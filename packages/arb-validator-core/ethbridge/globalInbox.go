@@ -36,8 +36,8 @@ type globalInbox struct {
 	auth *TransactAuth
 }
 
-func newGlobalInbox(address ethcommon.Address, rollupAddress ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*globalInbox, error) {
-	watcher, err := newGlobalInboxWatcher(address, rollupAddress, client)
+func newGlobalInbox(address ethcommon.Address, chain ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*globalInbox, error) {
+	watcher, err := newGlobalInboxWatcher(address, chain, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to GlobalInbox")
 	}
@@ -72,13 +72,9 @@ func (con *globalInbox) SendL2MessageNoWait(ctx context.Context, chain common.Ad
 	return err
 }
 
-//func (con *globalInbox) SendTransactionMessage(ctx context.Context, data []byte, vmAddress common.Address, contactAddress common.Address, amount *big.Int, seqNumber *big.Int) error {
-//
-//}
-
 func (con *globalInbox) DepositEthMessage(
 	ctx context.Context,
-	vmAddress common.Address,
+	chain common.Address,
 	destination common.Address,
 	value *big.Int,
 ) error {
@@ -91,7 +87,7 @@ func (con *globalInbox) DepositEthMessage(
 			Value:    value,
 			Context:  ctx,
 		},
-		vmAddress.ToEthAddress(),
+		chain.ToEthAddress(),
 		destination.ToEthAddress(),
 	)
 
@@ -104,7 +100,7 @@ func (con *globalInbox) DepositEthMessage(
 
 func (con *globalInbox) DepositERC20Message(
 	ctx context.Context,
-	vmAddress common.Address,
+	chain common.Address,
 	tokenAddress common.Address,
 	destination common.Address,
 	value *big.Int,
@@ -113,7 +109,7 @@ func (con *globalInbox) DepositERC20Message(
 	defer con.auth.Unlock()
 	tx, err := con.GlobalInbox.DepositERC20Message(
 		con.auth.getAuth(ctx),
-		vmAddress.ToEthAddress(),
+		chain.ToEthAddress(),
 		tokenAddress.ToEthAddress(),
 		destination.ToEthAddress(),
 		value,
@@ -128,7 +124,7 @@ func (con *globalInbox) DepositERC20Message(
 
 func (con *globalInbox) DepositERC721Message(
 	ctx context.Context,
-	vmAddress common.Address,
+	chain common.Address,
 	tokenAddress common.Address,
 	destination common.Address,
 	value *big.Int,
@@ -137,7 +133,7 @@ func (con *globalInbox) DepositERC721Message(
 	defer con.auth.Unlock()
 	tx, err := con.GlobalInbox.DepositERC721Message(
 		con.auth.getAuth(ctx),
-		vmAddress.ToEthAddress(),
+		chain.ToEthAddress(),
 		tokenAddress.ToEthAddress(),
 		destination.ToEthAddress(),
 		value,

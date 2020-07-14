@@ -124,15 +124,7 @@ func (a *ExecutionAssertionStub) Equals(b *ExecutionAssertionStub) bool {
 }
 
 func (a *ExecutionAssertionStub) Hash() common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Bytes32(a.AfterHash),
-		hashing.Bool(a.DidInboxInsn),
-		hashing.Uint64(a.NumGas),
-		hashing.Bytes32(a.FirstMessageHash),
-		hashing.Bytes32(a.LastMessageHash),
-		hashing.Bytes32(a.FirstLogHash),
-		hashing.Bytes32(a.LastLogHash),
-	)
+	return hashing.SoliditySHA3()
 }
 
 func (dn *ExecutionAssertionStub) CheckTime(params ChainParams) common.TimeTicks {

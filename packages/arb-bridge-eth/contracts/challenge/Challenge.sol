@@ -18,7 +18,7 @@
 
 pragma solidity ^0.5.11;
 
-import "../vm/IStaking.sol";
+import "../rollup/IStaking.sol";
 import "../libraries/RollupTime.sol";
 
 contract Challenge {
@@ -46,7 +46,7 @@ contract Challenge {
     // Only original asserter can continue bisect
     string private constant BIS_SENDER = "BIS_SENDER";
 
-    address internal vmAddress;
+    address internal rollupAddress;
     address payable internal asserter;
     address payable internal challenger;
 
@@ -94,14 +94,14 @@ contract Challenge {
     }
 
     function initializeChallenge(
-        address _vmAddress,
+        address _rollupAddress,
         address payable _asserter,
         address payable _challenger,
         uint256 _challengePeriodTicks
     ) internal {
         require(state == State.NoChallenge, CHAL_INIT_STATE);
 
-        vmAddress = _vmAddress;
+        rollupAddress = _rollupAddress;
         asserter = _asserter;
         challenger = _challenger;
         challengePeriodTicks = _challengePeriodTicks;
@@ -128,16 +128,12 @@ contract Challenge {
     }
 
     function _asserterWin() internal {
-        resolveChallengeAsserterWon();
+        IStaking(rollupAddress).resolveChallenge(asserter, challenger);
         selfdestruct(msg.sender);
     }
 
     function _challengerWin() internal {
-        resolveChallengeChallengerWon();
+        IStaking(rollupAddress).resolveChallenge(challenger, asserter);
         selfdestruct(msg.sender);
     }
-
-    function resolveChallengeAsserterWon() internal;
-
-    function resolveChallengeChallengerWon() internal;
 }

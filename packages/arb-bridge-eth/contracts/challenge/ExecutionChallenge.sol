@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +22,12 @@ import "./BisectionChallenge.sol";
 import "./ChallengeUtils.sol";
 
 import "../arch/OneStepProof.sol";
-import "../arch/Protocol.sol";
 
 import "../libraries/MerkleLib.sol";
 
 contract ExecutionChallenge is BisectionChallenge {
+    using Hashing for Value.Data;
+
     event BisectedAssertion(
         bytes32[] machineHashes,
         bool[] didInboxInsns,
@@ -56,13 +57,13 @@ contract ExecutionChallenge is BisectionChallenge {
 
     function bisectAssertion(
         bytes32 _beforeInbox,
-        bytes32[] memory _machineHashes,
-        bool[] memory _didInboxInsns,
-        bytes32[] memory _messageAccs,
-        bytes32[] memory _logAccs,
-        uint64[] memory _gases,
+        bytes32[] calldata _machineHashes,
+        bool[] calldata _didInboxInsns,
+        bytes32[] calldata _messageAccs,
+        bytes32[] calldata _logAccs,
+        uint64[] calldata _gases,
         uint64 _totalSteps
-    ) public asserterAction {
+    ) external asserterAction {
         _bisectAssertion(
             BisectAssertionData(
                 _beforeInbox,
@@ -90,30 +91,26 @@ contract ExecutionChallenge is BisectionChallenge {
             everDidInboxInsn = everDidInboxInsn || _data.didInboxInsns[i];
         }
 
-        bytes32 preconditionHash = Protocol.generatePreconditionHash(
-            _data.machineHashes[0],
-            _data.beforeInbox
-        );
-        bytes32 assertionHash = Protocol.generateAssertionHash(
-            _data.machineHashes[bisectionCount],
-            everDidInboxInsn,
-            totalGas,
-            _data.messageAccs[0],
-            _data.messageAccs[bisectionCount],
-            _data.logAccs[0],
-            _data.logAccs[bisectionCount]
-        );
-
         requireMatchesPrevState(
             ChallengeUtils.executionHash(
                 _data.totalSteps,
-                preconditionHash,
-                assertionHash
+                _data.machineHashes[0],
+                _data.beforeInbox,
+                _data.machineHashes[bisectionCount],
+                everDidInboxInsn,
+                totalGas,
+                _data.messageAccs[0],
+                _data.messageAccs[bisectionCount],
+                _data.logAccs[0],
+                _data.logAccs[bisectionCount]
             )
         );
 
         bytes32[] memory hashes = new bytes32[](bisectionCount);
-        assertionHash = Protocol.generateAssertionHash(
+        hashes[0] = ChallengeUtils.executionHash(
+            uint32(firstSegmentSize(uint256(_data.totalSteps), bisectionCount)),
+            _data.machineHashes[0],
+            _data.beforeInbox,
             _data.machineHashes[1],
             _data.didInboxInsns[0],
             _data.gases[0],
@@ -122,20 +119,17 @@ contract ExecutionChallenge is BisectionChallenge {
             _data.logAccs[0],
             _data.logAccs[1]
         );
-        hashes[0] = ChallengeUtils.executionHash(
-            uint32(firstSegmentSize(uint256(_data.totalSteps), bisectionCount)),
-            Protocol.generatePreconditionHash(
-                _data.machineHashes[0],
-                _data.beforeInbox
-            ),
-            assertionHash
-        );
 
         for (uint256 i = 1; i < bisectionCount; i++) {
             if (_data.didInboxInsns[i - 1]) {
-                _data.beforeInbox = Value.hashEmptyTuple();
+                _data.beforeInbox = Value.newEmptyTuple().hash();
             }
-            assertionHash = Protocol.generateAssertionHash(
+            hashes[i] = ChallengeUtils.executionHash(
+                uint32(
+                    otherSegmentSize(uint256(_data.totalSteps), bisectionCount)
+                ),
+                _data.machineHashes[i],
+                _data.beforeInbox,
                 _data.machineHashes[i + 1],
                 _data.didInboxInsns[i],
                 _data.gases[i],
@@ -143,16 +137,6 @@ contract ExecutionChallenge is BisectionChallenge {
                 _data.messageAccs[i + 1],
                 _data.logAccs[i],
                 _data.logAccs[i + 1]
-            );
-            hashes[i] = ChallengeUtils.executionHash(
-                uint32(
-                    otherSegmentSize(uint256(_data.totalSteps), bisectionCount)
-                ),
-                Protocol.generatePreconditionHash(
-                    _data.machineHashes[i],
-                    _data.beforeInbox
-                ),
-                assertionHash
             );
         }
 
@@ -196,11 +180,10 @@ contract ExecutionChallenge is BisectionChallenge {
             _lastLog
         );
 
-        uint256 correctProof = OneStepProof.validateProof(
+        Machine.Data memory endMachine = OneStepProof.validateProof(
             _beforeHash,
             _beforeInbox,
             _beforeInboxValueSize,
-            _afterHash,
             _didInboxInsns,
             _firstMessage,
             _lastMessage,
@@ -210,7 +193,17 @@ contract ExecutionChallenge is BisectionChallenge {
             _proof
         );
 
-        require(correctProof == 0, OSP_PROOF);
+        require(
+            Machine.hash(endMachine) == _afterHash,
+            "Proof had non matching end state"
+        );
+
+        // require(
+        //     _data.afterHash == endMachine.hash(),
+        //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
+        //     " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
+        // );
+
         emit OneStepProofCompleted();
         _asserterWin();
     }
@@ -227,44 +220,22 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32 _firstLog,
         bytes32 _lastLog
     ) internal view {
-        bytes32 beforeInbox = Value.hashTuplePreImage(
-            _beforeInbox,
-            _beforeInboxValueSize
-        );
-        bytes32 precondition = Protocol.generatePreconditionHash(
-            _beforeHash,
-            beforeInbox
-        );
+        bytes32 beforeInbox = Value
+            .newTuplePreImage(_beforeInbox, _beforeInboxValueSize)
+            .hash();
         requireMatchesPrevState(
             ChallengeUtils.executionHash(
                 1,
-                precondition,
-                Protocol.generateAssertionHash(
-                    _afterHash,
-                    _didInboxInsns,
-                    _gas,
-                    _firstMessage,
-                    _lastMessage,
-                    _firstLog,
-                    _lastLog
-                )
+                _beforeHash,
+                beforeInbox,
+                _afterHash,
+                _didInboxInsns,
+                _gas,
+                _firstMessage,
+                _lastMessage,
+                _firstLog,
+                _lastLog
             )
-        );
-    }
-
-    function resolveChallengeAsserterWon() internal {
-        IStaking(vmAddress).resolveChallenge(
-            asserter,
-            challenger,
-            ChallengeUtils.getInvalidExType()
-        );
-    }
-
-    function resolveChallengeChallengerWon() internal {
-        IStaking(vmAddress).resolveChallenge(
-            challenger,
-            asserter,
-            ChallengeUtils.getInvalidExType()
         );
     }
 }

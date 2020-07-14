@@ -27,16 +27,16 @@ var (
 )
 
 // ChallengeTesterABI is the input ABI used to generate the binding from.
-const ChallengeTesterABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"challengeFactory_\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"asserterAddress\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"challengerAddress\",\"type\":\"address\"},{\"internalType\":\"uint128\",\"name\":\"challengerPeriodTicks\",\"type\":\"uint128\"},{\"internalType\":\"bytes32\",\"name\":\"challengerDataHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"}],\"name\":\"startChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ChallengeTesterABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"challengeFactory_\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"asserterAddress\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"challengerAddress\",\"type\":\"address\"},{\"internalType\":\"uint128\",\"name\":\"challengerPeriodTicks\",\"type\":\"uint128\"},{\"internalType\":\"bytes32\",\"name\":\"challengerDataHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"}],\"name\":\"startChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ChallengeTesterFuncSigs maps the 4-byte function signature to its string representation.
 var ChallengeTesterFuncSigs = map[string]string{
-	"6bc3cd22": "resolveChallenge(address,address,uint256)",
+	"396f51cf": "resolveChallenge(address,address)",
 	"8f43ee32": "startChallenge(address,address,uint128,bytes32,uint256)",
 }
 
 // ChallengeTesterBin is the compiled bytecode used for deploying new contracts.
-var ChallengeTesterBin = "0x608060405234801561001057600080fd5b506040516102073803806102078339818101604052602081101561003357600080fd5b5051600080546001600160a01b039092166001600160a01b03199092169190911790556101a2806100656000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80636bc3cd221461003b5780638f43ee3214610073575b600080fd5b6100716004803603606081101561005157600080fd5b506001600160a01b038135811691602081013590911690604001356100be565b005b610071600480360360a081101561008957600080fd5b506001600160a01b0381358116916020810135909116906001600160801b0360408201351690606081013590608001356100c3565b505050565b600080546040805163432ed0e160e11b81526001600160a01b03898116600483015288811660248301526001600160801b038816604483015260648201879052608482018690529151919092169263865da1c29260a480820193602093909283900390910190829087803b15801561013a57600080fd5b505af115801561014e573d6000803e3d6000fd5b505050506040513d602081101561016457600080fd5b5050505050505056fea265627a7a7231582092bda98c44ad349f3d9dd3c416d2abff2fe3edd7d4d503ffbfd42998df23f17a64736f6c634300050f0032"
+var ChallengeTesterBin = "0x608060405234801561001057600080fd5b506040516101fe3803806101fe8339818101604052602081101561003357600080fd5b5051600080546001600160a01b039092166001600160a01b0319909216919091179055610199806100656000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c8063396f51cf1461003b5780638f43ee321461006b575b600080fd5b6100696004803603604081101561005157600080fd5b506001600160a01b03813581169160200135166100b6565b005b610069600480360360a081101561008157600080fd5b506001600160a01b0381358116916020810135909116906001600160801b0360408201351690606081013590608001356100ba565b5050565b600080546040805163432ed0e160e11b81526001600160a01b03898116600483015288811660248301526001600160801b038816604483015260648201879052608482018690529151919092169263865da1c29260a480820193602093909283900390910190829087803b15801561013157600080fd5b505af1158015610145573d6000803e3d6000fd5b505050506040513d602081101561015b57600080fd5b5050505050505056fea265627a7a72315820b29e3ac4165ccbc14d62ec34c1b04c11fb7cea537fa612c3629c4a1a3c3f629564736f6c63430005110032"
 
 // DeployChallengeTester deploys a new Ethereum contract, binding an instance of ChallengeTester to it.
 func DeployChallengeTester(auth *bind.TransactOpts, backend bind.ContractBackend, challengeFactory_ common.Address) (common.Address, *types.Transaction, *ChallengeTester, error) {
@@ -194,25 +194,25 @@ func (_ChallengeTester *ChallengeTesterTransactorRaw) Transact(opts *bind.Transa
 	return _ChallengeTester.Contract.contract.Transact(opts, method, params...)
 }
 
-// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
 //
-// Solidity: function resolveChallenge(address , address , uint256 ) returns()
-func (_ChallengeTester *ChallengeTesterTransactor) ResolveChallenge(opts *bind.TransactOpts, arg0 common.Address, arg1 common.Address, arg2 *big.Int) (*types.Transaction, error) {
-	return _ChallengeTester.contract.Transact(opts, "resolveChallenge", arg0, arg1, arg2)
+// Solidity: function resolveChallenge(address , address ) returns()
+func (_ChallengeTester *ChallengeTesterTransactor) ResolveChallenge(opts *bind.TransactOpts, arg0 common.Address, arg1 common.Address) (*types.Transaction, error) {
+	return _ChallengeTester.contract.Transact(opts, "resolveChallenge", arg0, arg1)
 }
 
-// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
 //
-// Solidity: function resolveChallenge(address , address , uint256 ) returns()
-func (_ChallengeTester *ChallengeTesterSession) ResolveChallenge(arg0 common.Address, arg1 common.Address, arg2 *big.Int) (*types.Transaction, error) {
-	return _ChallengeTester.Contract.ResolveChallenge(&_ChallengeTester.TransactOpts, arg0, arg1, arg2)
+// Solidity: function resolveChallenge(address , address ) returns()
+func (_ChallengeTester *ChallengeTesterSession) ResolveChallenge(arg0 common.Address, arg1 common.Address) (*types.Transaction, error) {
+	return _ChallengeTester.Contract.ResolveChallenge(&_ChallengeTester.TransactOpts, arg0, arg1)
 }
 
-// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
 //
-// Solidity: function resolveChallenge(address , address , uint256 ) returns()
-func (_ChallengeTester *ChallengeTesterTransactorSession) ResolveChallenge(arg0 common.Address, arg1 common.Address, arg2 *big.Int) (*types.Transaction, error) {
-	return _ChallengeTester.Contract.ResolveChallenge(&_ChallengeTester.TransactOpts, arg0, arg1, arg2)
+// Solidity: function resolveChallenge(address , address ) returns()
+func (_ChallengeTester *ChallengeTesterTransactorSession) ResolveChallenge(arg0 common.Address, arg1 common.Address) (*types.Transaction, error) {
+	return _ChallengeTester.Contract.ResolveChallenge(&_ChallengeTester.TransactOpts, arg0, arg1)
 }
 
 // StartChallenge is a paid mutator transaction binding the contract method 0x8f43ee32.
@@ -435,11 +435,11 @@ func (_IChallengeFactory *IChallengeFactoryTransactorSession) CreateChallenge(_a
 }
 
 // IStakingABI is the input ABI used to generate the binding from.
-const IStakingABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"winner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const IStakingABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"winner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IStakingFuncSigs maps the 4-byte function signature to its string representation.
 var IStakingFuncSigs = map[string]string{
-	"6bc3cd22": "resolveChallenge(address,address,uint256)",
+	"396f51cf": "resolveChallenge(address,address)",
 }
 
 // IStaking is an auto generated Go binding around an Ethereum contract.
@@ -584,23 +584,23 @@ func (_IStaking *IStakingTransactorRaw) Transact(opts *bind.TransactOpts, method
 	return _IStaking.Contract.contract.Transact(opts, method, params...)
 }
 
-// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
 //
-// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) returns()
-func (_IStaking *IStakingTransactor) ResolveChallenge(opts *bind.TransactOpts, winner common.Address, loser common.Address, challengeType *big.Int) (*types.Transaction, error) {
-	return _IStaking.contract.Transact(opts, "resolveChallenge", winner, loser, challengeType)
+// Solidity: function resolveChallenge(address winner, address loser) returns()
+func (_IStaking *IStakingTransactor) ResolveChallenge(opts *bind.TransactOpts, winner common.Address, loser common.Address) (*types.Transaction, error) {
+	return _IStaking.contract.Transact(opts, "resolveChallenge", winner, loser)
 }
 
-// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
 //
-// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) returns()
-func (_IStaking *IStakingSession) ResolveChallenge(winner common.Address, loser common.Address, challengeType *big.Int) (*types.Transaction, error) {
-	return _IStaking.Contract.ResolveChallenge(&_IStaking.TransactOpts, winner, loser, challengeType)
+// Solidity: function resolveChallenge(address winner, address loser) returns()
+func (_IStaking *IStakingSession) ResolveChallenge(winner common.Address, loser common.Address) (*types.Transaction, error) {
+	return _IStaking.Contract.ResolveChallenge(&_IStaking.TransactOpts, winner, loser)
 }
 
-// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
 //
-// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) returns()
-func (_IStaking *IStakingTransactorSession) ResolveChallenge(winner common.Address, loser common.Address, challengeType *big.Int) (*types.Transaction, error) {
-	return _IStaking.Contract.ResolveChallenge(&_IStaking.TransactOpts, winner, loser, challengeType)
+// Solidity: function resolveChallenge(address winner, address loser) returns()
+func (_IStaking *IStakingTransactorSession) ResolveChallenge(winner common.Address, loser common.Address) (*types.Transaction, error) {
+	return _IStaking.Contract.ResolveChallenge(&_IStaking.TransactOpts, winner, loser)
 }

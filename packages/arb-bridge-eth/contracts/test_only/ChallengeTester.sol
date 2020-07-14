@@ -19,7 +19,7 @@
 pragma solidity ^0.5.11;
 
 import "../challenge/IChallengeFactory.sol";
-import "../vm/IStaking.sol";
+import "../rollup/IStaking.sol";
 
 contract ChallengeTester is IStaking {
     IChallengeFactory private challengeFactory;
@@ -28,11 +28,7 @@ contract ChallengeTester is IStaking {
         challengeFactory = IChallengeFactory(challengeFactory_);
     }
 
-    function resolveChallenge(
-        address payable,
-        address,
-        uint256
-    ) external {
+    function resolveChallenge(address payable, address) external {
         return;
     }
 

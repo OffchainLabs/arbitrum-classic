@@ -19,22 +19,22 @@
 pragma solidity ^0.5.11;
 
 import "../arch/Machine.sol";
+import "../arch/Marshaling.sol";
 import "../arch/Value.sol";
 
 contract MachineTester {
+    using Hashing for Value.Data;
     using Machine for Machine.Data;
 
     function deserializeMachine(bytes memory data)
         public
         pure
-        returns (bytes32)
+        returns (uint256, bytes32)
     {
-        bool valid;
         uint256 offset;
         Machine.Data memory machine;
-        (valid, offset, machine) = Machine.deserializeMachine(data, 0);
-
-        return Machine.hash(machine);
+        (offset, machine) = Machine.deserializeMachine(data, 0);
+        return (offset, machine.hash());
     }
 
     function addStackVal(bytes memory data1, bytes memory data2)
@@ -42,17 +42,14 @@ contract MachineTester {
         pure
         returns (bytes32)
     {
-        bool valid;
         uint256 offset;
         Value.Data memory val1;
         Value.Data memory val2;
 
-        (valid, offset, val1) = Value.deserialize(data1, 0);
-        require(valid, "value1 incorrect");
+        (offset, val1) = Marshaling.deserialize(data1, 0);
 
-        (valid, offset, val2) = Value.deserialize(data2, 0);
-        require(valid, "value2 incorrect");
+        (offset, val2) = Marshaling.deserialize(data2, 0);
 
-        return Value.hash(Machine.addStackVal(val1, val2));
+        return Machine.addStackVal(val1, val2).hash();
     }
 }

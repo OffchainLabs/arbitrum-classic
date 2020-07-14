@@ -20,7 +20,7 @@ pragma solidity ^0.5.11;
 
 interface IBisectionChallenge {
     function initializeBisection(
-        address _vmAddress,
+        address _rollupAddress,
         address payable _asserter,
         address payable _challenger,
         uint256 _challengePeriodTicks,

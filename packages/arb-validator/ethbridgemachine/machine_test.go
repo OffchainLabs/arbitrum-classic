@@ -28,6 +28,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetest/machinetester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"math/big"
 	"testing"
 )
 
@@ -71,9 +72,13 @@ func TestDeserializeMachine(t *testing.T) {
 
 	expectedHash := machine.Hash()
 
-	bridgeHash, err := machineTester.DeserializeMachine(nil, stateData)
+	offset, bridgeHash, err := machineTester.DeserializeMachine(nil, stateData)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if offset.Cmp(big.NewInt(int64(len(stateData)))) != 0 {
+		t.Error("incorrect offset")
 	}
 
 	if expectedHash.ToEthHash() != bridgeHash {

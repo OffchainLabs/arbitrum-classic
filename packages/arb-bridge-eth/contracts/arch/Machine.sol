@@ -18,12 +18,12 @@
 
 pragma solidity ^0.5.11;
 
-import "./Value.sol";
+import "./Marshaling.sol";
 
 import "../libraries/DebugPrint.sol";
 
 library Machine {
-    using Value for Value.Data;
+    using Hashing for Value.Data;
 
     uint256 internal constant MACHINE_EXTENSIVE = 0;
     uint256 internal constant MACHINE_ERRORSTOP = 1;
@@ -37,7 +37,7 @@ library Machine {
         vals[0] = valHash;
         vals[1] = stackValHash;
 
-        return Value.getTuplePreImage(Value.newTuple(vals));
+        return Hashing.getTuplePreImage(vals);
     }
 
     struct Data {
@@ -62,13 +62,13 @@ library Machine {
                     "Machine(",
                     DebugPrint.bytes32string(machine.instructionStackHash),
                     ", \n",
-                    DebugPrint.bytes32string(Value.hash(machine.dataStack)),
+                    DebugPrint.bytes32string(machine.dataStack.hash()),
                     ", \n",
-                    DebugPrint.bytes32string(Value.hash(machine.auxStack)),
+                    DebugPrint.bytes32string(machine.auxStack.hash()),
                     ", \n",
-                    DebugPrint.bytes32string(Value.hash(machine.registerVal)),
+                    DebugPrint.bytes32string(machine.registerVal.hash()),
                     ", \n",
-                    DebugPrint.bytes32string(Value.hash(machine.staticVal)),
+                    DebugPrint.bytes32string(machine.staticVal.hash()),
                     ", \n",
                     DebugPrint.uint2str(machine.arbGasRemaining),
                     ", \n",
@@ -142,10 +142,10 @@ library Machine {
                 keccak256(
                     abi.encodePacked(
                         machine.instructionStackHash,
-                        Value.hash(machine.dataStack),
-                        Value.hash(machine.auxStack),
-                        Value.hash(machine.registerVal),
-                        Value.hash(machine.staticVal),
+                        machine.dataStack.hash(),
+                        machine.auxStack.hash(),
+                        machine.registerVal.hash(),
+                        machine.staticVal.hash(),
                         machine.arbGasRemaining,
                         machine.errHandlerHash
                     )
@@ -171,59 +171,28 @@ library Machine {
         internal
         pure
         returns (
-            bool, // valid
             uint256, // offset
             Data memory // machine
         )
     {
         Data memory m;
         m.status = MACHINE_EXTENSIVE;
-        bool valid;
-        (valid, offset, m.instructionStackHash) = Value.deserializeHashed(
+        uint256 instructionStack;
+        uint256 errHandler;
+        (offset, instructionStack) = Marshaling.deserializeInt(data, offset);
+
+        (offset, m.dataStack) = Marshaling.deserializeHashPreImage(
             data,
             offset
         );
-        if (!valid) {
-            return (false, offset, m);
-        }
+        (offset, m.auxStack) = Marshaling.deserializeHashPreImage(data, offset);
+        (offset, m.registerVal) = Marshaling.deserialize(data, offset);
+        (offset, m.staticVal) = Marshaling.deserialize(data, offset);
+        (offset, m.arbGasRemaining) = Marshaling.deserializeInt(data, offset);
+        (offset, errHandler) = Marshaling.deserializeInt(data, offset);
 
-        (valid, offset, m.dataStack) = Value.deserializeHashPreImage(
-            data,
-            offset
-        );
-        if (!valid) {
-            return (false, offset, m);
-        }
-        (valid, offset, m.auxStack) = Value.deserializeHashPreImage(
-            data,
-            offset
-        );
-        if (!valid) {
-            return (false, offset, m);
-        }
-        (valid, offset, m.registerVal) = Value.deserialize(data, offset);
-        if (!valid) {
-            return (false, offset, m);
-        }
-
-        (valid, offset, m.staticVal) = Value.deserialize(data, offset);
-        if (!valid) {
-            return (false, offset, m);
-        }
-
-        (valid, offset, m.arbGasRemaining) = Value.deserializeInt(data, offset);
-        if (!valid) {
-            return (false, offset, m);
-        }
-
-        (valid, offset, m.errHandlerHash) = Value.deserializeHashed(
-            data,
-            offset
-        );
-        if (!valid) {
-            return (false, offset, m);
-        }
-
-        return (true, offset, m);
+        m.instructionStackHash = bytes32(instructionStack);
+        m.errHandlerHash = bytes32(errHandler);
+        return (offset, m);
     }
 }

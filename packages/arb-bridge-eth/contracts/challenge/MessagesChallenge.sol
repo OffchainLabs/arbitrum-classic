@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +21,11 @@ pragma solidity ^0.5.11;
 import "./BisectionChallenge.sol";
 import "./ChallengeUtils.sol";
 
-import "../arch/Protocol.sol";
 import "../arch/Value.sol";
-import "../Messages.sol";
+import "../inbox/Messages.sol";
 
 contract MessagesChallenge is BisectionChallenge {
-    using Value for Value.Data;
+    using Hashing for Value.Data;
 
     event Bisected(
         bytes32[] chainHashes,
@@ -41,10 +40,10 @@ contract MessagesChallenge is BisectionChallenge {
     string private constant HS_BIS_INPLEN = "HS_BIS_INPLEN";
 
     function bisect(
-        bytes32[] memory _chainHashes,
-        bytes32[] memory _segmentHashes,
+        bytes32[] calldata _chainHashes,
+        bytes32[] calldata _segmentHashes,
         uint256 _chainLength
-    ) public asserterAction {
+    ) external asserterAction {
         uint256 bisectionCount = _chainHashes.length - 1;
         require(bisectionCount + 1 == _segmentHashes.length, HS_BIS_INPLEN);
 
@@ -95,15 +94,18 @@ contract MessagesChallenge is BisectionChallenge {
         uint256 _timestamp,
         address _sender,
         uint256 _inboxSeqNum,
-        bytes memory _msgData
-    ) public asserterAction {
-        bytes32 messageHash = Messages.messageHash(
-            _kind,
-            _sender,
-            _blockNumber,
-            _timestamp,
-            _inboxSeqNum,
-            keccak256(_msgData)
+        bytes calldata _msgData
+    ) external asserterAction {
+        bytes32 afterInbox = Messages.addMessageToInbox(
+            _beforeInbox,
+            Messages.messageHash(
+                _kind,
+                _sender,
+                _blockNumber,
+                _timestamp,
+                _inboxSeqNum,
+                keccak256(_msgData)
+            )
         );
         Value.Data memory messageValue = Messages.messageValue(
             _kind,
@@ -120,7 +122,7 @@ contract MessagesChallenge is BisectionChallenge {
         requireMatchesPrevState(
             ChallengeUtils.messagesHash(
                 _beforeInbox,
-                Messages.addMessageToInbox(_beforeInbox, messageHash),
+                afterInbox,
                 beforeVMInbox.hash(),
                 Messages
                     .addMessageToVMInbox(beforeVMInbox, messageValue)
@@ -131,21 +133,5 @@ contract MessagesChallenge is BisectionChallenge {
 
         emit OneStepProofCompleted();
         _asserterWin();
-    }
-
-    function resolveChallengeAsserterWon() internal {
-        IStaking(vmAddress).resolveChallenge(
-            asserter,
-            challenger,
-            ChallengeUtils.getInvalidMsgsType()
-        );
-    }
-
-    function resolveChallengeChallengerWon() internal {
-        IStaking(vmAddress).resolveChallenge(
-            challenger,
-            asserter,
-            ChallengeUtils.getInvalidMsgsType()
-        );
     }
 }

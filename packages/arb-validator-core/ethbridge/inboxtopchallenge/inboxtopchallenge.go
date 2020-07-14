@@ -27,13 +27,30 @@ var (
 )
 
 // BisectionChallengeABI is the input ABI used to generate the binding from.
-const BisectionChallengeABI = "[{\"anonymous\":false,\"inputs\":[],\"name\":\"AsserterTimedOut\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"ChallengerTimedOut\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"segmentIndex\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"}],\"name\":\"Continued\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"}],\"name\":\"InitiatedChallenge\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_segmentToChallenge\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"_bisectionRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_bisectionHash\",\"type\":\"bytes32\"}],\"name\":\"chooseSegment\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_vmAddress\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_asserter\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_challenger\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_challengePeriodTicks\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"_challengeState\",\"type\":\"bytes32\"}],\"name\":\"initializeBisection\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"timeoutChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const BisectionChallengeABI = "[{\"anonymous\":false,\"inputs\":[],\"name\":\"AsserterTimedOut\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"ChallengerTimedOut\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"segmentIndex\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"}],\"name\":\"Continued\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"}],\"name\":\"InitiatedChallenge\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_segmentToChallenge\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"_bisectionRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_bisectionHash\",\"type\":\"bytes32\"}],\"name\":\"chooseSegment\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_rollupAddress\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_asserter\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_challenger\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_challengePeriodTicks\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"_challengeState\",\"type\":\"bytes32\"}],\"name\":\"initializeBisection\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"timeoutChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // BisectionChallengeFuncSigs maps the 4-byte function signature to its string representation.
 var BisectionChallengeFuncSigs = map[string]string{
 	"79a9ad85": "chooseSegment(uint256,bytes,bytes32,bytes32)",
 	"02ad1e4e": "initializeBisection(address,address,address,uint256,bytes32)",
 	"ced5c1bf": "timeoutChallenge()",
+}
+
+// BisectionChallengeBin is the compiled bytecode used for deploying new contracts.
+var BisectionChallengeBin = "0x608060405234801561001057600080fd5b50610882806100206000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c806302ad1e4e1461004657806379a9ad851461008a578063ced5c1bf1461013c575b600080fd5b610088600480360360a081101561005c57600080fd5b506001600160a01b03813581169160208101358216916040820135169060608101359060800135610144565b005b610088600480360360808110156100a057600080fd5b813591908101906040810160208201356401000000008111156100c257600080fd5b8201836020820111156100d457600080fd5b803590602001918460018302840111640100000000831117156100f657600080fd5b91908080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152509295505082359350505060200135610159565b610088610457565b61015085858585610537565b60065550505050565b60055460ff16600281111561016a57fe5b60021460405180604001604052806009815260200168434f4e5f535441544560b81b815250906102185760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b838110156101dd5781810151838201526020016101c5565b50505050905090810190601f16801561020a5780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b5060035461022543610652565b11156040518060400160405280600c81526020016b434f4e5f444541444c494e4560a01b815250906102985760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156101dd5781810151838201526020016101c5565b5060025460408051808201909152600a81526921a7a72fa9a2a72222a960b11b6020820152906001600160a01b031633146103145760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156101dd5781810151838201526020016101c5565b5060065482146040518060400160405280600881526020016721a7a72fa82922ab60c11b815250906103875760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156101dd5781810151838201526020016101c5565b5061039783838387600101610659565b6040518060400160405280600981526020016821a7a72fa82927a7a360b91b815250906104055760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156101dd5781810151838201526020016101c5565b50600681905561041361075a565b60035460408051868152602081019290925280517f1e1c1e4e68a25c69a078a396e73975691c071d69ef789015dc16a562957804e49281900390910190a150505050565b60035461046343610652565b116104b5576040805162461bcd60e51b815260206004820152601760248201527f446561646c696e65206861736e27742065787069726564000000000000000000604482015290519081900360640190fd5b600160055460ff1660028111156104c857fe5b1415610504576040517f2b92a4b014281aa2424baba9ea60bf4f26833d1c1fbd873e51cd1a6caeef48f090600090a16104ff61076f565b610535565b6040517f4e1f1f06cf69d199fcdb4d87a5a92d5248ca6b540e9fc2d3698927c5002a236a90600090a16105356107e3565b565b600060055460ff16600281111561054a57fe5b146040518060400160405280600f81526020016e4348414c5f494e49545f535441544560881b815250906105bf5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156101dd5781810151838201526020016101c5565b50600080546001600160a01b038681166001600160a01b03199283161790925560018054868416908316178155600280549386169390921692909217905560048290556005805460ff1916909117905561061761083b565b60035460408051918252517fe070f23072cbc6c0fc7253b8d0120649d5f9d6e19a8aeab79eb50aa6360bcc679181900360200190a150505050565b6103e80290565b600080838160205b8851811161074c578089015193506020818a51036020018161067f57fe5b0491505b6000821180156106965750600286066001145b80156106a457508160020a86115b156106b757600286046001019550610683565b600286066107025783836040516020018083815260200182815260200192505050604051602081830303815290604052805190602001209250600286816106fa57fe5b049550610744565b828460405160200180838152602001828152602001925050506040516020818303038152906040528051906020012092506002868161073d57fe5b0460010195505b602001610661565b505090941495945050505050565b6005805460ff1916600117905561053561083b565b600080546002546001546040805163396f51cf60e01b81526001600160a01b039384166004820152918316602483015251919092169263396f51cf926044808201939182900301818387803b1580156107c757600080fd5b505af11580156107db573d6000803e3d6000fd5b503392505050ff5b600080546001546002546040805163396f51cf60e01b81526001600160a01b039384166004820152918316602483015251919092169263396f51cf926044808201939182900301818387803b1580156107c757600080fd5b60045461084743610652565b0160035556fea265627a7a723158209850b11081f5714a137b7872ff64bb22d8dbc51d320d07d81dcc0b80df958e6c64736f6c63430005110032"
+
+// DeployBisectionChallenge deploys a new Ethereum contract, binding an instance of BisectionChallenge to it.
+func DeployBisectionChallenge(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *BisectionChallenge, error) {
+	parsed, err := abi.JSON(strings.NewReader(BisectionChallengeABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(BisectionChallengeBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &BisectionChallenge{BisectionChallengeCaller: BisectionChallengeCaller{contract: contract}, BisectionChallengeTransactor: BisectionChallengeTransactor{contract: contract}, BisectionChallengeFilterer: BisectionChallengeFilterer{contract: contract}}, nil
 }
 
 // BisectionChallenge is an auto generated Go binding around an Ethereum contract.
@@ -201,23 +218,23 @@ func (_BisectionChallenge *BisectionChallengeTransactorSession) ChooseSegment(_s
 
 // InitializeBisection is a paid mutator transaction binding the contract method 0x02ad1e4e.
 //
-// Solidity: function initializeBisection(address _vmAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
-func (_BisectionChallenge *BisectionChallengeTransactor) InitializeBisection(opts *bind.TransactOpts, _vmAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
-	return _BisectionChallenge.contract.Transact(opts, "initializeBisection", _vmAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
+// Solidity: function initializeBisection(address _rollupAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
+func (_BisectionChallenge *BisectionChallengeTransactor) InitializeBisection(opts *bind.TransactOpts, _rollupAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
+	return _BisectionChallenge.contract.Transact(opts, "initializeBisection", _rollupAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
 }
 
 // InitializeBisection is a paid mutator transaction binding the contract method 0x02ad1e4e.
 //
-// Solidity: function initializeBisection(address _vmAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
-func (_BisectionChallenge *BisectionChallengeSession) InitializeBisection(_vmAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
-	return _BisectionChallenge.Contract.InitializeBisection(&_BisectionChallenge.TransactOpts, _vmAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
+// Solidity: function initializeBisection(address _rollupAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
+func (_BisectionChallenge *BisectionChallengeSession) InitializeBisection(_rollupAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
+	return _BisectionChallenge.Contract.InitializeBisection(&_BisectionChallenge.TransactOpts, _rollupAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
 }
 
 // InitializeBisection is a paid mutator transaction binding the contract method 0x02ad1e4e.
 //
-// Solidity: function initializeBisection(address _vmAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
-func (_BisectionChallenge *BisectionChallengeTransactorSession) InitializeBisection(_vmAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
-	return _BisectionChallenge.Contract.InitializeBisection(&_BisectionChallenge.TransactOpts, _vmAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
+// Solidity: function initializeBisection(address _rollupAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
+func (_BisectionChallenge *BisectionChallengeTransactorSession) InitializeBisection(_rollupAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
+	return _BisectionChallenge.Contract.InitializeBisection(&_BisectionChallenge.TransactOpts, _rollupAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
 }
 
 // TimeoutChallenge is a paid mutator transaction binding the contract method 0xced5c1bf.
@@ -776,7 +793,7 @@ func (_BisectionChallenge *BisectionChallengeFilterer) ParseInitiatedChallenge(l
 const BytesLibABI = "[]"
 
 // BytesLibBin is the compiled bytecode used for deploying new contracts.
-var BytesLibBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158207d8758ad86f665628dab702fc2bf77ffff692cbcea924b7642d8a631868fabc164736f6c634300050f0032"
+var BytesLibBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158209cc6ea8cfb5d0f6e66ccce67c7494628093cb8581f492f996c0110163c56d51b64736f6c63430005110032"
 
 // DeployBytesLib deploys a new Ethereum contract, binding an instance of BytesLib to it.
 func DeployBytesLib(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *BytesLib, error) {
@@ -940,6 +957,23 @@ const ChallengeABI = "[{\"anonymous\":false,\"inputs\":[],\"name\":\"AsserterTim
 // ChallengeFuncSigs maps the 4-byte function signature to its string representation.
 var ChallengeFuncSigs = map[string]string{
 	"ced5c1bf": "timeoutChallenge()",
+}
+
+// ChallengeBin is the compiled bytecode used for deploying new contracts.
+var ChallengeBin = "0x608060405234801561001057600080fd5b50610222806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c8063ced5c1bf14610030575b600080fd5b61003861003a565b005b6003546100464361011a565b11610098576040805162461bcd60e51b815260206004820152601760248201527f446561646c696e65206861736e27742065787069726564000000000000000000604482015290519081900360640190fd5b600160055460ff1660028111156100ab57fe5b14156100e7576040517f2b92a4b014281aa2424baba9ea60bf4f26833d1c1fbd873e51cd1a6caeef48f090600090a16100e2610121565b610118565b6040517f4e1f1f06cf69d199fcdb4d87a5a92d5248ca6b540e9fc2d3698927c5002a236a90600090a1610118610195565b565b6103e80290565b600080546002546001546040805163396f51cf60e01b81526001600160a01b039384166004820152918316602483015251919092169263396f51cf926044808201939182900301818387803b15801561017957600080fd5b505af115801561018d573d6000803e3d6000fd5b503392505050ff5b600080546001546002546040805163396f51cf60e01b81526001600160a01b039384166004820152918316602483015251919092169263396f51cf926044808201939182900301818387803b15801561017957600080fdfea265627a7a7231582026f12cdce58489d144e89925591dcaaf16947f1ea50bd7c07a731feaf290510664736f6c63430005110032"
+
+// DeployChallenge deploys a new Ethereum contract, binding an instance of Challenge to it.
+func DeployChallenge(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Challenge, error) {
+	parsed, err := abi.JSON(strings.NewReader(ChallengeABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ChallengeBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &Challenge{ChallengeCaller: ChallengeCaller{contract: contract}, ChallengeTransactor: ChallengeTransactor{contract: contract}, ChallengeFilterer: ChallengeFilterer{contract: contract}}, nil
 }
 
 // Challenge is an auto generated Go binding around an Ethereum contract.
@@ -1514,7 +1548,7 @@ var ChallengeUtilsFuncSigs = map[string]string{
 }
 
 // ChallengeUtilsBin is the compiled bytecode used for deploying new contracts.
-var ChallengeUtilsBin = "0x60c9610025600b82828239805160001a60731461001857fe5b30600052607381538281f3fe730000000000000000000000000000000000000000301460806040526004361060515760003560e01c80632e179be51460565780639531272714606e578063a697bcac146074578063d7519b4614607a575b600080fd5b605c6080565b60408051918252519081900360200190f35b605c6085565b605c608a565b605c608f565b600381565b600281565b600081565b60018156fea265627a7a72315820676277f300eb3668fbaa81a6d3882d3817cbd9bd15becfbe996bdd7f039c53e364736f6c634300050f0032"
+var ChallengeUtilsBin = "0x60c9610025600b82828239805160001a60731461001857fe5b30600052607381538281f3fe730000000000000000000000000000000000000000301460806040526004361060515760003560e01c80632e179be51460565780639531272714606e578063a697bcac146074578063d7519b4614607a575b600080fd5b605c6080565b60408051918252519081900360200190f35b605c6085565b605c608a565b605c608f565b600381565b600281565b600081565b60018156fea265627a7a72315820d6b82a8f1da234af8e8a5ebc59988c3739058feafa08621f40b955889c0b5e3364736f6c63430005110032"
 
 // DeployChallengeUtils deploys a new Ethereum contract, binding an instance of ChallengeUtils to it.
 func DeployChallengeUtils(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ChallengeUtils, error) {
@@ -1776,8 +1810,170 @@ func (_ChallengeUtils *ChallengeUtilsCallerSession) VALIDCHILDTYPE() (*big.Int, 
 	return _ChallengeUtils.Contract.VALIDCHILDTYPE(&_ChallengeUtils.CallOpts)
 }
 
+// HashingABI is the input ABI used to generate the binding from.
+const HashingABI = "[]"
+
+// HashingBin is the compiled bytecode used for deploying new contracts.
+var HashingBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158200a16caa6b13b51d9a0a96faa7003a2f51f1e55db1ef9dd57c37ab46cee5652c964736f6c63430005110032"
+
+// DeployHashing deploys a new Ethereum contract, binding an instance of Hashing to it.
+func DeployHashing(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Hashing, error) {
+	parsed, err := abi.JSON(strings.NewReader(HashingABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(HashingBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &Hashing{HashingCaller: HashingCaller{contract: contract}, HashingTransactor: HashingTransactor{contract: contract}, HashingFilterer: HashingFilterer{contract: contract}}, nil
+}
+
+// Hashing is an auto generated Go binding around an Ethereum contract.
+type Hashing struct {
+	HashingCaller     // Read-only binding to the contract
+	HashingTransactor // Write-only binding to the contract
+	HashingFilterer   // Log filterer for contract events
+}
+
+// HashingCaller is an auto generated read-only Go binding around an Ethereum contract.
+type HashingCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// HashingTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type HashingTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// HashingFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type HashingFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// HashingSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type HashingSession struct {
+	Contract     *Hashing          // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// HashingCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type HashingCallerSession struct {
+	Contract *HashingCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts  // Call options to use throughout this session
+}
+
+// HashingTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type HashingTransactorSession struct {
+	Contract     *HashingTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
+}
+
+// HashingRaw is an auto generated low-level Go binding around an Ethereum contract.
+type HashingRaw struct {
+	Contract *Hashing // Generic contract binding to access the raw methods on
+}
+
+// HashingCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type HashingCallerRaw struct {
+	Contract *HashingCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// HashingTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type HashingTransactorRaw struct {
+	Contract *HashingTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewHashing creates a new instance of Hashing, bound to a specific deployed contract.
+func NewHashing(address common.Address, backend bind.ContractBackend) (*Hashing, error) {
+	contract, err := bindHashing(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &Hashing{HashingCaller: HashingCaller{contract: contract}, HashingTransactor: HashingTransactor{contract: contract}, HashingFilterer: HashingFilterer{contract: contract}}, nil
+}
+
+// NewHashingCaller creates a new read-only instance of Hashing, bound to a specific deployed contract.
+func NewHashingCaller(address common.Address, caller bind.ContractCaller) (*HashingCaller, error) {
+	contract, err := bindHashing(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &HashingCaller{contract: contract}, nil
+}
+
+// NewHashingTransactor creates a new write-only instance of Hashing, bound to a specific deployed contract.
+func NewHashingTransactor(address common.Address, transactor bind.ContractTransactor) (*HashingTransactor, error) {
+	contract, err := bindHashing(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &HashingTransactor{contract: contract}, nil
+}
+
+// NewHashingFilterer creates a new log filterer instance of Hashing, bound to a specific deployed contract.
+func NewHashingFilterer(address common.Address, filterer bind.ContractFilterer) (*HashingFilterer, error) {
+	contract, err := bindHashing(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &HashingFilterer{contract: contract}, nil
+}
+
+// bindHashing binds a generic wrapper to an already deployed contract.
+func bindHashing(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(HashingABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Hashing *HashingRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Hashing.Contract.HashingCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Hashing *HashingRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Hashing.Contract.HashingTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Hashing *HashingRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Hashing.Contract.HashingTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Hashing *HashingCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Hashing.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Hashing *HashingTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Hashing.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Hashing *HashingTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Hashing.Contract.contract.Transact(opts, method, params...)
+}
+
 // IBisectionChallengeABI is the input ABI used to generate the binding from.
-const IBisectionChallengeABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_vmAddress\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_asserter\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_challenger\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_challengePeriodTicks\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"_challengeState\",\"type\":\"bytes32\"}],\"name\":\"initializeBisection\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const IBisectionChallengeABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_rollupAddress\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_asserter\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_challenger\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_challengePeriodTicks\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"_challengeState\",\"type\":\"bytes32\"}],\"name\":\"initializeBisection\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IBisectionChallengeFuncSigs maps the 4-byte function signature to its string representation.
 var IBisectionChallengeFuncSigs = map[string]string{
@@ -1928,31 +2124,31 @@ func (_IBisectionChallenge *IBisectionChallengeTransactorRaw) Transact(opts *bin
 
 // InitializeBisection is a paid mutator transaction binding the contract method 0x02ad1e4e.
 //
-// Solidity: function initializeBisection(address _vmAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
-func (_IBisectionChallenge *IBisectionChallengeTransactor) InitializeBisection(opts *bind.TransactOpts, _vmAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
-	return _IBisectionChallenge.contract.Transact(opts, "initializeBisection", _vmAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
+// Solidity: function initializeBisection(address _rollupAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
+func (_IBisectionChallenge *IBisectionChallengeTransactor) InitializeBisection(opts *bind.TransactOpts, _rollupAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
+	return _IBisectionChallenge.contract.Transact(opts, "initializeBisection", _rollupAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
 }
 
 // InitializeBisection is a paid mutator transaction binding the contract method 0x02ad1e4e.
 //
-// Solidity: function initializeBisection(address _vmAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
-func (_IBisectionChallenge *IBisectionChallengeSession) InitializeBisection(_vmAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
-	return _IBisectionChallenge.Contract.InitializeBisection(&_IBisectionChallenge.TransactOpts, _vmAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
+// Solidity: function initializeBisection(address _rollupAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
+func (_IBisectionChallenge *IBisectionChallengeSession) InitializeBisection(_rollupAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
+	return _IBisectionChallenge.Contract.InitializeBisection(&_IBisectionChallenge.TransactOpts, _rollupAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
 }
 
 // InitializeBisection is a paid mutator transaction binding the contract method 0x02ad1e4e.
 //
-// Solidity: function initializeBisection(address _vmAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
-func (_IBisectionChallenge *IBisectionChallengeTransactorSession) InitializeBisection(_vmAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
-	return _IBisectionChallenge.Contract.InitializeBisection(&_IBisectionChallenge.TransactOpts, _vmAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
+// Solidity: function initializeBisection(address _rollupAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
+func (_IBisectionChallenge *IBisectionChallengeTransactorSession) InitializeBisection(_rollupAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
+	return _IBisectionChallenge.Contract.InitializeBisection(&_IBisectionChallenge.TransactOpts, _rollupAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
 }
 
 // IStakingABI is the input ABI used to generate the binding from.
-const IStakingABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"winner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const IStakingABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"winner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IStakingFuncSigs maps the 4-byte function signature to its string representation.
 var IStakingFuncSigs = map[string]string{
-	"6bc3cd22": "resolveChallenge(address,address,uint256)",
+	"396f51cf": "resolveChallenge(address,address)",
 }
 
 // IStaking is an auto generated Go binding around an Ethereum contract.
@@ -2097,29 +2293,29 @@ func (_IStaking *IStakingTransactorRaw) Transact(opts *bind.TransactOpts, method
 	return _IStaking.Contract.contract.Transact(opts, method, params...)
 }
 
-// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
 //
-// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) returns()
-func (_IStaking *IStakingTransactor) ResolveChallenge(opts *bind.TransactOpts, winner common.Address, loser common.Address, challengeType *big.Int) (*types.Transaction, error) {
-	return _IStaking.contract.Transact(opts, "resolveChallenge", winner, loser, challengeType)
+// Solidity: function resolveChallenge(address winner, address loser) returns()
+func (_IStaking *IStakingTransactor) ResolveChallenge(opts *bind.TransactOpts, winner common.Address, loser common.Address) (*types.Transaction, error) {
+	return _IStaking.contract.Transact(opts, "resolveChallenge", winner, loser)
 }
 
-// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
 //
-// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) returns()
-func (_IStaking *IStakingSession) ResolveChallenge(winner common.Address, loser common.Address, challengeType *big.Int) (*types.Transaction, error) {
-	return _IStaking.Contract.ResolveChallenge(&_IStaking.TransactOpts, winner, loser, challengeType)
+// Solidity: function resolveChallenge(address winner, address loser) returns()
+func (_IStaking *IStakingSession) ResolveChallenge(winner common.Address, loser common.Address) (*types.Transaction, error) {
+	return _IStaking.Contract.ResolveChallenge(&_IStaking.TransactOpts, winner, loser)
 }
 
-// ResolveChallenge is a paid mutator transaction binding the contract method 0x6bc3cd22.
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
 //
-// Solidity: function resolveChallenge(address winner, address loser, uint256 challengeType) returns()
-func (_IStaking *IStakingTransactorSession) ResolveChallenge(winner common.Address, loser common.Address, challengeType *big.Int) (*types.Transaction, error) {
-	return _IStaking.Contract.ResolveChallenge(&_IStaking.TransactOpts, winner, loser, challengeType)
+// Solidity: function resolveChallenge(address winner, address loser) returns()
+func (_IStaking *IStakingTransactorSession) ResolveChallenge(winner common.Address, loser common.Address) (*types.Transaction, error) {
+	return _IStaking.Contract.ResolveChallenge(&_IStaking.TransactOpts, winner, loser)
 }
 
 // InboxTopChallengeABI is the input ABI used to generate the binding from.
-const InboxTopChallengeABI = "[{\"anonymous\":false,\"inputs\":[],\"name\":\"AsserterTimedOut\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32[]\",\"name\":\"chainHashes\",\"type\":\"bytes32[]\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"totalLength\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"}],\"name\":\"Bisected\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"ChallengerTimedOut\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"segmentIndex\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"}],\"name\":\"Continued\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"}],\"name\":\"InitiatedChallenge\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"OneStepProofCompleted\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"_chainHashes\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"_chainLength\",\"type\":\"uint256\"}],\"name\":\"bisect\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_segmentToChallenge\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"_bisectionRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_bisectionHash\",\"type\":\"bytes32\"}],\"name\":\"chooseSegment\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_vmAddress\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_asserter\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_challenger\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_challengePeriodTicks\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"_challengeState\",\"type\":\"bytes32\"}],\"name\":\"initializeBisection\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_lowerHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_value\",\"type\":\"bytes32\"}],\"name\":\"oneStepProof\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"timeoutChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const InboxTopChallengeABI = "[{\"anonymous\":false,\"inputs\":[],\"name\":\"AsserterTimedOut\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32[]\",\"name\":\"chainHashes\",\"type\":\"bytes32[]\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"totalLength\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"}],\"name\":\"Bisected\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"ChallengerTimedOut\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"segmentIndex\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"}],\"name\":\"Continued\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"}],\"name\":\"InitiatedChallenge\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"OneStepProofCompleted\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"_chainHashes\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"_chainLength\",\"type\":\"uint256\"}],\"name\":\"bisect\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_segmentToChallenge\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"_bisectionRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_bisectionHash\",\"type\":\"bytes32\"}],\"name\":\"chooseSegment\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_rollupAddress\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_asserter\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_challenger\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_challengePeriodTicks\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"_challengeState\",\"type\":\"bytes32\"}],\"name\":\"initializeBisection\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_lowerHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_value\",\"type\":\"bytes32\"}],\"name\":\"oneStepProof\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"timeoutChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // InboxTopChallengeFuncSigs maps the 4-byte function signature to its string representation.
 var InboxTopChallengeFuncSigs = map[string]string{
@@ -2131,7 +2327,7 @@ var InboxTopChallengeFuncSigs = map[string]string{
 }
 
 // InboxTopChallengeBin is the compiled bytecode used for deploying new contracts.
-var InboxTopChallengeBin = "0x608060405234801561001057600080fd5b50611158806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c806302ad1e4e1461005c57806337423267146100a057806379a9ad8514610145578063ced5c1bf146101f7578063df9ce01b146101ff575b600080fd5b61009e600480360360a081101561007257600080fd5b506001600160a01b03813581169160208101358216916040820135169060608101359060800135610222565b005b61009e600480360360408110156100b657600080fd5b8101906020810181356401000000008111156100d157600080fd5b8201836020820111156100e357600080fd5b8035906020019184602083028401116401000000008311171561010557600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295505091359250610237915050565b61009e6004803603608081101561015b57600080fd5b8135919081019060408101602082013564010000000081111561017d57600080fd5b82018360208201111561018f57600080fd5b803590602001918460018302840111640100000000831117156101b157600080fd5b91908080601f01602080910402602001604051908101604052809392919081815260200183838082843760009201919091525092955050823593505050602001356105f9565b61009e6108ba565b61009e6004803603604081101561021557600080fd5b508035906020013561099a565b61022e85858585610b66565b60065550505050565b60055460ff16600281111561024857fe5b600114604051806040016040528060098152602001684249535f535441544560b81b815250906102f65760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b838110156102bb5781810151838201526020016102a3565b50505050905090810190601f1680156102e85780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b5060035461030343610c81565b11156040518060400160405280600c81526020016b4249535f444541444c494e4560a01b815250906103765760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156102bb5781810151838201526020016102a3565b5060015460408051808201909152600a8152692124a9afa9a2a72222a960b11b6020820152906001600160a01b031633146103f25760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156102bb5781810151838201526020016102a3565b506000600183510390506104366104318460008151811061040f57fe5b602002602001015185848151811061042357fe5b602002602001015185610c88565b610cbf565b600182116104755760405162461bcd60e51b81526004018080602001828103825260218152602001806111036021913960400191505060405180910390fd5b6060816040519080825280602002602001820160405280156104a1578160200160208202803883390190505b5090506104e0846000815181106104b457fe5b6020026020010151856001815181106104c957fe5b60200260200101516104db8686610d31565b610c88565b816000815181106104ed57fe5b602090810291909101015260015b8281101561055a5761053b85828151811061051257fe5b602002602001015186836001018151811061052957fe5b60200260200101516104db8787610d4f565b82828151811061054757fe5b60209081029190910101526001016104fb565b5061056481610d62565b61056c610d71565b7f6ccb624e36453fb82f1a793715d74763283e458adc397e1f7d73dcdf604afbb184846003546040518080602001848152602001838152602001828103825285818151815260200191508051906020019060200280838360005b838110156105de5781810151838201526020016105c6565b5050505090500194505050505060405180910390a150505050565b60055460ff16600281111561060a57fe5b60021460405180604001604052806009815260200168434f4e5f535441544560b81b8152509061067b5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156102bb5781810151838201526020016102a3565b5060035461068843610c81565b11156040518060400160405280600c81526020016b434f4e5f444541444c494e4560a01b815250906106fb5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156102bb5781810151838201526020016102a3565b5060025460408051808201909152600a81526921a7a72fa9a2a72222a960b11b6020820152906001600160a01b031633146107775760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156102bb5781810151838201526020016102a3565b5060065482146040518060400160405280600881526020016721a7a72fa82922ab60c11b815250906107ea5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156102bb5781810151838201526020016102a3565b506107fa83838387600101610d8e565b6040518060400160405280600981526020016821a7a72fa82927a7a360b91b815250906108685760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156102bb5781810151838201526020016102a3565b506006819055610876610e8f565b60035460408051868152602081019290925280517f1e1c1e4e68a25c69a078a396e73975691c071d69ef789015dc16a562957804e49281900390910190a150505050565b6003546108c643610c81565b11610918576040805162461bcd60e51b815260206004820152601760248201527f446561646c696e65206861736e27742065787069726564000000000000000000604482015290519081900360640190fd5b600160055460ff16600281111561092b57fe5b1415610967576040517f2b92a4b014281aa2424baba9ea60bf4f26833d1c1fbd873e51cd1a6caeef48f090600090a1610962610ea2565b610998565b6040517f4e1f1f06cf69d199fcdb4d87a5a92d5248ca6b540e9fc2d3698927c5002a236a90600090a1610998610ead565b565b60055460ff1660028111156109ab57fe5b600114604051806040016040528060098152602001684249535f535441544560b81b81525090610a1c5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156102bb5781810151838201526020016102a3565b50600354610a2943610c81565b11156040518060400160405280600c81526020016b4249535f444541444c494e4560a01b81525090610a9c5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156102bb5781810151838201526020016102a3565b5060015460408051808201909152600a8152692124a9afa9a2a72222a960b11b6020820152906001600160a01b03163314610b185760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156102bb5781810151838201526020016102a3565b50610b3161043183610b2a8585610eb5565b6001610c88565b6040517f117efdf1fdd8be5a6ff0fb3c32333d7033bbd9523924bd0d9ca28f43540516f590600090a1610b62610ead565b5050565b600060055460ff166002811115610b7957fe5b146040518060400160405280600f81526020016e4348414c5f494e49545f535441544560881b81525090610bee5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156102bb5781810151838201526020016102a3565b50600080546001600160a01b038681166001600160a01b03199283161790925560018054868416908316178155600280549386169390921692909217905560048290556005805460ff19169091179055610c46610ee1565b60035460408051918252517fe070f23072cbc6c0fc7253b8d0120649d5f9d6e19a8aeab79eb50aa6360bcc679181900360200190a150505050565b6103e80290565b6040805160208082019590955280820193909352606080840192909252805180840390920182526080909201909152805191012090565b6006548114604051806040016040528060088152602001672124a9afa82922ab60c11b81525090610b625760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156102bb5781810151838201526020016102a3565b6000818381610d3c57fe5b06828481610d4657fe5b04019392505050565b6000818381610d5a57fe5b049392505050565b610d6b81610ef3565b60065550565b600580546002919060ff19166001835b0217905550610998610ee1565b600080838160205b88518111610e81578089015193506020818a510360200181610db457fe5b0491505b600082118015610dcb5750600286066001145b8015610dd957508160020a86115b15610dec57600286046001019550610db8565b60028606610e37578383604051602001808381526020018281526020019250505060405160208183030381529060405280519060200120925060028681610e2f57fe5b049550610e79565b8284604051602001808381526020018281526020019250505060405160208183030381529060405280519060200120925060028681610e7257fe5b0460010195505b602001610d96565b505090941495945050505050565b600580546001919060ff19168280610d81565b610eaa611031565b33ff5b610eaa6110da565b604080516020808201949094528082019290925280518083038201815260609092019052805191012090565b600454610eed43610c81565b01600355565b6000815b6001815111156110145760606002825160010181610f1157fe5b04604051908082528060200260200182016040528015610f3b578160200160208202803883390190505b50905060005b815181101561100c578251816002026001011015610fd457828160020281518110610f6857fe5b6020026020010151838260020260010181518110610f8257fe5b6020026020010151604051602001808381526020018281526020019250505060405160208183030381529060405280519060200120828281518110610fc357fe5b602002602001018181525050611004565b828160020281518110610fe357fe5b6020026020010151828281518110610ff757fe5b6020026020010181815250505b600101610f41565b509050610ef7565b8060008151811061102157fe5b6020026020010151915050919050565b6000546002546001546001600160a01b0392831692636bc3cd2292811691166110586110fd565b6040518463ffffffff1660e01b815260040180846001600160a01b03166001600160a01b03168152602001836001600160a01b03166001600160a01b031681526020018281526020019350505050600060405180830381600087803b1580156110c057600080fd5b505af11580156110d4573d6000803e3d6000fd5b50505050565b6000546001546002546001600160a01b0392831692636bc3cd2292811691166110585b60009056fe43616e27742062697365637420636861696e206f66206c657373207468616e2032a265627a7a7231582088d14aa7f7231c155d4c0fc7c465082c828be73d36a6d4bc1bc615b35933065c64736f6c634300050f0032"
+var InboxTopChallengeBin = "0x608060405234801561001057600080fd5b506110ee806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c806302ad1e4e1461005c57806337423267146100a057806379a9ad8514610110578063ced5c1bf146101c2578063df9ce01b146101ca575b600080fd5b61009e600480360360a081101561007257600080fd5b506001600160a01b038135811691602081013582169160408201351690606081013590608001356101ed565b005b61009e600480360360408110156100b657600080fd5b8101906020810181356401000000008111156100d157600080fd5b8201836020820111156100e357600080fd5b8035906020019184602083028401116401000000008311171561010557600080fd5b919350915035610202565b61009e6004803603608081101561012657600080fd5b8135919081019060408101602082013564010000000081111561014857600080fd5b82018360208201111561015a57600080fd5b8035906020019184600183028401116401000000008311171561017c57600080fd5b91908080601f01602080910402602001604051908101604052809392919081815260200183838082843760009201919091525092955050823593505050602001356105a7565b61009e610868565b61009e600480360360408110156101e057600080fd5b5080359060200135610948565b6101f985858585610b14565b60065550505050565b60055460ff16600281111561021357fe5b600114604051806040016040528060098152602001684249535f535441544560b81b815250906102c15760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b8381101561028657818101518382015260200161026e565b50505050905090810190601f1680156102b35780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b506003546102ce43610c2f565b11156040518060400160405280600c81526020016b4249535f444541444c494e4560a01b815250906103415760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561028657818101518382015260200161026e565b5060015460408051808201909152600a8152692124a9afa9a2a72222a960b11b6020820152906001600160a01b031633146103bd5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561028657818101518382015260200161026e565b5060001982016103f96103f485856000816103d457fe5b905060200201358686858181106103e757fe5b9050602002013585610c36565b610c6d565b600182116104385760405162461bcd60e51b81526004018080602001828103825260218152602001806110996021913960400191505060405180910390fd5b606081604051908082528060200260200182016040528015610464578160200160208202803883390190505b5090506104a18585600081811061047757fe5b905060200201358686600181811061048b57fe5b9050602002013561049c8686610cdf565b610c36565b816000815181106104ae57fe5b602090810291909101015260015b82811015610519576104fa8686838181106104d357fe5b905060200201358787846001018181106104e957fe5b9050602002013561049c8787610cfd565b82828151811061050657fe5b60209081029190910101526001016104bc565b5061052381610d10565b61052b610d1f565b7f6ccb624e36453fb82f1a793715d74763283e458adc397e1f7d73dcdf604afbb185858560035460405180806020018481526020018381526020018281038252868682818152602001925060200280828437600083820152604051601f909101601f191690920182900397509095505050505050a15050505050565b60055460ff1660028111156105b857fe5b60021460405180604001604052806009815260200168434f4e5f535441544560b81b815250906106295760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561028657818101518382015260200161026e565b5060035461063643610c2f565b11156040518060400160405280600c81526020016b434f4e5f444541444c494e4560a01b815250906106a95760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561028657818101518382015260200161026e565b5060025460408051808201909152600a81526921a7a72fa9a2a72222a960b11b6020820152906001600160a01b031633146107255760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561028657818101518382015260200161026e565b5060065482146040518060400160405280600881526020016721a7a72fa82922ab60c11b815250906107985760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561028657818101518382015260200161026e565b506107a883838387600101610d3c565b6040518060400160405280600981526020016821a7a72fa82927a7a360b91b815250906108165760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561028657818101518382015260200161026e565b506006819055610824610e3d565b60035460408051868152602081019290925280517f1e1c1e4e68a25c69a078a396e73975691c071d69ef789015dc16a562957804e49281900390910190a150505050565b60035461087443610c2f565b116108c6576040805162461bcd60e51b815260206004820152601760248201527f446561646c696e65206861736e27742065787069726564000000000000000000604482015290519081900360640190fd5b600160055460ff1660028111156108d957fe5b1415610915576040517f2b92a4b014281aa2424baba9ea60bf4f26833d1c1fbd873e51cd1a6caeef48f090600090a1610910610e50565b610946565b6040517f4e1f1f06cf69d199fcdb4d87a5a92d5248ca6b540e9fc2d3698927c5002a236a90600090a1610946610ec4565b565b60055460ff16600281111561095957fe5b600114604051806040016040528060098152602001684249535f535441544560b81b815250906109ca5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561028657818101518382015260200161026e565b506003546109d743610c2f565b11156040518060400160405280600c81526020016b4249535f444541444c494e4560a01b81525090610a4a5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561028657818101518382015260200161026e565b5060015460408051808201909152600a8152692124a9afa9a2a72222a960b11b6020820152906001600160a01b03163314610ac65760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561028657818101518382015260200161026e565b50610adf6103f483610ad88585610f1c565b6001610c36565b6040517f117efdf1fdd8be5a6ff0fb3c32333d7033bbd9523924bd0d9ca28f43540516f590600090a1610b10610ec4565b5050565b600060055460ff166002811115610b2757fe5b146040518060400160405280600f81526020016e4348414c5f494e49545f535441544560881b81525090610b9c5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561028657818101518382015260200161026e565b50600080546001600160a01b038681166001600160a01b03199283161790925560018054868416908316178155600280549386169390921692909217905560048290556005805460ff19169091179055610bf4610f48565b60035460408051918252517fe070f23072cbc6c0fc7253b8d0120649d5f9d6e19a8aeab79eb50aa6360bcc679181900360200190a150505050565b6103e80290565b6040805160208082019590955280820193909352606080840192909252805180840390920182526080909201909152805191012090565b6006548114604051806040016040528060088152602001672124a9afa82922ab60c11b81525090610b105760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561028657818101518382015260200161026e565b6000818381610cea57fe5b06828481610cf457fe5b04019392505050565b6000818381610d0857fe5b049392505050565b610d1981610f5a565b60065550565b600580546002919060ff19166001835b0217905550610946610f48565b600080838160205b88518111610e2f578089015193506020818a510360200181610d6257fe5b0491505b600082118015610d795750600286066001145b8015610d8757508160020a86115b15610d9a57600286046001019550610d66565b60028606610de5578383604051602001808381526020018281526020019250505060405160208183030381529060405280519060200120925060028681610ddd57fe5b049550610e27565b8284604051602001808381526020018281526020019250505060405160208183030381529060405280519060200120925060028681610e2057fe5b0460010195505b602001610d44565b505090941495945050505050565b600580546001919060ff19168280610d2f565b600080546002546001546040805163396f51cf60e01b81526001600160a01b039384166004820152918316602483015251919092169263396f51cf926044808201939182900301818387803b158015610ea857600080fd5b505af1158015610ebc573d6000803e3d6000fd5b503392505050ff5b600080546001546002546040805163396f51cf60e01b81526001600160a01b039384166004820152918316602483015251919092169263396f51cf926044808201939182900301818387803b158015610ea857600080fd5b604080516020808201949094528082019290925280518083038201815260609092019052805191012090565b600454610f5443610c2f565b01600355565b6000815b60018151111561107b5760606002825160010181610f7857fe5b04604051908082528060200260200182016040528015610fa2578160200160208202803883390190505b50905060005b815181101561107357825181600202600101101561103b57828160020281518110610fcf57fe5b6020026020010151838260020260010181518110610fe957fe5b602002602001015160405160200180838152602001828152602001925050506040516020818303038152906040528051906020012082828151811061102a57fe5b60200260200101818152505061106b565b82816002028151811061104a57fe5b602002602001015182828151811061105e57fe5b6020026020010181815250505b600101610fa8565b509050610f5e565b8060008151811061108857fe5b602002602001015191505091905056fe43616e27742062697365637420636861696e206f66206c657373207468616e2032a265627a7a72315820d012e1eb1303204c20cc9d6c5a582e0c8e115fa83373c364f451232087abe00664736f6c63430005110032"
 
 // DeployInboxTopChallenge deploys a new Ethereum contract, binding an instance of InboxTopChallenge to it.
 func DeployInboxTopChallenge(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *InboxTopChallenge, error) {
@@ -2333,23 +2529,23 @@ func (_InboxTopChallenge *InboxTopChallengeTransactorSession) ChooseSegment(_seg
 
 // InitializeBisection is a paid mutator transaction binding the contract method 0x02ad1e4e.
 //
-// Solidity: function initializeBisection(address _vmAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
-func (_InboxTopChallenge *InboxTopChallengeTransactor) InitializeBisection(opts *bind.TransactOpts, _vmAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
-	return _InboxTopChallenge.contract.Transact(opts, "initializeBisection", _vmAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
+// Solidity: function initializeBisection(address _rollupAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
+func (_InboxTopChallenge *InboxTopChallengeTransactor) InitializeBisection(opts *bind.TransactOpts, _rollupAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
+	return _InboxTopChallenge.contract.Transact(opts, "initializeBisection", _rollupAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
 }
 
 // InitializeBisection is a paid mutator transaction binding the contract method 0x02ad1e4e.
 //
-// Solidity: function initializeBisection(address _vmAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
-func (_InboxTopChallenge *InboxTopChallengeSession) InitializeBisection(_vmAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
-	return _InboxTopChallenge.Contract.InitializeBisection(&_InboxTopChallenge.TransactOpts, _vmAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
+// Solidity: function initializeBisection(address _rollupAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
+func (_InboxTopChallenge *InboxTopChallengeSession) InitializeBisection(_rollupAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
+	return _InboxTopChallenge.Contract.InitializeBisection(&_InboxTopChallenge.TransactOpts, _rollupAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
 }
 
 // InitializeBisection is a paid mutator transaction binding the contract method 0x02ad1e4e.
 //
-// Solidity: function initializeBisection(address _vmAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
-func (_InboxTopChallenge *InboxTopChallengeTransactorSession) InitializeBisection(_vmAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
-	return _InboxTopChallenge.Contract.InitializeBisection(&_InboxTopChallenge.TransactOpts, _vmAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
+// Solidity: function initializeBisection(address _rollupAddress, address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeState) returns()
+func (_InboxTopChallenge *InboxTopChallengeTransactorSession) InitializeBisection(_rollupAddress common.Address, _asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeState [32]byte) (*types.Transaction, error) {
+	return _InboxTopChallenge.Contract.InitializeBisection(&_InboxTopChallenge.TransactOpts, _rollupAddress, _asserter, _challenger, _challengePeriodTicks, _challengeState)
 }
 
 // OneStepProof is a paid mutator transaction binding the contract method 0xdf9ce01b.
@@ -3192,11 +3388,173 @@ func (_InboxTopChallenge *InboxTopChallengeFilterer) ParseOneStepProofCompleted(
 	return event, nil
 }
 
+// MarshalingABI is the input ABI used to generate the binding from.
+const MarshalingABI = "[]"
+
+// MarshalingBin is the compiled bytecode used for deploying new contracts.
+var MarshalingBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158209b0c1d3b5eda3a21d7269632ba939a0fb3ac18f738de2c9350fb50f42ecd3abe64736f6c63430005110032"
+
+// DeployMarshaling deploys a new Ethereum contract, binding an instance of Marshaling to it.
+func DeployMarshaling(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Marshaling, error) {
+	parsed, err := abi.JSON(strings.NewReader(MarshalingABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(MarshalingBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &Marshaling{MarshalingCaller: MarshalingCaller{contract: contract}, MarshalingTransactor: MarshalingTransactor{contract: contract}, MarshalingFilterer: MarshalingFilterer{contract: contract}}, nil
+}
+
+// Marshaling is an auto generated Go binding around an Ethereum contract.
+type Marshaling struct {
+	MarshalingCaller     // Read-only binding to the contract
+	MarshalingTransactor // Write-only binding to the contract
+	MarshalingFilterer   // Log filterer for contract events
+}
+
+// MarshalingCaller is an auto generated read-only Go binding around an Ethereum contract.
+type MarshalingCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// MarshalingTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type MarshalingTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// MarshalingFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type MarshalingFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// MarshalingSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type MarshalingSession struct {
+	Contract     *Marshaling       // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// MarshalingCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type MarshalingCallerSession struct {
+	Contract *MarshalingCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts     // Call options to use throughout this session
+}
+
+// MarshalingTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type MarshalingTransactorSession struct {
+	Contract     *MarshalingTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
+}
+
+// MarshalingRaw is an auto generated low-level Go binding around an Ethereum contract.
+type MarshalingRaw struct {
+	Contract *Marshaling // Generic contract binding to access the raw methods on
+}
+
+// MarshalingCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type MarshalingCallerRaw struct {
+	Contract *MarshalingCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// MarshalingTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type MarshalingTransactorRaw struct {
+	Contract *MarshalingTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewMarshaling creates a new instance of Marshaling, bound to a specific deployed contract.
+func NewMarshaling(address common.Address, backend bind.ContractBackend) (*Marshaling, error) {
+	contract, err := bindMarshaling(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &Marshaling{MarshalingCaller: MarshalingCaller{contract: contract}, MarshalingTransactor: MarshalingTransactor{contract: contract}, MarshalingFilterer: MarshalingFilterer{contract: contract}}, nil
+}
+
+// NewMarshalingCaller creates a new read-only instance of Marshaling, bound to a specific deployed contract.
+func NewMarshalingCaller(address common.Address, caller bind.ContractCaller) (*MarshalingCaller, error) {
+	contract, err := bindMarshaling(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &MarshalingCaller{contract: contract}, nil
+}
+
+// NewMarshalingTransactor creates a new write-only instance of Marshaling, bound to a specific deployed contract.
+func NewMarshalingTransactor(address common.Address, transactor bind.ContractTransactor) (*MarshalingTransactor, error) {
+	contract, err := bindMarshaling(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &MarshalingTransactor{contract: contract}, nil
+}
+
+// NewMarshalingFilterer creates a new log filterer instance of Marshaling, bound to a specific deployed contract.
+func NewMarshalingFilterer(address common.Address, filterer bind.ContractFilterer) (*MarshalingFilterer, error) {
+	contract, err := bindMarshaling(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &MarshalingFilterer{contract: contract}, nil
+}
+
+// bindMarshaling binds a generic wrapper to an already deployed contract.
+func bindMarshaling(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(MarshalingABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Marshaling *MarshalingRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Marshaling.Contract.MarshalingCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Marshaling *MarshalingRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Marshaling.Contract.MarshalingTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Marshaling *MarshalingRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Marshaling.Contract.MarshalingTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Marshaling *MarshalingCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Marshaling.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Marshaling *MarshalingTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Marshaling.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Marshaling *MarshalingTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Marshaling.Contract.contract.Transact(opts, method, params...)
+}
+
 // MerkleLibABI is the input ABI used to generate the binding from.
 const MerkleLibABI = "[]"
 
 // MerkleLibBin is the compiled bytecode used for deploying new contracts.
-var MerkleLibBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158206d3c48eac2025378f19036acea5dd5a4170cbcc927f1a4e42331138ee05eeeec64736f6c634300050f0032"
+var MerkleLibBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a7231582091f0cf8a8d490f7587e2923ffc15a0c546101f3531c51caa0f561f62b1abd9b464736f6c63430005110032"
 
 // DeployMerkleLib deploys a new Ethereum contract, binding an instance of MerkleLib to it.
 func DeployMerkleLib(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *MerkleLib, error) {
@@ -3358,7 +3716,7 @@ func (_MerkleLib *MerkleLibTransactorRaw) Transact(opts *bind.TransactOpts, meth
 const MessagesABI = "[]"
 
 // MessagesBin is the compiled bytecode used for deploying new contracts.
-var MessagesBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820288f926630ff090699d165f91860f5c7a9370fc5aaa71d38fc10b008fb025f7b64736f6c634300050f0032"
+var MessagesBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820a0120e26809cb38495027952324fa1ab62cba162e76d4c7eaeda16c142fe07d564736f6c63430005110032"
 
 // DeployMessages deploys a new Ethereum contract, binding an instance of Messages to it.
 func DeployMessages(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Messages, error) {
@@ -3520,7 +3878,7 @@ func (_Messages *MessagesTransactorRaw) Transact(opts *bind.TransactOpts, method
 const RollupTimeABI = "[]"
 
 // RollupTimeBin is the compiled bytecode used for deploying new contracts.
-var RollupTimeBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820d6e7c8732828a920a7e7e891f92298db188b8d6aee18e1f286205eb3f54a834564736f6c634300050f0032"
+var RollupTimeBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820bc5e1c1239ee257a8886402d63fd0e30faaddb124d4cfd39eb5105366f8e112b64736f6c63430005110032"
 
 // DeployRollupTime deploys a new Ethereum contract, binding an instance of RollupTime to it.
 func DeployRollupTime(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *RollupTime, error) {
@@ -3682,7 +4040,7 @@ func (_RollupTime *RollupTimeTransactorRaw) Transact(opts *bind.TransactOpts, me
 const ValueABI = "[]"
 
 // ValueBin is the compiled bytecode used for deploying new contracts.
-var ValueBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820756e12f9a680c5aa2d821f4845604d9e478c3e9e61704ebc03fff3bdaf85e52964736f6c634300050f0032"
+var ValueBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a7231582074a5343624f96b1b5461fa24f07e16f0444f98c70cb6e0869342f386e3cc720364736f6c63430005110032"
 
 // DeployValue deploys a new Ethereum contract, binding an instance of Value to it.
 func DeployValue(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Value, error) {

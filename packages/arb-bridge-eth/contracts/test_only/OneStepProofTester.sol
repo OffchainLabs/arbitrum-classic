@@ -25,7 +25,6 @@ contract OneStepProofTester {
         bytes32 beforeHash,
         bytes32 beforeInbox,
         uint256 beforeInboxValueSize,
-        bytes32 afterHash,
         bool didInboxInsn,
         bytes32 firstMessage,
         bytes32 lastMessage,
@@ -33,20 +32,21 @@ contract OneStepProofTester {
         bytes32 lastLog,
         uint64 gas,
         bytes memory proof
-    ) public pure returns (uint256) {
+    ) public pure returns (bytes32) {
         return
-            OneStepProof.validateProof(
-                beforeHash,
-                beforeInbox,
-                beforeInboxValueSize,
-                afterHash,
-                didInboxInsn,
-                firstMessage,
-                lastMessage,
-                firstLog,
-                lastLog,
-                gas,
-                proof
+            Machine.hash(
+                OneStepProof.validateProof(
+                    beforeHash,
+                    beforeInbox,
+                    beforeInboxValueSize,
+                    didInboxInsn,
+                    firstMessage,
+                    lastMessage,
+                    firstLog,
+                    lastLog,
+                    gas,
+                    proof
+                )
             );
     }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,12 @@
 
 pragma solidity ^0.5.11;
 
-import "../arch/Protocol.sol";
+import "../arch/Marshaling.sol";
 import "../libraries/RollupTime.sol";
 
 library RollupUtils {
+    using Hashing for Value.Data;
+
     uint256 private constant VALID_CHILD_TYPE = 3;
 
     struct ConfirmData {
@@ -149,16 +151,12 @@ library RollupUtils {
         uint256 startOffset,
         uint256 count
     ) internal pure returns (bytes32, uint256) {
-        bool valid;
         bytes32 hashVal = 0x00;
         Value.Data memory messageVal;
         uint256 offset = startOffset;
         for (uint256 i = 0; i < count; i++) {
-            (valid, offset, messageVal) = Value.deserialize(messages, offset);
-            require(valid, "Invalid output message");
-            hashVal = keccak256(
-                abi.encodePacked(hashVal, Value.hash(messageVal))
-            );
+            (offset, messageVal) = Marshaling.deserialize(messages, offset);
+            hashVal = keccak256(abi.encodePacked(hashVal, messageVal.hash()));
         }
         return (hashVal, offset);
     }
