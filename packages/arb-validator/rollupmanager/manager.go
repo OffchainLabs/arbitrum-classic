@@ -70,6 +70,8 @@ type Manager struct {
 
 const defaultMaxReorgDepth = 100
 
+const assumedValidThreshold = 2
+
 func CreateManager(
 	ctx context.Context,
 	rollupAddr common.Address,
@@ -132,13 +134,14 @@ func CreateManagerAdvanced(
 				log.Fatal(err)
 			}
 
-			chain, err := chainobserver.InitializeChainObserver(
+			chain, err := chainobserver.NewChainObserver(
 				runCtx,
 				rollupAddr,
 				updateOpinion,
 				clnt,
 				rollupWatcher,
 				checkpointer,
+				assumedValidThreshold,
 			)
 			if err != nil {
 				log.Fatal(err)
@@ -171,6 +174,9 @@ func CreateManagerAdvanced(
 				// we are processing
 				maxReorg := checkpointer.MaxReorgHeight()
 				for {
+					if err := man.activeChain.UpdateAssumedValidBlock(runCtx, clnt, assumedValidThreshold); err != nil {
+						return err
+					}
 					currentProcessedBlockId := man.activeChain.CurrentBlockId()
 					currentLocalHeight := currentProcessedBlockId.Height.AsInt()
 
@@ -239,6 +245,10 @@ func CreateManagerAdvanced(
 				for maybeBlockId := range headersChan {
 					if maybeBlockId.Err != nil {
 						return errors2.Wrap(maybeBlockId.Err, "Error getting new header")
+					}
+
+					if err := man.activeChain.UpdateAssumedValidBlock(runCtx, clnt, assumedValidThreshold); err != nil {
+						return err
 					}
 
 					blockId := maybeBlockId.BlockId

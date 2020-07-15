@@ -42,7 +42,9 @@ type ArbRollup interface {
 		beforeState *valprotocol.VMProtoData,
 		assertionParams *valprotocol.AssertionParams,
 		assertionClaim *valprotocol.AssertionClaim,
-		stakerProof []common.Hash) ([]Event, error)
+		stakerProof []common.Hash,
+		validBlock *common.BlockId,
+	) ([]Event, error)
 	Confirm(ctx context.Context, opp *valprotocol.ConfirmOpportunity) ([]Event, error)
 	StartChallenge(
 		ctx context.Context,

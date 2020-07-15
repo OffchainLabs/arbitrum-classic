@@ -135,6 +135,7 @@ async function makeEmptyAssertion(
   importedMessageCount: utils.BigNumberish,
   readInbox: boolean
 ): Promise<ContractTransaction> {
+  const block = await ethers.provider.getBlock('latest')
   return arbRollup.makeAssertion(
     [
       vmState,
@@ -146,7 +147,9 @@ async function makeEmptyAssertion(
       zerobytes32,
       zerobytes32,
       zerobytes32,
+      block.hash,
     ],
+    block.number,
     0,
     0,
     0,
@@ -372,7 +375,9 @@ async function makeAssertion(
   prevChildType: number,
   params: AssertionParams,
   claims: AssertionClaim,
-  stakerProof: Array<string>
+  stakerProof: Array<string>,
+  knownValidBlockHash: string,
+  knownValidBlockHeight: number
 ): Promise<{ receipt: providers.TransactionReceipt; assertion: Assertion }> {
   const tx = await arbRollup.makeAssertion(
     [
@@ -385,7 +390,9 @@ async function makeAssertion(
       claims.executionAssertion.afterState,
       claims.executionAssertion.outMessagesAcc(),
       claims.executionAssertion.outLogsAcc(),
+      knownValidBlockHash,
     ],
+    knownValidBlockHeight,
     prevProtoData.inboxCount,
     prevDeadline,
     prevChildType,
@@ -556,6 +563,7 @@ describe('ArbRollup', function () {
         []
       )
     )
+    const block = await ethers.provider.getBlock('latest')
     const info = await makeAssertion(
       arbRollup,
       zerobytes32,
@@ -565,7 +573,9 @@ describe('ArbRollup', function () {
       0,
       params,
       claims,
-      []
+      [],
+      block.hash,
+      block.number
     )
 
     assertionInfo = info.assertion
@@ -713,6 +723,7 @@ describe('ArbRollup', function () {
       )
     )
 
+    const block = await ethers.provider.getBlock('latest')
     assertionInfo = (
       await makeAssertion(
         arbRollup.connect(accounts[1]),
@@ -723,7 +734,9 @@ describe('ArbRollup', function () {
         0,
         params,
         claims,
-        []
+        [],
+        block.hash,
+        block.number
       )
     ).assertion
   })

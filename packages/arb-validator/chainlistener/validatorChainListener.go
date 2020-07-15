@@ -133,6 +133,7 @@ func MakeAssertion(
 		prepared.Params,
 		prepared.Claim,
 		proof,
+		prepared.ValidBlock,
 	)
 }
 

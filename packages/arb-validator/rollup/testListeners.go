@@ -18,8 +18,10 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainobserver"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -50,21 +52,27 @@ func NewEvil_WrongAssertionListener(
 	return &evil_WrongAssertionListener{chainlistener.NewValidatorChainListener(context.Background(), rollupAddress, actor), kind}
 }
 
-func (lis *evil_WrongAssertionListener) AssertionPrepared(ctx context.Context, obs *chainobserver.ChainObserver, assertion *chainlistener.PreparedAssertion) {
+func (lis *evil_WrongAssertionListener) AssertionPrepared(
+	ctx context.Context,
+	params valprotocol.ChainParams,
+	nodeGraph *nodegraph.StakedNodeGraph,
+	nodeLocation *structures.Node,
+	latestBlockId *common.BlockId,
+	prepared *chainlistener.PreparedAssertion) {
 	badHash := common.Hash{}
 	badHash[5] = 37
 	switch lis.kind {
 	case WrongInboxTopAssertion:
-		assertion.Claim.AfterInboxTop = badHash
+		prepared.Claim.AfterInboxTop = badHash
 		log.Println("Prepared EVIL inbox top assertion")
 	case WrongMessagesSliceAssertion:
-		assertion.Claim.ImportedMessagesSlice = badHash
+		prepared.Claim.ImportedMessagesSlice = badHash
 		log.Println("Prepared EVIL imported messages assertion")
 	case WrongExecutionAssertion:
-		assertion.Claim.AssertionStub.AfterHash = badHash
+		prepared.Claim.AssertionStub.AfterHash = badHash
 		log.Println("Prepared EVIL execution assertion")
 	default:
 		log.Fatal("unrecognized evil listener type")
 	}
-	lis.ValidatorChainListener.AssertionPrepared(ctx, obs.GetChainParams(), obs.NodeGraph, obs.KnownValidNode, obs.LatestBlockId, assertion)
+	lis.ValidatorChainListener.AssertionPrepared(ctx, params, nodeGraph, nodeLocation, latestBlockId, prepared)
 }
