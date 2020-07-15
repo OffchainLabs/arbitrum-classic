@@ -180,10 +180,11 @@ func (vm *arbRollup) MakeAssertion(
 	assertionParams *valprotocol.AssertionParams,
 	assertionClaim *valprotocol.AssertionClaim,
 	stakerProof []common.Hash,
+	validBlock *common.BlockId,
 ) ([]arbbridge.Event, error) {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
-	extraParams := [9][32]byte{
+	extraParams := [10][32]byte{
 		beforeState.MachineHash,
 		beforeState.InboxTop,
 		prevPrevLeafHash,
@@ -193,10 +194,12 @@ func (vm *arbRollup) MakeAssertion(
 		assertionClaim.AssertionStub.AfterHash,
 		assertionClaim.AssertionStub.LastMessageHash,
 		assertionClaim.AssertionStub.LastLogHash,
+		validBlock.HeaderHash,
 	}
 	tx, err := vm.ArbRollup.MakeAssertion(
 		vm.auth.getAuth(ctx),
 		extraParams,
+		validBlock.Height.AsInt(),
 		beforeState.InboxCount,
 		prevDeadline.Val,
 		uint32(prevChildType),
@@ -213,6 +216,7 @@ func (vm *arbRollup) MakeAssertion(
 			vm.auth.auth.From,
 			vm.rollupAddress,
 			extraParams,
+			validBlock.Height.AsInt(),
 			beforeState.InboxCount,
 			prevDeadline.Val,
 			uint32(prevChildType),

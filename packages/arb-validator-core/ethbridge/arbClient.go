@@ -143,6 +143,9 @@ func (c *EthArbClient) BlockIdForHeight(ctx context.Context, height *common.Time
 	if err != nil {
 		return nil, err
 	}
+	if header == nil {
+		return nil, errors.New("couldn't get header at height")
+	}
 	return getBlockID(header), nil
 }
 

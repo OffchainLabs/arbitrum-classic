@@ -34,16 +34,18 @@ type PreparedAssertion struct {
 	Claim       *valprotocol.AssertionClaim
 	Assertion   *protocol.ExecutionAssertion
 	Machine     machine.Machine
+	ValidBlock  *common.BlockId
 }
 
 func (pa *PreparedAssertion) String() string {
 	return fmt.Sprintf(
-		"PreparedAssertion(%v, %v, %v, %v, %v)",
+		"PreparedAssertion(%v, %v, %v, %v, %v, %v)",
 		pa.Prev.Hash(),
 		pa.BeforeState,
 		pa.Params,
 		pa.Claim,
 		pa.Assertion,
+		pa.ValidBlock,
 	)
 }
 
@@ -55,6 +57,7 @@ func (pa *PreparedAssertion) Clone() *PreparedAssertion {
 		Claim:       pa.Claim.Clone(),
 		Assertion:   pa.Assertion,
 		Machine:     pa.Machine,
+		ValidBlock:  pa.ValidBlock.Clone(),
 	}
 }
 

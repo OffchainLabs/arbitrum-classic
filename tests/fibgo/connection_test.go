@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 
@@ -253,7 +254,7 @@ func waitForReceipt(
 	for {
 		select {
 		case <-ticker.C:
-			return nil, errors.New("timed out waiting for receipt")
+			return nil, fmt.Errorf("timed out waiting for receipt for tx %v", txhash)
 		default:
 		}
 		receipt, err := client.TransactionReceipt(
