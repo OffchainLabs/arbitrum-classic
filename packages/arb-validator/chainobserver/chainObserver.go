@@ -98,7 +98,7 @@ func InitializeChainObserver(
 ) (*ChainObserver, error) {
 	if checkpointer.HasCheckpointedState() {
 		var chain *ChainObserver
-		if err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext) error {
+		if err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext, blockId *common.BlockId) error {
 			chainObserverBuf := &ChainObserverBuf{}
 			if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
 				return err

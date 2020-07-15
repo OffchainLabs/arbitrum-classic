@@ -19,7 +19,6 @@ package rollupmanager
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainobserver"
@@ -109,7 +108,17 @@ func CreateManagerAdvanced(
 			return nil, err
 		}
 	}
-	if err := verifyArbChain(ctx, rollupAddr, clnt, checkpointer); err != nil {
+	initialMachine, err := checkpointer.GetInitialMachine()
+	if err != nil {
+		return nil, err
+	}
+
+	rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := rollupWatcher.VerifyArbChain(ctx, initialMachine.Hash()); err != nil {
 		return nil, err
 	}
 
@@ -372,44 +381,4 @@ func (man *Manager) CurrentBlockId() (*common.BlockId, error) {
 
 func (man *Manager) GetCheckpointer() checkpointing.RollupCheckpointer {
 	return man.checkpointer
-}
-
-func verifyArbChain(
-	ctx context.Context,
-	rollupAddr common.Address,
-	clnt arbbridge.ArbClient,
-	checkpointer checkpointing.RollupCheckpointer,
-) error {
-	watcher, err := clnt.NewRollupWatcher(rollupAddr)
-	if err != nil {
-		return err
-	}
-
-	ethbridgeVersion, err := watcher.GetVersion(ctx)
-	if err != nil {
-		return err
-	}
-
-	if ethbridgeVersion != ValidEthBridgeVersion {
-		return fmt.Errorf("VM has EthBridge version %v, but validator implements version %v."+
-			" To find a validator version which supports your EthBridge, visit "+
-			"https://offchainlabs.com/ethbridge-version-support",
-			ethbridgeVersion, ValidEthBridgeVersion)
-	}
-
-	_, _, initialVMHash, err := watcher.GetCreationInfo(ctx)
-	if err != nil {
-		return err
-	}
-
-	initialMachine, err := checkpointer.GetInitialMachine()
-	if err != nil {
-		return err
-	}
-
-	initialMachineHash := initialMachine.Hash()
-	if initialMachineHash != initialVMHash {
-		return fmt.Errorf("ArbChain was initialized with VM with hash %v, but local validator has VM with hash %v", initialVMHash, initialMachineHash)
-	}
-	return nil
 }

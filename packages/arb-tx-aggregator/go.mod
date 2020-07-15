@@ -6,6 +6,7 @@ require (
 	github.com/ethereum/go-ethereum v1.9.16
 	github.com/golang/protobuf v1.4.2
 	github.com/gorilla/rpc v1.2.0
+	github.com/offchainlabs/arbitrum/packages/arb-checkpointer v0.0.0-00010101000000-000000000000
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.6.5
 	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.6.5
 	github.com/pkg/errors v0.9.1
@@ -14,4 +15,8 @@ require (
 
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../arb-util
 
+replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp
+
 replace github.com/offchainlabs/arbitrum/packages/arb-validator-core => ../arb-validator-core
+
+replace github.com/offchainlabs/arbitrum/packages/arb-checkpointer => ../arb-checkpointer

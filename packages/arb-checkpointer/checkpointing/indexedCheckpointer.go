@@ -164,7 +164,7 @@ func (cp *IndexedCheckpointer) AsyncSaveCheckpoint(
 	return errChan
 }
 
-func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbbridge.ChainTimeGetter, unmarshalFunc func([]byte, ckptcontext.RestoreContext) error) error {
+func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbbridge.ChainTimeGetter, unmarshalFunc func([]byte, ckptcontext.RestoreContext, *common.BlockId) error) error {
 	return restoreLatestState(ctx, cp.bs, cp.db, clnt, unmarshalFunc)
 }
 
@@ -189,7 +189,7 @@ func restoreLatestState(
 	bs machine.BlockStore,
 	db machine.CheckpointStorage,
 	clnt arbbridge.ChainTimeGetter,
-	unmarshalFunc func([]byte, ckptcontext.RestoreContext) error,
+	unmarshalFunc func([]byte, ckptcontext.RestoreContext, *common.BlockId) error,
 ) error {
 	if bs.IsBlockStoreEmpty() {
 		return errNoCheckpoint
@@ -213,7 +213,7 @@ func restoreLatestState(
 			// If something went wrong, try the next block
 			continue
 		}
-		if err := unmarshalFunc(ckpWithMan.Contents, &restoreContextLocked{db}); err != nil {
+		if err := unmarshalFunc(ckpWithMan.Contents, &restoreContextLocked{db}, onchainId); err != nil {
 			log.Println("Failed load checkpoint at height", height, "with error", err)
 			continue
 		}

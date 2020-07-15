@@ -79,13 +79,13 @@ func (e EvilRollupCheckpointer) HasCheckpointedState() bool {
 func (e EvilRollupCheckpointer) RestoreLatestState(
 	ctx context.Context,
 	clnt arbbridge.ChainTimeGetter,
-	unmarshalFunc func([]byte, ckptcontext.RestoreContext) error,
+	unmarshalFunc func([]byte, ckptcontext.RestoreContext, *common.BlockId) error,
 ) error {
 	return e.cp.RestoreLatestState(
 		ctx,
 		clnt,
-		func(contents []byte, resCtx ckptcontext.RestoreContext) error {
-			return unmarshalFunc(contents, &evilRestoreContext{resCtx})
+		func(contents []byte, resCtx ckptcontext.RestoreContext, blockId *common.BlockId) error {
+			return unmarshalFunc(contents, &evilRestoreContext{resCtx}, blockId)
 		},
 	)
 }

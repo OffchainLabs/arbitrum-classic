@@ -129,6 +129,7 @@ github.com/google/go-cmp v0.3.0/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMyw
 github.com/google/go-cmp v0.3.1/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=
 github.com/google/go-cmp v0.4.0 h1:xsAVV57WRhGj6kEIi8ReJzQlHHqcBYCElAvkovg3B/4=
 github.com/google/go-cmp v0.4.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
+github.com/google/go-cmp v0.5.0 h1:/QaMHBdZ26BB3SSst0Iwl10Epc+xhTquomWX0oZEB6w=
 github.com/google/go-cmp v0.5.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/gorilla/handlers v1.4.2 h1:0QniY0USkHQ1RGCLfKxeNHK9bkDHGRYGNDFBCS+YARg=
 github.com/gorilla/handlers v1.4.2/go.mod h1:Qkdc/uu4tH4g6mTK6auzZ766c4CA0Ng8+o/OAirnOIQ=
@@ -190,8 +191,11 @@ github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrk
 github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
 github.com/naoina/go-stringutil v0.1.0/go.mod h1:XJ2SJL9jCtBh+P9q5btrd/Ylo8XwT/h1USek5+NqSA0=
 github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416/go.mod h1:NBIhNtsFMo3G2szEBne+bO4gS192HuIYRqfvOWb4i1E=
+github.com/offchainlabs/arbitrum v0.6.5 h1:8VM/XQ6T0wArwttCU4jVqXTDTNx6M3Gj9xFcoh2//R4=
+github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.6.5 h1:25qxELadSWqXXgSu2T3YWMf28Rc+hBzhQWe11bsmCQo=
 github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.6.5/go.mod h1:TWnvXbLN+ddXUaW6kEd+vIdg7rgLz1aGtLaqCjAvxMc=
 github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.6.5/go.mod h1:7nk/7FwZIqynokCzuQVnzi+VyZnR2nBEKit9u8Ewhrw=
+github.com/offchainlabs/arbitrum/packages/arb-provider-go v0.6.5/go.mod h1:+V7YsM+1UfuTrQ++zvrlLPxrET27JlbFwyexxYil0I8=
 github.com/offchainlabs/arbitrum/packages/arb-validator v0.6.5/go.mod h1:fhA+K9rdav/tcFhmB5GIv1At6GwTExz4iW7/0ziPrh4=
 github.com/offchainlabs/go-solidity-sha3 v0.1.2 h1:IJ/KUv8zW5+Rtq/VvhNjq/Q7MDXjDx1ArAvkJhBRQAs=
 github.com/offchainlabs/go-solidity-sha3 v0.1.2/go.mod h1:WYAU7UTm1wXzEhnsTt843T77fKfR9x/rqqzjm8NJ3Mc=
@@ -354,6 +358,7 @@ gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce/go.mod h1:5AcXVHN
 gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200316214253-d7b0ff38cac9 h1:ITeyKbRetrVzqR3U1eY+ywgp7IBspGd1U/bkwd1gWu4=
 gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200316214253-d7b0ff38cac9/go.mod h1:uAJfkITjFhyEEuUfm7bsmCZRbW5WRq8s9EY8HZ6hCns=
 gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200603215123-a4a8cb9d2cbc/go.mod h1:uAJfkITjFhyEEuUfm7bsmCZRbW5WRq8s9EY8HZ6hCns=
+gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200619000410-60c24ae608a6 h1:a6cXbcDDUkSBlpnkWV1bJ+vv3mOgQEltEJ2rPxroVu0=
 gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200619000410-60c24ae608a6/go.mod h1:uAJfkITjFhyEEuUfm7bsmCZRbW5WRq8s9EY8HZ6hCns=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 h1:uRGJdciOHaEIrze2W8Q3AKkepLTh2hOroT7a+7czfdQ=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7/go.mod h1:dt/ZhP58zS4L8KSrWDmTeBkI65Dw0HsyUHuEVlX15mw=

@@ -136,13 +136,29 @@ func (gi *globalInboxWatcher) GetEvents(
 	blockId *common.BlockId,
 	timestamp *big.Int,
 ) ([]arbbridge.Event, error) {
+	evs, err := gi.GetDeliveredEventsInBlock(ctx, blockId, timestamp)
+	if err != nil {
+		return nil, err
+	}
+	events := make([]arbbridge.Event, 0, len(evs))
+	for _, ev := range evs {
+		events = append(events, ev)
+	}
+	return events, nil
+}
+
+func (gi *globalInboxWatcher) GetDeliveredEventsInBlock(
+	ctx context.Context,
+	blockId *common.BlockId,
+	timestamp *big.Int,
+) ([]arbbridge.MessageDeliveredEvent, error) {
 	bh := blockId.HeaderHash.ToEthHash()
 	inboxLogs, err := gi.getLogs(ctx, nil, nil, &bh)
 	if err != nil {
 		return nil, err
 	}
 
-	events := make([]arbbridge.Event, 0, len(inboxLogs))
+	events := make([]arbbridge.MessageDeliveredEvent, 0, len(inboxLogs))
 	for _, evmLog := range inboxLogs {
 		ev, err := gi.processLog(ctx, evmLog, timestamp)
 		if err != nil {
