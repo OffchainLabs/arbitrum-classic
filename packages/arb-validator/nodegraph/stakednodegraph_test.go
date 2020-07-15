@@ -25,6 +25,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"log"
 	"math/big"
 	"testing"
 	"time"
@@ -103,6 +104,396 @@ func TestAddStake(t *testing.T) {
 
 	if !staker2.Location().Equals(newNode) {
 		t.Fatal("incorrect staker location")
+	}
+}
+
+func TestStakerPruneInfoInitial(t *testing.T) {
+	mach, _, txHash, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
+	stakerAddress := common.Address{1}
+	stakeEvent, expectedStaker := getStakeData(stakerAddress, initialNode)
+	stakedNodeGraph.CreateStake(stakeEvent)
+	staker := stakedNodeGraph.Stakers().Get(stakerAddress)
+	if !expectedStaker.Equals(staker) {
+		t.Fatal("incorrect staker")
+	}
+
+	if stakedNodeGraph.Stakers().GetSize() != 1 {
+		t.Fatal("incorrect staker count")
+	}
+
+	if !staker.Location().Equals(initialNode) {
+		t.Fatal("incorrect staker location")
+	}
+
+	mootedParams, oldParams := stakedNodeGraph.GenerateStakerPruneInfo()
+	if len(mootedParams) != 0 {
+		t.Fatal("incorrect results")
+	}
+	if len(oldParams) != 0 {
+		t.Fatal("incorrect results")
+	}
+}
+
+func TestNodePruneInfoInitial(t *testing.T) {
+	mach, _, txHash, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
+	stakerAddress := common.Address{1}
+	stakeEvent, expectedStaker := getStakeData(stakerAddress, initialNode)
+	stakedNodeGraph.CreateStake(stakeEvent)
+	staker := stakedNodeGraph.Stakers().Get(stakerAddress)
+	if !expectedStaker.Equals(staker) {
+		t.Fatal("incorrect staker")
+	}
+
+	if stakedNodeGraph.Stakers().GetSize() != 1 {
+		t.Fatal("incorrect staker count")
+	}
+
+	if !staker.Location().Equals(initialNode) {
+		t.Fatal("incorrect staker location")
+	}
+
+	params := stakedNodeGraph.GenerateNodePruneInfo(stakedNodeGraph.Stakers())
+	if len(params) != 0 {
+		t.Fatal("incorrect results")
+	}
+}
+
+func TestStakerPruneInfoBase(t *testing.T) {
+	mach, _, txHash, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
+	dispNode, execAssert := getDisputableNode(initialNode)
+	err, _, _ := createAndAssertNodes(
+		stakedNodeGraph,
+		initialNode,
+		dispNode,
+		execAssert,
+		common.NewTimeBlocks(big.NewInt(10)),
+		common.Hash{})
+	if err != nil {
+		t.Fatal("error making new node")
+	}
+
+	stakerAddress := common.Address{1}
+	stakeEvent, expectedStaker := getStakeData(stakerAddress, initialNode)
+	stakedNodeGraph.CreateStake(stakeEvent)
+	staker := stakedNodeGraph.Stakers().Get(stakerAddress)
+	if !expectedStaker.Equals(staker) {
+		t.Fatal("incorrect staker")
+	}
+
+	if stakedNodeGraph.Stakers().GetSize() != 1 {
+		t.Fatal("incorrect staker count")
+	}
+
+	if !staker.Location().Equals(initialNode) {
+		t.Fatal("incorrect staker location")
+	}
+
+	mootedParams, oldParams := stakedNodeGraph.GenerateStakerPruneInfo()
+	if len(mootedParams) != 0 {
+		t.Fatal("incorrect results")
+	}
+	if len(oldParams) != 0 {
+		t.Fatal("incorrect results")
+	}
+}
+
+func TestNodePruneInfoBase(t *testing.T) {
+	mach, _, txHash, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
+	dispNode, execAssert := getDisputableNode(initialNode)
+	err, _, _ := createAndAssertNodes(
+		stakedNodeGraph,
+		initialNode,
+		dispNode,
+		execAssert,
+		common.NewTimeBlocks(big.NewInt(10)),
+		common.Hash{})
+	if err != nil {
+		t.Fatal("error making new node")
+	}
+
+	stakerAddress := common.Address{1}
+	stakeEvent, expectedStaker := getStakeData(stakerAddress, initialNode)
+	stakedNodeGraph.CreateStake(stakeEvent)
+	staker := stakedNodeGraph.Stakers().Get(stakerAddress)
+	if !expectedStaker.Equals(staker) {
+		t.Fatal("incorrect staker")
+	}
+
+	if stakedNodeGraph.Stakers().GetSize() != 1 {
+		t.Fatal("incorrect staker count")
+	}
+
+	if !staker.Location().Equals(initialNode) {
+		t.Fatal("incorrect staker location")
+	}
+
+	params := stakedNodeGraph.GenerateNodePruneInfo(stakedNodeGraph.Stakers())
+	if len(params) != 0 {
+		log.Println("params ", params)
+		t.Fatal("incorrect results")
+	}
+}
+
+func TestStakerPruneInfo(t *testing.T) {
+	mach, _, txHash, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
+	dispNode, execAssert := getDisputableNode(initialNode)
+	err, _, nodes := createAndAssertNodes(
+		stakedNodeGraph,
+		initialNode,
+		dispNode,
+		execAssert,
+		common.NewTimeBlocks(big.NewInt(10)),
+		common.Hash{})
+	if err != nil {
+		t.Fatal("error making new node")
+	}
+
+	for index, node := range nodes {
+		var addrr = byte(2 + index)
+		stakerAddress := common.Address{addrr}
+		stakeEvent, _ := getStakeData(stakerAddress, node)
+		stakedNodeGraph.CreateStake(stakeEvent)
+	}
+
+	mootedParams, oldParams := stakedNodeGraph.GenerateStakerPruneInfo()
+	if len(mootedParams) != 4 {
+		t.Fatal("incorrect results, mootedParams, ", mootedParams)
+	}
+	if len(oldParams) != 0 {
+		t.Fatal("incorrect results, oldParams, ", oldParams)
+	}
+}
+
+func TestNodePruneInfo(t *testing.T) {
+	mach, _, txHash, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
+	dispNode, execAssert := getDisputableNode(initialNode)
+	err, _, nodes := createAndAssertNodes(
+		stakedNodeGraph,
+		initialNode,
+		dispNode,
+		execAssert,
+		common.NewTimeBlocks(big.NewInt(10)),
+		common.Hash{})
+	if err != nil {
+		t.Fatal("error making new node")
+	}
+
+	for index, node := range nodes {
+		var addrr = byte(2 + index)
+		stakerAddress := common.Address{addrr}
+		stakeEvent, _ := getStakeData(stakerAddress, node)
+		stakedNodeGraph.CreateStake(stakeEvent)
+	}
+
+	params := stakedNodeGraph.GenerateNodePruneInfo(stakedNodeGraph.Stakers())
+	if len(params) != 0 {
+		log.Println("params ", params)
+		t.Fatal("incorrect results")
+	}
+}
+
+func TestNodePruneInfo2(t *testing.T) {
+	mach, _, txHash, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
+	dispNode, execAssert := getDisputableNode(initialNode)
+	err, nextValid, nodes := createAndAssertNodes(
+		stakedNodeGraph,
+		initialNode,
+		dispNode,
+		execAssert,
+		common.NewTimeBlocks(big.NewInt(10)),
+		common.Hash{})
+	if err != nil {
+		t.Fatal("error making new node")
+	}
+
+	for index, node := range nodes {
+		var addrr = byte(2 + index)
+		stakerAddress := common.Address{addrr}
+		stakeEvent, _ := getStakeData(stakerAddress, node)
+		stakedNodeGraph.CreateStake(stakeEvent)
+	}
+
+	stakedNodeGraph.UpdateLatestConfirmed(nextValid)
+
+	params := stakedNodeGraph.GenerateNodePruneInfo(stakedNodeGraph.Stakers())
+	if len(params) != 0 {
+		log.Println("params ", params)
+		t.Fatal("incorrect results")
+	}
+}
+
+func TestStakerPruneInfo2(t *testing.T) {
+	mach, _, txHash, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
+	dispNode, execAssert := getDisputableNode(initialNode)
+	err, nextValid, nodes := createAndAssertNodes(
+		stakedNodeGraph,
+		initialNode,
+		dispNode,
+		execAssert,
+		common.NewTimeBlocks(big.NewInt(10)),
+		common.Hash{})
+	if err != nil {
+		t.Fatal("error making new node")
+	}
+
+	for index, node := range nodes {
+		var addrr = byte(2 + index)
+		stakerAddress := common.Address{addrr}
+		stakeEvent, _ := getStakeData(stakerAddress, node)
+		stakedNodeGraph.CreateStake(stakeEvent)
+	}
+
+	//leaf := stakedNodeGraph.NodeFromHash(initialNode.Hash())
+	//stakedNodeGraph.DeleteLeaf(leaf)
+	//stakedNodeGraph.PruneNodeByHash(leaf.Hash())
+
+	stakedNodeGraph.UpdateLatestConfirmed(nextValid)
+
+	mootedParams, oldParams := stakedNodeGraph.GenerateStakerPruneInfo()
+	if len(mootedParams) != 3 {
+		t.Fatal("incorrect results, mootedParams, ", mootedParams)
+	}
+	if len(oldParams) != 0 {
+		t.Fatal("incorrect results, oldParams, ", oldParams)
+	}
+}
+
+func TestNodePruneInfo3(t *testing.T) {
+	mach, _, txHash, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
+	dispNode, execAssert := getDisputableNode(initialNode)
+	err, nextValid, nodes := createAndAssertNodes(
+		stakedNodeGraph,
+		initialNode,
+		dispNode,
+		execAssert,
+		common.NewTimeBlocks(big.NewInt(10)),
+		common.Hash{})
+	if err != nil {
+		t.Fatal("error making new node")
+	}
+
+	dispNode2, execAssert2 := getDisputableNode(nextValid)
+	err, nextValid2, _ := createAndAssertNodes(
+		stakedNodeGraph,
+		nextValid,
+		dispNode2,
+		execAssert2,
+		common.NewTimeBlocks(big.NewInt(20)),
+		common.Hash{})
+	if err != nil {
+		t.Fatal("error making new node")
+	}
+
+	for index, node := range nodes {
+		var addrr = byte(2 + index)
+		stakerAddress := common.Address{addrr}
+		stakeEvent, _ := getStakeData(stakerAddress, node)
+		stakedNodeGraph.CreateStake(stakeEvent)
+	}
+
+	stakedNodeGraph.UpdateLatestConfirmed(nextValid2)
+
+	params := stakedNodeGraph.GenerateNodePruneInfo(stakedNodeGraph.Stakers())
+	if len(params) != 3 {
+		log.Println("params ", params)
+		t.Fatal("incorrect results")
+	}
+}
+
+func TestStakerPruneInfo3(t *testing.T) {
+	mach, _, txHash, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
+	dispNode, execAssert := getDisputableNode(initialNode)
+	err, nextValid, _ := createAndAssertNodes(
+		stakedNodeGraph,
+		initialNode,
+		dispNode,
+		execAssert,
+		common.NewTimeBlocks(big.NewInt(10)),
+		common.Hash{})
+	if err != nil {
+		t.Fatal("error making new node")
+	}
+	dispNode2, execAssert2 := getDisputableNode(nextValid)
+	err, nextValid2, nodes2 := createAndAssertNodes(
+		stakedNodeGraph,
+		nextValid,
+		dispNode2,
+		execAssert2,
+		common.NewTimeBlocks(big.NewInt(20)),
+		common.Hash{})
+	if err != nil {
+		t.Fatal("error making new node")
+	}
+
+	for index, node := range nodes2 {
+		var addrr = byte(2 + index)
+		stakerAddress := common.Address{addrr}
+		stakeEvent, _ := getStakeData(stakerAddress, node)
+		stakedNodeGraph.CreateStake(stakeEvent)
+	}
+
+	stakedNodeGraph.UpdateLatestConfirmed(nextValid2)
+
+	mootedParams, oldParams := stakedNodeGraph.GenerateStakerPruneInfo()
+	if len(mootedParams) != 3 {
+		t.Fatal("incorrect results, mootedParams, ", mootedParams)
+	}
+	if len(oldParams) != 0 {
+		t.Fatal("incorrect results, oldParams, ", oldParams)
+	}
+}
+
+func TestStakerPruneInfo4(t *testing.T) {
+	mach, _, txHash, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach, txHash)
+	dispNode, execAssert := getDisputableNode(initialNode)
+	err, nextValid, nodes := createAndAssertNodes(
+		stakedNodeGraph,
+		initialNode,
+		dispNode,
+		execAssert,
+		common.NewTimeBlocks(big.NewInt(10)),
+		common.Hash{})
+	if err != nil {
+		t.Fatal("error making new node")
+	}
+	dispNode2, execAssert2 := getDisputableNode(nextValid)
+	err, nextValid2, _ := createAndAssertNodes(
+		stakedNodeGraph,
+		nextValid,
+		dispNode2,
+		execAssert2,
+		common.NewTimeBlocks(big.NewInt(20)),
+		common.Hash{})
+	if err != nil {
+		t.Fatal("error making new node")
+	}
+
+	for index, node := range nodes {
+		var addrr = byte(2 + index)
+		stakerAddress := common.Address{addrr}
+		stakeEvent, _ := getStakeData(stakerAddress, node)
+		stakedNodeGraph.CreateStake(stakeEvent)
+	}
+
+	stakedNodeGraph.UpdateLatestConfirmed(nextValid2)
+
+	mootedParams, oldParams := stakedNodeGraph.GenerateStakerPruneInfo()
+	if len(mootedParams) != 3 {
+		t.Fatal("incorrect results, mootedParams, ", mootedParams)
+	}
+	if len(oldParams) != 1 {
+		t.Fatal("incorrect results, oldParams, ", oldParams)
 	}
 }
 

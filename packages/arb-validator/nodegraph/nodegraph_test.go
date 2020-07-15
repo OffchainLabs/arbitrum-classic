@@ -419,13 +419,13 @@ func getNodeGraph(t *testing.T) (machine.Machine, valprotocol.ChainParams, commo
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	vmParams := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(1),
 		GracePeriod:             common.TicksFromSeconds(60 * 60),
 		MaxExecutionSteps:       1000000,
 		ArbGasSpeedLimitPerTick: 1000,
 	}
+
 	txHash := common.Hash{}
 	return mach, vmParams, txHash, NewNodeGraph(mach, vmParams, txHash)
 }
