@@ -241,8 +241,8 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
      *   afterVMHash Claimed machine hash after this assertion is completed
      *   messagesAccHash Claimed commitment to a set of messages output in the assertion
      *   logsAccHash Claimed commitment to a set of logs output in the assertion
-     *   validBlockHash Hash of a known block to invalidate the assertion if too deep a reorg occurs
-     * @param validBlockHeight Height of the block with hash validBlockHash
+     *   validBlockHashPrecondition Hash of a known block to invalidate the assertion if too deep a reorg occurs
+     * @param validBlockHeightPrecondition Height of the block with hash validBlockHash
      * @param beforeInboxCount The total number of messages read after the previous assertion executed
      * @param prevDeadlineTicks The challenge deadline of the node this assertion builds on
      * @param prevChildType The type of node that this assertion builds on top of
@@ -254,7 +254,7 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
      */
     function makeAssertion(
         bytes32[10] calldata fields,
-        uint256 validBlockHeight,
+        uint256 validBlockHeightPrecondition,
         uint256 beforeInboxCount,
         uint256 prevDeadlineTicks,
         uint32 prevChildType,
@@ -265,7 +265,7 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
         bytes32[] calldata stakerProof
     ) external {
         require(
-            blockhash(validBlockHeight) == fields[9],
+            blockhash(validBlockHeightPrecondition) == fields[9],
             "invalid known block"
         );
         NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils

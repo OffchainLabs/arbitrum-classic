@@ -85,7 +85,7 @@ interface ArbRollupInterface extends Interface {
     makeAssertion: TypedFunctionDescription<{
       encode([
         fields,
-        validBlockHeight,
+        validBlockHeightPrecondition,
         beforeInboxCount,
         prevDeadlineTicks,
         prevChildType,
@@ -335,7 +335,7 @@ export class ArbRollup extends Contract {
 
     makeAssertion(
       fields: Arrayish[],
-      validBlockHeight: BigNumberish,
+      validBlockHeightPrecondition: BigNumberish,
       beforeInboxCount: BigNumberish,
       prevDeadlineTicks: BigNumberish,
       prevChildType: BigNumberish,
@@ -478,7 +478,7 @@ export class ArbRollup extends Contract {
 
   makeAssertion(
     fields: Arrayish[],
-    validBlockHeight: BigNumberish,
+    validBlockHeightPrecondition: BigNumberish,
     beforeInboxCount: BigNumberish,
     prevDeadlineTicks: BigNumberish,
     prevChildType: BigNumberish,
@@ -665,7 +665,7 @@ export class ArbRollup extends Contract {
 
     makeAssertion(
       fields: Arrayish[],
-      validBlockHeight: BigNumberish,
+      validBlockHeightPrecondition: BigNumberish,
       beforeInboxCount: BigNumberish,
       prevDeadlineTicks: BigNumberish,
       prevChildType: BigNumberish,

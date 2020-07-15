@@ -52,7 +52,7 @@ type ChainObserver struct {
 	latestBlockId       *common.BlockId
 	// assumedValidBlock is used when making assertions so that we don't include messages past the threshold
 	// If there is a reorg past that depth, our assertion could be invalidated. Invalidation isn't a problem
-	// and would only lose the validator a small amount of money, so this assumption being violated is safe.
+	// and would only lose the validator a small amount of gas money, so this assumption being violated is safe.
 	assumedValidBlock *common.BlockId
 	listeners         []chainlistener.ChainListener
 	checkpointer      checkpointing.RollupCheckpointer
