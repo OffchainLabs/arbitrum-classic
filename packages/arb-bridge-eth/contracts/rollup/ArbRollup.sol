@@ -245,6 +245,8 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
      *   beforeInboxCount The total number of messages read after the previous assertion executed
      *   prevDeadlineTicks The challenge deadline of the node this assertion builds on
      *   importedMessageCount Argument specifying the number of messages read
+     *   beforeMessageCount The total number of messages that have been output by the chain before this assertion
+     *   beforeLogCount The total number of messages that have been output by the chain before this assertion
      * @param validBlockHashPrecondition Hash of a known block to invalidate the assertion if too deep a reorg occurs
      * @param validBlockHeightPrecondition Height of the block with hash validBlockHash
      * @param prevChildType The type of node that this assertion builds on top of
@@ -255,7 +257,7 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
      */
     function makeAssertion(
         bytes32[9] calldata fields,
-        uint256[3] calldata fields2,
+        uint256[5] calldata fields2,
         bytes32 validBlockHashPrecondition,
         uint256 validBlockHeightPrecondition,
         uint64 messageCount,

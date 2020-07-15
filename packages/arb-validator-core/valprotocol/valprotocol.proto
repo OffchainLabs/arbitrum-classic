@@ -31,6 +31,8 @@ message VMProtoDataBuf {
     common.HashBuf machineHash = 1;
     common.HashBuf inboxTop = 2;
     common.BigIntegerBuf inboxCount = 3;
+    common.BigIntegerBuf messageCount = 4;
+    common.BigIntegerBuf logCount = 5;
 }
 
 message AssertionParamsBuf {

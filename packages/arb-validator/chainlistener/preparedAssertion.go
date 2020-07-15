@@ -92,10 +92,12 @@ func (prep *PreparedAssertion) GetAssertionParams() [9][32]byte {
 	}
 }
 
-func (prep *PreparedAssertion) GetAssertionParams2() [3]*big.Int {
-	return [3]*big.Int{
+func (prep *PreparedAssertion) GetAssertionParams2() [5]*big.Int {
+	return [5]*big.Int{
 		prep.BeforeState.InboxCount,
 		prep.Prev.Deadline().Val,
 		prep.Params.ImportedMessageCount,
+		prep.BeforeState.MessageCount,
+		prep.BeforeState.LogCount,
 	}
 }

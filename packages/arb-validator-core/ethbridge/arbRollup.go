@@ -195,10 +195,12 @@ func (vm *arbRollup) MakeAssertion(
 		assertionClaim.AssertionStub.LastMessageHash,
 		assertionClaim.AssertionStub.LastLogHash,
 	}
-	fields2 := [3]*big.Int{
+	fields2 := [5]*big.Int{
 		beforeState.InboxCount,
 		prevDeadline.Val,
 		assertionParams.ImportedMessageCount,
+		beforeState.MessageCount,
+		beforeState.LogCount,
 	}
 	tx, err := vm.ArbRollup.MakeAssertion(
 		vm.auth.getAuth(ctx),

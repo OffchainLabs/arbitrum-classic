@@ -65,7 +65,9 @@ contract NodeGraph {
         uint64 numArbGas,
         uint64 numSteps,
         bool didInboxInsn,
+        uint256 beforeMessageCount,
         uint64 messageCount,
+        uint256 beforeLogCount,
         uint64 logCount
     );
 
@@ -130,6 +132,8 @@ contract NodeGraph {
         bytes32 vmProtoStateHash = RollupUtils.protoStateHash(
             _vmState,
             Value.newEmptyTuple().hash(),
+            0,
+            0,
             0
         );
         bytes32 initialNode = RollupUtils.childNodeHash(
@@ -205,7 +209,9 @@ contract NodeGraph {
             data.assertion.numArbGas,
             data.assertion.numSteps,
             data.assertion.didInboxInsn,
+            data.beforeMessageCount,
             data.assertion.messageCount,
+            data.beforeLogCount,
             data.assertion.logCount
         );
     }

@@ -35,12 +35,14 @@ library NodeGraphUtils {
         uint32 prevChildType;
         uint256 importedMessageCount;
         bytes32 afterInboxTop;
+        uint256 beforeMessageCount;
+        uint256 beforeLogCount;
         ChallengeUtils.ExecutionAssertion assertion;
     }
 
     function makeAssertion(
         bytes32[9] memory fields,
-        uint256[3] memory fields2,
+        uint256[5] memory fields2,
         uint32 prevChildType,
         uint64 numSteps,
         bool didInboxInsn,
@@ -73,6 +75,8 @@ library NodeGraphUtils {
                 prevChildType,
                 fields2[2],
                 fields[8],
+                fields2[3],
+                fields2[4],
                 assertion
             );
     }
@@ -85,7 +89,9 @@ library NodeGraphUtils {
         bytes32 vmProtoHashBefore = RollupUtils.protoStateHash(
             data.assertion.beforeHash,
             data.beforeInboxTop,
-            data.beforeInboxCount
+            data.beforeInboxCount,
+            data.beforeMessageCount,
+            data.beforeLogCount
         );
         bytes32 prevLeaf = RollupUtils.childNodeHash(
             data.prevPrevLeafHash,
@@ -207,7 +213,9 @@ library NodeGraphUtils {
                 RollupUtils.protoStateHash(
                     data.assertion.afterHash,
                     data.afterInboxTop,
-                    data.beforeInboxCount + data.importedMessageCount
+                    data.beforeInboxCount + data.importedMessageCount,
+                    data.beforeMessageCount + data.assertion.messageCount,
+                    data.beforeLogCount + data.assertion.logCount
                 )
             );
     }

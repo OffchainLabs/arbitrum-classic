@@ -225,9 +225,11 @@ interface ArbRollupInterface extends Interface {
         numArbGas,
         numSteps,
         didInboxInsn,
+        beforeMessageCount,
         messageCount,
+        beforeLogCount,
         logCount,
-      ]: [null, null, null, null, null, null, null, null]): string[]
+      ]: [null, null, null, null, null, null, null, null, null, null]): string[]
     }>
 
     RollupChallengeCompleted: TypedEventDescription<{
@@ -592,7 +594,9 @@ export class ArbRollup extends Contract {
       numArbGas: null,
       numSteps: null,
       didInboxInsn: null,
+      beforeMessageCount: null,
       messageCount: null,
+      beforeLogCount: null,
       logCount: null
     ): EventFilter
 
