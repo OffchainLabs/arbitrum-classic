@@ -21,11 +21,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-var codeFile = gotest.TestMachinePath()
+var codeFile = arbos.Path()
 
 func TestCheckpoint(t *testing.T) {
 	dePath := "dbPath"

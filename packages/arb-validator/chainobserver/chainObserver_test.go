@@ -19,7 +19,7 @@ package chainobserver
 import (
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -41,7 +41,7 @@ var dummyRollupAddress2 = common.Address{2}
 var dummyRollupAddress3 = common.Address{3}
 var dummyRollupAddress4 = common.Address{4}
 
-var contractPath = gotest.TestMachinePath()
+var contractPath = arbos.Path()
 
 func TestCreateEmptyChain(t *testing.T) {
 	testCreateEmptyChain(dummyRollupAddress1, "dummy", contractPath, t)

@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
@@ -280,7 +280,7 @@ func resolveChallenge(
 }
 
 func getTestMachine(t *testing.T) machine.Machine {
-	mach, err := loader.LoadMachineFromFile(gotest.TestMachinePath(), true, "cpp")
+	mach, err := loader.LoadMachineFromFile(arbos.Path(), true, "cpp")
 	if err != nil {
 		t.Fatal("Loader Error: ", err)
 	}

@@ -20,7 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -67,7 +67,7 @@ func TestMainSetup(m *testing.T) {
 	tester = deployedArbRollup
 }
 
-var contractPath = gotest.TestMachinePath()
+var contractPath = arbos.Path()
 
 func TestGenerateLastMessageHash(t *testing.T) {
 	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")

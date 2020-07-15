@@ -20,10 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodeview"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"log"
 	"math/big"
 	"os"
@@ -32,9 +29,12 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodeview"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-var contractPath = gotest.TestMachinePath()
+var contractPath = arbos.Path()
 
 var initialEntryBlockId = &common.BlockId{
 	Height:     common.NewTimeBlocksInt(10),

@@ -17,7 +17,7 @@
 package structures
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
@@ -27,7 +27,7 @@ import (
 	"testing"
 )
 
-var contractPath = gotest.TestMachinePath()
+var contractPath = arbos.Path()
 
 func TestMarshalNode(t *testing.T) {
 	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")

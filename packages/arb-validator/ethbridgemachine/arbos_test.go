@@ -17,6 +17,7 @@
 package ethbridgemachine
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"math/big"
 	"strings"
 	"testing"
@@ -25,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
@@ -35,7 +35,7 @@ import (
 )
 
 func TestFib(t *testing.T) {
-	mach, err := loader.LoadMachineFromFile(gotest.TestMachinePath(), false, "cpp")
+	mach, err := loader.LoadMachineFromFile(arbos.Path(), false, "cpp")
 	if err != nil {
 		t.Fatal(err)
 	}
