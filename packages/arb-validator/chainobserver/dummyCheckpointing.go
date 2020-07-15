@@ -14,15 +14,15 @@
 * limitations under the License.
  */
 
-package checkpointing
+package chainobserver
 
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"math/big"
 )
@@ -68,7 +68,8 @@ func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return dcp.initialMachine.Clone(), nil
 }
 
-func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(_ *common.BlockId, _ []byte, _ *ckptcontext.CheckpointContext) {
+func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(_ *common.BlockId, _ []byte, _ *ckptcontext.CheckpointContext) <-chan error {
+	return nil
 }
 
 func (dcp *DummyCheckpointer) CheckpointConfirmedNode(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *ckptcontext.CheckpointContext) error {

@@ -28,11 +28,11 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 )
 
 var errNoCheckpoint = errors.New("cannot restore because no checkpoint exists")
@@ -52,7 +52,7 @@ func NewIndexedCheckpointer(
 	databasePath string,
 	maxReorgHeight *big.Int,
 	forceFreshStart bool,
-) *IndexedCheckpointer {
+) (*IndexedCheckpointer, error) {
 	ret, err := newIndexedCheckpointer(
 		rollupAddr,
 		databasePath,
@@ -61,12 +61,12 @@ func NewIndexedCheckpointer(
 	)
 
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	go ret.writeDaemon()
 	go cleanupDaemon(ret.bs, ret.db, maxReorgHeight)
-	return ret
+	return ret, nil
 }
 
 // newIndexedCheckpointerFactory creates the checkpointer, but doesn't
@@ -136,21 +136,32 @@ type writableCheckpoint struct {
 	blockId  *common.BlockId
 	contents []byte
 	ckpCtx   *ckptcontext.CheckpointContext
+	errChan  chan<- error
 }
 
 func (cp *IndexedCheckpointer) AsyncSaveCheckpoint(
 	blockId *common.BlockId,
 	contents []byte,
 	cpCtx *ckptcontext.CheckpointContext,
-) {
+) <-chan error {
 	cp.Lock()
 	defer cp.Unlock()
+
+	errChan := make(chan error, 1)
+
+	if cp.nextCheckpointToWrite != nil {
+		cp.nextCheckpointToWrite.errChan <- errors.New("replaced by newer checkpoint")
+		close(cp.nextCheckpointToWrite.errChan)
+	}
 
 	cp.nextCheckpointToWrite = &writableCheckpoint{
 		blockId:  blockId,
 		contents: contents,
 		ckpCtx:   cpCtx,
+		errChan:  errChan,
 	}
+
+	return errChan
 }
 
 func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbbridge.ChainTimeGetter, unmarshalFunc func([]byte, ckptcontext.RestoreContext) error) error {
@@ -225,6 +236,8 @@ func (cp *IndexedCheckpointer) writeDaemon() {
 			if err != nil {
 				log.Println("Error writing checkpoint: {}", err)
 			}
+			checkpoint.errChan <- err
+			close(checkpoint.errChan)
 		}
 	}
 }

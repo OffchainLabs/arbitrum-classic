@@ -29,9 +29,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 )
 
 const (
@@ -77,17 +77,21 @@ func CreateManager(
 	aoFilePath string,
 	dbPath string,
 ) (*Manager, error) {
+	checkpointer, err := checkpointing.NewIndexedCheckpointer(
+		rollupAddr,
+		dbPath,
+		big.NewInt(defaultMaxReorgDepth),
+		false,
+	)
+	if err != nil {
+		return nil, err
+	}
 	return CreateManagerAdvanced(
 		ctx,
 		rollupAddr,
 		true,
 		clnt,
-		checkpointing.NewIndexedCheckpointer(
-			rollupAddr,
-			dbPath,
-			big.NewInt(defaultMaxReorgDepth),
-			false,
-		),
+		checkpointer,
 		aoFilePath,
 	)
 }

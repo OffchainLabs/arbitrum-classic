@@ -17,8 +17,8 @@
 syntax = "proto3";
 package structures;
 import "arb-util/common/common.proto";
-import "arb-validator/ckptcontext/ckptcontext.proto";
-option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing";
+import "arb-checkpointer/ckptcontext/ckptcontext.proto";
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing";
 
 message CheckpointMetadata {
     uint64 formatVersion = 1;

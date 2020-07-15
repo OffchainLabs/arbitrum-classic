@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"log"
 	"sync"
@@ -29,11 +29,11 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 

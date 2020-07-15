@@ -22,11 +22,11 @@ import (
 
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 )
 
 type messageStackItem struct {

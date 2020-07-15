@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"log"
 	"math/big"
@@ -30,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
@@ -39,7 +41,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainobserver"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
 
@@ -105,7 +106,7 @@ func TestConfirmAssertion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")
+	mach, err := loader.LoadMachineFromFile(arbos.Path(), false, "cpp")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,14 +158,17 @@ func TestConfirmAssertion(t *testing.T) {
 
 	checkBalance(rollupAddress, big.NewInt(100))
 
-	checkpointer := checkpointing.NewIndexedCheckpointer(
+	checkpointer, err := checkpointing.NewIndexedCheckpointer(
 		rollupAddress,
 		dbPath,
 		big.NewInt(100000),
 		true,
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if err := checkpointer.Initialize(contractPath); err != nil {
+	if err := checkpointer.Initialize(arbos.Path()); err != nil {
 		t.Fatal(err)
 	}
 

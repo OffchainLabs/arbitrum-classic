@@ -29,8 +29,8 @@ import (
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 

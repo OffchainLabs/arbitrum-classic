@@ -19,19 +19,19 @@ package chainobserver
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 	"testing"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 )
 
 var dummyAddress common.Address
@@ -203,9 +203,13 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 	var checkpointer checkpointing.RollupCheckpointer
 	switch checkpointType {
 	case "dummy":
-		checkpointer = checkpointing.NewDummyCheckpointer()
+		checkpointer = NewDummyCheckpointer()
 	case "fresh_rocksdb":
-		checkpointer = checkpointing.NewIndexedCheckpointer(rollupAddress, "", big.NewInt(1000000), true)
+		var err error
+		checkpointer, err = checkpointing.NewIndexedCheckpointer(rollupAddress, "", big.NewInt(1000000), true)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, errors.New("invalid checkpoint type")
 	}

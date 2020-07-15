@@ -18,10 +18,10 @@ package checkpointing
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"math/big"
 )
 
@@ -31,7 +31,7 @@ type RollupCheckpointer interface {
 	HasCheckpointedState() bool
 	RestoreLatestState(context.Context, arbbridge.ChainTimeGetter, func([]byte, ckptcontext.RestoreContext) error) error
 	GetInitialMachine() (machine.Machine, error)
-	AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *ckptcontext.CheckpointContext)
+	AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *ckptcontext.CheckpointContext) <-chan error
 	CheckpointConfirmedNode(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *ckptcontext.CheckpointContext) error
 
 	GetCheckpointDB() machine.CheckpointStorage

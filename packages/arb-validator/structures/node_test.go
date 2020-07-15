@@ -17,11 +17,11 @@
 package structures
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"google.golang.org/protobuf/proto"
 	"testing"

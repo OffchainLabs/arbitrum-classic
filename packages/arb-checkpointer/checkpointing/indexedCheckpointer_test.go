@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"log"
 	"math/big"
 	"os"
@@ -30,11 +29,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodeview"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
-
-var contractPath = arbos.Path()
 
 var initialEntryBlockId = &common.BlockId{
 	Height:     common.NewTimeBlocksInt(10),
@@ -357,60 +352,5 @@ func TestCleanup(t *testing.T) {
 	_, err = cp.bs.GetBlock(distantEntryBlockId)
 	if err != nil {
 		t.Error(err)
-	}
-}
-
-func TestConfirm(t *testing.T) {
-	var rollupAddr common.Address
-	cp, err := newIndexedCheckpointer(rollupAddr, dbPath, maxReorgHeight, true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cp.db.CloseCheckpointStorage()
-
-	if err := cp.Initialize(contractPath); err != nil {
-		t.Fatal(err)
-	}
-
-	checkpointContext := ckptcontext.NewCheckpointContext()
-	if err = writeCheckpoint(cp.bs, cp.db, &writableCheckpoint{
-		blockId:  initialEntryBlockId,
-		contents: checkpointData,
-		ckpCtx:   checkpointContext,
-	}); err != nil {
-		t.Error(err)
-	}
-
-	mach, err := cp.GetInitialMachine()
-	if err != nil {
-		t.Error()
-	}
-
-	nd := structures.NewInitialNode(mach, common.Hash{})
-
-	buf := nd.MarshalForCheckpoint(checkpointContext, false)
-	data, err := proto.Marshal(buf)
-	if err != nil {
-		t.Error()
-	}
-
-	if err := cp.CheckpointConfirmedNode(
-		common.Hash{75},
-		3,
-		data,
-		checkpointContext,
-	); err != nil {
-		t.Error(err)
-	}
-
-	view := nodeview.New(cp.confirmedNodeStore, cp.db)
-
-	loadedNd, err := view.GetNode(3, common.Hash{75})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !loadedNd.EqualsFull(nd) {
-		t.Error("Loaded node not equal to original")
 	}
 }

@@ -1,26 +1,9 @@
-/*
-* Copyright 2020, Offchain Labs, Inc.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*    http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
- */
-
-package rollup
+package chainobserver
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -30,9 +13,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainobserver"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
@@ -40,10 +20,12 @@ import (
 )
 
 var tester *ethbridgetestcontracts.RollupTester
+var dummyRollupAddress = common.Address{1}
+var auth *bind.TransactOpts
 
 func TestMainSetup(m *testing.T) {
 	client, auths := test.SimulatedBackend()
-	auth := auths[0]
+	auth = auths[0]
 
 	_, machineTx, deployedArbRollup, err := ethbridgetestcontracts.DeployRollupTester(
 		auth,
@@ -65,167 +47,6 @@ func TestMainSetup(m *testing.T) {
 	}
 
 	tester = deployedArbRollup
-}
-
-var contractPath = arbos.Path()
-
-func TestGenerateLastMessageHash(t *testing.T) {
-	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	node := structures.NewInitialNode(mach.Clone(), common.Hash{})
-
-	results := make([]*evm.Result, 0, 10)
-	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
-		results = append(results, stop)
-	}
-
-	nextNode := structures.NewRandomNodeFromValidPrev(node, results)
-	assert := nextNode.Assertion()
-	expectedHash := nextNode.Disputable().AssertionClaim.AssertionStub.LastMessageHash
-
-	ethbridgeHash, _, err := tester.GenerateLastMessageHash(
-		nil,
-		assert.OutMsgsData,
-		big.NewInt(0),
-		big.NewInt(int64(len(assert.OutMsgsData))))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if expectedHash != ethbridgeHash {
-		t.Error(errors.New("calculated wrong last message hash"))
-		fmt.Println(expectedHash)
-		fmt.Println(ethbridgeHash)
-	}
-}
-
-func TestCalculateLeafFromPath(t *testing.T) {
-	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	node := structures.NewInitialNode(mach.Clone(), common.Hash{})
-
-	results := make([]*evm.Result, 0, 10)
-	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
-		results = append(results, stop)
-	}
-
-	nextNode := structures.NewRandomNodeFromValidPrev(node, results)
-	path := structures.GeneratePathProof(node, nextNode)
-
-	bridgeHash, err := tester.CalculateLeafFromPath(nil, node.Hash(), common.HashSliceToRaw(path))
-	if nextNode.Hash().ToEthHash() != bridgeHash {
-		fmt.Println(bridgeHash)
-		fmt.Println(nextNode.Hash().ToEthHash())
-		t.Error(bridgeHash)
-	}
-}
-
-func TestChildNodeHash(t *testing.T) {
-	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	node := structures.NewInitialNode(mach.Clone(), common.Hash{})
-
-	results := make([]*evm.Result, 0, 10)
-	for i := int32(0); i < 7; i++ {
-		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
-		results = append(results, stop)
-	}
-
-	nextNode := structures.NewRandomNodeFromValidPrev(node, results)
-
-	bridgeHash, err := tester.ChildNodeHash(
-		nil,
-		nextNode.PrevHash(),
-		nextNode.Deadline().Val,
-		nextNode.NodeDataHash(),
-		new(big.Int).SetUint64(uint64(nextNode.LinkType())),
-		nextNode.VMProtoData().Hash())
-
-	if nextNode.Hash().ToEthHash() != bridgeHash {
-		fmt.Println(bridgeHash)
-		fmt.Println(nextNode.Hash().ToEthHash())
-		t.Error(bridgeHash)
-	}
-}
-
-func TestProtoStateHash(t *testing.T) {
-	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	node := structures.NewInitialNode(mach.Clone(), common.Hash{})
-
-	results := make([]*evm.Result, 0, 10)
-	for i := int32(0); i < 8; i++ {
-		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
-		results = append(results, stop)
-	}
-
-	nextNode := structures.NewRandomNodeFromValidPrev(node, results)
-	protoState := nextNode.VMProtoData()
-
-	bridgeHash, err := tester.ComputeProtoHashBefore(
-		nil,
-		protoState.MachineHash,
-		protoState.InboxTop,
-		protoState.InboxCount)
-
-	if protoState.Hash().ToEthHash() != bridgeHash {
-		fmt.Println(bridgeHash)
-		fmt.Println(protoState.Hash().ToEthHash())
-		t.Error(bridgeHash)
-	}
-}
-
-var dummyRollupAddress = common.Address{1}
-var dummyAddress common.Address
-
-func setUpChain(rollupAddress common.Address, checkpointType string, contractPath string) (*chainobserver.ChainObserver, error) {
-	var checkpointer checkpointing.RollupCheckpointer
-	switch checkpointType {
-	case "dummy":
-		checkpointer = checkpointing.NewDummyCheckpointer()
-	case "fresh_rocksdb":
-		checkpointer = checkpointing.NewIndexedCheckpointer(rollupAddress, "", big.NewInt(1000000), true)
-	default:
-		return nil, errors.New("invalid checkpoint type")
-	}
-	if err := checkpointer.Initialize(contractPath); err != nil {
-		return nil, err
-	}
-	chain, err := chainobserver.NewChain(
-		dummyAddress,
-		checkpointer,
-		valprotocol.ChainParams{
-			StakeRequirement:        big.NewInt(1),
-			GracePeriod:             common.TicksFromSeconds(60 * 60),
-			MaxExecutionSteps:       1000000,
-			ArbGasSpeedLimitPerTick: 1000,
-		},
-		false,
-		&common.BlockId{
-			Height:     common.NewTimeBlocks(big.NewInt(10)),
-			HeaderHash: common.Hash{},
-		},
-		common.Hash{},
-	)
-	if err != nil {
-		return nil, err
-	}
-	chain.Start(context.Background())
-	return chain, nil
 }
 
 func TestComputePrevLeaf(t *testing.T) {

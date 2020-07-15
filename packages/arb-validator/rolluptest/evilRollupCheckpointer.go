@@ -18,15 +18,15 @@ package rolluptest
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 )
 
 func NewEvilRollupCheckpointer(
@@ -34,15 +34,14 @@ func NewEvilRollupCheckpointer(
 	databasePath string,
 	maxReorgDepth *big.Int,
 	forceFreshStart bool,
-) *EvilRollupCheckpointer {
-	return &EvilRollupCheckpointer{
-		checkpointing.NewIndexedCheckpointer(
-			rollupAddr,
-			databasePath,
-			maxReorgDepth,
-			forceFreshStart,
-		),
-	}
+) (*EvilRollupCheckpointer, error) {
+	cp, err := checkpointing.NewIndexedCheckpointer(
+		rollupAddr,
+		databasePath,
+		maxReorgDepth,
+		forceFreshStart,
+	)
+	return &EvilRollupCheckpointer{cp}, err
 }
 
 type EvilRollupCheckpointer struct {
@@ -111,8 +110,8 @@ func (e EvilRollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return NewEvilMachine(m.(*cmachine.Machine)), nil
 }
 
-func (e EvilRollupCheckpointer) AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *ckptcontext.CheckpointContext) {
-	e.cp.AsyncSaveCheckpoint(blockId, contents, cpCtx)
+func (e EvilRollupCheckpointer) AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *ckptcontext.CheckpointContext) <-chan error {
+	return e.cp.AsyncSaveCheckpoint(blockId, contents, cpCtx)
 }
 
 func (e EvilRollupCheckpointer) CheckpointConfirmedNode(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *ckptcontext.CheckpointContext) error {

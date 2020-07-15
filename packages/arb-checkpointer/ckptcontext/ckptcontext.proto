@@ -17,7 +17,7 @@
 syntax = "proto3";
 package ckptcontext;
 import "arb-util/common/common.proto";
-option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext";
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext";
 
 message CheckpointManifest {
     repeated common.HashBuf values = 1;
