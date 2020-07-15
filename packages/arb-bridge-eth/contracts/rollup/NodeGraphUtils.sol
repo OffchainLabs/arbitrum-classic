@@ -27,22 +27,54 @@ library NodeGraphUtils {
     using Hashing for Value.Data;
 
     struct AssertionData {
-        bytes32 beforeVMHash;
         bytes32 beforeInboxTop;
         uint256 beforeInboxCount;
         bytes32 prevPrevLeafHash;
         uint256 prevDeadlineTicks;
         bytes32 prevDataHash;
         uint32 prevChildType;
-        uint64 numSteps;
         uint256 importedMessageCount;
         bytes32 afterInboxTop;
-        bytes32 importedMessagesSlice;
-        bytes32 afterVMHash;
-        bool didInboxInsn;
-        uint64 numArbGas;
-        bytes32 messagesAccHash;
-        bytes32 logsAccHash;
+        ChallengeUtils.ExecutionAssertion assertion;
+    }
+
+    function makeAssertion(
+        bytes32[9] memory fields,
+        uint256[3] memory fields2,
+        uint32 prevChildType,
+        uint64 numSteps,
+        bool didInboxInsn,
+        uint64 numArbGas,
+        uint64 messageCount,
+        uint64 logCount
+    ) internal pure returns (AssertionData memory) {
+        ChallengeUtils.ExecutionAssertion memory assertion = ChallengeUtils
+            .ExecutionAssertion(
+            numSteps,
+            fields[0],
+            fields[1],
+            fields[2],
+            didInboxInsn,
+            numArbGas,
+            0,
+            fields[3],
+            messageCount,
+            0,
+            fields[4],
+            logCount
+        );
+        return
+            AssertionData(
+                fields[5],
+                fields2[0],
+                fields[6],
+                fields2[1],
+                fields[7],
+                prevChildType,
+                fields2[2],
+                fields[8],
+                assertion
+            );
     }
 
     function computePrevLeaf(AssertionData memory data)
@@ -51,7 +83,7 @@ library NodeGraphUtils {
         returns (bytes32, bytes32)
     {
         bytes32 vmProtoHashBefore = RollupUtils.protoStateHash(
-            data.beforeVMHash,
+            data.assertion.beforeHash,
             data.beforeInboxTop,
             data.beforeInboxCount
         );
@@ -71,7 +103,7 @@ library NodeGraphUtils {
         AssertionData memory data,
         uint256 blockNum
     ) internal pure returns (uint256, uint256) {
-        uint256 checkTimeTicks = data.numArbGas /
+        uint256 checkTimeTicks = data.assertion.numArbGas /
             vmParams.arbGasSpeedLimitPerTick;
         uint256 deadlineTicks = RollupTime.blocksToTicks(blockNum) +
             vmParams.gracePeriodTicks;
@@ -121,7 +153,7 @@ library NodeGraphUtils {
             data.beforeInboxTop,
             data.afterInboxTop,
             Value.newEmptyTuple().hash(),
-            data.importedMessagesSlice,
+            data.assertion.inboxHash,
             data.importedMessageCount
         );
         return
@@ -150,7 +182,7 @@ library NodeGraphUtils {
                 prevLeaf,
                 deadlineTicks,
                 RollupUtils.challengeDataHash(
-                    executionHash(data),
+                    ChallengeUtils.hash(data.assertion),
                     gracePeriodTicks + checkTimeTicks
                 ),
                 ChallengeUtils.getInvalidExType(),
@@ -168,35 +200,15 @@ library NodeGraphUtils {
                 prevLeaf,
                 deadlineTicks,
                 RollupUtils.validDataHash(
-                    data.messagesAccHash,
-                    data.logsAccHash
+                    data.assertion.lastMessageHash,
+                    data.assertion.lastLogHash
                 ),
                 ChallengeUtils.getValidChildType(),
                 RollupUtils.protoStateHash(
-                    data.afterVMHash,
+                    data.assertion.afterHash,
                     data.afterInboxTop,
                     data.beforeInboxCount + data.importedMessageCount
                 )
-            );
-    }
-
-    function executionHash(AssertionData memory data)
-        private
-        pure
-        returns (bytes32)
-    {
-        return
-            ChallengeUtils.executionHash(
-                data.numSteps,
-                data.beforeVMHash,
-                data.importedMessagesSlice,
-                data.afterVMHash,
-                data.didInboxInsn,
-                data.numArbGas,
-                0x00,
-                data.messagesAccHash,
-                0x00,
-                data.logsAccHash
             );
     }
 }

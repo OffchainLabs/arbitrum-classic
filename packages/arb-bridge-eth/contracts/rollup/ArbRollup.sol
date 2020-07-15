@@ -241,51 +241,45 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
      *   afterVMHash Claimed machine hash after this assertion is completed
      *   messagesAccHash Claimed commitment to a set of messages output in the assertion
      *   logsAccHash Claimed commitment to a set of logs output in the assertion
-     *   validBlockHashPrecondition Hash of a known block to invalidate the assertion if too deep a reorg occurs
+     * @param fields2 Packed data for the following fields
+     *   beforeInboxCount The total number of messages read after the previous assertion executed
+     *   prevDeadlineTicks The challenge deadline of the node this assertion builds on
+     *   importedMessageCount Argument specifying the number of messages read
+     * @param validBlockHashPrecondition Hash of a known block to invalidate the assertion if too deep a reorg occurs
      * @param validBlockHeightPrecondition Height of the block with hash validBlockHash
-     * @param beforeInboxCount The total number of messages read after the previous assertion executed
-     * @param prevDeadlineTicks The challenge deadline of the node this assertion builds on
      * @param prevChildType The type of node that this assertion builds on top of
      * @param numSteps Argument specifying the number of steps execuited
-     * @param importedMessageCount Argument specifying the number of messages read
      * @param didInboxInsn Claim about whether the assertion inlcuding reading the inbox
      * @param numArbGas Claimed amount of ArbGas used in the assertion
      * @param stakerProof Node graph proof that the asserter is on or can move to the leaf this assertion builds on
      */
     function makeAssertion(
-        bytes32[10] calldata fields,
+        bytes32[9] calldata fields,
+        uint256[3] calldata fields2,
+        bytes32 validBlockHashPrecondition,
         uint256 validBlockHeightPrecondition,
-        uint256 beforeInboxCount,
-        uint256 prevDeadlineTicks,
+        uint64 messageCount,
+        uint64 logCount,
         uint32 prevChildType,
         uint64 numSteps,
-        uint256 importedMessageCount,
         bool didInboxInsn,
         uint64 numArbGas,
         bytes32[] calldata stakerProof
     ) external {
         require(
-            blockhash(validBlockHeightPrecondition) == fields[9],
+            blockhash(validBlockHeightPrecondition) == validBlockHashPrecondition,
             "invalid known block"
         );
         NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
-            .AssertionData(
-            fields[0],
-            fields[1],
-            beforeInboxCount,
-            fields[2],
-            prevDeadlineTicks,
-            fields[3],
+            .makeAssertion(
+            fields,
+            fields2,
             prevChildType,
             numSteps,
-            importedMessageCount,
-            fields[4],
-            fields[5],
-            fields[6],
             didInboxInsn,
             numArbGas,
-            fields[7],
-            fields[8]
+            messageCount,
+            logCount
         );
 
         (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(

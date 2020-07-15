@@ -239,6 +239,9 @@ func TestConfirmAssertion(t *testing.T) {
 
 	latestConf := chain.NodeGraph.LatestConfirmed()
 	validNode := chain.NodeGraph.NodeFromHash(latestConf.SuccessorHashes()[3])
+	if validNode == nil {
+		t.Fatal("valid node was nil")
+	}
 	if err := validNode.UpdateValidOpinion(prepared.Machine, prepared.Assertion); err != nil {
 		t.Fatal(err)
 	}

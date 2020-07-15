@@ -81,13 +81,21 @@ func (pa *PreparedAssertion) PossibleFutureNode(chainParams valprotocol.ChainPar
 func (prep *PreparedAssertion) GetAssertionParams() [9][32]byte {
 	return [9][32]byte{
 		prep.BeforeState.MachineHash,
-		prep.BeforeState.InboxTop,
-		prep.Prev.PrevHash(),
-		prep.Prev.NodeDataHash(),
-		prep.Claim.AfterInboxTop,
 		prep.Claim.ImportedMessagesSlice,
 		prep.Claim.AssertionStub.AfterHash,
 		prep.Claim.AssertionStub.LastMessageHash,
 		prep.Claim.AssertionStub.LastLogHash,
+		prep.BeforeState.InboxTop,
+		prep.Prev.PrevHash(),
+		prep.Prev.NodeDataHash(),
+		prep.Claim.AfterInboxTop,
+	}
+}
+
+func (prep *PreparedAssertion) GetAssertionParams2() [3]*big.Int {
+	return [3]*big.Int{
+		prep.BeforeState.InboxCount,
+		prep.Prev.Deadline().Val,
+		prep.Params.ImportedMessageCount,
 	}
 }

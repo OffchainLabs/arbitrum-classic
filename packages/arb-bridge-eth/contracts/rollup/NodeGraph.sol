@@ -64,7 +64,9 @@ contract NodeGraph {
         uint256 importedMessageCount,
         uint64 numArbGas,
         uint64 numSteps,
-        bool didInboxInsn
+        bool didInboxInsn,
+        uint64 messageCount,
+        uint64 logCount
     );
 
     event RollupConfirmed(bytes32 nodeHash);
@@ -192,17 +194,19 @@ contract NodeGraph {
                 prevLeaf,
                 inboxValue,
                 data.afterInboxTop,
-                data.importedMessagesSlice,
-                data.afterVMHash,
-                data.messagesAccHash,
-                data.logsAccHash,
+                data.assertion.inboxHash,
+                data.assertion.afterHash,
+                data.assertion.lastMessageHash,
+                data.assertion.lastLogHash,
                 validLeaf
             ],
             inboxCount,
             data.importedMessageCount,
-            data.numArbGas,
-            data.numSteps,
-            data.didInboxInsn
+            data.assertion.numArbGas,
+            data.assertion.numSteps,
+            data.assertion.didInboxInsn,
+            data.assertion.messageCount,
+            data.assertion.logCount
         );
     }
 
@@ -266,12 +270,16 @@ contract NodeGraph {
         view
     {
         require(
-            !VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash),
+            !VM.isErrored(data.assertion.beforeHash) &&
+                !VM.isHalted(data.assertion.beforeHash),
             MAKE_RUN
         );
-        require(data.numSteps <= vmParams.maxExecutionSteps, MAKE_STEP);
         require(
-            data.importedMessageCount == 0 || data.didInboxInsn,
+            data.assertion.numSteps <= vmParams.maxExecutionSteps,
+            MAKE_STEP
+        );
+        require(
+            data.importedMessageCount == 0 || data.assertion.didInboxInsn,
             MAKE_MESSAGES
         );
     }

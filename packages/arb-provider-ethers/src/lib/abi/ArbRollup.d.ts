@@ -85,18 +85,20 @@ interface ArbRollupInterface extends Interface {
     makeAssertion: TypedFunctionDescription<{
       encode([
         fields,
+        fields2,
+        validBlockHashPrecondition,
         validBlockHeightPrecondition,
-        beforeInboxCount,
-        prevDeadlineTicks,
+        messageCount,
+        logCount,
         prevChildType,
         numSteps,
-        importedMessageCount,
         didInboxInsn,
         numArbGas,
         stakerProof,
       ]: [
         Arrayish[],
-        BigNumberish,
+        BigNumberish[],
+        Arrayish,
         BigNumberish,
         BigNumberish,
         BigNumberish,
@@ -223,7 +225,9 @@ interface ArbRollupInterface extends Interface {
         numArbGas,
         numSteps,
         didInboxInsn,
-      ]: [null, null, null, null, null, null]): string[]
+        messageCount,
+        logCount,
+      ]: [null, null, null, null, null, null, null, null]): string[]
     }>
 
     RollupChallengeCompleted: TypedEventDescription<{
@@ -335,12 +339,13 @@ export class ArbRollup extends Contract {
 
     makeAssertion(
       fields: Arrayish[],
+      fields2: BigNumberish[],
+      validBlockHashPrecondition: Arrayish,
       validBlockHeightPrecondition: BigNumberish,
-      beforeInboxCount: BigNumberish,
-      prevDeadlineTicks: BigNumberish,
+      messageCount: BigNumberish,
+      logCount: BigNumberish,
       prevChildType: BigNumberish,
       numSteps: BigNumberish,
-      importedMessageCount: BigNumberish,
       didInboxInsn: boolean,
       numArbGas: BigNumberish,
       stakerProof: Arrayish[],
@@ -478,12 +483,13 @@ export class ArbRollup extends Contract {
 
   makeAssertion(
     fields: Arrayish[],
+    fields2: BigNumberish[],
+    validBlockHashPrecondition: Arrayish,
     validBlockHeightPrecondition: BigNumberish,
-    beforeInboxCount: BigNumberish,
-    prevDeadlineTicks: BigNumberish,
+    messageCount: BigNumberish,
+    logCount: BigNumberish,
     prevChildType: BigNumberish,
     numSteps: BigNumberish,
-    importedMessageCount: BigNumberish,
     didInboxInsn: boolean,
     numArbGas: BigNumberish,
     stakerProof: Arrayish[],
@@ -585,7 +591,9 @@ export class ArbRollup extends Contract {
       importedMessageCount: null,
       numArbGas: null,
       numSteps: null,
-      didInboxInsn: null
+      didInboxInsn: null,
+      messageCount: null,
+      logCount: null
     ): EventFilter
 
     RollupChallengeCompleted(
@@ -665,12 +673,13 @@ export class ArbRollup extends Contract {
 
     makeAssertion(
       fields: Arrayish[],
+      fields2: BigNumberish[],
+      validBlockHashPrecondition: Arrayish,
       validBlockHeightPrecondition: BigNumberish,
-      beforeInboxCount: BigNumberish,
-      prevDeadlineTicks: BigNumberish,
+      messageCount: BigNumberish,
+      logCount: BigNumberish,
       prevChildType: BigNumberish,
       numSteps: BigNumberish,
-      importedMessageCount: BigNumberish,
       didInboxInsn: boolean,
       numArbGas: BigNumberish,
       stakerProof: Arrayish[]

@@ -184,7 +184,7 @@ func (vm *arbRollup) MakeAssertion(
 ) ([]arbbridge.Event, error) {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
-	extraParams := [10][32]byte{
+	fields := [9][32]byte{
 		beforeState.MachineHash,
 		beforeState.InboxTop,
 		prevPrevLeafHash,
@@ -194,17 +194,22 @@ func (vm *arbRollup) MakeAssertion(
 		assertionClaim.AssertionStub.AfterHash,
 		assertionClaim.AssertionStub.LastMessageHash,
 		assertionClaim.AssertionStub.LastLogHash,
-		validBlock.HeaderHash,
+	}
+	fields2 := [3]*big.Int{
+		beforeState.InboxCount,
+		prevDeadline.Val,
+		assertionParams.ImportedMessageCount,
 	}
 	tx, err := vm.ArbRollup.MakeAssertion(
 		vm.auth.getAuth(ctx),
-		extraParams,
+		fields,
+		fields2,
+		validBlock.HeaderHash,
 		validBlock.Height.AsInt(),
-		beforeState.InboxCount,
-		prevDeadline.Val,
+		assertionClaim.AssertionStub.MessageCount,
+		assertionClaim.AssertionStub.LogCount,
 		uint32(prevChildType),
 		assertionParams.NumSteps,
-		assertionParams.ImportedMessageCount,
 		assertionClaim.AssertionStub.DidInboxInsn,
 		assertionClaim.AssertionStub.NumGas,
 		common.HashSliceToRaw(stakerProof),
@@ -215,13 +220,14 @@ func (vm *arbRollup) MakeAssertion(
 			vm.client,
 			vm.auth.auth.From,
 			vm.rollupAddress,
-			extraParams,
+			fields,
+			fields2,
+			validBlock.HeaderHash,
 			validBlock.Height.AsInt(),
-			beforeState.InboxCount,
-			prevDeadline.Val,
+			assertionClaim.AssertionStub.MessageCount,
+			assertionClaim.AssertionStub.LogCount,
 			uint32(prevChildType),
 			assertionParams.NumSteps,
-			assertionParams.ImportedMessageCount,
 			assertionClaim.AssertionStub.DidInboxInsn,
 			assertionClaim.AssertionStub.NumGas,
 			common.HashSliceToRaw(stakerProof),
