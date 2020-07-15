@@ -22,11 +22,13 @@ module.exports = {
           'http://localhost:7545'
         )
         const arbProvider = new ArbEth.ArbProvider(
+          '0xc68DCee7b8cA57F41D1A417103CB65836E99e013',
           'http://localhost:1235',
-          provider
+          provider,
+          'http://localhost:1237'
         )
         const wallet = new ethers.Wallet.fromMnemonic(mnemonic).connect(
-          provider
+          arbProvider
         )
         return new ProviderBridge(
           arbProvider,

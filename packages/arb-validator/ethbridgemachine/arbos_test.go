@@ -17,7 +17,6 @@
 package ethbridgemachine
 
 import (
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
@@ -246,7 +245,7 @@ func TestDeposit(t *testing.T) {
 
 func TestBatch(t *testing.T) {
 	chain := common.RandAddress()
-	chainId := new(big.Int).SetBytes(chain[12:])
+	chainId := new(big.Int).SetBytes(chain[14:])
 
 	mach, err := loader.LoadMachineFromFile(gotest.TestMachinePath(), false, "cpp")
 	if err != nil {
@@ -291,29 +290,12 @@ func TestBatch(t *testing.T) {
 			t.Fatal("deposit should not have had a result")
 		}
 
-		tx := message.Transaction{
-			MaxGas:      big.NewInt(0),
-			GasPriceBid: big.NewInt(0),
-			SequenceNum: big.NewInt(0),
-			DestAddress: dest,
-			Payment:     big.NewInt(0),
-			Data:        []byte{},
-		}
-
-		signedTx, err := types.SignTx(tx.AsEthTx(), types.NewEIP155Signer(chainId), pk)
+		tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 0, big.NewInt(0), []byte{})
+		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainId), pk)
 		if err != nil {
 			t.Fatal(err)
 		}
-		v, r, s := signedTx.RawSignatureValues()
-		var sig [65]byte
-		copy(sig[:], math.U256Bytes(r))
-		copy(sig[32:], math.U256Bytes(s))
-		sig[64] = byte(v.Uint64() % 2)
-		batchTx := message.BatchTx{
-			Transaction: tx,
-			Signature:   sig,
-		}
-		txes = append(txes, batchTx)
+		txes = append(txes, message.NewBatchTxFromSignedEthTx(signedTx))
 	}
 
 	msg := message.TransactionBatch{Transactions: txes}

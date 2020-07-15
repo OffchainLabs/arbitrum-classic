@@ -98,7 +98,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     aggregatorUrl?: string
   ) {
     const chainId = ethers.utils
-      .bigNumberify(ethers.utils.hexDataSlice(chainAddress, 12))
+      .bigNumberify(ethers.utils.hexDataSlice(chainAddress, 14))
       .toNumber()
     super(chainId)
     this.chainAddress = chainAddress
@@ -262,7 +262,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   // object with normalized values passed in, depending on the method
   /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
   public async perform(method: string, params: any): Promise<any> {
-    // console.log('perform', method, params)
+    console.log('perform', method, params)
     switch (method) {
       case 'getCode': {
         if (
@@ -369,7 +369,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             nonce: l2tx.sequenceNum.toNumber(),
             to: l2tx.destAddress,
             value: l2tx.payment,
-            chainId: 123456789,
+            chainId: this.chainId,
           }
           const response = this.ethProvider._wrapTransaction(tx)
           if (result.nodeInfo === undefined) {
@@ -423,8 +423,14 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         const result = await this.callImpl(tx)
         return result.gasUsed
       }
+      case 'sendTransaction': {
+        if (!this.aggregator) {
+          throw Error('Can only send transactions if aggregator is connected')
+        }
+        return this.aggregator.sendTransaction(params.signedTransaction)
+      }
     }
-    // console.log('Forwarding query to provider', method, params);
+    console.log('Forwarding query to provider', method, params)
     return await this.ethProvider.perform(method, params)
   }
 

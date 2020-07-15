@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
 	"log"
 	"math/big"
 	"net/http"
@@ -146,78 +147,30 @@ func (m *Server) sendBatch(ctx context.Context) {
 
 // SendTransaction takes a request signed transaction message from a client
 // and puts it in a queue to be included in the next transaction batch
-func (m *Server) SendTransaction(_ *http.Request, args *SendTransactionArgs, _ *SendTransactionReply) error {
-	destBytes, err := hexutil.Decode(args.DestAddress)
+func (m *Server) SendTransaction(_ *http.Request, args *SendTransactionArgs, reply *SendTransactionReply) error {
+	encodedTx, err := hexutil.Decode(args.SignedTransaction)
 	if err != nil {
-		return errors2.Wrap(err, "error decoding Dest")
-	}
-	var dest common.Address
-	copy(dest[:], destBytes)
-
-	maxGas, valid := new(big.Int).SetString(args.MaxGas, 10)
-	if !valid {
-		return errors.New("invalid MaxGas")
+		return errors2.Wrap(err, "error decoding signed transaction")
 	}
 
-	gasPriceBid, valid := new(big.Int).SetString(args.GasPriceBid, 10)
-	if !valid {
-		return errors.New("invalid GasPriceBid")
-	}
-
-	sequenceNum, valid := new(big.Int).SetString(args.SequenceNum, 10)
-	if !valid {
-		return errors.New("invalid sequence num")
-	}
-
-	paymentInt, valid := new(big.Int).SetString(args.Payment, 10)
-	if !valid {
-		return errors.New("invalid Payment")
-	}
-
-	data, err := hexutil.Decode(args.Data)
-	if err != nil {
-		return errors2.Wrap(err, "error decoding data")
-	}
-
-	tx := message.Transaction{
-		MaxGas:      maxGas,
-		GasPriceBid: gasPriceBid,
-		SequenceNum: sequenceNum,
-		DestAddress: dest,
-		Payment:     paymentInt,
-		Data:        data,
-	}
-
-	signature, err := hexutil.Decode(args.Signature)
-	if err != nil {
-		return errors2.Wrap(err, "error decoding signature")
-	}
-	if len(signature) != signatureLength {
-		return errors.New("signature of wrong length")
-	}
-
-	chainId := new(big.Int).SetBytes(m.rollupAddress[12:])
-	signer := types.NewEIP155Signer(chainId)
-	signedTx, err := tx.AsEthTx().WithSignature(signer, signature)
-	if err != nil {
+	tx := new(types.Transaction)
+	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
 		return err
 	}
-	ethSender, err := signer.Sender(signedTx)
+
+	chainId := new(big.Int).SetBytes(m.rollupAddress[14:])
+	signer := types.NewEIP155Signer(chainId)
+	ethSender, err := signer.Sender(tx)
 	if err != nil {
 		return err
 	}
 	sender := common.NewAddressFromEth(ethSender)
+	batchTx := message.NewBatchTxFromSignedEthTx(tx)
 
-	var sigData [signatureLength]byte
-	copy(sigData[:], signature)
+	txHash := tx.Hash()
+	log.Println("Got tx: ", batchTx.Transaction, "with hash", txHash, "from", sender)
 
-	batchTx := message.BatchTx{
-		Transaction: tx,
-		Signature:   sigData,
-	}
-
-	log.Println("Got tx: ", tx, "with hash", tx.MessageID(sender), "from", sender)
-
+	reply.TransactionHash = txHash.Hex()
 	m.Lock()
 	defer m.Unlock()
 

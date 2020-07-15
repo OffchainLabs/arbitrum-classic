@@ -107,6 +107,21 @@ func newTransactionFromData(data []byte) Transaction {
 	}
 }
 
+func NewTransactionFromEthTx(tx *types.Transaction) Transaction {
+	var dest common.Address
+	if tx.To() != nil {
+		dest = common.NewAddressFromEth(*tx.To())
+	}
+	return Transaction{
+		MaxGas:      new(big.Int).SetUint64(tx.Gas()),
+		GasPriceBid: tx.GasPrice(),
+		SequenceNum: new(big.Int).SetUint64(tx.Nonce()),
+		DestAddress: dest,
+		Payment:     tx.Value(),
+		Data:        tx.Data(),
+	}
+}
+
 func NewRandomTransaction() Transaction {
 	return Transaction{
 		MaxGas:      common.RandBigInt(),
@@ -277,6 +292,18 @@ func (c Call) AsData() []byte {
 type BatchTx struct {
 	Transaction Transaction
 	Signature   [SignatureSize]byte
+}
+
+func NewBatchTxFromSignedEthTx(tx *types.Transaction) BatchTx {
+	v, r, s := tx.RawSignatureValues()
+	var sig [65]byte
+	copy(sig[:], math.U256Bytes(r))
+	copy(sig[32:], math.U256Bytes(s))
+	sig[64] = byte(v.Uint64() % 2)
+	return BatchTx{
+		Transaction: NewTransactionFromEthTx(tx),
+		Signature:   sig,
+	}
 }
 
 func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) BatchTx {
