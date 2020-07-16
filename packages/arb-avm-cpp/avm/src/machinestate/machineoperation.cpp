@@ -21,6 +21,8 @@
 #include <ethash/keccak.hpp>
 #include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
 
+using namespace intx;
+
 namespace {
 template <typename T>
 static T shrink(uint256_t i) {
@@ -106,20 +108,10 @@ void sdiv(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
-    const auto min = (std::numeric_limits<uint256_t>::max() / 2) + 1;
-
     if (bNum == 0) {
         m.state = Status::Error;
-    } else if (aNum == min && bNum == -1) {
-        m.stack[1] = aNum;
     } else {
-        const auto signA = get_sign(aNum);
-        const auto signB = get_sign(bNum);
-        if (signA == -1)
-            aNum = 0 - aNum;
-        if (signB == -1)
-            bNum = 0 - bNum;
-        m.stack[1] = (aNum / bNum) * signA * signB;
+        m.stack[1] = sdivrem(aNum, bNum).quot;
     }
     m.stack.popClear();
     ++m.pc;
@@ -129,10 +121,10 @@ void mod(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
-    if (bNum != 0) {
-        m.stack[1] = aNum % bNum;
-    } else {
+    if (bNum == 0) {
         m.state = Status::Error;
+    } else {
+        m.stack[1] = aNum % bNum;
     }
     m.stack.popClear();
     ++m.pc;
@@ -146,13 +138,7 @@ void smod(MachineState& m) {
     if (bNum == 0) {
         m.state = Status::Error;
     } else {
-        const auto signA = get_sign(aNum);
-        const auto signB = get_sign(bNum);
-        if (signA == -1)
-            aNum = 0 - aNum;
-        if (signB == -1)
-            bNum = 0 - bNum;
-        m.stack[1] = (aNum % bNum) * signA;
+        m.stack[1] = sdivrem(aNum, bNum).rem;
     }
     m.stack.popClear();
     ++m.pc;
@@ -167,7 +153,7 @@ void addmod(MachineState& m) {
     if (cNum == 0) {
         m.state = Status::Error;
     } else {
-        m.stack[2] = intx::addmod(aNum, bNum, cNum);
+        m.stack[2] = addmod(aNum, bNum, cNum);
     }
     m.stack.popClear();
     m.stack.popClear();
@@ -183,7 +169,7 @@ void mulmod(MachineState& m) {
     if (cNum == 0) {
         m.state = Status::Error;
     } else {
-        m.stack[2] = intx::mulmod(aNum, bNum, cNum);
+        m.stack[2] = mulmod(aNum, bNum, cNum);
     }
     m.stack.popClear();
     m.stack.popClear();
@@ -194,7 +180,7 @@ void exp(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
-    m.stack[1] = intx::exp(aNum, bNum);
+    m.stack[1] = exp(aNum, bNum);
     m.stack.popClear();
     ++m.pc;
 }
@@ -331,8 +317,8 @@ void signExtend(MachineState& m) {
     if (bNum >= 32) {
         m.stack[1] = m.stack[0];
     } else {
-        auto idx = 8 * intx::narrow_cast<uint8_t>(bNum);
-        auto sign = intx::narrow_cast<uint8_t>((aNum >> idx) & 1);
+        auto idx = 8 * narrow_cast<uint8_t>(bNum) + 7;
+        auto sign = narrow_cast<uint8_t>((aNum >> idx) & 1);
         constexpr auto zero = uint256_t{0};
         auto mask = ~zero >> (256 - idx);
         m.stack[1] = ((sign ? ~zero : zero) << idx) | (aNum & mask);
@@ -368,7 +354,7 @@ void ethhash2Op(MachineState& m) {
     to_big_endian(bNum, it);
 
     auto hash_val = ethash::keccak256(inData.data(), inData.size());
-    m.stack[1] = intx::be::load<uint256_t>(hash_val);
+    m.stack[1] = be::load<uint256_t>(hash_val);
 
     m.stack.popClear();
     ++m.pc;
@@ -570,7 +556,7 @@ uint256_t parseSignature(MachineState& m) {
     auto it = to_big_endian(assumeInt(m.stack[0]), sig_raw.begin());
     to_big_endian(assumeInt(m.stack[1]), it);
 
-    auto message = intx::be::store<ethash::hash256>(assumeInt(m.stack[3]));
+    auto message = be::store<ethash::hash256>(assumeInt(m.stack[3]));
 
     static secp256k1_context* context = secp256k1_context_create(
         SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
@@ -598,7 +584,7 @@ uint256_t parseSignature(MachineState& m) {
     // Skip header byte
     auto hash_val = ethash::keccak256(pubkey_raw.data() + 1, 64);
     std::fill(&hash_val.bytes[0], &hash_val.bytes[12], 0);
-    return intx::be::load<uint256_t>(hash_val);
+    return be::load<uint256_t>(hash_val);
 }
 }  // namespace
 

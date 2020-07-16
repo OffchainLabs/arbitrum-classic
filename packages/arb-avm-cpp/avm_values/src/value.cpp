@@ -200,7 +200,7 @@ struct ValuePrinter {
     }
 
     std::ostream* operator()(const uint256_t& val) const {
-        os << val;
+        os << intx::to_string(val);
         return &os;
     }
 

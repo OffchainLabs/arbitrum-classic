@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include "bigint_utils.hpp"
-
 #include <avm/machine.hpp>
 
 #include <boost/algorithm/hex.hpp>
