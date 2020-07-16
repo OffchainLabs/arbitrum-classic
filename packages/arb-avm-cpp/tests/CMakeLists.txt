@@ -41,6 +41,7 @@ PRIVATE
 	Catch2::Catch2
 	nlohmann_json::nlohmann_json
     Boost::filesystem
+    Boost::system
 )
 
 include(CTest)
