@@ -22,7 +22,8 @@ COPY --from=arb-validator --chown=user /cpp-build build/
 RUN mkdir -p build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
     cmake --build . -j $(nproc) && \
-    cp lib/lib* ../cmachine
+    cd ../ && \
+    ./scripts/install-cmachine-release
 
 
 FROM alpine:edge as arb-validator-builder

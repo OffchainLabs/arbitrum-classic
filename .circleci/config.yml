@@ -141,11 +141,12 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
       - run:
           command: |
-            mkdir -p packages/arb-avm-cpp/build
-            cd packages/arb-avm-cpp/build
+            mkdir -p packages/arb-avm-cpp/debug
+            cd packages/arb-avm-cpp/debug
             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
             cmake --build . -j 2
-            cp lib/lib* ../cmachine/
+            cd ../
+            ./scripts/install-cmachine-debug
       - run:
           name: test arb-avm-cpp
           command: |
