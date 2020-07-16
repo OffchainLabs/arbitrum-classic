@@ -52,19 +52,24 @@ func (c *executionChallenge) BisectAssertion(
 	totalSteps uint64,
 ) error {
 	machineHashes := make([][32]byte, 0, len(assertions)+1)
-	didInboxInsns := make([]bool, 0, len(assertions))
+	inboxInsnIndex := uint32(0)
 	messageAccs := make([][32]byte, 0, len(assertions)+1)
 	logAccs := make([][32]byte, 0, len(assertions)+1)
 	gasses := make([]uint64, 0, len(assertions))
 	machineHashes = append(machineHashes, precondition.BeforeHash)
 	messageAccs = append(messageAccs, assertions[0].FirstMessageHash)
 	logAccs = append(logAccs, assertions[0].FirstLogHash)
-	for _, assertion := range assertions {
+	outCounts := make([]uint64, len(assertions)*2)
+	for i, assertion := range assertions {
 		machineHashes = append(machineHashes, assertion.AfterHash)
-		didInboxInsns = append(didInboxInsns, assertion.DidInboxInsn)
+		if assertion.DidInboxInsn {
+			inboxInsnIndex = uint32(i + 1)
+		}
 		messageAccs = append(messageAccs, assertion.LastMessageHash)
 		logAccs = append(logAccs, assertion.LastLogHash)
 		gasses = append(gasses, assertion.NumGas)
+		outCounts[i] = assertion.MessageCount
+		outCounts[i+len(assertions)] = assertion.LogCount
 	}
 	c.auth.Lock()
 	defer c.auth.Unlock()
@@ -73,9 +78,10 @@ func (c *executionChallenge) BisectAssertion(
 		c.auth.getAuth(ctx),
 		beforeInboxHash,
 		machineHashes,
-		didInboxInsns,
+		inboxInsnIndex,
 		messageAccs,
 		logAccs,
+		outCounts,
 		gasses,
 		totalSteps,
 	)
@@ -87,9 +93,10 @@ func (c *executionChallenge) BisectAssertion(
 			c.contractAddress,
 			beforeInboxHash,
 			machineHashes,
-			didInboxInsns,
+			inboxInsnIndex,
 			messageAccs,
 			logAccs,
+			outCounts,
 			gasses,
 			totalSteps,
 		)

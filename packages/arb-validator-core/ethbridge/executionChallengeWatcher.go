@@ -110,12 +110,14 @@ func (c *executionChallengeWatcher) parseExecutionEvent(chainInfo arbbridge.Chai
 		for i := 0; i < bisectionCount; i++ {
 			assertion := &valprotocol.ExecutionAssertionStub{
 				AfterHash:        bisectChal.MachineHashes[i+1],
-				DidInboxInsn:     bisectChal.DidInboxInsns[i],
+				DidInboxInsn:     bisectChal.InboxInsnIndex == uint32(i+1),
 				NumGas:           bisectChal.Gases[i],
 				FirstMessageHash: bisectChal.MessageAccs[i],
 				LastMessageHash:  bisectChal.MessageAccs[i+1],
+				MessageCount:     bisectChal.OutCounts[i],
 				FirstLogHash:     bisectChal.LogAccs[i],
 				LastLogHash:      bisectChal.LogAccs[i+1],
+				LogCount:         bisectChal.OutCounts[bisectionCount+i],
 			}
 			assertions = append(assertions, assertion)
 		}
