@@ -19,6 +19,9 @@ set (CMAKE_CXX_STANDARD 14)
 
 project (avm_values LANGUAGES CXX)
 
+
+find_package(Boost 1.65 REQUIRED)
+
 set(LIB_HEADERS
   include/avm_values/exceptions.hpp
   include/avm_values/tuple.hpp

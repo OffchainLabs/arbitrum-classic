@@ -33,6 +33,8 @@ add_executable(avm_tests arbos.cpp code.cpp main.cpp opcodes.cpp value.cpp check
 target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic)
 # target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)
 
+find_package(Boost 1.65 COMPONENTS filesystem REQUIRED)
+
 target_link_libraries(
 	avm_tests
 PRIVATE
