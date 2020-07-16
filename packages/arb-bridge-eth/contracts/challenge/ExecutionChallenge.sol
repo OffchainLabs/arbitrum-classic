@@ -208,6 +208,10 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32 beforeInbox = Value
             .newTuplePreImage(_beforeInbox, _beforeInboxValueSize)
             .hash();
+        // The one step proof already guarantees us that _firstMessage and _lastMessage
+        // are either one or 0 messages apart and the same is true for logs. Therefore
+        // we can infer the message count and log count based on whether the fields
+        // are equal or not
         ChallengeUtils.ExecutionAssertion memory assertion = ChallengeUtils
             .ExecutionAssertion(
             1,
