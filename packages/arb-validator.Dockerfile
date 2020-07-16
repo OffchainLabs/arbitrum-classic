@@ -6,7 +6,7 @@
 
 FROM alpine:edge as arb-avm-cpp
 # Alpine dependencies
-RUN apk update && apk add --no-cache autoconf automake boost-dev cmake file g++ libstdc++=9.3.0-r4 libgcc=9.3.0-r4 \
+RUN apk update && apk add --no-cache autoconf automake cmake file g++ libstdc++=9.3.0-r4 libgcc=9.3.0-r4 \
     git gmp-dev inotify-tools libtool make musl-dev openssl-dev && \
     apk add py-pip --no-cache && \
     apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \

@@ -60,7 +60,6 @@ option(AVM_BUILD_TESTING "Build SelfTest project" ON)
 
 find_package(Threads REQUIRED)
 find_package(GMP REQUIRED)
-find_package(Boost 1.65 COMPONENTS filesystem REQUIRED)
 find_package(RocksDB)
 if (NOT ROCKSDB_FOUND)
     include(build-rocksdb)
@@ -82,16 +81,12 @@ clang_format(TARGET_NAME ${ALL_CODE_FILES})
 enable_testing()
 add_code_coverage_all_targets()
 
-file(GLOB KECCAK_SOURCES
-  external/keccak/*.c
-)
-file(GLOB KECCAK_HEADERS
-  external/keccak/*.h
-)
-
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+hunter_add_package(Boost COMPONENTS filesystem)
+find_package(Boost CONFIG REQUIRED filesystem)
 
 hunter_add_package(ethash)
 find_package(ethash CONFIG REQUIRED)

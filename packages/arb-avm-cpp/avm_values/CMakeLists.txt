@@ -47,7 +47,7 @@ set(LIB_SOURCES
   src/vmValueParser.cpp
 )
 
-add_library(avm_values STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES})
+add_library(avm_values STATIC ${LIB_HEADERS} ${LIB_SOURCES})
 
 set_target_properties(
     avm_values
@@ -74,10 +74,9 @@ target_link_libraries(avm_values PUBLIC nonstd::variant-lite nonstd::optional-li
 target_code_coverage(avm_values AUTO ALL)
 
 if(${CMAKE_VERSION} VERSION_LESS "3.8.0")
-    source_group(avm_values FILES ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES})
+    source_group(avm_values FILES ${LIB_HEADERS} ${LIB_SOURCES})
 else()
     source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/include/avm_values" FILES ${LIB_HEADERS})
     source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" FILES ${LIB_SOURCES})
-    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/../external" FILES ${KECCAK_SOURCES})
 endif()
 
