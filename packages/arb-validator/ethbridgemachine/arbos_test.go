@@ -17,6 +17,8 @@
 package ethbridgemachine
 
 import (
+	"errors"
+	"fmt"
 	"github.com/ethereum/go-ethereum/core/types"
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
@@ -63,16 +65,16 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 	return results
 }
 
-func runTransaction(t *testing.T, mach machine.Machine, msg message.Message, sender common.Address) *evm.Result {
+func runTransaction(t *testing.T, mach machine.Machine, msg message.Message, sender common.Address) (*evm.Result, error) {
 	results := runMessage(t, mach, msg, sender)
 	if len(results) != 1 {
-		t.Fatal("unexpected log count", len(results))
+		return nil, fmt.Errorf("unexpected log count %v", len(results))
 	}
 	result := results[0]
 	if result.ResultCode != evm.ReturnCode {
-		t.Fatal("transaction failed unexpectedly", result.ResultCode)
+		return nil, fmt.Errorf("transaction failed unexpectedly %v", result)
 	}
-	return result
+	return result, nil
 }
 
 func getBalanceCall(t *testing.T, mach machine.Machine, address common.Address) *big.Int {
@@ -98,7 +100,10 @@ func getBalanceCall(t *testing.T, mach machine.Machine, address common.Address) 
 		DestAddress: common.NewAddressFromEth(goarbitrum.ARB_INFO_ADDRESS),
 		Data:        append(getBalanceSignature, getBalanceData...),
 	}
-	balanceResult := runTransaction(t, mach, message.L2Message{Msg: getBalance}, common.Address{})
+	balanceResult, err := runTransaction(t, mach, message.L2Message{Msg: getBalance}, common.Address{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	vals, err := getBalanceABI.Outputs.UnpackValues(balanceResult.ReturnData)
 	if len(vals) != 1 {
 		t.Fatal("unexpected tx result")
@@ -110,10 +115,10 @@ func getBalanceCall(t *testing.T, mach machine.Machine, address common.Address) 
 	return val
 }
 
-func deployFib(t *testing.T, mach machine.Machine, sender common.Address) common.Address {
+func deployFib(t *testing.T, mach machine.Machine, sender common.Address) (common.Address, error) {
 	constructorData, err := hexutil.Decode(FibonacciBin)
 	if err != nil {
-		t.Fatal(err)
+		return common.Address{}, err
 	}
 
 	constructorTx := message.Transaction{
@@ -125,13 +130,16 @@ func deployFib(t *testing.T, mach machine.Machine, sender common.Address) common
 		Data:        constructorData,
 	}
 
-	constructorResult := runTransaction(t, mach, message.L2Message{Msg: constructorTx}, sender)
+	constructorResult, err := runTransaction(t, mach, message.L2Message{Msg: constructorTx}, sender)
+	if err != nil {
+		return common.Address{}, err
+	}
 	if len(constructorResult.ReturnData) != 32 {
-		t.Fatal("unexpected constructor result length")
+		return common.Address{}, errors.New("unexpected constructor result length")
 	}
 	var fibAddress common.Address
 	copy(fibAddress[:], constructorResult.ReturnData[12:])
-	return fibAddress
+	return fibAddress, nil
 }
 
 func TestFib(t *testing.T) {
@@ -151,9 +159,25 @@ func TestFib(t *testing.T) {
 	}
 
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
+	chain := common.RandAddress()
 
-	fibAddress := deployFib(t, mach, addr)
+	initMsg := message.Init{
+		ChainParams: valprotocol.ChainParams{
+			StakeRequirement:        big.NewInt(0),
+			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
+			MaxExecutionSteps:       0,
+			ArbGasSpeedLimitPerTick: 0,
+		},
+		Owner:       common.Address{},
+		ExtraConfig: []byte{},
+	}
+	results := runMessage(t, mach, initMsg, chain)
+	log.Println(results)
 
+	fibAddress, err := deployFib(t, mach, addr)
+	if err != nil {
+		t.Fatal(err)
+	}
 	generateFibABI := fib.Methods["generateFib"]
 	generateFibData, err := generateFibABI.Inputs.Pack(big.NewInt(20))
 	if err != nil {
@@ -174,7 +198,10 @@ func TestFib(t *testing.T) {
 		Data:        append(generateSignature, generateFibData...),
 	}
 
-	generateResult := runTransaction(t, mach, message.L2Message{Msg: generateTx}, addr)
+	generateResult, err := runTransaction(t, mach, message.L2Message{Msg: generateTx}, addr)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(generateResult.EVMLogs) != 1 {
 		t.Fatal("incorrect log count")
 	}
@@ -207,7 +234,10 @@ func TestFib(t *testing.T) {
 		Data:        append(getFibSignature, getFibData...),
 	}
 
-	getFibResult := runTransaction(t, mach, message.L2Message{Msg: getFibTx}, addr)
+	getFibResult, err := runTransaction(t, mach, message.L2Message{Msg: getFibTx}, addr)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if hexutil.Encode(getFibResult.ReturnData) != "0x0000000000000000000000000000000000000000000000000000000000000008" {
 		t.Fatal("getFib had incorrect result")
 	}
@@ -265,8 +295,10 @@ func TestBatch(t *testing.T) {
 	results := runMessage(t, mach, initMsg, chain)
 	log.Println(results)
 
-	dest := deployFib(t, mach, common.RandAddress())
-
+	dest, err := deployFib(t, mach, common.RandAddress())
+	if err != nil {
+		t.Fatal(err)
+	}
 	batchSize := 20
 	txes := make([]message.BatchTx, 0, batchSize)
 	senders := make([]common.Address, 0, batchSize)
