@@ -5,7 +5,10 @@ geth --datadir data init geth/ethbridge.json
 cp geth/keystore/* data/keystore
 
 # run in background
-geth --datadir data --rpc --rpcaddr 'localhost' --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ./password.txt --mine &>geth.out &
+geth --datadir data --rpc --rpcaddr 'localhost' --rpcvhosts=* --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' \
+    --network=arb-network --networkid=44010 \
+    --ws --wsport 7546 --wsorigins '*' --wsapi personal,admin,db,eth,net,web3,miner,shh,txpool,debug \
+    --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ./password.txt --mine &>geth.out &
 
 # wait until service is up
 while ! nc -z localhost 7545; do sleep 2; done; \

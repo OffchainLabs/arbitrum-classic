@@ -21,6 +21,7 @@
     "docker:build:parity": "yarn workspace arb-bridge-eth docker:build:parity",
     "docker:build:ganache": "yarn workspace arb-bridge-eth docker:build:ganache",
     "run:local:geth": "yarn workspace arb-bridge-eth run:local:geth",
+    "kill:geth": "kill $(lsof -t -i:7545)",
     "docker:build:geth": "yarn workspace arb-bridge-eth docker:build:geth",
     "docker:parity": "yarn workspace arb-bridge-eth docker:parity",
     "docker:ganache": "yarn workspace arb-bridge-eth docker:ganache",
