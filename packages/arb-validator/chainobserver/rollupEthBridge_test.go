@@ -179,7 +179,10 @@ func TestProtoStateHash(t *testing.T) {
 		nil,
 		protoState.MachineHash,
 		protoState.InboxTop,
-		protoState.InboxCount)
+		protoState.InboxCount,
+		protoState.MessageCount,
+		protoState.LogCount,
+	)
 
 	if protoState.Hash().ToEthHash() != bridgeHash {
 		fmt.Println(bridgeHash)
@@ -240,13 +243,14 @@ func TestComputePrevLeaf(t *testing.T) {
 	bridgeHash, _, err := tester.ComputePrevLeaf(
 		nil,
 		prepared.GetAssertionParams(),
-		prepared.BeforeState.InboxCount,
-		prepared.Prev.Deadline().Val,
+		prepared.GetAssertionParams2(),
 		uint32(prepared.Prev.LinkType()),
 		prepared.Params.NumSteps,
-		prepared.Params.ImportedMessageCount,
 		prepared.Claim.AssertionStub.DidInboxInsn,
-		prepared.Claim.AssertionStub.NumGas)
+		prepared.Claim.AssertionStub.NumGas,
+		prepared.Assertion.OutMsgsCount,
+		prepared.Assertion.LogsCount,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,13 +302,14 @@ func TestGenerateInvalidMsgLeaf(t *testing.T) {
 	bridgeHash, _, err := tester.ComputePrevLeaf(
 		nil,
 		prepared.GetAssertionParams(),
-		prepared.BeforeState.InboxCount,
-		prepared.Prev.Deadline().Val,
+		prepared.GetAssertionParams2(),
 		uint32(prepared.Prev.LinkType()),
 		prepared.Params.NumSteps,
-		prepared.Params.ImportedMessageCount,
 		prepared.Claim.AssertionStub.DidInboxInsn,
-		prepared.Claim.AssertionStub.NumGas)
+		prepared.Claim.AssertionStub.NumGas,
+		prepared.Assertion.OutMsgsCount,
+		prepared.Assertion.LogsCount,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -348,13 +353,14 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 	bridgeHash, _, err := tester.ComputePrevLeaf(
 		nil,
 		prepared.GetAssertionParams(),
-		prepared.BeforeState.InboxCount,
-		prepared.Prev.Deadline().Val,
+		prepared.GetAssertionParams2(),
 		uint32(prepared.Prev.LinkType()),
 		prepared.Params.NumSteps,
-		prepared.Params.ImportedMessageCount,
 		prepared.Claim.AssertionStub.DidInboxInsn,
-		prepared.Claim.AssertionStub.NumGas)
+		prepared.Claim.AssertionStub.NumGas,
+		prepared.Assertion.OutMsgsCount,
+		prepared.Assertion.LogsCount,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -398,13 +404,14 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 	bridgeHash, _, err := tester.ComputePrevLeaf(
 		nil,
 		prepared.GetAssertionParams(),
-		prepared.BeforeState.InboxCount,
-		prepared.Prev.Deadline().Val,
+		prepared.GetAssertionParams2(),
 		uint32(prepared.Prev.LinkType()),
 		prepared.Params.NumSteps,
-		prepared.Params.ImportedMessageCount,
 		prepared.Claim.AssertionStub.DidInboxInsn,
-		prepared.Claim.AssertionStub.NumGas)
+		prepared.Claim.AssertionStub.NumGas,
+		prepared.Assertion.OutMsgsCount,
+		prepared.Assertion.LogsCount,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}

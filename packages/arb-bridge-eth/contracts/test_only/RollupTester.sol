@@ -122,39 +122,40 @@ contract RollupTester {
     function computeProtoHashBefore(
         bytes32 machineHash,
         bytes32 inboxTop,
-        uint256 inboxCount
+        uint256 inboxCount,
+        uint256 messageCount,
+        uint256 logCount
     ) public pure returns (bytes32) {
-        return RollupUtils.protoStateHash(machineHash, inboxTop, inboxCount);
+        return
+            RollupUtils.protoStateHash(
+                machineHash,
+                inboxTop,
+                inboxCount,
+                messageCount,
+                logCount
+            );
     }
 
     function computePrevLeaf(
-        bytes32[9] memory _fields,
-        uint256 _beforeInboxCount,
-        uint256 _prevDeadlineTicks,
-        uint32 _prevChildType,
-        uint64 _numSteps,
-        uint256 _importedMessageCount,
-        bool _didInboxInsn,
-        uint64 _numArbGas
+        bytes32[9] memory fields,
+        uint256[5] memory fields2,
+        uint32 prevChildType,
+        uint64 numSteps,
+        bool didInboxInsn,
+        uint64 numArbGas,
+        uint64 messageCount,
+        uint64 logCount
     ) public pure returns (bytes32, bytes32) {
         NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
-            .AssertionData(
-            _fields[0],
-            _fields[1],
-            _beforeInboxCount,
-            _fields[2],
-            _prevDeadlineTicks,
-            _fields[3],
-            _prevChildType,
-            _numSteps,
-            _importedMessageCount,
-            _fields[4],
-            _fields[5],
-            _fields[6],
-            _didInboxInsn,
-            _numArbGas,
-            _fields[7],
-            _fields[8]
+            .makeAssertion(
+            fields,
+            fields2,
+            prevChildType,
+            numSteps,
+            didInboxInsn,
+            numArbGas,
+            messageCount,
+            logCount
         );
 
         return NodeGraphUtils.computePrevLeaf(assertData);
@@ -162,33 +163,25 @@ contract RollupTester {
 
     function generateInvalidInboxTopLeaf(
         uint256[4] memory invalidInboxData,
-        bytes32[9] memory _fields,
-        uint256 _beforeInboxCount,
-        uint256 _prevDeadlineTicks,
-        uint32 _prevChildType,
-        uint64 _numSteps,
-        uint256 _importedMessageCount,
-        bool _didInboxInsn,
-        uint64 _numArbGas
+        bytes32[9] memory fields,
+        uint256[5] memory fields2,
+        uint32 prevChildType,
+        uint64 numSteps,
+        bool didInboxInsn,
+        uint64 numArbGas,
+        uint64 messageCount,
+        uint64 logCount
     ) public pure returns (bytes32) {
         NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
-            .AssertionData(
-            _fields[0],
-            _fields[1],
-            _beforeInboxCount,
-            _fields[2],
-            _prevDeadlineTicks,
-            _fields[3],
-            _prevChildType,
-            _numSteps,
-            _importedMessageCount,
-            _fields[4],
-            _fields[5],
-            _fields[6],
-            _didInboxInsn,
-            _numArbGas,
-            _fields[7],
-            _fields[8]
+            .makeAssertion(
+            fields,
+            fields2,
+            prevChildType,
+            numSteps,
+            didInboxInsn,
+            numArbGas,
+            messageCount,
+            logCount
         );
 
         return _generateInvalidInboxTopLeaf(assertData, invalidInboxData);
@@ -216,33 +209,25 @@ contract RollupTester {
     function generateInvalidMessagesLeaf(
         uint256 gracePeriodTicks,
         uint256 deadlineTicks,
-        bytes32[9] memory _fields,
-        uint256 _beforeInboxCount,
-        uint256 _prevDeadlineTicks,
-        uint32 _prevChildType,
-        uint64 _numSteps,
-        uint256 _importedMessageCount,
-        bool _didInboxInsn,
-        uint64 _numArbGas
+        bytes32[9] memory fields,
+        uint256[5] memory fields2,
+        uint32 prevChildType,
+        uint64 numSteps,
+        bool didInboxInsn,
+        uint64 numArbGas,
+        uint64 messageCount,
+        uint64 logCount
     ) public pure returns (bytes32) {
         NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
-            .AssertionData(
-            _fields[0],
-            _fields[1],
-            _beforeInboxCount,
-            _fields[2],
-            _prevDeadlineTicks,
-            _fields[3],
-            _prevChildType,
-            _numSteps,
-            _importedMessageCount,
-            _fields[4],
-            _fields[5],
-            _fields[6],
-            _didInboxInsn,
-            _numArbGas,
-            _fields[7],
-            _fields[8]
+            .makeAssertion(
+            fields,
+            fields2,
+            prevChildType,
+            numSteps,
+            didInboxInsn,
+            numArbGas,
+            messageCount,
+            logCount
         );
 
         return
@@ -275,33 +260,25 @@ contract RollupTester {
         uint256 gracePeriodTicks,
         uint256 checkTimeTicks,
         uint256 deadlineTicks,
-        bytes32[9] memory _fields,
-        uint256 _beforeInboxCount,
-        uint256 _prevDeadlineTicks,
-        uint32 _prevChildType,
-        uint64 _numSteps,
-        uint256 _importedMessageCount,
-        bool _didInboxInsn,
-        uint64 _numArbGas
+        bytes32[9] memory fields,
+        uint256[5] memory fields2,
+        uint32 prevChildType,
+        uint64 numSteps,
+        bool didInboxInsn,
+        uint64 numArbGas,
+        uint64 messageCount,
+        uint64 logCount
     ) public pure returns (bytes32) {
         NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
-            .AssertionData(
-            _fields[0],
-            _fields[1],
-            _beforeInboxCount,
-            _fields[2],
-            _prevDeadlineTicks,
-            _fields[3],
-            _prevChildType,
-            _numSteps,
-            _importedMessageCount,
-            _fields[4],
-            _fields[5],
-            _fields[6],
-            _didInboxInsn,
-            _numArbGas,
-            _fields[7],
-            _fields[8]
+            .makeAssertion(
+            fields,
+            fields2,
+            prevChildType,
+            numSteps,
+            didInboxInsn,
+            numArbGas,
+            messageCount,
+            logCount
         );
 
         return
@@ -335,33 +312,25 @@ contract RollupTester {
 
     function generateValidLeaf(
         uint256 deadlineTicks,
-        bytes32[9] memory _fields,
-        uint256 _beforeInboxCount,
-        uint256 _prevDeadlineTicks,
-        uint32 _prevChildType,
-        uint64 _numSteps,
-        uint256 _importedMessageCount,
-        bool _didInboxInsn,
-        uint64 _numArbGas
+        bytes32[9] memory fields,
+        uint256[5] memory fields2,
+        uint32 prevChildType,
+        uint64 numSteps,
+        bool didInboxInsn,
+        uint64 numArbGas,
+        uint64 messageCount,
+        uint64 logCount
     ) public pure returns (bytes32) {
         NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
-            .AssertionData(
-            _fields[0],
-            _fields[1],
-            _beforeInboxCount,
-            _fields[2],
-            _prevDeadlineTicks,
-            _fields[3],
-            _prevChildType,
-            _numSteps,
-            _importedMessageCount,
-            _fields[4],
-            _fields[5],
-            _fields[6],
-            _didInboxInsn,
-            _numArbGas,
-            _fields[7],
-            _fields[8]
+            .makeAssertion(
+            fields,
+            fields2,
+            prevChildType,
+            numSteps,
+            didInboxInsn,
+            numArbGas,
+            messageCount,
+            logCount
         );
 
         return _generateValidLeaf(assertData, deadlineTicks);
