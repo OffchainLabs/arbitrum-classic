@@ -34,7 +34,7 @@ include(cmake/cable/bootstrap.cmake)
 include(CableBuildType)
 include(CableToolchains)
 
-cable_configure_toolchain(DEFAULT cxx14-pic)
+cable_configure_toolchain(DEFAULT cxx14)
 
 include("cmake/HunterGate.cmake")
 HunterGate(
