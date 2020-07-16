@@ -20,8 +20,9 @@
 #include <avm_values/exceptions.hpp>
 #include <avm_values/vmValueParser.hpp>
 
-#include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
+
+#include <ethash/keccak.hpp>
 
 namespace {
 uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
@@ -108,9 +109,8 @@ uint256_t MachineState::hash() const {
         to_big_endian(val, oit);
     }
 
-    std::array<unsigned char, 32> hashData;
-    evm::Keccak_256(data.data(), data.size(), hashData.data());
-    return from_big_endian(hashData.begin(), hashData.end());
+    auto hash_val = ethash::keccak256(data.data(), data.size());
+    return from_big_endian(&hash_val.bytes[0], &hash_val.bytes[32]);
 }
 
 uint256_t MachineState::getMachineSize() {

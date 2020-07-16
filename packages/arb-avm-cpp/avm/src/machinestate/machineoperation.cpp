@@ -16,10 +16,10 @@
 
 #include <avm/machinestate/machineoperation.hpp>
 #include <avm/machinestate/machinestate.hpp>
-#include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
 
 #include <secp256k1_recovery.h>
+#include <ethash/keccak.hpp>
 #include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
 
 namespace {
@@ -377,10 +377,8 @@ void ethhash2Op(MachineState& m) {
     auto it = to_big_endian(aNum, inData.begin());
     to_big_endian(bNum, it);
 
-    std::array<unsigned char, 32> hashData;
-    evm::Keccak_256(inData.data(), 64, hashData.data());
-
-    m.stack[1] = from_big_endian(hashData.begin(), hashData.end());
+    auto hash_val = ethash::keccak256(inData.data(), inData.size());
+    m.stack[1] = from_big_endian(&hash_val.bytes[0], &hash_val.bytes[32]);
 
     m.stack.popClear();
     ++m.pc;
@@ -608,12 +606,10 @@ uint256_t parseSignature(MachineState& m) {
     if (!serialized_pubkey) {
         return 0;
     }
-
-    std::array<unsigned char, 32> hash_data;
     // Skip header byte
-    evm::Keccak_256(pubkey_raw.data() + 1, 64, hash_data.data());
-    std::fill(hash_data.begin(), hash_data.begin() + 12, 0);
-    return from_big_endian(hash_data.begin(), hash_data.end());
+    auto hash_val = ethash::keccak256(pubkey_raw.data() + 1, 64);
+    std::fill(&hash_val.bytes[0], &hash_val.bytes[12], 0);
+    return from_big_endian(&hash_val.bytes[0], &hash_val.bytes[32]);
 }
 }  // namespace
 

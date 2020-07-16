@@ -15,10 +15,10 @@
  */
 
 #include <avm/machine.hpp>
-#include <avm_values/keccak.hpp>
 #include <bigint_utils.hpp>
 
 #include <secp256k1_recovery.h>
+#include <ethash/keccak.hpp>
 
 #define CATCH_CONFIG_ENABLE_BENCHMARKING 1
 #include <catch2/catch.hpp>
@@ -877,10 +877,10 @@ TEST_CASE("ecrecover opcode is correct") {
     s.stack.push(from_big_endian(sig_raw.begin(), sig_raw.begin() + 32));
     s.runOp(OpCode::ECRECOVER);
     REQUIRE(s.stack[0] != value(0));
-    std::array<unsigned char, 32> hash_data;
-    keccak(pubkey_raw.begin() + 1, 64, hash_data.data());
-    std::fill(hash_data.begin(), hash_data.begin() + 12, 0);
-    auto correct_address = from_big_endian(hash_data.begin(), hash_data.end());
+    auto hash_val = ethash::keccak256(pubkey_raw.begin() + 1, 64);
+    std::fill(&hash_val.bytes[0], &hash_val.bytes[12], 0);
+    auto correct_address =
+        from_big_endian(&hash_val.bytes[0], &hash_val.bytes[32]);
     auto calculated_address = assumeInt(s.stack[0]);
     REQUIRE(correct_address == calculated_address);
 

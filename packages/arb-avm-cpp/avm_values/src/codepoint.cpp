@@ -17,8 +17,10 @@
 #include <avm_values/codepoint.hpp>
 
 #include <avm_values/tuple.hpp>
-#include <avm_values/util.hpp>
+
 #include <bigint_utils.hpp>
+
+#include <ethash/keccak.hpp>
 
 Operation::Operation(OpCode opcode_, value immediate_)
     : opcode(opcode_), immediate(std::move(immediate_)) {}
@@ -80,17 +82,15 @@ uint256_t hash(const CodePoint& cp) {
         auto immHash = hash_value(*cp.op.immediate);
         auto it = to_big_endian(immHash, valData.begin() + 2);
         to_big_endian(cp.nextHash, it);
-        std::array<unsigned char, 32> hashData;
-        evm::Keccak_256(valData.data(), valData.size(), hashData.data());
-        return from_big_endian(hashData.begin(), hashData.end());
+        auto hash_val = ethash::keccak256(valData.data(), valData.size());
+        return from_big_endian(&hash_val.bytes[0], &hash_val.bytes[32]);
     } else {
         std::array<unsigned char, 34> valData;
         valData[0] = CODEPT;
         valData[1] = static_cast<unsigned char>(cp.op.opcode);
         to_big_endian(cp.nextHash, valData.begin() + 2);
-        std::array<unsigned char, 32> hashData;
-        evm::Keccak_256(valData.data(), valData.size(), hashData.data());
-        return from_big_endian(hashData.begin(), hashData.end());
+        auto hash_val = ethash::keccak256(valData.data(), valData.size());
+        return from_big_endian(&hash_val.bytes[0], &hash_val.bytes[32]);
     }
 }
 

@@ -16,7 +16,6 @@
 
 #include <avm/machinestate/datastack.hpp>
 
-#include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
 
 uint256_t Datastack::hash() const {

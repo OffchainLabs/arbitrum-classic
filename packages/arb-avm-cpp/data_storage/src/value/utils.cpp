@@ -19,7 +19,6 @@
 #include "utils.hpp"
 
 #include <avm_values/tuple.hpp>
-#include <avm_values/util.hpp>
 
 #include <bigint_utils.hpp>
 

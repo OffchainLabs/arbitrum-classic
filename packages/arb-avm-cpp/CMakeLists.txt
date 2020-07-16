@@ -14,7 +14,19 @@
 
 cmake_minimum_required (VERSION 3.5)
 
-set (CMAKE_CXX_STANDARD 14)
+include(cmake/cable/bootstrap.cmake)
+include(CableBuildType)
+include(CableToolchains)
+
+cable_configure_toolchain(DEFAULT cxx14-pic)
+
+include("cmake/HunterGate.cmake")
+HunterGate(
+    URL "https://github.com/ruslo/hunter/archive/v0.23.211.tar.gz"
+    SHA1 "c022f0c2480e835a6bafdd734035ec2071b51897"
+)
+
+cable_set_build_type(DEFAULT RelWithDebInfo CONFIGURATION_TYPES Debug Release RelWithDebInfo)
 
 project (arb-avm-cpp)
 
@@ -64,6 +76,15 @@ file(GLOB KECCAK_HEADERS
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+hunter_add_package(ethash)
+find_package(ethash CONFIG REQUIRED)
+
+hunter_add_package(intx)
+find_package(intx CONFIG REQUIRED)
+
+get_target_property(ETHASH_LIB ethash::keccak "LOCATION_Release")
+file(COPY ${ETHASH_LIB} DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/cmachine)
 add_subdirectory(external)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/external/Catch2/contrib)
 add_subdirectory(utils)
