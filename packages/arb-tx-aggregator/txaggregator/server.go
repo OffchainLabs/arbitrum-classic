@@ -22,7 +22,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"log"
-	"math/big"
 	"net/http"
 	"sort"
 	"sync"
@@ -157,15 +156,16 @@ func (m *Server) SendTransaction(_ *http.Request, args *SendTransactionArgs, rep
 	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
 		return err
 	}
-
-	chainId := new(big.Int).SetBytes(m.rollupAddress[14:])
+	chainId := message.ChainAddressToID(m.rollupAddress)
 	signer := types.NewEIP155Signer(chainId)
 	ethSender, err := signer.Sender(tx)
 	if err != nil {
+		log.Println("Error processing transaction", err)
+		log.Printf("Tx chain id was %v and rollup chain's is %v", tx.ChainId(), chainId)
 		return err
 	}
 	sender := common.NewAddressFromEth(ethSender)
-	batchTx := message.NewBatchTxFromSignedEthTx(tx)
+	batchTx := message.NewSignedTransactionFromEth(tx)
 
 	txHash := tx.Hash()
 	log.Println("Got tx: ", batchTx.Transaction, "with hash", txHash, "from", sender)

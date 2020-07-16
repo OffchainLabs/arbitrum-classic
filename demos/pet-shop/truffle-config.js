@@ -22,7 +22,7 @@ module.exports = {
           'http://localhost:7545'
         )
         const arbProvider = new ArbEth.ArbProvider(
-          '0xc68DCee7b8cA57F41D1A417103CB65836E99e013',
+          '0x02545581726fB0F81212e5E7Fd424BAaECfEAb62',
           'http://localhost:1235',
           provider,
           'http://localhost:1237'

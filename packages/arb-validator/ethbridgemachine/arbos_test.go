@@ -335,7 +335,7 @@ func TestBatch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		txes = append(txes, message.L2Message{Msg: message.NewBatchTxFromSignedEthTx(signedTx)})
+		txes = append(txes, message.L2Message{Msg: message.NewSignedTransactionFromEth(signedTx)})
 	}
 	msg := message.NewTransactionBatchFromMessages(txes)
 	results = runMessage(t, mach, message.L2Message{Msg: msg}, common.RandAddress())
@@ -346,5 +346,19 @@ func TestBatch(t *testing.T) {
 		if result.L1Message.Sender != senders[i] {
 			t.Fatal("message had incorrect sender", result.L1Message.Sender, senders[i])
 		}
+		if result.L1Message.Kind != message.L2Type {
+			t.Fatal("message has incorrect type")
+		}
+
+		t.Log("output tx", hexutil.Encode(result.L1Message.Data))
+		nested, err := result.L1Message.NestedMessage()
+		if err != nil {
+			t.Fatal(err)
+		}
+		msg, ok := nested.(message.L2Message)
+		if !ok {
+			t.Fatal("expected l2 message")
+		}
+		t.Log(msg.Msg.L2Type())
 	}
 }

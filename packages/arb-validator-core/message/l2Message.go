@@ -48,7 +48,7 @@ const TransactionHeaderSize = 32*4 + AddressSize
 const SignatureSize = 65
 
 type AbstractL2Message interface {
-	l2Type() L2SubType
+	L2Type() L2SubType
 	AsData() []byte
 }
 
@@ -66,7 +66,7 @@ func (l L2Message) Type() Type {
 
 func (l L2Message) AsData() []byte {
 	ret := make([]byte, 0)
-	ret = append(ret, byte(l.Msg.l2Type()))
+	ret = append(ret, byte(l.Msg.L2Type()))
 	ret = append(ret, l.Msg.AsData()...)
 	return ret
 }
@@ -83,6 +83,9 @@ func NewL2MessageFromData(data []byte) (AbstractL2Message, error) {
 		return NewCallFromData(data), nil
 	case TransactionBatchType:
 		return newTransactionBatchFromData(data), nil
+	case SignedTransactionType:
+		log.Println("GOT SIGNED TX")
+		return newSignedTransactionFromData(data), nil
 	default:
 		return nil, errors.New("invalid l2 message type")
 	}
@@ -168,7 +171,7 @@ func (t Transaction) Type() Type {
 	return L2Type
 }
 
-func (t Transaction) l2Type() L2SubType {
+func (t Transaction) L2Type() L2SubType {
 	return TransactionType
 }
 
@@ -227,7 +230,7 @@ func (t ContractTransaction) Type() Type {
 	return L2Type
 }
 
-func (t ContractTransaction) l2Type() L2SubType {
+func (t ContractTransaction) L2Type() L2SubType {
 	return ContractTransactionType
 }
 
@@ -282,7 +285,7 @@ func NewRandomCall() Call {
 	}
 }
 
-func (t Call) l2Type() L2SubType {
+func (t Call) L2Type() L2SubType {
 	return CallType
 }
 
@@ -300,7 +303,18 @@ type SignedTransaction struct {
 	Signature   [SignatureSize]byte
 }
 
-func NewBatchTxFromSignedEthTx(tx *types.Transaction) SignedTransaction {
+func newSignedTransactionFromData(data []byte) SignedTransaction {
+	var sig [SignatureSize]byte
+	tx := newTransactionFromData(data[:len(data)-SignatureSize])
+	data = data[len(data)-SignatureSize:]
+	copy(sig[:], data[:])
+	return SignedTransaction{
+		Transaction: tx,
+		Signature:   sig,
+	}
+}
+
+func NewSignedTransactionFromEth(tx *types.Transaction) SignedTransaction {
 	v, r, s := tx.RawSignatureValues()
 	var sig [65]byte
 	copy(sig[:], math.U256Bytes(r))
@@ -312,14 +326,14 @@ func NewBatchTxFromSignedEthTx(tx *types.Transaction) SignedTransaction {
 	}
 }
 
-func chainId(chain common.Address) *big.Int {
-	return new(big.Int).SetBytes(chain[12:])
+func ChainAddressToID(chain common.Address) *big.Int {
+	return new(big.Int).SetBytes(chain[14:])
 }
 
 func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) SignedTransaction {
 	tx := NewRandomTransaction()
 
-	signedTx, err := types.SignTx(tx.AsEthTx(), types.NewEIP155Signer(chainId(chain)), privKey)
+	signedTx, err := types.SignTx(tx.AsEthTx(), types.NewEIP155Signer(ChainAddressToID(chain)), privKey)
 	if err != nil {
 		panic(err)
 	}
@@ -337,7 +351,7 @@ func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) SignedTra
 
 func (t SignedTransaction) AsEthTx(chain common.Address) *types.Transaction {
 	tx := t.Transaction.AsEthTx()
-	tx, err := tx.WithSignature(types.NewEIP155Signer(chainId(chain)), t.Signature[:])
+	tx, err := tx.WithSignature(types.NewEIP155Signer(ChainAddressToID(chain)), t.Signature[:])
 	if err != nil {
 		// This should never occur since it can only happen if the signature is not the
 		// correct length. We store as a [65]byte so it will always succeed
@@ -350,7 +364,7 @@ func (t SignedTransaction) MessageID(chain common.Address) common.Hash {
 	return common.NewHashFromEth(t.AsEthTx(chain).Hash())
 }
 
-func (t SignedTransaction) l2Type() L2SubType {
+func (t SignedTransaction) L2Type() L2SubType {
 	return SignedTransactionType
 }
 
@@ -408,7 +422,7 @@ func NewRandomTransactionBatch(txCount int, chain common.Address, privKey *ecdsa
 	return TransactionBatch{Transactions: txes}
 }
 
-func (t TransactionBatch) l2Type() L2SubType {
+func (t TransactionBatch) L2Type() L2SubType {
 	return TransactionBatchType
 }
 
