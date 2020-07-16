@@ -95,7 +95,7 @@ func getBalanceCall(t *testing.T, mach machine.Machine, address common.Address) 
 	}
 
 	getBalance := message.Call{
-		MaxGas:      big.NewInt(0),
+		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(goarbitrum.ARB_INFO_ADDRESS),
 		Data:        append(getBalanceSignature, getBalanceData...),
@@ -122,7 +122,7 @@ func deployFib(t *testing.T, mach machine.Machine, sender common.Address) (commo
 	}
 
 	constructorTx := message.Transaction{
-		MaxGas:      big.NewInt(0),
+		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.Address{},
@@ -140,6 +140,18 @@ func deployFib(t *testing.T, mach machine.Machine, sender common.Address) (commo
 	var fibAddress common.Address
 	copy(fibAddress[:], constructorResult.ReturnData[12:])
 	return fibAddress, nil
+}
+
+func depositEth(t *testing.T, mach machine.Machine, dest common.Address, amount *big.Int) {
+	msg := message.Eth{
+		Dest:  dest,
+		Value: amount,
+	}
+
+	depositResults := runMessage(t, mach, msg, dest)
+	if len(depositResults) != 0 {
+		t.Fatal("deposit should not have had a result")
+	}
 }
 
 func TestFib(t *testing.T) {
@@ -178,6 +190,9 @@ func TestFib(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	depositEth(t, mach, addr, big.NewInt(1000))
+
 	generateFibABI := fib.Methods["generateFib"]
 	generateFibData, err := generateFibABI.Inputs.Pack(big.NewInt(20))
 	if err != nil {
@@ -190,7 +205,7 @@ func TestFib(t *testing.T) {
 	}
 
 	generateTx := message.Transaction{
-		MaxGas:      big.NewInt(0),
+		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: fibAddress,
@@ -228,7 +243,7 @@ func TestFib(t *testing.T) {
 	}
 
 	getFibTx := message.Call{
-		MaxGas:      big.NewInt(0),
+		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		DestAddress: fibAddress,
 		Data:        append(getFibSignature, getFibData...),
@@ -258,17 +273,10 @@ func TestDeposit(t *testing.T) {
 
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 
-	msg := message.Eth{
-		Dest:  addr,
-		Value: big.NewInt(1000),
-	}
+	amount := big.NewInt(1000)
+	depositEth(t, mach, addr, amount)
 
-	depositResults := runMessage(t, mach, msg, addr)
-	if len(depositResults) != 0 {
-		t.Fatal("deposit should not have had a result")
-	}
-
-	if getBalanceCall(t, mach, addr).Cmp(msg.Value) != 0 {
+	if getBalanceCall(t, mach, addr).Cmp(amount) != 0 {
 		t.Fatal("incorrect balance")
 	}
 }
