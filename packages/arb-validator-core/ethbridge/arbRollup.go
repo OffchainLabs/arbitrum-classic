@@ -20,6 +20,7 @@ import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -186,15 +187,16 @@ func (vm *arbRollup) MakeAssertion(
 	defer vm.auth.Unlock()
 	fields := [9][32]byte{
 		beforeState.MachineHash,
-		beforeState.InboxTop,
-		prevPrevLeafHash,
-		prevDataHash,
-		assertionClaim.AfterInboxTop,
 		assertionClaim.ImportedMessagesSlice,
 		assertionClaim.AssertionStub.AfterHash,
 		assertionClaim.AssertionStub.LastMessageHash,
 		assertionClaim.AssertionStub.LastLogHash,
+		beforeState.InboxTop,
+		prevPrevLeafHash,
+		prevDataHash,
+		assertionClaim.AfterInboxTop,
 	}
+	log.Println(fields)
 	fields2 := [5]*big.Int{
 		beforeState.InboxCount,
 		prevDeadline.Val,
@@ -202,6 +204,7 @@ func (vm *arbRollup) MakeAssertion(
 		beforeState.MessageCount,
 		beforeState.LogCount,
 	}
+	log.Println(fields2)
 	tx, err := vm.ArbRollup.MakeAssertion(
 		vm.auth.getAuth(ctx),
 		fields,

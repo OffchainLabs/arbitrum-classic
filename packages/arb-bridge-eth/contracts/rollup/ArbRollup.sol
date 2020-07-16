@@ -233,14 +233,14 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
      * @dev This method selects an existing leaf to build an assertion on top of. If it succeeds that leaf is eliminated and four new leaves are created. The asserter is automatically moved to stake on the new valid leaf.
      * @param fields Packed data for the following fields
      *   beforeVMHash The hash of the machine at the end of the previous assertion
-     *   beforeInboxTop The hash of the global inbox that the previous assertion had read up to
-     *   prevPrevLeafHash The hash of the leaf that was the ancestor of the leaf we're building on
-     *   prevDataHash Type specific data of the node we're on
-     *   afterInboxTop Claimed hash of the global inbox at height beforeInboxCount + importedMessageCount
      *   importedMessagesSlice Claimed messages sent to the machine in this assertion based on beforeInboxCount and importedMessageCount
      *   afterVMHash Claimed machine hash after this assertion is completed
      *   messagesAccHash Claimed commitment to a set of messages output in the assertion
      *   logsAccHash Claimed commitment to a set of logs output in the assertion
+     *   beforeInboxTop The hash of the global inbox that the previous assertion had read up to
+     *   prevPrevLeafHash The hash of the leaf that was the ancestor of the leaf we're building on
+     *   prevDataHash Type specific data of the node we're on
+     *   afterInboxTop Claimed hash of the global inbox at height beforeInboxCount + importedMessageCount
      * @param fields2 Packed data for the following fields
      *   beforeInboxCount The total number of messages read after the previous assertion executed
      *   prevDeadlineTicks The challenge deadline of the node this assertion builds on
@@ -250,6 +250,8 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
      * @param validBlockHashPrecondition Hash of a known block to invalidate the assertion if too deep a reorg occurs
      * @param validBlockHeightPrecondition Height of the block with hash validBlockHash
      * @param prevChildType The type of node that this assertion builds on top of
+     * @param messageCount
+     * @param logCount
      * @param numSteps Argument specifying the number of steps execuited
      * @param didInboxInsn Claim about whether the assertion inlcuding reading the inbox
      * @param numArbGas Claimed amount of ArbGas used in the assertion
@@ -269,7 +271,8 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
         bytes32[] calldata stakerProof
     ) external {
         require(
-            blockhash(validBlockHeightPrecondition) == validBlockHashPrecondition,
+            blockhash(validBlockHeightPrecondition) ==
+                validBlockHashPrecondition,
             "invalid known block"
         );
         NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
