@@ -69,9 +69,9 @@ library ChallengeUtils {
 
     struct ExecutionAssertion {
         uint64 numSteps;
-        bytes32 beforeHash;
+        bytes32 beforeMachineHash;
         bytes32 inboxHash;
-        bytes32 afterHash;
+        bytes32 afterMachineHash;
         bool didInboxInsn;
         uint64 numArbGas;
         bytes32 firstMessageHash;
@@ -91,9 +91,9 @@ library ChallengeUtils {
             keccak256(
                 abi.encodePacked(
                     assertion.numSteps,
-                    assertion.beforeHash,
+                    assertion.beforeMachineHash,
                     assertion.inboxHash,
-                    assertion.afterHash,
+                    assertion.afterMachineHash,
                     assertion.didInboxInsn,
                     assertion.numArbGas,
                     assertion.firstMessageHash,

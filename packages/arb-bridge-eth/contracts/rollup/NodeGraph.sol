@@ -199,7 +199,7 @@ contract NodeGraph {
                 inboxValue,
                 data.afterInboxTop,
                 data.assertion.inboxHash,
-                data.assertion.afterHash,
+                data.assertion.afterMachineHash,
                 data.assertion.lastMessageHash,
                 data.assertion.lastLogHash,
                 validLeaf
@@ -276,8 +276,8 @@ contract NodeGraph {
         view
     {
         require(
-            !VM.isErrored(data.assertion.beforeHash) &&
-                !VM.isHalted(data.assertion.beforeHash),
+            !VM.isErrored(data.assertion.beforeMachineHash) &&
+                !VM.isHalted(data.assertion.beforeMachineHash),
             MAKE_RUN
         );
         require(

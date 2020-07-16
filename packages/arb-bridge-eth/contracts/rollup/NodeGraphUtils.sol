@@ -87,7 +87,7 @@ library NodeGraphUtils {
         returns (bytes32, bytes32)
     {
         bytes32 vmProtoHashBefore = RollupUtils.protoStateHash(
-            data.assertion.beforeHash,
+            data.assertion.beforeMachineHash,
             data.beforeInboxTop,
             data.beforeInboxCount,
             data.beforeMessageCount,
@@ -211,7 +211,7 @@ library NodeGraphUtils {
                 ),
                 ChallengeUtils.getValidChildType(),
                 RollupUtils.protoStateHash(
-                    data.assertion.afterHash,
+                    data.assertion.afterMachineHash,
                     data.afterInboxTop,
                     data.beforeInboxCount + data.importedMessageCount,
                     data.beforeMessageCount + data.assertion.messageCount,
