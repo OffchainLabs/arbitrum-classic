@@ -61,6 +61,18 @@ option(AVM_BUILD_TESTING "Build SelfTest project" ON)
 find_package(Threads REQUIRED)
 find_package(GMP REQUIRED)
 find_package(Boost 1.65 COMPONENTS filesystem REQUIRED)
+if(NOT TARGET Boost::boost)
+    add_library(Boost::boost IMPORTED INTERFACE)
+    set_property(TARGET Boost::boost PROPERTY
+        INTERFACE_INCLUDE_DIRECTORIES ${Boost_INCLUDE_DIR})
+endif()
+if(NOT TARGET Boost::filesystem)
+    add_library(Boost::filesystem IMPORTED INTERFACE)
+    set_property(TARGET Boost::filesystem PROPERTY
+        INTERFACE_INCLUDE_DIRECTORIES ${Boost_INCLUDE_DIR})
+    set_property(TARGET Boost::filesystem PROPERTY
+        INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
+endif()
 find_package(RocksDB)
 if (NOT ROCKSDB_FOUND)
     include(build-rocksdb)

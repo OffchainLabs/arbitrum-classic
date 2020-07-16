@@ -59,7 +59,6 @@ target_include_directories(avm PRIVATE
 )
 
 find_package(GMP REQUIRED)
-find_package(Boost 1.65 REQUIRED)
 
 target_link_libraries(avm PUBLIC avm_values RocksDB::RocksDB Threads::Threads secp256k1 ff PRIVATE Boost::boost ${GMP_LIBRARY})
 
