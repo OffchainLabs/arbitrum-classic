@@ -37,6 +37,7 @@ Install the validator
 
 ```bash
 yarn install:validator
+yarn build
 yarn demo:initialize
 ```
 
