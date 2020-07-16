@@ -250,8 +250,8 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
      * @param validBlockHashPrecondition Hash of a known block to invalidate the assertion if too deep a reorg occurs
      * @param validBlockHeightPrecondition Height of the block with hash validBlockHash
      * @param prevChildType The type of node that this assertion builds on top of
-     * @param messageCount
-     * @param logCount
+     * @param messageCount Claimed number of messages emitted in the assertion
+     * @param logCount Claimed number of logs emitted in the assertion
      * @param numSteps Argument specifying the number of steps execuited
      * @param didInboxInsn Claim about whether the assertion inlcuding reading the inbox
      * @param numArbGas Claimed amount of ArbGas used in the assertion
