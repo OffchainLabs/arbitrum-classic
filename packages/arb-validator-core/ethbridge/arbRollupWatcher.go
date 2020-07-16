@@ -253,8 +253,10 @@ func (vm *ethRollupWatcher) processEvents(
 				NumGas:           eventVal.NumArbGas,
 				FirstMessageHash: [32]byte{},
 				LastMessageHash:  eventVal.Fields[5],
+				MessageCount:     eventVal.MessageCount,
 				FirstLogHash:     [32]byte{},
 				LastLogHash:      eventVal.Fields[6],
+				LogCount:         eventVal.LogCount,
 			},
 		}
 		return arbbridge.AssertedEvent{

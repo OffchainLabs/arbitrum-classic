@@ -74,7 +74,9 @@ func ExecutionDataHash(
 		hashing.Uint64(assertion.NumGas),
 		hashing.Bytes32(assertion.FirstMessageHash),
 		hashing.Bytes32(assertion.LastMessageHash),
+		hashing.Uint64(assertion.MessageCount),
 		hashing.Bytes32(assertion.FirstLogHash),
 		hashing.Bytes32(assertion.LastLogHash),
+		hashing.Uint64(assertion.LogCount),
 	)
 }

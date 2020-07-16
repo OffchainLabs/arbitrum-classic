@@ -20,6 +20,7 @@ import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -184,27 +185,36 @@ func (vm *arbRollup) MakeAssertion(
 ) ([]arbbridge.Event, error) {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
-	extraParams := [10][32]byte{
+	fields := [9][32]byte{
 		beforeState.MachineHash,
-		beforeState.InboxTop,
-		prevPrevLeafHash,
-		prevDataHash,
-		assertionClaim.AfterInboxTop,
 		assertionClaim.ImportedMessagesSlice,
 		assertionClaim.AssertionStub.AfterHash,
 		assertionClaim.AssertionStub.LastMessageHash,
 		assertionClaim.AssertionStub.LastLogHash,
-		validBlock.HeaderHash,
+		beforeState.InboxTop,
+		prevPrevLeafHash,
+		prevDataHash,
+		assertionClaim.AfterInboxTop,
 	}
-	tx, err := vm.ArbRollup.MakeAssertion(
-		vm.auth.getAuth(ctx),
-		extraParams,
-		validBlock.Height.AsInt(),
+	log.Println(fields)
+	fields2 := [5]*big.Int{
 		beforeState.InboxCount,
 		prevDeadline.Val,
+		assertionParams.ImportedMessageCount,
+		beforeState.MessageCount,
+		beforeState.LogCount,
+	}
+	log.Println(fields2)
+	tx, err := vm.ArbRollup.MakeAssertion(
+		vm.auth.getAuth(ctx),
+		fields,
+		fields2,
+		validBlock.HeaderHash,
+		validBlock.Height.AsInt(),
+		assertionClaim.AssertionStub.MessageCount,
+		assertionClaim.AssertionStub.LogCount,
 		uint32(prevChildType),
 		assertionParams.NumSteps,
-		assertionParams.ImportedMessageCount,
 		assertionClaim.AssertionStub.DidInboxInsn,
 		assertionClaim.AssertionStub.NumGas,
 		common.HashSliceToRaw(stakerProof),
@@ -215,13 +225,14 @@ func (vm *arbRollup) MakeAssertion(
 			vm.client,
 			vm.auth.auth.From,
 			vm.rollupAddress,
-			extraParams,
+			fields,
+			fields2,
+			validBlock.HeaderHash,
 			validBlock.Height.AsInt(),
-			beforeState.InboxCount,
-			prevDeadline.Val,
+			assertionClaim.AssertionStub.MessageCount,
+			assertionClaim.AssertionStub.LogCount,
 			uint32(prevChildType),
 			assertionParams.NumSteps,
-			assertionParams.ImportedMessageCount,
 			assertionClaim.AssertionStub.DidInboxInsn,
 			assertionClaim.AssertionStub.NumGas,
 			common.HashSliceToRaw(stakerProof),

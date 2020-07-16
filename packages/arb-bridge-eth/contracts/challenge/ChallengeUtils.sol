@@ -67,31 +67,41 @@ library ChallengeUtils {
             );
     }
 
-    function executionHash(
-        uint64 _numSteps,
-        bytes32 _beforeHash,
-        bytes32 _beforeInboxHash,
-        bytes32 _afterHash,
-        bool _didInboxInsn,
-        uint64 _numGas,
-        bytes32 _firstMessageHash,
-        bytes32 _lastMessageHash,
-        bytes32 _firstLogHash,
-        bytes32 _lastLogHash
-    ) internal pure returns (bytes32) {
+    struct ExecutionAssertion {
+        uint64 numSteps;
+        bytes32 beforeMachineHash;
+        bytes32 inboxHash;
+        bytes32 afterMachineHash;
+        bool didInboxInsn;
+        uint64 numArbGas;
+        bytes32 firstMessageHash;
+        bytes32 lastMessageHash;
+        uint64 messageCount;
+        bytes32 firstLogHash;
+        bytes32 lastLogHash;
+        uint64 logCount;
+    }
+
+    function hash(ExecutionAssertion memory assertion)
+        internal
+        pure
+        returns (bytes32)
+    {
         return
             keccak256(
                 abi.encodePacked(
-                    _numSteps,
-                    _beforeHash,
-                    _beforeInboxHash,
-                    _afterHash,
-                    _didInboxInsn,
-                    _numGas,
-                    _firstMessageHash,
-                    _lastMessageHash,
-                    _firstLogHash,
-                    _lastLogHash
+                    assertion.numSteps,
+                    assertion.beforeMachineHash,
+                    assertion.inboxHash,
+                    assertion.afterMachineHash,
+                    assertion.didInboxInsn,
+                    assertion.numArbGas,
+                    assertion.firstMessageHash,
+                    assertion.lastMessageHash,
+                    assertion.messageCount,
+                    assertion.firstLogHash,
+                    assertion.lastLogHash,
+                    assertion.logCount
                 )
             );
     }
