@@ -33,8 +33,10 @@ type ExecutionAssertionStub struct {
 	NumGas           uint64
 	FirstMessageHash common.Hash
 	LastMessageHash  common.Hash
+	MessageCount     uint64
 	FirstLogHash     common.Hash
 	LastLogHash      common.Hash
+	LogCount         uint64
 }
 
 func BytesArrayAccumHash(data []byte, valCount uint64) common.Hash {
@@ -59,8 +61,10 @@ func NewExecutionAssertionStubFromAssertion(a *protocol.ExecutionAssertion) *Exe
 		NumGas:           a.NumGas,
 		FirstMessageHash: common.Hash{},
 		LastMessageHash:  BytesArrayAccumHash(a.OutMsgsData, a.OutMsgsCount),
+		MessageCount:     a.OutMsgsCount,
 		FirstLogHash:     common.Hash{},
 		LastLogHash:      BytesArrayAccumHash(a.LogsData, a.LogsCount),
+		LogCount:         a.LogsCount,
 	}
 }
 
@@ -71,8 +75,10 @@ func (a *ExecutionAssertionStub) MarshalToBuf() *ExecutionAssertionStubBuf {
 		NumGas:           a.NumGas,
 		FirstMessageHash: a.FirstMessageHash.MarshalToBuf(),
 		LastMessageHash:  a.LastMessageHash.MarshalToBuf(),
+		MessageCount:     a.MessageCount,
 		FirstLogHash:     a.FirstLogHash.MarshalToBuf(),
 		LastLogHash:      a.LastLogHash.MarshalToBuf(),
+		LogCount:         a.LogCount,
 	}
 }
 
@@ -83,8 +89,10 @@ func (a *ExecutionAssertionStubBuf) Unmarshal() *ExecutionAssertionStub {
 		NumGas:           a.NumGas,
 		FirstMessageHash: a.FirstMessageHash.Unmarshal(),
 		LastMessageHash:  a.LastMessageHash.Unmarshal(),
+		MessageCount:     a.MessageCount,
 		FirstLogHash:     a.FirstLogHash.Unmarshal(),
 		LastLogHash:      a.LastLogHash.Unmarshal(),
+		LogCount:         a.LogCount,
 	}
 }
 
@@ -95,22 +103,26 @@ func (a *ExecutionAssertionStub) Clone() *ExecutionAssertionStub {
 		NumGas:           a.NumGas,
 		FirstMessageHash: a.FirstMessageHash,
 		LastMessageHash:  a.LastMessageHash,
+		MessageCount:     a.MessageCount,
 		FirstLogHash:     a.FirstLogHash,
 		LastLogHash:      a.LastLogHash,
+		LogCount:         a.LogCount,
 	}
 }
 
 func (a *ExecutionAssertionStub) String() string {
 	return fmt.Sprintf(
 		"Assertion(AfterHash: %v, DidInboxInsn: %v, NumGas: %v, "+
-			"FirstMessageHash: %v, LastMessageHash: %v, FirstLogHash: %v LastLogHash: %v)",
+			"FirstMessageHash: %v, LastMessageHash: %v, MessageCount %v, FirstLogHash: %v LastLogHash: %v, LogCount %v)",
 		a.AfterHash,
 		a.DidInboxInsn,
 		a.NumGas,
 		a.FirstMessageHash,
 		a.LastMessageHash,
+		a.MessageCount,
 		a.FirstLogHash,
 		a.LastLogHash,
+		a.LogCount,
 	)
 }
 
@@ -119,8 +131,10 @@ func (a *ExecutionAssertionStub) Equals(b *ExecutionAssertionStub) bool {
 		a.NumGas == b.NumGas &&
 		a.FirstMessageHash == b.FirstMessageHash &&
 		a.LastMessageHash == b.LastMessageHash &&
+		a.MessageCount == b.MessageCount &&
 		a.FirstLogHash == b.FirstLogHash &&
-		a.LastLogHash == b.LastLogHash
+		a.LastLogHash == b.LastLogHash &&
+		a.LogCount == b.LogCount
 }
 
 func (a *ExecutionAssertionStub) Hash() common.Hash {

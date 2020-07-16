@@ -39,43 +39,55 @@ const (
 )
 
 type VMProtoData struct {
-	MachineHash common.Hash
-	InboxTop    common.Hash
-	InboxCount  *big.Int
+	MachineHash  common.Hash
+	InboxTop     common.Hash
+	InboxCount   *big.Int
+	MessageCount *big.Int
+	LogCount     *big.Int
 }
 
 func NewVMProtoData(
 	machineHash common.Hash,
 	inboxTop common.Hash,
 	inboxCount *big.Int,
+	messageCount *big.Int,
+	logCount *big.Int,
 ) *VMProtoData {
 	return &VMProtoData{
-		MachineHash: machineHash,
-		InboxTop:    inboxTop,
-		InboxCount:  inboxCount,
+		MachineHash:  machineHash,
+		InboxTop:     inboxTop,
+		InboxCount:   inboxCount,
+		MessageCount: messageCount,
+		LogCount:     logCount,
 	}
 }
 
 func (d *VMProtoData) String() string {
 	return fmt.Sprintf(
-		"VMProtoData(MachineHash: %v, InboxTop: %v, InboxCount: %v)",
+		"VMProtoData(MachineHash: %v, InboxTop: %v, InboxCount: %v, MessageCount: %v, LogCount: %v)",
 		d.MachineHash,
 		d.InboxTop,
 		d.InboxCount,
+		d.MessageCount,
+		d.LogCount,
 	)
 }
 
 func (d *VMProtoData) Equals(o *VMProtoData) bool {
 	return d.MachineHash == o.MachineHash &&
 		d.InboxTop == o.InboxTop &&
-		d.InboxCount.Cmp(o.InboxCount) == 0
+		d.InboxCount.Cmp(o.InboxCount) == 0 &&
+		d.MessageCount.Cmp(o.MessageCount) == 0 &&
+		d.LogCount.Cmp(o.LogCount) == 0
 }
 
 func (d *VMProtoData) Clone() *VMProtoData {
 	return &VMProtoData{
-		MachineHash: d.MachineHash,
-		InboxTop:    d.InboxTop,
-		InboxCount:  new(big.Int).Set(d.InboxCount),
+		MachineHash:  d.MachineHash,
+		InboxTop:     d.InboxTop,
+		InboxCount:   new(big.Int).Set(d.InboxCount),
+		MessageCount: new(big.Int).Set(d.MessageCount),
+		LogCount:     new(big.Int).Set(d.LogCount),
 	}
 }
 
@@ -84,22 +96,28 @@ func (d *VMProtoData) Hash() common.Hash {
 		hashing.Bytes32(d.MachineHash),
 		hashing.Bytes32(d.InboxTop),
 		hashing.Uint256(new(big.Int).Set(d.InboxCount)),
+		hashing.Uint256(new(big.Int).Set(d.MessageCount)),
+		hashing.Uint256(new(big.Int).Set(d.LogCount)),
 	)
 }
 
 func (node *VMProtoData) MarshalToBuf() *VMProtoDataBuf {
 	return &VMProtoDataBuf{
-		MachineHash: node.MachineHash.MarshalToBuf(),
-		InboxTop:    node.InboxTop.MarshalToBuf(),
-		InboxCount:  common.MarshalBigInt(node.InboxCount),
+		MachineHash:  node.MachineHash.MarshalToBuf(),
+		InboxTop:     node.InboxTop.MarshalToBuf(),
+		InboxCount:   common.MarshalBigInt(node.InboxCount),
+		MessageCount: common.MarshalBigInt(node.MessageCount),
+		LogCount:     common.MarshalBigInt(node.LogCount),
 	}
 }
 
 func (buf *VMProtoDataBuf) Unmarshal() *VMProtoData {
 	return &VMProtoData{
-		MachineHash: buf.MachineHash.Unmarshal(),
-		InboxTop:    buf.InboxTop.Unmarshal(),
-		InboxCount:  buf.InboxCount.Unmarshal(),
+		MachineHash:  buf.MachineHash.Unmarshal(),
+		InboxTop:     buf.InboxTop.Unmarshal(),
+		InboxCount:   buf.InboxCount.Unmarshal(),
+		MessageCount: buf.MessageCount.Unmarshal(),
+		LogCount:     buf.LogCount.Unmarshal(),
 	}
 }
 
@@ -255,5 +273,7 @@ func (dn *DisputableNode) ValidAfterVMProtoData(prevState *VMProtoData) *VMProto
 		dn.AssertionClaim.AssertionStub.AfterHash,
 		dn.AssertionClaim.AfterInboxTop,
 		new(big.Int).Add(prevState.InboxCount, dn.AssertionParams.ImportedMessageCount),
+		new(big.Int).Add(prevState.MessageCount, new(big.Int).SetUint64(dn.AssertionClaim.AssertionStub.MessageCount)),
+		new(big.Int).Add(prevState.LogCount, new(big.Int).SetUint64(dn.AssertionClaim.AssertionStub.LogCount)),
 	)
 }

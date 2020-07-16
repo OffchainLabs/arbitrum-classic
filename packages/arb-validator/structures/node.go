@@ -69,6 +69,8 @@ func NewInitialNode(mach machine.Machine, creationTxHash common.Hash) *Node {
 			mach.Hash(),
 			value.NewEmptyTuple().Hash(),
 			big.NewInt(0),
+			big.NewInt(0),
+			big.NewInt(0),
 		),
 		machine:         mach,
 		depth:           0,

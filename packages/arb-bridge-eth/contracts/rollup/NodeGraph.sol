@@ -64,7 +64,11 @@ contract NodeGraph {
         uint256 importedMessageCount,
         uint64 numArbGas,
         uint64 numSteps,
-        bool didInboxInsn
+        bool didInboxInsn,
+        uint256 beforeMessageCount,
+        uint64 messageCount,
+        uint256 beforeLogCount,
+        uint64 logCount
     );
 
     event RollupConfirmed(bytes32 nodeHash);
@@ -128,6 +132,8 @@ contract NodeGraph {
         bytes32 vmProtoStateHash = RollupUtils.protoStateHash(
             _vmState,
             Value.newEmptyTuple().hash(),
+            0,
+            0,
             0
         );
         bytes32 initialNode = RollupUtils.childNodeHash(
@@ -192,17 +198,21 @@ contract NodeGraph {
                 prevLeaf,
                 inboxValue,
                 data.afterInboxTop,
-                data.importedMessagesSlice,
-                data.afterVMHash,
-                data.messagesAccHash,
-                data.logsAccHash,
+                data.assertion.inboxHash,
+                data.assertion.afterMachineHash,
+                data.assertion.lastMessageHash,
+                data.assertion.lastLogHash,
                 validLeaf
             ],
             inboxCount,
             data.importedMessageCount,
-            data.numArbGas,
-            data.numSteps,
-            data.didInboxInsn
+            data.assertion.numArbGas,
+            data.assertion.numSteps,
+            data.assertion.didInboxInsn,
+            data.beforeMessageCount,
+            data.assertion.messageCount,
+            data.beforeLogCount,
+            data.assertion.logCount
         );
     }
 
@@ -266,12 +276,16 @@ contract NodeGraph {
         view
     {
         require(
-            !VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash),
+            !VM.isErrored(data.assertion.beforeMachineHash) &&
+                !VM.isHalted(data.assertion.beforeMachineHash),
             MAKE_RUN
         );
-        require(data.numSteps <= vmParams.maxExecutionSteps, MAKE_STEP);
         require(
-            data.importedMessageCount == 0 || data.didInboxInsn,
+            data.assertion.numSteps <= vmParams.maxExecutionSteps,
+            MAKE_STEP
+        );
+        require(
+            data.importedMessageCount == 0 || data.assertion.didInboxInsn,
             MAKE_MESSAGES
         );
     }

@@ -14,8 +14,10 @@ message ExecutionAssertionStubBuf {
     uint64 numGas = 3;
     common.HashBuf firstMessageHash = 4;
     common.HashBuf lastMessageHash = 5;
-    common.HashBuf firstLogHash = 6;
-    common.HashBuf lastLogHash = 7;
+    uint64 messageCount = 6;
+    common.HashBuf firstLogHash = 7;
+    common.HashBuf lastLogHash = 8;
+    uint64 logCount = 9;
 }
 
 message ChainParamsBuf {
@@ -29,6 +31,8 @@ message VMProtoDataBuf {
     common.HashBuf machineHash = 1;
     common.HashBuf inboxTop = 2;
     common.BigIntegerBuf inboxCount = 3;
+    common.BigIntegerBuf messageCount = 4;
+    common.BigIntegerBuf logCount = 5;
 }
 
 message AssertionParamsBuf {
