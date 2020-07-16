@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/math"
@@ -49,6 +50,10 @@ const SignatureSize = 65
 type AbstractL2Message interface {
 	l2Type() L2SubType
 	AsData() []byte
+}
+
+type SelfIdentifyingMessage interface {
+	MessageID() common.Hash
 }
 
 type L2Message struct {
@@ -182,8 +187,8 @@ func (t Transaction) asData() []byte {
 	return ret
 }
 
-func (t Transaction) MessageID(sender common.Address) common.Hash {
-	return hashing.SoliditySHA3(hashing.Address(sender), t.AsData())
+func (t Transaction) MessageID(sender common.Address, chain common.Address) common.Hash {
+	return hashing.SoliditySHA3(hashing.Address(sender), hashing.Address(chain), t.AsData())
 }
 
 type ContractTransaction struct {
@@ -307,10 +312,14 @@ func NewBatchTxFromSignedEthTx(tx *types.Transaction) SignedTransaction {
 	}
 }
 
+func chainId(chain common.Address) *big.Int {
+	return new(big.Int).SetBytes(chain[12:])
+}
+
 func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) SignedTransaction {
 	tx := NewRandomTransaction()
 
-	signedTx, err := types.SignTx(tx.AsEthTx(), types.NewEIP155Signer(new(big.Int).SetBytes(chain[12:])), privKey)
+	signedTx, err := types.SignTx(tx.AsEthTx(), types.NewEIP155Signer(chainId(chain)), privKey)
 	if err != nil {
 		panic(err)
 	}
@@ -324,6 +333,21 @@ func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) SignedTra
 		Transaction: tx,
 		Signature:   sig,
 	}
+}
+
+func (t SignedTransaction) AsEthTx(chain common.Address) *types.Transaction {
+	tx := t.Transaction.AsEthTx()
+	tx, err := tx.WithSignature(types.NewEIP155Signer(chainId(chain)), t.Signature[:])
+	if err != nil {
+		// This should never occur since it can only happen if the signature is not the
+		// correct length. We store as a [65]byte so it will always succeed
+		log.Fatal("SignedTransaction.AsEthTx failed unexpectedly", err)
+	}
+	return tx
+}
+
+func (t SignedTransaction) MessageID(chain common.Address) common.Hash {
+	return common.NewHashFromEth(t.AsEthTx(chain).Hash())
 }
 
 func (t SignedTransaction) l2Type() L2SubType {

@@ -42,14 +42,16 @@ func TestTxTracker(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	info, err := processNode(nodes[1])
+	chain := common.RandAddress()
+
+	info, err := processNode(nodes[1], chain)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	logs := info.fullLogs()
 	ns := checkpointer.GetConfirmedNodeStore()
-	txTracker, err := newTxTracker(checkpointer, ns)
+	txTracker, err := newTxTracker(checkpointer, ns, chain)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +69,7 @@ func TestTxTracker(t *testing.T) {
 	}
 
 	nodeTxInfo := func(node *structures.Node) func(*testing.T) {
-		nodeInfo, err := processNode(node)
+		nodeInfo, err := processNode(node, chain)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -88,7 +90,7 @@ func TestTxTracker(t *testing.T) {
 	}
 
 	nodeTxInfoMissing := func(node *structures.Node) func(*testing.T) {
-		nodeInfo, err := processNode(node)
+		nodeInfo, err := processNode(node, chain)
 		if err != nil {
 			t.Fatal(err)
 		}

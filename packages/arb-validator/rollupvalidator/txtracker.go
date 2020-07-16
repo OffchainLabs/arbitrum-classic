@@ -48,7 +48,6 @@ func (l logResponse) Equals(o logResponse) bool {
 // txTracker is thread safe
 type txTracker struct {
 	chainlistener.NoopListener
-	chainAddress common.Address
 
 	// The RWMutex protects the variables listed below it
 	sync.RWMutex
@@ -61,8 +60,9 @@ type txTracker struct {
 func newTxTracker(
 	db machine.CheckpointStorage,
 	ns machine.ConfirmedNodeStore,
+	chain common.Address,
 ) (*txTracker, error) {
-	txdb, err := newTxDB(db, ns)
+	txdb, err := newTxDB(db, ns, chain)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (tr *txTracker) AssertionPrepared(
 		if tr.pendingLocation != nil && tr.pendingLocation.NodeHash == possibleNode.Hash().String() {
 			return
 		}
-		nodeInfo, err := processNode(possibleNode)
+		nodeInfo, err := processNode(possibleNode, tr.txDB.chainAddress)
 		if err != nil {
 			log.Println("Prepared assertion with invalid data", err)
 			return
@@ -171,7 +171,7 @@ func (tr *txTracker) processNextNode(node *structures.Node) error {
 	if sawOldNode {
 		return nil
 	}
-	nodeInfo, err := processNode(node)
+	nodeInfo, err := processNode(node, tr.txDB.chainAddress)
 	if err != nil {
 		return err
 	}

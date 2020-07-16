@@ -51,7 +51,7 @@ type Server struct {
 // NewServer returns a new instance of the Server class
 func NewServer(man *rollupmanager.Manager, maxCallTime time.Duration) (*Server, error) {
 	checkpointer := man.GetCheckpointer()
-	tracker, err := newTxTracker(checkpointer.GetCheckpointDB(), checkpointer.GetConfirmedNodeStore())
+	tracker, err := newTxTracker(checkpointer.GetCheckpointDB(), checkpointer.GetConfirmedNodeStore(), man.RollupAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +230,7 @@ func (m *Server) executeCall(mach machine.Machine, args *evm.CallMessageArgs) (*
 	if err != nil {
 		return nil, err
 	}
-	if lastLog.L1Message.MessageID() != inboxMsg.MessageID() {
+	if lastLog.L1Message.MessageID(m.rollupAddress) != inboxMsg.MessageID(m.rollupAddress) {
 		// Last produced log is not the call we sent
 		return nil, errors.New("call took too long to execute")
 	}

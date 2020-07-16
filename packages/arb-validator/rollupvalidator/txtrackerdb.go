@@ -97,6 +97,7 @@ type txDB struct {
 	db                 machine.CheckpointStorage
 	confirmedNodeStore machine.ConfirmedNodeStore
 	confirmedNodeCache *lru.Cache
+	chainAddress       common.Address
 
 	transactions     map[common.Hash]*TxRecord
 	nodeInfo         map[nodeRecordKey]*nodeInfo
@@ -107,7 +108,7 @@ type txDB struct {
 	pendingTransactions map[common.Hash]*evm.TxInfo
 }
 
-func newTxDB(db machine.CheckpointStorage, ns machine.ConfirmedNodeStore) (*txDB, error) {
+func newTxDB(db machine.CheckpointStorage, ns machine.ConfirmedNodeStore, chain common.Address) (*txDB, error) {
 	lruCache, err := lru.New(500)
 	if err != nil {
 		return nil, err
@@ -116,6 +117,7 @@ func newTxDB(db machine.CheckpointStorage, ns machine.ConfirmedNodeStore) (*txDB
 		db:                  db,
 		confirmedNodeStore:  ns,
 		confirmedNodeCache:  lruCache,
+		chainAddress:        chain,
 		transactions:        make(map[common.Hash]*TxRecord),
 		nodeInfo:            make(map[nodeRecordKey]*nodeInfo),
 		nodeMetadata:        make(map[nodeRecordKey]*NodeMetadata),
@@ -306,7 +308,7 @@ func (txdb *txDB) lookupNodeRecord(nodeHeight uint64, nodeHash common.Hash) (*no
 		return nil, err
 	}
 
-	info, err = processNode(node)
+	info, err = processNode(node, txdb.chainAddress)
 	if err != nil {
 		return nil, err
 	}

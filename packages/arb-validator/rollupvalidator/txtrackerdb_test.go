@@ -86,7 +86,9 @@ func TestTrackerDB(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	db, err := newTxDB(checkpointer, checkpointer.GetConfirmedNodeStore())
+	chain := common.RandAddress()
+
+	db, err := newTxDB(checkpointer, checkpointer.GetConfirmedNodeStore(), chain)
 
 	heightTest := func(node *structures.Node) func(*testing.T) {
 		return func(t *testing.T) {
@@ -114,7 +116,7 @@ func TestTrackerDB(t *testing.T) {
 
 	nodeRecordTest := func(node *structures.Node) func(*testing.T) {
 		return func(t *testing.T) {
-			nodeInfo, err := processNode(node)
+			nodeInfo, err := processNode(node, chain)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -136,7 +138,7 @@ func TestTrackerDB(t *testing.T) {
 
 	nodeMetadataTest := func(node *structures.Node) func(*testing.T) {
 		return func(t *testing.T) {
-			nodeInfo, err := processNode(node)
+			nodeInfo, err := processNode(node, chain)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -158,7 +160,7 @@ func TestTrackerDB(t *testing.T) {
 
 	txRecordTest := func(node *structures.Node) func(*testing.T) {
 		return func(t *testing.T) {
-			nodeInfo, err := processNode(node)
+			nodeInfo, err := processNode(node, chain)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -186,7 +188,7 @@ func TestTrackerDB(t *testing.T) {
 
 	for _, node := range nodes {
 		t.Run("AddUnconfirmedNode", func(t *testing.T) {
-			nodeInfo, err := processNode(node)
+			nodeInfo, err := processNode(node, chain)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -241,7 +243,9 @@ func TestMetadataLogMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	nodeInfo, err := processNode(nodes[1])
+	chain := common.RandAddress()
+
+	nodeInfo, err := processNode(nodes[1], chain)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,23 +276,25 @@ func TestUnconfirmedDB(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	chain := common.RandAddress()
+
 	results := generateResults()
 
 	nodeA := structures.NewRandomNodeFromValidPrev(nodes[0], results)
 
 	nodeB := structures.NewRandomNodeFromValidPrev(nodes[0], results)
 
-	nodeInfoA, err := processNode(nodeA)
+	nodeInfoA, err := processNode(nodeA, chain)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	nodeInfoB, err := processNode(nodeB)
+	nodeInfoB, err := processNode(nodeB, chain)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	db, err := newTxDB(checkpointer, checkpointer.GetConfirmedNodeStore())
+	db, err := newTxDB(checkpointer, checkpointer.GetConfirmedNodeStore(), chain)
 	if err != nil {
 		t.Fatal(err)
 	}
