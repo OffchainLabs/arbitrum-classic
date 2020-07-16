@@ -288,3 +288,7 @@ packages/arb-validator/cmd/rollupServer/rollupServer
 packages/arb-validator/cmd/evilRollupServer/evilRollupServer
 packages/arb-validator/cmd/evilRollupServer/evilRollupServer
 packages/arb-validator/cmd/evilRollupServer/evilRollupServer
+
+# geth setup
+packages/arb-bridge-eth/data/
+packages/arb-bridge-eth/password.txt
