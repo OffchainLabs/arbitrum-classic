@@ -176,9 +176,20 @@ library RollupUtils {
     function protoStateHash(
         bytes32 machineHash,
         bytes32 inboxTop,
-        uint256 inboxCount
+        uint256 inboxCount,
+        uint256 messageCount,
+        uint256 logCount
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(machineHash, inboxTop, inboxCount));
+        return
+            keccak256(
+                abi.encodePacked(
+                    machineHash,
+                    inboxTop,
+                    inboxCount,
+                    messageCount,
+                    logCount
+                )
+            );
     }
 
     function validDataHash(bytes32 messagesAcc, bytes32 logsAcc)

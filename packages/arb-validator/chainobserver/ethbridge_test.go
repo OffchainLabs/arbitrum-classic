@@ -19,6 +19,7 @@ package chainobserver
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"log"
 	"math/big"
 	"math/rand"
@@ -37,7 +38,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
@@ -224,21 +224,22 @@ func TestConfirmAssertion(t *testing.T) {
 	}
 	prepared.Assertion = assertion
 	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
-	t.Run("make assertion", func(t *testing.T) {
-		var stakerProof []common.Hash
-		events, err := chainlistener.MakeAssertion(context.Background(), rollupContract, prepared, stakerProof)
-		if err != nil {
+	var stakerProof []common.Hash
+	events, err := chainlistener.MakeAssertion(context.Background(), rollupContract, prepared, stakerProof)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ev := range events {
+		if err := chain.HandleNotification(context.Background(), ev); err != nil {
 			t.Fatal(err)
 		}
-		for _, ev := range events {
-			if err := chain.HandleNotification(context.Background(), ev); err != nil {
-				t.Fatal(err)
-			}
-		}
-	})
+	}
 
 	latestConf := chain.NodeGraph.LatestConfirmed()
 	validNode := chain.NodeGraph.NodeFromHash(latestConf.SuccessorHashes()[3])
+	if validNode == nil {
+		t.Fatal("valid node was nil")
+	}
 	if err := validNode.UpdateValidOpinion(prepared.Machine, prepared.Assertion); err != nil {
 		t.Fatal(err)
 	}

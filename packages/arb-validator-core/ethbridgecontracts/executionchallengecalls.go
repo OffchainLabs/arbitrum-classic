@@ -32,8 +32,8 @@ func (_BisectionChallenge *BisectionChallengeTransactor) ChooseSegmentCall(ctx c
 	return callCheckExec(ctx, client, from, contractAddress, "chooseSegment", _segmentToChallenge, _proof, _bisectionRoot, _bisectionHash)
 }
 
-func (_ExecutionChallenge *ExecutionChallengeTransactor) BisectAssertionCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, _beforeInbox [32]byte, _machineHashes [][32]byte, _didInboxInsns []bool, _messageAccs [][32]byte, _logAccs [][32]byte, _gases []uint64, _totalSteps uint64) error {
-	return callCheckExec(ctx, client, from, contractAddress, "bisectAssertion", _beforeInbox, _machineHashes, _didInboxInsns, _messageAccs, _logAccs, _gases, _totalSteps)
+func (_ExecutionChallenge *ExecutionChallengeTransactor) BisectAssertionCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, _beforeInbox [32]byte, _machineHashes [][32]byte, inboxInsnIndex uint32, _messageAccs [][32]byte, _logAccs [][32]byte, _outCounts []uint64, _gases []uint64, _totalSteps uint64) error {
+	return callCheckExec(ctx, client, from, contractAddress, "bisectAssertion", _beforeInbox, _machineHashes, inboxInsnIndex, _messageAccs, _logAccs, _outCounts, _gases, _totalSteps)
 }
 
 func (_ExecutionChallenge *ExecutionChallengeTransactor) OneStepProofCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, _beforeHash [32]byte, _beforeInbox [32]byte, _beforeInboxValueSize *big.Int, _afterHash [32]byte, _didInboxInsns bool, _firstMessage [32]byte, _lastMessage [32]byte, _firstLog [32]byte, _lastLog [32]byte, _gas uint64, _proof []byte) error {

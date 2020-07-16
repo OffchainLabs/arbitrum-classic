@@ -427,15 +427,20 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         }
         return this.ethProvider.getBlockNumber()
       }
+      case 'estimateGas': {
+        const tx: ethers.providers.TransactionRequest = params.transaction
+        const result = await this.callImpl(tx)
+        return result.gasUsed
+      }
     }
     // console.log('Forwarding query to provider', method, params);
     return await this.ethProvider.perform(method, params)
   }
 
-  public async call(
+  private async callImpl(
     transaction: ethers.providers.TransactionRequest,
     blockTag?: ethers.providers.BlockTag | Promise<ethers.providers.BlockTag>
-  ): Promise<string> {
+  ): Promise<Result> {
     const from = await transaction.from
     const tx = new L2Call(
       await transaction.gasLimit,
@@ -461,7 +466,14 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     } else {
       resultVal = await callLatest()
     }
-    const result = Result.fromValue(resultVal)
+    return Result.fromValue(resultVal)
+  }
+
+  public async call(
+    transaction: ethers.providers.TransactionRequest,
+    blockTag?: ethers.providers.BlockTag | Promise<ethers.providers.BlockTag>
+  ): Promise<string> {
+    const result = await this.callImpl(transaction, blockTag)
     if (result.resultCode != ResultCode.Return) {
       throw new Error('Call was reverted')
     }
