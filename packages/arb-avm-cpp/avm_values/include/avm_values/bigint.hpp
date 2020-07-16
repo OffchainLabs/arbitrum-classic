@@ -19,6 +19,8 @@
 
 #include <intx/intx.hpp>
 
+#include <vector>
+
 using uint256_t = intx::uint256;
 using uint512_t = intx::uint512;
 

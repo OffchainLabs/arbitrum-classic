@@ -106,7 +106,7 @@ uint256_t MachineState::hash() const {
     { oit = to_big_endian(arb_gas_remaining, oit); }
     {
         auto val = ::hash_value(errpc);
-        oit = to_big_endian(val, oit);
+        to_big_endian(val, oit);
     }
 
     auto hash_val = ethash::keccak256(data.data(), data.size());
