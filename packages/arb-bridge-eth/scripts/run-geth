@@ -6,7 +6,7 @@ cp geth/keystore/* data/keystore
 
 # run in background
 geth --datadir data --rpc --rpcaddr 'localhost' --rpcvhosts=* --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' \
-    --network=arb-network --networkid=44010 \
+    --networkid=44010 \
     --ws --wsport 7546 --wsorigins '*' --wsapi personal,admin,db,eth,net,web3,miner,shh,txpool,debug \
     --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ./password.txt --mine &>geth.out &
 
