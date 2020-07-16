@@ -308,7 +308,7 @@ func TestBatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	batchSize := 20
-	txes := make([]message.BatchTx, 0, batchSize)
+	txes := make([]message.L2Message, 0, batchSize)
 	senders := make([]common.Address, 0, batchSize)
 	for i := 0; i < batchSize; i++ {
 		pk, err := crypto.GenerateKey()
@@ -330,18 +330,17 @@ func TestBatch(t *testing.T) {
 			t.Fatal("deposit should not have had a result")
 		}
 
-		tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 0, big.NewInt(0), []byte{})
+		tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
 		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainId), pk)
 		if err != nil {
 			t.Fatal(err)
 		}
-		txes = append(txes, message.NewBatchTxFromSignedEthTx(signedTx))
+		txes = append(txes, message.L2Message{Msg: message.NewBatchTxFromSignedEthTx(signedTx)})
 	}
-
-	msg := message.TransactionBatch{Transactions: txes}
+	msg := message.NewTransactionBatchFromMessages(txes)
 	results = runMessage(t, mach, message.L2Message{Msg: msg}, common.RandAddress())
 	if len(results) != len(txes) {
-		t.Fatal("incorrect result count")
+		t.Fatal("incorrect result count", len(results), "instead of", len(txes))
 	}
 	for i, result := range results {
 		if result.L1Message.Sender != senders[i] {

@@ -38,6 +38,7 @@ const (
 	ContractTransactionType           = 1
 	CallType                          = 2
 	TransactionBatchType              = 3
+	SignedTransactionType             = 4
 )
 
 const AddressSize = 32
@@ -289,24 +290,24 @@ func (c Call) AsData() []byte {
 	return ret
 }
 
-type BatchTx struct {
+type SignedTransaction struct {
 	Transaction Transaction
 	Signature   [SignatureSize]byte
 }
 
-func NewBatchTxFromSignedEthTx(tx *types.Transaction) BatchTx {
+func NewBatchTxFromSignedEthTx(tx *types.Transaction) SignedTransaction {
 	v, r, s := tx.RawSignatureValues()
 	var sig [65]byte
 	copy(sig[:], math.U256Bytes(r))
 	copy(sig[32:], math.U256Bytes(s))
 	sig[64] = byte(v.Uint64() % 2)
-	return BatchTx{
+	return SignedTransaction{
 		Transaction: NewTransactionFromEthTx(tx),
 		Signature:   sig,
 	}
 }
 
-func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) BatchTx {
+func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) SignedTransaction {
 	tx := NewRandomTransaction()
 
 	signedTx, err := types.SignTx(tx.AsEthTx(), types.NewEIP155Signer(new(big.Int).SetBytes(chain[12:])), privKey)
@@ -319,29 +320,29 @@ func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) BatchTx {
 	copy(sig[32:], math.U256Bytes(s))
 	sig[64] = byte(v.Uint64() % 2)
 
-	return BatchTx{
+	return SignedTransaction{
 		Transaction: tx,
 		Signature:   sig,
 	}
 }
 
-func (b BatchTx) Equals(o BatchTx) bool {
+func (t SignedTransaction) l2Type() L2SubType {
+	return SignedTransactionType
+}
+
+func (b SignedTransaction) Equals(o SignedTransaction) bool {
 	return b.Transaction.Equals(o.Transaction) &&
 		b.Signature == o.Signature
 }
 
-func (b BatchTx) AsData() []byte {
+func (b SignedTransaction) AsData() []byte {
 	ret := make([]byte, 0)
-	encodedLength := make([]byte, 8)
-	binary.BigEndian.PutUint64(encodedLength[:], uint64(len(b.Transaction.Data)))
-	ret = append(ret, encodedLength[:]...)
-	ret = append(ret, byte(TransactionType))
 	ret = append(ret, b.Transaction.AsData()...)
 	ret = append(ret, b.Signature[:]...)
 	return ret
 }
 
-func (b BatchTx) Hash() common.Hash {
+func (b SignedTransaction) Hash() common.Hash {
 	data := make([]byte, 0)
 	data = append(data, b.Transaction.AsData()...)
 	data = append(data, b.Signature[:]...)
@@ -349,36 +350,36 @@ func (b BatchTx) Hash() common.Hash {
 }
 
 type TransactionBatch struct {
-	Transactions []BatchTx
+	Transactions [][]byte
+}
+
+func NewTransactionBatchFromMessages(messages []L2Message) TransactionBatch {
+	txes := make([][]byte, 0)
+	for _, msg := range messages {
+		txes = append(txes, msg.AsData())
+	}
+	return TransactionBatch{Transactions: txes}
 }
 
 func newTransactionBatchFromData(data []byte) TransactionBatch {
-	txes := make([]BatchTx, 0)
+	txes := make([][]byte, 0)
 	for len(data) >= 8 {
-		calldataLength := binary.BigEndian.Uint64(data[:])
+		msgLength := binary.BigEndian.Uint64(data[:])
 		data = data[8:]
-		beginningSize := TransactionHeaderSize + calldataLength
-		if uint64(len(data)) < beginningSize+SignatureSize {
+		if uint64(len(data)) < msgLength {
 			// Not enough data remaining
 			break
 		}
-		tx := newTransactionFromData(data[:beginningSize])
-		data = data[beginningSize:]
-		var sig [SignatureSize]byte
-		copy(sig[:], data[:])
-		data = data[SignatureSize:]
-		txes = append(txes, BatchTx{
-			Transaction: tx,
-			Signature:   sig,
-		})
+		txes = append(txes, data[:msgLength])
+		data = data[msgLength:]
 	}
 	return TransactionBatch{Transactions: txes}
 }
 
 func NewRandomTransactionBatch(txCount int, chain common.Address, privKey *ecdsa.PrivateKey) TransactionBatch {
-	txes := make([]BatchTx, 0, txCount)
+	txes := make([][]byte, 0, txCount)
 	for i := 0; i < txCount; i++ {
-		txes = append(txes, NewRandomBatchTx(chain, privKey))
+		txes = append(txes, NewRandomBatchTx(chain, privKey).AsData())
 	}
 	return TransactionBatch{Transactions: txes}
 }
@@ -390,7 +391,10 @@ func (t TransactionBatch) l2Type() L2SubType {
 func (t TransactionBatch) AsData() []byte {
 	ret := make([]byte, 0)
 	for _, tx := range t.Transactions {
-		ret = append(ret, tx.AsData()...)
+		encodedLength := make([]byte, 8)
+		binary.BigEndian.PutUint64(encodedLength[:], uint64(len(tx)))
+		ret = append(ret, encodedLength[:]...)
+		ret = append(ret, tx...)
 	}
 	return ret
 }

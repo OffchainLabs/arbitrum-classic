@@ -42,7 +42,7 @@ const maxTransactions = 200
 const signatureLength = 65
 
 type DecodedBatchTx struct {
-	tx     message.BatchTx
+	tx     message.SignedTransaction
 	sender common.Address
 }
 
@@ -109,13 +109,13 @@ func prepareTransactions(txes []DecodedBatchTx) message.TransactionBatch {
 		})
 	}
 
-	batchTxes := make([]message.BatchTx, 0, len(txes))
+	batchTxes := make([]message.L2Message, 0, len(txes))
 	for _, tx := range txes {
 		nextTx := transactionsBySender[tx.sender][0]
 		transactionsBySender[tx.sender] = transactionsBySender[tx.sender][1:]
-		batchTxes = append(batchTxes, nextTx.tx)
+		batchTxes = append(batchTxes, message.L2Message{Msg: nextTx.tx})
 	}
-	return message.TransactionBatch{Transactions: batchTxes}
+	return message.NewTransactionBatchFromMessages(batchTxes)
 }
 
 func (m *Server) sendBatch(ctx context.Context) {
