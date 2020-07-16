@@ -17,10 +17,8 @@
 package ethbridgemachine
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"log"
 	"math/big"
-	"os"
 	"strings"
 	"testing"
 
@@ -221,18 +219,6 @@ func TestReddit(t *testing.T) {
 		DestAddress: common.Address{},
 		Payment:     big.NewInt(0),
 		Data:        constructorData,
-	}
-
-	inbox := structures.NewVMInbox()
-	inbox.DeliverMessage(message.NewInboxMessage(message.L2Message{Msg: constructorTx}, common.RandAddress(), big.NewInt(0), message.NewRandomChainTime()))
-	val := inbox.AsValue()
-
-	f, err := os.Create("/tmp/dat2")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := value.MarshalValue(val, f); err != nil {
-		t.Fatal(err)
 	}
 
 	constructorResult := runMessage(constructorTx)

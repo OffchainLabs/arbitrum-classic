@@ -23,7 +23,7 @@ RUN mkdir -p build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
     cmake --build . -j $(nproc) && \
     cd ../ && \
-    ./scripts/install-cmachine-release
+    ./scripts/install-cmachine-build
 
 
 FROM alpine:edge as arb-validator-builder
