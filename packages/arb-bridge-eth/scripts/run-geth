@@ -14,6 +14,3 @@ echo "node output at geth.out"
 
 # # kill service
 # kill $(lsof -t -i:7545)
-
-yarn migrate:geth
-

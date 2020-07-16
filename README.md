@@ -16,4 +16,26 @@ Arbitrum technologies are patent pending. This repository is offered under the A
 
 ## Quickstart
 
-Follow [the guide](https://developer.offchainlabs.com/docs/Developer_Quickstart/) on our developer site to build a demo dapp on Arbitrum. 
+Follow [the guide](https://developer.offchainlabs.com/docs/Developer_Quickstart/) on our developer site to build a demo dapp on Arbitrum.
+
+## Local setup
+
+MacOS dependencies
+
+```bash
+brew tap ethereum/ethereum
+brew install ethereum boost libtool autoconf automake gmp cmake
+```
+
+Start local Geth instance and deploy contracts
+
+```bash
+yarn run:local:geth
+```
+
+Start validator
+
+```bash
+yarn install:validator
+yarn demo:initialize
+```
