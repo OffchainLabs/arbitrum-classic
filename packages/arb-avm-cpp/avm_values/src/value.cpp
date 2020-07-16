@@ -36,15 +36,14 @@ Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
 
     return tup;
 }
+}  // namespace
 
 uint64_t deserialize_uint64_t(const char*& bufptr) {
-    uint64_t val;
-    memcpy(&val, bufptr, sizeof(val));
-    val = boost::endian::big_to_native(val);
+    uint64_t val = intx::be::unsafe::load<uint64_t>(
+        reinterpret_cast<const unsigned char*>(bufptr));
     bufptr += sizeof(val);
     return val;
 }
-}  // namespace
 
 CodePointRef deserializeCodePointRef(const char*& bufptr) {
     uint64_t segment = deserialize_uint64_t(bufptr);

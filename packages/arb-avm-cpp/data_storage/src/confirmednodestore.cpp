@@ -15,8 +15,11 @@
  */
 
 #include <data_storage/confirmednodestore.hpp>
+
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
+
+#include <avm_values/value.hpp>
 
 #include <rocksdb/status.h>
 #include <rocksdb/utilities/transaction_db.h>
@@ -86,10 +89,8 @@ std::array<char, node_height_value_size> toNodeHeightValue(
 }
 
 uint64_t valueToHeight(const std::string& value) {
-    uint64_t big_height;
-    auto big_height_ptr = reinterpret_cast<char*>(&big_height);
-    std::copy(value.data(), value.data() + value.size(), big_height_ptr);
-    return boost::endian::big_to_native(big_height);
+    auto data = value.data();
+    return deserialize_uint64_t(data);
 }
 
 uint256_t valueToHash(const std::string& value) {

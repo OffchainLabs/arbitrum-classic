@@ -44,7 +44,6 @@ set(LIB_SOURCES
   src/confirmednodestore.cpp
   src/keyvaluestore.cpp
   src/value/code.cpp
-  src/value/utils.cpp
   src/value/machine.cpp
   src/value/referencecount.cpp
   src/value/value.cpp

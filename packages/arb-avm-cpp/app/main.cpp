@@ -16,8 +16,6 @@
 
 #include <avm/machine.hpp>
 
-#include <boost/algorithm/hex.hpp>
-
 #include <sys/stat.h>
 #include <fstream>
 #include <iostream>
