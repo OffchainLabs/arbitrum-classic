@@ -40,6 +40,7 @@ PRIVATE
 	avm
 	Catch2::Catch2
 	nlohmann_json::nlohmann_json
+    Boost::filesystem
 )
 
 include(CTest)
