@@ -45,8 +45,6 @@ value deserialize_value(const char*& srccode, TuplePool& pool);
 
 void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf);
 
-void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf);
-
 void marshal_value(const value& val, std::vector<unsigned char>& buf);
 
 void marshalForProof(const value& val,

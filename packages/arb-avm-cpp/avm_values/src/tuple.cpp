@@ -16,9 +16,9 @@
 
 #include <avm_values/tuple.hpp>
 
-#include <bigint_utils.hpp>
-
 #include <ethash/keccak.hpp>
+
+#include <iostream>
 
 Tuple::Tuple(value val, TuplePool* pool)
     : tuplePool(pool), tpl(pool->getResource(1)) {
@@ -141,8 +141,7 @@ HashPreImage Tuple::calculateHashPreImage() const {
     int val_length = 32;
     for (uint64_t i = 0; i < tuple_size(); i++) {
         const auto& element = get_element(i);
-        auto valHash = hash_value(element);
-        oit = to_big_endian(valHash, oit);
+        oit = to_big_endian(hash_value(element), oit);
         size += ::getSize(element);
     }
 

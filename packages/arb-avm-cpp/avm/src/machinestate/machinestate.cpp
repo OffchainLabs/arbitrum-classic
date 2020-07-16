@@ -20,9 +20,9 @@
 #include <avm_values/exceptions.hpp>
 #include <avm_values/vmValueParser.hpp>
 
-#include <bigint_utils.hpp>
-
 #include <ethash/keccak.hpp>
+
+#include <iostream>
 
 namespace {
 uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
@@ -106,11 +106,11 @@ uint256_t MachineState::hash() const {
     { oit = to_big_endian(arb_gas_remaining, oit); }
     {
         auto val = ::hash_value(errpc);
-        to_big_endian(val, oit);
+        oit = to_big_endian(val, oit);
     }
 
     auto hash_val = ethash::keccak256(data.data(), data.size());
-    return from_big_endian(&hash_val.bytes[0], &hash_val.bytes[32]);
+    return intx::be::load<uint256_t>(hash_val);
 }
 
 uint256_t MachineState::getMachineSize() {
@@ -534,14 +534,18 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "data stack: " << val.stack << "\n";
     auto& current_code_point = val.code->loadCodePoint(val.pc);
     os << "operation " << current_code_point.op << "\n";
-    os << "codePointHash " << to_hex_str(hash(current_code_point)) << "\n";
-    os << "stackHash " << to_hex_str(val.stack.hash()) << "\n";
-    os << "auxStackHash " << to_hex_str(val.auxstack.hash()) << "\n";
-    os << "registerHash " << to_hex_str(hash_value(val.registerVal)) << "\n";
-    os << "staticHash " << to_hex_str(hash_value(val.static_val)) << "\n";
+    os << "codePointHash " << intx::to_string(hash(current_code_point), 16)
+       << "\n";
+    os << "stackHash " << intx::to_string(val.stack.hash(), 16) << "\n";
+    os << "auxStackHash " << intx::to_string(val.auxstack.hash(), 16) << "\n";
+    os << "registerHash " << intx::to_string(hash_value(val.registerVal), 16)
+       << "\n";
+    os << "staticHash " << intx::to_string(hash_value(val.static_val), 16)
+       << "\n";
     os << "arb_gas_remaining " << val.arb_gas_remaining << "\n";
     os << "err handler " << val.errpc.pc << "\n";
     auto& err_code_point = val.code->loadCodePoint(val.errpc.pc);
-    os << "errHandlerHash " << to_hex_str(hash(err_code_point)) << "\n";
+    os << "errHandlerHash " << intx::to_string(hash(err_code_point), 16)
+       << "\n";
     return os;
 }

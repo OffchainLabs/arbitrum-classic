@@ -20,7 +20,6 @@
 
 #include <avm/machine.hpp>
 #include <avm_values/opcodes.hpp>
-#include <bigint_utils.hpp>
 
 std::ostream& operator<<(std::ostream& os, const Machine& val) {
     os << val.machine_state;

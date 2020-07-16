@@ -22,8 +22,8 @@ cable_configure_toolchain(DEFAULT cxx14-pic)
 
 include("cmake/HunterGate.cmake")
 HunterGate(
-    URL "https://github.com/ruslo/hunter/archive/v0.23.211.tar.gz"
-    SHA1 "c022f0c2480e835a6bafdd734035ec2071b51897"
+    URL "https://github.com/cpp-pm/hunter/archive/v0.23.260.tar.gz"
+    SHA1 "13775235910a3fa85644568d1c5be8271de72e1c"
 )
 
 cable_set_build_type(DEFAULT RelWithDebInfo CONFIGURATION_TYPES Debug Release RelWithDebInfo)
@@ -87,7 +87,6 @@ get_target_property(ETHASH_LIB ethash::keccak "LOCATION_Release")
 file(COPY ${ETHASH_LIB} DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/cmachine)
 add_subdirectory(external)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/external/Catch2/contrib)
-add_subdirectory(utils)
 add_subdirectory(avm_values)
 add_subdirectory(data_storage)
 add_subdirectory(avm)

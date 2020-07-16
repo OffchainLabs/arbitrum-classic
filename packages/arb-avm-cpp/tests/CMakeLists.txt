@@ -38,7 +38,6 @@ target_link_libraries(
 PRIVATE
     cavm
 	avm
-    avm_utils
 	Catch2::Catch2
 	nlohmann_json::nlohmann_json
 )

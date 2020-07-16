@@ -20,6 +20,7 @@
 #include <avm_values/bigint.hpp>
 
 #include <array>
+#include <vector>
 
 class HashPreImage {
    private:

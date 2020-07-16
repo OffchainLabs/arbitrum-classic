@@ -27,6 +27,8 @@
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>
 
+#include <iostream>
+
 DataStorage::DataStorage(const std::string& db_path) {
     rocksdb::TransactionDBOptions txn_options;
     rocksdb::Options options;

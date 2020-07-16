@@ -16,7 +16,7 @@
 
 #include <avm/machinestate/datastack.hpp>
 
-#include <bigint_utils.hpp>
+#include <iostream>
 
 uint256_t Datastack::hash() const {
     auto h_value = getHashPreImage();

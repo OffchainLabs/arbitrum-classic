@@ -18,13 +18,10 @@
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
 
-#include <bigint_utils.hpp>
-
 #include <rocksdb/status.h>
 #include <rocksdb/utilities/transaction_db.h>
 
 constexpr auto height_size = 32;
-constexpr auto hash_size = 32;
 
 namespace {
 std::array<char, 64> toKey(const uint256_t& height, const uint256_t& hash) {
@@ -42,12 +39,13 @@ std::array<char, height_size> toKeyPrefix(const uint256_t& height) {
 }
 
 uint256_t keyToHeight(const rocksdb::Slice& key) {
-    return from_big_endian(key.data(), key.data() + height_size);
+    return intx::be::unsafe::load<uint256_t>(
+        reinterpret_cast<const unsigned char*>(key.data()));
 }
 
 uint256_t keyToHash(const rocksdb::Slice& key) {
-    return from_big_endian(key.data() + height_size,
-                           key.data() + height_size + hash_size);
+    return intx::be::unsafe::load<uint256_t>(
+        reinterpret_cast<const unsigned char*>(key.data() + height_size));
 }
 }  // namespace
 

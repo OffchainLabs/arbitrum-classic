@@ -18,9 +18,9 @@
 
 #include <avm_values/valuetype.hpp>
 
-#include <bigint_utils.hpp>
-
 #include <ethash/keccak.hpp>
+
+#include <iostream>
 
 uint256_t HashPreImage::hash() const {
     std::array<unsigned char, 65> tupData2;
@@ -32,18 +32,15 @@ uint256_t HashPreImage::hash() const {
     to_big_endian(valueSize, iter);
 
     auto hash_val = ethash::keccak256(tupData2.data(), tupData2.size());
-    return from_big_endian(&hash_val.bytes[0], &hash_val.bytes[32]);
+    return intx::be::load<uint256_t>(hash_val.bytes);
 }
 
 void HashPreImage::marshal(std::vector<unsigned char>& buf) const {
     buf.insert(buf.end(), firstHash.begin(), firstHash.end());
-
-    std::array<unsigned char, 32> tmpbuf;
-    to_big_endian(valueSize, tmpbuf.begin());
-    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+    marshal_uint256_t(valueSize, buf);
 }
 
 std::ostream& operator<<(std::ostream& os, const HashPreImage& val) {
-    os << "HashPreImage(" << val.hash() << ")";
+    os << "HashPreImage(" << intx::to_string(val.hash()) << ")";
     return os;
 }

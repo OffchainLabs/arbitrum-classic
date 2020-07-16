@@ -15,7 +15,6 @@
  */
 
 #include <avm/machine.hpp>
-#include <bigint_utils.hpp>
 
 #include <secp256k1_recovery.h>
 #include <ethash/keccak.hpp>
@@ -337,10 +336,11 @@ TEST_CASE("SIGNEXTEND opcode is correct") {
 
 TEST_CASE("HASH opcode is correct") {
     SECTION("10") {
-        testUnaryOp(10,
-                    from_hex_str("c65a7bb8d6351c1cf70c95a316cc6a92839c986682d98"
-                                 "bc35f958f4883f9d2a8"),
-                    OpCode::HASH);
+        testUnaryOp(
+            10,
+            intx::from_string<uint256_t>("0xc65a7bb8d6351c1cf70c95a316cc6a92839"
+                                         "c986682d98bc35f958f4883f9d2a8"),
+            OpCode::HASH);
     }
 }
 
@@ -871,27 +871,24 @@ TEST_CASE("ecrecover opcode is correct") {
                 ctx, sig_raw.data(), &recovery_id, &sig) == 1);
 
     MachineState s;
-    s.stack.push(from_big_endian(msg.begin(), msg.end()));
+    s.stack.push(intx::be::unsafe::load<uint256_t>(msg.begin()));
     s.stack.push(uint256_t{recovery_id});
-    s.stack.push(from_big_endian(sig_raw.begin() + 32, sig_raw.end()));
-    s.stack.push(from_big_endian(sig_raw.begin(), sig_raw.begin() + 32));
+    s.stack.push(intx::be::unsafe::load<uint256_t>(sig_raw.begin() + 32));
+    s.stack.push(intx::be::unsafe::load<uint256_t>(sig_raw.begin()));
     s.runOp(OpCode::ECRECOVER);
     REQUIRE(s.stack[0] != value(0));
     auto hash_val = ethash::keccak256(pubkey_raw.begin() + 1, 64);
     std::fill(&hash_val.bytes[0], &hash_val.bytes[12], 0);
-    auto correct_address =
-        from_big_endian(&hash_val.bytes[0], &hash_val.bytes[32]);
+    auto correct_address = intx::be::load<uint256_t>(hash_val);
     auto calculated_address = assumeInt(s.stack[0]);
     REQUIRE(correct_address == calculated_address);
 
     BENCHMARK_ADVANCED("ecrecover")(Catch::Benchmark::Chronometer meter) {
         MachineState sample_machine;
-        sample_machine.stack.push(from_big_endian(msg.begin(), msg.end()));
-        sample_machine.stack.push(uint256_t{recovery_id});
-        sample_machine.stack.push(
-            from_big_endian(sig_raw.begin() + 32, sig_raw.end()));
-        sample_machine.stack.push(
-            from_big_endian(sig_raw.begin(), sig_raw.begin() + 32));
+        s.stack.push(intx::be::unsafe::load<uint256_t>(msg.begin()));
+        s.stack.push(uint256_t{recovery_id});
+        s.stack.push(intx::be::unsafe::load<uint256_t>(sig_raw.begin() + 32));
+        s.stack.push(intx::be::unsafe::load<uint256_t>(sig_raw.begin()));
 
         std::vector<MachineState> machines(meter.runs());
         std::fill(machines.begin(), machines.end(), sample_machine);

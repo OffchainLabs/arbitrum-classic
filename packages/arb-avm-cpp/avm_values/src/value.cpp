@@ -20,7 +20,7 @@
 #include <avm_values/tuple.hpp>
 #include <avm_values/value.hpp>
 
-#include <bigint_utils.hpp>
+#include <boost/endian/conversion.hpp>
 
 #include <ostream>
 
@@ -59,8 +59,9 @@ CodePointStub deserializeCodePointStub(const char*& bufptr) {
 }
 
 uint256_t deserializeUint256t(const char*& bufptr) {
-    uint256_t ret = from_big_endian(bufptr, bufptr + UINT256_SIZE);
-    bufptr += UINT256_SIZE;
+    auto ret = intx::be::unsafe::load<uint256_t>(
+        reinterpret_cast<const unsigned char*>(bufptr));
+    bufptr += 32;
     return ret;
 }
 
@@ -86,17 +87,10 @@ value deserialize_value(const char*& bufptr, TuplePool& pool) {
 }
 
 void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
-    auto big_endian_val = boost::endian::native_to_big(val);
-    std::array<unsigned char, sizeof(val)> tmpbuf;
-    memcpy(tmpbuf.data(), &big_endian_val, sizeof(big_endian_val));
-
-    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-}
-
-void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
-    std::array<unsigned char, 32> tmpbuf;
-    to_big_endian(val, tmpbuf.begin());
-    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+    uint64_t big_endian_val = boost::endian::native_to_big(val);
+    const unsigned char* data =
+        reinterpret_cast<const unsigned char*>(&big_endian_val);
+    buf.insert(buf.end(), data, data + sizeof(big_endian_val));
 }
 
 void marshal_value(const value& val, std::vector<unsigned char>& buf) {
@@ -154,9 +148,7 @@ void marshalForProof(const CodePointStub& val,
     auto& cp = code.loadCodePoint(val.pc);
     buf.push_back(CODEPT);
     cp.op.marshalForProof(buf, childNestLevel(marshal_level), code);
-    std::array<unsigned char, 32> hashVal;
-    to_big_endian(cp.nextHash, hashVal.begin());
-    buf.insert(buf.end(), hashVal.begin(), hashVal.end());
+    marshal_uint256_t(cp.nextHash, buf);
 }
 
 void marshalForProof(const uint256_t& val,

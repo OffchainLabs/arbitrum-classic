@@ -20,7 +20,7 @@
 
 #include <avm_values/tuple.hpp>
 
-#include <bigint_utils.hpp>
+#include <boost/endian/conversion.hpp>
 
 constexpr int UINT64_SIZE = 8;
 

@@ -26,6 +26,8 @@
 
 #include <avm/machine.hpp>
 
+#include <iostream>
+
 namespace {
 using iterator = std::vector<unsigned char>::const_iterator;
 
