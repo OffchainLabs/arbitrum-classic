@@ -33,9 +33,15 @@ Start local Geth instance and deploy contracts
 yarn run:local:geth
 ```
 
-Start validator
+Install the validator
 
 ```bash
 yarn install:validator
 yarn demo:initialize
+```
+
+Run the validator, when prompted input the password "`pass`"
+
+```bash
+arb-validator validate -rpc -blocktime=2 rollups/local/validator0  http://localhost:7545 [rollup address]
 ```
