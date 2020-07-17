@@ -283,8 +283,6 @@ func TestDeposit(t *testing.T) {
 
 func TestBatch(t *testing.T) {
 	chain := common.RandAddress()
-	chainId := new(big.Int).SetBytes(chain[14:])
-
 	mach, err := loader.LoadMachineFromFile(gotest.TestMachinePath(), false, "cpp")
 	if err != nil {
 		t.Fatal(err)
@@ -332,7 +330,7 @@ func TestBatch(t *testing.T) {
 		}
 
 		tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
-		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainId), pk)
+		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
 		if err != nil {
 			t.Fatal(err)
 		}
