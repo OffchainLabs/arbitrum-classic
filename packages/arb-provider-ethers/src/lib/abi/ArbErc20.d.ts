@@ -94,7 +94,23 @@ export class ArbErc20 extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    allowance(owner: string, spender: string): Promise<BigNumber>
+    'adminMint(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    allowance(
+      owner: string,
+      spender: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'allowance(address,address)'(
+      owner: string,
+      spender: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
     approve(
       spender: string,
@@ -102,9 +118,29 @@ export class ArbErc20 extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    balanceOf(account: string): Promise<BigNumber>
+    'approve(address,uint256)'(
+      spender: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    balanceOf(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'balanceOf(address)'(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
     decreaseAllowance(
+      spender: string,
+      subtractedValue: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'decreaseAllowance(address,uint256)'(
       spender: string,
       subtractedValue: BigNumberish,
       overrides?: TransactionOverrides
@@ -116,9 +152,23 @@ export class ArbErc20 extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    totalSupply(): Promise<BigNumber>
+    'increaseAllowance(address,uint256)'(
+      spender: string,
+      addedValue: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    totalSupply(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'totalSupply()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
     transfer(
+      recipient: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'transfer(address,uint256)'(
       recipient: string,
       amount: BigNumberish,
       overrides?: TransactionOverrides
@@ -131,7 +181,20 @@ export class ArbErc20 extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    'transferFrom(address,address,uint256)'(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     withdraw(
+      account: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'withdraw(address,uint256)'(
       account: string,
       amount: BigNumberish,
       overrides?: TransactionOverrides
@@ -144,7 +207,23 @@ export class ArbErc20 extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  allowance(owner: string, spender: string): Promise<BigNumber>
+  'adminMint(address,uint256)'(
+    account: string,
+    amount: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  allowance(
+    owner: string,
+    spender: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
+
+  'allowance(address,address)'(
+    owner: string,
+    spender: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
 
   approve(
     spender: string,
@@ -152,9 +231,29 @@ export class ArbErc20 extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  balanceOf(account: string): Promise<BigNumber>
+  'approve(address,uint256)'(
+    spender: string,
+    amount: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  balanceOf(
+    account: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
+
+  'balanceOf(address)'(
+    account: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
 
   decreaseAllowance(
+    spender: string,
+    subtractedValue: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'decreaseAllowance(address,uint256)'(
     spender: string,
     subtractedValue: BigNumberish,
     overrides?: TransactionOverrides
@@ -166,9 +265,23 @@ export class ArbErc20 extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  totalSupply(): Promise<BigNumber>
+  'increaseAllowance(address,uint256)'(
+    spender: string,
+    addedValue: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  totalSupply(overrides?: TransactionOverrides): Promise<BigNumber>
+
+  'totalSupply()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
   transfer(
+    recipient: string,
+    amount: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'transfer(address,uint256)'(
     recipient: string,
     amount: BigNumberish,
     overrides?: TransactionOverrides
@@ -181,7 +294,20 @@ export class ArbErc20 extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  'transferFrom(address,address,uint256)'(
+    sender: string,
+    recipient: string,
+    amount: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   withdraw(
+    account: string,
+    amount: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'withdraw(address,uint256)'(
     account: string,
     amount: BigNumberish,
     overrides?: TransactionOverrides
@@ -198,34 +324,116 @@ export class ArbErc20 extends Contract {
   }
 
   estimate: {
-    adminMint(account: string, amount: BigNumberish): Promise<BigNumber>
+    adminMint(
+      account: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    allowance(owner: string, spender: string): Promise<BigNumber>
+    'adminMint(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    approve(spender: string, amount: BigNumberish): Promise<BigNumber>
+    allowance(
+      owner: string,
+      spender: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    balanceOf(account: string): Promise<BigNumber>
+    'allowance(address,address)'(
+      owner: string,
+      spender: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    approve(
+      spender: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'approve(address,uint256)'(
+      spender: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    balanceOf(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'balanceOf(address)'(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
     decreaseAllowance(
       spender: string,
-      subtractedValue: BigNumberish
+      subtractedValue: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'decreaseAllowance(address,uint256)'(
+      spender: string,
+      subtractedValue: BigNumberish,
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
     increaseAllowance(
       spender: string,
-      addedValue: BigNumberish
+      addedValue: BigNumberish,
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
-    totalSupply(): Promise<BigNumber>
+    'increaseAllowance(address,uint256)'(
+      spender: string,
+      addedValue: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    transfer(recipient: string, amount: BigNumberish): Promise<BigNumber>
+    totalSupply(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'totalSupply()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    transfer(
+      recipient: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'transfer(address,uint256)'(
+      recipient: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
     transferFrom(
       sender: string,
       recipient: string,
-      amount: BigNumberish
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
-    withdraw(account: string, amount: BigNumberish): Promise<BigNumber>
+    'transferFrom(address,address,uint256)'(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    withdraw(
+      account: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'withdraw(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
   }
 }

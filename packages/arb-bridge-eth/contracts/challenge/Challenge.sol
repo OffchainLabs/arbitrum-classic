@@ -20,8 +20,9 @@ pragma solidity ^0.5.11;
 
 import "../rollup/IStaking.sol";
 import "../libraries/RollupTime.sol";
+import "../libraries/Cloneable.sol";
 
-contract Challenge {
+contract Challenge is Cloneable {
     enum State { NoChallenge, AsserterTurn, ChallengerTurn }
 
     event InitiatedChallenge(uint256 deadlineTicks);
@@ -45,8 +46,6 @@ contract Challenge {
     string private constant BIS_DEADLINE = "BIS_DEADLINE";
     // Only original asserter can continue bisect
     string private constant BIS_SENDER = "BIS_SENDER";
-
-    bool isMasterCopy;
 
     address internal rollupAddress;
     address payable internal asserter;
@@ -72,10 +71,6 @@ contract Challenge {
         require(RollupTime.blocksToTicks(block.number) <= deadlineTicks, CON_DEADLINE);
         require(msg.sender == challenger, CON_SENDER);
         _;
-    }
-
-    constructor() public {
-        isMasterCopy = true;
     }
 
     function timeoutChallenge() public {
@@ -123,14 +118,12 @@ contract Challenge {
     }
 
     function _asserterWin() internal {
-        require(!isMasterCopy);
         IStaking(rollupAddress).resolveChallenge(asserter, challenger);
-        selfdestruct(msg.sender);
+        safeSelfDestruct(msg.sender);
     }
 
     function _challengerWin() internal {
-        require(!isMasterCopy);
         IStaking(rollupAddress).resolveChallenge(challenger, asserter);
-        selfdestruct(msg.sender);
+        safeSelfDestruct(msg.sender);
     }
 }

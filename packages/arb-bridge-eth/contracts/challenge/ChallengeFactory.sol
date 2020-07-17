@@ -29,8 +29,8 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
     // Invalid challenge type
     string public constant INVALID_TYPE_STR = "INVALID_TYPE";
 
-    address public inboxTopChallengeTemplate;
-    address public executionChallengeTemplate;
+    ICloneable public inboxTopChallengeTemplate;
+    ICloneable public executionChallengeTemplate;
     address public oneStepProofAddress;
 
     constructor(
@@ -38,8 +38,8 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         address _executionChallengeTemplate,
         address _oneStepProofAddress
     ) public {
-        inboxTopChallengeTemplate = _inboxTopChallengeTemplate;
-        executionChallengeTemplate = _executionChallengeTemplate;
+        inboxTopChallengeTemplate = ICloneable(_inboxTopChallengeTemplate);
+        executionChallengeTemplate = ICloneable(_executionChallengeTemplate);
         oneStepProofAddress = _oneStepProofAddress;
     }
 
@@ -72,7 +72,7 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         bytes32 _challengeHash,
         uint256 challengeType
     ) external returns (address) {
-        address challengeTemplate = getChallengeTemplate(challengeType);
+        ICloneable challengeTemplate = getChallengeTemplate(challengeType);
         address clone = createClone(challengeTemplate);
         IBisectionChallenge(clone).initializeBisection(
             msg.sender,
@@ -92,7 +92,7 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         return uint256(keccak256(abi.encodePacked(asserter, challenger, msg.sender)));
     }
 
-    function getChallengeTemplate(uint256 challengeType) private view returns (address) {
+    function getChallengeTemplate(uint256 challengeType) private view returns (ICloneable) {
         if (challengeType == ChallengeUtils.getInvalidInboxType()) {
             return inboxTopChallengeTemplate;
         } else if (challengeType == ChallengeUtils.getInvalidExType()) {

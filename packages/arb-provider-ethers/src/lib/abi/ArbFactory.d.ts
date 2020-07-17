@@ -62,7 +62,11 @@ export class ArbFactory extends Contract {
   interface: ArbFactoryInterface
 
   functions: {
-    challengeFactoryAddress(): Promise<string>
+    challengeFactoryAddress(overrides?: TransactionOverrides): Promise<string>
+
+    'challengeFactoryAddress()'(
+      overrides?: TransactionOverrides
+    ): Promise<string>
 
     createRollup(
       _vmState: Arrayish,
@@ -75,12 +79,29 @@ export class ArbFactory extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    globalInboxAddress(): Promise<string>
+    'createRollup(bytes32,uint128,uint128,uint64,uint128,address,bytes)'(
+      _vmState: Arrayish,
+      _gracePeriodTicks: BigNumberish,
+      _arbGasSpeedLimitPerTick: BigNumberish,
+      _maxExecutionSteps: BigNumberish,
+      _stakeRequirement: BigNumberish,
+      _owner: string,
+      _extraConfig: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
 
-    rollupTemplate(): Promise<string>
+    globalInboxAddress(overrides?: TransactionOverrides): Promise<string>
+
+    'globalInboxAddress()'(overrides?: TransactionOverrides): Promise<string>
+
+    rollupTemplate(overrides?: TransactionOverrides): Promise<string>
+
+    'rollupTemplate()'(overrides?: TransactionOverrides): Promise<string>
   }
 
-  challengeFactoryAddress(): Promise<string>
+  challengeFactoryAddress(overrides?: TransactionOverrides): Promise<string>
+
+  'challengeFactoryAddress()'(overrides?: TransactionOverrides): Promise<string>
 
   createRollup(
     _vmState: Arrayish,
@@ -93,16 +114,37 @@ export class ArbFactory extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  globalInboxAddress(): Promise<string>
+  'createRollup(bytes32,uint128,uint128,uint64,uint128,address,bytes)'(
+    _vmState: Arrayish,
+    _gracePeriodTicks: BigNumberish,
+    _arbGasSpeedLimitPerTick: BigNumberish,
+    _maxExecutionSteps: BigNumberish,
+    _stakeRequirement: BigNumberish,
+    _owner: string,
+    _extraConfig: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
 
-  rollupTemplate(): Promise<string>
+  globalInboxAddress(overrides?: TransactionOverrides): Promise<string>
+
+  'globalInboxAddress()'(overrides?: TransactionOverrides): Promise<string>
+
+  rollupTemplate(overrides?: TransactionOverrides): Promise<string>
+
+  'rollupTemplate()'(overrides?: TransactionOverrides): Promise<string>
 
   filters: {
     RollupCreated(rollupAddress: null): EventFilter
   }
 
   estimate: {
-    challengeFactoryAddress(): Promise<BigNumber>
+    challengeFactoryAddress(
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'challengeFactoryAddress()'(
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
     createRollup(
       _vmState: Arrayish,
@@ -111,11 +153,27 @@ export class ArbFactory extends Contract {
       _maxExecutionSteps: BigNumberish,
       _stakeRequirement: BigNumberish,
       _owner: string,
-      _extraConfig: Arrayish
+      _extraConfig: Arrayish,
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
-    globalInboxAddress(): Promise<BigNumber>
+    'createRollup(bytes32,uint128,uint128,uint64,uint128,address,bytes)'(
+      _vmState: Arrayish,
+      _gracePeriodTicks: BigNumberish,
+      _arbGasSpeedLimitPerTick: BigNumberish,
+      _maxExecutionSteps: BigNumberish,
+      _stakeRequirement: BigNumberish,
+      _owner: string,
+      _extraConfig: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    rollupTemplate(): Promise<BigNumber>
+    globalInboxAddress(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'globalInboxAddress()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    rollupTemplate(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'rollupTemplate()'(overrides?: TransactionOverrides): Promise<BigNumber>
   }
 }

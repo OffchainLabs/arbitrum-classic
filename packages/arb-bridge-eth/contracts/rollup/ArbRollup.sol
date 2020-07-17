@@ -22,8 +22,9 @@ import "./IArbRollup.sol";
 import "./NodeGraph.sol";
 import "./Staking.sol";
 import "../inbox/IGlobalInbox.sol";
+import "../libraries/Cloneable.sol";
 
-contract ArbRollup is IArbRollup, NodeGraph, Staking {
+contract ArbRollup is IArbRollup, Cloneable, NodeGraph, Staking {
     // invalid path proof
     string private constant PLACE_LEAF = "PLACE_LEAF";
 
@@ -56,8 +57,6 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
 
     string public constant VERSION = "develop";
 
-    bool isMasterCopy;
-
     address payable public owner;
 
     IGlobalInbox public globalInbox;
@@ -75,10 +74,6 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
     event ConfirmedAssertion(bytes32[] logsAccHash);
 
     event ConfirmedValidAssertion(bytes32 indexed nodeHash);
-
-    constructor() public {
-        isMasterCopy = true;
-    }
 
     function init(
         bytes32 _vmState,
@@ -283,8 +278,7 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
     }
 
     function ownerShutdown() external onlyOwner {
-        require(!isMasterCopy);
-        selfdestruct(msg.sender);
+        safeSelfDestruct(msg.sender);
     }
 
     function _recoverStakeConfirmed(address payable stakerAddress, bytes32[] memory proof) private {

@@ -296,9 +296,13 @@ export class ArbRollup extends Contract {
   interface: ArbRollupInterface
 
   functions: {
-    VERSION(): Promise<string>
+    VERSION(overrides?: TransactionOverrides): Promise<string>
 
-    challengeFactory(): Promise<string>
+    'VERSION()'(overrides?: TransactionOverrides): Promise<string>
+
+    challengeFactory(overrides?: TransactionOverrides): Promise<string>
+
+    'challengeFactory()'(overrides?: TransactionOverrides): Promise<string>
 
     confirm(
       initalProtoStateHash: Arrayish,
@@ -316,9 +320,29 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    getStakeRequired(): Promise<BigNumber>
+    'confirm(bytes32,uint256,uint256[],uint256[],bytes32[],bytes32[],bytes32[],uint256[],bytes,address[],bytes32[],uint256[])'(
+      initalProtoStateHash: Arrayish,
+      beforeSendCount: BigNumberish,
+      branches: BigNumberish[],
+      deadlineTicks: BigNumberish[],
+      challengeNodeData: Arrayish[],
+      logsAcc: Arrayish[],
+      vmProtoStateHashes: Arrayish[],
+      messageCounts: BigNumberish[],
+      messages: Arrayish,
+      stakerAddresses: string[],
+      stakerProofs: Arrayish[],
+      stakerProofOffsets: BigNumberish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
 
-    globalInbox(): Promise<string>
+    getStakeRequired(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'getStakeRequired()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    globalInbox(overrides?: TransactionOverrides): Promise<string>
+
+    'globalInbox()'(overrides?: TransactionOverrides): Promise<string>
 
     init(
       _vmState: Arrayish,
@@ -333,13 +357,58 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    isStaked(_stakerAddress: string): Promise<boolean>
+    'init(bytes32,uint128,uint128,uint64,uint128,address,address,address,bytes)'(
+      _vmState: Arrayish,
+      _gracePeriodTicks: BigNumberish,
+      _arbGasSpeedLimitPerTick: BigNumberish,
+      _maxExecutionSteps: BigNumberish,
+      _stakeRequirement: BigNumberish,
+      _owner: string,
+      _challengeFactoryAddress: string,
+      _globalInboxAddress: string,
+      _extraConfig: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
 
-    isValidLeaf(leaf: Arrayish): Promise<boolean>
+    isStaked(
+      _stakerAddress: string,
+      overrides?: TransactionOverrides
+    ): Promise<boolean>
 
-    latestConfirmed(): Promise<string>
+    'isStaked(address)'(
+      _stakerAddress: string,
+      overrides?: TransactionOverrides
+    ): Promise<boolean>
+
+    isValidLeaf(
+      leaf: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<boolean>
+
+    'isValidLeaf(bytes32)'(
+      leaf: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<boolean>
+
+    latestConfirmed(overrides?: TransactionOverrides): Promise<string>
+
+    'latestConfirmed()'(overrides?: TransactionOverrides): Promise<string>
 
     makeAssertion(
+      fields: Arrayish[],
+      fields2: BigNumberish[],
+      validBlockHashPrecondition: Arrayish,
+      validBlockHeightPrecondition: BigNumberish,
+      messageCount: BigNumberish,
+      logCount: BigNumberish,
+      prevChildType: BigNumberish,
+      numSteps: BigNumberish,
+      numArbGas: BigNumberish,
+      stakerProof: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'makeAssertion(bytes32[8],uint256[5],bytes32,uint256,uint64,uint64,uint32,uint64,uint64,bytes32[])'(
       fields: Arrayish[],
       fields2: BigNumberish[],
       validBlockHashPrecondition: Arrayish,
@@ -359,13 +428,31 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    owner(): Promise<string>
+    'moveStake(bytes32[],bytes32[])'(
+      proof1: Arrayish[],
+      proof2: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    owner(overrides?: TransactionOverrides): Promise<string>
+
+    'owner()'(overrides?: TransactionOverrides): Promise<string>
 
     ownerShutdown(
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    'ownerShutdown()'(
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     placeStake(
+      proof1: Arrayish[],
+      proof2: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'placeStake(bytes32[],bytes32[])'(
       proof1: Arrayish[],
       proof2: Arrayish[],
       overrides?: TransactionOverrides
@@ -380,7 +467,21 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    'pruneLeaves(bytes32[],bytes32[],uint256[],bytes32[],uint256[])'(
+      fromNodes: Arrayish[],
+      leafProofs: Arrayish[],
+      leafProofLengths: BigNumberish[],
+      latestConfProofs: Arrayish[],
+      latestConfirmedProofLengths: BigNumberish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     recoverStakeConfirmed(
+      proof: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'recoverStakeConfirmed(bytes32[])'(
       proof: Arrayish[],
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
@@ -393,7 +494,21 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    'recoverStakeMooted(address,bytes32,bytes32[],bytes32[])'(
+      stakerAddress: string,
+      node: Arrayish,
+      latestConfirmedProof: Arrayish[],
+      stakerProof: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     recoverStakeOld(
+      stakerAddress: string,
+      proof: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'recoverStakeOld(address,bytes32[])'(
       stakerAddress: string,
       proof: Arrayish[],
       overrides?: TransactionOverrides
@@ -409,7 +524,23 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    'recoverStakePassedDeadline(address,uint256,bytes32,uint256,bytes32,bytes32[])'(
+      stakerAddress: string,
+      deadlineTicks: BigNumberish,
+      disputableNodeHashVal: Arrayish,
+      childType: BigNumberish,
+      vmProtoStateHash: Arrayish,
+      proof: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     resolveChallenge(
+      winner: string,
+      loser: string,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'resolveChallenge(address,address)'(
       winner: string,
       loser: string,
       overrides?: TransactionOverrides
@@ -430,7 +561,35 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    vmParams(): Promise<{
+    'startChallenge(address,address,bytes32,uint256,uint256[2],bytes32[2],bytes32[],bytes32[],bytes32,bytes32,uint128)'(
+      asserterAddress: string,
+      challengerAddress: string,
+      prevNode: Arrayish,
+      deadlineTicks: BigNumberish,
+      stakerNodeTypes: BigNumberish[],
+      vmProtoHashes: Arrayish[],
+      asserterProof: Arrayish[],
+      challengerProof: Arrayish[],
+      asserterNodeHash: Arrayish,
+      challengerDataHash: Arrayish,
+      challengerPeriodTicks: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    vmParams(
+      overrides?: TransactionOverrides
+    ): Promise<{
+      gracePeriodTicks: BigNumber
+      arbGasSpeedLimitPerTick: BigNumber
+      maxExecutionSteps: BigNumber
+      0: BigNumber
+      1: BigNumber
+      2: BigNumber
+    }>
+
+    'vmParams()'(
+      overrides?: TransactionOverrides
+    ): Promise<{
       gracePeriodTicks: BigNumber
       arbGasSpeedLimitPerTick: BigNumber
       maxExecutionSteps: BigNumber
@@ -440,9 +599,13 @@ export class ArbRollup extends Contract {
     }>
   }
 
-  VERSION(): Promise<string>
+  VERSION(overrides?: TransactionOverrides): Promise<string>
 
-  challengeFactory(): Promise<string>
+  'VERSION()'(overrides?: TransactionOverrides): Promise<string>
+
+  challengeFactory(overrides?: TransactionOverrides): Promise<string>
+
+  'challengeFactory()'(overrides?: TransactionOverrides): Promise<string>
 
   confirm(
     initalProtoStateHash: Arrayish,
@@ -460,9 +623,29 @@ export class ArbRollup extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  getStakeRequired(): Promise<BigNumber>
+  'confirm(bytes32,uint256,uint256[],uint256[],bytes32[],bytes32[],bytes32[],uint256[],bytes,address[],bytes32[],uint256[])'(
+    initalProtoStateHash: Arrayish,
+    beforeSendCount: BigNumberish,
+    branches: BigNumberish[],
+    deadlineTicks: BigNumberish[],
+    challengeNodeData: Arrayish[],
+    logsAcc: Arrayish[],
+    vmProtoStateHashes: Arrayish[],
+    messageCounts: BigNumberish[],
+    messages: Arrayish,
+    stakerAddresses: string[],
+    stakerProofs: Arrayish[],
+    stakerProofOffsets: BigNumberish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
 
-  globalInbox(): Promise<string>
+  getStakeRequired(overrides?: TransactionOverrides): Promise<BigNumber>
+
+  'getStakeRequired()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+  globalInbox(overrides?: TransactionOverrides): Promise<string>
+
+  'globalInbox()'(overrides?: TransactionOverrides): Promise<string>
 
   init(
     _vmState: Arrayish,
@@ -477,13 +660,58 @@ export class ArbRollup extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  isStaked(_stakerAddress: string): Promise<boolean>
+  'init(bytes32,uint128,uint128,uint64,uint128,address,address,address,bytes)'(
+    _vmState: Arrayish,
+    _gracePeriodTicks: BigNumberish,
+    _arbGasSpeedLimitPerTick: BigNumberish,
+    _maxExecutionSteps: BigNumberish,
+    _stakeRequirement: BigNumberish,
+    _owner: string,
+    _challengeFactoryAddress: string,
+    _globalInboxAddress: string,
+    _extraConfig: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
 
-  isValidLeaf(leaf: Arrayish): Promise<boolean>
+  isStaked(
+    _stakerAddress: string,
+    overrides?: TransactionOverrides
+  ): Promise<boolean>
 
-  latestConfirmed(): Promise<string>
+  'isStaked(address)'(
+    _stakerAddress: string,
+    overrides?: TransactionOverrides
+  ): Promise<boolean>
+
+  isValidLeaf(
+    leaf: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<boolean>
+
+  'isValidLeaf(bytes32)'(
+    leaf: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<boolean>
+
+  latestConfirmed(overrides?: TransactionOverrides): Promise<string>
+
+  'latestConfirmed()'(overrides?: TransactionOverrides): Promise<string>
 
   makeAssertion(
+    fields: Arrayish[],
+    fields2: BigNumberish[],
+    validBlockHashPrecondition: Arrayish,
+    validBlockHeightPrecondition: BigNumberish,
+    messageCount: BigNumberish,
+    logCount: BigNumberish,
+    prevChildType: BigNumberish,
+    numSteps: BigNumberish,
+    numArbGas: BigNumberish,
+    stakerProof: Arrayish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'makeAssertion(bytes32[8],uint256[5],bytes32,uint256,uint64,uint64,uint32,uint64,uint64,bytes32[])'(
     fields: Arrayish[],
     fields2: BigNumberish[],
     validBlockHashPrecondition: Arrayish,
@@ -503,11 +731,29 @@ export class ArbRollup extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  owner(): Promise<string>
+  'moveStake(bytes32[],bytes32[])'(
+    proof1: Arrayish[],
+    proof2: Arrayish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  owner(overrides?: TransactionOverrides): Promise<string>
+
+  'owner()'(overrides?: TransactionOverrides): Promise<string>
 
   ownerShutdown(overrides?: TransactionOverrides): Promise<ContractTransaction>
 
+  'ownerShutdown()'(
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   placeStake(
+    proof1: Arrayish[],
+    proof2: Arrayish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'placeStake(bytes32[],bytes32[])'(
     proof1: Arrayish[],
     proof2: Arrayish[],
     overrides?: TransactionOverrides
@@ -522,7 +768,21 @@ export class ArbRollup extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  'pruneLeaves(bytes32[],bytes32[],uint256[],bytes32[],uint256[])'(
+    fromNodes: Arrayish[],
+    leafProofs: Arrayish[],
+    leafProofLengths: BigNumberish[],
+    latestConfProofs: Arrayish[],
+    latestConfirmedProofLengths: BigNumberish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   recoverStakeConfirmed(
+    proof: Arrayish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'recoverStakeConfirmed(bytes32[])'(
     proof: Arrayish[],
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
@@ -535,7 +795,21 @@ export class ArbRollup extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  'recoverStakeMooted(address,bytes32,bytes32[],bytes32[])'(
+    stakerAddress: string,
+    node: Arrayish,
+    latestConfirmedProof: Arrayish[],
+    stakerProof: Arrayish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   recoverStakeOld(
+    stakerAddress: string,
+    proof: Arrayish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'recoverStakeOld(address,bytes32[])'(
     stakerAddress: string,
     proof: Arrayish[],
     overrides?: TransactionOverrides
@@ -551,7 +825,23 @@ export class ArbRollup extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  'recoverStakePassedDeadline(address,uint256,bytes32,uint256,bytes32,bytes32[])'(
+    stakerAddress: string,
+    deadlineTicks: BigNumberish,
+    disputableNodeHashVal: Arrayish,
+    childType: BigNumberish,
+    vmProtoStateHash: Arrayish,
+    proof: Arrayish[],
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   resolveChallenge(
+    winner: string,
+    loser: string,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'resolveChallenge(address,address)'(
     winner: string,
     loser: string,
     overrides?: TransactionOverrides
@@ -572,7 +862,35 @@ export class ArbRollup extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  vmParams(): Promise<{
+  'startChallenge(address,address,bytes32,uint256,uint256[2],bytes32[2],bytes32[],bytes32[],bytes32,bytes32,uint128)'(
+    asserterAddress: string,
+    challengerAddress: string,
+    prevNode: Arrayish,
+    deadlineTicks: BigNumberish,
+    stakerNodeTypes: BigNumberish[],
+    vmProtoHashes: Arrayish[],
+    asserterProof: Arrayish[],
+    challengerProof: Arrayish[],
+    asserterNodeHash: Arrayish,
+    challengerDataHash: Arrayish,
+    challengerPeriodTicks: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  vmParams(
+    overrides?: TransactionOverrides
+  ): Promise<{
+    gracePeriodTicks: BigNumber
+    arbGasSpeedLimitPerTick: BigNumber
+    maxExecutionSteps: BigNumber
+    0: BigNumber
+    1: BigNumber
+    2: BigNumber
+  }>
+
+  'vmParams()'(
+    overrides?: TransactionOverrides
+  ): Promise<{
     gracePeriodTicks: BigNumber
     arbGasSpeedLimitPerTick: BigNumber
     maxExecutionSteps: BigNumber
@@ -633,9 +951,13 @@ export class ArbRollup extends Contract {
   }
 
   estimate: {
-    VERSION(): Promise<BigNumber>
+    VERSION(overrides?: TransactionOverrides): Promise<BigNumber>
 
-    challengeFactory(): Promise<BigNumber>
+    'VERSION()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    challengeFactory(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'challengeFactory()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
     confirm(
       initalProtoStateHash: Arrayish,
@@ -649,12 +971,33 @@ export class ArbRollup extends Contract {
       messages: Arrayish,
       stakerAddresses: string[],
       stakerProofs: Arrayish[],
-      stakerProofOffsets: BigNumberish[]
+      stakerProofOffsets: BigNumberish[],
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
-    getStakeRequired(): Promise<BigNumber>
+    'confirm(bytes32,uint256,uint256[],uint256[],bytes32[],bytes32[],bytes32[],uint256[],bytes,address[],bytes32[],uint256[])'(
+      initalProtoStateHash: Arrayish,
+      beforeSendCount: BigNumberish,
+      branches: BigNumberish[],
+      deadlineTicks: BigNumberish[],
+      challengeNodeData: Arrayish[],
+      logsAcc: Arrayish[],
+      vmProtoStateHashes: Arrayish[],
+      messageCounts: BigNumberish[],
+      messages: Arrayish,
+      stakerAddresses: string[],
+      stakerProofs: Arrayish[],
+      stakerProofOffsets: BigNumberish[],
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    globalInbox(): Promise<BigNumber>
+    getStakeRequired(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'getStakeRequired()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    globalInbox(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'globalInbox()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
     init(
       _vmState: Arrayish,
@@ -665,14 +1008,46 @@ export class ArbRollup extends Contract {
       _owner: string,
       _challengeFactoryAddress: string,
       _globalInboxAddress: string,
-      _extraConfig: Arrayish
+      _extraConfig: Arrayish,
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
-    isStaked(_stakerAddress: string): Promise<BigNumber>
+    'init(bytes32,uint128,uint128,uint64,uint128,address,address,address,bytes)'(
+      _vmState: Arrayish,
+      _gracePeriodTicks: BigNumberish,
+      _arbGasSpeedLimitPerTick: BigNumberish,
+      _maxExecutionSteps: BigNumberish,
+      _stakeRequirement: BigNumberish,
+      _owner: string,
+      _challengeFactoryAddress: string,
+      _globalInboxAddress: string,
+      _extraConfig: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    isValidLeaf(leaf: Arrayish): Promise<BigNumber>
+    isStaked(
+      _stakerAddress: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    latestConfirmed(): Promise<BigNumber>
+    'isStaked(address)'(
+      _stakerAddress: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    isValidLeaf(
+      leaf: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'isValidLeaf(bytes32)'(
+      leaf: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    latestConfirmed(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'latestConfirmed()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
     makeAssertion(
       fields: Arrayish[],
@@ -684,37 +1059,110 @@ export class ArbRollup extends Contract {
       prevChildType: BigNumberish,
       numSteps: BigNumberish,
       numArbGas: BigNumberish,
-      stakerProof: Arrayish[]
+      stakerProof: Arrayish[],
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
-    moveStake(proof1: Arrayish[], proof2: Arrayish[]): Promise<BigNumber>
+    'makeAssertion(bytes32[8],uint256[5],bytes32,uint256,uint64,uint64,uint32,uint64,uint64,bytes32[])'(
+      fields: Arrayish[],
+      fields2: BigNumberish[],
+      validBlockHashPrecondition: Arrayish,
+      validBlockHeightPrecondition: BigNumberish,
+      messageCount: BigNumberish,
+      logCount: BigNumberish,
+      prevChildType: BigNumberish,
+      numSteps: BigNumberish,
+      numArbGas: BigNumberish,
+      stakerProof: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    owner(): Promise<BigNumber>
+    moveStake(
+      proof1: Arrayish[],
+      proof2: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    ownerShutdown(): Promise<BigNumber>
+    'moveStake(bytes32[],bytes32[])'(
+      proof1: Arrayish[],
+      proof2: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    placeStake(proof1: Arrayish[], proof2: Arrayish[]): Promise<BigNumber>
+    owner(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'owner()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    ownerShutdown(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'ownerShutdown()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    placeStake(
+      proof1: Arrayish[],
+      proof2: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'placeStake(bytes32[],bytes32[])'(
+      proof1: Arrayish[],
+      proof2: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
     pruneLeaves(
       fromNodes: Arrayish[],
       leafProofs: Arrayish[],
       leafProofLengths: BigNumberish[],
       latestConfProofs: Arrayish[],
-      latestConfirmedProofLengths: BigNumberish[]
+      latestConfirmedProofLengths: BigNumberish[],
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
-    recoverStakeConfirmed(proof: Arrayish[]): Promise<BigNumber>
+    'pruneLeaves(bytes32[],bytes32[],uint256[],bytes32[],uint256[])'(
+      fromNodes: Arrayish[],
+      leafProofs: Arrayish[],
+      leafProofLengths: BigNumberish[],
+      latestConfProofs: Arrayish[],
+      latestConfirmedProofLengths: BigNumberish[],
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    recoverStakeConfirmed(
+      proof: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'recoverStakeConfirmed(bytes32[])'(
+      proof: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
     recoverStakeMooted(
       stakerAddress: string,
       node: Arrayish,
       latestConfirmedProof: Arrayish[],
-      stakerProof: Arrayish[]
+      stakerProof: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'recoverStakeMooted(address,bytes32,bytes32[],bytes32[])'(
+      stakerAddress: string,
+      node: Arrayish,
+      latestConfirmedProof: Arrayish[],
+      stakerProof: Arrayish[],
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
     recoverStakeOld(
       stakerAddress: string,
-      proof: Arrayish[]
+      proof: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'recoverStakeOld(address,bytes32[])'(
+      stakerAddress: string,
+      proof: Arrayish[],
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
     recoverStakePassedDeadline(
@@ -723,10 +1171,31 @@ export class ArbRollup extends Contract {
       disputableNodeHashVal: Arrayish,
       childType: BigNumberish,
       vmProtoStateHash: Arrayish,
-      proof: Arrayish[]
+      proof: Arrayish[],
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
-    resolveChallenge(winner: string, loser: string): Promise<BigNumber>
+    'recoverStakePassedDeadline(address,uint256,bytes32,uint256,bytes32,bytes32[])'(
+      stakerAddress: string,
+      deadlineTicks: BigNumberish,
+      disputableNodeHashVal: Arrayish,
+      childType: BigNumberish,
+      vmProtoStateHash: Arrayish,
+      proof: Arrayish[],
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    resolveChallenge(
+      winner: string,
+      loser: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'resolveChallenge(address,address)'(
+      winner: string,
+      loser: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
     startChallenge(
       asserterAddress: string,
@@ -739,9 +1208,27 @@ export class ArbRollup extends Contract {
       challengerProof: Arrayish[],
       asserterNodeHash: Arrayish,
       challengerDataHash: Arrayish,
-      challengerPeriodTicks: BigNumberish
+      challengerPeriodTicks: BigNumberish,
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
-    vmParams(): Promise<BigNumber>
+    'startChallenge(address,address,bytes32,uint256,uint256[2],bytes32[2],bytes32[],bytes32[],bytes32,bytes32,uint128)'(
+      asserterAddress: string,
+      challengerAddress: string,
+      prevNode: Arrayish,
+      deadlineTicks: BigNumberish,
+      stakerNodeTypes: BigNumberish[],
+      vmProtoHashes: Arrayish[],
+      asserterProof: Arrayish[],
+      challengerProof: Arrayish[],
+      asserterNodeHash: Arrayish,
+      challengerDataHash: Arrayish,
+      challengerPeriodTicks: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    vmParams(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'vmParams()'(overrides?: TransactionOverrides): Promise<BigNumber>
   }
 }

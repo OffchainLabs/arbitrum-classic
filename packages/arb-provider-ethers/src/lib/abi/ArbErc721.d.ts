@@ -116,19 +116,72 @@ export class ArbErc721 extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    'adminMint(address,uint256)'(
+      account: string,
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     approve(
       to: string,
       tokenId: BigNumberish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    balanceOf(owner: string): Promise<BigNumber>
+    'approve(address,uint256)'(
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
 
-    getApproved(tokenId: BigNumberish): Promise<string>
+    balanceOf(
+      owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    isApprovedForAll(owner: string, operator: string): Promise<boolean>
+    'balanceOf(address)'(
+      owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    ownerOf(tokenId: BigNumberish): Promise<string>
+    getApproved(
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<string>
+
+    'getApproved(uint256)'(
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<string>
+
+    isApprovedForAll(
+      owner: string,
+      operator: string,
+      overrides?: TransactionOverrides
+    ): Promise<boolean>
+
+    'isApprovedForAll(address,address)'(
+      owner: string,
+      operator: string,
+      overrides?: TransactionOverrides
+    ): Promise<boolean>
+
+    ownerOf(
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<string>
+
+    'ownerOf(uint256)'(
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<string>
+
+    safeTransferFrom(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
 
     'safeTransferFrom(address,address,uint256)'(
       from: string,
@@ -151,15 +204,57 @@ export class ArbErc721 extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    supportsInterface(interfaceId: Arrayish): Promise<boolean>
+    'setApprovalForAll(address,bool)'(
+      to: string,
+      approved: boolean,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
 
-    tokenByIndex(index: BigNumberish): Promise<BigNumber>
+    supportsInterface(
+      interfaceId: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<boolean>
 
-    tokenOfOwnerByIndex(owner: string, index: BigNumberish): Promise<BigNumber>
+    'supportsInterface(bytes4)'(
+      interfaceId: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<boolean>
 
-    tokensOfOwner(owner: string): Promise<BigNumber[]>
+    tokenByIndex(
+      index: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    totalSupply(): Promise<BigNumber>
+    'tokenByIndex(uint256)'(
+      index: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    tokenOfOwnerByIndex(
+      owner: string,
+      index: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'tokenOfOwnerByIndex(address,uint256)'(
+      owner: string,
+      index: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    tokensOfOwner(
+      owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber[]>
+
+    'tokensOfOwner(address)'(
+      owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber[]>
+
+    totalSupply(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'totalSupply()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
     transferFrom(
       from: string,
@@ -168,7 +263,20 @@ export class ArbErc721 extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    'transferFrom(address,address,uint256)'(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     withdraw(
+      account: string,
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'withdraw(address,uint256)'(
       account: string,
       tokenId: BigNumberish,
       overrides?: TransactionOverrides
@@ -181,19 +289,69 @@ export class ArbErc721 extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  'adminMint(address,uint256)'(
+    account: string,
+    tokenId: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   approve(
     to: string,
     tokenId: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  balanceOf(owner: string): Promise<BigNumber>
+  'approve(address,uint256)'(
+    to: string,
+    tokenId: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
 
-  getApproved(tokenId: BigNumberish): Promise<string>
+  balanceOf(owner: string, overrides?: TransactionOverrides): Promise<BigNumber>
 
-  isApprovedForAll(owner: string, operator: string): Promise<boolean>
+  'balanceOf(address)'(
+    owner: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
 
-  ownerOf(tokenId: BigNumberish): Promise<string>
+  getApproved(
+    tokenId: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<string>
+
+  'getApproved(uint256)'(
+    tokenId: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<string>
+
+  isApprovedForAll(
+    owner: string,
+    operator: string,
+    overrides?: TransactionOverrides
+  ): Promise<boolean>
+
+  'isApprovedForAll(address,address)'(
+    owner: string,
+    operator: string,
+    overrides?: TransactionOverrides
+  ): Promise<boolean>
+
+  ownerOf(
+    tokenId: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<string>
+
+  'ownerOf(uint256)'(
+    tokenId: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<string>
+
+  safeTransferFrom(
+    from: string,
+    to: string,
+    tokenId: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
 
   'safeTransferFrom(address,address,uint256)'(
     from: string,
@@ -216,15 +374,57 @@ export class ArbErc721 extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  supportsInterface(interfaceId: Arrayish): Promise<boolean>
+  'setApprovalForAll(address,bool)'(
+    to: string,
+    approved: boolean,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
 
-  tokenByIndex(index: BigNumberish): Promise<BigNumber>
+  supportsInterface(
+    interfaceId: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<boolean>
 
-  tokenOfOwnerByIndex(owner: string, index: BigNumberish): Promise<BigNumber>
+  'supportsInterface(bytes4)'(
+    interfaceId: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<boolean>
 
-  tokensOfOwner(owner: string): Promise<BigNumber[]>
+  tokenByIndex(
+    index: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
 
-  totalSupply(): Promise<BigNumber>
+  'tokenByIndex(uint256)'(
+    index: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
+
+  tokenOfOwnerByIndex(
+    owner: string,
+    index: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
+
+  'tokenOfOwnerByIndex(address,uint256)'(
+    owner: string,
+    index: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
+
+  tokensOfOwner(
+    owner: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber[]>
+
+  'tokensOfOwner(address)'(
+    owner: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber[]>
+
+  totalSupply(overrides?: TransactionOverrides): Promise<BigNumber>
+
+  'totalSupply()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
   transferFrom(
     from: string,
@@ -233,7 +433,20 @@ export class ArbErc721 extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  'transferFrom(address,address,uint256)'(
+    from: string,
+    to: string,
+    tokenId: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   withdraw(
+    account: string,
+    tokenId: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'withdraw(address,uint256)'(
     account: string,
     tokenId: BigNumberish,
     overrides?: TransactionOverrides
@@ -260,42 +473,176 @@ export class ArbErc721 extends Contract {
   }
 
   estimate: {
-    adminMint(account: string, tokenId: BigNumberish): Promise<BigNumber>
+    adminMint(
+      account: string,
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    approve(to: string, tokenId: BigNumberish): Promise<BigNumber>
+    'adminMint(address,uint256)'(
+      account: string,
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    balanceOf(owner: string): Promise<BigNumber>
+    approve(
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    getApproved(tokenId: BigNumberish): Promise<BigNumber>
+    'approve(address,uint256)'(
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    isApprovedForAll(owner: string, operator: string): Promise<BigNumber>
+    balanceOf(
+      owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    ownerOf(tokenId: BigNumberish): Promise<BigNumber>
+    'balanceOf(address)'(
+      owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    getApproved(
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'getApproved(uint256)'(
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    isApprovedForAll(
+      owner: string,
+      operator: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'isApprovedForAll(address,address)'(
+      owner: string,
+      operator: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    ownerOf(
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'ownerOf(uint256)'(
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
     safeTransferFrom(
       from: string,
       to: string,
-      tokenId: BigNumberish
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
-    setApprovalForAll(to: string, approved: boolean): Promise<BigNumber>
+    'safeTransferFrom(address,address,uint256)'(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    supportsInterface(interfaceId: Arrayish): Promise<BigNumber>
+    'safeTransferFrom(address,address,uint256,bytes)'(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      _data: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    tokenByIndex(index: BigNumberish): Promise<BigNumber>
+    setApprovalForAll(
+      to: string,
+      approved: boolean,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    tokenOfOwnerByIndex(owner: string, index: BigNumberish): Promise<BigNumber>
+    'setApprovalForAll(address,bool)'(
+      to: string,
+      approved: boolean,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    tokensOfOwner(owner: string): Promise<BigNumber>
+    supportsInterface(
+      interfaceId: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    totalSupply(): Promise<BigNumber>
+    'supportsInterface(bytes4)'(
+      interfaceId: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    tokenByIndex(
+      index: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'tokenByIndex(uint256)'(
+      index: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    tokenOfOwnerByIndex(
+      owner: string,
+      index: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'tokenOfOwnerByIndex(address,uint256)'(
+      owner: string,
+      index: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    tokensOfOwner(
+      owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'tokensOfOwner(address)'(
+      owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    totalSupply(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'totalSupply()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
     transferFrom(
       from: string,
       to: string,
-      tokenId: BigNumberish
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
-    withdraw(account: string, tokenId: BigNumberish): Promise<BigNumber>
+    'transferFrom(address,address,uint256)'(
+      from: string,
+      to: string,
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    withdraw(
+      account: string,
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'withdraw(address,uint256)'(
+      account: string,
+      tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
   }
 }
