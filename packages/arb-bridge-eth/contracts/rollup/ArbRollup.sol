@@ -56,6 +56,8 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
 
     string public constant VERSION = "develop";
 
+    bool isMasterCopy;
+
     address payable public owner;
 
     IGlobalInbox public globalInbox;
@@ -73,6 +75,10 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
     event ConfirmedAssertion(bytes32[] logsAccHash);
 
     event ConfirmedValidAssertion(bytes32 indexed nodeHash);
+
+    constructor() public {
+        isMasterCopy = true;
+    }
 
     function init(
         bytes32 _vmState,
@@ -277,6 +283,7 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
     }
 
     function ownerShutdown() external onlyOwner {
+        require(!isMasterCopy);
         selfdestruct(msg.sender);
     }
 

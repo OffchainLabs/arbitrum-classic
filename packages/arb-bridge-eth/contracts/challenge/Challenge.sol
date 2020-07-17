@@ -46,6 +46,8 @@ contract Challenge {
     // Only original asserter can continue bisect
     string private constant BIS_SENDER = "BIS_SENDER";
 
+    bool isMasterCopy;
+
     address internal rollupAddress;
     address payable internal asserter;
     address payable internal challenger;
@@ -70,6 +72,10 @@ contract Challenge {
         require(RollupTime.blocksToTicks(block.number) <= deadlineTicks, CON_DEADLINE);
         require(msg.sender == challenger, CON_SENDER);
         _;
+    }
+
+    constructor() public {
+        isMasterCopy = true;
     }
 
     function timeoutChallenge() public {
@@ -117,11 +123,13 @@ contract Challenge {
     }
 
     function _asserterWin() internal {
+        require(!isMasterCopy);
         IStaking(rollupAddress).resolveChallenge(asserter, challenger);
         selfdestruct(msg.sender);
     }
 
     function _challengerWin() internal {
+        require(!isMasterCopy);
         IStaking(rollupAddress).resolveChallenge(challenger, asserter);
         selfdestruct(msg.sender);
     }
