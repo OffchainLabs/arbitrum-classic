@@ -444,6 +444,33 @@ let assertionInfo: Assertion
 let originalNode: string
 let accounts: Signer[]
 
+async function createRollup(): Promise<ArbRollup> {
+  const tx = arbFactory.createRollup(
+    initialVmState, // vmState
+    gracePeriodTicks, // gracePeriodTicks
+    1000000, // arbGasSpeedLimitPerTick
+    maxExecutionSteps, // maxExecutionSteps
+    stakeRequirement, // stakeRequirement
+    await accounts[0].getAddress(), // owner
+    '0x'
+  )
+  await expect(tx).to.emit(arbFactory, 'RollupCreated')
+
+  const receipt = await (await tx).wait()
+  if (receipt.logs == undefined) {
+    throw Error('expected receipt to have logs')
+  }
+
+  const logs = receipt.logs.map((log: providers.Log) =>
+    arbFactory.interface.parseLog(log)
+  )
+  const ev = logs[2]
+  expect(ev.name).to.equal('RollupCreated')
+  const chainAddress = ev.values.rollupAddress
+  const ArbRollup = await ethers.getContractFactory('ArbRollup')
+  return ArbRollup.attach(chainAddress) as ArbRollup
+}
+
 describe('ArbRollup', async () => {
   it('should deploy contracts', async function () {
     accounts = await ethers.getSigners()
@@ -455,32 +482,36 @@ describe('ArbRollup', async () => {
     await rollupTester.deployed()
   })
 
-  it('should initialize', async function () {
-    const tx = arbFactory.createRollup(
+  it('should not be able to shut down the template', async () => {
+    const template = await arbFactory.rollupTemplate()
+    const ArbRollup = await ethers.getContractFactory('ArbRollup')
+    const templateRollup = ArbRollup.attach(template) as ArbRollup
+    templateRollup.init(
       initialVmState, // vmState
       gracePeriodTicks, // gracePeriodTicks
       1000000, // arbGasSpeedLimitPerTick
       maxExecutionSteps, // maxExecutionSteps
       stakeRequirement, // stakeRequirement
       await accounts[0].getAddress(), // owner
+      await arbFactory.challengeFactoryAddress(),
+      await arbFactory.globalInboxAddress(),
       '0x'
     )
-    await expect(tx).to.emit(arbFactory, 'RollupCreated')
 
-    const receipt = await (await tx).wait()
-    if (receipt.logs == undefined) {
-      throw Error('expected receipt to have logs')
-    }
-
-    const logs = receipt.logs.map((log: providers.Log) =>
-      arbFactory.interface.parseLog(log)
+    expect(templateRollup.owner()).to.eventually.equal(
+      await accounts[0].getAddress()
     )
-    const ev = logs[2]
-    expect(ev.name).to.equal('RollupCreated')
-    const chainAddress = ev.values.rollupAddress
-    const ArbRollup = await ethers.getContractFactory('ArbRollup')
-    arbRollup = ArbRollup.attach(chainAddress) as ArbRollup
+    await expect(templateRollup.ownerShutdown()).to.be.revertedWith('NOT_CLONE')
+  })
 
+  it('should be able to shut down a clone', async () => {
+    const rollup = await createRollup()
+    expect(rollup.owner()).to.eventually.equal(await accounts[0].getAddress())
+    rollup.ownerShutdown()
+  })
+
+  it('should initialize', async function () {
+    arbRollup = await createRollup()
     originalNode = await arbRollup.latestConfirmed()
     assert.isTrue(
       await arbRollup.isValidLeaf(originalNode),
