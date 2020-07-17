@@ -390,12 +390,6 @@ export class IncomingMessage {
   }
 
   messageID(): string {
-    if (this.msg.kind == MessageCode.L2) {
-      const l2message = this.msg
-      if (l2message.message.kind == L2MessageCode.Transaction) {
-        return l2message.message.messageID(this.sender)
-      }
-    }
     return this.inboxSeqNum.toHexString()
   }
 }

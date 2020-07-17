@@ -2,7 +2,7 @@ const fetch = require('node-fetch')
 global.fetch = fetch
 
 const ethers = require('ethers')
-const ArbEth = require('arb-provider-ethers')
+const ArbProvider = require('arb-provider-ethers').ArbProvider
 const ProviderBridge = require('arb-ethers-web3-bridge')
 const mnemonic =
   'jar deny prosper gasp flush glass core corn alarm treat leg smart'
@@ -21,8 +21,8 @@ module.exports = {
         const provider = new ethers.providers.JsonRpcProvider(
           'http://localhost:7545'
         )
-        const arbProvider = new ArbEth.ArbProvider(
-          '0x02545581726fB0F81212e5E7Fd424BAaECfEAb62',
+        const arbProvider = new ArbProvider(
+          '0x8CdB878Fc40d7259986d16Db5667381Bc02460Df',
           'http://localhost:1235',
           provider,
           'http://localhost:1237'
@@ -30,10 +30,7 @@ module.exports = {
         const wallet = new ethers.Wallet.fromMnemonic(mnemonic).connect(
           arbProvider
         )
-        return new ProviderBridge(
-          arbProvider,
-          new ArbEth.ArbWallet(wallet, arbProvider)
-        )
+        return new ProviderBridge(arbProvider, wallet)
       },
       network_id: '*',
       gasPrice: 0,

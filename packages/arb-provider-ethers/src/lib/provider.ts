@@ -262,7 +262,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   // object with normalized values passed in, depending on the method
   /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
   public async perform(method: string, params: any): Promise<any> {
-    console.log('perform', method, params)
+    // console.log('perform', method, params)
     switch (method) {
       case 'getCode': {
         if (

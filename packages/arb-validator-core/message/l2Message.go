@@ -315,7 +315,8 @@ func NewSignedTransactionFromEth(tx *types.Transaction) SignedTransaction {
 	var sig [65]byte
 	copy(sig[:], math.U256Bytes(r))
 	copy(sig[32:], math.U256Bytes(s))
-	sig[64] = byte(v.Uint64() % 2)
+	sig[64] = byte(1 - v.Uint64())
+
 	return SignedTransaction{
 		Transaction: NewTransactionFromEthTx(tx),
 		Signature:   sig,
@@ -360,16 +361,9 @@ func (b SignedTransaction) Equals(o SignedTransaction) bool {
 
 func (b SignedTransaction) AsData() []byte {
 	ret := make([]byte, 0)
-	ret = append(ret, b.Transaction.AsData()...)
+	ret = append(ret, b.Transaction.asData()...)
 	ret = append(ret, b.Signature[:]...)
 	return ret
-}
-
-func (b SignedTransaction) Hash() common.Hash {
-	data := make([]byte, 0)
-	data = append(data, b.Transaction.AsData()...)
-	data = append(data, b.Signature[:]...)
-	return marshaledBytesHash(data)
 }
 
 type TransactionBatch struct {
