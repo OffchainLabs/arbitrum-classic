@@ -52,10 +52,6 @@ type AbstractL2Message interface {
 	AsData() []byte
 }
 
-type SelfIdentifyingMessage interface {
-	MessageID() common.Hash
-}
-
 type L2Message struct {
 	Msg AbstractL2Message
 }
@@ -349,19 +345,8 @@ func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) SignedTra
 	}
 }
 
-func (t SignedTransaction) AsEthTx(chain common.Address) *types.Transaction {
-	tx := t.Transaction.AsEthTx()
-	tx, err := tx.WithSignature(types.NewEIP155Signer(ChainAddressToID(chain)), t.Signature[:])
-	if err != nil {
-		// This should never occur since it can only happen if the signature is not the
-		// correct length. We store as a [65]byte so it will always succeed
-		log.Fatal("SignedTransaction.AsEthTx failed unexpectedly", err)
-	}
-	return tx
-}
-
-func (t SignedTransaction) MessageID(chain common.Address) common.Hash {
-	return common.NewHashFromEth(t.AsEthTx(chain).Hash())
+func (t SignedTransaction) AsEthTx(chain common.Address) (*types.Transaction, error) {
+	return t.Transaction.AsEthTx().WithSignature(types.NewEIP155Signer(ChainAddressToID(chain)), t.Signature[:])
 }
 
 func (t SignedTransaction) L2Type() L2SubType {

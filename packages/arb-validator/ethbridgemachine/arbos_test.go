@@ -309,6 +309,7 @@ func TestBatch(t *testing.T) {
 	}
 	batchSize := 20
 	txes := make([]message.L2Message, 0, batchSize)
+	hashes := make([]common.Hash, 0, batchSize)
 	senders := make([]common.Address, 0, batchSize)
 	for i := 0; i < batchSize; i++ {
 		pk, err := crypto.GenerateKey()
@@ -336,6 +337,7 @@ func TestBatch(t *testing.T) {
 			t.Fatal(err)
 		}
 		txes = append(txes, message.L2Message{Msg: message.NewSignedTransactionFromEth(signedTx)})
+		hashes = append(hashes, common.NewHashFromEth(signedTx.Hash()))
 	}
 	msg := message.NewTransactionBatchFromMessages(txes)
 	results = runMessage(t, mach, message.L2Message{Msg: msg}, common.RandAddress())
@@ -344,21 +346,13 @@ func TestBatch(t *testing.T) {
 	}
 	for i, result := range results {
 		if result.L1Message.Sender != senders[i] {
-			t.Fatal("message had incorrect sender", result.L1Message.Sender, senders[i])
+			t.Error("message had incorrect sender", result.L1Message.Sender, senders[i])
 		}
 		if result.L1Message.Kind != message.L2Type {
-			t.Fatal("message has incorrect type")
+			t.Error("message has incorrect type")
 		}
-
-		t.Log("output tx", hexutil.Encode(result.L1Message.Data))
-		nested, err := result.L1Message.NestedMessage()
-		if err != nil {
-			t.Fatal(err)
+		if result.L1Message.MessageID() != hashes[i] {
+			t.Error("message had incorrect id", result.L1Message.MessageID(), hashes[i])
 		}
-		msg, ok := nested.(message.L2Message)
-		if !ok {
-			t.Fatal("expected l2 message")
-		}
-		t.Log(msg.Msg.L2Type())
 	}
 }

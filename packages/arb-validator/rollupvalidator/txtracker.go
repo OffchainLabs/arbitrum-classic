@@ -60,9 +60,8 @@ type txTracker struct {
 func newTxTracker(
 	db machine.CheckpointStorage,
 	ns machine.ConfirmedNodeStore,
-	chain common.Address,
 ) (*txTracker, error) {
-	txdb, err := newTxDB(db, ns, chain)
+	txdb, err := newTxDB(db, ns)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +140,7 @@ func (tr *txTracker) AssertionPrepared(
 		if tr.pendingLocation != nil && tr.pendingLocation.NodeHash == possibleNode.Hash().String() {
 			return
 		}
-		nodeInfo, err := processNode(possibleNode, tr.txDB.chainAddress)
+		nodeInfo, err := processNode(possibleNode)
 		if err != nil {
 			log.Println("Prepared assertion with invalid data", err)
 			return
@@ -171,7 +170,7 @@ func (tr *txTracker) processNextNode(node *structures.Node) error {
 	if sawOldNode {
 		return nil
 	}
-	nodeInfo, err := processNode(node, tr.txDB.chainAddress)
+	nodeInfo, err := processNode(node)
 	if err != nil {
 		return err
 	}

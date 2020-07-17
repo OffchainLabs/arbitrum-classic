@@ -52,7 +52,7 @@ type GlobalInbox interface {
 		ctx context.Context,
 		chain common.Address,
 		data message.L2Message,
-	) error
+	) (MessageDeliveredEvent, error)
 
 	// SendL2MessageNoWait calls SendL2Message without
 	// blocking while waiting for the receipt. This behavior is different from

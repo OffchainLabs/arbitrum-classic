@@ -31,9 +31,8 @@ func TestProcessNode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	chain := common.RandAddress()
 	initialNode := structures.NewInitialNode(mach, common.Hash{})
-	_, err = processNode(initialNode, chain)
+	_, err = processNode(initialNode)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +55,6 @@ func TestFindLogs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	chain := common.RandAddress()
 
 	results := make([]*evm.Result, 0, 5)
 	for i := int32(0); i < 5; i++ {
@@ -66,7 +64,7 @@ func TestFindLogs(t *testing.T) {
 
 	initialNode := structures.NewInitialNode(mach, common.Hash{})
 	nextNode := structures.NewRandomNodeFromValidPrev(initialNode, results)
-	info, err := processNode(nextNode, chain)
+	info, err := processNode(nextNode)
 	if err != nil {
 		t.Fatal(err)
 	}

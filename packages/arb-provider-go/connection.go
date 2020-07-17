@@ -231,7 +231,8 @@ func (conn *ArbConnection) EstimateGas(
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 	arbTx := message.NewTransactionFromEthTx(tx)
-	return conn.globalInbox.SendL2Message(ctx, conn.vmId, message.L2Message{Msg: arbTx})
+	_, err := conn.globalInbox.SendL2Message(ctx, conn.vmId, message.L2Message{Msg: arbTx})
+	return err
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -210,19 +210,7 @@ func (im InboxMessage) NestedMessage() (Message, error) {
 	}
 }
 
-func (im InboxMessage) MessageID(chain common.Address) common.Hash {
-	if im.Kind == L2Type {
-		msg, err := NewL2MessageFromData(im.Data)
-		if err == nil {
-			// msg must be one of the officially supported types
-			if msg, ok := msg.(Transaction); ok {
-				return msg.MessageID(im.Sender, chain)
-			}
-			if msg, ok := msg.(SignedTransaction); ok {
-				return msg.MessageID(chain)
-			}
-		}
-	}
+func (im InboxMessage) MessageID() common.Hash {
 	// by default just use the InboxSeqNum
 	var ret common.Hash
 	copy(ret[:], math.U256Bytes(im.InboxSeqNum))

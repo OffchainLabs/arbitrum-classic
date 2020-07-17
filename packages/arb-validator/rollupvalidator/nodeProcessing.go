@@ -131,7 +131,7 @@ func (ni *nodeInfo) getTxInfo(txIndex uint64) *evm.TxInfo {
 	}
 }
 
-func processNode(node *structures.Node, chain common.Address) (*nodeInfo, error) {
+func processNode(node *structures.Node) (*nodeInfo, error) {
 	nodeInfo := newNodeInfo()
 
 	l1TxHashString := ""
@@ -184,7 +184,7 @@ func processNode(node *structures.Node, chain common.Address) (*nodeInfo, error)
 		if result.ResultCode == evm.RevertCode {
 			log.Printf("*********** evm.Revert occurred with message \"%v\"\n", string(result.ReturnData))
 		}
-		txId := result.L1Message.MessageID(chain)
+		txId := result.L1Message.MessageID()
 		log.Println("Got result for transaction", txId)
 		nodeInfo.EVMTransactionHashes = append(nodeInfo.EVMTransactionHashes, txId)
 	}
