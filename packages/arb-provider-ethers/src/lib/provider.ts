@@ -430,7 +430,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         return this.aggregator.sendTransaction(params.signedTransaction)
       }
     }
-    console.log('Forwarding query to provider', method, params)
+    // console.log('Forwarding query to provider', method, params)
     return await this.ethProvider.perform(method, params)
   }
 

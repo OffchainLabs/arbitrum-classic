@@ -174,7 +174,6 @@ export class ArbWallet extends ethers.Signer {
   public async sendTransaction(
     transaction: ethers.providers.TransactionRequest
   ): Promise<ethers.providers.TransactionResponse> {
-    console.log('ARB WALLET sendTransaction')
     if (this.provider.aggregator) {
       return this.signer.sendTransaction(transaction)
     }
