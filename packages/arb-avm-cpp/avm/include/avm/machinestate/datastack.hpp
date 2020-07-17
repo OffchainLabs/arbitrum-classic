@@ -56,10 +56,16 @@ class Datastack {
     }
 
     const value& operator[](size_t index) const {
+        if (index >= values.size()) {
+            throw stack_too_small();
+        }
         return values[values.size() - 1 - index];
     }
 
     value& operator[](size_t index) {
+        if (index >= values.size()) {
+            throw stack_too_small();
+        }
         return values[values.size() - 1 - index];
     }
 
