@@ -195,6 +195,7 @@ github.com/offchainlabs/arbitrum v0.6.5 h1:8VM/XQ6T0wArwttCU4jVqXTDTNx6M3Gj9xFco
 github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.6.5 h1:25qxELadSWqXXgSu2T3YWMf28Rc+hBzhQWe11bsmCQo=
 github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.6.5/go.mod h1:TWnvXbLN+ddXUaW6kEd+vIdg7rgLz1aGtLaqCjAvxMc=
 github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.6.5/go.mod h1:7nk/7FwZIqynokCzuQVnzi+VyZnR2nBEKit9u8Ewhrw=
+github.com/offchainlabs/arbitrum/packages/arb-provider-go v0.6.5 h1:cu60WW6WbhdO99qSVKKxcUGyIXTBTDFVigxMnxoeyHs=
 github.com/offchainlabs/arbitrum/packages/arb-provider-go v0.6.5/go.mod h1:+V7YsM+1UfuTrQ++zvrlLPxrET27JlbFwyexxYil0I8=
 github.com/offchainlabs/arbitrum/packages/arb-validator v0.6.5/go.mod h1:fhA+K9rdav/tcFhmB5GIv1At6GwTExz4iW7/0ziPrh4=
 github.com/offchainlabs/go-solidity-sha3 v0.1.2 h1:IJ/KUv8zW5+Rtq/VvhNjq/Q7MDXjDx1ArAvkJhBRQAs=
