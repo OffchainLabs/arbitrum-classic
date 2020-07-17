@@ -33,7 +33,8 @@ async function setupRollup(arbOSData: string) {
     80000000,
     10000000000,
     ethers.utils.parseEther('.01'),
-    ethers.utils.hexZeroPad('0x', 20)
+    ethers.utils.hexZeroPad('0x', 20),
+    '0x'
   )
   const result = await tx.wait()
 

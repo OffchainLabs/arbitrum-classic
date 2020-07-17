@@ -1,240 +1,356 @@
+/*
+ * Copyright 2020, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package chainobserver
 
 import (
 	"context"
-	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
+	"log"
+	"math/big"
+	"math/rand"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"log"
-	"math/big"
-	"testing"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
 
-var tester *ethbridgetestcontracts.RollupTester
-var dummyRollupAddress = common.Address{1}
+var dbPath = "./testdb"
+
+var rollupTester *ethbridgetestcontracts.RollupTester
+var ethclnt *backends.SimulatedBackend
 var auth *bind.TransactOpts
 
-func TestMainSetup(m *testing.T) {
-	client, auths := test.SimulatedBackend()
+func TestMain(m *testing.M) {
+	var auths []*bind.TransactOpts
+	ethclnt, auths = test.SimulatedBackend()
 	auth = auths[0]
 
-	_, machineTx, deployedArbRollup, err := ethbridgetestcontracts.DeployRollupTester(
+	go func() {
+		t := time.NewTicker(time.Second * 1)
+		for range t.C {
+			ethclnt.Commit()
+		}
+	}()
+
+	_, tx, deployedTester, err := ethbridgetestcontracts.DeployRollupTester(
 		auth,
-		client,
+		ethclnt,
 	)
+
 	if err != nil {
 		log.Fatal(err)
 	}
-	client.Commit()
 	_, err = ethbridge.WaitForReceiptWithResults(
 		context.Background(),
-		client,
+		ethclnt,
 		auth.From,
-		machineTx,
-		"deployedMachineTester",
+		tx,
+		"DeployRollupTester",
 	)
-	if err != nil {
+	rollupTester = deployedTester
+
+	code := m.Run()
+	if err := os.RemoveAll(dbPath); err != nil {
 		log.Fatal(err)
 	}
-
-	tester = deployedArbRollup
+	os.Exit(code)
 }
 
-func TestComputePrevLeaf(t *testing.T) {
-	chain, err := setUpChain(dummyRollupAddress, "dummy", contractPath)
+func TestConfirmAssertion(t *testing.T) {
+	clnt := ethbridge.NewEthAuthClient(ethclnt, auth)
+
+	chainParams := valprotocol.ChainParams{
+		StakeRequirement:        big.NewInt(0),
+		GracePeriod:             common.TicksFromSeconds(1),
+		MaxExecutionSteps:       100000,
+		ArbGasSpeedLimitPerTick: 100000,
+	}
+
+	arbFactoryAddress, err := ethbridge.DeployRollupFactory(auth, ethclnt)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	assertion := chain.PrepareAssertion()
-
-	bridgeHash, _, err := tester.ComputePrevLeaf(
-		nil,
-		assertion.GetAssertionParams(),
-		assertion.BeforeState.InboxCount,
-		assertion.Prev.Deadline().Val,
-		uint32(assertion.Prev.LinkType()),
-		assertion.Params.NumSteps,
-		assertion.Params.ImportedMessageCount,
-		assertion.Claim.AssertionStub.DidInboxInsn,
-		assertion.Claim.AssertionStub.NumGas)
+	factory, err := clnt.NewArbFactory(common.NewAddressFromEth(arbFactoryAddress))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if assertion.Prev.Hash().ToEthHash() != bridgeHash {
-		t.Error(bridgeHash)
+	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")
+	if err != nil {
+		t.Fatal(err)
 	}
-}
 
-func randomAssertion() *protocol.ExecutionAssertion {
+	rollupAddress, blockCreated, err := factory.CreateRollup(
+		context.Background(),
+		mach.Hash(),
+		chainParams,
+		common.Address{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rollupContract, err := clnt.NewRollup(rollupAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	inboxAddress, err := rollupContract.InboxAddress(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	globalInbox, err := clnt.NewGlobalInbox(inboxAddress, rollupAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := globalInbox.DepositEthMessage(
+		context.Background(),
+		rollupAddress,
+		common.NewAddressFromEth(auth.From),
+		big.NewInt(100),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	checkBalance := func(address common.Address, amount *big.Int) {
+		balance, err := globalInbox.GetEthBalance(context.Background(), address)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if balance.Cmp(amount) != 0 {
+			t.Fatalf("failed checking balance, expected %v but saw %v", amount, balance)
+		}
+	}
+
+	checkBalance(rollupAddress, big.NewInt(100))
+
+	checkpointer, err := checkpointing.NewIndexedCheckpointer(
+		rollupAddress,
+		dbPath,
+		big.NewInt(100000),
+		true,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := checkpointer.Initialize(contractPath); err != nil {
+		t.Fatal(err)
+	}
+
+	chain, err := newChain(
+		rollupAddress,
+		checkpointer,
+		chainParams,
+		blockCreated,
+		common.Hash{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("place stake", func(t *testing.T) {
+		events, err := rollupContract.PlaceStake(
+			context.Background(),
+			big.NewInt(0),
+			[]common.Hash{},
+			[]common.Hash{},
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, ev := range events {
+			if err := chain.HandleNotification(context.Background(), ev); err != nil {
+				t.Fatal(err)
+			}
+		}
+	})
+
+	rand.Seed(time.Now().Unix())
+	dest := common.RandAddress()
 	results := make([]*evm.Result, 0, 5)
 	messages := make([]value.Value, 0)
-	messages = append(messages, message.NewInboxMessage(
-		message.Eth{
-			Dest:  common.Address{},
-			Value: big.NewInt(75),
-		},
-		common.NewAddressFromEth(auth.From),
-		big.NewInt(0),
-		message.NewRandomChainTime(),
-	).AsValue())
+	messages = append(
+		messages,
+		message.NewOutMessage(
+			message.Eth{
+				Dest:  dest,
+				Value: big.NewInt(75),
+			},
+			common.NewAddressFromEth(auth.From),
+		).AsValue(),
+	)
 	for i := int32(0); i < 5; i++ {
 		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
 		results = append(results, stop)
-		messages = append(messages, message.NewRandomInboxMessage(message.NewRandomEth()).AsValue())
+		messages = append(messages, message.NewRandomOutMessage(message.NewRandomEth()).AsValue())
 	}
 
-	return evm.NewRandomEVMAssertion(results, messages)
-}
+	assertion := evm.NewRandomEVMAssertion(results, messages)
+	assertion.NumGas = 100
 
-func TestGenerateInvalidMsgLeaf(t *testing.T) {
-	chain, err := setUpChain(dummyRollupAddress, "dummy", contractPath)
+	prepared, err := chain.prepareAssertion(chain.latestBlockId)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	prevNode := chain.NodeGraph.LatestConfirmed()
-	assertion := randomAssertion()
-
-	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertion, valprotocol.InvalidMessagesChildType, chain.GetChainParams())
-
-	prepared := chain.PrepareAssertion()
 	prepared.Assertion = assertion
 	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
-
-	bridgeHash, _, err := tester.ComputePrevLeaf(
-		nil,
-		prepared.GetAssertionParams(),
-		prepared.BeforeState.InboxCount,
-		prepared.Prev.Deadline().Val,
-		uint32(prepared.Prev.LinkType()),
-		prepared.Params.NumSteps,
-		prepared.Params.ImportedMessageCount,
-		prepared.Claim.AssertionStub.DidInboxInsn,
-		prepared.Claim.AssertionStub.NumGas)
+	var stakerProof []common.Hash
+	events, err := chainlistener.MakeAssertion(context.Background(), rollupContract, prepared, stakerProof)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if newNode.PrevHash().ToEthHash() != bridgeHash {
-		t.Error(bridgeHash)
+	for _, ev := range events {
+		if err := chain.HandleNotification(context.Background(), ev); err != nil {
+			t.Fatal(err)
+		}
 	}
 
-	invalidMsgHash, err := tester.ChildNodeHash(
-		nil,
-		newNode.PrevHash(),
-		newNode.Deadline().Val,
-		newNode.NodeDataHash(),
-		new(big.Int).SetUint64(uint64(valprotocol.InvalidMessagesChildType)),
-		newNode.VMProtoData().Hash())
-
-	if newNode.Hash().ToEthHash() != invalidMsgHash {
-		fmt.Println(bridgeHash)
-		fmt.Println(newNode.Hash().ToEthHash())
-		t.Error(bridgeHash)
+	latestConf := chain.NodeGraph.LatestConfirmed()
+	validNode := chain.NodeGraph.NodeFromHash(latestConf.SuccessorHashes()[3])
+	if validNode == nil {
+		t.Fatal("valid node was nil")
 	}
-}
-
-func TestGenerateInvalidInboxLeaf(t *testing.T) {
-	chain, err := setUpChain(dummyRollupAddress, "dummy", contractPath)
-	if err != nil {
+	if err := validNode.UpdateValidOpinion(prepared.Machine, prepared.Assertion); err != nil {
 		t.Fatal(err)
 	}
 
-	prevNode := chain.NodeGraph.LatestConfirmed()
-	assertion := randomAssertion()
-	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertion, valprotocol.InvalidInboxTopChildType, chain.GetChainParams())
+	time.Sleep(2 * time.Second)
 
-	prepared := chain.PrepareAssertion()
-	prepared.Assertion = assertion
-	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
-
-	bridgeHash, _, err := tester.ComputePrevLeaf(
-		nil,
-		prepared.GetAssertionParams(),
-		prepared.BeforeState.InboxCount,
-		prepared.Prev.Deadline().Val,
-		uint32(prepared.Prev.LinkType()),
-		prepared.Params.NumSteps,
-		prepared.Params.ImportedMessageCount,
-		prepared.Claim.AssertionStub.DidInboxInsn,
-		prepared.Claim.AssertionStub.NumGas)
+	currentTime, err := clnt.CurrentBlockId(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
+	confTime := new(big.Int).Add(currentTime.Height.AsInt(), big.NewInt(1))
 
-	if newNode.PrevHash().ToEthHash() != bridgeHash {
-		t.Error(bridgeHash)
-	}
+	t.Run("confirm assertion", func(t *testing.T) {
+		opp, nodes := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(common.NewTimeBlocks(confTime)))
+		if opp == nil {
+			t.Fatal("should have had opp")
+		}
+		proof := opp.PrepareProof()
+		offset := big.NewInt(0)
+		validCount := int64(0)
+		for i, nodeOpp := range opp.Nodes {
+			nd := nodes[i]
+			nodeOpp, ok := nodeOpp.(valprotocol.ConfirmValidOpportunity)
+			if !ok {
+				continue
+			}
+			if nd.Disputable().AssertionClaim.AssertionStub.LastLogHash != nodeOpp.LogsAcc {
+				t.Fatal("incorrect logs acc in proof")
+			}
 
-	invalidInboxHash, err := tester.ChildNodeHash(
-		nil,
-		newNode.PrevHash(),
-		newNode.Deadline().Val,
-		newNode.NodeDataHash(),
-		new(big.Int).SetUint64(uint64(valprotocol.InvalidInboxTopChildType)),
-		newNode.VMProtoData().Hash())
+			if nd.Disputable().AssertionClaim.AssertionStub.LastMessageHash != valprotocol.BytesArrayAccumHash(nodeOpp.MessagesData, nodeOpp.MessageCount) {
+				t.Fatal("incorrect messages acc in proof")
+			}
+			messageAccHash, nextOffset, err := rollupTester.GenerateLastMessageHash(
+				nil,
+				proof.Messages,
+				offset,
+				proof.MessageCounts[validCount],
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if messageAccHash != nd.Disputable().AssertionClaim.AssertionStub.LastMessageHash {
+				t.Fatal("generated incorrect messages acc")
+			}
 
-	if newNode.Hash().ToEthHash() != invalidInboxHash {
-		fmt.Println(bridgeHash)
-		fmt.Println(newNode.Hash().ToEthHash())
-		t.Error(bridgeHash)
-	}
-}
+			_, nodeDataHash, vmProtoStateHash, err := rollupTester.ProcessValidNode(
+				nil,
+				proof.InitalProtoStateHash,
+				proof.BranchesNums,
+				proof.DeadlineTicks,
+				proof.ChallengeNodeData,
+				proof.LogsAcc,
+				proof.VMProtoStateHashes,
+				proof.MessageCounts,
+				proof.Messages,
+				big.NewInt(validCount),
+				offset,
+			)
 
-func TestGenerateInvalidExecutionLeaf(t *testing.T) {
-	chain, err := setUpChain(dummyRollupAddress, "dummy", contractPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+			if vmProtoStateHash != nodeOpp.VMProtoStateHash {
+				t.Error("incorrect state hash")
+			}
 
-	prevNode := chain.NodeGraph.LatestConfirmed()
-	assertion := randomAssertion()
-	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertion, valprotocol.InvalidExecutionChildType, chain.GetChainParams())
+			if nodeDataHash != nd.NodeDataHash() {
+				t.Error("incorrect data hash")
+			}
 
-	prepared := chain.PrepareAssertion()
-	prepared.Assertion = assertion
-	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
+			offset = nextOffset
+			validCount++
+		}
 
-	bridgeHash, _, err := tester.ComputePrevLeaf(
-		nil,
-		prepared.GetAssertionParams(),
-		prepared.BeforeState.InboxCount,
-		prepared.Prev.Deadline().Val,
-		uint32(prepared.Prev.LinkType()),
-		prepared.Params.NumSteps,
-		prepared.Params.ImportedMessageCount,
-		prepared.Claim.AssertionStub.DidInboxInsn,
-		prepared.Claim.AssertionStub.NumGas)
-	if err != nil {
-		t.Fatal(err)
-	}
+		ret, err := rollupTester.Confirm(
+			nil,
+			latestConf.Hash().ToEthHash(),
+			proof.InitalProtoStateHash,
+			proof.BranchesNums,
+			proof.DeadlineTicks,
+			proof.ChallengeNodeData,
+			proof.LogsAcc,
+			proof.VMProtoStateHashes,
+			proof.MessageCounts,
+			proof.Messages,
+		)
 
-	if newNode.PrevHash().ToEthHash() != bridgeHash {
-		t.Error(bridgeHash)
-	}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(ret.ValidNodeHashes) != 1 {
+			t.Fatal("wrong valid node count")
+		}
+		if ret.LastNode != validNode.Hash() {
+			t.Fatalf("incorrect last node hash: was %v but should have been %v", hexutil.Encode(ret.LastNode[:]), validNode.Hash())
+		}
+		if ret.ValidNodeHashes[0] != validNode.Hash() {
+			t.Fatal("wrong node hash")
+		}
+		events, err := rollupContract.Confirm(context.Background(), opp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, ev := range events {
+			if err := chain.HandleNotification(context.Background(), ev); err != nil {
+				t.Fatal(err)
+			}
+		}
+	})
 
-	invalidExecutionHash, err := tester.ChildNodeHash(
-		nil,
-		newNode.PrevHash(),
-		newNode.Deadline().Val,
-		newNode.NodeDataHash(),
-		new(big.Int).SetUint64(uint64(valprotocol.InvalidExecutionChildType)),
-		newNode.VMProtoData().Hash())
-
-	if newNode.Hash().ToEthHash() != invalidExecutionHash {
-		fmt.Println(bridgeHash)
-		fmt.Println(newNode.Hash().ToEthHash())
-		t.Error(bridgeHash)
-	}
+	checkBalance(rollupAddress, big.NewInt(25))
+	checkBalance(dest, big.NewInt(75))
 }

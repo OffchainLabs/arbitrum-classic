@@ -288,7 +288,7 @@ func (sng *StakedNodeGraph) GenerateStakerPruneInfo() ([]RecoverStakeMootedParam
 			prev := stakerAncestor.Prev()
 			mootedToDo = append(mootedToDo, RecoverStakeMootedParams{
 				Addr:         staker.address,
-				AncestorHash: prev.Hash(),
+				AncestorHash: stakerAncestor.PrevHash(),
 				LcProof:      structures.GeneratePathProof(prev, sng.latestConfirmed),
 				StProof:      structures.GeneratePathProof(prev, staker.location),
 			})

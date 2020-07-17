@@ -34,16 +34,18 @@ type PreparedAssertion struct {
 	Claim       *valprotocol.AssertionClaim
 	Assertion   *protocol.ExecutionAssertion
 	Machine     machine.Machine
+	ValidBlock  *common.BlockId
 }
 
 func (pa *PreparedAssertion) String() string {
 	return fmt.Sprintf(
-		"PreparedAssertion(%v, %v, %v, %v, %v)",
+		"PreparedAssertion(%v, %v, %v, %v, %v, %v)",
 		pa.Prev.Hash(),
 		pa.BeforeState,
 		pa.Params,
 		pa.Claim,
 		pa.Assertion,
+		pa.ValidBlock,
 	)
 }
 
@@ -55,6 +57,7 @@ func (pa *PreparedAssertion) Clone() *PreparedAssertion {
 		Claim:       pa.Claim.Clone(),
 		Assertion:   pa.Assertion,
 		Machine:     pa.Machine,
+		ValidBlock:  pa.ValidBlock.Clone(),
 	}
 }
 
@@ -78,13 +81,23 @@ func (pa *PreparedAssertion) PossibleFutureNode(chainParams valprotocol.ChainPar
 func (prep *PreparedAssertion) GetAssertionParams() [9][32]byte {
 	return [9][32]byte{
 		prep.BeforeState.MachineHash,
-		prep.BeforeState.InboxTop,
-		prep.Prev.PrevHash(),
-		prep.Prev.NodeDataHash(),
-		prep.Claim.AfterInboxTop,
 		prep.Claim.ImportedMessagesSlice,
 		prep.Claim.AssertionStub.AfterHash,
 		prep.Claim.AssertionStub.LastMessageHash,
 		prep.Claim.AssertionStub.LastLogHash,
+		prep.BeforeState.InboxTop,
+		prep.Prev.PrevHash(),
+		prep.Prev.NodeDataHash(),
+		prep.Claim.AfterInboxTop,
+	}
+}
+
+func (prep *PreparedAssertion) GetAssertionParams2() [5]*big.Int {
+	return [5]*big.Int{
+		prep.BeforeState.InboxCount,
+		prep.Prev.Deadline().Val,
+		prep.Params.ImportedMessageCount,
+		prep.BeforeState.MessageCount,
+		prep.BeforeState.LogCount,
 	}
 }

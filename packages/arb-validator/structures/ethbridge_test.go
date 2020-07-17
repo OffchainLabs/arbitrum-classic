@@ -172,7 +172,10 @@ func TestProtoStateHash(t *testing.T) {
 		nil,
 		protoState.MachineHash,
 		protoState.InboxTop,
-		protoState.InboxCount)
+		protoState.InboxCount,
+		protoState.MessageCount,
+		protoState.LogCount,
+	)
 
 	if protoState.Hash().ToEthHash() != bridgeHash {
 		fmt.Println(bridgeHash)

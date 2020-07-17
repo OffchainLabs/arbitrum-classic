@@ -184,7 +184,9 @@ func processNode(node *structures.Node) (*nodeInfo, error) {
 		if result.ResultCode == evm.RevertCode {
 			log.Printf("*********** evm.Revert occurred with message \"%v\"\n", string(result.ReturnData))
 		}
-		nodeInfo.EVMTransactionHashes = append(nodeInfo.EVMTransactionHashes, result.L1Message.MessageID())
+		txId := result.L1Message.MessageID()
+		log.Println("Got result for transaction", txId)
+		nodeInfo.EVMTransactionHashes = append(nodeInfo.EVMTransactionHashes, txId)
 	}
 	return nodeInfo, nil
 }

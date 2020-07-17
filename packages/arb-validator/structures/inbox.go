@@ -86,6 +86,17 @@ func (ms *MessageStack) GetTopHash() common.Hash {
 	}
 }
 
+func (ms *MessageStack) GetMaxAtHeight(maxHeight *common.TimeBlocks) (bool, *big.Int) {
+	msg := ms.newest
+	for msg != nil && msg.message.ChainTime.BlockNum.Cmp(maxHeight) > 0 {
+		msg = msg.prev
+	}
+	if msg == nil {
+		return false, nil
+	}
+	return true, msg.count
+}
+
 func (ms *MessageStack) TopCount() *big.Int {
 	if ms.newest == nil {
 		return big.NewInt(0)

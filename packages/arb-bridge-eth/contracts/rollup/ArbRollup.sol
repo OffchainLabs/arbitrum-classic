@@ -233,52 +233,58 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
      * @dev This method selects an existing leaf to build an assertion on top of. If it succeeds that leaf is eliminated and four new leaves are created. The asserter is automatically moved to stake on the new valid leaf.
      * @param fields Packed data for the following fields
      *   beforeVMHash The hash of the machine at the end of the previous assertion
-     *   beforeInboxTop The hash of the global inbox that the previous assertion had read up to
-     *   prevPrevLeafHash The hash of the leaf that was the ancestor of the leaf we're building on
-     *   prevDataHash Type specific data of the node we're on
-     *   afterInboxTop Claimed hash of the global inbox at height beforeInboxCount + importedMessageCount
      *   importedMessagesSlice Claimed messages sent to the machine in this assertion based on beforeInboxCount and importedMessageCount
      *   afterVMHash Claimed machine hash after this assertion is completed
      *   messagesAccHash Claimed commitment to a set of messages output in the assertion
      *   logsAccHash Claimed commitment to a set of logs output in the assertion
-     * @param beforeInboxCount The total number of messages read after the previous assertion executed
-     * @param prevDeadlineTicks The challenge deadline of the node this assertion builds on
+     *   beforeInboxTop The hash of the global inbox that the previous assertion had read up to
+     *   prevPrevLeafHash The hash of the leaf that was the ancestor of the leaf we're building on
+     *   prevDataHash Type specific data of the node we're on
+     *   afterInboxTop Claimed hash of the global inbox at height beforeInboxCount + importedMessageCount
+     * @param fields2 Packed data for the following fields
+     *   beforeInboxCount The total number of messages read after the previous assertion executed
+     *   prevDeadlineTicks The challenge deadline of the node this assertion builds on
+     *   importedMessageCount Argument specifying the number of messages read
+     *   beforeMessageCount The total number of messages that have been output by the chain before this assertion
+     *   beforeLogCount The total number of messages that have been output by the chain before this assertion
+     * @param validBlockHashPrecondition Hash of a known block to invalidate the assertion if too deep a reorg occurs
+     * @param validBlockHeightPrecondition Height of the block with hash validBlockHash
      * @param prevChildType The type of node that this assertion builds on top of
+     * @param messageCount Claimed number of messages emitted in the assertion
+     * @param logCount Claimed number of logs emitted in the assertion
      * @param numSteps Argument specifying the number of steps execuited
-     * @param importedMessageCount Argument specifying the number of messages read
      * @param didInboxInsn Claim about whether the assertion inlcuding reading the inbox
      * @param numArbGas Claimed amount of ArbGas used in the assertion
      * @param stakerProof Node graph proof that the asserter is on or can move to the leaf this assertion builds on
      */
     function makeAssertion(
         bytes32[9] calldata fields,
-        uint256 beforeInboxCount,
-        uint256 prevDeadlineTicks,
+        uint256[5] calldata fields2,
+        bytes32 validBlockHashPrecondition,
+        uint256 validBlockHeightPrecondition,
+        uint64 messageCount,
+        uint64 logCount,
         uint32 prevChildType,
         uint64 numSteps,
-        uint256 importedMessageCount,
         bool didInboxInsn,
         uint64 numArbGas,
         bytes32[] calldata stakerProof
     ) external {
+        require(
+            blockhash(validBlockHeightPrecondition) ==
+                validBlockHashPrecondition,
+            "invalid known block"
+        );
         NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
-            .AssertionData(
-            fields[0],
-            fields[1],
-            beforeInboxCount,
-            fields[2],
-            prevDeadlineTicks,
-            fields[3],
+            .makeAssertion(
+            fields,
+            fields2,
             prevChildType,
             numSteps,
-            importedMessageCount,
-            fields[4],
-            fields[5],
-            fields[6],
             didInboxInsn,
             numArbGas,
-            fields[7],
-            fields[8]
+            messageCount,
+            logCount
         );
 
         (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(
