@@ -58,19 +58,18 @@ func (con *globalInbox) SendL2Message(ctx context.Context, chain common.Address,
 	if err != nil {
 		return arbbridge.MessageDeliveredEvent{}, err
 	}
-	if len(receipt.Logs) != 0 {
-		return arbbridge.MessageDeliveredEvent{}, errors.New("too many logs SendL2Message")
+	for _, evmLog := range receipt.Logs {
+		if receipt.Logs[0].Topics[0] != messageDeliveredFromOriginID {
+			continue
+		}
+		blockHeader, err := con.client.HeaderByHash(ctx, evmLog.BlockHash)
+		if err != nil {
+			return arbbridge.MessageDeliveredEvent{}, err
+		}
+		timestamp := new(big.Int).SetUint64(blockHeader.Time)
+		return con.parseMessageFromOrigin(*evmLog, timestamp, msg.AsData())
 	}
-	if receipt.Logs[0].Topics[0] == messageDeliveredFromOriginID {
-		return arbbridge.MessageDeliveredEvent{}, errors.New("unexpected log type SendL2Message")
-	}
-	evmLog := *receipt.Logs[0]
-	blockHeader, err := con.client.HeaderByHash(ctx, evmLog.BlockHash)
-	if err != nil {
-		return arbbridge.MessageDeliveredEvent{}, err
-	}
-	timestamp := new(big.Int).SetUint64(blockHeader.Time)
-	return con.parseMessageFromOrigin(evmLog, timestamp, msg.AsData())
+	return arbbridge.MessageDeliveredEvent{}, errors.New("Didn't output message delivered event")
 }
 
 func (con *globalInbox) SendL2MessageNoWait(ctx context.Context, chain common.Address, msg message.L2Message) error {
