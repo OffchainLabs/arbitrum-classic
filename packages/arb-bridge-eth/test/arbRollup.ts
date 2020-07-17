@@ -506,8 +506,8 @@ describe('ArbRollup', async () => {
 
   it('should be able to shut down a clone', async () => {
     const rollup = await createRollup()
-    expect(rollup.owner()).to.eventually.equal(await accounts[0].getAddress())
-    rollup.ownerShutdown()
+    await expect(rollup.owner()).to.eventually.equal(await accounts[0].getAddress())
+    await rollup.ownerShutdown()
   })
 
   it('should initialize', async function () {
