@@ -84,12 +84,15 @@ class Datastack {
         if (static_cast<size_t>(count) > values.size()) {
             throw stack_too_small();
         }
-        while (hashes.size() > values.size() - count) {
+        while (!hashes.empty() && hashes.size() > values.size() - count) {
             hashes.pop_back();
         }
     }
 
     void popClear() {
+        if (values.empty()) {
+            throw stack_too_small();
+        }
         values.pop_back();
         if (hashes.size() > values.size()) {
             hashes.pop_back();
@@ -101,8 +104,8 @@ class Datastack {
         const Code& code) const;
 
     value& peek() {
-        if (values.size() == 0) {
-            throw std::runtime_error("Stack is empty");
+        if (values.empty()) {
+            throw stack_too_small();
         }
 
         return values.back();
