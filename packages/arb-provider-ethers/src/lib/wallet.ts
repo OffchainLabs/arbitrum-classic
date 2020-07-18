@@ -90,7 +90,7 @@ export class ArbWallet extends ethers.Signer {
     const sendValue = ethers.utils.bigNumberify(value)
     const globalInbox = await this.globalInboxConn()
     const tx = await globalInbox.depositERC20Message(
-      this.provider.chainAddress,
+      await this.provider.chainAddress,
       erc20,
       to,
       sendValue
@@ -105,7 +105,7 @@ export class ArbWallet extends ethers.Signer {
   ): Promise<ethers.providers.TransactionResponse> {
     const globalInbox = await this.globalInboxConn()
     const tx = await globalInbox.depositERC721Message(
-      this.provider.chainAddress,
+      await this.provider.chainAddress,
       erc721,
       to,
       tokenId
@@ -119,7 +119,7 @@ export class ArbWallet extends ethers.Signer {
   ): Promise<ethers.providers.TransactionResponse> {
     const globalInbox = await this.globalInboxConn()
     const tx = await globalInbox.depositEthMessage(
-      this.provider.chainAddress,
+      await this.provider.chainAddress,
       to,
       { value }
     )
@@ -154,19 +154,20 @@ export class ArbWallet extends ethers.Signer {
     }
     const globalInbox = await this.globalInboxConn()
     await globalInbox.sendL2Message(
-      this.provider.chainAddress,
+      await this.provider.chainAddress,
       new L2Message(l2tx).asData()
     )
+    const network = await this.provider.getNetwork()
     const tx: ethers.utils.Transaction = {
       data: ethers.utils.hexlify(l2tx.calldata),
       from: from,
       gasLimit: l2tx.maxGas,
       gasPrice: l2tx.gasPriceBid,
-      hash: l2tx.messageID(from, this.provider.chainId),
+      hash: l2tx.messageID(from, network.chainId),
       nonce: l2tx.sequenceNum.toNumber(),
       to: l2tx.destAddress,
       value: l2tx.payment,
-      chainId: this.provider.chainId,
+      chainId: network.chainId,
     }
     return this.provider._wrapTransaction(tx, tx.hash)
   }

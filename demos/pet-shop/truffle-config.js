@@ -22,7 +22,6 @@ module.exports = {
           'http://localhost:7545'
         )
         const arbProvider = new ArbProvider(
-          '0x8CdB878Fc40d7259986d16Db5667381Bc02460Df',
           'http://localhost:1235',
           provider,
           'http://localhost:1237'
