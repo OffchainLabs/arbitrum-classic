@@ -497,7 +497,6 @@ describe('ArbRollup', async () => {
       await arbFactory.globalInboxAddress(),
       '0x'
     )
-
     expect(templateRollup.owner()).to.eventually.equal(
       await accounts[0].getAddress()
     )
