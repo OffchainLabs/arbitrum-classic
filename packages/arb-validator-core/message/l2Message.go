@@ -187,7 +187,11 @@ func (t Transaction) asData() []byte {
 }
 
 func (t Transaction) MessageID(sender common.Address, chain common.Address) common.Hash {
-	return hashing.SoliditySHA3(hashing.Address(sender), hashing.Address(chain), t.AsData())
+	data := make([]byte, 0)
+	data = append(data, byte(t.L2Type()))
+	data = append(data, t.asData()...)
+	inner := hashing.SoliditySHA3(hashing.Uint256(ChainAddressToID(chain)), hashing.Bytes32(marshaledBytesHash(data)))
+	return hashing.SoliditySHA3(addressData(sender), hashing.Bytes32(inner))
 }
 
 type ContractTransaction struct {

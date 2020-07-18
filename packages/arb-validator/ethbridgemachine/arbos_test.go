@@ -17,6 +17,7 @@
 package ethbridgemachine
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -305,17 +306,15 @@ func TestBatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	batchSize := 20
-	txes := make([]message.L2Message, 0, batchSize)
-	hashes := make([]common.Hash, 0, batchSize)
+	batchSize := 21
 	senders := make([]common.Address, 0, batchSize)
+	pks := make([]*ecdsa.PrivateKey, 0)
 	for i := 0; i < batchSize; i++ {
 		pk, err := crypto.GenerateKey()
 		if err != nil {
 			t.Fatal(err)
 		}
 		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
-		senders = append(senders, addr)
 		depositResults := runMessage(
 			t,
 			mach,
@@ -328,17 +327,40 @@ func TestBatch(t *testing.T) {
 		if len(depositResults) != 0 {
 			t.Fatal("deposit should not have had a result")
 		}
-
+		pks = append(pks, pk)
+	}
+	batchSender := common.NewAddressFromEth(crypto.PubkeyToAddress(pks[0].PublicKey))
+	txes := make([]message.L2Message, 0)
+	hashes := make([]common.Hash, 0)
+	batchSenderSeq := int64(0)
+	for i := 0; i < 10; i++ {
+		tx := message.Transaction{
+			MaxGas:      big.NewInt(100000000000),
+			GasPriceBid: big.NewInt(0),
+			SequenceNum: big.NewInt(batchSenderSeq),
+			DestAddress: dest,
+			Payment:     big.NewInt(0),
+			Data:        []byte{},
+		}
+		senders = append(senders, batchSender)
+		txes = append(txes, message.L2Message{Msg: tx})
+		hashes = append(hashes, tx.MessageID(batchSender, chain))
+		batchSenderSeq++
+	}
+	for _, pk := range pks[1:] {
 		tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
 		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
 		if err != nil {
 			t.Fatal(err)
 		}
+		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
+		senders = append(senders, addr)
 		txes = append(txes, message.L2Message{Msg: message.NewSignedTransactionFromEth(signedTx)})
 		hashes = append(hashes, common.NewHashFromEth(signedTx.Hash()))
 	}
+
 	msg := message.NewTransactionBatchFromMessages(txes)
-	results = runMessage(t, mach, message.L2Message{Msg: msg}, common.RandAddress())
+	results = runMessage(t, mach, message.L2Message{Msg: msg}, batchSender)
 	if len(results) != len(txes) {
 		t.Fatal("incorrect result count", len(results), "instead of", len(txes))
 	}
