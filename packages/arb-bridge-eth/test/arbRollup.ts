@@ -486,7 +486,7 @@ describe('ArbRollup', async () => {
     const template = await arbFactory.rollupTemplate()
     const ArbRollup = await ethers.getContractFactory('ArbRollup')
     const templateRollup = ArbRollup.attach(template) as ArbRollup
-    templateRollup.init(
+    await templateRollup.init(
       initialVmState, // vmState
       gracePeriodTicks, // gracePeriodTicks
       1000000, // arbGasSpeedLimitPerTick
