@@ -16,7 +16,6 @@
 /* eslint-env browser */
 'use strict'
 
-import * as ethers from 'ethers'
 import txaggregator from './abi/txaggregator.server.d'
 
 // TODO remove this dep

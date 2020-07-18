@@ -160,9 +160,9 @@ export class ArbWallet extends ethers.Signer {
     const tx: ethers.utils.Transaction = {
       data: ethers.utils.hexlify(l2tx.calldata),
       from: from,
-      gasLimit: ethers.utils.bigNumberify(1),
-      gasPrice: ethers.utils.bigNumberify(1),
-      hash: l2tx.messageID(from),
+      gasLimit: l2tx.maxGas,
+      gasPrice: l2tx.gasPriceBid,
+      hash: l2tx.messageID(from, this.provider.chainId),
       nonce: l2tx.sequenceNum.toNumber(),
       to: l2tx.destAddress,
       value: l2tx.payment,

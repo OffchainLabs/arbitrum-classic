@@ -33,16 +33,9 @@ module.exports = {
       rules: {
         'no-empty-pattern': 'warn',
         'prettier/prettier': ['error', { singleQuote: true }],
-        '@typescript-eslint/no-use-before-define': [
-          'error',
-          { functions: false },
-        ],
-        '@typescript-eslint/no-use-before-define': [
-          'warn',
-          { functions: false },
-        ],
         '@typescript-eslint/member-delimiter-style': ['off'],
         '@typescript-eslint/no-explicit-any': ['warn'],
+        '@typescript-eslint/no-use-before-define': ['off'],
       },
     },
   ],

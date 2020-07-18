@@ -23,7 +23,6 @@ import {
   MessageCode,
   L2MessageCode,
   L2Call,
-  L2Message,
 } from './message'
 import { ArbClient, AVMProof, NodeInfo } from './client'
 import { AggregatorClient } from './aggregator'
@@ -158,12 +157,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
           continue
         }
         if (log.name == MessageDelivered) {
-          if (log.values.kind == MessageCode.L2) {
-            const msg = L2Message.fromData(log.values.data)
-            if (msg.message.kind == L2MessageCode.Transaction) {
-              return msg.message.messageID(log.values.sender)
-            }
-          }
           return log.values.inboxSeqNum
         }
       }
