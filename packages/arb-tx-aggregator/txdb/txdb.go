@@ -63,11 +63,14 @@ func New(
 		checkpointer: checkpointer,
 		timeGetter:   clnt,
 	}
+	log.Println("New TXDB")
 	if checkpointer.HasCheckpointedState() {
-		// If there is no error restoring, do that, otherwise fall back to
-		// starting fresh
+		log.Println("New TXDB2")
 		if err := txdb.RestoreFromCheckpoint(ctx); err == nil {
+			log.Println("New TXDB3")
 			return txdb, nil
+		} else {
+			log.Println("Failed to restore from checkpoint, falling back to fresh start")
 		}
 	}
 

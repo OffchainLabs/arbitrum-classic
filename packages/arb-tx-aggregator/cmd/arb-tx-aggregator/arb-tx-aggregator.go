@@ -19,8 +19,10 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/machineobserver"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
@@ -86,9 +88,16 @@ func main() {
 		log.Fatal(err)
 	}
 
+	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "contract.mexe")
+	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
+	db, err := machineobserver.RunObserver(context.Background(), rollupArgs.Address, client.EthArbClient, contractFile, dbPath)
+	if err != nil {
+		log.Fatal(err)
+	}
 	server := aggregator.NewServer(
 		context.Background(),
 		globalInbox, rollupArgs.Address,
+		db,
 	)
 
 	s := rpc.NewServer()

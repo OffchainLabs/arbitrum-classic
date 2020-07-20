@@ -52,13 +52,18 @@ func NewServer(
 	ctx context.Context,
 	globalInbox arbbridge.GlobalInbox,
 	rollupAddress common.Address,
+	db *txdb.TxDB,
 ) *Server {
-	return &Server{chain: rollupAddress, batch: batcher.NewBatcher(ctx, globalInbox, rollupAddress)}
+	return &Server{
+		chain: rollupAddress,
+		batch: batcher.NewBatcher(ctx, globalInbox, rollupAddress),
+		db:    db,
+	}
 }
 
 // SendTransaction takes a request signed transaction message from a client
 // and puts it in a queue to be included in the next transaction batch
-func (m *Server) SendTransaction(_ *http.Request, args *SendTransactionArgs, _ *SendTransactionReply) error {
+func (m *Server) SendTransaction(_ *http.Request, args *evm.SendTransactionArgs, _ *evm.SendTransactionReply) error {
 	destBytes, err := hexutil.Decode(args.DestAddress)
 	if err != nil {
 		return errors2.Wrap(err, "error decoding Dest")

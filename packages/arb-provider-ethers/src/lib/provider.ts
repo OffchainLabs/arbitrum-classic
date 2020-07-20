@@ -26,7 +26,6 @@ import {
   L2Message,
 } from './message'
 import { ArbClient } from './client'
-import { AggregatorClient } from './aggregator'
 import * as ArbValue from './value'
 import { ArbWallet } from './wallet'
 
@@ -81,7 +80,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   public chainId: number
   public ethProvider: ethers.providers.JsonRpcProvider
   public client: ArbClient
-  public aggregator?: AggregatorClient
 
   private arbRollupCache?: ArbRollup
   private globalInboxCache?: GlobalInbox
@@ -89,18 +87,13 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   private chainAddressCache?: string
 
   constructor(
-    validatorUrl: string,
-    provider: ethers.providers.JsonRpcProvider,
-    aggregatorUrl?: string
+    aggregatorUrl: string,
+    provider: ethers.providers.JsonRpcProvider
   ) {
     super(123456789)
     this.chainId = 123456789
     this.ethProvider = provider
-    this.client = new ArbClient(validatorUrl)
-
-    if (aggregatorUrl) {
-      this.aggregator = new AggregatorClient(aggregatorUrl)
-    }
+    this.client = new ArbClient(aggregatorUrl)
   }
 
   public async arbRollupConn(): Promise<ArbRollup> {

@@ -154,7 +154,7 @@ export class ArbWallet extends ethers.Signer {
         `Can only send from wallet address ${from}, but tried to send from ${walletAddress}`
       )
     }
-    if (this.provider.aggregator) {
+    try {
       const batchTxHash = l2tx.batchHash(vmId)
 
       const messageHashBytes = ethers.utils.arrayify(batchTxHash)
@@ -167,7 +167,7 @@ export class ArbWallet extends ethers.Signer {
         )
       }
 
-      this.provider.aggregator.sendTransaction(
+      this.provider.client.sendTransaction(
         l2tx.destAddress,
         l2tx.sequenceNum,
         l2tx.payment,
@@ -175,7 +175,8 @@ export class ArbWallet extends ethers.Signer {
         this.pubkey,
         sig
       )
-    } else {
+    } catch (err) {
+      // If we couldn't send through the aggregator, put the tx on-chain ourselves
       const globalInbox = await this.globalInboxConn()
       await globalInbox.sendL2Message(vmId, new L2Message(l2tx).asData())
     }

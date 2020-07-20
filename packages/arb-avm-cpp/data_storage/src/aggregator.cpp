@@ -159,8 +159,11 @@ struct FlatSaver {
     }
 
     std::string load(rocksdb::Transaction& tx, uint64_t index) {
-        if (index >= count(tx)) {
-            throw std::runtime_error("invalid index");
+        uint64_t current_count = count(tx);
+        if (index >= current_count) {
+            std::stringstream ss;
+            ss << "invalid index " << index << "/" << current_count;
+            throw std::runtime_error(ss.str());
         }
         auto full_key = entryKey(index);
         std::string value;

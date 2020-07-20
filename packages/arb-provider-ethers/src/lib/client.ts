@@ -99,6 +99,39 @@ export class ArbClient {
     this.client = _arbClient(managerUrl)
   }
 
+  public async sendTransaction(
+    destAddress: string,
+    sequenceNum: ethers.utils.BigNumber,
+    payment: ethers.utils.BigNumber,
+    data: ethers.utils.Arrayish,
+    pubkey: string,
+    signature: string
+  ): Promise<evm.SendTransactionReply> {
+    return new Promise<evm.SendTransactionReply>((resolve, reject): void => {
+      const params: evm.SendTransactionArgs = {
+        destAddress,
+        sequenceNum: sequenceNum.toString(),
+        payment: payment.toString(),
+        data: ethers.utils.hexlify(data),
+        pubkey,
+        signature,
+      }
+      this.client.request(
+        `${NAMESPACE}.SendTransaction`,
+        [params],
+        (err: Error, error: Error, result: evm.SendTransactionReply) => {
+          if (err) {
+            reject(err)
+          } else if (error) {
+            reject(error)
+          } else {
+            resolve(result)
+          }
+        }
+      )
+    })
+  }
+
   public async getBlockCount(): Promise<number> {
     const params: evm.BlockCountArgs = {}
     return await new Promise<number>((resolve, reject): void => {

@@ -102,6 +102,21 @@ export interface BlockInfoReply {
   bloom?: string
 }
 
+export interface SendTransactionArgs {
+  maxGas?: string
+  gasPriceBid?: string
+  sequenceNum?: string
+  destAddress?: string
+  payment?: string
+  data?: string
+  pubkey?: string
+  signature?: string
+}
+
+export interface SendTransactionReply {
+  accepted?: boolean
+}
+
 export interface RollupValidatorService {
   GetBlockCount: (r: BlockCountArgs) => BlockCountReply
   GetBlockInfo: (r: BlockInfoArgs) => BlockInfoReply
@@ -110,4 +125,5 @@ export interface RollupValidatorService {
   CallMessage: (r: CallMessageArgs) => CallMessageReply
   FindLogs: (r: FindLogsArgs) => FindLogsReply
   GetChainAddress: (r: GetChainAddressArgs) => GetChainAddressReply
+  SendTransaction: (r: SendTransactionArgs) => SendTransactionReply
 }

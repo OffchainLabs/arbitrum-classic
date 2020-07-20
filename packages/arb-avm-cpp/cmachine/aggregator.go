@@ -40,7 +40,7 @@ type AggregatorStore struct {
 	c unsafe.Pointer
 }
 
-func deleteAggregatorStore(bs *BlockStore) {
+func deleteAggregatorStore(bs *AggregatorStore) {
 	C.deleteAggregatorStore(bs.c)
 }
 
@@ -127,8 +127,8 @@ func (as *AggregatorStore) LatestBlock() (*common.BlockId, error) {
 func (as *AggregatorStore) SaveBlock(id *common.BlockId, logBloom common.Hash) error {
 	cHeaderHash := hashToData(id.HeaderHash)
 	defer C.free(cHeaderHash)
-
 	cLogBloom := hashToData(logBloom)
+
 	defer C.free(cLogBloom)
 
 	if C.aggregatorSaveBlock(as.c, C.uint64_t(id.Height.AsInt().Uint64()), cHeaderHash, cLogBloom) == 0 {

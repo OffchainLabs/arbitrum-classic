@@ -101,9 +101,10 @@ int aggregatorSaveBlock(CAggregatorStore* agg,
     try {
         static_cast<AggregatorStore*>(agg)->saveBlock(
             height, receiveUint256(hash), receiveUint256(bloom));
-        return 1;
-    } catch (const std::exception&) {
-        return 0;
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "aggregatorSaveBlock error: " << e.what() << std::endl;
+        return false;
     }
 }
 
@@ -125,9 +126,10 @@ CBlockData aggregatorGetBlock(const CAggregatorStore* agg, uint64_t height) {
 int aggregatorRestoreBlock(CAggregatorStore* agg, uint64_t height) {
     try {
         static_cast<AggregatorStore*>(agg)->restoreBlock(height);
-        return 1;
-    } catch (const std::exception&) {
-        return 0;
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "aggregatorRestoreBlock error: " << e.what() << std::endl;
+        return false;
     }
 }
 
