@@ -188,6 +188,10 @@ func (m *Server) executeCall(mach machine.Machine, args *evm.CallMessageArgs) (*
 	seq, _ := new(big.Int).SetString("999999999999999999999999", 10)
 
 	callMsg := message.NewCallFromData(dataBytes)
+	// Max gas 0 in a call is a request for infinite gas
+	if callMsg.MaxGas.Cmp(big.NewInt(0)) == 0 {
+		callMsg.MaxGas.SetUint64(1000000000000)
+	}
 	inboxMsg := message.NewInboxMessage(
 		message.L2Message{Msg: callMsg},
 		sender,

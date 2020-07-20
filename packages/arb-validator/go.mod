@@ -8,7 +8,7 @@ require (
 	github.com/gorilla/rpc v1.2.0
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.6.5
-	github.com/offchainlabs/arbitrum/packages/arb-provider-go v0.6.5 // indirect
+	github.com/offchainlabs/arbitrum/packages/arb-provider-go v0.6.5
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.6.5
 	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.6.5
 	github.com/pkg/errors v0.9.1
@@ -20,3 +20,5 @@ replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../arb-util
 
 replace github.com/offchainlabs/arbitrum/packages/arb-validator-core => ../arb-validator-core
+
+replace github.com/offchainlabs/arbitrum/packages/arb-provider-go => ../arb-provider-go

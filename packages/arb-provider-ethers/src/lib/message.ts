@@ -36,11 +36,34 @@ function intValueToAddress(value: ArbValue.IntValue): string {
   )
 }
 
+export function marshaledBytesHash(data: Uint8Array): string {
+  let ret = ethers.utils.hexZeroPad(
+    ethers.utils.bigNumberify(data.length).toHexString(),
+    32
+  )
+  const chunks: string[] = []
+  let offset = 0
+  while (offset < data.length) {
+    const nextVal = new Uint8Array(32)
+    nextVal.set(data.slice(offset, offset + 32))
+    chunks.push('0x' + Buffer.from(nextVal).toString('hex'))
+    offset += 32
+  }
+  for (let i = 0; i < chunks.length; i++) {
+    ret = ethers.utils.solidityKeccak256(
+      ['bytes32', 'bytes32'],
+      [ret, chunks[chunks.length - 1 - i]]
+    )
+  }
+  return ret
+}
+
 export enum L2MessageCode {
   Transaction = 0,
   ContractTransaction = 1,
   Call = 2,
   TransactionBatch = 3,
+  SignedTransaction = 4,
 }
 
 export class L2Transaction {
@@ -104,25 +127,69 @@ export class L2Transaction {
     ])
   }
 
-  messageID(sender: string): string {
+  messageID(sender: string, chainId: number): string {
+    const data = ethers.utils.concat([[this.kind], this.asData()])
+    const inner = ethers.utils.solidityKeccak256(
+      ['uint256', 'bytes32'],
+      [chainId, marshaledBytesHash(data)]
+    )
     return ethers.utils.solidityKeccak256(
-      ['address', 'bytes'],
-      [sender, this.asData()]
+      ['bytes32', 'bytes32'],
+      [ethers.utils.hexZeroPad(sender, 32), inner]
     )
   }
+}
 
-  batchHash(chain: string): string {
-    return new ArbValue.TupleValue([
-      new ArbValue.IntValue(chain),
-      ArbValue.hexToBytestack(this.asData()),
-    ]).hash()
+export class L2SignedTransaction {
+  public kind: L2MessageCode.SignedTransaction
+
+  constructor(public tx: L2Transaction, public sig: string) {
+    this.kind = L2MessageCode.SignedTransaction
   }
 
-  batchData(signature: ethers.utils.Arrayish): string {
-    const length = ethers.utils.bigNumberify(this.calldata.length).toHexString()
-    const paddedLength = ethers.utils.hexZeroPad(length, 8)
-    const data = ethers.utils.concat([paddedLength, this.asData(), signature])
-    return ethers.utils.hexlify(data)
+  static fromData(data: ethers.utils.Arrayish): L2SignedTransaction {
+    const bytes = ethers.utils.arrayify(data)
+    const tx = L2Transaction.fromData(bytes.slice(0, bytes.length - 65))
+    const sig = bytes.slice(bytes.length - 65, bytes.length)
+    return new L2SignedTransaction(tx, ethers.utils.hexlify(sig))
+  }
+
+  asData(): Uint8Array {
+    return ethers.utils.concat([this.tx.asData(), this.sig])
+  }
+}
+
+export class L2Batch {
+  public kind: L2MessageCode.TransactionBatch
+
+  constructor(public messages: L2Message[]) {
+    this.kind = L2MessageCode.TransactionBatch
+  }
+
+  static fromData(data: ethers.utils.Arrayish): L2Batch {
+    const bytes = ethers.utils.arrayify(data)
+    let offset = 0
+    const messages: L2Message[] = []
+    while (offset < data.length) {
+      const lengthData = bytes.slice(offset, offset + 8)
+      offset += 8
+      const length = ethers.utils.bigNumberify(lengthData).toNumber()
+      messages.push(L2Message.fromData(bytes.slice(offset, offset + length)))
+    }
+    return new L2Batch(messages)
+  }
+
+  asData(): Uint8Array {
+    return ethers.utils.concat(
+      this.messages.map(msg => {
+        const data = msg.asData()
+        const lengthHex = ethers.utils.bigNumberify(data).toHexString()
+        return ethers.utils.concat([
+          ethers.utils.hexZeroPad(lengthHex, 8),
+          data,
+        ])
+      })
+    )
   }
 }
 
@@ -178,7 +245,11 @@ export class L2Call {
   }
 }
 
-export type L2SubMessage = L2Transaction | L2Call
+export type L2SubMessage =
+  | L2Transaction
+  | L2Call
+  | L2Batch
+  | L2SignedTransaction
 
 export enum MessageCode {
   Eth = 0,
@@ -390,12 +461,6 @@ export class IncomingMessage {
   }
 
   messageID(): string {
-    if (this.msg.kind == MessageCode.L2) {
-      const l2message = this.msg
-      if (l2message.message.kind == L2MessageCode.Transaction) {
-        return l2message.message.messageID(this.sender)
-      }
-    }
     return this.inboxSeqNum.toHexString()
   }
 }

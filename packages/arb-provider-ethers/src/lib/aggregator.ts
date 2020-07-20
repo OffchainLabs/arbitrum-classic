@@ -16,7 +16,6 @@
 /* eslint-env browser */
 'use strict'
 
-import * as ethers from 'ethers'
 import txaggregator from './abi/txaggregator.server.d'
 
 // TODO remove this dep
@@ -57,42 +56,28 @@ export class AggregatorClient {
     this.client = _aggregatorClient(managerUrl)
   }
 
-  public async sendTransaction(
-    destAddress: string,
-    sequenceNum: ethers.utils.BigNumber,
-    payment: ethers.utils.BigNumber,
-    data: ethers.utils.Arrayish,
-    pubkey: string,
-    signature: string
-  ): Promise<txaggregator.SendTransactionReply> {
-    return new Promise<txaggregator.SendTransactionReply>(
-      (resolve, reject): void => {
-        const params: txaggregator.SendTransactionArgs = {
-          destAddress,
-          sequenceNum: sequenceNum.toString(),
-          payment: payment.toString(),
-          data: ethers.utils.hexlify(data),
-          pubkey,
-          signature,
-        }
-        this.client.request(
-          'TxAggregator.SendTransaction',
-          [params],
-          (
-            err: Error,
-            error: Error,
-            result: txaggregator.SendTransactionReply
-          ) => {
-            if (err) {
-              reject(err)
-            } else if (error) {
-              reject(error)
-            } else {
-              resolve(result)
-            }
-          }
-        )
+  public async sendTransaction(signedTransaction: string): Promise<string> {
+    return new Promise<string>((resolve, reject): void => {
+      const params: txaggregator.SendTransactionArgs = {
+        signedTransaction,
       }
-    )
+      this.client.request(
+        'TxAggregator.SendTransaction',
+        [params],
+        (
+          err: Error,
+          error: Error,
+          result: txaggregator.SendTransactionReply
+        ) => {
+          if (err) {
+            reject(err)
+          } else if (error) {
+            reject(error)
+          } else {
+            resolve(result.transactionHash)
+          }
+        }
+      )
+    })
   }
 }

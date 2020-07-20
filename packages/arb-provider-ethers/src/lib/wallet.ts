@@ -29,13 +29,11 @@ export class ArbWallet extends ethers.Signer {
   public signer: ethers.Signer
   public provider: ArbProvider
   public globalInboxCache?: GlobalInbox
-  public pubkey?: string
 
   constructor(signer: ethers.Signer, provider: ArbProvider) {
     super()
     this.signer = signer
     this.provider = provider
-    this.pubkey = undefined
   }
 
   public async globalInboxConn(): Promise<GlobalInbox> {
@@ -90,10 +88,9 @@ export class ArbWallet extends ethers.Signer {
     value: ethers.utils.BigNumberish
   ): Promise<ethers.providers.TransactionResponse> {
     const sendValue = ethers.utils.bigNumberify(value)
-    const chain = await this.provider.getVmID()
     const globalInbox = await this.globalInboxConn()
     const tx = await globalInbox.depositERC20Message(
-      chain,
+      await this.provider.chainAddress,
       erc20,
       to,
       sendValue
@@ -106,10 +103,9 @@ export class ArbWallet extends ethers.Signer {
     erc721: string,
     tokenId: ethers.utils.BigNumberish
   ): Promise<ethers.providers.TransactionResponse> {
-    const chain = await this.provider.getVmID()
     const globalInbox = await this.globalInboxConn()
     const tx = await globalInbox.depositERC721Message(
-      chain,
+      await this.provider.chainAddress,
       erc721,
       to,
       tokenId
@@ -121,9 +117,12 @@ export class ArbWallet extends ethers.Signer {
     to: string,
     value: ethers.utils.BigNumberish
   ): Promise<ethers.providers.TransactionResponse> {
-    const chain = await this.provider.getVmID()
     const globalInbox = await this.globalInboxConn()
-    const tx = await globalInbox.depositEthMessage(chain, to, { value })
+    const tx = await globalInbox.depositEthMessage(
+      await this.provider.chainAddress,
+      to,
+      { value }
+    )
     return this.provider._wrapTransaction(tx, tx.hash)
   }
 
@@ -147,48 +146,28 @@ export class ArbWallet extends ethers.Signer {
     l2tx: L2Transaction,
     from: string
   ): Promise<ethers.providers.TransactionResponse> {
-    const vmId = await this.provider.getVmID()
     const walletAddress = await this.getAddress()
     if (from.toLowerCase() != walletAddress.toLowerCase()) {
       throw Error(
         `Can only send from wallet address ${from}, but tried to send from ${walletAddress}`
       )
     }
-    if (this.provider.aggregator) {
-      const batchTxHash = l2tx.batchHash(vmId)
-
-      const messageHashBytes = ethers.utils.arrayify(batchTxHash)
-      const sig = await this.signer.signMessage(messageHashBytes)
-
-      if (!this.pubkey) {
-        this.pubkey = ethers.utils.recoverPublicKey(
-          ethers.utils.arrayify(ethers.utils.hashMessage(messageHashBytes)),
-          sig
-        )
-      }
-
-      this.provider.aggregator.sendTransaction(
-        l2tx.destAddress,
-        l2tx.sequenceNum,
-        l2tx.payment,
-        l2tx.calldata,
-        this.pubkey,
-        sig
-      )
-    } else {
-      const globalInbox = await this.globalInboxConn()
-      await globalInbox.sendL2Message(vmId, new L2Message(l2tx).asData())
-    }
+    const globalInbox = await this.globalInboxConn()
+    await globalInbox.sendL2Message(
+      await this.provider.chainAddress,
+      new L2Message(l2tx).asData()
+    )
+    const network = await this.provider.getNetwork()
     const tx: ethers.utils.Transaction = {
       data: ethers.utils.hexlify(l2tx.calldata),
       from: from,
-      gasLimit: ethers.utils.bigNumberify(1),
-      gasPrice: ethers.utils.bigNumberify(1),
-      hash: l2tx.messageID(from),
+      gasLimit: l2tx.maxGas,
+      gasPrice: l2tx.gasPriceBid,
+      hash: l2tx.messageID(from, network.chainId),
       nonce: l2tx.sequenceNum.toNumber(),
       to: l2tx.destAddress,
       value: l2tx.payment,
-      chainId: this.provider.chainId,
+      chainId: network.chainId,
     }
     return this.provider._wrapTransaction(tx, tx.hash)
   }
@@ -196,6 +175,10 @@ export class ArbWallet extends ethers.Signer {
   public async sendTransaction(
     transaction: ethers.providers.TransactionRequest
   ): Promise<ethers.providers.TransactionResponse> {
+    if (this.provider.aggregator) {
+      return this.signer.sendTransaction(transaction)
+    }
+
     let gasLimit = await transaction.gasLimit
     if (!gasLimit) {
       // default to 90000 based on spec

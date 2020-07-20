@@ -31,7 +31,6 @@ func TestProcessNode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	initialNode := structures.NewInitialNode(mach, common.Hash{})
 	_, err = processNode(initialNode)
 	if err != nil {
