@@ -1,0 +1,70 @@
+/*
+ * Copyright 2020, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef caggregator_hpp
+#define caggregator_hpp
+
+#include "ctypes.h"
+
+#include <stdio.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+struct CBlockDataStruct {
+    int found;
+    const void* hash;
+
+    uint64_t start_log;
+    uint64_t log_count;
+
+    uint64_t start_message;
+    uint64_t message_count;
+};
+
+typedef struct CBlockDataStruct CBlockData;
+
+void deleteAggregator(CAggregatorStore* m);
+
+Uint64Result aggregatorLogCount(const CAggregatorStore* agg);
+int aggregatorSaveLog(CAggregatorStore* m, const void* data, uint64_t length);
+ByteSliceResult aggregatorGetLog(const CAggregatorStore* agg, uint64_t index);
+
+Uint64Result aggregatorMessageCount(const CAggregatorStore* agg);
+int aggregatorSaveMessage(CAggregatorStore* m,
+                          const void* data,
+                          uint64_t length);
+ByteSliceResult aggregatorGetMessage(const CAggregatorStore* agg,
+                                     uint64_t index);
+
+Uint64Result aggregatorBlockCount(const CAggregatorStore* agg);
+int aggregatorSaveBlock(CAggregatorStore* m, uint64_t height, const void* hash);
+CBlockData aggregatorGetBlock(const CAggregatorStore* agg, uint64_t height);
+int aggregatorRestoreBlock(CAggregatorStore* m, uint64_t height);
+
+// request_id is 32 bytes long
+ByteSliceResult aggregatorGetRequest(const CAggregatorStore* agg,
+                                     const void* request_id);
+int aggregatorSaveRequest(CAggregatorStore* agg,
+                          const void* request_id,
+                          uint64_t log_index);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* caggregator_hpp */

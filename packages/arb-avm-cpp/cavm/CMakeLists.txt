@@ -20,6 +20,7 @@ project (cavm LANGUAGES CXX)
 
 
 set(LIB_HEADERS
+  caggregator.h
   cblockstore.h
   cmachine.h
   ccheckpointstorage.h
@@ -29,6 +30,7 @@ set(LIB_HEADERS
 )
 
 set(LIB_SOURCES
+  caggregator.cpp
   cblockstore.cpp
   cmachine.cpp
   ccheckpointstorage.cpp

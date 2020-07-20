@@ -21,8 +21,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/txdb"
 	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
@@ -40,7 +40,6 @@ type Manager struct {
 	// set and whenever activeChain is going to be set (but not when it is accessed)
 	sync.Mutex
 
-	observer *MachineObserver
 	// reorgCache is nil when the validator is functioning normally. When the
 	// validator experiences a reorg it stores the current state in the reorg
 	// cache. It uses this cache to respond to non-mutating queries from users
@@ -53,6 +52,7 @@ type Manager struct {
 	// These variables are only written by the constructor
 	RollupAddress common.Address
 	checkpointer  checkpointing.RollupCheckpointer
+	txdb          *txdb.TxDB
 }
 
 const defaultMaxReorgDepth = 100
@@ -141,19 +141,17 @@ func CreateManager(
 				log.Fatal(err)
 			}
 
-			mach, currentChainId, err := RestoreLatestMachine(runCtx, clnt, cp, initialBlockId)
+			db, err := txdb.New(runCtx, clnt, cp, nil, initialBlockId)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			observer := MachineObserver{
-				mach:           mach,
-				logsChan:       make(chan value.Value),
-				currentBlockId: currentChainId,
-				prevBlockId:    currentChainId,
+			blockCount, err := db.BlockCount()
+			if err != nil {
+				log.Fatal(err)
 			}
 
-			log.Println("Starting observer from", observer.currentBlockId)
+			log.Println("Starting observer from", blockCount)
 
 			err = func() error {
 				// If the local chain is significantly behind the L1, catch up
@@ -163,7 +161,11 @@ func CreateManager(
 				// we are processing
 				maxReorg := cp.MaxReorgHeight()
 				for {
-					start := observer.currentBlockId.Height.AsInt()
+					blockCount, err := db.BlockCount()
+					if err != nil {
+						return err
+					}
+					start := new(big.Int).SetUint64(blockCount)
 					fetchEnd, err := calculateCatchupFetch(runCtx, start, clnt, maxReorg)
 					if err != nil {
 						return err
@@ -176,33 +178,35 @@ func CreateManager(
 					if err != nil {
 						return errors2.Wrap(err, "Manager hit error doing fast catchup")
 					}
-					for _, ev := range inboxDeliveredEvents {
-						observer.processNextMessage(ev)
+					if err := man.txdb.AddMessages(runCtx, inboxDeliveredEvents); err != nil {
+						return err
 					}
 				}
 
-				headersChan, err := clnt.SubscribeBlockHeaders(runCtx, observer.currentBlockId)
-				if err != nil {
-					return errors2.Wrap(err, "Error subscribing to block headers")
-				}
-
-				for maybeBlockId := range headersChan {
-					if maybeBlockId.Err != nil {
-						return errors2.Wrap(maybeBlockId.Err, "Error getting new header")
-					}
-
-					blockId := maybeBlockId.BlockId
-					timestamp := maybeBlockId.Timestamp
-
-					inboxEvents, err := inboxWatcher.GetDeliveredEventsInBlock(runCtx, blockId, timestamp)
-					if err != nil {
-						return errors2.Wrapf(err, "Manager hit error getting inbox events with block %v", blockId)
-					}
-
-					for _, ev := range inboxEvents {
-						observer.processNextMessage(ev)
-					}
-				}
+				//startBlock
+				//
+				//headersChan, err := clnt.SubscribeBlockHeaders(runCtx, observer.currentBlockId)
+				//if err != nil {
+				//	return errors2.Wrap(err, "Error subscribing to block headers")
+				//}
+				//
+				//for maybeBlockId := range headersChan {
+				//	if maybeBlockId.Err != nil {
+				//		return errors2.Wrap(maybeBlockId.Err, "Error getting new header")
+				//	}
+				//
+				//	blockId := maybeBlockId.BlockId
+				//	timestamp := maybeBlockId.Timestamp
+				//
+				//	inboxEvents, err := inboxWatcher.GetDeliveredEventsInBlock(runCtx, blockId, timestamp)
+				//	if err != nil {
+				//		return errors2.Wrapf(err, "Manager hit error getting inbox events with block %v", blockId)
+				//	}
+				//
+				//	for _, ev := range inboxEvents {
+				//		observer.processNextMessage(ev)
+				//	}
+				//}
 				return nil
 			}()
 
