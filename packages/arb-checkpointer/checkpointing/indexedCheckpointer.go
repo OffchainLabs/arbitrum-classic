@@ -42,7 +42,6 @@ type IndexedCheckpointer struct {
 	*sync.Mutex
 	db                    *cmachine.CheckpointStorage
 	bs                    machine.BlockStore
-	confirmedNodeStore    machine.ConfirmedNodeStore
 	nextCheckpointToWrite *writableCheckpoint
 	maxReorgHeight        *big.Int
 }
@@ -96,7 +95,6 @@ func newIndexedCheckpointer(
 		new(sync.Mutex),
 		cCheckpointer,
 		cCheckpointer.GetBlockStore(),
-		cCheckpointer.GetConfirmedNodeStore(),
 		nil,
 		maxReorgHeight,
 	}, nil
@@ -116,10 +114,6 @@ func (cp *IndexedCheckpointer) MaxReorgHeight() *big.Int {
 
 func (cp *IndexedCheckpointer) GetCheckpointDB() machine.CheckpointStorage {
 	return cp.db
-}
-
-func (cp *IndexedCheckpointer) GetConfirmedNodeStore() machine.ConfirmedNodeStore {
-	return cp.confirmedNodeStore
 }
 
 func (cp *IndexedCheckpointer) GetAggregatorStore() *cmachine.AggregatorStore {
@@ -170,22 +164,6 @@ func (cp *IndexedCheckpointer) AsyncSaveCheckpoint(
 
 func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbbridge.ChainTimeGetter, unmarshalFunc func([]byte, ckptcontext.RestoreContext, *common.BlockId) error) error {
 	return restoreLatestState(ctx, cp.bs, cp.db, clnt, unmarshalFunc)
-}
-
-func (cp *IndexedCheckpointer) CheckpointConfirmedNode(
-	nodeHash common.Hash,
-	depth uint64,
-	nodeData []byte,
-	cpCtx *ckptcontext.CheckpointContext,
-) error {
-	if _, err := cp.confirmedNodeStore.GetNode(depth, nodeHash); err == nil {
-		// Node already exists so don't bother inserting
-		return nil
-	}
-	if err := ckptcontext.SaveCheckpointContext(cp.db, cpCtx); err != nil {
-		return err
-	}
-	return cp.confirmedNodeStore.PutNode(depth, nodeHash, nodeData)
 }
 
 func restoreLatestState(

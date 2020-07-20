@@ -24,7 +24,6 @@ set(LIB_HEADERS
   cblockstore.h
   cmachine.h
   ccheckpointstorage.h
-  cconfirmednodestore.h
   utils.hpp
   ctypes.h
 )
@@ -34,7 +33,6 @@ set(LIB_SOURCES
   cblockstore.cpp
   cmachine.cpp
   ccheckpointstorage.cpp
-  cconfirmednodestore.cpp
 )
 
 add_library(cavm STATIC ${LIB_HEADERS} ${LIB_SOURCES})

@@ -20,7 +20,6 @@
 #include <data_storage/aggregator.hpp>
 #include <data_storage/blockstore.hpp>
 #include <data_storage/checkpointstorage.hpp>
-#include <data_storage/confirmednodestore.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 #include <data_storage/value/value.hpp>
@@ -70,11 +69,6 @@ void destroyCheckpointStorage(CCheckpointStorage* storage) {
 CBlockStore* createBlockStore(CCheckpointStorage* storage_ptr) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     return storage->getBlockStore().release();
-}
-
-CConfirmedNodeStore* createConfirmedNodeStore(CCheckpointStorage* storage_ptr) {
-    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
-    return storage->getConfirmedNodeStore().release();
 }
 
 CAggregatorStore* createAggregatorStore(CCheckpointStorage* storage_ptr) {

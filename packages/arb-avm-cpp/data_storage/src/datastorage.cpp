@@ -15,7 +15,6 @@
  */
 
 #include <data_storage/blockstore.hpp>
-#include <data_storage/confirmednodestore.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <string>

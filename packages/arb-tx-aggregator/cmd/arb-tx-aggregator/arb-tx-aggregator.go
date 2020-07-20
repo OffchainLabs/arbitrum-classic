@@ -101,9 +101,9 @@ func main() {
 		"application/json;charset=UTF-8",
 	)
 
-	if err := s.RegisterService(server, "TxAggregator"); err != nil {
+	if err := s.RegisterService(server, "Aggregator"); err != nil {
 		log.Fatal(err)
 	}
 
-	log.Fatal(utils.LaunchRPC(s, "1237", rpcVars))
+	log.Fatal(utils.LaunchRPC(s, "1235", rpcVars))
 }

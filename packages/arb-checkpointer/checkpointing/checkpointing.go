@@ -32,10 +32,8 @@ type RollupCheckpointer interface {
 	RestoreLatestState(context.Context, arbbridge.ChainTimeGetter, func([]byte, ckptcontext.RestoreContext, *common.BlockId) error) error
 	GetInitialMachine() (machine.Machine, error)
 	AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *ckptcontext.CheckpointContext) <-chan error
-	CheckpointConfirmedNode(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *ckptcontext.CheckpointContext) error
 
 	GetCheckpointDB() machine.CheckpointStorage
-	GetConfirmedNodeStore() machine.ConfirmedNodeStore
 	MaxReorgHeight() *big.Int
 }
 

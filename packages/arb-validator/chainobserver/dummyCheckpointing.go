@@ -52,10 +52,6 @@ func (dcp *DummyCheckpointer) GetCheckpointDB() machine.CheckpointStorage {
 	return nil
 }
 
-func (dcp *DummyCheckpointer) GetConfirmedNodeStore() machine.ConfirmedNodeStore {
-	return nil
-}
-
 func (dcp *DummyCheckpointer) HasCheckpointedState() bool {
 	return false
 }
@@ -69,10 +65,6 @@ func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
 }
 
 func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(_ *common.BlockId, _ []byte, _ *ckptcontext.CheckpointContext) <-chan error {
-	return nil
-}
-
-func (dcp *DummyCheckpointer) CheckpointConfirmedNode(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *ckptcontext.CheckpointContext) error {
 	return nil
 }
 
