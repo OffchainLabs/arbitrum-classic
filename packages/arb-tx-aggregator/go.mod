@@ -1,4 +1,4 @@
-module github.com/offchainlabs/arbitrum/packages/arb-validator
+module github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator
 
 go 1.13
 

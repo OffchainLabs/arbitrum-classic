@@ -16,6 +16,7 @@
 
 #include <data_storage/checkpointstorage.hpp>
 
+#include <data_storage/aggregator.hpp>
 #include <data_storage/blockstore.hpp>
 #include <data_storage/confirmednodestore.hpp>
 #include <data_storage/storageresult.hpp>
@@ -109,6 +110,10 @@ std::unique_ptr<BlockStore> CheckpointStorage::getBlockStore() const {
 std::unique_ptr<ConfirmedNodeStore> CheckpointStorage::getConfirmedNodeStore()
     const {
     return std::make_unique<ConfirmedNodeStore>(datastorage);
+}
+
+std::unique_ptr<AggregatorStore> CheckpointStorage::getAggregatorStore() const {
+    return std::make_unique<AggregatorStore>(datastorage);
 }
 
 Machine CheckpointStorage::getInitialMachine() const {

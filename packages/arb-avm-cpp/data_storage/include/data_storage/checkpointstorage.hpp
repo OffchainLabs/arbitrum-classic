@@ -28,6 +28,7 @@ struct GetResults;
 class Machine;
 class BlockStore;
 class ConfirmedNodeStore;
+class AggregatorStore;
 
 namespace rocksdb {
 class TransactionDB;
@@ -50,6 +51,7 @@ class CheckpointStorage {
     std::unique_ptr<KeyValueStore> makeKeyValueStore();
     std::unique_ptr<BlockStore> getBlockStore() const;
     std::unique_ptr<ConfirmedNodeStore> getConfirmedNodeStore() const;
+    std::unique_ptr<AggregatorStore> getAggregatorStore() const;
 
     Machine getInitialMachine() const;
     Machine getMachine(uint256_t machineHash) const;

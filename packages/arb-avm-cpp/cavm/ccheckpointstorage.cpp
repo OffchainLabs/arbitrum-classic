@@ -17,6 +17,7 @@
 #include "ccheckpointstorage.h"
 #include "utils.hpp"
 
+#include <data_storage/aggregator.hpp>
 #include <data_storage/blockstore.hpp>
 #include <data_storage/checkpointstorage.hpp>
 #include <data_storage/confirmednodestore.hpp>
@@ -74,6 +75,11 @@ CBlockStore* createBlockStore(CCheckpointStorage* storage_ptr) {
 CConfirmedNodeStore* createConfirmedNodeStore(CCheckpointStorage* storage_ptr) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     return storage->getConfirmedNodeStore().release();
+}
+
+CAggregatorStore* createAggregatorStore(CCheckpointStorage* storage_ptr) {
+    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    return storage->getAggregatorStore().release();
 }
 
 CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {

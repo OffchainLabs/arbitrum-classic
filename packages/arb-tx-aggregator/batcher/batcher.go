@@ -14,24 +14,19 @@
  * limitations under the License.
  */
 
-package txaggregator
+package batcher
 
 import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"errors"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	"log"
-	"math/big"
-	"net/http"
 	"sort"
 	"sync"
 	"time"
-
-	errors2 "github.com/pkg/errors"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -56,7 +51,7 @@ func NewDecodedBatchTx(tx message.BatchTx, key ecdsa.PublicKey) DecodedBatchTx {
 	}
 }
 
-type Server struct {
+type Batcher struct {
 	rollupAddress common.Address
 	globalInbox   arbbridge.GlobalInbox
 
@@ -65,13 +60,12 @@ type Server struct {
 	transactions []DecodedBatchTx
 }
 
-// NewServer returns a new instance of the Server class
-func NewServer(
+func NewBatcher(
 	ctx context.Context,
 	globalInbox arbbridge.GlobalInbox,
 	rollupAddress common.Address,
-) *Server {
-	server := &Server{
+) *Batcher {
+	server := &Batcher{
 		rollupAddress: rollupAddress,
 		globalInbox:   globalInbox,
 		valid:         true,
@@ -130,7 +124,7 @@ func prepareTransactions(txes []DecodedBatchTx) message.TransactionBatch {
 	return message.TransactionBatch{Transactions: batchTxes}
 }
 
-func (m *Server) sendBatch(ctx context.Context) {
+func (m *Batcher) sendBatch(ctx context.Context) {
 	var txes []DecodedBatchTx
 
 	if len(m.transactions) > maxTransactions {
@@ -159,58 +153,7 @@ func (m *Server) sendBatch(ctx context.Context) {
 
 // SendTransaction takes a request signed transaction message from a client
 // and puts it in a queue to be included in the next transaction batch
-func (m *Server) SendTransaction(_ *http.Request, args *SendTransactionArgs, _ *SendTransactionReply) error {
-	destBytes, err := hexutil.Decode(args.DestAddress)
-	if err != nil {
-		return errors2.Wrap(err, "error decoding Dest")
-	}
-	var dest common.Address
-	copy(dest[:], destBytes)
-
-	maxGas, valid := new(big.Int).SetString(args.MaxGas, 10)
-	if !valid {
-		return errors.New("invalid MaxGas")
-	}
-
-	gasPriceBid, valid := new(big.Int).SetString(args.GasPriceBid, 10)
-	if !valid {
-		return errors.New("invalid GasPriceBid")
-	}
-
-	sequenceNum, valid := new(big.Int).SetString(args.SequenceNum, 10)
-	if !valid {
-		return errors.New("invalid sequence num")
-	}
-
-	paymentInt, valid := new(big.Int).SetString(args.Payment, 10)
-	if !valid {
-		return errors.New("invalid Payment")
-	}
-
-	data, err := hexutil.Decode(args.Data)
-	if err != nil {
-		return errors2.Wrap(err, "error decoding data")
-	}
-
-	tx := message.Transaction{
-		MaxGas:      maxGas,
-		GasPriceBid: gasPriceBid,
-		SequenceNum: sequenceNum,
-		DestAddress: dest,
-		Payment:     paymentInt,
-		Data:        data,
-	}
-
-	pubkeyBytes, err := hexutil.Decode(args.Pubkey)
-	if err != nil {
-		return errors2.Wrap(err, "error decoding pubkey")
-	}
-
-	signature, err := hexutil.Decode(args.Signature)
-	if err != nil {
-		return errors2.Wrap(err, "error decoding signature")
-	}
-
+func (m *Batcher) SendTransaction(tx message.Transaction, pubkeyBytes []byte, signature []byte) error {
 	if len(signature) != signatureLength {
 		return errors.New("signature of wrong length")
 	}
@@ -250,7 +193,7 @@ func (m *Server) SendTransaction(_ *http.Request, args *SendTransactionArgs, _ *
 	}
 
 	if pubkeyErr != nil {
-		return err
+		return pubkeyErr
 	}
 	sender := common.NewAddressFromEth(crypto.PubkeyToAddress(*pubkey))
 	log.Println("Got tx: ", tx, "with hash", tx.MessageID(sender), "from", sender)

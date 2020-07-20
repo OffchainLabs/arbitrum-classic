@@ -28,6 +28,7 @@ import (
 	"bytes"
 	"errors"
 	"math/big"
+	"runtime"
 	"unsafe"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -44,6 +45,16 @@ type BlockInfo struct {
 	LogCount     uint64
 	StartMessage uint64
 	MessageCount uint64
+}
+
+func deleteAggregatorStore(bs *BlockStore) {
+	C.deleteAggregatorStore(bs.c)
+}
+
+func NewAggregatorStore(c unsafe.Pointer) *AggregatorStore {
+	as := &AggregatorStore{c: c}
+	runtime.SetFinalizer(as, deleteAggregatorStore)
+	return as
 }
 
 func (as *AggregatorStore) LogCount() (uint64, error) {

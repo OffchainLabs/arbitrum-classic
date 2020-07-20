@@ -14,6 +14,25 @@
  * limitations under the License.
  */
 
-package txaggregator
+syntax = "proto3";
+package aggregator;
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator";
 
-//go:generate protoc -I. --tstypes_out=declare_namespace=false:../../arb-provider-ethers/src/lib/abi --go_out=paths=source_relative:. server.proto
+message SendTransactionArgs {
+    string maxGas = 1;
+    string gasPriceBid = 2;
+    string sequenceNum = 3;
+    string destAddress = 4;
+    string payment = 5;
+    string data = 6;
+    string pubkey = 7;
+    string signature = 8;
+}
+
+message SendTransactionReply {
+    bool accepted = 1;
+}
+
+service Aggregator {
+    rpc SendTransaction (SendTransactionArgs) returns (SendTransactionReply);
+}

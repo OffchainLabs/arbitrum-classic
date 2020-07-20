@@ -27,11 +27,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/txaggregator"
 )
 
 func main() {
@@ -86,7 +86,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	server := txaggregator.NewServer(
+	server := aggregator.NewServer(
 		context.Background(),
 		globalInbox, rollupArgs.Address,
 	)

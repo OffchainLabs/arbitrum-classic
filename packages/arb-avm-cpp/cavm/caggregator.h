@@ -46,7 +46,7 @@ struct CBlockIdStruct {
 
 typedef struct CBlockIdStruct CBlockId;
 
-void deleteAggregator(CAggregatorStore* m);
+void deleteAggregatorStore(CAggregatorStore* m);
 
 Uint64Result aggregatorLogCount(const CAggregatorStore* agg);
 int aggregatorSaveLog(CAggregatorStore* m, const void* data, uint64_t length);

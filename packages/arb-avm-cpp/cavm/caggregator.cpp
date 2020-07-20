@@ -20,7 +20,7 @@
 
 #include <data_storage/aggregator.hpp>
 
-void deleteAggregator(CAggregatorStore* agg) {
+void deleteAggregatorStore(CAggregatorStore* agg) {
     delete static_cast<AggregatorStore*>(agg);
 }
 

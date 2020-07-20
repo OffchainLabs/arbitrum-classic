@@ -51,6 +51,7 @@ int deleteData(CCheckpointStorage* storage_ptr,
 
 CBlockStore* createBlockStore(CCheckpointStorage* storage_ptr);
 CConfirmedNodeStore* createConfirmedNodeStore(CCheckpointStorage* storage_ptr);
+CAggregatorStore* createAggregatorStore(CCheckpointStorage* storage_ptr);
 
 #ifdef __cplusplus
 }

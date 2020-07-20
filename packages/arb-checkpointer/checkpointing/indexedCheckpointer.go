@@ -40,7 +40,7 @@ var errNoMatchingCheckpoint = errors.New("cannot restore because no matching che
 
 type IndexedCheckpointer struct {
 	*sync.Mutex
-	db                    machine.CheckpointStorage
+	db                    *cmachine.CheckpointStorage
 	bs                    machine.BlockStore
 	confirmedNodeStore    machine.ConfirmedNodeStore
 	nextCheckpointToWrite *writableCheckpoint
@@ -120,6 +120,10 @@ func (cp *IndexedCheckpointer) GetCheckpointDB() machine.CheckpointStorage {
 
 func (cp *IndexedCheckpointer) GetConfirmedNodeStore() machine.ConfirmedNodeStore {
 	return cp.confirmedNodeStore
+}
+
+func (cp *IndexedCheckpointer) GetAggregatorStore() *cmachine.AggregatorStore {
+	return cp.db.GetAggregatorStore()
 }
 
 // HasCheckpointedState checks whether the block store is empty, which is the table

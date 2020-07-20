@@ -18,42 +18,15 @@ package machineobserver
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/txdb"
 	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
-	"sync"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
-
-type reorgCache struct {
-	latestValidMachine    machine.Machine
-	currentPendingMachine machine.Machine
-	currentBlockId        *common.BlockId
-}
-
-type Manager struct {
-	// The mutex should be held whenever listeres or reorgCache are accessed or
-	// set and whenever activeChain is going to be set (but not when it is accessed)
-	sync.Mutex
-
-	// reorgCache is nil when the validator is functioning normally. When the
-	// validator experiences a reorg it stores the current state in the reorg
-	// cache. It uses this cache to respond to non-mutating queries from users
-	// until it is caught back up with the latest state at which point it clears
-	// the cache and starts answering queries based on the current state.
-	// This approach let's us provide a best effort response to users quickly
-	// rather than blocking until the validator fully recovers from the reorg.
-	reorgCache *reorgCache
-
-	// These variables are only written by the constructor
-	RollupAddress common.Address
-	checkpointer  checkpointing.RollupCheckpointer
-	txdb          *txdb.TxDB
-}
 
 const defaultMaxReorgDepth = 100
 
@@ -82,13 +55,13 @@ func calculateCatchupFetch(ctx context.Context, start *big.Int, clnt arbbridge.C
 	return fetchEnd, nil
 }
 
-func CreateManager(
+func RunObserver(
 	ctx context.Context,
 	rollupAddr common.Address,
 	clnt arbbridge.ArbClient,
 	executablePath string,
 	dbPath string,
-) (*Manager, error) {
+) (*txdb.TxDB, error) {
 	cp, err := checkpointing.NewIndexedCheckpointer(
 		rollupAddr,
 		dbPath,
@@ -117,18 +90,23 @@ func CreateManager(
 		return nil, err
 	}
 
-	man := &Manager{
-		RollupAddress: rollupAddr,
-		checkpointer:  cp,
-	}
-
 	inboxAddr, err := rollupWatcher.InboxAddress(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	_, blockCreated, _, err := rollupWatcher.GetCreationInfo(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := txdb.New(ctx, clnt, cp, cp.GetAggregatorStore(), blockCreated)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	go func() {
-		var initialBlockId *common.BlockId
+
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
 
@@ -137,8 +115,7 @@ func CreateManager(
 				log.Fatal(err)
 			}
 
-			db, err := txdb.New(runCtx, clnt, cp, nil, initialBlockId)
-			if err != nil {
+			if err := db.RestoreFromCheckpoint(ctx); err != nil {
 				log.Fatal(err)
 			}
 
@@ -174,7 +151,7 @@ func CreateManager(
 					if err != nil {
 						return errors2.Wrap(err, "Manager hit error doing fast catchup")
 					}
-					if err := man.txdb.AddMessages(runCtx, inboxDeliveredEvents); err != nil {
+					if err := db.AddMessages(runCtx, inboxDeliveredEvents); err != nil {
 						return err
 					}
 				}
@@ -223,6 +200,5 @@ func CreateManager(
 			}
 		}
 	}()
-
-	return man, nil
+	return db, nil
 }

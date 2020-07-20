@@ -37,6 +37,9 @@ class AggregatorStore {
     std::shared_ptr<DataStorage> data_storage;
 
    public:
+    AggregatorStore(std::shared_ptr<DataStorage> data_storage_)
+        : data_storage(std::move(data_storage_)) {}
+
     uint64_t logCount() const;
     void saveLog(const std::vector<char>& log);
     std::vector<char> getLog(uint64_t index) const;

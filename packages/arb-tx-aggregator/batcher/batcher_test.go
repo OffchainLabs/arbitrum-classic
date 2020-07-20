@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-package txaggregator
+package batcher
 
 import (
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"math/big"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 func TestPrepareTransactions(t *testing.T) {

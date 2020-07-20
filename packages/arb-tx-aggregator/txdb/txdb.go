@@ -53,38 +53,26 @@ func New(
 	clnt arbbridge.ChainTimeGetter,
 	checkpointer checkpointing.RollupCheckpointer,
 	as *cmachine.AggregatorStore,
-	initialBlockId *common.BlockId,
+	blockCreated *common.BlockId,
 ) (*TxDB, error) {
+	txdb := &TxDB{
+		as:           as,
+		checkpointer: checkpointer,
+		timeGetter:   clnt,
+	}
 	if checkpointer.HasCheckpointedState() {
-		var mach machine.Machine
-		var blockId *common.BlockId
-		if err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext, restoreBlockId *common.BlockId) error {
-			var machineHash common.Hash
-			copy(machineHash[:], chainObserverBytes)
-			mach = restoreCtx.GetMachine(machineHash)
-			blockId = restoreBlockId
-			return nil
-		}); err != nil {
-			return nil, err
+		// If there is no error restoring, do that, otherwise fall back to
+		// starting fresh
+		if err := txdb.RestoreFromCheckpoint(ctx); err == nil {
+			return txdb, nil
 		}
-		if err := as.RestoreBlock(blockId.Height.AsInt().Uint64()); err != nil {
-			return nil, err
-		}
-		return &TxDB{
-			mach:         mach,
-			as:           as,
-			checkpointer: checkpointer,
-			timeGetter:   clnt,
-			callMach:     mach.Clone(),
-			callBlock:    blockId,
-		}, nil
 	}
 
 	mach, err := checkpointer.GetInitialMachine()
 	if err != nil {
 		return nil, err
 	}
-	prevBlockId, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocksInt(initialBlockId.Height.AsInt().Int64()-1))
+	prevBlockId, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocksInt(blockCreated.Height.AsInt().Int64()-1))
 	if err != nil {
 		return nil, err
 	}
@@ -101,14 +89,33 @@ func New(
 	if err := as.SaveBlock(prevBlockId); err != nil {
 		return nil, err
 	}
-	return &TxDB{
-		mach:         mach,
-		as:           as,
-		checkpointer: checkpointer,
-		timeGetter:   clnt,
-		callMach:     mach.Clone(),
-		callBlock:    prevBlockId,
-	}, nil
+	txdb.mach = mach
+	txdb.callMach = mach.Clone()
+	txdb.callBlock = prevBlockId
+	return txdb, nil
+}
+
+func (txdb *TxDB) RestoreFromCheckpoint(ctx context.Context) error {
+	var mach machine.Machine
+	var blockId *common.BlockId
+	if err := txdb.checkpointer.RestoreLatestState(ctx, txdb.timeGetter, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext, restoreBlockId *common.BlockId) error {
+		var machineHash common.Hash
+		copy(machineHash[:], chainObserverBytes)
+		mach = restoreCtx.GetMachine(machineHash)
+		blockId = restoreBlockId
+		return nil
+	}); err != nil {
+		return err
+	}
+	if err := txdb.as.RestoreBlock(blockId.Height.AsInt().Uint64()); err != nil {
+		return err
+	}
+	txdb.mach = mach
+	txdb.callMut.Lock()
+	defer txdb.callMut.Unlock()
+	txdb.callMach = mach.Clone()
+	txdb.callBlock = blockId
+	return nil
 }
 
 // The first
