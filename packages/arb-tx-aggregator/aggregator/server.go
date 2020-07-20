@@ -166,6 +166,19 @@ func (m *Server) FindLogs(
 	return nil
 }
 
+func (m *Server) GetBlockCount(
+	_ *http.Request,
+	_ *evm.BlockCountArgs,
+	reply *evm.BlockCountReply,
+) error {
+	id, err := m.db.LatestBlock()
+	if err != nil {
+		return err
+	}
+	reply.Height = id.Height.AsInt().Uint64()
+	return nil
+}
+
 func (m *Server) GetOutputMessage(
 	_ *http.Request,
 	args *evm.GetOutputMessageArgs,

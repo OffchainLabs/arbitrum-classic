@@ -57,6 +57,13 @@ message TopicGroup {
     repeated string topics = 1;
 }
 
+message BlockCountArgs {
+}
+
+message BlockCountReply {
+    uint64 height = 1;
+}
+
 message FindLogsArgs {
     string fromHeight = 1;
     string toHeight = 2;
@@ -117,6 +124,7 @@ message BlockInfoReply {
 }
 
 service RollupValidator {
+    rpc GetBlockCount (BlockCountArgs) returns (BlockCountReply);
     rpc GetBlockInfo (BlockInfoArgs) returns (BlockInfoReply);
     rpc GetOutputMessage (GetOutputMessageArgs) returns (GetOutputMessageReply);
     rpc GetRequestResult (GetRequestResultArgs) returns (GetRequestResultReply);

@@ -90,7 +90,7 @@ export class ArbWallet extends ethers.Signer {
     value: ethers.utils.BigNumberish
   ): Promise<ethers.providers.TransactionResponse> {
     const sendValue = ethers.utils.bigNumberify(value)
-    const chain = await this.provider.getVmID()
+    const chain = await this.provider.chainAddress()
     const globalInbox = await this.globalInboxConn()
     const tx = await globalInbox.depositERC20Message(
       chain,
@@ -106,7 +106,7 @@ export class ArbWallet extends ethers.Signer {
     erc721: string,
     tokenId: ethers.utils.BigNumberish
   ): Promise<ethers.providers.TransactionResponse> {
-    const chain = await this.provider.getVmID()
+    const chain = await this.provider.chainAddress()
     const globalInbox = await this.globalInboxConn()
     const tx = await globalInbox.depositERC721Message(
       chain,
@@ -121,7 +121,7 @@ export class ArbWallet extends ethers.Signer {
     to: string,
     value: ethers.utils.BigNumberish
   ): Promise<ethers.providers.TransactionResponse> {
-    const chain = await this.provider.getVmID()
+    const chain = await this.provider.chainAddress()
     const globalInbox = await this.globalInboxConn()
     const tx = await globalInbox.depositEthMessage(chain, to, { value })
     return this.provider._wrapTransaction(tx, tx.hash)
@@ -147,7 +147,7 @@ export class ArbWallet extends ethers.Signer {
     l2tx: L2Transaction,
     from: string
   ): Promise<ethers.providers.TransactionResponse> {
-    const vmId = await this.provider.getVmID()
+    const vmId = await this.provider.chainAddress()
     const walletAddress = await this.getAddress()
     if (from.toLowerCase() != walletAddress.toLowerCase()) {
       throw Error(

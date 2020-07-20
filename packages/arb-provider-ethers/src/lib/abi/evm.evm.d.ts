@@ -39,6 +39,12 @@ export interface TopicGroup {
   topics?: Array<string>
 }
 
+export interface BlockCountArgs {}
+
+export interface BlockCountReply {
+  height?: number
+}
+
 export interface FindLogsArgs {
   fromHeight?: string
   toHeight?: string
@@ -97,6 +103,7 @@ export interface BlockInfoReply {
 }
 
 export interface RollupValidatorService {
+  GetBlockCount: (r: BlockCountArgs) => BlockCountReply
   GetBlockInfo: (r: BlockInfoArgs) => BlockInfoReply
   GetOutputMessage: (r: GetOutputMessageArgs) => GetOutputMessageReply
   GetRequestResult: (r: GetRequestResultArgs) => GetRequestResultReply
