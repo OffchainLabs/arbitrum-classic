@@ -48,7 +48,6 @@ func (l logResponse) Equals(o logResponse) bool {
 // txTracker is thread safe
 type txTracker struct {
 	chainlistener.NoopListener
-	chainAddress common.Address
 
 	// The RWMutex protects the variables listed below it
 	sync.RWMutex

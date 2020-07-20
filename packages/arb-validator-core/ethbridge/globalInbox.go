@@ -18,6 +18,8 @@ package ethbridge
 
 import (
 	"context"
+	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
@@ -44,7 +46,7 @@ func newGlobalInbox(address ethcommon.Address, chain ethcommon.Address, client e
 	return &globalInbox{watcher, auth}, nil
 }
 
-func (con *globalInbox) SendL2Message(ctx context.Context, chain common.Address, msg message.L2Message) error {
+func (con *globalInbox) SendL2Message(ctx context.Context, chain common.Address, msg message.L2Message) (arbbridge.MessageDeliveredEvent, error) {
 	con.auth.Lock()
 	defer con.auth.Unlock()
 	tx, err := con.GlobalInbox.SendL2MessageFromOrigin(
@@ -52,10 +54,22 @@ func (con *globalInbox) SendL2Message(ctx context.Context, chain common.Address,
 		chain.ToEthAddress(),
 		msg.AsData(),
 	)
+	receipt, err := WaitForReceiptWithResults(ctx, con.client, con.auth.auth.From, tx, "SendL2MessageFromOrigin")
 	if err != nil {
-		return err
+		return arbbridge.MessageDeliveredEvent{}, err
 	}
-	return con.waitForReceipt(ctx, tx, "SendL2MessageFromOrigin")
+	for _, evmLog := range receipt.Logs {
+		if receipt.Logs[0].Topics[0] != messageDeliveredFromOriginID {
+			continue
+		}
+		blockHeader, err := con.client.HeaderByHash(ctx, evmLog.BlockHash)
+		if err != nil {
+			return arbbridge.MessageDeliveredEvent{}, err
+		}
+		timestamp := new(big.Int).SetUint64(blockHeader.Time)
+		return con.parseMessageFromOrigin(*evmLog, timestamp, msg.AsData())
+	}
+	return arbbridge.MessageDeliveredEvent{}, errors.New("Didn't output message delivered event")
 }
 
 func (con *globalInbox) SendL2MessageNoWait(ctx context.Context, chain common.Address, msg message.L2Message) error {
