@@ -48,10 +48,6 @@ func (dcp *DummyCheckpointer) Initialized() bool {
 	return dcp.initialMachine != nil
 }
 
-func (dcp *DummyCheckpointer) GetCheckpointDB() machine.CheckpointStorage {
-	return nil
-}
-
 func (dcp *DummyCheckpointer) HasCheckpointedState() bool {
 	return false
 }

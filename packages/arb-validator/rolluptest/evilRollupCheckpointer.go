@@ -64,10 +64,6 @@ func (e EvilRollupCheckpointer) GetMachine(h common.Hash) machine.Machine {
 	return NewEvilMachine(e.cp.(ckptcontext.RestoreContext).GetMachine(h).(*cmachine.Machine))
 }
 
-func (e *EvilRollupCheckpointer) GetCheckpointDB() machine.CheckpointStorage {
-	return e.cp.GetCheckpointDB()
-}
-
 func (e EvilRollupCheckpointer) HasCheckpointedState() bool {
 	return e.cp.HasCheckpointedState()
 }

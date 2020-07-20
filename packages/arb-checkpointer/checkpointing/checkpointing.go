@@ -33,7 +33,6 @@ type RollupCheckpointer interface {
 	GetInitialMachine() (machine.Machine, error)
 	AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *ckptcontext.CheckpointContext) <-chan error
 
-	GetCheckpointDB() machine.CheckpointStorage
 	MaxReorgHeight() *big.Int
 }
 

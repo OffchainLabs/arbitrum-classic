@@ -112,10 +112,6 @@ func (cp *IndexedCheckpointer) MaxReorgHeight() *big.Int {
 	return new(big.Int).Set(cp.maxReorgHeight)
 }
 
-func (cp *IndexedCheckpointer) GetCheckpointDB() machine.CheckpointStorage {
-	return cp.db
-}
-
 func (cp *IndexedCheckpointer) GetAggregatorStore() *cmachine.AggregatorStore {
 	return cp.db.GetAggregatorStore()
 }
