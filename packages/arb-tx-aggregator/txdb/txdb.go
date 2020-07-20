@@ -29,6 +29,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"log"
+	"sync"
 )
 
 type TxDB struct {
@@ -36,6 +37,10 @@ type TxDB struct {
 	as           *cmachine.AggregatorStore
 	checkpointer checkpointing.RollupCheckpointer
 	timeGetter   arbbridge.ChainTimeGetter
+
+	callMut   sync.Mutex
+	callMach  machine.Machine
+	callBlock *common.BlockId
 }
 
 type blockInbox struct {
@@ -70,6 +75,8 @@ func New(
 			as:           as,
 			checkpointer: checkpointer,
 			timeGetter:   clnt,
+			callMach:     mach.Clone(),
+			callBlock:    blockId,
 		}, nil
 	}
 
@@ -99,6 +106,8 @@ func New(
 		as:           as,
 		checkpointer: checkpointer,
 		timeGetter:   clnt,
+		callMach:     mach.Clone(),
+		callBlock:    prevBlockId,
 	}, nil
 }
 
@@ -113,12 +122,25 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 		if err := txdb.addAssertion(assertion, numSteps, bi.block); err != nil {
 			return nil
 		}
+		txdb.callMut.Lock()
+		// If we didn't run, no need to update the machine
+		if numSteps > 0 {
+			txdb.callMach = txdb.mach.Clone()
+		}
+		txdb.callBlock = bi.block
+		txdb.callMut.Unlock()
 	}
 	return nil
 }
 
-func (txdb *TxDB) BlockCount() (uint64, error) {
-	return txdb.as.BlockCount()
+func (txdb *TxDB) CallInfo() (machine.Machine, *common.BlockId) {
+	txdb.callMut.Lock()
+	defer txdb.callMut.Unlock()
+	return txdb.callMach, txdb.callBlock
+}
+
+func (txdb *TxDB) LatestBlock() (*common.BlockId, error) {
+	return txdb.as.LatestBlock()
 }
 
 func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps uint64, block *common.BlockId) error {
@@ -178,10 +200,11 @@ func makeBlockInbox(msgs []arbbridge.MessageDeliveredEvent) blockInbox {
 }
 
 func (txdb *TxDB) breakByBlock(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent) ([]blockInbox, error) {
-	currentBlockCount, err := txdb.as.BlockCount()
+	latestBlock, err := txdb.as.LatestBlock()
 	if err != nil {
 		return nil, err
 	}
+	latestBlockHeight := latestBlock.Height.AsInt().Uint64()
 	blocks := make([]blockInbox, 0)
 	stack := make([]arbbridge.MessageDeliveredEvent, 0)
 	for _, msg := range msgs {
@@ -189,8 +212,8 @@ func (txdb *TxDB) breakByBlock(ctx context.Context, msgs []arbbridge.MessageDeli
 			stack = append(stack, msg)
 		} else {
 			nextBlockIndex := makeBlockInbox(stack)
-			for nextBlockIndex.block.Height.AsInt().Uint64() > currentBlockCount {
-				blockId, err := txdb.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocksInt(int64(currentBlockCount)))
+			for nextBlockIndex.block.Height.AsInt().Uint64() > latestBlockHeight+1 {
+				blockId, err := txdb.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocksInt(int64(latestBlockHeight)))
 				if err != nil {
 					return nil, err
 				}
@@ -198,14 +221,16 @@ func (txdb *TxDB) breakByBlock(ctx context.Context, msgs []arbbridge.MessageDeli
 					inbox: value.NewEmptyTuple(),
 					block: blockId,
 				})
-				currentBlockCount++
+				latestBlockHeight++
 			}
 			blocks = append(blocks, makeBlockInbox(stack))
 			stack = make([]arbbridge.MessageDeliveredEvent, 0)
+			latestBlockHeight++
 		}
 	}
 	if len(stack) > 0 {
 		blocks = append(blocks, makeBlockInbox(stack))
+		latestBlockHeight++
 	}
 	return blocks, nil
 }

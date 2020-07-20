@@ -85,11 +85,12 @@ ByteSliceResult aggregatorGetMessage(const CAggregatorStore* agg,
     }
 }
 
-Uint64Result aggregatorBlockCount(const CAggregatorStore* agg) {
+CBlockId aggregatorLatestBlock(const CAggregatorStore* agg) {
     try {
-        return {static_cast<const AggregatorStore*>(agg)->blockCount(), true};
+        auto latest = static_cast<const AggregatorStore*>(agg)->latestBlock();
+        return {1, returnUint256(latest.second), latest.first};
     } catch (const std::exception&) {
-        return {0, false};
+        return {0, nullptr, 0};
     }
 }
 

@@ -45,7 +45,7 @@ class AggregatorStore {
     void saveMessage(const std::vector<char>& log);
     std::vector<char> getMessage(uint64_t index) const;
 
-    uint64_t blockCount() const;
+    std::pair<uint64_t, uint256_t> latestBlock() const;
     uint64_t getInitialBlock() const;
     void saveBlock(uint64_t height, const uint256_t& hash);
     BlockData getBlock(uint64_t height) const;

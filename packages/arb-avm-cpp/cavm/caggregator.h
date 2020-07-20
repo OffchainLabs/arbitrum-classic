@@ -38,6 +38,14 @@ struct CBlockDataStruct {
 
 typedef struct CBlockDataStruct CBlockData;
 
+struct CBlockIdStruct {
+    int found;
+    const void* hash;
+    uint64_t height;
+};
+
+typedef struct CBlockIdStruct CBlockId;
+
 void deleteAggregator(CAggregatorStore* m);
 
 Uint64Result aggregatorLogCount(const CAggregatorStore* agg);
@@ -51,7 +59,7 @@ int aggregatorSaveMessage(CAggregatorStore* m,
 ByteSliceResult aggregatorGetMessage(const CAggregatorStore* agg,
                                      uint64_t index);
 
-Uint64Result aggregatorBlockCount(const CAggregatorStore* agg);
+CBlockId aggregatorLatestBlock(const CAggregatorStore* agg);
 int aggregatorSaveBlock(CAggregatorStore* m, uint64_t height, const void* hash);
 CBlockData aggregatorGetBlock(const CAggregatorStore* agg, uint64_t height);
 int aggregatorRestoreBlock(CAggregatorStore* m, uint64_t height);

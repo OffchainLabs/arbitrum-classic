@@ -27,6 +27,7 @@ import "C"
 import (
 	"bytes"
 	"errors"
+	"math/big"
 	"unsafe"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -108,12 +109,15 @@ func (as *AggregatorStore) GetMessage(index uint64) (value.Value, error) {
 	return value.UnmarshalValue(bytes.NewBuffer(logBytes))
 }
 
-func (as *AggregatorStore) BlockCount() (uint64, error) {
-	result := C.aggregatorBlockCount(as.c)
+func (as *AggregatorStore) LatestBlock() (*common.BlockId, error) {
+	result := C.aggregatorLatestBlock(as.c)
 	if result.found == 0 {
-		return 0, errors.New("failed to load block count")
+		return nil, errors.New("failed to load block count")
 	}
-	return uint64(result.value), nil
+	return &common.BlockId{
+		Height:     common.NewTimeBlocks(new(big.Int).SetUint64(uint64(result.height))),
+		HeaderHash: dataToHash(result.hash),
+	}, nil
 }
 
 func (as *AggregatorStore) SaveBlock(id *common.BlockId) error {

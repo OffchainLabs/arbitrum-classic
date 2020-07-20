@@ -86,7 +86,7 @@ func CreateManager(
 	ctx context.Context,
 	rollupAddr common.Address,
 	clnt arbbridge.ArbClient,
-	aoFilePath string,
+	executablePath string,
 	dbPath string,
 ) (*Manager, error) {
 	cp, err := checkpointing.NewIndexedCheckpointer(
@@ -100,7 +100,7 @@ func CreateManager(
 	}
 
 	if !cp.Initialized() {
-		if err := cp.Initialize(aoFilePath); err != nil {
+		if err := cp.Initialize(executablePath); err != nil {
 			return nil, err
 		}
 	}
@@ -121,20 +121,16 @@ func CreateManager(
 		RollupAddress: rollupAddr,
 		checkpointer:  cp,
 	}
-	var initialBlockId *common.BlockId
+
+	inboxAddr, err := rollupWatcher.InboxAddress(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	go func() {
+		var initialBlockId *common.BlockId
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
-
-			rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			inboxAddr, err := rollupWatcher.InboxAddress(runCtx)
-			if err != nil {
-				log.Fatal(err)
-			}
 
 			inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
 			if err != nil {
@@ -146,12 +142,12 @@ func CreateManager(
 				log.Fatal(err)
 			}
 
-			blockCount, err := db.BlockCount()
+			latest, err := db.LatestBlock()
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			log.Println("Starting observer from", blockCount)
+			log.Println("Starting observer from", latest)
 
 			err = func() error {
 				// If the local chain is significantly behind the L1, catch up
@@ -161,11 +157,11 @@ func CreateManager(
 				// we are processing
 				maxReorg := cp.MaxReorgHeight()
 				for {
-					blockCount, err := db.BlockCount()
+					latestBlock, err := db.LatestBlock()
 					if err != nil {
 						return err
 					}
-					start := new(big.Int).SetUint64(blockCount)
+					start := new(big.Int).Add(latestBlock.Height.AsInt(), big.NewInt(1))
 					fetchEnd, err := calculateCatchupFetch(runCtx, start, clnt, maxReorg)
 					if err != nil {
 						return err
@@ -183,30 +179,33 @@ func CreateManager(
 					}
 				}
 
-				//startBlock
-				//
-				//headersChan, err := clnt.SubscribeBlockHeaders(runCtx, observer.currentBlockId)
-				//if err != nil {
-				//	return errors2.Wrap(err, "Error subscribing to block headers")
-				//}
-				//
-				//for maybeBlockId := range headersChan {
-				//	if maybeBlockId.Err != nil {
-				//		return errors2.Wrap(maybeBlockId.Err, "Error getting new header")
-				//	}
-				//
-				//	blockId := maybeBlockId.BlockId
-				//	timestamp := maybeBlockId.Timestamp
-				//
-				//	inboxEvents, err := inboxWatcher.GetDeliveredEventsInBlock(runCtx, blockId, timestamp)
-				//	if err != nil {
-				//		return errors2.Wrapf(err, "Manager hit error getting inbox events with block %v", blockId)
-				//	}
-				//
-				//	for _, ev := range inboxEvents {
-				//		observer.processNextMessage(ev)
-				//	}
-				//}
+				latest, err := db.LatestBlock()
+				if err != nil {
+					return err
+				}
+
+				headersChan, err := clnt.SubscribeBlockHeadersAfter(runCtx, latest)
+				if err != nil {
+					return errors2.Wrap(err, "Error subscribing to block headers")
+				}
+
+				for maybeBlockId := range headersChan {
+					if maybeBlockId.Err != nil {
+						return errors2.Wrap(maybeBlockId.Err, "Error getting new header")
+					}
+
+					blockId := maybeBlockId.BlockId
+					timestamp := maybeBlockId.Timestamp
+
+					inboxEvents, err := inboxWatcher.GetDeliveredEventsInBlock(runCtx, blockId, timestamp)
+					if err != nil {
+						return errors2.Wrapf(err, "Manager hit error getting inbox events with block %v", blockId)
+					}
+
+					if err := db.AddMessages(runCtx, inboxEvents); err != nil {
+						return err
+					}
+				}
 				return nil
 			}()
 

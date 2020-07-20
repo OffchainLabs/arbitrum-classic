@@ -131,12 +131,17 @@ struct FlatSaver {
     template <typename T>
     void saveNext(rocksdb::Transaction& tx, const T& output) {
         uint64_t current_count = count(tx);
-        auto full_key = entryKey(current_count);
+        save(tx, output, current_count);
+        saveCount(tx, current_count + 1);
+    }
+
+    template <typename T>
+    void save(rocksdb::Transaction& tx, const T& output, uint64_t index) {
+        auto full_key = entryKey(index);
         auto s = tx.Put(vecToSlice(full_key), vecToSlice(output));
         if (!s.ok()) {
-            throw std::runtime_error("failed to save next");
+            throw std::runtime_error("failed to save");
         }
-        saveCount(tx, current_count + 1);
     }
 
     std::string load(rocksdb::Transaction& tx, uint64_t index) {
@@ -217,9 +222,14 @@ std::vector<char> AggregatorStore::getRequest(
     return {log_value.begin(), log_value.end()};
 }
 
-uint64_t AggregatorStore::blockCount() const {
+std::pair<uint64_t, uint256_t> AggregatorStore::latestBlock() const {
     auto tx = data_storage->beginTransaction();
-    return BlockSaver{}.count(*tx);
+    uint64_t block_count = BlockSaver{}.count(*tx);
+    if (block_count == 0) {
+        throw std::runtime_error("no blocks in db");
+    }
+    auto block = getBlock(block_count - 1);
+    return {block_count - 1, block.hash};
 }
 
 uint64_t AggregatorStore::getInitialBlock() const {
@@ -235,17 +245,19 @@ uint64_t AggregatorStore::getInitialBlock() const {
 
 void AggregatorStore::saveBlock(uint64_t height, const uint256_t& hash) {
     auto tx = data_storage->beginTransaction();
+    auto value = blockValue(hash, logCount(), messageCount());
 
     std::string initial_value;
     auto s = tx->Get(rocksdb::ReadOptions{}, vecToSlice(initial_block_key),
                      &initial_value);
-    if (!s.IsNotFound()) {
+    if (s.IsNotFound()) {
         auto initial_val = uint64Value(height);
         auto s =
             tx->Put(vecToSlice(initial_block_key), vecToSlice(initial_val));
         if (!s.ok()) {
             throw std::runtime_error("couldn't save initial block");
         }
+        BlockSaver{}.save(*tx, value, height);
     } else if (!s.ok()) {
         throw std::runtime_error("couldn't load initial block");
     } else {
@@ -253,10 +265,8 @@ void AggregatorStore::saveBlock(uint64_t height, const uint256_t& hash) {
         if (height != current_count) {
             throw std::runtime_error("must save consecutive blocks");
         }
+        BlockSaver{}.saveNext(*tx, value);
     }
-
-    auto value = blockValue(hash, logCount(), messageCount());
-    BlockSaver{}.saveNext(*tx, value);
     commitTx(*tx);
 }
 
