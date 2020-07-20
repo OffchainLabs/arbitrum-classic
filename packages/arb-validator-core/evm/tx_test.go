@@ -29,7 +29,10 @@ func newRandomTxInfo(r *Result) *TxInfo {
 		TransactionHash:  common.RandHash(),
 		RawVal:           r.AsValue(),
 		StartLogIndex:    rand.Uint64(),
-		Location:         NewRandomNodeLocation(),
+		Block: &common.BlockId{
+			Height:     common.NewTimeBlocks(common.RandBigInt()),
+			HeaderHash: common.RandHash(),
+		},
 		Proof: &AVMLogProof{
 			LogPreHash:   "",
 			LogPostHash:  "",

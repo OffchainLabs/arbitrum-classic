@@ -19,7 +19,6 @@ package txdb
 import (
 	"context"
 	"errors"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -32,6 +31,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"log"
+	"math/big"
 	"sync"
 )
 
@@ -180,6 +180,114 @@ func (txdb *TxDB) LatestBlock() (*common.BlockId, error) {
 	return txdb.as.LatestBlock()
 }
 
+func (txdb *TxDB) FindLogs(
+	ctx context.Context,
+	fromHeight *uint64,
+	toHeight *uint64,
+	address []common.Address,
+	topics [][]common.Hash,
+) ([]evm.FullLog, error) {
+	latestBlock, err := txdb.LatestBlock()
+	if err != nil {
+		return nil, err
+	}
+	startHeight := uint64(0)
+	endHeight := latestBlock.Height.AsInt().Uint64()
+	if fromHeight != nil && *fromHeight > 0 {
+		startHeight = *fromHeight
+	}
+	if toHeight != nil {
+		altEndHeight := *toHeight + 1
+		if endHeight > altEndHeight {
+			endHeight = altEndHeight
+		}
+	}
+	logs := make([]evm.FullLog, 0)
+	if startHeight >= endHeight {
+		return logs, nil
+	}
+
+	for i := startHeight; i <= endHeight; i++ {
+		select {
+		case <-ctx.Done():
+			return nil, errors.New("call timed out")
+		default:
+		}
+		blockInfo, err := txdb.GetBlock(i)
+		if err != nil {
+			return nil, err
+		}
+
+		if !maybeMatchesLogQuery(blockInfo.Bloom[:], address, topics) {
+			continue
+		}
+
+		for j := uint64(0); j < blockInfo.LogCount; j++ {
+			logVal, err := txdb.as.GetLog(j)
+			if err != nil {
+				return nil, err
+			}
+
+			res, err := evm.NewResultFromValue(logVal)
+			if err != nil {
+				return nil, err
+			}
+
+			logIndex := uint64(0)
+			for _, evmLog := range res.EVMLogs {
+				if evmLog.MatchesQuery(address, topics) {
+					logs = append(logs, evm.FullLog{
+						Log:     evmLog,
+						TxIndex: j,
+						TxHash:  res.L1Message.MessageID(),
+						Index:   logIndex,
+						Block: &common.BlockId{
+							Height:     common.NewTimeBlocks(new(big.Int).SetUint64(i)),
+							HeaderHash: blockInfo.Hash,
+						},
+					})
+				}
+				logIndex++
+			}
+		}
+	}
+	return logs, nil
+}
+
+func maybeMatchesLogQuery(bloom []byte, addresses []common.Address, topics [][]common.Hash) bool {
+	logFilter := types.BytesToBloom(bloom)
+
+	if len(addresses) > 0 {
+		match := false
+		for _, addr := range addresses {
+			if logFilter.TestBytes(addr[:]) {
+				match = true
+				break
+			}
+		}
+		if !match {
+			return false
+		}
+	}
+
+	for _, topicGroup := range topics {
+		if len(topicGroup) == 0 {
+			continue
+		}
+		match := false
+		for _, topic := range topicGroup {
+			if logFilter.TestBytes(topic[:]) {
+				match = true
+				break
+			}
+		}
+		if !match {
+			return false
+		}
+	}
+	return true
+}
+
 func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps uint64, block *common.BlockId) error {
 	for _, avmMessage := range assertion.ParseOutMessages() {
 		if err := txdb.as.SaveMessage(avmMessage); err != nil {
@@ -207,13 +315,9 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 		}
 
 		for _, evmLog := range res.EVMLogs {
-			evmParsedTopics := make([]ethcommon.Hash, len(evmLog.Topics))
-			for j, t := range evmLog.Topics {
-				evmParsedTopics[j] = ethcommon.BytesToHash(t[:])
-			}
 			ethLogs = append(ethLogs, &types.Log{
 				Address: evmLog.Address.ToEthAddress(),
-				Topics:  evmParsedTopics,
+				Topics:  common.NewEthHashesFromHashes(evmLog.Topics),
 			})
 		}
 		startLogIndex += uint64(len(res.EVMLogs))

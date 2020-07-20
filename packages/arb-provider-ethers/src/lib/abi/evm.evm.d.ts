@@ -8,7 +8,8 @@ export interface NodeLocation {
 
 export interface FullLogBuf {
   address?: string
-  location?: NodeLocation
+  blockHash?: string
+  blockHeight?: number
   data?: string
   logIndex?: string
   topics?: Array<string>
@@ -29,7 +30,8 @@ export interface TxInfoBuf {
   txHash?: string
   txIndex?: number
   startLogIndex?: number
-  location?: NodeLocation
+  blockHash?: string
+  blockHeight?: number
   proof?: AVMLogProof
 }
 

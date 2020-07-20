@@ -340,7 +340,7 @@ func newSubscription(ctx context.Context, conn *ArbConnection, query ethereum.Fi
 				// Therefore the next query can start with block height one
 				// greater than the last log in the previous query
 				if len(logInfos) > 0 {
-					query.FromBlock = new(big.Int).SetUint64(logInfos[len(logInfos)-1].Location.NodeHeight + 1)
+					query.FromBlock = new(big.Int).Add(logInfos[len(logInfos)-1].Block.Height.AsInt(), big.NewInt(1))
 				}
 			}
 		}
@@ -402,14 +402,9 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	var evmLogs []*types.Log
 	logIndex := startLogIndex
 	for _, l := range result.EVMLogs {
-		evmParsedTopics := make([]ethcommon.Hash, len(l.Topics))
-		for j, t := range l.Topics {
-			evmParsedTopics[j] = ethcommon.BytesToHash(t[:])
-		}
-
 		ethLog := &types.Log{
 			Address:     l.Address.ToEthAddress(),
-			Topics:      evmParsedTopics,
+			Topics:      common.NewEthHashesFromHashes(l.Topics),
 			Data:        l.Data,
 			BlockNumber: result.L1Message.ChainTime.BlockNum.AsInt().Uint64(),
 			TxHash:      txHash,

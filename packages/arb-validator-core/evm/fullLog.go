@@ -20,6 +20,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"math/big"
 	"strconv"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -27,44 +28,31 @@ import (
 
 type FullLog struct {
 	Log
-	TxIndex  uint64
-	TxHash   common.Hash
-	Location *NodeLocation
-	Index    uint64
-	Removed  bool
+	TxIndex uint64
+	TxHash  common.Hash
+	Index   uint64
+	Block   *common.BlockId
+	Removed bool
 }
 
 func (l FullLog) Equals(o FullLog) bool {
 	return l.Log.Equals(o.Log) &&
 		l.TxIndex == o.TxIndex &&
 		l.TxHash == o.TxHash &&
-		l.Location.Equals(o.Location) &&
+		l.Block.Equals(o.Block) &&
 		l.Index == o.Index &&
 		l.Removed == o.Removed
 }
 
 func (l FullLog) ToEVMLog() *types.Log {
-	evmParsedTopics := make([]ethcommon.Hash, len(l.Topics))
-	for j, t := range l.Topics {
-		evmParsedTopics[j] = ethcommon.BytesToHash(t[:])
-	}
-
-	var blockHash ethcommon.Hash
-	var blockNumber uint64
-	if l.Location != nil {
-		location := l.Location
-		blockHash = ethcommon.HexToHash(location.NodeHash)
-		blockNumber = location.NodeHeight
-	}
-
 	return &types.Log{
 		Address:     l.Address.ToEthAddress(),
-		Topics:      evmParsedTopics,
+		Topics:      common.NewEthHashesFromHashes(l.Topics),
 		Data:        l.Data,
-		BlockNumber: blockNumber,
+		BlockNumber: l.Block.Height.AsInt().Uint64(),
 		TxHash:      l.TxHash.ToEthHash(),
 		TxIndex:     uint(l.TxIndex),
-		BlockHash:   blockHash,
+		BlockHash:   l.Block.HeaderHash.ToEthHash(),
 		Index:       uint(l.Index),
 		Removed:     l.Removed,
 	}
@@ -77,7 +65,8 @@ func (l FullLog) Marshal() *FullLogBuf {
 	}
 	return &FullLogBuf{
 		Address:          l.Address.Hex(),
-		Location:         l.Location,
+		BlockHash:        l.Block.HeaderHash.String(),
+		BlockHeight:      l.Block.Height.AsInt().Uint64(),
 		Data:             hexutil.Encode(l.Data),
 		LogIndex:         "0x" + strconv.FormatUint(0, 16),
 		Topics:           topicStrings,
@@ -104,7 +93,10 @@ func (x *FullLogBuf) Unmarshal() (FullLog, error) {
 		return ret, err
 	}
 	ret.TxHash = common.NewHashFromEth(ethcommon.HexToHash(x.TransactionHash))
-	ret.Location = x.Location
+	ret.Block = &common.BlockId{
+		Height:     common.NewTimeBlocks(new(big.Int).SetUint64(x.BlockHeight)),
+		HeaderHash: common.NewHashFromEth(ethcommon.HexToHash(x.BlockHash)),
+	}
 	ret.Index, err = hexutil.DecodeUint64(x.Index)
 	if err != nil {
 		return ret, err

@@ -26,7 +26,8 @@ message NodeLocation {
 
 message FullLogBuf {
     string address = 1;
-    NodeLocation location = 2;
+    string blockHash = 2;
+    uint64 blockHeight = 3;
     string data = 4;
     string logIndex = 5;
     repeated string topics = 6;
@@ -47,8 +48,9 @@ message TxInfoBuf {
     string txHash = 3;
     uint64 txIndex = 4;
     uint64 startLogIndex = 5;
-    NodeLocation location = 6;
-    AVMLogProof proof = 7;
+    string blockHash = 6;
+    uint64 blockHeight = 7;
+    AVMLogProof proof = 8;
 }
 
 message TopicGroup {

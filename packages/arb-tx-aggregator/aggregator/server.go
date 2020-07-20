@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
@@ -31,6 +32,7 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -111,20 +113,58 @@ func (m *Server) SendTransaction(_ *http.Request, args *SendTransactionArgs, _ *
 	return m.batch.SendTransaction(tx, pubkeyBytes, signature)
 }
 
-// FindLogs takes a set of parameters and return the list of all logs that match
-// the query
-//func (m *Server) FindLogs(
-//	_ *http.Request,
-//	args *evm.FindLogsArgs,
-//	reply *evm.FindLogsReply,
-//) error {
-//	ret, err := m.Server.FindLogs(context.Background(), args)
-//	if err != nil || ret == nil {
-//		return err
-//	}
-//	reply.Logs = ret.Logs
-//	return nil
-//}
+//FindLogs takes a set of parameters and return the list of all logs that match
+//the query
+func (m *Server) FindLogs(
+	request *http.Request,
+	args *evm.FindLogsArgs,
+	reply *evm.FindLogsReply,
+) error {
+	addresses := make([]common.Address, 0, 1)
+	for _, addr := range args.Addresses {
+		addresses = append(addresses, common.HexToAddress(addr))
+	}
+
+	topicGroups := make([][]common.Hash, 0, len(args.TopicGroups))
+	for _, topicGroup := range args.TopicGroups {
+		topics := make([]common.Hash, 0, len(topicGroup.Topics))
+		for _, topic := range topicGroup.Topics {
+			topics = append(topics, common.NewHashFromEth(ethcommon.HexToHash(topic)))
+		}
+		topicGroups = append(topicGroups, topics)
+	}
+
+	var fromHeight *uint64
+	if len(args.FromHeight) != 0 {
+		intVal, err := strconv.ParseUint(args.FromHeight[2:], 16, 64)
+		if err != nil {
+			return errors2.Wrap(err, "bad from height")
+		}
+		fromHeight = &intVal
+	}
+
+	var toHeight *uint64
+	if len(args.ToHeight) != 0 && args.ToHeight != "latest" {
+		intVal, err := strconv.ParseUint(args.ToHeight[2:], 16, 64)
+		if err != nil {
+			return errors2.Wrap(err, "bad to height")
+		}
+		toHeight = &intVal
+	}
+
+	logs, err := m.db.FindLogs(request.Context(), fromHeight, toHeight, addresses, topicGroups)
+	if err != nil {
+		return err
+	}
+
+	logInfos := make([]*evm.FullLogBuf, 0, len(logs))
+	for _, l := range logs {
+		logInfos = append(logInfos, l.Marshal())
+	}
+
+	reply.Logs = logInfos
+	return nil
+}
 
 func (m *Server) GetOutputMessage(
 	_ *http.Request,

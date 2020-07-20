@@ -72,7 +72,7 @@ type TxInfo struct {
 	TransactionHash  common.Hash
 	RawVal           value.Value
 	StartLogIndex    uint64
-	Location         *NodeLocation
+	Block            *common.BlockId
 	Proof            *AVMLogProof
 }
 
@@ -81,7 +81,7 @@ func (tx *TxInfo) Equals(o *TxInfo) bool {
 		tx.TransactionHash == o.TransactionHash &&
 		value.Eq(tx.RawVal, o.RawVal) &&
 		tx.StartLogIndex == o.StartLogIndex &&
-		tx.Location.Equals(o.Location) &&
+		tx.Block.Equals(o.Block) &&
 		tx.Proof.Equals(o.Proof)
 }
 
@@ -100,7 +100,8 @@ func (tx *TxInfo) Marshal() *TxInfoBuf {
 		TxHash:        tx.TransactionHash.String(),
 		TxIndex:       tx.TransactionIndex,
 		StartLogIndex: tx.StartLogIndex,
-		Location:      tx.Location,
+		BlockHash:     tx.Block.HeaderHash.String(),
+		BlockHeight:   tx.Block.Height.AsInt().Uint64(),
 		Proof:         tx.Proof,
 	}
 }
@@ -126,8 +127,11 @@ func (x *TxInfoBuf) Unmarshal() (*TxInfo, error) {
 		TransactionHash:  common.NewHashFromEth(ethcommon.HexToHash(x.TxHash)),
 		RawVal:           val,
 		StartLogIndex:    x.StartLogIndex,
-		Location:         x.Location,
-		Proof:            x.Proof,
+		Block: &common.BlockId{
+			Height:     common.NewTimeBlocks(new(big.Int).SetUint64(x.BlockHeight)),
+			HeaderHash: common.NewHashFromEth(ethcommon.HexToHash(x.BlockHash)),
+		},
+		Proof: x.Proof,
 	}, nil
 }
 
@@ -146,29 +150,16 @@ func (tx *TxInfo) ToEthReceipt() (*types.Receipt, error) {
 	var evmLogs []*types.Log
 	logIndex := tx.StartLogIndex
 	for _, l := range result.EVMLogs {
-		evmParsedTopics := make([]ethcommon.Hash, len(l.Topics))
-		for j, t := range l.Topics {
-			evmParsedTopics[j] = ethcommon.BytesToHash(t[:])
-		}
-
 		l := FullLog{
-			Log:      l,
-			TxIndex:  tx.TransactionIndex,
-			TxHash:   tx.TransactionHash,
-			Location: tx.Location,
-			Index:    logIndex,
+			Log:     l,
+			TxIndex: tx.TransactionIndex,
+			TxHash:  tx.TransactionHash,
+			Block:   tx.Block,
+			Index:   logIndex,
 		}.ToEVMLog()
 
 		evmLogs = append(evmLogs, l)
 		logIndex++
-	}
-
-	var blockHash ethcommon.Hash
-	var blockNumber *big.Int
-	if tx.Location != nil {
-		location := tx.Location
-		blockHash = ethcommon.HexToHash(location.NodeHash)
-		blockNumber = new(big.Int).SetUint64(location.NodeHeight)
 	}
 
 	contractAddress := ethcommon.Address{}
@@ -192,9 +183,9 @@ func (tx *TxInfo) ToEthReceipt() (*types.Receipt, error) {
 		Logs:              evmLogs,
 		TxHash:            tx.TransactionHash.ToEthHash(),
 		ContractAddress:   contractAddress,
-		GasUsed:           1,
-		BlockHash:         blockHash,
-		BlockNumber:       blockNumber,
+		GasUsed:           result.GasUsed.Uint64(),
+		BlockHash:         tx.Block.HeaderHash.ToEthHash(),
+		BlockNumber:       tx.Block.Height.AsInt(),
 		TransactionIndex:  uint(tx.TransactionIndex),
 	}, nil
 }
