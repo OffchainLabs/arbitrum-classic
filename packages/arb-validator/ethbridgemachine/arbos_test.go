@@ -17,22 +17,143 @@
 package ethbridgemachine
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
+	"crypto/ecdsa"
+	"errors"
+	"fmt"
+	"log"
 	"math/big"
 	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
+	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
+
+func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender common.Address) []*evm.Result {
+	chainTime := message.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
+	}
+
+	inbox := structures.NewVMInbox()
+	inbox.DeliverMessage(message.NewInboxMessage(msg, sender, big.NewInt(0), chainTime))
+	assertion, steps := mach.ExecuteAssertion(1000000000, inbox.AsValue(), 0)
+	t.Log("Ran assertion for", steps, "steps and had", assertion.LogsCount, "logs")
+	if mach.CurrentStatus() != machine.Extensive {
+		t.Fatal("machine should still be working")
+	}
+	results := make([]*evm.Result, 0)
+	for _, avmLog := range assertion.ParseLogs() {
+		result, err := evm.NewResultFromValue(avmLog)
+		if err != nil {
+			t.Fatal(err)
+		}
+		results = append(results, result)
+	}
+	return results
+}
+
+func runTransaction(t *testing.T, mach machine.Machine, msg message.Message, sender common.Address) (*evm.Result, error) {
+	results := runMessage(t, mach, msg, sender)
+	if len(results) != 1 {
+		return nil, fmt.Errorf("unexpected log count %v", len(results))
+	}
+	result := results[0]
+	if result.ResultCode != evm.ReturnCode {
+		return nil, fmt.Errorf("transaction failed unexpectedly %v", result)
+	}
+	return result, nil
+}
+
+func getBalanceCall(t *testing.T, mach machine.Machine, address common.Address) *big.Int {
+	info, err := abi.JSON(strings.NewReader(arboscontracts.ArbInfoABI))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	getBalanceABI := info.Methods["getBalance"]
+	getBalanceData, err := getBalanceABI.Inputs.Pack(address)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	getBalanceSignature, err := hexutil.Decode("0xf8b2cb4f")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	getBalance := message.Call{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		DestAddress: common.NewAddressFromEth(goarbitrum.ARB_INFO_ADDRESS),
+		Data:        append(getBalanceSignature, getBalanceData...),
+	}
+	balanceResult, err := runTransaction(t, mach, message.L2Message{Msg: getBalance}, common.Address{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	vals, err := getBalanceABI.Outputs.UnpackValues(balanceResult.ReturnData)
+	if len(vals) != 1 {
+		t.Fatal("unexpected tx result")
+	}
+	val, ok := vals[0].(*big.Int)
+	if !ok {
+		t.Fatal("unexpected tx result")
+	}
+	return val
+}
+
+func deployFib(t *testing.T, mach machine.Machine, sender common.Address) (common.Address, error) {
+	constructorData, err := hexutil.Decode(FibonacciBin)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	constructorTx := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(0),
+		DestAddress: common.Address{},
+		Payment:     big.NewInt(0),
+		Data:        constructorData,
+	}
+
+	constructorResult, err := runTransaction(t, mach, message.L2Message{Msg: constructorTx}, sender)
+	if err != nil {
+		return common.Address{}, err
+	}
+	if len(constructorResult.ReturnData) != 32 {
+		return common.Address{}, errors.New("unexpected constructor result length")
+	}
+	var fibAddress common.Address
+	copy(fibAddress[:], constructorResult.ReturnData[12:])
+	return fibAddress, nil
+}
+
+func depositEth(t *testing.T, mach machine.Machine, dest common.Address, amount *big.Int) {
+	msg := message.Eth{
+		Dest:  dest,
+		Value: amount,
+	}
+
+	depositResults := runMessage(t, mach, msg, dest)
+	if len(depositResults) != 0 {
+		t.Fatal("deposit should not have had a result")
+	}
+}
 
 func TestFib(t *testing.T) {
 	mach, err := loader.LoadMachineFromFile(arbos.Path(), false, "cpp")
@@ -50,57 +171,28 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	runMessage := func(msg message.AbstractL2Message) *evm.Result {
-		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
+	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
+	chain := common.RandAddress()
 
-		chainTime := message.ChainTime{
-			BlockNum:  common.NewTimeBlocksInt(0),
-			Timestamp: big.NewInt(0),
-		}
-
-		inbox := structures.NewVMInbox()
-		inbox.DeliverMessage(message.NewInboxMessage(message.L2Message{Msg: msg}, addr, big.NewInt(0), chainTime))
-		assertion, _ := mach.ExecuteAssertion(1000000000, inbox.AsValue(), 0)
-
-		if mach.CurrentStatus() != machine.Extensive {
-			t.Fatal("machine should still be working")
-		}
-		logs := assertion.ParseLogs()
-		if len(logs) != 1 {
-			t.Fatal("unexpected log count")
-		}
-
-		res, err := evm.NewResultFromValue(logs[0])
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		return res
+	initMsg := message.Init{
+		ChainParams: valprotocol.ChainParams{
+			StakeRequirement:        big.NewInt(0),
+			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
+			MaxExecutionSteps:       0,
+			ArbGasSpeedLimitPerTick: 0,
+		},
+		Owner:       common.Address{},
+		ExtraConfig: []byte{},
 	}
+	results := runMessage(t, mach, initMsg, chain)
+	log.Println(results)
 
-	constructorData, err := hexutil.Decode(FibonacciBin)
+	fibAddress, err := deployFib(t, mach, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	constructorTx := message.Transaction{
-		MaxGas:      big.NewInt(0),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(0),
-		DestAddress: common.Address{},
-		Payment:     big.NewInt(0),
-		Data:        constructorData,
-	}
-
-	constructorResult := runMessage(constructorTx)
-	if constructorResult.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected result", constructorResult.ResultCode)
-	}
-	if len(constructorResult.ReturnData) != 32 {
-		t.Fatal("unexpected constructor result length")
-	}
-	var fibAddress common.Address
-	copy(fibAddress[:], constructorResult.ReturnData[12:])
+	depositEth(t, mach, addr, big.NewInt(1000))
 
 	generateFibABI := fib.Methods["generateFib"]
 	generateFibData, err := generateFibABI.Inputs.Pack(big.NewInt(20))
@@ -114,17 +206,17 @@ func TestFib(t *testing.T) {
 	}
 
 	generateTx := message.Transaction{
-		MaxGas:      big.NewInt(0),
+		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: fibAddress,
-		Payment:     big.NewInt(0),
+		Payment:     big.NewInt(300),
 		Data:        append(generateSignature, generateFibData...),
 	}
 
-	generateResult := runMessage(generateTx)
-	if generateResult.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected result", generateResult.ResultCode)
+	generateResult, err := runTransaction(t, mach, message.L2Message{Msg: generateTx}, addr)
+	if err != nil {
+		t.Fatal(err)
 	}
 	if len(generateResult.EVMLogs) != 1 {
 		t.Fatal("incorrect log count")
@@ -152,17 +244,135 @@ func TestFib(t *testing.T) {
 	}
 
 	getFibTx := message.Call{
-		MaxGas:      big.NewInt(0),
+		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		DestAddress: fibAddress,
 		Data:        append(getFibSignature, getFibData...),
 	}
 
-	getFibResult := runMessage(getFibTx)
-	if getFibResult.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected result", getFibResult.ResultCode)
+	getFibResult, err := runTransaction(t, mach, message.L2Message{Msg: getFibTx}, addr)
+	if err != nil {
+		t.Fatal(err)
 	}
 	if hexutil.Encode(getFibResult.ReturnData) != "0x0000000000000000000000000000000000000000000000000000000000000008" {
 		t.Fatal("getFib had incorrect result")
+	}
+}
+
+func TestDeposit(t *testing.T) {
+	mach, err := loader.LoadMachineFromFile(arbos.Path(), false, "cpp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	inbox := structures.NewVMInbox()
+	mach.ExecuteAssertion(1000000000, inbox.AsValue(), 0)
+
+	pk, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
+
+	amount := big.NewInt(1000)
+	depositEth(t, mach, addr, amount)
+
+	if getBalanceCall(t, mach, addr).Cmp(amount) != 0 {
+		t.Fatal("incorrect balance")
+	}
+}
+
+func TestBatch(t *testing.T) {
+	chain := common.RandAddress()
+	mach, err := loader.LoadMachineFromFile(arbos.Path(), false, "cpp")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	initMsg := message.Init{
+		ChainParams: valprotocol.ChainParams{
+			StakeRequirement:        big.NewInt(0),
+			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
+			MaxExecutionSteps:       0,
+			ArbGasSpeedLimitPerTick: 0,
+		},
+		Owner:       common.Address{},
+		ExtraConfig: []byte{},
+	}
+	results := runMessage(t, mach, initMsg, chain)
+	log.Println(results)
+
+	dest, err := deployFib(t, mach, common.RandAddress())
+	if err != nil {
+		t.Fatal(err)
+	}
+	batchSize := 21
+	senders := make([]common.Address, 0, batchSize)
+	pks := make([]*ecdsa.PrivateKey, 0)
+	for i := 0; i < batchSize; i++ {
+		pk, err := crypto.GenerateKey()
+		if err != nil {
+			t.Fatal(err)
+		}
+		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
+		depositResults := runMessage(
+			t,
+			mach,
+			message.Eth{
+				Dest:  addr,
+				Value: big.NewInt(1000),
+			},
+			addr,
+		)
+		if len(depositResults) != 0 {
+			t.Fatal("deposit should not have had a result")
+		}
+		pks = append(pks, pk)
+	}
+	batchSender := common.NewAddressFromEth(crypto.PubkeyToAddress(pks[0].PublicKey))
+	txes := make([]message.L2Message, 0)
+	hashes := make([]common.Hash, 0)
+	batchSenderSeq := int64(0)
+	for i := 0; i < 10; i++ {
+		tx := message.Transaction{
+			MaxGas:      big.NewInt(100000000000),
+			GasPriceBid: big.NewInt(0),
+			SequenceNum: big.NewInt(batchSenderSeq),
+			DestAddress: dest,
+			Payment:     big.NewInt(0),
+			Data:        []byte{},
+		}
+		senders = append(senders, batchSender)
+		txes = append(txes, message.L2Message{Msg: tx})
+		hashes = append(hashes, tx.MessageID(batchSender, chain))
+		batchSenderSeq++
+	}
+	for _, pk := range pks[1:] {
+		tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
+		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
+		if err != nil {
+			t.Fatal(err)
+		}
+		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
+		senders = append(senders, addr)
+		txes = append(txes, message.L2Message{Msg: message.NewSignedTransactionFromEth(signedTx)})
+		hashes = append(hashes, common.NewHashFromEth(signedTx.Hash()))
+	}
+
+	msg := message.NewTransactionBatchFromMessages(txes)
+	results = runMessage(t, mach, message.L2Message{Msg: msg}, batchSender)
+	if len(results) != len(txes) {
+		t.Fatal("incorrect result count", len(results), "instead of", len(txes))
+	}
+	for i, result := range results {
+		if result.L1Message.Sender != senders[i] {
+			t.Error("message had incorrect sender", result.L1Message.Sender, senders[i])
+		}
+		if result.L1Message.Kind != message.L2Type {
+			t.Error("message has incorrect type")
+		}
+		if result.L1Message.MessageID() != hashes[i] {
+			t.Error("message had incorrect id", result.L1Message.MessageID(), hashes[i])
+		}
 	}
 }

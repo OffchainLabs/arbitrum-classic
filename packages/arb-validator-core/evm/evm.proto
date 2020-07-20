@@ -124,18 +124,11 @@ message BlockInfoReply {
 }
 
 message SendTransactionArgs {
-    string maxGas = 1;
-    string gasPriceBid = 2;
-    string sequenceNum = 3;
-    string destAddress = 4;
-    string payment = 5;
-    string data = 6;
-    string pubkey = 7;
-    string signature = 8;
+    string signedTransaction = 1;
 }
 
 message SendTransactionReply {
-    bool accepted = 1;
+    string transactionHash = 1;
 }
 
 service RollupValidator {

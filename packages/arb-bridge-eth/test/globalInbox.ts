@@ -43,28 +43,6 @@ const chainAddress = ethers.utils.getAddress(
   '0xffffffffffffffffffffffffffffffffffffffff'
 )
 
-async function generateL2TxBatch(
-  accounts: Signer[],
-  chain: string,
-  messageCount: utils.BigNumberish
-): Promise<Uint8Array> {
-  const txes = []
-  for (let i = 0; i < messageCount; i++) {
-    const tx = new Message.L2Transaction(
-      0,
-      0,
-      2000,
-      chainAddress,
-      54254535454544,
-      '0x00'
-    )
-    const signedHash = tx.batchHash(chain)
-    const signature = await accounts[0].signMessage(signedHash)
-    txes.push(tx.batchData(signature))
-  }
-  return ethers.utils.concat(txes)
-}
-
 let accounts: Signer[]
 let globalInbox: GlobalInbox
 
@@ -170,69 +148,23 @@ describe('GlobalInbox', async () => {
   }
 
   it('should make initial call', async () => {
-    const tx = new Message.L2Transaction(
-      0,
-      0,
-      54254535454544,
-      chainAddress,
-      2000,
-      '0x'
-    )
-    await globalInbox.sendL2Message(chainAddress, tx.asData())
+    const data = '0x' + 'ff'.repeat(100)
+    await globalInbox.sendL2Message(chainAddress, data)
   })
 
   it('should make second call', async () => {
-    const tx = new Message.L2Transaction(
-      0,
-      0,
-      54254535454544,
-      chainAddress,
-      2000,
-      '0x'
-    )
-    await globalInbox.sendL2Message(chainAddress, tx.asData())
+    const data = '0x' + 'ff'.repeat(100)
+    await globalInbox.sendL2Message(chainAddress, data)
   })
 
   it('should make bigger call', async () => {
-    const tx = new Message.L2Transaction(
-      0,
-      0,
-      54254535454544,
-      chainAddress,
-      2000,
-      '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
-    )
-    await globalInbox.sendL2Message(chainAddress, tx.asData())
+    const data = '0x' + 'ff'.repeat(1000)
+    await globalInbox.sendL2Message(chainAddress, data)
   })
 
-  it('should make a batch call', async () => {
-    const { 1: seqNum } = await globalInbox.getInbox(chainAddress)
-    const messageCount = 500
-
-    const data = await generateL2TxBatch(accounts, chainAddress, messageCount)
-
-    const txPromise = globalInbox.sendL2MessageFromOrigin(chainAddress, data)
-
-    await expect(txPromise)
-      .to.emit(globalInbox, 'MessageDeliveredFromOrigin')
-      .withArgs(chainAddress, 3, originalOwner, seqNum.add(1))
-
-    const tx = await txPromise
-    const [chainInput, txDataInput] = ethers.utils.defaultAbiCoder.decode(
-      ['address', 'bytes'],
-      ethers.utils.hexDataSlice(tx.data, 4)
-    )
-
-    assert.equal(
-      chainInput.toLowerCase(),
-      chainAddress.toLowerCase(),
-      'incorrect chain from input'
-    )
-
-    expect(
-      ethers.utils.hexlify(txDataInput),
-      'incorrect tx data from input'
-    ).to.equal(ethers.utils.hexlify(data))
+  it('should make huge call', async () => {
+    const data = '0x' + 'ff'.repeat(100000)
+    await globalInbox.sendL2Message(chainAddress, data)
   })
 
   it('tradeable-exits: initial', async () => {

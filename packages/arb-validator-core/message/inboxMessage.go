@@ -35,7 +35,8 @@ const (
 	EthType Type = iota
 	ERC20Type
 	ERC721Type
-	L2Type Type = iota
+	L2Type
+	InitType
 )
 
 type ChainTime struct {
@@ -141,7 +142,7 @@ func NewRandomInboxMessage(msg Message) InboxMessage {
 }
 
 func (im InboxMessage) String() string {
-	nested, err := im.nestedMessage()
+	nested, err := im.NestedMessage()
 	nestedStr := "invalid"
 	if err == nil {
 		nestedStr = fmt.Sprintf("%v", nested)
@@ -188,7 +189,7 @@ func (im InboxMessage) Equals(o InboxMessage) bool {
 		im.ChainTime.Timestamp.Cmp(o.ChainTime.Timestamp) == 0
 }
 
-func (im InboxMessage) nestedMessage() (Message, error) {
+func (im InboxMessage) NestedMessage() (Message, error) {
 	switch im.Kind {
 	case EthType:
 		return NewEthFromData(im.Data), nil
@@ -202,21 +203,14 @@ func (im InboxMessage) nestedMessage() (Message, error) {
 			return nil, err
 		}
 		return L2Message{Msg: l2}, nil
+	case InitType:
+		return NewInitFromData(im.Data), nil
 	default:
 		return nil, errors.New("unknown inbox message type")
 	}
 }
 
 func (im InboxMessage) MessageID() common.Hash {
-	if im.Kind == L2Type {
-		msg, err := NewL2MessageFromData(im.Data)
-		if err == nil {
-			// msg must be one of the officially supported types
-			if msg, ok := msg.(Transaction); ok {
-				return msg.MessageID(im.Sender)
-			}
-		}
-	}
 	// by default just use the InboxSeqNum
 	var ret common.Hash
 	copy(ret[:], math.U256Bytes(im.InboxSeqNum))

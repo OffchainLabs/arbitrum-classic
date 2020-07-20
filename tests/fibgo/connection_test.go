@@ -246,10 +246,12 @@ func startFibTestEventListener(
 func waitForReceipt(
 	client *goarbitrum.ArbConnection,
 	tx *types.Transaction,
-	sender common.Address,
 	timeout time.Duration,
 ) (*types.Receipt, error) {
-	txhash := client.TxHash(tx, sender)
+	txhash, err := client.TxHash(tx)
+	if err != nil {
+		return nil, err
+	}
 	ticker := time.NewTicker(timeout)
 	for {
 		select {
@@ -304,7 +306,6 @@ func TestFib(t *testing.T) {
 	receipt, err := waitForReceipt(
 		arbclient,
 		tx,
-		common.NewAddressFromEth(auth.From),
 		time.Second*20,
 	)
 	if err != nil {
@@ -341,7 +342,6 @@ func TestFib(t *testing.T) {
 	receipt, err = waitForReceipt(
 		arbclient,
 		tx,
-		common.NewAddressFromEth(session.TransactOpts.From),
 		time.Second*20,
 	)
 	if err != nil {

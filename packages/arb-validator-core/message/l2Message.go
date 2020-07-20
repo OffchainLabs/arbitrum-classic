@@ -23,8 +23,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/math"
@@ -38,6 +39,7 @@ const (
 	ContractTransactionType           = 1
 	CallType                          = 2
 	TransactionBatchType              = 3
+	SignedTransactionType             = 4
 )
 
 const AddressSize = 32
@@ -45,26 +47,8 @@ const AddressSize = 32
 const TransactionHeaderSize = 32*4 + AddressSize
 const SignatureSize = 65
 
-func marshaledBytesHash(data []byte) common.Hash {
-	var ret common.Hash
-	copy(ret[:], math.U256Bytes(big.NewInt(int64(len(data)))))
-	for len(data) > 0 {
-		var nextVal common.Hash
-		copy(nextVal[:], data[:])
-		ret = hashing.SoliditySHA3(
-			hashing.Bytes32(ret),
-			hashing.Bytes32(nextVal),
-		)
-		if len(data) <= 32 {
-			break
-		}
-		data = data[32:]
-	}
-	return ret
-}
-
 type AbstractL2Message interface {
-	l2Type() L2SubType
+	L2Type() L2SubType
 	AsData() []byte
 }
 
@@ -78,7 +62,7 @@ func (l L2Message) Type() Type {
 
 func (l L2Message) AsData() []byte {
 	ret := make([]byte, 0)
-	ret = append(ret, byte(l.Msg.l2Type()))
+	ret = append(ret, byte(l.Msg.L2Type()))
 	ret = append(ret, l.Msg.AsData()...)
 	return ret
 }
@@ -95,6 +79,9 @@ func NewL2MessageFromData(data []byte) (AbstractL2Message, error) {
 		return NewCallFromData(data), nil
 	case TransactionBatchType:
 		return newTransactionBatchFromData(data), nil
+	case SignedTransactionType:
+		log.Println("GOT SIGNED TX")
+		return newSignedTransactionFromData(data), nil
 	default:
 		return nil, errors.New("invalid l2 message type")
 	}
@@ -107,27 +94,6 @@ type Transaction struct {
 	DestAddress common.Address
 	Payment     *big.Int
 	Data        []byte
-}
-
-func extractUInt256(data []byte) (*big.Int, []byte) {
-	val := new(big.Int).SetBytes(data[:32])
-	data = data[32:]
-	return val, data
-}
-
-func extractAddress(data []byte) (common.Address, []byte) {
-	data = data[12:] // Skip first 12 bytes of 32 byte address data
-	var addr common.Address
-	copy(addr[:], data[:])
-	data = data[20:]
-	return addr, data
-}
-
-func addressData(addr common.Address) []byte {
-	ret := make([]byte, 0, 32)
-	ret = append(ret, make([]byte, 12)...)
-	ret = append(ret, addr[:]...)
-	return ret
 }
 
 func newTransactionFromData(data []byte) Transaction {
@@ -146,6 +112,21 @@ func newTransactionFromData(data []byte) Transaction {
 	}
 }
 
+func NewTransactionFromEthTx(tx *types.Transaction) Transaction {
+	var dest common.Address
+	if tx.To() != nil {
+		dest = common.NewAddressFromEth(*tx.To())
+	}
+	return Transaction{
+		MaxGas:      new(big.Int).SetUint64(tx.Gas()),
+		GasPriceBid: tx.GasPrice(),
+		SequenceNum: new(big.Int).SetUint64(tx.Nonce()),
+		DestAddress: dest,
+		Payment:     tx.Value(),
+		Data:        tx.Data(),
+	}
+}
+
 func NewRandomTransaction() Transaction {
 	return Transaction{
 		MaxGas:      common.RandBigInt(),
@@ -155,6 +136,10 @@ func NewRandomTransaction() Transaction {
 		Payment:     common.RandBigInt(),
 		Data:        common.RandBytes(200),
 	}
+}
+
+func (b Transaction) AsEthTx() *types.Transaction {
+	return types.NewTransaction(b.SequenceNum.Uint64(), b.DestAddress.ToEthAddress(), b.GasPriceBid, b.MaxGas.Uint64(), b.Payment, b.Data)
 }
 
 func (b Transaction) String() string {
@@ -182,7 +167,7 @@ func (t Transaction) Type() Type {
 	return L2Type
 }
 
-func (t Transaction) l2Type() L2SubType {
+func (t Transaction) L2Type() L2SubType {
 	return TransactionType
 }
 
@@ -201,15 +186,12 @@ func (t Transaction) asData() []byte {
 	return ret
 }
 
-func (t Transaction) BatchTxHash(chain common.Address) common.Hash {
+func (t Transaction) MessageID(sender common.Address, chain common.Address) common.Hash {
 	data := make([]byte, 0)
-	data = append(data, addressData(chain)...)
-	data = append(data, t.AsData()...)
-	return marshaledBytesHash(data)
-}
-
-func (t Transaction) MessageID(sender common.Address) common.Hash {
-	return hashing.SoliditySHA3(hashing.Address(sender), t.AsData())
+	data = append(data, byte(t.L2Type()))
+	data = append(data, t.asData()...)
+	inner := hashing.SoliditySHA3(hashing.Uint256(ChainAddressToID(chain)), hashing.Bytes32(marshaledBytesHash(data)))
+	return hashing.SoliditySHA3(addressData(sender), hashing.Bytes32(inner))
 }
 
 type ContractTransaction struct {
@@ -248,7 +230,7 @@ func (t ContractTransaction) Type() Type {
 	return L2Type
 }
 
-func (t ContractTransaction) l2Type() L2SubType {
+func (t ContractTransaction) L2Type() L2SubType {
 	return ContractTransactionType
 }
 
@@ -303,7 +285,7 @@ func NewRandomCall() Call {
 	}
 }
 
-func (t Call) l2Type() L2SubType {
+func (t Call) L2Type() L2SubType {
 	return CallType
 }
 
@@ -316,91 +298,124 @@ func (c Call) AsData() []byte {
 	return ret
 }
 
-type BatchTx struct {
+type SignedTransaction struct {
 	Transaction Transaction
 	Signature   [SignatureSize]byte
 }
 
-func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) BatchTx {
-	tx := NewRandomTransaction()
-	hash := tx.BatchTxHash(chain)
-	messageHash := hashing.SoliditySHA3WithPrefix(hash[:])
-	sigBytes, _ := crypto.Sign(messageHash.Bytes(), privKey)
-
-	var sig [65]byte
-	copy(sig[:], sigBytes)
-
-	return BatchTx{
+func newSignedTransactionFromData(data []byte) SignedTransaction {
+	var sig [SignatureSize]byte
+	tx := newTransactionFromData(data[:len(data)-SignatureSize])
+	data = data[len(data)-SignatureSize:]
+	copy(sig[:], data[:])
+	return SignedTransaction{
 		Transaction: tx,
 		Signature:   sig,
 	}
 }
 
-func (b BatchTx) Equals(o BatchTx) bool {
+func NewSignedTransactionFromEth(tx *types.Transaction) SignedTransaction {
+	v, r, s := tx.RawSignatureValues()
+	var sig [65]byte
+	copy(sig[:], math.U256Bytes(r))
+	copy(sig[32:], math.U256Bytes(s))
+	sig[64] = byte(1 - v.Uint64())
+
+	return SignedTransaction{
+		Transaction: NewTransactionFromEthTx(tx),
+		Signature:   sig,
+	}
+}
+
+func ChainAddressToID(chain common.Address) *big.Int {
+	return new(big.Int).SetBytes(chain[14:])
+}
+
+func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) SignedTransaction {
+	tx := NewRandomTransaction()
+
+	signedTx, err := types.SignTx(tx.AsEthTx(), types.NewEIP155Signer(ChainAddressToID(chain)), privKey)
+	if err != nil {
+		panic(err)
+	}
+	v, r, s := signedTx.RawSignatureValues()
+	var sig [65]byte
+	copy(sig[:], math.U256Bytes(r))
+	copy(sig[32:], math.U256Bytes(s))
+	sig[64] = byte(v.Uint64() % 2)
+
+	return SignedTransaction{
+		Transaction: tx,
+		Signature:   sig,
+	}
+}
+
+func (t SignedTransaction) AsEthTx(chain common.Address) (*types.Transaction, error) {
+	return t.Transaction.AsEthTx().WithSignature(types.NewEIP155Signer(ChainAddressToID(chain)), t.Signature[:])
+}
+
+func (t SignedTransaction) L2Type() L2SubType {
+	return SignedTransactionType
+}
+
+func (b SignedTransaction) Equals(o SignedTransaction) bool {
 	return b.Transaction.Equals(o.Transaction) &&
 		b.Signature == o.Signature
 }
 
-func (b BatchTx) AsData() []byte {
+func (b SignedTransaction) AsData() []byte {
 	ret := make([]byte, 0)
-	encodedLength := make([]byte, 8)
-	binary.BigEndian.PutUint64(encodedLength[:], uint64(len(b.Transaction.Data)))
-	ret = append(ret, encodedLength[:]...)
-	ret = append(ret, b.Transaction.AsData()...)
+	ret = append(ret, b.Transaction.asData()...)
 	ret = append(ret, b.Signature[:]...)
 	return ret
 }
 
-func (b BatchTx) Hash() common.Hash {
-	data := make([]byte, 0)
-	data = append(data, b.Transaction.AsData()...)
-	data = append(data, b.Signature[:]...)
-	return marshaledBytesHash(data)
+type TransactionBatch struct {
+	Transactions [][]byte
 }
 
-type TransactionBatch struct {
-	Transactions []BatchTx
+func NewTransactionBatchFromMessages(messages []L2Message) TransactionBatch {
+	txes := make([][]byte, 0)
+	for _, msg := range messages {
+		txes = append(txes, msg.AsData())
+	}
+	return TransactionBatch{Transactions: txes}
 }
 
 func newTransactionBatchFromData(data []byte) TransactionBatch {
-	txes := make([]BatchTx, 0)
+	txes := make([][]byte, 0)
 	for len(data) >= 8 {
-		calldataLength := binary.BigEndian.Uint64(data[:])
+		msgLength := binary.BigEndian.Uint64(data[:])
 		data = data[8:]
-		beginningSize := TransactionHeaderSize + calldataLength
-		if uint64(len(data)) < beginningSize+SignatureSize {
+		if uint64(len(data)) < msgLength {
 			// Not enough data remaining
 			break
 		}
-		tx := newTransactionFromData(data[:beginningSize])
-		data = data[beginningSize:]
-		var sig [SignatureSize]byte
-		copy(sig[:], data[:])
-		data = data[SignatureSize:]
-		txes = append(txes, BatchTx{
-			Transaction: tx,
-			Signature:   sig,
-		})
+		txes = append(txes, data[:msgLength])
+		data = data[msgLength:]
 	}
 	return TransactionBatch{Transactions: txes}
 }
 
 func NewRandomTransactionBatch(txCount int, chain common.Address, privKey *ecdsa.PrivateKey) TransactionBatch {
-	txes := make([]BatchTx, 0, txCount)
+	txes := make([][]byte, 0, txCount)
 	for i := 0; i < txCount; i++ {
-		txes = append(txes, NewRandomBatchTx(chain, privKey))
+		txes = append(txes, NewRandomBatchTx(chain, privKey).AsData())
 	}
 	return TransactionBatch{Transactions: txes}
 }
 
-func (t TransactionBatch) l2Type() L2SubType {
+func (t TransactionBatch) L2Type() L2SubType {
 	return TransactionBatchType
 }
 
 func (t TransactionBatch) AsData() []byte {
 	ret := make([]byte, 0)
 	for _, tx := range t.Transactions {
-		ret = append(ret, tx.AsData()...)
+		encodedLength := make([]byte, 8)
+		binary.BigEndian.PutUint64(encodedLength[:], uint64(len(tx)))
+		ret = append(ret, encodedLength[:]...)
+		ret = append(ret, tx...)
 	}
 	return ret
 }

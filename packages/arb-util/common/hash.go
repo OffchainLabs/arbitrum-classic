@@ -61,6 +61,10 @@ func (h Hash) MarshalToBuf() *HashBuf {
 	}
 }
 
+func HexToHash(hex string) Hash {
+	return NewHashFromEth(ethcommon.HexToHash(hex))
+}
+
 func MarshalSliceOfHashes(hs []Hash) []*HashBuf {
 	ret := make([]*HashBuf, 0, len(hs))
 	for _, h := range hs {

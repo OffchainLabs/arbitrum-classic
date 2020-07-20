@@ -103,18 +103,11 @@ export interface BlockInfoReply {
 }
 
 export interface SendTransactionArgs {
-  maxGas?: string
-  gasPriceBid?: string
-  sequenceNum?: string
-  destAddress?: string
-  payment?: string
-  data?: string
-  pubkey?: string
-  signature?: string
+  signedTransaction?: string
 }
 
 export interface SendTransactionReply {
-  accepted?: boolean
+  transactionHash?: string
 }
 
 export interface RollupValidatorService {

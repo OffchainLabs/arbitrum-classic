@@ -23,7 +23,6 @@ import {
   MessageCode,
   L2MessageCode,
   L2Call,
-  L2Message,
 } from './message'
 import { ArbClient } from './client'
 import * as ArbValue from './value'
@@ -77,29 +76,61 @@ interface Message {
 }
 
 export class ArbProvider extends ethers.providers.BaseProvider {
-  public chainId: number
   public ethProvider: ethers.providers.JsonRpcProvider
   public client: ArbClient
-
+  public chainAddress: Promise<string>
   private arbRollupCache?: ArbRollup
   private globalInboxCache?: GlobalInbox
   private validatorAddressesCache?: string[]
-  private chainAddressCache?: string
 
   constructor(
     aggregatorUrl: string,
-    provider: ethers.providers.JsonRpcProvider
+    provider: ethers.providers.JsonRpcProvider,
+    chainAddress?: string | Promise<string>
   ) {
-    super(123456789)
-    this.chainId = 123456789
+    const client = new ArbClient(aggregatorUrl)
+    if (!chainAddress) {
+      chainAddress = client.getChainAddress()
+    }
+
+    let network: ethers.utils.Network | Promise<ethers.utils.Network>
+    if (typeof chainAddress == 'string') {
+      const chainId = ethers.utils
+        .bigNumberify(ethers.utils.hexDataSlice(chainAddress, 14))
+        .toNumber()
+      network = {
+        chainId: chainId,
+        name: 'arbitrum',
+      }
+      const origChainAddress = chainAddress
+      chainAddress = new Promise((resolve, reject): void => {
+        resolve(origChainAddress)
+      })
+    } else {
+      network = chainAddress.then(addr => {
+        const chainId = ethers.utils
+          .bigNumberify(ethers.utils.hexDataSlice(addr, 14))
+          .toNumber()
+        const network: ethers.utils.Network = {
+          chainId: chainId,
+          name: 'arbitrum',
+        }
+        return network
+      })
+    }
+
+    super(network)
+    this.chainAddress = chainAddress
     this.ethProvider = provider
     this.client = new ArbClient(aggregatorUrl)
   }
 
   public async arbRollupConn(): Promise<ArbRollup> {
     if (!this.arbRollupCache) {
-      const vmID = await this.chainAddress()
-      const arbRollup = ArbRollupFactory.connect(vmID, this.ethProvider)
+      const arbRollup = ArbRollupFactory.connect(
+        await this.chainAddress,
+        this.ethProvider
+      )
       this.arbRollupCache = arbRollup
       return arbRollup
     }
@@ -128,18 +159,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     return new ArbWallet(this.ethProvider.getSigner(index), this)
   }
 
-  public async chainAddress(): Promise<string> {
-    if (!this.chainAddressCache) {
-      const chainAddress = await this.client.getChainAddress()
-      // Guard against race condition
-      if (!this.chainAddressCache) {
-        this.chainAddressCache = chainAddress
-      }
-      return chainAddress
-    }
-    return this.chainAddressCache
-  }
-
   private async getArbTxId(
     ethReceipt: ethers.providers.TransactionReceipt
   ): Promise<string | null> {
@@ -153,12 +172,6 @@ export class ArbProvider extends ethers.providers.BaseProvider {
           continue
         }
         if (log.name == MessageDelivered) {
-          if (log.values.kind == MessageCode.L2) {
-            const msg = L2Message.fromData(log.values.data)
-            if (msg.message.kind == L2MessageCode.Transaction) {
-              return msg.message.messageID(log.values.sender)
-            }
-          }
           return log.values.inboxSeqNum
         }
       }
@@ -326,6 +339,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             )
           }
           const l2tx = incoming.msg.message
+          const network = await this.getNetwork()
           const tx: ethers.utils.Transaction = {
             data: ethers.utils.hexlify(l2tx.calldata),
             from: incoming.sender,
@@ -335,7 +349,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             nonce: l2tx.sequenceNum.toNumber(),
             to: l2tx.destAddress,
             value: l2tx.payment,
-            chainId: 123456789,
+            chainId: network.chainId,
           }
           const response = this.ethProvider._wrapTransaction(tx)
           const blockNumber = incoming.blockNumber.toNumber()
@@ -377,8 +391,11 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         const result = await this.callImpl(tx)
         return result.gasUsed
       }
+      case 'sendTransaction': {
+        return this.client.sendTransaction(params.signedTransaction)
+      }
     }
-    // console.log('Forwarding query to provider', method, params);
+    // console.log('Forwarding query to provider', method, params)
     return await this.ethProvider.perform(method, params)
   }
 
@@ -445,14 +462,14 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
     const rawLog = receipt.logs[eventIndex]
     const cda = events[eventIndex]
-    const vmId = await this.chainAddress()
     // Check correct VM
-    if (rawLog.address.toLowerCase() !== vmId.toLowerCase()) {
+    const chainAddress = await this.chainAddress
+    if (rawLog.address.toLowerCase() !== chainAddress.toLowerCase()) {
       throw Error(
         'RollupAsserted Event is from a different address: ' +
           rawLog.address +
           '\nExpected address: ' +
-          vmId
+          chainAddress
       )
     }
 

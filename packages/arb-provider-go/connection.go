@@ -222,23 +222,18 @@ func (conn *ArbConnection) SuggestGasPrice(ctx context.Context) (*big.Int, error
 // There is no guarantee that this is the true gas limit requirement as other
 // transactions may be added or removed by miners, but it should provide a basis
 // for setting a reasonable default.
-
-// EstimateGas tries to estimate the gas needed to execute a specific
-// transaction based on the current pending state of the backend blockchain.
-// There is no guarantee that this is the true gas limit requirement as other
-// transactions may be added or removed by miners, but it should provide a basis
-// for setting a reasonable default.
 func (conn *ArbConnection) EstimateGas(
 	ctx context.Context,
 	call ethereum.CallMsg,
 ) (gas uint64, err error) {
-	return 100000, nil
+	return 100000000, nil
 }
 
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	arbTx := conn.TxToMessage(tx)
-	return conn.globalInbox.SendL2Message(ctx, conn.vmId, message.L2Message{Msg: arbTx})
+	arbTx := message.NewTransactionFromEthTx(tx)
+	_, err := conn.globalInbox.SendL2Message(ctx, conn.vmId, message.L2Message{Msg: arbTx})
+	return err
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -445,21 +440,10 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	}, nil
 }
 
-func (conn *ArbConnection) TxToMessage(tx *types.Transaction) message.Transaction {
-	var to common.Address
-	if tx.To() != nil {
-		to = common.NewAddressFromEth(*tx.To())
+func (conn *ArbConnection) TxHash(tx *types.Transaction) (common.Hash, error) {
+	from, err := types.HomesteadSigner{}.Sender(tx)
+	if err != nil {
+		return common.Hash{}, err
 	}
-	return message.Transaction{
-		MaxGas:      new(big.Int).SetUint64(tx.Gas()),
-		GasPriceBid: tx.GasPrice(),
-		SequenceNum: new(big.Int).SetUint64(tx.Nonce()),
-		DestAddress: to,
-		Payment:     tx.Value(),
-		Data:        tx.Data(),
-	}
-}
-
-func (conn *ArbConnection) TxHash(tx *types.Transaction, from common.Address) common.Hash {
-	return conn.TxToMessage(tx).MessageID(from)
+	return message.NewTransactionFromEthTx(tx).MessageID(common.NewAddressFromEth(from), conn.vmId), nil
 }

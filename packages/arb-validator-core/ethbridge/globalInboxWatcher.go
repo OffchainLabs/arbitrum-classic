@@ -169,6 +169,29 @@ func (gi *globalInboxWatcher) GetDeliveredEventsInBlock(
 	return events, nil
 }
 
+func (gi *globalInboxWatcher) parseMessageFromOrigin(evmLog types.Log, timestamp *big.Int, msgData []byte) (arbbridge.MessageDeliveredEvent, error) {
+	chainTime := message.ChainTime{
+		BlockNum: common.NewTimeBlocks(
+			new(big.Int).SetUint64(evmLog.BlockNumber),
+		),
+		Timestamp: timestamp,
+	}
+	val, err := gi.GlobalInbox.ParseMessageDeliveredFromOrigin(evmLog)
+	if err != nil {
+		return arbbridge.MessageDeliveredEvent{}, err
+	}
+	return arbbridge.MessageDeliveredEvent{
+		ChainInfo: getLogChainInfo(evmLog),
+		Message: message.InboxMessage{
+			Kind:        message.Type(val.Kind),
+			Sender:      common.NewAddressFromEth(val.Sender),
+			InboxSeqNum: val.InboxSeqNum,
+			Data:        msgData,
+			ChainTime:   chainTime,
+		},
+	}, nil
+}
+
 func (gi *globalInboxWatcher) processLog(
 	ctx context.Context,
 	evmLog types.Log,
@@ -215,20 +238,7 @@ func (gi *globalInboxWatcher) processLog(
 			return arbbridge.MessageDeliveredEvent{}, err
 		}
 
-		val, err := gi.GlobalInbox.ParseMessageDeliveredFromOrigin(evmLog)
-		if err != nil {
-			return arbbridge.MessageDeliveredEvent{}, err
-		}
-		return arbbridge.MessageDeliveredEvent{
-			ChainInfo: chainInfo,
-			Message: message.InboxMessage{
-				Kind:        message.Type(val.Kind),
-				Sender:      common.NewAddressFromEth(val.Sender),
-				InboxSeqNum: val.InboxSeqNum,
-				Data:        args.MessageData,
-				ChainTime:   chainTime,
-			},
-		}, nil
+		return gi.parseMessageFromOrigin(evmLog, timestamp, args.MessageData)
 	default:
 		return arbbridge.MessageDeliveredEvent{}, errors2.New("unknown arbitrum event type")
 	}

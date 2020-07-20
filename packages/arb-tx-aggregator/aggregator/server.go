@@ -63,59 +63,13 @@ func NewServer(
 
 // SendTransaction takes a request signed transaction message from a client
 // and puts it in a queue to be included in the next transaction batch
-func (m *Server) SendTransaction(_ *http.Request, args *evm.SendTransactionArgs, _ *evm.SendTransactionReply) error {
-	destBytes, err := hexutil.Decode(args.DestAddress)
+func (m *Server) SendTransaction(_ *http.Request, args *evm.SendTransactionArgs, reply *evm.SendTransactionReply) error {
+	txHash, err := m.batch.SendTransaction(args.SignedTransaction)
 	if err != nil {
-		return errors2.Wrap(err, "error decoding Dest")
+		return err
 	}
-	var dest common.Address
-	copy(dest[:], destBytes)
-
-	maxGas, valid := new(big.Int).SetString(args.MaxGas, 10)
-	if !valid {
-		return errors.New("invalid MaxGas")
-	}
-
-	gasPriceBid, valid := new(big.Int).SetString(args.GasPriceBid, 10)
-	if !valid {
-		return errors.New("invalid GasPriceBid")
-	}
-
-	sequenceNum, valid := new(big.Int).SetString(args.SequenceNum, 10)
-	if !valid {
-		return errors.New("invalid sequence num")
-	}
-
-	paymentInt, valid := new(big.Int).SetString(args.Payment, 10)
-	if !valid {
-		return errors.New("invalid Payment")
-	}
-
-	data, err := hexutil.Decode(args.Data)
-	if err != nil {
-		return errors2.Wrap(err, "error decoding data")
-	}
-
-	tx := message.Transaction{
-		MaxGas:      maxGas,
-		GasPriceBid: gasPriceBid,
-		SequenceNum: sequenceNum,
-		DestAddress: dest,
-		Payment:     paymentInt,
-		Data:        data,
-	}
-
-	pubkeyBytes, err := hexutil.Decode(args.Pubkey)
-	if err != nil {
-		return errors2.Wrap(err, "error decoding pubkey")
-	}
-
-	signature, err := hexutil.Decode(args.Signature)
-	if err != nil {
-		return errors2.Wrap(err, "error decoding signature")
-	}
-
-	return m.batch.SendTransaction(tx, pubkeyBytes, signature)
+	reply.TransactionHash = txHash.String()
+	return nil
 }
 
 //FindLogs takes a set of parameters and return the list of all logs that match

@@ -18,37 +18,27 @@ package batcher
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"errors"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
+	errors2 "github.com/pkg/errors"
 	"log"
 	"sort"
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 const maxTransactions = 200
 
-const signatureLength = 65
-const recoverBitPos = signatureLength - 1
-
 type DecodedBatchTx struct {
-	tx     message.BatchTx
-	pubkey []byte
-}
-
-func NewDecodedBatchTx(tx message.BatchTx, key ecdsa.PublicKey) DecodedBatchTx {
-	return DecodedBatchTx{
-		tx:     tx,
-		pubkey: elliptic.Marshal(crypto.S256(), key.X, key.Y),
-	}
+	tx     message.SignedTransaction
+	sender common.Address
 }
 
 type Batcher struct {
@@ -102,10 +92,9 @@ func NewBatcher(
 // user is maintained, but the transactions of that user are swapped to be in
 // sequence number order
 func prepareTransactions(txes []DecodedBatchTx) message.TransactionBatch {
-	transactionsBySender := make(map[string][]DecodedBatchTx)
+	transactionsBySender := make(map[common.Address][]DecodedBatchTx)
 	for _, tx := range txes {
-		senderPubkey := hexutil.Encode(tx.pubkey)
-		transactionsBySender[senderPubkey] = append(transactionsBySender[senderPubkey], tx)
+		transactionsBySender[tx.sender] = append(transactionsBySender[tx.sender], tx)
 	}
 
 	for _, txes := range transactionsBySender {
@@ -114,14 +103,13 @@ func prepareTransactions(txes []DecodedBatchTx) message.TransactionBatch {
 		})
 	}
 
-	batchTxes := make([]message.BatchTx, 0, len(txes))
+	batchTxes := make([]message.L2Message, 0, len(txes))
 	for _, tx := range txes {
-		senderPubkey := hexutil.Encode(tx.pubkey)
-		nextTx := transactionsBySender[senderPubkey][0]
-		transactionsBySender[senderPubkey] = transactionsBySender[senderPubkey][1:]
-		batchTxes = append(batchTxes, nextTx.tx)
+		nextTx := transactionsBySender[tx.sender][0]
+		transactionsBySender[tx.sender] = transactionsBySender[tx.sender][1:]
+		batchTxes = append(batchTxes, message.L2Message{Msg: nextTx.tx})
 	}
-	return message.TransactionBatch{Transactions: batchTxes}
+	return message.NewTransactionBatchFromMessages(batchTxes)
 }
 
 func (m *Batcher) sendBatch(ctx context.Context) {
@@ -153,61 +141,40 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 
 // SendTransaction takes a request signed transaction message from a client
 // and puts it in a queue to be included in the next transaction batch
-func (m *Batcher) SendTransaction(tx message.Transaction, pubkeyBytes []byte, signature []byte) error {
-	if len(signature) != signatureLength {
-		return errors.New("signature of wrong length")
+func (m *Batcher) SendTransaction(signedTransaction string) (common.Hash, error) {
+	encodedTx, err := hexutil.Decode(signedTransaction)
+	if err != nil {
+		return common.Hash{}, errors2.Wrap(err, "error decoding signed transaction")
 	}
 
-	// Convert sig with normalized v
-	if signature[recoverBitPos] == 27 {
-		signature[recoverBitPos] = 0
-	} else if signature[recoverBitPos] == 28 {
-		signature[recoverBitPos] = 1
+	tx := new(types.Transaction)
+	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
+		return common.Hash{}, err
 	}
-
-	txDataHash := tx.BatchTxHash(m.rollupAddress)
-	messageHash := hashing.SoliditySHA3WithPrefix(txDataHash[:])
-	if !crypto.VerifySignature(
-		pubkeyBytes,
-		messageHash[:],
-		signature[:len(signature)-1],
-	) {
-		return errors.New("invalid signature")
+	chainId := message.ChainAddressToID(m.rollupAddress)
+	signer := types.NewEIP155Signer(chainId)
+	ethSender, err := signer.Sender(tx)
+	if err != nil {
+		log.Println("Error processing transaction", err)
+		log.Printf("Tx chain id was %v and rollup chain's is %v", tx.ChainId(), chainId)
+		return common.Hash{}, err
 	}
+	sender := common.NewAddressFromEth(ethSender)
+	batchTx := message.NewSignedTransactionFromEth(tx)
 
-	var sigData [signatureLength]byte
-	copy(sigData[:], signature)
-
-	batchTx := message.BatchTx{
-		Transaction: tx,
-		Signature:   sigData,
-	}
-
-	var pubkey *ecdsa.PublicKey
-	var pubkeyErr error
-	if len(pubkeyBytes) == 33 {
-		pubkey, pubkeyErr = crypto.DecompressPubkey(pubkeyBytes)
-	} else {
-		x, y := elliptic.Unmarshal(crypto.S256(), pubkeyBytes)
-		pubkey = &ecdsa.PublicKey{Curve: crypto.S256(), X: x, Y: y}
-	}
-
-	if pubkeyErr != nil {
-		return pubkeyErr
-	}
-	sender := common.NewAddressFromEth(crypto.PubkeyToAddress(*pubkey))
-	log.Println("Got tx: ", tx, "with hash", tx.MessageID(sender), "from", sender)
+	txHash := tx.Hash()
+	log.Println("Got tx: ", batchTx.Transaction, "with hash", txHash, "from", sender)
 
 	m.Lock()
 	defer m.Unlock()
 
 	if !m.valid {
-		return errors.New("tx aggregator is not running")
+		return common.Hash{}, errors.New("tx aggregator is not running")
 	}
 
 	m.transactions = append(m.transactions, DecodedBatchTx{
 		tx:     batchTx,
-		pubkey: pubkeyBytes,
+		sender: sender,
 	})
-	return nil
+	return common.NewHashFromEth(txHash), nil
 }
