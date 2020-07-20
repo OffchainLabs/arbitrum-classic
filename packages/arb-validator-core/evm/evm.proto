@@ -67,37 +67,29 @@ message FindLogsReply {
 }
 
 message GetOutputMessageArgs {
-    string AssertionNodeHash = 1;
-    string MsgIndex = 2;
+    uint64 index = 1;
 }
 
 message GetOutputMessageReply {
-    bool found = 1;
-    string rawVal = 2;
+    string rawVal = 1;
 }
 
-message GetMessageResultArgs {
+message GetRequestResultArgs {
     string txHash = 1;
 }
 
-message GetMessageResultReply {
-    TxInfoBuf tx = 1;
+message GetRequestResultReply {
+    string rawVal = 1;
+    uint64 index = 2;
+    uint64 startLogIndex = 3;
 }
 
-message GetAssertionCountArgs {
-
-}
-
-message GetAssertionCountReply {
-    int32 assertionCount = 1;
-}
-
-message GetVMInfoArgs {
+message GetChainAddressArgs {
 
 }
 
-message GetVMInfoReply {
-    string vmID = 1;
+message GetChainAddressReply {
+    string chainAddress = 1;
 }
 
 message CallMessageArgs {
@@ -109,20 +101,24 @@ message CallMessageReply {
     string rawVal = 1;
 }
 
-message GetLatestNodeLocationArgs {
+message BlockInfoArgs {
+    uint64 height = 1;
 }
 
-message GetLatestNodeLocationReply {
-    NodeLocation location = 1;
+message BlockInfoReply {
+    string hash = 1;
+    uint64 startLog = 2;
+    uint64 logCount = 3;
+    uint64 startMessage = 4;
+	uint64 messageCount = 5;
+    string bloom = 6;
 }
 
 service RollupValidator {
+    rpc GetBlockInfo (BlockInfoArgs) returns (BlockInfoReply);
     rpc GetOutputMessage (GetOutputMessageArgs) returns (GetOutputMessageReply);
-    rpc GetMessageResult (GetMessageResultArgs) returns (GetMessageResultReply);
+    rpc GetRequestResult (GetRequestResultArgs) returns (GetRequestResultReply);
     rpc CallMessage (CallMessageArgs) returns (CallMessageReply);
     rpc FindLogs (FindLogsArgs) returns (FindLogsReply);
-    rpc GetAssertionCount (GetAssertionCountArgs) returns (GetAssertionCountReply);
-    rpc GetVMInfo (GetVMInfoArgs) returns (GetVMInfoReply);
-    rpc GetLatestNodeLocation (GetLatestNodeLocationArgs) returns (GetLatestNodeLocationReply);
-    rpc GetLatestPendingNodeLocation (GetLatestNodeLocationArgs) returns (GetLatestNodeLocationReply);
+    rpc GetChainAddress (GetChainAddressArgs) returns (GetChainAddressReply);
 }

@@ -20,23 +20,18 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
-
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/gorilla/rpc"
-	"github.com/gorilla/rpc/json"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
 
 var ContractName = "contract.mexe"
@@ -56,8 +51,6 @@ func ValidateRollupChain(
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	walletVars := utils.AddWalletFlags(validateCmd)
-	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
-	rpcVars := utils.AddRPCFlags(validateCmd)
 	blocktime := validateCmd.Int64(
 		"blocktime",
 		2,
@@ -136,31 +129,7 @@ func ValidateRollupChain(
 	manager.AddListener(&chainlistener.AnnouncerListener{})
 	manager.AddListener(validatorListener)
 
-	if *rpcEnable {
-		validatorServer, err := rollupvalidator.NewRPCServer(manager, time.Second*60)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// Run server
-		s := rpc.NewServer()
-		s.RegisterCodec(
-			json.NewCodec(),
-			"application/json",
-		)
-		s.RegisterCodec(
-			json.NewCodec(),
-			"application/json;charset=UTF-8",
-		)
-
-		if err := s.RegisterService(validatorServer, "Validator"); err != nil {
-			return err
-		}
-
-		return utils.LaunchRPC(s, "1235", rpcVars)
-	} else {
-		wait := make(chan bool)
-		<-wait
-	}
+	wait := make(chan bool)
+	<-wait
 	return nil
 }

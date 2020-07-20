@@ -2,6 +2,7 @@ package goarbitrum
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
@@ -35,7 +36,7 @@ type ArbConnection struct {
 func Dial(url string, auth *bind.TransactOpts, ethclint ethutils.EthClient) (*ArbConnection, error) {
 	client := ethbridge.NewEthAuthClient(ethclint, auth)
 	proxy := NewValidatorProxyImpl(url)
-	vmIdStr, err := proxy.GetVMInfo(context.Background())
+	vmIdStr, err := proxy.GetChainAddress(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -372,15 +373,81 @@ func (sub *subscription) Err() <-chan error {
 // TransactionReceipt returns the receipt of a transaction by transaction hash.
 // Note that the receipt is not available for pending transactions.
 func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (*types.Receipt, error) {
-	txInfo, err := conn.proxy.GetMessageResult(ctx, txHash.Bytes())
+	index, startLogIndex, val, err := conn.proxy.GetRequestResult(ctx, common.NewHashFromEth(txHash))
 	if err != nil {
 		return nil, errors2.Wrap(err, "TransactionReceipt error:")
 	}
-	if txInfo == nil {
+	if val == nil {
 		return nil, ethereum.NotFound
 	}
+	result, err := evm.NewResultFromValue(val)
+	if err != nil {
+		return nil, err
+	}
 
-	return txInfo.ToEthReceipt()
+	if result.L1Message.MessageID().ToEthHash() != txHash {
+		return nil, errors.New("tx hash doesn't match")
+	}
+
+	status := uint64(0)
+	if result.ResultCode == evm.ReturnCode {
+		status = 1
+	}
+
+	blockInfo, err := conn.proxy.BlockInfo(ctx, result.L1Message.ChainTime.BlockNum.AsInt().Uint64())
+	if err != nil {
+		return nil, err
+	}
+	txIndex := index - blockInfo.StartLog
+	var evmLogs []*types.Log
+	logIndex := startLogIndex
+	for _, l := range result.EVMLogs {
+		evmParsedTopics := make([]ethcommon.Hash, len(l.Topics))
+		for j, t := range l.Topics {
+			evmParsedTopics[j] = ethcommon.BytesToHash(t[:])
+		}
+
+		ethLog := &types.Log{
+			Address:     l.Address.ToEthAddress(),
+			Topics:      evmParsedTopics,
+			Data:        l.Data,
+			BlockNumber: result.L1Message.ChainTime.BlockNum.AsInt().Uint64(),
+			TxHash:      txHash,
+			TxIndex:     uint(txIndex),
+			BlockHash:   blockInfo.Hash.ToEthHash(),
+			Index:       uint(logIndex),
+		}
+		logIndex++
+		evmLogs = append(evmLogs, ethLog)
+	}
+
+	contractAddress := ethcommon.Address{}
+	if result.L1Message.Kind == message.L2Type {
+		msg, err := message.NewL2MessageFromData(result.L1Message.Data)
+		if err == nil {
+			if msg, ok := msg.(message.Transaction); ok {
+				emptyAddress := common.Address{}
+				if msg.DestAddress == emptyAddress {
+					copy(contractAddress[:], result.ReturnData[12:])
+				}
+			}
+		}
+	}
+
+	return &types.Receipt{
+		PostState: []byte{0},
+		Status:    status,
+		// TODO: Fill in with real value
+		CumulativeGasUsed: 1,
+		Bloom:             types.BytesToBloom(types.LogsBloom(evmLogs).Bytes()),
+		Logs:              evmLogs,
+		TxHash:            txHash,
+		ContractAddress:   contractAddress,
+		GasUsed:           result.GasUsed.Uint64(),
+		BlockHash:         blockInfo.Hash.ToEthHash(),
+		BlockNumber:       result.L1Message.ChainTime.BlockNum.AsInt(),
+		TransactionIndex:  uint(txIndex),
+	}, nil
 }
 
 func (conn *ArbConnection) TxToMessage(tx *types.Transaction) message.Transaction {

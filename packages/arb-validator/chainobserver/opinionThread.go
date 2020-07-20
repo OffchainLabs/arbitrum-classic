@@ -168,9 +168,6 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 						}
 						preparedAssertions[prevNode] = prepped
 						assertionsMut.Unlock()
-						chain.Lock()
-						chain.pendingState = prepped.Machine
-						chain.Unlock()
 					}()
 				} else {
 					assertionsMut.Lock()

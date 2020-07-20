@@ -19,6 +19,9 @@ package txdb
 import (
 	"context"
 	"errors"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
@@ -86,7 +89,7 @@ func New(
 	case <-ctx.Done():
 		return nil, errors.New("timed out saving checkpoint")
 	}
-	if err := as.SaveBlock(prevBlockId); err != nil {
+	if err := as.SaveBlock(prevBlockId, common.Hash{}); err != nil {
 		return nil, err
 	}
 	txdb.mach = mach
@@ -146,6 +149,33 @@ func (txdb *TxDB) CallInfo() (machine.Machine, *common.BlockId) {
 	return txdb.callMach, txdb.callBlock
 }
 
+func (txdb *TxDB) GetMessage(index uint64) (value.Value, error) {
+	return txdb.as.GetMessage(index)
+}
+
+func (txdb *TxDB) GetRequest(requestId common.Hash) (uint64, uint64, value.Value, error) {
+	requestCandidate, startLogIndex, err := txdb.as.GetPossibleRequestInfo(requestId)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	logVal, err := txdb.as.GetLog(requestCandidate)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	res, err := evm.NewResultFromValue(logVal)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	if res.L1Message.MessageID() != requestId {
+		return 0, 0, nil, errors.New("request not found")
+	}
+	return requestCandidate, startLogIndex, logVal, nil
+}
+
+func (txdb *TxDB) GetBlock(height uint64) (machine.BlockInfo, error) {
+	return txdb.as.GetBlock(height)
+}
+
 func (txdb *TxDB) LatestBlock() (*common.BlockId, error) {
 	return txdb.as.LatestBlock()
 }
@@ -156,6 +186,8 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 			return err
 		}
 	}
+	ethLogs := make([]*types.Log, 0)
+	startLogIndex := uint64(0)
 	for _, avmLog := range assertion.ParseLogs() {
 		if err := txdb.as.SaveLog(avmLog); err != nil {
 			return err
@@ -170,14 +202,28 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 		if err != nil {
 			return err
 		}
-		if err := txdb.as.SaveRequest(res.L1Message.MessageID(), newLogCount); err != nil {
+		if err := txdb.as.SaveRequest(res.L1Message.MessageID(), newLogCount, startLogIndex); err != nil {
 			return err
 		}
-		// save requestId -> currentLogIndex
-		if err := txdb.as.SaveBlock(block); err != nil {
-			return err
+
+		for _, evmLog := range res.EVMLogs {
+			evmParsedTopics := make([]ethcommon.Hash, len(evmLog.Topics))
+			for j, t := range evmLog.Topics {
+				evmParsedTopics[j] = ethcommon.BytesToHash(t[:])
+			}
+			ethLogs = append(ethLogs, &types.Log{
+				Address: evmLog.Address.ToEthAddress(),
+				Topics:  evmParsedTopics,
+			})
 		}
+		startLogIndex += uint64(len(res.EVMLogs))
 	}
+	var logBloom common.Hash
+	copy(logBloom[:], math.U256Bytes(types.LogsBloom(ethLogs)))
+	if err := txdb.as.SaveBlock(block, logBloom); err != nil {
+		return err
+	}
+
 	// Don't bother saving if we didn't run at all
 	if numSteps > 0 {
 		saveMach(txdb.mach, block, txdb.checkpointer)

@@ -96,10 +96,11 @@ CBlockId aggregatorLatestBlock(const CAggregatorStore* agg) {
 
 int aggregatorSaveBlock(CAggregatorStore* agg,
                         uint64_t height,
-                        const void* hash) {
+                        const void* hash,
+                        const void* bloom) {
     try {
-        static_cast<AggregatorStore*>(agg)->saveBlock(height,
-                                                      receiveUint256(hash));
+        static_cast<AggregatorStore*>(agg)->saveBlock(
+            height, receiveUint256(hash), receiveUint256(bloom));
         return 1;
     } catch (const std::exception&) {
         return 0;
@@ -114,9 +115,10 @@ CBlockData aggregatorGetBlock(const CAggregatorStore* agg, uint64_t height) {
                 block.start_log,
                 block.log_count,
                 block.start_message,
-                block.message_count};
+                block.message_count,
+                returnUint256(block.bloom)};
     } catch (const std::exception&) {
-        return {0, nullptr, 0, 0, 0, 0};
+        return {0, nullptr, 0, 0, 0, 0, nullptr};
     }
 }
 
@@ -130,24 +132,25 @@ int aggregatorRestoreBlock(CAggregatorStore* agg, uint64_t height) {
 }
 
 // request_id is 32 bytes long
-ByteSliceResult aggregatorGetRequest(const CAggregatorStore* agg,
-                                     const void* request_id) {
+CRequestInfo aggregatorGetPossibleRequestInfo(const CAggregatorStore* agg,
+                                              const void* request_id) {
     try {
-        auto data = returnCharVector(
-            static_cast<const AggregatorStore*>(agg)->getRequest(
-                receiveUint256(request_id)));
-        return {data, true};
+        auto info =
+            static_cast<const AggregatorStore*>(agg)->getPossibleRequestInfo(
+                receiveUint256(request_id));
+        return {true, info.first, info.second};
     } catch (const std::exception&) {
-        return {{nullptr, 0}, false};
+        return {false, 0, 0};
     }
 }
 
 int aggregatorSaveRequest(CAggregatorStore* agg,
                           const void* request_id,
-                          uint64_t log_index) {
+                          uint64_t log_index,
+                          uint64_t evm_start_log_index) {
     try {
         static_cast<AggregatorStore*>(agg)->saveRequest(
-            receiveUint256(request_id), log_index);
+            receiveUint256(request_id), log_index, evm_start_log_index);
         return 1;
     } catch (const std::exception&) {
         return 0;

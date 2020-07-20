@@ -27,6 +27,7 @@ import "C"
 import (
 	"bytes"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"math/big"
 	"runtime"
 	"unsafe"
@@ -37,14 +38,6 @@ import (
 
 type AggregatorStore struct {
 	c unsafe.Pointer
-}
-
-type BlockInfo struct {
-	Hash         common.Hash
-	StartLog     uint64
-	LogCount     uint64
-	StartMessage uint64
-	MessageCount uint64
 }
 
 func deleteAggregatorStore(bs *BlockStore) {
@@ -131,27 +124,31 @@ func (as *AggregatorStore) LatestBlock() (*common.BlockId, error) {
 	}, nil
 }
 
-func (as *AggregatorStore) SaveBlock(id *common.BlockId) error {
-	cHash := hashToData(id.HeaderHash)
-	defer C.free(cHash)
+func (as *AggregatorStore) SaveBlock(id *common.BlockId, logBloom common.Hash) error {
+	cHeaderHash := hashToData(id.HeaderHash)
+	defer C.free(cHeaderHash)
 
-	if C.aggregatorSaveBlock(as.c, C.uint64_t(id.Height.AsInt().Uint64()), cHash) == 0 {
+	cLogBloom := hashToData(logBloom)
+	defer C.free(cLogBloom)
+
+	if C.aggregatorSaveBlock(as.c, C.uint64_t(id.Height.AsInt().Uint64()), cHeaderHash, cLogBloom) == 0 {
 		return errors.New("failed to save block")
 	}
 	return nil
 }
 
-func (as *AggregatorStore) GetBlock(height uint64) (BlockInfo, error) {
+func (as *AggregatorStore) GetBlock(height uint64) (machine.BlockInfo, error) {
 	blockData := C.aggregatorGetBlock(as.c, C.uint64_t(height))
 	if blockData.found == 0 {
-		return BlockInfo{}, errors.New("failed to get block")
+		return machine.BlockInfo{}, errors.New("failed to get block")
 	}
-	return BlockInfo{
+	return machine.BlockInfo{
 		Hash:         dataToHash(blockData.hash),
 		StartLog:     uint64(blockData.start_log),
 		LogCount:     uint64(blockData.log_count),
 		StartMessage: uint64(blockData.start_message),
 		MessageCount: uint64(blockData.message_count),
+		Bloom:        dataToHash(blockData.hash),
 	}, nil
 }
 
@@ -162,23 +159,22 @@ func (as *AggregatorStore) RestoreBlock(height uint64) error {
 	return nil
 }
 
-func (as *AggregatorStore) GetRequest(requestId common.Hash) (value.Value, error) {
+func (as *AggregatorStore) GetPossibleRequestInfo(requestId common.Hash) (uint64, uint64, error) {
 	cHash := hashToData(requestId)
 	defer C.free(cHash)
 
-	result := C.aggregatorGetRequest(as.c, cHash)
+	result := C.aggregatorGetPossibleRequestInfo(as.c, cHash)
 	if result.found == 0 {
-		return nil, errors.New("failed to get request")
+		return 0, 0, errors.New("failed to get request")
 	}
-	logBytes := toByteSlice(result.slice)
-	return value.UnmarshalValue(bytes.NewBuffer(logBytes))
+	return uint64(result.log_index), uint64(result.evm_start_log_index), nil
 }
 
-func (as *AggregatorStore) SaveRequest(requestId common.Hash, logIndex uint64) error {
+func (as *AggregatorStore) SaveRequest(requestId common.Hash, logIndex uint64, evmLogStartIndex uint64) error {
 	cHash := hashToData(requestId)
 	defer C.free(cHash)
 
-	if C.aggregatorSaveRequest(as.c, cHash, C.uint64_t(logIndex)) == 0 {
+	if C.aggregatorSaveRequest(as.c, cHash, C.uint64_t(logIndex), C.uint64_t(evmLogStartIndex)) == 0 {
 		return errors.New("failed to save request")
 	}
 	return nil

@@ -31,6 +31,8 @@ struct BlockData {
 
     uint64_t start_message;
     uint64_t message_count;
+
+    uint256_t bloom;
 };
 
 class AggregatorStore {
@@ -50,12 +52,17 @@ class AggregatorStore {
 
     std::pair<uint64_t, uint256_t> latestBlock() const;
     uint64_t getInitialBlock() const;
-    void saveBlock(uint64_t height, const uint256_t& hash);
+    void saveBlock(uint64_t height,
+                   const uint256_t& hash,
+                   const uint256_t& bloom);
     BlockData getBlock(uint64_t height) const;
     void restoreBlock(uint64_t height);
 
-    std::vector<char> getRequest(const uint256_t& request_id) const;
-    void saveRequest(const uint256_t& request_id, uint64_t log_index);
+    std::pair<uint64_t, uint64_t> getPossibleRequestInfo(
+        const uint256_t& request_id) const;
+    void saveRequest(const uint256_t& request_id,
+                     uint64_t log_index,
+                     uint64_t evm_start_log_index);
 };
 
 #endif /* aggregator_hpp */

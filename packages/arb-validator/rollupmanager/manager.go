@@ -18,8 +18,6 @@ package rollupmanager
 
 import (
 	"context"
-	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainobserver"
 	errors2 "github.com/pkg/errors"
@@ -33,19 +31,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
-const (
-	ValidEthBridgeVersion = "develop"
-)
-
-var errNoActiveChain = errors.New("validator has no active chain")
-var notAtHead = errors.New("validator is catching up to latest")
-
-type reorgCache struct {
-	latestValidMachine    machine.Machine
-	currentPendingMachine machine.Machine
-	currentBlockId        *common.BlockId
-}
-
 type Manager struct {
 	// The mutex should be held whenever listeres or reorgCache are accessed or
 	// set and whenever activeChain is going to be set (but not when it is accessed)
@@ -53,14 +38,6 @@ type Manager struct {
 
 	listeners   []chainlistener.ChainListener
 	activeChain *chainobserver.ChainObserver
-	// reorgCache is nil when the validator is functioning normally. When the
-	// validator experiences a reorg it stores the current state in the reorg
-	// cache. It uses this cache to respond to non-mutating queries from users
-	// until it is caught back up with the latest state at which point it clears
-	// the cache and starts answering queries based on the current state.
-	// This approach let's us provide a best effort response to users quickly
-	// rather than blocking until the validator fully recovers from the reorg.
-	reorgCache *reorgCache
 
 	// These variables are only written by the constructor
 	RollupAddress common.Address
@@ -276,9 +253,6 @@ func CreateManagerAdvanced(
 						caughtUpToL1 = true
 						man.activeChain.NowAtHead()
 						log.Println("Now at head")
-						man.Lock()
-						man.reorgCache = nil
-						man.Unlock()
 					}
 
 					man.activeChain.NotifyNewBlock(blockId.Clone())
@@ -313,11 +287,6 @@ func CreateManagerAdvanced(
 			}
 
 			man.Lock()
-			man.reorgCache = &reorgCache{
-				latestValidMachine:    man.activeChain.LatestKnownValidMachine(),
-				currentPendingMachine: man.activeChain.CurrentPendingMachine(),
-				currentBlockId:        man.activeChain.CurrentBlockId(),
-			}
 			man.activeChain = nil
 			man.Unlock()
 
@@ -342,51 +311,6 @@ func (man *Manager) AddListener(listener chainlistener.ChainListener) {
 	if man.activeChain != nil {
 		man.activeChain.AddListener(context.Background(), listener)
 	}
-}
-
-func (man *Manager) GetLatestMachine() (machine.Machine, error) {
-	man.Lock()
-	defer man.Unlock()
-	if man.reorgCache != nil {
-		return man.reorgCache.latestValidMachine.Clone(), nil
-	}
-	if man.activeChain == nil {
-		return nil, errNoActiveChain
-	}
-	if man.activeChain.IsAtHead() {
-		return man.activeChain.LatestKnownValidMachine(), nil
-	}
-	return nil, notAtHead
-}
-
-func (man *Manager) GetPendingMachine() (machine.Machine, error) {
-	man.Lock()
-	defer man.Unlock()
-	if man.reorgCache != nil {
-		return man.reorgCache.currentPendingMachine.Clone(), nil
-	}
-	if man.activeChain == nil {
-		return nil, errNoActiveChain
-	}
-	if man.activeChain.IsAtHead() {
-		return man.activeChain.CurrentPendingMachine(), nil
-	}
-	return nil, notAtHead
-}
-
-func (man *Manager) CurrentBlockId() (*common.BlockId, error) {
-	man.Lock()
-	defer man.Unlock()
-	if man.reorgCache != nil {
-		return man.reorgCache.currentBlockId.Clone(), nil
-	}
-	if man.activeChain == nil {
-		return nil, errNoActiveChain
-	}
-	if man.activeChain.IsAtHead() {
-		return man.activeChain.CurrentBlockId(), nil
-	}
-	return nil, notAtHead
 }
 
 func (man *Manager) GetCheckpointer() checkpointing.RollupCheckpointer {

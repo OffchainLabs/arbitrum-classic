@@ -34,7 +34,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -58,7 +57,6 @@ type ChainObserver struct {
 	checkpointer      checkpointing.RollupCheckpointer
 	isOpinionated     bool
 	atHead            bool
-	pendingState      machine.Machine
 }
 
 func tryRestoreFromCheckpoint(
@@ -396,21 +394,6 @@ func (chain *ChainObserver) ContractAddress() common.Address {
 	chain.RLock()
 	defer chain.RUnlock()
 	return chain.rollupAddr
-}
-
-func (chain *ChainObserver) LatestKnownValidMachine() machine.Machine {
-	chain.RLock()
-	defer chain.RUnlock()
-	return chain.calculatedValidNode.Machine().Clone()
-}
-
-func (chain *ChainObserver) CurrentPendingMachine() machine.Machine {
-	chain.RLock()
-	defer chain.RUnlock()
-	if chain.pendingState == nil {
-		return chain.calculatedValidNode.Machine().Clone()
-	}
-	return chain.pendingState.Clone()
 }
 
 func (chain *ChainObserver) RestartFromLatestValid(ctx context.Context) {

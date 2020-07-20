@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2019, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,15 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
-package rollupvalidator;
-import "arb-util/common/common.proto";
-option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator";
+package machine
 
-message TxRecord {
-    uint64 nodeHeight = 1;
-    common.HashBuf nodeHash = 2;
-    uint64 transactionIndex = 3;
-}
+import "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
-message NodeMetadata {
-    bytes logBloom = 1;
+type BlockInfo struct {
+	Hash         common.Hash
+	StartLog     uint64
+	LogCount     uint64
+	StartMessage uint64
+	MessageCount uint64
+	Bloom        common.Hash
 }

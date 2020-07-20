@@ -49,33 +49,27 @@ export interface FindLogsReply {
 }
 
 export interface GetOutputMessageArgs {
-  AssertionNodeHash?: string
-  MsgIndex?: string
+  index?: number
 }
 
 export interface GetOutputMessageReply {
-  found?: boolean
   rawVal?: string
 }
 
-export interface GetMessageResultArgs {
+export interface GetRequestResultArgs {
   txHash?: string
 }
 
-export interface GetMessageResultReply {
-  tx?: TxInfoBuf
+export interface GetRequestResultReply {
+  rawVal?: string
+  index?: number
+  startLogIndex?: number
 }
 
-export interface GetAssertionCountArgs {}
+export interface GetChainAddressArgs {}
 
-export interface GetAssertionCountReply {
-  assertionCount?: number
-}
-
-export interface GetVMInfoArgs {}
-
-export interface GetVMInfoReply {
-  vmID?: string
+export interface GetChainAddressReply {
+  chainAddress?: string
 }
 
 export interface CallMessageArgs {
@@ -87,23 +81,24 @@ export interface CallMessageReply {
   rawVal?: string
 }
 
-export interface GetLatestNodeLocationArgs {}
+export interface BlockInfoArgs {
+  height?: number
+}
 
-export interface GetLatestNodeLocationReply {
-  location?: NodeLocation
+export interface BlockInfoReply {
+  hash?: string
+  startLog?: number
+  logCount?: number
+  startMessage?: number
+  messageCount?: number
+  bloom?: string
 }
 
 export interface RollupValidatorService {
+  GetBlockInfo: (r: BlockInfoArgs) => BlockInfoReply
   GetOutputMessage: (r: GetOutputMessageArgs) => GetOutputMessageReply
-  GetMessageResult: (r: GetMessageResultArgs) => GetMessageResultReply
+  GetRequestResult: (r: GetRequestResultArgs) => GetRequestResultReply
   CallMessage: (r: CallMessageArgs) => CallMessageReply
   FindLogs: (r: FindLogsArgs) => FindLogsReply
-  GetAssertionCount: (r: GetAssertionCountArgs) => GetAssertionCountReply
-  GetVMInfo: (r: GetVMInfoArgs) => GetVMInfoReply
-  GetLatestNodeLocation: (
-    r: GetLatestNodeLocationArgs
-  ) => GetLatestNodeLocationReply
-  GetLatestPendingNodeLocation: (
-    r: GetLatestNodeLocationArgs
-  ) => GetLatestNodeLocationReply
+  GetChainAddress: (r: GetChainAddressArgs) => GetChainAddressReply
 }

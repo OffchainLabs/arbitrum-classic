@@ -34,6 +34,8 @@ struct CBlockDataStruct {
 
     uint64_t start_message;
     uint64_t message_count;
+
+    const void* bloom;
 };
 
 typedef struct CBlockDataStruct CBlockData;
@@ -45,6 +47,14 @@ struct CBlockIdStruct {
 };
 
 typedef struct CBlockIdStruct CBlockId;
+
+struct CRequestInfoStruct {
+    int found;
+    uint64_t log_index;
+    uint64_t evm_start_log_index;
+};
+
+typedef struct CRequestInfoStruct CRequestInfo;
 
 void deleteAggregatorStore(CAggregatorStore* m);
 
@@ -60,16 +70,20 @@ ByteSliceResult aggregatorGetMessage(const CAggregatorStore* agg,
                                      uint64_t index);
 
 CBlockId aggregatorLatestBlock(const CAggregatorStore* agg);
-int aggregatorSaveBlock(CAggregatorStore* m, uint64_t height, const void* hash);
+int aggregatorSaveBlock(CAggregatorStore* m,
+                        uint64_t height,
+                        const void* hash,
+                        const void* bloom);
 CBlockData aggregatorGetBlock(const CAggregatorStore* agg, uint64_t height);
 int aggregatorRestoreBlock(CAggregatorStore* m, uint64_t height);
 
 // request_id is 32 bytes long
-ByteSliceResult aggregatorGetRequest(const CAggregatorStore* agg,
-                                     const void* request_id);
+CRequestInfo aggregatorGetPossibleRequestInfo(const CAggregatorStore* agg,
+                                              const void* request_id);
 int aggregatorSaveRequest(CAggregatorStore* agg,
                           const void* request_id,
-                          uint64_t log_index);
+                          uint64_t log_index,
+                          uint64_t evm_start_log_index);
 
 #ifdef __cplusplus
 }
