@@ -29,11 +29,10 @@ message FullLogBuf {
     string blockHash = 2;
     uint64 blockHeight = 3;
     string data = 4;
-    string logIndex = 5;
+    string index = 5;
     repeated string topics = 6;
     string transactionIndex = 7;
     string transactionHash = 8;
-    string index = 9;
 }
 
 message AVMLogProof {

@@ -68,7 +68,6 @@ func (l FullLog) Marshal() *FullLogBuf {
 		BlockHash:        l.Block.HeaderHash.String(),
 		BlockHeight:      l.Block.Height.AsInt().Uint64(),
 		Data:             hexutil.Encode(l.Data),
-		LogIndex:         "0x" + strconv.FormatUint(0, 16),
 		Topics:           topicStrings,
 		TransactionIndex: "0x" + strconv.FormatUint(l.TxIndex, 16),
 		TransactionHash:  l.TxHash.String(),

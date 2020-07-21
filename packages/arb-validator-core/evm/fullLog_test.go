@@ -17,6 +17,7 @@
 package evm
 
 import (
+	"math/big"
 	"math/rand"
 	"testing"
 
@@ -29,7 +30,7 @@ func newRandomFullLog(topicCount int32) FullLog {
 		TxIndex: rand.Uint64(),
 		TxHash:  common.RandHash(),
 		Block: &common.BlockId{
-			Height:     common.NewTimeBlocks(common.RandBigInt()),
+			Height:     common.NewTimeBlocks(new(big.Int).SetUint64(rand.Uint64())),
 			HeaderHash: common.RandHash(),
 		},
 		Index:   rand.Uint64(),
@@ -48,6 +49,8 @@ func TestFullLogMarshal(t *testing.T) {
 	}
 
 	if !l.Equals(l2) {
+		t.Log(l)
+		t.Log(l2)
 		t.Fatal("not equal after unmarshal")
 	}
 }

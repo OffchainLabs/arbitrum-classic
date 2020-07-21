@@ -11,11 +11,10 @@ export interface FullLogBuf {
   blockHash?: string
   blockHeight?: number
   data?: string
-  logIndex?: string
+  index?: string
   topics?: Array<string>
   transactionIndex?: string
   transactionHash?: string
-  index?: string
 }
 
 export interface AVMLogProof {
