@@ -15,17 +15,19 @@
  */
 
 #include <avm_values/bigint.hpp>
-#include <avm_values/util.hpp>
 
-#include <bigint_utils.hpp>
+#include <ethash/keccak.hpp>
 
 #include <sstream>
+#include <vector>
 
 uint256_t hash(const uint256_t& val) {
-    std::array<unsigned char, 32> intData;
-    to_big_endian(val, intData.begin());
+    auto int_data = intx::be::store<ethash::hash256>(val);
+    auto hash_val = ethash::keccak256(int_data);
+    return intx::be::load<uint256_t>(hash_val);
+}
 
-    std::array<unsigned char, 32> hashData;
-    evm::Keccak_256(intData.data(), 32, hashData.data());
-    return from_big_endian(hashData.begin(), hashData.end());
+void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
+    buf.resize(buf.size() + 32);
+    to_big_endian(val, &*(buf.end() - 32));
 }

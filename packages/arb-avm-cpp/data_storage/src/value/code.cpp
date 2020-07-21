@@ -68,7 +68,7 @@ std::vector<RawCodePoint> extractRawCodeSegment(
     const std::vector<unsigned char> stored_value) {
     auto iter = stored_value.begin();
     auto ptr = reinterpret_cast<const char*>(&*iter);
-    auto cp_count = checkpoint::utils::deserialize_uint64(ptr);
+    auto cp_count = deserialize_uint64_t(ptr);
     std::vector<RawCodePoint> cps;
     for (uint64_t i = 0; i < cp_count; i++) {
         cps.push_back(extractRawCodePoint(ptr));
@@ -110,7 +110,7 @@ std::vector<unsigned char> prepareToSaveCodeSegment(
     if (results.status.ok() && results.reference_count > 0) {
         auto iter = results.stored_value.begin();
         auto ptr = reinterpret_cast<const char*>(&*iter);
-        existing_cp_count = checkpoint::utils::deserialize_uint64(ptr);
+        existing_cp_count = deserialize_uint64_t(ptr);
         if (existing_cp_count >= snapshot.op_count) {
             // If this segment is already saved with at least as many ops as is
             // currently contains, just increment the reference count
@@ -185,7 +185,7 @@ uint64_t getNextSegmentID(const Transaction& transaction) {
         throw std::runtime_error("couldn't load segment id");
     }
     auto ptr = segment_id_raw.data();
-    return checkpoint::utils::deserialize_uint64(ptr);
+    return deserialize_uint64_t(ptr);
 }
 
 template <typename Func>

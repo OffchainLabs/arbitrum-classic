@@ -31,9 +31,7 @@ set(LIB_HEADERS
   include/avm_values/codepointstub.hpp
   include/avm_values/pool.hpp
   include/avm_values/opcodes.hpp
-  include/avm_values/util.hpp
   include/avm_values/vmValueParser.hpp
-        include/avm_values/keccak.hpp
 )
 
 set(LIB_SOURCES
@@ -47,10 +45,9 @@ set(LIB_SOURCES
   src/tuplestub.cpp
   src/value.cpp
   src/vmValueParser.cpp
-  src/keccak.cpp
 )
 
-add_library(avm_values STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES})
+add_library(avm_values STATIC ${LIB_HEADERS} ${LIB_SOURCES})
 
 set_target_properties(
     avm_values
@@ -72,15 +69,14 @@ target_include_directories(avm_values PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(avm_values PUBLIC nonstd::variant-lite nonstd::optional-lite Threads::Threads avm_utils nlohmann_json::nlohmann_json)
+target_link_libraries(avm_values PUBLIC nonstd::variant-lite nonstd::optional-lite Threads::Threads nlohmann_json::nlohmann_json ethash::keccak intx::intx PRIVATE Boost::boost)
 
 target_code_coverage(avm_values AUTO ALL)
 
 if(${CMAKE_VERSION} VERSION_LESS "3.8.0")
-    source_group(avm_values FILES ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES})
+    source_group(avm_values FILES ${LIB_HEADERS} ${LIB_SOURCES})
 else()
     source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/include/avm_values" FILES ${LIB_HEADERS})
     source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" FILES ${LIB_SOURCES})
-    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/../external" FILES ${KECCAK_SOURCES})
 endif()
 

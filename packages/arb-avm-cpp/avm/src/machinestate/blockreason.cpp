@@ -16,6 +16,8 @@
 
 #include <avm/machinestate/blockreason.hpp>
 
+#include <iostream>
+
 constexpr BlockType InboxBlocked::type;
 
 std::ostream& operator<<(std::ostream& os, const NotBlocked&) {

@@ -141,11 +141,12 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
       - run:
           command: |
-            mkdir -p packages/arb-avm-cpp/build
-            cd packages/arb-avm-cpp/build
+            mkdir -p packages/arb-avm-cpp/debug
+            cd packages/arb-avm-cpp/debug
             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
             cmake --build . -j 2
-            cp lib/lib* ../cmachine/
+            cd ../
+            ./scripts/install-cmachine-debug
       - run:
           name: test arb-avm-cpp
           command: |
@@ -153,7 +154,7 @@ jobs:
             lcov --capture --directory . --output-file coverage.info
             lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*'
             lcov --list coverage.info
-          working_directory: /home/user/project/packages/arb-avm-cpp/build
+          working_directory: /home/user/project/packages/arb-avm-cpp/debug
       - persist_to_workspace: # store the built files into the workspace for other jobs.
           root: /home/user/project/packages/arb-avm-cpp/cmachine
           paths:

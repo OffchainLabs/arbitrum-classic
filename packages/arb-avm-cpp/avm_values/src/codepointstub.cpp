@@ -17,7 +17,7 @@
 #include <avm_values/codepoint.hpp>
 #include <avm_values/codepointstub.hpp>
 
-#include <bigint_utils.hpp>
+#include <iostream>
 
 CodePointStub::CodePointStub(const CodePointRef& pc_, const CodePoint& cp_)
     : pc(pc_), hash(::hash(cp_)) {}

@@ -14,11 +14,7 @@
  * limitations under the License.
  */
 
-#include "bigint_utils.hpp"
-
 #include <avm/machine.hpp>
-
-#include <boost/algorithm/hex.hpp>
 
 #include <sys/stat.h>
 #include <fstream>
@@ -31,8 +27,8 @@ int main(int argc, char* argv[]) {
     if (argc < 3 || (std::string(argv[1]) != "--hexops" &&
                      std::string(argv[1]) != "--mexe")) {
         std::cout << "Usage: \n"
-                     "avm_runner --hexops filename\n"
-                     "avm_runner --mexe filename\n";
+                     "avm_runner --hexops filename [--inbox filename]\n"
+                     "avm_runner --mexe filename [--inbox filename]\n";
         return 1;
     }
     auto mode = std::string(argv[1]);
@@ -41,6 +37,9 @@ int main(int argc, char* argv[]) {
     auto mach = [&]() {
         if (mode == "--hexops") {
             std::ifstream file(filename, std::ios::binary);
+            if (!file.is_open()) {
+                throw std::runtime_error("Couldn't open file");
+            }
             std::vector<unsigned char> raw_ops(
                 (std::istreambuf_iterator<char>(file)),
                 std::istreambuf_iterator<char>());
@@ -60,7 +59,23 @@ int main(int argc, char* argv[]) {
         }
     }();
 
-    auto assertion = mach.run(100000000, Tuple(), std::chrono::seconds(0));
+    Tuple inbox;
+    if (argc == 5 && std::string(argv[3]) == "--inbox") {
+        std::ifstream file(argv[4], std::ios::binary);
+        if (!file.is_open()) {
+            throw std::runtime_error("Couldn't open file");
+        }
+        std::vector<unsigned char> raw_inbox(
+            (std::istreambuf_iterator<char>(file)),
+            std::istreambuf_iterator<char>());
+        auto data = reinterpret_cast<const char*>(raw_inbox.data());
+        auto inboxVal = deserialize_value(data, mach.getPool());
+        inbox = nonstd::get<Tuple>(inboxVal);
+    }
+
+    auto assertionBase = mach.run(100000000, Tuple(), std::chrono::seconds(0));
+
+    auto assertion = mach.run(100000000, inbox, std::chrono::seconds(0));
 
     std::cout << "Ran " << assertion.stepCount << " ending in state "
               << static_cast<int>(mach.currentStatus()) << "\n";

@@ -16,3 +16,6 @@
 [submodule "packages/arb-avm-cpp/external/optional-lite"]
 	path = packages/arb-avm-cpp/external/optional-lite
 	url = https://github.com/martinmoene/optional-lite
+[submodule "packages/arb-avm-cpp/cmake/cable"]
+	path = packages/arb-avm-cpp/cmake/cable
+	url = https://github.com/ethereum/cable

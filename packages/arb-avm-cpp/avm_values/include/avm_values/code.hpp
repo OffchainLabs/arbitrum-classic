@@ -189,10 +189,6 @@ class Code {
         const std::lock_guard<std::mutex> lock(mutex);
         return {0, segments.at(0)->size() - 1};
     }
-
-    friend std::ostream& operator<<(std::ostream& os, const Code& code);
 };
-
-std::ostream& operator<<(std::ostream& os, const Code& code);
 
 #endif /* code_hpp */

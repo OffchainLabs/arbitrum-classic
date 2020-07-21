@@ -15,13 +15,14 @@
  */
 
 #include <avm/machine.hpp>
-#include <avm_values/keccak.hpp>
-#include <bigint_utils.hpp>
 
 #include <secp256k1_recovery.h>
+#include <ethash/keccak.hpp>
 
 #define CATCH_CONFIG_ENABLE_BENCHMARKING 1
 #include <catch2/catch.hpp>
+
+using namespace intx;
 
 MachineState runUnaryOp(uint256_t arg1, OpCode op) {
     MachineState m;
@@ -85,36 +86,58 @@ void testTertiaryOp(uint256_t arg1,
 }
 
 TEST_CASE("ADD opcode is correct") {
-    SECTION("Non overlow is correct") { testBinaryOp(4, 3, 7, OpCode::ADD); }
+    SECTION("Non overlow is correct") {
+        testBinaryOp(4_u256, 3_u256, 7_u256, OpCode::ADD);
+    }
 
-    SECTION("0+0 is correct") { testBinaryOp(0, 0, 0, OpCode::ADD); }
+    SECTION("0+0 is correct") {
+        testBinaryOp(0_u256, 0_u256, 0_u256, OpCode::ADD);
+    }
 
-    SECTION("Overlow is correct") { testBinaryOp(-1, 4, 3, OpCode::ADD); }
+    SECTION("Overlow is correct") {
+        testBinaryOp(-1_u256, 4_u256, 3_u256, OpCode::ADD);
+    }
 
-    SECTION("-2+1 is correct") { testBinaryOp(-2, 1, -1, OpCode::ADD); }
+    SECTION("-2+1 is correct") {
+        testBinaryOp(-2_u256, 1_u256, -1_u256, OpCode::ADD);
+    }
 }
 
 TEST_CASE("MUL opcode is correct") {
-    SECTION("Non overlow is correct") { testBinaryOp(4, 3, 12, OpCode::MUL); }
+    SECTION("Non overlow is correct") {
+        testBinaryOp(4_u256, 3_u256, 12_u256, OpCode::MUL);
+    }
 
-    SECTION("3*0 is correct") { testBinaryOp(3, 0, 0, OpCode::MUL); }
+    SECTION("3*0 is correct") {
+        testBinaryOp(3_u256, 0_u256, 0_u256, OpCode::MUL);
+    }
 
-    SECTION("-1*1 is correct") { testBinaryOp(-1, 1, -1, OpCode::MUL); }
+    SECTION("-1*1 is correct") {
+        testBinaryOp(-1_u256, 1_u256, -1_u256, OpCode::MUL);
+    }
 
-    SECTION("-2+1 is correct") { testBinaryOp(-2, 1, -2, OpCode::MUL); }
+    SECTION("-2+1 is correct") {
+        testBinaryOp(-2_u256, 1_u256, -2_u256, OpCode::MUL);
+    }
 }
 
 TEST_CASE("SUB opcode is correct") {
-    SECTION("Non overlow is correct") { testBinaryOp(4, 3, 1, OpCode::SUB); }
+    SECTION("Non overlow is correct") {
+        testBinaryOp(4_u256, 3_u256, 1_u256, OpCode::SUB);
+    }
 
-    SECTION("Overlow is correct") { testBinaryOp(3, 4, -1, OpCode::SUB); }
+    SECTION("Overlow is correct") {
+        testBinaryOp(3_u256, 4_u256, -1_u256, OpCode::SUB);
+    }
 }
 
 TEST_CASE("DIV opcode is correct") {
-    SECTION("Non overlow is correct") { testBinaryOp(12, 3, 4, OpCode::DIV); }
+    SECTION("Non overlow is correct") {
+        testBinaryOp(12_u256, 3_u256, 4_u256, OpCode::DIV);
+    }
 
     SECTION("unsigned division is correct") {
-        MachineState m = runBinaryOp(-6, 2, OpCode::DIV);
+        MachineState m = runBinaryOp(-6_u256, 2_u256, OpCode::DIV);
         value res = m.stack.pop();
         auto num = nonstd::get_if<uint256_t>(&res);
         REQUIRE(num);
@@ -123,51 +146,61 @@ TEST_CASE("DIV opcode is correct") {
     }
 
     SECTION("Divide by zero") {
-        MachineState m = runBinaryOp(3, 0, OpCode::DIV);
+        MachineState m = runBinaryOp(3_u256, 0_u256, OpCode::DIV);
         REQUIRE(m.state == Status::Error);
     }
 }
 
 TEST_CASE("SDIV opcode is correct") {
     SECTION("Positive divided by positive") {
-        testBinaryOp(12, 3, 4, OpCode::SDIV);
+        testBinaryOp(12_u256, 3_u256, 4_u256, OpCode::SDIV);
     }
     SECTION("Positive divided by negative") {
-        testBinaryOp(12, -3, -4, OpCode::SDIV);
+        testBinaryOp(12_u256, -3_u256, -4_u256, OpCode::SDIV);
     }
     SECTION("Negative divided by positive") {
-        testBinaryOp(-12, 3, -4, OpCode::SDIV);
+        testBinaryOp(-12_u256, 3_u256, -4_u256, OpCode::SDIV);
     }
     SECTION("Negative divided by negative") {
-        testBinaryOp(-12, -3, 4, OpCode::SDIV);
+        testBinaryOp(-12_u256, -3_u256, 4_u256, OpCode::SDIV);
     }
     SECTION("Divide by zero") {
-        MachineState m = runBinaryOp(3, 0, OpCode::SDIV);
+        MachineState m = runBinaryOp(3_u256, 0_u256, OpCode::SDIV);
         REQUIRE(m.state == Status::Error);
     }
 }
 
 TEST_CASE("MOD opcode is correct") {
-    SECTION("8 mod 3") { testBinaryOp(8, 3, 2, OpCode::MOD); }
+    SECTION("8 mod 3") { testBinaryOp(8_u256, 3_u256, 2_u256, OpCode::MOD); }
 
-    SECTION("8 mod very large") { testBinaryOp(8, -3, 8, OpCode::MOD); }
+    SECTION("8 mod very large") {
+        testBinaryOp(8_u256, -3_u256, 8_u256, OpCode::MOD);
+    }
 
-    SECTION("0 mod 3") { testBinaryOp(0, 3, 0, OpCode::MOD); }
+    SECTION("0 mod 3") { testBinaryOp(0_u256, 3_u256, 0_u256, OpCode::MOD); }
 
     SECTION("Mod by zero") {
-        MachineState m = runBinaryOp(3, 0, OpCode::MOD);
+        MachineState m = runBinaryOp(3_u256, 0_u256, OpCode::MOD);
         REQUIRE(m.state == Status::Error);
     }
 }
 
 TEST_CASE("SMOD opcode is correct") {
-    SECTION("Positive mod positive") { testBinaryOp(8, 3, 2, OpCode::SMOD); }
+    SECTION("Positive mod positive") {
+        testBinaryOp(8_u256, 3_u256, 2_u256, OpCode::SMOD);
+    }
 
-    SECTION("Positive mod negative") { testBinaryOp(8, -3, 2, OpCode::SMOD); }
+    SECTION("Positive mod negative") {
+        testBinaryOp(8_u256, -3_u256, 2_u256, OpCode::SMOD);
+    }
 
-    SECTION("Negative mod positive") { testBinaryOp(-8, 3, -2, OpCode::SMOD); }
+    SECTION("Negative mod positive") {
+        testBinaryOp(-8_u256, 3_u256, -2_u256, OpCode::SMOD);
+    }
 
-    SECTION("Negative mod negative") { testBinaryOp(-8, -3, -2, OpCode::SMOD); }
+    SECTION("Negative mod negative") {
+        testBinaryOp(-8_u256, -3_u256, -2_u256, OpCode::SMOD);
+    }
     SECTION("Mod by zero") {
         MachineState m = runBinaryOp(3, 0, OpCode::SMOD);
         REQUIRE(m.state == Status::Error);
@@ -175,36 +208,52 @@ TEST_CASE("SMOD opcode is correct") {
 }
 
 TEST_CASE("ADDMOD opcode is correct") {
-    SECTION("(8+5)%3") { testTertiaryOp(8, 5, 3, 1, OpCode::ADDMOD); }
+    SECTION("(8+5)%3") {
+        testTertiaryOp(8_u256, 5_u256, 3_u256, 1_u256, OpCode::ADDMOD);
+    }
 
-    SECTION("(-1+1)%7") { testTertiaryOp(-1, 1, 7, 2, OpCode::ADDMOD); }
+    SECTION("(-1+1)%7") {
+        testTertiaryOp(-1_u256, 1_u256, 7_u256, 2_u256, OpCode::ADDMOD);
+    }
 
-    SECTION("(0+0)%7") { testTertiaryOp(0, 0, 7, 0, OpCode::ADDMOD); }
+    SECTION("(0+0)%7") {
+        testTertiaryOp(0_u256, 0_u256, 7_u256, 0_u256, OpCode::ADDMOD);
+    }
 
-    SECTION("(3+3)%-4") { testTertiaryOp(3, 3, -4, 6, OpCode::ADDMOD); }
+    SECTION("(3+3)%-4") {
+        testTertiaryOp(3_u256, 3_u256, -4_u256, 6_u256, OpCode::ADDMOD);
+    }
 
     SECTION("Mod by zero") {
-        MachineState m = runTertiaryOp(8, 3, 0, OpCode::ADDMOD);
+        MachineState m = runTertiaryOp(8_u256, 3_u256, 0_u256, OpCode::ADDMOD);
         REQUIRE(m.state == Status::Error);
     }
 }
 
 TEST_CASE("MULMOD opcode is correct") {
-    SECTION("(8*2)%3") { testTertiaryOp(8, 2, 3, 1, OpCode::MULMOD); }
+    SECTION("(8*2)%3") {
+        testTertiaryOp(8_u256, 2_u256, 3_u256, 1_u256, OpCode::MULMOD);
+    }
 
-    SECTION("(-1*2)%7") { testTertiaryOp(-1, 2, 7, 2, OpCode::MULMOD); }
+    SECTION("(-1*2)%7") {
+        testTertiaryOp(-1_u256, 2_u256, 7_u256, 2_u256, OpCode::MULMOD);
+    }
 
-    SECTION("(0*0)%7") { testTertiaryOp(0, 0, 7, 0, OpCode::MULMOD); }
+    SECTION("(0*0)%7") {
+        testTertiaryOp(0_u256, 0_u256, 7_u256, 0_u256, OpCode::MULMOD);
+    }
 
     SECTION("Mod by zero") {
-        MachineState m = runTertiaryOp(8, 3, 0, OpCode::MULMOD);
+        MachineState m = runTertiaryOp(8_u256, 3_u256, 0_u256, OpCode::MULMOD);
         REQUIRE(m.state == Status::Error);
     }
 }
 
 TEST_CASE("EXP opcode is correct") {
-    SECTION("All positive") { testBinaryOp(3, 2, 9, OpCode::EXP); }
-    SECTION("wrap") { testBinaryOp(2, 256, 0, OpCode::EXP); }
+    SECTION("All positive") {
+        testBinaryOp(3_u256, 2_u256, 9_u256, OpCode::EXP);
+    }
+    SECTION("wrap") { testBinaryOp(2_u256, 256_u256, 0_u256, OpCode::EXP); }
 }
 
 TEST_CASE("LT opcode is correct") {
@@ -238,36 +287,52 @@ TEST_CASE("GT opcode is correct") {
 }
 
 TEST_CASE("SLT opcode is correct") {
-    SECTION("All positive true") { testBinaryOp(7, 3, 0, OpCode::SLT); }
-    SECTION("All positive false") { testBinaryOp(3, 7, 1, OpCode::SLT); }
-    SECTION("All negative true") { testBinaryOp(-3, -7, 0, OpCode::SLT); }
-    SECTION("All negative false") { testBinaryOp(-7, -3, 1, OpCode::SLT); }
+    SECTION("All positive true") {
+        testBinaryOp(7_u256, 3_u256, 0_u256, OpCode::SLT);
+    }
+    SECTION("All positive false") {
+        testBinaryOp(3_u256, 7_u256, 1_u256, OpCode::SLT);
+    }
+    SECTION("All negative true") {
+        testBinaryOp(-3_u256, -7_u256, 0_u256, OpCode::SLT);
+    }
+    SECTION("All negative false") {
+        testBinaryOp(-7_u256, -3_u256, 1_u256, OpCode::SLT);
+    }
     SECTION("First pos, second neg true") {
-        testBinaryOp(3, -7, 0, OpCode::SLT);
+        testBinaryOp(3_u256, -7_u256, 0_u256, OpCode::SLT);
     }
     SECTION("First neg, second pos false") {
-        testBinaryOp(-3, 7, 1, OpCode::SLT);
+        testBinaryOp(-3_u256, 7_u256, 1_u256, OpCode::SLT);
     }
-    SECTION("equal") { testBinaryOp(3, 3, 0, OpCode::SLT); }
+    SECTION("equal") { testBinaryOp(3_u256, 3_u256, 0_u256, OpCode::SLT); }
 }
 
 TEST_CASE("SGT opcode is correct") {
-    SECTION("All positive true") { testBinaryOp(7, 3, 1, OpCode::SGT); }
-    SECTION("All positive false") { testBinaryOp(3, 7, 0, OpCode::SGT); }
-    SECTION("All negative true") { testBinaryOp(-3, -7, 1, OpCode::SGT); }
-    SECTION("All negative false") { testBinaryOp(-7, -3, 0, OpCode::SGT); }
+    SECTION("All positive true") {
+        testBinaryOp(7_u256, 3_u256, 1_u256, OpCode::SGT);
+    }
+    SECTION("All positive false") {
+        testBinaryOp(3_u256, 7_u256, 0_u256, OpCode::SGT);
+    }
+    SECTION("All negative true") {
+        testBinaryOp(-3_u256, -7_u256, 1_u256, OpCode::SGT);
+    }
+    SECTION("All negative false") {
+        testBinaryOp(-7_u256, -3_u256, 0_u256, OpCode::SGT);
+    }
     SECTION("First pos, second neg true") {
-        testBinaryOp(3, -7, 1, OpCode::SGT);
+        testBinaryOp(3_u256, -7_u256, 1_u256, OpCode::SGT);
     }
     SECTION("First neg, second pos false") {
-        testBinaryOp(-7, 3, 0, OpCode::SGT);
+        testBinaryOp(-7_u256, 3_u256, 0_u256, OpCode::SGT);
     }
-    SECTION("equal") { testBinaryOp(3, 3, 0, OpCode::SGT); }
+    SECTION("equal") { testBinaryOp(3_u256, 3_u256, 0_u256, OpCode::SGT); }
 }
 
 TEST_CASE("EQ opcode is correct") {
-    SECTION("Not equal") { testBinaryOp(7, 3, 0, OpCode::EQ); }
-    SECTION("equal") { testBinaryOp(3, 3, 1, OpCode::EQ); }
+    SECTION("Not equal") { testBinaryOp(7_u256, 3_u256, 0_u256, OpCode::EQ); }
+    SECTION("equal") { testBinaryOp(3_u256, 3_u256, 1_u256, OpCode::EQ); }
     SECTION("matching tuples") {
         MachineState m;
         m.stack.push(Tuple{uint256_t{1}, uint256_t{2}, m.pool.get()});
@@ -313,9 +378,9 @@ TEST_CASE("XOR opcode is correct") {
 }
 
 TEST_CASE("NOT opcode is correct") {
-    SECTION("0") { testUnaryOp(0, -1, OpCode::BITWISE_NOT); }
-    SECTION("3") { testUnaryOp(3, -4, OpCode::BITWISE_NOT); }
-    SECTION("-4") { testUnaryOp(-4, 3, OpCode::BITWISE_NOT); }
+    SECTION("0") { testUnaryOp(0_u256, -1_u256, OpCode::BITWISE_NOT); }
+    SECTION("3") { testUnaryOp(3_u256, -4_u256, OpCode::BITWISE_NOT); }
+    SECTION("-4") { testUnaryOp(-4_u256, 3_u256, OpCode::BITWISE_NOT); }
 }
 
 TEST_CASE("BYTE opcode is correct") {
@@ -324,23 +389,42 @@ TEST_CASE("BYTE opcode is correct") {
 }
 
 TEST_CASE("SIGNEXTEND opcode is correct") {
-    SECTION("test1") { testBinaryOp(-1, 0, -1, OpCode::SIGNEXTEND); }
-    SECTION("test2") { testBinaryOp(1, 0, 1, OpCode::SIGNEXTEND); }
-    SECTION("test3") { testBinaryOp(127, 0, 127, OpCode::SIGNEXTEND); }
-    SECTION("test4") { testBinaryOp(128, 0, -128, OpCode::SIGNEXTEND); }
-    SECTION("test5") { testBinaryOp(254, 0, -2, OpCode::SIGNEXTEND); }
-    SECTION("test6") { testBinaryOp(257, 0, 1, OpCode::SIGNEXTEND); }
-    SECTION("test7") { testBinaryOp(65534, 1, -2, OpCode::SIGNEXTEND); }
-    SECTION("test8") { testBinaryOp(65537, 1, 1, OpCode::SIGNEXTEND); }
-    SECTION("test8") { testBinaryOp(65537, 2, 65537, OpCode::SIGNEXTEND); }
+    SECTION("test1") {
+        testBinaryOp(-1_u256, 0_u256, -1_u256, OpCode::SIGNEXTEND);
+    }
+    SECTION("test2") {
+        testBinaryOp(1_u256, 0_u256, 1_u256, OpCode::SIGNEXTEND);
+    }
+    SECTION("test3") {
+        testBinaryOp(127_u256, 0_u256, 127_u256, OpCode::SIGNEXTEND);
+    }
+    SECTION("test4") {
+        testBinaryOp(128_u256, 0_u256, -128_u256, OpCode::SIGNEXTEND);
+    }
+    SECTION("test5") {
+        testBinaryOp(254_u256, 0_u256, -2_u256, OpCode::SIGNEXTEND);
+    }
+    SECTION("test6") {
+        testBinaryOp(257_u256, 0_u256, 1_u256, OpCode::SIGNEXTEND);
+    }
+    SECTION("test7") {
+        testBinaryOp(65534_u256, 1_u256, -2_u256, OpCode::SIGNEXTEND);
+    }
+    SECTION("test8") {
+        testBinaryOp(65537_u256, 1_u256, 1_u256, OpCode::SIGNEXTEND);
+    }
+    SECTION("test8") {
+        testBinaryOp(65537_u256, 2_u256, 65537_u256, OpCode::SIGNEXTEND);
+    }
 }
 
 TEST_CASE("HASH opcode is correct") {
     SECTION("10") {
-        testUnaryOp(10,
-                    from_hex_str("c65a7bb8d6351c1cf70c95a316cc6a92839c986682d98"
-                                 "bc35f958f4883f9d2a8"),
-                    OpCode::HASH);
+        testUnaryOp(
+            10,
+            intx::from_string<uint256_t>("0xc65a7bb8d6351c1cf70c95a316cc6a92839"
+                                         "c986682d98bc35f958f4883f9d2a8"),
+            OpCode::HASH);
     }
 }
 
@@ -871,27 +955,27 @@ TEST_CASE("ecrecover opcode is correct") {
                 ctx, sig_raw.data(), &recovery_id, &sig) == 1);
 
     MachineState s;
-    s.stack.push(from_big_endian(msg.begin(), msg.end()));
+    s.stack.push(intx::be::unsafe::load<uint256_t>(msg.begin()));
     s.stack.push(uint256_t{recovery_id});
-    s.stack.push(from_big_endian(sig_raw.begin() + 32, sig_raw.end()));
-    s.stack.push(from_big_endian(sig_raw.begin(), sig_raw.begin() + 32));
+    s.stack.push(intx::be::unsafe::load<uint256_t>(sig_raw.begin() + 32));
+    s.stack.push(intx::be::unsafe::load<uint256_t>(sig_raw.begin()));
     s.runOp(OpCode::ECRECOVER);
     REQUIRE(s.stack[0] != value(0));
-    std::array<unsigned char, 32> hash_data;
-    keccak(pubkey_raw.begin() + 1, 64, hash_data.data());
-    std::fill(hash_data.begin(), hash_data.begin() + 12, 0);
-    auto correct_address = from_big_endian(hash_data.begin(), hash_data.end());
+    auto hash_val = ethash::keccak256(pubkey_raw.begin() + 1, 64);
+    std::fill(&hash_val.bytes[0], &hash_val.bytes[12], 0);
+    auto correct_address = intx::be::load<uint256_t>(hash_val);
     auto calculated_address = assumeInt(s.stack[0]);
     REQUIRE(correct_address == calculated_address);
 
     BENCHMARK_ADVANCED("ecrecover")(Catch::Benchmark::Chronometer meter) {
         MachineState sample_machine;
-        sample_machine.stack.push(from_big_endian(msg.begin(), msg.end()));
+        sample_machine.stack.push(
+            intx::be::unsafe::load<uint256_t>(msg.begin()));
         sample_machine.stack.push(uint256_t{recovery_id});
         sample_machine.stack.push(
-            from_big_endian(sig_raw.begin() + 32, sig_raw.end()));
+            intx::be::unsafe::load<uint256_t>(sig_raw.begin() + 32));
         sample_machine.stack.push(
-            from_big_endian(sig_raw.begin(), sig_raw.begin() + 32));
+            intx::be::unsafe::load<uint256_t>(sig_raw.begin()));
 
         std::vector<MachineState> machines(meter.runs());
         std::fill(machines.begin(), machines.end(), sample_machine);
