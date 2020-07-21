@@ -21,10 +21,12 @@
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
 
-#include <bigint_utils.hpp>
-
 #include <rocksdb/status.h>
 #include <rocksdb/utilities/transaction_db.h>
+
+#include <boost/endian/conversion.hpp>
+
+#include <sstream>
 
 constexpr auto log_key = std::array<char, 1>{-50};
 constexpr auto message_key = std::array<char, 1>{-51};
@@ -95,11 +97,13 @@ std::array<char, 32 * 2 + sizeof(uint64_t) * 2> blockValue(
 
 BlockSaveData processBlockValue(const std::string& value) {
     auto it = value.begin();
-    auto hash = from_big_endian(it, it + 32);
+    auto hash = intx::be::unsafe::load<uint256_t>(
+        reinterpret_cast<const uint8_t*>(&*it));
     it += 32;
     uint64_t log_count = extractUint64(it);
     uint64_t message_count = extractUint64(it);
-    auto bloom = from_big_endian(it, it + 32);
+    auto bloom = intx::be::unsafe::load<uint256_t>(
+        reinterpret_cast<const uint8_t*>(&*it));
     return {hash, log_count, message_count, bloom};
 }
 

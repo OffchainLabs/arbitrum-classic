@@ -75,18 +75,21 @@ func (r *Result) AsValue() value.Value {
 
 func NewResultFromValue(val value.Value) (*Result, error) {
 	tup, ok := val.(value.TupleValue)
-	if !ok {
-		return nil, errors.New("advise expected tuple value")
-	}
-	if tup.Len() != 6 {
-		return nil, fmt.Errorf("advise expected tuple of length 6, but recieved %v", tup)
+	if !ok || tup.Len() != 5 {
+		return nil, fmt.Errorf("advise expected tuple of length 5, but recieved %v", tup)
 	}
 	l1MsgVal, _ := tup.GetByInt64(0)
 	resultCode, _ := tup.GetByInt64(1)
 	returnData, _ := tup.GetByInt64(2)
 	evmLogs, _ := tup.GetByInt64(3)
-	gasUsed, _ := tup.GetByInt64(4)
-	gasPrice, _ := tup.GetByInt64(5)
+	gasInfo, _ := tup.GetByInt64(4)
+
+	gasInfoTup, ok := gasInfo.(value.TupleValue)
+	if !ok || gasInfoTup.Len() != 2 {
+		return nil, fmt.Errorf("advise expected gas info tuple of length 2, but recieved %v", tup)
+	}
+	gasUsed, _ := gasInfoTup.GetByInt64(0)
+	gasPrice, _ := gasInfoTup.GetByInt64(1)
 
 	l1Msg, err := message.NewInboxMessageFromValue(l1MsgVal)
 	if err != nil {

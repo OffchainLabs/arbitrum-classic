@@ -52,7 +52,6 @@ func New(codeFile string) (*Machine, error) {
 	}
 	ret := &Machine{cMachine}
 	runtime.SetFinalizer(ret, cdestroyVM)
-
 	C.free(unsafe.Pointer(cFilename))
 	return ret, nil
 }
