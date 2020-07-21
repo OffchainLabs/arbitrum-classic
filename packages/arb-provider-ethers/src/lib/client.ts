@@ -99,23 +99,9 @@ export class ArbClient {
     this.client = _arbClient(managerUrl)
   }
 
-  public async sendTransaction(
-    destAddress: string,
-    sequenceNum: ethers.utils.BigNumber,
-    payment: ethers.utils.BigNumber,
-    data: ethers.utils.Arrayish,
-    pubkey: string,
-    signature: string
-  ): Promise<evm.SendTransactionReply> {
-    return new Promise<evm.SendTransactionReply>((resolve, reject): void => {
-      const params: evm.SendTransactionArgs = {
-        destAddress,
-        sequenceNum: sequenceNum.toString(),
-        payment: payment.toString(),
-        data: ethers.utils.hexlify(data),
-        pubkey,
-        signature,
-      }
+  public async sendTransaction(signedTransaction: string): Promise<string> {
+    return new Promise<string>((resolve, reject): void => {
+      const params: evm.SendTransactionArgs = { signedTransaction }
       this.client.request(
         `${NAMESPACE}.SendTransaction`,
         [params],
@@ -125,7 +111,7 @@ export class ArbClient {
           } else if (error) {
             reject(error)
           } else {
-            resolve(result)
+            resolve(result.transactionHash)
           }
         }
       )
