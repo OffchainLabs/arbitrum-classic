@@ -45,6 +45,7 @@ type Server struct {
 	batch       *batcher.Batcher
 	db          *txdb.TxDB
 	maxCallTime time.Duration
+	maxCallGas  *big.Int
 }
 
 // NewServer returns a new instance of the Server class
@@ -55,9 +56,11 @@ func NewServer(
 	db *txdb.TxDB,
 ) *Server {
 	return &Server{
-		chain: rollupAddress,
-		batch: batcher.NewBatcher(ctx, globalInbox, rollupAddress),
-		db:    db,
+		chain:       rollupAddress,
+		batch:       batcher.NewBatcher(ctx, globalInbox, rollupAddress),
+		db:          db,
+		maxCallTime: 0,
+		maxCallGas:  big.NewInt(100000000),
 	}
 }
 
@@ -170,7 +173,11 @@ func (m *Server) GetRequestResult(
 	copy(requestId[:], decoded)
 	index, startLogIndex, res, err := m.db.GetRequest(requestId)
 	if err != nil {
-		return err
+		// Request was not found so return nil rawVal
+		reply.RawVal = ""
+		reply.Index = 0
+		reply.StartLogIndex = 0
+		return nil
 	}
 	var buf bytes.Buffer
 	if err := value.MarshalValue(res, &buf); err != nil {
@@ -260,6 +267,9 @@ func (m *Server) executeCall(mach machine.Machine, blockId *common.BlockId, args
 	seq, _ := new(big.Int).SetString("999999999999999999999999", 10)
 
 	callMsg := message.NewCallFromData(dataBytes)
+	if callMsg.MaxGas.Cmp(big.NewInt(0)) == 0 || callMsg.MaxGas.Cmp(m.maxCallGas) > 0 {
+		callMsg.MaxGas = m.maxCallGas
+	}
 	inboxMsg := message.NewInboxMessage(
 		message.L2Message{Msg: callMsg},
 		sender,
@@ -271,7 +281,7 @@ func (m *Server) executeCall(mach machine.Machine, blockId *common.BlockId, args
 	)
 
 	inbox := value.NewEmptyTuple()
-	inbox = value.NewTuple2(inboxMsg.AsValue(), inbox)
+	inbox = value.NewTuple2(inbox, inboxMsg.AsValue())
 	assertion, steps := mach.ExecuteAssertion(
 		// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
 		10000000000000000,

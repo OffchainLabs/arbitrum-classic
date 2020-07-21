@@ -122,7 +122,7 @@ export class ArbClient {
     const params: evm.BlockCountArgs = {}
     return await new Promise<number>((resolve, reject): void => {
       this.client.request(
-        `${NAMESPACE}.GetOutputMessage`,
+        `${NAMESPACE}.GetBlockCount`,
         [params],
         (err: Error, error: Error, result: evm.BlockCountReply) => {
           if (err) {
@@ -164,14 +164,16 @@ export class ArbClient {
     }
   }
 
-  public async getRequestResult(txHash: string): Promise<RawMessageResult> {
+  public async getRequestResult(
+    txHash: string
+  ): Promise<RawMessageResult | null> {
     const params: evm.GetRequestResultArgs = {
       txHash,
     }
     const messageResult = await new Promise<evm.GetRequestResultReply>(
       (resolve, reject): void => {
         this.client.request(
-          `${NAMESPACE}.GetMessageResult`,
+          `${NAMESPACE}.GetRequestResult`,
           [params],
           (err: Error, error: Error, result: evm.GetRequestResultReply) => {
             if (err) {
@@ -186,12 +188,15 @@ export class ArbClient {
       }
     )
 
-    if (
-      messageResult.rawVal === undefined ||
-      messageResult.index === undefined ||
-      messageResult.startLogIndex === undefined
-    ) {
-      throw Error("reply didn't contain result")
+    if (messageResult.rawVal === undefined) {
+      return null
+    }
+
+    if (!messageResult.index) {
+      messageResult.index = 0
+    }
+    if (!messageResult.startLogIndex) {
+      messageResult.startLogIndex = 0
     }
 
     return {

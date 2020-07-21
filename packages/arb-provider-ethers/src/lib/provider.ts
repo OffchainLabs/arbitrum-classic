@@ -186,7 +186,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     }
   }
 
-  public async getMessageResult(txHash: string): Promise<MessageResult> {
+  public async getMessageResult(txHash: string): Promise<MessageResult | null> {
     // TODO: Make sure that there can be no collision between arbitrum transaction hashes and
     // Ethereum transaction hashes so that an attacker cannot fool the client into accepting a
     // false transction
@@ -204,9 +204,12 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       arbTxHash = txHash
     }
 
-    const { log, txIndex, startLogIndex } = await this.client.getRequestResult(
-      arbTxHash
-    )
+    const requestRet = await this.client.getRequestResult(arbTxHash)
+    if (!requestRet) {
+      return null
+    }
+
+    const { log, txIndex, startLogIndex } = requestRet
 
     const result = Result.fromValue(log)
 
@@ -260,9 +263,11 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         return count.toNumber()
       }
       case 'getTransactionReceipt': {
-        const { result, txIndex, startLogIndex } = await this.getMessageResult(
-          params.transactionHash
-        )
+        const res = await this.getMessageResult(params.transactionHash)
+        if (!res) {
+          return null
+        }
+        const { result, txIndex, startLogIndex } = res
 
         const currentBlockNum = await this.ethProvider.getBlockNumber()
         const messageBlockNum = result.incoming.blockNumber.toNumber()
@@ -275,7 +280,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
           incoming.msg.message.kind != L2MessageCode.Transaction
         ) {
           throw Error(
-            'Can only call getTransaction on an L2 Transaction message'
+            'Can only call getTransactionReceipt on an L2 Transaction message'
           )
         }
         const l2tx = incoming.msg.message
@@ -321,10 +326,12 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         return txReceipt
       }
       case 'getTransaction': {
-        const getMessageRequest = async (): Promise<
-          ethers.providers.TransactionResponse
-        > => {
-          const { result } = await this.getMessageResult(params.transactionHash)
+        const getMessageRequest = async (): Promise<ethers.providers.TransactionResponse | null> => {
+          const res = await this.getMessageResult(params.transactionHash)
+          if (!res) {
+            return null
+          }
+          const { result } = res
           const incoming = result.incoming
           if (
             incoming.msg.kind != MessageCode.L2 ||
@@ -339,8 +346,8 @@ export class ArbProvider extends ethers.providers.BaseProvider {
           const tx: ethers.utils.Transaction = {
             data: ethers.utils.hexlify(l2tx.calldata),
             from: incoming.sender,
-            gasLimit: ethers.utils.bigNumberify(1),
-            gasPrice: ethers.utils.bigNumberify(1),
+            gasLimit: incoming.msg.message.maxGas,
+            gasPrice: incoming.msg.message.gasPriceBid,
             hash: incoming.messageID(),
             nonce: l2tx.sequenceNum.toNumber(),
             to: l2tx.destAddress,
@@ -348,13 +355,16 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             chainId: network.chainId,
           }
           const response = this.ethProvider._wrapTransaction(tx)
+          const currentBlockNum = await this.ethProvider.getBlockNumber()
+          const messageBlockNum = result.incoming.blockNumber.toNumber()
+          const confirmations = currentBlockNum - messageBlockNum + 1
           const blockNumber = incoming.blockNumber.toNumber()
           const block = await this.ethProvider.getBlock(blockNumber)
           return {
             ...response,
             blockHash: block.hash,
-            blockNumber: blockNumber,
-            confirmations: 1000,
+            blockNumber,
+            confirmations,
           }
         }
         /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */

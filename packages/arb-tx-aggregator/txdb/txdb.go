@@ -300,6 +300,11 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 	ethLogs := make([]*types.Log, 0)
 	startLogIndex := uint64(0)
 	for _, avmLog := range assertion.ParseLogs() {
+		logIndex, err := txdb.as.LogCount()
+		if err != nil {
+			return err
+		}
+
 		if err := txdb.as.SaveLog(avmLog); err != nil {
 			return err
 		}
@@ -309,11 +314,9 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 			log.Println("Error parsing log result", err)
 			continue
 		}
-		newLogCount, err := txdb.as.LogCount()
-		if err != nil {
-			return err
-		}
-		if err := txdb.as.SaveRequest(res.L1Message.MessageID(), newLogCount, startLogIndex); err != nil {
+
+		log.Println("Got response for request", res.L1Message.MessageID())
+		if err := txdb.as.SaveRequest(res.L1Message.MessageID(), logIndex, startLogIndex); err != nil {
 			return err
 		}
 

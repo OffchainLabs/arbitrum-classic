@@ -26,12 +26,9 @@ module.exports = {
           provider
         )
         const wallet = new ethers.Wallet.fromMnemonic(mnemonic).connect(
-          provider
+          arbProvider
         )
-        return new ProviderBridge(
-          arbProvider,
-          new ArbEth.ArbWallet(wallet, arbProvider)
-        )
+        return new ProviderBridge(arbProvider, wallet)
       },
       network_id: '*',
       gasPrice: 0,
