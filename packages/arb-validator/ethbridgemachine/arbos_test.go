@@ -55,6 +55,14 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 	if mach.CurrentStatus() != machine.Extensive {
 		t.Fatal("machine should still be working")
 	}
+	blockReason := mach.IsBlocked(false)
+	if blockReason == nil {
+		t.Fatal("machine not blocked")
+	}
+
+	if _, ok := blockReason.(machine.InboxBlocked); !ok {
+		t.Fatal("Machine blocked for weird reason", blockReason)
+	}
 	results := make([]*evm.Result, 0)
 	for _, avmLog := range assertion.ParseLogs() {
 		result, err := evm.NewResultFromValue(avmLog)
@@ -66,8 +74,8 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 	return results
 }
 
-func runTransaction(t *testing.T, mach machine.Machine, msg message.Message, sender common.Address) (*evm.Result, error) {
-	results := runMessage(t, mach, msg, sender)
+func runTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Message, sender common.Address) (*evm.Result, error) {
+	results := runMessage(t, mach, message.L2Message{Msg: msg}, sender)
 	if len(results) != 1 {
 		return nil, fmt.Errorf("unexpected log count %v", len(results))
 	}
@@ -101,7 +109,7 @@ func getBalanceCall(t *testing.T, mach machine.Machine, address common.Address) 
 		DestAddress: common.NewAddressFromEth(goarbitrum.ARB_INFO_ADDRESS),
 		Data:        append(getBalanceSignature, getBalanceData...),
 	}
-	balanceResult, err := runTransaction(t, mach, message.L2Message{Msg: getBalance}, common.Address{})
+	balanceResult, err := runTransaction(t, mach, getBalance, common.Address{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +134,7 @@ func deployContract(t *testing.T, mach machine.Machine, sender common.Address, c
 		Data:        code,
 	}
 
-	constructorResult, err := runTransaction(t, mach, message.L2Message{Msg: constructorTx}, sender)
+	constructorResult, err := runTransaction(t, mach, constructorTx, sender)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -214,7 +222,7 @@ func TestFib(t *testing.T) {
 		Data:        append(generateSignature, generateFibData...),
 	}
 
-	generateResult, err := runTransaction(t, mach, message.L2Message{Msg: generateTx}, addr)
+	generateResult, err := runTransaction(t, mach, generateTx, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -250,7 +258,7 @@ func TestFib(t *testing.T) {
 		Data:        append(getFibSignature, getFibData...),
 	}
 
-	getFibResult, err := runTransaction(t, mach, message.L2Message{Msg: getFibTx}, addr)
+	getFibResult, err := runTransaction(t, mach, getFibTx, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
