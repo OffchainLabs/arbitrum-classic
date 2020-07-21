@@ -27,6 +27,26 @@ TEST_CASE("Aggregator tests") {
     auto storage = std::make_shared<DataStorage>(dbpath);
     auto store = std::make_unique<AggregatorStore>(storage);
 
+    SECTION("logs") {
+        REQUIRE(store->logCount() == 0);
+        CHECK_THROWS(store->getLog(0));
+        std::vector<char> sample_log{1, 2, 3, 4};
+        store->saveLog(sample_log);
+        REQUIRE(store->logCount() == 1);
+        REQUIRE(store->getLog(0) == sample_log);
+        CHECK_THROWS(store->getLog(1));
+    }
+
+    SECTION("messages") {
+        REQUIRE(store->messageCount() == 0);
+        CHECK_THROWS(store->getMessage(0));
+        std::vector<char> sample_message{1, 2, 3, 4};
+        store->saveMessage(sample_message);
+        REQUIRE(store->messageCount() == 1);
+        REQUIRE(store->getMessage(0) == sample_message);
+        CHECK_THROWS(store->getMessage(1));
+    }
+
     SECTION("blocks") {
         CHECK_THROWS(store->latestBlock());
 
@@ -37,86 +57,29 @@ TEST_CASE("Aggregator tests") {
             REQUIRE(latest.second == 2);
         }
 
-        CHECK_THROWS(store->saveBlock(52, 3, 0));
-
-        store->saveBlock(51, 3, 0);
+        CHECK_THROWS(store->saveBlock(52, 3, 2));
         {
+            // Latest is unmodified
+            auto latest = store->latestBlock();
+            REQUIRE(latest.first == 50);
+            REQUIRE(latest.second == 2);
+        }
+        store->saveBlock(51, 3, 2);
+        {
+            auto block = store->getBlock(51);
+            REQUIRE(block.hash == 3);
+            REQUIRE(block.start_log == 0);
+            REQUIRE(block.log_count == 0);
+            REQUIRE(block.start_message == 0);
+            REQUIRE(block.message_count == 0);
+            REQUIRE(block.bloom == 2);
+        }
+
+        {
+            // Latest is now updated
             auto latest = store->latestBlock();
             REQUIRE(latest.first == 51);
             REQUIRE(latest.second == 3);
         }
-        //        REQUIRE(store->getBlock(50))
     }
-    //    SECTION("BlockStore min, max, and empty") {
-    //        REQUIRE(store->isEmpty());
-    //        REQUIRE(store->maxHeight() == 0);
-    //        REQUIRE(store->minHeight() == 0);
-    //
-    //        REQUIRE(store->putBlock(10, 30, {1, 2, 3}).ok());
-    //        REQUIRE(!store->isEmpty());
-    //        REQUIRE(store->maxHeight() == 10);
-    //        REQUIRE(store->minHeight() == 10);
-    //
-    //        REQUIRE(store->putBlock(20, 30, {1, 2, 3}).ok());
-    //        REQUIRE(!store->isEmpty());
-    //        REQUIRE(store->maxHeight() == 20);
-    //        REQUIRE(store->minHeight() == 10);
-    //
-    //        REQUIRE(store->putBlock(5, 30, {1, 2, 3}).ok());
-    //        REQUIRE(!store->isEmpty());
-    //        REQUIRE(store->maxHeight() == 20);
-    //        REQUIRE(store->minHeight() == 5);
-    //
-    //        REQUIRE(store->putBlock(15, 30, {1, 2, 3}).ok());
-    //        REQUIRE(!store->isEmpty());
-    //        REQUIRE(store->maxHeight() == 20);
-    //        REQUIRE(store->minHeight() == 5);
-    //
-    //        REQUIRE(store->deleteBlock(20, 30).ok());
-    //        REQUIRE(store->maxHeight() == 15);
-    //        REQUIRE(store->minHeight() == 5);
-    //
-    //        REQUIRE(store->deleteBlock(5, 30).ok());
-    //        REQUIRE(store->maxHeight() == 15);
-    //        REQUIRE(store->minHeight() == 10);
-    //    }
-    //
-    //    SECTION("BlockStore block hashes at height") {
-    //        REQUIRE(store->blockHashesAtHeight(10).empty());
-    //
-    //        REQUIRE(store->putBlock(10, 30, {1, 2, 3}).ok());
-    //        REQUIRE(store->blockHashesAtHeight(10) ==
-    //        std::vector<uint256_t>{30});
-    //        REQUIRE(store->blockHashesAtHeight(9).empty());
-    //        REQUIRE(store->blockHashesAtHeight(11).empty());
-    //
-    //        REQUIRE(store->putBlock(10, 40, {1, 2, 3}).ok());
-    //        REQUIRE(store->blockHashesAtHeight(10) ==
-    //                std::vector<uint256_t>{30, 40});
-    //
-    //        REQUIRE(store->deleteBlock(10, 30).ok());
-    //        REQUIRE(store->blockHashesAtHeight(10) ==
-    //        std::vector<uint256_t>{40});
-    //    }
-    //
-    //    SECTION("BlockStore put and get") {
-    //        auto result = store->getBlock(10, 30);
-    //        REQUIRE(!result.status.ok());
-    //        REQUIRE(result.data.empty());
-    //
-    //        REQUIRE(store->putBlock(10, 30, {1, 2, 3}).ok());
-    //        result = store->getBlock(10, 30);
-    //        REQUIRE(result.status.ok());
-    //        REQUIRE(result.data == std::vector<unsigned char>{1, 2, 3});
-    //
-    //        REQUIRE(store->putBlock(10, 30, {2, 2, 3, 4}).ok());
-    //        result = store->getBlock(10, 30);
-    //        REQUIRE(result.status.ok());
-    //        REQUIRE(result.data == std::vector<unsigned char>{2, 2, 3, 4});
-    //
-    //        REQUIRE(store->deleteBlock(10, 30).ok());
-    //        result = store->getBlock(10, 30);
-    //        REQUIRE(!result.status.ok());
-    //        REQUIRE(result.data.empty());
-    //    }
 }
