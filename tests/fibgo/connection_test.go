@@ -4,10 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"math/big"
 	"math/rand"
@@ -16,23 +12,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/rpc"
-	"github.com/gorilla/rpc/json"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
 
 var db = "./testman"
@@ -45,8 +40,8 @@ func setupValidators(
 	client ethutils.EthClient,
 	auths []*bind.TransactOpts,
 ) ([]arbbridge.ArbAuthClient, error) {
-	if len(auths) == 0 {
-		panic("must have at least 1 validator")
+	if len(auths) < 2 {
+		panic("must have at least 2 auths")
 	}
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
@@ -95,8 +90,8 @@ func setupValidators(
 		return nil, err
 	}
 
-	managers := make([]*rollupmanager.Manager, 0, len(clients))
-	for _, client := range clients {
+	managers := make([]*rollupmanager.Manager, 0, len(clients)-1)
+	for _, client := range clients[1:] {
 		rollupActor, err := client.NewRollup(rollupAddress)
 		if err != nil {
 			return nil, err
@@ -135,29 +130,17 @@ func setupValidators(
 	}
 
 	go func() {
-		server, err := rollupvalidator.NewRPCServer(
-			managers[0],
-			time.Second*60,
-		)
-		if err != nil {
-			t.Fatal(err)
-		}
-		s := rpc.NewServer()
-		s.RegisterCodec(
-			json.NewCodec(),
-			"application/json",
-		)
-		s.RegisterCodec(
-			json.NewCodec(),
-			"application/json;charset=UTF-8",
-		)
-
-		if err := s.RegisterService(server, "Validator"); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := utils.LaunchRPC(s, "1235", utils.RPCFlags{}); err != nil {
-			t.Fatal(err)
+		client := clients[0]
+		if err := aggregator.LaunchAggregator(
+			context.Background(),
+			client,
+			rollupAddress,
+			contract,
+			db+client.Address().String(),
+			"1235",
+			utils.RPCFlags{},
+		); err != nil {
+			log.Fatal(err)
 		}
 	}()
 
@@ -283,7 +266,7 @@ func TestFib(t *testing.T) {
 		}
 	}()
 
-	validatorClients, err := setupValidators(t, client, auths[2:3])
+	validatorClients, err := setupValidators(t, client, auths[2:4])
 	if err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
@@ -315,7 +298,7 @@ func TestFib(t *testing.T) {
 		t.Fatal("tx deploying fib failed")
 	}
 
-	t.Log("Fib contract is at", hexutil.Encode(receipt.ContractAddress[:]))
+	t.Log("Fib contract is at", receipt.ContractAddress.Hex())
 
 	fib, err := NewFibonacci(receipt.ContractAddress, arbclient)
 	if err != nil {

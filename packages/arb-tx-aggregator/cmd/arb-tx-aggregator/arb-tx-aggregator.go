@@ -19,13 +19,9 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/machineobserver"
 	"log"
 	"os"
 	"path/filepath"
-
-	"github.com/gorilla/rpc"
-	"github.com/gorilla/rpc/json"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -75,44 +71,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	rollupContract, err := client.NewRollupWatcher(rollupArgs.Address)
-	if err != nil {
-		log.Fatal(err)
-	}
-	inboxAddress, err := rollupContract.InboxAddress(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
-	globalInbox, err := client.NewGlobalInbox(inboxAddress, rollupArgs.Address)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "contract.mexe")
 	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
-	db, err := machineobserver.RunObserver(context.Background(), rollupArgs.Address, client.EthArbClient, contractFile, dbPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	server := aggregator.NewServer(
+
+	if err := aggregator.LaunchAggregator(
 		context.Background(),
-		globalInbox, rollupArgs.Address,
-		db,
-	)
-
-	s := rpc.NewServer()
-	s.RegisterCodec(
-		json.NewCodec(),
-		"application/json",
-	)
-	s.RegisterCodec(
-		json.NewCodec(),
-		"application/json;charset=UTF-8",
-	)
-
-	if err := s.RegisterService(server, "Aggregator"); err != nil {
+		client,
+		rollupArgs.Address,
+		contractFile,
+		dbPath,
+		"1235",
+		rpcVars,
+	); err != nil {
 		log.Fatal(err)
 	}
-
-	log.Fatal(utils.LaunchRPC(s, "1235", rpcVars))
 }

@@ -148,7 +148,7 @@ func (as *AggregatorStore) GetBlock(height uint64) (machine.BlockInfo, error) {
 		LogCount:     uint64(blockData.log_count),
 		StartMessage: uint64(blockData.start_message),
 		MessageCount: uint64(blockData.message_count),
-		Bloom:        dataToHash(blockData.hash),
+		Bloom:        dataToHash(blockData.bloom),
 	}, nil
 }
 

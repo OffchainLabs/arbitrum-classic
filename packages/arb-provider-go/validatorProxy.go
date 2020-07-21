@@ -19,6 +19,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
+var Namespace = "Aggregator"
+
 type ValidatorProxy interface {
 	BlockInfo(ctx context.Context, height uint64) (machine.BlockInfo, error)
 	GetRequestResult(ctx context.Context, txHash common.Hash) (uint64, uint64, value.Value, error)
@@ -64,7 +66,7 @@ func _encodeAddressArraySlice(slice []ethcommon.Address) []string {
 }
 
 func (vp *ValidatorProxyImpl) doCall(ctx context.Context, methodName string, request interface{}, response interface{}) error {
-	msg, err := json.EncodeClientRequest("Validator."+methodName, request)
+	msg, err := json.EncodeClientRequest(Namespace+"."+methodName, request)
 	if err != nil {
 		log.Println("ValProxy.doCall: error in json.Enc:", err)
 		return err
@@ -140,6 +142,11 @@ func (vp *ValidatorProxyImpl) GetRequestResult(ctx context.Context, txHash commo
 		log.Println("ValProxy.GetRequestResult: doCall returned error:", err)
 		return 0, 0, nil, err
 	}
+
+	if len(response.RawVal) == 0 {
+		return 0, 0, nil, nil
+	}
+
 	data, err := hexutil.Decode(response.RawVal)
 	if err != nil {
 		return 0, 0, nil, err
@@ -154,7 +161,7 @@ func (vp *ValidatorProxyImpl) GetRequestResult(ctx context.Context, txHash commo
 func (vp *ValidatorProxyImpl) GetChainAddress(ctx context.Context) (string, error) {
 	request := &evm.GetChainAddressArgs{}
 	var response evm.GetChainAddressReply
-	if err := vp.doCall(ctx, "GetVMInfo", request, &response); err != nil {
+	if err := vp.doCall(ctx, "GetChainAddress", request, &response); err != nil {
 		return "", err
 	}
 	return response.ChainAddress, nil
