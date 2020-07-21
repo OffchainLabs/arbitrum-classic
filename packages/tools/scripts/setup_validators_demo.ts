@@ -21,7 +21,7 @@ const rollupsPath = root + 'rollups/'
 async function setupRollup(arbOSData: string) {
   const arbOSHash = Program.programMachineHash(arbOSData)
 
-  const factoryAddress = addresses['ArbFactory']
+  const factoryAddress = addresses['contracts']['ArbFactory'].address
 
   const factory = abi.ArbFactoryFactory.connect(factoryAddress, wallet)
 

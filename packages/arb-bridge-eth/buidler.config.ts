@@ -25,14 +25,6 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
   }
 })
 
-task('deploy').setAction(async (args, { deployments }, runSuper) => {
-  await runSuper()
-  const addresses = {
-    ArbFactory: (await deployments.get('ArbFactory')).address,
-  }
-  fs.writeFileSync('bridge_eth_addresses.json', JSON.stringify(addresses))
-})
-
 module.exports = {
   defaultNetwork: 'buidlerevm',
   paths: {
