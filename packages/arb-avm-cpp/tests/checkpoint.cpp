@@ -28,8 +28,6 @@
 
 #include <catch2/catch.hpp>
 
-#include <boost/filesystem.hpp>
-
 void saveValue(Transaction& transaction,
                const value& val,
                uint32_t expected_ref_count,

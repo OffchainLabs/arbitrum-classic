@@ -26,6 +26,8 @@
 
 #include <avm/machine.hpp>
 
+#include <iostream>
+
 namespace {
 using iterator = std::vector<unsigned char>::const_iterator;
 
@@ -38,8 +40,8 @@ uint256_t extractUint256(iterator& iter) {
 
 CodePointRef extractCodePointRef(iterator& iter) {
     auto ptr = reinterpret_cast<const char*>(&*iter);
-    auto segment_val = checkpoint::utils::deserialize_uint64(ptr);
-    auto pc_val = checkpoint::utils::deserialize_uint64(ptr);
+    auto segment_val = deserialize_uint64_t(ptr);
+    auto pc_val = deserialize_uint64_t(ptr);
     iter += sizeof(pc_val) + sizeof(segment_val);
     return {segment_val, pc_val};
 }

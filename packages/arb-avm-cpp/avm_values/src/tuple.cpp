@@ -16,8 +16,9 @@
 
 #include <avm_values/tuple.hpp>
 
-#include <avm_values/util.hpp>
-#include <bigint_utils.hpp>
+#include <ethash/keccak.hpp>
+
+#include <iostream>
 
 Tuple::Tuple(value val, TuplePool* pool)
     : tuplePool(pool), tpl(pool->getResource(1)) {
@@ -140,15 +141,16 @@ HashPreImage Tuple::calculateHashPreImage() const {
     int val_length = 32;
     for (uint64_t i = 0; i < tuple_size(); i++) {
         const auto& element = get_element(i);
-        auto valHash = hash_value(element);
-        oit = to_big_endian(valHash, oit);
+        oit = to_big_endian(hash_value(element), oit);
         size += ::getSize(element);
     }
 
+    auto hash_val = ethash::keccak256(
+        tupData.data(),
+        static_cast<unsigned int>(1 + val_length * (tuple_size())));
+
     std::array<unsigned char, 32> hashData;
-    evm::Keccak_256(tupData.data(),
-                    static_cast<unsigned int>(1 + val_length * (tuple_size())),
-                    hashData.data());
+    std::copy(&hash_val.bytes[0], &hash_val.bytes[32], hashData.begin());
 
     return HashPreImage{hashData, size};
 }
@@ -157,8 +159,11 @@ HashPreImage zeroPreimage() {
     std::array<unsigned char, 1> tupData;
     tupData[0] = 0;
 
+    auto hash_val = ethash::keccak256(tupData.data(), 1);
+
     std::array<unsigned char, 32> hashData;
-    evm::Keccak_256(tupData.data(), 1, hashData.data());
+    std::copy(&hash_val.bytes[0], &hash_val.bytes[32], hashData.begin());
+
     return HashPreImage(hashData, 1);
 }
 

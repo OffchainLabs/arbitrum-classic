@@ -19,6 +19,7 @@
 #include <nlohmann/json.hpp>
 
 #include <fstream>
+#include <iostream>
 
 const std::string INT_VAL_LABEL = "Int";
 const std::string TUP_VAL_LABEL = "Tuple";
@@ -33,7 +34,8 @@ const std::string STATIC_LABEL = "static_val";
 namespace {
 
 uint256_t int_value_from_json(const nlohmann::json& value_json) {
-    return uint256_t{"0x" + value_json[INT_VAL_LABEL].get<std::string>()};
+    return intx::from_string<uint256_t>(
+        "0x" + value_json[INT_VAL_LABEL].get<std::string>());
 }
 
 value value_from_json(const nlohmann::json& value_json,

@@ -29,8 +29,6 @@
 #include <avm_values/tuple.hpp>
 #include <avm_values/vmValueParser.hpp>
 
-#include "bigint_utils.hpp"
-
 #include <rocksdb/options.h>
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>
@@ -120,8 +118,9 @@ Machine CheckpointStorage::getInitialMachine() const {
     if (!s.ok()) {
         throw std::runtime_error("failed to load initial val");
     }
-    auto machine_hash =
-        from_big_endian(initial_raw.data(), initial_raw.data() + UINT256_SIZE);
+
+    auto machine_hash = intx::be::unsafe::load<uint256_t>(
+        reinterpret_cast<const unsigned char*>(initial_raw.data()));
     return getMachine(machine_hash);
 }
 

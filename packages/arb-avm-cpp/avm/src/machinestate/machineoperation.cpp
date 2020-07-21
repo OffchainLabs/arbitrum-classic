@@ -16,11 +16,12 @@
 
 #include <avm/machinestate/machineoperation.hpp>
 #include <avm/machinestate/machinestate.hpp>
-#include <avm_values/util.hpp>
-#include <bigint_utils.hpp>
 
 #include <secp256k1_recovery.h>
+#include <ethash/keccak.hpp>
 #include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
+
+using namespace intx;
 
 namespace {
 template <typename T>
@@ -107,20 +108,10 @@ void sdiv(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
-    const auto min = (std::numeric_limits<uint256_t>::max() / 2) + 1;
-
     if (bNum == 0) {
         m.state = Status::Error;
-    } else if (aNum == min && bNum == -1) {
-        m.stack[1] = aNum;
     } else {
-        const auto signA = get_sign(aNum);
-        const auto signB = get_sign(bNum);
-        if (signA == -1)
-            aNum = 0 - aNum;
-        if (signB == -1)
-            bNum = 0 - bNum;
-        m.stack[1] = (aNum / bNum) * signA * signB;
+        m.stack[1] = sdivrem(aNum, bNum).quot;
     }
     m.stack.popClear();
     ++m.pc;
@@ -130,10 +121,10 @@ void mod(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
-    if (bNum != 0) {
-        m.stack[1] = aNum % bNum;
-    } else {
+    if (bNum == 0) {
         m.state = Status::Error;
+    } else {
+        m.stack[1] = aNum % bNum;
     }
     m.stack.popClear();
     ++m.pc;
@@ -147,13 +138,7 @@ void smod(MachineState& m) {
     if (bNum == 0) {
         m.state = Status::Error;
     } else {
-        const auto signA = get_sign(aNum);
-        const auto signB = get_sign(bNum);
-        if (signA == -1)
-            aNum = 0 - aNum;
-        if (signB == -1)
-            bNum = 0 - bNum;
-        m.stack[1] = (aNum % bNum) * signA;
+        m.stack[1] = sdivrem(aNum, bNum).rem;
     }
     m.stack.popClear();
     ++m.pc;
@@ -168,9 +153,7 @@ void addmod(MachineState& m) {
     if (cNum == 0) {
         m.state = Status::Error;
     } else {
-        uint512_t aBig = aNum;
-        uint512_t bBig = bNum;
-        m.stack[2] = static_cast<uint256_t>((aBig + bBig) % cNum);
+        m.stack[2] = addmod(aNum, bNum, cNum);
     }
     m.stack.popClear();
     m.stack.popClear();
@@ -186,9 +169,7 @@ void mulmod(MachineState& m) {
     if (cNum == 0) {
         m.state = Status::Error;
     } else {
-        uint512_t aBig = aNum;
-        uint512_t bBig = bNum;
-        m.stack[2] = static_cast<uint256_t>((aBig * bBig) % cNum);
+        m.stack[2] = mulmod(aNum, bNum, cNum);
     }
     m.stack.popClear();
     m.stack.popClear();
@@ -199,8 +180,7 @@ void exp(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
-    uint64_t bSmall = assumeInt64(bNum);
-    m.stack[1] = power(aNum, bSmall);
+    m.stack[1] = exp(aNum, bNum);
     m.stack.popClear();
     ++m.pc;
 }
@@ -275,7 +255,7 @@ void eq(MachineState& m) {
 void iszero(MachineState& m) {
     m.stack.prepForMod(1);
     auto& aNum = assumeInt(m.stack[0]);
-    m.stack[0] = aNum.is_zero() ? 1 : 0;
+    m.stack[0] = aNum == 0 ? 1 : 0;
     ++m.pc;
 }
 
@@ -337,15 +317,11 @@ void signExtend(MachineState& m) {
     if (bNum >= 32) {
         m.stack[1] = m.stack[0];
     } else {
-        unsigned int t = 248 - 8 * static_cast<unsigned int>(bNum);
-        int signBit = bit(aNum, 255 - t);
-        uint256_t mask = power(uint256_t(2), 255 - t) - 1;
-        if (signBit == 0) {
-            m.stack[1] = aNum & mask;
-        } else {
-            mask ^= -1;
-            m.stack[1] = aNum | mask;
-        }
+        auto idx = 8 * narrow_cast<uint8_t>(bNum) + 7;
+        auto sign = narrow_cast<uint8_t>((aNum >> idx) & 1);
+        constexpr auto zero = uint256_t{0};
+        auto mask = ~zero >> (256 - idx);
+        m.stack[1] = ((sign ? ~zero : zero) << idx) | (aNum & mask);
     }
     m.stack.popClear();
     ++m.pc;
@@ -377,10 +353,8 @@ void ethhash2Op(MachineState& m) {
     auto it = to_big_endian(aNum, inData.begin());
     to_big_endian(bNum, it);
 
-    std::array<unsigned char, 32> hashData;
-    evm::Keccak_256(inData.data(), 64, hashData.data());
-
-    m.stack[1] = from_big_endian(hashData.begin(), hashData.end());
+    auto hash_val = ethash::keccak256(inData.data(), inData.size());
+    m.stack[1] = be::load<uint256_t>(hash_val);
 
     m.stack.popClear();
     ++m.pc;
@@ -579,11 +553,10 @@ uint256_t parseSignature(MachineState& m) {
         return 0;
     }
     std::array<unsigned char, 64> sig_raw;
-    to_big_endian(assumeInt(m.stack[0]), sig_raw.begin());
-    to_big_endian(assumeInt(m.stack[1]), sig_raw.begin() + 32);
+    auto it = to_big_endian(assumeInt(m.stack[0]), sig_raw.begin());
+    to_big_endian(assumeInt(m.stack[1]), it);
 
-    std::array<unsigned char, 32> message;
-    to_big_endian(assumeInt(m.stack[3]), message.begin());
+    auto message = be::store<ethash::hash256>(assumeInt(m.stack[3]));
 
     static secp256k1_context* context = secp256k1_context_create(
         SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
@@ -596,7 +569,7 @@ uint256_t parseSignature(MachineState& m) {
     }
 
     secp256k1_pubkey pubkey;
-    if (!secp256k1_ecdsa_recover(context, &pubkey, &sig, message.data())) {
+    if (!secp256k1_ecdsa_recover(context, &pubkey, &sig, message.bytes)) {
         return 0;
     }
 
@@ -608,12 +581,10 @@ uint256_t parseSignature(MachineState& m) {
     if (!serialized_pubkey) {
         return 0;
     }
-
-    std::array<unsigned char, 32> hash_data;
     // Skip header byte
-    evm::Keccak_256(pubkey_raw.data() + 1, 64, hash_data.data());
-    std::fill(hash_data.begin(), hash_data.begin() + 12, 0);
-    return from_big_endian(hash_data.begin(), hash_data.end());
+    auto hash_val = ethash::keccak256(pubkey_raw.data() + 1, 64);
+    std::fill(&hash_val.bytes[0], &hash_val.bytes[12], 0);
+    return be::load<uint256_t>(hash_val);
 }
 }  // namespace
 

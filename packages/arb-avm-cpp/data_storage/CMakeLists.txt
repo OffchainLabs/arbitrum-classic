@@ -44,7 +44,6 @@ set(LIB_SOURCES
   src/confirmednodestore.cpp
   src/keyvaluestore.cpp
   src/value/code.cpp
-  src/value/utils.cpp
   src/value/machine.cpp
   src/value/referencecount.cpp
   src/value/value.cpp
@@ -72,7 +71,7 @@ target_include_directories(data_storage PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(data_storage PUBLIC avm avm_values Threads::Threads PRIVATE avm_utils)
+target_link_libraries(data_storage PUBLIC avm avm_values Threads::Threads)
 
 target_code_coverage(data_storage AUTO ALL)
 
