@@ -92,11 +92,9 @@ func New(
 	case <-ctx.Done():
 		return nil, errors.New("timed out saving checkpoint")
 	}
-	log.Println("Saving initial block")
 	if err := as.SaveBlock(prevBlockId, common.Hash{}); err != nil {
 		return nil, err
 	}
-	log.Println("Saved initial block")
 	txdb.mach = mach
 	txdb.callMach = mach.Clone()
 	txdb.callBlock = prevBlockId
@@ -329,16 +327,11 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 	}
 	var logBloom common.Hash
 	copy(logBloom[:], math.U256Bytes(types.LogsBloom(ethLogs)))
-	log.Println("Saving next block", block)
 	if err := txdb.as.SaveBlock(block, logBloom); err != nil {
 		return err
 	}
-	log.Println("Saved next block")
 
-	// Don't bother saving if we didn't run at all
-	if numSteps > 0 {
-		saveMach(txdb.mach, block, txdb.checkpointer)
-	}
+	saveMach(txdb.mach, block, txdb.checkpointer)
 	return nil
 }
 
