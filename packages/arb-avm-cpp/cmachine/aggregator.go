@@ -67,7 +67,7 @@ func (as *AggregatorStore) SaveLog(val value.Value) error {
 	cData := C.CBytes(buf.Bytes())
 	defer C.free(cData)
 	if C.aggregatorSaveLog(as.c, cData, C.uint64_t(buf.Len())) == 0 {
-		return errors.New("failed to save block")
+		return errors.New("failed to save log")
 	}
 	return nil
 }
@@ -98,7 +98,7 @@ func (as *AggregatorStore) SaveMessage(val value.Value) error {
 	cData := C.CBytes(buf.Bytes())
 	defer C.free(cData)
 	if C.aggregatorSaveMessage(as.c, cData, C.uint64_t(buf.Len())) == 0 {
-		return errors.New("failed to save block")
+		return errors.New("failed to save message")
 	}
 
 	return nil

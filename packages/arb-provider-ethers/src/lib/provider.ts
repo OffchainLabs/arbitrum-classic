@@ -103,7 +103,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         name: 'arbitrum',
       }
       const origChainAddress = chainAddress
-      chainAddress = new Promise((resolve, reject): void => {
+      chainAddress = new Promise((resolve): void => {
         resolve(origChainAddress)
       })
     } else {
@@ -324,11 +324,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         const getMessageRequest = async (): Promise<
           ethers.providers.TransactionResponse
         > => {
-          const {
-            result,
-            txIndex,
-            startLogIndex,
-          } = await this.getMessageResult(params.transactionHash)
+          const { result } = await this.getMessageResult(params.transactionHash)
           const incoming = result.incoming
           if (
             incoming.msg.kind != MessageCode.L2 ||

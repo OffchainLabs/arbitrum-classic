@@ -151,7 +151,7 @@ func RunObserver(
 					if err != nil {
 						return errors2.Wrap(err, "Manager hit error doing fast catchup")
 					}
-					if err := db.AddMessages(runCtx, inboxDeliveredEvents); err != nil {
+					if err := db.AddMessages(runCtx, inboxDeliveredEvents, fetchEnd.Uint64()); err != nil {
 						return err
 					}
 				}
@@ -179,7 +179,7 @@ func RunObserver(
 						return errors2.Wrapf(err, "Manager hit error getting inbox events with block %v", blockId)
 					}
 
-					if err := db.AddMessages(runCtx, inboxEvents); err != nil {
+					if err := db.AddMessages(runCtx, inboxEvents, blockId.Height.AsInt().Uint64()); err != nil {
 						return err
 					}
 				}

@@ -92,9 +92,11 @@ func New(
 	case <-ctx.Done():
 		return nil, errors.New("timed out saving checkpoint")
 	}
+	log.Println("Saving initial block")
 	if err := as.SaveBlock(prevBlockId, common.Hash{}); err != nil {
 		return nil, err
 	}
+	log.Println("Saved initial block")
 	txdb.mach = mach
 	txdb.callMach = mach.Clone()
 	txdb.callBlock = prevBlockId
@@ -125,8 +127,8 @@ func (txdb *TxDB) RestoreFromCheckpoint(ctx context.Context) error {
 }
 
 // The first
-func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent) error {
-	blockInboxes, err := txdb.breakByBlock(ctx, msgs)
+func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent, lastBlock uint64) error {
+	blockInboxes, err := txdb.breakByBlock(ctx, msgs, lastBlock)
 	if err != nil {
 		return err
 	}
@@ -327,9 +329,11 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 	}
 	var logBloom common.Hash
 	copy(logBloom[:], math.U256Bytes(types.LogsBloom(ethLogs)))
+	log.Println("Saving next block", block)
 	if err := txdb.as.SaveBlock(block, logBloom); err != nil {
 		return err
 	}
+	log.Println("Saved next block")
 
 	// Don't bother saving if we didn't run at all
 	if numSteps > 0 {
@@ -359,38 +363,61 @@ func makeBlockInbox(msgs []arbbridge.MessageDeliveredEvent) blockInbox {
 	}
 }
 
-func (txdb *TxDB) breakByBlock(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent) ([]blockInbox, error) {
+func (txdb *TxDB) breakByBlock(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent, lastBlock uint64) ([]blockInbox, error) {
+	blocks := make([]blockInbox, 0)
 	latestBlock, err := txdb.as.LatestBlock()
 	if err != nil {
 		return nil, err
 	}
-	latestBlockHeight := latestBlock.Height.AsInt().Uint64()
-	blocks := make([]blockInbox, 0)
+	currentBlockHeight := latestBlock.Height.AsInt().Uint64() + 1
+	addEmptyBlock := func() error {
+		blockId, err := txdb.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocksInt(int64(currentBlockHeight)))
+		if err != nil {
+			return err
+		}
+		blocks = append(blocks, blockInbox{
+			inbox: value.NewEmptyTuple(),
+			block: blockId,
+		})
+		currentBlockHeight++
+		return nil
+	}
+
+	startHeight := lastBlock
+	if len(msgs) > 0 {
+		startHeight = msgs[0].BlockId.Height.AsInt().Uint64()
+	}
+
+	for currentBlockHeight < startHeight {
+		if err := addEmptyBlock(); err != nil {
+			return nil, err
+		}
+	}
+
 	stack := make([]arbbridge.MessageDeliveredEvent, 0)
 	for _, msg := range msgs {
 		if len(stack) == 0 || msg.BlockId.Height.Cmp(stack[0].BlockId.Height) == 0 {
 			stack = append(stack, msg)
 		} else {
 			nextBlockIndex := makeBlockInbox(stack)
-			for nextBlockIndex.block.Height.AsInt().Uint64() > latestBlockHeight+1 {
-				blockId, err := txdb.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocksInt(int64(latestBlockHeight)))
-				if err != nil {
+			for nextBlockIndex.block.Height.AsInt().Uint64() > currentBlockHeight {
+				if err := addEmptyBlock(); err != nil {
 					return nil, err
 				}
-				blocks = append(blocks, blockInbox{
-					inbox: value.NewEmptyTuple(),
-					block: blockId,
-				})
-				latestBlockHeight++
 			}
 			blocks = append(blocks, makeBlockInbox(stack))
 			stack = make([]arbbridge.MessageDeliveredEvent, 0)
-			latestBlockHeight++
+			currentBlockHeight++
 		}
 	}
 	if len(stack) > 0 {
 		blocks = append(blocks, makeBlockInbox(stack))
-		latestBlockHeight++
+		currentBlockHeight++
+	}
+	for currentBlockHeight <= lastBlock {
+		if err := addEmptyBlock(); err != nil {
+			return nil, err
+		}
 	}
 	return blocks, nil
 }

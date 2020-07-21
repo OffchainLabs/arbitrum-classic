@@ -89,7 +89,8 @@ CBlockId aggregatorLatestBlock(const CAggregatorStore* agg) {
     try {
         auto latest = static_cast<const AggregatorStore*>(agg)->latestBlock();
         return {1, returnUint256(latest.second), latest.first};
-    } catch (const std::exception&) {
+    } catch (const std::exception& e) {
+        std::cerr << "aggregatorLatestBlock error: " << e.what() << std::endl;
         return {0, nullptr, 0};
     }
 }

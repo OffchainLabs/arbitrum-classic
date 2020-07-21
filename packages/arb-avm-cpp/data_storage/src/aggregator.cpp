@@ -26,12 +26,12 @@
 #include <rocksdb/status.h>
 #include <rocksdb/utilities/transaction_db.h>
 
-constexpr auto log_key = std::array<char, 1>{3};
-constexpr auto message_key = std::array<char, 1>{3};
-constexpr auto block_key = std::array<char, 1>{3};
-constexpr auto initial_block_key = std::array<char, 1>{3};
+constexpr auto log_key = std::array<char, 1>{-50};
+constexpr auto message_key = std::array<char, 1>{-51};
+constexpr auto block_key = std::array<char, 1>{-52};
+constexpr auto initial_block_key = std::array<char, 1>{-53};
 
-constexpr auto request_key_prefix = std::array<char, 1>{1};
+constexpr auto request_key_prefix = std::array<char, 1>{-54};
 constexpr auto request_key_size = request_key_prefix.size() + 32;
 
 namespace {
@@ -114,7 +114,44 @@ std::array<char, sizeof(uint64_t) * 2> requestValue(
 }  // namespace
 
 template <size_t N, const std::array<char, N>& key>
-struct FlatSaver {
+struct EntrySaver {
+    std::array<char, N + sizeof(uint64_t)> entryKey(uint64_t index) {
+        std::array<char, N + sizeof(uint64_t)> full_key;
+        auto it = std::copy(key.begin(), key.end(), full_key.begin());
+        addUint64ToKey(index, it);
+        return full_key;
+    }
+
+    void saveIndex(rocksdb::Transaction& tx, uint64_t count) {
+        auto value = uint64Value(count);
+        auto s = tx.Put(vecToSlice(key), vecToSlice(value));
+        if (!s.ok()) {
+            throw std::runtime_error("failed to save count");
+        }
+    }
+
+    std::string loadEntry(rocksdb::Transaction& tx, uint64_t index) {
+        auto full_key = this->entryKey(index);
+        std::string value;
+        auto s = tx.Get(rocksdb::ReadOptions{}, vecToSlice(full_key), &value);
+        if (!s.ok()) {
+            throw std::runtime_error("failed load value");
+        }
+        return value;
+    }
+
+    template <typename T>
+    void saveEntry(rocksdb::Transaction& tx, const T& output, uint64_t height) {
+        auto full_key = this->entryKey(height);
+        auto s = tx.Put(vecToSlice(full_key), vecToSlice(output));
+        if (!s.ok()) {
+            throw std::runtime_error("failed to save");
+        }
+    }
+};
+
+template <size_t N, const std::array<char, N>& key>
+struct FlatSaver : private EntrySaver<N, key> {
     uint64_t count(rocksdb::Transaction& tx) {
         std::string value;
         auto s = tx.Get(rocksdb::ReadOptions{}, vecToSlice(key), &value);
@@ -127,35 +164,15 @@ struct FlatSaver {
         return extractUint64(it);
     }
 
-    std::array<char, N + sizeof(uint64_t)> entryKey(uint64_t index) {
-        std::array<char, N + sizeof(uint64_t)> full_key;
-        auto it = std::copy(key.begin(), key.end(), full_key.begin());
-        addUint64ToKey(index, it);
-        return full_key;
-    }
-
     void saveCount(rocksdb::Transaction& tx, uint64_t count) {
-        auto value = uint64Value(count);
-        auto s = tx.Put(vecToSlice(key), vecToSlice(value));
-        if (!s.ok()) {
-            throw std::runtime_error("failed to save count");
-        }
+        this->saveIndex(tx, count);
     }
 
     template <typename T>
     void saveNext(rocksdb::Transaction& tx, const T& output) {
         uint64_t current_count = count(tx);
-        save(tx, output, current_count);
+        this->saveEntry(tx, output, current_count);
         saveCount(tx, current_count + 1);
-    }
-
-    template <typename T>
-    void save(rocksdb::Transaction& tx, const T& output, uint64_t index) {
-        auto full_key = entryKey(index);
-        auto s = tx.Put(vecToSlice(full_key), vecToSlice(output));
-        if (!s.ok()) {
-            throw std::runtime_error("failed to save");
-        }
     }
 
     std::string load(rocksdb::Transaction& tx, uint64_t index) {
@@ -165,19 +182,46 @@ struct FlatSaver {
             ss << "invalid index " << index << "/" << current_count;
             throw std::runtime_error(ss.str());
         }
-        auto full_key = entryKey(index);
+        return this->loadEntry(tx, index);
+    }
+};
+
+template <size_t N, const std::array<char, N>& key>
+struct HeightSaver : public EntrySaver<N, key> {
+    uint64_t max(rocksdb::Transaction& tx) {
         std::string value;
-        auto s = tx.Get(rocksdb::ReadOptions{}, vecToSlice(full_key), &value);
+        auto s = tx.Get(rocksdb::ReadOptions{}, vecToSlice(key), &value);
         if (!s.ok()) {
-            throw std::runtime_error("failed load value");
+            throw std::runtime_error("no max saved");
         }
-        return value;
+        auto it = value.begin();
+        return extractUint64(it);
+    }
+
+    void saveMax(rocksdb::Transaction& tx, uint64_t max) {
+        this->saveIndex(tx, max);
+    }
+
+    template <typename T>
+    void save(rocksdb::Transaction& tx, const T& output, uint64_t height) {
+        this->saveEntry(tx, output, height);
+        saveMax(tx, height);
+    }
+
+    std::string load(rocksdb::Transaction& tx, uint64_t index) {
+        uint64_t current_max = max(tx);
+        if (index > current_max) {
+            std::stringstream ss;
+            ss << "invalid index " << index << "/" << current_max;
+            throw std::runtime_error(ss.str());
+        }
+        return this->loadEntry(tx, index);
     }
 };
 
 using LogSaver = FlatSaver<log_key.size(), log_key>;
 using MessageSaver = FlatSaver<message_key.size(), message_key>;
-using BlockSaver = FlatSaver<block_key.size(), block_key>;
+using BlockSaver = HeightSaver<block_key.size(), block_key>;
 
 uint64_t AggregatorStore::logCount() const {
     auto tx = data_storage->beginTransaction();
@@ -242,12 +286,9 @@ std::pair<uint64_t, uint64_t> AggregatorStore::getPossibleRequestInfo(
 
 std::pair<uint64_t, uint256_t> AggregatorStore::latestBlock() const {
     auto tx = data_storage->beginTransaction();
-    uint64_t block_count = BlockSaver{}.count(*tx);
-    if (block_count == 0) {
-        throw std::runtime_error("no blocks in db");
-    }
-    auto block = getBlock(block_count - 1);
-    return {block_count - 1, block.hash};
+    uint64_t latest_block = BlockSaver{}.max(*tx);
+    auto block = getBlock(latest_block);
+    return {latest_block, block.hash};
 }
 
 uint64_t AggregatorStore::getInitialBlock() const {
@@ -277,16 +318,18 @@ void AggregatorStore::saveBlock(uint64_t height,
         if (!s.ok()) {
             throw std::runtime_error("couldn't save initial block");
         }
-        BlockSaver{}.save(*tx, value, height);
     } else if (!s.ok()) {
         throw std::runtime_error("couldn't load initial block");
     } else {
-        auto current_count = BlockSaver{}.count(*tx);
-        if (height != current_count) {
-            throw std::runtime_error("must save consecutive blocks");
+        auto current_max = BlockSaver{}.max(*tx);
+        if (height != current_max + 1) {
+            std::stringstream ss;
+            ss << "must save consecutive blocks but tried to save " << height
+               << " with current latest " << current_max;
+            throw std::runtime_error(ss.str());
         }
-        BlockSaver{}.saveNext(*tx, value);
     }
+    BlockSaver{}.save(*tx, value, height);
     commitTx(*tx);
 }
 
@@ -319,6 +362,6 @@ void AggregatorStore::restoreBlock(uint64_t height) {
     auto parsed_value = processBlockValue(block_value);
     MessageSaver{}.saveCount(*tx, parsed_value.message_count);
     LogSaver{}.saveCount(*tx, parsed_value.log_count);
-    BlockSaver{}.saveCount(*tx, height);
+    BlockSaver{}.saveMax(*tx, height);
     commitTx(*tx);
 }
