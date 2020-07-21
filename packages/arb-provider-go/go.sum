@@ -84,6 +84,8 @@ github.com/ethereum/go-ethereum v1.9.15 h1:wrWl+QrtutRUJ9LZXdUqBoGoo2b1tOCYRDrAO
 github.com/ethereum/go-ethereum v1.9.15/go.mod h1:slT8bPPRhXsyNTwHQxrOnjuTZ1sDXRajW11EkJ84QJ0=
 github.com/ethereum/go-ethereum v1.9.16 h1:WQTmbO9RelgTouA5UlRfd4KnXqSarphmvn7XNXUmvhk=
 github.com/ethereum/go-ethereum v1.9.16/go.mod h1:kihoiSg74VC4dZAXMkmoWp70oQabz48BJg1tuzricFc=
+github.com/ethereum/go-ethereum v1.9.17 h1:2D02O8KcoyQHxfizvMi0vGXXzFIkQTMeKXwt0+4SYEA=
+github.com/ethereum/go-ethereum v1.9.17/go.mod h1:kihoiSg74VC4dZAXMkmoWp70oQabz48BJg1tuzricFc=
 github.com/fatih/color v1.3.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fjl/memsize v0.0.0-20180418122429-ca190fb6ffbc h1:jtW8jbpkO4YirRSyepBOH8E+2HEw6/hKkBvFPwhUN8c=
 github.com/fjl/memsize v0.0.0-20180418122429-ca190fb6ffbc/go.mod h1:VvhXpOYNQvB+uIk2RvXzuaQtkQJzzIx6lSBe1xv7hi0=
