@@ -17,6 +17,7 @@
 package challenges
 
 import (
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
@@ -28,7 +29,12 @@ import (
 var testerAddress ethcommon.Address
 
 func TestChallenges(t *testing.T) {
-	client, auths := test.SimulatedBackend()
+	client, pks := test.SimulatedBackend()
+
+	auths := make([]*bind.TransactOpts, 0)
+	for _, pk := range pks {
+		auths = append(auths, bind.NewKeyedTransactor(pk))
+	}
 
 	factorAddr, err := ethbridge.DeployChallengeFactory(auths[0], client)
 	if err != nil {

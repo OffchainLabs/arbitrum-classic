@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
@@ -22,6 +24,8 @@ import (
 var Namespace = "Aggregator"
 
 type ValidatorProxy interface {
+	GetBlockCount(ctx context.Context) (uint64, error)
+	SendTransaction(ctx context.Context, tx *types.Transaction) (common.Hash, error)
 	BlockInfo(ctx context.Context, height uint64) (machine.BlockInfo, error)
 	GetRequestResult(ctx context.Context, txHash common.Hash) (uint64, uint64, value.Value, error)
 	GetChainAddress(ctx context.Context) (string, error)
@@ -65,6 +69,20 @@ func _encodeAddressArraySlice(slice []ethcommon.Address) []string {
 	return ret
 }
 
+func (vp *ValidatorProxyImpl) SendTransaction(ctx context.Context, tx *types.Transaction) (common.Hash, error) {
+	txData, err := rlp.EncodeToBytes(tx)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	request := &evm.SendTransactionArgs{SignedTransaction: hexutil.Encode(txData)}
+	var response evm.SendTransactionReply
+	if err := vp.doCall(ctx, "SendTransaction", request, &response); err != nil {
+		log.Println("ValProxy.SendMessage: error returned from doCall:", err)
+		return common.Hash{}, err
+	}
+	return common.HexToHash(response.TransactionHash), nil
+}
+
 func (vp *ValidatorProxyImpl) doCall(ctx context.Context, methodName string, request interface{}, response interface{}) error {
 	msg, err := json.EncodeClientRequest(Namespace+"."+methodName, request)
 	if err != nil {
@@ -91,30 +109,6 @@ func (vp *ValidatorProxyImpl) doCall(ctx context.Context, methodName string, req
 	return ret
 }
 
-//
-//func (vp *ValidatorProxyImpl) SendMessage(val value.Value, hexPubkey string, signature []byte) ([]byte, error) {
-//	var buf bytes.Buffer
-//	if err := value.MarshalValue(val, &buf); err != nil {
-//		log.Println("ValProxy.SendMessage: marshaling error:", err)
-//		return nil, err
-//	}
-//	request := &rollupvalidator.SendMessageArgs{
-//		Data:      hexutil.Encode(buf.Bytes()),
-//		Pubkey:    hexPubkey,
-//		Signature: hexutil.Encode(signature),
-//	}
-//	var response rollupvalidator.SendMessageReply
-//	if err := vp.doCall("SendMessage", request, &response); err != nil {
-//		log.Println("ValProxy.SendMessage: error returned from doCall:", err)
-//		return nil, err
-//	}
-//	bs, err := hexutil.Decode(response.TxHash)
-//	if err != nil {
-//		log.Println("ValProxy.SendMessage error:", err)
-//	}
-//	return bs, err
-//}
-
 func (vp *ValidatorProxyImpl) BlockInfo(ctx context.Context, height uint64) (machine.BlockInfo, error) {
 	request := &evm.BlockInfoArgs{
 		Height: height,
@@ -123,13 +117,17 @@ func (vp *ValidatorProxyImpl) BlockInfo(ctx context.Context, height uint64) (mac
 	if err := vp.doCall(ctx, "BlockInfo", request, &response); err != nil {
 		return machine.BlockInfo{}, err
 	}
+	bloomBytes, err := hexutil.Decode(response.Bloom)
+	if err != nil {
+		return machine.BlockInfo{}, err
+	}
 	return machine.BlockInfo{
 		Hash:         common.NewHashFromEth(ethcommon.HexToHash(response.Hash)),
 		StartLog:     response.StartLog,
 		LogCount:     response.LogCount,
 		StartMessage: response.StartMessage,
 		MessageCount: response.MessageCount,
-		Bloom:        common.NewHashFromEth(ethcommon.HexToHash(response.Bloom)),
+		Bloom:        types.BytesToBloom(bloomBytes),
 	}, nil
 }
 
@@ -167,6 +165,15 @@ func (vp *ValidatorProxyImpl) GetChainAddress(ctx context.Context) (string, erro
 	return response.ChainAddress, nil
 }
 
+func (vp *ValidatorProxyImpl) GetBlockCount(ctx context.Context) (uint64, error) {
+	request := &evm.BlockCountArgs{}
+	var response evm.BlockCountReply
+	if err := vp.doCall(ctx, "GetBlockCount", request, &response); err != nil {
+		return 0, err
+	}
+	return response.Height, nil
+}
+
 func (vp *ValidatorProxyImpl) FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []ethcommon.Address, topicGroups [][]ethcommon.Hash) ([]evm.FullLog, error) {
 	tgs := make([]*evm.TopicGroup, 0, len(topicGroups))
 	for _, topicGroup := range topicGroups {
@@ -180,11 +187,13 @@ func (vp *ValidatorProxyImpl) FindLogs(ctx context.Context, fromHeight, toHeight
 	}
 	var response evm.FindLogsReply
 	if err := vp.doCall(ctx, "FindLogs", request, &response); err != nil {
+		log.Println("Error finding logs", err)
 		return nil, err
 	}
 
 	logs := make([]evm.FullLog, 0, len(response.Logs))
 	for _, l := range response.Logs {
+		log.Println("Found log")
 		parsedLog, err := l.Unmarshal()
 		if err != nil {
 			return nil, err

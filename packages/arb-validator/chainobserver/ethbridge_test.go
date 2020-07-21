@@ -18,6 +18,7 @@ package chainobserver
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"log"
@@ -49,9 +50,9 @@ var ethclnt *backends.SimulatedBackend
 var auth *bind.TransactOpts
 
 func TestMain(m *testing.M) {
-	var auths []*bind.TransactOpts
-	ethclnt, auths = test.SimulatedBackend()
-	auth = auths[0]
+	var pks []*ecdsa.PrivateKey
+	ethclnt, pks = test.SimulatedBackend()
+	auth = bind.NewKeyedTransactor(pks[0])
 
 	go func() {
 		t := time.NewTicker(time.Second * 1)

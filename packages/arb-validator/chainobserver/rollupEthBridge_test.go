@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
@@ -41,8 +42,8 @@ import (
 var tester *ethbridgetestcontracts.RollupTester
 
 func TestMainSetup(m *testing.T) {
-	client, auths := test.SimulatedBackend()
-	auth := auths[0]
+	client, pks := test.SimulatedBackend()
+	auth := bind.NewKeyedTransactor(pks[0])
 
 	_, machineTx, deployedArbRollup, err := ethbridgetestcontracts.DeployRollupTester(
 		auth,

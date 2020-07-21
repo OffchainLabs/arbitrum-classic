@@ -19,8 +19,12 @@ package txdb
 import (
 	"context"
 	"errors"
-	"github.com/ethereum/go-ethereum/common/math"
+	"log"
+	"math/big"
+	"sync"
+
 	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
@@ -30,9 +34,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
-	"log"
-	"math/big"
-	"sync"
 )
 
 type TxDB struct {
@@ -92,7 +93,7 @@ func New(
 	case <-ctx.Done():
 		return nil, errors.New("timed out saving checkpoint")
 	}
-	if err := as.SaveBlock(prevBlockId, common.Hash{}); err != nil {
+	if err := as.SaveBlock(prevBlockId, types.Bloom{}); err != nil {
 		return nil, err
 	}
 	txdb.mach = mach
@@ -220,13 +221,15 @@ func (txdb *TxDB) FindLogs(
 		if err != nil {
 			return nil, err
 		}
-
-		if !maybeMatchesLogQuery(blockInfo.Bloom[:], address, topics) {
+		log.Println("Looking for logs in block", i)
+		if !maybeMatchesLogQuery(blockInfo.Bloom, address, topics) {
 			continue
 		}
 
+		log.Println("Maybe found logs in block", i)
 		for j := uint64(0); j < blockInfo.LogCount; j++ {
-			logVal, err := txdb.as.GetLog(j)
+			logVal, err := txdb.as.GetLog(blockInfo.StartLog + j)
+			log.Println("Looking for logs in AVM log", blockInfo.StartLog+j)
 			if err != nil {
 				return nil, err
 			}
@@ -257,9 +260,7 @@ func (txdb *TxDB) FindLogs(
 	return logs, nil
 }
 
-func maybeMatchesLogQuery(bloom []byte, addresses []common.Address, topics [][]common.Hash) bool {
-	logFilter := types.BytesToBloom(bloom)
-
+func maybeMatchesLogQuery(logFilter types.Bloom, addresses []common.Address, topics [][]common.Hash) bool {
 	if len(addresses) > 0 {
 		match := false
 		for _, addr := range addresses {
@@ -321,6 +322,7 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 		}
 
 		for _, evmLog := range res.EVMLogs {
+			log.Println("Got evm log", evmLog, "in block", block.Height)
 			ethLogs = append(ethLogs, &types.Log{
 				Address: evmLog.Address.ToEthAddress(),
 				Topics:  common.NewEthHashesFromHashes(evmLog.Topics),
@@ -328,8 +330,7 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 		}
 		startLogIndex += uint64(len(res.EVMLogs))
 	}
-	var logBloom common.Hash
-	copy(logBloom[:], math.U256Bytes(types.LogsBloom(ethLogs)))
+	logBloom := types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
 	if err := txdb.as.SaveBlock(block, logBloom); err != nil {
 		return err
 	}

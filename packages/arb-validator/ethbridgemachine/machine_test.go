@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -33,8 +34,8 @@ import (
 )
 
 func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
-	client, auths := test.SimulatedBackend()
-	auth := auths[0]
+	client, pks := test.SimulatedBackend()
+	auth := bind.NewKeyedTransactor(pks[0])
 
 	_, machineTx, deployedMachineTester, err := ethbridgetestcontracts.DeployMachineTester(
 		auth,

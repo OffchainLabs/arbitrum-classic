@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
 
 	"log"
@@ -21,7 +22,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/ethclient"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
@@ -301,15 +301,9 @@ func main() {
 	s.RegisterCodec(NewUpCodec(), "application/json")
 	s.RegisterCodec(NewUpCodec(), "application/json;charset=UTF-8")
 
-	clnt, err := ethclient.Dial("http://localhost:7545")
-	if err != nil {
-		panic(err)
-	}
+	rollupAddress := arbcommon.Address{}
 
-	arbclnt, err := goarbitrum.Dial("http://localhost:1235", nil, clnt)
-	if err != nil {
-		panic(err)
-	}
+	arbclnt := goarbitrum.Dial("http://localhost:1235", nil, rollupAddress)
 
 	eth, err := NewEth(arbclnt)
 	if err != nil {

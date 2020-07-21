@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"log"
@@ -31,29 +32,32 @@ import (
 )
 
 var db = "./testman"
+var contract = arbos.Path()
 
 /********************************************/
 /*    Validators                            */
 /********************************************/
 func setupValidators(
-	t *testing.T,
 	client ethutils.EthClient,
-	auths []*bind.TransactOpts,
-) ([]arbbridge.ArbAuthClient, error) {
-	if len(auths) < 2 {
-		panic("must have at least 2 auths")
+	pks []*ecdsa.PrivateKey,
+) (common.Address, []arbbridge.ArbAuthClient, error) {
+	if len(pks) < 1 {
+		panic("must have at least 1 pks")
 	}
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
 	rand.Seed(seed)
 
-	clients := make([]arbbridge.ArbAuthClient, 0, len(auths))
-	for _, auth := range auths {
-		clients = append(clients, ethbridge.NewEthAuthClient(client, auth))
+	clients := make([]arbbridge.ArbAuthClient, 0, len(pks))
+	var auth *bind.TransactOpts
+	for i, pk := range pks {
+		if i == 0 {
+			auth = bind.NewKeyedTransactor(pk)
+		}
+		clients = append(clients, ethbridge.NewEthAuthClient(client, bind.NewKeyedTransactor(pk)))
 	}
 
 	ctx := context.Background()
-	contract := arbos.Path()
 
 	rollupAddress, err := func() (common.Address, error) {
 		config := valprotocol.ChainParams{
@@ -63,7 +67,7 @@ func setupValidators(
 			ArbGasSpeedLimitPerTick: 200000,
 		}
 
-		factoryAddr, err := ethbridge.DeployRollupFactory(auths[0], client)
+		factoryAddr, err := ethbridge.DeployRollupFactory(auth, client)
 		if err != nil {
 			return common.Address{}, err
 		}
@@ -87,14 +91,14 @@ func setupValidators(
 		return rollupAddress, err
 	}()
 	if err != nil {
-		return nil, err
+		return common.Address{}, nil, err
 	}
 
-	managers := make([]*rollupmanager.Manager, 0, len(clients)-1)
+	managers := make([]*rollupmanager.Manager, 0, len(clients))
 	for _, client := range clients[1:] {
 		rollupActor, err := client.NewRollup(rollupAddress)
 		if err != nil {
-			return nil, err
+			return common.Address{}, nil, err
 		}
 
 		dbName := db + client.Address().String()
@@ -111,10 +115,10 @@ func setupValidators(
 			dbName,
 		)
 		if err != nil {
-			return nil, err
+			return common.Address{}, nil, err
 		}
 
-		manager.AddListener(&chainlistener.AnnouncerListener{Prefix: "validator " + client.Address().String() + ": "})
+		//manager.AddListener(&chainlistener.AnnouncerListener{Prefix: "validator " + client.Address().String() + ": "})
 
 		validatorListener := chainlistener.NewValidatorChainListener(
 			context.Background(),
@@ -123,14 +127,17 @@ func setupValidators(
 		)
 		err = validatorListener.AddStaker(client)
 		if err != nil {
-			return nil, err
+			return common.Address{}, nil, err
 		}
 		manager.AddListener(validatorListener)
 		managers = append(managers, manager)
 	}
 
+	return rollupAddress, clients, nil
+}
+
+func launchAggregator(client arbbridge.ArbAuthClient, rollupAddress common.Address) error {
 	go func() {
-		client := clients[0]
 		if err := aggregator.LaunchAggregator(
 			context.Background(),
 			client,
@@ -158,18 +165,16 @@ waitloop:
 				continue
 			}
 			if err := conn.Close(); err != nil {
-				t.Fatal(err)
+				return err
 			}
 			// Wait for the validator to catch up to head
 			time.Sleep(time.Second * 2)
 			break waitloop
 		case <-time.After(time.Second * 5):
-			t.Fatal("Couldn't connect to rpc")
+			return errors.New("couldn't connect to rpc")
 		}
 	}
-
-	return clients, nil
-
+	return nil
 }
 
 type ListenerError struct {
@@ -231,20 +236,16 @@ func waitForReceipt(
 	tx *types.Transaction,
 	timeout time.Duration,
 ) (*types.Receipt, error) {
-	txhash, err := client.TxHash(tx)
-	if err != nil {
-		return nil, err
-	}
 	ticker := time.NewTicker(timeout)
 	for {
 		select {
 		case <-ticker.C:
-			return nil, fmt.Errorf("timed out waiting for receipt for tx %v", txhash)
+			return nil, fmt.Errorf("timed out waiting for receipt for tx %v", tx.Hash())
 		default:
 		}
 		receipt, err := client.TransactionReceipt(
 			context.Background(),
-			txhash.ToEthHash(),
+			tx.Hash(),
 		)
 		if err != nil {
 			if err.Error() == "not found" {
@@ -258,7 +259,7 @@ func waitForReceipt(
 }
 
 func TestFib(t *testing.T) {
-	client, auths := test.SimulatedBackend()
+	client, pks := test.SimulatedBackend()
 	go func() {
 		t := time.NewTicker(time.Second * 2)
 		for range t.C {
@@ -266,21 +267,26 @@ func TestFib(t *testing.T) {
 		}
 	}()
 
-	validatorClients, err := setupValidators(t, client, auths[2:4])
+	rollupAddress, validatorClients, err := setupValidators(client, pks[2:3])
 	if err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
 
-	auth := auths[0]
-	arbclient, err := goarbitrum.Dial(
-		"http://localhost:1235",
-		auth,
-		client,
-	)
-	if err != nil {
+	if err := launchAggregator(
+		ethbridge.NewEthAuthClient(client, bind.NewKeyedTransactor(pks[1])),
+		rollupAddress,
+	); err != nil {
 		t.Fatal(err)
 	}
 
+	pk := pks[0]
+	arbclient := goarbitrum.Dial(
+		"http://localhost:1235",
+		pk,
+		rollupAddress,
+	)
+
+	auth := bind.NewKeyedTransactor(pk)
 	_, tx, _, err := DeployFibonacci(auth, arbclient)
 	if err != nil {
 		t.Fatal("DeployFibonacci failed", err)

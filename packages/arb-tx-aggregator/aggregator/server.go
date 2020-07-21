@@ -21,7 +21,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
@@ -82,7 +81,8 @@ func (m *Server) FindLogs(
 	args *evm.FindLogsArgs,
 	reply *evm.FindLogsReply,
 ) error {
-	addresses := make([]common.Address, 0, 1)
+	log.Println("Server FindLogs", args.FromHeight, args.ToHeight)
+	addresses := make([]common.Address, 0, len(args.Addresses))
 	for _, addr := range args.Addresses {
 		addresses = append(addresses, common.HexToAddress(addr))
 	}
@@ -91,7 +91,7 @@ func (m *Server) FindLogs(
 	for _, topicGroup := range args.TopicGroups {
 		topics := make([]common.Hash, 0, len(topicGroup.Topics))
 		for _, topic := range topicGroup.Topics {
-			topics = append(topics, common.NewHashFromEth(ethcommon.HexToHash(topic)))
+			topics = append(topics, common.HexToHash(topic))
 		}
 		topicGroups = append(topicGroups, topics)
 	}
@@ -213,7 +213,7 @@ func (m *Server) BlockInfo(
 	reply.LogCount = info.LogCount
 	reply.StartMessage = info.StartMessage
 	reply.MessageCount = info.MessageCount
-	reply.Bloom = info.Bloom.String()
+	reply.Bloom = hexutil.Encode(info.Bloom.Bytes())
 	return nil
 }
 

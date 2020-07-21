@@ -361,8 +361,8 @@ func (vm *ethRollupWatcher) IsStaked(address common.Address) (bool, error) {
 }
 
 func (vm *ethRollupWatcher) VerifyArbChain(ctx context.Context, machHash common.Hash) error {
-	backend, auths := test.SimulatedBackend()
-	_, _, rollupSim, err := ethbridgecontracts.DeployArbRollup(auths[0], backend)
+	backend, pks := test.SimulatedBackend()
+	_, _, rollupSim, err := ethbridgecontracts.DeployArbRollup(bind.NewKeyedTransactor(pks[0]), backend)
 	if err != nil {
 		return err
 	}

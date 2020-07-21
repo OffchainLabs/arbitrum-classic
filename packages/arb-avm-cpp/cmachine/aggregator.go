@@ -27,6 +27,7 @@ import "C"
 import (
 	"bytes"
 	"errors"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"math/big"
 	"runtime"
@@ -124,11 +125,12 @@ func (as *AggregatorStore) LatestBlock() (*common.BlockId, error) {
 	}, nil
 }
 
-func (as *AggregatorStore) SaveBlock(id *common.BlockId, logBloom common.Hash) error {
+func (as *AggregatorStore) SaveBlock(id *common.BlockId, logBloom types.Bloom) error {
 	cHeaderHash := hashToData(id.HeaderHash)
 	defer C.free(cHeaderHash)
-	cLogBloom := hashToData(logBloom)
-
+	var bloomBuf bytes.Buffer
+	_ = value.NewIntValue(new(big.Int).SetBytes(logBloom[:])).Marshal(&bloomBuf)
+	cLogBloom := C.CBytes(bloomBuf.Bytes())
 	defer C.free(cLogBloom)
 
 	if C.aggregatorSaveBlock(as.c, C.uint64_t(id.Height.AsInt().Uint64()), cHeaderHash, cLogBloom) == 0 {
@@ -142,13 +144,15 @@ func (as *AggregatorStore) GetBlock(height uint64) (machine.BlockInfo, error) {
 	if blockData.found == 0 {
 		return machine.BlockInfo{}, errors.New("failed to get block")
 	}
+	defer C.free(blockData.bloom)
+	dataBuff := C.GoBytes(blockData.bloom, 32)
 	return machine.BlockInfo{
 		Hash:         dataToHash(blockData.hash),
 		StartLog:     uint64(blockData.start_log),
 		LogCount:     uint64(blockData.log_count),
 		StartMessage: uint64(blockData.start_message),
 		MessageCount: uint64(blockData.message_count),
-		Bloom:        dataToHash(blockData.bloom),
+		Bloom:        types.BytesToBloom(dataBuff),
 	}, nil
 }
 

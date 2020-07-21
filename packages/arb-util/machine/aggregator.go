@@ -16,7 +16,11 @@
 
 package machine
 
-import "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+import (
+	"github.com/ethereum/go-ethereum/core/types"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+)
 
 type BlockInfo struct {
 	Hash         common.Hash
@@ -24,5 +28,5 @@ type BlockInfo struct {
 	LogCount     uint64
 	StartMessage uint64
 	MessageCount uint64
-	Bloom        common.Hash
+	Bloom        types.Bloom
 }
