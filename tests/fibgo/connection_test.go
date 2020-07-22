@@ -40,7 +40,7 @@ var contract = arbos.Path()
 func setupValidators(
 	client ethutils.EthClient,
 	pks []*ecdsa.PrivateKey,
-) (common.Address, []arbbridge.ArbAuthClient, error) {
+) (common.Address, error) {
 	if len(pks) < 1 {
 		panic("must have at least 1 pks")
 	}
@@ -91,22 +91,17 @@ func setupValidators(
 		return rollupAddress, err
 	}()
 	if err != nil {
-		return common.Address{}, nil, err
+		return common.Address{}, err
 	}
 
 	managers := make([]*rollupmanager.Manager, 0, len(clients))
-	for _, client := range clients[1:] {
+	for _, client := range clients {
 		rollupActor, err := client.NewRollup(rollupAddress)
 		if err != nil {
-			return common.Address{}, nil, err
+			return common.Address{}, err
 		}
 
-		dbName := db + client.Address().String()
-
-		if err := os.RemoveAll(dbName); err != nil {
-			log.Fatal(err)
-		}
-
+		dbName := db + "/" + client.Address().String()
 		manager, err := rollupmanager.CreateManager(
 			ctx,
 			rollupAddress,
@@ -115,7 +110,7 @@ func setupValidators(
 			dbName,
 		)
 		if err != nil {
-			return common.Address{}, nil, err
+			return common.Address{}, err
 		}
 
 		manager.AddListener(&chainlistener.AnnouncerListener{Prefix: "validator " + client.Address().String() + ": "})
@@ -127,13 +122,13 @@ func setupValidators(
 		)
 		err = validatorListener.AddStaker(client)
 		if err != nil {
-			return common.Address{}, nil, err
+			return common.Address{}, err
 		}
 		manager.AddListener(validatorListener)
 		managers = append(managers, manager)
 	}
 
-	return rollupAddress, clients, nil
+	return rollupAddress, nil
 }
 
 func launchAggregator(client arbbridge.ArbAuthClient, rollupAddress common.Address) error {
@@ -143,7 +138,7 @@ func launchAggregator(client arbbridge.ArbAuthClient, rollupAddress common.Addre
 			client,
 			rollupAddress,
 			contract,
-			db+client.Address().String(),
+			db+"/aggregator",
 			"1235",
 			utils2.RPCFlags{},
 		); err != nil {
@@ -267,16 +262,22 @@ func TestFib(t *testing.T) {
 		}
 	}()
 
-	rollupAddress, validatorClients, err := setupValidators(client, pks[2:4])
+	if err := os.RemoveAll(db); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := os.Mkdir(db, 0700); err != nil {
+		log.Fatal(err)
+	}
+
+	rollupAddress, err := setupValidators(client, pks[2:4])
 	if err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
 
 	defer func() {
-		for _, client := range validatorClients {
-			if err := os.RemoveAll(db + client.Address().String()); err != nil {
-				log.Fatal(err)
-			}
+		if err := os.RemoveAll(db); err != nil {
+			log.Fatal(err)
 		}
 	}()
 
