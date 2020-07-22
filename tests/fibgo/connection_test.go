@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
 	"log"
 	"math/big"
@@ -18,7 +19,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
-	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -133,13 +133,14 @@ func setupValidators(
 
 func launchAggregator(client arbbridge.ArbAuthClient, rollupAddress common.Address) error {
 	go func() {
-		if err := aggregator.LaunchAggregator(
+		if err := rpc.LaunchAggregator(
 			context.Background(),
 			client,
 			rollupAddress,
 			contract,
 			db+"/aggregator",
 			"1235",
+			"8546",
 			utils2.RPCFlags{},
 		); err != nil {
 			log.Fatal(err)

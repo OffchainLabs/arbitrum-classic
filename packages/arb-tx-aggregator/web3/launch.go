@@ -14,27 +14,34 @@
  * limitations under the License.
  */
 
-package aggregator
+package web3
 
 import (
+	"context"
 	"github.com/gorilla/rpc/v2"
-	"github.com/gorilla/rpc/v2/json"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
 )
 
-func GenerateRPCServer(server *Server) (*rpc.Server, error) {
-	arbServer := NewRPCServer(server)
-	s := rpc.NewServer()
-	s.RegisterCodec(
-		json.NewCodec(),
-		"application/json",
-	)
-	s.RegisterCodec(
-		json.NewCodec(),
-		"application/json;charset=UTF-8",
-	)
-
-	if err := s.RegisterService(arbServer, "Aggregator"); err != nil {
+func GenerateWeb3Server(ctx context.Context, server *aggregator.Server) (*rpc.Server, error) {
+	web3Server, err := NewServer(ctx, server)
+	if err != nil {
 		return nil, err
 	}
+	s := rpc.NewServer()
+
+	// Register our own Codec
+	s.RegisterCodec(NewUpCodec(), "application/json")
+	s.RegisterCodec(NewUpCodec(), "application/json;charset=UTF-8")
+
+	err = s.RegisterService(web3Server, "Eth")
+	if err != nil {
+		panic(err)
+	}
+
+	err = s.RegisterService(new(Net), "Net")
+	if err != nil {
+		panic(err)
+	}
+
 	return s, nil
 }

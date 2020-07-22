@@ -226,7 +226,7 @@ export class ArbClient {
   }
 
   public call(tx: L2Call, sender: string | undefined): Promise<ArbValue.Value> {
-    return this._call(`${NAMESPACE}.CallMessage`, tx, sender)
+    return this._call(`${NAMESPACE}.Call`, tx, sender)
   }
 
   public pendingCall(

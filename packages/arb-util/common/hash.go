@@ -86,3 +86,11 @@ func HashSliceToRaw(slice []Hash) [][32]byte {
 	}
 	return ret
 }
+
+func HashArrayFromEth(hashes []ethcommon.Hash) []Hash {
+	ret := make([]Hash, 0, len(hashes))
+	for _, a := range hashes {
+		ret = append(ret, NewHashFromEth(a))
+	}
+	return ret
+}

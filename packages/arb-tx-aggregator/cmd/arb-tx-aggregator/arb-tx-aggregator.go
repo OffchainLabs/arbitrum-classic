@@ -19,14 +19,13 @@ package main
 import (
 	"context"
 	"flag"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -76,13 +75,14 @@ func main() {
 	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "contract.mexe")
 	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
 
-	if err := aggregator.LaunchAggregator(
+	if err := rpc.LaunchAggregator(
 		context.Background(),
 		client,
 		rollupArgs.Address,
 		contractFile,
 		dbPath,
 		"1235",
+		"8546",
 		rpcVars,
 	); err != nil {
 		log.Fatal(err)

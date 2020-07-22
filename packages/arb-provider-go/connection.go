@@ -35,8 +35,16 @@ type ArbConnection struct {
 }
 
 func Dial(url string, pk *ecdsa.PrivateKey, rollupAddress common.Address) *ArbConnection {
+	return NewArbConnection(
+		NewValidatorProxyImpl(url),
+		pk,
+		rollupAddress,
+	)
+}
+
+func NewArbConnection(connection ValidatorProxy, pk *ecdsa.PrivateKey, rollupAddress common.Address) *ArbConnection {
 	return &ArbConnection{
-		proxy:            NewValidatorProxyImpl(url),
+		proxy:            connection,
 		rollupAddress:    rollupAddress,
 		pk:               pk,
 		sentTransactions: make(map[ethcommon.Hash]ethcommon.Hash),
@@ -107,7 +115,7 @@ func (conn *ArbConnection) CallContract(
 		DestAddress: dest,
 		Data:        call.Data,
 	}
-	retValue, err := conn.proxy.CallMessage(ctx, tx, call.From)
+	retValue, err := conn.proxy.Call(ctx, tx, call.From)
 	if err != nil {
 		return nil, err
 	}

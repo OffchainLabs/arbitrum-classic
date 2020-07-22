@@ -28,9 +28,9 @@ type ValidatorProxy interface {
 	SendTransaction(ctx context.Context, tx *types.Transaction) (common.Hash, error)
 	BlockInfo(ctx context.Context, height uint64) (machine.BlockInfo, error)
 	GetRequestResult(ctx context.Context, txHash common.Hash) (value.Value, error)
-	GetChainAddress(ctx context.Context) (string, error)
+	GetChainAddress(ctx context.Context) (ethcommon.Address, error)
 	FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []ethcommon.Address, topics [][]ethcommon.Hash) ([]evm.FullLog, error)
-	CallMessage(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error)
+	Call(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error)
 	PendingCall(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error)
 }
 
@@ -156,13 +156,13 @@ func (vp *ValidatorProxyImpl) GetRequestResult(ctx context.Context, txHash commo
 	return val, nil
 }
 
-func (vp *ValidatorProxyImpl) GetChainAddress(ctx context.Context) (string, error) {
+func (vp *ValidatorProxyImpl) GetChainAddress(ctx context.Context) (ethcommon.Address, error) {
 	request := &evm.GetChainAddressArgs{}
 	var response evm.GetChainAddressReply
 	if err := vp.doCall(ctx, "GetChainAddress", request, &response); err != nil {
-		return "", err
+		return ethcommon.Address{}, err
 	}
-	return response.ChainAddress, nil
+	return ethcommon.HexToAddress(response.ChainAddress), nil
 }
 
 func (vp *ValidatorProxyImpl) GetBlockCount(ctx context.Context) (uint64, error) {
@@ -210,13 +210,13 @@ func hexToValue(rawVal string) (value.Value, error) {
 	return value.UnmarshalValue(bytes.NewReader(retBuf))
 }
 
-func (vp *ValidatorProxyImpl) CallMessage(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error) {
+func (vp *ValidatorProxyImpl) Call(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error) {
 	request := &evm.CallMessageArgs{
 		Data:   hexutil.Encode(msg.AsData()),
 		Sender: hexutil.Encode(sender[:]),
 	}
 	var response evm.CallMessageReply
-	if err := vp.doCall(ctx, "CallMessage", request, &response); err != nil {
+	if err := vp.doCall(ctx, "Call", request, &response); err != nil {
 		return nil, err
 	}
 	return hexToValue(response.RawVal)

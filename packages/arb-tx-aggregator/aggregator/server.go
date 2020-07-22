@@ -19,79 +19,66 @@ package aggregator
 import (
 	"bytes"
 	"context"
-	"errors"
-	"fmt"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	errors2 "github.com/pkg/errors"
-	"log"
 	"math/big"
 	"net/http"
 	"strconv"
-	"time"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
-	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/batcher"
-	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
-type Server struct {
-	chain       common.Address
-	batch       *batcher.Batcher
-	db          *txdb.TxDB
-	maxCallTime time.Duration
-	maxCallGas  *big.Int
+type RPCServer struct {
+	srv *Server
 }
 
 // NewServer returns a new instance of the Server class
-func NewServer(
-	ctx context.Context,
-	globalInbox arbbridge.GlobalInbox,
-	rollupAddress common.Address,
-	db *txdb.TxDB,
-) *Server {
-	return &Server{
-		chain:       rollupAddress,
-		batch:       batcher.NewBatcher(ctx, globalInbox, rollupAddress),
-		db:          db,
-		maxCallTime: 0,
-		maxCallGas:  big.NewInt(100000000),
-	}
+func NewRPCServer(srv *Server) *RPCServer {
+	return &RPCServer{srv: srv}
 }
 
 // SendTransaction takes a request signed transaction l2message from a client
 // and puts it in a queue to be included in the next transaction batch
-func (m *Server) SendTransaction(_ *http.Request, args *evm.SendTransactionArgs, reply *evm.SendTransactionReply) error {
-	txHash, err := m.batch.SendTransaction(args.SignedTransaction)
+func (m *RPCServer) SendTransaction(request *http.Request, args *evm.SendTransactionArgs, reply *evm.SendTransactionReply) error {
+	encodedTx, err := hexutil.Decode(args.SignedTransaction)
+	if err != nil {
+		return errors2.Wrap(err, "error decoding signed transaction")
+	}
+
+	tx := new(types.Transaction)
+	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
+		return err
+	}
+	hash, err := m.srv.SendTransaction(request.Context(), tx)
 	if err != nil {
 		return err
 	}
-	reply.TransactionHash = txHash.String()
+	reply.TransactionHash = hash.String()
 	return nil
 }
 
 //FindLogs takes a set of parameters and return the list of all logs that match
 //the query
-func (m *Server) FindLogs(
+func (m *RPCServer) FindLogs(
 	request *http.Request,
 	args *evm.FindLogsArgs,
 	reply *evm.FindLogsReply,
 ) error {
-	addresses := make([]common.Address, 0, len(args.Addresses))
+	addresses := make([]ethcommon.Address, 0, len(args.Addresses))
 	for _, addr := range args.Addresses {
-		addresses = append(addresses, common.HexToAddress(addr))
+		addresses = append(addresses, ethcommon.HexToAddress(addr))
 	}
 
-	topicGroups := make([][]common.Hash, 0, len(args.TopicGroups))
+	topicGroups := make([][]ethcommon.Hash, 0, len(args.TopicGroups))
 	for _, topicGroup := range args.TopicGroups {
-		topics := make([]common.Hash, 0, len(topicGroup.Topics))
+		topics := make([]ethcommon.Hash, 0, len(topicGroup.Topics))
 		for _, topic := range topicGroup.Topics {
-			topics = append(topics, common.HexToHash(topic))
+			topics = append(topics, ethcommon.HexToHash(topic))
 		}
 		topicGroups = append(topicGroups, topics)
 	}
@@ -113,55 +100,40 @@ func (m *Server) FindLogs(
 		}
 		toHeight = &intVal
 	}
-
-	logs, err := m.db.FindLogs(request.Context(), fromHeight, toHeight, addresses, topicGroups)
+	logs, err := m.srv.FindLogs(request.Context(), fromHeight, toHeight, addresses, topicGroups)
 	if err != nil {
 		return err
 	}
-
 	logInfos := make([]*evm.FullLogBuf, 0, len(logs))
 	for _, l := range logs {
 		logInfos = append(logInfos, l.Marshal())
 	}
-
 	reply.Logs = logInfos
 	return nil
 }
 
-func (m *Server) GetBlockCount(
-	_ *http.Request,
+func (m *RPCServer) GetBlockCount(
+	request *http.Request,
 	_ *evm.BlockCountArgs,
 	reply *evm.BlockCountReply,
 ) error {
-	id, err := m.db.LatestBlock()
-	if err != nil {
-		return err
-	}
-	reply.Height = id.Height.AsInt().Uint64()
-	return nil
+	var err error
+	reply.Height, err = m.srv.GetBlockCount(request.Context())
+	return err
 }
 
-func (m *Server) GetOutputMessage(
-	_ *http.Request,
+func (m *RPCServer) GetOutputMessage(
+	request *http.Request,
 	args *evm.GetOutputMessageArgs,
 	reply *evm.GetOutputMessageReply,
 ) error {
-	msg, err := m.db.GetMessage(args.Index)
-	if err != nil {
-		return err
-	}
-	var buf bytes.Buffer
-	if err := value.MarshalValue(msg, &buf); err != nil {
-		return err
-	}
-	reply.RawVal = hexutil.Encode(buf.Bytes())
-	return nil
+	return m.srv.GetOutputMessage(request.Context(), args, reply)
 }
 
 // GetMessageResult returns the value output by the VM in response to the
 //l2message with the given hash
-func (m *Server) GetRequestResult(
-	_ *http.Request,
+func (m *RPCServer) GetRequestResult(
+	request *http.Request,
 	args *evm.GetRequestResultArgs,
 	reply *evm.GetRequestResultReply,
 ) error {
@@ -171,14 +143,14 @@ func (m *Server) GetRequestResult(
 	}
 	var requestId common.Hash
 	copy(requestId[:], decoded)
-	res, err := m.db.GetRequest(requestId)
+	val, err := m.srv.GetRequestResult(request.Context(), requestId)
 	if err != nil {
 		// Request was not found so return nil rawVal
 		reply.RawVal = ""
 		return nil
 	}
 	var buf bytes.Buffer
-	if err := value.MarshalValue(res, &buf); err != nil {
+	if err := value.MarshalValue(val, &buf); err != nil {
 		return err
 	}
 	reply.RawVal = hexutil.Encode(buf.Bytes())
@@ -186,21 +158,25 @@ func (m *Server) GetRequestResult(
 }
 
 // GetVMInfo returns current metadata about this VM
-func (m *Server) GetChainAddress(
-	_ *http.Request,
-	_ *evm.GetChainAddressArgs,
+func (m *RPCServer) GetChainAddress(
+	request *http.Request,
+	args *evm.GetChainAddressArgs,
 	reply *evm.GetChainAddressReply,
 ) error {
-	reply.ChainAddress = m.chain.Hex()
+	chain, err := m.srv.GetChainAddress(request.Context())
+	if err != nil {
+		return err
+	}
+	reply.ChainAddress = chain.Hex()
 	return nil
 }
 
-func (m *Server) BlockInfo(
-	_ *http.Request,
+func (m *RPCServer) BlockInfo(
+	request *http.Request,
 	args *evm.BlockInfoArgs,
 	reply *evm.BlockInfoReply,
 ) error {
-	info, err := m.db.GetBlock(args.Height)
+	info, err := m.srv.BlockInfo(request.Context(), args.Height)
 	if err != nil {
 		return err
 	}
@@ -213,104 +189,48 @@ func (m *Server) BlockInfo(
 	return nil
 }
 
-// CallMessage takes a request from a client to process in a temporary context
+// Call takes a request from a client to process in a temporary context
 // and return the result
-func (m *Server) Call(
-	_ *http.Request,
+func (m *RPCServer) Call(
+	request *http.Request,
 	args *evm.CallMessageArgs,
 	reply *evm.CallMessageReply,
 ) error {
-	mach, blockId := m.db.CallInfo()
-	ret, err := m.executeCall(mach, blockId, args)
-	if err != nil {
-		return err
-	}
-	reply.RawVal = ret
-	return nil
+	return m.callImpl(request, args, reply, m.srv.Call)
 }
 
 // PendingCall takes a request from a client to process in a temporary context
 // and return the result
-func (m *Server) PendingCall(
-	_ *http.Request,
+func (m *RPCServer) PendingCall(
+	request *http.Request,
 	args *evm.CallMessageArgs,
 	reply *evm.CallMessageReply,
 ) error {
-	mach, blockId := m.db.CallInfo()
-	ret, err := m.executeCall(mach, blockId, args)
+	return m.callImpl(request, args, reply, m.srv.PendingCall)
+}
+
+func (m *RPCServer) callImpl(
+	request *http.Request,
+	args *evm.CallMessageArgs,
+	reply *evm.CallMessageReply,
+	call func(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error),
+) error {
+	var sender ethcommon.Address
+	if len(args.Sender) > 0 {
+		sender = ethcommon.HexToAddress(args.Sender)
+	}
+	dataBytes, err := hexutil.Decode(args.Data)
 	if err != nil {
 		return err
 	}
-	reply.RawVal = ret
-	return nil
-}
-
-func (m *Server) executeCall(mach machine.Machine, blockId *common.BlockId, args *evm.CallMessageArgs) (string, error) {
-	dataBytes, err := hexutil.Decode(args.Data)
-	if err != nil {
-		return "", err
-	}
-
-	var sender common.Address
-	if len(args.Sender) > 0 {
-		senderBytes, err := hexutil.Decode(args.Sender)
-		if err != nil {
-			return "", err
-		}
-		copy(sender[:], senderBytes)
-	}
-
-	seq, _ := new(big.Int).SetString("999999999999999999999999", 10)
 
 	callMsg := l2message.NewCallFromData(dataBytes)
-	if callMsg.MaxGas.Cmp(big.NewInt(0)) == 0 || callMsg.MaxGas.Cmp(m.maxCallGas) > 0 {
-		callMsg.MaxGas = m.maxCallGas
+	if callMsg.MaxGas.Cmp(big.NewInt(0)) == 0 || callMsg.MaxGas.Cmp(m.srv.maxCallGas) > 0 {
+		callMsg.MaxGas = m.srv.maxCallGas
 	}
-	inboxMsg := message.NewInboxMessage(
-		message.L2Message{Data: l2message.L2MessageAsData(callMsg)},
-		sender,
-		seq,
-		message.ChainTime{
-			BlockNum:  blockId.Height,
-			Timestamp: big.NewInt(time.Now().Unix()),
-		},
-	)
-
-	inbox := value.NewEmptyTuple()
-	inbox = value.NewTuple2(inbox, inboxMsg.AsValue())
-	assertion, steps := mach.ExecuteAssertion(
-		// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
-		10000000000000000,
-		inbox,
-		m.maxCallTime,
-	)
-
-	// If the machine wasn't able to run and it reports that it is currently
-	// blocked, return the block reason to give the client more information
-	// as opposed to just returning a general "call produced no output"
-	if br := mach.IsBlocked(true); steps == 0 && br != nil {
-		log.Println("can't produce solution since machine is blocked", br)
-		return "", fmt.Errorf("can't produce solution since machine is blocked %v", br)
-	}
-
-	log.Println("Executed call for", steps, "steps")
-
-	results := assertion.ParseLogs()
-	if len(results) == 0 {
-		return "", errors.New("call produced no output")
-	}
-	lastLogVal := results[len(results)-1]
-	lastLog, err := evm.NewResultFromValue(lastLogVal)
-	if err != nil {
-		return "", err
-	}
-	if lastLog.L1Message.MessageID() != inboxMsg.MessageID() {
-		// Last produced log is not the call we sent
-		return "", errors.New("call took too long to execute")
-	}
-
-	result := results[len(results)-1]
+	val, err := call(request.Context(), callMsg, sender)
 	var buf bytes.Buffer
-	_ = value.MarshalValue(result, &buf) // error can only occur from writes and bytes.Buffer is safe
-	return hexutil.Encode(buf.Bytes()), nil
+	_ = value.MarshalValue(val, &buf) // error can only occur from writes and bytes.Buffer is safe
+	reply.RawVal = hexutil.Encode(buf.Bytes())
+	return nil
 }

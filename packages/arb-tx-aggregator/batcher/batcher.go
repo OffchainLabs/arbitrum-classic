@@ -20,16 +20,12 @@ import (
 	"context"
 	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-	errors2 "github.com/pkg/errors"
 	"log"
 	"sort"
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rlp"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -142,16 +138,7 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 
 // SendTransaction takes a request signed transaction l2message from a client
 // and puts it in a queue to be included in the next transaction batch
-func (m *Batcher) SendTransaction(signedTransaction string) (common.Hash, error) {
-	encodedTx, err := hexutil.Decode(signedTransaction)
-	if err != nil {
-		return common.Hash{}, errors2.Wrap(err, "error decoding signed transaction")
-	}
-
-	tx := new(types.Transaction)
-	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
-		return common.Hash{}, err
-	}
+func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 	chainId := l2message.ChainAddressToID(m.rollupAddress)
 	signer := types.NewEIP155Signer(chainId)
 	ethSender, err := signer.Sender(tx)
