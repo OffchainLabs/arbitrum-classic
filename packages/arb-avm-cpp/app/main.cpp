@@ -73,9 +73,10 @@ int main(int argc, char* argv[]) {
         inbox = nonstd::get<Tuple>(inboxVal);
     }
 
-    auto assertionBase = mach.run(100000000, Tuple(), std::chrono::seconds(0));
+    auto assertionBase =
+        mach.runNormal(100000000, Tuple(), std::chrono::seconds(0));
 
-    auto assertion = mach.run(100000000, inbox, std::chrono::seconds(0));
+    auto assertion = mach.runNormal(100000000, inbox, std::chrono::seconds(0));
 
     std::cout << "Ran " << assertion.stepCount << " ending in state "
               << static_cast<int>(mach.currentStatus()) << "\n";

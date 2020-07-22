@@ -83,7 +83,7 @@ void pushgas(MachineState& m);
 void errcodept(MachineState& m);
 void pushinsn(MachineState& m);
 void pushinsnimm(MachineState& m);
-void sideload(MachineState& m);
+BlockReason sideload(MachineState& m);
 }  // namespace machineoperation
 
 #endif /* machineoperation_hpp */

@@ -59,7 +59,7 @@ func (ad AssertionDefender) NBisect(slices uint64) ([]AssertionDefender, []*valp
 		steps := valprotocol.CalculateBisectionStepCount(i, slices, nsteps)
 		initState := m.Clone()
 
-		assertion, numSteps := m.ExecuteAssertion(
+		assertion, numSteps := m.ExecuteNormalAssertion(
 			steps,
 			pre.BeforeInbox,
 			0,
@@ -90,7 +90,7 @@ func ChooseAssertionToChallenge(
 	for i := range assertions {
 		steps := valprotocol.CalculateBisectionStepCount(uint64(i), assertionCount, totalSteps)
 		initState := m.Clone()
-		generatedAssertion, numSteps := m.ExecuteAssertion(
+		generatedAssertion, numSteps := m.ExecuteNormalAssertion(
 			steps,
 			pre.BeforeInbox,
 			0,

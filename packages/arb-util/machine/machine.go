@@ -40,9 +40,16 @@ type Machine interface {
 	CurrentStatus() Status
 	IsBlocked(newMessages bool) BlockReason
 
+	ExecuteNormalAssertion(
+		maxSteps uint64,
+		inbox value.TupleValue,
+		maxWallTime time.Duration,
+	) (*protocol.ExecutionAssertion, uint64)
+
 	ExecuteAssertion(
 		maxSteps uint64,
 		inbox value.TupleValue,
+		sideloadValue value.TupleValue,
 		maxWallTime time.Duration,
 	) (*protocol.ExecutionAssertion, uint64)
 

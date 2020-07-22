@@ -59,7 +59,7 @@ func toEth(val *big.Int) *big.Float {
 func runMessage(mach machine.Machine, msg message.InboxMessage) (*evm.Result, error) {
 	vmInbox := structures.NewVMInbox()
 	vmInbox.DeliverMessage(msg)
-	assertion, _ := mach.ExecuteAssertion(
+	assertion, _ := mach.ExecuteNormalAssertion(
 		100000,
 		vmInbox.AsValue(),
 		1000,

@@ -118,6 +118,10 @@ struct ReasonConverter {
     CBlockReason operator()(const InboxBlocked&) const {
         return CBlockReason{BLOCK_TYPE_INBOX, ByteSlice{nullptr, 0}};
     }
+
+    CBlockReason operator()(const SideloadBlocked&) const {
+        return CBlockReason{BLOCK_TYPE_SIDELOAD, ByteSlice{nullptr, 0}};
+    }
 };
 
 CBlockReason machineIsBlocked(CMachine* m, int newMessages) {
@@ -141,19 +145,7 @@ ByteSlice machineMarshallState(CMachine* m) {
     return returnCharVector(mach->marshalState());
 }
 
-RawAssertion machineExecuteAssertion(CMachine* m,
-                                     uint64_t maxSteps,
-                                     void* inbox,
-                                     uint64_t wallLimit) {
-    assert(m);
-    Machine* mach = static_cast<Machine*>(m);
-
-    auto inboxData = reinterpret_cast<const char*>(inbox);
-    auto messages = deserialize_value(inboxData, mach->getPool());
-
-    Assertion assertion =
-        mach->run(maxSteps, nonstd::get<Tuple>(std::move(messages)),
-                  std::chrono::seconds{wallLimit});
+RawAssertion makeRawAssertion(Assertion& assertion) {
     std::vector<unsigned char> outMsgData;
     for (const auto& outMsg : assertion.outMessages) {
         marshal_value(outMsg, outMsgData);
@@ -170,4 +162,41 @@ RawAssertion machineExecuteAssertion(CMachine* m,
             assertion.stepCount,
             assertion.gasCount,
             assertion.didInboxInsn};
+}
+
+Tuple getTuple(TuplePool& pool, void* data) {
+    auto charData = reinterpret_cast<const char*>(data);
+    return nonstd::get<Tuple>(deserialize_value(charData, pool));
+}
+
+RawAssertion executeNormalAssertion(CMachine* m,
+                                    uint64_t maxSteps,
+                                    void* inbox,
+                                    uint64_t wallLimit) {
+    assert(m);
+    Machine* mach = static_cast<Machine*>(m);
+    auto messages = getTuple(mach->getPool(), inbox);
+
+    Assertion assertion = mach->runNormal(maxSteps, std::move(messages),
+                                          std::chrono::seconds{wallLimit});
+
+    return makeRawAssertion(assertion);
+}
+
+RawAssertion machineExecuteAssertion(CMachine* m,
+                                     uint64_t maxSteps,
+                                     void* inbox,
+                                     void* sideload,
+                                     uint64_t wallLimit) {
+    assert(m);
+    Machine* mach = static_cast<Machine*>(m);
+
+    auto messages = getTuple(mach->getPool(), inbox);
+    auto sideload_value = getTuple(mach->getPool(), sideload);
+
+    Assertion assertion =
+        mach->run(maxSteps, std::move(messages),
+                  std::chrono::seconds{wallLimit}, std::move(sideload_value));
+
+    return makeRawAssertion(assertion);
 }

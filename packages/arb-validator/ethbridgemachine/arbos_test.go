@@ -50,7 +50,7 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 
 	inbox := structures.NewVMInbox()
 	inbox.DeliverMessage(message.NewInboxMessage(msg, sender, big.NewInt(0), chainTime))
-	assertion, steps := mach.ExecuteAssertion(1000000000, inbox.AsValue(), 0)
+	assertion, steps := mach.ExecuteNormalAssertion(1000000000, inbox.AsValue(), 0)
 	t.Log("Ran assertion for", steps, "steps and had", assertion.LogsCount, "logs")
 	if mach.CurrentStatus() != machine.Extensive {
 		t.Fatal("machine should still be working")
@@ -286,7 +286,7 @@ func TestReddit(t *testing.T) {
 	}
 
 	inbox := structures.NewVMInbox()
-	mach.ExecuteAssertion(1000000000, inbox.AsValue(), 0)
+	mach.ExecuteNormalAssertion(1000000000, inbox.AsValue(), 0)
 
 	pk, err := crypto.GenerateKey()
 	if err != nil {
@@ -303,7 +303,7 @@ func TestReddit(t *testing.T) {
 
 		inbox := structures.NewVMInbox()
 		inbox.DeliverMessage(message.NewInboxMessage(message.L2Message{Msg: msg}, addr, big.NewInt(0), chainTime))
-		assertion, steps := mach.ExecuteAssertion(100000000, inbox.AsValue(), 0)
+		assertion, steps := mach.ExecuteNormalAssertion(100000000, inbox.AsValue(), 0)
 		t.Log("ran ", steps, "steps")
 		if mach.CurrentStatus() != machine.Extensive {
 			t.Fatal("machine should still be working")

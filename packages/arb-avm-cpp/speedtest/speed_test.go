@@ -63,7 +63,7 @@ func runAoFile(b *testing.B, filePath string) {
 	}
 
 	b.ResetTimer()
-	_, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, value.NewEmptyTuple(), time.Hour)
+	_, _ = mach.ExecuteNormalAssertion(uint64(b.N)*insnMultiplier, value.NewEmptyTuple(), time.Hour)
 }
 
 func nameFromFn(fn string) string {

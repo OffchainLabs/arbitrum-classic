@@ -204,7 +204,7 @@ func (m *Server) executeCall(mach machine.Machine, args *evm.CallMessageArgs) (*
 
 	inbox := structures.NewVMInbox()
 	inbox.DeliverMessage(inboxMsg)
-	assertion, steps := mach.ExecuteAssertion(
+	assertion, steps := mach.ExecuteNormalAssertion(
 		// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
 		10000000000000000,
 		inbox.AsValue(),

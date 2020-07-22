@@ -51,7 +51,7 @@ func generateProofCases(contract string) ([]*proofData, error) {
 		}
 		beforeHash := mach.Hash()
 		beforeMach := mach.Clone()
-		a, ranSteps := mach.ExecuteAssertion(1, inbox, 0)
+		a, ranSteps := mach.ExecuteNormalAssertion(1, inbox, 0)
 		if ranSteps == 0 {
 			break
 		}

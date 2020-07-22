@@ -30,7 +30,8 @@ enum CBlockType {
     BLOCK_TYPE_ERROR = 2,
     BLOCK_TYPE_BREAKPOINT = 3,
     BLOCK_TYPE_INBOX = 4,
-    BLOCK_TYPE_SEND = 5
+    BLOCK_TYPE_SEND = 5,
+    BLOCK_TYPE_SIDELOAD = 6
 };
 
 typedef enum {
@@ -68,9 +69,15 @@ CMachine* machineClone(CMachine* m);
 CStatus machineCurrentStatus(CMachine* m);
 CBlockReason machineIsBlocked(CMachine* m, int newMessages);
 
+RawAssertion executeNormalAssertion(CMachine* m,
+                                    uint64_t maxSteps,
+                                    void* inbox,
+                                    uint64_t wallLimit);
+
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
                                      void* inbox,
+                                     void* sideload,
                                      uint64_t wallLimit);
 
 ByteSlice machineMarshallForProof(CMachine* m);

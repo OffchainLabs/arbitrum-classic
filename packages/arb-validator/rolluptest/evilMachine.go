@@ -61,12 +61,23 @@ func _inverseTweakHash(h common.Hash) common.Hash {
 	return _tweakHash(h)
 }
 
-func (e EvilMachine) ExecuteAssertion(
+func (e EvilMachine) ExecuteNormalAssertion(
 	maxSteps uint64,
 	inbox value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
-	assn, numSteps := e.Machine.ExecuteAssertion(maxSteps, inbox, maxWallTime)
+	assn, numSteps := e.Machine.ExecuteNormalAssertion(maxSteps, inbox, maxWallTime)
+	assn.AfterHash = _tweakHash(assn.AfterHash.Unmarshal()).MarshalToBuf()
+	return assn, numSteps
+}
+
+func (e EvilMachine) ExecuteAssertion(
+	maxSteps uint64,
+	inbox value.TupleValue,
+	sideloadValue value.TupleValue,
+	maxWallTime time.Duration,
+) (*protocol.ExecutionAssertion, uint64) {
+	assn, numSteps := e.Machine.ExecuteAssertion(maxSteps, inbox, sideloadValue, maxWallTime)
 	assn.AfterHash = _tweakHash(assn.AfterHash.Unmarshal()).MarshalToBuf()
 	return assn, numSteps
 }

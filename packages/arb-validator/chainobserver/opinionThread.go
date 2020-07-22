@@ -245,7 +245,7 @@ func (chain *ChainObserver) prepareAssertion(maxValidBlock *common.BlockId) (*ch
 
 	beforeHash := mach.Hash()
 
-	assertion, stepsRun := mach.ExecuteAssertion(maxSteps, messagesVal, 0)
+	assertion, stepsRun := mach.ExecuteNormalAssertion(maxSteps, messagesVal, 0)
 
 	afterHash := mach.Hash()
 
@@ -312,7 +312,7 @@ func getNodeOpinion(
 		return valprotocol.InvalidMessagesChildType, nil
 	}
 
-	assertion, stepsRun := mach.ExecuteAssertion(
+	assertion, stepsRun := mach.ExecuteNormalAssertion(
 		params.NumSteps,
 		messagesVal,
 		0,
