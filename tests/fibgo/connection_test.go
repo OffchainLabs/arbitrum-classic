@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/ethclient"
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
