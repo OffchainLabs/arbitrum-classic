@@ -5,8 +5,6 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
-	message2 "github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	errors2 "github.com/pkg/errors"
 	"math/big"
 	"sync"
@@ -19,9 +17,11 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 type ArbConnection struct {
@@ -395,7 +395,7 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	}
 
 	contractAddress := ethcommon.Address{}
-	if result.L1Message.Kind == message2.L2Type {
+	if result.L1Message.Kind == message.L2Type {
 		msg, err := l2message.NewL2MessageFromData(result.L1Message.Data)
 		if err == nil {
 			if msg, ok := msg.(l2message.Transaction); ok {
