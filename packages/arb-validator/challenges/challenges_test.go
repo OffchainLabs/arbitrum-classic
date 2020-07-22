@@ -69,10 +69,7 @@ func TestChallenges(t *testing.T) {
 	t.Run("ERC721 Messages Challenge", func(t *testing.T) {
 		testMessagesChallengeERC721(t, client, auths[8], auths[9])
 	})
-	t.Run("Transaction Messages Challenge", func(t *testing.T) {
-		testMessagesChallengeTrnx(t, client, auths[10], auths[11])
-	})
-	t.Run("Contract Trans Messages Challenge", func(t *testing.T) {
-		testMessagesChallengeContractTrnx(t, client, auths[12], auths[13])
+	t.Run("L2 Messages Challenge", func(t *testing.T) {
+		testMessagesChallengeL2Trnx(t, client, auths[10], auths[11])
 	})
 }

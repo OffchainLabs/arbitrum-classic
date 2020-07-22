@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
+	message2 "github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	errors2 "github.com/pkg/errors"
 	"math/big"
 	"sync"
@@ -17,10 +18,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 type ArbConnection struct {
@@ -100,7 +101,7 @@ func (conn *ArbConnection) CallContract(
 	if call.GasPrice != nil {
 		gasPriceBid = call.GasPrice
 	}
-	tx := message.Call{
+	tx := l2message.Call{
 		MaxGas:      new(big.Int).SetUint64(call.Gas),
 		GasPriceBid: gasPriceBid,
 		DestAddress: dest,
@@ -145,7 +146,7 @@ func (conn *ArbConnection) PendingCallContract(ctx context.Context, call ethereu
 	if call.GasPrice != nil {
 		gasPriceBid = call.GasPrice
 	}
-	tx := message.Call{
+	tx := l2message.Call{
 		MaxGas:      new(big.Int).SetUint64(call.Gas),
 		GasPriceBid: gasPriceBid,
 		DestAddress: dest,
@@ -194,7 +195,7 @@ func (conn *ArbConnection) EstimateGas(
 
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	signer := types.NewEIP155Signer(message.ChainAddressToID(conn.rollupAddress))
+	signer := types.NewEIP155Signer(l2message.ChainAddressToID(conn.rollupAddress))
 	signedTx, err := types.SignTx(tx, signer, conn.pk)
 	if err != nil {
 		return err
@@ -394,10 +395,10 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	}
 
 	contractAddress := ethcommon.Address{}
-	if result.L1Message.Kind == message.L2Type {
-		msg, err := message.NewL2MessageFromData(result.L1Message.Data)
+	if result.L1Message.Kind == message2.L2Type {
+		msg, err := l2message.NewL2MessageFromData(result.L1Message.Data)
 		if err == nil {
-			if msg, ok := msg.(message.Transaction); ok {
+			if msg, ok := msg.(l2message.Transaction); ok {
 				emptyAddress := common.Address{}
 				if msg.DestAddress == emptyAddress {
 					copy(contractAddress[:], result.ReturnData[12:])

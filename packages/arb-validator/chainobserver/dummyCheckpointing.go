@@ -19,12 +19,13 @@ package chainobserver
 import (
 	"context"
 	"errors"
+	"math/big"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"math/big"
 )
 
 type DummyCheckpointer struct {

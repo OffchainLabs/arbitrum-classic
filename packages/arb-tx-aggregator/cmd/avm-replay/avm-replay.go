@@ -29,6 +29,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -97,7 +98,7 @@ func testMessages(filename string, contract string) error {
 	}
 
 	totalSupplyData, _ := hexutil.Decode("0x18160ddd")
-	totalSupplyCall := message.NewSimpleCall(
+	totalSupplyCall := l2message.NewSimpleCall(
 		common.HexToAddress("0x3c1be20be169df0d99cca3730aae70580c3edf9a"),
 		totalSupplyData,
 	)
@@ -121,7 +122,7 @@ func testMessages(filename string, contract string) error {
 		log.Println("tx result", txReturn)
 
 		tokenSupplyResult, err := runMessage(mach.Clone(), message.NewInboxMessage(
-			totalSupplyCall,
+			message.L2Message{Data: l2message.L2MessageAsData(totalSupplyCall)},
 			common.Address{},
 			big.NewInt(0),
 			message.ChainTime{},
@@ -135,23 +136,23 @@ func testMessages(filename string, contract string) error {
 		tokenBalances := make(map[common.Address]*big.Int)
 		for _, address := range addresses {
 			getTokenBalanceData, _ := hexutil.Decode("0x70a08231000000000000000000000000" + address.String()[2:])
-			getTokenBalanceCall := message.NewSimpleCall(
+			getTokenBalanceCall := l2message.NewSimpleCall(
 				common.HexToAddress("0x716f0d674efeeca329f141d0ca0d97a98057bdbf"),
 				getTokenBalanceData,
 			)
 			tokenBalanceResult, err := runMessage(mach.Clone(), message.NewInboxMessage(
-				getTokenBalanceCall,
+				message.L2Message{Data: l2message.L2MessageAsData(getTokenBalanceCall)},
 				common.Address{},
 				big.NewInt(0),
 				message.ChainTime{},
 			))
 			getEthBalanceData, _ := hexutil.Decode("0xf8b2cb4f000000000000000000000000" + address.String()[2:])
-			call := message.NewSimpleCall(
+			call := l2message.NewSimpleCall(
 				common.HexToAddress("0x0000000000000000000000000000000000000065"),
 				getEthBalanceData,
 			)
 			ethBalanceResult, err := runMessage(mach.Clone(), message.NewInboxMessage(
-				call,
+				message.L2Message{Data: l2message.L2MessageAsData(call)},
 				common.Address{},
 				big.NewInt(0),
 				message.ChainTime{},
@@ -206,19 +207,19 @@ func testMessages(filename string, contract string) error {
 	//}
 
 	//info := lastMessage.DeliveryInfo
-	//msg := lastMessage.Message.(message.Transaction)
+	//msg := lastMessage.Message.(l2message.Transaction)
 	//msg.SequenceNum = big.NewInt(0)
 
 	//vmInbox := structures.NewVMInbox()
-	//vmInbox.DeliverMessage(message.Delivered{
+	//vmInbox.DeliverMessage(l2message.Delivered{
 	//	Message:      msg,
 	//	DeliveryInfo: info,
 	//})
 	//val := vmInbox.AsValue()
 	//log.Println(hexutil.Encode(value.MarshalValueToBytes(val)))
 
-	//log.Println("Delivering crash message", msg)
-	//tokenBalanceFinalMessage := message.Delivered{
+	//log.Println("Delivering crash l2message", msg)
+	//tokenBalanceFinalMessage := l2message.Delivered{
 	//	Message:      getTokenBalanceCall,
 	//	DeliveryInfo: lastMessage.DeliveryInfo,
 	//}

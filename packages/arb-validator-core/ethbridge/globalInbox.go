@@ -19,18 +19,17 @@ package ethbridge
 import (
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-	"math/big"
-
 	errors2 "github.com/pkg/errors"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
 type globalInbox struct {
@@ -69,7 +68,7 @@ func (con *globalInbox) SendL2Message(ctx context.Context, chain common.Address,
 		timestamp := new(big.Int).SetUint64(blockHeader.Time)
 		return con.parseMessageFromOrigin(*evmLog, timestamp, msg.AsData())
 	}
-	return arbbridge.MessageDeliveredEvent{}, errors.New("Didn't output message delivered event")
+	return arbbridge.MessageDeliveredEvent{}, errors.New("Didn't output l2message delivered event")
 }
 
 func (con *globalInbox) SendL2MessageNoWait(ctx context.Context, chain common.Address, msg message.L2Message) error {

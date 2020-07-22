@@ -81,7 +81,7 @@ func TestGenerateLastMessageHash(t *testing.T) {
 	}
 
 	if expectedHash != ethbridgeHash {
-		t.Error(errors.New("calculated wrong last message hash"))
+		t.Error(errors.New("calculated wrong last l2message hash"))
 		fmt.Println(expectedHash)
 		fmt.Println(ethbridgeHash)
 	}

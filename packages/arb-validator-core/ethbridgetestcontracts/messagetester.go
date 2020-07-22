@@ -47,7 +47,7 @@ type MessagesEthMessage struct {
 }
 
 // MessageTesterABI is the input ABI used to generate the binding from.
-const MessageTesterABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"inbox\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"message\",\"type\":\"bytes32\"}],\"name\":\"addMessageToInbox\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"inboxTuplePreimage\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"inboxTupleSize\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"messageTuplePreimage\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"messageTupleSize\",\"type\":\"uint256\"}],\"name\":\"addMessageToVMInboxHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"messageType\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"inboxSeqNum\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"messageDataHash\",\"type\":\"bytes32\"}],\"name\":\"messageHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"messageType\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"inboxSeqNum\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"messageData\",\"type\":\"bytes\"}],\"name\":\"messageValueHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"parseERC20Message\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"valid\",\"type\":\"bool\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"internalType\":\"structMessages.ERC20Message\",\"name\":\"message\",\"type\":\"tuple\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"parseERC721Message\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"valid\",\"type\":\"bool\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"internalType\":\"structMessages.ERC721Message\",\"name\":\"message\",\"type\":\"tuple\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"parseEthMessage\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"valid\",\"type\":\"bool\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"internalType\":\"structMessages.EthMessage\",\"name\":\"message\",\"type\":\"tuple\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"startOffset\",\"type\":\"uint256\"}],\"name\":\"unmarshalOutgoingMessage\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"}]"
+const MessageTesterABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"inbox\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"l2message\",\"type\":\"bytes32\"}],\"name\":\"addMessageToInbox\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"inboxTuplePreimage\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"inboxTupleSize\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"messageTuplePreimage\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"messageTupleSize\",\"type\":\"uint256\"}],\"name\":\"addMessageToVMInboxHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"messageType\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"inboxSeqNum\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"messageDataHash\",\"type\":\"bytes32\"}],\"name\":\"messageHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"messageType\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"inboxSeqNum\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"messageData\",\"type\":\"bytes\"}],\"name\":\"messageValueHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"parseERC20Message\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"valid\",\"type\":\"bool\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"internalType\":\"structMessages.ERC20Message\",\"name\":\"l2message\",\"type\":\"tuple\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"parseERC721Message\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"valid\",\"type\":\"bool\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"internalType\":\"structMessages.ERC721Message\",\"name\":\"l2message\",\"type\":\"tuple\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"parseEthMessage\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"valid\",\"type\":\"bool\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"internalType\":\"structMessages.EthMessage\",\"name\":\"l2message\",\"type\":\"tuple\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"startOffset\",\"type\":\"uint256\"}],\"name\":\"unmarshalOutgoingMessage\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"}]"
 
 // MessageTesterFuncSigs maps the 4-byte function signature to its string representation.
 var MessageTesterFuncSigs = map[string]string{
@@ -222,7 +222,7 @@ func (_MessageTester *MessageTesterTransactorRaw) Transact(opts *bind.TransactOp
 
 // AddMessageToInbox is a free data retrieval call binding the contract method 0xa3b39209.
 //
-// Solidity: function addMessageToInbox(bytes32 inbox, bytes32 message) pure returns(bytes32)
+// Solidity: function addMessageToInbox(bytes32 inbox, bytes32 l2message) pure returns(bytes32)
 func (_MessageTester *MessageTesterCaller) AddMessageToInbox(opts *bind.CallOpts, inbox [32]byte, message [32]byte) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -234,14 +234,14 @@ func (_MessageTester *MessageTesterCaller) AddMessageToInbox(opts *bind.CallOpts
 
 // AddMessageToInbox is a free data retrieval call binding the contract method 0xa3b39209.
 //
-// Solidity: function addMessageToInbox(bytes32 inbox, bytes32 message) pure returns(bytes32)
+// Solidity: function addMessageToInbox(bytes32 inbox, bytes32 l2message) pure returns(bytes32)
 func (_MessageTester *MessageTesterSession) AddMessageToInbox(inbox [32]byte, message [32]byte) ([32]byte, error) {
 	return _MessageTester.Contract.AddMessageToInbox(&_MessageTester.CallOpts, inbox, message)
 }
 
 // AddMessageToInbox is a free data retrieval call binding the contract method 0xa3b39209.
 //
-// Solidity: function addMessageToInbox(bytes32 inbox, bytes32 message) pure returns(bytes32)
+// Solidity: function addMessageToInbox(bytes32 inbox, bytes32 l2message) pure returns(bytes32)
 func (_MessageTester *MessageTesterCallerSession) AddMessageToInbox(inbox [32]byte, message [32]byte) ([32]byte, error) {
 	return _MessageTester.Contract.AddMessageToInbox(&_MessageTester.CallOpts, inbox, message)
 }
@@ -326,7 +326,7 @@ func (_MessageTester *MessageTesterCallerSession) MessageValueHash(messageType u
 
 // ParseERC20Message is a free data retrieval call binding the contract method 0x6520427f.
 //
-// Solidity: function parseERC20Message(bytes data) pure returns(bool valid, (address,address,uint256) message)
+// Solidity: function parseERC20Message(bytes data) pure returns(bool valid, (address,address,uint256) l2message)
 func (_MessageTester *MessageTesterCaller) ParseERC20Message(opts *bind.CallOpts, data []byte) (struct {
 	Valid   bool
 	Message MessagesERC20Message
@@ -342,7 +342,7 @@ func (_MessageTester *MessageTesterCaller) ParseERC20Message(opts *bind.CallOpts
 
 // ParseERC20Message is a free data retrieval call binding the contract method 0x6520427f.
 //
-// Solidity: function parseERC20Message(bytes data) pure returns(bool valid, (address,address,uint256) message)
+// Solidity: function parseERC20Message(bytes data) pure returns(bool valid, (address,address,uint256) l2message)
 func (_MessageTester *MessageTesterSession) ParseERC20Message(data []byte) (struct {
 	Valid   bool
 	Message MessagesERC20Message
@@ -352,7 +352,7 @@ func (_MessageTester *MessageTesterSession) ParseERC20Message(data []byte) (stru
 
 // ParseERC20Message is a free data retrieval call binding the contract method 0x6520427f.
 //
-// Solidity: function parseERC20Message(bytes data) pure returns(bool valid, (address,address,uint256) message)
+// Solidity: function parseERC20Message(bytes data) pure returns(bool valid, (address,address,uint256) l2message)
 func (_MessageTester *MessageTesterCallerSession) ParseERC20Message(data []byte) (struct {
 	Valid   bool
 	Message MessagesERC20Message
@@ -362,7 +362,7 @@ func (_MessageTester *MessageTesterCallerSession) ParseERC20Message(data []byte)
 
 // ParseERC721Message is a free data retrieval call binding the contract method 0xfe517bd0.
 //
-// Solidity: function parseERC721Message(bytes data) pure returns(bool valid, (address,address,uint256) message)
+// Solidity: function parseERC721Message(bytes data) pure returns(bool valid, (address,address,uint256) l2message)
 func (_MessageTester *MessageTesterCaller) ParseERC721Message(opts *bind.CallOpts, data []byte) (struct {
 	Valid   bool
 	Message MessagesERC721Message
@@ -378,7 +378,7 @@ func (_MessageTester *MessageTesterCaller) ParseERC721Message(opts *bind.CallOpt
 
 // ParseERC721Message is a free data retrieval call binding the contract method 0xfe517bd0.
 //
-// Solidity: function parseERC721Message(bytes data) pure returns(bool valid, (address,address,uint256) message)
+// Solidity: function parseERC721Message(bytes data) pure returns(bool valid, (address,address,uint256) l2message)
 func (_MessageTester *MessageTesterSession) ParseERC721Message(data []byte) (struct {
 	Valid   bool
 	Message MessagesERC721Message
@@ -388,7 +388,7 @@ func (_MessageTester *MessageTesterSession) ParseERC721Message(data []byte) (str
 
 // ParseERC721Message is a free data retrieval call binding the contract method 0xfe517bd0.
 //
-// Solidity: function parseERC721Message(bytes data) pure returns(bool valid, (address,address,uint256) message)
+// Solidity: function parseERC721Message(bytes data) pure returns(bool valid, (address,address,uint256) l2message)
 func (_MessageTester *MessageTesterCallerSession) ParseERC721Message(data []byte) (struct {
 	Valid   bool
 	Message MessagesERC721Message
@@ -398,7 +398,7 @@ func (_MessageTester *MessageTesterCallerSession) ParseERC721Message(data []byte
 
 // ParseEthMessage is a free data retrieval call binding the contract method 0xec65668c.
 //
-// Solidity: function parseEthMessage(bytes data) pure returns(bool valid, (address,uint256) message)
+// Solidity: function parseEthMessage(bytes data) pure returns(bool valid, (address,uint256) l2message)
 func (_MessageTester *MessageTesterCaller) ParseEthMessage(opts *bind.CallOpts, data []byte) (struct {
 	Valid   bool
 	Message MessagesEthMessage
@@ -414,7 +414,7 @@ func (_MessageTester *MessageTesterCaller) ParseEthMessage(opts *bind.CallOpts, 
 
 // ParseEthMessage is a free data retrieval call binding the contract method 0xec65668c.
 //
-// Solidity: function parseEthMessage(bytes data) pure returns(bool valid, (address,uint256) message)
+// Solidity: function parseEthMessage(bytes data) pure returns(bool valid, (address,uint256) l2message)
 func (_MessageTester *MessageTesterSession) ParseEthMessage(data []byte) (struct {
 	Valid   bool
 	Message MessagesEthMessage
@@ -424,7 +424,7 @@ func (_MessageTester *MessageTesterSession) ParseEthMessage(data []byte) (struct
 
 // ParseEthMessage is a free data retrieval call binding the contract method 0xec65668c.
 //
-// Solidity: function parseEthMessage(bytes data) pure returns(bool valid, (address,uint256) message)
+// Solidity: function parseEthMessage(bytes data) pure returns(bool valid, (address,uint256) l2message)
 func (_MessageTester *MessageTesterCallerSession) ParseEthMessage(data []byte) (struct {
 	Valid   bool
 	Message MessagesEthMessage

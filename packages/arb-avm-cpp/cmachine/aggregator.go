@@ -85,7 +85,7 @@ func (as *AggregatorStore) GetLog(index uint64) (value.Value, error) {
 func (as *AggregatorStore) MessageCount() (uint64, error) {
 	result := C.aggregatorMessageCount(as.c)
 	if result.found == 0 {
-		return 0, errors.New("failed to load message count")
+		return 0, errors.New("failed to load l2message count")
 	}
 	return uint64(result.value), nil
 }
@@ -99,7 +99,7 @@ func (as *AggregatorStore) SaveMessage(val value.Value) error {
 	cData := C.CBytes(buf.Bytes())
 	defer C.free(cData)
 	if C.aggregatorSaveMessage(as.c, cData, C.uint64_t(buf.Len())) == 0 {
-		return errors.New("failed to save message")
+		return errors.New("failed to save l2message")
 	}
 
 	return nil
@@ -108,7 +108,7 @@ func (as *AggregatorStore) SaveMessage(val value.Value) error {
 func (as *AggregatorStore) GetMessage(index uint64) (value.Value, error) {
 	result := C.aggregatorGetMessage(as.c, C.uint64_t(index))
 	if result.found == 0 {
-		return nil, errors.New("failed to get message")
+		return nil, errors.New("failed to get l2message")
 	}
 	logBytes := toByteSlice(result.slice)
 	return value.UnmarshalValue(bytes.NewBuffer(logBytes))

@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package message
+package l2message
 
 import (
 	"bytes"
@@ -47,18 +47,16 @@ func TestL2MessageSerialization(t *testing.T) {
 
 	for _, msg := range l2Messages {
 		t.Run(fmt.Sprintf("%T", msg), func(t *testing.T) {
-			l2 := L2Message{Msg: msg}
-			data := l2.AsData()
+			data := L2MessageAsData(msg)
 			decoded, err := NewL2MessageFromData(data)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if bytes.Equal(decoded.AsData(), data) {
-				t.Fatal("decoded l2 message not equal")
+				t.Fatal("decoded l2 l2message not equal")
 			}
 		})
 	}
-
 }
 
 func TestTransactionHash(t *testing.T) {

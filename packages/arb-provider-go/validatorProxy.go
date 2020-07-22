@@ -7,9 +7,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"log"
 	"net/http"
 	"strconv"
@@ -30,8 +30,8 @@ type ValidatorProxy interface {
 	GetRequestResult(ctx context.Context, txHash common.Hash) (uint64, uint64, value.Value, error)
 	GetChainAddress(ctx context.Context) (string, error)
 	FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []ethcommon.Address, topics [][]ethcommon.Hash) ([]evm.FullLog, error)
-	CallMessage(ctx context.Context, msg message.Call, sender ethcommon.Address) (value.Value, error)
-	PendingCall(ctx context.Context, msg message.Call, sender ethcommon.Address) (value.Value, error)
+	CallMessage(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error)
+	PendingCall(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error)
 }
 
 type ValidatorProxyImpl struct {
@@ -210,7 +210,7 @@ func hexToValue(rawVal string) (value.Value, error) {
 	return value.UnmarshalValue(bytes.NewReader(retBuf))
 }
 
-func (vp *ValidatorProxyImpl) CallMessage(ctx context.Context, msg message.Call, sender ethcommon.Address) (value.Value, error) {
+func (vp *ValidatorProxyImpl) CallMessage(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error) {
 	request := &evm.CallMessageArgs{
 		Data:   hexutil.Encode(msg.AsData()),
 		Sender: hexutil.Encode(sender[:]),
@@ -222,7 +222,7 @@ func (vp *ValidatorProxyImpl) CallMessage(ctx context.Context, msg message.Call,
 	return hexToValue(response.RawVal)
 }
 
-func (vp *ValidatorProxyImpl) PendingCall(ctx context.Context, msg message.Call, sender ethcommon.Address) (value.Value, error) {
+func (vp *ValidatorProxyImpl) PendingCall(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error) {
 	request := &evm.CallMessageArgs{
 		Data:   hexutil.Encode(msg.AsData()),
 		Sender: hexutil.Encode(sender[:]),

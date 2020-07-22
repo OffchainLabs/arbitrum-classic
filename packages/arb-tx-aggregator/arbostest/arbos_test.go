@@ -32,6 +32,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -78,8 +79,8 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 	return results
 }
 
-func runTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Message, sender common.Address) (*evm.Result, error) {
-	results := runMessage(t, mach, message.L2Message{Msg: msg}, sender)
+func runTransaction(t *testing.T, mach machine.Machine, msg l2message.AbstractL2Message, sender common.Address) (*evm.Result, error) {
+	results := runMessage(t, mach, message.L2Message{Data: l2message.L2MessageAsData(msg)}, sender)
 	if len(results) != 1 {
 		return nil, fmt.Errorf("unexpected log count %v", len(results))
 	}
@@ -107,7 +108,7 @@ func getBalanceCall(t *testing.T, mach machine.Machine, address common.Address) 
 		t.Fatal(err)
 	}
 
-	getBalance := message.Call{
+	getBalance := l2message.Call{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS),
@@ -129,7 +130,7 @@ func getBalanceCall(t *testing.T, mach machine.Machine, address common.Address) 
 }
 
 func deployContract(t *testing.T, mach machine.Machine, sender common.Address, code []byte) (common.Address, error) {
-	constructorTx := message.Transaction{
+	constructorTx := l2message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
@@ -217,7 +218,7 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	generateTx := message.Transaction{
+	generateTx := l2message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
@@ -255,7 +256,7 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	getFibTx := message.Call{
+	getFibTx := l2message.Call{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		DestAddress: fibAddress,
@@ -376,11 +377,11 @@ func TestBatch(t *testing.T) {
 		pks = append(pks, pk)
 	}
 	batchSender := common.NewAddressFromEth(crypto.PubkeyToAddress(pks[0].PublicKey))
-	txes := make([]message.L2Message, 0)
+	txes := make([]l2message.AbstractL2Message, 0)
 	hashes := make([]common.Hash, 0)
 	batchSenderSeq := int64(0)
 	for i := 0; i < 10; i++ {
-		tx := message.Transaction{
+		tx := l2message.Transaction{
 			MaxGas:      big.NewInt(100000000000),
 			GasPriceBid: big.NewInt(0),
 			SequenceNum: big.NewInt(batchSenderSeq),
@@ -389,36 +390,36 @@ func TestBatch(t *testing.T) {
 			Data:        []byte{},
 		}
 		senders = append(senders, batchSender)
-		txes = append(txes, message.L2Message{Msg: tx})
+		txes = append(txes, tx)
 		hashes = append(hashes, tx.MessageID(batchSender, chain))
 		batchSenderSeq++
 	}
 	for _, pk := range pks[1:] {
 		tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
-		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
+		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(l2message.ChainAddressToID(chain)), pk)
 		if err != nil {
 			t.Fatal(err)
 		}
 		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 		senders = append(senders, addr)
-		txes = append(txes, message.L2Message{Msg: message.NewSignedTransactionFromEth(signedTx)})
+		txes = append(txes, l2message.NewSignedTransactionFromEth(signedTx))
 		hashes = append(hashes, common.NewHashFromEth(signedTx.Hash()))
 	}
 
-	msg := message.NewTransactionBatchFromMessages(txes)
-	results = runMessage(t, mach, message.L2Message{Msg: msg}, batchSender)
+	msg := l2message.NewTransactionBatchFromMessages(txes)
+	results = runMessage(t, mach, message.L2Message{Data: l2message.L2MessageAsData(msg)}, batchSender)
 	if len(results) != len(txes) {
 		t.Fatal("incorrect result count", len(results), "instead of", len(txes))
 	}
 	for i, result := range results {
 		if result.L1Message.Sender != senders[i] {
-			t.Error("message had incorrect sender", result.L1Message.Sender, senders[i])
+			t.Error("l2message had incorrect sender", result.L1Message.Sender, senders[i])
 		}
 		if result.L1Message.Kind != message.L2Type {
-			t.Error("message has incorrect type")
+			t.Error("l2message has incorrect type")
 		}
 		if result.L1Message.MessageID() != hashes[i] {
-			t.Error("message had incorrect id", result.L1Message.MessageID(), hashes[i])
+			t.Error("l2message had incorrect id", result.L1Message.MessageID(), hashes[i])
 		}
 	}
 }

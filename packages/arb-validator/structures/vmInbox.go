@@ -18,6 +18,7 @@ package structures
 
 import (
 	"fmt"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )

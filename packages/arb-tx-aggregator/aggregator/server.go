@@ -21,12 +21,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/batcher"
-	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
@@ -34,7 +28,14 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/batcher"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
@@ -63,7 +64,7 @@ func NewServer(
 	}
 }
 
-// SendTransaction takes a request signed transaction message from a client
+// SendTransaction takes a request signed transaction l2message from a client
 // and puts it in a queue to be included in the next transaction batch
 func (m *Server) SendTransaction(_ *http.Request, args *evm.SendTransactionArgs, reply *evm.SendTransactionReply) error {
 	txHash, err := m.batch.SendTransaction(args.SignedTransaction)
@@ -158,7 +159,7 @@ func (m *Server) GetOutputMessage(
 }
 
 // GetMessageResult returns the value output by the VM in response to the
-//message with the given hash
+//l2message with the given hash
 func (m *Server) GetRequestResult(
 	_ *http.Request,
 	args *evm.GetRequestResultArgs,
@@ -265,12 +266,12 @@ func (m *Server) executeCall(mach machine.Machine, blockId *common.BlockId, args
 
 	seq, _ := new(big.Int).SetString("999999999999999999999999", 10)
 
-	callMsg := message.NewCallFromData(dataBytes)
+	callMsg := l2message.NewCallFromData(dataBytes)
 	if callMsg.MaxGas.Cmp(big.NewInt(0)) == 0 || callMsg.MaxGas.Cmp(m.maxCallGas) > 0 {
 		callMsg.MaxGas = m.maxCallGas
 	}
 	inboxMsg := message.NewInboxMessage(
-		message.L2Message{Msg: callMsg},
+		message.L2Message{Data: l2message.L2MessageAsData(callMsg)},
 		sender,
 		seq,
 		message.ChainTime{
