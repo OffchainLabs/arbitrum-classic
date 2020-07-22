@@ -87,23 +87,34 @@ ByteSliceResult aggregatorGetMessage(const CAggregatorStore* agg,
     }
 }
 
-CBlockId aggregatorLatestBlock(const CAggregatorStore* agg) {
+CBlockData processBlock(uint64_t height, const BlockData& data) {
+    return {true,
+            height,
+            data.start_log,
+            data.log_count,
+            data.start_message,
+            data.message_count,
+            returnCharVector(data.data)};
+}
+
+CBlockData aggregatorLatestBlock(const CAggregatorStore* agg) {
     try {
         auto latest = static_cast<const AggregatorStore*>(agg)->latestBlock();
-        return {1, returnUint256(latest.second), latest.first};
+        return processBlock(latest.first, latest.second);
     } catch (const std::exception& e) {
         std::cerr << "aggregatorLatestBlock error: " << e.what() << std::endl;
-        return {0, nullptr, 0};
+        return {false, 0, 0, 0, 0, 0, ByteSlice{nullptr, 0}};
     }
 }
 
 int aggregatorSaveBlock(CAggregatorStore* agg,
                         uint64_t height,
-                        const void* hash,
-                        const void* bloom) {
+                        const void* data,
+                        int data_length) {
     try {
-        static_cast<AggregatorStore*>(agg)->saveBlock(
-            height, receiveUint256(hash), receiveUint256(bloom));
+        auto ptr = reinterpret_cast<const char*>(data);
+        static_cast<AggregatorStore*>(agg)->saveBlock(height,
+                                                      {ptr, ptr + data_length});
         return true;
     } catch (const std::exception& e) {
         std::cerr << "aggregatorSaveBlock error: " << e.what() << std::endl;
@@ -114,15 +125,9 @@ int aggregatorSaveBlock(CAggregatorStore* agg,
 CBlockData aggregatorGetBlock(const CAggregatorStore* agg, uint64_t height) {
     try {
         auto block = static_cast<const AggregatorStore*>(agg)->getBlock(height);
-        return {1,
-                returnUint256(block.hash),
-                block.start_log,
-                block.log_count,
-                block.start_message,
-                block.message_count,
-                returnUint256(block.bloom)};
+        return processBlock(height, block);
     } catch (const std::exception&) {
-        return {0, nullptr, 0, 0, 0, 0, nullptr};
+        return {false, 0, 0, 0, 0, 0, ByteSlice{nullptr, 0}};
     }
 }
 

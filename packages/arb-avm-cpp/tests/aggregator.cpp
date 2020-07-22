@@ -49,37 +49,37 @@ TEST_CASE("Aggregator tests") {
 
     SECTION("blocks") {
         CHECK_THROWS(store->latestBlock());
-
-        store->saveBlock(50, 2, 0);
+        std::vector<char> block_data{1, 2, 3, 4};
+        store->saveBlock(50, block_data);
         {
             auto latest = store->latestBlock();
             REQUIRE(latest.first == 50);
-            REQUIRE(latest.second == 2);
+            REQUIRE(latest.second.data == block_data);
         }
 
-        CHECK_THROWS(store->saveBlock(52, 3, 2));
+        CHECK_THROWS(store->saveBlock(52, block_data));
         {
             // Latest is unmodified
             auto latest = store->latestBlock();
             REQUIRE(latest.first == 50);
-            REQUIRE(latest.second == 2);
+            REQUIRE(latest.second.data == block_data);
         }
-        store->saveBlock(51, 3, 2);
+        std::vector<char> block_data2{1, 2, 3, 5};
+        store->saveBlock(51, block_data2);
         {
             auto block = store->getBlock(51);
-            REQUIRE(block.hash == 3);
             REQUIRE(block.start_log == 0);
             REQUIRE(block.log_count == 0);
             REQUIRE(block.start_message == 0);
             REQUIRE(block.message_count == 0);
-            REQUIRE(block.bloom == 2);
+            REQUIRE(block.data == block_data2);
         }
 
         {
             // Latest is now updated
             auto latest = store->latestBlock();
             REQUIRE(latest.first == 51);
-            REQUIRE(latest.second == 3);
+            REQUIRE(latest.second.data == block_data2);
         }
     }
 }

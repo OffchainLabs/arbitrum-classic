@@ -114,26 +114,32 @@ func (as *AggregatorStore) GetMessage(index uint64) (value.Value, error) {
 	return value.UnmarshalValue(bytes.NewBuffer(logBytes))
 }
 
+func parseBlockData(data []byte) (common.Hash, types.Bloom) {
+	var hash common.Hash
+	copy(hash[:], data[:])
+	return hash, types.BytesToBloom(data[32:])
+}
+
 func (as *AggregatorStore) LatestBlock() (*common.BlockId, error) {
 	result := C.aggregatorLatestBlock(as.c)
 	if result.found == 0 {
 		return nil, errors.New("failed to load block count")
 	}
+	hash, _ := parseBlockData(toByteSlice(result.data))
 	return &common.BlockId{
 		Height:     common.NewTimeBlocks(new(big.Int).SetUint64(uint64(result.height))),
-		HeaderHash: dataToHash(result.hash),
+		HeaderHash: hash,
 	}, nil
 }
 
 func (as *AggregatorStore) SaveBlock(id *common.BlockId, logBloom types.Bloom) error {
-	cHeaderHash := hashToData(id.HeaderHash)
-	defer C.free(cHeaderHash)
-	var bloomBuf bytes.Buffer
-	_ = value.NewIntValue(new(big.Int).SetBytes(logBloom[:])).Marshal(&bloomBuf)
-	cLogBloom := C.CBytes(bloomBuf.Bytes())
-	defer C.free(cLogBloom)
+	blockData := make([]byte, 0)
+	blockData = append(blockData, id.HeaderHash.Bytes()...)
+	blockData = append(blockData, logBloom.Bytes()...)
+	cBlockData := C.CBytes(blockData)
+	defer C.free(cBlockData)
 
-	if C.aggregatorSaveBlock(as.c, C.uint64_t(id.Height.AsInt().Uint64()), cHeaderHash, cLogBloom) == 0 {
+	if C.aggregatorSaveBlock(as.c, C.uint64_t(id.Height.AsInt().Uint64()), cBlockData, C.int(len(blockData))) == 0 {
 		return errors.New("failed to save block")
 	}
 	return nil
@@ -144,15 +150,14 @@ func (as *AggregatorStore) GetBlock(height uint64) (machine.BlockInfo, error) {
 	if blockData.found == 0 {
 		return machine.BlockInfo{}, errors.New("failed to get block")
 	}
-	defer C.free(blockData.bloom)
-	dataBuff := C.GoBytes(blockData.bloom, 32)
+	hash, bloom := parseBlockData(toByteSlice(blockData.data))
 	return machine.BlockInfo{
-		Hash:         dataToHash(blockData.hash),
+		Hash:         hash,
 		StartLog:     uint64(blockData.start_log),
 		LogCount:     uint64(blockData.log_count),
 		StartMessage: uint64(blockData.start_message),
 		MessageCount: uint64(blockData.message_count),
-		Bloom:        types.BytesToBloom(dataBuff),
+		Bloom:        bloom,
 	}, nil
 }
 

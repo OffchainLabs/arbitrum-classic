@@ -193,7 +193,6 @@ func (vp *ValidatorProxyImpl) FindLogs(ctx context.Context, fromHeight, toHeight
 
 	logs := make([]evm.FullLog, 0, len(response.Logs))
 	for _, l := range response.Logs {
-		log.Println("Found log")
 		parsedLog, err := l.Unmarshal()
 		if err != nil {
 			return nil, err

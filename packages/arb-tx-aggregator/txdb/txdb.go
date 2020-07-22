@@ -64,11 +64,8 @@ func New(
 		checkpointer: checkpointer,
 		timeGetter:   clnt,
 	}
-	log.Println("New TXDB")
 	if checkpointer.HasCheckpointedState() {
-		log.Println("New TXDB2")
 		if err := txdb.RestoreFromCheckpoint(ctx); err == nil {
-			log.Println("New TXDB3")
 			return txdb, nil
 		} else {
 			log.Println("Failed to restore from checkpoint, falling back to fresh start")
@@ -221,15 +218,12 @@ func (txdb *TxDB) FindLogs(
 		if err != nil {
 			return nil, err
 		}
-		log.Println("Looking for logs in block", i)
 		if !maybeMatchesLogQuery(blockInfo.Bloom, address, topics) {
 			continue
 		}
 
-		log.Println("Maybe found logs in block", i)
 		for j := uint64(0); j < blockInfo.LogCount; j++ {
 			logVal, err := txdb.as.GetLog(blockInfo.StartLog + j)
-			log.Println("Looking for logs in AVM log", blockInfo.StartLog+j)
 			if err != nil {
 				return nil, err
 			}
@@ -316,13 +310,11 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 			continue
 		}
 
-		log.Println("Got response for request", res.L1Message.MessageID())
 		if err := txdb.as.SaveRequest(res.L1Message.MessageID(), logIndex, startLogIndex); err != nil {
 			return err
 		}
 
 		for _, evmLog := range res.EVMLogs {
-			log.Println("Got evm log", evmLog, "in block", block.Height)
 			ethLogs = append(ethLogs, &types.Log{
 				Address: evmLog.Address.ToEthAddress(),
 				Topics:  common.NewEthHashesFromHashes(evmLog.Topics),

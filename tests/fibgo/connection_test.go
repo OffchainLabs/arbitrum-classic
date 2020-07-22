@@ -118,7 +118,7 @@ func setupValidators(
 			return common.Address{}, nil, err
 		}
 
-		//manager.AddListener(&chainlistener.AnnouncerListener{Prefix: "validator " + client.Address().String() + ": "})
+		manager.AddListener(&chainlistener.AnnouncerListener{Prefix: "validator " + client.Address().String() + ": "})
 
 		validatorListener := chainlistener.NewValidatorChainListener(
 			context.Background(),
@@ -267,10 +267,18 @@ func TestFib(t *testing.T) {
 		}
 	}()
 
-	rollupAddress, validatorClients, err := setupValidators(client, pks[2:3])
+	rollupAddress, validatorClients, err := setupValidators(client, pks[2:4])
 	if err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
+
+	defer func() {
+		for _, client := range validatorClients {
+			if err := os.RemoveAll(db + client.Address().String()); err != nil {
+				log.Fatal(err)
+			}
+		}
+	}()
 
 	if err := launchAggregator(
 		ethbridge.NewEthAuthClient(client, bind.NewKeyedTransactor(pks[1])),
@@ -383,10 +391,4 @@ func TestFib(t *testing.T) {
 			t.Error("eventLoop: FibonacciTestEvent not received")
 		}
 	})
-
-	for _, client := range validatorClients {
-		if err := os.RemoveAll(db + client.Address().String()); err != nil {
-			log.Fatal(err)
-		}
-	}
 }

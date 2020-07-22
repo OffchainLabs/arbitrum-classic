@@ -24,15 +24,13 @@
 class DataStorage;
 
 struct BlockData {
-    uint256_t hash;
-
     uint64_t start_log;
     uint64_t log_count;
 
     uint64_t start_message;
     uint64_t message_count;
 
-    uint256_t bloom;
+    std::vector<char> data;
 };
 
 class AggregatorStore {
@@ -50,11 +48,9 @@ class AggregatorStore {
     void saveMessage(const std::vector<char>& log);
     std::vector<char> getMessage(uint64_t index) const;
 
-    std::pair<uint64_t, uint256_t> latestBlock() const;
+    std::pair<uint64_t, BlockData> latestBlock() const;
     uint64_t getInitialBlock() const;
-    void saveBlock(uint64_t height,
-                   const uint256_t& hash,
-                   const uint256_t& bloom);
+    void saveBlock(uint64_t height, const std::vector<char>& data);
     BlockData getBlock(uint64_t height) const;
     void restoreBlock(uint64_t height);
 

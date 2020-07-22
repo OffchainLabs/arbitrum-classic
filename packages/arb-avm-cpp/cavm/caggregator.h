@@ -27,7 +27,8 @@ extern "C" {
 
 struct CBlockDataStruct {
     int found;
-    const void* hash;
+
+    uint64_t height;
 
     uint64_t start_log;
     uint64_t log_count;
@@ -35,7 +36,7 @@ struct CBlockDataStruct {
     uint64_t start_message;
     uint64_t message_count;
 
-    const void* bloom;
+    ByteSlice data;
 };
 
 typedef struct CBlockDataStruct CBlockData;
@@ -69,11 +70,11 @@ int aggregatorSaveMessage(CAggregatorStore* m,
 ByteSliceResult aggregatorGetMessage(const CAggregatorStore* agg,
                                      uint64_t index);
 
-CBlockId aggregatorLatestBlock(const CAggregatorStore* agg);
-int aggregatorSaveBlock(CAggregatorStore* m,
+CBlockData aggregatorLatestBlock(const CAggregatorStore* agg);
+int aggregatorSaveBlock(CAggregatorStore* agg,
                         uint64_t height,
-                        const void* hash,
-                        const void* bloom);
+                        const void* data,
+                        int data_length);
 CBlockData aggregatorGetBlock(const CAggregatorStore* agg, uint64_t height);
 int aggregatorRestoreBlock(CAggregatorStore* m, uint64_t height);
 

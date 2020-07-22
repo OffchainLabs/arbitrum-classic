@@ -81,7 +81,6 @@ func (m *Server) FindLogs(
 	args *evm.FindLogsArgs,
 	reply *evm.FindLogsReply,
 ) error {
-	log.Println("Server FindLogs", args.FromHeight, args.ToHeight)
 	addresses := make([]common.Address, 0, len(args.Addresses))
 	for _, addr := range args.Addresses {
 		addresses = append(addresses, common.HexToAddress(addr))
