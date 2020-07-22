@@ -4,6 +4,7 @@ global.fetch = fetch
 const ethers = require('ethers')
 const ArbEth = require('arb-provider-ethers')
 const ProviderBridge = require('arb-ethers-web3-bridge')
+const HDWalletProvider = require('@truffle/hdwallet-provider')
 const mnemonic =
   'jar deny prosper gasp flush glass core corn alarm treat leg smart'
 
@@ -14,6 +15,12 @@ module.exports = {
     development: {
       host: '127.0.0.1',
       port: 7545,
+      network_id: '*', // Match any network id
+    },
+    arbitrum2: {
+      provider: function () {
+        return new HDWalletProvider(mnemonic, 'http://127.0.0.1:8546/')
+      },
       network_id: '*', // Match any network id
     },
     arbitrum: {

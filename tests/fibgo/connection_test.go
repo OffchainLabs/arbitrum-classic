@@ -5,7 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
 	"log"
@@ -139,7 +139,7 @@ func launchAggregator(client arbbridge.ArbAuthClient, rollupAddress common.Addre
 			rollupAddress,
 			contract,
 			db+"/aggregator",
-			"1235",
+			"2235",
 			"8546",
 			utils2.RPCFlags{},
 		); err != nil {
@@ -302,16 +302,16 @@ func TestFib(t *testing.T) {
 	}
 	pk := pks[0]
 
-	//client, err := ethclient.Dial("http://localhost:8546")
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
+	client, err := ethclient.Dial("http://localhost:8546")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	client := goarbitrum.Dial(
-		"http://localhost:1235",
-		pk,
-		rollupAddress,
-	)
+	//client := goarbitrum.Dial(
+	//	"http://localhost:2235",
+	//	pk,
+	//	rollupAddress,
+	//)
 
 	auth := bind.NewKeyedTransactor(pk)
 	_, tx, _, err := DeployFibonacci(auth, client)

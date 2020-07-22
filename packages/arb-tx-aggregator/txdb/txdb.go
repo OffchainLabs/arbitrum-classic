@@ -154,6 +154,10 @@ func (txdb *TxDB) GetMessage(index uint64) (value.Value, error) {
 	return txdb.as.GetMessage(index)
 }
 
+func (txdb *TxDB) GetLog(index uint64) (value.Value, error) {
+	return txdb.as.GetLog(index)
+}
+
 func (txdb *TxDB) GetRequest(requestId common.Hash) (value.Value, error) {
 	requestCandidate, err := txdb.as.GetPossibleRequestInfo(requestId)
 	if err != nil {

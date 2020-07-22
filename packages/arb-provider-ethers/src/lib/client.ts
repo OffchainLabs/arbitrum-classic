@@ -17,7 +17,7 @@
 'use strict'
 
 import * as ArbValue from './value'
-import { L2Call } from './message'
+import { L2ContractTransaction } from './message'
 
 import * as ethers from 'ethers'
 
@@ -197,9 +197,9 @@ export class ArbClient {
 
   private _call(
     callFunc: string,
-    l2Call: L2Call,
+    l2Call: L2ContractTransaction,
     sender: string | undefined
-  ): Promise<ArbValue.Value> {
+  ): Promise<ArbValue.Value | undefined> {
     return new Promise((resolve, reject): void => {
       const params: evm.CallMessageArgs = {
         data: ethers.utils.hexlify(l2Call.asData()),
@@ -215,24 +215,27 @@ export class ArbClient {
             reject(error)
           } else {
             if (result.rawVal === undefined) {
-              reject('call result empty')
-              return
+              resolve(undefined)
+            } else {
+              resolve(ArbValue.unmarshal(result.rawVal))
             }
-            resolve(ArbValue.unmarshal(result.rawVal))
           }
         }
       )
     })
   }
 
-  public call(tx: L2Call, sender: string | undefined): Promise<ArbValue.Value> {
+  public call(
+    tx: L2ContractTransaction,
+    sender: string | undefined
+  ): Promise<ArbValue.Value | undefined> {
     return this._call(`${NAMESPACE}.Call`, tx, sender)
   }
 
   public pendingCall(
-    tx: L2Call,
+    tx: L2ContractTransaction,
     sender: string | undefined
-  ): Promise<ArbValue.Value> {
+  ): Promise<ArbValue.Value | undefined> {
     return this._call(`${NAMESPACE}.PendingCall`, tx, sender)
   }
 

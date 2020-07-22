@@ -245,9 +245,70 @@ export class L2Call {
   }
 }
 
+export class L2ContractTransaction {
+  public maxGas: ethers.utils.BigNumber
+  public gasPriceBid: ethers.utils.BigNumber
+  public destAddress: string
+  public payment: ethers.utils.BigNumber
+  public calldata: string
+  public kind: L2MessageCode.ContractTransaction
+
+  constructor(
+    maxGas: ethers.utils.BigNumberish | undefined,
+    gasPriceBid: ethers.utils.BigNumberish | undefined,
+    destAddress: ethers.utils.Arrayish | undefined,
+    payment: ethers.utils.BigNumberish | undefined,
+    calldata: ethers.utils.Arrayish | undefined
+  ) {
+    if (!maxGas) {
+      maxGas = 0
+    }
+    if (!gasPriceBid) {
+      gasPriceBid = 0
+    }
+    if (!destAddress) {
+      destAddress = ethers.utils.hexZeroPad('0x', 20)
+    }
+    if (!payment) {
+      payment = 0
+    }
+    if (!calldata) {
+      calldata = '0x'
+    }
+    this.maxGas = ethers.utils.bigNumberify(maxGas)
+    this.gasPriceBid = ethers.utils.bigNumberify(gasPriceBid)
+    this.destAddress = ethers.utils.hexlify(destAddress)
+    this.payment = ethers.utils.bigNumberify(payment)
+    this.calldata = ethers.utils.hexlify(calldata)
+    this.kind = L2MessageCode.ContractTransaction
+  }
+
+  static fromData(data: ethers.utils.Arrayish): L2ContractTransaction {
+    const bytes = ethers.utils.arrayify(data)
+    return new L2ContractTransaction(
+      bytes.slice(0, 32),
+      bytes.slice(32, 64),
+      bytes.slice(64, 96),
+      bytes.slice(96, 128),
+      bytes.slice(128)
+    )
+  }
+
+  asData(): Uint8Array {
+    return ethers.utils.concat([
+      hex32(this.maxGas),
+      hex32(this.gasPriceBid),
+      encodedAddress(this.destAddress),
+      hex32(this.payment),
+      this.calldata,
+    ])
+  }
+}
+
 export type L2SubMessage =
   | L2Transaction
   | L2Call
+  | L2ContractTransaction
   | L2Batch
   | L2SignedTransaction
 
@@ -358,6 +419,8 @@ function l2SubMessageFromData(data: ethers.utils.Arrayish): L2SubMessage {
   switch (kind) {
     case L2MessageCode.Transaction:
       return L2Transaction.fromData(bytes.slice(1))
+    case L2MessageCode.ContractTransaction:
+      return L2ContractTransaction.fromData(bytes.slice(1))
     case L2MessageCode.Call:
       return L2Call.fromData(bytes.slice(1))
     default:
@@ -580,6 +643,7 @@ export class Result {
     const cumulativeGas = (chainInfo.get(0) as ArbValue.IntValue).bignum
     const chainIndex = (chainInfo.get(1) as ArbValue.IntValue).bignum
     const startLogIndex = (chainInfo.get(2) as ArbValue.IntValue).bignum
+
     return new Result(
       incoming,
       resultCode,

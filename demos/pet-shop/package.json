@@ -12,6 +12,7 @@
     "watch": "webpack --watch"
   },
   "devDependencies": {
+    "@truffle/hdwallet-provider": "^1.0.39",
     "arb-ethers-web3-bridge": "^0.7.0",
     "css-loader": "^3.4.2",
     "file-loader": "^5.0.2",

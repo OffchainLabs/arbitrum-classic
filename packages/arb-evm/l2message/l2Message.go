@@ -66,7 +66,7 @@ func NewL2MessageFromData(data []byte) (AbstractL2Message, error) {
 	case TransactionType:
 		return newTransactionFromData(data), nil
 	case ContractTransactionType:
-		return newContractTransactionFromData(data), nil
+		return NewContractTransactionFromData(data), nil
 	case CallType:
 		return NewCallFromData(data), nil
 	case TransactionBatchType:
@@ -191,7 +191,7 @@ type ContractTransaction struct {
 	Data        []byte
 }
 
-func newContractTransactionFromData(data []byte) ContractTransaction {
+func NewContractTransactionFromData(data []byte) ContractTransaction {
 	maxGas, data := extractUInt256(data)
 	gasPriceBid, data := extractUInt256(data)
 	destAddress, data := extractAddress(data)

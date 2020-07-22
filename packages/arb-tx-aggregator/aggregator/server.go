@@ -212,7 +212,7 @@ func (m *RPCServer) callImpl(
 	request *http.Request,
 	args *evm.CallMessageArgs,
 	reply *evm.CallMessageReply,
-	call func(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error),
+	call func(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error),
 ) error {
 	var sender ethcommon.Address
 	if len(args.Sender) > 0 {
@@ -223,7 +223,7 @@ func (m *RPCServer) callImpl(
 		return err
 	}
 
-	callMsg := l2message.NewCallFromData(dataBytes)
+	callMsg := l2message.NewContractTransactionFromData(dataBytes)
 	val, err := call(request.Context(), callMsg, sender)
 	var buf bytes.Buffer
 	_ = value.MarshalValue(val, &buf) // error can only occur from writes and bytes.Buffer is safe

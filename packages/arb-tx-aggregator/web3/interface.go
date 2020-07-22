@@ -16,15 +16,7 @@ type GetBalanceArgs struct {
 }
 
 func (n *GetBalanceArgs) UnmarshalJSON(buf []byte) error {
-	tmp := []interface{}{&n.Address, &n.BlockNum}
-	wantLen := len(tmp)
-	if err := json.Unmarshal(buf, &tmp); err != nil {
-		return err
-	}
-	if g, e := len(tmp), wantLen; g != e {
-		return fmt.Errorf("wrong number of fields in CallArgs: %d != %d", g, e)
-	}
-	return nil
+	return unmarshalJSONArray(buf, []interface{}{&n.Address, &n.BlockNum})
 }
 
 type GetTransactionCountArgs struct {
@@ -33,15 +25,7 @@ type GetTransactionCountArgs struct {
 }
 
 func (n *GetTransactionCountArgs) UnmarshalJSON(buf []byte) error {
-	tmp := []interface{}{&n.Address, &n.BlockNum}
-	wantLen := len(tmp)
-	if err := json.Unmarshal(buf, &tmp); err != nil {
-		return err
-	}
-	if g, e := len(tmp), wantLen; g != e {
-		return fmt.Errorf("wrong number of fields in CallArgs: %d != %d", g, e)
-	}
-	return nil
+	return unmarshalJSONArray(buf, []interface{}{&n.Address, &n.BlockNum})
 }
 
 type GetBlockByNumberArgs struct {
@@ -50,15 +34,7 @@ type GetBlockByNumberArgs struct {
 }
 
 func (n *GetBlockByNumberArgs) UnmarshalJSON(buf []byte) error {
-	tmp := []interface{}{&n.BlockNum, &n.IncludeTxData}
-	wantLen := len(tmp)
-	if err := json.Unmarshal(buf, &tmp); err != nil {
-		return err
-	}
-	if g, e := len(tmp), wantLen; g != e {
-		return fmt.Errorf("wrong number of fields in CallArgs: %d != %d", g, e)
-	}
-	return nil
+	return unmarshalJSONArray(buf, []interface{}{&n.BlockNum, &n.IncludeTxData})
 }
 
 type CallTxArgs struct {
@@ -76,17 +52,36 @@ type CallArgs struct {
 }
 
 func (n *CallArgs) UnmarshalJSON(buf []byte) error {
-	tmp := []interface{}{&n.CallArgs, &n.BlockNum}
-	wantLen := len(tmp)
-	if err := json.Unmarshal(buf, &tmp); err != nil {
-		return err
-	}
-	if g, e := len(tmp), wantLen; g != e {
-		return fmt.Errorf("wrong number of fields in CallArgs: %d != %d", g, e)
-	}
-	return nil
+	return unmarshalJSONArray(buf, []interface{}{&n.CallArgs, &n.BlockNum})
 }
 
 type GasPriceArgs struct{}
 
 type VersionArgs struct{}
+
+type SendTransactionArgs struct {
+	Data *hexutil.Bytes
+}
+
+func (n *SendTransactionArgs) UnmarshalJSON(buf []byte) error {
+	return unmarshalJSONArray(buf, []interface{}{&n.Data})
+}
+
+type GetTransactionReceiptArgs struct {
+	Data *hexutil.Bytes
+}
+
+func (n *GetTransactionReceiptArgs) UnmarshalJSON(buf []byte) error {
+	return unmarshalJSONArray(buf, []interface{}{&n.Data})
+}
+
+func unmarshalJSONArray(buf []byte, fields []interface{}) error {
+	wantLen := len(fields)
+	if err := json.Unmarshal(buf, &fields); err != nil {
+		return err
+	}
+	if g, e := len(fields), wantLen; g != e {
+		return fmt.Errorf("wrong number of fields in CallArgs: %d != %d", g, e)
+	}
+	return nil
+}

@@ -127,26 +127,80 @@ func (m *Server) BlockInfo(_ context.Context, height uint64) (machine.BlockInfo,
 	return m.db.GetBlock(height)
 }
 
+func (m *Server) GetBlockHeader(_ context.Context, height uint64) (*types.Header, error) {
+	currentBlock, err := m.db.GetBlock(height)
+	if err != nil {
+		return nil, err
+	}
+	var parentHash ethcommon.Hash
+	if height > 0 {
+		prevBlock, err := m.db.GetBlock(height - 1)
+		if err != nil {
+			return nil, err
+		}
+		parentHash = prevBlock.Hash.ToEthHash()
+	}
+
+	totalGas := uint64(0)
+	if currentBlock.MessageCount > 0 {
+		lastLog, err := m.db.GetLog(currentBlock.StartLog + currentBlock.MessageCount - 1)
+		if err != nil {
+			return nil, err
+		}
+		res, err := evm.NewResultFromValue(lastLog)
+		if err != nil {
+			return nil, err
+		}
+		totalGas = res.CumulativeGas.Uint64()
+	}
+
+	return &types.Header{
+		ParentHash:  parentHash,
+		UncleHash:   ethcommon.Hash{},
+		Coinbase:    ethcommon.Address{},
+		Root:        ethcommon.Hash{},
+		TxHash:      ethcommon.Hash{},
+		ReceiptHash: ethcommon.Hash{},
+		Bloom:       currentBlock.Bloom,
+		Difficulty:  big.NewInt(0),
+		Number:      new(big.Int).SetUint64(height),
+		GasLimit:    totalGas,
+		GasUsed:     totalGas,
+		Time:        0,
+		Extra:       []byte{},
+		MixDigest:   ethcommon.Hash{},
+		Nonce:       types.BlockNonce{},
+	}, nil
+}
+
+func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, error) {
+	header, err := m.GetBlockHeader(ctx, height)
+	if err != nil {
+		return nil, err
+	}
+	return types.NewBlock(header, []*types.Transaction{}, nil, []*types.Receipt{}), nil
+}
+
 // Call takes a request from a client to process in a temporary context
 // and return the result
-func (m *Server) Call(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error) {
+func (m *Server) Call(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	mach, blockId := m.db.CallInfo()
 	return m.executeCall(mach, blockId, msg, sender)
 }
 
 // PendingCall takes a request from a client to process in a temporary context
 // and return the result
-func (m *Server) PendingCall(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error) {
+func (m *Server) PendingCall(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	mach, blockId := m.db.CallInfo()
 	return m.executeCall(mach, blockId, msg, sender)
 }
 
-func (m *Server) executeCall(mach machine.Machine, blockId *common.BlockId, msg l2message.Call, sender ethcommon.Address) (value.Value, error) {
+func (m *Server) executeCall(mach machine.Machine, blockId *common.BlockId, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	seq, _ := new(big.Int).SetString("999999999999999999999999", 10)
 	if msg.MaxGas.Cmp(big.NewInt(0)) == 0 || msg.MaxGas.Cmp(m.maxCallGas) > 0 {
 		msg.MaxGas = m.maxCallGas
 	}
-	log.Println("Executing call", msg.MaxGas, msg.GasPriceBid, msg.DestAddress)
+	log.Println("Executing call", msg.MaxGas, msg.GasPriceBid, msg.DestAddress, msg.Payment)
 	inboxMsg := message.NewInboxMessage(
 		message.L2Message{Data: l2message.L2MessageAsData(msg)},
 		common.NewAddressFromEth(sender),

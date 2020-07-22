@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	errors2 "github.com/pkg/errors"
-	"log"
 	"math/big"
 	"sync"
 	"time"
@@ -110,10 +109,14 @@ func (conn *ArbConnection) CallContract(
 	if call.GasPrice != nil {
 		gasPriceBid = call.GasPrice
 	}
-	tx := l2message.Call{
+	if call.Value == nil {
+		call.Value = big.NewInt(0)
+	}
+	tx := l2message.ContractTransaction{
 		MaxGas:      new(big.Int).SetUint64(call.Gas),
 		GasPriceBid: gasPriceBid,
 		DestAddress: dest,
+		Payment:     call.Value,
 		Data:        call.Data,
 	}
 	retValue, err := conn.proxy.Call(ctx, tx, call.From)
@@ -163,10 +166,14 @@ func (conn *ArbConnection) pendingCall(ctx context.Context, call ethereum.CallMs
 	if call.GasPrice != nil {
 		gasPriceBid = call.GasPrice
 	}
-	tx := l2message.Call{
+	if call.Value == nil {
+		call.Value = big.NewInt(0)
+	}
+	tx := l2message.ContractTransaction{
 		MaxGas:      new(big.Int).SetUint64(call.Gas),
 		GasPriceBid: gasPriceBid,
 		DestAddress: dest,
+		Payment:     call.Value,
 		Data:        call.Data,
 	}
 	return conn.proxy.PendingCall(ctx, tx, call.From)
@@ -203,7 +210,6 @@ func (conn *ArbConnection) EstimateGas(
 	ctx context.Context,
 	call ethereum.CallMsg,
 ) (uint64, error) {
-	log.Println("EstimateGas", call)
 	retValue, err := conn.pendingCall(ctx, call)
 	if err != nil {
 		return 0, err
@@ -375,9 +381,6 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	}
 	val, err := conn.proxy.GetRequestResult(ctx, common.NewHashFromEth(txHash))
 	if err != nil {
-		return nil, errors2.Wrap(err, "TransactionReceipt error:")
-	}
-	if val == nil {
 		return nil, ethereum.NotFound
 	}
 	result, err := evm.NewResultFromValue(val)

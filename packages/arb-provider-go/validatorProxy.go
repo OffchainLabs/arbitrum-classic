@@ -30,8 +30,8 @@ type ValidatorProxy interface {
 	GetRequestResult(ctx context.Context, txHash common.Hash) (value.Value, error)
 	GetChainAddress(ctx context.Context) (ethcommon.Address, error)
 	FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []ethcommon.Address, topics [][]ethcommon.Hash) ([]evm.FullLog, error)
-	Call(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error)
-	PendingCall(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error)
+	Call(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error)
+	PendingCall(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error)
 }
 
 type ValidatorProxyImpl struct {
@@ -210,7 +210,7 @@ func hexToValue(rawVal string) (value.Value, error) {
 	return value.UnmarshalValue(bytes.NewReader(retBuf))
 }
 
-func (vp *ValidatorProxyImpl) Call(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error) {
+func (vp *ValidatorProxyImpl) Call(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	request := &evm.CallMessageArgs{
 		Data:   hexutil.Encode(msg.AsData()),
 		Sender: hexutil.Encode(sender[:]),
@@ -222,7 +222,7 @@ func (vp *ValidatorProxyImpl) Call(ctx context.Context, msg l2message.Call, send
 	return hexToValue(response.RawVal)
 }
 
-func (vp *ValidatorProxyImpl) PendingCall(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error) {
+func (vp *ValidatorProxyImpl) PendingCall(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	request := &evm.CallMessageArgs{
 		Data:   hexutil.Encode(msg.AsData()),
 		Sender: hexutil.Encode(sender[:]),

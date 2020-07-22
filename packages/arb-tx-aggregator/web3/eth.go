@@ -2,6 +2,8 @@ package web3
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
@@ -98,23 +100,40 @@ func (s *Server) GetTransactionCount(r *http.Request, args *GetTransactionCountA
 	return nil
 }
 
-//
-//func (eth *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, reply *string) error {
-//	balance, err := eth.sys.GetTransactionCount(
-//		&bind.CallOpts{
-//			Pending:     false,
-//			From:        common.Address{},
-//			BlockNumber: big.NewInt(args.BlockNum.Int64()),
-//			Context:     r.Context(),
-//		},
-//		*args.Address,
-//	)
-//	if err != nil {
-//		return err
-//	}
-//	*reply = "0x" + balance.Text(16)
-//	return nil
-//}
+func (eth *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, reply *string) error {
+	//var blockNum uint64
+	//if *args.BlockNum == rpc.LatestBlockNumber {
+	//	var err error
+	//	blockNum, err = eth.srv.GetBlockCount(r.Context())
+	//	if err != nil {
+	//		return err
+	//	}
+	//} else if *args.BlockNum >= 0 {
+	//	blockNum = uint64(*args.BlockNum)
+	//} else {
+	//	return errors.New("unsupported block num")
+	//}
+	//eth.srv.B
+	//info, err := eth.srv.BlockInfo(r.Context(), blockNum)
+	//if err != nil {
+	//	return err
+	//}
+	//types.Block{}
+	//balance, err := eth.sys.GetTransactionCount(
+	//	&bind.CallOpts{
+	//		Pending:     false,
+	//		From:        common.Address{},
+	//		BlockNumber: big.NewInt(args.BlockNum.Int64()),
+	//		Context:     r.Context(),
+	//	},
+	//	*args.Address,
+	//)
+	//if err != nil {
+	//	return err
+	//}
+	//*reply = "0x" + balance.Text(16)
+	return nil
+}
 
 func buildCallMsg(args *CallTxArgs) ethereum.CallMsg {
 	var from common.Address
@@ -174,5 +193,28 @@ func (s *Server) EstimateGas(r *http.Request, args *CallTxArgs, reply *string) e
 
 func (s *Server) GasPrice(r *http.Request, _ *GasPriceArgs, reply *string) error {
 	*reply = "0x" + big.NewInt(0).Text(16)
+	return nil
+}
+func (s *Server) SendRawTransaction(r *http.Request, args *SendTransactionArgs, reply *string) error {
+	tx := new(types.Transaction)
+	if err := rlp.DecodeBytes(*args.Data, tx); err != nil {
+		return err
+	}
+	txHash, err := s.srv.SendTransaction(r.Context(), tx)
+	if err != nil {
+		return err
+	}
+	*reply = txHash.String()
+	return nil
+}
+
+func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionReceiptArgs, reply *types.Receipt) error {
+	var requestId common.Hash
+	copy(requestId[:], *args.Data)
+	receipt, err := s.conn.TransactionReceipt(r.Context(), requestId)
+	if err != nil {
+		return err
+	}
+	*reply = *receipt
 	return nil
 }

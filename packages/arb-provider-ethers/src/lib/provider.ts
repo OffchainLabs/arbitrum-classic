@@ -22,7 +22,7 @@ import {
   Log,
   MessageCode,
   L2MessageCode,
-  L2Call,
+  L2ContractTransaction,
 } from './message'
 import { ArbClient } from './client'
 import * as ArbValue from './value'
@@ -387,33 +387,37 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       case 'estimateGas': {
         const tx: ethers.providers.TransactionRequest = params.transaction
         const result = await this.callImpl(tx)
+        if (!result) {
+          throw Error('failed to estimate gas')
+        }
         return result.gasUsed
       }
       case 'sendTransaction': {
         return this.client.sendTransaction(params.signedTransaction)
       }
     }
-    // console.log('Forwarding query to provider', method, params)
+    console.log('Forwarding query to provider', method, params)
     return await this.ethProvider.perform(method, params)
   }
 
   private async callImpl(
     transaction: ethers.providers.TransactionRequest,
     blockTag?: ethers.providers.BlockTag | Promise<ethers.providers.BlockTag>
-  ): Promise<Result> {
+  ): Promise<Result | undefined> {
     const from = await transaction.from
-    const tx = new L2Call(
+    const tx = new L2ContractTransaction(
       await transaction.gasLimit,
       await transaction.gasPrice,
       await transaction.to,
+      await transaction.value,
       await transaction.data
     )
 
-    const callLatest = (): Promise<ArbValue.Value> => {
+    const callLatest = (): Promise<ArbValue.Value | undefined> => {
       return this.client.pendingCall(tx, from)
     }
 
-    let resultVal: ArbValue.Value
+    let resultVal: ArbValue.Value | undefined
     const tag = await blockTag
     if (tag) {
       if (tag == 'pending') {
@@ -426,6 +430,9 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     } else {
       resultVal = await callLatest()
     }
+    if (!resultVal) {
+      return undefined
+    }
     return Result.fromValue(resultVal)
   }
 
@@ -434,6 +441,9 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     blockTag?: ethers.providers.BlockTag | Promise<ethers.providers.BlockTag>
   ): Promise<string> {
     const result = await this.callImpl(transaction, blockTag)
+    if (!result) {
+      throw new Error("Call didn't return a value")
+    }
     if (result.resultCode != ResultCode.Return) {
       throw new Error('Call was reverted')
     }
