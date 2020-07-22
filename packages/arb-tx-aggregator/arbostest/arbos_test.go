@@ -14,13 +14,12 @@
 * limitations under the License.
  */
 
-package ethbridgemachine
+package arbostest
 
 import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"log"
 	"math/big"
 	"strings"
@@ -31,16 +30,15 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender common.Address) []*evm.Result {
@@ -49,10 +47,10 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 		Timestamp: big.NewInt(0),
 	}
 
-	inbox := structures.NewVMInbox()
-	inbox.DeliverMessage(message.NewInboxMessage(msg, sender, big.NewInt(0), chainTime))
-	assertion, steps := mach.ExecuteAssertion(1000000000, inbox.AsValue(), 0)
-	data, err := value.TestVectorJSON(inbox.AsValue(), assertion.ParseLogs(), assertion.ParseOutMessages())
+	inbox := value.NewEmptyTuple()
+	inbox = value.NewTuple2(inbox, message.NewInboxMessage(msg, sender, big.NewInt(0), chainTime).AsValue())
+	assertion, steps := mach.ExecuteAssertion(1000000000, inbox, 0)
+	data, err := value.TestVectorJSON(inbox, assertion.ParseLogs(), assertion.ParseOutMessages())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +110,7 @@ func getBalanceCall(t *testing.T, mach machine.Machine, address common.Address) 
 	getBalance := message.Call{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
-		DestAddress: common.NewAddressFromEth(goarbitrum.ARB_INFO_ADDRESS),
+		DestAddress: common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS),
 		Data:        append(getBalanceSignature, getBalanceData...),
 	}
 	balanceResult, err := runTransaction(t, mach, getBalance, common.Address{})
@@ -165,7 +163,7 @@ func depositEth(t *testing.T, mach machine.Machine, dest common.Address, amount 
 }
 
 func TestFib(t *testing.T) {
-	mach, err := loader.LoadMachineFromFile(arbos.Path(), false, "cpp")
+	mach, err := cmachine.New(arbos.Path())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,7 +271,7 @@ func TestFib(t *testing.T) {
 	}
 }
 func TestDeposit(t *testing.T) {
-	mach, err := loader.LoadMachineFromFile(arbos.Path(), false, "cpp")
+	mach, err := cmachine.New(arbos.Path())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,12 +292,11 @@ func TestDeposit(t *testing.T) {
 }
 
 func TestReddit(t *testing.T) {
-	mach, err := loader.LoadMachineFromFile(arbos.Path(), false, "cpp")
+	mach, err := cmachine.New(arbos.Path())
 	if err != nil {
 		t.Fatal(err)
 	}
-	inbox := structures.NewVMInbox()
-	mach.ExecuteAssertion(1000000000, inbox.AsValue(), 0)
+	mach.ExecuteAssertion(1000000000, value.NewEmptyTuple(), 0)
 
 	initMsg := message.Init{
 		ChainParams: valprotocol.ChainParams{
@@ -328,7 +325,7 @@ func TestReddit(t *testing.T) {
 
 func TestBatch(t *testing.T) {
 	chain := common.RandAddress()
-	mach, err := loader.LoadMachineFromFile(arbos.Path(), false, "cpp")
+	mach, err := cmachine.New(arbos.Path())
 	if err != nil {
 		t.Fatal(err)
 	}

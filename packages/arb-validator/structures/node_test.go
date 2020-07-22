@@ -20,8 +20,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"google.golang.org/protobuf/proto"
 	"testing"
@@ -36,14 +34,7 @@ func TestMarshalNode(t *testing.T) {
 	}
 
 	node := NewInitialNode(mach.Clone(), common.Hash{})
-
-	results := make([]*evm.Result, 0, 5)
-	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
-		results = append(results, stop)
-	}
-
-	nextNode := NewRandomNodeFromValidPrev(node, results)
+	nextNode := NewRandomNodeFromValidPrev(node)
 
 	checkpointContext := ckptcontext.NewCheckpointContext()
 	nodeBuf := nextNode.MarshalForCheckpoint(checkpointContext, true)

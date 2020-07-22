@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	errors2 "github.com/pkg/errors"
 	"math/big"
 	"sync"
@@ -15,15 +16,12 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
-
-var ARB_SYS_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000064")
-var ARB_INFO_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000065")
 
 type ArbConnection struct {
 	proxy         ValidatorProxy
@@ -45,11 +43,11 @@ func Dial(url string, pk *ecdsa.PrivateKey, rollupAddress common.Address) *ArbCo
 }
 
 func (conn *ArbConnection) getInfoCon() (*arboscontracts.ArbInfo, error) {
-	return arboscontracts.NewArbInfo(ARB_INFO_ADDRESS, conn)
+	return arboscontracts.NewArbInfo(arbos.ARB_INFO_ADDRESS, conn)
 }
 
 func (conn *ArbConnection) getSysCon() (*arboscontracts.ArbSys, error) {
-	return arboscontracts.NewArbSys(ARB_SYS_ADDRESS, conn)
+	return arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, conn)
 }
 
 ///////////////////////////////////////////////////////////////////////////////

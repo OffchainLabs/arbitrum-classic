@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
 
@@ -81,12 +82,12 @@ type Eth struct {
 }
 
 func NewEth(conn *goarbitrum.ArbConnection) (*Eth, error) {
-	info, err := arboscontracts.NewArbInfo(goarbitrum.ARB_INFO_ADDRESS, conn)
+	info, err := arboscontracts.NewArbInfo(arbos.ARB_INFO_ADDRESS, conn)
 	if err != nil {
 		return nil, err
 	}
 
-	sys, err := arboscontracts.NewArbSys(goarbitrum.ARB_SYS_ADDRESS, conn)
+	sys, err := arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, conn)
 	if err != nil {
 		return nil, err
 	}

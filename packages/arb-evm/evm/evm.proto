@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 package evm;
-option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm";
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-evm/evm";
 
 message NodeLocation {
     string nodeHash = 1;

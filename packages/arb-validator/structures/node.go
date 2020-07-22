@@ -19,9 +19,9 @@ package structures
 import (
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"log"
 	"math/big"
+	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -98,8 +98,14 @@ func NewValidNodeFromPrev(
 	)
 }
 
-func NewRandomNodeFromValidPrev(prev *Node, results []*evm.Result) *Node {
-	assertion := evm.NewRandomEVMAssertion(results, []value.Value{})
+func NewRandomNodeFromValidPrev(prev *Node) *Node {
+	assertion := protocol.NewExecutionAssertionFromValues(
+		common.RandHash(),
+		true,
+		rand.Uint64(),
+		[]value.Value{value.NewInt64Value(0), value.NewInt64Value(2)},
+		[]value.Value{value.NewInt64Value(1), value.NewInt64Value(2)},
+	)
 	disputableNode := valprotocol.NewRandomDisputableNode(
 		valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 	)

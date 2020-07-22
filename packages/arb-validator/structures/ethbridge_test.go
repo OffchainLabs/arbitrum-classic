@@ -28,8 +28,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
@@ -69,14 +67,7 @@ func TestGenerateLastMessageHash(t *testing.T) {
 	}
 
 	node := NewInitialNode(mach.Clone(), common.Hash{})
-
-	results := make([]*evm.Result, 0, 10)
-	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
-		results = append(results, stop)
-	}
-
-	nextNode := NewRandomNodeFromValidPrev(node, results)
+	nextNode := NewRandomNodeFromValidPrev(node)
 	assert := nextNode.Assertion()
 	expectedHash := nextNode.Disputable().AssertionClaim.AssertionStub.LastMessageHash
 
@@ -84,7 +75,7 @@ func TestGenerateLastMessageHash(t *testing.T) {
 		nil,
 		assert.OutMsgsData,
 		big.NewInt(0),
-		big.NewInt(int64(len(assert.OutMsgsData))))
+		new(big.Int).SetUint64(assert.OutMsgsCount))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,14 +94,7 @@ func TestCalculateLeafFromPath(t *testing.T) {
 	}
 
 	node := NewInitialNode(mach.Clone(), common.Hash{})
-
-	results := make([]*evm.Result, 0, 10)
-	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
-		results = append(results, stop)
-	}
-
-	nextNode := NewRandomNodeFromValidPrev(node, results)
+	nextNode := NewRandomNodeFromValidPrev(node)
 	path := GeneratePathProof(node, nextNode)
 
 	bridgeHash, err := tester.CalculateLeafFromPath(nil, node.Hash(), common.HashSliceToRaw(path))
@@ -128,14 +112,7 @@ func TestChildNodeHash(t *testing.T) {
 	}
 
 	node := NewInitialNode(mach.Clone(), common.Hash{})
-
-	results := make([]*evm.Result, 0, 10)
-	for i := int32(0); i < 7; i++ {
-		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
-		results = append(results, stop)
-	}
-
-	nextNode := NewRandomNodeFromValidPrev(node, results)
+	nextNode := NewRandomNodeFromValidPrev(node)
 
 	bridgeHash, err := tester.ChildNodeHash(
 		nil,
@@ -159,14 +136,7 @@ func TestProtoStateHash(t *testing.T) {
 	}
 
 	node := NewInitialNode(mach.Clone(), common.Hash{})
-
-	results := make([]*evm.Result, 0, 10)
-	for i := int32(0); i < 8; i++ {
-		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
-		results = append(results, stop)
-	}
-
-	nextNode := NewRandomNodeFromValidPrev(node, results)
+	nextNode := NewRandomNodeFromValidPrev(node)
 	protoState := nextNode.VMProtoData()
 
 	bridgeHash, err := tester.ComputeProtoHashBefore(

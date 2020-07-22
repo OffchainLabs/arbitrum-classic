@@ -19,20 +19,21 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math"
 	"math/big"
 	"os"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 func main() {
@@ -57,11 +58,11 @@ func toEth(val *big.Int) *big.Float {
 }
 
 func runMessage(mach machine.Machine, msg message.InboxMessage) (*evm.Result, error) {
-	vmInbox := structures.NewVMInbox()
-	vmInbox.DeliverMessage(msg)
+	inbox := value.NewEmptyTuple()
+	inbox = value.NewTuple2(inbox, msg.AsValue())
 	assertion, _ := mach.ExecuteAssertion(
 		100000,
-		vmInbox.AsValue(),
+		inbox,
 		1000,
 	)
 	//log.Println("ran assertion")
@@ -82,7 +83,7 @@ func testMessages(filename string, contract string) error {
 		return err
 	}
 
-	mach, err := loader.LoadMachineFromFile(contract, false, "cpp")
+	mach, err := cmachine.New(contract)
 	if err != nil {
 		return err
 	}

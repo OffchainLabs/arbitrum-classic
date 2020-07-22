@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
+	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -29,7 +30,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -143,7 +143,7 @@ func TestComputePrevLeaf(t *testing.T) {
 }
 
 func randomAssertion() *protocol.ExecutionAssertion {
-	results := make([]*evm.Result, 0, 5)
+	logs := make([]value.Value, 0, 5)
 	messages := make([]value.Value, 0)
 	messages = append(messages, message.NewInboxMessage(
 		message.Eth{
@@ -155,12 +155,17 @@ func randomAssertion() *protocol.ExecutionAssertion {
 		message.NewRandomChainTime(),
 	).AsValue())
 	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
-		results = append(results, stop)
+		logs = append(logs, value.NewInt64Value(0))
 		messages = append(messages, message.NewRandomInboxMessage(message.NewRandomEth()).AsValue())
 	}
 
-	return evm.NewRandomEVMAssertion(results, messages)
+	return protocol.NewExecutionAssertionFromValues(
+		common.RandHash(),
+		true,
+		rand.Uint64(),
+		messages,
+		logs,
+	)
 }
 
 func TestGenerateInvalidMsgLeaf(t *testing.T) {

@@ -19,8 +19,6 @@ package chainobserver
 import (
 	"context"
 	"crypto/ecdsa"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"log"
 	"math/big"
 	"math/rand"
@@ -34,12 +32,14 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
 
@@ -201,7 +201,6 @@ func TestConfirmAssertion(t *testing.T) {
 
 	rand.Seed(time.Now().Unix())
 	dest := common.RandAddress()
-	results := make([]*evm.Result, 0, 5)
 	messages := make([]value.Value, 0)
 	messages = append(
 		messages,
@@ -214,12 +213,17 @@ func TestConfirmAssertion(t *testing.T) {
 		).AsValue(),
 	)
 	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
-		results = append(results, stop)
 		messages = append(messages, message.NewRandomOutMessage(message.NewRandomEth()).AsValue())
 	}
 
-	assertion := evm.NewRandomEVMAssertion(results, messages)
+	assertion := protocol.NewExecutionAssertionFromValues(
+		common.RandHash(),
+		true,
+		rand.Uint64(),
+		messages,
+		[]value.Value{},
+	)
+
 	assertion.NumGas = 100
 
 	prepared, err := chain.prepareAssertion(chain.latestBlockId)
