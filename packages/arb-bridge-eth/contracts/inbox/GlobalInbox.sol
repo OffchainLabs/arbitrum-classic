@@ -250,44 +250,43 @@ contract GlobalInbox is
         if (message.kind == ETH_TRANSFER) {
             (bool valid, Messages.EthMessage memory eth) = Messages
                 .parseEthMessage(message.data);
-            if (valid) {
-                address paymentOwner = getPaymentOwner(
-                    eth.dest,
-                    nodeHash,
-                    messageIndex
-                );
-                transferEth(msg.sender, paymentOwner, eth.value);
-                deletePayment(eth.dest, nodeHash, messageIndex);
+            if (!valid) {
+                return;
             }
+            address paymentOwner = getPaymentOwner(
+                eth.dest,
+                nodeHash,
+                messageIndex
+            );
+            deletePayment(eth.dest, nodeHash, messageIndex);
+            transferEth(msg.sender, paymentOwner, eth.value);
         } else if (message.kind == ERC20_TRANSFER) {
             (bool valid, Messages.ERC20Message memory erc20) = Messages
                 .parseERC20Message(message.data);
-            if (valid) {
-                address paymentOwner = getPaymentOwner(
-                    erc20.dest,
-                    nodeHash,
-                    messageIndex
-                );
-                transferERC20(
-                    msg.sender,
-                    paymentOwner,
-                    erc20.token,
-                    erc20.value
-                );
-                deletePayment(erc20.dest, nodeHash, messageIndex);
+            if (!valid) {
+                return;
             }
+            address paymentOwner = getPaymentOwner(
+                erc20.dest,
+                nodeHash,
+                messageIndex
+            );
+            deletePayment(erc20.dest, nodeHash, messageIndex);
+
+            transferERC20(msg.sender, paymentOwner, erc20.token, erc20.value);
         } else if (message.kind == ERC721_TRANSFER) {
             (bool valid, Messages.ERC721Message memory erc721) = Messages
                 .parseERC721Message(message.data);
-            if (valid) {
-                address paymentOwner = getPaymentOwner(
-                    erc721.dest,
-                    nodeHash,
-                    messageIndex
-                );
-                transferNFT(msg.sender, paymentOwner, erc721.token, erc721.id);
-                deletePayment(erc721.dest, nodeHash, messageIndex);
+            if (!valid) {
+                return;
             }
+            address paymentOwner = getPaymentOwner(
+                erc721.dest,
+                nodeHash,
+                messageIndex
+            );
+            deletePayment(erc721.dest, nodeHash, messageIndex);
+            transferNFT(msg.sender, paymentOwner, erc721.token, erc721.id);
         }
     }
 }

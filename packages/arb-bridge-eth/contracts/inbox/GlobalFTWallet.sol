@@ -91,6 +91,14 @@ contract GlobalFTWallet {
         return true;
     }
 
+    function mintERC20(
+        address _to,
+        address _tokenContract,
+        uint256 _value
+    ) internal {
+        addToken(_to, _tokenContract, _value);
+    }
+
     function addToken(
         address _user,
         address _tokenContract,

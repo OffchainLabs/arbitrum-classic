@@ -43,4 +43,6 @@ interface IGlobalInbox {
     ) external;
 
     function sendInitializationMessage(bytes calldata messageData) external;
+
+    function sendL2Message(address chain, bytes calldata messageData) external;
 }

@@ -52,6 +52,7 @@
     "@nomiclabs/buidler-etherscan": "^1.3.3",
     "@nomiclabs/buidler-solhint": "^1.3.3",
     "@nomiclabs/buidler-waffle": "^1.3.5",
+    "@openzeppelin/contracts": "^2.5.0",
     "@typechain/ethers-v4": "^1.0.0",
     "@typechain/truffle-v4": "^2.0.3",
     "@typechain/truffle-v5": "^2.0.2",
