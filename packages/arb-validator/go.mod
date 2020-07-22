@@ -7,6 +7,7 @@ require (
 	github.com/golang/protobuf v1.4.2
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.6.5
 	github.com/offchainlabs/arbitrum/packages/arb-checkpointer v0.0.0-00010101000000-000000000000
+	github.com/offchainlabs/arbitrum/packages/arb-provider-go v0.6.5 // indirect
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.6.5
 	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.6.5
 	github.com/pkg/errors v0.9.1

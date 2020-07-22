@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+
 	"log"
 	"os"
 	"path/filepath"
@@ -26,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
+	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
@@ -35,7 +37,7 @@ import (
 func main() {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	walletArgs := utils.AddWalletFlags(fs)
-	rpcVars := utils.AddRPCFlags(fs)
+	rpcVars := utils2.AddRPCFlags(fs)
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {

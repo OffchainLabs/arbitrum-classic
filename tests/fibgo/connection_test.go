@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
 	"log"
 	"math/big"
 	"math/rand"
@@ -24,7 +25,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
@@ -145,7 +145,7 @@ func launchAggregator(client arbbridge.ArbAuthClient, rollupAddress common.Addre
 			contract,
 			db+client.Address().String(),
 			"1235",
-			utils.RPCFlags{},
+			utils2.RPCFlags{},
 		); err != nil {
 			log.Fatal(err)
 		}

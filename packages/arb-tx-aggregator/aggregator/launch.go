@@ -21,9 +21,9 @@ import (
 	"github.com/gorilla/rpc/v2"
 	"github.com/gorilla/rpc/v2/json"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/machineobserver"
+	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
 )
 
 func GenerateRPCServer(server *Server) (*rpc.Server, error) {
@@ -51,7 +51,7 @@ func LaunchAggregator(
 	executable string,
 	dbPath string,
 	port string,
-	flags utils.RPCFlags,
+	flags utils2.RPCFlags,
 ) error {
 	db, err := machineobserver.RunObserver(ctx, rollupAddress, client, executable, dbPath)
 	if err != nil {
@@ -75,5 +75,5 @@ func LaunchAggregator(
 		return err
 	}
 
-	return utils.LaunchRPC(s, port, flags)
+	return utils2.LaunchRPC(s, port, flags)
 }
