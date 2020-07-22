@@ -47,14 +47,32 @@ TEST_CASE("Aggregator tests") {
         CHECK_THROWS(store->getMessage(1));
     }
 
+    SECTION("requests") {
+        CHECK_THROWS(store->getPossibleRequestInfo(10));
+        store->saveRequest(10, 5);
+        REQUIRE(store->getPossibleRequestInfo(10) == 5);
+        CHECK_THROWS(store->getPossibleRequestInfo(8));
+    }
+
     SECTION("blocks") {
         CHECK_THROWS(store->latestBlock());
+        std::vector<char> data{1, 2, 3, 4};
+        store->saveLog(data);
+        store->saveLog(data);
+        store->saveMessage(data);
+        store->saveMessage(data);
+        store->saveMessage(data);
         std::vector<char> block_data{1, 2, 3, 4};
         store->saveBlock(50, block_data);
         {
             auto latest = store->latestBlock();
+            auto block = latest.second;
             REQUIRE(latest.first == 50);
-            REQUIRE(latest.second.data == block_data);
+            REQUIRE(block.start_log == 0);
+            REQUIRE(block.log_count == 2);
+            REQUIRE(block.start_message == 0);
+            REQUIRE(block.message_count == 3);
+            REQUIRE(block.data == block_data);
         }
 
         CHECK_THROWS(store->saveBlock(52, block_data));
@@ -64,14 +82,18 @@ TEST_CASE("Aggregator tests") {
             REQUIRE(latest.first == 50);
             REQUIRE(latest.second.data == block_data);
         }
+
+        store->saveLog(data);
+        store->saveLog(data);
+        store->saveMessage(data);
         std::vector<char> block_data2{1, 2, 3, 5};
         store->saveBlock(51, block_data2);
         {
             auto block = store->getBlock(51);
-            REQUIRE(block.start_log == 0);
-            REQUIRE(block.log_count == 0);
-            REQUIRE(block.start_message == 0);
-            REQUIRE(block.message_count == 0);
+            REQUIRE(block.start_log == 2);
+            REQUIRE(block.log_count == 2);
+            REQUIRE(block.start_message == 3);
+            REQUIRE(block.message_count == 1);
             REQUIRE(block.data == block_data2);
         }
 
@@ -79,7 +101,6 @@ TEST_CASE("Aggregator tests") {
             // Latest is now updated
             auto latest = store->latestBlock();
             REQUIRE(latest.first == 51);
-            REQUIRE(latest.second.data == block_data2);
         }
     }
 }
