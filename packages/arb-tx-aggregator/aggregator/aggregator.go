@@ -143,6 +143,10 @@ func (m *Server) PendingCall(ctx context.Context, msg l2message.Call, sender eth
 
 func (m *Server) executeCall(mach machine.Machine, blockId *common.BlockId, msg l2message.Call, sender ethcommon.Address) (value.Value, error) {
 	seq, _ := new(big.Int).SetString("999999999999999999999999", 10)
+	if msg.MaxGas.Cmp(big.NewInt(0)) == 0 || msg.MaxGas.Cmp(m.maxCallGas) > 0 {
+		msg.MaxGas = m.maxCallGas
+	}
+	log.Println("Executing call", msg.MaxGas, msg.GasPriceBid, msg.DestAddress)
 	inboxMsg := message.NewInboxMessage(
 		message.L2Message{Data: l2message.L2MessageAsData(msg)},
 		common.NewAddressFromEth(sender),

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	errors2 "github.com/pkg/errors"
+	"log"
 	"math/big"
 	"sync"
 	"time"
@@ -146,6 +147,14 @@ func (conn *ArbConnection) PendingCodeAt(
 
 // PendingCallContract executes an Ethereum contract call against the pending state.
 func (conn *ArbConnection) PendingCallContract(ctx context.Context, call ethereum.CallMsg) ([]byte, error) {
+	retValue, err := conn.pendingCall(ctx, call)
+	if err != nil {
+		return nil, err
+	}
+	return processCallRet(retValue)
+}
+
+func (conn *ArbConnection) pendingCall(ctx context.Context, call ethereum.CallMsg) (value.Value, error) {
 	var dest common.Address
 	if call.To != nil {
 		dest = common.NewAddressFromEth(*call.To)
@@ -160,11 +169,7 @@ func (conn *ArbConnection) PendingCallContract(ctx context.Context, call ethereu
 		DestAddress: dest,
 		Data:        call.Data,
 	}
-	retValue, err := conn.proxy.PendingCall(ctx, tx, call.From)
-	if err != nil {
-		return nil, err
-	}
-	return processCallRet(retValue)
+	return conn.proxy.PendingCall(ctx, tx, call.From)
 }
 
 // PendingNonceAt retrieves the current pending nonce associated with an account.
@@ -185,7 +190,7 @@ func (conn *ArbConnection) PendingNonceAt(
 
 // SuggestGasPrice retrieves the currently suggested gas price to allow a timely
 // execution of a transaction.
-func (conn *ArbConnection) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
+func (conn *ArbConnection) SuggestGasPrice(_ context.Context) (*big.Int, error) {
 	return big.NewInt(0), nil
 }
 
@@ -197,8 +202,17 @@ func (conn *ArbConnection) SuggestGasPrice(ctx context.Context) (*big.Int, error
 func (conn *ArbConnection) EstimateGas(
 	ctx context.Context,
 	call ethereum.CallMsg,
-) (gas uint64, err error) {
-	return 100000000, nil
+) (uint64, error) {
+	log.Println("EstimateGas", call)
+	retValue, err := conn.pendingCall(ctx, call)
+	if err != nil {
+		return 0, err
+	}
+	res, err := evm.NewResultFromValue(retValue)
+	if err != nil {
+		return 0, err
+	}
+	return res.GasUsed.Uint64(), nil
 }
 
 // SendTransaction injects the transaction into the pending pool for execution.

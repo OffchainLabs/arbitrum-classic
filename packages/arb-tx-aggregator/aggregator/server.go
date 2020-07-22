@@ -28,7 +28,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	errors2 "github.com/pkg/errors"
-	"math/big"
 	"net/http"
 	"strconv"
 )
@@ -225,9 +224,6 @@ func (m *RPCServer) callImpl(
 	}
 
 	callMsg := l2message.NewCallFromData(dataBytes)
-	if callMsg.MaxGas.Cmp(big.NewInt(0)) == 0 || callMsg.MaxGas.Cmp(m.srv.maxCallGas) > 0 {
-		callMsg.MaxGas = m.srv.maxCallGas
-	}
 	val, err := call(request.Context(), callMsg, sender)
 	var buf bytes.Buffer
 	_ = value.MarshalValue(val, &buf) // error can only occur from writes and bytes.Buffer is safe

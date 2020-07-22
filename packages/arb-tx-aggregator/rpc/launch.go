@@ -67,12 +67,12 @@ func LaunchAggregator(
 
 	if aggPort != "" {
 		go func() {
-			errChan <- utils2.LaunchRPC(aggServer, "1235", flags)
+			errChan <- utils2.LaunchRPC(aggServer, aggPort, flags)
 		}()
 	}
 	if web3Port != "" {
 		go func() {
-			errChan <- utils2.LaunchRPC(web3Server, "8545", flags)
+			errChan <- utils2.LaunchRPC(web3Server, web3Port, flags)
 		}()
 	}
 

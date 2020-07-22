@@ -29,7 +29,7 @@ func (n *GetBalanceArgs) UnmarshalJSON(buf []byte) error {
 
 type GetTransactionCountArgs struct {
 	Address  *common.Address
-	BlockNum *ethrpc.BlockNumber
+	BlockNum ethrpc.BlockNumber
 }
 
 func (n *GetTransactionCountArgs) UnmarshalJSON(buf []byte) error {
@@ -86,5 +86,7 @@ func (n *CallArgs) UnmarshalJSON(buf []byte) error {
 	}
 	return nil
 }
+
+type GasPriceArgs struct{}
 
 type VersionArgs struct{}

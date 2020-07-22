@@ -5,6 +5,8 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/ethclient"
+	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
 	"log"
@@ -18,7 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -163,6 +164,18 @@ waitloop:
 			if err := conn.Close(); err != nil {
 				return err
 			}
+
+			conn, err = net.DialTimeout(
+				"tcp",
+				net.JoinHostPort("127.0.0.1", "8546"),
+				time.Second,
+			)
+			if err != nil || conn == nil {
+				continue
+			}
+			if err := conn.Close(); err != nil {
+				return err
+			}
 			// Wait for the validator to catch up to head
 			time.Sleep(time.Second * 2)
 			break waitloop
@@ -228,7 +241,7 @@ func startFibTestEventListener(
 }
 
 func waitForReceipt(
-	client *goarbitrum.ArbConnection,
+	client bind.DeployBackend,
 	tx *types.Transaction,
 	timeout time.Duration,
 ) (*types.Receipt, error) {
@@ -255,11 +268,11 @@ func waitForReceipt(
 }
 
 func TestFib(t *testing.T) {
-	client, pks := test.SimulatedBackend()
+	l1Client, pks := test.SimulatedBackend()
 	go func() {
 		t := time.NewTicker(time.Second * 2)
 		for range t.C {
-			client.Commit()
+			l1Client.Commit()
 		}
 	}()
 
@@ -271,7 +284,7 @@ func TestFib(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	rollupAddress, err := setupValidators(client, pks[2:4])
+	rollupAddress, err := setupValidators(l1Client, pks[2:4])
 	if err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
@@ -283,27 +296,32 @@ func TestFib(t *testing.T) {
 	}()
 
 	if err := launchAggregator(
-		ethbridge.NewEthAuthClient(client, bind.NewKeyedTransactor(pks[1])),
+		ethbridge.NewEthAuthClient(l1Client, bind.NewKeyedTransactor(pks[1])),
 		rollupAddress,
 	); err != nil {
 		t.Fatal(err)
 	}
-
 	pk := pks[0]
-	arbclient := goarbitrum.Dial(
+
+	//client, err := ethclient.Dial("http://localhost:8546")
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+
+	client := goarbitrum.Dial(
 		"http://localhost:1235",
 		pk,
 		rollupAddress,
 	)
 
 	auth := bind.NewKeyedTransactor(pk)
-	_, tx, _, err := DeployFibonacci(auth, arbclient)
+	_, tx, _, err := DeployFibonacci(auth, client)
 	if err != nil {
 		t.Fatal("DeployFibonacci failed", err)
 	}
 
 	receipt, err := waitForReceipt(
-		arbclient,
+		client,
 		tx,
 		time.Second*20,
 	)
@@ -316,7 +334,7 @@ func TestFib(t *testing.T) {
 
 	t.Log("Fib contract is at", receipt.ContractAddress.Hex())
 
-	fib, err := NewFibonacci(receipt.ContractAddress, arbclient)
+	fib, err := NewFibonacci(receipt.ContractAddress, client)
 	if err != nil {
 		t.Fatal("connect fib failed", err)
 	}
@@ -339,7 +357,7 @@ func TestFib(t *testing.T) {
 		t.Fatal("GenerateFib error", err)
 	}
 	receipt, err = waitForReceipt(
-		arbclient,
+		client,
 		tx,
 		time.Second*20,
 	)

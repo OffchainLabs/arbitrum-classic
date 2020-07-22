@@ -2,6 +2,7 @@ package web3
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/rpc"
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
@@ -69,14 +70,25 @@ func (s *Server) GetBalance(r *http.Request, args *GetBalanceArgs, reply *string
 	return nil
 }
 
+func makeCallOpts(ctx context.Context, num rpc.BlockNumber, from common.Address) *bind.CallOpts {
+	pending := false
+	var blockNum *big.Int
+	if num == rpc.PendingBlockNumber {
+		pending = true
+	} else if num != rpc.LatestBlockNumber {
+		blockNum = big.NewInt(num.Int64())
+	}
+	return &bind.CallOpts{
+		Pending:     pending,
+		From:        from,
+		BlockNumber: blockNum,
+		Context:     ctx,
+	}
+}
+
 func (s *Server) GetTransactionCount(r *http.Request, args *GetTransactionCountArgs, reply *string) error {
 	balance, err := s.sys.GetTransactionCount(
-		&bind.CallOpts{
-			Pending:     false,
-			From:        common.Address{},
-			BlockNumber: big.NewInt(args.BlockNum.Int64()),
-			Context:     r.Context(),
-		},
+		makeCallOpts(r.Context(), args.BlockNum, common.Address{}),
 		*args.Address,
 	)
 	if err != nil {
@@ -104,42 +116,63 @@ func (s *Server) GetTransactionCount(r *http.Request, args *GetTransactionCountA
 //	return nil
 //}
 
-func (s *Server) Call(r *http.Request, args *CallArgs, reply *string) error {
+func buildCallMsg(args *CallTxArgs) ethereum.CallMsg {
 	var from common.Address
-	if args.CallArgs.From != nil {
-		from = *args.CallArgs.From
+	if args.From != nil {
+		from = *args.From
 	}
 	gas := uint64(0)
-	if args.CallArgs.Gas != nil {
-		gas = uint64(*args.CallArgs.Gas)
+	if args.Gas != nil {
+		gas = uint64(*args.Gas)
 	}
 	gasPrice := big.NewInt(0)
-	if args.CallArgs.GasPrice != nil {
-		gasPrice = args.CallArgs.GasPrice.ToInt()
+	if args.GasPrice != nil {
+		gasPrice = args.GasPrice.ToInt()
 	}
 	value := big.NewInt(0)
-	if args.CallArgs.Value != nil {
-		value = args.CallArgs.Value.ToInt()
+	if args.Value != nil {
+		value = args.Value.ToInt()
 	}
 	var data []byte
-	if args.CallArgs.Data != nil {
-		data = *args.CallArgs.Data
+	if args.Data != nil {
+		data = *args.Data
 	}
+	return ethereum.CallMsg{
+		From:     from,
+		To:       args.To,
+		Gas:      gas,
+		GasPrice: gasPrice,
+		Value:    value,
+		Data:     data,
+	}
+}
+
+func (s *Server) Call(r *http.Request, args *CallArgs, reply *string) error {
 	ret, err := s.conn.CallContract(
 		r.Context(),
-		ethereum.CallMsg{
-			From:     from,
-			To:       args.CallArgs.To,
-			Gas:      gas,
-			GasPrice: gasPrice,
-			Value:    value,
-			Data:     data,
-		},
+		buildCallMsg(args.CallArgs),
 		big.NewInt(args.BlockNum.Int64()),
 	)
 	if err != nil {
 		return err
 	}
 	*reply = hexutil.Encode(ret)
+	return nil
+}
+
+func (s *Server) EstimateGas(r *http.Request, args *CallTxArgs, reply *string) error {
+	ret, err := s.conn.EstimateGas(
+		r.Context(),
+		buildCallMsg(args),
+	)
+	if err != nil {
+		return err
+	}
+	*reply = hexutil.EncodeUint64(ret)
+	return nil
+}
+
+func (s *Server) GasPrice(r *http.Request, _ *GasPriceArgs, reply *string) error {
+	*reply = "0x" + big.NewInt(0).Text(16)
 	return nil
 }
