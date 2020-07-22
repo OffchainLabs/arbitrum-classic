@@ -171,12 +171,10 @@ func (m *Server) GetRequestResult(
 	}
 	var requestId common.Hash
 	copy(requestId[:], decoded)
-	index, startLogIndex, res, err := m.db.GetRequest(requestId)
+	res, err := m.db.GetRequest(requestId)
 	if err != nil {
 		// Request was not found so return nil rawVal
 		reply.RawVal = ""
-		reply.Index = 0
-		reply.StartLogIndex = 0
 		return nil
 	}
 	var buf bytes.Buffer
@@ -184,8 +182,6 @@ func (m *Server) GetRequestResult(
 		return err
 	}
 	reply.RawVal = hexutil.Encode(buf.Bytes())
-	reply.Index = index
-	reply.StartLogIndex = startLogIndex
 	return nil
 }
 

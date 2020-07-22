@@ -69,8 +69,6 @@ export interface GetRequestResultArgs {
 
 export interface GetRequestResultReply {
   rawVal?: string
-  index?: number
-  startLogIndex?: number
 }
 
 export interface GetChainAddressArgs {}

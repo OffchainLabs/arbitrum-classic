@@ -166,7 +166,7 @@ export class ArbClient {
 
   public async getRequestResult(
     txHash: string
-  ): Promise<RawMessageResult | null> {
+  ): Promise<ArbValue.Value | null> {
     const params: evm.GetRequestResultArgs = {
       txHash,
     }
@@ -192,18 +192,7 @@ export class ArbClient {
       return null
     }
 
-    if (!messageResult.index) {
-      messageResult.index = 0
-    }
-    if (!messageResult.startLogIndex) {
-      messageResult.startLogIndex = 0
-    }
-
-    return {
-      log: ArbValue.unmarshal(messageResult.rawVal),
-      txIndex: messageResult.index,
-      startLogIndex: messageResult.startLogIndex,
-    }
+    return ArbValue.unmarshal(messageResult.rawVal)
   }
 
   private _call(

@@ -142,25 +142,24 @@ int aggregatorRestoreBlock(CAggregatorStore* agg, uint64_t height) {
 }
 
 // request_id is 32 bytes long
-CRequestInfo aggregatorGetPossibleRequestInfo(const CAggregatorStore* agg,
+Uint64Result aggregatorGetPossibleRequestInfo(const CAggregatorStore* agg,
                                               const void* request_id) {
     try {
-        auto info =
+        auto index =
             static_cast<const AggregatorStore*>(agg)->getPossibleRequestInfo(
                 receiveUint256(request_id));
-        return {true, info.first, info.second};
+        return {index, true};
     } catch (const std::exception&) {
-        return {false, 0, 0};
+        return {0, false};
     }
 }
 
 int aggregatorSaveRequest(CAggregatorStore* agg,
                           const void* request_id,
-                          uint64_t log_index,
-                          uint64_t evm_start_log_index) {
+                          uint64_t log_index) {
     try {
         static_cast<AggregatorStore*>(agg)->saveRequest(
-            receiveUint256(request_id), log_index, evm_start_log_index);
+            receiveUint256(request_id), log_index);
         return 1;
     } catch (const std::exception&) {
         return 0;

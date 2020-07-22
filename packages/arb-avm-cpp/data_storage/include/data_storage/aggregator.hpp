@@ -54,11 +54,8 @@ class AggregatorStore {
     BlockData getBlock(uint64_t height) const;
     void restoreBlock(uint64_t height);
 
-    std::pair<uint64_t, uint64_t> getPossibleRequestInfo(
-        const uint256_t& request_id) const;
-    void saveRequest(const uint256_t& request_id,
-                     uint64_t log_index,
-                     uint64_t evm_start_log_index);
+    uint64_t getPossibleRequestInfo(const uint256_t& request_id) const;
+    void saveRequest(const uint256_t& request_id, uint64_t log_index);
 };
 
 #endif /* aggregator_hpp */

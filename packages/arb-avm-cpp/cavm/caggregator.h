@@ -79,12 +79,11 @@ CBlockData aggregatorGetBlock(const CAggregatorStore* agg, uint64_t height);
 int aggregatorRestoreBlock(CAggregatorStore* m, uint64_t height);
 
 // request_id is 32 bytes long
-CRequestInfo aggregatorGetPossibleRequestInfo(const CAggregatorStore* agg,
+Uint64Result aggregatorGetPossibleRequestInfo(const CAggregatorStore* agg,
                                               const void* request_id);
 int aggregatorSaveRequest(CAggregatorStore* agg,
                           const void* request_id,
-                          uint64_t log_index,
-                          uint64_t evm_start_log_index);
+                          uint64_t log_index);
 
 #ifdef __cplusplus
 }

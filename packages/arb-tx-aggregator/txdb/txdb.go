@@ -154,23 +154,23 @@ func (txdb *TxDB) GetMessage(index uint64) (value.Value, error) {
 	return txdb.as.GetMessage(index)
 }
 
-func (txdb *TxDB) GetRequest(requestId common.Hash) (uint64, uint64, value.Value, error) {
-	requestCandidate, startLogIndex, err := txdb.as.GetPossibleRequestInfo(requestId)
+func (txdb *TxDB) GetRequest(requestId common.Hash) (value.Value, error) {
+	requestCandidate, err := txdb.as.GetPossibleRequestInfo(requestId)
 	if err != nil {
-		return 0, 0, nil, err
+		return nil, err
 	}
 	logVal, err := txdb.as.GetLog(requestCandidate)
 	if err != nil {
-		return 0, 0, nil, err
+		return nil, err
 	}
 	res, err := evm.NewResultFromValue(logVal)
 	if err != nil {
-		return 0, 0, nil, err
+		return nil, err
 	}
 	if res.L1Message.MessageID() != requestId {
-		return 0, 0, nil, errors.New("request not found")
+		return nil, errors.New("request not found")
 	}
-	return requestCandidate, startLogIndex, logVal, nil
+	return logVal, nil
 }
 
 func (txdb *TxDB) GetBlock(height uint64) (machine.BlockInfo, error) {
@@ -293,7 +293,6 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 		}
 	}
 	ethLogs := make([]*types.Log, 0)
-	startLogIndex := uint64(0)
 	for _, avmLog := range assertion.ParseLogs() {
 		logIndex, err := txdb.as.LogCount()
 		if err != nil {
@@ -310,7 +309,7 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 			continue
 		}
 
-		if err := txdb.as.SaveRequest(res.L1Message.MessageID(), logIndex, startLogIndex); err != nil {
+		if err := txdb.as.SaveRequest(res.L1Message.MessageID(), logIndex); err != nil {
 			return err
 		}
 
@@ -320,7 +319,6 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 				Topics:  common.NewEthHashesFromHashes(evmLog.Topics),
 			})
 		}
-		startLogIndex += uint64(len(res.EVMLogs))
 	}
 	logBloom := types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
 	if err := txdb.as.SaveBlock(block, logBloom); err != nil {

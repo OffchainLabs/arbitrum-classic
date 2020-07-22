@@ -168,22 +168,22 @@ func (as *AggregatorStore) RestoreBlock(height uint64) error {
 	return nil
 }
 
-func (as *AggregatorStore) GetPossibleRequestInfo(requestId common.Hash) (uint64, uint64, error) {
+func (as *AggregatorStore) GetPossibleRequestInfo(requestId common.Hash) (uint64, error) {
 	cHash := hashToData(requestId)
 	defer C.free(cHash)
 
 	result := C.aggregatorGetPossibleRequestInfo(as.c, cHash)
 	if result.found == 0 {
-		return 0, 0, errors.New("failed to get request")
+		return 0, errors.New("failed to get request")
 	}
-	return uint64(result.log_index), uint64(result.evm_start_log_index), nil
+	return uint64(result.value), nil
 }
 
-func (as *AggregatorStore) SaveRequest(requestId common.Hash, logIndex uint64, evmLogStartIndex uint64) error {
+func (as *AggregatorStore) SaveRequest(requestId common.Hash, logIndex uint64) error {
 	cHash := hashToData(requestId)
 	defer C.free(cHash)
 
-	if C.aggregatorSaveRequest(as.c, cHash, C.uint64_t(logIndex), C.uint64_t(evmLogStartIndex)) == 0 {
+	if C.aggregatorSaveRequest(as.c, cHash, C.uint64_t(logIndex)) == 0 {
 		return errors.New("failed to save request")
 	}
 	return nil

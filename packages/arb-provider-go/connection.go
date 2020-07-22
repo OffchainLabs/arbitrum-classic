@@ -351,7 +351,7 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	if realHash, ok := conn.sentTransactions[txHash]; ok {
 		txHash = realHash
 	}
-	index, startLogIndex, val, err := conn.proxy.GetRequestResult(ctx, common.NewHashFromEth(txHash))
+	val, err := conn.proxy.GetRequestResult(ctx, common.NewHashFromEth(txHash))
 	if err != nil {
 		return nil, errors2.Wrap(err, "TransactionReceipt error:")
 	}
@@ -376,9 +376,8 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	if err != nil {
 		return nil, err
 	}
-	txIndex := index - blockInfo.StartLog
 	var evmLogs []*types.Log
-	logIndex := startLogIndex
+	logIndex := result.StartLogIndex.Uint64()
 	for _, l := range result.EVMLogs {
 		ethLog := &types.Log{
 			Address:     l.Address.ToEthAddress(),
@@ -386,7 +385,7 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 			Data:        l.Data,
 			BlockNumber: result.L1Message.ChainTime.BlockNum.AsInt().Uint64(),
 			TxHash:      txHash,
-			TxIndex:     uint(txIndex),
+			TxIndex:     uint(result.TxIndex.Uint64()),
 			BlockHash:   blockInfo.Hash.ToEthHash(),
 			Index:       uint(logIndex),
 		}
@@ -408,10 +407,9 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	}
 
 	return &types.Receipt{
-		PostState: []byte{0},
-		Status:    status,
-		// TODO: Fill in with real value
-		CumulativeGasUsed: 1,
+		PostState:         []byte{0},
+		Status:            status,
+		CumulativeGasUsed: result.CumulativeGas.Uint64(),
 		Bloom:             types.BytesToBloom(types.LogsBloom(evmLogs).Bytes()),
 		Logs:              evmLogs,
 		TxHash:            txHash,
@@ -419,6 +417,6 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 		GasUsed:           result.GasUsed.Uint64(),
 		BlockHash:         blockInfo.Hash.ToEthHash(),
 		BlockNumber:       result.L1Message.ChainTime.BlockNum.AsInt(),
-		TransactionIndex:  uint(txIndex),
+		TransactionIndex:  uint(result.TxIndex.Uint64()),
 	}, nil
 }

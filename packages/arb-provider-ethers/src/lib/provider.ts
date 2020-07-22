@@ -186,7 +186,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     }
   }
 
-  public async getMessageResult(txHash: string): Promise<MessageResult | null> {
+  public async getMessageResult(txHash: string): Promise<Result | null> {
     // TODO: Make sure that there can be no collision between arbitrum transaction hashes and
     // Ethereum transaction hashes so that an attacker cannot fool the client into accepting a
     // false transction
@@ -204,12 +204,10 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       arbTxHash = txHash
     }
 
-    const requestRet = await this.client.getRequestResult(arbTxHash)
-    if (!requestRet) {
+    const log = await this.client.getRequestResult(arbTxHash)
+    if (!log) {
       return null
     }
-
-    const { log, txIndex, startLogIndex } = requestRet
 
     const result = Result.fromValue(log)
 
@@ -233,11 +231,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     //   await this.verifyDisputableAssertion(assertionTxHash, log, proof)
     // }
 
-    return {
-      result,
-      txIndex,
-      startLogIndex,
-    }
+    return result
   }
 
   // This should return a Promise (and may throw errors)
@@ -263,11 +257,10 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         return count.toNumber()
       }
       case 'getTransactionReceipt': {
-        const res = await this.getMessageResult(params.transactionHash)
-        if (!res) {
+        const result = await this.getMessageResult(params.transactionHash)
+        if (!result) {
           return null
         }
-        const { result, txIndex, startLogIndex } = res
 
         const currentBlockNum = await this.ethProvider.getBlockNumber()
         const messageBlockNum = result.incoming.blockNumber.toNumber()
@@ -294,11 +287,11 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         const logs: ethers.providers.Log[] = []
         if (result.resultCode === ResultCode.Return) {
           status = 1
-          let logIndex = startLogIndex
+          let logIndex = result.startLogIndex.toNumber()
           for (const log of result.logs) {
             logs.push({
               ...log,
-              transactionIndex: txIndex,
+              transactionIndex: result.txIndex.toNumber(),
               blockNumber: messageBlockNum,
               transactionHash: incoming.messageID(),
               logIndex,
@@ -313,25 +306,24 @@ export class ArbProvider extends ethers.providers.BaseProvider {
           blockNumber: messageBlockNum,
           contractAddress: contractAddress,
           confirmations: confirmations,
-          cumulativeGasUsed: result.gasUsed,
+          cumulativeGasUsed: result.cumulativeGas,
           from: incoming.sender,
           gasUsed: result.gasUsed,
           logs,
           status,
           to: l2tx.destAddress,
           transactionHash: incoming.messageID(),
-          transactionIndex: txIndex,
+          transactionIndex: result.txIndex.toNumber(),
           byzantium: true,
         }
         return txReceipt
       }
       case 'getTransaction': {
         const getMessageRequest = async (): Promise<ethers.providers.TransactionResponse | null> => {
-          const res = await this.getMessageResult(params.transactionHash)
-          if (!res) {
+          const result = await this.getMessageResult(params.transactionHash)
+          if (!result) {
             return null
           }
-          const { result } = res
           const incoming = result.incoming
           if (
             incoming.msg.kind != MessageCode.L2 ||

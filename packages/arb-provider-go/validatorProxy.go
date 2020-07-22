@@ -27,7 +27,7 @@ type ValidatorProxy interface {
 	GetBlockCount(ctx context.Context) (uint64, error)
 	SendTransaction(ctx context.Context, tx *types.Transaction) (common.Hash, error)
 	BlockInfo(ctx context.Context, height uint64) (machine.BlockInfo, error)
-	GetRequestResult(ctx context.Context, txHash common.Hash) (uint64, uint64, value.Value, error)
+	GetRequestResult(ctx context.Context, txHash common.Hash) (value.Value, error)
 	GetChainAddress(ctx context.Context) (string, error)
 	FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []ethcommon.Address, topics [][]ethcommon.Hash) ([]evm.FullLog, error)
 	CallMessage(ctx context.Context, msg l2message.Call, sender ethcommon.Address) (value.Value, error)
@@ -131,29 +131,29 @@ func (vp *ValidatorProxyImpl) BlockInfo(ctx context.Context, height uint64) (mac
 	}, nil
 }
 
-func (vp *ValidatorProxyImpl) GetRequestResult(ctx context.Context, txHash common.Hash) (uint64, uint64, value.Value, error) {
+func (vp *ValidatorProxyImpl) GetRequestResult(ctx context.Context, txHash common.Hash) (value.Value, error) {
 	request := &evm.GetRequestResultArgs{
 		TxHash: hexutil.Encode(txHash[:]),
 	}
 	var response evm.GetRequestResultReply
 	if err := vp.doCall(ctx, "GetRequestResult", request, &response); err != nil {
 		log.Println("ValProxy.GetRequestResult: doCall returned error:", err)
-		return 0, 0, nil, err
+		return nil, err
 	}
 
 	if len(response.RawVal) == 0 {
-		return 0, 0, nil, nil
+		return nil, nil
 	}
 
 	data, err := hexutil.Decode(response.RawVal)
 	if err != nil {
-		return 0, 0, nil, err
+		return nil, err
 	}
 	val, err := value.UnmarshalValue(bytes.NewBuffer(data))
 	if err != nil {
-		return 0, 0, nil, err
+		return nil, err
 	}
-	return response.Index, response.StartLogIndex, val, nil
+	return val, nil
 }
 
 func (vp *ValidatorProxyImpl) GetChainAddress(ctx context.Context) (string, error) {

@@ -88,8 +88,6 @@ message GetRequestResultArgs {
 
 message GetRequestResultReply {
     string rawVal = 1;
-    uint64 index = 2;
-    uint64 startLogIndex = 3;
 }
 
 message GetChainAddressArgs {

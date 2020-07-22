@@ -100,12 +100,9 @@ BlockSaveData processBlockValue(const std::string& value) {
     return {log_count, message_count, {it, value.end()}};
 }
 
-std::array<char, sizeof(uint64_t) * 2> requestValue(
-    uint64_t log_index,
-    uint64_t evm_start_log_index) {
-    std::array<char, sizeof(uint64_t) * 2> key;
-    auto it = addUint64ToKey(log_index, key.begin());
-    addUint64ToKey(evm_start_log_index, it);
+std::array<char, sizeof(uint64_t)> requestValue(uint64_t log_index) {
+    std::array<char, sizeof(uint64_t)> key;
+    addUint64ToKey(log_index, key.begin());
     return key;
 }
 }  // namespace
@@ -255,10 +252,9 @@ std::vector<char> AggregatorStore::getMessage(uint64_t index) const {
 }
 
 void AggregatorStore::saveRequest(const uint256_t& request_id,
-                                  uint64_t log_index,
-                                  uint64_t evm_start_log_index) {
+                                  uint64_t log_index) {
     auto key = requestKey(request_id);
-    auto value = requestValue(log_index, evm_start_log_index);
+    auto value = requestValue(log_index);
     auto s = data_storage->txn_db->Put(rocksdb::WriteOptions{}, vecToSlice(key),
                                        vecToSlice(value));
     if (!s.ok()) {
@@ -266,7 +262,7 @@ void AggregatorStore::saveRequest(const uint256_t& request_id,
     }
 }
 
-std::pair<uint64_t, uint64_t> AggregatorStore::getPossibleRequestInfo(
+uint64_t AggregatorStore::getPossibleRequestInfo(
     const uint256_t& request_id) const {
     auto tx = data_storage->beginTransaction();
     auto key = requestKey(request_id);
@@ -277,8 +273,7 @@ std::pair<uint64_t, uint64_t> AggregatorStore::getPossibleRequestInfo(
     }
     auto it = request_value.begin();
     uint64_t log_index = extractUint64(it);
-    uint64_t evm_start_log_index = extractUint64(it);
-    return {log_index, evm_start_log_index};
+    return log_index;
 }
 
 std::pair<uint64_t, BlockData> AggregatorStore::latestBlock() const {

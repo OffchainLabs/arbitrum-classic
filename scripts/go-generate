@@ -25,6 +25,10 @@ cd arb-provider-go
 go generate ./...
 cd ..
 
+cd arb-evm
+go generate ./...
+cd ..
+
 cd arb-tx-aggregator
 go generate ./...
 cd ..

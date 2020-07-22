@@ -532,6 +532,9 @@ export class Result {
   public logs: Log[]
   public gasUsed: ethers.utils.BigNumber
   public gasPrice: ethers.utils.BigNumber
+  public cumulativeGas: ethers.utils.BigNumber
+  public txIndex: ethers.utils.BigNumber
+  public startLogIndex: ethers.utils.BigNumber
 
   constructor(
     incoming: IncomingMessage,
@@ -539,7 +542,10 @@ export class Result {
     returnData: Uint8Array,
     logs: Log[],
     gasUsed: ethers.utils.BigNumberish,
-    gasPrice: ethers.utils.BigNumberish
+    gasPrice: ethers.utils.BigNumberish,
+    cumulativeGas: ethers.utils.BigNumberish,
+    txIndex: ethers.utils.BigNumberish,
+    startLogIndex: ethers.utils.BigNumberish
   ) {
     this.incoming = incoming
     this.resultCode = resultCode
@@ -547,31 +553,63 @@ export class Result {
     this.logs = logs
     this.gasUsed = ethers.utils.bigNumberify(gasUsed)
     this.gasPrice = ethers.utils.bigNumberify(gasPrice)
+    this.cumulativeGas = ethers.utils.bigNumberify(cumulativeGas)
+    this.txIndex = ethers.utils.bigNumberify(txIndex)
+    this.startLogIndex = ethers.utils.bigNumberify(startLogIndex)
   }
 
   static fromValue(val: ArbValue.Value): Result {
     const tup = val as ArbValue.TupleValue
     const incoming = IncomingMessage.fromValue(tup.get(0))
-    const logs = stackValueToList(tup.get(3) as ArbValue.TupleValue).map(val =>
-      Log.fromValue(val)
+    const resultInfo = tup.get(1) as ArbValue.TupleValue
+    const gasInfo = tup.get(2) as ArbValue.TupleValue
+    const chainInfo = tup.get(3) as ArbValue.TupleValue
+
+    const resultCode = (resultInfo.get(
+      0
+    ) as ArbValue.IntValue).bignum.toNumber()
+    const returnData = ArbValue.bytestackToBytes(
+      resultInfo.get(1) as ArbValue.TupleValue
     )
+    const logs = stackValueToList(
+      resultInfo.get(2) as ArbValue.TupleValue
+    ).map(val => Log.fromValue(val))
+    const gasUsed = (gasInfo.get(0) as ArbValue.IntValue).bignum
+    const gasPrice = (gasInfo.get(1) as ArbValue.IntValue).bignum
+
+    const cumulativeGas = (chainInfo.get(0) as ArbValue.IntValue).bignum
+    const chainIndex = (chainInfo.get(1) as ArbValue.IntValue).bignum
+    const startLogIndex = (chainInfo.get(2) as ArbValue.IntValue).bignum
     return new Result(
       incoming,
-      (tup.get(1) as ArbValue.IntValue).bignum.toNumber(),
-      ArbValue.bytestackToBytes(tup.get(2) as ArbValue.TupleValue),
+      resultCode,
+      returnData,
       logs,
-      (tup.get(4) as ArbValue.IntValue).bignum.toNumber(),
-      (tup.get(5) as ArbValue.IntValue).bignum.toNumber()
+      gasUsed,
+      gasPrice,
+      cumulativeGas,
+      chainIndex,
+      startLogIndex
     )
   }
 
   asValue(): ArbValue.Value {
     return new ArbValue.TupleValue([
       this.incoming.asValue(),
-      new ArbValue.IntValue(this.resultCode),
-      ArbValue.hexToBytestack(this.returnData),
-      new ArbValue.IntValue(this.gasUsed),
-      new ArbValue.IntValue(this.gasPrice),
+      new ArbValue.TupleValue([
+        new ArbValue.IntValue(this.resultCode),
+        ArbValue.hexToBytestack(this.returnData),
+        listToStackValue(this.logs.map(log => log.asValue())),
+      ]),
+      new ArbValue.TupleValue([
+        new ArbValue.IntValue(this.gasUsed),
+        new ArbValue.IntValue(this.gasPrice),
+      ]),
+      new ArbValue.TupleValue([
+        new ArbValue.IntValue(this.cumulativeGas),
+        new ArbValue.IntValue(this.txIndex),
+        new ArbValue.IntValue(this.startLogIndex),
+      ]),
     ])
   }
 }
@@ -583,4 +621,12 @@ function stackValueToList(value: ArbValue.TupleValue): ArbValue.Value[] {
     value = value.get(1) as ArbValue.TupleValue
   }
   return values
+}
+
+function listToStackValue(values: ArbValue.Value[]): ArbValue.TupleValue {
+  let tup = new ArbValue.TupleValue([])
+  for (const val of values) {
+    tup = new ArbValue.TupleValue([val, tup])
+  }
+  return tup
 }
