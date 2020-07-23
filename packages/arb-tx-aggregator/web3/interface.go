@@ -88,6 +88,23 @@ type GetTransactionReceiptResult struct {
 	TransactionIndex uint        `json:"transactionIndex"`
 }
 
+type TransactionResult struct {
+	BlockHash        *common.Hash `json:"blockHash"`
+	BlockNumber      *string      `json:"blockNumber"`
+	From             string       `json:"from"`
+	Gas              string       `json:"gas"`
+	GasPrice         string       `json:"gasPrice"`
+	Hash             common.Hash  `json:"hash"`
+	Input            string       `json:"input"`
+	Nonce            string       `json:"nonce"`
+	To               *string      `json:"to"`
+	TransactionIndex *uint64      `json:"transactionIndex"`
+	Value            string       `json:"value"`
+	V                string       `json:"v"`
+	R                string       `json:"r"`
+	S                string       `json:"s"`
+}
+
 func unmarshalJSONArray(buf []byte, fields []interface{}) error {
 	wantLen := len(fields)
 	if err := json.Unmarshal(buf, &fields); err != nil {

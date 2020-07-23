@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
@@ -49,7 +50,7 @@ func NewServer(
 	return &Server{srv: srv, conn: conn, info: info, sys: sys}, nil
 }
 
-func (s *Server) BlockNumber(r *http.Request, args *BlockNumberArgs, reply *string) error {
+func (s *Server) BlockNumber(r *http.Request, _ *BlockNumberArgs, reply *string) error {
 	block, err := s.srv.GetBlockCount(r.Context())
 	if err != nil {
 		return err
@@ -116,9 +117,9 @@ func (s *Server) GetCode(r *http.Request, args *AccountInfoArgs, reply *string) 
 	return nil
 }
 
-func (eth *Server) blockNum(ctx context.Context, block *rpc.BlockNumber) (uint64, error) {
+func (s *Server) blockNum(ctx context.Context, block *rpc.BlockNumber) (uint64, error) {
 	if *block == rpc.LatestBlockNumber {
-		return eth.srv.GetBlockCount(ctx)
+		return s.srv.GetBlockCount(ctx)
 	} else if *block >= 0 {
 		return uint64(*block), nil
 	} else {
@@ -126,20 +127,20 @@ func (eth *Server) blockNum(ctx context.Context, block *rpc.BlockNumber) (uint64
 	}
 }
 
-func (eth *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, reply *GetBlockResult) error {
-	height, err := eth.blockNum(r.Context(), args.BlockNum)
+func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, reply *GetBlockResult) error {
+	height, err := s.blockNum(r.Context(), args.BlockNum)
 	if err != nil {
 		return err
 	}
 	if args.IncludeTxData {
 		log.Println("GetBlockByNumber with block data")
-		block, err := eth.srv.GetBlock(r.Context(), height)
+		block, err := s.srv.GetBlock(r.Context(), height)
 		if err != nil {
 			return err
 		}
 		reply.Header = *block.Header()
 	} else {
-		header, err := eth.srv.GetBlockHeader(r.Context(), height)
+		header, err := s.srv.GetBlockHeader(r.Context(), height)
 		if err != nil {
 			return err
 		}
@@ -206,7 +207,7 @@ func (s *Server) EstimateGas(r *http.Request, args *CallTxArgs, reply *string) e
 	return nil
 }
 
-func (s *Server) GasPrice(r *http.Request, _ *EmptyArgs, reply *string) error {
+func (s *Server) GasPrice(_ *http.Request, _ *EmptyArgs, reply *string) error {
 	*reply = "0x" + big.NewInt(0).Text(16)
 	return nil
 }
@@ -251,15 +252,55 @@ func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionRece
 	return nil
 }
 
-func (s *Server) GetTransactionByHash(r *http.Request, args *GetTransactionReceiptArgs, reply **types.Transaction) error {
-	var requestId common.Hash
+func (s *Server) GetTransactionByHash(r *http.Request, args *GetTransactionReceiptArgs, reply **TransactionResult) error {
+	var requestId arbcommon.Hash
 	copy(requestId[:], *args.Data)
-
-	tx, err := s.srv.GetTransaction(r.Context(), requestId)
+	val, err := s.srv.GetRequestResult(r.Context(), requestId)
 	if err != nil {
 		return err
 	}
-	*reply = tx
+	res, err := evm.NewResultFromValue(val)
+	if err != nil {
+		return err
+	}
+	chain, err := s.srv.GetChainAddress(r.Context())
+	if err != nil {
+		return err
+	}
+	tx, err := aggregator.GetTransaction(res.L1Message, arbcommon.NewAddressFromEth(chain))
+	if err != nil {
+		return err
+	}
+	blockInfo, err := s.srv.BlockInfo(r.Context(), res.L1Message.ChainTime.BlockNum.AsInt().Uint64())
+	if err != nil {
+		return err
+	}
+	vVal, rVal, sVal := tx.RawSignatureValues()
+	txIndex := res.TxIndex.Uint64()
+	blockNum := hexutil.EncodeBig(res.L1Message.ChainTime.BlockNum.AsInt())
+	blockHash := blockInfo.Hash.ToEthHash()
+	var to *string
+	if tx.To() != nil {
+		toStr := tx.To().Hex()
+		to = &toStr
+	}
+	*reply = &TransactionResult{
+		BlockHash:        &blockHash,
+		BlockNumber:      &blockNum,
+		From:             res.L1Message.Sender.ToEthAddress().Hex(),
+		Gas:              hexutil.EncodeUint64(tx.Gas()),
+		GasPrice:         hexutil.EncodeBig(tx.GasPrice()),
+		Hash:             tx.Hash(),
+		Input:            hexutil.Encode(tx.Data()),
+		Nonce:            hexutil.EncodeUint64(tx.Nonce()),
+		To:               to,
+		TransactionIndex: &txIndex,
+		Value:            hexutil.EncodeBig(tx.Value()),
+		V:                hexutil.EncodeBig(vVal),
+		R:                hexutil.EncodeBig(rVal),
+		S:                hexutil.EncodeBig(sVal),
+	}
+
 	data, _ := json.Marshal(reply)
 	log.Println("GetTransactionByHash", string(data))
 	return nil

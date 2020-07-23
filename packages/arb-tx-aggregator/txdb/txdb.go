@@ -124,7 +124,6 @@ func (txdb *TxDB) RestoreFromCheckpoint(ctx context.Context) error {
 
 // The first
 func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent, lastBlock uint64) error {
-	log.Println("Processing new messages", msgs)
 	blockInboxes, err := txdb.breakByBlock(ctx, msgs, lastBlock)
 	if err != nil {
 		return err
@@ -313,6 +312,8 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 			log.Println("Error parsing log result", err)
 			continue
 		}
+
+		log.Println("Got result for", res.L1Message.MessageID())
 
 		if err := txdb.as.SaveRequest(res.L1Message.MessageID(), logIndex); err != nil {
 			return err

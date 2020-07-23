@@ -202,7 +202,7 @@ func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, err
 		}
 		receipts = append(receipts, receipt)
 
-		tx, err := getTransaction(res.L1Message, m.chain)
+		tx, err := GetTransaction(res.L1Message, m.chain)
 		if err == nil {
 			transactions = append(transactions, tx)
 		}
@@ -220,10 +220,10 @@ func (m *Server) GetTransaction(_ context.Context, requestId ethcommon.Hash) (*t
 	if err != nil {
 		return nil, err
 	}
-	return getTransaction(res.L1Message, m.chain)
+	return GetTransaction(res.L1Message, m.chain)
 }
 
-func getTransaction(msg message.InboxMessage, chain common.Address) (*types.Transaction, error) {
+func GetTransaction(msg message.InboxMessage, chain common.Address) (*types.Transaction, error) {
 	if msg.Kind != message.L2Type {
 		return nil, errors.New("result is not a transaction")
 	}
