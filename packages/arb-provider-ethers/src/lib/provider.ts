@@ -392,6 +392,9 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         }
         return result.gasUsed
       }
+      case 'getGasPrice': {
+        return 0
+      }
       case 'sendTransaction': {
         return this.client.sendTransaction(params.signedTransaction)
       }

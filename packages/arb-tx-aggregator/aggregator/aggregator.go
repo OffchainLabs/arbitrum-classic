@@ -158,7 +158,7 @@ func (m *Server) GetBlockHeader(_ context.Context, height uint64) (*types.Header
 	return &types.Header{
 		ParentHash:  parentHash,
 		UncleHash:   ethcommon.Hash{},
-		Coinbase:    ethcommon.Address{},
+		Coinbase:    m.chain.ToEthAddress(),
 		Root:        ethcommon.Hash{},
 		TxHash:      ethcommon.Hash{},
 		ReceiptHash: ethcommon.Hash{},
@@ -200,24 +200,40 @@ func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, err
 		}
 		receipts = append(receipts, receipt)
 
-		if res.L1Message.Kind == message.L2Type {
-			msg, err := l2message.NewL2MessageFromData(res.L1Message.Data)
-			if err != nil {
-				return nil, err
-			}
-			if msg, ok := msg.(l2message.EthConvertable); ok {
-				tx, err := msg.AsEthTx(m.chain)
-				if err != nil {
-					return nil, err
-				}
-				transactions = append(transactions, tx)
-			} else {
-				log.Println("found non tx result")
-			}
+		tx, err := getTransaction(res.L1Message, m.chain)
+		if err == nil {
+			transactions = append(transactions, tx)
 		}
 	}
 
 	return types.NewBlock(header, transactions, nil, receipts), nil
+}
+
+func (m *Server) GetTransaction(_ context.Context, requestId ethcommon.Hash) (*types.Transaction, error) {
+	val, err := m.db.GetRequest(common.NewHashFromEth(requestId))
+	if err != nil {
+		return nil, nil
+	}
+	res, err := evm.NewResultFromValue(val)
+	if err != nil {
+		return nil, err
+	}
+	return getTransaction(res.L1Message, m.chain)
+}
+
+func getTransaction(msg message.InboxMessage, chain common.Address) (*types.Transaction, error) {
+	if msg.Kind != message.L2Type {
+		return nil, errors.New("result is not a transaction")
+	}
+	l2msg, err := l2message.NewL2MessageFromData(msg.Data)
+	if err != nil {
+		return nil, err
+	}
+	ethMsg, ok := l2msg.(l2message.EthConvertable)
+	if !ok {
+		return nil, errors.New("message not convertible to receipt")
+	}
+	return ethMsg.AsEthTx(chain)
 }
 
 // Call takes a request from a client to process in a temporary context

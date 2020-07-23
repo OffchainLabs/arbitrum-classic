@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	errors2 "github.com/pkg/errors"
-	"log"
 	"math/big"
 	"sync"
 	"time"
@@ -218,6 +217,9 @@ func (conn *ArbConnection) EstimateGas(
 	if err != nil {
 		return 0, err
 	}
+	if res.ResultCode != evm.ReturnCode {
+		return 0, errors.New("Transaction always failing")
+	}
 	return res.GasUsed.Uint64() + 100000, nil
 }
 
@@ -387,8 +389,6 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	if err != nil {
 		return nil, err
 	}
-
-	log.Println("Got tx receipt", result)
 
 	if result.L1Message.MessageID().ToEthHash() != txHash {
 		return nil, errors.New("tx hash doesn't match")

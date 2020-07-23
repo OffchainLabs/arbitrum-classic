@@ -91,14 +91,14 @@ func makeCallOpts(ctx context.Context, num rpc.BlockNumber, from common.Address)
 }
 
 func (s *Server) GetTransactionCount(r *http.Request, args *AccountInfoArgs, reply *string) error {
-	balance, err := s.sys.GetTransactionCount(
+	txCount, err := s.sys.GetTransactionCount(
 		makeCallOpts(r.Context(), args.BlockNum, common.Address{}),
 		*args.Address,
 	)
 	if err != nil {
 		return err
 	}
-	*reply = "0x" + balance.Text(16)
+	*reply = "0x" + txCount.Text(16)
 	return nil
 }
 
@@ -231,7 +231,18 @@ func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionRece
 	if err != nil {
 		return err
 	}
-	log.Println("Got receipt", *receipt)
-	**reply = *receipt
+	*reply = receipt
+	return nil
+}
+
+func (s *Server) GetTransactionByHash(r *http.Request, args *GetTransactionReceiptArgs, reply **types.Transaction) error {
+	var requestId common.Hash
+	copy(requestId[:], *args.Data)
+
+	tx, err := s.srv.GetTransaction(r.Context(), requestId)
+	if err != nil {
+		return err
+	}
+	*reply = tx
 	return nil
 }
