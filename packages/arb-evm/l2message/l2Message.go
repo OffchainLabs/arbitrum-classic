@@ -52,6 +52,10 @@ type AbstractL2Message interface {
 	AsData() []byte
 }
 
+type AbstractTransaction interface {
+	Destination() common.Address
+}
+
 type EthConvertable interface {
 	AsEthTx(chain common.Address) (*types.Transaction, error)
 }
@@ -137,6 +141,10 @@ func (t Transaction) AsEthTx(_ common.Address) (*types.Transaction, error) {
 	return types.NewTransaction(t.SequenceNum.Uint64(), t.DestAddress.ToEthAddress(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data), nil
 }
 
+func (t Transaction) Destination() common.Address {
+	return t.DestAddress
+}
+
 func (t Transaction) String() string {
 	return fmt.Sprintf(
 		"Transaction(%v, %v, %v, %v, %v, %v)",
@@ -219,6 +227,10 @@ func NewRandomContractTransaction() ContractTransaction {
 	}
 }
 
+func (t ContractTransaction) Destination() common.Address {
+	return t.DestAddress
+}
+
 func (t ContractTransaction) Type() message.Type {
 	return message.L2Type
 }
@@ -278,6 +290,10 @@ func NewRandomCall() Call {
 	}
 }
 
+func (t Call) Destination() common.Address {
+	return t.DestAddress
+}
+
 func (c Call) L2Type() L2SubType {
 	return CallType
 }
@@ -318,6 +334,10 @@ func NewSignedTransactionFromEth(tx *types.Transaction) SignedTransaction {
 		Transaction: NewTransactionFromEthTx(tx),
 		Signature:   sig,
 	}
+}
+
+func (t SignedTransaction) Destination() common.Address {
+	return t.Transaction.Destination()
 }
 
 func ChainAddressToID(chain common.Address) *big.Int {

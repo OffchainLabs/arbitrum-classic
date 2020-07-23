@@ -145,20 +145,11 @@ func (m *Server) BlockInfo(_ context.Context, height uint64) (machine.BlockInfo,
 	return m.db.GetBlock(height)
 }
 
-func (m *Server) GetBlockHeader(_ context.Context, height uint64) (*types.Header, error) {
+func (m *Server) GetBlockHeader(ctx context.Context, height uint64) (*types.Header, error) {
 	currentBlock, err := m.db.GetBlock(height)
 	if err != nil {
 		return nil, err
 	}
-	var parentHash ethcommon.Hash
-	if height > 0 {
-		prevBlock, err := m.db.GetBlock(height - 1)
-		if err != nil {
-			return nil, err
-		}
-		parentHash = prevBlock.Hash.ToEthHash()
-	}
-
 	gasUsed := uint64(0)
 	gasLimit := uint64(100000000)
 	if currentBlock.MessageCount > 0 {
@@ -173,23 +164,15 @@ func (m *Server) GetBlockHeader(_ context.Context, height uint64) (*types.Header
 		gasUsed = res.CumulativeGas.Uint64()
 	}
 
-	return &types.Header{
-		ParentHash:  parentHash,
-		UncleHash:   ethcommon.Hash{},
-		Coinbase:    m.chain.ToEthAddress(),
-		Root:        ethcommon.Hash{},
-		TxHash:      ethcommon.Hash{},
-		ReceiptHash: ethcommon.Hash{},
-		Bloom:       currentBlock.Bloom,
-		Difficulty:  big.NewInt(0),
-		Number:      new(big.Int).SetUint64(height),
-		GasLimit:    gasLimit,
-		GasUsed:     gasUsed,
-		Time:        0,
-		Extra:       []byte{},
-		MixDigest:   ethcommon.Hash{},
-		Nonce:       types.BlockNonce{},
-	}, nil
+	ethHeader, err := m.client.HeaderByHash(ctx, currentBlock.Hash.ToEthHash())
+	if err != nil {
+		return nil, err
+	}
+	ethHeader.Bloom = currentBlock.Bloom
+	ethHeader.GasLimit = gasLimit
+	ethHeader.GasUsed = gasUsed
+
+	return ethHeader, nil
 }
 
 func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, error) {

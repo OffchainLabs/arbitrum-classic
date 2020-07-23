@@ -295,5 +295,21 @@ func TestBatch(t *testing.T) {
 		if result.L1Message.MessageID() != hashes[i] {
 			t.Error("l2message had incorrect id", result.L1Message.MessageID(), hashes[i])
 		}
+		l2Message, err := l2message.NewL2MessageFromData(result.L1Message.Data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i < 10 {
+			_, ok := l2Message.(l2message.Transaction)
+			if !ok {
+				t.Error("bad transaction format")
+			}
+		} else {
+			_, ok := l2Message.(l2message.SignedTransaction)
+			if !ok {
+				t.Error("bad transaction format")
+			}
+		}
+		log.Printf("message: %T\n", l2Message)
 	}
 }

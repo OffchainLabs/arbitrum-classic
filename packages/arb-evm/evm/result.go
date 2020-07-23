@@ -84,9 +84,9 @@ func (r *Result) ToEthReceipt(blockHash common.Hash) (*types.Receipt, error) {
 	if r.L1Message.Kind == message.L2Type {
 		msg, err := l2message.NewL2MessageFromData(r.L1Message.Data)
 		if err == nil {
-			if msg, ok := msg.(l2message.Transaction); ok {
+			if msg, ok := msg.(l2message.AbstractTransaction); ok {
 				emptyAddress := common.Address{}
-				if msg.DestAddress == emptyAddress {
+				if msg.Destination() == emptyAddress {
 					copy(contractAddress[:], r.ReturnData[12:])
 				}
 			}

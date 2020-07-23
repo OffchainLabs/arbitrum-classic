@@ -2,6 +2,7 @@ package web3
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -220,7 +221,7 @@ func (s *Server) SendRawTransaction(r *http.Request, args *SendTransactionArgs, 
 	return nil
 }
 
-func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionReceiptArgs, reply **types.Receipt) error {
+func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionReceiptArgs, reply **GetTransactionReceiptResult) error {
 	var requestId common.Hash
 	copy(requestId[:], *args.Data)
 	receipt, err := s.conn.TransactionReceipt(r.Context(), requestId)
@@ -231,7 +232,20 @@ func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionRece
 	if err != nil {
 		return err
 	}
-	*reply = receipt
+	*reply = &GetTransactionReceiptResult{
+		Status:            receipt.Status,
+		CumulativeGasUsed: receipt.CumulativeGasUsed,
+		Bloom:             hexutil.Encode(receipt.Bloom.Bytes()),
+		Logs:              receipt.Logs,
+		TxHash:            receipt.TxHash,
+		ContractAddress:   receipt.ContractAddress.Hex(),
+		GasUsed:           receipt.GasUsed,
+		BlockHash:         receipt.BlockHash,
+		BlockNumber:       receipt.BlockNumber,
+		TransactionIndex:  receipt.TransactionIndex,
+	}
+	txReceipt, _ := json.Marshal(reply)
+	log.Println("GetTransactionReceipt", string(txReceipt))
 	return nil
 }
 

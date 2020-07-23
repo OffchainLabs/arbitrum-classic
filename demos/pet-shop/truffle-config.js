@@ -21,7 +21,7 @@ module.exports = {
     arbitrum2: {
       provider: function () {
         return wrapProvider(
-          new HDWalletProvider(mnemonic, 'http://127.0.0.1:8546/')
+          new HDWalletProvider(mnemonic, 'http://127.0.0.1:8547/')
         )
       },
       network_id: '*', // Match any network id
