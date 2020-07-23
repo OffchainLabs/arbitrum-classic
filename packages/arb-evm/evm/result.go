@@ -19,7 +19,10 @@ package evm
 import (
 	"errors"
 	"fmt"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
@@ -74,6 +77,57 @@ func (r *Result) AsValue() value.Value {
 		value.NewIntValue(r.GasPrice),
 	})
 	return tup
+}
+
+func (r *Result) ToEthReceipt(blockHash common.Hash) (*types.Receipt, error) {
+	contractAddress := ethcommon.Address{}
+	if r.L1Message.Kind == message.L2Type {
+		msg, err := l2message.NewL2MessageFromData(r.L1Message.Data)
+		if err == nil {
+			if msg, ok := msg.(l2message.Transaction); ok {
+				emptyAddress := common.Address{}
+				if msg.DestAddress == emptyAddress {
+					copy(contractAddress[:], r.ReturnData[12:])
+				}
+			}
+		}
+	}
+
+	status := uint64(0)
+	if r.ResultCode == ReturnCode {
+		status = 1
+	}
+
+	var evmLogs []*types.Log
+	logIndex := r.StartLogIndex.Uint64()
+	for _, l := range r.EVMLogs {
+		ethLog := &types.Log{
+			Address:     l.Address.ToEthAddress(),
+			Topics:      common.NewEthHashesFromHashes(l.Topics),
+			Data:        l.Data,
+			BlockNumber: r.L1Message.ChainTime.BlockNum.AsInt().Uint64(),
+			TxHash:      r.L1Message.MessageID().ToEthHash(),
+			TxIndex:     uint(r.TxIndex.Uint64()),
+			BlockHash:   blockHash.ToEthHash(),
+			Index:       uint(logIndex),
+		}
+		logIndex++
+		evmLogs = append(evmLogs, ethLog)
+	}
+
+	return &types.Receipt{
+		PostState:         []byte{0},
+		Status:            status,
+		CumulativeGasUsed: r.CumulativeGas.Uint64(),
+		Bloom:             types.BytesToBloom(types.LogsBloom(evmLogs).Bytes()),
+		Logs:              evmLogs,
+		TxHash:            r.L1Message.MessageID().ToEthHash(),
+		ContractAddress:   contractAddress,
+		GasUsed:           r.GasUsed.Uint64(),
+		BlockHash:         blockHash.ToEthHash(),
+		BlockNumber:       r.L1Message.ChainTime.BlockNum.AsInt(),
+		TransactionIndex:  uint(r.TxIndex.Uint64()),
+	}, nil
 }
 
 func NewResultFromValue(val value.Value) (*Result, error) {

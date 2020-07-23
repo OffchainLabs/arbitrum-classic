@@ -22,6 +22,7 @@ module.exports = {
         return new HDWalletProvider(mnemonic, 'http://127.0.0.1:8546/')
       },
       network_id: '*', // Match any network id
+      gasPrice: 0,
     },
     arbitrum: {
       provider: function () {

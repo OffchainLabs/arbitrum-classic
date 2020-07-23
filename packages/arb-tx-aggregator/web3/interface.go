@@ -5,26 +5,18 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 )
 
 type BlockNumberArgs struct{}
 
-type GetBalanceArgs struct {
-	Address  *common.Address
-	BlockNum *ethrpc.BlockNumber
-}
-
-func (n *GetBalanceArgs) UnmarshalJSON(buf []byte) error {
-	return unmarshalJSONArray(buf, []interface{}{&n.Address, &n.BlockNum})
-}
-
-type GetTransactionCountArgs struct {
+type AccountInfoArgs struct {
 	Address  *common.Address
 	BlockNum ethrpc.BlockNumber
 }
 
-func (n *GetTransactionCountArgs) UnmarshalJSON(buf []byte) error {
+func (n *AccountInfoArgs) UnmarshalJSON(buf []byte) error {
 	return unmarshalJSONArray(buf, []interface{}{&n.Address, &n.BlockNum})
 }
 
@@ -35,6 +27,10 @@ type GetBlockByNumberArgs struct {
 
 func (n *GetBlockByNumberArgs) UnmarshalJSON(buf []byte) error {
 	return unmarshalJSONArray(buf, []interface{}{&n.BlockNum, &n.IncludeTxData})
+}
+
+type GetBlockResult struct {
+	types.Header
 }
 
 type CallTxArgs struct {
@@ -55,9 +51,7 @@ func (n *CallArgs) UnmarshalJSON(buf []byte) error {
 	return unmarshalJSONArray(buf, []interface{}{&n.CallArgs, &n.BlockNum})
 }
 
-type GasPriceArgs struct{}
-
-type VersionArgs struct{}
+type EmptyArgs struct{}
 
 type SendTransactionArgs struct {
 	Data *hexutil.Bytes

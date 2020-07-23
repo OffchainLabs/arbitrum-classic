@@ -52,6 +52,10 @@ type AbstractL2Message interface {
 	AsData() []byte
 }
 
+type EthConvertable interface {
+	AsEthTx(chain common.Address) (*types.Transaction, error)
+}
+
 func L2MessageAsData(msg AbstractL2Message) []byte {
 	data := make([]byte, 0)
 	data = append(data, byte(msg.L2Type()))
@@ -129,8 +133,8 @@ func NewRandomTransaction() Transaction {
 	}
 }
 
-func (t Transaction) AsEthTx() *types.Transaction {
-	return types.NewTransaction(t.SequenceNum.Uint64(), t.DestAddress.ToEthAddress(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
+func (t Transaction) AsEthTx(_ common.Address) (*types.Transaction, error) {
+	return types.NewTransaction(t.SequenceNum.Uint64(), t.DestAddress.ToEthAddress(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data), nil
 }
 
 func (t Transaction) String() string {
@@ -322,8 +326,11 @@ func ChainAddressToID(chain common.Address) *big.Int {
 
 func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) SignedTransaction {
 	tx := NewRandomTransaction()
-
-	signedTx, err := types.SignTx(tx.AsEthTx(), types.NewEIP155Signer(ChainAddressToID(chain)), privKey)
+	ethTx, err := tx.AsEthTx(chain)
+	if err != nil {
+		panic(err)
+	}
+	signedTx, err := types.SignTx(ethTx, types.NewEIP155Signer(ChainAddressToID(chain)), privKey)
 	if err != nil {
 		panic(err)
 	}
@@ -340,7 +347,11 @@ func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) SignedTra
 }
 
 func (t SignedTransaction) AsEthTx(chain common.Address) (*types.Transaction, error) {
-	return t.Transaction.AsEthTx().WithSignature(types.NewEIP155Signer(ChainAddressToID(chain)), t.Signature[:])
+	tx, err := t.Transaction.AsEthTx(chain)
+	if err != nil {
+		return nil, err
+	}
+	return tx.WithSignature(types.NewEIP155Signer(ChainAddressToID(chain)), t.Signature[:])
 }
 
 func (t SignedTransaction) L2Type() L2SubType {

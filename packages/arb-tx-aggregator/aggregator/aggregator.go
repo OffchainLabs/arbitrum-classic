@@ -141,7 +141,8 @@ func (m *Server) GetBlockHeader(_ context.Context, height uint64) (*types.Header
 		parentHash = prevBlock.Hash.ToEthHash()
 	}
 
-	totalGas := uint64(0)
+	gasUsed := uint64(0)
+	gasLimit := uint64(100000000)
 	if currentBlock.MessageCount > 0 {
 		lastLog, err := m.db.GetLog(currentBlock.StartLog + currentBlock.MessageCount - 1)
 		if err != nil {
@@ -151,7 +152,7 @@ func (m *Server) GetBlockHeader(_ context.Context, height uint64) (*types.Header
 		if err != nil {
 			return nil, err
 		}
-		totalGas = res.CumulativeGas.Uint64()
+		gasUsed = res.CumulativeGas.Uint64()
 	}
 
 	return &types.Header{
@@ -164,8 +165,8 @@ func (m *Server) GetBlockHeader(_ context.Context, height uint64) (*types.Header
 		Bloom:       currentBlock.Bloom,
 		Difficulty:  big.NewInt(0),
 		Number:      new(big.Int).SetUint64(height),
-		GasLimit:    totalGas,
-		GasUsed:     totalGas,
+		GasLimit:    gasLimit,
+		GasUsed:     gasUsed,
 		Time:        0,
 		Extra:       []byte{},
 		MixDigest:   ethcommon.Hash{},
@@ -178,7 +179,45 @@ func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, err
 	if err != nil {
 		return nil, err
 	}
-	return types.NewBlock(header, []*types.Transaction{}, nil, []*types.Receipt{}), nil
+	currentBlock, err := m.db.GetBlock(height)
+	if err != nil {
+		return nil, err
+	}
+	transactions := make([]*types.Transaction, 0, currentBlock.LogCount)
+	receipts := make([]*types.Receipt, 0, currentBlock.LogCount)
+	for i := uint64(0); i < currentBlock.LogCount; i++ {
+		avmLog, err := m.db.GetLog(currentBlock.StartLog + i)
+		if err != nil {
+			return nil, err
+		}
+		res, err := evm.NewResultFromValue(avmLog)
+		if err != nil {
+			return nil, err
+		}
+		receipt, err := res.ToEthReceipt(currentBlock.Hash)
+		if err != nil {
+			return nil, err
+		}
+		receipts = append(receipts, receipt)
+
+		if res.L1Message.Kind == message.L2Type {
+			msg, err := l2message.NewL2MessageFromData(res.L1Message.Data)
+			if err != nil {
+				return nil, err
+			}
+			if msg, ok := msg.(l2message.EthConvertable); ok {
+				tx, err := msg.AsEthTx(m.chain)
+				if err != nil {
+					return nil, err
+				}
+				transactions = append(transactions, tx)
+			} else {
+				log.Println("found non tx result")
+			}
+		}
+	}
+
+	return types.NewBlock(header, transactions, nil, receipts), nil
 }
 
 // Call takes a request from a client to process in a temporary context
@@ -201,6 +240,7 @@ func (m *Server) executeCall(mach machine.Machine, blockId *common.BlockId, msg 
 		msg.MaxGas = m.maxCallGas
 	}
 	log.Println("Executing call", msg.MaxGas, msg.GasPriceBid, msg.DestAddress, msg.Payment)
+	log.Println("Call data", hexutil.Encode(msg.Data))
 	inboxMsg := message.NewInboxMessage(
 		message.L2Message{Data: l2message.L2MessageAsData(msg)},
 		common.NewAddressFromEth(sender),

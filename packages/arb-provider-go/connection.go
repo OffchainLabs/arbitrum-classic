@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	errors2 "github.com/pkg/errors"
+	"log"
 	"math/big"
 	"sync"
 	"time"
@@ -21,7 +22,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 type ArbConnection struct {
@@ -218,7 +218,7 @@ func (conn *ArbConnection) EstimateGas(
 	if err != nil {
 		return 0, err
 	}
-	return res.GasUsed.Uint64(), nil
+	return res.GasUsed.Uint64() + 100000, nil
 }
 
 // SendTransaction injects the transaction into the pending pool for execution.
@@ -388,60 +388,15 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 		return nil, err
 	}
 
+	log.Println("Got tx receipt", result)
+
 	if result.L1Message.MessageID().ToEthHash() != txHash {
 		return nil, errors.New("tx hash doesn't match")
-	}
-
-	status := uint64(0)
-	if result.ResultCode == evm.ReturnCode {
-		status = 1
 	}
 
 	blockInfo, err := conn.proxy.BlockInfo(ctx, result.L1Message.ChainTime.BlockNum.AsInt().Uint64())
 	if err != nil {
 		return nil, err
 	}
-	var evmLogs []*types.Log
-	logIndex := result.StartLogIndex.Uint64()
-	for _, l := range result.EVMLogs {
-		ethLog := &types.Log{
-			Address:     l.Address.ToEthAddress(),
-			Topics:      common.NewEthHashesFromHashes(l.Topics),
-			Data:        l.Data,
-			BlockNumber: result.L1Message.ChainTime.BlockNum.AsInt().Uint64(),
-			TxHash:      txHash,
-			TxIndex:     uint(result.TxIndex.Uint64()),
-			BlockHash:   blockInfo.Hash.ToEthHash(),
-			Index:       uint(logIndex),
-		}
-		logIndex++
-		evmLogs = append(evmLogs, ethLog)
-	}
-
-	contractAddress := ethcommon.Address{}
-	if result.L1Message.Kind == message.L2Type {
-		msg, err := l2message.NewL2MessageFromData(result.L1Message.Data)
-		if err == nil {
-			if msg, ok := msg.(l2message.Transaction); ok {
-				emptyAddress := common.Address{}
-				if msg.DestAddress == emptyAddress {
-					copy(contractAddress[:], result.ReturnData[12:])
-				}
-			}
-		}
-	}
-
-	return &types.Receipt{
-		PostState:         []byte{0},
-		Status:            status,
-		CumulativeGasUsed: result.CumulativeGas.Uint64(),
-		Bloom:             types.BytesToBloom(types.LogsBloom(evmLogs).Bytes()),
-		Logs:              evmLogs,
-		TxHash:            txHash,
-		ContractAddress:   contractAddress,
-		GasUsed:           result.GasUsed.Uint64(),
-		BlockHash:         blockInfo.Hash.ToEthHash(),
-		BlockNumber:       result.L1Message.ChainTime.BlockNum.AsInt(),
-		TransactionIndex:  uint(result.TxIndex.Uint64()),
-	}, nil
+	return result.ToEthReceipt(blockInfo.Hash)
 }

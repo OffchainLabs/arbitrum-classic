@@ -312,6 +312,7 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 			log.Println("Error parsing log result", err)
 			continue
 		}
+		log.Println("Got result", res)
 
 		if err := txdb.as.SaveRequest(res.L1Message.MessageID(), logIndex); err != nil {
 			return err
