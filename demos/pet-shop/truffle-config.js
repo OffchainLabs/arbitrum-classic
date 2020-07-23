@@ -1,9 +1,3 @@
-const fetch = require('node-fetch')
-global.fetch = fetch
-
-const ethers = require('ethers')
-const ArbEth = require('arb-provider-ethers')
-const ProviderBridge = require('arb-ethers-web3-bridge').ProviderBridge
 const wrapProvider = require('arb-ethers-web3-bridge').wrapProvider
 const HDWalletProvider = require('@truffle/hdwallet-provider')
 const mnemonic =
@@ -18,30 +12,13 @@ module.exports = {
       port: 7545,
       network_id: '*', // Match any network id
     },
-    arbitrum2: {
+    arbitrum: {
       provider: function () {
         return wrapProvider(
           new HDWalletProvider(mnemonic, 'http://127.0.0.1:8547/')
         )
       },
       network_id: '*', // Match any network id
-      gasPrice: 0,
-    },
-    arbitrum: {
-      provider: function () {
-        const provider = new ethers.providers.JsonRpcProvider(
-          'http://localhost:7545'
-        )
-        const arbProvider = new ArbEth.ArbProvider(
-          'http://localhost:1235',
-          provider
-        )
-        const wallet = new ethers.Wallet.fromMnemonic(mnemonic).connect(
-          arbProvider
-        )
-        return new ProviderBridge(arbProvider, wallet)
-      },
-      network_id: '*',
       gasPrice: 0,
     },
   },

@@ -74,7 +74,7 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fibAddress, err := deployContract(t, mach, addr, constructorData)
+	fibAddress, err := deployContract(t, mach, addr, constructorData, big.NewInt(0))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +191,7 @@ func TestReddit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	redditAddress, err := deployContract(t, mach, common.RandAddress(), constructorData)
+	redditAddress, err := deployContract(t, mach, common.RandAddress(), constructorData, big.NewInt(0))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,7 +223,7 @@ func TestBatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dest, err := deployContract(t, mach, common.RandAddress(), constructorData)
+	dest, err := deployContract(t, mach, common.RandAddress(), constructorData, big.NewInt(0))
 	if err != nil {
 		t.Fatal(err)
 	}

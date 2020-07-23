@@ -1,3 +1,19 @@
+/*
+* Copyright 2020, Offchain Labs, Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*    http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+ */
+
 package arbostest
 
 import (
@@ -27,11 +43,11 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 	inbox := value.NewEmptyTuple()
 	inbox = value.NewTuple2(inbox, message.NewInboxMessage(msg, sender, big.NewInt(0), chainTime).AsValue())
 	assertion, steps := mach.ExecuteAssertion(1000000000, inbox, 0)
-	data, err := value.TestVectorJSON(inbox, assertion.ParseLogs(), assertion.ParseOutMessages())
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(string(data))
+	//data, err := value.TestVectorJSON(inbox, assertion.ParseLogs(), assertion.ParseOutMessages())
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//t.Log(string(data))
 	t.Log("Ran assertion for", steps, "steps and had", assertion.LogsCount, "logs")
 	if mach.CurrentStatus() != machine.Extensive {
 		t.Fatal("machine should still be working")
@@ -143,16 +159,19 @@ func getBalanceCall(t *testing.T, mach machine.Machine, address common.Address) 
 	return val
 }
 
-func deployContract(t *testing.T, mach machine.Machine, sender common.Address, code []byte) (common.Address, error) {
-	constructorTx := l2message.Transaction{
+func makeConstructorTx(code []byte, sequenceNum *big.Int) l2message.Transaction {
+	return l2message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(0),
+		SequenceNum: sequenceNum,
 		DestAddress: common.Address{},
 		Payment:     big.NewInt(0),
 		Data:        code,
 	}
+}
 
+func deployContract(t *testing.T, mach machine.Machine, sender common.Address, code []byte, sequenceNum *big.Int) (common.Address, error) {
+	constructorTx := makeConstructorTx(code, sequenceNum)
 	constructorResult, err := runTransaction(t, mach, constructorTx, sender)
 	if err != nil {
 		return common.Address{}, err

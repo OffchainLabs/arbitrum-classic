@@ -25,7 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/math"
@@ -171,10 +170,6 @@ func (t Transaction) Equals(o Transaction) bool {
 		bytes.Equal(t.Data, o.Data)
 }
 
-func (t Transaction) Type() message.Type {
-	return message.L2Type
-}
-
 func (t Transaction) L2Type() L2SubType {
 	return TransactionType
 }
@@ -234,10 +229,6 @@ func NewRandomContractTransaction() ContractTransaction {
 
 func (t ContractTransaction) Destination() common.Address {
 	return t.DestAddress
-}
-
-func (t ContractTransaction) Type() message.Type {
-	return message.L2Type
 }
 
 func (t ContractTransaction) L2Type() L2SubType {

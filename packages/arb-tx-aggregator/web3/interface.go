@@ -105,6 +105,25 @@ type TransactionResult struct {
 	S                string       `json:"s"`
 }
 
+type GetLogsArgs struct {
+	FromBlock *ethrpc.BlockNumber `json:"fromBlock"`
+	ToBlock   *ethrpc.BlockNumber `json:"toBlock"`
+	Address   *common.Address     `json:"address"`
+	Topics    []common.Hash       `json:"topics"`
+	BlockHash *common.Hash        `json:"blockHash"`
+}
+
+type LogResult struct {
+	Removed          bool          `json:"removed"`
+	LogIndex         *string       `json:"logIndex"`
+	TransactionIndex *string       `json:"transactionIndex"`
+	TransactionHash  *common.Hash  `json:"transactionHash"`
+	BlockHash        *common.Hash  `json:"blockHash"`
+	BlockNumber      *string       `json:"blockNumber"`
+	Address          string        `json:"address"`
+	Topics           []common.Hash `json:"topics"`
+}
+
 func unmarshalJSONArray(buf []byte, fields []interface{}) error {
 	wantLen := len(fields)
 	if err := json.Unmarshal(buf, &fields); err != nil {

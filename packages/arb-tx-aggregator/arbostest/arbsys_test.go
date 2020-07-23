@@ -69,7 +69,7 @@ func TestTransactionCount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fibAddress, err := deployContract(t, mach, addr, constructorData)
+	fibAddress, err := deployContract(t, mach, addr, constructorData, big.NewInt(0))
 	if err != nil {
 		t.Fatal(err)
 	}

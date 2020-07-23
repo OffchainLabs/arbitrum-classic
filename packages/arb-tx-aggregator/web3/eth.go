@@ -305,3 +305,57 @@ func (s *Server) GetTransactionByHash(r *http.Request, args *GetTransactionRecei
 	log.Println("GetTransactionByHash", string(data))
 	return nil
 }
+
+func (s *Server) GetLogs(r *http.Request, args *GetLogsArgs, reply *[]LogResult) error {
+	var fromHeight *uint64
+	if args.FromBlock != nil {
+		from, err := s.blockNum(r.Context(), args.FromBlock)
+		if err != nil {
+			return err
+		}
+		fromHeight = &from
+	}
+
+	var toHeight *uint64
+	if args.ToBlock != nil {
+		to, err := s.blockNum(r.Context(), args.ToBlock)
+		if err != nil {
+			return err
+		}
+		toHeight = &to
+	}
+
+	addresses := make([]common.Address, 0, 1)
+	if args.Address != nil {
+		addresses = append(addresses, *args.Address)
+	}
+
+	topicGroups := make([][]common.Hash, 0, len(args.Topics))
+	for _, topic := range args.Topics {
+		topicGroups = append(topicGroups, []common.Hash{topic})
+	}
+
+	logs, err := s.srv.FindLogs(r.Context(), fromHeight, toHeight, addresses, topicGroups)
+	if err != nil {
+		return err
+	}
+	*reply = make([]LogResult, 0, len(logs))
+	for _, evmLog := range logs {
+		logIndex := hexutil.EncodeUint64(evmLog.Index)
+		txIndex := hexutil.EncodeUint64(evmLog.TxIndex)
+		txHash := evmLog.TxHash.ToEthHash()
+		blockHash := evmLog.Block.HeaderHash.ToEthHash()
+		blockNum := hexutil.EncodeBig(evmLog.Block.Height.AsInt())
+		*reply = append(*reply, LogResult{
+			Removed:          false,
+			LogIndex:         &logIndex,
+			TransactionIndex: &txIndex,
+			TransactionHash:  &txHash,
+			BlockHash:        &blockHash,
+			BlockNumber:      &blockNum,
+			Address:          evmLog.Address.Hex(),
+			Topics:           arbcommon.NewEthHashesFromHashes(evmLog.Topics),
+		})
+	}
+	return nil
+}

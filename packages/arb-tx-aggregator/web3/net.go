@@ -1,8 +1,8 @@
 package web3
 
 import (
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"net/http"
+	"strconv"
 )
 
 type Net struct {
@@ -10,6 +10,6 @@ type Net struct {
 }
 
 func (net *Net) Version(r *http.Request, args *EmptyArgs, reply *string) error {
-	*reply = hexutil.EncodeUint64(net.chainId)
+	*reply = strconv.FormatUint(net.chainId, 10)
 	return nil
 }
