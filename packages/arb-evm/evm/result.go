@@ -81,7 +81,7 @@ func (r *Result) AsValue() value.Value {
 
 func (r *Result) ToEthReceipt(blockHash common.Hash) (*types.Receipt, error) {
 	contractAddress := ethcommon.Address{}
-	if r.L1Message.Kind == message.L2Type {
+	if r.L1Message.Kind == message.L2Type && r.ResultCode == ReturnCode {
 		msg, err := l2message.NewL2MessageFromData(r.L1Message.Data)
 		if err == nil {
 			if msg, ok := msg.(l2message.AbstractTransaction); ok {
@@ -98,7 +98,7 @@ func (r *Result) ToEthReceipt(blockHash common.Hash) (*types.Receipt, error) {
 		status = 1
 	}
 
-	var evmLogs []*types.Log
+	evmLogs := make([]*types.Log, 0, len(r.EVMLogs))
 	logIndex := r.StartLogIndex.Uint64()
 	for _, l := range r.EVMLogs {
 		ethLog := &types.Log{

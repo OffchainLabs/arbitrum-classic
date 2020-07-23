@@ -19,8 +19,6 @@ package txdb
 import (
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"log"
 	"math/big"
 	"sync"
@@ -314,14 +312,6 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 		if err != nil {
 			log.Println("Error parsing log result", err)
 			continue
-		}
-
-		if res.L1Message.Kind == message.L2Type {
-			l2msg, err := l2message.NewL2MessageFromData(res.L1Message.Data)
-			if err != nil {
-				log.Println("error NewL2MessageFromData", err)
-			}
-			log.Printf("msg type%T\n", l2msg)
 		}
 
 		if err := txdb.as.SaveRequest(res.L1Message.MessageID(), logIndex); err != nil {

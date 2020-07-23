@@ -138,7 +138,12 @@ func NewRandomTransaction() Transaction {
 }
 
 func (t Transaction) AsEthTx(_ common.Address) (*types.Transaction, error) {
-	return types.NewTransaction(t.SequenceNum.Uint64(), t.DestAddress.ToEthAddress(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data), nil
+	emptyAddress := common.Address{}
+	if t.DestAddress == emptyAddress {
+		return types.NewContractCreation(t.SequenceNum.Uint64(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data), nil
+	} else {
+		return types.NewTransaction(t.SequenceNum.Uint64(), t.DestAddress.ToEthAddress(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data), nil
+	}
 }
 
 func (t Transaction) Destination() common.Address {

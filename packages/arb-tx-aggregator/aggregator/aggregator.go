@@ -168,6 +168,7 @@ func (m *Server) GetBlockHeader(ctx context.Context, height uint64) (*types.Head
 	if err != nil {
 		return nil, err
 	}
+	ethHeader.Coinbase = common.RandAddress().ToEthAddress()
 	ethHeader.Bloom = currentBlock.Bloom
 	ethHeader.GasLimit = gasLimit
 	ethHeader.GasUsed = gasUsed

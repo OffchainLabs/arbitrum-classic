@@ -220,7 +220,7 @@ func (conn *ArbConnection) EstimateGas(
 	if res.ResultCode != evm.ReturnCode {
 		return 0, errors.New("Transaction always failing")
 	}
-	return res.GasUsed.Uint64() + 100000, nil
+	return res.GasUsed.Uint64() + 1000000, nil
 }
 
 // SendTransaction injects the transaction into the pending pool for execution.

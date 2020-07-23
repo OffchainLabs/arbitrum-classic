@@ -145,6 +145,8 @@ func (eth *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs,
 		}
 		reply.Header = *header
 	}
+	data, _ := json.Marshal(reply)
+	log.Println("GetBlockByNumber", string(data))
 	return nil
 }
 
@@ -244,8 +246,8 @@ func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionRece
 		BlockNumber:       receipt.BlockNumber,
 		TransactionIndex:  receipt.TransactionIndex,
 	}
-	txReceipt, _ := json.Marshal(reply)
-	log.Println("GetTransactionReceipt", string(txReceipt))
+	data, _ := json.Marshal(reply)
+	log.Println("GetTransactionReceipt", string(data))
 	return nil
 }
 
@@ -258,5 +260,7 @@ func (s *Server) GetTransactionByHash(r *http.Request, args *GetTransactionRecei
 		return err
 	}
 	*reply = tx
+	data, _ := json.Marshal(reply)
+	log.Println("GetTransactionByHash", string(data))
 	return nil
 }
