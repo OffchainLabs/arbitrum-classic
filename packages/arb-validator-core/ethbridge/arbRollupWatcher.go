@@ -338,7 +338,13 @@ func (vm *ethRollupWatcher) GetCreationInfo(
 	if err != nil {
 		return common.Hash{}, nil, common.Hash{}, err
 	}
-	if len(logs) != 1 {
+	if len(logs) == 0 {
+		return common.Hash{},
+			nil,
+			common.Hash{},
+			errors.New("chain does not exist")
+	}
+	if len(logs) > 1 {
 		return common.Hash{},
 			nil,
 			common.Hash{},

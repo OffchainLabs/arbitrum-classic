@@ -117,12 +117,16 @@ export class ArbWallet extends ethers.Signer {
     to: string,
     value: ethers.utils.BigNumberish
   ): Promise<ethers.providers.TransactionResponse> {
+    console.log('deposit eth to chain', await this.provider.chainAddress)
     const globalInbox = await this.globalInboxConn()
     const tx = await globalInbox.depositEthMessage(
       await this.provider.chainAddress,
       to,
       { value }
     )
+    console.log('Depositing eth')
+    console.log(await tx.wait())
+    console.log('Deposited eth')
     return this.provider._wrapTransaction(tx, tx.hash)
   }
 

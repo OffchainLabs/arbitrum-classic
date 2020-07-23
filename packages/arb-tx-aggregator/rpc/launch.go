@@ -18,17 +18,20 @@ package rpc
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/machineobserver"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
 func LaunchAggregator(
 	ctx context.Context,
-	client arbbridge.ArbAuthClient,
+	client ethutils.EthClient,
+	auth *bind.TransactOpts,
 	rollupAddress common.Address,
 	executable string,
 	dbPath string,
@@ -36,23 +39,12 @@ func LaunchAggregator(
 	web3Port string,
 	flags utils2.RPCFlags,
 ) error {
-	db, err := machineobserver.RunObserver(ctx, rollupAddress, client, executable, dbPath)
+	arbClient := ethbridge.NewEthClient(client)
+	db, err := machineobserver.RunObserver(ctx, rollupAddress, arbClient, executable, dbPath)
 	if err != nil {
 		return err
 	}
-	rollupContract, err := client.NewRollupWatcher(rollupAddress)
-	if err != nil {
-		return err
-	}
-	inboxAddress, err := rollupContract.InboxAddress(context.Background())
-	if err != nil {
-		return err
-	}
-	globalInbox, err := client.NewGlobalInbox(inboxAddress, rollupAddress)
-	if err != nil {
-		return err
-	}
-	srv := aggregator.NewServer(ctx, globalInbox, rollupAddress, db)
+	srv, err := aggregator.NewServer(ctx, client, auth, rollupAddress, db)
 	errChan := make(chan error, 1)
 
 	aggServer, err := aggregator.GenerateRPCServer(srv)

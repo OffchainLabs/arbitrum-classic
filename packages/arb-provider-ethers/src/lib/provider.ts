@@ -172,7 +172,10 @@ export class ArbProvider extends ethers.providers.BaseProvider {
           continue
         }
         if (log.name == MessageDelivered) {
-          return log.values.inboxSeqNum
+          return ethers.utils.hexZeroPad(
+            ethers.utils.hexlify(log.values.inboxSeqNum),
+            32
+          )
         }
       }
     }
@@ -197,7 +200,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
       const arbTxId = await this.getArbTxId(ethReceipt)
       if (!arbTxId) {
         // If the Ethereum transaction wasn't actually a message send, the input data was bad
-        throw Error("txHash wasn't an ethereum or arbitrum transaction")
+        return null
       }
       arbTxHash = arbTxId
     } else {

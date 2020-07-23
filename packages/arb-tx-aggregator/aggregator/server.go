@@ -225,6 +225,9 @@ func (m *RPCServer) callImpl(
 
 	callMsg := l2message.NewContractTransactionFromData(dataBytes)
 	val, err := call(request.Context(), callMsg, sender)
+	if err != nil {
+		return err
+	}
 	var buf bytes.Buffer
 	_ = value.MarshalValue(val, &buf) // error can only occur from writes and bytes.Buffer is safe
 	reply.RawVal = hexutil.Encode(buf.Bytes())

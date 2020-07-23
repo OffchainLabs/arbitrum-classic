@@ -126,6 +126,7 @@ func (txdb *TxDB) RestoreFromCheckpoint(ctx context.Context) error {
 
 // The first
 func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent, lastBlock uint64) error {
+	log.Println("Processing new messages", msgs)
 	blockInboxes, err := txdb.breakByBlock(ctx, msgs, lastBlock)
 	if err != nil {
 		return err

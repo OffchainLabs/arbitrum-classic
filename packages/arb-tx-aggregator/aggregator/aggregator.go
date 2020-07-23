@@ -21,8 +21,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"math/big"
 	"time"
@@ -35,11 +38,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 type Server struct {
+	client      ethutils.EthClient
 	chain       common.Address
 	batch       *batcher.Batcher
 	db          *txdb.TxDB
@@ -50,17 +53,32 @@ type Server struct {
 // NewServer returns a new instance of the Server class
 func NewServer(
 	ctx context.Context,
-	globalInbox arbbridge.GlobalInbox,
+	client ethutils.EthClient,
+	auth *bind.TransactOpts,
 	rollupAddress common.Address,
 	db *txdb.TxDB,
-) *Server {
+) (*Server, error) {
+	arbClient := ethbridge.NewEthAuthClient(client, auth)
+	rollupContract, err := arbClient.NewRollupWatcher(rollupAddress)
+	if err != nil {
+		return nil, err
+	}
+	inboxAddress, err := rollupContract.InboxAddress(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	globalInbox, err := arbClient.NewGlobalInbox(inboxAddress, rollupAddress)
+	if err != nil {
+		return nil, err
+	}
 	return &Server{
+		client:      client,
 		chain:       rollupAddress,
 		batch:       batcher.NewBatcher(ctx, globalInbox, rollupAddress),
 		db:          db,
 		maxCallTime: 0,
 		maxCallGas:  big.NewInt(100000000),
-	}
+	}, nil
 }
 
 // SendTransaction takes a request signed transaction l2message from a client

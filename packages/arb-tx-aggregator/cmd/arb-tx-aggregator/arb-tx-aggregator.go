@@ -62,11 +62,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	client := ethbridge.NewEthAuthClient(ethclint, auth)
 
 	if err := arbbridge.WaitForNonZeroBalance(
 		context.Background(),
-		client,
+		ethbridge.NewEthClient(ethclint),
 		common.NewAddressFromEth(auth.From),
 	); err != nil {
 		log.Fatal(err)
@@ -77,12 +76,13 @@ func main() {
 
 	if err := rpc.LaunchAggregator(
 		context.Background(),
-		client,
+		ethclint,
+		auth,
 		rollupArgs.Address,
 		contractFile,
 		dbPath,
 		"1235",
-		"8546",
+		"8547",
 		rpcVars,
 	); err != nil {
 		log.Fatal(err)
