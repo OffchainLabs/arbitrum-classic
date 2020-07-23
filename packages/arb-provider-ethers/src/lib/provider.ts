@@ -22,7 +22,9 @@ import {
   Log,
   MessageCode,
   L2MessageCode,
+  L2Transaction,
   L2ContractTransaction,
+  IncomingMessage,
 } from './message'
 import { ArbClient } from './client'
 import * as ArbValue from './value'
@@ -73,6 +75,19 @@ interface Message {
   data: string
   signature: string
   pubkey: string
+}
+
+function getL2Tx(incoming: IncomingMessage): L2Transaction {
+  if (incoming.msg.kind != MessageCode.L2) {
+    throw Error('Can only call getTransaction on an L2 message')
+  }
+  if (incoming.msg.message.kind == L2MessageCode.SignedTransaction) {
+    return incoming.msg.message.tx
+  } else if (incoming.msg.message.kind == L2MessageCode.Transaction) {
+    return incoming.msg.message
+  } else {
+    throw Error('Invalid l2 subtype')
+  }
 }
 
 export class ArbProvider extends ethers.providers.BaseProvider {
@@ -271,18 +286,10 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         const block = await this.ethProvider.getBlock(messageBlockNum)
 
         const incoming = result.incoming
-        if (
-          incoming.msg.kind != MessageCode.L2 ||
-          incoming.msg.message.kind != L2MessageCode.Transaction
-        ) {
-          throw Error(
-            'Can only call getTransactionReceipt on an L2 Transaction message'
-          )
-        }
-        const l2tx = incoming.msg.message
+        const msg = getL2Tx(incoming)
 
         let contractAddress = undefined
-        if (ethers.utils.hexStripZeros(l2tx.destAddress) == '0x0') {
+        if (ethers.utils.hexStripZeros(msg.destAddress) == '0x0') {
           contractAddress = ethers.utils.hexlify(result.returnData.slice(12))
         }
 
@@ -314,7 +321,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
           gasUsed: result.gasUsed,
           logs,
           status,
-          to: l2tx.destAddress,
+          to: msg.destAddress,
           transactionHash: incoming.messageID(),
           transactionIndex: result.txIndex.toNumber(),
           byzantium: true,
@@ -328,25 +335,18 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             return null
           }
           const incoming = result.incoming
-          if (
-            incoming.msg.kind != MessageCode.L2 ||
-            incoming.msg.message.kind != L2MessageCode.Transaction
-          ) {
-            throw Error(
-              'Can only call getTransaction on an L2 Transaction message'
-            )
-          }
-          const l2tx = incoming.msg.message
+          const msg = getL2Tx(incoming)
+
           const network = await this.getNetwork()
           const tx: ethers.utils.Transaction = {
-            data: ethers.utils.hexlify(l2tx.calldata),
+            data: ethers.utils.hexlify(msg.calldata),
             from: incoming.sender,
-            gasLimit: incoming.msg.message.maxGas,
-            gasPrice: incoming.msg.message.gasPriceBid,
+            gasLimit: msg.maxGas,
+            gasPrice: msg.gasPriceBid,
             hash: incoming.messageID(),
-            nonce: l2tx.sequenceNum.toNumber(),
-            to: l2tx.destAddress,
-            value: l2tx.payment,
+            nonce: msg.sequenceNum.toNumber(),
+            to: msg.destAddress,
+            value: msg.payment,
             chainId: network.chainId,
           }
           const response = this.ethProvider._wrapTransaction(tx)
