@@ -423,6 +423,8 @@ function l2SubMessageFromData(data: ethers.utils.Arrayish): L2SubMessage {
       return L2ContractTransaction.fromData(bytes.slice(1))
     case L2MessageCode.Call:
       return L2Call.fromData(bytes.slice(1))
+    case L2MessageCode.SignedTransaction:
+      return L2SignedTransaction.fromData(bytes.slice(1))
     default:
       throw Error('invalid L2 message type ' + kind)
   }
