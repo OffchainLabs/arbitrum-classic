@@ -50,5 +50,11 @@ func GenerateWeb3Server(ctx context.Context, server *aggregator.Server) (*rpc.Se
 		panic(err)
 	}
 
+	web3 := &Web3{}
+	err = s.RegisterService(web3, "Web3")
+	if err != nil {
+		panic(err)
+	}
+
 	return s, nil
 }

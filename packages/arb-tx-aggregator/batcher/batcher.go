@@ -151,7 +151,7 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 	batchTx := l2message.NewSignedTransactionFromEth(tx)
 
 	txHash := tx.Hash()
-	log.Println("Got tx: ", batchTx.Transaction, "with hash", txHash.Hex(), "from", sender.Hex())
+	log.Println("Got tx: with hash", txHash.Hex(), "from", sender.Hex())
 
 	m.Lock()
 	defer m.Unlock()

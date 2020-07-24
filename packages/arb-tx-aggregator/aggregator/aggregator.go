@@ -258,7 +258,6 @@ func (m *Server) executeCall(mach machine.Machine, blockId *common.BlockId, msg 
 		msg.MaxGas = m.maxCallGas
 	}
 	log.Println("Executing call", msg.MaxGas, msg.GasPriceBid, msg.DestAddress, msg.Payment)
-	log.Println("Call data", hexutil.Encode(msg.Data))
 	inboxMsg := message.NewInboxMessage(
 		message.L2Message{Data: l2message.L2MessageAsData(msg)},
 		common.NewAddressFromEth(sender),

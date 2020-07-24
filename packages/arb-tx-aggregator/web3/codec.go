@@ -157,7 +157,11 @@ func (c *CodecRequest) Method() (string, error) {
 // case, to the method's expected parameters.
 func (c *CodecRequest) ReadRequest(args interface{}) error {
 	if c.err == nil && c.request.Params != nil {
-		if c.request.Method != "eth_call" && c.request.Method != "eth_blockNumber" && c.request.Method != "eth_getBalance" {
+		if c.request.Method != "eth_call" &&
+			c.request.Method != "eth_blockNumber" &&
+			c.request.Method != "eth_getBalance" &&
+			c.request.Method != "eth_sendRawTransaction" &&
+			c.request.Method != "eth_estimateGas" {
 			raw, _ := c.request.Params.MarshalJSON()
 			log.Println("Got request", c.request.Method, string(raw))
 		}
