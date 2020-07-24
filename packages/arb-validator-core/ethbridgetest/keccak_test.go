@@ -17,6 +17,7 @@
 package ethbridgetest
 
 import (
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"math/big"
@@ -41,7 +42,10 @@ func TestKeccak(t *testing.T) {
 	var bigData [25]*big.Int
 	for i := 0; i < 25; i++ {
 		data[i] = rand.Uint64()
-		bigData[i] = new(big.Int).SetUint64(data[i])
+	}
+
+	for i := 0; i < 25; i++ {
+		bigData[i] = new(big.Int).SetUint64(data[5*(i%5)+i/5])
 	}
 
 	ret, err := keccakTester.KeccakF(nil, bigData)
@@ -54,8 +58,17 @@ func TestKeccak(t *testing.T) {
 	t.Log(ret)
 	t.Log(data)
 
+	var permuted [25]uint64
 	for i := range ret {
-		if ret[i].Cmp(new(big.Int).SetUint64(data[i])) != 0 {
+		permuted[i] = data[5*(i%5)+i/5]
+	}
+
+	for i := range ret {
+		t.Log(hexutil.EncodeUint64(ret[i].Uint64()), permuted)
+	}
+
+	for i := range ret {
+		if ret[i].Cmp(new(big.Int).SetUint64(permuted[i])) != 0 {
 			t.Fatal("result hash didn't match")
 		}
 	}

@@ -15,6 +15,7 @@
  */
 
 #include <avm/machine.hpp>
+#include <avm/machinestate/machineoperation.hpp>
 
 #include <secp256k1_recovery.h>
 #include <ethash/keccak.hpp>
@@ -1001,4 +1002,26 @@ TEST_CASE("HALT opcode is correct") {
     SECTION("halt") {
         // TODO: fill in halt test
     }
+}
+
+TEST_CASE("KECCAKF opcode is correct") {
+    TuplePool pool;
+    Tuple input_data(
+        intx::from_string<uint256_t>("94370651106686220754648249265079798778273"
+                                     "932128194559331492955050019282050496"),
+        intx::from_string<uint256_t>("42512909751185556122923115391154208487752"
+                                     "310613213055089416300774052282720344"),
+        intx::from_string<uint256_t>("56208326812724912066026123588383649819390"
+                                     "601658448049319166841561743369815863"),
+        intx::from_string<uint256_t>("42512909751185556122923115391154208487752"
+                                     "310613213055089416300774052282720344"),
+        intx::from_string<uint256_t>("11318235288944921066599402722758875429096"
+                                     "9798016938687372921424809289618385856"),
+        intx::from_string<uint256_t>("81755589384323691266272576345129881657705"
+                                     "914621008081459572116739688988488432"),
+        uint256_t{6345636445}, &pool);
+    uint64_t state[25];
+    machineoperation::internal::encodeKeccakState(input_data, state);
+    auto ret = machineoperation::internal::decodeKeccakState(state, &pool);
+    REQUIRE(ret == input_data);
 }

@@ -20,6 +20,8 @@
 #include <avm/machinestate/blockreason.hpp>
 
 struct MachineState;
+class Tuple;
+class TuplePool;
 
 const int send_size_limit = 10000;
 
@@ -85,6 +87,11 @@ void errcodept(MachineState& m);
 void pushinsn(MachineState& m);
 void pushinsnimm(MachineState& m);
 void sideload(MachineState& m);
+
+namespace internal {
+void encodeKeccakState(const Tuple& tup, uint64_t* state);
+Tuple decodeKeccakState(const uint64_t* state, TuplePool* pool);
+}  // namespace internal
 }  // namespace machineoperation
 
 #endif /* machineoperation_hpp */

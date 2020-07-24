@@ -361,41 +361,50 @@ void ethhash2Op(MachineState& m) {
     ++m.pc;
 }
 
-void keccakF(MachineState& m) {
-    m.stack.prepForMod(1);
-    auto& tup = assumeTuple(m.stack[0]);
+namespace internal {
+void encodeKeccakState(const Tuple& tup, uint64_t* state) {
     if (tup.tuple_size() != 7) {
         throw bad_pop_type{};
     }
 
     std::array<uint256_t, 7> in_values;
     for (uint64_t i = 0; i < 7; i++) {
-        if (!nonstd::holds_alternative<uint256_t>(tup.get_element(0))) {
+        if (!nonstd::holds_alternative<uint256_t>(tup.get_element(i))) {
             throw bad_pop_type{};
         }
-        in_values[i] = nonstd::get<uint256_t>(tup.get_element(i / 7));
+        in_values[i] = nonstd::get<uint256_t>(tup.get_element(i));
     }
-
-    uint64_t state[25];
 
     for (size_t i = 0; i < 25; i++) {
-        state[i] = static_cast<uint64_t>(in_values[i / 7]);
-        in_values[i / 7] >>= 64;
-        ;
+        state[5 * (i % 5) + i / 5] = static_cast<uint64_t>(in_values[i / 4]);
+        in_values[i / 4] >>= 64;
     }
+}
 
-    ethash_keccakf1600(state);
-
+Tuple decodeKeccakState(const uint64_t* state, TuplePool* pool) {
     std::array<uint256_t, 7> values;
     values.fill(0);
 
     for (size_t i = 0; i < 25; i++) {
-        values[i / 7] |= state[i];
-        values[i / 7] <<= 64;
+        values[i / 4] |=
+            (uint256_t{state[5 * (i % 5) + i / 5]} << ((i % 4) * 64));
     }
 
-    m.stack[0] = Tuple(values[0], values[1], values[2], values[3], values[4],
-                       values[5], values[6], m.pool.get());
+    return Tuple(values[0], values[1], values[2], values[3], values[4],
+                 values[5], values[6], pool);
+}
+}  // namespace internal
+
+void keccakF(MachineState& m) {
+    m.stack.prepForMod(1);
+    auto& tup = assumeTuple(m.stack[0]);
+    uint64_t state[25];
+
+    internal::encodeKeccakState(tup, state);
+
+    ethash_keccakf1600(state);
+
+    m.stack[0] = internal::decodeKeccakState(state, m.pool.get());
     ++m.pc;
 }
 

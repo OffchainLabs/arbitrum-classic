@@ -134,6 +134,7 @@ func (m *Machine) ExecuteAssertion(
 	)
 
 	outMessagesRaw := toByteSlice(assertion.outMessages)
+
 	logsRaw := toByteSlice(assertion.logs)
 
 	return protocol.NewExecutionAssertion(
@@ -145,6 +146,7 @@ func (m *Machine) ExecuteAssertion(
 		logsRaw,
 		uint64(assertion.logCount),
 	), uint64(assertion.numSteps)
+
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {
@@ -152,6 +154,7 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 	rawProof := C.machineMarshallForProof(m.c)
 
 	return C.GoBytes(unsafe.Pointer(rawProof.data), rawProof.length), nil
+
 }
 
 func (m *Machine) MarshalState() ([]byte, error) {
