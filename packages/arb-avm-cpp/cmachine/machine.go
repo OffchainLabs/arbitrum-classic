@@ -132,11 +132,8 @@ func (m *Machine) ExecuteAssertion(
 		msgDataC,
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
-
 	outMessagesRaw := toByteSlice(assertion.outMessages)
-
 	logsRaw := toByteSlice(assertion.logs)
-
 	return protocol.NewExecutionAssertion(
 		m.Hash(),
 		int(assertion.didInboxInsn) != 0,
@@ -150,11 +147,8 @@ func (m *Machine) ExecuteAssertion(
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {
-
 	rawProof := C.machineMarshallForProof(m.c)
-
 	return C.GoBytes(unsafe.Pointer(rawProof.data), rawProof.length), nil
-
 }
 
 func (m *Machine) MarshalState() ([]byte, error) {
