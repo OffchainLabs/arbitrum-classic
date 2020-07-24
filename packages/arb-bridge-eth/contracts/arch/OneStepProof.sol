@@ -1110,7 +1110,7 @@ library OneStepProof {
         } else if (opCode == OP_ETHHASH2) {
             return (2, 8);
         } else if (opCode == OP_KECCAK_F) {
-            return (1, 8);
+            return (1, 800);
         } else if (opCode == OP_POP) {
             return (1, 1);
         } else if (opCode == OP_SPUSH) {

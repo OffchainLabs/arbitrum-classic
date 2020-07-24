@@ -30,21 +30,21 @@ import (
 
 func getInsnMultiplier(filePath string) uint64 {
 	ll := len(filePath)
-	numPopsStr := filePath[ll-4 : ll-3]
+	numPopsStr := filePath[ll-6 : ll-5]
 	numPops, err := strconv.Atoi(numPopsStr)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(filePath, " ", err)
 	}
-	numPushesStr := filePath[ll-6 : ll-5]
+	numPushesStr := filePath[ll-8 : ll-7]
 	numPushes, err := strconv.Atoi(numPushesStr)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(filePath, " ", err)
 	}
 	numExtraUnderscores := strings.Count(filePath, "_") - 2
 	return uint64(1 + numExtraUnderscores + numPops + numPushes)
 }
 
-func runAoFile(b *testing.B, filePath string) {
+func runExecutableFile(b *testing.B, filePath string) {
 	insnMultiplier := getInsnMultiplier(filePath)
 	ckpDir, err := ioutil.TempDir("/tmp", "speedtest-dummy-ckp")
 	if err != nil {
@@ -70,15 +70,15 @@ func nameFromFn(fn string) string {
 	ll := len(fn)
 	fnSlices := strings.Split(fn[:ll-7], "/")
 	ret := fnSlices[len(fnSlices)-1]
-	numPopsStr := fn[ll-4 : ll-3]
+	numPopsStr := fn[ll-6 : ll-5]
 	numPops, err := strconv.Atoi(numPopsStr)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(fn, " ", err)
 	}
-	numPushesStr := fn[ll-6 : ll-5]
+	numPushesStr := fn[ll-8 : ll-7]
 	numPushes, err := strconv.Atoi(numPushesStr)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(fn, " ", err)
 	}
 	for i := 0; i < numPushes; i++ {
 		ret = "push_" + ret
@@ -90,23 +90,23 @@ func nameFromFn(fn string) string {
 }
 
 func BenchmarkInsns(b *testing.B) {
-	_aos := getAos()
-	for _, fn := range _aos {
+	executables := getExecutables()
+	for _, fn := range executables {
 		b.Run(nameFromFn(fn), func(b *testing.B) {
-			runAoFile(b, fn)
+			runExecutableFile(b, fn)
 		})
 	}
 }
 
-func getAos() []string {
+func getExecutables() []string {
 	ret := []string{}
-	fileInfos, err := ioutil.ReadDir("./aos/")
+	fileInfos, err := ioutil.ReadDir("./executables/")
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, fileInfo := range fileInfos {
-		if !fileInfo.IsDir() && strings.HasSuffix(fileInfo.Name(), ".ao") {
-			ret = append(ret, "aos/"+fileInfo.Name())
+		if !fileInfo.IsDir() && strings.HasSuffix(fileInfo.Name(), ".mexe") {
+			ret = append(ret, "executables/"+fileInfo.Name())
 		}
 	}
 	return ret
