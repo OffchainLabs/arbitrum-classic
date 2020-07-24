@@ -18,13 +18,11 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math"
 	"math/big"
 	"os"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -78,6 +76,39 @@ func runMessage(mach machine.Machine, msg message.InboxMessage) (*evm.Result, er
 	return evmResult, nil
 }
 
+var chain = common.HexToAddress("0xc68DCee7b8cA57F41D1A417103CB65836E99e013")
+
+func printL2Message(tx []byte) error {
+	msg, err := l2message.NewL2MessageFromData(tx)
+	if err != nil {
+		return err
+	}
+	switch msg := msg.(type) {
+	case l2message.TransactionBatch:
+		for _, tx := range msg.Transactions {
+			if err := printL2Message(tx); err != nil {
+				return err
+			}
+		}
+	case l2message.SignedTransaction:
+		ethTx, err := msg.AsEthTx(chain)
+		if err != nil {
+			return err
+		}
+
+		//sender, err := types.NewEIP155Signer(l2message.ChainAddressToID(chain)).Sender(ethTx)
+		//if err != nil {
+		//	return err
+		//}
+
+		log.Println("SignedTransaction", ethTx.Hash().Hex()) // , "from", sender.Hex()
+		//log.Println(msg)
+	default:
+		log.Printf("Input: %T\n", msg)
+	}
+	return nil
+}
+
 func testMessages(filename string, contract string) error {
 	messages, err := loadMessages(filename)
 	if err != nil {
@@ -89,163 +120,44 @@ func testMessages(filename string, contract string) error {
 		return err
 	}
 
-	//tb := protocol.NewRandomTimeBounds()
-
-	addressesMap := make(map[common.Address]bool)
-	addresses := make([]common.Address, 0, len(addressesMap))
-	for address := range addressesMap {
-		addresses = append(addresses, address)
+	for _, msg := range messages {
+		inbox := value.NewEmptyTuple()
+		inbox = value.NewTuple2(inbox, msg.AsValue())
+		assertion, _ := mach.ExecuteAssertion(100000000000, inbox, 0)
+		log.Println("Ran assertion", assertion.NumGas)
 	}
 
-	totalSupplyData, _ := hexutil.Decode("0x18160ddd")
-	totalSupplyCall := l2message.NewSimpleCall(
-		common.HexToAddress("0x3c1be20be169df0d99cca3730aae70580c3edf9a"),
-		totalSupplyData,
-	)
-
-	prevEthBalances := make(map[common.Address]*big.Int)
-	prevTokenBalances := make(map[common.Address]*big.Int)
-	for _, address := range addresses {
-		prevEthBalances[address] = big.NewInt(0)
-		prevTokenBalances[address] = big.NewInt(0)
-	}
-	prevTotalSupply := big.NewInt(0)
-
-	runMsg := func(msg message.InboxMessage) error {
-		log.Println()
-		log.Println(msg)
-
-		txReturn, err := runMessage(mach, msg)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Println("tx result", txReturn)
-
-		tokenSupplyResult, err := runMessage(mach.Clone(), message.NewInboxMessage(
-			message.L2Message{Data: l2message.L2MessageAsData(totalSupplyCall)},
-			common.Address{},
-			big.NewInt(0),
-			message.ChainTime{},
-		))
-		if err != nil {
-			log.Fatal(err)
-		}
-		totalBalance := new(big.Int).SetBytes(tokenSupplyResult.ReturnData)
-		log.Println("total supply", toEth(totalBalance))
-		ethBalances := make(map[common.Address]*big.Int)
-		tokenBalances := make(map[common.Address]*big.Int)
-		for _, address := range addresses {
-			getTokenBalanceData, _ := hexutil.Decode("0x70a08231000000000000000000000000" + address.String()[2:])
-			getTokenBalanceCall := l2message.NewSimpleCall(
-				common.HexToAddress("0x716f0d674efeeca329f141d0ca0d97a98057bdbf"),
-				getTokenBalanceData,
-			)
-			tokenBalanceResult, err := runMessage(mach.Clone(), message.NewInboxMessage(
-				message.L2Message{Data: l2message.L2MessageAsData(getTokenBalanceCall)},
-				common.Address{},
-				big.NewInt(0),
-				message.ChainTime{},
-			))
-			getEthBalanceData, _ := hexutil.Decode("0xf8b2cb4f000000000000000000000000" + address.String()[2:])
-			call := l2message.NewSimpleCall(
-				common.HexToAddress("0x0000000000000000000000000000000000000065"),
-				getEthBalanceData,
-			)
-			ethBalanceResult, err := runMessage(mach.Clone(), message.NewInboxMessage(
-				message.L2Message{Data: l2message.L2MessageAsData(call)},
-				common.Address{},
-				big.NewInt(0),
-				message.ChainTime{},
-			))
-			if err != nil {
-				log.Fatal(err)
-			}
-			ethBalances[address] = new(big.Int).SetBytes(ethBalanceResult.ReturnData)
-			tokenBalances[address] = new(big.Int).SetBytes(tokenBalanceResult.ReturnData)
-
-			log.Println("balance", address, toEth(ethBalances[address]), toEth(tokenBalances[address]))
-		}
-
-		blocked := mach.IsBlocked(true)
-		if blocked != nil {
-			return fmt.Errorf("machine is blocked: %v", blocked)
-		}
-		if txReturn.ResultCode == evm.RevertCode {
-			for _, address := range addresses {
-				if ethBalances[address].Cmp(prevEthBalances[address]) != 0 {
-					log.Fatal("eth balance changed after revert")
-				}
-				if tokenBalances[address].Cmp(prevTokenBalances[address]) != 0 {
-					log.Fatal("token balance changed after revert")
-				}
-			}
-			if prevTotalSupply.Cmp(totalBalance) != 0 {
-				log.Fatal("total supply changed after revert")
-			}
-		}
-		prevEthBalances = ethBalances
-		prevTokenBalances = tokenBalances
-		prevTotalSupply = totalBalance
-		return nil
-	}
-
-	for i, msg := range messages {
-		//if i == 35 {
-		//	break
-		//}
-		log.Println(i)
-		if err := runMsg(msg); err != nil {
-			log.Println(err)
-			return nil
-		}
-	}
-
-	//lastMessage := singleMessages[34]
-	//_, err = runMessage(mach, lastMessage)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-
-	//info := lastMessage.DeliveryInfo
-	//msg := lastMessage.Message.(l2message.Transaction)
-	//msg.SequenceNum = big.NewInt(0)
-
-	//vmInbox := structures.NewVMInbox()
-	//vmInbox.DeliverMessage(l2message.Delivered{
-	//	Message:      msg,
-	//	DeliveryInfo: info,
-	//})
-	//val := vmInbox.AsValue()
-	//log.Println(hexutil.Encode(value.MarshalValueToBytes(val)))
-
-	//log.Println("Delivering crash l2message", msg)
-	//tokenBalanceFinalMessage := l2message.Delivered{
-	//	Message:      getTokenBalanceCall,
-	//	DeliveryInfo: lastMessage.DeliveryInfo,
-	//}
-	//vmInbox := structures.NewVMInbox()
-	//vmInbox.DeliverMessage(tokenBalanceFinalMessage)
-	//i := 0
-	//_, _ = mach.ExecuteAssertion(
-	//	1,
-	//	tb,
-	//	vmInbox.AsValue(),
-	//	1000,
-	//)
-	//for {
-	//	mach.PrintState()
-	//	blocked := mach.IsBlocked(common.NewTimeBlocksInt(0), false)
-	//	if blocked != nil {
-	//		log.Printf("machine after %v steps is blocked: %v\n", i, blocked)
-	//		return nil
+	//inbox := value.NewEmptyTuple()
+	//for _, msg := range messages {
+	//	nested, err := msg.NestedMessage()
+	//	if err != nil {
+	//		return err
 	//	}
-	//	_, _ = mach.ExecuteAssertion(
-	//		1,
-	//		tb,
-	//		value.NewEmptyTuple(),
-	//		1000,
-	//	)
-	//	i++
+	//	if tx, ok := nested.(message.L2Message); ok {
+	//		if err := printL2Message(tx.Data); err != nil {
+	//			return err
+	//		}
+	//	} else {
+	//		log.Printf("Input %T: %v from %v\n", nested, nested, msg.Sender)
+	//	}
+	//	inbox = value.NewTuple2(inbox, msg.AsValue())
+
+	//}
+	//assertion, steps := mach.ExecuteAssertion(100000000000, inbox, 0)
+	//log.Println("Ran for", steps, assertion.NumGas)
+	////testData, err := value.TestVectorJSON(inbox, assertion.ParseLogs(), assertion.ParseOutMessages())
+	////if err != nil {
+	////	return err
+	////}
+	////log.Println(string(testData))
+	//logs := assertion.ParseLogs()
+	//log.Println("Had logs", len(logs))
+	//for _, avmLog := range logs {
+	//	res, err := evm.NewResultFromValue(avmLog)
+	//	if err != nil {
+	//		return err
+	//	}
+	//	log.Println("Got res", res.ResultCode, res.GasUsed, res.L1Message.Sender, res.L1Message.MessageID())
 	//}
 	return nil
 }
