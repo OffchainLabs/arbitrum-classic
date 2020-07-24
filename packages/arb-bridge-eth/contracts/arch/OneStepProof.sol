@@ -20,6 +20,7 @@ pragma solidity ^0.5.11;
 
 import "./Value.sol";
 import "./Machine.sol";
+import "../libraries/Keccak.sol";
 
 // Sourced from https://github.com/leapdao/solEVM-enforcer/tree/master
 
@@ -520,6 +521,43 @@ library OneStepProof {
         return true;
     }
 
+    function executeKeccakFInsn(
+        Machine.Data memory machine,
+        Value.Data memory val1
+    ) internal pure returns (bool) {
+        if (!val1.isTuple()) {
+            return false;
+        }
+        Value.Data[] memory values = val1.tupleVal;
+        if (values.length != 7) {
+            return false;
+        }
+        for (uint256 i = 0; i < 7; i++) {
+            if (!values[i].isInt()) {
+                return false;
+            }
+        }
+        uint256[25] memory data;
+        for (uint256 i = 0; i < 25; i++) {
+            data[i] = uint256(uint64(values[i / 7].intVal << ((i % 4) * 64)));
+        }
+
+        data = Keccak.keccak_f(data);
+
+        Value.Data[] memory outValues = new Value.Data[](7);
+        for (uint256 i = 0; i < 7; i++) {
+            outValues[i] = Value.newInt(0);
+        }
+
+        for (uint256 i = 0; i < 25; i++) {
+            outValues[i / 7].intVal <<= 64;
+            outValues[i / 7].intVal |= data[i];
+        }
+
+        machine.addDataStackValue(Value.newTuple(outValues));
+        return true;
+    }
+
     // Stack ops
 
     function executePopInsn(Machine.Data memory, Value.Data memory)
@@ -968,6 +1006,7 @@ library OneStepProof {
     uint8 internal constant OP_SHA3 = 0x20;
     uint8 internal constant OP_TYPE = 0x21;
     uint8 internal constant OP_ETHHASH2 = 0x22;
+    uint8 internal constant OP_KECCAK_F = 0x23;
 
     // Stack, Memory, Storage and Flow Operations
     uint8 internal constant OP_POP = 0x30;
@@ -1070,6 +1109,8 @@ library OneStepProof {
             return (1, 3);
         } else if (opCode == OP_ETHHASH2) {
             return (2, 8);
+        } else if (opCode == OP_KECCAK_F) {
+            return (1, 8);
         } else if (opCode == OP_POP) {
             return (1, 1);
         } else if (opCode == OP_SPUSH) {
@@ -1331,6 +1372,8 @@ library OneStepProof {
                 stackVals[0],
                 stackVals[1]
             );
+        } else if (opCode == OP_KECCAK_F) {
+            correct = executeKeccakFInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_POP) {
             correct = executePopInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_SPUSH) {
