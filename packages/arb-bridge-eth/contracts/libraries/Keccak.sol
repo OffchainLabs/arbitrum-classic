@@ -27,8 +27,6 @@ library Keccak {
     {
         uint256[5] memory C;
         uint256[5] memory D;
-        uint256 x;
-        uint256 y;
         //uint D_0; uint D_1; uint D_2; uint D_3; uint D_4;
         uint256[25] memory B;
 
