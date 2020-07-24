@@ -18,8 +18,7 @@
 
 pragma solidity ^0.5.11;
 
-/// @dev These contracts are used to verify Proof of Work within a smart contract.
-///      The algorithms have been extracted from the implementation of smart pool (https://github.com/smartpool)
+///      This algorithm has been extracted from the implementation of smart pool (https://github.com/smartpool)
 library Keccak {
     function keccak_f(uint256[25] memory A)
         internal
@@ -28,8 +27,8 @@ library Keccak {
     {
         uint256[5] memory C;
         uint256[5] memory D;
-        // uint x;
-        // uint y;
+        uint256 x;
+        uint256 y;
         //uint D_0; uint D_1; uint D_2; uint D_3; uint D_4;
         uint256[25] memory B;
 

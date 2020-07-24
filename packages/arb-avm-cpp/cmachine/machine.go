@@ -148,7 +148,9 @@ func (m *Machine) ExecuteAssertion(
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {
+
 	rawProof := C.machineMarshallForProof(m.c)
+
 	return C.GoBytes(unsafe.Pointer(rawProof.data), rawProof.length), nil
 }
 

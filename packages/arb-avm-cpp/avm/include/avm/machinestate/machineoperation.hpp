@@ -49,6 +49,7 @@ void signExtend(MachineState& m);
 void hashOp(MachineState& m);
 void typeOp(MachineState& m);
 void ethhash2Op(MachineState& m);
+void keccakF(MachineState& m);
 void pop(MachineState& m);
 void spush(MachineState& m);
 void rpush(MachineState& m);

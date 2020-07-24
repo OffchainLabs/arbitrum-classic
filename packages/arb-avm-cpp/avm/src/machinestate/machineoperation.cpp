@@ -17,6 +17,7 @@
 #include <avm/machinestate/machineoperation.hpp>
 #include <avm/machinestate/machinestate.hpp>
 
+#include <ethash/keccak.h>
 #include <secp256k1_recovery.h>
 #include <ethash/keccak.hpp>
 #include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
@@ -357,6 +358,44 @@ void ethhash2Op(MachineState& m) {
     m.stack[1] = be::load<uint256_t>(hash_val);
 
     m.stack.popClear();
+    ++m.pc;
+}
+
+void keccakF(MachineState& m) {
+    m.stack.prepForMod(1);
+    auto& tup = assumeTuple(m.stack[0]);
+    if (tup.tuple_size() != 7) {
+        throw bad_pop_type{};
+    }
+
+    std::array<uint256_t, 7> in_values;
+    for (uint64_t i = 0; i < 7; i++) {
+        if (!nonstd::holds_alternative<uint256_t>(tup.get_element(0))) {
+            throw bad_pop_type{};
+        }
+        in_values[i] = nonstd::get<uint256_t>(tup.get_element(i / 7));
+    }
+
+    uint64_t state[25];
+
+    for (size_t i = 0; i < 25; i++) {
+        state[i] = static_cast<uint64_t>(in_values[i / 7]);
+        in_values[i / 7] >>= 64;
+        ;
+    }
+
+    ethash_keccakf1600(state);
+
+    std::array<uint256_t, 7> values;
+    values.fill(0);
+
+    for (size_t i = 0; i < 25; i++) {
+        values[i / 7] |= state[i];
+        values[i / 7] <<= 64;
+    }
+
+    m.stack[0] = Tuple(values[0], values[1], values[2], values[3], values[4],
+                       values[5], values[6], m.pool.get());
     ++m.pc;
 }
 

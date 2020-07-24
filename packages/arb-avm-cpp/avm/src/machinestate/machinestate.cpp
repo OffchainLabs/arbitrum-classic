@@ -382,6 +382,9 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::ETHHASH2:
             machineoperation::ethhash2Op(*this);
             break;
+        case OpCode::KECCAKF:
+            machineoperation::keccakF(*this);
+            break;
 
             /***********************************************/
             /*  Stack, Memory, Storage and Flow Operations */

@@ -18,6 +18,7 @@ package ethbridgemachine
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 
 	"encoding/json"
@@ -77,7 +78,7 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 		if err != nil {
 			t.Fatal("Proof invalid with error", err)
 		} else if proof.Assertion.AfterHash != afterHash {
-			t.Fatal("Proof invalid")
+			t.Fatal("Proof invalid", hexutil.Encode(afterHash[:]))
 		}
 	}
 }
