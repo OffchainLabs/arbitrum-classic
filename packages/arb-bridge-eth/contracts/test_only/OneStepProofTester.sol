@@ -25,18 +25,18 @@ contract OneStepProofTester {
         bytes32 beforeHash,
         bytes32 beforeInbox,
         uint256 beforeInboxValueSize,
-        bool didInboxInsn,
         bytes32 firstMessage,
         bytes32 firstLog,
-        uint64 gas,
         bytes memory proof
     )
         public
         pure
         returns (
-            bytes32,
-            bytes32,
-            bytes32
+            bytes32 machineHash,
+            bytes32 logAcc,
+            bytes32 messageAcc,
+            uint64 gas,
+            bool didInboxInsn
         )
     {
         OneStepProof.AssertionContext memory context = OneStepProof
@@ -44,16 +44,16 @@ contract OneStepProofTester {
             beforeHash,
             beforeInbox,
             beforeInboxValueSize,
-            didInboxInsn,
             firstMessage,
             firstLog,
-            gas,
             proof
         );
         return (
             Machine.hash(context.machine),
             context.logAcc,
-            context.messageAcc
+            context.messageAcc,
+            context.gas,
+            context.didInboxInsn
         );
     }
 }

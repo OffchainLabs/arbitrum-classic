@@ -36,10 +36,8 @@ library OneStepProof {
     struct ValidateProofData {
         bytes32 beforeHash;
         Value.Data beforeInbox;
-        bool didInboxInsn;
         bytes32 firstMessage;
         bytes32 firstLog;
-        uint64 gas;
         bytes proof;
     }
 
@@ -56,10 +54,8 @@ library OneStepProof {
         bytes32 beforeHash,
         bytes32 beforeInbox,
         uint256 beforeInboxValueSize,
-        bool didInboxInsn,
         bytes32 firstMessage,
         bytes32 firstLog,
-        uint64 gas,
         bytes memory proof
     ) internal pure returns (AssertionContext memory) {
         return
@@ -67,10 +63,8 @@ library OneStepProof {
                 ValidateProofData(
                     beforeHash,
                     Value.newTuplePreImage(beforeInbox, beforeInboxValueSize),
-                    didInboxInsn,
                     firstMessage,
                     firstLog,
-                    gas,
                     proof
                 )
             );
@@ -847,6 +841,7 @@ library OneStepProof {
             "Inbox instruction was blocked"
         );
         context.machine.addDataStackValue(beforeInbox);
+        context.didInboxInsn = true;
         return true;
     }
 
@@ -1027,7 +1022,7 @@ library OneStepProof {
     uint8 internal constant OP_ECRECOVER = 0x80;
 
     // opInfo returns data stack pop count and gas used
-    function opInfo(uint256 opCode) internal pure returns (uint256, uint256) {
+    function opInfo(uint256 opCode) internal pure returns (uint256, uint64) {
         if (opCode == OP_ADD) {
             return (2, 3);
         } else if (opCode == OP_MUL) {
@@ -1164,7 +1159,6 @@ library OneStepProof {
         pure
         returns (
             uint8 opCode,
-            uint256 gasCost,
             Value.Data[] memory stackVals,
             Machine.Data memory startMachine,
             AssertionContext memory context,
@@ -1177,19 +1171,19 @@ library OneStepProof {
             offset
         );
 
-        context = AssertionContext(
-            startMachine.clone(),
-            _data.beforeInbox,
-            _data.didInboxInsn,
-            _data.firstMessage,
-            _data.firstLog,
-            _data.gas
-        );
-
         uint8 immediate = uint8(_data.proof[offset]);
         opCode = uint8(_data.proof[offset + 1]);
         uint256 popCount;
+        uint64 gasCost;
         (popCount, gasCost) = opInfo(opCode);
+        context = AssertionContext(
+            startMachine.clone(),
+            _data.beforeInbox,
+            false,
+            _data.firstMessage,
+            _data.firstLog,
+            gasCost
+        );
         stackVals = new Value.Data[](popCount);
         offset += 2;
 
@@ -1237,7 +1231,7 @@ library OneStepProof {
                 );
             }
         }
-        return (opCode, gasCost, stackVals, startMachine, context, offset);
+        return (opCode, stackVals, startMachine, context, offset);
     }
 
     uint8 private constant CODE_POINT_TYPECODE = 1;
@@ -1251,35 +1245,21 @@ library OneStepProof {
         returns (AssertionContext memory)
     {
         uint8 opCode;
-        uint256 gasCost;
         uint256 offset;
         Value.Data[] memory stackVals;
         Machine.Data memory startMachine;
         AssertionContext memory context;
-        (
-            opCode,
-            gasCost,
-            stackVals,
-            startMachine,
-            context,
-            offset
-        ) = loadMachine(_data);
+        (opCode, stackVals, startMachine, context, offset) = loadMachine(_data);
 
         bool correct = true;
-        require(_data.gas == gasCost, "Invalid gas in proof");
-        require(
-            (_data.didInboxInsn && opCode == OP_INBOX) ||
-                (!_data.didInboxInsn && opCode != OP_INBOX),
-            "Invalid didInboxInsn claim"
-        );
         // Update end machine gas remaining before running opcode
         // No need to overflow check since the check for whether we
         // have sufficient gas fixes the overflow case
         context.machine.arbGasRemaining =
             context.machine.arbGasRemaining -
-            gasCost;
+            context.gas;
 
-        if (startMachine.arbGasRemaining < gasCost) {
+        if (startMachine.arbGasRemaining < context.gas) {
             context.machine.arbGasRemaining = MAX_UINT256;
             correct = false;
         } else if (opCode == OP_ADD) {

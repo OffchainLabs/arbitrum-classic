@@ -197,10 +197,8 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32 _beforeInbox,
         uint256 _beforeInboxValueSize,
         bytes32 _afterHash,
-        bool _didInboxInsns,
         bytes32 _firstMessage,
         bytes32 _firstLog,
-        uint64 _gas,
         bytes memory _proof
     ) public asserterAction {
         bytes32 beforeInbox = Value
@@ -212,10 +210,8 @@ contract ExecutionChallenge is BisectionChallenge {
             _beforeHash,
             _beforeInbox,
             _beforeInboxValueSize,
-            _didInboxInsns,
             _firstMessage,
             _firstLog,
-            _gas,
             _proof
         );
         // The one step proof already guarantees us that _firstMessage and _lastMessage
@@ -228,8 +224,8 @@ contract ExecutionChallenge is BisectionChallenge {
             _beforeHash,
             beforeInbox,
             _afterHash,
-            _didInboxInsns,
-            _gas,
+            context.didInboxInsn,
+            context.gas,
             _firstMessage,
             context.messageAcc,
             _firstMessage == context.messageAcc ? 0 : 1,
