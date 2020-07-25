@@ -288,6 +288,19 @@ func TestReddit(t *testing.T) {
 	inbox := structures.NewVMInbox()
 	mach.ExecuteAssertion(1000000000, inbox.AsValue(), 0)
 
+	chain := common.RandAddress()
+	initMsg := message.Init{
+		ChainParams: valprotocol.ChainParams{
+			StakeRequirement:        big.NewInt(0),
+			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
+			MaxExecutionSteps:       0,
+			ArbGasSpeedLimitPerTick: 0,
+		},
+		Owner:       common.Address{},
+		ExtraConfig: []byte{},
+	}
+	runMessage(t, mach, initMsg, chain)
+
 	pk, err := crypto.GenerateKey()
 	if err != nil {
 		t.Fatal(err)
