@@ -35,7 +35,8 @@ contract OneStepProofTester {
     ) public pure returns (bytes32) {
         return
             Machine.hash(
-                OneStepProof.validateProof(
+                OneStepProof
+                    .validateProof(
                     beforeHash,
                     beforeInbox,
                     beforeInboxValueSize,
@@ -47,6 +48,7 @@ contract OneStepProofTester {
                     gas,
                     proof
                 )
+                    .machine
             );
     }
 }

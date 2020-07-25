@@ -232,7 +232,8 @@ contract ExecutionChallenge is BisectionChallenge {
             "sent both logs and messages"
         );
         requireMatchesPrevState(assertion.hash());
-        Machine.Data memory endMachine = OneStepProof.validateProof(
+        OneStepProof.AssertionContext memory context = OneStepProof
+            .validateProof(
             _beforeHash,
             _beforeInbox,
             _beforeInboxValueSize,
@@ -246,7 +247,7 @@ contract ExecutionChallenge is BisectionChallenge {
         );
 
         require(
-            Machine.hash(endMachine) == _afterHash,
+            Machine.hash(context.machine) == _afterHash,
             "Proof had non matching end state"
         );
 
