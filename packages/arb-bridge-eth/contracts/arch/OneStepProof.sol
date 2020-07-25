@@ -935,7 +935,7 @@ library OneStepProof {
         } else if (opCode == OP_ETHHASH2) {
             return (2, 0, 8, binaryMathOp);
         } else if (opCode == OP_KECCAK_F) {
-            return (1, 0, 800, executeKeccakFInsn);
+            return (1, 0, 600, executeKeccakFInsn);
         } else if (opCode == OP_POP) {
             return (1, 0, 1, executePopInsn);
         } else if (opCode == OP_SPUSH) {
