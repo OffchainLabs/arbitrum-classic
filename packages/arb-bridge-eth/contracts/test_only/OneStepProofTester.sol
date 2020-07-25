@@ -39,13 +39,21 @@ contract OneStepProofTester {
             bool didInboxInsn
         )
     {
-        OneStepProof.AssertionContext memory context = OneStepProof.executeStep(
+        Value.Data memory inbox = Value.newTuplePreImage(
             beforeInbox,
-            beforeInboxValueSize,
+            beforeInboxValueSize
+        );
+        (
+            OneStepProof.AssertionContext memory context,
+            uint8 opcode
+        ) = OneStepProof.initializeExecutionContext(
+            inbox,
             firstMessage,
             firstLog,
             proof
         );
+
+        OneStepProof.executeOp(context, opcode);
         return (
             Machine.hash(context.startMachine),
             Machine.hash(context.afterMachine),

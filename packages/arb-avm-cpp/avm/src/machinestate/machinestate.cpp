@@ -159,29 +159,43 @@ std::vector<unsigned char> MachineState::marshalState() const {
 
 std::vector<unsigned char> MachineState::marshalForProof() {
     auto currentInstruction = loadCurrentInstruction();
-    auto opcode = currentInstruction.op.opcode;
+    auto& current_op = currentInstruction.op;
+    auto opcode = current_op.opcode;
     std::vector<MarshalLevel> stackPops = InstructionStackPops.at(opcode);
+    std::vector<MarshalLevel> auxStackPops = InstructionAuxStackPops.at(opcode);
+
+    uint64_t stack_pop_count = stackPops.size();
+
     MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
-    if (currentInstruction.op.immediate && !stackPops.empty()) {
-        immediateMarshalLevel = stackPops[0];
-        stackPops.erase(stackPops.begin());
+    if (current_op.immediate) {
+        if (stackPops.empty()) {
+            stack_pop_count++;
+        } else {
+            immediateMarshalLevel = stackPops[0];
+            stackPops.erase(stackPops.begin());
+        }
     }
 
+    std::vector<unsigned char> buf;
+    buf.push_back(stack_pop_count);
+    buf.push_back(auxStackPops.size());
+
     auto stackProof = stack.marshalForProof(stackPops, *code);
-    std::vector<MarshalLevel> auxStackPops = InstructionAuxStackPops.at(opcode);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
 
-    std::vector<unsigned char> buf;
-    buf.push_back(stackPops.size());
-    buf.push_back(auxStackPops.size());
     buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());
+    if (current_op.immediate) {
+        ::marshalForProof(*current_op.immediate, immediateMarshalLevel, buf,
+                          *code);
+    }
     buf.insert(buf.end(), auxStackProof.second.begin(),
                auxStackProof.second.end());
     ::marshalState(buf, *code, currentInstruction.nextHash, stackProof.first,
                    auxStackProof.first, registerVal, static_val,
                    arb_gas_remaining, errpc);
 
-    currentInstruction.op.marshalForProof(buf, immediateMarshalLevel, *code);
+    buf.push_back(current_op.immediate ? 1 : 0);
+    buf.push_back(static_cast<uint8_t>(current_op.opcode));
 
     return buf;
 }

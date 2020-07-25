@@ -35,13 +35,6 @@ library OneStepProof {
 
     uint256 private constant MAX_UINT256 = ((1 << 128) + 1) * ((1 << 128) - 1);
 
-    struct ValidateProofData {
-        Value.Data beforeInbox;
-        bytes32 firstMessage;
-        bytes32 firstLog;
-        bytes proof;
-    }
-
     struct ValueStack {
         uint256 length;
         Value.Data[] values;
@@ -75,6 +68,7 @@ library OneStepProof {
         uint64 gas;
         ValueStack stack;
         ValueStack auxstack;
+        bool hadImmediate;
     }
 
     function handleError(AssertionContext memory context) internal pure {
@@ -94,22 +88,151 @@ library OneStepProof {
         context.auxstack.length = 0;
     }
 
-    function executeStep(
-        bytes32 beforeInbox,
-        uint256 beforeInboxValueSize,
-        bytes32 firstMessage,
-        bytes32 firstLog,
+    function initializeExecutionContext(
+        Value.Data memory inbox,
+        bytes32 messagesAcc,
+        bytes32 logsAcc,
         bytes memory proof
-    ) internal pure returns (AssertionContext memory) {
-        return
-            checkProof(
-                ValidateProofData(
-                    Value.newTuplePreImage(beforeInbox, beforeInboxValueSize),
-                    firstMessage,
-                    firstLog,
-                    proof
-                )
+    ) internal pure returns (AssertionContext memory context, uint8 opCode) {
+        uint8 stackCount = uint8(proof[0]);
+        uint8 auxstackCount = uint8(proof[1]);
+
+        // Leave some extra space for values pushed on the stack in the proofs
+        Value.Data[] memory stackVals = new Value.Data[](stackCount + 4);
+        Value.Data[] memory auxstackVals = new Value.Data[](auxstackCount + 4);
+        uint256 offset = 2;
+        for (uint256 i = 0; i < stackCount; i++) {
+            (offset, stackVals[i]) = Marshaling.deserialize(proof, offset);
+        }
+        for (uint256 i = 0; i < auxstackCount; i++) {
+            (offset, auxstackVals[i]) = Marshaling.deserialize(proof, offset);
+        }
+        Machine.Data memory mach;
+        (offset, mach) = Machine.deserializeMachine(proof, offset);
+
+        uint8 immediate = uint8(proof[offset]);
+        opCode = uint8(proof[offset + 1]);
+        context = AssertionContext(
+            mach,
+            mach.clone(),
+            inbox,
+            false,
+            messagesAcc,
+            logsAcc,
+            0,
+            ValueStack(stackCount, stackVals),
+            ValueStack(auxstackCount, auxstackVals),
+            immediate == 1
+        );
+
+        require(
+            immediate == 0 || immediate == 1,
+            "Proof had bad operation type"
+        );
+        Value.Data memory cp;
+        if (immediate == 0) {
+            cp = Value.newCodePoint(
+                uint8(opCode),
+                context.startMachine.instructionStackHash
             );
+        } else {
+            // If we have an immediate, there must be at least one stack value
+            require(stackVals.length > 0, "no immediate value");
+            cp = Value.newCodePoint(
+                uint8(opCode),
+                context.startMachine.instructionStackHash,
+                stackVals[stackCount - 1]
+            );
+        }
+        context.startMachine.instructionStackHash = cp.hash();
+
+        // Add the stack and auxstack values to the start machine
+        uint256 i = 0;
+        for (i = 0; i < stackCount - immediate; i++) {
+            context.startMachine.addDataStackValue(stackVals[i]);
+        }
+        for (i = 0; i < auxstackCount; i++) {
+            context.startMachine.addAuxStackValue(auxstackVals[i]);
+        }
+
+        return (context, opCode);
+    }
+
+    function executeOp(AssertionContext memory context, uint8 opCode)
+        internal
+        pure
+    {
+        (
+            uint256 dataPopCount,
+            uint256 auxPopCount,
+            uint64 gasCost,
+            function(AssertionContext memory) internal pure impl
+        ) = opInfo(opCode);
+        context.gas = gasCost;
+
+        // Update end machine gas remaining before running opcode
+        // No need to overflow check since the check for whether we
+        // have sufficient gas fixes the overflow case
+        context.afterMachine.arbGasRemaining =
+            context.afterMachine.arbGasRemaining -
+            gasCost;
+
+        if (context.startMachine.arbGasRemaining < gasCost) {
+            context.afterMachine.arbGasRemaining = MAX_UINT256;
+            context.handleError();
+            return;
+        }
+
+        if (context.stack.length < dataPopCount) {
+            // If we have insufficient values, reject the proof unless the stack has been fully exhausted
+            require(
+                context.afterMachine.dataStack.hash() ==
+                    Value.newEmptyTuple().hash(),
+                "stack not empty"
+            );
+            // If the stack is empty, the instruction underflowed so we have hit an error
+            context.handleError();
+            return;
+        }
+
+        if (context.auxstack.length < auxPopCount) {
+            // If we have insufficient values, reject the proof unless the auxstack has been fully exhausted
+            require(
+                context.afterMachine.auxStack.hash() ==
+                    Value.newEmptyTuple().hash(),
+                "auxstack not empty"
+            );
+            // If the auxstack is empty, the instruction underflowed so we have hit an error
+            context.handleError();
+            return;
+        }
+
+        // Require the prover to submit the minimal number of stack items
+        require(
+            ((dataPopCount > 0 || !context.hadImmediate) &&
+                context.stack.length == dataPopCount) ||
+                (context.hadImmediate &&
+                    dataPopCount == 0 &&
+                    context.stack.length == 1),
+            "too many stack items"
+        );
+        require(
+            context.auxstack.length == auxPopCount,
+            "too many auxstack items"
+        );
+
+        impl(context);
+
+        // Add the stack and auxstack values to the start machine
+        uint256 i = 0;
+
+        for (i = 0; i < context.stack.length; i++) {
+            context.afterMachine.addDataStackValue(context.stack.values[i]);
+        }
+
+        for (i = 0; i < context.auxstack.length; i++) {
+            context.afterMachine.addAuxStackValue(context.auxstack.values[i]);
+        }
     }
 
     /* solhint-disable no-inline-assembly */
@@ -245,7 +368,7 @@ library OneStepProof {
 
     function executeAddmodInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b, uint256 m) = trinaryMathOp(context);
-        if (!valid || b == 0) {
+        if (!valid || m == 0) {
             context.handleOpcodeError();
             return;
         }
@@ -258,7 +381,7 @@ library OneStepProof {
 
     function executeMulmodInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b, uint256 m) = trinaryMathOp(context);
-        if (!valid || b == 0) {
+        if (!valid || m == 0) {
             context.handleOpcodeError();
             return;
         }
@@ -456,7 +579,7 @@ library OneStepProof {
         internal
         pure
     {
-        (bool valid, uint256 b, uint256 a) = binaryMathOp(context);
+        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
         if (!valid) {
             context.handleOpcodeError();
             return;
@@ -566,10 +689,9 @@ library OneStepProof {
         internal
         pure
     {
-        bool empty = context.stack.length == 0 &&
+        bool empty = context.auxstack.length == 0 &&
             context.afterMachine.auxStack.hash() ==
             Value.newEmptyTuple().hash();
-        context.auxstack.pushVal(Value.newBoolean(empty));
         context.stack.pushVal(Value.newBoolean(empty));
     }
 
@@ -653,7 +775,7 @@ library OneStepProof {
         Value.Data memory val2 = context.stack.popVal();
         Value.Data memory val3 = context.stack.popVal();
         if (
-            !val1.isTuple() || !val2.isInt() || val1.intVal >= val2.valLength()
+            !val1.isInt() || !val2.isTuple() || val1.intVal >= val2.valLength()
         ) {
             context.handleOpcodeError();
             return;
@@ -779,7 +901,7 @@ library OneStepProof {
         Value.Data memory val1 = context.stack.popVal();
         Value.Data memory val2 = context.stack.popVal();
         Value.Data memory val3 = context.stack.popVal();
-        if (!val1.isInt() || !val2.isCodePoint()) {
+        if (!val1.isInt() || !val3.isCodePoint()) {
             context.handleOpcodeError();
             return;
         }
@@ -909,163 +1031,10 @@ library OneStepProof {
 
     uint8 internal constant OP_ECRECOVER = 0x80;
 
-    function loadMachine(ValidateProofData memory _data)
-        internal
-        pure
-        returns (uint8 opCode, AssertionContext memory context)
-    {
-        uint8 stackCount = uint8(_data.proof[0]);
-        uint8 auxstackCount = uint8(_data.proof[1]);
-
-        // Leave some extra space for values pushed on the stack in the proofs
-        Value.Data[] memory stackVals = new Value.Data[](stackCount + 4);
-        Value.Data[] memory auxstackVals = new Value.Data[](auxstackCount + 4);
-        uint256 offset = 2;
-        for (uint256 i = 0; i < stackCount; i++) {
-            (offset, stackVals[i]) = Marshaling.deserialize(
-                _data.proof,
-                offset
-            );
-        }
-        for (uint256 i = 0; i < auxstackCount; i++) {
-            (offset, auxstackVals[i]) = Marshaling.deserialize(
-                _data.proof,
-                offset
-            );
-        }
-        Machine.Data memory mach;
-        (offset, mach) = Machine.deserializeMachine(_data.proof, offset);
-
-        uint8 immediate = uint8(_data.proof[offset]);
-        opCode = uint8(_data.proof[offset + 1]);
-        context = AssertionContext(
-            mach,
-            mach.clone(),
-            _data.beforeInbox,
-            false,
-            _data.firstMessage,
-            _data.firstLog,
-            0,
-            ValueStack(stackCount, stackVals),
-            ValueStack(auxstackCount, auxstackVals)
-        );
-
-        offset += 2;
-
-        require(
-            immediate == 0 || immediate == 1,
-            "Proof had bad operation type"
-        );
-        Value.Data memory cp;
-        if (immediate == 0) {
-            cp = Value.newCodePoint(
-                uint8(opCode),
-                context.startMachine.instructionStackHash
-            );
-        } else {
-            // If we have an immediate, there must be at least one stack value
-            require(stackVals.length > 0);
-            cp = Value.newCodePoint(
-                uint8(opCode),
-                context.startMachine.instructionStackHash,
-                stackVals[0]
-            );
-        }
-        context.startMachine.instructionStackHash = cp.hash();
-
-        // Add the stack and auxstack values to the start machine
-        uint256 i = 0;
-        for (i = 0; i < stackVals.length - immediate; i++) {
-            context.startMachine.addDataStackValue(
-                stackVals[stackVals.length - 1 - i]
-            );
-        }
-        for (i = 0; i < auxstackVals.length; i++) {
-            context.startMachine.addAuxStackValue(
-                auxstackVals[auxstackVals.length - 1 - i]
-            );
-        }
-
-        return (opCode, context);
-    }
-
     uint8 private constant CODE_POINT_TYPECODE = 1;
     bytes32 private constant CODE_POINT_ERROR = keccak256(
         abi.encodePacked(CODE_POINT_TYPECODE, uint8(0), bytes32(0))
     );
-
-    function checkProof(ValidateProofData memory _data)
-        internal
-        pure
-        returns (AssertionContext memory)
-    {
-        (uint8 opCode, AssertionContext memory context) = loadMachine(_data);
-        (
-            uint256 dataPopCount,
-            uint256 auxPopCount,
-            uint64 gasCost,
-            function(AssertionContext memory) internal pure impl
-        ) = opInfo(opCode);
-        context.gas = gasCost;
-
-        // Update end machine gas remaining before running opcode
-        // No need to overflow check since the check for whether we
-        // have sufficient gas fixes the overflow case
-        context.afterMachine.arbGasRemaining =
-            context.afterMachine.arbGasRemaining -
-            gasCost;
-
-        if (context.startMachine.arbGasRemaining < gasCost) {
-            context.afterMachine.arbGasRemaining = MAX_UINT256;
-            context.handleError();
-            return context;
-        }
-
-        if (context.stack.length < dataPopCount) {
-            // If we have insufficient values, reject the proof unless the stack has been fully exhausted
-            require(
-                context.afterMachine.dataStack.hash() ==
-                    Value.newEmptyTuple().hash()
-            );
-            // If the stack is empty, the instruction underflowed so we have hit an error
-            context.handleError();
-            return context;
-        }
-
-        if (context.auxstack.length < auxPopCount) {
-            // If we have insufficient values, reject the proof unless the auxstack has been fully exhausted
-            require(
-                context.afterMachine.auxStack.hash() ==
-                    Value.newEmptyTuple().hash()
-            );
-            // If the auxstack is empty, the instruction underflowed so we have hit an error
-            context.handleError();
-            return context;
-        }
-
-        // Require the prover to submit the minimal number of stack items
-        require(context.stack.length == dataPopCount);
-        require(context.auxstack.length == auxPopCount);
-
-        impl(context);
-
-        // Add the stack and auxstack values to the start machine
-        uint256 i = 0;
-
-        for (i = 0; i < context.stack.length; i++) {
-            context.afterMachine.addDataStackValue(
-                context.stack.values[context.stack.length - 1 - i]
-            );
-        }
-
-        for (i = 0; i < context.auxstack.length; i++) {
-            context.afterMachine.addAuxStackValue(
-                context.auxstack.values[context.auxstack.length - 1 - i]
-            );
-        }
-
-        return context;
-    }
 
     function opInfo(uint256 opCode)
         internal

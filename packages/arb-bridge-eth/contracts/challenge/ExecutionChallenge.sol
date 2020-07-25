@@ -199,17 +199,22 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32 _firstLog,
         bytes memory _proof
     ) public asserterAction {
-        bytes32 beforeInbox = Value
-            .newTuplePreImage(_beforeInbox, _beforeInboxValueSize)
-            .hash();
-
-        OneStepProof.AssertionContext memory context = OneStepProof.executeStep(
+        Value.Data memory inbox = Value.newTuplePreImage(
             _beforeInbox,
-            _beforeInboxValueSize,
+            _beforeInboxValueSize
+        );
+
+        (
+            OneStepProof.AssertionContext memory context,
+            uint8 opcode
+        ) = OneStepProof.initializeExecutionContext(
+            inbox,
             _firstMessage,
             _firstLog,
             _proof
         );
+
+        OneStepProof.executeOp(context, opcode);
         // The one step proof already guarantees us that _firstMessage and _lastMessage
         // are either one or 0 messages apart and the same is true for logs. Therefore
         // we can infer the message count and log count based on whether the fields
@@ -218,7 +223,7 @@ contract ExecutionChallenge is BisectionChallenge {
             .ExecutionAssertion(
             1,
             Machine.hash(context.startMachine),
-            beforeInbox,
+            inbox.hash(),
             Machine.hash(context.afterMachine),
             context.didInboxInsn,
             context.gas,
