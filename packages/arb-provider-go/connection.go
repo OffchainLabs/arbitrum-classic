@@ -225,6 +225,7 @@ func (conn *ArbConnection) EstimateGas(
 
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	// This is a stopgap measure until https://github.com/ethereum/go-ethereum/issues/16484 is solved
 	signer := types.NewEIP155Signer(l2message.ChainAddressToID(conn.rollupAddress))
 	signedTx, err := types.SignTx(tx, signer, conn.pk)
 	if err != nil {
@@ -383,6 +384,9 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	}
 	val, err := conn.proxy.GetRequestResult(ctx, common.NewHashFromEth(txHash))
 	if err != nil {
+		return nil, err
+	}
+	if val == nil {
 		return nil, ethereum.NotFound
 	}
 	result, err := evm.NewResultFromValue(val)
