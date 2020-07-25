@@ -439,8 +439,9 @@ library OneStepProof {
         }
         uint256[25] memory data;
         for (uint256 i = 0; i < 25; i++) {
-            data[i] = uint256(uint64(values[i / 4].intVal));
-            values[i / 4].intVal >>= 64;
+            data[5 * (i % 5) + i / 5] = uint256(
+                uint64(values[i / 4].intVal >> ((i % 4) * 64))
+            );
         }
 
         data = Keccak.keccak_f(data);
@@ -451,7 +452,9 @@ library OneStepProof {
         }
 
         for (uint256 i = 0; i < 25; i++) {
-            outValues[i / 4].intVal |= data[i] << ((i % 4) * 64);
+            outValues[i / 4].intVal |=
+                data[5 * (i % 5) + i / 5] <<
+                ((i % 4) * 64);
         }
 
         context.stack.pushVal(Value.newTuple(outValues));

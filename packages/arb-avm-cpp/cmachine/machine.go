@@ -45,14 +45,14 @@ type Machine struct {
 
 func New(codeFile string) (*Machine, error) {
 	cFilename := C.CString(codeFile)
-
 	cMachine := C.machineCreate(cFilename)
 
 	if cMachine == nil {
-		return nil, fmt.Errorf("error loading machine %v", codeFile)
 
+		return nil, fmt.Errorf("error loading machine %v", codeFile)
 	}
 	ret := &Machine{cMachine}
+
 	runtime.SetFinalizer(ret, cdestroyVM)
 	C.free(unsafe.Pointer(cFilename))
 	return ret, nil

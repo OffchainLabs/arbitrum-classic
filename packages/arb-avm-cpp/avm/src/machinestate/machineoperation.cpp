@@ -367,31 +367,28 @@ void encodeKeccakState(const Tuple& tup, uint64_t* state) {
         throw bad_pop_type{};
     }
 
-    std::array<uint256_t, 7> in_values;
-    for (uint64_t i = 0; i < 7; i++) {
-        if (!nonstd::holds_alternative<uint256_t>(tup.get_element(i))) {
-            throw bad_pop_type{};
-        }
-        in_values[i] = nonstd::get<uint256_t>(tup.get_element(i));
+    for (uint64_t i = 0; i < 6; ++i) {
+        intx::be::unsafe::store(reinterpret_cast<uint8_t*>(&state[i * 4]),
+                                bswap(assumeInt(tup.get_element_unsafe(i))));
     }
-
-    for (size_t i = 0; i < 25; i++) {
-        state[5 * (i % 5) + i / 5] = static_cast<uint64_t>(in_values[i / 4]);
-        in_values[i / 4] >>= 64;
-    }
+    // Handle last val separately
+    state[24] = static_cast<uint64_t>(assumeInt(tup.get_element_unsafe(6)));
 }
 
 Tuple decodeKeccakState(const uint64_t* state, TuplePool* pool) {
-    std::array<uint256_t, 7> values;
-    values.fill(0);
-
-    for (size_t i = 0; i < 25; i++) {
-        values[i / 4] |=
-            (uint256_t{state[5 * (i % 5) + i / 5]} << ((i % 4) * 64));
-    }
-
-    return Tuple(values[0], values[1], values[2], values[3], values[4],
-                 values[5], values[6], pool);
+    return Tuple(bswap(intx::be::unsafe::load<uint256_t>(
+                     reinterpret_cast<const uint8_t*>(&state[0]))),
+                 bswap(intx::be::unsafe::load<uint256_t>(
+                     reinterpret_cast<const uint8_t*>(&state[4]))),
+                 bswap(intx::be::unsafe::load<uint256_t>(
+                     reinterpret_cast<const uint8_t*>(&state[8]))),
+                 bswap(intx::be::unsafe::load<uint256_t>(
+                     reinterpret_cast<const uint8_t*>(&state[12]))),
+                 bswap(intx::be::unsafe::load<uint256_t>(
+                     reinterpret_cast<const uint8_t*>(&state[16]))),
+                 bswap(intx::be::unsafe::load<uint256_t>(
+                     reinterpret_cast<const uint8_t*>(&state[20]))),
+                 uint256_t{state[24]}, pool);
 }
 }  // namespace internal
 
