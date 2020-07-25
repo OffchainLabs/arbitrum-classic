@@ -27,28 +27,33 @@ contract OneStepProofTester {
         uint256 beforeInboxValueSize,
         bool didInboxInsn,
         bytes32 firstMessage,
-        bytes32 lastMessage,
         bytes32 firstLog,
-        bytes32 lastLog,
         uint64 gas,
         bytes memory proof
-    ) public pure returns (bytes32) {
-        return
-            Machine.hash(
-                OneStepProof
-                    .validateProof(
-                    beforeHash,
-                    beforeInbox,
-                    beforeInboxValueSize,
-                    didInboxInsn,
-                    firstMessage,
-                    lastMessage,
-                    firstLog,
-                    lastLog,
-                    gas,
-                    proof
-                )
-                    .machine
-            );
+    )
+        public
+        pure
+        returns (
+            bytes32,
+            bytes32,
+            bytes32
+        )
+    {
+        OneStepProof.AssertionContext memory context = OneStepProof
+            .validateProof(
+            beforeHash,
+            beforeInbox,
+            beforeInboxValueSize,
+            didInboxInsn,
+            firstMessage,
+            firstLog,
+            gas,
+            proof
+        );
+        return (
+            Machine.hash(context.machine),
+            context.logAcc,
+            context.messageAcc
+        );
     }
 }

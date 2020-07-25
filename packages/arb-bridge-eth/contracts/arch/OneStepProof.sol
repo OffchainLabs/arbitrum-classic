@@ -38,9 +38,7 @@ library OneStepProof {
         Value.Data beforeInbox;
         bool didInboxInsn;
         bytes32 firstMessage;
-        bytes32 lastMessage;
         bytes32 firstLog;
-        bytes32 lastLog;
         uint64 gas;
         bytes proof;
     }
@@ -60,9 +58,7 @@ library OneStepProof {
         uint256 beforeInboxValueSize,
         bool didInboxInsn,
         bytes32 firstMessage,
-        bytes32 lastMessage,
         bytes32 firstLog,
-        bytes32 lastLog,
         uint64 gas,
         bytes memory proof
     ) internal pure returns (AssertionContext memory) {
@@ -73,9 +69,7 @@ library OneStepProof {
                     Value.newTuplePreImage(beforeInbox, beforeInboxValueSize),
                     didInboxInsn,
                     firstMessage,
-                    lastMessage,
                     firstLog,
-                    lastLog,
                     gas,
                     proof
                 )
@@ -816,28 +810,32 @@ library OneStepProof {
         return true;
     }
 
-    function executeLogInsn(AssertionContext memory, Value.Data[] memory vals)
-        internal
-        pure
-        returns (bool, bytes32)
-    {
-        return (true, vals[0].hash());
+    function executeLogInsn(
+        AssertionContext memory context,
+        Value.Data[] memory vals
+    ) internal pure returns (bool) {
+        context.logAcc = keccak256(
+            abi.encodePacked(context.logAcc, vals[0].hash())
+        );
+        return true;
     }
 
     // System operations
 
-    function executeSendInsn(AssertionContext memory, Value.Data[] memory vals)
-        internal
-        pure
-        returns (bool, bytes32)
-    {
+    function executeSendInsn(
+        AssertionContext memory context,
+        Value.Data[] memory vals
+    ) internal pure returns (bool) {
         if (vals[0].size > SEND_SIZE_LIMIT) {
-            return (false, 0);
+            return false;
         }
         if (!vals[0].isValidTypeForSend()) {
-            return (false, 0);
+            return false;
         }
-        return (true, vals[0].hash());
+        context.messageAcc = keccak256(
+            abi.encodePacked(context.messageAcc, vals[0].hash())
+        );
+        return true;
     }
 
     function executeInboxInsn(
@@ -1268,7 +1266,6 @@ library OneStepProof {
         ) = loadMachine(_data);
 
         bool correct = true;
-        bytes32 messageHash;
         require(_data.gas == gasCost, "Invalid gas in proof");
         require(
             (_data.didInboxInsn && opCode == OP_INBOX) ||
@@ -1397,44 +1394,9 @@ library OneStepProof {
         } else if (opCode == OP_BREAKPOINT) {
             correct = executeBreakpointInsn(context, stackVals);
         } else if (opCode == OP_LOG) {
-            (correct, messageHash) = executeLogInsn(context, stackVals);
-            if (correct) {
-                require(
-                    keccak256(abi.encodePacked(_data.firstLog, messageHash)) ==
-                        _data.lastLog,
-                    "Logged value doesn't match output log"
-                );
-                require(
-                    _data.firstMessage == _data.lastMessage,
-                    "Send not called, but message is nonzero"
-                );
-            } else {
-                messageHash = 0;
-            }
+            correct = executeLogInsn(context, stackVals);
         } else if (opCode == OP_SEND) {
-            (correct, messageHash) = executeSendInsn(context, stackVals);
-            if (correct) {
-                if (messageHash == 0) {
-                    require(
-                        _data.firstMessage == _data.lastMessage,
-                        "Send value exceeds size limit, no message should be sent"
-                    );
-                } else {
-                    require(
-                        keccak256(
-                            abi.encodePacked(_data.firstMessage, messageHash)
-                        ) == _data.lastMessage,
-                        "sent message doesn't match output message"
-                    );
-
-                    require(
-                        _data.firstLog == _data.lastLog,
-                        "Log not called, but message is nonzero"
-                    );
-                }
-            } else {
-                messageHash = 0;
-            }
+            correct = executeSendInsn(context, stackVals);
         } else if (opCode == OP_INBOX) {
             correct = executeInboxInsn(context, _data.beforeInbox);
         } else if (opCode == OP_ERROR) {
@@ -1457,17 +1419,6 @@ library OneStepProof {
             correct = executeECRecoverInsn(context, stackVals);
         } else {
             correct = false;
-        }
-
-        if (messageHash == 0) {
-            require(
-                _data.firstMessage == _data.lastMessage,
-                "Send not called, but message is nonzero"
-            );
-            require(
-                _data.firstLog == _data.lastLog,
-                "Log not called, but message is nonzero"
-            );
         }
 
         if (!correct) {
