@@ -193,10 +193,8 @@ contract ExecutionChallenge is BisectionChallenge {
     }
 
     function oneStepProof(
-        bytes32 _beforeHash,
         bytes32 _beforeInbox,
         uint256 _beforeInboxValueSize,
-        bytes32 _afterHash,
         bytes32 _firstMessage,
         bytes32 _firstLog,
         bytes memory _proof
@@ -205,9 +203,7 @@ contract ExecutionChallenge is BisectionChallenge {
             .newTuplePreImage(_beforeInbox, _beforeInboxValueSize)
             .hash();
 
-        OneStepProof.AssertionContext memory context = OneStepProof
-            .validateProof(
-            _beforeHash,
+        OneStepProof.AssertionContext memory context = OneStepProof.executeStep(
             _beforeInbox,
             _beforeInboxValueSize,
             _firstMessage,
@@ -221,9 +217,9 @@ contract ExecutionChallenge is BisectionChallenge {
         ChallengeUtils.ExecutionAssertion memory assertion = ChallengeUtils
             .ExecutionAssertion(
             1,
-            _beforeHash,
+            Machine.hash(context.startMachine),
             beforeInbox,
-            _afterHash,
+            Machine.hash(context.afterMachine),
             context.didInboxInsn,
             context.gas,
             _firstMessage,
@@ -235,10 +231,11 @@ contract ExecutionChallenge is BisectionChallenge {
         );
         requireMatchesPrevState(assertion.hash());
 
-        require(
-            Machine.hash(context.machine) == _afterHash,
-            "Proof had non matching end state"
-        );
+        // require(
+        //     _data.beforeHash == startMachine.hash(),
+        //     string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString(),
+        //     " beforeHash = ", DebugPrint.bytes32string(_data.beforeHash), "\nstartMachine = ", DebugPrint.bytes32string(startMachine.hash())))
+        // );
 
         // require(
         //     _data.afterHash == endMachine.hash(),

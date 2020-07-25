@@ -125,15 +125,15 @@ uint256_t MachineState::getMachineSize() {
 }
 
 namespace {
-std::vector<unsigned char> marshalState(const Code& code,
-                                        uint256_t next_codepoint_hash,
-                                        HashPreImage stackPreImage,
-                                        HashPreImage auxStackPreImage,
-                                        value registerVal,
-                                        value staticVal,
-                                        uint256_t arb_gas_remaining,
-                                        CodePointStub errpc) {
-    auto buf = std::vector<unsigned char>();
+void marshalState(std::vector<unsigned char>& buf,
+                  const Code& code,
+                  uint256_t next_codepoint_hash,
+                  HashPreImage stackPreImage,
+                  HashPreImage auxStackPreImage,
+                  value registerVal,
+                  value staticVal,
+                  uint256_t arb_gas_remaining,
+                  CodePointStub errpc) {
     marshal_uint256_t(next_codepoint_hash, buf);
 
     stackPreImage.marshal(buf);
@@ -143,18 +143,18 @@ std::vector<unsigned char> marshalState(const Code& code,
     ::marshalForProof(staticVal, MarshalLevel::STUB, buf, code);
     marshal_uint256_t(arb_gas_remaining, buf);
     marshal_uint256_t(::hash(errpc), buf);
-
-    return buf;
 }
 }  // namespace
 
 std::vector<unsigned char> MachineState::marshalState() const {
     auto stackPreImage = stack.getHashPreImage();
     auto auxStackPreImage = auxstack.getHashPreImage();
+    std::vector<unsigned char> buf;
 
-    return ::marshalState(*code, ::hash(loadCurrentInstruction()),
-                          stackPreImage, auxStackPreImage, registerVal,
-                          static_val, arb_gas_remaining, errpc);
+    ::marshalState(buf, *code, ::hash(loadCurrentInstruction()), stackPreImage,
+                   auxStackPreImage, registerVal, static_val, arb_gas_remaining,
+                   errpc);
+    return buf;
 }
 
 std::vector<unsigned char> MachineState::marshalForProof() {
@@ -171,15 +171,18 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     std::vector<MarshalLevel> auxStackPops = InstructionAuxStackPops.at(opcode);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
 
-    auto buf = ::marshalState(
-        *code, currentInstruction.nextHash, stackProof.first,
-        auxStackProof.first, registerVal, static_val, arb_gas_remaining, errpc);
-
-    currentInstruction.op.marshalForProof(buf, immediateMarshalLevel, *code);
-
+    std::vector<unsigned char> buf;
+    buf.push_back(stackPops.size());
+    buf.push_back(auxStackPops.size());
     buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());
     buf.insert(buf.end(), auxStackProof.second.begin(),
                auxStackProof.second.end());
+    ::marshalState(buf, *code, currentInstruction.nextHash, stackProof.first,
+                   auxStackProof.first, registerVal, static_val,
+                   arb_gas_remaining, errpc);
+
+    currentInstruction.op.marshalForProof(buf, immediateMarshalLevel, *code);
+
     return buf;
 }
 
