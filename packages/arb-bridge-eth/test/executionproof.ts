@@ -61,7 +61,7 @@ describe('OneStepProof', async () => {
     it(`handle proofs from ${filename}`, async () => {
       let i = 0
       for (const proof of data) {
-        if (i > 50) {
+        if (i > 25) {
           // Some tests are too big to run every case
           return
         }
