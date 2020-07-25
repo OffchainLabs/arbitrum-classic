@@ -125,15 +125,15 @@ uint256_t MachineState::getMachineSize() {
 }
 
 namespace {
-std::vector<unsigned char> marshalState(const Code& code,
-                                        uint256_t next_codepoint_hash,
-                                        HashPreImage stackPreImage,
-                                        HashPreImage auxStackPreImage,
-                                        value registerVal,
-                                        value staticVal,
-                                        uint256_t arb_gas_remaining,
-                                        CodePointStub errpc) {
-    auto buf = std::vector<unsigned char>();
+void marshalState(std::vector<unsigned char>& buf,
+                  const Code& code,
+                  uint256_t next_codepoint_hash,
+                  HashPreImage stackPreImage,
+                  HashPreImage auxStackPreImage,
+                  value registerVal,
+                  value staticVal,
+                  uint256_t arb_gas_remaining,
+                  CodePointStub errpc) {
     marshal_uint256_t(next_codepoint_hash, buf);
 
     stackPreImage.marshal(buf);
@@ -143,43 +143,60 @@ std::vector<unsigned char> marshalState(const Code& code,
     ::marshalForProof(staticVal, MarshalLevel::STUB, buf, code);
     marshal_uint256_t(arb_gas_remaining, buf);
     marshal_uint256_t(::hash(errpc), buf);
-
-    return buf;
 }
 }  // namespace
 
 std::vector<unsigned char> MachineState::marshalState() const {
     auto stackPreImage = stack.getHashPreImage();
     auto auxStackPreImage = auxstack.getHashPreImage();
+    std::vector<unsigned char> buf;
 
-    return ::marshalState(*code, ::hash(loadCurrentInstruction()),
-                          stackPreImage, auxStackPreImage, registerVal,
-                          static_val, arb_gas_remaining, errpc);
+    ::marshalState(buf, *code, ::hash(loadCurrentInstruction()), stackPreImage,
+                   auxStackPreImage, registerVal, static_val, arb_gas_remaining,
+                   errpc);
+    return buf;
 }
 
 std::vector<unsigned char> MachineState::marshalForProof() {
     auto currentInstruction = loadCurrentInstruction();
-    auto opcode = currentInstruction.op.opcode;
+    auto& current_op = currentInstruction.op;
+    auto opcode = current_op.opcode;
     std::vector<MarshalLevel> stackPops = InstructionStackPops.at(opcode);
+    std::vector<MarshalLevel> auxStackPops = InstructionAuxStackPops.at(opcode);
+
+    uint64_t stack_pop_count = stackPops.size();
+
     MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
-    if (currentInstruction.op.immediate && !stackPops.empty()) {
-        immediateMarshalLevel = stackPops[0];
-        stackPops.erase(stackPops.begin());
+    if (current_op.immediate) {
+        if (stackPops.empty()) {
+            stack_pop_count++;
+        } else {
+            immediateMarshalLevel = stackPops[0];
+            stackPops.erase(stackPops.begin());
+        }
     }
 
+    std::vector<unsigned char> buf;
+    buf.push_back(stack_pop_count);
+    buf.push_back(auxStackPops.size());
+
     auto stackProof = stack.marshalForProof(stackPops, *code);
-    std::vector<MarshalLevel> auxStackPops = InstructionAuxStackPops.at(opcode);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
 
-    auto buf = ::marshalState(
-        *code, currentInstruction.nextHash, stackProof.first,
-        auxStackProof.first, registerVal, static_val, arb_gas_remaining, errpc);
-
-    currentInstruction.op.marshalForProof(buf, immediateMarshalLevel, *code);
-
     buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());
+    if (current_op.immediate) {
+        ::marshalForProof(*current_op.immediate, immediateMarshalLevel, buf,
+                          *code);
+    }
     buf.insert(buf.end(), auxStackProof.second.begin(),
                auxStackProof.second.end());
+    ::marshalState(buf, *code, currentInstruction.nextHash, stackProof.first,
+                   auxStackProof.first, registerVal, static_val,
+                   arb_gas_remaining, errpc);
+
+    buf.push_back(current_op.immediate ? 1 : 0);
+    buf.push_back(static_cast<uint8_t>(current_op.opcode));
+
     return buf;
 }
 
@@ -381,6 +398,9 @@ BlockReason MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::ETHHASH2:
             machineoperation::ethhash2Op(*this);
+            break;
+        case OpCode::KECCAKF:
+            machineoperation::keccakF(*this);
             break;
 
             /***********************************************/
