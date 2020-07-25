@@ -87,6 +87,13 @@ library OneStepProof {
         }
     }
 
+    function handleOpcodeError(AssertionContext memory context) internal pure {
+        context.handleError();
+        // Also clear the stack and auxstack
+        context.stack.length = 0;
+        context.auxstack.length = 0;
+    }
+
     function executeStep(
         bytes32 beforeInbox,
         uint256 beforeInboxValueSize,
@@ -148,7 +155,7 @@ library OneStepProof {
     function executeAddInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
         if (!valid) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -161,7 +168,7 @@ library OneStepProof {
     function executeMulInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
         if (!valid) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -174,7 +181,7 @@ library OneStepProof {
     function executeSubInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
         if (!valid) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -187,7 +194,7 @@ library OneStepProof {
     function executeDivInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
         if (!valid || b == 0) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -200,7 +207,7 @@ library OneStepProof {
     function executeSdivInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
         if (!valid || b == 0) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -213,7 +220,7 @@ library OneStepProof {
     function executeModInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
         if (!valid || b == 0) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -226,7 +233,7 @@ library OneStepProof {
     function executeSmodInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
         if (!valid || b == 0) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -239,7 +246,7 @@ library OneStepProof {
     function executeAddmodInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b, uint256 m) = trinaryMathOp(context);
         if (!valid || b == 0) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -252,7 +259,7 @@ library OneStepProof {
     function executeMulmodInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b, uint256 m) = trinaryMathOp(context);
         if (!valid || b == 0) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -265,7 +272,7 @@ library OneStepProof {
     function executeExpInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
         if (!valid) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -280,7 +287,7 @@ library OneStepProof {
     function executeLtInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
         if (!valid) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -293,7 +300,7 @@ library OneStepProof {
     function executeGtInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
         if (!valid) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -306,7 +313,7 @@ library OneStepProof {
     function executeSltInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
         if (!valid) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -319,7 +326,7 @@ library OneStepProof {
     function executeSgtInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
         if (!valid) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -352,7 +359,7 @@ library OneStepProof {
     function executeAndInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
         if (!valid) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -365,7 +372,7 @@ library OneStepProof {
     function executeOrInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
         if (!valid) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -378,7 +385,7 @@ library OneStepProof {
     function executeXorInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
         if (!valid) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -391,7 +398,7 @@ library OneStepProof {
     function executeNotInsn(AssertionContext memory context) internal pure {
         Value.Data memory val1 = context.stack.popVal();
         if (!val1.isInt()) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 a = val1.intVal;
@@ -405,7 +412,7 @@ library OneStepProof {
     function executeByteInsn(AssertionContext memory context) internal pure {
         (bool valid, uint256 x, uint256 n) = binaryMathOp(context);
         if (!valid) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -421,7 +428,7 @@ library OneStepProof {
     {
         (bool valid, uint256 b, uint256 a) = binaryMathOp(context);
         if (!valid) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         uint256 c;
@@ -451,7 +458,7 @@ library OneStepProof {
     {
         (bool valid, uint256 b, uint256 a) = binaryMathOp(context);
         if (!valid) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         bytes32 res = keccak256(abi.encodePacked(a, b));
@@ -461,14 +468,14 @@ library OneStepProof {
     function executeKeccakFInsn(AssertionContext memory context) internal pure {
         Value.Data memory val = context.stack.popVal();
         if (!val.isTuple() || val.tupleVal.length != 7) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
 
         Value.Data[] memory values = val.tupleVal;
         for (uint256 i = 0; i < 7; i++) {
             if (!values[i].isInt()) {
-                context.handleError();
+                context.handleOpcodeError();
                 return;
             }
         }
@@ -513,7 +520,7 @@ library OneStepProof {
     function executeJumpInsn(AssertionContext memory context) internal pure {
         Value.Data memory val = context.stack.popVal();
         if (!val.isCodePoint()) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         context.afterMachine.instructionStackHash = val.hash();
@@ -523,7 +530,7 @@ library OneStepProof {
         Value.Data memory val1 = context.stack.popVal();
         Value.Data memory val2 = context.stack.popVal();
         if (!val1.isCodePoint() || !val2.isInt()) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         if (val2.intVal != 0) {
@@ -577,7 +584,7 @@ library OneStepProof {
     function executeErrsetInsn(AssertionContext memory context) internal pure {
         Value.Data memory val = context.stack.popVal();
         if (!val.isCodePoint()) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         context.afterMachine.errHandlerHash = val.hash();
@@ -635,7 +642,7 @@ library OneStepProof {
         if (
             !val1.isInt() || !val2.isTuple() || val1.intVal >= val2.valLength()
         ) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         context.stack.pushVal(val2.tupleVal[val1.intVal]);
@@ -648,7 +655,7 @@ library OneStepProof {
         if (
             !val1.isTuple() || !val2.isInt() || val1.intVal >= val2.valLength()
         ) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         Value.Data[] memory tupleVals = val2.tupleVal;
@@ -659,7 +666,7 @@ library OneStepProof {
     function executeTlenInsn(AssertionContext memory context) internal pure {
         Value.Data memory val1 = context.stack.popVal();
         if (!val1.isTuple()) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         context.stack.pushVal(Value.newInt(val1.valLength()));
@@ -673,7 +680,7 @@ library OneStepProof {
             !auxVal.isTuple() ||
             val1.intVal >= auxVal.valLength()
         ) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         context.auxstack.pushVal(auxVal);
@@ -689,7 +696,7 @@ library OneStepProof {
             !val1.isInt() ||
             val1.intVal >= auxVal.valLength()
         ) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         Value.Data[] memory tupleVals = auxVal.tupleVal;
@@ -710,7 +717,7 @@ library OneStepProof {
     function executeSendInsn(AssertionContext memory context) internal pure {
         Value.Data memory val1 = context.stack.popVal();
         if (val1.size > SEND_SIZE_LIMIT || !val1.isValidTypeForSend()) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         context.messageAcc = keccak256(
@@ -731,7 +738,7 @@ library OneStepProof {
     function executeSetGasInsn(AssertionContext memory context) internal pure {
         Value.Data memory val1 = context.stack.popVal();
         if (!val1.isInt()) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         context.afterMachine.arbGasRemaining = val1.intVal;
@@ -757,7 +764,7 @@ library OneStepProof {
         Value.Data memory val1 = context.stack.popVal();
         Value.Data memory val2 = context.stack.popVal();
         if (!val1.isInt() || !val2.isCodePoint()) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         context.stack.pushVal(
@@ -773,7 +780,7 @@ library OneStepProof {
         Value.Data memory val2 = context.stack.popVal();
         Value.Data memory val3 = context.stack.popVal();
         if (!val1.isInt() || !val2.isCodePoint()) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         context.stack.pushVal(
@@ -798,7 +805,7 @@ library OneStepProof {
         Value.Data memory val3 = context.stack.popVal();
         Value.Data memory val4 = context.stack.popVal();
         if (!val1.isInt() || !val2.isInt() || !val3.isInt() || !val4.isInt()) {
-            context.handleError();
+            context.handleOpcodeError();
             return;
         }
         bytes32 r = bytes32(val1.intVal);
@@ -814,7 +821,7 @@ library OneStepProof {
     }
 
     function executeErrorInsn(AssertionContext memory context) internal pure {
-        context.handleError();
+        context.handleOpcodeError();
     }
 
     function executeStopInsn(AssertionContext memory context) internal pure {
@@ -994,7 +1001,8 @@ library OneStepProof {
     {
         (uint8 opCode, AssertionContext memory context) = loadMachine(_data);
         (
-            uint256 popCount,
+            uint256 dataPopCount,
+            uint256 auxPopCount,
             uint64 gasCost,
             function(AssertionContext memory) internal pure impl
         ) = opInfo(opCode);
@@ -1013,7 +1021,7 @@ library OneStepProof {
             return context;
         }
 
-        if (context.stack.length < popCount) {
+        if (context.stack.length < dataPopCount) {
             // If we have insufficient values, reject the proof unless the stack has been fully exhausted
             require(
                 context.afterMachine.dataStack.hash() ==
@@ -1024,149 +1032,179 @@ library OneStepProof {
             return context;
         }
 
+        if (context.auxstack.length < auxPopCount) {
+            // If we have insufficient values, reject the proof unless the auxstack has been fully exhausted
+            require(
+                context.afterMachine.auxStack.hash() ==
+                    Value.newEmptyTuple().hash()
+            );
+            // If the auxstack is empty, the instruction underflowed so we have hit an error
+            context.handleError();
+            return context;
+        }
+
+        // Require the prover to submit the minimal number of stack items
+        require(context.stack.length == dataPopCount);
+        require(context.auxstack.length == auxPopCount);
+
         impl(context);
+
+        // Add the stack and auxstack values to the start machine
+        uint256 i = 0;
+
+        for (i = 0; i < context.stack.length; i++) {
+            context.afterMachine.addDataStackValue(
+                context.stack.values[context.stack.length - 1 - i]
+            );
+        }
+
+        for (i = 0; i < context.auxstack.length; i++) {
+            context.afterMachine.addAuxStackValue(
+                context.auxstack.values[context.auxstack.length - 1 - i]
+            );
+        }
 
         return context;
     }
 
-    // opInfo returns data stack pop count and gas used
     function opInfo(uint256 opCode)
         internal
         pure
         returns (
-            uint256,
-            uint64,
-            function(AssertionContext memory) internal pure
+            uint256, // stack pops
+            uint256, // auxstack pops
+            uint64, // gas used
+            function(AssertionContext memory) internal pure // impl
         )
     {
         if (opCode == OP_ADD) {
-            return (2, 3, executeAddInsn);
+            return (2, 0, 3, executeAddInsn);
         } else if (opCode == OP_MUL) {
-            return (2, 3, executeMulInsn);
+            return (2, 0, 3, executeMulInsn);
         } else if (opCode == OP_SUB) {
-            return (2, 3, executeSubInsn);
+            return (2, 0, 3, executeSubInsn);
         } else if (opCode == OP_DIV) {
-            return (2, 4, executeDivInsn);
+            return (2, 0, 4, executeDivInsn);
         } else if (opCode == OP_SDIV) {
-            return (2, 7, executeSdivInsn);
+            return (2, 0, 7, executeSdivInsn);
         } else if (opCode == OP_MOD) {
-            return (2, 4, executeModInsn);
+            return (2, 0, 4, executeModInsn);
         } else if (opCode == OP_SMOD) {
-            return (2, 7, executeSmodInsn);
+            return (2, 0, 7, executeSmodInsn);
         } else if (opCode == OP_ADDMOD) {
-            return (3, 4, executeAddmodInsn);
+            return (3, 0, 4, executeAddmodInsn);
         } else if (opCode == OP_MULMOD) {
-            return (3, 4, executeMulmodInsn);
+            return (3, 0, 4, executeMulmodInsn);
         } else if (opCode == OP_EXP) {
-            return (2, 25, executeExpInsn);
+            return (2, 0, 25, executeExpInsn);
         } else if (opCode == OP_LT) {
-            return (2, 2, executeLtInsn);
+            return (2, 0, 2, executeLtInsn);
         } else if (opCode == OP_GT) {
-            return (2, 2, executeGtInsn);
+            return (2, 0, 2, executeGtInsn);
         } else if (opCode == OP_SLT) {
-            return (2, 2, executeSltInsn);
+            return (2, 0, 2, executeSltInsn);
         } else if (opCode == OP_SGT) {
-            return (2, 2, executeSgtInsn);
+            return (2, 0, 2, executeSgtInsn);
         } else if (opCode == OP_EQ) {
-            return (2, 2, executeEqInsn);
+            return (2, 0, 2, executeEqInsn);
         } else if (opCode == OP_ISZERO) {
-            return (1, 1, executeIszeroInsn);
+            return (1, 0, 1, executeIszeroInsn);
         } else if (opCode == OP_AND) {
-            return (2, 2, executeAndInsn);
+            return (2, 0, 2, executeAndInsn);
         } else if (opCode == OP_OR) {
-            return (2, 2, executeOrInsn);
+            return (2, 0, 2, executeOrInsn);
         } else if (opCode == OP_XOR) {
-            return (2, 2, executeXorInsn);
+            return (2, 0, 2, executeXorInsn);
         } else if (opCode == OP_NOT) {
-            return (1, 1, executeNotInsn);
+            return (1, 0, 1, executeNotInsn);
         } else if (opCode == OP_BYTE) {
-            return (2, 4, executeByteInsn);
+            return (2, 0, 4, executeByteInsn);
         } else if (opCode == OP_SIGNEXTEND) {
-            return (2, 7, executeSignextendInsn);
+            return (2, 0, 7, executeSignextendInsn);
         } else if (opCode == OP_SHA3) {
-            return (1, 7, executeSha3Insn);
+            return (1, 0, 7, executeSha3Insn);
         } else if (opCode == OP_TYPE) {
-            return (1, 3, executeTypeInsn);
+            return (1, 0, 3, executeTypeInsn);
         } else if (opCode == OP_ETHHASH2) {
-            return (2, 8, executeEthhash2Insn);
+            return (2, 0, 8, executeEthhash2Insn);
         } else if (opCode == OP_KECCAK_F) {
-            return (1, 800, executeKeccakFInsn);
+            return (1, 0, 800, executeKeccakFInsn);
         } else if (opCode == OP_POP) {
-            return (1, 1, executePopInsn);
+            return (1, 0, 1, executePopInsn);
         } else if (opCode == OP_SPUSH) {
-            return (0, 1, executeSpushInsn);
+            return (0, 0, 1, executeSpushInsn);
         } else if (opCode == OP_RPUSH) {
-            return (0, 1, executeRpushInsn);
+            return (0, 0, 1, executeRpushInsn);
         } else if (opCode == OP_RSET) {
-            return (1, 2, executeRsetInsn);
+            return (1, 0, 2, executeRsetInsn);
         } else if (opCode == OP_JUMP) {
-            return (1, 4, executeJumpInsn);
+            return (1, 0, 4, executeJumpInsn);
         } else if (opCode == OP_CJUMP) {
-            return (2, 4, executeCjumpInsn);
+            return (2, 0, 4, executeCjumpInsn);
         } else if (opCode == OP_STACKEMPTY) {
-            return (0, 2, executeStackemptyInsn);
+            return (0, 0, 2, executeStackemptyInsn);
         } else if (opCode == OP_PCPUSH) {
-            return (0, 1, executePcpushInsn);
+            return (0, 0, 1, executePcpushInsn);
         } else if (opCode == OP_AUXPUSH) {
-            return (1, 1, executeAuxpushInsn);
+            return (1, 0, 1, executeAuxpushInsn);
         } else if (opCode == OP_AUXPOP) {
-            return (0, 1, executeAuxpopInsn);
+            return (0, 1, 1, executeAuxpopInsn);
         } else if (opCode == OP_AUXSTACKEMPTY) {
-            return (0, 2, executeAuxstackemptyInsn);
+            return (0, 0, 2, executeAuxstackemptyInsn);
         } else if (opCode == OP_NOP) {
-            return (0, 1, executeNopInsn);
+            return (0, 0, 1, executeNopInsn);
         } else if (opCode == OP_ERRPUSH) {
-            return (0, 1, executeErrpushInsn);
+            return (0, 0, 1, executeErrpushInsn);
         } else if (opCode == OP_ERRSET) {
-            return (1, 1, executeErrsetInsn);
+            return (1, 0, 1, executeErrsetInsn);
         } else if (opCode == OP_DUP0) {
-            return (1, 1, executeDup0Insn);
+            return (1, 0, 1, executeDup0Insn);
         } else if (opCode == OP_DUP1) {
-            return (2, 1, executeDup1Insn);
+            return (2, 0, 1, executeDup1Insn);
         } else if (opCode == OP_DUP2) {
-            return (3, 1, executeDup2Insn);
+            return (3, 0, 1, executeDup2Insn);
         } else if (opCode == OP_SWAP1) {
-            return (2, 1, executeSwap1Insn);
+            return (2, 0, 1, executeSwap1Insn);
         } else if (opCode == OP_SWAP2) {
-            return (3, 1, executeSwap2Insn);
+            return (3, 0, 1, executeSwap2Insn);
         } else if (opCode == OP_TGET) {
-            return (2, 2, executeTgetInsn);
+            return (2, 0, 2, executeTgetInsn);
         } else if (opCode == OP_TSET) {
-            return (3, 40, executeTsetInsn);
+            return (3, 0, 40, executeTsetInsn);
         } else if (opCode == OP_TLEN) {
-            return (1, 2, executeTlenInsn);
+            return (1, 0, 2, executeTlenInsn);
         } else if (opCode == OP_XGET) {
-            return (1, 3, executeXgetInsn);
+            return (1, 1, 3, executeXgetInsn);
         } else if (opCode == OP_XSET) {
-            return (2, 41, executeXsetInsn);
+            return (2, 1, 41, executeXsetInsn);
         } else if (opCode == OP_BREAKPOINT) {
-            return (0, 100, executeNopInsn);
+            return (0, 0, 100, executeNopInsn);
         } else if (opCode == OP_LOG) {
-            return (1, 100, executeLogInsn);
+            return (1, 0, 100, executeLogInsn);
         } else if (opCode == OP_SEND) {
-            return (1, 100, executeSendInsn);
+            return (1, 0, 100, executeSendInsn);
         } else if (opCode == OP_INBOX) {
-            return (0, 40, executeInboxInsn);
+            return (0, 0, 40, executeInboxInsn);
         } else if (opCode == OP_ERROR) {
-            return (0, 5, executeErrorInsn);
+            return (0, 0, 5, executeErrorInsn);
         } else if (opCode == OP_STOP) {
-            return (0, 10, executeStopInsn);
+            return (0, 0, 10, executeStopInsn);
         } else if (opCode == OP_SETGAS) {
-            return (1, 0, executeSetGasInsn);
+            return (1, 0, 0, executeSetGasInsn);
         } else if (opCode == OP_PUSHGAS) {
-            return (0, 1, executePushGasInsn);
+            return (0, 0, 1, executePushGasInsn);
         } else if (opCode == OP_ERR_CODE_POINT) {
-            return (0, 25, executeErrCodePointInsn);
+            return (0, 0, 25, executeErrCodePointInsn);
         } else if (opCode == OP_PUSH_INSN) {
-            return (2, 25, executePushInsnInsn);
+            return (2, 0, 25, executePushInsnInsn);
         } else if (opCode == OP_PUSH_INSN_IMM) {
-            return (3, 25, executePushInsnImmInsn);
+            return (3, 0, 25, executePushInsnImmInsn);
         } else if (opCode == OP_SIDELOAD) {
-            return (0, 10, executeSideloadInsn);
+            return (0, 0, 10, executeSideloadInsn);
         } else if (opCode == OP_ECRECOVER) {
-            return (4, 20000, executeECRecoverInsn);
+            return (4, 0, 20000, executeECRecoverInsn);
         } else {
-            return (0, 0, executeErrorInsn);
+            return (0, 0, 0, executeErrorInsn);
         }
     }
 }
