@@ -97,11 +97,11 @@ library OneStepProof {
     ) internal pure returns (AssertionContext memory) {
         uint8 stackCount = uint8(proof[0]);
         uint8 auxstackCount = uint8(proof[1]);
+        uint256 offset = 2;
 
         // Leave some extra space for values pushed on the stack in the proofs
         Value.Data[] memory stackVals = new Value.Data[](stackCount + 4);
         Value.Data[] memory auxstackVals = new Value.Data[](auxstackCount + 4);
-        uint256 offset = 2;
         for (uint256 i = 0; i < stackCount; i++) {
             (offset, stackVals[i]) = Marshaling.deserialize(proof, offset);
         }
@@ -113,6 +113,7 @@ library OneStepProof {
 
         uint8 immediate = uint8(proof[offset]);
         uint8 opCode = uint8(proof[offset + 1]);
+        offset += 2;
         AssertionContext memory context = AssertionContext(
             mach,
             mach.clone(),
@@ -187,7 +188,7 @@ library OneStepProof {
             require(
                 context.afterMachine.dataStack.hash() ==
                     Value.newEmptyTuple().hash(),
-                "stack not empty"
+                "stack item missing from proof"
             );
             // If the stack is empty, the instruction underflowed so we have hit an error
             context.handleError();
@@ -199,7 +200,7 @@ library OneStepProof {
             require(
                 context.afterMachine.auxStack.hash() ==
                     Value.newEmptyTuple().hash(),
-                "auxstack not empty"
+                "auxstack item missing from proof"
             );
             // If the auxstack is empty, the instruction underflowed so we have hit an error
             context.handleError();
@@ -413,7 +414,7 @@ library OneStepProof {
 
     // Hash
 
-    function executeSha3Insn(AssertionContext memory context) internal pure {
+    function executeHashInsn(AssertionContext memory context) internal pure {
         Value.Data memory val = context.stack.popVal();
         context.stack.pushVal(Value.newInt(uint256(val.hash())));
     }
@@ -815,7 +816,7 @@ library OneStepProof {
     uint8 internal constant OP_SIGNEXTEND = 0x1b;
 
     // SHA3
-    uint8 internal constant OP_SHA3 = 0x20;
+    uint8 internal constant OP_HASH = 0x20;
     uint8 internal constant OP_TYPE = 0x21;
     uint8 internal constant OP_ETHHASH2 = 0x22;
     uint8 internal constant OP_KECCAK_F = 0x23;
@@ -928,8 +929,8 @@ library OneStepProof {
             return (2, 0, 4, binaryMathOp);
         } else if (opCode == OP_SIGNEXTEND) {
             return (2, 0, 7, binaryMathOp);
-        } else if (opCode == OP_SHA3) {
-            return (1, 0, 7, executeSha3Insn);
+        } else if (opCode == OP_HASH) {
+            return (1, 0, 7, executeHashInsn);
         } else if (opCode == OP_TYPE) {
             return (1, 0, 3, executeTypeInsn);
         } else if (opCode == OP_ETHHASH2) {
