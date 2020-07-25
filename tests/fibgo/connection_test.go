@@ -131,11 +131,12 @@ func setupValidators(
 	return rollupAddress, nil
 }
 
-func launchAggregator(client arbbridge.ArbAuthClient, rollupAddress common.Address) error {
+func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollupAddress common.Address) error {
 	go func() {
 		if err := rpc.LaunchAggregator(
 			context.Background(),
 			client,
+			auth,
 			rollupAddress,
 			contract,
 			db+"/aggregator",
@@ -295,7 +296,8 @@ func TestFib(t *testing.T) {
 	}()
 
 	if err := launchAggregator(
-		ethbridge.NewEthAuthClient(l1Client, bind.NewKeyedTransactor(pks[1])),
+		l1Client,
+		bind.NewKeyedTransactor(pks[1]),
 		rollupAddress,
 	); err != nil {
 		t.Fatal(err)
