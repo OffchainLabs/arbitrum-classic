@@ -43,17 +43,10 @@ contract OneStepProofTester {
             beforeInbox,
             beforeInboxValueSize
         );
-        (
-            OneStepProof.AssertionContext memory context,
-            uint8 opcode
-        ) = OneStepProof.initializeExecutionContext(
-            inbox,
-            firstMessage,
-            firstLog,
-            proof
-        );
+        OneStepProof.AssertionContext memory context = OneStepProof
+            .initializeExecutionContext(inbox, firstMessage, firstLog, proof);
 
-        OneStepProof.executeOp(context, opcode);
+        OneStepProof.executeOp(context);
         return (
             Machine.hash(context.startMachine),
             Machine.hash(context.afterMachine),

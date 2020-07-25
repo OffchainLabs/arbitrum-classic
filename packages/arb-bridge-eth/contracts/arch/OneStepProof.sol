@@ -69,6 +69,7 @@ library OneStepProof {
         ValueStack stack;
         ValueStack auxstack;
         bool hadImmediate;
+        uint8 opcode;
     }
 
     function handleError(AssertionContext memory context) internal pure {
@@ -93,7 +94,7 @@ library OneStepProof {
         bytes32 messagesAcc,
         bytes32 logsAcc,
         bytes memory proof
-    ) internal pure returns (AssertionContext memory context, uint8 opCode) {
+    ) internal pure returns (AssertionContext memory) {
         uint8 stackCount = uint8(proof[0]);
         uint8 auxstackCount = uint8(proof[1]);
 
@@ -111,8 +112,8 @@ library OneStepProof {
         (offset, mach) = Machine.deserializeMachine(proof, offset);
 
         uint8 immediate = uint8(proof[offset]);
-        opCode = uint8(proof[offset + 1]);
-        context = AssertionContext(
+        uint8 opCode = uint8(proof[offset + 1]);
+        AssertionContext memory context = AssertionContext(
             mach,
             mach.clone(),
             inbox,
@@ -122,7 +123,8 @@ library OneStepProof {
             0,
             ValueStack(stackCount, stackVals),
             ValueStack(auxstackCount, auxstackVals),
-            immediate == 1
+            immediate == 1,
+            opCode
         );
 
         require(
@@ -155,19 +157,16 @@ library OneStepProof {
             context.startMachine.addAuxStackValue(auxstackVals[i]);
         }
 
-        return (context, opCode);
+        return context;
     }
 
-    function executeOp(AssertionContext memory context, uint8 opCode)
-        internal
-        pure
-    {
+    function executeOp(AssertionContext memory context) internal pure {
         (
             uint256 dataPopCount,
             uint256 auxPopCount,
             uint64 gasCost,
             function(AssertionContext memory) internal pure impl
-        ) = opInfo(opCode);
+        ) = opInfo(context.opcode);
         context.gas = gasCost;
 
         // Update end machine gas remaining before running opcode
@@ -239,223 +238,140 @@ library OneStepProof {
 
     // Arithmetic
 
-    function binaryMathOp(AssertionContext memory context)
-        private
-        pure
-        returns (
-            bool,
-            uint256,
-            uint256
-        )
-    {
+    function binaryMathOp(AssertionContext memory context) internal pure {
         Value.Data memory val1 = context.stack.popVal();
         Value.Data memory val2 = context.stack.popVal();
         if (!val1.isInt() || !val2.isInt()) {
-            return (false, 0, 0);
+            context.handleOpcodeError();
+            return;
         }
-        return (true, val1.intVal, val2.intVal);
+        uint256 a = val1.intVal;
+        uint256 b = val2.intVal;
+
+        uint256 c;
+        if (context.opcode == OP_ADD) {
+            assembly {
+                c := add(a, b)
+            }
+        } else if (context.opcode == OP_MUL) {
+            assembly {
+                c := mul(a, b)
+            }
+        } else if (context.opcode == OP_SUB) {
+            assembly {
+                c := sub(a, b)
+            }
+        } else if (context.opcode == OP_EXP) {
+            assembly {
+                c := exp(a, b)
+            }
+        } else if (context.opcode == OP_LT) {
+            assembly {
+                c := lt(a, b)
+            }
+        } else if (context.opcode == OP_GT) {
+            assembly {
+                c := gt(a, b)
+            }
+        } else if (context.opcode == OP_SLT) {
+            assembly {
+                c := slt(a, b)
+            }
+        } else if (context.opcode == OP_SGT) {
+            assembly {
+                c := sgt(a, b)
+            }
+        } else if (context.opcode == OP_AND) {
+            assembly {
+                c := and(a, b)
+            }
+        } else if (context.opcode == OP_OR) {
+            assembly {
+                c := or(a, b)
+            }
+        } else if (context.opcode == OP_XOR) {
+            assembly {
+                c := xor(a, b)
+            }
+        } else if (context.opcode == OP_BYTE) {
+            assembly {
+                c := byte(b, a)
+            }
+        } else if (context.opcode == OP_SIGNEXTEND) {
+            assembly {
+                c := signextend(b, a)
+            }
+        } else if (context.opcode == OP_ETHHASH2) {
+            c = uint256(keccak256(abi.encodePacked(a, b)));
+        } else {
+            assert(false);
+        }
+
+        context.stack.pushVal(Value.newInt(c));
     }
 
-    function trinaryMathOp(AssertionContext memory context)
-        private
-        pure
-        returns (
-            bool,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function binaryMathOpZero(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = context.stack.popVal();
+        Value.Data memory val2 = context.stack.popVal();
+        if (!val1.isInt() || !val2.isInt() || val2.intVal == 0) {
+            context.handleOpcodeError();
+            return;
+        }
+        uint256 a = val1.intVal;
+        uint256 b = val2.intVal;
+
+        uint256 c;
+        if (context.opcode == OP_DIV) {
+            assembly {
+                c := div(a, b)
+            }
+        } else if (context.opcode == OP_SDIV) {
+            assembly {
+                c := sdiv(a, b)
+            }
+        } else if (context.opcode == OP_MOD) {
+            assembly {
+                c := mod(a, b)
+            }
+        } else if (context.opcode == OP_SMOD) {
+            assembly {
+                c := smod(a, b)
+            }
+        } else {
+            assert(false);
+        }
+
+        context.stack.pushVal(Value.newInt(c));
+    }
+
+    function executeMathModInsn(AssertionContext memory context) internal pure {
         Value.Data memory val1 = context.stack.popVal();
         Value.Data memory val2 = context.stack.popVal();
         Value.Data memory val3 = context.stack.popVal();
-        if (!val1.isInt() || !val2.isInt() || !val3.isInt()) {
-            return (false, 0, 0, 0);
-        }
-        return (true, val1.intVal, val2.intVal, val3.intVal);
-    }
-
-    function executeAddInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
-        if (!valid) {
+        if (
+            !val1.isInt() || !val2.isInt() || !val3.isInt() || val3.intVal == 0
+        ) {
             context.handleOpcodeError();
             return;
         }
-        uint256 c;
-        assembly {
-            c := add(a, b)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
+        uint256 a = val1.intVal;
+        uint256 b = val2.intVal;
+        uint256 m = val3.intVal;
 
-    function executeMulInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
-        if (!valid) {
-            context.handleOpcodeError();
-            return;
-        }
         uint256 c;
-        assembly {
-            c := mul(a, b)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
 
-    function executeSubInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
-        if (!valid) {
-            context.handleOpcodeError();
-            return;
+        if (context.opcode == OP_ADDMOD) {
+            assembly {
+                c := addmod(a, b, m)
+            }
+        } else if (context.opcode == OP_MULMOD) {
+            assembly {
+                c := mulmod(a, b, m)
+            }
+        } else {
+            assert(false);
         }
-        uint256 c;
-        assembly {
-            c := sub(a, b)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
 
-    function executeDivInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
-        if (!valid || b == 0) {
-            context.handleOpcodeError();
-            return;
-        }
-        uint256 c;
-        assembly {
-            c := div(a, b)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
-
-    function executeSdivInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
-        if (!valid || b == 0) {
-            context.handleOpcodeError();
-            return;
-        }
-        uint256 c;
-        assembly {
-            c := sdiv(a, b)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
-
-    function executeModInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
-        if (!valid || b == 0) {
-            context.handleOpcodeError();
-            return;
-        }
-        uint256 c;
-        assembly {
-            c := mod(a, b)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
-
-    function executeSmodInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
-        if (!valid || b == 0) {
-            context.handleOpcodeError();
-            return;
-        }
-        uint256 c;
-        assembly {
-            c := smod(a, b)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
-
-    function executeAddmodInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b, uint256 m) = trinaryMathOp(context);
-        if (!valid || m == 0) {
-            context.handleOpcodeError();
-            return;
-        }
-        uint256 c;
-        assembly {
-            c := addmod(a, b, m)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
-
-    function executeMulmodInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b, uint256 m) = trinaryMathOp(context);
-        if (!valid || m == 0) {
-            context.handleOpcodeError();
-            return;
-        }
-        uint256 c;
-        assembly {
-            c := mulmod(a, b, m)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
-
-    function executeExpInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
-        if (!valid) {
-            context.handleOpcodeError();
-            return;
-        }
-        uint256 c;
-        assembly {
-            c := exp(a, b)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
-
-    // Comparison
-
-    function executeLtInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
-        if (!valid) {
-            context.handleOpcodeError();
-            return;
-        }
-        uint256 c;
-        assembly {
-            c := lt(a, b)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
-
-    function executeGtInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
-        if (!valid) {
-            context.handleOpcodeError();
-            return;
-        }
-        uint256 c;
-        assembly {
-            c := gt(a, b)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
-
-    function executeSltInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
-        if (!valid) {
-            context.handleOpcodeError();
-            return;
-        }
-        uint256 c;
-        assembly {
-            c := slt(a, b)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
-
-    function executeSgtInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
-        if (!valid) {
-            context.handleOpcodeError();
-            return;
-        }
-        uint256 c;
-        assembly {
-            c := sgt(a, b)
-        }
         context.stack.pushVal(Value.newInt(c));
     }
 
@@ -479,45 +395,6 @@ library OneStepProof {
         }
     }
 
-    function executeAndInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
-        if (!valid) {
-            context.handleOpcodeError();
-            return;
-        }
-        uint256 c;
-        assembly {
-            c := and(a, b)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
-
-    function executeOrInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
-        if (!valid) {
-            context.handleOpcodeError();
-            return;
-        }
-        uint256 c;
-        assembly {
-            c := or(a, b)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
-
-    function executeXorInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
-        if (!valid) {
-            context.handleOpcodeError();
-            return;
-        }
-        uint256 c;
-        assembly {
-            c := xor(a, b)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
-
     function executeNotInsn(AssertionContext memory context) internal pure {
         Value.Data memory val1 = context.stack.popVal();
         if (!val1.isInt()) {
@@ -528,35 +405,6 @@ library OneStepProof {
         uint256 c;
         assembly {
             c := not(a)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
-
-    function executeByteInsn(AssertionContext memory context) internal pure {
-        (bool valid, uint256 x, uint256 n) = binaryMathOp(context);
-        if (!valid) {
-            context.handleOpcodeError();
-            return;
-        }
-        uint256 c;
-        assembly {
-            c := byte(n, x)
-        }
-        context.stack.pushVal(Value.newInt(c));
-    }
-
-    function executeSignextendInsn(AssertionContext memory context)
-        internal
-        pure
-    {
-        (bool valid, uint256 b, uint256 a) = binaryMathOp(context);
-        if (!valid) {
-            context.handleOpcodeError();
-            return;
-        }
-        uint256 c;
-        assembly {
-            c := signextend(a, b)
         }
         context.stack.pushVal(Value.newInt(c));
     }
@@ -573,19 +421,6 @@ library OneStepProof {
     function executeTypeInsn(AssertionContext memory context) internal pure {
         Value.Data memory val = context.stack.popVal();
         context.stack.pushVal(val.typeCodeVal());
-    }
-
-    function executeEthhash2Insn(AssertionContext memory context)
-        internal
-        pure
-    {
-        (bool valid, uint256 a, uint256 b) = binaryMathOp(context);
-        if (!valid) {
-            context.handleOpcodeError();
-            return;
-        }
-        bytes32 res = keccak256(abi.encodePacked(a, b));
-        context.stack.pushVal(Value.newInt(uint256(res)));
     }
 
     function executeKeccakFInsn(AssertionContext memory context) internal pure {
@@ -1047,55 +882,55 @@ library OneStepProof {
         )
     {
         if (opCode == OP_ADD) {
-            return (2, 0, 3, executeAddInsn);
+            return (2, 0, 3, binaryMathOp);
         } else if (opCode == OP_MUL) {
-            return (2, 0, 3, executeMulInsn);
+            return (2, 0, 3, binaryMathOp);
         } else if (opCode == OP_SUB) {
-            return (2, 0, 3, executeSubInsn);
+            return (2, 0, 3, binaryMathOp);
         } else if (opCode == OP_DIV) {
-            return (2, 0, 4, executeDivInsn);
+            return (2, 0, 4, binaryMathOpZero);
         } else if (opCode == OP_SDIV) {
-            return (2, 0, 7, executeSdivInsn);
+            return (2, 0, 7, binaryMathOpZero);
         } else if (opCode == OP_MOD) {
-            return (2, 0, 4, executeModInsn);
+            return (2, 0, 4, binaryMathOpZero);
         } else if (opCode == OP_SMOD) {
-            return (2, 0, 7, executeSmodInsn);
+            return (2, 0, 7, binaryMathOpZero);
         } else if (opCode == OP_ADDMOD) {
-            return (3, 0, 4, executeAddmodInsn);
+            return (3, 0, 4, executeMathModInsn);
         } else if (opCode == OP_MULMOD) {
-            return (3, 0, 4, executeMulmodInsn);
+            return (3, 0, 4, executeMathModInsn);
         } else if (opCode == OP_EXP) {
-            return (2, 0, 25, executeExpInsn);
+            return (2, 0, 25, binaryMathOp);
         } else if (opCode == OP_LT) {
-            return (2, 0, 2, executeLtInsn);
+            return (2, 0, 2, binaryMathOp);
         } else if (opCode == OP_GT) {
-            return (2, 0, 2, executeGtInsn);
+            return (2, 0, 2, binaryMathOp);
         } else if (opCode == OP_SLT) {
-            return (2, 0, 2, executeSltInsn);
+            return (2, 0, 2, binaryMathOp);
         } else if (opCode == OP_SGT) {
-            return (2, 0, 2, executeSgtInsn);
+            return (2, 0, 2, binaryMathOp);
         } else if (opCode == OP_EQ) {
             return (2, 0, 2, executeEqInsn);
         } else if (opCode == OP_ISZERO) {
             return (1, 0, 1, executeIszeroInsn);
         } else if (opCode == OP_AND) {
-            return (2, 0, 2, executeAndInsn);
+            return (2, 0, 2, binaryMathOp);
         } else if (opCode == OP_OR) {
-            return (2, 0, 2, executeOrInsn);
+            return (2, 0, 2, binaryMathOp);
         } else if (opCode == OP_XOR) {
-            return (2, 0, 2, executeXorInsn);
+            return (2, 0, 2, binaryMathOp);
         } else if (opCode == OP_NOT) {
             return (1, 0, 1, executeNotInsn);
         } else if (opCode == OP_BYTE) {
-            return (2, 0, 4, executeByteInsn);
+            return (2, 0, 4, binaryMathOp);
         } else if (opCode == OP_SIGNEXTEND) {
-            return (2, 0, 7, executeSignextendInsn);
+            return (2, 0, 7, binaryMathOp);
         } else if (opCode == OP_SHA3) {
             return (1, 0, 7, executeSha3Insn);
         } else if (opCode == OP_TYPE) {
             return (1, 0, 3, executeTypeInsn);
         } else if (opCode == OP_ETHHASH2) {
-            return (2, 0, 8, executeEthhash2Insn);
+            return (2, 0, 8, binaryMathOp);
         } else if (opCode == OP_KECCAK_F) {
             return (1, 0, 800, executeKeccakFInsn);
         } else if (opCode == OP_POP) {

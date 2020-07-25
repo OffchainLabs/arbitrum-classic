@@ -204,17 +204,15 @@ contract ExecutionChallenge is BisectionChallenge {
             _beforeInboxValueSize
         );
 
-        (
-            OneStepProof.AssertionContext memory context,
-            uint8 opcode
-        ) = OneStepProof.initializeExecutionContext(
+        OneStepProof.AssertionContext memory context = OneStepProof
+            .initializeExecutionContext(
             inbox,
             _firstMessage,
             _firstLog,
             _proof
         );
 
-        OneStepProof.executeOp(context, opcode);
+        OneStepProof.executeOp(context);
         // The one step proof already guarantees us that _firstMessage and _lastMessage
         // are either one or 0 messages apart and the same is true for logs. Therefore
         // we can infer the message count and log count based on whether the fields
