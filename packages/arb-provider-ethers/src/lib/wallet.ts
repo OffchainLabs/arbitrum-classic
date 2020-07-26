@@ -16,34 +16,26 @@
 /* eslint-env node */
 'use strict'
 
+import { Bridge } from './bridge'
+
 import { L2Transaction, L2Message } from './message'
 import { ArbProvider } from './provider'
 import { GlobalInbox } from './abi/GlobalInbox'
 import { ArbSysFactory } from './abi/ArbSysFactory'
+import { TransactionOverrides } from './abi'
 
 import * as ethers from 'ethers'
 
 const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
 
-export class ArbWallet extends ethers.Signer {
+export class ArbWallet extends Bridge implements ethers.Signer {
   public signer: ethers.Signer
   public provider: ArbProvider
-  public globalInboxCache?: GlobalInbox
 
   constructor(signer: ethers.Signer, provider: ArbProvider) {
-    super()
+    super(signer, provider.ethProvider, provider.chainAddress)
     this.signer = signer
     this.provider = provider
-  }
-
-  public async globalInboxConn(): Promise<GlobalInbox> {
-    if (!this.globalInboxCache) {
-      const globalInbox = await this.provider.globalInboxConn()
-      const linkedGlobalInbox = globalInbox.connect(this.signer)
-      this.globalInboxCache = linkedGlobalInbox
-      return linkedGlobalInbox
-    }
-    return this.globalInboxCache
   }
 
   public getAddress(): Promise<string> {
@@ -62,105 +54,41 @@ export class ArbWallet extends ethers.Signer {
     return arbsys.withdrawEth(await this.getAddress(), { value: valueNum })
   }
 
-  public async withdrawEth(): Promise<ethers.providers.TransactionResponse> {
-    const globalInbox = await this.globalInboxConn()
-    return globalInbox.withdrawEth()
-  }
-
-  public async withdrawERC20(
-    erc20: string
-  ): Promise<ethers.providers.TransactionResponse> {
-    const globalInbox = await this.globalInboxConn()
-    return globalInbox.withdrawERC20(erc20)
-  }
-
-  public async withdrawERC721(
-    erc721: string,
-    tokenId: ethers.utils.BigNumberish
-  ): Promise<ethers.providers.TransactionResponse> {
-    const globalInbox = await this.globalInboxConn()
-    return globalInbox.withdrawERC721(erc721, tokenId)
-  }
-
   public async depositERC20(
     to: string,
     erc20: string,
-    value: ethers.utils.BigNumberish
+    value: ethers.utils.BigNumberish,
+    overrides?: TransactionOverrides
   ): Promise<ethers.providers.TransactionResponse> {
-    const sendValue = ethers.utils.bigNumberify(value)
-    const globalInbox = await this.globalInboxConn()
-    const tx = await globalInbox.depositERC20Message(
-      await this.provider.chainAddress,
-      erc20,
-      to,
-      sendValue
-    )
+    const tx = await super.depositERC20(to, erc20, value, overrides)
     return this.provider._wrapTransaction(tx, tx.hash)
   }
 
   public async depositERC721(
     to: string,
     erc721: string,
-    tokenId: ethers.utils.BigNumberish
+    tokenId: ethers.utils.BigNumberish,
+    overrides?: TransactionOverrides
   ): Promise<ethers.providers.TransactionResponse> {
-    const globalInbox = await this.globalInboxConn()
-    const tx = await globalInbox.depositERC721Message(
-      await this.provider.chainAddress,
-      erc721,
-      to,
-      tokenId
-    )
+    const tx = await super.depositERC20(to, erc721, tokenId, overrides)
     return this.provider._wrapTransaction(tx, tx.hash)
   }
 
   public async depositETH(
     to: string,
-    value: ethers.utils.BigNumberish
+    value: ethers.utils.BigNumberish,
+    overrides?: TransactionOverrides
   ): Promise<ethers.providers.TransactionResponse> {
-    console.log('deposit eth to chain', await this.provider.chainAddress)
-    const globalInbox = await this.globalInboxConn()
-    const tx = await globalInbox.depositEthMessage(
-      await this.provider.chainAddress,
-      to,
-      { value }
-    )
-    console.log('Depositing eth')
-    console.log(await tx.wait())
-    console.log('Deposited eth')
+    const tx = await super.depositETH(to, value, overrides)
     return this.provider._wrapTransaction(tx, tx.hash)
   }
 
-  public async transferPayment(
-    originalOwner: string,
-    newOwner: string,
-    nodeHash: string,
-    messageIndex: ethers.utils.BigNumberish
-  ): Promise<ethers.providers.TransactionResponse> {
-    const msgIndex = ethers.utils.bigNumberify(messageIndex)
-    const globalInbox = await this.globalInboxConn()
-    const tx = await globalInbox.transferPayment(
-      originalOwner,
-      newOwner,
-      nodeHash,
-      msgIndex
-    )
-    return tx
-  }
   public async sendTransactionMessage(
     l2tx: L2Transaction,
-    from: string
+    from: string,
+    overrides?: TransactionOverrides
   ): Promise<ethers.providers.TransactionResponse> {
-    const walletAddress = await this.getAddress()
-    if (from.toLowerCase() != walletAddress.toLowerCase()) {
-      throw Error(
-        `Can only send from wallet address ${from}, but tried to send from ${walletAddress}`
-      )
-    }
-    const globalInbox = await this.globalInboxConn()
-    await globalInbox.sendL2Message(
-      await this.provider.chainAddress,
-      new L2Message(l2tx).asData()
-    )
+    this.sendL2Message(l2tx, from, overrides)
     const network = await this.provider.getNetwork()
     const tx: ethers.utils.Transaction = {
       data: ethers.utils.hexlify(l2tx.calldata),
