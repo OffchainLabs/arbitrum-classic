@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"log"
 	"math"
 	"math/big"
@@ -45,7 +46,7 @@ func main() {
 	//	panic(err)
 	//}
 
-	if err := testMessages(filename, "contract.mexe"); err != nil {
+	if err := testMessages(filename, arbos.Path()); err != nil {
 		panic(err)
 	}
 }

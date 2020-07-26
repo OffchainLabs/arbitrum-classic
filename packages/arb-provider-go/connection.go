@@ -5,7 +5,9 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	errors2 "github.com/pkg/errors"
+	"log"
 	"math/big"
 	"sync"
 	"time"
@@ -87,8 +89,9 @@ func processCallRet(retValue value.Value) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if logVal.ResultCode != evm.ReturnCode {
-		return nil, fmt.Errorf("call reverted %v", logVal)
+	log.Println("Got call result", logVal.ResultCode, hexutil.Encode(logVal.ReturnData))
+	if logVal.ResultCode != evm.ReturnCode && logVal.ResultCode != evm.RevertCode {
+		return nil, fmt.Errorf("call failed %v", logVal)
 	}
 	return logVal.ReturnData, nil
 }

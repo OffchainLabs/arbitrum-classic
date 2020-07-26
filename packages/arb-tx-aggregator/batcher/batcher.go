@@ -106,6 +106,7 @@ func prepareTransactions(txes []DecodedBatchTx) l2message.TransactionBatch {
 		transactionsBySender[tx.sender] = transactionsBySender[tx.sender][1:]
 		batchTxes = append(batchTxes, nextTx.tx)
 	}
+	log.Println("Made batch", batchTxes)
 	return l2message.NewTransactionBatchFromMessages(batchTxes)
 }
 
