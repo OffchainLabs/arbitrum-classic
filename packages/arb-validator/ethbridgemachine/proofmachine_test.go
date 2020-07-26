@@ -18,18 +18,19 @@ package ethbridgemachine
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
+	"math/big"
+	"strconv"
 
 	"encoding/json"
 	"errors"
 	"io/ioutil"
 
-	"math/big"
 	"path/filepath"
 	"runtime"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
@@ -61,24 +62,39 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 	}
 
 	for _, proof := range proofs {
-		afterHash, err := osp.ValidateProof(
-			&bind.CallOpts{Context: context.Background()},
-			proof.BeforeHash,
-			proof.InboxInner,
-			big.NewInt(proof.InboxSize),
-			proof.Assertion.DidInboxInsn,
-			proof.Assertion.FirstMessageHash,
-			proof.Assertion.LastMessageHash,
-			proof.Assertion.FirstLogHash,
-			proof.Assertion.LastLogHash,
-			proof.Assertion.NumGas,
-			proof.Proof,
-		)
-		if err != nil {
-			t.Fatal("Proof invalid with error", err)
-		} else if proof.Assertion.AfterHash != afterHash {
-			t.Fatal("Proof invalid")
-		}
+		opcode := proof.Proof[len(proof.Proof)-1]
+		t.Run(strconv.FormatUint(uint64(opcode), 10), func(t *testing.T) {
+			machineData, err := osp.ExecuteStep(
+				&bind.CallOpts{Context: context.Background()},
+				proof.InboxInner,
+				big.NewInt(proof.InboxSize),
+				proof.Assertion.FirstMessageHash,
+				proof.Assertion.FirstLogHash,
+				proof.Proof,
+			)
+			t.Log("Opcode", opcode)
+			if err != nil {
+				t.Fatal("proof invalid with error", err)
+			}
+			if machineData.DidInboxInsn != proof.Assertion.DidInboxInsn {
+				t.Fatal("wrong DidInboxInsn")
+			}
+			if machineData.Gas != proof.Assertion.NumGas {
+				t.Fatal("wrong gas")
+			}
+			if machineData.LogAcc != proof.Assertion.LastLogHash {
+				t.Fatal("wrong log")
+			}
+			if machineData.MessageAcc != proof.Assertion.LastMessageHash {
+				t.Fatal("wrong message")
+			}
+			if machineData.StartHash != proof.BeforeHash {
+				t.Fatal("wrong before machine")
+			}
+			if machineData.EndHash != proof.Assertion.AfterHash {
+				t.Fatal("wrong after machine")
+			}
+		})
 	}
 }
 

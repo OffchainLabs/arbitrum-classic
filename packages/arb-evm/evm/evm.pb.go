@@ -1425,7 +1425,7 @@ var file_evm_proto_depIdxs = []int32{
 	17, // 4: evm.RollupValidator.GetBlockInfo:input_type -> evm.BlockInfoArgs
 	9,  // 5: evm.RollupValidator.GetOutputMessage:input_type -> evm.GetOutputMessageArgs
 	11, // 6: evm.RollupValidator.GetRequestResult:input_type -> evm.GetRequestResultArgs
-	15, // 7: evm.RollupValidator.Call:input_type -> evm.CallMessageArgs
+	15, // 7: evm.RollupValidator.CallMessage:input_type -> evm.CallMessageArgs
 	7,  // 8: evm.RollupValidator.FindLogs:input_type -> evm.FindLogsArgs
 	13, // 9: evm.RollupValidator.GetChainAddress:input_type -> evm.GetChainAddressArgs
 	19, // 10: evm.RollupValidator.SendTransaction:input_type -> evm.SendTransactionArgs
@@ -1433,7 +1433,7 @@ var file_evm_proto_depIdxs = []int32{
 	18, // 12: evm.RollupValidator.GetBlockInfo:output_type -> evm.BlockInfoReply
 	10, // 13: evm.RollupValidator.GetOutputMessage:output_type -> evm.GetOutputMessageReply
 	12, // 14: evm.RollupValidator.GetRequestResult:output_type -> evm.GetRequestResultReply
-	16, // 15: evm.RollupValidator.Call:output_type -> evm.CallMessageReply
+	16, // 15: evm.RollupValidator.CallMessage:output_type -> evm.CallMessageReply
 	8,  // 16: evm.RollupValidator.FindLogs:output_type -> evm.FindLogsReply
 	14, // 17: evm.RollupValidator.GetChainAddress:output_type -> evm.GetChainAddressReply
 	20, // 18: evm.RollupValidator.SendTransaction:output_type -> evm.SendTransactionReply

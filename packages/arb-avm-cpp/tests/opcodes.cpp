@@ -15,12 +15,17 @@
  */
 
 #include <avm/machine.hpp>
+#include <avm/machinestate/machineoperation.hpp>
 
 #include <secp256k1_recovery.h>
 #include <ethash/keccak.hpp>
 
 #define CATCH_CONFIG_ENABLE_BENCHMARKING 1
 #include <catch2/catch.hpp>
+
+#include <boost/algorithm/hex.hpp>
+
+#include <iostream>
 
 using namespace intx;
 
@@ -1000,5 +1005,139 @@ TEST_CASE("ERROR opcode is correct") {
 TEST_CASE("HALT opcode is correct") {
     SECTION("halt") {
         // TODO: fill in halt test
+    }
+}
+
+uint256_t hexToInt(const std::string& hexstr) {
+    std::vector<unsigned char> bytes;
+    bytes.resize(hexstr.size() / 2);
+    boost::algorithm::unhex(hexstr.begin(), hexstr.end(), bytes.begin());
+    return intx::be::unsafe::load<uint256_t>(bytes.data());
+}
+
+TEST_CASE("KECCAKF opcode is correct") {
+    auto pool = std::make_shared<TuplePool>();
+    auto code = std::make_shared<Code>();
+    SECTION("Inverts correctly") {
+        Tuple input_data(intx::from_string<uint256_t>(
+                             "94370651106686220754648249265079798778273"
+                             "932128194559331492955050019282050496"),
+                         intx::from_string<uint256_t>(
+                             "42512909751185556122923115391154208487752"
+                             "310613213055089416300774052282720344"),
+                         intx::from_string<uint256_t>(
+                             "56208326812724912066026123588383649819390"
+                             "601658448049319166841561743369815863"),
+                         intx::from_string<uint256_t>(
+                             "42512909751185556122923115391154208487752"
+                             "310613213055089416300774052282720344"),
+                         intx::from_string<uint256_t>(
+                             "11318235288944921066599402722758875429096"
+                             "9798016938687372921424809289618385856"),
+                         intx::from_string<uint256_t>(
+                             "81755589384323691266272576345129881657705"
+                             "914621008081459572116739688988488432"),
+                         uint256_t{6345636445}, pool.get());
+        uint64_t state[25];
+        machineoperation::internal::encodeKeccakState(input_data, state);
+        auto ret =
+            machineoperation::internal::decodeKeccakState(state, pool.get());
+        REQUIRE(ret == input_data);
+    }
+
+    SECTION("Hashes correctly") {
+        auto stub = code->addSegment();
+        stub = code->addOperation(stub.pc, Operation(OpCode::KECCAKF));
+        code->addOperation(stub.pc, Operation(OpCode::KECCAKF));
+        MachineState m{std::move(code), Tuple(), pool};
+        m.stack.push(Tuple(0_u256, 0_u256, 0_u256, 0_u256, 0_u256, 0_u256,
+                           0_u256, pool.get()));
+        m.runOne();
+        auto ret = m.stack.pop();
+        {
+            REQUIRE(nonstd::holds_alternative<Tuple>(ret));
+            auto ret_tup = nonstd::get<Tuple>(ret);
+            REQUIRE(ret_tup.tuple_size() == 7);
+            std::array<uint256_t, 7> parts;
+            for (size_t i = 0; i < 7; ++i) {
+                auto val = ret_tup.get_element(i);
+                REQUIRE(nonstd::holds_alternative<uint256_t>(val));
+                parts[i] = nonstd::get<uint256_t>(val);
+            }
+
+            uint256_t correct0 = hexToInt(
+                "bd1547306f80494dd598261ea65aa9ee84d5ccf933c0478af1258f7940e1dd"
+                "e7");
+            uint256_t correct1 = hexToInt(
+                "8c5bda0cd6192e7690fee5a0a44647c4ff97a42d7f8e6fd48b284e056253d0"
+                "57");
+            uint256_t correct2 = hexToInt(
+                "a9a6e6260d712103eb5aa93f2317d63530935ab7d08ffc64ad30a6f71b1905"
+                "9c");
+            uint256_t correct3 = hexToInt(
+                "05e5635a21d9ae6101f22f1a11a5569f43b831cd0347c82681a57c16dbcf55"
+                "5f");
+            uint256_t correct4 = hexToInt(
+                "8c3ee88a1ccf32c8b87c5a554fd00ecb613670957bc4661164befef28cc970"
+                "f2");
+            uint256_t correct5 = hexToInt(
+                "75f644e97f30a13b16f53526e70465c21841f924a2c509e4940c7922ae3a26"
+                "14");
+            uint256_t correct6 = hexToInt(
+                "000000000000000000000000000000000000000000000000eaf1ff7b5ceca2"
+                "49");
+
+            REQUIRE(parts[0] == correct0);
+            REQUIRE(parts[1] == correct1);
+            REQUIRE(parts[2] == correct2);
+            REQUIRE(parts[3] == correct3);
+            REQUIRE(parts[4] == correct4);
+            REQUIRE(parts[5] == correct5);
+            REQUIRE(parts[6] == correct6);
+        }
+
+        m.stack.push(std::move(ret));
+        m.runOne();
+        ret = m.stack.pop();
+        {
+            REQUIRE(nonstd::holds_alternative<Tuple>(ret));
+            auto ret_tup = nonstd::get<Tuple>(ret);
+            REQUIRE(ret_tup.tuple_size() == 7);
+            std::array<uint256_t, 7> parts;
+            for (size_t i = 0; i < 7; ++i) {
+                auto val = ret_tup.get_element(i);
+                REQUIRE(nonstd::holds_alternative<uint256_t>(val));
+                parts[i] = nonstd::get<uint256_t>(val);
+            }
+            uint256_t correct0 = hexToInt(
+                "8a20d9b25569d094093d8d1270d76b6c6a332cd07057b56d2d5c954df96ecb"
+                "3c");
+            uint256_t correct1 = hexToInt(
+                "faf4f247c3d810f785773dae1275af0df957b9a2da65fb384f9c4f99e5e7f1"
+                "56");
+            uint256_t correct2 = hexToInt(
+                "deea66c4ba8f974f68ce61b6b9ce68a1e4fecc0fee98b4251f1b9ee6f79a87"
+                "59");
+            uint256_t correct3 = hexToInt(
+                "fd5449a6bf1747437cf8a9f009831265e00654042719dbd933c43d836eafb1"
+                "f5");
+            uint256_t correct4 = hexToInt(
+                "91a0226e649e42e9e3b8c8ee55b7b03c48ead5fc5d0be77497ddad33d8994b"
+                "40");
+            uint256_t correct5 = hexToInt(
+                "609f4e62a44c10595b3402464e1c3db6202a9ec5faa3cce8900e3129e7badd"
+                "7b");
+            uint256_t correct6 = hexToInt(
+                "00000000000000000000000000000000000000000000000020d06cd26a8fbf"
+                "5c");
+
+            REQUIRE(parts[0] == correct0);
+            REQUIRE(parts[1] == correct1);
+            REQUIRE(parts[2] == correct2);
+            REQUIRE(parts[3] == correct3);
+            REQUIRE(parts[4] == correct4);
+            REQUIRE(parts[5] == correct5);
+            REQUIRE(parts[6] == correct6);
+        }
     }
 }
