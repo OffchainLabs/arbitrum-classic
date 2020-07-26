@@ -383,10 +383,7 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 		txHash = realHash
 	}
 	val, err := conn.proxy.GetRequestResult(ctx, common.NewHashFromEth(txHash))
-	if err != nil {
-		return nil, err
-	}
-	if val == nil {
+	if val == nil || err != nil {
 		return nil, ethereum.NotFound
 	}
 	result, err := evm.NewResultFromValue(val)
