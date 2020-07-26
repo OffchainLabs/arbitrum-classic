@@ -167,7 +167,7 @@ func (txdb *TxDB) GetRequest(requestId common.Hash) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	res, err := evm.NewResultFromValue(logVal)
+	res, err := evm.NewTxResultFromValue(logVal)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +232,7 @@ func (txdb *TxDB) FindLogs(
 				return nil, err
 			}
 
-			res, err := evm.NewResultFromValue(logVal)
+			res, err := evm.NewTxResultFromValue(logVal)
 			if err != nil {
 				return nil, err
 			}
@@ -307,7 +307,7 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 			return err
 		}
 
-		res, err := evm.NewResultFromValue(avmLog)
+		res, err := evm.NewTxResultFromValue(avmLog)
 		if err != nil {
 			log.Println("Error parsing log result", err)
 			continue

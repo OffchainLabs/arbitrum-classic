@@ -43,7 +43,7 @@ const (
 	UnknownErrorCode                    = 255
 )
 
-type Result struct {
+type TxResult struct {
 	L1Message     message.InboxMessage
 	ResultCode    ResultType
 	ReturnData    []byte
@@ -55,9 +55,9 @@ type Result struct {
 	StartLogIndex *big.Int
 }
 
-func (r *Result) String() string {
+func (r *TxResult) String() string {
 	return fmt.Sprintf(
-		"Result(%v, %v, %v, %v, %v, %v)",
+		"TxResult(%v, %v, %v, %v, %v, %v)",
 		r.L1Message,
 		r.ResultCode,
 		hexutil.Encode(r.ReturnData),
@@ -67,7 +67,7 @@ func (r *Result) String() string {
 	)
 }
 
-func (r *Result) AsValue() value.Value {
+func (r *TxResult) AsValue() value.Value {
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		r.L1Message.AsValue(),
 		value.NewInt64Value(int64(r.ResultCode)),
@@ -79,7 +79,7 @@ func (r *Result) AsValue() value.Value {
 	return tup
 }
 
-func (r *Result) ToEthReceipt(blockHash common.Hash) (*types.Receipt, error) {
+func (r *TxResult) ToEthReceipt(blockHash common.Hash) (*types.Receipt, error) {
 	contractAddress := ethcommon.Address{}
 	if r.L1Message.Kind == message.L2Type && r.ResultCode == ReturnCode {
 		msg, err := l2message.NewL2MessageFromData(r.L1Message.Data)
@@ -130,7 +130,7 @@ func (r *Result) ToEthReceipt(blockHash common.Hash) (*types.Receipt, error) {
 	}, nil
 }
 
-func NewResultFromValue(val value.Value) (*Result, error) {
+func NewTxResultFromValue(val value.Value) (*TxResult, error) {
 	tup, ok := val.(value.TupleValue)
 	if !ok || tup.Len() != 4 {
 		return nil, fmt.Errorf("advise expected tuple of length 5, but recieved %v", tup)
@@ -200,7 +200,7 @@ func NewResultFromValue(val value.Value) (*Result, error) {
 		return nil, errors.New("startLogIndex must be an int")
 	}
 
-	return &Result{
+	return &TxResult{
 		L1Message:     l1Msg,
 		ResultCode:    ResultType(resultCodeInt.BigInt().Uint64()),
 		ReturnData:    returnBytes,
@@ -213,12 +213,12 @@ func NewResultFromValue(val value.Value) (*Result, error) {
 	}, nil
 }
 
-func NewRandomResult(msg message.Message, logCount int32) *Result {
+func NewRandomResult(msg message.Message, logCount int32) *TxResult {
 	logs := make([]Log, 0, logCount)
 	for i := int32(0); i < logCount; i++ {
 		logs = append(logs, NewRandomLog(3))
 	}
-	return &Result{
+	return &TxResult{
 		L1Message:     message.NewRandomInboxMessage(msg),
 		ResultCode:    ReturnCode,
 		ReturnData:    common.RandBytes(200),

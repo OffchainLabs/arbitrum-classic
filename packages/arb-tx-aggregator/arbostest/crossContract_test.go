@@ -129,7 +129,7 @@ func TestCrossContract(t *testing.T) {
 	log.Println("Assertion had", len(logs), "logs")
 
 	for _, logVal := range assertion.ParseLogs() {
-		res, err := evm.NewResultFromValue(logVal)
+		res, err := evm.NewTxResultFromValue(logVal)
 		if err != nil {
 			t.Fatal(err)
 		}

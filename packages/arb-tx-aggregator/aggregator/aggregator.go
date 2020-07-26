@@ -157,7 +157,7 @@ func (m *Server) GetBlockHeader(ctx context.Context, height uint64) (*types.Head
 		if err != nil {
 			return nil, err
 		}
-		res, err := evm.NewResultFromValue(lastLog)
+		res, err := evm.NewTxResultFromValue(lastLog)
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +192,7 @@ func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, err
 		if err != nil {
 			return nil, err
 		}
-		res, err := evm.NewResultFromValue(avmLog)
+		res, err := evm.NewTxResultFromValue(avmLog)
 		if err != nil {
 			return nil, err
 		}
@@ -216,7 +216,7 @@ func (m *Server) GetTransaction(_ context.Context, requestId ethcommon.Hash) (*t
 	if err != nil {
 		return nil, nil
 	}
-	res, err := evm.NewResultFromValue(val)
+	res, err := evm.NewTxResultFromValue(val)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ func (m *Server) executeCall(mach machine.Machine, blockId *common.BlockId, msg 
 		return nil, errors.New("call produced no output")
 	}
 	lastLogVal := results[len(results)-1]
-	lastLog, err := evm.NewResultFromValue(lastLogVal)
+	lastLog, err := evm.NewTxResultFromValue(lastLogVal)
 	if err != nil {
 		return nil, err
 	}

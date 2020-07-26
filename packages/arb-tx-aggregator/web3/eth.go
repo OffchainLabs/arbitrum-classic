@@ -259,7 +259,7 @@ func (s *Server) GetTransactionByHash(r *http.Request, args *GetTransactionRecei
 	if err != nil {
 		return err
 	}
-	res, err := evm.NewResultFromValue(val)
+	res, err := evm.NewTxResultFromValue(val)
 	if err != nil {
 		return err
 	}

@@ -34,7 +34,7 @@ import (
 	"testing"
 )
 
-func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender common.Address) []*evm.Result {
+func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender common.Address) []*evm.TxResult {
 	chainTime := message.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
@@ -60,9 +60,9 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 	if _, ok := blockReason.(machine.InboxBlocked); !ok {
 		t.Fatal("Machine blocked for weird reason", blockReason)
 	}
-	results := make([]*evm.Result, 0)
+	results := make([]*evm.TxResult, 0)
 	for _, avmLog := range assertion.ParseLogs() {
-		result, err := evm.NewResultFromValue(avmLog)
+		result, err := evm.NewTxResultFromValue(avmLog)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -71,7 +71,7 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 	return results
 }
 
-func runTransaction(t *testing.T, mach machine.Machine, msg l2message.AbstractL2Message, sender common.Address) (*evm.Result, error) {
+func runTransaction(t *testing.T, mach machine.Machine, msg l2message.AbstractL2Message, sender common.Address) (*evm.TxResult, error) {
 	results := runMessage(t, mach, message.L2Message{Data: l2message.L2MessageAsData(msg)}, sender)
 	if len(results) != 1 {
 		return nil, fmt.Errorf("unexpected log count %v", len(results))

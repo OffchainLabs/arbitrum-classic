@@ -57,7 +57,7 @@ func toEth(val *big.Int) *big.Float {
 	return new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
 }
 
-func runMessage(mach machine.Machine, msg message.InboxMessage) (*evm.Result, error) {
+func runMessage(mach machine.Machine, msg message.InboxMessage) (*evm.TxResult, error) {
 	inbox := value.NewEmptyTuple()
 	inbox = value.NewTuple2(inbox, msg.AsValue())
 	assertion, _ := mach.ExecuteAssertion(
@@ -70,7 +70,7 @@ func runMessage(mach machine.Machine, msg message.InboxMessage) (*evm.Result, er
 	if len(logs) != 1 {
 		log.Fatal("returned incorrect log count")
 	}
-	evmResult, err := evm.NewResultFromValue(logs[0])
+	evmResult, err := evm.NewTxResultFromValue(logs[0])
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,7 @@ func testMessages(filename string, contract string) error {
 	//logs := assertion.ParseLogs()
 	//log.Println("Had logs", len(logs))
 	//for _, avmLog := range logs {
-	//	res, err := evm.NewResultFromValue(avmLog)
+	//	res, err := evm.NewTxResultFromValue(avmLog)
 	//	if err != nil {
 	//		return err
 	//	}

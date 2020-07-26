@@ -85,7 +85,7 @@ func (conn *ArbConnection) CodeAt(
 }
 
 func processCallRet(retValue value.Value) ([]byte, error) {
-	logVal, err := evm.NewResultFromValue(retValue)
+	logVal, err := evm.NewTxResultFromValue(retValue)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +216,7 @@ func (conn *ArbConnection) EstimateGas(
 	if err != nil {
 		return 0, err
 	}
-	res, err := evm.NewResultFromValue(retValue)
+	res, err := evm.NewTxResultFromValue(retValue)
 	if err != nil {
 		return 0, err
 	}
@@ -389,7 +389,7 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	if val == nil || err != nil {
 		return nil, ethereum.NotFound
 	}
-	result, err := evm.NewResultFromValue(val)
+	result, err := evm.NewTxResultFromValue(val)
 	if err != nil {
 		return nil, err
 	}
