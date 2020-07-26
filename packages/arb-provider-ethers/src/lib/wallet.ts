@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { Bridge } from './bridge'
+import { L1Bridge } from './l1bridge'
 
 import { L2Transaction, L2Message } from './message'
 import { ArbProvider } from './provider'
@@ -26,32 +26,22 @@ import { TransactionOverrides } from './abi'
 
 import * as ethers from 'ethers'
 
-const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
-
-export class ArbWallet extends Bridge implements ethers.Signer {
-  public signer: ethers.Signer
+export class ArbWallet extends L1Bridge implements ethers.Signer {
+  public l1Signer: ethers.Signer
   public provider: ArbProvider
 
-  constructor(signer: ethers.Signer, provider: ArbProvider) {
-    super(signer, provider.ethProvider, provider.chainAddress)
-    this.signer = signer
+  constructor(l1Signer: ethers.Signer, provider: ArbProvider) {
+    super(l1Signer, provider.chainAddress)
+    this.l1Signer = l1Signer
     this.provider = provider
   }
 
   public getAddress(): Promise<string> {
-    return this.signer.getAddress()
+    return this.l1Signer.getAddress()
   }
 
   public signMessage(message: ethers.utils.Arrayish | string): Promise<string> {
-    return this.signer.signMessage(message)
-  }
-
-  public async withdrawEthFromChain(
-    value: ethers.utils.BigNumberish
-  ): Promise<ethers.providers.TransactionResponse> {
-    const valueNum = ethers.utils.bigNumberify(value)
-    const arbsys = ArbSysFactory.connect(ARB_SYS_ADDRESS, this)
-    return arbsys.withdrawEth(await this.getAddress(), { value: valueNum })
+    return this.l1Signer.signMessage(message)
   }
 
   public async depositERC20(
@@ -107,12 +97,14 @@ export class ArbWallet extends Bridge implements ethers.Signer {
   public async sendTransaction(
     transaction: ethers.providers.TransactionRequest
   ): Promise<ethers.providers.TransactionResponse> {
-    try {
-      return this.signer.sendTransaction(transaction)
-    } catch (e) {
-      // Fallback to sending at L1 if arbitrum provider fails
-      return this.sendTransactionAtL1(transaction)
-    }
+    // try {
+    //   return this.l1Signer.sendTransaction(transaction)
+    // } catch (e) {
+
+    // }
+    // Using the L1 wallet plugin, we can only send non-batched transactions
+    // because we only have access to an L1 signer, not an L2 signer
+    return this.sendTransactionAtL1(transaction)
   }
 
   private async sendTransactionAtL1(

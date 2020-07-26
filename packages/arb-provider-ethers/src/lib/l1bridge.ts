@@ -22,14 +22,15 @@ import { GlobalInboxFactory } from './abi/GlobalInboxFactory'
 import { ArbRollupFactory } from './abi/ArbRollupFactory'
 import { TransactionOverrides } from './abi'
 
-import * as ethers from 'ethers'
+import { TransactionResponse } from 'ethers/providers'
+import { BigNumberish } from 'ethers/utils'
+import { Signer } from 'ethers'
 
-export class Bridge {
+export class L1Bridge {
   public globalInboxCache?: GlobalInbox
 
   constructor(
-    public signer: ethers.Signer,
-    public provider: ethers.providers.Provider,
+    public signer: Signer,
     public chainAddress: string | Promise<string>
   ) {}
 
@@ -37,12 +38,12 @@ export class Bridge {
     if (!this.globalInboxCache) {
       const arbRollup = ArbRollupFactory.connect(
         await this.chainAddress,
-        this.provider
+        this.signer
       )
       const globalInboxAddress = await arbRollup.globalInbox()
       const globalInbox = GlobalInboxFactory.connect(
         globalInboxAddress,
-        this.provider
+        this.signer
       ).connect(this.signer)
       this.globalInboxCache = globalInbox
       return globalInbox
@@ -50,9 +51,7 @@ export class Bridge {
     return this.globalInboxCache
   }
 
-  public async withdrawEthFromLockbox(): Promise<
-    ethers.providers.TransactionResponse
-  > {
+  public async withdrawEthFromLockbox(): Promise<TransactionResponse> {
     const globalInbox = await this.globalInboxConn()
     return globalInbox.withdrawEth()
   }
@@ -60,16 +59,16 @@ export class Bridge {
   public async withdrawERC20FromLockbox(
     erc20: string,
     overrides?: TransactionOverrides
-  ): Promise<ethers.providers.TransactionResponse> {
+  ): Promise<TransactionResponse> {
     const globalInbox = await this.globalInboxConn()
     return globalInbox.withdrawERC20(erc20, overrides)
   }
 
   public async withdrawERC721FromLockbox(
     erc721: string,
-    tokenId: ethers.utils.BigNumberish,
+    tokenId: BigNumberish,
     overrides?: TransactionOverrides
-  ): Promise<ethers.providers.TransactionResponse> {
+  ): Promise<TransactionResponse> {
     const globalInbox = await this.globalInboxConn()
     return globalInbox.withdrawERC721(erc721, tokenId, overrides)
   }
@@ -77,16 +76,15 @@ export class Bridge {
   public async depositERC20(
     to: string,
     erc20: string,
-    value: ethers.utils.BigNumberish,
+    value: BigNumberish,
     overrides?: TransactionOverrides
-  ): Promise<ethers.providers.TransactionResponse> {
-    const sendValue = ethers.utils.bigNumberify(value)
+  ): Promise<TransactionResponse> {
     const globalInbox = await this.globalInboxConn()
     return globalInbox.depositERC20Message(
       await this.chainAddress,
       erc20,
       to,
-      sendValue,
+      value,
       overrides
     )
   }
@@ -94,9 +92,9 @@ export class Bridge {
   public async depositERC721(
     to: string,
     erc721: string,
-    tokenId: ethers.utils.BigNumberish,
+    tokenId: BigNumberish,
     overrides?: TransactionOverrides
-  ): Promise<ethers.providers.TransactionResponse> {
+  ): Promise<TransactionResponse> {
     const globalInbox = await this.globalInboxConn()
     return globalInbox.depositERC721Message(
       await this.chainAddress,
@@ -109,9 +107,9 @@ export class Bridge {
 
   public async depositETH(
     to: string,
-    value: ethers.utils.BigNumberish,
+    value: BigNumberish,
     overrides?: TransactionOverrides
-  ): Promise<ethers.providers.TransactionResponse> {
+  ): Promise<TransactionResponse> {
     const globalInbox = await this.globalInboxConn()
     return globalInbox.depositEthMessage(await this.chainAddress, to, {
       ...overrides,
@@ -123,16 +121,15 @@ export class Bridge {
     originalOwner: string,
     newOwner: string,
     nodeHash: string,
-    messageIndex: ethers.utils.BigNumberish,
+    messageIndex: BigNumberish,
     overrides?: TransactionOverrides
-  ): Promise<ethers.providers.TransactionResponse> {
-    const msgIndex = ethers.utils.bigNumberify(messageIndex)
+  ): Promise<TransactionResponse> {
     const globalInbox = await this.globalInboxConn()
     return globalInbox.transferPayment(
       originalOwner,
       newOwner,
       nodeHash,
-      msgIndex,
+      messageIndex,
       overrides
     )
   }
@@ -141,7 +138,7 @@ export class Bridge {
     l2tx: L2Transaction,
     from: string,
     overrides?: TransactionOverrides
-  ): Promise<ethers.providers.TransactionResponse> {
+  ): Promise<TransactionResponse> {
     const walletAddress = await this.signer.getAddress()
     if (from.toLowerCase() != walletAddress.toLowerCase()) {
       throw Error(
