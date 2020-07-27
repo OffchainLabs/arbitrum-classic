@@ -49,10 +49,16 @@ type GlobalInboxWatcher interface {
 		ctx context.Context,
 		user common.Address,
 	) (*big.Int, error)
+
+	GetInbox(
+		ctx context.Context,
+	) (common.Hash, *big.Int, error)
 }
 
 type GlobalInbox interface {
 	GlobalInboxWatcher
+
+	Sender() common.Address
 
 	SendL2Message(
 		ctx context.Context,
@@ -69,7 +75,7 @@ type GlobalInbox interface {
 		ctx context.Context,
 		chain common.Address,
 		data message.L2Message,
-	) error
+	) (common.Hash, error)
 
 	DepositEthMessage(
 		ctx context.Context,

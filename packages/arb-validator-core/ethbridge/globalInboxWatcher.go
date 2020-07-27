@@ -264,3 +264,12 @@ func (gi *globalInboxWatcher) GetEthBalance(
 		user.ToEthAddress(),
 	)
 }
+
+func (gi *globalInboxWatcher) GetInbox(
+	ctx context.Context,
+) (common.Hash, *big.Int, error) {
+	return gi.GlobalInbox.GetInbox(
+		&bind.CallOpts{Context: ctx},
+		gi.rollupAddress,
+	)
+}

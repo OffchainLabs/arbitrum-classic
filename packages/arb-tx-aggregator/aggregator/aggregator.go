@@ -42,12 +42,15 @@ import (
 )
 
 type Server struct {
-	client      ethutils.EthClient
-	chain       common.Address
-	batch       *batcher.Batcher
-	db          *txdb.TxDB
-	maxCallTime time.Duration
-	maxCallGas  *big.Int
+	client          ethutils.EthClient
+	chain           common.Address
+	batch           *batcher.Batcher
+	db              *txdb.TxDB
+	callMach        machine.Machine
+	pendingCallMach machine.Machine
+	callBlock       *common.BlockId
+	maxCallTime     time.Duration
+	maxCallGas      *big.Int
 }
 
 // NewServer returns a new instance of the Server class
@@ -71,14 +74,48 @@ func NewServer(
 	if err != nil {
 		return nil, err
 	}
-	return &Server{
-		client:      client,
-		chain:       rollupAddress,
-		batch:       batcher.NewBatcher(ctx, globalInbox, rollupAddress),
-		db:          db,
-		maxCallTime: 0,
-		maxCallGas:  big.NewInt(100000000),
-	}, nil
+
+	mach, block := db.CallInfo()
+	server := &Server{
+		client:          client,
+		chain:           rollupAddress,
+		batch:           batcher.NewBatcher(ctx, client, globalInbox, rollupAddress),
+		db:              db,
+		callMach:        mach,
+		pendingCallMach: mach,
+		callBlock:       block,
+		maxCallTime:     0,
+		maxCallGas:      big.NewInt(100000000),
+	}
+
+	go func() {
+		ticker := time.NewTicker(time.Second * 5)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				mach, block := db.CallInfo()
+				if mach.Hash() == server.callMach.Hash() {
+					// The machine hasn't changed so updating is easy
+					server.callBlock = block
+				} else {
+					server.callMach = mach
+
+					//_, currentCount, err := globalInbox.GetInbox(ctx)
+					//if err != nil {
+					//	return
+					//}
+					//inbox := server.batch.PendingMessages(currentCount)
+
+				}
+				break
+			}
+		}
+	}()
+
+	return server, nil
 }
 
 // SendTransaction takes a request signed transaction l2message from a client
@@ -242,14 +279,14 @@ func GetTransaction(msg message.InboxMessage, chain common.Address) (*types.Tran
 // and return the result
 func (m *Server) Call(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	mach, blockId := m.db.CallInfo()
-	return m.executeCall(mach, blockId, msg, sender)
+	return m.executeCall(mach.Clone(), blockId, msg, sender)
 }
 
 // PendingCall takes a request from a client to process in a temporary context
 // and return the result
 func (m *Server) PendingCall(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	mach, blockId := m.db.CallInfo()
-	return m.executeCall(mach, blockId, msg, sender)
+	return m.executeCall(mach.Clone(), blockId, msg, sender)
 }
 
 func (m *Server) executeCall(mach machine.Machine, blockId *common.BlockId, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {

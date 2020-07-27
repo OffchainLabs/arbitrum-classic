@@ -45,6 +45,10 @@ func newGlobalInbox(address ethcommon.Address, chain ethcommon.Address, client e
 	return &globalInbox{watcher, auth}, nil
 }
 
+func (con *globalInbox) Sender() common.Address {
+	return common.NewAddressFromEth(con.auth.auth.From)
+}
+
 func (con *globalInbox) SendL2Message(ctx context.Context, chain common.Address, msg message.L2Message) (arbbridge.MessageDeliveredEvent, error) {
 	con.auth.Lock()
 	defer con.auth.Unlock()
@@ -71,18 +75,18 @@ func (con *globalInbox) SendL2Message(ctx context.Context, chain common.Address,
 	return arbbridge.MessageDeliveredEvent{}, errors.New("Didn't output l2message delivered event")
 }
 
-func (con *globalInbox) SendL2MessageNoWait(ctx context.Context, chain common.Address, msg message.L2Message) error {
+func (con *globalInbox) SendL2MessageNoWait(ctx context.Context, chain common.Address, msg message.L2Message) (common.Hash, error) {
 	con.auth.Lock()
 	defer con.auth.Unlock()
-	_, err := con.GlobalInbox.SendL2MessageFromOrigin(
+	tx, err := con.GlobalInbox.SendL2MessageFromOrigin(
 		con.auth.getAuth(ctx),
 		chain.ToEthAddress(),
 		msg.AsData(),
 	)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
-	return err
+	return common.NewHashFromEth(tx.Hash()), err
 }
 
 func (con *globalInbox) DepositEthMessage(

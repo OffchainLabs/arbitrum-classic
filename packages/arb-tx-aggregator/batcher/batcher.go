@@ -17,10 +17,15 @@
 package batcher
 
 import (
+	"container/list"
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"log"
+	"math/big"
 	"sort"
 	"sync"
 	"time"
@@ -38,17 +43,24 @@ type DecodedBatchTx struct {
 	sender common.Address
 }
 
+type pendingBatch struct {
+	batch  message.L2Message
+	txHash common.Hash
+}
+
 type Batcher struct {
 	rollupAddress common.Address
 	globalInbox   arbbridge.GlobalInbox
 
 	sync.Mutex
-	valid        bool
-	transactions []DecodedBatchTx
+	valid          bool
+	transactions   []DecodedBatchTx
+	pendingBatches list.List
 }
 
 func NewBatcher(
 	ctx context.Context,
+	client ethutils.EthClient,
 	globalInbox arbbridge.GlobalInbox,
 	rollupAddress common.Address,
 ) *Batcher {
@@ -82,7 +94,86 @@ func NewBatcher(
 			}
 		}
 	}()
+
+	go func() {
+		ticker := time.NewTicker(time.Second * 5)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				server.Lock()
+				// Remove batches from pending as they are completed
+				for server.pendingBatches.Len() > 0 {
+					front := server.pendingBatches.Front()
+					oldestBatch := front.Value.(pendingBatch)
+					server.Unlock()
+					receipt, err := ethbridge.WaitForReceiptSimple(ctx, client, oldestBatch.txHash.ToEthHash())
+					if err != nil || receipt.Status != 1 {
+						log.Fatal("Batch transaction failed")
+					}
+					server.Lock()
+					server.pendingBatches.Remove(front)
+				}
+				server.Unlock()
+				break
+			}
+		}
+	}()
 	return server
+}
+
+func (m *Batcher) PendingMessages(currentSeq *big.Int) value.TupleValue {
+	m.Lock()
+	defer m.Unlock()
+	item := m.pendingBatches.Front()
+	inbox := value.NewEmptyTuple()
+	for item != nil {
+		front := m.pendingBatches.Front()
+		inbox = value.NewTuple2(inbox, message.NewInboxMessage(
+			front.Value.(pendingBatch).batch,
+			m.globalInbox.Sender(),
+			currentSeq.Add(currentSeq, big.NewInt(1)),
+			message.ChainTime{
+				BlockNum:  nil,
+				Timestamp: nil,
+			},
+		).AsValue())
+		item = item.Next()
+	}
+	return inbox
+}
+
+func (m *Batcher) sendBatch(ctx context.Context) {
+	var txes []DecodedBatchTx
+
+	if len(m.transactions) > maxTransactions {
+		txes = m.transactions[:maxTransactions]
+		m.transactions = m.transactions[maxTransactions:]
+	} else {
+		txes = m.transactions
+		m.transactions = nil
+	}
+	m.Unlock()
+
+	log.Println("Submitting batch with", len(txes), "transactions")
+
+	batch := message.L2Message{Data: l2message.L2MessageAsData(prepareTransactions(txes))}
+	txHash, err := m.globalInbox.SendL2MessageNoWait(
+		ctx,
+		m.rollupAddress,
+		batch,
+	)
+	m.Lock()
+	if err != nil {
+		log.Println("transaction aggregator failed: ", err)
+		m.valid = false
+	}
+	m.pendingBatches.PushBack(pendingBatch{
+		batch:  batch,
+		txHash: txHash,
+	})
 }
 
 // prepareTransactions reorders the transactions such that the position of each
@@ -108,33 +199,6 @@ func prepareTransactions(txes []DecodedBatchTx) l2message.TransactionBatch {
 	}
 	log.Println("Made batch", batchTxes)
 	return l2message.NewTransactionBatchFromMessages(batchTxes)
-}
-
-func (m *Batcher) sendBatch(ctx context.Context) {
-	var txes []DecodedBatchTx
-
-	if len(m.transactions) > maxTransactions {
-		txes = m.transactions[:maxTransactions]
-		m.transactions = m.transactions[maxTransactions:]
-	} else {
-		txes = m.transactions
-		m.transactions = nil
-	}
-	m.Unlock()
-
-	log.Println("Submitting batch with", len(txes), "transactions")
-
-	err := m.globalInbox.SendL2MessageNoWait(
-		ctx,
-		m.rollupAddress,
-		message.L2Message{Data: l2message.L2MessageAsData(prepareTransactions(txes))},
-	)
-
-	m.Lock()
-	if err != nil {
-		log.Println("transaction aggregator failed: ", err)
-		m.valid = false
-	}
 }
 
 // SendTransaction takes a request signed transaction l2message from a client

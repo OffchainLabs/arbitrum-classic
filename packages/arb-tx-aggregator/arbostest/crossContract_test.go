@@ -137,7 +137,7 @@ func TestCrossContract(t *testing.T) {
 		if res.ResultCode != evm.ReturnCode {
 			t.Error("tx failed", res.ResultCode)
 		}
-		log.Println("ReturnData", hexutil.Encode(res.ReturnData))
+		t.Log("ReturnData", hexutil.Encode(res.ReturnData))
 		if res.L1Message.Kind == message.L2Type {
 			l2, err := l2message.NewL2MessageFromData(res.L1Message.Data)
 			if err != nil {

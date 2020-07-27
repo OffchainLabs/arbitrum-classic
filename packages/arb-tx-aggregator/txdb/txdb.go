@@ -130,7 +130,7 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 	}
 	for _, bi := range blockInboxes {
 		assertion, numSteps := txdb.mach.ExecuteAssertion(1000000000000, bi.inbox, 0)
-		if err := txdb.addAssertion(assertion, numSteps, bi.block); err != nil {
+		if err := txdb.addAssertion(assertion, bi.block); err != nil {
 			return nil
 		}
 		txdb.callMut.Lock()
@@ -147,7 +147,7 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 func (txdb *TxDB) CallInfo() (machine.Machine, *common.BlockId) {
 	txdb.callMut.Lock()
 	defer txdb.callMut.Unlock()
-	return txdb.callMach.Clone(), txdb.callBlock
+	return txdb.callMach, txdb.callBlock
 }
 
 func (txdb *TxDB) GetMessage(index uint64) (value.Value, error) {
@@ -290,7 +290,7 @@ func maybeMatchesLogQuery(logFilter types.Bloom, addresses []common.Address, top
 	return true
 }
 
-func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps uint64, block *common.BlockId) error {
+func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, block *common.BlockId) error {
 	for _, avmMessage := range assertion.ParseOutMessages() {
 		if err := txdb.as.SaveMessage(avmMessage); err != nil {
 			return err

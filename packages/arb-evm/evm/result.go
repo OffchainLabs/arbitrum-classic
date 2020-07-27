@@ -43,6 +43,9 @@ const (
 	UnknownErrorCode                    = 255
 )
 
+type Result interface {
+}
+
 type TxResult struct {
 	L1Message     message.InboxMessage
 	ResultCode    ResultType
@@ -130,16 +133,7 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) (*types.Receipt, error) {
 	}, nil
 }
 
-func NewTxResultFromValue(val value.Value) (*TxResult, error) {
-	tup, ok := val.(value.TupleValue)
-	if !ok || tup.Len() != 4 {
-		return nil, fmt.Errorf("advise expected tuple of length 5, but recieved %v", tup)
-	}
-	l1MsgVal, _ := tup.GetByInt64(0)
-	resultInfo, _ := tup.GetByInt64(1)
-	gasInfo, _ := tup.GetByInt64(2)
-	chainInfo, _ := tup.GetByInt64(3)
-
+func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.Value, chainInfo value.Value) (*TxResult, error) {
 	resultTup, ok := resultInfo.(value.TupleValue)
 	if !ok || resultTup.Len() != 3 {
 		return nil, fmt.Errorf("advise expected result info tuple of length 3, but recieved %v", resultTup)
@@ -211,6 +205,45 @@ func NewTxResultFromValue(val value.Value) (*TxResult, error) {
 		TxIndex:       txIndexInt.BigInt(),
 		StartLogIndex: startLogIndexInt.BigInt(),
 	}, nil
+}
+
+func NewResultFromValue(val value.Value) (Result, error) {
+	tup, ok := val.(value.TupleValue)
+	if !ok || tup.Len() == 0 {
+		return nil, errors.New("expected result to be nonempty tuple")
+	}
+	kind, _ := tup.GetByInt64(0)
+	kindInt, ok := kind.(value.IntValue)
+	if !ok {
+		return nil, errors.New("kind must be an int")
+	}
+
+	if kindInt.BigInt().Uint64() == 0 {
+		if tup.Len() != 5 {
+			return nil, fmt.Errorf("tx result expected tuple of length 5, but recieved %v", tup)
+		}
+		l1MsgVal, _ := tup.GetByInt64(1)
+		resultInfo, _ := tup.GetByInt64(2)
+		gasInfo, _ := tup.GetByInt64(3)
+		chainInfo, _ := tup.GetByInt64(4)
+		return parseTxResult(l1MsgVal, resultInfo, gasInfo, chainInfo)
+	} else if kindInt.BigInt().Uint64() == 1 {
+		return nil, errors.New("unhanded block result")
+	} else {
+		return nil, errors.New("unknown result kind")
+	}
+}
+
+func NewTxResultFromValue(val value.Value) (*TxResult, error) {
+	res, err := NewResultFromValue(val)
+	if err != nil {
+		return nil, err
+	}
+	txRes, ok := res.(*TxResult)
+	if !ok {
+		return nil, errors.New("unexpected avm result type")
+	}
+	return txRes, nil
 }
 
 func NewRandomResult(msg message.Message, logCount int32) *TxResult {
