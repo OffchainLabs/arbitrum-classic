@@ -23,7 +23,7 @@ import { ArbRollupFactory } from './abi/ArbRollupFactory'
 import { TransactionOverrides } from './abi'
 
 import { TransactionResponse } from 'ethers/providers'
-import { BigNumberish } from 'ethers/utils'
+import { BigNumberish, BigNumber } from 'ethers/utils'
 import { Signer } from 'ethers'
 
 export class L1Bridge {
@@ -150,5 +150,24 @@ export class L1Bridge {
       await this.chainAddress,
       new L2Message(l2tx).asData()
     )
+  }
+
+  public async getEthLockBoxBalance(address: string): Promise<BigNumber> {
+    const globalInbox = await this.globalInboxConn()
+    return globalInbox.getEthBalance(address)
+  }
+  public async getERC20LockBoxBalance(
+    contractAddress: string,
+    ownerAddress: string
+  ): Promise<BigNumber> {
+    const globalInbox = await this.globalInboxConn()
+    return globalInbox.getERC20Balance(contractAddress, ownerAddress)
+  }
+  public async getERC721LockBoxTokens(
+    contractAddress: string,
+    ownerAddress: string
+  ): Promise<BigNumber[]> {
+    const globalInbox = await this.globalInboxConn()
+    return globalInbox.getERC721Tokens(contractAddress, ownerAddress)
   }
 }
