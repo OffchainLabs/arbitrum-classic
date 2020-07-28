@@ -173,7 +173,7 @@ func setPreCondition(
 	precondition *valprotocol.Precondition,
 	totalSteps uint64,
 ) *valprotocol.Precondition {
-	assertion, _ := mach.ExecuteNormalAssertion(
+	assertion, _ := mach.ExecuteAssertion(
 		totalSteps,
 		startPrecondition.BeforeInbox,
 		0,
@@ -217,7 +217,7 @@ func executionChallengerUpdate(
 						bisectionEvent.TotalSteps)
 
 					newMachine = cMach.Clone()
-					assertion, _ := cMach.ExecuteNormalAssertion(
+					assertion, _ := cMach.ExecuteAssertion(
 						stepCount,
 						pre.BeforeInbox,
 						0,

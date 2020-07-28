@@ -59,7 +59,7 @@ func toEth(val *big.Int) *big.Float {
 func runMessage(mach machine.Machine, msg message.InboxMessage) (*evm.Result, error) {
 	vmInbox := structures.NewVMInbox()
 	vmInbox.DeliverMessage(msg)
-	assertion, _ := mach.ExecuteNormalAssertion(
+	assertion, _ := mach.ExecuteAssertion(
 		100000,
 		vmInbox.AsValue(),
 		1000,
@@ -224,7 +224,7 @@ func testMessages(filename string, contract string) error {
 	//vmInbox := structures.NewVMInbox()
 	//vmInbox.DeliverMessage(tokenBalanceFinalMessage)
 	//i := 0
-	//_, _ = mach.ExecuteAssertion(
+	//_, _ = mach.ExecuteSideloadedAssertion(
 	//	1,
 	//	tb,
 	//	vmInbox.AsValue(),
@@ -237,7 +237,7 @@ func testMessages(filename string, contract string) error {
 	//		log.Printf("machine after %v steps is blocked: %v\n", i, blocked)
 	//		return nil
 	//	}
-	//	_, _ = mach.ExecuteAssertion(
+	//	_, _ = mach.ExecuteSideloadedAssertion(
 	//		1,
 	//		tb,
 	//		value.NewEmptyTuple(),

@@ -169,34 +169,34 @@ Tuple getTuple(TuplePool& pool, void* data) {
     return nonstd::get<Tuple>(deserialize_value(charData, pool));
 }
 
-RawAssertion executeNormalAssertion(CMachine* m,
-                                    uint64_t maxSteps,
-                                    void* inbox,
-                                    uint64_t wallLimit) {
+RawAssertion executeAssertion(CMachine* m,
+                              uint64_t maxSteps,
+                              void* inbox,
+                              uint64_t wallLimit) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
     auto messages = getTuple(mach->getPool(), inbox);
 
-    Assertion assertion = mach->runNormal(maxSteps, std::move(messages),
-                                          std::chrono::seconds{wallLimit});
+    Assertion assertion = mach->run(maxSteps, std::move(messages),
+                                    std::chrono::seconds{wallLimit});
 
     return makeRawAssertion(assertion);
 }
 
-RawAssertion machineExecuteAssertion(CMachine* m,
-                                     uint64_t maxSteps,
-                                     void* inbox,
-                                     void* sideload,
-                                     uint64_t wallLimit) {
+RawAssertion executeSideloadedAssertion(CMachine* m,
+                                        uint64_t maxSteps,
+                                        void* inbox,
+                                        void* sideload,
+                                        uint64_t wallLimit) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
 
     auto messages = getTuple(mach->getPool(), inbox);
     auto sideload_value = getTuple(mach->getPool(), sideload);
 
-    Assertion assertion =
-        mach->run(maxSteps, std::move(messages),
-                  std::chrono::seconds{wallLimit}, std::move(sideload_value));
+    Assertion assertion = mach->runSideloaded(maxSteps, std::move(messages),
+                                              std::chrono::seconds{wallLimit},
+                                              std::move(sideload_value));
 
     return makeRawAssertion(assertion);
 }

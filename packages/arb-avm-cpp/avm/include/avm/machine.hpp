@@ -30,16 +30,6 @@ struct Assertion {
     std::vector<value> outMessages;
     std::vector<value> logs;
     bool didInboxInsn;
-
-    //    void updateAssertion(Assertion addition){
-    //        stepCount += addition.stepCount;
-    //        gasCount += addition.gasCount;
-    //        didInboxInsn = addition.didInboxInsn;
-    //        outMessages.insert(outMessages.end(),
-    //        addition.outMessages.begin(), addition.outMessages.end());
-    //        logs.insert(logs.end(), addition.logs.begin(),
-    //        addition.logs.end());
-    //    };
 };
 
 class Machine {
@@ -65,14 +55,14 @@ class Machine {
         return {MachineState::loadFromFile(executable_filename)};
     }
 
+    Assertion runSideloaded(uint64_t stepCount,
+                            Tuple messages,
+                            std::chrono::seconds wallLimit,
+                            Tuple sideload);
+
     Assertion run(uint64_t stepCount,
                   Tuple messages,
-                  std::chrono::seconds wallLimit,
-                  Tuple sideload);
-
-    Assertion runNormal(uint64_t stepCount,
-                        Tuple messages,
-                        std::chrono::seconds wallLimit);
+                  std::chrono::seconds wallLimit);
 
     Status currentStatus() { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }

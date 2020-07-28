@@ -166,7 +166,7 @@ func updateExecutionData(
 	mach := defender.initState
 	pre := defender.precondition
 	// Update mach, precondition, deadline
-	assertion, _ := mach.ExecuteNormalAssertion(
+	assertion, _ := mach.ExecuteAssertion(
 		totalSteps,
 		pre.BeforeInbox,
 		0,
@@ -221,7 +221,7 @@ func runExecutionOneStepProof(
 			return 0, err
 		}
 		pre := defender.GetPrecondition()
-		assertion, _ := defender.GetMachineState().ExecuteNormalAssertion(
+		assertion, _ := defender.GetMachineState().ExecuteAssertion(
 			1,
 			pre.BeforeInbox,
 			0,

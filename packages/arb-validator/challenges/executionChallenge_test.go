@@ -116,7 +116,7 @@ func testExecutionChallenge(
 func getExecutionChallengeData(mach machine.Machine) (common.Hash, *valprotocol.Precondition, uint64) {
 	afterMachine := mach.Clone()
 	precondition := valprotocol.NewPrecondition(mach.Hash(), value.NewEmptyTuple())
-	assertion, numSteps := afterMachine.ExecuteNormalAssertion(1000, value.NewEmptyTuple(), 0)
+	assertion, numSteps := afterMachine.ExecuteAssertion(1000, value.NewEmptyTuple(), 0)
 
 	challengeHash := valprotocol.ExecutionDataHash(
 		numSteps,

@@ -114,7 +114,25 @@ func (m *Machine) PrintState() {
 	C.machinePrint(m.c)
 }
 
-func (m *Machine) ExecuteNormalAssertion(
+func makeExecutionAssertion(
+	assertion C.RawAssertion,
+	machineHash common.Hash,
+) (*protocol.ExecutionAssertion, uint64) {
+	outMessagesRaw := toByteSlice(assertion.outMessages)
+	logsRaw := toByteSlice(assertion.logs)
+
+	return protocol.NewExecutionAssertion(
+		machineHash,
+		int(assertion.didInboxInsn) != 0,
+		uint64(assertion.numGas),
+		outMessagesRaw,
+		uint64(assertion.outMessageCount),
+		logsRaw,
+		uint64(assertion.logCount),
+	), uint64(assertion.numSteps)
+}
+
+func (m *Machine) ExecuteAssertion(
 	maxSteps uint64,
 	inbox value.TupleValue,
 	maxWallTime time.Duration,
@@ -126,28 +144,17 @@ func (m *Machine) ExecuteNormalAssertion(
 	msgDataC := C.CBytes(msgData)
 	defer C.free(msgDataC)
 
-	assertion := C.executeNormalAssertion(
+	assertion := C.executeAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
 		msgDataC,
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
 
-	outMessagesRaw := toByteSlice(assertion.outMessages)
-	logsRaw := toByteSlice(assertion.logs)
-
-	return protocol.NewExecutionAssertion(
-		m.Hash(),
-		int(assertion.didInboxInsn) != 0,
-		uint64(assertion.numGas),
-		outMessagesRaw,
-		uint64(assertion.outMessageCount),
-		logsRaw,
-		uint64(assertion.logCount),
-	), uint64(assertion.numSteps)
+	return makeExecutionAssertion(assertion, m.Hash())
 }
 
-func (m *Machine) ExecuteAssertion(
+func (m *Machine) ExecuteSideloadedAssertion(
 	maxSteps uint64,
 	inbox value.TupleValue,
 	sideloadValue value.TupleValue,
@@ -167,7 +174,7 @@ func (m *Machine) ExecuteAssertion(
 	sideloadDataC := C.CBytes(sideloadData)
 	defer C.free(sideloadDataC)
 
-	assertion := C.machineExecuteAssertion(
+	assertion := C.executeSideloadedAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
 		msgDataC,
@@ -175,18 +182,7 @@ func (m *Machine) ExecuteAssertion(
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
 
-	outMessagesRaw := toByteSlice(assertion.outMessages)
-	logsRaw := toByteSlice(assertion.logs)
-
-	return protocol.NewExecutionAssertion(
-		m.Hash(),
-		int(assertion.didInboxInsn) != 0,
-		uint64(assertion.numGas),
-		outMessagesRaw,
-		uint64(assertion.outMessageCount),
-		logsRaw,
-		uint64(assertion.logCount),
-	), uint64(assertion.numSteps)
+	return makeExecutionAssertion(assertion, m.Hash())
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {

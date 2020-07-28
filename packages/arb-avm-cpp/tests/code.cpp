@@ -63,7 +63,7 @@ Machine generateTestMachine() {
 }
 
 void checkRun(Machine& mach, uint64_t step_count_target = 6) {
-    auto assertion = mach.runNormal(10000, Tuple(), std::chrono::seconds{0});
+    auto assertion = mach.run(10000, Tuple(), std::chrono::seconds{0});
     REQUIRE(assertion.stepCount == step_count_target);
     auto val = mach.machine_state.stack.pop();
     REQUIRE(val == value{uint256_t{4}});
@@ -90,7 +90,7 @@ TEST_CASE("Code serialization") {
 
     SECTION("Save different and load") {
         auto mach2 = mach;
-        mach2.runNormal(2, Tuple{}, std::chrono::seconds{0});
+        mach2.run(2, Tuple{}, std::chrono::seconds{0});
         saveMachine(*tx, mach);
         saveMachine(*tx, mach2);
 
