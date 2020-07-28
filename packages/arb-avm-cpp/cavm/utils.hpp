@@ -40,6 +40,16 @@ inline ByteSlice returnCharVector(const std::vector<unsigned char>& data) {
     return {returnCharVectorRaw(data), static_cast<int>(data.size())};
 }
 
+inline char* returnCharVectorRaw(const std::vector<char>& data) {
+    char* cData = reinterpret_cast<char*>(malloc(data.size()));
+    std::copy(data.begin(), data.end(), cData);
+    return cData;
+}
+
+inline ByteSlice returnCharVector(const std::vector<char>& data) {
+    return {returnCharVectorRaw(data), static_cast<int>(data.size())};
+}
+
 inline ByteSliceResult returnDataResult(const DataResults& results) {
     if (!results.status.ok()) {
         return {{}, false};

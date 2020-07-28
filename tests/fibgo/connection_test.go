@@ -2,12 +2,12 @@ package test
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
+	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
 	"log"
 	"math/big"
 	"math/rand"
@@ -16,98 +16,88 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/rpc"
-	"github.com/gorilla/rpc/json"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
 
 var db = "./testman"
+var contract = arbos.Path()
+
+func setupRollup(ctx context.Context, client ethutils.EthClient, auth *bind.TransactOpts) (common.Address, error) {
+	config := valprotocol.ChainParams{
+		StakeRequirement:        big.NewInt(10),
+		GracePeriod:             common.TimeTicks{Val: big.NewInt(13000 * 2)},
+		MaxExecutionSteps:       10000000000,
+		ArbGasSpeedLimitPerTick: 200000,
+	}
+
+	factoryAddr, err := ethbridge.DeployRollupFactory(auth, client)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	arbClient := ethbridge.NewEthAuthClient(client, auth)
+
+	factory, err := arbClient.NewArbFactory(common.NewAddressFromEth(factoryAddr))
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	mach, err := loader.LoadMachineFromFile(contract, false, "cpp")
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	rollupAddress, _, err := factory.CreateRollup(
+		ctx,
+		mach.Hash(),
+		config,
+		common.Address{},
+	)
+	return rollupAddress, err
+}
 
 /********************************************/
 /*    Validators                            */
 /********************************************/
 func setupValidators(
-	t *testing.T,
+	rollupAddress common.Address,
 	client ethutils.EthClient,
-	auths []*bind.TransactOpts,
-) ([]arbbridge.ArbAuthClient, error) {
-	if len(auths) == 0 {
-		panic("must have at least 1 validator")
+	pks []*ecdsa.PrivateKey,
+) error {
+	if len(pks) < 1 {
+		panic("must have at least 1 pks")
 	}
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
 	rand.Seed(seed)
 
-	clients := make([]arbbridge.ArbAuthClient, 0, len(auths))
-	for _, auth := range auths {
-		clients = append(clients, ethbridge.NewEthAuthClient(client, auth))
+	clients := make([]arbbridge.ArbAuthClient, 0, len(pks))
+	for _, pk := range pks {
+		clients = append(clients, ethbridge.NewEthAuthClient(client, bind.NewKeyedTransactor(pk)))
 	}
 
 	ctx := context.Background()
-	contract := gotest.TestMachinePath()
-
-	rollupAddress, err := func() (common.Address, error) {
-		config := valprotocol.ChainParams{
-			StakeRequirement:        big.NewInt(10),
-			GracePeriod:             common.TimeTicks{Val: big.NewInt(13000 * 2)},
-			MaxExecutionSteps:       10000000000,
-			ArbGasSpeedLimitPerTick: 200000,
-		}
-
-		factoryAddr, err := ethbridge.DeployRollupFactory(auths[0], client)
-		if err != nil {
-			return common.Address{}, err
-		}
-
-		factory, err := clients[0].NewArbFactory(common.NewAddressFromEth(factoryAddr))
-		if err != nil {
-			return common.Address{}, err
-		}
-
-		mach, err := loader.LoadMachineFromFile(contract, false, "cpp")
-		if err != nil {
-			return common.Address{}, err
-		}
-
-		rollupAddress, _, err := factory.CreateRollup(
-			ctx,
-			mach.Hash(),
-			config,
-			clients[0].Address(),
-		)
-		return rollupAddress, err
-	}()
-	if err != nil {
-		return nil, err
-	}
 
 	managers := make([]*rollupmanager.Manager, 0, len(clients))
 	for _, client := range clients {
 		rollupActor, err := client.NewRollup(rollupAddress)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		dbName := db + client.Address().String()
-
-		if err := os.RemoveAll(dbName); err != nil {
-			log.Fatal(err)
-		}
-
+		dbName := db + "/" + client.Address().String()
 		manager, err := rollupmanager.CreateManager(
 			ctx,
 			rollupAddress,
@@ -116,7 +106,7 @@ func setupValidators(
 			dbName,
 		)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		manager.AddListener(&chainlistener.AnnouncerListener{Prefix: "validator " + client.Address().String() + ": "})
@@ -128,36 +118,29 @@ func setupValidators(
 		)
 		err = validatorListener.AddStaker(client)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		manager.AddListener(validatorListener)
 		managers = append(managers, manager)
 	}
 
+	return nil
+}
+
+func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollupAddress common.Address) error {
 	go func() {
-		server, err := rollupvalidator.NewRPCServer(
-			managers[0],
-			time.Second*60,
-		)
-		if err != nil {
-			t.Fatal(err)
-		}
-		s := rpc.NewServer()
-		s.RegisterCodec(
-			json.NewCodec(),
-			"application/json",
-		)
-		s.RegisterCodec(
-			json.NewCodec(),
-			"application/json;charset=UTF-8",
-		)
-
-		if err := s.RegisterService(server, "Validator"); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := utils.LaunchRPC(s, "1235", utils.RPCFlags{}); err != nil {
-			t.Fatal(err)
+		if err := rpc.LaunchAggregator(
+			context.Background(),
+			client,
+			auth,
+			rollupAddress,
+			contract,
+			db+"/aggregator",
+			"2235",
+			"8546",
+			utils2.RPCFlags{},
+		); err != nil {
+			log.Fatal(err)
 		}
 	}()
 
@@ -168,25 +151,35 @@ waitloop:
 		case <-ticker.C:
 			conn, err := net.DialTimeout(
 				"tcp",
-				net.JoinHostPort("127.0.0.1", "1235"),
+				net.JoinHostPort("127.0.0.1", "2235"),
 				time.Second,
 			)
 			if err != nil || conn == nil {
 				continue
 			}
 			if err := conn.Close(); err != nil {
-				t.Fatal(err)
+				return err
+			}
+
+			conn, err = net.DialTimeout(
+				"tcp",
+				net.JoinHostPort("127.0.0.1", "8546"),
+				time.Second,
+			)
+			if err != nil || conn == nil {
+				continue
+			}
+			if err := conn.Close(); err != nil {
+				return err
 			}
 			// Wait for the validator to catch up to head
 			time.Sleep(time.Second * 2)
 			break waitloop
 		case <-time.After(time.Second * 5):
-			t.Fatal("Couldn't connect to rpc")
+			return errors.New("couldn't connect to rpc")
 		}
 	}
-
-	return clients, nil
-
+	return nil
 }
 
 type ListenerError struct {
@@ -244,24 +237,20 @@ func startFibTestEventListener(
 }
 
 func waitForReceipt(
-	client *goarbitrum.ArbConnection,
+	client bind.DeployBackend,
 	tx *types.Transaction,
 	timeout time.Duration,
 ) (*types.Receipt, error) {
-	txhash, err := client.TxHash(tx)
-	if err != nil {
-		return nil, err
-	}
 	ticker := time.NewTicker(timeout)
 	for {
 		select {
 		case <-ticker.C:
-			return nil, fmt.Errorf("timed out waiting for receipt for tx %v", txhash)
+			return nil, fmt.Errorf("timed out waiting for receipt for tx %v", tx.Hash())
 		default:
 		}
 		receipt, err := client.TransactionReceipt(
 			context.Background(),
-			txhash.ToEthHash(),
+			tx.Hash(),
 		)
 		if err != nil {
 			if err.Error() == "not found" {
@@ -275,36 +264,65 @@ func waitForReceipt(
 }
 
 func TestFib(t *testing.T) {
-	client, auths := test.SimulatedBackend()
+	l1Client, pks := test.SimulatedBackend()
 	go func() {
 		t := time.NewTicker(time.Second * 2)
 		for range t.C {
-			client.Commit()
+			l1Client.Commit()
 		}
 	}()
 
-	validatorClients, err := setupValidators(t, client, auths[2:3])
-	if err != nil {
-		t.Fatalf("Validator setup error %v", err)
+	if err := os.RemoveAll(db); err != nil {
+		t.Fatal(err)
 	}
 
-	auth := auths[0]
-	arbclient, err := goarbitrum.Dial(
-		"http://localhost:1235",
-		auth,
-		client,
-	)
+	if err := os.Mkdir(db, 0700); err != nil {
+		t.Fatal(err)
+	}
+
+	rollupAddress, err := setupRollup(context.Background(), l1Client, bind.NewKeyedTransactor(pks[2]))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, tx, _, err := DeployFibonacci(auth, arbclient)
+	if err := setupValidators(rollupAddress, l1Client, pks[3:5]); err != nil {
+		t.Fatalf("Validator setup error %v", err)
+	}
+
+	defer func() {
+		if err := os.RemoveAll(db); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	if err := launchAggregator(
+		l1Client,
+		bind.NewKeyedTransactor(pks[1]),
+		rollupAddress,
+	); err != nil {
+		t.Fatal(err)
+	}
+	pk := pks[0]
+
+	//client, err := ethclient.Dial("http://localhost:8546")
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+
+	client := goarbitrum.Dial(
+		"http://localhost:2235",
+		pk,
+		rollupAddress,
+	)
+
+	auth := bind.NewKeyedTransactor(pk)
+	_, tx, _, err := DeployFibonacci(auth, client)
 	if err != nil {
 		t.Fatal("DeployFibonacci failed", err)
 	}
 
 	receipt, err := waitForReceipt(
-		arbclient,
+		client,
 		tx,
 		time.Second*20,
 	)
@@ -315,9 +333,9 @@ func TestFib(t *testing.T) {
 		t.Fatal("tx deploying fib failed")
 	}
 
-	t.Log("Fib contract is at", hexutil.Encode(receipt.ContractAddress[:]))
+	t.Log("Fib contract is at", receipt.ContractAddress.Hex())
 
-	fib, err := NewFibonacci(receipt.ContractAddress, arbclient)
+	fib, err := NewFibonacci(receipt.ContractAddress, client)
 	if err != nil {
 		t.Fatal("connect fib failed", err)
 	}
@@ -340,7 +358,7 @@ func TestFib(t *testing.T) {
 		t.Fatal("GenerateFib error", err)
 	}
 	receipt, err = waitForReceipt(
-		arbclient,
+		client,
 		tx,
 		time.Second*20,
 	)
@@ -394,10 +412,4 @@ func TestFib(t *testing.T) {
 			t.Error("eventLoop: FibonacciTestEvent not received")
 		}
 	})
-
-	for _, client := range validatorClients {
-		if err := os.RemoveAll(db + client.Address().String()); err != nil {
-			log.Fatal(err)
-		}
-	}
 }
