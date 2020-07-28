@@ -254,6 +254,7 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 // TODO: Currently FilterLogs does not properly handle reorgs by replaying undone
 // logs with the removed flag set
 func (conn *ArbConnection) FilterLogs(ctx context.Context, query ethereum.FilterQuery) ([]types.Log, error) {
+	log.Println("filter logs", query)
 	logInfos, err := conn.proxy.FindLogs(
 		ctx,
 		_extractQueryHeight(query.FromBlock),

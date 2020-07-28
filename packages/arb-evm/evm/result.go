@@ -207,6 +207,102 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 	}, nil
 }
 
+type OutputStatistics struct {
+	GasUsed      *big.Int
+	TxCount      *big.Int
+	EVMLogCount  *big.Int
+	AVMLogCount  *big.Int
+	AVMSendCount *big.Int
+}
+
+type BlockInfo struct {
+	BlockNum   *big.Int
+	Timestamp  *big.Int
+	GasLimit   *big.Int
+	BlockStats *OutputStatistics
+	ChainStats *OutputStatistics
+}
+
+func (b *BlockInfo) FirstAVMLog() *big.Int {
+	return new(big.Int).Sub(b.ChainStats.AVMLogCount, b.BlockStats.AVMLogCount)
+}
+
+func (b *BlockInfo) FirstAVMSend() *big.Int {
+	return new(big.Int).Sub(b.ChainStats.AVMSendCount, b.BlockStats.AVMSendCount)
+}
+
+func parseBlockResult(blockNum value.Value, timestamp value.Value, gasLimit value.Value, blockStatsRaw value.Value, chainStatsRaw value.Value) (*BlockInfo, error) {
+	blockNumInt, ok := blockNum.(value.IntValue)
+	if !ok {
+		return nil, errors.New("blockNum must be an int")
+	}
+	timestampInt, ok := timestamp.(value.IntValue)
+	if !ok {
+		return nil, errors.New("timestamp must be an int")
+	}
+	gasLimitInt, ok := gasLimit.(value.IntValue)
+	if !ok {
+		return nil, errors.New("gasLimit must be an int")
+	}
+	blockStats, err := parseOutputStatistics(blockStatsRaw)
+	if err != nil {
+		return nil, err
+	}
+
+	chainStats, err := parseOutputStatistics(chainStatsRaw)
+	if err != nil {
+		return nil, err
+	}
+
+	return &BlockInfo{
+		BlockNum:   blockNumInt.BigInt(),
+		Timestamp:  timestampInt.BigInt(),
+		GasLimit:   gasLimitInt.BigInt(),
+		BlockStats: blockStats,
+		ChainStats: chainStats,
+	}, nil
+}
+
+func parseOutputStatistics(val value.Value) (*OutputStatistics, error) {
+	tup, ok := val.(value.TupleValue)
+	if !ok || tup.Len() != 5 {
+		return nil, errors.New("expected result to be nonempty tuple")
+	}
+	gasUsed, _ := tup.GetByInt64(0)
+	txCount, _ := tup.GetByInt64(1)
+	evmLogCount, _ := tup.GetByInt64(2)
+	avmLogCount, _ := tup.GetByInt64(3)
+	avmSendCount, _ := tup.GetByInt64(4)
+
+	gasUsedInt, ok := gasUsed.(value.IntValue)
+	if !ok {
+		return nil, errors.New("gasUsed must be an int")
+	}
+	txCountInt, ok := txCount.(value.IntValue)
+	if !ok {
+		return nil, errors.New("txCount must be an int")
+	}
+	evmLogCountInt, ok := evmLogCount.(value.IntValue)
+	if !ok {
+		return nil, errors.New("evmLogCount must be an int")
+	}
+	avmLogCountInt, ok := avmLogCount.(value.IntValue)
+	if !ok {
+		return nil, errors.New("avmLogCount must be an int")
+	}
+	avmSendCountInt, ok := avmSendCount.(value.IntValue)
+	if !ok {
+		return nil, errors.New("avmSendCount must be an int")
+	}
+	return &OutputStatistics{
+		GasUsed:      gasUsedInt.BigInt(),
+		TxCount:      txCountInt.BigInt(),
+		EVMLogCount:  evmLogCountInt.BigInt(),
+		AVMLogCount:  avmLogCountInt.BigInt(),
+		AVMSendCount: avmSendCountInt.BigInt(),
+	}, nil
+}
+
 func NewResultFromValue(val value.Value) (Result, error) {
 	tup, ok := val.(value.TupleValue)
 	if !ok || tup.Len() == 0 {
@@ -228,7 +324,13 @@ func NewResultFromValue(val value.Value) (Result, error) {
 		chainInfo, _ := tup.GetByInt64(4)
 		return parseTxResult(l1MsgVal, resultInfo, gasInfo, chainInfo)
 	} else if kindInt.BigInt().Uint64() == 1 {
-		return nil, errors.New("unhanded block result")
+		blockNum, _ := tup.GetByInt64(1)
+		timestamp, _ := tup.GetByInt64(2)
+		gasLimit, _ := tup.GetByInt64(3)
+		blockStatsRaw, _ := tup.GetByInt64(4)
+		chainStatsRaw, _ := tup.GetByInt64(5)
+
+		return parseBlockResult(blockNum, timestamp, gasLimit, blockStatsRaw, chainStatsRaw)
 	} else {
 		return nil, errors.New("unknown result kind")
 	}
@@ -240,6 +342,18 @@ func NewTxResultFromValue(val value.Value) (*TxResult, error) {
 		return nil, err
 	}
 	txRes, ok := res.(*TxResult)
+	if !ok {
+		return nil, errors.New("unexpected avm result type")
+	}
+	return txRes, nil
+}
+
+func NewBlockResultFromValue(val value.Value) (*BlockInfo, error) {
+	res, err := NewResultFromValue(val)
+	if err != nil {
+		return nil, err
+	}
+	txRes, ok := res.(*BlockInfo)
 	if !ok {
 		return nil, errors.New("unexpected avm result type")
 	}

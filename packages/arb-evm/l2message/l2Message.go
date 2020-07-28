@@ -39,6 +39,7 @@ const (
 	CallType                          = 2
 	TransactionBatchType              = 3
 	SignedTransactionType             = 4
+	Heartbeat                         = 6
 )
 
 const AddressSize = 32
@@ -434,4 +435,15 @@ func (t TransactionBatch) AsData() []byte {
 		ret = append(ret, tx...)
 	}
 	return ret
+}
+
+type Hearbeat struct {
+}
+
+func (t Hearbeat) L2Type() L2SubType {
+	return Heartbeat
+}
+
+func (t Hearbeat) AsData() []byte {
+	return make([]byte, 0)
 }

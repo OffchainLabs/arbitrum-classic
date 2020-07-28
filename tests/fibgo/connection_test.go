@@ -285,9 +285,9 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := setupValidators(rollupAddress, l1Client, pks[3:5]); err != nil {
-		t.Fatalf("Validator setup error %v", err)
-	}
+	//if err := setupValidators(rollupAddress, l1Client, pks[3:5]); err != nil {
+	//	t.Fatalf("Validator setup error %v", err)
+	//}
 
 	defer func() {
 		if err := os.RemoveAll(db); err != nil {
@@ -394,8 +394,11 @@ func TestFib(t *testing.T) {
 			return
 		}
 
+		log.Println("Waiting for events")
+
 	Loop:
 		for ev := range eventChan {
+			log.Println("Got fib event")
 			switch event := ev.(type) {
 			case *FibonacciTestEvent:
 				testEventRcvd = true

@@ -66,13 +66,8 @@ TEST_CASE("Aggregator tests") {
         store->saveBlock(50, block_data);
         {
             auto latest = store->latestBlock();
-            auto block = latest.second;
             REQUIRE(latest.first == 50);
-            REQUIRE(block.start_log == 0);
-            REQUIRE(block.log_count == 2);
-            REQUIRE(block.start_message == 0);
-            REQUIRE(block.message_count == 3);
-            REQUIRE(block.data == block_data);
+            REQUIRE(latest.second == block_data);
         }
 
         CHECK_THROWS(store->saveBlock(52, block_data));
@@ -80,7 +75,7 @@ TEST_CASE("Aggregator tests") {
             // Latest is unmodified
             auto latest = store->latestBlock();
             REQUIRE(latest.first == 50);
-            REQUIRE(latest.second.data == block_data);
+            REQUIRE(latest.second == block_data);
         }
 
         store->saveLog(data);
@@ -90,11 +85,7 @@ TEST_CASE("Aggregator tests") {
         store->saveBlock(51, block_data2);
         {
             auto block = store->getBlock(51);
-            REQUIRE(block.start_log == 2);
-            REQUIRE(block.log_count == 2);
-            REQUIRE(block.start_message == 3);
-            REQUIRE(block.message_count == 1);
-            REQUIRE(block.data == block_data2);
+            REQUIRE(block == block_data2);
         }
 
         {

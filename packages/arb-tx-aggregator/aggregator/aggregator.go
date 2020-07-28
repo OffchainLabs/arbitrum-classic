@@ -127,7 +127,6 @@ func (m *Server) SendTransaction(_ context.Context, tx *types.Transaction) (comm
 //FindLogs takes a set of parameters and return the list of all logs that match
 //the query
 func (m *Server) FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []ethcommon.Address, topics [][]ethcommon.Hash) ([]evm.FullLog, error) {
-
 	topicGroups := make([][]common.Hash, 0)
 	for _, group := range topics {
 		topicGroups = append(topicGroups, common.HashArrayFromEth(group))
@@ -178,7 +177,7 @@ func (m *Server) GetChainAddress(_ context.Context) (ethcommon.Address, error) {
 	return m.chain.ToEthAddress(), nil
 }
 
-func (m *Server) BlockInfo(_ context.Context, height uint64) (machine.BlockInfo, error) {
+func (m *Server) BlockInfo(_ context.Context, height uint64) (*machine.BlockInfo, error) {
 	return m.db.GetBlock(height)
 }
 
@@ -187,24 +186,23 @@ func (m *Server) GetBlockHeader(ctx context.Context, height uint64) (*types.Head
 	if err != nil {
 		return nil, err
 	}
-	gasUsed := uint64(0)
-	gasLimit := uint64(100000000)
-	if currentBlock.MessageCount > 0 {
-		lastLog, err := m.db.GetLog(currentBlock.StartLog + currentBlock.MessageCount - 1)
-		if err != nil {
-			return nil, err
-		}
-		res, err := evm.NewTxResultFromValue(lastLog)
-		if err != nil {
-			return nil, err
-		}
-		gasUsed = res.CumulativeGas.Uint64()
-	}
 
 	ethHeader, err := m.client.HeaderByHash(ctx, currentBlock.Hash.ToEthHash())
 	if err != nil {
 		return nil, err
 	}
+
+	gasUsed := uint64(0)
+	gasLimit := uint64(100000000)
+	if currentBlock != nil {
+		res, err := evm.NewBlockResultFromValue(currentBlock.BlockLog)
+		if err != nil {
+			return nil, err
+		}
+		gasUsed = res.BlockStats.GasUsed.Uint64()
+		gasLimit = res.GasLimit.Uint64()
+	}
+
 	ethHeader.Coinbase = common.RandAddress().ToEthAddress()
 	ethHeader.Bloom = currentBlock.Bloom
 	ethHeader.GasLimit = gasLimit
@@ -222,10 +220,22 @@ func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, err
 	if err != nil {
 		return nil, err
 	}
-	transactions := make([]*types.Transaction, 0, currentBlock.LogCount)
-	receipts := make([]*types.Receipt, 0, currentBlock.LogCount)
-	for i := uint64(0); i < currentBlock.LogCount; i++ {
-		avmLog, err := m.db.GetLog(currentBlock.StartLog + i)
+
+	if currentBlock == nil {
+		// No arbitrum block at this height
+		return types.NewBlock(header, nil, nil, nil), nil
+	}
+
+	res, err := evm.NewBlockResultFromValue(currentBlock.BlockLog)
+	if err != nil {
+		return nil, err
+	}
+	txCount := res.BlockStats.TxCount.Uint64()
+	startLog := res.FirstAVMLog().Uint64()
+	transactions := make([]*types.Transaction, 0, txCount)
+	receipts := make([]*types.Receipt, 0, txCount)
+	for i := uint64(0); i < txCount; i++ {
+		avmLog, err := m.db.GetLog(startLog + i)
 		if err != nil {
 			return nil, err
 		}

@@ -92,10 +92,7 @@ export interface BlockInfoArgs {
 
 export interface BlockInfoReply {
   hash?: string
-  startLog?: number
-  logCount?: number
-  startMessage?: number
-  messageCount?: number
+  rawVal?: string
   bloom?: string
 }
 

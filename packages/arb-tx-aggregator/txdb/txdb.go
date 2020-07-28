@@ -19,6 +19,7 @@ package txdb
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"log"
 	"math/big"
 	"sync"
@@ -31,25 +32,20 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
 type TxDB struct {
-	mach         machine.Machine
-	as           *cmachine.AggregatorStore
-	checkpointer checkpointing.RollupCheckpointer
-	timeGetter   arbbridge.ChainTimeGetter
+	mach          machine.Machine
+	as            *cmachine.AggregatorStore
+	checkpointer  checkpointing.RollupCheckpointer
+	timeGetter    arbbridge.ChainTimeGetter
+	initialHeight *common.BlockId
 
 	callMut   sync.Mutex
 	callMach  machine.Machine
 	callBlock *common.BlockId
-}
-
-type blockInbox struct {
-	inbox value.TupleValue
-	block *common.BlockId
 }
 
 func New(
@@ -59,10 +55,15 @@ func New(
 	as *cmachine.AggregatorStore,
 	blockCreated *common.BlockId,
 ) (*TxDB, error) {
+	prevBlockId, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocksInt(blockCreated.Height.AsInt().Int64()-1))
+	if err != nil {
+		return nil, err
+	}
 	txdb := &TxDB{
-		as:           as,
-		checkpointer: checkpointer,
-		timeGetter:   clnt,
+		as:            as,
+		checkpointer:  checkpointer,
+		timeGetter:    clnt,
+		initialHeight: prevBlockId,
 	}
 	if checkpointer.HasCheckpointedState() {
 		if err := txdb.RestoreFromCheckpoint(ctx); err == nil {
@@ -76,10 +77,6 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	prevBlockId, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocksInt(blockCreated.Height.AsInt().Int64()-1))
-	if err != nil {
-		return nil, err
-	}
 	// Save initial machine so that next time we will have a checkpointed state
 	saveChan := saveMach(mach, prevBlockId, checkpointer)
 	select {
@@ -89,9 +86,6 @@ func New(
 		}
 	case <-ctx.Done():
 		return nil, errors.New("timed out saving checkpoint")
-	}
-	if err := as.SaveBlock(prevBlockId, types.Bloom{}); err != nil {
-		return nil, err
 	}
 	txdb.mach = mach
 	txdb.callMach = mach.Clone()
@@ -111,7 +105,22 @@ func (txdb *TxDB) RestoreFromCheckpoint(ctx context.Context) error {
 	}); err != nil {
 		return err
 	}
-	if err := txdb.as.RestoreBlock(blockId.Height.AsInt().Uint64()); err != nil {
+	blockInfo, err := txdb.GetBlock(blockId.Height.AsInt().Uint64())
+	if err != nil {
+		return err
+	}
+	if blockInfo == nil {
+		return errors.New("should only checkpoint at non-empty blocks")
+	}
+	block, err := evm.NewBlockResultFromValue(blockInfo.BlockLog)
+	if err != nil {
+		return err
+	}
+	if err := txdb.as.Reorg(
+		blockId.Height.AsInt().Uint64(),
+		block.ChainStats.AVMSendCount.Uint64(),
+		block.ChainStats.AVMLogCount.Uint64(),
+	); err != nil {
 		return err
 	}
 	txdb.mach = mach
@@ -122,24 +131,11 @@ func (txdb *TxDB) RestoreFromCheckpoint(ctx context.Context) error {
 	return nil
 }
 
-// The first
-func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent, lastBlock uint64) error {
-	blockInboxes, err := txdb.breakByBlock(ctx, msgs, lastBlock)
-	if err != nil {
-		return err
-	}
-	for _, bi := range blockInboxes {
-		assertion, numSteps := txdb.mach.ExecuteAssertion(1000000000000, bi.inbox, 0)
-		if err := txdb.addAssertion(assertion, bi.block); err != nil {
+func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent) error {
+	for _, msg := range msgs {
+		if err := txdb.addMessage(ctx, msg.Message); err != nil {
 			return nil
 		}
-		txdb.callMut.Lock()
-		// If we didn't run, no need to update the machine
-		if numSteps > 0 {
-			txdb.callMach = txdb.mach.Clone()
-		}
-		txdb.callBlock = bi.block
-		txdb.callMut.Unlock()
 	}
 	return nil
 }
@@ -177,12 +173,16 @@ func (txdb *TxDB) GetRequest(requestId common.Hash) (value.Value, error) {
 	return logVal, nil
 }
 
-func (txdb *TxDB) GetBlock(height uint64) (machine.BlockInfo, error) {
+func (txdb *TxDB) GetBlock(height uint64) (*machine.BlockInfo, error) {
 	return txdb.as.GetBlock(height)
 }
 
 func (txdb *TxDB) LatestBlock() (*common.BlockId, error) {
-	return txdb.as.LatestBlock()
+	block, err := txdb.as.LatestBlock()
+	if err != nil {
+		return txdb.initialHeight, nil
+	}
+	return block, nil
 }
 
 func (txdb *TxDB) FindLogs(
@@ -222,12 +222,22 @@ func (txdb *TxDB) FindLogs(
 		if err != nil {
 			return nil, err
 		}
+		if blockInfo == nil {
+			// No arbitrum txes in this block
+			continue
+		}
 		if !maybeMatchesLogQuery(blockInfo.Bloom, address, topics) {
 			continue
 		}
 
-		for j := uint64(0); j < blockInfo.LogCount; j++ {
-			logVal, err := txdb.as.GetLog(blockInfo.StartLog + j)
+		res, err := evm.NewBlockResultFromValue(blockInfo.BlockLog)
+		if err != nil {
+			return nil, err
+		}
+
+		first := res.FirstAVMLog().Uint64()
+		for j := uint64(0); j < res.BlockStats.AVMLogCount.Uint64(); j++ {
+			logVal, err := txdb.as.GetLog(first + j)
 			if err != nil {
 				return nil, err
 			}
@@ -290,12 +300,22 @@ func maybeMatchesLogQuery(logFilter types.Bloom, addresses []common.Address, top
 	return true
 }
 
-func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, block *common.BlockId) error {
+func (txdb *TxDB) addMessage(ctx context.Context, msg message.InboxMessage) error {
+
+	type resultInfo struct {
+		logIndex uint64
+		result   *evm.TxResult
+	}
+	inbox := value.NewEmptyTuple()
+	inbox = value.NewTuple2(inbox, msg.AsValue())
+	assertion, _ := txdb.mach.ExecuteAssertion(1000000000000, inbox, 0)
 	for _, avmMessage := range assertion.ParseOutMessages() {
 		if err := txdb.as.SaveMessage(avmMessage); err != nil {
 			return err
 		}
 	}
+
+	results := make([]resultInfo, 0)
 	ethLogs := make([]*types.Log, 0)
 	for _, avmLog := range assertion.ParseLogs() {
 		logIndex, err := txdb.as.LogCount()
@@ -307,31 +327,52 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, block *co
 			return err
 		}
 
-		res, err := evm.NewTxResultFromValue(avmLog)
+		res, err := evm.NewResultFromValue(avmLog)
 		if err != nil {
 			log.Println("Error parsing log result", err)
 			continue
 		}
 
-		log.Println("Got result for", res.L1Message.MessageID(), res.ResultCode)
-
-		if err := txdb.as.SaveRequest(res.L1Message.MessageID(), logIndex); err != nil {
-			return err
-		}
-
-		for _, evmLog := range res.EVMLogs {
-			ethLogs = append(ethLogs, &types.Log{
-				Address: evmLog.Address.ToEthAddress(),
-				Topics:  common.NewEthHashesFromHashes(evmLog.Topics),
+		switch res := res.(type) {
+		case *evm.TxResult:
+			log.Println("Got result for", res.L1Message.MessageID(), res.ResultCode)
+			results = append(results, resultInfo{
+				logIndex: logIndex,
+				result:   res,
 			})
+		case *evm.BlockInfo:
+			block, err := txdb.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(res.BlockNum))
+			if err != nil {
+				return err
+			}
+			logBloom := types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
+			if err := txdb.as.SaveBlock(block, logIndex, logBloom); err != nil {
+				return err
+			}
+
+			for _, item := range results {
+				if err := txdb.as.SaveRequest(item.result.L1Message.MessageID(), item.logIndex); err != nil {
+					return err
+				}
+				log.Println("Got", len(item.result.EVMLogs), "logs")
+				for _, evmLog := range item.result.EVMLogs {
+					log.Println("Got log", evmLog)
+					ethLogs = append(ethLogs, &types.Log{
+						Address: evmLog.Address.ToEthAddress(),
+						Topics:  common.NewEthHashesFromHashes(evmLog.Topics),
+					})
+				}
+			}
+			results = make([]resultInfo, 0)
+
+			saveMach(txdb.mach, block, txdb.checkpointer)
+
+			txdb.callMut.Lock()
+			txdb.callMach = txdb.mach.Clone()
+			txdb.callBlock = block
+			txdb.callMut.Unlock()
 		}
 	}
-	logBloom := types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
-	if err := txdb.as.SaveBlock(block, logBloom); err != nil {
-		return err
-	}
-
-	saveMach(txdb.mach, block, txdb.checkpointer)
 	return nil
 }
 
@@ -342,75 +383,4 @@ func saveMach(mach machine.Machine, id *common.BlockId, checkpointer checkpointi
 	cpData := make([]byte, 32)
 	copy(cpData[:], machHash[:])
 	return checkpointer.AsyncSaveCheckpoint(id, cpData, ctx)
-}
-
-// makeBlockInbox assumes that all messages are from the same block
-func makeBlockInbox(msgs []arbbridge.MessageDeliveredEvent) blockInbox {
-	inbox := value.NewEmptyTuple()
-	for _, msg := range msgs {
-		inbox = value.NewTuple2(inbox, msg.Message.AsValue())
-	}
-	return blockInbox{
-		inbox: inbox,
-		block: msgs[0].BlockId,
-	}
-}
-
-func (txdb *TxDB) breakByBlock(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent, lastBlock uint64) ([]blockInbox, error) {
-	blocks := make([]blockInbox, 0)
-	latestBlock, err := txdb.as.LatestBlock()
-	if err != nil {
-		return nil, err
-	}
-	currentBlockHeight := latestBlock.Height.AsInt().Uint64() + 1
-	addEmptyBlock := func() error {
-		blockId, err := txdb.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocksInt(int64(currentBlockHeight)))
-		if err != nil {
-			return err
-		}
-		blocks = append(blocks, blockInbox{
-			inbox: value.NewEmptyTuple(),
-			block: blockId,
-		})
-		currentBlockHeight++
-		return nil
-	}
-
-	startHeight := lastBlock
-	if len(msgs) > 0 {
-		startHeight = msgs[0].BlockId.Height.AsInt().Uint64()
-	}
-
-	for currentBlockHeight < startHeight {
-		if err := addEmptyBlock(); err != nil {
-			return nil, err
-		}
-	}
-
-	stack := make([]arbbridge.MessageDeliveredEvent, 0)
-	for _, msg := range msgs {
-		if len(stack) == 0 || msg.BlockId.Height.Cmp(stack[0].BlockId.Height) == 0 {
-			stack = append(stack, msg)
-		} else {
-			nextBlockIndex := makeBlockInbox(stack)
-			for nextBlockIndex.block.Height.AsInt().Uint64() > currentBlockHeight {
-				if err := addEmptyBlock(); err != nil {
-					return nil, err
-				}
-			}
-			blocks = append(blocks, makeBlockInbox(stack))
-			stack = make([]arbbridge.MessageDeliveredEvent, 0)
-			currentBlockHeight++
-		}
-	}
-	if len(stack) > 0 {
-		blocks = append(blocks, makeBlockInbox(stack))
-		currentBlockHeight++
-	}
-	for currentBlockHeight <= lastBlock {
-		if err := addEmptyBlock(); err != nil {
-			return nil, err
-		}
-	}
-	return blocks, nil
 }

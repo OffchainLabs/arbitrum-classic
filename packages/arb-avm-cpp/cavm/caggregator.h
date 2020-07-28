@@ -27,15 +27,7 @@ extern "C" {
 
 struct CBlockDataStruct {
     int found;
-
     uint64_t height;
-
-    uint64_t start_log;
-    uint64_t log_count;
-
-    uint64_t start_message;
-    uint64_t message_count;
-
     ByteSlice data;
 };
 
@@ -76,7 +68,10 @@ int aggregatorSaveBlock(CAggregatorStore* agg,
                         const void* data,
                         int data_length);
 CBlockData aggregatorGetBlock(const CAggregatorStore* agg, uint64_t height);
-int aggregatorRestoreBlock(CAggregatorStore* m, uint64_t height);
+int aggregatorReorg(CAggregatorStore* agg,
+                    uint64_t block_height,
+                    uint64_t message_count,
+                    uint64_t log_count);
 
 // request_id is 32 bytes long
 Uint64Result aggregatorGetPossibleRequestInfo(const CAggregatorStore* agg,

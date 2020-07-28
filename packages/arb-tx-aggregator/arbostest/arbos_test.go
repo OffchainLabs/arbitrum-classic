@@ -17,9 +17,9 @@
 package arbostest
 
 import (
-	"crypto/ecdsa"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"log"
 	"math/big"
 	"strings"
@@ -27,14 +27,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 func TestFib(t *testing.T) {
@@ -163,111 +161,11 @@ func TestReddit(t *testing.T) {
 	log.Println(redditAddress)
 }
 
-func TestSignedTx(t *testing.T) {
+func TestBlocks(t *testing.T) {
 	chain := common.RandAddress()
 	mach, err := cmachine.New(arbos.Path())
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	dest := common.RandAddress()
-	pk, err := crypto.GenerateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
-	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
-
-	chainTime := message.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
-
-	inbox := value.NewEmptyTuple()
-	inbox = value.NewTuple2(
-		inbox,
-		message.NewInboxMessage(
-			simpleInitMessage(),
-			chain,
-			big.NewInt(0),
-			chainTime,
-		).AsValue(),
-	)
-	inbox = value.NewTuple2(
-		inbox,
-		message.NewInboxMessage(
-			message.Eth{
-				Dest:  addr,
-				Value: big.NewInt(1000),
-			},
-			common.RandAddress(),
-			big.NewInt(1),
-			chainTime,
-		).AsValue(),
-	)
-
-	tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(l2message.ChainAddressToID(chain)), pk)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	inbox = value.NewTuple2(
-		inbox,
-		message.NewInboxMessage(
-			message.L2Message{Data: l2message.L2MessageAsData(l2message.NewSignedTransactionFromEth(signedTx))},
-			common.RandAddress(),
-			big.NewInt(2),
-			chainTime,
-		).AsValue(),
-	)
-	assertion, _ := mach.ExecuteAssertion(1000000000, inbox, 0)
-	logs := assertion.ParseLogs()
-	testCase, err := value.TestVectorJSON(inbox, logs, assertion.ParseOutMessages())
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(string(testCase))
-	if len(logs) != 1 {
-		t.Fatal("incorrect log output count")
-	}
-	result, err := evm.NewTxResultFromValue(logs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected result code", result.ResultCode)
-	}
-	if result.L1Message.Sender != addr {
-		t.Error("l2message had incorrect sender", result.L1Message.Sender, addr)
-	}
-	if result.L1Message.Kind != message.L2Type {
-		t.Error("l2message has incorrect type")
-	}
-	l2Message, err := l2message.NewL2MessageFromData(result.L1Message.Data)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if result.L1Message.MessageID().ToEthHash() != signedTx.Hash() {
-		t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.L1Message.MessageID(), signedTx.Hash().Hex())
-	}
-
-	_, ok := l2Message.(l2message.SignedTransaction)
-	if !ok {
-		t.Error("bad transaction format")
-	}
-}
-
-func TestUnsignedTx(t *testing.T) {
-	chain := common.RandAddress()
-	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	chainTime := message.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
 	}
 	inbox := value.NewEmptyTuple()
 	inbox = value.NewTuple2(
@@ -276,218 +174,118 @@ func TestUnsignedTx(t *testing.T) {
 			simpleInitMessage(),
 			chain,
 			big.NewInt(0),
-			chainTime,
-		).AsValue(),
-	)
-	sender := common.RandAddress()
-	inbox = value.NewTuple2(
-		inbox,
-		message.NewInboxMessage(
-			message.Eth{
-				Dest:  sender,
-				Value: big.NewInt(1000),
+			message.ChainTime{
+				BlockNum:  common.NewTimeBlocksInt(0),
+				Timestamp: big.NewInt(0),
 			},
-			common.RandAddress(),
-			big.NewInt(1),
-			chainTime,
 		).AsValue(),
 	)
-
-	tx1 := l2message.Transaction{
-		MaxGas:      big.NewInt(100000000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(0),
-		DestAddress: common.RandAddress(),
-		Payment:     big.NewInt(10),
-		Data:        []byte{},
-	}
-
-	tx2 := l2message.Transaction{
-		MaxGas:      big.NewInt(100000000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(1),
-		DestAddress: common.RandAddress(),
-		Payment:     big.NewInt(10),
-		Data:        []byte{},
-	}
-
-	inbox = value.NewTuple2(
-		inbox,
-		message.NewInboxMessage(
-			message.L2Message{Data: l2message.L2MessageAsData(tx1)},
-			sender,
-			big.NewInt(2),
-			chainTime,
-		).AsValue(),
-	)
-	inbox = value.NewTuple2(
-		inbox,
-		message.NewInboxMessage(
-			message.L2Message{Data: l2message.L2MessageAsData(tx2)},
-			sender,
-			big.NewInt(3),
-			chainTime,
-		).AsValue(),
-	)
-	assertion, _ := mach.ExecuteAssertion(1000000000, inbox, 0)
-	logs := assertion.ParseLogs()
-	testCase, err := value.TestVectorJSON(inbox, logs, assertion.ParseOutMessages())
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(string(testCase))
-	if len(logs) != 2 {
-		t.Fatal("incorrect log output count")
-	}
-	for i, avmLog := range logs {
-		result, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if result.ResultCode != evm.ReturnCode {
-			t.Fatal("unexpected result code", result.ResultCode)
-		}
-		if result.L1Message.Sender != sender {
-			t.Error("l2message had incorrect sender", result.L1Message.Sender, sender)
-		}
-		if result.L1Message.Kind != message.L2Type {
-			t.Error("l2message has incorrect type")
-		}
-		l2Message, err := l2message.NewL2MessageFromData(result.L1Message.Data)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		var correctHash common.Hash
-		if i == 0 {
-			correctHash = tx1.MessageID(sender, chain)
-		} else {
-			correctHash = tx2.MessageID(sender, chain)
-		}
-		if result.L1Message.MessageID() != correctHash {
-			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.L1Message.MessageID(), correctHash)
-		}
-
-		_, ok := l2Message.(l2message.Transaction)
-		if !ok {
-			t.Error("bad transaction format")
-		}
-	}
-}
-
-func TestBatch(t *testing.T) {
-	mach, chain := initArbOS(t)
-
-	pks := make([]*ecdsa.PrivateKey, 0)
-	for i := 0; i < 20; i++ {
-		pk, err := crypto.GenerateKey()
-		if err != nil {
-			t.Fatal(err)
-		}
-		depositResults := runMessage(
-			t,
-			mach,
-			message.Eth{
-				Dest:  common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey)),
-				Value: big.NewInt(1000),
-			},
-			common.RandAddress(),
-		)
-		if len(depositResults) != 0 {
-			t.Fatal("deposit should not have had a result")
-		}
-		pks = append(pks, pk)
-	}
-
-	batchSender := common.RandAddress()
-
-	depositResults := runMessage(
-		t,
-		mach,
-		message.Eth{
-			Dest:  batchSender,
-			Value: big.NewInt(1000),
-		},
-		common.RandAddress(),
-	)
-	if len(depositResults) != 0 {
-		t.Fatal("deposit should not have had a result")
-	}
-
-	senders := make([]common.Address, 0)
-	txes := make([]l2message.AbstractL2Message, 0)
-	hashes := make([]common.Hash, 0)
-
-	for _, pk := range pks {
-		tx := types.NewTransaction(0, common.RandAddress().ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
-		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(l2message.ChainAddressToID(chain)), pk)
-		if err != nil {
-			t.Fatal(err)
-		}
-		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
-		senders = append(senders, addr)
-		txes = append(txes, l2message.NewSignedTransactionFromEth(signedTx))
-		hashes = append(hashes, common.NewHashFromEth(signedTx.Hash()))
-	}
-
-	batchSenderSeq := int64(0)
-	for i := 0; i < 10; i++ {
+	for i := int64(0); i < 5; i++ {
 		tx := l2message.Transaction{
 			MaxGas:      big.NewInt(100000000000),
 			GasPriceBid: big.NewInt(0),
-			SequenceNum: big.NewInt(batchSenderSeq),
+			SequenceNum: big.NewInt(0),
 			DestAddress: common.RandAddress(),
 			Payment:     big.NewInt(0),
 			Data:        []byte{},
 		}
-		hashes = append(hashes, tx.MessageID(batchSender, chain))
-		senders = append(senders, batchSender)
-		txes = append(txes, tx)
-		batchSenderSeq++
+		inbox = value.NewTuple2(
+			inbox,
+			message.NewInboxMessage(
+				message.L2Message{Data: l2message.L2MessageAsData(tx)},
+				common.RandAddress(),
+				big.NewInt(i+1),
+				message.ChainTime{
+					BlockNum:  common.NewTimeBlocksInt(i + 1),
+					Timestamp: big.NewInt(10 + i + 1),
+				},
+			).AsValue(),
+		)
 	}
 
-	msg := l2message.NewTransactionBatchFromMessages(txes)
-	results := runMessage(t, mach, message.L2Message{Data: l2message.L2MessageAsData(msg)}, batchSender)
-	if len(results) != len(txes) {
-		t.Fatal("incorrect result count", len(results), "instead of", len(txes))
-	}
-	for i, result := range results {
-		if result.L1Message.Sender != senders[i] {
-			t.Error("l2message had incorrect sender", result.L1Message.Sender, senders[i])
-		}
-		if result.L1Message.Kind != message.L2Type {
-			t.Error("l2message has incorrect type")
-		}
-		msg, err := l2message.NewL2MessageFromData(result.L1Message.Data)
+	assertion, _ := mach.ExecuteAssertion(1000000000, inbox, 0)
+	avmLogs := assertion.ParseLogs()
+	t.Log("Got", len(avmLogs), "logs")
+	blockGasUsed := big.NewInt(0)
+	blockAVMLogCount := big.NewInt(0)
+	blockEVMLogCount := big.NewInt(0)
+	blockTxCount := big.NewInt(0)
+
+	totalGasUsed := big.NewInt(0)
+	totalAVMLogCount := big.NewInt(0)
+	totalEVMLogCount := big.NewInt(0)
+	totalTxCount := big.NewInt(0)
+	for i, avmLog := range avmLogs {
+		blockAVMLogCount = blockAVMLogCount.Add(blockAVMLogCount, big.NewInt(1))
+		totalAVMLogCount = totalAVMLogCount.Add(totalAVMLogCount, big.NewInt(1))
+		res, err := evm.NewResultFromValue(avmLog)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
 		}
 
-		if result.L1Message.MessageID() != hashes[i] {
-			t.Errorf("l2message of type %T had incorrect id %v instead of %v", msg, result.L1Message.MessageID(), hashes[i])
+		if i%2 == 0 {
+			res, ok := res.(*evm.TxResult)
+			if !ok {
+				t.Error("incorrect result type")
+			}
+			if res.ResultCode != evm.ReturnCode {
+				t.Error("tx failed unexpectedly")
+			}
+			blockGasUsed = blockGasUsed.Add(blockGasUsed, res.GasUsed)
+			blockEVMLogCount = blockEVMLogCount.Add(blockEVMLogCount, big.NewInt(int64(len(res.EVMLogs))))
+			blockTxCount = blockTxCount.Add(blockTxCount, big.NewInt(1))
+
+			totalGasUsed = totalGasUsed.Add(totalGasUsed, res.GasUsed)
+			totalEVMLogCount = totalEVMLogCount.Add(totalEVMLogCount, big.NewInt(int64(len(res.EVMLogs))))
+			totalTxCount = totalTxCount.Add(totalTxCount, big.NewInt(1))
 		} else {
-			t.Log("correct request id")
-		}
+			res, ok := res.(*evm.BlockInfo)
+			if !ok {
+				t.Fatal("incorrect result type")
+			}
+			if res.BlockNum.Cmp(big.NewInt(int64(i/2+1))) != 0 {
+				t.Error("unexpected block height")
+			}
+			if res.Timestamp.Cmp(big.NewInt(int64(10+i/2+1))) != 0 {
+				t.Error("unexpected block height")
+			}
 
-		switch msg := msg.(type) {
-		case l2message.Transaction:
-			match, ok := txes[i].(l2message.Transaction)
-			if !ok {
-				t.Error("l2 type didn't match")
+			if res.BlockStats.GasUsed.Cmp(blockGasUsed) != 0 {
+				t.Error("unexpected chain gas used")
 			}
-			if !msg.Equals(match) {
-				t.Error("transaction didn't match input")
+			if res.BlockStats.AVMLogCount.Cmp(blockAVMLogCount) != 0 {
+				t.Error("unexpected block log count", res.BlockStats.AVMLogCount)
 			}
-		case l2message.SignedTransaction:
-			match, ok := txes[i].(l2message.SignedTransaction)
-			if !ok {
-				t.Error("l2 type didn't match")
+			if res.BlockStats.AVMSendCount.Cmp(big.NewInt(0)) != 0 {
+				t.Error("unexpected block send count")
 			}
-			if !msg.Equals(match) {
-				t.Error("signed transaction didn't match input")
+			if res.BlockStats.EVMLogCount.Cmp(blockEVMLogCount) != 0 {
+				t.Error("unexpected block evm log count")
 			}
-		default:
-			t.Error("unexpected output type")
+			if res.BlockStats.TxCount.Cmp(blockTxCount) != 0 {
+				t.Error("unexpected block tx count", res.BlockStats.TxCount)
+			}
+
+			if res.ChainStats.GasUsed.Cmp(totalGasUsed) != 0 {
+				t.Error("unexpected chain gas used")
+			}
+			if res.ChainStats.AVMLogCount.Cmp(totalAVMLogCount) != 0 {
+				t.Error("unexpected chain log count", res.ChainStats.AVMLogCount, "instead of", totalAVMLogCount)
+			}
+			if res.ChainStats.AVMSendCount.Cmp(big.NewInt(0)) != 0 {
+				t.Error("unexpected chain send count")
+			}
+			if res.ChainStats.EVMLogCount.Cmp(totalEVMLogCount) != 0 {
+				t.Error("unexpected chain evm log count")
+			}
+			if res.ChainStats.TxCount.Cmp(totalTxCount) != 0 {
+				t.Error("unexpected chain tx count", res.ChainStats.TxCount, "instead of", totalTxCount)
+			}
+
+			blockGasUsed = big.NewInt(0)
+			blockAVMLogCount = big.NewInt(0)
+			blockEVMLogCount = big.NewInt(0)
+			blockTxCount = big.NewInt(0)
 		}
 	}
 }
