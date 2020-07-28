@@ -40,6 +40,7 @@ const (
 	CallType                          = 2
 	TransactionBatchType              = 3
 	SignedTransactionType             = 4
+	DeployBuddyContract               = 5
 )
 
 const AddressSize = 32
@@ -85,6 +86,61 @@ func NewL2MessageFromData(data []byte) (AbstractL2Message, error) {
 	default:
 		return nil, errors.New("invalid l2 message type")
 	}
+}
+
+type BuddyDeployment struct {
+	MaxGas      *big.Int
+	GasPriceBid *big.Int
+	DestAddress common.Address
+	Payment     *big.Int
+	Data        []byte
+}
+
+func NewBuddyDeploymentFromData(data []byte) AbstractL2Message {
+	return newBuddyDeploymentFromData(data)
+}
+
+func newBuddyDeploymentFromData(data []byte) BuddyDeployment {
+	return BuddyDeployment{
+		MaxGas:      big.NewInt(10000000000),
+		GasPriceBid: big.NewInt(0),
+		DestAddress: common.Address{},
+		Payment:     big.NewInt(0),
+		Data:        data,
+	}
+}
+
+func (b BuddyDeployment) String() string {
+	return fmt.Sprintf(
+		"Transaction(%v, %v, %v, %v, %v)",
+		b.MaxGas,
+		b.GasPriceBid,
+		b.DestAddress,
+		b.Payment,
+		hexutil.Encode(b.Data),
+	)
+}
+
+func (b BuddyDeployment) Type() Type {
+	return L2BuddyDeploy
+}
+
+func (b BuddyDeployment) L2Type() L2SubType {
+	return ContractTransactionType
+}
+
+func (b BuddyDeployment) asData() []byte {
+	ret := make([]byte, 0)
+	ret = append(ret, math.U256Bytes(b.MaxGas)...)
+	ret = append(ret, math.U256Bytes(b.GasPriceBid)...)
+	ret = append(ret, addressData(b.DestAddress)...)
+	ret = append(ret, math.U256Bytes(b.Payment)...)
+	ret = append(ret, b.Data...)
+	return ret
+}
+
+func (t BuddyDeployment) AsData() []byte {
+	return t.asData()
 }
 
 type Transaction struct {

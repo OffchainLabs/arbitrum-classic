@@ -192,6 +192,10 @@ func (m *Server) executeCall(mach machine.Machine, args *evm.CallMessageArgs) (*
 	if callMsg.MaxGas.Cmp(big.NewInt(0)) == 0 {
 		callMsg.MaxGas.SetUint64(1000000000000)
 	}
+
+	log.Println("message.L2Message------------------------x-----")
+	log.Println("sender: ", sender)
+	log.Println(message.L2Message{Msg: callMsg})
 	inboxMsg := message.NewInboxMessage(
 		message.L2Message{Msg: callMsg},
 		sender,

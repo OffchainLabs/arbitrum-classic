@@ -34,6 +34,8 @@ interface IGlobalInbox {
         uint256 inboxSeqNum
     );
 
+    event BuddyContractDeployed(address indexed sender, bytes data);
+
     function getInbox(address account) external view returns (bytes32, uint256);
 
     function sendMessages(
@@ -45,4 +47,7 @@ interface IGlobalInbox {
     function sendInitializationMessage(bytes calldata messageData) external;
 
     function sendL2Message(address chain, bytes calldata messageData) external;
+
+    function sendL2BuddyDeploy(address chain, bytes calldata messageData)
+        external;
 }

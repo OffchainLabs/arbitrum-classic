@@ -34,6 +34,15 @@ interface GlobalInboxInterface extends Interface {
       encode([chain, to]: [string, string]): string
     }>
 
+    depositPairedERC20Message: TypedFunctionDescription<{
+      encode([chain, erc20, to, value]: [
+        string,
+        string,
+        string,
+        BigNumberish
+      ]): string
+    }>
+
     getERC20Balance: TypedFunctionDescription<{
       encode([_tokenContract, _owner]: [string, string]): string
     }>
@@ -47,6 +56,10 @@ interface GlobalInboxInterface extends Interface {
     }>
 
     getInbox: TypedFunctionDescription<{ encode([account]: [string]): string }>
+
+    getPairedERC20Balance: TypedFunctionDescription<{
+      encode([_tokenContract, _owner]: [string, string]): string
+    }>
 
     getPaymentOwner: TypedFunctionDescription<{
       encode([originalOwner, nodeHash, messageIndex]: [
@@ -64,6 +77,8 @@ interface GlobalInboxInterface extends Interface {
       ]): string
     }>
 
+    isBuddyContract: TypedFunctionDescription<{ encode([]: [string]): string }>
+
     ownedERC20s: TypedFunctionDescription<{
       encode([_owner]: [string]): string
     }>
@@ -74,6 +89,10 @@ interface GlobalInboxInterface extends Interface {
 
     sendInitializationMessage: TypedFunctionDescription<{
       encode([messageData]: [Arrayish]): string
+    }>
+
+    sendL2BuddyDeploy: TypedFunctionDescription<{
+      encode([chain, messageData]: [string, Arrayish]): string
     }>
 
     sendL2Message: TypedFunctionDescription<{
@@ -110,9 +129,17 @@ interface GlobalInboxInterface extends Interface {
     }>
 
     withdrawEth: TypedFunctionDescription<{ encode([]: []): string }>
+
+    withdrawPairedERC20: TypedFunctionDescription<{
+      encode([_tokenContract]: [string]): string
+    }>
   }
 
   events: {
+    BuddyContractDeployed: TypedEventDescription<{
+      encodeTopics([sender, data]: [string | null, null]): string[]
+    }>
+
     MessageDelivered: TypedEventDescription<{
       encodeTopics([chain, kind, sender, inboxSeqNum, data]: [
         string | null,
@@ -180,6 +207,14 @@ export class GlobalInbox extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    depositPairedERC20Message(
+      chain: string,
+      erc20: string,
+      to: string,
+      value: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     getERC20Balance(_tokenContract: string, _owner: string): Promise<BigNumber>
 
     getERC721Tokens(_erc721: string, _owner: string): Promise<BigNumber[]>
@@ -193,6 +228,11 @@ export class GlobalInbox extends Contract {
       1: BigNumber
     }>
 
+    getPairedERC20Balance(
+      _tokenContract: string,
+      _owner: string
+    ): Promise<BigNumber>
+
     getPaymentOwner(
       originalOwner: string,
       nodeHash: Arrayish,
@@ -205,11 +245,19 @@ export class GlobalInbox extends Contract {
       _tokenId: BigNumberish
     ): Promise<boolean>
 
+    isBuddyContract(arg0: string): Promise<boolean>
+
     ownedERC20s(_owner: string): Promise<string[]>
 
     ownedERC721s(_owner: string): Promise<string[]>
 
     sendInitializationMessage(
+      messageData: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    sendL2BuddyDeploy(
+      chain: string,
       messageData: Arrayish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
@@ -253,6 +301,11 @@ export class GlobalInbox extends Contract {
     ): Promise<ContractTransaction>
 
     withdrawEth(overrides?: TransactionOverrides): Promise<ContractTransaction>
+
+    withdrawPairedERC20(
+      _tokenContract: string,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
   }
 
   depositERC20Message(
@@ -277,6 +330,14 @@ export class GlobalInbox extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  depositPairedERC20Message(
+    chain: string,
+    erc20: string,
+    to: string,
+    value: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   getERC20Balance(_tokenContract: string, _owner: string): Promise<BigNumber>
 
   getERC721Tokens(_erc721: string, _owner: string): Promise<BigNumber[]>
@@ -290,6 +351,11 @@ export class GlobalInbox extends Contract {
     1: BigNumber
   }>
 
+  getPairedERC20Balance(
+    _tokenContract: string,
+    _owner: string
+  ): Promise<BigNumber>
+
   getPaymentOwner(
     originalOwner: string,
     nodeHash: Arrayish,
@@ -302,11 +368,19 @@ export class GlobalInbox extends Contract {
     _tokenId: BigNumberish
   ): Promise<boolean>
 
+  isBuddyContract(arg0: string): Promise<boolean>
+
   ownedERC20s(_owner: string): Promise<string[]>
 
   ownedERC721s(_owner: string): Promise<string[]>
 
   sendInitializationMessage(
+    messageData: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  sendL2BuddyDeploy(
+    chain: string,
     messageData: Arrayish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
@@ -351,7 +425,14 @@ export class GlobalInbox extends Contract {
 
   withdrawEth(overrides?: TransactionOverrides): Promise<ContractTransaction>
 
+  withdrawPairedERC20(
+    _tokenContract: string,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   filters: {
+    BuddyContractDeployed(sender: string | null, data: null): EventFilter
+
     MessageDelivered(
       chain: string | null,
       kind: BigNumberish | null,
@@ -393,6 +474,13 @@ export class GlobalInbox extends Contract {
 
     depositEthMessage(chain: string, to: string): Promise<BigNumber>
 
+    depositPairedERC20Message(
+      chain: string,
+      erc20: string,
+      to: string,
+      value: BigNumberish
+    ): Promise<BigNumber>
+
     getERC20Balance(_tokenContract: string, _owner: string): Promise<BigNumber>
 
     getERC721Tokens(_erc721: string, _owner: string): Promise<BigNumber>
@@ -400,6 +488,11 @@ export class GlobalInbox extends Contract {
     getEthBalance(_owner: string): Promise<BigNumber>
 
     getInbox(account: string): Promise<BigNumber>
+
+    getPairedERC20Balance(
+      _tokenContract: string,
+      _owner: string
+    ): Promise<BigNumber>
 
     getPaymentOwner(
       originalOwner: string,
@@ -413,11 +506,15 @@ export class GlobalInbox extends Contract {
       _tokenId: BigNumberish
     ): Promise<BigNumber>
 
+    isBuddyContract(arg0: string): Promise<BigNumber>
+
     ownedERC20s(_owner: string): Promise<BigNumber>
 
     ownedERC721s(_owner: string): Promise<BigNumber>
 
     sendInitializationMessage(messageData: Arrayish): Promise<BigNumber>
+
+    sendL2BuddyDeploy(chain: string, messageData: Arrayish): Promise<BigNumber>
 
     sendL2Message(chain: string, messageData: Arrayish): Promise<BigNumber>
 
@@ -444,5 +541,7 @@ export class GlobalInbox extends Contract {
     withdrawERC721(_erc721: string, _tokenId: BigNumberish): Promise<BigNumber>
 
     withdrawEth(): Promise<BigNumber>
+
+    withdrawPairedERC20(_tokenContract: string): Promise<BigNumber>
   }
 }

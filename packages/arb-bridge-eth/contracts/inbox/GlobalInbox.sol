@@ -22,10 +22,12 @@ import "./GlobalEthWallet.sol";
 import "./GlobalFTWallet.sol";
 import "./GlobalNFTWallet.sol";
 import "./IGlobalInbox.sol";
+import "./PairedFTContracts.sol";
 import "./Messages.sol";
 import "./PaymentRecords.sol";
 
 contract GlobalInbox is
+    PairedFTContracts,
     GlobalEthWallet,
     GlobalFTWallet,
     GlobalNFTWallet,
@@ -37,6 +39,7 @@ contract GlobalInbox is
     uint8 internal constant ERC721_TRANSFER = 2;
     uint8 internal constant L2_MSG = 3;
     uint8 internal constant INITIALIZATION_MSG = 4;
+    uint8 internal constant BUDDY_CONTRACT_DEPLOY = 5;
 
     struct Inbox {
         bytes32 value;
@@ -120,6 +123,12 @@ contract GlobalInbox is
         _deliverMessage(chain, L2_MSG, msg.sender, messageData);
     }
 
+    function sendL2BuddyDeploy(address chain, bytes calldata messageData)
+        external
+    {
+        _deliverMessage(chain, BUDDY_CONTRACT_DEPLOY, msg.sender, messageData);
+    }
+
     /**
      * @notice Send a generic L2 message to a given Arbitrum Rollup chain
      * @dev This method can be used to send any type of message that doesn't require L1 validation
@@ -165,6 +174,33 @@ contract GlobalInbox is
         uint256 value
     ) external {
         depositERC20(erc20, chain, value);
+        _deliverMessage(
+            chain,
+            ERC20_TRANSFER,
+            msg.sender,
+            abi.encodePacked(
+                bytes32(bytes20(erc20)),
+                bytes32(bytes20(to)),
+                value
+            )
+        );
+    }
+
+    /**
+     * @notice Deposits an ERC20 token into a given Arbitrum Rollup chain
+     * @dev This method requires approving this contract for transfers
+     * @param chain Address of the rollup chain that the token is deposited into
+     * @param erc20 L1 address of the token being deposited
+     * @param to Address on the rollup chain that will receive the tokens
+     * @param value Quantity of tokens being deposited
+     */
+    function depositPairedERC20Message(
+        address chain,
+        address erc20,
+        address to,
+        uint256 value
+    ) external {
+        depositPairedERC20(erc20, chain, value);
         _deliverMessage(
             chain,
             ERC20_TRANSFER,
@@ -273,7 +309,21 @@ contract GlobalInbox is
             );
             deletePayment(erc20.dest, nodeHash, messageIndex);
 
-            transferERC20(msg.sender, paymentOwner, erc20.token, erc20.value);
+            if (isBuddyContract[erc20.token]) {
+                transferPairedERC20(
+                    msg.sender,
+                    paymentOwner,
+                    erc20.token,
+                    erc20.value
+                );
+            } else {
+                transferERC20(
+                    msg.sender,
+                    paymentOwner,
+                    erc20.token,
+                    erc20.value
+                );
+            }
         } else if (message.kind == ERC721_TRANSFER) {
             (bool valid, Messages.ERC721Message memory erc721) = Messages
                 .parseERC721Message(message.data);
@@ -287,6 +337,14 @@ contract GlobalInbox is
             );
             deletePayment(erc721.dest, nodeHash, messageIndex);
             transferNFT(msg.sender, paymentOwner, erc721.token, erc721.id);
+        } else if (message.kind == BUDDY_CONTRACT_DEPLOY) {
+            require(false, "just fail now");
+            isBuddyContract[message.sender] = true;
+
+            emit IGlobalInbox.BuddyContractDeployed(
+                message.sender,
+                message.data
+            );
         }
     }
 }

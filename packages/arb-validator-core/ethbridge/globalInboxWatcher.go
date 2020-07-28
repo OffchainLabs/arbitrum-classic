@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"log"
 	"math/big"
 	"strings"
 
@@ -164,6 +165,7 @@ func (gi *globalInboxWatcher) parseMessageFromOrigin(evmLog types.Log, timestamp
 	if err != nil {
 		return arbbridge.MessageDeliveredEvent{}, err
 	}
+	log.Println("parseMessageFromOrigin ----------------------")
 	return arbbridge.MessageDeliveredEvent{
 		ChainInfo: getLogChainInfo(evmLog),
 		Message: message.InboxMessage{
@@ -194,6 +196,23 @@ func (gi *globalInboxWatcher) processLog(
 		if err != nil {
 			return arbbridge.MessageDeliveredEvent{}, err
 		}
+		log.Println("processLog--------------")
+		log.Println("val.Kind: ", val.Kind)
+		log.Println("val.Data: ", val.Data)
+		log.Println("val.Sender: ", common.NewAddressFromEth(val.Sender))
+		eventRet := arbbridge.MessageDeliveredEvent{
+			ChainInfo: chainInfo,
+			Message: message.InboxMessage{
+				Kind:        message.Type(val.Kind),
+				Sender:      common.NewAddressFromEth(val.Sender),
+				InboxSeqNum: val.InboxSeqNum,
+				Data:        val.Data,
+				ChainTime:   chainTime,
+			},
+		}
+
+		log.Println("MessageDelivered", eventRet.Message)
+
 		return arbbridge.MessageDeliveredEvent{
 			ChainInfo: chainInfo,
 			Message: message.InboxMessage{

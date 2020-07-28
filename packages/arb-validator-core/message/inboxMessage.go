@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	errors2 "github.com/pkg/errors"
+	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -37,6 +38,7 @@ const (
 	ERC721Type
 	L2Type
 	InitType
+	L2BuddyDeploy
 )
 
 type ChainTime struct {
@@ -65,6 +67,7 @@ type InboxMessage struct {
 }
 
 func NewInboxMessage(msg Message, sender common.Address, inboxSeqNum *big.Int, time ChainTime) InboxMessage {
+	log.Println("NewInboxMessage----------------------==========")
 	return InboxMessage{
 		Kind:        msg.Type(),
 		Sender:      sender,
@@ -142,6 +145,7 @@ func NewRandomInboxMessage(msg Message) InboxMessage {
 }
 
 func (im InboxMessage) String() string {
+	log.Println("inside String()")
 	nested, err := im.NestedMessage()
 	nestedStr := "invalid"
 	if err == nil {
@@ -205,6 +209,10 @@ func (im InboxMessage) NestedMessage() (Message, error) {
 		return L2Message{Msg: l2}, nil
 	case InitType:
 		return NewInitFromData(im.Data), nil
+	case L2BuddyDeploy:
+		x := L2Message{Msg: NewBuddyDeploymentFromData(im.Data)}
+		log.Print("value here yo: ", x.AsData())
+		return x, nil
 	default:
 		return nil, errors.New("unknown inbox message type")
 	}
