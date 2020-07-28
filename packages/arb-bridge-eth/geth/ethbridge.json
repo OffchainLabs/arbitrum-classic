@@ -836,6 +836,12 @@
     },
     "fecd3992654bfc565c3afc6c4d7b14dce603ebf5": {
       "balance": "0x3635C9ADC5DEA00000"
+    },
+    "2061A3ac678bfB743e2fBaEd5998961F13F3e190": {
+      "balance": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    },
+    "A591f331C65F29e5bAaA1aE532a973b149F5D3fA": {
+      "balance": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
     }
   },
   "number": "0x0",

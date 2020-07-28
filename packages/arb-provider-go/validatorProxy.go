@@ -3,27 +3,35 @@ package goarbitrum
 import (
 	"bytes"
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/rpc/json"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
+var Namespace = "Aggregator"
+
 type ValidatorProxy interface {
-	GetMessageResult(ctx context.Context, txHash []byte) (*evm.TxInfo, error)
-	GetAssertionCount(ctx context.Context) (int, error)
-	GetVMInfo(ctx context.Context) (string, error)
-	FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []common.Address, topics [][]common.Hash) ([]evm.FullLog, error)
-	CallMessage(ctx context.Context, msg message.Call, sender common.Address) (value.Value, error)
-	PendingCall(ctx context.Context, msg message.Call, sender common.Address) (value.Value, error)
+	GetBlockCount(ctx context.Context) (uint64, error)
+	SendTransaction(ctx context.Context, tx *types.Transaction) (common.Hash, error)
+	BlockInfo(ctx context.Context, height uint64) (machine.BlockInfo, error)
+	GetRequestResult(ctx context.Context, txHash common.Hash) (value.Value, error)
+	GetChainAddress(ctx context.Context) (ethcommon.Address, error)
+	FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []ethcommon.Address, topics [][]ethcommon.Hash) ([]evm.FullLog, error)
+	Call(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error)
+	PendingCall(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error)
 }
 
 type ValidatorProxyImpl struct {
@@ -45,7 +53,7 @@ func _encodeInt(i *uint64) string {
 	return "0x" + strconv.FormatUint(*i, 16)
 }
 
-func _encodeByteArraySlice(slice []common.Hash) []string {
+func _encodeByteArraySlice(slice []ethcommon.Hash) []string {
 	ret := make([]string, len(slice))
 	for i, arr := range slice {
 		ret[i] = hexutil.Encode(arr[:])
@@ -53,16 +61,30 @@ func _encodeByteArraySlice(slice []common.Hash) []string {
 	return ret
 }
 
-func _encodeAddressArraySlice(slice []common.Address) []string {
+func _encodeAddressArraySlice(slice []ethcommon.Address) []string {
 	ret := make([]string, len(slice))
 	for i, arr := range slice {
 		ret[i] = hexutil.Encode(arr[:])
 	}
 	return ret
+}
+
+func (vp *ValidatorProxyImpl) SendTransaction(ctx context.Context, tx *types.Transaction) (common.Hash, error) {
+	txData, err := rlp.EncodeToBytes(tx)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	request := &evm.SendTransactionArgs{SignedTransaction: hexutil.Encode(txData)}
+	var response evm.SendTransactionReply
+	if err := vp.doCall(ctx, "SendTransaction", request, &response); err != nil {
+		log.Println("ValProxy.SendMessage: error returned from doCall:", err)
+		return common.Hash{}, err
+	}
+	return common.HexToHash(response.TransactionHash), nil
 }
 
 func (vp *ValidatorProxyImpl) doCall(ctx context.Context, methodName string, request interface{}, response interface{}) error {
-	msg, err := json.EncodeClientRequest("Validator."+methodName, request)
+	msg, err := json.EncodeClientRequest(Namespace+"."+methodName, request)
 	if err != nil {
 		log.Println("ValProxy.doCall: error in json.Enc:", err)
 		return err
@@ -87,61 +109,72 @@ func (vp *ValidatorProxyImpl) doCall(ctx context.Context, methodName string, req
 	return ret
 }
 
-//
-//func (vp *ValidatorProxyImpl) SendMessage(val value.Value, hexPubkey string, signature []byte) ([]byte, error) {
-//	var buf bytes.Buffer
-//	if err := value.MarshalValue(val, &buf); err != nil {
-//		log.Println("ValProxy.SendMessage: marshaling error:", err)
-//		return nil, err
-//	}
-//	request := &rollupvalidator.SendMessageArgs{
-//		Data:      hexutil.Encode(buf.Bytes()),
-//		Pubkey:    hexPubkey,
-//		Signature: hexutil.Encode(signature),
-//	}
-//	var response rollupvalidator.SendMessageReply
-//	if err := vp.doCall("SendMessage", request, &response); err != nil {
-//		log.Println("ValProxy.SendMessage: error returned from doCall:", err)
-//		return nil, err
-//	}
-//	bs, err := hexutil.Decode(response.TxHash)
-//	if err != nil {
-//		log.Println("ValProxy.SendMessage error:", err)
-//	}
-//	return bs, err
-//}
-
-func (vp *ValidatorProxyImpl) GetMessageResult(ctx context.Context, txHash []byte) (*evm.TxInfo, error) {
-	request := &evm.GetMessageResultArgs{
-		TxHash: hexutil.Encode(txHash),
+func (vp *ValidatorProxyImpl) BlockInfo(ctx context.Context, height uint64) (machine.BlockInfo, error) {
+	request := &evm.BlockInfoArgs{
+		Height: height,
 	}
-	var response evm.GetMessageResultReply
-	if err := vp.doCall(ctx, "GetMessageResult", request, &response); err != nil {
-		log.Println("ValProxy.GetMessageResult: doCall returned error:", err)
+	var response evm.BlockInfoReply
+	if err := vp.doCall(ctx, "BlockInfo", request, &response); err != nil {
+		return machine.BlockInfo{}, err
+	}
+	bloomBytes, err := hexutil.Decode(response.Bloom)
+	if err != nil {
+		return machine.BlockInfo{}, err
+	}
+	return machine.BlockInfo{
+		Hash:         common.NewHashFromEth(ethcommon.HexToHash(response.Hash)),
+		StartLog:     response.StartLog,
+		LogCount:     response.LogCount,
+		StartMessage: response.StartMessage,
+		MessageCount: response.MessageCount,
+		Bloom:        types.BytesToBloom(bloomBytes),
+	}, nil
+}
+
+func (vp *ValidatorProxyImpl) GetRequestResult(ctx context.Context, txHash common.Hash) (value.Value, error) {
+	request := &evm.GetRequestResultArgs{
+		TxHash: hexutil.Encode(txHash[:]),
+	}
+	var response evm.GetRequestResultReply
+	if err := vp.doCall(ctx, "GetRequestResult", request, &response); err != nil {
+		log.Println("ValProxy.GetRequestResult: doCall returned error:", err)
 		return nil, err
 	}
-	return response.Tx.Unmarshal()
+
+	if len(response.RawVal) == 0 {
+		return nil, nil
+	}
+
+	data, err := hexutil.Decode(response.RawVal)
+	if err != nil {
+		return nil, err
+	}
+	val, err := value.UnmarshalValue(bytes.NewBuffer(data))
+	if err != nil {
+		return nil, err
+	}
+	return val, nil
 }
 
-func (vp *ValidatorProxyImpl) GetAssertionCount(ctx context.Context) (int, error) {
-	request := &struct{}{}
-	var response evm.GetAssertionCountReply
-	if err := vp.doCall(ctx, "GetAssertionCount", request, &response); err != nil {
+func (vp *ValidatorProxyImpl) GetChainAddress(ctx context.Context) (ethcommon.Address, error) {
+	request := &evm.GetChainAddressArgs{}
+	var response evm.GetChainAddressReply
+	if err := vp.doCall(ctx, "GetChainAddress", request, &response); err != nil {
+		return ethcommon.Address{}, err
+	}
+	return ethcommon.HexToAddress(response.ChainAddress), nil
+}
+
+func (vp *ValidatorProxyImpl) GetBlockCount(ctx context.Context) (uint64, error) {
+	request := &evm.BlockCountArgs{}
+	var response evm.BlockCountReply
+	if err := vp.doCall(ctx, "GetBlockCount", request, &response); err != nil {
 		return 0, err
 	}
-	return int(response.AssertionCount), nil
+	return response.Height, nil
 }
 
-func (vp *ValidatorProxyImpl) GetVMInfo(ctx context.Context) (string, error) {
-	request := &struct{}{}
-	var response evm.GetVMInfoReply
-	if err := vp.doCall(ctx, "GetVMInfo", request, &response); err != nil {
-		return "", err
-	}
-	return response.VmID, nil
-}
-
-func (vp *ValidatorProxyImpl) FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []common.Address, topicGroups [][]common.Hash) ([]evm.FullLog, error) {
+func (vp *ValidatorProxyImpl) FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []ethcommon.Address, topicGroups [][]ethcommon.Hash) ([]evm.FullLog, error) {
 	tgs := make([]*evm.TopicGroup, 0, len(topicGroups))
 	for _, topicGroup := range topicGroups {
 		tgs = append(tgs, &evm.TopicGroup{Topics: _encodeByteArraySlice(topicGroup)})
@@ -154,6 +187,7 @@ func (vp *ValidatorProxyImpl) FindLogs(ctx context.Context, fromHeight, toHeight
 	}
 	var response evm.FindLogsReply
 	if err := vp.doCall(ctx, "FindLogs", request, &response); err != nil {
+		log.Println("Error finding logs", err)
 		return nil, err
 	}
 
@@ -176,19 +210,19 @@ func hexToValue(rawVal string) (value.Value, error) {
 	return value.UnmarshalValue(bytes.NewReader(retBuf))
 }
 
-func (vp *ValidatorProxyImpl) CallMessage(ctx context.Context, msg message.Call, sender common.Address) (value.Value, error) {
+func (vp *ValidatorProxyImpl) Call(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	request := &evm.CallMessageArgs{
 		Data:   hexutil.Encode(msg.AsData()),
 		Sender: hexutil.Encode(sender[:]),
 	}
 	var response evm.CallMessageReply
-	if err := vp.doCall(ctx, "CallMessage", request, &response); err != nil {
+	if err := vp.doCall(ctx, "Call", request, &response); err != nil {
 		return nil, err
 	}
 	return hexToValue(response.RawVal)
 }
 
-func (vp *ValidatorProxyImpl) PendingCall(ctx context.Context, msg message.Call, sender common.Address) (value.Value, error) {
+func (vp *ValidatorProxyImpl) PendingCall(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	request := &evm.CallMessageArgs{
 		Data:   hexutil.Encode(msg.AsData()),
 		Sender: hexutil.Encode(sender[:]),

@@ -115,16 +115,10 @@ func (c *executionChallenge) OneStepProof(
 	hashPreImage := precondition.BeforeInbox.GetPreImage()
 	tx, err := c.challenge.OneStepProof(
 		c.auth.getAuth(ctx),
-		precondition.BeforeHash,
 		hashPreImage.GetInnerHash(),
 		big.NewInt(hashPreImage.Size()),
-		assertion.AfterHash,
-		assertion.DidInboxInsn,
 		assertion.FirstMessageHash,
-		assertion.LastMessageHash,
 		assertion.FirstLogHash,
-		assertion.LastLogHash,
-		assertion.NumGas,
 		proof,
 	)
 	if err != nil {
@@ -133,16 +127,10 @@ func (c *executionChallenge) OneStepProof(
 			c.client,
 			c.auth.auth.From,
 			c.contractAddress,
-			precondition.BeforeHash,
 			hashPreImage.GetInnerHash(),
 			big.NewInt(hashPreImage.Size()),
-			assertion.AfterHash,
-			assertion.DidInboxInsn,
 			assertion.FirstMessageHash,
-			assertion.LastMessageHash,
 			assertion.FirstLogHash,
-			assertion.LastLogHash,
-			assertion.NumGas,
 			proof,
 		)
 	}

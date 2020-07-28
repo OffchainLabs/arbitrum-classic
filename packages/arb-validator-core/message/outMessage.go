@@ -19,6 +19,7 @@ package message
 import (
 	"errors"
 	"fmt"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )

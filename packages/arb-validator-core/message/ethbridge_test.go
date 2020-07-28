@@ -19,7 +19,6 @@ package message
 import (
 	"bytes"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -27,10 +26,11 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 var errHash = errors.New("ethbridge calculated wrong hash")
-var errMsgHash = errors.New("ethbridge calculated wrong message hash")
+var errMsgHash = errors.New("ethbridge calculated wrong l2message hash")
 
 func setupRand(t *testing.T) {
 	currentTime := time.Now().Unix()
@@ -133,13 +133,13 @@ func TestUnmarshalOutgoing(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !valid {
-		t.Fatal("invalid message")
+		t.Fatal("invalid l2message")
 	}
 	if offset.Uint64() != uint64(len(valData.Bytes())) {
 		t.Error("incorrect offset")
 	}
 	if Type(kind) != msg.Kind {
-		t.Error("incorrect message type")
+		t.Error("incorrect l2message type")
 	}
 	if sender != msg.Sender.ToEthAddress() {
 		t.Error("incorrect sender")
@@ -156,7 +156,7 @@ func TestParseEthMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ret.Valid {
-		t.Error("invalid message")
+		t.Error("invalid l2message")
 	}
 	parsedMsg := ret.Message
 	if parsedMsg.Value.Cmp(msg.Value) != 0 {
@@ -174,7 +174,7 @@ func TestParseERC20Message(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ret.Valid {
-		t.Error("invalid message")
+		t.Error("invalid l2message")
 	}
 	parsedMsg := ret.Message
 	if parsedMsg.Token != msg.Token.ToEthAddress() {
@@ -195,7 +195,7 @@ func TestParseERC721Message(t *testing.T) {
 		t.Error(err)
 	}
 	if !ret.Valid {
-		t.Error("invalid message")
+		t.Error("invalid l2message")
 	}
 	parsedMsg := ret.Message
 	if parsedMsg.Token != msg.Token.ToEthAddress() {

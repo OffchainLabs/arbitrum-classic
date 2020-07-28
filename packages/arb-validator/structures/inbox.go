@@ -22,11 +22,11 @@ import (
 
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 )
 
 type messageStackItem struct {
@@ -145,10 +145,10 @@ func (ms *MessageStack) GetHashAtIndex(height *big.Int) (common.Hash, error) {
 		return value.NewEmptyTuple().Hash(), nil
 	}
 	if height.Cmp(ms.bottomIndex()) < 0 {
-		return common.Hash{}, errors.New("height is below bottom of message stack")
+		return common.Hash{}, errors.New("height is below bottom of l2message stack")
 	}
 	if height.Cmp(ms.TopCount()) > 0 {
-		return common.Hash{}, errors.New("height is above top of message stack")
+		return common.Hash{}, errors.New("height is above top of l2message stack")
 	}
 	offset := new(big.Int).Sub(height, ms.bottomIndex())
 	return ms.oldest.skipNext(offset.Uint64()).hash, nil

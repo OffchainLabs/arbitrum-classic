@@ -22,4 +22,6 @@ import * as Program from './lib/program'
 export { ArbValue, Message, abi, Program }
 export { ArbProvider } from './lib/provider'
 export { ArbWallet } from './lib/wallet'
+export { L1Bridge } from './lib/l1bridge'
+export { withdrawEth } from './lib/l2bridge'
 export { ArbConversion } from './lib/conversion'

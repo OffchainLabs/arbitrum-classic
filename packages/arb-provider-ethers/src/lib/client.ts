@@ -17,11 +17,13 @@
 'use strict'
 
 import * as ArbValue from './value'
-import { L2Call } from './message'
+import { L2ContractTransaction } from './message'
 
 import * as ethers from 'ethers'
 
 import evm from './abi/evm.evm.d'
+
+const NAMESPACE = 'Aggregator'
 
 // TODO remove this dep
 const jaysonBrowserClient = require('jayson/lib/client/browser') // eslint-disable-line @typescript-eslint/no-var-requires
@@ -54,23 +56,10 @@ function _arbClient(managerAddress: string): any {
   return jaysonBrowserClient(callServer, {})
 }
 
-export interface NodeInfo {
-  nodeHash: string
-  nodeHeight: number
-  l1TxHash?: string
-  l1Confirmations?: number
-}
-
-export interface AVMProof {
-  logPostHash: string
-  logPreHash: string
-  logValHashes: string[]
-}
-
 interface RawMessageResult {
-  val: ArbValue.Value
-  proof?: AVMProof
-  nodeInfo: NodeInfo
+  log: ArbValue.Value
+  txIndex: number
+  startLogIndex: number
 }
 
 interface OutputMessage {
@@ -102,41 +91,6 @@ function convertTopics(
   )
 }
 
-function extractAVMProof(proof?: evm.AVMLogProof): AVMProof | undefined {
-  if (proof === undefined) {
-    return undefined
-  }
-
-  let logValHashes = proof.logValHashes
-  if (!logValHashes) {
-    logValHashes = []
-  }
-
-  if (proof.logPostHash === undefined || proof.logPreHash === undefined) {
-    return undefined
-  }
-  return {
-    logPostHash: proof.logPostHash,
-    logPreHash: proof.logPreHash,
-    logValHashes,
-  }
-}
-
-function extractNodeInfo(nodeInfo?: evm.NodeLocation): NodeInfo | undefined {
-  if (
-    nodeInfo === undefined ||
-    nodeInfo.nodeHash === undefined ||
-    nodeInfo.nodeHeight === undefined
-  ) {
-    return undefined
-  }
-  return {
-    nodeHash: nodeInfo.nodeHash,
-    nodeHeight: nodeInfo.nodeHeight,
-    l1TxHash: nodeInfo.l1TxHash,
-  }
-}
-
 export class ArbClient {
   /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
   public client: any
@@ -145,18 +99,50 @@ export class ArbClient {
     this.client = _arbClient(managerUrl)
   }
 
-  public async getOutputMessage(
-    AssertionNodeHash: string,
-    msgIndex: string
-  ): Promise<OutputMessage | null> {
-    const params: evm.GetOutputMessageArgs = {
-      AssertionNodeHash,
-      MsgIndex: msgIndex,
-    }
+  public async sendTransaction(signedTransaction: string): Promise<string> {
+    return new Promise<string>((resolve, reject): void => {
+      const params: evm.SendTransactionArgs = { signedTransaction }
+      this.client.request(
+        `${NAMESPACE}.SendTransaction`,
+        [params],
+        (err: Error, error: Error, result: evm.SendTransactionReply) => {
+          if (err) {
+            reject(err)
+          } else if (error) {
+            reject(error)
+          } else {
+            resolve(result.transactionHash)
+          }
+        }
+      )
+    })
+  }
+
+  public async getBlockCount(): Promise<number> {
+    const params: evm.BlockCountArgs = {}
+    return await new Promise<number>((resolve, reject): void => {
+      this.client.request(
+        `${NAMESPACE}.GetBlockCount`,
+        [params],
+        (err: Error, error: Error, result: evm.BlockCountReply) => {
+          if (err) {
+            reject(err)
+          } else if (error) {
+            reject(error)
+          } else {
+            resolve(result.height)
+          }
+        }
+      )
+    })
+  }
+
+  public async getOutputMessage(index: number): Promise<OutputMessage> {
+    const params: evm.GetOutputMessageArgs = { index }
     const msgResult = await new Promise<evm.GetOutputMessageReply>(
       (resolve, reject): void => {
         this.client.request(
-          'Validator.GetOutputMessage',
+          `${NAMESPACE}.GetOutputMessage`,
           [params],
           (err: Error, error: Error, result: evm.GetOutputMessageReply) => {
             if (err) {
@@ -170,29 +156,26 @@ export class ArbClient {
         )
       }
     )
-    if (msgResult.found && msgResult.rawVal !== undefined) {
-      const val = ArbValue.unmarshal(msgResult.rawVal)
-
-      return {
-        outputMsg: val,
-      }
-    } else {
-      return null
+    if (msgResult.rawVal === undefined) {
+      throw Error("reply didn't contain output")
+    }
+    return {
+      outputMsg: ArbValue.unmarshal(msgResult.rawVal),
     }
   }
 
-  public async getMessageResult(
+  public async getRequestResult(
     txHash: string
-  ): Promise<RawMessageResult | null> {
-    const params: evm.GetMessageResultArgs = {
+  ): Promise<ArbValue.Value | null> {
+    const params: evm.GetRequestResultArgs = {
       txHash,
     }
-    const messageResult = await new Promise<evm.GetMessageResultReply>(
+    const messageResult = await new Promise<evm.GetRequestResultReply>(
       (resolve, reject): void => {
         this.client.request(
-          'Validator.GetMessageResult',
+          `${NAMESPACE}.GetRequestResult`,
           [params],
-          (err: Error, error: Error, result: evm.GetMessageResultReply) => {
+          (err: Error, error: Error, result: evm.GetRequestResultReply) => {
             if (err) {
               reject(err)
             } else if (error) {
@@ -204,32 +187,19 @@ export class ArbClient {
         )
       }
     )
-    if (messageResult.tx && messageResult.tx.found) {
-      const tx = messageResult.tx
-      if (tx.rawVal === undefined) {
-        return null
-      }
-      const nodeInfo = extractNodeInfo(tx.location)
-      if (nodeInfo === undefined) {
-        return null
-      }
 
-      const val = ArbValue.unmarshal(tx.rawVal)
-      return {
-        val,
-        nodeInfo: nodeInfo,
-        proof: extractAVMProof(tx.proof),
-      }
-    } else {
+    if (messageResult.rawVal === undefined) {
       return null
     }
+
+    return ArbValue.unmarshal(messageResult.rawVal)
   }
 
   private _call(
     callFunc: string,
-    l2Call: L2Call,
+    l2Call: L2ContractTransaction,
     sender: string | undefined
-  ): Promise<ArbValue.Value> {
+  ): Promise<ArbValue.Value | undefined> {
     return new Promise((resolve, reject): void => {
       const params: evm.CallMessageArgs = {
         data: ethers.utils.hexlify(l2Call.asData()),
@@ -245,25 +215,28 @@ export class ArbClient {
             reject(error)
           } else {
             if (result.rawVal === undefined) {
-              reject('call result empty')
-              return
+              resolve(undefined)
+            } else {
+              resolve(ArbValue.unmarshal(result.rawVal))
             }
-            resolve(ArbValue.unmarshal(result.rawVal))
           }
         }
       )
     })
   }
 
-  public call(tx: L2Call, sender: string | undefined): Promise<ArbValue.Value> {
-    return this._call('Validator.CallMessage', tx, sender)
+  public call(
+    tx: L2ContractTransaction,
+    sender: string | undefined
+  ): Promise<ArbValue.Value | undefined> {
+    return this._call(`${NAMESPACE}.Call`, tx, sender)
   }
 
   public pendingCall(
-    tx: L2Call,
+    tx: L2ContractTransaction,
     sender: string | undefined
-  ): Promise<ArbValue.Value> {
-    return this._call('Validator.PendingCall', tx, sender)
+  ): Promise<ArbValue.Value | undefined> {
+    return this._call(`${NAMESPACE}.PendingCall`, tx, sender)
   }
 
   public findLogs(filter: ethers.providers.Filter): Promise<evm.FullLogBuf[]> {
@@ -280,7 +253,7 @@ export class ArbClient {
         topicGroups: convertTopics(filter.topics),
       }
       return this.client.request(
-        'Validator.FindLogs',
+        `${NAMESPACE}.FindLogs`,
         [params],
         (err: Error, error: Error, result: evm.FindLogsReply) => {
           if (err) {
@@ -295,76 +268,22 @@ export class ArbClient {
     })
   }
 
-  public getVmID(): Promise<string> {
-    const params: evm.GetVMInfoArgs = {}
+  public getChainAddress(): Promise<string> {
+    const params: evm.GetChainAddressArgs = {}
     return new Promise((resolve, reject): void => {
       this.client.request(
-        'Validator.GetVMInfo',
+        `${NAMESPACE}.GetChainAddress`,
         [params],
-        (err: Error, error: Error, result: evm.GetVMInfoReply) => {
+        (err: Error, error: Error, result: evm.GetChainAddressReply) => {
           if (err) {
             reject(err)
           } else if (error) {
             reject(error)
           } else {
-            resolve(result.vmID)
+            resolve(result.chainAddress)
           }
         }
       )
     })
-  }
-
-  public getAssertionCount(): Promise<number> {
-    const params: evm.GetAssertionCountArgs = {}
-    return new Promise((resolve, reject): void => {
-      this.client.request(
-        'Validator.GetAssertionCount',
-        [params],
-        (err: Error, error: Error, result: evm.GetAssertionCountReply) => {
-          if (err) {
-            reject(err)
-          } else if (error) {
-            reject(error)
-          } else {
-            resolve(result.assertionCount)
-          }
-        }
-      )
-    })
-  }
-
-  private async getNodeLocation(
-    funcType: string
-  ): Promise<NodeInfo | undefined> {
-    const params: evm.GetLatestNodeLocationArgs = {}
-    return new Promise((resolve, reject): void => {
-      this.client.request(
-        funcType,
-        [params],
-        (err: Error, error: Error, result: evm.GetLatestNodeLocationReply) => {
-          if (err) {
-            reject(err)
-          } else if (error) {
-            reject(error)
-          } else {
-            resolve(extractNodeInfo(result.location))
-          }
-        }
-      )
-    })
-  }
-
-  public async getLatestNodeLocation(): Promise<NodeInfo | undefined> {
-    return await this.getNodeLocation('Validator.GetLatestNodeLocation')
-  }
-
-  public async getLatestPendingNodeLocation(): Promise<NodeInfo | undefined> {
-    const nodeInfo = await this.getNodeLocation(
-      'Validator.GetLatestPendingNodeLocation'
-    )
-    if (nodeInfo === undefined) {
-      return this.getLatestNodeLocation()
-    }
-    return nodeInfo
   }
 }

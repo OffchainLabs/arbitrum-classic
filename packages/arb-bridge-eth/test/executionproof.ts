@@ -61,23 +61,32 @@ describe('OneStepProof', async () => {
     it(`handle proofs from ${filename}`, async () => {
       let i = 0
       for (const proof of data) {
-        if (i > 50) {
+        if (i > 25) {
           // Some tests are too big to run every case
           return
         }
-        const afterHash = await ospTester.validateProof(
-          proof.BeforeHash,
+        const {
+          startHash,
+          endHash,
+          logAcc,
+          messageAcc,
+          gas,
+          didInboxInsn,
+        } = await ospTester.executeStep(
           proof.InboxInner,
           proof.InboxSize,
-          proof.Assertion.DidInboxInsn,
           proof.Assertion.FirstMessageHash,
-          proof.Assertion.LastMessageHash,
           proof.Assertion.FirstLogHash,
-          proof.Assertion.LastLogHash,
-          proof.Assertion.NumGas,
           Buffer.from(proof.Proof, 'base64')
         )
-        expect(afterHash).to.equal(utils.hexlify(proof.Assertion.AfterHash))
+        expect(startHash).to.equal(utils.hexlify(proof.BeforeHash))
+        expect(endHash).to.equal(utils.hexlify(proof.Assertion.AfterHash))
+        expect(logAcc).to.equal(utils.hexlify(proof.Assertion.LastLogHash))
+        expect(messageAcc).to.equal(
+          utils.hexlify(proof.Assertion.LastMessageHash)
+        )
+        expect(gas).to.equal(proof.Assertion.NumGas)
+        expect(didInboxInsn).to.equal(proof.Assertion.DidInboxInsn)
         i++
       }
     }).timeout(20000)

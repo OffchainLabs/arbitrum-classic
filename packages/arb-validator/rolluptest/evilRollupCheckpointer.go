@@ -18,15 +18,15 @@ package rolluptest
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 )
 
 func NewEvilRollupCheckpointer(
@@ -34,15 +34,14 @@ func NewEvilRollupCheckpointer(
 	databasePath string,
 	maxReorgDepth *big.Int,
 	forceFreshStart bool,
-) *EvilRollupCheckpointer {
-	return &EvilRollupCheckpointer{
-		checkpointing.NewIndexedCheckpointer(
-			rollupAddr,
-			databasePath,
-			maxReorgDepth,
-			forceFreshStart,
-		),
-	}
+) (*EvilRollupCheckpointer, error) {
+	cp, err := checkpointing.NewIndexedCheckpointer(
+		rollupAddr,
+		databasePath,
+		maxReorgDepth,
+		forceFreshStart,
+	)
+	return &EvilRollupCheckpointer{cp}, err
 }
 
 type EvilRollupCheckpointer struct {
@@ -65,14 +64,6 @@ func (e EvilRollupCheckpointer) GetMachine(h common.Hash) machine.Machine {
 	return NewEvilMachine(e.cp.(ckptcontext.RestoreContext).GetMachine(h).(*cmachine.Machine))
 }
 
-func (e *EvilRollupCheckpointer) GetCheckpointDB() machine.CheckpointStorage {
-	return e.cp.GetCheckpointDB()
-}
-
-func (e *EvilRollupCheckpointer) GetConfirmedNodeStore() machine.ConfirmedNodeStore {
-	return e.cp.GetConfirmedNodeStore()
-}
-
 func (e EvilRollupCheckpointer) HasCheckpointedState() bool {
 	return e.cp.HasCheckpointedState()
 }
@@ -80,13 +71,13 @@ func (e EvilRollupCheckpointer) HasCheckpointedState() bool {
 func (e EvilRollupCheckpointer) RestoreLatestState(
 	ctx context.Context,
 	clnt arbbridge.ChainTimeGetter,
-	unmarshalFunc func([]byte, ckptcontext.RestoreContext) error,
+	unmarshalFunc func([]byte, ckptcontext.RestoreContext, *common.BlockId) error,
 ) error {
 	return e.cp.RestoreLatestState(
 		ctx,
 		clnt,
-		func(contents []byte, resCtx ckptcontext.RestoreContext) error {
-			return unmarshalFunc(contents, &evilRestoreContext{resCtx})
+		func(contents []byte, resCtx ckptcontext.RestoreContext, blockId *common.BlockId) error {
+			return unmarshalFunc(contents, &evilRestoreContext{resCtx}, blockId)
 		},
 	)
 }
@@ -111,12 +102,8 @@ func (e EvilRollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return NewEvilMachine(m.(*cmachine.Machine)), nil
 }
 
-func (e EvilRollupCheckpointer) AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *ckptcontext.CheckpointContext) {
-	e.cp.AsyncSaveCheckpoint(blockId, contents, cpCtx)
-}
-
-func (e EvilRollupCheckpointer) CheckpointConfirmedNode(nodeHash common.Hash, depth uint64, nodeData []byte, cpCtx *ckptcontext.CheckpointContext) error {
-	return e.cp.CheckpointConfirmedNode(nodeHash, depth, nodeData, cpCtx)
+func (e EvilRollupCheckpointer) AsyncSaveCheckpoint(blockId *common.BlockId, contents []byte, cpCtx *ckptcontext.CheckpointContext) <-chan error {
+	return e.cp.AsyncSaveCheckpoint(blockId, contents, cpCtx)
 }
 
 func (e EvilRollupCheckpointer) MaxReorgHeight() *big.Int {

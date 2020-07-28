@@ -21,6 +21,10 @@ cd arb-validator
 go vet ./...
 cd ..
 
+cd arb-evm
+go vet ./...
+cd ..
+
 cd arb-provider-go
 go vet ./...
 cd ..

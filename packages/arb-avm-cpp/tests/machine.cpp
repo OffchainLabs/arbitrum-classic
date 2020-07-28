@@ -184,10 +184,10 @@ TEST_CASE("MachineTestVectors") {
     TuplePool pool;
 
     std::vector<std::string> files = {
-        "opcodetestarbgas",   "opcodetestdup",   "opcodetestecrecover",
-        "opcodetestethhash2", "opcodetesthash",  "opcodetestlogic",
-        "opcodetestmath",     "opcodeteststack", "opcodetesttuple",
-        "opcodetestcode"};
+        "opcodetestarbgas",   "opcodetestdup",    "opcodetestecrecover",
+        "opcodetestethhash2", "opcodetesthash",   "opcodetestlogic",
+        "opcodetestmath",     "opcodeteststack",  "opcodetesttuple",
+        "opcodetestcode",     "opcodetestkeccakf"};
 
     for (const auto& filename : files) {
         DYNAMIC_SECTION(filename) {
