@@ -21,32 +21,39 @@ pragma solidity ^0.5.11;
 import "../arch/OneStepProof.sol";
 
 contract OneStepProofTester {
-    function validateProof(
-        bytes32 beforeHash,
+    function executeStep(
         bytes32 beforeInbox,
         uint256 beforeInboxValueSize,
-        bool didInboxInsn,
         bytes32 firstMessage,
-        bytes32 lastMessage,
         bytes32 firstLog,
-        bytes32 lastLog,
-        uint64 gas,
         bytes memory proof
-    ) public pure returns (bytes32) {
-        return
-            Machine.hash(
-                OneStepProof.validateProof(
-                    beforeHash,
-                    beforeInbox,
-                    beforeInboxValueSize,
-                    didInboxInsn,
-                    firstMessage,
-                    lastMessage,
-                    firstLog,
-                    lastLog,
-                    gas,
-                    proof
-                )
-            );
+    )
+        public
+        pure
+        returns (
+            bytes32 startHash,
+            bytes32 endHash,
+            bytes32 logAcc,
+            bytes32 messageAcc,
+            uint64 gas,
+            bool didInboxInsn
+        )
+    {
+        Value.Data memory inbox = Value.newTuplePreImage(
+            beforeInbox,
+            beforeInboxValueSize
+        );
+        OneStepProof.AssertionContext memory context = OneStepProof
+            .initializeExecutionContext(inbox, firstMessage, firstLog, proof);
+
+        OneStepProof.executeOp(context);
+        return (
+            Machine.hash(context.startMachine),
+            Machine.hash(context.afterMachine),
+            context.logAcc,
+            context.messageAcc,
+            context.gas,
+            context.didInboxInsn
+        );
     }
 }

@@ -17,6 +17,7 @@
 #include <avm/machinestate/machineoperation.hpp>
 #include <avm/machinestate/machinestate.hpp>
 
+#include <ethash/keccak.h>
 #include <secp256k1_recovery.h>
 #include <ethash/keccak.hpp>
 #include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
@@ -357,6 +358,50 @@ void ethhash2Op(MachineState& m) {
     m.stack[1] = be::load<uint256_t>(hash_val);
 
     m.stack.popClear();
+    ++m.pc;
+}
+
+namespace internal {
+void encodeKeccakState(const Tuple& tup, uint64_t* state) {
+    if (tup.tuple_size() != 7) {
+        throw bad_pop_type{};
+    }
+
+    for (uint64_t i = 0; i < 6; ++i) {
+        intx::be::unsafe::store(reinterpret_cast<uint8_t*>(&state[i * 4]),
+                                bswap(assumeInt(tup.get_element_unsafe(i))));
+    }
+    // Handle last val separately
+    state[24] = static_cast<uint64_t>(assumeInt(tup.get_element_unsafe(6)));
+}
+
+Tuple decodeKeccakState(const uint64_t* state, TuplePool* pool) {
+    return Tuple(bswap(intx::be::unsafe::load<uint256_t>(
+                     reinterpret_cast<const uint8_t*>(&state[0]))),
+                 bswap(intx::be::unsafe::load<uint256_t>(
+                     reinterpret_cast<const uint8_t*>(&state[4]))),
+                 bswap(intx::be::unsafe::load<uint256_t>(
+                     reinterpret_cast<const uint8_t*>(&state[8]))),
+                 bswap(intx::be::unsafe::load<uint256_t>(
+                     reinterpret_cast<const uint8_t*>(&state[12]))),
+                 bswap(intx::be::unsafe::load<uint256_t>(
+                     reinterpret_cast<const uint8_t*>(&state[16]))),
+                 bswap(intx::be::unsafe::load<uint256_t>(
+                     reinterpret_cast<const uint8_t*>(&state[20]))),
+                 uint256_t{state[24]}, pool);
+}
+}  // namespace internal
+
+void keccakF(MachineState& m) {
+    m.stack.prepForMod(1);
+    auto& tup = assumeTuple(m.stack[0]);
+    uint64_t state[25];
+
+    internal::encodeKeccakState(tup, state);
+
+    ethash_keccakf1600(state);
+
+    m.stack[0] = internal::decodeKeccakState(state, m.pool.get());
     ++m.pc;
 }
 
