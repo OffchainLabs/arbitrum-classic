@@ -101,8 +101,8 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 func TestValidateProof(t *testing.T) {
 	testMachines := gotest.OpCodeTestFiles()
 
-	client, auths := test.SimulatedBackend()
-	auth := auths[0]
+	client, pks := test.SimulatedBackend()
+	auth := bind.NewKeyedTransactor(pks[0])
 	_, tx, osp, err := ethbridgetestcontracts.DeployOneStepProofTester(auth, client)
 	if err != nil {
 		t.Fatal(err)

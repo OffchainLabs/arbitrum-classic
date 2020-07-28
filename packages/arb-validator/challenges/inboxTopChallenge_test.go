@@ -18,16 +18,16 @@ package challenges
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"math/big"
 	"testing"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 

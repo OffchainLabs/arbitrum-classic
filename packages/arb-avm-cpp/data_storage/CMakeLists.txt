@@ -20,9 +20,9 @@ set (CMAKE_CXX_STANDARD 14)
 project (data_storage LANGUAGES CXX)
 
 set(LIB_HEADERS
+  include/data_storage/aggregator.hpp
   include/data_storage/blockstore.hpp
   include/data_storage/checkpointstorage.hpp
-  include/data_storage/confirmednodestore.hpp
   include/data_storage/datastorage.hpp
   include/data_storage/keyvaluestore.hpp
   include/data_storage/storageresult.hpp
@@ -38,10 +38,10 @@ set(LIB_PRIVATE_HEADERS
 )
 
 set(LIB_SOURCES
+  src/aggregator.cpp
   src/blockstore.cpp
   src/datastorage.cpp
   src/checkpointstorage.cpp
-  src/confirmednodestore.cpp
   src/keyvaluestore.cpp
   src/value/code.cpp
   src/value/machine.cpp

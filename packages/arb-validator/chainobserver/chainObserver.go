@@ -20,11 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	errors2 "github.com/pkg/errors"
-
 	"log"
 	"math/big"
 	"sync"
@@ -32,11 +28,13 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -58,7 +56,6 @@ type ChainObserver struct {
 	checkpointer      checkpointing.RollupCheckpointer
 	isOpinionated     bool
 	atHead            bool
-	pendingState      machine.Machine
 }
 
 func tryRestoreFromCheckpoint(
@@ -67,7 +64,7 @@ func tryRestoreFromCheckpoint(
 	checkpointer checkpointing.RollupCheckpointer,
 ) *ChainObserver {
 	var chain *ChainObserver
-	err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext) error {
+	err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext, _ *common.BlockId) error {
 		chainObserverBuf := &ChainObserverBuf{}
 		if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
 			return err
@@ -398,21 +395,6 @@ func (chain *ChainObserver) ContractAddress() common.Address {
 	return chain.rollupAddr
 }
 
-func (chain *ChainObserver) LatestKnownValidMachine() machine.Machine {
-	chain.RLock()
-	defer chain.RUnlock()
-	return chain.calculatedValidNode.Machine().Clone()
-}
-
-func (chain *ChainObserver) CurrentPendingMachine() machine.Machine {
-	chain.RLock()
-	defer chain.RUnlock()
-	if chain.pendingState == nil {
-		return chain.calculatedValidNode.Machine().Clone()
-	}
-	return chain.pendingState.Clone()
-}
-
 func (chain *ChainObserver) RestartFromLatestValid(ctx context.Context) {
 	chain.RLock()
 	defer chain.RUnlock()
@@ -500,26 +482,6 @@ func (chain *ChainObserver) challengeResolved(ctx context.Context, ev arbbridge.
 
 func (chain *ChainObserver) confirmNode(ctx context.Context, ev arbbridge.ConfirmedEvent) error {
 	confirmedNode := chain.NodeGraph.NodeFromHash(ev.NodeHash)
-	ckptCtx := ckptcontext.NewCheckpointContext()
-
-	// Note that we marshal the node without including the machine state
-	// of that node. This is because saving the machine state for every confirmed
-	// node would significantly bloat the database and there is currently
-	// no usecase for this data
-	nodeData := confirmedNode.MarshalForCheckpoint(ckptCtx, false)
-	nodeBytes, err := proto.Marshal(nodeData)
-	if err != nil {
-		return err
-	}
-	if err := chain.checkpointer.CheckpointConfirmedNode(
-		confirmedNode.Hash(),
-		confirmedNode.Depth(),
-		nodeBytes,
-		ckptCtx,
-	); err != nil {
-		return err
-	}
-
 	if confirmedNode.Depth() > chain.KnownValidNode.Depth() {
 		chain.KnownValidNode = confirmedNode
 	}

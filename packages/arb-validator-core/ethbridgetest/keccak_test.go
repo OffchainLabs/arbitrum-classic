@@ -17,6 +17,7 @@
 package ethbridgetest
 
 import (
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
@@ -26,8 +27,8 @@ import (
 )
 
 func TestKeccak(t *testing.T) {
-	client, auths := test.SimulatedBackend()
-	auth := auths[0]
+	client, pks := test.SimulatedBackend()
+	auth := bind.NewKeyedTransactor(pks[0])
 
 	_, _, keccakTester, err := ethbridgetestcontracts.DeployKeccakTester(
 		auth,

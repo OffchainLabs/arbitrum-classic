@@ -146,7 +146,7 @@ contract GlobalInbox is
             chain,
             ETH_TRANSFER,
             msg.sender,
-            abi.encodePacked(bytes32(bytes20(to)), msg.value)
+            abi.encodePacked(uint256(uint160(bytes20(to))), msg.value)
         );
     }
 
