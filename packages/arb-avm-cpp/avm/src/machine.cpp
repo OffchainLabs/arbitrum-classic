@@ -26,12 +26,10 @@ std::ostream& operator<<(std::ostream& os, const Machine& val) {
     return os;
 }
 
-Assertion Machine::run(uint64_t stepCount,
-                       Tuple messages,
-                       std::chrono::seconds wallLimit) {
+Assertion Machine::executeMachine(uint64_t stepCount,
+                                  std::chrono::seconds wallLimit) {
     bool has_time_limit = wallLimit.count() != 0;
     auto start_time = std::chrono::system_clock::now();
-    machine_state.context = AssertionContext{std::move(messages)};
     while (machine_state.context.numSteps < stepCount) {
         auto blockReason = machine_state.runOne();
         if (!nonstd::get_if<NotBlocked>(&blockReason)) {
@@ -49,4 +47,20 @@ Assertion Machine::run(uint64_t stepCount,
             std::move(machine_state.context.outMessage),
             std::move(machine_state.context.logs),
             machine_state.context.didInboxInsn};
+}
+
+Assertion Machine::run(uint64_t stepCount,
+                       Tuple messages,
+                       std::chrono::seconds wallLimit) {
+    machine_state.context = AssertionContext{std::move(messages)};
+    return executeMachine(stepCount, wallLimit);
+}
+
+Assertion Machine::runSideloaded(uint64_t stepCount,
+                                 Tuple messages,
+                                 std::chrono::seconds wallLimit,
+                                 Tuple sideload_value) {
+    machine_state.context =
+        AssertionContext{std::move(messages), std::move(sideload_value)};
+    return executeMachine(stepCount, wallLimit);
 }

@@ -740,8 +740,18 @@ void pushinsnimm(MachineState& m) {
     ++m.pc;
 }
 
-void sideload(MachineState& m) {
-    m.stack.push(Tuple{});
+BlockReason sideload(MachineState& m) {
+    if (m.context.sideload_value.tuple_size() != 0) {
+        m.stack.push(m.context.sideload_value);
+        m.context.sideload_value = Tuple{};
+    } else {
+        if (m.context.numSteps != 0 && m.context.blockingSideload) {
+            return SideloadBlocked{};
+        }
+        m.stack.push(Tuple{});
+    }
     ++m.pc;
+    return NotBlocked{};
 }
+
 }  // namespace machineoperation

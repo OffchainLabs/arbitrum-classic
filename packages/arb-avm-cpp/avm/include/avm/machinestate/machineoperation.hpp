@@ -86,7 +86,7 @@ void pushgas(MachineState& m);
 void errcodept(MachineState& m);
 void pushinsn(MachineState& m);
 void pushinsnimm(MachineState& m);
-void sideload(MachineState& m);
+BlockReason sideload(MachineState& m);
 
 namespace internal {
 void encodeKeccakState(const Tuple& tup, uint64_t* state);

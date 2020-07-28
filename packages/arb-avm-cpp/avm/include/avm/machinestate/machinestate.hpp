@@ -28,19 +28,31 @@
 
 struct AssertionContext {
     Tuple inbox;
+    Tuple sideload_value;
     uint32_t numSteps;
     bool didInboxInsn;
     uint64_t numGas;
+    bool blockingSideload;
     std::vector<value> outMessage;
     std::vector<value> logs;
 
     AssertionContext() : numSteps(0), didInboxInsn(false), numGas(0) {}
 
-    explicit AssertionContext(Tuple inbox)
+    explicit AssertionContext(Tuple inbox, Tuple sideload)
         : inbox(std::move(inbox)),
+          sideload_value(std::move(sideload)),
           numSteps{0},
           didInboxInsn(false),
-          numGas{0} {}
+          numGas{0},
+          blockingSideload(true) {}
+
+    explicit AssertionContext(Tuple inbox)
+        : inbox(std::move(inbox)),
+          sideload_value(Tuple{}),
+          numSteps{0},
+          didInboxInsn(false),
+          numGas{0},
+          blockingSideload(false) {}
 
     void executedInbox() {
         didInboxInsn = true;
