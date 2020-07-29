@@ -22,12 +22,12 @@ import "./GlobalEthWallet.sol";
 import "./GlobalFTWallet.sol";
 import "./GlobalNFTWallet.sol";
 import "./IGlobalInbox.sol";
-import "./PairedFTContracts.sol";
+import "./PairedFTWallet.sol";
 import "./Messages.sol";
 import "./PaymentRecords.sol";
 
 contract GlobalInbox is
-    PairedFTContracts,
+    PairedFTWallet,
     GlobalEthWallet,
     GlobalFTWallet,
     GlobalNFTWallet,
@@ -39,7 +39,7 @@ contract GlobalInbox is
     uint8 internal constant ERC721_TRANSFER = 2;
     uint8 internal constant L2_MSG = 3;
     uint8 internal constant INITIALIZATION_MSG = 4;
-    uint8 internal constant BUDDY_CONTRACT_DEPLOY = 5;
+    uint8 internal constant L2_CONTRACT_PAIR = 5;
 
     struct Inbox {
         bytes32 value;
@@ -123,10 +123,11 @@ contract GlobalInbox is
         _deliverMessage(chain, L2_MSG, msg.sender, messageData);
     }
 
-    function sendL2BuddyDeploy(address chain, bytes calldata messageData)
+    function deployL2ContractPair(address chain, bytes calldata contractData)
         external
     {
-        _deliverMessage(chain, BUDDY_CONTRACT_DEPLOY, msg.sender, messageData);
+        registerContractPair(msg.sender, chain);
+        _deliverMessage(chain, L2_CONTRACT_PAIR, msg.sender, contractData);
     }
 
     /**
@@ -309,7 +310,7 @@ contract GlobalInbox is
             );
             deletePayment(erc20.dest, nodeHash, messageIndex);
 
-            if (isBuddyContract[erc20.token]) {
+            if (isPairedContract(erc20.token, msg.sender)) {
                 transferPairedERC20(
                     msg.sender,
                     paymentOwner,
@@ -337,10 +338,7 @@ contract GlobalInbox is
             );
             deletePayment(erc721.dest, nodeHash, messageIndex);
             transferNFT(msg.sender, paymentOwner, erc721.token, erc721.id);
-        } else if (message.kind == BUDDY_CONTRACT_DEPLOY) {
-            require(false, "just fail now");
-            isBuddyContract[message.sender] = true;
-
+        } else if (message.kind == L2_CONTRACT_PAIR) {
             emit IGlobalInbox.BuddyContractDeployed(
                 message.sender,
                 message.data

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019-2020, Offchain Labs, Inc.
  *
@@ -48,6 +50,6 @@ interface IGlobalInbox {
 
     function sendL2Message(address chain, bytes calldata messageData) external;
 
-    function sendL2BuddyDeploy(address chain, bytes calldata messageData)
+    function deployL2ContractPair(address chain, bytes calldata messageData)
         external;
 }
