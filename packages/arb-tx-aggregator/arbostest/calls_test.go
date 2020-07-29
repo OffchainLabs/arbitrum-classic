@@ -121,6 +121,33 @@ func getTransactionCountCall(t *testing.T, mach machine.Machine, address common.
 	return val
 }
 
+func withdrawEthTx(t *testing.T, sequenceNum *big.Int, amount *big.Int, dest common.Address) l2message.Transaction {
+	arbsys, err := abi.JSON(strings.NewReader(arboscontracts.ArbSysABI))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	txabi := arbsys.Methods["withdrawEth"]
+	txData, err := txabi.Inputs.Pack(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	funcSig, err := hexutil.Decode("0x25e16063")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return l2message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: sequenceNum,
+		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
+		Payment:     amount,
+		Data:        append(funcSig, txData...),
+	}
+}
+
 func getBalanceCall(t *testing.T, mach machine.Machine, address common.Address) *big.Int {
 	info, err := abi.JSON(strings.NewReader(arboscontracts.ArbInfoABI))
 	if err != nil {
