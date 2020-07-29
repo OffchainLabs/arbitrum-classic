@@ -70,3 +70,14 @@ func (e EvilMachine) ExecuteAssertion(
 	assn.AfterHash = _tweakHash(assn.AfterHash.Unmarshal()).MarshalToBuf()
 	return assn, numSteps
 }
+
+func (e EvilMachine) ExecuteSideloadedAssertion(
+	maxSteps uint64,
+	inbox value.TupleValue,
+	sideloadValue value.TupleValue,
+	maxWallTime time.Duration,
+) (*protocol.ExecutionAssertion, uint64) {
+	assn, numSteps := e.Machine.ExecuteSideloadedAssertion(maxSteps, inbox, sideloadValue, maxWallTime)
+	assn.AfterHash = _tweakHash(assn.AfterHash.Unmarshal()).MarshalToBuf()
+	return assn, numSteps
+}

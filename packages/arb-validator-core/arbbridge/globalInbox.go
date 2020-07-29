@@ -33,6 +33,12 @@ type GlobalInboxWatcher interface {
 		toBlock *big.Int,
 	) ([]MessageDeliveredEvent, error)
 
+	GetDeliveredEventsInBlock(
+		ctx context.Context,
+		blockId *common.BlockId,
+		timestamp *big.Int,
+	) ([]MessageDeliveredEvent, error)
+
 	GetERC20Balance(
 		ctx context.Context,
 		user common.Address,

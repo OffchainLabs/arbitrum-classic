@@ -45,12 +45,9 @@ type Machine struct {
 
 func New(codeFile string) (*Machine, error) {
 	cFilename := C.CString(codeFile)
-
 	cMachine := C.machineCreate(cFilename)
-
 	if cMachine == nil {
 		return nil, fmt.Errorf("error loading machine %v", codeFile)
-
 	}
 	ret := &Machine{cMachine}
 	runtime.SetFinalizer(ret, cdestroyVM)
@@ -114,6 +111,24 @@ func (m *Machine) PrintState() {
 	C.machinePrint(m.c)
 }
 
+func makeExecutionAssertion(
+	assertion C.RawAssertion,
+	machineHash common.Hash,
+) (*protocol.ExecutionAssertion, uint64) {
+	outMessagesRaw := toByteSlice(assertion.outMessages)
+	logsRaw := toByteSlice(assertion.logs)
+
+	return protocol.NewExecutionAssertion(
+		machineHash,
+		int(assertion.didInboxInsn) != 0,
+		uint64(assertion.numGas),
+		outMessagesRaw,
+		uint64(assertion.outMessageCount),
+		logsRaw,
+		uint64(assertion.logCount),
+	), uint64(assertion.numSteps)
+}
+
 func (m *Machine) ExecuteAssertion(
 	maxSteps uint64,
 	inbox value.TupleValue,
@@ -126,25 +141,45 @@ func (m *Machine) ExecuteAssertion(
 	msgDataC := C.CBytes(msgData)
 	defer C.free(msgDataC)
 
-	assertion := C.machineExecuteAssertion(
+	assertion := C.executeAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
 		msgDataC,
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
 
-	outMessagesRaw := toByteSlice(assertion.outMessages)
-	logsRaw := toByteSlice(assertion.logs)
+	return makeExecutionAssertion(assertion, m.Hash())
+}
 
-	return protocol.NewExecutionAssertion(
-		m.Hash(),
-		int(assertion.didInboxInsn) != 0,
-		uint64(assertion.numGas),
-		outMessagesRaw,
-		uint64(assertion.outMessageCount),
-		logsRaw,
-		uint64(assertion.logCount),
-	), uint64(assertion.numSteps)
+func (m *Machine) ExecuteSideloadedAssertion(
+	maxSteps uint64,
+	inbox value.TupleValue,
+	sideloadValue value.TupleValue,
+	maxWallTime time.Duration,
+) (*protocol.ExecutionAssertion, uint64) {
+	var buf bytes.Buffer
+	_ = value.MarshalValue(inbox, &buf)
+
+	msgData := buf.Bytes()
+	msgDataC := C.CBytes(msgData)
+	defer C.free(msgDataC)
+
+	var sideloadBuf bytes.Buffer
+	_ = value.MarshalValue(sideloadValue, &sideloadBuf)
+
+	sideloadData := buf.Bytes()
+	sideloadDataC := C.CBytes(sideloadData)
+	defer C.free(sideloadDataC)
+
+	assertion := C.executeSideloadedAssertion(
+		m.c,
+		C.uint64_t(maxSteps),
+		msgDataC,
+		sideloadDataC,
+		C.uint64_t(uint64(maxWallTime.Seconds())),
+	)
+
+	return makeExecutionAssertion(assertion, m.Hash())
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {

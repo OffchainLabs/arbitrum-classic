@@ -18,18 +18,18 @@ package challenges
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 	"testing"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 func testMessagesChallenge(
@@ -196,67 +196,13 @@ func testMessagesChallengeERC721(
 	}
 }
 
-func testMessagesChallengeTrnx(
+func testMessagesChallengeL2Trnx(
 	t *testing.T,
 	client ethutils.EthClient,
 	asserter *bind.TransactOpts,
 	challenger *bind.TransactOpts) {
 	t.Parallel()
-	messageStack := getMsgStackTrxn()
-	messageCount := uint64(4)
-	startIndex := big.NewInt(2)
-
-	beforeInbox, challengeHash := getMsgChallengeData(
-		t,
-		messageStack,
-		startIndex,
-		messageCount)
-
-	if err := testChallenge(
-		client,
-		asserter,
-		challenger,
-		valprotocol.InvalidMessagesChildType,
-		challengeHash,
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
-			return DefendMessagesClaim(
-				context.Background(),
-				client,
-				challengeAddress,
-				blockId,
-				0,
-				messageStack,
-				beforeInbox,
-				new(big.Int).SetUint64(messageCount),
-				2,
-			)
-		},
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
-			return ChallengeMessagesClaim(
-				context.Background(),
-				client,
-				challengeAddress,
-				blockId,
-				0,
-				messageStack,
-				beforeInbox,
-				new(big.Int).SetUint64(messageCount),
-				true,
-			)
-		},
-		testerAddress,
-	); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func testMessagesChallengeContractTrnx(
-	t *testing.T,
-	client ethutils.EthClient,
-	asserter *bind.TransactOpts,
-	challenger *bind.TransactOpts) {
-	t.Parallel()
-	messageStack := getMsgStackContractTrxn()
+	messageStack := getMsgStackl2Trxn()
 	messageCount := uint64(4)
 	startIndex := big.NewInt(2)
 
@@ -367,21 +313,11 @@ func getMsgStackER721() *structures.MessageStack {
 	return messageStack
 }
 
-func getMsgStackContractTrxn() *structures.MessageStack {
+func getMsgStackl2Trxn() *structures.MessageStack {
 	messageStack := structures.NewMessageStack()
 
 	for i := int64(0); i < 8; i++ {
-		msg := message.NewRandomInboxMessage(message.NewRandomContractTransaction())
-		messageStack.DeliverMessage(msg)
-	}
-	return messageStack
-}
-
-func getMsgStackTrxn() *structures.MessageStack {
-	messageStack := structures.NewMessageStack()
-
-	for i := int64(0); i < 8; i++ {
-		msg := message.NewRandomInboxMessage(message.NewRandomTransaction())
+		msg := message.NewRandomInboxMessage(message.L2Message{Data: common.RandBytes(2000)})
 		messageStack.DeliverMessage(msg)
 	}
 	return messageStack

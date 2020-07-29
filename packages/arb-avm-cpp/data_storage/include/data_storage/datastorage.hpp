@@ -39,6 +39,11 @@ class DataStorage {
 
     DataStorage(const std::string& db_path);
     rocksdb::Status closeDb();
+
+    std::unique_ptr<rocksdb::Transaction> beginTransaction() {
+        return std::unique_ptr<rocksdb::Transaction>{
+            txn_db->BeginTransaction(rocksdb::WriteOptions())};
+    }
 };
 
 class Transaction {

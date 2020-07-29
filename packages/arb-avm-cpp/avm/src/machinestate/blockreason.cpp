@@ -40,6 +40,10 @@ std::ostream& operator<<(std::ostream& os, const InboxBlocked&) {
     return os << "InboxBlocked";
 }
 
+std::ostream& operator<<(std::ostream& os, const SideloadBlocked&) {
+    return os << "SideloadBlocked";
+}
+
 std::ostream& operator<<(std::ostream& os, const BlockReason& val) {
     nonstd::visit([&](const auto& reason) { os << reason; }, val);
     return os;

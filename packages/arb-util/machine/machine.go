@@ -46,6 +46,13 @@ type Machine interface {
 		maxWallTime time.Duration,
 	) (*protocol.ExecutionAssertion, uint64)
 
+	ExecuteSideloadedAssertion(
+		maxSteps uint64,
+		inbox value.TupleValue,
+		sideloadValue value.TupleValue,
+		maxWallTime time.Duration,
+	) (*protocol.ExecutionAssertion, uint64)
+
 	MarshalForProof() ([]byte, error)
 
 	MarshalState() ([]byte, error)

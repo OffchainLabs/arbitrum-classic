@@ -191,8 +191,8 @@ func (checkpoint *CheckpointStorage) GetBlockStore() machine.BlockStore {
 	return NewBlockStore(bs)
 }
 
-func (checkpoint *CheckpointStorage) GetConfirmedNodeStore() machine.ConfirmedNodeStore {
-	bs := C.createConfirmedNodeStore(checkpoint.c)
+func (checkpoint *CheckpointStorage) GetAggregatorStore() *AggregatorStore {
+	bs := C.createAggregatorStore(checkpoint.c)
 
-	return NewConfirmedNodeStore(bs)
+	return NewAggregatorStore(bs)
 }

@@ -35,6 +35,9 @@ struct Assertion {
 class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
 
+    Assertion executeMachine(uint64_t stepCount,
+                             std::chrono::seconds wallLimit);
+
    public:
     MachineState machine_state;
 
@@ -51,6 +54,11 @@ class Machine {
     static Machine loadFromFile(const std::string& executable_filename) {
         return {MachineState::loadFromFile(executable_filename)};
     }
+
+    Assertion runSideloaded(uint64_t stepCount,
+                            Tuple messages,
+                            std::chrono::seconds wallLimit,
+                            Tuple sideload);
 
     Assertion run(uint64_t stepCount,
                   Tuple messages,
