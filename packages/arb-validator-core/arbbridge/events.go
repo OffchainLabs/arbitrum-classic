@@ -17,10 +17,10 @@
 package arbbridge
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 

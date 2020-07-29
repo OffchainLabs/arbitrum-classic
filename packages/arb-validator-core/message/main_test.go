@@ -17,7 +17,6 @@
 package message
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"log"
 	"os"
@@ -29,8 +28,8 @@ import (
 var tester *ethbridgetestcontracts.MessageTester
 
 func TestMain(m *testing.M) {
-	client, pks := test.SimulatedBackend()
-	auth := bind.NewKeyedTransactor(pks[0])
+	client, auths := test.SimulatedBackend()
+	auth := auths[0]
 	_, _, deployedMessageTester, err := ethbridgetestcontracts.DeployMessageTester(
 		auth,
 		client,

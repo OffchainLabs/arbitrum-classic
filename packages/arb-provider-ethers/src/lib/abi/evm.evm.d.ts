@@ -8,13 +8,13 @@ export interface NodeLocation {
 
 export interface FullLogBuf {
   address?: string
-  blockHash?: string
-  blockHeight?: number
+  location?: NodeLocation
   data?: string
-  index?: string
+  logIndex?: string
   topics?: Array<string>
   transactionIndex?: string
   transactionHash?: string
+  index?: string
 }
 
 export interface AVMLogProof {
@@ -29,19 +29,12 @@ export interface TxInfoBuf {
   txHash?: string
   txIndex?: number
   startLogIndex?: number
-  blockHash?: string
-  blockHeight?: number
+  location?: NodeLocation
   proof?: AVMLogProof
 }
 
 export interface TopicGroup {
   topics?: Array<string>
-}
-
-export interface BlockCountArgs {}
-
-export interface BlockCountReply {
-  height?: number
 }
 
 export interface FindLogsArgs {
@@ -56,25 +49,33 @@ export interface FindLogsReply {
 }
 
 export interface GetOutputMessageArgs {
-  index?: number
+  AssertionNodeHash?: string
+  MsgIndex?: string
 }
 
 export interface GetOutputMessageReply {
+  found?: boolean
   rawVal?: string
 }
 
-export interface GetRequestResultArgs {
+export interface GetMessageResultArgs {
   txHash?: string
 }
 
-export interface GetRequestResultReply {
-  rawVal?: string
+export interface GetMessageResultReply {
+  tx?: TxInfoBuf
 }
 
-export interface GetChainAddressArgs {}
+export interface GetAssertionCountArgs {}
 
-export interface GetChainAddressReply {
-  chainAddress?: string
+export interface GetAssertionCountReply {
+  assertionCount?: number
+}
+
+export interface GetVMInfoArgs {}
+
+export interface GetVMInfoReply {
+  vmID?: string
 }
 
 export interface CallMessageArgs {
@@ -86,34 +87,23 @@ export interface CallMessageReply {
   rawVal?: string
 }
 
-export interface BlockInfoArgs {
-  height?: number
-}
+export interface GetLatestNodeLocationArgs {}
 
-export interface BlockInfoReply {
-  hash?: string
-  startLog?: number
-  logCount?: number
-  startMessage?: number
-  messageCount?: number
-  bloom?: string
-}
-
-export interface SendTransactionArgs {
-  signedTransaction?: string
-}
-
-export interface SendTransactionReply {
-  transactionHash?: string
+export interface GetLatestNodeLocationReply {
+  location?: NodeLocation
 }
 
 export interface RollupValidatorService {
-  GetBlockCount: (r: BlockCountArgs) => BlockCountReply
-  GetBlockInfo: (r: BlockInfoArgs) => BlockInfoReply
   GetOutputMessage: (r: GetOutputMessageArgs) => GetOutputMessageReply
-  GetRequestResult: (r: GetRequestResultArgs) => GetRequestResultReply
+  GetMessageResult: (r: GetMessageResultArgs) => GetMessageResultReply
   CallMessage: (r: CallMessageArgs) => CallMessageReply
   FindLogs: (r: FindLogsArgs) => FindLogsReply
-  GetChainAddress: (r: GetChainAddressArgs) => GetChainAddressReply
-  SendTransaction: (r: SendTransactionArgs) => SendTransactionReply
+  GetAssertionCount: (r: GetAssertionCountArgs) => GetAssertionCountReply
+  GetVMInfo: (r: GetVMInfoArgs) => GetVMInfoReply
+  GetLatestNodeLocation: (
+    r: GetLatestNodeLocationArgs
+  ) => GetLatestNodeLocationReply
+  GetLatestPendingNodeLocation: (
+    r: GetLatestNodeLocationArgs
+  ) => GetLatestNodeLocationReply
 }

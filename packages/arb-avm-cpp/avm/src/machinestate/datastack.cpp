@@ -43,17 +43,10 @@ std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
     calculateAllHashes();
     Datastack c = *this;
     std::vector<unsigned char> buf;
-    std::vector<value> values;
-    for (size_t i = 0; i < stackInfo.size(); ++i) {
-        values.push_back(c.pop());
+    for (auto si : stackInfo) {
+        value val = c.pop();
+        ::marshalForProof(val, si, buf, code);
     }
-
-    // Marshal the values from deepest to most shallow in the stack
-    for (size_t i = 0; i < stackInfo.size(); ++i) {
-        auto index = stackInfo.size() - 1 - i;
-        ::marshalForProof(values[index], stackInfo[index], buf, code);
-    }
-
     return std::make_pair(c.getHashPreImage(), std::move(buf));
 }
 

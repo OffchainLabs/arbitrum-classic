@@ -18,7 +18,8 @@ package chainobserver
 
 import (
 	"context"
-	"crypto/ecdsa"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"log"
 	"math/big"
 	"math/rand"
@@ -30,16 +31,14 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
 
@@ -50,9 +49,9 @@ var ethclnt *backends.SimulatedBackend
 var auth *bind.TransactOpts
 
 func TestMain(m *testing.M) {
-	var pks []*ecdsa.PrivateKey
-	ethclnt, pks = test.SimulatedBackend()
-	auth = bind.NewKeyedTransactor(pks[0])
+	var auths []*bind.TransactOpts
+	ethclnt, auths = test.SimulatedBackend()
+	auth = auths[0]
 
 	go func() {
 		t := time.NewTicker(time.Second * 1)
@@ -157,15 +156,12 @@ func TestConfirmAssertion(t *testing.T) {
 
 	checkBalance(rollupAddress, big.NewInt(100))
 
-	checkpointer, err := checkpointing.NewIndexedCheckpointer(
+	checkpointer := checkpointing.NewIndexedCheckpointer(
 		rollupAddress,
 		dbPath,
 		big.NewInt(100000),
 		true,
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	if err := checkpointer.Initialize(contractPath); err != nil {
 		t.Fatal(err)
@@ -201,6 +197,7 @@ func TestConfirmAssertion(t *testing.T) {
 
 	rand.Seed(time.Now().Unix())
 	dest := common.RandAddress()
+	results := make([]*evm.Result, 0, 5)
 	messages := make([]value.Value, 0)
 	messages = append(
 		messages,
@@ -213,17 +210,12 @@ func TestConfirmAssertion(t *testing.T) {
 		).AsValue(),
 	)
 	for i := int32(0); i < 5; i++ {
+		stop := evm.NewRandomResult(message.NewRandomEth(), 2)
+		results = append(results, stop)
 		messages = append(messages, message.NewRandomOutMessage(message.NewRandomEth()).AsValue())
 	}
 
-	assertion := protocol.NewExecutionAssertionFromValues(
-		common.RandHash(),
-		true,
-		rand.Uint64(),
-		messages,
-		[]value.Value{},
-	)
-
+	assertion := evm.NewRandomEVMAssertion(results, messages)
 	assertion.NumGas = 100
 
 	prepared, err := chain.prepareAssertion(chain.latestBlockId)

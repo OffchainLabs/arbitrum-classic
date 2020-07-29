@@ -21,9 +21,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
@@ -34,8 +33,8 @@ import (
 )
 
 func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
-	client, pks := test.SimulatedBackend()
-	auth := bind.NewKeyedTransactor(pks[0])
+	client, auths := test.SimulatedBackend()
+	auth := auths[0]
 
 	_, machineTx, deployedMachineTester, err := ethbridgetestcontracts.DeployMachineTester(
 		auth,
@@ -61,7 +60,7 @@ func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
 
 func TestDeserializeMachine(t *testing.T) {
 	machineTester := getTester(t)
-	machine, err := loader.LoadMachineFromFile(arbos.Path(), true, "cpp")
+	machine, err := loader.LoadMachineFromFile(gotest.TestMachinePath(), true, "cpp")
 	if err != nil {
 		t.Fatal(err)
 	}

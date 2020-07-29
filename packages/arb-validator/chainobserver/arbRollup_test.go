@@ -18,7 +18,6 @@ package chainobserver
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
@@ -141,7 +140,7 @@ func getRollup(t *testing.T) arbbridge.ArbRollup {
 		t.Fatal(err)
 	}
 
-	mach, err := loader.LoadMachineFromFile(arbos.Path(), false, "cpp")
+	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")
 	if err != nil {
 		t.Fatal(err)
 	}

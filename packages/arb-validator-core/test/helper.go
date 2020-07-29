@@ -17,7 +17,7 @@
 package test
 
 import (
-	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
@@ -26,23 +26,24 @@ import (
 	"math/big"
 )
 
-func SimulatedBackend() (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
+func SimulatedBackend() (*backends.SimulatedBackend, []*bind.TransactOpts) {
 	genesisAlloc := make(map[ethcommon.Address]core.GenesisAccount)
-	pks := make([]*ecdsa.PrivateKey, 0)
+	auths := make([]*bind.TransactOpts, 0)
 	balance, _ := new(big.Int).SetString("10000000000000000000", 10) // 10 eth in wei
 	for i := 0; i < 15; i++ {
 		privateKey, err := crypto.GenerateKey()
 		if err != nil {
 			log.Fatal(err)
 		}
-		pks = append(pks, privateKey)
+		auth := bind.NewKeyedTransactor(privateKey)
+		auths = append(auths, auth)
 
-		genesisAlloc[crypto.PubkeyToAddress(privateKey.PublicKey)] = core.GenesisAccount{
+		genesisAlloc[auth.From] = core.GenesisAccount{
 			Balance: balance,
 		}
 	}
 
 	blockGasLimit := uint64(1000000000)
 	client := backends.NewSimulatedBackend(genesisAlloc, blockGasLimit)
-	return client, pks
+	return client, auths
 }

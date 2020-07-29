@@ -45,9 +45,12 @@ type Machine struct {
 
 func New(codeFile string) (*Machine, error) {
 	cFilename := C.CString(codeFile)
+
 	cMachine := C.machineCreate(cFilename)
+
 	if cMachine == nil {
 		return nil, fmt.Errorf("error loading machine %v", codeFile)
+
 	}
 	ret := &Machine{cMachine}
 	runtime.SetFinalizer(ret, cdestroyVM)
@@ -129,8 +132,10 @@ func (m *Machine) ExecuteAssertion(
 		msgDataC,
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
+
 	outMessagesRaw := toByteSlice(assertion.outMessages)
 	logsRaw := toByteSlice(assertion.logs)
+
 	return protocol.NewExecutionAssertion(
 		m.Hash(),
 		int(assertion.didInboxInsn) != 0,
@@ -140,7 +145,6 @@ func (m *Machine) ExecuteAssertion(
 		logsRaw,
 		uint64(assertion.logCount),
 	), uint64(assertion.numSteps)
-
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {

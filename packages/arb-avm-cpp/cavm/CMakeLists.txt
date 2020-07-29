@@ -20,19 +20,19 @@ project (cavm LANGUAGES CXX)
 
 
 set(LIB_HEADERS
-  caggregator.h
   cblockstore.h
   cmachine.h
   ccheckpointstorage.h
+  cconfirmednodestore.h
   utils.hpp
   ctypes.h
 )
 
 set(LIB_SOURCES
-  caggregator.cpp
   cblockstore.cpp
   cmachine.cpp
   ccheckpointstorage.cpp
+  cconfirmednodestore.cpp
 )
 
 add_library(cavm STATIC ${LIB_HEADERS} ${LIB_SOURCES})

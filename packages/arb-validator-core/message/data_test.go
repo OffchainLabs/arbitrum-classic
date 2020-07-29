@@ -18,12 +18,12 @@ package message
 
 import (
 	"bytes"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/rand"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 func TestListToStackValue(t *testing.T) {
@@ -101,5 +101,17 @@ func TestByteStackToHexFailures(t *testing.T) {
 	tup, _ = value.NewTupleFromSlice([]value.Value{intVal, listVal})
 	if _, err := ByteStackToHex(tup); err == nil {
 		t.Error("should fail when second value contains non ints in the stack")
+	}
+}
+
+func TestMarshaledBytesHash(t *testing.T) {
+	data, err := hexutil.Decode("0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142")
+	if err != nil {
+		t.Fatal(err)
+	}
+	hash := marshaledBytesHash(data)
+	correct := common.HexToHash("0x4fc384a19926e9ff7ec8f2376a0d146dc273031df1db4d133236d209700e4780")
+	if hash != correct {
+		t.Fatal("incorrect result", hash, correct)
 	}
 }

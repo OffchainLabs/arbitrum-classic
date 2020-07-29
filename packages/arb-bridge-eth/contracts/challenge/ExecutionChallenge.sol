@@ -193,26 +193,21 @@ contract ExecutionChallenge is BisectionChallenge {
     }
 
     function oneStepProof(
+        bytes32 _beforeHash,
         bytes32 _beforeInbox,
         uint256 _beforeInboxValueSize,
+        bytes32 _afterHash,
+        bool _didInboxInsns,
         bytes32 _firstMessage,
+        bytes32 _lastMessage,
         bytes32 _firstLog,
+        bytes32 _lastLog,
+        uint64 _gas,
         bytes memory _proof
     ) public asserterAction {
-        Value.Data memory inbox = Value.newTuplePreImage(
-            _beforeInbox,
-            _beforeInboxValueSize
-        );
-
-        OneStepProof.AssertionContext memory context = OneStepProof
-            .initializeExecutionContext(
-            inbox,
-            _firstMessage,
-            _firstLog,
-            _proof
-        );
-
-        OneStepProof.executeOp(context);
+        bytes32 beforeInbox = Value
+            .newTuplePreImage(_beforeInbox, _beforeInboxValueSize)
+            .hash();
         // The one step proof already guarantees us that _firstMessage and _lastMessage
         // are either one or 0 messages apart and the same is true for logs. Therefore
         // we can infer the message count and log count based on whether the fields
@@ -220,25 +215,40 @@ contract ExecutionChallenge is BisectionChallenge {
         ChallengeUtils.ExecutionAssertion memory assertion = ChallengeUtils
             .ExecutionAssertion(
             1,
-            Machine.hash(context.startMachine),
-            inbox.hash(),
-            Machine.hash(context.afterMachine),
-            context.didInboxInsn,
-            context.gas,
+            _beforeHash,
+            beforeInbox,
+            _afterHash,
+            _didInboxInsns,
+            _gas,
             _firstMessage,
-            context.messageAcc,
-            _firstMessage == context.messageAcc ? 0 : 1,
+            _lastMessage,
+            _firstMessage == _lastMessage ? 0 : 1,
             _firstLog,
-            context.logAcc,
-            _firstLog == context.logAcc ? 0 : 1
+            _lastLog,
+            _firstLog == _lastLog ? 0 : 1
+        );
+        require(
+            _firstMessage == _lastMessage || _firstLog == _lastLog,
+            "sent both logs and messages"
         );
         requireMatchesPrevState(assertion.hash());
+        Machine.Data memory endMachine = OneStepProof.validateProof(
+            _beforeHash,
+            _beforeInbox,
+            _beforeInboxValueSize,
+            _didInboxInsns,
+            _firstMessage,
+            _lastMessage,
+            _firstLog,
+            _lastLog,
+            _gas,
+            _proof
+        );
 
-        // require(
-        //     _data.beforeHash == startMachine.hash(),
-        //     string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString(),
-        //     " beforeHash = ", DebugPrint.bytes32string(_data.beforeHash), "\nstartMachine = ", DebugPrint.bytes32string(startMachine.hash())))
-        // );
+        require(
+            Machine.hash(endMachine) == _afterHash,
+            "Proof had non matching end state"
+        );
 
         // require(
         //     _data.afterHash == endMachine.hash(),

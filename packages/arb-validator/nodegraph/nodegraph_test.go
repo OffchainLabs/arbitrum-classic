@@ -17,7 +17,7 @@
 package nodegraph
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -30,7 +30,7 @@ import (
 	"time"
 )
 
-var contractPath = arbos.Path()
+var contractPath = gotest.TestMachinePath()
 
 func TestInitial(t *testing.T) {
 	mach, txHash, nodeGraph := getStakedNodeGraph(t)

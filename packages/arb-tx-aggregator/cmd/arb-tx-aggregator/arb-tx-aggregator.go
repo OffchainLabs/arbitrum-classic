@@ -19,24 +19,25 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	"log"
 	"os"
-	"path/filepath"
+
+	"github.com/gorilla/rpc"
+	"github.com/gorilla/rpc/json"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/txaggregator"
 )
 
 func main() {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	walletArgs := utils.AddWalletFlags(fs)
-	rpcVars := utils2.AddRPCFlags(fs)
+	rpcVars := utils.AddRPCFlags(fs)
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
@@ -62,29 +63,47 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	client := ethbridge.NewEthAuthClient(ethclint, auth)
 
 	if err := arbbridge.WaitForNonZeroBalance(
 		context.Background(),
-		ethbridge.NewEthClient(ethclint),
+		client,
 		common.NewAddressFromEth(auth.From),
 	); err != nil {
 		log.Fatal(err)
 	}
 
-	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "contract.mexe")
-	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
-
-	if err := rpc.LaunchAggregator(
-		context.Background(),
-		ethclint,
-		auth,
-		rollupArgs.Address,
-		contractFile,
-		dbPath,
-		"1235",
-		"8547",
-		rpcVars,
-	); err != nil {
+	rollupContract, err := client.NewRollupWatcher(rollupArgs.Address)
+	if err != nil {
 		log.Fatal(err)
 	}
+	inboxAddress, err := rollupContract.InboxAddress(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+	globalInbox, err := client.NewGlobalInbox(inboxAddress, rollupArgs.Address)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	server := txaggregator.NewServer(
+		context.Background(),
+		globalInbox, rollupArgs.Address,
+	)
+
+	s := rpc.NewServer()
+	s.RegisterCodec(
+		json.NewCodec(),
+		"application/json",
+	)
+	s.RegisterCodec(
+		json.NewCodec(),
+		"application/json;charset=UTF-8",
+	)
+
+	if err := s.RegisterService(server, "TxAggregator"); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Fatal(utils.LaunchRPC(s, "1237", rpcVars))
 }

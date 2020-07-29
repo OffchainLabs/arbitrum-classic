@@ -34,5 +34,4 @@ type ArbRollupWatcher interface {
 	GetCreationInfo(ctx context.Context) (common.Hash, *common.BlockId, common.Hash, error)
 	GetVersion(ctx context.Context) (string, error)
 	IsStaked(address common.Address) (bool, error)
-	VerifyArbChain(ctx context.Context, machHash common.Hash) error
 }

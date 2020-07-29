@@ -20,8 +20,6 @@
 #include <avm/machinestate/blockreason.hpp>
 
 struct MachineState;
-class Tuple;
-class TuplePool;
 
 const int send_size_limit = 10000;
 
@@ -51,7 +49,6 @@ void signExtend(MachineState& m);
 void hashOp(MachineState& m);
 void typeOp(MachineState& m);
 void ethhash2Op(MachineState& m);
-void keccakF(MachineState& m);
 void pop(MachineState& m);
 void spush(MachineState& m);
 void rpush(MachineState& m);
@@ -87,11 +84,6 @@ void errcodept(MachineState& m);
 void pushinsn(MachineState& m);
 void pushinsnimm(MachineState& m);
 void sideload(MachineState& m);
-
-namespace internal {
-void encodeKeccakState(const Tuple& tup, uint64_t* state);
-Tuple decodeKeccakState(const uint64_t* state, TuplePool* pool);
-}  // namespace internal
 }  // namespace machineoperation
 
 #endif /* machineoperation_hpp */

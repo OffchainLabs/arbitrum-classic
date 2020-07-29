@@ -52,21 +52,17 @@ func main() {
 }
 
 func createEvilManager(rollupAddress common.Address, client arbbridge.ArbAuthClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
-	cp, err := rolluptest.NewEvilRollupCheckpointer(
-		rollupAddress,
-		dbPath,
-		big.NewInt(100),
-		false,
-	)
-	if err != nil {
-		return nil, err
-	}
 	return rollupmanager.CreateManagerAdvanced(
 		context.Background(),
 		rollupAddress,
 		true,
 		client,
-		cp,
+		rolluptest.NewEvilRollupCheckpointer(
+			rollupAddress,
+			dbPath,
+			big.NewInt(100),
+			false,
+		),
 		contractFile,
 	)
 }

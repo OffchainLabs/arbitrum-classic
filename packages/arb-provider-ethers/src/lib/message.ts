@@ -245,70 +245,9 @@ export class L2Call {
   }
 }
 
-export class L2ContractTransaction {
-  public maxGas: ethers.utils.BigNumber
-  public gasPriceBid: ethers.utils.BigNumber
-  public destAddress: string
-  public payment: ethers.utils.BigNumber
-  public calldata: string
-  public kind: L2MessageCode.ContractTransaction
-
-  constructor(
-    maxGas: ethers.utils.BigNumberish | undefined,
-    gasPriceBid: ethers.utils.BigNumberish | undefined,
-    destAddress: ethers.utils.Arrayish | undefined,
-    payment: ethers.utils.BigNumberish | undefined,
-    calldata: ethers.utils.Arrayish | undefined
-  ) {
-    if (!maxGas) {
-      maxGas = 0
-    }
-    if (!gasPriceBid) {
-      gasPriceBid = 0
-    }
-    if (!destAddress) {
-      destAddress = ethers.utils.hexZeroPad('0x', 20)
-    }
-    if (!payment) {
-      payment = 0
-    }
-    if (!calldata) {
-      calldata = '0x'
-    }
-    this.maxGas = ethers.utils.bigNumberify(maxGas)
-    this.gasPriceBid = ethers.utils.bigNumberify(gasPriceBid)
-    this.destAddress = ethers.utils.hexlify(destAddress)
-    this.payment = ethers.utils.bigNumberify(payment)
-    this.calldata = ethers.utils.hexlify(calldata)
-    this.kind = L2MessageCode.ContractTransaction
-  }
-
-  static fromData(data: ethers.utils.Arrayish): L2ContractTransaction {
-    const bytes = ethers.utils.arrayify(data)
-    return new L2ContractTransaction(
-      bytes.slice(0, 32),
-      bytes.slice(32, 64),
-      bytes.slice(64, 96),
-      bytes.slice(96, 128),
-      bytes.slice(128)
-    )
-  }
-
-  asData(): Uint8Array {
-    return ethers.utils.concat([
-      hex32(this.maxGas),
-      hex32(this.gasPriceBid),
-      encodedAddress(this.destAddress),
-      hex32(this.payment),
-      this.calldata,
-    ])
-  }
-}
-
 export type L2SubMessage =
   | L2Transaction
   | L2Call
-  | L2ContractTransaction
   | L2Batch
   | L2SignedTransaction
 
@@ -419,12 +358,8 @@ function l2SubMessageFromData(data: ethers.utils.Arrayish): L2SubMessage {
   switch (kind) {
     case L2MessageCode.Transaction:
       return L2Transaction.fromData(bytes.slice(1))
-    case L2MessageCode.ContractTransaction:
-      return L2ContractTransaction.fromData(bytes.slice(1))
     case L2MessageCode.Call:
       return L2Call.fromData(bytes.slice(1))
-    case L2MessageCode.SignedTransaction:
-      return L2SignedTransaction.fromData(bytes.slice(1))
     default:
       throw Error('invalid L2 message type ' + kind)
   }
@@ -597,9 +532,6 @@ export class Result {
   public logs: Log[]
   public gasUsed: ethers.utils.BigNumber
   public gasPrice: ethers.utils.BigNumber
-  public cumulativeGas: ethers.utils.BigNumber
-  public txIndex: ethers.utils.BigNumber
-  public startLogIndex: ethers.utils.BigNumber
 
   constructor(
     incoming: IncomingMessage,
@@ -607,10 +539,7 @@ export class Result {
     returnData: Uint8Array,
     logs: Log[],
     gasUsed: ethers.utils.BigNumberish,
-    gasPrice: ethers.utils.BigNumberish,
-    cumulativeGas: ethers.utils.BigNumberish,
-    txIndex: ethers.utils.BigNumberish,
-    startLogIndex: ethers.utils.BigNumberish
+    gasPrice: ethers.utils.BigNumberish
   ) {
     this.incoming = incoming
     this.resultCode = resultCode
@@ -618,64 +547,31 @@ export class Result {
     this.logs = logs
     this.gasUsed = ethers.utils.bigNumberify(gasUsed)
     this.gasPrice = ethers.utils.bigNumberify(gasPrice)
-    this.cumulativeGas = ethers.utils.bigNumberify(cumulativeGas)
-    this.txIndex = ethers.utils.bigNumberify(txIndex)
-    this.startLogIndex = ethers.utils.bigNumberify(startLogIndex)
   }
 
   static fromValue(val: ArbValue.Value): Result {
     const tup = val as ArbValue.TupleValue
     const incoming = IncomingMessage.fromValue(tup.get(0))
-    const resultInfo = tup.get(1) as ArbValue.TupleValue
-    const gasInfo = tup.get(2) as ArbValue.TupleValue
-    const chainInfo = tup.get(3) as ArbValue.TupleValue
-
-    const resultCode = (resultInfo.get(
-      0
-    ) as ArbValue.IntValue).bignum.toNumber()
-    const returnData = ArbValue.bytestackToBytes(
-      resultInfo.get(1) as ArbValue.TupleValue
+    const logs = stackValueToList(tup.get(3) as ArbValue.TupleValue).map(val =>
+      Log.fromValue(val)
     )
-    const logs = stackValueToList(
-      resultInfo.get(2) as ArbValue.TupleValue
-    ).map(val => Log.fromValue(val))
-    const gasUsed = (gasInfo.get(0) as ArbValue.IntValue).bignum
-    const gasPrice = (gasInfo.get(1) as ArbValue.IntValue).bignum
-
-    const cumulativeGas = (chainInfo.get(0) as ArbValue.IntValue).bignum
-    const chainIndex = (chainInfo.get(1) as ArbValue.IntValue).bignum
-    const startLogIndex = (chainInfo.get(2) as ArbValue.IntValue).bignum
-
     return new Result(
       incoming,
-      resultCode,
-      returnData,
+      (tup.get(1) as ArbValue.IntValue).bignum.toNumber(),
+      ArbValue.bytestackToBytes(tup.get(2) as ArbValue.TupleValue),
       logs,
-      gasUsed,
-      gasPrice,
-      cumulativeGas,
-      chainIndex,
-      startLogIndex
+      (tup.get(4) as ArbValue.IntValue).bignum.toNumber(),
+      (tup.get(5) as ArbValue.IntValue).bignum.toNumber()
     )
   }
 
   asValue(): ArbValue.Value {
     return new ArbValue.TupleValue([
       this.incoming.asValue(),
-      new ArbValue.TupleValue([
-        new ArbValue.IntValue(this.resultCode),
-        ArbValue.hexToBytestack(this.returnData),
-        listToStackValue(this.logs.map(log => log.asValue())),
-      ]),
-      new ArbValue.TupleValue([
-        new ArbValue.IntValue(this.gasUsed),
-        new ArbValue.IntValue(this.gasPrice),
-      ]),
-      new ArbValue.TupleValue([
-        new ArbValue.IntValue(this.cumulativeGas),
-        new ArbValue.IntValue(this.txIndex),
-        new ArbValue.IntValue(this.startLogIndex),
-      ]),
+      new ArbValue.IntValue(this.resultCode),
+      ArbValue.hexToBytestack(this.returnData),
+      new ArbValue.IntValue(this.gasUsed),
+      new ArbValue.IntValue(this.gasPrice),
     ])
   }
 }
@@ -687,12 +583,4 @@ function stackValueToList(value: ArbValue.TupleValue): ArbValue.Value[] {
     value = value.get(1) as ArbValue.TupleValue
   }
   return values
-}
-
-function listToStackValue(values: ArbValue.Value[]): ArbValue.TupleValue {
-  let tup = new ArbValue.TupleValue([])
-  for (const val of values) {
-    tup = new ArbValue.TupleValue([val, tup])
-  }
-  return tup
 }

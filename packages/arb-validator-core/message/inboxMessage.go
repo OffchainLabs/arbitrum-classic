@@ -20,14 +20,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common/math"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -203,15 +202,19 @@ func (im InboxMessage) NestedMessage() (Message, error) {
 	case ERC721Type:
 		return NewERC721FromData(im.Data), nil
 	case L2Type:
-		return L2Message{Data: im.Data}, nil
+		l2, err := NewL2MessageFromData(im.Data)
+		if err != nil {
+			return nil, err
+		}
+		return L2Message{Msg: l2}, nil
 	case InitType:
 		return NewInitFromData(im.Data), nil
-	//case L2BuddyDeploy:
-	//	x := L2Message{Msg: NewBuddyDeploymentFromData(im.Data)}
-	//	log.Print("value here yo: ", x.AsData())
-	//	return x, nil
+	case L2BuddyDeploy:
+		x := L2Message{Msg: NewBuddyDeploymentFromData(im.Data)}
+		log.Print("value here yo: ", x.AsData())
+		return x, nil
 	default:
-		return nil, errors.New("unknown inbox l2message type")
+		return nil, errors.New("unknown inbox message type")
 	}
 }
 

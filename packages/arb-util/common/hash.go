@@ -47,14 +47,6 @@ func (h Hash) ToEthHash() ethcommon.Hash {
 	return ethcommon.Hash(h)
 }
 
-func NewEthHashesFromHashes(a []Hash) []ethcommon.Hash {
-	ret := make([]ethcommon.Hash, 0, len(a))
-	for _, t := range a {
-		ret = append(ret, ethcommon.BytesToHash(t[:]))
-	}
-	return ret
-}
-
 func (h Hash) MarshalToBuf() *HashBuf {
 	return &HashBuf{
 		Value: append([]byte{}, h[:]...),
@@ -83,14 +75,6 @@ func HashSliceToRaw(slice []Hash) [][32]byte {
 	ret := make([][32]byte, 0, len(slice))
 	for _, h := range slice {
 		ret = append(ret, h)
-	}
-	return ret
-}
-
-func HashArrayFromEth(hashes []ethcommon.Hash) []Hash {
-	ret := make([]Hash, 0, len(hashes))
-	for _, a := range hashes {
-		ret = append(ret, NewHashFromEth(a))
 	}
 	return ret
 }

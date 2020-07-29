@@ -24,6 +24,16 @@ import (
 	"runtime"
 )
 
+func TestMachinePath() string {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		err := errors.New("failed to get filename")
+		log.Fatal(err)
+	}
+
+	return filepath.Join(filepath.Dir(filename), "../../../arbos.mexe")
+}
+
 func OpCodeTestFiles() []string {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {

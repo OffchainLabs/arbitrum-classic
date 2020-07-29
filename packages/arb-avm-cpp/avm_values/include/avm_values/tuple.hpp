@@ -120,10 +120,6 @@ class Tuple {
         return tpl->data[pos];
     }
 
-    const value& get_element_unsafe(uint64_t pos) const {
-        return tpl->data[pos];
-    }
-
     HashPreImage getHashPreImage() const {
         if (!tpl) {
             return zeroPreimage();

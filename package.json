@@ -47,7 +47,6 @@
       "packages/arb-provider-ethers",
       "packages/arbos-contracts",
       "packages/tools",
-      "demos/pet-shop",
       "demos/*",
       "workspace/*"
     ]

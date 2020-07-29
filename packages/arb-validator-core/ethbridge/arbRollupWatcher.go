@@ -19,10 +19,8 @@ package ethbridge
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"math/big"
 	"strings"
 
@@ -338,13 +336,7 @@ func (vm *ethRollupWatcher) GetCreationInfo(
 	if err != nil {
 		return common.Hash{}, nil, common.Hash{}, err
 	}
-	if len(logs) == 0 {
-		return common.Hash{},
-			nil,
-			common.Hash{},
-			errors.New("chain does not exist")
-	}
-	if len(logs) > 1 {
+	if len(logs) != 1 {
 		return common.Hash{},
 			nil,
 			common.Hash{},
@@ -364,38 +356,4 @@ func (vm *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {
 
 func (vm *ethRollupWatcher) IsStaked(address common.Address) (bool, error) {
 	return vm.ArbRollup.IsStaked(nil, address.ToEthAddress())
-}
-
-func (vm *ethRollupWatcher) VerifyArbChain(ctx context.Context, machHash common.Hash) error {
-	backend, pks := test.SimulatedBackend()
-	_, _, rollupSim, err := ethbridgecontracts.DeployArbRollup(bind.NewKeyedTransactor(pks[0]), backend)
-	if err != nil {
-		return err
-	}
-	backend.Commit()
-	validEthBridgeVersion, err := rollupSim.VERSION(&bind.CallOpts{Context: ctx})
-	if err != nil {
-		return err
-	}
-	ethbridgeVersion, err := vm.GetVersion(ctx)
-	if err != nil {
-		return err
-	}
-
-	if ethbridgeVersion != validEthBridgeVersion {
-		return fmt.Errorf("VM has EthBridge version %v, but validator implements version %v."+
-			" To find a validator version which supports your EthBridge, visit "+
-			"https://offchainlabs.com/ethbridge-version-support",
-			ethbridgeVersion, validEthBridgeVersion)
-	}
-
-	_, _, initialVMHash, err := vm.GetCreationInfo(ctx)
-	if err != nil {
-		return err
-	}
-
-	if machHash != initialVMHash {
-		return fmt.Errorf("ArbChain was initialized with VM with hash %v, but local validator has VM with hash %v", initialVMHash, machHash)
-	}
-	return nil
 }

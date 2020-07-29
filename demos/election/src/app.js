@@ -3,6 +3,7 @@
 
 var $ = require('jquery')
 const ethers = require('ethers')
+const ArbProvider = require('arb-provider-ethers').ArbProvider
 
 require('bootstrap/dist/css/bootstrap.min.css')
 
@@ -24,7 +25,6 @@ const App = {
       try {
         // Request account access
         await window.ethereum.enable()
-        console.log('window.ethereum', window.ethereum)
       } catch (error) {
         // User denied account access...
         console.error('User denied account access')
@@ -39,18 +39,16 @@ const App = {
     // If no injected web3 instance is detected, fall back to Ganache
     else {
       web3Provider = new ethers.providers.JsonRpcProvider(
-        'http://localhost:8547'
+        'http://localhost:7545'
       )
     }
 
-    App.provider = web3Provider
+    App.provider = new ArbProvider('http://localhost:1235', web3Provider)
     return App.initContract()
   },
 
   initContract: async function () {
-    console.log(App.provider)
     var network = await App.provider.getNetwork()
-    console.log(network)
     const election = require('../build/contracts/Election.json')
     const address = election.networks[network.chainId.toString()].address
     const electionContractRaw = new ethers.Contract(
@@ -59,7 +57,6 @@ const App = {
       App.provider
     )
     const wallet = App.provider.getSigner(0)
-    console.log(wallet)
     App.contracts.Election = electionContractRaw.connect(wallet) // eslint-disable-line require-atomic-updates
     App.account = await wallet.getAddress() // eslint-disable-line require-atomic-updates
     App.listenForEvents()

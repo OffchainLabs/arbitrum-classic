@@ -19,7 +19,7 @@ package nodegraph
 import (
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"strconv"

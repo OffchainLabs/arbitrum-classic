@@ -17,7 +17,6 @@
 package challenges
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
@@ -29,12 +28,7 @@ import (
 var testerAddress ethcommon.Address
 
 func TestChallenges(t *testing.T) {
-	client, pks := test.SimulatedBackend()
-
-	auths := make([]*bind.TransactOpts, 0)
-	for _, pk := range pks {
-		auths = append(auths, bind.NewKeyedTransactor(pk))
-	}
+	client, auths := test.SimulatedBackend()
 
 	factorAddr, err := ethbridge.DeployChallengeFactory(auths[0], client)
 	if err != nil {
@@ -69,7 +63,10 @@ func TestChallenges(t *testing.T) {
 	t.Run("ERC721 Messages Challenge", func(t *testing.T) {
 		testMessagesChallengeERC721(t, client, auths[8], auths[9])
 	})
-	t.Run("L2 Messages Challenge", func(t *testing.T) {
-		testMessagesChallengeL2Trnx(t, client, auths[10], auths[11])
+	t.Run("Transaction Messages Challenge", func(t *testing.T) {
+		testMessagesChallengeTrnx(t, client, auths[10], auths[11])
+	})
+	t.Run("Contract Trans Messages Challenge", func(t *testing.T) {
+		testMessagesChallengeContractTrnx(t, client, auths[12], auths[13])
 	})
 }

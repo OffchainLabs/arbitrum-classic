@@ -18,22 +18,23 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-	errors2 "github.com/pkg/errors"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"math/big"
 	"strings"
 
+	errors2 "github.com/pkg/errors"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 var messageDeliveredID ethcommon.Hash
@@ -136,29 +137,13 @@ func (gi *globalInboxWatcher) GetEvents(
 	blockId *common.BlockId,
 	timestamp *big.Int,
 ) ([]arbbridge.Event, error) {
-	evs, err := gi.GetDeliveredEventsInBlock(ctx, blockId, timestamp)
-	if err != nil {
-		return nil, err
-	}
-	events := make([]arbbridge.Event, 0, len(evs))
-	for _, ev := range evs {
-		events = append(events, ev)
-	}
-	return events, nil
-}
-
-func (gi *globalInboxWatcher) GetDeliveredEventsInBlock(
-	ctx context.Context,
-	blockId *common.BlockId,
-	timestamp *big.Int,
-) ([]arbbridge.MessageDeliveredEvent, error) {
 	bh := blockId.HeaderHash.ToEthHash()
 	inboxLogs, err := gi.getLogs(ctx, nil, nil, &bh)
 	if err != nil {
 		return nil, err
 	}
 
-	events := make([]arbbridge.MessageDeliveredEvent, 0, len(inboxLogs))
+	events := make([]arbbridge.Event, 0, len(inboxLogs))
 	for _, evmLog := range inboxLogs {
 		ev, err := gi.processLog(ctx, evmLog, timestamp)
 		if err != nil {

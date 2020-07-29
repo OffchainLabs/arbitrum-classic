@@ -1,7 +1,11 @@
-const wrapProvider = require('arb-ethers-web3-bridge').wrapProvider
-const HDWalletProvider = require('@truffle/hdwallet-provider')
+const fetch = require('node-fetch')
+global.fetch = fetch
+
+const ethers = require('ethers')
+const ArbEth = require('arb-provider-ethers')
+const ProviderBridge = require('arb-ethers-web3-bridge')
 const mnemonic =
-  'surge ability together fruit retire harvest release turkey social coffee owner uphold panel group car'
+  'jar deny prosper gasp flush glass core corn alarm treat leg smart'
 
 module.exports = {
   // See <http://truffleframework.com/docs/advanced/configuration>
@@ -14,11 +18,22 @@ module.exports = {
     },
     arbitrum: {
       provider: function () {
-        return wrapProvider(
-          new HDWalletProvider(mnemonic, 'http://127.0.0.1:8547/')
+        const provider = new ethers.providers.JsonRpcProvider(
+          'http://localhost:7545'
+        )
+        const arbProvider = new ArbEth.ArbProvider(
+          'http://localhost:1235',
+          provider
+        )
+        const wallet = new ethers.Wallet.fromMnemonic(mnemonic).connect(
+          provider
+        )
+        return new ProviderBridge(
+          arbProvider,
+          new ArbEth.ArbWallet(wallet, arbProvider)
         )
       },
-      network_id: '*', // Match any network id
+      network_id: '*',
       gasPrice: 0,
     },
   },

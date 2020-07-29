@@ -226,24 +226,6 @@ jobs:
             cd arb-provider-go
             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
           working_directory: /home/user/project/packages/arb-provider-go
-      - run:
-          name: test arb-evm
-          command: |
-            export CGO_LDFLAGS="-lgcov --coverage"
-            cd ..
-            export ARB_PACKAGES=$(go list ./... | grep -v 'evilRollupServer' | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
-            cd arb-evm
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-evm.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
-          working_directory: /home/user/project/packages/arb-evm
-      - run:
-          name: test arb-tx-aggregator
-          command: |
-            export CGO_LDFLAGS="-lgcov --coverage"
-            cd ..
-            export ARB_PACKAGES=$(go list ./... | grep -v 'evilRollupServer' | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
-            cd arb-tx-aggregator
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-tx-aggregator.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
-          working_directory: /home/user/project/packages/arb-tx-aggregator
       - run: codecovbash -R /home/user/project -c -F unit
       - store_test_results:
           path: *test-path

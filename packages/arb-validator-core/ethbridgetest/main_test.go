@@ -17,7 +17,6 @@
 package ethbridgetest
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"log"
 	"os"
 	"testing"
@@ -29,8 +28,8 @@ import (
 var valueTester *ethbridgetestcontracts.ValueTester
 
 func TestMain(m *testing.M) {
-	client, pks := test.SimulatedBackend()
-	auth := bind.NewKeyedTransactor(pks[0])
+	client, auths := test.SimulatedBackend()
+	auth := auths[0]
 
 	_, _, deployedValueTester, err := ethbridgetestcontracts.DeployValueTester(
 		auth,

@@ -2,7 +2,10 @@
 'use strict'
 
 var $ = require('jquery')
+const ethers = require('ethers')
 const Web3 = require('web3')
+const ArbEth = require('arb-provider-ethers')
+const ProviderBridge = require('arb-ethers-web3-bridge')
 
 require('bootstrap/dist/css/bootstrap.min.css')
 
@@ -32,38 +35,51 @@ const App = {
   },
 
   initWeb3: async function () {
-    var standardProvider = null
+    // Modern dapp browsers...
+    let web3Provider = null
     if (window.ethereum) {
-      standardProvider = window.ethereum
+      web3Provider = new ethers.providers.Web3Provider(window.ethereum)
       try {
-        // Request account access if needed
+        // Request account access
         await window.ethereum.enable()
       } catch (error) {
-        console.log('User denied account access')
+        // User denied account access...
+        console.error('User denied account access')
       }
-    } else if (window.web3) {
-      // Legacy dapp browsers...
-      standardProvider = window.web3.currentProvider
-    } else {
-      // Non-dapp browsers...
-      console.log(
-        'Non-Ethereum browser detected. You should consider trying MetaMask!'
+    }
+    // Legacy dapp browsers...
+    else if (window.web3) {
+      web3Provider = new ethers.providers.Web3Provider(
+        window.web3.currentProvider
+      )
+    }
+    // If no injected web3 instance is detected, fall back to Ganache
+    else {
+      web3Provider = new ethers.providers.JsonRpcProvider(
+        'http://localhost:7545'
       )
     }
 
-    App.web3 = new Web3(standardProvider) // eslint-disable-line require-atomic-updates
+    const arbProvider = new ArbEth.ArbProvider(
+      'http://localhost:1235',
+      web3Provider
+    )
+    const wallet = web3Provider.getSigner(0)
+    const provider = new ProviderBridge(
+      arbProvider,
+      new ArbEth.ArbWallet(wallet, arbProvider)
+    )
+
+    App.web3 = new Web3(provider) // eslint-disable-line require-atomic-updates
 
     return App.initContract()
   },
 
-  initContract: async function () {
+  initContract: function () {
     const adoption = require('../build/contracts/Adoption.json')
-
-    const netid = await App.web3.eth.net.getId()
-
     App.contracts.Adoption = new App.web3.eth.Contract(
       adoption.abi,
-      adoption.networks[netid].address
+      adoption.networks['123456789'].address
     )
 
     // Use our contract to retrieve and mark the adopted pets

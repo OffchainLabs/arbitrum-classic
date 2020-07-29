@@ -19,17 +19,17 @@ package structures
 import (
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"log"
 	"math/big"
-	"math/rand"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 )
 
 var zeroBytes32 common.Hash // deliberately zeroed
@@ -98,14 +98,8 @@ func NewValidNodeFromPrev(
 	)
 }
 
-func NewRandomNodeFromValidPrev(prev *Node) *Node {
-	assertion := protocol.NewExecutionAssertionFromValues(
-		common.RandHash(),
-		true,
-		rand.Uint64(),
-		[]value.Value{value.NewInt64Value(0), value.NewInt64Value(2)},
-		[]value.Value{value.NewInt64Value(1), value.NewInt64Value(2)},
-	)
+func NewRandomNodeFromValidPrev(prev *Node, results []*evm.Result) *Node {
+	assertion := evm.NewRandomEVMAssertion(results, []value.Value{})
 	disputableNode := valprotocol.NewRandomDisputableNode(
 		valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 	)

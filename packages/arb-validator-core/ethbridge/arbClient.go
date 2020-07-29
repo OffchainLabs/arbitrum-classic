@@ -44,8 +44,15 @@ var reorgError = errors.New("reorg occured")
 var headerRetryDelay = time.Second * 2
 var maxFetchAttempts = 5
 
-func (c *EthArbClient) SubscribeBlockHeadersAfter(ctx context.Context, prevBlockId *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
+func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
 	blockIdChan := make(chan arbbridge.MaybeBlockId, 100)
+
+	startHeader, err := c.client.HeaderByHash(ctx, startBlockId.HeaderHash.ToEthHash())
+	if err != nil {
+		return nil, err
+	}
+	blockIdChan <- arbbridge.MaybeBlockId{BlockId: startBlockId, Timestamp: new(big.Int).SetUint64(startHeader.Time)}
+	prevBlockId := startBlockId
 	go func() {
 		defer close(blockIdChan)
 
@@ -93,18 +100,6 @@ func (c *EthArbClient) SubscribeBlockHeadersAfter(ctx context.Context, prevBlock
 	}()
 
 	return blockIdChan, nil
-}
-
-func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
-	blockIdChan := make(chan arbbridge.MaybeBlockId, 100)
-
-	startHeader, err := c.client.HeaderByHash(ctx, startBlockId.HeaderHash.ToEthHash())
-	if err != nil {
-		return nil, err
-	}
-	blockIdChan <- arbbridge.MaybeBlockId{BlockId: startBlockId, Timestamp: new(big.Int).SetUint64(startHeader.Time)}
-	prevBlockId := startBlockId
-	return c.SubscribeBlockHeadersAfter(ctx, prevBlockId)
 }
 
 func (c *EthArbClient) NewArbFactoryWatcher(address common.Address) (arbbridge.ArbFactoryWatcher, error) {
