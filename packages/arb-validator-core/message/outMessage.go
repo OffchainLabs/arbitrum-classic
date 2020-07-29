@@ -44,8 +44,8 @@ func NewOutMessageFromValue(val value.Value) (OutMessage, error) {
 	if !ok {
 		return failRet, errors.New("val must be a tuple")
 	}
-	if tup.Len() != 2 {
-		return failRet, fmt.Errorf("expected tuple of length 2, but recieved %v", tup)
+	if tup.Len() != 3 {
+		return failRet, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
 	}
 	kind, _ := tup.GetByInt64(0)
 	sender, _ := tup.GetByInt64(1)
