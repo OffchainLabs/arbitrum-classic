@@ -16,45 +16,6 @@
 
 package message
 
-type L2SubType uint8
-
-const (
-	TransactionType         L2SubType = 0
-	ContractTransactionType           = 1
-	CallType                          = 2
-	TransactionBatchType              = 3
-	SignedTransactionType             = 4
-	DeployBuddyContract               = 5
-)
-
-const AddressSize = 32
-
-const TransactionHeaderSize = 32*4 + AddressSize
-const SignatureSize = 65
-
-type AbstractL2Message interface {
-	L2Type() L2SubType
-	AsData() []byte
-}
-
-//type BuddyDeployment struct {
-//	MaxGas      *big.Int
-//	GasPriceBid *big.Int
-//	DestAddress common.Address
-//	Payment     *big.Int
-//	Data        []byte
-//}
-//
-//func PairedDepkoymentData(data []byte) []byte {
-//	ret := make([]byte, 0)
-//	ret = append(ret, math.U256Bytes() math.U256Bytes(b.MaxGas)...)
-//	ret = append(ret, math.U256Bytes(b.GasPriceBid)...)
-//	ret = append(ret, addressData(b.DestAddress)...)
-//	ret = append(ret, math.U256Bytes(b.Payment)...)
-//	ret = append(ret, data...)
-//	return ret
-//}
-
 type L2Message struct {
 	Data []byte
 }

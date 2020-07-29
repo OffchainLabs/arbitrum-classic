@@ -18,67 +18,25 @@
 
 pragma solidity ^0.5.11;
 
-import "../interfaces/IPairedErc20.sol";
-
-contract PairedFTContracts {
-    mapping(address => bool) public isBuddyContract;
-    mapping(address => address) private contractToChain;
-
-    struct PairedFTWallet {
+contract FTRecords {
+    struct FTWallet {
         address contractAddress;
         uint256 balance;
     }
 
-    struct UserPairedFTWallet {
+    struct UserFTWallet {
         mapping(address => uint256) ftIndex;
-        PairedFTWallet[] ftList;
+        FTWallet[] ftList;
     }
 
-    mapping(address => UserPairedFTWallet) private pairedFtWallets;
+    mapping(address => UserFTWallet) internal ftWallets;
 
-    function depositPairedERC20(
-        address _tokenContract,
-        address _destination,
-        uint256 _value
-    ) internal {
-        PairedErc20(_tokenContract).burn(msg.sender, _value);
-        addPairedToken(_destination, _tokenContract, _value);
-    }
-
-    function transferPairedERC20(
-        address _from,
-        address _to,
-        address _tokenContract,
-        uint256 _value
-    ) internal returns (bool) {
-        uint256 balance = getPairedERC20Balance(_tokenContract, _from);
-
-        if (balance < _value) {
-            removePairedToken(_from, _tokenContract, balance);
-        } else {
-            removePairedToken(_from, _tokenContract, _value);
-        }
-
-        addPairedToken(_to, _tokenContract, _value);
-        return true;
-    }
-
-    function withdrawPairedERC20(address _tokenContract) external {
-        uint256 value = getPairedERC20Balance(_tokenContract, msg.sender);
-        require(
-            removePairedToken(msg.sender, _tokenContract, value),
-            "Wallet doesn't own sufficient balance of token"
-        );
-
-        PairedErc20(_tokenContract).mint(msg.sender, value);
-    }
-
-    function getPairedERC20Balance(address _tokenContract, address _owner)
+    function getERC20Balance(address _tokenContract, address _owner)
         public
         view
         returns (uint256)
     {
-        UserPairedFTWallet storage wallet = pairedFtWallets[_owner];
+        UserFTWallet storage wallet = ftWallets[_owner];
         uint256 index = wallet.ftIndex[_tokenContract];
         if (index == 0) {
             return 0;
@@ -86,38 +44,38 @@ contract PairedFTContracts {
         return wallet.ftList[index - 1].balance;
     }
 
-    function addPairedToken(
+    function addToken(
         address _user,
         address _tokenContract,
         uint256 _value
-    ) private {
+    ) internal {
         if (_value == 0) {
             return;
         }
-        UserPairedFTWallet storage wallet = pairedFtWallets[_user];
+        UserFTWallet storage wallet = ftWallets[_user];
         uint256 index = wallet.ftIndex[_tokenContract];
         if (index == 0) {
-            index = wallet.ftList.push(PairedFTWallet(_tokenContract, 0));
+            index = wallet.ftList.push(FTWallet(_tokenContract, 0));
             wallet.ftIndex[_tokenContract] = index;
         }
         wallet.ftList[index - 1].balance += _value;
     }
 
-    function removePairedToken(
+    function removeToken(
         address _user,
         address _tokenContract,
         uint256 _value
-    ) private returns (bool) {
+    ) internal returns (bool) {
         if (_value == 0) {
             return true;
         }
-        UserPairedFTWallet storage wallet = pairedFtWallets[_user];
+        UserFTWallet storage wallet = ftWallets[_user];
         uint256 walletIndex = wallet.ftIndex[_tokenContract];
         if (walletIndex == 0) {
             // Wallet has no coins from given ERC20 contract
             return false;
         }
-        PairedFTWallet storage tokenWallet = wallet.ftList[walletIndex - 1];
+        FTWallet storage tokenWallet = wallet.ftList[walletIndex - 1];
         if (_value > tokenWallet.balance) {
             // Wallet does not own enough ERC20 tokens
             return false;

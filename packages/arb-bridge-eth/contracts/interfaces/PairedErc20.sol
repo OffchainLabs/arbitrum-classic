@@ -18,27 +18,10 @@
 
 pragma solidity ^0.5.11;
 
-// import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-// import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 import "./IERC20.sol";
-
-// contract ArbBaseERC20 is ERC20, ERC20Detailed {
-//     constructor() public ERC20Detailed("Token Buddy", "TB", 18) {}
-// }
 
 contract PairedErc20 is IERC20 {
     function mint(address account, uint256 amount) external;
 
     function burn(address account, uint256 amount) external;
 }
-
-// contract ArbERC20 is ArbBaseERC20 {
-//     function adminMint(address account, uint256 amount) public {
-//         _mint(account, amount);
-//     }
-
-//     function withdraw(address account, uint256 amount) public {
-//         _burn(msg.sender, amount);
-//         ArbSys(100).withdrawERC20(account, amount);
-//     }
-// }

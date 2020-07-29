@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,51 +18,63 @@
 
 pragma solidity ^0.5.11;
 
-import "../interfaces/IERC20.sol";
+import "../interfaces/PairedErc20.sol";
 import "./FTRecords.sol";
 
-contract GlobalFTWallet is FTRecords {
-    function ownedERC20s(address _owner)
-        external
-        view
-        returns (address[] memory)
+contract PairedFTWallet is FTRecords {
+    mapping(address => mapping(address => bool)) private pairedContractRecords;
+
+    function registerContractPair(address _tokenContract, address _chain)
+        internal
     {
-        UserFTWallet storage wallet = ftWallets[_owner];
-        address[] memory addresses = new address[](wallet.ftList.length);
-        uint256 addressCount = addresses.length;
-        for (uint256 i = 0; i < addressCount; i++) {
-            addresses[i] = wallet.ftList[i].contractAddress;
-        }
-        return addresses;
+        pairedContractRecords[_tokenContract][_chain] = true;
     }
 
-    function withdrawERC20(address _tokenContract) external {
+    function isPairedContract(address _tokenContract, address _chain)
+        public
+        view
+        returns (bool)
+    {
+        return pairedContractRecords[_tokenContract][_chain];
+    }
+
+    function withdrawPairedERC20(address _tokenContract) external {
         uint256 value = getERC20Balance(_tokenContract, msg.sender);
         require(
             removeToken(msg.sender, _tokenContract, value),
             "Wallet doesn't own sufficient balance of token"
         );
-        IERC20(_tokenContract).transfer(msg.sender, value);
+
+        PairedErc20(_tokenContract).mint(msg.sender, value);
     }
 
-    function depositERC20(
+    function depositPairedERC20(
         address _tokenContract,
         address _destination,
         uint256 _value
     ) internal {
-        IERC20(_tokenContract).transferFrom(msg.sender, address(this), _value);
+        require(
+            isPairedContract(_tokenContract, _destination),
+            "must be paired contract"
+        );
+        PairedErc20(_tokenContract).burn(msg.sender, _value); // approve ?
         addToken(_destination, _tokenContract, _value);
     }
 
-    function transferERC20(
+    function transferPairedERC20(
         address _from,
         address _to,
         address _tokenContract,
         uint256 _value
     ) internal returns (bool) {
-        if (!removeToken(_from, _tokenContract, _value)) {
-            return false;
+        uint256 balance = getERC20Balance(_tokenContract, _from);
+
+        if (balance < _value) {
+            removeToken(_from, _tokenContract, balance);
+        } else {
+            removeToken(_from, _tokenContract, _value);
         }
+
         addToken(_to, _tokenContract, _value);
         return true;
     }

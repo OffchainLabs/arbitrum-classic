@@ -12,6 +12,10 @@ import {
 
 interface GlobalInboxInterface extends Interface {
   functions: {
+    deployL2ContractPair: TypedFunctionDescription<{
+      encode([chain, contractData]: [string, Arrayish]): string
+    }>
+
     depositERC20Message: TypedFunctionDescription<{
       encode([chain, erc20, to, value]: [
         string,
@@ -57,10 +61,6 @@ interface GlobalInboxInterface extends Interface {
 
     getInbox: TypedFunctionDescription<{ encode([account]: [string]): string }>
 
-    getPairedERC20Balance: TypedFunctionDescription<{
-      encode([_tokenContract, _owner]: [string, string]): string
-    }>
-
     getPaymentOwner: TypedFunctionDescription<{
       encode([originalOwner, nodeHash, messageIndex]: [
         string,
@@ -77,7 +77,9 @@ interface GlobalInboxInterface extends Interface {
       ]): string
     }>
 
-    isBuddyContract: TypedFunctionDescription<{ encode([]: [string]): string }>
+    isPairedContract: TypedFunctionDescription<{
+      encode([_tokenContract, _chain]: [string, string]): string
+    }>
 
     ownedERC20s: TypedFunctionDescription<{
       encode([_owner]: [string]): string
@@ -89,10 +91,6 @@ interface GlobalInboxInterface extends Interface {
 
     sendInitializationMessage: TypedFunctionDescription<{
       encode([messageData]: [Arrayish]): string
-    }>
-
-    sendL2BuddyDeploy: TypedFunctionDescription<{
-      encode([chain, messageData]: [string, Arrayish]): string
     }>
 
     sendL2Message: TypedFunctionDescription<{
@@ -185,6 +183,12 @@ export class GlobalInbox extends Contract {
   interface: GlobalInboxInterface
 
   functions: {
+    deployL2ContractPair(
+      chain: string,
+      contractData: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     depositERC20Message(
       chain: string,
       erc20: string,
@@ -228,11 +232,6 @@ export class GlobalInbox extends Contract {
       1: BigNumber
     }>
 
-    getPairedERC20Balance(
-      _tokenContract: string,
-      _owner: string
-    ): Promise<BigNumber>
-
     getPaymentOwner(
       originalOwner: string,
       nodeHash: Arrayish,
@@ -245,19 +244,13 @@ export class GlobalInbox extends Contract {
       _tokenId: BigNumberish
     ): Promise<boolean>
 
-    isBuddyContract(arg0: string): Promise<boolean>
+    isPairedContract(_tokenContract: string, _chain: string): Promise<boolean>
 
     ownedERC20s(_owner: string): Promise<string[]>
 
     ownedERC721s(_owner: string): Promise<string[]>
 
     sendInitializationMessage(
-      messageData: Arrayish,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    sendL2BuddyDeploy(
-      chain: string,
       messageData: Arrayish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
@@ -308,6 +301,12 @@ export class GlobalInbox extends Contract {
     ): Promise<ContractTransaction>
   }
 
+  deployL2ContractPair(
+    chain: string,
+    contractData: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   depositERC20Message(
     chain: string,
     erc20: string,
@@ -351,11 +350,6 @@ export class GlobalInbox extends Contract {
     1: BigNumber
   }>
 
-  getPairedERC20Balance(
-    _tokenContract: string,
-    _owner: string
-  ): Promise<BigNumber>
-
   getPaymentOwner(
     originalOwner: string,
     nodeHash: Arrayish,
@@ -368,19 +362,13 @@ export class GlobalInbox extends Contract {
     _tokenId: BigNumberish
   ): Promise<boolean>
 
-  isBuddyContract(arg0: string): Promise<boolean>
+  isPairedContract(_tokenContract: string, _chain: string): Promise<boolean>
 
   ownedERC20s(_owner: string): Promise<string[]>
 
   ownedERC721s(_owner: string): Promise<string[]>
 
   sendInitializationMessage(
-    messageData: Arrayish,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  sendL2BuddyDeploy(
-    chain: string,
     messageData: Arrayish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
@@ -458,6 +446,11 @@ export class GlobalInbox extends Contract {
   }
 
   estimate: {
+    deployL2ContractPair(
+      chain: string,
+      contractData: Arrayish
+    ): Promise<BigNumber>
+
     depositERC20Message(
       chain: string,
       erc20: string,
@@ -489,11 +482,6 @@ export class GlobalInbox extends Contract {
 
     getInbox(account: string): Promise<BigNumber>
 
-    getPairedERC20Balance(
-      _tokenContract: string,
-      _owner: string
-    ): Promise<BigNumber>
-
     getPaymentOwner(
       originalOwner: string,
       nodeHash: Arrayish,
@@ -506,15 +494,13 @@ export class GlobalInbox extends Contract {
       _tokenId: BigNumberish
     ): Promise<BigNumber>
 
-    isBuddyContract(arg0: string): Promise<BigNumber>
+    isPairedContract(_tokenContract: string, _chain: string): Promise<BigNumber>
 
     ownedERC20s(_owner: string): Promise<BigNumber>
 
     ownedERC721s(_owner: string): Promise<BigNumber>
 
     sendInitializationMessage(messageData: Arrayish): Promise<BigNumber>
-
-    sendL2BuddyDeploy(chain: string, messageData: Arrayish): Promise<BigNumber>
 
     sendL2Message(chain: string, messageData: Arrayish): Promise<BigNumber>
 
