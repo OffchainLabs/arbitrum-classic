@@ -48,6 +48,6 @@ interface IGlobalInbox {
 
     function sendL2Message(address chain, bytes calldata messageData) external;
 
-    function deployL2ContractPair(address chain, bytes calldata messageData)
+    function sendL2BuddyDeploy(address chain, bytes calldata messageData)
         external;
 }

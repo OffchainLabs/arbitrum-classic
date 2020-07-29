@@ -19,9 +19,20 @@
 pragma solidity ^0.5.11;
 
 import "../interfaces/IERC20.sol";
-import "./FTRecords.sol";
 
-contract GlobalFTWallet is FTRecords {
+contract GlobalFTWallet {
+    struct FTWallet {
+        address contractAddress;
+        uint256 balance;
+    }
+
+    struct UserFTWallet {
+        mapping(address => uint256) ftIndex;
+        FTWallet[] ftList;
+    }
+
+    mapping(address => UserFTWallet) private ftWallets;
+
     function ownedERC20s(address _owner)
         external
         view
@@ -45,6 +56,19 @@ contract GlobalFTWallet is FTRecords {
         IERC20(_tokenContract).transfer(msg.sender, value);
     }
 
+    function getERC20Balance(address _tokenContract, address _owner)
+        public
+        view
+        returns (uint256)
+    {
+        UserFTWallet storage wallet = ftWallets[_owner];
+        uint256 index = wallet.ftIndex[_tokenContract];
+        if (index == 0) {
+            return 0;
+        }
+        return wallet.ftList[index - 1].balance;
+    }
+
     function depositERC20(
         address _tokenContract,
         address _destination,
@@ -64,6 +88,63 @@ contract GlobalFTWallet is FTRecords {
             return false;
         }
         addToken(_to, _tokenContract, _value);
+        return true;
+    }
+
+    function mintERC20(
+        address _to,
+        address _tokenContract,
+        uint256 _value
+    ) internal {
+        addToken(_to, _tokenContract, _value);
+    }
+
+    function addToken(
+        address _user,
+        address _tokenContract,
+        uint256 _value
+    ) private {
+        if (_value == 0) {
+            return;
+        }
+        UserFTWallet storage wallet = ftWallets[_user];
+        uint256 index = wallet.ftIndex[_tokenContract];
+        if (index == 0) {
+            index = wallet.ftList.push(FTWallet(_tokenContract, 0));
+            wallet.ftIndex[_tokenContract] = index;
+        }
+        wallet.ftList[index - 1].balance += _value;
+    }
+
+    function removeToken(
+        address _user,
+        address _tokenContract,
+        uint256 _value
+    ) private returns (bool) {
+        if (_value == 0) {
+            return true;
+        }
+        UserFTWallet storage wallet = ftWallets[_user];
+        uint256 walletIndex = wallet.ftIndex[_tokenContract];
+        if (walletIndex == 0) {
+            // Wallet has no coins from given ERC20 contract
+            return false;
+        }
+        FTWallet storage tokenWallet = wallet.ftList[walletIndex - 1];
+        if (_value > tokenWallet.balance) {
+            // Wallet does not own enough ERC20 tokens
+            return false;
+        }
+        tokenWallet.balance -= _value;
+        if (tokenWallet.balance == 0) {
+            wallet.ftIndex[wallet.ftList[wallet.ftList.length - 1]
+                .contractAddress] = walletIndex;
+            wallet.ftList[walletIndex - 1] = wallet.ftList[wallet
+                .ftList
+                .length - 1];
+            delete wallet.ftIndex[_tokenContract];
+            wallet.ftList.pop();
+        }
         return true;
     }
 }
