@@ -146,7 +146,7 @@ func TestWithdrawEth(t *testing.T) {
 		Owner:       common.Address{},
 		ExtraConfig: []byte{},
 	}
-	inbox = value.NewTuple2(inbox, message.NewInboxMessage(initMsg, addr, big.NewInt(0), chainTime).AsValue())
+	inbox = value.NewTuple2(inbox, message.NewInboxMessage(initMsg, chain, big.NewInt(0), chainTime).AsValue())
 
 	depositMsg := message.Eth{
 		Dest:  addr,
@@ -154,9 +154,9 @@ func TestWithdrawEth(t *testing.T) {
 	}
 	inbox = value.NewTuple2(inbox, message.NewInboxMessage(depositMsg, addr, big.NewInt(1), chainTime).AsValue())
 
-	runMessage(t, mach, initMsg, chain)
-
-	tx := withdrawEthTx(t, big.NewInt(0), big.NewInt(100), addr)
+	depositValue := big.NewInt(100)
+	withdrawDest := common.RandAddress()
+	tx := withdrawEthTx(t, big.NewInt(0), depositValue, withdrawDest)
 	inbox = value.NewTuple2(inbox, message.NewInboxMessage(message.L2Message{Data: l2message.L2MessageAsData(tx)}, addr, big.NewInt(2), chainTime).AsValue())
 
 	assertion, _ := mach.ExecuteAssertion(10000000000, inbox, 0)
@@ -177,5 +177,33 @@ func TestWithdrawEth(t *testing.T) {
 	}
 	if res.ResultCode != evm.ReturnCode {
 		t.Fatal("incorrect tx response", res.ResultCode)
+	}
+
+	sends := assertion.ParseOutMessages()
+	if len(sends) != 1 {
+		t.Fatal("unexpected send count")
+	}
+
+	outMsg, err := message.NewOutMessageFromValue(sends[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if outMsg.Kind != message.EthType {
+		t.Fatal("outgoing message had wrong type", outMsg.Kind)
+	}
+
+	if outMsg.Sender != addr {
+		t.Fatal("wrong withdraw sender")
+	}
+
+	outEthMsg := message.NewEthFromData(outMsg.Data)
+
+	if outEthMsg.Value.Cmp(depositValue) != 0 {
+		t.Fatal("wrong withdraw value", outEthMsg.Value)
+	}
+
+	if outEthMsg.Dest != withdrawDest {
+		t.Fatal("wrong withdraw destination", outEthMsg.Dest)
 	}
 }
