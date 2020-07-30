@@ -347,6 +347,9 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::EXP:
             machineoperation::exp(*this);
             break;
+        case OpCode::SIGNEXTEND:
+            machineoperation::signExtend(*this);
+            break;
             /******************************************/
             /*  Comparison & Bitwise Logic Operations */
             /******************************************/
@@ -383,8 +386,14 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::BYTE:
             machineoperation::byte(*this);
             break;
-        case OpCode::SIGNEXTEND:
-            machineoperation::signExtend(*this);
+        case OpCode::SHL:
+            machineoperation::shl(*this);
+            break;
+        case OpCode::SHR:
+            machineoperation::shr(*this);
+            break;
+        case OpCode::SAR:
+            machineoperation::sar(*this);
             break;
 
             /***********************/

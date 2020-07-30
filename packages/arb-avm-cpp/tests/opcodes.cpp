@@ -389,37 +389,40 @@ TEST_CASE("NOT opcode is correct") {
 }
 
 TEST_CASE("BYTE opcode is correct") {
-    SECTION("31st byte of 16 = 16") { testBinaryOp(16, 31, 16, OpCode::BYTE); }
+    SECTION("31st byte of 16 = 16") { testBinaryOp(31, 16, 16, OpCode::BYTE); }
     SECTION("3rd byte of 3 = 0") { testBinaryOp(3, 3, 0, OpCode::BYTE); }
 }
 
 TEST_CASE("SIGNEXTEND opcode is correct") {
     SECTION("test1") {
-        testBinaryOp(-1_u256, 0_u256, -1_u256, OpCode::SIGNEXTEND);
+        testBinaryOp(0_u256, -1_u256, -1_u256, OpCode::SIGNEXTEND);
     }
     SECTION("test2") {
-        testBinaryOp(1_u256, 0_u256, 1_u256, OpCode::SIGNEXTEND);
+        testBinaryOp(0_u256, 1_u256, 1_u256, OpCode::SIGNEXTEND);
     }
     SECTION("test3") {
-        testBinaryOp(127_u256, 0_u256, 127_u256, OpCode::SIGNEXTEND);
+        testBinaryOp(0_u256, 127_u256, 127_u256, OpCode::SIGNEXTEND);
     }
     SECTION("test4") {
-        testBinaryOp(128_u256, 0_u256, -128_u256, OpCode::SIGNEXTEND);
+        testBinaryOp(0_u256, 128_u256, -128_u256, OpCode::SIGNEXTEND);
     }
     SECTION("test5") {
-        testBinaryOp(254_u256, 0_u256, -2_u256, OpCode::SIGNEXTEND);
+        testBinaryOp(0_u256, 254_u256, -2_u256, OpCode::SIGNEXTEND);
     }
     SECTION("test6") {
-        testBinaryOp(257_u256, 0_u256, 1_u256, OpCode::SIGNEXTEND);
+        testBinaryOp(0_u256, 257_u256, 1_u256, OpCode::SIGNEXTEND);
     }
     SECTION("test7") {
-        testBinaryOp(65534_u256, 1_u256, -2_u256, OpCode::SIGNEXTEND);
+        testBinaryOp(1_u256, 65534_u256, -2_u256, OpCode::SIGNEXTEND);
     }
     SECTION("test8") {
-        testBinaryOp(65537_u256, 1_u256, 1_u256, OpCode::SIGNEXTEND);
+        testBinaryOp(1_u256, 65537_u256, 1_u256, OpCode::SIGNEXTEND);
     }
     SECTION("test8") {
-        testBinaryOp(65537_u256, 2_u256, 65537_u256, OpCode::SIGNEXTEND);
+        testBinaryOp(2_u256, 65537_u256, 65537_u256, OpCode::SIGNEXTEND);
+    }
+    SECTION("test9") {
+        testBinaryOp(50_u256, 254_u256, 254_u256, OpCode::SIGNEXTEND);
     }
 }
 
