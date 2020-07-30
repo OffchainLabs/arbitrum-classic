@@ -35,6 +35,7 @@ enum class OpCode : uint8_t {
     ADDMOD,
     MULMOD,
     EXP,
+    SIGNEXTEND,
 
     LT = 0x10,
     GT,
@@ -47,7 +48,9 @@ enum class OpCode : uint8_t {
     BITWISE_XOR,
     BITWISE_NOT,
     BYTE,
-    SIGNEXTEND,
+    SHL,
+    SHR,
+    SAR,
 
     HASH = 0x20,
     TYPE,
@@ -113,6 +116,7 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::ADDMOD, "addmod"},
     {OpCode::MULMOD, "mulmod"},
     {OpCode::EXP, "exp"},
+    {OpCode::SIGNEXTEND, "signextend"},
 
     {OpCode::LT, "lt"},
     {OpCode::GT, "gt"},
@@ -125,7 +129,9 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::BITWISE_XOR, "xor"},
     {OpCode::BITWISE_NOT, "not"},
     {OpCode::BYTE, "byte"},
-    {OpCode::SIGNEXTEND, "signextend"},
+    {OpCode::SHL, "shl"},
+    {OpCode::SHR, "shr"},
+    {OpCode::SAR, "sar"},
 
     {OpCode::HASH, "hash"},
     {OpCode::TYPE, "type"},
@@ -192,6 +198,7 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::MULMOD,
          {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
         {OpCode::EXP, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::SIGNEXTEND, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
 
         {OpCode::LT, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
         {OpCode::GT, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
@@ -204,7 +211,9 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::BITWISE_XOR, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
         {OpCode::BITWISE_NOT, {MarshalLevel::SINGLE}},
         {OpCode::BYTE, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
-        {OpCode::SIGNEXTEND, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::SHL, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::SHR, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::SAR, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
 
         {OpCode::HASH, {MarshalLevel::STUB}},
         {OpCode::TYPE, {MarshalLevel::SINGLE}},
@@ -273,6 +282,7 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
                                {OpCode::ADDMOD, {}},
                                {OpCode::MULMOD, {}},
                                {OpCode::EXP, {}},
+                               {OpCode::SIGNEXTEND, {}},
 
                                {OpCode::LT, {}},
                                {OpCode::GT, {}},
@@ -285,7 +295,9 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
                                {OpCode::BITWISE_XOR, {}},
                                {OpCode::BITWISE_NOT, {}},
                                {OpCode::BYTE, {}},
-                               {OpCode::SIGNEXTEND, {}},
+                               {OpCode::SHL, {}},
+                               {OpCode::SHR, {}},
+                               {OpCode::SAR, {}},
 
                                {OpCode::HASH, {}},
                                {OpCode::TYPE, {}},
@@ -347,6 +359,7 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::ADDMOD, 4},
     {OpCode::MULMOD, 4},
     {OpCode::EXP, 25},
+    {OpCode::SIGNEXTEND, 7},
 
     {OpCode::LT, 2},
     {OpCode::GT, 2},
@@ -359,7 +372,9 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::BITWISE_XOR, 2},
     {OpCode::BITWISE_NOT, 1},
     {OpCode::BYTE, 4},
-    {OpCode::SIGNEXTEND, 7},
+    {OpCode::SHL, 4},
+    {OpCode::SHR, 4},
+    {OpCode::SAR, 4},
 
     {OpCode::HASH, 7},
     {OpCode::TYPE, 3},

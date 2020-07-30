@@ -21,9 +21,11 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"log"
@@ -115,5 +117,93 @@ func TestTransactionCount(t *testing.T) {
 	txCount = getTransactionCountCall(t, mach, addr)
 	if txCount.Cmp(big.NewInt(2)) != 0 {
 		t.Fatal("wrong tx count", txCount)
+	}
+}
+
+func TestWithdrawEth(t *testing.T) {
+	mach, err := cmachine.New(arbos.Path())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	chainTime := message.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
+	}
+
+	addr := common.RandAddress()
+	chain := common.RandAddress()
+
+	inbox := value.NewEmptyTuple()
+
+	initMsg := message.Init{
+		ChainParams: valprotocol.ChainParams{
+			StakeRequirement:        big.NewInt(0),
+			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
+			MaxExecutionSteps:       0,
+			ArbGasSpeedLimitPerTick: 0,
+		},
+		Owner:       common.Address{},
+		ExtraConfig: []byte{},
+	}
+	inbox = value.NewTuple2(inbox, message.NewInboxMessage(initMsg, chain, big.NewInt(0), chainTime).AsValue())
+
+	depositMsg := message.Eth{
+		Dest:  addr,
+		Value: big.NewInt(10000),
+	}
+	inbox = value.NewTuple2(inbox, message.NewInboxMessage(depositMsg, addr, big.NewInt(1), chainTime).AsValue())
+
+	depositValue := big.NewInt(100)
+	withdrawDest := common.RandAddress()
+	tx := withdrawEthTx(t, big.NewInt(0), depositValue, withdrawDest)
+	inbox = value.NewTuple2(inbox, message.NewInboxMessage(message.L2Message{Data: l2message.L2MessageAsData(tx)}, addr, big.NewInt(2), chainTime).AsValue())
+
+	assertion, _ := mach.ExecuteAssertion(10000000000, inbox, 0)
+	testCase, err := value.TestVectorJSON(inbox, assertion.ParseLogs(), assertion.ParseOutMessages())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(string(testCase))
+	logs := assertion.ParseLogs()
+
+	if len(logs) != 1 {
+		t.Fatal("unexpected log count", len(logs))
+	}
+
+	res, err := evm.NewResultFromValue(logs[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.ResultCode != evm.ReturnCode {
+		t.Fatal("incorrect tx response", res.ResultCode)
+	}
+
+	sends := assertion.ParseOutMessages()
+	if len(sends) != 1 {
+		t.Fatal("unexpected send count")
+	}
+
+	outMsg, err := message.NewOutMessageFromValue(sends[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if outMsg.Kind != message.EthType {
+		t.Fatal("outgoing message had wrong type", outMsg.Kind)
+	}
+
+	if outMsg.Sender != addr {
+		t.Fatal("wrong withdraw sender")
+	}
+
+	outEthMsg := message.NewEthFromData(outMsg.Data)
+
+	if outEthMsg.Value.Cmp(depositValue) != 0 {
+		t.Fatal("wrong withdraw value", outEthMsg.Value)
+	}
+
+	if outEthMsg.Dest != withdrawDest {
+		t.Fatal("wrong withdraw destination", outEthMsg.Dest)
 	}
 }
