@@ -26,6 +26,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/core/types"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -38,23 +40,31 @@ type DecodedBatchTx struct {
 	sender common.Address
 }
 
+type pendingBatch struct {
+	txes []l2message.SignedTransaction
+}
+
 type Batcher struct {
 	rollupAddress common.Address
+	client        ethutils.EthClient
 	globalInbox   arbbridge.GlobalInbox
 
 	sync.Mutex
 	valid        bool
 	transactions []DecodedBatchTx
+	pendingTxes  map[common.Address]uint64
 }
 
 func NewBatcher(
 	ctx context.Context,
+	client ethutils.EthClient,
 	globalInbox arbbridge.GlobalInbox,
 	rollupAddress common.Address,
 	maxBatchTime time.Duration,
 ) *Batcher {
 	server := &Batcher{
 		rollupAddress: rollupAddress,
+		client:        client,
 		globalInbox:   globalInbox,
 		valid:         true,
 	}
@@ -89,25 +99,26 @@ func NewBatcher(
 // prepareTransactions reorders the transactions such that the position of each
 // user is maintained, but the transactions of that user are swapped to be in
 // sequence number order
-func prepareTransactions(txes []DecodedBatchTx) message.TransactionBatch {
+func prepareTransactions(txes []DecodedBatchTx) []DecodedBatchTx {
 	transactionsBySender := make(map[common.Address][]DecodedBatchTx)
 	for _, tx := range txes {
 		transactionsBySender[tx.sender] = append(transactionsBySender[tx.sender], tx)
 	}
 
 	for _, txes := range transactionsBySender {
-		sort.SliceStable(txes, func(i, j int) bool {
+		sort.Slice(txes, func(i, j int) bool {
 			return txes[i].tx.Transaction.SequenceNum.Cmp(txes[j].tx.Transaction.SequenceNum) < 0
 		})
 	}
 
-	batchTxes := make([]message.AbstractL2Message, 0, len(txes))
+
+	batchTxes := make([]DecodedBatchTx, 0, len(txes))
 	for _, tx := range txes {
 		nextTx := transactionsBySender[tx.sender][0]
 		transactionsBySender[tx.sender] = transactionsBySender[tx.sender][1:]
-		batchTxes = append(batchTxes, nextTx.tx)
+		batchTxes = append(batchTxes, nextTx)
 	}
-	return message.NewTransactionBatchFromMessages(batchTxes)
+	return batchTxes
 }
 
 func (m *Batcher) sendBatch(ctx context.Context) {
@@ -124,17 +135,46 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 
 	log.Println("Submitting batch with", len(txes), "transactions")
 
-	err := m.globalInbox.SendL2MessageNoWait(
+	batch := prepareTransactions(txes)
+
+	batchTxes := make([]l2message.AbstractL2Message, 0, len(batch))
+	for _, tx := range batch {
+		batchTxes = append(batchTxes, tx.tx)
+	}
+	batchTx := l2message.NewTransactionBatchFromMessages(batchTxes)
+	txHash, err := m.globalInbox.SendL2MessageNoWait(
 		ctx,
 		m.rollupAddress,
-		message.NewL2Message(prepareTransactions(txes)).AsData(),
+		message.NewL2Message(batchTx).AsData(),
 	)
 
 	m.Lock()
 	if err != nil {
 		log.Println("transaction aggregator failed: ", err)
 		m.valid = false
+		return
 	}
+
+	go func() {
+		receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, m.client, txHash.ToEthHash())
+		if err != nil || receipt.Status != 1 {
+			// batch failed
+			log.Fatal("Error submitted batch", err)
+		} else {
+			m.Lock()
+			defer m.Unlock()
+			// batch succeeded
+			for _, tx := range batch {
+				m.pendingTxes[tx.sender]--
+			}
+		}
+	}()
+}
+
+func (m *Batcher) PendingTransactionCount(account common.Address) uint64 {
+	m.Lock()
+	defer m.Unlock()
+	return m.pendingTxes[account]
 }
 
 // SendTransaction takes a request signed transaction l2message from a client
@@ -165,5 +205,6 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 		tx:     batchTx,
 		sender: sender,
 	})
+	m.pendingTxes[sender]++
 	return common.NewHashFromEth(txHash), nil
 }

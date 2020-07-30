@@ -14,7 +14,7 @@ type BlockNumberArgs struct{}
 
 type AccountInfoArgs struct {
 	Address  *common.Address
-	BlockNum ethrpc.BlockNumber
+	BlockNum *ethrpc.BlockNumber
 }
 
 func (n *AccountInfoArgs) UnmarshalJSON(buf []byte) error {
