@@ -37,6 +37,7 @@ interface IGlobalInbox {
     );
 
     event BuddyContractDeployed(address indexed sender, bytes data);
+    event BuddyContractPair(address indexed sender, address data);
 
     function getInbox(address account) external view returns (bytes32, uint256);
 
