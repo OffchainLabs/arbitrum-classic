@@ -22,6 +22,9 @@
 #include <ethash/keccak.hpp>
 #include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
 
+// Many opcode implementations were inspired from the Apache 2.0 licensed EVM
+// implementation https://github.com/ethereum/evmone
+
 using namespace intx;
 
 namespace {
@@ -191,14 +194,12 @@ void signExtend(MachineState& m) {
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
 
-    if (aNum >= 32) {
-        m.stack[1] = m.stack[0];
-    } else {
-        auto idx = 8 * narrow_cast<uint8_t>(aNum) + 7;
-        auto sign = narrow_cast<uint8_t>((bNum >> idx) & 1);
-        constexpr auto zero = uint256_t{0};
-        auto mask = ~zero >> (256 - idx);
-        m.stack[1] = ((sign ? ~zero : zero) << idx) | (bNum & mask);
+    if (aNum < 31) {
+        auto sign_bit = 8 * narrow_cast<uint8_t>(aNum) + 7;
+        auto sign_mask = uint256_t{1} << sign_bit;
+        auto value_mask = sign_mask - 1;
+        auto is_neg = (bNum & sign_mask) != 0;
+        m.stack[1] = is_neg ? aNum | ~value_mask : aNum & value_mask;
     }
     m.stack.popClear();
     ++m.pc;
