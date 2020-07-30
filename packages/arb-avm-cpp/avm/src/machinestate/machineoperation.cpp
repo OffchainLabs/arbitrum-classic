@@ -186,6 +186,24 @@ void exp(MachineState& m) {
     ++m.pc;
 }
 
+void signExtend(MachineState& m) {
+    m.stack.prepForMod(2);
+    auto& aNum = assumeInt(m.stack[0]);
+    auto& bNum = assumeInt(m.stack[1]);
+
+    if (aNum >= 32) {
+        m.stack[1] = m.stack[0];
+    } else {
+        auto idx = 8 * narrow_cast<uint8_t>(aNum) + 7;
+        auto sign = narrow_cast<uint8_t>((bNum >> idx) & 1);
+        constexpr auto zero = uint256_t{0};
+        auto mask = ~zero >> (256 - idx);
+        m.stack[1] = ((sign ? ~zero : zero) << idx) | (bNum & mask);
+    }
+    m.stack.popClear();
+    ++m.pc;
+}
+
 void lt(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
@@ -310,19 +328,38 @@ void byte(MachineState& m) {
     ++m.pc;
 }
 
-void signExtend(MachineState& m) {
+void shl(MachineState& m) {
+    m.stack.prepForMod(2);
+    auto& aNum = assumeInt(m.stack[0]);
+    auto& bNum = assumeInt(m.stack[1]);
+    m.stack[1] = bNum << aNum;
+    m.stack.popClear();
+    ++m.pc;
+}
+
+void shr(MachineState& m) {
+    m.stack.prepForMod(2);
+    auto& aNum = assumeInt(m.stack[0]);
+    auto& bNum = assumeInt(m.stack[1]);
+    m.stack[1] = bNum >> aNum;
+    m.stack.popClear();
+    ++m.pc;
+}
+
+void sar(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
 
-    if (aNum >= 32) {
-        m.stack[1] = m.stack[0];
+    if ((bNum & uint256_t{1} << 255) == 0) {
+        shr(m);
+        return;
+    }
+
+    if (aNum >= 256) {
+        m.stack[1] = ~uint256_t{0};
     } else {
-        auto idx = 8 * narrow_cast<uint8_t>(aNum) + 7;
-        auto sign = narrow_cast<uint8_t>((bNum >> idx) & 1);
-        constexpr auto zero = uint256_t{0};
-        auto mask = ~zero >> (256 - idx);
-        m.stack[1] = ((sign ? ~zero : zero) << idx) | (bNum & mask);
+        m.stack[1] = (bNum >> aNum) | (~uint256_t{0} << (256 - aNum));
     }
     m.stack.popClear();
     ++m.pc;

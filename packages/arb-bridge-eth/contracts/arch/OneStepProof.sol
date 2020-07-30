@@ -266,6 +266,10 @@ library OneStepProof {
             assembly {
                 c := exp(a, b)
             }
+        } else if (context.opcode == OP_SIGNEXTEND) {
+            assembly {
+                c := signextend(a, b)
+            }
         } else if (context.opcode == OP_LT) {
             assembly {
                 c := lt(a, b)
@@ -298,9 +302,17 @@ library OneStepProof {
             assembly {
                 c := byte(a, b)
             }
-        } else if (context.opcode == OP_SIGNEXTEND) {
+        } else if (context.opcode == OP_SHL) {
             assembly {
-                c := signextend(a, b)
+                c := shl(a, b)
+            }
+        } else if (context.opcode == OP_SHR) {
+            assembly {
+                c := shr(a, b)
+            }
+        } else if (context.opcode == OP_SAR) {
+            assembly {
+                c := sar(a, b)
             }
         } else if (context.opcode == OP_ETHHASH2) {
             c = uint256(keccak256(abi.encodePacked(a, b)));
@@ -800,6 +812,7 @@ library OneStepProof {
     uint8 internal constant OP_ADDMOD = 0x08;
     uint8 internal constant OP_MULMOD = 0x09;
     uint8 internal constant OP_EXP = 0x0a;
+    uint8 internal constant OP_SIGNEXTEND = 0x0b;
 
     // Comparison & bitwise logic
     uint8 internal constant OP_LT = 0x10;
@@ -813,7 +826,9 @@ library OneStepProof {
     uint8 internal constant OP_XOR = 0x18;
     uint8 internal constant OP_NOT = 0x19;
     uint8 internal constant OP_BYTE = 0x1a;
-    uint8 internal constant OP_SIGNEXTEND = 0x1b;
+    uint8 internal constant OP_SHL = 0x1b;
+    uint8 internal constant OP_SHR = 0x1c;
+    uint8 internal constant OP_SAR = 0x1d;
 
     // SHA3
     uint8 internal constant OP_HASH = 0x20;
@@ -905,6 +920,8 @@ library OneStepProof {
             return (3, 0, 4, executeMathModInsn);
         } else if (opCode == OP_EXP) {
             return (2, 0, 25, binaryMathOp);
+        } else if (opCode == OP_SIGNEXTEND) {
+            return (2, 0, 7, binaryMathOp);
         } else if (opCode == OP_LT) {
             return (2, 0, 2, binaryMathOp);
         } else if (opCode == OP_GT) {
@@ -927,8 +944,12 @@ library OneStepProof {
             return (1, 0, 1, executeNotInsn);
         } else if (opCode == OP_BYTE) {
             return (2, 0, 4, binaryMathOp);
-        } else if (opCode == OP_SIGNEXTEND) {
-            return (2, 0, 7, binaryMathOp);
+        } else if (opCode == OP_SHL) {
+            return (2, 0, 4, binaryMathOp);
+        } else if (opCode == OP_SHR) {
+            return (2, 0, 4, binaryMathOp);
+        } else if (opCode == OP_SAR) {
+            return (2, 0, 4, binaryMathOp);
         } else if (opCode == OP_HASH) {
             return (1, 0, 7, executeHashInsn);
         } else if (opCode == OP_TYPE) {
