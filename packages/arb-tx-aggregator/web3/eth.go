@@ -76,12 +76,12 @@ func (s *Server) GetBalance(r *http.Request, args *AccountInfoArgs, reply *strin
 	return nil
 }
 
-func makeCallOpts(ctx context.Context, num rpc.BlockNumber, from common.Address) *bind.CallOpts {
+func makeCallOpts(ctx context.Context, num *rpc.BlockNumber, from common.Address) *bind.CallOpts {
 	pending := false
 	var blockNum *big.Int
-	if num == rpc.PendingBlockNumber {
+	if *num == rpc.PendingBlockNumber {
 		pending = true
-	} else if num != rpc.LatestBlockNumber {
+	} else if *num != rpc.LatestBlockNumber {
 		blockNum = big.NewInt(num.Int64())
 	}
 	return &bind.CallOpts{
@@ -100,12 +100,13 @@ func (s *Server) GetTransactionCount(r *http.Request, args *AccountInfoArgs, rep
 	if err != nil {
 		return err
 	}
+	txCount = txCount.Add(txCount, new(big.Int).SetUint64(s.srv.PendingTransactionCount(arbcommon.NewAddressFromEth(*args.Address))))
 	*reply = "0x" + txCount.Text(16)
 	return nil
 }
 
 func (s *Server) GetCode(r *http.Request, args *AccountInfoArgs, reply *string) error {
-	height, err := s.blockNum(r.Context(), &args.BlockNum)
+	height, err := s.blockNumRestrictLatest(r.Context(), args.BlockNum)
 	if err != nil {
 		return err
 	}
@@ -117,18 +118,42 @@ func (s *Server) GetCode(r *http.Request, args *AccountInfoArgs, reply *string) 
 	return nil
 }
 
-func (s *Server) blockNum(ctx context.Context, block *rpc.BlockNumber) (uint64, error) {
-	if *block == rpc.LatestBlockNumber {
-		return s.srv.GetBlockCount(ctx)
+func (s *Server) blockNumRestrictLatest(ctx context.Context, block *rpc.BlockNumber) (uint64, error) {
+	if block == nil || *block == rpc.PendingBlockNumber {
+		latest := rpc.LatestBlockNumber
+		block = &latest
+	}
+	height, err := s.blockNum(ctx, block)
+	if err != nil {
+		return 0, err
+	}
+	if height != nil {
+		return *height, nil
+	}
+	latest := rpc.LatestBlockNumber
+	height, err = s.blockNum(ctx, &latest)
+	if err != nil {
+		return 0, err
+	}
+	return *height, nil
+}
+
+func (s *Server) blockNum(ctx context.Context, block *rpc.BlockNumber) (*uint64, error) {
+	if block == nil || *block == rpc.PendingBlockNumber {
+		return nil, nil
+	} else if *block == rpc.LatestBlockNumber {
+		count, err := s.srv.GetBlockCount(ctx)
+		return &count, err
 	} else if *block >= 0 {
-		return uint64(*block), nil
+		count := uint64(*block)
+		return &count, nil
 	} else {
-		return 0, errors.New("unsupported block num")
+		return nil, errors.New("unsupported block num")
 	}
 }
 
 func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, reply *GetBlockResult) error {
-	height, err := s.blockNum(r.Context(), args.BlockNum)
+	height, err := s.blockNumRestrictLatest(r.Context(), args.BlockNum)
 	if err != nil {
 		return err
 	}
@@ -325,7 +350,7 @@ func (s *Server) GetTransactionByHash(r *http.Request, args *GetTransactionRecei
 func (s *Server) GetLogs(r *http.Request, args *GetLogsArgs, reply *[]LogResult) error {
 	var fromHeight *uint64
 	if args.FromBlock != nil {
-		from, err := s.blockNum(r.Context(), args.FromBlock)
+		from, err := s.blockNumRestrictLatest(r.Context(), args.FromBlock)
 		if err != nil {
 			return err
 		}
@@ -334,7 +359,7 @@ func (s *Server) GetLogs(r *http.Request, args *GetLogsArgs, reply *[]LogResult)
 
 	var toHeight *uint64
 	if args.ToBlock != nil {
-		to, err := s.blockNum(r.Context(), args.ToBlock)
+		to, err := s.blockNumRestrictLatest(r.Context(), args.ToBlock)
 		if err != nil {
 			return err
 		}

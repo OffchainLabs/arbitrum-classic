@@ -66,6 +66,10 @@ func NewServer(
 	}
 }
 
+func (m *Server) PendingTransactionCount(account common.Address) uint64 {
+	return m.batch.PendingTransactionCount(account)
+}
+
 // SendTransaction takes a request signed transaction l2message from a client
 // and puts it in a queue to be included in the next transaction batch
 func (m *Server) SendTransaction(_ context.Context, tx *types.Transaction) (common.Hash, error) {

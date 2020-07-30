@@ -70,18 +70,18 @@ func (con *globalInbox) SendL2Message(ctx context.Context, chain common.Address,
 	return arbbridge.MessageDeliveredEvent{}, errors.New("Didn't output l2message delivered event")
 }
 
-func (con *globalInbox) SendL2MessageNoWait(ctx context.Context, chain common.Address, data []byte) error {
+func (con *globalInbox) SendL2MessageNoWait(ctx context.Context, chain common.Address, data []byte) (common.Hash, error) {
 	con.auth.Lock()
 	defer con.auth.Unlock()
-	_, err := con.GlobalInbox.SendL2MessageFromOrigin(
+	tx, err := con.GlobalInbox.SendL2MessageFromOrigin(
 		con.auth.getAuth(ctx),
 		chain.ToEthAddress(),
 		data,
 	)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
-	return err
+	return common.NewHashFromEth(tx.Hash()), nil
 }
 
 func (con *globalInbox) DepositEthMessage(
