@@ -49,8 +49,9 @@ void bitwiseXor(MachineState& m);
 void bitwiseNot(MachineState& m);
 void byte(MachineState& m);
 void shl(MachineState& m);
-void shr(MachineState& m) void sar(MachineState& m) void hashOp(
-    MachineState& m);
+void shr(MachineState& m);
+void sar(MachineState& m);
+void hashOp(MachineState& m);
 void typeOp(MachineState& m);
 void ethhash2Op(MachineState& m);
 void keccakF(MachineState& m);
