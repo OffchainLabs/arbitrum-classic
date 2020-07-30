@@ -421,6 +421,9 @@ TEST_CASE("SIGNEXTEND opcode is correct") {
     SECTION("test8") {
         testBinaryOp(2_u256, 65537_u256, 65537_u256, OpCode::SIGNEXTEND);
     }
+    SECTION("test9") {
+        testBinaryOp(50_u256, 254_u256, 254_u256, OpCode::SIGNEXTEND);
+    }
 }
 
 TEST_CASE("HASH opcode is correct") {
