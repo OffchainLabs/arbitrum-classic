@@ -132,11 +132,11 @@ contract GlobalInbox is
             L2_CONTRACT_PAIR,
             msg.sender,
             abi.encodePacked(
-                bytes1(uint8(1)),
-                bytes32(uint256(10000000000)),
-                bytes32(uint256(0)),
+                uint8(1),
+                uint256(1000000000),
+                uint256(0),
                 bytes32(bytes20(address(0))),
-                bytes32(uint256(0)),
+                uint256(0),
                 contractData
             )
         );
