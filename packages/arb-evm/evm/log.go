@@ -179,8 +179,8 @@ func LogStackToLogs(val value.Value) ([]Log, error) {
 
 func LogsToLogStack(logs []Log) value.TupleValue {
 	logValues := make([]value.Value, 0, len(logs))
-	for _, log := range logs {
-		logValues = append(logValues, log.AsValue())
+	for i := range logs {
+		logValues = append(logValues, logs[len(logs)-1-i].AsValue())
 	}
 	return message.ListToStackValue(logValues)
 }
