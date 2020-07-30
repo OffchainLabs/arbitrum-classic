@@ -69,6 +69,8 @@ type InboxMessage struct {
 
 func NewInboxMessage(msg Message, sender common.Address, inboxSeqNum *big.Int, time ChainTime) InboxMessage {
 	log.Println("NewInboxMessage----------------------==========")
+	log.Println("msg.Type(): ", msg.Type())
+	log.Println("msg.Data(): ", msg.AsData())
 	return InboxMessage{
 		Kind:        msg.Type(),
 		Sender:      sender,
@@ -222,6 +224,8 @@ type BuddyDeployment struct {
 }
 
 func NewBuddyDeployMessage(data []byte) BuddyDeployment {
+	log.Println("NewBuddyDeployMessage----------------------==========")
+	log.Println("data: ", data)
 	return BuddyDeployment{
 		MaxGas:      big.NewInt(10000000000),
 		GasPrice:    big.NewInt(0),
@@ -236,14 +240,15 @@ func (b BuddyDeployment) Type() Type {
 }
 
 func (b BuddyDeployment) AsData() []byte {
-	var typeCode byte = 1
 	ret := make([]byte, 0)
-	ret = append(ret, typeCode)
+	ret = append(ret, byte(1))
 	ret = append(ret, math.U256Bytes(b.MaxGas)...)
 	ret = append(ret, math.U256Bytes(b.GasPrice)...)
 	ret = append(ret, addressData(b.DestAddress)...)
 	ret = append(ret, math.U256Bytes(b.Payment)...)
 	ret = append(ret, b.Data...)
+	log.Println("Buddy AsData()----------------------==========")
+	log.Println("data: ", ret)
 	return ret
 }
 

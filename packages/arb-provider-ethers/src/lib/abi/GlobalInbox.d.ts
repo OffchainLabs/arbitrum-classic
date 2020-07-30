@@ -138,6 +138,10 @@ interface GlobalInboxInterface extends Interface {
       encodeTopics([sender, data]: [string | null, null]): string[]
     }>
 
+    BuddyContractPair: TypedEventDescription<{
+      encodeTopics([sender, data]: [string | null, null]): string[]
+    }>
+
     MessageDelivered: TypedEventDescription<{
       encodeTopics([chain, kind, sender, inboxSeqNum, data]: [
         string | null,
@@ -420,6 +424,8 @@ export class GlobalInbox extends Contract {
 
   filters: {
     BuddyContractDeployed(sender: string | null, data: null): EventFilter
+
+    BuddyContractPair(sender: string | null, data: null): EventFilter
 
     MessageDelivered(
       chain: string | null,

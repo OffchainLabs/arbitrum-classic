@@ -213,7 +213,7 @@ func (gi *globalInboxWatcher) processLog(
 		}
 		log.Println("processLog--------------")
 		log.Println("val.Kind: ", val.Kind)
-		log.Println("val.Data: ", val.Data)
+		//log.Println("val.Data: ", val.Data)
 		log.Println("val.Sender: ", common.NewAddressFromEth(val.Sender))
 		eventRet := arbbridge.MessageDeliveredEvent{
 			ChainInfo: chainInfo,
