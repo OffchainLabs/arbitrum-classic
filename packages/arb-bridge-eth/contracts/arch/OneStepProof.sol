@@ -296,11 +296,11 @@ library OneStepProof {
             }
         } else if (context.opcode == OP_BYTE) {
             assembly {
-                c := byte(b, a)
+                c := byte(a, b)
             }
         } else if (context.opcode == OP_SIGNEXTEND) {
             assembly {
-                c := signextend(b, a)
+                c := signextend(a, b)
             }
         } else if (context.opcode == OP_ETHHASH2) {
             c = uint256(keccak256(abi.encodePacked(a, b)));

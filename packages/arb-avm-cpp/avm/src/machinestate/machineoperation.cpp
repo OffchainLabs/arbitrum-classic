@@ -299,12 +299,12 @@ void byte(MachineState& m) {
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
 
-    if (bNum >= 32) {
+    if (aNum >= 32) {
         m.stack[1] = 0;
     } else {
-        const auto shift = 256 - 8 - 8 * shrink<uint8_t>(bNum);
+        const auto shift = 256 - 8 - 8 * shrink<uint8_t>(aNum);
         const auto mask = uint256_t(255) << shift;
-        m.stack[1] = (aNum & mask) >> shift;
+        m.stack[1] = (bNum & mask) >> shift;
     }
     m.stack.popClear();
     ++m.pc;
@@ -315,14 +315,14 @@ void signExtend(MachineState& m) {
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
 
-    if (bNum >= 32) {
+    if (aNum >= 32) {
         m.stack[1] = m.stack[0];
     } else {
-        auto idx = 8 * narrow_cast<uint8_t>(bNum) + 7;
-        auto sign = narrow_cast<uint8_t>((aNum >> idx) & 1);
+        auto idx = 8 * narrow_cast<uint8_t>(aNum) + 7;
+        auto sign = narrow_cast<uint8_t>((bNum >> idx) & 1);
         constexpr auto zero = uint256_t{0};
         auto mask = ~zero >> (256 - idx);
-        m.stack[1] = ((sign ? ~zero : zero) << idx) | (aNum & mask);
+        m.stack[1] = ((sign ? ~zero : zero) << idx) | (bNum & mask);
     }
     m.stack.popClear();
     ++m.pc;
