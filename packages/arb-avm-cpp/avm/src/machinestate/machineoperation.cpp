@@ -351,7 +351,7 @@ void sar(MachineState& m) {
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
 
-    if ((bNum & uint256_t{1} << 255) == 0) {
+    if ((bNum & (uint256_t{1} << 255)) == 0) {
         shr(m);
         return;
     }
