@@ -27,6 +27,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	errors2 "github.com/pkg/errors"
+	"log"
 	"math/big"
 )
 
@@ -96,6 +97,8 @@ func (r *Result) ToEthReceipt(blockHash common.Hash) (*types.Receipt, error) {
 	status := uint64(0)
 	if r.ResultCode == ReturnCode {
 		status = 1
+	} else {
+		log.Println("Transaction failed", r.ResultCode, string(r.ReturnData))
 	}
 
 	evmLogs := make([]*types.Log, 0, len(r.EVMLogs))

@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"log"
 	"math"
 	"math/big"
@@ -45,7 +46,15 @@ func main() {
 	//	panic(err)
 	//}
 
-	if err := testMessages(filename, "contract.mexe"); err != nil {
+	//if err := getMessages(
+	//	"http://localhost:7545",
+	//	common.HexToAddress("0xc68DCee7b8cA57F41D1A417103CB65836E99e013"),
+	//	filename,
+	//); err != nil {
+	//	panic(err)
+	//}
+
+	if err := testMessages(filename, arbos.Path()); err != nil {
 		panic(err)
 	}
 }
@@ -102,6 +111,7 @@ func printL2Message(tx []byte) error {
 		//}
 
 		log.Println("SignedTransaction", ethTx.Hash().Hex()) // , "from", sender.Hex()
+		log.Println("tx:", l2message.NewSignedTransactionFromEth(ethTx))
 		//log.Println(msg)
 	default:
 		log.Printf("Input: %T\n", msg)
@@ -120,45 +130,45 @@ func testMessages(filename string, contract string) error {
 		return err
 	}
 
-	for _, msg := range messages {
-		inbox := value.NewEmptyTuple()
-		inbox = value.NewTuple2(inbox, msg.AsValue())
-		assertion, _ := mach.ExecuteAssertion(100000000000, inbox, 0)
-		log.Println("Ran assertion", assertion.NumGas)
-	}
-
-	//inbox := value.NewEmptyTuple()
 	//for _, msg := range messages {
-	//	nested, err := msg.NestedMessage()
-	//	if err != nil {
-	//		return err
-	//	}
-	//	if tx, ok := nested.(message.L2Message); ok {
-	//		if err := printL2Message(tx.Data); err != nil {
-	//			return err
-	//		}
-	//	} else {
-	//		log.Printf("Input %T: %v from %v\n", nested, nested, msg.Sender)
-	//	}
+	//	inbox := value.NewEmptyTuple()
 	//	inbox = value.NewTuple2(inbox, msg.AsValue())
+	//	assertion, _ := mach.ExecuteAssertion(100000000000, inbox, 0)
+	//	log.Println("Ran assertion", assertion.NumGas)
+	//}
 
+	inbox := value.NewEmptyTuple()
+	for _, msg := range messages {
+		nested, err := msg.NestedMessage()
+		if err != nil {
+			return err
+		}
+		if tx, ok := nested.(message.L2Message); ok {
+			if err := printL2Message(tx.Data); err != nil {
+				return err
+			}
+		} else {
+			log.Printf("Input %T: %v from %v\n", nested, nested, msg.Sender)
+		}
+		inbox = value.NewTuple2(inbox, msg.AsValue())
+	}
+	assertion, steps := mach.ExecuteAssertion(100000000000, inbox, 0)
+	log.Println("Ran for", steps, assertion.NumGas)
+	//testData, err := value.TestVectorJSON(inbox, assertion.ParseLogs(), assertion.ParseOutMessages())
+	//if err != nil {
+	//	return err
 	//}
-	//assertion, steps := mach.ExecuteAssertion(100000000000, inbox, 0)
-	//log.Println("Ran for", steps, assertion.NumGas)
-	////testData, err := value.TestVectorJSON(inbox, assertion.ParseLogs(), assertion.ParseOutMessages())
-	////if err != nil {
-	////	return err
-	////}
-	////log.Println(string(testData))
-	//logs := assertion.ParseLogs()
-	//log.Println("Had logs", len(logs))
-	//for _, avmLog := range logs {
-	//	res, err := evm.NewResultFromValue(avmLog)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	log.Println("Got res", res.ResultCode, res.GasUsed, res.L1Message.Sender, res.L1Message.MessageID())
-	//}
+	//log.Println(string(testData))
+	logs := assertion.ParseLogs()
+	log.Println("Had logs", len(logs))
+	for _, avmLog := range logs {
+		res, err := evm.NewResultFromValue(avmLog)
+		if err != nil {
+			return err
+		}
+		log.Println("Got res", res.ResultCode, res.GasUsed, res.L1Message.Sender, res.L1Message.MessageID())
+		log.Println("Res had logs", res.EVMLogs)
+	}
 	return nil
 }
 
