@@ -166,8 +166,9 @@ func LogStackToLogs(val value.Value) ([]Log, error) {
 		return nil, errors2.Wrap(err, "log stack was not a stack")
 	}
 	logs := make([]Log, 0, len(logValues))
-	for _, logVal := range logValues {
-		log, err := NewLogFromValue(logVal)
+	for i := range logValues {
+		// Flip the order of the logs
+		log, err := NewLogFromValue(logValues[len(logValues)-1-i])
 		if err != nil {
 			return nil, err
 		}
