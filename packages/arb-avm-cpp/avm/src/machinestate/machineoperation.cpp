@@ -199,7 +199,7 @@ void signExtend(MachineState& m) {
         auto sign_mask = uint256_t{1} << sign_bit;
         auto value_mask = sign_mask - 1;
         auto is_neg = (bNum & sign_mask) != 0;
-        m.stack[1] = is_neg ? aNum | ~value_mask : aNum & value_mask;
+        m.stack[1] = is_neg ? bNum | ~value_mask : bNum & value_mask;
     }
     m.stack.popClear();
     ++m.pc;
