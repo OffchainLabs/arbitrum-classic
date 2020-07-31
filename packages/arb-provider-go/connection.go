@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	errors2 "github.com/pkg/errors"
+	"log"
 	"math/big"
 	"sync"
 	"time"
@@ -87,8 +88,11 @@ func processCallRet(retValue value.Value) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if logVal.ResultCode != evm.ReturnCode {
-		return nil, fmt.Errorf("call reverted %v", logVal)
+	if logVal.ResultCode != evm.ReturnCode && logVal.ResultCode != evm.RevertCode {
+		return nil, fmt.Errorf("call failed %v", logVal)
+	}
+	if logVal.ResultCode == evm.RevertCode {
+		log.Println("Call failed with message", string(logVal.ReturnData))
 	}
 	return logVal.ReturnData, nil
 }

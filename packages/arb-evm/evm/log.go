@@ -166,8 +166,9 @@ func LogStackToLogs(val value.Value) ([]Log, error) {
 		return nil, errors2.Wrap(err, "log stack was not a stack")
 	}
 	logs := make([]Log, 0, len(logValues))
-	for _, logVal := range logValues {
-		log, err := NewLogFromValue(logVal)
+	for i := range logValues {
+		// Flip the order of the logs
+		log, err := NewLogFromValue(logValues[len(logValues)-1-i])
 		if err != nil {
 			return nil, err
 		}
@@ -178,8 +179,8 @@ func LogStackToLogs(val value.Value) ([]Log, error) {
 
 func LogsToLogStack(logs []Log) value.TupleValue {
 	logValues := make([]value.Value, 0, len(logs))
-	for _, log := range logs {
-		logValues = append(logValues, log.AsValue())
+	for i := range logs {
+		logValues = append(logValues, logs[len(logs)-1-i].AsValue())
 	}
 	return message.ListToStackValue(logValues)
 }

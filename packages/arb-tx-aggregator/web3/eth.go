@@ -146,8 +146,6 @@ func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, r
 		}
 		reply.Header = *header
 	}
-	data, _ := json.Marshal(reply)
-	log.Println("GetBlockByNumber", string(data))
 	return nil
 }
 
@@ -354,6 +352,7 @@ func (s *Server) GetLogs(r *http.Request, args *GetLogsArgs, reply *[]LogResult)
 			BlockHash:        &blockHash,
 			BlockNumber:      &blockNum,
 			Address:          evmLog.Address.Hex(),
+			Data:             hexutil.Encode(evmLog.Data),
 			Topics:           arbcommon.NewEthHashesFromHashes(evmLog.Topics),
 		})
 	}

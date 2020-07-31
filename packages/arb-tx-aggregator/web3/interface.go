@@ -121,6 +121,7 @@ type LogResult struct {
 	BlockHash        *common.Hash  `json:"blockHash"`
 	BlockNumber      *string       `json:"blockNumber"`
 	Address          string        `json:"address"`
+	Data             string        `json:"data"`
 	Topics           []common.Hash `json:"topics"`
 }
 
