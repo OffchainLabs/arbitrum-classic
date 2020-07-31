@@ -162,8 +162,8 @@ func (c *CodecRequest) ReadRequest(args interface{}) error {
 			c.request.Method != "eth_getBalance" &&
 			c.request.Method != "eth_sendRawTransaction" &&
 			c.request.Method != "eth_estimateGas" {
-			raw, _ := c.request.Params.MarshalJSON()
-			log.Println("Got request", c.request.Method, string(raw))
+			//raw, _ := c.request.Params.MarshalJSON()
+			//log.Println("Got request", c.request.Method, string(raw))
 		}
 
 		// Note: if c.request.Params is nil it's not an error, it's an optional member.

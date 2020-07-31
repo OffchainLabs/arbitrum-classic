@@ -2,7 +2,6 @@ package web3
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -245,8 +244,8 @@ func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionRece
 		BlockNumber:       receipt.BlockNumber,
 		TransactionIndex:  receipt.TransactionIndex,
 	}
-	data, _ := json.Marshal(reply)
-	log.Println("GetTransactionReceipt", string(data))
+	//data, _ := json.Marshal(reply)
+	//log.Println("GetTransactionReceipt", string(data))
 	return nil
 }
 
@@ -299,8 +298,8 @@ func (s *Server) GetTransactionByHash(r *http.Request, args *GetTransactionRecei
 		S:                hexutil.EncodeBig(sVal),
 	}
 
-	data, _ := json.Marshal(reply)
-	log.Println("GetTransactionByHash", string(data))
+	//data, _ := json.Marshal(reply)
+	//log.Println("GetTransactionByHash", string(data))
 	return nil
 }
 
