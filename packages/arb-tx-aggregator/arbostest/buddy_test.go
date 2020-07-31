@@ -18,6 +18,7 @@ package arbostest
 
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
 	"log"
 	"math/big"
@@ -37,20 +38,24 @@ func TestBuddyContract(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//pointsConstructorData, err := hexutil.Decode(SubredditPointsV0Bin)
+	//erc20ABI, err := abi.JSON(strings.NewReader(ArbERC20ABI))
 	//if err != nil {
 	//	t.Fatal(err)
 	//}
 
-	//distABI, err := abi.JSON(strings.NewReader(BuddyERC20ABI))
+	//getNameABI := erc20ABI.Methods["name"]
+	//getNameSignature, err := hexutil.Decode("0x06fdde03")
 	//if err != nil {
 	//	t.Fatal(err)
 	//}
 	//
-	//initializeBuddyContractABI := distABI.Methods["initialize"]
-	//instantiateContractSignature, err := hexutil.Decode("0x1c2a2551")
-	//if err != nil {
-	//	t.Fatal(err)
+	//generateTx := l2message.Transaction{
+	//	MaxGas:      big.NewInt(1000000000),
+	//	GasPriceBid: big.NewInt(0),
+	//	SequenceNum: big.NewInt(1),
+	//	DestAddress: fibAddress,
+	//	Payment:     big.NewInt(300),
+	//	Data:        append(generateSignature, generateFibData...),
 	//}
 
 	chainTime := message.ChainTime{
@@ -58,9 +63,6 @@ func TestBuddyContract(t *testing.T) {
 		Timestamp: big.NewInt(0),
 	}
 	addr := common.Address{1, 2, 3, 4, 5}
-
-	//chainAddress := common.HexToAddress("0xba59937520bd4c1067bac24fb774b981b4b8c115")
-	//inboxAddress := common.HexToAddress("0x93fe8c8771c698af5a59a9a049ed02f2c71fefc4")
 
 	//initializeBuddyContractData, err := initializeBuddyContractABI.Inputs.Pack(chainAddress, inboxAddress)
 	//if err != nil {
@@ -102,6 +104,8 @@ func TestBuddyContract(t *testing.T) {
 		chainTime,
 	)
 
+	//buddyContractAddress := common.HexToAddress("0x4ee09d87c0112181f1aa950e259a3e2d3bbd7e49")
+
 	inbox = value.NewTuple2(inbox, buddyMsg.AsValue())
 
 	//inbox = value.NewTuple2(inbox, message.NewInboxMessage(
@@ -138,25 +142,31 @@ func TestBuddyContract(t *testing.T) {
 	t.Log(string(data))
 
 	logs := assertion.ParseLogs()
-	log.Println("Assertion had", len(logs), "logs")
+	if len(logs) != 1 {
+		t.Fatal("unexpected log count", len(logs))
+	}
 
-	//for _, logVal := range assertion.ParseLogs() {
-	//	res, err := evm.NewResultFromValue(logVal)
-	//	if err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	if res.ResultCode != evm.ReturnCode {
-	//		t.Error("tx failed", res.ResultCode)
-	//	}
-	//	log.Println("ReturnData", hexutil.Encode(res.ReturnData))
-	//	if res.L1Message.Kind == message.L2Type {
-	//		l2, err := l2message.NewL2MessageFromData(res.L1Message.Data)
-	//		if err != nil {
-	//			t.Fatal(err)
-	//		}
-	//		log.Println(l2)
-	//	}
-	//
-	//}
+	sends := assertion.ParseOutMessages()
+	if len(sends) != 1 {
+		t.Fatal("unexpected send count", len(sends))
+	}
+
+	t.Log("send", sends[0])
+
+	for _, logVal := range assertion.ParseLogs() {
+		res, err := evm.NewResultFromValue(logVal)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.ResultCode != evm.ReturnCode {
+			t.Error("tx failed", res.ResultCode)
+		}
+		log.Println("ReturnData", hexutil.Encode(res.ReturnData))
+		//if res.L1Message.Kind == message.L2Type {
+		//	l2, err := l2message.NewL2MessageFromData(res.L1Message.Data)
+		//	if err != nil {
+		//		t.Fatal(err)
+		//	}
+		//}
+	}
 }
