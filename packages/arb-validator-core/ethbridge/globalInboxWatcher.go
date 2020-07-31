@@ -180,7 +180,6 @@ func (gi *globalInboxWatcher) parseMessageFromOrigin(evmLog types.Log, timestamp
 	if err != nil {
 		return arbbridge.MessageDeliveredEvent{}, err
 	}
-	log.Println("parseMessageFromOrigin ----------------------")
 	return arbbridge.MessageDeliveredEvent{
 		ChainInfo: getLogChainInfo(evmLog),
 		Message: message.InboxMessage{
@@ -211,10 +210,6 @@ func (gi *globalInboxWatcher) processLog(
 		if err != nil {
 			return arbbridge.MessageDeliveredEvent{}, err
 		}
-		log.Println("processLog--------------")
-		log.Println("val.Kind: ", val.Kind)
-		//log.Println("val.Data: ", val.Data)
-		log.Println("val.Sender: ", common.NewAddressFromEth(val.Sender))
 		eventRet := arbbridge.MessageDeliveredEvent{
 			ChainInfo: chainInfo,
 			Message: message.InboxMessage{

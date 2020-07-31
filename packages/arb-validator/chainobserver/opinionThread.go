@@ -236,11 +236,6 @@ func (chain *ChainObserver) prepareAssertion(maxValidBlock *common.BlockId) (*ch
 
 	inbox, _ := chain.Inbox.GenerateVMInbox(beforeInboxTop, newMessageCount.Uint64())
 	messagesVal := inbox.AsValue()
-	log.Println("inboxxxxxxxxxxx")
-	log.Println(inbox.AsValue())
-	//for _, _ := range inbox.AsValue() {
-	//
-	//}
 
 	mach := currentOpinion.Machine().Clone()
 	maxSteps := chain.NodeGraph.Params().MaxExecutionSteps

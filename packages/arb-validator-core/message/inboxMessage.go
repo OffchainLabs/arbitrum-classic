@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	errors2 "github.com/pkg/errors"
-	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/math"
@@ -68,9 +67,6 @@ type InboxMessage struct {
 }
 
 func NewInboxMessage(msg Message, sender common.Address, inboxSeqNum *big.Int, time ChainTime) InboxMessage {
-	log.Println("NewInboxMessage----------------------==========")
-	log.Println("msg.Type(): ", msg.Type())
-	log.Println("msg.Data(): ", msg.AsData())
 	return InboxMessage{
 		Kind:        msg.Type(),
 		Sender:      sender,
@@ -148,7 +144,6 @@ func NewRandomInboxMessage(msg Message) InboxMessage {
 }
 
 func (im InboxMessage) String() string {
-	log.Println("inside String()")
 	nested, err := im.NestedMessage()
 	nestedStr := "invalid"
 	if err == nil {
