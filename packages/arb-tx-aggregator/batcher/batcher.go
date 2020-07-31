@@ -64,7 +64,7 @@ func NewBatcher(
 	}
 
 	go func() {
-		ticker := time.NewTicker(time.Second * 5)
+		ticker := time.NewTicker(time.Second * 10)
 		defer ticker.Stop()
 		for {
 			select {
