@@ -209,30 +209,14 @@ func (im InboxMessage) NestedMessage() (Message, error) {
 	case InitType:
 		return NewInitFromData(im.Data), nil
 	case L2BuddyDeploy:
-		return NewBuddyDeployMessage(im.Data), nil
+		return BuddyDeployment{Data: im.Data}, nil
 	default:
 		return nil, errors.New("unknown inbox l2message type")
 	}
 }
 
 type BuddyDeployment struct {
-	MaxGas      *big.Int
-	GasPrice    *big.Int
-	DestAddress common.Address
-	Payment     *big.Int
-	Data        []byte
-}
-
-func NewBuddyDeployMessage(data []byte) BuddyDeployment {
-	log.Println("NewBuddyDeployMessage----------------------==========")
-	log.Println("data: ", data)
-	return BuddyDeployment{
-		MaxGas:      big.NewInt(10000000000),
-		GasPrice:    big.NewInt(0),
-		DestAddress: common.Address{},
-		Payment:     big.NewInt(0),
-		Data:        data,
-	}
+	Data []byte
 }
 
 func (b BuddyDeployment) Type() Type {
@@ -240,16 +224,7 @@ func (b BuddyDeployment) Type() Type {
 }
 
 func (b BuddyDeployment) AsData() []byte {
-	ret := make([]byte, 0)
-	ret = append(ret, byte(1))
-	ret = append(ret, math.U256Bytes(b.MaxGas)...)
-	ret = append(ret, math.U256Bytes(b.GasPrice)...)
-	ret = append(ret, addressData(b.DestAddress)...)
-	ret = append(ret, math.U256Bytes(b.Payment)...)
-	ret = append(ret, b.Data...)
-	log.Println("Buddy AsData()----------------------==========")
-	log.Println("data: ", ret)
-	return ret
+	return b.Data
 }
 
 func (im InboxMessage) MessageID() common.Hash {
