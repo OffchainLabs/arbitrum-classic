@@ -333,6 +333,8 @@ func (vm *arbRollup) waitForReceipt(ctx context.Context, tx *types.Transaction, 
 		return nil, err
 	}
 
+	log.Println("Made tx with gas", methodName, "with", receipt.GasUsed, "gas")
+
 	events := make([]arbbridge.Event, 0, len(receipt.Logs))
 
 	for _, log := range receipt.Logs {

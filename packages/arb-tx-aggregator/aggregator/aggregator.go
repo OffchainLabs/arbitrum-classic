@@ -74,7 +74,7 @@ func NewServer(
 	return &Server{
 		client:      client,
 		chain:       rollupAddress,
-		batch:       batcher.NewBatcher(ctx, globalInbox, rollupAddress),
+		batch:       batcher.NewBatcher(ctx, client, globalInbox, rollupAddress),
 		db:          db,
 		maxCallTime: 0,
 		maxCallGas:  big.NewInt(100000000),

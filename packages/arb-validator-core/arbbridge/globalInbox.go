@@ -69,7 +69,7 @@ type GlobalInbox interface {
 		ctx context.Context,
 		chain common.Address,
 		data message.L2Message,
-	) error
+	) (common.Hash, error)
 
 	DepositEthMessage(
 		ctx context.Context,

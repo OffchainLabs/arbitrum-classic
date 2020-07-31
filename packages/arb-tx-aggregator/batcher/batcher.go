@@ -19,6 +19,8 @@ package batcher
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"log"
 	"sort"
@@ -40,6 +42,7 @@ type DecodedBatchTx struct {
 
 type Batcher struct {
 	rollupAddress common.Address
+	client        ethutils.EthClient
 	globalInbox   arbbridge.GlobalInbox
 
 	sync.Mutex
@@ -49,11 +52,13 @@ type Batcher struct {
 
 func NewBatcher(
 	ctx context.Context,
+	client ethutils.EthClient,
 	globalInbox arbbridge.GlobalInbox,
 	rollupAddress common.Address,
 ) *Batcher {
 	server := &Batcher{
 		rollupAddress: rollupAddress,
+		client:        client,
 		globalInbox:   globalInbox,
 		valid:         true,
 	}
@@ -123,11 +128,20 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 
 	log.Println("Submitting batch with", len(txes), "transactions")
 
-	err := m.globalInbox.SendL2MessageNoWait(
+	txHash, err := m.globalInbox.SendL2MessageNoWait(
 		ctx,
 		m.rollupAddress,
 		message.L2Message{Data: l2message.L2MessageAsData(prepareTransactions(txes))},
 	)
+
+	go func() {
+		receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, m.client, txHash.ToEthHash())
+		if err != nil {
+			log.Println(err)
+		} else {
+			log.Println("batch GasUsed", receipt.GasUsed)
+		}
+	}()
 
 	m.Lock()
 	if err != nil {
