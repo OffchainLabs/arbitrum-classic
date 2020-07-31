@@ -313,7 +313,7 @@ func (txdb *TxDB) addAssertion(assertion *protocol.ExecutionAssertion, numSteps 
 			continue
 		}
 
-		log.Println("Got result for", res.L1Message.MessageID(), res.ResultCode)
+		log.Println("Got result for", res.L1Message.MessageID(), res.ResultCode, "with gas used", res.GasUsed)
 
 		if err := txdb.as.SaveRequest(res.L1Message.MessageID(), logIndex); err != nil {
 			return err
