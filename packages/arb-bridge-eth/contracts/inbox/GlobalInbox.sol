@@ -188,34 +188,11 @@ contract GlobalInbox is
         address to,
         uint256 value
     ) external {
-        depositERC20(erc20, chain, value);
-        _deliverMessage(
-            chain,
-            ERC20_TRANSFER,
-            msg.sender,
-            abi.encodePacked(
-                bytes32(bytes20(erc20)),
-                bytes32(bytes20(to)),
-                value
-            )
-        );
-    }
-
-    /**
-     * @notice Deposits an ERC20 token into a given Arbitrum Rollup chain
-     * @dev This method requires approving this contract for transfers
-     * @param chain Address of the rollup chain that the token is deposited into
-     * @param erc20 L1 address of the token being deposited
-     * @param to Address on the rollup chain that will receive the tokens
-     * @param value Quantity of tokens being deposited
-     */
-    function depositPairedERC20Message(
-        address chain,
-        address erc20,
-        address to,
-        uint256 value
-    ) external {
-        depositPairedERC20(erc20, chain, value);
+        if (isPairedContract(erc20, chain)) {
+            depositPairedERC20(erc20, chain, value);
+        } else {
+            depositERC20(erc20, chain, value);
+        }
         _deliverMessage(
             chain,
             ERC20_TRANSFER,
