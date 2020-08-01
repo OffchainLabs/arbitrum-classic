@@ -7,7 +7,6 @@ package web3
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/gorilla/rpc/v2/json2"
