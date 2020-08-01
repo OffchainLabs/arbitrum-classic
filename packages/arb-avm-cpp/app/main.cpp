@@ -60,24 +60,34 @@ int main(int argc, char* argv[]) {
     }();
 
     Tuple inbox;
-    if (argc == 5 && std::string(argv[3]) == "--inbox") {
-        std::ifstream file(argv[4], std::ios::binary);
-        if (!file.is_open()) {
-            throw std::runtime_error("Couldn't open file");
+    if (argc == 5) {
+        if (std::string(argv[3]) == "--inbox") {
+            std::ifstream file(argv[4], std::ios::binary);
+            if (!file.is_open()) {
+                throw std::runtime_error("Couldn't open file");
+            }
+            std::vector<unsigned char> raw_inbox(
+                (std::istreambuf_iterator<char>(file)),
+                std::istreambuf_iterator<char>());
+            auto data = reinterpret_cast<const char*>(raw_inbox.data());
+            auto inboxVal = deserialize_value(data, mach.getPool());
+            inbox = nonstd::get<Tuple>(inboxVal);
+        } else if (std::string(argv[3]) == "--json-inbox") {
+            std::ifstream file(argv[4], std::ios::binary);
+            nlohmann::json j;
+            file >> j;
+            inbox = nonstd::get<Tuple>(
+                simple_value_from_json(j["inbox"], mach.getPool()));
         }
-        std::vector<unsigned char> raw_inbox(
-            (std::istreambuf_iterator<char>(file)),
-            std::istreambuf_iterator<char>());
-        auto data = reinterpret_cast<const char*>(raw_inbox.data());
-        auto inboxVal = deserialize_value(data, mach.getPool());
-        inbox = nonstd::get<Tuple>(inboxVal);
     }
 
-    auto assertionBase = mach.run(100000000, Tuple(), std::chrono::seconds(0));
+    //    auto assertionBase = mach.run(100000000, Tuple(),
+    //    std::chrono::seconds(0));
 
     auto assertion = mach.run(100000000, inbox, std::chrono::seconds(0));
 
-    std::cout << "Ran " << assertion.stepCount << " ending in state "
-              << static_cast<int>(mach.currentStatus()) << "\n";
+    std::cout << "Ran " << assertion.stepCount << " " << assertion.gasCount
+              << " ending in state " << static_cast<int>(mach.currentStatus())
+              << "\n";
     return 0;
 }
