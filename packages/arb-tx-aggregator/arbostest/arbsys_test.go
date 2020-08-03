@@ -17,21 +17,23 @@
 package arbostest
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"log"
 	"math/big"
 	"strings"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 func TestTransactionCount(t *testing.T) {
@@ -100,7 +102,7 @@ func TestTransactionCount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	generateTx := l2message.Transaction{
+	generateTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
@@ -126,7 +128,7 @@ func TestWithdrawEth(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	chainTime := message.ChainTime{
+	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
@@ -134,7 +136,7 @@ func TestWithdrawEth(t *testing.T) {
 	addr := common.RandAddress()
 	chain := common.RandAddress()
 
-	inbox := value.NewEmptyTuple()
+	inboxMessages := make([]inbox.InboxMessage, 0)
 
 	initMsg := message.Init{
 		ChainParams: valprotocol.ChainParams{
@@ -146,21 +148,21 @@ func TestWithdrawEth(t *testing.T) {
 		Owner:       common.Address{},
 		ExtraConfig: []byte{},
 	}
-	inbox = value.NewTuple2(inbox, message.NewInboxMessage(initMsg, chain, big.NewInt(0), chainTime).AsValue())
+	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg, chain, big.NewInt(0), chainTime))
 
 	depositMsg := message.Eth{
 		Dest:  addr,
 		Value: big.NewInt(10000),
 	}
-	inbox = value.NewTuple2(inbox, message.NewInboxMessage(depositMsg, addr, big.NewInt(1), chainTime).AsValue())
+	inboxMessages = append(inboxMessages, message.NewInboxMessage(depositMsg, addr, big.NewInt(1), chainTime))
 
 	depositValue := big.NewInt(100)
 	withdrawDest := common.RandAddress()
 	tx := withdrawEthTx(t, big.NewInt(0), depositValue, withdrawDest)
-	inbox = value.NewTuple2(inbox, message.NewInboxMessage(message.L2Message{Data: l2message.L2MessageAsData(tx)}, addr, big.NewInt(2), chainTime).AsValue())
+	inboxMessages = append(inboxMessages, message.NewInboxMessage(message.NewL2Message(tx), addr, big.NewInt(2), chainTime))
 
-	assertion, _ := mach.ExecuteAssertion(10000000000, inbox, 0)
-	testCase, err := value.TestVectorJSON(inbox, assertion.ParseLogs(), assertion.ParseOutMessages())
+	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
+	testCase, err := value.TestVectorJSON(inbox.InboxValue(inboxMessages), assertion.ParseLogs(), assertion.ParseOutMessages())
 	if err != nil {
 		t.Fatal(err)
 	}

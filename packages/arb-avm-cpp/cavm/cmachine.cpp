@@ -169,13 +169,26 @@ Tuple getTuple(TuplePool& pool, void* data) {
     return nonstd::get<Tuple>(deserialize_value(charData, pool));
 }
 
+std::vector<value> getInboxMessages(TuplePool& pool,
+                                    void* data,
+                                    uint64_t message_count) {
+    auto charData = reinterpret_cast<const char*>(data);
+    std::vector<value> messages;
+    for (uint64_t i = 0; i < message_count; ++i) {
+        messages.push_back(deserialize_value(charData, pool));
+    }
+    return messages;
+}
+
 RawAssertion executeAssertion(CMachine* m,
                               uint64_t maxSteps,
-                              void* inbox,
+                              void* inbox_messages,
+                              uint64_t message_count,
                               uint64_t wallLimit) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    auto messages = getTuple(mach->getPool(), inbox);
+    auto messages =
+        getInboxMessages(mach->getPool(), inbox_messages, message_count);
 
     Assertion assertion = mach->run(maxSteps, std::move(messages),
                                     std::chrono::seconds{wallLimit});
@@ -185,13 +198,15 @@ RawAssertion executeAssertion(CMachine* m,
 
 RawAssertion executeSideloadedAssertion(CMachine* m,
                                         uint64_t maxSteps,
-                                        void* inbox,
+                                        void* inbox_messages,
+                                        uint64_t message_count,
                                         void* sideload,
                                         uint64_t wallLimit) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
 
-    auto messages = getTuple(mach->getPool(), inbox);
+    auto messages =
+        getInboxMessages(mach->getPool(), inbox_messages, message_count);
     auto sideload_value = getTuple(mach->getPool(), sideload);
 
     Assertion assertion = mach->runSideloaded(maxSteps, std::move(messages),

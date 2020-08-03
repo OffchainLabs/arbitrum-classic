@@ -71,12 +71,14 @@ CBlockReason machineIsBlocked(CMachine* m, int newMessages);
 
 RawAssertion executeAssertion(CMachine* m,
                               uint64_t maxSteps,
-                              void* inbox,
+                              void* inbox_messages,
+                              uint64_t message_count,
                               uint64_t wallLimit);
 
 RawAssertion executeSideloadedAssertion(CMachine* m,
                                         uint64_t maxSteps,
-                                        void* inbox,
+                                        void* inbox_messages,
+                                        uint64_t message_count,
                                         void* sideload,
                                         uint64_t wallLimit);
 

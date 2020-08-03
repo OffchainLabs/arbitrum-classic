@@ -16,14 +16,22 @@
 
 package message
 
-type L2Message struct {
-	Data []byte
-}
+import (
+	"testing"
 
-func (l L2Message) Type() Type {
-	return L2Type
-}
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
-func (l L2Message) AsData() []byte {
-	return l.Data
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+)
+
+func TestMarshaledBytesHash(t *testing.T) {
+	data, err := hexutil.Decode("0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142")
+	if err != nil {
+		t.Fatal(err)
+	}
+	hash := marshaledBytesHash(data)
+	correct := common.HexToHash("0x4fc384a19926e9ff7ec8f2376a0d146dc273031df1db4d133236d209700e4780")
+	if hash != correct {
+		t.Fatal("incorrect result", hash, correct)
+	}
 }

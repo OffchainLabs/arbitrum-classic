@@ -17,6 +17,7 @@
 package machine
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -42,13 +43,13 @@ type Machine interface {
 
 	ExecuteAssertion(
 		maxSteps uint64,
-		inbox value.TupleValue,
+		messages []inbox.InboxMessage,
 		maxWallTime time.Duration,
 	) (*protocol.ExecutionAssertion, uint64)
 
 	ExecuteSideloadedAssertion(
 		maxSteps uint64,
-		inbox value.TupleValue,
+		messages []inbox.InboxMessage,
 		sideloadValue value.TupleValue,
 		maxWallTime time.Duration,
 	) (*protocol.ExecutionAssertion, uint64)

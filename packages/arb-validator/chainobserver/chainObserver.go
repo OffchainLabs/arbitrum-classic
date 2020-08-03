@@ -541,7 +541,7 @@ func (chain *ChainObserver) ExecutionPrecondition(node *structures.Node) *valpro
 	params := node.Disputable().AssertionParams
 	inbox, _ := chain.Inbox.GenerateVMInbox(vmProtoData.InboxTop, params.ImportedMessageCount.Uint64())
 	return &valprotocol.Precondition{
-		BeforeHash:  vmProtoData.MachineHash,
-		BeforeInbox: inbox.AsValue(),
+		BeforeHash:    vmProtoData.MachineHash,
+		InboxMessages: inbox.Messages(),
 	}
 }

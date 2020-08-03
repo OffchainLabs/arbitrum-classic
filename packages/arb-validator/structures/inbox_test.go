@@ -21,20 +21,15 @@ import (
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 func getStack() *MessageStack {
-	msg1 := message.NewRandomInboxMessage(message.NewRandomEth())
-	msg2 := message.NewRandomInboxMessage(message.NewRandomEth())
-	msg3 := message.NewRandomInboxMessage(message.NewRandomEth())
-	msg4 := message.NewRandomInboxMessage(message.NewRandomEth())
-
 	messageStack := NewMessageStack()
-	messageStack.DeliverMessage(msg1)
-	messageStack.DeliverMessage(msg2)
-	messageStack.DeliverMessage(msg3)
-	messageStack.DeliverMessage(msg4)
+	messageStack.DeliverMessage(inbox.NewRandomInboxMessage())
+	messageStack.DeliverMessage(inbox.NewRandomInboxMessage())
+	messageStack.DeliverMessage(inbox.NewRandomInboxMessage())
+	messageStack.DeliverMessage(inbox.NewRandomInboxMessage())
 	return messageStack
 }
 
@@ -81,8 +76,8 @@ func TestInboxInsert(t *testing.T) {
 		t.Error("marshal/unmarshal changes hash of empty inbox")
 	}
 
-	msg1 := message.NewRandomInboxMessage(message.NewRandomEth())
-	msg2 := message.NewRandomInboxMessage(message.NewRandomEth())
+	msg1 := inbox.NewRandomInboxMessage()
+	msg2 := inbox.NewRandomInboxMessage()
 
 	pi.DeliverMessage(msg1)
 	msg1Delivered := pi.newest.message

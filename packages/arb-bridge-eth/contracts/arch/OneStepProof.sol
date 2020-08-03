@@ -61,7 +61,7 @@ library OneStepProof {
     struct AssertionContext {
         Machine.Data startMachine;
         Machine.Data afterMachine;
-        Value.Data inbox;
+        bytes32 inboxHash;
         bool didInboxInsn;
         bytes32 messageAcc;
         bytes32 logAcc;
@@ -70,6 +70,8 @@ library OneStepProof {
         ValueStack auxstack;
         bool hadImmediate;
         uint8 opcode;
+        bytes proof;
+        uint256 offset;
     }
 
     function handleError(AssertionContext memory context) internal pure {
@@ -90,7 +92,7 @@ library OneStepProof {
     }
 
     function initializeExecutionContext(
-        Value.Data memory inbox,
+        bytes32 inboxHash,
         bytes32 messagesAcc,
         bytes32 logsAcc,
         bytes memory proof
@@ -117,7 +119,7 @@ library OneStepProof {
         AssertionContext memory context = AssertionContext(
             mach,
             mach.clone(),
-            inbox,
+            inboxHash,
             false,
             messagesAcc,
             logsAcc,
@@ -125,7 +127,9 @@ library OneStepProof {
             ValueStack(stackCount, stackVals),
             ValueStack(auxstackCount, auxstackVals),
             immediate == 1,
-            opCode
+            opCode,
+            proof,
+            offset
         );
 
         require(
@@ -700,11 +704,17 @@ library OneStepProof {
 
     function executeInboxInsn(AssertionContext memory context) internal pure {
         require(
-            context.inbox.hash() != Value.newEmptyTuple().hash(),
+            context.inboxHash != Value.newEmptyTuple().hash(),
             "Inbox instruction was blocked"
         );
-        context.stack.pushVal(context.inbox);
-        context.inbox = Value.newEmptyTuple();
+
+        (, Value.Data memory inbox) = Marshaling.deserialize(
+            context.proof,
+            context.offset
+        );
+        require(inbox.hash() == context.inboxHash, "incorrect inbox value");
+        context.stack.pushVal(inbox);
+        context.inboxHash = Value.newEmptyTuple().hash();
         context.didInboxInsn = true;
     }
 

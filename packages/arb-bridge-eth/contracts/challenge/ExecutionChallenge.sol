@@ -193,20 +193,14 @@ contract ExecutionChallenge is BisectionChallenge {
     }
 
     function oneStepProof(
-        bytes32 _beforeInbox,
-        uint256 _beforeInboxValueSize,
+        bytes32 _inboxHash,
         bytes32 _firstMessage,
         bytes32 _firstLog,
         bytes memory _proof
     ) public asserterAction {
-        Value.Data memory inbox = Value.newTuplePreImage(
-            _beforeInbox,
-            _beforeInboxValueSize
-        );
-
         OneStepProof.AssertionContext memory context = OneStepProof
             .initializeExecutionContext(
-            inbox,
+            _inboxHash,
             _firstMessage,
             _firstLog,
             _proof
@@ -221,7 +215,7 @@ contract ExecutionChallenge is BisectionChallenge {
             .ExecutionAssertion(
             1,
             Machine.hash(context.startMachine),
-            inbox.hash(),
+            _inboxHash,
             Machine.hash(context.afterMachine),
             context.didInboxInsn,
             context.gas,

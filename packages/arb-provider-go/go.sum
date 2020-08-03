@@ -183,6 +183,7 @@ github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrk
 github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
 github.com/naoina/go-stringutil v0.1.0/go.mod h1:XJ2SJL9jCtBh+P9q5btrd/Ylo8XwT/h1USek5+NqSA0=
 github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416/go.mod h1:NBIhNtsFMo3G2szEBne+bO4gS192HuIYRqfvOWb4i1E=
+github.com/offchainlabs/arbitrum v0.6.5 h1:8VM/XQ6T0wArwttCU4jVqXTDTNx6M3Gj9xFcoh2//R4=
 github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.6.5/go.mod h1:TWnvXbLN+ddXUaW6kEd+vIdg7rgLz1aGtLaqCjAvxMc=
 github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.6.5/go.mod h1:7nk/7FwZIqynokCzuQVnzi+VyZnR2nBEKit9u8Ewhrw=
 github.com/offchainlabs/arbitrum/packages/arb-validator v0.6.5/go.mod h1:fhA+K9rdav/tcFhmB5GIv1At6GwTExz4iW7/0ziPrh4=

@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
         }
     }();
 
-    Tuple inbox;
+    std::vector<value> inbox_messages;
     if (argc == 5 && std::string(argv[3]) == "--inbox") {
         std::ifstream file(argv[4], std::ios::binary);
         if (!file.is_open()) {
@@ -69,13 +69,19 @@ int main(int argc, char* argv[]) {
             (std::istreambuf_iterator<char>(file)),
             std::istreambuf_iterator<char>());
         auto data = reinterpret_cast<const char*>(raw_inbox.data());
-        auto inboxVal = deserialize_value(data, mach.getPool());
-        inbox = nonstd::get<Tuple>(inboxVal);
+        auto inbox_val =
+            nonstd::get<Tuple>(deserialize_value(data, mach.getPool()));
+        while (inbox_val != Tuple{}) {
+            inbox_messages.push_back(std::move(inbox_val.get_element(1)));
+            inbox_val = nonstd::get<Tuple>(std::move(inbox_val.get_element(0)));
+        }
+        std::reverse(inbox_messages.begin(), inbox_messages.end());
     }
 
-    auto assertionBase = mach.run(100000000, Tuple(), std::chrono::seconds(0));
+    auto assertionBase = mach.run(100000000, {}, std::chrono::seconds(0));
 
-    auto assertion = mach.run(100000000, inbox, std::chrono::seconds(0));
+    auto assertion =
+        mach.run(100000000, std::move(inbox_messages), std::chrono::seconds(0));
 
     std::cout << "Ran " << assertion.stepCount << " ending in state "
               << static_cast<int>(mach.currentStatus()) << "\n";

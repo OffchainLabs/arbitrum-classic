@@ -61,7 +61,7 @@ func (ad AssertionDefender) NBisect(slices uint64) ([]AssertionDefender, []*valp
 
 		assertion, numSteps := m.ExecuteAssertion(
 			steps,
-			pre.BeforeInbox,
+			pre.InboxMessages,
 			0,
 		)
 		defenders = append(defenders, NewAssertionDefender(
@@ -92,7 +92,7 @@ func ChooseAssertionToChallenge(
 		initState := m.Clone()
 		generatedAssertion, numSteps := m.ExecuteAssertion(
 			steps,
-			pre.BeforeInbox,
+			pre.InboxMessages,
 			0,
 		)
 		stub := valprotocol.NewExecutionAssertionStubFromAssertion(generatedAssertion)

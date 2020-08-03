@@ -18,14 +18,13 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	errors2 "github.com/pkg/errors"
-	"math/big"
-
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	errors2 "github.com/pkg/errors"
 )
 
 type executionChallenge struct {
@@ -73,7 +72,7 @@ func (c *executionChallenge) BisectAssertion(
 	}
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	beforeInboxHash := precondition.BeforeInbox.Hash()
+	beforeInboxHash := inbox.InboxValue(precondition.InboxMessages).Hash()
 	tx, err := c.challenge.BisectAssertion(
 		c.auth.getAuth(ctx),
 		beforeInboxHash,
@@ -112,11 +111,10 @@ func (c *executionChallenge) OneStepProof(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	hashPreImage := precondition.BeforeInbox.GetPreImage()
+	inboxHash := inbox.InboxValue(precondition.InboxMessages).Hash()
 	tx, err := c.challenge.OneStepProof(
 		c.auth.getAuth(ctx),
-		hashPreImage.GetInnerHash(),
-		big.NewInt(hashPreImage.Size()),
+		inboxHash,
 		assertion.FirstMessageHash,
 		assertion.FirstLogHash,
 		proof,
@@ -127,8 +125,7 @@ func (c *executionChallenge) OneStepProof(
 			c.client,
 			c.auth.auth.From,
 			c.contractAddress,
-			hashPreImage.GetInnerHash(),
-			big.NewInt(hashPreImage.Size()),
+			inboxHash,
 			assertion.FirstMessageHash,
 			assertion.FirstLogHash,
 			proof,
@@ -149,7 +146,7 @@ func (c *executionChallenge) ChooseSegment(
 		stepCount := valprotocol.CalculateBisectionStepCount(uint64(i), uint64(len(assertions)), totalSteps)
 		bisectionHashes = append(
 			bisectionHashes,
-			valprotocol.ExecutionDataHash(stepCount, preconditions[i].BeforeHash, preconditions[i].BeforeInbox.Hash(), assertions[i]),
+			valprotocol.ExecutionDataHash(stepCount, preconditions[i].BeforeHash, inbox.InboxValue(preconditions[i].InboxMessages).Hash(), assertions[i]),
 		)
 	}
 

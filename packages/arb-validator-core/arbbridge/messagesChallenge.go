@@ -21,8 +21,8 @@ import (
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 type MessagesChallenge interface {
@@ -39,7 +39,7 @@ type MessagesChallenge interface {
 		ctx context.Context,
 		beforeInbox common.Hash,
 		beforeVmInbox value.HashPreImage,
-		msg message.InboxMessage,
+		msg inbox.InboxMessage,
 	) error
 
 	ChooseSegment(

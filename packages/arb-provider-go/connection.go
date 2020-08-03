@@ -17,7 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -115,7 +115,7 @@ func (conn *ArbConnection) CallContract(
 	if call.Value == nil {
 		call.Value = big.NewInt(0)
 	}
-	tx := l2message.ContractTransaction{
+	tx := message.ContractTransaction{
 		MaxGas:      new(big.Int).SetUint64(call.Gas),
 		GasPriceBid: gasPriceBid,
 		DestAddress: dest,
@@ -172,7 +172,7 @@ func (conn *ArbConnection) pendingCall(ctx context.Context, call ethereum.CallMs
 	if call.Value == nil {
 		call.Value = big.NewInt(0)
 	}
-	tx := l2message.ContractTransaction{
+	tx := message.ContractTransaction{
 		MaxGas:      new(big.Int).SetUint64(call.Gas),
 		GasPriceBid: gasPriceBid,
 		DestAddress: dest,
@@ -230,7 +230,7 @@ func (conn *ArbConnection) EstimateGas(
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 	// This is a stopgap measure until https://github.com/ethereum/go-ethereum/issues/16484 is solved
-	signer := types.NewEIP155Signer(l2message.ChainAddressToID(conn.rollupAddress))
+	signer := types.NewEIP155Signer(message.ChainAddressToID(conn.rollupAddress))
 	signedTx, err := types.SignTx(tx, signer, conn.pk)
 	if err != nil {
 		return err

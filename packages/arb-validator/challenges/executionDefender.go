@@ -168,7 +168,7 @@ func updateExecutionData(
 	// Update mach, precondition, deadline
 	assertion, _ := mach.ExecuteAssertion(
 		totalSteps,
-		pre.BeforeInbox,
+		pre.InboxMessages,
 		0,
 	)
 	pre = pre.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
@@ -223,7 +223,7 @@ func runExecutionOneStepProof(
 		pre := defender.GetPrecondition()
 		assertion, _ := defender.GetMachineState().ExecuteAssertion(
 			1,
-			pre.BeforeInbox,
+			pre.InboxMessages,
 			0,
 		)
 

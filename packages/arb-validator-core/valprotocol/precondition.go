@@ -18,49 +18,50 @@ package valprotocol
 
 import (
 	"fmt"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type Precondition struct {
-	BeforeHash  common.Hash
-	BeforeInbox value.TupleValue
+	BeforeHash    common.Hash
+	InboxMessages []inbox.InboxMessage
 }
 
-func NewPrecondition(beforeHash common.Hash, beforeInbox value.TupleValue) *Precondition {
-	return &Precondition{BeforeHash: beforeHash, BeforeInbox: beforeInbox}
+func NewPrecondition(beforeHash common.Hash, inboxMessages []inbox.InboxMessage) *Precondition {
+	return &Precondition{BeforeHash: beforeHash, InboxMessages: inboxMessages}
 }
 
 func (pre *Precondition) String() string {
-	inboxHash := pre.BeforeInbox.Hash()
 	return fmt.Sprintf(
-		"Precondition(beforeHash: %v, BeforeInbox: %v)",
+		"Precondition(beforeHash: %v, InboxMessages: %v)",
 		pre.BeforeHash,
-		inboxHash,
+		pre.InboxMessages,
 	)
 }
 
 func (pre *Precondition) Equals(b *Precondition) bool {
-	return pre.BeforeHash == b.BeforeHash ||
-		value.Eq(pre.BeforeInbox, b.BeforeInbox)
-}
-
-func (pre *Precondition) Hash() common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Bytes32(pre.BeforeHash),
-		hashing.Bytes32(pre.BeforeInbox.Hash()),
-	)
+	if pre.BeforeHash != b.BeforeHash ||
+		len(pre.InboxMessages) != len(b.InboxMessages) {
+		return false
+	}
+	for i, msg := range pre.InboxMessages {
+		if !value.Eq(msg.AsValue(), b.InboxMessages[i].AsValue()) {
+			return false
+		}
+	}
+	return false
 }
 
 func (pre *Precondition) GeneratePostcondition(a *ExecutionAssertionStub) *Precondition {
-	nextBeforeInbox := pre.BeforeInbox
+	nextInboxMessages := pre.InboxMessages
 	if a.DidInboxInsn {
-		nextBeforeInbox = value.NewEmptyTuple()
+		nextInboxMessages = nil
 	}
 	return &Precondition{
-		BeforeHash:  a.AfterHash,
-		BeforeInbox: nextBeforeInbox,
+		BeforeHash:    a.AfterHash,
+		InboxMessages: nextInboxMessages,
 	}
 }
 

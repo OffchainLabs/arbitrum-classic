@@ -20,14 +20,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 func TestTupleHashing(t *testing.T) {
@@ -63,7 +65,7 @@ func TestTupleHashing(t *testing.T) {
 
 func TestBytesStack(t *testing.T) {
 	data := common.RandBytes(200)
-	bytestack := message.BytesToByteStack(data)
+	bytestack := inbox.BytesToByteStack(data)
 	t.Log("bytestack", bytestack)
 
 	bridgeStackHash, err := valueTester.BytesToBytestackHash(nil, data, big.NewInt(0), big.NewInt(int64(len(data))))
@@ -107,7 +109,7 @@ func TestBytesToBytestackHash(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		calcDataValue := message.BytesToByteStack(data)
+		calcDataValue := inbox.BytesToByteStack(data)
 		if calcDataValue.Hash() != valueHash {
 			t.Error("hash not equal with data length", len(data))
 		}

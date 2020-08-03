@@ -24,10 +24,10 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
@@ -81,7 +81,7 @@ func (c *messagesChallenge) OneStepProof(
 	ctx context.Context,
 	beforeInbox common.Hash,
 	beforeVmInbox value.HashPreImage,
-	msg message.InboxMessage,
+	msg inbox.InboxMessage,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()

@@ -26,7 +26,34 @@
 
 namespace {
 uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
+
+Tuple makeInbox(std::vector<value> inbox_messages, TuplePool* pool) {
+    Tuple inbox;
+    for (auto& msg : inbox_messages) {
+        inbox = Tuple(std::move(inbox), std::move(msg), pool);
+    }
+    return inbox;
 }
+}  // namespace
+
+AssertionContext::AssertionContext(std::vector<value> inbox_messages,
+                                   Tuple sideload,
+                                   TuplePool* pool)
+    : inbox(makeInbox(std::move(inbox_messages), pool)),
+      sideload_value(std::move(sideload)),
+      numSteps{0},
+      didInboxInsn(false),
+      numGas{0},
+      blockingSideload(true) {}
+
+AssertionContext::AssertionContext(std::vector<value> inbox_messages,
+                                   TuplePool* pool)
+    : inbox(makeInbox(std::move(inbox_messages), pool)),
+      sideload_value(Tuple{}),
+      numSteps{0},
+      didInboxInsn(false),
+      numGas{0},
+      blockingSideload(false) {}
 
 MachineState::MachineState()
     : pool(std::make_unique<TuplePool>()),
@@ -196,6 +223,10 @@ std::vector<unsigned char> MachineState::marshalForProof() {
 
     buf.push_back(current_op.immediate ? 1 : 0);
     buf.push_back(static_cast<uint8_t>(current_op.opcode));
+
+    if (current_op.opcode == OpCode::INBOX) {
+        ::marshalForProof(context.inbox, MarshalLevel::STUB, buf, *code);
+    }
 
     return buf;
 }
