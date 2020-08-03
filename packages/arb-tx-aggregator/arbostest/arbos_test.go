@@ -280,7 +280,7 @@ func TestBatch(t *testing.T) {
 	}
 
 	msg := message.NewTransactionBatchFromMessages(txes)
-	results = runMessage(t, mach, message.L2Message{Data: message.L2MessageAsData(msg)}, batchSender)
+	results = runMessage(t, mach, message.NewL2Message(msg), batchSender)
 	if len(results) != len(txes) {
 		t.Fatal("incorrect result count", len(results), "instead of", len(txes))
 	}
@@ -294,7 +294,7 @@ func TestBatch(t *testing.T) {
 		if result.L1Message.MessageID() != hashes[i] {
 			t.Error("l2message had incorrect id", result.L1Message.MessageID(), hashes[i])
 		}
-		l2Message, err := message.NewL2MessageFromData(result.L1Message.Data)
+		l2Message, err := message.L2Message{Data: result.L1Message.Data}.AbstractMessage()
 		if err != nil {
 			t.Fatal(err)
 		}

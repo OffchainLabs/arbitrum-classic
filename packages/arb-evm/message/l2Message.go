@@ -73,14 +73,15 @@ type EthConvertable interface {
 	AsEthTx(chain common.Address) (*types.Transaction, error)
 }
 
-func L2MessageAsData(msg AbstractL2Message) []byte {
+func NewL2Message(msg AbstractL2Message) L2Message {
 	data := make([]byte, 0)
 	data = append(data, byte(msg.L2Type()))
 	data = append(data, msg.AsData()...)
-	return data
+	return L2Message{Data: data}
 }
 
-func NewL2MessageFromData(data []byte) (AbstractL2Message, error) {
+func (l L2Message) AbstractMessage() (AbstractL2Message, error) {
+	data := l.Data
 	l2Type := L2SubType(data[0])
 	data = data[1:]
 	switch l2Type {
@@ -204,7 +205,7 @@ func (t Transaction) asData() []byte {
 }
 
 func (t Transaction) MessageID(sender common.Address, chain common.Address) common.Hash {
-	data := L2MessageAsData(t)
+	data := NewL2Message(t).AsData()
 	inner := hashing.SoliditySHA3(hashing.Uint256(ChainAddressToID(chain)), hashing.Bytes32(marshaledBytesHash(data)))
 	return hashing.SoliditySHA3(addressData(sender), hashing.Bytes32(inner))
 }
@@ -407,7 +408,7 @@ type TransactionBatch struct {
 func NewTransactionBatchFromMessages(messages []AbstractL2Message) TransactionBatch {
 	txes := make([][]byte, 0)
 	for _, msg := range messages {
-		txes = append(txes, L2MessageAsData(msg))
+		txes = append(txes, NewL2Message(msg).AsData())
 	}
 	return TransactionBatch{Transactions: txes}
 }

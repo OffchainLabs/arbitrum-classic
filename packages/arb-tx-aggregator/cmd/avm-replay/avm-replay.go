@@ -77,15 +77,15 @@ func runMessage(mach machine.Machine, msg inbox.InboxMessage) (*evm.Result, erro
 
 var chain = common.HexToAddress("0xc68DCee7b8cA57F41D1A417103CB65836E99e013")
 
-func printL2Message(tx []byte) error {
-	msg, err := message.NewL2MessageFromData(tx)
+func printL2Message(tx message.L2Message) error {
+	msg, err := tx.AbstractMessage()
 	if err != nil {
 		return err
 	}
 	switch msg := msg.(type) {
 	case message.TransactionBatch:
 		for _, tx := range msg.Transactions {
-			if err := printL2Message(tx); err != nil {
+			if err := printL2Message(message.L2Message{Data: tx}); err != nil {
 				return err
 			}
 		}
@@ -133,7 +133,7 @@ func testMessages(filename string, contract string) error {
 			return err
 		}
 		if tx, ok := nested.(message.L2Message); ok {
-			if err := printL2Message(tx.Data); err != nil {
+			if err := printL2Message(tx); err != nil {
 				return err
 			}
 		} else {

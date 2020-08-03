@@ -126,7 +126,7 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 	err := m.globalInbox.SendL2MessageNoWait(
 		ctx,
 		m.rollupAddress,
-		message.L2Message{Data: message.L2MessageAsData(prepareTransactions(txes))}.AsData(),
+		message.NewL2Message(prepareTransactions(txes)).AsData(),
 	)
 
 	m.Lock()

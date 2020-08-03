@@ -228,7 +228,7 @@ func GetTransaction(msg inbox.InboxMessage, chain common.Address) (*types.Transa
 	if msg.Kind != message.L2Type {
 		return nil, errors.New("result is not a transaction")
 	}
-	l2msg, err := message.NewL2MessageFromData(msg.Data)
+	l2msg, err := message.L2Message{Data: msg.Data}.AbstractMessage()
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +260,7 @@ func (m *Server) executeCall(mach machine.Machine, blockId *common.BlockId, msg 
 	}
 	log.Println("Executing call", msg.MaxGas, msg.GasPriceBid, msg.DestAddress, msg.Payment)
 	inboxMsg := message.NewInboxMessage(
-		message.L2Message{Data: message.L2MessageAsData(msg)},
+		message.NewL2Message(msg),
 		common.NewAddressFromEth(sender),
 		seq,
 		inbox.ChainTime{

@@ -86,28 +86,28 @@ func TestCrossContract(t *testing.T) {
 	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg, addr, big.NewInt(0), chainTime))
 
 	inboxMessages = append(inboxMessages, message.NewInboxMessage(
-		message.L2Message{Data: message.L2MessageAsData(makeConstructorTx(distributionsConstructorData, big.NewInt(0)))},
+		message.NewL2Message(makeConstructorTx(distributionsConstructorData, big.NewInt(0))),
 		addr,
 		big.NewInt(1),
 		chainTime,
 	))
 
 	inboxMessages = append(inboxMessages, message.NewInboxMessage(
-		message.L2Message{Data: message.L2MessageAsData(makeConstructorTx(pointsConstructorData, big.NewInt(1)))},
+		message.NewL2Message(makeConstructorTx(pointsConstructorData, big.NewInt(1))),
 		addr,
 		big.NewInt(2),
 		chainTime,
 	))
 
 	inboxMessages = append(inboxMessages, message.NewInboxMessage(
-		message.L2Message{Data: message.L2MessageAsData(message.Transaction{
+		message.NewL2Message(message.Transaction{
 			MaxGas:      big.NewInt(1000000000),
 			GasPriceBid: big.NewInt(0),
 			SequenceNum: big.NewInt(2),
 			DestAddress: distributionsAddress,
 			Payment:     big.NewInt(0),
 			Data:        append(instantiateContractSignature, instantiateContractData...),
-		})},
+		}),
 		addr,
 		big.NewInt(3),
 		chainTime,
@@ -139,7 +139,7 @@ func TestCrossContract(t *testing.T) {
 		}
 		log.Println("ReturnData", hexutil.Encode(res.ReturnData))
 		if res.L1Message.Kind == message.L2Type {
-			l2, err := message.NewL2MessageFromData(res.L1Message.Data)
+			l2, err := message.L2Message{Data: res.L1Message.Data}.AbstractMessage()
 			if err != nil {
 				t.Fatal(err)
 			}

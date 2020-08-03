@@ -159,7 +159,7 @@ func TestWithdrawEth(t *testing.T) {
 	depositValue := big.NewInt(100)
 	withdrawDest := common.RandAddress()
 	tx := withdrawEthTx(t, big.NewInt(0), depositValue, withdrawDest)
-	inboxMessages = append(inboxMessages, message.NewInboxMessage(message.L2Message{Data: message.L2MessageAsData(tx)}, addr, big.NewInt(2), chainTime))
+	inboxMessages = append(inboxMessages, message.NewInboxMessage(message.NewL2Message(tx), addr, big.NewInt(2), chainTime))
 
 	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
 	testCase, err := value.TestVectorJSON(inbox.InboxValue(inboxMessages), assertion.ParseLogs(), assertion.ParseOutMessages())

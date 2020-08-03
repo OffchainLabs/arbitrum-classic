@@ -116,7 +116,7 @@ func TestPrepareTransactions(t *testing.T) {
 				t.Fatal("sorted is wrong length")
 			}
 			for i, tx := range tc.sorted {
-				if !bytes.Equal(message.L2MessageAsData(tx), sortedTxesCal.Transactions[i]) {
+				if !bytes.Equal(message.NewL2Message(tx).AsData(), sortedTxesCal.Transactions[i]) {
 					t.Error("tx in wrong order")
 					break
 				}
