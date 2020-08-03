@@ -27,6 +27,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
+const AddressSize = 32
+const TransactionHeaderSize = 32*4 + AddressSize
+
 func TestL2MessageSerialization(t *testing.T) {
 	pk, err := crypto.GenerateKey()
 	if err != nil {

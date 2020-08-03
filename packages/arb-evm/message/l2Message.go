@@ -55,9 +55,6 @@ const (
 	SignedTransactionType             = 4
 )
 
-const AddressSize = 32
-
-const TransactionHeaderSize = 32*4 + AddressSize
 const SignatureSize = 65
 
 type AbstractL2Message interface {
@@ -271,15 +268,6 @@ type Call struct {
 	Data        []byte
 }
 
-func NewSimpleCall(dest common.Address, data []byte) AbstractL2Message {
-	return Call{
-		MaxGas:      big.NewInt(0),
-		GasPriceBid: big.NewInt(0),
-		DestAddress: dest,
-		Data:        data,
-	}
-}
-
 func NewCallFromData(data []byte) Call {
 	maxGas, data := extractUInt256(data)
 	gasPriceBid, data := extractUInt256(data)
@@ -301,8 +289,8 @@ func NewRandomCall() Call {
 	}
 }
 
-func (t Call) Destination() common.Address {
-	return t.DestAddress
+func (c Call) Destination() common.Address {
+	return c.DestAddress
 }
 
 func (c Call) L2Type() L2SubType {
