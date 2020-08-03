@@ -20,7 +20,6 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
-	"math/big"
 	"strconv"
 
 	"encoding/json"
@@ -66,8 +65,7 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 		t.Run(strconv.FormatUint(uint64(opcode), 10), func(t *testing.T) {
 			machineData, err := osp.ExecuteStep(
 				&bind.CallOpts{Context: context.Background()},
-				proof.InboxInner,
-				big.NewInt(proof.InboxSize),
+				proof.InboxHash,
 				proof.Assertion.FirstMessageHash,
 				proof.Assertion.FirstLogHash,
 				proof.Proof,

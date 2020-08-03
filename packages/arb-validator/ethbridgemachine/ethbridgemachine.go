@@ -29,8 +29,7 @@ import (
 type proofData struct {
 	BeforeHash common.Hash
 	Assertion  *valprotocol.ExecutionAssertionStub
-	InboxInner common.Hash
-	InboxSize  int64
+	InboxHash  common.Hash
 	Proof      []byte
 }
 
@@ -56,19 +55,17 @@ func generateProofCases(contract string) ([]*proofData, error) {
 			break
 		}
 		if ranSteps != 1 {
-			return nil, errors.New("Executed incorrect step count")
+			return nil, errors.New("executed incorrect step count")
 		}
 		if mach.CurrentStatus() == machine.ErrorStop {
 			beforeMach.PrintState()
 			mach.PrintState()
 			return nil, errors.New("machine stopped in error state")
 		}
-		hashPreImage := inbox.InboxValue(inboxMessages).GetPreImage()
 		proofs = append(proofs, &proofData{
 			BeforeHash: beforeHash,
 			Assertion:  valprotocol.NewExecutionAssertionStubFromAssertion(a),
-			InboxInner: hashPreImage.GetInnerHash(),
-			InboxSize:  hashPreImage.Size(),
+			InboxHash:  inbox.InboxValue(inboxMessages).Hash(),
 			Proof:      proof,
 		})
 

@@ -224,6 +224,10 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     buf.push_back(current_op.immediate ? 1 : 0);
     buf.push_back(static_cast<uint8_t>(current_op.opcode));
 
+    if (current_op.opcode == OpCode::INBOX) {
+        ::marshalForProof(context.inbox, MarshalLevel::STUB, buf, *code);
+    }
+
     return buf;
 }
 

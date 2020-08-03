@@ -22,8 +22,7 @@ import "../arch/OneStepProof.sol";
 
 contract OneStepProofTester {
     function executeStep(
-        bytes32 beforeInbox,
-        uint256 beforeInboxValueSize,
+        bytes32 inboxHash,
         bytes32 firstMessage,
         bytes32 firstLog,
         bytes memory proof
@@ -39,12 +38,13 @@ contract OneStepProofTester {
             bool didInboxInsn
         )
     {
-        Value.Data memory inbox = Value.newTuplePreImage(
-            beforeInbox,
-            beforeInboxValueSize
-        );
         OneStepProof.AssertionContext memory context = OneStepProof
-            .initializeExecutionContext(inbox, firstMessage, firstLog, proof);
+            .initializeExecutionContext(
+            inboxHash,
+            firstMessage,
+            firstLog,
+            proof
+        );
 
         OneStepProof.executeOp(context);
         return (

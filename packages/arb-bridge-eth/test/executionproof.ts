@@ -38,8 +38,7 @@ interface Assertion {
 interface Proof {
   BeforeHash: number[]
   Assertion: Assertion
-  InboxInner: number[]
-  InboxSize: number
+  InboxHash: string
   Proof: string
 }
 
@@ -73,8 +72,7 @@ describe('OneStepProof', async () => {
           gas,
           didInboxInsn,
         } = await ospTester.executeStep(
-          proof.InboxInner,
-          proof.InboxSize,
+          proof.InboxHash,
           proof.Assertion.FirstMessageHash,
           proof.Assertion.FirstLogHash,
           Buffer.from(proof.Proof, 'base64')

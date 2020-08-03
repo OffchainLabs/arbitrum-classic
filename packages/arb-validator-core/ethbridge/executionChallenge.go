@@ -18,15 +18,13 @@ package ethbridge
 
 import (
 	"context"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	errors2 "github.com/pkg/errors"
-	"math/big"
-
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	errors2 "github.com/pkg/errors"
 )
 
 type executionChallenge struct {
@@ -113,11 +111,10 @@ func (c *executionChallenge) OneStepProof(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	hashPreImage := inbox.InboxValue(precondition.InboxMessages).GetPreImage()
+	inboxHash := inbox.InboxValue(precondition.InboxMessages).Hash()
 	tx, err := c.challenge.OneStepProof(
 		c.auth.getAuth(ctx),
-		hashPreImage.GetInnerHash(),
-		big.NewInt(hashPreImage.Size()),
+		inboxHash,
 		assertion.FirstMessageHash,
 		assertion.FirstLogHash,
 		proof,
@@ -128,8 +125,7 @@ func (c *executionChallenge) OneStepProof(
 			c.client,
 			c.auth.auth.From,
 			c.contractAddress,
-			hashPreImage.GetInnerHash(),
-			big.NewInt(hashPreImage.Size()),
+			inboxHash,
 			assertion.FirstMessageHash,
 			assertion.FirstLogHash,
 			proof,

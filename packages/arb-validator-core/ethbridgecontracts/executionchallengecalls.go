@@ -36,8 +36,8 @@ func (_ExecutionChallenge *ExecutionChallengeTransactor) BisectAssertionCall(ctx
 	return callCheckExec(ctx, client, from, contractAddress, "bisectAssertion", _beforeInbox, _machineHashes, inboxInsnIndex, _messageAccs, _logAccs, _outCounts, _gases, _totalSteps)
 }
 
-func (_ExecutionChallenge *ExecutionChallengeTransactor) OneStepProofCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, _beforeInbox [32]byte, _beforeInboxValueSize *big.Int, _firstMessage [32]byte, _firstLog [32]byte, _proof []byte) error {
-	return callCheckExec(ctx, client, from, contractAddress, "oneStepProof", _beforeInbox, _beforeInboxValueSize, _firstMessage, _firstLog, _proof)
+func (_ExecutionChallenge *ExecutionChallengeTransactor) OneStepProofCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, _inboxHash [32]byte, _firstMessage [32]byte, _firstLog [32]byte, _proof []byte) error {
+	return callCheckExec(ctx, client, from, contractAddress, "oneStepProof", _inboxHash, _firstMessage, _firstLog, _proof)
 }
 
 func (_Challenge *ChallengeTransactor) TimeoutChallengeCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address) error {
