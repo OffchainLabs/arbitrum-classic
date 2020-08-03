@@ -19,6 +19,7 @@ package chainobserver
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 	"math/big"
 	"sync"
@@ -89,15 +90,14 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				if err == nil {
 					afterInboxTop = &afterInboxTopVal
 				}
-				inbox, _ := chain.Inbox.GenerateVMInbox(currentOpinion.VMProtoData().InboxTop, params.ImportedMessageCount.Uint64())
-				messages, _ := chain.Inbox.GetMessages(currentOpinion.VMProtoData().InboxTop, params.ImportedMessageCount.Uint64())
-				messagesVal := inbox.AsValue()
+				vmInbox, _ := chain.Inbox.GenerateVMInbox(currentOpinion.VMProtoData().InboxTop, params.ImportedMessageCount.Uint64())
+				messages := vmInbox.Messages()
 				nextMachine = currentOpinion.Machine().Clone()
 				log.Println("Forming opinion on", successor.Hash().ShortString(), "which imported", messages, "messages")
 
 				chain.RUnlock()
 
-				newOpinion, validExecution = getNodeOpinion(params, claim, afterInboxTop, inbox.Hash().Hash(), messagesVal, nextMachine)
+				newOpinion, validExecution = getNodeOpinion(params, claim, afterInboxTop, inbox.InboxValue(messages).Hash(), messages, nextMachine)
 			}
 			// Reset prepared
 			assertionsMut.Lock()
@@ -234,15 +234,15 @@ func (chain *ChainObserver) prepareAssertion(maxValidBlock *common.BlockId) (*ch
 	}
 	newMessageCount := new(big.Int).Sub(maxMessageCount, beforeState.InboxCount)
 
-	inbox, _ := chain.Inbox.GenerateVMInbox(beforeInboxTop, newMessageCount.Uint64())
-	messagesVal := inbox.AsValue()
+	vmInbox, _ := chain.Inbox.GenerateVMInbox(beforeInboxTop, newMessageCount.Uint64())
+	messages := vmInbox.Messages()
 	mach := currentOpinion.Machine().Clone()
 	maxSteps := chain.NodeGraph.Params().MaxExecutionSteps
 	chain.RUnlock()
 
 	beforeHash := mach.Hash()
 
-	assertion, stepsRun := mach.ExecuteAssertion(maxSteps, messagesVal, 0)
+	assertion, stepsRun := mach.ExecuteAssertion(maxSteps, messages, 0)
 
 	afterHash := mach.Hash()
 
@@ -267,7 +267,7 @@ func (chain *ChainObserver) prepareAssertion(maxValidBlock *common.BlockId) (*ch
 		}
 		claim = &valprotocol.AssertionClaim{
 			AfterInboxTop:         afterInboxTop,
-			ImportedMessagesSlice: inbox.Hash().Hash(),
+			ImportedMessagesSlice: inbox.InboxValue(messages).Hash(),
 			AssertionStub:         stub,
 		}
 	} else {
@@ -297,7 +297,7 @@ func getNodeOpinion(
 	claim *valprotocol.AssertionClaim,
 	afterInboxTop *common.Hash,
 	calculatedMessagesSlice common.Hash,
-	messagesVal value.TupleValue,
+	messages []inbox.InboxMessage,
 	mach machine.Machine,
 ) (valprotocol.ChildType, *protocol.ExecutionAssertion) {
 	if afterInboxTop == nil || claim.AfterInboxTop != *afterInboxTop {
@@ -311,7 +311,7 @@ func getNodeOpinion(
 
 	assertion, stepsRun := mach.ExecuteAssertion(
 		params.NumSteps,
-		messagesVal,
+		messages,
 		0,
 	)
 	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(valprotocol.NewExecutionAssertionStubFromAssertion(assertion)) {

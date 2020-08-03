@@ -17,6 +17,7 @@
 package rolluptest
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -63,21 +64,21 @@ func _inverseTweakHash(h common.Hash) common.Hash {
 
 func (e EvilMachine) ExecuteAssertion(
 	maxSteps uint64,
-	inbox value.TupleValue,
+	inboxMessages []inbox.InboxMessage,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
-	assn, numSteps := e.Machine.ExecuteAssertion(maxSteps, inbox, maxWallTime)
+	assn, numSteps := e.Machine.ExecuteAssertion(maxSteps, inboxMessages, maxWallTime)
 	assn.AfterHash = _tweakHash(assn.AfterHash.Unmarshal()).MarshalToBuf()
 	return assn, numSteps
 }
 
 func (e EvilMachine) ExecuteSideloadedAssertion(
 	maxSteps uint64,
-	inbox value.TupleValue,
+	inboxMessages []inbox.InboxMessage,
 	sideloadValue value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
-	assn, numSteps := e.Machine.ExecuteSideloadedAssertion(maxSteps, inbox, sideloadValue, maxWallTime)
+	assn, numSteps := e.Machine.ExecuteSideloadedAssertion(maxSteps, inboxMessages, sideloadValue, maxWallTime)
 	assn.AfterHash = _tweakHash(assn.AfterHash.Unmarshal()).MarshalToBuf()
 	return assn, numSteps
 }

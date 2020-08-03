@@ -29,6 +29,7 @@ import "C"
 import (
 	"bytes"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"runtime"
 	"time"
 	"unsafe"
@@ -131,20 +132,22 @@ func makeExecutionAssertion(
 
 func (m *Machine) ExecuteAssertion(
 	maxSteps uint64,
-	inbox value.TupleValue,
+	inboxMessages []inbox.InboxMessage,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
 	var buf bytes.Buffer
-	_ = value.MarshalValue(inbox, &buf)
+	for _, msg := range inboxMessages {
+		_ = value.MarshalValue(msg.AsValue(), &buf)
+	}
 
-	msgData := buf.Bytes()
-	msgDataC := C.CBytes(msgData)
+	msgDataC := C.CBytes(buf.Bytes())
 	defer C.free(msgDataC)
 
 	assertion := C.executeAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
 		msgDataC,
+		C.uint64_t(len(inboxMessages)),
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
 
@@ -153,15 +156,16 @@ func (m *Machine) ExecuteAssertion(
 
 func (m *Machine) ExecuteSideloadedAssertion(
 	maxSteps uint64,
-	inbox value.TupleValue,
+	inboxMessages []inbox.InboxMessage,
 	sideloadValue value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
 	var buf bytes.Buffer
-	_ = value.MarshalValue(inbox, &buf)
+	for _, msg := range inboxMessages {
+		_ = value.MarshalValue(msg.AsValue(), &buf)
+	}
 
-	msgData := buf.Bytes()
-	msgDataC := C.CBytes(msgData)
+	msgDataC := C.CBytes(buf.Bytes())
 	defer C.free(msgDataC)
 
 	var sideloadBuf bytes.Buffer
@@ -175,6 +179,7 @@ func (m *Machine) ExecuteSideloadedAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
 		msgDataC,
+		C.uint64_t(len(inboxMessages)),
 		sideloadDataC,
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)

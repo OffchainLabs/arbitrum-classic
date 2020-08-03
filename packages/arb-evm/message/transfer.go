@@ -19,6 +19,7 @@ package message
 import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 )
 
@@ -50,7 +51,7 @@ func (e Eth) AsData() []byte {
 	return data
 }
 
-func (e Eth) Type() Type {
+func (e Eth) Type() inbox.Type {
 	return EthType
 }
 
@@ -87,7 +88,7 @@ func (e ERC20) AsData() []byte {
 	return data
 }
 
-func (e ERC20) Type() Type {
+func (e ERC20) Type() inbox.Type {
 	return ERC20Type
 }
 
@@ -124,6 +125,6 @@ func (e ERC721) AsData() []byte {
 	return data
 }
 
-func (e ERC721) Type() Type {
+func (e ERC721) Type() inbox.Type {
 	return ERC721Type
 }

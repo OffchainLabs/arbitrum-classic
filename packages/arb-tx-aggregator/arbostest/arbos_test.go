@@ -29,11 +29,9 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
@@ -92,7 +90,7 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	generateTx := l2message.Transaction{
+	generateTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
@@ -130,7 +128,7 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	getFibTx := l2message.Call{
+	getFibTx := message.Call{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		DestAddress: fibAddress,
@@ -171,7 +169,7 @@ func TestReddit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mach.ExecuteAssertion(1000000000, value.NewEmptyTuple(), 0)
+	mach.ExecuteAssertion(1000000000, nil, 0)
 
 	chain := common.RandAddress()
 	initMsg := message.Init{
@@ -252,11 +250,11 @@ func TestBatch(t *testing.T) {
 		pks = append(pks, pk)
 	}
 	batchSender := common.NewAddressFromEth(crypto.PubkeyToAddress(pks[0].PublicKey))
-	txes := make([]l2message.AbstractL2Message, 0)
+	txes := make([]message.AbstractL2Message, 0)
 	hashes := make([]common.Hash, 0)
 	batchSenderSeq := int64(0)
 	for i := 0; i < 10; i++ {
-		tx := l2message.Transaction{
+		tx := message.Transaction{
 			MaxGas:      big.NewInt(100000000000),
 			GasPriceBid: big.NewInt(0),
 			SequenceNum: big.NewInt(batchSenderSeq),
@@ -271,18 +269,18 @@ func TestBatch(t *testing.T) {
 	}
 	for _, pk := range pks[1:] {
 		tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
-		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(l2message.ChainAddressToID(chain)), pk)
+		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
 		if err != nil {
 			t.Fatal(err)
 		}
 		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 		senders = append(senders, addr)
-		txes = append(txes, l2message.NewSignedTransactionFromEth(signedTx))
+		txes = append(txes, message.NewSignedTransactionFromEth(signedTx))
 		hashes = append(hashes, common.NewHashFromEth(signedTx.Hash()))
 	}
 
-	msg := l2message.NewTransactionBatchFromMessages(txes)
-	results = runMessage(t, mach, message.L2Message{Data: l2message.L2MessageAsData(msg)}, batchSender)
+	msg := message.NewTransactionBatchFromMessages(txes)
+	results = runMessage(t, mach, message.L2Message{Data: message.L2MessageAsData(msg)}, batchSender)
 	if len(results) != len(txes) {
 		t.Fatal("incorrect result count", len(results), "instead of", len(txes))
 	}
@@ -296,17 +294,17 @@ func TestBatch(t *testing.T) {
 		if result.L1Message.MessageID() != hashes[i] {
 			t.Error("l2message had incorrect id", result.L1Message.MessageID(), hashes[i])
 		}
-		l2Message, err := l2message.NewL2MessageFromData(result.L1Message.Data)
+		l2Message, err := message.NewL2MessageFromData(result.L1Message.Data)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if i < 10 {
-			_, ok := l2Message.(l2message.Transaction)
+			_, ok := l2Message.(message.Transaction)
 			if !ok {
 				t.Error("bad transaction format")
 			}
 		} else {
-			_, ok := l2Message.(l2message.SignedTransaction)
+			_, ok := l2Message.(message.SignedTransaction)
 			if !ok {
 				t.Error("bad transaction format")
 			}

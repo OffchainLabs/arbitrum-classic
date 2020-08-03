@@ -50,17 +50,19 @@ Assertion Machine::executeMachine(uint64_t stepCount,
 }
 
 Assertion Machine::run(uint64_t stepCount,
-                       Tuple messages,
+                       std::vector<value> inbox_messages,
                        std::chrono::seconds wallLimit) {
-    machine_state.context = AssertionContext{std::move(messages)};
+    machine_state.context =
+        AssertionContext{std::move(inbox_messages), machine_state.pool.get()};
     return executeMachine(stepCount, wallLimit);
 }
 
 Assertion Machine::runSideloaded(uint64_t stepCount,
-                                 Tuple messages,
+                                 std::vector<value> inbox_messages,
                                  std::chrono::seconds wallLimit,
                                  Tuple sideload_value) {
     machine_state.context =
-        AssertionContext{std::move(messages), std::move(sideload_value)};
+        AssertionContext{std::move(inbox_messages), std::move(sideload_value),
+                         machine_state.pool.get()};
     return executeMachine(stepCount, wallLimit);
 }

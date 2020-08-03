@@ -19,6 +19,7 @@ package chainobserver
 import (
 	"context"
 	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/common/math"
 	"log"
 	"math/big"
 	"math/rand"
@@ -32,11 +33,11 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
@@ -48,6 +49,18 @@ var dbPath = "./testdb"
 var rollupTester *ethbridgetestcontracts.RollupTester
 var ethclnt *backends.SimulatedBackend
 var auth *bind.TransactOpts
+
+func ethTransfer(dest common.Address, amount *big.Int) value.Value {
+	ethData := make([]byte, 0)
+	ethData = append(ethData, math.U256Bytes(inbox.NewIntFromAddress(dest).BigInt())...)
+	ethData = append(ethData, math.U256Bytes(amount)...)
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(0), // ETH type
+		inbox.NewIntFromAddress(common.NewAddressFromEth(auth.From)),
+		inbox.BytesToByteStack(ethData),
+	})
+	return tup
+}
 
 func TestMain(m *testing.M) {
 	var pks []*ecdsa.PrivateKey
@@ -201,26 +214,14 @@ func TestConfirmAssertion(t *testing.T) {
 
 	rand.Seed(time.Now().Unix())
 	dest := common.RandAddress()
-	messages := make([]value.Value, 0)
-	messages = append(
-		messages,
-		message.NewOutMessage(
-			message.Eth{
-				Dest:  dest,
-				Value: big.NewInt(75),
-			},
-			common.NewAddressFromEth(auth.From),
-		).AsValue(),
-	)
-	for i := int32(0); i < 5; i++ {
-		messages = append(messages, message.NewRandomOutMessage(message.NewRandomEth()).AsValue())
-	}
+	sends := make([]value.Value, 0)
+	sends = append(sends, ethTransfer(dest, big.NewInt(75)))
 
 	assertion := protocol.NewExecutionAssertionFromValues(
 		common.RandHash(),
 		true,
 		rand.Uint64(),
-		messages,
+		sends,
 		[]value.Value{},
 	)
 

@@ -24,9 +24,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
@@ -94,15 +94,11 @@ func getChallengeData(t *testing.T, messageStack *structures.MessageStack, messa
 }
 
 func getInboxMsgStack() *structures.MessageStack {
-	msg1 := message.NewRandomInboxMessage(message.NewRandomEth())
-	msg2 := message.NewRandomInboxMessage(message.NewRandomEth())
-	msg3 := message.NewRandomInboxMessage(message.NewRandomEth())
-	msg4 := message.NewRandomInboxMessage(message.NewRandomEth())
 	messageStack := structures.NewMessageStack()
-	messageStack.DeliverMessage(msg1)
-	messageStack.DeliverMessage(msg2)
-	messageStack.DeliverMessage(msg3)
-	messageStack.DeliverMessage(msg4)
+	messageStack.DeliverMessage(inbox.NewRandomInboxMessage())
+	messageStack.DeliverMessage(inbox.NewRandomInboxMessage())
+	messageStack.DeliverMessage(inbox.NewRandomInboxMessage())
+	messageStack.DeliverMessage(inbox.NewRandomInboxMessage())
 
 	return messageStack
 }

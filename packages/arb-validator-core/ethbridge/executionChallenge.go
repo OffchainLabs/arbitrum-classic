@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	errors2 "github.com/pkg/errors"
@@ -73,7 +74,7 @@ func (c *executionChallenge) BisectAssertion(
 	}
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	beforeInboxHash := precondition.BeforeInbox.Hash()
+	beforeInboxHash := inbox.InboxValue(precondition.InboxMessages).Hash()
 	tx, err := c.challenge.BisectAssertion(
 		c.auth.getAuth(ctx),
 		beforeInboxHash,
@@ -112,7 +113,7 @@ func (c *executionChallenge) OneStepProof(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	hashPreImage := precondition.BeforeInbox.GetPreImage()
+	hashPreImage := inbox.InboxValue(precondition.InboxMessages).GetPreImage()
 	tx, err := c.challenge.OneStepProof(
 		c.auth.getAuth(ctx),
 		hashPreImage.GetInnerHash(),
@@ -149,7 +150,7 @@ func (c *executionChallenge) ChooseSegment(
 		stepCount := valprotocol.CalculateBisectionStepCount(uint64(i), uint64(len(assertions)), totalSteps)
 		bisectionHashes = append(
 			bisectionHashes,
-			valprotocol.ExecutionDataHash(stepCount, preconditions[i].BeforeHash, preconditions[i].BeforeInbox.Hash(), assertions[i]),
+			valprotocol.ExecutionDataHash(stepCount, preconditions[i].BeforeHash, inbox.InboxValue(preconditions[i].InboxMessages).Hash(), assertions[i]),
 		)
 	}
 

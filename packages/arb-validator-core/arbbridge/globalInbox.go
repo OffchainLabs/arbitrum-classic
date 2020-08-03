@@ -18,7 +18,6 @@ package arbbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -57,7 +56,7 @@ type GlobalInbox interface {
 	SendL2Message(
 		ctx context.Context,
 		chain common.Address,
-		data message.L2Message,
+		data []byte,
 	) (MessageDeliveredEvent, error)
 
 	// SendL2MessageNoWait calls SendL2Message without
@@ -68,7 +67,7 @@ type GlobalInbox interface {
 	SendL2MessageNoWait(
 		ctx context.Context,
 		chain common.Address,
-		data message.L2Message,
+		data []byte,
 	) error
 
 	DepositEthMessage(

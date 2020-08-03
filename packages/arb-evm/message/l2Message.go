@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package l2message
+package message
 
 import (
 	"bytes"
@@ -22,14 +22,28 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
+
+type L2Message struct {
+	Data []byte
+}
+
+func (l L2Message) Type() inbox.Type {
+	return L2Type
+}
+
+func (l L2Message) AsData() []byte {
+	return l.Data
+}
 
 type L2SubType uint8
 

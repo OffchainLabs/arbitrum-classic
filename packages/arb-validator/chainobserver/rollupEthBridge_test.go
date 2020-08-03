@@ -34,7 +34,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -145,26 +144,13 @@ func TestComputePrevLeaf(t *testing.T) {
 
 func randomAssertion() *protocol.ExecutionAssertion {
 	logs := make([]value.Value, 0, 5)
-	messages := make([]value.Value, 0)
-	messages = append(messages, message.NewInboxMessage(
-		message.Eth{
-			Dest:  common.Address{},
-			Value: big.NewInt(75),
-		},
-		common.NewAddressFromEth(auth.From),
-		big.NewInt(0),
-		message.NewRandomChainTime(),
-	).AsValue())
-	for i := int32(0); i < 5; i++ {
-		logs = append(logs, value.NewInt64Value(0))
-		messages = append(messages, message.NewRandomInboxMessage(message.NewRandomEth()).AsValue())
-	}
-
+	sends := make([]value.Value, 0)
+	sends = append(sends, ethTransfer(common.Address{}, big.NewInt(75)))
 	return protocol.NewExecutionAssertionFromValues(
 		common.RandHash(),
 		true,
 		rand.Uint64(),
-		messages,
+		sends,
 		logs,
 	)
 }

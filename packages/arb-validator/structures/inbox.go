@@ -19,18 +19,17 @@ package structures
 import (
 	"errors"
 	"fmt"
-
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 type messageStackItem struct {
-	message message.InboxMessage
+	message inbox.InboxMessage
 	prev    *messageStackItem
 	next    *messageStackItem
 	hash    common.Hash
@@ -113,7 +112,7 @@ func (ms *MessageStack) bottomIndex() *big.Int {
 	}
 }
 
-func (ms *MessageStack) DeliverMessage(msg message.InboxMessage) {
+func (ms *MessageStack) DeliverMessage(msg inbox.InboxMessage) {
 	newTopCount := new(big.Int).Add(ms.TopCount(), big.NewInt(1))
 	if ms.newest == nil {
 		item := &messageStackItem{
@@ -183,7 +182,7 @@ func (x *InboxBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Mes
 	ret.hashOfRest = x.HashOfRest.Unmarshal()
 	for i := len(x.Items) - 1; i >= 0; i = i - 1 {
 		val := ctx.GetValue(x.Items[i].Unmarshal())
-		msg, err := message.NewInboxMessageFromValue(val)
+		msg, err := inbox.NewInboxMessageFromValue(val)
 		if err != nil {
 			return nil, err
 		}
@@ -245,10 +244,10 @@ func (ms *MessageStack) GenerateBisection(startItemHash common.Hash, segments, c
 	return cuts, nil
 }
 
-func (ms *MessageStack) GenerateOneStepProof(startItemHash common.Hash) (message.InboxMessage, error) {
+func (ms *MessageStack) GenerateOneStepProof(startItemHash common.Hash) (inbox.InboxMessage, error) {
 	item, ok := ms.itemAfterHash(startItemHash)
 	if !ok {
-		return message.InboxMessage{}, errors.New("one step proof startItemHash not found")
+		return inbox.InboxMessage{}, errors.New("one step proof startItemHash not found")
 	}
 	return item.message, nil
 }
@@ -274,29 +273,8 @@ func (ms *MessageStack) GenerateVMInbox(olderAcc common.Hash, count uint64) (*VM
 	return inbox, nil
 }
 
-func (ms *MessageStack) GetMessages(olderAcc common.Hash, count uint64) ([]message.InboxMessage, error) {
-	if count == 0 {
-		return nil, nil
-	}
-	oldItem, ok := ms.itemAfterHash(olderAcc)
-	if !ok {
-		return nil, errors.New("olderAcc not found")
-	}
-
-	item := oldItem
-	msgs := make([]message.InboxMessage, 0)
-	for i := uint64(0); i < count; i++ {
-		if item == nil {
-			return nil, errors.New("not enough Messages in inbox")
-		}
-		msgs = append(msgs, item.message)
-		item = item.next
-	}
-	return msgs, nil
-}
-
-func (ms *MessageStack) GetAllMessages() []message.InboxMessage {
-	msgs := make([]message.InboxMessage, 0)
+func (ms *MessageStack) GetAllMessages() []inbox.InboxMessage {
+	msgs := make([]inbox.InboxMessage, 0)
 	for item := ms.oldest; item != nil; item = item.next {
 		msgs = append(msgs, item.message)
 	}

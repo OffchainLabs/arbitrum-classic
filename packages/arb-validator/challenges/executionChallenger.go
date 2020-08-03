@@ -175,7 +175,7 @@ func setPreCondition(
 ) *valprotocol.Precondition {
 	assertion, _ := mach.ExecuteAssertion(
 		totalSteps,
-		startPrecondition.BeforeInbox,
+		startPrecondition.InboxMessages,
 		0,
 	)
 	assertStub := valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
@@ -219,7 +219,7 @@ func executionChallengerUpdate(
 					newMachine = cMach.Clone()
 					assertion, _ := cMach.ExecuteAssertion(
 						stepCount,
-						pre.BeforeInbox,
+						pre.InboxMessages,
 						0,
 					)
 					newAssertStub := valprotocol.NewExecutionAssertionStubFromAssertion(assertion)

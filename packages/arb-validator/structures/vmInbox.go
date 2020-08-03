@@ -19,13 +19,13 @@ package structures
 import (
 	"fmt"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 type VMInbox struct {
 	preImageHashes []value.HashPreImage
-	value          value.TupleValue
+	messages       []inbox.InboxMessage
 }
 
 func NewVMInbox() *VMInbox {
@@ -36,14 +36,14 @@ func NewVMInbox() *VMInbox {
 	preImageHashes = append(preImageHashes, hashPreImage)
 
 	return &VMInbox{
-		value:          value.NewEmptyTuple(),
 		preImageHashes: preImageHashes,
+		messages:       nil,
 	}
 }
 
-func (b *VMInbox) DeliverMessage(msg message.InboxMessage) {
-	b.value = value.NewTuple2(b.value, msg.AsValue())
-	hashPreImage := b.value.GetPreImage()
+func (b *VMInbox) DeliverMessage(msg inbox.InboxMessage) {
+	b.messages = append(b.messages, msg)
+	hashPreImage := value.NewTuple2(b.preImageHashes[len(b.preImageHashes)-1], msg.AsValue()).GetPreImage()
 	b.preImageHashes = append(b.preImageHashes, hashPreImage)
 }
 
@@ -73,8 +73,8 @@ func (b *VMInbox) String() string {
 	return fmt.Sprintf("%v", b.preImageHashes)
 }
 
-func (b *VMInbox) AsValue() value.TupleValue {
-	return b.value
+func (b *VMInbox) Messages() []inbox.InboxMessage {
+	return b.messages
 }
 
 func (b *VMInbox) Hash() value.HashPreImage {

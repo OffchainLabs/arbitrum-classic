@@ -393,7 +393,7 @@ func createNodesOnAssert(
 
 func getDisputableNode(baseNode *structures.Node) (*valprotocol.DisputableNode, *protocol.ExecutionAssertion) {
 	theMachine := baseNode.Machine()
-	execAssertion, numSteps := theMachine.ExecuteAssertion(1, value.NewEmptyTuple(), time.Hour)
+	execAssertion, numSteps := theMachine.ExecuteAssertion(1, nil, time.Hour)
 	_ = execAssertion
 
 	assertionParams := &valprotocol.AssertionParams{

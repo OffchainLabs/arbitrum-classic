@@ -19,7 +19,6 @@ package ethbridge
 import (
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	errors2 "github.com/pkg/errors"
 	"math/big"
 
@@ -45,13 +44,13 @@ func newGlobalInbox(address ethcommon.Address, chain ethcommon.Address, client e
 	return &globalInbox{watcher, auth}, nil
 }
 
-func (con *globalInbox) SendL2Message(ctx context.Context, chain common.Address, msg message.L2Message) (arbbridge.MessageDeliveredEvent, error) {
+func (con *globalInbox) SendL2Message(ctx context.Context, chain common.Address, data []byte) (arbbridge.MessageDeliveredEvent, error) {
 	con.auth.Lock()
 	defer con.auth.Unlock()
 	tx, err := con.GlobalInbox.SendL2MessageFromOrigin(
 		con.auth.getAuth(ctx),
 		chain.ToEthAddress(),
-		msg.AsData(),
+		data,
 	)
 	receipt, err := WaitForReceiptWithResults(ctx, con.client, con.auth.auth.From, tx, "SendL2MessageFromOrigin")
 	if err != nil {
@@ -66,18 +65,18 @@ func (con *globalInbox) SendL2Message(ctx context.Context, chain common.Address,
 			return arbbridge.MessageDeliveredEvent{}, err
 		}
 		timestamp := new(big.Int).SetUint64(blockHeader.Time)
-		return con.parseMessageFromOrigin(*evmLog, timestamp, msg.AsData())
+		return con.parseMessageFromOrigin(*evmLog, timestamp, data)
 	}
 	return arbbridge.MessageDeliveredEvent{}, errors.New("Didn't output l2message delivered event")
 }
 
-func (con *globalInbox) SendL2MessageNoWait(ctx context.Context, chain common.Address, msg message.L2Message) error {
+func (con *globalInbox) SendL2MessageNoWait(ctx context.Context, chain common.Address, data []byte) error {
 	con.auth.Lock()
 	defer con.auth.Unlock()
 	_, err := con.GlobalInbox.SendL2MessageFromOrigin(
 		con.auth.getAuth(ctx),
 		chain.ToEthAddress(),
-		msg.AsData(),
+		data,
 	)
 	if err != nil {
 		return err

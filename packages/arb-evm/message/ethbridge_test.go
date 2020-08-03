@@ -19,6 +19,7 @@ package message
 import (
 	"bytes"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -41,12 +42,12 @@ func setupRand(t *testing.T) {
 func TestMessage(t *testing.T) {
 	setupRand(t)
 
-	msg := InboxMessage{
+	msg := inbox.InboxMessage{
 		Kind:        L2Type,
 		Sender:      common.RandAddress(),
 		InboxSeqNum: common.RandBigInt(),
 		Data:        common.RandBytes(200),
-		ChainTime:   NewRandomChainTime(),
+		ChainTime:   inbox.NewRandomChainTime(),
 	}
 
 	bridgeHash, err := tester.MessageHash(
@@ -138,7 +139,7 @@ func TestUnmarshalOutgoing(t *testing.T) {
 	if offset.Uint64() != uint64(len(valData.Bytes())) {
 		t.Error("incorrect offset")
 	}
-	if Type(kind) != msg.Kind {
+	if inbox.Type(kind) != msg.Kind {
 		t.Error("incorrect l2message type")
 	}
 	if sender != msg.Sender.ToEthAddress() {

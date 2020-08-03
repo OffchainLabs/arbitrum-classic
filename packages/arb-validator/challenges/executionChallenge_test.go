@@ -20,8 +20,8 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -115,13 +115,13 @@ func testExecutionChallenge(
 
 func getExecutionChallengeData(mach machine.Machine) (common.Hash, *valprotocol.Precondition, uint64) {
 	afterMachine := mach.Clone()
-	precondition := valprotocol.NewPrecondition(mach.Hash(), value.NewEmptyTuple())
-	assertion, numSteps := afterMachine.ExecuteAssertion(1000, value.NewEmptyTuple(), 0)
+	precondition := valprotocol.NewPrecondition(mach.Hash(), nil)
+	assertion, numSteps := afterMachine.ExecuteAssertion(1000, precondition.InboxMessages, 0)
 
 	challengeHash := valprotocol.ExecutionDataHash(
 		numSteps,
 		precondition.BeforeHash,
-		precondition.BeforeInbox.Hash(),
+		inbox.InboxValue(precondition.InboxMessages).Hash(),
 		valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 	)
 

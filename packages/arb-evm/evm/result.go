@@ -19,16 +19,18 @@ package evm
 import (
 	"errors"
 	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
+
+	ethcommon "github.com/ethereum/go-ethereum/common"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type ResultType int
@@ -45,7 +47,7 @@ const (
 )
 
 type Result struct {
-	L1Message     message.InboxMessage
+	L1Message     inbox.InboxMessage
 	ResultCode    ResultType
 	ReturnData    []byte
 	EVMLogs       []Log
@@ -72,7 +74,7 @@ func (r *Result) AsValue() value.Value {
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		r.L1Message.AsValue(),
 		value.NewInt64Value(int64(r.ResultCode)),
-		message.BytesToByteStack(r.ReturnData),
+		inbox.BytesToByteStack(r.ReturnData),
 		LogsToLogStack(r.EVMLogs),
 		value.NewIntValue(r.GasUsed),
 		value.NewIntValue(r.GasPrice),
@@ -83,9 +85,9 @@ func (r *Result) AsValue() value.Value {
 func (r *Result) ToEthReceipt(blockHash common.Hash) (*types.Receipt, error) {
 	contractAddress := ethcommon.Address{}
 	if r.L1Message.Kind == message.L2Type && r.ResultCode == ReturnCode {
-		msg, err := l2message.NewL2MessageFromData(r.L1Message.Data)
+		msg, err := message.NewL2MessageFromData(r.L1Message.Data)
 		if err == nil {
-			if msg, ok := msg.(l2message.AbstractTransaction); ok {
+			if msg, ok := msg.(message.AbstractTransaction); ok {
 				emptyAddress := common.Address{}
 				if msg.Destination() == emptyAddress {
 					copy(contractAddress[:], r.ReturnData[12:])
@@ -166,11 +168,11 @@ func NewResultFromValue(val value.Value) (*Result, error) {
 	txIndex, _ := chainInfoTup.GetByInt64(1)
 	startLogIndex, _ := chainInfoTup.GetByInt64(2)
 
-	l1Msg, err := message.NewInboxMessageFromValue(l1MsgVal)
+	l1Msg, err := inbox.NewInboxMessageFromValue(l1MsgVal)
 	if err != nil {
 		return nil, err
 	}
-	returnBytes, err := message.ByteStackToHex(returnData)
+	returnBytes, err := inbox.ByteStackToHex(returnData)
 	if err != nil {
 		return nil, errors2.Wrap(err, "umarshalling return data")
 	}
