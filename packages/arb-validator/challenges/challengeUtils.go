@@ -18,9 +18,6 @@ package challenges
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type ExecutionChallengeInfo struct {
@@ -55,40 +52,6 @@ func challengeEnded(state ChallengeState, err error) bool {
 	} else {
 		return false
 	}
-}
-
-func getVmInboxSegments(
-	vmInbox *structures.VMInbox,
-	bisectionEvent arbbridge.MessagesBisectionEvent,
-	startInbox uint64,
-) ([]value.HashPreImage, error) {
-	bisectionLength := bisectionEvent.TotalLength.Uint64()
-	return vmInbox.GenerateBisection(
-		startInbox,
-		uint64(len(bisectionEvent.SegmentHashes))-1,
-		bisectionLength)
-}
-
-func getInboxSegments(
-	inbox *structures.MessageStack,
-	bisectionEvent arbbridge.MessagesBisectionEvent,
-) ([]common.Hash, error) {
-	bisectionLength := bisectionEvent.TotalLength.Uint64()
-	return inbox.GenerateBisection(
-		bisectionEvent.ChainHashes[0],
-		uint64(len(bisectionEvent.ChainHashes))-1,
-		bisectionLength)
-}
-
-func getSegments(
-	inbox *structures.MessageStack,
-	bisectionEvent arbbridge.InboxTopBisectionEvent,
-) ([]common.Hash, error) {
-	bisectionLength := bisectionEvent.TotalLength.Uint64()
-	return inbox.GenerateBisection(
-		bisectionEvent.ChainHashes[0],
-		uint64(len(bisectionEvent.ChainHashes))-1,
-		bisectionLength)
 }
 
 func findSegmentToChallenge(

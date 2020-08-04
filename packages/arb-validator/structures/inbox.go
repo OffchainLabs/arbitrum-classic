@@ -44,6 +44,14 @@ func (msi *messageStackItem) skipNext(n uint64) *messageStackItem {
 	return ret
 }
 
+func (msi *messageStackItem) skipPrev(n uint64) *messageStackItem {
+	ret := msi
+	for i := uint64(0); i < n && ret != nil; i++ {
+		ret = ret.prev
+	}
+	return ret
+}
+
 func (msi *messageStackItem) Equals(msi2 *messageStackItem) bool {
 	return msi.hash == msi2.hash &&
 		msi.count.Cmp(msi2.count) == 0 &&
@@ -61,10 +69,9 @@ type MessageStack struct {
 
 func NewMessageStack() *MessageStack {
 	return &MessageStack{
-		newest:     nil,
-		oldest:     nil,
-		index:      make(map[common.Hash]*messageStackItem),
-		hashOfRest: value.NewEmptyTuple().Hash(),
+		newest: nil,
+		oldest: nil,
+		index:  make(map[common.Hash]*messageStackItem),
 	}
 }
 
@@ -215,20 +222,30 @@ func (ms *MessageStack) itemAfterHash(acc common.Hash) (*messageStackItem, bool)
 	return item.next, true
 }
 
+func (ms *MessageStack) itemAtHash(acc common.Hash) (*messageStackItem, bool) {
+	item, found := ms.index[acc]
+	return item, found
+}
+
+func segmentSizes(segments, count uint64) (uint64, uint64, uint64) {
+	if count < segments {
+		segments = count
+	}
+	firstSegmentSize := count/segments + count%segments
+	otherSegmentSize := count / segments
+	return segments, firstSegmentSize, otherSegmentSize
+}
+
 func (ms *MessageStack) GenerateBisection(startItemHash common.Hash, segments, count uint64) ([]common.Hash, error) {
 	startItem, ok := ms.itemAfterHash(startItemHash)
 	if !ok {
 		return nil, errors.New("bisection startItemHash not found")
 	}
 
-	if count < segments {
-		segments = count
-	}
+	segments, firstSegmentSize, otherSegmentSize := segmentSizes(segments, count)
 
 	cuts := make([]common.Hash, 0, segments+1)
 	cuts = append(cuts, startItemHash)
-	firstSegmentSize := count/segments + count%segments
-	otherSegmentSize := count / segments
 	item := startItem.skipNext(firstSegmentSize - 1)
 	if item == nil {
 		return nil, errors.New("inbox too short start")
@@ -244,7 +261,51 @@ func (ms *MessageStack) GenerateBisection(startItemHash common.Hash, segments, c
 	return cuts, nil
 }
 
-func (ms *MessageStack) GenerateOneStepProof(startItemHash common.Hash) (inbox.InboxMessage, error) {
+func (ms *MessageStack) GenerateBisectionReverse(afterItemHash common.Hash, segments, count uint64) ([]common.Hash, error) {
+	startItem, ok := ms.itemAtHash(afterItemHash)
+	if !ok {
+		return nil, errors.New("bisection startItemHash not found")
+	}
+
+	segments, firstSegmentSize, otherSegmentSize := segmentSizes(segments, count)
+
+	cuts := make([]common.Hash, 0, segments+1)
+	cuts = append(cuts, afterItemHash)
+	item := startItem.skipPrev(firstSegmentSize)
+	if item == nil {
+		return nil, errors.New("inbox too short start")
+	}
+	cuts = append(cuts, item.hash)
+	for i := uint64(1); i < segments; i++ {
+		item = item.skipPrev(otherSegmentSize)
+		if item == nil {
+			return nil, errors.New("inbox too short rest")
+		}
+		cuts = append(cuts, item.hash)
+	}
+	return cuts, nil
+}
+
+func (ms *MessageStack) InboxMessageAt(afterGlobalInbox common.Hash) (inbox.InboxMessage, error) {
+	item, ok := ms.itemAtHash(afterGlobalInbox)
+	if !ok {
+		return inbox.InboxMessage{}, errors.New("one step proof startItemHash not found")
+	}
+	return item.message, nil
+}
+
+func (ms *MessageStack) InboxMessageBefore(afterGlobalInbox common.Hash) (inbox.InboxMessage, error) {
+	item, ok := ms.itemAtHash(afterGlobalInbox)
+	if !ok {
+		return inbox.InboxMessage{}, errors.New("one step proof startItemHash not found")
+	}
+	if item.prev == nil {
+		return inbox.InboxMessage{}, errors.New("no previous message")
+	}
+	return item.prev.message, nil
+}
+
+func (ms *MessageStack) InboxMessageAfter(startItemHash common.Hash) (inbox.InboxMessage, error) {
 	item, ok := ms.itemAfterHash(startItemHash)
 	if !ok {
 		return inbox.InboxMessage{}, errors.New("one step proof startItemHash not found")
@@ -254,7 +315,7 @@ func (ms *MessageStack) GenerateOneStepProof(startItemHash common.Hash) (inbox.I
 
 func (ms *MessageStack) GenerateVMInbox(olderAcc common.Hash, count uint64) (*VMInbox, error) {
 	if count == 0 {
-		return NewVMInbox(), nil
+		return NewVMInbox(nil), nil
 	}
 	oldItem, ok := ms.itemAfterHash(olderAcc)
 	if !ok {
@@ -262,15 +323,15 @@ func (ms *MessageStack) GenerateVMInbox(olderAcc common.Hash, count uint64) (*VM
 	}
 
 	item := oldItem
-	inbox := NewVMInbox()
+	messages := make([]inbox.InboxMessage, 0, count)
 	for i := uint64(0); i < count; i++ {
 		if item == nil {
 			return nil, errors.New("not enough Messages in inbox")
 		}
-		inbox.DeliverMessage(item.message)
+		messages = append(messages, item.message)
 		item = item.next
 	}
-	return inbox, nil
+	return NewVMInbox(messages), nil
 }
 
 func (ms *MessageStack) GetAllMessages() []inbox.InboxMessage {
@@ -279,6 +340,15 @@ func (ms *MessageStack) GetAllMessages() []inbox.InboxMessage {
 		msgs = append(msgs, item.message)
 	}
 	return msgs
+}
+
+func (ms *MessageStack) GetAllHashes() []common.Hash {
+	hashes := make([]common.Hash, 0)
+	hashes = append(hashes, ms.hashOfRest)
+	for item := ms.oldest; item != nil; item = item.next {
+		hashes = append(hashes, item.hash)
+	}
+	return hashes
 }
 
 type Inbox struct {

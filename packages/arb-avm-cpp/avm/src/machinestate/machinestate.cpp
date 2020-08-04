@@ -29,8 +29,8 @@ uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
 
 Tuple makeInbox(std::vector<value> inbox_messages, TuplePool* pool) {
     Tuple inbox;
-    for (auto& msg : inbox_messages) {
-        inbox = Tuple(std::move(inbox), std::move(msg), pool);
+    for (auto it = inbox_messages.rbegin(); it != inbox_messages.rend(); ++it) {
+        inbox = Tuple(std::move(inbox), std::move(*it), pool);
     }
     return inbox;
 }

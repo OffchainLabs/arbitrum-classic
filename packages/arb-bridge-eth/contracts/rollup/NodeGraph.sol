@@ -131,7 +131,7 @@ contract NodeGraph {
         // VM protocol state
         bytes32 vmProtoStateHash = RollupUtils.protoStateHash(
             _vmState,
-            Value.newEmptyTuple().hash(),
+            0,
             0,
             0,
             0

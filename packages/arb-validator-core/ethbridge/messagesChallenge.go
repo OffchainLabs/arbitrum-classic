@@ -79,7 +79,7 @@ func (c *messagesChallenge) Bisect(
 
 func (c *messagesChallenge) OneStepProof(
 	ctx context.Context,
-	beforeInbox common.Hash,
+	afterGlobalInbox common.Hash,
 	beforeVmInbox value.HashPreImage,
 	msg inbox.InboxMessage,
 ) error {
@@ -87,7 +87,7 @@ func (c *messagesChallenge) OneStepProof(
 	defer c.auth.Unlock()
 	tx, err := c.contract.OneStepProof(
 		c.auth.getAuth(ctx),
-		beforeInbox,
+		afterGlobalInbox,
 		beforeVmInbox.GetInnerHash(),
 		big.NewInt(beforeVmInbox.Size()),
 		uint8(msg.Kind),

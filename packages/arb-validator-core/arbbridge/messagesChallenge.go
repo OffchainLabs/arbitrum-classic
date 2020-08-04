@@ -37,7 +37,7 @@ type MessagesChallenge interface {
 
 	OneStepProof(
 		ctx context.Context,
-		beforeInbox common.Hash,
+		afterGlobalInbox common.Hash,
 		beforeVmInbox value.HashPreImage,
 		msg inbox.InboxMessage,
 	) error

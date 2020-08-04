@@ -24,6 +24,15 @@ import "./ChallengeUtils.sol";
 import "../arch/Value.sol";
 import "../inbox/Messages.sol";
 
+// The messages challenge pops n items from the inbox segment and pushes
+// them onto the inbox stack, applying a transformation function to them
+// in the process
+//
+// (((rest message1) message2) message3)   ()
+// ((() message1) message2)                (() message3)
+// (() message1)                           ((() message3) message2)
+// rest                                    (((() message3) message2) message1)
+
 contract MessagesChallenge is BisectionChallenge {
     using Hashing for Value.Data;
 
@@ -86,7 +95,7 @@ contract MessagesChallenge is BisectionChallenge {
     }
 
     function oneStepProof(
-        bytes32 _beforeInbox,
+        bytes32 _afterGlobalInbox,
         bytes32 _preImageBHash,
         uint256 _preImageBSize,
         uint8 _kind,
@@ -96,8 +105,8 @@ contract MessagesChallenge is BisectionChallenge {
         uint256 _inboxSeqNum,
         bytes calldata _msgData
     ) external asserterAction {
-        bytes32 afterInbox = Messages.addMessageToInbox(
-            _beforeInbox,
+        bytes32 beforeGlobalInbox = Messages.addMessageToInbox(
+            _afterGlobalInbox,
             Messages.messageHash(
                 _kind,
                 _sender,
@@ -121,8 +130,8 @@ contract MessagesChallenge is BisectionChallenge {
         );
         requireMatchesPrevState(
             ChallengeUtils.messagesHash(
-                _beforeInbox,
-                afterInbox,
+                beforeGlobalInbox,
+                _afterGlobalInbox,
                 beforeVMInbox.hash(),
                 Messages
                     .addMessageToVMInbox(beforeVMInbox, messageValue)

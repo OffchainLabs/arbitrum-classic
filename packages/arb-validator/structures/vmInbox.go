@@ -28,23 +28,22 @@ type VMInbox struct {
 	messages       []inbox.InboxMessage
 }
 
-func NewVMInbox() *VMInbox {
+func NewVMInbox(messages []inbox.InboxMessage) *VMInbox {
 	tuple := value.NewEmptyTuple()
 	hashPreImage := tuple.GetPreImage()
 
 	preImageHashes := make([]value.HashPreImage, 0)
 	preImageHashes = append(preImageHashes, hashPreImage)
 
+	for i := range messages {
+		hashPreImage = value.NewTuple2(hashPreImage, messages[len(messages)-1-i].AsValue()).GetPreImage()
+		preImageHashes = append(preImageHashes, hashPreImage)
+	}
+
 	return &VMInbox{
 		preImageHashes: preImageHashes,
-		messages:       nil,
+		messages:       messages,
 	}
-}
-
-func (b *VMInbox) DeliverMessage(msg inbox.InboxMessage) {
-	b.messages = append(b.messages, msg)
-	hashPreImage := value.NewTuple2(b.preImageHashes[len(b.preImageHashes)-1], msg.AsValue()).GetPreImage()
-	b.preImageHashes = append(b.preImageHashes, hashPreImage)
 }
 
 func (b *VMInbox) GenerateBisection(startIndex, segments, count uint64) ([]value.HashPreImage, error) {

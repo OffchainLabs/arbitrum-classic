@@ -20,7 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	errors2 "github.com/pkg/errors"
 	"math/big"
 	"math/rand"
 
@@ -85,7 +85,7 @@ func challengeMessages(
 
 	vmInbox, err := inbox.GenerateVMInbox(beforeInbox, messageCount)
 	if err != nil {
-		return 0, err
+		return 0, errors2.Wrap(err, "challenger error generating vm inbox")
 	}
 
 	startInbox := uint64(0)
@@ -149,17 +149,23 @@ func msgsChallengerUpdate(
 	// Wait to check if we've already chosen a segment
 	timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 	if timedOut {
-		inboxSegments, err := getInboxSegments(
-			inbox,
-			bisectionEvent)
+		totalMessages := bisectionEvent.TotalLength.Uint64()
+		segmentCount := uint64(len(bisectionEvent.SegmentHashes)) - 1
+
+		inboxSegments, err := inbox.GenerateBisectionReverse(
+			bisectionEvent.ChainHashes[0],
+			segmentCount,
+			totalMessages,
+		)
 		if err != nil {
 			return nil, 0, err
 		}
 
-		vmInboxSegments, err := getVmInboxSegments(
-			vmInbox,
-			bisectionEvent,
-			startInbox)
+		vmInboxSegments, err := vmInbox.GenerateBisection(
+			startInbox,
+			segmentCount,
+			totalMessages,
+		)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -176,12 +182,11 @@ func msgsChallengerUpdate(
 
 		if !found {
 			if challengeEverything {
-				segmentToChallenge = uint64(rand.Int31n(int32(len(bisectionEvent.ChainHashes) - 1)))
+				segmentToChallenge = uint64(rand.Int31n(int32(segmentCount)))
 			} else {
 				return nil, 0, errors.New("Nothing to challenge")
 			}
 		}
-		log.Println("ChooseSegment", uint16(segmentToChallenge), bisectionEvent.ChainHashes, bisectionEvent.SegmentHashes, bisectionEvent.TotalLength)
 		err = contract.ChooseSegment(ctx, uint16(segmentToChallenge), bisectionEvent.ChainHashes, bisectionEvent.SegmentHashes, bisectionEvent.TotalLength)
 		if err != nil {
 			return nil, 0, err

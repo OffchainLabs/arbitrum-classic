@@ -156,8 +156,8 @@ library NodeGraphUtils {
         uint256 gracePeriodTicks
     ) internal pure returns (bytes32) {
         bytes32 challengeHash = ChallengeUtils.messagesHash(
-            data.beforeInboxTop,
             data.afterInboxTop,
+            data.beforeInboxTop,
             Value.newEmptyTuple().hash(),
             data.assertion.inboxHash,
             data.importedMessageCount

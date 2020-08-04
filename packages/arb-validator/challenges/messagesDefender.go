@@ -35,7 +35,8 @@ func DefendMessagesClaim(
 	startBlockId *common.BlockId,
 	startLogIndex uint,
 	inbox *structures.MessageStack,
-	beforeInbox common.Hash,
+	beforeInboxTop common.Hash,
+	afterInboxTop common.Hash,
 	messageCount *big.Int,
 	bisectionCount uint64,
 ) (ChallengeState, error) {
@@ -57,7 +58,8 @@ func DefendMessagesClaim(
 		contract,
 		client,
 		inbox,
-		beforeInbox,
+		beforeInboxTop,
+		afterInboxTop,
 		messageCount.Uint64(),
 		bisectionCount,
 	)
@@ -69,7 +71,8 @@ func defendMessages(
 	contract arbbridge.MessagesChallenge,
 	client arbbridge.ArbClient,
 	inbox *structures.MessageStack,
-	beforeInbox common.Hash,
+	beforeInboxTop common.Hash,
+	afterInboxTop common.Hash,
 	messageCount uint64,
 	bisectionCount uint64,
 ) (ChallengeState, error) {
@@ -82,37 +85,33 @@ func defendMessages(
 		return 0, fmt.Errorf("MessagesChallenge defender expected InitiateChallengeEvent but got %T", event)
 	}
 
-	vmInbox, err := inbox.GenerateVMInbox(beforeInbox, messageCount)
+	vmInbox, err := inbox.GenerateVMInbox(beforeInboxTop, messageCount)
 	if err != nil {
-		return 0, err
+		return 0, errors2.Wrap(err, "defender error generating vm inbox")
 	}
 
-	log.Println("Inbox", inbox)
-	log.Println("VM inbox", vmInbox)
-
-	startInbox := beforeInbox
+	beforeGlobalInbox := afterInboxTop
+	afterGlobalInbox := beforeInboxTop
 	inboxStartCount := uint64(0)
 
-	tuple := value.NewEmptyTuple()
-	hashPreImage := tuple.GetPreImage()
+	inboxPreImage := value.NewEmptyTuple().GetPreImage()
 	for {
-		log.Println(inboxStartCount, messageCount)
 		if messageCount == 1 {
 			return runMsgsOneStepProof(
 				ctx,
 				eventChan,
 				inbox,
 				contract,
-				startInbox,
-				hashPreImage)
+				afterGlobalInbox,
+				inboxPreImage)
 		}
 
-		event, state, preImages, _, err := msgsDefenderUpdate(
+		event, state, preImages, err := msgsDefenderUpdate(
 			ctx,
 			eventChan,
 			contract,
 			inbox,
-			startInbox,
+			beforeGlobalInbox,
 			messageCount,
 			bisectionCount,
 			inboxStartCount,
@@ -145,26 +144,27 @@ func defendMessages(
 			return 0, fmt.Errorf("MessagesChallenge defender expected ContinueChallengeEvent but got %T", event)
 		}
 
-		startInbox, hashPreImage, inboxStartCount, messageCount = updateMsgChallengeData(
+		log.Println("Chose segment", continueEvent.SegmentIndex)
+
+		beforeGlobalInbox, afterGlobalInbox, inboxPreImage, inboxStartCount, messageCount = updateMsgChallengeData(
 			bisectionEvent,
 			continueEvent,
 			preImages,
 			messageCount,
 			inboxStartCount)
-
-		log.Println("messageCount", messageCount, uint64(len(bisectionEvent.ChainHashes))-1, continueEvent.SegmentIndex.Uint64())
 	}
 }
 
 func updateMsgChallengeData(
 	bisectionEvent arbbridge.MessagesBisectionEvent,
 	continueEvent arbbridge.ContinueChallengeEvent,
-	preImages []value.HashPreImage,
+	inboxPreImages []value.HashPreImage,
 	messageCount uint64,
 	inboxStartCount uint64,
-) (common.Hash, value.HashPreImage, uint64, uint64) {
-	startInbox := bisectionEvent.ChainHashes[continueEvent.SegmentIndex.Uint64()]
-	hashPreImage := preImages[continueEvent.SegmentIndex.Uint64()]
+) (common.Hash, common.Hash, value.HashPreImage, uint64, uint64) {
+	beforeGlobalInbox := bisectionEvent.ChainHashes[continueEvent.SegmentIndex.Uint64()]
+	afterGlobalInbox := bisectionEvent.ChainHashes[continueEvent.SegmentIndex.Uint64()+1]
+	hashPreImage := inboxPreImages[continueEvent.SegmentIndex.Uint64()]
 
 	inboxStartCount += getSegmentStart(
 		messageCount,
@@ -176,7 +176,7 @@ func updateMsgChallengeData(
 		uint64(len(bisectionEvent.ChainHashes))-1,
 		continueEvent.SegmentIndex.Uint64())
 
-	return startInbox, hashPreImage, inboxStartCount, messageCount
+	return beforeGlobalInbox, afterGlobalInbox, hashPreImage, inboxStartCount, messageCount
 }
 
 func msgsDefenderUpdate(
@@ -184,21 +184,22 @@ func msgsDefenderUpdate(
 	eventChan <-chan arbbridge.Event,
 	contract arbbridge.MessagesChallenge,
 	inbox *structures.MessageStack,
-	startInbox common.Hash,
+	afterGlobalInbox common.Hash,
 	messageCount uint64,
 	bisectionCount uint64,
 	inboxStartCount uint64,
 	vmInbox *structures.VMInbox,
-) (arbbridge.Event, ChallengeState, []value.HashPreImage, bool, error) {
-	chainHashes, err := inbox.GenerateBisection(startInbox, bisectionCount, messageCount)
+) (arbbridge.Event, ChallengeState, []value.HashPreImage, error) {
+	log.Println("Bisecting from", afterGlobalInbox, bisectionCount, messageCount)
+	chainHashes, err := inbox.GenerateBisectionReverse(afterGlobalInbox, bisectionCount, messageCount)
+	log.Println("Bisection", chainHashes)
 	preImages, err := vmInbox.GenerateBisection(inboxStartCount, bisectionCount, messageCount)
 	if err != nil {
-		return nil, 0, nil, false, err
+		return nil, 0, nil, err
 	}
 
 	makeBisection, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 	if makeBisection {
-
 		simpleHashes := make([]common.Hash, 0, len(preImages))
 		for _, h := range preImages {
 			simpleHashes = append(simpleHashes, h.Hash())
@@ -206,15 +207,12 @@ func msgsDefenderUpdate(
 
 		err = contract.Bisect(ctx, chainHashes, simpleHashes, new(big.Int).SetUint64(messageCount))
 		if err != nil {
-			return nil, 0, nil, makeBisection, errors2.Wrap(err, "failing making bisection")
+			return nil, 0, nil, errors2.Wrap(err, "failing making bisection")
 		}
 
 		event, state, err = getNextEvent(eventChan)
-
-		return event, state, preImages, makeBisection, err
-	} else {
-		return event, state, preImages, makeBisection, err
 	}
+	return event, state, preImages, err
 }
 
 func runMsgsOneStepProof(
@@ -222,16 +220,18 @@ func runMsgsOneStepProof(
 	eventChan <-chan arbbridge.Event,
 	inbox *structures.MessageStack,
 	contract arbbridge.MessagesChallenge,
-	startInbox common.Hash,
-	hashPreImage value.HashPreImage,
+	afterGlobalInbox common.Hash,
+	inboxPreImage value.HashPreImage,
 ) (ChallengeState, error) {
 	timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 	if timedOut {
-		msg, err := inbox.GenerateOneStepProof(startInbox)
+		msg, err := inbox.InboxMessageAfter(afterGlobalInbox)
 		if err != nil {
 			return 0, err
 		}
-		if err := contract.OneStepProof(ctx, startInbox, hashPreImage, msg); err != nil {
+		if err := contract.OneStepProof(ctx, afterGlobalInbox, inboxPreImage, msg); err != nil {
+			log.Println("afterGlobalInbox", afterGlobalInbox)
+			log.Println("msg", msg.AsValue().Hash())
 			return 0, errors2.Wrap(err, "failing making one step proof")
 		}
 		event, state, err = getNextEvent(eventChan)

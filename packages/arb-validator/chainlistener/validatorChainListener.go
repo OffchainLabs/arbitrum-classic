@@ -348,6 +348,7 @@ func (lis *ValidatorChainListener) launchChallenge(
 					startLogIndex,
 					msgStack,
 					chal.ConflictNode().VMProtoData().InboxTop,
+					chal.ConflictNode().Disputable().AssertionClaim.AfterInboxTop,
 					chal.ConflictNode().Disputable().AssertionParams.ImportedMessageCount,
 					100,
 				)

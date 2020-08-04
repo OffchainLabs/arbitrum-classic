@@ -39,17 +39,20 @@ func testMessagesChallenge(
 	challenger *bind.TransactOpts,
 ) {
 	t.Parallel()
-	messageStack := getMsgStack()
+	testMessages := getTestMessages()
+	messageStack := makeMessageStack(testMessages)
 	messageCount := uint64(4)
 	startIndex := big.NewInt(2)
 
-	beforeInbox, challengeHash := getMsgChallengeData(
+	beforeInboxTop, afterInboxTop, challengeHash := getMsgChallengeData(
 		t,
-		messageStack,
+		testMessages,
 		startIndex,
-		messageCount)
+		messageCount,
+	)
 
-	if err := testChallenge(
+	testChallenge(
+		t,
 		client,
 		asserter,
 		challenger,
@@ -63,7 +66,8 @@ func testMessagesChallenge(
 				blockId,
 				0,
 				messageStack,
-				beforeInbox,
+				beforeInboxTop,
+				afterInboxTop,
 				new(big.Int).SetUint64(messageCount),
 				2,
 			)
@@ -76,56 +80,84 @@ func testMessagesChallenge(
 				blockId,
 				0,
 				messageStack,
-				beforeInbox,
+				beforeInboxTop,
 				new(big.Int).SetUint64(messageCount),
 				true,
 			)
 		},
 		testerAddress,
-	); err != nil {
-		t.Fatal(err)
-	}
+	)
 }
 
 func getMsgChallengeData(
 	t *testing.T,
-	messageStack *structures.MessageStack,
+	messages []inbox.InboxMessage,
 	startIndex *big.Int,
 	msgCount uint64,
-) (common.Hash, common.Hash) {
+) (common.Hash, common.Hash, common.Hash) {
+	messageStack := makeMessageStack(messages)
 
-	beforeInbox, err := messageStack.GetHashAtIndex(startIndex)
+	bottomInboxHash, err := messageStack.GetHashAtIndex(startIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	startIndex = startIndex.Add(startIndex, new(big.Int).SetUint64(msgCount))
-	afterInbox, err := messageStack.GetHashAtIndex(startIndex)
+	endIndex := new(big.Int).Add(startIndex, new(big.Int).SetUint64(msgCount))
+	topInboxHash, err := messageStack.GetHashAtIndex(endIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	inbox, err := messageStack.GenerateVMInbox(beforeInbox, msgCount)
+	t.Log("Message stack:")
+	stackHashes := messageStack.GetAllHashes()
+	for i := range messages {
+		t.Log("stack:", stackHashes[len(stackHashes)-1-i])
+		t.Log("message:", messages[len(messages)-1-i].AsValue().Hash())
+	}
+	t.Log(stackHashes[0])
+
+	t.Log("topHash", topInboxHash)
+	t.Log("bottomHash", bottomInboxHash)
+
+	vmInbox, err := messageStack.GenerateVMInbox(bottomInboxHash, msgCount)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	importedMessages := inbox.Hash().Hash()
+	calculatedInboxMessages := vmInbox.Messages()
+	if uint64(len(calculatedInboxMessages)) != msgCount {
+		t.Fatal("unexpected vm inbox message count", len(calculatedInboxMessages), "instead of", msgCount)
+	}
+	start := startIndex.Uint64()
+	for i, msg := range messages[start : start+msgCount] {
+		if !msg.Equals(calculatedInboxMessages[i]) {
+			t.Fatal("generated vm inbox had bad contents")
+		}
+
+	}
+
 	challengeHash := valprotocol.MessageChallengeDataHash(
-		beforeInbox,
-		afterInbox,
+		topInboxHash,
+		bottomInboxHash,
 		value.NewEmptyTuple().Hash(),
-		importedMessages,
+		vmInbox.Hash().Hash(),
 		big.NewInt(4),
 	)
-	return beforeInbox, challengeHash
+	return bottomInboxHash, topInboxHash, challengeHash
 }
 
-func getMsgStack() *structures.MessageStack {
+func makeMessageStack(messages []inbox.InboxMessage) *structures.MessageStack {
 	messageStack := structures.NewMessageStack()
-	for i := int64(0); i < 8; i++ {
-		msg := inbox.NewRandomInboxMessage()
+	for _, msg := range messages {
 		messageStack.DeliverMessage(msg)
 	}
 	return messageStack
+}
+
+func getTestMessages() []inbox.InboxMessage {
+	messages := make([]inbox.InboxMessage, 0, 8)
+	for i := int64(0); i < 8; i++ {
+		messages = append(messages, inbox.NewRandomInboxMessage())
+	}
+	return messages
 }

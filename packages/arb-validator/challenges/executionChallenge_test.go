@@ -39,7 +39,8 @@ func testExecutionChallenge(
 	mach := getTestMachine(t)
 	challengeHash, precondition, numSteps := getExecutionChallengeData(mach)
 
-	if err := testChallengerCatchUp(
+	testChallengerCatchUp(
+		t,
 		client,
 		asserter,
 		challenger,
@@ -108,9 +109,7 @@ func testExecutionChallenge(
 			)
 		},
 		testerAddress,
-	); err != nil {
-		t.Fatal(err)
-	}
+	)
 }
 
 func getExecutionChallengeData(mach machine.Machine) (common.Hash, *valprotocol.Precondition, uint64) {
