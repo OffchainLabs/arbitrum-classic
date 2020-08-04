@@ -18,27 +18,28 @@ package challenges
 
 import (
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 type AssertionDefender struct {
-	precondition *valprotocol.Precondition
-	numSteps     uint64
-	initState    machine.Machine
+	inboxMessages []inbox.InboxMessage
+	numSteps      uint64
+	initState     machine.Machine
 }
 
-func NewAssertionDefender(precondition *valprotocol.Precondition, numSteps uint64, initState machine.Machine) AssertionDefender {
-	return AssertionDefender{precondition, numSteps, initState.Clone()}
+func NewAssertionDefender(inboxMessages []inbox.InboxMessage, numSteps uint64, initState machine.Machine) AssertionDefender {
+	return AssertionDefender{inboxMessages, numSteps, initState.Clone()}
 }
 
 func (ad AssertionDefender) NumSteps() uint64 {
 	return ad.numSteps
 }
 
-func (ad AssertionDefender) GetPrecondition() *valprotocol.Precondition {
-	return ad.precondition
+func (ad AssertionDefender) GetInboxMessages() []inbox.InboxMessage {
+	return ad.inboxMessages
 }
 
 func (ad AssertionDefender) GetMachineState() machine.Machine {
@@ -54,24 +55,24 @@ func (ad AssertionDefender) NBisect(slices uint64) ([]AssertionDefender, []*valp
 	assertions := make([]*valprotocol.ExecutionAssertionStub, 0, slices)
 	m := ad.initState.Clone()
 
-	pre := ad.precondition
+	messages := ad.inboxMessages
 	for i := uint64(0); i < slices; i++ {
 		steps := valprotocol.CalculateBisectionStepCount(i, slices, nsteps)
 		initState := m.Clone()
 
 		assertion, numSteps := m.ExecuteAssertion(
 			steps,
-			pre.InboxMessages,
+			messages,
 			0,
 		)
 		defenders = append(defenders, NewAssertionDefender(
-			pre,
+			messages[:assertion.InboxMessagesConsumed],
 			numSteps,
 			initState,
 		))
-		stub := valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
+		stub := valprotocol.NewExecutionAssertionStubFromAssertion(assertion, messages)
 		assertions = append(assertions, stub)
-		pre = pre.GeneratePostcondition(stub)
+		messages = messages[assertion.InboxMessagesConsumed:]
 	}
 	return defenders, assertions
 }
@@ -82,7 +83,7 @@ func (ad AssertionDefender) SolidityOneStepProof() ([]byte, error) {
 
 func ChooseAssertionToChallenge(
 	m machine.Machine,
-	pre *valprotocol.Precondition,
+	inboxMessages []inbox.InboxMessage,
 	assertions []*valprotocol.ExecutionAssertionStub,
 	totalSteps uint64,
 ) (uint16, machine.Machine, error) {
@@ -92,14 +93,14 @@ func ChooseAssertionToChallenge(
 		initState := m.Clone()
 		generatedAssertion, numSteps := m.ExecuteAssertion(
 			steps,
-			pre.InboxMessages,
+			inboxMessages,
 			0,
 		)
-		stub := valprotocol.NewExecutionAssertionStubFromAssertion(generatedAssertion)
-		if uint64(numSteps) != steps || !stub.Equals(assertions[i]) {
+		stub := valprotocol.NewExecutionAssertionStubFromAssertion(generatedAssertion, inboxMessages)
+		if numSteps != steps || !stub.Equals(assertions[i]) {
 			return uint16(i), initState, nil
 		}
-		pre = pre.GeneratePostcondition(stub)
+		inboxMessages = inboxMessages[generatedAssertion.InboxMessagesConsumed:]
 	}
 	return 0, nil, errors.New("all segments in false ExecutionAssertion are valid")
 }

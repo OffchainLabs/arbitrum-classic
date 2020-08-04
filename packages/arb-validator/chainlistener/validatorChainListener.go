@@ -292,23 +292,20 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(
 func (lis *ValidatorChainListener) StartedChallenge(
 	ctx context.Context,
 	msgStack *structures.MessageStack,
-	precondition *valprotocol.Precondition,
 	chal *nodegraph.Challenge) {
-	lis.launchChallenge(ctx, msgStack, precondition, chal)
+	lis.launchChallenge(ctx, msgStack, chal)
 }
 
 func (lis *ValidatorChainListener) ResumedChallenge(
 	ctx context.Context,
 	msgStack *structures.MessageStack,
-	precondition *valprotocol.Precondition,
 	chal *nodegraph.Challenge) {
-	lis.launchChallenge(ctx, msgStack, precondition, chal)
+	lis.launchChallenge(ctx, msgStack, chal)
 }
 
 func (lis *ValidatorChainListener) launchChallenge(
 	ctx context.Context,
 	msgStack *structures.MessageStack,
-	precondition *valprotocol.Precondition,
 	chal *nodegraph.Challenge) {
 	// Must already be staked to be challenged
 	startBlockId := chal.BlockId()
@@ -359,6 +356,10 @@ func (lis *ValidatorChainListener) launchChallenge(
 				}
 			}()
 		case valprotocol.InvalidExecutionChildType:
+			messages, err := structures.ImportedMessages(msgStack, chal.ConflictNode())
+			if err != nil {
+				log.Fatal("Node held invalid messages")
+			}
 			go func() {
 				res, err := challenges.DefendExecutionClaim(
 					ctx,
@@ -366,7 +367,7 @@ func (lis *ValidatorChainListener) launchChallenge(
 					chal.Contract(),
 					startBlockId,
 					startLogIndex,
-					precondition,
+					messages,
 					chal.ConflictNode().Prev().Machine(),
 					chal.ConflictNode().Disputable().AssertionParams.NumSteps,
 					50,
@@ -423,6 +424,10 @@ func (lis *ValidatorChainListener) launchChallenge(
 				}
 			}()
 		case valprotocol.InvalidExecutionChildType:
+			messages, err := structures.ImportedMessages(msgStack, chal.ConflictNode())
+			if err != nil {
+				log.Fatal("Node held invalid messages")
+			}
 			go func() {
 				res, err := challenges.ChallengeExecutionClaim(
 					ctx,
@@ -430,7 +435,7 @@ func (lis *ValidatorChainListener) launchChallenge(
 					chal.Contract(),
 					startBlockId,
 					startLogIndex,
-					precondition,
+					messages,
 					chal.ConflictNode().Prev().Machine(),
 					false,
 					challenges.StandardExecutionChallenge(),

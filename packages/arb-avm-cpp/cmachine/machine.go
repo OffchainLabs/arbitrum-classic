@@ -114,15 +114,16 @@ func (m *Machine) PrintState() {
 
 func makeExecutionAssertion(
 	assertion C.RawAssertion,
-	machineHash common.Hash,
+	beforeMachineHash common.Hash,
+	afterMachineHash common.Hash,
 ) (*protocol.ExecutionAssertion, uint64) {
 	outMessagesRaw := toByteSlice(assertion.outMessages)
 	logsRaw := toByteSlice(assertion.logs)
-
 	return protocol.NewExecutionAssertion(
-		machineHash,
-		int(assertion.didInboxInsn) != 0,
+		beforeMachineHash,
+		afterMachineHash,
 		uint64(assertion.numGas),
+		uint64(assertion.inbox_messages_consumed),
 		outMessagesRaw,
 		uint64(assertion.outMessageCount),
 		logsRaw,
@@ -143,6 +144,7 @@ func (m *Machine) ExecuteAssertion(
 	msgDataC := C.CBytes(buf.Bytes())
 	defer C.free(msgDataC)
 
+	beforeHash := m.Hash()
 	assertion := C.executeAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
@@ -151,7 +153,7 @@ func (m *Machine) ExecuteAssertion(
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
 
-	return makeExecutionAssertion(assertion, m.Hash())
+	return makeExecutionAssertion(assertion, beforeHash, m.Hash())
 }
 
 func (m *Machine) ExecuteSideloadedAssertion(
@@ -175,6 +177,7 @@ func (m *Machine) ExecuteSideloadedAssertion(
 	sideloadDataC := C.CBytes(sideloadData)
 	defer C.free(sideloadDataC)
 
+	beforeHash := m.Hash()
 	assertion := C.executeSideloadedAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
@@ -184,7 +187,7 @@ func (m *Machine) ExecuteSideloadedAssertion(
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
 
-	return makeExecutionAssertion(assertion, m.Hash())
+	return makeExecutionAssertion(assertion, beforeHash, m.Hash())
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {

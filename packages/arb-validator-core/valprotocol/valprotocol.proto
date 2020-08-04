@@ -9,15 +9,17 @@ message PreconditionBuf {
 }
 
 message ExecutionAssertionStubBuf {
-    common.HashBuf afterHash = 1;
-    bool   didInboxInsn = 2;
-    uint64 numGas = 3;
-    common.HashBuf firstMessageHash = 4;
-    common.HashBuf lastMessageHash = 5;
-    uint64 messageCount = 6;
-    common.HashBuf firstLogHash = 7;
-    common.HashBuf lastLogHash = 8;
-    uint64 logCount = 9;
+    uint64 numGas = 1;
+    common.HashBuf beforeMachineHash = 2;
+    common.HashBuf afterMachineHash = 3;
+    common.HashBuf beforeInboxHash = 4;
+    common.HashBuf afterInboxHash = 5;
+    common.HashBuf firstMessageHash = 6;
+    common.HashBuf lastMessageHash = 7;
+    uint64 messageCount = 8;
+    common.HashBuf firstLogHash = 9;
+    common.HashBuf lastLogHash = 10;
+    uint64 logCount = 11;
 }
 
 message ChainParamsBuf {
@@ -42,8 +44,7 @@ message AssertionParamsBuf {
 
 message AssertionClaimBuf {
     common.HashBuf afterInboxTop = 1;
-    common.HashBuf importedMessagesSlice = 2;
-    valprotocol.ExecutionAssertionStubBuf assertionStub = 3;
+    valprotocol.ExecutionAssertionStubBuf assertionStub = 2;
 }
 
 message DisputableNodeBuf {

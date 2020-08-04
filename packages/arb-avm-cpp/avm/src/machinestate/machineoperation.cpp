@@ -720,11 +720,10 @@ bool send(MachineState& m) {
 }
 
 BlockReason inboxOp(MachineState& m) {
-    if (m.context.inbox.tuple_size() == 0) {
+    if (m.context.inboxEmpty()) {
         return InboxBlocked();
     }
-    m.stack.push(std::move(m.context.inbox));
-    m.context.executedInbox();
+    m.stack.push(m.context.popInbox());
     ++m.pc;
     return NotBlocked{};
 }

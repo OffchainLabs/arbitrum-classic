@@ -43,12 +43,10 @@ type ChainListener interface {
 	StartedChallenge(
 		context.Context,
 		*structures.MessageStack,
-		*valprotocol.Precondition,
 		*nodegraph.Challenge)
 	ResumedChallenge(
 		context.Context,
 		*structures.MessageStack,
-		*valprotocol.Precondition,
 		*nodegraph.Challenge)
 	CompletedChallenge(context.Context, *nodegraph.StakedNodeGraph, arbbridge.ChallengeCompletedEvent)
 	SawAssertion(context.Context, arbbridge.AssertedEvent)

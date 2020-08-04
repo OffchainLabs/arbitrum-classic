@@ -96,8 +96,7 @@ contract MessagesChallenge is BisectionChallenge {
 
     function oneStepProof(
         bytes32 _afterGlobalInbox,
-        bytes32 _preImageBHash,
-        uint256 _preImageBSize,
+        bytes32 _beforeVMInbox,
         uint8 _kind,
         uint256 _blockNumber,
         uint256 _timestamp,
@@ -116,26 +115,25 @@ contract MessagesChallenge is BisectionChallenge {
                 keccak256(_msgData)
             )
         );
-        Value.Data memory messageValue = Messages.messageValue(
-            _kind,
-            _blockNumber,
-            _timestamp,
-            _sender,
-            _inboxSeqNum,
-            _msgData
-        );
-        Value.Data memory beforeVMInbox = Value.newTuplePreImage(
-            _preImageBHash,
-            _preImageBSize
+        bytes32 afterVMInbox = Messages.addMessageToInbox(
+            _beforeVMInbox,
+            Messages
+                .messageValue(
+                _kind,
+                _blockNumber,
+                _timestamp,
+                _sender,
+                _inboxSeqNum,
+                _msgData
+            )
+                .hash()
         );
         requireMatchesPrevState(
             ChallengeUtils.messagesHash(
                 beforeGlobalInbox,
                 _afterGlobalInbox,
-                beforeVMInbox.hash(),
-                Messages
-                    .addMessageToVMInbox(beforeVMInbox, messageValue)
-                    .hash(),
+                _beforeVMInbox,
+                afterVMInbox,
                 1
             )
         );

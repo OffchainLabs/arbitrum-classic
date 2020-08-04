@@ -37,7 +37,7 @@ func testExecutionChallenge(
 	t.Parallel()
 
 	mach := getTestMachine(t)
-	challengeHash, precondition, numSteps := getExecutionChallengeData(mach)
+	challengeHash, inboxMessages, numSteps := getExecutionChallengeData(mach)
 
 	testChallengerCatchUp(
 		t,
@@ -53,7 +53,7 @@ func testExecutionChallenge(
 				challengeAddress,
 				blockId,
 				0,
-				precondition,
+				inboxMessages,
 				mach.Clone(),
 				numSteps,
 				4,
@@ -67,7 +67,7 @@ func testExecutionChallenge(
 				challengeAddress,
 				blockId,
 				0,
-				precondition,
+				inboxMessages,
 				mach.Clone(),
 				numSteps,
 				4,
@@ -85,7 +85,7 @@ func testExecutionChallenge(
 				challengeAddress,
 				blockId,
 				0,
-				precondition,
+				inboxMessages,
 				mach.Clone(),
 				true,
 				StandardExecutionChallenge(),
@@ -98,7 +98,7 @@ func testExecutionChallenge(
 				challengeAddress,
 				blockId,
 				0,
-				precondition,
+				inboxMessages,
 				mach.Clone(),
 				true,
 				ExecutionChallengeInfo{
@@ -112,17 +112,15 @@ func testExecutionChallenge(
 	)
 }
 
-func getExecutionChallengeData(mach machine.Machine) (common.Hash, *valprotocol.Precondition, uint64) {
+func getExecutionChallengeData(mach machine.Machine) (common.Hash, []inbox.InboxMessage, uint64) {
 	afterMachine := mach.Clone()
-	precondition := valprotocol.NewPrecondition(mach.Hash(), nil)
-	assertion, numSteps := afterMachine.ExecuteAssertion(1000, precondition.InboxMessages, 0)
+	var inboxMessages []inbox.InboxMessage
+	assertion, numSteps := afterMachine.ExecuteAssertion(1000, inboxMessages, 0)
 
 	challengeHash := valprotocol.ExecutionDataHash(
 		numSteps,
-		precondition.BeforeHash,
-		inbox.InboxValue(precondition.InboxMessages).Hash(),
-		valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
+		valprotocol.NewExecutionAssertionStubFromAssertion(assertion, inboxMessages),
 	)
 
-	return challengeHash, precondition, numSteps
+	return challengeHash, inboxMessages, numSteps
 }

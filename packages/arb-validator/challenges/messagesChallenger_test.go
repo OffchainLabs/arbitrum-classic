@@ -140,7 +140,7 @@ func getMsgChallengeData(
 		topInboxHash,
 		bottomInboxHash,
 		value.NewEmptyTuple().Hash(),
-		vmInbox.Hash().Hash(),
+		vmInbox.Hash(),
 		big.NewInt(4),
 	)
 	return bottomInboxHash, topInboxHash, challengeHash

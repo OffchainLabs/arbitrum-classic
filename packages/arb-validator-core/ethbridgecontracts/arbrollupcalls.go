@@ -32,8 +32,8 @@ func (_ArbRollup *ArbRollupTransactor) ConfirmCall(ctx context.Context, client e
 	return callCheckRollup(ctx, client, from, contractAddress, "confirm", initalProtoStateHash, branches, deadlineTicks, challengeNodeData, logsAcc, vmProtoStateHashes, messagesLengths, messages, stakerAddresses, stakerProofs, stakerProofOffsets)
 }
 
-func (_ArbRollup *ArbRollupTransactor) MakeAssertionCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, fields [9][32]byte, fields2 [5]*big.Int, validBlockHashPrecondition [32]byte, validBlockHeightPrecondition *big.Int, messageCount uint64, logCount uint64, prevChildType uint32, numSteps uint64, didInboxInsn bool, numArbGas uint64, stakerProof [][32]byte) error {
-	return callCheckRollup(ctx, client, from, contractAddress, "makeAssertion", fields, fields2, validBlockHashPrecondition, validBlockHeightPrecondition, messageCount, logCount, prevChildType, numSteps, didInboxInsn, numArbGas, stakerProof)
+func (_ArbRollup *ArbRollupTransactor) MakeAssertionCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, fields [9][32]byte, fields2 [5]*big.Int, validBlockHashPrecondition [32]byte, validBlockHeightPrecondition *big.Int, messageCount uint64, logCount uint64, prevChildType uint32, numSteps uint64, numArbGas uint64, stakerProof [][32]byte) error {
+	return callCheckRollup(ctx, client, from, contractAddress, "makeAssertion", fields, fields2, validBlockHashPrecondition, validBlockHeightPrecondition, messageCount, logCount, prevChildType, numSteps, numArbGas, stakerProof)
 }
 
 func callCheckRollup(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {

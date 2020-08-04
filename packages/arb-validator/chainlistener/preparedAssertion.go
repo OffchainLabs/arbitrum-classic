@@ -81,8 +81,8 @@ func (pa *PreparedAssertion) PossibleFutureNode(chainParams valprotocol.ChainPar
 func (prep *PreparedAssertion) GetAssertionParams() [9][32]byte {
 	return [9][32]byte{
 		prep.BeforeState.MachineHash,
-		prep.Claim.ImportedMessagesSlice,
-		prep.Claim.AssertionStub.AfterHash,
+		prep.Claim.AssertionStub.BeforeInboxHash,
+		prep.Claim.AssertionStub.AfterMachineHash,
 		prep.Claim.AssertionStub.LastMessageHash,
 		prep.Claim.AssertionStub.LastLogHash,
 		prep.BeforeState.InboxTop,

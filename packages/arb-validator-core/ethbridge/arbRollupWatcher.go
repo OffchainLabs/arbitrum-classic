@@ -247,11 +247,11 @@ func (vm *ethRollupWatcher) processEvents(
 			ImportedMessageCount: eventVal.ImportedMessageCount,
 		}
 		claim := &valprotocol.AssertionClaim{
-			AfterInboxTop:         eventVal.Fields[2],
-			ImportedMessagesSlice: eventVal.Fields[3],
+			AfterInboxTop: eventVal.Fields[2],
 			AssertionStub: &valprotocol.ExecutionAssertionStub{
-				AfterHash:        eventVal.Fields[4],
-				DidInboxInsn:     eventVal.DidInboxInsn,
+				AfterMachineHash: eventVal.Fields[4],
+				BeforeInboxHash:  eventVal.Fields[3],
+				AfterInboxHash:   [32]byte{},
 				NumGas:           eventVal.NumArbGas,
 				FirstMessageHash: [32]byte{},
 				LastMessageHash:  eventVal.Fields[5],

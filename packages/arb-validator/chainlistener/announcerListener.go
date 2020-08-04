@@ -54,7 +54,6 @@ func (al *AnnouncerListener) StakeMoved(ctx context.Context, ng *nodegraph.Stake
 func (al *AnnouncerListener) StartedChallenge(
 	context.Context,
 	*structures.MessageStack,
-	*valprotocol.Precondition,
 	*nodegraph.Challenge) {
 	log.Println(al.Prefix, "StartedChallenge")
 }
@@ -62,7 +61,6 @@ func (al *AnnouncerListener) StartedChallenge(
 func (al *AnnouncerListener) ResumedChallenge(
 	context.Context,
 	*structures.MessageStack,
-	*valprotocol.Precondition,
 	*nodegraph.Challenge) {
 	log.Println(al.Prefix, "ResumedChallenge")
 }

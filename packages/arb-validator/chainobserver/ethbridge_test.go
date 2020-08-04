@@ -216,10 +216,17 @@ func TestConfirmAssertion(t *testing.T) {
 	sends := make([]value.Value, 0)
 	sends = append(sends, ethTransfer(dest, big.NewInt(75)))
 
+	messages := []inbox.InboxMessage{
+		inbox.NewRandomInboxMessage(),
+		inbox.NewRandomInboxMessage(),
+		inbox.NewRandomInboxMessage(),
+		inbox.NewRandomInboxMessage(),
+	}
 	assertion := protocol.NewExecutionAssertionFromValues(
 		common.RandHash(),
-		true,
+		common.RandHash(),
 		rand.Uint64(),
+		uint64(len(messages)),
 		sends,
 		[]value.Value{},
 	)
@@ -231,7 +238,7 @@ func TestConfirmAssertion(t *testing.T) {
 		t.Fatal(err)
 	}
 	prepared.Assertion = assertion
-	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
+	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion, messages)
 	var stakerProof []common.Hash
 	events, err = chainlistener.MakeAssertion(context.Background(), rollupContract, prepared, stakerProof)
 	if err != nil {

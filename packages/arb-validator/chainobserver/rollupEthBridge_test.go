@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 	"math/big"
 	"math/rand"
@@ -128,7 +129,6 @@ func TestComputePrevLeaf(t *testing.T) {
 		prepared.GetAssertionParams2(),
 		uint32(prepared.Prev.LinkType()),
 		prepared.Params.NumSteps,
-		prepared.Claim.AssertionStub.DidInboxInsn,
 		prepared.Claim.AssertionStub.NumGas,
 		prepared.Assertion.OutMsgsCount,
 		prepared.Assertion.LogsCount,
@@ -142,17 +142,27 @@ func TestComputePrevLeaf(t *testing.T) {
 	}
 }
 
-func randomAssertion() *protocol.ExecutionAssertion {
+func randomAssertion() (*protocol.ExecutionAssertion, *valprotocol.ExecutionAssertionStub) {
 	logs := make([]value.Value, 0, 5)
 	sends := make([]value.Value, 0)
 	sends = append(sends, ethTransfer(common.Address{}, big.NewInt(75)))
-	return protocol.NewExecutionAssertionFromValues(
+
+	messages := []inbox.InboxMessage{
+		inbox.NewRandomInboxMessage(),
+		inbox.NewRandomInboxMessage(),
+		inbox.NewRandomInboxMessage(),
+		inbox.NewRandomInboxMessage(),
+	}
+
+	assertion := protocol.NewExecutionAssertionFromValues(
 		common.RandHash(),
-		true,
+		common.RandHash(),
 		rand.Uint64(),
+		uint64(len(messages)),
 		sends,
 		logs,
 	)
+	return assertion, valprotocol.NewExecutionAssertionStubFromAssertion(assertion, messages)
 }
 
 func TestGenerateInvalidMsgLeaf(t *testing.T) {
@@ -162,16 +172,16 @@ func TestGenerateInvalidMsgLeaf(t *testing.T) {
 	}
 
 	prevNode := chain.NodeGraph.LatestConfirmed()
-	assertion := randomAssertion()
+	assertion, assertionStub := randomAssertion()
 
-	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertion, valprotocol.InvalidMessagesChildType, chain.GetChainParams())
+	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertionStub, valprotocol.InvalidMessagesChildType, chain.GetChainParams())
 
 	prepared, err := chain.prepareAssertion(chain.latestBlockId)
 	if err != nil {
 		t.Fatal(err)
 	}
 	prepared.Assertion = assertion
-	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
+	prepared.Claim.AssertionStub = assertionStub
 
 	bridgeHash, _, err := tester.ComputePrevLeaf(
 		nil,
@@ -179,7 +189,6 @@ func TestGenerateInvalidMsgLeaf(t *testing.T) {
 		prepared.GetAssertionParams2(),
 		uint32(prepared.Prev.LinkType()),
 		prepared.Params.NumSteps,
-		prepared.Claim.AssertionStub.DidInboxInsn,
 		prepared.Claim.AssertionStub.NumGas,
 		prepared.Assertion.OutMsgsCount,
 		prepared.Assertion.LogsCount,
@@ -214,15 +223,15 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 	}
 
 	prevNode := chain.NodeGraph.LatestConfirmed()
-	assertion := randomAssertion()
-	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertion, valprotocol.InvalidInboxTopChildType, chain.GetChainParams())
+	assertion, assertionStub := randomAssertion()
+	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertionStub, valprotocol.InvalidInboxTopChildType, chain.GetChainParams())
 
 	prepared, err := chain.prepareAssertion(chain.latestBlockId)
 	if err != nil {
 		t.Fatal(err)
 	}
 	prepared.Assertion = assertion
-	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
+	prepared.Claim.AssertionStub = assertionStub
 
 	bridgeHash, _, err := tester.ComputePrevLeaf(
 		nil,
@@ -230,7 +239,6 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 		prepared.GetAssertionParams2(),
 		uint32(prepared.Prev.LinkType()),
 		prepared.Params.NumSteps,
-		prepared.Claim.AssertionStub.DidInboxInsn,
 		prepared.Claim.AssertionStub.NumGas,
 		prepared.Assertion.OutMsgsCount,
 		prepared.Assertion.LogsCount,
@@ -265,15 +273,15 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 	}
 
 	prevNode := chain.NodeGraph.LatestConfirmed()
-	assertion := randomAssertion()
-	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertion, valprotocol.InvalidExecutionChildType, chain.GetChainParams())
+	assertion, assertionStub := randomAssertion()
+	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertionStub, valprotocol.InvalidExecutionChildType, chain.GetChainParams())
 
 	prepared, err := chain.prepareAssertion(chain.latestBlockId)
 	if err != nil {
 		t.Fatal(err)
 	}
 	prepared.Assertion = assertion
-	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
+	prepared.Claim.AssertionStub = assertionStub
 
 	bridgeHash, _, err := tester.ComputePrevLeaf(
 		nil,
@@ -281,7 +289,6 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 		prepared.GetAssertionParams2(),
 		uint32(prepared.Prev.LinkType()),
 		prepared.Params.NumSteps,
-		prepared.Claim.AssertionStub.DidInboxInsn,
 		prepared.Claim.AssertionStub.NumGas,
 		prepared.Assertion.OutMsgsCount,
 		prepared.Assertion.LogsCount,

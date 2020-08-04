@@ -1,8 +1,9 @@
-package value
+package inbox
 
 import (
 	"encoding/json"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type JSONValue interface {
@@ -18,15 +19,19 @@ type JSONInt struct {
 
 type TestVector struct {
 	Version int         `json:"format_version"`
-	Inbox   JSONValue   `json:"inbox"`
+	Inbox   []JSONValue `json:"inbox"`
 	Logs    []JSONValue `json:"logs"`
 	Sends   []JSONValue `json:"sends"`
 }
 
-func TestVectorJSON(inbox Value, logs []Value, sends []Value) ([]byte, error) {
-	jsonInbox, err := valueToJSON(inbox)
-	if err != nil {
-		return nil, err
+func TestVectorJSON(inbox []InboxMessage, logs []value.Value, sends []value.Value) ([]byte, error) {
+	jsonInbox := make([]JSONValue, 0, len(inbox))
+	for _, msg := range inbox {
+		val, err := valueToJSON(msg.AsValue())
+		if err != nil {
+			return nil, err
+		}
+		jsonInbox = append(jsonInbox, val)
 	}
 	jsonLogs := make([]JSONValue, 0, len(logs))
 	for _, avmLog := range logs {
@@ -53,19 +58,11 @@ func TestVectorJSON(inbox Value, logs []Value, sends []Value) ([]byte, error) {
 	return json.Marshal(vector)
 }
 
-func ValueToJSON(val Value) ([]byte, error) {
-	convertedVal, err := valueToJSON(val)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(convertedVal)
-}
-
-func valueToJSON(val Value) (JSONValue, error) {
+func valueToJSON(val value.Value) (JSONValue, error) {
 	switch val := val.(type) {
-	case IntValue:
+	case value.IntValue:
 		return JSONInt{Int: val.BigInt().Text(16)}, nil
-	case TupleValue:
+	case value.TupleValue:
 		vals := make([]JSONValue, 0)
 		for _, subVal := range val.Contents() {
 			jsonSubVal, err := valueToJSON(subVal)

@@ -20,6 +20,7 @@ pragma solidity ^0.5.11;
 
 import "./Value.sol";
 import "./Machine.sol";
+import "../inbox/Messages.sol";
 import "../libraries/Keccak.sol";
 
 // Sourced from https://github.com/leapdao/solEVM-enforcer/tree/master
@@ -62,7 +63,6 @@ library OneStepProof {
         Machine.Data startMachine;
         Machine.Data afterMachine;
         bytes32 inboxHash;
-        bool didInboxInsn;
         bytes32 messageAcc;
         bytes32 logAcc;
         uint64 gas;
@@ -120,7 +120,6 @@ library OneStepProof {
             mach,
             mach.clone(),
             inboxHash,
-            false,
             messagesAcc,
             logsAcc,
             0,
@@ -703,19 +702,15 @@ library OneStepProof {
     }
 
     function executeInboxInsn(AssertionContext memory context) internal pure {
-        require(
-            context.inboxHash != Value.newEmptyTuple().hash(),
-            "Inbox instruction was blocked"
-        );
-
         (, Value.Data memory inbox) = Marshaling.deserialize(
             context.proof,
             context.offset
         );
-        require(inbox.hash() == context.inboxHash, "incorrect inbox value");
         context.stack.pushVal(inbox);
-        context.inboxHash = Value.newEmptyTuple().hash();
-        context.didInboxInsn = true;
+        context.inboxHash = Messages.addMessageToInbox(
+            context.inboxHash,
+            inbox.hash()
+        );
     }
 
     function executeSetGasInsn(AssertionContext memory context) internal pure {

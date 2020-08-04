@@ -45,7 +45,6 @@ library NodeGraphUtils {
         uint256[5] memory fields2,
         uint32 prevChildType,
         uint64 numSteps,
-        bool didInboxInsn,
         uint64 numArbGas,
         uint64 messageCount,
         uint64 logCount
@@ -53,11 +52,11 @@ library NodeGraphUtils {
         ChallengeUtils.ExecutionAssertion memory assertion = ChallengeUtils
             .ExecutionAssertion(
             numSteps,
+            numArbGas,
             fields[0],
             fields[1],
             fields[2],
-            didInboxInsn,
-            numArbGas,
+            0,
             0,
             fields[3],
             messageCount,
@@ -158,8 +157,8 @@ library NodeGraphUtils {
         bytes32 challengeHash = ChallengeUtils.messagesHash(
             data.afterInboxTop,
             data.beforeInboxTop,
-            Value.newEmptyTuple().hash(),
-            data.assertion.inboxHash,
+            0,
+            data.assertion.beforeInboxHash,
             data.importedMessageCount
         );
         return

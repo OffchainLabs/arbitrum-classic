@@ -27,26 +27,31 @@
 #include <vector>
 
 struct AssertionContext {
-    Tuple inbox;
+    std::vector<value> inbox_messages;
+    uint64_t inbox_messages_consumed;
     Tuple sideload_value;
     uint32_t numSteps;
-    bool didInboxInsn;
     uint64_t numGas;
     bool blockingSideload;
     std::vector<value> outMessage;
     std::vector<value> logs;
 
-    AssertionContext() : numSteps(0), didInboxInsn(false), numGas(0) {}
+    AssertionContext() : inbox_messages_consumed(0), numSteps(0), numGas(0) {}
 
     explicit AssertionContext(std::vector<value> inbox_messages,
-                              Tuple sideload,
-                              TuplePool* pool);
-    explicit AssertionContext(std::vector<value> inbox_messages,
-                              TuplePool* pool);
+                              Tuple sideload);
+    explicit AssertionContext(std::vector<value> inbox_messages);
 
-    void executedInbox() {
-        didInboxInsn = true;
-        inbox = Tuple();
+    value popInbox() {
+        return std::move(inbox_messages[inbox_messages_consumed++]);
+    }
+
+    const value& peakInbox() const {
+        return inbox_messages[inbox_messages_consumed];
+    }
+
+    bool inboxEmpty() const {
+        return inbox_messages_consumed == inbox_messages.size();
     }
 };
 

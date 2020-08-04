@@ -161,7 +161,7 @@ func msgsChallengerUpdate(
 			return nil, 0, err
 		}
 
-		vmInboxSegments, err := vmInbox.GenerateBisection(
+		vmInboxHashes, err := vmInbox.GenerateBisection(
 			startInbox,
 			segmentCount,
 			totalMessages,
@@ -171,12 +171,7 @@ func msgsChallengerUpdate(
 		}
 
 		segmentToChallenge, found := findSegmentToChallenge(inboxSegments, bisectionEvent.ChainHashes)
-
 		if !found {
-			vmInboxHashes := make([]common.Hash, 0)
-			for _, preImage := range vmInboxSegments {
-				vmInboxHashes = append(vmInboxHashes, preImage.Hash())
-			}
 			segmentToChallenge, found = findSegmentToChallenge(vmInboxHashes, bisectionEvent.SegmentHashes)
 		}
 

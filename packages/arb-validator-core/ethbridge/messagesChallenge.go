@@ -25,7 +25,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -80,7 +79,7 @@ func (c *messagesChallenge) Bisect(
 func (c *messagesChallenge) OneStepProof(
 	ctx context.Context,
 	afterGlobalInbox common.Hash,
-	beforeVmInbox value.HashPreImage,
+	beforeVmInbox common.Hash,
 	msg inbox.InboxMessage,
 ) error {
 	c.auth.Lock()
@@ -88,8 +87,7 @@ func (c *messagesChallenge) OneStepProof(
 	tx, err := c.contract.OneStepProof(
 		c.auth.getAuth(ctx),
 		afterGlobalInbox,
-		beforeVmInbox.GetInnerHash(),
-		big.NewInt(beforeVmInbox.Size()),
+		beforeVmInbox,
 		uint8(msg.Kind),
 		msg.ChainTime.BlockNum.AsInt(),
 		msg.ChainTime.Timestamp,

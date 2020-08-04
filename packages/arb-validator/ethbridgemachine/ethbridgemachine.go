@@ -18,19 +18,16 @@ package ethbridgemachine
 
 import (
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
 
 type proofData struct {
-	BeforeHash common.Hash
-	Assertion  *valprotocol.ExecutionAssertionStub
-	InboxHash  common.Hash
-	Proof      []byte
+	Assertion *valprotocol.ExecutionAssertionStub
+	Proof     []byte
 }
 
 func generateProofCases(contract string) ([]*proofData, error) {
@@ -48,7 +45,6 @@ func generateProofCases(contract string) ([]*proofData, error) {
 		if err != nil {
 			return nil, err
 		}
-		beforeHash := mach.Hash()
 		beforeMach := mach.Clone()
 		a, ranSteps := mach.ExecuteAssertion(1, inboxMessages, 0)
 		if ranSteps == 0 {
@@ -63,15 +59,10 @@ func generateProofCases(contract string) ([]*proofData, error) {
 			return nil, errors.New("machine stopped in error state")
 		}
 		proofs = append(proofs, &proofData{
-			BeforeHash: beforeHash,
-			Assertion:  valprotocol.NewExecutionAssertionStubFromAssertion(a),
-			InboxHash:  inbox.InboxValue(inboxMessages).Hash(),
-			Proof:      proof,
+			Assertion: valprotocol.NewExecutionAssertionStubFromAssertion(a, inboxMessages),
+			Proof:     proof,
 		})
-
-		if a.DidInboxInsn {
-			inboxMessages = make([]inbox.InboxMessage, 0)
-		}
+		inboxMessages = inboxMessages[a.InboxMessagesConsumed:]
 	}
 	return proofs, nil
 }

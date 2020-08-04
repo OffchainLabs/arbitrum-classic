@@ -22,7 +22,7 @@ import "../arch/OneStepProof.sol";
 
 contract OneStepProofTester {
     function executeStep(
-        bytes32 inboxHash,
+        bytes32 afterInboxHash,
         bytes32 firstMessage,
         bytes32 firstLog,
         bytes memory proof
@@ -32,15 +32,15 @@ contract OneStepProofTester {
         returns (
             bytes32 startHash,
             bytes32 endHash,
+            bytes32 beforeInboxHash,
             bytes32 logAcc,
             bytes32 messageAcc,
-            uint64 gas,
-            bool didInboxInsn
+            uint64 gas
         )
     {
         OneStepProof.AssertionContext memory context = OneStepProof
             .initializeExecutionContext(
-            inboxHash,
+            afterInboxHash,
             firstMessage,
             firstLog,
             proof
@@ -50,10 +50,10 @@ contract OneStepProofTester {
         return (
             Machine.hash(context.startMachine),
             Machine.hash(context.afterMachine),
+            context.inboxHash,
             context.logAcc,
             context.messageAcc,
-            context.gas,
-            context.didInboxInsn
+            context.gas
         );
     }
 }

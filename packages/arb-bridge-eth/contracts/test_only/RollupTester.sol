@@ -141,7 +141,6 @@ contract RollupTester {
         uint256[5] memory fields2,
         uint32 prevChildType,
         uint64 numSteps,
-        bool didInboxInsn,
         uint64 numArbGas,
         uint64 messageCount,
         uint64 logCount
@@ -152,7 +151,6 @@ contract RollupTester {
             fields2,
             prevChildType,
             numSteps,
-            didInboxInsn,
             numArbGas,
             messageCount,
             logCount
@@ -167,7 +165,6 @@ contract RollupTester {
         uint256[5] memory fields2,
         uint32 prevChildType,
         uint64 numSteps,
-        bool didInboxInsn,
         uint64 numArbGas,
         uint64 messageCount,
         uint64 logCount
@@ -178,7 +175,6 @@ contract RollupTester {
             fields2,
             prevChildType,
             numSteps,
-            didInboxInsn,
             numArbGas,
             messageCount,
             logCount
@@ -213,7 +209,6 @@ contract RollupTester {
         uint256[5] memory fields2,
         uint32 prevChildType,
         uint64 numSteps,
-        bool didInboxInsn,
         uint64 numArbGas,
         uint64 messageCount,
         uint64 logCount
@@ -224,7 +219,6 @@ contract RollupTester {
             fields2,
             prevChildType,
             numSteps,
-            didInboxInsn,
             numArbGas,
             messageCount,
             logCount
@@ -264,7 +258,6 @@ contract RollupTester {
         uint256[5] memory fields2,
         uint32 prevChildType,
         uint64 numSteps,
-        bool didInboxInsn,
         uint64 numArbGas,
         uint64 messageCount,
         uint64 logCount
@@ -275,7 +268,6 @@ contract RollupTester {
             fields2,
             prevChildType,
             numSteps,
-            didInboxInsn,
             numArbGas,
             messageCount,
             logCount
@@ -316,7 +308,6 @@ contract RollupTester {
         uint256[5] memory fields2,
         uint32 prevChildType,
         uint64 numSteps,
-        bool didInboxInsn,
         uint64 numArbGas,
         uint64 messageCount,
         uint64 logCount
@@ -327,7 +318,6 @@ contract RollupTester {
             fields2,
             prevChildType,
             numSteps,
-            didInboxInsn,
             numArbGas,
             messageCount,
             logCount

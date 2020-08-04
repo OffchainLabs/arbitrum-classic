@@ -22,7 +22,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type MessagesChallenge interface {
@@ -38,7 +37,7 @@ type MessagesChallenge interface {
 	OneStepProof(
 		ctx context.Context,
 		afterGlobalInbox common.Hash,
-		beforeVmInbox value.HashPreImage,
+		beforeVmInbox common.Hash,
 		msg inbox.InboxMessage,
 	) error
 

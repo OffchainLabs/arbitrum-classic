@@ -187,8 +187,8 @@ func (vm *arbRollup) MakeAssertion(
 	defer vm.auth.Unlock()
 	fields := [9][32]byte{
 		beforeState.MachineHash,
-		assertionClaim.ImportedMessagesSlice,
-		assertionClaim.AssertionStub.AfterHash,
+		assertionClaim.AssertionStub.AfterMachineHash,
+		assertionClaim.AssertionStub.BeforeInboxHash,
 		assertionClaim.AssertionStub.LastMessageHash,
 		assertionClaim.AssertionStub.LastLogHash,
 		beforeState.InboxTop,
@@ -215,7 +215,6 @@ func (vm *arbRollup) MakeAssertion(
 		assertionClaim.AssertionStub.LogCount,
 		uint32(prevChildType),
 		assertionParams.NumSteps,
-		assertionClaim.AssertionStub.DidInboxInsn,
 		assertionClaim.AssertionStub.NumGas,
 		common.HashSliceToRaw(stakerProof),
 	)
@@ -233,7 +232,6 @@ func (vm *arbRollup) MakeAssertion(
 			assertionClaim.AssertionStub.LogCount,
 			uint32(prevChildType),
 			assertionParams.NumSteps,
-			assertionClaim.AssertionStub.DidInboxInsn,
 			assertionClaim.AssertionStub.NumGas,
 			common.HashSliceToRaw(stakerProof),
 		)

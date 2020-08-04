@@ -20,7 +20,6 @@ import (
 	"context"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -46,24 +45,22 @@ func newExecutionChallenge(address ethcommon.Address, client ethutils.EthClient,
 
 func (c *executionChallenge) BisectAssertion(
 	ctx context.Context,
-	precondition *valprotocol.Precondition,
 	assertions []*valprotocol.ExecutionAssertionStub,
 	totalSteps uint64,
 ) error {
 	machineHashes := make([][32]byte, 0, len(assertions)+1)
-	inboxInsnIndex := uint32(0)
+	inboxHashes := make([][32]byte, 0, len(assertions)+1)
 	messageAccs := make([][32]byte, 0, len(assertions)+1)
 	logAccs := make([][32]byte, 0, len(assertions)+1)
 	gasses := make([]uint64, 0, len(assertions))
-	machineHashes = append(machineHashes, precondition.BeforeHash)
+	machineHashes = append(machineHashes, assertions[0].BeforeMachineHash)
+	inboxHashes = append(inboxHashes, assertions[0].BeforeInboxHash)
 	messageAccs = append(messageAccs, assertions[0].FirstMessageHash)
 	logAccs = append(logAccs, assertions[0].FirstLogHash)
 	outCounts := make([]uint64, len(assertions)*2)
 	for i, assertion := range assertions {
-		machineHashes = append(machineHashes, assertion.AfterHash)
-		if assertion.DidInboxInsn {
-			inboxInsnIndex = uint32(i + 1)
-		}
+		machineHashes = append(machineHashes, assertion.AfterMachineHash)
+		inboxHashes = append(inboxHashes, assertion.AfterInboxHash)
 		messageAccs = append(messageAccs, assertion.LastMessageHash)
 		logAccs = append(logAccs, assertion.LastLogHash)
 		gasses = append(gasses, assertion.NumGas)
@@ -72,12 +69,10 @@ func (c *executionChallenge) BisectAssertion(
 	}
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	beforeInboxHash := inbox.InboxValue(precondition.InboxMessages).Hash()
 	tx, err := c.challenge.BisectAssertion(
 		c.auth.getAuth(ctx),
-		beforeInboxHash,
 		machineHashes,
-		inboxInsnIndex,
+		inboxHashes,
 		messageAccs,
 		logAccs,
 		outCounts,
@@ -90,9 +85,8 @@ func (c *executionChallenge) BisectAssertion(
 			c.client,
 			c.auth.auth.From,
 			c.contractAddress,
-			beforeInboxHash,
 			machineHashes,
-			inboxInsnIndex,
+			inboxHashes,
 			messageAccs,
 			logAccs,
 			outCounts,
@@ -105,16 +99,14 @@ func (c *executionChallenge) BisectAssertion(
 
 func (c *executionChallenge) OneStepProof(
 	ctx context.Context,
-	precondition *valprotocol.Precondition,
 	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	inboxHash := inbox.InboxValue(precondition.InboxMessages).Hash()
 	tx, err := c.challenge.OneStepProof(
 		c.auth.getAuth(ctx),
-		inboxHash,
+		assertion.AfterInboxHash,
 		assertion.FirstMessageHash,
 		assertion.FirstLogHash,
 		proof,
@@ -125,7 +117,7 @@ func (c *executionChallenge) OneStepProof(
 			c.client,
 			c.auth.auth.From,
 			c.contractAddress,
-			inboxHash,
+			assertion.AfterInboxHash,
 			assertion.FirstMessageHash,
 			assertion.FirstLogHash,
 			proof,
@@ -137,7 +129,6 @@ func (c *executionChallenge) OneStepProof(
 func (c *executionChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
-	preconditions []*valprotocol.Precondition,
 	assertions []*valprotocol.ExecutionAssertionStub,
 	totalSteps uint64,
 ) error {
@@ -146,7 +137,7 @@ func (c *executionChallenge) ChooseSegment(
 		stepCount := valprotocol.CalculateBisectionStepCount(uint64(i), uint64(len(assertions)), totalSteps)
 		bisectionHashes = append(
 			bisectionHashes,
-			valprotocol.ExecutionDataHash(stepCount, preconditions[i].BeforeHash, inbox.InboxValue(preconditions[i].InboxMessages).Hash(), assertions[i]),
+			valprotocol.ExecutionDataHash(stepCount, assertions[i]),
 		)
 	}
 

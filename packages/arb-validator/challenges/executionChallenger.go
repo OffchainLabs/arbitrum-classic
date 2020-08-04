@@ -19,6 +19,7 @@ package challenges
 import (
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -33,7 +34,7 @@ func ChallengeExecutionClaim(
 	address common.Address,
 	startBlockId *common.BlockId,
 	startLogIndex uint,
-	startPrecondition *valprotocol.Precondition,
+	inboxMessages []inbox.InboxMessage,
 	startMachine machine.Machine,
 	challengeEverything bool,
 	challengeType ExecutionChallengeInfo,
@@ -56,7 +57,7 @@ func ChallengeExecutionClaim(
 		contract,
 		client,
 		startMachine,
-		startPrecondition,
+		inboxMessages,
 		challengeEverything,
 		challengeType,
 	)
@@ -68,7 +69,7 @@ func challengeExecution(
 	contract arbbridge.ExecutionChallenge,
 	client arbbridge.ArbClient,
 	startMachine machine.Machine,
-	startPrecondition *valprotocol.Precondition,
+	inboxMessages []inbox.InboxMessage,
 	challengeEverything bool,
 	challengeType ExecutionChallengeInfo,
 ) (ChallengeState, error) {
@@ -82,7 +83,6 @@ func challengeExecution(
 	}
 
 	mach := startMachine
-	precondition := startPrecondition
 	deadline := ev.Deadline
 	for {
 		cont := ContinueChallenge(challengeType)
@@ -117,14 +117,22 @@ func challengeExecution(
 			return 0, fmt.Errorf("ExecutionChallenge challenger expected ExecutionBisectionEvent but got %T", event)
 		}
 
-		newMachine, preconditions, event, state, chooseSegment, err := executionChallengerUpdate(
-			ctx,
-			eventChan,
-			mach,
-			contract,
-			precondition,
-			bisectionEvent,
-			challengeEverything)
+		chooseSegment, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
+
+		if chooseSegment {
+			mach, inboxMessages, err = executionChallengerUpdate(
+				ctx,
+				mach,
+				contract,
+				inboxMessages,
+				bisectionEvent,
+				challengeEverything,
+			)
+			if err != nil {
+				return state, err
+			}
+			event, state, err = getNextEvent(eventChan)
+		}
 
 		if challengeEnded(state, err) {
 			return state, err
@@ -136,18 +144,15 @@ func challengeExecution(
 		}
 
 		// Update mach, precondition, deadline
-		if chooseSegment {
-			// Freshly bisected assertion
-			mach = newMachine
-			precondition = preconditions[continueEvent.SegmentIndex.Uint64()]
-		} else {
+		if !chooseSegment {
 			// Replayed from existing event
 			totalSteps := computeSteps(continueEvent, bisectionEvent)
-			precondition = setPreCondition(
-				mach,
-				startPrecondition,
-				precondition,
-				totalSteps)
+			assertion, _ := mach.ExecuteAssertion(
+				totalSteps,
+				inboxMessages,
+				0,
+			)
+			inboxMessages = inboxMessages[assertion.InboxMessagesConsumed:]
 		}
 		deadline = continueEvent.Deadline
 	}
@@ -167,78 +172,50 @@ func computeSteps(
 	return totalSteps
 }
 
-func setPreCondition(
-	mach machine.Machine,
-	startPrecondition *valprotocol.Precondition,
-	precondition *valprotocol.Precondition,
-	totalSteps uint64,
-) *valprotocol.Precondition {
-	assertion, _ := mach.ExecuteAssertion(
-		totalSteps,
-		startPrecondition.InboxMessages,
-		0,
-	)
-	assertStub := valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
-	return precondition.GeneratePostcondition(assertStub)
-}
-
 func executionChallengerUpdate(
 	ctx context.Context,
-	eventChan <-chan arbbridge.Event,
 	mach machine.Machine,
 	contract arbbridge.ExecutionChallenge,
-	precondition *valprotocol.Precondition,
+	inboxMessages []inbox.InboxMessage,
 	bisectionEvent arbbridge.ExecutionBisectionEvent,
 	challengeEverything bool,
-) (machine.Machine, []*valprotocol.Precondition, arbbridge.Event, ChallengeState, bool, error) {
-	chooseSegment, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
-	var preconditions []*valprotocol.Precondition
-	var newMachine machine.Machine
-	if chooseSegment {
-		var challengedAssertionNum uint16
-		challengedAssertionNum, newMachine, err = ChooseAssertionToChallenge(
-			mach.Clone(),
-			precondition,
-			bisectionEvent.Assertions,
-			bisectionEvent.TotalSteps)
+) (machine.Machine, []inbox.InboxMessage, error) {
+	challengedAssertionNum, newMachine, err := ChooseAssertionToChallenge(
+		mach.Clone(),
+		inboxMessages,
+		bisectionEvent.Assertions,
+		bisectionEvent.TotalSteps)
 
-		if err != nil {
-			if !challengeEverything {
-				return nil, nil, nil, 0, chooseSegment, err
-			} else {
-				pre := precondition
-				cMach := mach.Clone()
-				challengedAssertionNum = uint16(rand.Int31n(int32(len(bisectionEvent.Assertions))))
+	if err != nil {
+		if !challengeEverything {
+			return nil, nil, err
+		} else {
+			cMach := mach.Clone()
+			challengedAssertionNum = uint16(rand.Int31n(int32(len(bisectionEvent.Assertions))))
 
-				for i := 0; i < len(bisectionEvent.Assertions); i++ {
-					stepCount := valprotocol.CalculateBisectionStepCount(
-						uint64(i),
-						uint64(len(bisectionEvent.Assertions)),
-						bisectionEvent.TotalSteps)
+			for i := 0; i < len(bisectionEvent.Assertions); i++ {
+				stepCount := valprotocol.CalculateBisectionStepCount(
+					uint64(i),
+					uint64(len(bisectionEvent.Assertions)),
+					bisectionEvent.TotalSteps)
 
-					newMachine = cMach.Clone()
-					assertion, _ := cMach.ExecuteAssertion(
-						stepCount,
-						pre.InboxMessages,
-						0,
-					)
-					newAssertStub := valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
-					pre = precondition.GeneratePostcondition(newAssertStub)
-				}
-				err = nil
+				newMachine = cMach.Clone()
+				assertion, _ := cMach.ExecuteAssertion(
+					stepCount,
+					inboxMessages,
+					0,
+				)
+				inboxMessages = inboxMessages[assertion.InboxMessagesConsumed:]
 			}
+			err = nil
 		}
-
-		preconditions = valprotocol.GeneratePreconditions(precondition, bisectionEvent.Assertions)
-		err = contract.ChooseSegment(
-			ctx,
-			challengedAssertionNum,
-			preconditions,
-			bisectionEvent.Assertions,
-			bisectionEvent.TotalSteps,
-		)
-		event, state, err = getNextEvent(eventChan)
 	}
 
-	return newMachine, preconditions, event, state, chooseSegment, err
+	err = contract.ChooseSegment(
+		ctx,
+		challengedAssertionNum,
+		bisectionEvent.Assertions,
+		bisectionEvent.TotalSteps,
+	)
+	return newMachine, inboxMessages, err
 }

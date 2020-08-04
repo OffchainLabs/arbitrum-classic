@@ -66,10 +66,10 @@ func (lis *evil_WrongAssertionListener) AssertionPrepared(
 		prepared.Claim.AfterInboxTop = badHash
 		log.Println("Prepared EVIL inbox top assertion")
 	case WrongMessagesSliceAssertion:
-		prepared.Claim.ImportedMessagesSlice = badHash
+		prepared.Claim.AssertionStub.BeforeInboxHash = badHash
 		log.Println("Prepared EVIL imported messages assertion")
 	case WrongExecutionAssertion:
-		prepared.Claim.AssertionStub.AfterHash = badHash
+		prepared.Claim.AssertionStub.AfterMachineHash = badHash
 		log.Println("Prepared EVIL execution assertion")
 	default:
 		log.Fatal("unrecognized evil listener type")

@@ -18,13 +18,13 @@ package chainobserver
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"testing"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
@@ -140,18 +140,18 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 
 func doAnAssertion(chain *ChainObserver, baseNode *structures.Node) error {
 	theMachine := baseNode.Machine()
-	execAssertion, numSteps := theMachine.ExecuteAssertion(1, nil, time.Hour)
+	var messages []inbox.InboxMessage
+	execAssertion, numSteps := theMachine.ExecuteAssertion(1, messages, time.Hour)
 	_ = execAssertion
 
 	assertionParams := &valprotocol.AssertionParams{
 		NumSteps:             numSteps,
 		ImportedMessageCount: big.NewInt(0),
 	}
-	assertionStub := valprotocol.NewExecutionAssertionStubFromAssertion(execAssertion)
+	assertionStub := valprotocol.NewExecutionAssertionStubFromAssertion(execAssertion, messages)
 	assertionClaim := &valprotocol.AssertionClaim{
-		AfterInboxTop:         chain.Inbox.GetTopHash(),
-		ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
-		AssertionStub:         assertionStub,
+		AfterInboxTop: chain.Inbox.GetTopHash(),
+		AssertionStub: assertionStub,
 	}
 	disputableNode := valprotocol.NewDisputableNode(
 		assertionParams,

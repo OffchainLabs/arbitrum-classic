@@ -31,7 +31,7 @@ contract ExecutionChallenge is BisectionChallenge {
 
     event BisectedAssertion(
         bytes32[] machineHashes,
-        uint32 inboxInsnIndex,
+        bytes32[] inboxHashes,
         bytes32[] messageAccs,
         bytes32[] logAccs,
         uint64[] outCounts,
@@ -48,9 +48,8 @@ contract ExecutionChallenge is BisectionChallenge {
     string private constant OSP_PROOF = "OSP_PROOF";
 
     struct BisectAssertionData {
-        bytes32 beforeInbox;
         bytes32[] machineHashes;
-        uint32 inboxInsnIndex;
+        bytes32[] inboxHashes;
         bytes32[] messageAccs;
         bytes32[] logAccs;
         uint64[] outCounts;
@@ -60,9 +59,8 @@ contract ExecutionChallenge is BisectionChallenge {
 
     // @param inboxInsnIndex is 0 if the assertion didn't include an inbox instruction, and otherwise the index of the segment including it plus 1
     function bisectAssertion(
-        bytes32 _beforeInbox,
         bytes32[] memory _machineHashes,
-        uint32 inboxInsnIndex,
+        bytes32[] memory _inboxHashes,
         bytes32[] memory _messageAccs,
         bytes32[] memory _logAccs,
         uint64[] memory _outCounts,
@@ -70,9 +68,8 @@ contract ExecutionChallenge is BisectionChallenge {
         uint64 _totalSteps
     ) public asserterAction {
         BisectAssertionData memory bisection = BisectAssertionData(
-            _beforeInbox,
             _machineHashes,
-            inboxInsnIndex,
+            _inboxHashes,
             _messageAccs,
             _logAccs,
             _outCounts,
@@ -87,6 +84,7 @@ contract ExecutionChallenge is BisectionChallenge {
         view
     {
         uint256 bisectionCount = _data.machineHashes.length - 1;
+        require(bisectionCount + 1 == _data.inboxHashes.length, BIS_INPLEN);
         require(bisectionCount + 1 == _data.messageAccs.length, BIS_INPLEN);
         require(bisectionCount + 1 == _data.logAccs.length, BIS_INPLEN);
         require(bisectionCount == _data.gases.length, BIS_INPLEN);
@@ -105,12 +103,11 @@ contract ExecutionChallenge is BisectionChallenge {
                 .ExecutionAssertion(
                 _data
                     .totalSteps,
-                _data.machineHashes[0],
-                _data
-                    .beforeInbox,
-                _data.machineHashes[bisectionCount],
-                _data.inboxInsnIndex > 0 ? true : false,
                 totalGas,
+                _data.machineHashes[0],
+                _data.machineHashes[bisectionCount],
+                _data.inboxHashes[0],
+                _data.inboxHashes[bisectionCount],
                 _data.messageAccs[0],
                 _data.messageAccs[bisectionCount],
                 totalMessageCount,
@@ -132,12 +129,11 @@ contract ExecutionChallenge is BisectionChallenge {
             ChallengeUtils
                 .ExecutionAssertion(
                 stepCount,
-                data.machineHashes[i],
-                data
-                    .beforeInbox,
-                data.machineHashes[i + 1],
-                data.inboxInsnIndex == i + 1,
                 data.gases[i],
+                data.machineHashes[i],
+                data.machineHashes[i + 1],
+                data.inboxHashes[i],
+                data.inboxHashes[i + 1],
                 data.messageAccs[i],
                 data.messageAccs[i + 1],
                 data.outCounts[i],
@@ -151,7 +147,7 @@ contract ExecutionChallenge is BisectionChallenge {
     function _emitBisectionEvent(BisectAssertionData memory data) private {
         emit BisectedAssertion(
             data.machineHashes,
-            data.inboxInsnIndex,
+            data.inboxHashes,
             data.messageAccs,
             data.logAccs,
             data.outCounts,
@@ -172,10 +168,6 @@ contract ExecutionChallenge is BisectionChallenge {
             0
         );
         for (uint256 i = 1; i < bisectionCount; i++) {
-            // If the previous segment called inbox, set the inbox to the empty tuple
-            if (_data.inboxInsnIndex == i) {
-                _data.beforeInbox = Value.newEmptyTuple().hash();
-            }
             hashes[i] = _generateBisectionHash(
                 _data,
                 uint32(
@@ -193,14 +185,14 @@ contract ExecutionChallenge is BisectionChallenge {
     }
 
     function oneStepProof(
-        bytes32 _inboxHash,
+        bytes32 _afterInboxHash,
         bytes32 _firstMessage,
         bytes32 _firstLog,
         bytes memory _proof
     ) public asserterAction {
         OneStepProof.AssertionContext memory context = OneStepProof
             .initializeExecutionContext(
-            _inboxHash,
+            _afterInboxHash,
             _firstMessage,
             _firstLog,
             _proof
@@ -214,11 +206,11 @@ contract ExecutionChallenge is BisectionChallenge {
         ChallengeUtils.ExecutionAssertion memory assertion = ChallengeUtils
             .ExecutionAssertion(
             1,
-            Machine.hash(context.startMachine),
-            _inboxHash,
-            Machine.hash(context.afterMachine),
-            context.didInboxInsn,
             context.gas,
+            Machine.hash(context.startMachine),
+            Machine.hash(context.afterMachine),
+            context.inboxHash,
+            _afterInboxHash,
             _firstMessage,
             context.messageAcc,
             _firstMessage == context.messageAcc ? 0 : 1,

@@ -19,6 +19,7 @@ package challenges
 import (
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -33,7 +34,7 @@ func DefendExecutionClaim(
 	address common.Address,
 	startBlockId *common.BlockId,
 	startLogIndex uint,
-	precondition *valprotocol.Precondition,
+	inboxMessages []inbox.InboxMessage,
 	startMachine machine.Machine,
 	numSteps uint64,
 	bisectionCount uint32,
@@ -60,7 +61,7 @@ func DefendExecutionClaim(
 		contract,
 		client,
 		NewAssertionDefender(
-			precondition,
+			inboxMessages,
 			numSteps,
 			startMachine,
 		),
@@ -152,33 +153,24 @@ func updateExecutionData(
 	defender AssertionDefender,
 	bisectionEvent arbbridge.ExecutionBisectionEvent,
 ) AssertionDefender {
-	totalSteps := uint64(0)
-	assertionLen := uint64(len(bisectionEvent.Assertions))
-	segmentIndex := continueEvent.SegmentIndex.Uint64()
-
-	for i := uint64(0); i < segmentIndex; i++ {
-		totalSteps += valprotocol.CalculateBisectionStepCount(
-			i,
-			assertionLen,
-			bisectionEvent.TotalSteps)
-	}
+	totalSteps := computeSteps(continueEvent, bisectionEvent)
 
 	mach := defender.initState
-	pre := defender.precondition
+	inboxMessages := defender.inboxMessages
 	// Update mach, precondition, deadline
 	assertion, _ := mach.ExecuteAssertion(
 		totalSteps,
-		pre.InboxMessages,
+		inboxMessages,
 		0,
 	)
-	pre = pre.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
+	inboxMessages = inboxMessages[assertion.InboxMessagesConsumed:]
 
 	steps := valprotocol.CalculateBisectionStepCount(
-		segmentIndex,
-		assertionLen,
+		continueEvent.SegmentIndex.Uint64(),
+		uint64(len(bisectionEvent.Assertions)),
 		bisectionEvent.TotalSteps)
 
-	return NewAssertionDefender(pre, steps, mach)
+	return NewAssertionDefender(inboxMessages, steps, mach)
 }
 
 func executionDefenderUpdate(
@@ -193,10 +185,8 @@ func executionDefenderUpdate(
 	if makeBisection {
 		var assertions []*valprotocol.ExecutionAssertionStub
 		defenders, assertions = defender.NBisect(uint64(bisectionCount))
-
 		err := contract.BisectAssertion(
 			ctx,
-			defender.GetPrecondition(),
 			assertions,
 			defender.NumSteps())
 		if err != nil {
@@ -220,17 +210,15 @@ func runExecutionOneStepProof(
 		if err != nil {
 			return 0, err
 		}
-		pre := defender.GetPrecondition()
 		assertion, _ := defender.GetMachineState().ExecuteAssertion(
 			1,
-			pre.InboxMessages,
+			defender.GetInboxMessages(),
 			0,
 		)
 
 		err = contract.OneStepProof(
 			ctx,
-			defender.GetPrecondition(),
-			valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
+			valprotocol.NewExecutionAssertionStubFromAssertion(assertion, defender.GetInboxMessages()),
 			proof,
 		)
 		if err != nil {

@@ -32,7 +32,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
@@ -162,7 +161,7 @@ func TestWithdrawEth(t *testing.T) {
 	inboxMessages = append(inboxMessages, message.NewInboxMessage(message.NewL2Message(tx), addr, big.NewInt(2), chainTime))
 
 	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-	testCase, err := value.TestVectorJSON(inbox.InboxValue(inboxMessages), assertion.ParseLogs(), assertion.ParseOutMessages())
+	testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.ParseLogs(), assertion.ParseOutMessages())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -52,7 +52,7 @@ contract NodeGraph {
     //  prevLeaf
     //  inboxValue
     //  afterInboxTop
-    //  importedMessagesSlice
+    //  beforeInboxHash
     //  afterVMHash
     //  messagesAccHash
     //  logsAccHash
@@ -64,7 +64,6 @@ contract NodeGraph {
         uint256 importedMessageCount,
         uint64 numArbGas,
         uint64 numSteps,
-        bool didInboxInsn,
         uint256 beforeMessageCount,
         uint64 messageCount,
         uint256 beforeLogCount,
@@ -198,7 +197,7 @@ contract NodeGraph {
                 prevLeaf,
                 inboxValue,
                 data.afterInboxTop,
-                data.assertion.inboxHash,
+                data.assertion.beforeInboxHash,
                 data.assertion.afterMachineHash,
                 data.assertion.lastMessageHash,
                 data.assertion.lastLogHash,
@@ -208,7 +207,6 @@ contract NodeGraph {
             data.importedMessageCount,
             data.assertion.numArbGas,
             data.assertion.numSteps,
-            data.assertion.didInboxInsn,
             data.beforeMessageCount,
             data.assertion.messageCount,
             data.beforeLogCount,
@@ -283,10 +281,6 @@ contract NodeGraph {
         require(
             data.assertion.numSteps <= vmParams.maxExecutionSteps,
             MAKE_STEP
-        );
-        require(
-            data.importedMessageCount == 0 || data.assertion.didInboxInsn,
-            MAKE_MESSAGES
         );
     }
 

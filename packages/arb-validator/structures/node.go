@@ -19,6 +19,7 @@ package structures
 import (
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 	"math/big"
 	"math/rand"
@@ -99,15 +100,21 @@ func NewValidNodeFromPrev(
 }
 
 func NewRandomNodeFromValidPrev(prev *Node) *Node {
+	messages := []inbox.InboxMessage{
+		inbox.NewRandomInboxMessage(),
+		inbox.NewRandomInboxMessage(),
+		inbox.NewRandomInboxMessage(),
+	}
 	assertion := protocol.NewExecutionAssertionFromValues(
 		common.RandHash(),
-		true,
+		common.RandHash(),
 		rand.Uint64(),
+		uint64(len(messages)),
 		[]value.Value{value.NewInt64Value(0), value.NewInt64Value(2)},
 		[]value.Value{value.NewInt64Value(1), value.NewInt64Value(2)},
 	)
 	disputableNode := valprotocol.NewRandomDisputableNode(
-		valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
+		valprotocol.NewExecutionAssertionStubFromAssertion(assertion, messages),
 	)
 	nextNode := NewValidNodeFromPrev(
 		prev,
@@ -123,13 +130,11 @@ func NewRandomNodeFromValidPrev(prev *Node) *Node {
 
 func NewRandomInvalidNodeFromValidPrev(
 	prev *Node,
-	assertion *protocol.ExecutionAssertion,
+	assertion *valprotocol.ExecutionAssertionStub,
 	kind valprotocol.ChildType,
 	params valprotocol.ChainParams,
 ) *Node {
-	disputableNode := valprotocol.NewRandomDisputableNode(
-		valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
-	)
+	disputableNode := valprotocol.NewRandomDisputableNode(assertion)
 
 	nextNode := NewInvalidNodeFromPrev(
 		prev,
@@ -140,7 +145,7 @@ func NewRandomInvalidNodeFromValidPrev(
 		common.RandHash(),
 	)
 
-	_ = nextNode.UpdateValidOpinion(nil, assertion)
+	_ = nextNode.UpdateInvalidOpinion()
 	return nextNode
 }
 
@@ -340,7 +345,7 @@ func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash
 			node.disputable.AssertionClaim.AfterInboxTop,
 			vmProtoData.InboxTop,
 			value.NewEmptyTuple().Hash(),
-			node.disputable.AssertionClaim.ImportedMessagesSlice,
+			node.disputable.AssertionClaim.AssertionStub.BeforeInboxHash,
 			node.disputable.AssertionParams.ImportedMessageCount,
 		)
 		challengePeriod := params.GracePeriod.Add(common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
@@ -348,8 +353,6 @@ func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash
 	case valprotocol.InvalidExecutionChildType:
 		ret := valprotocol.ExecutionDataHash(
 			node.disputable.AssertionParams.NumSteps,
-			node.prev.vmProtoData.MachineHash,
-			node.disputable.AssertionClaim.ImportedMessagesSlice,
 			node.disputable.AssertionClaim.AssertionStub,
 		)
 		challengePeriod := params.GracePeriod.Add(node.disputable.AssertionClaim.AssertionStub.CheckTime(params))
@@ -443,13 +446,6 @@ func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Node
 		node.machine = ctx.GetMachine(x.MachineHash.Unmarshal())
 	}
 
-	if x.Assertion != nil {
-		calculatedStub := valprotocol.NewExecutionAssertionStubFromAssertion(node.assertion)
-		if !node.disputable.AssertionClaim.AssertionStub.Equals(calculatedStub) {
-			return nil, errors.New("assertion doesn't match stub")
-		}
-	}
-
 	// can't set up prev and successorHash fields yet; caller must do this later
 	return node, nil
 }
@@ -496,4 +492,14 @@ func GetConflictAncestor(n1, n2 *Node) (*Node, *Node, error) {
 		return n1, n2, errors.New("no conflict")
 	}
 	return n1, n2, nil
+}
+
+func ImportedMessages(globalInbox *MessageStack, node *Node) ([]inbox.InboxMessage, error) {
+	inboxTop := node.Prev().VMProtoData().InboxTop
+	messageCount := node.Disputable().AssertionParams.ImportedMessageCount.Uint64()
+	vmInbox, err := globalInbox.GenerateVMInbox(inboxTop, messageCount)
+	if err != nil {
+		return nil, err
+	}
+	return vmInbox.Messages(), nil
 }

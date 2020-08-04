@@ -65,7 +65,7 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 		t.Run(strconv.FormatUint(uint64(opcode), 10), func(t *testing.T) {
 			machineData, err := osp.ExecuteStep(
 				&bind.CallOpts{Context: context.Background()},
-				proof.InboxHash,
+				proof.Assertion.AfterInboxHash,
 				proof.Assertion.FirstMessageHash,
 				proof.Assertion.FirstLogHash,
 				proof.Proof,
@@ -74,7 +74,7 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 			if err != nil {
 				t.Fatal("proof invalid with error", err)
 			}
-			if machineData.DidInboxInsn != proof.Assertion.DidInboxInsn {
+			if machineData.BeforeInboxHash != proof.Assertion.BeforeInboxHash {
 				t.Fatal("wrong DidInboxInsn")
 			}
 			if machineData.Gas != proof.Assertion.NumGas {
@@ -86,10 +86,10 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 			if machineData.MessageAcc != proof.Assertion.LastMessageHash {
 				t.Fatal("wrong message")
 			}
-			if machineData.StartHash != proof.BeforeHash {
+			if machineData.StartHash != proof.Assertion.BeforeMachineHash {
 				t.Fatal("wrong before machine")
 			}
-			if machineData.EndHash != proof.Assertion.AfterHash {
+			if machineData.EndHash != proof.Assertion.AfterMachineHash {
 				t.Fatal("wrong after machine")
 			}
 		})

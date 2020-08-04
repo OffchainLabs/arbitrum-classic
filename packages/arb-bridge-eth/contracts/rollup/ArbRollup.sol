@@ -232,9 +232,9 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
      * @notice Submit a new assertion to be built on top of the specified leaf if it is validly constructed
      * @dev This method selects an existing leaf to build an assertion on top of. If it succeeds that leaf is eliminated and four new leaves are created. The asserter is automatically moved to stake on the new valid leaf.
      * @param fields Packed data for the following fields
-     *   beforeVMHash The hash of the machine at the end of the previous assertion
-     *   importedMessagesSlice Claimed messages sent to the machine in this assertion based on beforeInboxCount and importedMessageCount
-     *   afterVMHash Claimed machine hash after this assertion is completed
+     *   beforeMachineHash The hash of the machine at the end of the previous assertion
+     *   afterMachineHash Claimed machine hash after this assertion is completed
+     *   beforeInboxHash Claimed messages sent to the machine in this assertion based on beforeInboxCount and importedMessageCount
      *   messagesAccHash Claimed commitment to a set of messages output in the assertion
      *   logsAccHash Claimed commitment to a set of logs output in the assertion
      *   beforeInboxTop The hash of the global inbox that the previous assertion had read up to
@@ -253,7 +253,6 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
      * @param messageCount Claimed number of messages emitted in the assertion
      * @param logCount Claimed number of logs emitted in the assertion
      * @param numSteps Argument specifying the number of steps execuited
-     * @param didInboxInsn Claim about whether the assertion inlcuding reading the inbox
      * @param numArbGas Claimed amount of ArbGas used in the assertion
      * @param stakerProof Node graph proof that the asserter is on or can move to the leaf this assertion builds on
      */
@@ -266,7 +265,6 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
         uint64 logCount,
         uint32 prevChildType,
         uint64 numSteps,
-        bool didInboxInsn,
         uint64 numArbGas,
         bytes32[] calldata stakerProof
     ) external {
@@ -281,7 +279,6 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
             fields2,
             prevChildType,
             numSteps,
-            didInboxInsn,
             numArbGas,
             messageCount,
             logCount

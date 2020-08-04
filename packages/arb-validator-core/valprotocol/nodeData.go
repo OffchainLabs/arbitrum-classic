@@ -168,55 +168,48 @@ func (m *AssertionParamsBuf) Unmarshal() *AssertionParams {
 }
 
 type AssertionClaim struct {
-	AfterInboxTop         common.Hash
-	ImportedMessagesSlice common.Hash
-	AssertionStub         *ExecutionAssertionStub
+	AfterInboxTop common.Hash
+	AssertionStub *ExecutionAssertionStub
 }
 
 func NewRandomAssertionClaim(assertion *ExecutionAssertionStub) *AssertionClaim {
 	return &AssertionClaim{
-		AfterInboxTop:         common.RandHash(),
-		ImportedMessagesSlice: common.RandHash(),
-		AssertionStub:         assertion,
+		AfterInboxTop: common.RandHash(),
+		AssertionStub: assertion,
 	}
 }
 
 func (dn *AssertionClaim) String() string {
 	return fmt.Sprintf(
-		"AssertionClaim(AfterInboxTop: %v, ImportedMessagesSlice: %v, Assertion: %v)",
+		"AssertionClaim(AfterInboxTop: %v, Assertion: %v)",
 		dn.AfterInboxTop,
-		dn.ImportedMessagesSlice,
 		dn.AssertionStub,
 	)
 }
 
 func (dn *AssertionClaim) Equals(o *AssertionClaim) bool {
 	return dn.AfterInboxTop == o.AfterInboxTop &&
-		dn.ImportedMessagesSlice == o.ImportedMessagesSlice &&
 		dn.AssertionStub.Equals(o.AssertionStub)
 }
 
 func (dn *AssertionClaim) Clone() *AssertionClaim {
 	return &AssertionClaim{
-		AfterInboxTop:         dn.AfterInboxTop,
-		ImportedMessagesSlice: dn.ImportedMessagesSlice,
-		AssertionStub:         dn.AssertionStub.Clone(),
+		AfterInboxTop: dn.AfterInboxTop,
+		AssertionStub: dn.AssertionStub.Clone(),
 	}
 }
 
 func (dn *AssertionClaim) MarshalToBuf() *AssertionClaimBuf {
 	return &AssertionClaimBuf{
-		AfterInboxTop:         dn.AfterInboxTop.MarshalToBuf(),
-		ImportedMessagesSlice: dn.ImportedMessagesSlice.MarshalToBuf(),
-		AssertionStub:         dn.AssertionStub.MarshalToBuf(),
+		AfterInboxTop: dn.AfterInboxTop.MarshalToBuf(),
+		AssertionStub: dn.AssertionStub.MarshalToBuf(),
 	}
 }
 
 func (m *AssertionClaimBuf) Unmarshal() *AssertionClaim {
 	return &AssertionClaim{
-		AfterInboxTop:         m.AfterInboxTop.Unmarshal(),
-		ImportedMessagesSlice: m.ImportedMessagesSlice.Unmarshal(),
-		AssertionStub:         m.AssertionStub.Unmarshal(),
+		AfterInboxTop: m.AfterInboxTop.Unmarshal(),
+		AssertionStub: m.AssertionStub.Unmarshal(),
 	}
 }
 
@@ -270,7 +263,7 @@ func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
 
 func (dn *DisputableNode) ValidAfterVMProtoData(prevState *VMProtoData) *VMProtoData {
 	return NewVMProtoData(
-		dn.AssertionClaim.AssertionStub.AfterHash,
+		dn.AssertionClaim.AssertionStub.AfterMachineHash,
 		dn.AssertionClaim.AfterInboxTop,
 		new(big.Int).Add(prevState.InboxCount, dn.AssertionParams.ImportedMessageCount),
 		new(big.Int).Add(prevState.MessageCount, new(big.Int).SetUint64(dn.AssertionClaim.AssertionStub.MessageCount)),

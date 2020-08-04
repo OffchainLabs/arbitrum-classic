@@ -186,10 +186,13 @@ func NewAddressFromInt(val value.IntValue) common.Address {
 	return address
 }
 
-func InboxValue(messages []InboxMessage) value.TupleValue {
-	inbox := value.NewEmptyTuple()
+func InboxValue(messages []InboxMessage) common.Hash {
+	inboxAcc := common.Hash{}
 	for i := range messages {
-		inbox = value.NewTuple2(inbox, messages[len(messages)-1-i].AsValue())
+		inboxAcc = hashing.SoliditySHA3(
+			hashing.Bytes32(inboxAcc),
+			hashing.Bytes32(messages[len(messages)-1-i].AsValue().Hash()),
+		)
 	}
-	return inbox
+	return inboxAcc
 }

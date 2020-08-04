@@ -27,14 +27,12 @@ type ExecutionChallenge interface {
 
 	BisectAssertion(
 		ctx context.Context,
-		precondition *valprotocol.Precondition,
 		assertions []*valprotocol.ExecutionAssertionStub,
 		totalSteps uint64,
 	) error
 
 	OneStepProof(
 		ctx context.Context,
-		precondition *valprotocol.Precondition,
 		assertion *valprotocol.ExecutionAssertionStub,
 		proof []byte,
 	) error
@@ -42,7 +40,6 @@ type ExecutionChallenge interface {
 	ChooseSegment(
 		ctx context.Context,
 		assertionToChallenge uint16,
-		preconditions []*valprotocol.Precondition,
 		assertions []*valprotocol.ExecutionAssertionStub,
 		totalSteps uint64,
 	) error

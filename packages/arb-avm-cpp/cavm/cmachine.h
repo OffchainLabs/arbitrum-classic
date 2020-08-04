@@ -49,13 +49,13 @@ typedef struct {
 } CBlockReason;
 
 typedef struct {
+    uint64_t inbox_messages_consumed;
     ByteSlice outMessages;
     int outMessageCount;
     ByteSlice logs;
     int logCount;
     uint64_t numSteps;
     uint64_t numGas;
-    int didInboxInsn;
 } RawAssertion;
 
 CMachine* machineCreate(const char* filename);
