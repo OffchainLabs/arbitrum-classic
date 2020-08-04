@@ -337,8 +337,8 @@ func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash
 		return ret, challengePeriod
 	case valprotocol.InvalidMessagesChildType:
 		ret := valprotocol.MessageChallengeDataHash(
-			vmProtoData.InboxTop,
 			node.disputable.AssertionClaim.AfterInboxTop,
+			vmProtoData.InboxTop,
 			value.NewEmptyTuple().Hash(),
 			node.disputable.AssertionClaim.ImportedMessagesSlice,
 			node.disputable.AssertionParams.ImportedMessageCount,

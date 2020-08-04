@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"log"
 	"math/big"
 	"math/rand"
@@ -60,6 +61,17 @@ func ethTransfer(dest common.Address, amount *big.Int) value.Value {
 		inbox.BytesToByteStack(ethData),
 	})
 	return tup
+}
+
+func checkBalance(t *testing.T, globalInbox arbbridge.GlobalInbox, address common.Address, amount *big.Int) {
+	balance, err := globalInbox.GetEthBalance(context.Background(), address)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if balance.Cmp(amount) != 0 {
+		t.Fatalf("failed checking balance, expected %v but saw %v", amount, balance)
+	}
 }
 
 func TestMain(m *testing.M) {
@@ -157,18 +169,7 @@ func TestConfirmAssertion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	checkBalance := func(address common.Address, amount *big.Int) {
-		balance, err := globalInbox.GetEthBalance(context.Background(), address)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if balance.Cmp(amount) != 0 {
-			t.Fatalf("failed checking balance, expected %v but saw %v", amount, balance)
-		}
-	}
-
-	checkBalance(rollupAddress, big.NewInt(100))
+	checkBalance(t, globalInbox, rollupAddress, big.NewInt(100))
 
 	checkpointer, err := checkpointing.NewIndexedCheckpointer(
 		rollupAddress,
@@ -195,22 +196,20 @@ func TestConfirmAssertion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Run("place stake", func(t *testing.T) {
-		events, err := rollupContract.PlaceStake(
-			context.Background(),
-			big.NewInt(0),
-			[]common.Hash{},
-			[]common.Hash{},
-		)
-		if err != nil {
+	events, err := rollupContract.PlaceStake(
+		context.Background(),
+		big.NewInt(0),
+		[]common.Hash{},
+		[]common.Hash{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ev := range events {
+		if err := chain.HandleNotification(context.Background(), ev); err != nil {
 			t.Fatal(err)
 		}
-		for _, ev := range events {
-			if err := chain.HandleNotification(context.Background(), ev); err != nil {
-				t.Fatal(err)
-			}
-		}
-	})
+	}
 
 	rand.Seed(time.Now().Unix())
 	dest := common.RandAddress()
@@ -234,7 +233,7 @@ func TestConfirmAssertion(t *testing.T) {
 	prepared.Assertion = assertion
 	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
 	var stakerProof []common.Hash
-	events, err := chainlistener.MakeAssertion(context.Background(), rollupContract, prepared, stakerProof)
+	events, err = chainlistener.MakeAssertion(context.Background(), rollupContract, prepared, stakerProof)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -357,6 +356,6 @@ func TestConfirmAssertion(t *testing.T) {
 		}
 	})
 
-	checkBalance(rollupAddress, big.NewInt(25))
-	checkBalance(dest, big.NewInt(75))
+	checkBalance(t, globalInbox, rollupAddress, big.NewInt(25))
+	checkBalance(t, globalInbox, dest, big.NewInt(75))
 }

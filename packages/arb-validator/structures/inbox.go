@@ -25,7 +25,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type messageStackItem struct {
@@ -86,7 +85,7 @@ func (ms *MessageStack) String() string {
 
 func (ms *MessageStack) GetTopHash() common.Hash {
 	if ms.newest == nil {
-		return value.NewEmptyTuple().Hash()
+		return common.Hash{}
 	} else {
 		return ms.newest.hash
 	}
@@ -148,7 +147,7 @@ func (ms *MessageStack) DeliverMessage(msg inbox.InboxMessage) {
 
 func (ms *MessageStack) GetHashAtIndex(height *big.Int) (common.Hash, error) {
 	if height.Cmp(big.NewInt(0)) == 0 {
-		return value.NewEmptyTuple().Hash(), nil
+		return common.Hash{}, nil
 	}
 	if height.Cmp(ms.bottomIndex()) < 0 {
 		return common.Hash{}, errors.New("height is below bottom of l2message stack")
