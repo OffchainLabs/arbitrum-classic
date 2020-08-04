@@ -87,24 +87,6 @@ func TestMessage(t *testing.T) {
 func TestDeliveredMessage(t *testing.T) {
 	setupRand(t)
 
-	startInbox := value.NewEmptyTuple()
-	startInboxPre := startInbox.GetPreImage()
-	msg := value.NewTuple2(value.NewInt64Value(2), value.NewInt64Value(6))
-	msgPre := msg.GetPreImage()
-	bridgeVMInboxHash, err := tester.AddMessageToVMInboxHash(
-		nil,
-		startInboxPre.GetInnerHash(),
-		big.NewInt(startInboxPre.Size()),
-		msgPre.GetInnerHash(),
-		big.NewInt(msgPre.Size()),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if bridgeVMInboxHash != value.NewTuple2(startInbox, msg).Hash() {
-		t.Error("incorrect AddMessageToVMInboxHash")
-	}
-
 	beforeInbox := common.RandHash()
 	msgHash := common.RandHash()
 	bridgeInboxHash, err := tester.AddMessageToInbox(

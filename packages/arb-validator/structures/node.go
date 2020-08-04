@@ -344,7 +344,7 @@ func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash
 		ret := valprotocol.MessageChallengeDataHash(
 			node.disputable.AssertionClaim.AfterInboxTop,
 			vmProtoData.InboxTop,
-			value.NewEmptyTuple().Hash(),
+			common.Hash{},
 			node.disputable.AssertionClaim.AssertionStub.BeforeInboxHash,
 			node.disputable.AssertionParams.ImportedMessageCount,
 		)

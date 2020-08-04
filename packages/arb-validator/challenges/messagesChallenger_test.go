@@ -25,7 +25,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -139,7 +138,7 @@ func getMsgChallengeData(
 	challengeHash := valprotocol.MessageChallengeDataHash(
 		topInboxHash,
 		bottomInboxHash,
-		value.NewEmptyTuple().Hash(),
+		common.Hash{},
 		vmInbox.Hash(),
 		big.NewInt(4),
 	)

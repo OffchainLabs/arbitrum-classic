@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	errors2 "github.com/pkg/errors"
@@ -94,7 +93,7 @@ func defendMessages(
 	afterGlobalInbox := beforeInboxTop
 	inboxStartCount := uint64(0)
 
-	beforeInboxHash := value.NewEmptyTuple().Hash()
+	beforeInboxHash := vmInbox.Hash()
 	for {
 		if messageCount == 1 {
 			return runMsgsOneStepProof(
@@ -152,7 +151,8 @@ func defendMessages(
 			continueEvent,
 			vmInboxHashes,
 			messageCount,
-			inboxStartCount)
+			inboxStartCount,
+		)
 	}
 }
 
@@ -203,7 +203,7 @@ func msgsDefenderUpdate(
 	if makeBisection {
 		err = contract.Bisect(ctx, chainHashes, vmInboxHashes, new(big.Int).SetUint64(messageCount))
 		if err != nil {
-			return nil, 0, nil, errors2.Wrap(err, "failing making bisection")
+			return nil, 0, nil, errors2.Wrap(err, "failing making messages bisection")
 		}
 
 		event, state, err = getNextEvent(eventChan)
