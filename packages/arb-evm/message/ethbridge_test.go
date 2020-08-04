@@ -18,92 +18,11 @@ package message
 
 import (
 	"bytes"
-	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"math/big"
-	"math/rand"
-	"testing"
-	"time"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"math/big"
+	"testing"
 )
-
-var errHash = errors.New("ethbridge calculated wrong hash")
-var errMsgHash = errors.New("ethbridge calculated wrong l2message hash")
-
-func setupRand(t *testing.T) {
-	currentTime := time.Now().Unix()
-	t.Log("seed:", currentTime)
-	rand.Seed(currentTime)
-}
-
-func TestMessage(t *testing.T) {
-	setupRand(t)
-
-	msg := inbox.InboxMessage{
-		Kind:        L2Type,
-		Sender:      common.RandAddress(),
-		InboxSeqNum: common.RandBigInt(),
-		Data:        common.RandBytes(200),
-		ChainTime:   inbox.NewRandomChainTime(),
-	}
-
-	bridgeHash, err := tester.MessageHash(
-		nil,
-		uint8(msg.Kind),
-		msg.Sender.ToEthAddress(),
-		msg.ChainTime.BlockNum.AsInt(),
-		msg.ChainTime.Timestamp,
-		msg.InboxSeqNum,
-		hashing.SoliditySHA3(msg.Data),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if bridgeHash != msg.CommitmentHash().ToEthHash() {
-		t.Error(errHash)
-	}
-
-	messageBridgeHash, err := tester.MessageValueHash(
-		nil,
-		uint8(msg.Kind),
-		msg.ChainTime.BlockNum.AsInt(),
-		msg.ChainTime.Timestamp,
-		msg.Sender.ToEthAddress(),
-		msg.InboxSeqNum,
-		msg.Data,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if messageBridgeHash != msg.AsValue().Hash().ToEthHash() {
-		t.Error(errMsgHash)
-	}
-}
-
-func TestDeliveredMessage(t *testing.T) {
-	setupRand(t)
-
-	beforeInbox := common.RandHash()
-	msgHash := common.RandHash()
-	bridgeInboxHash, err := tester.AddMessageToInbox(
-		nil,
-		beforeInbox,
-		msgHash,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if bridgeInboxHash != hashing.SoliditySHA3(
-		hashing.Bytes32(beforeInbox),
-		hashing.Bytes32(msgHash),
-	) {
-		t.Error("incorrect AddMessageToInbox")
-	}
-}
 
 func TestUnmarshalOutgoing(t *testing.T) {
 	msg := NewRandomOutMessage(NewRandomEth())
