@@ -26,9 +26,11 @@ import * as fs from 'fs'
 use(chaiAsPromised)
 
 interface Assertion {
-  AfterHash: number[]
-  DidInboxInsn: boolean
   NumGas: number
+  BeforeMachineHash: number[]
+  AfterMachineHash: number[]
+  BeforeInboxHash: number[]
+  AfterInboxHash: number[]
   FirstMessageHash: number[]
   LastMessageHash: number[]
   FirstLogHash: number[]
@@ -36,9 +38,7 @@ interface Assertion {
 }
 
 interface Proof {
-  BeforeHash: number[]
   Assertion: Assertion
-  InboxHash: string
   Proof: string
 }
 
@@ -67,24 +67,30 @@ describe('OneStepProof', async () => {
         const {
           startHash,
           endHash,
+          beforeInboxHash,
           logAcc,
           messageAcc,
           gas,
-          didInboxInsn,
         } = await ospTester.executeStep(
-          proof.InboxHash,
+          proof.Assertion.AfterInboxHash,
           proof.Assertion.FirstMessageHash,
           proof.Assertion.FirstLogHash,
           Buffer.from(proof.Proof, 'base64')
         )
-        expect(startHash).to.equal(utils.hexlify(proof.BeforeHash))
-        expect(endHash).to.equal(utils.hexlify(proof.Assertion.AfterHash))
+        expect(startHash).to.equal(
+          utils.hexlify(proof.Assertion.BeforeMachineHash)
+        )
+        expect(endHash).to.equal(
+          utils.hexlify(proof.Assertion.AfterMachineHash)
+        )
         expect(logAcc).to.equal(utils.hexlify(proof.Assertion.LastLogHash))
         expect(messageAcc).to.equal(
           utils.hexlify(proof.Assertion.LastMessageHash)
         )
         expect(gas).to.equal(proof.Assertion.NumGas)
-        expect(didInboxInsn).to.equal(proof.Assertion.DidInboxInsn)
+        expect(beforeInboxHash).to.equal(
+          utils.hexlify(proof.Assertion.BeforeInboxHash)
+        )
         i++
       }
     }).timeout(20000)

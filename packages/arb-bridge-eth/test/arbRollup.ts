@@ -133,18 +133,17 @@ async function makeEmptyAssertion(
   arbRollup: ArbRollup,
   vmState: string,
   numSteps: number,
-  importedMessageCount: utils.BigNumberish,
-  readInbox: boolean
+  importedMessageCount: utils.BigNumberish
 ): Promise<ContractTransaction> {
   const block = await ethers.provider.getBlock('latest')
   return arbRollup.makeAssertion(
     [
       vmState,
-      emptyTupleHash,
       zerobytes32,
       zerobytes32,
-      emptyTupleHash,
-      emptyTupleHash,
+      zerobytes32,
+      zerobytes32,
+      zerobytes32,
       zerobytes32,
       zerobytes32,
       zerobytes32,
@@ -156,7 +155,6 @@ async function makeEmptyAssertion(
     0,
     0,
     numSteps,
-    readInbox,
     0,
     []
   )
@@ -202,7 +200,6 @@ class AssertionParams {
 class ExecutionAssertion {
   constructor(
     public afterState: string,
-    public didReadInbox: boolean,
     public numGas: number,
     public outMessages: ArbValue.Value[],
     public outLogs: ArbValue.Value[]
@@ -328,9 +325,9 @@ class Assertion {
     return childNodeInnerHash(
       this.deadline(),
       invalidMessagesHash(
-        this.prevProtoData.inboxTop,
         this.claims.afterInboxTop,
-        emptyTupleHash,
+        this.prevProtoData.inboxTop,
+        zerobytes32,
         this.claims.importedMessageSlice,
         this.params.importedMessageCount,
         gracePeriodTicks.add(ethers.utils.bigNumberify(1000))
@@ -400,8 +397,8 @@ async function makeAssertion(
 ): Promise<{ receipt: providers.TransactionReceipt; assertion: Assertion }> {
   const fields1 = [
     prevProtoData.machineHash,
-    claims.importedMessageSlice,
     claims.executionAssertion.afterState,
+    claims.importedMessageSlice,
     claims.executionAssertion.outMessagesAcc(),
     claims.executionAssertion.outLogsAcc(),
     prevProtoData.inboxTop,
@@ -425,7 +422,6 @@ async function makeAssertion(
     claims.executionAssertion.outLogs.length,
     prevChildType,
     params.numSteps,
-    claims.executionAssertion.didReadInbox,
     claims.executionAssertion.numGas,
     stakerProof
   )
@@ -515,8 +511,7 @@ describe('ArbRollup', async () => {
         arbRollup,
         '0x3400000000000000000000000000000000000000000000000000000000000000',
         0,
-        0,
-        false
+        0
       )
     ).to.be.revertedWith('MAKE_LEAF')
   })
@@ -527,31 +522,19 @@ describe('ArbRollup', async () => {
 
   it('should fail to assert over step limit', async () => {
     await expect(
-      makeEmptyAssertion(
-        arbRollup,
-        initialVmState,
-        maxExecutionSteps + 1,
-        0,
-        false
-      )
+      makeEmptyAssertion(arbRollup, initialVmState, maxExecutionSteps + 1, 0)
     ).to.be.revertedWith('MAKE_STEP')
   })
 
   it('should fail to assert without stake', async () => {
     await expect(
-      makeEmptyAssertion(arbRollup, initialVmState, 0, 0, false)
+      makeEmptyAssertion(arbRollup, initialVmState, 0, 0)
     ).to.be.revertedWith('INV_STAKER')
-  })
-
-  it('should fail if consuming messages but not reading inbox', async () => {
-    await expect(
-      makeEmptyAssertion(arbRollup, initialVmState, 0, 10, false)
-    ).to.be.revertedWith('MAKE_MESSAGES')
   })
 
   it('should fail if reading past lastest inbox message', async () => {
     await expect(
-      makeEmptyAssertion(arbRollup, initialVmState, 0, 10, true)
+      makeEmptyAssertion(arbRollup, initialVmState, 0, 10)
     ).to.be.revertedWith('MAKE_MESSAGE_CNT')
   })
 
@@ -580,20 +563,13 @@ describe('ArbRollup', async () => {
       await arbRollup.isValidLeaf(originalNode),
       'latest confirmed should be leaf before asserting'
     )
-    const prevProtoData = new VMProtoData(
-      initialVmState,
-      emptyTupleHash,
-      0,
-      0,
-      0
-    )
+    const prevProtoData = new VMProtoData(initialVmState, zerobytes32, 0, 0, 0)
     const params = new AssertionParams(0, ethers.utils.bigNumberify(0))
     const claims = new AssertionClaim(
       zerobytes32,
       emptyTupleHash,
       new ExecutionAssertion(
         '0x8500000000000000000000000000000000000000000000000000000000000000',
-        false,
         0,
         [],
         []
@@ -752,7 +728,6 @@ describe('ArbRollup', async () => {
       emptyTupleHash,
       new ExecutionAssertion(
         zerobytes32,
-        false,
         0,
         [new ArbValue.TupleValue([new ArbValue.IntValue(10)])],
         []

@@ -36,8 +36,6 @@ contract NodeGraph {
     string private constant MAKE_RUN = "MAKE_RUN";
     // Tried to execute too many steps
     string private constant MAKE_STEP = "MAKE_STEP";
-    // Imported messages without reading them
-    string private constant MAKE_MESSAGES = "MAKE_MESSAGES";
     // Tried to import more messages than exist in ethe inbox
     string private constant MAKE_MESSAGE_CNT = "MAKE_MESSAGE_CNT";
 
