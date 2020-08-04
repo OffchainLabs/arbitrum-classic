@@ -64,33 +64,27 @@ describe('OneStepProof', async () => {
           // Some tests are too big to run every case
           return
         }
-        const {
-          startHash,
-          endHash,
-          beforeInboxHash,
-          logAcc,
-          messageAcc,
-          gas,
-        } = await ospTester.executeStep(
+        const { fields, gas } = await ospTester.executeStep(
           proof.Assertion.AfterInboxHash,
           proof.Assertion.FirstMessageHash,
           proof.Assertion.FirstLogHash,
           Buffer.from(proof.Proof, 'base64')
         )
-        expect(startHash).to.equal(
+        expect(fields[0]).to.equal(
           utils.hexlify(proof.Assertion.BeforeMachineHash)
         )
-        expect(endHash).to.equal(
+        expect(fields[1]).to.equal(
           utils.hexlify(proof.Assertion.AfterMachineHash)
         )
-        expect(logAcc).to.equal(utils.hexlify(proof.Assertion.LastLogHash))
-        expect(messageAcc).to.equal(
+        expect(fields[2]).to.equal(
+          utils.hexlify(proof.Assertion.AfterInboxHash)
+        )
+        expect(fields[3]).to.equal(utils.hexlify(proof.Assertion.LastLogHash))
+        expect(fields[4]).to.equal(
           utils.hexlify(proof.Assertion.LastMessageHash)
         )
         expect(gas).to.equal(proof.Assertion.NumGas)
-        expect(beforeInboxHash).to.equal(
-          utils.hexlify(proof.Assertion.BeforeInboxHash)
-        )
+
         i++
       }
     }).timeout(20000)

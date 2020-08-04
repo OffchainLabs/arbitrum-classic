@@ -47,7 +47,7 @@ func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, c
 		t.Fatal(err)
 	}
 	if chain.NodeGraph.Leaves().NumLeaves() != 1 {
-		t.Fatal("unexpected leaf count")
+		t.Fatal("unexpected leaf count", chain.NodeGraph.Leaves().NumLeaves())
 	}
 	tryMarshalUnmarshal(chain, t)
 }
@@ -81,7 +81,7 @@ func testDoAssertion(dummyRollupAddress common.Address, checkpointType string, c
 	if err := doAnAssertion(chain, validTip); err != nil {
 		t.Fatal(err)
 	}
-	if chain.NodeGraph.Leaves().NumLeaves() != 7 {
+	if chain.NodeGraph.Leaves().NumLeaves() != 5 {
 		t.Fatal("unexpected leaf count")
 	}
 
@@ -107,7 +107,7 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 	staker2addr := common.Address{2}
 	contractAddr := common.Address{3}
 	validTip := chain.NodeGraph.NodeGraph.GetSuccessor(chain.NodeGraph.LatestConfirmed(), valprotocol.ValidChildType)
-	tip2 := chain.NodeGraph.NodeGraph.GetSuccessor(chain.NodeGraph.LatestConfirmed(), valprotocol.InvalidMessagesChildType)
+	tip2 := chain.NodeGraph.NodeGraph.GetSuccessor(chain.NodeGraph.LatestConfirmed(), valprotocol.InvalidInboxTopChildType)
 	n1, _, childType, err := nodegraph.GetConflictAncestor(validTip, tip2)
 	if err != nil {
 		t.Fatal(err)
@@ -116,7 +116,7 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 	if !confNode.Equals(chain.NodeGraph.LatestConfirmed()) {
 		t.Fatal("unexpected value for conflict ancestor")
 	}
-	if childType != valprotocol.InvalidMessagesChildType {
+	if childType != valprotocol.InvalidInboxTopChildType {
 		t.Fatal("unexpected value for conflict type")
 	}
 
@@ -148,14 +148,10 @@ func doAnAssertion(chain *ChainObserver, baseNode *structures.Node) error {
 		NumSteps:             numSteps,
 		ImportedMessageCount: big.NewInt(0),
 	}
-	assertionStub := valprotocol.NewExecutionAssertionStubFromAssertion(execAssertion, messages)
-	assertionClaim := &valprotocol.AssertionClaim{
-		AfterInboxTop: chain.Inbox.GetTopHash(),
-		AssertionStub: assertionStub,
-	}
+	assertionStub := structures.NewExecutionAssertionStubFromWholeAssertion(execAssertion, baseNode.VMProtoData().InboxTop, chain.Inbox.MessageStack)
 	disputableNode := valprotocol.NewDisputableNode(
 		assertionParams,
-		assertionClaim,
+		assertionStub,
 		chain.Inbox.GetTopHash(),
 		big.NewInt(0),
 	)

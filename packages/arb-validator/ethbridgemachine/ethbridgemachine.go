@@ -18,8 +18,10 @@ package ethbridgemachine
 
 import (
 	"errors"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
@@ -28,6 +30,7 @@ import (
 type proofData struct {
 	Assertion *valprotocol.ExecutionAssertionStub
 	Proof     []byte
+	Message   *inbox.InboxMessage
 }
 
 func generateProofCases(contract string) ([]*proofData, error) {
@@ -37,7 +40,9 @@ func generateProofCases(contract string) ([]*proofData, error) {
 	}
 
 	maxSteps := uint64(100000)
-	inboxMessages := make([]inbox.InboxMessage, 0)
+	ms := structures.NewRandomMessageStack(100)
+
+	prevInboxHash := common.Hash{}
 
 	proofs := make([]*proofData, 0)
 	for i := uint64(0); i < maxSteps; i++ {
@@ -46,7 +51,11 @@ func generateProofCases(contract string) ([]*proofData, error) {
 			return nil, err
 		}
 		beforeMach := mach.Clone()
-		a, ranSteps := mach.ExecuteAssertion(1, inboxMessages, 0)
+		messages, err := ms.GetMessages(prevInboxHash, 1)
+		if err != nil {
+			return nil, err
+		}
+		a, ranSteps := mach.ExecuteAssertion(1, messages, 0)
 		if ranSteps == 0 {
 			break
 		}
@@ -58,11 +67,17 @@ func generateProofCases(contract string) ([]*proofData, error) {
 			mach.PrintState()
 			return nil, errors.New("machine stopped in error state")
 		}
+		stub := structures.NewExecutionAssertionStubFromWholeAssertion(a, prevInboxHash, ms)
+		var msg *inbox.InboxMessage
+		if a.InboxMessagesConsumed > 0 {
+			msg = &messages[0]
+		}
 		proofs = append(proofs, &proofData{
-			Assertion: valprotocol.NewExecutionAssertionStubFromAssertion(a, inboxMessages),
+			Assertion: stub,
 			Proof:     proof,
+			Message:   msg,
 		})
-		inboxMessages = inboxMessages[a.InboxMessagesConsumed:]
+		prevInboxHash = stub.AfterInboxHash
 	}
 	return proofs, nil
 }

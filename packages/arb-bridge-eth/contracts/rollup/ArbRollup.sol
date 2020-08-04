@@ -234,13 +234,13 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
      * @param fields Packed data for the following fields
      *   beforeMachineHash The hash of the machine at the end of the previous assertion
      *   afterMachineHash Claimed machine hash after this assertion is completed
-     *   beforeInboxHash Claimed messages sent to the machine in this assertion based on beforeInboxCount and importedMessageCount
+     *   beforeInboxTop The hash of the global inbox that the previous assertion had read up to
+     *   afterInboxTop Claimed hash of the global inbox at height beforeInboxCount + importedMessageCount
      *   messagesAccHash Claimed commitment to a set of messages output in the assertion
      *   logsAccHash Claimed commitment to a set of logs output in the assertion
-     *   beforeInboxTop The hash of the global inbox that the previous assertion had read up to
      *   prevPrevLeafHash The hash of the leaf that was the ancestor of the leaf we're building on
      *   prevDataHash Type specific data of the node we're on
-     *   afterInboxTop Claimed hash of the global inbox at height beforeInboxCount + importedMessageCount
+
      * @param fields2 Packed data for the following fields
      *   beforeInboxCount The total number of messages read after the previous assertion executed
      *   prevDeadlineTicks The challenge deadline of the node this assertion builds on
@@ -257,7 +257,7 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
      * @param stakerProof Node graph proof that the asserter is on or can move to the leaf this assertion builds on
      */
     function makeAssertion(
-        bytes32[9] calldata fields,
+        bytes32[8] calldata fields,
         uint256[5] calldata fields2,
         bytes32 validBlockHashPrecondition,
         uint256 validBlockHeightPrecondition,

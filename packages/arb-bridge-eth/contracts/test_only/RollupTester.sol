@@ -137,7 +137,7 @@ contract RollupTester {
     }
 
     function computePrevLeaf(
-        bytes32[9] memory fields,
+        bytes32[8] memory fields,
         uint256[5] memory fields2,
         uint32 prevChildType,
         uint64 numSteps,
@@ -161,7 +161,7 @@ contract RollupTester {
 
     function generateInvalidInboxTopLeaf(
         uint256[4] memory invalidInboxData,
-        bytes32[9] memory fields,
+        bytes32[8] memory fields,
         uint256[5] memory fields2,
         uint32 prevChildType,
         uint64 numSteps,
@@ -202,59 +202,11 @@ contract RollupTester {
             );
     }
 
-    function generateInvalidMessagesLeaf(
-        uint256 gracePeriodTicks,
-        uint256 deadlineTicks,
-        bytes32[9] memory fields,
-        uint256[5] memory fields2,
-        uint32 prevChildType,
-        uint64 numSteps,
-        uint64 numArbGas,
-        uint64 messageCount,
-        uint64 logCount
-    ) public pure returns (bytes32) {
-        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
-            .makeAssertion(
-            fields,
-            fields2,
-            prevChildType,
-            numSteps,
-            numArbGas,
-            messageCount,
-            logCount
-        );
-
-        return
-            _generateInvalidMessagesLeaf(
-                assertData,
-                gracePeriodTicks,
-                deadlineTicks
-            );
-    }
-
-    function _generateInvalidMessagesLeaf(
-        NodeGraphUtils.AssertionData memory assertData,
-        uint256 gracePeriodTicks,
-        uint256 deadlineTicks
-    ) private pure returns (bytes32) {
-        (bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils
-            .computePrevLeaf(assertData);
-
-        return
-            NodeGraphUtils.generateInvalidMessagesLeaf(
-                assertData,
-                prevLeaf,
-                deadlineTicks,
-                vmProtoHashBefore,
-                gracePeriodTicks
-            );
-    }
-
     function generateInvalidExecutionLeaf(
         uint256 gracePeriodTicks,
         uint256 checkTimeTicks,
         uint256 deadlineTicks,
-        bytes32[9] memory fields,
+        bytes32[8] memory fields,
         uint256[5] memory fields2,
         uint32 prevChildType,
         uint64 numSteps,
@@ -304,7 +256,7 @@ contract RollupTester {
 
     function generateValidLeaf(
         uint256 deadlineTicks,
-        bytes32[9] memory fields,
+        bytes32[8] memory fields,
         uint256[5] memory fields2,
         uint32 prevChildType,
         uint64 numSteps,

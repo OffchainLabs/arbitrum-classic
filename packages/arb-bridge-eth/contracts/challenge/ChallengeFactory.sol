@@ -28,16 +28,13 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
     // Invalid challenge type
     string public constant INVALID_TYPE_STR = "INVALID_TYPE";
 
-    address public messagesChallengeTemplate;
     address public inboxTopChallengeTemplate;
     address public executionChallengeTemplate;
 
     constructor(
-        address _messagesChallengeTemplate,
         address _inboxTopChallengeTemplate,
         address _executionChallengeTemplate
     ) public {
-        messagesChallengeTemplate = _messagesChallengeTemplate;
         inboxTopChallengeTemplate = _inboxTopChallengeTemplate;
         executionChallengeTemplate = _executionChallengeTemplate;
     }
@@ -103,8 +100,6 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
     {
         if (challengeType == ChallengeUtils.getInvalidInboxType()) {
             return inboxTopChallengeTemplate;
-        } else if (challengeType == ChallengeUtils.getInvalidMsgsType()) {
-            return messagesChallengeTemplate;
         } else if (challengeType == ChallengeUtils.getInvalidExType()) {
             return executionChallengeTemplate;
         } else {

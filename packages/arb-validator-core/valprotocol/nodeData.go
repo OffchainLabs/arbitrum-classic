@@ -29,13 +29,12 @@ type ChildType uint
 
 const (
 	InvalidInboxTopChildType  ChildType = 0
-	InvalidMessagesChildType  ChildType = 1
-	InvalidExecutionChildType ChildType = 2
-	ValidChildType            ChildType = 3
+	InvalidExecutionChildType ChildType = 1
+	ValidChildType            ChildType = 2
 
 	MinChildType        ChildType = 0
-	MaxInvalidChildType ChildType = 2
-	MaxChildType        ChildType = 3
+	MaxInvalidChildType ChildType = 1
+	MaxChildType        ChildType = 2
 )
 
 type VMProtoData struct {
@@ -101,23 +100,23 @@ func (d *VMProtoData) Hash() common.Hash {
 	)
 }
 
-func (node *VMProtoData) MarshalToBuf() *VMProtoDataBuf {
+func (d *VMProtoData) MarshalToBuf() *VMProtoDataBuf {
 	return &VMProtoDataBuf{
-		MachineHash:  node.MachineHash.MarshalToBuf(),
-		InboxTop:     node.InboxTop.MarshalToBuf(),
-		InboxCount:   common.MarshalBigInt(node.InboxCount),
-		MessageCount: common.MarshalBigInt(node.MessageCount),
-		LogCount:     common.MarshalBigInt(node.LogCount),
+		MachineHash:  d.MachineHash.MarshalToBuf(),
+		InboxTop:     d.InboxTop.MarshalToBuf(),
+		InboxCount:   common.MarshalBigInt(d.InboxCount),
+		MessageCount: common.MarshalBigInt(d.MessageCount),
+		LogCount:     common.MarshalBigInt(d.LogCount),
 	}
 }
 
-func (buf *VMProtoDataBuf) Unmarshal() *VMProtoData {
+func (x *VMProtoDataBuf) Unmarshal() *VMProtoData {
 	return &VMProtoData{
-		MachineHash:  buf.MachineHash.Unmarshal(),
-		InboxTop:     buf.InboxTop.Unmarshal(),
-		InboxCount:   buf.InboxCount.Unmarshal(),
-		MessageCount: buf.MessageCount.Unmarshal(),
-		LogCount:     buf.LogCount.Unmarshal(),
+		MachineHash:  x.MachineHash.Unmarshal(),
+		InboxTop:     x.InboxTop.Unmarshal(),
+		InboxCount:   x.InboxCount.Unmarshal(),
+		MessageCount: x.MessageCount.Unmarshal(),
+		LogCount:     x.LogCount.Unmarshal(),
 	}
 }
 
@@ -160,75 +159,29 @@ func (ap *AssertionParams) MarshalToBuf() *AssertionParamsBuf {
 	}
 }
 
-func (m *AssertionParamsBuf) Unmarshal() *AssertionParams {
+func (x *AssertionParamsBuf) Unmarshal() *AssertionParams {
 	return &AssertionParams{
-		NumSteps:             m.NumSteps,
-		ImportedMessageCount: m.ImportedMessageCount.Unmarshal(),
-	}
-}
-
-type AssertionClaim struct {
-	AfterInboxTop common.Hash
-	AssertionStub *ExecutionAssertionStub
-}
-
-func NewRandomAssertionClaim(assertion *ExecutionAssertionStub) *AssertionClaim {
-	return &AssertionClaim{
-		AfterInboxTop: common.RandHash(),
-		AssertionStub: assertion,
-	}
-}
-
-func (dn *AssertionClaim) String() string {
-	return fmt.Sprintf(
-		"AssertionClaim(AfterInboxTop: %v, Assertion: %v)",
-		dn.AfterInboxTop,
-		dn.AssertionStub,
-	)
-}
-
-func (dn *AssertionClaim) Equals(o *AssertionClaim) bool {
-	return dn.AfterInboxTop == o.AfterInboxTop &&
-		dn.AssertionStub.Equals(o.AssertionStub)
-}
-
-func (dn *AssertionClaim) Clone() *AssertionClaim {
-	return &AssertionClaim{
-		AfterInboxTop: dn.AfterInboxTop,
-		AssertionStub: dn.AssertionStub.Clone(),
-	}
-}
-
-func (dn *AssertionClaim) MarshalToBuf() *AssertionClaimBuf {
-	return &AssertionClaimBuf{
-		AfterInboxTop: dn.AfterInboxTop.MarshalToBuf(),
-		AssertionStub: dn.AssertionStub.MarshalToBuf(),
-	}
-}
-
-func (m *AssertionClaimBuf) Unmarshal() *AssertionClaim {
-	return &AssertionClaim{
-		AfterInboxTop: m.AfterInboxTop.Unmarshal(),
-		AssertionStub: m.AssertionStub.Unmarshal(),
+		NumSteps:             x.NumSteps,
+		ImportedMessageCount: x.ImportedMessageCount.Unmarshal(),
 	}
 }
 
 type DisputableNode struct {
 	AssertionParams *AssertionParams
-	AssertionClaim  *AssertionClaim
+	Assertion       *ExecutionAssertionStub
 	MaxInboxTop     common.Hash
 	MaxInboxCount   *big.Int
 }
 
 func NewDisputableNode(
 	assertionParams *AssertionParams,
-	assertionClaim *AssertionClaim,
+	assertion *ExecutionAssertionStub,
 	maxInboxTop common.Hash,
 	maxInboxCount *big.Int,
 ) *DisputableNode {
 	return &DisputableNode{
 		AssertionParams: assertionParams,
-		AssertionClaim:  assertionClaim,
+		Assertion:       assertion,
 		MaxInboxTop:     maxInboxTop,
 		MaxInboxCount:   maxInboxCount,
 	}
@@ -237,7 +190,7 @@ func NewDisputableNode(
 func NewRandomDisputableNode(assertion *ExecutionAssertionStub) *DisputableNode {
 	return &DisputableNode{
 		AssertionParams: NewRandomAssertionParams(),
-		AssertionClaim:  NewRandomAssertionClaim(assertion),
+		Assertion:       assertion,
 		MaxInboxTop:     common.RandHash(),
 		MaxInboxCount:   common.RandBigInt(),
 	}
@@ -246,27 +199,27 @@ func NewRandomDisputableNode(assertion *ExecutionAssertionStub) *DisputableNode 
 func (dn *DisputableNode) MarshalToBuf() *DisputableNodeBuf {
 	return &DisputableNodeBuf{
 		AssertionParams: dn.AssertionParams.MarshalToBuf(),
-		AssertionClaim:  dn.AssertionClaim.MarshalToBuf(),
+		Assertion:       dn.Assertion.MarshalToBuf(),
 		MaxInboxTop:     dn.MaxInboxTop.MarshalToBuf(),
 		MaxInboxCount:   common.MarshalBigInt(dn.MaxInboxCount),
 	}
 }
 
-func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
+func (x *DisputableNodeBuf) Unmarshal() *DisputableNode {
 	return NewDisputableNode(
-		buf.AssertionParams.Unmarshal(),
-		buf.AssertionClaim.Unmarshal(),
-		buf.MaxInboxTop.Unmarshal(),
-		buf.MaxInboxCount.Unmarshal(),
+		x.AssertionParams.Unmarshal(),
+		x.Assertion.Unmarshal(),
+		x.MaxInboxTop.Unmarshal(),
+		x.MaxInboxCount.Unmarshal(),
 	)
 }
 
 func (dn *DisputableNode) ValidAfterVMProtoData(prevState *VMProtoData) *VMProtoData {
 	return NewVMProtoData(
-		dn.AssertionClaim.AssertionStub.AfterMachineHash,
-		dn.AssertionClaim.AfterInboxTop,
+		dn.Assertion.AfterMachineHash,
+		dn.Assertion.AfterInboxHash,
 		new(big.Int).Add(prevState.InboxCount, dn.AssertionParams.ImportedMessageCount),
-		new(big.Int).Add(prevState.MessageCount, new(big.Int).SetUint64(dn.AssertionClaim.AssertionStub.MessageCount)),
-		new(big.Int).Add(prevState.LogCount, new(big.Int).SetUint64(dn.AssertionClaim.AssertionStub.LogCount)),
+		new(big.Int).Add(prevState.MessageCount, new(big.Int).SetUint64(dn.Assertion.MessageCount)),
+		new(big.Int).Add(prevState.LogCount, new(big.Int).SetUint64(dn.Assertion.LogCount)),
 	)
 }

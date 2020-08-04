@@ -179,22 +179,21 @@ func (vm *arbRollup) MakeAssertion(
 	prevChildType valprotocol.ChildType,
 	beforeState *valprotocol.VMProtoData,
 	assertionParams *valprotocol.AssertionParams,
-	assertionClaim *valprotocol.AssertionClaim,
+	assertion *valprotocol.ExecutionAssertionStub,
 	stakerProof []common.Hash,
 	validBlock *common.BlockId,
 ) ([]arbbridge.Event, error) {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
-	fields := [9][32]byte{
+	fields := [8][32]byte{
 		beforeState.MachineHash,
-		assertionClaim.AssertionStub.AfterMachineHash,
-		assertionClaim.AssertionStub.BeforeInboxHash,
-		assertionClaim.AssertionStub.LastMessageHash,
-		assertionClaim.AssertionStub.LastLogHash,
+		assertion.AfterMachineHash,
+		assertion.BeforeInboxHash,
+		assertion.LastMessageHash,
+		assertion.LastLogHash,
 		beforeState.InboxTop,
 		prevPrevLeafHash,
 		prevDataHash,
-		assertionClaim.AfterInboxTop,
 	}
 	log.Println(fields)
 	fields2 := [5]*big.Int{
@@ -211,11 +210,11 @@ func (vm *arbRollup) MakeAssertion(
 		fields2,
 		validBlock.HeaderHash,
 		validBlock.Height.AsInt(),
-		assertionClaim.AssertionStub.MessageCount,
-		assertionClaim.AssertionStub.LogCount,
+		assertion.MessageCount,
+		assertion.LogCount,
 		uint32(prevChildType),
 		assertionParams.NumSteps,
-		assertionClaim.AssertionStub.NumGas,
+		assertion.NumGas,
 		common.HashSliceToRaw(stakerProof),
 	)
 	if err != nil {
@@ -228,11 +227,11 @@ func (vm *arbRollup) MakeAssertion(
 			fields2,
 			validBlock.HeaderHash,
 			validBlock.Height.AsInt(),
-			assertionClaim.AssertionStub.MessageCount,
-			assertionClaim.AssertionStub.LogCount,
+			assertion.MessageCount,
+			assertion.LogCount,
 			uint32(prevChildType),
 			assertionParams.NumSteps,
-			assertionClaim.AssertionStub.NumGas,
+			assertion.NumGas,
 			common.HashSliceToRaw(stakerProof),
 		)
 		return nil, callErr

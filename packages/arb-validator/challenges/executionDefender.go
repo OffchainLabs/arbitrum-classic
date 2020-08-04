@@ -19,13 +19,13 @@ package challenges
 import (
 	"context"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 func DefendExecutionClaim(
@@ -34,8 +34,9 @@ func DefendExecutionClaim(
 	address common.Address,
 	startBlockId *common.BlockId,
 	startLogIndex uint,
-	inboxMessages []inbox.InboxMessage,
 	startMachine machine.Machine,
+	assertion *valprotocol.ExecutionAssertionStub,
+	inboxStack *structures.MessageStack,
 	numSteps uint64,
 	bisectionCount uint32,
 	challengeType ExecutionChallengeInfo,
@@ -61,9 +62,10 @@ func DefendExecutionClaim(
 		contract,
 		client,
 		NewAssertionDefender(
-			inboxMessages,
 			numSteps,
 			startMachine,
+			inboxStack,
+			assertion,
 		),
 		bisectionCount,
 		challengeType,
@@ -153,24 +155,12 @@ func updateExecutionData(
 	defender AssertionDefender,
 	bisectionEvent arbbridge.ExecutionBisectionEvent,
 ) AssertionDefender {
-	totalSteps := computeSteps(continueEvent, bisectionEvent)
-
-	mach := defender.initState
-	inboxMessages := defender.inboxMessages
-	// Update mach, precondition, deadline
-	assertion, _ := mach.ExecuteAssertion(
-		totalSteps,
-		inboxMessages,
-		0,
-	)
-	inboxMessages = inboxMessages[assertion.InboxMessagesConsumed:]
-
+	stepsToSkip := computeStepsUpTo(continueEvent.SegmentIndex.Uint64(), bisectionEvent)
 	steps := valprotocol.CalculateBisectionStepCount(
 		continueEvent.SegmentIndex.Uint64(),
 		uint64(len(bisectionEvent.Assertions)),
 		bisectionEvent.TotalSteps)
-
-	return NewAssertionDefender(inboxMessages, steps, mach)
+	return defender.MoveDefender(stepsToSkip, steps)
 }
 
 func executionDefenderUpdate(
@@ -184,7 +174,7 @@ func executionDefenderUpdate(
 	var defenders []AssertionDefender = nil
 	if makeBisection {
 		var assertions []*valprotocol.ExecutionAssertionStub
-		defenders, assertions = defender.NBisect(uint64(bisectionCount))
+		defenders = defender.NBisect(uint64(bisectionCount))
 		err := contract.BisectAssertion(
 			ctx,
 			assertions,
@@ -206,21 +196,25 @@ func runExecutionOneStepProof(
 ) (ChallengeState, error) {
 	timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 	if timedOut {
-		proof, err := defender.SolidityOneStepProof()
+		proof, msg, err := defender.SolidityOneStepProof()
 		if err != nil {
 			return 0, err
 		}
-		assertion, _ := defender.GetMachineState().ExecuteAssertion(
-			1,
-			defender.GetInboxMessages(),
-			0,
-		)
+		if msg != nil {
+			err = contract.OneStepProofInbox(
+				ctx,
+				defender.AssertionStub(),
+				proof,
+				*msg,
+			)
+		} else {
+			err = contract.OneStepProof(
+				ctx,
+				defender.AssertionStub(),
+				proof,
+			)
+		}
 
-		err = contract.OneStepProof(
-			ctx,
-			valprotocol.NewExecutionAssertionStubFromAssertion(assertion, defender.GetInboxMessages()),
-			proof,
-		)
 		if err != nil {
 			return 0, err
 		}

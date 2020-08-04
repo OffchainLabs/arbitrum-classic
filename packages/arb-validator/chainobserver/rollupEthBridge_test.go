@@ -20,7 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"log"
 	"math/big"
 	"math/rand"
@@ -108,6 +108,7 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 	if err != nil {
 		return nil, err
 	}
+	chain.Inbox = &structures.Inbox{MessageStack: structures.NewRandomMessageStack(100)}
 	chain.Start(context.Background())
 	return chain, nil
 }
@@ -129,7 +130,7 @@ func TestComputePrevLeaf(t *testing.T) {
 		prepared.GetAssertionParams2(),
 		uint32(prepared.Prev.LinkType()),
 		prepared.Params.NumSteps,
-		prepared.Claim.AssertionStub.NumGas,
+		prepared.AssertionStub.NumGas,
 		prepared.Assertion.OutMsgsCount,
 		prepared.Assertion.LogsCount,
 	)
@@ -142,16 +143,15 @@ func TestComputePrevLeaf(t *testing.T) {
 	}
 }
 
-func randomAssertion() (*protocol.ExecutionAssertion, *valprotocol.ExecutionAssertionStub) {
+func randomAssertion(t *testing.T, ms *structures.MessageStack, prevNode *structures.Node) (*protocol.ExecutionAssertion, *valprotocol.ExecutionAssertionStub) {
 	logs := make([]value.Value, 0, 5)
 	sends := make([]value.Value, 0)
 	sends = append(sends, ethTransfer(common.Address{}, big.NewInt(75)))
 
-	messages := []inbox.InboxMessage{
-		inbox.NewRandomInboxMessage(),
-		inbox.NewRandomInboxMessage(),
-		inbox.NewRandomInboxMessage(),
-		inbox.NewRandomInboxMessage(),
+	beforeInboxHash := prevNode.VMProtoData().InboxTop
+	messages, err := ms.GetMessages(beforeInboxHash, 5)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	assertion := protocol.NewExecutionAssertionFromValues(
@@ -162,58 +162,7 @@ func randomAssertion() (*protocol.ExecutionAssertion, *valprotocol.ExecutionAsse
 		sends,
 		logs,
 	)
-	return assertion, valprotocol.NewExecutionAssertionStubFromAssertion(assertion, messages)
-}
-
-func TestGenerateInvalidMsgLeaf(t *testing.T) {
-	chain, err := setUpChain(dummyRollupAddress, "dummy", contractPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	prevNode := chain.NodeGraph.LatestConfirmed()
-	assertion, assertionStub := randomAssertion()
-
-	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertionStub, valprotocol.InvalidMessagesChildType, chain.GetChainParams())
-
-	prepared, err := chain.prepareAssertion(chain.latestBlockId)
-	if err != nil {
-		t.Fatal(err)
-	}
-	prepared.Assertion = assertion
-	prepared.Claim.AssertionStub = assertionStub
-
-	bridgeHash, _, err := tester.ComputePrevLeaf(
-		nil,
-		prepared.GetAssertionParams(),
-		prepared.GetAssertionParams2(),
-		uint32(prepared.Prev.LinkType()),
-		prepared.Params.NumSteps,
-		prepared.Claim.AssertionStub.NumGas,
-		prepared.Assertion.OutMsgsCount,
-		prepared.Assertion.LogsCount,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if newNode.PrevHash().ToEthHash() != bridgeHash {
-		t.Error(bridgeHash)
-	}
-
-	invalidMsgHash, err := tester.ChildNodeHash(
-		nil,
-		newNode.PrevHash(),
-		newNode.Deadline().Val,
-		newNode.NodeDataHash(),
-		new(big.Int).SetUint64(uint64(valprotocol.InvalidMessagesChildType)),
-		newNode.VMProtoData().Hash())
-
-	if newNode.Hash().ToEthHash() != invalidMsgHash {
-		fmt.Println(bridgeHash)
-		fmt.Println(newNode.Hash().ToEthHash())
-		t.Error(bridgeHash)
-	}
+	return assertion, structures.NewExecutionAssertionStubFromWholeAssertion(assertion, beforeInboxHash, ms)
 }
 
 func TestGenerateInvalidInboxLeaf(t *testing.T) {
@@ -223,15 +172,15 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 	}
 
 	prevNode := chain.NodeGraph.LatestConfirmed()
-	assertion, assertionStub := randomAssertion()
-	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertionStub, valprotocol.InvalidInboxTopChildType, chain.GetChainParams())
+	assertion, assertionStub := randomAssertion(t, chain.Inbox.MessageStack, prevNode)
+	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertionStub, assertion, valprotocol.InvalidInboxTopChildType, chain.GetChainParams())
 
 	prepared, err := chain.prepareAssertion(chain.latestBlockId)
 	if err != nil {
 		t.Fatal(err)
 	}
 	prepared.Assertion = assertion
-	prepared.Claim.AssertionStub = assertionStub
+	prepared.AssertionStub = assertionStub
 
 	bridgeHash, _, err := tester.ComputePrevLeaf(
 		nil,
@@ -239,7 +188,7 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 		prepared.GetAssertionParams2(),
 		uint32(prepared.Prev.LinkType()),
 		prepared.Params.NumSteps,
-		prepared.Claim.AssertionStub.NumGas,
+		prepared.AssertionStub.NumGas,
 		prepared.Assertion.OutMsgsCount,
 		prepared.Assertion.LogsCount,
 	)
@@ -273,15 +222,15 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 	}
 
 	prevNode := chain.NodeGraph.LatestConfirmed()
-	assertion, assertionStub := randomAssertion()
-	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertionStub, valprotocol.InvalidExecutionChildType, chain.GetChainParams())
+	assertion, assertionStub := randomAssertion(t, chain.Inbox.MessageStack, prevNode)
+	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertionStub, assertion, valprotocol.InvalidExecutionChildType, chain.GetChainParams())
 
 	prepared, err := chain.prepareAssertion(chain.latestBlockId)
 	if err != nil {
 		t.Fatal(err)
 	}
 	prepared.Assertion = assertion
-	prepared.Claim.AssertionStub = assertionStub
+	prepared.AssertionStub = assertionStub
 
 	bridgeHash, _, err := tester.ComputePrevLeaf(
 		nil,
@@ -289,7 +238,7 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 		prepared.GetAssertionParams2(),
 		uint32(prepared.Prev.LinkType()),
 		prepared.Params.NumSteps,
-		prepared.Claim.AssertionStub.NumGas,
+		prepared.AssertionStub.NumGas,
 		prepared.Assertion.OutMsgsCount,
 		prepared.Assertion.LogsCount,
 	)
@@ -298,7 +247,7 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 	}
 
 	if newNode.PrevHash().ToEthHash() != bridgeHash {
-		t.Error(bridgeHash)
+		t.Error("incorrect prev leaf hash", hexutil.Encode(bridgeHash[:]))
 	}
 
 	invalidExecutionHash, err := tester.ChildNodeHash(

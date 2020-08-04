@@ -21,6 +21,7 @@ import (
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
 	"math/rand"
@@ -195,6 +196,7 @@ func TestConfirmAssertion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	chain.Inbox = &structures.Inbox{MessageStack: structures.NewRandomMessageStack(100)}
 
 	events, err := rollupContract.PlaceStake(
 		context.Background(),
@@ -216,17 +218,11 @@ func TestConfirmAssertion(t *testing.T) {
 	sends := make([]value.Value, 0)
 	sends = append(sends, ethTransfer(dest, big.NewInt(75)))
 
-	messages := []inbox.InboxMessage{
-		inbox.NewRandomInboxMessage(),
-		inbox.NewRandomInboxMessage(),
-		inbox.NewRandomInboxMessage(),
-		inbox.NewRandomInboxMessage(),
-	}
 	assertion := protocol.NewExecutionAssertionFromValues(
 		common.RandHash(),
 		common.RandHash(),
 		rand.Uint64(),
-		uint64(len(messages)),
+		6,
 		sends,
 		[]value.Value{},
 	)
@@ -238,7 +234,7 @@ func TestConfirmAssertion(t *testing.T) {
 		t.Fatal(err)
 	}
 	prepared.Assertion = assertion
-	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion, messages)
+	prepared.AssertionStub = structures.NewExecutionAssertionStubFromWholeAssertion(assertion, chain.calculatedValidNode.VMProtoData().InboxTop, chain.Inbox.MessageStack)
 	var stakerProof []common.Hash
 	events, err = chainlistener.MakeAssertion(context.Background(), rollupContract, prepared, stakerProof)
 	if err != nil {
@@ -251,7 +247,7 @@ func TestConfirmAssertion(t *testing.T) {
 	}
 
 	latestConf := chain.NodeGraph.LatestConfirmed()
-	validNode := chain.NodeGraph.NodeFromHash(latestConf.SuccessorHashes()[3])
+	validNode := chain.NodeGraph.NodeFromHash(latestConf.SuccessorHashes()[valprotocol.ValidChildType])
 	if validNode == nil {
 		t.Fatal("valid node was nil")
 	}
@@ -281,11 +277,11 @@ func TestConfirmAssertion(t *testing.T) {
 			if !ok {
 				continue
 			}
-			if nd.Disputable().AssertionClaim.AssertionStub.LastLogHash != nodeOpp.LogsAcc {
+			if nd.Disputable().Assertion.LastLogHash != nodeOpp.LogsAcc {
 				t.Fatal("incorrect logs acc in proof")
 			}
 
-			if nd.Disputable().AssertionClaim.AssertionStub.LastMessageHash != valprotocol.BytesArrayAccumHash(nodeOpp.MessagesData, nodeOpp.MessageCount) {
+			if nd.Disputable().Assertion.LastMessageHash != valprotocol.BytesArrayAccumHash(common.Hash{}, nodeOpp.MessagesData, nodeOpp.MessageCount) {
 				t.Fatal("incorrect messages acc in proof")
 			}
 			messageAccHash, nextOffset, err := rollupTester.GenerateLastMessageHash(
@@ -297,7 +293,7 @@ func TestConfirmAssertion(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if messageAccHash != nd.Disputable().AssertionClaim.AssertionStub.LastMessageHash {
+			if messageAccHash != nd.Disputable().Assertion.LastMessageHash {
 				t.Fatal("generated incorrect messages acc")
 			}
 

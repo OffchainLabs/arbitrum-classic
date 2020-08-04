@@ -62,10 +62,12 @@ library OneStepProof {
     struct AssertionContext {
         Machine.Data startMachine;
         Machine.Data afterMachine;
-        bytes32 inboxHash;
+        bytes32 inboxAcc;
         bytes32 messageAcc;
         bytes32 logAcc;
         uint64 gas;
+        Value.Data inboxMessage;
+        bytes32 inboxMessageHash;
         ValueStack stack;
         ValueStack auxstack;
         bool hadImmediate;
@@ -91,8 +93,46 @@ library OneStepProof {
         context.auxstack.length = 0;
     }
 
+    function initializeInboxExecutionContext(
+        bytes32 inboxAcc,
+        bytes32 messagesAcc,
+        bytes32 logsAcc,
+        bytes memory proof,
+        uint8 _kind,
+        uint256 _blockNumber,
+        uint256 _timestamp,
+        address _sender,
+        uint256 _inboxSeqNum,
+        bytes memory _msgData
+    ) internal pure returns (AssertionContext memory) {
+        AssertionContext memory context = initializeExecutionContext(
+            inboxAcc,
+            messagesAcc,
+            logsAcc,
+            proof
+        );
+
+        context.inboxMessageHash = Messages.messageHash(
+            _kind,
+            _sender,
+            _blockNumber,
+            _timestamp,
+            _inboxSeqNum,
+            keccak256(_msgData)
+        );
+
+        context.inboxMessage = Messages.messageValue(
+            _kind,
+            _blockNumber,
+            _timestamp,
+            _sender,
+            _inboxSeqNum,
+            _msgData
+        );
+    }
+
     function initializeExecutionContext(
-        bytes32 inboxHash,
+        bytes32 inboxAcc,
         bytes32 messagesAcc,
         bytes32 logsAcc,
         bytes memory proof
@@ -119,9 +159,11 @@ library OneStepProof {
         AssertionContext memory context = AssertionContext(
             mach,
             mach.clone(),
-            inboxHash,
+            inboxAcc,
             messagesAcc,
             logsAcc,
+            0,
+            Value.newEmptyTuple(),
             0,
             ValueStack(stackCount, stackVals),
             ValueStack(auxstackCount, auxstackVals),
@@ -702,14 +744,11 @@ library OneStepProof {
     }
 
     function executeInboxInsn(AssertionContext memory context) internal pure {
-        (, Value.Data memory inbox) = Marshaling.deserialize(
-            context.proof,
-            context.offset
-        );
-        context.stack.pushVal(inbox);
-        context.inboxHash = Messages.addMessageToInbox(
-            context.inboxHash,
-            inbox.hash()
+        require(context.inboxMessageHash != 0, "must supply message");
+        context.stack.pushVal(context.inboxMessage);
+        context.inboxAcc = Messages.addMessageToInbox(
+            context.inboxAcc,
+            context.inboxMessageHash
         );
     }
 

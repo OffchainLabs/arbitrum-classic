@@ -20,11 +20,11 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"testing"
 )
 
@@ -37,7 +37,7 @@ func testExecutionChallenge(
 	t.Parallel()
 
 	mach := getTestMachine(t)
-	challengeHash, inboxMessages, numSteps := getExecutionChallengeData(mach)
+	challengeHash, assertion, inboxStack, numSteps := getExecutionChallengeData(mach)
 
 	testChallengerCatchUp(
 		t,
@@ -53,8 +53,9 @@ func testExecutionChallenge(
 				challengeAddress,
 				blockId,
 				0,
-				inboxMessages,
 				mach.Clone(),
+				assertion,
+				inboxStack,
 				numSteps,
 				4,
 				StandardExecutionChallenge(),
@@ -67,8 +68,9 @@ func testExecutionChallenge(
 				challengeAddress,
 				blockId,
 				0,
-				inboxMessages,
 				mach.Clone(),
+				assertion,
+				inboxStack,
 				numSteps,
 				4,
 				ExecutionChallengeInfo{
@@ -85,7 +87,7 @@ func testExecutionChallenge(
 				challengeAddress,
 				blockId,
 				0,
-				inboxMessages,
+				inboxStack,
 				mach.Clone(),
 				true,
 				StandardExecutionChallenge(),
@@ -98,7 +100,7 @@ func testExecutionChallenge(
 				challengeAddress,
 				blockId,
 				0,
-				inboxMessages,
+				inboxStack,
 				mach.Clone(),
 				true,
 				ExecutionChallengeInfo{
@@ -112,15 +114,11 @@ func testExecutionChallenge(
 	)
 }
 
-func getExecutionChallengeData(mach machine.Machine) (common.Hash, []inbox.InboxMessage, uint64) {
+func getExecutionChallengeData(mach machine.Machine) (common.Hash, *valprotocol.ExecutionAssertionStub, *structures.MessageStack, uint64) {
+	ms := structures.NewRandomMessageStack(1000)
 	afterMachine := mach.Clone()
-	var inboxMessages []inbox.InboxMessage
-	assertion, numSteps := afterMachine.ExecuteAssertion(1000, inboxMessages, 0)
-
-	challengeHash := valprotocol.ExecutionDataHash(
-		numSteps,
-		valprotocol.NewExecutionAssertionStubFromAssertion(assertion, inboxMessages),
-	)
-
-	return challengeHash, inboxMessages, numSteps
+	assertion, numSteps := afterMachine.ExecuteAssertion(1000, ms.GetAllMessages(), 0)
+	stub := structures.NewExecutionAssertionStubFromWholeAssertion(assertion, common.Hash{}, ms)
+	challengeHash := valprotocol.ExecutionDataHash(numSteps, stub)
+	return challengeHash, stub, ms, numSteps
 }

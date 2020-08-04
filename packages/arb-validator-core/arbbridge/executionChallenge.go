@@ -18,6 +18,7 @@ package arbbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
@@ -35,6 +36,13 @@ type ExecutionChallenge interface {
 		ctx context.Context,
 		assertion *valprotocol.ExecutionAssertionStub,
 		proof []byte,
+	) error
+
+	OneStepProofInbox(
+		ctx context.Context,
+		assertion *valprotocol.ExecutionAssertionStub,
+		proof []byte,
+		msg inbox.InboxMessage,
 	) error
 
 	ChooseSegment(

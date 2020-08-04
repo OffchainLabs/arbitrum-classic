@@ -20,6 +20,7 @@ import (
 	"context"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -121,6 +122,48 @@ func (c *executionChallenge) OneStepProof(
 			assertion.FirstMessageHash,
 			assertion.FirstLogHash,
 			proof,
+		)
+	}
+	return c.waitForReceipt(ctx, tx, "OneStepProof")
+}
+
+func (c *executionChallenge) OneStepProofInbox(
+	ctx context.Context,
+	assertion *valprotocol.ExecutionAssertionStub,
+	proof []byte,
+	msg inbox.InboxMessage,
+) error {
+	c.auth.Lock()
+	defer c.auth.Unlock()
+	tx, err := c.challenge.OneStepProofInbox(
+		c.auth.getAuth(ctx),
+		assertion.AfterInboxHash,
+		assertion.FirstMessageHash,
+		assertion.FirstLogHash,
+		proof,
+		uint8(msg.Kind),
+		msg.ChainTime.BlockNum.AsInt(),
+		msg.ChainTime.Timestamp,
+		msg.Sender.ToEthAddress(),
+		msg.InboxSeqNum,
+		msg.Data,
+	)
+	if err != nil {
+		return c.challenge.OneStepProofInboxCall(
+			ctx,
+			c.client,
+			c.auth.auth.From,
+			c.contractAddress,
+			assertion.AfterInboxHash,
+			assertion.FirstMessageHash,
+			assertion.FirstLogHash,
+			proof,
+			uint8(msg.Kind),
+			msg.ChainTime.BlockNum.AsInt(),
+			msg.ChainTime.Timestamp,
+			msg.Sender.ToEthAddress(),
+			msg.InboxSeqNum,
+			msg.Data,
 		)
 	}
 	return c.waitForReceipt(ctx, tx, "OneStepProof")

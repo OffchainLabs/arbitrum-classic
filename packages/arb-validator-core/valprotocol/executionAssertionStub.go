@@ -19,13 +19,11 @@ package valprotocol
 import (
 	"bytes"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 type ExecutionAssertionStub struct {
@@ -42,8 +40,8 @@ type ExecutionAssertionStub struct {
 	LogCount          uint64
 }
 
-func BytesArrayAccumHash(data []byte, valCount uint64) common.Hash {
-	var lastMsgHash common.Hash
+func BytesArrayAccumHash(initialHash common.Hash, data []byte, valCount uint64) common.Hash {
+	lastMsgHash := initialHash
 	rd := bytes.NewReader(data)
 	for i := uint64(0); i < valCount; i++ {
 		val, err := value.UnmarshalValue(rd)
@@ -55,22 +53,6 @@ func BytesArrayAccumHash(data []byte, valCount uint64) common.Hash {
 			hashing.Bytes32(val.Hash()))
 	}
 	return lastMsgHash
-}
-
-func NewExecutionAssertionStubFromAssertion(a *protocol.ExecutionAssertion, messages []inbox.InboxMessage) *ExecutionAssertionStub {
-	return &ExecutionAssertionStub{
-		BeforeMachineHash: a.BeforeMachineHash.Unmarshal(),
-		AfterMachineHash:  a.AfterMachineHash.Unmarshal(),
-		BeforeInboxHash:   inbox.InboxValue(messages[:a.InboxMessagesConsumed]),
-		AfterInboxHash:    common.Hash{},
-		NumGas:            a.NumGas,
-		FirstMessageHash:  common.Hash{},
-		LastMessageHash:   BytesArrayAccumHash(a.OutMsgsData, a.OutMsgsCount),
-		MessageCount:      a.OutMsgsCount,
-		FirstLogHash:      common.Hash{},
-		LastLogHash:       BytesArrayAccumHash(a.LogsData, a.LogsCount),
-		LogCount:          a.LogsCount,
-	}
 }
 
 func (a *ExecutionAssertionStub) MarshalToBuf() *ExecutionAssertionStubBuf {

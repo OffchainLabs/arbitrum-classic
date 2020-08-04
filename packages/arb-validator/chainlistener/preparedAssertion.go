@@ -28,13 +28,13 @@ import (
 )
 
 type PreparedAssertion struct {
-	Prev        *structures.Node
-	BeforeState *valprotocol.VMProtoData
-	Params      *valprotocol.AssertionParams
-	Claim       *valprotocol.AssertionClaim
-	Assertion   *protocol.ExecutionAssertion
-	Machine     machine.Machine
-	ValidBlock  *common.BlockId
+	Prev          *structures.Node
+	BeforeState   *valprotocol.VMProtoData
+	Params        *valprotocol.AssertionParams
+	AssertionStub *valprotocol.ExecutionAssertionStub
+	Assertion     *protocol.ExecutionAssertion
+	Machine       machine.Machine
+	ValidBlock    *common.BlockId
 }
 
 func (pa *PreparedAssertion) String() string {
@@ -43,7 +43,7 @@ func (pa *PreparedAssertion) String() string {
 		pa.Prev.Hash(),
 		pa.BeforeState,
 		pa.Params,
-		pa.Claim,
+		pa.AssertionStub,
 		pa.Assertion,
 		pa.ValidBlock,
 	)
@@ -51,13 +51,13 @@ func (pa *PreparedAssertion) String() string {
 
 func (pa *PreparedAssertion) Clone() *PreparedAssertion {
 	return &PreparedAssertion{
-		Prev:        pa.Prev,
-		BeforeState: pa.BeforeState.Clone(),
-		Params:      pa.Params.Clone(),
-		Claim:       pa.Claim.Clone(),
-		Assertion:   pa.Assertion,
-		Machine:     pa.Machine,
-		ValidBlock:  pa.ValidBlock.Clone(),
+		Prev:          pa.Prev,
+		BeforeState:   pa.BeforeState.Clone(),
+		Params:        pa.Params.Clone(),
+		AssertionStub: pa.AssertionStub.Clone(),
+		Assertion:     pa.Assertion,
+		Machine:       pa.Machine,
+		ValidBlock:    pa.ValidBlock.Clone(),
 	}
 }
 
@@ -66,7 +66,7 @@ func (pa *PreparedAssertion) PossibleFutureNode(chainParams valprotocol.ChainPar
 		pa.Prev,
 		valprotocol.NewDisputableNode(
 			pa.Params,
-			pa.Claim,
+			pa.AssertionStub,
 			common.Hash{},
 			big.NewInt(0),
 		),
@@ -78,17 +78,16 @@ func (pa *PreparedAssertion) PossibleFutureNode(chainParams valprotocol.ChainPar
 	return node
 }
 
-func (prep *PreparedAssertion) GetAssertionParams() [9][32]byte {
-	return [9][32]byte{
-		prep.BeforeState.MachineHash,
-		prep.Claim.AssertionStub.BeforeInboxHash,
-		prep.Claim.AssertionStub.AfterMachineHash,
-		prep.Claim.AssertionStub.LastMessageHash,
-		prep.Claim.AssertionStub.LastLogHash,
-		prep.BeforeState.InboxTop,
+func (prep *PreparedAssertion) GetAssertionParams() [8][32]byte {
+	return [8][32]byte{
+		prep.AssertionStub.BeforeMachineHash,
+		prep.AssertionStub.AfterMachineHash,
+		prep.AssertionStub.BeforeInboxHash,
+		prep.AssertionStub.AfterInboxHash,
+		prep.AssertionStub.LastMessageHash,
+		prep.AssertionStub.LastLogHash,
 		prep.Prev.PrevHash(),
 		prep.Prev.NodeDataHash(),
-		prep.Claim.AfterInboxTop,
 	}
 }
 

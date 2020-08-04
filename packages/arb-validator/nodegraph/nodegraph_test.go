@@ -399,14 +399,10 @@ func getDisputableNode(baseNode *structures.Node) (*valprotocol.DisputableNode, 
 		NumSteps:             numSteps,
 		ImportedMessageCount: big.NewInt(0),
 	}
-	assertionStub := valprotocol.NewExecutionAssertionStubFromAssertion(execAssertion, nil)
-	assertionClaim := &valprotocol.AssertionClaim{
-		AfterInboxTop: common.Hash{},
-		AssertionStub: assertionStub,
-	}
+	assertionStub := structures.NewExecutionAssertionStubFromWholeAssertion(execAssertion, baseNode.VMProtoData().InboxTop, nil)
 	return valprotocol.NewDisputableNode(
 		assertionParams,
-		assertionClaim,
+		assertionStub,
 		common.Hash{},
 		big.NewInt(0),
 	), execAssertion

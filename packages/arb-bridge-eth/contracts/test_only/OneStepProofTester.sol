@@ -21,39 +21,72 @@ pragma solidity ^0.5.11;
 import "../arch/OneStepProof.sol";
 
 contract OneStepProofTester {
+    // fields
+    //  startHash
+    //  endHash
+    //  inboxAcc
+    //  logAcc
+    //  messageAcc
+
+    function execute(OneStepProof.AssertionContext memory context)
+        private
+        pure
+        returns (bytes32[5] memory fields, uint64 gas)
+    {
+        OneStepProof.executeOp(context);
+        return (
+            [
+                Machine.hash(context.startMachine),
+                Machine.hash(context.afterMachine),
+                context.inboxAcc,
+                context.logAcc,
+                context.messageAcc
+            ],
+            context.gas
+        );
+    }
+
     function executeStep(
-        bytes32 afterInboxHash,
+        bytes32 firstInbox,
         bytes32 firstMessage,
         bytes32 firstLog,
         bytes memory proof
-    )
-        public
-        pure
-        returns (
-            bytes32 startHash,
-            bytes32 endHash,
-            bytes32 beforeInboxHash,
-            bytes32 logAcc,
-            bytes32 messageAcc,
-            uint64 gas
-        )
-    {
+    ) public pure returns (bytes32[5] memory fields, uint64 gas) {
         OneStepProof.AssertionContext memory context = OneStepProof
             .initializeExecutionContext(
-            afterInboxHash,
+            firstInbox,
             firstMessage,
             firstLog,
             proof
         );
+        return execute(context);
+    }
 
-        OneStepProof.executeOp(context);
-        return (
-            Machine.hash(context.startMachine),
-            Machine.hash(context.afterMachine),
-            context.inboxHash,
-            context.logAcc,
-            context.messageAcc,
-            context.gas
+    function executeInboxStep(
+        bytes32 firstInbox,
+        bytes32 firstMessage,
+        bytes32 firstLog,
+        bytes memory proof,
+        uint8 kind,
+        uint256 blockNumber,
+        uint256 timestamp,
+        address sender,
+        uint256 inboxSeqNum,
+        bytes memory msgData
+    ) public pure returns (bytes32[5] memory fields, uint64 gas) {
+        OneStepProof.AssertionContext memory context = OneStepProof
+            .initializeInboxExecutionContext(
+            firstInbox,
+            firstMessage,
+            firstLog,
+            proof,
+            kind,
+            blockNumber,
+            timestamp,
+            sender,
+            inboxSeqNum,
+            msgData
         );
+        return execute(context);
     }
 }

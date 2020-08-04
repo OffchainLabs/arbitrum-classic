@@ -49,15 +49,14 @@ contract NodeGraph {
     // Fields
     //  prevLeaf
     //  inboxValue
-    //  afterInboxTop
-    //  beforeInboxHash
-    //  afterVMHash
+    //  afterMachineHash
+    //  afterInboxHash
     //  messagesAccHash
     //  logsAccHash
     //  validNodeHash
 
     event RollupAsserted(
-        bytes32[8] fields,
+        bytes32[7] fields,
         uint256 inboxCount,
         uint256 importedMessageCount,
         uint64 numArbGas,
@@ -194,9 +193,8 @@ contract NodeGraph {
             [
                 prevLeaf,
                 inboxValue,
-                data.afterInboxTop,
-                data.assertion.beforeInboxHash,
                 data.assertion.afterMachineHash,
+                data.assertion.afterInboxHash,
                 data.assertion.lastMessageHash,
                 data.assertion.lastLogHash,
                 validLeaf
@@ -301,13 +299,6 @@ contract NodeGraph {
             vmProtoHashBefore,
             vmParams.gracePeriodTicks
         );
-        bytes32 invalidMsgsLeaf = NodeGraphUtils.generateInvalidMessagesLeaf(
-            data,
-            prevLeaf,
-            deadlineTicks,
-            vmProtoHashBefore,
-            vmParams.gracePeriodTicks
-        );
         bytes32 invalidExecLeaf = NodeGraphUtils.generateInvalidExecutionLeaf(
             data,
             prevLeaf,
@@ -323,7 +314,6 @@ contract NodeGraph {
         );
 
         leaves[invalidInboxLeaf] = true;
-        leaves[invalidMsgsLeaf] = true;
         leaves[invalidExecLeaf] = true;
         leaves[validLeaf] = true;
 

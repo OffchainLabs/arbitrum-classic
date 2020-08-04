@@ -63,34 +63,56 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 	for _, proof := range proofs {
 		opcode := proof.Proof[len(proof.Proof)-1]
 		t.Run(strconv.FormatUint(uint64(opcode), 10), func(t *testing.T) {
-			machineData, err := osp.ExecuteStep(
-				&bind.CallOpts{Context: context.Background()},
-				proof.Assertion.AfterInboxHash,
-				proof.Assertion.FirstMessageHash,
-				proof.Assertion.FirstLogHash,
-				proof.Proof,
-			)
+			var err error
+			var machineData struct {
+				Fields [5][32]byte
+				Gas    uint64
+			}
+
+			if proof.Message != nil {
+				machineData, err = osp.ExecuteInboxStep(
+					&bind.CallOpts{Context: context.Background()},
+					proof.Assertion.AfterInboxHash,
+					proof.Assertion.FirstMessageHash,
+					proof.Assertion.FirstLogHash,
+					proof.Proof,
+					uint8(proof.Message.Kind),
+					proof.Message.ChainTime.BlockNum.AsInt(),
+					proof.Message.ChainTime.Timestamp,
+					proof.Message.Sender.ToEthAddress(),
+					proof.Message.InboxSeqNum,
+					proof.Message.Data,
+				)
+			} else {
+				machineData, err = osp.ExecuteStep(
+					&bind.CallOpts{Context: context.Background()},
+					proof.Assertion.AfterInboxHash,
+					proof.Assertion.FirstMessageHash,
+					proof.Assertion.FirstLogHash,
+					proof.Proof,
+				)
+			}
 			t.Log("Opcode", opcode)
 			if err != nil {
 				t.Fatal("proof invalid with error", err)
 			}
-			if machineData.BeforeInboxHash != proof.Assertion.BeforeInboxHash {
+			if machineData.Fields[0] != proof.Assertion.BeforeMachineHash {
+				t.Fatal("wrong before machine")
+			}
+			if machineData.Fields[1] != proof.Assertion.AfterMachineHash {
+				t.Fatal("wrong after machine")
+			}
+			if machineData.Fields[2] != proof.Assertion.AfterInboxHash {
 				t.Fatal("wrong DidInboxInsn")
+			}
+			if machineData.Fields[3] != proof.Assertion.LastLogHash {
+				t.Fatal("wrong log")
+			}
+			if machineData.Fields[4] != proof.Assertion.LastMessageHash {
+				t.Fatal("wrong message")
 			}
 			if machineData.Gas != proof.Assertion.NumGas {
 				t.Fatal("wrong gas")
-			}
-			if machineData.LogAcc != proof.Assertion.LastLogHash {
-				t.Fatal("wrong log")
-			}
-			if machineData.MessageAcc != proof.Assertion.LastMessageHash {
-				t.Fatal("wrong message")
-			}
-			if machineData.StartHash != proof.Assertion.BeforeMachineHash {
-				t.Fatal("wrong before machine")
-			}
-			if machineData.EndHash != proof.Assertion.AfterMachineHash {
-				t.Fatal("wrong after machine")
 			}
 		})
 	}

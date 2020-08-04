@@ -3,11 +3,6 @@ package valprotocol;
 import "arb-util/common/common.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol";
 
-message PreconditionBuf {
-    common.HashBuf beforeHash = 1;
-    common.HashBuf beforeInbox = 2;
-}
-
 message ExecutionAssertionStubBuf {
     uint64 numGas = 1;
     common.HashBuf beforeMachineHash = 2;
@@ -42,14 +37,9 @@ message AssertionParamsBuf {
     common.BigIntegerBuf importedMessageCount = 2;
 }
 
-message AssertionClaimBuf {
-    common.HashBuf afterInboxTop = 1;
-    valprotocol.ExecutionAssertionStubBuf assertionStub = 2;
-}
-
 message DisputableNodeBuf {
     AssertionParamsBuf assertionParams = 1;
-    AssertionClaimBuf assertionClaim = 2;
+    valprotocol.ExecutionAssertionStubBuf assertion = 2;
     common.HashBuf maxInboxTop = 3;
     common.BigIntegerBuf maxInboxCount = 4;
 }

@@ -15,7 +15,6 @@ abigen --sol=$PREFIX/rollup/ArbRollup.sol --pkg=$PACKAGE --out=arbrollup.go --ex
 
 abigen --sol=$PREFIX/challenge/ChallengeFactory.sol --pkg=$PACKAGE --out=challengefactory.go --exc=$IGNORED
 abigen --sol=$PREFIX/challenge/InboxTopChallenge.sol --pkg=$PACKAGE --out=inboxtopchallenge.go --exc=$IGNORED
-abigen --sol=$PREFIX/challenge/MessagesChallenge.sol --pkg=$PACKAGE --out=messageschallenge.go --exc=$IGNORED_WITH_CHALLENGES
 abigen --sol=$PREFIX/challenge/ExecutionChallenge.sol --pkg=$PACKAGE --out=executionchallenge.go --exc=$IGNORED_WITH_CHALLENGES
 
 abigen --sol=$PREFIX/inbox/GlobalInbox.sol --pkg=ethbridgecontracts --out=globalinbox.go --exc=$IGNORED

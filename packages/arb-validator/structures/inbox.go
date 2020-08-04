@@ -74,6 +74,14 @@ func NewMessageStack() *MessageStack {
 	}
 }
 
+func NewRandomMessageStack(count int) *MessageStack {
+	ms := NewMessageStack()
+	for i := 0; i < count; i++ {
+		ms.DeliverMessage(inbox.NewRandomInboxMessage())
+	}
+	return ms
+}
+
 func (ms *MessageStack) String() string {
 	hashes := make([]common.Hash, 0)
 	hashes = append(hashes, ms.hashOfRest)
@@ -221,6 +229,21 @@ func (ms *MessageStack) itemAfterHash(acc common.Hash) (*messageStackItem, bool)
 	return item.next, true
 }
 
+func (ms *MessageStack) itemSkippedAfterHash(acc common.Hash, count uint64) (common.Hash, bool) {
+	if count == 0 {
+		return acc, true
+	}
+	next, ok := ms.itemAfterHash(acc)
+	if !ok {
+		return common.Hash{}, false
+	}
+	node := next.skipNext(count - 1)
+	if node == nil {
+		return common.Hash{}, false
+	}
+	return node.hash, true
+}
+
 func (ms *MessageStack) itemAtHash(acc common.Hash) (*messageStackItem, bool) {
 	item, found := ms.index[acc]
 	return item, found
@@ -331,6 +354,45 @@ func (ms *MessageStack) GenerateVMInbox(olderAcc common.Hash, count uint64) (*VM
 		item = item.next
 	}
 	return NewVMInbox(messages), nil
+}
+
+func (ms *MessageStack) GetMessages(olderAcc common.Hash, count uint64) ([]inbox.InboxMessage, error) {
+	if count == 0 {
+		return nil, nil
+	}
+	oldItem, ok := ms.itemAfterHash(olderAcc)
+	if !ok {
+		return nil, errors.New("olderAcc not found")
+	}
+
+	item := oldItem
+	messages := make([]inbox.InboxMessage, 0, count)
+	for i := uint64(0); i < count; i++ {
+		if item == nil {
+			return nil, errors.New("not enough Messages in inbox")
+		}
+		messages = append(messages, item.message)
+		item = item.next
+	}
+	return messages, nil
+}
+
+func (ms *MessageStack) GetAssertionMessages(beforeInboxHash common.Hash, afterInboxHash common.Hash) ([]inbox.InboxMessage, error) {
+	oldItem, ok := ms.itemAfterHash(beforeInboxHash)
+	if !ok {
+		return nil, errors.New("beforeInboxHash not found")
+	}
+
+	item := oldItem
+	messages := make([]inbox.InboxMessage, 0)
+	for item.hash != afterInboxHash {
+		if item == nil {
+			return nil, errors.New("not enough Messages in inbox")
+		}
+		messages = append(messages, item.message)
+		item = item.next
+	}
+	return messages, nil
 }
 
 func (ms *MessageStack) GetAllMessages() []inbox.InboxMessage {
