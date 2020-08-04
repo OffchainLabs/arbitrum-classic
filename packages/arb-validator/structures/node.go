@@ -67,7 +67,7 @@ func NewInitialNode(mach machine.Machine, creationTxHash common.Hash) *Node {
 		linkType:   0,
 		vmProtoData: valprotocol.NewVMProtoData(
 			mach.Hash(),
-			value.NewEmptyTuple().Hash(),
+			common.Hash{},
 			big.NewInt(0),
 			big.NewInt(0),
 			big.NewInt(0),
