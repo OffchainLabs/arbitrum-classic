@@ -18,6 +18,7 @@ package arbbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -48,8 +49,7 @@ type ExecutionChallenge interface {
 	ChooseSegment(
 		ctx context.Context,
 		assertionToChallenge uint16,
-		assertions []*valprotocol.ExecutionAssertionStub,
-		totalSteps uint64,
+		assertionHashes []common.Hash,
 	) error
 }
 

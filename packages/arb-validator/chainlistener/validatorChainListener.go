@@ -390,7 +390,9 @@ func (lis *ValidatorChainListener) launchChallenge(
 					startBlockId,
 					startLogIndex,
 					msgStack,
+					chal.ConflictNode().Disputable().AssertionParams.NumSteps,
 					chal.ConflictNode().Prev().Machine(),
+					chal.ConflictNode().VMProtoData().InboxTop,
 					false,
 					challenges.StandardExecutionChallenge(),
 				)

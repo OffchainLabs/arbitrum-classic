@@ -160,9 +160,8 @@ type MessagesBisectionEvent struct {
 
 type ExecutionBisectionEvent struct {
 	ChainInfo
-	Assertions []*valprotocol.ExecutionAssertionStub
-	TotalSteps uint64
-	Deadline   common.TimeTicks
+	AssertionHashes []common.Hash
+	Deadline        common.TimeTicks
 }
 
 type MessageDeliveredEvent struct {

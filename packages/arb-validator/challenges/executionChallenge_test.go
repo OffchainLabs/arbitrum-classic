@@ -88,7 +88,9 @@ func testExecutionChallenge(
 				blockId,
 				0,
 				inboxStack,
+				numSteps,
 				mach.Clone(),
+				assertion.BeforeInboxHash,
 				true,
 				StandardExecutionChallenge(),
 			)
@@ -101,7 +103,9 @@ func testExecutionChallenge(
 				blockId,
 				0,
 				inboxStack,
+				numSteps,
 				mach.Clone(),
+				assertion.BeforeInboxHash,
 				true,
 				ExecutionChallengeInfo{
 					true,

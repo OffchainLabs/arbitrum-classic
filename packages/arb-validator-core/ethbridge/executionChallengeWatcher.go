@@ -28,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -105,29 +104,14 @@ func (c *executionChallengeWatcher) parseExecutionEvent(chainInfo arbbridge.Chai
 		if err != nil {
 			return nil, err
 		}
-		bisectionCount := len(bisectChal.MachineHashes) - 1
-		assertions := make([]*valprotocol.ExecutionAssertionStub, 0, bisectionCount)
-		for i := 0; i < bisectionCount; i++ {
-			assertion := &valprotocol.ExecutionAssertionStub{
-				NumGas:            bisectChal.Gases[i],
-				BeforeMachineHash: bisectChal.MachineHashes[i],
-				AfterMachineHash:  bisectChal.MachineHashes[i+1],
-				BeforeInboxHash:   bisectChal.InboxAccs[i],
-				AfterInboxHash:    bisectChal.InboxAccs[i+1],
-				FirstMessageHash:  bisectChal.MessageAccs[i],
-				LastMessageHash:   bisectChal.MessageAccs[i+1],
-				MessageCount:      bisectChal.OutCounts[i],
-				FirstLogHash:      bisectChal.LogAccs[i],
-				LastLogHash:       bisectChal.LogAccs[i+1],
-				LogCount:          bisectChal.OutCounts[bisectionCount+i],
-			}
-			assertions = append(assertions, assertion)
+		hashes := make([]common.Hash, len(bisectChal.AssertionHashes))
+		for _, h := range bisectChal.AssertionHashes {
+			hashes = append(hashes, h)
 		}
 		return arbbridge.ExecutionBisectionEvent{
-			ChainInfo:  chainInfo,
-			Assertions: assertions,
-			TotalSteps: bisectChal.TotalSteps,
-			Deadline:   common.TimeTicks{Val: bisectChal.DeadlineTicks},
+			ChainInfo:       chainInfo,
+			AssertionHashes: hashes,
+			Deadline:        common.TimeTicks{Val: bisectChal.DeadlineTicks},
 		}, nil
 	} else if log.Topics[0] == oneStepProofCompletedID {
 		_, err := c.challenge.ParseOneStepProofCompleted(log)

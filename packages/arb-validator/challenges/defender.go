@@ -20,6 +20,7 @@ import (
 	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 
@@ -51,7 +52,18 @@ func (ad AssertionDefender) AssertionStub() *valprotocol.ExecutionAssertionStub 
 	return ad.assertion
 }
 
-func (ad AssertionDefender) MoveDefender(stepsToSkip, steps uint64) AssertionDefender {
+func (ad AssertionDefender) MoveDefender(
+	bisectionEvent arbbridge.ExecutionBisectionEvent,
+	continueEvent arbbridge.ContinueChallengeEvent,
+) AssertionDefender {
+	segmentCount := uint64(len(bisectionEvent.AssertionHashes))
+	stepsToSkip := computeStepsUpTo(continueEvent.SegmentIndex.Uint64(), segmentCount, ad.numSteps)
+	steps := valprotocol.CalculateBisectionStepCount(
+		continueEvent.SegmentIndex.Uint64(),
+		segmentCount,
+		ad.numSteps,
+	)
+
 	// Update mach, precondition, deadline
 	messages, err := ad.inbox.GetAssertionMessages(ad.assertion.BeforeInboxHash, ad.assertion.AfterInboxHash)
 	if err != nil {

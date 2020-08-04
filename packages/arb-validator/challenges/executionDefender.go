@@ -145,22 +145,9 @@ func defendExecution(
 			defender = defenders[continueEvent.SegmentIndex.Uint64()]
 		} else {
 			// Replayed from existing event
-			defender = updateExecutionData(continueEvent, defender, bisectionEvent)
+			defender = defender.MoveDefender(bisectionEvent, continueEvent)
 		}
 	}
-}
-
-func updateExecutionData(
-	continueEvent arbbridge.ContinueChallengeEvent,
-	defender AssertionDefender,
-	bisectionEvent arbbridge.ExecutionBisectionEvent,
-) AssertionDefender {
-	stepsToSkip := computeStepsUpTo(continueEvent.SegmentIndex.Uint64(), bisectionEvent)
-	steps := valprotocol.CalculateBisectionStepCount(
-		continueEvent.SegmentIndex.Uint64(),
-		uint64(len(bisectionEvent.Assertions)),
-		bisectionEvent.TotalSteps)
-	return defender.MoveDefender(stepsToSkip, steps)
 }
 
 func executionDefenderUpdate(

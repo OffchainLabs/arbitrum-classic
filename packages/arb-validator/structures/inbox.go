@@ -395,6 +395,20 @@ func (ms *MessageStack) GetAssertionMessages(beforeInboxHash common.Hash, afterI
 	return messages, nil
 }
 
+func (ms *MessageStack) GetAllMessagesAfter(olderAcc common.Hash) ([]inbox.InboxMessage, error) {
+	item, ok := ms.itemAfterHash(olderAcc)
+	if !ok {
+		return nil, errors.New("olderAcc not found")
+	}
+
+	messages := make([]inbox.InboxMessage, 0)
+	for item != nil {
+		messages = append(messages, item.message)
+		item = item.next
+	}
+	return messages, nil
+}
+
 func (ms *MessageStack) GetAllMessages() []inbox.InboxMessage {
 	msgs := make([]inbox.InboxMessage, 0)
 	for item := ms.oldest; item != nil; item = item.next {

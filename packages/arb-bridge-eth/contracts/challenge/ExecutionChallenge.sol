@@ -29,16 +29,7 @@ contract ExecutionChallenge is BisectionChallenge {
     using ChallengeUtils for ChallengeUtils.ExecutionAssertion;
     using Hashing for Value.Data;
 
-    event BisectedAssertion(
-        bytes32[] machineHashes,
-        bytes32[] inboxAccs,
-        bytes32[] messageAccs,
-        bytes32[] logAccs,
-        uint64[] outCounts,
-        uint64[] gases,
-        uint64 totalSteps,
-        uint256 deadlineTicks
-    );
+    event BisectedAssertion(bytes32[] assertionHashes, uint256 deadlineTicks);
 
     event OneStepProofCompleted();
 
@@ -99,62 +90,62 @@ contract ExecutionChallenge is BisectionChallenge {
         }
 
         requireMatchesPrevState(
-            ChallengeUtils
-                .ExecutionAssertion(
-                _data
-                    .totalSteps,
+            _generateAssertionHash(
+                _data,
+                _data.totalSteps,
+                0,
+                bisectionCount,
                 totalGas,
-                _data.machineHashes[0],
-                _data.machineHashes[bisectionCount],
-                _data.inboxAccs[0],
-                _data.inboxAccs[bisectionCount],
-                _data.messageAccs[0],
-                _data.messageAccs[bisectionCount],
                 totalMessageCount,
-                _data.logAccs[0],
-                _data.logAccs[bisectionCount],
                 totalLogCount
             )
-                .hash()
         );
     }
 
     function _generateBisectionHash(
         BisectAssertionData memory data,
-        uint32 stepCount,
+        uint64 stepCount,
         uint256 bisectionCount,
         uint256 i
+    ) private pure returns (bytes32) {
+        return
+            _generateAssertionHash(
+                data,
+                stepCount,
+                i,
+                i + 1,
+                data.gases[i],
+                data.outCounts[i],
+                data.outCounts[bisectionCount + i]
+            );
+    }
+
+    function _generateAssertionHash(
+        BisectAssertionData memory data,
+        uint64 stepCount,
+        uint256 start,
+        uint256 end,
+        uint64 gas,
+        uint64 messageCount,
+        uint64 logCount
     ) private pure returns (bytes32) {
         return
             ChallengeUtils
                 .ExecutionAssertion(
                 stepCount,
-                data.gases[i],
-                data.machineHashes[i],
-                data.machineHashes[i + 1],
-                data.inboxAccs[i],
-                data.inboxAccs[i + 1],
-                data.messageAccs[i],
-                data.messageAccs[i + 1],
-                data.outCounts[i],
-                data.logAccs[i],
-                data.logAccs[i + 1],
-                data.outCounts[bisectionCount + i]
+                gas,
+                data.machineHashes[start],
+                data.machineHashes[end],
+                data.inboxAccs[start],
+                data.inboxAccs[end],
+                data.messageAccs[start],
+                data.messageAccs[end],
+                messageCount,
+                data.logAccs[start],
+                data.logAccs[end],
+                logCount
             )
                 .hash();
-    }
-
-    function _emitBisectionEvent(BisectAssertionData memory data) private {
-        emit BisectedAssertion(
-            data.machineHashes,
-            data.inboxAccs,
-            data.messageAccs,
-            data.logAccs,
-            data.outCounts,
-            data.gases,
-            data.totalSteps,
-            deadlineTicks
-        );
     }
 
     function _bisectAssertion(BisectAssertionData memory _data) private {
@@ -163,14 +154,14 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32[] memory hashes = new bytes32[](bisectionCount);
         hashes[0] = _generateBisectionHash(
             _data,
-            uint32(firstSegmentSize(uint256(_data.totalSteps), bisectionCount)),
+            uint64(firstSegmentSize(uint256(_data.totalSteps), bisectionCount)),
             bisectionCount,
             0
         );
         for (uint256 i = 1; i < bisectionCount; i++) {
             hashes[i] = _generateBisectionHash(
                 _data,
-                uint32(
+                uint64(
                     otherSegmentSize(uint256(_data.totalSteps), bisectionCount)
                 ),
                 bisectionCount,
@@ -181,7 +172,7 @@ contract ExecutionChallenge is BisectionChallenge {
         commitToSegment(hashes);
         asserterResponded();
 
-        _emitBisectionEvent(_data);
+        emit BisectedAssertion(hashes, deadlineTicks);
     }
 
     function oneStepProofInbox(

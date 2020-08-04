@@ -172,21 +172,11 @@ func (c *executionChallenge) OneStepProofInbox(
 func (c *executionChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
-	assertions []*valprotocol.ExecutionAssertionStub,
-	totalSteps uint64,
+	assertionHashes []common.Hash,
 ) error {
-	bisectionHashes := make([]common.Hash, 0, len(assertions))
-	for i := range assertions {
-		stepCount := valprotocol.CalculateBisectionStepCount(uint64(i), uint64(len(assertions)), totalSteps)
-		bisectionHashes = append(
-			bisectionHashes,
-			valprotocol.ExecutionDataHash(stepCount, assertions[i]),
-		)
-	}
-
 	return c.bisectionChallenge.chooseSegment(
 		ctx,
 		assertionToChallenge,
-		bisectionHashes,
+		assertionHashes,
 	)
 }
