@@ -226,8 +226,7 @@ func (chain *ChainObserver) prepareAssertion(maxValidBlock *common.BlockId) (*ch
 	beforeInboxTop := beforeState.InboxTop
 	newMessageCount := new(big.Int).Sub(maxMessageCount, beforeState.InboxCount)
 
-	vmInbox, _ := chain.Inbox.GenerateVMInbox(beforeInboxTop, newMessageCount.Uint64())
-	messages := vmInbox.Messages()
+	messages, _ := chain.Inbox.GetMessages(beforeInboxTop, newMessageCount.Uint64())
 	mach := currentOpinion.Machine().Clone()
 	maxSteps := chain.NodeGraph.Params().MaxExecutionSteps
 	chain.RUnlock()

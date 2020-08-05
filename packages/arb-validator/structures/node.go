@@ -19,7 +19,6 @@ package structures
 import (
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 	"math/big"
 	"math/rand"
@@ -479,14 +478,4 @@ func GetConflictAncestor(n1, n2 *Node) (*Node, *Node, error) {
 		return n1, n2, errors.New("no conflict")
 	}
 	return n1, n2, nil
-}
-
-func ImportedMessages(globalInbox *MessageStack, node *Node) ([]inbox.InboxMessage, error) {
-	inboxTop := node.Prev().VMProtoData().InboxTop
-	messageCount := node.Disputable().AssertionParams.ImportedMessageCount.Uint64()
-	vmInbox, err := globalInbox.GenerateVMInbox(inboxTop, messageCount)
-	if err != nil {
-		return nil, err
-	}
-	return vmInbox.Messages(), nil
 }
