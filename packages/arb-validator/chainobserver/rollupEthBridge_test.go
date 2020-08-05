@@ -19,14 +19,13 @@ package chainobserver
 import (
 	"context"
 	"errors"
-	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"log"
 	"math/big"
 	"math/rand"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
@@ -155,7 +154,7 @@ func randomAssertion(t *testing.T, ms *structures.MessageStack, prevNode *struct
 	}
 
 	assertion := protocol.NewExecutionAssertionFromValues(
-		common.RandHash(),
+		prevNode.VMProtoData().MachineHash,
 		common.RandHash(),
 		rand.Uint64(),
 		uint64(len(messages)),
@@ -197,7 +196,7 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 	}
 
 	if newNode.PrevHash().ToEthHash() != bridgeHash {
-		t.Error(bridgeHash)
+		t.Error("invalid prev leaf", hexutil.Encode(bridgeHash[:]), "instead of", newNode.PrevHash())
 	}
 
 	invalidInboxHash, err := tester.ChildNodeHash(
@@ -209,8 +208,8 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 		newNode.VMProtoData().Hash())
 
 	if newNode.Hash().ToEthHash() != invalidInboxHash {
-		fmt.Println(bridgeHash)
-		fmt.Println(newNode.Hash().ToEthHash())
+		t.Log(bridgeHash)
+		t.Log(newNode.Hash().ToEthHash())
 		t.Error(bridgeHash)
 	}
 }
@@ -259,8 +258,8 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 		newNode.VMProtoData().Hash())
 
 	if newNode.Hash().ToEthHash() != invalidExecutionHash {
-		fmt.Println(bridgeHash)
-		fmt.Println(newNode.Hash().ToEthHash())
+		t.Log(bridgeHash)
+		t.Log(newNode.Hash().ToEthHash())
 		t.Error(bridgeHash)
 	}
 }

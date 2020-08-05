@@ -22,6 +22,7 @@ import "../libraries/CloneFactory.sol";
 
 import "./IChallengeFactory.sol";
 import "./IBisectionChallenge.sol";
+import "./IExecutionChallenge.sol";
 import "./ChallengeUtils.sol";
 
 contract ChallengeFactory is CloneFactory, IChallengeFactory {
@@ -30,13 +31,16 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
 
     address public inboxTopChallengeTemplate;
     address public executionChallengeTemplate;
+    address public oneStepProofAddress;
 
     constructor(
         address _inboxTopChallengeTemplate,
-        address _executionChallengeTemplate
+        address _executionChallengeTemplate,
+        address _oneStepProofAddress
     ) public {
         inboxTopChallengeTemplate = _inboxTopChallengeTemplate;
         executionChallengeTemplate = _executionChallengeTemplate;
+        oneStepProofAddress = _oneStepProofAddress;
     }
 
     function generateCloneAddress(
@@ -79,6 +83,10 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
             _challengePeriodTicks,
             _challengeHash
         );
+
+        if (challengeType == ChallengeUtils.getInvalidExType()) {
+            IExecutionChallenge(clone).connectOneStepProof(oneStepProofAddress);
+        }
         return address(clone);
     }
 

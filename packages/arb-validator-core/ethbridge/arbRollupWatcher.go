@@ -246,27 +246,20 @@ func (vm *ethRollupWatcher) processEvents(
 			NumSteps:             eventVal.NumSteps,
 			ImportedMessageCount: eventVal.ImportedMessageCount,
 		}
-		claim := &valprotocol.ExecutionAssertionStub{
+
+		return arbbridge.AssertedEvent{
+			ChainInfo:        chainInfo,
+			PrevLeafHash:     eventVal.Fields[0],
+			MaxInboxTop:      eventVal.Fields[1],
+			MaxInboxCount:    eventVal.InboxCount,
+			AssertionParams:  params,
 			AfterMachineHash: eventVal.Fields[2],
-			BeforeInboxHash:  eventVal.Fields[3],
-			AfterInboxHash:   [32]byte{},
+			AfterInboxHash:   eventVal.Fields[3],
 			NumGas:           eventVal.NumArbGas,
-			FirstMessageHash: [32]byte{},
 			LastMessageHash:  eventVal.Fields[4],
 			MessageCount:     eventVal.MessageCount,
-			FirstLogHash:     [32]byte{},
 			LastLogHash:      eventVal.Fields[5],
 			LogCount:         eventVal.LogCount,
-		}
-		return arbbridge.AssertedEvent{
-			ChainInfo:    chainInfo,
-			PrevLeafHash: eventVal.Fields[0],
-			Disputable: valprotocol.NewDisputableNode(
-				params,
-				claim,
-				eventVal.Fields[1],
-				eventVal.InboxCount,
-			),
 		}, nil
 	case rollupConfirmedID:
 		eventVal, err := vm.ArbRollup.ParseRollupConfirmed(ethLog)

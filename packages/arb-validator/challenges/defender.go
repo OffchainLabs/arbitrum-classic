@@ -67,7 +67,7 @@ func (ad AssertionDefender) MoveDefender(
 	// Update mach, precondition, deadline
 	messages, err := ad.inbox.GetAssertionMessages(ad.assertion.BeforeInboxHash, ad.assertion.AfterInboxHash)
 	if err != nil {
-		log.Fatal("assertion defender must have valid messages")
+		log.Fatal("assertion defender must have valid messages", ad.assertion.BeforeInboxHash, ad.assertion.AfterInboxHash)
 	}
 
 	skippedAssertion, _ := ad.initState.ExecuteAssertion(
@@ -112,7 +112,7 @@ func (ad AssertionDefender) NBisect(slices uint64) []AssertionDefender {
 
 		inboxMessages, err := ad.inbox.GetAssertionMessages(beforeInboxHash, ad.assertion.AfterInboxHash)
 		if err != nil {
-			log.Fatal("inbox messages must exist for assertion that you're defending")
+			log.Fatal("inbox messages must exist for assertion that you're defending ", beforeInboxHash, ad.assertion.AfterInboxHash)
 		}
 
 		assertion, numSteps := m.ExecuteAssertion(

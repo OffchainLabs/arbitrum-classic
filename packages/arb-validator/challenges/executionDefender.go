@@ -160,8 +160,11 @@ func executionDefenderUpdate(
 	makeBisection, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 	var defenders []AssertionDefender = nil
 	if makeBisection {
-		var assertions []*valprotocol.ExecutionAssertionStub
 		defenders = defender.NBisect(uint64(bisectionCount))
+		assertions := make([]*valprotocol.ExecutionAssertionStub, 0, len(defenders))
+		for _, def := range defenders {
+			assertions = append(assertions, def.AssertionStub())
+		}
 		err := contract.BisectAssertion(
 			ctx,
 			assertions,
@@ -188,7 +191,7 @@ func runExecutionOneStepProof(
 			return 0, err
 		}
 		if msg != nil {
-			err = contract.OneStepProofInbox(
+			err = contract.OneStepProofWithMessage(
 				ctx,
 				defender.AssertionStub(),
 				proof,

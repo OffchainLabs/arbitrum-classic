@@ -48,36 +48,6 @@ function inboxTopHash(
   )
 }
 
-function messagesHash(
-  lowerHashA: string,
-  topHashA: string,
-  lowerHashB: string,
-  topHashB: string,
-  chainLength: utils.BigNumberish
-): string {
-  return ethers.utils.solidityKeccak256(
-    ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'uint256'],
-    [lowerHashA, topHashA, lowerHashB, topHashB, chainLength]
-  )
-}
-
-function invalidMessagesHash(
-  lowerHashA: string,
-  topHashA: string,
-  lowerHashB: string,
-  topHashB: string,
-  chainLength: utils.BigNumberish,
-  challengePeriod: utils.BigNumberish
-): string {
-  return ethers.utils.solidityKeccak256(
-    ['bytes32', 'uint256'],
-    [
-      messagesHash(lowerHashA, topHashA, lowerHashB, topHashB, chainLength),
-      challengePeriod,
-    ]
-  )
-}
-
 function childNodeInnerHash(
   deadlineTicks: utils.BigNumberish,
   nodeDataHash: string,
@@ -121,11 +91,6 @@ function childNodeShortHash(
   )
 }
 
-const emptyTupleHash = ethers.utils.solidityKeccak256(
-  ['uint8', 'bytes32', 'uint256'],
-  [3, ethers.utils.solidityKeccak256(['uint8'], [0]), 1]
-)
-
 const zerobytes32 =
   '0x0000000000000000000000000000000000000000000000000000000000000000'
 
@@ -139,7 +104,6 @@ async function makeEmptyAssertion(
   return arbRollup.makeAssertion(
     [
       vmState,
-      zerobytes32,
       zerobytes32,
       zerobytes32,
       zerobytes32,
@@ -218,8 +182,11 @@ class ExecutionAssertion {
 
   outLogsAcc(): string {
     return this.outLogs.reduce(
-      (acc, hash) =>
-        ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [acc, hash]),
+      (acc, val) =>
+        ethers.utils.solidityKeccak256(
+          ['bytes32', 'bytes32'],
+          [acc, val.hash()]
+        ),
       zerobytes32
     )
   }
@@ -235,7 +202,6 @@ class ExecutionAssertion {
 class AssertionClaim {
   constructor(
     public afterInboxTop: string,
-    public importedMessageSlice: string,
     public executionAssertion: ExecutionAssertion
   ) {}
 }
@@ -321,29 +287,6 @@ class Assertion {
     )
   }
 
-  invalidMessagesHashInner(): string {
-    return childNodeInnerHash(
-      this.deadline(),
-      invalidMessagesHash(
-        this.claims.afterInboxTop,
-        this.prevProtoData.inboxTop,
-        zerobytes32,
-        this.claims.importedMessageSlice,
-        this.params.importedMessageCount,
-        gracePeriodTicks.add(ethers.utils.bigNumberify(1000))
-      ),
-      1,
-      this.prevProtoData.hash()
-    )
-  }
-
-  invalidMessagesHash(): string {
-    return childNodeShortHash(
-      this.prevNodeHash(),
-      this.invalidMessagesHashInner()
-    )
-  }
-
   updatedProtoData(): VMProtoData {
     return new VMProtoData(
       this.claims.executionAssertion.afterState,
@@ -372,7 +315,7 @@ class Assertion {
     return childNodeInnerHash(
       this.deadline(),
       this.validDataHash(),
-      3,
+      2,
       this.updatedProtoData().hash()
     )
   }
@@ -398,13 +341,12 @@ async function makeAssertion(
   const fields1 = [
     prevProtoData.machineHash,
     claims.executionAssertion.afterState,
-    claims.importedMessageSlice,
+    prevProtoData.inboxTop,
+    claims.afterInboxTop,
     claims.executionAssertion.outMessagesAcc(),
     claims.executionAssertion.outLogsAcc(),
-    prevProtoData.inboxTop,
     prevPrevNode,
     prevDataHash,
-    claims.afterInboxTop,
   ]
   const fields2 = [
     prevProtoData.inboxCount,
@@ -567,7 +509,6 @@ describe('ArbRollup', async () => {
     const params = new AssertionParams(0, ethers.utils.bigNumberify(0))
     const claims = new AssertionClaim(
       zerobytes32,
-      emptyTupleHash,
       new ExecutionAssertion(
         '0x8500000000000000000000000000000000000000000000000000000000000000',
         0,
@@ -600,10 +541,6 @@ describe('ArbRollup', async () => {
       await arbRollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
       'invalid inbox top should be leaf'
     )
-    assert.isTrue(
-      await arbRollup.isValidLeaf(assertionInfo.invalidMessagesHash()),
-      'invalid messages should be leaf'
-    )
     // TODO: Check whether invalid execution is leaf
     assert.isTrue(
       await arbRollup.isValidLeaf(assertionInfo.validHash()),
@@ -630,7 +567,7 @@ describe('ArbRollup', async () => {
       await accounts[1].getAddress(),
       assertionInfo.prevNodeHash(),
       assertionInfo.deadline(),
-      [3, 0],
+      [2, 0],
       [
         assertionInfo.updatedProtoData().hash(),
         assertionInfo.prevProtoData.hash(),
@@ -702,8 +639,8 @@ describe('ArbRollup', async () => {
 
   it('should prune a leaf', async () => {
     assert.isTrue(
-      await arbRollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
-      'invalid messages should be leaf'
+      await arbRollup.isValidLeaf(assertionInfo.validHash()),
+      'valid node should be leaf'
     )
     await expect(
       arbRollup.pruneLeaves(
@@ -725,7 +662,6 @@ describe('ArbRollup', async () => {
     const params = new AssertionParams(0, ethers.utils.bigNumberify(0))
     const claims = new AssertionClaim(
       zerobytes32,
-      emptyTupleHash,
       new ExecutionAssertion(
         zerobytes32,
         0,
@@ -760,7 +696,7 @@ describe('ArbRollup', async () => {
     const { validNodeHashes, lastNode } = await rollupTester.confirm(
       await arbRollup.latestConfirmed(),
       assertionInfo.prevProtoData.hash(),
-      [3],
+      [2],
       [assertionInfo.deadline()],
       [],
       [assertionInfo.claims.executionAssertion.outLogsAcc()],
@@ -781,7 +717,7 @@ describe('ArbRollup', async () => {
     await expect(
       arbRollup.confirm(
         assertionInfo.prevProtoData.hash(),
-        [3],
+        [2],
         [assertionInfo.deadline()],
         [],
         [assertionInfo.claims.executionAssertion.outLogsAcc()],

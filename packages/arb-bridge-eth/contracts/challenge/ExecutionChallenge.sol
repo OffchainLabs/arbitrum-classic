@@ -18,20 +18,22 @@
 
 pragma solidity ^0.5.11;
 
+import "./IExecutionChallenge.sol";
 import "./BisectionChallenge.sol";
 import "./ChallengeUtils.sol";
 
-import "../arch/OneStepProof.sol";
+import "../arch/IOneStepProof.sol";
 
 import "../libraries/MerkleLib.sol";
 
-contract ExecutionChallenge is BisectionChallenge {
+contract ExecutionChallenge is IExecutionChallenge, BisectionChallenge {
     using ChallengeUtils for ChallengeUtils.ExecutionAssertion;
-    using Hashing for Value.Data;
 
     event BisectedAssertion(bytes32[] assertionHashes, uint256 deadlineTicks);
 
     event OneStepProofCompleted();
+
+    IOneStepProof executor;
 
     // Incorrect previous state
     string private constant BIS_INPLEN = "BIS_INPLEN";
@@ -46,6 +48,10 @@ contract ExecutionChallenge is BisectionChallenge {
         uint64[] outCounts;
         uint64[] gases;
         uint64 totalSteps;
+    }
+
+    function connectOneStepProof(address oneStepProof) external {
+        executor = IOneStepProof(oneStepProof);
     }
 
     // @param inboxInsnIndex is 0 if the assertion didn't include an inbox instruction, and otherwise the index of the segment including it plus 1
@@ -175,7 +181,7 @@ contract ExecutionChallenge is BisectionChallenge {
         emit BisectedAssertion(hashes, deadlineTicks);
     }
 
-    function oneStepProofInbox(
+    function oneStepProofWithMessage(
         bytes32 _firstInbox,
         bytes32 _firstMessage,
         bytes32 _firstLog,
@@ -187,8 +193,8 @@ contract ExecutionChallenge is BisectionChallenge {
         uint256 _inboxSeqNum,
         bytes memory _msgData
     ) public asserterAction {
-        OneStepProof.AssertionContext memory context = OneStepProof
-            .initializeInboxExecutionContext(
+        (uint64 gas, bytes32[5] memory fields) = executor
+            .executeStepWithMessage(
             _firstInbox,
             _firstMessage,
             _firstLog,
@@ -200,7 +206,8 @@ contract ExecutionChallenge is BisectionChallenge {
             _inboxSeqNum,
             _msgData
         );
-        executeProof(context);
+
+        checkProof(gas, _firstInbox, _firstMessage, _firstLog, fields);
     }
 
     function oneStepProof(
@@ -209,23 +216,28 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32 _firstLog,
         bytes memory _proof
     ) public asserterAction {
-        OneStepProof.AssertionContext memory context = OneStepProof
-            .initializeExecutionContext(
+        (uint64 gas, bytes32[5] memory fields) = executor.executeStep(
             _firstInbox,
             _firstMessage,
             _firstLog,
             _proof
         );
-        executeProof(context);
+
+        checkProof(gas, _firstInbox, _firstMessage, _firstLog, fields);
     }
 
-    function executeProof(OneStepProof.AssertionContext memory context)
-        private
-    {
-        bytes32 firstInbox = context.inboxAcc;
-        bytes32 firstMessage = context.messageAcc;
-        bytes32 firstLog = context.logAcc;
-        OneStepProof.executeOp(context);
+    function checkProof(
+        uint64 gas,
+        bytes32 firstInbox,
+        bytes32 firstMessage,
+        bytes32 firstLog,
+        bytes32[5] memory fields
+    ) private {
+        bytes32 startMachineHash = fields[0];
+        bytes32 endMachineHash = fields[1];
+        bytes32 afterInboxHash = fields[2];
+        bytes32 afterMessagesHash = fields[3];
+        bytes32 afterLogsHash = fields[4];
         // The one step proof already guarantees us that _firstMessage and _lastMessage
         // are either one or 0 messages apart and the same is true for logs. Therefore
         // we can infer the message count and log count based on whether the fields
@@ -233,17 +245,17 @@ contract ExecutionChallenge is BisectionChallenge {
         ChallengeUtils.ExecutionAssertion memory assertion = ChallengeUtils
             .ExecutionAssertion(
             1,
-            context.gas,
-            Machine.hash(context.startMachine),
-            Machine.hash(context.afterMachine),
+            gas,
+            startMachineHash,
+            endMachineHash,
             firstInbox,
-            context.inboxAcc,
+            afterInboxHash,
             firstMessage,
-            context.messageAcc,
-            firstMessage == context.messageAcc ? 0 : 1,
+            afterMessagesHash,
+            firstMessage == afterMessagesHash ? 0 : 1,
             firstLog,
-            context.logAcc,
-            firstLog == context.logAcc ? 0 : 1
+            afterLogsHash,
+            firstLog == afterLogsHash ? 0 : 1
         );
         requireMatchesPrevState(assertion.hash());
 

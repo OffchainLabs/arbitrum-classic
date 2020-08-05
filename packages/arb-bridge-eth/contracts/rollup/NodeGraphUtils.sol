@@ -83,7 +83,7 @@ library NodeGraphUtils {
     {
         bytes32 vmProtoHashBefore = RollupUtils.protoStateHash(
             data.assertion.beforeMachineHash,
-            data.assertion.afterInboxHash,
+            data.assertion.beforeInboxHash,
             data.beforeInboxCount,
             data.beforeMessageCount,
             data.beforeLogCount

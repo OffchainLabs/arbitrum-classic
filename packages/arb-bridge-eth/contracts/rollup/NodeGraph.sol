@@ -43,9 +43,6 @@ contract NodeGraph {
     string private constant PRUNE_PROOFLEN = "PRUNE_PROOFLEN";
     string private constant PRUNE_CONFLICT = "PRUNE_CONFLICT";
 
-    uint256 private constant VALID_CHILD_TYPE = 3;
-    uint256 private constant MAX_CHILD_TYPE = 3;
-
     // Fields
     //  prevLeaf
     //  inboxValue

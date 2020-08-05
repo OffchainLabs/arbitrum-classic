@@ -52,7 +52,11 @@ func DeployChallengeFactory(auth *bind.TransactOpts, client ethutils.EthClient) 
 	if err != nil {
 		return ethcommon.Address{}, err
 	}
-	factoryAddr, _, _, err := ethbridgecontracts.DeployChallengeFactory(auth, client, inboxTopAddr, executionAddr)
+	ospAddr, _, _, err := ethbridgecontracts.DeployOneStepProof(auth, client)
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+	factoryAddr, _, _, err := ethbridgecontracts.DeployChallengeFactory(auth, client, inboxTopAddr, executionAddr, ospAddr)
 	return factoryAddr, err
 }
 

@@ -18,19 +18,18 @@
 
 pragma solidity ^0.5.11;
 
+import "./IOneStepProof.sol";
 import "./Value.sol";
 import "./Machine.sol";
 import "../inbox/Messages.sol";
 import "../libraries/Keccak.sol";
 
-// Sourced from https://github.com/leapdao/solEVM-enforcer/tree/master
+// Originally forked from https://github.com/leapdao/solEVM-enforcer/tree/master
 
-library OneStepProof {
+contract OneStepProof is IOneStepProof {
     using Machine for Machine.Data;
     using Hashing for Value.Data;
     using Value for Value.Data;
-    using OneStepProof for ValueStack;
-    using OneStepProof for AssertionContext;
 
     uint256 private constant SEND_SIZE_LIMIT = 10000;
 
@@ -43,6 +42,88 @@ library OneStepProof {
     string private constant STACK_MANY = "STACK_MANY";
     string private constant AUX_MANY = "AUX_MANY";
     string private constant INBOX_VAL = "INBOX_VAL";
+
+    function executeStep(
+        bytes32 inboxAcc,
+        bytes32 messagesAcc,
+        bytes32 logsAcc,
+        bytes calldata proof
+    ) external pure returns (uint64 gas, bytes32[5] memory fields) {
+        AssertionContext memory context = initializeExecutionContext(
+            inboxAcc,
+            messagesAcc,
+            logsAcc,
+            proof
+        );
+
+        executeOp(context);
+
+        return returnContext(context);
+    }
+
+    function executeStepWithMessage(
+        bytes32 inboxAcc,
+        bytes32 messagesAcc,
+        bytes32 logsAcc,
+        bytes calldata proof,
+        uint8 _kind,
+        uint256 _blockNumber,
+        uint256 _timestamp,
+        address _sender,
+        uint256 _inboxSeqNum,
+        bytes calldata _msgData
+    ) external pure returns (uint64 gas, bytes32[5] memory fields) {
+        AssertionContext memory context = initializeExecutionContext(
+            inboxAcc,
+            messagesAcc,
+            logsAcc,
+            proof
+        );
+
+        context.inboxMessageHash = Messages.messageHash(
+            _kind,
+            _sender,
+            _blockNumber,
+            _timestamp,
+            _inboxSeqNum,
+            keccak256(_msgData)
+        );
+
+        context.inboxMessage = Messages.messageValue(
+            _kind,
+            _blockNumber,
+            _timestamp,
+            _sender,
+            _inboxSeqNum,
+            _msgData
+        );
+        executeOp(context);
+        return returnContext(context);
+    }
+
+    // fields
+    // startMachineHash,
+    // endMachineHash,
+    // afterInboxHash,
+    // afterMessagesHash,
+    // afterLogsHash
+
+    function returnContext(AssertionContext memory context)
+        private
+        pure
+        returns (uint64 gas, bytes32[5] memory fields)
+    {
+        return (
+            context.gas,
+            [
+                Machine.hash(context.startMachine),
+                Machine.hash(context.afterMachine),
+                context.inboxAcc,
+                context.messageAcc,
+                context.logAcc
+            ]
+        );
+    }
 
     struct ValueStack {
         uint256 length;
@@ -99,44 +180,6 @@ library OneStepProof {
         // Also clear the stack and auxstack
         context.stack.length = 0;
         context.auxstack.length = 0;
-    }
-
-    function initializeInboxExecutionContext(
-        bytes32 inboxAcc,
-        bytes32 messagesAcc,
-        bytes32 logsAcc,
-        bytes memory proof,
-        uint8 _kind,
-        uint256 _blockNumber,
-        uint256 _timestamp,
-        address _sender,
-        uint256 _inboxSeqNum,
-        bytes memory _msgData
-    ) internal pure returns (AssertionContext memory) {
-        AssertionContext memory context = initializeExecutionContext(
-            inboxAcc,
-            messagesAcc,
-            logsAcc,
-            proof
-        );
-
-        context.inboxMessageHash = Messages.messageHash(
-            _kind,
-            _sender,
-            _blockNumber,
-            _timestamp,
-            _inboxSeqNum,
-            keccak256(_msgData)
-        );
-
-        context.inboxMessage = Messages.messageValue(
-            _kind,
-            _blockNumber,
-            _timestamp,
-            _sender,
-            _inboxSeqNum,
-            _msgData
-        );
     }
 
     function initializeExecutionContext(

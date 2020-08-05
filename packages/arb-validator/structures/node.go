@@ -142,7 +142,7 @@ func NewRandomInvalidNodeFromValidPrev(
 		common.RandHash(),
 	)
 
-	_ = nextNode.UpdateValidOpinion(nil, assertion)
+	_ = nextNode.UpdateInvalidOpinion()
 	return nextNode
 }
 

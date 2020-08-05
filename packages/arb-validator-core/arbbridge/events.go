@@ -106,8 +106,17 @@ type StakeMovedEvent struct {
 
 type AssertedEvent struct {
 	ChainInfo
-	PrevLeafHash common.Hash
-	Disputable   *valprotocol.DisputableNode
+	PrevLeafHash     common.Hash
+	AssertionParams  *valprotocol.AssertionParams
+	MaxInboxTop      common.Hash
+	MaxInboxCount    *big.Int
+	NumGas           uint64
+	AfterMachineHash common.Hash
+	AfterInboxHash   common.Hash
+	LastMessageHash  common.Hash
+	MessageCount     uint64
+	LastLogHash      common.Hash
+	LogCount         uint64
 }
 
 type ConfirmedEvent struct {

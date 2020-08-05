@@ -517,9 +517,28 @@ func (chain *ChainObserver) updateOldest() {
 }
 
 func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.AssertedEvent) {
+	prevNode := chain.NodeGraph.NodeFromHash(ev.PrevLeafHash)
+	disNode := valprotocol.NewDisputableNode(
+		ev.AssertionParams,
+		&valprotocol.ExecutionAssertionStub{
+			NumGas:            ev.NumGas,
+			BeforeMachineHash: prevNode.VMProtoData().MachineHash,
+			AfterMachineHash:  ev.AfterMachineHash,
+			BeforeInboxHash:   prevNode.VMProtoData().InboxTop,
+			AfterInboxHash:    ev.AfterInboxHash,
+			FirstMessageHash:  common.Hash{},
+			LastMessageHash:   ev.LastMessageHash,
+			MessageCount:      ev.MessageCount,
+			FirstLogHash:      common.Hash{},
+			LastLogHash:       ev.LastLogHash,
+			LogCount:          ev.LogCount,
+		},
+		ev.MaxInboxTop,
+		ev.MaxInboxCount,
+	)
 	chain.NodeGraph.CreateNodesOnAssert(
 		chain.NodeGraph.NodeFromHash(ev.PrevLeafHash),
-		ev.Disputable,
+		disNode,
 		ev.BlockId.Height,
 		ev.TxHash,
 	)

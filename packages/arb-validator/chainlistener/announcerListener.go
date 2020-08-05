@@ -75,8 +75,7 @@ func (al *AnnouncerListener) CompletedChallenge(
 
 func (al *AnnouncerListener) SawAssertion(ctx context.Context, ev arbbridge.AssertedEvent) {
 	log.Println(al.Prefix, "SawAssertion on leaf", ev.PrevLeafHash)
-	log.Println(al.Prefix, "Params:", ev.Disputable.AssertionParams)
-	log.Println(al.Prefix, "Assertion:", ev.Disputable.Assertion)
+	log.Println(al.Prefix, "Params:", ev.AssertionParams)
 }
 
 func (al *AnnouncerListener) ConfirmedNode(ctx context.Context, ev arbbridge.ConfirmedEvent) {

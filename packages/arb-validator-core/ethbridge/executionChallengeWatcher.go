@@ -104,7 +104,7 @@ func (c *executionChallengeWatcher) parseExecutionEvent(chainInfo arbbridge.Chai
 		if err != nil {
 			return nil, err
 		}
-		hashes := make([]common.Hash, len(bisectChal.AssertionHashes))
+		hashes := make([]common.Hash, 0, len(bisectChal.AssertionHashes))
 		for _, h := range bisectChal.AssertionHashes {
 			hashes = append(hashes, h)
 		}

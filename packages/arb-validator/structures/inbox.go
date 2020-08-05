@@ -378,19 +378,21 @@ func (ms *MessageStack) GetMessages(olderAcc common.Hash, count uint64) ([]inbox
 }
 
 func (ms *MessageStack) GetAssertionMessages(beforeInboxHash common.Hash, afterInboxHash common.Hash) ([]inbox.InboxMessage, error) {
-	oldItem, ok := ms.itemAfterHash(beforeInboxHash)
-	if !ok {
+	if beforeInboxHash == afterInboxHash {
+		return nil, nil
+	}
+	item, ok := ms.itemAfterHash(beforeInboxHash)
+	if !ok || item == nil {
 		return nil, errors.New("beforeInboxHash not found")
 	}
 
-	item := oldItem
 	messages := make([]inbox.InboxMessage, 0)
 	for item.hash != afterInboxHash {
+		messages = append(messages, item.message)
+		item = item.next
 		if item == nil {
 			return nil, errors.New("not enough Messages in inbox")
 		}
-		messages = append(messages, item.message)
-		item = item.next
 	}
 	return messages, nil
 }

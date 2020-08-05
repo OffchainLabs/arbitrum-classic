@@ -219,15 +219,13 @@ func TestConfirmAssertion(t *testing.T) {
 	sends = append(sends, ethTransfer(dest, big.NewInt(75)))
 
 	assertion := protocol.NewExecutionAssertionFromValues(
+		chain.calculatedValidNode.VMProtoData().MachineHash,
 		common.RandHash(),
-		common.RandHash(),
-		rand.Uint64(),
+		100,
 		6,
 		sends,
 		[]value.Value{},
 	)
-
-	assertion.NumGas = 100
 
 	prepared, err := chain.prepareAssertion(chain.latestBlockId)
 	if err != nil {
@@ -281,8 +279,12 @@ func TestConfirmAssertion(t *testing.T) {
 				t.Fatal("incorrect logs acc in proof")
 			}
 
-			if nd.Disputable().Assertion.LastMessageHash != valprotocol.BytesArrayAccumHash(common.Hash{}, nodeOpp.MessagesData, nodeOpp.MessageCount) {
-				t.Fatal("incorrect messages acc in proof")
+			lastMessageHashOpp := valprotocol.BytesArrayAccumHash(common.Hash{}, nodeOpp.MessagesData, nodeOpp.MessageCount)
+			if nd.Disputable().Assertion.LastMessageHash != lastMessageHashOpp {
+				t.Log("Assertion", nd.Disputable().Assertion)
+				t.Log("nodeOpp.MessagesData", hexutil.Encode(nodeOpp.MessagesData))
+				t.Log("nodeOpp.MessageCount", nodeOpp.MessageCount)
+				t.Fatal("incorrect messages acc in proof", lastMessageHashOpp, nd.Disputable().Assertion.LastMessageHash)
 			}
 			messageAccHash, nextOffset, err := rollupTester.GenerateLastMessageHash(
 				nil,
@@ -322,6 +324,18 @@ func TestConfirmAssertion(t *testing.T) {
 			offset = nextOffset
 			validCount++
 		}
+
+		t.Log(
+			latestConf.Hash(),
+			proof.InitalProtoStateHash,
+			proof.BranchesNums,
+			proof.DeadlineTicks,
+			proof.ChallengeNodeData,
+			proof.LogsAcc,
+			proof.VMProtoStateHashes,
+			proof.MessageCounts,
+			proof.Messages,
+		)
 
 		ret, err := rollupTester.Confirm(
 			nil,

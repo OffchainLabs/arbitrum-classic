@@ -127,7 +127,7 @@ func (c *executionChallenge) OneStepProof(
 	return c.waitForReceipt(ctx, tx, "OneStepProof")
 }
 
-func (c *executionChallenge) OneStepProofInbox(
+func (c *executionChallenge) OneStepProofWithMessage(
 	ctx context.Context,
 	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
@@ -135,7 +135,7 @@ func (c *executionChallenge) OneStepProofInbox(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	tx, err := c.challenge.OneStepProofInbox(
+	tx, err := c.challenge.OneStepProofWithMessage(
 		c.auth.getAuth(ctx),
 		assertion.AfterInboxHash,
 		assertion.FirstMessageHash,

@@ -39,7 +39,7 @@ type ExecutionChallenge interface {
 		proof []byte,
 	) error
 
-	OneStepProofInbox(
+	OneStepProofWithMessage(
 		ctx context.Context,
 		assertion *valprotocol.ExecutionAssertionStub,
 		proof []byte,

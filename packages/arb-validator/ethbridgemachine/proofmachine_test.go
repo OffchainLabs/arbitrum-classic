@@ -19,7 +19,7 @@ package ethbridgemachine
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"strconv"
 
 	"encoding/json"
@@ -35,7 +35,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 )
 
-func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontracts.OneStepProofTester) {
+func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts.OneStepProof) {
 	t.Log("proof test contact: ", contract)
 
 	proofs, err := generateProofCases(contract)
@@ -65,12 +65,12 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 		t.Run(strconv.FormatUint(uint64(opcode), 10), func(t *testing.T) {
 			var err error
 			var machineData struct {
-				Fields [5][32]byte
 				Gas    uint64
+				Fields [5][32]byte
 			}
 
 			if proof.Message != nil {
-				machineData, err = osp.ExecuteInboxStep(
+				machineData, err = osp.ExecuteStepWithMessage(
 					&bind.CallOpts{Context: context.Background()},
 					proof.Assertion.AfterInboxHash,
 					proof.Assertion.FirstMessageHash,
@@ -123,7 +123,7 @@ func TestValidateProof(t *testing.T) {
 
 	client, pks := test.SimulatedBackend()
 	auth := bind.NewKeyedTransactor(pks[0])
-	_, tx, osp, err := ethbridgetestcontracts.DeployOneStepProofTester(auth, client)
+	_, tx, osp, err := ethbridgecontracts.DeployOneStepProof(auth, client)
 	if err != nil {
 		t.Fatal(err)
 	}
