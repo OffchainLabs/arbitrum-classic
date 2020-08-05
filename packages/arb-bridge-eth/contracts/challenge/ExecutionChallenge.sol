@@ -54,7 +54,6 @@ contract ExecutionChallenge is IExecutionChallenge, BisectionChallenge {
         executor = IOneStepProof(oneStepProof);
     }
 
-    // @param inboxInsnIndex is 0 if the assertion didn't include an inbox instruction, and otherwise the index of the segment including it plus 1
     function bisectAssertion(
         bytes32[] memory _machineHashes,
         bytes32[] memory _inboxAccs,
@@ -238,7 +237,7 @@ contract ExecutionChallenge is IExecutionChallenge, BisectionChallenge {
         bytes32 afterInboxHash = fields[2];
         bytes32 afterMessagesHash = fields[3];
         bytes32 afterLogsHash = fields[4];
-        // The one step proof already guarantees us that _firstMessage and _lastMessage
+        // The one step proof already guarantees us that firstMessage and lastMessage
         // are either one or 0 messages apart and the same is true for logs. Therefore
         // we can infer the message count and log count based on whether the fields
         // are equal or not

@@ -185,14 +185,3 @@ func NewAddressFromInt(val value.IntValue) common.Address {
 	copy(address[:], valBytes[12:])
 	return address
 }
-
-func InboxValue(messages []InboxMessage) common.Hash {
-	inboxAcc := common.Hash{}
-	for i := range messages {
-		inboxAcc = hashing.SoliditySHA3(
-			hashing.Bytes32(inboxAcc),
-			hashing.Bytes32(messages[len(messages)-1-i].AsValue().Hash()),
-		)
-	}
-	return inboxAcc
-}

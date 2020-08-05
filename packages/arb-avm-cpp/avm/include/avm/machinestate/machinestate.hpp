@@ -42,12 +42,10 @@ struct AssertionContext {
                               Tuple sideload);
     explicit AssertionContext(std::vector<value> inbox_messages);
 
+    // popInbox assumes that the number of messages already consumed is less
+    // than the number of messages in the inbox
     value popInbox() {
         return std::move(inbox_messages[inbox_messages_consumed++]);
-    }
-
-    const value& peakInbox() const {
-        return inbox_messages[inbox_messages_consumed];
     }
 
     bool inboxEmpty() const {
