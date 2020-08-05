@@ -728,7 +728,7 @@ BlockReason inboxPeekOp(MachineState& m) {
     if (!has_staged_message) {
         m.staged_message = m.context.popInbox();
     }
-    m.stack[0] = uint256_t{m.stack[0] == m.staged_message.get_element(0)};
+    m.stack[0] = m.stack[0] == m.staged_message.get_element(0) ? 1 : 0;
     ++m.pc;
     return NotBlocked{};
 }
