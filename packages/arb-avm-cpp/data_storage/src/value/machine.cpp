@@ -64,15 +64,11 @@ MachineStateKeys extractStateKeys(
     auto arb_gas_remaining = extractUint256(current_iter);
     auto pc = extractCodePointRef(current_iter);
     auto err_pc = extractCodePointStub(current_iter);
+    auto staged_message_hash = extractUint256(current_iter);
 
-    return MachineStateKeys{static_hash,
-                            register_hash,
-                            datastack_hash,
-                            auxstack_hash,
-                            arb_gas_remaining,
-                            pc,
-                            err_pc,
-                            status};
+    return MachineStateKeys{static_hash,   register_hash,       datastack_hash,
+                            auxstack_hash, arb_gas_remaining,   pc,
+                            err_pc,        staged_message_hash, status};
 }
 
 std::vector<unsigned char> serializeStateKeys(
@@ -86,6 +82,7 @@ std::vector<unsigned char> serializeStateKeys(
     marshal_uint256_t(state_data.arb_gas_remaining, state_data_vector);
     state_data.pc.marshal(state_data_vector);
     state_data.err_pc.marshal(state_data_vector);
+    marshal_uint256_t(state_data.staged_message_hash, state_data_vector);
     return state_data_vector;
 }
 }  // namespace
@@ -113,6 +110,8 @@ DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
             transaction, parsed_state.datastack_hash, segment_counts);
         auto delete_auxstack_res = deleteValueImpl(
             transaction, parsed_state.auxstack_hash, segment_counts);
+        auto delete_staged_message_res = deleteValueImpl(
+            transaction, parsed_state.staged_message_hash, segment_counts);
 
         ++segment_counts[parsed_state.pc.segment];
         ++segment_counts[parsed_state.err_pc.pc.segment];
@@ -122,7 +121,8 @@ DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
         if (!(delete_static_res.status.ok() &&
               delete_register_res.status.ok() &&
               delete_datastack_res.status.ok() &&
-              delete_auxstack_res.status.ok())) {
+              delete_auxstack_res.status.ok() &&
+              delete_staged_message_res.status.ok())) {
             std::cout << "error deleting checkpoint" << std::endl;
         }
     }
@@ -172,8 +172,11 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
     auto auxstack_tup = machinestate.auxstack.getTupleRepresentation(pool);
     auto auxstack_results =
         saveValueImpl(transaction, auxstack_tup, segment_counts);
+    auto staged_message_results =
+        saveValueImpl(transaction, machinestate.staged_message, segment_counts);
     if (!datastack_results.status.ok() || !auxstack_results.status.ok() ||
-        !register_val_results.status.ok()) {
+        !register_val_results.status.ok() ||
+        !staged_message_results.status.ok()) {
         return SaveResults{0, rocksdb::Status().Aborted()};
     }
 
@@ -190,6 +193,7 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
                          machinestate.arb_gas_remaining,
                          machinestate.pc,
                          machinestate.errpc,
+                         hash_value(machinestate.staged_message),
                          machinestate.state};
     auto serialized_state = serializeStateKeys(machine_state_data);
     return saveRefCountedData(*transaction.transaction, key, serialized_state);
