@@ -20,7 +20,7 @@ import { ethers } from '@nomiclabs/buidler'
 import { utils } from 'ethers'
 import { use, expect } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { OneStepProofTester } from '../build/types/OneStepProofTester'
+import { OneStepProof } from '../build/types/OneStepProof'
 import * as fs from 'fs'
 
 use(chaiAsPromised)
@@ -42,14 +42,12 @@ interface Proof {
   Proof: string
 }
 
-let ospTester: OneStepProofTester
+let ospTester: OneStepProof
 
 describe('OneStepProof', async () => {
   before(async () => {
-    const OneStepProofTester = await ethers.getContractFactory(
-      'OneStepProofTester'
-    )
-    ospTester = (await OneStepProofTester.deploy()) as OneStepProofTester
+    const OneStepProof = await ethers.getContractFactory('OneStepProof')
+    ospTester = (await OneStepProof.deploy()) as OneStepProof
     await ospTester.deployed()
   })
 
