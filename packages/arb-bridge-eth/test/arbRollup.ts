@@ -164,6 +164,7 @@ class AssertionParams {
 class ExecutionAssertion {
   constructor(
     public afterState: string,
+    public afterInboxHash: string,
     public numGas: number,
     public outMessages: ArbValue.Value[],
     public outLogs: ArbValue.Value[]
@@ -199,13 +200,6 @@ class ExecutionAssertion {
   }
 }
 
-class AssertionClaim {
-  constructor(
-    public afterInboxTop: string,
-    public executionAssertion: ExecutionAssertion
-  ) {}
-}
-
 class Assertion {
   public blockNumber: utils.BigNumber
   public inboxCount: utils.BigNumber
@@ -221,7 +215,7 @@ class Assertion {
     public prevDataHash: string,
     public prevChildType: number,
     public params: AssertionParams,
-    public claims: AssertionClaim
+    public assertion: ExecutionAssertion
   ) {
     this.blockNumber = ethers.utils.bigNumberify(blockNumber)
     this.inboxCount = ethers.utils.bigNumberify(inboxCount)
@@ -256,7 +250,7 @@ class Assertion {
 
   invalidInboxTopDataHash(): string {
     return inboxTopHash(
-      this.claims.afterInboxTop,
+      this.assertion.afterInboxHash,
       this.inboxValue,
       this.inboxCount.sub(
         this.prevProtoData.inboxCount.add(this.params.importedMessageCount)
@@ -289,25 +283,18 @@ class Assertion {
 
   updatedProtoData(): VMProtoData {
     return new VMProtoData(
-      this.claims.executionAssertion.afterState,
-      this.claims.afterInboxTop,
+      this.assertion.afterState,
+      this.assertion.afterInboxHash,
       this.prevProtoData.inboxCount.add(this.params.importedMessageCount),
-      this.prevProtoData.messageCount.add(
-        this.claims.executionAssertion.outMessages.length
-      ),
-      this.prevProtoData.logCount.add(
-        this.claims.executionAssertion.outLogs.length
-      )
+      this.prevProtoData.messageCount.add(this.assertion.outMessages.length),
+      this.prevProtoData.logCount.add(this.assertion.outLogs.length)
     )
   }
 
   validDataHash(): string {
     return ethers.utils.solidityKeccak256(
       ['bytes32', 'bytes32'],
-      [
-        this.claims.executionAssertion.outMessagesAcc(),
-        this.claims.executionAssertion.outLogsAcc(),
-      ]
+      [this.assertion.outMessagesAcc(), this.assertion.outLogsAcc()]
     )
   }
 
@@ -325,6 +312,66 @@ class Assertion {
   }
 }
 
+function makeFields(
+  prevPrevNode: string,
+  prevProtoData: VMProtoData,
+  prevDataHash: string,
+  executionAssertion: ExecutionAssertion
+): string[] {
+  return [
+    prevProtoData.machineHash,
+    executionAssertion.afterState,
+    prevProtoData.inboxTop,
+    executionAssertion.afterInboxHash,
+    executionAssertion.outMessagesAcc(),
+    executionAssertion.outLogsAcc(),
+    prevPrevNode,
+    prevDataHash,
+  ]
+}
+
+function makeFields2(
+  prevProtoData: VMProtoData,
+  prevDeadline: utils.BigNumberish,
+  params: AssertionParams
+): utils.BigNumberish[] {
+  return [
+    prevProtoData.inboxCount,
+    prevDeadline,
+    params.importedMessageCount,
+    prevProtoData.messageCount,
+    prevProtoData.logCount,
+  ]
+}
+
+async function computePrevLeaf(
+  tester: RollupTester,
+  prevPrevNode: string,
+  prevProtoData: VMProtoData,
+  prevDeadline: utils.BigNumberish,
+  prevDataHash: string,
+  prevChildType: number,
+  params: AssertionParams,
+  executionAssertion: ExecutionAssertion
+): Promise<{ prevLeaf: string; vmProtoHashBefore: string }> {
+  const fields1 = makeFields(
+    prevPrevNode,
+    prevProtoData,
+    prevDataHash,
+    executionAssertion
+  )
+  const fields2 = makeFields2(prevProtoData, prevDeadline, params)
+  return tester.computePrevLeaf(
+    fields1,
+    fields2,
+    prevChildType,
+    params.numSteps,
+    executionAssertion.numGas,
+    executionAssertion.outMessages.length,
+    executionAssertion.outLogs.length
+  )
+}
+
 async function makeAssertion(
   arbRollup: ArbRollup,
   prevPrevNode: string,
@@ -333,38 +380,28 @@ async function makeAssertion(
   prevDataHash: string,
   prevChildType: number,
   params: AssertionParams,
-  claims: AssertionClaim,
+  executionAssertion: ExecutionAssertion,
   stakerProof: Array<string>,
   knownValidBlockHash: string,
   knownValidBlockHeight: number
 ): Promise<{ receipt: providers.TransactionReceipt; assertion: Assertion }> {
-  const fields1 = [
-    prevProtoData.machineHash,
-    claims.executionAssertion.afterState,
-    prevProtoData.inboxTop,
-    claims.afterInboxTop,
-    claims.executionAssertion.outMessagesAcc(),
-    claims.executionAssertion.outLogsAcc(),
+  const fields1 = makeFields(
     prevPrevNode,
+    prevProtoData,
     prevDataHash,
-  ]
-  const fields2 = [
-    prevProtoData.inboxCount,
-    prevDeadline,
-    params.importedMessageCount,
-    prevProtoData.messageCount,
-    prevProtoData.logCount,
-  ]
+    executionAssertion
+  )
+  const fields2 = makeFields2(prevProtoData, prevDeadline, params)
   const tx = await arbRollup.makeAssertion(
     fields1,
     fields2,
     knownValidBlockHash,
     knownValidBlockHeight,
-    claims.executionAssertion.outMessages.length,
-    claims.executionAssertion.outLogs.length,
+    executionAssertion.outMessages.length,
+    executionAssertion.outLogs.length,
     prevChildType,
     params.numSteps,
-    claims.executionAssertion.numGas,
+    executionAssertion.numGas,
     stakerProof
   )
 
@@ -386,7 +423,7 @@ async function makeAssertion(
     prevDataHash,
     prevChildType,
     params,
-    claims
+    executionAssertion
   )
 
   return {
@@ -507,14 +544,12 @@ describe('ArbRollup', async () => {
     )
     const prevProtoData = new VMProtoData(initialVmState, zerobytes32, 0, 0, 0)
     const params = new AssertionParams(0, ethers.utils.bigNumberify(0))
-    const claims = new AssertionClaim(
+    const execAssertion = new ExecutionAssertion(
+      '0x8500000000000000000000000000000000000000000000000000000000000000',
       zerobytes32,
-      new ExecutionAssertion(
-        '0x8500000000000000000000000000000000000000000000000000000000000000',
-        0,
-        [],
-        []
-      )
+      0,
+      [],
+      []
     )
     const block = await ethers.provider.getBlock('latest')
     const info = await makeAssertion(
@@ -525,7 +560,7 @@ describe('ArbRollup', async () => {
       zerobytes32,
       0,
       params,
-      claims,
+      execAssertion,
       [],
       block.hash,
       block.number
@@ -660,14 +695,35 @@ describe('ArbRollup', async () => {
 
   it('should assert again', async () => {
     const params = new AssertionParams(0, ethers.utils.bigNumberify(0))
-    const claims = new AssertionClaim(
+    const execAssertion = new ExecutionAssertion(
       zerobytes32,
-      new ExecutionAssertion(
-        zerobytes32,
-        0,
-        [new ArbValue.TupleValue([new ArbValue.IntValue(10)])],
-        []
-      )
+      zerobytes32,
+      0,
+      [new ArbValue.TupleValue([new ArbValue.IntValue(10)])],
+      []
+    )
+
+    const { prevLeaf, vmProtoHashBefore } = await computePrevLeaf(
+      rollupTester,
+      assertionInfo.prevNodeHash(),
+      assertionInfo.prevProtoData,
+      assertionInfo.deadline(),
+      assertionInfo.invalidInboxTopChallengeHash(),
+      0,
+      params,
+      execAssertion
+    )
+
+    expect(vmProtoHashBefore, 'wrong vmProtoHashBefore').to.equal(
+      assertionInfo.prevProtoData.hash()
+    )
+    expect(prevLeaf, 'wrong prevLeaf').to.equal(
+      assertionInfo.invalidInboxTopHash()
+    )
+
+    assert.isTrue(
+      await arbRollup.isValidLeaf(prevLeaf),
+      'invalid inbox node should be leaf'
     )
 
     const block = await ethers.provider.getBlock('latest')
@@ -680,7 +736,7 @@ describe('ArbRollup', async () => {
         assertionInfo.invalidInboxTopChallengeHash(),
         0,
         params,
-        claims,
+        execAssertion,
         [],
         block.hash,
         block.number
@@ -699,10 +755,10 @@ describe('ArbRollup', async () => {
       [2],
       [assertionInfo.deadline()],
       [],
-      [assertionInfo.claims.executionAssertion.outLogsAcc()],
+      [assertionInfo.assertion.outLogsAcc()],
       [assertionInfo.updatedProtoData().hash()],
-      [assertionInfo.claims.executionAssertion.outMessages.length],
-      assertionInfo.claims.executionAssertion.outMessagesData()
+      [assertionInfo.assertion.outMessages.length],
+      assertionInfo.assertion.outMessagesData()
     )
 
     expect(validNodeHashes.length).to.equal(1)
@@ -720,10 +776,10 @@ describe('ArbRollup', async () => {
         [2],
         [assertionInfo.deadline()],
         [],
-        [assertionInfo.claims.executionAssertion.outLogsAcc()],
+        [assertionInfo.assertion.outLogsAcc()],
         [assertionInfo.updatedProtoData().hash()],
-        [assertionInfo.claims.executionAssertion.outMessages.length],
-        assertionInfo.claims.executionAssertion.outMessagesData(),
+        [assertionInfo.assertion.outMessages.length],
+        assertionInfo.assertion.outMessagesData(),
         [await accounts[1].getAddress()].sort(),
         [],
         [0, 0]

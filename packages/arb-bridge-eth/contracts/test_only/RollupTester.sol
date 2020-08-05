@@ -144,7 +144,7 @@ contract RollupTester {
         uint64 numArbGas,
         uint64 messageCount,
         uint64 logCount
-    ) public pure returns (bytes32, bytes32) {
+    ) public pure returns (bytes32 prevLeaf, bytes32 vmProtoHashBefore) {
         NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
             .makeAssertion(
             fields,

@@ -123,7 +123,7 @@ func TestComputePrevLeaf(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bridgeHash, _, err := tester.ComputePrevLeaf(
+	prevData, err := tester.ComputePrevLeaf(
 		nil,
 		prepared.GetAssertionParams(),
 		prepared.GetAssertionParams2(),
@@ -137,8 +137,8 @@ func TestComputePrevLeaf(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if prepared.Prev.Hash().ToEthHash() != bridgeHash {
-		t.Error(bridgeHash)
+	if prepared.Prev.Hash().ToEthHash() != prevData.PrevLeaf {
+		t.Error(prevData.PrevLeaf)
 	}
 }
 
@@ -181,7 +181,7 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 	prepared.Assertion = assertion
 	prepared.AssertionStub = assertionStub
 
-	bridgeHash, _, err := tester.ComputePrevLeaf(
+	prevData, err := tester.ComputePrevLeaf(
 		nil,
 		prepared.GetAssertionParams(),
 		prepared.GetAssertionParams2(),
@@ -195,8 +195,8 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if newNode.PrevHash().ToEthHash() != bridgeHash {
-		t.Error("invalid prev leaf", hexutil.Encode(bridgeHash[:]), "instead of", newNode.PrevHash())
+	if newNode.PrevHash().ToEthHash() != prevData.PrevLeaf {
+		t.Error("invalid prev leaf", hexutil.Encode(prevData.PrevLeaf[:]), "instead of", newNode.PrevHash())
 	}
 
 	invalidInboxHash, err := tester.ChildNodeHash(
@@ -208,9 +208,9 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 		newNode.VMProtoData().Hash())
 
 	if newNode.Hash().ToEthHash() != invalidInboxHash {
-		t.Log(bridgeHash)
-		t.Log(newNode.Hash().ToEthHash())
-		t.Error(bridgeHash)
+		t.Log(invalidInboxHash)
+		t.Log(newNode.Hash())
+		t.Error("incorrect child node hash")
 	}
 }
 
@@ -231,7 +231,7 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 	prepared.Assertion = assertion
 	prepared.AssertionStub = assertionStub
 
-	bridgeHash, _, err := tester.ComputePrevLeaf(
+	prevData, err := tester.ComputePrevLeaf(
 		nil,
 		prepared.GetAssertionParams(),
 		prepared.GetAssertionParams2(),
@@ -245,8 +245,8 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if newNode.PrevHash().ToEthHash() != bridgeHash {
-		t.Error("incorrect prev leaf hash", hexutil.Encode(bridgeHash[:]))
+	if newNode.PrevHash().ToEthHash() != prevData.PrevLeaf {
+		t.Error("incorrect prev leaf hash", hexutil.Encode(prevData.PrevLeaf[:]))
 	}
 
 	invalidExecutionHash, err := tester.ChildNodeHash(
@@ -258,8 +258,8 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 		newNode.VMProtoData().Hash())
 
 	if newNode.Hash().ToEthHash() != invalidExecutionHash {
-		t.Log(bridgeHash)
-		t.Log(newNode.Hash().ToEthHash())
-		t.Error(bridgeHash)
+		t.Log(invalidExecutionHash)
+		t.Log(newNode.Hash())
+		t.Error("invalid prev leaf")
 	}
 }

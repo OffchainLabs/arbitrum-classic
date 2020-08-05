@@ -65,9 +65,9 @@ library NodeGraphUtils {
         return
             AssertionData(
                 fields2[0],
-                fields[5],
-                fields2[1],
                 fields[6],
+                fields2[1],
+                fields[7],
                 prevChildType,
                 fields2[2],
                 fields2[3],
@@ -79,24 +79,22 @@ library NodeGraphUtils {
     function computePrevLeaf(AssertionData memory data)
         internal
         pure
-        returns (bytes32, bytes32)
+        returns (bytes32 prevLeaf, bytes32 vmProtoHashBefore)
     {
-        bytes32 vmProtoHashBefore = RollupUtils.protoStateHash(
+        vmProtoHashBefore = RollupUtils.protoStateHash(
             data.assertion.beforeMachineHash,
             data.assertion.beforeInboxHash,
             data.beforeInboxCount,
             data.beforeMessageCount,
             data.beforeLogCount
         );
-        bytes32 prevLeaf = RollupUtils.childNodeHash(
+        prevLeaf = RollupUtils.childNodeHash(
             data.prevPrevLeafHash,
             data.prevDeadlineTicks,
             data.prevDataHash,
             data.prevChildType,
             vmProtoHashBefore
         );
-
-        return (prevLeaf, vmProtoHashBefore);
     }
 
     function getTimeData(
