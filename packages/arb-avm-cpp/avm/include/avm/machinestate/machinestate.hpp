@@ -27,7 +27,7 @@
 #include <vector>
 
 struct AssertionContext {
-    std::vector<value> inbox_messages;
+    std::vector<Tuple> inbox_messages;
     uint64_t inbox_messages_consumed;
     Tuple sideload_value;
     uint32_t numSteps;
@@ -38,13 +38,13 @@ struct AssertionContext {
 
     AssertionContext() : inbox_messages_consumed(0), numSteps(0), numGas(0) {}
 
-    explicit AssertionContext(std::vector<value> inbox_messages,
+    explicit AssertionContext(std::vector<Tuple> inbox_messages,
                               Tuple sideload);
-    explicit AssertionContext(std::vector<value> inbox_messages);
+    explicit AssertionContext(std::vector<Tuple> inbox_messages);
 
     // popInbox assumes that the number of messages already consumed is less
     // than the number of messages in the inbox
-    value popInbox() {
+    Tuple popInbox() {
         return std::move(inbox_messages[inbox_messages_consumed++]);
     }
 
@@ -65,6 +65,7 @@ struct MachineState {
     Status state = Status::Extensive;
     CodePointRef pc;
     CodePointStub errpc;
+    Tuple staged_message;
     AssertionContext context;
 
     static MachineState loadFromFile(const std::string& executable_filename);
@@ -84,7 +85,8 @@ struct MachineState {
                  uint256_t arb_gas_remaining_,
                  Status state_,
                  CodePointRef pc_,
-                 CodePointStub errpc_);
+                 CodePointStub errpc_,
+                 Tuple staged_message_);
 
     uint256_t getMachineSize();
     std::vector<unsigned char> marshalForProof();

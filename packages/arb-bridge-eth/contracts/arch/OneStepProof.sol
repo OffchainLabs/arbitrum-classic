@@ -790,13 +790,51 @@ contract OneStepProof is IOneStepProof {
         );
     }
 
-    function executeInboxInsn(AssertionContext memory context) internal pure {
+    function incrementInbox(AssertionContext memory context)
+        private
+        pure
+        returns (Value.Data memory)
+    {
         require(context.inboxMessageHash != 0, INBOX_VAL);
-        pushVal(context.stack, context.inboxMessage);
         context.inboxAcc = Messages.addMessageToInbox(
             context.inboxAcc,
             context.inboxMessageHash
         );
+        return context.inboxMessage;
+    }
+
+    function executeInboxPeekInsn(AssertionContext memory context)
+        internal
+        pure
+    {
+        Value.Data memory val = popVal(context.stack);
+        if (
+            context.afterMachine.pendingMessage.hash() !=
+            Value.newEmptyTuple().hash()
+        ) {
+            context.afterMachine.pendingMessage = incrementInbox(context);
+        }
+        // The pending message must be a tuple of size at least 2
+        pushVal(
+            context.stack,
+            Value.newBoolean(
+                context.afterMachine.pendingMessage.tupleVal[1].hash() ==
+                    val.hash()
+            )
+        );
+    }
+
+    function executeInboxInsn(AssertionContext memory context) internal pure {
+        if (
+            context.afterMachine.pendingMessage.hash() !=
+            Value.newEmptyTuple().hash()
+        ) {
+            // The pending message field is already full
+            pushVal(context.stack, context.afterMachine.pendingMessage);
+            context.afterMachine.pendingMessage = Value.newEmptyTuple();
+        } else {
+            pushVal(context.stack, incrementInbox(context));
+        }
     }
 
     function executeSetGasInsn(AssertionContext memory context) internal pure {
@@ -966,6 +1004,7 @@ contract OneStepProof is IOneStepProof {
 
     // System operations
     uint8 private constant OP_SEND = 0x70;
+    uint8 private constant OP_INBOX_PEEK = 0x71;
     uint8 private constant OP_INBOX = 0x72;
     uint8 private constant OP_ERROR = 0x73;
     uint8 private constant OP_STOP = 0x74;
@@ -1091,6 +1130,8 @@ contract OneStepProof is IOneStepProof {
             return (1, 0, 100, executeLogInsn);
         } else if (opCode == OP_SEND) {
             return (1, 0, 100, executeSendInsn);
+        } else if (opCode == OP_INBOX_PEEK) {
+            return (1, 0, 40, executeInboxPeekInsn);
         } else if (opCode == OP_INBOX) {
             return (0, 0, 40, executeInboxInsn);
         } else if (opCode == OP_ERROR) {

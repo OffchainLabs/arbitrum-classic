@@ -56,12 +56,12 @@ class Machine {
     }
 
     Assertion runSideloaded(uint64_t stepCount,
-                            std::vector<value> inbox_messages,
+                            std::vector<Tuple> inbox_messages,
                             std::chrono::seconds wallLimit,
                             Tuple sideload);
 
     Assertion run(uint64_t stepCount,
-                  std::vector<value> inbox_messages,
+                  std::vector<Tuple> inbox_messages,
                   std::chrono::seconds wallLimit);
 
     Status currentStatus() { return machine_state.state; }

@@ -719,11 +719,31 @@ bool send(MachineState& m) {
     return success;
 }
 
-BlockReason inboxOp(MachineState& m) {
-    if (m.context.inboxEmpty()) {
+BlockReason inboxPeekOp(MachineState& m) {
+    m.stack.prepForMod(1);
+    bool has_staged_message = m.staged_message != Tuple{};
+    if (!has_staged_message && m.context.inboxEmpty()) {
         return InboxBlocked();
     }
-    m.stack.push(m.context.popInbox());
+    if (!has_staged_message) {
+        m.staged_message = m.context.popInbox();
+    }
+    m.stack[0] = m.stack[0] == m.staged_message.get_element(0) ? 1 : 0;
+    ++m.pc;
+    return NotBlocked{};
+}
+
+BlockReason inboxOp(MachineState& m) {
+    bool has_staged_message = m.staged_message != Tuple{};
+    if (!has_staged_message && m.context.inboxEmpty()) {
+        return InboxBlocked();
+    }
+    if (has_staged_message) {
+        m.stack.push(m.staged_message);
+        m.staged_message = Tuple();
+    } else {
+        m.stack.push(m.context.popInbox());
+    }
     ++m.pc;
     return NotBlocked{};
 }
