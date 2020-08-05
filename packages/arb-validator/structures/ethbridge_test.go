@@ -67,9 +67,10 @@ func TestGenerateLastMessageHash(t *testing.T) {
 	}
 
 	node := NewInitialNode(mach.Clone(), common.Hash{})
-	nextNode := NewRandomNodeFromValidPrev(node)
+	ms := NewRandomMessageStack(20)
+	nextNode := NewRandomNodeFromValidPrev(node, ms, 5)
 	assert := nextNode.Assertion()
-	expectedHash := nextNode.Disputable().AssertionClaim.AssertionStub.LastMessageHash
+	expectedHash := nextNode.Disputable().Assertion.LastMessageHash
 
 	ethbridgeHash, _, err := tester.GenerateLastMessageHash(
 		nil,
@@ -94,7 +95,8 @@ func TestCalculateLeafFromPath(t *testing.T) {
 	}
 
 	node := NewInitialNode(mach.Clone(), common.Hash{})
-	nextNode := NewRandomNodeFromValidPrev(node)
+	ms := NewRandomMessageStack(20)
+	nextNode := NewRandomNodeFromValidPrev(node, ms, 5)
 	path := GeneratePathProof(node, nextNode)
 
 	bridgeHash, err := tester.CalculateLeafFromPath(nil, node.Hash(), common.HashSliceToRaw(path))
@@ -112,7 +114,8 @@ func TestChildNodeHash(t *testing.T) {
 	}
 
 	node := NewInitialNode(mach.Clone(), common.Hash{})
-	nextNode := NewRandomNodeFromValidPrev(node)
+	ms := NewRandomMessageStack(20)
+	nextNode := NewRandomNodeFromValidPrev(node, ms, 5)
 
 	bridgeHash, err := tester.ChildNodeHash(
 		nil,
@@ -136,7 +139,8 @@ func TestProtoStateHash(t *testing.T) {
 	}
 
 	node := NewInitialNode(mach.Clone(), common.Hash{})
-	nextNode := NewRandomNodeFromValidPrev(node)
+	ms := NewRandomMessageStack(20)
+	nextNode := NewRandomNodeFromValidPrev(node, ms, 5)
 	protoState := nextNode.VMProtoData()
 
 	bridgeHash, err := tester.ComputeProtoHashBefore(

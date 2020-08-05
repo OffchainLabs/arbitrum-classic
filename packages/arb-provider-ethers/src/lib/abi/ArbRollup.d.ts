@@ -92,7 +92,6 @@ interface ArbRollupInterface extends Interface {
         logCount,
         prevChildType,
         numSteps,
-        didInboxInsn,
         numArbGas,
         stakerProof,
       ]: [
@@ -104,7 +103,6 @@ interface ArbRollupInterface extends Interface {
         BigNumberish,
         BigNumberish,
         BigNumberish,
-        boolean,
         BigNumberish,
         Arrayish[]
       ]): string
@@ -224,12 +222,11 @@ interface ArbRollupInterface extends Interface {
         importedMessageCount,
         numArbGas,
         numSteps,
-        didInboxInsn,
         beforeMessageCount,
         messageCount,
         beforeLogCount,
         logCount,
-      ]: [null, null, null, null, null, null, null, null, null, null]): string[]
+      ]: [null, null, null, null, null, null, null, null, null]): string[]
     }>
 
     RollupChallengeCompleted: TypedEventDescription<{
@@ -348,7 +345,6 @@ export class ArbRollup extends Contract {
       logCount: BigNumberish,
       prevChildType: BigNumberish,
       numSteps: BigNumberish,
-      didInboxInsn: boolean,
       numArbGas: BigNumberish,
       stakerProof: Arrayish[],
       overrides?: TransactionOverrides
@@ -492,7 +488,6 @@ export class ArbRollup extends Contract {
     logCount: BigNumberish,
     prevChildType: BigNumberish,
     numSteps: BigNumberish,
-    didInboxInsn: boolean,
     numArbGas: BigNumberish,
     stakerProof: Arrayish[],
     overrides?: TransactionOverrides
@@ -593,7 +588,6 @@ export class ArbRollup extends Contract {
       importedMessageCount: null,
       numArbGas: null,
       numSteps: null,
-      didInboxInsn: null,
       beforeMessageCount: null,
       messageCount: null,
       beforeLogCount: null,
@@ -684,7 +678,6 @@ export class ArbRollup extends Contract {
       logCount: BigNumberish,
       prevChildType: BigNumberish,
       numSteps: BigNumberish,
-      didInboxInsn: boolean,
       numArbGas: BigNumberish,
       stakerProof: Arrayish[]
     ): Promise<BigNumber>

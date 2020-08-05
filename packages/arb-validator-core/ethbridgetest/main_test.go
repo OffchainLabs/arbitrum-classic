@@ -27,6 +27,7 @@ import (
 )
 
 var valueTester *ethbridgetestcontracts.ValueTester
+var messageTester *ethbridgetestcontracts.MessageTester
 
 func TestMain(m *testing.M) {
 	client, pks := test.SimulatedBackend()
@@ -40,9 +41,18 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
+	_, _, deployedMessageTester, err := ethbridgetestcontracts.DeployMessageTester(
+		auth,
+		client,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	client.Commit()
 
 	valueTester = deployedValueTester
+	messageTester = deployedMessageTester
 
 	code := m.Run()
 	os.Exit(code)

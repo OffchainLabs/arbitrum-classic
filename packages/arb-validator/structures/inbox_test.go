@@ -52,7 +52,7 @@ func TestBisection(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			msg, err := messageStack.GenerateOneStepProof(section)
+			msg, err := messageStack.InboxMessageAfter(section)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -36,8 +36,6 @@ contract NodeGraph {
     string private constant MAKE_RUN = "MAKE_RUN";
     // Tried to execute too many steps
     string private constant MAKE_STEP = "MAKE_STEP";
-    // Imported messages without reading them
-    string private constant MAKE_MESSAGES = "MAKE_MESSAGES";
     // Tried to import more messages than exist in ethe inbox
     string private constant MAKE_MESSAGE_CNT = "MAKE_MESSAGE_CNT";
 
@@ -45,26 +43,21 @@ contract NodeGraph {
     string private constant PRUNE_PROOFLEN = "PRUNE_PROOFLEN";
     string private constant PRUNE_CONFLICT = "PRUNE_CONFLICT";
 
-    uint256 private constant VALID_CHILD_TYPE = 3;
-    uint256 private constant MAX_CHILD_TYPE = 3;
-
     // Fields
     //  prevLeaf
     //  inboxValue
-    //  afterInboxTop
-    //  importedMessagesSlice
-    //  afterVMHash
+    //  afterMachineHash
+    //  afterInboxHash
     //  messagesAccHash
     //  logsAccHash
     //  validNodeHash
 
     event RollupAsserted(
-        bytes32[8] fields,
+        bytes32[7] fields,
         uint256 inboxCount,
         uint256 importedMessageCount,
         uint64 numArbGas,
         uint64 numSteps,
-        bool didInboxInsn,
         uint256 beforeMessageCount,
         uint64 messageCount,
         uint256 beforeLogCount,
@@ -131,7 +124,7 @@ contract NodeGraph {
         // VM protocol state
         bytes32 vmProtoStateHash = RollupUtils.protoStateHash(
             _vmState,
-            Value.newEmptyTuple().hash(),
+            0,
             0,
             0,
             0
@@ -197,9 +190,8 @@ contract NodeGraph {
             [
                 prevLeaf,
                 inboxValue,
-                data.afterInboxTop,
-                data.assertion.inboxHash,
                 data.assertion.afterMachineHash,
+                data.assertion.afterInboxHash,
                 data.assertion.lastMessageHash,
                 data.assertion.lastLogHash,
                 validLeaf
@@ -208,7 +200,6 @@ contract NodeGraph {
             data.importedMessageCount,
             data.assertion.numArbGas,
             data.assertion.numSteps,
-            data.assertion.didInboxInsn,
             data.beforeMessageCount,
             data.assertion.messageCount,
             data.beforeLogCount,
@@ -284,10 +275,6 @@ contract NodeGraph {
             data.assertion.numSteps <= vmParams.maxExecutionSteps,
             MAKE_STEP
         );
-        require(
-            data.importedMessageCount == 0 || data.assertion.didInboxInsn,
-            MAKE_MESSAGES
-        );
     }
 
     function _initializeAssertionLeaves(
@@ -309,13 +296,6 @@ contract NodeGraph {
             vmProtoHashBefore,
             vmParams.gracePeriodTicks
         );
-        bytes32 invalidMsgsLeaf = NodeGraphUtils.generateInvalidMessagesLeaf(
-            data,
-            prevLeaf,
-            deadlineTicks,
-            vmProtoHashBefore,
-            vmParams.gracePeriodTicks
-        );
         bytes32 invalidExecLeaf = NodeGraphUtils.generateInvalidExecutionLeaf(
             data,
             prevLeaf,
@@ -331,7 +311,6 @@ contract NodeGraph {
         );
 
         leaves[invalidInboxLeaf] = true;
-        leaves[invalidMsgsLeaf] = true;
         leaves[invalidExecLeaf] = true;
         leaves[validLeaf] = true;
 

@@ -31,7 +31,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
@@ -119,7 +118,7 @@ func TestCrossContract(t *testing.T) {
 	}
 
 	assertion, _ := mach.ExecuteAssertion(1000000000, inboxMessages, 0)
-	data, err := value.TestVectorJSON(inbox.InboxValue(inboxMessages), assertion.ParseLogs(), assertion.ParseOutMessages())
+	data, err := inbox.TestVectorJSON(inboxMessages, assertion.ParseLogs(), assertion.ParseOutMessages())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,21 +3,18 @@ package valprotocol;
 import "arb-util/common/common.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol";
 
-message PreconditionBuf {
-    common.HashBuf beforeHash = 1;
-    common.HashBuf beforeInbox = 2;
-}
-
 message ExecutionAssertionStubBuf {
-    common.HashBuf afterHash = 1;
-    bool   didInboxInsn = 2;
-    uint64 numGas = 3;
-    common.HashBuf firstMessageHash = 4;
-    common.HashBuf lastMessageHash = 5;
-    uint64 messageCount = 6;
-    common.HashBuf firstLogHash = 7;
-    common.HashBuf lastLogHash = 8;
-    uint64 logCount = 9;
+    uint64 numGas = 1;
+    common.HashBuf beforeMachineHash = 2;
+    common.HashBuf afterMachineHash = 3;
+    common.HashBuf beforeInboxHash = 4;
+    common.HashBuf afterInboxHash = 5;
+    common.HashBuf firstMessageHash = 6;
+    common.HashBuf lastMessageHash = 7;
+    uint64 messageCount = 8;
+    common.HashBuf firstLogHash = 9;
+    common.HashBuf lastLogHash = 10;
+    uint64 logCount = 11;
 }
 
 message ChainParamsBuf {
@@ -40,15 +37,9 @@ message AssertionParamsBuf {
     common.BigIntegerBuf importedMessageCount = 2;
 }
 
-message AssertionClaimBuf {
-    common.HashBuf afterInboxTop = 1;
-    common.HashBuf importedMessagesSlice = 2;
-    valprotocol.ExecutionAssertionStubBuf assertionStub = 3;
-}
-
 message DisputableNodeBuf {
     AssertionParamsBuf assertionParams = 1;
-    AssertionClaimBuf assertionClaim = 2;
+    valprotocol.ExecutionAssertionStubBuf assertion = 2;
     common.HashBuf maxInboxTop = 3;
     common.BigIntegerBuf maxInboxCount = 4;
 }

@@ -46,7 +46,6 @@ type ArbClient interface {
 	NewRollupWatcher(address common.Address) (ArbRollupWatcher, error)
 	NewGlobalInboxWatcher(address common.Address, rollupAddress common.Address) (GlobalInboxWatcher, error)
 	NewExecutionChallengeWatcher(address common.Address) (ExecutionChallengeWatcher, error)
-	NewMessagesChallengeWatcher(address common.Address) (MessagesChallengeWatcher, error)
 	NewInboxTopChallengeWatcher(address common.Address) (InboxTopChallengeWatcher, error)
 
 	GetBalance(ctx context.Context, account common.Address) (*big.Int, error)
@@ -60,7 +59,6 @@ type ArbAuthClient interface {
 	NewGlobalInbox(address common.Address, rollupAddress common.Address) (GlobalInbox, error)
 	NewChallengeFactory(address common.Address) (ChallengeFactory, error)
 	NewExecutionChallenge(address common.Address) (ExecutionChallenge, error)
-	NewMessagesChallenge(address common.Address) (MessagesChallenge, error)
 	NewInboxTopChallenge(address common.Address) (InboxTopChallenge, error)
 }
 

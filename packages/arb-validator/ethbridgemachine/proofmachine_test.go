@@ -19,7 +19,7 @@ package ethbridgemachine
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"strconv"
 
 	"encoding/json"
@@ -35,7 +35,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 )
 
-func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontracts.OneStepProofTester) {
+func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts.OneStepProof) {
 	t.Log("proof test contact: ", contract)
 
 	proofs, err := generateProofCases(contract)
@@ -63,34 +63,56 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 	for _, proof := range proofs {
 		opcode := proof.Proof[len(proof.Proof)-1]
 		t.Run(strconv.FormatUint(uint64(opcode), 10), func(t *testing.T) {
-			machineData, err := osp.ExecuteStep(
-				&bind.CallOpts{Context: context.Background()},
-				proof.InboxHash,
-				proof.Assertion.FirstMessageHash,
-				proof.Assertion.FirstLogHash,
-				proof.Proof,
-			)
+			var err error
+			var machineData struct {
+				Gas    uint64
+				Fields [5][32]byte
+			}
+
+			if proof.Message != nil {
+				machineData, err = osp.ExecuteStepWithMessage(
+					&bind.CallOpts{Context: context.Background()},
+					proof.Assertion.AfterInboxHash,
+					proof.Assertion.FirstMessageHash,
+					proof.Assertion.FirstLogHash,
+					proof.Proof,
+					uint8(proof.Message.Kind),
+					proof.Message.ChainTime.BlockNum.AsInt(),
+					proof.Message.ChainTime.Timestamp,
+					proof.Message.Sender.ToEthAddress(),
+					proof.Message.InboxSeqNum,
+					proof.Message.Data,
+				)
+			} else {
+				machineData, err = osp.ExecuteStep(
+					&bind.CallOpts{Context: context.Background()},
+					proof.Assertion.AfterInboxHash,
+					proof.Assertion.FirstMessageHash,
+					proof.Assertion.FirstLogHash,
+					proof.Proof,
+				)
+			}
 			t.Log("Opcode", opcode)
 			if err != nil {
 				t.Fatal("proof invalid with error", err)
 			}
-			if machineData.DidInboxInsn != proof.Assertion.DidInboxInsn {
+			if machineData.Fields[0] != proof.Assertion.BeforeMachineHash {
+				t.Fatal("wrong before machine")
+			}
+			if machineData.Fields[1] != proof.Assertion.AfterMachineHash {
+				t.Fatal("wrong after machine")
+			}
+			if machineData.Fields[2] != proof.Assertion.AfterInboxHash {
 				t.Fatal("wrong DidInboxInsn")
+			}
+			if machineData.Fields[3] != proof.Assertion.LastLogHash {
+				t.Fatal("wrong log")
+			}
+			if machineData.Fields[4] != proof.Assertion.LastMessageHash {
+				t.Fatal("wrong message")
 			}
 			if machineData.Gas != proof.Assertion.NumGas {
 				t.Fatal("wrong gas")
-			}
-			if machineData.LogAcc != proof.Assertion.LastLogHash {
-				t.Fatal("wrong log")
-			}
-			if machineData.MessageAcc != proof.Assertion.LastMessageHash {
-				t.Fatal("wrong message")
-			}
-			if machineData.StartHash != proof.BeforeHash {
-				t.Fatal("wrong before machine")
-			}
-			if machineData.EndHash != proof.Assertion.AfterHash {
-				t.Fatal("wrong after machine")
 			}
 		})
 	}
@@ -101,7 +123,7 @@ func TestValidateProof(t *testing.T) {
 
 	client, pks := test.SimulatedBackend()
 	auth := bind.NewKeyedTransactor(pks[0])
-	_, tx, osp, err := ethbridgetestcontracts.DeployOneStepProofTester(auth, client)
+	_, tx, osp, err := ethbridgecontracts.DeployOneStepProof(auth, client)
 	if err != nil {
 		t.Fatal(err)
 	}

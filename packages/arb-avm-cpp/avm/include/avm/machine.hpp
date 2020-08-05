@@ -27,9 +27,9 @@
 struct Assertion {
     uint64_t stepCount;
     uint64_t gasCount;
+    uint64_t inbox_messages_consumed;
     std::vector<value> outMessages;
     std::vector<value> logs;
-    bool didInboxInsn;
 };
 
 class Machine {

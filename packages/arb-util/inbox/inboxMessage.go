@@ -185,11 +185,3 @@ func NewAddressFromInt(val value.IntValue) common.Address {
 	copy(address[:], valBytes[12:])
 	return address
 }
-
-func InboxValue(messages []InboxMessage) value.TupleValue {
-	inbox := value.NewEmptyTuple()
-	for _, msg := range messages {
-		inbox = value.NewTuple2(inbox, msg.AsValue())
-	}
-	return inbox
-}

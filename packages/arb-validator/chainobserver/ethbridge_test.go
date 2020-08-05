@@ -20,6 +20,8 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
 	"math/rand"
@@ -60,6 +62,17 @@ func ethTransfer(dest common.Address, amount *big.Int) value.Value {
 		inbox.BytesToByteStack(ethData),
 	})
 	return tup
+}
+
+func checkBalance(t *testing.T, globalInbox arbbridge.GlobalInbox, address common.Address, amount *big.Int) {
+	balance, err := globalInbox.GetEthBalance(context.Background(), address)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if balance.Cmp(amount) != 0 {
+		t.Fatalf("failed checking balance, expected %v but saw %v", amount, balance)
+	}
 }
 
 func TestMain(m *testing.M) {
@@ -157,18 +170,7 @@ func TestConfirmAssertion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	checkBalance := func(address common.Address, amount *big.Int) {
-		balance, err := globalInbox.GetEthBalance(context.Background(), address)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if balance.Cmp(amount) != 0 {
-			t.Fatalf("failed checking balance, expected %v but saw %v", amount, balance)
-		}
-	}
-
-	checkBalance(rollupAddress, big.NewInt(100))
+	checkBalance(t, globalInbox, rollupAddress, big.NewInt(100))
 
 	checkpointer, err := checkpointing.NewIndexedCheckpointer(
 		rollupAddress,
@@ -194,23 +196,22 @@ func TestConfirmAssertion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	chain.Inbox = &structures.Inbox{MessageStack: structures.NewRandomMessageStack(100)}
 
-	t.Run("place stake", func(t *testing.T) {
-		events, err := rollupContract.PlaceStake(
-			context.Background(),
-			big.NewInt(0),
-			[]common.Hash{},
-			[]common.Hash{},
-		)
-		if err != nil {
+	events, err := rollupContract.PlaceStake(
+		context.Background(),
+		big.NewInt(0),
+		[]common.Hash{},
+		[]common.Hash{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ev := range events {
+		if err := chain.HandleNotification(context.Background(), ev); err != nil {
 			t.Fatal(err)
 		}
-		for _, ev := range events {
-			if err := chain.HandleNotification(context.Background(), ev); err != nil {
-				t.Fatal(err)
-			}
-		}
-	})
+	}
 
 	rand.Seed(time.Now().Unix())
 	dest := common.RandAddress()
@@ -218,23 +219,22 @@ func TestConfirmAssertion(t *testing.T) {
 	sends = append(sends, ethTransfer(dest, big.NewInt(75)))
 
 	assertion := protocol.NewExecutionAssertionFromValues(
+		chain.calculatedValidNode.VMProtoData().MachineHash,
 		common.RandHash(),
-		true,
-		rand.Uint64(),
+		100,
+		6,
 		sends,
 		[]value.Value{},
 	)
-
-	assertion.NumGas = 100
 
 	prepared, err := chain.prepareAssertion(chain.latestBlockId)
 	if err != nil {
 		t.Fatal(err)
 	}
 	prepared.Assertion = assertion
-	prepared.Claim.AssertionStub = valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
+	prepared.AssertionStub = structures.NewExecutionAssertionStubFromWholeAssertion(assertion, chain.calculatedValidNode.VMProtoData().InboxTop, chain.Inbox.MessageStack)
 	var stakerProof []common.Hash
-	events, err := chainlistener.MakeAssertion(context.Background(), rollupContract, prepared, stakerProof)
+	events, err = chainlistener.MakeAssertion(context.Background(), rollupContract, prepared, stakerProof)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,7 +245,7 @@ func TestConfirmAssertion(t *testing.T) {
 	}
 
 	latestConf := chain.NodeGraph.LatestConfirmed()
-	validNode := chain.NodeGraph.NodeFromHash(latestConf.SuccessorHashes()[3])
+	validNode := chain.NodeGraph.NodeFromHash(latestConf.SuccessorHashes()[valprotocol.ValidChildType])
 	if validNode == nil {
 		t.Fatal("valid node was nil")
 	}
@@ -275,12 +275,16 @@ func TestConfirmAssertion(t *testing.T) {
 			if !ok {
 				continue
 			}
-			if nd.Disputable().AssertionClaim.AssertionStub.LastLogHash != nodeOpp.LogsAcc {
+			if nd.Disputable().Assertion.LastLogHash != nodeOpp.LogsAcc {
 				t.Fatal("incorrect logs acc in proof")
 			}
 
-			if nd.Disputable().AssertionClaim.AssertionStub.LastMessageHash != valprotocol.BytesArrayAccumHash(nodeOpp.MessagesData, nodeOpp.MessageCount) {
-				t.Fatal("incorrect messages acc in proof")
+			lastMessageHashOpp := valprotocol.BytesArrayAccumHash(common.Hash{}, nodeOpp.MessagesData, nodeOpp.MessageCount)
+			if nd.Disputable().Assertion.LastMessageHash != lastMessageHashOpp {
+				t.Log("Assertion", nd.Disputable().Assertion)
+				t.Log("nodeOpp.MessagesData", hexutil.Encode(nodeOpp.MessagesData))
+				t.Log("nodeOpp.MessageCount", nodeOpp.MessageCount)
+				t.Fatal("incorrect messages acc in proof", lastMessageHashOpp, nd.Disputable().Assertion.LastMessageHash)
 			}
 			messageAccHash, nextOffset, err := rollupTester.GenerateLastMessageHash(
 				nil,
@@ -291,7 +295,7 @@ func TestConfirmAssertion(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if messageAccHash != nd.Disputable().AssertionClaim.AssertionStub.LastMessageHash {
+			if messageAccHash != nd.Disputable().Assertion.LastMessageHash {
 				t.Fatal("generated incorrect messages acc")
 			}
 
@@ -320,6 +324,18 @@ func TestConfirmAssertion(t *testing.T) {
 			offset = nextOffset
 			validCount++
 		}
+
+		t.Log(
+			latestConf.Hash(),
+			proof.InitalProtoStateHash,
+			proof.BranchesNums,
+			proof.DeadlineTicks,
+			proof.ChallengeNodeData,
+			proof.LogsAcc,
+			proof.VMProtoStateHashes,
+			proof.MessageCounts,
+			proof.Messages,
+		)
 
 		ret, err := rollupTester.Confirm(
 			nil,
@@ -357,6 +373,6 @@ func TestConfirmAssertion(t *testing.T) {
 		}
 	})
 
-	checkBalance(rollupAddress, big.NewInt(25))
-	checkBalance(dest, big.NewInt(75))
+	checkBalance(t, globalInbox, rollupAddress, big.NewInt(25))
+	checkBalance(t, globalInbox, dest, big.NewInt(75))
 }

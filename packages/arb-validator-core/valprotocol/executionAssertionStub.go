@@ -24,23 +24,24 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 type ExecutionAssertionStub struct {
-	AfterHash        common.Hash
-	DidInboxInsn     bool
-	NumGas           uint64
-	FirstMessageHash common.Hash
-	LastMessageHash  common.Hash
-	MessageCount     uint64
-	FirstLogHash     common.Hash
-	LastLogHash      common.Hash
-	LogCount         uint64
+	NumGas            uint64
+	BeforeMachineHash common.Hash
+	AfterMachineHash  common.Hash
+	BeforeInboxHash   common.Hash
+	AfterInboxHash    common.Hash
+	FirstMessageHash  common.Hash
+	LastMessageHash   common.Hash
+	MessageCount      uint64
+	FirstLogHash      common.Hash
+	LastLogHash       common.Hash
+	LogCount          uint64
 }
 
-func BytesArrayAccumHash(data []byte, valCount uint64) common.Hash {
-	var lastMsgHash common.Hash
+func BytesArrayAccumHash(initialHash common.Hash, data []byte, valCount uint64) common.Hash {
+	lastMsgHash := initialHash
 	rd := bytes.NewReader(data)
 	for i := uint64(0); i < valCount; i++ {
 		val, err := value.UnmarshalValue(rd)
@@ -54,69 +55,63 @@ func BytesArrayAccumHash(data []byte, valCount uint64) common.Hash {
 	return lastMsgHash
 }
 
-func NewExecutionAssertionStubFromAssertion(a *protocol.ExecutionAssertion) *ExecutionAssertionStub {
-	return &ExecutionAssertionStub{
-		AfterHash:        a.AfterHash.Unmarshal(),
-		DidInboxInsn:     a.DidInboxInsn,
-		NumGas:           a.NumGas,
-		FirstMessageHash: common.Hash{},
-		LastMessageHash:  BytesArrayAccumHash(a.OutMsgsData, a.OutMsgsCount),
-		MessageCount:     a.OutMsgsCount,
-		FirstLogHash:     common.Hash{},
-		LastLogHash:      BytesArrayAccumHash(a.LogsData, a.LogsCount),
-		LogCount:         a.LogsCount,
-	}
-}
-
 func (a *ExecutionAssertionStub) MarshalToBuf() *ExecutionAssertionStubBuf {
 	return &ExecutionAssertionStubBuf{
-		AfterHash:        a.AfterHash.MarshalToBuf(),
-		DidInboxInsn:     a.DidInboxInsn,
-		NumGas:           a.NumGas,
-		FirstMessageHash: a.FirstMessageHash.MarshalToBuf(),
-		LastMessageHash:  a.LastMessageHash.MarshalToBuf(),
-		MessageCount:     a.MessageCount,
-		FirstLogHash:     a.FirstLogHash.MarshalToBuf(),
-		LastLogHash:      a.LastLogHash.MarshalToBuf(),
-		LogCount:         a.LogCount,
+		NumGas:            a.NumGas,
+		BeforeMachineHash: a.BeforeMachineHash.MarshalToBuf(),
+		AfterMachineHash:  a.AfterMachineHash.MarshalToBuf(),
+		BeforeInboxHash:   a.BeforeInboxHash.MarshalToBuf(),
+		AfterInboxHash:    a.AfterInboxHash.MarshalToBuf(),
+		FirstMessageHash:  a.FirstMessageHash.MarshalToBuf(),
+		LastMessageHash:   a.LastMessageHash.MarshalToBuf(),
+		MessageCount:      a.MessageCount,
+		FirstLogHash:      a.FirstLogHash.MarshalToBuf(),
+		LastLogHash:       a.LastLogHash.MarshalToBuf(),
+		LogCount:          a.LogCount,
 	}
 }
 
 func (a *ExecutionAssertionStubBuf) Unmarshal() *ExecutionAssertionStub {
 	return &ExecutionAssertionStub{
-		AfterHash:        a.AfterHash.Unmarshal(),
-		DidInboxInsn:     a.DidInboxInsn,
-		NumGas:           a.NumGas,
-		FirstMessageHash: a.FirstMessageHash.Unmarshal(),
-		LastMessageHash:  a.LastMessageHash.Unmarshal(),
-		MessageCount:     a.MessageCount,
-		FirstLogHash:     a.FirstLogHash.Unmarshal(),
-		LastLogHash:      a.LastLogHash.Unmarshal(),
-		LogCount:         a.LogCount,
+		NumGas:            a.NumGas,
+		BeforeMachineHash: a.BeforeMachineHash.Unmarshal(),
+		AfterMachineHash:  a.AfterMachineHash.Unmarshal(),
+		BeforeInboxHash:   a.BeforeInboxHash.Unmarshal(),
+		AfterInboxHash:    a.AfterInboxHash.Unmarshal(),
+		FirstMessageHash:  a.FirstMessageHash.Unmarshal(),
+		LastMessageHash:   a.LastMessageHash.Unmarshal(),
+		MessageCount:      a.MessageCount,
+		FirstLogHash:      a.FirstLogHash.Unmarshal(),
+		LastLogHash:       a.LastLogHash.Unmarshal(),
+		LogCount:          a.LogCount,
 	}
 }
 
 func (a *ExecutionAssertionStub) Clone() *ExecutionAssertionStub {
 	return &ExecutionAssertionStub{
-		AfterHash:        a.AfterHash,
-		DidInboxInsn:     a.DidInboxInsn,
-		NumGas:           a.NumGas,
-		FirstMessageHash: a.FirstMessageHash,
-		LastMessageHash:  a.LastMessageHash,
-		MessageCount:     a.MessageCount,
-		FirstLogHash:     a.FirstLogHash,
-		LastLogHash:      a.LastLogHash,
-		LogCount:         a.LogCount,
+		NumGas:            a.NumGas,
+		BeforeMachineHash: a.BeforeMachineHash,
+		AfterMachineHash:  a.AfterMachineHash,
+		BeforeInboxHash:   a.BeforeInboxHash,
+		AfterInboxHash:    a.AfterInboxHash,
+		FirstMessageHash:  a.FirstMessageHash,
+		LastMessageHash:   a.LastMessageHash,
+		MessageCount:      a.MessageCount,
+		FirstLogHash:      a.FirstLogHash,
+		LastLogHash:       a.LastLogHash,
+		LogCount:          a.LogCount,
 	}
 }
 
 func (a *ExecutionAssertionStub) String() string {
 	return fmt.Sprintf(
-		"Assertion(AfterHash: %v, DidInboxInsn: %v, NumGas: %v, "+
+		"Assertion(NumGas: %v, BeforeMachineHash: %v, AfterMachineHash: %v, BeforeInboxHash: %v, AfterInboxHash: %v "+
 			"FirstMessageHash: %v, LastMessageHash: %v, MessageCount %v, FirstLogHash: %v LastLogHash: %v, LogCount %v)",
-		a.AfterHash,
-		a.DidInboxInsn,
 		a.NumGas,
+		a.BeforeMachineHash,
+		a.AfterMachineHash,
+		a.BeforeInboxHash,
+		a.AfterInboxHash,
 		a.FirstMessageHash,
 		a.LastMessageHash,
 		a.MessageCount,
@@ -127,18 +122,17 @@ func (a *ExecutionAssertionStub) String() string {
 }
 
 func (a *ExecutionAssertionStub) Equals(b *ExecutionAssertionStub) bool {
-	return a.AfterHash == b.AfterHash &&
-		a.NumGas == b.NumGas &&
+	return a.NumGas == b.NumGas &&
+		a.BeforeMachineHash == b.BeforeMachineHash &&
+		a.AfterMachineHash == b.AfterMachineHash &&
+		a.BeforeInboxHash == b.BeforeInboxHash &&
+		a.AfterInboxHash == b.AfterInboxHash &&
 		a.FirstMessageHash == b.FirstMessageHash &&
 		a.LastMessageHash == b.LastMessageHash &&
 		a.MessageCount == b.MessageCount &&
 		a.FirstLogHash == b.FirstLogHash &&
 		a.LastLogHash == b.LastLogHash &&
 		a.LogCount == b.LogCount
-}
-
-func (a *ExecutionAssertionStub) Hash() common.Hash {
-	return hashing.SoliditySHA3()
 }
 
 func (dn *ExecutionAssertionStub) CheckTime(params ChainParams) common.TimeTicks {

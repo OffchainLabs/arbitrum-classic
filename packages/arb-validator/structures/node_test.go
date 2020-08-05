@@ -34,7 +34,8 @@ func TestMarshalNode(t *testing.T) {
 	}
 
 	node := NewInitialNode(mach.Clone(), common.Hash{})
-	nextNode := NewRandomNodeFromValidPrev(node)
+	ms := NewRandomMessageStack(20)
+	nextNode := NewRandomNodeFromValidPrev(node, ms, 5)
 
 	checkpointContext := ckptcontext.NewCheckpointContext()
 	nodeBuf := nextNode.MarshalForCheckpoint(checkpointContext, true)

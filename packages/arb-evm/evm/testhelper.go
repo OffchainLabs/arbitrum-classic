@@ -31,7 +31,8 @@ func NewRandomEVMAssertion(results []*Result, messages []value.Value) *protocol.
 	}
 	return protocol.NewExecutionAssertionFromValues(
 		common.RandHash(),
-		false,
+		common.RandHash(),
+		rand.Uint64(),
 		rand.Uint64(),
 		messages,
 		logs,

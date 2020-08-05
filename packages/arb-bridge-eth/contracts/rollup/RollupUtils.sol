@@ -21,10 +21,12 @@ pragma solidity ^0.5.11;
 import "../arch/Marshaling.sol";
 import "../libraries/RollupTime.sol";
 
+import "../challenge/ChallengeUtils.sol";
+
 library RollupUtils {
     using Hashing for Value.Data;
 
-    uint256 private constant VALID_CHILD_TYPE = 3;
+    string private constant CONF_INP = "CONF_INP";
 
     struct ConfirmData {
         bytes32 initalProtoStateHash;
@@ -90,7 +92,8 @@ library RollupUtils {
         uint256 nodeIndex
     ) private pure returns (NodeData memory, bool) {
         uint256 branchType = data.branches[nodeIndex];
-        bool isValidChildType = (branchType == VALID_CHILD_TYPE);
+        bool isValidChildType = (branchType ==
+            ChallengeUtils.getValidChildType());
         bytes32 nodeDataHash;
 
         if (isValidChildType) {
@@ -167,10 +170,13 @@ library RollupUtils {
     {
         uint256 nodeCount = data.branches.length;
         uint256 validNodeCount = data.messageCounts.length;
-        require(data.vmProtoStateHashes.length == validNodeCount);
-        require(data.logsAcc.length == validNodeCount);
-        require(data.deadlineTicks.length == nodeCount);
-        require(data.challengeNodeData.length == nodeCount - validNodeCount);
+        require(data.vmProtoStateHashes.length == validNodeCount, CONF_INP);
+        require(data.logsAcc.length == validNodeCount, CONF_INP);
+        require(data.deadlineTicks.length == nodeCount, CONF_INP);
+        require(
+            data.challengeNodeData.length == nodeCount - validNodeCount,
+            CONF_INP
+        );
     }
 
     function protoStateHash(

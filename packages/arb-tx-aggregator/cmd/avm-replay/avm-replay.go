@@ -121,9 +121,7 @@ func testMessages(filename string, contract string) error {
 	}
 
 	//for _, msg := range messages {
-	//	inbox := value.NewEmptyTuple()
-	//	inbox = value.NewTuple2(inbox, msg.AsValue())
-	//	assertion, _ := mach.ExecuteAssertion(100000000000, inbox, 0)
+	//	assertion, _ := mach.ExecuteAssertion(100000000000, []inbox.InboxMessage{msg}, 0)
 	//	log.Println("Ran assertion", assertion.NumGas)
 	//}
 

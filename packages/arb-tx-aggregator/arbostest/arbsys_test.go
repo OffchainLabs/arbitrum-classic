@@ -32,7 +32,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
@@ -136,8 +135,6 @@ func TestWithdrawEth(t *testing.T) {
 	addr := common.RandAddress()
 	chain := common.RandAddress()
 
-	inboxMessages := make([]inbox.InboxMessage, 0)
-
 	initMsg := message.Init{
 		ChainParams: valprotocol.ChainParams{
 			StakeRequirement:        big.NewInt(0),
@@ -148,21 +145,23 @@ func TestWithdrawEth(t *testing.T) {
 		Owner:       common.Address{},
 		ExtraConfig: []byte{},
 	}
-	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg, chain, big.NewInt(0), chainTime))
-
 	depositMsg := message.Eth{
 		Dest:  addr,
 		Value: big.NewInt(10000),
 	}
-	inboxMessages = append(inboxMessages, message.NewInboxMessage(depositMsg, addr, big.NewInt(1), chainTime))
 
 	depositValue := big.NewInt(100)
 	withdrawDest := common.RandAddress()
 	tx := withdrawEthTx(t, big.NewInt(0), depositValue, withdrawDest)
-	inboxMessages = append(inboxMessages, message.NewInboxMessage(message.NewL2Message(tx), addr, big.NewInt(2), chainTime))
+
+	inboxMessages := []inbox.InboxMessage{
+		message.NewInboxMessage(initMsg, chain, big.NewInt(0), chainTime),
+		message.NewInboxMessage(depositMsg, addr, big.NewInt(1), chainTime),
+		message.NewInboxMessage(message.NewL2Message(tx), addr, big.NewInt(2), chainTime),
+	}
 
 	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-	testCase, err := value.TestVectorJSON(inbox.InboxValue(inboxMessages), assertion.ParseLogs(), assertion.ParseOutMessages())
+	testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.ParseLogs(), assertion.ParseOutMessages())
 	if err != nil {
 		t.Fatal(err)
 	}

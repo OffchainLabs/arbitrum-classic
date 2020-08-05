@@ -60,7 +60,4 @@ func TestChallenges(t *testing.T) {
 	t.Run("Execution Challenge", func(t *testing.T) {
 		testExecutionChallenge(t, client, auths[4], auths[5])
 	})
-	t.Run("Messages Challenge", func(t *testing.T) {
-		testMessagesChallenge(t, client, auths[2], auths[3])
-	})
 }

@@ -155,13 +155,13 @@ RawAssertion makeRawAssertion(Assertion& assertion) {
         marshal_value(log, logData);
     }
 
-    return {returnCharVector(outMsgData),
+    return {assertion.inbox_messages_consumed,
+            returnCharVector(outMsgData),
             static_cast<int>(assertion.outMessages.size()),
             returnCharVector(logData),
             static_cast<int>(assertion.logs.size()),
             assertion.stepCount,
-            assertion.gasCount,
-            assertion.didInboxInsn};
+            assertion.gasCount};
 }
 
 Tuple getTuple(TuplePool& pool, void* data) {

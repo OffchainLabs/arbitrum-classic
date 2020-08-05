@@ -43,7 +43,8 @@ func testInboxTopChallenge(
 	count := new(big.Int).Sub(messageStack.TopCount(), big.NewInt(1))
 	bottomHash, challengeHash := getChallengeData(t, messageStack, count)
 
-	if err := testChallenge(
+	testChallenge(
+		t,
 		client,
 		asserter,
 		challenger,
@@ -74,9 +75,7 @@ func testInboxTopChallenge(
 			)
 		},
 		testerAddress,
-	); err != nil {
-		t.Fatal(err)
-	}
+	)
 }
 
 func getChallengeData(t *testing.T, messageStack *structures.MessageStack, messageCount *big.Int) (common.Hash, common.Hash) {

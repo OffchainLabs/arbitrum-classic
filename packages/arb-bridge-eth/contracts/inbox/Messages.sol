@@ -76,16 +76,6 @@ library Messages {
         return keccak256(abi.encodePacked(inbox, message));
     }
 
-    function addMessageToVMInbox(
-        Value.Data memory vmInboxHashValue,
-        Value.Data memory message
-    ) internal pure returns (Value.Data memory) {
-        Value.Data[] memory vals = new Value.Data[](2);
-        vals[0] = vmInboxHashValue;
-        vals[1] = message;
-        return Value.newTuple(vals);
-    }
-
     struct OutgoingMessage {
         uint8 kind;
         address sender;

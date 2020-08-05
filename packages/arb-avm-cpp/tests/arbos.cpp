@@ -46,14 +46,10 @@ TEST_CASE("ARBOS test vectors") {
             nlohmann::json j;
             i >> j;
 
-            auto inbox_value =
-                simple_value_from_json(j.at("inbox"), pool).get<Tuple>();
             std::vector<value> messages;
-            while (inbox_value.tuple_size() != 0) {
-                messages.push_back(inbox_value.get_element(1));
-                inbox_value = inbox_value.get_element(0).get<Tuple>();
+            for (const auto& json_message : j.at("inbox")) {
+                messages.push_back(simple_value_from_json(json_message, pool));
             }
-            std::reverse(messages.begin(), messages.end());
 
             auto logs_json = j.at("logs");
             std::vector<value> logs;

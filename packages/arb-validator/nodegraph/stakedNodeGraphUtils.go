@@ -63,7 +63,7 @@ func confirmNodeOpp(currentNode *structures.Node) valprotocol.ConfirmNodeOpportu
 				DeadlineTicks:    currentNode.Deadline(),
 				MessagesData:     assertion.OutMsgsData,
 				MessageCount:     assertion.OutMsgsCount,
-				LogsAcc:          currentNode.Disputable().AssertionClaim.AssertionStub.LastLogHash,
+				LogsAcc:          currentNode.Disputable().Assertion.LastLogHash,
 				VMProtoStateHash: currentNode.VMProtoData().Hash(),
 			}
 		}
