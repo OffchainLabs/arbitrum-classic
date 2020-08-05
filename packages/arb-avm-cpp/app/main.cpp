@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
         }
     }();
 
-    std::vector<value> inbox_messages;
+    std::vector<Tuple> inbox_messages;
     if (argc == 5 && std::string(argv[3]) == "--inbox") {
         std::ifstream file(argv[4], std::ios::binary);
         if (!file.is_open()) {
@@ -72,7 +72,8 @@ int main(int argc, char* argv[]) {
         auto inbox_val =
             nonstd::get<Tuple>(deserialize_value(data, mach.getPool()));
         while (inbox_val != Tuple{}) {
-            inbox_messages.push_back(std::move(inbox_val.get_element(1)));
+            inbox_messages.push_back(
+                std::move(inbox_val.get_element(1).get<Tuple>()));
             inbox_val = nonstd::get<Tuple>(std::move(inbox_val.get_element(0)));
         }
         std::reverse(inbox_messages.begin(), inbox_messages.end());
