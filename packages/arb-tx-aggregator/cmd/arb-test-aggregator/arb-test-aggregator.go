@@ -19,7 +19,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"flag"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -52,13 +51,6 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
-
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
-
-	err := fs.Parse(os.Args[1:])
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	client, pks := test.SimulatedBackend()
 	auth := bind.NewKeyedTransactor(pks[0])
@@ -167,6 +159,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	log.Println("Processed", len(events), "messages")
+
 	msgs := make([]inbox.InboxMessage, 0, len(events))
 
 	//calls := serverLogger.calls
@@ -187,11 +181,17 @@ func main() {
 	//}
 
 	for _, ev := range events {
+		log.Println(ev.BlockId.Height, ev.LogIndex)
+	}
+
+	for _, ev := range events {
 		//for len(calls) > 0 && calls[0].blockId.Height.Cmp(ev.BlockId.Height) < 0 {
 		//	addCall()
 		//}
 		//ev.Message.InboxSeqNum = big.NewInt(int64(len(msgs)))
 		msgs = append(msgs, ev.Message)
+
+		log.Println("Incoming message", ev.Message)
 		//prevTimestamp = ev.Message.ChainTime.Timestamp
 	}
 
@@ -199,23 +199,23 @@ func main() {
 	//	addCall()
 	//}
 
-	for _, call := range serverLogger.calls {
-		log.Println("got call", call.msg, "from", call.sender.Hex())
-	}
+	//for _, call := range serverLogger.calls {
+	//	log.Println("got call", call.msg, "from", call.sender.Hex())
+	//}
 
-	lastCall := serverLogger.calls[len(serverLogger.calls)-1]
-	callMsg := message.NewInboxMessage(
-		message.NewL2Message(lastCall.msg),
-		common.NewAddressFromEth(lastCall.sender),
-		big.NewInt(int64(len(msgs))),
-		inbox.ChainTime{
-			BlockNum:  lastCall.blockId.Height,
-			Timestamp: events[len(events)-1].Message.ChainTime.Timestamp,
-		},
-	)
-	msgs = append(msgs, callMsg)
+	//lastCall := serverLogger.calls[len(serverLogger.calls)-1]
+	//callMsg := message.NewInboxMessage(
+	//	message.NewL2Message(lastCall.msg),
+	//	common.NewAddressFromEth(lastCall.sender),
+	//	big.NewInt(int64(len(msgs))),
+	//	inbox.ChainTime{
+	//		BlockNum:  lastCall.blockId.Height,
+	//		Timestamp: events[len(events)-1].Message.ChainTime.Timestamp,
+	//	},
+	//)
+	//msgs = append(msgs, callMsg)
 
-	log.Println("Appended call as inbox message", callMsg)
+	//log.Println("Appended call as inbox message", callMsg)
 
 	assertion, _ := mach.ExecuteAssertion(10000000000000, msgs, 0)
 	testVec, err := inbox.TestVectorJSON(msgs, assertion.ParseLogs(), assertion.ParseOutMessages())
