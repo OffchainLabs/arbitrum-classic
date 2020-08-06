@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
@@ -70,6 +71,10 @@ func (c *bisectionChallenge) chooseSegment(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
+	if int(segmentToChallenge) >= len(segments) {
+		return errors.New("invalid assertionToChallenge")
+	}
+
 	tree := NewMerkleTree(segments)
 	tx, err := c.BisectionChallenge.ChooseSegment(
 		c.auth.getAuth(ctx),

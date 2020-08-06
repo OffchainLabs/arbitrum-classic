@@ -54,7 +54,6 @@ func (al *AnnouncerListener) StakeMoved(ctx context.Context, ng *nodegraph.Stake
 func (al *AnnouncerListener) StartedChallenge(
 	context.Context,
 	*structures.MessageStack,
-	*valprotocol.Precondition,
 	*nodegraph.Challenge) {
 	log.Println(al.Prefix, "StartedChallenge")
 }
@@ -62,7 +61,6 @@ func (al *AnnouncerListener) StartedChallenge(
 func (al *AnnouncerListener) ResumedChallenge(
 	context.Context,
 	*structures.MessageStack,
-	*valprotocol.Precondition,
 	*nodegraph.Challenge) {
 	log.Println(al.Prefix, "ResumedChallenge")
 }
@@ -77,8 +75,7 @@ func (al *AnnouncerListener) CompletedChallenge(
 
 func (al *AnnouncerListener) SawAssertion(ctx context.Context, ev arbbridge.AssertedEvent) {
 	log.Println(al.Prefix, "SawAssertion on leaf", ev.PrevLeafHash)
-	log.Println(al.Prefix, "Params:", ev.Disputable.AssertionParams)
-	log.Println(al.Prefix, "Claim:", ev.Disputable.AssertionClaim)
+	log.Println(al.Prefix, "Params:", ev.AssertionParams)
 }
 
 func (al *AnnouncerListener) ConfirmedNode(ctx context.Context, ev arbbridge.ConfirmedEvent) {

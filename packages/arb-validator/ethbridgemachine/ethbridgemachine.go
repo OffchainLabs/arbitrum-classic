@@ -18,20 +18,19 @@ package ethbridgemachine
 
 import (
 	"errors"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
 
 type proofData struct {
-	BeforeHash common.Hash
-	Assertion  *valprotocol.ExecutionAssertionStub
-	InboxInner common.Hash
-	InboxSize  int64
-	Proof      []byte
+	Assertion *valprotocol.ExecutionAssertionStub
+	Proof     []byte
+	Message   *inbox.InboxMessage
 }
 
 func generateProofCases(contract string) ([]*proofData, error) {
@@ -41,7 +40,9 @@ func generateProofCases(contract string) ([]*proofData, error) {
 	}
 
 	maxSteps := uint64(100000)
-	inbox := value.NewEmptyTuple()
+	ms := structures.NewRandomMessageStack(100)
+
+	prevInboxHash := common.Hash{}
 
 	proofs := make([]*proofData, 0)
 	for i := uint64(0); i < maxSteps; i++ {
@@ -49,32 +50,34 @@ func generateProofCases(contract string) ([]*proofData, error) {
 		if err != nil {
 			return nil, err
 		}
-		beforeHash := mach.Hash()
 		beforeMach := mach.Clone()
-		a, ranSteps := mach.ExecuteAssertion(1, inbox, 0)
+		messages, err := ms.GetMessages(prevInboxHash, 1)
+		if err != nil {
+			return nil, err
+		}
+		a, ranSteps := mach.ExecuteAssertion(1, messages, 0)
 		if ranSteps == 0 {
 			break
 		}
 		if ranSteps != 1 {
-			return nil, errors.New("Executed incorrect step count")
+			return nil, errors.New("executed incorrect step count")
 		}
 		if mach.CurrentStatus() == machine.ErrorStop {
 			beforeMach.PrintState()
 			mach.PrintState()
 			return nil, errors.New("machine stopped in error state")
 		}
-		hashPreImage := inbox.GetPreImage()
-		proofs = append(proofs, &proofData{
-			BeforeHash: beforeHash,
-			Assertion:  valprotocol.NewExecutionAssertionStubFromAssertion(a),
-			InboxInner: hashPreImage.GetInnerHash(),
-			InboxSize:  hashPreImage.Size(),
-			Proof:      proof,
-		})
-
-		if a.DidInboxInsn {
-			inbox = value.NewEmptyTuple()
+		stub := structures.NewExecutionAssertionStubFromWholeAssertion(a, prevInboxHash, ms)
+		var msg *inbox.InboxMessage
+		if a.InboxMessagesConsumed > 0 {
+			msg = &messages[0]
 		}
+		proofs = append(proofs, &proofData{
+			Assertion: stub,
+			Proof:     proof,
+			Message:   msg,
+		})
+		prevInboxHash = stub.AfterInboxHash
 	}
 	return proofs, nil
 }

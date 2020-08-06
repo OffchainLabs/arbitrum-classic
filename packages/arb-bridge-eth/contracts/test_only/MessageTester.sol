@@ -72,21 +72,6 @@ contract MessageTester {
         return Messages.addMessageToInbox(inbox, message);
     }
 
-    function addMessageToVMInboxHash(
-        bytes32 inboxTuplePreimage,
-        uint256 inboxTupleSize,
-        bytes32 messageTuplePreimage,
-        uint256 messageTupleSize
-    ) public pure returns (bytes32) {
-        return
-            Messages
-                .addMessageToVMInbox(
-                Value.newTuplePreImage(inboxTuplePreimage, inboxTupleSize),
-                Value.newTuplePreImage(messageTuplePreimage, messageTupleSize)
-            )
-                .hash();
-    }
-
     function unmarshalOutgoingMessage(bytes memory data, uint256 startOffset)
         public
         pure

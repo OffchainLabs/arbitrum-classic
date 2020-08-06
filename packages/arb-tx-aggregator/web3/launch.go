@@ -18,8 +18,10 @@ package web3
 
 import (
 	"context"
+
 	"github.com/gorilla/rpc/v2"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -44,7 +46,7 @@ func GenerateWeb3Server(ctx context.Context, server *aggregator.Server) (*rpc.Se
 		panic(err)
 	}
 
-	net := &Net{chainId: l2message.ChainAddressToID(common.NewAddressFromEth(chain)).Uint64()}
+	net := &Net{chainId: message.ChainAddressToID(common.NewAddressFromEth(chain)).Uint64()}
 	err = s.RegisterService(net, "Net")
 	if err != nil {
 		panic(err)

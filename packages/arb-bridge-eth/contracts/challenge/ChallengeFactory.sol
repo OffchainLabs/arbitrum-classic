@@ -22,24 +22,25 @@ import "../libraries/CloneFactory.sol";
 
 import "./IChallengeFactory.sol";
 import "./IBisectionChallenge.sol";
+import "./IExecutionChallenge.sol";
 import "./ChallengeUtils.sol";
 
 contract ChallengeFactory is CloneFactory, IChallengeFactory {
     // Invalid challenge type
     string public constant INVALID_TYPE_STR = "INVALID_TYPE";
 
-    address public messagesChallengeTemplate;
     address public inboxTopChallengeTemplate;
     address public executionChallengeTemplate;
+    address public oneStepProofAddress;
 
     constructor(
-        address _messagesChallengeTemplate,
         address _inboxTopChallengeTemplate,
-        address _executionChallengeTemplate
+        address _executionChallengeTemplate,
+        address _oneStepProofAddress
     ) public {
-        messagesChallengeTemplate = _messagesChallengeTemplate;
         inboxTopChallengeTemplate = _inboxTopChallengeTemplate;
         executionChallengeTemplate = _executionChallengeTemplate;
+        oneStepProofAddress = _oneStepProofAddress;
     }
 
     function generateCloneAddress(
@@ -82,6 +83,10 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
             _challengePeriodTicks,
             _challengeHash
         );
+
+        if (challengeType == ChallengeUtils.getInvalidExType()) {
+            IExecutionChallenge(clone).connectOneStepProof(oneStepProofAddress);
+        }
         return address(clone);
     }
 
@@ -103,8 +108,6 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
     {
         if (challengeType == ChallengeUtils.getInvalidInboxType()) {
             return inboxTopChallengeTemplate;
-        } else if (challengeType == ChallengeUtils.getInvalidMsgsType()) {
-            return messagesChallengeTemplate;
         } else if (challengeType == ChallengeUtils.getInvalidExType()) {
             return executionChallengeTemplate;
         } else {

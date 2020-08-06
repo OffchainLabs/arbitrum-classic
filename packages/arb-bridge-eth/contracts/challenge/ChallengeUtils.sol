@@ -20,16 +20,11 @@ pragma solidity ^0.5.11;
 
 library ChallengeUtils {
     uint256 public constant INVALID_INBOX_TOP_TYPE = 0;
-    uint256 public constant INVALID_MESSAGES_TYPE = 1;
-    uint256 public constant INVALID_EXECUTION_TYPE = 2;
-    uint256 public constant VALID_CHILD_TYPE = 3;
+    uint256 public constant INVALID_EXECUTION_TYPE = 1;
+    uint256 public constant VALID_CHILD_TYPE = 2;
 
     function getInvalidInboxType() internal pure returns (uint256) {
         return INVALID_INBOX_TOP_TYPE;
-    }
-
-    function getInvalidMsgsType() internal pure returns (uint256) {
-        return INVALID_MESSAGES_TYPE;
     }
 
     function getInvalidExType() internal pure returns (uint256) {
@@ -48,32 +43,13 @@ library ChallengeUtils {
         return keccak256(abi.encodePacked(_lowerHash, _topHash, _chainLength));
     }
 
-    function messagesHash(
-        bytes32 _lowerHashA,
-        bytes32 _topHashA,
-        bytes32 _lowerHashB,
-        bytes32 _topHashB,
-        uint256 _chainLength
-    ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    _lowerHashA,
-                    _topHashA,
-                    _lowerHashB,
-                    _topHashB,
-                    _chainLength
-                )
-            );
-    }
-
     struct ExecutionAssertion {
         uint64 numSteps;
-        bytes32 beforeMachineHash;
-        bytes32 inboxHash;
-        bytes32 afterMachineHash;
-        bool didInboxInsn;
         uint64 numArbGas;
+        bytes32 beforeMachineHash;
+        bytes32 afterMachineHash;
+        bytes32 beforeInboxHash;
+        bytes32 afterInboxHash;
         bytes32 firstMessageHash;
         bytes32 lastMessageHash;
         uint64 messageCount;
@@ -91,11 +67,11 @@ library ChallengeUtils {
             keccak256(
                 abi.encodePacked(
                     assertion.numSteps,
-                    assertion.beforeMachineHash,
-                    assertion.inboxHash,
-                    assertion.afterMachineHash,
-                    assertion.didInboxInsn,
                     assertion.numArbGas,
+                    assertion.beforeMachineHash,
+                    assertion.afterMachineHash,
+                    assertion.beforeInboxHash,
+                    assertion.afterInboxHash,
                     assertion.firstMessageHash,
                     assertion.lastMessageHash,
                     assertion.messageCount,

@@ -14,45 +14,16 @@
  * limitations under the License.
  */
 
-package message
+package inbox
 
 import (
 	"bytes"
 	"errors"
 	errors2 "github.com/pkg/errors"
-	"math"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
-
-func toEth(val *big.Int) *big.Float {
-	fbalance := new(big.Float)
-	fbalance.SetString(val.String())
-	return new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
-}
-
-func extractUInt256(data []byte) (*big.Int, []byte) {
-	val := new(big.Int).SetBytes(data[:32])
-	data = data[32:]
-	return val, data
-}
-
-func extractAddress(data []byte) (common.Address, []byte) {
-	data = data[12:] // Skip first 12 bytes of 32 byte address data
-	var addr common.Address
-	copy(addr[:], data[:])
-	data = data[20:]
-	return addr, data
-}
-
-func addressData(addr common.Address) []byte {
-	ret := make([]byte, 0, 32)
-	ret = append(ret, make([]byte, 12)...)
-	ret = append(ret, addr[:]...)
-	return ret
-}
 
 func bytesToValues(val []byte) []value.Value {
 	var ints []value.Value

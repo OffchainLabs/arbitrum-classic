@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package l2message
+package message
 
 import (
 	"bytes"
@@ -22,14 +22,28 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
+
+type L2Message struct {
+	Data []byte
+}
+
+func (l L2Message) Type() inbox.Type {
+	return L2Type
+}
+
+func (l L2Message) AsData() []byte {
+	return l.Data
+}
 
 type L2SubType uint8
 
@@ -41,9 +55,6 @@ const (
 	SignedTransactionType             = 4
 )
 
-const AddressSize = 32
-
-const TransactionHeaderSize = 32*4 + AddressSize
 const SignatureSize = 65
 
 type AbstractL2Message interface {
@@ -59,14 +70,15 @@ type EthConvertable interface {
 	AsEthTx(chain common.Address) (*types.Transaction, error)
 }
 
-func L2MessageAsData(msg AbstractL2Message) []byte {
+func NewL2Message(msg AbstractL2Message) L2Message {
 	data := make([]byte, 0)
 	data = append(data, byte(msg.L2Type()))
 	data = append(data, msg.AsData()...)
-	return data
+	return L2Message{Data: data}
 }
 
-func NewL2MessageFromData(data []byte) (AbstractL2Message, error) {
+func (l L2Message) AbstractMessage() (AbstractL2Message, error) {
+	data := l.Data
 	l2Type := L2SubType(data[0])
 	data = data[1:]
 	switch l2Type {
@@ -190,7 +202,7 @@ func (t Transaction) asData() []byte {
 }
 
 func (t Transaction) MessageID(sender common.Address, chain common.Address) common.Hash {
-	data := L2MessageAsData(t)
+	data := NewL2Message(t).AsData()
 	inner := hashing.SoliditySHA3(hashing.Uint256(ChainAddressToID(chain)), hashing.Bytes32(marshaledBytesHash(data)))
 	return hashing.SoliditySHA3(addressData(sender), hashing.Bytes32(inner))
 }
@@ -256,15 +268,6 @@ type Call struct {
 	Data        []byte
 }
 
-func NewSimpleCall(dest common.Address, data []byte) AbstractL2Message {
-	return Call{
-		MaxGas:      big.NewInt(0),
-		GasPriceBid: big.NewInt(0),
-		DestAddress: dest,
-		Data:        data,
-	}
-}
-
 func NewCallFromData(data []byte) Call {
 	maxGas, data := extractUInt256(data)
 	gasPriceBid, data := extractUInt256(data)
@@ -286,8 +289,8 @@ func NewRandomCall() Call {
 	}
 }
 
-func (t Call) Destination() common.Address {
-	return t.DestAddress
+func (c Call) Destination() common.Address {
+	return c.DestAddress
 }
 
 func (c Call) L2Type() L2SubType {
@@ -393,7 +396,7 @@ type TransactionBatch struct {
 func NewTransactionBatchFromMessages(messages []AbstractL2Message) TransactionBatch {
 	txes := make([][]byte, 0)
 	for _, msg := range messages {
-		txes = append(txes, L2MessageAsData(msg))
+		txes = append(txes, NewL2Message(msg).AsData())
 	}
 	return TransactionBatch{Transactions: txes}
 }

@@ -246,30 +246,20 @@ func (vm *ethRollupWatcher) processEvents(
 			NumSteps:             eventVal.NumSteps,
 			ImportedMessageCount: eventVal.ImportedMessageCount,
 		}
-		claim := &valprotocol.AssertionClaim{
-			AfterInboxTop:         eventVal.Fields[2],
-			ImportedMessagesSlice: eventVal.Fields[3],
-			AssertionStub: &valprotocol.ExecutionAssertionStub{
-				AfterHash:        eventVal.Fields[4],
-				DidInboxInsn:     eventVal.DidInboxInsn,
-				NumGas:           eventVal.NumArbGas,
-				FirstMessageHash: [32]byte{},
-				LastMessageHash:  eventVal.Fields[5],
-				MessageCount:     eventVal.MessageCount,
-				FirstLogHash:     [32]byte{},
-				LastLogHash:      eventVal.Fields[6],
-				LogCount:         eventVal.LogCount,
-			},
-		}
+
 		return arbbridge.AssertedEvent{
-			ChainInfo:    chainInfo,
-			PrevLeafHash: eventVal.Fields[0],
-			Disputable: valprotocol.NewDisputableNode(
-				params,
-				claim,
-				eventVal.Fields[1],
-				eventVal.InboxCount,
-			),
+			ChainInfo:        chainInfo,
+			PrevLeafHash:     eventVal.Fields[0],
+			MaxInboxTop:      eventVal.Fields[1],
+			MaxInboxCount:    eventVal.InboxCount,
+			AssertionParams:  params,
+			AfterMachineHash: eventVal.Fields[2],
+			AfterInboxHash:   eventVal.Fields[3],
+			NumGas:           eventVal.NumArbGas,
+			LastMessageHash:  eventVal.Fields[4],
+			MessageCount:     eventVal.MessageCount,
+			LastLogHash:      eventVal.Fields[5],
+			LogCount:         eventVal.LogCount,
 		}, nil
 	case rollupConfirmedID:
 		eventVal, err := vm.ArbRollup.ParseRollupConfirmed(ethLog)

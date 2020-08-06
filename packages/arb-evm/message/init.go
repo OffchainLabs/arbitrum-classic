@@ -19,6 +19,7 @@ package message
 import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"math/big"
 )
@@ -47,7 +48,7 @@ func NewInitFromData(data []byte) Init {
 	}
 }
 
-func (m Init) Type() Type {
+func (m Init) Type() inbox.Type {
 	return InitType
 }
 

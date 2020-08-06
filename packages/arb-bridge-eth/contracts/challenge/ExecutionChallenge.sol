@@ -18,29 +18,22 @@
 
 pragma solidity ^0.5.11;
 
+import "./IExecutionChallenge.sol";
 import "./BisectionChallenge.sol";
 import "./ChallengeUtils.sol";
 
-import "../arch/OneStepProof.sol";
+import "../arch/IOneStepProof.sol";
 
 import "../libraries/MerkleLib.sol";
 
-contract ExecutionChallenge is BisectionChallenge {
+contract ExecutionChallenge is IExecutionChallenge, BisectionChallenge {
     using ChallengeUtils for ChallengeUtils.ExecutionAssertion;
-    using Hashing for Value.Data;
 
-    event BisectedAssertion(
-        bytes32[] machineHashes,
-        uint32 inboxInsnIndex,
-        bytes32[] messageAccs,
-        bytes32[] logAccs,
-        uint64[] outCounts,
-        uint64[] gases,
-        uint64 totalSteps,
-        uint256 deadlineTicks
-    );
+    event BisectedAssertion(bytes32[] assertionHashes, uint256 deadlineTicks);
 
     event OneStepProofCompleted();
+
+    IOneStepProof executor;
 
     // Incorrect previous state
     string private constant BIS_INPLEN = "BIS_INPLEN";
@@ -48,9 +41,8 @@ contract ExecutionChallenge is BisectionChallenge {
     string private constant OSP_PROOF = "OSP_PROOF";
 
     struct BisectAssertionData {
-        bytes32 beforeInbox;
         bytes32[] machineHashes;
-        uint32 inboxInsnIndex;
+        bytes32[] inboxAccs;
         bytes32[] messageAccs;
         bytes32[] logAccs;
         uint64[] outCounts;
@@ -58,11 +50,13 @@ contract ExecutionChallenge is BisectionChallenge {
         uint64 totalSteps;
     }
 
-    // @param inboxInsnIndex is 0 if the assertion didn't include an inbox instruction, and otherwise the index of the segment including it plus 1
+    function connectOneStepProof(address oneStepProof) external {
+        executor = IOneStepProof(oneStepProof);
+    }
+
     function bisectAssertion(
-        bytes32 _beforeInbox,
         bytes32[] memory _machineHashes,
-        uint32 inboxInsnIndex,
+        bytes32[] memory _inboxAccs,
         bytes32[] memory _messageAccs,
         bytes32[] memory _logAccs,
         uint64[] memory _outCounts,
@@ -70,9 +64,8 @@ contract ExecutionChallenge is BisectionChallenge {
         uint64 _totalSteps
     ) public asserterAction {
         BisectAssertionData memory bisection = BisectAssertionData(
-            _beforeInbox,
             _machineHashes,
-            inboxInsnIndex,
+            _inboxAccs,
             _messageAccs,
             _logAccs,
             _outCounts,
@@ -87,6 +80,7 @@ contract ExecutionChallenge is BisectionChallenge {
         view
     {
         uint256 bisectionCount = _data.machineHashes.length - 1;
+        require(bisectionCount + 1 == _data.inboxAccs.length, BIS_INPLEN);
         require(bisectionCount + 1 == _data.messageAccs.length, BIS_INPLEN);
         require(bisectionCount + 1 == _data.logAccs.length, BIS_INPLEN);
         require(bisectionCount == _data.gases.length, BIS_INPLEN);
@@ -101,64 +95,62 @@ contract ExecutionChallenge is BisectionChallenge {
         }
 
         requireMatchesPrevState(
-            ChallengeUtils
-                .ExecutionAssertion(
-                _data
-                    .totalSteps,
-                _data.machineHashes[0],
-                _data
-                    .beforeInbox,
-                _data.machineHashes[bisectionCount],
-                _data.inboxInsnIndex > 0 ? true : false,
+            _generateAssertionHash(
+                _data,
+                _data.totalSteps,
+                0,
+                bisectionCount,
                 totalGas,
-                _data.messageAccs[0],
-                _data.messageAccs[bisectionCount],
                 totalMessageCount,
-                _data.logAccs[0],
-                _data.logAccs[bisectionCount],
                 totalLogCount
             )
-                .hash()
         );
     }
 
     function _generateBisectionHash(
         BisectAssertionData memory data,
-        uint32 stepCount,
+        uint64 stepCount,
         uint256 bisectionCount,
         uint256 i
+    ) private pure returns (bytes32) {
+        return
+            _generateAssertionHash(
+                data,
+                stepCount,
+                i,
+                i + 1,
+                data.gases[i],
+                data.outCounts[i],
+                data.outCounts[bisectionCount + i]
+            );
+    }
+
+    function _generateAssertionHash(
+        BisectAssertionData memory data,
+        uint64 stepCount,
+        uint256 start,
+        uint256 end,
+        uint64 gas,
+        uint64 messageCount,
+        uint64 logCount
     ) private pure returns (bytes32) {
         return
             ChallengeUtils
                 .ExecutionAssertion(
                 stepCount,
-                data.machineHashes[i],
-                data
-                    .beforeInbox,
-                data.machineHashes[i + 1],
-                data.inboxInsnIndex == i + 1,
-                data.gases[i],
-                data.messageAccs[i],
-                data.messageAccs[i + 1],
-                data.outCounts[i],
-                data.logAccs[i],
-                data.logAccs[i + 1],
-                data.outCounts[bisectionCount + i]
+                gas,
+                data.machineHashes[start],
+                data.machineHashes[end],
+                data.inboxAccs[start],
+                data.inboxAccs[end],
+                data.messageAccs[start],
+                data.messageAccs[end],
+                messageCount,
+                data.logAccs[start],
+                data.logAccs[end],
+                logCount
             )
                 .hash();
-    }
-
-    function _emitBisectionEvent(BisectAssertionData memory data) private {
-        emit BisectedAssertion(
-            data.machineHashes,
-            data.inboxInsnIndex,
-            data.messageAccs,
-            data.logAccs,
-            data.outCounts,
-            data.gases,
-            data.totalSteps,
-            deadlineTicks
-        );
     }
 
     function _bisectAssertion(BisectAssertionData memory _data) private {
@@ -167,18 +159,14 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32[] memory hashes = new bytes32[](bisectionCount);
         hashes[0] = _generateBisectionHash(
             _data,
-            uint32(firstSegmentSize(uint256(_data.totalSteps), bisectionCount)),
+            uint64(firstSegmentSize(uint256(_data.totalSteps), bisectionCount)),
             bisectionCount,
             0
         );
         for (uint256 i = 1; i < bisectionCount; i++) {
-            // If the previous segment called inbox, set the inbox to the empty tuple
-            if (_data.inboxInsnIndex == i) {
-                _data.beforeInbox = Value.newEmptyTuple().hash();
-            }
             hashes[i] = _generateBisectionHash(
                 _data,
-                uint32(
+                uint64(
                     otherSegmentSize(uint256(_data.totalSteps), bisectionCount)
                 ),
                 bisectionCount,
@@ -189,62 +177,86 @@ contract ExecutionChallenge is BisectionChallenge {
         commitToSegment(hashes);
         asserterResponded();
 
-        _emitBisectionEvent(_data);
+        emit BisectedAssertion(hashes, deadlineTicks);
+    }
+
+    function oneStepProofWithMessage(
+        bytes32 _firstInbox,
+        bytes32 _firstMessage,
+        bytes32 _firstLog,
+        bytes memory _proof,
+        uint8 _kind,
+        uint256 _blockNumber,
+        uint256 _timestamp,
+        address _sender,
+        uint256 _inboxSeqNum,
+        bytes memory _msgData
+    ) public asserterAction {
+        (uint64 gas, bytes32[5] memory fields) = executor
+            .executeStepWithMessage(
+            _firstInbox,
+            _firstMessage,
+            _firstLog,
+            _proof,
+            _kind,
+            _blockNumber,
+            _timestamp,
+            _sender,
+            _inboxSeqNum,
+            _msgData
+        );
+
+        checkProof(gas, _firstInbox, _firstMessage, _firstLog, fields);
     }
 
     function oneStepProof(
-        bytes32 _beforeInbox,
-        uint256 _beforeInboxValueSize,
+        bytes32 _firstInbox,
         bytes32 _firstMessage,
         bytes32 _firstLog,
         bytes memory _proof
     ) public asserterAction {
-        Value.Data memory inbox = Value.newTuplePreImage(
-            _beforeInbox,
-            _beforeInboxValueSize
-        );
-
-        OneStepProof.AssertionContext memory context = OneStepProof
-            .initializeExecutionContext(
-            inbox,
+        (uint64 gas, bytes32[5] memory fields) = executor.executeStep(
+            _firstInbox,
             _firstMessage,
             _firstLog,
             _proof
         );
 
-        OneStepProof.executeOp(context);
-        // The one step proof already guarantees us that _firstMessage and _lastMessage
+        checkProof(gas, _firstInbox, _firstMessage, _firstLog, fields);
+    }
+
+    function checkProof(
+        uint64 gas,
+        bytes32 firstInbox,
+        bytes32 firstMessage,
+        bytes32 firstLog,
+        bytes32[5] memory fields
+    ) private {
+        bytes32 startMachineHash = fields[0];
+        bytes32 endMachineHash = fields[1];
+        bytes32 afterInboxHash = fields[2];
+        bytes32 afterMessagesHash = fields[3];
+        bytes32 afterLogsHash = fields[4];
+        // The one step proof already guarantees us that firstMessage and lastMessage
         // are either one or 0 messages apart and the same is true for logs. Therefore
         // we can infer the message count and log count based on whether the fields
         // are equal or not
         ChallengeUtils.ExecutionAssertion memory assertion = ChallengeUtils
             .ExecutionAssertion(
             1,
-            Machine.hash(context.startMachine),
-            inbox.hash(),
-            Machine.hash(context.afterMachine),
-            context.didInboxInsn,
-            context.gas,
-            _firstMessage,
-            context.messageAcc,
-            _firstMessage == context.messageAcc ? 0 : 1,
-            _firstLog,
-            context.logAcc,
-            _firstLog == context.logAcc ? 0 : 1
+            gas,
+            startMachineHash,
+            endMachineHash,
+            firstInbox,
+            afterInboxHash,
+            firstMessage,
+            afterMessagesHash,
+            firstMessage == afterMessagesHash ? 0 : 1,
+            firstLog,
+            afterLogsHash,
+            firstLog == afterLogsHash ? 0 : 1
         );
         requireMatchesPrevState(assertion.hash());
-
-        // require(
-        //     _data.beforeHash == startMachine.hash(),
-        //     string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString(),
-        //     " beforeHash = ", DebugPrint.bytes32string(_data.beforeHash), "\nstartMachine = ", DebugPrint.bytes32string(startMachine.hash())))
-        // );
-
-        // require(
-        //     _data.afterHash == endMachine.hash(),
-        //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
-        //     " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
-        // );
 
         emit OneStepProofCompleted();
         _asserterWin();

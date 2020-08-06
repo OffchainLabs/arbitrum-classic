@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 var codeFile = arbos.Path()
@@ -71,7 +70,7 @@ func TestCheckpointMachine(t *testing.T) {
 
 	_, numSteps := mach.ExecuteAssertion(
 		1000,
-		value.NewEmptyTuple(),
+		nil,
 		time.Hour,
 	)
 

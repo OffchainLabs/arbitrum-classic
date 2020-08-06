@@ -161,3 +161,14 @@ func inboxChallengerUpdate(
 	}
 	return getNextEvent(eventChan)
 }
+
+func getSegments(
+	inbox *structures.MessageStack,
+	bisectionEvent arbbridge.InboxTopBisectionEvent,
+) ([]common.Hash, error) {
+	bisectionLength := bisectionEvent.TotalLength.Uint64()
+	return inbox.GenerateBisection(
+		bisectionEvent.ChainHashes[0],
+		uint64(len(bisectionEvent.ChainHashes))-1,
+		bisectionLength)
+}

@@ -26,13 +26,27 @@
 
 namespace {
 uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
-}
+}  // namespace
+
+AssertionContext::AssertionContext(
+    std::vector<Tuple> inbox_messages,
+    Tuple sideload,
+    bool blockingSideload_,
+    nonstd::optional<value> fake_inbox_peek_value_)
+    : inbox_messages(std::move(inbox_messages)),
+      inbox_messages_consumed(0),
+      sideload_value(std::move(sideload)),
+      numSteps{0},
+      numGas{0},
+      blockingSideload(blockingSideload_),
+      fake_inbox_peek_value(std::move(fake_inbox_peek_value_)) {}
 
 MachineState::MachineState()
     : pool(std::make_unique<TuplePool>()),
       arb_gas_remaining(max_arb_gas_remaining),
       pc(0, 0),
-      errpc({0, 0}, getErrCodePoint()) {}
+      errpc({0, 0}, getErrCodePoint()),
+      staged_message(Tuple()) {}
 
 MachineState::MachineState(std::shared_ptr<Code> code_,
                            value static_val_,
@@ -42,7 +56,8 @@ MachineState::MachineState(std::shared_ptr<Code> code_,
       static_val(std::move(static_val_)),
       arb_gas_remaining(max_arb_gas_remaining),
       pc(code->initialCodePointRef()),
-      errpc({0, 0}, code->loadCodePoint({0, 0})) {}
+      errpc({0, 0}, code->loadCodePoint({0, 0})),
+      staged_message(Tuple()) {}
 
 MachineState::MachineState(std::shared_ptr<TuplePool> pool_,
                            std::shared_ptr<Code> code_,
@@ -53,7 +68,8 @@ MachineState::MachineState(std::shared_ptr<TuplePool> pool_,
                            uint256_t arb_gas_remaining_,
                            Status state_,
                            CodePointRef pc_,
-                           CodePointStub errpc_)
+                           CodePointStub errpc_,
+                           Tuple staged_message_)
     : pool(std::move(pool_)),
       code(std::move(code_)),
       registerVal(std::move(register_val_)),
@@ -63,7 +79,8 @@ MachineState::MachineState(std::shared_ptr<TuplePool> pool_,
       arb_gas_remaining(arb_gas_remaining_),
       state(state_),
       pc(pc_),
-      errpc(errpc_) {}
+      errpc(errpc_),
+      staged_message(std::move(staged_message_)) {}
 
 MachineState MachineState::loadFromFile(
     const std::string& executable_filename) {
@@ -81,7 +98,7 @@ uint256_t MachineState::hash() const {
     if (state == Status::Error)
         return 1;
 
-    std::array<unsigned char, 32 * 7> data;
+    std::array<unsigned char, 32 * 8> data;
     auto oit = data.begin();
     {
         auto val = ::hash(loadCurrentInstruction());
@@ -106,6 +123,10 @@ uint256_t MachineState::hash() const {
     { oit = to_big_endian(arb_gas_remaining, oit); }
     {
         auto val = ::hash_value(errpc);
+        oit = to_big_endian(val, oit);
+    }
+    {
+        auto val = ::hash_value(staged_message);
         to_big_endian(val, oit);
     }
 
@@ -133,7 +154,8 @@ void marshalState(std::vector<unsigned char>& buf,
                   value registerVal,
                   value staticVal,
                   uint256_t arb_gas_remaining,
-                  CodePointStub errpc) {
+                  CodePointStub errpc,
+                  const Tuple& staged_message) {
     marshal_uint256_t(next_codepoint_hash, buf);
 
     stackPreImage.marshal(buf);
@@ -143,6 +165,7 @@ void marshalState(std::vector<unsigned char>& buf,
     ::marshalForProof(staticVal, MarshalLevel::STUB, buf, code);
     marshal_uint256_t(arb_gas_remaining, buf);
     marshal_uint256_t(::hash(errpc), buf);
+    ::marshalForProof(staged_message, MarshalLevel::SINGLE, buf, code);
 }
 }  // namespace
 
@@ -153,7 +176,7 @@ std::vector<unsigned char> MachineState::marshalState() const {
 
     ::marshalState(buf, *code, ::hash(loadCurrentInstruction()), stackPreImage,
                    auxStackPreImage, registerVal, static_val, arb_gas_remaining,
-                   errpc);
+                   errpc, staged_message);
     return buf;
 }
 
@@ -192,11 +215,10 @@ std::vector<unsigned char> MachineState::marshalForProof() {
                auxStackProof.second.end());
     ::marshalState(buf, *code, currentInstruction.nextHash, stackProof.first,
                    auxStackProof.first, registerVal, static_val,
-                   arb_gas_remaining, errpc);
+                   arb_gas_remaining, errpc, staged_message);
 
     buf.push_back(current_op.immediate ? 1 : 0);
     buf.push_back(static_cast<uint8_t>(current_op.opcode));
-
     return buf;
 }
 
@@ -516,6 +538,8 @@ BlockReason MachineState::runOp(OpCode opcode) {
 
             break;
         }
+        case OpCode::INBOX_PEEK:
+            return machineoperation::inboxPeekOp(*this);
         case OpCode::INBOX:
             return machineoperation::inboxOp(*this);
         case OpCode::ERROR:

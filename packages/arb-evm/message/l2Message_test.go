@@ -14,18 +14,21 @@
 * limitations under the License.
  */
 
-package l2message
+package message
 
 import (
 	"bytes"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
+
+const AddressSize = 32
+const TransactionHeaderSize = 32*4 + AddressSize
 
 func TestL2MessageSerialization(t *testing.T) {
 	pk, err := crypto.GenerateKey()
@@ -47,12 +50,12 @@ func TestL2MessageSerialization(t *testing.T) {
 
 	for _, msg := range l2Messages {
 		t.Run(fmt.Sprintf("%T", msg), func(t *testing.T) {
-			data := L2MessageAsData(msg)
-			decoded, err := NewL2MessageFromData(data)
+			l2Message := NewL2Message(msg)
+			decoded, err := l2Message.AbstractMessage()
 			if err != nil {
 				t.Fatal(err)
 			}
-			if bytes.Equal(decoded.AsData(), data) {
+			if bytes.Equal(decoded.AsData(), l2Message.AsData()) {
 				t.Fatal("decoded l2 l2message not equal")
 			}
 		})

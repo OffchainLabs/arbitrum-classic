@@ -21,10 +21,10 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"testing"
 )
 
@@ -37,9 +37,10 @@ func testExecutionChallenge(
 	t.Parallel()
 
 	mach := getTestMachine(t)
-	challengeHash, precondition, numSteps := getExecutionChallengeData(mach)
+	challengeHash, assertion, inboxStack, numSteps := getExecutionChallengeData(mach)
 
-	if err := testChallengerCatchUp(
+	testChallengerCatchUp(
+		t,
 		client,
 		asserter,
 		challenger,
@@ -52,8 +53,9 @@ func testExecutionChallenge(
 				challengeAddress,
 				blockId,
 				0,
-				precondition,
 				mach.Clone(),
+				assertion,
+				inboxStack,
 				numSteps,
 				4,
 				StandardExecutionChallenge(),
@@ -66,8 +68,9 @@ func testExecutionChallenge(
 				challengeAddress,
 				blockId,
 				0,
-				precondition,
 				mach.Clone(),
+				assertion,
+				inboxStack,
 				numSteps,
 				4,
 				ExecutionChallengeInfo{
@@ -84,8 +87,10 @@ func testExecutionChallenge(
 				challengeAddress,
 				blockId,
 				0,
-				precondition,
+				inboxStack,
+				numSteps,
 				mach.Clone(),
+				assertion.BeforeInboxHash,
 				true,
 				StandardExecutionChallenge(),
 			)
@@ -97,8 +102,10 @@ func testExecutionChallenge(
 				challengeAddress,
 				blockId,
 				0,
-				precondition,
+				inboxStack,
+				numSteps,
 				mach.Clone(),
+				assertion.BeforeInboxHash,
 				true,
 				ExecutionChallengeInfo{
 					true,
@@ -108,22 +115,14 @@ func testExecutionChallenge(
 			)
 		},
 		testerAddress,
-	); err != nil {
-		t.Fatal(err)
-	}
+	)
 }
 
-func getExecutionChallengeData(mach machine.Machine) (common.Hash, *valprotocol.Precondition, uint64) {
+func getExecutionChallengeData(mach machine.Machine) (common.Hash, *valprotocol.ExecutionAssertionStub, *structures.MessageStack, uint64) {
+	ms := structures.NewRandomMessageStack(1000)
 	afterMachine := mach.Clone()
-	precondition := valprotocol.NewPrecondition(mach.Hash(), value.NewEmptyTuple())
-	assertion, numSteps := afterMachine.ExecuteAssertion(1000, value.NewEmptyTuple(), 0)
-
-	challengeHash := valprotocol.ExecutionDataHash(
-		numSteps,
-		precondition.BeforeHash,
-		precondition.BeforeInbox.Hash(),
-		valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
-	)
-
-	return challengeHash, precondition, numSteps
+	assertion, numSteps := afterMachine.ExecuteAssertion(1000, ms.GetAllMessages(), 0)
+	stub := structures.NewExecutionAssertionStubFromWholeAssertion(assertion, common.Hash{}, ms)
+	challengeHash := valprotocol.ExecutionDataHash(numSteps, stub)
+	return challengeHash, stub, ms, numSteps
 }

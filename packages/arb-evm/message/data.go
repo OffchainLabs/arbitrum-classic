@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-package l2message
+package message
 
 import (
+	ethmath "github.com/ethereum/go-ethereum/common/math"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"math/big"
 
-	ethmath "github.com/ethereum/go-ethereum/common/math"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
 
 func extractUInt256(data []byte) (*big.Int, []byte) {

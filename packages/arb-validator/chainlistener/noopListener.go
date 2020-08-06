@@ -44,13 +44,11 @@ func (NoopListener) StakeMoved(context.Context, *nodegraph.StakedNodeGraph, arbb
 func (NoopListener) StartedChallenge(
 	context.Context,
 	*structures.MessageStack,
-	*valprotocol.Precondition,
 	*nodegraph.Challenge) {
 }
 func (NoopListener) ResumedChallenge(
 	context.Context,
 	*structures.MessageStack,
-	*valprotocol.Precondition,
 	*nodegraph.Challenge) {
 
 }
