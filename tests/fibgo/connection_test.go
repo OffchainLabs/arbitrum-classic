@@ -393,7 +393,7 @@ func TestFib(t *testing.T) {
 
 	t.Run("TestEvent", func(t *testing.T) {
 		eventChan := make(chan interface{}, 2)
-		startFibTestEventListener(t, session.Contract, eventChan, time.Second*10)
+		startFibTestEventListener(t, session.Contract, eventChan, time.Second*20)
 		testEventRcvd := false
 
 		fibsize := 15
