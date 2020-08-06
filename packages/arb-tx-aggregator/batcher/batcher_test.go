@@ -24,14 +24,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 func TestPrepareTransactions(t *testing.T) {
 	type testCase struct {
 		raw    []DecodedBatchTx
-		sorted []l2message.SignedTransaction
+		sorted []message.SignedTransaction
 		label  string
 	}
 
@@ -48,9 +48,9 @@ func TestPrepareTransactions(t *testing.T) {
 	cases := make([]testCase, 0)
 	cases = append(cases, func() testCase {
 		decodedTxes := make([]DecodedBatchTx, 0)
-		sortedTxes := make([]l2message.SignedTransaction, 0)
+		sortedTxes := make([]message.SignedTransaction, 0)
 		for i := 0; i < 10; i++ {
-			batchTx := l2message.NewRandomBatchTx(chain, keys[0])
+			batchTx := message.NewRandomBatchTx(chain, keys[0])
 			batchTx.Transaction.SequenceNum = big.NewInt(int64(i))
 			decoded := DecodedBatchTx{
 				tx:     batchTx,
@@ -67,9 +67,9 @@ func TestPrepareTransactions(t *testing.T) {
 	}())
 	cases = append(cases, func() testCase {
 		decodedTxes := make([]DecodedBatchTx, 0)
-		sortedTxes := make([]l2message.SignedTransaction, 0)
+		sortedTxes := make([]message.SignedTransaction, 0)
 		for i := 0; i < 10; i++ {
-			batchTx := l2message.NewRandomBatchTx(chain, keys[0])
+			batchTx := message.NewRandomBatchTx(chain, keys[0])
 			batchTx.Transaction.SequenceNum = big.NewInt(9 - int64(i))
 			decoded := DecodedBatchTx{
 				tx:     batchTx,
@@ -89,9 +89,9 @@ func TestPrepareTransactions(t *testing.T) {
 
 	cases = append(cases, func() testCase {
 		decodedTxes := make([]DecodedBatchTx, 0)
-		sortedTxes := make([]l2message.SignedTransaction, 0)
+		sortedTxes := make([]message.SignedTransaction, 0)
 		for i := 0; i < 10; i++ {
-			batchTx := l2message.NewRandomBatchTx(chain, keys[i])
+			batchTx := message.NewRandomBatchTx(chain, keys[i])
 			batchTx.Transaction.SequenceNum = big.NewInt(9 - int64(i))
 			decoded := DecodedBatchTx{
 				tx:     batchTx,
@@ -116,7 +116,7 @@ func TestPrepareTransactions(t *testing.T) {
 				t.Fatal("sorted is wrong length")
 			}
 			for i, tx := range tc.sorted {
-				if !bytes.Equal(l2message.L2MessageAsData(tx), sortedTxesCal.Transactions[i]) {
+				if !bytes.Equal(message.NewL2Message(tx).AsData(), sortedTxesCal.Transactions[i]) {
 					t.Error("tx in wrong order")
 					break
 				}

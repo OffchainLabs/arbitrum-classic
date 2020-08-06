@@ -18,22 +18,20 @@ package main
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"log"
-	"math"
-	"math/big"
 	"os"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 )
 
 func main() {
@@ -59,18 +57,10 @@ func main() {
 	}
 }
 
-func toEth(val *big.Int) *big.Float {
-	fbalance := new(big.Float)
-	fbalance.SetString(val.String())
-	return new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
-}
-
-func runMessage(mach machine.Machine, msg message.InboxMessage) (*evm.Result, error) {
-	inbox := value.NewEmptyTuple()
-	inbox = value.NewTuple2(inbox, msg.AsValue())
+func runMessage(mach machine.Machine, msg inbox.InboxMessage) (*evm.Result, error) {
 	assertion, _ := mach.ExecuteAssertion(
 		100000,
-		inbox,
+		[]inbox.InboxMessage{msg},
 		1000,
 	)
 	//log.Println("ran assertion")
@@ -87,19 +77,19 @@ func runMessage(mach machine.Machine, msg message.InboxMessage) (*evm.Result, er
 
 var chain = common.HexToAddress("0xc68DCee7b8cA57F41D1A417103CB65836E99e013")
 
-func printL2Message(tx []byte) error {
-	msg, err := l2message.NewL2MessageFromData(tx)
+func printL2Message(tx message.L2Message) error {
+	msg, err := tx.AbstractMessage()
 	if err != nil {
 		return err
 	}
 	switch msg := msg.(type) {
-	case l2message.TransactionBatch:
+	case message.TransactionBatch:
 		for _, tx := range msg.Transactions {
-			if err := printL2Message(tx); err != nil {
+			if err := printL2Message(message.L2Message{Data: tx}); err != nil {
 				return err
 			}
 		}
-	case l2message.SignedTransaction:
+	case message.SignedTransaction:
 		ethTx, err := msg.AsEthTx(chain)
 		if err != nil {
 			return err
@@ -111,7 +101,7 @@ func printL2Message(tx []byte) error {
 		//}
 
 		log.Println("SignedTransaction", ethTx.Hash().Hex()) // , "from", sender.Hex()
-		log.Println("tx:", l2message.NewSignedTransactionFromEth(ethTx))
+		log.Println("tx:", message.NewSignedTransactionFromEth(ethTx))
 		//log.Println(msg)
 	default:
 		log.Printf("Input: %T\n", msg)
@@ -131,28 +121,24 @@ func testMessages(filename string, contract string) error {
 	}
 
 	//for _, msg := range messages {
-	//	inbox := value.NewEmptyTuple()
-	//	inbox = value.NewTuple2(inbox, msg.AsValue())
-	//	assertion, _ := mach.ExecuteAssertion(100000000000, inbox, 0)
+	//	assertion, _ := mach.ExecuteAssertion(100000000000, []inbox.InboxMessage{msg}, 0)
 	//	log.Println("Ran assertion", assertion.NumGas)
 	//}
 
-	inbox := value.NewEmptyTuple()
 	for _, msg := range messages {
-		nested, err := msg.NestedMessage()
+		nested, err := message.NestedMessage(msg)
 		if err != nil {
 			return err
 		}
 		if tx, ok := nested.(message.L2Message); ok {
-			if err := printL2Message(tx.Data); err != nil {
+			if err := printL2Message(tx); err != nil {
 				return err
 			}
 		} else {
 			log.Printf("Input %T: %v from %v\n", nested, nested, msg.Sender)
 		}
-		inbox = value.NewTuple2(inbox, msg.AsValue())
 	}
-	assertion, steps := mach.ExecuteAssertion(100000000000, inbox, 0)
+	assertion, steps := mach.ExecuteAssertion(100000000000, messages, 0)
 	log.Println("Ran for", steps, assertion.NumGas)
 	//testData, err := value.TestVectorJSON(inbox, assertion.ParseLogs(), assertion.ParseOutMessages())
 	//if err != nil {
@@ -172,7 +158,7 @@ func testMessages(filename string, contract string) error {
 	return nil
 }
 
-func loadMessages(filename string) ([]message.InboxMessage, error) {
+func loadMessages(filename string) ([]inbox.InboxMessage, error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -182,14 +168,14 @@ func loadMessages(filename string) ([]message.InboxMessage, error) {
 		return nil, err
 	}
 
-	messageVals, err := message.StackValueToList(messagesStackVal)
+	messageVals, err := inbox.StackValueToList(messagesStackVal)
 	if err != nil {
 		return nil, err
 	}
 
-	messages := make([]message.InboxMessage, 0, len(messageVals))
+	messages := make([]inbox.InboxMessage, 0, len(messageVals))
 	for _, val := range messageVals {
-		msg, err := message.NewInboxMessageFromValue(val)
+		msg, err := inbox.NewInboxMessageFromValue(val)
 		if err != nil {
 			return nil, err
 		}
@@ -241,7 +227,7 @@ func getMessages(ethURL string, rollupAddress common.Address, filename string) e
 		values = append(values, ev.Message.AsValue())
 	}
 
-	messagesStackVal := message.ListToStackValue(values)
+	messagesStackVal := inbox.ListToStackValue(values)
 	f, err := os.Create(filename)
 	if err != nil {
 		return err

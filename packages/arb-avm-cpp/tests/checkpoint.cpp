@@ -369,9 +369,12 @@ Machine getComplexMachine() {
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
 
+    Tuple staged_message(uint256_t{100}, uint256_t{200}, pool.get());
+
     return Machine(MachineState(pool, std::move(code), register_val,
                                 std::move(static_val), data_stack, aux_stack,
-                                arb_gas_remaining, state, pc, err_pc));
+                                arb_gas_remaining, state, pc, err_pc,
+                                std::move(staged_message)));
 }
 
 Machine getDefaultMachine() {
@@ -386,9 +389,10 @@ Machine getDefaultMachine() {
     CodePointRef pc(0, 0);
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
-    return Machine(MachineState(pool, std::move(code), register_val,
-                                std::move(static_val), data_stack, aux_stack,
-                                arb_gas_remaining, state, pc, err_pc));
+    Tuple staged_message;
+    return Machine(MachineState(
+        pool, std::move(code), register_val, std::move(static_val), data_stack,
+        aux_stack, arb_gas_remaining, state, pc, err_pc, staged_message));
 }
 
 TEST_CASE("Save Machinestatedata") {

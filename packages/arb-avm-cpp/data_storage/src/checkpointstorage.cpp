@@ -159,6 +159,12 @@ Machine CheckpointStorage::getMachine(uint256_t machineHash) const {
         throw std::runtime_error("failed to load machine auxstack");
     }
 
+    auto staged_message_results = ::getValueImpl(
+        *transaction, state_data.staged_message_hash, pool.get(), segment_ids);
+    if (!staged_message_results.status.ok()) {
+        throw std::runtime_error("failed to load machine saved message");
+    }
+
     segment_ids.insert(state_data.pc.segment);
     segment_ids.insert(state_data.err_pc.pc.segment);
 
@@ -188,7 +194,8 @@ Machine CheckpointStorage::getMachine(uint256_t machineHash) const {
                         state_data.arb_gas_remaining,
                         state_data.status,
                         state_data.pc,
-                        state_data.err_pc};
+                        state_data.err_pc,
+                        std::move(staged_message_results.data.get<Tuple>())};
 }
 
 DbResult<value> CheckpointStorage::getValue(uint256_t value_hash) const {

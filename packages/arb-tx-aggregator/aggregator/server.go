@@ -19,17 +19,19 @@ package aggregator
 import (
 	"bytes"
 	"context"
+	errors2 "github.com/pkg/errors"
+	"net/http"
+	"strconv"
+
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	errors2 "github.com/pkg/errors"
-	"net/http"
-	"strconv"
 )
 
 type RPCServer struct {
@@ -212,7 +214,7 @@ func (m *RPCServer) callImpl(
 	request *http.Request,
 	args *evm.CallMessageArgs,
 	reply *evm.CallMessageReply,
-	call func(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error),
+	call func(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error),
 ) error {
 	var sender ethcommon.Address
 	if len(args.Sender) > 0 {
@@ -223,7 +225,7 @@ func (m *RPCServer) callImpl(
 		return err
 	}
 
-	callMsg := l2message.NewContractTransactionFromData(dataBytes)
+	callMsg := message.NewContractTransactionFromData(dataBytes)
 	val, err := call(request.Context(), callMsg, sender)
 	if err != nil {
 		return err

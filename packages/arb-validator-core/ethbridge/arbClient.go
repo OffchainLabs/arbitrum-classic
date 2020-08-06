@@ -123,10 +123,6 @@ func (c *EthArbClient) NewExecutionChallengeWatcher(address common.Address) (arb
 	return newExecutionChallengeWatcher(address.ToEthAddress(), c.client)
 }
 
-func (c *EthArbClient) NewMessagesChallengeWatcher(address common.Address) (arbbridge.MessagesChallengeWatcher, error) {
-	return newMessagesChallengeWatcher(address.ToEthAddress(), c.client)
-}
-
 func (c *EthArbClient) NewInboxTopChallengeWatcher(address common.Address) (arbbridge.InboxTopChallengeWatcher, error) {
 	return newInboxTopChallengeWatcher(address.ToEthAddress(), c.client)
 }
@@ -205,10 +201,6 @@ func (c *EthArbAuthClient) NewChallengeFactory(address common.Address) (arbbridg
 
 func (c *EthArbAuthClient) NewExecutionChallenge(address common.Address) (arbbridge.ExecutionChallenge, error) {
 	return newExecutionChallenge(address.ToEthAddress(), c.client, c.auth)
-}
-
-func (c *EthArbAuthClient) NewMessagesChallenge(address common.Address) (arbbridge.MessagesChallenge, error) {
-	return newMessagesChallenge(address.ToEthAddress(), c.client, c.auth)
 }
 
 func (c *EthArbAuthClient) NewInboxTopChallenge(address common.Address) (arbbridge.InboxTopChallenge, error) {

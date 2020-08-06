@@ -27,7 +27,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
@@ -74,14 +73,14 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 
 			if found &&
 				prepped.Params.Equals(disputable.AssertionParams) &&
-				prepped.Claim.Equals(disputable.AssertionClaim) {
+				prepped.AssertionStub.Equals(disputable.Assertion) {
 				newOpinion = valprotocol.ValidChildType
 				nextMachine = prepped.Machine
 				validExecution = prepped.Assertion
 				chain.RUnlock()
 			} else {
 				params := disputable.AssertionParams.Clone()
-				claim := disputable.AssertionClaim.Clone()
+				claim := disputable.Assertion.Clone()
 				prevInboxCount := new(big.Int).Set(currentOpinion.VMProtoData().InboxCount)
 				afterInboxTopHeight := new(big.Int).Add(prevInboxCount, params.ImportedMessageCount)
 				afterInboxTopVal, err := chain.Inbox.GetHashAtIndex(afterInboxTopHeight)
@@ -89,15 +88,12 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				if err == nil {
 					afterInboxTop = &afterInboxTopVal
 				}
-				inbox, _ := chain.Inbox.GenerateVMInbox(currentOpinion.VMProtoData().InboxTop, params.ImportedMessageCount.Uint64())
-				messages, _ := chain.Inbox.GetMessages(currentOpinion.VMProtoData().InboxTop, params.ImportedMessageCount.Uint64())
-				messagesVal := inbox.AsValue()
 				nextMachine = currentOpinion.Machine().Clone()
-				log.Println("Forming opinion on", successor.Hash().ShortString(), "which imported", messages, "messages")
+				log.Println("Forming opinion on", successor.Hash().ShortString())
 
 				chain.RUnlock()
 
-				newOpinion, validExecution = getNodeOpinion(params, claim, afterInboxTop, inbox.Hash().Hash(), messagesVal, nextMachine)
+				newOpinion, validExecution = chain.getNodeOpinion(params, claim, afterInboxTop, nextMachine)
 			}
 			// Reset prepared
 			assertionsMut.Lock()
@@ -228,21 +224,16 @@ func (chain *ChainObserver) prepareAssertion(maxValidBlock *common.BlockId) (*ch
 	}
 
 	beforeInboxTop := beforeState.InboxTop
-	afterInboxTop, err := chain.Inbox.GetHashAtIndex(maxMessageCount)
-	if err != nil {
-		return nil, err
-	}
 	newMessageCount := new(big.Int).Sub(maxMessageCount, beforeState.InboxCount)
 
-	inbox, _ := chain.Inbox.GenerateVMInbox(beforeInboxTop, newMessageCount.Uint64())
-	messagesVal := inbox.AsValue()
+	messages, _ := chain.Inbox.GetMessages(beforeInboxTop, newMessageCount.Uint64())
 	mach := currentOpinion.Machine().Clone()
 	maxSteps := chain.NodeGraph.Params().MaxExecutionSteps
 	chain.RUnlock()
 
 	beforeHash := mach.Hash()
 
-	assertion, stepsRun := mach.ExecuteAssertion(maxSteps, messagesVal, 0)
+	assertion, stepsRun := mach.ExecuteAssertion(maxSteps, messages, 0)
 
 	afterHash := mach.Hash()
 
@@ -257,64 +248,50 @@ func (chain *ChainObserver) prepareAssertion(maxValidBlock *common.BlockId) (*ch
 		currentOpinion.Hash(),
 	)
 
-	var params *valprotocol.AssertionParams
-	var claim *valprotocol.AssertionClaim
-	stub := valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
-	if assertion.DidInboxInsn {
-		params = &valprotocol.AssertionParams{
-			NumSteps:             stepsRun,
-			ImportedMessageCount: newMessageCount,
-		}
-		claim = &valprotocol.AssertionClaim{
-			AfterInboxTop:         afterInboxTop,
-			ImportedMessagesSlice: inbox.Hash().Hash(),
-			AssertionStub:         stub,
-		}
-	} else {
-		params = &valprotocol.AssertionParams{
-			NumSteps:             stepsRun,
-			ImportedMessageCount: big.NewInt(0),
-		}
-		claim = &valprotocol.AssertionClaim{
-			AfterInboxTop:         beforeInboxTop,
-			ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
-			AssertionStub:         stub,
-		}
+	chain.RLock()
+	defer chain.RUnlock()
+	stub := structures.NewExecutionAssertionStubFromWholeAssertion(assertion, beforeInboxTop, chain.Inbox.MessageStack)
+	params := &valprotocol.AssertionParams{
+		NumSteps:             stepsRun,
+		ImportedMessageCount: new(big.Int).SetUint64(assertion.InboxMessagesConsumed),
 	}
 	return &chainlistener.PreparedAssertion{
-		Prev:        currentOpinion,
-		BeforeState: beforeState,
-		Params:      params,
-		Claim:       claim,
-		Assertion:   assertion,
-		Machine:     mach,
-		ValidBlock:  maxValidBlock,
+		Prev:          currentOpinion,
+		BeforeState:   beforeState,
+		Params:        params,
+		AssertionStub: stub,
+		Assertion:     assertion,
+		Machine:       mach,
+		ValidBlock:    maxValidBlock,
 	}, nil
 }
 
-func getNodeOpinion(
+func (chain *ChainObserver) getNodeOpinion(
 	params *valprotocol.AssertionParams,
-	claim *valprotocol.AssertionClaim,
+	assertionStub *valprotocol.ExecutionAssertionStub,
 	afterInboxTop *common.Hash,
-	calculatedMessagesSlice common.Hash,
-	messagesVal value.TupleValue,
 	mach machine.Machine,
 ) (valprotocol.ChildType, *protocol.ExecutionAssertion) {
-	if afterInboxTop == nil || claim.AfterInboxTop != *afterInboxTop {
-		log.Println("Saw node with invalid after inbox top claim", claim.AfterInboxTop)
+	if afterInboxTop == nil || assertionStub.AfterInboxHash != *afterInboxTop {
+		log.Println("Saw node with invalid after inbox top claim", assertionStub.AfterInboxHash)
 		return valprotocol.InvalidInboxTopChildType, nil
 	}
-	if calculatedMessagesSlice != claim.ImportedMessagesSlice {
-		log.Println("Saw node with invalid imported messages claim", claim.ImportedMessagesSlice)
-		return valprotocol.InvalidMessagesChildType, nil
+
+	chain.RLock()
+	messages, err := chain.Inbox.GetMessages(assertionStub.BeforeInboxHash, params.ImportedMessageCount.Uint64())
+	if err != nil {
+		log.Fatal("accepted assertion can't overrun the inbox")
 	}
+	chain.RUnlock()
 
 	assertion, stepsRun := mach.ExecuteAssertion(
 		params.NumSteps,
-		messagesVal,
+		messages,
 		0,
 	)
-	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(valprotocol.NewExecutionAssertionStubFromAssertion(assertion)) {
+	chain.RLock()
+	defer chain.RUnlock()
+	if params.NumSteps != stepsRun || !assertionStub.Equals(structures.NewExecutionAssertionStubFromWholeAssertion(assertion, assertionStub.BeforeInboxHash, chain.Inbox.MessageStack)) {
 		log.Println("Saw node with invalid execution claim")
 		return valprotocol.InvalidExecutionChildType, nil
 	}

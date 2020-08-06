@@ -21,7 +21,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -393,22 +392,17 @@ func createNodesOnAssert(
 
 func getDisputableNode(baseNode *structures.Node) (*valprotocol.DisputableNode, *protocol.ExecutionAssertion) {
 	theMachine := baseNode.Machine()
-	execAssertion, numSteps := theMachine.ExecuteAssertion(1, value.NewEmptyTuple(), time.Hour)
+	execAssertion, numSteps := theMachine.ExecuteAssertion(1, nil, time.Hour)
 	_ = execAssertion
 
 	assertionParams := &valprotocol.AssertionParams{
 		NumSteps:             numSteps,
 		ImportedMessageCount: big.NewInt(0),
 	}
-	assertionStub := valprotocol.NewExecutionAssertionStubFromAssertion(execAssertion)
-	assertionClaim := &valprotocol.AssertionClaim{
-		AfterInboxTop:         common.Hash{},
-		ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
-		AssertionStub:         assertionStub,
-	}
+	assertionStub := structures.NewExecutionAssertionStubFromWholeAssertion(execAssertion, baseNode.VMProtoData().InboxTop, nil)
 	return valprotocol.NewDisputableNode(
 		assertionParams,
-		assertionClaim,
+		assertionStub,
 		common.Hash{},
 		big.NewInt(0),
 	), execAssertion

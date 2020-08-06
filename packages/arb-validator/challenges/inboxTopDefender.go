@@ -180,7 +180,7 @@ func runInboxOneStepProof(
 ) (ChallengeState, error) {
 	timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 	if timedOut {
-		msg, err := inbox.GenerateOneStepProof(currentStartState)
+		msg, err := inbox.InboxMessageAfter(currentStartState)
 		if err != nil {
 			return 0, err
 		}

@@ -27,36 +27,29 @@
 #include <vector>
 
 struct AssertionContext {
-    Tuple inbox;
+    std::vector<Tuple> inbox_messages;
+    uint64_t inbox_messages_consumed;
     Tuple sideload_value;
     uint32_t numSteps;
-    bool didInboxInsn;
     uint64_t numGas;
     bool blockingSideload;
     std::vector<value> outMessage;
     std::vector<value> logs;
 
-    AssertionContext() : numSteps(0), didInboxInsn(false), numGas(0) {}
+    AssertionContext() : inbox_messages_consumed(0), numSteps(0), numGas(0) {}
 
-    explicit AssertionContext(Tuple inbox, Tuple sideload)
-        : inbox(std::move(inbox)),
-          sideload_value(std::move(sideload)),
-          numSteps{0},
-          didInboxInsn(false),
-          numGas{0},
-          blockingSideload(true) {}
+    explicit AssertionContext(std::vector<Tuple> inbox_messages,
+                              Tuple sideload);
+    explicit AssertionContext(std::vector<Tuple> inbox_messages);
 
-    explicit AssertionContext(Tuple inbox)
-        : inbox(std::move(inbox)),
-          sideload_value(Tuple{}),
-          numSteps{0},
-          didInboxInsn(false),
-          numGas{0},
-          blockingSideload(false) {}
+    // popInbox assumes that the number of messages already consumed is less
+    // than the number of messages in the inbox
+    Tuple popInbox() {
+        return std::move(inbox_messages[inbox_messages_consumed++]);
+    }
 
-    void executedInbox() {
-        didInboxInsn = true;
-        inbox = Tuple();
+    bool inboxEmpty() const {
+        return inbox_messages_consumed == inbox_messages.size();
     }
 };
 
@@ -72,6 +65,7 @@ struct MachineState {
     Status state = Status::Extensive;
     CodePointRef pc;
     CodePointStub errpc;
+    Tuple staged_message;
     AssertionContext context;
 
     static MachineState loadFromFile(const std::string& executable_filename);
@@ -91,7 +85,8 @@ struct MachineState {
                  uint256_t arb_gas_remaining_,
                  Status state_,
                  CodePointRef pc_,
-                 CodePointStub errpc_);
+                 CodePointStub errpc_,
+                 Tuple staged_message_);
 
     uint256_t getMachineSize();
     std::vector<unsigned char> marshalForProof();

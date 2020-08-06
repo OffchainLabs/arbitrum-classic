@@ -7,8 +7,8 @@ type ContractName =
   | 'ArbRollup'
   | 'GlobalInbox'
   | 'InboxTopChallenge'
-  | 'MessagesChallenge'
   | 'ExecutionChallenge'
+  | 'OneStepProof'
 
 const logDeploy = (contractName: string, contract: Contract) => {
   console.log(
@@ -24,15 +24,15 @@ export default async function deploy_contracts(
   const ExecutionChallenge = await ethers.getContractFactory(
     'ExecutionChallenge'
   )
-  const MessagesChallenge = await ethers.getContractFactory('MessagesChallenge')
+  const OneStepProof = await ethers.getContractFactory('OneStepProof')
   const InboxTopChallenge = await ethers.getContractFactory('InboxTopChallenge')
   const ArbRollup = await ethers.getContractFactory('ArbRollup')
   const GlobalInbox = await ethers.getContractFactory('GlobalInbox')
   const ChallengeFactory = await ethers.getContractFactory('ChallengeFactory')
   const ArbFactory = await ethers.getContractFactory('ArbFactory')
 
-  const messageChallenge = await MessagesChallenge.deploy()
-  logDeploy('MessagesChallenge', messageChallenge)
+  const oneStepProof = await OneStepProof.deploy()
+  logDeploy('OneStepProof', oneStepProof)
   const inboxTopChallenge = await InboxTopChallenge.deploy()
   logDeploy('InboxTopChallenge', inboxTopChallenge)
   const executionChallenge = await ExecutionChallenge.deploy()
@@ -43,9 +43,9 @@ export default async function deploy_contracts(
   logDeploy('GlobalInbox', globalInbox)
 
   const challengeFactory = await ChallengeFactory.deploy(
-    messageChallenge.address,
     inboxTopChallenge.address,
-    executionChallenge.address
+    executionChallenge.address,
+    oneStepProof.address
   )
   logDeploy('ChallengeFactory', challengeFactory)
 
@@ -57,8 +57,8 @@ export default async function deploy_contracts(
   logDeploy('ArbFactory', arbFactory)
 
   await Promise.all([
-    messageChallenge.deployed().then(() => {
-      console.log('MessagesChallenge deployed')
+    oneStepProof.deployed().then(() => {
+      console.log('OneStepProof deployed')
     }),
     inboxTopChallenge.deployed().then(() => {
       console.log('InboxTopChallenge deployed')
@@ -86,8 +86,8 @@ export default async function deploy_contracts(
     ArbRollup: arbRollup,
     GlobalInbox: globalInbox,
     InboxTopChallenge: inboxTopChallenge,
-    MessagesChallenge: messageChallenge,
     ExecutionChallenge: executionChallenge,
+    OneStepProof: oneStepProof,
   }
   return contracts
 }

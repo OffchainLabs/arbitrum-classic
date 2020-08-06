@@ -73,7 +73,7 @@ func UnmarshalValueWithType(tipe byte, r io.Reader) (Value, error) {
 	case tipe == TypeCodeCodePointStub:
 		return NewCodePointStubFromReader(r)
 	default:
-		return NewEmptyTuple(), UnmarshalError{"Unmarshal: invalid value type"}
+		return nil, UnmarshalError{"Unmarshal: invalid value type"}
 	}
 }
 
@@ -81,7 +81,7 @@ func UnmarshalValue(r io.Reader) (Value, error) {
 	tipe := make([]byte, 1)
 	_, err := io.ReadFull(r, tipe)
 	if err != nil {
-		return NewEmptyTuple(), err
+		return nil, err
 	}
 	return UnmarshalValueWithType(tipe[0], r)
 }

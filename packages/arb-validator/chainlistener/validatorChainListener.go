@@ -131,7 +131,7 @@ func MakeAssertion(
 		prepared.Prev.LinkType(),
 		prepared.BeforeState,
 		prepared.Params,
-		prepared.Claim,
+		prepared.AssertionStub,
 		proof,
 		prepared.ValidBlock,
 	)
@@ -292,23 +292,20 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(
 func (lis *ValidatorChainListener) StartedChallenge(
 	ctx context.Context,
 	msgStack *structures.MessageStack,
-	precondition *valprotocol.Precondition,
 	chal *nodegraph.Challenge) {
-	lis.launchChallenge(ctx, msgStack, precondition, chal)
+	lis.launchChallenge(ctx, msgStack, chal)
 }
 
 func (lis *ValidatorChainListener) ResumedChallenge(
 	ctx context.Context,
 	msgStack *structures.MessageStack,
-	precondition *valprotocol.Precondition,
 	chal *nodegraph.Challenge) {
-	lis.launchChallenge(ctx, msgStack, precondition, chal)
+	lis.launchChallenge(ctx, msgStack, chal)
 }
 
 func (lis *ValidatorChainListener) launchChallenge(
 	ctx context.Context,
 	msgStack *structures.MessageStack,
-	precondition *valprotocol.Precondition,
 	chal *nodegraph.Challenge) {
 	// Must already be staked to be challenged
 	startBlockId := chal.BlockId()
@@ -325,7 +322,7 @@ func (lis *ValidatorChainListener) launchChallenge(
 					startBlockId,
 					startLogIndex,
 					msgStack,
-					chal.ConflictNode().Disputable().AssertionClaim.AfterInboxTop,
+					chal.ConflictNode().Disputable().Assertion.AfterInboxHash,
 					new(big.Int).Sub(
 						chal.ConflictNode().Disputable().MaxInboxCount,
 						new(big.Int).Add(chal.ConflictNode().Prev().VMProtoData().InboxCount, chal.ConflictNode().Disputable().AssertionParams.ImportedMessageCount),
@@ -338,25 +335,6 @@ func (lis *ValidatorChainListener) launchChallenge(
 					log.Println("Completed defending inbox top claim", res)
 				}
 			}()
-		case valprotocol.InvalidMessagesChildType:
-			go func() {
-				res, err := challenges.DefendMessagesClaim(
-					ctx,
-					asserterKey.client,
-					chal.Contract(),
-					startBlockId,
-					startLogIndex,
-					msgStack,
-					chal.ConflictNode().VMProtoData().InboxTop,
-					chal.ConflictNode().Disputable().AssertionParams.ImportedMessageCount,
-					100,
-				)
-				if err != nil {
-					log.Println("Failed defending messages claim", err)
-				} else {
-					log.Println("Completed defending messages claim", res)
-				}
-			}()
 		case valprotocol.InvalidExecutionChildType:
 			go func() {
 				res, err := challenges.DefendExecutionClaim(
@@ -365,8 +343,9 @@ func (lis *ValidatorChainListener) launchChallenge(
 					chal.Contract(),
 					startBlockId,
 					startLogIndex,
-					precondition,
 					chal.ConflictNode().Prev().Machine(),
+					chal.ConflictNode().Disputable().Assertion,
+					msgStack,
 					chal.ConflictNode().Disputable().AssertionParams.NumSteps,
 					50,
 					challenges.StandardExecutionChallenge(),
@@ -402,25 +381,6 @@ func (lis *ValidatorChainListener) launchChallenge(
 					log.Println("Completed challenging inbox top claim", res)
 				}
 			}()
-		case valprotocol.InvalidMessagesChildType:
-			go func() {
-				res, err := challenges.ChallengeMessagesClaim(
-					ctx,
-					challenger.client,
-					chal.Contract(),
-					startBlockId,
-					startLogIndex,
-					msgStack,
-					chal.ConflictNode().VMProtoData().InboxTop,
-					chal.ConflictNode().Disputable().AssertionParams.ImportedMessageCount,
-					false,
-				)
-				if err != nil {
-					log.Println("Failed challenging messages claim", err)
-				} else {
-					log.Println("Completed challenging messages claim", res)
-				}
-			}()
 		case valprotocol.InvalidExecutionChildType:
 			go func() {
 				res, err := challenges.ChallengeExecutionClaim(
@@ -429,8 +389,10 @@ func (lis *ValidatorChainListener) launchChallenge(
 					chal.Contract(),
 					startBlockId,
 					startLogIndex,
-					precondition,
+					msgStack,
+					chal.ConflictNode().Disputable().AssertionParams.NumSteps,
 					chal.ConflictNode().Prev().Machine(),
+					chal.ConflictNode().VMProtoData().InboxTop,
 					false,
 					challenges.StandardExecutionChallenge(),
 				)

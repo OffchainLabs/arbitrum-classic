@@ -41,7 +41,7 @@ type ArbRollup interface {
 		prevChildType valprotocol.ChildType,
 		beforeState *valprotocol.VMProtoData,
 		assertionParams *valprotocol.AssertionParams,
-		assertionClaim *valprotocol.AssertionClaim,
+		assertion *valprotocol.ExecutionAssertionStub,
 		stakerProof []common.Hash,
 		validBlock *common.BlockId,
 	) ([]Event, error)

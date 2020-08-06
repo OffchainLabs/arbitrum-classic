@@ -19,6 +19,7 @@ package txdb
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 	"math/big"
 	"sync"
@@ -48,8 +49,8 @@ type TxDB struct {
 }
 
 type blockInbox struct {
-	inbox value.TupleValue
-	block *common.BlockId
+	messages []inbox.InboxMessage
+	block    *common.BlockId
 }
 
 func New(
@@ -129,7 +130,7 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 		return err
 	}
 	for _, bi := range blockInboxes {
-		assertion, numSteps := txdb.mach.ExecuteAssertion(1000000000000, bi.inbox, 0)
+		assertion, numSteps := txdb.mach.ExecuteAssertion(1000000000000, bi.messages, 0)
 		if err := txdb.addAssertion(assertion, numSteps, bi.block); err != nil {
 			return nil
 		}
@@ -346,13 +347,13 @@ func saveMach(mach machine.Machine, id *common.BlockId, checkpointer checkpointi
 
 // makeBlockInbox assumes that all messages are from the same block
 func makeBlockInbox(msgs []arbbridge.MessageDeliveredEvent) blockInbox {
-	inbox := value.NewEmptyTuple()
+	inboxMessages := make([]inbox.InboxMessage, 0, len(msgs))
 	for _, msg := range msgs {
-		inbox = value.NewTuple2(inbox, msg.Message.AsValue())
+		inboxMessages = append(inboxMessages, msg.Message)
 	}
 	return blockInbox{
-		inbox: inbox,
-		block: msgs[0].BlockId,
+		messages: inboxMessages,
+		block:    msgs[0].BlockId,
 	}
 }
 
@@ -369,7 +370,6 @@ func (txdb *TxDB) breakByBlock(ctx context.Context, msgs []arbbridge.MessageDeli
 			return err
 		}
 		blocks = append(blocks, blockInbox{
-			inbox: value.NewEmptyTuple(),
 			block: blockId,
 		})
 		currentBlockHeight++

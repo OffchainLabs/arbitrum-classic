@@ -21,24 +21,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
 type Server struct {
@@ -223,15 +224,15 @@ func (m *Server) GetTransaction(_ context.Context, requestId ethcommon.Hash) (*t
 	return GetTransaction(res.L1Message, m.chain)
 }
 
-func GetTransaction(msg message.InboxMessage, chain common.Address) (*types.Transaction, error) {
+func GetTransaction(msg inbox.InboxMessage, chain common.Address) (*types.Transaction, error) {
 	if msg.Kind != message.L2Type {
 		return nil, errors.New("result is not a transaction")
 	}
-	l2msg, err := l2message.NewL2MessageFromData(msg.Data)
+	l2msg, err := message.L2Message{Data: msg.Data}.AbstractMessage()
 	if err != nil {
 		return nil, err
 	}
-	ethMsg, ok := l2msg.(l2message.EthConvertable)
+	ethMsg, ok := l2msg.(message.EthConvertable)
 	if !ok {
 		return nil, errors.New("message not convertible to receipt")
 	}
@@ -240,40 +241,38 @@ func GetTransaction(msg message.InboxMessage, chain common.Address) (*types.Tran
 
 // Call takes a request from a client to process in a temporary context
 // and return the result
-func (m *Server) Call(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
+func (m *Server) Call(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	mach, blockId := m.db.CallInfo()
 	return m.executeCall(mach, blockId, msg, sender)
 }
 
 // PendingCall takes a request from a client to process in a temporary context
 // and return the result
-func (m *Server) PendingCall(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
+func (m *Server) PendingCall(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	mach, blockId := m.db.CallInfo()
 	return m.executeCall(mach, blockId, msg, sender)
 }
 
-func (m *Server) executeCall(mach machine.Machine, blockId *common.BlockId, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
+func (m *Server) executeCall(mach machine.Machine, blockId *common.BlockId, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	seq, _ := new(big.Int).SetString("999999999999999999999999", 10)
 	if msg.MaxGas.Cmp(big.NewInt(0)) == 0 || msg.MaxGas.Cmp(m.maxCallGas) > 0 {
 		msg.MaxGas = m.maxCallGas
 	}
 	log.Println("Executing call", msg.MaxGas, msg.GasPriceBid, msg.DestAddress, msg.Payment)
 	inboxMsg := message.NewInboxMessage(
-		message.L2Message{Data: l2message.L2MessageAsData(msg)},
+		message.NewL2Message(msg),
 		common.NewAddressFromEth(sender),
 		seq,
-		message.ChainTime{
+		inbox.ChainTime{
 			BlockNum:  blockId.Height,
 			Timestamp: big.NewInt(time.Now().Unix()),
 		},
 	)
 
-	inbox := value.NewEmptyTuple()
-	inbox = value.NewTuple2(inbox, inboxMsg.AsValue())
 	assertion, steps := mach.ExecuteAssertion(
 		// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
 		10000000000000000,
-		inbox,
+		[]inbox.InboxMessage{inboxMsg},
 		m.maxCallTime,
 	)
 

@@ -155,13 +155,20 @@ RawAssertion makeRawAssertion(Assertion& assertion) {
         marshal_value(log, logData);
     }
 
-    return {returnCharVector(outMsgData),
+    return {assertion.inbox_messages_consumed,
+            returnCharVector(outMsgData),
             static_cast<int>(assertion.outMessages.size()),
             returnCharVector(logData),
             static_cast<int>(assertion.logs.size()),
             assertion.stepCount,
-            assertion.gasCount,
-            assertion.didInboxInsn};
+            assertion.gasCount};
+}
+
+RawAssertion makeEmptyAssertion() {
+    return {0, returnCharVector(std::vector<char>{}),
+            0, returnCharVector(std::vector<char>{}),
+            0, 0,
+            0};
 }
 
 Tuple getTuple(TuplePool& pool, void* data) {
@@ -169,34 +176,57 @@ Tuple getTuple(TuplePool& pool, void* data) {
     return nonstd::get<Tuple>(deserialize_value(charData, pool));
 }
 
+std::vector<Tuple> getInboxMessages(TuplePool& pool,
+                                    void* data,
+                                    uint64_t message_count) {
+    auto charData = reinterpret_cast<const char*>(data);
+    std::vector<Tuple> messages;
+    for (uint64_t i = 0; i < message_count; ++i) {
+        messages.push_back(deserialize_value(charData, pool).get<Tuple>());
+    }
+    return messages;
+}
+
 RawAssertion executeAssertion(CMachine* m,
                               uint64_t maxSteps,
-                              void* inbox,
+                              void* inbox_messages,
+                              uint64_t message_count,
                               uint64_t wallLimit) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    auto messages = getTuple(mach->getPool(), inbox);
+    auto messages =
+        getInboxMessages(mach->getPool(), inbox_messages, message_count);
 
-    Assertion assertion = mach->run(maxSteps, std::move(messages),
-                                    std::chrono::seconds{wallLimit});
-
-    return makeRawAssertion(assertion);
+    try {
+        Assertion assertion = mach->run(maxSteps, std::move(messages),
+                                        std::chrono::seconds{wallLimit});
+        return makeRawAssertion(assertion);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to make assertion " << e.what() << "\n";
+        return makeEmptyAssertion();
+    }
 }
 
 RawAssertion executeSideloadedAssertion(CMachine* m,
                                         uint64_t maxSteps,
-                                        void* inbox,
+                                        void* inbox_messages,
+                                        uint64_t message_count,
                                         void* sideload,
                                         uint64_t wallLimit) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
 
-    auto messages = getTuple(mach->getPool(), inbox);
+    auto messages =
+        getInboxMessages(mach->getPool(), inbox_messages, message_count);
     auto sideload_value = getTuple(mach->getPool(), sideload);
 
-    Assertion assertion = mach->runSideloaded(maxSteps, std::move(messages),
-                                              std::chrono::seconds{wallLimit},
-                                              std::move(sideload_value));
-
-    return makeRawAssertion(assertion);
+    try {
+        Assertion assertion = mach->runSideloaded(
+            maxSteps, std::move(messages), std::chrono::seconds{wallLimit},
+            std::move(sideload_value));
+        return makeRawAssertion(assertion);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to make assertion " << e.what() << "\n";
+        return makeEmptyAssertion();
+    }
 }

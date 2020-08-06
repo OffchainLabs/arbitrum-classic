@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 func getInsnMultiplier(filePath string) uint64 {
@@ -63,7 +62,7 @@ func runExecutableFile(b *testing.B, filePath string) {
 	}
 
 	b.ResetTimer()
-	_, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, value.NewEmptyTuple(), time.Hour)
+	_, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, nil, time.Hour)
 }
 
 func nameFromFn(fn string) string {

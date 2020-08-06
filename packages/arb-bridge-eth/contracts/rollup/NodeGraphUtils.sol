@@ -27,25 +27,22 @@ library NodeGraphUtils {
     using Hashing for Value.Data;
 
     struct AssertionData {
-        bytes32 beforeInboxTop;
         uint256 beforeInboxCount;
         bytes32 prevPrevLeafHash;
         uint256 prevDeadlineTicks;
         bytes32 prevDataHash;
         uint32 prevChildType;
         uint256 importedMessageCount;
-        bytes32 afterInboxTop;
         uint256 beforeMessageCount;
         uint256 beforeLogCount;
         ChallengeUtils.ExecutionAssertion assertion;
     }
 
     function makeAssertion(
-        bytes32[9] memory fields,
+        bytes32[8] memory fields,
         uint256[5] memory fields2,
         uint32 prevChildType,
         uint64 numSteps,
-        bool didInboxInsn,
         uint64 numArbGas,
         uint64 messageCount,
         uint64 logCount
@@ -53,28 +50,26 @@ library NodeGraphUtils {
         ChallengeUtils.ExecutionAssertion memory assertion = ChallengeUtils
             .ExecutionAssertion(
             numSteps,
+            numArbGas,
             fields[0],
             fields[1],
             fields[2],
-            didInboxInsn,
-            numArbGas,
-            0,
             fields[3],
-            messageCount,
             0,
             fields[4],
+            messageCount,
+            0,
+            fields[5],
             logCount
         );
         return
             AssertionData(
-                fields[5],
                 fields2[0],
                 fields[6],
                 fields2[1],
                 fields[7],
                 prevChildType,
                 fields2[2],
-                fields[8],
                 fields2[3],
                 fields2[4],
                 assertion
@@ -84,24 +79,22 @@ library NodeGraphUtils {
     function computePrevLeaf(AssertionData memory data)
         internal
         pure
-        returns (bytes32, bytes32)
+        returns (bytes32 prevLeaf, bytes32 vmProtoHashBefore)
     {
-        bytes32 vmProtoHashBefore = RollupUtils.protoStateHash(
+        vmProtoHashBefore = RollupUtils.protoStateHash(
             data.assertion.beforeMachineHash,
-            data.beforeInboxTop,
+            data.assertion.beforeInboxHash,
             data.beforeInboxCount,
             data.beforeMessageCount,
             data.beforeLogCount
         );
-        bytes32 prevLeaf = RollupUtils.childNodeHash(
+        prevLeaf = RollupUtils.childNodeHash(
             data.prevPrevLeafHash,
             data.prevDeadlineTicks,
             data.prevDataHash,
             data.prevChildType,
             vmProtoHashBefore
         );
-
-        return (prevLeaf, vmProtoHashBefore);
     }
 
     function getTimeData(
@@ -131,7 +124,7 @@ library NodeGraphUtils {
         uint256 gracePeriodTicks
     ) internal pure returns (bytes32) {
         bytes32 challengeHash = ChallengeUtils.inboxTopHash(
-            data.afterInboxTop,
+            data.assertion.afterInboxHash,
             inboxValue,
             inboxCount - (data.beforeInboxCount + data.importedMessageCount)
         );
@@ -144,33 +137,6 @@ library NodeGraphUtils {
                     gracePeriodTicks + RollupTime.blocksToTicks(1)
                 ),
                 ChallengeUtils.getInvalidInboxType(),
-                vmProtoHashBefore
-            );
-    }
-
-    function generateInvalidMessagesLeaf(
-        AssertionData memory data,
-        bytes32 prevLeaf,
-        uint256 deadlineTicks,
-        bytes32 vmProtoHashBefore,
-        uint256 gracePeriodTicks
-    ) internal pure returns (bytes32) {
-        bytes32 challengeHash = ChallengeUtils.messagesHash(
-            data.beforeInboxTop,
-            data.afterInboxTop,
-            Value.newEmptyTuple().hash(),
-            data.assertion.inboxHash,
-            data.importedMessageCount
-        );
-        return
-            RollupUtils.childNodeHash(
-                prevLeaf,
-                deadlineTicks,
-                RollupUtils.challengeDataHash(
-                    challengeHash,
-                    gracePeriodTicks + RollupTime.blocksToTicks(1)
-                ),
-                ChallengeUtils.getInvalidMsgsType(),
                 vmProtoHashBefore
             );
     }
@@ -212,7 +178,7 @@ library NodeGraphUtils {
                 ChallengeUtils.getValidChildType(),
                 RollupUtils.protoStateHash(
                     data.assertion.afterMachineHash,
-                    data.afterInboxTop,
+                    data.assertion.afterInboxHash,
                     data.beforeInboxCount + data.importedMessageCount,
                     data.beforeMessageCount + data.assertion.messageCount,
                     data.beforeLogCount + data.assertion.logCount

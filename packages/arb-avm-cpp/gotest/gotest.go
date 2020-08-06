@@ -42,3 +42,26 @@ func OpCodeTestFiles() []string {
 
 	return filenames
 }
+
+func ArbOSTestFiles() []string {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		err := errors.New("failed to get filename")
+		panic(err)
+	}
+	testCaseDir := filepath.Join(filepath.Dir(filename), "../tests/arbos-cases")
+	files, err := ioutil.ReadDir(testCaseDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+	filenames := make([]string, 0, len(files))
+	extension := ".aoslog"
+	for _, file := range files {
+		name := file.Name()
+		if len(name) > len(extension) && name[len(name)-len(extension):] == extension {
+			filenames = append(filenames, filepath.Join(testCaseDir, file.Name()))
+		}
+	}
+
+	return filenames
+}

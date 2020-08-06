@@ -8,7 +8,7 @@ const func: DeployFunction = async (bre: BuidlerRuntimeEnvironment) => {
   const { deploy, log } = deployments
   const { deployer } = await getNamedAccounts()
 
-  const messagesChallenge = await deployments.get('MessagesChallenge')
+  const oneStepProof = await deployments.get('OneStepProof')
   const inboxTopChallenge = await deployments.get('InboxTopChallenge')
   const executionChallenge = await deployments.get('ExecutionChallenge')
 
@@ -17,9 +17,9 @@ const func: DeployFunction = async (bre: BuidlerRuntimeEnvironment) => {
     const deployResult = await deploy('ChallengeFactory', {
       from: deployer,
       args: [
-        messagesChallenge.address,
         inboxTopChallenge.address,
         executionChallenge.address,
+        oneStepProof.address,
       ],
     })
     contract = await deployments.get('ChallengeFactory')
@@ -34,7 +34,7 @@ const func: DeployFunction = async (bre: BuidlerRuntimeEnvironment) => {
 module.exports = func
 module.exports.tags = ['ChallengeFactory']
 module.exports.dependencies = [
-  'MessagesChallenge',
   'InboxTopChallenge',
   'ExecutionChallenge',
+  'OneStepProof',
 ]

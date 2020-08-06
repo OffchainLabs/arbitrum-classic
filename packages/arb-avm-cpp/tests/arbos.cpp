@@ -46,8 +46,12 @@ TEST_CASE("ARBOS test vectors") {
             nlohmann::json j;
             i >> j;
 
-            auto inbox =
-                simple_value_from_json(j.at("inbox"), pool).get<Tuple>();
+            std::vector<Tuple> messages;
+            for (const auto& json_message : j.at("inbox")) {
+                messages.push_back(
+                    simple_value_from_json(json_message, pool).get<Tuple>());
+            }
+
             auto logs_json = j.at("logs");
             std::vector<value> logs;
             for (const auto& log_json : logs_json) {
@@ -59,7 +63,7 @@ TEST_CASE("ARBOS test vectors") {
             auto mach = storage.getInitialMachine();
             mach.machine_state.stack.push(uint256_t{0});
             auto assertion =
-                mach.run(1000000000, inbox, std::chrono::seconds{0});
+                mach.run(1000000000, messages, std::chrono::seconds{0});
             INFO("Machine ran for " << assertion.stepCount << " steps");
             REQUIRE(assertion.logs.size() == logs.size());
             auto log = logs[0].get<Tuple>();

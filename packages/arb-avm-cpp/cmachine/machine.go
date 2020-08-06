@@ -29,6 +29,7 @@ import "C"
 import (
 	"bytes"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"runtime"
 	"time"
 	"unsafe"
@@ -113,15 +114,16 @@ func (m *Machine) PrintState() {
 
 func makeExecutionAssertion(
 	assertion C.RawAssertion,
-	machineHash common.Hash,
+	beforeMachineHash common.Hash,
+	afterMachineHash common.Hash,
 ) (*protocol.ExecutionAssertion, uint64) {
 	outMessagesRaw := toByteSlice(assertion.outMessages)
 	logsRaw := toByteSlice(assertion.logs)
-
 	return protocol.NewExecutionAssertion(
-		machineHash,
-		int(assertion.didInboxInsn) != 0,
+		beforeMachineHash,
+		afterMachineHash,
 		uint64(assertion.numGas),
+		uint64(assertion.inbox_messages_consumed),
 		outMessagesRaw,
 		uint64(assertion.outMessageCount),
 		logsRaw,
@@ -131,37 +133,41 @@ func makeExecutionAssertion(
 
 func (m *Machine) ExecuteAssertion(
 	maxSteps uint64,
-	inbox value.TupleValue,
+	inboxMessages []inbox.InboxMessage,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
 	var buf bytes.Buffer
-	_ = value.MarshalValue(inbox, &buf)
+	for _, msg := range inboxMessages {
+		_ = value.MarshalValue(msg.AsValue(), &buf)
+	}
 
-	msgData := buf.Bytes()
-	msgDataC := C.CBytes(msgData)
+	msgDataC := C.CBytes(buf.Bytes())
 	defer C.free(msgDataC)
 
+	beforeHash := m.Hash()
 	assertion := C.executeAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
 		msgDataC,
+		C.uint64_t(len(inboxMessages)),
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
 
-	return makeExecutionAssertion(assertion, m.Hash())
+	return makeExecutionAssertion(assertion, beforeHash, m.Hash())
 }
 
 func (m *Machine) ExecuteSideloadedAssertion(
 	maxSteps uint64,
-	inbox value.TupleValue,
+	inboxMessages []inbox.InboxMessage,
 	sideloadValue value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
 	var buf bytes.Buffer
-	_ = value.MarshalValue(inbox, &buf)
+	for _, msg := range inboxMessages {
+		_ = value.MarshalValue(msg.AsValue(), &buf)
+	}
 
-	msgData := buf.Bytes()
-	msgDataC := C.CBytes(msgData)
+	msgDataC := C.CBytes(buf.Bytes())
 	defer C.free(msgDataC)
 
 	var sideloadBuf bytes.Buffer
@@ -171,15 +177,17 @@ func (m *Machine) ExecuteSideloadedAssertion(
 	sideloadDataC := C.CBytes(sideloadData)
 	defer C.free(sideloadDataC)
 
+	beforeHash := m.Hash()
 	assertion := C.executeSideloadedAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
 		msgDataC,
+		C.uint64_t(len(inboxMessages)),
 		sideloadDataC,
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
 
-	return makeExecutionAssertion(assertion, m.Hash())
+	return makeExecutionAssertion(assertion, beforeHash, m.Hash())
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {

@@ -48,15 +48,15 @@ func DeployChallengeFactory(auth *bind.TransactOpts, client ethutils.EthClient) 
 	if err != nil {
 		return ethcommon.Address{}, err
 	}
-	messagesAddr, _, _, err := ethbridgecontracts.DeployMessagesChallenge(auth, client)
-	if err != nil {
-		return ethcommon.Address{}, err
-	}
 	executionAddr, _, _, err := ethbridgecontracts.DeployExecutionChallenge(auth, client)
 	if err != nil {
 		return ethcommon.Address{}, err
 	}
-	factoryAddr, _, _, err := ethbridgecontracts.DeployChallengeFactory(auth, client, messagesAddr, inboxTopAddr, executionAddr)
+	ospAddr, _, _, err := ethbridgecontracts.DeployOneStepProof(auth, client)
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+	factoryAddr, _, _, err := ethbridgecontracts.DeployChallengeFactory(auth, client, inboxTopAddr, executionAddr, ospAddr)
 	return factoryAddr, err
 }
 

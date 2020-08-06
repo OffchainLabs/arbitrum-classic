@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	errors2 "github.com/pkg/errors"
 	"math/big"
 	"strings"
@@ -132,7 +132,7 @@ func NewLogFromValue(val value.Value) (Log, error) {
 	var address common.Address
 	copy(address[:], contractIDBytes[12:])
 	logDataByteVal, _ := tupVal.GetByInt64(1)
-	logData, err := message.ByteStackToHex(logDataByteVal)
+	logData, err := inbox.ByteStackToHex(logDataByteVal)
 	if err != nil {
 		return Log{}, err
 	}
@@ -151,7 +151,7 @@ func NewLogFromValue(val value.Value) (Log, error) {
 func (l Log) AsValue() value.TupleValue {
 	data := []value.Value{
 		value.NewValueFromAddress(l.Address),
-		message.BytesToByteStack(l.Data),
+		inbox.BytesToByteStack(l.Data),
 	}
 	for _, topic := range l.Topics {
 		data = append(data, value.NewIntValue(new(big.Int).SetBytes(topic.Bytes())))
@@ -161,7 +161,7 @@ func (l Log) AsValue() value.TupleValue {
 }
 
 func LogStackToLogs(val value.Value) ([]Log, error) {
-	logValues, err := message.StackValueToList(val)
+	logValues, err := inbox.StackValueToList(val)
 	if err != nil {
 		return nil, errors2.Wrap(err, "log stack was not a stack")
 	}
@@ -182,5 +182,5 @@ func LogsToLogStack(logs []Log) value.TupleValue {
 	for i := range logs {
 		logValues = append(logValues, logs[len(logs)-1-i].AsValue())
 	}
-	return message.ListToStackValue(logValues)
+	return inbox.ListToStackValue(logValues)
 }

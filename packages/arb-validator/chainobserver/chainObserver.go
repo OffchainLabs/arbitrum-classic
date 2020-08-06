@@ -158,9 +158,8 @@ func (chain *ChainObserver) Start(ctx context.Context) {
 			listener.ResumedChallenge(
 				ctx,
 				chain.Inbox.MessageStack,
-				chain.ExecutionPrecondition(challenge.ConflictNode()),
-				challenge)
-
+				challenge,
+			)
 		}
 	})
 	chain.startCleanupThread(ctx)
@@ -468,7 +467,6 @@ func (chain *ChainObserver) newChallenge(ctx context.Context, ev arbbridge.Chall
 		lis.StartedChallenge(
 			ctx,
 			chain.Inbox.MessageStack,
-			chain.ExecutionPrecondition(challenge.ConflictNode()),
 			challenge)
 	}
 }
@@ -519,9 +517,28 @@ func (chain *ChainObserver) updateOldest() {
 }
 
 func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.AssertedEvent) {
+	prevNode := chain.NodeGraph.NodeFromHash(ev.PrevLeafHash)
+	disNode := valprotocol.NewDisputableNode(
+		ev.AssertionParams,
+		&valprotocol.ExecutionAssertionStub{
+			NumGas:            ev.NumGas,
+			BeforeMachineHash: prevNode.VMProtoData().MachineHash,
+			AfterMachineHash:  ev.AfterMachineHash,
+			BeforeInboxHash:   prevNode.VMProtoData().InboxTop,
+			AfterInboxHash:    ev.AfterInboxHash,
+			FirstMessageHash:  common.Hash{},
+			LastMessageHash:   ev.LastMessageHash,
+			MessageCount:      ev.MessageCount,
+			FirstLogHash:      common.Hash{},
+			LastLogHash:       ev.LastLogHash,
+			LogCount:          ev.LogCount,
+		},
+		ev.MaxInboxTop,
+		ev.MaxInboxCount,
+	)
 	chain.NodeGraph.CreateNodesOnAssert(
 		chain.NodeGraph.NodeFromHash(ev.PrevLeafHash),
-		ev.Disputable,
+		disNode,
 		ev.BlockId.Height,
 		ev.TxHash,
 	)
@@ -534,14 +551,4 @@ func (chain *ChainObserver) equals(co2 *ChainObserver) bool {
 	return chain.NodeGraph.Equals(co2.NodeGraph) &&
 		bytes.Compare(chain.rollupAddr[:], co2.rollupAddr[:]) == 0 &&
 		chain.Inbox.Equals(co2.Inbox)
-}
-
-func (chain *ChainObserver) ExecutionPrecondition(node *structures.Node) *valprotocol.Precondition {
-	vmProtoData := node.Prev().VMProtoData()
-	params := node.Disputable().AssertionParams
-	inbox, _ := chain.Inbox.GenerateVMInbox(vmProtoData.InboxTop, params.ImportedMessageCount.Uint64())
-	return &valprotocol.Precondition{
-		BeforeHash:  vmProtoData.MachineHash,
-		BeforeInbox: inbox.AsValue(),
-	}
 }

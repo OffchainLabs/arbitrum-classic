@@ -19,13 +19,14 @@ package message
 import (
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type OutMessage struct {
-	Kind   Type
+	Kind   inbox.Type
 	Sender common.Address
 	Data   []byte
 }
@@ -59,14 +60,14 @@ func NewOutMessageFromValue(val value.Value) (OutMessage, error) {
 	if !ok {
 		return failRet, errors.New("sender must be an int")
 	}
-	data, err := ByteStackToHex(messageData)
+	data, err := inbox.ByteStackToHex(messageData)
 	if err != nil {
 		return failRet, err
 	}
 
 	return OutMessage{
-		Kind:   Type(kindInt.BigInt().Uint64()),
-		Sender: intValueToAddress(senderInt),
+		Kind:   inbox.Type(kindInt.BigInt().Uint64()),
+		Sender: inbox.NewAddressFromInt(senderInt),
 		Data:   data,
 	}, nil
 }
@@ -78,8 +79,8 @@ func NewRandomOutMessage(msg Message) OutMessage {
 func (im OutMessage) AsValue() value.Value {
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(int64(im.Kind)),
-		addressToIntValue(im.Sender),
-		BytesToByteStack(im.Data),
+		inbox.NewIntFromAddress(im.Sender),
+		inbox.BytesToByteStack(im.Data),
 	})
 	return tup
 }

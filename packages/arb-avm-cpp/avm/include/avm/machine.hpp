@@ -27,9 +27,9 @@
 struct Assertion {
     uint64_t stepCount;
     uint64_t gasCount;
+    uint64_t inbox_messages_consumed;
     std::vector<value> outMessages;
     std::vector<value> logs;
-    bool didInboxInsn;
 };
 
 class Machine {
@@ -56,12 +56,12 @@ class Machine {
     }
 
     Assertion runSideloaded(uint64_t stepCount,
-                            Tuple messages,
+                            std::vector<Tuple> inbox_messages,
                             std::chrono::seconds wallLimit,
                             Tuple sideload);
 
     Assertion run(uint64_t stepCount,
-                  Tuple messages,
+                  std::vector<Tuple> inbox_messages,
                   std::chrono::seconds wallLimit);
 
     Status currentStatus() { return machine_state.state; }
