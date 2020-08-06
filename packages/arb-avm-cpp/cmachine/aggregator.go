@@ -30,7 +30,6 @@ import (
 	"errors"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	errors2 "github.com/pkg/errors"
 	"math/big"
 	"runtime"
 	"unsafe"
@@ -152,10 +151,6 @@ func (as *AggregatorStore) SaveBlock(id *common.BlockId, logIndex uint64, logBlo
 }
 
 func (as *AggregatorStore) GetBlock(height uint64) (*machine.BlockInfo, error) {
-	latest, err := as.LatestBlock()
-	if err != nil || height > latest.Height.AsInt().Uint64() {
-		return nil, errors2.Wrap(err, "invalid height")
-	}
 	blockData := C.aggregatorGetBlock(as.c, C.uint64_t(height))
 	if blockData.found == 0 {
 		return nil, nil

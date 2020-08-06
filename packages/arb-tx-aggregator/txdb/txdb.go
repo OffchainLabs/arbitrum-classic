@@ -16,6 +16,7 @@
 
 package txdb
 
+import "C"
 import (
 	"context"
 	"errors"
@@ -248,15 +249,19 @@ func (txdb *TxDB) GetRequest(requestId common.Hash) (value.Value, error) {
 }
 
 func (txdb *TxDB) GetBlock(height uint64) (*machine.BlockInfo, error) {
+	latest := txdb.LatestBlock()
+	if height > latest.Height.AsInt().Uint64() {
+		return nil, nil
+	}
 	return txdb.as.GetBlock(height)
 }
 
-func (txdb *TxDB) LatestBlock() (*common.BlockId, error) {
+func (txdb *TxDB) LatestBlock() *common.BlockId {
 	block, err := txdb.as.LatestBlock()
 	if err != nil {
-		return txdb.initialHeight, nil
+		return txdb.initialHeight
 	}
-	return block, nil
+	return block
 }
 
 func (txdb *TxDB) FindLogs(
@@ -266,10 +271,7 @@ func (txdb *TxDB) FindLogs(
 	address []common.Address,
 	topics [][]common.Hash,
 ) ([]evm.FullLog, error) {
-	latestBlock, err := txdb.LatestBlock()
-	if err != nil {
-		return nil, err
-	}
+	latestBlock := txdb.LatestBlock()
 	startHeight := uint64(0)
 	endHeight := latestBlock.Height.AsInt().Uint64()
 	if fromHeight != nil && *fromHeight > 0 {
