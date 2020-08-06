@@ -28,22 +28,18 @@ namespace {
 uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
 }  // namespace
 
-AssertionContext::AssertionContext(std::vector<Tuple> inbox_messages,
-                                   Tuple sideload)
+AssertionContext::AssertionContext(
+    std::vector<Tuple> inbox_messages,
+    Tuple sideload,
+    bool blockingSideload_,
+    nonstd::optional<value> fake_inbox_peek_value_)
     : inbox_messages(std::move(inbox_messages)),
       inbox_messages_consumed(0),
       sideload_value(std::move(sideload)),
       numSteps{0},
       numGas{0},
-      blockingSideload(true) {}
-
-AssertionContext::AssertionContext(std::vector<Tuple> inbox_messages)
-    : inbox_messages(std::move(inbox_messages)),
-      inbox_messages_consumed(0),
-      sideload_value(Tuple{}),
-      numSteps{0},
-      numGas{0},
-      blockingSideload(false) {}
+      blockingSideload(blockingSideload_),
+      fake_inbox_peek_value(std::move(fake_inbox_peek_value_)) {}
 
 MachineState::MachineState()
     : pool(std::make_unique<TuplePool>()),
@@ -233,7 +229,8 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
         return HaltBlocked();
     }
     auto& instruction = loadCurrentInstruction();
-    if (instruction.op.opcode == OpCode::INBOX) {
+    if (instruction.op.opcode == OpCode::INBOX ||
+        instruction.op.opcode == OpCode::INBOX_PEEK) {
         if (newMessages) {
             return NotBlocked();
         }

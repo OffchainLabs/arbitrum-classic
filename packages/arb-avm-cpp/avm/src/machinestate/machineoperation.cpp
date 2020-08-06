@@ -723,12 +723,20 @@ BlockReason inboxPeekOp(MachineState& m) {
     m.stack.prepForMod(1);
     bool has_staged_message = m.staged_message != Tuple{};
     if (!has_staged_message && m.context.inboxEmpty()) {
-        return InboxBlocked();
+        if (!m.context.fake_inbox_peek_value) {
+            return InboxBlocked();
+        }
+
+        // When fake_inbox_peek_value is set we're in callserver mode. Use
+        // that value as the message value
+        m.stack[0] = m.stack[0] == *m.context.fake_inbox_peek_value ? 1 : 0;
+        ++m.pc;
+        return NotBlocked{};
     }
     if (!has_staged_message) {
         m.staged_message = m.context.popInbox();
     }
-    m.stack[0] = m.stack[0] == m.staged_message.get_element(0) ? 1 : 0;
+    m.stack[0] = m.stack[0] == m.staged_message.get_element(1) ? 1 : 0;
     ++m.pc;
     return NotBlocked{};
 }

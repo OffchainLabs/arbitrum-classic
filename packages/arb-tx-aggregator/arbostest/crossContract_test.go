@@ -133,12 +133,17 @@ func TestCrossContract(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if res.ResultCode != evm.ReturnCode {
-			t.Error("tx failed", res.ResultCode)
+		txRes, ok := res.(*evm.TxResult)
+		if !ok {
+			t.Fatal("incorrect res type", res)
 		}
-		log.Println("ReturnData", hexutil.Encode(res.ReturnData))
-		if res.L1Message.Kind == message.L2Type {
-			l2, err := message.L2Message{Data: res.L1Message.Data}.AbstractMessage()
+
+		if txRes.ResultCode != evm.ReturnCode {
+			t.Error("tx failed", txRes.ResultCode)
+		}
+		log.Println("ReturnData", hexutil.Encode(txRes.ReturnData))
+		if txRes.L1Message.Kind == message.L2Type {
+			l2, err := message.L2Message{Data: txRes.L1Message.Data}.AbstractMessage()
 			if err != nil {
 				t.Fatal(err)
 			}

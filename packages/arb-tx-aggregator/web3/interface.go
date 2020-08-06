@@ -32,6 +32,7 @@ func (n *GetBlockByNumberArgs) UnmarshalJSON(buf []byte) error {
 
 type GetBlockResult struct {
 	types.Header
+	Transactions interface{} `json:"transactions"`
 }
 
 type CallTxArgs struct {

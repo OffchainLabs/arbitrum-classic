@@ -26,8 +26,35 @@ std::ostream& operator<<(std::ostream& os, const Machine& val) {
     return os;
 }
 
-Assertion Machine::executeMachine(uint64_t stepCount,
-                                  std::chrono::seconds wallLimit) {
+namespace {
+bool validMessages(const std::vector<Tuple>& messages) {
+    for (const auto& msg : messages) {
+        if (msg.tuple_size() < 2) {
+            return false;
+        }
+        if (!nonstd::holds_alternative<uint256_t>(msg.get_element(1))) {
+            return false;
+        }
+    }
+    return true;
+}
+}  // namespace
+
+Assertion Machine::executeMachine(
+    uint64_t stepCount,
+    std::chrono::seconds wallLimit,
+    std::vector<Tuple> inbox_messages,
+    Tuple sideload,
+    bool blockingSideload,
+    nonstd::optional<value> fake_inbox_peek_value) {
+    if (!validMessages(inbox_messages)) {
+        throw std::runtime_error("invalid message format");
+    }
+
+    machine_state.context =
+        AssertionContext{std::move(inbox_messages), std::move(sideload),
+                         blockingSideload, std::move(fake_inbox_peek_value)};
+
     bool has_time_limit = wallLimit.count() != 0;
     auto start_time = std::chrono::system_clock::now();
     while (machine_state.context.numSteps < stepCount) {
@@ -49,38 +76,25 @@ Assertion Machine::executeMachine(uint64_t stepCount,
             std::move(machine_state.context.logs)};
 }
 
-namespace {
-bool validMessages(const std::vector<Tuple>& messages) {
-    for (const auto& msg : messages) {
-        if (msg.tuple_size() < 2) {
-            return false;
-        }
-        if (!nonstd::holds_alternative<uint256_t>(msg.get_element(1))) {
-            return false;
-        }
-    }
-    return true;
-}
-}  // namespace
-
 Assertion Machine::run(uint64_t stepCount,
                        std::vector<Tuple> inbox_messages,
                        std::chrono::seconds wallLimit) {
-    if (!validMessages(inbox_messages)) {
-        throw std::runtime_error("invalid message format");
-    }
-    machine_state.context = AssertionContext{std::move(inbox_messages)};
-    return executeMachine(stepCount, wallLimit);
+    return executeMachine(stepCount, wallLimit, std::move(inbox_messages),
+                          Tuple(), false, nonstd::nullopt);
+}
+
+Assertion Machine::runCallServer(uint64_t stepCount,
+                                 std::vector<Tuple> inbox_messages,
+                                 std::chrono::seconds wallLimit,
+                                 value fake_inbox_peek_value) {
+    return executeMachine(stepCount, wallLimit, std::move(inbox_messages),
+                          Tuple(), false, std::move(fake_inbox_peek_value));
 }
 
 Assertion Machine::runSideloaded(uint64_t stepCount,
                                  std::vector<Tuple> inbox_messages,
                                  std::chrono::seconds wallLimit,
                                  Tuple sideload_value) {
-    if (!validMessages(inbox_messages)) {
-        throw std::runtime_error("invalid message format");
-    }
-    machine_state.context =
-        AssertionContext{std::move(inbox_messages), std::move(sideload_value)};
-    return executeMachine(stepCount, wallLimit);
+    return executeMachine(stepCount, wallLimit, std::move(inbox_messages),
+                          std::move(sideload_value), true, nonstd::nullopt);
 }

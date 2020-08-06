@@ -31,7 +31,6 @@
 constexpr auto log_key = std::array<char, 1>{-50};
 constexpr auto message_key = std::array<char, 1>{-51};
 constexpr auto block_key = std::array<char, 1>{-52};
-constexpr auto initial_block_key = std::array<char, 1>{-53};
 
 constexpr auto request_key_prefix = std::array<char, 1>{-54};
 constexpr auto request_key_size = request_key_prefix.size() + 32;
@@ -73,31 +72,6 @@ std::array<char, sizeof(uint64_t)> uint64Value(uint64_t height) {
     std::array<char, sizeof(uint64_t)> key;
     addUint64ToKey(height, key.begin());
     return key;
-}
-
-struct BlockSaveData {
-    uint64_t log_count;
-    uint64_t message_count;
-    std::vector<char> data;
-};
-
-std::vector<char> blockValue(uint64_t log_count,
-                             uint64_t message_count,
-                             const std::vector<char>& data) {
-    std::vector<char> full_data;
-    full_data.reserve(sizeof(uint64_t) * 2 + data.size());
-    full_data.resize(sizeof(uint64_t) * 2);
-    auto it = addUint64ToKey(log_count, full_data.begin());
-    it = addUint64ToKey(message_count, it);
-    full_data.insert(full_data.end(), data.begin(), data.end());
-    return full_data;
-}
-
-BlockSaveData processBlockValue(const std::string& value) {
-    auto it = value.begin();
-    uint64_t log_count = extractUint64(it);
-    uint64_t message_count = extractUint64(it);
-    return {log_count, message_count, {it, value.end()}};
 }
 
 std::array<char, sizeof(uint64_t)> requestValue(uint64_t log_index) {
@@ -276,79 +250,32 @@ uint64_t AggregatorStore::getPossibleRequestInfo(
     return log_index;
 }
 
-std::pair<uint64_t, BlockData> AggregatorStore::latestBlock() const {
+std::pair<uint64_t, std::vector<char>> AggregatorStore::latestBlock() const {
     auto tx = data_storage->beginTransaction();
     uint64_t latest_block = BlockSaver{}.max(*tx);
     return {latest_block, getBlock(latest_block)};
 }
 
-uint64_t AggregatorStore::getInitialBlock() const {
-    std::string value;
-    auto s = data_storage->txn_db->Get(rocksdb::ReadOptions{},
-                                       vecToSlice(initial_block_key), &value);
-    if (!s.ok()) {
-        throw std::runtime_error("couldn't load initial block");
-    }
-    auto it = value.begin();
-    return extractUint64(it);
-}
-
 void AggregatorStore::saveBlock(uint64_t height,
                                 const std::vector<char>& data) {
     auto tx = data_storage->beginTransaction();
-    auto value = blockValue(logCount(), messageCount(), data);
-
-    std::string initial_value;
-    auto s = tx->Get(rocksdb::ReadOptions{}, vecToSlice(initial_block_key),
-                     &initial_value);
-    if (s.IsNotFound()) {
-        auto initial_val = uint64Value(height);
-        auto s =
-            tx->Put(vecToSlice(initial_block_key), vecToSlice(initial_val));
-        if (!s.ok()) {
-            throw std::runtime_error("couldn't save initial block");
-        }
-    } else if (!s.ok()) {
-        throw std::runtime_error("couldn't load initial block");
-    } else {
-        auto current_max = BlockSaver{}.max(*tx);
-        if (height != current_max + 1) {
-            std::stringstream ss;
-            ss << "must save consecutive blocks but tried to save " << height
-               << " with current latest " << current_max;
-            throw std::runtime_error(ss.str());
-        }
-    }
-    BlockSaver{}.save(*tx, value, height);
+    ;
+    BlockSaver{}.save(*tx, data, height);
     commitTx(*tx);
 }
 
-BlockData AggregatorStore::getBlock(uint64_t height) const {
+std::vector<char> AggregatorStore::getBlock(uint64_t height) const {
     auto tx = data_storage->beginTransaction();
     auto block_value = BlockSaver{}.load(*tx, height);
-    auto parsed_value = processBlockValue(block_value);
-    auto initial = getInitialBlock();
-
-    uint64_t prev_log_count = 0;
-    uint64_t prev_message_count = 0;
-    if (height > initial) {
-        auto prev_block_value = BlockSaver{}.load(*tx, height - 1);
-        auto prev_parsed_value = processBlockValue(prev_block_value);
-        prev_log_count = prev_parsed_value.log_count;
-        prev_message_count = prev_parsed_value.message_count;
-    }
-
-    return {prev_log_count, parsed_value.log_count - prev_log_count,
-            prev_message_count, parsed_value.message_count - prev_message_count,
-            std::move(parsed_value.data)};
+    return {block_value.begin(), block_value.end()};
 }
 
-void AggregatorStore::restoreBlock(uint64_t height) {
+void AggregatorStore::reorg(uint64_t block_height,
+                            uint64_t message_count,
+                            uint64_t log_count) {
     auto tx = data_storage->beginTransaction();
-    auto block_value = BlockSaver{}.load(*tx, height);
-    auto parsed_value = processBlockValue(block_value);
-    MessageSaver{}.saveCount(*tx, parsed_value.message_count);
-    LogSaver{}.saveCount(*tx, parsed_value.log_count);
-    BlockSaver{}.saveMax(*tx, height);
+    MessageSaver{}.saveCount(*tx, message_count);
+    LogSaver{}.saveCount(*tx, log_count);
+    BlockSaver{}.saveMax(*tx, block_height);
     commitTx(*tx);
 }

@@ -172,7 +172,7 @@ func TestWithdrawEth(t *testing.T) {
 		t.Fatal("unexpected log count", len(logs))
 	}
 
-	res, err := evm.NewResultFromValue(logs[0])
+	res, err := evm.NewTxResultFromValue(logs[0])
 	if err != nil {
 		t.Fatal(err)
 	}
