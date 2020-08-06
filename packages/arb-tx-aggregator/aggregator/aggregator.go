@@ -188,7 +188,6 @@ func (m *Server) GetBlockHeader(ctx context.Context, height uint64) (*types.Head
 		gasLimit = res.GasLimit.Uint64()
 	}
 
-	ethHeader.Coinbase = common.RandAddress().ToEthAddress()
 	ethHeader.Bloom = currentBlock.Bloom
 	ethHeader.GasLimit = gasLimit
 	ethHeader.GasUsed = gasUsed
@@ -196,11 +195,7 @@ func (m *Server) GetBlockHeader(ctx context.Context, height uint64) (*types.Head
 	return ethHeader, nil
 }
 
-func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, error) {
-	header, err := m.GetBlockHeader(ctx, height)
-	if err != nil {
-		return nil, err
-	}
+func (m *Server) GetBlockResults(height uint64) ([]*evm.TxResult, error) {
 	currentBlock, err := m.db.GetBlock(height)
 	if err != nil {
 		return nil, err
@@ -208,7 +203,7 @@ func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, err
 
 	if currentBlock == nil {
 		// No arbitrum block at this height
-		return types.NewBlock(header, nil, nil, nil), nil
+		return nil, nil
 	}
 
 	res, err := evm.NewBlockResultFromValue(currentBlock.BlockLog)
@@ -217,8 +212,7 @@ func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, err
 	}
 	txCount := res.BlockStats.TxCount.Uint64()
 	startLog := res.FirstAVMLog().Uint64()
-	transactions := make([]*types.Transaction, 0, txCount)
-	receipts := make([]*types.Receipt, 0, txCount)
+	results := make([]*evm.TxResult, 0, txCount)
 	for i := uint64(0); i < txCount; i++ {
 		avmLog, err := m.db.GetLog(startLog + i)
 		if err != nil {
@@ -228,16 +222,35 @@ func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, err
 		if err != nil {
 			return nil, err
 		}
-		receipt, err := res.ToEthReceipt(currentBlock.Hash)
+		results = append(results, res)
+	}
+	return results, nil
+}
+
+func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, error) {
+	header, err := m.GetBlockHeader(ctx, height)
+	if err != nil {
+		return nil, err
+	}
+
+	results, err := m.GetBlockResults(height)
+	if err != nil {
+		return nil, err
+	}
+
+	transactions := make([]*types.Transaction, 0, len(results))
+	receipts := make([]*types.Receipt, 0, len(results))
+	for _, res := range results {
+		receipt, err := res.ToEthReceipt(common.NewHashFromEth(header.Hash()))
 		if err != nil {
 			return nil, err
 		}
 		receipts = append(receipts, receipt)
-
 		tx, err := GetTransaction(res.L1Message, m.chain)
-		if err == nil {
-			transactions = append(transactions, tx)
+		if err != nil {
+			return nil, err
 		}
+		transactions = append(transactions, tx)
 	}
 
 	return types.NewBlock(header, transactions, nil, receipts), nil
