@@ -17,7 +17,6 @@
 package batcher
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"math/big"
 	"testing"
@@ -112,11 +111,11 @@ func TestPrepareTransactions(t *testing.T) {
 			sortedTxesCal := prepareTransactions(tc.raw)
 			t.Log("correct:", tc.sorted)
 			t.Log("calculated:", sortedTxesCal)
-			if len(sortedTxesCal.Transactions) != len(tc.sorted) {
+			if len(sortedTxesCal) != len(tc.sorted) {
 				t.Fatal("sorted is wrong length")
 			}
 			for i, tx := range tc.sorted {
-				if !bytes.Equal(message.NewL2Message(tx).AsData(), sortedTxesCal.Transactions[i]) {
+				if !tx.Equals(sortedTxesCal[i].tx) {
 					t.Error("tx in wrong order")
 					break
 				}
