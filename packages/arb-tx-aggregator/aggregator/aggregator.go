@@ -51,13 +51,12 @@ type Server struct {
 
 // NewServer returns a new instance of the Server class
 func NewServer(
-	ctx context.Context,
 	client ethutils.EthClient,
 	batch *batcher.Batcher,
 	rollupAddress common.Address,
 	db *txdb.TxDB,
-) (*Server, error) {
-	server := &Server{
+) *Server {
+	return &Server{
 		client:      client,
 		chain:       rollupAddress,
 		batch:       batch,
@@ -65,8 +64,6 @@ func NewServer(
 		maxCallTime: 0,
 		maxCallGas:  big.NewInt(100000000),
 	}
-
-	return server, nil
 }
 
 // SendTransaction takes a request signed transaction l2message from a client
