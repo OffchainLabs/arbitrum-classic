@@ -139,6 +139,7 @@ func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollup
 			"2235",
 			"8546",
 			utils2.RPCFlags{},
+			time.Second,
 		); err != nil {
 			log.Fatal(err)
 		}
@@ -188,9 +189,10 @@ type ListenerError struct {
 }
 
 func startFibTestEventListener(
+	t *testing.T,
 	fibonacci *Fibonacci,
 	ch chan interface{},
-	t *testing.T,
+	timeLimit time.Duration,
 ) {
 	go func() {
 		evCh := make(chan *FibonacciTestEvent, 2)
@@ -208,6 +210,11 @@ func startFibTestEventListener(
 		errChan := sub.Err()
 		for {
 			select {
+			case <-time.After(timeLimit):
+				ch <- &ListenerError{
+					ListenerName: "FibonacciTestEvent ",
+					Err:          errors.New("timed out"),
+				}
 			case ev, ok := <-evCh:
 				if ok {
 					ch <- ev
@@ -245,7 +252,7 @@ func waitForReceipt(
 	for {
 		select {
 		case <-ticker.C:
-			return nil, fmt.Errorf("timed out waiting for receipt for tx %v", tx.Hash())
+			return nil, fmt.Errorf("timed out waiting for receipt for tx %v", tx.Hash().Hex())
 		default:
 		}
 		receipt, err := client.TransactionReceipt(
@@ -264,6 +271,15 @@ func waitForReceipt(
 }
 
 func TestFib(t *testing.T) {
+	if err := os.RemoveAll(db); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.RemoveAll(db); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
 	l1Client, pks := test.SimulatedBackend()
 	go func() {
 		t := time.NewTicker(time.Second * 2)
@@ -288,12 +304,6 @@ func TestFib(t *testing.T) {
 	if err := setupValidators(rollupAddress, l1Client, pks[3:5]); err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
-
-	defer func() {
-		if err := os.RemoveAll(db); err != nil {
-			t.Fatal(err)
-		}
-	}()
 
 	if err := launchAggregator(
 		l1Client,
@@ -383,7 +393,7 @@ func TestFib(t *testing.T) {
 
 	t.Run("TestEvent", func(t *testing.T) {
 		eventChan := make(chan interface{}, 2)
-		startFibTestEventListener(session.Contract, eventChan, t)
+		startFibTestEventListener(t, session.Contract, eventChan, time.Second*10)
 		testEventRcvd := false
 
 		fibsize := 15

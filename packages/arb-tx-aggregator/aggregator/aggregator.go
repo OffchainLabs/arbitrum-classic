@@ -21,65 +21,86 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"log"
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
 type Server struct {
-	client      ethutils.EthClient
-	chain       common.Address
-	batch       *batcher.Batcher
-	db          *txdb.TxDB
-	maxCallTime time.Duration
-	maxCallGas  *big.Int
+	client          ethutils.EthClient
+	chain           common.Address
+	batch           *batcher.Batcher
+	db              *txdb.TxDB
+	callMach        machine.Machine
+	pendingCallMach machine.Machine
+	callBlock       *common.BlockId
+	maxCallTime     time.Duration
+	maxCallGas      *big.Int
 }
 
 // NewServer returns a new instance of the Server class
 func NewServer(
 	ctx context.Context,
 	client ethutils.EthClient,
-	auth *bind.TransactOpts,
+	batch *batcher.Batcher,
 	rollupAddress common.Address,
 	db *txdb.TxDB,
 ) (*Server, error) {
-	arbClient := ethbridge.NewEthAuthClient(client, auth)
-	rollupContract, err := arbClient.NewRollupWatcher(rollupAddress)
-	if err != nil {
-		return nil, err
+	mach, block := db.CallInfo()
+	server := &Server{
+		client:          client,
+		chain:           rollupAddress,
+		batch:           batch,
+		db:              db,
+		callMach:        mach,
+		pendingCallMach: mach,
+		callBlock:       block,
+		maxCallTime:     0,
+		maxCallGas:      big.NewInt(100000000),
 	}
-	inboxAddress, err := rollupContract.InboxAddress(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	globalInbox, err := arbClient.NewGlobalInbox(inboxAddress, rollupAddress)
-	if err != nil {
-		return nil, err
-	}
-	return &Server{
-		client:      client,
-		chain:       rollupAddress,
-		batch:       batcher.NewBatcher(ctx, globalInbox, rollupAddress),
-		db:          db,
-		maxCallTime: 0,
-		maxCallGas:  big.NewInt(100000000),
-	}, nil
+
+	go func() {
+		ticker := time.NewTicker(time.Second * 5)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				mach, block := db.CallInfo()
+				if mach.Hash() == server.callMach.Hash() {
+					// The machine hasn't changed so updating is easy
+					server.callBlock = block
+				} else {
+					server.callMach = mach
+
+					//_, currentCount, err := globalInbox.GetInbox(ctx)
+					//if err != nil {
+					//	return
+					//}
+					//inbox := server.batch.PendingMessages(currentCount)
+
+				}
+				break
+			}
+		}
+	}()
+
+	return server, nil
 }
 
 // SendTransaction takes a request signed transaction l2message from a client
@@ -91,7 +112,6 @@ func (m *Server) SendTransaction(_ context.Context, tx *types.Transaction) (comm
 //FindLogs takes a set of parameters and return the list of all logs that match
 //the query
 func (m *Server) FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []ethcommon.Address, topics [][]ethcommon.Hash) ([]evm.FullLog, error) {
-
 	topicGroups := make([][]common.Hash, 0)
 	for _, group := range topics {
 		topicGroups = append(topicGroups, common.HashArrayFromEth(group))
@@ -142,7 +162,7 @@ func (m *Server) GetChainAddress(_ context.Context) (ethcommon.Address, error) {
 	return m.chain.ToEthAddress(), nil
 }
 
-func (m *Server) BlockInfo(_ context.Context, height uint64) (machine.BlockInfo, error) {
+func (m *Server) BlockInfo(_ context.Context, height uint64) (*machine.BlockInfo, error) {
 	return m.db.GetBlock(height)
 }
 
@@ -151,24 +171,23 @@ func (m *Server) GetBlockHeader(ctx context.Context, height uint64) (*types.Head
 	if err != nil {
 		return nil, err
 	}
-	gasUsed := uint64(0)
-	gasLimit := uint64(100000000)
-	if currentBlock.MessageCount > 0 {
-		lastLog, err := m.db.GetLog(currentBlock.StartLog + currentBlock.MessageCount - 1)
-		if err != nil {
-			return nil, err
-		}
-		res, err := evm.NewResultFromValue(lastLog)
-		if err != nil {
-			return nil, err
-		}
-		gasUsed = res.CumulativeGas.Uint64()
-	}
 
 	ethHeader, err := m.client.HeaderByHash(ctx, currentBlock.Hash.ToEthHash())
 	if err != nil {
 		return nil, err
 	}
+
+	gasUsed := uint64(0)
+	gasLimit := uint64(100000000)
+	if currentBlock != nil {
+		res, err := evm.NewBlockResultFromValue(currentBlock.BlockLog)
+		if err != nil {
+			return nil, err
+		}
+		gasUsed = res.BlockStats.GasUsed.Uint64()
+		gasLimit = res.GasLimit.Uint64()
+	}
+
 	ethHeader.Coinbase = common.RandAddress().ToEthAddress()
 	ethHeader.Bloom = currentBlock.Bloom
 	ethHeader.GasLimit = gasLimit
@@ -186,14 +205,26 @@ func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, err
 	if err != nil {
 		return nil, err
 	}
-	transactions := make([]*types.Transaction, 0, currentBlock.LogCount)
-	receipts := make([]*types.Receipt, 0, currentBlock.LogCount)
-	for i := uint64(0); i < currentBlock.LogCount; i++ {
-		avmLog, err := m.db.GetLog(currentBlock.StartLog + i)
+
+	if currentBlock == nil {
+		// No arbitrum block at this height
+		return types.NewBlock(header, nil, nil, nil), nil
+	}
+
+	res, err := evm.NewBlockResultFromValue(currentBlock.BlockLog)
+	if err != nil {
+		return nil, err
+	}
+	txCount := res.BlockStats.TxCount.Uint64()
+	startLog := res.FirstAVMLog().Uint64()
+	transactions := make([]*types.Transaction, 0, txCount)
+	receipts := make([]*types.Receipt, 0, txCount)
+	for i := uint64(0); i < txCount; i++ {
+		avmLog, err := m.db.GetLog(startLog + i)
 		if err != nil {
 			return nil, err
 		}
-		res, err := evm.NewResultFromValue(avmLog)
+		res, err := evm.NewTxResultFromValue(avmLog)
 		if err != nil {
 			return nil, err
 		}
@@ -217,7 +248,7 @@ func (m *Server) GetTransaction(_ context.Context, requestId ethcommon.Hash) (*t
 	if err != nil {
 		return nil, nil
 	}
-	res, err := evm.NewResultFromValue(val)
+	res, err := evm.NewTxResultFromValue(val)
 	if err != nil {
 		return nil, err
 	}
@@ -243,14 +274,14 @@ func GetTransaction(msg inbox.InboxMessage, chain common.Address) (*types.Transa
 // and return the result
 func (m *Server) Call(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	mach, blockId := m.db.CallInfo()
-	return m.executeCall(mach, blockId, msg, sender)
+	return m.executeCall(mach.Clone(), blockId, msg, sender)
 }
 
 // PendingCall takes a request from a client to process in a temporary context
 // and return the result
 func (m *Server) PendingCall(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	mach, blockId := m.db.CallInfo()
-	return m.executeCall(mach, blockId, msg, sender)
+	return m.executeCall(mach.Clone(), blockId, msg, sender)
 }
 
 func (m *Server) executeCall(mach machine.Machine, blockId *common.BlockId, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
@@ -291,7 +322,7 @@ func (m *Server) executeCall(mach machine.Machine, blockId *common.BlockId, msg 
 		return nil, errors.New("call produced no output")
 	}
 	lastLogVal := results[len(results)-1]
-	lastLog, err := evm.NewResultFromValue(lastLogVal)
+	lastLog, err := evm.NewTxResultFromValue(lastLogVal)
 	if err != nil {
 		return nil, err
 	}

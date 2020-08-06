@@ -48,14 +48,16 @@ class AggregatorStore {
     void saveMessage(const std::vector<char>& log);
     std::vector<char> getMessage(uint64_t index) const;
 
-    std::pair<uint64_t, BlockData> latestBlock() const;
-    uint64_t getInitialBlock() const;
+    std::pair<uint64_t, std::vector<char>> latestBlock() const;
     void saveBlock(uint64_t height, const std::vector<char>& data);
-    BlockData getBlock(uint64_t height) const;
-    void restoreBlock(uint64_t height);
+    std::vector<char> getBlock(uint64_t height) const;
 
     uint64_t getPossibleRequestInfo(const uint256_t& request_id) const;
     void saveRequest(const uint256_t& request_id, uint64_t log_index);
+
+    void reorg(uint64_t block_height,
+               uint64_t message_count,
+               uint64_t log_count);
 };
 
 #endif /* aggregator_hpp */

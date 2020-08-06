@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
@@ -84,15 +85,13 @@ func (conn *ArbConnection) CodeAt(
 }
 
 func processCallRet(retValue value.Value) ([]byte, error) {
-	logVal, err := evm.NewResultFromValue(retValue)
+	logVal, err := evm.NewTxResultFromValue(retValue)
 	if err != nil {
 		return nil, err
 	}
+	log.Println("Got call result", logVal.ResultCode, hexutil.Encode(logVal.ReturnData))
 	if logVal.ResultCode != evm.ReturnCode && logVal.ResultCode != evm.RevertCode {
 		return nil, fmt.Errorf("call failed %v", logVal)
-	}
-	if logVal.ResultCode == evm.RevertCode {
-		log.Println("Call failed with message", string(logVal.ReturnData))
 	}
 	return logVal.ReturnData, nil
 }
@@ -217,7 +216,7 @@ func (conn *ArbConnection) EstimateGas(
 	if err != nil {
 		return 0, err
 	}
-	res, err := evm.NewResultFromValue(retValue)
+	res, err := evm.NewTxResultFromValue(retValue)
 	if err != nil {
 		return 0, err
 	}
@@ -390,7 +389,7 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	if val == nil || err != nil {
 		return nil, ethereum.NotFound
 	}
-	result, err := evm.NewResultFromValue(val)
+	result, err := evm.NewTxResultFromValue(val)
 	if err != nil {
 		return nil, err
 	}

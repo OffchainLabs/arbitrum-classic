@@ -107,6 +107,8 @@ func RunObserver(
 
 	go func() {
 
+		firstRun := true
+
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
 
@@ -115,8 +117,11 @@ func RunObserver(
 				log.Fatal(err)
 			}
 
-			if err := db.RestoreFromCheckpoint(ctx); err != nil {
-				log.Fatal(err)
+			if !firstRun {
+				if err := db.RestoreFromCheckpoint(ctx); err != nil {
+					log.Fatal(err)
+				}
+				firstRun = false
 			}
 
 			latest, err := db.LatestBlock()

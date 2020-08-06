@@ -23,6 +23,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -84,6 +85,7 @@ func main() {
 		"1235",
 		"8547",
 		rpcVars,
+		time.Second*5,
 	); err != nil {
 		log.Fatal(err)
 	}
