@@ -24,6 +24,8 @@ import (
 )
 
 type ArbFactory interface {
+	ArbFactoryWatcher
+
 	CreateRollup(
 		ctx context.Context,
 		vmState common.Hash,

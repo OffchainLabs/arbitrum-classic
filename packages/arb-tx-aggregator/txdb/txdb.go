@@ -20,7 +20,6 @@ import "C"
 import (
 	"context"
 	"errors"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 	"math/big"
@@ -190,9 +189,7 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 			if err != nil {
 				return err
 			}
-			log.Println("Saving logs into bloom", ethLogs)
 			logBloom := types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
-			log.Println("Saving bloom", hexutil.Encode(logBloom.Bytes()))
 			if err := txdb.as.SaveBlock(block, logIndex, logBloom); err != nil {
 				return err
 			}

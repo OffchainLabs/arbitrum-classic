@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/batcher"
 	"log"
 	"math/big"
 	"time"
@@ -31,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -40,40 +40,47 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
+type ServerLogger interface {
+	LogCall(msg message.ContractTransaction, sender ethcommon.Address, blockId *common.BlockId)
+}
+
 type Server struct {
 	client      ethutils.EthClient
 	chain       common.Address
-	batch       *batcher.Batcher
+	txBatcher   batcher.TransactionBatcher
 	db          *txdb.TxDB
 	maxCallTime time.Duration
 	maxCallGas  *big.Int
+	logger      ServerLogger
 }
 
 // NewServer returns a new instance of the Server class
 func NewServer(
 	client ethutils.EthClient,
-	batch *batcher.Batcher,
+	txBatcher batcher.TransactionBatcher,
 	rollupAddress common.Address,
 	db *txdb.TxDB,
+	logger ServerLogger,
 ) *Server {
 	return &Server{
 		client:      client,
 		chain:       rollupAddress,
-		batch:       batch,
+		txBatcher:   txBatcher,
 		db:          db,
 		maxCallTime: 0,
 		maxCallGas:  big.NewInt(100000000),
+		logger:      logger,
 	}
 }
 
 func (m *Server) PendingTransactionCount(account common.Address) uint64 {
-	return m.batch.PendingTransactionCount(account)
+	return m.txBatcher.PendingTransactionCount(account)
 }
 
 // SendTransaction takes a request signed transaction l2message from a client
 // and puts it in a queue to be included in the next transaction batch
 func (m *Server) SendTransaction(_ context.Context, tx *types.Transaction) (common.Hash, error) {
-	return m.batch.SendTransaction(tx)
+	return m.txBatcher.SendTransaction(tx)
 }
 
 //FindLogs takes a set of parameters and return the list of all logs that match
@@ -257,6 +264,9 @@ func GetTransaction(msg inbox.InboxMessage, chain common.Address) (*types.Transa
 // and return the result
 func (m *Server) Call(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	mach, blockId := m.db.CallInfo()
+	if m.logger != nil {
+		m.logger.LogCall(msg, sender, blockId)
+	}
 	return m.executeCall(mach, blockId, msg, sender)
 }
 
@@ -264,6 +274,9 @@ func (m *Server) Call(ctx context.Context, msg message.ContractTransaction, send
 // and return the result
 func (m *Server) PendingCall(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	mach, blockId := m.db.CallInfo()
+	if m.logger != nil {
+		m.logger.LogCall(msg, sender, blockId)
+	}
 	return m.executeCall(mach, blockId, msg, sender)
 }
 

@@ -35,6 +35,11 @@ import (
 
 const maxTransactions = 200
 
+type TransactionBatcher interface {
+	PendingTransactionCount(account common.Address) uint64
+	SendTransaction(tx *types.Transaction) (common.Hash, error)
+}
+
 type DecodedBatchTx struct {
 	tx     message.SignedTransaction
 	sender common.Address
@@ -63,6 +68,7 @@ func NewBatcher(
 		client:        client,
 		globalInbox:   globalInbox,
 		valid:         true,
+		pendingTxes:   make(map[common.Address]uint64),
 	}
 
 	go func() {
@@ -139,7 +145,6 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 	batchTx := message.NewTransactionBatchFromMessages(batchTxes)
 	txHash, err := m.globalInbox.SendL2MessageNoWait(
 		ctx,
-		m.rollupAddress,
 		message.NewL2Message(batchTx).AsData(),
 	)
 

@@ -28,8 +28,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
-const defaultMaxReorgDepth = 100
-
 func calculateCatchupFetch(ctx context.Context, start *big.Int, clnt arbbridge.ChainTimeGetter, maxReorg *big.Int) (*big.Int, error) {
 	currentLocalHeight := start
 	currentOnChain, err := clnt.CurrentBlockId(ctx)
@@ -60,18 +58,8 @@ func RunObserver(
 	rollupAddr common.Address,
 	clnt arbbridge.ArbClient,
 	executablePath string,
-	dbPath string,
+	cp *checkpointing.IndexedCheckpointer,
 ) (*txdb.TxDB, error) {
-	cp, err := checkpointing.NewIndexedCheckpointer(
-		rollupAddr,
-		dbPath,
-		big.NewInt(defaultMaxReorgDepth),
-		false,
-	)
-	if err != nil {
-		return nil, err
-	}
-
 	if !cp.Initialized() {
 		if err := cp.Initialize(executablePath); err != nil {
 			return nil, err
