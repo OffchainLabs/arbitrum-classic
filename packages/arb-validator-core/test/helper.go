@@ -42,7 +42,7 @@ func SimulatedBackend() (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
 		}
 	}
 
-	blockGasLimit := uint64(1000000000)
+	blockGasLimit := uint64(1300000000)
 	client := backends.NewSimulatedBackend(genesisAlloc, blockGasLimit)
 	return client, pks
 }
