@@ -26,11 +26,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
 const maxTransactions = 200
@@ -38,10 +38,6 @@ const maxTransactions = 200
 type DecodedBatchTx struct {
 	tx     message.SignedTransaction
 	sender common.Address
-}
-
-type pendingBatch struct {
-	txes []l2message.SignedTransaction
 }
 
 type Batcher struct {
@@ -111,7 +107,6 @@ func prepareTransactions(txes []DecodedBatchTx) []DecodedBatchTx {
 		})
 	}
 
-
 	batchTxes := make([]DecodedBatchTx, 0, len(txes))
 	for _, tx := range txes {
 		nextTx := transactionsBySender[tx.sender][0]
@@ -137,11 +132,11 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 
 	batch := prepareTransactions(txes)
 
-	batchTxes := make([]l2message.AbstractL2Message, 0, len(batch))
+	batchTxes := make([]message.AbstractL2Message, 0, len(batch))
 	for _, tx := range batch {
 		batchTxes = append(batchTxes, tx.tx)
 	}
-	batchTx := l2message.NewTransactionBatchFromMessages(batchTxes)
+	batchTx := message.NewTransactionBatchFromMessages(batchTxes)
 	txHash, err := m.globalInbox.SendL2MessageNoWait(
 		ctx,
 		m.rollupAddress,
