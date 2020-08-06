@@ -33,7 +33,7 @@ struct AssertionContext {
     uint32_t numSteps;
     uint64_t numGas;
     bool blockingSideload;
-    nonstd::optional<value> fake_inbox_peak_value;
+    nonstd::optional<value> fake_inbox_peek_value;
     std::vector<value> outMessage;
     std::vector<value> logs;
 
@@ -42,7 +42,7 @@ struct AssertionContext {
     AssertionContext(std::vector<Tuple> inbox_messages,
                      Tuple sideload,
                      bool blockingSideload_,
-                     nonstd::optional<value> fake_inbox_peak_value_);
+                     nonstd::optional<value> fake_inbox_peek_value_);
 
     // popInbox assumes that the number of messages already consumed is less
     // than the number of messages in the inbox

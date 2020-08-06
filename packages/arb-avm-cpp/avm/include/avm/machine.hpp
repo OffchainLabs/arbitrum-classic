@@ -40,7 +40,7 @@ class Machine {
                              std::vector<Tuple> inbox_messages,
                              Tuple sideload,
                              bool blockingSideload_,
-                             nonstd::optional<value> fake_inbox_peak_value_);
+                             nonstd::optional<value> fake_inbox_peek_value_);
 
    public:
     MachineState machine_state;
@@ -71,7 +71,7 @@ class Machine {
     Assertion runCallServer(uint64_t stepCount,
                             std::vector<Tuple> inbox_messages,
                             std::chrono::seconds wallLimit,
-                            value fake_inbox_peak_value);
+                            value fake_inbox_peek_value);
 
     Status currentStatus() { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }

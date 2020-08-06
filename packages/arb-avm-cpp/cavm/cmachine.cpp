@@ -211,22 +211,22 @@ RawAssertion executeCallServerAssertion(CMachine* m,
                                         uint64_t maxSteps,
                                         void* inbox_messages,
                                         uint64_t message_count,
-                                        void* fake_inbox_peak_value,
+                                        void* fake_inbox_peek_value,
                                         uint64_t wallLimit) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
 
     auto messages =
         getInboxMessages(mach->getPool(), inbox_messages, message_count);
-    auto fake_inbox_peak_value_data =
-        reinterpret_cast<const char*>(fake_inbox_peak_value);
-    auto fake_inbox_peak =
-        deserialize_value(fake_inbox_peak_value_data, mach->getPool());
+    auto fake_inbox_peek_value_data =
+        reinterpret_cast<const char*>(fake_inbox_peek_value);
+    auto fake_inbox_peek =
+        deserialize_value(fake_inbox_peek_value_data, mach->getPool());
 
     try {
         Assertion assertion = mach->runCallServer(
             maxSteps, std::move(messages), std::chrono::seconds{wallLimit},
-            std::move(fake_inbox_peak));
+            std::move(fake_inbox_peek));
         return makeRawAssertion(assertion);
     } catch (const std::exception& e) {
         std::cerr << "Failed to make assertion " << e.what() << "\n";
