@@ -46,14 +46,14 @@ Assertion Machine::executeMachine(
     std::vector<Tuple> inbox_messages,
     Tuple sideload,
     bool blockingSideload,
-    nonstd::optional<value> fake_inbox_peak_value) {
+    nonstd::optional<value> fake_inbox_peek_value) {
     if (!validMessages(inbox_messages)) {
         throw std::runtime_error("invalid message format");
     }
 
     machine_state.context =
         AssertionContext{std::move(inbox_messages), std::move(sideload),
-                         blockingSideload, std::move(fake_inbox_peak_value)};
+                         blockingSideload, std::move(fake_inbox_peek_value)};
 
     bool has_time_limit = wallLimit.count() != 0;
     auto start_time = std::chrono::system_clock::now();
@@ -86,9 +86,9 @@ Assertion Machine::run(uint64_t stepCount,
 Assertion Machine::runCallServer(uint64_t stepCount,
                                  std::vector<Tuple> inbox_messages,
                                  std::chrono::seconds wallLimit,
-                                 value fake_inbox_peak_value) {
+                                 value fake_inbox_peek_value) {
     return executeMachine(stepCount, wallLimit, std::move(inbox_messages),
-                          Tuple(), false, std::move(fake_inbox_peak_value));
+                          Tuple(), false, std::move(fake_inbox_peek_value));
 }
 
 Assertion Machine::runSideloaded(uint64_t stepCount,

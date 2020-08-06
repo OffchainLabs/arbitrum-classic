@@ -32,14 +32,14 @@ AssertionContext::AssertionContext(
     std::vector<Tuple> inbox_messages,
     Tuple sideload,
     bool blockingSideload_,
-    nonstd::optional<value> fake_inbox_peak_value_)
+    nonstd::optional<value> fake_inbox_peek_value_)
     : inbox_messages(std::move(inbox_messages)),
       inbox_messages_consumed(0),
       sideload_value(std::move(sideload)),
       numSteps{0},
       numGas{0},
       blockingSideload(blockingSideload_),
-      fake_inbox_peak_value(std::move(fake_inbox_peak_value_)) {}
+      fake_inbox_peek_value(std::move(fake_inbox_peek_value_)) {}
 
 MachineState::MachineState()
     : pool(std::make_unique<TuplePool>()),
