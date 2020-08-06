@@ -58,7 +58,7 @@ struct AssertionContext {
 struct MachineState {
     std::shared_ptr<TuplePool> pool;
     std::shared_ptr<Code> code;
-    mutable std::shared_ptr<const CodeSegment> loaded_segment;
+    mutable nonstd::optional<CodeSegmentSnapshot> loaded_segment;
     value registerVal;
     value static_val;
     Datastack stack;
