@@ -131,17 +131,26 @@ func makeExecutionAssertion(
 	), uint64(assertion.numSteps)
 }
 
+func encodeInboxMessages(inboxMessages []inbox.InboxMessage) []byte {
+	var buf bytes.Buffer
+	for _, msg := range inboxMessages {
+		_ = value.MarshalValue(msg.AsValue(), &buf)
+	}
+	return buf.Bytes()
+}
+
+func encodeValue(val value.Value) []byte {
+	var buf bytes.Buffer
+	_ = value.MarshalValue(val, &buf)
+	return buf.Bytes()
+}
+
 func (m *Machine) ExecuteAssertion(
 	maxSteps uint64,
 	inboxMessages []inbox.InboxMessage,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
-	var buf bytes.Buffer
-	for _, msg := range inboxMessages {
-		_ = value.MarshalValue(msg.AsValue(), &buf)
-	}
-
-	msgDataC := C.CBytes(buf.Bytes())
+	msgDataC := C.CBytes(encodeInboxMessages(inboxMessages))
 	defer C.free(msgDataC)
 
 	beforeHash := m.Hash()
@@ -156,25 +165,41 @@ func (m *Machine) ExecuteAssertion(
 	return makeExecutionAssertion(assertion, beforeHash, m.Hash())
 }
 
+func (m *Machine) ExecuteCallServerAssertion(
+	maxSteps uint64,
+	inboxMessages []inbox.InboxMessage,
+	fakeInboxPeekValue value.Value,
+	maxWallTime time.Duration,
+) (*protocol.ExecutionAssertion, uint64) {
+	msgDataC := C.CBytes(encodeInboxMessages(inboxMessages))
+	defer C.free(msgDataC)
+
+	inboxPeekDataC := C.CBytes(encodeValue(fakeInboxPeekValue))
+	defer C.free(inboxPeekDataC)
+
+	beforeHash := m.Hash()
+	assertion := C.executeCallServerAssertion(
+		m.c,
+		C.uint64_t(maxSteps),
+		msgDataC,
+		C.uint64_t(len(inboxMessages)),
+		inboxPeekDataC,
+		C.uint64_t(uint64(maxWallTime.Seconds())),
+	)
+
+	return makeExecutionAssertion(assertion, beforeHash, m.Hash())
+}
+
 func (m *Machine) ExecuteSideloadedAssertion(
 	maxSteps uint64,
 	inboxMessages []inbox.InboxMessage,
 	sideloadValue value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
-	var buf bytes.Buffer
-	for _, msg := range inboxMessages {
-		_ = value.MarshalValue(msg.AsValue(), &buf)
-	}
-
-	msgDataC := C.CBytes(buf.Bytes())
+	msgDataC := C.CBytes(encodeInboxMessages(inboxMessages))
 	defer C.free(msgDataC)
 
-	var sideloadBuf bytes.Buffer
-	_ = value.MarshalValue(sideloadValue, &sideloadBuf)
-
-	sideloadData := buf.Bytes()
-	sideloadDataC := C.CBytes(sideloadData)
+	sideloadDataC := C.CBytes(encodeValue(sideloadValue))
 	defer C.free(sideloadDataC)
 
 	beforeHash := m.Hash()

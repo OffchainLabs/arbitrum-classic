@@ -75,6 +75,13 @@ RawAssertion executeAssertion(CMachine* m,
                               uint64_t message_count,
                               uint64_t wallLimit);
 
+RawAssertion executeCallServerAssertion(CMachine* m,
+                                        uint64_t maxSteps,
+                                        void* inbox_messages,
+                                        uint64_t message_count,
+                                        void* fake_inbox_peak_value,
+                                        uint64_t wallLimit);
+
 RawAssertion executeSideloadedAssertion(CMachine* m,
                                         uint64_t maxSteps,
                                         void* inbox_messages,

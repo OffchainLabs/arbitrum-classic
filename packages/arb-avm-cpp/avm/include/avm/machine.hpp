@@ -36,7 +36,11 @@ class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
 
     Assertion executeMachine(uint64_t stepCount,
-                             std::chrono::seconds wallLimit);
+                             std::chrono::seconds wallLimit,
+                             std::vector<Tuple> inbox_messages,
+                             Tuple sideload,
+                             bool blockingSideload_,
+                             nonstd::optional<value> fake_inbox_peak_value_);
 
    public:
     MachineState machine_state;
@@ -63,6 +67,11 @@ class Machine {
     Assertion run(uint64_t stepCount,
                   std::vector<Tuple> inbox_messages,
                   std::chrono::seconds wallLimit);
+
+    Assertion runCallServer(uint64_t stepCount,
+                            std::vector<Tuple> inbox_messages,
+                            std::chrono::seconds wallLimit,
+                            value fake_inbox_peak_value);
 
     Status currentStatus() { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }
