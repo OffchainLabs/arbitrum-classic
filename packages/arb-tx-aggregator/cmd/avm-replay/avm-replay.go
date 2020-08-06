@@ -57,7 +57,7 @@ func main() {
 	}
 }
 
-func runMessage(mach machine.Machine, msg inbox.InboxMessage) (*evm.Result, error) {
+func runMessage(mach machine.Machine, msg inbox.InboxMessage) (evm.Result, error) {
 	assertion, _ := mach.ExecuteAssertion(
 		100000,
 		[]inbox.InboxMessage{msg},
@@ -152,8 +152,10 @@ func testMessages(filename string, contract string) error {
 		if err != nil {
 			return err
 		}
-		log.Println("Got res", res.ResultCode, res.GasUsed, res.L1Message.Sender, res.L1Message.MessageID())
-		log.Println("Res had logs", res.EVMLogs)
+		if res, ok := res.(*evm.TxResult); ok {
+			log.Println("Got res", res.ResultCode, res.GasUsed, res.L1Message.Sender, res.L1Message.MessageID())
+			log.Println("Res had logs", res.EVMLogs)
+		}
 	}
 	return nil
 }

@@ -26,6 +26,7 @@ package cmachine
 import "C"
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -114,10 +115,13 @@ func (as *AggregatorStore) GetMessage(index uint64) (value.Value, error) {
 	return value.UnmarshalValue(bytes.NewBuffer(logBytes))
 }
 
-func parseBlockData(data []byte) (common.Hash, types.Bloom) {
+func parseBlockData(data []byte) (uint64, common.Hash, types.Bloom) {
+	logIndex := binary.BigEndian.Uint64(data)
+	data = data[8:]
 	var hash common.Hash
 	copy(hash[:], data[:])
-	return hash, types.BytesToBloom(data[32:])
+	data = data[32:]
+	return logIndex, hash, types.BytesToBloom(data[32:])
 }
 
 func (as *AggregatorStore) LatestBlock() (*common.BlockId, error) {
@@ -125,15 +129,16 @@ func (as *AggregatorStore) LatestBlock() (*common.BlockId, error) {
 	if result.found == 0 {
 		return nil, errors.New("failed to load block count")
 	}
-	hash, _ := parseBlockData(toByteSlice(result.data))
+	_, hash, _ := parseBlockData(toByteSlice(result.data))
 	return &common.BlockId{
 		Height:     common.NewTimeBlocks(new(big.Int).SetUint64(uint64(result.height))),
 		HeaderHash: hash,
 	}, nil
 }
 
-func (as *AggregatorStore) SaveBlock(id *common.BlockId, logBloom types.Bloom) error {
-	blockData := make([]byte, 0)
+func (as *AggregatorStore) SaveBlock(id *common.BlockId, logIndex uint64, logBloom types.Bloom) error {
+	blockData := make([]byte, 8)
+	binary.BigEndian.PutUint64(blockData[:], logIndex)
 	blockData = append(blockData, id.HeaderHash.Bytes()...)
 	blockData = append(blockData, logBloom.Bytes()...)
 	cBlockData := C.CBytes(blockData)
@@ -145,24 +150,30 @@ func (as *AggregatorStore) SaveBlock(id *common.BlockId, logBloom types.Bloom) e
 	return nil
 }
 
-func (as *AggregatorStore) GetBlock(height uint64) (machine.BlockInfo, error) {
+func (as *AggregatorStore) GetBlock(height uint64) (*machine.BlockInfo, error) {
 	blockData := C.aggregatorGetBlock(as.c, C.uint64_t(height))
 	if blockData.found == 0 {
-		return machine.BlockInfo{}, errors.New("failed to get block")
+		return nil, nil
 	}
-	hash, bloom := parseBlockData(toByteSlice(blockData.data))
-	return machine.BlockInfo{
-		Hash:         hash,
-		StartLog:     uint64(blockData.start_log),
-		LogCount:     uint64(blockData.log_count),
-		StartMessage: uint64(blockData.start_message),
-		MessageCount: uint64(blockData.message_count),
-		Bloom:        bloom,
+	logIndex, hash, bloom := parseBlockData(toByteSlice(blockData.data))
+	avmLog, err := as.GetLog(logIndex)
+	if err != nil {
+		return nil, err
+	}
+	return &machine.BlockInfo{
+		Hash:     hash,
+		BlockLog: avmLog,
+		Bloom:    bloom,
 	}, nil
 }
 
-func (as *AggregatorStore) RestoreBlock(height uint64) error {
-	if C.aggregatorRestoreBlock(as.c, C.uint64_t(height)) == 0 {
+func (as *AggregatorStore) Reorg(height uint64, messageCount uint64, logCount uint64) error {
+	if C.aggregatorReorg(
+		as.c,
+		C.uint64_t(height),
+		C.uint64_t(messageCount),
+		C.uint64_t(logCount),
+	) == 0 {
 		return errors.New("failed to restore block")
 	}
 	return nil

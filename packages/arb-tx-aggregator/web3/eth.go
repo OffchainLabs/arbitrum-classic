@@ -132,19 +132,32 @@ func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, r
 	if err != nil {
 		return err
 	}
+	header, err := s.srv.GetBlockHeader(r.Context(), height)
+	if err != nil {
+		return err
+	}
+	reply.Header = *header
+	results, err := s.srv.GetBlockResults(height)
+	if err != nil {
+		return err
+	}
+
 	if args.IncludeTxData {
-		log.Println("GetBlockByNumber with block data")
-		block, err := s.srv.GetBlock(r.Context(), height)
-		if err != nil {
-			return err
+		txes := make([]*TransactionResult, 0, len(results))
+		for _, res := range results {
+			txRes, err := s.makeTransactionResult(r.Context(), res)
+			if err != nil {
+				return err
+			}
+			txes = append(txes, txRes)
 		}
-		reply.Header = *block.Header()
+		reply.Transactions = txes
 	} else {
-		header, err := s.srv.GetBlockHeader(r.Context(), height)
-		if err != nil {
-			return err
+		txes := make([]hexutil.Bytes, 0, len(results))
+		for _, res := range results {
+			txes = append(txes, res.L1Message.MessageID().Bytes())
 		}
-		reply.Header = *header
+		reply.Transactions = txes
 	}
 	return nil
 }
@@ -250,28 +263,18 @@ func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionRece
 	return nil
 }
 
-func (s *Server) GetTransactionByHash(r *http.Request, args *GetTransactionReceiptArgs, reply **TransactionResult) error {
-	var requestId arbcommon.Hash
-	copy(requestId[:], *args.Data)
-	val, err := s.srv.GetRequestResult(r.Context(), requestId)
+func (s *Server) makeTransactionResult(ctx context.Context, res *evm.TxResult) (*TransactionResult, error) {
+	chain, err := s.srv.GetChainAddress(ctx)
 	if err != nil {
-		return err
-	}
-	res, err := evm.NewResultFromValue(val)
-	if err != nil {
-		return err
-	}
-	chain, err := s.srv.GetChainAddress(r.Context())
-	if err != nil {
-		return err
+		return nil, err
 	}
 	tx, err := aggregator.GetTransaction(res.L1Message, arbcommon.NewAddressFromEth(chain))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	blockInfo, err := s.srv.BlockInfo(r.Context(), res.L1Message.ChainTime.BlockNum.AsInt().Uint64())
+	blockInfo, err := s.srv.BlockInfo(ctx, res.L1Message.ChainTime.BlockNum.AsInt().Uint64())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	vVal, rVal, sVal := tx.RawSignatureValues()
 	txIndex := res.TxIndex.Uint64()
@@ -282,7 +285,7 @@ func (s *Server) GetTransactionByHash(r *http.Request, args *GetTransactionRecei
 		toStr := tx.To().Hex()
 		to = &toStr
 	}
-	*reply = &TransactionResult{
+	return &TransactionResult{
 		BlockHash:        &blockHash,
 		BlockNumber:      &blockNum,
 		From:             res.L1Message.Sender.ToEthAddress().Hex(),
@@ -297,10 +300,25 @@ func (s *Server) GetTransactionByHash(r *http.Request, args *GetTransactionRecei
 		V:                hexutil.EncodeBig(vVal),
 		R:                hexutil.EncodeBig(rVal),
 		S:                hexutil.EncodeBig(sVal),
-	}
+	}, nil
+}
 
-	data, _ := json.Marshal(reply)
-	log.Println("GetTransactionByHash", string(data))
+func (s *Server) GetTransactionByHash(r *http.Request, args *GetTransactionReceiptArgs, reply **TransactionResult) error {
+	var requestId arbcommon.Hash
+	copy(requestId[:], *args.Data)
+	val, err := s.srv.GetRequestResult(r.Context(), requestId)
+	if err != nil {
+		return err
+	}
+	res, err := evm.NewTxResultFromValue(val)
+	if err != nil {
+		return err
+	}
+	txRes, err := s.makeTransactionResult(r.Context(), res)
+	if err != nil {
+		return err
+	}
+	*reply = txRes
 	return nil
 }
 

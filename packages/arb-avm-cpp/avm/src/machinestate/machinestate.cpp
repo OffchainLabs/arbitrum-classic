@@ -229,7 +229,8 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
         return HaltBlocked();
     }
     auto& instruction = loadCurrentInstruction();
-    if (instruction.op.opcode == OpCode::INBOX) {
+    if (instruction.op.opcode == OpCode::INBOX ||
+        instruction.op.opcode == OpCode::INBOX_PEEK) {
         if (newMessages) {
             return NotBlocked();
         }

@@ -113,11 +113,8 @@ message BlockInfoArgs {
 
 message BlockInfoReply {
     string hash = 1;
-    uint64 startLog = 2;
-    uint64 logCount = 3;
-    uint64 startMessage = 4;
-	uint64 messageCount = 5;
-    string bloom = 6;
+    string rawVal = 2;
+    string bloom = 3;
 }
 
 message SendTransactionArgs {

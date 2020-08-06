@@ -139,7 +139,7 @@ func TestECRecover(t *testing.T) {
 	}
 
 	for i, logVal := range assertion.ParseLogs() {
-		res, err := evm.NewResultFromValue(logVal)
+		res, err := evm.NewTxResultFromValue(logVal)
 		if err != nil {
 			t.Fatal(err)
 		}

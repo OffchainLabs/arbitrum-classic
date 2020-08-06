@@ -58,11 +58,11 @@ func TestArbOSCases(t *testing.T) {
 			}
 
 			for i := 0; i < commonLogCount; i++ {
-				calcRes, err := evm.NewResultFromValue(calcLogs[i])
+				calcRes, err := evm.NewTxResultFromValue(calcLogs[i])
 				if err != nil {
 					t.Fatal(err)
 				}
-				res, err := evm.NewResultFromValue(avmLogs[i])
+				res, err := evm.NewTxResultFromValue(avmLogs[i])
 				if err != nil {
 					t.Fatal(err)
 				}
