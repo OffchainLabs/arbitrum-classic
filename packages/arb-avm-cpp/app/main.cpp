@@ -60,29 +60,43 @@ int main(int argc, char* argv[]) {
     }();
 
     std::vector<Tuple> inbox_messages;
-    if (argc == 5 && std::string(argv[3]) == "--inbox") {
-        std::ifstream file(argv[4], std::ios::binary);
-        if (!file.is_open()) {
-            throw std::runtime_error("Couldn't open file");
+    if (argc == 5) {
+        if (std::string(argv[3]) == "--inbox") {
+            std::ifstream file(argv[4], std::ios::binary);
+            if (!file.is_open()) {
+                throw std::runtime_error("Couldn't open file");
+            }
+            std::vector<unsigned char> raw_inbox(
+                (std::istreambuf_iterator<char>(file)),
+                std::istreambuf_iterator<char>());
+            auto data = reinterpret_cast<const char*>(raw_inbox.data());
+            auto inbox_val =
+                nonstd::get<Tuple>(deserialize_value(data, mach.getPool()));
+            while (inbox_val != Tuple{}) {
+                inbox_messages.push_back(
+                    std::move(inbox_val.get_element(1).get<Tuple>()));
+                inbox_val =
+                    nonstd::get<Tuple>(std::move(inbox_val.get_element(0)));
+            }
+            std::reverse(inbox_messages.begin(), inbox_messages.end());
+        } else if (std::string(argv[3]) == "--json-inbox") {
+            std::ifstream file(argv[4], std::ios::binary);
+            nlohmann::json j;
+            file >> j;
+
+            for (const auto& val : j["inbox"]) {
+                inbox_messages.push_back(
+                    simple_value_from_json(val, mach.getPool()).get<Tuple>());
+            }
         }
-        std::vector<unsigned char> raw_inbox(
-            (std::istreambuf_iterator<char>(file)),
-            std::istreambuf_iterator<char>());
-        auto data = reinterpret_cast<const char*>(raw_inbox.data());
-        auto inbox_val =
-            nonstd::get<Tuple>(deserialize_value(data, mach.getPool()));
-        while (inbox_val != Tuple{}) {
-            inbox_messages.push_back(
-                std::move(inbox_val.get_element(1).get<Tuple>()));
-            inbox_val = nonstd::get<Tuple>(std::move(inbox_val.get_element(0)));
-        }
-        std::reverse(inbox_messages.begin(), inbox_messages.end());
     }
 
     auto assertionBase = mach.run(100000000, {}, std::chrono::seconds(0));
 
     auto assertion =
         mach.run(100000000, std::move(inbox_messages), std::chrono::seconds(0));
+
+    std::cout << "Produced " << assertion.logs.size() << " logs\n";
 
     std::cout << "Ran " << assertion.stepCount << " ending in state "
               << static_cast<int>(mach.currentStatus()) << "\n";
