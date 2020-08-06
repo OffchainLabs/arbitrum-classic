@@ -182,10 +182,11 @@ func (m *RPCServer) BlockInfo(
 		return err
 	}
 	reply.Hash = info.Hash.String()
-	reply.StartLog = info.StartLog
-	reply.LogCount = info.LogCount
-	reply.StartMessage = info.StartMessage
-	reply.MessageCount = info.MessageCount
+	var buf bytes.Buffer
+	if err := value.MarshalValue(info.BlockLog, &buf); err != nil {
+		return err
+	}
+	reply.RawVal = hexutil.Encode(buf.Bytes())
 	reply.Bloom = hexutil.Encode(info.Bloom.Bytes())
 	return nil
 }

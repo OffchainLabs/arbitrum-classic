@@ -51,6 +51,7 @@ func NewBatcher(
 	ctx context.Context,
 	globalInbox arbbridge.GlobalInbox,
 	rollupAddress common.Address,
+	maxBatchTime time.Duration,
 ) *Batcher {
 	server := &Batcher{
 		rollupAddress: rollupAddress,
@@ -59,7 +60,7 @@ func NewBatcher(
 	}
 
 	go func() {
-		ticker := time.NewTicker(time.Second * 5)
+		ticker := time.NewTicker(maxBatchTime)
 		defer ticker.Stop()
 		for {
 			select {
