@@ -100,10 +100,10 @@ class Code {
     Code() : Code(0) {}
     Code(uint64_t next_segment_num_) : next_segment_num(next_segment_num_) {}
 
-    std::shared_ptr<const CodeSegment> loadCodeSegment(
-        uint64_t segment_num) const {
+    CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const {
         const std::lock_guard<std::mutex> lock(mutex);
-        return segments.at(segment_num);
+        auto& segment = segments.at(segment_num);
+        return {segment, segment->size()};
     }
 
     bool containsSegment(uint64_t segment_id) const {

@@ -241,10 +241,10 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
 }
 
 const CodePoint& MachineState::loadCurrentInstruction() const {
-    if (!loaded_segment || loaded_segment->segmentID() != pc.segment) {
+    if (!loaded_segment || loaded_segment->segment->segmentID() != pc.segment) {
         loaded_segment = code->loadCodeSegment(pc.segment);
     }
-    return (*loaded_segment)[pc.pc];
+    return (*loaded_segment->segment)[pc.pc];
 }
 
 BlockReason MachineState::runOne() {
