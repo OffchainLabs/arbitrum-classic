@@ -163,7 +163,6 @@ func TestConfirmAssertion(t *testing.T) {
 
 	if err := globalInbox.DepositEthMessage(
 		context.Background(),
-		rollupAddress,
 		common.NewAddressFromEth(auth.From),
 		big.NewInt(100),
 	); err != nil {

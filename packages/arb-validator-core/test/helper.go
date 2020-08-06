@@ -29,7 +29,7 @@ import (
 func SimulatedBackend() (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
 	genesisAlloc := make(map[ethcommon.Address]core.GenesisAccount)
 	pks := make([]*ecdsa.PrivateKey, 0)
-	balance, _ := new(big.Int).SetString("10000000000000000000", 10) // 10 eth in wei
+	balance, _ := new(big.Int).SetString("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
 	for i := 0; i < 15; i++ {
 		privateKey, err := crypto.GenerateKey()
 		if err != nil {

@@ -8,8 +8,8 @@ import (
 )
 
 type JSONValue struct {
-	Tuple []JSONValue `json:"Tuple,omitempty"`
-	Int   *string     `json:"Int,omitempty"`
+	Tuple *[]JSONValue `json:"Tuple,omitempty"`
+	Int   *string      `json:"Int,omitempty"`
 }
 
 type TestVector struct {
@@ -103,7 +103,7 @@ func valueToJSON(val value.Value) (JSONValue, error) {
 			}
 			vals = append(vals, jsonSubVal)
 		}
-		return JSONValue{Tuple: vals}, nil
+		return JSONValue{Tuple: &vals}, nil
 	default:
 		return JSONValue{}, errors.New("unsupported type")
 	}
@@ -118,7 +118,7 @@ func jsonToValue(val JSONValue) (value.Value, error) {
 		return value.NewIntValue(intVal), nil
 	} else if val.Tuple != nil {
 		vals := make([]value.Value, 0)
-		for _, jsonSubVal := range val.Tuple {
+		for _, jsonSubVal := range *val.Tuple {
 			subVal, err := jsonToValue(jsonSubVal)
 			if err != nil {
 				return nil, err

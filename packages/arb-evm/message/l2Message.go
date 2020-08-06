@@ -239,6 +239,17 @@ func NewRandomContractTransaction() ContractTransaction {
 	}
 }
 
+func (t ContractTransaction) String() string {
+	return fmt.Sprintf(
+		"ContractTransaction(%v, %v, %v, %v, %v)",
+		t.MaxGas,
+		t.GasPriceBid,
+		t.DestAddress,
+		t.Payment,
+		hexutil.Encode(t.Data),
+	)
+}
+
 func (t ContractTransaction) Destination() common.Address {
 	return t.DestAddress
 }

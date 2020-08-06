@@ -19,6 +19,7 @@ package rpc
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/machineobserver"
@@ -27,8 +28,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"math/big"
 	"time"
 )
+
+const defaultMaxReorgDepth = 100
 
 func LaunchAggregator(
 	ctx context.Context,
@@ -41,9 +45,21 @@ func LaunchAggregator(
 	web3Port string,
 	flags utils2.RPCFlags,
 	maxBatchTime time.Duration,
+	logger aggregator.ServerLogger,
 ) error {
 	arbClient := ethbridge.NewEthClient(client)
-	db, err := machineobserver.RunObserver(ctx, rollupAddress, arbClient, executable, dbPath)
+
+	cp, err := checkpointing.NewIndexedCheckpointer(
+		rollupAddress,
+		dbPath,
+		big.NewInt(defaultMaxReorgDepth),
+		false,
+	)
+	if err != nil {
+		return err
+	}
+
+	db, err := machineobserver.RunObserver(ctx, rollupAddress, arbClient, executable, cp)
 	if err != nil {
 		return err
 	}
@@ -64,7 +80,7 @@ func LaunchAggregator(
 
 	batch := batcher.NewBatcher(ctx, client, globalInbox, rollupAddress, maxBatchTime)
 
-	srv := aggregator.NewServer(client, batch, rollupAddress, db)
+	srv := aggregator.NewServer(client, batch, rollupAddress, db, logger)
 	errChan := make(chan error, 1)
 
 	aggServer, err := aggregator.GenerateRPCServer(srv)
