@@ -70,28 +70,20 @@ TEST_CASE("Aggregator tests") {
             REQUIRE(latest.second == block_data);
         }
 
-        CHECK_THROWS(store->saveBlock(52, block_data));
-        {
-            // Latest is unmodified
-            auto latest = store->latestBlock();
-            REQUIRE(latest.first == 50);
-            REQUIRE(latest.second == block_data);
-        }
-
         store->saveLog(data);
         store->saveLog(data);
         store->saveMessage(data);
         std::vector<char> block_data2{1, 2, 3, 5};
-        store->saveBlock(51, block_data2);
+        store->saveBlock(52, block_data2);
         {
-            auto block = store->getBlock(51);
+            auto block = store->getBlock(52);
             REQUIRE(block == block_data2);
         }
 
         {
             // Latest is now updated
             auto latest = store->latestBlock();
-            REQUIRE(latest.first == 51);
+            REQUIRE(latest.first == 52);
         }
     }
 }
