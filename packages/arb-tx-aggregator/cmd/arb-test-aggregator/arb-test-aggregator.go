@@ -19,14 +19,18 @@ package main
 import (
 	"bufio"
 	"context"
+	"crypto/ecdsa"
+	"errors"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -41,7 +45,76 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
+type fundRequest struct {
+	account common.Address
+	amount  *big.Int
+}
+
+func fundAccounts(
+	ctx context.Context,
+	client ethutils.EthClient,
+	inboxAddress common.Address,
+	rollupAddress common.Address,
+	fundingPKs []*ecdsa.PrivateKey,
+	requests []fundRequest,
+) error {
+	auths := make([]*bind.TransactOpts, 0, len(fundingPKs))
+	for _, pk := range fundingPKs {
+		auths = append(auths, bind.NewKeyedTransactor(pk))
+	}
+	for len(requests) > 0 {
+		if len(auths) == 0 {
+			return errors.New("not enough value to fund account")
+		}
+		req := requests[0]
+		auth := auths[0]
+		currentBalance, err := client.BalanceAt(ctx, auth.From, nil)
+		if err != nil {
+			return nil
+		}
+
+		globalInbox, err := ethbridge.NewEthAuthClient(client, auth).NewGlobalInbox(inboxAddress, rollupAddress)
+		if err != nil {
+			return err
+		}
+
+		amountToDeposit := req.amount
+		if amountToDeposit.Cmp(currentBalance) > 0 {
+			amountToDeposit = req.amount
+			req.amount = req.amount.Sub(req.amount, currentBalance)
+			auths = auths[1:]
+		} else {
+			requests = requests[1:]
+		}
+
+		if err := globalInbox.DepositEthMessage(
+			context.Background(),
+			req.account,
+			amountToDeposit,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func main() {
+	requests := make([]fundRequest, 0)
+	for _, arg := range os.Args[1:] {
+		split := strings.Split(arg, ":")
+		if len(split) != 2 {
+			log.Fatal("Expected funding accounts format [account:amount]...")
+		}
+		hexAmount, ok := new(big.Int).SetString(split[1], 16)
+		if !ok {
+			log.Fatal("amount must be in hex")
+		}
+		requests = append(requests, fundRequest{
+			account: common.HexToAddress(split[0]),
+			amount:  hexAmount,
+		})
+	}
+
 	dbPath := "test-aggregator-db"
 	if err := os.RemoveAll(dbPath); err != nil {
 		log.Fatal(err)
@@ -54,8 +127,6 @@ func main() {
 
 	client, pks := test.SimulatedBackend()
 	auth := bind.NewKeyedTransactor(pks[0])
-	auth2 := bind.NewKeyedTransactor(pks[1])
-	auth3 := bind.NewKeyedTransactor(pks[2])
 	go func() {
 		t := time.NewTicker(time.Millisecond * 500)
 		for range t.C {
@@ -97,40 +168,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println("Created rollup chain at", rollupAddress.Hex(), "with machine hash", mach.Hash())
-
 	inboxAddress, err := factory.GlobalInboxAddress()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	amount, ok := new(big.Int).SetString("8fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
-	if !ok {
-		log.Fatal("invalid amount")
-	}
-	globalInbox1, err := ethbridge.NewEthAuthClient(client, auth2).NewGlobalInbox(inboxAddress, rollupAddress)
-	if err != nil {
+	log.Println("Created rollup chain at", rollupAddress.Hex(), "with machine hash", mach.Hash())
+
+	if err := fundAccounts(context.Background(), client, inboxAddress, rollupAddress, pks[1:], requests); err != nil {
 		log.Fatal(err)
-	}
-	if err := globalInbox1.DepositEthMessage(
-		context.Background(),
-		common.HexToAddress("0x2061A3ac678bfB743e2fBaEd5998961F13F3e190"),
-		amount,
-	); err != nil {
-		log.Fatal("Failed first deposit ", err)
 	}
 
-	globalInbox2, err := ethbridge.NewEthAuthClient(client, auth3).NewGlobalInbox(inboxAddress, rollupAddress)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := globalInbox2.DepositEthMessage(
-		context.Background(),
-		common.HexToAddress("0x17ec8597ff92c3f44523bdc65bf0f1be632917ff"),
-		amount,
-	); err != nil {
-		log.Fatal("Failed second deposit ", err)
-	}
+	log.Println("Funded requested accounts")
 
 	serverLogger := &logger{}
 
@@ -156,7 +205,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	events, err := globalInbox1.GetDeliveredEvents(context.Background(), nil, nil)
+	globalInbox, err := ethbridge.NewEthClient(client).NewGlobalInboxWatcher(inboxAddress, rollupAddress)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	events, err := globalInbox.GetDeliveredEvents(context.Background(), nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
