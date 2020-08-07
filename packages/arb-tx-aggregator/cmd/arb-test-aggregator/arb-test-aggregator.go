@@ -102,7 +102,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	amount, ok := new(big.Int).SetString("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
+	amount, ok := new(big.Int).SetString("8fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
 	if !ok {
 		log.Fatal("invalid amount")
 	}
