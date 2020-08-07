@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
-	"math/big"
 )
 
 type BlockNumberArgs struct{}
@@ -73,20 +72,18 @@ func (n *GetTransactionReceiptArgs) UnmarshalJSON(buf []byte) error {
 
 // Receipt represents the results of a transaction.
 type GetTransactionReceiptResult struct {
-	Status            uint64       `json:"status"`
-	CumulativeGasUsed uint64       `json:"cumulativeGasUsed"`
-	Bloom             string       `json:"logsBloom"`
-	Logs              []*types.Log `json:"logs"`
-	// They are stored in the chain database.
-	TxHash          common.Hash `json:"transactionHash"`
-	ContractAddress string      `json:"contractAddress"`
-	GasUsed         uint64      `json:"gasUsed"`
-
-	// Inclusion information: These fields provide information about the inclusion of the
-	// transaction corresponding to this receipt.
-	BlockHash        common.Hash `json:"blockHash"`
-	BlockNumber      *big.Int    `json:"blockNumber"`
-	TransactionIndex uint        `json:"transactionIndex"`
+	TransactionHash   hexutil.Bytes  `json:"transactionHash"`
+	TransactionIndex  hexutil.Uint64 `json:"transactionIndex"`
+	BlockHash         hexutil.Bytes  `json:"blockHash"`
+	BlockNumber       *hexutil.Big   `json:"blockNumber"`
+	From              hexutil.Bytes  `json:"from"`
+	To                *hexutil.Bytes `json:"to"`
+	CumulativeGasUsed hexutil.Uint64 `json:"cumulativeGasUsed"`
+	GasUsed           hexutil.Uint64 `json:"gasUsed"`
+	ContractAddress   *hexutil.Bytes `json:"contractAddress"`
+	Logs              []*types.Log   `json:"logs"`
+	LogsBloom         hexutil.Bytes  `json:"logsBloom"`
+	Status            hexutil.Uint64 `json:"status"`
 }
 
 type TransactionResult struct {
