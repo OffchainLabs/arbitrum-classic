@@ -161,7 +161,7 @@ func (s *Server) blockNum(ctx context.Context, block *rpc.BlockNumber) (*uint64,
 	}
 }
 
-func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, reply *GetBlockResult) error {
+func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, reply **GetBlockResult) error {
 	height, err := s.blockNumRestrictLatest(r.Context(), args.BlockNum)
 	if err != nil {
 		return err
@@ -170,12 +170,13 @@ func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, r
 	if err != nil {
 		return err
 	}
-	reply.Header = *header
+
 	results, err := s.srv.GetBlockResults(height)
 	if err != nil {
 		return err
 	}
 
+	var transactions interface{}
 	if args.IncludeTxData {
 		txes := make([]*TransactionResult, 0, len(results))
 		for _, res := range results {
@@ -185,13 +186,39 @@ func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, r
 			}
 			txes = append(txes, txRes)
 		}
-		reply.Transactions = txes
+		transactions = txes
 	} else {
 		txes := make([]hexutil.Bytes, 0, len(results))
 		for _, res := range results {
 			txes = append(txes, res.L1Message.MessageID().Bytes())
 		}
-		reply.Transactions = txes
+		transactions = txes
+	}
+
+	size := uint64(0)
+
+	uncles := make([]hexutil.Bytes, 0)
+	*reply = &GetBlockResult{
+		Number:           (*hexutil.Big)(header.Number),
+		Hash:             header.Hash().Bytes(),
+		ParentHash:       header.ParentHash.Bytes(),
+		MixDigest:        header.MixDigest.Bytes(),
+		Nonce:            &header.Nonce,
+		Sha3Uncles:       header.UncleHash.Bytes(),
+		LogsBloom:        header.Bloom.Bytes(),
+		TransactionsRoot: header.TxHash.Bytes(),
+		StateRoot:        header.Root.Bytes(),
+		ReceiptsRoot:     header.ReceiptHash.Bytes(),
+		Miner:            header.Coinbase.Bytes(),
+		Difficulty:       (*hexutil.Big)(header.Difficulty),
+		TotalDifficulty:  (*hexutil.Big)(header.Difficulty),
+		ExtraData:        (*hexutil.Bytes)(&header.Extra),
+		Size:             (*hexutil.Uint64)(&size),
+		GasLimit:         (*hexutil.Uint64)(&header.GasLimit),
+		GasUsed:          (*hexutil.Uint64)(&header.GasUsed),
+		Timestamp:        (*hexutil.Uint64)(&header.Time),
+		Transactions:     transactions,
+		Uncles:           &uncles,
 	}
 	return nil
 }
@@ -320,6 +347,27 @@ func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionRece
 		destBytes := destAddr[:]
 		dest = (*hexutil.Bytes)(&destBytes)
 	}
+
+	logs := make([]LogResult, 0, len(receipt.Logs))
+	for _, l := range receipt.Logs {
+		logIndex := hexutil.EncodeUint64(uint64(l.Index))
+		txIndex := hexutil.EncodeUint64(uint64(l.TxIndex))
+		txHash := l.TxHash
+		blockHash := l.BlockHash
+		blockNum := hexutil.EncodeUint64(l.BlockNumber)
+		logs = append(logs, LogResult{
+			Removed:          false,
+			LogIndex:         &logIndex,
+			TransactionIndex: &txIndex,
+			TransactionHash:  &txHash,
+			BlockHash:        &blockHash,
+			BlockNumber:      &blockNum,
+			Address:          l.Address.Hex(),
+			Data:             hexutil.Encode(l.Data),
+			Topics:           l.Topics,
+		})
+	}
+
 	*reply = &GetTransactionReceiptResult{
 		TransactionHash:   receipt.TxHash.Bytes(),
 		TransactionIndex:  hexutil.Uint64(receipt.TransactionIndex),
@@ -327,12 +375,12 @@ func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionRece
 		BlockNumber:       (*hexutil.Big)(receipt.BlockNumber),
 		From:              result.L1Message.Sender[:],
 		To:                dest,
-		CumulativeGasUsed: hexutil.Uint64(receipt.CumulativeGasUsed),
 		GasUsed:           hexutil.Uint64(receipt.GasUsed),
+		CumulativeGasUsed: hexutil.Uint64(receipt.CumulativeGasUsed),
 		ContractAddress:   contractAddress,
-		Logs:              receipt.Logs,
-		LogsBloom:         receipt.Bloom.Bytes(),
+		Logs:              logs,
 		Status:            hexutil.Uint64(receipt.Status),
+		LogsBloom:         receipt.Bloom.Bytes(),
 	}
 	return nil
 }
