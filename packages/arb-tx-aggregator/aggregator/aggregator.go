@@ -165,6 +165,12 @@ func (m *Server) GetBlockHeader(ctx context.Context, height uint64) (*types.Head
 		return nil, err
 	}
 
+	if ethHeader == nil {
+		err := errors.New("eth header should be non-nil if there was no error")
+		log.Println(err)
+		return nil, err
+	}
+
 	ethHeader.Bloom = bloom
 	ethHeader.GasLimit = gasLimit
 	ethHeader.GasUsed = gasUsed
