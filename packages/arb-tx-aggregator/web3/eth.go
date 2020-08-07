@@ -2,12 +2,12 @@ package web3
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
@@ -263,28 +263,69 @@ func (s *Server) SendRawTransaction(r *http.Request, args *SendTransactionArgs, 
 func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionReceiptArgs, reply **GetTransactionReceiptResult) error {
 	var requestId common.Hash
 	copy(requestId[:], *args.Data)
-	receipt, err := s.conn.TransactionReceipt(r.Context(), requestId)
-	if err == ethereum.NotFound {
+
+	val, err := s.srv.GetRequestResult(r.Context(), arbcommon.NewHashFromEth(requestId))
+	if val == nil || err != nil {
 		*reply = nil
 		return nil
 	}
+	result, err := evm.NewTxResultFromValue(val)
 	if err != nil {
 		return err
 	}
-	*reply = &GetTransactionReceiptResult{
-		Status:            receipt.Status,
-		CumulativeGasUsed: receipt.CumulativeGasUsed,
-		Bloom:             hexutil.Encode(receipt.Bloom.Bytes()),
-		Logs:              receipt.Logs,
-		TxHash:            receipt.TxHash,
-		ContractAddress:   receipt.ContractAddress.Hex(),
-		GasUsed:           receipt.GasUsed,
-		BlockHash:         receipt.BlockHash,
-		BlockNumber:       receipt.BlockNumber,
-		TransactionIndex:  receipt.TransactionIndex,
+
+	if result.L1Message.MessageID().ToEthHash() != requestId {
+		return errors.New("tx hash doesn't match")
 	}
-	data, _ := json.Marshal(reply)
-	log.Println("GetTransactionReceipt", string(data))
+
+	if result.L1Message.Kind != message.L2Type {
+		return errors.New("queried for non l2 tx")
+	}
+
+	msg, err := message.L2Message{Data: result.L1Message.Data}.AbstractMessage()
+	if err != nil {
+		return err
+	}
+	txMsg, ok := msg.(message.AbstractTransaction)
+	if !ok {
+		return errors.New("expected some kind of transaction")
+	}
+
+	header, err := s.srv.GetBlockHeader(r.Context(), result.L1Message.ChainTime.BlockNum.AsInt().Uint64())
+	if err != nil {
+		return err
+	}
+	receipt, err := result.ToEthReceipt(arbcommon.NewHashFromEth(header.Hash()))
+	if err != nil {
+		return err
+	}
+
+	var dest *hexutil.Bytes
+	var contractAddress *hexutil.Bytes
+	emptyAddress := common.Address{}
+	if receipt.ContractAddress != emptyAddress {
+		addrBytes := receipt.ContractAddress.Bytes()
+		contractAddress = (*hexutil.Bytes)(&addrBytes)
+	} else {
+		destAddr := txMsg.Destination()
+		destBytes := destAddr[:]
+		dest = (*hexutil.Bytes)(&destBytes)
+	}
+	log.Print("found")
+	*reply = &GetTransactionReceiptResult{
+		TransactionHash:   receipt.TxHash.Bytes(),
+		TransactionIndex:  hexutil.Uint64(receipt.TransactionIndex),
+		BlockHash:         receipt.BlockHash.Bytes(),
+		BlockNumber:       (*hexutil.Big)(receipt.BlockNumber),
+		From:              result.L1Message.Sender[:],
+		To:                dest,
+		CumulativeGasUsed: hexutil.Uint64(receipt.CumulativeGasUsed),
+		GasUsed:           hexutil.Uint64(receipt.GasUsed),
+		ContractAddress:   contractAddress,
+		Logs:              receipt.Logs,
+		LogsBloom:         receipt.Bloom.Bytes(),
+		Status:            hexutil.Uint64(receipt.Status),
+	}
 	return nil
 }
 
@@ -333,7 +374,9 @@ func (s *Server) GetTransactionByHash(r *http.Request, args *GetTransactionRecei
 	copy(requestId[:], *args.Data)
 	val, err := s.srv.GetRequestResult(r.Context(), requestId)
 	if err != nil {
-		return err
+		// Transaction not found
+		*reply = nil
+		return nil
 	}
 	res, err := evm.NewTxResultFromValue(val)
 	if err != nil {
