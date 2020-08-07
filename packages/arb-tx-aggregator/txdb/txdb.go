@@ -16,11 +16,9 @@
 
 package txdb
 
-import "C"
 import (
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 	"math/big"
 	"sync"
@@ -32,10 +30,15 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
+
+type TxDBLogger interface {
+	LogInboxMessage(msg inbox.InboxMessage)
+}
 
 type TxDB struct {
 	mach          machine.Machine
@@ -43,6 +46,7 @@ type TxDB struct {
 	checkpointer  checkpointing.RollupCheckpointer
 	timeGetter    arbbridge.ChainTimeGetter
 	initialHeight *common.BlockId
+	logger        TxDBLogger
 
 	callMut   sync.Mutex
 	callMach  machine.Machine
@@ -55,6 +59,7 @@ func New(
 	checkpointer checkpointing.RollupCheckpointer,
 	as *cmachine.AggregatorStore,
 	blockCreated *common.BlockId,
+	logger TxDBLogger,
 ) (*TxDB, error) {
 	prevBlockId, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocksInt(blockCreated.Height.AsInt().Int64()-1))
 	if err != nil {
@@ -65,6 +70,7 @@ func New(
 		checkpointer:  checkpointer,
 		timeGetter:    clnt,
 		initialHeight: prevBlockId,
+		logger:        logger,
 	}
 	if checkpointer.HasCheckpointedState() {
 		if err := txdb.RestoreFromCheckpoint(ctx); err == nil {
@@ -141,6 +147,9 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 	messages := make([]inbox.InboxMessage, 0, len(msgs))
 	for _, msg := range msgs {
 		messages = append(messages, msg.Message)
+		if txdb.logger != nil {
+			txdb.logger.LogInboxMessage(msg.Message)
+		}
 	}
 
 	assertion, _ := txdb.mach.ExecuteCallServerAssertion(1000000000000, messages, value.NewIntValue(new(big.Int).SetUint64(lastBlock+1)), 0)

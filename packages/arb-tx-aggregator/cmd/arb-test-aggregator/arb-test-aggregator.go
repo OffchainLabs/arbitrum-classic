@@ -25,6 +25,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"io/ioutil"
 	"log"
@@ -213,19 +214,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	globalInbox, err := ethbridge.NewEthClient(client).NewGlobalInboxWatcher(inboxAddress, rollupAddress)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	events, err := globalInbox.GetDeliveredEvents(context.Background(), nil, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Println("Processed", len(events), "messages")
-
-	msgs := make([]inbox.InboxMessage, 0, len(events))
+	msgs := serverLogger.inboxMessages
 
 	//calls := serverLogger.calls
 	//prevTimestamp := big.NewInt(0)
@@ -243,17 +232,6 @@ func main() {
 	//	msgs = append(msgs, callMsg)
 	//	calls = calls[1:]
 	//}
-
-	for _, ev := range events {
-		//for len(calls) > 0 && calls[0].blockId.Height.Cmp(ev.BlockId.Height) < 0 {
-		//	addCall()
-		//}
-		//ev.Message.InboxSeqNum = big.NewInt(int64(len(msgs)))
-		msgs = append(msgs, ev.Message)
-
-		log.Println("Incoming message", ev.Message)
-		//prevTimestamp = ev.Message.ChainTime.Timestamp
-	}
 
 	//for len(calls) > 0 {
 	//	addCall()
@@ -277,13 +255,13 @@ func main() {
 
 	//log.Println("Appended call as inbox message", callMsg)
 
-	assertion, _ := mach.ExecuteAssertion(10000000000000, msgs, 0)
-	testVec, err := inbox.TestVectorJSON(msgs, assertion.ParseLogs(), assertion.ParseOutMessages())
-	if err != nil {
+	if err := saveTestVec(msgs, nil, nil); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := ioutil.WriteFile("testVec.json", testVec, 0644); err != nil {
+	assertion, _ := mach.ExecuteAssertion(10000000000000, msgs, 0)
+
+	if err := saveTestVec(msgs, assertion.ParseLogs(), assertion.ParseOutMessages()); err != nil {
 		log.Fatal(err)
 	}
 
@@ -306,6 +284,18 @@ func main() {
 	}
 }
 
+func saveTestVec(msgs []inbox.InboxMessage, logs []value.Value, sends []value.Value) error {
+	testVec, err := inbox.TestVectorJSON(msgs, logs, sends)
+	if err != nil {
+		return err
+	}
+
+	if err := ioutil.WriteFile("testVec.json", testVec, 0644); err != nil {
+		return err
+	}
+	return nil
+}
+
 type loggedCall struct {
 	msg     message.ContractTransaction
 	sender  ethcommon.Address
@@ -313,7 +303,8 @@ type loggedCall struct {
 }
 
 type logger struct {
-	calls []loggedCall
+	calls         []loggedCall
+	inboxMessages []inbox.InboxMessage
 }
 
 func (l *logger) LogCall(msg message.ContractTransaction, sender ethcommon.Address, blockId *common.BlockId) {
@@ -322,4 +313,8 @@ func (l *logger) LogCall(msg message.ContractTransaction, sender ethcommon.Addre
 		sender:  sender,
 		blockId: blockId,
 	})
+}
+
+func (l *logger) LogInboxMessage(msg inbox.InboxMessage) {
+	l.inboxMessages = append(l.inboxMessages, msg)
 }

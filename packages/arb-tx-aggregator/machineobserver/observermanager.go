@@ -57,40 +57,25 @@ func RunObserver(
 	ctx context.Context,
 	rollupAddr common.Address,
 	clnt arbbridge.ArbClient,
-	executablePath string,
-	cp *checkpointing.IndexedCheckpointer,
-) (*txdb.TxDB, error) {
-	if !cp.Initialized() {
-		if err := cp.Initialize(executablePath); err != nil {
-			return nil, err
-		}
-	}
+	cp checkpointing.RollupCheckpointer,
+	db *txdb.TxDB,
+) error {
 	initialMachine, err := cp.GetInitialMachine()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if err := rollupWatcher.VerifyArbChain(ctx, initialMachine.Hash()); err != nil {
-		return nil, err
+		return err
 	}
 
 	inboxAddr, err := rollupWatcher.InboxAddress(ctx)
 	if err != nil {
-		return nil, err
-	}
-
-	_, blockCreated, _, err := rollupWatcher.GetCreationInfo(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	db, err := txdb.New(ctx, clnt, cp, cp.GetAggregatorStore(), blockCreated)
-	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	go func() {
@@ -186,5 +171,5 @@ func RunObserver(
 			}
 		}
 	}()
-	return db, nil
+	return nil
 }

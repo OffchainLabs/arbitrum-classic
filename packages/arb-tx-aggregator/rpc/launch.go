@@ -23,6 +23,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/machineobserver"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -33,6 +34,11 @@ import (
 )
 
 const defaultMaxReorgDepth = 100
+
+type Logger interface {
+	aggregator.ServerLogger
+	txdb.TxDBLogger
+}
 
 func LaunchAggregator(
 	ctx context.Context,
@@ -45,7 +51,7 @@ func LaunchAggregator(
 	web3Port string,
 	flags utils2.RPCFlags,
 	maxBatchTime time.Duration,
-	logger aggregator.ServerLogger,
+	logger Logger,
 ) error {
 	arbClient := ethbridge.NewEthClient(client)
 
@@ -59,9 +65,10 @@ func LaunchAggregator(
 		return err
 	}
 
-	db, err := machineobserver.RunObserver(ctx, rollupAddress, arbClient, executable, cp)
-	if err != nil {
-		return err
+	if !cp.Initialized() {
+		if err := cp.Initialize(executable); err != nil {
+			return err
+		}
 	}
 
 	authClient := ethbridge.NewEthAuthClient(client, auth)
@@ -75,6 +82,20 @@ func LaunchAggregator(
 	}
 	globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
 	if err != nil {
+		return err
+	}
+
+	_, blockCreated, _, err := rollupContract.GetCreationInfo(ctx)
+	if err != nil {
+		return err
+	}
+
+	db, err := txdb.New(ctx, arbClient, cp, cp.GetAggregatorStore(), blockCreated, logger)
+	if err != nil {
+		return err
+	}
+
+	if err := machineobserver.RunObserver(ctx, rollupAddress, arbClient, cp, db); err != nil {
 		return err
 	}
 
