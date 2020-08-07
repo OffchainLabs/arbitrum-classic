@@ -52,6 +52,14 @@ const uint256_t& assumeInt(const value& val) {
     return *aNum;
 }
 
+const CodePointStub& assumeCodePoint(const value& val) {
+    auto cp = nonstd::get_if<CodePointStub>(&val);
+    if (!cp) {
+        throw bad_pop_type{};
+    }
+    return *cp;
+}
+
 uint64_t assumeInt64(uint256_t& val) {
     if (val > std::numeric_limits<uint64_t>::max()) {
         throw int_out_of_bounds{};
@@ -469,25 +477,17 @@ void rset(MachineState& m) {
 
 void jump(MachineState& m) {
     m.stack.prepForMod(1);
-    auto target = nonstd::get_if<CodePointStub>(&m.stack[0]);
-    if (target) {
-        m.pc = target->pc;
-    } else {
-        m.state = Status::Error;
-    }
+    auto& target = assumeCodePoint(m.stack[0]);
+    m.pc = target.pc;
     m.stack.popClear();
 }
 
 void cjump(MachineState& m) {
     m.stack.prepForMod(2);
-    auto target = nonstd::get_if<CodePointStub>(&m.stack[0]);
-    auto& bNum = assumeInt(m.stack[1]);
-    if (bNum != 0) {
-        if (target) {
-            m.pc = target->pc;
-        } else {
-            m.state = Status::Error;
-        }
+    auto& target = assumeCodePoint(m.stack[0]);
+    auto& cond = assumeInt(m.stack[1]);
+    if (cond != 0) {
+        m.pc = target.pc;
     } else {
         ++m.pc;
     }
