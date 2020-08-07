@@ -170,8 +170,8 @@ contract GlobalInbox is
             ERC20_TRANSFER,
             msg.sender,
             abi.encodePacked(
-                bytes32(bytes20(erc20)),
-                bytes32(bytes20(to)),
+                uint256(uint160(bytes20(erc20))),
+                uint256(uint160(bytes20(to))),
                 value
             )
         );
@@ -196,7 +196,11 @@ contract GlobalInbox is
             chain,
             ERC721_TRANSFER,
             msg.sender,
-            abi.encodePacked(bytes32(bytes20(erc721)), bytes32(bytes20(to)), id)
+            abi.encodePacked(
+                uint256(uint160(bytes20(erc721))),
+                uint256(uint160(bytes20(to))),
+                id
+            )
         );
     }
 
