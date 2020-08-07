@@ -180,6 +180,7 @@ func main() {
 	}
 
 	log.Println("Created rollup chain at", rollupAddress.Hex(), "with machine hash", mach.Hash())
+	log.Println("Chain has id", message.ChainAddressToID(rollupAddress))
 
 	if err := fundAccounts(context.Background(), client, inboxAddress, rollupAddress, pks[1:], requests); err != nil {
 		log.Fatal(err)
