@@ -60,18 +60,22 @@ func fundAccounts(
 ) error {
 	auths := make([]*bind.TransactOpts, 0, len(fundingPKs))
 	for _, pk := range fundingPKs {
-		auths = append(auths, bind.NewKeyedTransactor(pk))
+		auth := bind.NewKeyedTransactor(pk)
+		auth.GasPrice = big.NewInt(0)
+		auths = append(auths, auth)
 	}
-	for len(requests) > 0 {
+	remainingRequests := requests
+	for len(remainingRequests) > 0 {
 		if len(auths) == 0 {
 			return errors.New("not enough value to fund account")
 		}
-		req := requests[0]
+		req := remainingRequests[0]
 		auth := auths[0]
 		currentBalance, err := client.BalanceAt(ctx, auth.From, nil)
 		if err != nil {
 			return nil
 		}
+		currentBalance = currentBalance.Sub(currentBalance, big.NewInt(100000))
 
 		globalInbox, err := ethbridge.NewEthAuthClient(client, auth).NewGlobalInbox(inboxAddress, rollupAddress)
 		if err != nil {
@@ -80,12 +84,14 @@ func fundAccounts(
 
 		amountToDeposit := req.amount
 		if amountToDeposit.Cmp(currentBalance) > 0 {
-			amountToDeposit = req.amount
-			req.amount = req.amount.Sub(req.amount, currentBalance)
+			amountToDeposit = currentBalance
+			req.amount = req.amount.Sub(req.amount, amountToDeposit)
 			auths = auths[1:]
 		} else {
-			requests = requests[1:]
+			remainingRequests = remainingRequests[1:]
 		}
+
+		log.Println("Sending", amountToDeposit, "to", req.account)
 
 		if err := globalInbox.DepositEthMessage(
 			context.Background(),
@@ -146,9 +152,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	arbClient := ethbridge.NewEthAuthClient(client, auth)
+	arbAuthClient := ethbridge.NewEthAuthClient(client, auth)
 
-	factory, err := arbClient.NewArbFactory(common.NewAddressFromEth(factoryAddr))
+	factory, err := arbAuthClient.NewArbFactory(common.NewAddressFromEth(factoryAddr))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -200,6 +206,7 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
+
 	_, err = bufio.NewReader(os.Stdin).ReadBytes('\n')
 	if err != nil {
 		log.Fatal(err)
@@ -235,10 +242,6 @@ func main() {
 	//	msgs = append(msgs, callMsg)
 	//	calls = calls[1:]
 	//}
-
-	for _, ev := range events {
-		log.Println(ev.BlockId.Height, ev.LogIndex)
-	}
 
 	for _, ev := range events {
 		//for len(calls) > 0 && calls[0].blockId.Height.Cmp(ev.BlockId.Height) < 0 {
