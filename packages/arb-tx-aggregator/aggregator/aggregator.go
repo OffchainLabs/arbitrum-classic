@@ -68,7 +68,7 @@ func NewServer(
 		txBatcher:   txBatcher,
 		db:          db,
 		maxCallTime: 0,
-		maxCallGas:  big.NewInt(100000000),
+		maxCallGas:  big.NewInt(10000000000),
 		logger:      logger,
 	}
 }
@@ -264,9 +264,6 @@ func GetTransaction(msg inbox.InboxMessage, chain common.Address) (*types.Transa
 // and return the result
 func (m *Server) Call(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	mach, blockId := m.db.CallInfo()
-	if m.logger != nil {
-		m.logger.LogCall(msg, sender, blockId)
-	}
 	return m.executeCall(mach, blockId, msg, sender)
 }
 
@@ -274,9 +271,6 @@ func (m *Server) Call(ctx context.Context, msg message.ContractTransaction, send
 // and return the result
 func (m *Server) PendingCall(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	mach, blockId := m.db.CallInfo()
-	if m.logger != nil {
-		m.logger.LogCall(msg, sender, blockId)
-	}
 	return m.executeCall(mach, blockId, msg, sender)
 }
 
@@ -285,6 +279,9 @@ func (m *Server) executeCall(callMach machine.Machine, blockId *common.BlockId, 
 	seq, _ := new(big.Int).SetString("999999999999999999999999", 10)
 	if msg.MaxGas.Cmp(big.NewInt(0)) == 0 || msg.MaxGas.Cmp(m.maxCallGas) > 0 {
 		msg.MaxGas = m.maxCallGas
+	}
+	if m.logger != nil {
+		m.logger.LogCall(msg, sender, blockId)
 	}
 	log.Println("Executing call", msg.MaxGas, msg.GasPriceBid, msg.DestAddress, msg.Payment)
 	inboxMsg := message.NewInboxMessage(
@@ -312,7 +309,7 @@ func (m *Server) executeCall(callMach machine.Machine, blockId *common.BlockId, 
 		return nil, fmt.Errorf("can't produce solution since machine is blocked %v", br)
 	}
 
-	log.Println("Executed call for", steps, "steps")
+	log.Println("Executed call for", steps, "steps", "and", assertion.NumGas, "gas")
 
 	results := assertion.ParseLogs()
 	if len(results) == 0 {
