@@ -104,13 +104,15 @@ class Tuple {
         if (pos >= tuple_size()) {
             throw bad_tuple_index{};
         }
-        std::shared_ptr<RawTuple> tmp = tuplePool->getResource(tuple_size());
-
-        std::copy(tpl->data.begin(), tpl->data.end(),
-                  std::back_inserter(tmp->data));
-
-        tmp->data[pos] = std::move(newval);
-        tpl = tmp;
+        if (tpl.use_count() > 1) {
+            std::shared_ptr<RawTuple> tmp =
+                tuplePool->getResource(tuple_size());
+            std::copy(tpl->data.begin(), tpl->data.end(),
+                      std::back_inserter(tmp->data));
+            tpl = tmp;
+        }
+        tpl->data[pos] = std::move(newval);
+        tpl->deferredHashing = true;
     }
 
     value get_element(uint64_t pos) const {
