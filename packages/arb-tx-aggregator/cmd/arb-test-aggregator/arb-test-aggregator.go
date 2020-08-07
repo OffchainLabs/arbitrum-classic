@@ -57,7 +57,7 @@ func main() {
 	auth2 := bind.NewKeyedTransactor(pks[1])
 	auth3 := bind.NewKeyedTransactor(pks[2])
 	go func() {
-		t := time.NewTicker(time.Second * 1)
+		t := time.NewTicker(time.Millisecond * 500)
 		for range t.C {
 			client.Commit()
 		}
@@ -96,6 +96,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Println("Created rollup chain at", rollupAddress.Hex(), "with machine hash", mach.Hash())
 
 	inboxAddress, err := factory.GlobalInboxAddress()
 	if err != nil {
