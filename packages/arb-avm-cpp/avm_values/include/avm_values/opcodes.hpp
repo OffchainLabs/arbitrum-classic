@@ -472,6 +472,6 @@ inline OpCodeArray<bool> initializeValidity() {
 inline const OpCodeArray<bool>& instructionValidity() {
     static OpCodeArray<bool> costs = initializeValidity();
     return costs;
-};
+}
 
 #endif /* opcodes_hpp */
