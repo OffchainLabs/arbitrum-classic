@@ -14,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
@@ -89,7 +88,7 @@ func processCallRet(retValue value.Value) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Println("Got call result", logVal.ResultCode, hexutil.Encode(logVal.ReturnData))
+	log.Println("Got call result", logVal.ResultCode)
 	if logVal.ResultCode != evm.ReturnCode && logVal.ResultCode != evm.RevertCode {
 		return nil, fmt.Errorf("call failed %v", logVal)
 	}
