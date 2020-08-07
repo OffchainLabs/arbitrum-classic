@@ -134,7 +134,7 @@ func main() {
 	client, pks := test.SimulatedBackend()
 	auth := bind.NewKeyedTransactor(pks[0])
 	go func() {
-		t := time.NewTicker(time.Millisecond * 500)
+		t := time.NewTicker(time.Millisecond * 1000)
 		for range t.C {
 			client.Commit()
 		}
