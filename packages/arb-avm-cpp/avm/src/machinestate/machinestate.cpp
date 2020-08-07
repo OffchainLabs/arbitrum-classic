@@ -266,16 +266,16 @@ BlockReason MachineState::runOne() {
             stack.push(std::move(imm));
         }
 
-        uint64_t gas_cost;
-        try {
-            gas_cost = InstructionArbGasCost.at(instruction.op.opcode);
-        } catch (const std::exception& e) {
+        if (!instructionValidity()[static_cast<size_t>(
+                instruction.op.opcode)]) {
             // The opcode is invalid, execute by transitioning to the error
             // state
             state = Status::Error;
             return NotBlocked();
         }
 
+        uint64_t gas_cost =
+            instructionGasCosts()[static_cast<size_t>(instruction.op.opcode)];
         if (arb_gas_remaining < gas_cost) {
             // If there's insufficient gas remaining, execute by transitioning
             // to the error state with remaining gas set to max
@@ -305,8 +305,7 @@ BlockReason MachineState::runOne() {
         }
 
         // adjust for the gas used
-        auto gasUsed = InstructionArbGasCost.at(instruction.op.opcode);
-        context.numGas += gasUsed;
+        context.numGas += gas_cost;
 
         if (state == Status::Error) {
             // if state is Error, clean up stack
