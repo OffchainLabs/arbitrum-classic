@@ -454,7 +454,7 @@ inline OpCodeArray<uint64_t> initializeGasCosts() {
 inline const OpCodeArray<uint64_t>& instructionGasCosts() {
     static OpCodeArray<uint64_t> costs = initializeGasCosts();
     return costs;
-};
+}
 
 inline OpCodeArray<bool> initializeValidity() {
     OpCodeArray<bool> arr;
