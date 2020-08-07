@@ -3,17 +3,6 @@ package web3
 import (
 	"context"
 	"errors"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
-	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
-	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
-	"log"
 	"math/big"
 	"net/http"
 
@@ -21,6 +10,17 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/rpc"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
+	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
 )
 
 type Server struct {
@@ -311,7 +311,6 @@ func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionRece
 		destBytes := destAddr[:]
 		dest = (*hexutil.Bytes)(&destBytes)
 	}
-	log.Print("found")
 	*reply = &GetTransactionReceiptResult{
 		TransactionHash:   receipt.TxHash.Bytes(),
 		TransactionIndex:  hexutil.Uint64(receipt.TransactionIndex),
