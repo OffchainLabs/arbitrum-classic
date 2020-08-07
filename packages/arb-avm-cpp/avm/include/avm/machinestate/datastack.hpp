@@ -26,7 +26,7 @@ class Transaction;
 struct SaveResults;
 
 class Datastack {
-    static constexpr int lazyCount = 1000;
+    static constexpr int lazyCount = 10000;
 
     void addHash() const;
     void calculateAllHashes() const;
@@ -36,8 +36,8 @@ class Datastack {
     mutable std::vector<HashPreImage> hashes;
 
     Datastack() {
-        values.reserve(1000);
-        hashes.reserve(1000);
+        values.reserve(lazyCount);
+        hashes.reserve(lazyCount);
     }
 
     Datastack(Tuple tuple_rep);
