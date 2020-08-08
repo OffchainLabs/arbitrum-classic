@@ -43,6 +43,10 @@ CheckpointStorage::CheckpointStorage(const std::string& db_path)
 
 void CheckpointStorage::initialize(const std::string& executable_path) {
     auto executable = loadExecutable(executable_path);
+    initialize(std::move(executable));
+}
+
+void CheckpointStorage::initialize(LoadedExecutable executable) {
     auto tx = makeTransaction();
     code->addSegment(std::move(executable.code));
     Machine mach{MachineState{code, std::move(executable.static_val)}};

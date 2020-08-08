@@ -67,6 +67,13 @@ class CodeSegment {
     CodeSegment(uint64_t segment_id_, std::vector<CodePoint> code_)
         : segment_id(segment_id_), code(std::move(code_)) {}
 
+    CodeSegment(uint64_t segment_id_, std::vector<Operation> ops)
+        : CodeSegment(segment_id_) {
+        for (auto it = ops.rbegin(); it != ops.rend(); ++it) {
+            addOperation(std::move(*it));
+        }
+    }
+
     uint64_t segmentID() const { return segment_id; }
 
     const CodePoint& operator[](uint64_t pc) const { return code.at(pc); }
