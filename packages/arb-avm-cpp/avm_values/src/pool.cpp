@@ -21,7 +21,21 @@
 
 void tupleDeleter(RawTuple* p) {
     auto& deleter = TuplePool().get_impl();
-    deleter.deleteTuple({p, tupleDeleter});
+    if (!deleter.shuttingDown) {
+        return deleter.deleteTuple({p, tupleDeleter});
+    }
+
+    static std::vector<std::unique_ptr<RawTuple>> deletion_queue;
+    static bool deleting_shutdown = false;
+
+    deletion_queue.push_back(std::unique_ptr<RawTuple>{p});
+    if (!deleting_shutdown) {
+        deleting_shutdown = true;
+        while (!deletion_queue.empty()) {
+            deletion_queue.pop_back();
+        }
+        deleting_shutdown = false;
+    }
 }
 
 /**
@@ -49,9 +63,8 @@ std::shared_ptr<RawTuple> TuplePool::getResource(size_t s) {
     return resource;
 }
 
-void TuplePool::deleteTuple(
-    std::unique_ptr<RawTuple, void (*)(RawTuple*)> tup) {
-    if (!shuttingDown) {
+void TuplePool::deleteTuple(UniqueTuple tup) {
+    if (shuttingDown) {
     }
     delete_list.push_front(std::move(tup));
     if (!deleting) {
