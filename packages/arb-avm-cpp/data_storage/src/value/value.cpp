@@ -82,6 +82,44 @@ std::vector<std::vector<unsigned char>> parseTuple(
     return return_vector;
 }
 
+void parseTupleForDeletion(const std::vector<unsigned char>& tuple_data,
+                           std::vector<uint256_t>& tuples_to_delete,
+                           std::map<uint64_t, uint64_t>& segment_counts) {
+    auto iter = tuple_data.begin();
+    uint8_t count = *iter - TUPLE;
+    ++iter;
+
+    for (uint8_t i = 0; i < count; i++) {
+        auto value_type = static_cast<ValueTypes>(*iter);
+        auto buf = reinterpret_cast<const char*>(&*iter);
+        switch (value_type) {
+            case NUM: {
+                iter += TUP_NUM_LENGTH;
+                break;
+            }
+            case CODE_POINT_STUB: {
+                ++buf;
+                auto cp = deserializeCodePointStub(buf);
+                ++segment_counts[cp.pc.segment];
+                iter += TUP_CODEPT_LENGTH;
+                break;
+            }
+            case HASH_PRE_IMAGE: {
+                throw std::runtime_error("HASH_ONLY item");
+            }
+            case TUPLE: {
+                ++buf;
+                tuples_to_delete.push_back(deserializeUint256t(buf));
+                iter += TUP_TUPLE_LENGTH;
+                break;
+            }
+            default: {
+                throw std::runtime_error("invalid value type in tuple");
+            }
+        }
+    }
+}
+
 DbResult<value> getTuple(const Transaction& transaction,
                          const GetResults& results,
                          std::set<uint64_t>& segment_ids) {
@@ -270,37 +308,40 @@ struct ValueSaver {
     }
 };
 
-DeleteResults deleteValue(Transaction& transaction,
-                          const rocksdb::Slice& hash_key,
+DeleteResults deleteTuple(Transaction& transaction,
+                          const uint256_t& tuple_hash,
                           std::map<uint64_t, uint64_t>& segment_counts) {
-    auto results = getRefCountedData(*transaction.transaction, hash_key);
+    std::vector<uint256_t> tuples_to_delete{tuple_hash};
+    DeleteResults ret;
+    while (!tuples_to_delete.empty()) {
+        auto tup_hash = std::move(tuples_to_delete.back());
+        tuples_to_delete.pop_back();
+        std::vector<unsigned char> hash_key;
+        marshal_uint256_t(tup_hash, hash_key);
+        auto key = vecToSlice(hash_key);
 
-    if (!results.status.ok()) {
-        return DeleteResults{0, results.status};
-    }
-
-    if (results.reference_count > 1) {
-        auto buf = reinterpret_cast<const char*>(results.stored_value.data());
-        auto value_type = static_cast<ValueTypes>(*buf);
-        ++buf;
-
-        if (value_type == TUPLE) {
-            auto value_vectors = parseTuple(results.stored_value);
-
-            for (const auto& vec : value_vectors) {
-                rocksdb::Slice tupKey{
-                    reinterpret_cast<const char*>(vec.data()) + 1,
-                    vec.size() - 1};
-                auto delete_status =
-                    deleteValue(transaction, tupKey, segment_counts);
-            }
-        } else if (value_type == CODE_POINT_STUB) {
-            auto code_point = deserializeCodePointStub(buf);
-            ++segment_counts[code_point.pc.segment];
+        auto results = getRefCountedData(*transaction.transaction, key);
+        if (!results.status.IsNotFound()) {
+            // value was already deleted, this shouldn't happen, but we can
+            // continue
+            continue;
         }
-    }
 
-    return deleteRefCountedData(*transaction.transaction, hash_key);
+        if (!results.status.ok()) {
+            // Some unexpected error occured
+            return DeleteResults{0, results.status};
+        }
+
+        if (results.reference_count == 1) {
+            // This was the last reference to this tuple so decrement the
+            // reference count of the references values
+            parseTupleForDeletion(results.stored_value, tuples_to_delete,
+                                  segment_counts);
+        }
+
+        ret = deleteRefCountedData(*transaction.transaction, key);
+    }
+    return ret;
 }
 }  // namespace
 
@@ -367,7 +408,29 @@ DeleteResults deleteValueImpl(Transaction& transaction,
     std::vector<unsigned char> hash_key;
     marshal_uint256_t(value_hash, hash_key);
     auto key = vecToSlice(hash_key);
-    return deleteValue(transaction, key, segment_counts);
+
+    auto results = getRefCountedData(*transaction.transaction, key);
+
+    if (!results.status.ok()) {
+        return DeleteResults{0, results.status};
+    }
+
+    auto ret = deleteRefCountedData(*transaction.transaction, key);
+
+    auto value_type = static_cast<ValueTypes>(*results.stored_value.data());
+
+    if (results.reference_count == 1 &&
+        (value_type >= TUPLE && value_type <= TUPLE + 8)) {
+        // The value we deleted was a tuple
+        std::vector<uint256_t> tuples_to_delete;
+        parseTupleForDeletion(results.stored_value, tuples_to_delete,
+                              segment_counts);
+        for (const auto& tup : tuples_to_delete) {
+            deleteTuple(transaction, tup, segment_counts);
+        }
+    }
+
+    return ret;
 }
 
 DeleteResults deleteValue(Transaction& transaction, uint256_t value_hash) {
