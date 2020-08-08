@@ -166,19 +166,30 @@ struct ValueSerializer {
     }
 };
 
-SaveResults saveTuple(Transaction& transaction,
-                      const Tuple& val,
-                      std::map<uint64_t, uint64_t>& segment_counts) {
-    auto hash_key = getHashKey(val);
-    auto key = vecToSlice(hash_key);
-    auto results = getRefCountedData(*transaction.transaction, key);
+struct BasicValChecker {
+    Transaction& transaction;
 
-    auto incr_ref_count = results.status.ok() && results.reference_count > 0;
-
-    if (incr_ref_count) {
-        return incrementReference(*transaction.transaction, key);
+    bool operator()(const value& val) const {
+        return nonstd::visit(*this, val);
+    }
+    bool operator()(const Tuple& val) const {
+        auto hash_key = getHashKey(val);
+        auto key = vecToSlice(hash_key);
+        auto results = getRefCountedData(*transaction.transaction, key);
+        return results.status.ok() && results.reference_count > 0;
     }
 
+    template <typename T>
+    bool operator()(const T&) const {
+        return true;
+    }
+};
+
+SaveResults saveTupleRecord(Transaction& transaction,
+                            const Tuple& val,
+                            std::map<uint64_t, uint64_t>& segment_counts) {
+    auto hash_key = getHashKey(val);
+    auto key = vecToSlice(hash_key);
     std::vector<unsigned char> value_vector;
     value_vector.push_back(TUPLE + val.tuple_size());
 
@@ -186,14 +197,48 @@ SaveResults saveTuple(Transaction& transaction,
         auto current_val = val.get_element(i);
         nonstd::visit(ValueSerializer{value_vector, segment_counts},
                       current_val);
-
-        if (nonstd::holds_alternative<Tuple>(current_val)) {
-            auto tup_val = nonstd::get<Tuple>(current_val);
-            auto tuple_save_results =
-                saveTuple(transaction, tup_val, segment_counts);
-        }
     }
     return saveRefCountedData(*transaction.transaction, key, value_vector);
+}
+
+bool isSaved(Transaction& transaction, const Tuple& val) {
+    auto hash_key = getHashKey(val);
+    auto key = vecToSlice(hash_key);
+    auto results = getRefCountedData(*transaction.transaction, key);
+    return results.status.ok() && results.reference_count > 0;
+}
+
+SaveResults saveTuple(Transaction& transaction,
+                      const Tuple& val,
+                      std::map<uint64_t, uint64_t>& segment_counts) {
+    SaveResults ret;
+    std::vector<Tuple> tups{val};
+    while (!tups.empty()) {
+        auto& tup = tups.back();
+        if (isSaved(transaction, val)) {
+            auto hash_key = getHashKey(val);
+            auto key = vecToSlice(hash_key);
+            ret = incrementReference(*transaction.transaction, key);
+            tups.pop_back();
+        } else {
+            bool found_complex = false;
+            for (uint64_t i = 0; i < tup.tuple_size(); ++i) {
+                auto& elem = tup.get_element_unsafe(i);
+                if (!nonstd::holds_alternative<Tuple>(elem)) {
+                    continue;
+                }
+                if (!isSaved(transaction, elem.get<Tuple>())) {
+                    found_complex = true;
+                    tups.push_back(tup.get_element(i).get<Tuple>());
+                }
+            }
+            if (!found_complex) {
+                ret = saveTupleRecord(transaction, tup, segment_counts);
+                tups.pop_back();
+            }
+        }
+    }
+    return ret;
 }
 
 struct ValueSaver {

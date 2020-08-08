@@ -25,13 +25,16 @@
 #include <memory>
 
 HashPreImage zeroPreimage();
+struct BasicValChecker;
 
 class Tuple {
    private:
     TuplePool* tuplePool;
     std::shared_ptr<RawTuple> tpl;
 
-    HashPreImage calculateHashPreImage() const;
+    void calculateHashPreImage() const;
+
+    friend BasicValChecker;
 
    public:
     Tuple() : tuplePool(nullptr) {}
@@ -131,8 +134,7 @@ class Tuple {
             return zeroPreimage();
         }
         if (tpl->deferredHashing) {
-            tpl->cachedPreImage = calculateHashPreImage();
-            tpl->deferredHashing = false;
+            calculateHashPreImage();
         }
         return tpl->cachedPreImage;
     }
