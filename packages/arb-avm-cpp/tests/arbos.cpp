@@ -47,15 +47,17 @@ TEST_CASE("ARBOS test vectors") {
             i >> j;
 
             std::vector<Tuple> messages;
-            for (const auto& json_message : j.at("inbox")) {
+            for (auto& json_message : j.at("inbox")) {
                 messages.push_back(
-                    simple_value_from_json(json_message, pool).get<Tuple>());
+                    simple_value_from_json(std::move(json_message), pool)
+                        .get<Tuple>());
             }
 
             auto logs_json = j.at("logs");
             std::vector<value> logs;
-            for (const auto& log_json : logs_json) {
-                logs.push_back(simple_value_from_json(log_json, pool));
+            for (auto& log_json : logs_json) {
+                logs.push_back(
+                    simple_value_from_json(std::move(log_json), pool));
             }
 
             CheckpointStorage storage(dbpath);

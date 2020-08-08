@@ -84,9 +84,10 @@ int main(int argc, char* argv[]) {
             nlohmann::json j;
             file >> j;
 
-            for (const auto& val : j["inbox"]) {
+            for (auto& val : j["inbox"]) {
                 inbox_messages.push_back(
-                    simple_value_from_json(val, mach.getPool()).get<Tuple>());
+                    simple_value_from_json(std::move(val), mach.getPool())
+                        .get<Tuple>());
             }
         }
     }
