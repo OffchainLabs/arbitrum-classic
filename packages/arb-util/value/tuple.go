@@ -140,6 +140,9 @@ func (tv TupleValue) Equal(val Value) bool {
 	if !ok {
 		return false
 	}
+	if tv.Len() != tup.Len() {
+		return false
+	}
 	return tv.Hash() == tup.Hash()
 }
 
