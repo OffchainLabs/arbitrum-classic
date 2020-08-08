@@ -45,6 +45,9 @@ struct SerializedTupStub {
 using ParsedTupVal =
     nonstd::variant<uint256_t, CodePointStub, SerializedTupStub>;
 
+using ParsedSerializedVal =
+    nonstd::variant<uint256_t, CodePointStub, std::vector<ParsedTupVal>>;
+
 std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
     std::vector<ParsedTupVal> return_vector;
 
@@ -85,6 +88,30 @@ std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
         }
     }
     return return_vector;
+}
+
+ParsedSerializedVal parseRecord(const std::vector<unsigned char>& data) {
+    auto buf = reinterpret_cast<const char*>(data.data());
+    auto value_type = static_cast<ValueTypes>(*buf);
+    ++buf;
+
+    switch (value_type) {
+        case NUM: {
+            return deserializeUint256t(buf);
+        }
+        case CODE_POINT_STUB: {
+            return deserializeCodePointStub(buf);
+        }
+        case HASH_PRE_IMAGE: {
+            throw std::runtime_error("HASH_ONLY item");
+        }
+        default: {
+            if (value_type - TUPLE > 8) {
+                throw std::runtime_error("can't get value with invalid type");
+            }
+            return parseTuple(data);
+        }
+    }
 }
 
 DbResult<value> getTuple(const Transaction& transaction,
@@ -229,46 +256,29 @@ struct ValueSaver {
     }
 };
 
-DeleteResults deleteTuple(Transaction& transaction,
-                          const uint256_t& tuple_hash,
-                          std::map<uint64_t, uint64_t>& segment_counts) {
-    std::vector<uint256_t> tuples_to_delete{tuple_hash};
-    DeleteResults ret;
-    while (!tuples_to_delete.empty()) {
-        auto tup_hash = std::move(tuples_to_delete.back());
-        tuples_to_delete.pop_back();
-        std::vector<unsigned char> hash_key;
-        marshal_uint256_t(tup_hash, hash_key);
-        auto key = vecToSlice(hash_key);
+// Returns a list of value hashes to be deleted
+std::vector<uint256_t> deleteParsedValue(const uint256_t&,
+                                         std::map<uint64_t, uint64_t>&) {
+    return {};
+}
 
-        auto results = getRefCountedData(*transaction.transaction, key);
-        if (!results.status.IsNotFound()) {
-            // value was already deleted, this shouldn't happen, but we can
-            // continue
-            continue;
+std::vector<uint256_t> deleteParsedValue(
+    const CodePointStub& cp,
+    std::map<uint64_t, uint64_t>& segment_counts) {
+    segment_counts[cp.pc.segment]++;
+    return {};
+}
+
+std::vector<uint256_t> deleteParsedValue(const std::vector<ParsedTupVal>& tup,
+                                         std::map<uint64_t, uint64_t>&) {
+    std::vector<uint256_t> vals_to_delete;
+    for (const auto& val : tup) {
+        // We only need to delete tuples since other values are recorded inline
+        if (nonstd::holds_alternative<SerializedTupStub>(val)) {
+            vals_to_delete.push_back(val.get<SerializedTupStub>().hash);
         }
-
-        if (!results.status.ok()) {
-            // Some unexpected error occured
-            return DeleteResults{0, results.status};
-        }
-
-        if (results.reference_count == 1) {
-            // This was the last reference to this tuple so decrement the
-            // reference count of the references values
-            for (const auto& nested : parseTuple(results.stored_value)) {
-                if (nonstd::holds_alternative<SerializedTupStub>(nested)) {
-                    tuples_to_delete.push_back(
-                        nested.get<SerializedTupStub>().hash);
-                } else if (nonstd::holds_alternative<CodePointStub>(nested)) {
-                    segment_counts[nested.get<CodePointStub>().pc.segment]++;
-                }
-            }
-        }
-
-        ret = deleteRefCountedData(*transaction.transaction, key);
     }
-    return ret;
+    return vals_to_delete;
 }
 }  // namespace
 
@@ -332,34 +342,31 @@ SaveResults saveValue(Transaction& transaction, const value& val) {
 DeleteResults deleteValueImpl(Transaction& transaction,
                               const uint256_t& value_hash,
                               std::map<uint64_t, uint64_t>& segment_counts) {
-    std::vector<unsigned char> hash_key;
-    marshal_uint256_t(value_hash, hash_key);
-    auto key = vecToSlice(hash_key);
-
-    auto results = getRefCountedData(*transaction.transaction, key);
-
-    if (!results.status.ok()) {
-        return DeleteResults{0, results.status};
-    }
-
-    auto ret = deleteRefCountedData(*transaction.transaction, key);
-
-    auto value_type = static_cast<ValueTypes>(*results.stored_value.data());
-
-    if (results.reference_count == 1 &&
-        (value_type >= TUPLE && value_type <= TUPLE + 8)) {
-        // The value we deleted was a tuple
-        std::vector<uint256_t> tuples_to_delete;
-        for (const auto& nested : parseTuple(results.stored_value)) {
-            if (nonstd::holds_alternative<SerializedTupStub>(nested)) {
-                deleteTuple(transaction, nested.get<SerializedTupStub>().hash,
-                            segment_counts);
-            } else if (nonstd::holds_alternative<CodePointStub>(nested)) {
-                segment_counts[nested.get<CodePointStub>().pc.segment]++;
-            }
+    bool first = true;
+    DeleteResults ret;
+    std::vector<uint256_t> items_to_delete{value_hash};
+    while (!items_to_delete.empty()) {
+        auto next_item = std::move(items_to_delete.back());
+        items_to_delete.pop_back();
+        std::vector<unsigned char> hash_key;
+        marshal_uint256_t(next_item, hash_key);
+        auto key = vecToSlice(hash_key);
+        auto results = deleteRefCountedData(*transaction.transaction, key);
+        if (results.status.ok() && results.reference_count == 0) {
+            auto new_items_to_delete = nonstd::visit(
+                [&](const auto& val) {
+                    return deleteParsedValue(val, segment_counts);
+                },
+                parseRecord(results.stored_value));
+            items_to_delete.insert(items_to_delete.end(),
+                                   new_items_to_delete.begin(),
+                                   new_items_to_delete.end());
+        }
+        if (first) {
+            ret = results;
+            first = false;
         }
     }
-
     return ret;
 }
 

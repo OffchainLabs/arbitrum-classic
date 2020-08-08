@@ -97,16 +97,19 @@ DeleteResults deleteRefCountedData(rocksdb::Transaction& transaction,
     if (results.status.ok()) {
         if (results.reference_count <= deleted_references) {
             auto delete_status = transaction.Delete(hash_key);
-            return DeleteResults{0, delete_status};
+            return DeleteResults{0, delete_status,
+                                 std::move(results.stored_value)};
         } else {
             auto updated_ref_count =
                 results.reference_count - deleted_references;
             auto update_result = saveValueWithRefCount(
                 transaction, updated_ref_count, hash_key, results.stored_value);
-            return DeleteResults{updated_ref_count, update_result.status};
+            return DeleteResults{updated_ref_count, update_result.status,
+                                 std::move(results.stored_value)};
         }
     } else {
-        return DeleteResults{0, results.status};
+        return DeleteResults{0, results.status,
+                             std::move(results.stored_value)};
     }
 }
 

@@ -95,7 +95,8 @@ DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
     auto results = getRefCountedData(*transaction.transaction, key);
 
     if (!results.status.ok()) {
-        return DeleteResults{0, results.status};
+        return DeleteResults{0, results.status,
+                             std::move(results.stored_value)};
     }
 
     auto delete_results = deleteRefCountedData(*transaction.transaction, key);
