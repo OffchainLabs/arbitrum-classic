@@ -24,14 +24,12 @@
 
 class Transaction;
 class CodeSegment;
-class TuplePool;
 class Code;
 
 uint64_t getNextSegmentID(const Transaction& transaction);
 
 std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
                                             uint64_t segment_id,
-                                            TuplePool* pool,
                                             std::set<uint64_t>& segment_ids);
 void saveCode(Transaction& transaction,
               const Code& code,

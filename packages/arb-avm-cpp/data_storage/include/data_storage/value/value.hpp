@@ -37,12 +37,9 @@ DeleteResults deleteValueImpl(Transaction& transaction,
                               std::map<uint64_t, uint64_t>& segment_counts);
 DbResult<value> getValueImpl(const Transaction& transaction,
                              uint256_t value_hash,
-                             TuplePool* pool,
                              std::set<uint64_t>& segment_ids);
 
-DbResult<value> getValue(const Transaction& transaction,
-                         uint256_t value_hash,
-                         TuplePool* pool);
+DbResult<value> getValue(const Transaction& transaction, uint256_t value_hash);
 SaveResults saveValue(Transaction& transaction, const value& val);
 DeleteResults deleteValue(Transaction& transaction, uint256_t value_hash);
 

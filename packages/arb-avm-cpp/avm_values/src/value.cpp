@@ -50,7 +50,7 @@ uint256_t deserializeUint256t(const char*& bufptr) {
     return ret;
 }
 
-value deserialize_value(const char*& bufptr, TuplePool& pool) {
+value deserialize_value(const char*& bufptr) {
     // Iteratively read all values leaving placeholder for the tuples
     std::vector<DeserializedValue> values;
     uint64_t values_to_read = 1;
@@ -83,11 +83,10 @@ value deserialize_value(const char*& bufptr, TuplePool& pool) {
             }
         }
     }
-    return assembleValueFromDeserialized(std::move(values), pool);
+    return assembleValueFromDeserialized(std::move(values));
 }
 
-value assembleValueFromDeserialized(std::vector<DeserializedValue> values,
-                                    TuplePool& pool) {
+value assembleValueFromDeserialized(std::vector<DeserializedValue> values) {
     // Next form the full value out of the interleaved values and placeholders
     size_t total_values_size = values.size();
     for (size_t i = 0; i < total_values_size; ++i) {
@@ -97,7 +96,7 @@ value assembleValueFromDeserialized(std::vector<DeserializedValue> values,
             continue;
         }
         auto holder = val.get<TuplePlaceholder>();
-        Tuple tup(&pool, holder.values);
+        Tuple tup(holder.values);
         for (uint8_t j = 0; j < holder.values; ++j) {
             tup.set_element(j, std::move(values[val_pos + 1 + j].get<value>()));
         }

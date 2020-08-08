@@ -30,7 +30,6 @@
 #include <catch2/catch.hpp>
 
 Machine generateTestMachine() {
-    auto pool = std::make_shared<TuplePool>();
     auto code = std::make_shared<Code>();
     auto stub1 = code->addSegment();
     auto stub2 = code->addSegment();
@@ -55,7 +54,7 @@ Machine generateTestMachine() {
     add_op1(Operation{OpCode::JUMP, stub3});
     add_op1(Operation{OpCode::ADD});
 
-    Machine mach{std::move(code), Tuple(), pool};
+    Machine mach{std::move(code), Tuple()};
     for (int i = 0; i < 4; i++) {
         mach.machine_state.stack.push(uint256_t{1});
     }

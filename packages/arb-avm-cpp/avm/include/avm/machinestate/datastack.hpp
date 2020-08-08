@@ -42,7 +42,7 @@ class Datastack {
 
     Datastack(Tuple tuple_rep);
 
-    Tuple getTupleRepresentation(TuplePool* pool) const;
+    Tuple getTupleRepresentation() const;
 
     void push(value&& newdata) {
         values.push_back(std::move(newdata));

@@ -40,18 +40,18 @@ uint256_t int_value_from_json(const nlohmann::json& value_json) {
 
 value value_from_json(nlohmann::json full_value_json,
                       size_t op_count,
-                      const CodeSegment& code,
-                      TuplePool& pool) {
+                      const CodeSegment& code) {
     std::vector<DeserializedValue> values;
-    std::vector<nlohmann::json> json_values{std::move(full_value_json)};
+    std::vector<std::reference_wrapper<const nlohmann::json>> json_values{
+        full_value_json};
     while (!json_values.empty()) {
         auto value_json = std::move(json_values.back());
         json_values.pop_back();
 
-        if (value_json.contains(INT_VAL_LABEL)) {
+        if (value_json.get().contains(INT_VAL_LABEL)) {
             values.push_back(value{int_value_from_json(value_json)});
-        } else if (value_json.contains(TUP_VAL_LABEL)) {
-            auto& json_tup = value_json[TUP_VAL_LABEL];
+        } else if (value_json.get().contains(TUP_VAL_LABEL)) {
+            auto& json_tup = value_json.get()[TUP_VAL_LABEL];
             if (!json_tup.is_array() || json_tup.size() > 8) {
                 throw std::runtime_error(
                     "tuple must contain array of size less than 9");
@@ -59,10 +59,10 @@ value value_from_json(nlohmann::json full_value_json,
             values.push_back(
                 TuplePlaceholder{static_cast<uint8_t>(json_tup.size())});
             for (auto it = json_tup.rbegin(); it != json_tup.rend(); ++it) {
-                json_values.push_back(std::move(*it));
+                json_values.push_back(*it);
             }
-        } else if (value_json.contains(CP_VAL_LABEL)) {
-            auto& cp_json = value_json[CP_VAL_LABEL];
+        } else if (value_json.get().contains(CP_VAL_LABEL)) {
+            auto& cp_json = value_json.get()[CP_VAL_LABEL];
             auto internal_offset =
                 cp_json.at(CP_INTERNAL_LABEL).get<uint64_t>();
             uint64_t pc = 0;
@@ -76,13 +76,12 @@ value value_from_json(nlohmann::json full_value_json,
             throw std::runtime_error("invalid value type");
         }
     }
-    return assembleValueFromDeserialized(std::move(values), pool);
+    return assembleValueFromDeserialized(std::move(values));
 }
 
 Operation operation_from_json(const nlohmann::json& op_json,
                               size_t op_count,
-                              const CodeSegment& code,
-                              TuplePool& pool) {
+                              const CodeSegment& code) {
     auto opcode_json = op_json.at(OPCODE_LABEL);
     if (opcode_json.contains(OPCODE_SUB_LABEL)) {
         opcode_json = opcode_json.at(OPCODE_SUB_LABEL);
@@ -95,21 +94,22 @@ Operation operation_from_json(const nlohmann::json& op_json,
     if (imm.is_null()) {
         return {opcode};
     }
-    return {opcode, value_from_json(std::move(imm), op_count, code, pool)};
+    return {opcode, value_from_json(std::move(imm), op_count, code)};
 }
 }  // namespace
 
-value simple_value_from_json(nlohmann::json full_value_json, TuplePool& pool) {
+value simple_value_from_json(const nlohmann::json& full_value_json) {
     std::vector<DeserializedValue> values;
-    std::vector<nlohmann::json> json_values{std::move(full_value_json)};
+    std::vector<std::reference_wrapper<const nlohmann::json>> json_values{
+        full_value_json};
     while (!json_values.empty()) {
         auto value_json = std::move(json_values.back());
         json_values.pop_back();
 
-        if (value_json.contains(INT_VAL_LABEL)) {
+        if (value_json.get().contains(INT_VAL_LABEL)) {
             values.push_back(value{int_value_from_json(value_json)});
-        } else if (value_json.contains(TUP_VAL_LABEL)) {
-            auto& json_tup = value_json[TUP_VAL_LABEL];
+        } else if (value_json.get().contains(TUP_VAL_LABEL)) {
+            const auto& json_tup = value_json.get()[TUP_VAL_LABEL];
             if (!json_tup.is_array() || json_tup.size() > 8) {
                 throw std::runtime_error(
                     "tuple must contain array of size less than 9");
@@ -117,17 +117,16 @@ value simple_value_from_json(nlohmann::json full_value_json, TuplePool& pool) {
             values.push_back(
                 TuplePlaceholder{static_cast<uint8_t>(json_tup.size())});
             for (auto it = json_tup.rbegin(); it != json_tup.rend(); ++it) {
-                json_values.push_back(std::move(*it));
+                json_values.push_back(*it);
             }
         } else {
             throw std::runtime_error("invalid value type");
         }
     }
-    return assembleValueFromDeserialized(std::move(values), pool);
+    return assembleValueFromDeserialized(std::move(values));
 }
 
-LoadedExecutable loadExecutable(const std::string& executable_filename,
-                                TuplePool& pool) {
+LoadedExecutable loadExecutable(const std::string& executable_filename) {
     std::ifstream executable_input_stream(executable_filename);
     if (!executable_input_stream.is_open()) {
         throw std::runtime_error("doesn't exist");
@@ -141,10 +140,9 @@ LoadedExecutable loadExecutable(const std::string& executable_filename,
     auto op_count = json_code.size();
     auto segment = std::make_shared<CodeSegment>(0);
     for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
-        segment->addOperation(
-            operation_from_json(*it, op_count, *segment, pool));
+        segment->addOperation(operation_from_json(*it, op_count, *segment));
     }
     value static_val = value_from_json(
-        std::move(executable_json.at(STATIC_LABEL)), op_count, *segment, pool);
+        std::move(executable_json.at(STATIC_LABEL)), op_count, *segment);
     return {std::move(segment), std::move(static_val)};
 }

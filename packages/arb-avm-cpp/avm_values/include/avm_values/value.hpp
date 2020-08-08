@@ -23,7 +23,6 @@
 
 #include <nonstd/variant.hpp>
 
-class TuplePool;
 class Tuple;
 struct Operation;
 struct CodePoint;
@@ -46,7 +45,7 @@ uint64_t deserialize_uint64_t(const char*& bufptr);
 CodePointRef deserializeCodePointRef(const char*& bufptr);
 CodePointStub deserializeCodePointStub(const char*& bufptr);
 uint256_t deserializeUint256t(const char*& srccode);
-value deserialize_value(const char*& srccode, TuplePool& pool);
+value deserialize_value(const char*& srccode);
 
 void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf);
 
@@ -59,7 +58,6 @@ void marshalForProof(const value& val,
 
 uint256_t getSize(const value& val);
 
-value assembleValueFromDeserialized(std::vector<DeserializedValue> values,
-                                    TuplePool& pool);
+value assembleValueFromDeserialized(std::vector<DeserializedValue> values);
 
 #endif /* value_hpp */

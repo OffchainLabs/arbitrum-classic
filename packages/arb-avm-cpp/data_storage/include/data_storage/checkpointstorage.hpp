@@ -38,8 +38,6 @@ class CheckpointStorage {
     std::shared_ptr<Code> code;
 
    public:
-    std::shared_ptr<TuplePool> pool;
-
     CheckpointStorage(const std::string& db_path);
     bool closeCheckpointStorage();
     void initialize(const std::string& executable_path);

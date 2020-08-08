@@ -20,39 +20,33 @@
 
 #include <iostream>
 
-Tuple::Tuple(value val, TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(1)) {
+Tuple::Tuple(value val) : tpl(TuplePool::get_impl().getResource(1)) {
     tpl->data.push_back(std::move(val));
 }
 
-Tuple::Tuple(value val1, value val2, TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(2)) {
+Tuple::Tuple(value val1, value val2)
+    : tpl(TuplePool::get_impl().getResource(2)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
 }
 
-Tuple::Tuple(value val1, value val2, value val3, TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(3)) {
+Tuple::Tuple(value val1, value val2, value val3)
+    : tpl(TuplePool::get_impl().getResource(3)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
 }
 
-Tuple::Tuple(value val1, value val2, value val3, value val4, TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(4)) {
+Tuple::Tuple(value val1, value val2, value val3, value val4)
+    : tpl(TuplePool::get_impl().getResource(4)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
     tpl->data.push_back(std::move(val4));
 }
 
-Tuple::Tuple(value val1,
-             value val2,
-             value val3,
-             value val4,
-             value val5,
-             TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(5)) {
+Tuple::Tuple(value val1, value val2, value val3, value val4, value val5)
+    : tpl(TuplePool::get_impl().getResource(5)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
@@ -65,9 +59,8 @@ Tuple::Tuple(value val1,
              value val3,
              value val4,
              value val5,
-             value val6,
-             TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(6)) {
+             value val6)
+    : tpl(TuplePool::get_impl().getResource(6)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
@@ -82,9 +75,8 @@ Tuple::Tuple(value val1,
              value val4,
              value val5,
              value val6,
-             value val7,
-             TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(7)) {
+             value val7)
+    : tpl(TuplePool::get_impl().getResource(7)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
@@ -101,9 +93,8 @@ Tuple::Tuple(value val1,
              value val5,
              value val6,
              value val7,
-             value val8,
-             TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(8)) {
+             value val8)
+    : tpl(TuplePool::get_impl().getResource(8)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
@@ -114,9 +105,9 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val8));
 }
 
-Tuple::Tuple(std::vector<value> values, TuplePool* pool) : tuplePool(pool) {
+Tuple::Tuple(std::vector<value> values) {
     if (!values.empty() && values.size() < 9) {
-        tpl = pool->getResource(values.size());
+        tpl = TuplePool::get_impl().getResource(values.size());
         for (auto& val : values) {
             tpl->data.push_back(std::move(val));
         }

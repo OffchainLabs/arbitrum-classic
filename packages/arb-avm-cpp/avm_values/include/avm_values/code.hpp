@@ -37,8 +37,7 @@ class CodeSegment {
 
     friend class Code;
     friend LoadedExecutable loadExecutable(
-        const std::string& executable_filename,
-        TuplePool& pool);
+        const std::string& executable_filename);
 
     size_t capacity() const { return code.capacity(); }
 

@@ -421,7 +421,7 @@ void encodeKeccakState(const Tuple& tup, uint64_t* state) {
     state[24] = static_cast<uint64_t>(assumeInt(tup.get_element_unsafe(6)));
 }
 
-Tuple decodeKeccakState(const uint64_t* state, TuplePool* pool) {
+Tuple decodeKeccakState(const uint64_t* state) {
     return Tuple(bswap(intx::be::unsafe::load<uint256_t>(
                      reinterpret_cast<const uint8_t*>(&state[0]))),
                  bswap(intx::be::unsafe::load<uint256_t>(
@@ -434,7 +434,7 @@ Tuple decodeKeccakState(const uint64_t* state, TuplePool* pool) {
                      reinterpret_cast<const uint8_t*>(&state[16]))),
                  bswap(intx::be::unsafe::load<uint256_t>(
                      reinterpret_cast<const uint8_t*>(&state[20]))),
-                 uint256_t{state[24]}, pool);
+                 uint256_t{state[24]});
 }
 }  // namespace internal
 
@@ -447,7 +447,7 @@ void keccakF(MachineState& m) {
 
     ethash_keccakf1600(state);
 
-    m.stack[0] = internal::decodeKeccakState(state, m.pool.get());
+    m.stack[0] = internal::decodeKeccakState(state);
     ++m.pc;
 }
 

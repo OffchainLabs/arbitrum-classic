@@ -84,7 +84,6 @@ std::vector<std::vector<unsigned char>> parseTuple(
 
 DbResult<value> getTuple(const Transaction& transaction,
                          const GetResults& results,
-                         TuplePool* pool,
                          std::set<uint64_t>& segment_ids) {
     auto value_vectors = parseTuple(results.stored_value);
 
@@ -128,14 +127,13 @@ DbResult<value> getTuple(const Transaction& transaction,
                     return DbResult<value>{results.status,
                                            results.reference_count, Tuple()};
                 }
-                auto tuple =
-                    getTuple(transaction, results, pool, segment_ids).data;
+                auto tuple = getTuple(transaction, results, segment_ids).data;
                 values.push_back(tuple);
                 break;
             }
         }
     }
-    auto tuple = Tuple(values, pool);
+    auto tuple = Tuple(std::move(values));
     return DbResult<value>{results.status, results.reference_count, tuple};
 }
 
@@ -214,7 +212,7 @@ SaveResults saveTuple(Transaction& transaction,
     SaveResults ret;
     std::vector<Tuple> tups{val};
     while (!tups.empty()) {
-        auto& tup = tups.back();
+        auto tup = tups.back();
         if (isSaved(transaction, val)) {
             auto hash_key = getHashKey(val);
             auto key = vecToSlice(hash_key);
@@ -308,7 +306,6 @@ DeleteResults deleteValue(Transaction& transaction,
 
 DbResult<value> getValueImpl(const Transaction& transaction,
                              uint256_t value_hash,
-                             TuplePool* pool,
                              std::set<uint64_t>& segment_ids) {
     std::vector<unsigned char> hash_key;
     marshal_uint256_t(value_hash, hash_key);
@@ -343,16 +340,14 @@ DbResult<value> getValueImpl(const Transaction& transaction,
             if (value_type - TUPLE > 8) {
                 throw std::runtime_error("can't get value with invalid type");
             }
-            return getTuple(transaction, results, pool, segment_ids);
+            return getTuple(transaction, results, segment_ids);
         }
     }
 }
 
-DbResult<value> getValue(const Transaction& transaction,
-                         uint256_t value_hash,
-                         TuplePool* pool) {
+DbResult<value> getValue(const Transaction& transaction, uint256_t value_hash) {
     std::set<uint64_t> segment_ids;
-    return getValueImpl(transaction, value_hash, pool, segment_ids);
+    return getValueImpl(transaction, value_hash, segment_ids);
 }
 
 SaveResults saveValueImpl(Transaction& transaction,

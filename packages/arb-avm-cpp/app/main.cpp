@@ -52,8 +52,7 @@ int main(int argc, char* argv[]) {
                 stub = code->addOperation(stub.pc,
                                           Operation(static_cast<OpCode>(*it)));
             }
-            return Machine(MachineState(std::move(code), Tuple(),
-                                        std::make_shared<TuplePool>()));
+            return Machine(MachineState(std::move(code), Tuple()));
         } else {
             return Machine::loadFromFile(filename);
         }
@@ -70,8 +69,7 @@ int main(int argc, char* argv[]) {
                 (std::istreambuf_iterator<char>(file)),
                 std::istreambuf_iterator<char>());
             auto data = reinterpret_cast<const char*>(raw_inbox.data());
-            auto inbox_val =
-                nonstd::get<Tuple>(deserialize_value(data, mach.getPool()));
+            auto inbox_val = nonstd::get<Tuple>(deserialize_value(data));
             while (inbox_val != Tuple{}) {
                 inbox_messages.push_back(
                     std::move(inbox_val.get_element(1).get<Tuple>()));
@@ -86,8 +84,7 @@ int main(int argc, char* argv[]) {
 
             for (auto& val : j["inbox"]) {
                 inbox_messages.push_back(
-                    simple_value_from_json(std::move(val), mach.getPool())
-                        .get<Tuple>());
+                    simple_value_from_json(std::move(val)).get<Tuple>());
             }
         }
     }

@@ -65,7 +65,6 @@ void restoreCheckpoint(CheckpointStorage& storage, Machine& expected_machine) {
 
 TEST_CASE("Checkpoint State") {
     DBDeleter deleter;
-    TuplePool pool;
     CheckpointStorage storage(dbpath);
     storage.initialize(test_contract_path);
 
@@ -88,7 +87,6 @@ TEST_CASE("Checkpoint State") {
 
 TEST_CASE("Delete machine checkpoint") {
     DBDeleter deleter;
-    TuplePool pool;
     CheckpointStorage storage(dbpath);
     storage.initialize(test_contract_path);
 
@@ -104,7 +102,6 @@ TEST_CASE("Delete machine checkpoint") {
 
 TEST_CASE("Restore checkpoint") {
     DBDeleter deleter;
-    TuplePool pool;
     CheckpointStorage storage(dbpath);
     storage.initialize(test_contract_path);
 
@@ -132,12 +129,10 @@ TEST_CASE("Proof") {
 TEST_CASE("Clone") {
     auto machine = Machine::loadFromFile(test_contract_path);
     for (int i = 0; i < 100; i++) {
-        machine.machine_state.stack.push(Tuple(uint256_t{3}, uint256_t{6},
-                                               uint256_t{7}, uint256_t{2},
-                                               &machine.getPool()));
-        machine.machine_state.auxstack.push(Tuple(uint256_t{3}, uint256_t{6},
-                                                  uint256_t{7}, uint256_t{2},
-                                                  &machine.getPool()));
+        machine.machine_state.stack.push(
+            Tuple(uint256_t{3}, uint256_t{6}, uint256_t{7}, uint256_t{2}));
+        machine.machine_state.auxstack.push(
+            Tuple(uint256_t{3}, uint256_t{6}, uint256_t{7}, uint256_t{2}));
     }
 
     for (int i = 0; i < 1000; i++) {
@@ -181,7 +176,6 @@ TEST_CASE("Machine hash") {
 
 TEST_CASE("MachineTestVectors") {
     DBDeleter deleter;
-    TuplePool pool;
 
     std::vector<std::string> files = {
         "opcodetestarbgas",   "opcodetestdup",    "opcodetestecrecover",

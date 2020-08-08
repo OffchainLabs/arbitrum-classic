@@ -19,6 +19,11 @@
 
 #include <ostream>
 
+void tupleDeleter(RawTuple* p) {
+    auto& deleter = TuplePool().get_impl();
+    deleter.deleteTuple({p, tupleDeleter});
+}
+
 /**
  * Returns instance of Resource.
  *
@@ -33,9 +38,9 @@ std::shared_ptr<RawTuple> TuplePool::getResource(size_t s) {
     }
     std::shared_ptr<RawTuple> resource;
     if (resources[s].empty()) {
-        resource = std::make_shared<RawTuple>();
+        resource = {new RawTuple{}, tupleDeleter};
     } else {
-        resource = resources[s].back();
+        resource = {std::move(resources[s].back())};
         resources[s].pop_back();
     }
     resource->data.clear();
@@ -44,8 +49,29 @@ std::shared_ptr<RawTuple> TuplePool::getResource(size_t s) {
     return resource;
 }
 
-void TuplePool::returnResource(std::shared_ptr<RawTuple>&& object) {
+void TuplePool::deleteTuple(
+    std::unique_ptr<RawTuple, void (*)(RawTuple*)> tup) {
     if (!shuttingDown) {
-        resources[object->data.size()].push_back(std::move(object));
     }
+    delete_list.push_front(std::move(tup));
+    if (!deleting) {
+        deleting = true;
+        while (!delete_list.empty()) {
+            auto& item = delete_list.back();
+            item->data.clear();
+            if (!shuttingDown) {
+                resources[item->data.capacity()].push_back(std::move(item));
+            } else {
+                // Clear out the custom deleter
+                std::unique_ptr<RawTuple>{item.release()};
+            }
+            delete_list.pop_back();
+        }
+        deleting = false;
+    }
+}
+
+TuplePool& TuplePool::get_impl() {
+    thread_local TuplePool singleton;
+    return singleton;
 }

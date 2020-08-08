@@ -31,7 +31,6 @@
 
 TEST_CASE("ARBOS test vectors") {
     DBDeleter deleter;
-    TuplePool pool;
 
     std::vector<std::string> files = {
         "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
@@ -49,15 +48,14 @@ TEST_CASE("ARBOS test vectors") {
             std::vector<Tuple> messages;
             for (auto& json_message : j.at("inbox")) {
                 messages.push_back(
-                    simple_value_from_json(std::move(json_message), pool)
+                    simple_value_from_json(std::move(json_message))
                         .get<Tuple>());
             }
 
             auto logs_json = j.at("logs");
             std::vector<value> logs;
             for (auto& log_json : logs_json) {
-                logs.push_back(
-                    simple_value_from_json(std::move(log_json), pool));
+                logs.push_back(simple_value_from_json(std::move(log_json)));
             }
 
             CheckpointStorage storage(dbpath);

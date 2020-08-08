@@ -29,50 +29,43 @@ struct BasicValChecker;
 
 class Tuple {
    private:
-    TuplePool* tuplePool;
     std::shared_ptr<RawTuple> tpl;
 
     void calculateHashPreImage() const;
 
     friend BasicValChecker;
+    friend RawTuple;
 
    public:
-    Tuple() : tuplePool(nullptr) {}
+    Tuple() : tpl(nullptr) {}
 
     uint256_t getSize() const { return getHashPreImage().getSize(); }
 
-    Tuple(TuplePool* pool, size_t size) {
+    explicit Tuple(size_t size) {
         if (size > 0) {
-            tuplePool = pool;
-            tpl = pool->getResource(size);
+            tpl = TuplePool::get_impl().getResource(size);
             for (size_t i = 0; i < size; i++) {
                 tpl->data.push_back(Tuple{});
             }
         }
     }
 
-    Tuple(value val, TuplePool* pool);
+    explicit Tuple(value val);
 
-    Tuple(value val1, value val2, TuplePool* pool);
+    Tuple(value val1, value val2);
 
-    Tuple(value val1, value val2, value val3, TuplePool* pool);
+    Tuple(value val1, value val2, value val3);
 
-    Tuple(value val1, value val2, value val3, value val4, TuplePool* pool);
+    Tuple(value val1, value val2, value val3, value val4);
 
-    Tuple(value val1,
-          value val2,
-          value val3,
-          value val4,
-          value val5,
-          TuplePool* pool);
+    Tuple(value val1, value val2, value val3, value val4, value val5);
 
     Tuple(value val1,
           value val2,
           value val3,
           value val4,
           value val5,
-          value val6,
-          TuplePool* pool);
+          value val6);
 
     Tuple(value val1,
           value val2,
@@ -80,8 +73,7 @@ class Tuple {
           value val4,
           value val5,
           value val6,
-          value val7,
-          TuplePool* pool);
+          value val7);
 
     Tuple(value val1,
           value val2,
@@ -90,10 +82,9 @@ class Tuple {
           value val5,
           value val6,
           value val7,
-          value val8,
-          TuplePool* pool);
+          value val8);
 
-    Tuple(std::vector<value> values, TuplePool* pool);
+    Tuple(std::vector<value> values);
 
     uint64_t tuple_size() const {
         if (tpl) {
@@ -109,7 +100,7 @@ class Tuple {
         }
         if (tpl.use_count() > 1) {
             std::shared_ptr<RawTuple> tmp =
-                tuplePool->getResource(tuple_size());
+                TuplePool::get_impl().getResource(tuple_size());
             std::copy(tpl->data.begin(), tpl->data.end(),
                       std::back_inserter(tmp->data));
             tpl = tmp;
