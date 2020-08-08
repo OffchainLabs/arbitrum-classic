@@ -123,13 +123,6 @@ Tuple::Tuple(std::vector<value> values, TuplePool* pool) : tuplePool(pool) {
     }
 }
 
-void Tuple::marshal(std::vector<unsigned char>& buf) const {
-    buf.push_back(TUPLE + tuple_size());
-    for (uint64_t i = 0; i < tuple_size(); i++) {
-        marshal_value(get_element(i), buf);
-    }
-}
-
 constexpr uint64_t hash_size = 32;
 
 struct BasicValChecker {
@@ -173,7 +166,7 @@ void Tuple::calculateHashPreImage() const {
     // Make sure children are already hashed
     std::vector<Tuple> tups{*this};
     while (!tups.empty()) {
-        auto& tup = tups.back();
+        Tuple tup = tups.back();
         if (BasicValChecker{}(tup)) {
             tups.pop_back();
         } else {

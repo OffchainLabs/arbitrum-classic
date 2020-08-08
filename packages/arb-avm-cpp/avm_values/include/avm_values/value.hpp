@@ -32,8 +32,12 @@ class Code;
 struct CodePointStub;
 struct CodePointRef;
 
-// Note: uint256_t is actually 48 bytes long
 using value = nonstd::variant<Tuple, uint256_t, CodePointStub, HashPreImage>;
+
+struct TuplePlaceholder {
+    uint8_t values;
+};
+using DeserializedValue = nonstd::variant<TuplePlaceholder, value>;
 
 std::ostream& operator<<(std::ostream& os, const value& val);
 uint256_t hash_value(const value& value);
@@ -54,5 +58,8 @@ void marshalForProof(const value& val,
                      const Code& code);
 
 uint256_t getSize(const value& val);
+
+value assembleValueFromDeserialized(std::vector<DeserializedValue> values,
+                                    TuplePool& pool);
 
 #endif /* value_hpp */

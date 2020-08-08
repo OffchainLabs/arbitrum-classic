@@ -50,13 +50,8 @@ uint256_t deserializeUint256t(const char*& bufptr) {
     return ret;
 }
 
-struct TuplePlaceholder {
-    uint8_t values;
-};
-using DeserializedValue = nonstd::variant<TuplePlaceholder, value>;
-
 value deserialize_value(const char*& bufptr, TuplePool& pool) {
-    // First iteratively read all values leaving placeholder for the tuples
+    // Iteratively read all values leaving placeholder for the tuples
     std::vector<DeserializedValue> values;
     uint64_t values_to_read = 1;
     while (values_to_read > 0) {
@@ -88,7 +83,11 @@ value deserialize_value(const char*& bufptr, TuplePool& pool) {
             }
         }
     }
+    return assembleValueFromDeserialized(std::move(values), pool);
+}
 
+value assembleValueFromDeserialized(std::vector<DeserializedValue> values,
+                                    TuplePool& pool) {
     // Next form the full value out of the interleaved values and placeholders
     size_t total_values_size = values.size();
     for (size_t i = 0; i < total_values_size; ++i) {
@@ -116,18 +115,29 @@ void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
     buf.insert(buf.end(), data, data + sizeof(big_endian_val));
 }
 
-void marshal_value(const value& val, std::vector<unsigned char>& buf) {
-    if (nonstd::holds_alternative<Tuple>(val)) {
-        nonstd::get<Tuple>(val).marshal(buf);
-    } else if (nonstd::holds_alternative<uint256_t>(val)) {
-        buf.push_back(NUM);
-        marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
-    } else if (nonstd::holds_alternative<CodePointStub>(val)) {
-        buf.push_back(CODE_POINT_STUB);
-        nonstd::get<CodePointStub>(val).marshal(buf);
-    } else if (nonstd::holds_alternative<HashPreImage>(val)) {
-        buf.push_back(HASH_PRE_IMAGE);
-        nonstd::get<HashPreImage>(val).marshal(buf);
+void marshal_value(const value& full_val, std::vector<unsigned char>& buf) {
+    std::vector<value> values{full_val};
+    while (!values.empty()) {
+        const auto val = std::move(values.back());
+        values.pop_back();
+        if (nonstd::holds_alternative<Tuple>(val)) {
+            const auto& tup = val.get<Tuple>();
+            auto size = tup.tuple_size();
+            buf.push_back(TUPLE + size);
+            // queue elements in reverse order for serialization
+            for (uint64_t i = 0; i < size; i++) {
+                values.push_back(tup.get_element(size - 1 - i));
+            }
+        } else if (nonstd::holds_alternative<uint256_t>(val)) {
+            buf.push_back(NUM);
+            marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
+        } else if (nonstd::holds_alternative<CodePointStub>(val)) {
+            buf.push_back(CODE_POINT_STUB);
+            nonstd::get<CodePointStub>(val).marshal(buf);
+        } else if (nonstd::holds_alternative<HashPreImage>(val)) {
+            buf.push_back(HASH_PRE_IMAGE);
+            nonstd::get<HashPreImage>(val).marshal(buf);
+        }
     }
 }
 

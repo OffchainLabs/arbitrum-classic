@@ -138,8 +138,6 @@ class Tuple {
         }
         return tpl->cachedPreImage;
     }
-
-    void marshal(std::vector<unsigned char>& buf) const;
 };
 
 inline uint256_t hash(const Tuple& tup) {
