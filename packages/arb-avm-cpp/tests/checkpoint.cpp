@@ -50,9 +50,10 @@ void getValue(const Transaction& transaction,
 }
 
 void getTuple(const Transaction& transaction,
-              const Tuple& tuple,
+              const value& val,
               uint32_t expected_ref_count,
               bool expected_status) {
+    auto tuple = val.get<Tuple>();
     auto results = getValue(transaction, hash(tuple));
 
     REQUIRE(nonstd::holds_alternative<Tuple>(results.data));
@@ -68,6 +69,7 @@ void getTupleValues(const Transaction& transaction,
                     uint256_t tuple_hash,
                     std::vector<uint256_t> value_hashes) {
     auto results = getValue(transaction, tuple_hash);
+    REQUIRE(results.status.ok());
     REQUIRE(nonstd::holds_alternative<Tuple>(results.data));
 
     auto tuple = nonstd::get<Tuple>(results.data);
@@ -133,12 +135,6 @@ TEST_CASE("Save and get value") {
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true);
     }
-    SECTION("save tuple") {
-        uint256_t num = 1;
-        auto tuple = Tuple(num);
-        saveValue(*transaction, tuple, 1, true);
-        getTuple(*transaction, tuple, 1, true);
-    }
     SECTION("save num") {
         uint256_t num = 1;
         saveValue(*transaction, num, 1, true);
@@ -183,21 +179,21 @@ TEST_CASE("Save and get tuple values") {
         getTupleValues(*transaction, hash(tuple), hashes);
     }
     SECTION("save nested tuple") {
-        auto inner_tuple = Tuple();
-        auto tuple = Tuple(inner_tuple);
+        value inner_tuple = Tuple();
+        value tuple = Tuple(inner_tuple);
         saveValue(*transaction, tuple, 1, true);
-        std::vector<uint256_t> hashes{hash(inner_tuple)};
-        getTupleValues(*transaction, hash(tuple), hashes);
+        std::vector<uint256_t> hashes{hash_value(inner_tuple)};
+        getTupleValues(*transaction, hash_value(tuple), hashes);
     }
     SECTION("save multiple valued tuple") {
         CodePointStub code_point_stub({0, 1}, 654546);
-        auto inner_tuple = Tuple();
+        value inner_tuple = Tuple();
         uint256_t num = 1;
-        auto tuple = Tuple(inner_tuple, num, code_point_stub);
+        value tuple = Tuple(inner_tuple, num, code_point_stub);
         saveValue(*transaction, tuple, 1, true);
-        std::vector<uint256_t> hashes{hash(inner_tuple), hash(num),
+        std::vector<uint256_t> hashes{hash_value(inner_tuple), hash(num),
                                       hash(code_point_stub)};
-        getTupleValues(*transaction, hash(tuple), hashes);
+        getTupleValues(*transaction, hash_value(tuple), hashes);
     }
     SECTION("save multiple valued tuple, saveValue()") {
         CodePointStub code_point_stub({0, 1}, 654546);
@@ -266,11 +262,11 @@ TEST_CASE("Save And Get Tuple") {
     SECTION("save saved tuple in tuple") {
         auto transaction2 = storage.makeTransaction();
         uint256_t num = 1;
-        auto inner_tuple = Tuple(num);
-        auto tuple = Tuple(inner_tuple);
+        value inner_tuple = Tuple(num);
+        value tuple = Tuple(inner_tuple);
         saveValue(*transaction, inner_tuple, 1, true);
         getTuple(*transaction, inner_tuple, 1, true);
-        saveValue(*transaction2, tuple, 1, true);
+        saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true);
         getTuple(*transaction, inner_tuple, 2, true);
     }

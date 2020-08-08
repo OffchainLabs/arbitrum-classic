@@ -37,9 +37,16 @@ std::vector<unsigned char> getHashKey(const value& val) {
     return hash_key_vector;
 }
 
-std::vector<std::vector<unsigned char>> parseTuple(
-    const std::vector<unsigned char>& data) {
-    std::vector<std::vector<unsigned char>> return_vector;
+struct SerializedTupStub {
+    uint8_t size;
+    uint256_t hash;
+};
+
+using ParsedTupVal =
+    nonstd::variant<uint256_t, CodePointStub, SerializedTupStub>;
+
+std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
+    std::vector<ParsedTupVal> return_vector;
 
     auto iter = data.begin();
     uint8_t count = *iter - TUPLE;
@@ -47,19 +54,18 @@ std::vector<std::vector<unsigned char>> parseTuple(
 
     for (uint8_t i = 0; i < count; i++) {
         auto value_type = static_cast<ValueTypes>(*iter);
-        std::vector<unsigned char> current;
+        auto buf = reinterpret_cast<const char*>(&*iter);
+        ++buf;
 
         switch (value_type) {
             case NUM: {
-                auto next_it = iter + TUP_NUM_LENGTH;
-                current.insert(current.end(), iter, next_it);
-                iter = next_it;
+                return_vector.push_back(deserializeUint256t(buf));
+                iter += TUP_NUM_LENGTH;
                 break;
             }
             case CODE_POINT_STUB: {
-                auto next_it = iter + TUP_CODEPT_LENGTH;
-                current.insert(current.end(), iter, next_it);
-                iter = next_it;
+                return_vector.push_back(deserializeCodePointStub(buf));
+                iter += TUP_CODEPT_LENGTH;
                 break;
             }
             case HASH_PRE_IMAGE: {
@@ -71,105 +77,58 @@ std::vector<std::vector<unsigned char>> parseTuple(
                     throw std::runtime_error(
                         "tried to parse tuple with invalid typecode");
                 }
-                auto next_it = iter + TUP_TUPLE_LENGTH;
-                current.insert(current.end(), iter, next_it);
-                iter = next_it;
+                return_vector.push_back(
+                    SerializedTupStub{tup_size, deserializeUint256t(buf)});
+                iter += TUP_TUPLE_LENGTH;
                 break;
             }
         }
-        return_vector.push_back(current);
     }
     return return_vector;
 }
 
-void parseTupleForDeletion(const std::vector<unsigned char>& tuple_data,
-                           std::vector<uint256_t>& tuples_to_delete,
-                           std::map<uint64_t, uint64_t>& segment_counts) {
-    auto iter = tuple_data.begin();
-    uint8_t count = *iter - TUPLE;
-    ++iter;
+DbResult<value> getTuple(const Transaction& transaction,
+                         const GetResults& results,
+                         std::set<uint64_t>& segment_ids);
 
-    for (uint8_t i = 0; i < count; i++) {
-        auto value_type = static_cast<ValueTypes>(*iter);
-        auto buf = reinterpret_cast<const char*>(&*iter);
-        switch (value_type) {
-            case NUM: {
-                iter += TUP_NUM_LENGTH;
-                break;
-            }
-            case CODE_POINT_STUB: {
-                ++buf;
-                auto cp = deserializeCodePointStub(buf);
-                ++segment_counts[cp.pc.segment];
-                iter += TUP_CODEPT_LENGTH;
-                break;
-            }
-            case HASH_PRE_IMAGE: {
-                throw std::runtime_error("HASH_ONLY item");
-            }
-            case TUPLE: {
-                ++buf;
-                tuples_to_delete.push_back(deserializeUint256t(buf));
-                iter += TUP_TUPLE_LENGTH;
-                break;
-            }
-            default: {
-                throw std::runtime_error("invalid value type in tuple");
-            }
-        }
+struct TupleGetter {
+    const Transaction& transaction;
+    std::set<uint64_t>& segment_ids;
+
+    DbResult<value> operator()(const uint256_t& val) const {
+        return {rocksdb::Status::OK(), 1, val};
     }
-}
+
+    DbResult<value> operator()(const CodePointStub& val) const {
+        segment_ids.insert(val.pc.segment);
+        return {rocksdb::Status::OK(), 1, val};
+    }
+
+    DbResult<value> operator()(const SerializedTupStub& val) const {
+        std::vector<unsigned char> hash_key;
+        marshal_uint256_t(val.hash, hash_key);
+        auto key = vecToSlice(hash_key);
+        auto results = getRefCountedData(*transaction.transaction, key);
+
+        if (!results.status.ok()) {
+            return DbResult<value>{results.status, results.reference_count,
+                                   Tuple()};
+        }
+        return getTuple(transaction, results, segment_ids);
+    }
+};
 
 DbResult<value> getTuple(const Transaction& transaction,
                          const GetResults& results,
                          std::set<uint64_t>& segment_ids) {
-    auto value_vectors = parseTuple(results.stored_value);
-
-    if (value_vectors.empty()) {
-        return DbResult<value>{results.status, results.reference_count,
-                               Tuple()};
-    }
-
     std::vector<value> values;
-    for (auto& current_vector : value_vectors) {
-        auto buf = reinterpret_cast<const char*>(current_vector.data());
-        auto value_type = static_cast<ValueTypes>(*buf);
-        ++buf;
-
-        switch (value_type) {
-            case NUM: {
-                values.push_back(deserializeUint256t(buf));
-                break;
-            }
-            case CODE_POINT_STUB: {
-                auto code_point = deserializeCodePointStub(buf);
-                values.push_back(code_point);
-                segment_ids.insert(code_point.pc.segment);
-                break;
-            }
-            case HASH_PRE_IMAGE: {
-                throw std::runtime_error("HASH_ONLY item");
-            }
-            default: {
-                auto tup_size = value_type - TUPLE;
-                if (tup_size > 8) {
-                    throw std::runtime_error(
-                        "tried to get value inside tuple with invalid "
-                        "typecode");
-                }
-                rocksdb::Slice tupKey(buf, 32);
-                auto results =
-                    getRefCountedData(*transaction.transaction, tupKey);
-
-                if (!results.status.ok()) {
-                    return DbResult<value>{results.status,
-                                           results.reference_count, Tuple()};
-                }
-                auto tuple = getTuple(transaction, results, segment_ids).data;
-                values.push_back(tuple);
-                break;
-            }
+    for (auto& current_vector : parseTuple(results.stored_value)) {
+        auto val = nonstd::visit(TupleGetter{transaction, segment_ids},
+                                 current_vector);
+        if (!val.status.ok()) {
+            return DbResult<value>{val.status, val.reference_count, Tuple()};
         }
+        values.push_back(std::move(val.data));
     }
     auto tuple = Tuple(std::move(values));
     return DbResult<value>{results.status, results.reference_count, tuple};
@@ -180,7 +139,7 @@ struct ValueSerializer {
     std::map<uint64_t, uint64_t>& segment_counts;
 
     void operator()(const Tuple& val) const {
-        value_vector.push_back(TUPLE);
+        value_vector.push_back(TUPLE + val.tuple_size());
         auto hash_key = hash_value(val);
         marshal_uint256_t(hash_key, value_vector);
     }
@@ -202,79 +161,41 @@ struct ValueSerializer {
     }
 };
 
-struct BasicValChecker {
-    Transaction& transaction;
-
-    bool operator()(const value& val) const {
-        return nonstd::visit(*this, val);
-    }
-    bool operator()(const Tuple& val) const {
-        auto hash_key = getHashKey(val);
+SaveResults saveTuple(Transaction& transaction,
+                      const Tuple& orig_val,
+                      std::map<uint64_t, uint64_t>& segment_counts) {
+    std::vector<Tuple> tups{orig_val};
+    bool first = true;
+    SaveResults save_ret;
+    while (!tups.empty()) {
+        auto tup = std::move(tups.back());
+        tups.pop_back();
+        auto hash_key = getHashKey(tup);
         auto key = vecToSlice(hash_key);
         auto results = getRefCountedData(*transaction.transaction, key);
-        return results.status.ok() && results.reference_count > 0;
-    }
-
-    template <typename T>
-    bool operator()(const T&) const {
-        return true;
-    }
-};
-
-SaveResults saveTupleRecord(Transaction& transaction,
-                            const Tuple& val,
-                            std::map<uint64_t, uint64_t>& segment_counts) {
-    auto hash_key = getHashKey(val);
-    auto key = vecToSlice(hash_key);
-    std::vector<unsigned char> value_vector;
-    value_vector.push_back(TUPLE + val.tuple_size());
-
-    for (uint64_t i = 0; i < val.tuple_size(); i++) {
-        auto current_val = val.get_element(i);
-        nonstd::visit(ValueSerializer{value_vector, segment_counts},
-                      current_val);
-    }
-    return saveRefCountedData(*transaction.transaction, key, value_vector);
-}
-
-bool isSaved(Transaction& transaction, const Tuple& val) {
-    auto hash_key = getHashKey(val);
-    auto key = vecToSlice(hash_key);
-    auto results = getRefCountedData(*transaction.transaction, key);
-    return results.status.ok() && results.reference_count > 0;
-}
-
-SaveResults saveTuple(Transaction& transaction,
-                      const Tuple& val,
-                      std::map<uint64_t, uint64_t>& segment_counts) {
-    SaveResults ret;
-    std::vector<Tuple> tups{val};
-    while (!tups.empty()) {
-        auto tup = tups.back();
-        if (isSaved(transaction, val)) {
-            auto hash_key = getHashKey(val);
-            auto key = vecToSlice(hash_key);
+        SaveResults ret;
+        if (results.status.ok() && results.reference_count > 0) {
             ret = incrementReference(*transaction.transaction, key);
-            tups.pop_back();
         } else {
-            bool found_complex = false;
-            for (uint64_t i = 0; i < tup.tuple_size(); ++i) {
-                auto& elem = tup.get_element_unsafe(i);
-                if (!nonstd::holds_alternative<Tuple>(elem)) {
-                    continue;
-                }
-                if (!isSaved(transaction, elem.get<Tuple>())) {
-                    found_complex = true;
-                    tups.push_back(tup.get_element(i).get<Tuple>());
+            std::vector<unsigned char> value_vector;
+            value_vector.push_back(TUPLE + tup.tuple_size());
+            for (uint64_t i = 0; i < tup.tuple_size(); i++) {
+                auto current_val = tup.get_element(i);
+                nonstd::visit(ValueSerializer{value_vector, segment_counts},
+                              current_val);
+                if (nonstd::holds_alternative<Tuple>(current_val)) {
+                    tups.push_back(current_val.get<Tuple>());
                 }
             }
-            if (!found_complex) {
-                ret = saveTupleRecord(transaction, tup, segment_counts);
-                tups.pop_back();
-            }
+            ret =
+                saveRefCountedData(*transaction.transaction, key, value_vector);
+        }
+        if (first) {
+            save_ret = ret;
+            first = false;
         }
     }
-    return ret;
+    return save_ret;
 }
 
 struct ValueSaver {
@@ -335,8 +256,14 @@ DeleteResults deleteTuple(Transaction& transaction,
         if (results.reference_count == 1) {
             // This was the last reference to this tuple so decrement the
             // reference count of the references values
-            parseTupleForDeletion(results.stored_value, tuples_to_delete,
-                                  segment_counts);
+            for (const auto& nested : parseTuple(results.stored_value)) {
+                if (nonstd::holds_alternative<SerializedTupStub>(nested)) {
+                    tuples_to_delete.push_back(
+                        nested.get<SerializedTupStub>().hash);
+                } else if (nonstd::holds_alternative<CodePointStub>(nested)) {
+                    segment_counts[nested.get<CodePointStub>().pc.segment]++;
+                }
+            }
         }
 
         ret = deleteRefCountedData(*transaction.transaction, key);
@@ -423,10 +350,13 @@ DeleteResults deleteValueImpl(Transaction& transaction,
         (value_type >= TUPLE && value_type <= TUPLE + 8)) {
         // The value we deleted was a tuple
         std::vector<uint256_t> tuples_to_delete;
-        parseTupleForDeletion(results.stored_value, tuples_to_delete,
-                              segment_counts);
-        for (const auto& tup : tuples_to_delete) {
-            deleteTuple(transaction, tup, segment_counts);
+        for (const auto& nested : parseTuple(results.stored_value)) {
+            if (nonstd::holds_alternative<SerializedTupStub>(nested)) {
+                deleteTuple(transaction, nested.get<SerializedTupStub>().hash,
+                            segment_counts);
+            } else if (nonstd::holds_alternative<CodePointStub>(nested)) {
+                segment_counts[nested.get<CodePointStub>().pc.segment]++;
+            }
         }
     }
 
