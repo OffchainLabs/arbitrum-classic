@@ -20,12 +20,14 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/machineobserver"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"time"
 )
 
 func LaunchAggregator(
@@ -38,13 +40,31 @@ func LaunchAggregator(
 	aggPort string,
 	web3Port string,
 	flags utils2.RPCFlags,
+	maxBatchTime time.Duration,
 ) error {
 	arbClient := ethbridge.NewEthClient(client)
 	db, err := machineobserver.RunObserver(ctx, rollupAddress, arbClient, executable, dbPath)
 	if err != nil {
 		return err
 	}
-	srv, err := aggregator.NewServer(ctx, client, auth, rollupAddress, db)
+
+	authClient := ethbridge.NewEthAuthClient(client, auth)
+	rollupContract, err := arbClient.NewRollupWatcher(rollupAddress)
+	if err != nil {
+		return err
+	}
+	inboxAddress, err := rollupContract.InboxAddress(context.Background())
+	if err != nil {
+		return err
+	}
+	globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
+	if err != nil {
+		return err
+	}
+
+	batch := batcher.NewBatcher(ctx, globalInbox, rollupAddress, maxBatchTime)
+
+	srv := aggregator.NewServer(client, batch, rollupAddress, db)
 	errChan := make(chan error, 1)
 
 	aggServer, err := aggregator.GenerateRPCServer(srv)

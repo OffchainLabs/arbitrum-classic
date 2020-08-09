@@ -87,23 +87,12 @@ ByteSliceResult aggregatorGetMessage(const CAggregatorStore* agg,
     }
 }
 
-CBlockData processBlock(uint64_t height, const BlockData& data) {
-    return {true,
-            height,
-            data.start_log,
-            data.log_count,
-            data.start_message,
-            data.message_count,
-            returnCharVector(data.data)};
-}
-
 CBlockData aggregatorLatestBlock(const CAggregatorStore* agg) {
     try {
         auto latest = static_cast<const AggregatorStore*>(agg)->latestBlock();
-        return processBlock(latest.first, latest.second);
+        return {true, latest.first, returnCharVector(latest.second)};
     } catch (const std::exception& e) {
-        std::cerr << "aggregatorLatestBlock error: " << e.what() << std::endl;
-        return {false, 0, 0, 0, 0, 0, ByteSlice{nullptr, 0}};
+        return {false, 0, ByteSlice{nullptr, 0}};
     }
 }
 
@@ -125,15 +114,19 @@ int aggregatorSaveBlock(CAggregatorStore* agg,
 CBlockData aggregatorGetBlock(const CAggregatorStore* agg, uint64_t height) {
     try {
         auto block = static_cast<const AggregatorStore*>(agg)->getBlock(height);
-        return processBlock(height, block);
+        return {true, height, returnCharVector(block)};
     } catch (const std::exception&) {
-        return {false, 0, 0, 0, 0, 0, ByteSlice{nullptr, 0}};
+        return {false, 0, ByteSlice{nullptr, 0}};
     }
 }
 
-int aggregatorRestoreBlock(CAggregatorStore* agg, uint64_t height) {
+int aggregatorReorg(CAggregatorStore* agg,
+                    uint64_t block_height,
+                    uint64_t message_count,
+                    uint64_t log_count) {
     try {
-        static_cast<AggregatorStore*>(agg)->restoreBlock(height);
+        static_cast<AggregatorStore*>(agg)->reorg(block_height, message_count,
+                                                  log_count);
         return true;
     } catch (const std::exception& e) {
         std::cerr << "aggregatorRestoreBlock error: " << e.what() << std::endl;

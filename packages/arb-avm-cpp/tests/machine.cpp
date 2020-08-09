@@ -70,7 +70,7 @@ TEST_CASE("Checkpoint State") {
     storage.initialize(test_contract_path);
 
     auto machine = storage.getInitialMachine();
-    machine.run(1, Tuple(), std::chrono::seconds{0});
+    machine.run(1, {}, std::chrono::seconds{0});
 
     SECTION("default") { checkpointState(storage, machine); }
     SECTION("save twice") { checkpointStateTwice(storage, machine); }
@@ -94,7 +94,7 @@ TEST_CASE("Delete machine checkpoint") {
 
     SECTION("default") {
         auto machine = storage.getInitialMachine();
-        machine.run(1, Tuple(), std::chrono::seconds{0});
+        machine.run(1, {}, std::chrono::seconds{0});
         auto transaction = storage.makeTransaction();
         auto results = saveMachine(*transaction, machine);
         deleteCheckpoint(*transaction, machine);
@@ -175,8 +175,8 @@ TEST_CASE("Machine hash") {
                            "817555893843236912662725763451298816577059146210080"
                            "81459572116739688988488432"));
     REQUIRE(machineHash == intx::from_string<uint256_t>(
-                               "56208326812724912066026123588383649819390601658"
-                               "448049319166841561743369815863"));
+                               "12818298244055256727021237632105567892940754157"
+                               "945856618644698870485816765145"));
 }
 
 TEST_CASE("MachineTestVectors") {
@@ -197,7 +197,7 @@ TEST_CASE("MachineTestVectors") {
             auto mach = Machine::loadFromFile(test_file);
             while (
                 nonstd::holds_alternative<NotBlocked>(mach.isBlocked(false))) {
-                mach.run(1, Tuple(), std::chrono::seconds{0});
+                mach.run(1, {}, std::chrono::seconds{0});
             }
             REQUIRE(mach.currentStatus() == Status::Halted);
         }

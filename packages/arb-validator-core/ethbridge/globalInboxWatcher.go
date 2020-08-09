@@ -21,7 +21,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
@@ -33,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
@@ -41,13 +41,13 @@ var messageDeliveredFromOriginID ethcommon.Hash
 var l2MessageFromOriginCallABI abi.Method
 
 func init() {
-	inbox, err := abi.JSON(strings.NewReader(ethbridgecontracts.GlobalInboxABI))
+	inboxABI, err := abi.JSON(strings.NewReader(ethbridgecontracts.GlobalInboxABI))
 	if err != nil {
 		panic(err)
 	}
-	messageDeliveredID = inbox.Events["MessageDelivered"].ID
-	messageDeliveredFromOriginID = inbox.Events["MessageDeliveredFromOrigin"].ID
-	l2MessageFromOriginCallABI = inbox.Methods["sendL2MessageFromOrigin"]
+	messageDeliveredID = inboxABI.Events["MessageDelivered"].ID
+	messageDeliveredFromOriginID = inboxABI.Events["MessageDeliveredFromOrigin"].ID
+	l2MessageFromOriginCallABI = inboxABI.Methods["sendL2MessageFromOrigin"]
 }
 
 type globalInboxWatcher struct {
@@ -170,7 +170,7 @@ func (gi *globalInboxWatcher) GetDeliveredEventsInBlock(
 }
 
 func (gi *globalInboxWatcher) parseMessageFromOrigin(evmLog types.Log, timestamp *big.Int, msgData []byte) (arbbridge.MessageDeliveredEvent, error) {
-	chainTime := message.ChainTime{
+	chainTime := inbox.ChainTime{
 		BlockNum: common.NewTimeBlocks(
 			new(big.Int).SetUint64(evmLog.BlockNumber),
 		),
@@ -182,8 +182,8 @@ func (gi *globalInboxWatcher) parseMessageFromOrigin(evmLog types.Log, timestamp
 	}
 	return arbbridge.MessageDeliveredEvent{
 		ChainInfo: getLogChainInfo(evmLog),
-		Message: message.InboxMessage{
-			Kind:        message.Type(val.Kind),
+		Message: inbox.InboxMessage{
+			Kind:        inbox.Type(val.Kind),
 			Sender:      common.NewAddressFromEth(val.Sender),
 			InboxSeqNum: val.InboxSeqNum,
 			Data:        msgData,
@@ -198,7 +198,7 @@ func (gi *globalInboxWatcher) processLog(
 	timestamp *big.Int,
 ) (arbbridge.MessageDeliveredEvent, error) {
 	chainInfo := getLogChainInfo(evmLog)
-	chainTime := message.ChainTime{
+	chainTime := inbox.ChainTime{
 		BlockNum: common.NewTimeBlocks(
 			new(big.Int).SetUint64(evmLog.BlockNumber),
 		),
@@ -212,8 +212,8 @@ func (gi *globalInboxWatcher) processLog(
 		}
 		eventRet := arbbridge.MessageDeliveredEvent{
 			ChainInfo: chainInfo,
-			Message: message.InboxMessage{
-				Kind:        message.Type(val.Kind),
+			Message: inbox.InboxMessage{
+				Kind:        inbox.Type(val.Kind),
 				Sender:      common.NewAddressFromEth(val.Sender),
 				InboxSeqNum: val.InboxSeqNum,
 				Data:        val.Data,
@@ -225,8 +225,8 @@ func (gi *globalInboxWatcher) processLog(
 
 		return arbbridge.MessageDeliveredEvent{
 			ChainInfo: chainInfo,
-			Message: message.InboxMessage{
-				Kind:        message.Type(val.Kind),
+			Message: inbox.InboxMessage{
+				Kind:        inbox.Type(val.Kind),
 				Sender:      common.NewAddressFromEth(val.Sender),
 				InboxSeqNum: val.InboxSeqNum,
 				Data:        val.Data,

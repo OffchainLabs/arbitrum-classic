@@ -19,14 +19,14 @@ package batcher
 import (
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"log"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
@@ -34,7 +34,7 @@ import (
 const maxTransactions = 200
 
 type DecodedBatchTx struct {
-	tx     l2message.SignedTransaction
+	tx     message.SignedTransaction
 	sender common.Address
 }
 
@@ -51,6 +51,7 @@ func NewBatcher(
 	ctx context.Context,
 	globalInbox arbbridge.GlobalInbox,
 	rollupAddress common.Address,
+	maxBatchTime time.Duration,
 ) *Batcher {
 	server := &Batcher{
 		rollupAddress: rollupAddress,
@@ -59,7 +60,7 @@ func NewBatcher(
 	}
 
 	go func() {
-		ticker := time.NewTicker(time.Second * 5)
+		ticker := time.NewTicker(maxBatchTime)
 		defer ticker.Stop()
 		for {
 			select {
@@ -88,7 +89,7 @@ func NewBatcher(
 // prepareTransactions reorders the transactions such that the position of each
 // user is maintained, but the transactions of that user are swapped to be in
 // sequence number order
-func prepareTransactions(txes []DecodedBatchTx) l2message.TransactionBatch {
+func prepareTransactions(txes []DecodedBatchTx) message.TransactionBatch {
 	transactionsBySender := make(map[common.Address][]DecodedBatchTx)
 	for _, tx := range txes {
 		transactionsBySender[tx.sender] = append(transactionsBySender[tx.sender], tx)
@@ -100,13 +101,13 @@ func prepareTransactions(txes []DecodedBatchTx) l2message.TransactionBatch {
 		})
 	}
 
-	batchTxes := make([]l2message.AbstractL2Message, 0, len(txes))
+	batchTxes := make([]message.AbstractL2Message, 0, len(txes))
 	for _, tx := range txes {
 		nextTx := transactionsBySender[tx.sender][0]
 		transactionsBySender[tx.sender] = transactionsBySender[tx.sender][1:]
 		batchTxes = append(batchTxes, nextTx.tx)
 	}
-	return l2message.NewTransactionBatchFromMessages(batchTxes)
+	return message.NewTransactionBatchFromMessages(batchTxes)
 }
 
 func (m *Batcher) sendBatch(ctx context.Context) {
@@ -126,7 +127,7 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 	err := m.globalInbox.SendL2MessageNoWait(
 		ctx,
 		m.rollupAddress,
-		message.L2Message{Data: l2message.L2MessageAsData(prepareTransactions(txes))},
+		message.NewL2Message(prepareTransactions(txes)).AsData(),
 	)
 
 	m.Lock()
@@ -139,7 +140,7 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 // SendTransaction takes a request signed transaction l2message from a client
 // and puts it in a queue to be included in the next transaction batch
 func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
-	chainId := l2message.ChainAddressToID(m.rollupAddress)
+	chainId := message.ChainAddressToID(m.rollupAddress)
 	signer := types.NewEIP155Signer(chainId)
 	ethSender, err := signer.Sender(tx)
 	if err != nil {
@@ -148,7 +149,7 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 		return common.Hash{}, err
 	}
 	sender := common.NewAddressFromEth(ethSender)
-	batchTx := l2message.NewSignedTransactionFromEth(tx)
+	batchTx := message.NewSignedTransactionFromEth(tx)
 
 	txHash := tx.Hash()
 	log.Println("Got tx: with hash", txHash.Hex(), "from", sender.Hex())

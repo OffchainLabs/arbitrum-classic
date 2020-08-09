@@ -20,15 +20,17 @@ import { ethers } from '@nomiclabs/buidler'
 import { utils } from 'ethers'
 import { use, expect } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { OneStepProofTester } from '../build/types/OneStepProofTester'
+import { OneStepProof } from '../build/types/OneStepProof'
 import * as fs from 'fs'
 
 use(chaiAsPromised)
 
 interface Assertion {
-  AfterHash: number[]
-  DidInboxInsn: boolean
   NumGas: number
+  BeforeMachineHash: number[]
+  AfterMachineHash: number[]
+  BeforeInboxHash: number[]
+  AfterInboxHash: number[]
   FirstMessageHash: number[]
   LastMessageHash: number[]
   FirstLogHash: number[]
@@ -36,21 +38,16 @@ interface Assertion {
 }
 
 interface Proof {
-  BeforeHash: number[]
   Assertion: Assertion
-  InboxInner: number[]
-  InboxSize: number
   Proof: string
 }
 
-let ospTester: OneStepProofTester
+let ospTester: OneStepProof
 
 describe('OneStepProof', async () => {
   before(async () => {
-    const OneStepProofTester = await ethers.getContractFactory(
-      'OneStepProofTester'
-    )
-    ospTester = (await OneStepProofTester.deploy()) as OneStepProofTester
+    const OneStepProof = await ethers.getContractFactory('OneStepProof')
+    ospTester = (await OneStepProof.deploy()) as OneStepProof
     await ospTester.deployed()
   })
 
@@ -65,28 +62,27 @@ describe('OneStepProof', async () => {
           // Some tests are too big to run every case
           return
         }
-        const {
-          startHash,
-          endHash,
-          logAcc,
-          messageAcc,
-          gas,
-          didInboxInsn,
-        } = await ospTester.executeStep(
-          proof.InboxInner,
-          proof.InboxSize,
+        const { fields, gas } = await ospTester.executeStep(
+          proof.Assertion.AfterInboxHash,
           proof.Assertion.FirstMessageHash,
           proof.Assertion.FirstLogHash,
           Buffer.from(proof.Proof, 'base64')
         )
-        expect(startHash).to.equal(utils.hexlify(proof.BeforeHash))
-        expect(endHash).to.equal(utils.hexlify(proof.Assertion.AfterHash))
-        expect(logAcc).to.equal(utils.hexlify(proof.Assertion.LastLogHash))
-        expect(messageAcc).to.equal(
+        expect(fields[0]).to.equal(
+          utils.hexlify(proof.Assertion.BeforeMachineHash)
+        )
+        expect(fields[1]).to.equal(
+          utils.hexlify(proof.Assertion.AfterMachineHash)
+        )
+        expect(fields[2]).to.equal(
+          utils.hexlify(proof.Assertion.AfterInboxHash)
+        )
+        expect(fields[3]).to.equal(utils.hexlify(proof.Assertion.LastLogHash))
+        expect(fields[4]).to.equal(
           utils.hexlify(proof.Assertion.LastMessageHash)
         )
         expect(gas).to.equal(proof.Assertion.NumGas)
-        expect(didInboxInsn).to.equal(proof.Assertion.DidInboxInsn)
+
         i++
       }
     }).timeout(20000)

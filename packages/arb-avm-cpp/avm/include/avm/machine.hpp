@@ -27,16 +27,20 @@
 struct Assertion {
     uint64_t stepCount;
     uint64_t gasCount;
+    uint64_t inbox_messages_consumed;
     std::vector<value> outMessages;
     std::vector<value> logs;
-    bool didInboxInsn;
 };
 
 class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
 
     Assertion executeMachine(uint64_t stepCount,
-                             std::chrono::seconds wallLimit);
+                             std::chrono::seconds wallLimit,
+                             std::vector<Tuple> inbox_messages,
+                             Tuple sideload,
+                             bool blockingSideload_,
+                             nonstd::optional<value> fake_inbox_peek_value_);
 
    public:
     MachineState machine_state;
@@ -56,13 +60,18 @@ class Machine {
     }
 
     Assertion runSideloaded(uint64_t stepCount,
-                            Tuple messages,
+                            std::vector<Tuple> inbox_messages,
                             std::chrono::seconds wallLimit,
                             Tuple sideload);
 
     Assertion run(uint64_t stepCount,
-                  Tuple messages,
+                  std::vector<Tuple> inbox_messages,
                   std::chrono::seconds wallLimit);
+
+    Assertion runCallServer(uint64_t stepCount,
+                            std::vector<Tuple> inbox_messages,
+                            std::chrono::seconds wallLimit,
+                            value fake_inbox_peek_value);
 
     Status currentStatus() { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }

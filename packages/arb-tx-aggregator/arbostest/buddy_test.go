@@ -19,7 +19,8 @@ package arbostest
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 	"math/big"
 	"testing"
@@ -27,8 +28,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
@@ -58,7 +57,7 @@ func TestBuddyContract(t *testing.T) {
 	//	Data:        append(generateSignature, generateFibData...),
 	//}
 
-	chainTime := message.ChainTime{
+	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
@@ -74,7 +73,7 @@ func TestBuddyContract(t *testing.T) {
 	//	t.Fatal(err)
 	//}
 
-	inbox := value.NewEmptyTuple()
+	messages := make([]inbox.InboxMessage, 0)
 
 	initMsg := message.Init{
 		ChainParams: valprotocol.ChainParams{
@@ -86,11 +85,11 @@ func TestBuddyContract(t *testing.T) {
 		Owner:       common.Address{},
 		ExtraConfig: []byte{},
 	}
-	inbox = value.NewTuple2(inbox, message.NewInboxMessage(initMsg, addr, big.NewInt(0), chainTime).AsValue())
+	messages = append(messages, message.NewInboxMessage(initMsg, addr, big.NewInt(0), chainTime))
 
 	l1contract := common.RandAddress()
 
-	buddyConstructor := l2message.ContractTransaction{
+	buddyConstructor := message.ContractTransaction{
 		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		DestAddress: common.Address{},
@@ -98,7 +97,7 @@ func TestBuddyContract(t *testing.T) {
 		Data:        arbERC20Data,
 	}
 	buddyMsg := message.NewInboxMessage(
-		message.BuddyDeployment{Data: l2message.L2MessageAsData(buddyConstructor)},
+		message.BuddyDeployment{Data: message.NewL2Message(buddyConstructor).AsData()},
 		l1contract,
 		big.NewInt(1),
 		chainTime,
@@ -106,7 +105,7 @@ func TestBuddyContract(t *testing.T) {
 
 	//buddyContractAddress := common.HexToAddress("0x4ee09d87c0112181f1aa950e259a3e2d3bbd7e49")
 
-	inbox = value.NewTuple2(inbox, buddyMsg.AsValue())
+	messages = append(messages, buddyMsg)
 
 	//inbox = value.NewTuple2(inbox, message.NewInboxMessage(
 	//	message.L2Message{Data: l2message.L2MessageAsData(makeConstructorTx(pointsConstructorData, big.NewInt(1)))},
@@ -134,8 +133,8 @@ func TestBuddyContract(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assertion, _ := mach.ExecuteAssertion(1000000000, inbox, 0)
-	data, err := value.TestVectorJSON(inbox, assertion.ParseLogs(), assertion.ParseOutMessages())
+	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
+	data, err := inbox.TestVectorJSON(messages, assertion.ParseLogs(), assertion.ParseOutMessages())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +153,7 @@ func TestBuddyContract(t *testing.T) {
 	t.Log("send", sends[0])
 
 	for _, logVal := range assertion.ParseLogs() {
-		res, err := evm.NewResultFromValue(logVal)
+		res, err := evm.NewTxResultFromValue(logVal)
 		if err != nil {
 			t.Fatal(err)
 		}

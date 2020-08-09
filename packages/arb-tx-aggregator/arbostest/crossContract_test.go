@@ -18,6 +18,7 @@ package arbostest
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 	"math/big"
 	"strings"
@@ -27,11 +28,9 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
@@ -57,7 +56,7 @@ func TestCrossContract(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	chainTime := message.ChainTime{
+	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
@@ -81,45 +80,45 @@ func TestCrossContract(t *testing.T) {
 		Owner:       common.Address{},
 		ExtraConfig: []byte{},
 	}
-	inbox := value.NewEmptyTuple()
+	inboxMessages := make([]inbox.InboxMessage, 0)
 
-	inbox = value.NewTuple2(inbox, message.NewInboxMessage(initMsg, addr, big.NewInt(0), chainTime).AsValue())
+	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg, addr, big.NewInt(0), chainTime))
 
-	inbox = value.NewTuple2(inbox, message.NewInboxMessage(
-		message.L2Message{Data: l2message.L2MessageAsData(makeConstructorTx(distributionsConstructorData, big.NewInt(0)))},
+	inboxMessages = append(inboxMessages, message.NewInboxMessage(
+		message.NewL2Message(makeConstructorTx(distributionsConstructorData, big.NewInt(0))),
 		addr,
 		big.NewInt(1),
 		chainTime,
-	).AsValue())
+	))
 
-	inbox = value.NewTuple2(inbox, message.NewInboxMessage(
-		message.L2Message{Data: l2message.L2MessageAsData(makeConstructorTx(pointsConstructorData, big.NewInt(1)))},
+	inboxMessages = append(inboxMessages, message.NewInboxMessage(
+		message.NewL2Message(makeConstructorTx(pointsConstructorData, big.NewInt(1))),
 		addr,
 		big.NewInt(2),
 		chainTime,
-	).AsValue())
+	))
 
-	inbox = value.NewTuple2(inbox, message.NewInboxMessage(
-		message.L2Message{Data: l2message.L2MessageAsData(l2message.Transaction{
+	inboxMessages = append(inboxMessages, message.NewInboxMessage(
+		message.NewL2Message(message.Transaction{
 			MaxGas:      big.NewInt(1000000000),
 			GasPriceBid: big.NewInt(0),
 			SequenceNum: big.NewInt(2),
 			DestAddress: distributionsAddress,
 			Payment:     big.NewInt(0),
 			Data:        append(instantiateContractSignature, instantiateContractData...),
-		})},
+		}),
 		addr,
 		big.NewInt(3),
 		chainTime,
-	).AsValue())
+	))
 
 	mach, err := cmachine.New(arbos.Path())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	assertion, _ := mach.ExecuteAssertion(1000000000, inbox, 0)
-	data, err := value.TestVectorJSON(inbox, assertion.ParseLogs(), assertion.ParseOutMessages())
+	assertion, _ := mach.ExecuteAssertion(1000000000, inboxMessages, 0)
+	data, err := inbox.TestVectorJSON(inboxMessages, assertion.ParseLogs(), assertion.ParseOutMessages())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,12 +133,17 @@ func TestCrossContract(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if res.ResultCode != evm.ReturnCode {
-			t.Error("tx failed", res.ResultCode)
+		txRes, ok := res.(*evm.TxResult)
+		if !ok {
+			t.Fatal("incorrect res type", res)
 		}
-		log.Println("ReturnData", hexutil.Encode(res.ReturnData))
-		if res.L1Message.Kind == message.L2Type {
-			l2, err := l2message.NewL2MessageFromData(res.L1Message.Data)
+
+		if txRes.ResultCode != evm.ReturnCode {
+			t.Error("tx failed", txRes.ResultCode)
+		}
+		log.Println("ReturnData", hexutil.Encode(txRes.ReturnData))
+		if txRes.L1Message.Kind == message.L2Type {
+			l2, err := message.L2Message{Data: txRes.L1Message.Data}.AbstractMessage()
 			if err != nil {
 				t.Fatal(err)
 			}

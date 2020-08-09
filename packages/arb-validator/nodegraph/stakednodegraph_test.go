@@ -210,7 +210,7 @@ func TestStakerPruneInfo(t *testing.T) {
 	stakeAllNodes(stakedNodeGraph, nodes, 2)
 
 	mootedParams, oldParams := stakedNodeGraph.GenerateStakerPruneInfo()
-	if len(mootedParams) != 4 {
+	if len(mootedParams) != 3 {
 		t.Fatal("incorrect results, mootedParams, ", mootedParams)
 	}
 	if len(oldParams) != 0 {
@@ -256,7 +256,7 @@ func TestStakerPruneInfo2(t *testing.T) {
 	stakedNodeGraph.UpdateLatestConfirmed(nextValid)
 
 	mootedParams, oldParams := stakedNodeGraph.GenerateStakerPruneInfo()
-	if len(mootedParams) != 3 {
+	if len(mootedParams) != 2 {
 		t.Fatal("incorrect results, mootedParams, ", mootedParams)
 	}
 	if len(oldParams) != 0 {
@@ -275,9 +275,8 @@ func TestNodePruneInfo3(t *testing.T) {
 	stakedNodeGraph.UpdateLatestConfirmed(nextValid2)
 
 	params := stakedNodeGraph.GenerateNodePruneInfo(stakedNodeGraph.Stakers())
-	if len(params) != 3 {
-		log.Println("params ", params)
-		t.Fatal("incorrect results")
+	if len(params) != 2 {
+		t.Fatal("incorrect results", len(params))
 	}
 }
 
@@ -291,11 +290,11 @@ func TestStakerPruneInfo3(t *testing.T) {
 	stakedNodeGraph.UpdateLatestConfirmed(nextValid2)
 
 	mootedParams, oldParams := stakedNodeGraph.GenerateStakerPruneInfo()
-	if len(mootedParams) != 3 {
-		t.Fatal("incorrect results, mootedParams, ", mootedParams)
+	if len(mootedParams) != 2 {
+		t.Error("incorrect results, mootedParams, ", len(mootedParams))
 	}
 	if len(oldParams) != 0 {
-		t.Fatal("incorrect results, oldParams, ", oldParams)
+		t.Error("incorrect results, oldParams, ", len(oldParams))
 	}
 }
 
@@ -308,7 +307,7 @@ func TestStakerPruneInfo4(t *testing.T) {
 	stakedNodeGraph.UpdateLatestConfirmed(nextValid2)
 
 	mootedParams, oldParams := stakedNodeGraph.GenerateStakerPruneInfo()
-	if len(mootedParams) != 3 {
+	if len(mootedParams) != 2 {
 		t.Fatal("incorrect results, mootedParams, ", mootedParams)
 	}
 	if len(oldParams) != 1 {

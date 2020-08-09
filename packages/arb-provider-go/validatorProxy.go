@@ -3,21 +3,21 @@ package goarbitrum
 import (
 	"bytes"
 	"context"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/rpc/json"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -26,12 +26,12 @@ var Namespace = "Aggregator"
 type ValidatorProxy interface {
 	GetBlockCount(ctx context.Context) (uint64, error)
 	SendTransaction(ctx context.Context, tx *types.Transaction) (common.Hash, error)
-	BlockInfo(ctx context.Context, height uint64) (machine.BlockInfo, error)
+	BlockInfo(ctx context.Context, height uint64) (*machine.BlockInfo, error)
 	GetRequestResult(ctx context.Context, txHash common.Hash) (value.Value, error)
 	GetChainAddress(ctx context.Context) (ethcommon.Address, error)
 	FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []ethcommon.Address, topics [][]ethcommon.Hash) ([]evm.FullLog, error)
-	Call(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error)
-	PendingCall(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error)
+	Call(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error)
+	PendingCall(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error)
 }
 
 type ValidatorProxyImpl struct {
@@ -109,25 +109,31 @@ func (vp *ValidatorProxyImpl) doCall(ctx context.Context, methodName string, req
 	return ret
 }
 
-func (vp *ValidatorProxyImpl) BlockInfo(ctx context.Context, height uint64) (machine.BlockInfo, error) {
+func (vp *ValidatorProxyImpl) BlockInfo(ctx context.Context, height uint64) (*machine.BlockInfo, error) {
 	request := &evm.BlockInfoArgs{
 		Height: height,
 	}
 	var response evm.BlockInfoReply
 	if err := vp.doCall(ctx, "BlockInfo", request, &response); err != nil {
-		return machine.BlockInfo{}, err
+		return nil, err
 	}
 	bloomBytes, err := hexutil.Decode(response.Bloom)
 	if err != nil {
-		return machine.BlockInfo{}, err
+		return nil, err
 	}
-	return machine.BlockInfo{
-		Hash:         common.NewHashFromEth(ethcommon.HexToHash(response.Hash)),
-		StartLog:     response.StartLog,
-		LogCount:     response.LogCount,
-		StartMessage: response.StartMessage,
-		MessageCount: response.MessageCount,
-		Bloom:        types.BytesToBloom(bloomBytes),
+
+	data, err := hexutil.Decode(response.RawVal)
+	if err != nil {
+		return nil, err
+	}
+	val, err := value.UnmarshalValue(bytes.NewBuffer(data))
+	if err != nil {
+		return nil, err
+	}
+	return &machine.BlockInfo{
+		Hash:     common.NewHashFromEth(ethcommon.HexToHash(response.Hash)),
+		BlockLog: val,
+		Bloom:    types.BytesToBloom(bloomBytes),
 	}, nil
 }
 
@@ -210,7 +216,7 @@ func hexToValue(rawVal string) (value.Value, error) {
 	return value.UnmarshalValue(bytes.NewReader(retBuf))
 }
 
-func (vp *ValidatorProxyImpl) Call(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
+func (vp *ValidatorProxyImpl) Call(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	request := &evm.CallMessageArgs{
 		Data:   hexutil.Encode(msg.AsData()),
 		Sender: hexutil.Encode(sender[:]),
@@ -222,7 +228,7 @@ func (vp *ValidatorProxyImpl) Call(ctx context.Context, msg l2message.ContractTr
 	return hexToValue(response.RawVal)
 }
 
-func (vp *ValidatorProxyImpl) PendingCall(ctx context.Context, msg l2message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
+func (vp *ValidatorProxyImpl) PendingCall(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	request := &evm.CallMessageArgs{
 		Data:   hexutil.Encode(msg.AsData()),
 		Sender: hexutil.Encode(sender[:]),

@@ -14,10 +14,11 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -84,15 +85,13 @@ func (conn *ArbConnection) CodeAt(
 }
 
 func processCallRet(retValue value.Value) ([]byte, error) {
-	logVal, err := evm.NewResultFromValue(retValue)
+	logVal, err := evm.NewTxResultFromValue(retValue)
 	if err != nil {
 		return nil, err
 	}
+	log.Println("Got call result", logVal.ResultCode, hexutil.Encode(logVal.ReturnData))
 	if logVal.ResultCode != evm.ReturnCode && logVal.ResultCode != evm.RevertCode {
 		return nil, fmt.Errorf("call failed %v", logVal)
-	}
-	if logVal.ResultCode == evm.RevertCode {
-		log.Println("Call failed with message", string(logVal.ReturnData))
 	}
 	return logVal.ReturnData, nil
 }
@@ -115,7 +114,7 @@ func (conn *ArbConnection) CallContract(
 	if call.Value == nil {
 		call.Value = big.NewInt(0)
 	}
-	tx := l2message.ContractTransaction{
+	tx := message.ContractTransaction{
 		MaxGas:      new(big.Int).SetUint64(call.Gas),
 		GasPriceBid: gasPriceBid,
 		DestAddress: dest,
@@ -172,7 +171,7 @@ func (conn *ArbConnection) pendingCall(ctx context.Context, call ethereum.CallMs
 	if call.Value == nil {
 		call.Value = big.NewInt(0)
 	}
-	tx := l2message.ContractTransaction{
+	tx := message.ContractTransaction{
 		MaxGas:      new(big.Int).SetUint64(call.Gas),
 		GasPriceBid: gasPriceBid,
 		DestAddress: dest,
@@ -217,7 +216,7 @@ func (conn *ArbConnection) EstimateGas(
 	if err != nil {
 		return 0, err
 	}
-	res, err := evm.NewResultFromValue(retValue)
+	res, err := evm.NewTxResultFromValue(retValue)
 	if err != nil {
 		return 0, err
 	}
@@ -230,7 +229,7 @@ func (conn *ArbConnection) EstimateGas(
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 	// This is a stopgap measure until https://github.com/ethereum/go-ethereum/issues/16484 is solved
-	signer := types.NewEIP155Signer(l2message.ChainAddressToID(conn.rollupAddress))
+	signer := types.NewEIP155Signer(message.ChainAddressToID(conn.rollupAddress))
 	signedTx, err := types.SignTx(tx, signer, conn.pk)
 	if err != nil {
 		return err
@@ -390,7 +389,7 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	if val == nil || err != nil {
 		return nil, ethereum.NotFound
 	}
-	result, err := evm.NewResultFromValue(val)
+	result, err := evm.NewTxResultFromValue(val)
 	if err != nil {
 		return nil, err
 	}

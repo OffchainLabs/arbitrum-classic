@@ -19,30 +19,47 @@ package arbostest
 import (
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/l2message"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"math/big"
 	"strings"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
 )
 
-func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender common.Address) []*evm.Result {
-	chainTime := message.ChainTime{
+func simpleInitMessage() message.Init {
+	return message.Init{
+		ChainParams: valprotocol.ChainParams{
+			StakeRequirement:        big.NewInt(0),
+			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
+			MaxExecutionSteps:       0,
+			ArbGasSpeedLimitPerTick: 0,
+		},
+		Owner:       common.Address{},
+		ExtraConfig: []byte{},
+	}
+}
+
+func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender common.Address) []*evm.TxResult {
+	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
 
-	inbox := value.NewEmptyTuple()
-	inbox = value.NewTuple2(inbox, message.NewInboxMessage(msg, sender, big.NewInt(0), chainTime).AsValue())
-	assertion, steps := mach.ExecuteAssertion(1000000000, inbox, 0)
+	assertion, steps := mach.ExecuteAssertion(
+		1000000000,
+		[]inbox.InboxMessage{message.NewInboxMessage(msg, sender, big.NewInt(0), chainTime)},
+		0,
+	)
 	//data, err := value.TestVectorJSON(inbox, assertion.ParseLogs(), assertion.ParseOutMessages())
 	//if err != nil {
 	//	t.Fatal(err)
@@ -60,9 +77,9 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 	if _, ok := blockReason.(machine.InboxBlocked); !ok {
 		t.Fatal("Machine blocked for weird reason", blockReason)
 	}
-	results := make([]*evm.Result, 0)
+	results := make([]*evm.TxResult, 0)
 	for _, avmLog := range assertion.ParseLogs() {
-		result, err := evm.NewResultFromValue(avmLog)
+		result, err := evm.NewTxResultFromValue(avmLog)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -71,8 +88,8 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 	return results
 }
 
-func runTransaction(t *testing.T, mach machine.Machine, msg l2message.AbstractL2Message, sender common.Address) (*evm.Result, error) {
-	results := runMessage(t, mach, message.L2Message{Data: l2message.L2MessageAsData(msg)}, sender)
+func runTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Message, sender common.Address) (*evm.TxResult, error) {
+	results := runMessage(t, mach, message.NewL2Message(msg), sender)
 	if len(results) != 1 {
 		return nil, fmt.Errorf("unexpected log count %v", len(results))
 	}
@@ -100,7 +117,7 @@ func getTransactionCountCall(t *testing.T, mach machine.Machine, address common.
 		t.Fatal(err)
 	}
 
-	call := l2message.Call{
+	call := message.Call{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
@@ -121,7 +138,7 @@ func getTransactionCountCall(t *testing.T, mach machine.Machine, address common.
 	return val
 }
 
-func withdrawEthTx(t *testing.T, sequenceNum *big.Int, amount *big.Int, dest common.Address) l2message.Transaction {
+func withdrawEthTx(t *testing.T, sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
 	arbsys, err := abi.JSON(strings.NewReader(arboscontracts.ArbSysABI))
 	if err != nil {
 		t.Fatal(err)
@@ -138,7 +155,7 @@ func withdrawEthTx(t *testing.T, sequenceNum *big.Int, amount *big.Int, dest com
 		t.Fatal(err)
 	}
 
-	return l2message.Transaction{
+	return message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: sequenceNum,
@@ -165,7 +182,7 @@ func getBalanceCall(t *testing.T, mach machine.Machine, address common.Address) 
 		t.Fatal(err)
 	}
 
-	getBalance := l2message.Call{
+	getBalance := message.Call{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS),
@@ -186,8 +203,8 @@ func getBalanceCall(t *testing.T, mach machine.Machine, address common.Address) 
 	return val
 }
 
-func makeConstructorTx(code []byte, sequenceNum *big.Int) l2message.Transaction {
-	return l2message.Transaction{
+func makeConstructorTx(code []byte, sequenceNum *big.Int) message.Transaction {
+	return message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: sequenceNum,

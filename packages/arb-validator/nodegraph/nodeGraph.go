@@ -250,7 +250,7 @@ func (ng *NodeGraph) CreateNodesOnAssert(
 	currentTime *common.TimeBlocks,
 	assertionTxHash common.Hash,
 ) []*structures.Node {
-	newNodes := make([]*structures.Node, 0, 4)
+	newNodes := make([]*structures.Node, 0, 3)
 	_, ok := ng.nodeFromHash[prevNode.Hash()]
 	if !ok {
 		log.Fatal("can't assert on non-existent node")

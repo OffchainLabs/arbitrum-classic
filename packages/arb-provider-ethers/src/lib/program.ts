@@ -123,7 +123,8 @@ export function programMachineHash(progString: string): string {
       new ArbValue.BasicOp(0),
       ethers.utils.hexZeroPad('0x00', 32)
     ),
-    new ArbValue.IntValue(ethers.constants.MaxUint256)
+    new ArbValue.IntValue(ethers.constants.MaxUint256),
+    new ArbValue.TupleValue([])
   )
 }
 
@@ -134,7 +135,8 @@ export function machineHash(
   registerVal: ArbValue.Value,
   staticVal: ArbValue.Value,
   errPc: ArbValue.Value,
-  arbGasRemaining: ArbValue.IntValue
+  arbGasRemaining: ArbValue.IntValue,
+  pendingMessage: ArbValue.Value
 ): string {
   return ethers.utils.solidityKeccak256(
     [
@@ -145,6 +147,7 @@ export function machineHash(
       'bytes32',
       'uint256',
       'bytes32',
+      'bytes32',
     ],
     [
       pc.hash(),
@@ -154,6 +157,7 @@ export function machineHash(
       staticVal.hash(),
       arbGasRemaining.bignum,
       errPc.hash(),
+      pendingMessage.hash(),
     ]
   )
 }

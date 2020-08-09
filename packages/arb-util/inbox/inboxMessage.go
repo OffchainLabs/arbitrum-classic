@@ -14,14 +14,16 @@
 * limitations under the License.
  */
 
-package message
+package inbox
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	errors2 "github.com/pkg/errors"
 	"math/big"
+	"math/rand"
 
 	"github.com/ethereum/go-ethereum/common/math"
 
@@ -31,15 +33,6 @@ import (
 )
 
 type Type uint8
-
-const (
-	EthType Type = iota
-	ERC20Type
-	ERC721Type
-	L2Type
-	InitType
-	L2BuddyDeploy
-)
 
 type ChainTime struct {
 	BlockNum  *common.TimeBlocks
@@ -53,27 +46,12 @@ func NewRandomChainTime() ChainTime {
 	}
 }
 
-type Message interface {
-	Type() Type
-	AsData() []byte
-}
-
 type InboxMessage struct {
 	Kind        Type
 	Sender      common.Address
 	InboxSeqNum *big.Int
 	Data        []byte
 	ChainTime   ChainTime
-}
-
-func NewInboxMessage(msg Message, sender common.Address, inboxSeqNum *big.Int, time ChainTime) InboxMessage {
-	return InboxMessage{
-		Kind:        msg.Type(),
-		Sender:      sender,
-		InboxSeqNum: inboxSeqNum,
-		Data:        msg.AsData(),
-		ChainTime:   time,
-	}
 }
 
 func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
@@ -124,7 +102,7 @@ func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 
 	return InboxMessage{
 		Kind:        Type(kindInt.BigInt().Uint64()),
-		Sender:      intValueToAddress(senderInt),
+		Sender:      NewAddressFromInt(senderInt),
 		InboxSeqNum: inboxSeqNumInt.BigInt(),
 		Data:        data,
 		ChainTime: ChainTime{
@@ -134,27 +112,23 @@ func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 	}, nil
 }
 
-func NewRandomInboxMessage(msg Message) InboxMessage {
-	return NewInboxMessage(
-		msg,
-		common.RandAddress(),
-		common.RandBigInt(),
-		NewRandomChainTime(),
-	)
+func NewRandomInboxMessage() InboxMessage {
+	return InboxMessage{
+		Kind:        Type(rand.Uint32()),
+		Sender:      common.RandAddress(),
+		InboxSeqNum: common.RandBigInt(),
+		Data:        common.RandBytes(200),
+		ChainTime:   NewRandomChainTime(),
+	}
 }
 
 func (im InboxMessage) String() string {
-	nested, err := im.NestedMessage()
-	nestedStr := "invalid"
-	if err == nil {
-		nestedStr = fmt.Sprintf("%v", nested)
-	}
 	return fmt.Sprintf(
 		"InboxMessage(%v, %v, %v, %v, %v)",
 		im.Kind,
 		im.Sender,
 		im.InboxSeqNum,
-		nestedStr,
+		hexutil.Encode(im.Data),
 		im.ChainTime,
 	)
 }
@@ -164,7 +138,7 @@ func (im InboxMessage) AsValue() value.Value {
 		value.NewInt64Value(int64(im.Kind)),
 		value.NewIntValue(im.ChainTime.BlockNum.AsInt()),
 		value.NewIntValue(im.ChainTime.Timestamp),
-		addressToIntValue(im.Sender),
+		NewIntFromAddress(im.Sender),
 		value.NewIntValue(im.InboxSeqNum),
 		BytesToByteStack(im.Data),
 	})
@@ -191,45 +165,13 @@ func (im InboxMessage) Equals(o InboxMessage) bool {
 		im.ChainTime.Timestamp.Cmp(o.ChainTime.Timestamp) == 0
 }
 
-func (im InboxMessage) NestedMessage() (Message, error) {
-	switch im.Kind {
-	case EthType:
-		return NewEthFromData(im.Data), nil
-	case ERC20Type:
-		return NewERC20FromData(im.Data), nil
-	case ERC721Type:
-		return NewERC721FromData(im.Data), nil
-	case L2Type:
-		return L2Message{Data: im.Data}, nil
-	case InitType:
-		return NewInitFromData(im.Data), nil
-	case L2BuddyDeploy:
-		return BuddyDeployment{Data: im.Data}, nil
-	default:
-		return nil, errors.New("unknown inbox l2message type")
-	}
-}
-
-type BuddyDeployment struct {
-	Data []byte
-}
-
-func (b BuddyDeployment) Type() Type {
-	return L2BuddyDeploy
-}
-
-func (b BuddyDeployment) AsData() []byte {
-	return b.Data
-}
-
 func (im InboxMessage) MessageID() common.Hash {
-	// by default just use the InboxSeqNum
 	var ret common.Hash
 	copy(ret[:], math.U256Bytes(im.InboxSeqNum))
 	return ret
 }
 
-func addressToIntValue(address common.Address) value.IntValue {
+func NewIntFromAddress(address common.Address) value.IntValue {
 	addressBytes := [32]byte{}
 	copy(addressBytes[12:], address[:])
 	addressVal := big.NewInt(0).SetBytes(addressBytes[:])
@@ -237,7 +179,7 @@ func addressToIntValue(address common.Address) value.IntValue {
 	return value.NewIntValue(addressVal)
 }
 
-func intValueToAddress(val value.IntValue) common.Address {
+func NewAddressFromInt(val value.IntValue) common.Address {
 	address := common.Address{}
 	valBytes := val.ToBytes()
 	copy(address[:], valBytes[12:])

@@ -719,12 +719,39 @@ bool send(MachineState& m) {
     return success;
 }
 
+BlockReason inboxPeekOp(MachineState& m) {
+    m.stack.prepForMod(1);
+    bool has_staged_message = m.staged_message != Tuple{};
+    if (!has_staged_message && m.context.inboxEmpty()) {
+        if (!m.context.fake_inbox_peek_value) {
+            return InboxBlocked();
+        }
+
+        // When fake_inbox_peek_value is set we're in callserver mode. Use
+        // that value as the message value
+        m.stack[0] = m.stack[0] == *m.context.fake_inbox_peek_value ? 1 : 0;
+        ++m.pc;
+        return NotBlocked{};
+    }
+    if (!has_staged_message) {
+        m.staged_message = m.context.popInbox();
+    }
+    m.stack[0] = m.stack[0] == m.staged_message.get_element(1) ? 1 : 0;
+    ++m.pc;
+    return NotBlocked{};
+}
+
 BlockReason inboxOp(MachineState& m) {
-    if (m.context.inbox.tuple_size() == 0) {
+    bool has_staged_message = m.staged_message != Tuple{};
+    if (!has_staged_message && m.context.inboxEmpty()) {
         return InboxBlocked();
     }
-    m.stack.push(std::move(m.context.inbox));
-    m.context.executedInbox();
+    if (has_staged_message) {
+        m.stack.push(m.staged_message);
+        m.staged_message = Tuple();
+    } else {
+        m.stack.push(m.context.popInbox());
+    }
     ++m.pc;
     return NotBlocked{};
 }

@@ -18,31 +18,29 @@ package challenges
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
 	"testing"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 
-	errors2 "github.com/pkg/errors"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
 
 type ChallengeFunc func(common.Address, *ethbridge.EthArbAuthClient, *common.BlockId) (ChallengeState, error)
 
 func testChallengerCatchUp(
+	t *testing.T,
 	client ethutils.EthClient,
 	asserter *bind.TransactOpts,
 	challenger *bind.TransactOpts,
@@ -53,10 +51,10 @@ func testChallengerCatchUp(
 	challengerFunc ChallengeFunc,
 	challengerFuncStop ChallengeFunc,
 	testerAddress ethcommon.Address,
-) error {
+) {
 	current, err := client.HeaderByNumber(context.Background(), nil)
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 	blockId := &common.BlockId{
 		Height:     common.NewTimeBlocks(current.Number),
@@ -71,7 +69,7 @@ func testChallengerCatchUp(
 		testerAddress,
 	)
 	if err != nil {
-		return errors2.Wrap(err, "Error starting challenge")
+		t.Fatal("Error starting challenge", err)
 	}
 
 	asserterEndChan := make(chan ChallengeState)
@@ -121,23 +119,13 @@ func testChallengerCatchUp(
 
 	go func() {
 		cBlockId := blockId.MarshalToBuf().Unmarshal()
-		tryCount := 0
 		for {
 			endState, err := challengerFuncStop(challengeAddress, challengerClient, cBlockId)
 			if endState == ChallengerDiscontinued {
 				break
 			}
-			if tryCount > 20 {
-				asserterErrChan <- err
-				return
-			}
-			tryCount += 1
-			log.Println("Restarting challenger", err)
-			cBlockId, err = asserterClient.BlockIdForHeight(context.Background(), cBlockId.Height)
-			if err != nil {
-				asserterErrChan <- err
-				return
-			}
+			asserterErrChan <- err
+			return
 		}
 		for {
 			endState, err := challengerFunc(challengeAddress, challengerClient, cBlockId)
@@ -145,24 +133,16 @@ func testChallengerCatchUp(
 				asserterEndChan <- endState
 				return
 			}
-			if tryCount > 20 {
-				asserterErrChan <- err
-				return
-			}
-			tryCount += 1
-			log.Println("Restarting challenger", err)
-			cBlockId, err = asserterClient.BlockIdForHeight(context.Background(), cBlockId.Height)
-			if err != nil {
-				asserterErrChan <- err
-				return
-			}
+			asserterErrChan <- err
+			return
 		}
 	}()
 
-	return resolveChallenge(asserterEndChan, asserterErrChan, challengerEndChan, challengerErrChan)
+	resolveChallenge(t, asserterEndChan, asserterErrChan, challengerEndChan, challengerErrChan)
 }
 
 func testChallenge(
+	t *testing.T,
 	client ethutils.EthClient,
 	asserter *bind.TransactOpts,
 	challenger *bind.TransactOpts,
@@ -171,10 +151,10 @@ func testChallenge(
 	asserterFunc ChallengeFunc,
 	challengerFunc ChallengeFunc,
 	testerAddress ethcommon.Address,
-) error {
+) {
 	current, err := client.HeaderByNumber(context.Background(), nil)
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 	blockId := &common.BlockId{
 		Height:     common.NewTimeBlocks(current.Number),
@@ -189,7 +169,7 @@ func testChallenge(
 		testerAddress,
 	)
 	if err != nil {
-		return errors2.Wrap(err, "Error starting challenge")
+		t.Fatal("Error starting challenge", err)
 	}
 
 	asserterEndChan := make(chan ChallengeState)
@@ -198,83 +178,64 @@ func testChallenge(
 	challengerErrChan := make(chan error)
 
 	go func() {
-		tryCount := 0
 		for {
 			endState, err := asserterFunc(challengeAddress, asserterClient, blockId)
 			if err == nil {
 				asserterEndChan <- endState
 				return
 			}
-			if tryCount > 20 {
-				asserterErrChan <- err
-				return
-			}
-			tryCount += 1
-			log.Println("Restarting asserter", err)
-			_, err = asserterClient.BlockIdForHeight(context.Background(), blockId.Height)
-			if err != nil {
-				asserterErrChan <- err
-				return
-			}
+			asserterErrChan <- err
+			return
 		}
 	}()
 
 	go func() {
 		cBlockId := blockId.MarshalToBuf().Unmarshal()
-		tryCount := 0
 		for {
 			endState, err := challengerFunc(challengeAddress, challengerClient, cBlockId)
 			if err == nil {
 				asserterEndChan <- endState
 				return
 			}
-			if tryCount > 20 {
-				asserterErrChan <- err
-				return
-			}
-			tryCount += 1
-			log.Println("Restarting challenger", err)
-			cBlockId, err = asserterClient.BlockIdForHeight(context.Background(), cBlockId.Height)
-			if err != nil {
-				asserterErrChan <- err
-				return
-			}
+			asserterErrChan <- err
+			return
 		}
 	}()
 
-	return resolveChallenge(asserterEndChan, asserterErrChan, challengerEndChan, challengerErrChan)
+	resolveChallenge(t, asserterEndChan, asserterErrChan, challengerEndChan, challengerErrChan)
 }
 
 func resolveChallenge(
+	t *testing.T,
 	asserterEndChan chan ChallengeState,
 	asserterErrChan chan error,
 	challengerEndChan chan ChallengeState,
-	challengerErrChan chan error) error {
+	challengerErrChan chan error) {
 	doneCount := 0
 	for {
 		select {
 		case challengeState := <-asserterEndChan:
 			if challengeState != ChallengeAsserterWon {
-				return fmt.Errorf("Asserter Ended: Asserter challenge ended with %v", challengeState)
+				t.Fatalf("Asserter Ended: Asserter challenge ended with %v", challengeState)
 			}
 			doneCount++
 			if doneCount == 2 {
-				return nil
+				return
 			}
 		case challengeState := <-challengerEndChan:
 			if challengeState != ChallengeAsserterWon {
-				return fmt.Errorf("Challenger Ended: Asserter challenge ended with %v", challengeState)
+				t.Fatalf("Challenger Ended: Asserter challenge ended with %v", challengeState)
 			}
 			doneCount++
 			if doneCount == 2 {
-				return nil
+				return
 			}
 		case err := <-asserterErrChan:
-			return errors2.Wrap(err, "Asserter error")
+			t.Fatal("Asserter error", err)
 		case err := <-challengerErrChan:
-			return errors2.Wrap(err, "Challenger error")
+			t.Fatal("Challenger error", err)
 		case <-time.After(80 * time.Second):
-			return errors.New("Challenge never completed")
+			t.Fatal("Challenge never completed")
 		}
 	}
 }

@@ -107,6 +107,8 @@ func RunObserver(
 
 	go func() {
 
+		firstRun := true
+
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
 
@@ -115,18 +117,17 @@ func RunObserver(
 				log.Fatal(err)
 			}
 
-			if err := db.RestoreFromCheckpoint(ctx); err != nil {
-				log.Fatal(err)
+			if !firstRun {
+				if err := db.RestoreFromCheckpoint(ctx); err != nil {
+					log.Fatal(err)
+				}
+				firstRun = false
 			}
-
-			latest, err := db.LatestBlock()
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			log.Println("Starting observer from", latest)
 
 			err = func() error {
+				latest := db.LatestBlock()
+				log.Println("Starting observer from", latest)
+
 				// If the local chain is significantly behind the L1, catch up
 				// more efficiently. We process `MaxReorgHeight` blocks at a
 				// time up to `MaxReorgHeight` blocks before the current head
@@ -134,10 +135,7 @@ func RunObserver(
 				// we are processing
 				maxReorg := cp.MaxReorgHeight()
 				for {
-					latestBlock, err := db.LatestBlock()
-					if err != nil {
-						return err
-					}
+					latestBlock := db.LatestBlock()
 					start := new(big.Int).Add(latestBlock.Height.AsInt(), big.NewInt(1))
 					fetchEnd, err := calculateCatchupFetch(runCtx, start, clnt, maxReorg)
 					if err != nil {
@@ -154,11 +152,11 @@ func RunObserver(
 					if err := db.AddMessages(runCtx, inboxDeliveredEvents, fetchEnd.Uint64()); err != nil {
 						return err
 					}
-				}
 
-				latest, err := db.LatestBlock()
-				if err != nil {
-					return err
+					latest, err = clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(fetchEnd))
+					if err != nil {
+						return err
+					}
 				}
 
 				headersChan, err := clnt.SubscribeBlockHeadersAfter(runCtx, latest)
