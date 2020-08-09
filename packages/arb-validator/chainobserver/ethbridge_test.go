@@ -269,6 +269,7 @@ func TestConfirmAssertion(t *testing.T) {
 		proof := opp.PrepareProof()
 		offset := big.NewInt(0)
 		validCount := int64(0)
+		beforeSendCount := proof.BeforeSendCount
 		for i, nodeOpp := range opp.Nodes {
 			nd := nodes[i]
 			nodeOpp, ok := nodeOpp.(valprotocol.ConfirmValidOpportunity)
@@ -299,22 +300,36 @@ func TestConfirmAssertion(t *testing.T) {
 				t.Fatal("generated incorrect messages acc")
 			}
 
-			_, nodeDataHash, vmProtoStateHash, err := rollupTester.ProcessValidNode(
+			validNodeRet, err := rollupTester.ProcessValidNode(
 				nil,
 				proof.LogsAcc,
 				proof.VMProtoStateHashes,
 				proof.MessageCounts,
 				proof.Messages,
 				big.NewInt(validCount),
+				beforeSendCount,
 				offset,
 			)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-			if vmProtoStateHash != nodeOpp.VMProtoState.Hash() {
+			beforeSendCount = beforeSendCount.Add(beforeSendCount, proof.MessageCounts[validCount])
+
+			if validNodeRet.VmProtoStateHash != nodeOpp.VMProtoState.Hash() {
 				t.Error("incorrect state hash")
 			}
 
-			if nodeDataHash != nd.NodeDataHash() {
+			if validNodeRet.NodeDataHash != nd.NodeDataHash() {
 				t.Error("incorrect data hash")
+			}
+
+			if validNodeRet.AfterSendCount.Cmp(beforeSendCount) != 0 {
+				t.Error("incorrect after send count")
+			}
+
+			if validNodeRet.AfterOffset.Cmp(nextOffset) != 0 {
+				t.Error("incorrect after offset")
 			}
 
 			offset = nextOffset
@@ -337,6 +352,7 @@ func TestConfirmAssertion(t *testing.T) {
 			nil,
 			latestConf.Hash().ToEthHash(),
 			proof.InitalProtoStateHash,
+			proof.BeforeSendCount,
 			proof.BranchesNums,
 			proof.DeadlineTicks,
 			proof.ChallengeNodeData,

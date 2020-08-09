@@ -343,6 +343,7 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
      */
     function confirm(
         bytes32 initalProtoStateHash,
+        uint256 beforeSendCount,
         uint256[] memory branches,
         uint256[] memory deadlineTicks,
         bytes32[] memory challengeNodeData,
@@ -358,6 +359,7 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
             _confirm(
                 RollupUtils.ConfirmData(
                     initalProtoStateHash,
+                    beforeSendCount,
                     branches,
                     deadlineTicks,
                     challengeNodeData,

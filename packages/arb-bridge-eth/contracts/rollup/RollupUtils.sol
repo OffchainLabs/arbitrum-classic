@@ -30,6 +30,7 @@ library RollupUtils {
 
     struct ConfirmData {
         bytes32 initalProtoStateHash;
+        uint256 beforeSendCount;
         uint256[] branches;
         uint256[] deadlineTicks;
         bytes32[] challengeNodeData;
@@ -44,15 +45,16 @@ library RollupUtils {
         uint256 invalidNum;
         uint256 messagesOffset;
         bytes32 vmProtoStateHash;
+        uint256 beforeSendCount;
         bytes32 nodeHash;
     }
 
-    function getInitialNodeData(bytes32 vmProtoStateHash, bytes32 confNode)
-        private
-        pure
-        returns (NodeData memory)
-    {
-        return NodeData(0, 0, 0, vmProtoStateHash, confNode);
+    function getInitialNodeData(
+        bytes32 vmProtoStateHash,
+        uint256 beforeSendCount,
+        bytes32 confNode
+    ) private pure returns (NodeData memory) {
+        return NodeData(0, 0, 0, vmProtoStateHash, beforeSendCount, confNode);
     }
 
     function confirm(ConfirmData memory data, bytes32 confNode)
@@ -67,6 +69,7 @@ library RollupUtils {
         validNodeHashes = new bytes32[](validNodeCount);
         NodeData memory currentNodeData = getInitialNodeData(
             data.initalProtoStateHash,
+            data.beforeSendCount,
             confNode
         );
         bool isValidChildType;
@@ -98,12 +101,14 @@ library RollupUtils {
 
         if (isValidChildType) {
             (
+                nodeData.beforeSendCount,
                 nodeData.messagesOffset,
                 nodeDataHash,
                 nodeData.vmProtoStateHash
             ) = processValidNode(
                 data,
                 nodeData.validNum,
+                nodeData.beforeSendCount,
                 nodeData.messagesOffset
             );
             nodeData.validNum++;
@@ -126,27 +131,35 @@ library RollupUtils {
     function processValidNode(
         ConfirmData memory data,
         uint256 validNum,
+        uint256 beforeSendCount,
         uint256 startOffset
     )
         internal
         pure
         returns (
             uint256,
+            uint256,
             bytes32,
             bytes32
         )
     {
+        uint256 sendCount = data.messageCounts[validNum];
         (bytes32 lastMsgHash, uint256 messagesOffset) = generateLastMessageHash(
             data.messages,
             startOffset,
-            data.messageCounts[validNum]
+            sendCount
         );
         bytes32 nodeDataHash = validDataHash(
             lastMsgHash,
             data.logsAcc[validNum]
         );
         bytes32 vmProtoStateHash = data.vmProtoStateHashes[validNum];
-        return (messagesOffset, nodeDataHash, vmProtoStateHash);
+        return (
+            beforeSendCount + sendCount,
+            messagesOffset,
+            nodeDataHash,
+            vmProtoStateHash
+        );
     }
 
     function generateLastMessageHash(

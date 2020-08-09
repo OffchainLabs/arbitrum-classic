@@ -24,6 +24,7 @@ contract RollupTester {
     function confirm(
         bytes32 confNode,
         bytes32 initalProtoStateHash,
+        uint256 beforeSendCount,
         uint256[] memory branches,
         uint256[] memory deadlineTicks,
         bytes32[] memory challengeNodeData,
@@ -36,6 +37,7 @@ contract RollupTester {
             RollupUtils.confirm(
                 RollupUtils.ConfirmData(
                     initalProtoStateHash,
+                    beforeSendCount,
                     branches,
                     deadlineTicks,
                     challengeNodeData,
@@ -63,19 +65,22 @@ contract RollupTester {
         uint256[] memory messageCounts,
         bytes memory messages,
         uint256 validNum,
+        uint256 beforeSendCount,
         uint256 startOffset
     )
         public
         pure
         returns (
-            uint256,
-            bytes32,
-            bytes32
+            uint256 afterSendCount,
+            uint256 afterOffset,
+            bytes32 nodeDataHash,
+            bytes32 vmProtoStateHash
         )
     {
         return
             RollupUtils.processValidNode(
                 RollupUtils.ConfirmData(
+                    0,
                     0,
                     new uint256[](0),
                     new uint256[](0),
@@ -86,6 +91,7 @@ contract RollupTester {
                     messages
                 ),
                 validNum,
+                beforeSendCount,
                 startOffset
             );
     }

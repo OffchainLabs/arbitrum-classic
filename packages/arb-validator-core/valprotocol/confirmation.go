@@ -131,8 +131,6 @@ type ConfirmProof struct {
 
 func (opp *ConfirmOpportunity) PrepareProof() ConfirmProof {
 	nodeOpps := opp.Nodes
-	initalProtoStateHash := nodeOpps[0].CoreOpp().VMProtoState.Hash()
-	beforeSendCount := nodeOpps[0].CoreOpp().PrevVMProtoState.MessageCount
 	branchesNums := make([]*big.Int, 0, len(nodeOpps))
 	deadlineTicks := make([]*big.Int, 0, len(nodeOpps))
 	challengeNodeData := make([]common.Hash, 0)
@@ -166,8 +164,8 @@ func (opp *ConfirmOpportunity) PrepareProof() ConfirmProof {
 	}
 
 	return ConfirmProof{
-		InitalProtoStateHash: initalProtoStateHash,
-		BeforeSendCount:      beforeSendCount,
+		InitalProtoStateHash: nodeOpps[0].CoreOpp().VMProtoState.Hash(),
+		BeforeSendCount:      nodeOpps[0].CoreOpp().PrevVMProtoState.MessageCount,
 		BranchesNums:         branchesNums,
 		DeadlineTicks:        deadlineTicks,
 		ChallengeNodeData:    common.HashSliceToRaw(challengeNodeData),
