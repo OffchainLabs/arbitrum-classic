@@ -313,7 +313,7 @@ func TestConfirmAssertion(t *testing.T) {
 				offset,
 			)
 
-			if vmProtoStateHash != nodeOpp.VMProtoStateHash {
+			if vmProtoStateHash != nodeOpp.VMProtoState.Hash() {
 				t.Error("incorrect state hash")
 			}
 
