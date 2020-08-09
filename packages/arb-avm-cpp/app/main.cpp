@@ -101,8 +101,6 @@ int main(int argc, char* argv[]) {
             }
         }
     }
-    //
-    //    auto assertionBase = mach.run(100000000, {}, std::chrono::seconds(0));
 
     auto assertion =
         mach.run(100000000, std::move(inbox_messages), std::chrono::seconds(0));
