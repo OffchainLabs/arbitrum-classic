@@ -106,13 +106,13 @@ ParsedSerializedVal parseRecord(const std::vector<unsigned char>& data) {
     }
 }
 
-DbResult<value> getTuple(const Transaction& transaction,
-                         const GetResults& results,
-                         std::set<uint64_t>& segment_ids);
-
-struct TupleGetter {
+struct ValueGetter {
     const Transaction& transaction;
     std::set<uint64_t>& segment_ids;
+
+    DbResult<value> operator()(const ParsedTupVal& val) const {
+        return nonstd::visit(*this, val);
+    }
 
     DbResult<value> operator()(const uint256_t& val) const {
         return {rocksdb::Status::OK(), 1, val};
@@ -133,26 +133,22 @@ struct TupleGetter {
             return DbResult<value>{results.status, results.reference_count,
                                    Tuple()};
         }
-        return getTuple(transaction, results, segment_ids);
+        return this->operator()(parseTuple(results.stored_value));
+    }
+
+    DbResult<value> operator()(const std::vector<ParsedTupVal>& val) const {
+        std::vector<value> values;
+        for (const auto& nested : val) {
+            auto nested_ret = this->operator()(nested);
+            if (!nested_ret.status.ok()) {
+                return nested_ret;
+            }
+            values.push_back(nested_ret.data);
+        }
+        auto tuple = Tuple(std::move(values));
+        return DbResult<value>{rocksdb::Status::OK(), 1, tuple};
     }
 };
-
-DbResult<value> getTuple(const Transaction& transaction,
-                         const GetResults& results,
-                         std::set<uint64_t>& segment_ids) {
-    std::vector<value> values;
-    auto nested_values = parseTuple(results.stored_value);
-    for (auto& current_vector : nested_values) {
-        auto val = nonstd::visit(TupleGetter{transaction, segment_ids},
-                                 current_vector);
-        if (!val.status.ok()) {
-            return DbResult<value>{val.status, val.reference_count, Tuple()};
-        }
-        values.push_back(std::move(val.data));
-    }
-    auto tuple = Tuple(std::move(values));
-    return DbResult<value>{results.status, results.reference_count, tuple};
-}
 
 std::vector<value> serializeValue(const value& val,
                                   std::vector<unsigned char>& value_vector,
@@ -245,32 +241,13 @@ DbResult<value> getValueImpl(const Transaction& transaction,
                                Tuple()};
     }
 
-    auto buf = reinterpret_cast<const char*>(results.stored_value.data());
-    auto value_type = static_cast<ValueTypes>(*buf);
-    ++buf;
+    auto record = parseRecord(results.stored_value);
 
-    switch (value_type) {
-        case NUM: {
-            auto val = deserializeUint256t(buf);
-            return DbResult<value>{results.status, results.reference_count,
-                                   val};
-        }
-        case CODE_POINT_STUB: {
-            auto code_point = deserializeCodePointStub(buf);
-            segment_ids.insert(code_point.pc.segment);
-            return DbResult<value>{results.status, results.reference_count,
-                                   code_point};
-        }
-        case HASH_PRE_IMAGE: {
-            throw std::runtime_error("HASH_ONLY item");
-        }
-        default: {
-            if (value_type - TUPLE > 8) {
-                throw std::runtime_error("can't get value with invalid type");
-            }
-            return getTuple(transaction, results, segment_ids);
-        }
+    auto ret = nonstd::visit(ValueGetter{transaction, segment_ids}, record);
+    if (!ret.status.ok()) {
+        return ret;
     }
+    return {results.status, results.reference_count, ret.data};
 }
 
 DbResult<value> getValue(const Transaction& transaction, uint256_t value_hash) {
