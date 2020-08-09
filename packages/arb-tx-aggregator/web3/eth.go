@@ -50,6 +50,15 @@ func NewServer(
 	return &Server{srv: srv, conn: conn, info: info, sys: sys}, nil
 }
 
+func (s *Server) ChainId(r *http.Request, args *EmptyArgs, reply *hexutil.Big) error {
+	chainAddress, err := s.srv.GetChainAddress(r.Context())
+	if err != nil {
+		return err
+	}
+	*reply = (hexutil.Big)(*message.ChainAddressToID(arbcommon.NewAddressFromEth(chainAddress)))
+	return nil
+}
+
 func (s *Server) BlockNumber(r *http.Request, _ *BlockNumberArgs, reply *string) error {
 	block, err := s.srv.GetBlockCount(r.Context())
 	if err != nil {
