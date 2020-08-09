@@ -29,14 +29,6 @@ constexpr int TUP_NUM_LENGTH = 33;
 constexpr int TUP_CODEPT_LENGTH = 49;
 
 namespace {
-std::vector<unsigned char> getHashKey(const value& val) {
-    auto hash_key = hash_value(val);
-    std::vector<unsigned char> hash_key_vector;
-    marshal_uint256_t(hash_key, hash_key_vector);
-
-    return hash_key_vector;
-}
-
 struct SerializedTupStub {
     uint8_t size;
     uint256_t hash;
@@ -149,7 +141,8 @@ DbResult<value> getTuple(const Transaction& transaction,
                          const GetResults& results,
                          std::set<uint64_t>& segment_ids) {
     std::vector<value> values;
-    for (auto& current_vector : parseTuple(results.stored_value)) {
+    auto nested_values = parseTuple(results.stored_value);
+    for (auto& current_vector : nested_values) {
         auto val = nonstd::visit(TupleGetter{transaction, segment_ids},
                                  current_vector);
         if (!val.status.ok()) {
@@ -161,114 +154,71 @@ DbResult<value> getTuple(const Transaction& transaction,
     return DbResult<value>{results.status, results.reference_count, tuple};
 }
 
-struct ValueSerializer {
-    std::vector<unsigned char>& value_vector;
-    std::map<uint64_t, uint64_t>& segment_counts;
-
-    void operator()(const Tuple& val) const {
-        value_vector.push_back(TUPLE + val.tuple_size());
-        auto hash_key = hash_value(val);
-        marshal_uint256_t(hash_key, value_vector);
-    }
-
-    void operator()(const uint256_t& val) const {
-        value_vector.push_back(NUM);
-        marshal_uint256_t(val, value_vector);
-    }
-
-    void operator()(const CodePointStub& val) const {
-        value_vector.push_back(CODE_POINT_STUB);
-        val.marshal(value_vector);
-        ++segment_counts[val.pc.segment];
-    }
-
-    void operator()(const HashPreImage& val) const {
-        value_vector.push_back(HASH_PRE_IMAGE);
-        val.marshal(value_vector);
-    }
-};
-
-SaveResults saveTuple(Transaction& transaction,
-                      const Tuple& orig_val,
-                      std::map<uint64_t, uint64_t>& segment_counts) {
-    std::vector<Tuple> tups{orig_val};
-    bool first = true;
-    SaveResults save_ret;
-    while (!tups.empty()) {
-        auto tup = std::move(tups.back());
-        tups.pop_back();
-        auto hash_key = getHashKey(tup);
-        auto key = vecToSlice(hash_key);
-        auto results = getRefCountedData(*transaction.transaction, key);
-        SaveResults ret;
-        if (results.status.ok() && results.reference_count > 0) {
-            ret = incrementReference(*transaction.transaction, key);
-        } else {
-            std::vector<unsigned char> value_vector;
-            value_vector.push_back(TUPLE + tup.tuple_size());
-            for (uint64_t i = 0; i < tup.tuple_size(); i++) {
-                auto current_val = tup.get_element(i);
-                nonstd::visit(ValueSerializer{value_vector, segment_counts},
-                              current_val);
-                if (nonstd::holds_alternative<Tuple>(current_val)) {
-                    tups.push_back(current_val.get<Tuple>());
-                }
-            }
-            ret =
-                saveRefCountedData(*transaction.transaction, key, value_vector);
-        }
-        if (first) {
-            save_ret = ret;
-            first = false;
-        }
-    }
-    return save_ret;
+std::vector<value> serializeValue(const value& val,
+                                  std::vector<unsigned char>& value_vector,
+                                  std::map<uint64_t, uint64_t>& segment_counts);
+std::vector<value> serializeValue(const uint256_t& val,
+                                  std::vector<unsigned char>& value_vector,
+                                  std::map<uint64_t, uint64_t>&) {
+    value_vector.push_back(NUM);
+    marshal_uint256_t(val, value_vector);
+    return {};
 }
-
-struct ValueSaver {
-    Transaction& transaction;
-    std::map<uint64_t, uint64_t>& segment_counts;
-
-    template <typename T>
-    SaveResults saveImpl(const T& val, bool allow_replacement) const {
-        std::vector<unsigned char> serialized_value;
-        ValueSerializer{serialized_value, segment_counts}(val);
-        auto hash_key = getHashKey(val);
-        auto key = vecToSlice(hash_key);
-        return saveRefCountedData(*transaction.transaction, key,
-                                  serialized_value, 1, allow_replacement);
+std::vector<value> serializeValue(
+    const CodePointStub& val,
+    std::vector<unsigned char>& value_vector,
+    std::map<uint64_t, uint64_t>& segment_counts) {
+    value_vector.push_back(CODE_POINT_STUB);
+    val.marshal(value_vector);
+    ++segment_counts[val.pc.segment];
+    return {};
+}
+std::vector<value> serializeValue(
+    const Tuple& val,
+    std::vector<unsigned char>& value_vector,
+    std::map<uint64_t, uint64_t>& segment_counts) {
+    std::vector<value> ret;
+    value_vector.push_back(TUPLE + val.tuple_size());
+    for (uint64_t i = 0; i < val.tuple_size(); i++) {
+        auto nested = val.get_element_unsafe(i);
+        if (nonstd::holds_alternative<Tuple>(nested)) {
+            const auto& nested_tup = nested.get<Tuple>();
+            value_vector.push_back(TUPLE + nested_tup.tuple_size());
+            marshal_uint256_t(hash(nested_tup), value_vector);
+            ret.push_back(nested);
+        } else {
+            serializeValue(nested, value_vector, segment_counts);
+        }
     }
-
-    SaveResults operator()(const Tuple& val) const {
-        return saveTuple(transaction, val, segment_counts);
-    }
-
-    SaveResults operator()(const CodePointStub& val) const {
-        // The same code point can exist in different segments with different
-        // serializations mapping to the same hash. If this occurs, the
-        // different versions are interchangeable
-        return saveImpl(val, true);
-    }
-
-    template <typename T>
-    SaveResults operator()(const T& val) const {
-        return saveImpl(val, false);
-    }
-};
+    return ret;
+}
+std::vector<value> serializeValue(const HashPreImage&,
+                                  std::vector<unsigned char>&,
+                                  std::map<uint64_t, uint64_t>&) {
+    throw std::runtime_error("Can't serialize hash preimage in db");
+}
+std::vector<value> serializeValue(
+    const value& val,
+    std::vector<unsigned char>& value_vector,
+    std::map<uint64_t, uint64_t>& segment_counts) {
+    return nonstd::visit(
+        [&](const auto& val) {
+            return serializeValue(val, value_vector, segment_counts);
+        },
+        val);
+}
 
 // Returns a list of value hashes to be deleted
 std::vector<uint256_t> deleteParsedValue(const uint256_t&,
                                          std::map<uint64_t, uint64_t>&) {
     return {};
 }
-
 std::vector<uint256_t> deleteParsedValue(
     const CodePointStub& cp,
     std::map<uint64_t, uint64_t>& segment_counts) {
     segment_counts[cp.pc.segment]++;
     return {};
 }
-
 std::vector<uint256_t> deleteParsedValue(const std::vector<ParsedTupVal>& tup,
                                          std::map<uint64_t, uint64_t>&) {
     std::vector<uint256_t> vals_to_delete;
@@ -331,7 +281,35 @@ DbResult<value> getValue(const Transaction& transaction, uint256_t value_hash) {
 SaveResults saveValueImpl(Transaction& transaction,
                           const value& val,
                           std::map<uint64_t, uint64_t>& segment_counts) {
-    return nonstd::visit(ValueSaver{transaction, segment_counts}, val);
+    bool first = true;
+    SaveResults ret;
+    std::vector<value> items_to_save{val};
+    while (!items_to_save.empty()) {
+        auto next_item = std::move(items_to_save.back());
+        items_to_save.pop_back();
+        auto hash = hash_value(next_item);
+        std::vector<unsigned char> hash_key;
+        marshal_uint256_t(hash, hash_key);
+        auto key = vecToSlice(hash_key);
+        auto results = getRefCountedData(*transaction.transaction, key);
+        SaveResults save_ret;
+        if (results.status.ok() && results.reference_count > 0) {
+            save_ret = incrementReference(*transaction.transaction, key);
+        } else {
+            std::vector<unsigned char> value_vector;
+            auto new_items_to_save =
+                serializeValue(next_item, value_vector, segment_counts);
+            items_to_save.insert(items_to_save.end(), new_items_to_save.begin(),
+                                 new_items_to_save.end());
+            save_ret =
+                saveRefCountedData(*transaction.transaction, key, value_vector);
+        }
+        if (first) {
+            ret = save_ret;
+            first = false;
+        }
+    }
+    return ret;
 }
 
 SaveResults saveValue(Transaction& transaction, const value& val) {
