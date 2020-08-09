@@ -34,9 +34,11 @@ contract GlobalFTWallet {
 
     mapping(address => UserFTWallet) internal ftWallets;
 
+    enum PairingStatus { Unpaired, Requested, Paired }
+
     struct PairedContract {
         bool paired;
-        mapping(address => bool) connectedRollups;
+        mapping(address => PairingStatus) connectedRollups;
     }
 
     mapping(address => PairedContract) pairedContracts;
@@ -89,21 +91,40 @@ contract GlobalFTWallet {
         view
         returns (bool)
     {
-        return pairedContracts[_tokenContract].connectedRollups[_chain];
+        return
+            pairedContracts[_tokenContract].connectedRollups[_chain] ==
+            PairingStatus.Paired;
     }
 
-    function registerContractPair(address _tokenContract, address _chain)
-        internal
-    {
-        pairedContracts[_tokenContract].paired = true;
-        pairedContracts[_tokenContract].connectedRollups[_chain] = true;
-
-        // Burn existing balance since we will switch over to minting on withdrawal
-        IPairedErc20 tokenContract = IPairedErc20(_tokenContract);
-        tokenContract.burn(
-            address(this),
-            tokenContract.balanceOf(address(this))
+    function requestPairing(address _tokenContract, address _chain) internal {
+        PairedContract storage pairedContract = pairedContracts[_tokenContract];
+        require(
+            pairedContract.connectedRollups[_chain] == PairingStatus.Unpaired,
+            "must be unpaired"
         );
+        if (!pairedContract.paired) {
+            // This is the first time pairing with a chain
+            pairedContract.paired = true;
+
+            // Burn existing balance since we will switch over to minting on withdrawal
+            IPairedErc20 tokenContract = IPairedErc20(_tokenContract);
+            tokenContract.burn(
+                address(this),
+                tokenContract.balanceOf(address(this))
+            );
+        }
+        pairedContract.connectedRollups[_chain] = PairingStatus.Requested;
+    }
+
+    function confirmPairing(address _tokenContract, address _chain) internal {
+        PairedContract storage pairedContract = pairedContracts[_tokenContract];
+        if (
+            pairedContract.connectedRollups[_chain] != PairingStatus.Requested
+        ) {
+            // If the pairing hasn't been requested, ignore this
+            return;
+        }
+        pairedContract.connectedRollups[_chain] = PairingStatus.Paired;
     }
 
     function depositERC20(
@@ -111,8 +132,17 @@ contract GlobalFTWallet {
         address _destination,
         uint256 _value
     ) internal {
-        addToken(_destination, _tokenContract, _value);
-        if (pairedContracts[_tokenContract].paired) {
+        PairedContract storage pairedContract = pairedContracts[_tokenContract];
+        bool isPaired = pairedContract.paired;
+
+        bool recipientMintNewTokens = isPaired &&
+            pairedContract.connectedRollups[_destination] ==
+            PairingStatus.Paired;
+        if (!recipientMintNewTokens) {
+            addToken(_destination, _tokenContract, _value);
+        }
+
+        if (isPaired) {
             IPairedErc20(_tokenContract).burn(msg.sender, _value);
         } else {
             require(
@@ -134,17 +164,17 @@ contract GlobalFTWallet {
     ) internal returns (bool) {
         // Skip removing or adding tokens for a pair contract with one of its connected rollups
         PairedContract storage pairedContract = pairedContracts[_tokenContract];
-
-        bool senderMintNewTokens = pairedContract.paired &&
-            pairedContract.connectedRollups[_from];
+        bool isPaired = pairedContract.paired;
+        bool senderMintNewTokens = isPaired &&
+            pairedContract.connectedRollups[_from] == PairingStatus.Paired;
         if (
             !senderMintNewTokens && !removeToken(_from, _tokenContract, _value)
         ) {
             return false;
         }
 
-        bool recipientMintNewTokens = pairedContract.paired &&
-            pairedContract.connectedRollups[_to];
+        bool recipientMintNewTokens = isPaired &&
+            pairedContract.connectedRollups[_to] == PairingStatus.Paired;
         if (!recipientMintNewTokens) {
             addToken(_to, _tokenContract, _value);
         }

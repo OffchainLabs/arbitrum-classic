@@ -317,6 +317,20 @@ export enum MessageCode {
   ERC20 = 1,
   ERC721 = 2,
   L2 = 3,
+  Initialization = 4,
+  BuddyRegistered = 5,
+}
+
+export class BuddyRegisteredMessage {
+  public kind: MessageCode.BuddyRegistered
+
+  constructor() {
+    this.kind = MessageCode.BuddyRegistered
+  }
+
+  asData(): Uint8Array {
+    return new Uint8Array(0)
+  }
 }
 
 export class EthMessage {
@@ -448,6 +462,12 @@ export class L2Message {
 
 export type Message = EthMessage | ERC20Message | ERC721Message | L2Message
 
+export type OutMessage =
+  | EthMessage
+  | ERC20Message
+  | ERC721Message
+  | BuddyRegisteredMessage
+
 function newMessageFromData(
   kind: MessageCode,
   data: ethers.utils.Arrayish
@@ -531,7 +551,7 @@ export class IncomingMessage {
 }
 
 export class OutgoingMessage {
-  constructor(public msg: Message, public sender: string) {}
+  constructor(public msg: OutMessage, public sender: string) {}
 
   asValue(): ArbValue.Value {
     return new ArbValue.TupleValue([

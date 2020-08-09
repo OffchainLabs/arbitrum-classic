@@ -129,6 +129,7 @@ contract GlobalInbox is
         bytes calldata contractData
     ) external {
         require(isContract(msg.sender), "must be called by contract");
+        requestPairing(msg.sender, chain);
         _deliverMessage(
             chain,
             L2_CONTRACT_PAIR,
@@ -316,7 +317,7 @@ contract GlobalInbox is
             deletePayment(erc721.dest, nodeHash, messageIndex);
             transferNFT(msg.sender, paymentOwner, erc721.token, erc721.id);
         } else if (message.kind == L2_CONTRACT_PAIR) {
-            registerContractPair(message.sender, msg.sender);
+            confirmPairing(message.sender, msg.sender);
             emit IGlobalInbox.BuddyContractDeployed(
                 message.sender,
                 message.data

@@ -36,9 +36,10 @@ contract EthBuddyERC20 is IPairedErc20, Ownable, ERC20, BaseDetails {
 
     constructor(address _globalInbox) public {
         inbox = _globalInbox;
+        _mint(msg.sender, 1000000000000);
     }
 
-    function connect(address _rollupChain) public onlyOwner {
+    function connectToChain(address _rollupChain) public onlyOwner {
         IGlobalInbox(inbox).deployL2ContractPair(
             _rollupChain,
             10000000000,
