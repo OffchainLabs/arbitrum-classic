@@ -28,8 +28,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func (_ArbRollup *ArbRollupTransactor) ConfirmCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, initalProtoStateHash [32]byte, branches []*big.Int, deadlineTicks []*big.Int, challengeNodeData [][32]byte, logsAcc [][32]byte, vmProtoStateHashes [][32]byte, messagesLengths []*big.Int, messages []byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) error {
-	return callCheckRollup(ctx, client, from, contractAddress, "confirm", initalProtoStateHash, branches, deadlineTicks, challengeNodeData, logsAcc, vmProtoStateHashes, messagesLengths, messages, stakerAddresses, stakerProofs, stakerProofOffsets)
+func (_ArbRollup *ArbRollupTransactor) ConfirmCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, initalProtoStateHash [32]byte, beforeSendCount *big.Int, branches []*big.Int, deadlineTicks []*big.Int, challengeNodeData [][32]byte, logsAcc [][32]byte, vmProtoStateHashes [][32]byte, messagesLengths []*big.Int, messages []byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) error {
+	return callCheckRollup(ctx, client, from, contractAddress, "confirm", initalProtoStateHash, beforeSendCount, branches, deadlineTicks, challengeNodeData, logsAcc, vmProtoStateHashes, messagesLengths, messages, stakerAddresses, stakerProofs, stakerProofOffsets)
 }
 
 func (_ArbRollup *ArbRollupTransactor) MakeAssertionCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, fields [8][32]byte, fields2 [5]*big.Int, validBlockHashPrecondition [32]byte, validBlockHeightPrecondition *big.Int, messageCount uint64, logCount uint64, prevChildType uint32, numSteps uint64, numArbGas uint64, stakerProof [][32]byte) error {
