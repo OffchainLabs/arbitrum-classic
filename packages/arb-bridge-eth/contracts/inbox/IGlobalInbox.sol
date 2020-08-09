@@ -51,6 +51,11 @@ interface IGlobalInbox {
 
     function sendL2Message(address chain, bytes calldata messageData) external;
 
-    function deployL2ContractPair(address chain, bytes calldata messageData)
-        external;
+    function deployL2ContractPair(
+        address chain,
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        uint256 payment,
+        bytes calldata contractData
+    ) external;
 }

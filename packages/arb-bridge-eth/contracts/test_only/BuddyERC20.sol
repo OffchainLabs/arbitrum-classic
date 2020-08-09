@@ -18,55 +18,43 @@
 
 pragma solidity ^0.5.0;
 
-import "../../../arbos-contracts/contracts/ArbSys.sol";
-import "../../../arb-bridge-eth/contracts/inbox/IGlobalInbox.sol";
-import "../@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
+import "arbos-contracts/contracts/ArbERC20.sol";
+import "../inbox/IGlobalInbox.sol";
+import "../interfaces/IPairedErc20.sol";
+import "@openzeppelin/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 
-contract ArbBaseERC20 is ERC20, ERC20Detailed {
+contract BaseDetails is ERC20Detailed {
     constructor() public ERC20Detailed("Token Buddy", "TB", 18) {}
 }
 
-// contract PairedErc20 is ArbBaseERC20 {
-//     function mint(address account, uint256 amount) external;
-//     function burn(address account, uint256 amount) external;
-// }
+contract ArbBuddyERC20 is ArbERC20, BaseDetails {}
 
-contract ArbERC20 is ArbBaseERC20 {
-    function adminMint(address account, uint256 amount) public {
-        // This function is only callable through admin logic since address 1 cannot make calls
-        // require(msg.sender == address(1));
-        _mint(account, amount);
-    }
-
-    function withdraw(address account, uint256 amount) public {
-        _burn(msg.sender, amount);
-        ArbSys(100).withdrawERC20(account, amount);
-    }
-}
-
-contract BuddyERC20 is ArbBaseERC20 {
+contract EthBuddyERC20 is IPairedErc20, Ownable, ERC20, BaseDetails {
     address public inbox;
-    address public chain;
 
-    constructor() public {}
+    constructor(address _globalInbox) public {
+        inbox = _globalInbox;
+    }
 
-    function initialize(address _rollupChain, address _inbox) public {
-        inbox = _inbox;
-        chain = _rollupChain;
-        IGlobalInbox(_inbox).deployL2ContractPair(
+    function connect(address _rollupChain) public onlyOwner {
+        IGlobalInbox(inbox).deployL2ContractPair(
             _rollupChain,
+            10000000000,
+            0,
+            0,
             type(ArbERC20).creationCode
         );
     }
 
     function mint(address account, uint256 amount) public {
-        // require(inbox == msg.sender, "must be authorized rollup-chain");
+        require(inbox == msg.sender, "only callable by global inbox");
         _mint(account, amount);
     }
 
     function burn(address account, uint256 amount) public {
-        // require(inbox == msg.sender, "must be authorized rollup-chain");
+        require(inbox == msg.sender, "only callable by global inbox");
         _burn(account, amount);
     }
 }

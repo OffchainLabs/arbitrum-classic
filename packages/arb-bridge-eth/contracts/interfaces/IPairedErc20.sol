@@ -18,10 +18,10 @@
 
 pragma solidity ^0.5.11;
 
-import "./IERC20.sol";
-
-contract PairedErc20 is IERC20 {
+interface IPairedErc20 {
     function mint(address account, uint256 amount) external;
 
     function burn(address account, uint256 amount) external;
+
+    function balanceOf(address account) external view returns (uint256);
 }
