@@ -301,10 +301,6 @@ func TestConfirmAssertion(t *testing.T) {
 
 			_, nodeDataHash, vmProtoStateHash, err := rollupTester.ProcessValidNode(
 				nil,
-				proof.InitalProtoStateHash,
-				proof.BranchesNums,
-				proof.DeadlineTicks,
-				proof.ChallengeNodeData,
 				proof.LogsAcc,
 				proof.VMProtoStateHashes,
 				proof.MessageCounts,

@@ -58,10 +58,6 @@ contract RollupTester {
     }
 
     function processValidNode(
-        bytes32 initalProtoStateHash,
-        uint256[] memory branches,
-        uint256[] memory deadlineTicks,
-        bytes32[] memory challengeNodeData,
         bytes32[] memory logsAcc,
         bytes32[] memory vmProtoStateHashes,
         uint256[] memory messageCounts,
@@ -80,10 +76,10 @@ contract RollupTester {
         return
             RollupUtils.processValidNode(
                 RollupUtils.ConfirmData(
-                    initalProtoStateHash,
-                    branches,
-                    deadlineTicks,
-                    challengeNodeData,
+                    0,
+                    new uint256[](0),
+                    new uint256[](0),
+                    new bytes32[](0),
                     logsAcc,
                     vmProtoStateHashes,
                     messageCounts,
