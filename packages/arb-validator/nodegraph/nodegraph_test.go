@@ -32,8 +32,8 @@ import (
 var contractPath = arbos.Path()
 
 func TestInitial(t *testing.T) {
-	mach, txHash, nodeGraph := getStakedNodeGraph(t)
-	expectedNode := structures.NewInitialNode(mach, txHash)
+	mach, nodeGraph := getStakedNodeGraph(t)
+	expectedNode := structures.NewInitialNode(mach)
 
 	if nodeGraph.Stakers().GetSize() != 0 {
 		t.Fatal("initial stakers incorrect")
@@ -53,8 +53,8 @@ func TestInitial(t *testing.T) {
 }
 
 func TestCreateNodes(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 	dispNode, execAssert := getDisputableNode(initialNode)
 	err, nextValid, nodes := createNodesOnAssert(
 		stakedNodeGraph,
@@ -62,7 +62,7 @@ func TestCreateNodes(t *testing.T) {
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -79,7 +79,7 @@ func TestCreateNodes(t *testing.T) {
 		dispNode2,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -91,8 +91,8 @@ func TestCreateNodes(t *testing.T) {
 }
 
 func TestGetLeaves(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 	leaves := stakedNodeGraph.Leaves()
 
 	if leaves.NumLeaves() != 1 || !leaves.IsLeaf(initialNode) {
@@ -106,7 +106,7 @@ func TestGetLeaves(t *testing.T) {
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -131,7 +131,7 @@ func TestGetLeaves(t *testing.T) {
 		dispNode2,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -151,8 +151,8 @@ func TestGetLeaves(t *testing.T) {
 }
 
 func TestPruneInitialNodes(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 	stakedNodeGraph.PruneNodeByHash(initialNode.Hash())
 	getNode := stakedNodeGraph.NodeFromHash(initialNode.Hash())
 	if getNode != nil {
@@ -161,8 +161,8 @@ func TestPruneInitialNodes(t *testing.T) {
 }
 
 func TestPrunePrevNodes(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 	dispNode, execAssert := getDisputableNode(initialNode)
 	err, nextValid, _ := createNodesOnAssert(
 		stakedNodeGraph,
@@ -170,7 +170,7 @@ func TestPrunePrevNodes(t *testing.T) {
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -188,8 +188,8 @@ func TestPrunePrevNodes(t *testing.T) {
 }
 
 func TestPrunePrevNode(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 	dispNode, execAssert := getDisputableNode(initialNode)
 	err, _, nodes := createNodesOnAssert(
 		stakedNodeGraph,
@@ -197,7 +197,7 @@ func TestPrunePrevNode(t *testing.T) {
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -217,8 +217,8 @@ func TestPrunePrevNode(t *testing.T) {
 }
 
 func TestGetLeaf(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 	if !stakedNodeGraph.Leaves().IsLeaf(initialNode) {
 		t.Fatal("error getting leaf")
 	}
@@ -229,7 +229,7 @@ func TestGetLeaf(t *testing.T) {
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -245,8 +245,8 @@ func TestGetLeaf(t *testing.T) {
 }
 
 func TestHasReference(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 	if !stakedNodeGraph.Leaves().IsLeaf(initialNode) {
 		t.Fatal("error getting leaf")
 	}
@@ -260,8 +260,8 @@ func TestHasReference(t *testing.T) {
 }
 
 func TestHasReferenceWithSuccessors(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 
 	dispNode, execAssert := getDisputableNode(initialNode)
 	_, _, _ = createNodesOnAssert(
@@ -270,7 +270,7 @@ func TestHasReferenceWithSuccessors(t *testing.T) {
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if !stakedNodeGraph.HasReference(initialNode) {
 		t.Fatal("reference error")
 	}
@@ -282,8 +282,8 @@ func TestHasReferenceWithSuccessors(t *testing.T) {
 }
 
 func TestPruneNewNode(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 	dispNode, execAssert := getDisputableNode(initialNode)
 	err, nextValid, _ := createNodesOnAssert(
 		stakedNodeGraph,
@@ -291,7 +291,7 @@ func TestPruneNewNode(t *testing.T) {
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -304,8 +304,8 @@ func TestPruneNewNode(t *testing.T) {
 }
 
 func TestPruneAllNodes(t *testing.T) {
-	mach, txHash, nodeGraph := getNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, nodeGraph := getNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 	dispNode, execAssert := getDisputableNode(initialNode)
 	err, _, nodes := createNodesOnAssert(
 		nodeGraph,
@@ -313,7 +313,7 @@ func TestPruneAllNodes(t *testing.T) {
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -345,12 +345,16 @@ func verifyNewNodes(
 				baseNode,
 				dispNode,
 				valprotocol.ChildType(index),
-				nodeGraph.params, common.NewTimeBlocks(big.NewInt(10)), common.Hash{})
+				nodeGraph.params,
+				common.NewTimeBlocks(big.NewInt(10)),
+			)
 		} else {
 			expectedNode = structures.NewValidNodeFromPrev(
 				baseNode,
 				dispNode,
-				nodeGraph.params, common.NewTimeBlocks(big.NewInt(10)), common.Hash{})
+				nodeGraph.params,
+				common.NewTimeBlocks(big.NewInt(10)),
+			)
 		}
 
 		getNode := nodeGraph.NodeFromHash(expectedNode.Hash())
@@ -373,13 +377,12 @@ func createNodesOnAssert(
 	dispNode *valprotocol.DisputableNode,
 	execAssertion *protocol.ExecutionAssertion,
 	currentTime *common.TimeBlocks,
-	assertionTxHash common.Hash) (error, *structures.Node, []*structures.Node) {
+) (error, *structures.Node, []*structures.Node) {
 
 	nodes := nodeGraph.CreateNodesOnAssert(
 		baseNode,
 		dispNode,
 		currentTime,
-		assertionTxHash,
 	)
 
 	nextValid := nodeGraph.GetSuccessor(baseNode, valprotocol.ValidChildType)
@@ -415,11 +418,11 @@ var vmParams = valprotocol.ChainParams{
 	ArbGasSpeedLimitPerTick: 1000,
 }
 
-func getNodeGraph(t *testing.T) (machine.Machine, common.Hash, *NodeGraph) {
+func getNodeGraph(t *testing.T) (machine.Machine, *NodeGraph) {
 	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return mach, common.Hash{}, NewNodeGraph(mach, vmParams, common.Hash{})
+	return mach, NewNodeGraph(mach, vmParams)
 }

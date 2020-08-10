@@ -39,15 +39,14 @@ import (
 )
 
 type TxDB struct {
-	mach          machine.Machine
-	as            *cmachine.AggregatorStore
-	checkpointer  checkpointing.RollupCheckpointer
-	timeGetter    arbbridge.ChainTimeGetter
-	initialHeight *common.BlockId
+	mach         machine.Machine
+	as           *cmachine.AggregatorStore
+	checkpointer checkpointing.RollupCheckpointer
+	timeGetter   arbbridge.ChainTimeGetter
 
-	callMut   sync.Mutex
-	callMach  machine.Machine
-	callBlock *common.BlockId
+	callMut     sync.Mutex
+	callMach    machine.Machine
+	lastBlockId *common.BlockId
 }
 
 func New(
@@ -55,17 +54,11 @@ func New(
 	clnt arbbridge.ChainTimeGetter,
 	checkpointer checkpointing.RollupCheckpointer,
 	as *cmachine.AggregatorStore,
-	blockCreated *common.BlockId,
 ) (*TxDB, error) {
-	prevBlockId, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocksInt(blockCreated.Height.AsInt().Int64()-1))
-	if err != nil {
-		return nil, err
-	}
 	txdb := &TxDB{
-		as:            as,
-		checkpointer:  checkpointer,
-		timeGetter:    clnt,
-		initialHeight: prevBlockId,
+		as:           as,
+		checkpointer: checkpointer,
+		timeGetter:   clnt,
 	}
 	if checkpointer.HasCheckpointedState() {
 		if err := txdb.RestoreFromCheckpoint(ctx); err == nil {
@@ -74,24 +67,12 @@ func New(
 			log.Println("Failed to restore from checkpoint, falling back to fresh start")
 		}
 	}
-
+	// We failed to restore from a checkpoint
 	mach, err := checkpointer.GetInitialMachine()
 	if err != nil {
 		return nil, err
 	}
-	// Save initial machine so that next time we will have a checkpointed state
-	saveChan := saveMach(mach, prevBlockId, checkpointer)
-	select {
-	case err := <-saveChan:
-		if err != nil {
-			return nil, err
-		}
-	case <-ctx.Done():
-		return nil, errors.New("timed out saving checkpoint")
-	}
 	txdb.mach = mach
-	txdb.callMach = mach.Clone()
-	txdb.callBlock = prevBlockId
 	return txdb, nil
 }
 
@@ -125,15 +106,16 @@ func (txdb *TxDB) RestoreFromCheckpoint(ctx context.Context) error {
 	); err != nil {
 		return err
 	}
+
 	txdb.mach = mach
 	txdb.callMut.Lock()
 	defer txdb.callMut.Unlock()
 	txdb.callMach = mach.Clone()
-	txdb.callBlock = blockId
+	txdb.lastBlockId = blockId
 	return nil
 }
 
-func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent, lastBlock uint64) error {
+func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent, finishedBlock *common.BlockId) error {
 	type resultInfo struct {
 		logIndex uint64
 		result   *evm.TxResult
@@ -144,13 +126,17 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 		messages = append(messages, msg.Message)
 	}
 
-	assertion, _ := txdb.mach.ExecuteCallServerAssertion(1000000000000, messages, value.NewIntValue(new(big.Int).SetUint64(lastBlock+1)), 0)
+	nextBlockHeight := new(big.Int).Add(finishedBlock.Height.AsInt(), big.NewInt(1))
+	// TODO: Give ExecuteCallServerAssertion the ability to run unbounded until it blocks
+	// The max steps here is a hack since it should just run until it blocks
+	assertion, _ := txdb.mach.ExecuteCallServerAssertion(1000000000000, messages, value.NewIntValue(nextBlockHeight), 0)
 	for _, avmMessage := range assertion.ParseOutMessages() {
 		if err := txdb.as.SaveMessage(avmMessage); err != nil {
 			return err
 		}
 	}
 
+	var lastBlock *common.BlockId
 	results := make([]resultInfo, 0)
 	for _, avmLog := range assertion.ParseLogs() {
 		logIndex, err := txdb.as.LogCount()
@@ -202,23 +188,31 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 					return err
 				}
 			}
+			lastBlock = block
 			results = make([]resultInfo, 0)
-
-			saveMach(txdb.mach, block, txdb.checkpointer)
-
 			txdb.callMut.Lock()
 			txdb.callMach = txdb.mach.Clone()
-			txdb.callBlock = block
+			txdb.lastBlockId = block
 			txdb.callMut.Unlock()
 		}
 	}
+	if lastBlock != nil {
+		saveMach(txdb.mach, lastBlock, txdb.checkpointer)
+	}
+
+	txdb.callMut.Lock()
+	if txdb.callMach == nil || txdb.callMach.Hash() != txdb.mach.Hash() {
+		txdb.callMach = txdb.mach.Clone()
+	}
+	txdb.lastBlockId = finishedBlock
+	txdb.callMut.Unlock()
 	return nil
 }
 
 func (txdb *TxDB) CallInfo() (machine.Machine, *common.BlockId) {
 	txdb.callMut.Lock()
 	defer txdb.callMut.Unlock()
-	return txdb.callMach.Clone(), txdb.callBlock
+	return txdb.callMach.Clone(), txdb.lastBlockId
 }
 
 func (txdb *TxDB) GetMessage(index uint64) (value.Value, error) {
@@ -249,19 +243,13 @@ func (txdb *TxDB) GetRequest(requestId common.Hash) (value.Value, error) {
 }
 
 func (txdb *TxDB) GetBlock(height uint64) (*machine.BlockInfo, error) {
-	latest := txdb.LatestBlock()
-	if height > latest.Height.AsInt().Uint64() {
-		return nil, nil
-	}
 	return txdb.as.GetBlock(height)
 }
 
-func (txdb *TxDB) LatestBlock() *common.BlockId {
-	block, err := txdb.as.LatestBlock()
-	if err != nil {
-		return txdb.initialHeight
-	}
-	return block
+func (txdb *TxDB) LatestBlockId() *common.BlockId {
+	txdb.callMut.Lock()
+	defer txdb.callMut.Unlock()
+	return txdb.lastBlockId
 }
 
 func (txdb *TxDB) FindLogs(
@@ -271,7 +259,7 @@ func (txdb *TxDB) FindLogs(
 	address []common.Address,
 	topics [][]common.Hash,
 ) ([]evm.FullLog, error) {
-	latestBlock := txdb.LatestBlock()
+	latestBlock := txdb.LatestBlockId()
 	startHeight := uint64(0)
 	endHeight := latestBlock.Height.AsInt().Uint64()
 	if fromHeight != nil && *fromHeight > 0 {

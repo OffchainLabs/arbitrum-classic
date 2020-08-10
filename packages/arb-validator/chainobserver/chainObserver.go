@@ -47,7 +47,7 @@ type ChainObserver struct {
 	Inbox               *structures.Inbox
 	KnownValidNode      *structures.Node
 	calculatedValidNode *structures.Node
-	latestBlockId       *common.BlockId
+	currentEventId      arbbridge.ChainInfo
 	// assumedValidBlock is used when making assertions so that we don't include messages past the threshold
 	// If there is a reorg past that depth, our assertion could be invalidated. Invalidation isn't a problem
 	// and would only lose the validator a small amount of gas money, so this assumption being violated is safe.
@@ -62,21 +62,26 @@ func tryRestoreFromCheckpoint(
 	ctx context.Context,
 	clnt arbbridge.ChainTimeGetter,
 	checkpointer checkpointing.RollupCheckpointer,
-) *ChainObserver {
+) (*ChainObserver, *common.BlockId) {
 	var chain *ChainObserver
-	err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext, _ *common.BlockId) error {
+	var id *common.BlockId
+	err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext, blockId *common.BlockId) error {
 		chainObserverBuf := &ChainObserverBuf{}
 		if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
 			return err
 		}
 		var err error
 		chain, err = chainObserverBuf.unmarshalFromCheckpoint(restoreCtx, checkpointer)
-		return err
+		if err != nil {
+			return err
+		}
+		id = blockId
+		return nil
 	})
 	if err != nil || chain == nil {
-		return nil
+		return nil, nil
 	}
-	return chain
+	return chain, id
 }
 
 func NewChainObserver(
@@ -88,14 +93,15 @@ func NewChainObserver(
 	checkpointer checkpointing.RollupCheckpointer,
 	assumedValidDepth int64,
 ) (*ChainObserver, error) {
-	creationHash, blockId, _, err := watcher.GetCreationInfo(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	var chain *ChainObserver
+	var currentEventId arbbridge.ChainInfo
 	if checkpointer.HasCheckpointedState() {
-		chain = tryRestoreFromCheckpoint(ctx, clnt, checkpointer)
+		restoredChain, restoredBlockId := tryRestoreFromCheckpoint(ctx, clnt, checkpointer)
+		currentEventId = arbbridge.ChainInfo{
+			BlockId:  restoredBlockId,
+			LogIndex: 0,
+		}
+		chain = restoredChain
 	}
 	if chain == nil {
 		params, err := watcher.GetParams(ctx)
@@ -103,12 +109,17 @@ func NewChainObserver(
 			return nil, err
 		}
 
+		_, createdEventId, _, _, err := watcher.GetCreationInfo(ctx)
+		if err != nil {
+			return nil, err
+		}
+		currentEventId = createdEventId
+		currentEventId.LogIndex++
+
 		chain, err = newChain(
 			rollupAddr,
 			checkpointer,
 			params,
-			blockId,
-			creationHash,
 		)
 		if err != nil {
 			return nil, err
@@ -116,11 +127,10 @@ func NewChainObserver(
 	}
 
 	chain.isOpinionated = updateOpinion
+	chain.currentEventId = currentEventId
 
-	err = chain.UpdateAssumedValidBlock(ctx, clnt, assumedValidDepth)
-	if err != nil {
-		// If we can't update the valid block right now, just use the chain creation height
-		chain.assumedValidBlock = blockId
+	if err := chain.UpdateAssumedValidBlock(ctx, clnt, assumedValidDepth); err != nil {
+		return nil, err
 	}
 
 	return chain, nil
@@ -140,7 +150,7 @@ func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
 					chain.RUnlock()
 					break
 				}
-				confOpp, _ := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(chain.latestBlockId.Height))
+				confOpp, _ := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(chain.currentEventId.BlockId.Height))
 				if confOpp != nil {
 					for _, listener := range chain.listeners {
 						listener.ConfirmableNodes(ctx, confOpp)
@@ -246,7 +256,6 @@ func (chain *ChainObserver) marshalForCheckpoint(ctx *ckptcontext.CheckpointCont
 		Inbox:               chain.Inbox.MarshalForCheckpoint(ctx),
 		KnownValidNode:      chain.KnownValidNode.Hash().MarshalToBuf(),
 		CalculatedValidNode: chain.calculatedValidNode.Hash().MarshalToBuf(),
-		LatestBlockId:       chain.latestBlockId.MarshalToBuf(),
 	}
 }
 
@@ -279,7 +288,6 @@ func (x *ChainObserverBuf) unmarshalFromCheckpoint(
 		Inbox:               &structures.Inbox{MessageStack: inbox},
 		KnownValidNode:      knownValidNode,
 		calculatedValidNode: calculatedValidNode,
-		latestBlockId:       x.LatestBlockId.Unmarshal(),
 		listeners:           []chainlistener.ChainListener{},
 		checkpointer:        checkpointer,
 		atHead:              false,
@@ -290,14 +298,12 @@ func newChain(
 	rollupAddr common.Address,
 	checkpointer checkpointing.RollupCheckpointer,
 	vmParams valprotocol.ChainParams,
-	startBlockId *common.BlockId,
-	creationTxHash common.Hash,
 ) (*ChainObserver, error) {
 	mach, err := checkpointer.GetInitialMachine()
 	if err != nil {
 		return nil, err
 	}
-	nodeGraph := nodegraph.NewStakedNodeGraph(mach, vmParams, creationTxHash)
+	nodeGraph := nodegraph.NewStakedNodeGraph(mach, vmParams)
 	return &ChainObserver{
 		RWMutex:             &sync.RWMutex{},
 		NodeGraph:           nodeGraph,
@@ -305,8 +311,6 @@ func newChain(
 		Inbox:               structures.NewInbox(),
 		KnownValidNode:      nodeGraph.LatestConfirmed(),
 		calculatedValidNode: nodeGraph.LatestConfirmed(),
-		latestBlockId:       startBlockId,
-		assumedValidBlock:   startBlockId,
 		listeners:           []chainlistener.ChainListener{},
 		checkpointer:        checkpointer,
 		isOpinionated:       true,
@@ -333,7 +337,7 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 	defer chain.Unlock()
 	switch ev := event.(type) {
 	case arbbridge.MessageDeliveredEvent:
-		chain.messageDelivered(ctx, ev)
+		return chain.messageDelivered(ctx, ev)
 	case arbbridge.StakeCreatedEvent:
 		chain.createStake(ctx, ev)
 	case arbbridge.ChallengeStartedEvent:
@@ -360,10 +364,15 @@ func (chain *ChainObserver) UpdateAssumedValidBlock(ctx context.Context, clnt ar
 		return errors2.Wrap(err, "Getting current block header")
 	}
 
-	assumedValidBlock, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(new(big.Int).Sub(latestL1BlockId.Height.AsInt(), big.NewInt(assumedValidDepth))))
-	if err != nil {
-		return errors2.Wrap(err, "Getting assumed valid block header")
+	validHeight := new(big.Int).Sub(latestL1BlockId.Height.AsInt(), big.NewInt(assumedValidDepth))
+	if validHeight.Cmp(big.NewInt(0)) < 0 {
+		validHeight = big.NewInt(0)
 	}
+	assumedValidBlock, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(validHeight))
+	if err != nil {
+		return errors2.Wrapf(err, "Getting assumed valid block header at height %v", validHeight)
+	}
+
 	chain.Lock()
 	defer chain.Unlock()
 	chain.assumedValidBlock = assumedValidBlock
@@ -373,7 +382,10 @@ func (chain *ChainObserver) UpdateAssumedValidBlock(ctx context.Context, clnt ar
 func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
-	chain.latestBlockId = blockId
+	chain.currentEventId = arbbridge.ChainInfo{
+		BlockId:  blockId,
+		LogIndex: 0,
+	}
 	ckptCtx := ckptcontext.NewCheckpointContext()
 	buf, err := chain.marshalToBytes(ckptCtx)
 	if err != nil {
@@ -382,10 +394,13 @@ func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx)
 }
 
-func (chain *ChainObserver) CurrentBlockId() *common.BlockId {
+func (chain *ChainObserver) CurrentEventId() arbbridge.ChainInfo {
 	chain.RLock()
 	defer chain.RUnlock()
-	return chain.latestBlockId.Clone()
+	return arbbridge.ChainInfo{
+		BlockId:  chain.currentEventId.BlockId.Clone(),
+		LogIndex: chain.currentEventId.LogIndex,
+	}
 }
 
 func (chain *ChainObserver) ContractAddress() common.Address {
@@ -412,11 +427,14 @@ func (chain *ChainObserver) PendingCorrectNodes() []*structures.Node {
 	return nodes
 }
 
-func (chain *ChainObserver) messageDelivered(ctx context.Context, ev arbbridge.MessageDeliveredEvent) {
-	chain.Inbox.DeliverMessage(ev.Message)
+func (chain *ChainObserver) messageDelivered(ctx context.Context, ev arbbridge.MessageDeliveredEvent) error {
+	if err := chain.Inbox.DeliverMessage(ev.Message); err != nil {
+		return err
+	}
 	for _, lis := range chain.listeners {
 		lis.MessageDelivered(ctx, ev)
 	}
+	return nil
 }
 
 func (chain *ChainObserver) pruneLeaf(ctx context.Context, ev arbbridge.PrunedEvent) {
@@ -540,7 +558,6 @@ func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.Asser
 		chain.NodeGraph.NodeFromHash(ev.PrevLeafHash),
 		disNode,
 		ev.BlockId.Height,
-		ev.TxHash,
 	)
 	for _, listener := range chain.listeners {
 		listener.SawAssertion(ctx, ev)
