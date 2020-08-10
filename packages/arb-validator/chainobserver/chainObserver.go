@@ -64,13 +64,13 @@ func tryRestoreFromCheckpoint(
 	checkpointer checkpointing.RollupCheckpointer,
 ) *ChainObserver {
 	var chain *ChainObserver
-	err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext, _ *common.BlockId) error {
+	err := checkpointer.RestoreLatestState(ctx, clnt, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext, blockId *common.BlockId) error {
 		chainObserverBuf := &ChainObserverBuf{}
 		if err := proto.Unmarshal(chainObserverBytes, chainObserverBuf); err != nil {
 			return err
 		}
 		var err error
-		chain, err = chainObserverBuf.unmarshalFromCheckpoint(restoreCtx, checkpointer)
+		chain, err = chainObserverBuf.unmarshalFromCheckpoint(restoreCtx, checkpointer, blockId)
 		return err
 	})
 	if err != nil || chain == nil {
@@ -245,13 +245,13 @@ func (chain *ChainObserver) marshalForCheckpoint(ctx *ckptcontext.CheckpointCont
 		Inbox:               chain.Inbox.MarshalForCheckpoint(ctx),
 		KnownValidNode:      chain.KnownValidNode.Hash().MarshalToBuf(),
 		CalculatedValidNode: chain.calculatedValidNode.Hash().MarshalToBuf(),
-		LatestBlockId:       chain.latestBlockId.MarshalToBuf(),
 	}
 }
 
 func (x *ChainObserverBuf) unmarshalFromCheckpoint(
 	restoreCtx ckptcontext.RestoreContext,
 	checkpointer checkpointing.RollupCheckpointer,
+	checkpointBlockId *common.BlockId,
 ) (*ChainObserver, error) {
 	nodeGraph, err := x.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
 	if err != nil {
@@ -278,7 +278,7 @@ func (x *ChainObserverBuf) unmarshalFromCheckpoint(
 		Inbox:               &structures.Inbox{MessageStack: inbox},
 		KnownValidNode:      knownValidNode,
 		calculatedValidNode: calculatedValidNode,
-		latestBlockId:       x.LatestBlockId.Unmarshal(),
+		latestBlockId:       checkpointBlockId,
 		listeners:           []chainlistener.ChainListener{},
 		checkpointer:        checkpointer,
 		atHead:              false,
