@@ -337,7 +337,7 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 	defer chain.Unlock()
 	switch ev := event.(type) {
 	case arbbridge.MessageDeliveredEvent:
-		chain.messageDelivered(ctx, ev)
+		return chain.messageDelivered(ctx, ev)
 	case arbbridge.StakeCreatedEvent:
 		chain.createStake(ctx, ev)
 	case arbbridge.ChallengeStartedEvent:
@@ -427,11 +427,14 @@ func (chain *ChainObserver) PendingCorrectNodes() []*structures.Node {
 	return nodes
 }
 
-func (chain *ChainObserver) messageDelivered(ctx context.Context, ev arbbridge.MessageDeliveredEvent) {
-	chain.Inbox.DeliverMessage(ev.Message)
+func (chain *ChainObserver) messageDelivered(ctx context.Context, ev arbbridge.MessageDeliveredEvent) error {
+	if err := chain.Inbox.DeliverMessage(ev.Message); err != nil {
+		return err
+	}
 	for _, lis := range chain.listeners {
 		lis.MessageDelivered(ctx, ev)
 	}
+	return nil
 }
 
 func (chain *ChainObserver) pruneLeaf(ctx context.Context, ev arbbridge.PrunedEvent) {

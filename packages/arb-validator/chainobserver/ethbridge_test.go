@@ -225,7 +225,12 @@ func TestConfirmAssertion(t *testing.T) {
 		[]value.Value{},
 	)
 
-	prepared, err := chain.prepareAssertion(chain.currentEventId.BlockId)
+	currentBlock, err := clnt.CurrentBlockId(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	prepared, err := chain.prepareAssertion(currentBlock)
 	if err != nil {
 		t.Fatal(err)
 	}

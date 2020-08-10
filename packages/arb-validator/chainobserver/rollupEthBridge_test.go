@@ -113,7 +113,11 @@ func TestComputePrevLeaf(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	prepared, err := chain.prepareAssertion(chain.currentEventId.BlockId)
+	msgs := chain.Inbox.GetAllMessages()
+	prepared, err := chain.prepareAssertion(&common.BlockId{
+		Height:     msgs[len(msgs)-1].ChainTime.BlockNum,
+		HeaderHash: common.Hash{},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +173,11 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 	assertion, assertionStub := randomAssertion(t, chain.Inbox.MessageStack, prevNode)
 	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertionStub, valprotocol.InvalidInboxTopChildType, chain.GetChainParams())
 
-	prepared, err := chain.prepareAssertion(chain.currentEventId.BlockId)
+	msgs := chain.Inbox.GetAllMessages()
+	prepared, err := chain.prepareAssertion(&common.BlockId{
+		Height:     msgs[len(msgs)-1].ChainTime.BlockNum,
+		HeaderHash: common.Hash{},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +227,11 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 	assertion, assertionStub := randomAssertion(t, chain.Inbox.MessageStack, prevNode)
 	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertionStub, valprotocol.InvalidExecutionChildType, chain.GetChainParams())
 
-	prepared, err := chain.prepareAssertion(chain.currentEventId.BlockId)
+	msgs := chain.Inbox.GetAllMessages()
+	prepared, err := chain.prepareAssertion(&common.BlockId{
+		Height:     msgs[len(msgs)-1].ChainTime.BlockNum,
+		HeaderHash: common.Hash{},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

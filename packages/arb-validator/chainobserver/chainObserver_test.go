@@ -123,7 +123,10 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 	createOneStaker(chain, staker1addr, validTip.Hash())
 	createOneStaker(chain, staker2addr, tip2.Hash())
 	challenge := nodegraph.NewChallenge(
-		chain.currentEventId.BlockId,
+		&common.BlockId{
+			Height:     common.NewTimeBlocksInt(0),
+			HeaderHash: common.Hash{},
+		},
 		0,
 		staker1addr,
 		staker2addr,
