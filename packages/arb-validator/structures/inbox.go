@@ -19,6 +19,7 @@ package structures
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
@@ -128,6 +129,9 @@ func (ms *MessageStack) bottomIndex() *big.Int {
 
 func (ms *MessageStack) DeliverMessage(msg inbox.InboxMessage) {
 	newTopCount := new(big.Int).Add(ms.TopCount(), big.NewInt(1))
+	if msg.InboxSeqNum.Cmp(newTopCount) != 0 {
+		log.Fatal("didn't get messages in correct order")
+	}
 	if ms.newest == nil {
 		item := &messageStackItem{
 			message: msg,

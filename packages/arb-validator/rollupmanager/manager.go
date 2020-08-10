@@ -145,7 +145,7 @@ func CreateManagerAdvanced(
 			}
 			man.Unlock()
 
-			currentProcessedBlockId := man.activeChain.CurrentBlockId()
+			currentProcessedBlockId := man.activeChain.CurrentEventId()
 			time.Sleep(time.Second) // give time for things to settle, post-reorg, before restarting stuff
 
 			log.Println("Starting validator from", currentProcessedBlockId)
@@ -167,8 +167,8 @@ func CreateManagerAdvanced(
 					if err := man.activeChain.UpdateAssumedValidBlock(runCtx, clnt, assumedValidThreshold); err != nil {
 						return err
 					}
-					currentProcessedBlockId := man.activeChain.CurrentBlockId()
-					currentLocalHeight := currentProcessedBlockId.Height.AsInt()
+					nextEventId := man.activeChain.CurrentEventId()
+					startHeight := nextEventId.BlockId.Height.AsInt()
 
 					currentOnChain, err := clnt.CurrentBlockId(runCtx)
 					if err != nil {
@@ -177,47 +177,55 @@ func CreateManagerAdvanced(
 					currentL1Height := currentOnChain.Height.AsInt()
 
 					fastCatchupEndHeight := new(big.Int).Sub(currentL1Height, maxReorg)
-					if currentLocalHeight.Cmp(fastCatchupEndHeight) >= 0 {
+					if startHeight.Cmp(fastCatchupEndHeight) >= 0 {
 						break
 					}
 
-					fetchSize := new(big.Int).Sub(fastCatchupEndHeight, currentLocalHeight)
+					fetchSize := new(big.Int).Sub(fastCatchupEndHeight, startHeight)
 					if fetchSize.Cmp(big.NewInt(1)) <= 0 {
 						break
 					}
 					if fetchSize.Cmp(maxReorg) >= 0 {
 						fetchSize = maxReorg
 					}
-					fetchEnd := new(big.Int).Add(currentLocalHeight, fetchSize)
+					fetchEnd := new(big.Int).Add(startHeight, fetchSize)
 					fetchEnd = fetchEnd.Sub(fetchEnd, big.NewInt(1))
 
-					log.Println("Getting events between", currentLocalHeight, "and", fetchEnd)
-					inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, currentLocalHeight, fetchEnd)
+					log.Println("Getting events between", startHeight, "and", fetchEnd)
+					inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, startHeight, fetchEnd)
 					if err != nil {
 						return errors2.Wrap(err, "Manager hit error doing fast catchup")
 					}
 					inboxEvents := make([]arbbridge.Event, 0, len(inboxDeliveredEvents))
 					for _, ev := range inboxDeliveredEvents {
+						if ev.ChainInfo.Cmp(nextEventId) < 0 {
+							// Start at the matching event id
+							continue
+						}
 						inboxEvents = append(inboxEvents, ev)
 					}
 
-					events, err := rollupWatcher.GetAllEvents(runCtx, currentLocalHeight, fetchEnd)
+					events, err := rollupWatcher.GetAllEvents(runCtx, startHeight, fetchEnd)
 					if err != nil {
 						return errors2.Wrap(err, "Manager hit error doing fast catchup")
 					}
 					allEvents := arbbridge.MergeEventsUnsafe(inboxEvents, events)
 					for _, ev := range allEvents {
+						if ev.GetChainInfo().Cmp(nextEventId) < 0 {
+							// Start at the matching event id
+							continue
+						}
 						blockId := ev.GetChainInfo().BlockId
-						if blockId.Height.AsInt().Cmp(currentLocalHeight) > 0 {
+						if blockId.Height.AsInt().Cmp(startHeight) > 0 {
 							man.activeChain.NotifyNewBlock(blockId.Clone())
-							currentLocalHeight = blockId.Height.AsInt()
+							startHeight = blockId.Height.AsInt()
 						}
 						err := man.activeChain.HandleNotification(runCtx, ev)
 						if err != nil {
 							return errors2.Wrap(err, "Manager hit error processing event during fast catchup")
 						}
 					}
-					if fetchEnd.Cmp(currentLocalHeight) > 0 {
+					if fetchEnd.Cmp(startHeight) > 0 {
 						endBlockId, err := clnt.BlockIdForHeight(runCtx, common.NewTimeBlocks(fetchEnd))
 						if err != nil {
 							return err
@@ -226,7 +234,8 @@ func CreateManagerAdvanced(
 					}
 				}
 
-				headersChan, err := clnt.SubscribeBlockHeaders(runCtx, man.activeChain.CurrentBlockId())
+				startEventId := man.activeChain.CurrentEventId()
+				headersChan, err := clnt.SubscribeBlockHeaders(runCtx, startEventId.BlockId)
 				if err != nil {
 					return errors2.Wrap(err, "Error subscribing to block headers")
 				}
@@ -266,14 +275,30 @@ func CreateManagerAdvanced(
 					if err != nil {
 						return errors2.Wrapf(err, "Manager hit error getting inbox events with block %v", blockId)
 					}
+					// It's save to process inbox events out of order with rollup events as long
+					// as the inbox events are ahead of the rollup ones
+					for _, ev := range inboxEvents {
+						if ev.GetChainInfo().Cmp(startEventId) < 0 {
+							// Start at the matching event id
+							continue
+						}
+						err := man.activeChain.HandleNotification(runCtx, ev)
+						if err != nil {
+							return errors2.Wrap(err, "Manager hit error processing event")
+						}
+					}
 
 					events, err := rollupWatcher.GetEvents(runCtx, blockId, timestamp)
 					if err != nil {
 						return errors2.Wrapf(err, "Manager hit error getting rollup events with block %v", blockId)
 					}
 
-					for _, event := range arbbridge.MergeEventsUnsafe(inboxEvents, events) {
-						err := man.activeChain.HandleNotification(runCtx, event)
+					for _, ev := range events {
+						if ev.GetChainInfo().Cmp(startEventId) < 0 {
+							// Start at the matching event id
+							continue
+						}
+						err := man.activeChain.HandleNotification(runCtx, ev)
 						if err != nil {
 							return errors2.Wrap(err, "Manager hit error processing event")
 						}

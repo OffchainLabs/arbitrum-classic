@@ -57,6 +57,21 @@ func MergeEventsUnsafe(events1 []Event, events2 []Event) []Event {
 	return events
 }
 
+// MergeEventsUnsafe assumes that both sets of events are disjoint and come from
+// the same chain state rather than from two different states caused by a reorg
+func MergeAllEventsUnsafe(events [][]Event) []Event {
+	if len(events) == 0 {
+		return nil
+	}
+	if len(events) == 1 {
+		return events[0]
+	}
+	if len(events) == 2 {
+		return MergeEventsUnsafe(events[0], events[1])
+	}
+	return MergeEventsUnsafe(events[0], MergeAllEventsUnsafe(events[1:]))
+}
+
 type ChainInfo struct {
 	BlockId  *common.BlockId
 	LogIndex uint

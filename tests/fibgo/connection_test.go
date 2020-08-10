@@ -137,7 +137,7 @@ func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollup
 			contract,
 			db+"/aggregator",
 			"2235",
-			"8546",
+			"9546",
 			utils2.RPCFlags{},
 			time.Second,
 		); err != nil {
@@ -146,7 +146,6 @@ func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollup
 	}()
 
 	ticker := time.NewTicker(time.Second)
-waitloop:
 	for {
 		select {
 		case <-ticker.C:
@@ -156,7 +155,7 @@ waitloop:
 				time.Second,
 			)
 			if err != nil || conn == nil {
-				continue
+				break
 			}
 			if err := conn.Close(); err != nil {
 				return err
@@ -164,23 +163,22 @@ waitloop:
 
 			conn, err = net.DialTimeout(
 				"tcp",
-				net.JoinHostPort("127.0.0.1", "8546"),
+				net.JoinHostPort("127.0.0.1", "9546"),
 				time.Second,
 			)
 			if err != nil || conn == nil {
-				continue
+				break
 			}
 			if err := conn.Close(); err != nil {
 				return err
 			}
 			// Wait for the validator to catch up to head
 			time.Sleep(time.Second * 2)
-			break waitloop
+			return nil
 		case <-time.After(time.Second * 5):
 			return errors.New("couldn't connect to rpc")
 		}
 	}
-	return nil
 }
 
 type ListenerError struct {

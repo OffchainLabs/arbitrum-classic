@@ -31,7 +31,7 @@ type ArbRollupWatcher interface {
 
 	GetParams(ctx context.Context) (valprotocol.ChainParams, error)
 	InboxAddress(ctx context.Context) (common.Address, error)
-	GetCreationInfo(ctx context.Context) (common.Hash, *common.BlockId, common.Hash, error)
+	GetCreationInfo(ctx context.Context) (common.Hash, ChainInfo, common.Hash, *big.Int, error)
 	GetVersion(ctx context.Context) (string, error)
 	IsStaked(address common.Address) (bool, error)
 	VerifyArbChain(ctx context.Context, machHash common.Hash) error

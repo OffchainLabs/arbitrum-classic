@@ -55,7 +55,7 @@ func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, c
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 	ctx := ckptcontext.NewCheckpointContext()
 	chainBuf := chain.marshalForCheckpoint(ctx)
-	chain2, err := chainBuf.unmarshalFromCheckpoint(ctx, nil, nil)
+	chain2, err := chainBuf.unmarshalFromCheckpoint(ctx, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -123,7 +123,7 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 	createOneStaker(chain, staker1addr, validTip.Hash())
 	createOneStaker(chain, staker2addr, tip2.Hash())
 	challenge := nodegraph.NewChallenge(
-		chain.latestBlockId,
+		chain.currentEventId.BlockId,
 		0,
 		staker1addr,
 		staker2addr,

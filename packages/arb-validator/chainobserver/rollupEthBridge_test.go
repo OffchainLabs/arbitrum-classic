@@ -98,10 +98,6 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 			MaxExecutionSteps:       1000000,
 			ArbGasSpeedLimitPerTick: 1000,
 		},
-		&common.BlockId{
-			Height:     common.NewTimeBlocks(big.NewInt(10)),
-			HeaderHash: common.Hash{},
-		},
 	)
 	if err != nil {
 		return nil, err
@@ -117,7 +113,7 @@ func TestComputePrevLeaf(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	prepared, err := chain.prepareAssertion(chain.latestBlockId)
+	prepared, err := chain.prepareAssertion(chain.currentEventId.BlockId)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +169,7 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 	assertion, assertionStub := randomAssertion(t, chain.Inbox.MessageStack, prevNode)
 	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertionStub, valprotocol.InvalidInboxTopChildType, chain.GetChainParams())
 
-	prepared, err := chain.prepareAssertion(chain.latestBlockId)
+	prepared, err := chain.prepareAssertion(chain.currentEventId.BlockId)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,7 +219,7 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 	assertion, assertionStub := randomAssertion(t, chain.Inbox.MessageStack, prevNode)
 	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertionStub, valprotocol.InvalidExecutionChildType, chain.GetChainParams())
 
-	prepared, err := chain.prepareAssertion(chain.latestBlockId)
+	prepared, err := chain.prepareAssertion(chain.currentEventId.BlockId)
 	if err != nil {
 		t.Fatal(err)
 	}
