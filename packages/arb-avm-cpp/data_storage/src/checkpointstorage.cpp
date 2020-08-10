@@ -39,14 +39,17 @@ const std::string initial_slice_label = "initial";
 
 CheckpointStorage::CheckpointStorage(const std::string& db_path)
     : datastorage(std::make_shared<DataStorage>(db_path)),
-      code(std::make_shared<Code>(getNextSegmentID(*makeConstTransaction()))),
-      pool(std::make_shared<TuplePool>()) {}
+      code(std::make_shared<Code>(getNextSegmentID(*makeConstTransaction()))) {}
 
 void CheckpointStorage::initialize(const std::string& executable_path) {
-    auto executable = loadExecutable(executable_path, *pool);
+    auto executable = loadExecutable(executable_path);
+    initialize(std::move(executable));
+}
+
+void CheckpointStorage::initialize(LoadedExecutable executable) {
     auto tx = makeTransaction();
     code->addSegment(std::move(executable.code));
-    Machine mach{MachineState{code, std::move(executable.static_val), pool}};
+    Machine mach{MachineState{code, std::move(executable.static_val)}};
     auto res = saveMachine(*tx, mach);
     auto save_exp = std::runtime_error("failed to save");
     if (!res.status.ok()) {
@@ -133,34 +136,34 @@ Machine CheckpointStorage::getMachine(uint256_t machineHash) const {
 
     auto state_data = results.data;
 
-    auto static_results = ::getValueImpl(*transaction, state_data.static_hash,
-                                         pool.get(), segment_ids);
+    auto static_results =
+        ::getValueImpl(*transaction, state_data.static_hash, segment_ids);
     if (!static_results.status.ok()) {
         throw std::runtime_error("failed loaded core machine static");
     }
 
-    auto register_results = ::getValueImpl(
-        *transaction, state_data.register_hash, pool.get(), segment_ids);
+    auto register_results =
+        ::getValueImpl(*transaction, state_data.register_hash, segment_ids);
     if (!register_results.status.ok()) {
         throw std::runtime_error("failed to load machine register");
     }
 
-    auto stack_results = ::getValueImpl(*transaction, state_data.datastack_hash,
-                                        pool.get(), segment_ids);
+    auto stack_results =
+        ::getValueImpl(*transaction, state_data.datastack_hash, segment_ids);
     if (!stack_results.status.ok() ||
         !nonstd::holds_alternative<Tuple>(stack_results.data)) {
         throw std::runtime_error("failed to load machine stack");
     }
 
-    auto auxstack_results = ::getValueImpl(
-        *transaction, state_data.auxstack_hash, pool.get(), segment_ids);
+    auto auxstack_results =
+        ::getValueImpl(*transaction, state_data.auxstack_hash, segment_ids);
     if (!auxstack_results.status.ok() ||
         !nonstd::holds_alternative<Tuple>(auxstack_results.data)) {
         throw std::runtime_error("failed to load machine auxstack");
     }
 
     auto staged_message_results = ::getValueImpl(
-        *transaction, state_data.staged_message_hash, pool.get(), segment_ids);
+        *transaction, state_data.staged_message_hash, segment_ids);
     if (!staged_message_results.status.ok()) {
         throw std::runtime_error("failed to load machine saved message");
     }
@@ -177,16 +180,14 @@ Machine CheckpointStorage::getMachine(uint256_t machineHash) const {
                 // If the segment is already loaded, no need to restore it
                 continue;
             }
-            auto segment =
-                getCodeSegment(*transaction, *it, pool.get(), next_segment_ids);
+            auto segment = getCodeSegment(*transaction, *it, next_segment_ids);
             code->restoreExistingSegment(std::move(segment));
             loaded_segment = true;
         }
         segment_ids = std::move(next_segment_ids);
     }
 
-    return MachineState{pool,
-                        code,
+    return MachineState{code,
                         std::move(register_results.data),
                         std::move(static_results.data),
                         Datastack(nonstd::get<Tuple>(stack_results.data)),
@@ -200,5 +201,5 @@ Machine CheckpointStorage::getMachine(uint256_t machineHash) const {
 
 DbResult<value> CheckpointStorage::getValue(uint256_t value_hash) const {
     auto tx = makeConstTransaction();
-    return ::getValue(*tx, value_hash, pool.get());
+    return ::getValue(*tx, value_hash);
 }

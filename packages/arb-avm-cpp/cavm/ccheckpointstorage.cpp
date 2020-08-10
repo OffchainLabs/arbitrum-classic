@@ -114,8 +114,7 @@ int saveValue(CCheckpointStorage* storage_ptr, const void* value_data) {
 
     auto data_ptr = reinterpret_cast<const char*>(value_data);
 
-    TuplePool pool;
-    auto val = deserialize_value(data_ptr, pool);
+    auto val = deserialize_value(data_ptr);
     auto results = saveValue(*transaction, val);
 
     if (!results.status.ok()) {

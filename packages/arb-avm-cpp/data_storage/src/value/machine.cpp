@@ -95,7 +95,8 @@ DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
     auto results = getRefCountedData(*transaction.transaction, key);
 
     if (!results.status.ok()) {
-        return DeleteResults{0, results.status};
+        return DeleteResults{0, results.status,
+                             std::move(results.stored_value)};
     }
 
     auto delete_results = deleteRefCountedData(*transaction.transaction, key);
@@ -161,15 +162,14 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
     }
 
     auto& machinestate = machine.machine_state;
-    auto pool = machinestate.pool.get();
     auto static_val_results =
         saveValueImpl(transaction, machinestate.static_val, segment_counts);
     auto register_val_results =
         saveValueImpl(transaction, machinestate.registerVal, segment_counts);
-    auto datastack_tup = machinestate.stack.getTupleRepresentation(pool);
+    auto datastack_tup = machinestate.stack.getTupleRepresentation();
     auto datastack_results =
         saveValueImpl(transaction, datastack_tup, segment_counts);
-    auto auxstack_tup = machinestate.auxstack.getTupleRepresentation(pool);
+    auto auxstack_tup = machinestate.auxstack.getTupleRepresentation();
     auto auxstack_results =
         saveValueImpl(transaction, auxstack_tup, segment_counts);
     auto staged_message_results =

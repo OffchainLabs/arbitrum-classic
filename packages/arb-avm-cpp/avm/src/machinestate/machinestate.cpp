@@ -42,25 +42,20 @@ AssertionContext::AssertionContext(
       fake_inbox_peek_value(std::move(fake_inbox_peek_value_)) {}
 
 MachineState::MachineState()
-    : pool(std::make_unique<TuplePool>()),
-      arb_gas_remaining(max_arb_gas_remaining),
+    : arb_gas_remaining(max_arb_gas_remaining),
       pc(0, 0),
       errpc({0, 0}, getErrCodePoint()),
       staged_message(Tuple()) {}
 
-MachineState::MachineState(std::shared_ptr<Code> code_,
-                           value static_val_,
-                           std::shared_ptr<TuplePool> pool_)
-    : pool(std::move(pool_)),
-      code(std::move(code_)),
+MachineState::MachineState(std::shared_ptr<Code> code_, value static_val_)
+    : code(std::move(code_)),
       static_val(std::move(static_val_)),
       arb_gas_remaining(max_arb_gas_remaining),
       pc(code->initialCodePointRef()),
       errpc({0, 0}, code->loadCodePoint({0, 0})),
       staged_message(Tuple()) {}
 
-MachineState::MachineState(std::shared_ptr<TuplePool> pool_,
-                           std::shared_ptr<Code> code_,
+MachineState::MachineState(std::shared_ptr<Code> code_,
                            value register_val_,
                            value static_val_,
                            Datastack stack_,
@@ -70,8 +65,7 @@ MachineState::MachineState(std::shared_ptr<TuplePool> pool_,
                            CodePointRef pc_,
                            CodePointStub errpc_,
                            Tuple staged_message_)
-    : pool(std::move(pool_)),
-      code(std::move(code_)),
+    : code(std::move(code_)),
       registerVal(std::move(register_val_)),
       static_val(static_val_),
       stack(std::move(stack_)),
@@ -84,12 +78,10 @@ MachineState::MachineState(std::shared_ptr<TuplePool> pool_,
 
 MachineState MachineState::loadFromFile(
     const std::string& executable_filename) {
-    auto pool = std::make_shared<TuplePool>();
-    auto executable = loadExecutable(executable_filename, *pool);
+    auto executable = loadExecutable(executable_filename);
     auto code = std::make_shared<Code>(0);
     code->addSegment(std::move(executable.code));
-    return MachineState{std::move(code), std::move(executable.static_val),
-                        std::move(pool)};
+    return MachineState{std::move(code), std::move(executable.static_val)};
 }
 
 uint256_t MachineState::hash() const {
@@ -241,10 +233,10 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
 }
 
 const CodePoint& MachineState::loadCurrentInstruction() const {
-    if (!loaded_segment || loaded_segment->segmentID() != pc.segment) {
+    if (!loaded_segment || loaded_segment->segment->segmentID() != pc.segment) {
         loaded_segment = code->loadCodeSegment(pc.segment);
     }
-    return (*loaded_segment)[pc.pc];
+    return (*loaded_segment->segment)[pc.pc];
 }
 
 BlockReason MachineState::runOne() {
@@ -266,16 +258,16 @@ BlockReason MachineState::runOne() {
             stack.push(std::move(imm));
         }
 
-        uint64_t gas_cost;
-        try {
-            gas_cost = InstructionArbGasCost.at(instruction.op.opcode);
-        } catch (const std::exception& e) {
+        if (!instructionValidity()[static_cast<size_t>(
+                instruction.op.opcode)]) {
             // The opcode is invalid, execute by transitioning to the error
             // state
             state = Status::Error;
             return NotBlocked();
         }
 
+        uint64_t gas_cost =
+            instructionGasCosts()[static_cast<size_t>(instruction.op.opcode)];
         if (arb_gas_remaining < gas_cost) {
             // If there's insufficient gas remaining, execute by transitioning
             // to the error state with remaining gas set to max
@@ -305,8 +297,7 @@ BlockReason MachineState::runOne() {
         }
 
         // adjust for the gas used
-        auto gasUsed = InstructionArbGasCost.at(instruction.op.opcode);
-        context.numGas += gasUsed;
+        context.numGas += gas_cost;
 
         if (state == Status::Error) {
             // if state is Error, clean up stack

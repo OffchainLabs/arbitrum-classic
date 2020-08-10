@@ -52,6 +52,14 @@ const uint256_t& assumeInt(const value& val) {
     return *aNum;
 }
 
+const CodePointStub& assumeCodePoint(const value& val) {
+    auto cp = nonstd::get_if<CodePointStub>(&val);
+    if (!cp) {
+        throw bad_pop_type{};
+    }
+    return *cp;
+}
+
 uint64_t assumeInt64(uint256_t& val) {
     if (val > std::numeric_limits<uint64_t>::max()) {
         throw int_out_of_bounds{};
@@ -413,7 +421,7 @@ void encodeKeccakState(const Tuple& tup, uint64_t* state) {
     state[24] = static_cast<uint64_t>(assumeInt(tup.get_element_unsafe(6)));
 }
 
-Tuple decodeKeccakState(const uint64_t* state, TuplePool* pool) {
+Tuple decodeKeccakState(const uint64_t* state) {
     return Tuple(bswap(intx::be::unsafe::load<uint256_t>(
                      reinterpret_cast<const uint8_t*>(&state[0]))),
                  bswap(intx::be::unsafe::load<uint256_t>(
@@ -426,7 +434,7 @@ Tuple decodeKeccakState(const uint64_t* state, TuplePool* pool) {
                      reinterpret_cast<const uint8_t*>(&state[16]))),
                  bswap(intx::be::unsafe::load<uint256_t>(
                      reinterpret_cast<const uint8_t*>(&state[20]))),
-                 uint256_t{state[24]}, pool);
+                 uint256_t{state[24]});
 }
 }  // namespace internal
 
@@ -439,7 +447,7 @@ void keccakF(MachineState& m) {
 
     ethash_keccakf1600(state);
 
-    m.stack[0] = internal::decodeKeccakState(state, m.pool.get());
+    m.stack[0] = internal::decodeKeccakState(state);
     ++m.pc;
 }
 
@@ -469,25 +477,17 @@ void rset(MachineState& m) {
 
 void jump(MachineState& m) {
     m.stack.prepForMod(1);
-    auto target = nonstd::get_if<CodePointStub>(&m.stack[0]);
-    if (target) {
-        m.pc = target->pc;
-    } else {
-        m.state = Status::Error;
-    }
+    auto& target = assumeCodePoint(m.stack[0]);
+    m.pc = target.pc;
     m.stack.popClear();
 }
 
 void cjump(MachineState& m) {
     m.stack.prepForMod(2);
-    auto target = nonstd::get_if<CodePointStub>(&m.stack[0]);
-    auto& bNum = assumeInt(m.stack[1]);
-    if (bNum != 0) {
-        if (target) {
-            m.pc = target->pc;
-        } else {
-            m.state = Status::Error;
-        }
+    auto& target = assumeCodePoint(m.stack[0]);
+    auto& cond = assumeInt(m.stack[1]);
+    if (cond != 0) {
+        m.pc = target.pc;
     } else {
         ++m.pc;
     }

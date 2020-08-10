@@ -69,10 +69,10 @@ std::ostream& operator<<(std::ostream& os, const Datastack& val) {
     return os;
 }
 
-Tuple Datastack::getTupleRepresentation(TuplePool* pool) const {
+Tuple Datastack::getTupleRepresentation() const {
     Tuple rep;
     for (size_t i = 0; i < values.size(); i++) {
-        rep = Tuple(values[values.size() - 1 - i], rep, pool);
+        rep = Tuple(values[values.size() - 1 - i], rep);
     }
     return rep;
 }
@@ -95,8 +95,7 @@ void Datastack::addHash() const {
     }();
 
     auto newVal = values[hashes.size()];
-    TuplePool pool;
-    auto tup = Tuple(newVal, prev, &pool);
+    auto tup = Tuple(newVal, prev);
     hashes.emplace_back(tup.getHashPreImage());
 }
 

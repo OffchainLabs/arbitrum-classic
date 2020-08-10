@@ -133,7 +133,6 @@ std::vector<unsigned char> prepareToSaveCodeSegment(
 
 std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
                                             uint64_t segment_id,
-                                            TuplePool* pool,
                                             std::set<uint64_t>& segment_ids) {
     auto key_vec = segment_key(segment_id);
     auto key = vecToSlice(key_vec);
@@ -150,8 +149,8 @@ std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
         if (!raw_cp.immediateHash) {
             cps.emplace_back(Operation{raw_cp.opcode}, raw_cp.next_hash);
         } else {
-            auto imm = getValueImpl(transaction, *raw_cp.immediateHash, pool,
-                                    segment_ids);
+            auto imm =
+                getValueImpl(transaction, *raw_cp.immediateHash, segment_ids);
             if (!imm.status.ok()) {
                 throw std::runtime_error("failed to load immediate value");
             }

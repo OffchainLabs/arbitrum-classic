@@ -36,6 +36,7 @@ struct SaveResults {
 struct DeleteResults {
     uint32_t reference_count;
     rocksdb::Status status;
+    std::vector<unsigned char> stored_value;
 };
 
 template <typename T>
