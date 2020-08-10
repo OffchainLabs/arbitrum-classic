@@ -62,7 +62,7 @@ func TestCreateNodes(t *testing.T) {
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -79,7 +79,7 @@ func TestCreateNodes(t *testing.T) {
 		dispNode2,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -106,7 +106,7 @@ func TestGetLeaves(t *testing.T) {
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -131,7 +131,7 @@ func TestGetLeaves(t *testing.T) {
 		dispNode2,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -170,7 +170,7 @@ func TestPrunePrevNodes(t *testing.T) {
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -197,7 +197,7 @@ func TestPrunePrevNode(t *testing.T) {
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -229,7 +229,7 @@ func TestGetLeaf(t *testing.T) {
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -270,7 +270,7 @@ func TestHasReferenceWithSuccessors(t *testing.T) {
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if !stakedNodeGraph.HasReference(initialNode) {
 		t.Fatal("reference error")
 	}
@@ -291,7 +291,7 @@ func TestPruneNewNode(t *testing.T) {
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -313,7 +313,7 @@ func TestPruneAllNodes(t *testing.T) {
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
@@ -345,12 +345,16 @@ func verifyNewNodes(
 				baseNode,
 				dispNode,
 				valprotocol.ChildType(index),
-				nodeGraph.params, common.NewTimeBlocks(big.NewInt(10)), common.Hash{})
+				nodeGraph.params,
+				common.NewTimeBlocks(big.NewInt(10)),
+			)
 		} else {
 			expectedNode = structures.NewValidNodeFromPrev(
 				baseNode,
 				dispNode,
-				nodeGraph.params, common.NewTimeBlocks(big.NewInt(10)), common.Hash{})
+				nodeGraph.params,
+				common.NewTimeBlocks(big.NewInt(10)),
+			)
 		}
 
 		getNode := nodeGraph.NodeFromHash(expectedNode.Hash())
@@ -373,13 +377,12 @@ func createNodesOnAssert(
 	dispNode *valprotocol.DisputableNode,
 	execAssertion *protocol.ExecutionAssertion,
 	currentTime *common.TimeBlocks,
-	assertionTxHash common.Hash) (error, *structures.Node, []*structures.Node) {
+) (error, *structures.Node, []*structures.Node) {
 
 	nodes := nodeGraph.CreateNodesOnAssert(
 		baseNode,
 		dispNode,
 		currentTime,
-		assertionTxHash,
 	)
 
 	nextValid := nodeGraph.GetSuccessor(baseNode, valprotocol.ValidChildType)

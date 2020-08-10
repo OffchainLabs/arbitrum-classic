@@ -540,7 +540,6 @@ func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.Asser
 		chain.NodeGraph.NodeFromHash(ev.PrevLeafHash),
 		disNode,
 		ev.BlockId.Height,
-		ev.TxHash,
 	)
 	for _, listener := range chain.listeners {
 		listener.SawAssertion(ctx, ev)

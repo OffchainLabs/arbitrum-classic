@@ -160,7 +160,6 @@ func doAnAssertion(chain *ChainObserver, baseNode *structures.Node) error {
 		baseNode,
 		disputableNode,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{},
 	)
 
 	nextValid := chain.NodeGraph.GetSuccessor(baseNode, valprotocol.ValidChildType)

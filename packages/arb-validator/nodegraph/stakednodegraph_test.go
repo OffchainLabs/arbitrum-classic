@@ -88,7 +88,7 @@ func assertAndCreateNodes(
 		dispNode,
 		execAssert,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{})
+	)
 	if err != nil {
 		t.Fatal("error making new node")
 	}
