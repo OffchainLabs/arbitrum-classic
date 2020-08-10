@@ -32,7 +32,7 @@ contract GlobalFTWallet {
         FTWallet[] ftList;
     }
 
-    mapping(address => UserFTWallet) internal ftWallets;
+    mapping(address => UserFTWallet) private ftWallets;
 
     enum PairingStatus { Unpaired, Requested, Paired }
 
@@ -185,7 +185,7 @@ contract GlobalFTWallet {
         address _user,
         address _tokenContract,
         uint256 _value
-    ) internal {
+    ) private {
         if (_value == 0) {
             return;
         }
@@ -202,7 +202,7 @@ contract GlobalFTWallet {
         address _user,
         address _tokenContract,
         uint256 _value
-    ) internal returns (bool) {
+    ) private returns (bool) {
         if (_value == 0) {
             return true;
         }

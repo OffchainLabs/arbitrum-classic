@@ -103,12 +103,7 @@ contract GlobalInbox is
             msg.sender,
             keccak256(messageData)
         );
-        emit IGlobalInbox.MessageDeliveredFromOrigin(
-            chain,
-            L2_MSG,
-            msg.sender,
-            inboxSeqNum
-        );
+        emit MessageDeliveredFromOrigin(chain, L2_MSG, msg.sender, inboxSeqNum);
     }
 
     /**
@@ -143,7 +138,7 @@ contract GlobalInbox is
                 contractData
             )
         );
-        emit IGlobalInbox.BuddyContractPair(msg.sender, chain);
+        emit BuddyContractPair(msg.sender, chain);
     }
 
     /**
@@ -242,7 +237,7 @@ contract GlobalInbox is
             _sender,
             keccak256(_messageData)
         );
-        emit IGlobalInbox.MessageDelivered(
+        emit MessageDelivered(
             _chain,
             _kind,
             _sender,
@@ -318,10 +313,7 @@ contract GlobalInbox is
             transferNFT(msg.sender, paymentOwner, erc721.token, erc721.id);
         } else if (message.kind == L2_CONTRACT_PAIR) {
             confirmPairing(message.sender, msg.sender);
-            emit IGlobalInbox.BuddyContractDeployed(
-                message.sender,
-                message.data
-            );
+            emit BuddyContractDeployed(message.sender, message.data);
         }
     }
 
