@@ -26,6 +26,10 @@ class Transaction;
 struct SaveResults;
 
 class Datastack {
+    // lazyCount defines how many unhashed items are allowed on the stack
+    // This serves to bound the total time it can take to hash the machine
+    // while removing the need to hash the stack while churn is occuring
+    // near the top
     static constexpr int lazyCount = 10000;
 
     void addHash() const;

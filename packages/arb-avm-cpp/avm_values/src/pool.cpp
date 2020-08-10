@@ -64,8 +64,6 @@ std::shared_ptr<RawTuple> TuplePool::getResource(size_t s) {
 }
 
 void TuplePool::deleteTuple(UniqueTuple tup) {
-    if (shuttingDown) {
-    }
     delete_list.push_front(std::move(tup));
     if (!deleting) {
         deleting = true;

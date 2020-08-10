@@ -116,6 +116,9 @@ Tuple::Tuple(std::vector<value> values) {
 
 constexpr uint64_t hash_size = 32;
 
+// BasicValChecker checks to see whether a value can be hashed without
+// recursion. All non-tuple values or tuples with a cached hash are
+// basic. Tuples that haven't been hashed yet are not
 struct BasicValChecker {
     bool operator()(const value& val) const {
         return nonstd::visit(*this, val);
