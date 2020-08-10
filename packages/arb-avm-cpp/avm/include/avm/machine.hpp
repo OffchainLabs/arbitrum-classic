@@ -48,12 +48,8 @@ class Machine {
     Machine() = default;
     Machine(MachineState machine_state_)
         : machine_state(std::move(machine_state_)) {}
-    Machine(std::shared_ptr<Code> code,
-            value static_val,
-            std::shared_ptr<TuplePool> pool_)
-        : machine_state(std::move(code),
-                        std::move(static_val),
-                        std::move(pool_)) {}
+    Machine(std::shared_ptr<Code> code, value static_val)
+        : machine_state(std::move(code), std::move(static_val)) {}
 
     static Machine loadFromFile(const std::string& executable_filename) {
         return {MachineState::loadFromFile(executable_filename)};
@@ -85,8 +81,6 @@ class Machine {
     std::vector<unsigned char> marshalState() const {
         return machine_state.marshalState();
     }
-
-    TuplePool& getPool() { return *machine_state.pool; }
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);

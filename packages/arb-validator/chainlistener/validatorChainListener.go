@@ -148,8 +148,8 @@ func (lis *ValidatorChainListener) AssertionPrepared(
 	_ valprotocol.ChainParams,
 	nodeGraph *nodegraph.StakedNodeGraph,
 	nodeLocation *structures.Node,
-	latestBlockId *common.BlockId,
-	prepared *PreparedAssertion) {
+	prepared *PreparedAssertion,
+) {
 	// Anyone confirm a node
 	// No need to have your own stake
 	lis.Lock()
@@ -196,12 +196,17 @@ func (lis *ValidatorChainListener) AssertionPrepared(
 			continue
 		}
 		lis.Lock()
+		currentTime, err := stakingKey.client.CurrentBlockId(ctx)
+		if err != nil {
+			log.Println("Validator couldn't get time")
+			break
+		}
 		stakeTime, placedStake := lis.broadcastCreateStakes[stakingAddress]
 		if placedStake {
-			log.Println("Thinking about placing stake", latestBlockId.Height.AsInt(), new(big.Int).Add(stakeTime.AsInt(), big.NewInt(3)))
+			log.Println("Thinking about placing stake", currentTime.Height.AsInt(), new(big.Int).Add(stakeTime.AsInt(), big.NewInt(3)))
 		}
-		if !placedStake || latestBlockId.Height.AsInt().Cmp(new(big.Int).Add(stakeTime.AsInt(), big.NewInt(3))) >= 0 {
-			lis.broadcastCreateStakes[stakingAddress] = latestBlockId.Height
+		if !placedStake || currentTime.Height.AsInt().Cmp(new(big.Int).Add(stakeTime.AsInt(), big.NewInt(3))) >= 0 {
+			lis.broadcastCreateStakes[stakingAddress] = currentTime.Height
 			log.Println("No stake is currently down, so setting up a stake")
 			lis.Unlock()
 			// Put down new stake so that we can assert next time

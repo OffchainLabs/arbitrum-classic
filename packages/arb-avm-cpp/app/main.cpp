@@ -15,12 +15,24 @@
  */
 
 #include <avm/machine.hpp>
+#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/storageresult.hpp>
+#include <data_storage/value/machine.hpp>
+
+#include <boost/filesystem.hpp>
 
 #include <sys/stat.h>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
+
+std::string temp_dp_path = "arb_runner_temp_db";
+
+struct DBDeleter {
+    DBDeleter() { boost::filesystem::remove_all(temp_dp_path); }
+    ~DBDeleter() { boost::filesystem::remove_all(temp_dp_path); }
+};
 
 int main(int argc, char* argv[]) {
     using namespace std::chrono_literals;
@@ -34,57 +46,73 @@ int main(int argc, char* argv[]) {
     auto mode = std::string(argv[1]);
     std::string filename = argv[2];
 
-    auto mach = [&]() {
-        if (mode == "--hexops") {
-            std::ifstream file(filename, std::ios::binary);
-            if (!file.is_open()) {
-                throw std::runtime_error("Couldn't open file");
-            }
-            std::vector<unsigned char> raw_ops(
-                (std::istreambuf_iterator<char>(file)),
-                std::istreambuf_iterator<char>());
+    DBDeleter deleter;
+    CheckpointStorage storage{temp_dp_path};
 
-            auto code = std::make_shared<Code>();
-            auto stub = code->addSegment();
-            // Code segments are built back to front so add operations in
-            // reverse
-            for (auto it = raw_ops.rbegin(); it != raw_ops.rend(); ++it) {
-                stub = code->addOperation(stub.pc,
-                                          Operation(static_cast<OpCode>(*it)));
-            }
-            return Machine(MachineState(std::move(code), Tuple(),
-                                        std::make_shared<TuplePool>()));
-        } else {
-            return Machine::loadFromFile(filename);
-        }
-    }();
-
-    std::vector<Tuple> inbox_messages;
-    if (argc == 5 && std::string(argv[3]) == "--inbox") {
-        std::ifstream file(argv[4], std::ios::binary);
+    if (mode == "--hexops") {
+        std::ifstream file(filename, std::ios::binary);
         if (!file.is_open()) {
             throw std::runtime_error("Couldn't open file");
         }
-        std::vector<unsigned char> raw_inbox(
+        std::vector<unsigned char> raw_ops(
             (std::istreambuf_iterator<char>(file)),
             std::istreambuf_iterator<char>());
-        auto data = reinterpret_cast<const char*>(raw_inbox.data());
-        auto inbox_val =
-            nonstd::get<Tuple>(deserialize_value(data, mach.getPool()));
-        while (inbox_val != Tuple{}) {
-            inbox_messages.push_back(
-                std::move(inbox_val.get_element(1).get<Tuple>()));
-            inbox_val = nonstd::get<Tuple>(std::move(inbox_val.get_element(0)));
+
+        std::vector<Operation> ops;
+        for (auto op : raw_ops) {
+            ops.push_back(Operation{static_cast<OpCode>(op)});
         }
-        std::reverse(inbox_messages.begin(), inbox_messages.end());
+
+        auto code = std::make_shared<CodeSegment>(0, ops);
+        storage.initialize(LoadedExecutable{std::move(code), Tuple()});
+    } else {
+        storage.initialize(filename);
     }
 
-    auto assertionBase = mach.run(100000000, {}, std::chrono::seconds(0));
+    auto mach = storage.getInitialMachine();
+
+    std::vector<Tuple> inbox_messages;
+    if (argc == 5) {
+        if (std::string(argv[3]) == "--inbox") {
+            std::ifstream file(argv[4], std::ios::binary);
+            if (!file.is_open()) {
+                throw std::runtime_error("Couldn't open file");
+            }
+            std::vector<unsigned char> raw_inbox(
+                (std::istreambuf_iterator<char>(file)),
+                std::istreambuf_iterator<char>());
+            auto data = reinterpret_cast<const char*>(raw_inbox.data());
+            auto inbox_val = nonstd::get<Tuple>(deserialize_value(data));
+            while (inbox_val != Tuple{}) {
+                inbox_messages.push_back(
+                    std::move(inbox_val.get_element(1).get<Tuple>()));
+                inbox_val =
+                    nonstd::get<Tuple>(std::move(inbox_val.get_element(0)));
+            }
+            std::reverse(inbox_messages.begin(), inbox_messages.end());
+        } else if (std::string(argv[3]) == "--json-inbox") {
+            std::ifstream file(argv[4], std::ios::binary);
+            nlohmann::json j;
+            file >> j;
+
+            for (auto& val : j["inbox"]) {
+                inbox_messages.push_back(
+                    simple_value_from_json(std::move(val)).get<Tuple>());
+            }
+        }
+    }
 
     auto assertion =
         mach.run(100000000, std::move(inbox_messages), std::chrono::seconds(0));
 
+    std::cout << "Produced " << assertion.logs.size() << " logs\n";
+
     std::cout << "Ran " << assertion.stepCount << " ending in state "
               << static_cast<int>(mach.currentStatus()) << "\n";
+
+    saveMachine(*storage.makeTransaction(), mach);
+
+    auto mach2 = storage.getMachine(mach.hash());
+    mach2.run(0, {}, std::chrono::seconds(0));
     return 0;
 }

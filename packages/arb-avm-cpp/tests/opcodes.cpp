@@ -340,8 +340,8 @@ TEST_CASE("EQ opcode is correct") {
     SECTION("equal") { testBinaryOp(3_u256, 3_u256, 1_u256, OpCode::EQ); }
     SECTION("matching tuples") {
         MachineState m;
-        m.stack.push(Tuple{uint256_t{1}, uint256_t{2}, m.pool.get()});
-        m.stack.push(Tuple{uint256_t{1}, uint256_t{2}, m.pool.get()});
+        m.stack.push(Tuple{uint256_t{1}, uint256_t{2}});
+        m.stack.push(Tuple{uint256_t{1}, uint256_t{2}});
         m.runOp(OpCode::EQ);
         value res = m.stack.pop();
         auto actual = nonstd::get_if<uint256_t>(&res);
@@ -351,8 +351,8 @@ TEST_CASE("EQ opcode is correct") {
     }
     SECTION("different tuples") {
         MachineState m;
-        m.stack.push(Tuple{uint256_t{1}, uint256_t{2}, m.pool.get()});
-        m.stack.push(Tuple{uint256_t{1}, uint256_t{3}, m.pool.get()});
+        m.stack.push(Tuple{uint256_t{1}, uint256_t{2}});
+        m.stack.push(Tuple{uint256_t{1}, uint256_t{3}});
         m.runOp(OpCode::EQ);
         value res = m.stack.pop();
         auto actual = nonstd::get_if<uint256_t>(&res);
@@ -459,7 +459,7 @@ TEST_CASE("TYPE opcode is correct") {
     }
     SECTION("type tuple") {
         MachineState m;
-        m.stack.push(Tuple{uint256_t{1}, uint256_t{2}, m.pool.get()});
+        m.stack.push(Tuple{uint256_t{1}, uint256_t{2}});
         REQUIRE(m.stack.stacksize() == 1);
         m.runOp(OpCode::TYPE);
         REQUIRE(m.stack.stacksize() == 1);
@@ -481,10 +481,9 @@ TEST_CASE("POP opcode is correct") {
 
 TEST_CASE("SPUSH opcode is correct") {
     SECTION("spush") {
-        auto pool = std::make_shared<TuplePool>();
         auto code = std::make_shared<Code>();
         code->addSegment();
-        MachineState m{std::move(code), uint256_t{5}, pool};
+        MachineState m{std::move(code), uint256_t{5}};
         m.runOp(OpCode::SPUSH);
         REQUIRE(m.stack.stacksize() == 1);
         value res = m.stack.pop();
@@ -571,11 +570,10 @@ TEST_CASE("STACKEMPTY opcode is correct") {
 
 TEST_CASE("PCPUSH opcode is correct") {
     SECTION("pcpush") {
-        auto pool = std::make_shared<TuplePool>();
         auto code = std::make_shared<Code>();
         auto stub = code->addSegment();
         code->addOperation(stub.pc, Operation(OpCode::ADD));
-        MachineState m{std::move(code), uint256_t(5), pool};
+        MachineState m{std::move(code), uint256_t(5)};
         auto initial_stub = CodePointStub(m.pc, m.loadCurrentInstruction());
         m.runOp(OpCode::PCPUSH);
         REQUIRE(m.stack.stacksize() == 1);
@@ -635,8 +633,7 @@ MachineState createTestMachineState(OpCode op) {
     auto stub = code->addSegment();
     stub = code->addOperation(stub.pc, {OpCode::HALT});
     code->addOperation(stub.pc, {op});
-    auto pool = std::make_shared<TuplePool>();
-    return {std::move(code), Tuple(), std::move(pool)};
+    return {std::move(code), Tuple()};
 }
 
 TEST_CASE("NOP opcode is correct") {
@@ -652,11 +649,10 @@ TEST_CASE("NOP opcode is correct") {
 
 TEST_CASE("ERRPUSH opcode is correct") {
     SECTION("errpush") {
-        auto pool = std::make_shared<TuplePool>();
         auto code = std::make_shared<Code>();
         auto stub = code->addSegment();
         stub = code->addOperation(stub.pc, Operation(OpCode::ADD));
-        MachineState m{std::move(code), uint256_t(5), pool};
+        MachineState m{std::move(code), uint256_t(5)};
         m.errpc = stub;
         m.runOp(OpCode::ERRPUSH);
         REQUIRE(m.stack.stacksize() == 1);
@@ -772,8 +768,8 @@ TEST_CASE("SWAP2 opcode is correct") {
 TEST_CASE("TGET opcode is correct") {
     SECTION("tget") {
         MachineState m;
-        m.stack.push(Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7},
-                           uint256_t{6}, m.pool.get()});
+        m.stack.push(
+            Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7}, uint256_t{6}});
         m.stack.push(uint256_t{1});
         m.runOp(OpCode::TGET);
         value res = m.stack.pop();
@@ -783,8 +779,8 @@ TEST_CASE("TGET opcode is correct") {
 
     SECTION("index out range") {
         MachineState m;
-        m.stack.push(Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7},
-                           uint256_t{6}, m.pool.get()});
+        m.stack.push(
+            Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7}, uint256_t{6}});
         m.stack.push(uint256_t{5});
         try {
             m.runOp(OpCode::TGET);
@@ -801,11 +797,11 @@ TEST_CASE("TSET opcode is correct") {
     SECTION("2 tup") {
         MachineState m;
         m.stack.push(uint256_t{3});
-        m.stack.push(Tuple{uint256_t{1}, uint256_t{2}, m.pool.get()});
+        m.stack.push(Tuple{uint256_t{1}, uint256_t{2}});
         m.stack.push(uint256_t{1});
         m.runOp(OpCode::TSET);
         value res = m.stack.pop();
-        REQUIRE(res == value{Tuple{uint256_t{1}, uint256_t{3}, m.pool.get()}});
+        REQUIRE(res == value{Tuple{uint256_t{1}, uint256_t{3}}});
         REQUIRE(m.stack.stacksize() == 0);
     }
 
@@ -814,13 +810,13 @@ TEST_CASE("TSET opcode is correct") {
         m.stack.push(uint256_t{3});
         m.stack.push(Tuple{uint256_t{9}, uint256_t{9}, uint256_t{9},
                            uint256_t{9}, uint256_t{9}, uint256_t{9},
-                           uint256_t{9}, uint256_t{9}, m.pool.get()});
+                           uint256_t{9}, uint256_t{9}});
         m.stack.push(uint256_t{7});
         m.runOp(OpCode::TSET);
         value res = m.stack.pop();
         REQUIRE(res == value{Tuple{uint256_t{9}, uint256_t{9}, uint256_t{9},
                                    uint256_t{9}, uint256_t{9}, uint256_t{9},
-                                   uint256_t{9}, uint256_t{3}, m.pool.get()}});
+                                   uint256_t{9}, uint256_t{3}}});
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
@@ -828,8 +824,8 @@ TEST_CASE("TSET opcode is correct") {
 TEST_CASE("TLEN opcode is correct") {
     SECTION("tlen") {
         MachineState m;
-        m.stack.push(Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7},
-                           uint256_t{6}, m.pool.get()});
+        m.stack.push(
+            Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7}, uint256_t{6}});
         m.runOp(OpCode::TLEN);
         value res = m.stack.pop();
         REQUIRE(res == value{uint256_t(4)});
@@ -840,8 +836,8 @@ TEST_CASE("TLEN opcode is correct") {
 TEST_CASE("XGET opcode is correct") {
     SECTION("correct") {
         MachineState m;
-        m.auxstack.push(Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7},
-                              uint256_t{6}, m.pool.get()});
+        m.auxstack.push(
+            Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7}, uint256_t{6}});
         m.stack.push(uint256_t{1});
         m.runOp(OpCode::XGET);
         value res = m.stack.pop();
@@ -852,8 +848,8 @@ TEST_CASE("XGET opcode is correct") {
 
     SECTION("index out range") {
         MachineState m;
-        m.auxstack.push(Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7},
-                              uint256_t{6}, m.pool.get()});
+        m.auxstack.push(
+            Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7}, uint256_t{6}});
         m.stack.push(uint256_t{5});
 
         CHECK_THROWS(m.runOp(OpCode::XGET));
@@ -865,12 +861,12 @@ TEST_CASE("XGET opcode is correct") {
 TEST_CASE("XSET opcode is correct") {
     SECTION("2 tup") {
         MachineState m;
-        m.auxstack.push(Tuple{uint256_t{1}, uint256_t{2}, m.pool.get()});
+        m.auxstack.push(Tuple{uint256_t{1}, uint256_t{2}});
         m.stack.push(uint256_t{3});
         m.stack.push(uint256_t{1});
         m.runOp(OpCode::XSET);
         value res = m.auxstack.pop();
-        REQUIRE(res == value{Tuple{uint256_t{1}, uint256_t{3}, m.pool.get()}});
+        REQUIRE(res == value{Tuple{uint256_t{1}, uint256_t{3}}});
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.auxstack.stacksize() == 0);
     }
@@ -900,8 +896,8 @@ TEST_CASE("SEND opcode is correct") {
     SECTION("send") {
         // TODO: fill in send test
         MachineState m;
-        m.stack.push(Tuple{uint256_t{1}, uint256_t{2345}, uint256_t{1},
-                           uint256_t{4}, m.pool.get()});
+        m.stack.push(
+            Tuple{uint256_t{1}, uint256_t{2345}, uint256_t{1}, uint256_t{4}});
 
         m.runOp(OpCode::SEND);
         REQUIRE(m.stack.stacksize() == 0);
@@ -1019,7 +1015,6 @@ uint256_t hexToInt(const std::string& hexstr) {
 }
 
 TEST_CASE("KECCAKF opcode is correct") {
-    auto pool = std::make_shared<TuplePool>();
     auto code = std::make_shared<Code>();
     SECTION("Inverts correctly") {
         Tuple input_data(intx::from_string<uint256_t>(
@@ -1040,11 +1035,10 @@ TEST_CASE("KECCAKF opcode is correct") {
                          intx::from_string<uint256_t>(
                              "81755589384323691266272576345129881657705"
                              "914621008081459572116739688988488432"),
-                         uint256_t{6345636445}, pool.get());
+                         uint256_t{6345636445});
         uint64_t state[25];
         machineoperation::internal::encodeKeccakState(input_data, state);
-        auto ret =
-            machineoperation::internal::decodeKeccakState(state, pool.get());
+        auto ret = machineoperation::internal::decodeKeccakState(state);
         REQUIRE(ret == input_data);
     }
 
@@ -1052,9 +1046,9 @@ TEST_CASE("KECCAKF opcode is correct") {
         auto stub = code->addSegment();
         stub = code->addOperation(stub.pc, Operation(OpCode::KECCAKF));
         code->addOperation(stub.pc, Operation(OpCode::KECCAKF));
-        MachineState m{std::move(code), Tuple(), pool};
-        m.stack.push(Tuple(0_u256, 0_u256, 0_u256, 0_u256, 0_u256, 0_u256,
-                           0_u256, pool.get()));
+        MachineState m{std::move(code), Tuple()};
+        m.stack.push(
+            Tuple(0_u256, 0_u256, 0_u256, 0_u256, 0_u256, 0_u256, 0_u256));
         m.runOne();
         auto ret = m.stack.pop();
         {

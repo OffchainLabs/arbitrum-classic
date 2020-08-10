@@ -21,7 +21,6 @@
 
 struct MachineState;
 class Tuple;
-class TuplePool;
 
 const int send_size_limit = 10000;
 
@@ -94,7 +93,7 @@ BlockReason sideload(MachineState& m);
 
 namespace internal {
 void encodeKeccakState(const Tuple& tup, uint64_t* state);
-Tuple decodeKeccakState(const uint64_t* state, TuplePool* pool);
+Tuple decodeKeccakState(const uint64_t* state);
 }  // namespace internal
 }  // namespace machineoperation
 

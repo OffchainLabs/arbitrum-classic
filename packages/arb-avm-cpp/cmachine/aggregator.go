@@ -121,7 +121,7 @@ func parseBlockData(data []byte) (uint64, common.Hash, types.Bloom) {
 	var hash common.Hash
 	copy(hash[:], data[:])
 	data = data[32:]
-	return logIndex, hash, types.BytesToBloom(data[32:])
+	return logIndex, hash, types.BytesToBloom(data[:])
 }
 
 func (as *AggregatorStore) LatestBlock() (*common.BlockId, error) {

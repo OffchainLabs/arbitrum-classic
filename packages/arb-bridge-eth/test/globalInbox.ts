@@ -264,11 +264,6 @@ describe('GlobalInbox', async () => {
     await globalInbox.sendL2Message(chainAddress, data)
   })
 
-  it('should make huge call', async () => {
-    const data = '0x' + 'ff'.repeat(100000)
-    await globalInbox.sendL2Message(chainAddress, data)
-  })
-
   it('tradeable-exits: initial', async () => {
     await expect(
       globalInbox.getPaymentOwner(originalOwner, nodeHash, messageIndex),
