@@ -24,20 +24,6 @@
 
 #include <ostream>
 
-namespace {
-Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
-    Tuple tup;
-    if (size > 0) {
-        tup = Tuple(&pool, size);
-        for (int i = 0; i < size; i++) {
-            tup.set_element(i, deserialize_value(bufptr, pool));
-        }
-    }
-
-    return tup;
-}
-}  // namespace
-
 uint64_t deserialize_uint64_t(const char*& bufptr) {
     uint64_t val = intx::be::unsafe::load<uint64_t>(
         reinterpret_cast<const unsigned char*>(bufptr));
@@ -64,25 +50,61 @@ uint256_t deserializeUint256t(const char*& bufptr) {
     return ret;
 }
 
-value deserialize_value(const char*& bufptr, TuplePool& pool) {
-    uint8_t valType;
-    memcpy(&valType, bufptr, sizeof(valType));
-    bufptr += sizeof(valType);
-    switch (valType) {
-        case NUM:
-            return deserializeUint256t(bufptr);
-        case CODEPT: {
-            return deserializeCodePointStub(bufptr);
-        }
-        default:
-            if (valType >= TUPLE && valType <= TUPLE + 8) {
-                return deserializeTuple(bufptr, valType - TUPLE, pool);
-            } else {
-                std::printf("in deserialize_value, unhandled type = %X\n",
-                            valType);
-                throw std::runtime_error("Tried to deserialize unhandled type");
+value deserialize_value(const char*& bufptr) {
+    // Iteratively read all values leaving placeholder for the tuples
+    std::vector<DeserializedValue> values;
+    uint64_t values_to_read = 1;
+    while (values_to_read > 0) {
+        uint8_t valType;
+        memcpy(&valType, bufptr, sizeof(valType));
+        bufptr += sizeof(valType);
+        --values_to_read;
+        switch (valType) {
+            case NUM: {
+                values.push_back(value{deserializeUint256t(bufptr)});
+                break;
             }
+            case CODEPT: {
+                values.push_back(value{deserializeCodePointStub(bufptr)});
+                break;
+            }
+            default: {
+                if (valType >= TUPLE && valType <= TUPLE + 8) {
+                    uint8_t tuple_size = valType - TUPLE;
+                    values_to_read += tuple_size;
+                    values.push_back(TuplePlaceholder{tuple_size});
+                } else {
+                    std::printf("in deserialize_value, unhandled type = %X\n",
+                                valType);
+                    throw std::runtime_error(
+                        "Tried to deserialize unhandled type");
+                }
+                break;
+            }
+        }
     }
+    return assembleValueFromDeserialized(std::move(values));
+}
+
+value assembleValueFromDeserialized(std::vector<DeserializedValue> values) {
+    // Next form the full value out of the interleaved values and placeholders
+    size_t total_values_size = values.size();
+    for (size_t i = 0; i < total_values_size; ++i) {
+        size_t val_pos = total_values_size - 1 - i;
+        auto& val = values[val_pos];
+        if (nonstd::holds_alternative<value>(val)) {
+            continue;
+        }
+        auto holder = val.get<TuplePlaceholder>();
+        Tuple tup(holder.values);
+        for (uint8_t j = 0; j < holder.values; ++j) {
+            tup.set_element(j, std::move(values[val_pos + 1 + j].get<value>()));
+        }
+        values.erase(values.begin() + val_pos + 1,
+                     values.begin() + val_pos + 1 + holder.values);
+        values[val_pos] = std::move(tup);
+    }
+    return values.back().get<value>();
 }
 
 void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
@@ -92,18 +114,29 @@ void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
     buf.insert(buf.end(), data, data + sizeof(big_endian_val));
 }
 
-void marshal_value(const value& val, std::vector<unsigned char>& buf) {
-    if (nonstd::holds_alternative<Tuple>(val)) {
-        nonstd::get<Tuple>(val).marshal(buf);
-    } else if (nonstd::holds_alternative<uint256_t>(val)) {
-        buf.push_back(NUM);
-        marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
-    } else if (nonstd::holds_alternative<CodePointStub>(val)) {
-        buf.push_back(CODE_POINT_STUB);
-        nonstd::get<CodePointStub>(val).marshal(buf);
-    } else if (nonstd::holds_alternative<HashPreImage>(val)) {
-        buf.push_back(HASH_PRE_IMAGE);
-        nonstd::get<HashPreImage>(val).marshal(buf);
+void marshal_value(const value& full_val, std::vector<unsigned char>& buf) {
+    std::vector<value> values{full_val};
+    while (!values.empty()) {
+        const auto val = std::move(values.back());
+        values.pop_back();
+        if (nonstd::holds_alternative<Tuple>(val)) {
+            const auto& tup = val.get<Tuple>();
+            auto size = tup.tuple_size();
+            buf.push_back(TUPLE + size);
+            // queue elements in reverse order for serialization
+            for (uint64_t i = 0; i < size; i++) {
+                values.push_back(tup.get_element(size - 1 - i));
+            }
+        } else if (nonstd::holds_alternative<uint256_t>(val)) {
+            buf.push_back(NUM);
+            marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
+        } else if (nonstd::holds_alternative<CodePointStub>(val)) {
+            buf.push_back(CODE_POINT_STUB);
+            nonstd::get<CodePointStub>(val).marshal(buf);
+        } else if (nonstd::holds_alternative<HashPreImage>(val)) {
+            buf.push_back(HASH_PRE_IMAGE);
+            nonstd::get<HashPreImage>(val).marshal(buf);
+        }
     }
 }
 

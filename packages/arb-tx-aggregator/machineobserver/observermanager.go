@@ -78,6 +78,43 @@ func RunObserver(
 		return err
 	}
 
+	_, eventCreated, _, creationTimestamp, err := rollupWatcher.GetCreationInfo(ctx)
+	if err != nil {
+		return err
+	}
+
+	if db.LatestBlockId() == nil {
+		// We're starting from scratch. Process the messages from the partial block
+		inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
+		if err != nil {
+			return err
+		}
+
+		events, err := inboxWatcher.GetDeliveredEventsInBlock(ctx, eventCreated.BlockId, creationTimestamp)
+		if err != nil {
+			return err
+		}
+
+		// filter out events before nextEventId
+		if len(events) > 0 {
+			startIndex := -1
+			for i, ev := range events {
+				if ev.ChainInfo.Cmp(eventCreated) > 0 {
+					startIndex = i
+				}
+			}
+			if startIndex >= 0 {
+				events = events[startIndex:]
+			} else {
+				events = nil
+			}
+		}
+
+		if err := db.AddMessages(ctx, events, eventCreated.BlockId); err != nil {
+			return err
+		}
+	}
+
 	go func() {
 
 		firstRun := true
@@ -98,8 +135,7 @@ func RunObserver(
 			}
 
 			err = func() error {
-				latest := db.LatestBlock()
-				log.Println("Starting observer from", latest)
+				log.Println("Starting observer after", db.LatestBlockId())
 
 				// If the local chain is significantly behind the L1, catch up
 				// more efficiently. We process `MaxReorgHeight` blocks at a
@@ -108,8 +144,7 @@ func RunObserver(
 				// we are processing
 				maxReorg := cp.MaxReorgHeight()
 				for {
-					latestBlock := db.LatestBlock()
-					start := new(big.Int).Add(latestBlock.Height.AsInt(), big.NewInt(1))
+					start := new(big.Int).Add(db.LatestBlockId().Height.AsInt(), big.NewInt(1))
 					fetchEnd, err := calculateCatchupFetch(runCtx, start, clnt, maxReorg)
 					if err != nil {
 						return err
@@ -122,21 +157,18 @@ func RunObserver(
 					if err != nil {
 						return errors2.Wrap(err, "Manager hit error doing fast catchup")
 					}
-					if err := db.AddMessages(runCtx, inboxDeliveredEvents, fetchEnd.Uint64()); err != nil {
-						return err
-					}
 
-					latest, err = clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(fetchEnd))
+					endBlock, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(fetchEnd))
 					if err != nil {
 						return err
 					}
+					if err := db.AddMessages(runCtx, inboxDeliveredEvents, endBlock); err != nil {
+						return err
+					}
 				}
 
-				headersChan, err := clnt.SubscribeBlockHeadersAfter(runCtx, latest)
-				if err != nil {
-					return errors2.Wrap(err, "Error subscribing to block headers")
-				}
-
+				latest := db.LatestBlockId()
+				headersChan := clnt.SubscribeBlockHeadersAfter(runCtx, latest)
 				for maybeBlockId := range headersChan {
 					if maybeBlockId.Err != nil {
 						return errors2.Wrap(maybeBlockId.Err, "Error getting new header")
@@ -150,7 +182,7 @@ func RunObserver(
 						return errors2.Wrapf(err, "Manager hit error getting inbox events with block %v", blockId)
 					}
 
-					if err := db.AddMessages(runCtx, inboxEvents, blockId.Height.AsInt().Uint64()); err != nil {
+					if err := db.AddMessages(runCtx, inboxEvents, blockId); err != nil {
 						return err
 					}
 				}

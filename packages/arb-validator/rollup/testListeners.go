@@ -57,7 +57,6 @@ func (lis *evil_WrongAssertionListener) AssertionPrepared(
 	params valprotocol.ChainParams,
 	nodeGraph *nodegraph.StakedNodeGraph,
 	nodeLocation *structures.Node,
-	latestBlockId *common.BlockId,
 	prepared *chainlistener.PreparedAssertion) {
 	badHash := common.Hash{}
 	badHash[5] = 37
@@ -71,5 +70,5 @@ func (lis *evil_WrongAssertionListener) AssertionPrepared(
 	default:
 		log.Fatal("unrecognized evil listener type")
 	}
-	lis.ValidatorChainListener.AssertionPrepared(ctx, params, nodeGraph, nodeLocation, latestBlockId, prepared)
+	lis.ValidatorChainListener.AssertionPrepared(ctx, params, nodeGraph, nodeLocation, prepared)
 }

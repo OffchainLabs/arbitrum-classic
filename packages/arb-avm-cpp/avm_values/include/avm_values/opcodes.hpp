@@ -19,7 +19,9 @@
 
 #define CURRENT_AO_VERSION 1
 
+#include <array>
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -181,7 +183,8 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::PUSH_INSN_IMM, "pushinsnimm"},
     {OpCode::SIDELOAD, "sideload"},
 
-    {OpCode::ECRECOVER, "ecrecover"}};
+    {OpCode::ECRECOVER, "ecrecover"},
+    {OpCode::DEBUG_PRINT, "debugprint"}};
 
 enum class MarshalLevel { STUB, SINGLE, FULL };
 
@@ -429,5 +432,47 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::DEBUG_PRINT, 1},
 
     {OpCode::ECRECOVER, 20000}};
+
+constexpr size_t MaxValidOpcode =
+    static_cast<size_t>(std::numeric_limits<uint8_t>::max());
+
+template <typename T>
+using OpCodeArray = std::array<T, MaxValidOpcode>;
+
+inline OpCodeArray<uint64_t> initializeGasCosts() {
+    OpCodeArray<uint64_t> arr;
+    for (size_t i = 0; i <= MaxValidOpcode; ++i) {
+        auto it = InstructionArbGasCost.find(static_cast<OpCode>(i));
+        if (it != InstructionArbGasCost.end()) {
+            arr[i] = it->second;
+        } else {
+            arr[i] = 0;
+        }
+    }
+    return arr;
+}
+
+inline const OpCodeArray<uint64_t>& instructionGasCosts() {
+    static OpCodeArray<uint64_t> costs = initializeGasCosts();
+    return costs;
+}
+
+inline OpCodeArray<bool> initializeValidity() {
+    OpCodeArray<bool> arr;
+    for (size_t i = 0; i <= MaxValidOpcode; ++i) {
+        auto it = InstructionArbGasCost.find(static_cast<OpCode>(i));
+        if (it != InstructionArbGasCost.end()) {
+            arr[i] = true;
+        } else {
+            arr[i] = false;
+        }
+    }
+    return arr;
+}
+
+inline const OpCodeArray<bool>& instructionValidity() {
+    static OpCodeArray<bool> costs = initializeValidity();
+    return costs;
+}
 
 #endif /* opcodes_hpp */

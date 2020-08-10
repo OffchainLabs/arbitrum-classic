@@ -57,9 +57,9 @@ func (sg *StakedNodeGraph) Stakers() *StakerSet {
 	return sg.stakers
 }
 
-func NewStakedNodeGraph(machine machine.Machine, params valprotocol.ChainParams, creationTxHash common.Hash) *StakedNodeGraph {
+func NewStakedNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *StakedNodeGraph {
 	return &StakedNodeGraph{
-		NodeGraph:  NewNodeGraph(machine, params, creationTxHash),
+		NodeGraph:  NewNodeGraph(machine, params),
 		stakers:    NewStakerSet(),
 		Challenges: NewChallengeSet(),
 	}

@@ -85,12 +85,7 @@ func LaunchAggregator(
 		return err
 	}
 
-	_, blockCreated, _, err := rollupContract.GetCreationInfo(ctx)
-	if err != nil {
-		return err
-	}
-
-	db, err := txdb.New(ctx, arbClient, cp, cp.GetAggregatorStore(), blockCreated, logger)
+	db, err := txdb.New(ctx, arbClient, cp, cp.GetAggregatorStore(), logger)
 	if err != nil {
 		return err
 	}

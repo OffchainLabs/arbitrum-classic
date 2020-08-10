@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -39,7 +38,7 @@ func testInboxTopChallenge(
 ) {
 	t.Parallel()
 
-	messageStack := getInboxMsgStack()
+	messageStack := structures.NewRandomMessageStack(10)
 	count := new(big.Int).Sub(messageStack.TopCount(), big.NewInt(1))
 	bottomHash, challengeHash := getChallengeData(t, messageStack, count)
 
@@ -90,14 +89,4 @@ func getChallengeData(t *testing.T, messageStack *structures.MessageStack, messa
 	challengeHash := valprotocol.InboxTopChallengeDataHash(bottomHash, topHash, messageCount)
 
 	return bottomHash, challengeHash
-}
-
-func getInboxMsgStack() *structures.MessageStack {
-	messageStack := structures.NewMessageStack()
-	messageStack.DeliverMessage(inbox.NewRandomInboxMessage())
-	messageStack.DeliverMessage(inbox.NewRandomInboxMessage())
-	messageStack.DeliverMessage(inbox.NewRandomInboxMessage())
-	messageStack.DeliverMessage(inbox.NewRandomInboxMessage())
-
-	return messageStack
 }

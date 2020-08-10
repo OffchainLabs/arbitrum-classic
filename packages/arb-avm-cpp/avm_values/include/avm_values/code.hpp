@@ -37,8 +37,7 @@ class CodeSegment {
 
     friend class Code;
     friend LoadedExecutable loadExecutable(
-        const std::string& executable_filename,
-        TuplePool& pool);
+        const std::string& executable_filename);
 
     size_t capacity() const { return code.capacity(); }
 
@@ -67,6 +66,13 @@ class CodeSegment {
     }
     CodeSegment(uint64_t segment_id_, std::vector<CodePoint> code_)
         : segment_id(segment_id_), code(std::move(code_)) {}
+
+    CodeSegment(uint64_t segment_id_, std::vector<Operation> ops)
+        : CodeSegment(segment_id_) {
+        for (auto it = ops.rbegin(); it != ops.rend(); ++it) {
+            addOperation(std::move(*it));
+        }
+    }
 
     uint64_t segmentID() const { return segment_id; }
 
@@ -100,10 +106,10 @@ class Code {
     Code() : Code(0) {}
     Code(uint64_t next_segment_num_) : next_segment_num(next_segment_num_) {}
 
-    std::shared_ptr<const CodeSegment> loadCodeSegment(
-        uint64_t segment_num) const {
+    CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const {
         const std::lock_guard<std::mutex> lock(mutex);
-        return segments.at(segment_num);
+        auto& segment = segments.at(segment_num);
+        return {segment, segment->size()};
     }
 
     bool containsSegment(uint64_t segment_id) const {

@@ -136,7 +136,7 @@ func TestConfirmAssertion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rollupAddress, blockCreated, err := factory.CreateRollup(
+	rollupAddress, _, err := factory.CreateRollup(
 		context.Background(),
 		mach.Hash(),
 		chainParams,
@@ -189,8 +189,6 @@ func TestConfirmAssertion(t *testing.T) {
 		rollupAddress,
 		checkpointer,
 		chainParams,
-		blockCreated,
-		common.Hash{},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -226,7 +224,12 @@ func TestConfirmAssertion(t *testing.T) {
 		[]value.Value{},
 	)
 
-	prepared, err := chain.prepareAssertion(chain.latestBlockId)
+	currentBlock, err := clnt.CurrentBlockId(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	prepared, err := chain.prepareAssertion(currentBlock)
 	if err != nil {
 		t.Fatal(err)
 	}

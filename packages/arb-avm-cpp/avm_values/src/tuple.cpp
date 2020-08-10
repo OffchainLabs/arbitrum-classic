@@ -20,39 +20,33 @@
 
 #include <iostream>
 
-Tuple::Tuple(value val, TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(1)) {
+Tuple::Tuple(value val) : tpl(TuplePool::get_impl().getResource(1)) {
     tpl->data.push_back(std::move(val));
 }
 
-Tuple::Tuple(value val1, value val2, TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(2)) {
+Tuple::Tuple(value val1, value val2)
+    : tpl(TuplePool::get_impl().getResource(2)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
 }
 
-Tuple::Tuple(value val1, value val2, value val3, TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(3)) {
+Tuple::Tuple(value val1, value val2, value val3)
+    : tpl(TuplePool::get_impl().getResource(3)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
 }
 
-Tuple::Tuple(value val1, value val2, value val3, value val4, TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(4)) {
+Tuple::Tuple(value val1, value val2, value val3, value val4)
+    : tpl(TuplePool::get_impl().getResource(4)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
     tpl->data.push_back(std::move(val4));
 }
 
-Tuple::Tuple(value val1,
-             value val2,
-             value val3,
-             value val4,
-             value val5,
-             TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(5)) {
+Tuple::Tuple(value val1, value val2, value val3, value val4, value val5)
+    : tpl(TuplePool::get_impl().getResource(5)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
@@ -65,9 +59,8 @@ Tuple::Tuple(value val1,
              value val3,
              value val4,
              value val5,
-             value val6,
-             TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(6)) {
+             value val6)
+    : tpl(TuplePool::get_impl().getResource(6)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
@@ -82,9 +75,8 @@ Tuple::Tuple(value val1,
              value val4,
              value val5,
              value val6,
-             value val7,
-             TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(7)) {
+             value val7)
+    : tpl(TuplePool::get_impl().getResource(7)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
@@ -101,9 +93,8 @@ Tuple::Tuple(value val1,
              value val5,
              value val6,
              value val7,
-             value val8,
-             TuplePool* pool)
-    : tuplePool(pool), tpl(pool->getResource(8)) {
+             value val8)
+    : tpl(TuplePool::get_impl().getResource(8)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
@@ -114,45 +105,80 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val8));
 }
 
-Tuple::Tuple(std::vector<value> values, TuplePool* pool) : tuplePool(pool) {
+Tuple::Tuple(std::vector<value> values) {
     if (!values.empty() && values.size() < 9) {
-        tpl = pool->getResource(values.size());
+        tpl = TuplePool::get_impl().getResource(values.size());
         for (auto& val : values) {
             tpl->data.push_back(std::move(val));
         }
     }
 }
 
-void Tuple::marshal(std::vector<unsigned char>& buf) const {
-    buf.push_back(TUPLE + tuple_size());
-    for (uint64_t i = 0; i < tuple_size(); i++) {
-        marshal_value(get_element(i), buf);
-    }
-}
+constexpr uint64_t hash_size = 32;
 
-HashPreImage Tuple::calculateHashPreImage() const {
+// BasicValChecker checks to see whether a value can be hashed without
+// recursion. All non-tuple values or tuples with a cached hash are
+// basic. Tuples that haven't been hashed yet are not
+struct BasicValChecker {
+    bool operator()(const value& val) const {
+        return nonstd::visit(*this, val);
+    }
+    bool operator()(const Tuple& tup) const {
+        return !tup.tpl || !tup.tpl->deferredHashing;
+    }
+
+    template <typename T>
+    bool operator()(const T&) const {
+        return true;
+    }
+};
+
+HashPreImage calcHashPreImage(const Tuple& tup) {
     std::array<unsigned char, 1 + 8 * 32> tupData;
     uint256_t size = 1;
 
-    tupData[0] = tuple_size();
+    tupData[0] = tup.tuple_size();
     auto oit = tupData.begin();
     ++oit;
 
-    int val_length = 32;
-    for (uint64_t i = 0; i < tuple_size(); i++) {
-        const auto& element = get_element(i);
+    for (uint64_t i = 0; i < tup.tuple_size(); i++) {
+        const auto& element = tup.get_element(i);
         oit = to_big_endian(hash_value(element), oit);
         size += ::getSize(element);
     }
 
     auto hash_val = ethash::keccak256(
         tupData.data(),
-        static_cast<unsigned int>(1 + val_length * (tuple_size())));
-
+        static_cast<unsigned int>(1 + hash_size * (tup.tuple_size())));
     std::array<unsigned char, 32> hashData;
     std::copy(&hash_val.bytes[0], &hash_val.bytes[32], hashData.begin());
 
     return HashPreImage{hashData, size};
+}
+
+void Tuple::calculateHashPreImage() const {
+    // Make sure children are already hashed
+    std::vector<Tuple> tups{*this};
+    while (!tups.empty()) {
+        Tuple tup = tups.back();
+        if (BasicValChecker{}(tup)) {
+            tups.pop_back();
+        } else {
+            bool found_complex = false;
+            for (uint64_t i = 0; i < tup.tuple_size(); ++i) {
+                auto& elem = tup.get_element_unsafe(i);
+                if (!BasicValChecker{}(elem)) {
+                    found_complex = true;
+                    tups.push_back(tup.get_element(i).get<Tuple>());
+                }
+            }
+            if (!found_complex) {
+                tup.tpl->cachedPreImage = calcHashPreImage(tup);
+                tup.tpl->deferredHashing = false;
+                tups.pop_back();
+            }
+        }
+    }
 }
 
 HashPreImage zeroPreimage() {

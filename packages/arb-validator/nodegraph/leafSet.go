@@ -42,7 +42,7 @@ func (ll *LeafSet) NumLeaves() int {
 	return len(ll.idx)
 }
 
-func (ll *LeafSet) Add(node *structures.Node) {
+func (ll *LeafSet) add(node *structures.Node) {
 	log.Println("Added leaf", node.LinkType(), node.Hash())
 	if ll.IsLeaf(node) {
 		log.Fatal("tried to insert leaf twice")
@@ -50,7 +50,7 @@ func (ll *LeafSet) Add(node *structures.Node) {
 	ll.idx[node.Hash()] = node
 }
 
-func (ll *LeafSet) Delete(node *structures.Node) {
+func (ll *LeafSet) delete(node *structures.Node) {
 	log.Println("Removed leaf", node.LinkType(), node.Hash())
 	delete(ll.idx, node.Hash())
 }
@@ -61,7 +61,7 @@ func (ll *LeafSet) forall(f func(*structures.Node)) {
 	}
 }
 
-func (ll *LeafSet) Equals(ll2 *LeafSet) bool {
+func (ll *LeafSet) equals(ll2 *LeafSet) bool {
 	if len(ll.idx) != len(ll2.idx) {
 		return false
 	}
