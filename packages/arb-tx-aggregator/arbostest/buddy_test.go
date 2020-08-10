@@ -17,6 +17,7 @@
 package arbostest
 
 import (
+	"bytes"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -37,41 +38,16 @@ func TestBuddyContract(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//erc20ABI, err := abi.JSON(strings.NewReader(ArbERC20ABI))
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-
-	//getNameABI := erc20ABI.Methods["name"]
-	//getNameSignature, err := hexutil.Decode("0x06fdde03")
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//
-	//generateTx := l2message.Transaction{
-	//	MaxGas:      big.NewInt(1000000000),
-	//	GasPriceBid: big.NewInt(0),
-	//	SequenceNum: big.NewInt(1),
-	//	DestAddress: fibAddress,
-	//	Payment:     big.NewInt(300),
-	//	Data:        append(generateSignature, generateFibData...),
-	//}
+	getNameSignature, err := hexutil.Decode("0x06fdde03")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
 	addr := common.Address{1, 2, 3, 4, 5}
-
-	//initializeBuddyContractData, err := initializeBuddyContractABI.Inputs.Pack(chainAddress, inboxAddress)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-
-	//instantiateContractData, err = initializeBuddyContractABI.Inputs.Pack(inboxAddress)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
 
 	messages := make([]inbox.InboxMessage, 0)
 
@@ -96,37 +72,27 @@ func TestBuddyContract(t *testing.T) {
 		Payment:     big.NewInt(0),
 		Data:        arbERC20Data,
 	}
-	buddyMsg := message.NewInboxMessage(
+	messages = append(messages, message.NewInboxMessage(
 		message.BuddyDeployment{Data: message.NewL2Message(buddyConstructor).AsData()},
 		l1contract,
 		big.NewInt(1),
 		chainTime,
-	)
+	))
 
-	//buddyContractAddress := common.HexToAddress("0x4ee09d87c0112181f1aa950e259a3e2d3bbd7e49")
-
-	messages = append(messages, buddyMsg)
-
-	//inbox = value.NewTuple2(inbox, message.NewInboxMessage(
-	//	message.L2Message{Data: l2message.L2MessageAsData(makeConstructorTx(pointsConstructorData, big.NewInt(1)))},
-	//	addr,
-	//	big.NewInt(2),
-	//	chainTime,
-	//).AsValue())
-	//
-	//inbox = value.NewTuple2(inbox, message.NewInboxMessage(
-	//	message.L2Message{Data: l2message.L2MessageAsData(l2message.Transaction{
-	//		MaxGas:      big.NewInt(1000000000),
-	//		GasPriceBid: big.NewInt(0),
-	//		SequenceNum: big.NewInt(2),
-	//		DestAddress: distributionsAddress,
-	//		Payment:     big.NewInt(0),
-	//		Data:        append(instantiateContractSignature, initializeBuddyContractData...),
-	//	})},
-	//	addr,
-	//	big.NewInt(3),
-	//	chainTime,
-	//).AsValue())
+	otherAddr := common.HexToAddress("4ee09d87c0112181f1aa950e259a3e2d3bbd7e49")
+	messages = append(messages, message.NewInboxMessage(
+		message.NewL2Message(message.Transaction{
+			MaxGas:      big.NewInt(100000000),
+			GasPriceBid: big.NewInt(0),
+			SequenceNum: big.NewInt(0),
+			DestAddress: otherAddr,
+			Payment:     big.NewInt(0),
+			Data:        getNameSignature,
+		}),
+		common.RandAddress(),
+		big.NewInt(2),
+		chainTime,
+	))
 
 	mach, err := cmachine.New(arbos.Path())
 	if err != nil {
@@ -134,14 +100,14 @@ func TestBuddyContract(t *testing.T) {
 	}
 
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
-	data, err := inbox.TestVectorJSON(messages, assertion.ParseLogs(), assertion.ParseOutMessages())
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(string(data))
+	//data, err := inbox.TestVectorJSON(messages, assertion.ParseLogs(), assertion.ParseOutMessages())
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//t.Log(string(data))
 
 	logs := assertion.ParseLogs()
-	if len(logs) != 1 {
+	if len(logs) != 2 {
 		t.Fatal("unexpected log count", len(logs))
 	}
 
@@ -150,9 +116,7 @@ func TestBuddyContract(t *testing.T) {
 		t.Fatal("unexpected send count", len(sends))
 	}
 
-	t.Log("send", sends[0])
-
-	for _, logVal := range assertion.ParseLogs() {
+	for i, logVal := range assertion.ParseLogs() {
 		res, err := evm.NewTxResultFromValue(logVal)
 		if err != nil {
 			t.Fatal(err)
@@ -160,12 +124,31 @@ func TestBuddyContract(t *testing.T) {
 		if res.ResultCode != evm.ReturnCode {
 			t.Error("tx failed", res.ResultCode)
 		}
-		log.Println("ReturnData", hexutil.Encode(res.ReturnData))
-		//if res.L1Message.Kind == message.L2Type {
-		//	l2, err := l2message.NewL2MessageFromData(res.L1Message.Data)
-		//	if err != nil {
-		//		t.Fatal(err)
-		//	}
-		//}
+
+		if i == 0 {
+			if len(res.ReturnData) != 32 {
+				log.Fatal("unexpected return data length")
+			}
+			if !bytes.Equal(res.ReturnData[12:], l1contract[:]) {
+				t.Log("Returned address", hexutil.Encode(res.ReturnData))
+				t.Log("l1 address", l1contract)
+				t.Error("constructor returned incorrect address")
+			}
+		} else {
+			t.Log("ReturnData", hexutil.Encode(res.ReturnData))
+			if len(res.ReturnData) == 0 {
+				t.Error("expected return data")
+			}
+		}
+	}
+
+	for _, sendVal := range assertion.ParseOutMessages() {
+		msg, err := message.NewOutMessageFromValue(sendVal)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if msg.Sender != l1contract {
+			t.Error("Buddy contract created at wrong address")
+		}
 	}
 }
