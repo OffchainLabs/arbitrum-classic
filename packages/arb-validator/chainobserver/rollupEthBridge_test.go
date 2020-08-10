@@ -103,7 +103,6 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 		return nil, err
 	}
 	chain.Inbox = &structures.Inbox{MessageStack: structures.NewRandomMessageStack(100)}
-	chain.Start(context.Background())
 	return chain, nil
 }
 
