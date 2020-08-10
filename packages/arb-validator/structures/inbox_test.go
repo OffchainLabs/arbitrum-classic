@@ -24,17 +24,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-func getStack() *MessageStack {
-	messageStack := NewMessageStack()
-	messageStack.DeliverMessage(inbox.NewRandomInboxMessage())
-	messageStack.DeliverMessage(inbox.NewRandomInboxMessage())
-	messageStack.DeliverMessage(inbox.NewRandomInboxMessage())
-	messageStack.DeliverMessage(inbox.NewRandomInboxMessage())
-	return messageStack
-}
-
 func TestBisection(t *testing.T) {
-	messageStack := getStack()
+	messageStack := NewRandomMessageStack(6)
 
 	bottomHash, err := messageStack.GetHashAtIndex(big.NewInt(0))
 	if err != nil {
@@ -77,9 +68,13 @@ func TestInboxInsert(t *testing.T) {
 	}
 
 	msg1 := inbox.NewRandomInboxMessage()
+	msg1.InboxSeqNum = big.NewInt(1)
 	msg2 := inbox.NewRandomInboxMessage()
+	msg2.InboxSeqNum = big.NewInt(2)
 
-	pi.DeliverMessage(msg1)
+	if err := pi.DeliverMessage(msg1); err != nil {
+		t.Fatal(err)
+	}
 	msg1Delivered := pi.newest.message
 
 	if !msg1Delivered.Equals(msg1) {
@@ -93,7 +88,9 @@ func TestInboxInsert(t *testing.T) {
 		t.Error("marshal/unmarshal changes hash of one-item inbox")
 	}
 
-	pi.DeliverMessage(msg2)
+	if err := pi.DeliverMessage(msg2); err != nil {
+		t.Fatal(err)
+	}
 	msg2Delivered := pi.newest.message
 	if !msg2Delivered.Equals(msg2) {
 		t.Error("newest of Inbox wrong at val2")

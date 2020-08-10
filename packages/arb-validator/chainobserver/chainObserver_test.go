@@ -123,7 +123,10 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 	createOneStaker(chain, staker1addr, validTip.Hash())
 	createOneStaker(chain, staker2addr, tip2.Hash())
 	challenge := nodegraph.NewChallenge(
-		chain.latestBlockId,
+		&common.BlockId{
+			Height:     common.NewTimeBlocksInt(0),
+			HeaderHash: common.Hash{},
+		},
 		0,
 		staker1addr,
 		staker2addr,
@@ -160,7 +163,6 @@ func doAnAssertion(chain *ChainObserver, baseNode *structures.Node) error {
 		baseNode,
 		disputableNode,
 		common.NewTimeBlocks(big.NewInt(10)),
-		common.Hash{},
 	)
 
 	nextValid := chain.NodeGraph.GetSuccessor(baseNode, valprotocol.ValidChildType)
@@ -202,7 +204,6 @@ func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash c
 				HeaderHash: common.Hash{},
 			},
 			LogIndex: 0,
-			TxHash:   [32]byte{},
 		},
 		Staker:   stakerAddr,
 		NodeHash: nodeHash,

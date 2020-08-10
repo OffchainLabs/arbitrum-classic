@@ -315,7 +315,7 @@ func (vm *ethRollupWatcher) InboxAddress(
 
 func (vm *ethRollupWatcher) GetCreationInfo(
 	ctx context.Context,
-) (common.Hash, *common.BlockId, common.Hash, error) {
+) (common.Hash, arbbridge.ChainInfo, common.Hash, *big.Int, error) {
 	addressIndex := ethcommon.Hash{}
 	copy(
 		addressIndex[:],
@@ -326,26 +326,36 @@ func (vm *ethRollupWatcher) GetCreationInfo(
 		Topics:    [][]ethcommon.Hash{{rollupCreatedID}},
 	})
 	if err != nil {
-		return common.Hash{}, nil, common.Hash{}, err
+		return common.Hash{}, arbbridge.ChainInfo{}, common.Hash{}, nil, err
 	}
 	if len(logs) == 0 {
 		return common.Hash{},
-			nil,
+			arbbridge.ChainInfo{},
 			common.Hash{},
+			nil,
 			errors.New("chain does not exist")
 	}
 	if len(logs) > 1 {
 		return common.Hash{},
-			nil,
+			arbbridge.ChainInfo{},
 			common.Hash{},
+			nil,
 			errors.New("more than one chain created with same address")
 	}
 	ev, err := vm.ArbRollup.ParseRollupCreated(logs[0])
 	if err != nil {
-		return common.Hash{}, nil, common.Hash{}, err
+		return common.Hash{}, arbbridge.ChainInfo{}, common.Hash{}, nil, err
 	}
 
-	return common.NewHashFromEth(logs[0].TxHash), getLogBlockID(logs[0]), ev.InitVMHash, nil
+	header, err := vm.client.HeaderByNumber(ctx, new(big.Int).SetUint64(logs[0].BlockNumber))
+	if err != nil {
+		return common.Hash{},
+			arbbridge.ChainInfo{},
+			common.Hash{},
+			nil,
+			err
+	}
+	return common.NewHashFromEth(logs[0].TxHash), getLogChainInfo(logs[0]), ev.InitVMHash, new(big.Int).SetUint64(header.Time), nil
 }
 
 func (vm *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {
@@ -379,7 +389,7 @@ func (vm *ethRollupWatcher) VerifyArbChain(ctx context.Context, machHash common.
 			ethbridgeVersion, validEthBridgeVersion)
 	}
 
-	_, _, initialVMHash, err := vm.GetCreationInfo(ctx)
+	_, _, initialVMHash, _, err := vm.GetCreationInfo(ctx)
 	if err != nil {
 		return err
 	}

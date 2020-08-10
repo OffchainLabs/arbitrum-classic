@@ -85,6 +85,16 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
         address _globalInboxAddress,
         bytes calldata _extraConfig
     ) external {
+        emit RollupCreated(
+            _vmState,
+            _gracePeriodTicks,
+            _arbGasSpeedLimitPerTick,
+            _maxExecutionSteps,
+            _stakeRequirement,
+            _owner,
+            _extraConfig
+        );
+
         NodeGraph.init(
             _vmState,
             _gracePeriodTicks,
@@ -104,16 +114,6 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
                 bytes32(bytes20(_owner)),
                 _extraConfig
             )
-        );
-
-        emit RollupCreated(
-            _vmState,
-            _gracePeriodTicks,
-            _arbGasSpeedLimitPerTick,
-            _maxExecutionSteps,
-            _stakeRequirement,
-            _owner,
-            _extraConfig
         );
     }
 

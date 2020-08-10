@@ -19,7 +19,6 @@ package structures
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"google.golang.org/protobuf/proto"
 	"testing"
@@ -33,7 +32,7 @@ func TestMarshalNode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	node := NewInitialNode(mach.Clone(), common.Hash{})
+	node := NewInitialNode(mach.Clone())
 	ms := NewRandomMessageStack(20)
 	nextNode := NewRandomNodeFromValidPrev(node, ms, 5)
 

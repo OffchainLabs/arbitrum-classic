@@ -19,6 +19,7 @@ package structures
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
@@ -77,7 +78,12 @@ func NewMessageStack() *MessageStack {
 func NewRandomMessageStack(count int) *MessageStack {
 	ms := NewMessageStack()
 	for i := 0; i < count; i++ {
-		ms.DeliverMessage(inbox.NewRandomInboxMessage())
+		randMsg := inbox.NewRandomInboxMessage()
+		randMsg.InboxSeqNum = big.NewInt(int64(i + 1))
+		if err := ms.DeliverMessage(randMsg); err != nil {
+			// This can never happen
+			log.Fatal(err)
+		}
 	}
 	return ms
 }
@@ -126,8 +132,11 @@ func (ms *MessageStack) bottomIndex() *big.Int {
 	}
 }
 
-func (ms *MessageStack) DeliverMessage(msg inbox.InboxMessage) {
+func (ms *MessageStack) DeliverMessage(msg inbox.InboxMessage) error {
 	newTopCount := new(big.Int).Add(ms.TopCount(), big.NewInt(1))
+	if msg.InboxSeqNum.Cmp(newTopCount) != 0 {
+		return errors.New("didn't get messages in correct order")
+	}
 	if ms.newest == nil {
 		item := &messageStackItem{
 			message: msg,
@@ -151,6 +160,7 @@ func (ms *MessageStack) DeliverMessage(msg inbox.InboxMessage) {
 		item.prev.next = item
 		ms.index[item.hash] = item
 	}
+	return nil
 }
 
 func (ms *MessageStack) GetHashAtIndex(height *big.Int) (common.Hash, error) {
