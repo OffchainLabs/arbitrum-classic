@@ -45,7 +45,7 @@ func MergeEventsUnsafe(events1 []Event, events2 []Event) []Event {
 		} else {
 			event1 := events1[events1Index]
 			event2 := events2[events2Index]
-			if event1.GetChainInfo().BlockId.Height.AsInt().Cmp(event2.GetChainInfo().BlockId.Height.AsInt()) < 0 {
+			if event1.GetChainInfo().Cmp(event2.GetChainInfo()) < 0 {
 				events = append(events, events1[events1Index])
 				events1Index++
 			} else {
@@ -64,6 +64,22 @@ type ChainInfo struct {
 
 func (c ChainInfo) GetChainInfo() ChainInfo {
 	return c
+}
+
+func (c ChainInfo) Cmp(o ChainInfo) int {
+	heightDiff := c.BlockId.Height.Cmp(o.BlockId.Height)
+	if heightDiff != 0 {
+		return heightDiff
+	}
+
+	if c.LogIndex > o.LogIndex {
+		return 1
+	}
+	if c.LogIndex < o.LogIndex {
+		return -1
+	}
+
+	return 0
 }
 
 type StakeCreatedEvent struct {
