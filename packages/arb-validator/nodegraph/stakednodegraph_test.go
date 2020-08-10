@@ -52,8 +52,8 @@ func getStakeData(stakerAddress common.Address, node *structures.Node) (arbbridg
 }
 
 func graphWithOneStaker(t *testing.T) (*StakedNodeGraph, *structures.Node, common.Address, arbbridge.StakeCreatedEvent) {
-	mach, txHash, stakedNodeGraph := getStakedNodeGraph(t)
-	expectedNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getStakedNodeGraph(t)
+	expectedNode := structures.NewInitialNode(mach)
 
 	stakerAddress := common.Address{1}
 	stakeEvent, expectedStaker := getStakeData(stakerAddress, expectedNode)
@@ -165,8 +165,8 @@ func TestNodePruneInfoInitial(t *testing.T) {
 }
 
 func TestStakerPruneInfoBase(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getStakedNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 	_, _ = assertAndCreateNodes(t, initialNode, stakedNodeGraph)
 
 	stakerAddress := common.Address{1}
@@ -202,8 +202,8 @@ func stakeAllNodes(stakedNodeGraph *StakedNodeGraph, nodes []*structures.Node, s
 }
 
 func TestStakerPruneInfo(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getStakedNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 
 	_, nodes := assertAndCreateNodes(t, initialNode, stakedNodeGraph)
 	stakeAllNodes(stakedNodeGraph, nodes, 2)
@@ -218,8 +218,8 @@ func TestStakerPruneInfo(t *testing.T) {
 }
 
 func TestNodePruneInfo(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getStakedNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 
 	_, nodes := assertAndCreateNodes(t, initialNode, stakedNodeGraph)
 	stakeAllNodes(stakedNodeGraph, nodes, 2)
@@ -232,8 +232,8 @@ func TestNodePruneInfo(t *testing.T) {
 }
 
 func TestNodePruneInfo2(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getStakedNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 
 	nextValid, nodes := assertAndCreateNodes(t, initialNode, stakedNodeGraph)
 	stakeAllNodes(stakedNodeGraph, nodes, 2)
@@ -247,8 +247,8 @@ func TestNodePruneInfo2(t *testing.T) {
 }
 
 func TestStakerPruneInfo2(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getStakedNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 
 	nextValid, nodes := assertAndCreateNodes(t, initialNode, stakedNodeGraph)
 	stakeAllNodes(stakedNodeGraph, nodes, 2)
@@ -264,8 +264,8 @@ func TestStakerPruneInfo2(t *testing.T) {
 }
 
 func TestNodePruneInfo3(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getStakedNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 
 	nextValid, nodes := assertAndCreateNodes(t, initialNode, stakedNodeGraph)
 	nextValid2, _ := assertAndCreateNodes(t, nextValid, stakedNodeGraph)
@@ -280,8 +280,8 @@ func TestNodePruneInfo3(t *testing.T) {
 }
 
 func TestStakerPruneInfo3(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getStakedNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 	nextValid, _ := assertAndCreateNodes(t, initialNode, stakedNodeGraph)
 	nextValid2, nodes2 := assertAndCreateNodes(t, nextValid, stakedNodeGraph)
 
@@ -298,8 +298,8 @@ func TestStakerPruneInfo3(t *testing.T) {
 }
 
 func TestStakerPruneInfo4(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getStakedNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 	nextValid, nodes := assertAndCreateNodes(t, initialNode, stakedNodeGraph)
 	nextValid2, _ := assertAndCreateNodes(t, nextValid, stakedNodeGraph)
 	stakeAllNodes(stakedNodeGraph, nodes, 2)
@@ -371,8 +371,8 @@ func TestRemoveStake(t *testing.T) {
 }
 
 func TestNodeGraphChallenges(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getStakedNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 
 	stakerAddress := common.Address{1}
 	stakerAddress2 := common.Address{2}
@@ -427,8 +427,8 @@ func TestNodeGraphChallenges(t *testing.T) {
 }
 
 func TestHasReferenceWithStakers(t *testing.T) {
-	mach, txHash, stakedNodeGraph := getStakedNodeGraph(t)
-	initialNode := structures.NewInitialNode(mach, txHash)
+	mach, stakedNodeGraph := getStakedNodeGraph(t)
+	initialNode := structures.NewInitialNode(mach)
 	if !stakedNodeGraph.HasReference(initialNode) {
 		t.Fatal("reference error")
 	}
@@ -447,11 +447,11 @@ func TestHasReferenceWithStakers(t *testing.T) {
 	}
 }
 
-func getStakedNodeGraph(t *testing.T) (machine.Machine, common.Hash, *StakedNodeGraph) {
+func getStakedNodeGraph(t *testing.T) (machine.Machine, *StakedNodeGraph) {
 	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return mach, common.Hash{}, NewStakedNodeGraph(mach, vmParams, common.Hash{})
+	return mach, NewStakedNodeGraph(mach, vmParams)
 }

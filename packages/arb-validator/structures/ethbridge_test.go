@@ -66,7 +66,7 @@ func TestGenerateLastMessageHash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	node := NewInitialNode(mach.Clone(), common.Hash{})
+	node := NewInitialNode(mach.Clone())
 	ms := NewRandomMessageStack(20)
 	nextNode := NewRandomNodeFromValidPrev(node, ms, 5)
 	assert := nextNode.Assertion()
@@ -94,7 +94,7 @@ func TestCalculateLeafFromPath(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	node := NewInitialNode(mach.Clone(), common.Hash{})
+	node := NewInitialNode(mach.Clone())
 	ms := NewRandomMessageStack(20)
 	nextNode := NewRandomNodeFromValidPrev(node, ms, 5)
 	path := GeneratePathProof(node, nextNode)
@@ -113,7 +113,7 @@ func TestChildNodeHash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	node := NewInitialNode(mach.Clone(), common.Hash{})
+	node := NewInitialNode(mach.Clone())
 	ms := NewRandomMessageStack(20)
 	nextNode := NewRandomNodeFromValidPrev(node, ms, 5)
 
@@ -138,7 +138,7 @@ func TestProtoStateHash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	node := NewInitialNode(mach.Clone(), common.Hash{})
+	node := NewInitialNode(mach.Clone())
 	ms := NewRandomMessageStack(20)
 	nextNode := NewRandomNodeFromValidPrev(node, ms, 5)
 	protoState := nextNode.VMProtoData()

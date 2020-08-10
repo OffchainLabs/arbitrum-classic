@@ -88,7 +88,7 @@ func NewChainObserver(
 	checkpointer checkpointing.RollupCheckpointer,
 	assumedValidDepth int64,
 ) (*ChainObserver, error) {
-	creationHash, blockId, _, err := watcher.GetCreationInfo(ctx)
+	_, blockId, _, err := watcher.GetCreationInfo(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,6 @@ func NewChainObserver(
 			checkpointer,
 			params,
 			blockId,
-			creationHash,
 		)
 		if err != nil {
 			return nil, err
@@ -291,13 +290,12 @@ func newChain(
 	checkpointer checkpointing.RollupCheckpointer,
 	vmParams valprotocol.ChainParams,
 	startBlockId *common.BlockId,
-	creationTxHash common.Hash,
 ) (*ChainObserver, error) {
 	mach, err := checkpointer.GetInitialMachine()
 	if err != nil {
 		return nil, err
 	}
-	nodeGraph := nodegraph.NewStakedNodeGraph(mach, vmParams, creationTxHash)
+	nodeGraph := nodegraph.NewStakedNodeGraph(mach, vmParams)
 	return &ChainObserver{
 		RWMutex:             &sync.RWMutex{},
 		NodeGraph:           nodeGraph,

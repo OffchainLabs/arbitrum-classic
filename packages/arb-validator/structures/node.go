@@ -57,7 +57,7 @@ func (node *Node) String() string {
 	return fmt.Sprintf("Node(type: %v, disputable: %v, deadline: %v, protodata: %v)", node.linkType, node.disputable, node.deadline.Val, node.vmProtoData)
 }
 
-func NewInitialNode(mach machine.Machine, creationTxHash common.Hash) *Node {
+func NewInitialNode(mach machine.Machine) *Node {
 	ret := &Node{
 		prevHash:   common.Hash{},
 		prev:       nil,

@@ -72,8 +72,8 @@ func (ng *NodeGraph) Params() valprotocol.ChainParams {
 	return ng.params
 }
 
-func NewNodeGraph(machine machine.Machine, params valprotocol.ChainParams, creationTxHash common.Hash) *NodeGraph {
-	newNode := structures.NewInitialNode(machine, creationTxHash)
+func NewNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *NodeGraph {
+	newNode := structures.NewInitialNode(machine)
 	nodeFromHash := make(map[common.Hash]*structures.Node)
 	nodeFromHash[newNode.Hash()] = newNode
 	leaves := NewLeafSet()

@@ -191,7 +191,6 @@ func TestConfirmAssertion(t *testing.T) {
 		checkpointer,
 		chainParams,
 		blockCreated,
-		common.Hash{},
 	)
 	if err != nil {
 		t.Fatal(err)
