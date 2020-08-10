@@ -198,13 +198,8 @@ func CreateManagerAdvanced(
 					}
 					inboxEvents := make([]arbbridge.Event, 0, len(inboxDeliveredEvents))
 					for _, ev := range inboxDeliveredEvents {
-						if ev.ChainInfo.Cmp(nextEventId) < 0 {
-							// Start at the matching event id
-							continue
-						}
 						inboxEvents = append(inboxEvents, ev)
 					}
-
 					events, err := rollupWatcher.GetAllEvents(runCtx, startHeight, fetchEnd)
 					if err != nil {
 						return errors2.Wrap(err, "Manager hit error doing fast catchup")
