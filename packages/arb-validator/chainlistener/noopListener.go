@@ -18,7 +18,6 @@ package chainlistener
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
@@ -68,7 +67,6 @@ func (NoopListener) AssertionPrepared(
 	valprotocol.ChainParams,
 	*nodegraph.StakedNodeGraph,
 	*structures.Node,
-	*common.BlockId,
 	*PreparedAssertion) {
 }
 func (NoopListener) ConfirmableNodes(context.Context, *valprotocol.ConfirmOpportunity) {

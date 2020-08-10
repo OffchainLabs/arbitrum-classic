@@ -48,5 +48,4 @@ message NodeBuf {
     common.HashBuf nodeDataHash = 9;
     common.HashBuf innerHash = 10;
     common.HashBuf hash = 11;
-    common.HashBuf assertionTxHash = 12;
 }

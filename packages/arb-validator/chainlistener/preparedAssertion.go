@@ -24,7 +24,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
-	"time"
 )
 
 type PreparedAssertion struct {
@@ -59,23 +58,6 @@ func (pa *PreparedAssertion) Clone() *PreparedAssertion {
 		Machine:       pa.Machine,
 		ValidBlock:    pa.ValidBlock.Clone(),
 	}
-}
-
-func (pa *PreparedAssertion) PossibleFutureNode(chainParams valprotocol.ChainParams) *structures.Node {
-	node := structures.NewValidNodeFromPrev(
-		pa.Prev,
-		valprotocol.NewDisputableNode(
-			pa.Params,
-			pa.AssertionStub,
-			common.Hash{},
-			big.NewInt(0),
-		),
-		chainParams,
-		common.BlocksFromSeconds(time.Now().Unix()),
-		common.Hash{},
-	)
-	_ = node.UpdateValidOpinion(pa.Machine, pa.Assertion)
-	return node
 }
 
 func (prep *PreparedAssertion) GetAssertionParams() [8][32]byte {

@@ -18,7 +18,6 @@ package chainlistener
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
@@ -95,7 +94,6 @@ func (al *AnnouncerListener) AssertionPrepared(
 	valprotocol.ChainParams,
 	*nodegraph.StakedNodeGraph,
 	*structures.Node,
-	*common.BlockId,
 	*PreparedAssertion,
 ) {
 	log.Println(al.Prefix, "AssertionPrepared")

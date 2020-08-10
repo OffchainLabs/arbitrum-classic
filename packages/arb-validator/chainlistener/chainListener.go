@@ -18,7 +18,6 @@ package chainlistener
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
@@ -58,7 +57,6 @@ type ChainListener interface {
 		valprotocol.ChainParams,
 		*nodegraph.StakedNodeGraph,
 		*structures.Node,
-		*common.BlockId,
 		*PreparedAssertion)
 	ConfirmableNodes(context.Context, *valprotocol.ConfirmOpportunity)
 	PrunableLeafs(context.Context, []valprotocol.PruneParams)
