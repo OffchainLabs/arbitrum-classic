@@ -20,7 +20,7 @@
 #include <ostream>
 
 void tupleDeleter(RawTuple* p) {
-    auto& deleter = TuplePool().get_impl();
+    auto& deleter = TuplePool::get_impl();
     if (!deleter.shuttingDown) {
         return deleter.deleteTuple({p, tupleDeleter});
     }
