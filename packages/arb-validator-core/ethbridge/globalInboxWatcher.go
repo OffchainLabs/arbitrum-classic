@@ -18,22 +18,21 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	errors2 "github.com/pkg/errors"
-	"log"
 	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
 var messageDeliveredID ethcommon.Hash
@@ -210,19 +209,6 @@ func (gi *globalInboxWatcher) processLog(
 		if err != nil {
 			return arbbridge.MessageDeliveredEvent{}, err
 		}
-		eventRet := arbbridge.MessageDeliveredEvent{
-			ChainInfo: chainInfo,
-			Message: inbox.InboxMessage{
-				Kind:        inbox.Type(val.Kind),
-				Sender:      common.NewAddressFromEth(val.Sender),
-				InboxSeqNum: val.InboxSeqNum,
-				Data:        val.Data,
-				ChainTime:   chainTime,
-			},
-		}
-
-		log.Println("MessageDelivered", eventRet.Message)
-
 		return arbbridge.MessageDeliveredEvent{
 			ChainInfo: chainInfo,
 			Message: inbox.InboxMessage{
