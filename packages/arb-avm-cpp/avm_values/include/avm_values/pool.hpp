@@ -21,6 +21,7 @@
 #include <avm_values/value.hpp>
 
 #include <array>
+#include <deque>
 #include <memory>
 #include <vector>
 
@@ -32,12 +33,23 @@ struct RawTuple {
     RawTuple() : cachedPreImage({}, 0), deferredHashing(true) {}
 };
 
+using UniqueTuple = std::unique_ptr<RawTuple, void (*)(RawTuple*)>;
+
 class TuplePool {
    private:
-    std::array<std::vector<std::shared_ptr<RawTuple>>, 9> resources;
+    std::array<std::vector<UniqueTuple>, 9> resources;
     bool shuttingDown = false;
 
+    bool deleting = false;
+    std::deque<UniqueTuple> delete_list;
+
+    void deleteTuple(UniqueTuple tup);
+
+    friend void tupleDeleter(RawTuple* p);
+
    public:
+    static TuplePool& get_impl();
+
     ~TuplePool() { shuttingDown = true; }
     /**
      * Returns instance of Resource.
@@ -48,17 +60,6 @@ class TuplePool {
      * @return Resource instance.
      */
     std::shared_ptr<RawTuple> getResource(size_t s);
-
-    /**
-     * Return resource back to the pool.
-     *
-     * The resource must be initialized back to
-     * the default settings before someone else
-     * attempts to use it.
-     *
-     * @param object Resource instance.
-     */
-    void returnResource(std::shared_ptr<RawTuple>&& object);
 };
 
 #endif /* pool_hpp */
