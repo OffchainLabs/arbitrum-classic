@@ -127,6 +127,8 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 	}
 
 	nextBlockHeight := new(big.Int).Add(finishedBlock.Height.AsInt(), big.NewInt(1))
+	// TODO: Give ExecuteCallServerAssertion the ability to run unbounded until it blocks
+	// The max steps here is a hack since it should just run until it blocks
 	assertion, _ := txdb.mach.ExecuteCallServerAssertion(1000000000000, messages, value.NewIntValue(nextBlockHeight), 0)
 	for _, avmMessage := range assertion.ParseOutMessages() {
 		if err := txdb.as.SaveMessage(avmMessage); err != nil {

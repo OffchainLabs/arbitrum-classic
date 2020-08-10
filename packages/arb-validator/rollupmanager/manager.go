@@ -145,10 +145,9 @@ func CreateManagerAdvanced(
 			}
 			man.Unlock()
 
-			currentProcessedBlockId := man.activeChain.CurrentEventId()
 			time.Sleep(time.Second) // give time for things to settle, post-reorg, before restarting stuff
 
-			log.Println("Starting validator from", currentProcessedBlockId)
+			log.Println("Starting validator from", man.activeChain.CurrentEventId().BlockId)
 
 			man.activeChain.RestartFromLatestValid(runCtx)
 
@@ -270,7 +269,7 @@ func CreateManagerAdvanced(
 					if err != nil {
 						return errors2.Wrapf(err, "Manager hit error getting inbox events with block %v", blockId)
 					}
-					// It's save to process inbox events out of order with rollup events as long
+					// It's safe to process inbox events out of order with rollup events as long
 					// as the inbox events are ahead of the rollup ones
 					for _, ev := range inboxEvents {
 						if ev.GetChainInfo().Cmp(startEventId) < 0 {
