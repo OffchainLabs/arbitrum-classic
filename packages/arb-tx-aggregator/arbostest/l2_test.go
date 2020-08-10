@@ -19,6 +19,7 @@ package arbostest
 import (
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"log"
 	"math/big"
@@ -267,7 +268,7 @@ func TestBatch(t *testing.T) {
 	results := runMessage(t, mach, initMsg, chain)
 	log.Println(results)
 
-	constructorData, err := hexutil.Decode(FibonacciBin)
+	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
 	if err != nil {
 		t.Fatal(err)
 	}

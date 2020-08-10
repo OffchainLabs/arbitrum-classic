@@ -17,6 +17,7 @@
 package arbostest
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"log"
 	"math/big"
 	"strings"
@@ -67,7 +68,7 @@ func TestTransactionCount(t *testing.T) {
 		t.Fatal("wrong tx count", txCount)
 	}
 
-	constructorData, err := hexutil.Decode(FibonacciBin)
+	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +86,7 @@ func TestTransactionCount(t *testing.T) {
 		t.Fatal("wrong tx count", txCount)
 	}
 
-	fib, err := abi.JSON(strings.NewReader(FibonacciABI))
+	fib, err := abi.JSON(strings.NewReader(arbostestcontracts.FibonacciABI))
 	if err != nil {
 		t.Fatal(err)
 	}
