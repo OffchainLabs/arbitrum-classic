@@ -228,7 +228,7 @@ func TestBlocks(t *testing.T) {
 		messages = append(
 			messages,
 			message.NewInboxMessage(
-				message.NewL2Message(tx),
+				message.NewSafeL2Message(tx),
 				common.RandAddress(),
 				big.NewInt(i+1),
 				inbox.ChainTime{

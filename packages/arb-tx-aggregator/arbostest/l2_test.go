@@ -83,10 +83,14 @@ func TestSignedTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	l2, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx})
+	if err != nil {
+		t.Fatal(err)
+	}
 	messages = append(
 		messages,
 		message.NewInboxMessage(
-			message.NewL2Message(message.NewSignedTransactionFromEth(signedTx)),
+			l2,
 			common.RandAddress(),
 			big.NewInt(2),
 			chainTime,
@@ -100,7 +104,7 @@ func TestSignedTx(t *testing.T) {
 	}
 	t.Log(string(testCase))
 	if len(logs) != 1 {
-		t.Fatal("incorrect log output count")
+		t.Fatal("incorrect log output count", len(logs))
 	}
 	result, err := evm.NewTxResultFromValue(logs[0])
 	if err != nil {
@@ -126,7 +130,7 @@ func TestSignedTx(t *testing.T) {
 
 	_, ok := l2Message.(message.SignedTransaction)
 	if !ok {
-		t.Error("bad transaction format")
+		t.Error("bad transaction format", l2Message)
 	}
 }
 
@@ -186,7 +190,7 @@ func TestUnsignedTx(t *testing.T) {
 	messages = append(
 		messages,
 		message.NewInboxMessage(
-			message.NewL2Message(tx1),
+			message.NewSafeL2Message(tx1),
 			sender,
 			big.NewInt(2),
 			chainTime,
@@ -195,7 +199,7 @@ func TestUnsignedTx(t *testing.T) {
 	messages = append(
 		messages,
 		message.NewInboxMessage(
-			message.NewL2Message(tx2),
+			message.NewSafeL2Message(tx2),
 			sender,
 			big.NewInt(3),
 			chainTime,
@@ -239,7 +243,6 @@ func TestUnsignedTx(t *testing.T) {
 		if result.L1Message.MessageID() != correctHash {
 			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.L1Message.MessageID(), correctHash)
 		}
-
 		_, ok := l2Message.(message.Transaction)
 		if !ok {
 			t.Error("bad transaction format")
@@ -325,12 +328,15 @@ func TestBatch(t *testing.T) {
 		}
 		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 		senders = append(senders, addr)
-		txes = append(txes, message.NewSignedTransactionFromEth(signedTx))
+		txes = append(txes, message.SignedTransaction{Tx: signedTx})
 		hashes = append(hashes, common.NewHashFromEth(signedTx.Hash()))
 	}
 
-	msg := message.NewTransactionBatchFromMessages(txes)
-	results = runMessage(t, mach, message.NewL2Message(msg), batchSender)
+	msg, err := message.NewTransactionBatchFromMessages(txes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	results = runMessage(t, mach, message.NewSafeL2Message(msg), batchSender)
 	if len(results) != len(txes) {
 		t.Fatal("incorrect result count", len(results), "instead of", len(txes))
 	}

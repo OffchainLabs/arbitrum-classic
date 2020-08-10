@@ -89,7 +89,11 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 }
 
 func runTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Message, sender common.Address) (*evm.TxResult, error) {
-	results := runMessage(t, mach, message.NewL2Message(msg), sender)
+	l2, err := message.NewL2Message(msg)
+	if err != nil {
+		return nil, err
+	}
+	results := runMessage(t, mach, l2, sender)
 	if len(results) != 1 {
 		return nil, fmt.Errorf("unexpected log count %v", len(results))
 	}

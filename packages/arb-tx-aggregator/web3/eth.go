@@ -264,11 +264,7 @@ func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionRece
 }
 
 func (s *Server) makeTransactionResult(ctx context.Context, res *evm.TxResult) (*TransactionResult, error) {
-	chain, err := s.srv.GetChainAddress(ctx)
-	if err != nil {
-		return nil, err
-	}
-	tx, err := aggregator.GetTransaction(res.L1Message, arbcommon.NewAddressFromEth(chain))
+	tx, err := aggregator.GetTransaction(res.L1Message)
 	if err != nil {
 		return nil, err
 	}

@@ -212,7 +212,7 @@ func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, err
 			return nil, err
 		}
 		receipts = append(receipts, receipt)
-		tx, err := GetTransaction(res.L1Message, m.chain)
+		tx, err := GetTransaction(res.L1Message)
 		if err != nil {
 			return nil, err
 		}
@@ -231,10 +231,10 @@ func (m *Server) GetTransaction(_ context.Context, requestId ethcommon.Hash) (*t
 	if err != nil {
 		return nil, err
 	}
-	return GetTransaction(res.L1Message, m.chain)
+	return GetTransaction(res.L1Message)
 }
 
-func GetTransaction(msg inbox.InboxMessage, chain common.Address) (*types.Transaction, error) {
+func GetTransaction(msg inbox.InboxMessage) (*types.Transaction, error) {
 	if msg.Kind != message.L2Type {
 		return nil, errors.New("result is not a transaction")
 	}
@@ -246,7 +246,7 @@ func GetTransaction(msg inbox.InboxMessage, chain common.Address) (*types.Transa
 	if !ok {
 		return nil, errors.New("message not convertible to receipt")
 	}
-	return ethMsg.AsEthTx(chain)
+	return ethMsg.AsEthTx(), nil
 }
 
 // Call takes a request from a client to process in a temporary context
@@ -271,7 +271,7 @@ func (m *Server) executeCall(callMach machine.Machine, blockId *common.BlockId, 
 	}
 	log.Println("Executing call", msg.MaxGas, msg.GasPriceBid, msg.DestAddress, msg.Payment)
 	inboxMsg := message.NewInboxMessage(
-		message.NewL2Message(msg),
+		message.NewSafeL2Message(msg),
 		common.NewAddressFromEth(sender),
 		seq,
 		inbox.ChainTime{

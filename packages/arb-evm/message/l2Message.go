@@ -22,6 +22,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/rlp"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -55,11 +56,14 @@ const (
 	SignedTransactionType             = 4
 )
 
-const SignatureSize = 65
-
 type AbstractL2Message interface {
 	L2Type() L2SubType
-	AsData() []byte
+	AsData() ([]byte, error)
+}
+
+type SafeAbstractL2Message interface {
+	AbstractL2Message
+	AsDataSafe() []byte
 }
 
 type AbstractTransaction interface {
@@ -67,13 +71,24 @@ type AbstractTransaction interface {
 }
 
 type EthConvertable interface {
-	AsEthTx(chain common.Address) (*types.Transaction, error)
+	AsEthTx() *types.Transaction
 }
 
-func NewL2Message(msg AbstractL2Message) L2Message {
+func NewL2Message(msg AbstractL2Message) (L2Message, error) {
+	msgData, err := msg.AsData()
+	if err != nil {
+		return L2Message{}, err
+	}
 	data := make([]byte, 0)
 	data = append(data, byte(msg.L2Type()))
-	data = append(data, msg.AsData()...)
+	data = append(data, msgData...)
+	return L2Message{Data: data}, nil
+}
+
+func NewSafeL2Message(msg SafeAbstractL2Message) L2Message {
+	data := make([]byte, 0)
+	data = append(data, byte(msg.L2Type()))
+	data = append(data, msg.AsDataSafe()...)
 	return L2Message{Data: data}
 }
 
@@ -91,7 +106,7 @@ func (l L2Message) AbstractMessage() (AbstractL2Message, error) {
 	case TransactionBatchType:
 		return newTransactionBatchFromData(data), nil
 	case SignedTransactionType:
-		return newSignedTransactionFromData(data), nil
+		return newSignedTransactionFromData(data)
 	default:
 		return nil, errors.New("invalid l2 l2message type")
 	}
@@ -148,12 +163,12 @@ func NewRandomTransaction() Transaction {
 	}
 }
 
-func (t Transaction) AsEthTx(_ common.Address) (*types.Transaction, error) {
+func (t Transaction) AsEthTx() *types.Transaction {
 	emptyAddress := common.Address{}
 	if t.DestAddress == emptyAddress {
-		return types.NewContractCreation(t.SequenceNum.Uint64(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data), nil
+		return types.NewContractCreation(t.SequenceNum.Uint64(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
 	} else {
-		return types.NewTransaction(t.SequenceNum.Uint64(), t.DestAddress.ToEthAddress(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data), nil
+		return types.NewTransaction(t.SequenceNum.Uint64(), t.DestAddress.ToEthAddress(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
 	}
 }
 
@@ -186,11 +201,11 @@ func (t Transaction) L2Type() L2SubType {
 	return TransactionType
 }
 
-func (t Transaction) AsData() []byte {
-	return t.asData()
+func (t Transaction) AsData() ([]byte, error) {
+	return t.AsDataSafe(), nil
 }
 
-func (t Transaction) asData() []byte {
+func (t Transaction) AsDataSafe() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, math.U256Bytes(t.MaxGas)...)
 	ret = append(ret, math.U256Bytes(t.GasPriceBid)...)
@@ -202,8 +217,8 @@ func (t Transaction) asData() []byte {
 }
 
 func (t Transaction) MessageID(sender common.Address, chain common.Address) common.Hash {
-	data := NewL2Message(t).AsData()
-	inner := hashing.SoliditySHA3(hashing.Uint256(ChainAddressToID(chain)), hashing.Bytes32(marshaledBytesHash(data)))
+	l2 := NewSafeL2Message(t)
+	inner := hashing.SoliditySHA3(hashing.Uint256(ChainAddressToID(chain)), hashing.Bytes32(marshaledBytesHash(l2.AsData())))
 	return hashing.SoliditySHA3(addressData(sender), hashing.Bytes32(inner))
 }
 
@@ -247,11 +262,11 @@ func (t ContractTransaction) L2Type() L2SubType {
 	return ContractTransactionType
 }
 
-func (t ContractTransaction) AsData() []byte {
-	return t.asData()
+func (t ContractTransaction) AsData() ([]byte, error) {
+	return t.AsDataSafe(), nil
 }
 
-func (t ContractTransaction) asData() []byte {
+func (t ContractTransaction) AsDataSafe() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, math.U256Bytes(t.MaxGas)...)
 	ret = append(ret, math.U256Bytes(t.GasPriceBid)...)
@@ -297,80 +312,54 @@ func (c Call) L2Type() L2SubType {
 	return CallType
 }
 
-func (c Call) AsData() []byte {
+func (c Call) AsData() ([]byte, error) {
 	ret := make([]byte, 0)
 	ret = append(ret, math.U256Bytes(c.MaxGas)...)
 	ret = append(ret, math.U256Bytes(c.GasPriceBid)...)
 	ret = append(ret, addressData(c.DestAddress)...)
 	ret = append(ret, c.Data...)
-	return ret
+	return ret, nil
 }
 
 type SignedTransaction struct {
-	Transaction Transaction
-	Signature   [SignatureSize]byte
+	Tx *types.Transaction
 }
 
-func newSignedTransactionFromData(data []byte) SignedTransaction {
-	var sig [SignatureSize]byte
-	tx := newTransactionFromData(data[:len(data)-SignatureSize])
-	data = data[len(data)-SignatureSize:]
-	copy(sig[:], data[:])
-	return SignedTransaction{
-		Transaction: tx,
-		Signature:   sig,
+func newSignedTransactionFromData(data []byte) (SignedTransaction, error) {
+	tx := new(types.Transaction)
+	if err := rlp.DecodeBytes(data, tx); err != nil {
+		return SignedTransaction{}, err
 	}
-}
-
-func NewSignedTransactionFromEth(tx *types.Transaction) SignedTransaction {
-	v, r, s := tx.RawSignatureValues()
-	var sig [65]byte
-	copy(sig[:], math.U256Bytes(r))
-	copy(sig[32:], math.U256Bytes(s))
-	sig[64] = byte(1 - v.Uint64())
-
-	return SignedTransaction{
-		Transaction: NewTransactionFromEthTx(tx),
-		Signature:   sig,
-	}
+	return SignedTransaction{Tx: tx}, nil
 }
 
 func (t SignedTransaction) Destination() common.Address {
-	return t.Transaction.Destination()
+	dest := t.Tx.To()
+	if dest != nil {
+		return common.NewAddressFromEth(*dest)
+	}
+	return common.Address{}
 }
 
 func ChainAddressToID(chain common.Address) *big.Int {
 	return new(big.Int).SetBytes(chain[14:])
 }
 
-func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey) SignedTransaction {
+func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey, nonce uint64) SignedTransaction {
 	tx := NewRandomTransaction()
-	ethTx, err := tx.AsEthTx(chain)
-	if err != nil {
-		panic(err)
-	}
+	tx.SequenceNum = new(big.Int).SetUint64(nonce)
+	ethTx := tx.AsEthTx()
 	signedTx, err := types.SignTx(ethTx, types.NewEIP155Signer(ChainAddressToID(chain)), privKey)
 	if err != nil {
 		panic(err)
 	}
-	v, r, s := signedTx.RawSignatureValues()
-	var sig [65]byte
-	copy(sig[:], math.U256Bytes(r))
-	copy(sig[32:], math.U256Bytes(s))
-	sig[64] = byte(v.Uint64() % 2)
-
 	return SignedTransaction{
-		Transaction: tx,
-		Signature:   sig,
+		Tx: signedTx,
 	}
 }
 
-func (t SignedTransaction) AsEthTx(chain common.Address) (*types.Transaction, error) {
-	tx, err := t.Transaction.AsEthTx(chain)
-	if err != nil {
-		return nil, err
-	}
-	return tx.WithSignature(types.NewEIP155Signer(ChainAddressToID(chain)), t.Signature[:])
+func (t SignedTransaction) AsEthTx() *types.Transaction {
+	return t.Tx
 }
 
 func (t SignedTransaction) L2Type() L2SubType {
@@ -378,27 +367,35 @@ func (t SignedTransaction) L2Type() L2SubType {
 }
 
 func (t SignedTransaction) Equals(o SignedTransaction) bool {
-	return t.Transaction.Equals(o.Transaction) &&
-		t.Signature == o.Signature
+	tJson, err := t.Tx.MarshalJSON()
+	if err != nil {
+		return false
+	}
+	oJson, err := o.Tx.MarshalJSON()
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(tJson, oJson)
 }
 
-func (t SignedTransaction) AsData() []byte {
-	ret := make([]byte, 0)
-	ret = append(ret, t.Transaction.asData()...)
-	ret = append(ret, t.Signature[:]...)
-	return ret
+func (t SignedTransaction) AsData() ([]byte, error) {
+	return rlp.EncodeToBytes(t.Tx)
 }
 
 type TransactionBatch struct {
 	Transactions [][]byte
 }
 
-func NewTransactionBatchFromMessages(messages []AbstractL2Message) TransactionBatch {
+func NewTransactionBatchFromMessages(messages []AbstractL2Message) (TransactionBatch, error) {
 	txes := make([][]byte, 0)
 	for _, msg := range messages {
-		txes = append(txes, NewL2Message(msg).AsData())
+		msg, err := NewL2Message(msg)
+		if err != nil {
+			return TransactionBatch{}, err
+		}
+		txes = append(txes, msg.AsData())
 	}
-	return TransactionBatch{Transactions: txes}
+	return TransactionBatch{Transactions: txes}, nil
 }
 
 func newTransactionBatchFromData(data []byte) TransactionBatch {
@@ -416,19 +413,24 @@ func newTransactionBatchFromData(data []byte) TransactionBatch {
 	return TransactionBatch{Transactions: txes}
 }
 
-func NewRandomTransactionBatch(txCount int, chain common.Address, privKey *ecdsa.PrivateKey) TransactionBatch {
-	txes := make([][]byte, 0, txCount)
+func NewRandomTransactionBatch(txCount int, chain common.Address, privKey *ecdsa.PrivateKey, initialNonce uint64) (TransactionBatch, error) {
+	messages := make([]AbstractL2Message, 0, txCount)
 	for i := 0; i < txCount; i++ {
-		txes = append(txes, NewRandomBatchTx(chain, privKey).AsData())
+		messages = append(messages, NewRandomBatchTx(chain, privKey, initialNonce))
+		initialNonce++
 	}
-	return TransactionBatch{Transactions: txes}
+	return NewTransactionBatchFromMessages(messages)
 }
 
 func (t TransactionBatch) L2Type() L2SubType {
 	return TransactionBatchType
 }
 
-func (t TransactionBatch) AsData() []byte {
+func (t TransactionBatch) AsData() ([]byte, error) {
+	return t.AsDataSafe(), nil
+}
+
+func (t TransactionBatch) AsDataSafe() []byte {
 	ret := make([]byte, 0)
 	for _, tx := range t.Transactions {
 		encodedLength := make([]byte, 8)

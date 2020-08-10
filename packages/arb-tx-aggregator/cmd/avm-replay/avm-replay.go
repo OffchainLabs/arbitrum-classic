@@ -90,18 +90,14 @@ func printL2Message(tx message.L2Message) error {
 			}
 		}
 	case message.SignedTransaction:
-		ethTx, err := msg.AsEthTx(chain)
-		if err != nil {
-			return err
-		}
 
 		//sender, err := types.NewEIP155Signer(l2message.ChainAddressToID(chain)).Sender(ethTx)
 		//if err != nil {
 		//	return err
 		//}
 
-		log.Println("SignedTransaction", ethTx.Hash().Hex()) // , "from", sender.Hex()
-		log.Println("tx:", message.NewSignedTransactionFromEth(ethTx))
+		log.Println("SignedTransaction", msg.Tx.Hash().Hex()) // , "from", sender.Hex()
+		log.Println("tx:", msg)
 		//log.Println(msg)
 	default:
 		log.Printf("Input: %T\n", msg)
