@@ -34,7 +34,6 @@ func getStakeData(stakerAddress common.Address, node *structures.Node) (arbbridg
 			HeaderHash: common.Hash{},
 		},
 		LogIndex: 0,
-		TxHash:   [32]byte{},
 	}
 	stakeEvent := arbbridge.StakeCreatedEvent{
 		ChainInfo: chainInfo,

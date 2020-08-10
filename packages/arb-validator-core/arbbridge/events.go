@@ -60,7 +60,6 @@ func MergeEventsUnsafe(events1 []Event, events2 []Event) []Event {
 type ChainInfo struct {
 	BlockId  *common.BlockId
 	LogIndex uint
-	TxHash   [32]byte
 }
 
 func (c ChainInfo) GetChainInfo() ChainInfo {

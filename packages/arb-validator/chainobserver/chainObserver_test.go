@@ -201,7 +201,6 @@ func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash c
 				HeaderHash: common.Hash{},
 			},
 			LogIndex: 0,
-			TxHash:   [32]byte{},
 		},
 		Staker:   stakerAddr,
 		NodeHash: nodeHash,
