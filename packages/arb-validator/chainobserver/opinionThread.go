@@ -177,8 +177,8 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 									chain.GetChainParams(),
 									chain.NodeGraph,
 									chain.KnownValidNode,
-									chain.latestBlockId,
-									prepared.Clone())
+									prepared.Clone(),
+								)
 							}
 						} else {
 							assertionsMut.Lock()

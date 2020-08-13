@@ -53,7 +53,7 @@ func (ng *NodeGraph) Leaves() *LeafSet {
 }
 
 func (ng *NodeGraph) DeleteLeaf(leaf *structures.Node) {
-	ng.leaves.Delete(leaf)
+	ng.leaves.delete(leaf)
 }
 
 func (ng *NodeGraph) NodeFromHash(hash common.Hash) *structures.Node {
@@ -72,12 +72,12 @@ func (ng *NodeGraph) Params() valprotocol.ChainParams {
 	return ng.params
 }
 
-func NewNodeGraph(machine machine.Machine, params valprotocol.ChainParams, creationTxHash common.Hash) *NodeGraph {
-	newNode := structures.NewInitialNode(machine, creationTxHash)
+func NewNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *NodeGraph {
+	newNode := structures.NewInitialNode(machine)
 	nodeFromHash := make(map[common.Hash]*structures.Node)
 	nodeFromHash[newNode.Hash()] = newNode
 	leaves := NewLeafSet()
-	leaves.Add(newNode)
+	leaves.add(newNode)
 	return &NodeGraph{
 		latestConfirmed: newNode,
 		leaves:          leaves,
@@ -143,7 +143,7 @@ func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (
 		if nd == nil {
 			return nil, errors.New("unexpected nil node")
 		}
-		chain.leaves.Add(nd)
+		chain.leaves.add(nd)
 	}
 
 	lcHash := x.LatestConfirmedHash.Unmarshal()
@@ -186,7 +186,7 @@ func (ng *NodeGraph) DebugStringForNodeRecursive(node *structures.Node, stakers 
 func (ng *NodeGraph) Equals(ng2 *NodeGraph) bool {
 	if !ng.latestConfirmed.Equals(ng2.latestConfirmed) ||
 		!ng.oldestNode.Equals(ng2.oldestNode) ||
-		!ng.leaves.Equals(ng2.leaves) ||
+		!ng.leaves.equals(ng2.leaves) ||
 		len(ng.nodeFromHash) != len(ng2.nodeFromHash) ||
 		!ng.params.Equals(ng.params) {
 		return false
@@ -248,7 +248,6 @@ func (ng *NodeGraph) CreateNodesOnAssert(
 	prevNode *structures.Node,
 	dispNode *valprotocol.DisputableNode,
 	currentTime *common.TimeBlocks,
-	assertionTxHash common.Hash,
 ) []*structures.Node {
 	newNodes := make([]*structures.Node, 0, 3)
 	_, ok := ng.nodeFromHash[prevNode.Hash()]
@@ -258,21 +257,21 @@ func (ng *NodeGraph) CreateNodesOnAssert(
 	if !ng.leaves.IsLeaf(prevNode) {
 		log.Fatal("can't assert on non-leaf node")
 	}
-	ng.leaves.Delete(prevNode)
+	ng.leaves.delete(prevNode)
 
 	// create nodes for invalid branches
 	for kind := valprotocol.ChildType(0); kind <= valprotocol.MaxInvalidChildType; kind++ {
-		newNode := structures.NewInvalidNodeFromPrev(prevNode, dispNode, kind, ng.params, currentTime, assertionTxHash)
+		newNode := structures.NewInvalidNodeFromPrev(prevNode, dispNode, kind, ng.params, currentTime)
 		_ = prevNode.LinkSuccessor(newNode)
 		ng.nodeFromHash[newNode.Hash()] = newNode
-		ng.leaves.Add(newNode)
+		ng.leaves.add(newNode)
 		newNodes = append(newNodes, newNode)
 	}
 
-	newNode := structures.NewValidNodeFromPrev(prevNode, dispNode, ng.params, currentTime, assertionTxHash)
+	newNode := structures.NewValidNodeFromPrev(prevNode, dispNode, ng.params, currentTime)
 	_ = prevNode.LinkSuccessor(newNode)
 	ng.nodeFromHash[newNode.Hash()] = newNode
-	ng.leaves.Add(newNode)
+	ng.leaves.add(newNode)
 	newNodes = append(newNodes, newNode)
 	return newNodes
 }

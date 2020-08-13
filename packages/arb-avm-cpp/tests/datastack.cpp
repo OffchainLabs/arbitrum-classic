@@ -36,9 +36,7 @@ void initializeDatastack(const Transaction& transaction,
                          uint256_t tuple_hash,
                          uint256_t expected_hash,
                          uint64_t expected_size) {
-    TuplePool pool;
-
-    auto results = ::getValue(transaction, tuple_hash, &pool);
+    auto results = ::getValue(transaction, tuple_hash);
     REQUIRE(results.status.ok());
     REQUIRE(nonstd::holds_alternative<Tuple>(results.data));
 
@@ -49,12 +47,11 @@ void initializeDatastack(const Transaction& transaction,
 }
 
 void saveDataStack(Datastack data_stack) {
-    TuplePool pool;
     CheckpointStorage storage(dbpath);
     std::vector<CodePoint> code;
     auto transaction = storage.makeTransaction();
 
-    auto tuple_ret = data_stack.getTupleRepresentation(&pool);
+    auto tuple_ret = data_stack.getTupleRepresentation();
     auto results = saveValue(*transaction, tuple_ret);
 
     REQUIRE(transaction->commit().ok());
@@ -63,12 +60,11 @@ void saveDataStack(Datastack data_stack) {
 }
 
 void saveDataStackTwice(Datastack data_stack) {
-    TuplePool pool;
     CheckpointStorage storage(dbpath);
     std::vector<CodePoint> code;
     auto transaction = storage.makeTransaction();
 
-    auto tuple_ret = data_stack.getTupleRepresentation(&pool);
+    auto tuple_ret = data_stack.getTupleRepresentation();
     auto results = saveValue(*transaction, tuple_ret);
     auto results2 = saveValue(*transaction, tuple_ret);
 
@@ -80,13 +76,12 @@ void saveDataStackTwice(Datastack data_stack) {
 void saveAndGetDataStack(Transaction& transaction,
                          Datastack data_stack,
                          uint256_t expected_hash) {
-    TuplePool pool;
-    auto tuple_ret = data_stack.getTupleRepresentation(&pool);
+    auto tuple_ret = data_stack.getTupleRepresentation();
     auto results = saveValue(transaction, tuple_ret);
     REQUIRE(results.status.ok());
     transaction.commit();
 
-    auto get_results = getValue(transaction, expected_hash, &pool);
+    auto get_results = getValue(transaction, expected_hash);
 
     REQUIRE(nonstd::holds_alternative<Tuple>(get_results.data));
     REQUIRE(get_results.status.ok());
@@ -97,16 +92,14 @@ void saveAndGetDataStack(Transaction& transaction,
 void saveTwiceAndGetDataStack(Transaction& transaction,
                               Datastack data_stack,
                               uint256_t expected_hash) {
-    TuplePool pool;
-
-    auto tuple_ret = data_stack.getTupleRepresentation(&pool);
+    auto tuple_ret = data_stack.getTupleRepresentation();
     auto results = saveValue(transaction, tuple_ret);
     auto results2 = saveValue(transaction, tuple_ret);
     REQUIRE(results.status.ok());
     REQUIRE(results2.status.ok());
     transaction.commit();
 
-    auto get_results = getValue(transaction, expected_hash, &pool);
+    auto get_results = getValue(transaction, expected_hash);
 
     REQUIRE(nonstd::holds_alternative<Tuple>(get_results.data));
     REQUIRE(get_results.status.ok());
@@ -116,13 +109,12 @@ void saveTwiceAndGetDataStack(Transaction& transaction,
 
 TEST_CASE("Initialize datastack") {
     DBDeleter deleter;
-    TuplePool pool;
     CheckpointStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
     Datastack data_stack;
 
     SECTION("default") {
-        auto tuple_ret = data_stack.getTupleRepresentation(&pool);
+        auto tuple_ret = data_stack.getTupleRepresentation();
         auto results = saveValue(*transaction, tuple_ret);
         transaction->commit();
         initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
@@ -131,7 +123,7 @@ TEST_CASE("Initialize datastack") {
     SECTION("push empty tuple") {
         Tuple tuple;
         data_stack.push(tuple);
-        auto tuple_ret = data_stack.getTupleRepresentation(&pool);
+        auto tuple_ret = data_stack.getTupleRepresentation();
         auto results = saveValue(*transaction, tuple_ret);
         transaction->commit();
         initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
@@ -140,10 +132,10 @@ TEST_CASE("Initialize datastack") {
     SECTION("push num, tuple") {
         CodePointStub code_point_stub{{0, 0}, 3452345};
         uint256_t num = 1;
-        auto tuple = Tuple(code_point_stub, &pool);
+        auto tuple = Tuple(code_point_stub);
         data_stack.push(num);
         data_stack.push(tuple);
-        auto tuple_ret = data_stack.getTupleRepresentation(&pool);
+        auto tuple_ret = data_stack.getTupleRepresentation();
         auto results = saveValue(*transaction, tuple_ret);
         transaction->commit();
         initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
@@ -152,10 +144,10 @@ TEST_CASE("Initialize datastack") {
     SECTION("push codepoint, tuple") {
         CodePointStub code_point_stub{{0, 0}, 3452345};
         uint256_t num = 1;
-        auto tuple = Tuple(num, &pool);
+        auto tuple = Tuple(num);
         data_stack.push(code_point_stub);
         data_stack.push(tuple);
-        auto tuple_ret = data_stack.getTupleRepresentation(&pool);
+        auto tuple_ret = data_stack.getTupleRepresentation();
         auto results = saveValue(*transaction, tuple_ret);
         transaction->commit();
         initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
@@ -166,37 +158,35 @@ TEST_CASE("Initialize datastack") {
 TEST_CASE("Save datastack") {
     DBDeleter deleter;
     Datastack datastack;
-    TuplePool pool;
 
     SECTION("save empty") { saveDataStack(datastack); }
     SECTION("save empty twice") { saveDataStackTwice(datastack); }
     SECTION("save with values") {
         uint256_t num = 1;
         uint256_t intVal = 5435;
-        auto tuple = Tuple(intVal, &pool);
+        auto tuple = Tuple(intVal);
         datastack.push(num);
         datastack.push(tuple);
         Tuple tup0;
-        auto tup1 = Tuple(tuple, tup0, &pool);
-        auto tup_rep = Tuple(num, tup1, &pool);
+        auto tup1 = Tuple(tuple, tup0);
+        auto tup_rep = Tuple(num, tup1);
         saveDataStack(datastack);
     }
     SECTION("save with values, twice") {
         uint256_t num = 1;
         uint256_t intVal = 5435;
-        auto tuple = Tuple(intVal, &pool);
+        auto tuple = Tuple(intVal);
         datastack.push(num);
         datastack.push(tuple);
         Tuple tup0;
-        auto tup1 = Tuple(tuple, tup0, &pool);
-        auto tup_rep = Tuple(num, tup1, &pool);
+        auto tup1 = Tuple(tuple, tup0);
+        auto tup_rep = Tuple(num, tup1);
         saveDataStackTwice(datastack);
     }
 }
 
 TEST_CASE("Save and get datastack") {
     DBDeleter deleter;
-    TuplePool pool;
     CheckpointStorage storage(dbpath);
     Datastack datastack;
 
@@ -204,33 +194,31 @@ TEST_CASE("Save and get datastack") {
         uint256_t intVal = 5435;
         auto transaction = storage.makeTransaction();
         uint256_t num = 1;
-        auto tuple = Tuple(intVal, &pool);
+        auto tuple = Tuple(intVal);
         datastack.push(num);
         datastack.push(tuple);
         Tuple tup0;
-        auto tup1 = Tuple(tuple, tup0, &pool);
-        auto tup_rep = Tuple(num, tup1, &pool);
+        auto tup1 = Tuple(tuple, tup0);
+        auto tup_rep = Tuple(num, tup1);
         saveAndGetDataStack(*transaction, datastack, hash(tup_rep));
     }
     SECTION("save datastack twice and get") {
         uint256_t intVal = 5435;
         auto transaction = storage.makeTransaction();
         uint256_t num = 1;
-        auto tuple = Tuple(intVal, &pool);
+        auto tuple = Tuple(intVal);
         datastack.push(num);
         datastack.push(tuple);
         Tuple tup0;
-        auto tup1 = Tuple(tuple, tup0, &pool);
-        auto tup_rep = Tuple(num, tup1, &pool);
+        auto tup1 = Tuple(tuple, tup0);
+        auto tup_rep = Tuple(num, tup1);
         saveTwiceAndGetDataStack(*transaction, datastack, hash(tup_rep));
     }
 }
 
 TEST_CASE("Initial VM Values") {
     SECTION("parse invalid path") {
-        TuplePool pool = TuplePool();
-        TuplePool& pool_ref = pool;
-        CHECK_THROWS(loadExecutable("nonexistent/path", pool_ref));
+        CHECK_THROWS(loadExecutable("nonexistent/path"));
     }
     boost::filesystem::remove_all(dbpath);
 }

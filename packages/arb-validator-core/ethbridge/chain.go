@@ -67,7 +67,6 @@ func getLogChainInfo(log types.Log) arbbridge.ChainInfo {
 	return arbbridge.ChainInfo{
 		BlockId:  getLogBlockID(log),
 		LogIndex: log.Index,
-		TxHash:   log.TxHash,
 	}
 }
 

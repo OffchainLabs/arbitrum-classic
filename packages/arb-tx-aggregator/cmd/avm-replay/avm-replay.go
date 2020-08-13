@@ -208,12 +208,12 @@ func getMessages(ethURL string, rollupAddress common.Address, filename string) e
 		return err
 	}
 
-	_, blockId, _, err := rollupWatcher.GetCreationInfo(ctx)
+	_, eventId, _, _, err := rollupWatcher.GetCreationInfo(ctx)
 	if err != nil {
 		return err
 	}
 
-	events, err := inboxWatcher.GetDeliveredEvents(ctx, blockId.Height.AsInt(), nil)
+	events, err := inboxWatcher.GetDeliveredEvents(ctx, eventId.BlockId.Height.AsInt(), nil)
 	if err != nil {
 		return err
 	}

@@ -90,7 +90,7 @@ func (m *Server) FindLogs(ctx context.Context, fromHeight, toHeight *uint64, add
 }
 
 func (m *Server) GetBlockCount(_ context.Context) (uint64, error) {
-	id := m.db.LatestBlock()
+	id := m.db.LatestBlockId()
 	return id.Height.AsInt().Uint64(), nil
 }
 

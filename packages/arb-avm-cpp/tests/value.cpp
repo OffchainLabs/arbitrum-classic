@@ -49,8 +49,7 @@ TEST_CASE("Value hashing") {
             auto valRaw = reinterpret_cast<const char*>(valBytes.data());
             uint256_t givenHash = intx::from_string<uint256_t>(
                 std::string("0x") + valtest["hash"].get<std::string>());
-            TuplePool pool;
-            auto val = deserialize_value(valRaw, pool);
+            auto val = deserialize_value(valRaw);
             auto calcHash = hash_value(val);
             REQUIRE(givenHash == calcHash);
         }
@@ -71,12 +70,11 @@ TEST_CASE("Value marshaling") {
             auto valBytes =
                 hexStringToBytes(valtest["value"].get<std::string>());
             auto valRaw = reinterpret_cast<const char*>(valBytes.data());
-            TuplePool pool;
-            auto val = deserialize_value(valRaw, pool);
+            auto val = deserialize_value(valRaw);
             std::vector<unsigned char> buf;
             marshal_value(val, buf);
             auto valptr = (const char*)&buf[0];
-            auto newval = deserialize_value(valptr, pool);
+            auto newval = deserialize_value(valptr);
             auto valsEqual = val == newval;
             REQUIRE(valsEqual);
             // REQUIRE(val == newval); junit output broken with map::at error

@@ -26,7 +26,11 @@ class Transaction;
 struct SaveResults;
 
 class Datastack {
-    static constexpr int lazyCount = 1000;
+    // lazyCount defines how many unhashed items are allowed on the stack
+    // This serves to bound the total time it can take to hash the machine
+    // while removing the need to hash the stack while churn is occuring
+    // near the top
+    static constexpr int lazyCount = 10000;
 
     void addHash() const;
     void calculateAllHashes() const;
@@ -36,13 +40,13 @@ class Datastack {
     mutable std::vector<HashPreImage> hashes;
 
     Datastack() {
-        values.reserve(1000);
-        hashes.reserve(1000);
+        values.reserve(lazyCount);
+        hashes.reserve(lazyCount);
     }
 
     Datastack(Tuple tuple_rep);
 
-    Tuple getTupleRepresentation(TuplePool* pool) const;
+    Tuple getTupleRepresentation() const;
 
     void push(value&& newdata) {
         values.push_back(std::move(newdata));

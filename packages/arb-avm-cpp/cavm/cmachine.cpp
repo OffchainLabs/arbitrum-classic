@@ -171,18 +171,16 @@ RawAssertion makeEmptyAssertion() {
             0};
 }
 
-Tuple getTuple(TuplePool& pool, void* data) {
+Tuple getTuple(void* data) {
     auto charData = reinterpret_cast<const char*>(data);
-    return nonstd::get<Tuple>(deserialize_value(charData, pool));
+    return nonstd::get<Tuple>(deserialize_value(charData));
 }
 
-std::vector<Tuple> getInboxMessages(TuplePool& pool,
-                                    void* data,
-                                    uint64_t message_count) {
+std::vector<Tuple> getInboxMessages(void* data, uint64_t message_count) {
     auto charData = reinterpret_cast<const char*>(data);
     std::vector<Tuple> messages;
     for (uint64_t i = 0; i < message_count; ++i) {
-        messages.push_back(deserialize_value(charData, pool).get<Tuple>());
+        messages.push_back(deserialize_value(charData).get<Tuple>());
     }
     return messages;
 }
@@ -194,8 +192,7 @@ RawAssertion executeAssertion(CMachine* m,
                               uint64_t wallLimit) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    auto messages =
-        getInboxMessages(mach->getPool(), inbox_messages, message_count);
+    auto messages = getInboxMessages(inbox_messages, message_count);
 
     try {
         Assertion assertion = mach->run(maxSteps, std::move(messages),
@@ -216,12 +213,10 @@ RawAssertion executeCallServerAssertion(CMachine* m,
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
 
-    auto messages =
-        getInboxMessages(mach->getPool(), inbox_messages, message_count);
+    auto messages = getInboxMessages(inbox_messages, message_count);
     auto fake_inbox_peek_value_data =
         reinterpret_cast<const char*>(fake_inbox_peek_value);
-    auto fake_inbox_peek =
-        deserialize_value(fake_inbox_peek_value_data, mach->getPool());
+    auto fake_inbox_peek = deserialize_value(fake_inbox_peek_value_data);
 
     try {
         Assertion assertion = mach->runCallServer(
@@ -243,9 +238,8 @@ RawAssertion executeSideloadedAssertion(CMachine* m,
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
 
-    auto messages =
-        getInboxMessages(mach->getPool(), inbox_messages, message_count);
-    auto sideload_value = getTuple(mach->getPool(), sideload);
+    auto messages = getInboxMessages(inbox_messages, message_count);
+    auto sideload_value = getTuple(sideload);
 
     try {
         Assertion assertion = mach->runSideloaded(
