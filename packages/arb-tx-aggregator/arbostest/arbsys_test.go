@@ -34,7 +34,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 func TestTransactionCount(t *testing.T) {
@@ -68,17 +67,7 @@ func TestTransactionCount(t *testing.T) {
 		return nil
 	}
 
-	initMsg := message.Init{
-		ChainParams: valprotocol.ChainParams{
-			StakeRequirement:        big.NewInt(0),
-			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
-			MaxExecutionSteps:       0,
-			ArbGasSpeedLimitPerTick: 0,
-		},
-		Owner:       common.Address{},
-		ExtraConfig: []byte{},
-	}
-	results := runMessage(t, mach, initMsg, chain)
+	results := runMessage(t, mach, initMsg(), chain)
 	log.Println(results)
 
 	if err := checkTxCount(0); err != nil {
@@ -150,16 +139,6 @@ func TestWithdrawEth(t *testing.T) {
 	addr := common.RandAddress()
 	chain := common.RandAddress()
 
-	initMsg := message.Init{
-		ChainParams: valprotocol.ChainParams{
-			StakeRequirement:        big.NewInt(0),
-			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
-			MaxExecutionSteps:       0,
-			ArbGasSpeedLimitPerTick: 0,
-		},
-		Owner:       common.Address{},
-		ExtraConfig: []byte{},
-	}
 	depositMsg := message.Eth{
 		Dest:  addr,
 		Value: big.NewInt(10000),
@@ -170,7 +149,7 @@ func TestWithdrawEth(t *testing.T) {
 	tx := withdrawEthTx(t, big.NewInt(0), depositValue, withdrawDest)
 
 	inboxMessages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg, chain, big.NewInt(0), chainTime),
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
 		message.NewInboxMessage(depositMsg, addr, big.NewInt(1), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(tx), addr, big.NewInt(2), chainTime),
 	}

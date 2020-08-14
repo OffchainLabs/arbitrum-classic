@@ -19,7 +19,6 @@ package arbostest
 import (
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"log"
 	"math/big"
 	"testing"
@@ -58,7 +57,7 @@ func TestSignedTx(t *testing.T) {
 	messages = append(
 		messages,
 		message.NewInboxMessage(
-			simpleInitMessage(),
+			initMsg(),
 			chain,
 			big.NewInt(0),
 			chainTime,
@@ -149,7 +148,7 @@ func TestUnsignedTx(t *testing.T) {
 	messages = append(
 		messages,
 		message.NewInboxMessage(
-			simpleInitMessage(),
+			initMsg(),
 			chain,
 			big.NewInt(0),
 			chainTime,
@@ -257,17 +256,7 @@ func TestBatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	initMsg := message.Init{
-		ChainParams: valprotocol.ChainParams{
-			StakeRequirement:        big.NewInt(0),
-			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
-			MaxExecutionSteps:       0,
-			ArbGasSpeedLimitPerTick: 0,
-		},
-		Owner:       common.Address{},
-		ExtraConfig: []byte{},
-	}
-	results := runMessage(t, mach, initMsg, chain)
+	results := runMessage(t, mach, initMsg(), chain)
 	log.Println(results)
 
 	constructorData, err := hexutil.Decode(FibonacciBin)

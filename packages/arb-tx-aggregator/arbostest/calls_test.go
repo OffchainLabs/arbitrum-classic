@@ -36,7 +36,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
-func simpleInitMessage() message.Init {
+func initMsg() message.Init {
 	return message.Init{
 		ChainParams: valprotocol.ChainParams{
 			StakeRequirement:        big.NewInt(0),
