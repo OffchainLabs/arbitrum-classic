@@ -1,5 +1,5 @@
 import * as ethers from 'ethers'
-import { abi, Program, ArbConversion } from 'arb-provider-ethers'
+import { abi, Program, ArbConversion, L1Bridge } from 'arb-provider-ethers'
 import * as yargs from 'yargs'
 import * as fs from 'fs-extra'
 import { setupValidatorStates } from './setup_validators'
@@ -18,7 +18,7 @@ const wallet = provider.getSigner(0)
 const root = '../../'
 const rollupsPath = root + 'rollups/'
 
-async function setupRollup(arbOSData: string) {
+async function setupRollup(arbOSData: string): Promise<string> {
   const arbOSHash = Program.programMachineHash(arbOSData)
 
   const factoryAddress = addresses['contracts']['ArbFactory'].address
@@ -44,7 +44,7 @@ async function setupRollup(arbOSData: string) {
         .topic
     )
   )
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const {
     rollupAddress,
   }: RollupCreatedParams = (e?.args as any) as RollupCreatedParams
@@ -69,6 +69,23 @@ async function initializeWallets(count: number): Promise<ethers.Wallet[]> {
   return wallets
 }
 
+async function initializeClientWallets(rollupAddress: string): Promise<void> {
+  const addresses = [
+    '0xc7711f36b2C13E00821fFD9EC54B04A60AEfbd1b',
+    '0x38299D74a169e68df4Da85Fb12c6Fd22246aDD9F',
+    '0xAf40F7D235A9786a420bb89B188910958fD7EF93',
+    '0xFcC598b3E3575CA937AF7F0E804a8BAb5E92a3f6',
+    '0x755449b9901f91deC52DB39AF8c655206C63eD8e',
+  ]
+
+  const bridge = new L1Bridge(wallet, rollupAddress)
+  const amount = ethers.utils.parseEther('100')
+
+  for (const address of addresses) {
+    await bridge.depositETH(address, amount)
+  }
+}
+
 async function setupValidators(
   count: number,
   blocktime: number,
@@ -80,7 +97,7 @@ async function setupValidators(
 
   const validatorsPath = rollupsPath + 'local/'
 
-  if (count < 1) {
+  if (count < 2) {
     throw Error('must create at least 1 validator')
   }
 
@@ -117,10 +134,12 @@ async function setupValidators(
     fs.writeFileSync(walletPath + wallet.address, encryptedWallet)
     i++
   }
+
+  await initializeClientWallets(rollup)
 }
 
 if (require.main === module) {
-  const argv = yargs.command(
+  yargs.command(
     'init [rollup] [ethurl]',
     'initialize validators for the given rollup chain',
     yargsBuilder =>
@@ -140,7 +159,7 @@ if (require.main === module) {
         },
       }),
     args => {
-      setupValidators(args.validatorcount, args.blocktime, args.force)
+      setupValidators(args.validatorcount + 1, args.blocktime, args.force)
     }
-  ).argv
+  )
 }

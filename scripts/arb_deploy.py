@@ -46,14 +46,15 @@ networks:
         external:
             name: arb-network
 services:
-    arb-validator0:
+    arb-tx-aggregator:
         volumes:
             - %s:/home/user/state
         image: arb-validator
-        command: validate %s --rpc state %s %s
+        entrypoint: '/home/user/go/bin/arb-tx-aggregator'
+        command: %s state %s %s
         ports:
             - '1235:1235'
-            - '1236:1236'
+            - '8547:8547'
 """
 
 
@@ -126,13 +127,13 @@ def deploy(sudo_flag, build_flag, up_flag, rollup, password):
                 raise Exception(
                     "arb_deploy requires validator password through [--password=pass] parameter or in config.json file"
                 )
-            if "blocktime" in data:
-                extra_flags += " -blocktime=%s" % data["blocktime"]
         if i == 0:
             contents = compose_header(
                 states_path % 0, extra_flags, eth_url, rollup_address
             )
         else:
+            if "blocktime" in data:
+                extra_flags += " -blocktime=%s" % data["blocktime"]
             contents += compose_validator(
                 i, states_path % i, extra_flags, eth_url, rollup_address
             )
