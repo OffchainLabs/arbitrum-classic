@@ -307,7 +307,7 @@ func (m *Server) executeCall(callMach machine.Machine, blockId *common.BlockId, 
 	if err != nil {
 		return nil, err
 	}
-	targetHash := hashing.SoliditySHA3(hashing.Uint256(message.ChainAddressToID(m.chain)), hashing.Bytes32(inboxMsg.MessageID()))
+	targetHash := hashing.SoliditySHA3(hashing.Uint256(message.ChainAddressToID(m.chain)), hashing.Uint256(inboxMsg.InboxSeqNum))
 	if lastLog.IncomingRequest.MessageID != targetHash {
 		// Last produced log is not the call we sent
 		return nil, fmt.Errorf("Call resulted in incorrect id %v instead of %v", lastLog.IncomingRequest.MessageID, targetHash)

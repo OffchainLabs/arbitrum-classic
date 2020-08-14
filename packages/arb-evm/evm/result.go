@@ -19,6 +19,7 @@ package evm
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	errors2 "github.com/pkg/errors"
@@ -63,10 +64,12 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 	if err != nil {
 		return IncomingRequest{}, err
 	}
+	var messageID common.Hash
+	copy(messageID[:], math.U256Bytes(msg.InboxSeqNum))
 	return IncomingRequest{
 		Kind:      msg.Kind,
 		Sender:    msg.Sender,
-		MessageID: msg.MessageID(),
+		MessageID: messageID,
 		Data:      msg.Data,
 		ChainTime: msg.ChainTime,
 	}, nil
