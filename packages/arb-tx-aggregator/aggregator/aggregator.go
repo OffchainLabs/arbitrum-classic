@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"log"
 	"math/big"
 	"time"
@@ -212,7 +213,7 @@ func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, err
 			return nil, err
 		}
 		receipts = append(receipts, receipt)
-		tx, err := GetTransaction(res.L1Message)
+		tx, err := GetTransaction(res.IncomingRequest)
 		if err != nil {
 			return nil, err
 		}
@@ -231,10 +232,10 @@ func (m *Server) GetTransaction(_ context.Context, requestId ethcommon.Hash) (*t
 	if err != nil {
 		return nil, err
 	}
-	return GetTransaction(res.L1Message)
+	return GetTransaction(res.IncomingRequest)
 }
 
-func GetTransaction(msg inbox.InboxMessage) (*types.Transaction, error) {
+func GetTransaction(msg evm.IncomingRequest) (*types.Transaction, error) {
 	if msg.Kind != message.L2Type {
 		return nil, errors.New("result is not a transaction")
 	}
@@ -306,9 +307,10 @@ func (m *Server) executeCall(callMach machine.Machine, blockId *common.BlockId, 
 	if err != nil {
 		return nil, err
 	}
-	if lastLog.L1Message.MessageID() != inboxMsg.MessageID() {
+	targetHash := hashing.SoliditySHA3(hashing.Uint256(message.ChainAddressToID(m.chain)), hashing.Bytes32(inboxMsg.MessageID()))
+	if lastLog.IncomingRequest.MessageID != targetHash {
 		// Last produced log is not the call we sent
-		return nil, errors.New("call took too long to execute")
+		return nil, fmt.Errorf("Call resulted in incorrect id %v instead of %v", lastLog.IncomingRequest.MessageID, targetHash)
 	}
 	return results[len(results)-1], nil
 }

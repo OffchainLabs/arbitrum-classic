@@ -142,8 +142,8 @@ func TestCrossContract(t *testing.T) {
 			t.Error("tx failed", txRes.ResultCode)
 		}
 		log.Println("ReturnData", hexutil.Encode(txRes.ReturnData))
-		if txRes.L1Message.Kind == message.L2Type {
-			l2, err := message.L2Message{Data: txRes.L1Message.Data}.AbstractMessage()
+		if txRes.IncomingRequest.Kind == message.L2Type {
+			l2, err := message.L2Message{Data: txRes.IncomingRequest.Data}.AbstractMessage()
 			if err != nil {
 				t.Fatal(err)
 			}

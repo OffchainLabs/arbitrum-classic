@@ -113,19 +113,19 @@ func TestSignedTx(t *testing.T) {
 	if result.ResultCode != evm.ReturnCode {
 		t.Fatal("unexpected result code", result.ResultCode)
 	}
-	if result.L1Message.Sender != addr {
-		t.Error("l2message had incorrect sender", result.L1Message.Sender, addr)
+	if result.IncomingRequest.Sender != addr {
+		t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, addr)
 	}
-	if result.L1Message.Kind != message.L2Type {
+	if result.IncomingRequest.Kind != message.L2Type {
 		t.Error("l2message has incorrect type")
 	}
-	l2Message, err := message.L2Message{Data: result.L1Message.Data}.AbstractMessage()
+	l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if result.L1Message.MessageID().ToEthHash() != signedTx.Hash() {
-		t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.L1Message.MessageID(), signedTx.Hash().Hex())
+	if result.IncomingRequest.MessageID.ToEthHash() != signedTx.Hash() {
+		t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, signedTx.Hash().Hex())
 	}
 
 	_, ok := l2Message.(message.SignedTransaction)
@@ -223,13 +223,13 @@ func TestUnsignedTx(t *testing.T) {
 		if result.ResultCode != evm.ReturnCode {
 			t.Fatal("unexpected result code", result.ResultCode)
 		}
-		if result.L1Message.Sender != sender {
-			t.Error("l2message had incorrect sender", result.L1Message.Sender, sender)
+		if result.IncomingRequest.Sender != sender {
+			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, sender)
 		}
-		if result.L1Message.Kind != message.L2Type {
+		if result.IncomingRequest.Kind != message.L2Type {
 			t.Error("l2message has incorrect type")
 		}
-		l2Message, err := message.L2Message{Data: result.L1Message.Data}.AbstractMessage()
+		l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -240,8 +240,8 @@ func TestUnsignedTx(t *testing.T) {
 		} else {
 			correctHash = tx2.MessageID(sender, chain)
 		}
-		if result.L1Message.MessageID() != correctHash {
-			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.L1Message.MessageID(), correctHash)
+		if result.IncomingRequest.MessageID != correctHash {
+			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, correctHash)
 		}
 		_, ok := l2Message.(message.Transaction)
 		if !ok {
@@ -341,16 +341,16 @@ func TestBatch(t *testing.T) {
 		t.Fatal("incorrect result count", len(results), "instead of", len(txes))
 	}
 	for i, result := range results {
-		if result.L1Message.Sender != senders[i] {
-			t.Error("l2message had incorrect sender", result.L1Message.Sender, senders[i])
+		if result.IncomingRequest.Sender != senders[i] {
+			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, senders[i])
 		}
-		if result.L1Message.Kind != message.L2Type {
+		if result.IncomingRequest.Kind != message.L2Type {
 			t.Error("l2message has incorrect type")
 		}
-		if result.L1Message.MessageID() != hashes[i] {
-			t.Error("l2message had incorrect id", result.L1Message.MessageID(), hashes[i])
+		if result.IncomingRequest.MessageID != hashes[i] {
+			t.Error("l2message had incorrect id", result.IncomingRequest.MessageID, hashes[i])
 		}
-		l2Message, err := message.L2Message{Data: result.L1Message.Data}.AbstractMessage()
+		l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
 		if err != nil {
 			t.Fatal(err)
 		}

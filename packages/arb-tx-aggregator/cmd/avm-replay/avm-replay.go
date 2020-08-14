@@ -149,7 +149,7 @@ func testMessages(filename string, contract string) error {
 			return err
 		}
 		if res, ok := res.(*evm.TxResult); ok {
-			log.Println("Got res", res.ResultCode, res.GasUsed, res.L1Message.Sender, res.L1Message.MessageID())
+			log.Println("Got res", res.ResultCode, res.GasUsed, res.IncomingRequest.Sender, res.IncomingRequest.MessageID)
 			log.Println("Res had logs", res.EVMLogs)
 		}
 	}

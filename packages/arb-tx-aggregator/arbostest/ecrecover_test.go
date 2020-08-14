@@ -166,8 +166,8 @@ func TestECRecover(t *testing.T) {
 			t.Error("tx failed", res.ResultCode)
 		}
 		log.Println("ReturnData", hexutil.Encode(res.ReturnData))
-		if res.L1Message.Kind == message.L2Type {
-			l2, err := message.L2Message{Data: res.L1Message.Data}.AbstractMessage()
+		if res.IncomingRequest.Kind == message.L2Type {
+			l2, err := message.L2Message{Data: res.IncomingRequest.Data}.AbstractMessage()
 			if err != nil {
 				t.Fatal(err)
 			}
