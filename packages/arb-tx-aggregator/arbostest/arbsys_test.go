@@ -17,6 +17,7 @@
 package arbostest
 
 import (
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"log"
 	"math/big"
@@ -55,6 +56,18 @@ func TestTransactionCount(t *testing.T) {
 		Timestamp: big.NewInt(0),
 	}
 
+	checkTxCount := func(target int) error {
+		snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(9999999))
+		txCount, err := snap.GetTransactionCount(addr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if txCount.Cmp(big.NewInt(int64(target))) != 0 {
+			return fmt.Errorf("wrong tx count %v", txCount)
+		}
+		return nil
+	}
+
 	initMsg := message.Init{
 		ChainParams: valprotocol.ChainParams{
 			StakeRequirement:        big.NewInt(0),
@@ -68,13 +81,8 @@ func TestTransactionCount(t *testing.T) {
 	results := runMessage(t, mach, initMsg, chain)
 	log.Println(results)
 
-	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(1))
-	txCount, err := snap.GetTransactionCount(addr)
-	if err != nil {
+	if err := checkTxCount(0); err != nil {
 		t.Fatal(err)
-	}
-	if txCount.Cmp(big.NewInt(0)) != 0 {
-		t.Fatal("wrong tx count", txCount)
 	}
 
 	constructorData, err := hexutil.Decode(FibonacciBin)
@@ -86,17 +94,11 @@ func TestTransactionCount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(fibAddress.Hex())
 
 	depositEth(t, mach, addr, big.NewInt(1000))
 
-	snap = snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(1))
-	txCount, err = snap.GetTransactionCount(addr)
-	if err != nil {
+	if err := checkTxCount(1); err != nil {
 		t.Fatal(err)
-	}
-	if txCount.Cmp(big.NewInt(1)) != 0 {
-		t.Fatal("wrong tx count", txCount)
 	}
 
 	fib, err := abi.JSON(strings.NewReader(FibonacciABI))
@@ -129,13 +131,8 @@ func TestTransactionCount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap = snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(1))
-	txCount, err = snap.GetTransactionCount(addr)
-	if err != nil {
+	if err := checkTxCount(2); err != nil {
 		t.Fatal(err)
-	}
-	if txCount.Cmp(big.NewInt(2)) != 0 {
-		t.Fatal("wrong tx count", txCount)
 	}
 }
 
