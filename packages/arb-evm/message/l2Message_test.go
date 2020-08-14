@@ -36,26 +36,37 @@ func TestL2MessageSerialization(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx := NewRandomTransaction()
-	txData := tx.AsData()
+	txData := tx.AsDataSafe()
 	if len(txData) != TransactionHeaderSize+len(tx.Data) {
 		t.Error("serialized tx has incorrect size")
 	}
 
+	randomBatch, err := NewRandomTransactionBatch(10, common.RandAddress(), pk, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
 	l2Messages := []AbstractL2Message{
 		tx,
 		NewRandomContractTransaction(),
 		NewRandomCall(),
-		NewRandomTransactionBatch(10, common.RandAddress(), pk),
+		randomBatch,
 	}
 
 	for _, msg := range l2Messages {
 		t.Run(fmt.Sprintf("%T", msg), func(t *testing.T) {
-			l2Message := NewL2Message(msg)
+			l2Message, err := NewL2Message(msg)
+			if err != nil {
+				t.Fatal(err)
+			}
 			decoded, err := l2Message.AbstractMessage()
 			if err != nil {
 				t.Fatal(err)
 			}
-			if bytes.Equal(decoded.AsData(), l2Message.AsData()) {
+			data, err := decoded.AsData()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if bytes.Equal(data, l2Message.AsData()) {
 				t.Fatal("decoded l2 l2message not equal")
 			}
 		})

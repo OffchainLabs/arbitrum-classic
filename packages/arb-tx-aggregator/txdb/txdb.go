@@ -156,7 +156,7 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 
 		switch res := res.(type) {
 		case *evm.TxResult:
-			log.Println("Got result for", res.L1Message.MessageID(), res.ResultCode)
+			log.Println("Got result for", res.IncomingRequest.MessageID, res.ResultCode)
 			results = append(results, resultInfo{
 				logIndex: logIndex,
 				result:   res,
@@ -184,7 +184,7 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 			}
 
 			for _, item := range results {
-				if err := txdb.as.SaveRequest(item.result.L1Message.MessageID(), item.logIndex); err != nil {
+				if err := txdb.as.SaveRequest(item.result.IncomingRequest.MessageID, item.logIndex); err != nil {
 					return err
 				}
 			}
@@ -236,7 +236,7 @@ func (txdb *TxDB) GetRequest(requestId common.Hash) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	if res.L1Message.MessageID() != requestId {
+	if res.IncomingRequest.MessageID != requestId {
 		return nil, errors.New("request not found")
 	}
 	return logVal, nil
@@ -317,7 +317,7 @@ func (txdb *TxDB) FindLogs(
 					logs = append(logs, evm.FullLog{
 						Log:     evmLog,
 						TxIndex: j,
-						TxHash:  res.L1Message.MessageID(),
+						TxHash:  res.IncomingRequest.MessageID,
 						Index:   logIndex,
 						Block: &common.BlockId{
 							Height:     common.NewTimeBlocks(new(big.Int).SetUint64(i)),

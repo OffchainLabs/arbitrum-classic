@@ -155,7 +155,7 @@ func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, r
 	} else {
 		txes := make([]hexutil.Bytes, 0, len(results))
 		for _, res := range results {
-			txes = append(txes, res.L1Message.MessageID().Bytes())
+			txes = append(txes, res.IncomingRequest.MessageID.Bytes())
 		}
 		reply.Transactions = txes
 	}
@@ -264,21 +264,17 @@ func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionRece
 }
 
 func (s *Server) makeTransactionResult(ctx context.Context, res *evm.TxResult) (*TransactionResult, error) {
-	chain, err := s.srv.GetChainAddress(ctx)
+	tx, err := aggregator.GetTransaction(res.IncomingRequest)
 	if err != nil {
 		return nil, err
 	}
-	tx, err := aggregator.GetTransaction(res.L1Message, arbcommon.NewAddressFromEth(chain))
-	if err != nil {
-		return nil, err
-	}
-	blockInfo, err := s.srv.BlockInfo(ctx, res.L1Message.ChainTime.BlockNum.AsInt().Uint64())
+	blockInfo, err := s.srv.BlockInfo(ctx, res.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
 	if err != nil {
 		return nil, err
 	}
 	vVal, rVal, sVal := tx.RawSignatureValues()
 	txIndex := res.TxIndex.Uint64()
-	blockNum := hexutil.EncodeBig(res.L1Message.ChainTime.BlockNum.AsInt())
+	blockNum := hexutil.EncodeBig(res.IncomingRequest.ChainTime.BlockNum.AsInt())
 	blockHash := blockInfo.Hash.ToEthHash()
 	var to *string
 	if tx.To() != nil {
@@ -288,7 +284,7 @@ func (s *Server) makeTransactionResult(ctx context.Context, res *evm.TxResult) (
 	return &TransactionResult{
 		BlockHash:        &blockHash,
 		BlockNumber:      &blockNum,
-		From:             res.L1Message.Sender.ToEthAddress().Hex(),
+		From:             res.IncomingRequest.Sender.ToEthAddress().Hex(),
 		Gas:              hexutil.EncodeUint64(tx.Gas()),
 		GasPrice:         hexutil.EncodeBig(tx.GasPrice()),
 		Hash:             tx.Hash(),

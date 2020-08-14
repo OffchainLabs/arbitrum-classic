@@ -19,10 +19,12 @@ package evm
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	errors2 "github.com/pkg/errors"
 	"math/big"
+	"math/rand"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -49,22 +51,66 @@ type Result interface {
 	AsValue() value.Value
 }
 
+type IncomingRequest struct {
+	Kind      inbox.Type
+	Sender    common.Address
+	MessageID common.Hash
+	Data      []byte
+	ChainTime inbox.ChainTime
+}
+
+func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
+	msg, err := inbox.NewInboxMessageFromValue(val)
+	if err != nil {
+		return IncomingRequest{}, err
+	}
+	var messageID common.Hash
+	copy(messageID[:], math.U256Bytes(msg.InboxSeqNum))
+	return IncomingRequest{
+		Kind:      msg.Kind,
+		Sender:    msg.Sender,
+		MessageID: messageID,
+		Data:      msg.Data,
+		ChainTime: msg.ChainTime,
+	}, nil
+}
+
+func NewRandomIncomingRequest() IncomingRequest {
+	return IncomingRequest{
+		Kind:      inbox.Type(rand.Uint32()),
+		Sender:    common.RandAddress(),
+		MessageID: common.RandHash(),
+		Data:      common.RandBytes(200),
+		ChainTime: inbox.NewRandomChainTime(),
+	}
+}
+
+func (ir IncomingRequest) AsValue() value.Value {
+	return inbox.InboxMessage{
+		Kind:        ir.Kind,
+		Sender:      ir.Sender,
+		InboxSeqNum: new(big.Int).SetBytes(ir.MessageID[:]),
+		Data:        ir.Data,
+		ChainTime:   ir.ChainTime,
+	}.AsValue()
+}
+
 type TxResult struct {
-	L1Message     inbox.InboxMessage
-	ResultCode    ResultType
-	ReturnData    []byte
-	EVMLogs       []Log
-	GasUsed       *big.Int
-	GasPrice      *big.Int
-	CumulativeGas *big.Int
-	TxIndex       *big.Int
-	StartLogIndex *big.Int
+	IncomingRequest IncomingRequest
+	ResultCode      ResultType
+	ReturnData      []byte
+	EVMLogs         []Log
+	GasUsed         *big.Int
+	GasPrice        *big.Int
+	CumulativeGas   *big.Int
+	TxIndex         *big.Int
+	StartLogIndex   *big.Int
 }
 
 func (r *TxResult) String() string {
 	return fmt.Sprintf(
 		"TxResult(%v, %v, %v, %v, %v, %v)",
-		r.L1Message,
+		r.IncomingRequest,
 		r.ResultCode,
 		hexutil.Encode(r.ReturnData),
 		r.EVMLogs,
@@ -75,7 +121,7 @@ func (r *TxResult) String() string {
 
 func (r *TxResult) AsValue() value.Value {
 	tup, _ := value.NewTupleFromSlice([]value.Value{
-		r.L1Message.AsValue(),
+		r.IncomingRequest.AsValue(),
 		value.NewInt64Value(int64(r.ResultCode)),
 		inbox.BytesToByteStack(r.ReturnData),
 		LogsToLogStack(r.EVMLogs),
@@ -87,8 +133,8 @@ func (r *TxResult) AsValue() value.Value {
 
 func (r *TxResult) ToEthReceipt(blockHash common.Hash) (*types.Receipt, error) {
 	contractAddress := ethcommon.Address{}
-	if r.L1Message.Kind == message.L2Type && r.ResultCode == ReturnCode {
-		msg, err := message.L2Message{Data: r.L1Message.Data}.AbstractMessage()
+	if r.IncomingRequest.Kind == message.L2Type && r.ResultCode == ReturnCode {
+		msg, err := message.L2Message{Data: r.IncomingRequest.Data}.AbstractMessage()
 		if err == nil {
 			if msg, ok := msg.(message.AbstractTransaction); ok {
 				emptyAddress := common.Address{}
@@ -111,8 +157,8 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) (*types.Receipt, error) {
 			Address:     l.Address.ToEthAddress(),
 			Topics:      common.NewEthHashesFromHashes(l.Topics),
 			Data:        l.Data,
-			BlockNumber: r.L1Message.ChainTime.BlockNum.AsInt().Uint64(),
-			TxHash:      r.L1Message.MessageID().ToEthHash(),
+			BlockNumber: r.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64(),
+			TxHash:      r.IncomingRequest.MessageID.ToEthHash(),
 			TxIndex:     uint(r.TxIndex.Uint64()),
 			BlockHash:   blockHash.ToEthHash(),
 			Index:       uint(logIndex),
@@ -127,11 +173,11 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) (*types.Receipt, error) {
 		CumulativeGasUsed: r.CumulativeGas.Uint64(),
 		Bloom:             types.BytesToBloom(types.LogsBloom(evmLogs).Bytes()),
 		Logs:              evmLogs,
-		TxHash:            r.L1Message.MessageID().ToEthHash(),
+		TxHash:            r.IncomingRequest.MessageID.ToEthHash(),
 		ContractAddress:   contractAddress,
 		GasUsed:           r.GasUsed.Uint64(),
 		BlockHash:         blockHash.ToEthHash(),
-		BlockNumber:       r.L1Message.ChainTime.BlockNum.AsInt(),
+		BlockNumber:       r.IncomingRequest.ChainTime.BlockNum.AsInt(),
 		TransactionIndex:  uint(r.TxIndex.Uint64()),
 	}, nil
 }
@@ -160,7 +206,7 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 	txIndex, _ := chainInfoTup.GetByInt64(1)
 	startLogIndex, _ := chainInfoTup.GetByInt64(2)
 
-	l1Msg, err := inbox.NewInboxMessageFromValue(l1MsgVal)
+	l1Msg, err := NewIncomingRequestFromValue(l1MsgVal)
 	if err != nil {
 		return nil, err
 	}
@@ -198,15 +244,15 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 	}
 
 	return &TxResult{
-		L1Message:     l1Msg,
-		ResultCode:    ResultType(resultCodeInt.BigInt().Uint64()),
-		ReturnData:    returnBytes,
-		EVMLogs:       logs,
-		GasUsed:       gasUsedInt.BigInt(),
-		GasPrice:      gasPriceInt.BigInt(),
-		CumulativeGas: cumulativeGasInt.BigInt(),
-		TxIndex:       txIndexInt.BigInt(),
-		StartLogIndex: startLogIndexInt.BigInt(),
+		IncomingRequest: l1Msg,
+		ResultCode:      ResultType(resultCodeInt.BigInt().Uint64()),
+		ReturnData:      returnBytes,
+		EVMLogs:         logs,
+		GasUsed:         gasUsedInt.BigInt(),
+		GasPrice:        gasPriceInt.BigInt(),
+		CumulativeGas:   cumulativeGasInt.BigInt(),
+		TxIndex:         txIndexInt.BigInt(),
+		StartLogIndex:   startLogIndexInt.BigInt(),
 	}, nil
 }
 
@@ -393,20 +439,20 @@ func NewBlockResultFromValue(val value.Value) (*BlockInfo, error) {
 	return txRes, nil
 }
 
-func NewRandomResult(msg message.Message, logCount int32) *TxResult {
+func NewRandomResult(logCount int32) *TxResult {
 	logs := make([]Log, 0, logCount)
 	for i := int32(0); i < logCount; i++ {
 		logs = append(logs, NewRandomLog(3))
 	}
 	return &TxResult{
-		L1Message:     message.NewRandomInboxMessage(msg),
-		ResultCode:    ReturnCode,
-		ReturnData:    common.RandBytes(200),
-		EVMLogs:       logs,
-		GasUsed:       common.RandBigInt(),
-		GasPrice:      common.RandBigInt(),
-		CumulativeGas: common.RandBigInt(),
-		TxIndex:       common.RandBigInt(),
-		StartLogIndex: common.RandBigInt(),
+		IncomingRequest: NewRandomIncomingRequest(),
+		ResultCode:      ReturnCode,
+		ReturnData:      common.RandBytes(200),
+		EVMLogs:         logs,
+		GasUsed:         common.RandBigInt(),
+		GasPrice:        common.RandBigInt(),
+		CumulativeGas:   common.RandBigInt(),
+		TxIndex:         common.RandBigInt(),
+		StartLogIndex:   common.RandBigInt(),
 	}
 }

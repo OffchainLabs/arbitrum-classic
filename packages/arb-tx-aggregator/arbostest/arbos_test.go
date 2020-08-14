@@ -154,6 +154,19 @@ func TestDeposit(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	initMsg := message.Init{
+		ChainParams: valprotocol.ChainParams{
+			StakeRequirement:        big.NewInt(0),
+			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
+			MaxExecutionSteps:       0,
+			ArbGasSpeedLimitPerTick: 0,
+		},
+		Owner:       common.Address{},
+		ExtraConfig: []byte{},
+	}
+	results := runMessage(t, mach, initMsg, common.RandAddress())
+	log.Println(results)
+
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 
 	amount := big.NewInt(1000)
@@ -228,7 +241,7 @@ func TestBlocks(t *testing.T) {
 		messages = append(
 			messages,
 			message.NewInboxMessage(
-				message.NewL2Message(tx),
+				message.NewSafeL2Message(tx),
 				common.RandAddress(),
 				big.NewInt(i+1),
 				inbox.ChainTime{
