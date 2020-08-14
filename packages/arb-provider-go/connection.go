@@ -402,5 +402,5 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	if err != nil {
 		return nil, err
 	}
-	return result.ToEthReceipt(blockInfo.Hash)
+	return result.ToEthReceipt(blockInfo.Hash), nil
 }

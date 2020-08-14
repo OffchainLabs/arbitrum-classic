@@ -20,10 +20,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"log"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"math/big"
 	"time"
 
@@ -35,7 +33,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
@@ -69,7 +66,7 @@ func NewServer(
 
 // SendTransaction takes a request signed transaction l2message from a client
 // and puts it in a queue to be included in the next transaction batch
-func (m *Server) SendTransaction(_ context.Context, tx *types.Transaction) (common.Hash, error) {
+func (m *Server) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 	return m.batch.SendTransaction(tx)
 }
 
@@ -90,13 +87,12 @@ func (m *Server) FindLogs(ctx context.Context, fromHeight, toHeight *uint64, add
 	)
 }
 
-func (m *Server) GetBlockCount(_ context.Context) (uint64, error) {
+func (m *Server) GetBlockCount() uint64 {
 	id := m.db.LatestBlockId()
-	return id.Height.AsInt().Uint64(), nil
+	return id.Height.AsInt().Uint64()
 }
 
 func (m *Server) GetOutputMessage(
-	_ context.Context,
 	args *evm.GetOutputMessageArgs,
 	reply *evm.GetOutputMessageReply,
 ) error {
@@ -114,16 +110,16 @@ func (m *Server) GetOutputMessage(
 
 // GetMessageResult returns the value output by the VM in response to the
 //l2message with the given hash
-func (m *Server) GetRequestResult(_ context.Context, requestId common.Hash) (value.Value, error) {
+func (m *Server) GetRequestResult(requestId common.Hash) (value.Value, error) {
 	return m.db.GetRequest(requestId)
 }
 
 // GetVMInfo returns current metadata about this VM
-func (m *Server) GetChainAddress(_ context.Context) (ethcommon.Address, error) {
-	return m.chain.ToEthAddress(), nil
+func (m *Server) GetChainAddress() ethcommon.Address {
+	return m.chain.ToEthAddress()
 }
 
-func (m *Server) BlockInfo(_ context.Context, height uint64) (*machine.BlockInfo, error) {
+func (m *Server) BlockInfo(height uint64) (*machine.BlockInfo, error) {
 	return m.db.GetBlock(height)
 }
 
@@ -208,10 +204,7 @@ func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, err
 	transactions := make([]*types.Transaction, 0, len(results))
 	receipts := make([]*types.Receipt, 0, len(results))
 	for _, res := range results {
-		receipt, err := res.ToEthReceipt(common.NewHashFromEth(header.Hash()))
-		if err != nil {
-			return nil, err
-		}
+		receipt := res.ToEthReceipt(common.NewHashFromEth(header.Hash()))
 		receipts = append(receipts, receipt)
 		tx, err := GetTransaction(res.IncomingRequest)
 		if err != nil {
@@ -221,18 +214,6 @@ func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, err
 	}
 
 	return types.NewBlock(header, transactions, nil, receipts), nil
-}
-
-func (m *Server) GetTransaction(_ context.Context, requestId ethcommon.Hash) (*types.Transaction, error) {
-	val, err := m.db.GetRequest(common.NewHashFromEth(requestId))
-	if err != nil {
-		return nil, nil
-	}
-	res, err := evm.NewTxResultFromValue(val)
-	if err != nil {
-		return nil, err
-	}
-	return GetTransaction(res.IncomingRequest)
 }
 
 func GetTransaction(msg evm.IncomingRequest) (*types.Transaction, error) {
@@ -250,67 +231,26 @@ func GetTransaction(msg evm.IncomingRequest) (*types.Transaction, error) {
 	return ethMsg.AsEthTx(), nil
 }
 
+func (m *Server) AdjustGas(msg message.ContractTransaction) message.ContractTransaction {
+	if msg.MaxGas.Cmp(big.NewInt(0)) == 0 || msg.MaxGas.Cmp(m.maxCallGas) > 0 {
+		msg.MaxGas = m.maxCallGas
+	}
+	return msg
+}
+
 // Call takes a request from a client to process in a temporary context
 // and return the result
-func (m *Server) Call(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
-	mach, blockId := m.db.CallInfo()
-	return m.executeCall(mach, blockId, msg, sender)
+func (m *Server) Call(msg message.ContractTransaction, sender ethcommon.Address) (*evm.TxResult, error) {
+	msg = m.AdjustGas(msg)
+	return m.db.LatestSnapshot().Call(msg, common.NewAddressFromEth(sender))
 }
 
 // PendingCall takes a request from a client to process in a temporary context
 // and return the result
-func (m *Server) PendingCall(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
-	mach, blockId := m.db.CallInfo()
-	return m.executeCall(mach, blockId, msg, sender)
+func (m *Server) PendingCall(msg message.ContractTransaction, sender ethcommon.Address) (*evm.TxResult, error) {
+	return m.Call(msg, sender)
 }
 
-func (m *Server) executeCall(callMach machine.Machine, blockId *common.BlockId, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
-	mach := callMach.Clone()
-	seq, _ := new(big.Int).SetString("999999999999999999999999", 10)
-	if msg.MaxGas.Cmp(big.NewInt(0)) == 0 || msg.MaxGas.Cmp(m.maxCallGas) > 0 {
-		msg.MaxGas = m.maxCallGas
-	}
-	log.Println("Executing call", msg.MaxGas, msg.GasPriceBid, msg.DestAddress, msg.Payment)
-	inboxMsg := message.NewInboxMessage(
-		message.NewSafeL2Message(msg),
-		common.NewAddressFromEth(sender),
-		seq,
-		inbox.ChainTime{
-			BlockNum:  blockId.Height,
-			Timestamp: big.NewInt(time.Now().Unix()),
-		},
-	)
-
-	assertion, steps := mach.ExecuteAssertion(
-		// Call execution is only limited by wall time, so use a massive max steps as an approximation to infinity
-		10000000000000000,
-		[]inbox.InboxMessage{inboxMsg},
-		m.maxCallTime,
-	)
-
-	// If the machine wasn't able to run and it reports that it is currently
-	// blocked, return the block reason to give the client more information
-	// as opposed to just returning a general "call produced no output"
-	if br := mach.IsBlocked(true); steps == 0 && br != nil {
-		log.Println("can't produce solution since machine is blocked", br)
-		return nil, fmt.Errorf("can't produce solution since machine is blocked %v", br)
-	}
-
-	log.Println("Executed call for", steps, "steps")
-
-	results := assertion.ParseLogs()
-	if len(results) == 0 {
-		return nil, errors.New("call produced no output")
-	}
-	lastLogVal := results[len(results)-1]
-	lastLog, err := evm.NewTxResultFromValue(lastLogVal)
-	if err != nil {
-		return nil, err
-	}
-	targetHash := hashing.SoliditySHA3(hashing.Uint256(message.ChainAddressToID(m.chain)), hashing.Uint256(inboxMsg.InboxSeqNum))
-	if lastLog.IncomingRequest.MessageID != targetHash {
-		// Last produced log is not the call we sent
-		return nil, fmt.Errorf("Call resulted in incorrect id %v instead of %v", lastLog.IncomingRequest.MessageID, targetHash)
-	}
-	return results[len(results)-1], nil
+func (m *Server) LatestSnapshot() *snapshot.Snapshot {
+	return m.db.LatestSnapshot()
 }

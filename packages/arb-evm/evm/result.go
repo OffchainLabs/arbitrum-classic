@@ -131,7 +131,7 @@ func (r *TxResult) AsValue() value.Value {
 	return tup
 }
 
-func (r *TxResult) ToEthReceipt(blockHash common.Hash) (*types.Receipt, error) {
+func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 	contractAddress := ethcommon.Address{}
 	if r.IncomingRequest.Kind == message.L2Type && r.ResultCode == ReturnCode {
 		msg, err := message.L2Message{Data: r.IncomingRequest.Data}.AbstractMessage()
@@ -179,7 +179,7 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) (*types.Receipt, error) {
 		BlockHash:         blockHash.ToEthHash(),
 		BlockNumber:       r.IncomingRequest.ChainTime.BlockNum.AsInt(),
 		TransactionIndex:  uint(r.TxIndex.Uint64()),
-	}, nil
+	}
 }
 
 func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.Value, chainInfo value.Value) (*TxResult, error) {
