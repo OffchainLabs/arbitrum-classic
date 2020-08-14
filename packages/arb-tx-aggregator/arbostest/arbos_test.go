@@ -18,6 +18,7 @@ package arbostest
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 	"math/big"
@@ -154,6 +155,11 @@ func TestDeposit(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	chainTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
+	}
+
 	initMsg := message.Init{
 		ChainParams: valprotocol.ChainParams{
 			StakeRequirement:        big.NewInt(0),
@@ -164,7 +170,8 @@ func TestDeposit(t *testing.T) {
 		Owner:       common.Address{},
 		ExtraConfig: []byte{},
 	}
-	results := runMessage(t, mach, initMsg, common.RandAddress())
+	chain := common.RandAddress()
+	results := runMessage(t, mach, initMsg, chain)
 	log.Println(results)
 
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
@@ -172,7 +179,12 @@ func TestDeposit(t *testing.T) {
 	amount := big.NewInt(1000)
 	depositEth(t, mach, addr, amount)
 
-	if getBalanceCall(t, mach, addr).Cmp(amount) != 0 {
+	snap := snapshot.NewSnapshot(mach.Clone(), chainTime, message.ChainAddressToID(chain), big.NewInt(1))
+	balance, err := snap.GetBalance(addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if balance.Cmp(amount) != 0 {
 		t.Fatal("incorrect balance")
 	}
 }

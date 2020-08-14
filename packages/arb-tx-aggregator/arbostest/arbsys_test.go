@@ -17,6 +17,7 @@
 package arbostest
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"log"
 	"math/big"
 	"strings"
@@ -49,6 +50,11 @@ func TestTransactionCount(t *testing.T) {
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 	chain := common.RandAddress()
 
+	chainTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
+	}
+
 	initMsg := message.Init{
 		ChainParams: valprotocol.ChainParams{
 			StakeRequirement:        big.NewInt(0),
@@ -62,7 +68,11 @@ func TestTransactionCount(t *testing.T) {
 	results := runMessage(t, mach, initMsg, chain)
 	log.Println(results)
 
-	txCount := getTransactionCountCall(t, mach, addr)
+	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(1))
+	txCount, err := snap.GetTransactionCount(addr)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if txCount.Cmp(big.NewInt(0)) != 0 {
 		t.Fatal("wrong tx count", txCount)
 	}
@@ -80,7 +90,11 @@ func TestTransactionCount(t *testing.T) {
 
 	depositEth(t, mach, addr, big.NewInt(1000))
 
-	txCount = getTransactionCountCall(t, mach, addr)
+	snap = snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(1))
+	txCount, err = snap.GetTransactionCount(addr)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if txCount.Cmp(big.NewInt(1)) != 0 {
 		t.Fatal("wrong tx count", txCount)
 	}
@@ -115,7 +129,11 @@ func TestTransactionCount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	txCount = getTransactionCountCall(t, mach, addr)
+	snap = snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(1))
+	txCount, err = snap.GetTransactionCount(addr)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if txCount.Cmp(big.NewInt(2)) != 0 {
 		t.Fatal("wrong tx count", txCount)
 	}

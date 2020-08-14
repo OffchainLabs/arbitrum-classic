@@ -41,6 +41,7 @@ func NewSnapshot(mach machine.Machine, time inbox.ChainTime, chainId *big.Int, l
 		mach:            mach,
 		time:            time,
 		nextInboxSeqNum: new(big.Int).Add(lastInboxSeq, big.NewInt(1)),
+		chainId:         chainId,
 	}
 }
 
@@ -119,7 +120,7 @@ func runTx(mach machine.Machine, msg inbox.InboxMessage, chainId *big.Int) (*evm
 
 	avmLogs := assertion.ParseLogs()
 	if len(avmLogs) != 1 {
-		return nil, errors.New("unexpected log count")
+		return nil, fmt.Errorf("unexpected log count %v", len(avmLogs))
 	}
 
 	res, err := evm.NewTxResultFromValue(avmLogs[0])

@@ -104,44 +104,6 @@ func runTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Me
 	return result, nil
 }
 
-func getTransactionCountCall(t *testing.T, mach machine.Machine, address common.Address) *big.Int {
-	arbsys, err := abi.JSON(strings.NewReader(arboscontracts.ArbSysABI))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	txabi := arbsys.Methods["getTransactionCount"]
-	txData, err := txabi.Inputs.Pack(address)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	funcSig, err := hexutil.Decode("0x23ca0cd2")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	call := message.Call{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
-		Data:        append(funcSig, txData...),
-	}
-	funcResult, err := runTransaction(t, mach.Clone(), call, common.Address{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	vals, err := txabi.Outputs.UnpackValues(funcResult.ReturnData)
-	if len(vals) != 1 {
-		t.Fatal("unexpected tx result")
-	}
-	val, ok := vals[0].(*big.Int)
-	if !ok {
-		t.Fatal("unexpected tx result")
-	}
-	return val
-}
-
 func withdrawEthTx(t *testing.T, sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
 	arbsys, err := abi.JSON(strings.NewReader(arboscontracts.ArbSysABI))
 	if err != nil {
@@ -167,44 +129,6 @@ func withdrawEthTx(t *testing.T, sequenceNum *big.Int, amount *big.Int, dest com
 		Payment:     amount,
 		Data:        append(funcSig, txData...),
 	}
-}
-
-func getBalanceCall(t *testing.T, mach machine.Machine, address common.Address) *big.Int {
-	info, err := abi.JSON(strings.NewReader(arboscontracts.ArbInfoABI))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	getBalanceABI := info.Methods["getBalance"]
-	getBalanceData, err := getBalanceABI.Inputs.Pack(address)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	getBalanceSignature, err := hexutil.Decode("0xf8b2cb4f")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	getBalance := message.Call{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		DestAddress: common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS),
-		Data:        append(getBalanceSignature, getBalanceData...),
-	}
-	balanceResult, err := runTransaction(t, mach.Clone(), getBalance, common.Address{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	vals, err := getBalanceABI.Outputs.UnpackValues(balanceResult.ReturnData)
-	if len(vals) != 1 {
-		t.Fatal("unexpected tx result")
-	}
-	val, ok := vals[0].(*big.Int)
-	if !ok {
-		t.Fatal("unexpected tx result")
-	}
-	return val
 }
 
 func makeConstructorTx(code []byte, sequenceNum *big.Int) message.Transaction {
