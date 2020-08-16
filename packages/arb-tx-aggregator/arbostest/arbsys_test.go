@@ -19,7 +19,6 @@ package arbostest
 import (
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
-	"log"
 	"math/big"
 	"strings"
 	"testing"
@@ -36,6 +35,25 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
+func generateFib(val *big.Int) ([]byte, error) {
+	fib, err := abi.JSON(strings.NewReader(FibonacciABI))
+	if err != nil {
+		return nil, err
+	}
+
+	generateFibABI := fib.Methods["generateFib"]
+	generateFibData, err := generateFibABI.Inputs.Pack(val)
+	if err != nil {
+		return nil, err
+	}
+
+	generateSignature, err := hexutil.Decode("0x2ddec39b")
+	if err != nil {
+		return nil, err
+	}
+	return append(generateSignature, generateFibData...), nil
+}
+
 func TestTransactionCount(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
 	if err != nil {
@@ -49,6 +67,8 @@ func TestTransactionCount(t *testing.T) {
 
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 	chain := common.RandAddress()
+	randDest := common.RandAddress()
+	correctTxCount := 0
 
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
@@ -67,10 +87,73 @@ func TestTransactionCount(t *testing.T) {
 		return nil
 	}
 
-	results := runMessage(t, mach, initMsg(), chain)
-	log.Println(results)
+	runMessage(t, mach, initMsg(), chain)
 
 	if err := checkTxCount(0); err != nil {
+		t.Fatal(err)
+	}
+
+	depositEth(t, mach, addr, big.NewInt(1000))
+
+	// Deposit doesn't increase tx count
+	if err := checkTxCount(correctTxCount); err != nil {
+		t.Fatal(err)
+	}
+
+	tx1 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(int64(correctTxCount)),
+		DestAddress: randDest,
+		Payment:     big.NewInt(300),
+		Data:        []byte{},
+	}
+
+	_, err = runValidTransaction(t, mach, tx1, addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// TODO: This should increase the count
+	//correctTxCount++
+
+	// Payment to EOA increases tx count
+	if err := checkTxCount(correctTxCount); err != nil {
+		t.Fatal(err)
+	}
+
+	tx2 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(int64(correctTxCount) + 1),
+		DestAddress: randDest,
+		Payment:     big.NewInt(10),
+		Data:        []byte{},
+	}
+
+	runMessage(t, mach, message.NewSafeL2Message(tx2), addr)
+
+	// Payment to EOA with incorrect sequence number shouldn't increase tx count
+	if err := checkTxCount(correctTxCount); err != nil {
+		t.Fatal(err)
+	}
+
+	tx3 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(int64(correctTxCount)),
+		DestAddress: randDest,
+		Payment:     big.NewInt(30000),
+		Data:        []byte{},
+	}
+
+	_, err = runTransaction(t, mach, tx3, addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Payment to EOA with insufficient funds shouldn't increase tx count
+	if err := checkTxCount(correctTxCount); err != nil {
 		t.Fatal(err)
 	}
 
@@ -79,29 +162,18 @@ func TestTransactionCount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fibAddress, err := deployContract(t, mach, addr, constructorData, big.NewInt(0))
+	fibAddress, err := deployContract(t, mach, addr, constructorData, big.NewInt(int64(correctTxCount)))
 	if err != nil {
 		t.Fatal(err)
 	}
+	correctTxCount++
 
-	depositEth(t, mach, addr, big.NewInt(1000))
-
-	if err := checkTxCount(1); err != nil {
+	// Contract deployment increases tx count
+	if err := checkTxCount(correctTxCount); err != nil {
 		t.Fatal(err)
 	}
 
-	fib, err := abi.JSON(strings.NewReader(FibonacciABI))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	generateFibABI := fib.Methods["generateFib"]
-	generateFibData, err := generateFibABI.Inputs.Pack(big.NewInt(20))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	generateSignature, err := hexutil.Decode("0x2ddec39b")
+	fibData, err := generateFib(big.NewInt(20))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,18 +181,61 @@ func TestTransactionCount(t *testing.T) {
 	generateTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(1),
+		SequenceNum: big.NewInt(int64(correctTxCount)),
 		DestAddress: fibAddress,
 		Payment:     big.NewInt(300),
-		Data:        append(generateSignature, generateFibData...),
+		Data:        fibData,
 	}
 
-	_, err = runTransaction(t, mach, generateTx, addr)
+	_, err = runValidTransaction(t, mach, generateTx, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := checkTxCount(2); err != nil {
+	correctTxCount++
+
+	// Tx call increases tx count
+	if err := checkTxCount(correctTxCount); err != nil {
+		t.Fatal(err)
+	}
+
+	generateTx2 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(3),
+		DestAddress: fibAddress,
+		Payment:     big.NewInt(300),
+		Data:        fibData,
+	}
+
+	runMessage(t, mach, message.NewSafeL2Message(generateTx2), addr)
+
+	// Tx call with incorrect sequence number doesn't affect the count
+	if err := checkTxCount(correctTxCount); err != nil {
+		t.Fatal(err)
+	}
+
+	generateTx3 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(int64(correctTxCount)),
+		DestAddress: fibAddress,
+		Payment:     big.NewInt(100000),
+		Data:        fibData,
+	}
+
+	res, err := runTransaction(t, mach, generateTx3, addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.ResultCode != evm.InsufficientTxFundsCode {
+		t.Fatal("incorrect return code", res.ResultCode)
+	}
+	// TODO: This shouldn't increase the count
+	correctTxCount++
+
+	// Tx call with insufficient balance doesn't affect the count
+	if err := checkTxCount(correctTxCount); err != nil {
 		t.Fatal(err)
 	}
 }

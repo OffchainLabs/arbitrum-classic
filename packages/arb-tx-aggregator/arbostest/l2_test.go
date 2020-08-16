@@ -212,7 +212,7 @@ func TestUnsignedTx(t *testing.T) {
 	}
 	t.Log(string(testCase))
 	if len(logs) != 2 {
-		t.Fatal("incorrect log output count")
+		t.Fatal("incorrect log output count", len(logs))
 	}
 	for i, avmLog := range logs {
 		result, err := evm.NewTxResultFromValue(avmLog)

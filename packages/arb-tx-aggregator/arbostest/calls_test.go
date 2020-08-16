@@ -88,6 +88,17 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 	return results
 }
 
+func runValidTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Message, sender common.Address) (*evm.TxResult, error) {
+	result, err := runTransaction(t, mach, msg, sender)
+	if err != nil {
+		return nil, err
+	}
+	if result.ResultCode != evm.ReturnCode {
+		return nil, fmt.Errorf("transaction failed unexpectedly %v", result)
+	}
+	return result, nil
+}
+
 func runTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Message, sender common.Address) (*evm.TxResult, error) {
 	l2, err := message.NewL2Message(msg)
 	if err != nil {
@@ -97,11 +108,7 @@ func runTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Me
 	if len(results) != 1 {
 		return nil, fmt.Errorf("unexpected log count %v", len(results))
 	}
-	result := results[0]
-	if result.ResultCode != evm.ReturnCode {
-		return nil, fmt.Errorf("transaction failed unexpectedly %v", result)
-	}
-	return result, nil
+	return results[0], nil
 }
 
 func withdrawEthTx(t *testing.T, sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
@@ -144,7 +151,7 @@ func makeConstructorTx(code []byte, sequenceNum *big.Int) message.Transaction {
 
 func deployContract(t *testing.T, mach machine.Machine, sender common.Address, code []byte, sequenceNum *big.Int) (common.Address, error) {
 	constructorTx := makeConstructorTx(code, sequenceNum)
-	constructorResult, err := runTransaction(t, mach, constructorTx, sender)
+	constructorResult, err := runValidTransaction(t, mach, constructorTx, sender)
 	if err != nil {
 		return common.Address{}, err
 	}
