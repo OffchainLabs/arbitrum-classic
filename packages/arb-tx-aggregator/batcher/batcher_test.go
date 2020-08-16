@@ -49,7 +49,7 @@ func TestPrepareTransactions(t *testing.T) {
 		decodedTxes := make([]DecodedBatchTx, 0)
 		sortedTxes := make([]message.SignedTransaction, 0)
 		for i := 0; i < 10; i++ {
-			batchTx := message.NewRandomBatchTx(chain, keys[0], uint64(i))
+			batchTx := message.NewRandomSignedTx(chain, keys[0], uint64(i))
 			decoded := DecodedBatchTx{
 				tx:     batchTx,
 				sender: common.NewAddressFromEth(crypto.PubkeyToAddress(keys[0].PublicKey)),
@@ -67,7 +67,7 @@ func TestPrepareTransactions(t *testing.T) {
 		decodedTxes := make([]DecodedBatchTx, 0)
 		sortedTxes := make([]message.SignedTransaction, 0)
 		for i := 0; i < 10; i++ {
-			batchTx := message.NewRandomBatchTx(chain, keys[0], uint64(9-i))
+			batchTx := message.NewRandomSignedTx(chain, keys[0], uint64(9-i))
 			decoded := DecodedBatchTx{
 				tx:     batchTx,
 				sender: common.NewAddressFromEth(crypto.PubkeyToAddress(keys[0].PublicKey)),
@@ -88,7 +88,7 @@ func TestPrepareTransactions(t *testing.T) {
 		decodedTxes := make([]DecodedBatchTx, 0)
 		sortedTxes := make([]message.SignedTransaction, 0)
 		for i := 0; i < 10; i++ {
-			batchTx := message.NewRandomBatchTx(chain, keys[i], uint64(9-i))
+			batchTx := message.NewRandomSignedTx(chain, keys[i], uint64(9-i))
 			decoded := DecodedBatchTx{
 				tx:     batchTx,
 				sender: common.NewAddressFromEth(crypto.PubkeyToAddress(keys[i].PublicKey)),

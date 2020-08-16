@@ -128,9 +128,8 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 	if err != nil {
 		log.Fatal("failed to produce batch", err)
 	}
-	err = m.globalInbox.SendL2MessageNoWait(
+	_, err = m.globalInbox.SendL2MessageNoWait(
 		ctx,
-		m.rollupAddress,
 		message.NewSafeL2Message(batchTx).AsData(),
 	)
 	m.Lock()

@@ -75,11 +75,11 @@ func waitForReceipt(ctx context.Context, client ethutils.EthClient, from ethcomm
 	return err
 }
 
-func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
+func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.EthClient, txHash ethcommon.Hash) (*types.Receipt, error) {
 	for {
 		select {
 		case _ = <-time.After(time.Second):
-			receipt, err := client.TransactionReceipt(ctx, tx.Hash())
+			receipt, err := client.TransactionReceipt(ctx, txHash)
 			if receipt == nil && err == nil {
 				continue
 			}
@@ -90,28 +90,36 @@ func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, f
 				log.Println("ERROR getting receipt", err)
 				return nil, err
 			}
-			if receipt.Status != 1 {
-				data, err := receipt.MarshalJSON()
-				if err != nil {
-					return nil, errors.New("Failed unmarshalling receipt")
-				}
-				callMsg := ethereum.CallMsg{
-					From:     from,
-					To:       tx.To(),
-					Gas:      tx.Gas(),
-					GasPrice: tx.GasPrice(),
-					Value:    tx.Value(),
-					Data:     tx.Data(),
-				}
-				data, err = client.CallContract(ctx, callMsg, receipt.BlockNumber)
-				if err != nil {
-					return nil, fmt.Errorf("Transaction %v failed with error %v", methodName, err)
-				}
-				return nil, fmt.Errorf("Transaction %v failed with tx %v", methodName, string(data))
-			}
 			return receipt, nil
 		case _ = <-ctx.Done():
 			return nil, errors.New("Receipt not found")
 		}
 	}
+}
+
+func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
+	receipt, err := WaitForReceiptWithResultsSimple(ctx, client, tx.Hash())
+	if err != nil {
+		return nil, err
+	}
+	if receipt.Status != 1 {
+		data, err := receipt.MarshalJSON()
+		if err != nil {
+			return nil, errors.New("Failed unmarshalling receipt")
+		}
+		callMsg := ethereum.CallMsg{
+			From:     from,
+			To:       tx.To(),
+			Gas:      tx.Gas(),
+			GasPrice: tx.GasPrice(),
+			Value:    tx.Value(),
+			Data:     tx.Data(),
+		}
+		data, err = client.CallContract(ctx, callMsg, receipt.BlockNumber)
+		if err != nil {
+			return nil, fmt.Errorf("Transaction %v failed with error %v", methodName, err)
+		}
+		return nil, fmt.Errorf("Transaction %v failed with tx %v", methodName, string(data))
+	}
+	return receipt, nil
 }
