@@ -1,0 +1,215 @@
+package batcher
+
+import (
+	"container/heap"
+	"errors"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
+	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"log"
+	"math/rand"
+)
+
+// An IntHeap is a min-heap of ints.
+type TxHeap []*types.Transaction
+
+func (h TxHeap) Len() int           { return len(h) }
+func (h TxHeap) Less(i, j int) bool { return h[i].Nonce() < h[j].Nonce() }
+func (h TxHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+
+func (h *TxHeap) Push(x interface{}) {
+	// Push and Pop use pointer receivers because they modify the slice's length,
+	// not just its contents.
+	*h = append(*h, x.(*types.Transaction))
+}
+
+func (h *TxHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
+}
+
+//// This example inserts several ints into an IntHeap, checks the minimum,
+//// and removes them in order of priority.
+//func main() {
+//	h := &IntHeap{2, 1, 5}
+//	heap.Init(h)
+//	heap.Push(h, 3)
+//	fmt.Printf("minimum: %d\n", (*h)[0])
+//	for h.Len() > 0 {
+//		fmt.Printf("%d ", heap.Pop(h))
+//	}
+//}
+
+type txQueue struct {
+	txes        TxHeap
+	txesByNonce map[uint64]*types.Transaction
+	maxNonce    uint64
+}
+
+func newTxQueue() *txQueue {
+	return &txQueue{
+		txes:        nil,
+		txesByNonce: make(map[uint64]*types.Transaction),
+		maxNonce:    0,
+	}
+}
+
+func (q *txQueue) addTransaction(tx *types.Transaction) error {
+	if _, ok := q.txesByNonce[tx.Nonce()]; ok {
+		return errors.New("transaction replacement not supported")
+	}
+
+	q.txesByNonce[tx.Nonce()] = tx
+	heap.Push(&q.txes, tx)
+
+	if tx.Nonce() > q.maxNonce {
+		q.maxNonce = tx.Nonce()
+	}
+	return nil
+}
+
+func (q *txQueue) Empty() bool {
+	return len(q.txes) == 0
+}
+
+func (q *txQueue) Peak() *types.Transaction {
+	return q.txes[0]
+}
+
+func (q *txQueue) Pop() *types.Transaction {
+	tx := heap.Pop(&q.txes).(*types.Transaction)
+	delete(q.txesByNonce, tx.Nonce())
+	return tx
+}
+
+type txQueues struct {
+	queues   map[common.Address]*txQueue
+	accounts []common.Address
+	signer   types.Signer
+}
+
+func newTxQueues() *txQueues {
+	return &txQueues{
+		queues:   make(map[common.Address]*txQueue),
+		accounts: nil,
+	}
+}
+
+func (q *txQueues) addTransaction(tx *types.Transaction) error {
+	sender, _ := types.Sender(q.signer, tx)
+	queue, ok := q.queues[sender]
+	if !ok {
+		queue = newTxQueue()
+		q.queues[sender] = queue
+		q.accounts = append(q.accounts, sender)
+	}
+	return queue.addTransaction(tx)
+}
+
+func (q *txQueues) removeTxFromAccountAtIndex(i int) {
+	account := q.accounts[i]
+	txQueue := q.queues[account]
+	txQueue.Pop()
+	if txQueue.Empty() {
+		delete(q.queues, account)
+		q.accounts[i] = q.accounts[len(q.accounts)-1]
+		q.accounts = q.accounts[:len(q.accounts)-1]
+	}
+}
+
+func (q *txQueues) getRandomTx() (*types.Transaction, int) {
+	index := int(rand.Int31n(int32(len(q.accounts))))
+	nextAccount := q.queues[q.accounts[index]]
+	tx := nextAccount.Peak()
+	return tx, index
+}
+
+type pendingBatch struct {
+	snap        *snapshot.Snapshot
+	txCounts    map[common.Address]uint64
+	appliedTxes []*types.Transaction
+	sizeBytes   common.StorageSize
+	maxSize     common.StorageSize
+	full        bool
+}
+
+func newPendingBatch(snap *snapshot.Snapshot, maxSize common.StorageSize) *pendingBatch {
+	return &pendingBatch{
+		snap:        snap,
+		txCounts:    make(map[common.Address]uint64),
+		appliedTxes: nil,
+		sizeBytes:   0,
+		maxSize:     maxSize,
+		full:        false,
+	}
+}
+
+func (p *pendingBatch) getTxCount(account common.Address) uint64 {
+	count, ok := p.txCounts[account]
+	if !ok {
+		txCount, err := p.snap.GetTransactionCount(arbcommon.NewAddressFromEth(account))
+		if err != nil {
+			panic(err)
+		}
+		count = txCount.Uint64()
+		p.txCounts[account] = count
+	}
+	return count
+}
+
+func (p *pendingBatch) addRandomTx(queuedTxes *txQueues) bool {
+	index := int(rand.Int31n(int32(len(queuedTxes.accounts))))
+	first := true
+	lastIndex := index
+	index--
+	for {
+		index++
+		if !first && index == lastIndex {
+			return false
+		}
+		first = false
+		nextAccount := queuedTxes.queues[queuedTxes.accounts[index]]
+		tx := nextAccount.Peak()
+
+		sender, _ := types.Sender(queuedTxes.signer, tx)
+		nextValidNonce := p.getTxCount(sender)
+		if tx.Nonce() > nextValidNonce {
+			continue
+		}
+		if p.sizeBytes+tx.Size() > p.maxSize {
+			p.full = true
+			continue
+		}
+		queuedTxes.removeTxFromAccountAtIndex(index)
+
+		if tx.Nonce() < nextValidNonce {
+			// Just discard this tx since it is old
+			continue
+		}
+
+		msg, err := message.NewL2Message(message.SignedTransaction{Tx: tx})
+		if err != nil {
+			log.Println("invalid tx", err)
+			continue
+		}
+
+		newSnap, _, err := snapshot.NewSnapshotWithMessage(
+			p.snap,
+			msg,
+			arbcommon.NewAddressFromEth(sender),
+		)
+		if err != nil {
+			log.Println("invalid tx", err)
+			continue
+		}
+		p.snap = newSnap
+		p.appliedTxes = append(p.appliedTxes, tx)
+		p.sizeBytes += tx.Size()
+		return true
+	}
+}

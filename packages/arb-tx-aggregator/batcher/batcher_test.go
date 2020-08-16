@@ -19,6 +19,7 @@ package batcher
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/core/types"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -29,8 +30,8 @@ import (
 
 func TestPrepareTransactions(t *testing.T) {
 	type testCase struct {
-		raw    []DecodedBatchTx
-		sorted []message.SignedTransaction
+		orig   []*types.Transaction
+		sorted []*types.Transaction
 		label  string
 	}
 
@@ -46,85 +47,75 @@ func TestPrepareTransactions(t *testing.T) {
 
 	cases := make([]testCase, 0)
 	cases = append(cases, func() testCase {
-		decodedTxes := make([]DecodedBatchTx, 0)
-		sortedTxes := make([]message.SignedTransaction, 0)
+		origTxes := make([]*types.Transaction, 0)
+		sortedTxes := make([]*types.Transaction, 0)
 		for i := 0; i < 10; i++ {
-			batchTx := message.NewRandomSignedTx(chain, keys[0], uint64(i))
-			decoded := DecodedBatchTx{
-				tx:     batchTx,
-				sender: common.NewAddressFromEth(crypto.PubkeyToAddress(keys[0].PublicKey)),
-			}
-			decodedTxes = append(decodedTxes, decoded)
-			sortedTxes = append(sortedTxes, decoded.tx)
+			tx := message.NewRandomSignedEthTx(chain, keys[0], uint64(i))
+			origTxes = append(origTxes, tx)
+			sortedTxes = append(sortedTxes, tx)
 		}
 		return testCase{
-			raw:    decodedTxes,
+			orig:   origTxes,
 			sorted: sortedTxes,
 			label:  "inorder",
 		}
 	}())
 	cases = append(cases, func() testCase {
-		decodedTxes := make([]DecodedBatchTx, 0)
-		sortedTxes := make([]message.SignedTransaction, 0)
+		decodedTxes := make([]*types.Transaction, 0)
+		sortedTxes := make([]*types.Transaction, 0)
 		for i := 0; i < 10; i++ {
-			batchTx := message.NewRandomSignedTx(chain, keys[0], uint64(9-i))
-			decoded := DecodedBatchTx{
-				tx:     batchTx,
-				sender: common.NewAddressFromEth(crypto.PubkeyToAddress(keys[0].PublicKey)),
-			}
-			decodedTxes = append(decodedTxes, decoded)
+			tx := message.NewRandomSignedEthTx(chain, keys[0], uint64(9-i))
+			decodedTxes = append(decodedTxes, tx)
 		}
 		for i := range decodedTxes {
-			sortedTxes = append(sortedTxes, decodedTxes[len(decodedTxes)-1-i].tx)
+			sortedTxes = append(sortedTxes, decodedTxes[len(decodedTxes)-1-i])
 		}
 		return testCase{
-			raw:    decodedTxes,
+			orig:   decodedTxes,
 			sorted: sortedTxes,
 			label:  "reverse",
 		}
 	}())
 
 	cases = append(cases, func() testCase {
-		decodedTxes := make([]DecodedBatchTx, 0)
-		sortedTxes := make([]message.SignedTransaction, 0)
+		origTxes := make([]*types.Transaction, 0)
+		sortedTxes := make([]*types.Transaction, 0)
 		for i := 0; i < 10; i++ {
-			batchTx := message.NewRandomSignedTx(chain, keys[i], uint64(9-i))
-			decoded := DecodedBatchTx{
-				tx:     batchTx,
-				sender: common.NewAddressFromEth(crypto.PubkeyToAddress(keys[i].PublicKey)),
-			}
-			decodedTxes = append(decodedTxes, decoded)
-			sortedTxes = append(sortedTxes, decoded.tx)
+			tx := message.NewRandomSignedEthTx(chain, keys[i], uint64(9-i))
+			origTxes = append(origTxes, tx)
+			sortedTxes = append(sortedTxes, tx)
 		}
 		return testCase{
-			raw:    decodedTxes,
+			orig:   origTxes,
 			sorted: sortedTxes,
 			label:  "reverseDifferentKeys",
 		}
 	}())
 
+	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
+
 	for _, tc := range cases {
 		t.Run(tc.label, func(t *testing.T) {
-			sortedTxesCal, err := prepareTransactions(tc.raw)
-			if err != nil {
-				t.Fatal(err)
-			}
+			sortedTxesCal := prepareTransactions(signer, tc.orig)
 			t.Log("correct:", tc.sorted)
 			t.Log("calculated:", sortedTxesCal)
-			if len(sortedTxesCal.Transactions) != len(tc.sorted) {
+			if len(sortedTxesCal) != len(tc.sorted) {
 				t.Fatal("sorted is wrong length")
 			}
 			for i, tx := range tc.sorted {
-				l2, err := message.NewL2Message(tx)
+				data1, err := tx.MarshalJSON()
 				if err != nil {
 					t.Fatal(err)
 				}
-				if !bytes.Equal(l2.AsData(), sortedTxesCal.Transactions[i]) {
+				data2, err := sortedTxesCal[i].MarshalJSON()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(data1, data2) {
 					t.Error("tx in wrong order")
 					break
 				}
 			}
 		})
 	}
-
 }
