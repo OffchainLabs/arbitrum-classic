@@ -9,17 +9,18 @@ FROM alpine:edge as arb-avm-cpp
 RUN apk update && apk add --no-cache autoconf automake boost-dev cmake file g++ libstdc++=9.3.0-r4 libgcc=9.3.0-r4 \
     git gmp-dev inotify-tools libtool make musl-dev openssl-dev && \
     apk add py-pip --no-cache && \
-    apk add rocksdb-dev --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing && \
-    addgroup -g 1000 -S user && \
-    adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
-USER user
-WORKDIR "/home/user/"
+    apk add rocksdb-dev --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing
+    # addgroup -g 1000 -S user && \
+    # adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
+# USER user
+# WORKDIR "/home/user/"
 # Copy source code
-COPY --chown=user arb-avm-cpp/ ./
+COPY arb-avm-cpp/ ./
 # Copy build cache
-COPY --from=arb-validator --chown=user /cpp-build build/
+COPY --from=arb-validator /cpp-build build/
 # Build arb-avm-cpp
-RUN mkdir -p build && cd build && \
+RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf &&\
+    mkdir -p build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
     cmake --build . -j $(nproc) && \
     cd ../ && \
