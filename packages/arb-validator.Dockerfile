@@ -82,7 +82,7 @@ COPY --chown=user --from=arb-validator-builder /home/user/go/bin /home/user/go/b
 
 # Build cache
 COPY --chown=user --from=arb-validator-builder /home/user/.cache/go-build /build
-COPY --from=arb-avm-cpp /home/user/build /cpp-build
+COPY --chown=user --from=arb-avm-cpp build /cpp-build
 
 ENTRYPOINT ["/home/user/go/bin/arb-validator"]
 EXPOSE 1235 1236
