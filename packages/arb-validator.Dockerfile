@@ -9,7 +9,7 @@ FROM alpine:edge as arb-avm-cpp
 RUN apk update && apk add --no-cache autoconf automake boost-dev cmake file g++ libstdc++=9.3.0-r4 libgcc=9.3.0-r4 \
     git gmp-dev inotify-tools libtool make musl-dev openssl-dev && \
     apk add py-pip --no-cache && \
-    apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
+    apk add rocksdb-dev --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
@@ -30,7 +30,7 @@ FROM alpine:edge as arb-validator-builder
 # Alpine dependencies
 RUN apk add --no-cache build-base git go libstdc++=9.3.0-r4 libgcc=9.3.0-r4 \
     libc-dev linux-headers && \
-    apk add gmp-dev rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
+    apk add gmp-dev rocksdb-dev --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user && \
     mkdir /home/user/arb-validator && \
@@ -70,7 +70,7 @@ RUN go install -v ./cmd/arb-tx-aggregator
 FROM alpine:edge as arb-validator
 # Export binary
 RUN apk add --no-cache libstdc++=9.3.0-r4 libgcc=9.3.0-r4 && \
-    apk add rocksdb --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
+    apk add rocksdb --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
