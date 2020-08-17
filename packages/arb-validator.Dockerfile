@@ -19,7 +19,7 @@ COPY arb-avm-cpp/ ./
 # Copy build cache
 COPY --from=arb-validator /cpp-build build/
 # Build arb-avm-cpp
-RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf &&\
+RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf && \
     mkdir -p build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
     cmake --build . -j $(nproc) && \
@@ -49,9 +49,9 @@ COPY --chown=user arb-evm/go.* /home/user/arb-evm/
 COPY --chown=user arb-tx-aggregator/go.* /home/user/arb-tx-aggregator/
 RUN go mod download
 # Copy source code
-COPY --from=arb-avm-cpp /home/user/go.mod /home/user/go.sum /home/user/arb-avm-cpp/
-COPY --from=arb-avm-cpp /home/user/cavm/*.h /home/user/arb-avm-cpp/cavm/
-COPY --from=arb-avm-cpp /home/user/cmachine /home/user/arb-avm-cpp/cmachine/
+COPY --chown=user --from=arb-avm-cpp /go.mod /go.sum /home/user/arb-avm-cpp/
+COPY --chown=user --from=arb-avm-cpp /cavm/*.h /home/user/arb-avm-cpp/cavm/
+COPY --chown=user --from=arb-avm-cpp /cmachine /home/user/arb-avm-cpp/cmachine/
 
 COPY --chown=user arb-util/ /home/user/arb-util/
 COPY --chown=user arb-avm-cpp/ /home/user/arb-avm-cpp/
