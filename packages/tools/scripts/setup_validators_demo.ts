@@ -161,5 +161,5 @@ if (require.main === module) {
     args => {
       setupValidators(args.validatorcount + 1, args.blocktime, args.force)
     }
-  )
+  ).argv
 }
