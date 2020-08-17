@@ -53,9 +53,9 @@ type Batcher struct {
 	db *txdb.TxDB
 
 	sync.Mutex
-	valid      bool
-	queuedTxes *txQueues
+	valid bool
 
+	queuedTxes      *txQueues
 	pendingSnapshot *snapshot.Snapshot
 	pendingBatch    []*types.Transaction
 }
@@ -223,8 +223,6 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 	txHash := common.NewHashFromEth(tx.Hash())
 	log.Println("Got tx: with hash", txHash, "from", ethSender.Hex())
 
-	sender := common.NewAddressFromEth(ethSender)
-
 	m.Lock()
 	defer m.Unlock()
 
@@ -232,22 +230,8 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 		return common.Hash{}, errors.New("tx aggregator is not running")
 	}
 
-	txCount, err := m.pendingSnapshot.GetTransactionCount(sender)
-	if err != nil {
+	if err := m.validateTxAgainstPending(tx); err != nil {
 		return common.Hash{}, err
-	}
-
-	if tx.Nonce() < txCount.Uint64() {
-		return common.Hash{}, core.ErrNonceTooLow
-	}
-
-	amount, err := m.pendingSnapshot.GetBalance(sender)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	if tx.Cost().Cmp(amount) < 0 {
-		return common.Hash{}, core.ErrInsufficientFunds
 	}
 
 	if err := m.queuedTxes.addTransaction(tx); err != nil {
@@ -255,6 +239,29 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 	}
 
 	return txHash, nil
+}
+
+func (m *Batcher) validateTxAgainstPending(tx *types.Transaction) error {
+	ethSender, _ := types.Sender(m.signer, tx)
+	sender := common.NewAddressFromEth(ethSender)
+	txCount, err := m.pendingSnapshot.GetTransactionCount(sender)
+	if err != nil {
+		return err
+	}
+
+	if tx.Nonce() < txCount.Uint64() {
+		return core.ErrNonceTooLow
+	}
+
+	amount, err := m.pendingSnapshot.GetBalance(sender)
+	if err != nil {
+		return err
+	}
+
+	if tx.Cost().Cmp(amount) < 0 {
+		return core.ErrInsufficientFunds
+	}
+	return nil
 }
 
 func (m *Batcher) addTxToBatch(tx *types.Transaction) error {
