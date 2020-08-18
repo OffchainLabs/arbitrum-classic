@@ -207,7 +207,6 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 	}
 
 	txdb.callMut.Lock()
-	defer txdb.callMut.Unlock()
 	if txdb.callMach == nil || txdb.callMach.Hash() != txdb.mach.Hash() {
 		txdb.callMach = txdb.mach.Clone()
 	}
