@@ -275,8 +275,9 @@ func (txdb *TxDB) LatestBlock() *common.BlockId {
 func (txdb *TxDB) LatestSnapshot() *snapshot.Snapshot {
 	txdb.callMut.Lock()
 	defer txdb.callMut.Unlock()
+
 	currentTime := inbox.ChainTime{
-		BlockNum:  txdb.lastBlockProcessed.Height,
+		BlockNum:  txdb.lastBlockProcessed.Height.Clone(),
 		Timestamp: big.NewInt(time.Now().Unix()),
 	}
 	return snapshot.NewSnapshot(txdb.callMach.Clone(), currentTime, message.ChainAddressToID(txdb.chain), txdb.lastInboxSeq)
