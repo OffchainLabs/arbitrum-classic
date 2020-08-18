@@ -16,37 +16,41 @@
 
 package txdb
 
-import "C"
 import (
 	"context"
 	"errors"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 	"math/big"
 	"sync"
+	"time"
 
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
 type TxDB struct {
+	View
 	mach         machine.Machine
-	as           *cmachine.AggregatorStore
 	checkpointer checkpointing.RollupCheckpointer
 	timeGetter   arbbridge.ChainTimeGetter
+	chain        common.Address
 
-	callMut     sync.Mutex
-	callMach    machine.Machine
-	lastBlockId *common.BlockId
+	callMut            sync.Mutex
+	callMach           machine.Machine
+	lastBlockProcessed *common.BlockId
+	lastInboxSeq       *big.Int
 }
 
 func New(
@@ -54,11 +58,13 @@ func New(
 	clnt arbbridge.ChainTimeGetter,
 	checkpointer checkpointing.RollupCheckpointer,
 	as *cmachine.AggregatorStore,
+	chain common.Address,
 ) (*TxDB, error) {
 	txdb := &TxDB{
-		as:           as,
+		View:         View{as: as},
 		checkpointer: checkpointer,
 		timeGetter:   clnt,
+		chain:        chain,
 	}
 	if checkpointer.HasCheckpointedState() {
 		if err := txdb.RestoreFromCheckpoint(ctx); err == nil {
@@ -73,22 +79,26 @@ func New(
 		return nil, err
 	}
 	txdb.mach = mach
+	txdb.callMach = mach.Clone()
+	txdb.lastInboxSeq = big.NewInt(0)
 	return txdb, nil
 }
 
 func (txdb *TxDB) RestoreFromCheckpoint(ctx context.Context) error {
 	var mach machine.Machine
 	var blockId *common.BlockId
+	var lastInboxSeq *big.Int
 	if err := txdb.checkpointer.RestoreLatestState(ctx, txdb.timeGetter, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext, restoreBlockId *common.BlockId) error {
 		var machineHash common.Hash
 		copy(machineHash[:], chainObserverBytes)
+		lastInboxSeq = new(big.Int).SetBytes(chainObserverBytes[32:])
 		mach = restoreCtx.GetMachine(machineHash)
 		blockId = restoreBlockId
 		return nil
 	}); err != nil {
 		return err
 	}
-	blockInfo, err := txdb.GetBlock(blockId.Height.AsInt().Uint64())
+	blockInfo, err := txdb.as.GetBlock(blockId.Height.AsInt().Uint64())
 	if err != nil {
 		return err
 	}
@@ -111,7 +121,8 @@ func (txdb *TxDB) RestoreFromCheckpoint(ctx context.Context) error {
 	txdb.callMut.Lock()
 	defer txdb.callMut.Unlock()
 	txdb.callMach = mach.Clone()
-	txdb.lastBlockId = blockId
+	txdb.lastBlockProcessed = blockId
+	txdb.lastInboxSeq = lastInboxSeq
 	return nil
 }
 
@@ -176,9 +187,7 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 			if err != nil {
 				return err
 			}
-			log.Println("Saving logs into bloom", ethLogs)
 			logBloom := types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
-			log.Println("Saving bloom", hexutil.Encode(logBloom.Bytes()))
 			if err := txdb.as.SaveBlock(block, logIndex, logBloom); err != nil {
 				return err
 			}
@@ -192,27 +201,32 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 			results = make([]resultInfo, 0)
 			txdb.callMut.Lock()
 			txdb.callMach = txdb.mach.Clone()
-			txdb.lastBlockId = block
+			txdb.lastBlockProcessed = block
 			txdb.callMut.Unlock()
 		}
-	}
-	if lastBlock != nil {
-		saveMach(txdb.mach, lastBlock, txdb.checkpointer)
 	}
 
 	txdb.callMut.Lock()
 	if txdb.callMach == nil || txdb.callMach.Hash() != txdb.mach.Hash() {
 		txdb.callMach = txdb.mach.Clone()
 	}
-	txdb.lastBlockId = finishedBlock
+	if len(messages) > 0 {
+		txdb.lastInboxSeq = messages[len(messages)-1].InboxSeqNum
+	}
+	txdb.lastBlockProcessed = finishedBlock
+	lastInboxSeq := new(big.Int).Set(txdb.lastInboxSeq)
 	txdb.callMut.Unlock()
-	return nil
-}
 
-func (txdb *TxDB) CallInfo() (machine.Machine, *common.BlockId) {
-	txdb.callMut.Lock()
-	defer txdb.callMut.Unlock()
-	return txdb.callMach.Clone(), txdb.lastBlockId
+	if lastBlock != nil {
+		ctx := ckptcontext.NewCheckpointContext()
+		ctx.AddMachine(txdb.mach)
+		machHash := txdb.mach.Hash()
+		cpData := make([]byte, 64)
+		copy(cpData[:], machHash[:])
+		copy(cpData[32:], math.U256Bytes(lastInboxSeq))
+		txdb.checkpointer.AsyncSaveCheckpoint(lastBlock, cpData, ctx)
+	}
+	return nil
 }
 
 func (txdb *TxDB) GetMessage(index uint64) (value.Value, error) {
@@ -243,132 +257,34 @@ func (txdb *TxDB) GetRequest(requestId common.Hash) (value.Value, error) {
 }
 
 func (txdb *TxDB) GetBlock(height uint64) (*machine.BlockInfo, error) {
+	latest := txdb.LatestBlock()
+	if height > latest.Height.AsInt().Uint64() {
+		return nil, nil
+	}
 	return txdb.as.GetBlock(height)
+}
+
+func (txdb *TxDB) LatestBlock() *common.BlockId {
+	block, err := txdb.as.LatestBlock()
+	if err != nil {
+		return txdb.lastBlockProcessed
+	}
+	return block
+}
+
+func (txdb *TxDB) LatestSnapshot() *snapshot.Snapshot {
+	txdb.callMut.Lock()
+	defer txdb.callMut.Unlock()
+
+	currentTime := inbox.ChainTime{
+		BlockNum:  txdb.lastBlockProcessed.Height.Clone(),
+		Timestamp: big.NewInt(time.Now().Unix()),
+	}
+	return snapshot.NewSnapshot(txdb.callMach.Clone(), currentTime, message.ChainAddressToID(txdb.chain), new(big.Int).Set(txdb.lastInboxSeq))
 }
 
 func (txdb *TxDB) LatestBlockId() *common.BlockId {
 	txdb.callMut.Lock()
 	defer txdb.callMut.Unlock()
-	return txdb.lastBlockId
-}
-
-func (txdb *TxDB) FindLogs(
-	ctx context.Context,
-	fromHeight *uint64,
-	toHeight *uint64,
-	address []common.Address,
-	topics [][]common.Hash,
-) ([]evm.FullLog, error) {
-	latestBlock := txdb.LatestBlockId()
-	startHeight := uint64(0)
-	endHeight := latestBlock.Height.AsInt().Uint64()
-	if fromHeight != nil && *fromHeight > 0 {
-		startHeight = *fromHeight
-	}
-	if toHeight != nil {
-		altEndHeight := *toHeight + 1
-		if endHeight > altEndHeight {
-			endHeight = altEndHeight
-		}
-	}
-	logs := make([]evm.FullLog, 0)
-	if startHeight >= endHeight {
-		return logs, nil
-	}
-
-	for i := startHeight; i <= endHeight; i++ {
-		select {
-		case <-ctx.Done():
-			return nil, errors.New("call timed out")
-		default:
-		}
-		blockInfo, err := txdb.GetBlock(i)
-		if err != nil {
-			return nil, err
-		}
-		if blockInfo == nil {
-			// No arbitrum txes in this block
-			continue
-		}
-		if !maybeMatchesLogQuery(blockInfo.Bloom, address, topics) {
-			continue
-		}
-
-		res, err := evm.NewBlockResultFromValue(blockInfo.BlockLog)
-		if err != nil {
-			return nil, err
-		}
-
-		first := res.FirstAVMLog().Uint64()
-		for j := uint64(0); j < res.BlockStats.AVMLogCount.Uint64(); j++ {
-			logVal, err := txdb.as.GetLog(first + j)
-			if err != nil {
-				return nil, err
-			}
-
-			res, err := evm.NewTxResultFromValue(logVal)
-			if err != nil {
-				return nil, err
-			}
-
-			logIndex := uint64(0)
-			for _, evmLog := range res.EVMLogs {
-				if evmLog.MatchesQuery(address, topics) {
-					logs = append(logs, evm.FullLog{
-						Log:     evmLog,
-						TxIndex: j,
-						TxHash:  res.IncomingRequest.MessageID,
-						Index:   logIndex,
-						Block: &common.BlockId{
-							Height:     common.NewTimeBlocks(new(big.Int).SetUint64(i)),
-							HeaderHash: blockInfo.Hash,
-						},
-					})
-				}
-				logIndex++
-			}
-		}
-	}
-	return logs, nil
-}
-
-func maybeMatchesLogQuery(logFilter types.Bloom, addresses []common.Address, topics [][]common.Hash) bool {
-	if len(addresses) > 0 {
-		match := false
-		for _, addr := range addresses {
-			if logFilter.TestBytes(addr[:]) {
-				match = true
-				break
-			}
-		}
-		if !match {
-			return false
-		}
-	}
-
-	for _, topicGroup := range topics {
-		if len(topicGroup) == 0 {
-			continue
-		}
-		match := false
-		for _, topic := range topicGroup {
-			if logFilter.TestBytes(topic[:]) {
-				match = true
-				break
-			}
-		}
-		if !match {
-			return false
-		}
-	}
-	return true
-}
-
-func saveMach(mach machine.Machine, id *common.BlockId, checkpointer checkpointing.RollupCheckpointer) <-chan error {
-	ctx := ckptcontext.NewCheckpointContext()
-	ctx.AddMachine(mach)
-	machHash := mach.Hash()
-	cpData := make([]byte, 32)
-	copy(cpData[:], machHash[:])
-	return checkpointer.AsyncSaveCheckpoint(id, cpData, ctx)
+	return txdb.lastBlockProcessed
 }

@@ -17,8 +17,7 @@
 package arbostest
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
-	"log"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -30,11 +29,31 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
+
+func generateFib(val *big.Int) ([]byte, error) {
+	fib, err := abi.JSON(strings.NewReader(arbostestcontracts.FibonacciABI))
+	if err != nil {
+		return nil, err
+	}
+
+	generateFibABI := fib.Methods["generateFib"]
+	generateFibData, err := generateFibABI.Inputs.Pack(val)
+	if err != nil {
+		return nil, err
+	}
+
+	generateSignature, err := hexutil.Decode("0x2ddec39b")
+	if err != nil {
+		return nil, err
+	}
+	return append(generateSignature, generateFibData...), nil
+}
 
 func TestTransactionCount(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
@@ -49,23 +68,93 @@ func TestTransactionCount(t *testing.T) {
 
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 	chain := common.RandAddress()
+	randDest := common.RandAddress()
+	correctTxCount := 0
 
-	initMsg := message.Init{
-		ChainParams: valprotocol.ChainParams{
-			StakeRequirement:        big.NewInt(0),
-			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
-			MaxExecutionSteps:       0,
-			ArbGasSpeedLimitPerTick: 0,
-		},
-		Owner:       common.Address{},
-		ExtraConfig: []byte{},
+	chainTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
 	}
-	results := runMessage(t, mach, initMsg, chain)
-	log.Println(results)
 
-	txCount := getTransactionCountCall(t, mach, addr)
-	if txCount.Cmp(big.NewInt(0)) != 0 {
-		t.Fatal("wrong tx count", txCount)
+	checkTxCount := func(target int) error {
+		snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(9999999))
+		txCount, err := snap.GetTransactionCount(addr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if txCount.Cmp(big.NewInt(int64(target))) != 0 {
+			return fmt.Errorf("wrong tx count %v", txCount)
+		}
+		t.Log("Current tx count is", txCount)
+		return nil
+	}
+
+	runMessage(t, mach, initMsg(), chain)
+
+	if err := checkTxCount(0); err != nil {
+		t.Fatal(err)
+	}
+
+	depositEth(t, mach, addr, big.NewInt(1000))
+
+	// Deposit doesn't increase tx count
+	if err := checkTxCount(correctTxCount); err != nil {
+		t.Fatal(err)
+	}
+
+	tx1 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(int64(correctTxCount)),
+		DestAddress: randDest,
+		Payment:     big.NewInt(300),
+		Data:        []byte{},
+	}
+
+	_, err = runValidTransaction(t, mach, tx1, addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	correctTxCount++
+
+	// Payment to EOA increases tx count
+	if err := checkTxCount(correctTxCount); err != nil {
+		t.Fatal(err)
+	}
+
+	tx2 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(int64(correctTxCount) + 1),
+		DestAddress: randDest,
+		Payment:     big.NewInt(10),
+		Data:        []byte{},
+	}
+
+	runMessage(t, mach, message.NewSafeL2Message(tx2), addr)
+
+	// Payment to EOA with incorrect sequence number shouldn't increase tx count
+	if err := checkTxCount(correctTxCount); err != nil {
+		t.Fatal(err)
+	}
+
+	tx3 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(int64(correctTxCount)),
+		DestAddress: randDest,
+		Payment:     big.NewInt(30000),
+		Data:        []byte{},
+	}
+
+	_, err = runTransaction(t, mach, tx3, addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Payment to EOA with insufficient funds shouldn't increase tx count
+	if err := checkTxCount(correctTxCount); err != nil {
+		t.Fatal(err)
 	}
 
 	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
@@ -73,31 +162,18 @@ func TestTransactionCount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fibAddress, err := deployContract(t, mach, addr, constructorData, big.NewInt(0))
+	fibAddress, err := deployContract(t, mach, addr, constructorData, big.NewInt(int64(correctTxCount)))
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(fibAddress.Hex())
+	correctTxCount++
 
-	depositEth(t, mach, addr, big.NewInt(1000))
-
-	txCount = getTransactionCountCall(t, mach, addr)
-	if txCount.Cmp(big.NewInt(1)) != 0 {
-		t.Fatal("wrong tx count", txCount)
-	}
-
-	fib, err := abi.JSON(strings.NewReader(arbostestcontracts.FibonacciABI))
-	if err != nil {
+	// Contract deployment increases tx count
+	if err := checkTxCount(correctTxCount); err != nil {
 		t.Fatal(err)
 	}
 
-	generateFibABI := fib.Methods["generateFib"]
-	generateFibData, err := generateFibABI.Inputs.Pack(big.NewInt(20))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	generateSignature, err := hexutil.Decode("0x2ddec39b")
+	fibData, err := generateFib(big.NewInt(20))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,20 +181,60 @@ func TestTransactionCount(t *testing.T) {
 	generateTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(1),
+		SequenceNum: big.NewInt(int64(correctTxCount)),
 		DestAddress: fibAddress,
 		Payment:     big.NewInt(300),
-		Data:        append(generateSignature, generateFibData...),
+		Data:        fibData,
 	}
 
-	_, err = runTransaction(t, mach, generateTx, addr)
+	_, err = runValidTransaction(t, mach, generateTx, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	txCount = getTransactionCountCall(t, mach, addr)
-	if txCount.Cmp(big.NewInt(2)) != 0 {
-		t.Fatal("wrong tx count", txCount)
+	correctTxCount++
+
+	// Tx call increases tx count
+	if err := checkTxCount(correctTxCount); err != nil {
+		t.Fatal(err)
+	}
+
+	generateTx2 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(int64(correctTxCount + 1)),
+		DestAddress: fibAddress,
+		Payment:     big.NewInt(300),
+		Data:        fibData,
+	}
+
+	runMessage(t, mach, message.NewSafeL2Message(generateTx2), addr)
+
+	// Tx call with incorrect sequence number doesn't affect the count
+	if err := checkTxCount(correctTxCount); err != nil {
+		t.Fatal(err)
+	}
+
+	generateTx3 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(int64(correctTxCount)),
+		DestAddress: fibAddress,
+		Payment:     big.NewInt(100000),
+		Data:        fibData,
+	}
+
+	res, err := runTransaction(t, mach, generateTx3, addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.ResultCode != evm.InsufficientTxFundsCode {
+		t.Fatal("incorrect return code", res.ResultCode)
+	}
+
+	// Tx call with insufficient balance doesn't affect the count
+	if err := checkTxCount(correctTxCount); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -136,16 +252,6 @@ func TestWithdrawEth(t *testing.T) {
 	addr := common.RandAddress()
 	chain := common.RandAddress()
 
-	initMsg := message.Init{
-		ChainParams: valprotocol.ChainParams{
-			StakeRequirement:        big.NewInt(0),
-			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
-			MaxExecutionSteps:       0,
-			ArbGasSpeedLimitPerTick: 0,
-		},
-		Owner:       common.Address{},
-		ExtraConfig: []byte{},
-	}
 	depositMsg := message.Eth{
 		Dest:  addr,
 		Value: big.NewInt(10000),
@@ -156,7 +262,7 @@ func TestWithdrawEth(t *testing.T) {
 	tx := withdrawEthTx(t, big.NewInt(0), depositValue, withdrawDest)
 
 	inboxMessages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg, chain, big.NewInt(0), chainTime),
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
 		message.NewInboxMessage(depositMsg, addr, big.NewInt(1), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(tx), addr, big.NewInt(2), chainTime),
 	}

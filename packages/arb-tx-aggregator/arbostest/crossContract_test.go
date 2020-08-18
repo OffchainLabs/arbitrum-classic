@@ -32,7 +32,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 func TestCrossContract(t *testing.T) {
@@ -71,20 +70,8 @@ func TestCrossContract(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	initMsg := message.Init{
-		ChainParams: valprotocol.ChainParams{
-			StakeRequirement:        big.NewInt(0),
-			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
-			MaxExecutionSteps:       0,
-			ArbGasSpeedLimitPerTick: 0,
-		},
-		Owner:       common.Address{},
-		ExtraConfig: []byte{},
-	}
 	inboxMessages := make([]inbox.InboxMessage, 0)
-
-	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg, addr, big.NewInt(0), chainTime))
-
+	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg(), addr, big.NewInt(0), chainTime))
 	inboxMessages = append(inboxMessages, message.NewInboxMessage(
 		message.NewSafeL2Message(makeConstructorTx(distributionsConstructorData, big.NewInt(0))),
 		addr,

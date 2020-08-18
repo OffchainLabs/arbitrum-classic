@@ -51,7 +51,7 @@ func TestBuddyContract(t *testing.T) {
 
 	messages := make([]inbox.InboxMessage, 0)
 
-	messages = append(messages, message.NewInboxMessage(simpleInitMessage(), addr, big.NewInt(0), chainTime))
+	messages = append(messages, message.NewInboxMessage(initMsg(), addr, big.NewInt(0), chainTime))
 
 	l1contract := common.RandAddress()
 

@@ -17,8 +17,6 @@
 package web3
 
 import (
-	"context"
-
 	"github.com/gorilla/rpc/v2"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -26,27 +24,18 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func GenerateWeb3Server(ctx context.Context, server *aggregator.Server) (*rpc.Server, error) {
-	chain, err := server.GetChainAddress(ctx)
-	if err != nil {
-		return nil, err
-	}
-	web3Server, err := NewServer(ctx, server)
-	if err != nil {
-		return nil, err
-	}
+func GenerateWeb3Server(server *aggregator.Server) (*rpc.Server, error) {
 	s := rpc.NewServer()
-
 	// Register our own Codec
 	s.RegisterCodec(NewUpCodec(), "application/json")
 	s.RegisterCodec(NewUpCodec(), "application/json;charset=UTF-8")
 
-	err = s.RegisterService(web3Server, "Eth")
+	err := s.RegisterService(NewServer(server), "Eth")
 	if err != nil {
 		panic(err)
 	}
 
-	net := &Net{chainId: message.ChainAddressToID(common.NewAddressFromEth(chain)).Uint64()}
+	net := &Net{chainId: message.ChainAddressToID(common.NewAddressFromEth(server.GetChainAddress())).Uint64()}
 	err = s.RegisterService(net, "Net")
 	if err != nil {
 		panic(err)
