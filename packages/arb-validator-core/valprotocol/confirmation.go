@@ -21,15 +21,15 @@ import (
 	"math/big"
 )
 
-type ConfirmNodeOpp struct {
+type ConfirmNodeOppCore struct {
 	Branch           ChildType
 	DeadlineTicks    common.TimeTicks
 	PrevVMProtoState *VMProtoData
 	VMProtoState     *VMProtoData
 }
 
-func (c *ConfirmNodeOpp) Clone() *ConfirmNodeOpp {
-	return &ConfirmNodeOpp{
+func (c *ConfirmNodeOppCore) Clone() *ConfirmNodeOppCore {
+	return &ConfirmNodeOppCore{
 		Branch:           c.Branch,
 		DeadlineTicks:    c.DeadlineTicks.Clone(),
 		PrevVMProtoState: c.PrevVMProtoState.Clone(),
@@ -38,7 +38,7 @@ func (c *ConfirmNodeOpp) Clone() *ConfirmNodeOpp {
 }
 
 type ConfirmValidOpportunity struct {
-	*ConfirmNodeOpp
+	*ConfirmNodeOppCore
 	MessagesData []byte
 	MessageCount uint64
 	LogsAcc      common.Hash
@@ -48,15 +48,15 @@ func (opp ConfirmValidOpportunity) Clone() ConfirmNodeOpportunity {
 	messagesData := make([]byte, 0, len(opp.MessagesData))
 	messagesData = append(messagesData, opp.MessagesData...)
 	return ConfirmValidOpportunity{
-		ConfirmNodeOpp: opp.ConfirmNodeOpp.Clone(),
-		MessagesData:   messagesData,
-		MessageCount:   opp.MessageCount,
-		LogsAcc:        opp.LogsAcc,
+		ConfirmNodeOppCore: opp.ConfirmNodeOppCore.Clone(),
+		MessagesData:       messagesData,
+		MessageCount:       opp.MessageCount,
+		LogsAcc:            opp.LogsAcc,
 	}
 }
 
-func (opp ConfirmValidOpportunity) CoreOpp() *ConfirmNodeOpp {
-	return opp.ConfirmNodeOpp
+func (opp ConfirmValidOpportunity) CoreOpp() *ConfirmNodeOppCore {
+	return opp.ConfirmNodeOppCore
 }
 
 func (opp ConfirmValidOpportunity) ProofSize() int {
@@ -64,19 +64,19 @@ func (opp ConfirmValidOpportunity) ProofSize() int {
 }
 
 type ConfirmInvalidOpportunity struct {
-	*ConfirmNodeOpp
+	*ConfirmNodeOppCore
 	ChallengeNodeData common.Hash
 }
 
 func (opp ConfirmInvalidOpportunity) Clone() ConfirmNodeOpportunity {
 	return ConfirmInvalidOpportunity{
-		ConfirmNodeOpp:    opp.ConfirmNodeOpp.Clone(),
-		ChallengeNodeData: opp.ChallengeNodeData,
+		ConfirmNodeOppCore: opp.ConfirmNodeOppCore.Clone(),
+		ChallengeNodeData:  opp.ChallengeNodeData,
 	}
 }
 
-func (opp ConfirmInvalidOpportunity) CoreOpp() *ConfirmNodeOpp {
-	return opp.ConfirmNodeOpp
+func (opp ConfirmInvalidOpportunity) CoreOpp() *ConfirmNodeOppCore {
+	return opp.ConfirmNodeOppCore
 }
 
 func (opp ConfirmInvalidOpportunity) ProofSize() int {
@@ -85,7 +85,7 @@ func (opp ConfirmInvalidOpportunity) ProofSize() int {
 
 type ConfirmNodeOpportunity interface {
 	Clone() ConfirmNodeOpportunity
-	CoreOpp() *ConfirmNodeOpp
+	CoreOpp() *ConfirmNodeOppCore
 	ProofSize() int
 }
 
