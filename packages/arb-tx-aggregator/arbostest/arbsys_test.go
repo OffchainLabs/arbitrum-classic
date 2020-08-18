@@ -157,7 +157,7 @@ func TestWithdrawEth(t *testing.T) {
 	inboxMessages := []inbox.InboxMessage{
 		message.NewInboxMessage(initMsg, chain, big.NewInt(0), chainTime),
 		message.NewInboxMessage(depositMsg, addr, big.NewInt(1), chainTime),
-		message.NewInboxMessage(message.NewL2Message(tx), addr, big.NewInt(2), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx), addr, big.NewInt(2), chainTime),
 	}
 
 	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)

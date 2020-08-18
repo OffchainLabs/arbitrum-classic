@@ -100,14 +100,14 @@ func TestECRecover(t *testing.T) {
 	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg, addr, big.NewInt(0), chainTime))
 
 	inboxMessages = append(inboxMessages, message.NewInboxMessage(
-		message.NewL2Message(makeConstructorTx(constructorData, big.NewInt(0))),
+		message.NewSafeL2Message(makeConstructorTx(constructorData, big.NewInt(0))),
 		addr,
 		big.NewInt(1),
 		chainTime,
 	))
 
 	inboxMessages = append(inboxMessages, message.NewInboxMessage(
-		message.NewL2Message(message.Transaction{
+		message.NewSafeL2Message(message.Transaction{
 			MaxGas:      big.NewInt(1000000000),
 			GasPriceBid: big.NewInt(0),
 			SequenceNum: big.NewInt(1),
@@ -166,8 +166,8 @@ func TestECRecover(t *testing.T) {
 			t.Error("tx failed", res.ResultCode)
 		}
 		log.Println("ReturnData", hexutil.Encode(res.ReturnData))
-		if res.L1Message.Kind == message.L2Type {
-			l2, err := message.L2Message{Data: res.L1Message.Data}.AbstractMessage()
+		if res.IncomingRequest.Kind == message.L2Type {
+			l2, err := message.L2Message{Data: res.IncomingRequest.Data}.AbstractMessage()
 			if err != nil {
 				t.Fatal(err)
 			}

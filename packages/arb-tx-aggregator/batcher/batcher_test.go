@@ -19,7 +19,6 @@ package batcher
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -50,8 +49,7 @@ func TestPrepareTransactions(t *testing.T) {
 		decodedTxes := make([]DecodedBatchTx, 0)
 		sortedTxes := make([]message.SignedTransaction, 0)
 		for i := 0; i < 10; i++ {
-			batchTx := message.NewRandomBatchTx(chain, keys[0])
-			batchTx.Transaction.SequenceNum = big.NewInt(int64(i))
+			batchTx := message.NewRandomBatchTx(chain, keys[0], uint64(i))
 			decoded := DecodedBatchTx{
 				tx:     batchTx,
 				sender: common.NewAddressFromEth(crypto.PubkeyToAddress(keys[0].PublicKey)),
@@ -69,8 +67,7 @@ func TestPrepareTransactions(t *testing.T) {
 		decodedTxes := make([]DecodedBatchTx, 0)
 		sortedTxes := make([]message.SignedTransaction, 0)
 		for i := 0; i < 10; i++ {
-			batchTx := message.NewRandomBatchTx(chain, keys[0])
-			batchTx.Transaction.SequenceNum = big.NewInt(9 - int64(i))
+			batchTx := message.NewRandomBatchTx(chain, keys[0], uint64(9-i))
 			decoded := DecodedBatchTx{
 				tx:     batchTx,
 				sender: common.NewAddressFromEth(crypto.PubkeyToAddress(keys[0].PublicKey)),
@@ -91,8 +88,7 @@ func TestPrepareTransactions(t *testing.T) {
 		decodedTxes := make([]DecodedBatchTx, 0)
 		sortedTxes := make([]message.SignedTransaction, 0)
 		for i := 0; i < 10; i++ {
-			batchTx := message.NewRandomBatchTx(chain, keys[i])
-			batchTx.Transaction.SequenceNum = big.NewInt(9 - int64(i))
+			batchTx := message.NewRandomBatchTx(chain, keys[i], uint64(9-i))
 			decoded := DecodedBatchTx{
 				tx:     batchTx,
 				sender: common.NewAddressFromEth(crypto.PubkeyToAddress(keys[i].PublicKey)),
@@ -109,14 +105,21 @@ func TestPrepareTransactions(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.label, func(t *testing.T) {
-			sortedTxesCal := prepareTransactions(tc.raw)
+			sortedTxesCal, err := prepareTransactions(tc.raw)
+			if err != nil {
+				t.Fatal(err)
+			}
 			t.Log("correct:", tc.sorted)
 			t.Log("calculated:", sortedTxesCal)
 			if len(sortedTxesCal.Transactions) != len(tc.sorted) {
 				t.Fatal("sorted is wrong length")
 			}
 			for i, tx := range tc.sorted {
-				if !bytes.Equal(message.NewL2Message(tx).AsData(), sortedTxesCal.Transactions[i]) {
+				l2, err := message.NewL2Message(tx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(l2.AsData(), sortedTxesCal.Transactions[i]) {
 					t.Error("tx in wrong order")
 					break
 				}
