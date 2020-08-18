@@ -17,7 +17,6 @@
 package snapshot
 
 import (
-	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -130,7 +129,7 @@ func runTx(mach machine.Machine, msg inbox.InboxMessage, chainId *big.Int) (*evm
 
 	targetHash := hashing.SoliditySHA3(hashing.Uint256(chainId), hashing.Uint256(msg.InboxSeqNum))
 	if res.IncomingRequest.MessageID != targetHash {
-		return nil, errors.New("call got unexpected result")
+		return nil, fmt.Errorf("call got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
 	}
 
 	return res, nil
