@@ -19,16 +19,16 @@ package evm
 import (
 	"errors"
 	"fmt"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	errors2 "github.com/pkg/errors"
+	"log"
 	"math/big"
 	"math/rand"
-
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -120,13 +120,27 @@ func (r *TxResult) String() string {
 }
 
 func (r *TxResult) AsValue() value.Value {
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		r.IncomingRequest.AsValue(),
+	resultInfo, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(int64(r.ResultCode)),
 		inbox.BytesToByteStack(r.ReturnData),
 		LogsToLogStack(r.EVMLogs),
-		value.NewIntValue(r.GasUsed),
-		value.NewIntValue(r.GasPrice),
+	})
+
+	chainInfo, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewIntValue(r.CumulativeGas),
+		value.NewIntValue(r.TxIndex),
+		value.NewIntValue(r.StartLogIndex),
+	})
+
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(0),
+		r.IncomingRequest.AsValue(),
+		resultInfo,
+		value.NewTuple2(
+			value.NewIntValue(r.GasUsed),
+			value.NewIntValue(r.GasPrice),
+		),
+		chainInfo,
 	})
 	return tup
 }
@@ -301,6 +315,7 @@ func (b *BlockInfo) FirstAVMSend() *big.Int {
 
 func (b *BlockInfo) AsValue() value.Value {
 	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(1),
 		value.NewIntValue(b.BlockNum),
 		value.NewIntValue(b.Timestamp),
 		value.NewIntValue(b.GasLimit),
@@ -390,12 +405,13 @@ func NewResultFromValue(val value.Value) (Result, error) {
 	kind, _ := tup.GetByInt64(0)
 	kindInt, ok := kind.(value.IntValue)
 	if !ok {
-		return nil, errors.New("kind must be an int")
+		log.Println("RESULT", tup)
+		return nil, errors.New(" result kind must be an int")
 	}
 
 	if kindInt.BigInt().Uint64() == 0 {
 		if tup.Len() != 5 {
-			return nil, fmt.Errorf("tx result expected tuple of length 5, but recieved %v", tup)
+			return nil, fmt.Errorf("tx result expected tuple of length 5, but recieved len %v: %v", tup.Len(), tup)
 		}
 		l1MsgVal, _ := tup.GetByInt64(1)
 		resultInfo, _ := tup.GetByInt64(2)

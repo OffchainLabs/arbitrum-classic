@@ -279,7 +279,7 @@ func (txdb *TxDB) LatestSnapshot() *snapshot.Snapshot {
 		BlockNum:  txdb.lastBlockProcessed.Height,
 		Timestamp: big.NewInt(time.Now().Unix()),
 	}
-	return snapshot.NewSnapshot(txdb.callMach.Clone(), currentTime, txdb.lastInboxSeq, message.ChainAddressToID(txdb.chain))
+	return snapshot.NewSnapshot(txdb.callMach.Clone(), currentTime, message.ChainAddressToID(txdb.chain), txdb.lastInboxSeq)
 }
 
 func (txdb *TxDB) LatestBlockId() *common.BlockId {
