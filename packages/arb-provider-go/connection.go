@@ -17,12 +17,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arboscontracts"
 )
 
 type ArbConnection struct {
@@ -402,5 +402,5 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 	if err != nil {
 		return nil, err
 	}
-	return result.ToEthReceipt(blockInfo.Hash)
+	return result.ToEthReceipt(blockInfo.Hash), nil
 }
