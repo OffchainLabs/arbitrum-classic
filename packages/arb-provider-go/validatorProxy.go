@@ -218,7 +218,7 @@ func hexToValue(rawVal string) (value.Value, error) {
 
 func (vp *ValidatorProxyImpl) Call(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	request := &evm.CallMessageArgs{
-		Data:   hexutil.Encode(msg.AsData()),
+		Data:   hexutil.Encode(msg.AsDataSafe()),
 		Sender: hexutil.Encode(sender[:]),
 	}
 	var response evm.CallMessageReply
@@ -230,7 +230,7 @@ func (vp *ValidatorProxyImpl) Call(ctx context.Context, msg message.ContractTran
 
 func (vp *ValidatorProxyImpl) PendingCall(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error) {
 	request := &evm.CallMessageArgs{
-		Data:   hexutil.Encode(msg.AsData()),
+		Data:   hexutil.Encode(msg.AsDataSafe()),
 		Sender: hexutil.Encode(sender[:]),
 	}
 	var response evm.CallMessageReply

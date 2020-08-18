@@ -269,7 +269,7 @@ func getChallengeInfo(
 		asserter,
 		asserterClient.Address().ToEthAddress(),
 		challengerClient.Address().ToEthAddress(),
-		common.TicksFromBlockNum(common.NewTimeBlocksInt(5)).Val,
+		common.TicksFromBlockNum(common.NewTimeBlocksInt(10)).Val,
 		challengeHash,
 		new(big.Int).SetUint64(uint64(challengeType)),
 	)

@@ -84,10 +84,14 @@ func TestSignedTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	l2, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx})
+	if err != nil {
+		t.Fatal(err)
+	}
 	messages = append(
 		messages,
 		message.NewInboxMessage(
-			message.NewL2Message(message.NewSignedTransactionFromEth(signedTx)),
+			l2,
 			common.RandAddress(),
 			big.NewInt(2),
 			chainTime,
@@ -101,7 +105,7 @@ func TestSignedTx(t *testing.T) {
 	}
 	t.Log(string(testCase))
 	if len(logs) != 1 {
-		t.Fatal("incorrect log output count")
+		t.Fatal("incorrect log output count", len(logs))
 	}
 	result, err := evm.NewTxResultFromValue(logs[0])
 	if err != nil {
@@ -110,24 +114,24 @@ func TestSignedTx(t *testing.T) {
 	if result.ResultCode != evm.ReturnCode {
 		t.Fatal("unexpected result code", result.ResultCode)
 	}
-	if result.L1Message.Sender != addr {
-		t.Error("l2message had incorrect sender", result.L1Message.Sender, addr)
+	if result.IncomingRequest.Sender != addr {
+		t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, addr)
 	}
-	if result.L1Message.Kind != message.L2Type {
+	if result.IncomingRequest.Kind != message.L2Type {
 		t.Error("l2message has incorrect type")
 	}
-	l2Message, err := message.L2Message{Data: result.L1Message.Data}.AbstractMessage()
+	l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if result.L1Message.MessageID().ToEthHash() != signedTx.Hash() {
-		t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.L1Message.MessageID(), signedTx.Hash().Hex())
+	if result.IncomingRequest.MessageID.ToEthHash() != signedTx.Hash() {
+		t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, signedTx.Hash().Hex())
 	}
 
 	_, ok := l2Message.(message.SignedTransaction)
 	if !ok {
-		t.Error("bad transaction format")
+		t.Error("bad transaction format", l2Message)
 	}
 }
 
@@ -187,7 +191,7 @@ func TestUnsignedTx(t *testing.T) {
 	messages = append(
 		messages,
 		message.NewInboxMessage(
-			message.NewL2Message(tx1),
+			message.NewSafeL2Message(tx1),
 			sender,
 			big.NewInt(2),
 			chainTime,
@@ -196,7 +200,7 @@ func TestUnsignedTx(t *testing.T) {
 	messages = append(
 		messages,
 		message.NewInboxMessage(
-			message.NewL2Message(tx2),
+			message.NewSafeL2Message(tx2),
 			sender,
 			big.NewInt(3),
 			chainTime,
@@ -220,13 +224,13 @@ func TestUnsignedTx(t *testing.T) {
 		if result.ResultCode != evm.ReturnCode {
 			t.Fatal("unexpected result code", result.ResultCode)
 		}
-		if result.L1Message.Sender != sender {
-			t.Error("l2message had incorrect sender", result.L1Message.Sender, sender)
+		if result.IncomingRequest.Sender != sender {
+			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, sender)
 		}
-		if result.L1Message.Kind != message.L2Type {
+		if result.IncomingRequest.Kind != message.L2Type {
 			t.Error("l2message has incorrect type")
 		}
-		l2Message, err := message.L2Message{Data: result.L1Message.Data}.AbstractMessage()
+		l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -237,10 +241,9 @@ func TestUnsignedTx(t *testing.T) {
 		} else {
 			correctHash = tx2.MessageID(sender, chain)
 		}
-		if result.L1Message.MessageID() != correctHash {
-			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.L1Message.MessageID(), correctHash)
+		if result.IncomingRequest.MessageID != correctHash {
+			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, correctHash)
 		}
-
 		_, ok := l2Message.(message.Transaction)
 		if !ok {
 			t.Error("bad transaction format")
@@ -326,26 +329,29 @@ func TestBatch(t *testing.T) {
 		}
 		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 		senders = append(senders, addr)
-		txes = append(txes, message.NewSignedTransactionFromEth(signedTx))
+		txes = append(txes, message.SignedTransaction{Tx: signedTx})
 		hashes = append(hashes, common.NewHashFromEth(signedTx.Hash()))
 	}
 
-	msg := message.NewTransactionBatchFromMessages(txes)
-	results = runMessage(t, mach, message.NewL2Message(msg), batchSender)
+	msg, err := message.NewTransactionBatchFromMessages(txes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	results = runMessage(t, mach, message.NewSafeL2Message(msg), batchSender)
 	if len(results) != len(txes) {
 		t.Fatal("incorrect result count", len(results), "instead of", len(txes))
 	}
 	for i, result := range results {
-		if result.L1Message.Sender != senders[i] {
-			t.Error("l2message had incorrect sender", result.L1Message.Sender, senders[i])
+		if result.IncomingRequest.Sender != senders[i] {
+			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, senders[i])
 		}
-		if result.L1Message.Kind != message.L2Type {
+		if result.IncomingRequest.Kind != message.L2Type {
 			t.Error("l2message has incorrect type")
 		}
-		if result.L1Message.MessageID() != hashes[i] {
-			t.Error("l2message had incorrect id", result.L1Message.MessageID(), hashes[i])
+		if result.IncomingRequest.MessageID != hashes[i] {
+			t.Error("l2message had incorrect id", result.IncomingRequest.MessageID, hashes[i])
 		}
-		l2Message, err := message.L2Message{Data: result.L1Message.Data}.AbstractMessage()
+		l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
 		if err != nil {
 			t.Fatal(err)
 		}

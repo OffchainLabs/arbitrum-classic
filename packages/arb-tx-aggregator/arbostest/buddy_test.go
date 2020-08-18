@@ -30,7 +30,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 func TestBuddyContract(t *testing.T) {
@@ -52,17 +51,7 @@ func TestBuddyContract(t *testing.T) {
 
 	messages := make([]inbox.InboxMessage, 0)
 
-	initMsg := message.Init{
-		ChainParams: valprotocol.ChainParams{
-			StakeRequirement:        big.NewInt(0),
-			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
-			MaxExecutionSteps:       0,
-			ArbGasSpeedLimitPerTick: 0,
-		},
-		Owner:       common.Address{},
-		ExtraConfig: []byte{},
-	}
-	messages = append(messages, message.NewInboxMessage(initMsg, addr, big.NewInt(0), chainTime))
+	messages = append(messages, message.NewInboxMessage(simpleInitMessage(), addr, big.NewInt(0), chainTime))
 
 	l1contract := common.RandAddress()
 
@@ -80,7 +69,7 @@ func TestBuddyContract(t *testing.T) {
 	))
 
 	messages = append(messages, message.NewInboxMessage(
-		message.NewL2Message(message.Transaction{
+		message.NewSafeL2Message(message.Transaction{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
 			SequenceNum: big.NewInt(0),
