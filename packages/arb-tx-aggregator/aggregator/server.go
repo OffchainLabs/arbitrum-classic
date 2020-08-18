@@ -18,7 +18,6 @@ package aggregator
 
 import (
 	"bytes"
-	"context"
 	errors2 "github.com/pkg/errors"
 	"net/http"
 	"strconv"
@@ -45,7 +44,7 @@ func NewRPCServer(srv *Server) *RPCServer {
 
 // SendTransaction takes a request signed transaction l2message from a client
 // and puts it in a queue to be included in the next transaction batch
-func (m *RPCServer) SendTransaction(request *http.Request, args *evm.SendTransactionArgs, reply *evm.SendTransactionReply) error {
+func (m *RPCServer) SendTransaction(_ *http.Request, args *evm.SendTransactionArgs, reply *evm.SendTransactionReply) error {
 	encodedTx, err := hexutil.Decode(args.SignedTransaction)
 	if err != nil {
 		return errors2.Wrap(err, "error decoding signed transaction")
@@ -55,7 +54,7 @@ func (m *RPCServer) SendTransaction(request *http.Request, args *evm.SendTransac
 	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
 		return err
 	}
-	hash, err := m.srv.SendTransaction(request.Context(), tx)
+	hash, err := m.srv.SendTransaction(tx)
 	if err != nil {
 		return err
 	}
@@ -114,27 +113,27 @@ func (m *RPCServer) FindLogs(
 }
 
 func (m *RPCServer) GetBlockCount(
-	request *http.Request,
+	_ *http.Request,
 	_ *evm.BlockCountArgs,
 	reply *evm.BlockCountReply,
 ) error {
 	var err error
-	reply.Height, err = m.srv.GetBlockCount(request.Context())
+	reply.Height = m.srv.GetBlockCount()
 	return err
 }
 
 func (m *RPCServer) GetOutputMessage(
-	request *http.Request,
+	_ *http.Request,
 	args *evm.GetOutputMessageArgs,
 	reply *evm.GetOutputMessageReply,
 ) error {
-	return m.srv.GetOutputMessage(request.Context(), args, reply)
+	return m.srv.GetOutputMessage(args, reply)
 }
 
 // GetMessageResult returns the value output by the VM in response to the
 //l2message with the given hash
 func (m *RPCServer) GetRequestResult(
-	request *http.Request,
+	_ *http.Request,
 	args *evm.GetRequestResultArgs,
 	reply *evm.GetRequestResultReply,
 ) error {
@@ -144,7 +143,7 @@ func (m *RPCServer) GetRequestResult(
 	}
 	var requestId common.Hash
 	copy(requestId[:], decoded)
-	val, err := m.srv.GetRequestResult(request.Context(), requestId)
+	val, err := m.srv.GetRequestResult(requestId)
 	if err != nil {
 		// Request was not found so return nil rawVal
 		reply.RawVal = ""
@@ -160,24 +159,21 @@ func (m *RPCServer) GetRequestResult(
 
 // GetVMInfo returns current metadata about this VM
 func (m *RPCServer) GetChainAddress(
-	request *http.Request,
-	args *evm.GetChainAddressArgs,
+	_ *http.Request,
+	_ *evm.GetChainAddressArgs,
 	reply *evm.GetChainAddressReply,
 ) error {
-	chain, err := m.srv.GetChainAddress(request.Context())
-	if err != nil {
-		return err
-	}
+	chain := m.srv.GetChainAddress()
 	reply.ChainAddress = chain.Hex()
 	return nil
 }
 
 func (m *RPCServer) BlockInfo(
-	request *http.Request,
+	_ *http.Request,
 	args *evm.BlockInfoArgs,
 	reply *evm.BlockInfoReply,
 ) error {
-	info, err := m.srv.BlockInfo(request.Context(), args.Height)
+	info, err := m.srv.BlockInfo(args.Height)
 	if err != nil {
 		return err
 	}
@@ -194,28 +190,27 @@ func (m *RPCServer) BlockInfo(
 // Call takes a request from a client to process in a temporary context
 // and return the result
 func (m *RPCServer) Call(
-	request *http.Request,
+	_ *http.Request,
 	args *evm.CallMessageArgs,
 	reply *evm.CallMessageReply,
 ) error {
-	return m.callImpl(request, args, reply, m.srv.Call)
+	return m.callImpl(args, reply, m.srv.Call)
 }
 
 // PendingCall takes a request from a client to process in a temporary context
 // and return the result
 func (m *RPCServer) PendingCall(
-	request *http.Request,
+	_ *http.Request,
 	args *evm.CallMessageArgs,
 	reply *evm.CallMessageReply,
 ) error {
-	return m.callImpl(request, args, reply, m.srv.PendingCall)
+	return m.callImpl(args, reply, m.srv.PendingCall)
 }
 
 func (m *RPCServer) callImpl(
-	request *http.Request,
 	args *evm.CallMessageArgs,
 	reply *evm.CallMessageReply,
-	call func(ctx context.Context, msg message.ContractTransaction, sender ethcommon.Address) (value.Value, error),
+	call func(msg message.ContractTransaction, sender ethcommon.Address) (*evm.TxResult, error),
 ) error {
 	var sender ethcommon.Address
 	if len(args.Sender) > 0 {
@@ -227,12 +222,12 @@ func (m *RPCServer) callImpl(
 	}
 
 	callMsg := message.NewContractTransactionFromData(dataBytes)
-	val, err := call(request.Context(), callMsg, sender)
+	val, err := call(callMsg, sender)
 	if err != nil {
 		return err
 	}
 	var buf bytes.Buffer
-	_ = value.MarshalValue(val, &buf) // error can only occur from writes and bytes.Buffer is safe
+	_ = value.MarshalValue(val.AsValue(), &buf) // error can only occur from writes and bytes.Buffer is safe
 	reply.RawVal = hexutil.Encode(buf.Bytes())
 	return nil
 }

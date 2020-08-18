@@ -100,7 +100,7 @@ func RunObserver(
 		return nil, err
 	}
 
-	db, err := txdb.New(ctx, clnt, cp, cp.GetAggregatorStore())
+	db, err := txdb.New(ctx, clnt, cp, cp.GetAggregatorStore(), rollupAddr)
 	if err != nil {
 		return nil, err
 	}
