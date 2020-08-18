@@ -66,27 +66,25 @@ func TestBuddyContract(t *testing.T) {
 
 	l1contract := common.RandAddress()
 
-	buddyConstructor := message.ContractTransaction{
+	buddyConstructor := message.BuddyDeployment{
 		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
-		DestAddress: common.Address{},
 		Payment:     big.NewInt(0),
 		Data:        arbERC20Data,
 	}
 	messages = append(messages, message.NewInboxMessage(
-		message.BuddyDeployment{Data: message.NewL2Message(buddyConstructor).AsData()},
+		buddyConstructor,
 		l1contract,
 		big.NewInt(1),
 		chainTime,
 	))
 
-	otherAddr := common.HexToAddress("4ee09d87c0112181f1aa950e259a3e2d3bbd7e49")
 	messages = append(messages, message.NewInboxMessage(
 		message.NewL2Message(message.Transaction{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
 			SequenceNum: big.NewInt(0),
-			DestAddress: otherAddr,
+			DestAddress: l1contract,
 			Payment:     big.NewInt(0),
 			Data:        getNameSignature,
 		}),
@@ -123,7 +121,7 @@ func TestBuddyContract(t *testing.T) {
 			t.Fatal(err)
 		}
 		if res.ResultCode != evm.ReturnCode {
-			t.Error("tx failed", res.ResultCode)
+			t.Error("tx", i, "failed", res.ResultCode)
 		}
 
 		if i == 0 {

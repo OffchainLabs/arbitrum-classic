@@ -18,6 +18,7 @@ package message
 
 import (
 	"errors"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 
@@ -70,20 +71,49 @@ func NestedMessage(im inbox.InboxMessage) (Message, error) {
 	case InitType:
 		return NewInitFromData(im.Data), nil
 	case L2BuddyDeploy:
-		return BuddyDeployment{Data: im.Data}, nil
+		return NewBuddyDeploymentFromData(im.Data), nil
 	default:
 		return nil, errors.New("unknown inbox l2message type")
 	}
 }
 
 type BuddyDeployment struct {
-	Data []byte
+	MaxGas      *big.Int
+	GasPriceBid *big.Int
+	Payment     *big.Int
+	Data        []byte
 }
 
 func (b BuddyDeployment) Type() inbox.Type {
 	return L2BuddyDeploy
 }
 
-func (b BuddyDeployment) AsData() []byte {
-	return b.Data
+func NewBuddyDeploymentFromData(data []byte) BuddyDeployment {
+	maxGas, data := extractUInt256(data)
+	gasPriceBid, data := extractUInt256(data)
+	payment, data := extractUInt256(data)
+	return BuddyDeployment{
+		MaxGas:      maxGas,
+		GasPriceBid: gasPriceBid,
+		Payment:     payment,
+		Data:        data,
+	}
+}
+
+func NewRandomBuddyDeployment() BuddyDeployment {
+	return BuddyDeployment{
+		MaxGas:      common.RandBigInt(),
+		GasPriceBid: common.RandBigInt(),
+		Payment:     common.RandBigInt(),
+		Data:        common.RandBytes(200),
+	}
+}
+
+func (t BuddyDeployment) AsData() []byte {
+	ret := make([]byte, 0)
+	ret = append(ret, math.U256Bytes(t.MaxGas)...)
+	ret = append(ret, math.U256Bytes(t.GasPriceBid)...)
+	ret = append(ret, math.U256Bytes(t.Payment)...)
+	ret = append(ret, t.Data...)
+	return ret
 }
