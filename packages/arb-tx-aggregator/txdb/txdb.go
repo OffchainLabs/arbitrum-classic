@@ -214,7 +214,7 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 		txdb.lastInboxSeq = messages[len(messages)-1].InboxSeqNum
 	}
 	txdb.lastBlockProcessed = finishedBlock
-	lastInboxSeq := txdb.lastInboxSeq
+	lastInboxSeq := new(big.Int).Set(txdb.lastInboxSeq)
 	txdb.callMut.Unlock()
 
 	if lastBlock != nil {
@@ -280,7 +280,7 @@ func (txdb *TxDB) LatestSnapshot() *snapshot.Snapshot {
 		BlockNum:  txdb.lastBlockProcessed.Height.Clone(),
 		Timestamp: big.NewInt(time.Now().Unix()),
 	}
-	return snapshot.NewSnapshot(txdb.callMach.Clone(), currentTime, message.ChainAddressToID(txdb.chain), txdb.lastInboxSeq)
+	return snapshot.NewSnapshot(txdb.callMach.Clone(), currentTime, message.ChainAddressToID(txdb.chain), new(big.Int).Set(txdb.lastInboxSeq))
 }
 
 func (txdb *TxDB) LatestBlockId() *common.BlockId {
