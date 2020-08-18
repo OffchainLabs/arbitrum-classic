@@ -51,7 +51,7 @@ func newPruneParams(
 }
 
 func confirmNodeOpp(currentNode *structures.Node) valprotocol.ConfirmNodeOpportunity {
-	coreOpp := &valprotocol.ConfirmNodeOppCore{
+	coreOpp := &valprotocol.ConfirmNodeOpportunityCore{
 		Branch:           currentNode.LinkType(),
 		DeadlineTicks:    currentNode.Deadline(),
 		PrevVMProtoState: currentNode.Prev().VMProtoData(),
@@ -66,16 +66,16 @@ func confirmNodeOpp(currentNode *structures.Node) valprotocol.ConfirmNodeOpportu
 			return nil
 		} else {
 			confOpp = valprotocol.ConfirmValidOpportunity{
-				ConfirmNodeOppCore: coreOpp,
-				MessagesData:       assertion.OutMsgsData,
-				MessageCount:       assertion.OutMsgsCount,
-				LogsAcc:            currentNode.Disputable().Assertion.LastLogHash,
+				ConfirmNodeOpportunityCore: coreOpp,
+				MessagesData:               assertion.OutMsgsData,
+				MessageCount:               assertion.OutMsgsCount,
+				LogsAcc:                    currentNode.Disputable().Assertion.LastLogHash,
 			}
 		}
 	} else {
 		confOpp = valprotocol.ConfirmInvalidOpportunity{
-			ConfirmNodeOppCore: coreOpp,
-			ChallengeNodeData:  currentNode.NodeDataHash(),
+			ConfirmNodeOpportunityCore: coreOpp,
+			ChallengeNodeData:          currentNode.NodeDataHash(),
 		}
 	}
 	return confOpp
