@@ -84,6 +84,7 @@ func TestTransactionCount(t *testing.T) {
 		if txCount.Cmp(big.NewInt(int64(target))) != 0 {
 			return fmt.Errorf("wrong tx count %v", txCount)
 		}
+		t.Log("Current tx count is", txCount)
 		return nil
 	}
 
@@ -113,9 +114,7 @@ func TestTransactionCount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// TODO: This should increase the count
-	//correctTxCount++
+	correctTxCount++
 
 	// Payment to EOA increases tx count
 	if err := checkTxCount(correctTxCount); err != nil {
@@ -202,7 +201,7 @@ func TestTransactionCount(t *testing.T) {
 	generateTx2 := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(3),
+		SequenceNum: big.NewInt(int64(correctTxCount + 1)),
 		DestAddress: fibAddress,
 		Payment:     big.NewInt(300),
 		Data:        fibData,
@@ -231,8 +230,6 @@ func TestTransactionCount(t *testing.T) {
 	if res.ResultCode != evm.InsufficientTxFundsCode {
 		t.Fatal("incorrect return code", res.ResultCode)
 	}
-	// TODO: This shouldn't increase the count
-	correctTxCount++
 
 	// Tx call with insufficient balance doesn't affect the count
 	if err := checkTxCount(correctTxCount); err != nil {
