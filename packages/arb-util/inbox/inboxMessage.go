@@ -70,7 +70,7 @@ func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 
 	kindInt, ok := kind.(value.IntValue)
 	if !ok {
-		return failRet, errors.New("kind must be an int")
+		return failRet, errors.New("inbox message kind must be an int")
 	}
 
 	blockNumberInt, ok := blockNumber.(value.IntValue)

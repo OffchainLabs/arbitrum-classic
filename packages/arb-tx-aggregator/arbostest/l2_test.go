@@ -19,7 +19,7 @@ package arbostest
 import (
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"log"
 	"math/big"
 	"testing"
@@ -34,6 +34,80 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
+
+func TestContractTx(t *testing.T) {
+	chain := common.RandAddress()
+	mach, err := cmachine.New(arbos.Path())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	chainTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
+	}
+	messages := make([]inbox.InboxMessage, 0)
+
+	sender := common.RandAddress()
+	tx := message.ContractTransaction{
+		MaxGas:      big.NewInt(100000000000),
+		GasPriceBid: big.NewInt(0),
+		DestAddress: common.RandAddress(),
+		Payment:     big.NewInt(0),
+		Data:        []byte{},
+	}
+
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			initMsg(),
+			chain,
+			big.NewInt(0),
+			chainTime,
+		),
+	)
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			message.NewSafeL2Message(tx),
+			sender,
+			big.NewInt(1),
+			chainTime,
+		),
+	)
+
+	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
+	logs := assertion.ParseLogs()
+	if len(logs) != 1 {
+		t.Fatal("incorrect log output count", len(logs))
+	}
+	result, err := evm.NewTxResultFromValue(logs[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.ResultCode != evm.ReturnCode {
+		t.Fatal("unexpected result code", result.ResultCode)
+	}
+	if result.IncomingRequest.Sender != sender {
+		t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, sender)
+	}
+	if result.IncomingRequest.Kind != message.L2Type {
+		t.Error("l2message has incorrect type")
+	}
+	l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	targetHash := hashing.SoliditySHA3(hashing.Uint256(message.ChainAddressToID(chain)), hashing.Uint256(big.NewInt(1)))
+	if result.IncomingRequest.MessageID != targetHash {
+		t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, targetHash)
+	}
+	_, ok := l2Message.(message.ContractTransaction)
+	if !ok {
+		t.Error("bad transaction format")
+	}
+}
 
 func TestSignedTx(t *testing.T) {
 	chain := common.RandAddress()
@@ -58,7 +132,7 @@ func TestSignedTx(t *testing.T) {
 	messages = append(
 		messages,
 		message.NewInboxMessage(
-			simpleInitMessage(),
+			initMsg(),
 			chain,
 			big.NewInt(0),
 			chainTime,
@@ -149,7 +223,7 @@ func TestUnsignedTx(t *testing.T) {
 	messages = append(
 		messages,
 		message.NewInboxMessage(
-			simpleInitMessage(),
+			initMsg(),
 			chain,
 			big.NewInt(0),
 			chainTime,
@@ -213,7 +287,7 @@ func TestUnsignedTx(t *testing.T) {
 	}
 	t.Log(string(testCase))
 	if len(logs) != 2 {
-		t.Fatal("incorrect log output count")
+		t.Fatal("incorrect log output count", len(logs))
 	}
 	for i, avmLog := range logs {
 		result, err := evm.NewTxResultFromValue(avmLog)
@@ -257,17 +331,7 @@ func TestBatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	initMsg := message.Init{
-		ChainParams: valprotocol.ChainParams{
-			StakeRequirement:        big.NewInt(0),
-			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
-			MaxExecutionSteps:       0,
-			ArbGasSpeedLimitPerTick: 0,
-		},
-		Owner:       common.Address{},
-		ExtraConfig: []byte{},
-	}
-	results := runMessage(t, mach, initMsg, chain)
+	results := runMessage(t, mach, initMsg(), chain)
 	log.Println(results)
 
 	constructorData, err := hexutil.Decode(FibonacciBin)

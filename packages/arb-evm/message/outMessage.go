@@ -54,7 +54,7 @@ func NewOutMessageFromValue(val value.Value) (OutMessage, error) {
 
 	kindInt, ok := kind.(value.IntValue)
 	if !ok {
-		return failRet, errors.New("kind must be an int")
+		return failRet, errors.New("outgoing message kind must be an int")
 	}
 	senderInt, ok := sender.(value.IntValue)
 	if !ok {
