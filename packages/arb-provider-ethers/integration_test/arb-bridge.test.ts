@@ -5,6 +5,12 @@ import { expect } from 'chai'
 
 const arbChainAddress = process.argv[process.argv.length - 1]
 
+if (!arbChainAddress.startsWith('0x')) {
+  console.warn(
+    `Error: include arb chain address, i.e,: yarn run test_bridge 0xaddress`
+  )
+  process.exit(1)
+}
 const { BigNumber } = utils
 const ethProviderUrl = 'http://0.0.0.0:7545'
 const arbProviderUrl = 'http://0.0.0.0:8547'
@@ -37,9 +43,10 @@ describe('l1 Bridge', () => {
 
     const tx = await l1Bridge.depositETH(walletAddress, testValue)
     await tx.wait()
-
-    const newArbBalance = await arbProvider.getBalance(walletAddress)
-    expect(newArbBalance.sub(testValue).eq(arbBalance)).to.be.true
+    setTimeout(async () => {
+      const newArbBalance = await arbProvider.getBalance(walletAddress)
+      expect(newArbBalance.sub(testValue).eq(arbBalance)).to.be.true
+    }, 3000)
   })
 })
 
