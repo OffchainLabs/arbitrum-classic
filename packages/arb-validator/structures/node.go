@@ -296,6 +296,7 @@ func (node *Node) calculateNodeDataHash(params valprotocol.ChainParams) common.H
 	}
 	if node.linkType == valprotocol.ValidChildType {
 		return hashing.SoliditySHA3(
+			hashing.Uint256(big.NewInt(0)),
 			hashing.Bytes32(node.disputable.Assertion.LastMessageHash),
 			hashing.Bytes32(node.disputable.Assertion.LastLogHash),
 		)

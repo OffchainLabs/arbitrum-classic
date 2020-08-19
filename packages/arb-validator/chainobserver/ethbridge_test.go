@@ -264,117 +264,169 @@ func TestConfirmAssertion(t *testing.T) {
 	}
 	confTime := new(big.Int).Add(currentTime.Height.AsInt(), big.NewInt(1))
 
-	t.Run("confirm assertion", func(t *testing.T) {
-		opp, nodes := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(common.NewTimeBlocks(confTime)))
-		if opp == nil {
-			t.Fatal("should have had opp")
+	opp, nodes := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(common.NewTimeBlocks(confTime)))
+	if opp == nil {
+		t.Fatal("should have had opp")
+	}
+	t.Log("Confirming", len(nodes), "nodes")
+	proof := opp.PrepareProof()
+	offset := big.NewInt(0)
+	validCount := int64(0)
+	beforeSendCount := new(big.Int).Set(proof.BeforeSendCount)
+	prevNodeHash := latestConf.Hash().ToEthHash()
+	for i, nodeOpp := range opp.Nodes {
+		nd := nodes[i]
+		nodeOpp, ok := nodeOpp.(valprotocol.ConfirmValidOpportunity)
+		if !ok {
+			continue
 		}
-		proof := opp.PrepareProof()
-		offset := big.NewInt(0)
-		validCount := int64(0)
-		for i, nodeOpp := range opp.Nodes {
-			nd := nodes[i]
-			nodeOpp, ok := nodeOpp.(valprotocol.ConfirmValidOpportunity)
-			if !ok {
-				continue
-			}
-			if nd.Disputable().Assertion.LastLogHash != nodeOpp.LogsAcc {
-				t.Fatal("incorrect logs acc in proof")
-			}
-
-			lastMessageHashOpp := valprotocol.BytesArrayAccumHash(common.Hash{}, nodeOpp.MessagesData, nodeOpp.MessageCount)
-			if nd.Disputable().Assertion.LastMessageHash != lastMessageHashOpp {
-				t.Log("Assertion", nd.Disputable().Assertion)
-				t.Log("nodeOpp.MessagesData", hexutil.Encode(nodeOpp.MessagesData))
-				t.Log("nodeOpp.MessageCount", nodeOpp.MessageCount)
-				t.Fatal("incorrect messages acc in proof", lastMessageHashOpp, nd.Disputable().Assertion.LastMessageHash)
-			}
-			messageAccHash, nextOffset, err := rollupTester.GenerateLastMessageHash(
-				nil,
-				proof.Messages,
-				offset,
-				proof.MessageCounts[validCount],
-			)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if messageAccHash != nd.Disputable().Assertion.LastMessageHash {
-				t.Fatal("generated incorrect messages acc")
-			}
-
-			_, nodeDataHash, vmProtoStateHash, err := rollupTester.ProcessValidNode(
-				nil,
-				proof.InitalProtoStateHash,
-				proof.BranchesNums,
-				proof.DeadlineTicks,
-				proof.ChallengeNodeData,
-				proof.LogsAcc,
-				proof.VMProtoStateHashes,
-				proof.MessageCounts,
-				proof.Messages,
-				big.NewInt(validCount),
-				offset,
-			)
-
-			if vmProtoStateHash != nodeOpp.VMProtoStateHash {
-				t.Error("incorrect state hash")
-			}
-
-			if nodeDataHash != nd.NodeDataHash() {
-				t.Error("incorrect data hash")
-			}
-
-			offset = nextOffset
-			validCount++
+		if nd.PrevHash().ToEthHash() != prevNodeHash {
+			t.Fatal("incorrect prev hash")
+		}
+		if nd.Disputable().Assertion.LastLogHash != nodeOpp.LogsAcc {
+			t.Fatal("incorrect logs acc in proof")
 		}
 
-		t.Log(
-			latestConf.Hash(),
-			proof.InitalProtoStateHash,
-			proof.BranchesNums,
-			proof.DeadlineTicks,
-			proof.ChallengeNodeData,
-			proof.LogsAcc,
-			proof.VMProtoStateHashes,
-			proof.MessageCounts,
-			proof.Messages,
-		)
-
-		ret, err := rollupTester.Confirm(
+		lastMessageHashOpp := valprotocol.BytesArrayAccumHash(common.Hash{}, nodeOpp.MessagesData, nodeOpp.MessageCount)
+		if nd.Disputable().Assertion.LastMessageHash != lastMessageHashOpp {
+			t.Log("Assertion", nd.Disputable().Assertion)
+			t.Log("nodeOpp.MessagesData", hexutil.Encode(nodeOpp.MessagesData))
+			t.Log("nodeOpp.MessageCount", nodeOpp.MessageCount)
+			t.Fatal("incorrect messages acc in proof", lastMessageHashOpp, nd.Disputable().Assertion.LastMessageHash)
+		}
+		messageAccHash, nextOffset, err := rollupTester.GenerateLastMessageHash(
 			nil,
-			latestConf.Hash().ToEthHash(),
-			proof.InitalProtoStateHash,
-			proof.BranchesNums,
-			proof.DeadlineTicks,
-			proof.ChallengeNodeData,
+			proof.Messages,
+			offset,
+			proof.MessageCounts[validCount],
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if messageAccHash != nd.Disputable().Assertion.LastMessageHash {
+			t.Fatal("generated incorrect messages acc")
+		}
+
+		validNodeRet, err := rollupTester.ProcessValidNode(
+			nil,
 			proof.LogsAcc,
 			proof.VMProtoStateHashes,
 			proof.MessageCounts,
 			proof.Messages,
+			big.NewInt(validCount),
+			beforeSendCount,
+			offset,
 		)
+		if err != nil {
+			t.Fatal(err)
+		}
 
+		beforeSendCount = beforeSendCount.Add(beforeSendCount, proof.MessageCounts[validCount])
+
+		if validNodeRet.VmProtoStateHash != nodeOpp.VMProtoState.Hash() {
+			t.Error("incorrect state hash")
+		}
+
+		if validNodeRet.NodeDataHash != nd.NodeDataHash() {
+			t.Error("incorrect data hash")
+		}
+
+		if validNodeRet.AfterSendCount.Cmp(beforeSendCount) != 0 {
+			t.Error("incorrect after send count")
+		}
+
+		if validNodeRet.AfterOffset.Cmp(nextOffset) != 0 {
+			t.Error("incorrect after offset")
+		}
+
+		nodeHash, err := rollupTester.ChildNodeHash(
+			nil,
+			prevNodeHash,
+			proof.DeadlineTicks[i],
+			validNodeRet.NodeDataHash,
+			proof.BranchesNums[i],
+			proof.VMProtoStateHashes[validCount],
+		)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(ret.ValidNodeHashes) != 1 {
-			t.Fatal("wrong valid node count")
+		if nodeHash != nd.Hash().ToEthHash() {
+			t.Fatal("incorrect node hash")
 		}
-		if ret.LastNode != validNode.Hash() {
-			t.Fatalf("incorrect last node hash: was %v but should have been %v", hexutil.Encode(ret.LastNode[:]), validNode.Hash())
-		}
-		if ret.ValidNodeHashes[0] != validNode.Hash() {
-			t.Fatal("wrong node hash")
-		}
-		events, err := rollupContract.Confirm(context.Background(), opp)
-		if err != nil {
+
+		t.Log("Node to confirm:", hexutil.Encode(nodeHash[:]))
+
+		prevNodeHash = nodeHash
+		offset = nextOffset
+		validCount++
+	}
+
+	if prevNodeHash != validNode.Hash().ToEthHash() {
+		t.Fatal("unexpected final prevNodeHash")
+	}
+
+	opp, _ = chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(common.NewTimeBlocks(confTime)))
+	if opp == nil {
+		t.Fatal("should have had opp")
+	}
+	proof = opp.PrepareProof()
+	t.Log(
+		latestConf.Hash(),
+		proof.InitalProtoStateHash,
+		proof.BeforeSendCount,
+		proof.BranchesNums,
+		proof.DeadlineTicks,
+		proof.ChallengeNodeData,
+		proof.LogsAcc,
+		proof.VMProtoStateHashes,
+		proof.MessageCounts,
+		proof.Messages,
+	)
+
+	ret, err := rollupTester.Confirm(
+		nil,
+		latestConf.Hash().ToEthHash(),
+		proof.InitalProtoStateHash,
+		proof.BeforeSendCount,
+		proof.BranchesNums,
+		proof.DeadlineTicks,
+		proof.ChallengeNodeData,
+		proof.LogsAcc,
+		proof.VMProtoStateHashes,
+		proof.MessageCounts,
+		proof.Messages,
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ret.ValidNodeHashes) != 1 {
+		t.Fatal("wrong valid node count")
+	}
+
+	t.Log("last node:", hexutil.Encode(ret.LastNodeHash[:]))
+	for _, nodeHash := range ret.ValidNodeHashes {
+		t.Log("valid node hash:", hexutil.Encode(nodeHash[:]))
+	}
+	if ret.VmProtoStateHash != validNode.VMProtoData().Hash() {
+		t.Fatal("incorrect final vm proto state hash")
+	}
+
+	if ret.LastNodeHash != validNode.Hash() {
+		t.Fatalf("incorrect last node hash: was %v but should have been %v", hexutil.Encode(ret.LastNodeHash[:]), validNode.Hash())
+	}
+	if ret.ValidNodeHashes[0] != validNode.Hash() {
+		t.Fatal("wrong node hash")
+	}
+	events, err = rollupContract.Confirm(context.Background(), opp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ev := range events {
+		if err := chain.HandleNotification(context.Background(), ev); err != nil {
 			t.Fatal(err)
 		}
-		for _, ev := range events {
-			if err := chain.HandleNotification(context.Background(), ev); err != nil {
-				t.Fatal(err)
-			}
-		}
-	})
+	}
 
 	checkBalance(t, globalInbox, rollupAddress, big.NewInt(25))
 	checkBalance(t, globalInbox, dest, big.NewInt(75))

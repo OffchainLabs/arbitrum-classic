@@ -19,6 +19,7 @@ interface ArbRollupInterface extends Interface {
     confirm: TypedFunctionDescription<{
       encode([
         initalProtoStateHash,
+        beforeSendCount,
         branches,
         deadlineTicks,
         challengeNodeData,
@@ -31,6 +32,7 @@ interface ArbRollupInterface extends Interface {
         stakerProofOffsets,
       ]: [
         Arrayish,
+        BigNumberish,
         BigNumberish[],
         BigNumberish[],
         Arrayish[],
@@ -300,6 +302,7 @@ export class ArbRollup extends Contract {
 
     confirm(
       initalProtoStateHash: Arrayish,
+      beforeSendCount: BigNumberish,
       branches: BigNumberish[],
       deadlineTicks: BigNumberish[],
       challengeNodeData: Arrayish[],
@@ -443,6 +446,7 @@ export class ArbRollup extends Contract {
 
   confirm(
     initalProtoStateHash: Arrayish,
+    beforeSendCount: BigNumberish,
     branches: BigNumberish[],
     deadlineTicks: BigNumberish[],
     challengeNodeData: Arrayish[],
@@ -635,6 +639,7 @@ export class ArbRollup extends Contract {
 
     confirm(
       initalProtoStateHash: Arrayish,
+      beforeSendCount: BigNumberish,
       branches: BigNumberish[],
       deadlineTicks: BigNumberish[],
       challengeNodeData: Arrayish[],
