@@ -89,7 +89,7 @@ func NewBatcher(
 // prepareTransactions reorders the transactions such that the position of each
 // user is maintained, but the transactions of that user are swapped to be in
 // sequence number order
-func prepareTransactions(txes []DecodedBatchTx) message.TransactionBatch {
+func prepareTransactions(txes []DecodedBatchTx) (message.TransactionBatch, error) {
 	transactionsBySender := make(map[common.Address][]DecodedBatchTx)
 	for _, tx := range txes {
 		transactionsBySender[tx.sender] = append(transactionsBySender[tx.sender], tx)
@@ -97,7 +97,7 @@ func prepareTransactions(txes []DecodedBatchTx) message.TransactionBatch {
 
 	for _, txes := range transactionsBySender {
 		sort.SliceStable(txes, func(i, j int) bool {
-			return txes[i].tx.Transaction.SequenceNum.Cmp(txes[j].tx.Transaction.SequenceNum) < 0
+			return txes[i].tx.Tx.Nonce() < txes[j].tx.Tx.Nonce()
 		})
 	}
 
@@ -124,12 +124,15 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 
 	log.Println("Submitting batch with", len(txes), "transactions")
 
-	err := m.globalInbox.SendL2MessageNoWait(
+	batchTx, err := prepareTransactions(txes)
+	if err != nil {
+		log.Fatal("failed to produce batch", err)
+	}
+	err = m.globalInbox.SendL2MessageNoWait(
 		ctx,
 		m.rollupAddress,
-		message.NewL2Message(prepareTransactions(txes)).AsData(),
+		message.NewSafeL2Message(batchTx).AsData(),
 	)
-
 	m.Lock()
 	if err != nil {
 		log.Println("transaction aggregator failed: ", err)
@@ -149,7 +152,6 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 		return common.Hash{}, err
 	}
 	sender := common.NewAddressFromEth(ethSender)
-	batchTx := message.NewSignedTransactionFromEth(tx)
 
 	txHash := tx.Hash()
 	log.Println("Got tx: with hash", txHash.Hex(), "from", sender.Hex())
@@ -162,7 +164,7 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 	}
 
 	m.transactions = append(m.transactions, DecodedBatchTx{
-		tx:     batchTx,
+		tx:     message.SignedTransaction{Tx: tx},
 		sender: sender,
 	})
 	return common.NewHashFromEth(txHash), nil

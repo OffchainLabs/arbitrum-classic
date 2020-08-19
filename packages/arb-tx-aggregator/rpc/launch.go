@@ -72,7 +72,7 @@ func LaunchAggregator(
 		return err
 	}
 
-	web3Server, err := web3.GenerateWeb3Server(ctx, srv)
+	web3Server, err := web3.GenerateWeb3Server(srv)
 	if err != nil {
 		return err
 	}

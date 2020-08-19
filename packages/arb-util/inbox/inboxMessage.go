@@ -25,8 +25,6 @@ import (
 	"math/big"
 	"math/rand"
 
-	"github.com/ethereum/go-ethereum/common/math"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -72,7 +70,7 @@ func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 
 	kindInt, ok := kind.(value.IntValue)
 	if !ok {
-		return failRet, errors.New("kind must be an int")
+		return failRet, errors.New("inbox message kind must be an int")
 	}
 
 	blockNumberInt, ok := blockNumber.(value.IntValue)
@@ -163,12 +161,6 @@ func (im InboxMessage) Equals(o InboxMessage) bool {
 		bytes.Equal(im.Data, o.Data) &&
 		im.ChainTime.BlockNum.AsInt().Cmp(o.ChainTime.BlockNum.AsInt()) == 0 &&
 		im.ChainTime.Timestamp.Cmp(o.ChainTime.Timestamp) == 0
-}
-
-func (im InboxMessage) MessageID() common.Hash {
-	var ret common.Hash
-	copy(ret[:], math.U256Bytes(im.InboxSeqNum))
-	return ret
 }
 
 func NewIntFromAddress(address common.Address) value.IntValue {
