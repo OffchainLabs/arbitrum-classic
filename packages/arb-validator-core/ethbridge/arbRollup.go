@@ -244,6 +244,7 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 	tx, err := vm.ArbRollup.Confirm(
 		vm.auth.getAuth(ctx),
 		proof.InitalProtoStateHash,
+		proof.BeforeSendCount,
 		proof.BranchesNums,
 		proof.DeadlineTicks,
 		proof.ChallengeNodeData,
@@ -262,6 +263,7 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 			vm.auth.auth.From,
 			vm.rollupAddress,
 			proof.InitalProtoStateHash,
+			proof.BeforeSendCount,
 			proof.BranchesNums,
 			proof.DeadlineTicks,
 			proof.ChallengeNodeData,

@@ -21,36 +21,42 @@ import (
 	"math/big"
 )
 
-type ConfirmValidOpportunity struct {
+type ConfirmNodeOpportunityCore struct {
+	Branch           ChildType
 	DeadlineTicks    common.TimeTicks
-	MessagesData     []byte
-	MessageCount     uint64
-	LogsAcc          common.Hash
-	VMProtoStateHash common.Hash
+	PrevVMProtoState *VMProtoData
+	VMProtoState     *VMProtoData
+}
+
+func (c *ConfirmNodeOpportunityCore) Clone() *ConfirmNodeOpportunityCore {
+	return &ConfirmNodeOpportunityCore{
+		Branch:           c.Branch,
+		DeadlineTicks:    c.DeadlineTicks.Clone(),
+		PrevVMProtoState: c.PrevVMProtoState.Clone(),
+		VMProtoState:     c.VMProtoState.Clone(),
+	}
+}
+
+type ConfirmValidOpportunity struct {
+	*ConfirmNodeOpportunityCore
+	MessagesData []byte
+	MessageCount uint64
+	LogsAcc      common.Hash
 }
 
 func (opp ConfirmValidOpportunity) Clone() ConfirmNodeOpportunity {
 	messagesData := make([]byte, 0, len(opp.MessagesData))
 	messagesData = append(messagesData, opp.MessagesData...)
 	return ConfirmValidOpportunity{
-		DeadlineTicks:    opp.DeadlineTicks.Clone(),
-		MessagesData:     messagesData,
-		MessageCount:     opp.MessageCount,
-		LogsAcc:          opp.LogsAcc,
-		VMProtoStateHash: opp.VMProtoStateHash,
+		ConfirmNodeOpportunityCore: opp.ConfirmNodeOpportunityCore.Clone(),
+		MessagesData:               messagesData,
+		MessageCount:               opp.MessageCount,
+		LogsAcc:                    opp.LogsAcc,
 	}
 }
 
-func (opp ConfirmValidOpportunity) BranchType() ChildType {
-	return ValidChildType
-}
-
-func (opp ConfirmValidOpportunity) Deadline() common.TimeTicks {
-	return opp.DeadlineTicks
-}
-
-func (opp ConfirmValidOpportunity) StateHash() common.Hash {
-	return opp.VMProtoStateHash
+func (opp ConfirmValidOpportunity) CoreOpp() *ConfirmNodeOpportunityCore {
+	return opp.ConfirmNodeOpportunityCore
 }
 
 func (opp ConfirmValidOpportunity) ProofSize() int {
@@ -58,31 +64,19 @@ func (opp ConfirmValidOpportunity) ProofSize() int {
 }
 
 type ConfirmInvalidOpportunity struct {
-	DeadlineTicks     common.TimeTicks
+	*ConfirmNodeOpportunityCore
 	ChallengeNodeData common.Hash
-	Branch            ChildType
-	VMProtoStateHash  common.Hash
 }
 
 func (opp ConfirmInvalidOpportunity) Clone() ConfirmNodeOpportunity {
 	return ConfirmInvalidOpportunity{
-		opp.DeadlineTicks.Clone(),
-		opp.ChallengeNodeData,
-		opp.Branch,
-		opp.VMProtoStateHash,
+		ConfirmNodeOpportunityCore: opp.ConfirmNodeOpportunityCore.Clone(),
+		ChallengeNodeData:          opp.ChallengeNodeData,
 	}
 }
 
-func (opp ConfirmInvalidOpportunity) BranchType() ChildType {
-	return opp.Branch
-}
-
-func (opp ConfirmInvalidOpportunity) Deadline() common.TimeTicks {
-	return opp.DeadlineTicks
-}
-
-func (opp ConfirmInvalidOpportunity) StateHash() common.Hash {
-	return opp.VMProtoStateHash
+func (opp ConfirmInvalidOpportunity) CoreOpp() *ConfirmNodeOpportunityCore {
+	return opp.ConfirmNodeOpportunityCore
 }
 
 func (opp ConfirmInvalidOpportunity) ProofSize() int {
@@ -91,9 +85,7 @@ func (opp ConfirmInvalidOpportunity) ProofSize() int {
 
 type ConfirmNodeOpportunity interface {
 	Clone() ConfirmNodeOpportunity
-	BranchType() ChildType
-	Deadline() common.TimeTicks
-	StateHash() common.Hash
+	CoreOpp() *ConfirmNodeOpportunityCore
 	ProofSize() int
 }
 
@@ -125,6 +117,7 @@ func (opp *ConfirmOpportunity) Clone() *ConfirmOpportunity {
 
 type ConfirmProof struct {
 	InitalProtoStateHash common.Hash
+	BeforeSendCount      *big.Int
 	BranchesNums         []*big.Int
 	DeadlineTicks        []*big.Int
 	ChallengeNodeData    [][32]byte
@@ -138,7 +131,6 @@ type ConfirmProof struct {
 
 func (opp *ConfirmOpportunity) PrepareProof() ConfirmProof {
 	nodeOpps := opp.Nodes
-	initalProtoStateHash := nodeOpps[0].StateHash()
 	branchesNums := make([]*big.Int, 0, len(nodeOpps))
 	deadlineTicks := make([]*big.Int, 0, len(nodeOpps))
 	challengeNodeData := make([]common.Hash, 0)
@@ -148,13 +140,14 @@ func (opp *ConfirmOpportunity) PrepareProof() ConfirmProof {
 	messageData := make([]byte, 0)
 
 	for _, opp := range nodeOpps {
-		branchesNums = append(branchesNums, new(big.Int).SetUint64(uint64(opp.BranchType())))
-		deadlineTicks = append(deadlineTicks, opp.Deadline().Val)
+		core := opp.CoreOpp()
+		branchesNums = append(branchesNums, new(big.Int).SetUint64(uint64(core.Branch)))
+		deadlineTicks = append(deadlineTicks, core.DeadlineTicks.Val)
 
 		switch opp := opp.(type) {
 		case ConfirmValidOpportunity:
 			logsAcc = append(logsAcc, opp.LogsAcc)
-			vmProtoStateHashes = append(vmProtoStateHashes, opp.VMProtoStateHash)
+			vmProtoStateHashes = append(vmProtoStateHashes, core.VMProtoState.Hash())
 			messageData = append(messageData, opp.MessagesData...)
 			messageCounts = append(messageCounts, new(big.Int).SetUint64(opp.MessageCount))
 		case ConfirmInvalidOpportunity:
@@ -171,7 +164,8 @@ func (opp *ConfirmOpportunity) PrepareProof() ConfirmProof {
 	}
 
 	return ConfirmProof{
-		InitalProtoStateHash: initalProtoStateHash,
+		InitalProtoStateHash: nodeOpps[0].CoreOpp().VMProtoState.Hash(),
+		BeforeSendCount:      nodeOpps[0].CoreOpp().PrevVMProtoState.MessageCount,
 		BranchesNums:         branchesNums,
 		DeadlineTicks:        deadlineTicks,
 		ChallengeNodeData:    common.HashSliceToRaw(challengeNodeData),

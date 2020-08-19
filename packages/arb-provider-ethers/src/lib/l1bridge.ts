@@ -120,7 +120,6 @@ export class L1Bridge {
   public async transferPayment(
     originalOwner: string,
     newOwner: string,
-    nodeHash: string,
     messageIndex: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<TransactionResponse> {
@@ -128,7 +127,6 @@ export class L1Bridge {
     return globalInbox.transferPayment(
       originalOwner,
       newOwner,
-      nodeHash,
       messageIndex,
       overrides
     )
@@ -148,7 +146,8 @@ export class L1Bridge {
     const globalInbox = await this.globalInboxConn()
     return globalInbox.sendL2Message(
       await this.chainAddress,
-      new L2Message(l2tx).asData()
+      new L2Message(l2tx).asData(),
+      overrides
     )
   }
 

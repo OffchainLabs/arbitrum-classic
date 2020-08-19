@@ -24,6 +24,7 @@ contract RollupTester {
     function confirm(
         bytes32 confNode,
         bytes32 initalProtoStateHash,
+        uint256 beforeSendCount,
         uint256[] memory branches,
         uint256[] memory deadlineTicks,
         bytes32[] memory challengeNodeData,
@@ -31,21 +32,35 @@ contract RollupTester {
         bytes32[] memory vmProtoStateHashes,
         uint256[] memory messageCounts,
         bytes memory messages
-    ) public pure returns (bytes32[] memory validNodeHashes, bytes32 lastNode) {
-        return
-            RollupUtils.confirm(
-                RollupUtils.ConfirmData(
-                    initalProtoStateHash,
-                    branches,
-                    deadlineTicks,
-                    challengeNodeData,
-                    logsAcc,
-                    vmProtoStateHashes,
-                    messageCounts,
-                    messages
-                ),
-                confNode
-            );
+    )
+        public
+        pure
+        returns (
+            bytes32[] memory validNodeHashes,
+            bytes32 vmProtoStateHash,
+            bytes32 lastNodeHash
+        )
+    {
+        RollupUtils.NodeData memory finalNodeData;
+        (validNodeHashes, finalNodeData) = RollupUtils.confirm(
+            RollupUtils.ConfirmData(
+                initalProtoStateHash,
+                beforeSendCount,
+                branches,
+                deadlineTicks,
+                challengeNodeData,
+                logsAcc,
+                vmProtoStateHashes,
+                messageCounts,
+                messages
+            ),
+            confNode
+        );
+        return (
+            validNodeHashes,
+            finalNodeData.vmProtoStateHash,
+            finalNodeData.nodeHash
+        );
     }
 
     function generateLastMessageHash(
@@ -58,38 +73,38 @@ contract RollupTester {
     }
 
     function processValidNode(
-        bytes32 initalProtoStateHash,
-        uint256[] memory branches,
-        uint256[] memory deadlineTicks,
-        bytes32[] memory challengeNodeData,
         bytes32[] memory logsAcc,
         bytes32[] memory vmProtoStateHashes,
         uint256[] memory messageCounts,
         bytes memory messages,
         uint256 validNum,
+        uint256 beforeSendCount,
         uint256 startOffset
     )
         public
         pure
         returns (
-            uint256,
-            bytes32,
-            bytes32
+            uint256 afterSendCount,
+            uint256 afterOffset,
+            bytes32 nodeDataHash,
+            bytes32 vmProtoStateHash
         )
     {
         return
             RollupUtils.processValidNode(
                 RollupUtils.ConfirmData(
-                    initalProtoStateHash,
-                    branches,
-                    deadlineTicks,
-                    challengeNodeData,
+                    0,
+                    0,
+                    new uint256[](0),
+                    new uint256[](0),
+                    new bytes32[](0),
                     logsAcc,
                     vmProtoStateHashes,
                     messageCounts,
                     messages
                 ),
                 validNum,
+                beforeSendCount,
                 startOffset
             );
     }

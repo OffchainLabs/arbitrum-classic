@@ -22,7 +22,6 @@ contract PaymentRecords {
     mapping(bytes32 => address) private payments;
 
     event PaymentTransfer(
-        bytes32 nodeHash,
         uint256 messageIndex,
         address originalOwner,
         address prevOwner,
@@ -32,22 +31,16 @@ contract PaymentRecords {
     function transferPayment(
         address originalOwner,
         address newOwner,
-        bytes32 nodeHash,
         uint256 messageIndex
     ) external {
-        address currentOwner = getPaymentOwner(
-            originalOwner,
-            nodeHash,
-            messageIndex
-        );
+        address currentOwner = getPaymentOwner(originalOwner, messageIndex);
         require(msg.sender == currentOwner, "Must be payment owner.");
 
         payments[keccak256(
-            abi.encodePacked(nodeHash, messageIndex, originalOwner)
+            abi.encodePacked(messageIndex, originalOwner)
         )] = newOwner;
 
         emit PaymentTransfer(
-            nodeHash,
             messageIndex,
             originalOwner,
             currentOwner,
@@ -55,13 +48,13 @@ contract PaymentRecords {
         );
     }
 
-    function getPaymentOwner(
-        address originalOwner,
-        bytes32 nodeHash,
-        uint256 messageIndex
-    ) public view returns (address) {
+    function getPaymentOwner(address originalOwner, uint256 messageIndex)
+        public
+        view
+        returns (address)
+    {
         address currentOwner = payments[keccak256(
-            abi.encodePacked(nodeHash, messageIndex, originalOwner)
+            abi.encodePacked(messageIndex, originalOwner)
         )];
 
         if (currentOwner == address(0)) {
@@ -71,13 +64,11 @@ contract PaymentRecords {
         }
     }
 
-    function deletePayment(
-        address originalOwner,
-        bytes32 nodeHash,
-        uint256 messageIndex
-    ) internal {
+    function deletePayment(address originalOwner, uint256 messageIndex)
+        internal
+    {
         delete payments[keccak256(
-            abi.encodePacked(nodeHash, messageIndex, originalOwner)
+            abi.encodePacked(messageIndex, originalOwner)
         )];
     }
 }
