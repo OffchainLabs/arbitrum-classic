@@ -30,6 +30,7 @@ library RollupUtils {
 
     struct ConfirmData {
         bytes32 initalProtoStateHash;
+        uint256 initialSendCount;
         uint256[] branches;
         uint256[] deadlineTicks;
         bytes32[] challengeNodeData;
@@ -44,21 +45,22 @@ library RollupUtils {
         uint256 invalidNum;
         uint256 messagesOffset;
         bytes32 vmProtoStateHash;
+        uint256 beforeSendCount;
         bytes32 nodeHash;
     }
 
-    function getInitialNodeData(bytes32 vmProtoStateHash, bytes32 confNode)
-        private
-        pure
-        returns (NodeData memory)
-    {
-        return NodeData(0, 0, 0, vmProtoStateHash, confNode);
+    function getInitialNodeData(
+        bytes32 vmProtoStateHash,
+        uint256 beforeSendCount,
+        bytes32 confNode
+    ) private pure returns (NodeData memory) {
+        return NodeData(0, 0, 0, vmProtoStateHash, beforeSendCount, confNode);
     }
 
     function confirm(ConfirmData memory data, bytes32 confNode)
         internal
         pure
-        returns (bytes32[] memory validNodeHashes, bytes32)
+        returns (bytes32[] memory validNodeHashes, NodeData memory)
     {
         verifyDataLength(data);
 
@@ -67,12 +69,12 @@ library RollupUtils {
         validNodeHashes = new bytes32[](validNodeCount);
         NodeData memory currentNodeData = getInitialNodeData(
             data.initalProtoStateHash,
+            data.initialSendCount,
             confNode
         );
-        bool isValidChildType;
 
         for (uint256 nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++) {
-            (currentNodeData, isValidChildType) = processNode(
+            bool isValidChildType = processNode(
                 data,
                 currentNodeData,
                 nodeIndex
@@ -83,14 +85,14 @@ library RollupUtils {
                     .nodeHash;
             }
         }
-        return (validNodeHashes, currentNodeData.nodeHash);
+        return (validNodeHashes, currentNodeData);
     }
 
     function processNode(
         ConfirmData memory data,
         NodeData memory nodeData,
         uint256 nodeIndex
-    ) private pure returns (NodeData memory, bool) {
+    ) private pure returns (bool) {
         uint256 branchType = data.branches[nodeIndex];
         bool isValidChildType = (branchType ==
             ChallengeUtils.getValidChildType());
@@ -98,12 +100,14 @@ library RollupUtils {
 
         if (isValidChildType) {
             (
+                nodeData.beforeSendCount,
                 nodeData.messagesOffset,
                 nodeDataHash,
                 nodeData.vmProtoStateHash
             ) = processValidNode(
                 data,
                 nodeData.validNum,
+                nodeData.beforeSendCount,
                 nodeData.messagesOffset
             );
             nodeData.validNum++;
@@ -120,33 +124,42 @@ library RollupUtils {
             nodeData.vmProtoStateHash
         );
 
-        return (nodeData, isValidChildType);
+        return isValidChildType;
     }
 
     function processValidNode(
         ConfirmData memory data,
         uint256 validNum,
+        uint256 beforeSendCount,
         uint256 startOffset
     )
         internal
         pure
         returns (
             uint256,
+            uint256,
             bytes32,
             bytes32
         )
     {
+        uint256 sendCount = data.messageCounts[validNum];
         (bytes32 lastMsgHash, uint256 messagesOffset) = generateLastMessageHash(
             data.messages,
             startOffset,
-            data.messageCounts[validNum]
+            sendCount
         );
         bytes32 nodeDataHash = validDataHash(
+            beforeSendCount,
             lastMsgHash,
             data.logsAcc[validNum]
         );
         bytes32 vmProtoStateHash = data.vmProtoStateHashes[validNum];
-        return (messagesOffset, nodeDataHash, vmProtoStateHash);
+        return (
+            beforeSendCount + sendCount,
+            messagesOffset,
+            nodeDataHash,
+            vmProtoStateHash
+        );
     }
 
     function generateLastMessageHash(
@@ -198,12 +211,13 @@ library RollupUtils {
             );
     }
 
-    function validDataHash(bytes32 messagesAcc, bytes32 logsAcc)
-        internal
-        pure
-        returns (bytes32)
-    {
-        return keccak256(abi.encodePacked(messagesAcc, logsAcc));
+    function validDataHash(
+        uint256 beforeSendCount,
+        bytes32 messagesAcc,
+        bytes32 logsAcc
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(abi.encodePacked(beforeSendCount, messagesAcc, logsAcc));
     }
 
     function challengeDataHash(bytes32 challenge, uint256 challengePeriod)

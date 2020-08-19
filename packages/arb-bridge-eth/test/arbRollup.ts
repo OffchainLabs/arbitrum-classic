@@ -293,8 +293,12 @@ class Assertion {
 
   validDataHash(): string {
     return ethers.utils.solidityKeccak256(
-      ['bytes32', 'bytes32'],
-      [this.assertion.outMessagesAcc(), this.assertion.outLogsAcc()]
+      ['uint256', 'bytes32', 'bytes32'],
+      [
+        this.prevProtoData.messageCount,
+        this.assertion.outMessagesAcc(),
+        this.assertion.outLogsAcc(),
+      ]
     )
   }
 
@@ -647,6 +651,7 @@ describe('ArbRollup', async () => {
     await expect(
       arbRollup.confirm(
         assertionInfo.prevProtoData.hash(),
+        assertionInfo.prevProtoData.messageCount,
         [0],
         [assertionInfo.deadline()],
         [assertionInfo.invalidInboxTopChallengeHash()],
@@ -749,9 +754,10 @@ describe('ArbRollup', async () => {
     await ethers.provider.send('evm_mine', [])
     await ethers.provider.send('evm_mine', [])
 
-    const { validNodeHashes, lastNode } = await rollupTester.confirm(
+    const { validNodeHashes, lastNodeHash } = await rollupTester.confirm(
       await arbRollup.latestConfirmed(),
       assertionInfo.prevProtoData.hash(),
+      assertionInfo.prevProtoData.messageCount,
       [2],
       [assertionInfo.deadline()],
       [],
@@ -765,7 +771,7 @@ describe('ArbRollup', async () => {
     expect(validNodeHashes[0]).to.equal(assertionInfo.validHash())
 
     assert.equal(
-      lastNode,
+      lastNodeHash,
       assertionInfo.validHash(),
       'calculated last node should be the valid node'
     )
@@ -773,6 +779,7 @@ describe('ArbRollup', async () => {
     await expect(
       arbRollup.confirm(
         assertionInfo.prevProtoData.hash(),
+        assertionInfo.prevProtoData.messageCount,
         [2],
         [assertionInfo.deadline()],
         [],

@@ -172,6 +172,7 @@ library NodeGraphUtils {
                 prevLeaf,
                 deadlineTicks,
                 RollupUtils.validDataHash(
+                    data.beforeMessageCount,
                     data.assertion.lastMessageHash,
                     data.assertion.lastLogHash
                 ),

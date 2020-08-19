@@ -46,10 +46,6 @@ const chainAddress = ethers.utils.getAddress(
 let accounts: Signer[]
 let globalInbox: GlobalInbox
 
-const nodeHash =
-  '0x10c9d77c3846591fdfc3f966935819eb7dd71ebb7e71d5d081b880868ca33e4d'
-const nodeHash2 =
-  '0x20c9d77c3846591fdfc3f966935819eb7dd71ebb7e71d5d081b880868ca33e4d'
 const messageIndex = 0
 let originalOwner: string
 let address2: string
@@ -164,56 +160,55 @@ describe('GlobalInbox', async () => {
 
   it('tradeable-exits: initial', async () => {
     await expect(
-      globalInbox.getPaymentOwner(originalOwner, nodeHash, messageIndex),
+      globalInbox.getPaymentOwner(originalOwner, messageIndex),
       'current owner must be original owner'
     ).to.eventually.equal(originalOwner)
 
     await expect(
       globalInbox
         .connect(accounts[0])
-        .transferPayment(originalOwner, address2, nodeHash, messageIndex)
+        .transferPayment(originalOwner, address2, messageIndex)
     ).to.emit(globalInbox, 'PaymentTransfer')
 
     await expect(
-      globalInbox.getPaymentOwner(originalOwner, nodeHash, messageIndex),
+      globalInbox.getPaymentOwner(originalOwner, messageIndex),
       'current owner must be new owner (address2)'
     ).to.eventually.equal(address2)
   })
 
   it('tradeable-exits: subsequent transfers', async () => {
     await expect(
-      globalInbox.getPaymentOwner(originalOwner, nodeHash, messageIndex),
+      globalInbox.getPaymentOwner(originalOwner, messageIndex),
       'current owner must be address2'
     ).to.eventually.equal(address2)
 
     await expect(
       globalInbox
         .connect(accounts[0])
-        .transferPayment(originalOwner, address2, nodeHash, messageIndex)
+        .transferPayment(originalOwner, address2, messageIndex)
     ).to.be.revertedWith('Must be payment owner')
 
     await expect(
       globalInbox
         .connect(accounts[1])
-        .transferPayment(originalOwner, address3, nodeHash, messageIndex)
+        .transferPayment(originalOwner, address3, messageIndex)
     ).to.emit(globalInbox, 'PaymentTransfer')
 
     await expect(
-      globalInbox.getPaymentOwner(originalOwner, nodeHash, messageIndex),
+      globalInbox.getPaymentOwner(originalOwner, messageIndex),
       'current owner must be new owner (address3)'
     ).to.eventually.equal(address3)
 
     await expect(
       globalInbox
         .connect(accounts[1])
-        .transferPayment(originalOwner, address2, nodeHash, messageIndex)
+        .transferPayment(originalOwner, address2, messageIndex)
     ).to.be.revertedWith('Must be payment owner.')
   })
 
   it('tradeable-exits: commiting transfers', async () => {
     const currOwner = await globalInbox.getPaymentOwner(
       originalOwner,
-      nodeHash,
       messageIndex
     )
     await expect(
@@ -232,9 +227,7 @@ describe('GlobalInbox', async () => {
 
     const msgData = await getMessageData(originalOwner, currOwner, 50)
 
-    await globalInbox
-      .connect(accounts[3])
-      .sendMessages(msgData, [1], [nodeHash])
+    await globalInbox.connect(accounts[3]).sendMessages(msgData, 0, 1)
 
     await expect(globalInbox.getEthBalance(address4)).to.eventually.equal(50)
     await expect(globalInbox.getEthBalance(currOwner)).to.eventually.equal(50)
@@ -244,46 +237,12 @@ describe('GlobalInbox', async () => {
 
     const msgData2 = await getMessageData(address4, originalOwner, 50)
 
-    await globalInbox
-      .connect(accounts[3])
-      .sendMessages(msgData2, [1], [nodeHash2])
+    await globalInbox.connect(accounts[3]).sendMessages(msgData2, 1, 2)
 
     await expect(globalInbox.getEthBalance(address4)).to.eventually.equal(0)
     await expect(globalInbox.getEthBalance(currOwner)).to.eventually.equal(50)
     await expect(globalInbox.getEthBalance(originalOwner)).to.eventually.equal(
       50
     )
-  })
-
-  it('tradeable-exits: commiting transfers, different mnsg indexes', async () => {
-    const chainAddress = await accounts[4].getAddress()
-    const destAddress = await accounts[5].getAddress()
-    await expect(
-      globalInbox
-        .connect(accounts[1])
-        .depositEthMessage(chainAddress, destAddress, {
-          value: 100,
-        })
-    ).to.emit(globalInbox, 'MessageDelivered')
-
-    const msgData = await getMessageData(chainAddress, destAddress, 10)
-
-    await globalInbox
-      .connect(accounts[4])
-      .sendMessages(msgData, [0], [nodeHash2])
-
-    await expect(globalInbox.getEthBalance(chainAddress)).to.eventually.equal(
-      100
-    )
-    await expect(globalInbox.getEthBalance(destAddress)).to.eventually.equal(0)
-
-    await globalInbox
-      .connect(accounts[4])
-      .sendMessages(msgData, [1], [nodeHash2])
-
-    await expect(globalInbox.getEthBalance(chainAddress)).to.eventually.equal(
-      90
-    )
-    await expect(globalInbox.getEthBalance(destAddress)).to.eventually.equal(10)
   })
 })
