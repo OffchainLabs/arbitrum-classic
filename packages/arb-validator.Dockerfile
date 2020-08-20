@@ -9,17 +9,19 @@ FROM alpine:edge as arb-avm-cpp
 RUN apk update && apk add --no-cache autoconf automake boost-dev cmake file g++ libstdc++=9.3.0-r4 libgcc=9.3.0-r4 \
     git gmp-dev inotify-tools libtool make musl-dev openssl-dev && \
     apk add py-pip --no-cache && \
-    apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
-    addgroup -g 1000 -S user && \
-    adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
-USER user
+    apk add rocksdb-dev --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing && \
+    mkdir -p /home/user
+    # addgroup -g 1000 -S user && \
+    # adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
+# USER user
 WORKDIR "/home/user/"
 # Copy source code
-COPY --chown=user arb-avm-cpp/ ./
+COPY arb-avm-cpp/ ./
 # Copy build cache
-COPY --from=arb-validator --chown=user /cpp-build build/
+COPY --from=arb-validator /cpp-build build/
 # Build arb-avm-cpp
-RUN mkdir -p build && cd build && \
+RUN echo "nameserver 192.168.1.1" > /etc/resolv.conf && \
+    mkdir -p build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
     cmake --build . -j $(nproc) && \
     cd ../ && \
@@ -30,7 +32,7 @@ FROM alpine:edge as arb-validator-builder
 # Alpine dependencies
 RUN apk add --no-cache build-base git go libstdc++=9.3.0-r4 libgcc=9.3.0-r4 \
     libc-dev linux-headers && \
-    apk add gmp-dev rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
+    apk add gmp-dev rocksdb-dev --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user && \
     mkdir /home/user/arb-validator && \
@@ -42,25 +44,35 @@ COPY --chown=user arb-avm-cpp/go.* /home/user/arb-avm-cpp/
 COPY --chown=user arb-util/go.* /home/user/arb-util/
 COPY --chown=user arb-validator/go.* /home/user/arb-validator/
 COPY --chown=user arb-validator-core/go.* /home/user/arb-validator-core/
+COPY --chown=user arb-provider-go/go.* /home/user/arb-provider-go/
+COPY --chown=user arb-checkpointer/go.* /home/user/arb-checkpointer/
+COPY --chown=user arb-evm/go.* /home/user/arb-evm/
+COPY --chown=user arb-tx-aggregator/go.* /home/user/arb-tx-aggregator/
 RUN go mod download
 # Copy source code
 COPY --from=arb-avm-cpp /home/user/go.mod /home/user/go.sum /home/user/arb-avm-cpp/
 COPY --from=arb-avm-cpp /home/user/cavm/*.h /home/user/arb-avm-cpp/cavm/
 COPY --from=arb-avm-cpp /home/user/cmachine /home/user/arb-avm-cpp/cmachine/
+
 COPY --chown=user arb-util/ /home/user/arb-util/
 COPY --chown=user arb-avm-cpp/ /home/user/arb-avm-cpp/
 COPY --chown=user arb-validator/ /home/user/arb-validator/
 COPY --chown=user arb-validator-core/ /home/user/arb-validator-core/
+COPY --chown=user arb-provider-go/ /home/user/arb-provider-go/
+COPY --chown=user arb-checkpointer/ /home/user/arb-checkpointer/
+COPY --chown=user arb-evm/ /home/user/arb-evm/
+COPY --chown=user arb-tx-aggregator/ /home/user/arb-tx-aggregator/
 # Copy build cache
 COPY --from=arb-validator --chown=user /build /home/user/.cache/go-build
 # Build arb-validator
 RUN go install -v ./cmd/arb-validator
-
+WORKDIR "/home/user/arb-tx-aggregator"
+RUN go install -v ./cmd/arb-tx-aggregator
 
 FROM alpine:edge as arb-validator
 # Export binary
 RUN apk add --no-cache libstdc++=9.3.0-r4 libgcc=9.3.0-r4 && \
-    apk add rocksdb --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
+    apk add rocksdb --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
