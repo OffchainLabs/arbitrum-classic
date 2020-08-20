@@ -343,6 +343,7 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
      */
     function confirm(
         bytes32 initalProtoStateHash,
+        uint256 beforeSendCount,
         uint256[] memory branches,
         uint256[] memory deadlineTicks,
         bytes32[] memory challengeNodeData,
@@ -358,6 +359,7 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
             _confirm(
                 RollupUtils.ConfirmData(
                     initalProtoStateHash,
+                    beforeSendCount,
                     branches,
                     deadlineTicks,
                     challengeNodeData,
@@ -386,15 +388,17 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
             CONF_TIME
         );
 
-        (bytes32[] memory validNodeHashes, bytes32 confNode) = RollupUtils
-            .confirm(data, latestConfirmed());
+        (
+            bytes32[] memory validNodeHashes,
+            RollupUtils.NodeData memory finalNodeData
+        ) = RollupUtils.confirm(data, latestConfirmed());
 
         uint256 validNodeCount = validNodeHashes.length;
         for (uint256 i = 0; i < validNodeCount; i++) {
             emit ConfirmedValidAssertion(validNodeHashes[i]);
         }
         uint256 activeCount = checkAlignedStakers(
-            confNode,
+            finalNodeData.nodeHash,
             data.deadlineTicks[totalNodeCount - 1],
             stakerAddresses,
             stakerProofs,
@@ -402,13 +406,13 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
         );
         require(activeCount > 0, CONF_HAS_STAKER);
 
-        confirmNode(confNode);
+        confirmNode(finalNodeData.nodeHash);
 
         // Send all messages is a single batch
         globalInbox.sendMessages(
             data.messages,
-            data.messageCounts,
-            validNodeHashes
+            data.initialSendCount,
+            finalNodeData.beforeSendCount
         );
 
         if (validNodeCount > 0) {

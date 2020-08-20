@@ -38,8 +38,8 @@ interface IGlobalInbox {
 
     function sendMessages(
         bytes calldata _messages,
-        uint256[] calldata messageCounts,
-        bytes32[] calldata nodeHashes
+        uint256 initialMaxSendCount,
+        uint256 finalMaxSendCount
     ) external;
 
     function sendInitializationMessage(bytes calldata messageData) external;

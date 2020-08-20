@@ -58,30 +58,27 @@ contract GlobalInbox is
      * @notice Process a set of marshalled messages confirmed by a rollup chain
      * @dev messageCounts and nodeHashes are used to uniquely identify messages in conjunction with PaymentRecords
      * @param messages Contiguously marshaled messages from a set of assertions
-     * @param messageCounts Number of messages in each assertion confirmed
-     * @param nodeHashes Hash of each node that has been confirmed
+     * @param initialMaxSendCount Previous total message count sent by this sender
+     * @param finalMaxSendCount Total message count sent by this sender after these messages
      */
     function sendMessages(
         bytes calldata messages,
-        uint256[] calldata messageCounts,
-        bytes32[] calldata nodeHashes
+        uint256 initialMaxSendCount,
+        uint256 finalMaxSendCount
     ) external {
         bool valid;
         uint256 offset = 0;
         Messages.OutgoingMessage memory message;
 
-        uint256 nodeCount = nodeHashes.length;
-        for (uint256 i = 0; i < nodeCount; i++) {
-            for (uint256 j = 0; j < messageCounts[i]; j++) {
-                (valid, offset, message) = Messages.unmarshalOutgoingMessage(
-                    messages,
-                    offset
-                );
-                if (!valid) {
-                    return;
-                }
-                sendDeserializedMsg(nodeHashes[i], j, message);
+        for (uint256 i = initialMaxSendCount; i < finalMaxSendCount; i++) {
+            (valid, offset, message) = Messages.unmarshalOutgoingMessage(
+                messages,
+                offset
+            );
+            if (!valid) {
+                return;
             }
+            sendDeserializedMsg(i, message);
         }
     }
 
@@ -247,7 +244,6 @@ contract GlobalInbox is
     }
 
     function sendDeserializedMsg(
-        bytes32 nodeHash,
         uint256 messageIndex,
         Messages.OutgoingMessage memory message
     ) private {
@@ -255,13 +251,9 @@ contract GlobalInbox is
             (bool valid, Messages.EthMessage memory eth) = Messages
                 .parseEthMessage(message.data);
             if (valid) {
-                address paymentOwner = getPaymentOwner(
-                    eth.dest,
-                    nodeHash,
-                    messageIndex
-                );
+                address paymentOwner = getPaymentOwner(eth.dest, messageIndex);
                 transferEth(msg.sender, paymentOwner, eth.value);
-                deletePayment(eth.dest, nodeHash, messageIndex);
+                deletePayment(eth.dest, messageIndex);
             }
         } else if (message.kind == ERC20_TRANSFER) {
             (bool valid, Messages.ERC20Message memory erc20) = Messages
@@ -269,7 +261,6 @@ contract GlobalInbox is
             if (valid) {
                 address paymentOwner = getPaymentOwner(
                     erc20.dest,
-                    nodeHash,
                     messageIndex
                 );
                 transferERC20(
@@ -278,7 +269,7 @@ contract GlobalInbox is
                     erc20.token,
                     erc20.value
                 );
-                deletePayment(erc20.dest, nodeHash, messageIndex);
+                deletePayment(erc20.dest, messageIndex);
             }
         } else if (message.kind == ERC721_TRANSFER) {
             (bool valid, Messages.ERC721Message memory erc721) = Messages
@@ -286,11 +277,10 @@ contract GlobalInbox is
             if (valid) {
                 address paymentOwner = getPaymentOwner(
                     erc721.dest,
-                    nodeHash,
                     messageIndex
                 );
                 transferNFT(msg.sender, paymentOwner, erc721.token, erc721.id);
-                deletePayment(erc721.dest, nodeHash, messageIndex);
+                deletePayment(erc721.dest, messageIndex);
             }
         }
     }

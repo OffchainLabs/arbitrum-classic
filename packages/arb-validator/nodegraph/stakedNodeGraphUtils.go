@@ -51,6 +51,12 @@ func newPruneParams(
 }
 
 func confirmNodeOpp(currentNode *structures.Node) valprotocol.ConfirmNodeOpportunity {
+	coreOpp := &valprotocol.ConfirmNodeOpportunityCore{
+		Branch:           currentNode.LinkType(),
+		DeadlineTicks:    currentNode.Deadline(),
+		PrevVMProtoState: currentNode.Prev().VMProtoData(),
+		VMProtoState:     currentNode.VMProtoData(),
+	}
 	var confOpp valprotocol.ConfirmNodeOpportunity
 	if currentNode.LinkType() == valprotocol.ValidChildType {
 		// We need to know the contents of the actual assertion to confirm it
@@ -60,19 +66,16 @@ func confirmNodeOpp(currentNode *structures.Node) valprotocol.ConfirmNodeOpportu
 			return nil
 		} else {
 			confOpp = valprotocol.ConfirmValidOpportunity{
-				DeadlineTicks:    currentNode.Deadline(),
-				MessagesData:     assertion.OutMsgsData,
-				MessageCount:     assertion.OutMsgsCount,
-				LogsAcc:          currentNode.Disputable().Assertion.LastLogHash,
-				VMProtoStateHash: currentNode.VMProtoData().Hash(),
+				ConfirmNodeOpportunityCore: coreOpp,
+				MessagesData:               assertion.OutMsgsData,
+				MessageCount:               assertion.OutMsgsCount,
+				LogsAcc:                    currentNode.Disputable().Assertion.LastLogHash,
 			}
 		}
 	} else {
 		confOpp = valprotocol.ConfirmInvalidOpportunity{
-			DeadlineTicks:     currentNode.Deadline(),
-			ChallengeNodeData: currentNode.NodeDataHash(),
-			Branch:            currentNode.LinkType(),
-			VMProtoStateHash:  currentNode.VMProtoData().Hash(),
+			ConfirmNodeOpportunityCore: coreOpp,
+			ChallengeNodeData:          currentNode.NodeDataHash(),
 		}
 	}
 	return confOpp

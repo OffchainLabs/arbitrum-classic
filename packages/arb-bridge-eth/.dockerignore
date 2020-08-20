@@ -1,7 +1,6 @@
 demos/
 workspace/
 arb-provider-ethers
-arb-provider-go
 arb-validator.Dockerfile
 **/arb-avm-cpp/rocksdb
 **/arb-avm-cpp/rocksdb-prefix
