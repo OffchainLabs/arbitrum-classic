@@ -17,9 +17,6 @@
 package arbostest
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 	"math/big"
 	"strings"
@@ -30,12 +27,20 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 func TestFib(t *testing.T) {
+	chainTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
+	}
+
 	mach, err := cmachine.New(arbos.Path())
 	if err != nil {
 		t.Fatal(err)
@@ -66,6 +71,13 @@ func TestFib(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	snap := snapshot.NewSnapshot(mach.Clone(), chainTime, message.ChainAddressToID(chain), big.NewInt(1))
+	code, err := snap.GetCode(fibAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("code", len(code))
 
 	depositEth(t, mach, addr, big.NewInt(1000))
 
