@@ -19,15 +19,11 @@ package arbostest
 import (
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"math/big"
-	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
@@ -112,29 +108,13 @@ func runTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Me
 }
 
 func withdrawEthTx(t *testing.T, sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
-	arbsys, err := abi.JSON(strings.NewReader(arboscontracts.ArbSysABI))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	txabi := arbsys.Methods["withdrawEth"]
-	txData, err := txabi.Inputs.Pack(dest)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	funcSig, err := hexutil.Decode("0x25e16063")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	return message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: sequenceNum,
 		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 		Payment:     amount,
-		Data:        append(funcSig, txData...),
+		Data:        snapshot.GetWithdrawEthData(dest),
 	}
 }
 
