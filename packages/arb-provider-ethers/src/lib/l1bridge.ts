@@ -34,7 +34,7 @@ export class L1Bridge {
     public chainAddress: string | Promise<string>
   ) {}
 
-  private async globalInboxConn(): Promise<GlobalInbox> {
+  public async globalInboxConn(): Promise<GlobalInbox> {
     if (!this.globalInboxCache) {
       const arbRollup = ArbRollupFactory.connect(
         await this.chainAddress,
