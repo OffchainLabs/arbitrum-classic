@@ -18,6 +18,7 @@ package arbostest
 
 import (
 	"crypto/ecdsa"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"log"
@@ -157,19 +158,40 @@ func TestSignedTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	l2, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx})
+	l2msg, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx})
 	if err != nil {
 		t.Fatal(err)
 	}
 	messages = append(
 		messages,
 		message.NewInboxMessage(
-			l2,
+			l2msg,
 			common.RandAddress(),
 			big.NewInt(2),
 			chainTime,
 		),
 	)
+
+	tx2 := types.NewContractCreation(1, big.NewInt(0), 100000000000, big.NewInt(0), hexutil.MustDecode(FibonacciBin))
+	signedTx2, err := types.SignTx(tx2, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	l2msg2, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			l2msg2,
+			common.RandAddress(),
+			big.NewInt(2),
+			chainTime,
+		),
+	)
+
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
 	logs := assertion.ParseLogs()
 	testCase, err := inbox.TestVectorJSON(messages, logs, assertion.ParseOutMessages())
@@ -177,35 +199,45 @@ func TestSignedTx(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log(string(testCase))
-	if len(logs) != 1 {
+	if len(logs) != 2 {
 		t.Fatal("incorrect log output count", len(logs))
 	}
-	result, err := evm.NewTxResultFromValue(logs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected result code", result.ResultCode)
-	}
-	if result.IncomingRequest.Sender != addr {
-		t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, addr)
-	}
-	if result.IncomingRequest.Kind != message.L2Type {
-		t.Error("l2message has incorrect type")
-	}
-	l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
-	if err != nil {
-		t.Fatal(err)
+	for i, avmLog := range logs {
+		result, err := evm.NewTxResultFromValue(avmLog)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.ResultCode != evm.ReturnCode {
+			t.Fatal("unexpected result code", result.ResultCode)
+		}
+		if result.IncomingRequest.Sender != addr {
+			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, addr)
+		}
+		if result.IncomingRequest.Kind != message.L2Type {
+			t.Error("l2message has incorrect type")
+		}
+		l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var correctHash ethcommon.Hash
+		if i == 0 {
+			correctHash = signedTx.Hash()
+		} else {
+			correctHash = signedTx2.Hash()
+		}
+
+		if result.IncomingRequest.MessageID.ToEthHash() != correctHash {
+			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, correctHash.Hex())
+		}
+
+		_, ok := l2Message.(message.SignedTransaction)
+		if !ok {
+			t.Error("bad transaction format", l2Message)
+		}
 	}
 
-	if result.IncomingRequest.MessageID.ToEthHash() != signedTx.Hash() {
-		t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, signedTx.Hash().Hex())
-	}
-
-	_, ok := l2Message.(message.SignedTransaction)
-	if !ok {
-		t.Error("bad transaction format", l2Message)
-	}
 }
 
 func TestUnsignedTx(t *testing.T) {
