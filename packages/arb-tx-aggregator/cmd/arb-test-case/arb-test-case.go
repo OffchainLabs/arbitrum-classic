@@ -18,9 +18,6 @@ package main
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"log"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -85,33 +82,8 @@ func generateTestCase(ethURL string, rollupAddress common.Address, contract stri
 	}
 
 	messages := make([]inbox.InboxMessage, 0, len(events))
-	for i, ev := range events {
-		msg, err := message.NestedMessage(ev.Message)
-		if err != nil {
-			return err
-		}
-		log.Println("Message", msg, "from", ev.Message.Sender.Hex())
+	for _, ev := range events {
 		messages = append(messages, ev.Message)
-		if i == len(events)-1 {
-			l2 := msg.(message.L2Message)
-			ab, err := l2.AbstractMessage()
-			if err != nil {
-				return err
-			}
-			tx := ab.(message.TransactionBatch).Transactions[0]
-			inner, err := message.L2Message{Data: tx}.AbstractMessage()
-			if err != nil {
-				return err
-			}
-			signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
-			ethTx := inner.(message.SignedTransaction).Tx
-			sender, err := types.Sender(signer, ethTx)
-			if err != nil {
-				return err
-			}
-			log.Println("ethTx", ethTx)
-			log.Println("sender", sender.Hex())
-		}
 	}
 
 	mach, err := cmachine.New(contract)
@@ -125,20 +97,10 @@ func generateTestCase(ethURL string, rollupAddress common.Address, contract stri
 		0,
 	)
 
-	for _, lg := range assertion.ParseLogs() {
-		res, err := evm.NewTxResultFromValue(lg)
-		if err != nil {
-			return err
-		}
-		log.Println("result", res)
-		log.Println("sender", res.IncomingRequest.Sender.Hex())
-
+	data, err := inbox.TestVectorJSON(messages, assertion.ParseLogs(), assertion.ParseOutMessages())
+	if err != nil {
+		return err
 	}
-
-	//data, err := inbox.TestVectorJSON(messages, assertion.ParseLogs(), assertion.ParseOutMessages())
-	//if err != nil {
-	//	return err
-	//}
-	//log.Println(string(data))
+	log.Println(string(data))
 	return nil
 }
