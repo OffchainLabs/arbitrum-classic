@@ -364,8 +364,7 @@ func TestBatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	results := runMessage(t, mach, initMsg(), chain)
-	log.Println(results)
+	runMessage(t, mach, initMsg(), chain)
 
 	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
 	if err != nil {
@@ -385,18 +384,7 @@ func TestBatch(t *testing.T) {
 			t.Fatal(err)
 		}
 		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
-		depositResults := runMessage(
-			t,
-			mach,
-			message.Eth{
-				Dest:  addr,
-				Value: big.NewInt(1000),
-			},
-			addr,
-		)
-		if len(depositResults) != 0 {
-			t.Fatal("deposit should not have had a result")
-		}
+		depositEth(t, mach, addr, big.NewInt(1000))
 		pks = append(pks, pk)
 	}
 	batchSender := common.NewAddressFromEth(crypto.PubkeyToAddress(pks[0].PublicKey))
@@ -433,9 +421,12 @@ func TestBatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	results = runMessage(t, mach, message.NewSafeL2Message(msg), batchSender)
+	results, sends := runMessage(t, mach, message.NewSafeL2Message(msg), batchSender)
 	if len(results) != len(txes) {
 		t.Fatal("incorrect result count", len(results), "instead of", len(txes))
+	}
+	if len(sends) != 0 {
+		t.Fatal("incorrect send count", len(sends), "instead of 0")
 	}
 	for i, result := range results {
 		if result.IncomingRequest.Sender != senders[i] {

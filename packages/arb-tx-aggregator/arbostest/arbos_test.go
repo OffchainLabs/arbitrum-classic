@@ -17,7 +17,6 @@
 package arbostest
 
 import (
-	"log"
 	"math/big"
 	"strings"
 	"testing"
@@ -60,8 +59,7 @@ func TestFib(t *testing.T) {
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 	chain := common.RandAddress()
 
-	results := runMessage(t, mach, initMsg(), chain)
-	log.Println(results)
+	runMessage(t, mach, initMsg(), chain)
 
 	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
 	if err != nil {
@@ -157,8 +155,7 @@ func TestDeposit(t *testing.T) {
 	}
 
 	chain := common.RandAddress()
-	results := runMessage(t, mach, initMsg(), chain)
-	log.Println(results)
+	runMessage(t, mach, initMsg(), chain)
 
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 
