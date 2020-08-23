@@ -18,20 +18,21 @@ package arbostest
 
 import (
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"log"
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
@@ -334,7 +335,7 @@ func TestBatch(t *testing.T) {
 	results := runMessage(t, mach, initMsg(), chain)
 	log.Println(results)
 
-	constructorData, err := hexutil.Decode(FibonacciBin)
+	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -26,10 +26,10 @@ import "./Messages.sol";
 import "./PaymentRecords.sol";
 
 contract GlobalInbox is
+    IGlobalInbox,
     GlobalEthWallet,
     GlobalFTWallet,
     GlobalNFTWallet,
-    IGlobalInbox,
     PaymentRecords // solhint-disable-next-line bracket-align
 {
     uint8 internal constant ETH_TRANSFER = 0;
@@ -37,6 +37,7 @@ contract GlobalInbox is
     uint8 internal constant ERC721_TRANSFER = 2;
     uint8 internal constant L2_MSG = 3;
     uint8 internal constant INITIALIZATION_MSG = 4;
+    uint8 internal constant L2_CONTRACT_PAIR = 5;
 
     struct Inbox {
         bytes32 value;
@@ -99,12 +100,7 @@ contract GlobalInbox is
             msg.sender,
             keccak256(messageData)
         );
-        emit IGlobalInbox.MessageDeliveredFromOrigin(
-            chain,
-            L2_MSG,
-            msg.sender,
-            inboxSeqNum
-        );
+        emit MessageDeliveredFromOrigin(chain, L2_MSG, msg.sender, inboxSeqNum);
     }
 
     /**
@@ -115,6 +111,24 @@ contract GlobalInbox is
      */
     function sendL2Message(address chain, bytes calldata messageData) external {
         _deliverMessage(chain, L2_MSG, msg.sender, messageData);
+    }
+
+    function deployL2ContractPair(
+        address chain,
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        uint256 payment,
+        bytes calldata contractData
+    ) external {
+        require(isContract(msg.sender), "must be called by contract");
+        requestPairing(msg.sender, chain);
+        _deliverMessage(
+            chain,
+            L2_CONTRACT_PAIR,
+            msg.sender,
+            abi.encodePacked(maxGas, gasPriceBid, payment, contractData)
+        );
+        emit BuddyContractPair(msg.sender, chain);
     }
 
     /**
@@ -213,7 +227,7 @@ contract GlobalInbox is
             _sender,
             keccak256(_messageData)
         );
-        emit IGlobalInbox.MessageDelivered(
+        emit MessageDelivered(
             _chain,
             _kind,
             _sender,
@@ -250,38 +264,53 @@ contract GlobalInbox is
         if (message.kind == ETH_TRANSFER) {
             (bool valid, Messages.EthMessage memory eth) = Messages
                 .parseEthMessage(message.data);
-            if (valid) {
-                address paymentOwner = getPaymentOwner(eth.dest, messageIndex);
-                transferEth(msg.sender, paymentOwner, eth.value);
-                deletePayment(eth.dest, messageIndex);
+            if (!valid) {
+                return;
             }
+
+            address paymentOwner = getPaymentOwner(eth.dest, messageIndex);
+            deletePayment(eth.dest, messageIndex);
+            transferEth(msg.sender, paymentOwner, eth.value);
         } else if (message.kind == ERC20_TRANSFER) {
             (bool valid, Messages.ERC20Message memory erc20) = Messages
                 .parseERC20Message(message.data);
-            if (valid) {
-                address paymentOwner = getPaymentOwner(
-                    erc20.dest,
-                    messageIndex
-                );
-                transferERC20(
-                    msg.sender,
-                    paymentOwner,
-                    erc20.token,
-                    erc20.value
-                );
-                deletePayment(erc20.dest, messageIndex);
+            if (!valid) {
+                return;
             }
+
+            address paymentOwner = getPaymentOwner(erc20.dest, messageIndex);
+            transferERC20(msg.sender, paymentOwner, erc20.token, erc20.value);
+            deletePayment(erc20.dest, messageIndex);
         } else if (message.kind == ERC721_TRANSFER) {
             (bool valid, Messages.ERC721Message memory erc721) = Messages
                 .parseERC721Message(message.data);
-            if (valid) {
-                address paymentOwner = getPaymentOwner(
-                    erc721.dest,
-                    messageIndex
-                );
-                transferNFT(msg.sender, paymentOwner, erc721.token, erc721.id);
-                deletePayment(erc721.dest, messageIndex);
+            if (!valid) {
+                return;
             }
+
+            address paymentOwner = getPaymentOwner(erc721.dest, messageIndex);
+            transferNFT(msg.sender, paymentOwner, erc721.token, erc721.id);
+            deletePayment(erc721.dest, messageIndex);
+        } else if (message.kind == L2_CONTRACT_PAIR) {
+            updatePairing(message.sender, msg.sender, message.data[0] != 0);
+            emit BuddyContractDeployed(message.sender, message.data);
         }
+    }
+
+    // Implementation taken from OpenZeppelin (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.1.0/contracts/utils/Address.sol)
+    function isContract(address account) private view returns (bool) {
+        // According to EIP-1052, 0x0 is the value returned for not-yet created accounts
+        // and 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470 is returned
+        // for accounts without code, i.e. `keccak256('')`
+        bytes32 codehash;
+
+
+            bytes32 accountHash
+         = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            codehash := extcodehash(account)
+        }
+        return (codehash != accountHash && codehash != 0x0);
     }
 }

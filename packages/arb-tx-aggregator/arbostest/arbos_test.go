@@ -17,9 +17,6 @@
 package arbostest
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 	"math/big"
 	"strings"
@@ -30,9 +27,13 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 func TestFib(t *testing.T) {
@@ -41,7 +42,7 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fib, err := abi.JSON(strings.NewReader(FibonacciABI))
+	fib, err := abi.JSON(strings.NewReader(arbostestcontracts.FibonacciABI))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +58,7 @@ func TestFib(t *testing.T) {
 	results := runMessage(t, mach, initMsg(), chain)
 	log.Println(results)
 
-	constructorData, err := hexutil.Decode(FibonacciBin)
+	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
 	if err != nil {
 		t.Fatal(err)
 	}

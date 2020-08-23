@@ -20,6 +20,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
@@ -37,12 +38,12 @@ import (
 )
 
 func TestECRecover(t *testing.T) {
-	constructorData, err := hexutil.Decode(ECRecoverTestBin)
+	constructorData, err := hexutil.Decode(arbostestcontracts.ECRecoverTestBin)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ecTestABI, err := abi.JSON(strings.NewReader(ECRecoverTestABI))
+	ecTestABI, err := abi.JSON(strings.NewReader(arbostestcontracts.ECRecoverTestABI))
 	if err != nil {
 		t.Fatal(err)
 	}

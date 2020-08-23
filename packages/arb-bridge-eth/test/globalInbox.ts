@@ -23,19 +23,37 @@ import * as chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { deployMockContract } from '@ethereum-waffle/mock-contract'
 import { GlobalInbox } from '../build/types/GlobalInbox'
+import { EthBuddyErc20 } from '../build/types/EthBuddyErc20'
 import { ArbValue, Message } from 'arb-provider-ethers'
 
 chai.use(chaiAsPromised)
 
 const { assert, expect } = chai
 
-async function getMessageData(
+function getEthMessageData(
   sender: string,
   receiver: string,
   value: utils.BigNumberish
-): Promise<Uint8Array> {
+): Uint8Array {
   const ethMsg = new Message.EthMessage(receiver, value)
   const msg = new Message.OutgoingMessage(ethMsg, sender)
+  return ArbValue.marshal(msg.asValue())
+}
+
+function getERC20MessageData(
+  sender: string,
+  receiver: string,
+  token: string,
+  value: utils.BigNumberish
+): Uint8Array {
+  const erc20Msg = new Message.ERC20Message(token, receiver, value)
+  const msg = new Message.OutgoingMessage(erc20Msg, sender)
+  return ArbValue.marshal(msg.asValue())
+}
+
+function getBuddyMessageData(sender: string, valid: boolean): Uint8Array {
+  const buddyMsg = new Message.BuddyRegisteredMessage(valid)
+  const msg = new Message.OutgoingMessage(buddyMsg, sender)
   return ArbValue.marshal(msg.asValue())
 }
 
@@ -86,36 +104,133 @@ describe('GlobalInbox', async () => {
     ).to.eventually.equal(1000)
   })
 
-  // These tests use a waffle mock which depends on buidlerevm
-  if (bre.network.name == 'buidlerevm') {
-    it('should deposit an ERC20', async () => {
-      const [mockCreator] = await waffle.provider.getWallets()
-      const IERC20 = await ethers.getContractFactory('IERC20')
-      const mockERC20 = await deployMockContract(
-        mockCreator,
-        IERC20.interface.abi
-      )
+  it('should deposit an ERC20', async () => {
+    const EthBuddyErc20 = await ethers.getContractFactory('EthBuddyERC20')
+    const erc20 = (await EthBuddyErc20.deploy(
+      globalInbox.address
+    )) as EthBuddyErc20
+    await erc20.deployed()
 
-      await mockERC20.mock.transferFrom.returns(1)
-
-      await expect(
-        globalInbox.getERC20Balance(mockERC20.address, chainAddress),
-        'ERC20 balance should start at 0'
-      ).to.eventually.equal(0)
-
-      await globalInbox.depositERC20Message(
+    await expect(
+      globalInbox.depositERC20Message(
         chainAddress,
-        mockERC20.address,
+        erc20.address,
         chainAddress,
         50
-      )
+      ),
+      'Must approve before depositing'
+    ).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
 
-      await expect(
-        globalInbox.getERC20Balance(mockERC20.address, chainAddress),
-        "ERC20 Balance wasn't deposited successfully"
-      ).to.eventually.equal(50)
-    })
+    await erc20.approve(globalInbox.address, 1000000)
 
+    await expect(
+      globalInbox.getERC20Balance(erc20.address, chainAddress),
+      'ERC20 balance should start at 0'
+    ).to.eventually.equal(0)
+
+    await globalInbox.depositERC20Message(
+      chainAddress,
+      erc20.address,
+      chainAddress,
+      50
+    )
+
+    await expect(
+      globalInbox.getERC20Balance(erc20.address, chainAddress),
+      "ERC20 Balance wasn't deposited successfully"
+    ).to.eventually.equal(50)
+  })
+
+  it('should support paired ERC20s', async () => {
+    const chainAddress = await accounts[6].getAddress()
+    const EthBuddyErc20 = await ethers.getContractFactory('EthBuddyERC20')
+    const erc20 = (await EthBuddyErc20.deploy(
+      globalInbox.address
+    )) as EthBuddyErc20
+    await erc20.deployed()
+
+    await expect(
+      globalInbox.isPairedContract(erc20.address, chainAddress),
+      "shouldn't be paired"
+    ).to.eventually.to.equal(0)
+
+    await erc20.connectToChain(chainAddress)
+
+    await expect(
+      globalInbox.isPairedContract(erc20.address, chainAddress),
+      'should be initializing'
+    ).to.eventually.to.equal(1)
+
+    await globalInbox
+      .connect(accounts[6])
+      .sendMessages(await getBuddyMessageData(erc20.address, false), 0, 1)
+
+    await expect(
+      globalInbox.isPairedContract(erc20.address, chainAddress),
+      'should be reset to unpaired'
+    ).to.eventually.to.equal(0)
+
+    await erc20.connectToChain(chainAddress)
+
+    await globalInbox
+      .connect(accounts[6])
+      .sendMessages(await getBuddyMessageData(erc20.address, true), 0, 1)
+
+    await expect(
+      globalInbox.isPairedContract(erc20.address, chainAddress),
+      'should be paired'
+    ).to.eventually.equal(2)
+
+    await expect(
+      erc20.balanceOf(address3),
+      'ERC20 balance of dest should start at 0'
+    ).to.eventually.equal(0)
+
+    await expect(
+      globalInbox.getERC20Balance(erc20.address, chainAddress),
+      'Global inbox ERC20 balance should start at 0'
+    ).to.eventually.equal(0)
+
+    await globalInbox.depositERC20Message(
+      chainAddress,
+      erc20.address,
+      address4,
+      50
+    )
+
+    await expect(
+      erc20.balanceOf(globalInbox.address),
+      'Depositing paired token should burn'
+    ).to.eventually.equal(0)
+
+    await expect(
+      globalInbox.getERC20Balance(erc20.address, chainAddress),
+      'Global inbox ERC20 balance should still be 0'
+    ).to.eventually.equal(0)
+
+    const erc20MsgData = getERC20MessageData(
+      address2,
+      address3,
+      erc20.address,
+      100000
+    )
+    await globalInbox.connect(accounts[6]).sendMessages(erc20MsgData, 1, 2)
+
+    await expect(
+      globalInbox.getERC20Balance(erc20.address, address3),
+      'ERC20 balance should increase'
+    ).to.eventually.equal(100000)
+
+    await globalInbox.connect(accounts[2]).withdrawERC20(erc20.address)
+
+    await expect(
+      erc20.balanceOf(address3),
+      'Withdrawing should mint tokens'
+    ).to.eventually.equal(100000)
+  })
+
+  // These tests use a waffle mock which depends on buidlerevm
+  if (bre.network.name == 'buidlerevm') {
     it('should deposit an ERC721', async () => {
       const [mockCreator] = await waffle.provider.getWallets()
       const IERC721 = await ethers.getContractFactory('IERC721')
@@ -225,7 +340,7 @@ describe('GlobalInbox', async () => {
       0
     )
 
-    const msgData = await getMessageData(originalOwner, currOwner, 50)
+    const msgData = await getEthMessageData(originalOwner, currOwner, 50)
 
     await globalInbox.connect(accounts[3]).sendMessages(msgData, 0, 1)
 
@@ -235,7 +350,7 @@ describe('GlobalInbox', async () => {
       0
     )
 
-    const msgData2 = await getMessageData(address4, originalOwner, 50)
+    const msgData2 = await getEthMessageData(address4, originalOwner, 50)
 
     await globalInbox.connect(accounts[3]).sendMessages(msgData2, 1, 2)
 

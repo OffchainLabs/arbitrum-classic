@@ -14,6 +14,7 @@ flags:
   integration: {}
 
 ignore:
+  - 'packages/arb-tx-aggregator/arbostestcontracts'
   - 'packages/arb-validator-core/ethbridgecontracts'
   - 'packages/arb-validator-core/ethbridgetestcontracts'
   - 'packages/arb-validator-core/arboscontracts'
