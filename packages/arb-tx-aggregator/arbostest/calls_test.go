@@ -45,7 +45,7 @@ func initMsg() message.Init {
 	}
 }
 
-func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender common.Address) []*evm.TxResult {
+func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender common.Address) ([]*evm.TxResult, []message.OutMessage) {
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
@@ -61,7 +61,7 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 	//	t.Fatal(err)
 	//}
 	//t.Log(string(data))
-	t.Log("Ran assertion for", steps, "steps and had", assertion.LogsCount, "logs")
+	t.Log("Ran assertion for", steps, "steps and had", assertion.LogsCount, "logs and", assertion.OutMsgsCount, "messages")
 	if mach.CurrentStatus() != machine.Extensive {
 		t.Fatal("machine should still be working")
 	}
@@ -81,7 +81,15 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 		}
 		results = append(results, result)
 	}
-	return results
+	sends := make([]message.OutMessage, 0)
+	for _, send := range assertion.ParseOutMessages() {
+		msg, err := message.NewOutMessageFromValue(send)
+		if err != nil {
+			t.Fatal(err)
+		}
+		sends = append(sends, msg)
+	}
+	return results, sends
 }
 
 func runValidTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Message, sender common.Address) (*evm.TxResult, error) {
@@ -100,9 +108,12 @@ func runTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Me
 	if err != nil {
 		return nil, err
 	}
-	results := runMessage(t, mach, l2, sender)
+	results, sends := runMessage(t, mach, l2, sender)
 	if len(results) != 1 {
 		return nil, fmt.Errorf("unexpected log count %v", len(results))
+	}
+	if len(sends) != 0 {
+		return nil, fmt.Errorf("unexpected send count %v", len(sends))
 	}
 	return results[0], nil
 }
@@ -149,8 +160,11 @@ func depositEth(t *testing.T, mach machine.Machine, dest common.Address, amount 
 		Value: amount,
 	}
 
-	depositResults := runMessage(t, mach, msg, dest)
+	depositResults, sendResults := runMessage(t, mach, msg, dest)
 	if len(depositResults) != 0 {
 		t.Fatal("deposit should not have had a result")
+	}
+	if len(sendResults) != 0 {
+		t.Fatal("deposit should not trigger sends")
 	}
 }
