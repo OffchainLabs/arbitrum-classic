@@ -18,7 +18,6 @@ package arbostest
 
 import (
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"math/big"
 	"strings"
 	"testing"
@@ -30,13 +29,15 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 func generateFib(val *big.Int) ([]byte, error) {
-	fib, err := abi.JSON(strings.NewReader(FibonacciABI))
+	fib, err := abi.JSON(strings.NewReader(arbostestcontracts.FibonacciABI))
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +157,7 @@ func TestTransactionCount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	constructorData, err := hexutil.Decode(FibonacciBin)
+	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -18,21 +18,22 @@ package arbostest
 
 import (
 	"crypto/ecdsa"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"log"
 	"math/big"
 	"testing"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
@@ -172,7 +173,7 @@ func TestSignedTx(t *testing.T) {
 		),
 	)
 
-	tx2 := types.NewContractCreation(1, big.NewInt(0), 100000000000, big.NewInt(0), hexutil.MustDecode(FibonacciBin))
+	tx2 := types.NewContractCreation(1, big.NewInt(0), 100000000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
 	signedTx2, err := types.SignTx(tx2, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
 	if err != nil {
 		t.Fatal(err)
@@ -366,7 +367,7 @@ func TestBatch(t *testing.T) {
 	results := runMessage(t, mach, initMsg(), chain)
 	log.Println(results)
 
-	constructorData, err := hexutil.Decode(FibonacciBin)
+	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
 	if err != nil {
 		t.Fatal(err)
 	}

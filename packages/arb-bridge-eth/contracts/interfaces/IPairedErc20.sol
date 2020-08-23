@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2020, Offchain Labs, Inc.
  *
@@ -14,4 +16,12 @@
  * limitations under the License.
  */
 
-package ethbridgetest
+pragma solidity ^0.5.11;
+
+interface IPairedErc20 {
+    function mint(address account, uint256 amount) external;
+
+    function burn(address account, uint256 amount) external;
+
+    function balanceOf(address account) external view returns (uint256);
+}
