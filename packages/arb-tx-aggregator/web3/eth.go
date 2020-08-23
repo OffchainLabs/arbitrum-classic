@@ -1,10 +1,8 @@
 package web3
 
 import (
-	"encoding/json"
 	"errors"
 	errors2 "github.com/pkg/errors"
-	"log"
 	"math/big"
 	"net/http"
 
@@ -233,8 +231,6 @@ func (s *Server) GetTransactionReceipt(_ *http.Request, args *GetTransactionRece
 		BlockNumber:       receipt.BlockNumber,
 		TransactionIndex:  receipt.TransactionIndex,
 	}
-	data, _ := json.Marshal(reply)
-	log.Println("GetTransactionReceipt", string(data))
 	return nil
 }
 
