@@ -126,14 +126,7 @@ contract GlobalInbox is
             chain,
             L2_CONTRACT_PAIR,
             msg.sender,
-            abi.encodePacked(
-                uint8(1),
-                maxGas,
-                gasPriceBid,
-                bytes32(bytes20(address(0))),
-                payment,
-                contractData
-            )
+            abi.encodePacked(maxGas, gasPriceBid, payment, contractData)
         );
         emit BuddyContractPair(msg.sender, chain);
     }

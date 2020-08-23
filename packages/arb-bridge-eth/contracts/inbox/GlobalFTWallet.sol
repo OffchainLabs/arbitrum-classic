@@ -34,6 +34,7 @@ contract GlobalFTWallet {
 
     mapping(address => UserFTWallet) private ftWallets;
 
+    // Uninitialized paired contracts default to Unpaired
     enum PairingStatus { Unpaired, Requested, Paired }
 
     struct PairedContract {
