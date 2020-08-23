@@ -19,7 +19,7 @@
 pragma solidity ^0.5.17;
 
 interface Sys {
-    // Send given amount of Eth to dest with from sender.
+    // Send given Eth to dest.
     function withdrawEth(address dest) external payable;
 }
 
