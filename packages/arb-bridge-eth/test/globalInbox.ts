@@ -51,8 +51,8 @@ function getERC20MessageData(
   return ArbValue.marshal(msg.asValue())
 }
 
-function getBuddyMessageData(sender: string): Uint8Array {
-  const buddyMsg = new Message.BuddyRegisteredMessage()
+function getBuddyMessageData(sender: string, valid: boolean): Uint8Array {
+  const buddyMsg = new Message.BuddyRegisteredMessage(valid)
   const msg = new Message.OutgoingMessage(buddyMsg, sender)
   return ArbValue.marshal(msg.asValue())
 }
@@ -149,22 +149,37 @@ describe('GlobalInbox', async () => {
     )) as EthBuddyErc20
     await erc20.deployed()
 
+    await expect(
+      globalInbox.isPairedContract(erc20.address, chainAddress),
+      "shouldn't be paired"
+    ).to.eventually.to.equal(0)
+
     await erc20.connectToChain(chainAddress)
 
     await expect(
       globalInbox.isPairedContract(erc20.address, chainAddress),
-      "shouldn't be paired"
-    ).to.eventually.be.false
+      'should be initializing'
+    ).to.eventually.to.equal(1)
 
-    const buddyMsgData = await getBuddyMessageData(erc20.address)
     await globalInbox
       .connect(accounts[6])
-      .sendMessages(buddyMsgData, [1], [nodeHash])
+      .sendMessages(await getBuddyMessageData(erc20.address, false), 0, 1)
+
+    await expect(
+      globalInbox.isPairedContract(erc20.address, chainAddress),
+      'should be reset to unpaired'
+    ).to.eventually.to.equal(0)
+
+    await erc20.connectToChain(chainAddress)
+
+    await globalInbox
+      .connect(accounts[6])
+      .sendMessages(await getBuddyMessageData(erc20.address, true), 0, 1)
 
     await expect(
       globalInbox.isPairedContract(erc20.address, chainAddress),
       'should be paired'
-    ).to.eventually.be.true
+    ).to.eventually.equal(2)
 
     await expect(
       erc20.balanceOf(address3),
@@ -199,9 +214,7 @@ describe('GlobalInbox', async () => {
       erc20.address,
       100000
     )
-    await globalInbox
-      .connect(accounts[6])
-      .sendMessages(erc20MsgData, [1], [nodeHash])
+    await globalInbox.connect(accounts[6]).sendMessages(erc20MsgData, 1, 2)
 
     await expect(
       globalInbox.getERC20Balance(erc20.address, address3),

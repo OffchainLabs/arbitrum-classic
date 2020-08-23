@@ -299,7 +299,7 @@ contract GlobalInbox is
             transferNFT(msg.sender, paymentOwner, erc721.token, erc721.id);
             deletePayment(erc721.dest, messageIndex);
         } else if (message.kind == L2_CONTRACT_PAIR) {
-            confirmPairing(message.sender, msg.sender);
+            updatePairing(message.sender, msg.sender, message.data[0] != 0);
             emit BuddyContractDeployed(message.sender, message.data);
         }
     }

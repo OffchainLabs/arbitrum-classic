@@ -324,12 +324,19 @@ export enum MessageCode {
 export class BuddyRegisteredMessage {
   public kind: MessageCode.BuddyRegistered
 
-  constructor() {
+  constructor(public valid: boolean) {
     this.kind = MessageCode.BuddyRegistered
   }
 
+  static fromData(data: ethers.utils.Arrayish): BuddyRegisteredMessage {
+    const bytes = ethers.utils.arrayify(data)
+    return new BuddyRegisteredMessage(bytes[0] == 1)
+  }
+
   asData(): Uint8Array {
-    return new Uint8Array(0)
+    const arr = new Uint8Array(1)
+    arr[0] = this.valid ? 1 : 0
+    return arr
   }
 }
 

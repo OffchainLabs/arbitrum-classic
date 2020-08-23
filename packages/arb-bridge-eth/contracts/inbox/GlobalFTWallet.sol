@@ -87,13 +87,11 @@ contract GlobalFTWallet {
     }
 
     function isPairedContract(address _tokenContract, address _chain)
-        public
+        external
         view
-        returns (bool)
+        returns (PairingStatus)
     {
-        return
-            pairedContracts[_tokenContract].connectedRollups[_chain] ==
-            PairingStatus.Paired;
+        return pairedContracts[_tokenContract].connectedRollups[_chain];
     }
 
     function requestPairing(address _tokenContract, address _chain) internal {
@@ -116,7 +114,11 @@ contract GlobalFTWallet {
         pairedContract.connectedRollups[_chain] = PairingStatus.Requested;
     }
 
-    function confirmPairing(address _tokenContract, address _chain) internal {
+    function updatePairing(
+        address _tokenContract,
+        address _chain,
+        bool success
+    ) internal {
         PairedContract storage pairedContract = pairedContracts[_tokenContract];
         if (
             pairedContract.connectedRollups[_chain] != PairingStatus.Requested
@@ -124,7 +126,11 @@ contract GlobalFTWallet {
             // If the pairing hasn't been requested, ignore this
             return;
         }
-        pairedContract.connectedRollups[_chain] = PairingStatus.Paired;
+        if (success) {
+            pairedContract.connectedRollups[_chain] = PairingStatus.Paired;
+        } else {
+            pairedContract.connectedRollups[_chain] = PairingStatus.Unpaired;
+        }
     }
 
     function depositERC20(
