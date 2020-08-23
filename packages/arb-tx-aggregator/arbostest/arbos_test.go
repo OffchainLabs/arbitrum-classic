@@ -37,6 +37,11 @@ import (
 )
 
 func TestFib(t *testing.T) {
+	chainTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
+	}
+
 	mach, err := cmachine.New(arbos.Path())
 	if err != nil {
 		t.Fatal(err)
@@ -67,6 +72,13 @@ func TestFib(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	snap := snapshot.NewSnapshot(mach.Clone(), chainTime, message.ChainAddressToID(chain), big.NewInt(1))
+	code, err := snap.GetCode(fibAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("code", len(code))
 
 	depositEth(t, mach, addr, big.NewInt(1000))
 

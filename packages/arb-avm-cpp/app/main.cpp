@@ -107,10 +107,13 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Produced " << assertion.logs.size() << " logs\n";
 
-    std::cout << "Ran " << assertion.stepCount << " ending in state "
+    std::cout << "Ran " << assertion.stepCount << " steps in "
+              << assertion.gasCount << " gas ending in state "
               << static_cast<int>(mach.currentStatus()) << "\n";
 
-    saveMachine(*storage.makeTransaction(), mach);
+    auto tx = storage.makeTransaction();
+    saveMachine(*tx, mach);
+    tx->commit();
 
     auto mach2 = storage.getMachine(mach.hash());
     mach2.run(0, {}, std::chrono::seconds(0));

@@ -1,9 +1,8 @@
 package web3
 
 import (
-	"encoding/json"
 	"errors"
-	"log"
+	errors2 "github.com/pkg/errors"
 	"math/big"
 	"net/http"
 
@@ -43,7 +42,7 @@ func (s *Server) GetBalance(_ *http.Request, args *AccountInfoArgs, reply *strin
 	}
 	balance, err := snap.GetBalance(arbcommon.NewAddressFromEth(*args.Address))
 	if err != nil {
-		return err
+		return errors2.Wrap(err, "error getting balance")
 	}
 	*reply = hexutil.EncodeBig(balance)
 	return nil
@@ -56,7 +55,7 @@ func (s *Server) GetTransactionCount(_ *http.Request, args *AccountInfoArgs, rep
 	}
 	txCount, err := snap.GetTransactionCount(arbcommon.NewAddressFromEth(*args.Address))
 	if err != nil {
-		return err
+		return errors2.Wrap(err, "error getting transaction count")
 	}
 	*reply = hexutil.EncodeBig(txCount)
 	return nil
@@ -69,7 +68,7 @@ func (s *Server) GetCode(_ *http.Request, args *AccountInfoArgs, reply *string) 
 	}
 	code, err := snap.GetCode(arbcommon.NewAddressFromEth(*args.Address))
 	if err != nil {
-		return err
+		return errors2.Wrap(err, "error getting code")
 	}
 	*reply = hexutil.Encode(code)
 	return nil
@@ -155,18 +154,18 @@ func buildCallMsg(args *CallTxArgs) (arbcommon.Address, message.ContractTransact
 	}
 }
 
-func (s *Server) executeCall(args *CallArgs) (*evm.TxResult, error) {
-	snap, err := s.getSnapshot(args.BlockNum)
+func (s *Server) executeCall(args *CallTxArgs, blockNum *rpc.BlockNumber) (*evm.TxResult, error) {
+	snap, err := s.getSnapshot(blockNum)
 	if err != nil {
 		return nil, err
 	}
-	from, msg := buildCallMsg(args.CallArgs)
+	from, msg := buildCallMsg(args)
 	msg = s.srv.AdjustGas(msg)
 	return snap.Call(msg, from)
 }
 
 func (s *Server) Call(_ *http.Request, args *CallArgs, reply *string) error {
-	res, err := s.executeCall(args)
+	res, err := s.executeCall(args.CallArgs, args.BlockNum)
 	if err != nil {
 		return err
 	}
@@ -174,8 +173,9 @@ func (s *Server) Call(_ *http.Request, args *CallArgs, reply *string) error {
 	return nil
 }
 
-func (s *Server) EstimateGas(_ *http.Request, args *CallArgs, reply *string) error {
-	res, err := s.executeCall(args)
+func (s *Server) EstimateGas(_ *http.Request, args *CallTxArgs, reply *string) error {
+	blockNum := rpc.PendingBlockNumber
+	res, err := s.executeCall(args, &blockNum)
 	if err != nil {
 		return err
 	}
@@ -231,8 +231,6 @@ func (s *Server) GetTransactionReceipt(_ *http.Request, args *GetTransactionRece
 		BlockNumber:       receipt.BlockNumber,
 		TransactionIndex:  receipt.TransactionIndex,
 	}
-	data, _ := json.Marshal(reply)
-	log.Println("GetTransactionReceipt", string(data))
 	return nil
 }
 

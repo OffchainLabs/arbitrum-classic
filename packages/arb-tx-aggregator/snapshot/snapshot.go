@@ -100,7 +100,7 @@ func (s *Snapshot) GetTransactionCount(account common.Address) (*big.Int, error)
 }
 
 func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
-	res, err := s.makeBasicCall(getCodeData(account), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+	res, err := s.makeBasicCall(getCodeData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
 	if err != nil {
 		return nil, err
 	}

@@ -254,12 +254,12 @@ func TestWithdrawEth(t *testing.T) {
 
 	depositMsg := message.Eth{
 		Dest:  addr,
-		Value: big.NewInt(10000),
+		Value: big.NewInt(100),
 	}
 
-	depositValue := big.NewInt(100)
+	withdrawValue := big.NewInt(100)
 	withdrawDest := common.RandAddress()
-	tx := withdrawEthTx(t, big.NewInt(0), depositValue, withdrawDest)
+	tx := withdrawEthTx(t, big.NewInt(0), withdrawValue, withdrawDest)
 
 	inboxMessages := []inbox.InboxMessage{
 		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
@@ -307,7 +307,7 @@ func TestWithdrawEth(t *testing.T) {
 
 	outEthMsg := message.NewEthFromData(outMsg.Data)
 
-	if outEthMsg.Value.Cmp(depositValue) != 0 {
+	if outEthMsg.Value.Cmp(withdrawValue) != 0 {
 		t.Fatal("wrong withdraw value", outEthMsg.Value)
 	}
 
