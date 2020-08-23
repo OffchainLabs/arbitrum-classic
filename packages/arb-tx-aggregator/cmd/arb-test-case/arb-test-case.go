@@ -30,14 +30,6 @@ import (
 )
 
 func main() {
-	//if err := getMessages(
-	//	"https://ropsten.infura.io/v3/5851cb75448e4f8da37c5015006589a6",
-	//	common.HexToAddress("0xEb57E0FB729E892E84259B4e6Dc08442Aa6E9Ee4"),
-	//	filename,
-	//); err != nil {
-	//	panic(err)
-	//}
-
 	if err := generateTestCase(
 		"http://localhost:7545",
 		common.HexToAddress("0xc68DCee7b8cA57F41D1A417103CB65836E99e013"),
