@@ -34,7 +34,7 @@ export class L1Bridge {
     public chainAddress: string | Promise<string>
   ) {}
 
-  public async globalInboxConn(): Promise<GlobalInbox> {
+  public async globalInbox(): Promise<GlobalInbox> {
     if (!this.globalInboxCache) {
       const arbRollup = ArbRollupFactory.connect(
         await this.chainAddress,
@@ -52,7 +52,7 @@ export class L1Bridge {
   }
 
   public async withdrawEthFromLockbox(): Promise<TransactionResponse> {
-    const globalInbox = await this.globalInboxConn()
+    const globalInbox = await this.globalInbox()
     return globalInbox.withdrawEth()
   }
 
@@ -60,7 +60,7 @@ export class L1Bridge {
     erc20: string,
     overrides?: TransactionOverrides
   ): Promise<TransactionResponse> {
-    const globalInbox = await this.globalInboxConn()
+    const globalInbox = await this.globalInbox()
     return globalInbox.withdrawERC20(erc20, overrides)
   }
 
@@ -69,7 +69,7 @@ export class L1Bridge {
     tokenId: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<TransactionResponse> {
-    const globalInbox = await this.globalInboxConn()
+    const globalInbox = await this.globalInbox()
     return globalInbox.withdrawERC721(erc721, tokenId, overrides)
   }
 
@@ -79,7 +79,7 @@ export class L1Bridge {
     value: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<TransactionResponse> {
-    const globalInbox = await this.globalInboxConn()
+    const globalInbox = await this.globalInbox()
     return globalInbox.depositERC20Message(
       await this.chainAddress,
       erc20,
@@ -95,7 +95,7 @@ export class L1Bridge {
     tokenId: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<TransactionResponse> {
-    const globalInbox = await this.globalInboxConn()
+    const globalInbox = await this.globalInbox()
     return globalInbox.depositERC721Message(
       await this.chainAddress,
       erc721,
@@ -110,7 +110,7 @@ export class L1Bridge {
     value: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<TransactionResponse> {
-    const globalInbox = await this.globalInboxConn()
+    const globalInbox = await this.globalInbox()
     return globalInbox.depositEthMessage(await this.chainAddress, to, {
       ...overrides,
       value,
@@ -123,7 +123,7 @@ export class L1Bridge {
     messageIndex: BigNumberish,
     overrides?: TransactionOverrides
   ): Promise<TransactionResponse> {
-    const globalInbox = await this.globalInboxConn()
+    const globalInbox = await this.globalInbox()
     return globalInbox.transferPayment(
       originalOwner,
       newOwner,
@@ -143,7 +143,7 @@ export class L1Bridge {
         `Can only send from wallet address ${from}, but tried to send from ${walletAddress}`
       )
     }
-    const globalInbox = await this.globalInboxConn()
+    const globalInbox = await this.globalInbox()
     return globalInbox.sendL2Message(
       await this.chainAddress,
       new L2Message(l2tx).asData(),
@@ -152,21 +152,21 @@ export class L1Bridge {
   }
 
   public async getEthLockBoxBalance(address: string): Promise<BigNumber> {
-    const globalInbox = await this.globalInboxConn()
+    const globalInbox = await this.globalInbox()
     return globalInbox.getEthBalance(address)
   }
   public async getERC20LockBoxBalance(
     contractAddress: string,
     ownerAddress: string
   ): Promise<BigNumber> {
-    const globalInbox = await this.globalInboxConn()
+    const globalInbox = await this.globalInbox()
     return globalInbox.getERC20Balance(contractAddress, ownerAddress)
   }
   public async getERC721LockBoxTokens(
     contractAddress: string,
     ownerAddress: string
   ): Promise<BigNumber[]> {
-    const globalInbox = await this.globalInboxConn()
+    const globalInbox = await this.globalInbox()
     return globalInbox.getERC721Tokens(contractAddress, ownerAddress)
   }
 }
