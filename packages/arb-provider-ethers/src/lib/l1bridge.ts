@@ -77,7 +77,7 @@ export class L1Bridge {
     to: string,
     erc20: string,
     value: BigNumberish,
-    overrides?: TransactionOverrides
+    overrides: TransactionOverrides = {}
   ): Promise<TransactionResponse> {
     const globalInbox = await this.globalInbox()
     return globalInbox.depositERC20Message(
@@ -93,7 +93,7 @@ export class L1Bridge {
     to: string,
     erc721: string,
     tokenId: BigNumberish,
-    overrides?: TransactionOverrides
+    overrides: TransactionOverrides = {}
   ): Promise<TransactionResponse> {
     const globalInbox = await this.globalInbox()
     return globalInbox.depositERC721Message(
