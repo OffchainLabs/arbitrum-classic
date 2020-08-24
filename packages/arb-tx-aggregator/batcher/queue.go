@@ -8,7 +8,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"log"
 	"math/rand"
 )
 
@@ -136,9 +135,10 @@ type pendingBatch struct {
 	sizeBytes   common.StorageSize
 	maxSize     common.StorageSize
 	full        bool
+	signer      types.Signer
 }
 
-func newPendingBatch(snap *snapshot.Snapshot, maxSize common.StorageSize) *pendingBatch {
+func newPendingBatch(snap *snapshot.Snapshot, maxSize common.StorageSize, signer types.Signer) *pendingBatch {
 	return &pendingBatch{
 		snap:        snap,
 		txCounts:    make(map[common.Address]uint64),
@@ -146,6 +146,7 @@ func newPendingBatch(snap *snapshot.Snapshot, maxSize common.StorageSize) *pendi
 		sizeBytes:   0,
 		maxSize:     maxSize,
 		full:        false,
+		signer:      signer,
 	}
 }
 
@@ -162,7 +163,7 @@ func (p *pendingBatch) getTxCount(account common.Address) uint64 {
 	return count
 }
 
-func (p *pendingBatch) addRandomTx(queuedTxes *txQueues) bool {
+func (p *pendingBatch) popRandomTx(queuedTxes *txQueues) *types.Transaction {
 	index := int(rand.Int31n(int32(len(queuedTxes.accounts))))
 	first := true
 	lastIndex := index
@@ -170,7 +171,7 @@ func (p *pendingBatch) addRandomTx(queuedTxes *txQueues) bool {
 	for {
 		index++
 		if !first && index == lastIndex {
-			return false
+			return nil
 		}
 		first = false
 		nextAccount := queuedTxes.queues[queuedTxes.accounts[index]]
@@ -192,24 +193,27 @@ func (p *pendingBatch) addRandomTx(queuedTxes *txQueues) bool {
 			continue
 		}
 
-		msg, err := message.NewL2Message(message.SignedTransaction{Tx: tx})
-		if err != nil {
-			log.Println("invalid tx", err)
-			continue
-		}
-
-		newSnap, _, err := snapshot.NewSnapshotWithMessage(
-			p.snap,
-			msg,
-			arbcommon.NewAddressFromEth(sender),
-		)
-		if err != nil {
-			log.Println("invalid tx", err)
-			continue
-		}
-		p.snap = newSnap
-		p.appliedTxes = append(p.appliedTxes, tx)
-		p.sizeBytes += tx.Size()
-		return true
+		return tx
 	}
+}
+
+func (p *pendingBatch) addValidTransaction(tx *types.Transaction) error {
+	msg, err := message.NewL2Message(message.SignedTransaction{Tx: tx})
+	if err != nil {
+		return err
+	}
+
+	sender, _ := types.Sender(p.signer, tx)
+	newSnap, _, err := snapshot.NewSnapshotWithMessage(
+		p.snap,
+		msg,
+		arbcommon.NewAddressFromEth(sender),
+	)
+	if err != nil {
+		return err
+	}
+	p.snap = newSnap
+	p.appliedTxes = append(p.appliedTxes, tx)
+	p.sizeBytes += tx.Size()
+	return nil
 }
