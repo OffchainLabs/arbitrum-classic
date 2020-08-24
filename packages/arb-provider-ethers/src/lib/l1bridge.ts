@@ -58,7 +58,7 @@ export class L1Bridge {
 
   public async withdrawERC20FromLockbox(
     erc20: string,
-    overrides?: TransactionOverrides
+    overrides: TransactionOverrides = {}
   ): Promise<TransactionResponse> {
     const globalInbox = await this.globalInbox()
     return globalInbox.withdrawERC20(erc20, overrides)
@@ -67,7 +67,7 @@ export class L1Bridge {
   public async withdrawERC721FromLockbox(
     erc721: string,
     tokenId: BigNumberish,
-    overrides?: TransactionOverrides
+    overrides: TransactionOverrides = {}
   ): Promise<TransactionResponse> {
     const globalInbox = await this.globalInbox()
     return globalInbox.withdrawERC721(erc721, tokenId, overrides)
@@ -77,7 +77,7 @@ export class L1Bridge {
     to: string,
     erc20: string,
     value: BigNumberish,
-    overrides?: TransactionOverrides
+    overrides: TransactionOverrides = {}
   ): Promise<TransactionResponse> {
     const globalInbox = await this.globalInbox()
     return globalInbox.depositERC20Message(
@@ -93,7 +93,7 @@ export class L1Bridge {
     to: string,
     erc721: string,
     tokenId: BigNumberish,
-    overrides?: TransactionOverrides
+    overrides: TransactionOverrides = {}
   ): Promise<TransactionResponse> {
     const globalInbox = await this.globalInbox()
     return globalInbox.depositERC721Message(
@@ -108,7 +108,7 @@ export class L1Bridge {
   public async depositETH(
     to: string,
     value: BigNumberish,
-    overrides?: TransactionOverrides
+    overrides: TransactionOverrides = {}
   ): Promise<TransactionResponse> {
     const globalInbox = await this.globalInbox()
     return globalInbox.depositEthMessage(await this.chainAddress, to, {
@@ -121,7 +121,7 @@ export class L1Bridge {
     originalOwner: string,
     newOwner: string,
     messageIndex: BigNumberish,
-    overrides?: TransactionOverrides
+    overrides: TransactionOverrides = {}
   ): Promise<TransactionResponse> {
     const globalInbox = await this.globalInbox()
     return globalInbox.transferPayment(
@@ -135,7 +135,7 @@ export class L1Bridge {
   public async sendL2Message(
     l2tx: L2Transaction,
     from: string,
-    overrides?: TransactionOverrides
+    overrides: TransactionOverrides = {}
   ): Promise<TransactionResponse> {
     const walletAddress = await this.signer.getAddress()
     if (from.toLowerCase() != walletAddress.toLowerCase()) {
