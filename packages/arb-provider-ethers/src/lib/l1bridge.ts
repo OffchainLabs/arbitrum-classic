@@ -108,7 +108,7 @@ export class L1Bridge {
   public async depositETH(
     to: string,
     value: BigNumberish,
-    overrides?: TransactionOverrides
+    overrides: TransactionOverrides = {}
   ): Promise<TransactionResponse> {
     const globalInbox = await this.globalInbox()
     return globalInbox.depositEthMessage(await this.chainAddress, to, {
