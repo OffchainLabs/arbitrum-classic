@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/rlp"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -36,6 +37,15 @@ import (
 
 type L2Message struct {
 	Data []byte
+}
+
+func (l L2Message) String() string {
+	msg, err := l.AbstractMessage()
+	if err != nil {
+		return "invalid message"
+	} else {
+		return fmt.Sprintf("%v", msg)
+	}
 }
 
 func (l L2Message) Type() inbox.Type {
@@ -358,6 +368,15 @@ func NewRandomBatchTx(chain common.Address, privKey *ecdsa.PrivateKey, nonce uin
 	}
 }
 
+func (t SignedTransaction) String() string {
+	j, err := t.Tx.MarshalJSON()
+	if err != nil {
+		return fmt.Sprintf("SignedTransaction(%v)", err)
+	} else {
+		return string(j)
+	}
+}
+
 func (t SignedTransaction) AsEthTx() *types.Transaction {
 	return t.Tx
 }
@@ -420,6 +439,24 @@ func NewRandomTransactionBatch(txCount int, chain common.Address, privKey *ecdsa
 		initialNonce++
 	}
 	return NewTransactionBatchFromMessages(messages)
+}
+
+func (t TransactionBatch) String() string {
+	var sb strings.Builder
+	sb.WriteString("TransactionBatch(")
+	for i, txData := range t.Transactions {
+		msg, err := L2Message{Data: txData}.AbstractMessage()
+		if err != nil {
+			sb.WriteString("invalid tx")
+		} else {
+			sb.WriteString(fmt.Sprintf("%v", msg))
+		}
+		if i < len(t.Transactions)-1 {
+			sb.WriteString(", ")
+		}
+	}
+	sb.WriteString(")")
+	return sb.String()
 }
 
 func (t TransactionBatch) L2Type() L2SubType {

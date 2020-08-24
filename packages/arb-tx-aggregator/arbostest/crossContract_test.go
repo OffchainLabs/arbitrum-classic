@@ -18,6 +18,7 @@ package arbostest
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 	"math/big"
@@ -34,17 +35,17 @@ import (
 )
 
 func TestCrossContract(t *testing.T) {
-	distributionsConstructorData, err := hexutil.Decode(DistributionsV0Bin)
+	distributionsConstructorData, err := hexutil.Decode(arbostestcontracts.DistributionsV0Bin)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	pointsConstructorData, err := hexutil.Decode(SubredditPointsV0Bin)
+	pointsConstructorData, err := hexutil.Decode(arbostestcontracts.SubredditPointsV0Bin)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	distABI, err := abi.JSON(strings.NewReader(DistributionsV0ABI))
+	distABI, err := abi.JSON(strings.NewReader(arbostestcontracts.DistributionsV0ABI))
 	if err != nil {
 		t.Fatal(err)
 	}

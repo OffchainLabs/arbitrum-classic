@@ -32,6 +32,9 @@ import (
 var (
 	txCountABI abi.Method
 	txCountSig []byte
+
+	withdrawEthABI abi.Method
+	withdrawEthSig []byte
 )
 
 func init() {
@@ -41,10 +44,10 @@ func init() {
 	}
 
 	txCountABI = arbsys.Methods["getTransactionCount"]
-	txCountSig, err = hexutil.Decode("0x23ca0cd2")
-	if err != nil {
-		panic(err)
-	}
+	txCountSig = hexutil.MustDecode("0x23ca0cd2")
+
+	withdrawEthABI = arbsys.Methods["withdrawEth"]
+	withdrawEthSig = hexutil.MustDecode("0x25e16063")
 }
 
 func getTransactionCountData(address common.Address) []byte {
@@ -65,4 +68,12 @@ func parseTransactionCountResult(res *evm.TxResult) (*big.Int, error) {
 		return nil, errors.New("unexpected tx result")
 	}
 	return val, nil
+}
+
+func GetWithdrawEthData(address common.Address) []byte {
+	txData, err := withdrawEthABI.Inputs.Pack(address)
+	if err != nil {
+		panic(err)
+	}
+	return append(withdrawEthSig, txData...)
 }

@@ -14,4 +14,6 @@
  * limitations under the License.
  */
 
-package ethbridgetest
+//go:generate ./abigen.sh
+
+package arbostestcontracts

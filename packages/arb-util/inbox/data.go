@@ -50,18 +50,23 @@ var errInt = errors.New("expected int value")
 var errTupleSize2 = errors.New("expected 2-tuple value")
 
 func StackValueToList(val value.Value) ([]value.Value, error) {
+	tupVal, ok := val.(value.TupleValue)
+	if !ok {
+		return nil, errors2.Wrap(errTupleSize2, val.String())
+	}
 	values := make([]value.Value, 0)
-	for !val.Equal(value.NewEmptyTuple()) {
-		tupVal, ok := val.(value.TupleValue)
-		if !ok {
-			return nil, errors2.Wrap(errTupleSize2, val.String())
-		}
+	for tupVal.Len() != 0 {
 		if tupVal.Len() != 2 {
 			return nil, errors2.Wrap(errTupleSize2, val.String())
 		}
 
 		member, _ := tupVal.GetByInt64(0)
-		val, _ = tupVal.GetByInt64(1)
+		val, _ := tupVal.GetByInt64(1)
+
+		tupVal, ok = val.(value.TupleValue)
+		if !ok {
+			return nil, errors2.Wrap(errTupleSize2, val.String())
+		}
 
 		values = append(values, member)
 	}

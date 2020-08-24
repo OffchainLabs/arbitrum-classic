@@ -18,20 +18,22 @@ package arbostest
 
 import (
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"log"
 	"math/big"
 	"testing"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
@@ -157,19 +159,40 @@ func TestSignedTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	l2, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx})
+	l2msg, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx})
 	if err != nil {
 		t.Fatal(err)
 	}
 	messages = append(
 		messages,
 		message.NewInboxMessage(
-			l2,
+			l2msg,
 			common.RandAddress(),
 			big.NewInt(2),
 			chainTime,
 		),
 	)
+
+	tx2 := types.NewContractCreation(1, big.NewInt(0), 100000000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
+	signedTx2, err := types.SignTx(tx2, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	l2msg2, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			l2msg2,
+			common.RandAddress(),
+			big.NewInt(2),
+			chainTime,
+		),
+	)
+
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
 	logs := assertion.ParseLogs()
 	testCase, err := inbox.TestVectorJSON(messages, logs, assertion.ParseOutMessages())
@@ -177,35 +200,45 @@ func TestSignedTx(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log(string(testCase))
-	if len(logs) != 1 {
+	if len(logs) != 2 {
 		t.Fatal("incorrect log output count", len(logs))
 	}
-	result, err := evm.NewTxResultFromValue(logs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected result code", result.ResultCode)
-	}
-	if result.IncomingRequest.Sender != addr {
-		t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, addr)
-	}
-	if result.IncomingRequest.Kind != message.L2Type {
-		t.Error("l2message has incorrect type")
-	}
-	l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
-	if err != nil {
-		t.Fatal(err)
+	for i, avmLog := range logs {
+		result, err := evm.NewTxResultFromValue(avmLog)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.ResultCode != evm.ReturnCode {
+			t.Fatal("unexpected result code", result.ResultCode)
+		}
+		if result.IncomingRequest.Sender != addr {
+			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, addr)
+		}
+		if result.IncomingRequest.Kind != message.L2Type {
+			t.Error("l2message has incorrect type")
+		}
+		l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var correctHash ethcommon.Hash
+		if i == 0 {
+			correctHash = signedTx.Hash()
+		} else {
+			correctHash = signedTx2.Hash()
+		}
+
+		if result.IncomingRequest.MessageID.ToEthHash() != correctHash {
+			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, correctHash.Hex())
+		}
+
+		_, ok := l2Message.(message.SignedTransaction)
+		if !ok {
+			t.Error("bad transaction format", l2Message)
+		}
 	}
 
-	if result.IncomingRequest.MessageID.ToEthHash() != signedTx.Hash() {
-		t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, signedTx.Hash().Hex())
-	}
-
-	_, ok := l2Message.(message.SignedTransaction)
-	if !ok {
-		t.Error("bad transaction format", l2Message)
-	}
 }
 
 func TestUnsignedTx(t *testing.T) {
@@ -331,10 +364,9 @@ func TestBatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	results := runMessage(t, mach, initMsg(), chain)
-	log.Println(results)
+	runMessage(t, mach, initMsg(), chain)
 
-	constructorData, err := hexutil.Decode(FibonacciBin)
+	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -352,18 +384,7 @@ func TestBatch(t *testing.T) {
 			t.Fatal(err)
 		}
 		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
-		depositResults := runMessage(
-			t,
-			mach,
-			message.Eth{
-				Dest:  addr,
-				Value: big.NewInt(1000),
-			},
-			addr,
-		)
-		if len(depositResults) != 0 {
-			t.Fatal("deposit should not have had a result")
-		}
+		depositEth(t, mach, addr, big.NewInt(1000))
 		pks = append(pks, pk)
 	}
 	batchSender := common.NewAddressFromEth(crypto.PubkeyToAddress(pks[0].PublicKey))
@@ -400,9 +421,12 @@ func TestBatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	results = runMessage(t, mach, message.NewSafeL2Message(msg), batchSender)
+	results, sends := runMessage(t, mach, message.NewSafeL2Message(msg), batchSender)
 	if len(results) != len(txes) {
 		t.Fatal("incorrect result count", len(results), "instead of", len(txes))
+	}
+	if len(sends) != 0 {
+		t.Fatal("incorrect send count", len(sends), "instead of 0")
 	}
 	for i, result := range results {
 		if result.IncomingRequest.Sender != senders[i] {

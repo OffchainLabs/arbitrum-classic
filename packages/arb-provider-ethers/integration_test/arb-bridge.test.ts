@@ -50,8 +50,26 @@ describe('l1 Bridge', () => {
   })
 })
 
-describe('l2 bridge', () => {
+describe('l2', async () => {
+  it('simple eth transfer', async () => {
+    const randomAddress = Wallet.createRandom().address
+    const value = utils.parseEther('0.01')
+    const tx = await arbSigner.sendTransaction({
+      to: randomAddress,
+      value,
+    })
+    await tx.wait()
+    setTimeout(async () => {
+      const arbBalance = await arbProvider.getBalance(randomAddress)
+      expect(arbBalance.eq(value)).to.be.true
+    }, 3000)
+  })
+})
+
+describe('l2 bridge', async () => {
   it('withdraws ETH', async () => {
+    const setupTx = await l1Bridge.depositETH(walletAddress, testValue)
+    await setupTx.wait()
     const arbBalance = await arbProvider.getBalance(walletAddress)
     expect(arbBalance.gte(testValue)).to.be.true
     const tx = await withdrawEth(arbSigner, testValue)
@@ -59,5 +77,6 @@ describe('l2 bridge', () => {
     console.info('waiting for receipt...')
     const rec = await tx.wait()
     console.info('withdraw receipt arrived!', rec)
+    expect(true).to.be.true
   })
 })

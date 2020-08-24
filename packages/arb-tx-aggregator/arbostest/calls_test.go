@@ -19,15 +19,11 @@ package arbostest
 import (
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"math/big"
-	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
@@ -49,7 +45,7 @@ func initMsg() message.Init {
 	}
 }
 
-func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender common.Address) []*evm.TxResult {
+func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender common.Address) ([]*evm.TxResult, []message.OutMessage) {
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
@@ -65,7 +61,7 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 	//	t.Fatal(err)
 	//}
 	//t.Log(string(data))
-	t.Log("Ran assertion for", steps, "steps and had", assertion.LogsCount, "logs")
+	t.Log("Ran assertion for", steps, "steps and had", assertion.LogsCount, "logs and", assertion.OutMsgsCount, "messages")
 	if mach.CurrentStatus() != machine.Extensive {
 		t.Fatal("machine should still be working")
 	}
@@ -85,7 +81,15 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 		}
 		results = append(results, result)
 	}
-	return results
+	sends := make([]message.OutMessage, 0)
+	for _, send := range assertion.ParseOutMessages() {
+		msg, err := message.NewOutMessageFromValue(send)
+		if err != nil {
+			t.Fatal(err)
+		}
+		sends = append(sends, msg)
+	}
+	return results, sends
 }
 
 func runValidTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Message, sender common.Address) (*evm.TxResult, error) {
@@ -104,37 +108,24 @@ func runTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Me
 	if err != nil {
 		return nil, err
 	}
-	results := runMessage(t, mach, l2, sender)
+	results, sends := runMessage(t, mach, l2, sender)
 	if len(results) != 1 {
 		return nil, fmt.Errorf("unexpected log count %v", len(results))
+	}
+	if len(sends) != 0 {
+		return nil, fmt.Errorf("unexpected send count %v", len(sends))
 	}
 	return results[0], nil
 }
 
 func withdrawEthTx(t *testing.T, sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
-	arbsys, err := abi.JSON(strings.NewReader(arboscontracts.ArbSysABI))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	txabi := arbsys.Methods["withdrawEth"]
-	txData, err := txabi.Inputs.Pack(dest)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	funcSig, err := hexutil.Decode("0x25e16063")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	return message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: sequenceNum,
 		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 		Payment:     amount,
-		Data:        append(funcSig, txData...),
+		Data:        snapshot.GetWithdrawEthData(dest),
 	}
 }
 
@@ -169,8 +160,11 @@ func depositEth(t *testing.T, mach machine.Machine, dest common.Address, amount 
 		Value: amount,
 	}
 
-	depositResults := runMessage(t, mach, msg, dest)
+	depositResults, sendResults := runMessage(t, mach, msg, dest)
 	if len(depositResults) != 0 {
 		t.Fatal("deposit should not have had a result")
+	}
+	if len(sendResults) != 0 {
+		t.Fatal("deposit should not trigger sends")
 	}
 }

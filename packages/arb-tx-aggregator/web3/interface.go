@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
+	errors2 "github.com/pkg/errors"
 	"math/big"
 )
 
@@ -18,7 +19,11 @@ type AccountInfoArgs struct {
 }
 
 func (n *AccountInfoArgs) UnmarshalJSON(buf []byte) error {
-	return unmarshalJSONArray(buf, []interface{}{&n.Address, &n.BlockNum})
+	err := unmarshalJSONArray(buf, []interface{}{&n.Address, &n.BlockNum})
+	if err != nil {
+		return errors2.Wrap(err, "error parsing account info args")
+	}
+	return nil
 }
 
 type GetBlockByNumberArgs struct {
@@ -27,7 +32,11 @@ type GetBlockByNumberArgs struct {
 }
 
 func (n *GetBlockByNumberArgs) UnmarshalJSON(buf []byte) error {
-	return unmarshalJSONArray(buf, []interface{}{&n.BlockNum, &n.IncludeTxData})
+	err := unmarshalJSONArray(buf, []interface{}{&n.BlockNum, &n.IncludeTxData})
+	if err != nil {
+		return errors2.Wrap(err, "error parsing block number args")
+	}
+	return nil
 }
 
 type GetBlockResult struct {
@@ -50,7 +59,11 @@ type CallArgs struct {
 }
 
 func (n *CallArgs) UnmarshalJSON(buf []byte) error {
-	return unmarshalJSONArray(buf, []interface{}{&n.CallArgs, &n.BlockNum})
+	err := unmarshalJSONArray(buf, []interface{}{&n.CallArgs, &n.BlockNum})
+	if err != nil {
+		return errors2.Wrapf(err, "error parsing call args %v", string(buf))
+	}
+	return nil
 }
 
 type EmptyArgs struct{}
@@ -60,7 +73,11 @@ type SendTransactionArgs struct {
 }
 
 func (n *SendTransactionArgs) UnmarshalJSON(buf []byte) error {
-	return unmarshalJSONArray(buf, []interface{}{&n.Data})
+	err := unmarshalJSONArray(buf, []interface{}{&n.Data})
+	if err != nil {
+		return errors2.Wrap(err, "error parsing send transaction args")
+	}
+	return nil
 }
 
 type GetTransactionReceiptArgs struct {
@@ -68,7 +85,11 @@ type GetTransactionReceiptArgs struct {
 }
 
 func (n *GetTransactionReceiptArgs) UnmarshalJSON(buf []byte) error {
-	return unmarshalJSONArray(buf, []interface{}{&n.Data})
+	err := unmarshalJSONArray(buf, []interface{}{&n.Data})
+	if err != nil {
+		return errors2.Wrap(err, "error parsing get transaction args")
+	}
+	return nil
 }
 
 // Receipt represents the results of a transaction.

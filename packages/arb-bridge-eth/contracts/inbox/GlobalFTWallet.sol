@@ -19,6 +19,7 @@
 pragma solidity ^0.5.11;
 
 import "../interfaces/IERC20.sol";
+import "../interfaces/IPairedErc20.sol";
 
 contract GlobalFTWallet {
     struct FTWallet {
@@ -32,6 +33,16 @@ contract GlobalFTWallet {
     }
 
     mapping(address => UserFTWallet) private ftWallets;
+
+    // Uninitialized paired contracts default to Unpaired
+    enum PairingStatus { Unpaired, Requested, Paired }
+
+    struct PairedContract {
+        bool paired;
+        mapping(address => PairingStatus) connectedRollups;
+    }
+
+    mapping(address => PairedContract) pairedContracts;
 
     function ownedERC20s(address _owner)
         external
@@ -53,7 +64,14 @@ contract GlobalFTWallet {
             removeToken(msg.sender, _tokenContract, value),
             "Wallet doesn't own sufficient balance of token"
         );
-        IERC20(_tokenContract).transfer(msg.sender, value);
+        if (pairedContracts[_tokenContract].paired) {
+            IPairedErc20(_tokenContract).mint(msg.sender, value);
+        } else {
+            require(
+                IERC20(_tokenContract).transfer(msg.sender, value),
+                "transferFailed"
+            );
+        }
     }
 
     function getERC20Balance(address _tokenContract, address _owner)
@@ -69,13 +87,80 @@ contract GlobalFTWallet {
         return wallet.ftList[index - 1].balance;
     }
 
+    function isPairedContract(address _tokenContract, address _chain)
+        external
+        view
+        returns (PairingStatus)
+    {
+        return pairedContracts[_tokenContract].connectedRollups[_chain];
+    }
+
+    function requestPairing(address _tokenContract, address _chain) internal {
+        PairedContract storage pairedContract = pairedContracts[_tokenContract];
+        require(
+            pairedContract.connectedRollups[_chain] == PairingStatus.Unpaired,
+            "must be unpaired"
+        );
+        if (!pairedContract.paired) {
+            // This is the first time pairing with a chain
+            pairedContract.paired = true;
+
+            // Burn existing balance since we will switch over to minting on withdrawal
+            IPairedErc20 tokenContract = IPairedErc20(_tokenContract);
+            tokenContract.burn(
+                address(this),
+                tokenContract.balanceOf(address(this))
+            );
+        }
+        pairedContract.connectedRollups[_chain] = PairingStatus.Requested;
+    }
+
+    function updatePairing(
+        address _tokenContract,
+        address _chain,
+        bool success
+    ) internal {
+        PairedContract storage pairedContract = pairedContracts[_tokenContract];
+        if (
+            pairedContract.connectedRollups[_chain] != PairingStatus.Requested
+        ) {
+            // If the pairing hasn't been requested, ignore this
+            return;
+        }
+        if (success) {
+            pairedContract.connectedRollups[_chain] = PairingStatus.Paired;
+        } else {
+            pairedContract.connectedRollups[_chain] = PairingStatus.Unpaired;
+        }
+    }
+
     function depositERC20(
         address _tokenContract,
         address _destination,
         uint256 _value
     ) internal {
-        IERC20(_tokenContract).transferFrom(msg.sender, address(this), _value);
-        addToken(_destination, _tokenContract, _value);
+        PairedContract storage pairedContract = pairedContracts[_tokenContract];
+        bool isPaired = pairedContract.paired;
+
+        bool recipientMintNewTokens = isPaired &&
+            pairedContract.connectedRollups[_destination] ==
+            PairingStatus.Paired;
+        if (!recipientMintNewTokens) {
+            addToken(_destination, _tokenContract, _value);
+        }
+
+        if (isPaired) {
+            IPairedErc20(_tokenContract).burn(msg.sender, _value);
+        } else {
+            require(
+                IERC20(_tokenContract).transferFrom(
+                    msg.sender,
+                    address(this),
+                    _value
+                ),
+                "failed transfer"
+            );
+        }
     }
 
     function transferERC20(
@@ -84,10 +169,22 @@ contract GlobalFTWallet {
         address _tokenContract,
         uint256 _value
     ) internal returns (bool) {
-        if (!removeToken(_from, _tokenContract, _value)) {
+        // Skip removing or adding tokens for a pair contract with one of its connected rollups
+        PairedContract storage pairedContract = pairedContracts[_tokenContract];
+        bool isPaired = pairedContract.paired;
+        bool senderMintNewTokens = isPaired &&
+            pairedContract.connectedRollups[_from] == PairingStatus.Paired;
+        if (
+            !senderMintNewTokens && !removeToken(_from, _tokenContract, _value)
+        ) {
             return false;
         }
-        addToken(_to, _tokenContract, _value);
+
+        bool recipientMintNewTokens = isPaired &&
+            pairedContract.connectedRollups[_to] == PairingStatus.Paired;
+        if (!recipientMintNewTokens) {
+            addToken(_to, _tokenContract, _value);
+        }
         return true;
     }
 
