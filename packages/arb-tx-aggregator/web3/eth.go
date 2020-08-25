@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/ethereum/go-ethereum/common/math"
 	errors2 "github.com/pkg/errors"
+	"log"
 	"math/big"
 	"net/http"
 
@@ -80,10 +81,11 @@ func (s *Server) GetStorageAt(_ *http.Request, args *GetStorageAtArgs, reply *st
 	if err != nil {
 		return err
 	}
-	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*args.Address), args.Index)
+	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*args.Address), (*big.Int)(args.Index))
 	if err != nil {
 		return errors2.Wrap(err, "error getting storage")
 	}
+	log.Println("Storage val", storageVal)
 	*reply = hexutil.Encode(math.U256Bytes(storageVal))
 	return nil
 }

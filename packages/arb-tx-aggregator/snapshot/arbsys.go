@@ -85,7 +85,7 @@ func GetWithdrawEthData(address common.Address) []byte {
 }
 
 func getStorageAtData(address common.Address, index *big.Int) []byte {
-	txData, err := getStorageAtABI.Inputs.Pack(address)
+	txData, err := getStorageAtABI.Inputs.Pack(address, index)
 	if err != nil {
 		panic(err)
 	}

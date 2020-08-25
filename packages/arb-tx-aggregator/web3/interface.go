@@ -28,7 +28,7 @@ func (n *AccountInfoArgs) UnmarshalJSON(buf []byte) error {
 
 type GetStorageAtArgs struct {
 	Address  *common.Address
-	Index    *big.Int
+	Index    *hexutil.Big
 	BlockNum *ethrpc.BlockNumber
 }
 
