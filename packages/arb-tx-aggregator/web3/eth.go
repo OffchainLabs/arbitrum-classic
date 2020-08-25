@@ -2,6 +2,7 @@ package web3
 
 import (
 	"errors"
+	"github.com/ethereum/go-ethereum/common/math"
 	errors2 "github.com/pkg/errors"
 	"math/big"
 	"net/http"
@@ -71,6 +72,19 @@ func (s *Server) GetCode(_ *http.Request, args *AccountInfoArgs, reply *string) 
 		return errors2.Wrap(err, "error getting code")
 	}
 	*reply = hexutil.Encode(code)
+	return nil
+}
+
+func (s *Server) GetStorageAt(_ *http.Request, args *GetStorageAtArgs, reply *string) error {
+	snap, err := s.getSnapshot(args.BlockNum)
+	if err != nil {
+		return err
+	}
+	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*args.Address), args.Index)
+	if err != nil {
+		return errors2.Wrap(err, "error getting storage")
+	}
+	*reply = hexutil.Encode(math.U256Bytes(storageVal))
 	return nil
 }
 
