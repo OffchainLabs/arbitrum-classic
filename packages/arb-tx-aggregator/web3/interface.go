@@ -40,6 +40,19 @@ func (n *GetStorageAtArgs) UnmarshalJSON(buf []byte) error {
 	return nil
 }
 
+type GetBlockByHashArgs struct {
+	BlockHash     hexutil.Bytes
+	IncludeTxData bool
+}
+
+func (n *GetBlockByHashArgs) UnmarshalJSON(buf []byte) error {
+	err := unmarshalJSONArray(buf, []interface{}{&n.BlockHash, &n.IncludeTxData})
+	if err != nil {
+		return errors2.Wrap(err, "error parsing block number args")
+	}
+	return nil
+}
+
 type GetBlockByNumberArgs struct {
 	BlockNum      *ethrpc.BlockNumber
 	IncludeTxData bool
@@ -54,8 +67,26 @@ func (n *GetBlockByNumberArgs) UnmarshalJSON(buf []byte) error {
 }
 
 type GetBlockResult struct {
-	types.Header
-	Transactions interface{} `json:"transactions"`
+	Number           *hexutil.Big      `json:"number"`
+	Hash             hexutil.Bytes     `json:"hash"`
+	ParentHash       hexutil.Bytes     `json:"parentHash"`
+	MixDigest        hexutil.Bytes     `json:"mixHash"`
+	Nonce            *types.BlockNonce `json:"nonce"`
+	Sha3Uncles       hexutil.Bytes     `json:"sha3Uncles"`
+	LogsBloom        hexutil.Bytes     `json:"logsBloom"`
+	TransactionsRoot hexutil.Bytes     `json:"transactionsRoot"`
+	StateRoot        hexutil.Bytes     `json:"stateRoot"`
+	ReceiptsRoot     hexutil.Bytes     `json:"receiptsRoot"`
+	Miner            hexutil.Bytes     `json:"miner"`
+	Difficulty       *hexutil.Big      `json:"difficulty"`
+	TotalDifficulty  *hexutil.Big      `json:"totalDifficulty"`
+	ExtraData        *hexutil.Bytes    `json:"extraData"`
+	Size             *hexutil.Uint64   `json:"size"`
+	GasLimit         *hexutil.Uint64   `json:"gasLimit"`
+	GasUsed          *hexutil.Uint64   `json:"gasUsed"`
+	Timestamp        *hexutil.Uint64   `json:"timestamp"`
+	Transactions     interface{}       `json:"transactions"`
+	Uncles           *[]hexutil.Bytes  `json:"uncles"`
 }
 
 type CallTxArgs struct {

@@ -1,6 +1,7 @@
 package web3
 
 import (
+	"context"
 	"errors"
 	errors2 "github.com/pkg/errors"
 	"log"
@@ -99,22 +100,37 @@ func (s *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
 	}
 }
 
-func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, reply *GetBlockResult) error {
+func (s *Server) GetBlockByHash(r *http.Request, args *GetBlockByHashArgs, reply **GetBlockResult) error {
+	var blockHash arbcommon.Hash
+	copy(blockHash[:], args.BlockHash)
+
+	header, err := s.srv.GetBlockHeaderByHash(r.Context(), blockHash)
+	if err != nil {
+		return err
+	}
+	return s.getBlock(r.Context(), header, args.IncludeTxData, reply)
+}
+
+func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, reply **GetBlockResult) error {
 	height, err := s.blockNum(args.BlockNum)
 	if err != nil {
 		return err
 	}
-	header, err := s.srv.GetBlockHeader(r.Context(), height)
+	header, err := s.srv.GetBlockHeaderByNumber(r.Context(), height)
 	if err != nil {
 		return err
 	}
-	reply.Header = *header
-	results, err := s.srv.GetBlockResults(height)
+	return s.getBlock(r.Context(), header, args.IncludeTxData, reply)
+}
+
+func (s *Server) getBlock(ctx context.Context, header *types.Header, includeTxData bool, reply **GetBlockResult) error {
+	results, err := s.srv.GetBlockResults(header.Number.Uint64())
 	if err != nil {
 		return err
 	}
 
-	if args.IncludeTxData {
+	var transactions interface{}
+	if includeTxData {
 		txes := make([]*TransactionResult, 0, len(results))
 		for _, res := range results {
 			txRes, err := s.makeTransactionResult(res)
@@ -123,13 +139,37 @@ func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, r
 			}
 			txes = append(txes, txRes)
 		}
-		reply.Transactions = txes
+		transactions = txes
 	} else {
 		txes := make([]hexutil.Bytes, 0, len(results))
 		for _, res := range results {
 			txes = append(txes, res.IncomingRequest.MessageID.Bytes())
 		}
-		reply.Transactions = txes
+		transactions = txes
+	}
+	size := uint64(0)
+	uncles := make([]hexutil.Bytes, 0)
+	*reply = &GetBlockResult{
+		Number:           (*hexutil.Big)(header.Number),
+		Hash:             header.Hash().Bytes(),
+		ParentHash:       header.ParentHash.Bytes(),
+		MixDigest:        header.MixDigest.Bytes(),
+		Nonce:            &header.Nonce,
+		Sha3Uncles:       header.UncleHash.Bytes(),
+		LogsBloom:        header.Bloom.Bytes(),
+		TransactionsRoot: header.TxHash.Bytes(),
+		StateRoot:        header.Root.Bytes(),
+		ReceiptsRoot:     header.ReceiptHash.Bytes(),
+		Miner:            header.Coinbase.Bytes(),
+		Difficulty:       (*hexutil.Big)(header.Difficulty),
+		TotalDifficulty:  (*hexutil.Big)(header.Difficulty),
+		ExtraData:        (*hexutil.Bytes)(&header.Extra),
+		Size:             (*hexutil.Uint64)(&size),
+		GasLimit:         (*hexutil.Uint64)(&header.GasLimit),
+		GasUsed:          (*hexutil.Uint64)(&header.GasUsed),
+		Timestamp:        (*hexutil.Uint64)(&header.Time),
+		Transactions:     transactions,
+		Uncles:           &uncles,
 	}
 	return nil
 }

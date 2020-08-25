@@ -123,17 +123,42 @@ func (m *Server) BlockInfo(height uint64) (*machine.BlockInfo, error) {
 	return m.db.GetBlock(height)
 }
 
-func (m *Server) GetBlockHeader(ctx context.Context, height uint64) (*types.Header, error) {
+func (m *Server) GetBlockHeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
+	ethHeader, err := m.client.HeaderByHash(ctx, hash.ToEthHash())
+	if err != nil {
+		return nil, err
+	}
+
+	currentBlock, err := m.db.GetBlock(ethHeader.Number.Uint64())
+	if err != nil {
+		return nil, err
+	}
+
+	return m.getBlockHeader(currentBlock, ethHeader)
+}
+
+func (m *Server) GetBlockHeaderByNumber(ctx context.Context, height uint64) (*types.Header, error) {
 	currentBlock, err := m.db.GetBlock(height)
 	if err != nil {
 		return nil, err
 	}
 
+	var ethHeader *types.Header
+	if currentBlock != nil {
+		ethHeader, err = m.client.HeaderByHash(ctx, currentBlock.Hash.ToEthHash())
+	} else {
+		ethHeader, err = m.client.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
+	}
+	if err != nil {
+		return nil, err
+	}
+	return m.getBlockHeader(currentBlock, ethHeader)
+}
+
+func (m *Server) getBlockHeader(currentBlock *machine.BlockInfo, ethHeader *types.Header) (*types.Header, error) {
 	gasUsed := uint64(0)
 	gasLimit := uint64(100000000)
 	bloom := types.Bloom{}
-
-	var ethHeader *types.Header
 	if currentBlock != nil {
 		res, err := evm.NewBlockResultFromValue(currentBlock.BlockLog)
 		if err != nil {
@@ -142,13 +167,6 @@ func (m *Server) GetBlockHeader(ctx context.Context, height uint64) (*types.Head
 		gasUsed = res.BlockStats.GasUsed.Uint64()
 		gasLimit = res.GasLimit.Uint64()
 		bloom = currentBlock.Bloom
-
-		ethHeader, err = m.client.HeaderByHash(ctx, currentBlock.Hash.ToEthHash())
-	} else {
-		ethHeader, err = m.client.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
-	}
-	if err != nil {
-		return nil, err
 	}
 
 	ethHeader.Bloom = bloom
@@ -191,7 +209,7 @@ func (m *Server) GetBlockResults(height uint64) ([]*evm.TxResult, error) {
 }
 
 func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, error) {
-	header, err := m.GetBlockHeader(ctx, height)
+	header, err := m.GetBlockHeaderByNumber(ctx, height)
 	if err != nil {
 		return nil, err
 	}
