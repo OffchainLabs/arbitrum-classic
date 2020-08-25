@@ -2,7 +2,6 @@ package web3
 
 import (
 	"errors"
-	"github.com/ethereum/go-ethereum/common/math"
 	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
@@ -86,7 +85,7 @@ func (s *Server) GetStorageAt(_ *http.Request, args *GetStorageAtArgs, reply *st
 		return errors2.Wrap(err, "error getting storage")
 	}
 	log.Println("Storage val", storageVal)
-	*reply = hexutil.Encode(math.U256Bytes(storageVal))
+	*reply = hexutil.EncodeBig(storageVal)
 	return nil
 }
 
