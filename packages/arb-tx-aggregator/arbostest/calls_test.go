@@ -146,6 +146,10 @@ func deployContract(t *testing.T, mach machine.Machine, sender common.Address, c
 	if err != nil {
 		return common.Address{}, err
 	}
+	return getConstructorResult(constructorResult)
+}
+
+func getConstructorResult(constructorResult *evm.TxResult) (common.Address, error) {
 	if len(constructorResult.ReturnData) != 32 {
 		return common.Address{}, errors.New("unexpected constructor result length")
 	}

@@ -83,9 +83,19 @@ func (s *Snapshot) makeBasicCall(data []byte, dest common.Address) (*evm.TxResul
 	return s.Call(msg, common.Address{})
 }
 
+func checkValidResult(res *evm.TxResult) error {
+	if res.ResultCode == evm.ReturnCode {
+		return nil
+	}
+	return fmt.Errorf("error processing call %v", res.ResultCode)
+}
+
 func (s *Snapshot) GetBalance(account common.Address) (*big.Int, error) {
 	res, err := s.makeBasicCall(getBalanceData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
 	if err != nil {
+		return nil, err
+	}
+	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
 	return parseBalanceResult(res)
@@ -96,6 +106,9 @@ func (s *Snapshot) GetTransactionCount(account common.Address) (*big.Int, error)
 	if err != nil {
 		return nil, err
 	}
+	if err := checkValidResult(res); err != nil {
+		return nil, err
+	}
 	return parseTransactionCountResult(res)
 }
 
@@ -104,7 +117,21 @@ func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := checkValidResult(res); err != nil {
+		return nil, err
+	}
 	return parseCodeResult(res)
+}
+
+func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.Int, error) {
+	res, err := s.makeBasicCall(GetStorageAtData(account, index), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+	if err != nil {
+		return nil, err
+	}
+	if err := checkValidResult(res); err != nil {
+		return nil, err
+	}
+	return parseGetStorageAtResult(res)
 }
 
 func runTx(mach machine.Machine, msg inbox.InboxMessage, chainId *big.Int) (*evm.TxResult, error) {

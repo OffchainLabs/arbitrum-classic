@@ -35,6 +35,9 @@ var (
 
 	withdrawEthABI abi.Method
 	withdrawEthSig []byte
+
+	getStorageAtABI abi.Method
+	getStorageAtSig []byte
 )
 
 func init() {
@@ -48,6 +51,9 @@ func init() {
 
 	withdrawEthABI = arbsys.Methods["withdrawEth"]
 	withdrawEthSig = hexutil.MustDecode("0x25e16063")
+
+	getStorageAtABI = arbsys.Methods["getStorageAt"]
+	getStorageAtSig = hexutil.MustDecode("0xa169625f")
 }
 
 func getTransactionCountData(address common.Address) []byte {
@@ -76,4 +82,24 @@ func GetWithdrawEthData(address common.Address) []byte {
 		panic(err)
 	}
 	return append(withdrawEthSig, txData...)
+}
+
+func GetStorageAtData(address common.Address, index *big.Int) []byte {
+	txData, err := getStorageAtABI.Inputs.Pack(address, index)
+	if err != nil {
+		panic(err)
+	}
+	return append(getStorageAtSig, txData...)
+}
+
+func parseGetStorageAtResult(res *evm.TxResult) (*big.Int, error) {
+	vals, err := getStorageAtABI.Outputs.UnpackValues(res.ReturnData)
+	if err != nil {
+		return nil, err
+	}
+	val, ok := vals[0].(*big.Int)
+	if !ok {
+		return nil, errors.New("unexpected tx result")
+	}
+	return val, nil
 }

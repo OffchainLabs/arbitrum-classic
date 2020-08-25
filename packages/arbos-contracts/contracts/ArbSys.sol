@@ -35,4 +35,9 @@ interface ArbSys {
         external
         view
         returns (uint256);
+
+    function getStorageAt(address account, uint256 index)
+        external
+        view
+        returns (uint256);
 }

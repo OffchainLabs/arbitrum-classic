@@ -26,6 +26,20 @@ func (n *AccountInfoArgs) UnmarshalJSON(buf []byte) error {
 	return nil
 }
 
+type GetStorageAtArgs struct {
+	Address  *common.Address
+	Index    *hexutil.Big
+	BlockNum *ethrpc.BlockNumber
+}
+
+func (n *GetStorageAtArgs) UnmarshalJSON(buf []byte) error {
+	err := unmarshalJSONArray(buf, []interface{}{&n.Address, &n.Index, &n.BlockNum})
+	if err != nil {
+		return errors2.Wrap(err, "error parsing storage args")
+	}
+	return nil
+}
+
 type GetBlockByNumberArgs struct {
 	BlockNum      *ethrpc.BlockNumber
 	IncludeTxData bool
