@@ -124,7 +124,7 @@ func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
 }
 
 func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.Int, error) {
-	res, err := s.makeBasicCall(getStorageAtData(account, index), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+	res, err := s.makeBasicCall(GetStorageAtData(account, index), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
