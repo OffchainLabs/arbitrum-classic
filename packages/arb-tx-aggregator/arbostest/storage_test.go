@@ -43,9 +43,9 @@ func TestGetStorageAt(t *testing.T) {
 	}
 
 	chain := common.RandAddress()
-	sender := common.RandAddress()
+	sender := common.HexToAddress("0x8c988ec54f112dd35666e19e7b0904bb12df1b6c")
 
-	connAddr := common.HexToAddress("0x2aad3e8302f74e0818b7bcd10c2c050526707755")
+	connAddr := common.HexToAddress("0x7cc1af94bfb4676c4facfc6a56430ec35c45b8b0")
 
 	constructorTx := makeConstructorTx(
 		hexutil.MustDecode(arbostestcontracts.StorageBin),
@@ -104,7 +104,7 @@ func TestGetStorageAt(t *testing.T) {
 		t.Fatal(err)
 	}
 	if connAddrCalc != connAddr {
-		t.Fatal("constructed address doesn't match", connAddrCalc, "instead of", connAddr)
+		t.Fatal("constructed address doesn't match:", connAddrCalc, "instead of", connAddr)
 	}
 	getStorageAtRes, err := evm.NewTxResultFromValue(logs[1])
 	if err != nil {
