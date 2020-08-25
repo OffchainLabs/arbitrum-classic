@@ -104,7 +104,7 @@ func TestGetStorageAt(t *testing.T) {
 		t.Fatal(err)
 	}
 	if connAddrCalc != connAddr {
-		t.Fatal("constructed address doesn't match")
+		t.Fatal("constructed address doesn't match", connAddrCalc, "instead of", connAddr)
 	}
 	getStorageAtRes, err := evm.NewTxResultFromValue(logs[1])
 	if err != nil {
