@@ -1,6 +1,7 @@
 package web3
 
 import (
+	"context"
 	"errors"
 	errors2 "github.com/pkg/errors"
 	"log"
@@ -99,22 +100,37 @@ func (s *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
 	}
 }
 
+func (s *Server) GetBlockByHash(r *http.Request, args *GetBlockByHashArgs, reply **GetBlockResult) error {
+	var blockHash arbcommon.Hash
+	copy(blockHash[:], args.BlockHash)
+
+	header, err := s.srv.GetBlockHeaderByHash(r.Context(), blockHash)
+	if err != nil {
+		return err
+	}
+	return s.getBlock(r.Context(), header, args.IncludeTxData, reply)
+}
+
 func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, reply **GetBlockResult) error {
 	height, err := s.blockNum(args.BlockNum)
 	if err != nil {
 		return err
 	}
-	header, err := s.srv.GetBlockHeader(r.Context(), height)
+	header, err := s.srv.GetBlockHeaderByNumber(r.Context(), height)
 	if err != nil {
 		return err
 	}
-	results, err := s.srv.GetBlockResults(height)
+	return s.getBlock(r.Context(), header, args.IncludeTxData, reply)
+}
+
+func (s *Server) getBlock(ctx context.Context, header *types.Header, includeTxData bool, reply **GetBlockResult) error {
+	results, err := s.srv.GetBlockResults(header.Number.Uint64())
 	if err != nil {
 		return err
 	}
 
 	var transactions interface{}
-	if args.IncludeTxData {
+	if includeTxData {
 		txes := make([]*TransactionResult, 0, len(results))
 		for _, res := range results {
 			txRes, err := s.makeTransactionResult(res)

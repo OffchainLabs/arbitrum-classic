@@ -40,6 +40,19 @@ func (n *GetStorageAtArgs) UnmarshalJSON(buf []byte) error {
 	return nil
 }
 
+type GetBlockByHashArgs struct {
+	BlockHash     hexutil.Bytes
+	IncludeTxData bool
+}
+
+func (n *GetBlockByHashArgs) UnmarshalJSON(buf []byte) error {
+	err := unmarshalJSONArray(buf, []interface{}{&n.BlockHash, &n.IncludeTxData})
+	if err != nil {
+		return errors2.Wrap(err, "error parsing block number args")
+	}
+	return nil
+}
+
 type GetBlockByNumberArgs struct {
 	BlockNum      *ethrpc.BlockNumber
 	IncludeTxData bool
