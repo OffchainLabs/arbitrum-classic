@@ -151,6 +151,17 @@ func newPendingBatch(snap *snapshot.Snapshot, maxSize common.StorageSize, signer
 	}
 }
 
+func newPendingBatchFromExisting(batch *pendingBatch, maxSize common.StorageSize) *pendingBatch {
+	return &pendingBatch{
+		snap:        batch.snap,
+		txCounts:    batch.txCounts,
+		appliedTxes: nil,
+		sizeBytes:   0,
+		maxSize:     maxSize,
+		full:        false,
+	}
+}
+
 func (p *pendingBatch) getTxCount(account common.Address) uint64 {
 	count, ok := p.txCounts[account]
 	if !ok {

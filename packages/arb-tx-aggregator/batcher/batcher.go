@@ -87,6 +87,15 @@ func NewBatcher(
 
 			case <-ticker.C:
 				server.Lock()
+				tx := server.pendingBatch.popRandomTx(server.queuedTxes)
+				if tx == nil {
+					// Either the batch is full or we ran out of txes
+					if server.pendingBatch.full {
+
+					} else {
+						continue
+					}
+				}
 			}
 		}
 	}()
@@ -146,23 +155,9 @@ func prepareTransactions(signer types.Signer, txes []*types.Transaction) []*type
 }
 
 func (m *Batcher) sendBatch(ctx context.Context) {
-	var txes []*types.Transaction
-
-	//if len(m.transactions) > maxTransactions {
-	//	txes = m.transactions[:maxTransactions]
-	//	m.transactions = m.transactions[maxTransactions:]
-	//} else {
-	//	txes = m.transactions
-	//	m.transactions = nil
-	//}
-	m.Unlock()
-
-	log.Println("Submitting batch with", len(txes), "transactions")
-
-	batch := prepareTransactions(m.signer, txes)
-
-	batchTxes := make([]message.AbstractL2Message, 0, len(batch))
-	for _, tx := range batch {
+	txes := m.pendingBatch.appliedTxes
+	batchTxes := make([]message.AbstractL2Message, 0, len(txes))
+	for _, tx := range txes {
 		batchTxes = append(batchTxes, message.SignedTransaction{Tx: tx})
 	}
 	batchTx, err := message.NewTransactionBatchFromMessages(batchTxes)
@@ -176,12 +171,13 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 		message.NewSafeL2Message(batchTx).AsData(),
 	)
 
-	m.Lock()
 	if err != nil {
 		log.Println("transaction aggregator failed: ", err)
 		m.valid = false
 		return
 	}
+
+	m.pendingBatch = newPendingBatchFromExisting(m.pendingBatch, maxBatchSize)
 
 	go func() {
 		receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, m.client, txHash.ToEthHash())
@@ -192,7 +188,7 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 			m.Lock()
 			defer m.Unlock()
 			// batch succeeded
-			for _, tx := range batch {
+			for _, tx := range txes {
 				_, _ = types.Sender(m.signer, tx)
 				//m.pendingTxes[sender]--
 			}
