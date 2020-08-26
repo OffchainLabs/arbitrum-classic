@@ -272,3 +272,7 @@ func (m *Server) PendingCall(msg message.ContractTransaction, sender ethcommon.A
 func (m *Server) LatestSnapshot() *snapshot.Snapshot {
 	return m.db.LatestSnapshot()
 }
+
+func (m *Server) PendingSnapshot() *snapshot.Snapshot {
+	return m.batch.PendingSnapshot()
+}

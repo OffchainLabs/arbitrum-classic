@@ -90,7 +90,6 @@ func (q *txQueue) Pop() *types.Transaction {
 type txQueues struct {
 	queues   map[common.Address]*txQueue
 	accounts []common.Address
-	signer   types.Signer
 }
 
 func newTxQueues() *txQueues {
@@ -100,8 +99,8 @@ func newTxQueues() *txQueues {
 	}
 }
 
-func (q *txQueues) addTransaction(tx *types.Transaction) error {
-	sender, _ := types.Sender(q.signer, tx)
+func (q *txQueues) addTransaction(tx *types.Transaction, signer types.Signer) error {
+	sender, _ := types.Sender(signer, tx)
 	queue, ok := q.queues[sender]
 	if !ok {
 		queue = newTxQueue()
@@ -175,8 +174,12 @@ func (p *pendingBatch) getTxCount(account common.Address) uint64 {
 	return count
 }
 
-func (p *pendingBatch) popRandomTx(queuedTxes *txQueues) *types.Transaction {
-	index := int(rand.Int31n(int32(len(queuedTxes.accounts))))
+func (p *pendingBatch) popRandomTx(queuedTxes *txQueues, signer types.Signer) *types.Transaction {
+	queuedCount := int32(len(queuedTxes.accounts))
+	if queuedCount == 0 {
+		return nil
+	}
+	index := int(rand.Int31n(queuedCount))
 	first := true
 	lastIndex := index
 	index--
@@ -189,7 +192,7 @@ func (p *pendingBatch) popRandomTx(queuedTxes *txQueues) *types.Transaction {
 		nextAccount := queuedTxes.queues[queuedTxes.accounts[index]]
 		tx := nextAccount.Peak()
 
-		sender, _ := types.Sender(queuedTxes.signer, tx)
+		sender, _ := types.Sender(signer, tx)
 		nextValidNonce := p.getTxCount(sender)
 		if tx.Nonce() > nextValidNonce {
 			continue
@@ -209,18 +212,19 @@ func (p *pendingBatch) popRandomTx(queuedTxes *txQueues) *types.Transaction {
 	}
 }
 
-func (p *pendingBatch) addValidTransaction(tx *types.Transaction) error {
+func snapWithTx(snap *snapshot.Snapshot, tx *types.Transaction, signer types.Signer) (*snapshot.Snapshot, error) {
 	msg, err := message.NewL2Message(message.SignedTransaction{Tx: tx})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	sender, _ := types.Sender(p.signer, tx)
-	newSnap, _, err := snapshot.NewSnapshotWithMessage(
-		p.snap,
-		msg,
-		arbcommon.NewAddressFromEth(sender),
-	)
+	sender, _ := types.Sender(signer, tx)
+	_, err = snap.AddMessage(msg, arbcommon.NewAddressFromEth(sender), arbcommon.NewHashFromEth(tx.Hash()))
+	return snap, err
+}
+
+func (p *pendingBatch) addValidTransaction(tx *types.Transaction) error {
+	newSnap, err := snapWithTx(p.snap, tx, p.signer)
 	if err != nil {
 		return err
 	}
@@ -228,6 +232,12 @@ func (p *pendingBatch) addValidTransaction(tx *types.Transaction) error {
 	p.appliedTxes = append(p.appliedTxes, tx)
 	p.sizeBytes += tx.Size()
 	return nil
+}
+
+func (p *pendingBatch) addUpdatedSnap(tx *types.Transaction, newSnap *snapshot.Snapshot) {
+	p.snap = newSnap
+	p.appliedTxes = append(p.appliedTxes, tx)
+	p.sizeBytes += tx.Size()
 }
 
 func (p *pendingBatch) checkValidForQueue(tx *types.Transaction) error {

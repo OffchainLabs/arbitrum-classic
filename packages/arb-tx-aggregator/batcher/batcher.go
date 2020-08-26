@@ -17,10 +17,10 @@
 package batcher
 
 import (
+	"container/list"
 	"context"
 	"errors"
 	"log"
-	"sort"
 	"sync"
 	"time"
 
@@ -36,14 +36,17 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
-const maxTransactions = 200
-
 const maxBatchSize ethcommon.StorageSize = 500000
 
 type TransactionBatcher interface {
 	PendingTransactionCount(account common.Address) *uint64
 	SendTransaction(tx *types.Transaction) (common.Hash, error)
 	PendingSnapshot() (*snapshot.Snapshot, bool)
+}
+
+type pendingSentBatch struct {
+	txHash common.Hash
+	txes   []*types.Transaction
 }
 
 type Batcher struct {
@@ -56,8 +59,9 @@ type Batcher struct {
 	sync.Mutex
 	valid bool
 
-	queuedTxes   *txQueues
-	pendingBatch *pendingBatch
+	queuedTxes         *txQueues
+	pendingBatch       *pendingBatch
+	pendingSentBatches *list.List
 }
 
 func NewBatcher(
@@ -68,13 +72,16 @@ func NewBatcher(
 	globalInbox arbbridge.GlobalInbox,
 	maxBatchTime time.Duration,
 ) *Batcher {
+	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
 	server := &Batcher{
-		signer:      types.NewEIP155Signer(message.ChainAddressToID(rollupAddress)),
-		client:      client,
-		globalInbox: globalInbox,
-		db:          db,
-		valid:       true,
-		queuedTxes:  newTxQueues(),
+		signer:             signer,
+		client:             client,
+		globalInbox:        globalInbox,
+		db:                 db,
+		valid:              true,
+		queuedTxes:         newTxQueues(),
+		pendingBatch:       newPendingBatch(db.LatestSnapshot(), maxBatchSize, signer),
+		pendingSentBatches: list.New(),
 	}
 
 	go func() {
@@ -87,15 +94,30 @@ func NewBatcher(
 
 			case <-ticker.C:
 				server.Lock()
-				tx := server.pendingBatch.popRandomTx(server.queuedTxes)
-				if tx == nil {
-					// Either the batch is full or we ran out of txes
-					if server.pendingBatch.full {
-
+				for {
+					tx := server.pendingBatch.popRandomTx(server.queuedTxes, signer)
+					if tx == nil {
+						// Either the batch is full or we ran out of txes
+						isFull := server.pendingBatch.full
+						server.sendBatch(ctx)
+						if !isFull {
+							// If we didn't fill the last batch, pause for more transactions
+							server.Unlock()
+							break
+						}
 					} else {
-						continue
+						newSnap := server.pendingBatch.snap.Clone()
+						server.Unlock()
+						newSnap, err := snapWithTx(newSnap, tx, signer)
+						server.Lock()
+						if err != nil {
+							log.Println("Aggregator ignored invalid tx", err)
+							continue
+						}
+						server.pendingBatch.addUpdatedSnap(tx, newSnap)
 					}
 				}
+
 			}
 		}
 	}()
@@ -110,17 +132,20 @@ func NewBatcher(
 
 			case <-ticker.C:
 				server.Lock()
-				// Keep sending in spin loop until we can't anymore
+				for server.pendingSentBatches.Len() > 0 {
+					batch := server.pendingSentBatches.Front().Value.(*pendingSentBatch)
+					txHash := batch.txHash.ToEthHash()
+					server.Unlock()
+					receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, client, txHash)
+					if err != nil || receipt.Status != 1 {
+						// batch failed
+						log.Fatal("Error submitted batch", err)
+					}
 
-				//sentFull := false
-				//for server.valid && len(server.transactions) >= maxTransactions {
-				//	server.sendBatch(ctx)
-				//	sentFull = true
-				//}
-				//// If we have've sent any batches, send a partial
-				//if !sentFull && server.valid && len(server.transactions) > 0 {
-				//	server.sendBatch(ctx)
-				//}
+					// batch succeeded
+					server.Lock()
+					server.pendingSentBatches.Remove(server.pendingSentBatches.Front())
+				}
 				server.Unlock()
 			}
 		}
@@ -128,34 +153,11 @@ func NewBatcher(
 	return server
 }
 
-// prepareTransactions reorders the transactions such that the position of each
-// user is maintained, but the transactions of that user are swapped to be in
-// sequence number order
-func prepareTransactions(signer types.Signer, txes []*types.Transaction) []*types.Transaction {
-	transactionsBySender := make(map[ethcommon.Address][]*types.Transaction)
-	for _, tx := range txes {
-		sender, _ := types.Sender(signer, tx)
-		transactionsBySender[sender] = append(transactionsBySender[sender], tx)
-	}
-
-	for _, txes := range transactionsBySender {
-		sort.Slice(txes, func(i, j int) bool {
-			return txes[i].Nonce() < txes[j].Nonce()
-		})
-	}
-
-	batchTxes := make([]*types.Transaction, 0, len(txes))
-	for _, tx := range txes {
-		sender, _ := types.Sender(signer, tx)
-		nextTx := transactionsBySender[sender][0]
-		transactionsBySender[sender] = transactionsBySender[sender][1:]
-		batchTxes = append(batchTxes, nextTx)
-	}
-	return batchTxes
-}
-
 func (m *Batcher) sendBatch(ctx context.Context) {
 	txes := m.pendingBatch.appliedTxes
+	if len(txes) == 0 {
+		return
+	}
 	batchTxes := make([]message.AbstractL2Message, 0, len(txes))
 	for _, tx := range txes {
 		batchTxes = append(batchTxes, message.SignedTransaction{Tx: tx})
@@ -178,22 +180,17 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 	}
 
 	m.pendingBatch = newPendingBatchFromExisting(m.pendingBatch, maxBatchSize)
+	m.pendingSentBatches.PushBack(&pendingSentBatch{
+		txHash: txHash,
+		txes:   txes,
+	})
+}
 
-	go func() {
-		receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, m.client, txHash.ToEthHash())
-		if err != nil || receipt.Status != 1 {
-			// batch failed
-			log.Fatal("Error submitted batch", err)
-		} else {
-			m.Lock()
-			defer m.Unlock()
-			// batch succeeded
-			for _, tx := range txes {
-				_, _ = types.Sender(m.signer, tx)
-				//m.pendingTxes[sender]--
-			}
-		}
-	}()
+func (m *Batcher) PendingSnapshot() *snapshot.Snapshot {
+	m.Lock()
+	defer m.Unlock()
+	m.setupPending()
+	return m.pendingBatch.snap.Clone()
 }
 
 func (m *Batcher) PendingTransactionCount(account common.Address) *uint64 {
@@ -210,9 +207,6 @@ func (m *Batcher) PendingTransactionCount(account common.Address) *uint64 {
 // SendTransaction takes a request signed transaction l2message from a client
 // and puts it in a queue to be included in the next transaction batch
 func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
-	// Make sure we have an up to date batch to check against
-	m.setupPending()
-
 	ethSender, err := types.Sender(m.signer, tx)
 	if err != nil {
 		log.Println("Error processing transaction", err)
@@ -229,11 +223,14 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 		return common.Hash{}, errors.New("tx aggregator is not running")
 	}
 
+	// Make sure we have an up to date batch to check against
+	m.setupPending()
+
 	if err := m.pendingBatch.checkValidForQueue(tx); err != nil {
 		return common.Hash{}, err
 	}
 
-	if err := m.queuedTxes.addTransaction(tx); err != nil {
+	if err := m.queuedTxes.addTransaction(tx, m.signer); err != nil {
 		return common.Hash{}, err
 	}
 
@@ -241,14 +238,29 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 }
 
 func (m *Batcher) setupPending() {
-	latest := m.db.LatestSnapshot()
-	if m.pendingBatch == nil {
-		m.pendingBatch = newPendingBatch(latest, maxBatchSize, m.signer)
-	} else if m.pendingBatch.snap.Height().Cmp(latest.Height()) < 0 {
-		for _, tx := range m.pendingBatch.appliedTxes {
-			// If there's an error here, just throw out the tx
-			_ = m.queuedTxes.addTransaction(tx)
+	snap := m.db.LatestSnapshot()
+	if m.pendingBatch.snap.Height().Cmp(snap.Height()) < 0 {
+		// Add all of the already broadcast transactions to the snapshot
+		// If they were already included, they'll be ignored because they will
+		// have invalid sequence numbers
+		n := m.pendingSentBatches.Front()
+		for n != nil {
+			item := n.Value.(*pendingSentBatch)
+			for _, tx := range item.txes {
+				var err error
+				newSnap, err := snapWithTx(snap, tx, m.signer)
+				if err != nil {
+					continue
+				}
+				snap = newSnap
+			}
+			n = n.Next()
 		}
-		m.pendingBatch = newPendingBatch(latest, maxBatchSize, m.signer)
+		for _, tx := range m.pendingBatch.appliedTxes {
+			// Add the pending, but not broadcast txes back into the queue
+			// If there's an error here, just throw out the tx
+			_ = m.queuedTxes.addTransaction(tx, m.signer)
+		}
+		m.pendingBatch = newPendingBatch(snap, maxBatchSize, m.signer)
 	}
 }

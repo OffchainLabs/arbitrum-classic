@@ -44,19 +44,30 @@ func NewSnapshot(mach machine.Machine, time inbox.ChainTime, chainId *big.Int, l
 	}
 }
 
-func NewSnapshotWithMessage(snap *Snapshot, msg message.Message, sender common.Address) (*Snapshot, *evm.TxResult, error) {
-	mach := snap.mach.Clone()
-	inboxMsg := message.NewInboxMessage(msg, sender, snap.nextInboxSeqNum, snap.time)
-	res, err := runTx(mach, inboxMsg, snap.chainId)
+// AddMessage can only be called if the snapshot is uniquely owned
+// If an error is returned, s is unmodified
+func (s *Snapshot) AddMessage(msg message.Message, sender common.Address, targetHash common.Hash) (*evm.TxResult, error) {
+	mach := s.mach.Clone()
+	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, s.time)
+	res, err := runTx(mach, inboxMsg, targetHash)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
+	s.mach = mach
+	s.nextInboxSeqNum = new(big.Int).Add(s.nextInboxSeqNum, big.NewInt(1))
+	return res, nil
+}
+
+func (s *Snapshot) Clone() *Snapshot {
 	return &Snapshot{
-		mach:            mach,
-		time:            snap.time,
-		nextInboxSeqNum: new(big.Int).Add(snap.nextInboxSeqNum, big.NewInt(1)),
-		chainId:         snap.chainId,
-	}, res, nil
+		mach: s.mach,
+		time: inbox.ChainTime{
+			BlockNum:  s.time.BlockNum.Clone(),
+			Timestamp: new(big.Int).Set(s.time.Timestamp),
+		},
+		nextInboxSeqNum: new(big.Int).Set(s.nextInboxSeqNum),
+		chainId:         new(big.Int).Set(s.chainId),
+	}
 }
 
 func (s *Snapshot) Height() *common.TimeBlocks {
@@ -64,12 +75,13 @@ func (s *Snapshot) Height() *common.TimeBlocks {
 }
 
 func (s *Snapshot) Call(msg message.ContractTransaction, sender common.Address) (*evm.TxResult, error) {
-	return s.TryTx(message.NewSafeL2Message(msg), sender)
+	targetHash := hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
+	return s.TryTx(message.NewSafeL2Message(msg), sender, targetHash)
 }
 
-func (s *Snapshot) TryTx(msg message.Message, sender common.Address) (*evm.TxResult, error) {
+func (s *Snapshot) TryTx(msg message.Message, sender common.Address, targetHash common.Hash) (*evm.TxResult, error) {
 	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, s.time)
-	return runTx(s.mach.Clone(), inboxMsg, s.chainId)
+	return runTx(s.mach.Clone(), inboxMsg, targetHash)
 }
 
 func (s *Snapshot) makeBasicCall(data []byte, dest common.Address) (*evm.TxResult, error) {
@@ -123,6 +135,7 @@ func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
 	return parseCodeResult(res)
 }
 
+
 func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.Int, error) {
 	res, err := s.makeBasicCall(GetStorageAtData(account, index), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
@@ -134,7 +147,8 @@ func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.In
 	return parseGetStorageAtResult(res)
 }
 
-func runTx(mach machine.Machine, msg inbox.InboxMessage, chainId *big.Int) (*evm.TxResult, error) {
+
+func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash) (*evm.TxResult, error) {
 	assertion, steps := mach.ExecuteAssertion(100000000, []inbox.InboxMessage{msg}, 0)
 
 	// If the machine wasn't able to run and it reports that it is currently
@@ -154,7 +168,6 @@ func runTx(mach machine.Machine, msg inbox.InboxMessage, chainId *big.Int) (*evm
 		return nil, err
 	}
 
-	targetHash := hashing.SoliditySHA3(hashing.Uint256(chainId), hashing.Uint256(msg.InboxSeqNum))
 	if res.IncomingRequest.MessageID != targetHash {
 		return nil, fmt.Errorf("call got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
 	}

@@ -402,7 +402,7 @@ func (s *Server) GetLogs(r *http.Request, args *GetLogsArgs, reply *[]LogResult)
 func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {
 	currentCount := s.srv.GetBlockCount()
 	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
-		return s.srv.LatestSnapshot(), nil
+		return s.srv.PendingSnapshot(), nil
 	}
 
 	if *blockNum == rpc.LatestBlockNumber || blockNum.Int64() == int64(currentCount) {
