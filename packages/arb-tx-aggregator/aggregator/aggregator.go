@@ -276,3 +276,7 @@ func (m *Server) LatestSnapshot() *snapshot.Snapshot {
 func (m *Server) PendingSnapshot() *snapshot.Snapshot {
 	return m.batch.PendingSnapshot()
 }
+
+func (m *Server) PendingTransactionCount(account common.Address) *uint64 {
+	return m.batch.PendingTransactionCount(account)
+}
