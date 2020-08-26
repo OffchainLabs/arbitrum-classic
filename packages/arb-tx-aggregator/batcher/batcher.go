@@ -168,6 +168,7 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 		m.valid = false
 		return
 	}
+	log.Println("Submitting batch with", len(txes), "transactions")
 	txHash, err := m.globalInbox.SendL2MessageNoWait(
 		ctx,
 		message.NewSafeL2Message(batchTx).AsData(),
