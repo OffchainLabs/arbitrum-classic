@@ -155,17 +155,27 @@ func (c *CodecRequest) Method() (string, error) {
 // absence of expected names MAY result in an error being
 // generated. The names MUST match exactly, including
 // case, to the method's expected parameters.
+
+var ignoredMethods map[string]bool
+
+func init() {
+	ignoredMethods = make(map[string]bool)
+	ignoredMethods["eth_call"] = true
+	ignoredMethods["eth_blockNumber"] = true
+	ignoredMethods["eth_getBalance"] = true
+	ignoredMethods["eth_sendRawTransaction"] = true
+	ignoredMethods["eth_estimateGas"] = true
+	ignoredMethods["eth_getBlockByNumber"] = true
+	ignoredMethods["eth_getTransactionReceipt"] = true
+	ignoredMethods["net_version"] = true
+}
+
 func (c *CodecRequest) ReadRequest(args interface{}) error {
 	if c.err == nil && c.request.Params != nil {
-		if c.request.Method != "eth_call" &&
-			c.request.Method != "eth_blockNumber" &&
-			c.request.Method != "eth_getBalance" &&
-			c.request.Method != "eth_sendRawTransaction" &&
-			c.request.Method != "eth_estimateGas" {
+		if _, ok := ignoredMethods[c.request.Method]; !ok {
 			raw, _ := c.request.Params.MarshalJSON()
 			log.Println("Got request", c.request.Method, string(raw))
 		}
-
 		// Note: if c.request.Params is nil it's not an error, it's an optional member.
 		// JSON params structured object. Unmarshal to the args object.
 		if err := json.Unmarshal(*c.request.Params, args); err != nil {

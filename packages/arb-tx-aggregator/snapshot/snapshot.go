@@ -135,7 +135,6 @@ func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
 	return parseCodeResult(res)
 }
 
-
 func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.Int, error) {
 	res, err := s.makeBasicCall(GetStorageAtData(account, index), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
@@ -146,7 +145,6 @@ func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.In
 	}
 	return parseGetStorageAtResult(res)
 }
-
 
 func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash) (*evm.TxResult, error) {
 	assertion, steps := mach.ExecuteAssertion(100000000, []inbox.InboxMessage{msg}, 0)

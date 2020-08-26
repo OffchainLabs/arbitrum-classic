@@ -185,9 +185,13 @@ func (p *pendingBatch) popRandomTx(queuedTxes *txQueues, signer types.Signer) *t
 	index--
 	for {
 		index++
+		if index == len(queuedTxes.accounts) {
+			index = 0
+		}
 		if !first && index == lastIndex {
 			return nil
 		}
+
 		first = false
 		nextAccount := queuedTxes.queues[queuedTxes.accounts[index]]
 		tx := nextAccount.Peak()
@@ -199,7 +203,7 @@ func (p *pendingBatch) popRandomTx(queuedTxes *txQueues, signer types.Signer) *t
 		}
 		if p.sizeBytes+tx.Size() > p.maxSize {
 			p.full = true
-			continue
+			return nil
 		}
 		queuedTxes.removeTxFromAccountAtIndex(index)
 
@@ -223,21 +227,12 @@ func snapWithTx(snap *snapshot.Snapshot, tx *types.Transaction, signer types.Sig
 	return snap, err
 }
 
-func (p *pendingBatch) addValidTransaction(tx *types.Transaction) error {
-	newSnap, err := snapWithTx(p.snap, tx, p.signer)
-	if err != nil {
-		return err
-	}
-	p.snap = newSnap
-	p.appliedTxes = append(p.appliedTxes, tx)
-	p.sizeBytes += tx.Size()
-	return nil
-}
-
 func (p *pendingBatch) addUpdatedSnap(tx *types.Transaction, newSnap *snapshot.Snapshot) {
 	p.snap = newSnap
 	p.appliedTxes = append(p.appliedTxes, tx)
 	p.sizeBytes += tx.Size()
+	sender, _ := types.Sender(p.signer, tx)
+	p.txCounts[sender] = tx.Nonce() + 1
 }
 
 func (p *pendingBatch) checkValidForQueue(tx *types.Transaction) error {
