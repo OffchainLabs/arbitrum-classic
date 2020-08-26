@@ -252,7 +252,7 @@ func (p *pendingBatch) checkValidForQueue(tx *types.Transaction) error {
 		return err
 	}
 
-	if tx.Cost().Cmp(amount) < 0 {
+	if tx.Cost().Cmp(amount) > 0 {
 		return core.ErrInsufficientFunds
 	}
 	return nil
