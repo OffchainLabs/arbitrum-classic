@@ -4,6 +4,7 @@ import (
 	"container/heap"
 	"errors"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
@@ -215,5 +216,28 @@ func (p *pendingBatch) addValidTransaction(tx *types.Transaction) error {
 	p.snap = newSnap
 	p.appliedTxes = append(p.appliedTxes, tx)
 	p.sizeBytes += tx.Size()
+	return nil
+}
+
+func (p *pendingBatch) checkValidForQueue(tx *types.Transaction) error {
+	ethSender, _ := types.Sender(p.signer, tx)
+	sender := arbcommon.NewAddressFromEth(ethSender)
+	txCount, err := p.snap.GetTransactionCount(sender)
+	if err != nil {
+		return err
+	}
+
+	if tx.Nonce() < txCount.Uint64() {
+		return core.ErrNonceTooLow
+	}
+
+	amount, err := p.snap.GetBalance(sender)
+	if err != nil {
+		return err
+	}
+
+	if tx.Cost().Cmp(amount) < 0 {
+		return core.ErrInsufficientFunds
+	}
 	return nil
 }

@@ -25,7 +25,6 @@ import (
 	"time"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -38,6 +37,8 @@ import (
 )
 
 const maxTransactions = 200
+
+const maxBatchSize ethcommon.StorageSize = 500000
 
 type TransactionBatcher interface {
 	PendingTransactionCount(account common.Address) *uint64
@@ -55,9 +56,8 @@ type Batcher struct {
 	sync.Mutex
 	valid bool
 
-	queuedTxes      *txQueues
-	pendingSnapshot *snapshot.Snapshot
-	pendingBatch    []*types.Transaction
+	queuedTxes   *txQueues
+	pendingBatch *pendingBatch
 }
 
 func NewBatcher(
@@ -214,6 +214,9 @@ func (m *Batcher) PendingTransactionCount(account common.Address) *uint64 {
 // SendTransaction takes a request signed transaction l2message from a client
 // and puts it in a queue to be included in the next transaction batch
 func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
+	// Make sure we have an up to date batch to check against
+	m.setupPending()
+
 	ethSender, err := types.Sender(m.signer, tx)
 	if err != nil {
 		log.Println("Error processing transaction", err)
@@ -230,7 +233,7 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 		return common.Hash{}, errors.New("tx aggregator is not running")
 	}
 
-	if err := m.validateTxAgainstPending(tx); err != nil {
+	if err := m.pendingBatch.checkValidForQueue(tx); err != nil {
 		return common.Hash{}, err
 	}
 
@@ -241,60 +244,15 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 	return txHash, nil
 }
 
-func (m *Batcher) validateTxAgainstPending(tx *types.Transaction) error {
-	ethSender, _ := types.Sender(m.signer, tx)
-	sender := common.NewAddressFromEth(ethSender)
-	txCount, err := m.pendingSnapshot.GetTransactionCount(sender)
-	if err != nil {
-		return err
-	}
-
-	if tx.Nonce() < txCount.Uint64() {
-		return core.ErrNonceTooLow
-	}
-
-	amount, err := m.pendingSnapshot.GetBalance(sender)
-	if err != nil {
-		return err
-	}
-
-	if tx.Cost().Cmp(amount) < 0 {
-		return core.ErrInsufficientFunds
-	}
-	return nil
-}
-
-func (m *Batcher) addTxToBatch(tx *types.Transaction) error {
-	ethSender, _ := types.Sender(m.signer, tx)
-	sender := common.NewAddressFromEth(ethSender)
-	msg, err := message.NewL2Message(message.SignedTransaction{Tx: tx})
-	if err != nil {
-		return err
-	}
-	newSnap, _, err := snapshot.NewSnapshotWithMessage(m.pendingSnapshot, msg, sender)
-	if err != nil {
-		return err
-	}
-	m.pendingSnapshot = newSnap
-	m.pendingBatch = append(m.pendingBatch, tx)
-	return nil
-}
-
-func (m *Batcher) PendingSnapshot() (*snapshot.Snapshot, bool) {
-	m.setupPending()
+func (m *Batcher) setupPending() {
 	latest := m.db.LatestSnapshot()
-	if m.pendingSnapshot == nil || m.pendingSnapshot.Height().Cmp(latest.Height()) < 0 {
-		m.pendingSnapshot = latest
-		return latest, true
+	if m.pendingBatch == nil {
+		m.pendingBatch = newPendingBatch(latest, maxBatchSize, m.signer)
+	} else if m.pendingBatch.snap.Height().Cmp(latest.Height()) < 0 {
+		for _, tx := range m.pendingBatch.appliedTxes {
+			// If there's an error here, just throw out the tx
+			_ = m.queuedTxes.addTransaction(tx)
+		}
+		m.pendingBatch = newPendingBatch(latest, maxBatchSize, m.signer)
 	}
-	return m.pendingSnapshot, false
-}
-
-func (m *Batcher) setupPending() bool {
-	latest := m.db.LatestSnapshot()
-	if m.pendingSnapshot == nil || m.pendingSnapshot.Height().Cmp(latest.Height()) < 0 {
-		m.pendingSnapshot = latest
-		return true
-	}
-	return false
 }
