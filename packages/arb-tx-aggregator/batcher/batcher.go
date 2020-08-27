@@ -134,6 +134,9 @@ func NewBatcher(
 
 			case <-ticker.C:
 				server.Lock()
+				// Note: this loop is the only place where items can be removed
+				// from pendingSentBatches, so pendingSentBatches.Front() is
+				// guaranteed not to change when the server lock is released
 				for server.pendingSentBatches.Len() > 0 {
 					batch := server.pendingSentBatches.Front().Value.(*pendingSentBatch)
 					txHash := batch.txHash.ToEthHash()
