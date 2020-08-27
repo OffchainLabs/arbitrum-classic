@@ -299,9 +299,9 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//if err := setupValidators(rollupAddress, l1Client, pks[3:5]); err != nil {
-	//	t.Fatalf("Validator setup error %v", err)
-	//}
+	if err := setupValidators(rollupAddress, l1Client, pks[3:5]); err != nil {
+		t.Fatalf("Validator setup error %v", err)
+	}
 
 	if err := launchAggregator(
 		l1Client,
