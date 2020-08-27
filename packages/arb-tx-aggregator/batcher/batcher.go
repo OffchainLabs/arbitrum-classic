@@ -17,47 +17,112 @@
 package batcher
 
 import (
+	"container/list"
 	"context"
 	"errors"
 	"log"
-	"sort"
 	"sync"
 	"time"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
-const maxTransactions = 200
+const maxBatchSize ethcommon.StorageSize = 500000
 
-type DecodedBatchTx struct {
-	tx     message.SignedTransaction
-	sender common.Address
+type TransactionBatcher interface {
+	PendingTransactionCount(account common.Address) *uint64
+	SendTransaction(tx *types.Transaction) (common.Hash, error)
+	PendingSnapshot() (*snapshot.Snapshot, bool)
+}
+
+type pendingSentBatch struct {
+	txHash common.Hash
+	txes   []*types.Transaction
 }
 
 type Batcher struct {
-	rollupAddress common.Address
-	globalInbox   arbbridge.GlobalInbox
+	signer      types.Signer
+	client      ethutils.EthClient
+	globalInbox arbbridge.GlobalInbox
+
+	db *txdb.TxDB
 
 	sync.Mutex
-	valid        bool
-	transactions []DecodedBatchTx
+	valid bool
+
+	queuedTxes         *txQueues
+	pendingBatch       *pendingBatch
+	pendingSentBatches *list.List
 }
 
 func NewBatcher(
 	ctx context.Context,
-	globalInbox arbbridge.GlobalInbox,
+	db *txdb.TxDB,
 	rollupAddress common.Address,
+	client ethutils.EthClient,
+	globalInbox arbbridge.GlobalInbox,
 	maxBatchTime time.Duration,
 ) *Batcher {
+	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
 	server := &Batcher{
-		rollupAddress: rollupAddress,
-		globalInbox:   globalInbox,
-		valid:         true,
+		signer:             signer,
+		client:             client,
+		globalInbox:        globalInbox,
+		db:                 db,
+		valid:              true,
+		queuedTxes:         newTxQueues(),
+		pendingBatch:       newPendingBatch(db.LatestSnapshot(), maxBatchSize, signer),
+		pendingSentBatches: list.New(),
 	}
+
+	go func() {
+		lastBatch := time.Now()
+		ticker := time.NewTicker(time.Millisecond * 10)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+
+			case <-ticker.C:
+				server.Lock()
+				for {
+					tx, cont := server.pendingBatch.popRandomTx(server.queuedTxes, signer)
+					if tx != nil {
+						newSnap := server.pendingBatch.snap.Clone()
+						server.Unlock()
+						newSnap, err := snapWithTx(newSnap, tx, signer)
+						server.Lock()
+						if err != nil {
+							log.Println("Aggregator ignored invalid tx", err)
+							continue
+						}
+						server.pendingBatch.addUpdatedSnap(tx, newSnap)
+					}
+					if server.pendingBatch.full || (!cont && time.Since(lastBatch) > maxBatchTime) {
+						lastBatch = time.Now()
+						server.sendBatch(ctx)
+					}
+
+					if !cont {
+						// If we didn't fill the last batch, pause for more transactions
+						server.Unlock()
+						break
+					}
+				}
+
+			}
+		}
+	}()
 
 	go func() {
 		ticker := time.NewTicker(maxBatchTime)
@@ -69,15 +134,22 @@ func NewBatcher(
 
 			case <-ticker.C:
 				server.Lock()
-				// Keep sending in spin loop until we can't anymore
-				sentFull := false
-				for server.valid && len(server.transactions) >= maxTransactions {
-					server.sendBatch(ctx)
-					sentFull = true
-				}
-				// If we have've sent any batches, send a partial
-				if !sentFull && server.valid && len(server.transactions) > 0 {
-					server.sendBatch(ctx)
+				// Note: this loop is the only place where items can be removed
+				// from pendingSentBatches, so pendingSentBatches.Front() is
+				// guaranteed not to change when the server lock is released
+				for server.pendingSentBatches.Len() > 0 {
+					batch := server.pendingSentBatches.Front().Value.(*pendingSentBatch)
+					txHash := batch.txHash.ToEthHash()
+					server.Unlock()
+					receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, client, txHash)
+					if err != nil || receipt.Status != 1 {
+						// batch failed
+						log.Fatal("Error submitted batch", err)
+					}
+
+					// batch succeeded
+					server.Lock()
+					server.pendingSentBatches.Remove(server.pendingSentBatches.Front())
 				}
 				server.Unlock()
 			}
@@ -86,75 +158,69 @@ func NewBatcher(
 	return server
 }
 
-// prepareTransactions reorders the transactions such that the position of each
-// user is maintained, but the transactions of that user are swapped to be in
-// sequence number order
-func prepareTransactions(txes []DecodedBatchTx) (message.TransactionBatch, error) {
-	transactionsBySender := make(map[common.Address][]DecodedBatchTx)
-	for _, tx := range txes {
-		transactionsBySender[tx.sender] = append(transactionsBySender[tx.sender], tx)
+func (m *Batcher) sendBatch(ctx context.Context) {
+	txes := m.pendingBatch.appliedTxes
+	if len(txes) == 0 {
+		return
 	}
-
-	for _, txes := range transactionsBySender {
-		sort.SliceStable(txes, func(i, j int) bool {
-			return txes[i].tx.Tx.Nonce() < txes[j].tx.Tx.Nonce()
-		})
-	}
-
 	batchTxes := make([]message.AbstractL2Message, 0, len(txes))
 	for _, tx := range txes {
-		nextTx := transactionsBySender[tx.sender][0]
-		transactionsBySender[tx.sender] = transactionsBySender[tx.sender][1:]
-		batchTxes = append(batchTxes, nextTx.tx)
+		batchTxes = append(batchTxes, message.SignedTransaction{Tx: tx})
 	}
-	return message.NewTransactionBatchFromMessages(batchTxes)
-}
-
-func (m *Batcher) sendBatch(ctx context.Context) {
-	var txes []DecodedBatchTx
-
-	if len(m.transactions) > maxTransactions {
-		txes = m.transactions[:maxTransactions]
-		m.transactions = m.transactions[maxTransactions:]
-	} else {
-		txes = m.transactions
-		m.transactions = nil
-	}
-	m.Unlock()
-
-	log.Println("Submitting batch with", len(txes), "transactions")
-
-	batchTx, err := prepareTransactions(txes)
-	if err != nil {
-		log.Fatal("failed to produce batch", err)
-	}
-	err = m.globalInbox.SendL2MessageNoWait(
-		ctx,
-		m.rollupAddress,
-		message.NewSafeL2Message(batchTx).AsData(),
-	)
-	m.Lock()
+	batchTx, err := message.NewTransactionBatchFromMessages(batchTxes)
 	if err != nil {
 		log.Println("transaction aggregator failed: ", err)
 		m.valid = false
+		return
 	}
+	log.Println("Submitting batch with", len(txes), "transactions")
+	txHash, err := m.globalInbox.SendL2MessageNoWait(
+		ctx,
+		message.NewSafeL2Message(batchTx).AsData(),
+	)
+
+	if err != nil {
+		log.Println("transaction aggregator failed: ", err)
+		m.valid = false
+		return
+	}
+
+	m.pendingBatch = newPendingBatchFromExisting(m.pendingBatch, maxBatchSize)
+	m.pendingSentBatches.PushBack(&pendingSentBatch{
+		txHash: txHash,
+		txes:   txes,
+	})
+}
+
+func (m *Batcher) PendingSnapshot() *snapshot.Snapshot {
+	m.Lock()
+	defer m.Unlock()
+	m.setupPending()
+	return m.pendingBatch.snap.Clone()
+}
+
+func (m *Batcher) PendingTransactionCount(account common.Address) *uint64 {
+	m.Lock()
+	defer m.Unlock()
+	q, ok := m.queuedTxes.queues[account.ToEthAddress()]
+	if !ok {
+		return nil
+	}
+	count := q.maxNonce + 1
+	return &count
 }
 
 // SendTransaction takes a request signed transaction l2message from a client
 // and puts it in a queue to be included in the next transaction batch
 func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
-	chainId := message.ChainAddressToID(m.rollupAddress)
-	signer := types.NewEIP155Signer(chainId)
-	ethSender, err := signer.Sender(tx)
+	ethSender, err := types.Sender(m.signer, tx)
 	if err != nil {
 		log.Println("Error processing transaction", err)
-		log.Printf("Tx chain id was %v and rollup chain's is %v", tx.ChainId(), chainId)
 		return common.Hash{}, err
 	}
-	sender := common.NewAddressFromEth(ethSender)
 
-	txHash := tx.Hash()
-	log.Println("Got tx: with hash", txHash.Hex(), "from", sender.Hex())
+	txHash := common.NewHashFromEth(tx.Hash())
+	log.Println("Got tx: with hash", txHash, "from", ethSender.Hex())
 
 	m.Lock()
 	defer m.Unlock()
@@ -163,9 +229,44 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 		return common.Hash{}, errors.New("tx aggregator is not running")
 	}
 
-	m.transactions = append(m.transactions, DecodedBatchTx{
-		tx:     message.SignedTransaction{Tx: tx},
-		sender: sender,
-	})
-	return common.NewHashFromEth(txHash), nil
+	// Make sure we have an up to date batch to check against
+	m.setupPending()
+
+	if err := m.pendingBatch.checkValidForQueue(tx); err != nil {
+		return common.Hash{}, err
+	}
+
+	if err := m.queuedTxes.addTransaction(tx, m.signer); err != nil {
+		return common.Hash{}, err
+	}
+
+	return txHash, nil
+}
+
+func (m *Batcher) setupPending() {
+	snap := m.db.LatestSnapshot()
+	if m.pendingBatch.snap.Height().Cmp(snap.Height()) < 0 {
+		// Add all of the already broadcast transactions to the snapshot
+		// If they were already included, they'll be ignored because they will
+		// have invalid sequence numbers
+		n := m.pendingSentBatches.Front()
+		for n != nil {
+			item := n.Value.(*pendingSentBatch)
+			for _, tx := range item.txes {
+				var err error
+				newSnap, err := snapWithTx(snap, tx, m.signer)
+				if err != nil {
+					continue
+				}
+				snap = newSnap
+			}
+			n = n.Next()
+		}
+		for _, tx := range m.pendingBatch.appliedTxes {
+			// Add the pending, but not broadcast txes back into the queue
+			// If there's an error here, just throw out the tx
+			_ = m.queuedTxes.addTransaction(tx, m.signer)
+		}
+		m.pendingBatch = newPendingBatch(snap, maxBatchSize, m.signer)
+	}
 }

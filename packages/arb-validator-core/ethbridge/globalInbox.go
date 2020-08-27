@@ -44,12 +44,12 @@ func newGlobalInbox(address ethcommon.Address, chain ethcommon.Address, client e
 	return &globalInbox{watcher, auth}, nil
 }
 
-func (con *globalInbox) SendL2Message(ctx context.Context, chain common.Address, data []byte) (arbbridge.MessageDeliveredEvent, error) {
+func (con *globalInbox) SendL2Message(ctx context.Context, data []byte) (arbbridge.MessageDeliveredEvent, error) {
 	con.auth.Lock()
 	defer con.auth.Unlock()
 	tx, err := con.GlobalInbox.SendL2MessageFromOrigin(
 		con.auth.getAuth(ctx),
-		chain.ToEthAddress(),
+		con.rollupAddress,
 		data,
 	)
 	receipt, err := WaitForReceiptWithResults(ctx, con.client, con.auth.auth.From, tx, "SendL2MessageFromOrigin")
@@ -70,23 +70,22 @@ func (con *globalInbox) SendL2Message(ctx context.Context, chain common.Address,
 	return arbbridge.MessageDeliveredEvent{}, errors.New("Didn't output l2message delivered event")
 }
 
-func (con *globalInbox) SendL2MessageNoWait(ctx context.Context, chain common.Address, data []byte) error {
+func (con *globalInbox) SendL2MessageNoWait(ctx context.Context, data []byte) (common.Hash, error) {
 	con.auth.Lock()
 	defer con.auth.Unlock()
-	_, err := con.GlobalInbox.SendL2MessageFromOrigin(
+	tx, err := con.GlobalInbox.SendL2MessageFromOrigin(
 		con.auth.getAuth(ctx),
-		chain.ToEthAddress(),
+		con.rollupAddress,
 		data,
 	)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
-	return err
+	return common.NewHashFromEth(tx.Hash()), nil
 }
 
 func (con *globalInbox) DepositEthMessage(
 	ctx context.Context,
-	chain common.Address,
 	destination common.Address,
 	value *big.Int,
 ) error {
@@ -99,7 +98,7 @@ func (con *globalInbox) DepositEthMessage(
 			Value:    value,
 			Context:  ctx,
 		},
-		chain.ToEthAddress(),
+		con.rollupAddress,
 		destination.ToEthAddress(),
 	)
 
@@ -112,7 +111,6 @@ func (con *globalInbox) DepositEthMessage(
 
 func (con *globalInbox) DepositERC20Message(
 	ctx context.Context,
-	chain common.Address,
 	tokenAddress common.Address,
 	destination common.Address,
 	value *big.Int,
@@ -121,7 +119,7 @@ func (con *globalInbox) DepositERC20Message(
 	defer con.auth.Unlock()
 	tx, err := con.GlobalInbox.DepositERC20Message(
 		con.auth.getAuth(ctx),
-		chain.ToEthAddress(),
+		con.rollupAddress,
 		tokenAddress.ToEthAddress(),
 		destination.ToEthAddress(),
 		value,
@@ -136,7 +134,6 @@ func (con *globalInbox) DepositERC20Message(
 
 func (con *globalInbox) DepositERC721Message(
 	ctx context.Context,
-	chain common.Address,
 	tokenAddress common.Address,
 	destination common.Address,
 	value *big.Int,
@@ -145,7 +142,7 @@ func (con *globalInbox) DepositERC721Message(
 	defer con.auth.Unlock()
 	tx, err := con.GlobalInbox.DepositERC721Message(
 		con.auth.getAuth(ctx),
-		chain.ToEthAddress(),
+		con.rollupAddress,
 		tokenAddress.ToEthAddress(),
 		destination.ToEthAddress(),
 		value,

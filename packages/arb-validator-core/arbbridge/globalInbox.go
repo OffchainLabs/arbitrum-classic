@@ -55,7 +55,6 @@ type GlobalInbox interface {
 
 	SendL2Message(
 		ctx context.Context,
-		chain common.Address,
 		data []byte,
 	) (MessageDeliveredEvent, error)
 
@@ -66,26 +65,22 @@ type GlobalInbox interface {
 	// create any security problems
 	SendL2MessageNoWait(
 		ctx context.Context,
-		chain common.Address,
 		data []byte,
-	) error
+	) (common.Hash, error)
 
 	DepositEthMessage(
 		ctx context.Context,
-		chain common.Address,
 		destination common.Address,
 		value *big.Int,
 	) error
 	DepositERC20Message(
 		ctx context.Context,
-		chain common.Address,
 		tokenAddress common.Address,
 		destination common.Address,
 		value *big.Int,
 	) error
 	DepositERC721Message(
 		ctx context.Context,
-		chain common.Address,
 		tokenAddress common.Address,
 		destination common.Address,
 		value *big.Int,

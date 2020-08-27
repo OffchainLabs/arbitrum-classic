@@ -51,11 +51,19 @@ func (s *Server) GetBalance(_ *http.Request, args *AccountInfoArgs, reply *strin
 }
 
 func (s *Server) GetTransactionCount(_ *http.Request, args *AccountInfoArgs, reply *string) error {
+	account := arbcommon.NewAddressFromEth(*args.Address)
+	if args.BlockNum == nil || *args.BlockNum == rpc.PendingBlockNumber {
+		count := s.srv.PendingTransactionCount(account)
+		if count != nil {
+			*reply = hexutil.EncodeUint64(*count)
+			return nil
+		}
+	}
 	snap, err := s.getSnapshot(args.BlockNum)
 	if err != nil {
 		return err
 	}
-	txCount, err := snap.GetTransactionCount(arbcommon.NewAddressFromEth(*args.Address))
+	txCount, err := snap.GetTransactionCount(account)
 	if err != nil {
 		return errors2.Wrap(err, "error getting transaction count")
 	}
@@ -400,12 +408,11 @@ func (s *Server) GetLogs(r *http.Request, args *GetLogsArgs, reply *[]LogResult)
 }
 
 func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {
-	currentCount := s.srv.GetBlockCount()
 	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
-		return s.srv.LatestSnapshot(), nil
+		return s.srv.PendingSnapshot(), nil
 	}
 
-	if *blockNum == rpc.LatestBlockNumber || blockNum.Int64() == int64(currentCount) {
+	if *blockNum == rpc.LatestBlockNumber || blockNum.Int64() == int64(s.srv.GetBlockCount()) {
 		return s.srv.LatestSnapshot(), nil
 	}
 

@@ -2,7 +2,6 @@ package web3
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"strings"
 	"unicode"
@@ -52,7 +51,6 @@ func (c *UpCodecRequest) Method() (string, error) {
 			method = string(unicode.ToUpper(r)) + method[n:]
 		}
 		modifiedRequest := service + "." + method
-		log.Println("Made request", modifiedRequest)
 		return modifiedRequest, nil
 	}
 	return m, err

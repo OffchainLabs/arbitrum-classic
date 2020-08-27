@@ -62,7 +62,7 @@ func LaunchAggregator(
 		return err
 	}
 
-	batch := batcher.NewBatcher(ctx, globalInbox, rollupAddress, maxBatchTime)
+	batch := batcher.NewBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
 
 	srv := aggregator.NewServer(client, batch, rollupAddress, db)
 	errChan := make(chan error, 1)
