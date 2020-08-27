@@ -157,11 +157,8 @@ func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash)
 	}
 
 	avmLogs := assertion.ParseLogs()
-	if len(avmLogs) != 1 {
-		return nil, fmt.Errorf("unexpected log count %v", len(avmLogs))
-	}
 
-	res, err := evm.NewTxResultFromValue(avmLogs[0])
+	res, err := evm.NewTxResultFromValue(avmLogs[len(avmLogs)-1])
 	if err != nil {
 		return nil, err
 	}
