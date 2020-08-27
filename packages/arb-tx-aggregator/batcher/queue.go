@@ -9,6 +9,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"log"
 	"math/rand"
 )
 
@@ -174,10 +175,10 @@ func (p *pendingBatch) getTxCount(account common.Address) uint64 {
 	return count
 }
 
-func (p *pendingBatch) popRandomTx(queuedTxes *txQueues, signer types.Signer) *types.Transaction {
+func (p *pendingBatch) popRandomTx(queuedTxes *txQueues, signer types.Signer) (*types.Transaction, bool) {
 	queuedCount := int32(len(queuedTxes.accounts))
 	if queuedCount == 0 {
-		return nil
+		return nil, false
 	}
 	index := int(rand.Int31n(queuedCount))
 	first := true
@@ -189,11 +190,12 @@ func (p *pendingBatch) popRandomTx(queuedTxes *txQueues, signer types.Signer) *t
 			index = 0
 		}
 		if !first && index == lastIndex {
-			return nil
+			return nil, false
 		}
 
 		first = false
-		nextAccount := queuedTxes.queues[queuedTxes.accounts[index]]
+		account := queuedTxes.accounts[index]
+		nextAccount := queuedTxes.queues[account]
 		tx := nextAccount.Peak()
 
 		sender, _ := types.Sender(signer, tx)
@@ -203,16 +205,16 @@ func (p *pendingBatch) popRandomTx(queuedTxes *txQueues, signer types.Signer) *t
 		}
 		if p.sizeBytes+tx.Size() > p.maxSize {
 			p.full = true
-			return nil
+			return nil, true
 		}
 		queuedTxes.removeTxFromAccountAtIndex(index)
 
 		if tx.Nonce() < nextValidNonce {
 			// Just discard this tx since it is old
-			continue
+			return nil, true
 		}
 
-		return tx
+		return tx, false
 	}
 }
 
@@ -253,6 +255,7 @@ func (p *pendingBatch) checkValidForQueue(tx *types.Transaction) error {
 	}
 
 	if tx.Cost().Cmp(amount) > 0 {
+		log.Println("tx rejected for insufficient funds:", tx.Value(), tx.GasPrice(), tx.Gas(), amount)
 		return core.ErrInsufficientFunds
 	}
 	return nil

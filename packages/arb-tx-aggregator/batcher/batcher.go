@@ -85,7 +85,8 @@ func NewBatcher(
 	}
 
 	go func() {
-		ticker := time.NewTicker(maxBatchTime)
+		lastBatch := time.Now()
+		ticker := time.NewTicker(time.Millisecond * 10)
 		defer ticker.Stop()
 		for {
 			select {
@@ -95,17 +96,8 @@ func NewBatcher(
 			case <-ticker.C:
 				server.Lock()
 				for {
-					tx := server.pendingBatch.popRandomTx(server.queuedTxes, signer)
-					if tx == nil {
-						// Either the batch is full or we ran out of txes
-						isFull := server.pendingBatch.full
-						server.sendBatch(ctx)
-						if !isFull {
-							// If we didn't fill the last batch, pause for more transactions
-							server.Unlock()
-							break
-						}
-					} else {
+					tx, cont := server.pendingBatch.popRandomTx(server.queuedTxes, signer)
+					if tx != nil {
 						newSnap := server.pendingBatch.snap.Clone()
 						server.Unlock()
 						newSnap, err := snapWithTx(newSnap, tx, signer)
@@ -115,6 +107,16 @@ func NewBatcher(
 							continue
 						}
 						server.pendingBatch.addUpdatedSnap(tx, newSnap)
+					}
+					if server.pendingBatch.full || (!cont && time.Since(lastBatch) > maxBatchTime) {
+						lastBatch = time.Now()
+						server.sendBatch(ctx)
+					}
+
+					if !cont {
+						// If we didn't fill the last batch, pause for more transactions
+						server.Unlock()
+						break
 					}
 				}
 
