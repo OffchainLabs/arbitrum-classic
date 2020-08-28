@@ -51,7 +51,7 @@ func (sc *snapshotCache) latest() *snapshot.Snapshot {
 
 func (sc *snapshotCache) getSnapshot(time inbox.ChainTime) *snapshot.Snapshot {
 	// If the time is past the most recent value, we have no snapshot
-	if sc.tree.Right().Value.(*common.TimeBlocks).Cmp(time.BlockNum) < 0 {
+	if sc.tree.Right().Key.(*common.TimeBlocks).Cmp(time.BlockNum) < 0 {
 		return nil
 	}
 
