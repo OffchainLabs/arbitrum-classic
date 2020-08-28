@@ -22,6 +22,7 @@ import (
 	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
+	errors2 "github.com/pkg/errors"
 	"math/big"
 	"time"
 
@@ -126,12 +127,12 @@ func (m *Server) BlockInfo(height uint64) (*machine.BlockInfo, error) {
 func (m *Server) GetBlockHeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
 	ethHeader, err := m.client.HeaderByHash(ctx, hash.ToEthHash())
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "eth header not found")
 	}
 
 	currentBlock, err := m.db.GetBlock(ethHeader.Number.Uint64())
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "failed to get arb block")
 	}
 
 	return m.getBlockHeader(currentBlock, ethHeader)
