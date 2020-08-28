@@ -19,6 +19,7 @@ package cmachine
 /*
 #cgo CFLAGS: -I.
 #cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lsecp256k1 -lff -lgmp -lkeccak
+#cgo linux LDFLAGS: -lld
 #include "../cavm/cmachine.h"
 #include "../cavm/ccheckpointstorage.h"
 #include <stdio.h>
