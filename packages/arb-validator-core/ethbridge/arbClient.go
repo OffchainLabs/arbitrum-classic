@@ -154,6 +154,17 @@ func (c *EthArbClient) BlockIdForHeight(ctx context.Context, height *common.Time
 	return getBlockID(header), nil
 }
 
+func (c *EthArbClient) TimestampForBlockHash(ctx context.Context, hash common.Hash) (*big.Int, error) {
+	header, err := c.client.HeaderByHash(ctx, hash.ToEthHash())
+	if err != nil {
+		return nil, err
+	}
+	if header == nil {
+		return nil, errors.New("couldn't get header at height")
+	}
+	return new(big.Int).SetUint64(header.Time), nil
+}
+
 type TransactAuth struct {
 	sync.Mutex
 	auth *bind.TransactOpts

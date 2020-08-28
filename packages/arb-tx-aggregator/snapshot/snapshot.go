@@ -59,6 +59,11 @@ func (s *Snapshot) AddMessage(msg message.Message, sender common.Address, target
 	return res, nil
 }
 
+// AdvanceTime can only be called if the snapshot is uniquely owned
+func (s *Snapshot) AdvanceTime(time inbox.ChainTime) {
+	s.time = time
+}
+
 func (s *Snapshot) Clone() *Snapshot {
 	return &Snapshot{
 		mach: s.mach,
