@@ -46,10 +46,7 @@
       "packages/arb-bridge-eth",
       "packages/arb-provider-ethers",
       "packages/arbos-contracts",
-      "packages/tools",
-      "demos/pet-shop",
-      "demos/*",
-      "workspace/*"
+      "packages/tools"
     ]
   },
   "devDependencies": {
