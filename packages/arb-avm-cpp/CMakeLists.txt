@@ -80,10 +80,7 @@ if(NOT TARGET Boost::system)
     set_property(TARGET Boost::system PROPERTY
         INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
 endif()
-find_package(RocksDB)
-if (NOT ROCKSDB_FOUND)
-    include(build-rocksdb)
-endif()
+find_package(RocksDB REQUIRED)
 include(CodeCoverage)
 include(Formatting)
 
