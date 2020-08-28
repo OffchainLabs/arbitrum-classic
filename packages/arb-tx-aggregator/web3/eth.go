@@ -37,8 +37,8 @@ func (s *Server) BlockNumber(_ *http.Request, _ *BlockNumberArgs, reply *string)
 	return nil
 }
 
-func (s *Server) GetBalance(_ *http.Request, args *AccountInfoArgs, reply *string) error {
-	snap, err := s.getSnapshot(args.BlockNum)
+func (s *Server) GetBalance(r *http.Request, args *AccountInfoArgs, reply *string) error {
+	snap, err := s.getSnapshot(r.Context(), args.BlockNum)
 	if err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func (s *Server) GetBalance(_ *http.Request, args *AccountInfoArgs, reply *strin
 	return nil
 }
 
-func (s *Server) GetTransactionCount(_ *http.Request, args *AccountInfoArgs, reply *string) error {
+func (s *Server) GetTransactionCount(r *http.Request, args *AccountInfoArgs, reply *string) error {
 	account := arbcommon.NewAddressFromEth(*args.Address)
 	if args.BlockNum == nil || *args.BlockNum == rpc.PendingBlockNumber {
 		count := s.srv.PendingTransactionCount(account)
@@ -59,7 +59,7 @@ func (s *Server) GetTransactionCount(_ *http.Request, args *AccountInfoArgs, rep
 			return nil
 		}
 	}
-	snap, err := s.getSnapshot(args.BlockNum)
+	snap, err := s.getSnapshot(r.Context(), args.BlockNum)
 	if err != nil {
 		return err
 	}
@@ -71,8 +71,8 @@ func (s *Server) GetTransactionCount(_ *http.Request, args *AccountInfoArgs, rep
 	return nil
 }
 
-func (s *Server) GetCode(_ *http.Request, args *AccountInfoArgs, reply *string) error {
-	snap, err := s.getSnapshot(args.BlockNum)
+func (s *Server) GetCode(r *http.Request, args *AccountInfoArgs, reply *string) error {
+	snap, err := s.getSnapshot(r.Context(), args.BlockNum)
 	if err != nil {
 		return err
 	}
@@ -84,8 +84,8 @@ func (s *Server) GetCode(_ *http.Request, args *AccountInfoArgs, reply *string) 
 	return nil
 }
 
-func (s *Server) GetStorageAt(_ *http.Request, args *GetStorageAtArgs, reply *string) error {
-	snap, err := s.getSnapshot(args.BlockNum)
+func (s *Server) GetStorageAt(r *http.Request, args *GetStorageAtArgs, reply *string) error {
+	snap, err := s.getSnapshot(r.Context(), args.BlockNum)
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ func (s *Server) GetBlockByHash(r *http.Request, args *GetBlockByHashArgs, reply
 	if err != nil {
 		return err
 	}
-	return s.getBlock(r.Context(), header, args.IncludeTxData, reply)
+	return s.getBlock(header, args.IncludeTxData, reply)
 }
 
 func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, reply **GetBlockResult) error {
@@ -128,10 +128,10 @@ func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, r
 	if err != nil {
 		return err
 	}
-	return s.getBlock(r.Context(), header, args.IncludeTxData, reply)
+	return s.getBlock(header, args.IncludeTxData, reply)
 }
 
-func (s *Server) getBlock(ctx context.Context, header *types.Header, includeTxData bool, reply **GetBlockResult) error {
+func (s *Server) getBlock(header *types.Header, includeTxData bool, reply **GetBlockResult) error {
 	results, err := s.srv.GetBlockResults(header.Number.Uint64())
 	if err != nil {
 		return err
@@ -217,8 +217,8 @@ func buildCallMsg(args *CallTxArgs) (arbcommon.Address, message.ContractTransact
 	}
 }
 
-func (s *Server) executeCall(args *CallTxArgs, blockNum *rpc.BlockNumber) (*evm.TxResult, error) {
-	snap, err := s.getSnapshot(blockNum)
+func (s *Server) executeCall(ctx context.Context, args *CallTxArgs, blockNum *rpc.BlockNumber) (*evm.TxResult, error) {
+	snap, err := s.getSnapshot(ctx, blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -227,8 +227,8 @@ func (s *Server) executeCall(args *CallTxArgs, blockNum *rpc.BlockNumber) (*evm.
 	return snap.Call(msg, from)
 }
 
-func (s *Server) Call(_ *http.Request, args *CallArgs, reply *string) error {
-	res, err := s.executeCall(args.CallArgs, args.BlockNum)
+func (s *Server) Call(r *http.Request, args *CallArgs, reply *string) error {
+	res, err := s.executeCall(r.Context(), args.CallArgs, args.BlockNum)
 	if err != nil {
 		return err
 	}
@@ -236,9 +236,9 @@ func (s *Server) Call(_ *http.Request, args *CallArgs, reply *string) error {
 	return nil
 }
 
-func (s *Server) EstimateGas(_ *http.Request, args *CallTxArgs, reply *string) error {
+func (s *Server) EstimateGas(r *http.Request, args *CallTxArgs, reply *string) error {
 	blockNum := rpc.PendingBlockNumber
-	res, err := s.executeCall(args, &blockNum)
+	res, err := s.executeCall(r.Context(), args, &blockNum)
 	if err != nil {
 		return err
 	}
@@ -407,13 +407,21 @@ func (s *Server) GetLogs(r *http.Request, args *GetLogsArgs, reply *[]LogResult)
 	return nil
 }
 
-func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {
+func (s *Server) getSnapshot(ctx context.Context, blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {
 	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
 		return s.srv.PendingSnapshot(), nil
 	}
 
-	if *blockNum == rpc.LatestBlockNumber || blockNum.Int64() == int64(s.srv.GetBlockCount()) {
+	if *blockNum == rpc.LatestBlockNumber {
 		return s.srv.LatestSnapshot(), nil
+	}
+
+	snap, err := s.srv.GetSnapshot(ctx, uint64(*blockNum))
+	if err != nil {
+		return nil, err
+	}
+	if snap != nil {
+		return snap, nil
 	}
 
 	return nil, errors.New("unsupported block number")

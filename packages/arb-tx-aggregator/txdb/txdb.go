@@ -324,6 +324,12 @@ func (txdb *TxDB) LatestSnapshot() *snapshot.Snapshot {
 	return txdb.snapCache.latest()
 }
 
+func (txdb *TxDB) GetSnapshot(time inbox.ChainTime) *snapshot.Snapshot {
+	txdb.callMut.Lock()
+	defer txdb.callMut.Unlock()
+	return txdb.snapCache.getSnapshot(time)
+}
+
 func (txdb *TxDB) LatestBlockId() *common.BlockId {
 	txdb.callMut.Lock()
 	defer txdb.callMut.Unlock()
