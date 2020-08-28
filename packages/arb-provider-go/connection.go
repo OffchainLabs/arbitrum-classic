@@ -398,9 +398,9 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcom
 		return nil, errors.New("tx hash doesn't match")
 	}
 
-	blockInfo, err := conn.proxy.BlockInfo(ctx, result.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
+	blockHash, err := conn.proxy.BlockHash(ctx, result.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
 	if err != nil {
 		return nil, err
 	}
-	return result.ToEthReceipt(blockInfo.Hash), nil
+	return result.ToEthReceipt(blockHash), nil
 }
