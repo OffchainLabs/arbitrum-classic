@@ -17,6 +17,7 @@
 package snapshot
 
 import (
+	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -157,6 +158,9 @@ func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash)
 	}
 
 	avmLogs := assertion.ParseLogs()
+	if len(avmLogs) == 0 {
+		return nil, errors.New("no logs produced by tx")
+	}
 
 	res, err := evm.NewTxResultFromValue(avmLogs[len(avmLogs)-1])
 	if err != nil {

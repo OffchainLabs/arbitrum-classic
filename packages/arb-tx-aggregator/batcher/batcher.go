@@ -96,7 +96,7 @@ func NewBatcher(
 			case <-ticker.C:
 				server.Lock()
 				for {
-					tx, cont := server.pendingBatch.popRandomTx(server.queuedTxes, signer)
+					tx, accountIndex, cont := server.pendingBatch.popRandomTx(server.queuedTxes, signer)
 					if tx != nil {
 						newSnap := server.pendingBatch.snap.Clone()
 						server.Unlock()
@@ -107,6 +107,7 @@ func NewBatcher(
 							continue
 						}
 						server.pendingBatch.addUpdatedSnap(tx, newSnap)
+						server.queuedTxes.maybeRemoveAccountAtIndex(accountIndex)
 					}
 					if server.pendingBatch.full || (!cont && time.Since(lastBatch) > maxBatchTime) {
 						lastBatch = time.Now()
