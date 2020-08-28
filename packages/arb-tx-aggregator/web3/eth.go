@@ -111,9 +111,11 @@ func (s *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
 func (s *Server) GetBlockByHash(r *http.Request, args *GetBlockByHashArgs, reply **GetBlockResult) error {
 	var blockHash arbcommon.Hash
 	copy(blockHash[:], args.BlockHash)
+	log.Println("Running GetBlockByHash", blockHash)
 
 	header, err := s.srv.GetBlockHeaderByHash(r.Context(), blockHash)
 	if err != nil {
+		log.Println("Error getting block header by hash", err)
 		return err
 	}
 	return s.getBlock(r.Context(), header, args.IncludeTxData, reply)
@@ -134,6 +136,7 @@ func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, r
 func (s *Server) getBlock(ctx context.Context, header *types.Header, includeTxData bool, reply **GetBlockResult) error {
 	results, err := s.srv.GetBlockResults(header.Number.Uint64())
 	if err != nil {
+		log.Println("Error getting block results", err)
 		return err
 	}
 
@@ -143,6 +146,7 @@ func (s *Server) getBlock(ctx context.Context, header *types.Header, includeTxDa
 		for _, res := range results {
 			txRes, err := s.makeTransactionResult(res)
 			if err != nil {
+				log.Println("Error getting transaction result", err)
 				return err
 			}
 			txes = append(txes, txRes)
@@ -179,6 +183,7 @@ func (s *Server) getBlock(ctx context.Context, header *types.Header, includeTxDa
 		Transactions:     transactions,
 		Uncles:           &uncles,
 	}
+	log.Println("Sent reply with block result")
 	return nil
 }
 
