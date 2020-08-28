@@ -73,7 +73,7 @@ func (sc *snapshotCache) getSnapshot(time inbox.ChainTime) *snapshot.Snapshot {
 
 func (sc *snapshotCache) addSnapshot(snap *snapshot.Snapshot) {
 	sc.tree.Put(snap.Height(), snap)
-	if sc.tree.Size() > sc.max {
+	for sc.tree.Size() > sc.max {
 		sc.tree.Remove(sc.tree.Left().Key)
 	}
 }
