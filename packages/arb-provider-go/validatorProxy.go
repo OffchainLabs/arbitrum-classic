@@ -3,6 +3,7 @@ package goarbitrum
 import (
 	"bytes"
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -27,6 +28,7 @@ type ValidatorProxy interface {
 	GetBlockCount(ctx context.Context) (uint64, error)
 	SendTransaction(ctx context.Context, tx *types.Transaction) (common.Hash, error)
 	BlockInfo(ctx context.Context, height uint64) (*machine.BlockInfo, error)
+	BlockHash(ctx context.Context, height uint64) (common.Hash, error)
 	GetRequestResult(ctx context.Context, txHash common.Hash) (value.Value, error)
 	GetChainAddress(ctx context.Context) (ethcommon.Address, error)
 	FindLogs(ctx context.Context, fromHeight, toHeight *uint64, addresses []ethcommon.Address, topics [][]ethcommon.Hash) ([]evm.FullLog, error)
@@ -117,15 +119,20 @@ func (vp *ValidatorProxyImpl) BlockInfo(ctx context.Context, height uint64) (*ma
 	if err := vp.doCall(ctx, "BlockInfo", request, &response); err != nil {
 		return nil, err
 	}
+	data, err := hexutil.Decode(response.RawVal)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(data) == 0 {
+		return nil, errors.New("block info not found for block at height")
+	}
+
 	bloomBytes, err := hexutil.Decode(response.Bloom)
 	if err != nil {
 		return nil, err
 	}
 
-	data, err := hexutil.Decode(response.RawVal)
-	if err != nil {
-		return nil, err
-	}
 	val, err := value.UnmarshalValue(bytes.NewBuffer(data))
 	if err != nil {
 		return nil, err
@@ -135,6 +142,15 @@ func (vp *ValidatorProxyImpl) BlockInfo(ctx context.Context, height uint64) (*ma
 		BlockLog: val,
 		Bloom:    types.BytesToBloom(bloomBytes),
 	}, nil
+}
+
+func (vp *ValidatorProxyImpl) BlockHash(ctx context.Context, height uint64) (common.Hash, error) {
+	request := &evm.BlockHashArgs{}
+	var response evm.BlockHashReply
+	if err := vp.doCall(ctx, "BlockHash", request, &response); err != nil {
+		return common.Hash{}, err
+	}
+	return common.HexToHash(response.Hash), nil
 }
 
 func (vp *ValidatorProxyImpl) GetRequestResult(ctx context.Context, txHash common.Hash) (value.Value, error) {

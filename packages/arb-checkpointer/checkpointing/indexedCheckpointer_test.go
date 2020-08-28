@@ -75,6 +75,10 @@ func (m *TimeGetterMock) BlockIdForHeight(ctx context.Context, height *common.Ti
 	return m.blockIdFunc(ctx, height)
 }
 
+func (m *TimeGetterMock) TimestampForBlockHash(context.Context, common.Hash) (*big.Int, error) {
+	return nil, errors.New("unsupported method")
+}
+
 func TestMain(m *testing.M) {
 	code := m.Run()
 	if err := os.RemoveAll(dbPath); err != nil {

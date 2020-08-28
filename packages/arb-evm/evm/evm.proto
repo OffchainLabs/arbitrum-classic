@@ -117,6 +117,14 @@ message BlockInfoReply {
     string bloom = 3;
 }
 
+message BlockHashArgs {
+    uint64 height = 1;
+}
+
+message BlockHashReply {
+    string hash = 1;
+}
+
 message SendTransactionArgs {
     string signedTransaction = 1;
 }
@@ -127,7 +135,8 @@ message SendTransactionReply {
 
 service RollupValidator {
     rpc GetBlockCount (BlockCountArgs) returns (BlockCountReply);
-    rpc GetBlockInfo (BlockInfoArgs) returns (BlockInfoReply);
+    rpc BlockInfo (BlockInfoArgs) returns (BlockInfoReply);
+    rpc BlockHash (BlockHashArgs) returns (BlockHashReply);
     rpc GetOutputMessage (GetOutputMessageArgs) returns (GetOutputMessageReply);
     rpc GetRequestResult (GetRequestResultArgs) returns (GetRequestResultReply);
     rpc CallMessage (CallMessageArgs) returns (CallMessageReply);

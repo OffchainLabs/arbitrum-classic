@@ -17,6 +17,7 @@
 package snapshot
 
 import (
+	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -56,6 +57,11 @@ func (s *Snapshot) AddMessage(msg message.Message, sender common.Address, target
 	s.mach = mach
 	s.nextInboxSeqNum = new(big.Int).Add(s.nextInboxSeqNum, big.NewInt(1))
 	return res, nil
+}
+
+// AdvanceTime can only be called if the snapshot is uniquely owned
+func (s *Snapshot) AdvanceTime(time inbox.ChainTime) {
+	s.time = time
 }
 
 func (s *Snapshot) Clone() *Snapshot {
@@ -157,11 +163,11 @@ func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash)
 	}
 
 	avmLogs := assertion.ParseLogs()
-	if len(avmLogs) != 1 {
-		return nil, fmt.Errorf("unexpected log count %v", len(avmLogs))
+	if len(avmLogs) == 0 {
+		return nil, errors.New("no logs produced by tx")
 	}
 
-	res, err := evm.NewTxResultFromValue(avmLogs[0])
+	res, err := evm.NewTxResultFromValue(avmLogs[len(avmLogs)-1])
 	if err != nil {
 		return nil, err
 	}

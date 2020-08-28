@@ -98,10 +98,12 @@ func (q *txQueues) addTransaction(tx *types.Transaction, signer types.Signer) er
 }
 
 func (q *txQueues) removeTxFromAccountAtIndex(i int) {
+	q.queues[q.accounts[i]].Pop()
+}
+
+func (q *txQueues) maybeRemoveAccountAtIndex(i int) {
 	account := q.accounts[i]
-	txQueue := q.queues[account]
-	txQueue.Pop()
-	if txQueue.Empty() {
+	if q.queues[account].Empty() {
 		delete(q.queues, account)
 		q.accounts[i] = q.accounts[len(q.accounts)-1]
 		q.accounts = q.accounts[:len(q.accounts)-1]
@@ -161,10 +163,10 @@ func (p *pendingBatch) getTxCount(account common.Address) uint64 {
 	return count
 }
 
-func (p *pendingBatch) popRandomTx(queuedTxes *txQueues, signer types.Signer) (*types.Transaction, bool) {
+func (p *pendingBatch) popRandomTx(queuedTxes *txQueues, signer types.Signer) (*types.Transaction, int, bool) {
 	queuedCount := int32(len(queuedTxes.accounts))
 	if queuedCount == 0 {
-		return nil, false
+		return nil, 0, false
 	}
 	index := int(rand.Int31n(queuedCount))
 	first := true
@@ -176,7 +178,7 @@ func (p *pendingBatch) popRandomTx(queuedTxes *txQueues, signer types.Signer) (*
 			index = 0
 		}
 		if !first && index == lastIndex {
-			return nil, false
+			return nil, 0, false
 		}
 
 		first = false
@@ -191,16 +193,17 @@ func (p *pendingBatch) popRandomTx(queuedTxes *txQueues, signer types.Signer) (*
 		}
 		if p.sizeBytes+tx.Size() > p.maxSize {
 			p.full = true
-			return nil, true
+			return nil, 0, true
 		}
 		queuedTxes.removeTxFromAccountAtIndex(index)
 
 		if tx.Nonce() < nextValidNonce {
 			// Just discard this tx since it is old
-			return nil, true
+			queuedTxes.maybeRemoveAccountAtIndex(index)
+			return nil, 0, true
 		}
 
-		return tx, false
+		return tx, index, true
 	}
 }
 

@@ -22,6 +22,7 @@ import (
 	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"time"
 
@@ -267,6 +268,18 @@ func (m *Server) Call(msg message.ContractTransaction, sender ethcommon.Address)
 // and return the result
 func (m *Server) PendingCall(msg message.ContractTransaction, sender ethcommon.Address) (*evm.TxResult, error) {
 	return m.Call(msg, sender)
+}
+
+func (m *Server) GetSnapshot(ctx context.Context, blockHeight uint64) (*snapshot.Snapshot, error) {
+	height := new(big.Int).SetUint64(blockHeight)
+	header, err := m.client.HeaderByNumber(ctx, height)
+	if err != nil {
+		return nil, err
+	}
+	return m.db.GetSnapshot(inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocks(height),
+		Timestamp: new(big.Int).SetUint64(header.Time),
+	}), nil
 }
 
 func (m *Server) LatestSnapshot() *snapshot.Snapshot {

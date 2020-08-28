@@ -96,6 +96,14 @@ export interface BlockInfoReply {
   bloom?: string
 }
 
+export interface BlockHashArgs {
+  height?: number
+}
+
+export interface BlockHashReply {
+  hash?: string
+}
+
 export interface SendTransactionArgs {
   signedTransaction?: string
 }
@@ -106,7 +114,8 @@ export interface SendTransactionReply {
 
 export interface RollupValidatorService {
   GetBlockCount: (r: BlockCountArgs) => BlockCountReply
-  GetBlockInfo: (r: BlockInfoArgs) => BlockInfoReply
+  BlockInfo: (r: BlockInfoArgs) => BlockInfoReply
+  BlockHash: (r: BlockHashArgs) => BlockHashReply
   GetOutputMessage: (r: GetOutputMessageArgs) => GetOutputMessageReply
   GetRequestResult: (r: GetRequestResultArgs) => GetRequestResultReply
   CallMessage: (r: CallMessageArgs) => CallMessageReply

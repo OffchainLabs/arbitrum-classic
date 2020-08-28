@@ -177,6 +177,9 @@ func (m *RPCServer) BlockInfo(
 	if err != nil {
 		return err
 	}
+	if info == nil {
+		return nil
+	}
 	reply.Hash = info.Hash.String()
 	var buf bytes.Buffer
 	if err := value.MarshalValue(info.BlockLog, &buf); err != nil {
@@ -184,6 +187,19 @@ func (m *RPCServer) BlockInfo(
 	}
 	reply.RawVal = hexutil.Encode(buf.Bytes())
 	reply.Bloom = hexutil.Encode(info.Bloom.Bytes())
+	return nil
+}
+
+func (m *RPCServer) BlockHash(
+	r *http.Request,
+	args *evm.BlockHashArgs,
+	reply *evm.BlockHashReply,
+) error {
+	header, err := m.srv.GetBlockHeaderByNumber(r.Context(), args.Height)
+	if err != nil {
+		return err
+	}
+	reply.Hash = hexutil.Encode(header.Hash().Bytes())
 	return nil
 }
 
