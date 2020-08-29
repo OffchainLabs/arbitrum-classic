@@ -20,11 +20,7 @@ import "./ArbSys.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721Enumerable.sol";
 
 contract ArbERC721 is ERC721Enumerable {
-    function tokensOfOwner(address owner)
-        public
-        view
-        returns (uint256[] memory)
-    {
+    function tokensOfOwner(address owner) public view returns (uint256[] memory) {
         return _tokensOfOwner(owner);
     }
 

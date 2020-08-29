@@ -31,13 +31,7 @@ interface ArbSys {
 
     // Return the number of transactions issued by the given external account
     // or the account sequence number of the given contract
-    function getTransactionCount(address account)
-        external
-        view
-        returns (uint256);
+    function getTransactionCount(address account) external view returns (uint256);
 
-    function getStorageAt(address account, uint256 index)
-        external
-        view
-        returns (uint256);
+    function getStorageAt(address account, uint256 index) external view returns (uint256);
 }
