@@ -47,8 +47,7 @@ library NodeGraphUtils {
         uint64 messageCount,
         uint64 logCount
     ) internal pure returns (AssertionData memory) {
-        ChallengeUtils.ExecutionAssertion memory assertion = ChallengeUtils
-            .ExecutionAssertion(
+        ChallengeUtils.ExecutionAssertion memory assertion = ChallengeUtils.ExecutionAssertion(
             numSteps,
             numArbGas,
             fields[0],
@@ -102,10 +101,8 @@ library NodeGraphUtils {
         AssertionData memory data,
         uint256 blockNum
     ) internal pure returns (uint256, uint256) {
-        uint256 checkTimeTicks = data.assertion.numArbGas /
-            vmParams.arbGasSpeedLimitPerTick;
-        uint256 deadlineTicks = RollupTime.blocksToTicks(blockNum) +
-            vmParams.gracePeriodTicks;
+        uint256 checkTimeTicks = data.assertion.numArbGas / vmParams.arbGasSpeedLimitPerTick;
+        uint256 deadlineTicks = RollupTime.blocksToTicks(blockNum) + vmParams.gracePeriodTicks;
         if (deadlineTicks < data.prevDeadlineTicks) {
             deadlineTicks = data.prevDeadlineTicks;
         }

@@ -122,20 +122,8 @@ contract NodeGraph {
         uint64 _maxExecutionSteps
     ) internal {
         // VM protocol state
-        bytes32 vmProtoStateHash = RollupUtils.protoStateHash(
-            _vmState,
-            0,
-            0,
-            0,
-            0
-        );
-        bytes32 initialNode = RollupUtils.childNodeHash(
-            0,
-            0,
-            0,
-            0,
-            vmProtoStateHash
-        );
+        bytes32 vmProtoStateHash = RollupUtils.protoStateHash(_vmState, 0, 0, 0, 0);
+        bytes32 initialNode = RollupUtils.childNodeHash(0, 0, 0, 0, vmProtoStateHash);
         latestConfirmedPriv = initialNode;
         leaves[initialNode] = true;
 
@@ -150,8 +138,7 @@ contract NodeGraph {
         bytes32 inboxValue,
         uint256 inboxCount
     ) internal returns (bytes32, bytes32) {
-        (bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils
-            .computePrevLeaf(data);
+        (bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils.computePrevLeaf(data);
         require(isValidLeaf(prevLeaf), MAKE_LEAF);
         _verifyAssertionData(data);
 
@@ -227,10 +214,7 @@ contract NodeGraph {
         uint256 prevLeafOffset,
         uint256 prevConfOffset
     ) private returns (uint256, uint256) {
-        require(
-            leafProofLength > 0 && latestConfirmedProofLength > 0,
-            PRUNE_PROOFLEN
-        );
+        require(leafProofLength > 0 && latestConfirmedProofLength > 0, PRUNE_PROOFLEN);
         uint256 nextLeafOffset = prevLeafOffset + leafProofLength;
         uint256 nextConfOffset = prevConfOffset + latestConfirmedProofLength;
 
@@ -243,8 +227,7 @@ contract NodeGraph {
         ) == latestConfirmed();
 
         require(
-            isValidNode &&
-                leafProofs[prevLeafOffset] != latestConfProofs[prevConfOffset],
+            isValidNode && leafProofs[prevLeafOffset] != latestConfProofs[prevConfOffset],
             PRUNE_CONFLICT
         );
 
@@ -262,19 +245,13 @@ contract NodeGraph {
         return (nextLeafOffset, nextConfOffset);
     }
 
-    function _verifyAssertionData(NodeGraphUtils.AssertionData memory data)
-        private
-        view
-    {
+    function _verifyAssertionData(NodeGraphUtils.AssertionData memory data) private view {
         require(
             !VM.isErrored(data.assertion.beforeMachineHash) &&
                 !VM.isHalted(data.assertion.beforeMachineHash),
             MAKE_RUN
         );
-        require(
-            data.assertion.numSteps <= vmParams.maxExecutionSteps,
-            MAKE_STEP
-        );
+        require(data.assertion.numSteps <= vmParams.maxExecutionSteps, MAKE_STEP);
     }
 
     function _initializeAssertionLeaves(
@@ -284,8 +261,11 @@ contract NodeGraph {
         bytes32 inboxValue,
         uint256 inboxCount
     ) private returns (bytes32) {
-        (uint256 checkTimeTicks, uint256 deadlineTicks) = NodeGraphUtils
-            .getTimeData(vmParams, data, block.number);
+        (uint256 checkTimeTicks, uint256 deadlineTicks) = NodeGraphUtils.getTimeData(
+            vmParams,
+            data,
+            block.number
+        );
 
         bytes32 invalidInboxLeaf = NodeGraphUtils.generateInvalidInboxTopLeaf(
             data,
@@ -304,11 +284,7 @@ contract NodeGraph {
             vmParams.gracePeriodTicks,
             checkTimeTicks
         );
-        bytes32 validLeaf = NodeGraphUtils.generateValidLeaf(
-            data,
-            prevLeaf,
-            deadlineTicks
-        );
+        bytes32 validLeaf = NodeGraphUtils.generateValidLeaf(data, prevLeaf, deadlineTicks);
 
         leaves[invalidInboxLeaf] = true;
         leaves[invalidExecLeaf] = true;

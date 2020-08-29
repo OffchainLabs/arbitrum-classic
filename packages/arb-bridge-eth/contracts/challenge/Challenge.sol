@@ -60,29 +60,20 @@ contract Challenge {
 
     modifier asserterAction {
         require(State.AsserterTurn == state, BIS_STATE);
-        require(
-            RollupTime.blocksToTicks(block.number) <= deadlineTicks,
-            BIS_DEADLINE
-        );
+        require(RollupTime.blocksToTicks(block.number) <= deadlineTicks, BIS_DEADLINE);
         require(msg.sender == asserter, BIS_SENDER);
         _;
     }
 
     modifier challengerAction {
         require(State.ChallengerTurn == state, CON_STATE);
-        require(
-            RollupTime.blocksToTicks(block.number) <= deadlineTicks,
-            CON_DEADLINE
-        );
+        require(RollupTime.blocksToTicks(block.number) <= deadlineTicks, CON_DEADLINE);
         require(msg.sender == challenger, CON_SENDER);
         _;
     }
 
     function timeoutChallenge() public {
-        require(
-            RollupTime.blocksToTicks(block.number) > deadlineTicks,
-            "Deadline hasn't expired"
-        );
+        require(RollupTime.blocksToTicks(block.number) > deadlineTicks, "Deadline hasn't expired");
 
         if (state == State.AsserterTurn) {
             emit AsserterTimedOut();
@@ -112,9 +103,7 @@ contract Challenge {
     }
 
     function updateDeadline() internal {
-        deadlineTicks =
-            RollupTime.blocksToTicks(block.number) +
-            challengePeriodTicks;
+        deadlineTicks = RollupTime.blocksToTicks(block.number) + challengePeriodTicks;
     }
 
     function asserterResponded() internal {

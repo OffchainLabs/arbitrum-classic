@@ -27,11 +27,7 @@ library DebugPrint {
         }
     }
 
-    function bytes32string(bytes32 b32)
-        internal
-        pure
-        returns (string memory out)
-    {
+    function bytes32string(bytes32 b32) internal pure returns (string memory out) {
         bytes memory s = new bytes(64);
 
         for (uint256 i = 0; i < 32; i++) {
@@ -46,11 +42,7 @@ library DebugPrint {
     }
 
     // Taken from https://github.com/oraclize/ethereum-api/blob/master/oraclizeAPI_0.5.sol
-    function uint2str(uint256 _iParam)
-        internal
-        pure
-        returns (string memory _uintAsString)
-    {
+    function uint2str(uint256 _iParam) internal pure returns (string memory _uintAsString) {
         uint256 _i = _iParam;
         if (_i == 0) {
             return "0";

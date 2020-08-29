@@ -35,14 +35,7 @@ library Messages {
     ) internal pure returns (bytes32) {
         return
             keccak256(
-                abi.encodePacked(
-                    kind,
-                    sender,
-                    blockNumber,
-                    timestamp,
-                    inboxSeqNum,
-                    messageDataHash
-                )
+                abi.encodePacked(kind, sender, blockNumber, timestamp, inboxSeqNum, messageDataHash)
             );
     }
 
@@ -60,19 +53,11 @@ library Messages {
         tupData[2] = Value.newInt(timestamp);
         tupData[3] = Value.newInt(uint256(sender));
         tupData[4] = Value.newInt(inboxSeqNum);
-        tupData[5] = Marshaling.bytesToBytestack(
-            messageData,
-            0,
-            messageData.length
-        );
+        tupData[5] = Marshaling.bytesToBytestack(messageData, 0, messageData.length);
         return Value.newTuple(tupData);
     }
 
-    function addMessageToInbox(bytes32 inbox, bytes32 message)
-        internal
-        pure
-        returns (bytes32)
-    {
+    function addMessageToInbox(bytes32 inbox, bytes32 message) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(inbox, message));
     }
 
@@ -121,29 +106,20 @@ library Messages {
         }
 
         uint256 rawKind;
-        (valid, offset, rawKind) = Marshaling.deserializeCheckedInt(
-            data,
-            offset
-        );
+        (valid, offset, rawKind) = Marshaling.deserializeCheckedInt(data, offset);
         if (!valid) {
             return (false, startOffset, message);
         }
         message.kind = uint8(rawKind);
 
         uint256 senderRaw;
-        (valid, offset, senderRaw) = Marshaling.deserializeCheckedInt(
-            data,
-            offset
-        );
+        (valid, offset, senderRaw) = Marshaling.deserializeCheckedInt(data, offset);
         if (!valid) {
             return (false, startOffset, message);
         }
 
         message.sender = address(uint160((senderRaw)));
-        (valid, offset, message.data) = Marshaling.bytestackToBytes(
-            data,
-            offset
-        );
+        (valid, offset, message.data) = Marshaling.bytestackToBytes(data, offset);
         if (!valid) {
             return (false, startOffset, message);
         }

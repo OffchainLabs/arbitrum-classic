@@ -7,7 +7,6 @@ if (!process.env.DOCKER) {
   usePlugin('@nomiclabs/buidler-waffle')
   usePlugin('buidler-typechain')
   usePlugin('solidity-coverage')
-  usePlugin('@nomiclabs/buidler-solhint')
   usePlugin('@nomiclabs/buidler-etherscan')
   usePlugin('buidler-spdx-license-identifier')
   usePlugin('buidler-gas-reporter')

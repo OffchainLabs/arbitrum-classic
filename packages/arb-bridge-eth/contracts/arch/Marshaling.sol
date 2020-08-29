@@ -32,10 +32,7 @@ library Marshaling {
         pure
         returns (uint256 offset, Value.Data memory value)
     {
-        require(
-            data.length >= startOffset && data.length - startOffset >= 64,
-            "to short"
-        );
+        require(data.length >= startOffset && data.length - startOffset >= 64, "to short");
         bytes32 hashData;
         uint256 size;
         (offset, hashData) = extractBytes32(data, startOffset);
@@ -51,10 +48,7 @@ library Marshaling {
             uint256 // val
         )
     {
-        require(
-            data.length >= startOffset && data.length - startOffset >= 32,
-            "too short"
-        );
+        require(data.length >= startOffset && data.length - startOffset >= 32, "too short");
         return (startOffset + 32, data.toUint(startOffset));
     }
 
@@ -142,9 +136,7 @@ library Marshaling {
             return deserializeCodePoint(data, offset);
         } else if (valType == Value.tuplePreImageTypeCode()) {
             return deserializeHashPreImage(data, offset);
-        } else if (
-            valType >= Value.tupleTypeCode() && valType < Value.valueTypeCode()
-        ) {
+        } else if (valType >= Value.tupleTypeCode() && valType < Value.valueTypeCode()) {
             uint8 tupLength = uint8(valType - Value.tupleTypeCode());
             Value.Data[] memory tupleVal;
             (offset, tupleVal) = deserializeTuple(tupLength, data, offset);
@@ -220,8 +212,7 @@ library Marshaling {
         // If byteCount % 32 != 0, the last chunk will have byteCount % 32 bytes of data in it and the rest should be ignored
         uint256 fullChunkCount = byteCount / 32;
         uint256 partialChunkSize = byteCount % 32;
-        uint256 totalChunkCount = fullChunkCount +
-            (partialChunkSize > 0 ? 1 : 0);
+        uint256 totalChunkCount = fullChunkCount + (partialChunkSize > 0 ? 1 : 0);
 
         bytes32[] memory fullChunks = new bytes32[](fullChunkCount);
         bytes memory partialChunk = new bytes(partialChunkSize);
@@ -246,9 +237,7 @@ library Marshaling {
             } else {
                 // Put the chunks into fullChunks in reverse order
                 // We use a separate index fullChunkIndex since we may or may not have included a partial chunk
-                fullChunks[fullChunkCount - 1 - fullChunkIndex] = bytes32(
-                    nextChunk
-                );
+                fullChunks[fullChunkCount - 1 - fullChunkIndex] = bytes32(nextChunk);
                 fullChunkIndex++;
             }
         }

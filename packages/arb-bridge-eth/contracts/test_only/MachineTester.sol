@@ -26,22 +26,14 @@ contract MachineTester {
     using Hashing for Value.Data;
     using Machine for Machine.Data;
 
-    function deserializeMachine(bytes memory data)
-        public
-        pure
-        returns (uint256, bytes32)
-    {
+    function deserializeMachine(bytes memory data) public pure returns (uint256, bytes32) {
         uint256 offset;
         Machine.Data memory machine;
         (offset, machine) = Machine.deserializeMachine(data, 0);
         return (offset, machine.hash());
     }
 
-    function addStackVal(bytes memory data1, bytes memory data2)
-        public
-        pure
-        returns (bytes32)
-    {
+    function addStackVal(bytes memory data1, bytes memory data2) public pure returns (bytes32) {
         uint256 offset;
         Value.Data memory val1;
         Value.Data memory val2;

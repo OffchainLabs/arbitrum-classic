@@ -74,15 +74,10 @@ library RollupUtils {
         );
 
         for (uint256 nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++) {
-            bool isValidChildType = processNode(
-                data,
-                currentNodeData,
-                nodeIndex
-            );
+            bool isValidChildType = processNode(data, currentNodeData, nodeIndex);
 
             if (isValidChildType) {
-                validNodeHashes[currentNodeData.validNum - 1] = currentNodeData
-                    .nodeHash;
+                validNodeHashes[currentNodeData.validNum - 1] = currentNodeData.nodeHash;
             }
         }
         return (validNodeHashes, currentNodeData);
@@ -94,8 +89,7 @@ library RollupUtils {
         uint256 nodeIndex
     ) private pure returns (bool) {
         uint256 branchType = data.branches[nodeIndex];
-        bool isValidChildType = (branchType ==
-            ChallengeUtils.getValidChildType());
+        bool isValidChildType = (branchType == ChallengeUtils.getValidChildType());
         bytes32 nodeDataHash;
 
         if (isValidChildType) {
@@ -148,18 +142,9 @@ library RollupUtils {
             startOffset,
             sendCount
         );
-        bytes32 nodeDataHash = validDataHash(
-            beforeSendCount,
-            lastMsgHash,
-            data.logsAcc[validNum]
-        );
+        bytes32 nodeDataHash = validDataHash(beforeSendCount, lastMsgHash, data.logsAcc[validNum]);
         bytes32 vmProtoStateHash = data.vmProtoStateHashes[validNum];
-        return (
-            beforeSendCount + sendCount,
-            messagesOffset,
-            nodeDataHash,
-            vmProtoStateHash
-        );
+        return (beforeSendCount + sendCount, messagesOffset, nodeDataHash, vmProtoStateHash);
     }
 
     function generateLastMessageHash(
@@ -177,19 +162,13 @@ library RollupUtils {
         return (hashVal, offset);
     }
 
-    function verifyDataLength(RollupUtils.ConfirmData memory data)
-        private
-        pure
-    {
+    function verifyDataLength(RollupUtils.ConfirmData memory data) private pure {
         uint256 nodeCount = data.branches.length;
         uint256 validNodeCount = data.messageCounts.length;
         require(data.vmProtoStateHashes.length == validNodeCount, CONF_INP);
         require(data.logsAcc.length == validNodeCount, CONF_INP);
         require(data.deadlineTicks.length == nodeCount, CONF_INP);
-        require(
-            data.challengeNodeData.length == nodeCount - validNodeCount,
-            CONF_INP
-        );
+        require(data.challengeNodeData.length == nodeCount - validNodeCount, CONF_INP);
     }
 
     function protoStateHash(
@@ -200,15 +179,7 @@ library RollupUtils {
         uint256 logCount
     ) internal pure returns (bytes32) {
         return
-            keccak256(
-                abi.encodePacked(
-                    machineHash,
-                    inboxTop,
-                    inboxCount,
-                    messageCount,
-                    logCount
-                )
-            );
+            keccak256(abi.encodePacked(machineHash, inboxTop, inboxCount, messageCount, logCount));
     }
 
     function validDataHash(
@@ -216,8 +187,7 @@ library RollupUtils {
         bytes32 messagesAcc,
         bytes32 logsAcc
     ) internal pure returns (bytes32) {
-        return
-            keccak256(abi.encodePacked(beforeSendCount, messagesAcc, logsAcc));
+        return keccak256(abi.encodePacked(beforeSendCount, messagesAcc, logsAcc));
     }
 
     function challengeDataHash(bytes32 challenge, uint256 challengePeriod)
@@ -240,12 +210,7 @@ library RollupUtils {
                 abi.encodePacked(
                     prevNodeHash,
                     keccak256(
-                        abi.encodePacked(
-                            vmProtoStateHash,
-                            deadlineTicks,
-                            nodeDataHash,
-                            childType
-                        )
+                        abi.encodePacked(vmProtoStateHash, deadlineTicks, nodeDataHash, childType)
                     )
                 )
             );

@@ -58,11 +58,7 @@ library ChallengeUtils {
         uint64 logCount;
     }
 
-    function hash(ExecutionAssertion memory assertion)
-        internal
-        pure
-        returns (bytes32)
-    {
+    function hash(ExecutionAssertion memory assertion) internal pure returns (bytes32) {
         return
             keccak256(
                 abi.encodePacked(

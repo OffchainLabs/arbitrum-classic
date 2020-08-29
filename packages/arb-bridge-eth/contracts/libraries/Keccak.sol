@@ -20,11 +20,7 @@ pragma solidity ^0.5.11;
 
 ///      This algorithm has been extracted from the implementation of smart pool (https://github.com/smartpool)
 library Keccak {
-    function keccak_f(uint256[25] memory A)
-        internal
-        pure
-        returns (uint256[25] memory)
-    {
+    function keccak_f(uint256[25] memory A) internal pure returns (uint256[25] memory) {
         uint256[5] memory C;
         uint256[5] memory D;
         //uint D_0; uint D_1; uint D_2; uint D_3; uint D_4;
@@ -74,21 +70,11 @@ library Keccak {
                 D[x] = C[(x+4)%5]^((C[(x+1)%5] * 2)&0xffffffffffffffff | (C[(x+1)%5]/(2**63)));
             }*/
 
-            D[0] =
-                C[4] ^
-                (((C[1] * 2) & 0xffffffffffffffff) | (C[1] / (2**63)));
-            D[1] =
-                C[0] ^
-                (((C[2] * 2) & 0xffffffffffffffff) | (C[2] / (2**63)));
-            D[2] =
-                C[1] ^
-                (((C[3] * 2) & 0xffffffffffffffff) | (C[3] / (2**63)));
-            D[3] =
-                C[2] ^
-                (((C[4] * 2) & 0xffffffffffffffff) | (C[4] / (2**63)));
-            D[4] =
-                C[3] ^
-                (((C[0] * 2) & 0xffffffffffffffff) | (C[0] / (2**63)));
+            D[0] = C[4] ^ (((C[1] * 2) & 0xffffffffffffffff) | (C[1] / (2**63)));
+            D[1] = C[0] ^ (((C[2] * 2) & 0xffffffffffffffff) | (C[2] / (2**63)));
+            D[2] = C[1] ^ (((C[3] * 2) & 0xffffffffffffffff) | (C[3] / (2**63)));
+            D[3] = C[2] ^ (((C[4] * 2) & 0xffffffffffffffff) | (C[4] / (2**63)));
+            D[4] = C[3] ^ (((C[0] * 2) & 0xffffffffffffffff) | (C[0] / (2**63)));
 
             /*
             for( x = 0 ; x < 5 ; x++ ) {
@@ -127,47 +113,28 @@ library Keccak {
             B[0] = A[0];
             B[8] = (((A[1] * (2**36)) & 0xffffffffffffffff) | (A[1] / (2**28)));
             B[11] = (((A[2] * (2**3)) & 0xffffffffffffffff) | (A[2] / (2**61)));
-            B[19] = (((A[3] * (2**41)) & 0xffffffffffffffff) |
-                (A[3] / (2**23)));
-            B[22] = (((A[4] * (2**18)) & 0xffffffffffffffff) |
-                (A[4] / (2**46)));
+            B[19] = (((A[3] * (2**41)) & 0xffffffffffffffff) | (A[3] / (2**23)));
+            B[22] = (((A[4] * (2**18)) & 0xffffffffffffffff) | (A[4] / (2**46)));
             B[2] = (((A[5] * (2**1)) & 0xffffffffffffffff) | (A[5] / (2**63)));
             B[5] = (((A[6] * (2**44)) & 0xffffffffffffffff) | (A[6] / (2**20)));
-            B[13] = (((A[7] * (2**10)) & 0xffffffffffffffff) |
-                (A[7] / (2**54)));
-            B[16] = (((A[8] * (2**45)) & 0xffffffffffffffff) |
-                (A[8] / (2**19)));
+            B[13] = (((A[7] * (2**10)) & 0xffffffffffffffff) | (A[7] / (2**54)));
+            B[16] = (((A[8] * (2**45)) & 0xffffffffffffffff) | (A[8] / (2**19)));
             B[24] = (((A[9] * (2**2)) & 0xffffffffffffffff) | (A[9] / (2**62)));
-            B[4] = (((A[10] * (2**62)) & 0xffffffffffffffff) |
-                (A[10] / (2**2)));
-            B[7] = (((A[11] * (2**6)) & 0xffffffffffffffff) |
-                (A[11] / (2**58)));
-            B[10] = (((A[12] * (2**43)) & 0xffffffffffffffff) |
-                (A[12] / (2**21)));
-            B[18] = (((A[13] * (2**15)) & 0xffffffffffffffff) |
-                (A[13] / (2**49)));
-            B[21] = (((A[14] * (2**61)) & 0xffffffffffffffff) |
-                (A[14] / (2**3)));
-            B[1] = (((A[15] * (2**28)) & 0xffffffffffffffff) |
-                (A[15] / (2**36)));
-            B[9] = (((A[16] * (2**55)) & 0xffffffffffffffff) |
-                (A[16] / (2**9)));
-            B[12] = (((A[17] * (2**25)) & 0xffffffffffffffff) |
-                (A[17] / (2**39)));
-            B[15] = (((A[18] * (2**21)) & 0xffffffffffffffff) |
-                (A[18] / (2**43)));
-            B[23] = (((A[19] * (2**56)) & 0xffffffffffffffff) |
-                (A[19] / (2**8)));
-            B[3] = (((A[20] * (2**27)) & 0xffffffffffffffff) |
-                (A[20] / (2**37)));
-            B[6] = (((A[21] * (2**20)) & 0xffffffffffffffff) |
-                (A[21] / (2**44)));
-            B[14] = (((A[22] * (2**39)) & 0xffffffffffffffff) |
-                (A[22] / (2**25)));
-            B[17] = (((A[23] * (2**8)) & 0xffffffffffffffff) |
-                (A[23] / (2**56)));
-            B[20] = (((A[24] * (2**14)) & 0xffffffffffffffff) |
-                (A[24] / (2**50)));
+            B[4] = (((A[10] * (2**62)) & 0xffffffffffffffff) | (A[10] / (2**2)));
+            B[7] = (((A[11] * (2**6)) & 0xffffffffffffffff) | (A[11] / (2**58)));
+            B[10] = (((A[12] * (2**43)) & 0xffffffffffffffff) | (A[12] / (2**21)));
+            B[18] = (((A[13] * (2**15)) & 0xffffffffffffffff) | (A[13] / (2**49)));
+            B[21] = (((A[14] * (2**61)) & 0xffffffffffffffff) | (A[14] / (2**3)));
+            B[1] = (((A[15] * (2**28)) & 0xffffffffffffffff) | (A[15] / (2**36)));
+            B[9] = (((A[16] * (2**55)) & 0xffffffffffffffff) | (A[16] / (2**9)));
+            B[12] = (((A[17] * (2**25)) & 0xffffffffffffffff) | (A[17] / (2**39)));
+            B[15] = (((A[18] * (2**21)) & 0xffffffffffffffff) | (A[18] / (2**43)));
+            B[23] = (((A[19] * (2**56)) & 0xffffffffffffffff) | (A[19] / (2**8)));
+            B[3] = (((A[20] * (2**27)) & 0xffffffffffffffff) | (A[20] / (2**37)));
+            B[6] = (((A[21] * (2**20)) & 0xffffffffffffffff) | (A[21] / (2**44)));
+            B[14] = (((A[22] * (2**39)) & 0xffffffffffffffff) | (A[22] / (2**25)));
+            B[17] = (((A[23] * (2**8)) & 0xffffffffffffffff) | (A[23] / (2**56)));
+            B[20] = (((A[24] * (2**14)) & 0xffffffffffffffff) | (A[24] / (2**50)));
 
             /*Xi state*/
             /*

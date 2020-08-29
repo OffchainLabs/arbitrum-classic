@@ -132,14 +132,7 @@ library Value {
     }
 
     function newInt(uint256 _val) internal pure returns (Data memory) {
-        return
-            Data(
-                _val,
-                CodePoint(0, 0, new Data[](0)),
-                new Data[](0),
-                INT_TYPECODE,
-                uint256(1)
-            );
+        return Data(_val, CodePoint(0, 0, new Data[](0)), new Data[](0), INT_TYPECODE, uint256(1));
     }
 
     function newHashedValue(bytes32 valueHash, uint256 valueSize)
@@ -165,8 +158,7 @@ library Value {
             size += _val[i].size;
         }
 
-        return
-            Data(0, CodePoint(0, 0, new Data[](0)), _val, TUPLE_TYPECODE, size);
+        return Data(0, CodePoint(0, 0, new Data[](0)), _val, TUPLE_TYPECODE, size);
     }
 
     function newTuplePreImage(bytes32 preImageHash, uint256 size)
@@ -184,11 +176,7 @@ library Value {
             );
     }
 
-    function newCodePoint(uint8 opCode, bytes32 nextHash)
-        internal
-        pure
-        returns (Data memory)
-    {
+    function newCodePoint(uint8 opCode, bytes32 nextHash) internal pure returns (Data memory) {
         return newCodePoint(CodePoint(opCode, nextHash, new Data[](0)));
     }
 
@@ -202,11 +190,7 @@ library Value {
         return newCodePoint(CodePoint(opCode, nextHash, imm));
     }
 
-    function newCodePoint(CodePoint memory _val)
-        private
-        pure
-        returns (Data memory)
-    {
+    function newCodePoint(CodePoint memory _val) private pure returns (Data memory) {
         return Data(0, _val, new Data[](0), CODE_POINT_TYPECODE, uint256(1));
     }
 }

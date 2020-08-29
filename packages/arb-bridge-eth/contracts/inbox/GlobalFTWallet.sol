@@ -44,11 +44,7 @@ contract GlobalFTWallet {
 
     mapping(address => PairedContract) pairedContracts;
 
-    function ownedERC20s(address _owner)
-        external
-        view
-        returns (address[] memory)
-    {
+    function ownedERC20s(address _owner) external view returns (address[] memory) {
         UserFTWallet storage wallet = ftWallets[_owner];
         address[] memory addresses = new address[](wallet.ftList.length);
         uint256 addressCount = addresses.length;
@@ -67,18 +63,11 @@ contract GlobalFTWallet {
         if (pairedContracts[_tokenContract].paired) {
             IPairedErc20(_tokenContract).mint(msg.sender, value);
         } else {
-            require(
-                IERC20(_tokenContract).transfer(msg.sender, value),
-                "transferFailed"
-            );
+            require(IERC20(_tokenContract).transfer(msg.sender, value), "transferFailed");
         }
     }
 
-    function getERC20Balance(address _tokenContract, address _owner)
-        public
-        view
-        returns (uint256)
-    {
+    function getERC20Balance(address _tokenContract, address _owner) public view returns (uint256) {
         UserFTWallet storage wallet = ftWallets[_owner];
         uint256 index = wallet.ftIndex[_tokenContract];
         if (index == 0) {
@@ -107,10 +96,7 @@ contract GlobalFTWallet {
 
             // Burn existing balance since we will switch over to minting on withdrawal
             IPairedErc20 tokenContract = IPairedErc20(_tokenContract);
-            tokenContract.burn(
-                address(this),
-                tokenContract.balanceOf(address(this))
-            );
+            tokenContract.burn(address(this), tokenContract.balanceOf(address(this)));
         }
         pairedContract.connectedRollups[_chain] = PairingStatus.Requested;
     }
@@ -121,9 +107,7 @@ contract GlobalFTWallet {
         bool success
     ) internal {
         PairedContract storage pairedContract = pairedContracts[_tokenContract];
-        if (
-            pairedContract.connectedRollups[_chain] != PairingStatus.Requested
-        ) {
+        if (pairedContract.connectedRollups[_chain] != PairingStatus.Requested) {
             // If the pairing hasn't been requested, ignore this
             return;
         }
@@ -143,8 +127,7 @@ contract GlobalFTWallet {
         bool isPaired = pairedContract.paired;
 
         bool recipientMintNewTokens = isPaired &&
-            pairedContract.connectedRollups[_destination] ==
-            PairingStatus.Paired;
+            pairedContract.connectedRollups[_destination] == PairingStatus.Paired;
         if (!recipientMintNewTokens) {
             addToken(_destination, _tokenContract, _value);
         }
@@ -153,11 +136,7 @@ contract GlobalFTWallet {
             IPairedErc20(_tokenContract).burn(msg.sender, _value);
         } else {
             require(
-                IERC20(_tokenContract).transferFrom(
-                    msg.sender,
-                    address(this),
-                    _value
-                ),
+                IERC20(_tokenContract).transferFrom(msg.sender, address(this), _value),
                 "failed transfer"
             );
         }
@@ -174,9 +153,7 @@ contract GlobalFTWallet {
         bool isPaired = pairedContract.paired;
         bool senderMintNewTokens = isPaired &&
             pairedContract.connectedRollups[_from] == PairingStatus.Paired;
-        if (
-            !senderMintNewTokens && !removeToken(_from, _tokenContract, _value)
-        ) {
+        if (!senderMintNewTokens && !removeToken(_from, _tokenContract, _value)) {
             return false;
         }
 
@@ -226,11 +203,8 @@ contract GlobalFTWallet {
         }
         tokenWallet.balance -= _value;
         if (tokenWallet.balance == 0) {
-            wallet.ftIndex[wallet.ftList[wallet.ftList.length - 1]
-                .contractAddress] = walletIndex;
-            wallet.ftList[walletIndex - 1] = wallet.ftList[wallet
-                .ftList
-                .length - 1];
+            wallet.ftIndex[wallet.ftList[wallet.ftList.length - 1].contractAddress] = walletIndex;
+            wallet.ftList[walletIndex - 1] = wallet.ftList[wallet.ftList.length - 1];
             delete wallet.ftIndex[_tokenContract];
             wallet.ftList.pop();
         }

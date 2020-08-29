@@ -32,10 +32,7 @@ contract CloneFactory {
         bytes20 targetBytes = bytes20(target);
         assembly {
             let clone := mload(0x40)
-            mstore(
-                clone,
-                0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000
-            )
+            mstore(clone, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
             mstore(add(clone, 0x14), targetBytes)
             mstore(
                 add(clone, 0x28),
@@ -45,17 +42,11 @@ contract CloneFactory {
         }
     }
 
-    function create2Clone(address target, bytes32 salt)
-        internal
-        returns (address result)
-    {
+    function create2Clone(address target, bytes32 salt) internal returns (address result) {
         bytes20 targetBytes = bytes20(target);
         assembly {
             let clone := mload(0x40)
-            mstore(
-                clone,
-                0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000
-            )
+            mstore(clone, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
             mstore(add(clone, 0x14), targetBytes)
             mstore(
                 add(clone, 0x28),
@@ -65,18 +56,11 @@ contract CloneFactory {
         }
     }
 
-    function isClone(address target, address query)
-        internal
-        view
-        returns (bool result)
-    {
+    function isClone(address target, address query) internal view returns (bool result) {
         bytes20 targetBytes = bytes20(target);
         assembly {
             let clone := mload(0x40)
-            mstore(
-                clone,
-                0x363d3d373d3d3d363d7300000000000000000000000000000000000000000000
-            )
+            mstore(clone, 0x363d3d373d3d3d363d7300000000000000000000000000000000000000000000)
             mstore(add(clone, 0xa), targetBytes)
             mstore(
                 add(clone, 0x1e),
@@ -92,18 +76,11 @@ contract CloneFactory {
         }
     }
 
-    function cloneCodeHash(address target)
-        internal
-        pure
-        returns (bytes32 result)
-    {
+    function cloneCodeHash(address target) internal pure returns (bytes32 result) {
         bytes20 targetBytes = bytes20(target);
         assembly {
             let clone := mload(0x40)
-            mstore(
-                clone,
-                0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000
-            )
+            mstore(clone, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
             mstore(add(clone, 0x14), targetBytes)
             mstore(
                 add(clone, 0x28),

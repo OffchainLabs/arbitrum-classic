@@ -75,10 +75,7 @@ contract ExecutionChallenge is IExecutionChallenge, BisectionChallenge {
         _bisectAssertion(bisection);
     }
 
-    function _checkBisectionPrecondition(BisectAssertionData memory _data)
-        private
-        view
-    {
+    function _checkBisectionPrecondition(BisectAssertionData memory _data) private view {
         uint256 bisectionCount = _data.machineHashes.length - 1;
         require(bisectionCount + 1 == _data.inboxAccs.length, BIS_INPLEN);
         require(bisectionCount + 1 == _data.messageAccs.length, BIS_INPLEN);
@@ -166,9 +163,7 @@ contract ExecutionChallenge is IExecutionChallenge, BisectionChallenge {
         for (uint256 i = 1; i < bisectionCount; i++) {
             hashes[i] = _generateBisectionHash(
                 _data,
-                uint64(
-                    otherSegmentSize(uint256(_data.totalSteps), bisectionCount)
-                ),
+                uint64(otherSegmentSize(uint256(_data.totalSteps), bisectionCount)),
                 bisectionCount,
                 i
             );
@@ -192,8 +187,7 @@ contract ExecutionChallenge is IExecutionChallenge, BisectionChallenge {
         uint256 _inboxSeqNum,
         bytes memory _msgData
     ) public asserterAction {
-        (uint64 gas, bytes32[5] memory fields) = executor
-            .executeStepWithMessage(
+        (uint64 gas, bytes32[5] memory fields) = executor.executeStepWithMessage(
             _firstInbox,
             _firstMessage,
             _firstLog,
@@ -241,8 +235,7 @@ contract ExecutionChallenge is IExecutionChallenge, BisectionChallenge {
         // are either one or 0 messages apart and the same is true for logs. Therefore
         // we can infer the message count and log count based on whether the fields
         // are equal or not
-        ChallengeUtils.ExecutionAssertion memory assertion = ChallengeUtils
-            .ExecutionAssertion(
+        ChallengeUtils.ExecutionAssertion memory assertion = ChallengeUtils.ExecutionAssertion(
             1,
             gas,
             startMachineHash,

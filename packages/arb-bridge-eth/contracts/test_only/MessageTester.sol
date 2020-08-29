@@ -53,22 +53,11 @@ contract MessageTester {
     ) public pure returns (bytes32) {
         return
             Messages
-                .messageValue(
-                messageType,
-                blockNumber,
-                timestamp,
-                sender,
-                inboxSeqNum,
-                messageData
-            )
+                .messageValue(messageType, blockNumber, timestamp, sender, inboxSeqNum, messageData)
                 .hash();
     }
 
-    function addMessageToInbox(bytes32 inbox, bytes32 message)
-        public
-        pure
-        returns (bytes32)
-    {
+    function addMessageToInbox(bytes32 inbox, bytes32 message) public pure returns (bytes32) {
         return Messages.addMessageToInbox(inbox, message);
     }
 
@@ -83,11 +72,8 @@ contract MessageTester {
             bytes memory // data
         )
     {
-        (
-            bool valid,
-            uint256 offset,
-            Messages.OutgoingMessage memory message
-        ) = Messages.unmarshalOutgoingMessage(data, startOffset);
+        (bool valid, uint256 offset, Messages.OutgoingMessage memory message) = Messages
+            .unmarshalOutgoingMessage(data, startOffset);
         return (valid, offset, message.kind, message.sender, message.data);
     }
 
