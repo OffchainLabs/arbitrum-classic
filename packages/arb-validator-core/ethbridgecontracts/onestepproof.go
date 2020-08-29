@@ -26,6 +26,168 @@ var (
 	_ = event.NewSubscription
 )
 
+// KeccakABI is the input ABI used to generate the binding from.
+const KeccakABI = "[]"
+
+// KeccakBin is the compiled bytecode used for deploying new contracts.
+var KeccakBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820c07ae5b3a4de3b843e4ad0fe343fe545017077f4b66197a567534adf7bf6c06864736f6c63430005110032"
+
+// DeployKeccak deploys a new Ethereum contract, binding an instance of Keccak to it.
+func DeployKeccak(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Keccak, error) {
+	parsed, err := abi.JSON(strings.NewReader(KeccakABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(KeccakBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &Keccak{KeccakCaller: KeccakCaller{contract: contract}, KeccakTransactor: KeccakTransactor{contract: contract}, KeccakFilterer: KeccakFilterer{contract: contract}}, nil
+}
+
+// Keccak is an auto generated Go binding around an Ethereum contract.
+type Keccak struct {
+	KeccakCaller     // Read-only binding to the contract
+	KeccakTransactor // Write-only binding to the contract
+	KeccakFilterer   // Log filterer for contract events
+}
+
+// KeccakCaller is an auto generated read-only Go binding around an Ethereum contract.
+type KeccakCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// KeccakTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type KeccakTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// KeccakFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type KeccakFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// KeccakSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type KeccakSession struct {
+	Contract     *Keccak           // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// KeccakCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type KeccakCallerSession struct {
+	Contract *KeccakCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts // Call options to use throughout this session
+}
+
+// KeccakTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type KeccakTransactorSession struct {
+	Contract     *KeccakTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// KeccakRaw is an auto generated low-level Go binding around an Ethereum contract.
+type KeccakRaw struct {
+	Contract *Keccak // Generic contract binding to access the raw methods on
+}
+
+// KeccakCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type KeccakCallerRaw struct {
+	Contract *KeccakCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// KeccakTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type KeccakTransactorRaw struct {
+	Contract *KeccakTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewKeccak creates a new instance of Keccak, bound to a specific deployed contract.
+func NewKeccak(address common.Address, backend bind.ContractBackend) (*Keccak, error) {
+	contract, err := bindKeccak(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &Keccak{KeccakCaller: KeccakCaller{contract: contract}, KeccakTransactor: KeccakTransactor{contract: contract}, KeccakFilterer: KeccakFilterer{contract: contract}}, nil
+}
+
+// NewKeccakCaller creates a new read-only instance of Keccak, bound to a specific deployed contract.
+func NewKeccakCaller(address common.Address, caller bind.ContractCaller) (*KeccakCaller, error) {
+	contract, err := bindKeccak(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &KeccakCaller{contract: contract}, nil
+}
+
+// NewKeccakTransactor creates a new write-only instance of Keccak, bound to a specific deployed contract.
+func NewKeccakTransactor(address common.Address, transactor bind.ContractTransactor) (*KeccakTransactor, error) {
+	contract, err := bindKeccak(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &KeccakTransactor{contract: contract}, nil
+}
+
+// NewKeccakFilterer creates a new log filterer instance of Keccak, bound to a specific deployed contract.
+func NewKeccakFilterer(address common.Address, filterer bind.ContractFilterer) (*KeccakFilterer, error) {
+	contract, err := bindKeccak(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &KeccakFilterer{contract: contract}, nil
+}
+
+// bindKeccak binds a generic wrapper to an already deployed contract.
+func bindKeccak(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(KeccakABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Keccak *KeccakRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Keccak.Contract.KeccakCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Keccak *KeccakRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Keccak.Contract.KeccakTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Keccak *KeccakRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Keccak.Contract.KeccakTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Keccak *KeccakCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Keccak.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Keccak *KeccakTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Keccak.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Keccak *KeccakTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Keccak.Contract.contract.Transact(opts, method, params...)
+}
+
 // OneStepProofABI is the input ABI used to generate the binding from.
 const OneStepProofABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"inboxAcc\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"messagesAcc\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"logsAcc\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"}],\"name\":\"executeStep\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"gas\",\"type\":\"uint64\"},{\"internalType\":\"bytes32[5]\",\"name\":\"fields\",\"type\":\"bytes32[5]\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"inboxAcc\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"messagesAcc\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"logsAcc\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"uint8\",\"name\":\"_kind\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"_blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_timestamp\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_inboxSeqNum\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_msgData\",\"type\":\"bytes\"}],\"name\":\"executeStepWithMessage\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"gas\",\"type\":\"uint64\"},{\"internalType\":\"bytes32[5]\",\"name\":\"fields\",\"type\":\"bytes32[5]\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"}]"
 

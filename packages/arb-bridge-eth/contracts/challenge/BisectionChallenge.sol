@@ -23,7 +23,7 @@ import "./IBisectionChallenge.sol";
 
 import "../libraries/MerkleLib.sol";
 
-contract BisectionChallenge is Challenge, IBisectionChallenge {
+contract BisectionChallenge is IBisectionChallenge, Challenge {
     event Continued(uint256 segmentIndex, uint256 deadlineTicks);
 
     // Incorrect previous state

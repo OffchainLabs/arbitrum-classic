@@ -25,12 +25,12 @@ import "./IArbRollup.sol";
 contract ArbFactory is CloneFactory {
     event RollupCreated(address rollupAddress);
 
-    address public rollupTemplate;
+    ICloneable public rollupTemplate;
     address public globalInboxAddress;
     address public challengeFactoryAddress;
 
     constructor(
-        address _rollupTemplate,
+        ICloneable _rollupTemplate,
         address _globalInboxAddress,
         address _challengeFactoryAddress
     ) public {

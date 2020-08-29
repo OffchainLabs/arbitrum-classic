@@ -1,7 +1,15 @@
 #!/bin/bash
 PREFIX=../../arb-bridge-eth/contracts
-IGNORED_LIB=$PREFIX/libraries/MerkleLib.sol:MerkleLib,$PREFIX/libraries/BytesLib.sol:BytesLib,$PREFIX/libraries/CloneFactory.sol:CloneFactory,$PREFIX/libraries/BytesLib.sol:BytesLib,$PREFIX/libraries/DebugPrint.sol:DebugPrint,$PREFIX/libraries/RollupTime.sol:RollupTime,$PREFIX/libraries/Keccak.sol:Keccak
-IGNORED_ARCH=$PREFIX/arch/Value.sol:Value,$PREFIX/arch/Marshaling.sol:Marshaling,$PREFIX/arch/Hashing.sol:Hashing,$PREFIX/arch/Protocol.sol:Protocol,$PREFIX/arch/Machine.sol:Machine,$PREFIX/arch/IOneStepProof.sol:IOneStepProof
+MERKLELIB=$PREFIX/libraries/MerkleLib.sol:MerkleLib
+BYTESLIB=$PREFIX/libraries/BytesLib.sol:BytesLib
+CLONEFACTORY=$PREFIX/libraries/CloneFactory.sol:CloneFactory
+DEBUGPRINT=$PREFIX/libraries/DebugPrint.sol:DebugPrint
+ROLLUPTIME=$PREFIX/libraries/RollupTime.sol:RollupTime
+CLONABLE=$PREFIX/libraries/Cloneable.sol:Cloneable
+ICLONABLE=$PREFIX/libraries/ICloneable.sol:ICloneable
+IGNORED_LIB=$MERKLELIB,$BYTESLIB,$CLONEFACTORY,$DEBUGPRINT,$ROLLUPTIME,$CLONABLE,$ICLONABLE
+ARCH_PREFIX=$PREFIX/arch
+IGNORED_ARCH=$ARCH_PREFIX/Value.sol:Value,$ARCH_PREFIX/Marshaling.sol:Marshaling,$ARCH_PREFIX/Hashing.sol:Hashing,$ARCH_PREFIX/Protocol.sol:Protocol,$ARCH_PREFIX/Machine.sol:Machine,$ARCH_PREFIX/IOneStepProof.sol:IOneStepProof
 CHAL_PREFIX=$PREFIX/challenge
 IGNORED_CHALLENGE=$CHAL_PREFIX/ChallengeUtils.sol:ChallengeUtils,$CHAL_PREFIX/IChallengeFactory.sol:IChallengeFactory,$CHAL_PREFIX/IBisectionChallenge.sol:IBisectionChallenge,$CHAL_PREFIX/IExecutionChallenge.sol:IExecutionChallenge
 IGNORED_INBOX=$PREFIX/inbox/IGlobalInbox.sol:IGlobalInbox,$PREFIX/inbox/Messages.sol:Messages

@@ -48,7 +48,7 @@ contract Staking {
     // staker1 already in a challenge
     string private constant STK1_IN_CHAL = "STK1_IN_CHAL";
     // staker2 already in a challenge
-    string private constant STK2_IN_CHAL = "STK1_IN_CHAL";
+    string private constant STK2_IN_CHAL = "STK2_IN_CHAL";
     // Child types must be ordered
     string private constant TYPE_ORDER = "TYPE_ORDER";
     // Invalid child type

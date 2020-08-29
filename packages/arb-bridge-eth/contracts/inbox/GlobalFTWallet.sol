@@ -22,6 +22,8 @@ import "../interfaces/IERC20.sol";
 import "../interfaces/IPairedErc20.sol";
 
 contract GlobalFTWallet {
+    string public constant FAILED_TRANSFER = "FAILED_TRANSFER";
+
     struct FTWallet {
         address contractAddress;
         uint256 balance;
@@ -63,7 +65,7 @@ contract GlobalFTWallet {
         if (pairedContracts[_tokenContract].paired) {
             IPairedErc20(_tokenContract).mint(msg.sender, value);
         } else {
-            require(IERC20(_tokenContract).transfer(msg.sender, value), "transferFailed");
+            require(IERC20(_tokenContract).transfer(msg.sender, value), FAILED_TRANSFER);
         }
     }
 
@@ -137,7 +139,7 @@ contract GlobalFTWallet {
         } else {
             require(
                 IERC20(_tokenContract).transferFrom(msg.sender, address(this), _value),
-                "failed transfer"
+                FAILED_TRANSFER
             );
         }
     }

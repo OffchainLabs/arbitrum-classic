@@ -1138,3 +1138,14 @@ TEST_CASE("KECCAKF opcode is correct") {
         }
     }
 }
+
+TEST_CASE("Stack underflow") {
+    for (uint8_t op = static_cast<uint8_t>(OpCode::ADD);
+         op <= static_cast<uint8_t>(OpCode::ECRECOVER); ++op) {
+        auto code = std::make_shared<Code>();
+        auto stub = code->addSegment();
+        code->addOperation(stub.pc, Operation(static_cast<OpCode>(op)));
+        MachineState m{std::move(code), uint256_t{5}};
+        m.runOne();
+    }
+}

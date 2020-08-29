@@ -12,6 +12,10 @@ import {
 
 interface ArbSysInterface extends Interface {
   functions: {
+    getStorageAt: TypedFunctionDescription<{
+      encode([account, index]: [string, BigNumberish]): string
+    }>
+
     getTransactionCount: TypedFunctionDescription<{
       encode([account]: [string]): string
     }>
@@ -44,9 +48,35 @@ export class ArbSys extends Contract {
   interface: ArbSysInterface
 
   functions: {
-    getTransactionCount(account: string): Promise<BigNumber>
+    getStorageAt(
+      account: string,
+      index: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'getStorageAt(address,uint256)'(
+      account: string,
+      index: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    getTransactionCount(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'getTransactionCount(address)'(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
     withdrawERC20(
+      dest: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'withdrawERC20(address,uint256)'(
       dest: string,
       amount: BigNumberish,
       overrides?: TransactionOverrides
@@ -58,15 +88,52 @@ export class ArbSys extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    'withdrawERC721(address,uint256)'(
+      dest: string,
+      id: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     withdrawEth(
+      dest: string,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'withdrawEth(address)'(
       dest: string,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
   }
 
-  getTransactionCount(account: string): Promise<BigNumber>
+  getStorageAt(
+    account: string,
+    index: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
+
+  'getStorageAt(address,uint256)'(
+    account: string,
+    index: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
+
+  getTransactionCount(
+    account: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
+
+  'getTransactionCount(address)'(
+    account: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
 
   withdrawERC20(
+    dest: string,
+    amount: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'withdrawERC20(address,uint256)'(
     dest: string,
     amount: BigNumberish,
     overrides?: TransactionOverrides
@@ -78,7 +145,18 @@ export class ArbSys extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  'withdrawERC721(address,uint256)'(
+    dest: string,
+    id: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   withdrawEth(
+    dest: string,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'withdrawEth(address)'(
     dest: string,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
@@ -86,12 +164,60 @@ export class ArbSys extends Contract {
   filters: {}
 
   estimate: {
-    getTransactionCount(account: string): Promise<BigNumber>
+    getStorageAt(
+      account: string,
+      index: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    withdrawERC20(dest: string, amount: BigNumberish): Promise<BigNumber>
+    'getStorageAt(address,uint256)'(
+      account: string,
+      index: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    withdrawERC721(dest: string, id: BigNumberish): Promise<BigNumber>
+    getTransactionCount(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    withdrawEth(dest: string): Promise<BigNumber>
+    'getTransactionCount(address)'(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    withdrawERC20(
+      dest: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'withdrawERC20(address,uint256)'(
+      dest: string,
+      amount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    withdrawERC721(
+      dest: string,
+      id: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'withdrawERC721(address,uint256)'(
+      dest: string,
+      id: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    withdrawEth(
+      dest: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'withdrawEth(address)'(
+      dest: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
   }
 }

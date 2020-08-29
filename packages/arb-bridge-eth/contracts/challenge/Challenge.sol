@@ -20,8 +20,9 @@ pragma solidity ^0.5.11;
 
 import "../rollup/IStaking.sol";
 import "../libraries/RollupTime.sol";
+import "../libraries/Cloneable.sol";
 
-contract Challenge {
+contract Challenge is Cloneable {
     enum State { NoChallenge, AsserterTurn, ChallengerTurn }
 
     event InitiatedChallenge(uint256 deadlineTicks);
@@ -118,11 +119,11 @@ contract Challenge {
 
     function _asserterWin() internal {
         IStaking(rollupAddress).resolveChallenge(asserter, challenger);
-        selfdestruct(msg.sender);
+        safeSelfDestruct(msg.sender);
     }
 
     function _challengerWin() internal {
         IStaking(rollupAddress).resolveChallenge(challenger, asserter);
-        selfdestruct(msg.sender);
+        safeSelfDestruct(msg.sender);
     }
 }

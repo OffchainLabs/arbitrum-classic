@@ -22,8 +22,9 @@ import "./IArbRollup.sol";
 import "./NodeGraph.sol";
 import "./Staking.sol";
 import "../inbox/IGlobalInbox.sol";
+import "../libraries/Cloneable.sol";
 
-contract ArbRollup is IArbRollup, NodeGraph, Staking {
+contract ArbRollup is IArbRollup, Cloneable, NodeGraph, Staking {
     // invalid path proof
     string private constant PLACE_LEAF = "PLACE_LEAF";
 
@@ -277,7 +278,7 @@ contract ArbRollup is IArbRollup, NodeGraph, Staking {
     }
 
     function ownerShutdown() external onlyOwner {
-        selfdestruct(msg.sender);
+        safeSelfDestruct(msg.sender);
     }
 
     function _recoverStakeConfirmed(address payable stakerAddress, bytes32[] memory proof) private {

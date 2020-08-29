@@ -183,7 +183,24 @@ export class GlobalInbox extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    'deployL2ContractPair(address,uint256,uint256,uint256,bytes)'(
+      chain: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      payment: BigNumberish,
+      contractData: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     depositERC20Message(
+      chain: string,
+      erc20: string,
+      to: string,
+      value: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'depositERC20Message(address,address,address,uint256)'(
       chain: string,
       erc20: string,
       to: string,
@@ -199,20 +216,71 @@ export class GlobalInbox extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    'depositERC721Message(address,address,address,uint256)'(
+      chain: string,
+      erc721: string,
+      to: string,
+      id: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     depositEthMessage(
       chain: string,
       to: string,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    getERC20Balance(_tokenContract: string, _owner: string): Promise<BigNumber>
+    'depositEthMessage(address,address)'(
+      chain: string,
+      to: string,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
 
-    getERC721Tokens(_erc721: string, _owner: string): Promise<BigNumber[]>
+    getERC20Balance(
+      _tokenContract: string,
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    getEthBalance(_owner: string): Promise<BigNumber>
+    'getERC20Balance(address,address)'(
+      _tokenContract: string,
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    getERC721Tokens(
+      _erc721: string,
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber[]>
+
+    'getERC721Tokens(address,address)'(
+      _erc721: string,
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber[]>
+
+    getEthBalance(
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'getEthBalance(address)'(
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
     getInbox(
-      account: string
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<{
+      0: string
+      1: BigNumber
+    }>
+
+    'getInbox(address)'(
+      account: string,
+      overrides?: TransactionOverrides
     ): Promise<{
       0: string
       1: BigNumber
@@ -220,27 +288,79 @@ export class GlobalInbox extends Contract {
 
     getPaymentOwner(
       originalOwner: string,
-      messageIndex: BigNumberish
+      messageIndex: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<string>
+
+    'getPaymentOwner(address,uint256)'(
+      originalOwner: string,
+      messageIndex: BigNumberish,
+      overrides?: TransactionOverrides
     ): Promise<string>
 
     hasERC721(
       _erc721: string,
       _owner: string,
-      _tokenId: BigNumberish
+      _tokenId: BigNumberish,
+      overrides?: TransactionOverrides
     ): Promise<boolean>
 
-    isPairedContract(_tokenContract: string, _chain: string): Promise<boolean>
+    'hasERC721(address,address,uint256)'(
+      _erc721: string,
+      _owner: string,
+      _tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<boolean>
 
-    ownedERC20s(_owner: string): Promise<string[]>
+    isPairedContract(
+      _tokenContract: string,
+      _chain: string,
+      overrides?: TransactionOverrides
+    ): Promise<number>
 
-    ownedERC721s(_owner: string): Promise<string[]>
+    'isPairedContract(address,address)'(
+      _tokenContract: string,
+      _chain: string,
+      overrides?: TransactionOverrides
+    ): Promise<number>
+
+    ownedERC20s(
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<string[]>
+
+    'ownedERC20s(address)'(
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<string[]>
+
+    ownedERC721s(
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<string[]>
+
+    'ownedERC721s(address)'(
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<string[]>
 
     sendInitializationMessage(
       messageData: Arrayish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    'sendInitializationMessage(bytes)'(
+      messageData: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     sendL2Message(
+      chain: string,
+      messageData: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'sendL2Message(address,bytes)'(
       chain: string,
       messageData: Arrayish,
       overrides?: TransactionOverrides
@@ -252,7 +372,20 @@ export class GlobalInbox extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    'sendL2MessageFromOrigin(address,bytes)'(
+      chain: string,
+      messageData: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     sendMessages(
+      messages: Arrayish,
+      initialMaxSendCount: BigNumberish,
+      finalMaxSendCount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'sendMessages(bytes,uint256,uint256)'(
       messages: Arrayish,
       initialMaxSendCount: BigNumberish,
       finalMaxSendCount: BigNumberish,
@@ -266,7 +399,19 @@ export class GlobalInbox extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    'transferPayment(address,address,uint256)'(
+      originalOwner: string,
+      newOwner: string,
+      messageIndex: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     withdrawERC20(
+      _tokenContract: string,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'withdrawERC20(address)'(
       _tokenContract: string,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
@@ -277,10 +422,29 @@ export class GlobalInbox extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    'withdrawERC721(address,uint256)'(
+      _erc721: string,
+      _tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     withdrawEth(overrides?: TransactionOverrides): Promise<ContractTransaction>
+
+    'withdrawEth()'(
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
   }
 
   deployL2ContractPair(
+    chain: string,
+    maxGas: BigNumberish,
+    gasPriceBid: BigNumberish,
+    payment: BigNumberish,
+    contractData: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'deployL2ContractPair(address,uint256,uint256,uint256,bytes)'(
     chain: string,
     maxGas: BigNumberish,
     gasPriceBid: BigNumberish,
@@ -297,7 +461,23 @@ export class GlobalInbox extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  'depositERC20Message(address,address,address,uint256)'(
+    chain: string,
+    erc20: string,
+    to: string,
+    value: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   depositERC721Message(
+    chain: string,
+    erc721: string,
+    to: string,
+    id: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'depositERC721Message(address,address,address,uint256)'(
     chain: string,
     erc721: string,
     to: string,
@@ -311,14 +491,57 @@ export class GlobalInbox extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  getERC20Balance(_tokenContract: string, _owner: string): Promise<BigNumber>
+  'depositEthMessage(address,address)'(
+    chain: string,
+    to: string,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
 
-  getERC721Tokens(_erc721: string, _owner: string): Promise<BigNumber[]>
+  getERC20Balance(
+    _tokenContract: string,
+    _owner: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
 
-  getEthBalance(_owner: string): Promise<BigNumber>
+  'getERC20Balance(address,address)'(
+    _tokenContract: string,
+    _owner: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
+
+  getERC721Tokens(
+    _erc721: string,
+    _owner: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber[]>
+
+  'getERC721Tokens(address,address)'(
+    _erc721: string,
+    _owner: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber[]>
+
+  getEthBalance(
+    _owner: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
+
+  'getEthBalance(address)'(
+    _owner: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
 
   getInbox(
-    account: string
+    account: string,
+    overrides?: TransactionOverrides
+  ): Promise<{
+    0: string
+    1: BigNumber
+  }>
+
+  'getInbox(address)'(
+    account: string,
+    overrides?: TransactionOverrides
   ): Promise<{
     0: string
     1: BigNumber
@@ -326,27 +549,79 @@ export class GlobalInbox extends Contract {
 
   getPaymentOwner(
     originalOwner: string,
-    messageIndex: BigNumberish
+    messageIndex: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<string>
+
+  'getPaymentOwner(address,uint256)'(
+    originalOwner: string,
+    messageIndex: BigNumberish,
+    overrides?: TransactionOverrides
   ): Promise<string>
 
   hasERC721(
     _erc721: string,
     _owner: string,
-    _tokenId: BigNumberish
+    _tokenId: BigNumberish,
+    overrides?: TransactionOverrides
   ): Promise<boolean>
 
-  isPairedContract(_tokenContract: string, _chain: string): Promise<boolean>
+  'hasERC721(address,address,uint256)'(
+    _erc721: string,
+    _owner: string,
+    _tokenId: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<boolean>
 
-  ownedERC20s(_owner: string): Promise<string[]>
+  isPairedContract(
+    _tokenContract: string,
+    _chain: string,
+    overrides?: TransactionOverrides
+  ): Promise<number>
 
-  ownedERC721s(_owner: string): Promise<string[]>
+  'isPairedContract(address,address)'(
+    _tokenContract: string,
+    _chain: string,
+    overrides?: TransactionOverrides
+  ): Promise<number>
+
+  ownedERC20s(
+    _owner: string,
+    overrides?: TransactionOverrides
+  ): Promise<string[]>
+
+  'ownedERC20s(address)'(
+    _owner: string,
+    overrides?: TransactionOverrides
+  ): Promise<string[]>
+
+  ownedERC721s(
+    _owner: string,
+    overrides?: TransactionOverrides
+  ): Promise<string[]>
+
+  'ownedERC721s(address)'(
+    _owner: string,
+    overrides?: TransactionOverrides
+  ): Promise<string[]>
 
   sendInitializationMessage(
     messageData: Arrayish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  'sendInitializationMessage(bytes)'(
+    messageData: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   sendL2Message(
+    chain: string,
+    messageData: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'sendL2Message(address,bytes)'(
     chain: string,
     messageData: Arrayish,
     overrides?: TransactionOverrides
@@ -358,7 +633,20 @@ export class GlobalInbox extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  'sendL2MessageFromOrigin(address,bytes)'(
+    chain: string,
+    messageData: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   sendMessages(
+    messages: Arrayish,
+    initialMaxSendCount: BigNumberish,
+    finalMaxSendCount: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'sendMessages(bytes,uint256,uint256)'(
     messages: Arrayish,
     initialMaxSendCount: BigNumberish,
     finalMaxSendCount: BigNumberish,
@@ -372,7 +660,19 @@ export class GlobalInbox extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  'transferPayment(address,address,uint256)'(
+    originalOwner: string,
+    newOwner: string,
+    messageIndex: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   withdrawERC20(
+    _tokenContract: string,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'withdrawERC20(address)'(
     _tokenContract: string,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
@@ -383,7 +683,17 @@ export class GlobalInbox extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  'withdrawERC721(address,uint256)'(
+    _erc721: string,
+    _tokenId: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   withdrawEth(overrides?: TransactionOverrides): Promise<ContractTransaction>
+
+  'withdrawEth()'(
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
 
   filters: {
     BuddyContractDeployed(sender: string | null, data: null): EventFilter
@@ -419,75 +729,251 @@ export class GlobalInbox extends Contract {
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       payment: BigNumberish,
-      contractData: Arrayish
+      contractData: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'deployL2ContractPair(address,uint256,uint256,uint256,bytes)'(
+      chain: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      payment: BigNumberish,
+      contractData: Arrayish,
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
     depositERC20Message(
       chain: string,
       erc20: string,
       to: string,
-      value: BigNumberish
+      value: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'depositERC20Message(address,address,address,uint256)'(
+      chain: string,
+      erc20: string,
+      to: string,
+      value: BigNumberish,
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
     depositERC721Message(
       chain: string,
       erc721: string,
       to: string,
-      id: BigNumberish
+      id: BigNumberish,
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
-    depositEthMessage(chain: string, to: string): Promise<BigNumber>
+    'depositERC721Message(address,address,address,uint256)'(
+      chain: string,
+      erc721: string,
+      to: string,
+      id: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    getERC20Balance(_tokenContract: string, _owner: string): Promise<BigNumber>
+    depositEthMessage(
+      chain: string,
+      to: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    getERC721Tokens(_erc721: string, _owner: string): Promise<BigNumber>
+    'depositEthMessage(address,address)'(
+      chain: string,
+      to: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    getEthBalance(_owner: string): Promise<BigNumber>
+    getERC20Balance(
+      _tokenContract: string,
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    getInbox(account: string): Promise<BigNumber>
+    'getERC20Balance(address,address)'(
+      _tokenContract: string,
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    getERC721Tokens(
+      _erc721: string,
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'getERC721Tokens(address,address)'(
+      _erc721: string,
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    getEthBalance(
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'getEthBalance(address)'(
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    getInbox(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'getInbox(address)'(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
     getPaymentOwner(
       originalOwner: string,
-      messageIndex: BigNumberish
+      messageIndex: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'getPaymentOwner(address,uint256)'(
+      originalOwner: string,
+      messageIndex: BigNumberish,
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
     hasERC721(
       _erc721: string,
       _owner: string,
-      _tokenId: BigNumberish
+      _tokenId: BigNumberish,
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
-    isPairedContract(_tokenContract: string, _chain: string): Promise<BigNumber>
+    'hasERC721(address,address,uint256)'(
+      _erc721: string,
+      _owner: string,
+      _tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    ownedERC20s(_owner: string): Promise<BigNumber>
+    isPairedContract(
+      _tokenContract: string,
+      _chain: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    ownedERC721s(_owner: string): Promise<BigNumber>
+    'isPairedContract(address,address)'(
+      _tokenContract: string,
+      _chain: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    sendInitializationMessage(messageData: Arrayish): Promise<BigNumber>
+    ownedERC20s(
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    sendL2Message(chain: string, messageData: Arrayish): Promise<BigNumber>
+    'ownedERC20s(address)'(
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    ownedERC721s(
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'ownedERC721s(address)'(
+      _owner: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    sendInitializationMessage(
+      messageData: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'sendInitializationMessage(bytes)'(
+      messageData: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    sendL2Message(
+      chain: string,
+      messageData: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'sendL2Message(address,bytes)'(
+      chain: string,
+      messageData: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
     sendL2MessageFromOrigin(
       chain: string,
-      messageData: Arrayish
+      messageData: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'sendL2MessageFromOrigin(address,bytes)'(
+      chain: string,
+      messageData: Arrayish,
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
     sendMessages(
       messages: Arrayish,
       initialMaxSendCount: BigNumberish,
-      finalMaxSendCount: BigNumberish
+      finalMaxSendCount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'sendMessages(bytes,uint256,uint256)'(
+      messages: Arrayish,
+      initialMaxSendCount: BigNumberish,
+      finalMaxSendCount: BigNumberish,
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
     transferPayment(
       originalOwner: string,
       newOwner: string,
-      messageIndex: BigNumberish
+      messageIndex: BigNumberish,
+      overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
-    withdrawERC20(_tokenContract: string): Promise<BigNumber>
+    'transferPayment(address,address,uint256)'(
+      originalOwner: string,
+      newOwner: string,
+      messageIndex: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    withdrawERC721(_erc721: string, _tokenId: BigNumberish): Promise<BigNumber>
+    withdrawERC20(
+      _tokenContract: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    withdrawEth(): Promise<BigNumber>
+    'withdrawERC20(address)'(
+      _tokenContract: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    withdrawERC721(
+      _erc721: string,
+      _tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'withdrawERC721(address,uint256)'(
+      _erc721: string,
+      _tokenId: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    withdrawEth(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'withdrawEth()'(overrides?: TransactionOverrides): Promise<BigNumber>
   }
 }
