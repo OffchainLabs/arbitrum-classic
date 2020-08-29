@@ -7,13 +7,8 @@ if (!process.env.DOCKER) {
   usePlugin('@nomiclabs/buidler-waffle')
   usePlugin('buidler-typechain')
   usePlugin('solidity-coverage')
-  usePlugin('@nomiclabs/buidler-etherscan')
   usePlugin('buidler-spdx-license-identifier')
   usePlugin('buidler-gas-reporter')
-
-  const verifyTask = require('./scripts/verifyTask') // eslint-disable-line @typescript-eslint/no-var-requires
-  const setupVerifyTask = verifyTask.default
-  setupVerifyTask()
 }
 
 task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {

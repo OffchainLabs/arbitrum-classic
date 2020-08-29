@@ -34,7 +34,7 @@
     "flatten": "buidler flatten > arbitrum_flat.sol",
     "docker:build:geth": "docker build -t arb-bridge-eth-geth -f geth.Dockerfile .",
     "docker:geth": "rm -rf deployments/parity_44010 && ./scripts/launch-geth",
-    "verify": "./scripts/verify",
+    "verify": "buidler etherscan-verify --api-key $(dotenv -p ETHERSCAN_API_KEY)",
     "typechain": "buidler typechain"
   },
   "dependencies": {
@@ -67,6 +67,7 @@
     "buidler-typechain": "^0.1.1",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
+    "dotenv-cli": "^3.2.0",
     "eslint": "^7.3.1",
     "ethereum-waffle": "^2.3.0",
     "mocha": "^7.1.2",
