@@ -96,7 +96,7 @@ func createRollupChain() error {
 	// Rollup creation
 	client := ethbridge.NewEthAuthClient(ethclint, auth)
 
-	if err := cmdhelper.WaitForBalance(context.Background(), client, common.Address{}, common.NewAddressFromEth(auth.From)); err != nil {
+	if err := arbbridge.WaitForBalance(context.Background(), client, common.Address{}, common.NewAddressFromEth(auth.From)); err != nil {
 		return err
 	}
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package cmdhelper
+package arbbridge
 
 import (
 	"context"
@@ -24,11 +24,9 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
-func WaitForBalance(ctx context.Context, client arbbridge.ArbAuthClient, tokenAddress common.Address, userAddress common.Address) error {
-
+func WaitForBalance(ctx context.Context, client ArbClient, tokenAddress common.Address, userAddress common.Address) error {
 	emptyAddress := common.Address{}
 	if tokenAddress == emptyAddress {
 		balance, err := client.GetBalance(ctx, userAddress)
@@ -55,7 +53,6 @@ func WaitForBalance(ctx context.Context, client arbbridge.ArbAuthClient, tokenAd
 			}
 		}
 	} else {
-
 		erc20, err := client.NewIERC20Watcher(tokenAddress)
 		if err != nil {
 			return err
@@ -84,5 +81,4 @@ func WaitForBalance(ctx context.Context, client arbbridge.ArbAuthClient, tokenAd
 			}
 		}
 	}
-	return nil
 }

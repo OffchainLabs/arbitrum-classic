@@ -18,32 +18,29 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"math/big"
-
-	"github.com/ethereum/go-ethereum/core/types"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/ierc20"
-
 	errors2 "github.com/pkg/errors"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
 type IERC20 struct {
-	IERC20 *ierc20.IERC20
-	client *ethclient.Client
-	auth   *TransactAuth
+	*IERC20Watcher
+	auth *TransactAuth
 }
 
-func newIERC20(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*IERC20, error) {
-	ierc20Contract, err := ierc20.NewIERC20(address, client)
+func newIERC20(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*IERC20, error) {
+	watcher, err := newIERC20Watcher(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to IERC20")
+		return nil, err
 	}
-	return &IERC20{ierc20Contract, client, auth}, nil
+	return &IERC20{IERC20Watcher: watcher, auth: auth}, nil
 }
 
 func (con *IERC20) Approve(ctx context.Context, spender common.Address, amount *big.Int) error {
@@ -65,12 +62,12 @@ func (con *IERC20) waitForReceipt(ctx context.Context, tx *types.Transaction, me
 }
 
 type IERC20Watcher struct {
-	IERC20 *ierc20.IERC20
+	IERC20 *ethbridgecontracts.IERC20
 	client ethutils.EthClient
 }
 
 func newIERC20Watcher(address ethcommon.Address, client ethutils.EthClient) (*IERC20Watcher, error) {
-	ierc20Contract, err := ierc20.NewIERC20(address, client)
+	ierc20Contract, err := ethbridgecontracts.NewIERC20(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to IERC20")
 	}

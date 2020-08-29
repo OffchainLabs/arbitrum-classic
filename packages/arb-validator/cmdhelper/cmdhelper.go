@@ -100,7 +100,7 @@ func ValidateRollupChain(
 		return err
 	}
 
-	if err := WaitForBalance(context.Background(), client, params.StakeToken, common.NewAddressFromEth(auth.From)); err != nil {
+	if err := arbbridge.WaitForBalance(context.Background(), client, params.StakeToken, common.NewAddressFromEth(auth.From)); err != nil {
 		return err
 	}
 
