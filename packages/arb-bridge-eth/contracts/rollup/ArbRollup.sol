@@ -108,6 +108,7 @@ contract ArbRollup is IArbRollup, Cloneable, NodeGraph, Staking {
                 uint256(_arbGasSpeedLimitPerTick),
                 uint256(_maxExecutionSteps),
                 uint256(_stakeRequirement),
+                bytes32(bytes20(_stakeToken)),
                 bytes32(bytes20(_owner)),
                 _extraConfig
             )
