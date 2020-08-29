@@ -141,25 +141,6 @@ describe('GlobalInbox', async () => {
     ).to.eventually.equal(50)
   })
 
-  it('should reject a failed ERC20 deposit', async () => {
-    const [mockCreator] = await waffle.provider.getWallets()
-    const IERC20 = await ethers.getContractFactory('IERC20')
-    const mockERC20 = await deployMockContract(
-      mockCreator,
-      IERC20.interface.abi
-    )
-
-    await mockERC20.mock.transferFrom.returns(0)
-    await expect(
-      globalInbox.depositERC20Message(
-        chainAddress,
-        mockERC20.address,
-        chainAddress,
-        50
-      )
-    ).to.eventually.be.rejectedWith('FAILED_TRANSFER')
-  })
-
   it('should support paired ERC20s', async () => {
     const chainAddress = await accounts[6].getAddress()
     const EthBuddyErc20 = await ethers.getContractFactory('EthBuddyERC20')
@@ -250,6 +231,25 @@ describe('GlobalInbox', async () => {
 
   // These tests use a waffle mock which depends on buidlerevm
   if (bre.network.name == 'buidlerevm') {
+    it('should reject a failed ERC20 deposit', async () => {
+      const [mockCreator] = await waffle.provider.getWallets()
+      const IERC20 = await ethers.getContractFactory('IERC20')
+      const mockERC20 = await deployMockContract(
+        mockCreator,
+        IERC20.interface.abi
+      )
+
+      await mockERC20.mock.transferFrom.returns(0)
+      await expect(
+        globalInbox.depositERC20Message(
+          chainAddress,
+          mockERC20.address,
+          chainAddress,
+          50
+        )
+      ).to.eventually.be.rejectedWith('FAILED_TRANSFER')
+    })
+
     it('should deposit an ERC721', async () => {
       const [mockCreator] = await waffle.provider.getWallets()
       const IERC721 = await ethers.getContractFactory('IERC721')
