@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.0;
+pragma solidity ^0.5.11;
 
 import "arbos-contracts/contracts/ArbERC20.sol";
 import "../inbox/IGlobalInbox.sol";
@@ -39,14 +39,9 @@ contract EthBuddyERC20 is IPairedErc20, Ownable, ERC20, BaseDetails {
         _mint(msg.sender, 1000000000000);
     }
 
-    function connectToChain(address _rollupChain) public onlyOwner {
-        IGlobalInbox(inbox).deployL2ContractPair(
-            _rollupChain,
-            10000000000,
-            0,
-            0,
-            type(ArbERC20).creationCode
-        );
+    function connectToChain(address _chain) public onlyOwner {
+        IGlobalInbox inboxCon = IGlobalInbox(inbox);
+        inboxCon.deployL2ContractPair(_chain, 10000000000, 0, 0, type(ArbERC20).creationCode);
     }
 
     function mint(address account, uint256 amount) public {

@@ -1,4 +1,6 @@
-rm -r ./dist
+#!/bin/bash
+
+rm -rf ./dist
 
 tsc
 

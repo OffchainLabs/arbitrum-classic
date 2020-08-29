@@ -29,7 +29,7 @@ else
     NPROC=4
 fi
 
-cmake --build . -j "${NPROC}"
+cmake --build . -- -j "${NPROC}"
 cd ../
 "./scripts/install-cmachine-$BUILD"
 cd ../..

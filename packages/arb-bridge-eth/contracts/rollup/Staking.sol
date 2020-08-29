@@ -94,11 +94,7 @@ contract Staking {
         address challengeContract
     );
 
-    event RollupChallengeCompleted(
-        address challengeContract,
-        address winner,
-        address loser
-    );
+    event RollupChallengeCompleted(address challengeContract, address winner, address loser);
 
     function getStakeRequired() external view returns (uint128) {
         return stakeRequirement;
@@ -161,13 +157,11 @@ contract Staking {
         Staker storage challenger = getValidStaker(challengerAddress);
 
         require(
-            RollupTime.blocksToTicks(asserter.creationTimeBlocks) <
-                deadlineTicks,
+            RollupTime.blocksToTicks(asserter.creationTimeBlocks) < deadlineTicks,
             STK1_DEADLINE
         );
         require(
-            RollupTime.blocksToTicks(challenger.creationTimeBlocks) <
-                deadlineTicks,
+            RollupTime.blocksToTicks(challenger.creationTimeBlocks) < deadlineTicks,
             STK2_DEADLINE
         );
         require(!asserter.inChallenge, STK1_IN_CHAL);
@@ -191,10 +185,7 @@ contract Staking {
                 RollupUtils.childNodeHash(
                     prevNode,
                     deadlineTicks,
-                    RollupUtils.challengeDataHash(
-                        challengerDataHash,
-                        challengerPeriodTicks
-                    ),
+                    RollupUtils.challengeDataHash(challengerDataHash, challengerPeriodTicks),
                     stakerNodeTypes[1],
                     vmProtoHashes[1]
                 ),
@@ -240,9 +231,7 @@ contract Staking {
         );
     }
 
-    function init(uint128 _stakeRequirement, address _challengeFactoryAddress)
-        internal
-    {
+    function init(uint128 _stakeRequirement, address _challengeFactoryAddress) internal {
         require(address(challengeFactory) == address(0), INIT_TWICE);
         require(_challengeFactoryAddress != address(0), INIT_NONZERO);
 
@@ -252,11 +241,7 @@ contract Staking {
         stakeRequirement = _stakeRequirement;
     }
 
-    function getStakerLocation(address _stakerAddress)
-        internal
-        view
-        returns (bytes32)
-    {
+    function getStakerLocation(address _stakerAddress) internal view returns (bytes32) {
         bytes32 location = stakers[_stakerAddress].location;
         require(location != 0x00, INV_STAKER);
         return location;
@@ -271,9 +256,7 @@ contract Staking {
         emit RollupStakeCreated(msg.sender, location);
     }
 
-    function updateStakerLocation(address _stakerAddress, bytes32 _location)
-        internal
-    {
+    function updateStakerLocation(address _stakerAddress, bytes32 _location) internal {
         stakers[_stakerAddress].location = _location;
         emit RollupStakeMoved(_stakerAddress, _location);
     }
@@ -285,11 +268,7 @@ contract Staking {
         emit RollupStakeRefunded(address(_stakerAddress));
     }
 
-    function getValidStaker(address _stakerAddress)
-        private
-        view
-        returns (Staker storage)
-    {
+    function getValidStaker(address _stakerAddress) private view returns (Staker storage) {
         Staker storage staker = stakers[_stakerAddress];
         require(staker.location != 0x00, INV_STAKER);
         return staker;
@@ -348,17 +327,12 @@ contract Staking {
     ) private view returns (bool) {
         require(bytes20(stakerAddress) > prevStaker, CHCK_ORDER);
         Staker storage staker = getValidStaker(stakerAddress);
-        bool isActive = RollupTime.blocksToTicks(staker.creationTimeBlocks) <
-            deadlineTicks;
+        bool isActive = RollupTime.blocksToTicks(staker.creationTimeBlocks) < deadlineTicks;
 
         if (isActive) {
             require(
-                RollupUtils.calculateLeafFromPath(
-                    node,
-                    stakerProofs,
-                    proofStart,
-                    proofEnd
-                ) == staker.location,
+                RollupUtils.calculateLeafFromPath(node, stakerProofs, proofStart, proofEnd) ==
+                    staker.location,
                 CHCK_STAKER_PROOF
             );
         }

@@ -19,11 +19,7 @@
 pragma solidity ^0.5.11;
 
 library MerkleLib {
-    function generateAddressRoot(address[] memory _addresses)
-        internal
-        pure
-        returns (bytes32)
-    {
+    function generateAddressRoot(address[] memory _addresses) internal pure returns (bytes32) {
         bytes32[] memory _hashes = new bytes32[](_addresses.length);
         for (uint256 i = 0; i < _addresses.length; i++) {
             _hashes[i] = bytes32(bytes20(_addresses[i]));
@@ -31,16 +27,10 @@ library MerkleLib {
         return generateRoot(_hashes);
     }
 
-    function generateRoot(bytes32[] memory _hashes)
-        internal
-        pure
-        returns (bytes32)
-    {
+    function generateRoot(bytes32[] memory _hashes) internal pure returns (bytes32) {
         bytes32[] memory prevLayer = _hashes;
         while (prevLayer.length > 1) {
-            bytes32[] memory nextLayer = new bytes32[](
-                (prevLayer.length + 1) / 2
-            );
+            bytes32[] memory nextLayer = new bytes32[]((prevLayer.length + 1) / 2);
             for (uint256 i = 0; i < nextLayer.length; i++) {
                 if (2 * i + 1 < prevLayer.length) {
                     nextLayer[i] = keccak256(

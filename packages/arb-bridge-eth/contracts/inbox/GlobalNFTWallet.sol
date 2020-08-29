@@ -34,11 +34,7 @@ contract GlobalNFTWallet {
 
     mapping(address => UserNFTWallet) private nftWallets;
 
-    function ownedERC721s(address _owner)
-        external
-        view
-        returns (address[] memory)
-    {
+    function ownedERC721s(address _owner) external view returns (address[] memory) {
         UserNFTWallet storage wallet = nftWallets[_owner];
         address[] memory addresses = new address[](wallet.nftWalletList.length);
         uint256 addressCount = addresses.length;
@@ -75,10 +71,7 @@ contract GlobalNFTWallet {
     }
 
     function withdrawERC721(address _erc721, uint256 _tokenId) external {
-        require(
-            removeNFTToken(msg.sender, _erc721, _tokenId),
-            "Wallet doesn't own token"
-        );
+        require(removeNFTToken(msg.sender, _erc721, _tokenId), "Wallet doesn't own token");
         IERC721(_erc721).safeTransferFrom(address(this), msg.sender, _tokenId);
     }
 
@@ -112,16 +105,11 @@ contract GlobalNFTWallet {
         UserNFTWallet storage wallet = nftWallets[_user];
         uint256 index = wallet.nftWalletIndex[_erc721];
         if (index == 0) {
-            index = wallet.nftWalletList.push(
-                NFTWallet(_erc721, new uint256[](0))
-            );
+            index = wallet.nftWalletList.push(NFTWallet(_erc721, new uint256[](0)));
             wallet.nftWalletIndex[_erc721] = index;
         }
         NFTWallet storage nftWallet = wallet.nftWalletList[index - 1];
-        require(
-            nftWallet.tokenIndex[_tokenId] == 0,
-            "can't add already owned token"
-        );
+        require(nftWallet.tokenIndex[_tokenId] == 0, "can't add already owned token");
         nftWallet.tokenList.push(_tokenId);
         nftWallet.tokenIndex[_tokenId] = nftWallet.tokenList.length;
     }
@@ -143,17 +131,12 @@ contract GlobalNFTWallet {
             // Wallet does not own specific NFT
             return false;
         }
-        nftWallet.tokenIndex[nftWallet.tokenList[nftWallet.tokenList.length -
-            1]] = tokenIndex;
-        nftWallet.tokenList[tokenIndex - 1] = nftWallet.tokenList[nftWallet
-            .tokenList
-            .length - 1];
+        nftWallet.tokenIndex[nftWallet.tokenList[nftWallet.tokenList.length - 1]] = tokenIndex;
+        nftWallet.tokenList[tokenIndex - 1] = nftWallet.tokenList[nftWallet.tokenList.length - 1];
         delete nftWallet.tokenIndex[_tokenId];
         nftWallet.tokenList.pop();
         if (nftWallet.tokenList.length == 0) {
-            wallet.nftWalletIndex[wallet.nftWalletList[wallet
-                .nftWalletList
-                .length - 1]
+            wallet.nftWalletIndex[wallet.nftWalletList[wallet.nftWalletList.length - 1]
                 .contractAddress] = walletIndex;
             wallet.nftWalletList[walletIndex - 1] = wallet.nftWalletList[wallet
                 .nftWalletList

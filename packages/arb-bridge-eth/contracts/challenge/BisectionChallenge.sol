@@ -63,12 +63,7 @@ contract BisectionChallenge is Challenge, IBisectionChallenge {
     ) public challengerAction {
         require(_bisectionRoot == challengeState, CON_PREV);
         require(
-            MerkleLib.verifyProof(
-                _proof,
-                _bisectionRoot,
-                _bisectionHash,
-                _segmentToChallenge + 1
-            ),
+            MerkleLib.verifyProof(_proof, _bisectionRoot, _bisectionHash, _segmentToChallenge + 1),
             CON_PROOF
         );
 

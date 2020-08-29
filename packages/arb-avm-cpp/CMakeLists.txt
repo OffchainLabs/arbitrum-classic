@@ -15,7 +15,7 @@
 cmake_minimum_required (VERSION 3.5)
 
 find_package(Git)
-if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/../../.git")
+if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../.git")
 # Update submodules as needed
     message(STATUS "Submodule update")
     execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
@@ -80,10 +80,7 @@ if(NOT TARGET Boost::system)
     set_property(TARGET Boost::system PROPERTY
         INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
 endif()
-find_package(RocksDB)
-if (NOT ROCKSDB_FOUND)
-    include(build-rocksdb)
-endif()
+find_package(RocksDB REQUIRED)
 include(CodeCoverage)
 include(Formatting)
 

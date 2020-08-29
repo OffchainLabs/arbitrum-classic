@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/emirpasic/gods v1.12.0
-	github.com/ethereum/go-ethereum v1.9.17
+	github.com/ethereum/go-ethereum v1.9.20
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/rpc v1.2.0

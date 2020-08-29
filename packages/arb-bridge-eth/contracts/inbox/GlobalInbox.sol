@@ -46,11 +46,7 @@ contract GlobalInbox is
 
     mapping(address => Inbox) private inboxes;
 
-    function getInbox(address account)
-        external
-        view
-        returns (bytes32, uint256)
-    {
+    function getInbox(address account) external view returns (bytes32, uint256) {
         Inbox storage inbox = inboxes[account];
         return (inbox.value, inbox.count);
     }
@@ -72,10 +68,7 @@ contract GlobalInbox is
         Messages.OutgoingMessage memory message;
 
         for (uint256 i = initialMaxSendCount; i < finalMaxSendCount; i++) {
-            (valid, offset, message) = Messages.unmarshalOutgoingMessage(
-                messages,
-                offset
-            );
+            (valid, offset, message) = Messages.unmarshalOutgoingMessage(messages, offset);
             if (!valid) {
                 return;
             }
@@ -89,9 +82,7 @@ contract GlobalInbox is
      * @param chain Address of the rollup chain that the ETH is deposited into
      * @param messageData Data of the message being sent
      */
-    function sendL2MessageFromOrigin(address chain, bytes calldata messageData)
-        external
-    {
+    function sendL2MessageFromOrigin(address chain, bytes calldata messageData) external {
         // solhint-disable-next-line avoid-tx-origin
         require(msg.sender == tx.origin, "origin only");
         uint256 inboxSeqNum = _deliverMessageImpl(
@@ -137,12 +128,7 @@ contract GlobalInbox is
      * @param messageData Data of the message being sent
      */
     function sendInitializationMessage(bytes calldata messageData) external {
-        _deliverMessage(
-            msg.sender,
-            INITIALIZATION_MSG,
-            msg.sender,
-            messageData
-        );
+        _deliverMessage(msg.sender, INITIALIZATION_MSG, msg.sender, messageData);
     }
 
     /**
@@ -180,11 +166,7 @@ contract GlobalInbox is
             chain,
             ERC20_TRANSFER,
             msg.sender,
-            abi.encodePacked(
-                uint256(uint160(bytes20(erc20))),
-                uint256(uint160(bytes20(to))),
-                value
-            )
+            abi.encodePacked(uint256(uint160(bytes20(erc20))), uint256(uint160(bytes20(to))), value)
         );
     }
 
@@ -207,11 +189,7 @@ contract GlobalInbox is
             chain,
             ERC721_TRANSFER,
             msg.sender,
-            abi.encodePacked(
-                uint256(uint160(bytes20(erc721))),
-                uint256(uint160(bytes20(to))),
-                id
-            )
+            abi.encodePacked(uint256(uint160(bytes20(erc721))), uint256(uint160(bytes20(to))), id)
         );
     }
 
@@ -221,19 +199,8 @@ contract GlobalInbox is
         address _sender,
         bytes memory _messageData
     ) private {
-        uint256 inboxSeqNum = _deliverMessageImpl(
-            _chain,
-            _kind,
-            _sender,
-            keccak256(_messageData)
-        );
-        emit MessageDelivered(
-            _chain,
-            _kind,
-            _sender,
-            inboxSeqNum,
-            _messageData
-        );
+        uint256 inboxSeqNum = _deliverMessageImpl(_chain, _kind, _sender, keccak256(_messageData));
+        emit MessageDelivered(_chain, _kind, _sender, inboxSeqNum, _messageData);
     }
 
     function _deliverMessageImpl(
@@ -257,13 +224,11 @@ contract GlobalInbox is
         return updatedCount;
     }
 
-    function sendDeserializedMsg(
-        uint256 messageIndex,
-        Messages.OutgoingMessage memory message
-    ) private {
+    function sendDeserializedMsg(uint256 messageIndex, Messages.OutgoingMessage memory message)
+        private
+    {
         if (message.kind == ETH_TRANSFER) {
-            (bool valid, Messages.EthMessage memory eth) = Messages
-                .parseEthMessage(message.data);
+            (bool valid, Messages.EthMessage memory eth) = Messages.parseEthMessage(message.data);
             if (!valid) {
                 return;
             }
@@ -272,8 +237,9 @@ contract GlobalInbox is
             deletePayment(eth.dest, messageIndex);
             transferEth(msg.sender, paymentOwner, eth.value);
         } else if (message.kind == ERC20_TRANSFER) {
-            (bool valid, Messages.ERC20Message memory erc20) = Messages
-                .parseERC20Message(message.data);
+            (bool valid, Messages.ERC20Message memory erc20) = Messages.parseERC20Message(
+                message.data
+            );
             if (!valid) {
                 return;
             }
@@ -282,8 +248,9 @@ contract GlobalInbox is
             transferERC20(msg.sender, paymentOwner, erc20.token, erc20.value);
             deletePayment(erc20.dest, messageIndex);
         } else if (message.kind == ERC721_TRANSFER) {
-            (bool valid, Messages.ERC721Message memory erc721) = Messages
-                .parseERC721Message(message.data);
+            (bool valid, Messages.ERC721Message memory erc721) = Messages.parseERC721Message(
+                message.data
+            );
             if (!valid) {
                 return;
             }
@@ -304,9 +271,7 @@ contract GlobalInbox is
         // for accounts without code, i.e. `keccak256('')`
         bytes32 codehash;
 
-
-            bytes32 accountHash
-         = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
+        bytes32 accountHash = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
         // solhint-disable-next-line no-inline-assembly
         assembly {
             codehash := extcodehash(account)

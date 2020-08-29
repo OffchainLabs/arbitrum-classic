@@ -40,14 +40,14 @@
   "devDependencies": {
     "@types/chai": "^4.2.11",
     "@types/mocha": "^7.0.2",
+    "@typescript-eslint/eslint-plugin": "^3.4.0",
+    "@typescript-eslint/parser": "^3.4.0",
     "chai": "^4.2.0",
     "chai-bignumber": "^3.0.0",
     "ethereum-waffle": "^2.3.0",
     "install-peers-cli": "^2.2.0",
     "mocha": "^7.2.0",
     "nyc": "^15.1.0",
-    "typechain": "^1.0.4",
-    "typechain-target-ethers": "^1.0.3",
     "typescript": "^3.8.3"
   },
   "files": [

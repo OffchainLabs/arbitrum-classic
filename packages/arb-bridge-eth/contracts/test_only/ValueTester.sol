@@ -32,10 +32,7 @@ contract ValueTester {
             bytes32 // valHash
         )
     {
-        (uint256 offset, Value.Data memory value) = Marshaling.deserialize(
-            data,
-            startOffset
-        );
+        (uint256 offset, Value.Data memory value) = Marshaling.deserialize(data, startOffset);
         return (offset, value.hash());
     }
 
@@ -44,8 +41,7 @@ contract ValueTester {
         uint256 startOffset,
         uint256 dataLength
     ) public pure returns (bytes32) {
-        return
-            Marshaling.bytesToBytestack(data, startOffset, dataLength).hash();
+        return Marshaling.bytesToBytestack(data, startOffset, dataLength).hash();
     }
 
     function bytestackToBytes(bytes memory data, uint256 offset)
@@ -60,11 +56,7 @@ contract ValueTester {
         return Marshaling.bytestackToBytes(data, offset);
     }
 
-    function hashTuplePreImage(bytes32 innerHash, uint256 valueSize)
-        public
-        pure
-        returns (bytes32)
-    {
+    function hashTuplePreImage(bytes32 innerHash, uint256 valueSize) public pure returns (bytes32) {
         return Hashing.hashTuplePreImage(innerHash, valueSize);
     }
 

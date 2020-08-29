@@ -57,9 +57,7 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
                                 bytes1(0xff),
                                 address(this),
                                 generateNonce(asserter, challenger),
-                                cloneCodeHash(
-                                    getChallengeTemplate(challengeType)
-                                )
+                                cloneCodeHash(getChallengeTemplate(challengeType))
                             )
                         )
                     )
@@ -90,22 +88,11 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         return address(clone);
     }
 
-    function generateNonce(address asserter, address challenger)
-        private
-        view
-        returns (uint256)
-    {
-        return
-            uint256(
-                keccak256(abi.encodePacked(asserter, challenger, msg.sender))
-            );
+    function generateNonce(address asserter, address challenger) private view returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(asserter, challenger, msg.sender)));
     }
 
-    function getChallengeTemplate(uint256 challengeType)
-        private
-        view
-        returns (address)
-    {
+    function getChallengeTemplate(uint256 challengeType) private view returns (address) {
         if (challengeType == ChallengeUtils.getInvalidInboxType()) {
             return inboxTopChallengeTemplate;
         } else if (challengeType == ChallengeUtils.getInvalidExType()) {

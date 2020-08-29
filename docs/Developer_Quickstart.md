@@ -58,13 +58,15 @@ stopping and restarting the client will lose all blockchain state, but the valid
 Now you'll deploy and run a demo dApp on Arbitrum. The dApp is based on
 a simple Pet Shop dApp that is used in a Truffle tutorial.
 
-Inside the Arbitrum monorepo, open the `pet-shop` demo dApp:
+First clone the pet-shop demo dapp and install dependencies:
 
 ```bash
-cd demos/pet-shop
+git clone https://github.com/OffchainLabs/demo-dapp-pet-shop
+cd demo-dapp-pet-shop
+yarn
 ```
 
-### Build and Run
+### Deployment
 
 Deploy contracts to Arbitrum :
 
@@ -88,19 +90,17 @@ truffle migrate --network arbitrum
    > 0xe4b33c0bb790b88f2463facaf86ae7c17cbdab41187e69ddde8cc1c1fda7c9ab
    > ```
 
-2) Select local network test in Metamask
+2) Select local arbitrum network in Metamask
 
    - Go back to Metamask or click the extension icon
    - Select `Main Ethereum Network` top right hand side
    - Choose `Custom RPC`
-   - Enter `Local Test` as the network name
-   - Enter `http://127.0.0.1:7545` as the RPC url
+   - Enter `Local Arbitrum` as the network name
+   - Enter `http://127.0.0.1:8547` as the RPC url
    - Press the save button
-   - Metamask should now have an Local Test account holding ETH
+   - Metamask should now have an Local Arbitrum account holding ETH
 
 3) Launch the front-end
-
-   In another session navigate to `demos/pet-shop` and run:
 
    ```bash
    yarn start
@@ -120,7 +120,9 @@ truffle migrate --network arbitrum
 If you want to try another dapp run, deploy the solidity contracts and launch the frontend
 
 ```bash
-cd demos/election
+git clone https://github.com/OffchainLabs/demo-dapp-election
+cd demo-dapp-election
+yarn
 truffle migrate --network arbitrum
 yarn start
 ```

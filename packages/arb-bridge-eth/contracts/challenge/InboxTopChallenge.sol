@@ -24,29 +24,18 @@ import "./ChallengeUtils.sol";
 import "../inbox/Messages.sol";
 
 contract InboxTopChallenge is BisectionChallenge {
-    event Bisected(
-        bytes32[] chainHashes,
-        uint256 totalLength,
-        uint256 deadlineTicks
-    );
+    event Bisected(bytes32[] chainHashes, uint256 totalLength, uint256 deadlineTicks);
 
     event OneStepProofCompleted();
 
     // Proof was incorrect
     string private constant HC_OSP_PROOF = "HC_OSP_PROOF";
 
-    function bisect(bytes32[] calldata _chainHashes, uint256 _chainLength)
-        external
-        asserterAction
-    {
+    function bisect(bytes32[] calldata _chainHashes, uint256 _chainLength) external asserterAction {
         uint256 bisectionCount = _chainHashes.length - 1;
 
         requireMatchesPrevState(
-            ChallengeUtils.inboxTopHash(
-                _chainHashes[0],
-                _chainHashes[bisectionCount],
-                _chainLength
-            )
+            ChallengeUtils.inboxTopHash(_chainHashes[0], _chainHashes[bisectionCount], _chainLength)
         );
 
         require(_chainLength > 1, "Can't bisect chain of less than 2");
@@ -69,10 +58,7 @@ contract InboxTopChallenge is BisectionChallenge {
         emit Bisected(_chainHashes, _chainLength, deadlineTicks);
     }
 
-    function oneStepProof(bytes32 _lowerHash, bytes32 _value)
-        external
-        asserterAction
-    {
+    function oneStepProof(bytes32 _lowerHash, bytes32 _value) external asserterAction {
         requireMatchesPrevState(
             ChallengeUtils.inboxTopHash(
                 _lowerHash,

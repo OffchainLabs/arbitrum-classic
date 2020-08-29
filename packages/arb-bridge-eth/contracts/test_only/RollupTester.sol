@@ -56,11 +56,7 @@ contract RollupTester {
             ),
             confNode
         );
-        return (
-            validNodeHashes,
-            finalNodeData.vmProtoStateHash,
-            finalNodeData.nodeHash
-        );
+        return (validNodeHashes, finalNodeData.vmProtoStateHash, finalNodeData.nodeHash);
     }
 
     function generateLastMessageHash(
@@ -68,8 +64,7 @@ contract RollupTester {
         uint256 startOffset,
         uint256 length
     ) public pure returns (bytes32, uint256) {
-        return
-            RollupUtils.generateLastMessageHash(messages, startOffset, length);
+        return RollupUtils.generateLastMessageHash(messages, startOffset, length);
     }
 
     function processValidNode(
@@ -142,13 +137,7 @@ contract RollupTester {
         uint256 logCount
     ) public pure returns (bytes32) {
         return
-            RollupUtils.protoStateHash(
-                machineHash,
-                inboxTop,
-                inboxCount,
-                messageCount,
-                logCount
-            );
+            RollupUtils.protoStateHash(machineHash, inboxTop, inboxCount, messageCount, logCount);
     }
 
     function computePrevLeaf(
@@ -160,8 +149,7 @@ contract RollupTester {
         uint64 messageCount,
         uint64 logCount
     ) public pure returns (bytes32 prevLeaf, bytes32 vmProtoHashBefore) {
-        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
-            .makeAssertion(
+        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils.makeAssertion(
             fields,
             fields2,
             prevChildType,
@@ -184,8 +172,7 @@ contract RollupTester {
         uint64 messageCount,
         uint64 logCount
     ) public pure returns (bytes32) {
-        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
-            .makeAssertion(
+        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils.makeAssertion(
             fields,
             fields2,
             prevChildType,
@@ -202,8 +189,7 @@ contract RollupTester {
         NodeGraphUtils.AssertionData memory assertData,
         uint256[4] memory invalidInboxData
     ) private pure returns (bytes32) {
-        (bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils
-            .computePrevLeaf(assertData);
+        (bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils.computePrevLeaf(assertData);
 
         return
             NodeGraphUtils.generateInvalidInboxTopLeaf(
@@ -229,8 +215,7 @@ contract RollupTester {
         uint64 messageCount,
         uint64 logCount
     ) public pure returns (bytes32) {
-        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
-            .makeAssertion(
+        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils.makeAssertion(
             fields,
             fields2,
             prevChildType,
@@ -255,8 +240,7 @@ contract RollupTester {
         uint256 checkTimeTicks,
         uint256 deadlineTicks
     ) private pure returns (bytes32) {
-        (bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils
-            .computePrevLeaf(assertData);
+        (bytes32 prevLeaf, bytes32 vmProtoHashBefore) = NodeGraphUtils.computePrevLeaf(assertData);
 
         return
             NodeGraphUtils.generateInvalidExecutionLeaf(
@@ -279,8 +263,7 @@ contract RollupTester {
         uint64 messageCount,
         uint64 logCount
     ) public pure returns (bytes32) {
-        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils
-            .makeAssertion(
+        NodeGraphUtils.AssertionData memory assertData = NodeGraphUtils.makeAssertion(
             fields,
             fields2,
             prevChildType,
@@ -299,11 +282,6 @@ contract RollupTester {
     ) private pure returns (bytes32) {
         (bytes32 prevLeaf, ) = NodeGraphUtils.computePrevLeaf(assertData);
 
-        return
-            NodeGraphUtils.generateValidLeaf(
-                assertData,
-                prevLeaf,
-                deadlineTicks
-            );
+        return NodeGraphUtils.generateValidLeaf(assertData, prevLeaf, deadlineTicks);
     }
 }

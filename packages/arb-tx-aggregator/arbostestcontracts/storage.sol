@@ -20,10 +20,7 @@ pragma solidity ^0.5.17;
 
 interface Sys2 {
     // Send given Eth to dest.
-    function getStorageAt(address account, uint256 index)
-        external
-        view
-        returns (uint256);
+    function getStorageAt(address account, uint256 index) external view returns (uint256);
 }
 
 contract Storage {

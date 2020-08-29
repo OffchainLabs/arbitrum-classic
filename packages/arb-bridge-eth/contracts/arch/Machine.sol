@@ -29,10 +29,11 @@ library Machine {
     uint256 internal constant MACHINE_ERRORSTOP = 1;
     uint256 internal constant MACHINE_HALT = 2;
 
-    function addStackVal(
-        Value.Data memory stackValHash,
-        Value.Data memory valHash
-    ) internal pure returns (Value.Data memory) {
+    function addStackVal(Value.Data memory stackValHash, Value.Data memory valHash)
+        internal
+        pure
+        returns (Value.Data memory)
+    {
         Value.Data[] memory vals = new Value.Data[](2);
         vals[0] = valHash;
         vals[1] = stackValHash;
@@ -52,11 +53,7 @@ library Machine {
         uint256 status;
     }
 
-    function toString(Data memory machine)
-        internal
-        pure
-        returns (string memory)
-    {
+    function toString(Data memory machine) internal pure returns (string memory) {
         return
             string(
                 abi.encodePacked(
@@ -93,17 +90,11 @@ library Machine {
         machine.status = MACHINE_HALT;
     }
 
-    function addDataStackValue(Data memory machine, Value.Data memory val)
-        internal
-        pure
-    {
+    function addDataStackValue(Data memory machine, Value.Data memory val) internal pure {
         machine.dataStack = addStackVal(machine.dataStack, val);
     }
 
-    function addAuxStackValue(Data memory machine, Value.Data memory val)
-        internal
-        pure
-    {
+    function addAuxStackValue(Data memory machine, Value.Data memory val) internal pure {
         machine.auxStack = addStackVal(machine.auxStack, val);
     }
 
@@ -188,10 +179,7 @@ library Machine {
         uint256 errHandler;
         (offset, instructionStack) = Marshaling.deserializeInt(data, offset);
 
-        (offset, m.dataStack) = Marshaling.deserializeHashPreImage(
-            data,
-            offset
-        );
+        (offset, m.dataStack) = Marshaling.deserializeHashPreImage(data, offset);
         (offset, m.auxStack) = Marshaling.deserializeHashPreImage(data, offset);
         (offset, m.registerVal) = Marshaling.deserialize(data, offset);
         (offset, m.staticVal) = Marshaling.deserialize(data, offset);

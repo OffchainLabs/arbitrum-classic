@@ -28,21 +28,11 @@ library Hashing {
         return keccak256(abi.encodePacked(val));
     }
 
-    function hashCodePoint(Value.CodePoint memory cp)
-        internal
-        pure
-        returns (bytes32)
-    {
+    function hashCodePoint(Value.CodePoint memory cp) internal pure returns (bytes32) {
         assert(cp.immediate.length < 2);
         if (cp.immediate.length == 0) {
             return
-                keccak256(
-                    abi.encodePacked(
-                        Value.codePointTypeCode(),
-                        cp.opcode,
-                        cp.nextCodePoint
-                    )
-                );
+                keccak256(abi.encodePacked(Value.codePointTypeCode(), cp.opcode, cp.nextCodePoint));
         }
         return
             keccak256(
@@ -60,14 +50,7 @@ library Hashing {
         pure
         returns (bytes32)
     {
-        return
-            keccak256(
-                abi.encodePacked(
-                    uint8(Value.tupleTypeCode()),
-                    innerHash,
-                    valueSize
-                )
-            );
+        return keccak256(abi.encodePacked(uint8(Value.tupleTypeCode()), innerHash, valueSize));
     }
 
     function hash(Value.Data memory val) internal pure returns (bytes32) {
@@ -87,11 +70,7 @@ library Hashing {
         }
     }
 
-    function getTuplePreImage(Value.Data[] memory vals)
-        internal
-        pure
-        returns (Value.Data memory)
-    {
+    function getTuplePreImage(Value.Data[] memory vals) internal pure returns (Value.Data memory) {
         require(vals.length <= 8, "Invalid tuple length");
         bytes32[] memory hashes = new bytes32[](vals.length);
         uint256 hashCount = hashes.length;
@@ -100,9 +79,7 @@ library Hashing {
             hashes[i] = vals[i].hash();
             size += vals[i].size;
         }
-        bytes32 firstHash = keccak256(
-            abi.encodePacked(uint8(hashes.length), hashes)
-        );
+        bytes32 firstHash = keccak256(abi.encodePacked(uint8(hashes.length), hashes));
         return Value.newTuplePreImage(firstHash, size);
     }
 }

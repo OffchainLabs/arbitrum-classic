@@ -12,29 +12,18 @@ pragma solidity ^0.5.11;
 
 /* solhint-disable no-inline-assembly */
 library BytesLib {
-    function toAddress(bytes memory _bytes, uint256 _start)
-        internal
-        pure
-        returns (address)
-    {
+    function toAddress(bytes memory _bytes, uint256 _start) internal pure returns (address) {
         require(_bytes.length >= (_start + 20), "Read out of bounds");
         address tempAddress;
 
         assembly {
-            tempAddress := div(
-                mload(add(add(_bytes, 0x20), _start)),
-                0x1000000000000000000000000
-            )
+            tempAddress := div(mload(add(add(_bytes, 0x20), _start)), 0x1000000000000000000000000)
         }
 
         return tempAddress;
     }
 
-    function toUint8(bytes memory _bytes, uint256 _start)
-        internal
-        pure
-        returns (uint8)
-    {
+    function toUint8(bytes memory _bytes, uint256 _start) internal pure returns (uint8) {
         require(_bytes.length >= (_start + 1), "Read out of bounds");
         uint8 tempUint;
 
@@ -45,11 +34,7 @@ library BytesLib {
         return tempUint;
     }
 
-    function toUint(bytes memory _bytes, uint256 _start)
-        internal
-        pure
-        returns (uint256)
-    {
+    function toUint(bytes memory _bytes, uint256 _start) internal pure returns (uint256) {
         require(_bytes.length >= (_start + 32), "Read out of bounds");
         uint256 tempUint;
 
@@ -60,11 +45,7 @@ library BytesLib {
         return tempUint;
     }
 
-    function toBytes32(bytes memory _bytes, uint256 _start)
-        internal
-        pure
-        returns (bytes32)
-    {
+    function toBytes32(bytes memory _bytes, uint256 _start) internal pure returns (bytes32) {
         require(_bytes.length >= (_start + 32), "Read out of bounds");
         bytes32 tempBytes32;
 

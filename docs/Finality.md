@@ -31,8 +31,8 @@ On-chain confirmation is typically slower than the other types.
 The ArbChain's validators will all place stakes on proposed future histories of the chain.
 Arbitrum enforces two rules regarding those stakes:
 
--   If a validator is staked on a correct future history, it can force that history to be confirmed by the system eventually.
--   If a validator is staked on a history that is not confirmed, that validator will lose its stake.
+- If a validator is staked on a correct future history, it can force that history to be confirmed by the system eventually.
+- If a validator is staked on a history that is not confirmed, that validator will lose its stake.
 
 You can choose to treat a transaction as final when a validator of your choice is staked on a history containing that transaction.
 

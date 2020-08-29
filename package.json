@@ -46,15 +46,10 @@
       "packages/arb-bridge-eth",
       "packages/arb-provider-ethers",
       "packages/arbos-contracts",
-      "packages/tools",
-      "demos/pet-shop",
-      "demos/*",
-      "workspace/*"
+      "packages/tools"
     ]
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^3.4.0",
-    "@typescript-eslint/parser": "^3.4.0",
     "eslint": "^7.3.1",
     "eslint-config-prettier": "^6.11.0",
     "eslint-plugin-mocha": "^7.0.1",

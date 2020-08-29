@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/ethereum/go-ethereum/trie"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -232,7 +233,7 @@ func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, err
 		transactions = append(transactions, tx)
 	}
 
-	return types.NewBlock(header, transactions, nil, receipts), nil
+	return types.NewBlock(header, transactions, nil, receipts, new(trie.Trie)), nil
 }
 
 func GetTransaction(msg evm.IncomingRequest) (*types.Transaction, error) {

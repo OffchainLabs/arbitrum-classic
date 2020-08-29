@@ -130,20 +130,13 @@ contract OneStepProof is IOneStepProof {
         Value.Data[] values;
     }
 
-    function popVal(ValueStack memory stack)
-        private
-        pure
-        returns (Value.Data memory)
-    {
+    function popVal(ValueStack memory stack) private pure returns (Value.Data memory) {
         Value.Data memory val = stack.values[stack.length - 1];
         stack.length--;
         return val;
     }
 
-    function pushVal(ValueStack memory stack, Value.Data memory val)
-        private
-        pure
-    {
+    function pushVal(ValueStack memory stack, Value.Data memory val) private pure {
         stack.values[stack.length] = val;
         stack.length++;
     }
@@ -169,9 +162,7 @@ contract OneStepProof is IOneStepProof {
         if (context.afterMachine.errHandlerHash == CODE_POINT_ERROR) {
             context.afterMachine.setErrorStop();
         } else {
-            context.afterMachine.instructionStackHash = context
-                .afterMachine
-                .errHandlerHash;
+            context.afterMachine.instructionStackHash = context.afterMachine.errHandlerHash;
         }
     }
 
@@ -227,10 +218,7 @@ contract OneStepProof is IOneStepProof {
         require(immediate == 0 || immediate == 1, BAD_IMM_TYP);
         Value.Data memory cp;
         if (immediate == 0) {
-            cp = Value.newCodePoint(
-                uint8(opCode),
-                context.startMachine.instructionStackHash
-            );
+            cp = Value.newCodePoint(uint8(opCode), context.startMachine.instructionStackHash);
         } else {
             // If we have an immediate, there must be at least one stack value
             require(stackVals.length > 0, NO_IMM);
@@ -266,9 +254,7 @@ contract OneStepProof is IOneStepProof {
         // Update end machine gas remaining before running opcode
         // No need to overflow check since the check for whether we
         // have sufficient gas fixes the overflow case
-        context.afterMachine.arbGasRemaining =
-            context.afterMachine.arbGasRemaining -
-            gasCost;
+        context.afterMachine.arbGasRemaining = context.afterMachine.arbGasRemaining - gasCost;
 
         if (context.startMachine.arbGasRemaining < gasCost) {
             context.afterMachine.arbGasRemaining = MAX_UINT256;
@@ -279,8 +265,7 @@ contract OneStepProof is IOneStepProof {
         if (context.stack.length < dataPopCount) {
             // If we have insufficient values, reject the proof unless the stack has been fully exhausted
             require(
-                context.afterMachine.dataStack.hash() ==
-                    Value.newEmptyTuple().hash(),
+                context.afterMachine.dataStack.hash() == Value.newEmptyTuple().hash(),
                 STACK_MISSING
             );
             // If the stack is empty, the instruction underflowed so we have hit an error
@@ -291,8 +276,7 @@ contract OneStepProof is IOneStepProof {
         if (context.auxstack.length < auxPopCount) {
             // If we have insufficient values, reject the proof unless the auxstack has been fully exhausted
             require(
-                context.afterMachine.auxStack.hash() ==
-                    Value.newEmptyTuple().hash(),
+                context.afterMachine.auxStack.hash() == Value.newEmptyTuple().hash(),
                 AUX_MISSING
             );
             // If the auxstack is empty, the instruction underflowed so we have hit an error
@@ -302,11 +286,8 @@ contract OneStepProof is IOneStepProof {
 
         // Require the prover to submit the minimal number of stack items
         require(
-            ((dataPopCount > 0 || !context.hadImmediate) &&
-                context.stack.length == dataPopCount) ||
-                (context.hadImmediate &&
-                    dataPopCount == 0 &&
-                    context.stack.length == 1),
+            ((dataPopCount > 0 || !context.hadImmediate) && context.stack.length == dataPopCount) ||
+                (context.hadImmediate && dataPopCount == 0 && context.stack.length == 1),
             STACK_MANY
         );
         require(context.auxstack.length == auxPopCount, AUX_MANY);
@@ -451,9 +432,7 @@ contract OneStepProof is IOneStepProof {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
-        if (
-            !val1.isInt() || !val2.isInt() || !val3.isInt() || val3.intVal == 0
-        ) {
+        if (!val1.isInt() || !val2.isInt() || !val3.isInt() || val3.intVal == 0) {
             handleOpcodeError(context);
             return;
         }
@@ -542,9 +521,7 @@ contract OneStepProof is IOneStepProof {
         }
         uint256[25] memory data;
         for (uint256 i = 0; i < 25; i++) {
-            data[5 * (i % 5) + i / 5] = uint256(
-                uint64(values[i / 4].intVal >> ((i % 4) * 64))
-            );
+            data[5 * (i % 5) + i / 5] = uint256(uint64(values[i / 4].intVal >> ((i % 4) * 64)));
         }
 
         data = Keccak.keccak_f(data);
@@ -555,9 +532,7 @@ contract OneStepProof is IOneStepProof {
         }
 
         for (uint256 i = 0; i < 25; i++) {
-            outValues[i / 4].intVal |=
-                data[5 * (i % 5) + i / 5] <<
-                ((i % 4) * 64);
+            outValues[i / 4].intVal |= data[5 * (i % 5) + i / 5] << ((i % 4) * 64);
         }
 
         pushVal(context.stack, Value.newTuple(outValues));
@@ -602,21 +577,14 @@ contract OneStepProof is IOneStepProof {
         }
     }
 
-    function executeStackemptyInsn(AssertionContext memory context)
-        internal
-        pure
-    {
+    function executeStackemptyInsn(AssertionContext memory context) internal pure {
         bool empty = context.stack.length == 0 &&
-            context.afterMachine.dataStack.hash() ==
-            Value.newEmptyTuple().hash();
+            context.afterMachine.dataStack.hash() == Value.newEmptyTuple().hash();
         pushVal(context.stack, Value.newBoolean(empty));
     }
 
     function executePcpushInsn(AssertionContext memory context) internal pure {
-        pushVal(
-            context.stack,
-            Value.newHashedValue(context.startMachine.instructionStackHash, 1)
-        );
+        pushVal(context.stack, Value.newHashedValue(context.startMachine.instructionStackHash, 1));
     }
 
     function executeAuxpushInsn(AssertionContext memory context) internal pure {
@@ -627,23 +595,16 @@ contract OneStepProof is IOneStepProof {
         pushVal(context.stack, popVal(context.auxstack));
     }
 
-    function executeAuxstackemptyInsn(AssertionContext memory context)
-        internal
-        pure
-    {
+    function executeAuxstackemptyInsn(AssertionContext memory context) internal pure {
         bool empty = context.auxstack.length == 0 &&
-            context.afterMachine.auxStack.hash() ==
-            Value.newEmptyTuple().hash();
+            context.afterMachine.auxStack.hash() == Value.newEmptyTuple().hash();
         pushVal(context.stack, Value.newBoolean(empty));
     }
 
     function executeNopInsn(AssertionContext memory) internal pure {}
 
     function executeErrpushInsn(AssertionContext memory context) internal pure {
-        pushVal(
-            context.stack,
-            Value.newHashedValue(context.afterMachine.errHandlerHash, 1)
-        );
+        pushVal(context.stack, Value.newHashedValue(context.afterMachine.errHandlerHash, 1));
     }
 
     function executeErrsetInsn(AssertionContext memory context) internal pure {
@@ -704,9 +665,7 @@ contract OneStepProof is IOneStepProof {
     function executeTgetInsn(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
-        if (
-            !val1.isInt() || !val2.isTuple() || val1.intVal >= val2.valLength()
-        ) {
+        if (!val1.isInt() || !val2.isTuple() || val1.intVal >= val2.valLength()) {
             handleOpcodeError(context);
             return;
         }
@@ -717,9 +676,7 @@ contract OneStepProof is IOneStepProof {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
-        if (
-            !val1.isInt() || !val2.isTuple() || val1.intVal >= val2.valLength()
-        ) {
+        if (!val1.isInt() || !val2.isTuple() || val1.intVal >= val2.valLength()) {
             handleOpcodeError(context);
             return;
         }
@@ -740,11 +697,7 @@ contract OneStepProof is IOneStepProof {
     function executeXgetInsn(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory auxVal = popVal(context.auxstack);
-        if (
-            !val1.isInt() ||
-            !auxVal.isTuple() ||
-            val1.intVal >= auxVal.valLength()
-        ) {
+        if (!val1.isInt() || !auxVal.isTuple() || val1.intVal >= auxVal.valLength()) {
             handleOpcodeError(context);
             return;
         }
@@ -756,11 +709,7 @@ contract OneStepProof is IOneStepProof {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory auxVal = popVal(context.auxstack);
-        if (
-            !auxVal.isTuple() ||
-            !val1.isInt() ||
-            val1.intVal >= auxVal.valLength()
-        ) {
+        if (!auxVal.isTuple() || !val1.isInt() || val1.intVal >= auxVal.valLength()) {
             handleOpcodeError(context);
             return;
         }
@@ -772,9 +721,7 @@ contract OneStepProof is IOneStepProof {
     // Logging
 
     function executeLogInsn(AssertionContext memory context) internal pure {
-        context.logAcc = keccak256(
-            abi.encodePacked(context.logAcc, popVal(context.stack).hash())
-        );
+        context.logAcc = keccak256(abi.encodePacked(context.logAcc, popVal(context.stack).hash()));
     }
 
     // System operations
@@ -785,9 +732,7 @@ contract OneStepProof is IOneStepProof {
             handleOpcodeError(context);
             return;
         }
-        context.messageAcc = keccak256(
-            abi.encodePacked(context.messageAcc, val1.hash())
-        );
+        context.messageAcc = keccak256(abi.encodePacked(context.messageAcc, val1.hash()));
     }
 
     function incrementInbox(AssertionContext memory context)
@@ -796,39 +741,24 @@ contract OneStepProof is IOneStepProof {
         returns (Value.Data memory)
     {
         require(context.inboxMessageHash != 0, INBOX_VAL);
-        context.inboxAcc = Messages.addMessageToInbox(
-            context.inboxAcc,
-            context.inboxMessageHash
-        );
+        context.inboxAcc = Messages.addMessageToInbox(context.inboxAcc, context.inboxMessageHash);
         return context.inboxMessage;
     }
 
-    function executeInboxPeekInsn(AssertionContext memory context)
-        internal
-        pure
-    {
+    function executeInboxPeekInsn(AssertionContext memory context) internal pure {
         Value.Data memory val = popVal(context.stack);
-        if (
-            context.afterMachine.pendingMessage.hash() !=
-            Value.newEmptyTuple().hash()
-        ) {
+        if (context.afterMachine.pendingMessage.hash() != Value.newEmptyTuple().hash()) {
             context.afterMachine.pendingMessage = incrementInbox(context);
         }
         // The pending message must be a tuple of size at least 2
         pushVal(
             context.stack,
-            Value.newBoolean(
-                context.afterMachine.pendingMessage.tupleVal[1].hash() ==
-                    val.hash()
-            )
+            Value.newBoolean(context.afterMachine.pendingMessage.tupleVal[1].hash() == val.hash())
         );
     }
 
     function executeInboxInsn(AssertionContext memory context) internal pure {
-        if (
-            context.afterMachine.pendingMessage.hash() !=
-            Value.newEmptyTuple().hash()
-        ) {
+        if (context.afterMachine.pendingMessage.hash() != Value.newEmptyTuple().hash()) {
             // The pending message field is already full
             pushVal(context.stack, context.afterMachine.pendingMessage);
             context.afterMachine.pendingMessage = Value.newEmptyTuple();
@@ -847,39 +777,24 @@ contract OneStepProof is IOneStepProof {
     }
 
     function executePushGasInsn(AssertionContext memory context) internal pure {
-        pushVal(
-            context.stack,
-            Value.newInt(context.afterMachine.arbGasRemaining)
-        );
+        pushVal(context.stack, Value.newInt(context.afterMachine.arbGasRemaining));
     }
 
-    function executeErrCodePointInsn(AssertionContext memory context)
-        internal
-        pure
-    {
+    function executeErrCodePointInsn(AssertionContext memory context) internal pure {
         pushVal(context.stack, Value.newHashedValue(CODE_POINT_ERROR, 1));
     }
 
-    function executePushInsnInsn(AssertionContext memory context)
-        internal
-        pure
-    {
+    function executePushInsnInsn(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         if (!val1.isInt() || !val2.isCodePoint()) {
             handleOpcodeError(context);
             return;
         }
-        pushVal(
-            context.stack,
-            Value.newCodePoint(uint8(val1.intVal), val2.hash())
-        );
+        pushVal(context.stack, Value.newCodePoint(uint8(val1.intVal), val2.hash()));
     }
 
-    function executePushInsnImmInsn(AssertionContext memory context)
-        internal
-        pure
-    {
+    function executePushInsnImmInsn(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
@@ -887,24 +802,15 @@ contract OneStepProof is IOneStepProof {
             handleOpcodeError(context);
             return;
         }
-        pushVal(
-            context.stack,
-            Value.newCodePoint(uint8(val1.intVal), val3.hash(), val2)
-        );
+        pushVal(context.stack, Value.newCodePoint(uint8(val1.intVal), val3.hash(), val2));
     }
 
-    function executeSideloadInsn(AssertionContext memory context)
-        internal
-        pure
-    {
+    function executeSideloadInsn(AssertionContext memory context) internal pure {
         Value.Data[] memory values = new Value.Data[](0);
         pushVal(context.stack, Value.newTuple(values));
     }
 
-    function executeECRecoverInsn(AssertionContext memory context)
-        internal
-        pure
-    {
+    function executeECRecoverInsn(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
@@ -1061,12 +967,7 @@ contract OneStepProof is IOneStepProof {
             return (1, 0, 1, executeIszeroInsn);
         } else if (opCode == OP_NOT) {
             return (1, 0, 1, executeNotInsn);
-        } else if (
-            opCode == OP_BYTE ||
-            opCode == OP_SHL ||
-            opCode == OP_SHR ||
-            opCode == OP_SAR
-        ) {
+        } else if (opCode == OP_BYTE || opCode == OP_SHL || opCode == OP_SHR || opCode == OP_SAR) {
             return (2, 0, 4, binaryMathOp);
         } else if (opCode == OP_HASH) {
             return (1, 0, 7, executeHashInsn);

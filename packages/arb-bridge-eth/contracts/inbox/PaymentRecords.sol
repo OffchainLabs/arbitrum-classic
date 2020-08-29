@@ -36,16 +36,9 @@ contract PaymentRecords {
         address currentOwner = getPaymentOwner(originalOwner, messageIndex);
         require(msg.sender == currentOwner, "Must be payment owner.");
 
-        payments[keccak256(
-            abi.encodePacked(messageIndex, originalOwner)
-        )] = newOwner;
+        payments[keccak256(abi.encodePacked(messageIndex, originalOwner))] = newOwner;
 
-        emit PaymentTransfer(
-            messageIndex,
-            originalOwner,
-            currentOwner,
-            newOwner
-        );
+        emit PaymentTransfer(messageIndex, originalOwner, currentOwner, newOwner);
     }
 
     function getPaymentOwner(address originalOwner, uint256 messageIndex)
@@ -53,9 +46,7 @@ contract PaymentRecords {
         view
         returns (address)
     {
-        address currentOwner = payments[keccak256(
-            abi.encodePacked(messageIndex, originalOwner)
-        )];
+        address currentOwner = payments[keccak256(abi.encodePacked(messageIndex, originalOwner))];
 
         if (currentOwner == address(0)) {
             return originalOwner;
@@ -64,11 +55,7 @@ contract PaymentRecords {
         }
     }
 
-    function deletePayment(address originalOwner, uint256 messageIndex)
-        internal
-    {
-        delete payments[keccak256(
-            abi.encodePacked(messageIndex, originalOwner)
-        )];
+    function deletePayment(address originalOwner, uint256 messageIndex) internal {
+        delete payments[keccak256(abi.encodePacked(messageIndex, originalOwner))];
     }
 }
