@@ -81,6 +81,7 @@ contract ArbRollup is IArbRollup, Cloneable, NodeGraph, Staking {
         uint128 _arbGasSpeedLimitPerTick,
         uint64 _maxExecutionSteps,
         uint128 _stakeRequirement,
+        address _stakeToken,
         address payable _owner,
         address _challengeFactoryAddress,
         address _globalInboxAddress,
@@ -97,7 +98,7 @@ contract ArbRollup is IArbRollup, Cloneable, NodeGraph, Staking {
         );
 
         NodeGraph.init(_vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps);
-        Staking.init(_stakeRequirement, _challengeFactoryAddress);
+        Staking.init(_stakeRequirement, _stakeToken, _challengeFactoryAddress);
         globalInbox = IGlobalInbox(_globalInboxAddress);
         owner = _owner;
 
@@ -107,6 +108,7 @@ contract ArbRollup is IArbRollup, Cloneable, NodeGraph, Staking {
                 uint256(_arbGasSpeedLimitPerTick),
                 uint256(_maxExecutionSteps),
                 uint256(_stakeRequirement),
+                bytes32(bytes20(_stakeToken)),
                 bytes32(bytes20(_owner)),
                 _extraConfig
             )

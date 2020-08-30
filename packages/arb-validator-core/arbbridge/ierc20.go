@@ -1,7 +1,5 @@
-// SPDX-License-Identifier: Apache-2.0
-
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +14,20 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+package arbbridge
 
-interface IArbRollup {
-    function init(
-        bytes32 _vmState,
-        uint128 _gracePeriodTicks,
-        uint128 _arbGasSpeedLimitPerTick,
-        uint64 _maxExecutionSteps,
-        uint128 _stakeRequirement,
-        address _stakeToken,
-        address payable _owner,
-        address _challengeFactoryAddress,
-        address _globalInboxAddress,
-        bytes calldata _extraConfig
-    ) external;
+import (
+	"context"
+	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+)
+
+type IERC20 interface {
+	Approve(ctx context.Context, spender common.Address, amount *big.Int) error
+}
+
+type IERC20Watcher interface {
+	BalanceOf(ctx context.Context, account common.Address) (*big.Int, error)
+	Allowance(ctx context.Context, owner, spender common.Address) (*big.Int, error)
 }

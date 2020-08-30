@@ -18,9 +18,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"math/big"
 	"os"
 	"path/filepath"
 
@@ -58,13 +60,15 @@ func main() {
 func createRollupChain() error {
 	createCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	walletVars := utils.AddWalletFlags(createCmd)
+	tokenAddressString := createCmd.String("staketoken", "", "staketoken=TokenAddress")
+	stakeAmountString := createCmd.String("stakeamount", "", "stakeamount=Amount")
 	err := createCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
 	}
 
 	if createCmd.NArg() != 3 {
-		return fmt.Errorf("usage: arb-validator create %v <validator_folder> <ethURL> <factoryAddress>", utils.WalletArgsString)
+		return fmt.Errorf("usage: arb-validator create %v <validator_folder> <ethURL> <factoryAddress> [staketoken=TokenAddress] [staketoken=TokenAddress]", utils.WalletArgsString)
 	}
 
 	validatorFolder := createCmd.Arg(0)
@@ -92,7 +96,7 @@ func createRollupChain() error {
 	// Rollup creation
 	client := ethbridge.NewEthAuthClient(ethclint, auth)
 
-	if err := arbbridge.WaitForNonZeroBalance(context.Background(), client, common.NewAddressFromEth(auth.From)); err != nil {
+	if err := arbbridge.WaitForBalance(context.Background(), client, common.Address{}, common.NewAddressFromEth(auth.From)); err != nil {
 		return err
 	}
 
@@ -101,10 +105,24 @@ func createRollupChain() error {
 		return err
 	}
 
+	params := rollup.DefaultChainParams()
+	if *tokenAddressString != "" {
+		params = params.WithStakeToken(common.HexToAddress(*tokenAddressString))
+	}
+
+	if *stakeAmountString != "" {
+		stakeAmount, success := new(big.Int).SetString(*stakeAmountString, 10)
+		if success {
+			params = params.WithStakeRequirement(stakeAmount)
+		} else {
+			return errors.New("invalid stake amount: expected an integer")
+		}
+	}
+
 	address, _, err := factory.CreateRollup(
 		context.Background(),
 		mach.Hash(),
-		rollup.DefaultChainParams(),
+		params,
 		common.Address{},
 	)
 	if err != nil {

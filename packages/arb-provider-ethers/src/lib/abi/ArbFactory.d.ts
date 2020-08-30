@@ -23,6 +23,7 @@ interface ArbFactoryInterface extends Interface {
         _arbGasSpeedLimitPerTick,
         _maxExecutionSteps,
         _stakeRequirement,
+        _stakeToken,
         _owner,
         _extraConfig,
       ]: [
@@ -31,6 +32,7 @@ interface ArbFactoryInterface extends Interface {
         BigNumberish,
         BigNumberish,
         BigNumberish,
+        string,
         string,
         Arrayish
       ]): string
@@ -74,17 +76,19 @@ export class ArbFactory extends Contract {
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
       _stakeRequirement: BigNumberish,
+      _stakeToken: string,
       _owner: string,
       _extraConfig: Arrayish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    'createRollup(bytes32,uint128,uint128,uint64,uint128,address,bytes)'(
+    'createRollup(bytes32,uint128,uint128,uint64,uint128,address,address,bytes)'(
       _vmState: Arrayish,
       _gracePeriodTicks: BigNumberish,
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
       _stakeRequirement: BigNumberish,
+      _stakeToken: string,
       _owner: string,
       _extraConfig: Arrayish,
       overrides?: TransactionOverrides
@@ -109,17 +113,19 @@ export class ArbFactory extends Contract {
     _arbGasSpeedLimitPerTick: BigNumberish,
     _maxExecutionSteps: BigNumberish,
     _stakeRequirement: BigNumberish,
+    _stakeToken: string,
     _owner: string,
     _extraConfig: Arrayish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  'createRollup(bytes32,uint128,uint128,uint64,uint128,address,bytes)'(
+  'createRollup(bytes32,uint128,uint128,uint64,uint128,address,address,bytes)'(
     _vmState: Arrayish,
     _gracePeriodTicks: BigNumberish,
     _arbGasSpeedLimitPerTick: BigNumberish,
     _maxExecutionSteps: BigNumberish,
     _stakeRequirement: BigNumberish,
+    _stakeToken: string,
     _owner: string,
     _extraConfig: Arrayish,
     overrides?: TransactionOverrides
@@ -152,17 +158,19 @@ export class ArbFactory extends Contract {
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
       _stakeRequirement: BigNumberish,
+      _stakeToken: string,
       _owner: string,
       _extraConfig: Arrayish,
       overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
-    'createRollup(bytes32,uint128,uint128,uint64,uint128,address,bytes)'(
+    'createRollup(bytes32,uint128,uint128,uint64,uint128,address,address,bytes)'(
       _vmState: Arrayish,
       _gracePeriodTicks: BigNumberish,
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
       _stakeRequirement: BigNumberish,
+      _stakeToken: string,
       _owner: string,
       _extraConfig: Arrayish,
       overrides?: TransactionOverrides

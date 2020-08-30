@@ -50,8 +50,15 @@ func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof
 	call := &bind.TransactOpts{
 		From:    vm.auth.auth.From,
 		Signer:  vm.auth.auth.Signer,
-		Value:   stakeAmount,
 		Context: ctx,
+	}
+	blankAddress := ethcommon.Address{}
+	st, err := vm.ArbRollup.GetStakeToken(&bind.CallOpts{Context: ctx})
+	if err != nil {
+		return nil, err
+	}
+	if st == blankAddress {
+		call.Value = stakeAmount
 	}
 	tx, err := vm.ArbRollup.PlaceStake(
 		call,

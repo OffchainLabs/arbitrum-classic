@@ -37,6 +37,7 @@ var contract = arbos.Path()
 func setupRollup(ctx context.Context, client ethutils.EthClient, auth *bind.TransactOpts) (common.Address, error) {
 	config := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(10),
+		StakeToken:              common.Address{},
 		GracePeriod:             common.TimeTicks{Val: big.NewInt(13000 * 2)},
 		MaxExecutionSteps:       10000000000,
 		ArbGasSpeedLimitPerTick: 200000,

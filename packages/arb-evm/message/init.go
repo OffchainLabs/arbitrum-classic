@@ -35,10 +35,12 @@ func NewInitFromData(data []byte) Init {
 	arbGasSpeedLimit, data := extractUInt256(data)
 	maxExecutionSteps, data := extractUInt256(data)
 	stakeRequirement, data := extractUInt256(data)
+	stakeToken, data := extractAddress(data)
 	owner, data := extractAddress(data)
 	return Init{
 		ChainParams: valprotocol.ChainParams{
 			StakeRequirement:        stakeRequirement,
+			StakeToken:              stakeToken,
 			GracePeriod:             common.TimeTicks{Val: gracePeriod},
 			MaxExecutionSteps:       maxExecutionSteps.Uint64(),
 			ArbGasSpeedLimitPerTick: arbGasSpeedLimit.Uint64(),
