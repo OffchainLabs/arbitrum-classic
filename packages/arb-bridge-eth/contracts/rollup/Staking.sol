@@ -105,7 +105,7 @@ contract Staking {
         return stakeRequirement;
     }
 
-    function getStakeToken() external view returns(address) {
+    function getStakeToken() external view returns (address) {
         return stakeToken;
     }
 
@@ -256,9 +256,7 @@ contract Staking {
         uint128 _stakeRequirement,
         address _stakeToken,
         address _challengeFactoryAddress
-    )
-        internal
-    {
+    ) internal {
         require(address(challengeFactory) == address(0), INIT_TWICE);
         require(_challengeFactoryAddress != address(0), INIT_NONZERO);
 
@@ -280,7 +278,10 @@ contract Staking {
             require(msg.value == stakeRequirement, STK_AMT);
         } else {
             require(msg.value == 0, STK_AMT);
-            require(IERC20(stakeToken).transferFrom(msg.sender, address(this), stakeRequirement), TRANSFER_FAILED);
+            require(
+                IERC20(stakeToken).transferFrom(msg.sender, address(this), stakeRequirement),
+                TRANSFER_FAILED
+            );
         }
 
         require(stakers[msg.sender].location == 0x00, ALRDY_STAKED);
