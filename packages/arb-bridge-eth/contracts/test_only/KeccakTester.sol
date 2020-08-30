@@ -21,7 +21,7 @@ pragma solidity ^0.5.11;
 import "../libraries/Keccak.sol";
 
 library KeccakTester {
-    function keccak_f(uint256[25] memory A) public pure returns (uint256[25] memory) {
-        return Keccak.keccak_f(A);
+    function keccakF(uint256[25] memory input) public pure returns (uint256[25] memory) {
+        return Keccak.keccakF(input);
     }
 }

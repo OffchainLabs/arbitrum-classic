@@ -33,7 +33,7 @@ contract ExecutionChallenge is IExecutionChallenge, BisectionChallenge {
 
     event OneStepProofCompleted();
 
-    IOneStepProof executor;
+    IOneStepProof private executor;
 
     // Incorrect previous state
     string private constant BIS_INPLEN = "BIS_INPLEN";

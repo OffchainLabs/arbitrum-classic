@@ -74,6 +74,8 @@ interface ArbRollupInterface extends Interface {
       ]): string
     }>
 
+    isMaster: TypedFunctionDescription<{ encode([]: []): string }>
+
     isStaked: TypedFunctionDescription<{
       encode([_stakerAddress]: [string]): string
     }>
@@ -369,6 +371,10 @@ export class ArbRollup extends Contract {
       _extraConfig: Arrayish,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
+
+    isMaster(overrides?: TransactionOverrides): Promise<boolean>
+
+    'isMaster()'(overrides?: TransactionOverrides): Promise<boolean>
 
     isStaked(
       _stakerAddress: string,
@@ -672,6 +678,10 @@ export class ArbRollup extends Contract {
     _extraConfig: Arrayish,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
+
+  isMaster(overrides?: TransactionOverrides): Promise<boolean>
+
+  'isMaster()'(overrides?: TransactionOverrides): Promise<boolean>
 
   isStaked(
     _stakerAddress: string,
@@ -1024,6 +1034,10 @@ export class ArbRollup extends Contract {
       _extraConfig: Arrayish,
       overrides?: TransactionOverrides
     ): Promise<BigNumber>
+
+    isMaster(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'isMaster()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
     isStaked(
       _stakerAddress: string,

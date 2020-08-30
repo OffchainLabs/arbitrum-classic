@@ -28,7 +28,7 @@ import { ArbValue, Message } from 'arb-provider-ethers'
 
 chai.use(chaiAsPromised)
 
-const { assert, expect } = chai
+const { expect } = chai
 
 function getEthMessageData(
   sender: string,
@@ -105,8 +105,10 @@ describe('GlobalInbox', async () => {
   })
 
   it('should deposit an ERC20', async () => {
-    const EthBuddyErc20 = await ethers.getContractFactory('EthBuddyERC20')
-    const erc20 = (await EthBuddyErc20.deploy(
+    const EthBuddyErc20Contract = await ethers.getContractFactory(
+      'EthBuddyERC20'
+    )
+    const erc20 = (await EthBuddyErc20Contract.deploy(
       globalInbox.address
     )) as EthBuddyErc20
     await erc20.deployed()
@@ -143,8 +145,10 @@ describe('GlobalInbox', async () => {
 
   it('should support paired ERC20s', async () => {
     const chainAddress = await accounts[6].getAddress()
-    const EthBuddyErc20 = await ethers.getContractFactory('EthBuddyERC20')
-    const erc20 = (await EthBuddyErc20.deploy(
+    const EthBuddyErc20Contract = await ethers.getContractFactory(
+      'EthBuddyERC20'
+    )
+    const erc20 = (await EthBuddyErc20Contract.deploy(
       globalInbox.address
     )) as EthBuddyErc20
     await erc20.deployed()
