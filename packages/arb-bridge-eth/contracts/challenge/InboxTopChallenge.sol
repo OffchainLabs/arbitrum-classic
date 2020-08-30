@@ -38,7 +38,7 @@ contract InboxTopChallenge is BisectionChallenge {
             ChallengeUtils.inboxTopHash(_chainHashes[0], _chainHashes[bisectionCount], _chainLength)
         );
 
-        require(_chainLength > 1, "Can't bisect chain of less than 2");
+        require(_chainLength > 1, "bisection too short");
         bytes32[] memory hashes = new bytes32[](bisectionCount);
         hashes[0] = ChallengeUtils.inboxTopHash(
             _chainHashes[0],

@@ -1,6 +1,5 @@
 import { task, usePlugin } from '@nomiclabs/buidler/config'
 import 'dotenv/config'
-import fs from 'fs'
 
 usePlugin('buidler-deploy')
 if (!process.env.DOCKER) {
@@ -25,7 +24,7 @@ task('deposit', 'Deposit coins into ethbridge')
   .addPositionalParam('dest', "The destination account's address")
   .addPositionalParam('amount', 'The amount to deposit')
   .setAction(async ({ chain, privkey, dest, amount }, bre) => {
-    const { deployments, getNamedAccounts, ethers } = bre
+    const { deployments, ethers } = bre
     const inboxDep = await deployments.getOrNull('GlobalInbox')
     if (!inboxDep) {
       throw Error('GlobalInbox not deployed')

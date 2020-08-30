@@ -44,7 +44,7 @@ contract GlobalFTWallet {
         mapping(address => PairingStatus) connectedRollups;
     }
 
-    mapping(address => PairedContract) pairedContracts;
+    mapping(address => PairedContract) private pairedContracts;
 
     function ownedERC20s(address _owner) external view returns (address[] memory) {
         UserFTWallet storage wallet = ftWallets[_owner];
@@ -58,10 +58,7 @@ contract GlobalFTWallet {
 
     function withdrawERC20(address _tokenContract) external {
         uint256 value = getERC20Balance(_tokenContract, msg.sender);
-        require(
-            removeToken(msg.sender, _tokenContract, value),
-            "Wallet doesn't own sufficient balance of token"
-        );
+        require(removeToken(msg.sender, _tokenContract, value), "insufficient balance");
         if (pairedContracts[_tokenContract].paired) {
             IPairedErc20(_tokenContract).mint(msg.sender, value);
         } else {

@@ -524,7 +524,7 @@ contract OneStepProof is IOneStepProof {
             data[5 * (i % 5) + i / 5] = uint256(uint64(values[i / 4].intVal >> ((i % 4) * 64)));
         }
 
-        data = Keccak.keccak_f(data);
+        data = Keccak.keccakF(data);
 
         Value.Data[] memory outValues = new Value.Data[](7);
         for (uint256 i = 0; i < 7; i++) {
