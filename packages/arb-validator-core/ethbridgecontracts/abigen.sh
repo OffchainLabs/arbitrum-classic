@@ -27,4 +27,4 @@ abigen --sol=$PREFIX/challenge/ExecutionChallenge.sol --pkg=$PACKAGE --out=execu
 
 abigen --sol=$PREFIX/arch/OneStepProof.sol --pkg=$PACKAGE --out=onestepproof.go --exc=$IGNORED
 
-abigen --sol=$PREFIX/inbox/GlobalInbox.sol --pkg=ethbridgecontracts --out=globalinbox.go --exc=$IGNORED
+abigen --sol=$PREFIX/inbox/GlobalInbox.sol --pkg=ethbridgecontracts --out=globalinbox.go --exc=$IGNORED,$PREFIX/interfaces/IERC20.sol:IERC20

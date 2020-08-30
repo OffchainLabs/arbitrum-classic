@@ -64,9 +64,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := arbbridge.WaitForNonZeroBalance(
+	if err := arbbridge.WaitForBalance(
 		context.Background(),
 		ethbridge.NewEthClient(ethclint),
+		common.Address{},
 		common.NewAddressFromEth(auth.From),
 	); err != nil {
 		log.Fatal(err)

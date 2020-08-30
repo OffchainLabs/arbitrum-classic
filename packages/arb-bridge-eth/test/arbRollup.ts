@@ -35,6 +35,7 @@ const initialVmState =
   '0x9900000000000000000000000000000000000000000000000000000000000000'
 const stakeRequirement = 10
 const maxExecutionSteps = 50000
+const stakeToken = '0x0000000000000000000000000000000000000000'
 const gracePeriodTicks = ethers.utils.bigNumberify(1000)
 
 function inboxTopHash(
@@ -451,6 +452,7 @@ async function createRollup(): Promise<ArbRollup> {
     1000000, // arbGasSpeedLimitPerTick
     maxExecutionSteps, // maxExecutionSteps
     stakeRequirement, // stakeRequirement
+    stakeToken,
     await accounts[0].getAddress(), // owner
     '0x'
   )
@@ -492,6 +494,7 @@ describe('ArbRollup', async () => {
       1000000, // arbGasSpeedLimitPerTick
       maxExecutionSteps, // maxExecutionSteps
       stakeRequirement, // stakeRequirement
+      stakeToken,
       await accounts[0].getAddress(), // owner
       await arbFactory.challengeFactoryAddress(),
       await arbFactory.globalInboxAddress(),

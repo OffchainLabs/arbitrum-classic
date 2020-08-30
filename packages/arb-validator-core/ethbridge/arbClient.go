@@ -131,6 +131,10 @@ func (c *EthArbClient) NewInboxTopChallengeWatcher(address common.Address) (arbb
 	return newInboxTopChallengeWatcher(address.ToEthAddress(), c.client)
 }
 
+func (c *EthArbClient) NewIERC20Watcher(address common.Address) (arbbridge.IERC20Watcher, error) {
+	return newIERC20Watcher(address.ToEthAddress(), c.client)
+}
+
 func (c *EthArbClient) GetBalance(ctx context.Context, account common.Address) (*big.Int, error) {
 	return c.client.BalanceAt(ctx, account.ToEthAddress(), nil)
 }
@@ -220,4 +224,8 @@ func (c *EthArbAuthClient) NewExecutionChallenge(address common.Address) (arbbri
 
 func (c *EthArbAuthClient) NewInboxTopChallenge(address common.Address) (arbbridge.InboxTopChallenge, error) {
 	return newInboxTopChallenge(address.ToEthAddress(), c.client, c.auth)
+}
+
+func (c *EthArbAuthClient) NewIERC20(address common.Address) (arbbridge.IERC20, error) {
+	return newIERC20(address.ToEthAddress(), c.client, c.auth)
 }

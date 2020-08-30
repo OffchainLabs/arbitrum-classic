@@ -287,17 +287,24 @@ func (vm *ethRollupWatcher) processEvents(
 func (vm *ethRollupWatcher) GetParams(
 	ctx context.Context,
 ) (valprotocol.ChainParams, error) {
+	invalid := valprotocol.ChainParams{}
 	callOpts := &bind.CallOpts{Context: ctx}
 	rawParams, err := vm.ArbRollup.VmParams(callOpts)
 	if err != nil {
-		return valprotocol.ChainParams{}, err
+		return invalid, err
 	}
 	stakeRequired, err := vm.ArbRollup.GetStakeRequired(callOpts)
 	if err != nil {
-		return valprotocol.ChainParams{}, err
+		return invalid, err
+	}
+
+	stakeToken, err := vm.ArbRollup.GetStakeToken(callOpts)
+	if err != nil {
+		return invalid, err
 	}
 	return valprotocol.ChainParams{
 		StakeRequirement: stakeRequired,
+		StakeToken:       common.NewAddressFromEth(stakeToken),
 		GracePeriod: common.TimeTicks{
 			Val: rawParams.GracePeriodTicks,
 		},

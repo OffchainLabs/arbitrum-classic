@@ -48,6 +48,12 @@ interface ArbRollupInterface extends Interface {
 
     getStakeRequired: TypedFunctionDescription<{ encode([]: []): string }>
 
+    getStakeToken: TypedFunctionDescription<{ encode([]: []): string }>
+
+    getWithdrawnStake: TypedFunctionDescription<{
+      encode([_staker]: [string]): string
+    }>
+
     globalInbox: TypedFunctionDescription<{ encode([]: []): string }>
 
     init: TypedFunctionDescription<{
@@ -57,6 +63,7 @@ interface ArbRollupInterface extends Interface {
         _arbGasSpeedLimitPerTick,
         _maxExecutionSteps,
         _stakeRequirement,
+        _stakeToken,
         _owner,
         _challengeFactoryAddress,
         _globalInboxAddress,
@@ -67,6 +74,7 @@ interface ArbRollupInterface extends Interface {
         BigNumberish,
         BigNumberish,
         BigNumberish,
+        string,
         string,
         string,
         string,
@@ -342,6 +350,20 @@ export class ArbRollup extends Contract {
 
     'getStakeRequired()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
+    getStakeToken(overrides?: TransactionOverrides): Promise<string>
+
+    'getStakeToken()'(overrides?: TransactionOverrides): Promise<string>
+
+    getWithdrawnStake(
+      _staker: string,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'getWithdrawnStake(address)'(
+      _staker: string,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     globalInbox(overrides?: TransactionOverrides): Promise<string>
 
     'globalInbox()'(overrides?: TransactionOverrides): Promise<string>
@@ -352,6 +374,7 @@ export class ArbRollup extends Contract {
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
       _stakeRequirement: BigNumberish,
+      _stakeToken: string,
       _owner: string,
       _challengeFactoryAddress: string,
       _globalInboxAddress: string,
@@ -359,12 +382,13 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
-    'init(bytes32,uint128,uint128,uint64,uint128,address,address,address,bytes)'(
+    'init(bytes32,uint128,uint128,uint64,uint128,address,address,address,address,bytes)'(
       _vmState: Arrayish,
       _gracePeriodTicks: BigNumberish,
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
       _stakeRequirement: BigNumberish,
+      _stakeToken: string,
       _owner: string,
       _challengeFactoryAddress: string,
       _globalInboxAddress: string,
@@ -649,6 +673,20 @@ export class ArbRollup extends Contract {
 
   'getStakeRequired()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
+  getStakeToken(overrides?: TransactionOverrides): Promise<string>
+
+  'getStakeToken()'(overrides?: TransactionOverrides): Promise<string>
+
+  getWithdrawnStake(
+    _staker: string,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'getWithdrawnStake(address)'(
+    _staker: string,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   globalInbox(overrides?: TransactionOverrides): Promise<string>
 
   'globalInbox()'(overrides?: TransactionOverrides): Promise<string>
@@ -659,6 +697,7 @@ export class ArbRollup extends Contract {
     _arbGasSpeedLimitPerTick: BigNumberish,
     _maxExecutionSteps: BigNumberish,
     _stakeRequirement: BigNumberish,
+    _stakeToken: string,
     _owner: string,
     _challengeFactoryAddress: string,
     _globalInboxAddress: string,
@@ -666,12 +705,13 @@ export class ArbRollup extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  'init(bytes32,uint128,uint128,uint64,uint128,address,address,address,bytes)'(
+  'init(bytes32,uint128,uint128,uint64,uint128,address,address,address,address,bytes)'(
     _vmState: Arrayish,
     _gracePeriodTicks: BigNumberish,
     _arbGasSpeedLimitPerTick: BigNumberish,
     _maxExecutionSteps: BigNumberish,
     _stakeRequirement: BigNumberish,
+    _stakeToken: string,
     _owner: string,
     _challengeFactoryAddress: string,
     _globalInboxAddress: string,
@@ -1005,6 +1045,20 @@ export class ArbRollup extends Contract {
 
     'getStakeRequired()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
+    getStakeToken(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'getStakeToken()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    getWithdrawnStake(
+      _staker: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'getWithdrawnStake(address)'(
+      _staker: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
     globalInbox(overrides?: TransactionOverrides): Promise<BigNumber>
 
     'globalInbox()'(overrides?: TransactionOverrides): Promise<BigNumber>
@@ -1015,6 +1069,7 @@ export class ArbRollup extends Contract {
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
       _stakeRequirement: BigNumberish,
+      _stakeToken: string,
       _owner: string,
       _challengeFactoryAddress: string,
       _globalInboxAddress: string,
@@ -1022,12 +1077,13 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
-    'init(bytes32,uint128,uint128,uint64,uint128,address,address,address,bytes)'(
+    'init(bytes32,uint128,uint128,uint64,uint128,address,address,address,address,bytes)'(
       _vmState: Arrayish,
       _gracePeriodTicks: BigNumberish,
       _arbGasSpeedLimitPerTick: BigNumberish,
       _maxExecutionSteps: BigNumberish,
       _stakeRequirement: BigNumberish,
+      _stakeToken: string,
       _owner: string,
       _challengeFactoryAddress: string,
       _globalInboxAddress: string,

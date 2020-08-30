@@ -90,23 +90,24 @@ func ValidateRollupChain(
 	}
 	client := ethbridge.NewEthAuthClient(ethclint, auth)
 
-	if err := arbbridge.WaitForNonZeroBalance(
-		context.Background(),
-		client,
-		common.NewAddressFromEth(auth.From),
-	); err != nil {
+	rollup, err := client.NewRollup(rollupArgs.Address)
+	if err != nil {
 		return err
 	}
 
-	rollupActor, err := client.NewRollup(rollupArgs.Address)
+	params, err := rollup.GetParams(context.Background())
 	if err != nil {
+		return err
+	}
+
+	if err := arbbridge.WaitForBalance(context.Background(), client, params.StakeToken, common.NewAddressFromEth(auth.From)); err != nil {
 		return err
 	}
 
 	validatorListener := chainlistener.NewValidatorChainListener(
 		context.Background(),
 		rollupArgs.Address,
-		rollupActor,
+		rollup,
 	)
 	err = validatorListener.AddStaker(client)
 	if err != nil {
