@@ -48,7 +48,6 @@ import { ArbInfoFactory } from './abi/ArbInfoFactory'
 // EthBridge event names
 const EB_EVENT_CDA = 'RollupAsserted'
 const MessageDelivered = 'MessageDelivered'
-const MessageDeliveredFromOrigin = 'MessageDeliveredFromOrigin'
 
 const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
 const ARB_INFO_ADDRESS = '0x0000000000000000000000000000000000000065'
@@ -255,7 +254,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
   // This should return a Promise (and may throw errors)
   // method is the method name (e.g. getBalance) and params is an
   // object with normalized values passed in, depending on the method
-  /* eslint-disable no-alert, @typescript-eslint/no-explicit-any */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/explicit-module-boundary-types
   public async perform(method: string, params: any): Promise<any> {
     // console.log('perform', method, params)
     switch (method) {

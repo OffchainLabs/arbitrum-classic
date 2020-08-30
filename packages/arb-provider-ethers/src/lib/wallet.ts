@@ -18,10 +18,8 @@
 
 import { L1Bridge } from './l1bridge'
 
-import { L2Transaction, L2Message } from './message'
+import { L2Transaction } from './message'
 import { ArbProvider } from './provider'
-import { GlobalInbox } from './abi/GlobalInbox'
-import { ArbSysFactory } from './abi/ArbSysFactory'
 import { TransactionOverrides } from './abi'
 
 import * as ethers from 'ethers'
