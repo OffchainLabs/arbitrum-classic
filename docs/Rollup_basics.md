@@ -37,9 +37,7 @@ You’re starting with a dapp—or you’re planning to develop one—that’s m
 
 First, you’ll want to identify an initial set of validators for your chain. We’ll talk later about how you might choose validators, and why people might want to validate a chain. Of course, validators will be able to come and go at will once the chain is going.  
 
-When you’re ready to launch your chain, you send an Ethereum transaction to the EthBridge—the component that connects Arbitrum to Ethereum—telling it to launch your chain on Arbitrum Rollup, and identifying the contract’s initial validators.  The EthBridge will start an Ethereum contract to manage your chain,
-and some parameters will be recorded on the main Ethereum chain. For more details on the parameters that you'll need to specify when launching an ArbChain, see the [Chain Parameters](Chain_parameters.md) section of the documentation.
-
+When you’re ready to launch your chain, you send an Ethereum transaction to the EthBridge—the component that connects Arbitrum to Ethereum—telling it to launch your chain on Arbitrum Rollup, and specifying [chain parameters](Chain_parameters.md).  The EthBridge will start an Ethereum contract to manage your chain, and some parameters will be recorded on the main Ethereum chain.
 
 Your Rollup chain is now up and running on Arbitrum. You can deploy contracts to it, by sending the same transaction that you would send to Ethereum if you wanted to deploy there. Users of your dapp can launch your existing front-end interface in their browsers. The front end will automatically interact with the running chain using Arbitrum’s front-end plug-ins for web3, ethers, or go-ethereum.
 
