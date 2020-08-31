@@ -4,13 +4,11 @@ title: Solidity Support
 custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Solidity_Support.md
 ---
 
-# TODO: We talk about Solidity, but should we change to EVM?
-
-Arbitrum Rollup allows you to trustlessly deploy Solidity contracts. Arbitrum supports almost all solidity code as expected with a few exceptions that we detail below..
+Arbitrum Rollup supports EVM transactions, and therefore allows you to trustlessly deploy Solidity contracts (as well as Vyper or any other language that compile to EVM). Arbitrum supports almost all Solidity code as expected with a few exceptions that we detail below.
 
 # Restrictions
 
-Although we support most solidity code, we have a few restrictions, including language features that don't make much sense in the Layer 2 context.
+Although we support most Solidity code, we have a few restrictions, including language features that don't make much sense in the Layer 2 context.
 
 - Unsupported Solidity Features:
 

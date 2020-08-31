@@ -13,18 +13,18 @@ and lower cost than on-chain Ethereum contracts.
 Despite running off-chain, ArbChains are _trustless_, meaning that any
 party can force an ArbChain to execute correctly according to the code of its contracts.
 
-You can make as many ArbChains as you want. Each ArbChain provides the same interface as the Ethereum blockchain, and contracts can be deployed on the chain at anytime using the `CREATE` and `CREATE2` opcode.
+You can make as many ArbChains as you want. Each ArbChain provides the same interface as the Ethereum blockchain, and contracts can be deployed on the chain at anytime using the `CREATE` and `CREATE2` opcode. You can also deploy contracts by sending transactions to address zero on the chain, just as you would on Ethereum.
 > Note: Earlier versions of Arbitrum did not fully support dynamic contract launching and required code for all contracts to be provided when initially launching the chain. We have now removed this limitation.
 
 Applications that reside on the same ArbChain can make synchronous calls to one another exactly as they would on Ethereum.
-Typically, you'll want to group dApps together into a single ArbChain if they need to interact and compose with one another. Applications that do not require interaction with others can be deployed on their own ArbChain.
+Typically, you'll want to group dApps together into a single ArbChain if they need to interact and compose with one another. Applications that do not require synchronous interaction with others can be deployed on their own ArbChain.
 
 Every ArbChain has a set of Validators, who monitor the chain to ensure that it executes correctly.
-Validators will deposit currency stakes, which they will lose if they behave dishonestly. Validating an Arbitrum Rollup chain is permissioneless; anyone who puts down a stake can serve as a validator.
+Validators will deposit currency stakes, which they will lose if they behave dishonestly. Validating an Arbitrum Rollup chain is permissionless; anyone who puts down a stake can serve as a validator.
 
 An ArbChain contains a set of contracts.
-Over time, you can launch new contracts in an ArbChain, and contracts can self-destruct, exactly as they do on the Etherum blockchain.
-ArbChains accept EVM transactions that are byte-for-byte identical to Ethereum contracts.
+Over time, you can launch new contracts in an ArbChain, and contracts can self-destruct, exactly as they do on the Ethereum blockchain.
+ArbChains accept EVM transactions that are byte-for-byte identical to Ethereum transactions.
 
 
 ## How to make an ArbChain
@@ -32,14 +32,12 @@ ArbChains accept EVM transactions that are byte-for-byte identical to Ethereum c
 
 Suppose you’re a developer who has written a dapp for the Ethereum platform. Arbitrum interoperates with Ethereum, so you can launch your dapp on an Arbitrum Rollup chain and get better speed and scalability. 
 
-You’re starting with a dapp—or you’re planning to develop one—that’s made up of some contracts written in Solidity, along with a browser-based front end.  Here’s how to use Arbitrum with your dapp. Arbitrum supports dynamic launching of contracts on deployed chains using Ethereum's CREATE and CREATE2 opcodes, so you can either launch a new Rollup chain for your dapp or deploy it to an existing one. Here, we describe the process for launching a new chain.
+You’re starting with a dapp—or you’re planning to develop one—that’s made up of some contracts written in Solidity, along with a browser-based front end.  Here’s how to use Arbitrum with your dapp. Arbitrum supports dynamic launching of contracts on deployed chains just as in Ethereum by sending transactions to address zero or by using the CREATE and CREATE2 opcodes. Arbitrum is fully compatible with standard build tools (e.g. Truffle, Buidler). You can either launch your dApp on a new Rollup or deploy it to an existing one. Here, we describe the process for launching a new chain.
 
 First, you’ll want to identify an initial set of validators for your chain. We’ll talk later about how you might choose validators, and why people might want to validate a chain. Of course, validators will be able to come and go at will once the chain is going.  
 
-When you’re ready to launch your chain, you send an Ethereum message to the EthBridge—the component that connects Arbitrum to Ethereum—telling it to launch your chain on Arbitrum Rollup, and identifying the contract’s initial validators.  The EthBridge will start an Ethereum contract to manage your chain,
+When you’re ready to launch your chain, you send an Ethereum transaction to the EthBridge—the component that connects Arbitrum to Ethereum—telling it to launch your chain on Arbitrum Rollup, and identifying the contract’s initial validators.  The EthBridge will start an Ethereum contract to manage your chain,
 and some parameters will be recorded on the main Ethereum chain.
-
-# TODO identify initial validators?
 
 
 Your Rollup chain is now up and running on Arbitrum. You can deploy contracts to it, by sending the same transaction that you would send to Ethereum if you wanted to deploy there. Users of your dapp can launch your existing front-end interface in their browsers. The front end will automatically interact with the running chain using Arbitrum’s front-end plug-ins for web3, ethers, or go-ethereum.
@@ -71,7 +69,7 @@ Although validation is permissionless and anyone _can_ validate, it's important 
 For developers who do not want to validate themselves, you'll be able to hire a validator-as-a-service to validate your ArbChain once Arbitrum is released for production.  
 You might want to hire more than one, if you or your users worry that one might misbehave. As long as any validator behaves honestly, the Arbitrum protocol guarantees that all contracts in the ArbChain will run correctly according to their code. 
 
-Some users will want to validate as well, in order to protect their interest in the dapp's correct execution. A healthy ArbChain with an engaged userbase will likely have a variety of validators.
+Some users will want to validate as well, in order to protect their interest in the dapp's correct execution. Users may also hire validators that they trust to ensure the chains correct operation. A healthy ArbChain with an engaged userbase will likely have a variety of validators.
 
 
 
