@@ -4,7 +4,7 @@ title: Arbitrum Rollup Basics
 sidebar_label: Arbitrum Rollup Basics
 ---
 
-This document explains the basic concepts behind Arbitrum Rollup.
+This document explains the basic concepts behind Arbitrum Rollup and provides links for learning more about the various system components..
 
 ## Arbitrum Rollup Chains (ArbChains)
 
@@ -16,6 +16,7 @@ party can force an ArbChain to execute correctly according to the code of its co
 You can make as many ArbChains as you want. Each ArbChain provides the same interface as the Ethereum blockchain, and contracts can be deployed on the chain at anytime using the `CREATE` and `CREATE2` opcode. You can also deploy contracts by sending transactions to address zero on the chain, just as you would on Ethereum.
 > Note: Earlier versions of Arbitrum did not fully support dynamic contract launching and required code for all contracts to be provided when initially launching the chain. We have now removed this limitation.
 
+
 Applications that reside on the same ArbChain can make synchronous calls to one another exactly as they would on Ethereum.
 Typically, you'll want to group dApps together into a single ArbChain if they need to interact and compose with one another. Applications that do not require synchronous interaction with others can be deployed on their own ArbChain.
 
@@ -24,13 +25,13 @@ Validators will deposit currency stakes, which they will lose if they behave dis
 
 An ArbChain contains a set of contracts.
 Over time, you can launch new contracts in an ArbChain, and contracts can self-destruct, exactly as they do on the Ethereum blockchain.
-ArbChains accept EVM transactions that are byte-for-byte identical to Ethereum transactions.
+Arbitrum supports EVM, and therefore supports Solidity contracts. See (Solidity Support)[Solidity_Support.md] for a list of the few Solidity features which Arbitrum does not support.
 
 
 ## How to make an ArbChain
 
 
-Suppose you’re a developer who has written a dapp for the Ethereum platform. Arbitrum interoperates with Ethereum, so you can launch your dapp on an Arbitrum Rollup chain and get better speed and scalability. 
+Suppose you’re a developer who has written a dApp for the Ethereum platform. Arbitrum interoperates with Ethereum, so you can launch your dapp on an Arbitrum Rollup chain and get better speed and scalability. 
 
 You’re starting with a dapp—or you’re planning to develop one—that’s made up of some contracts written in Solidity, along with a browser-based front end.  Here’s how to use Arbitrum with your dapp. Arbitrum supports dynamic launching of contracts on deployed chains just as in Ethereum by sending transactions to address zero or by using the CREATE and CREATE2 opcodes. Arbitrum is fully compatible with standard build tools (e.g. Truffle, Buidler). You can either launch your dApp on a new Rollup or deploy it to an existing one. Here, we describe the process for launching a new chain.
 

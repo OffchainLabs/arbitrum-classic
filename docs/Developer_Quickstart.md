@@ -12,7 +12,7 @@ Arbitrum is a suite of Ethereum scaling solutions that enables high-throughput, 
 
 ### How does Arbitrum work?
 
-If you're looking to discover how Arbitrum works, the best place to begin is by understanding the [basics of the Arbitrum Rollup protocol](Rollup_basics.md). 
+If you're looking to discover how Arbitrum works, the best place to begin is by the [Rollups basics](Rollup_basics.md) section, which gives a high level overview of Arbitrum's internals. From there, you can jump into more detailed explainers on various components of the system.
   
 ### How Can I Start Buidling
 
