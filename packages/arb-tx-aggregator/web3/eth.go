@@ -264,7 +264,7 @@ func (s *Server) SendRawTransaction(_ *http.Request, args *SendTransactionArgs, 
 	return nil
 }
 
-func (s *Server) GetTransactionReceipt(_ *http.Request, args *GetTransactionReceiptArgs, reply **GetTransactionReceiptResult) error {
+func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionReceiptArgs, reply **GetTransactionReceiptResult) error {
 	var requestId arbcommon.Hash
 	copy(requestId[:], *args.Data)
 	val, err := s.srv.GetRequestResult(requestId)
@@ -277,11 +277,12 @@ func (s *Server) GetTransactionReceipt(_ *http.Request, args *GetTransactionRece
 		return err
 	}
 
-	blockInfo, err := s.srv.BlockInfo(result.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
+	header, err := s.srv.GetBlockHeaderByNumber(r.Context(), result.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
 	if err != nil {
 		return err
 	}
-	receipt := result.ToEthReceipt(blockInfo.Hash)
+
+	receipt := result.ToEthReceipt(arbcommon.NewHashFromEth(header.Hash()))
 	*reply = &GetTransactionReceiptResult{
 		Status:            receipt.Status,
 		CumulativeGasUsed: receipt.CumulativeGasUsed,
