@@ -8,6 +8,11 @@ if (!process.env.DOCKER) {
   usePlugin('solidity-coverage')
   usePlugin('buidler-spdx-license-identifier')
   usePlugin('buidler-gas-reporter')
+  usePlugin('@nomiclabs/buidler-etherscan')
+
+  const verifyTask = require('./scripts/verifyTask') // eslint-disable-line @typescript-eslint/no-var-requires
+  const setupVerifyTask = verifyTask.default
+  setupVerifyTask()
 }
 
 task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
@@ -91,9 +96,6 @@ module.exports = {
     },
   },
   etherscan: {
-    // The url for the Etherscan API you want to use.
-    // For example, here we're using the one for the Ropsten test network
-    url: 'https://api-kovan.etherscan.io/api',
     apiKey: process.env['ETHERSCAN_API_KEY'],
   },
 }

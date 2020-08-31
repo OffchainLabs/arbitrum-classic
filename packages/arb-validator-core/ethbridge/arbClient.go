@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"math/big"
@@ -44,10 +45,12 @@ var reorgError = errors.New("reorg occured")
 var headerRetryDelay = time.Second * 2
 var maxFetchAttempts = 5
 
-func (c *EthArbClient) SubscribeBlockHeadersAfter(ctx context.Context, prevBlockId *common.BlockId) <-chan arbbridge.MaybeBlockId {
+func (c *EthArbClient) SubscribeBlockHeadersAfter(ctx context.Context, prevBlockId *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
 	blockIdChan := make(chan arbbridge.MaybeBlockId, 100)
-	c.subscribeBlockHeadersAfter(ctx, prevBlockId, blockIdChan)
-	return blockIdChan
+	if err := c.subscribeBlockHeadersAfter(ctx, prevBlockId, blockIdChan); err != nil {
+		return nil, err
+	}
+	return blockIdChan, nil
 }
 
 func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
@@ -59,11 +62,22 @@ func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *
 	}
 	blockIdChan <- arbbridge.MaybeBlockId{BlockId: startBlockId, Timestamp: new(big.Int).SetUint64(startHeader.Time)}
 	prevBlockId := startBlockId
-	c.subscribeBlockHeadersAfter(ctx, prevBlockId, blockIdChan)
+	if err := c.subscribeBlockHeadersAfter(ctx, prevBlockId, blockIdChan); err != nil {
+		return nil, err
+	}
 	return blockIdChan, nil
 }
 
-func (c *EthArbClient) subscribeBlockHeadersAfter(ctx context.Context, prevBlockId *common.BlockId, blockIdChan chan<- arbbridge.MaybeBlockId) {
+func (c *EthArbClient) subscribeBlockHeadersAfter(ctx context.Context, prevBlockId *common.BlockId, blockIdChan chan<- arbbridge.MaybeBlockId) error {
+	prevBlockIdCheck, err := c.BlockIdForHeight(ctx, prevBlockId.Height)
+	if err != nil {
+		return err
+	}
+
+	if !prevBlockId.Equals(prevBlockIdCheck) {
+		return fmt.Errorf("can't subscribe to headers, block hash %v doesn't match expected value %v", prevBlockIdCheck, prevBlockId)
+	}
+
 	go func() {
 		defer close(blockIdChan)
 
@@ -109,6 +123,7 @@ func (c *EthArbClient) subscribeBlockHeadersAfter(ctx context.Context, prevBlock
 			blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId, Timestamp: new(big.Int).SetUint64(nextHeader.Time)}
 		}
 	}()
+	return nil
 }
 
 func (c *EthArbClient) NewArbFactoryWatcher(address common.Address) (arbbridge.ArbFactoryWatcher, error) {

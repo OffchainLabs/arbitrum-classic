@@ -55,7 +55,7 @@ contract ArbRollup is IArbRollup, Cloneable, NodeGraph, Staking {
     // Only callable by owner
     string private constant ONLY_OWNER = "ONLY_OWNER";
 
-    string public constant VERSION = "develop";
+    string public constant VERSION = "0.7.0";
 
     address payable public owner;
 
