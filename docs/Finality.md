@@ -45,3 +45,8 @@ Of course, you can always become a validator, if you want to make sure your corr
 The weakest form of evidence for a pending transaction is that people you trust say it is on the correct future history.
 If they aren't staked on that future, they have nothing to lose if they're lying, except possibly their reputation.
 But if you strongly trust them, that might be enough.
+
+
+## Withdrawals
+
+One aspect of the system that is closely related to finality is the ability to withdraw funds from the ArbChain back onto Ethereum. This is discussed fully in the [withdrawals](Withdrawals.md) section of the documentation.

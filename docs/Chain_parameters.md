@@ -29,14 +29,14 @@ The parameters are:
 For executing in a production-like setting, we suggest the following parameters:
 
 - stake requirement: 1 Eth, or 2% of total value in chain, whichever is more
-- grace period: 180 minutes
+- grace period: 360 minutes
 - speed limit: 1.0
 - max assertion size: 50 seconds
 
-(We say "production-like setting" because we do not currently recommend use of Arbitrum Rollup in a true
+(We say "production-like setting" because we currently **strongly recommend against** using Arbitrum Rollup in a true
 production setting on the main chain.)
 
-If you're debugging your dapp, you care more about fast turnaround than security, so we suggest the following parameters:
+If you're debugging your dApp, you care more about fast turnaround than security, so we suggest the following parameters:
 
 - stake requirement: 0.1 Eth
 - grace period: 10 minutes
@@ -44,3 +44,5 @@ If you're debugging your dapp, you care more about fast turnaround than security
 - max assertion size: 15 seconds
 
 The presets on the chain launcher page will follow these recommendations.
+
+**To learn more about how to choose parameters and the rationale behind the default parameters, see our Medium post on [optimizing challenge periods](https://medium.com/offchainlabs/optimizing-challenge-periods-in-rollup-b61378c87277).**
