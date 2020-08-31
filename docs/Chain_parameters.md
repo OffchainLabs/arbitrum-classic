@@ -29,7 +29,7 @@ The parameters are:
 For executing in a production-like setting, we suggest the following parameters:
 
 - stake requirement: 1 Eth, or 2% of total value in chain, whichever is more
-- grace period: 180 minutes
+- grace period: 360 minutes
 - speed limit: 1.0
 - max assertion size: 50 seconds
 
