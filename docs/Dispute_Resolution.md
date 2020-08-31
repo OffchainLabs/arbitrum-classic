@@ -31,7 +31,7 @@ The process continues with further divisions. After a logarithmic number of divi
 
 At this point the asserter has to give a one-step proof to the EthBridge, containing the information that the EthBridge needs to quickly verify that the one-step assertion is correct.  Or perhaps the asserter will fail to provide a valid one-step proof. Either way, the dispute is resolved.
 
-![img](https://drive.google.com/file/d/1bkEBk0vPTvnW73CDMb9LOJtzDQYnYnnV/view?usp=sharing)
+![img](http://staging-developer.offchainlabs.com/img/Arbitrum_dispute.png)
 
 We won’t go into the details of one-step proofs here. Suffice it to say that [Arbitrum’s custom VM architecture](AVM_Design.md) comes into play here, making the one-step proof small (a few hundred bytes at most) and quick to check (costing about 90,000 Ethereum gas, or about one dollar at current prices).
 
