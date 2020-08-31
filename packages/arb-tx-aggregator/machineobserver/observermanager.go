@@ -191,7 +191,10 @@ func RunObserver(
 				}
 
 				latest := db.LatestBlockId()
-				headersChan := clnt.SubscribeBlockHeadersAfter(runCtx, latest)
+				headersChan, err := clnt.SubscribeBlockHeadersAfter(runCtx, latest)
+				if err != nil {
+					return errors2.Wrap(err, "can't restart header subscription")
+				}
 				for maybeBlockId := range headersChan {
 					if maybeBlockId.Err != nil {
 						return errors2.Wrap(maybeBlockId.Err, "Error getting new header")
