@@ -21,6 +21,7 @@ import (
 	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
@@ -223,6 +224,8 @@ func RunObserver(
 			default:
 
 			}
+			// Wait for things to settle
+			time.Sleep(time.Second)
 		}
 	}()
 	return db, nil
