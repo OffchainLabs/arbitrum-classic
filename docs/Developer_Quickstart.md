@@ -1,13 +1,11 @@
-
 ---
 id: Developer_Quickstart
 title: Arbitrum Developer Quickstart
-custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Developer_Quickstart.md
+sidebar_label: Developer Quickstart
+custom_edit_url:https://github.com/OffchainLabs/arbitrum/edit/master/docs/Developer_Quickstart.md
 ---
 
-
 Arbitrum is a suite of Ethereum scaling solutions that enables high-throughput, low cost smart contracts while remaining trustlessly secure. Arbitrum has three modes: AnyTrust Channels, AnyTrust Sidechains, and Arbitrum Rollup. The following documentation describes how to use Arbitrum Rollup, which is currently live on testnet. Whether you're a developer that just wants to start building or you're curious into digging deeper into the internals of Arbitrum and how it works, this site is the right place for you.
-
 
 
 ### How does Arbitrum work?
