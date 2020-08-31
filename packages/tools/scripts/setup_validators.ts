@@ -76,7 +76,11 @@ if (require.main === module) {
         blocktime: args.blocktime,
       }
 
-      setupValidatorStates(args.validatorcount, config.rollup_address, config)
+      setupValidatorStates(
+        args.validatorcount + 1,
+        config.rollup_address,
+        config
+      )
     }
   ).argv
 }

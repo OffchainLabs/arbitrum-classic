@@ -147,6 +147,7 @@ func newPendingBatchFromExisting(batch *pendingBatch, maxSize common.StorageSize
 		sizeBytes:   0,
 		maxSize:     maxSize,
 		full:        false,
+		signer:      batch.signer,
 	}
 }
 

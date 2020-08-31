@@ -137,6 +137,11 @@ func (txdb *TxDB) RestoreFromCheckpoint(ctx context.Context) error {
 }
 
 func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent, finishedBlock *common.BlockId) error {
+	timestamp, err := txdb.timeGetter.TimestampForBlockHash(ctx, finishedBlock.HeaderHash)
+	if err != nil {
+		return err
+	}
+
 	var lastBlock *common.BlockId
 	for _, msg := range msgs {
 		block, err := txdb.processMessage(ctx, msg.Message)
@@ -166,10 +171,6 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 
 	latestSnap := txdb.snapCache.latest()
 	if latestSnap == nil || latestSnap.Height().Cmp(finishedBlock.Height) < 0 {
-		timestamp, err := txdb.timeGetter.TimestampForBlockHash(ctx, finishedBlock.HeaderHash)
-		if err != nil {
-			return err
-		}
 		txdb.addSnap(finishedBlock.Height.AsInt(), timestamp)
 	}
 	txdb.callMut.Unlock()
@@ -197,11 +198,6 @@ func (txdb *TxDB) processMessage(ctx context.Context, msg inbox.InboxMessage) (*
 }
 
 func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.ExecutionAssertion) (*common.BlockId, error) {
-	type resultInfo struct {
-		logIndex uint64
-		result   *evm.TxResult
-	}
-
 	for _, avmMessage := range assertion.ParseOutMessages() {
 		if err := txdb.as.SaveMessage(avmMessage); err != nil {
 			return nil, err
@@ -240,6 +236,7 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 			txCount := res.BlockStats.TxCount.Uint64()
 			startLog := res.FirstAVMLog().Uint64()
 			ethLogs := make([]*types.Log, 0)
+			txResults := make([]*evm.TxResult, 0, txCount)
 			for i := uint64(0); i < txCount; i++ {
 				avmLog, err := txdb.GetLog(startLog + i)
 				if err != nil {
@@ -249,6 +246,10 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 				if err != nil {
 					return nil, err
 				}
+				txResults = append(txResults, txRes)
+			}
+
+			for _, txRes := range txResults {
 				for _, evmLog := range txRes.EVMLogs {
 					ethLogs = append(ethLogs, &types.Log{
 						Address: evmLog.Address.ToEthAddress(),
@@ -264,6 +265,12 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 			logBloom := types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
 			if err := txdb.as.SaveBlock(block, logIndex, logBloom); err != nil {
 				return nil, err
+			}
+
+			for i, txRes := range txResults {
+				if err := txdb.as.SaveRequest(txRes.IncomingRequest.MessageID, startLog+uint64(i)); err != nil {
+					return nil, err
+				}
 			}
 
 			lastBlock = block
