@@ -4,9 +4,11 @@ title: Executable Creation
 sidebar_label: Executable Creation
 ---
 
-Arbitrum supports standard EVM contract deployment. This allows standard solidity smart to be deployed on Arbitrum Chains.
+Arbitrum supports standard EVM contract deployment. This allows standard Solidity smart contracts to be deployed on Arbitrum Chains using existing developer tools.
 
-To deploy your contracts, you need to set your deployment tool to deploy on an Arbitrum rollup chain instead of Ethereum.
+To deploy your contracts, you need to set your deployment tool to deploy on an Arbitrum rollup chain instead of Ethereum. While this should be straightforward, we include instructions for some build systems here, and we will add to the list over time. If you're using a build system that's not listed here and having trouble configuring it, please reach out to us on [Discord](https://discord.gg/ZpZuw7p).
+
+## Truffle 
 
 To port an existing truffle configuration:
 

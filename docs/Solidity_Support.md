@@ -4,14 +4,19 @@ title: Solidity Support
 custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Solidity_Support.md
 ---
 
-Arbitrum Rollup allows you to deploy a set of Solidity contracts as on a trustless layer 2 sidechain. Arbitrum supports almost all solidity code as expected with a few exceptions.
+Arbitrum Rollup supports EVM transactions, and therefore allows you to trustlessly deploy Solidity contracts (as well as Vyper or any other language that compile to EVM). Arbitrum supports almost all Solidity code as expected with a few exceptions that we detail below.
 
 # Restrictions
 
-Although we support most solidity code, there are a number of restrictions that currently exist.
+Although we support most Solidity code, we have a few restrictions, including language features that don't make much sense in the Layer 2 context.
 
 - Unsupported Solidity Features:
 
   - `blockhash(uint blockNumber) returns (bytes32)`
   - `block.coinbase`
   - `block.difficulty`
+  
+  
+  # Time
+  
+  Abitrum supports `block.number` and `block.timestamp`. For the semantics of these features in the Arbitrum context, please see [Time in Arbitrum](Time_in_Arbitrum.md).
