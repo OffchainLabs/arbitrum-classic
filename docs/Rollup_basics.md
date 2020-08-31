@@ -38,7 +38,7 @@ You’re starting with a dapp—or you’re planning to develop one—that’s m
 First, you’ll want to identify an initial set of validators for your chain. We’ll talk later about how you might choose validators, and why people might want to validate a chain. Of course, validators will be able to come and go at will once the chain is going.  
 
 When you’re ready to launch your chain, you send an Ethereum transaction to the EthBridge—the component that connects Arbitrum to Ethereum—telling it to launch your chain on Arbitrum Rollup, and identifying the contract’s initial validators.  The EthBridge will start an Ethereum contract to manage your chain,
-and some parameters will be recorded on the main Ethereum chain.
+and some parameters will be recorded on the main Ethereum chain. For more details on the parameters that you'll need to specify when launching an ArbChain, see the [Chain Parameters](Chain_parameters.md) section of the documentation.
 
 
 Your Rollup chain is now up and running on Arbitrum. You can deploy contracts to it, by sending the same transaction that you would send to Ethereum if you wanted to deploy there. Users of your dapp can launch your existing front-end interface in their browsers. The front end will automatically interact with the running chain using Arbitrum’s front-end plug-ins for web3, ethers, or go-ethereum.
@@ -60,6 +60,8 @@ The Arbitrum protocol ensures that an honest party can always win challenges.
 This deters dishonesty, and it ensures that any one honest party can force correct behavior, even if everyone else is dishonest.
 That's what makes ArbChains trustless.
 
+For more information on how validators advance a chain and resolve disputes, see [Progress and Dispute Resolution](Dispute_Resolution.md)
+
 ### Who will validate your ArbChain?
 
 At this point, you might be wondering who will be validators of your ArbChain.
@@ -77,7 +79,7 @@ Some users will want to validate as well, in order to protect their interest in 
 ## How clients interact with contracts
 
 Arbitrum client programs can use the same client frameworks as on Ethereum, including web3, ethers, and go-ethereum.
-Offchain Labs provides plug-ins for these frameworks, to make them work with Arbitrum.
+Offchain Labs provides [plug-ins for these frameworks](Frontend_Integration.md), to make them work with Arbitrum.
 The details in this section are all handled by the plug-ins, so you don't have to worry about them.
 But read on, if you're interested in how things work.
 
@@ -88,6 +90,16 @@ Inside the ArbChain, the program running on the chain's Arbitrum Virtual Machine
 It will interpret each message as a call to a contract, and it will execute that call, updating the contract's state.
 At the end of the call, the program will emit an Arbitrum log item, which will become visible to the client program.
 The client program will then read the call's result from the log item.
+
+
+## The Arbitrum Virtual Machine
+
+Although Arbitrum supports EVM, under the hood it runs the Arbitrum Virtual Machine (AVM). The AVM is optimized for allowing fast progress in the optimistic case while maintaining the ability to efficiently resolve disputes. To learn more, you can read a detailed overview of the [AVM Design Rationale](AVM_Design.md) as well as the [AVM Specification](AVM_Specification.md), a lower level description of the semantics of the AVM architecture.
+
+## ArbOS
+
+ArbOS, the Arbitrum operating system sits atop of the AVM and is responsible for isolating untrusted contracts from one another, tracking and limiting their resource usage using [ArbGas](ArbGas.md), and managing the economic model that collects fees from users to fund the operation of a chain's validators. ArbOS gives Arbitrum a great deal of flexibility by offloading work that would have been done in the L1 smart contract into cheaper L2 code. To learn more, see the section on [ArbOS](ArbOS.md).
+
 
 ## Other topics
 
