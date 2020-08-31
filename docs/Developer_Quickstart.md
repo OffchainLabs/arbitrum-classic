@@ -20,7 +20,7 @@ Note that Abitrum chains support dynamic launching of contracts, so you don't ne
 
 Once you have deployed Arbitrum, you can [build and run the demo app](#hello-arbitrum) or [deploy your own contracts](Contract_Deployment.md).
 
-****Want to learn more? Check out the** [**open source code**](https://github.com/offchainlabs/arbitrum)**. Join the team on** [**Discord**](https://discord.gg/ZpZuw7p)**.**
+**Want to learn more? Check out the** [**open source code**](https://github.com/offchainlabs/arbitrum)**. Join the team on** [**Discord**](https://discord.gg/ZpZuw7p)**.**
 
 ## Setup Blockchain
 
