@@ -15,35 +15,35 @@ Clients need to wait until they can have enough confidence in a transaction's ac
 
 There are three models of confirmation that a client can choose to rely on.
 
-_In Arbitrum Rollup Beta 1, clients use the second option, relying on the validator they're connected to._  
+_In the current Arbitrum beta version, clients use the third option by default, relying on the aggregator they're connected to._  
 In later versions, the client software will be able to choose which model to rely on.
 
 ### On-chain confirmation of your transaction
 
 The strongest type of confirmation is on-chain confirmation.
-This is when an ArbChain's on-chain manager records the transaction's confirmation.
-Once the confirmation is solidly recorded on-chain, it will never be undone.
+This is when an ArbChain's on-chain EthBridge records the transaction's confirmation.
+Once the confirmation is solidly confirmed on-chain, it will never be undone.
 
 On-chain confirmation is typically slower than the other types.
 
 ### Validators staked on your transaction
 
-The ArbChain's validators will all place stakes on proposed future histories of the chain.
+The ArbChain's validators will place stakes on proposed future histories of the chain.
 Arbitrum enforces two rules regarding those stakes:
 
 - If a validator is staked on a correct future history, it can force that history to be confirmed by the system eventually.
 - If a validator is staked on a history that is not confirmed, that validator will lose its stake.
 
-You can choose to treat a transaction as final when a validator of your choice is staked on a history containing that transaction.
+You can choose to treat a transaction as final when a validator or validators who you trust are staked on a history containing that transaction.
 
 If you are a validator, then you can rely on yourself.
 If your transaction is part of the correct future, you can be sure the transaction will be confirmed.
 Of course, you can always become a validator, if you want to make sure your correct transactions will be confirmed.
 
-### Validators or observers vouching for the transaction, without staking
+### Validators or aggregators vouching for the transaction, without staking
 
-The weakest form of evidence for a pending transaction is that people you trust say it is on the correct future history.
-If they aren't staked on that future, they have nothing to lose if they're lying, except possibly their reputation.
+The weakest form of evidence for a pending transaction is that someone you trust says it is on the correct future history.
+If they aren't staked on that future, they will not directly be penalized if they're lying, except possibly their reputation.
 But if you strongly trust them, that might be enough.
 
 
