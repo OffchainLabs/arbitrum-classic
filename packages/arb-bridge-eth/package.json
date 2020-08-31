@@ -1,11 +1,10 @@
 {
   "name": "arb-bridge-eth",
   "private": true,
-  "version": "0.6.5",
+  "version": "0.7.0",
   "description": "",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
-  "main": "truffle-config.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/OffchainLabs/arbitrum.git"
@@ -18,45 +17,67 @@
     "test": "test"
   },
   "scripts": {
-    "build": "truffle compile",
-    "migrate:ropsten": "truffle migrate --reset --network ropsten",
-    "migrate:rinkeby": "truffle migrate --reset --network rinkeby",
-    "migrate:kovan": "truffle migrate --reset --network kovan",
-    "flatten": "truffle-flattener contracts/* > arbitrum_flat.sol",
-    "truffle": "truffle",
-    "docker:build:parity": "docker build -t arb-bridge-eth .",
-    "docker:build:ganache": "docker build -t arb-bridge-eth-ganache -f ganache.Dockerfile .",
+    "build": "buidler compile",
+    "test": "rm -rf deployments/buidlerevm_31337 && buidler typechain && buidler test",
+    "test:gas": "rm -rf deployments/buidlerevm_31337 && buidler typechain && REPORT_GAS=true buidler test --network localhost",
+    "test:gas:ci": "CI=true yarn test:gas && mv gasReporterOutput.json ../..",
+    "test:coverage": "rm -rf deployments/buidlerevm_31337 && buidler typechain && buidler coverage",
+    "lint:js": "eslint .",
+    "lint:solidity": "solhint 'contracts/**/*.sol'",
+    "lint": "yarn lint:solidity && yarn lint:js",
+    "format": "prettier './**/*.{js,json,md,ts,yml,sol}' --write && yarn lint --fix",
+    "migrate:ropsten": "buidler deploy --network ropsten",
+    "migrate:rinkeby": "buidler deploy --network rinkeby",
+    "migrate:kovan": "buidler deploy --network kovan",
+    "migrate:geth": "rm -rf deployments/parity_44010 && buidler deploy --network parity",
+    "run:local:geth": "./scripts/run-geth && yarn migrate:geth",
+    "flatten": "buidler flatten > arbitrum_flat.sol",
     "docker:build:geth": "docker build -t arb-bridge-eth-geth -f geth.Dockerfile .",
-    "docker:parity": "./scripts/launch-parity",
-    "docker:ganache": "./scripts/launch-ganache",
-    "docker:geth": "./scripts/launch-geth",
-    "verify": "./scripts/verify"
-  },
-  "module": {
-    "loaders": [
-      {
-        "test": ".sol",
-        "loader": "truffle-solidity"
-      }
-    ]
+    "docker:geth": "rm -rf deployments/parity_44010 && ./scripts/launch-geth",
+    "verify": "buidler etherscan-verify --api-key $(dotenv -p ETHERSCAN_API_KEY)",
+    "typechain": "buidler typechain"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^2.5.0"
+    "@nomiclabs/buidler": "^1.4.4",
+    "@nomiclabs/buidler-ethers": "^1.3.4",
+    "@types/node": "^14.0.13",
+    "buidler-deploy": "^0.5.18",
+    "dotenv": "^8.2.0",
+    "ethers": "^4.0.27",
+    "ts-node": "^9.0.0",
+    "typescript": "^4.0.2"
   },
   "devDependencies": {
-    "@openzeppelin/test-helpers": "^0.5.4",
-    "@truffle/hdwallet-provider": "^1.0.34",
-    "dotenv": "^8.2.0",
-    "eth-gas-reporter": "^0.2.17",
-    "ethereumjs-util": "^6.2.0",
-    "truffle": "^5.1.11",
-    "truffle-flattener": "^1.4.2",
-    "truffle-plugin-verify": "^0.3.10"
-  },
-  "workspaces": {
-    "nohoist": [
-      "@openzeppelin/contracts",
-      "eth-gas-reporter"
-    ]
+    "@codechecks/client": "^0.1.10",
+    "@nomiclabs/buidler-etherscan": "^1.3.3",
+    "@nomiclabs/buidler-waffle": "^1.3.5",
+    "@openzeppelin/contracts": "^2.5.0",
+    "@typechain/ethers-v4": "^1.0.0",
+    "@typechain/truffle-v4": "^2.0.3",
+    "@typechain/truffle-v5": "^2.0.2",
+    "@typechain/web3-v1": "^1.0.0",
+    "@types/chai": "^4.2.11",
+    "@types/chai-as-promised": "^7.1.2",
+    "@types/mocha": "^7.0.2",
+    "@typescript-eslint/eslint-plugin": "^3.4.0",
+    "@typescript-eslint/parser": "^3.4.0",
+    "arb-provider-ethers": "^0.7.0",
+    "buidler-gas-reporter": "^0.1.3",
+    "buidler-spdx-license-identifier": "^1.0.2",
+    "buidler-typechain": "^0.1.1",
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "dotenv-cli": "^3.2.0",
+    "eslint": "^7.3.1",
+    "ethereum-waffle": "^2.3.0",
+    "mocha": "^7.1.2",
+    "mocha-junit-reporter": "^2.0.0",
+    "prettier": "^2.0.5",
+    "prettier-plugin-solidity": "^1.0.0-alpha.54",
+    "solhint": "^3.2.0",
+    "solhint-plugin-prettier": "^0.0.5",
+    "solidity-coverage": "^0.7.7",
+    "ts-generator": "^0.0.8",
+    "typechain": "^2.0.0"
   }
 }

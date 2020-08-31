@@ -17,17 +17,14 @@
 #ifndef checkpointutils_hpp
 #define checkpointutils_hpp
 
-#include <avm_values/codepoint.hpp>
+#include <avm_values/codepointstub.hpp>
 #include <avm_values/tuple.hpp>
 
-extern std::unordered_map<int, int> blockreason_type_length;
+#include <rocksdb/slice.h>
 
-namespace checkpoint {
-namespace utils {
-uint64_t deserialize_uint64(const char*& bufptr);
-void serializeCodePointStub(const CodePointStub& val,
-                            std::vector<unsigned char>& value_vector);
-}  // namespace utils
-}  // namespace checkpoint
+template <typename T>
+inline rocksdb::Slice vecToSlice(const T& vec) {
+    return {reinterpret_cast<const char*>(vec.data()), vec.size()};
+}
 
 #endif /* checkpointutils_hpp */

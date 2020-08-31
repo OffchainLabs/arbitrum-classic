@@ -23,13 +23,16 @@ ENV PATH="/home/user/.npm-global/bin:${PATH}"
 WORKDIR "/home/user/"
 RUN mkdir -p /home/user/.npm-global && \
     npm config set prefix "/home/user/.npm-global" && \
-    npm install -g ganache-cli@6.5.0 truffle@5.0.30 yarn@1.17.3
+    npm install -g ganache-cli@6.5.0
 COPY package.json ./
-RUN yarn --production --frozen-lockfile --non-interactive
+RUN npm install --only=prod --ignore-scripts --no-package-lock
 
 # Source code
-COPY . ./
-RUN truffle compile
+COPY deploy ./deploy
+COPY contracts ./contracts
+COPY buidler.config.ts .
+COPY tsconfig.docker.json tsconfig.json
+COPY parity ./parity
 
 # Global arguments
 ARG MNEMONIC
@@ -38,12 +41,11 @@ ENV MNEMONIC=$MNEMONIC \
     NUM_WALLETS=$NUM_WALLETS
 
 # Generate bridge_eth_addresses.json for export
-RUN PORT=$(awk '/port: / {print $2}' truffle-config.js | sed 's/,//g');\
-    mkdir db && ganache-cli --db db -e 100000 \
+RUN mkdir db && ganache-cli --db db -e 100000 \
         -p 7545 -a "${NUM_WALLETS}" -m "${MNEMONIC}" & \
     while ! nc -z localhost 7545; do sleep 2; done; \
     echo "Finished waiting for ganache on localhost:${PORT}..." && \
-    truffle migrate -q && [ -f bridge_eth_addresses.json ]
+    DOCKER=true npx buidler deploy --network parity && [ -f bridge_eth_addresses.json ]
 
 
 # Minimize image
@@ -66,7 +68,6 @@ COPY --from=0 --chown=user /home/user/build /home/user/build
 COPY --from=0 --chown=user /home/user/db /home/user/db
 
 # Source files
-COPY --chown=user . ./
 
 ARG MNEMONIC
 ARG NUM_WALLETS

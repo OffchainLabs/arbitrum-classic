@@ -4,53 +4,20 @@ title: Solidity Support
 custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Solidity_Support.md
 ---
 
-Arbitrum Rollup allows you to deploy a set of Solidity contracts as a trustless layer 2 sidechain. To accomplish this, Arbitrum compiles the contracts to run on a customized virtual machine architecture, optimized for off-chain execution.
+Arbitrum Rollup supports EVM transactions, and therefore allows you to trustlessly deploy Solidity contracts (as well as Vyper or any other language that compile to EVM). Arbitrum supports almost all Solidity code as expected with a few exceptions that we detail below.
 
-# Compilation
+# Differences from Solidity on Ethereum
 
-A set of solidity contracts can be compiled into an Arbitrum executable file, which can be used to launch an Arbitrum Chain.
+Although Arbitrum supports Solidity code, there are differences in the effects of a few operations, including language features that don't make much sense in the Layer 2 context.
 
-Currently the only supported deployment mechanism for Arbitrum is through a truffle plugin. Add the following block to your `truffle-config.js` file to add an Arbitrum deployment configuration to your project.
+- `tx.gasprice` will return 1
+- `block.blockhash(x)` will always return zero
+- `block.coinbase` will return zero
+- `block.difficulty` will return the constant 2500000000000000
+- `block.gaslimit` will return the constant 10000000000
+- `gasleft` will return the amount of ArbGas remaining
 
-```js
-arbitrum: {
-  provider: function() {
-    if (typeof this.provider.prov == "undefined") {
-      this.provider.prov = ArbProvider.provider(
-        __dirname,
-        "build/contracts",
-        {
-          mnemonic: mnemonic
-        }
-      );
-    }
-    return this.provider.prov;
-  },
-  network_id: "*"
-}
-```
 
-After configuring truffle, compile your contracts into an Arbitrum executable file using:
+# Time
 
-`truffle migrate --network arbitrum`
-
-Running that command will produce a compiled Arbitrum VM binary, `contract.ao`.
-
-# Restrictions
-
-Although we support most solidity code, there are a number of restrictions that currently exist.
-
-- Unsupported Solidity Features:
-
-  - `blockhash(uint blockNumber) returns (bytes32)`
-  - `block.coinbase`
-  - `block.difficulty`
-  - `block.gaslimit`
-  - `gasleft() returns (uint256)`
-  - General contract creation
-
-# Workarounds
-
-- Contract cloning
-  - Despite the fact that we don't support standard contract creation, we do support the cloning of already deployed contracts (producing a similar result as [EIP-1167](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1167.md)).
-  - Cloning an existing contract is done through `ArbSys(100).cloneContract(contractAddress)`
+Abitrum supports `block.number` and `block.timestamp`. For the semantics of these features in the Arbitrum context, please see [Time in Arbitrum](Time_in_Arbitrum.md).

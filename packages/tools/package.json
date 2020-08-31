@@ -1,0 +1,29 @@
+{
+  "name": "tools",
+  "version": "0.7.0",
+  "main": "index.js",
+  "license": "Apache-2.0",
+  "private": true,
+  "scripts": {
+    "demo:initialize": "ts-node ./scripts/setup_validators_demo.ts init",
+    "prod:initialize": "ts-node ./scripts/setup_validators.ts init"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^9.0.1",
+    "@types/yargs": "^15.0.5",
+    "@typescript-eslint/eslint-plugin": "^3.4.0",
+    "@typescript-eslint/parser": "^3.4.0",
+    "arb-provider-ethers": "^0.7.0",
+    "ethers": "^4.0.27",
+    "fs-extra": "^9.0.1",
+    "ts-node": "^9.0.0",
+    "typescript": "^4.0.2",
+    "yargs": "^15.4.1"
+  },
+  "workspaces": {
+    "nohoist": [
+      "@types/fs-extra",
+      "fs-extra"
+    ]
+  }
+}

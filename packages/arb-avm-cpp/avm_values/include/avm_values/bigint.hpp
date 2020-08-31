@@ -14,41 +14,32 @@
  * limitations under the License.
  */
 
-// Ported from
-// https://github.com/microsoft/eEVM/blob/master/include/eEVM/bigint.h Copyright
-// (c) Microsoft Corporation. All rights reserved. Licensed under the MIT
-// License.
-
 #ifndef bigint_hpp
 #define bigint_hpp
 
-#include <boost/multiprecision/cpp_int.hpp>
+#include <intx/intx.hpp>
 
-/* Boosts big integers behave (sort of) unexpected in the following sense.
-numeric_limits<int256_t>::max() == numeric_limits<uint256_t>::max() == (1 <<
-256) -1 I.e., the sign is stored in a separate bit.
-*/
+#include <vector>
 
-using uint128_t = boost::multiprecision::uint128_t;
-using uint256_t = boost::multiprecision::uint256_t;
-using uint512_t = boost::multiprecision::uint512_t;
-
-using int128_t = boost::multiprecision::int128_t;
-using int256_t = boost::multiprecision::int256_t;
-using int512_t = boost::multiprecision::int512_t;
+using uint256_t = intx::uint256;
+using uint512_t = intx::uint512;
 
 inline int get_sign(uint256_t v) {
     return (v >> 255) ? -1 : 1;
 }
 
-inline auto power(uint256_t b, uint64_t e) {
-    return boost::multiprecision::pow(b, static_cast<unsigned int>(e));
-}
-
 uint256_t hash(const uint256_t& val);
 
-inline bool bit(uint256_t x, int i) {
-    return boost::multiprecision::bit_test(x, i);
+void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf);
+
+inline char* to_big_endian(const uint256_t& val, char* it) {
+    intx::be::unsafe::store(reinterpret_cast<unsigned char*>(it), val);
+    return it + 32;
+}
+
+inline unsigned char* to_big_endian(const uint256_t& val, unsigned char* it) {
+    intx::be::unsafe::store(it, val);
+    return it + 32;
 }
 
 #endif /* bigint_hpp */

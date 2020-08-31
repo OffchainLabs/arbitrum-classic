@@ -17,10 +17,10 @@
 package arbbridge
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
@@ -45,7 +45,7 @@ func MergeEventsUnsafe(events1 []Event, events2 []Event) []Event {
 		} else {
 			event1 := events1[events1Index]
 			event2 := events2[events2Index]
-			if event1.GetChainInfo().BlockId.Height.AsInt().Cmp(event2.GetChainInfo().BlockId.Height.AsInt()) < 0 {
+			if event1.GetChainInfo().Cmp(event2.GetChainInfo()) < 0 {
 				events = append(events, events1[events1Index])
 				events1Index++
 			} else {
@@ -60,11 +60,26 @@ func MergeEventsUnsafe(events1 []Event, events2 []Event) []Event {
 type ChainInfo struct {
 	BlockId  *common.BlockId
 	LogIndex uint
-	TxHash   [32]byte
 }
 
 func (c ChainInfo) GetChainInfo() ChainInfo {
 	return c
+}
+
+func (c ChainInfo) Cmp(o ChainInfo) int {
+	heightDiff := c.BlockId.Height.Cmp(o.BlockId.Height)
+	if heightDiff != 0 {
+		return heightDiff
+	}
+
+	if c.LogIndex > o.LogIndex {
+		return 1
+	}
+	if c.LogIndex < o.LogIndex {
+		return -1
+	}
+
+	return 0
 }
 
 type StakeCreatedEvent struct {
@@ -106,8 +121,17 @@ type StakeMovedEvent struct {
 
 type AssertedEvent struct {
 	ChainInfo
-	PrevLeafHash common.Hash
-	Disputable   *valprotocol.DisputableNode
+	PrevLeafHash     common.Hash
+	AssertionParams  *valprotocol.AssertionParams
+	MaxInboxTop      common.Hash
+	MaxInboxCount    *big.Int
+	NumGas           uint64
+	AfterMachineHash common.Hash
+	AfterInboxHash   common.Hash
+	LastMessageHash  common.Hash
+	MessageCount     uint64
+	LastLogHash      common.Hash
+	LogCount         uint64
 }
 
 type ConfirmedEvent struct {
@@ -160,14 +184,13 @@ type MessagesBisectionEvent struct {
 
 type ExecutionBisectionEvent struct {
 	ChainInfo
-	Assertions []*valprotocol.ExecutionAssertionStub
-	TotalSteps uint64
-	Deadline   common.TimeTicks
+	AssertionHashes []common.Hash
+	Deadline        common.TimeTicks
 }
 
 type MessageDeliveredEvent struct {
 	ChainInfo
-	Message message.Received
+	Message inbox.InboxMessage
 }
 
 type NewTimeEvent struct {

@@ -19,6 +19,9 @@
 
 #include <avm_values/value.hpp>
 
+#include <map>
+#include <set>
+
 struct DeleteResults;
 struct SaveResults;
 class Transaction;
@@ -26,9 +29,17 @@ class Transaction;
 template <typename T>
 struct DbResult;
 
-DbResult<value> getValue(const Transaction& transaction,
-                         uint256_t value_hash,
-                         TuplePool* pool);
+SaveResults saveValueImpl(Transaction& transaction,
+                          const value& val,
+                          std::map<uint64_t, uint64_t>& segment_counts);
+DeleteResults deleteValueImpl(Transaction& transaction,
+                              const uint256_t& value_hash,
+                              std::map<uint64_t, uint64_t>& segment_counts);
+DbResult<value> getValueImpl(const Transaction& transaction,
+                             uint256_t value_hash,
+                             std::set<uint64_t>& segment_ids);
+
+DbResult<value> getValue(const Transaction& transaction, uint256_t value_hash);
 SaveResults saveValue(Transaction& transaction, const value& val);
 DeleteResults deleteValue(Transaction& transaction, uint256_t value_hash);
 

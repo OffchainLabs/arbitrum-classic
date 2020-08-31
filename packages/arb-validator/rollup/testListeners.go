@@ -18,6 +18,10 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -36,7 +40,7 @@ const (
 )
 
 type evil_WrongAssertionListener struct {
-	*ValidatorChainListener
+	*chainlistener.ValidatorChainListener
 	kind WrongAssertionType
 }
 
@@ -45,24 +49,26 @@ func NewEvil_WrongAssertionListener(
 	actor arbbridge.ArbRollup,
 	kind WrongAssertionType,
 ) *evil_WrongAssertionListener {
-	return &evil_WrongAssertionListener{NewValidatorChainListener(context.Background(), rollupAddress, actor), kind}
+	return &evil_WrongAssertionListener{chainlistener.NewValidatorChainListener(context.Background(), rollupAddress, actor), kind}
 }
 
-func (lis *evil_WrongAssertionListener) AssertionPrepared(ctx context.Context, obs *ChainObserver, assertion *PreparedAssertion) {
+func (lis *evil_WrongAssertionListener) AssertionPrepared(
+	ctx context.Context,
+	params valprotocol.ChainParams,
+	nodeGraph *nodegraph.StakedNodeGraph,
+	nodeLocation *structures.Node,
+	prepared *chainlistener.PreparedAssertion) {
 	badHash := common.Hash{}
 	badHash[5] = 37
 	switch lis.kind {
 	case WrongInboxTopAssertion:
-		assertion.claim.AfterInboxTop = badHash
+		prepared.AssertionStub.AfterInboxHash = badHash
 		log.Println("Prepared EVIL inbox top assertion")
-	case WrongMessagesSliceAssertion:
-		assertion.claim.ImportedMessagesSlice = badHash
-		log.Println("Prepared EVIL imported messages assertion")
 	case WrongExecutionAssertion:
-		assertion.claim.AssertionStub.AfterHash = badHash
+		prepared.AssertionStub.AfterMachineHash = badHash
 		log.Println("Prepared EVIL execution assertion")
 	default:
 		log.Fatal("unrecognized evil listener type")
 	}
-	lis.ValidatorChainListener.AssertionPrepared(ctx, obs, assertion)
+	lis.ValidatorChainListener.AssertionPrepared(ctx, params, nodeGraph, nodeLocation, prepared)
 }

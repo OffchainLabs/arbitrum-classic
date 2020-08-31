@@ -17,93 +17,55 @@
 #ifndef tuple_hpp
 #define tuple_hpp
 
-#include <avm_values/codepoint.hpp>
+#include <avm_values/codepointstub.hpp>
 #include <avm_values/exceptions.hpp>
 #include <avm_values/pool.hpp>
 #include <avm_values/value.hpp>
 
 #include <memory>
 
-uint256_t zeroHash();
-
-class HashPreImage {
-   private:
-    std::array<unsigned char, 32> firstHash;
-    uint256_t valueSize;
-
-   public:
-    HashPreImage() = default;
-    HashPreImage(std::array<unsigned char, 32> _firstHash,
-                 uint256_t _valueSize) {
-        firstHash = _firstHash;
-        valueSize = _valueSize;
-    }
-    std::array<unsigned char, 32> getFirstHash() const { return firstHash; }
-    uint256_t getSize() const { return valueSize; }
-    void marshal(std::vector<unsigned char>& buf) const;
-    uint256_t hash() const;
-};
-
-inline uint256_t hash(const HashPreImage& hv) {
-    return hv.hash();
-}
-
-inline bool operator==(const HashPreImage& val1, const HashPreImage& val2) {
-    return val1.hash() == val2.hash();
-}
-
-inline bool operator!=(const HashPreImage& val1, const HashPreImage& val2) {
-    return val1.hash() != val2.hash();
-}
-
-std::ostream& operator<<(std::ostream& os, const HashPreImage& val);
+HashPreImage zeroPreimage();
+struct BasicValChecker;
 
 class Tuple {
    private:
-    TuplePool* tuplePool;
     std::shared_ptr<RawTuple> tpl;
-    uint256_t value_size = 1;
 
-    friend uint256_t hash(const Tuple&);
+    void calculateHashPreImage() const;
+
+    friend BasicValChecker;
+    friend RawTuple;
 
    public:
-    Tuple() = default;
-    uint256_t calculateHash() const;
-    uint256_t getSize() const;
+    Tuple() : tpl(nullptr) {}
 
-    Tuple(TuplePool* pool, size_t size) {
+    uint256_t getSize() const { return getHashPreImage().getSize(); }
+
+    explicit Tuple(size_t size) {
         if (size > 0) {
-            tuplePool = pool;
-            tpl = pool->getResource(size);
+            tpl = TuplePool::get_impl().getResource(size);
             for (size_t i = 0; i < size; i++) {
                 tpl->data.push_back(Tuple{});
             }
-            tpl->deferredHashing = true;
         }
     }
 
-    Tuple(value val, TuplePool* pool);
+    explicit Tuple(value val);
 
-    Tuple(value val1, value val2, TuplePool* pool);
+    Tuple(value val1, value val2);
 
-    Tuple(value val1, value val2, value val3, TuplePool* pool);
+    Tuple(value val1, value val2, value val3);
 
-    Tuple(value val1, value val2, value val3, value val4, TuplePool* pool);
+    Tuple(value val1, value val2, value val3, value val4);
 
-    Tuple(value val1,
-          value val2,
-          value val3,
-          value val4,
-          value val5,
-          TuplePool* pool);
+    Tuple(value val1, value val2, value val3, value val4, value val5);
 
     Tuple(value val1,
           value val2,
           value val3,
           value val4,
           value val5,
-          value val6,
-          TuplePool* pool);
+          value val6);
 
     Tuple(value val1,
           value val2,
@@ -111,8 +73,7 @@ class Tuple {
           value val4,
           value val5,
           value val6,
-          value val7,
-          TuplePool* pool);
+          value val7);
 
     Tuple(value val1,
           value val2,
@@ -121,12 +82,9 @@ class Tuple {
           value val5,
           value val6,
           value val7,
-          value val8,
-          TuplePool* pool);
+          value val8);
 
-    Tuple(std::vector<value> values, TuplePool* pool);
-
-    void computeValueSize();
+    Tuple(std::vector<value> values);
 
     uint64_t tuple_size() const {
         if (tpl) {
@@ -140,14 +98,12 @@ class Tuple {
         if (pos >= tuple_size()) {
             throw bad_tuple_index{};
         }
-        std::shared_ptr<RawTuple> tmp = tuplePool->getResource(tuple_size());
-
+        std::shared_ptr<RawTuple> tmp =
+            TuplePool::get_impl().getResource(tuple_size());
         std::copy(tpl->data.begin(), tpl->data.end(),
                   std::back_inserter(tmp->data));
-        tpl = tmp;
-
+        tpl = std::move(tmp);
         tpl->data[pos] = std::move(newval);
-        computeValueSize();
         tpl->deferredHashing = true;
     }
 
@@ -158,23 +114,23 @@ class Tuple {
         return tpl->data[pos];
     }
 
-    void marshal(std::vector<unsigned char>& buf, const Code& code) const;
-    value clone_shallow();
+    const value& get_element_unsafe(uint64_t pos) const {
+        return tpl->data[pos];
+    }
 
-    HashPreImage getHashPreImage() const;
+    HashPreImage getHashPreImage() const {
+        if (!tpl) {
+            return zeroPreimage();
+        }
+        if (tpl->deferredHashing) {
+            calculateHashPreImage();
+        }
+        return tpl->cachedPreImage;
+    }
 };
 
 inline uint256_t hash(const Tuple& tup) {
-    if (tup.tpl) {
-        if (tup.tpl->deferredHashing) {
-            tup.tpl->cachedHash = tup.calculateHash();
-            tup.tpl->deferredHashing = false;
-        }
-        return tup.tpl->cachedHash;
-    } else {
-        static uint256_t zeroHashVal = zeroHash();
-        return zeroHashVal;
-    }
+    return hash(tup.getHashPreImage());
 }
 
 inline bool operator==(const Tuple& val1, const Tuple& val2) {

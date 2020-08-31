@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,15 +16,14 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
-
+pragma solidity ^0.5.11;
 
 library DebugPrint {
-    function char(byte b) private pure returns (byte c) {
+    function char(bytes1 b) private pure returns (bytes1 c) {
         if (uint8(b) < 10) {
-            return byte(uint8(b) + 0x30);
+            return bytes1(uint8(b) + 0x30);
         } else {
-            return byte(uint8(b) + 0x57);
+            return bytes1(uint8(b) + 0x57);
         }
     }
 
@@ -30,11 +31,11 @@ library DebugPrint {
         bytes memory s = new bytes(64);
 
         for (uint256 i = 0; i < 32; i++) {
-            byte b = byte(b32[i]);
-            byte hi = byte(uint8(b) / 16);
-            byte lo = byte(uint8(b) - 16 * uint8(hi));
-            s[i*2] = char(hi);
-            s[i*2+1] = char(lo);
+            bytes1 b = bytes1(b32[i]);
+            bytes1 hi = bytes1(uint8(b) / 16);
+            bytes1 lo = bytes1(uint8(b) - 16 * uint8(hi));
+            s[i * 2] = char(hi);
+            s[i * 2 + 1] = char(lo);
         }
 
         out = string(s);
@@ -55,7 +56,7 @@ library DebugPrint {
         bytes memory bstr = new bytes(len);
         uint256 k = len - 1;
         while (_i != 0) {
-            bstr[k--] = byte(uint8(48 + _i % 10));
+            bstr[k--] = bytes1(uint8(48 + (_i % 10)));
             _i /= 10;
         }
         return string(bstr);

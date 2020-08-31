@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,66 +16,65 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
-
+pragma solidity ^0.5.11;
 
 library ChallengeUtils {
+    uint256 public constant INVALID_INBOX_TOP_TYPE = 0;
+    uint256 public constant INVALID_EXECUTION_TYPE = 1;
+    uint256 public constant VALID_CHILD_TYPE = 2;
+
+    function getInvalidInboxType() internal pure returns (uint256) {
+        return INVALID_INBOX_TOP_TYPE;
+    }
+
+    function getInvalidExType() internal pure returns (uint256) {
+        return INVALID_EXECUTION_TYPE;
+    }
+
+    function getValidChildType() internal pure returns (uint256) {
+        return VALID_CHILD_TYPE;
+    }
 
     function inboxTopHash(
         bytes32 _lowerHash,
         bytes32 _topHash,
         uint256 _chainLength
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                _lowerHash,
-                _topHash,
-                _chainLength
-            )
-        );
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_lowerHash, _topHash, _chainLength));
     }
 
-    function messagesHash(
-        bytes32 _lowerHashA,
-        bytes32 _topHashA,
-        bytes32 _lowerHashB,
-        bytes32 _topHashB,
-        uint256 _chainLength
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                _lowerHashA,
-                _topHashA,
-                _lowerHashB,
-                _topHashB,
-                _chainLength
-            )
-        );
+    struct ExecutionAssertion {
+        uint64 numSteps;
+        uint64 numArbGas;
+        bytes32 beforeMachineHash;
+        bytes32 afterMachineHash;
+        bytes32 beforeInboxHash;
+        bytes32 afterInboxHash;
+        bytes32 firstMessageHash;
+        bytes32 lastMessageHash;
+        uint64 messageCount;
+        bytes32 firstLogHash;
+        bytes32 lastLogHash;
+        uint64 logCount;
     }
 
-    function executionHash(
-        uint64 _numSteps,
-        bytes32 _preconditionHash,
-        bytes32 _assertionHash
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                _numSteps,
-                _preconditionHash,
-                _assertionHash
-            )
-        );
+    function hash(ExecutionAssertion memory assertion) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    assertion.numSteps,
+                    assertion.numArbGas,
+                    assertion.beforeMachineHash,
+                    assertion.afterMachineHash,
+                    assertion.beforeInboxHash,
+                    assertion.afterInboxHash,
+                    assertion.firstMessageHash,
+                    assertion.lastMessageHash,
+                    assertion.messageCount,
+                    assertion.firstLogHash,
+                    assertion.lastLogHash,
+                    assertion.logCount
+                )
+            );
     }
 }

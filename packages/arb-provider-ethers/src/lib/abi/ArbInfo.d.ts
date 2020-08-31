@@ -36,20 +36,62 @@ export class ArbInfo extends Contract {
   interface: ArbInfoInterface
 
   functions: {
-    getBalance(account: string): Promise<BigNumber>
+    getBalance(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    getCode(account: string): Promise<string>
+    'getBalance(address)'(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    getCode(account: string, overrides?: TransactionOverrides): Promise<string>
+
+    'getCode(address)'(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<string>
   }
 
-  getBalance(account: string): Promise<BigNumber>
+  getBalance(
+    account: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
 
-  getCode(account: string): Promise<string>
+  'getBalance(address)'(
+    account: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
+
+  getCode(account: string, overrides?: TransactionOverrides): Promise<string>
+
+  'getCode(address)'(
+    account: string,
+    overrides?: TransactionOverrides
+  ): Promise<string>
 
   filters: {}
 
   estimate: {
-    getBalance(account: string): Promise<BigNumber>
+    getBalance(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
-    getCode(account: string): Promise<BigNumber>
+    'getBalance(address)'(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    getCode(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'getCode(address)'(
+      account: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
   }
 }

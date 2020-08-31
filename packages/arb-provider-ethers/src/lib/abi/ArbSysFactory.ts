@@ -14,13 +14,62 @@ export class ArbSysFactory {
 
 const _abi = [
   {
+    constant: true,
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'index',
+        type: 'uint256',
+      },
+    ],
+    name: 'getStorageAt',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    payable: false,
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    constant: true,
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+    ],
+    name: 'getTransactionCount',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    payable: false,
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     constant: false,
     inputs: [
       {
+        internalType: 'address',
         name: 'dest',
         type: 'address',
       },
       {
+        internalType: 'uint256',
         name: 'amount',
         type: 'uint256',
       },
@@ -35,10 +84,12 @@ const _abi = [
     constant: false,
     inputs: [
       {
+        internalType: 'address',
         name: 'dest',
         type: 'address',
       },
       {
+        internalType: 'uint256',
         name: 'id',
         type: 'uint256',
       },
@@ -53,112 +104,15 @@ const _abi = [
     constant: false,
     inputs: [
       {
+        internalType: 'address',
         name: 'dest',
         type: 'address',
-      },
-      {
-        name: 'amount',
-        type: 'uint256',
       },
     ],
     name: 'withdrawEth',
     outputs: [],
-    payable: false,
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    constant: true,
-    inputs: [],
-    name: 'blockLowerBound',
-    outputs: [
-      {
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    payable: false,
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    constant: true,
-    inputs: [],
-    name: 'timestampLowerBound',
-    outputs: [
-      {
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    payable: false,
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    constant: true,
-    inputs: [],
-    name: 'blockUpperBound',
-    outputs: [
-      {
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    payable: false,
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    constant: true,
-    inputs: [],
-    name: 'timestampUpperBound',
-    outputs: [
-      {
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    payable: false,
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    constant: true,
-    inputs: [
-      {
-        name: 'account',
-        type: 'address',
-      },
-    ],
-    name: 'getTransactionCount',
-    outputs: [
-      {
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    payable: false,
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    constant: false,
-    inputs: [
-      {
-        name: 'account',
-        type: 'address',
-      },
-    ],
-    name: 'cloneContract',
-    outputs: [
-      {
-        name: '',
-        type: 'address',
-      },
-    ],
-    payable: false,
-    stateMutability: 'nonpayable',
+    payable: true,
+    stateMutability: 'payable',
     type: 'function',
   },
 ]

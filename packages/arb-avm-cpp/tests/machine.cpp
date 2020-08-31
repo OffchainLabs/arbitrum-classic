@@ -59,83 +59,67 @@ void deleteCheckpoint(Transaction& transaction, Machine& machine) {
 }
 
 void restoreCheckpoint(CheckpointStorage& storage, Machine& expected_machine) {
-    auto ret = storage.getMachine(expected_machine.hash());
-    REQUIRE(ret.second);
-    REQUIRE(ret.first.hash() == expected_machine.hash());
+    auto mach = storage.getMachine(expected_machine.hash());
+    REQUIRE(mach.hash() == expected_machine.hash());
 }
 
 TEST_CASE("Checkpoint State") {
     DBDeleter deleter;
-    TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
+    storage.initialize(test_contract_path);
 
-    SECTION("default") {
-        auto ret = Machine::loadFromFile(test_contract_path);
-        REQUIRE(ret.second);
-        checkpointState(storage, ret.first);
-    }
-    SECTION("save twice") {
-        auto ret = Machine::loadFromFile(test_contract_path);
-        REQUIRE(ret.second);
-        checkpointStateTwice(storage, ret.first);
-    }
+    auto machine = storage.getInitialMachine();
+    machine.run(1, {}, std::chrono::seconds{0});
+
+    SECTION("default") { checkpointState(storage, machine); }
+    SECTION("save twice") { checkpointStateTwice(storage, machine); }
     SECTION("assert machine hash") {
-        auto ret = Machine::loadFromFile(test_contract_path);
-        REQUIRE(ret.second);
-        auto machine = std::move(ret.first);
-        Machine machine2 = storage.getInitialMachine();
         auto hash1 = machine.hash();
-        auto hash2 = machine2.hash();
         auto transaction = storage.makeTransaction();
         auto results = saveMachine(*transaction, machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
-        auto ret2 = storage.getMachine(hash1);
-        REQUIRE(ret2.second);
-        auto machine3 = std::move(ret2.first);
-        auto hash3 = machine3.hash();
-        REQUIRE(hash3 == hash2);
-        REQUIRE(hash1 == hash2);
+        auto machine2 = storage.getMachine(hash1);
+        auto hash2 = machine2.hash();
+        REQUIRE(hash2 == hash1);
     }
 }
 
 TEST_CASE("Delete machine checkpoint") {
     DBDeleter deleter;
-    TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
+    storage.initialize(test_contract_path);
 
     SECTION("default") {
-        auto ret = Machine::loadFromFile(test_contract_path);
-        REQUIRE(ret.second);
+        auto machine = storage.getInitialMachine();
+        machine.run(1, {}, std::chrono::seconds{0});
         auto transaction = storage.makeTransaction();
-        auto results = saveMachine(*transaction, ret.first);
-        deleteCheckpoint(*transaction, ret.first);
+        auto results = saveMachine(*transaction, machine);
+        deleteCheckpoint(*transaction, machine);
         REQUIRE(transaction->commit().ok());
     }
 }
 
 TEST_CASE("Restore checkpoint") {
     DBDeleter deleter;
-    TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
+    CheckpointStorage storage(dbpath);
+    storage.initialize(test_contract_path);
 
     SECTION("default") {
-        auto ret = Machine::loadFromFile(test_contract_path);
-        REQUIRE(ret.second);
+        auto machine = storage.getInitialMachine();
         auto transaction = storage.makeTransaction();
-        auto results = saveMachine(*transaction, ret.first);
+        auto results = saveMachine(*transaction, machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
-        restoreCheckpoint(storage, ret.first);
+        restoreCheckpoint(storage, machine);
     }
 }
 
 TEST_CASE("Proof") {
-    auto ret = Machine::loadFromFile(test_contract_path);
-    REQUIRE(ret.second);
+    auto machine = Machine::loadFromFile(test_contract_path);
     while (true) {
-        auto assertion = ret.first.run(1, {}, {}, std::chrono::seconds{0});
-        ret.first.marshalForProof();
+        auto assertion = machine.run(1, {}, std::chrono::seconds{0});
+        machine.marshalForProof();
         if (assertion.stepCount == 0) {
             break;
         }
@@ -143,16 +127,12 @@ TEST_CASE("Proof") {
 }
 
 TEST_CASE("Clone") {
-    auto ret = Machine::loadFromFile(test_contract_path);
-    REQUIRE(ret.second);
-    auto machine = std::move(ret.first);
+    auto machine = Machine::loadFromFile(test_contract_path);
     for (int i = 0; i < 100; i++) {
-        machine.machine_state.stack.push(Tuple(uint256_t{3}, uint256_t{6},
-                                               uint256_t{7}, uint256_t{2},
-                                               &machine.getPool()));
-        machine.machine_state.auxstack.push(Tuple(uint256_t{3}, uint256_t{6},
-                                                  uint256_t{7}, uint256_t{2},
-                                                  &machine.getPool()));
+        machine.machine_state.stack.push(
+            Tuple(uint256_t{3}, uint256_t{6}, uint256_t{7}, uint256_t{2}));
+        machine.machine_state.auxstack.push(
+            Tuple(uint256_t{3}, uint256_t{6}, uint256_t{7}, uint256_t{2}));
     }
 
     for (int i = 0; i < 1000; i++) {
@@ -162,30 +142,58 @@ TEST_CASE("Clone") {
 }
 
 TEST_CASE("Machine hash") {
-    DBDeleter deleter;
-    TuplePool pool;
-    CheckpointStorage storage(dbpath, test_contract_path);
-    MachineState machine = MachineState::loadFromFile(test_contract_path).first;
-    auto pcHash = ::hash(machine.static_values->code[machine.pc]);
+    MachineState machine = MachineState::loadFromFile(test_contract_path);
+    auto pcHash = ::hash(machine.loadCurrentInstruction());
     auto stackHash = machine.stack.hash();
     auto auxstackHash = machine.auxstack.hash();
     auto registerHash = ::hash_value(machine.registerVal);
-    auto staticHash = ::hash_value(machine.static_values->staticVal);
-    auto errHash = ::hash(machine.static_values->code[machine.errpc]);
+    auto staticHash = ::hash_value(machine.static_val);
+    auto errHash = ::hash(machine.errpc);
     auto machineHash = machine.hash();
 
-    REQUIRE(pcHash == uint256_t("7737343943613437755395141441291826898796163866"
-                                "8492301359045565991555588221763"));
-    REQUIRE(stackHash == uint256_t("4251290975118555612292311539115420848775231"
-                                   "0613213055089416300774052282720344"));
-    REQUIRE(auxstackHash == uint256_t("4251290975118555612292311539115420848775"
-                                      "2310613213055089416300774052282720344"));
-    REQUIRE(registerHash == uint256_t("4251290975118555612292311539115420848775"
-                                      "2310613213055089416300774052282720344"));
-    REQUIRE(staticHash == uint256_t("832315546794065743621037540472311669512067"
-                                    "66645942016669157541405145405171869"));
-    REQUIRE(errHash == uint256_t("817555893843236912662725763451298816577059146"
-                                 "21008081459572116739688988488432"));
-    REQUIRE(machineHash == uint256_t("38086450045779233370084791113969759535500"
-                                     "380524553750909191655579112918186895"));
+    REQUIRE(pcHash == intx::from_string<uint256_t>(
+                          "9437065110668622075464824926507979877827393212819455"
+                          "9331492955050019282050496"));
+    REQUIRE(stackHash == intx::from_string<uint256_t>(
+                             "4251290975118555612292311539115420848775231061321"
+                             "3055089416300774052282720344"));
+    REQUIRE(auxstackHash == intx::from_string<uint256_t>(
+                                "4251290975118555612292311539115420848775231061"
+                                "3213055089416300774052282720344"));
+    REQUIRE(registerHash == intx::from_string<uint256_t>(
+                                "4251290975118555612292311539115420848775231061"
+                                "3213055089416300774052282720344"));
+    REQUIRE(staticHash == intx::from_string<uint256_t>(
+                              "113182352889449210665994027227588754290969798016"
+                              "938687372921424809289618385856"));
+    REQUIRE(errHash == intx::from_string<uint256_t>(
+                           "817555893843236912662725763451298816577059146210080"
+                           "81459572116739688988488432"));
+    REQUIRE(machineHash == intx::from_string<uint256_t>(
+                               "12818298244055256727021237632105567892940754157"
+                               "945856618644698870485816765145"));
+}
+
+TEST_CASE("MachineTestVectors") {
+    DBDeleter deleter;
+
+    std::vector<std::string> files = {
+        "opcodetestarbgas",   "opcodetestdup",    "opcodetestecrecover",
+        "opcodetestethhash2", "opcodetesthash",   "opcodetestlogic",
+        "opcodetestmath",     "opcodeteststack",  "opcodetesttuple",
+        "opcodetestcode",     "opcodetestkeccakf"};
+
+    for (const auto& filename : files) {
+        DYNAMIC_SECTION(filename) {
+            auto test_file =
+                std::string{machine_test_cases_path} + "/" + filename + ".mexe";
+
+            auto mach = Machine::loadFromFile(test_file);
+            while (
+                nonstd::holds_alternative<NotBlocked>(mach.isBlocked(false))) {
+                mach.run(1, {}, std::chrono::seconds{0});
+            }
+            REQUIRE(mach.currentStatus() == Status::Halted);
+        }
+    }
 }

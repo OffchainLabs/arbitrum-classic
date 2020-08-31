@@ -20,6 +20,7 @@
 #include <avm/machinestate/blockreason.hpp>
 
 struct MachineState;
+class Tuple;
 
 const int send_size_limit = 10000;
 
@@ -34,6 +35,7 @@ void smod(MachineState& m);
 void addmod(MachineState& m);
 void mulmod(MachineState& m);
 void exp(MachineState& m);
+void signExtend(MachineState& m);
 void lt(MachineState& m);
 void gt(MachineState& m);
 void slt(MachineState& m);
@@ -45,10 +47,13 @@ void bitwiseOr(MachineState& m);
 void bitwiseXor(MachineState& m);
 void bitwiseNot(MachineState& m);
 void byte(MachineState& m);
-void signExtend(MachineState& m);
+void shl(MachineState& m);
+void shr(MachineState& m);
+void sar(MachineState& m);
 void hashOp(MachineState& m);
 void typeOp(MachineState& m);
 void ethhash2Op(MachineState& m);
+void keccakF(MachineState& m);
 void pop(MachineState& m);
 void spush(MachineState& m);
 void rpush(MachineState& m);
@@ -70,12 +75,26 @@ void swap2(MachineState& m);
 void tget(MachineState& m);
 void tset(MachineState& m);
 void tlen(MachineState& m);
+void xget(MachineState& m);
+void xset(MachineState& m);
+void ec_recover(MachineState& m);
 BlockReason breakpoint(MachineState&);
 void log(MachineState& m);
 void debug(MachineState& m);
 bool send(MachineState& m);
-void getTime(MachineState& m);
+BlockReason inboxPeekOp(MachineState& m);
 BlockReason inboxOp(MachineState& m);
+void setgas(MachineState& m);
+void pushgas(MachineState& m);
+void errcodept(MachineState& m);
+void pushinsn(MachineState& m);
+void pushinsnimm(MachineState& m);
+BlockReason sideload(MachineState& m);
+
+namespace internal {
+void encodeKeccakState(const Tuple& tup, uint64_t* state);
+Tuple decodeKeccakState(const uint64_t* state);
+}  // namespace internal
 }  // namespace machineoperation
 
 #endif /* machineoperation_hpp */

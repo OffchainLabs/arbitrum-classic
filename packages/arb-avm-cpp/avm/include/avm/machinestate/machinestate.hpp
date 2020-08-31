@@ -26,83 +26,75 @@
 #include <memory>
 #include <vector>
 
-struct TimeBounds {
-    uint256_t lowerBoundBlock;
-    uint256_t upperBoundBlock;
-    uint256_t lowerBoundTimestamp;
-    uint256_t upperBoundTimestamp;
-};
-
 struct AssertionContext {
-    TimeBounds timeBounds;
-    Tuple inbox;
+    std::vector<Tuple> inbox_messages;
+    uint64_t inbox_messages_consumed;
+    Tuple sideload_value;
     uint32_t numSteps;
-    bool didInboxInsn;
     uint64_t numGas;
+    bool blockingSideload;
+    nonstd::optional<value> fake_inbox_peek_value;
     std::vector<value> outMessage;
     std::vector<value> logs;
 
-    AssertionContext() = default;
+    AssertionContext() : inbox_messages_consumed(0), numSteps(0), numGas(0) {}
 
-    explicit AssertionContext(const TimeBounds& tb, Tuple inbox)
-        : timeBounds(tb),
-          inbox(std::move(inbox)),
-          numSteps{0},
-          didInboxInsn(false),
-          numGas{0} {}
+    AssertionContext(std::vector<Tuple> inbox_messages,
+                     Tuple sideload,
+                     bool blockingSideload_,
+                     nonstd::optional<value> fake_inbox_peek_value_);
 
-    void executedInbox() {
-        didInboxInsn = true;
-        inbox = Tuple();
+    // popInbox assumes that the number of messages already consumed is less
+    // than the number of messages in the inbox
+    Tuple popInbox() {
+        return std::move(inbox_messages[inbox_messages_consumed++]);
+    }
+
+    bool inboxEmpty() const {
+        return inbox_messages_consumed == inbox_messages.size();
     }
 };
 
 struct MachineState {
-    std::shared_ptr<TuplePool> pool;
-    std::shared_ptr<const StaticVmValues> static_values;
+    std::shared_ptr<Code> code;
+    mutable nonstd::optional<CodeSegmentSnapshot> loaded_segment;
     value registerVal;
+    value static_val;
     Datastack stack;
     Datastack auxstack;
+    uint256_t arb_gas_remaining;
     Status state = Status::Extensive;
     CodePointRef pc;
-    CodePointRef errpc;
+    CodePointStub errpc;
+    Tuple staged_message;
     AssertionContext context;
 
-    static std::pair<MachineState, bool> loadFromFile(
-        const std::string& contract_filename);
+    static MachineState loadFromFile(const std::string& executable_filename);
 
-    MachineState()
-        : pool(std::make_unique<TuplePool>()), pc(0, false), errpc(0, true) {}
+    MachineState();
 
-    MachineState(std::shared_ptr<const StaticVmValues> static_values_,
-                 std::shared_ptr<TuplePool> pool_)
-        : pool(std::move(pool_)),
-          static_values(std::move(static_values_)),
-          pc(0, false),
-          errpc(0, true) {}
+    MachineState(std::shared_ptr<Code> code_, value static_val);
 
-    MachineState(std::shared_ptr<TuplePool> pool_,
-                 std::shared_ptr<const StaticVmValues> static_values_,
+    MachineState(std::shared_ptr<Code> code_,
                  value register_val_,
+                 value static_val,
                  Datastack stack_,
                  Datastack auxstack_,
+                 uint256_t arb_gas_remaining_,
                  Status state_,
                  CodePointRef pc_,
-                 CodePointRef errpc_)
-        : pool(std::move(pool_)),
-          static_values(std::move(static_values_)),
-          registerVal(std::move(register_val_)),
-          stack(std::move(stack_)),
-          auxstack(std::move(auxstack_)),
-          state(state_),
-          pc(pc_),
-          errpc(errpc_) {}
+                 CodePointStub errpc_,
+                 Tuple staged_message_);
 
     uint256_t getMachineSize();
     std::vector<unsigned char> marshalForProof();
+    std::vector<unsigned char> marshalState() const;
     BlockReason runOp(OpCode opcode);
+    BlockReason runOne();
     uint256_t hash() const;
-    BlockReason isBlocked(uint256_t currentTime, bool newMessages) const;
+    BlockReason isBlocked(bool newMessages) const;
+
+    const CodePoint& loadCurrentInstruction() const;
 };
 
 #endif /* machinestate_hpp */

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,57 +16,53 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "../libraries/CloneFactory.sol";
 
 import "./IChallengeFactory.sol";
 import "./IBisectionChallenge.sol";
-import "./ChallengeType.sol";
+import "./IExecutionChallenge.sol";
+import "./ChallengeUtils.sol";
 
-
-contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
-
+contract ChallengeFactory is CloneFactory, IChallengeFactory {
     // Invalid challenge type
-    string constant INVALID_TYPE = "INVALID_TYPE";
+    string public constant INVALID_TYPE_STR = "INVALID_TYPE";
 
-    address public messagesChallengeTemplate;
-    address public inboxTopChallengeTemplate;
-    address public executionChallengeTemplate;
+    ICloneable public inboxTopChallengeTemplate;
+    ICloneable public executionChallengeTemplate;
+    address public oneStepProofAddress;
 
     constructor(
-        address _messagesChallengeTemplate,
         address _inboxTopChallengeTemplate,
-        address _executionChallengeTemplate
+        address _executionChallengeTemplate,
+        address _oneStepProofAddress
     ) public {
-        messagesChallengeTemplate = _messagesChallengeTemplate;
-        inboxTopChallengeTemplate = _inboxTopChallengeTemplate;
-        executionChallengeTemplate = _executionChallengeTemplate;
+        inboxTopChallengeTemplate = ICloneable(_inboxTopChallengeTemplate);
+        executionChallengeTemplate = ICloneable(_executionChallengeTemplate);
+        oneStepProofAddress = _oneStepProofAddress;
     }
 
     function generateCloneAddress(
         address asserter,
         address challenger,
         uint256 challengeType
-    )
-        public
-        view
-        returns(address)
-    {
-        return address(
-            uint160(
-                uint256(
-                    keccak256(
-                        abi.encodePacked(
-                            bytes1(0xff),
-                            address(this),
-                            generateNonce(asserter, challenger),
-                            cloneCodeHash(getChallengeTemplate(challengeType))
+    ) public view returns (address) {
+        return
+            address(
+                uint160(
+                    uint256(
+                        keccak256(
+                            abi.encodePacked(
+                                bytes1(0xff),
+                                address(this),
+                                generateNonce(asserter, challenger),
+                                cloneCodeHash(getChallengeTemplate(challengeType))
+                            )
                         )
                     )
                 )
-            )
-        );
+            );
     }
 
     function createChallenge(
@@ -73,11 +71,8 @@ contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
         uint256 _challengePeriodTicks,
         bytes32 _challengeHash,
         uint256 challengeType
-    )
-        external
-        returns(address)
-    {
-        address challengeTemplate = getChallengeTemplate(challengeType);
+    ) external returns (address) {
+        ICloneable challengeTemplate = getChallengeTemplate(challengeType);
         address clone = createClone(challengeTemplate);
         IBisectionChallenge(clone).initializeBisection(
             msg.sender,
@@ -86,30 +81,24 @@ contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
             _challengePeriodTicks,
             _challengeHash
         );
+
+        if (challengeType == ChallengeUtils.getInvalidExType()) {
+            IExecutionChallenge(clone).connectOneStepProof(oneStepProofAddress);
+        }
         return address(clone);
     }
 
-    function generateNonce(address asserter, address challenger) private view returns(uint) {
-        return uint(
-            keccak256(
-                abi.encodePacked(
-                    asserter,
-                    challenger,
-                    msg.sender
-                )
-            )
-        );
+    function generateNonce(address asserter, address challenger) private view returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(asserter, challenger, msg.sender)));
     }
 
-    function getChallengeTemplate(uint256 challengeType) private view returns(address) {
-        if (challengeType == INVALID_INBOX_TOP_TYPE) {
+    function getChallengeTemplate(uint256 challengeType) private view returns (ICloneable) {
+        if (challengeType == ChallengeUtils.getInvalidInboxType()) {
             return inboxTopChallengeTemplate;
-        } else if (challengeType == INVALID_MESSAGES_TYPE) {
-            return messagesChallengeTemplate;
-        } else if (challengeType == INVALID_EXECUTION_TYPE) {
+        } else if (challengeType == ChallengeUtils.getInvalidExType()) {
             return executionChallengeTemplate;
         } else {
-            require(false, INVALID_TYPE);
+            require(false, INVALID_TYPE_STR);
         }
     }
 }

@@ -19,17 +19,17 @@ package structures
 import (
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
 	"log"
 	"math/big"
+	"math/rand"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
 )
 
 var zeroBytes32 common.Hash // deliberately zeroed
@@ -42,13 +42,12 @@ type Node struct {
 	linkType    valprotocol.ChildType
 	vmProtoData *valprotocol.VMProtoData
 
-	machine         machine.Machine              // nil if unknown
-	assertion       *protocol.ExecutionAssertion // nil if not valid node or unknown
-	depth           uint64
-	nodeDataHash    common.Hash
-	innerHash       common.Hash
-	hash            common.Hash
-	assertionTxHash common.Hash
+	machine      machine.Machine              // nil if unknown
+	assertion    *protocol.ExecutionAssertion // nil if not valid node or unknown
+	depth        uint64
+	nodeDataHash common.Hash
+	innerHash    common.Hash
+	hash         common.Hash
 
 	successorHashes [valprotocol.MaxChildType + 1]common.Hash
 	numStakers      uint64
@@ -58,7 +57,7 @@ func (node *Node) String() string {
 	return fmt.Sprintf("Node(type: %v, disputable: %v, deadline: %v, protodata: %v)", node.linkType, node.disputable, node.deadline.Val, node.vmProtoData)
 }
 
-func NewInitialNode(mach machine.Machine, creationTxHash common.Hash) *Node {
+func NewInitialNode(mach machine.Machine) *Node {
 	ret := &Node{
 		prevHash:   common.Hash{},
 		prev:       nil,
@@ -67,12 +66,13 @@ func NewInitialNode(mach machine.Machine, creationTxHash common.Hash) *Node {
 		linkType:   0,
 		vmProtoData: valprotocol.NewVMProtoData(
 			mach.Hash(),
-			value.NewEmptyTuple().Hash(),
+			common.Hash{},
+			big.NewInt(0),
+			big.NewInt(0),
 			big.NewInt(0),
 		),
-		machine:         mach,
-		depth:           0,
-		assertionTxHash: creationTxHash,
+		machine: mach,
+		depth:   0,
 	}
 	ret.setHash(common.Hash{})
 	return ret
@@ -83,7 +83,6 @@ func NewValidNodeFromPrev(
 	disputable *valprotocol.DisputableNode,
 	params valprotocol.ChainParams,
 	currentTime *common.TimeBlocks,
-	assertionTxHash common.Hash,
 ) *Node {
 	return NewNodeFromPrev(
 		prev,
@@ -92,24 +91,50 @@ func NewValidNodeFromPrev(
 		params,
 		currentTime,
 		disputable.ValidAfterVMProtoData(prev.vmProtoData),
-		assertionTxHash,
 	)
 }
 
-func NewRandomNodeFromValidPrev(prev *Node, results []evm.Result) *Node {
-	assertion := evm.NewRandomEVMAssertion(results, []value.Value{})
+func NewRandomNodeFromValidPrev(prev *Node, inboxStack *MessageStack, messageCount uint64) *Node {
+	assertion := protocol.NewExecutionAssertionFromValues(
+		common.RandHash(),
+		common.RandHash(),
+		rand.Uint64(),
+		messageCount,
+		[]value.Value{value.NewInt64Value(0), value.NewInt64Value(2)},
+		[]value.Value{value.NewInt64Value(1), value.NewInt64Value(2)},
+	)
+
 	disputableNode := valprotocol.NewRandomDisputableNode(
-		valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
+		NewExecutionAssertionStubFromWholeAssertion(assertion, prev.VMProtoData().InboxTop, inboxStack),
 	)
 	nextNode := NewValidNodeFromPrev(
 		prev,
 		disputableNode,
 		valprotocol.NewRandomChainParams(),
 		common.NewTimeBlocks(common.RandBigInt()),
-		common.RandHash(),
 	)
 
 	_ = nextNode.UpdateValidOpinion(nil, assertion)
+	return nextNode
+}
+
+func NewRandomInvalidNodeFromValidPrev(
+	prev *Node,
+	stub *valprotocol.ExecutionAssertionStub,
+	kind valprotocol.ChildType,
+	params valprotocol.ChainParams,
+) *Node {
+	disputableNode := valprotocol.NewRandomDisputableNode(stub)
+
+	nextNode := NewInvalidNodeFromPrev(
+		prev,
+		disputableNode,
+		kind,
+		params,
+		common.NewTimeBlocks(common.RandBigInt()),
+	)
+
+	_ = nextNode.UpdateInvalidOpinion()
 	return nextNode
 }
 
@@ -119,7 +144,6 @@ func NewInvalidNodeFromPrev(
 	kind valprotocol.ChildType,
 	params valprotocol.ChainParams,
 	currentTime *common.TimeBlocks,
-	assertionTxHash common.Hash,
 ) *Node {
 	return NewNodeFromPrev(
 		prev,
@@ -128,7 +152,6 @@ func NewInvalidNodeFromPrev(
 		params,
 		currentTime,
 		prev.vmProtoData,
-		assertionTxHash,
 	)
 }
 
@@ -139,23 +162,21 @@ func NewNodeFromPrev(
 	params valprotocol.ChainParams,
 	currentTime *common.TimeBlocks,
 	vmProtoData *valprotocol.VMProtoData,
-	assertionTxHash common.Hash,
 ) *Node {
 	deadlineTicks := valprotocol.CalculateNodeDeadline(
-		disputable.AssertionClaim.AssertionStub,
+		disputable.Assertion,
 		params,
 		prev.deadline,
 		common.TicksFromBlockNum(currentTime),
 	)
 	ret := &Node{
-		prevHash:        prev.hash,
-		prev:            prev,
-		deadline:        deadlineTicks,
-		disputable:      disputable,
-		linkType:        kind,
-		vmProtoData:     vmProtoData,
-		depth:           prev.depth + 1,
-		assertionTxHash: assertionTxHash,
+		prevHash:    prev.hash,
+		prev:        prev,
+		deadline:    deadlineTicks,
+		disputable:  disputable,
+		linkType:    kind,
+		vmProtoData: vmProtoData,
+		depth:       prev.depth + 1,
 	}
 	ret.setHash(ret.calculateNodeDataHash(params))
 	return ret
@@ -171,10 +192,6 @@ func (node *Node) LinkSuccessor(successor *Node) error {
 
 func (node *Node) Hash() common.Hash {
 	return node.hash
-}
-
-func (node *Node) AssertionTxHash() common.Hash {
-	return node.assertionTxHash
 }
 
 func (node *Node) LinkType() valprotocol.ChildType {
@@ -273,27 +290,15 @@ func (node *Node) Equals(node2 *Node) bool {
 	return node.hash == node2.hash
 }
 
-func (node *Node) executionPreconditionHash() common.Hash {
-	vmProtoData := node.prev.vmProtoData
-
-	return hashing.SoliditySHA3(
-		hashing.Bytes32(vmProtoData.MachineHash),
-		hashing.TimeBlocks(node.disputable.AssertionParams.TimeBounds.LowerBoundBlock),
-		hashing.TimeBlocks(node.disputable.AssertionParams.TimeBounds.UpperBoundBlock),
-		hashing.Uint128(node.disputable.AssertionParams.TimeBounds.LowerBoundTimestamp),
-		hashing.Uint128(node.disputable.AssertionParams.TimeBounds.UpperBoundTimestamp),
-		hashing.Bytes32(node.disputable.AssertionClaim.ImportedMessagesSlice),
-	)
-}
-
 func (node *Node) calculateNodeDataHash(params valprotocol.ChainParams) common.Hash {
 	if node.disputable == nil {
 		return common.Hash{}
 	}
 	if node.linkType == valprotocol.ValidChildType {
 		return hashing.SoliditySHA3(
-			hashing.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastMessageHash),
-			hashing.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastLogHash),
+			hashing.Uint256(big.NewInt(0)),
+			hashing.Bytes32(node.disputable.Assertion.LastMessageHash),
+			hashing.Bytes32(node.disputable.Assertion.LastLogHash),
 		)
 	} else {
 		challengeDataHash, challengePeriodTicks := node.ChallengeNodeData(params)
@@ -311,29 +316,18 @@ func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash
 		inboxLeft := new(big.Int).Add(vmProtoData.InboxCount, node.disputable.AssertionParams.ImportedMessageCount)
 		inboxLeft = inboxLeft.Sub(node.disputable.MaxInboxCount, inboxLeft)
 		ret := valprotocol.InboxTopChallengeDataHash(
-			node.disputable.AssertionClaim.AfterInboxTop,
+			node.disputable.Assertion.AfterInboxHash,
 			node.disputable.MaxInboxTop,
 			inboxLeft,
-		)
-		challengePeriod := params.GracePeriod.Add(common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
-		return ret, challengePeriod
-	case valprotocol.InvalidMessagesChildType:
-		ret := valprotocol.MessageChallengeDataHash(
-			vmProtoData.InboxTop,
-			node.disputable.AssertionClaim.AfterInboxTop,
-			value.NewEmptyTuple().Hash(),
-			node.disputable.AssertionClaim.ImportedMessagesSlice,
-			node.disputable.AssertionParams.ImportedMessageCount,
 		)
 		challengePeriod := params.GracePeriod.Add(common.TicksFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
 		return ret, challengePeriod
 	case valprotocol.InvalidExecutionChildType:
 		ret := valprotocol.ExecutionDataHash(
 			node.disputable.AssertionParams.NumSteps,
-			node.executionPreconditionHash(),
-			node.disputable.AssertionClaim.AssertionStub.Hash(),
+			node.disputable.Assertion,
 		)
-		challengePeriod := params.GracePeriod.Add(node.disputable.AssertionClaim.AssertionStub.CheckTime(params))
+		challengePeriod := params.GracePeriod.Add(node.disputable.Assertion.CheckTime(params))
 		return ret, challengePeriod
 	default:
 		log.Fatal("Unhandled challenge type", node.linkType)
@@ -382,18 +376,17 @@ func (node *Node) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext, inclu
 	}
 
 	return &NodeBuf{
-		PrevHash:        node.prevHash.MarshalToBuf(),
-		Deadline:        node.deadline.MarshalToBuf(),
-		DisputableNode:  disputableNodeBuf,
-		LinkType:        uint32(node.linkType),
-		VmProtoData:     node.vmProtoData.MarshalToBuf(),
-		MachineHash:     machineHash,
-		Assertion:       node.assertion,
-		Depth:           node.depth,
-		NodeDataHash:    node.nodeDataHash.MarshalToBuf(),
-		InnerHash:       node.innerHash.MarshalToBuf(),
-		Hash:            node.hash.MarshalToBuf(),
-		AssertionTxHash: node.assertionTxHash.MarshalToBuf(),
+		PrevHash:       node.prevHash.MarshalToBuf(),
+		Deadline:       node.deadline.MarshalToBuf(),
+		DisputableNode: disputableNodeBuf,
+		LinkType:       uint32(node.linkType),
+		VmProtoData:    node.vmProtoData.MarshalToBuf(),
+		MachineHash:    machineHash,
+		Assertion:      node.assertion,
+		Depth:          node.depth,
+		NodeDataHash:   node.nodeDataHash.MarshalToBuf(),
+		InnerHash:      node.innerHash.MarshalToBuf(),
+		Hash:           node.hash.MarshalToBuf(),
 	}
 }
 
@@ -404,31 +397,23 @@ func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Node
 	}
 
 	node := &Node{
-		prevHash:        x.PrevHash.Unmarshal(),
-		prev:            nil,
-		deadline:        x.Deadline.Unmarshal(),
-		disputable:      disputableNode,
-		linkType:        valprotocol.ChildType(x.LinkType),
-		vmProtoData:     x.VmProtoData.Unmarshal(),
-		machine:         nil,
-		assertion:       x.Assertion,
-		depth:           x.Depth,
-		nodeDataHash:    x.NodeDataHash.Unmarshal(),
-		innerHash:       x.InnerHash.Unmarshal(),
-		hash:            x.Hash.Unmarshal(),
-		assertionTxHash: x.AssertionTxHash.Unmarshal(),
-		numStakers:      0,
+		prevHash:     x.PrevHash.Unmarshal(),
+		prev:         nil,
+		deadline:     x.Deadline.Unmarshal(),
+		disputable:   disputableNode,
+		linkType:     valprotocol.ChildType(x.LinkType),
+		vmProtoData:  x.VmProtoData.Unmarshal(),
+		machine:      nil,
+		assertion:    x.Assertion,
+		depth:        x.Depth,
+		nodeDataHash: x.NodeDataHash.Unmarshal(),
+		innerHash:    x.InnerHash.Unmarshal(),
+		hash:         x.Hash.Unmarshal(),
+		numStakers:   0,
 	}
 
 	if x.MachineHash != nil {
 		node.machine = ctx.GetMachine(x.MachineHash.Unmarshal())
-	}
-
-	if x.Assertion != nil {
-		calculatedStub := valprotocol.NewExecutionAssertionStubFromAssertion(node.assertion)
-		if !node.disputable.AssertionClaim.AssertionStub.Equals(calculatedStub) {
-			return nil, errors.New("assertion doesn't match stub")
-		}
 	}
 
 	// can't set up prev and successorHash fields yet; caller must do this later

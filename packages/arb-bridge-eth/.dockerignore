@@ -1,15 +1,8 @@
-demos/
-workspace/
-arb-compiler-evm
 arb-provider-ethers
-arb-provider-go
-arb-provider-truffle
-arb-provider-web3
 arb-validator.Dockerfile
 **/arb-avm-cpp/rocksdb
 **/arb-avm-cpp/rocksdb-prefix
 
-**/vconan
 **/Dockerfile
 **/.dockerignore
 
@@ -26,7 +19,6 @@ arb-validator.Dockerfile
 **/validator-states
 **/docker-compose.yml
 **/arb-avm-cpp/tests/config.hpp
-**/arb-compiler-evm/tests/sol-syscall/code.txt
 **/bridge_eth_addresses.json
 **/keys.json
 

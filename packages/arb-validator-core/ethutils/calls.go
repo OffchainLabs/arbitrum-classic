@@ -24,10 +24,9 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func CallCheck(ctx context.Context, client *ethclient.Client, from common.Address, contractAddress common.Address, contractABI abi.ABI, method string, params ...interface{}) error {
+func CallCheck(ctx context.Context, client EthClient, from common.Address, contractAddress common.Address, contractABI abi.ABI, method string, params ...interface{}) error {
 	// Pack the input, call and unpack the results
 	input, err := contractABI.Pack(method, params...)
 	if err != nil {

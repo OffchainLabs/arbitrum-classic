@@ -19,6 +19,25 @@
 
 #include <ostream>
 
+void tupleDeleter(RawTuple* p) {
+    auto& deleter = TuplePool::get_impl();
+    if (!deleter.shuttingDown) {
+        return deleter.deleteTuple({p, tupleDeleter});
+    }
+
+    static std::vector<std::unique_ptr<RawTuple>> deletion_queue;
+    static bool deleting_shutdown = false;
+
+    deletion_queue.push_back(std::unique_ptr<RawTuple>{p});
+    if (!deleting_shutdown) {
+        deleting_shutdown = true;
+        while (!deletion_queue.empty()) {
+            deletion_queue.pop_back();
+        }
+        deleting_shutdown = false;
+    }
+}
+
 /**
  * Returns instance of Resource.
  *
@@ -27,24 +46,43 @@
  *
  * @return Resource instance.
  */
-std::shared_ptr<RawTuple> TuplePool::getResource(int s) {
+std::shared_ptr<RawTuple> TuplePool::getResource(size_t s) {
     if (s == 0) {
         return nullptr;
     }
     std::shared_ptr<RawTuple> resource;
     if (resources[s].empty()) {
-        resource = std::make_shared<RawTuple>();
+        resource = {new RawTuple{}, tupleDeleter};
     } else {
-        resource = resources[s].back();
+        resource = {std::move(resources[s].back())};
         resources[s].pop_back();
     }
     resource->data.clear();
     resource->data.reserve(s);
+    resource->deferredHashing = true;
     return resource;
 }
 
-void TuplePool::returnResource(std::shared_ptr<RawTuple>&& object) {
-    if (!shuttingDown) {
-        resources[object->data.size()].push_back(std::move(object));
+void TuplePool::deleteTuple(UniqueTuple tup) {
+    delete_list.push_front(std::move(tup));
+    if (!deleting) {
+        deleting = true;
+        while (!delete_list.empty()) {
+            auto& item = delete_list.back();
+            item->data.clear();
+            if (!shuttingDown) {
+                resources[item->data.capacity()].push_back(std::move(item));
+            } else {
+                // Clear out the custom deleter
+                std::unique_ptr<RawTuple>{item.release()};
+            }
+            delete_list.pop_back();
+        }
+        deleting = false;
     }
+}
+
+TuplePool& TuplePool::get_impl() {
+    thread_local TuplePool singleton;
+    return singleton;
 }

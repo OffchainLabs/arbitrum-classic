@@ -32,6 +32,8 @@ const (
 	ChallengeAsserterWon
 	ChallengeAsserterTimedOut
 	ChallengeChallengerTimedOut
+	ChallengerDiscontinued
+	DefenderDiscontinued
 )
 
 var replayTimeout = time.Second
@@ -89,7 +91,7 @@ func getNextEventWithTimeout(
 			if err != nil {
 				return nil, 0, err
 			}
-			if common.TicksFromBlockNum(blockId.Height).Cmp(deadline) >= 0 {
+			if common.TicksFromBlockNum(blockId.Height).Cmp(deadline) > 0 {
 				err := contract.TimeoutChallenge(ctx)
 				if err != nil {
 					return nil, 0, err
@@ -110,13 +112,14 @@ func getNextEventIfExists(ctx context.Context, eventChan <-chan arbbridge.Event,
 		select {
 		case event, ok := <-eventChan:
 			if !ok {
-				return false, nil, 0, challengeNoEvents
+				return false, nil, ChallengeContinuing, challengeNoEvents
+			} else {
+				return false, event, getAfterState(event), nil
 			}
-			return false, event, getAfterState(event), nil
 		case <-time.After(timeout):
-			return true, nil, 0, nil
+			return true, nil, ChallengeContinuing, nil
 		case <-ctx.Done():
-			return false, nil, 0, errors.New("context cancelled while waiting for event")
+			return false, nil, ChallengeContinuing, errors.New("context cancelled while waiting for event")
 		}
 	}
 }

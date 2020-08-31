@@ -4,7 +4,7 @@ title: Installation
 sidebar_label: Installation
 ---
 
-## Install System Dependencies
+## Setup instructions
 
 Follow the instructions for supported operating systems or use the comprehensive
 list of dependencies.
@@ -16,7 +16,7 @@ list of dependencies.
 Using [Homebrew](https://brew.sh/):
 
 ```bash
-brew install python3 docker docker-compose rocksdb
+brew install python3 docker docker-compose
 brew cask install docker
 open -a Docker
 ```
@@ -31,24 +31,23 @@ Using apt:
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-pip docker docker-compose
+sudo apt install -y curl python3 python3-pip
 ```
 
-> Docker [can be used without sudo](https://docs.docker.com/install/linux/linux-postinstall/)
-> to give permissions "equivalent to the `root` user". See [the security warning](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface).
+Then setup docker using the [official instructions](https://docs.docker.com/engine/install/ubuntu/)
 
 ### 2. Install yarn and truffle
 
 ```bash
 touch ~/.bashrc
-curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
+curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.35.3/install.sh | bash
 curl -o- -L https://yarnpkg.com/install.sh | bash
-nvm install 10.16.3
 . ~/.bashrc
+nvm install 10.16.3
 yarn global add truffle
 ```
 
-### Full List
+### Full list
 
 Here are the important dependencies in case you are not running on a supported OS:
 
@@ -68,19 +67,40 @@ Here are the important dependencies in case you are not running on a supported O
 Download the Arbitrum Monorepo from source:
 
 ```bash
-git clone -b v0.6.5 https://github.com/offchainlabs/arbitrum.git
+git clone -b v0.7.0 https://github.com/offchainlabs/arbitrum.git
 cd arbitrum
 yarn
 yarn build
-yarn install:deps
 ```
 
-Check `arbc-truffle` was installed:
+# Native setup instructions
+
+For most users we recommend that you run Arbitrum through our easy docker setup. However if you want to install Arbitrum natively, additionally follow this instructions:
+
+#### MacOS
 
 ```bash
-which arbc-truffle
+brew install autoconf automake boost cmake gmp go libtool rocksdb
 ```
 
-Expected output:
+#### Ubuntu 18.04
 
-> /usr/local/bin/arbc-truffle
+```bash
+sudo add-apt-repository ppa:longsleep/golang-backports
+sudo apt update
+sudo apt install -y autoconf automake cmake libboost-dev libboost-filesystem-dev libgmp-dev librocksdb-dev libssl-dev libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libtool golang-go
+
+git clone -b v6.11.4 https://github.com/facebook/rocksdb
+cd rocksdb
+make shared_lib
+cd make install
+```
+
+## Install Arbitrum
+
+With the dependencies installed, you can now install Arbitrum locally with
+
+```bash
+cd arbitrum
+yarn install:validator
+```

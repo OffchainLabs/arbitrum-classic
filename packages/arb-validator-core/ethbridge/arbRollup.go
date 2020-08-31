@@ -19,12 +19,12 @@ package ethbridge
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -35,7 +35,7 @@ type arbRollup struct {
 	auth *TransactAuth
 }
 
-func newRollup(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*arbRollup, error) {
+func newRollup(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*arbRollup, error) {
 	watcher, err := newRollupWatcher(address, client)
 	if err != nil {
 		return nil, err
@@ -50,8 +50,15 @@ func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof
 	call := &bind.TransactOpts{
 		From:    vm.auth.auth.From,
 		Signer:  vm.auth.auth.Signer,
-		Value:   stakeAmount,
 		Context: ctx,
+	}
+	blankAddress := ethcommon.Address{}
+	st, err := vm.ArbRollup.GetStakeToken(&bind.CallOpts{Context: ctx})
+	if err != nil {
+		return nil, err
+	}
+	if st == blankAddress {
+		call.Value = stakeAmount
 	}
 	tx, err := vm.ArbRollup.PlaceStake(
 		call,
@@ -178,33 +185,40 @@ func (vm *arbRollup) MakeAssertion(
 	prevChildType valprotocol.ChildType,
 	beforeState *valprotocol.VMProtoData,
 	assertionParams *valprotocol.AssertionParams,
-	assertionClaim *valprotocol.AssertionClaim,
+	assertion *valprotocol.ExecutionAssertionStub,
 	stakerProof []common.Hash,
+	validBlock *common.BlockId,
 ) ([]arbbridge.Event, error) {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
-	extraParams := [9][32]byte{
+	fields := [8][32]byte{
 		beforeState.MachineHash,
-		beforeState.InboxTop,
+		assertion.AfterMachineHash,
+		assertion.BeforeInboxHash,
+		assertion.AfterInboxHash,
+		assertion.LastMessageHash,
+		assertion.LastLogHash,
 		prevPrevLeafHash,
 		prevDataHash,
-		assertionClaim.AfterInboxTop,
-		assertionClaim.ImportedMessagesSlice,
-		assertionClaim.AssertionStub.AfterHash,
-		assertionClaim.AssertionStub.LastMessageHash,
-		assertionClaim.AssertionStub.LastLogHash,
+	}
+	fields2 := [5]*big.Int{
+		beforeState.InboxCount,
+		prevDeadline.Val,
+		assertionParams.ImportedMessageCount,
+		beforeState.MessageCount,
+		beforeState.LogCount,
 	}
 	tx, err := vm.ArbRollup.MakeAssertion(
 		vm.auth.getAuth(ctx),
-		extraParams,
-		beforeState.InboxCount,
-		prevDeadline.Val,
+		fields,
+		fields2,
+		validBlock.HeaderHash,
+		validBlock.Height.AsInt(),
+		assertion.MessageCount,
+		assertion.LogCount,
 		uint32(prevChildType),
 		assertionParams.NumSteps,
-		assertionParams.TimeBounds.AsIntArray(),
-		assertionParams.ImportedMessageCount,
-		assertionClaim.AssertionStub.DidInboxInsn,
-		assertionClaim.AssertionStub.NumGas,
+		assertion.NumGas,
 		common.HashSliceToRaw(stakerProof),
 	)
 	if err != nil {
@@ -213,15 +227,15 @@ func (vm *arbRollup) MakeAssertion(
 			vm.client,
 			vm.auth.auth.From,
 			vm.rollupAddress,
-			extraParams,
-			beforeState.InboxCount,
-			prevDeadline.Val,
+			fields,
+			fields2,
+			validBlock.HeaderHash,
+			validBlock.Height.AsInt(),
+			assertion.MessageCount,
+			assertion.LogCount,
 			uint32(prevChildType),
 			assertionParams.NumSteps,
-			assertionParams.TimeBounds.AsIntArray(),
-			assertionParams.ImportedMessageCount,
-			assertionClaim.AssertionStub.DidInboxInsn,
-			assertionClaim.AssertionStub.NumGas,
+			assertion.NumGas,
 			common.HashSliceToRaw(stakerProof),
 		)
 		return nil, callErr
@@ -237,6 +251,7 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 	tx, err := vm.ArbRollup.Confirm(
 		vm.auth.getAuth(ctx),
 		proof.InitalProtoStateHash,
+		proof.BeforeSendCount,
 		proof.BranchesNums,
 		proof.DeadlineTicks,
 		proof.ChallengeNodeData,
@@ -255,6 +270,7 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 			vm.auth.auth.From,
 			vm.rollupAddress,
 			proof.InitalProtoStateHash,
+			proof.BeforeSendCount,
 			proof.BranchesNums,
 			proof.DeadlineTicks,
 			proof.ChallengeNodeData,
@@ -313,44 +329,6 @@ func (vm *arbRollup) StartChallenge(
 	}
 	return vm.waitForReceipt(ctx, tx, "StartExecutionChallenge")
 }
-
-//func (vm *arbRollup) VerifyVM(
-//	auth *bind.CallOpts,
-//	config *valmessage.VMConfiguration,
-//	machine common.Hash,
-//) error {
-//	//code, err := vm.client.CodeAt(auth.Context, vm.address, nil)
-//	// Verify that VM has correct code
-//	vmInfo, err := vm.ArbRollup.Vm(auth)
-//	if err != nil {
-//		return err
-//	}
-//
-//	if vmInfo.MachineHash != machine {
-//		return errors.New("VM has different machine hash")
-//	}
-//
-//	if config.GracePeriod != uint64(vmInfo.GracePeriod) {
-//		return errors.New("VM has different grace period")
-//	}
-//
-//	if value.NewBigIntFromBuf(config.EscrowRequired).Cmp(vmInfo.EscrowRequired) != 0 {
-//		return errors.New("VM has different escrow required")
-//	}
-//
-//	if config.MaxExecutionStepCount != vmInfo.MaxExecutionSteps {
-//		return errors.New("VM has different mxa steps")
-//	}
-//
-//	owner, err := vm.ArbRollup.Owner(auth)
-//	if err != nil {
-//		return err
-//	}
-//	if protocol.NewAddressFromBuf(config.Owner) != owner {
-//		return errors.New("VM has different owner")
-//	}
-//	return nil
-//}
 
 func (vm *arbRollup) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) ([]arbbridge.Event, error) {
 	receipt, err := WaitForReceiptWithResults(ctx, vm.client, vm.auth.auth.From, tx, methodName)

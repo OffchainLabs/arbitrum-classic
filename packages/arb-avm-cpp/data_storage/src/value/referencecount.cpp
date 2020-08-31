@@ -45,11 +45,12 @@ SaveResults saveValueWithRefCount(rocksdb::Transaction& transaction,
 }  // namespace
 
 SaveResults incrementReference(rocksdb::Transaction& transaction,
-                               const rocksdb::Slice& hash_key) {
+                               const rocksdb::Slice& hash_key,
+                               uint32_t new_references) {
     auto results = getRefCountedData(transaction, hash_key);
 
     if (results.status.ok()) {
-        auto updated_count = results.reference_count + 1;
+        auto updated_count = results.reference_count + new_references;
         return saveValueWithRefCount(transaction, updated_count, hash_key,
                                      results.stored_value);
     } else {
@@ -59,12 +60,14 @@ SaveResults incrementReference(rocksdb::Transaction& transaction,
 
 SaveResults saveRefCountedData(rocksdb::Transaction& transaction,
                                const rocksdb::Slice& hash_key,
-                               const std::vector<unsigned char>& value) {
+                               const std::vector<unsigned char>& value,
+                               uint32_t new_references,
+                               bool allow_replacement) {
     auto results = getRefCountedData(transaction, hash_key);
     int ref_count;
 
     if (results.status.ok()) {
-        if (results.stored_value != value) {
+        if (!allow_replacement && results.stored_value != value) {
             std::cout << "Different value for key: ";
             boost::algorithm::hex(hash_key.data(),
                                   hash_key.data() + hash_key.size(),
@@ -77,32 +80,36 @@ SaveResults saveRefCountedData(rocksdb::Transaction& transaction,
             boost::algorithm::hex(value.begin(), value.end(),
                                   std::ostream_iterator<char>{std::cout, ""});
             std::cout << std::endl;
+            assert(false);
         }
-        assert(results.stored_value == value);
-        ref_count = results.reference_count + 1;
+        ref_count = results.reference_count + new_references;
     } else {
-        ref_count = 1;
+        ref_count = new_references;
     }
     return saveValueWithRefCount(transaction, ref_count, hash_key, value);
 }
 
 DeleteResults deleteRefCountedData(rocksdb::Transaction& transaction,
-                                   const rocksdb::Slice& hash_key) {
+                                   const rocksdb::Slice& hash_key,
+                                   uint32_t deleted_references) {
     auto results = getRefCountedData(transaction, hash_key);
 
     if (results.status.ok()) {
-        if (results.reference_count < 2) {
+        if (results.reference_count <= deleted_references) {
             auto delete_status = transaction.Delete(hash_key);
-            return DeleteResults{0, delete_status};
-
+            return DeleteResults{0, delete_status,
+                                 std::move(results.stored_value)};
         } else {
-            auto updated_ref_count = results.reference_count - 1;
+            auto updated_ref_count =
+                results.reference_count - deleted_references;
             auto update_result = saveValueWithRefCount(
                 transaction, updated_ref_count, hash_key, results.stored_value);
-            return DeleteResults{updated_ref_count, update_result.status};
+            return DeleteResults{updated_ref_count, update_result.status,
+                                 std::move(results.stored_value)};
         }
     } else {
-        return DeleteResults{0, results.status};
+        return DeleteResults{0, results.status,
+                             std::move(results.stored_value)};
     }
 }
 

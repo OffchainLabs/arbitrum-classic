@@ -10,18 +10,16 @@ set -e
 if [[ "$*" == *--debug* ]]; then
     BUILD=debug
     CMAKE_BUILD_TYPE=Debug
+    CMACHINE_INSTALL_SCRIPT=./scripts/install-cmachine-{$BUILD}
 else
     BUILD=build
     CMAKE_BUILD_TYPE=Release
+    CMACHINE_INSTALL_SCRIPT=./scripts/install-cmachine-release
 fi
 
 mkdir -p packages/arb-avm-cpp/${BUILD}
 cd packages/arb-avm-cpp/${BUILD}
-. ../../../vconan/bin/activate
-conan install ..
-deactivate
 cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} ..
-
 
 if nproc >/dev/null 2>&1; then
     NPROC=$(nproc)
@@ -31,9 +29,10 @@ else
     NPROC=4
 fi
 
-cmake --build . -j "${NPROC}"
-cp lib/lib* ../cmachine/
-cd ../../..
+cmake --build . -- -j "${NPROC}"
+cd ../
+"./scripts/install-cmachine-$BUILD"
+cd ../..
 
 # install arb-validator
 cd packages/arb-validator

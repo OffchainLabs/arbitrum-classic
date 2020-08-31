@@ -18,7 +18,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb
+#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lkeccak -ldl
 #include "../cavm/cblockstore.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -99,7 +99,7 @@ func (bs *BlockStore) GetBlock(id *common.BlockId) ([]byte, error) {
 	)
 
 	if result.found == 0 {
-		return nil, errors.New("not found")
+		return nil, errors.New("block not found in block store")
 	}
 
 	return toByteSlice(result.slice), nil

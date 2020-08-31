@@ -15,17 +15,18 @@
  */
 
 #include <data_storage/blockstore.hpp>
-#include <data_storage/confirmednodestore.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <string>
 
 #include <rocksdb/options.h>
-#include <avm_values/codepoint.hpp>
+#include <avm_values/codepointstub.hpp>
 #include <avm_values/tuple.hpp>
 
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>
+
+#include <iostream>
 
 DataStorage::DataStorage(const std::string& db_path) {
     rocksdb::TransactionDBOptions txn_options;

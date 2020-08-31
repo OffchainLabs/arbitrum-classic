@@ -21,24 +21,15 @@
 
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/value/code.hpp>
 #include <data_storage/value/value.hpp>
 
 #include <avm/machine.hpp>
 
+#include <iostream>
+
 namespace {
-rocksdb::Slice vecToSlice(const std::vector<unsigned char>& vec) {
-    return {reinterpret_cast<const char*>(vec.data()), vec.size()};
-}
-
 using iterator = std::vector<unsigned char>::const_iterator;
-
-CodePointStub extractCodePointStub(iterator& iter) {
-    auto ptr = reinterpret_cast<const char*>(&*iter);
-    auto pc_val = checkpoint::utils::deserialize_uint64(ptr);
-    auto hash_val = deserializeUint256t(ptr);
-    iter += sizeof(pc_val) + 32;
-    return {pc_val, hash_val};
-}
 
 uint256_t extractUint256(iterator& iter) {
     auto ptr = reinterpret_cast<const char*>(&*iter);
@@ -47,60 +38,92 @@ uint256_t extractUint256(iterator& iter) {
     return int_val;
 }
 
+CodePointRef extractCodePointRef(iterator& iter) {
+    auto ptr = reinterpret_cast<const char*>(&*iter);
+    auto segment_val = deserialize_uint64_t(ptr);
+    auto pc_val = deserialize_uint64_t(ptr);
+    iter += sizeof(pc_val) + sizeof(segment_val);
+    return {segment_val, pc_val};
+}
+
+CodePointStub extractCodePointStub(iterator& iter) {
+    auto ref = extractCodePointRef(iter);
+    auto next_hash = extractUint256(iter);
+    return {ref, next_hash};
+}
+
 MachineStateKeys extractStateKeys(
     const std::vector<unsigned char>& stored_state) {
     auto current_iter = stored_state.begin();
     auto status = static_cast<Status>(*current_iter);
     ++current_iter;
+    auto static_hash = extractUint256(current_iter);
     auto register_hash = extractUint256(current_iter);
     auto datastack_hash = extractUint256(current_iter);
     auto auxstack_hash = extractUint256(current_iter);
-    auto pc = extractCodePointStub(current_iter);
+    auto arb_gas_remaining = extractUint256(current_iter);
+    auto pc = extractCodePointRef(current_iter);
     auto err_pc = extractCodePointStub(current_iter);
+    auto staged_message_hash = extractUint256(current_iter);
 
-    return MachineStateKeys{register_hash, datastack_hash, auxstack_hash, pc,
-                            err_pc,        status};
+    return MachineStateKeys{static_hash,   register_hash,       datastack_hash,
+                            auxstack_hash, arb_gas_remaining,   pc,
+                            err_pc,        staged_message_hash, status};
 }
 
 std::vector<unsigned char> serializeStateKeys(
     const MachineStateKeys& state_data) {
     std::vector<unsigned char> state_data_vector;
     state_data_vector.push_back(static_cast<unsigned char>(state_data.status));
+    marshal_uint256_t(state_data.static_hash, state_data_vector);
     marshal_uint256_t(state_data.register_hash, state_data_vector);
     marshal_uint256_t(state_data.datastack_hash, state_data_vector);
     marshal_uint256_t(state_data.auxstack_hash, state_data_vector);
-    checkpoint::utils::serializeCodePointStub(state_data.pc, state_data_vector);
-    checkpoint::utils::serializeCodePointStub(state_data.err_pc,
-                                              state_data_vector);
+    marshal_uint256_t(state_data.arb_gas_remaining, state_data_vector);
+    state_data.pc.marshal(state_data_vector);
+    state_data.err_pc.marshal(state_data_vector);
+    marshal_uint256_t(state_data.staged_message_hash, state_data_vector);
     return state_data_vector;
 }
 }  // namespace
 
 DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
+    std::map<uint64_t, uint64_t> segment_counts;
     std::vector<unsigned char> checkpoint_name;
     marshal_uint256_t(machine_hash, checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
     auto results = getRefCountedData(*transaction.transaction, key);
 
     if (!results.status.ok()) {
-        return DeleteResults{0, results.status};
+        return DeleteResults{0, results.status,
+                             std::move(results.stored_value)};
     }
 
     auto delete_results = deleteRefCountedData(*transaction.transaction, key);
 
     if (delete_results.reference_count < 1) {
         auto parsed_state = extractStateKeys(results.stored_value);
+        auto delete_static_res = deleteValueImpl(
+            transaction, parsed_state.static_hash, segment_counts);
+        auto delete_register_res = deleteValueImpl(
+            transaction, parsed_state.register_hash, segment_counts);
+        auto delete_datastack_res = deleteValueImpl(
+            transaction, parsed_state.datastack_hash, segment_counts);
+        auto delete_auxstack_res = deleteValueImpl(
+            transaction, parsed_state.auxstack_hash, segment_counts);
+        auto delete_staged_message_res = deleteValueImpl(
+            transaction, parsed_state.staged_message_hash, segment_counts);
 
-        auto delete_register_res =
-            deleteValue(transaction, parsed_state.register_hash);
-        auto delete_datastack_res =
-            deleteValue(transaction, parsed_state.datastack_hash);
-        auto delete_auxstack_res =
-            deleteValue(transaction, parsed_state.auxstack_hash);
+        ++segment_counts[parsed_state.pc.segment];
+        ++segment_counts[parsed_state.err_pc.pc.segment];
 
-        if (!(delete_register_res.status.ok() &&
+        deleteCode(transaction, segment_counts);
+
+        if (!(delete_static_res.status.ok() &&
+              delete_register_res.status.ok() &&
               delete_datastack_res.status.ok() &&
-              delete_auxstack_res.status.ok())) {
+              delete_auxstack_res.status.ok() &&
+              delete_staged_message_res.status.ok())) {
             std::cout << "error deleting checkpoint" << std::endl;
         }
     }
@@ -125,6 +148,8 @@ DbResult<MachineStateKeys> getMachineState(const Transaction& transaction,
 }
 
 SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
+    std::map<uint64_t, uint64_t> segment_counts;
+
     std::vector<unsigned char> checkpoint_name;
     marshal_uint256_t(machine.hash(), checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
@@ -137,28 +162,38 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
     }
 
     auto& machinestate = machine.machine_state;
-    auto pool = machinestate.pool.get();
+    auto static_val_results =
+        saveValueImpl(transaction, machinestate.static_val, segment_counts);
     auto register_val_results =
-        saveValue(transaction, machinestate.registerVal);
-    auto datastack_tup = machinestate.stack.getTupleRepresentation(pool);
-    auto datastack_results = saveValue(transaction, datastack_tup);
-    auto auxstack_tup = machinestate.auxstack.getTupleRepresentation(pool);
-    auto auxstack_results = saveValue(transaction, auxstack_tup);
-    auto err_pc_stub =
-        CodePointStub{machinestate.static_values->code[machinestate.errpc]};
-    auto pc_stub =
-        CodePointStub{machinestate.static_values->code[machinestate.pc]};
-
+        saveValueImpl(transaction, machinestate.registerVal, segment_counts);
+    auto datastack_tup = machinestate.stack.getTupleRepresentation();
+    auto datastack_results =
+        saveValueImpl(transaction, datastack_tup, segment_counts);
+    auto auxstack_tup = machinestate.auxstack.getTupleRepresentation();
+    auto auxstack_results =
+        saveValueImpl(transaction, auxstack_tup, segment_counts);
+    auto staged_message_results =
+        saveValueImpl(transaction, machinestate.staged_message, segment_counts);
     if (!datastack_results.status.ok() || !auxstack_results.status.ok() ||
-        !register_val_results.status.ok()) {
+        !register_val_results.status.ok() ||
+        !staged_message_results.status.ok()) {
         return SaveResults{0, rocksdb::Status().Aborted()};
     }
+
+    ++segment_counts[machinestate.pc.segment];
+    ++segment_counts[machinestate.errpc.pc.segment];
+
+    saveCode(transaction, *machinestate.code, segment_counts);
+
     auto machine_state_data =
-        MachineStateKeys{hash_value(machinestate.registerVal),
+        MachineStateKeys{hash_value(machinestate.static_val),
+                         hash_value(machinestate.registerVal),
                          hash(datastack_tup),
                          hash(auxstack_tup),
-                         pc_stub,
-                         err_pc_stub,
+                         machinestate.arb_gas_remaining,
+                         machinestate.pc,
+                         machinestate.errpc,
+                         hash_value(machinestate.staged_message),
                          machinestate.state};
     auto serialized_state = serializeStateKeys(machine_state_data);
     return saveRefCountedData(*transaction.transaction, key, serialized_state);

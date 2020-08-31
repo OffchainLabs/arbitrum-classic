@@ -19,5 +19,8 @@
 
 const char* const test_cases_path = "@TEST_CASES_PATH@";
 const char* const test_contract_path = "@TEST_CONTRACT_PATH@";
+const char* const arb_os_path = "@ARB_OS_PATH@";
+const char* const arb_os_test_cases_path = "@ARB_OS_TEST_CASES_PATH@";
+const char* const machine_test_cases_path = "@MACHINE_TEST_CASES_PATH@";
 
 #endif /* config_hpp_in */

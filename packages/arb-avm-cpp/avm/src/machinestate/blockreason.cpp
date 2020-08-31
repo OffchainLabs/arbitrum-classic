@@ -16,9 +16,7 @@
 
 #include <avm/machinestate/blockreason.hpp>
 
-#include <avm_values/codepoint.hpp>
-#include <avm_values/tuple.hpp>
-#include <avm_values/value.hpp>
+#include <iostream>
 
 constexpr BlockType InboxBlocked::type;
 
@@ -38,8 +36,12 @@ std::ostream& operator<<(std::ostream& os, const BreakpointBlocked&) {
     return os << "BreakpointBlocked";
 }
 
-std::ostream& operator<<(std::ostream& os, const InboxBlocked& val) {
-    return os << "InboxBlocked(" << val.timout << ")";
+std::ostream& operator<<(std::ostream& os, const InboxBlocked&) {
+    return os << "InboxBlocked";
+}
+
+std::ostream& operator<<(std::ostream& os, const SideloadBlocked&) {
+    return os << "SideloadBlocked";
 }
 
 std::ostream& operator<<(std::ostream& os, const BlockReason& val) {

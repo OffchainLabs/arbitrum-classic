@@ -16,15 +16,23 @@
     "install:deps": "./scripts/install-deps",
     "install:ci": "./scripts/install-ci",
     "install:validator": "./scripts/install-validator",
-    "update-abi": "./scripts/update-abi",
+    "update-abi": "yarn go:generate && yarn workspace arb-provider-ethers update-abi",
     "build": "yarn workspace arb-provider-ethers build",
     "docker:build:parity": "yarn workspace arb-bridge-eth docker:build:parity",
     "docker:build:ganache": "yarn workspace arb-bridge-eth docker:build:ganache",
+    "run:local:geth": "yarn workspace arb-bridge-eth run:local:geth",
+    "kill:geth": "kill $(lsof -t -i:7545)",
     "docker:build:geth": "yarn workspace arb-bridge-eth docker:build:geth",
     "docker:parity": "yarn workspace arb-bridge-eth docker:parity",
     "docker:ganache": "yarn workspace arb-bridge-eth docker:ganache",
     "docker:geth": "yarn workspace arb-bridge-eth docker:geth",
-    "prepare": "yarn workspace arb-provider-ethers prepare"
+    "prepare": "yarn workspace arb-provider-ethers prepare",
+    "go:vet": "./scripts/go-vet",
+    "go:generate": "./scripts/go-generate",
+    "demo:initialize": "yarn workspace tools demo:initialize",
+    "demo:deploy": "./scripts/arb_deploy.py local",
+    "prod:initialize": "yarn workspace tools prod:initialize",
+    "deploy:validators": "./scripts/arb_deploy.py"
   },
   "engines": {
     "node": ">= 8.0.0 < 13.0.0",
@@ -37,21 +45,16 @@
     "packages": [
       "packages/arb-bridge-eth",
       "packages/arb-provider-ethers",
-      "packages/arb-provider-truffle",
-      "packages/arb-provider-web3",
-      "packages/arb-compiler-evm/contract-templates",
-      "packages/arb-compiler-evm/tests/sol-syscall",
-      "demos/*",
-      "workspace/*"
+      "packages/arbos-contracts",
+      "packages/tools"
     ]
   },
-  "dependencies": {
-    "@typescript-eslint/eslint-plugin": "^2.29.0",
-    "@typescript-eslint/parser": "^2.29.0",
-    "eslint": "^6.8.0",
-    "eslint-config-prettier": "^6.10.1",
-    "eslint-plugin-prettier": "^3.1.3",
+  "devDependencies": {
+    "eslint": "^7.3.1",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-plugin-mocha": "^7.0.1",
+    "eslint-plugin-prettier": "^3.1.4",
     "prettier": "^2.0.5",
-    "typescript": "^3.8.3"
+    "prettier-plugin-solidity": "^1.0.0-alpha.54"
   }
 }

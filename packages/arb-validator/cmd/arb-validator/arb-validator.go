@@ -18,10 +18,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
+	"math/big"
 	"os"
 	"path/filepath"
 
@@ -38,15 +39,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
-
-	_ "net/http/pprof"
 )
 
 func main() {
-
-	go func() {
-		http.ListenAndServe("localhost:8080", nil)
-	}()
 	// Check number of args
 	flag.Parse()
 	switch os.Args[1] {
@@ -64,21 +59,23 @@ func main() {
 
 func createRollupChain() error {
 	createCmd := flag.NewFlagSet("validate", flag.ExitOnError)
-	walletVars := utils.AddFlags(createCmd)
+	walletVars := utils.AddWalletFlags(createCmd)
+	tokenAddressString := createCmd.String("staketoken", "", "staketoken=TokenAddress")
+	stakeAmountString := createCmd.String("stakeamount", "", "stakeamount=Amount")
 	err := createCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
 	}
 
 	if createCmd.NArg() != 3 {
-		return fmt.Errorf("usage: arb-validator create %v <validator_folder> <ethURL> <factoryAddress>", utils.WalletArgsString)
+		return fmt.Errorf("usage: arb-validator create %v <validator_folder> <ethURL> <factoryAddress> [staketoken=TokenAddress] [staketoken=TokenAddress]", utils.WalletArgsString)
 	}
 
 	validatorFolder := createCmd.Arg(0)
 	ethURL := createCmd.Arg(1)
 	addressString := createCmd.Arg(2)
 	factoryAddress := common.HexToAddress(addressString)
-	contractFile := filepath.Join(validatorFolder, "contract.ao")
+	contractFile := filepath.Join(validatorFolder, cmdhelper.ContractName)
 
 	// 1) Compiled Arbitrum bytecode
 	mach, err := loader.LoadMachineFromFile(contractFile, true, "cpp")
@@ -99,7 +96,7 @@ func createRollupChain() error {
 	// Rollup creation
 	client := ethbridge.NewEthAuthClient(ethclint, auth)
 
-	if err := arbbridge.WaitForNonZeroBalance(context.Background(), client, common.NewAddressFromEth(auth.From)); err != nil {
+	if err := arbbridge.WaitForBalance(context.Background(), client, common.Address{}, common.NewAddressFromEth(auth.From)); err != nil {
 		return err
 	}
 
@@ -108,10 +105,24 @@ func createRollupChain() error {
 		return err
 	}
 
+	params := rollup.DefaultChainParams()
+	if *tokenAddressString != "" {
+		params = params.WithStakeToken(common.HexToAddress(*tokenAddressString))
+	}
+
+	if *stakeAmountString != "" {
+		stakeAmount, success := new(big.Int).SetString(*stakeAmountString, 10)
+		if success {
+			params = params.WithStakeRequirement(stakeAmount)
+		} else {
+			return errors.New("invalid stake amount: expected an integer")
+		}
+	}
+
 	address, _, err := factory.CreateRollup(
 		context.Background(),
 		mach.Hash(),
-		rollup.DefaultChainParams(),
+		params,
 		common.Address{},
 	)
 	if err != nil {

@@ -22,34 +22,6 @@ function assertNever(x: never): never {
   throw new Error('Unexpected object: ' + x)
 }
 
-// Error and Halt opcodes
-export enum OpCode {
-  Error = 0x74,
-  Halt = 0x75,
-}
-
-// Valid opcode ranges (inclusive)
-const OP_CODE_RANGES: Array<[number, number]> = [
-  [0x00, 0x0a],
-  [0x10, 0x1b],
-  [0x20, 0x22],
-  [0x30, 0x3d],
-  [0x40, 0x44],
-  [0x50, 0x52],
-  [0x60, 0x61],
-  [0x70, 0x75],
-]
-
-const VALID_OP_CODES = OP_CODE_RANGES.reduce(
-  (acc: number[], range: [number, number]) =>
-    acc.concat(
-      Array(range[1] - range[0] + 1)
-        .fill(0)
-        .map((_, i) => range[0] + i)
-    ),
-  []
-)
-
 // Max tuple size
 export const MAX_TUPLE_SIZE = 8
 
@@ -91,7 +63,7 @@ export enum OperationType {
   Immediate = 1,
 }
 
-type Operation = BasicOp | ImmOp
+export type Operation = BasicOp | ImmOp
 
 export class BasicOp {
   public opcode: number
@@ -142,18 +114,10 @@ export class IntValue {
 }
 
 export class CodePointValue {
-  public insnNum: ethers.utils.BigNumber
   public op: Operation
   public nextHash: string
-  // insnNum: 8 byte integer
-  // op: BasicOp or ImmOp
-  // nextHash: 32 byte hash
-  constructor(
-    insnNum: ethers.utils.BigNumberish,
-    op: Operation,
-    nextHash: string
-  ) {
-    this.insnNum = ethers.utils.bigNumberify(insnNum)
+
+  constructor(op: Operation, nextHash: string) {
     this.op = op
     this.nextHash = nextHash
   }
@@ -228,7 +192,7 @@ export class TupleValue {
     } else {
       const hashes = this.contents.map((value): string => value.hash())
       const types = ['uint8'].concat(Array(contents.length).fill('bytes32'))
-      const values: any[] = [contents.length]
+      const values: (number | string)[] = [contents.length]
 
       const firstHash = ethers.utils.solidityKeccak256(
         types,
@@ -289,53 +253,6 @@ export class TupleValue {
   }
 }
 
-// Useful for BigTuple operations
-const LAST_INDEX = MAX_TUPLE_SIZE - 1
-const LAST_INDEX_BIG_NUM = LAST_INDEX
-
-// tuple: TupleValue
-// index: BigNumber
-// returns: *Value
-export function getBigTuple(tuple: TupleValue, index: number): Value {
-  if (tuple.contents.length === 0) {
-    return new IntValue(ethers.utils.bigNumberify(0))
-  } else if (index === 0) {
-    return tuple.get(LAST_INDEX)
-  } else {
-    const path = index % LAST_INDEX_BIG_NUM
-    const subTup = tuple.get(path) as TupleValue
-    return getBigTuple(subTup, Math.floor(index / LAST_INDEX_BIG_NUM))
-  }
-}
-
-// tuple: TupleValue
-// index: BigNumber
-// value: *Value
-// Non-Mutating returns TupleValue
-export function setBigTuple(
-  tupleValue: TupleValue,
-  index: number,
-  value: Value
-): TupleValue {
-  let tuple = tupleValue
-  if (tuple.contents.length === 0) {
-    tuple = new TupleValue(Array(MAX_TUPLE_SIZE).fill(new TupleValue([])))
-  }
-
-  if (index === 0) {
-    return tuple.set(LAST_INDEX, value)
-  } else {
-    const path = index % LAST_INDEX_BIG_NUM
-    const subTup = tuple.get(path) as TupleValue
-    const newSubTup = setBigTuple(
-      subTup,
-      Math.floor(index / LAST_INDEX_BIG_NUM),
-      value
-    )
-    return tuple.set(path, newSubTup)
-  }
-}
-
 function bytesToIntValues(bytearray: Uint8Array): ethers.utils.BigNumber[] {
   const bignums: ethers.utils.BigNumber[] = []
   const sizeBytes = bytearray.length
@@ -351,36 +268,6 @@ function bytesToIntValues(bytearray: Uint8Array): ethers.utils.BigNumber[] {
 }
 
 // twoTupleValue: (byterange: SizedTupleValue, size: IntValue)
-export function sizedByteRangeToBytes(twoTupleValue: TupleValue): Uint8Array {
-  const byterange = twoTupleValue.get(0) as TupleValue
-  const sizeInt = twoTupleValue.get(1) as IntValue
-  const sizeBytes = sizeInt.bignum.toNumber()
-  const chunkCount = Math.ceil(sizeBytes / 32)
-  const result = new Uint8Array(chunkCount * 32)
-  for (let i = 0; i < chunkCount; i++) {
-    const value = getBigTuple(byterange, i) as IntValue
-    result.set(
-      ethers.utils.padZeros(ethers.utils.arrayify(value.bignum), 32),
-      i * 32
-    )
-  }
-  return result.slice(0, sizeBytes)
-}
-
-// hexString: must be a byte string (hexString.length % 2 === 0)
-export function hexToSizedByteRange(hex: ethers.utils.Arrayish): TupleValue {
-  const bytearray = ethers.utils.arrayify(hex)
-  const sizeBytes = bytearray.length
-  const bignums = bytesToIntValues(bytearray)
-  // Empty tuple
-  let t = new TupleValue([])
-  for (let i = 0; i < bignums.length; i++) {
-    t = setBigTuple(t, i, new IntValue(bignums[i]))
-  }
-  return new TupleValue([t, new IntValue(sizeBytes)])
-}
-
-// twoTupleValue: (byterange: SizedTupleValue, size: IntValue)
 export function bytestackToBytes(twoTupleValue: TupleValue): Uint8Array {
   const sizeInt = twoTupleValue.get(0) as IntValue
   let stack = twoTupleValue.get(1) as TupleValue
@@ -391,8 +278,8 @@ export function bytestackToBytes(twoTupleValue: TupleValue): Uint8Array {
 
   let i = 0
   while (stack.contents.length == 2) {
-    const value = stack.get(1) as IntValue
-    stack = stack.get(0) as TupleValue
+    const value = stack.get(0) as IntValue
+    stack = stack.get(1) as TupleValue
     const chunk = ethers.utils.padZeros(ethers.utils.arrayify(value.bignum), 32)
     const offset = (chunkCount - 1 - i) * 32
     result.set(chunk, offset)
@@ -409,7 +296,7 @@ export function hexToBytestack(hex: ethers.utils.Arrayish): TupleValue {
   // Empty tuple
   let t = new TupleValue([])
   for (let i = 0; i < bignums.length; i++) {
-    t = new TupleValue([t, new IntValue(bignums[i])])
+    t = new TupleValue([new IntValue(bignums[i]), t])
   }
   return new TupleValue([new IntValue(sizeBytes), t])
 }
@@ -426,10 +313,9 @@ function _marshalValue(acc: Uint8Array, v: Value): Uint8Array {
     return ethers.utils.concat([accTy, uBigNumToBytes(val.bignum)])
   } else if (ty === ValueType.CodePoint) {
     const val = v as CodePointValue
-    // 1B type; 8B insnNum; 1B immCount; 1B opcode; Val?; 32B hash
+    // 1B type; 1B immCount; 1B opcode; Val?; 32B hash
     const packed = ethers.utils.concat([
       accTy,
-      intToBytes(val.insnNum, 8),
       intToBytes(val.op.kind, 1),
       intToBytes(val.op.opcode, 1),
     ])
@@ -469,95 +355,10 @@ export function marshal(someValue: Value): Uint8Array {
   return _marshalValue(new Uint8Array(), someValue)
 }
 
-function unmarshalContract(array: Uint8Array): [Operation[], Value] {
-  let offset = 0
-  let versionBytes
-  ;[versionBytes, offset] = extractBytes(array, offset, 4)
-  let extensionVersion = ethers.utils.bigNumberify(1)
-  while (!extensionVersion.eq(0)) {
-    let extensionVersionBytes
-    ;[extensionVersionBytes, offset] = extractBytes(array, offset, 4)
-    extensionVersion = ethers.utils.bigNumberify(extensionVersionBytes)
-    if (!extensionVersion.eq(0)) {
-      let extensionLengthBytes
-      ;[extensionLengthBytes, offset] = extractBytes(array, offset, 4)
-      const extensionLength = ethers.utils.bigNumberify(extensionLengthBytes)
-      offset += extensionLength.toNumber()
-    }
-  }
-
-  let codeCountBytes
-  ;[codeCountBytes, offset] = extractBytes(array, offset, 8)
-  const codeCount = ethers.utils.bigNumberify(codeCountBytes).toNumber()
-  const ops: Operation[] = []
-  for (let i = 0; i < codeCount; ++i) {
-    let op
-    ;[op, offset] = unmarshalOp(array, offset)
-    ops.push(op)
-  }
-  const [staticVal] = _unmarshalValue(array, offset)
-  return [ops, staticVal]
-}
-
-function opsToCodePoints(ops: Operation[]): CodePointValue[] {
-  const cps: CodePointValue[] = []
-  for (const op of ops) {
-    cps.push(new CodePointValue(0, op, ethers.utils.hexZeroPad('0x00', 32)))
-  }
-  for (let i = cps.length - 2; i >= 0; i--) {
-    cps[i].nextHash = cps[i + 1].hash()
-  }
-  return cps
-}
-
-export function contractMachineHash(array: Uint8Array): string {
-  const [ops, staticVal] = unmarshalContract(array)
-  const codePoints = opsToCodePoints(ops)
-
-  return machineHash(
-    codePoints[0],
-    new TupleValue([]),
-    new TupleValue([]),
-    new TupleValue([]),
-    staticVal,
-    new CodePointValue(
-      '18446744073709551615',
-      new BasicOp(0),
-      ethers.utils.hexZeroPad('0x00', 32)
-    )
-  )
-}
-
-export function machineHash(
-  pc: Value,
-  stack: Value,
-  auxstack: Value,
-  registerVal: Value,
-  staticVal: Value,
-  errPc: Value
-): string {
-  return ethers.utils.solidityKeccak256(
-    ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32'],
-    [
-      pc.hash(),
-      stack.hash(),
-      auxstack.hash(),
-      registerVal.hash(),
-      staticVal.hash(),
-      errPc.hash(),
-    ]
-  )
-}
-
 function unmarshalOpCode(array: Uint8Array, offset: number): [number, number] {
   let head
   ;[head, offset] = extractBytes(array, offset, 1)
   const opcode = ethers.utils.bigNumberify(head).toNumber()
-  if (!VALID_OP_CODES.includes(opcode)) {
-    throw Error(
-      'Error unmarshalOpCode no such opcode: 0x' + opcode.toString(16)
-    )
-  }
   return [opcode, offset]
 }
 
@@ -586,7 +387,6 @@ function unmarshalTuple(
   offset: number
 ): [Value[], number] {
   const contents = new Array(size)
-  const tail = array
   for (let i = 0; i < size; i++) {
     let value
     ;[value, offset] = _unmarshalValue(array, offset)
@@ -604,19 +404,12 @@ function _unmarshalValue(array: Uint8Array, offset: number): [Value, number] {
     const i = ethers.utils.bigNumberify(head)
     return [new IntValue(i), offset]
   } else if (ty === ValueType.CodePoint) {
-    ;[head, offset] = extractBytes(array, offset, 8)
-    const pc = ethers.utils.bigNumberify(head)
     let op
     ;[op, offset] = unmarshalOp(array, offset)
     ;[head, offset] = extractBytes(array, offset, 32)
     const nextHash = ethers.utils.hexlify(head)
-    return [new CodePointValue(pc, op, nextHash), offset]
+    return [new CodePointValue(op, nextHash), offset]
   } else if (ty === ValueType.HashOnly) {
-    ;[head, offset] = extractBytes(array, offset, 8)
-    const size = ethers.utils.bigNumberify(head)
-    ;[head, offset] = extractBytes(array, offset, 32)
-    const hash = '0x' + head
-    // return [new HashOnlyValue(hash, size), tail];
     throw Error('Error unmarshaling: HashOnlyValue was not expected')
   } else if (ty >= ValueType.Tuple && ty <= ValueType.TupleMax) {
     const size = ty - ValueType.Tuple
@@ -628,6 +421,12 @@ function _unmarshalValue(array: Uint8Array, offset: number): [Value, number] {
   }
 }
 
-export function unmarshal(array: ethers.utils.Arrayish): Value {
-  return _unmarshalValue(ethers.utils.arrayify(array), 0)[0]
+export function unmarshal(
+  array: ethers.utils.Arrayish,
+  offset?: number
+): Value {
+  if (!offset) {
+    offset = 0
+  }
+  return _unmarshalValue(ethers.utils.arrayify(array), offset)[0]
 }

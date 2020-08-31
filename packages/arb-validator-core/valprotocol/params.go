@@ -23,29 +23,34 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
+// If StakeToken is 0, stake requirement is ETH measured in Wei, otherwise stake requirement is units of stakeStoken
 type ChainParams struct {
-	StakeRequirement        *big.Int         // in Wei
+	StakeRequirement        *big.Int
+	StakeToken              common.Address
 	GracePeriod             common.TimeTicks // in Ticks
 	MaxExecutionSteps       uint64
-	MaxBlockBoundsWidth     uint64 // in blocks
-	MaxTimestampBoundsWidth uint64 // in seconds
 	ArbGasSpeedLimitPerTick uint64 // in ArbGas per tick
 }
 
 func NewRandomChainParams() ChainParams {
 	return ChainParams{
 		StakeRequirement:        common.RandBigInt(),
+		StakeToken:              common.RandAddress(),
 		GracePeriod:             common.TimeTicks{Val: common.RandBigInt()},
 		MaxExecutionSteps:       rand.Uint64(),
-		MaxBlockBoundsWidth:     rand.Uint64(),
-		MaxTimestampBoundsWidth: rand.Uint64(),
 		ArbGasSpeedLimitPerTick: rand.Uint64(),
 	}
 }
 
-func (cp ChainParams) WithStakeRequirement(amountInWei *big.Int) ChainParams {
+func (cp ChainParams) WithStakeRequirement(amount *big.Int) ChainParams {
 	ret := cp
-	ret.StakeRequirement = amountInWei
+	ret.StakeRequirement = amount
+	return ret
+}
+
+func (cp ChainParams) WithStakeToken(address common.Address) ChainParams {
+	ret := cp
+	ret.StakeToken = address
 	return ret
 }
 
@@ -65,18 +70,6 @@ func (cp ChainParams) WithMaxExecutionSteps(steps uint64) ChainParams {
 	return ret
 }
 
-func (cp ChainParams) WithMaxBlocksBoundsWidth(width uint64) ChainParams {
-	ret := cp
-	ret.MaxBlockBoundsWidth = width
-	return ret
-}
-
-func (cp ChainParams) WithMaxTimestampBoundsWidth(width uint64) ChainParams {
-	ret := cp
-	ret.MaxTimestampBoundsWidth = width
-	return ret
-}
-
 func (cp ChainParams) WithArbGasSpeedLimitPerTick(limit uint64) ChainParams {
 	ret := cp
 	ret.ArbGasSpeedLimitPerTick = limit
@@ -86,10 +79,9 @@ func (cp ChainParams) WithArbGasSpeedLimitPerTick(limit uint64) ChainParams {
 func (params ChainParams) MarshalToBuf() *ChainParamsBuf {
 	return &ChainParamsBuf{
 		StakeRequirement:        common.MarshalBigInt(params.StakeRequirement),
+		StakeToken:              params.StakeToken.MarshallToBuf(),
 		GracePeriod:             params.GracePeriod.MarshalToBuf(),
 		MaxExecutionSteps:       params.MaxExecutionSteps,
-		MaxBlockBoundsWidth:     params.MaxBlockBoundsWidth,
-		MaxTimestampBoundsWidth: params.MaxTimestampBoundsWidth,
 		ArbGasSpeedLimitPerTick: params.ArbGasSpeedLimitPerTick,
 	}
 }
@@ -97,19 +89,17 @@ func (params ChainParams) MarshalToBuf() *ChainParamsBuf {
 func (m *ChainParamsBuf) Unmarshal() ChainParams {
 	return ChainParams{
 		StakeRequirement:        m.StakeRequirement.Unmarshal(),
+		StakeToken:              m.StakeToken.Unmarshal(),
 		GracePeriod:             m.GracePeriod.Unmarshal(),
 		MaxExecutionSteps:       m.MaxExecutionSteps,
-		MaxBlockBoundsWidth:     m.MaxBlockBoundsWidth,
-		MaxTimestampBoundsWidth: m.MaxTimestampBoundsWidth,
 		ArbGasSpeedLimitPerTick: m.ArbGasSpeedLimitPerTick,
 	}
 }
 
 func (cp ChainParams) Equals(cp2 ChainParams) bool {
 	return cp.StakeRequirement.Cmp(cp2.StakeRequirement) == 0 &&
+		cp.StakeToken == cp2.StakeToken &&
 		cp.GracePeriod == cp2.GracePeriod &&
 		cp.MaxExecutionSteps == cp2.MaxExecutionSteps &&
-		cp.MaxBlockBoundsWidth == cp2.MaxBlockBoundsWidth &&
-		cp.MaxTimestampBoundsWidth == cp2.MaxTimestampBoundsWidth &&
 		cp.ArbGasSpeedLimitPerTick == cp2.ArbGasSpeedLimitPerTick
 }

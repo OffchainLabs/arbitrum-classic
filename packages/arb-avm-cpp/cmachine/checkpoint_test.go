@@ -1,5 +1,5 @@
 /*
-* Copyright 2019, Offchain Labs, Inc.
+* Copyright 2020, Offchain Labs, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -17,25 +17,24 @@
 package cmachine
 
 import (
-	"log"
-	"math/big"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 )
 
+var codeFile = arbos.Path()
+
 func TestCheckpoint(t *testing.T) {
-	codeFile := "contract.ao"
 	dePath := "dbPath"
 
-	checkpointStorage, err := NewCheckpoint(dePath, codeFile)
+	checkpointStorage, err := NewCheckpoint(dePath)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
+	}
+	if err := checkpointStorage.Initialize(codeFile); err != nil {
+		t.Fatal(err)
 	}
 	defer checkpointStorage.CloseCheckpointStorage()
 
@@ -46,16 +45,18 @@ func TestCheckpoint(t *testing.T) {
 	}
 
 	if err := os.RemoveAll(dePath); err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 }
 
 func TestCheckpointMachine(t *testing.T) {
-	codeFile := "contract.ao"
 	dePath := "dbPath2"
 
-	checkpointStorage, err := NewCheckpoint(dePath, codeFile)
+	checkpointStorage, err := NewCheckpoint(dePath)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := checkpointStorage.Initialize(codeFile); err != nil {
 		t.Fatal(err)
 	}
 	defer checkpointStorage.CloseCheckpointStorage()
@@ -69,13 +70,7 @@ func TestCheckpointMachine(t *testing.T) {
 
 	_, numSteps := mach.ExecuteAssertion(
 		1000,
-		&protocol.TimeBounds{
-			LowerBoundBlock:     common.NewTimeBlocks(big.NewInt(100)),
-			UpperBoundBlock:     common.NewTimeBlocks(big.NewInt(120)),
-			LowerBoundTimestamp: big.NewInt(100),
-			UpperBoundTimestamp: big.NewInt(120),
-		},
-		value.NewEmptyTuple(),
+		nil,
 		time.Hour,
 	)
 
@@ -95,6 +90,6 @@ func TestCheckpointMachine(t *testing.T) {
 	}
 
 	if err := os.RemoveAll(dePath); err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 }

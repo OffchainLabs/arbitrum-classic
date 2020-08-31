@@ -61,12 +61,20 @@ func MessageChallengeDataHash(
 
 func ExecutionDataHash(
 	numSteps uint64,
-	preconditionHash common.Hash,
-	assertionHash common.Hash,
+	assertion *ExecutionAssertionStub,
 ) common.Hash {
 	return hashing.SoliditySHA3(
 		hashing.Uint64(numSteps),
-		hashing.Bytes32(preconditionHash),
-		hashing.Bytes32(assertionHash),
+		hashing.Uint64(assertion.NumGas),
+		hashing.Bytes32(assertion.BeforeMachineHash),
+		hashing.Bytes32(assertion.AfterMachineHash),
+		hashing.Bytes32(assertion.BeforeInboxHash),
+		hashing.Bytes32(assertion.AfterInboxHash),
+		hashing.Bytes32(assertion.FirstMessageHash),
+		hashing.Bytes32(assertion.LastMessageHash),
+		hashing.Uint64(assertion.MessageCount),
+		hashing.Bytes32(assertion.FirstLogHash),
+		hashing.Bytes32(assertion.LastLogHash),
+		hashing.Uint64(assertion.LogCount),
 	)
 }

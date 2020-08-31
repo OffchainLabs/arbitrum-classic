@@ -19,6 +19,8 @@ package ethbridge
 import (
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"log"
 	"math/big"
 	"time"
 
@@ -29,8 +31,6 @@ import (
 	ethereum "github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -67,47 +67,59 @@ func getLogChainInfo(log types.Log) arbbridge.ChainInfo {
 	return arbbridge.ChainInfo{
 		BlockId:  getLogBlockID(log),
 		LogIndex: log.Index,
-		TxHash:   log.TxHash,
 	}
 }
 
-func waitForReceipt(ctx context.Context, client *ethclient.Client, from ethcommon.Address, tx *types.Transaction, methodName string) error {
+func waitForReceipt(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string) error {
 	_, err := WaitForReceiptWithResults(ctx, client, from, tx, methodName)
 	return err
 }
-func WaitForReceiptWithResults(ctx context.Context, client *ethclient.Client, from ethcommon.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
+
+func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.EthClient, txHash ethcommon.Hash) (*types.Receipt, error) {
 	for {
 		select {
 		case _ = <-time.After(time.Second):
-			receipt, err := client.TransactionReceipt(ctx, tx.Hash())
+			receipt, err := client.TransactionReceipt(ctx, txHash)
+			if receipt == nil && err == nil {
+				continue
+			}
 			if err != nil {
 				if err.Error() == ethereum.NotFound.Error() {
 					continue
 				}
+				log.Println("ERROR getting receipt", err)
 				return nil, err
-			}
-			if receipt.Status != 1 {
-				data, err := receipt.MarshalJSON()
-				if err != nil {
-					return nil, errors.New("Failed unmarshalling receipt")
-				}
-				callMsg := ethereum.CallMsg{
-					From:     from,
-					To:       tx.To(),
-					Gas:      tx.Gas(),
-					GasPrice: tx.GasPrice(),
-					Value:    tx.Value(),
-					Data:     tx.Data(),
-				}
-				data, err = client.CallContract(ctx, callMsg, receipt.BlockNumber)
-				if err != nil {
-					return nil, fmt.Errorf("Transaction %v failed with error %v", methodName, err)
-				}
-				return nil, fmt.Errorf("Transaction %v failed with tx %v", methodName, string(data))
 			}
 			return receipt, nil
 		case _ = <-ctx.Done():
 			return nil, errors.New("Receipt not found")
 		}
 	}
+}
+
+func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
+	receipt, err := WaitForReceiptWithResultsSimple(ctx, client, tx.Hash())
+	if err != nil {
+		return nil, err
+	}
+	if receipt.Status != 1 {
+		data, err := receipt.MarshalJSON()
+		if err != nil {
+			return nil, errors.New("Failed unmarshalling receipt")
+		}
+		callMsg := ethereum.CallMsg{
+			From:     from,
+			To:       tx.To(),
+			Gas:      tx.Gas(),
+			GasPrice: tx.GasPrice(),
+			Value:    tx.Value(),
+			Data:     tx.Data(),
+		}
+		data, err = client.CallContract(ctx, callMsg, receipt.BlockNumber)
+		if err != nil {
+			return nil, fmt.Errorf("Transaction %v failed with error %v", methodName, err)
+		}
+		return nil, fmt.Errorf("Transaction %v failed with tx %v", methodName, string(data))
+	}
+	return receipt, nil
 }

@@ -31,12 +31,16 @@ enum CBlockType {
     BLOCK_TYPE_BREAKPOINT = 3,
     BLOCK_TYPE_INBOX = 4,
     BLOCK_TYPE_SEND = 5,
+    BLOCK_TYPE_SIDELOAD = 6
 };
 
 typedef enum {
     STATUS_EXTENSIVE = 0,
     STATUS_ERROR_STOP = 1,
     STATUS_HALT = 2,
+    // STATE_UNKNOWN is used if the underlying MachineState state isn't a valid
+    // value
+    STATE_UNKNOWN = 3
 } CStatus;
 
 typedef struct {
@@ -45,13 +49,13 @@ typedef struct {
 } CBlockReason;
 
 typedef struct {
+    uint64_t inbox_messages_consumed;
     ByteSlice outMessages;
     int outMessageCount;
     ByteSlice logs;
     int logCount;
     uint64_t numSteps;
     uint64_t numGas;
-    int didInboxInsn;
 } RawAssertion;
 
 CMachine* machineCreate(const char* filename);
@@ -63,18 +67,31 @@ CMachine* machineClone(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
 CStatus machineCurrentStatus(CMachine* m);
-CBlockReason machineIsBlocked(CMachine* m, void* currentTime, int newMessages);
+CBlockReason machineIsBlocked(CMachine* m, int newMessages);
 
-RawAssertion machineExecuteAssertion(CMachine* m,
-                                     uint64_t maxSteps,
-                                     void* lowerBoundBlockData,
-                                     void* upperBoundBlockData,
-                                     void* lowerBoundTimestampData,
-                                     void* upperBoundTimestampData,
-                                     void* inbox,
-                                     uint64_t wallLimit);
+RawAssertion executeAssertion(CMachine* m,
+                              uint64_t maxSteps,
+                              void* inbox_messages,
+                              uint64_t message_count,
+                              uint64_t wallLimit);
+
+RawAssertion executeCallServerAssertion(CMachine* m,
+                                        uint64_t maxSteps,
+                                        void* inbox_messages,
+                                        uint64_t message_count,
+                                        void* fake_inbox_peek_value,
+                                        uint64_t wallLimit);
+
+RawAssertion executeSideloadedAssertion(CMachine* m,
+                                        uint64_t maxSteps,
+                                        void* inbox_messages,
+                                        uint64_t message_count,
+                                        void* sideload,
+                                        uint64_t wallLimit);
 
 ByteSlice machineMarshallForProof(CMachine* m);
+
+ByteSlice machineMarshallState(CMachine* m);
 
 void machinePrint(CMachine* m);
 

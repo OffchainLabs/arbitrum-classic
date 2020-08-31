@@ -13,12 +13,13 @@ validator-states
 docker-compose.yml
 packages/arb-avm-cpp/tests/config.hpp
 packages/arb-avm-cpp/rocksdb
-packages/arb-compiler-evm/tests/sol-syscall/code.txt
 bridge_eth_addresses.json
 keys.json
-vconan
 /workspace
 arbitrum_flat.sol
+vconan
+gasReporterOutput.json
+rollups
 
 # Logs
 logs
@@ -287,3 +288,7 @@ packages/arb-validator/cmd/rollupServer/rollupServer
 packages/arb-validator/cmd/evilRollupServer/evilRollupServer
 packages/arb-validator/cmd/evilRollupServer/evilRollupServer
 packages/arb-validator/cmd/evilRollupServer/evilRollupServer
+
+# geth setup
+packages/arb-bridge-eth/data/
+packages/arb-bridge-eth/password.txt

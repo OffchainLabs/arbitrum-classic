@@ -18,30 +18,48 @@ package ethbridge
 
 import (
 	"context"
+	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 
 	errors2 "github.com/pkg/errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/arbfactory"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
 type arbFactory struct {
-	contract *arbfactory.ArbFactory
-	client   *ethclient.Client
+	contract *ethbridgecontracts.ArbFactory
+	client   ethutils.EthClient
 	auth     *TransactAuth
 }
 
-func newArbFactory(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*arbFactory, error) {
-	vmCreatorContract, err := arbfactory.NewArbFactory(address, client)
+func newArbFactory(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*arbFactory, error) {
+	vmCreatorContract, err := ethbridgecontracts.NewArbFactory(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
 	}
 	return &arbFactory{vmCreatorContract, client, auth}, nil
+}
+
+func DeployRollupFactory(auth *bind.TransactOpts, client ethutils.EthClient) (ethcommon.Address, error) {
+	rollupAddr, _, _, err := ethbridgecontracts.DeployArbRollup(auth, client)
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+	inbox, _, _, err := ethbridgecontracts.DeployGlobalInbox(auth, client)
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+	chalFactory, err := DeployChallengeFactory(auth, client)
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+	factoryAddr, _, _, err := ethbridgecontracts.DeployArbFactory(auth, client, rollupAddr, inbox, chalFactory)
+	return factoryAddr, err
 }
 
 func (con *arbFactory) CreateRollup(
@@ -58,9 +76,10 @@ func (con *arbFactory) CreateRollup(
 		params.GracePeriod.Val,
 		new(big.Int).SetUint64(params.ArbGasSpeedLimitPerTick),
 		params.MaxExecutionSteps,
-		[2]uint64{params.MaxBlockBoundsWidth, params.MaxTimestampBoundsWidth},
 		params.StakeRequirement,
+		params.StakeToken.ToEthAddress(),
 		owner.ToEthAddress(),
+		[]byte{},
 	)
 	if err != nil {
 		return common.Address{}, nil, errors2.Wrap(err, "Failed to call to ChainFactory.CreateChain")
@@ -69,24 +88,24 @@ func (con *arbFactory) CreateRollup(
 	if err != nil {
 		return common.Address{}, nil, err
 	}
-	if len(receipt.Logs) != 2 {
-		return common.Address{}, nil, errors2.New("Wrong receipt count")
+	if len(receipt.Logs) != 3 {
+		return common.Address{}, nil, fmt.Errorf("Wrong receipt count %v instead of 2", len(receipt.Logs))
 	}
-	event, err := con.contract.ParseRollupCreated(*receipt.Logs[1])
+	event, err := con.contract.ParseRollupCreated(*receipt.Logs[2])
 	if err != nil {
 		return common.Address{}, nil, err
 	}
-	return common.NewAddressFromEth(event.VmAddress), GetReceiptBlockID(receipt), nil
+	return common.NewAddressFromEth(event.RollupAddress), GetReceiptBlockID(receipt), nil
 }
 
 type arbFactoryWatcher struct {
-	contract *arbfactory.ArbFactory
-	client   *ethclient.Client
+	contract *ethbridgecontracts.ArbFactory
+	client   ethutils.EthClient
 	address  ethcommon.Address
 }
 
-func newArbFactoryWatcher(address ethcommon.Address, client *ethclient.Client) (*arbFactoryWatcher, error) {
-	vmCreatorContract, err := arbfactory.NewArbFactory(address, client)
+func newArbFactoryWatcher(address ethcommon.Address, client ethutils.EthClient) (*arbFactoryWatcher, error) {
+	vmCreatorContract, err := ethbridgecontracts.NewArbFactory(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
 	}

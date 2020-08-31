@@ -19,6 +19,10 @@ package ethbridge
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"math/big"
 	"strings"
 
@@ -29,12 +33,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
@@ -50,34 +50,34 @@ var rollupConfirmedID ethcommon.Hash
 var confirmedAssertionID ethcommon.Hash
 
 func init() {
-	parsedRollup, err := abi.JSON(strings.NewReader(rollup.ArbRollupABI))
+	parsedRollup, err := abi.JSON(strings.NewReader(ethbridgecontracts.ArbRollupABI))
 	if err != nil {
 		panic(err)
 	}
-	rollupCreatedID = parsedRollup.Events["RollupCreated"].ID()
-	stakeCreatedID = parsedRollup.Events["RollupStakeCreated"].ID()
-	challengeStartedID = parsedRollup.Events["RollupChallengeStarted"].ID()
-	challengeCompletedID = parsedRollup.Events["RollupChallengeCompleted"].ID()
-	rollupRefundedID = parsedRollup.Events["RollupStakeRefunded"].ID()
-	rollupPrunedID = parsedRollup.Events["RollupPruned"].ID()
-	rollupStakeMovedID = parsedRollup.Events["RollupStakeMoved"].ID()
-	rollupAssertedID = parsedRollup.Events["RollupAsserted"].ID()
-	rollupConfirmedID = parsedRollup.Events["RollupConfirmed"].ID()
-	confirmedAssertionID = parsedRollup.Events["ConfirmedAssertion"].ID()
+	rollupCreatedID = parsedRollup.Events["RollupCreated"].ID
+	stakeCreatedID = parsedRollup.Events["RollupStakeCreated"].ID
+	challengeStartedID = parsedRollup.Events["RollupChallengeStarted"].ID
+	challengeCompletedID = parsedRollup.Events["RollupChallengeCompleted"].ID
+	rollupRefundedID = parsedRollup.Events["RollupStakeRefunded"].ID
+	rollupPrunedID = parsedRollup.Events["RollupPruned"].ID
+	rollupStakeMovedID = parsedRollup.Events["RollupStakeMoved"].ID
+	rollupAssertedID = parsedRollup.Events["RollupAsserted"].ID
+	rollupConfirmedID = parsedRollup.Events["RollupConfirmed"].ID
+	confirmedAssertionID = parsedRollup.Events["ConfirmedAssertion"].ID
 }
 
 type ethRollupWatcher struct {
-	ArbRollup *rollup.ArbRollup
+	ArbRollup *ethbridgecontracts.ArbRollup
 
 	rollupAddress ethcommon.Address
-	client        *ethclient.Client
+	client        ethutils.EthClient
 }
 
 func newRollupWatcher(
 	rollupAddress ethcommon.Address,
-	client *ethclient.Client,
+	client ethutils.EthClient,
 ) (*ethRollupWatcher, error) {
-	arbitrumRollupContract, err := rollup.NewArbRollup(rollupAddress, client)
+	arbitrumRollupContract, err := ethbridgecontracts.NewArbRollup(rollupAddress, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to arbRollup")
 	}
@@ -243,37 +243,23 @@ func (vm *ethRollupWatcher) processEvents(
 			return nil, err
 		}
 		params := &valprotocol.AssertionParams{
-			NumSteps: eventVal.NumSteps,
-			TimeBounds: &protocol.TimeBounds{
-				LowerBoundBlock:     common.NewTimeBlocks(eventVal.TimeBounds[0]),
-				UpperBoundBlock:     common.NewTimeBlocks(eventVal.TimeBounds[1]),
-				LowerBoundTimestamp: eventVal.TimeBounds[2],
-				UpperBoundTimestamp: eventVal.TimeBounds[3],
-			},
+			NumSteps:             eventVal.NumSteps,
 			ImportedMessageCount: eventVal.ImportedMessageCount,
 		}
-		claim := &valprotocol.AssertionClaim{
-			AfterInboxTop:         eventVal.Fields[2],
-			ImportedMessagesSlice: eventVal.Fields[3],
-			AssertionStub: &valprotocol.ExecutionAssertionStub{
-				AfterHash:        eventVal.Fields[4],
-				DidInboxInsn:     eventVal.DidInboxInsn,
-				NumGas:           eventVal.NumArbGas,
-				FirstMessageHash: [32]byte{},
-				LastMessageHash:  eventVal.Fields[5],
-				FirstLogHash:     [32]byte{},
-				LastLogHash:      eventVal.Fields[6],
-			},
-		}
+
 		return arbbridge.AssertedEvent{
-			ChainInfo:    chainInfo,
-			PrevLeafHash: eventVal.Fields[0],
-			Disputable: valprotocol.NewDisputableNode(
-				params,
-				claim,
-				eventVal.Fields[1],
-				eventVal.InboxCount,
-			),
+			ChainInfo:        chainInfo,
+			PrevLeafHash:     eventVal.Fields[0],
+			MaxInboxTop:      eventVal.Fields[1],
+			MaxInboxCount:    eventVal.InboxCount,
+			AssertionParams:  params,
+			AfterMachineHash: eventVal.Fields[2],
+			AfterInboxHash:   eventVal.Fields[3],
+			NumGas:           eventVal.NumArbGas,
+			LastMessageHash:  eventVal.Fields[4],
+			MessageCount:     eventVal.MessageCount,
+			LastLogHash:      eventVal.Fields[5],
+			LogCount:         eventVal.LogCount,
 		}, nil
 	case rollupConfirmedID:
 		eventVal, err := vm.ArbRollup.ParseRollupConfirmed(ethLog)
@@ -301,23 +287,28 @@ func (vm *ethRollupWatcher) processEvents(
 func (vm *ethRollupWatcher) GetParams(
 	ctx context.Context,
 ) (valprotocol.ChainParams, error) {
+	invalid := valprotocol.ChainParams{}
 	callOpts := &bind.CallOpts{Context: ctx}
 	rawParams, err := vm.ArbRollup.VmParams(callOpts)
 	if err != nil {
-		return valprotocol.ChainParams{}, err
+		return invalid, err
 	}
 	stakeRequired, err := vm.ArbRollup.GetStakeRequired(callOpts)
 	if err != nil {
-		return valprotocol.ChainParams{}, err
+		return invalid, err
+	}
+
+	stakeToken, err := vm.ArbRollup.GetStakeToken(callOpts)
+	if err != nil {
+		return invalid, err
 	}
 	return valprotocol.ChainParams{
 		StakeRequirement: stakeRequired,
+		StakeToken:       common.NewAddressFromEth(stakeToken),
 		GracePeriod: common.TimeTicks{
 			Val: rawParams.GracePeriodTicks,
 		},
 		MaxExecutionSteps:       rawParams.MaxExecutionSteps,
-		MaxBlockBoundsWidth:     rawParams.MaxBlockBoundsWidth,
-		MaxTimestampBoundsWidth: rawParams.MaxTimestampBoundsWidth,
 		ArbGasSpeedLimitPerTick: rawParams.ArbGasSpeedLimitPerTick.Uint64(),
 	}, nil
 }
@@ -331,7 +322,7 @@ func (vm *ethRollupWatcher) InboxAddress(
 
 func (vm *ethRollupWatcher) GetCreationInfo(
 	ctx context.Context,
-) (common.Hash, *common.BlockId, common.Hash, error) {
+) (common.Hash, arbbridge.ChainInfo, common.Hash, *big.Int, error) {
 	addressIndex := ethcommon.Hash{}
 	copy(
 		addressIndex[:],
@@ -342,20 +333,36 @@ func (vm *ethRollupWatcher) GetCreationInfo(
 		Topics:    [][]ethcommon.Hash{{rollupCreatedID}},
 	})
 	if err != nil {
-		return common.Hash{}, nil, common.Hash{}, err
+		return common.Hash{}, arbbridge.ChainInfo{}, common.Hash{}, nil, err
 	}
-	if len(logs) != 1 {
+	if len(logs) == 0 {
 		return common.Hash{},
-			nil,
+			arbbridge.ChainInfo{},
 			common.Hash{},
+			nil,
+			errors.New("chain does not exist")
+	}
+	if len(logs) > 1 {
+		return common.Hash{},
+			arbbridge.ChainInfo{},
+			common.Hash{},
+			nil,
 			errors.New("more than one chain created with same address")
 	}
 	ev, err := vm.ArbRollup.ParseRollupCreated(logs[0])
 	if err != nil {
-		return common.Hash{}, nil, common.Hash{}, err
+		return common.Hash{}, arbbridge.ChainInfo{}, common.Hash{}, nil, err
 	}
 
-	return common.NewHashFromEth(logs[0].TxHash), getLogBlockID(logs[0]), ev.InitVMHash, nil
+	header, err := vm.client.HeaderByNumber(ctx, new(big.Int).SetUint64(logs[0].BlockNumber))
+	if err != nil {
+		return common.Hash{},
+			arbbridge.ChainInfo{},
+			common.Hash{},
+			nil,
+			err
+	}
+	return common.NewHashFromEth(logs[0].TxHash), getLogChainInfo(logs[0]), ev.InitVMHash, new(big.Int).SetUint64(header.Time), nil
 }
 
 func (vm *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {
@@ -364,4 +371,38 @@ func (vm *ethRollupWatcher) GetVersion(ctx context.Context) (string, error) {
 
 func (vm *ethRollupWatcher) IsStaked(address common.Address) (bool, error) {
 	return vm.ArbRollup.IsStaked(nil, address.ToEthAddress())
+}
+
+func (vm *ethRollupWatcher) VerifyArbChain(ctx context.Context, machHash common.Hash) error {
+	backend, pks := test.SimulatedBackend()
+	_, _, rollupSim, err := ethbridgecontracts.DeployArbRollup(bind.NewKeyedTransactor(pks[0]), backend)
+	if err != nil {
+		return err
+	}
+	backend.Commit()
+	validEthBridgeVersion, err := rollupSim.VERSION(&bind.CallOpts{Context: ctx})
+	if err != nil {
+		return err
+	}
+	ethbridgeVersion, err := vm.GetVersion(ctx)
+	if err != nil {
+		return err
+	}
+
+	if ethbridgeVersion != validEthBridgeVersion {
+		return fmt.Errorf("VM has EthBridge version %v, but validator implements version %v."+
+			" To find a validator version which supports your EthBridge, visit "+
+			"https://offchainlabs.com/ethbridge-version-support",
+			ethbridgeVersion, validEthBridgeVersion)
+	}
+
+	_, _, initialVMHash, _, err := vm.GetCreationInfo(ctx)
+	if err != nil {
+		return err
+	}
+
+	if machHash != initialVMHash {
+		return fmt.Errorf("ArbChain was initialized with VM with hash %v, but local validator has VM with hash %v", initialVMHash, machHash)
+	}
+	return nil
 }

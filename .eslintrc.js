@@ -17,6 +17,7 @@ module.exports = {
     'prettier/prettier': 'error',
     'no-unused-vars': 'warn',
     'prefer-const': [2, { destructuring: 'all' }],
+    'object-curly-spacing': ['error', 'always'],
   },
   overrides: [
     {
@@ -25,22 +26,16 @@ module.exports = {
       extends: [
         'eslint:recommended',
         'plugin:@typescript-eslint/recommended',
+        'prettier/@typescript-eslint',
         'plugin:prettier/recommended',
       ],
       plugins: ['@typescript-eslint', 'prettier'],
       rules: {
         'no-empty-pattern': 'warn',
         'prettier/prettier': ['error', { singleQuote: true }],
-        '@typescript-eslint/no-use-before-define': [
-          'error',
-          { functions: false },
-        ],
-        '@typescript-eslint/no-use-before-define': [
-          'warn',
-          { functions: true },
-        ],
         '@typescript-eslint/member-delimiter-style': ['off'],
         '@typescript-eslint/no-explicit-any': ['warn'],
+        '@typescript-eslint/no-use-before-define': ['off'],
       },
     },
   ],

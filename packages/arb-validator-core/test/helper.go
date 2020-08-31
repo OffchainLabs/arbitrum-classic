@@ -17,63 +17,32 @@
 package test
 
 import (
-	"encoding/json"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"io/ioutil"
-	"net"
-	"os"
-	"time"
-
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
+	"log"
+	"math/big"
 )
 
-func checkPort(port string) bool {
-	timeout := time.Second
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", port), timeout)
-	if err != nil {
-		return false
-	}
-	if conn != nil {
-		defer conn.Close()
-		return true
-	}
-	return false
-}
+func SimulatedBackend() (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
+	genesisAlloc := make(map[ethcommon.Address]core.GenesisAccount)
+	pks := make([]*ecdsa.PrivateKey, 0)
+	balance, _ := new(big.Int).SetString("10000000000000000000", 10) // 10 eth in wei
+	for i := 0; i < 15; i++ {
+		privateKey, err := crypto.GenerateKey()
+		if err != nil {
+			log.Fatal(err)
+		}
+		pks = append(pks, privateKey)
 
-func GetEthUrl() string {
-	if checkPort("7546") {
-		return "ws://127.0.0.1:7546"
-	} else {
-		return "ws://127.0.0.1:7545"
-	}
-}
-
-func GetFactoryAddress() (common.Address, error) {
-	bridge_eth_addresses := "../bridge_eth_addresses.json"
-	jsonFile, err := os.Open(bridge_eth_addresses)
-	if err != nil {
-		return common.Address{}, err
-	}
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-	if err := jsonFile.Close(); err != nil {
-		return common.Address{}, err
+		genesisAlloc[crypto.PubkeyToAddress(privateKey.PublicKey)] = core.GenesisAccount{
+			Balance: balance,
+		}
 	}
 
-	var connectionInfo ethbridge.ArbAddresses
-	if err := json.Unmarshal(byteValue, &connectionInfo); err != nil {
-		return common.Address{}, err
-	}
-
-	return connectionInfo.ArbFactoryAddress(), nil
-}
-
-func SetupAuth(hexKey string) (*bind.TransactOpts, error) {
-	privateKey, err := crypto.HexToECDSA(hexKey)
-	if err != nil {
-		return nil, err
-	}
-
-	return bind.NewKeyedTransactor(privateKey), nil
+	blockGasLimit := uint64(1000000000)
+	client := backends.NewSimulatedBackend(genesisAlloc, blockGasLimit)
+	return client, pks
 }

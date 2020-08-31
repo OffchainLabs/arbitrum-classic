@@ -5,6 +5,7 @@ import { Contract, ContractFactory, Signer } from 'ethers'
 import { Provider } from 'ethers/providers'
 import { UnsignedTransaction } from 'ethers/utils/transaction'
 
+import { TransactionOverrides } from '.'
 import { ArbInfo } from './ArbInfo'
 
 export class ArbInfoFactory extends ContractFactory {
@@ -12,11 +13,11 @@ export class ArbInfoFactory extends ContractFactory {
     super(_abi, _bytecode, signer)
   }
 
-  deploy(): Promise<ArbInfo> {
-    return super.deploy() as Promise<ArbInfo>
+  deploy(overrides?: TransactionOverrides): Promise<ArbInfo> {
+    return super.deploy(overrides) as Promise<ArbInfo>
   }
-  getDeployTransaction(): UnsignedTransaction {
-    return super.getDeployTransaction()
+  getDeployTransaction(overrides?: TransactionOverrides): UnsignedTransaction {
+    return super.getDeployTransaction(overrides)
   }
   attach(address: string): ArbInfo {
     return super.attach(address) as ArbInfo
@@ -37,6 +38,7 @@ const _abi = [
     constant: true,
     inputs: [
       {
+        internalType: 'address',
         name: 'account',
         type: 'address',
       },
@@ -44,6 +46,7 @@ const _abi = [
     name: 'getBalance',
     outputs: [
       {
+        internalType: 'uint256',
         name: '',
         type: 'uint256',
       },
@@ -56,6 +59,7 @@ const _abi = [
     constant: true,
     inputs: [
       {
+        internalType: 'address',
         name: 'account',
         type: 'address',
       },
@@ -63,7 +67,8 @@ const _abi = [
     name: 'getCode',
     outputs: [
       {
-        name: 'o_code',
+        internalType: 'bytes',
+        name: '',
         type: 'bytes',
       },
     ],
@@ -74,4 +79,4 @@ const _abi = [
 ]
 
 const _bytecode =
-  '0x608060405234801561001057600080fd5b506101d1806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80637e105ce21461003b578063f8b2cb4f146100f8575b600080fd5b61007d6004803603602081101561005157600080fd5b81019080803573ffffffffffffffffffffffffffffffffffffffff169060200190929190505050610150565b6040518080602001828103825283818151815260200191508051906020019080838360005b838110156100bd5780820151818401526020810190506100a2565b50505050905090810190601f1680156100ea5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b61013a6004803603602081101561010e57600080fd5b81019080803573ffffffffffffffffffffffffffffffffffffffff16906020019092919050505061017b565b6040518082815260200191505060405180910390f35b6060813b6040519150601f19601f602083010116820160405280825280600060208401853c50919050565b60008173ffffffffffffffffffffffffffffffffffffffff1631905091905056fea265627a7a72305820dd579d9b644a8f9b974767e963faad88533c23cc6516bf7f2cd1a7d3ba434bc264736f6c634300050a0032'
+  '0x608060405234801561001057600080fd5b50610198806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80637e105ce21461003b578063f8b2cb4f146100d6575b600080fd5b6100616004803603602081101561005157600080fd5b50356001600160a01b031661010e565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561009b578181015183820152602001610083565b50505050905090810190601f1680156100c85780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b6100fc600480360360208110156100ec57600080fd5b50356001600160a01b0316610156565b60408051918252519081900360200190f35b60606000823b90506060816040519080825280601f01601f191660200182016040528015610143576020820181803883390190505b50905081600060208301863c9392505050565b6001600160a01b0316319056fea265627a7a72315820b4b2b581a87ed83f4c54ac7d7feee5e27e2e48836e69eb7ce79d80c96e26a5bc64736f6c63430005110032'

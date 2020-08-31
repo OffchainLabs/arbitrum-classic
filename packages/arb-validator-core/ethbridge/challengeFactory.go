@@ -18,29 +18,46 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 
 	errors2 "github.com/pkg/errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/challengefactory"
 )
 
 type challengeFactory struct {
-	contract *challengefactory.ChallengeFactory
-	client   *ethclient.Client
+	contract *ethbridgecontracts.ChallengeFactory
+	client   ethutils.EthClient
 	auth     *TransactAuth
 }
 
-func newChallengeFactory(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*challengeFactory, error) {
-	vmCreatorContract, err := challengefactory.NewChallengeFactory(address, client)
+func newChallengeFactory(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*challengeFactory, error) {
+	vmCreatorContract, err := ethbridgecontracts.NewChallengeFactory(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
 	}
 	return &challengeFactory{vmCreatorContract, client, auth}, nil
+}
+
+func DeployChallengeFactory(auth *bind.TransactOpts, client ethutils.EthClient) (ethcommon.Address, error) {
+	inboxTopAddr, _, _, err := ethbridgecontracts.DeployInboxTopChallenge(auth, client)
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+	executionAddr, _, _, err := ethbridgecontracts.DeployExecutionChallenge(auth, client)
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+	ospAddr, _, _, err := ethbridgecontracts.DeployOneStepProof(auth, client)
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+	factoryAddr, _, _, err := ethbridgecontracts.DeployChallengeFactory(auth, client, inboxTopAddr, executionAddr, ospAddr)
+	return factoryAddr, err
 }
 
 func (con *challengeFactory) CreateChallenge(

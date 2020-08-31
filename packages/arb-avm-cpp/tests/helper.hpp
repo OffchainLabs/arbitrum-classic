@@ -15,6 +15,7 @@
 extern std::string dbpath;
 
 struct DBDeleter {
+    DBDeleter() { boost::filesystem::remove_all(dbpath); }
     ~DBDeleter() { boost::filesystem::remove_all(dbpath); }
 };
 

@@ -18,31 +18,29 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/inboxtopchallenge"
-
 	errors2 "github.com/pkg/errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type inboxTopChallenge struct {
 	*bisectionChallenge
-	contract *inboxtopchallenge.InboxTopChallenge
+	contract *ethbridgecontracts.InboxTopChallenge
 }
 
-func newInboxTopChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*inboxTopChallenge, error) {
+func newInboxTopChallenge(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*inboxTopChallenge, error) {
 	bisectionChallenge, err := newBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
 	}
-	inboxTopContract, err := inboxtopchallenge.NewInboxTopChallenge(address, client)
+	inboxTopContract, err := ethbridgecontracts.NewInboxTopChallenge(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to InboxTopChallenge")
 	}

@@ -14,28 +14,73 @@
 
 cmake_minimum_required (VERSION 3.5)
 
-set (CMAKE_CXX_STANDARD 14)
+find_package(Git)
+if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../.git")
+# Update submodules as needed
+    message(STATUS "Submodule update")
+    execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                    RESULT_VARIABLE GIT_SUBMOD_RESULT)
+    if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+        message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+    endif()
+endif()
+
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cable/bootstrap.cmake")
+    message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
+endif()
+
+include(cmake/cable/bootstrap.cmake)
+include(CableBuildType)
+include(CableToolchains)
+
+cable_configure_toolchain(DEFAULT cxx14)
+
+include("cmake/HunterGate.cmake")
+HunterGate(
+    URL "https://github.com/cpp-pm/hunter/archive/v0.23.260.tar.gz"
+    SHA1 "13775235910a3fa85644568d1c5be8271de72e1c"
+)
+
+cable_set_build_type(DEFAULT RelWithDebInfo CONFIGURATION_TYPES Debug Release RelWithDebInfo)
 
 project (arb-avm-cpp)
 
+include(CTest)
+
 set(AVM_VERSION_MAJOR 0)
-set(AVM_VERSION_MINOR 6)
-set(AVM_VERSION_PATCH 5)
+set(AVM_VERSION_MINOR 7)
+set(AVM_VERSION_PATCH 0)
 
 set(AVM_VERSION_STRING ${AVM_VERSION_MAJOR}.${AVM_VERSION_MINOR}.${AVM_VERSION_PATCH})
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup(TARGETS)
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
-message(STATUS "CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}")
+
+option(AVM_BUILD_TESTING "Build SelfTest project" ON)
 
 find_package(Threads REQUIRED)
-find_package(Boost 1.65 COMPONENTS filesystem REQUIRED)
-find_package(RocksDB)
-if (NOT ROCKSDB_FOUND)
-    include(build-rocksdb)
+find_package(GMP REQUIRED)
+find_package(Boost 1.65 COMPONENTS filesystem system REQUIRED)
+if(NOT TARGET Boost::boost)
+    add_library(Boost::boost IMPORTED INTERFACE)
+    set_property(TARGET Boost::boost PROPERTY
+        INTERFACE_INCLUDE_DIRECTORIES ${Boost_INCLUDE_DIR})
 endif()
+if(NOT TARGET Boost::filesystem)
+    add_library(Boost::filesystem IMPORTED INTERFACE)
+    set_property(TARGET Boost::filesystem PROPERTY
+        INTERFACE_INCLUDE_DIRECTORIES ${Boost_INCLUDE_DIR})
+    set_property(TARGET Boost::filesystem PROPERTY
+        INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
+endif()
+if(NOT TARGET Boost::system)
+    add_library(Boost::system IMPORTED INTERFACE)
+    set_property(TARGET Boost::system PROPERTY
+        INTERFACE_INCLUDE_DIRECTORIES ${Boost_INCLUDE_DIR})
+    set_property(TARGET Boost::system PROPERTY
+        INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
+endif()
+find_package(RocksDB REQUIRED)
 include(CodeCoverage)
 include(Formatting)
 
@@ -53,16 +98,27 @@ clang_format(TARGET_NAME ${ALL_CODE_FILES})
 enable_testing()
 add_code_coverage_all_targets()
 
-file(GLOB KECCAK_SOURCES
-  external/keccak/*.c
-)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-add_subdirectory(utils)
+hunter_add_package(ethash)
+find_package(ethash CONFIG REQUIRED)
+
+hunter_add_package(intx)
+find_package(intx CONFIG REQUIRED)
+
+get_target_property(ETHASH_LIB ethash::keccak "LOCATION_Release")
+file(COPY ${ETHASH_LIB} DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/cmachine)
+add_subdirectory(external)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/external/Catch2/contrib)
 add_subdirectory(avm_values)
 add_subdirectory(data_storage)
 add_subdirectory(avm)
 add_subdirectory(cavm)
 add_subdirectory(app)
 
-add_subdirectory(tests)
+if (BUILD_TESTING)
+  add_subdirectory(tests)
+endif()
 

@@ -1,0 +1,19 @@
+#!/bin/bash
+
+echo arbitrum > password.txt
+geth --datadir data init geth/ethbridge.json
+cp geth/keystore/* data/keystore
+
+# run in background
+geth --datadir data --rpc --rpcaddr '0.0.0.0' --rpcvhosts=* --rpcport 7545 --rpcapi 'personal,db,eth,net,web3,txpool,miner' \
+    --networkid=44010 \
+    --ws --wsport 7546 --wsorigins '*' --wsapi personal,admin,db,eth,net,web3,miner,shh,txpool,debug \
+    --allow-insecure-unlock --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ./password.txt --mine &>geth.out &
+
+# wait until service is up
+while ! nc -z localhost 7545; do sleep 2; done; \
+echo "Finished waiting for geth on localhost:7545..."
+echo "node output at geth.out"
+
+# # kill service
+# kill $(lsof -t -i:7545)

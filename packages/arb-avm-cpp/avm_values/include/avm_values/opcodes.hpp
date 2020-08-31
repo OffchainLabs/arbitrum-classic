@@ -19,7 +19,9 @@
 
 #define CURRENT_AO_VERSION 1
 
+#include <array>
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -35,6 +37,7 @@ enum class OpCode : uint8_t {
     ADDMOD,
     MULMOD,
     EXP,
+    SIGNEXTEND,
 
     LT = 0x10,
     GT,
@@ -47,11 +50,14 @@ enum class OpCode : uint8_t {
     BITWISE_XOR,
     BITWISE_NOT,
     BYTE,
-    SIGNEXTEND,
+    SHL,
+    SHR,
+    SAR,
 
     HASH = 0x20,
     TYPE,
     ETHHASH2,
+    KECCAKF,
 
     POP = 0x30,
     SPUSH,          // 31
@@ -77,29 +83,29 @@ enum class OpCode : uint8_t {
     TGET = 0x50,
     TSET,
     TLEN,
+    XGET,
+    XSET,
 
     BREAKPOINT = 0x60,
     LOG,
 
     SEND = 0x70,
-    GETTIME,
+    INBOX_PEEK,
     INBOX,
     ERROR,
     HALT,
-    DEBUG,
-    DEFAULT
-};
+    SET_GAS,
+    PUSH_GAS,
+    ERR_CODE_POINT,
+    PUSH_INSN,
+    PUSH_INSN_IMM,
+    //    OPEN_INSN,
+    SIDELOAD = 0x7B,
 
-inline bool isValidOpcode(OpCode op) {
-    return (op >= OpCode::ADD && op <= OpCode::EXP) ||
-           (op >= OpCode::LT && op <= OpCode::SIGNEXTEND) ||
-           (op >= OpCode::HASH && op <= OpCode::ETHHASH2) ||
-           (op >= OpCode::POP && op <= OpCode::ERRSET) ||
-           (op >= OpCode::DUP0 && op <= OpCode::SWAP2) ||
-           (op >= OpCode::TGET && op <= OpCode::TLEN) ||
-           (op >= OpCode::BREAKPOINT && op <= OpCode::LOG) ||
-           (op >= OpCode::SEND && op <= OpCode::HALT);
-}
+    ECRECOVER = 0x80,
+
+    DEBUG_PRINT = 0x90,
+};
 
 const std::unordered_map<OpCode, std::string> InstructionNames = {
     {static_cast<OpCode>(0), "unhandled opcode"},
@@ -113,6 +119,7 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::ADDMOD, "addmod"},
     {OpCode::MULMOD, "mulmod"},
     {OpCode::EXP, "exp"},
+    {OpCode::SIGNEXTEND, "signextend"},
 
     {OpCode::LT, "lt"},
     {OpCode::GT, "gt"},
@@ -125,11 +132,14 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::BITWISE_XOR, "xor"},
     {OpCode::BITWISE_NOT, "not"},
     {OpCode::BYTE, "byte"},
-    {OpCode::SIGNEXTEND, "signextend"},
+    {OpCode::SHL, "shl"},
+    {OpCode::SHR, "shr"},
+    {OpCode::SAR, "sar"},
 
     {OpCode::HASH, "hash"},
     {OpCode::TYPE, "type"},
     {OpCode::ETHHASH2, "ethhash2"},
+    {OpCode::KECCAKF, "keccakf"},
 
     {OpCode::POP, "pop"},
     {OpCode::SPUSH, "spush"},
@@ -155,146 +165,195 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::TGET, "tget"},
     {OpCode::TSET, "tset"},
     {OpCode::TLEN, "tlen"},
+    {OpCode::XGET, "xget"},
+    {OpCode::XSET, "xset"},
 
     {OpCode::BREAKPOINT, "breakpoint"},
     {OpCode::LOG, "log"},
 
     {OpCode::SEND, "send"},
-    {OpCode::GETTIME, "gettime"},
+    {OpCode::INBOX_PEEK, "inboxpeek"},
     {OpCode::INBOX, "inbox"},
     {OpCode::ERROR, "error"},
     {OpCode::HALT, "halt"},
-    {OpCode::DEBUG, "debug"}};
+    {OpCode::SET_GAS, "setgas"},
+    {OpCode::PUSH_GAS, "pushgas"},
+    {OpCode::ERR_CODE_POINT, "errcodepoint"},
+    {OpCode::PUSH_INSN, "pushinsn"},
+    {OpCode::PUSH_INSN_IMM, "pushinsnimm"},
+    {OpCode::SIDELOAD, "sideload"},
 
-const std::unordered_map<OpCode, std::vector<bool>> InstructionStackPops = {
-    {static_cast<OpCode>(0), {}},
-    {OpCode::ADD, {true, true}},
-    {OpCode::MUL, {true, true}},
-    {OpCode::SUB, {true, true}},
-    {OpCode::DIV, {true, true}},
-    {OpCode::SDIV, {true, true}},
-    {OpCode::MOD, {true, true}},
-    {OpCode::SMOD, {true, true}},
-    {OpCode::ADDMOD, {true, true, true}},
-    {OpCode::MULMOD, {true, true, true}},
-    {OpCode::EXP, {true, true}},
+    {OpCode::ECRECOVER, "ecrecover"},
+    {OpCode::DEBUG_PRINT, "debugprint"}};
 
-    {OpCode::LT, {true, true}},
-    {OpCode::GT, {true, true}},
-    {OpCode::SLT, {true, true}},
-    {OpCode::SGT, {true, true}},
-    {OpCode::EQ, {false, false}},
-    {OpCode::ISZERO, {true}},
-    {OpCode::BITWISE_AND, {true, true}},
-    {OpCode::BITWISE_OR, {true, true}},
-    {OpCode::BITWISE_XOR, {true, true}},
-    {OpCode::BITWISE_NOT, {true}},
-    {OpCode::BYTE, {true, true}},
-    {OpCode::SIGNEXTEND, {true, true}},
+enum class MarshalLevel { STUB, SINGLE, FULL };
 
-    {OpCode::HASH, {false}},
-    {OpCode::TYPE, {true}},
-    {OpCode::ETHHASH2, {true, true}},
+const std::unordered_map<OpCode, std::vector<MarshalLevel>>
+    InstructionStackPops = {
+        {static_cast<OpCode>(0), {}},
+        {OpCode::ADD, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::MUL, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::SUB, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::DIV, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::SDIV, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::MOD, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::SMOD, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::ADDMOD,
+         {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::MULMOD,
+         {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::EXP, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::SIGNEXTEND, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
 
-    {OpCode::POP, {false}},
-    {OpCode::SPUSH, {}},
-    {OpCode::RPUSH, {}},
-    {OpCode::RSET, {false}},
-    {OpCode::JUMP, {false}},
-    {OpCode::CJUMP, {true, true}},
-    {OpCode::STACKEMPTY, {}},
-    {OpCode::PCPUSH, {}},
-    {OpCode::AUXPUSH, {false}},
-    {OpCode::AUXPOP, {}},
-    {OpCode::AUXSTACKEMPTY, {}},
-    {OpCode::NOP, {}},
-    {OpCode::ERRPUSH, {}},
-    {OpCode::ERRSET, {true}},
+        {OpCode::LT, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::GT, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::SLT, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::SGT, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::EQ, {MarshalLevel::STUB, MarshalLevel::STUB}},
+        {OpCode::ISZERO, {MarshalLevel::SINGLE}},
+        {OpCode::BITWISE_AND, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::BITWISE_OR, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::BITWISE_XOR, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::BITWISE_NOT, {MarshalLevel::SINGLE}},
+        {OpCode::BYTE, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::SHL, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::SHR, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::SAR, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
 
-    {OpCode::DUP0, {false}},
-    {OpCode::DUP1, {false, false}},
-    {OpCode::DUP2, {false, false, false}},
-    {OpCode::SWAP1, {false, false}},
-    {OpCode::SWAP2, {false, false, false}},
+        {OpCode::HASH, {MarshalLevel::STUB}},
+        {OpCode::TYPE, {MarshalLevel::SINGLE}},
+        {OpCode::ETHHASH2, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::KECCAKF, {MarshalLevel::SINGLE}},
 
-    {OpCode::TGET, {true, true}},
-    {OpCode::TSET, {true, true, false}},
-    {OpCode::TLEN, {true}},
+        {OpCode::POP, {MarshalLevel::STUB}},
+        {OpCode::SPUSH, {}},
+        {OpCode::RPUSH, {}},
+        {OpCode::RSET, {MarshalLevel::STUB}},
+        {OpCode::JUMP, {MarshalLevel::STUB}},
+        {OpCode::CJUMP, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::STACKEMPTY, {}},
+        {OpCode::PCPUSH, {}},
+        {OpCode::AUXPUSH, {MarshalLevel::STUB}},
+        {OpCode::AUXPOP, {}},
+        {OpCode::AUXSTACKEMPTY, {}},
+        {OpCode::NOP, {}},
+        {OpCode::ERRPUSH, {}},
+        {OpCode::ERRSET, {MarshalLevel::SINGLE}},
 
-    {OpCode::BREAKPOINT, {}},
-    {OpCode::LOG, {false}},
+        {OpCode::DUP0, {MarshalLevel::STUB}},
+        {OpCode::DUP1, {MarshalLevel::STUB, MarshalLevel::STUB}},
+        {OpCode::DUP2,
+         {MarshalLevel::STUB, MarshalLevel::STUB, MarshalLevel::STUB}},
+        {OpCode::SWAP1, {MarshalLevel::STUB, MarshalLevel::STUB}},
+        {OpCode::SWAP2,
+         {MarshalLevel::STUB, MarshalLevel::STUB, MarshalLevel::STUB}},
 
-    {OpCode::SEND, {false}},
-    {OpCode::GETTIME, {}},
-    {OpCode::INBOX, {false}},
-    {OpCode::ERROR, {}},
-    {OpCode::HALT, {}},
-    {OpCode::DEBUG, {}}};
+        {OpCode::TGET, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::TSET,
+         {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::STUB}},
+        {OpCode::TLEN, {MarshalLevel::SINGLE}},
+        {OpCode::XGET, {MarshalLevel::SINGLE}},
+        {OpCode::XSET, {MarshalLevel::SINGLE, MarshalLevel::STUB}},
 
-const std::unordered_map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
-    {static_cast<OpCode>(0), {}},
-    {OpCode::ADD, {}},
-    {OpCode::MUL, {}},
-    {OpCode::SUB, {}},
-    {OpCode::DIV, {}},
-    {OpCode::SDIV, {}},
-    {OpCode::MOD, {}},
-    {OpCode::SMOD, {}},
-    {OpCode::ADDMOD, {}},
-    {OpCode::MULMOD, {}},
-    {OpCode::EXP, {}},
+        {OpCode::BREAKPOINT, {}},
+        {OpCode::LOG, {MarshalLevel::STUB}},
 
-    {OpCode::LT, {}},
-    {OpCode::GT, {}},
-    {OpCode::SLT, {}},
-    {OpCode::SGT, {}},
-    {OpCode::EQ, {}},
-    {OpCode::ISZERO, {}},
-    {OpCode::BITWISE_AND, {}},
-    {OpCode::BITWISE_OR, {}},
-    {OpCode::BITWISE_XOR, {}},
-    {OpCode::BITWISE_NOT, {}},
-    {OpCode::BYTE, {}},
-    {OpCode::SIGNEXTEND, {}},
+        {OpCode::SEND, {MarshalLevel::FULL}},
+        {OpCode::INBOX_PEEK, {MarshalLevel::SINGLE}},
+        {OpCode::INBOX, {}},
+        {OpCode::ERROR, {}},
+        {OpCode::HALT, {}},
+        {OpCode::SET_GAS, {MarshalLevel::SINGLE}},
+        {OpCode::PUSH_GAS, {}},
+        {OpCode::ERR_CODE_POINT, {}},
+        {OpCode::PUSH_INSN, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::PUSH_INSN_IMM,
+         {MarshalLevel::SINGLE, MarshalLevel::STUB, MarshalLevel::SINGLE}},
+        {OpCode::SIDELOAD, {}},
+        {OpCode::DEBUG_PRINT, {}},
 
-    {OpCode::HASH, {}},
-    {OpCode::TYPE, {}},
-    {OpCode::ETHHASH2, {}},
+        {OpCode::ECRECOVER,
+         {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE,
+          MarshalLevel::SINGLE}}};
 
-    {OpCode::POP, {}},
-    {OpCode::SPUSH, {}},
-    {OpCode::RPUSH, {}},
-    {OpCode::RSET, {}},
-    {OpCode::JUMP, {}},
-    {OpCode::CJUMP, {}},
-    {OpCode::STACKEMPTY, {}},
-    {OpCode::PCPUSH, {}},
-    {OpCode::AUXPUSH, {}},
-    {OpCode::AUXPOP, {false}},
-    {OpCode::AUXSTACKEMPTY, {}},
-    {OpCode::NOP, {}},
-    {OpCode::ERRPUSH, {}},
-    {OpCode::ERRSET, {}},
+const std::unordered_map<OpCode, std::vector<MarshalLevel>>
+    InstructionAuxStackPops = {{static_cast<OpCode>(0), {}},
+                               {OpCode::ADD, {}},
+                               {OpCode::MUL, {}},
+                               {OpCode::SUB, {}},
+                               {OpCode::DIV, {}},
+                               {OpCode::SDIV, {}},
+                               {OpCode::MOD, {}},
+                               {OpCode::SMOD, {}},
+                               {OpCode::ADDMOD, {}},
+                               {OpCode::MULMOD, {}},
+                               {OpCode::EXP, {}},
+                               {OpCode::SIGNEXTEND, {}},
 
-    {OpCode::DUP0, {}},
-    {OpCode::DUP1, {}},
-    {OpCode::DUP2, {}},
-    {OpCode::SWAP1, {}},
-    {OpCode::SWAP2, {}},
+                               {OpCode::LT, {}},
+                               {OpCode::GT, {}},
+                               {OpCode::SLT, {}},
+                               {OpCode::SGT, {}},
+                               {OpCode::EQ, {}},
+                               {OpCode::ISZERO, {}},
+                               {OpCode::BITWISE_AND, {}},
+                               {OpCode::BITWISE_OR, {}},
+                               {OpCode::BITWISE_XOR, {}},
+                               {OpCode::BITWISE_NOT, {}},
+                               {OpCode::BYTE, {}},
+                               {OpCode::SHL, {}},
+                               {OpCode::SHR, {}},
+                               {OpCode::SAR, {}},
 
-    {OpCode::TGET, {}},
-    {OpCode::TSET, {}},
-    {OpCode::TLEN, {}},
+                               {OpCode::HASH, {}},
+                               {OpCode::TYPE, {}},
+                               {OpCode::ETHHASH2, {}},
+                               {OpCode::KECCAKF, {}},
 
-    {OpCode::BREAKPOINT, {}},
-    {OpCode::LOG, {}},
+                               {OpCode::POP, {}},
+                               {OpCode::SPUSH, {}},
+                               {OpCode::RPUSH, {}},
+                               {OpCode::RSET, {}},
+                               {OpCode::JUMP, {}},
+                               {OpCode::CJUMP, {}},
+                               {OpCode::STACKEMPTY, {}},
+                               {OpCode::PCPUSH, {}},
+                               {OpCode::AUXPUSH, {}},
+                               {OpCode::AUXPOP, {MarshalLevel::STUB}},
+                               {OpCode::AUXSTACKEMPTY, {}},
+                               {OpCode::NOP, {}},
+                               {OpCode::ERRPUSH, {}},
+                               {OpCode::ERRSET, {}},
 
-    {OpCode::SEND, {}},
-    {OpCode::GETTIME, {}},
-    {OpCode::INBOX, {}},
-    {OpCode::ERROR, {}},
-    {OpCode::HALT, {}},
-    {OpCode::DEBUG, {}}};
+                               {OpCode::DUP0, {}},
+                               {OpCode::DUP1, {}},
+                               {OpCode::DUP2, {}},
+                               {OpCode::SWAP1, {}},
+                               {OpCode::SWAP2, {}},
+
+                               {OpCode::TGET, {}},
+                               {OpCode::TSET, {}},
+                               {OpCode::TLEN, {}},
+                               {OpCode::XGET, {MarshalLevel::SINGLE}},
+                               {OpCode::XSET, {MarshalLevel::SINGLE}},
+
+                               {OpCode::BREAKPOINT, {}},
+                               {OpCode::LOG, {}},
+
+                               {OpCode::SEND, {}},
+                               {OpCode::INBOX_PEEK, {}},
+                               {OpCode::INBOX, {}},
+                               {OpCode::ERROR, {}},
+                               {OpCode::HALT, {}},
+                               {OpCode::SET_GAS, {}},
+                               {OpCode::PUSH_GAS, {}},
+                               {OpCode::ERR_CODE_POINT, {}},
+                               {OpCode::PUSH_INSN, {}},
+                               {OpCode::PUSH_INSN_IMM, {}},
+                               {OpCode::SIDELOAD, {}},
+                               {OpCode::DEBUG_PRINT, {}},
+
+                               {OpCode::ECRECOVER, {}}};
 
 const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::ADD, 3},
@@ -307,6 +366,7 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::ADDMOD, 4},
     {OpCode::MULMOD, 4},
     {OpCode::EXP, 25},
+    {OpCode::SIGNEXTEND, 7},
 
     {OpCode::LT, 2},
     {OpCode::GT, 2},
@@ -319,11 +379,14 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::BITWISE_XOR, 2},
     {OpCode::BITWISE_NOT, 1},
     {OpCode::BYTE, 4},
-    {OpCode::SIGNEXTEND, 7},
+    {OpCode::SHL, 4},
+    {OpCode::SHR, 4},
+    {OpCode::SAR, 4},
 
     {OpCode::HASH, 7},
     {OpCode::TYPE, 3},
     {OpCode::ETHHASH2, 8},
+    {OpCode::KECCAKF, 600},
 
     {OpCode::POP, 1},
     {OpCode::SPUSH, 1},
@@ -349,15 +412,67 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::TGET, 2},
     {OpCode::TSET, 40},
     {OpCode::TLEN, 2},
+    {OpCode::XGET, 3},
+    {OpCode::XSET, 41},
 
     {OpCode::BREAKPOINT, 100},
     {OpCode::LOG, 100},
 
     {OpCode::SEND, 100},
-    {OpCode::GETTIME, 40},
+    {OpCode::INBOX_PEEK, 40},
     {OpCode::INBOX, 40},
     {OpCode::ERROR, 5},
     {OpCode::HALT, 10},
-    {OpCode::DEBUG, 1}};
+    {OpCode::SET_GAS, 0},
+    {OpCode::PUSH_GAS, 1},
+    {OpCode::ERR_CODE_POINT, 25},
+    {OpCode::PUSH_INSN, 25},
+    {OpCode::PUSH_INSN_IMM, 25},
+    {OpCode::SIDELOAD, 10},
+    {OpCode::DEBUG_PRINT, 1},
+
+    {OpCode::ECRECOVER, 20000}};
+
+constexpr size_t MaxValidOpcode =
+    static_cast<size_t>(std::numeric_limits<uint8_t>::max());
+
+template <typename T>
+using OpCodeArray = std::array<T, MaxValidOpcode>;
+
+inline OpCodeArray<uint64_t> initializeGasCosts() {
+    OpCodeArray<uint64_t> arr;
+    for (size_t i = 0; i <= MaxValidOpcode; ++i) {
+        auto it = InstructionArbGasCost.find(static_cast<OpCode>(i));
+        if (it != InstructionArbGasCost.end()) {
+            arr[i] = it->second;
+        } else {
+            arr[i] = 0;
+        }
+    }
+    return arr;
+}
+
+inline const OpCodeArray<uint64_t>& instructionGasCosts() {
+    static OpCodeArray<uint64_t> costs = initializeGasCosts();
+    return costs;
+}
+
+inline OpCodeArray<bool> initializeValidity() {
+    OpCodeArray<bool> arr;
+    for (size_t i = 0; i <= MaxValidOpcode; ++i) {
+        auto it = InstructionArbGasCost.find(static_cast<OpCode>(i));
+        if (it != InstructionArbGasCost.end()) {
+            arr[i] = true;
+        } else {
+            arr[i] = false;
+        }
+    }
+    return arr;
+}
+
+inline const OpCodeArray<bool>& instructionValidity() {
+    static OpCodeArray<bool> costs = initializeValidity();
+    return costs;
+}
 
 #endif /* opcodes_hpp */

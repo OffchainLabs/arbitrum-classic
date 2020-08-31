@@ -18,49 +18,48 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 	"strings"
 
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/executionchallenge"
 )
 
 var bisectedAssertionID ethcommon.Hash
 var oneStepProofCompletedID ethcommon.Hash
 
 func init() {
-	parsed, err := abi.JSON(strings.NewReader(executionchallenge.ExecutionChallengeABI))
+	parsed, err := abi.JSON(strings.NewReader(ethbridgecontracts.ExecutionChallengeABI))
 	if err != nil {
 		panic(err)
 	}
-	bisectedAssertionID = parsed.Events["BisectedAssertion"].ID()
-	oneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
+	bisectedAssertionID = parsed.Events["BisectedAssertion"].ID
+	oneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID
 }
 
 type executionChallengeWatcher struct {
 	*bisectionChallengeWatcher
-	challenge *executionchallenge.ExecutionChallenge
-	client    *ethclient.Client
+	challenge *ethbridgecontracts.ExecutionChallenge
+	client    ethutils.EthClient
 	address   ethcommon.Address
 	topics    [][]ethcommon.Hash
 }
 
-func newExecutionChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*executionChallengeWatcher, error) {
+func newExecutionChallengeWatcher(address ethcommon.Address, client ethutils.EthClient) (*executionChallengeWatcher, error) {
 	bisectionChallenge, err := newBisectionChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
 	}
-	executionContract, err := executionchallenge.NewExecutionChallenge(address, client)
+	executionContract, err := ethbridgecontracts.NewExecutionChallenge(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
@@ -105,25 +104,14 @@ func (c *executionChallengeWatcher) parseExecutionEvent(chainInfo arbbridge.Chai
 		if err != nil {
 			return nil, err
 		}
-		bisectionCount := len(bisectChal.MachineHashes) - 1
-		assertions := make([]*valprotocol.ExecutionAssertionStub, 0, bisectionCount)
-		for i := 0; i < bisectionCount; i++ {
-			assertion := &valprotocol.ExecutionAssertionStub{
-				AfterHash:        bisectChal.MachineHashes[i+1],
-				DidInboxInsn:     bisectChal.DidInboxInsns[i],
-				NumGas:           bisectChal.Gases[i],
-				FirstMessageHash: bisectChal.MessageAccs[i],
-				LastMessageHash:  bisectChal.MessageAccs[i+1],
-				FirstLogHash:     bisectChal.LogAccs[i],
-				LastLogHash:      bisectChal.LogAccs[i+1],
-			}
-			assertions = append(assertions, assertion)
+		hashes := make([]common.Hash, 0, len(bisectChal.AssertionHashes))
+		for _, h := range bisectChal.AssertionHashes {
+			hashes = append(hashes, h)
 		}
 		return arbbridge.ExecutionBisectionEvent{
-			ChainInfo:  chainInfo,
-			Assertions: assertions,
-			TotalSteps: bisectChal.TotalSteps,
-			Deadline:   common.TimeTicks{Val: bisectChal.DeadlineTicks},
+			ChainInfo:       chainInfo,
+			AssertionHashes: hashes,
+			Deadline:        common.TimeTicks{Val: bisectChal.DeadlineTicks},
 		}, nil
 	} else if log.Topics[0] == oneStepProofCompletedID {
 		_, err := c.challenge.ParseOneStepProofCompleted(log)

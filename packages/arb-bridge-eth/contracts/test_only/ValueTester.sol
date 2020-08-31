@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2020, Offchain Labs, Inc.
  *
@@ -14,86 +16,54 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "../arch/Value.sol";
+import "../arch/Marshaling.sol";
 
 contract ValueTester {
-    function deserializeHash(
-        bytes memory data,
-        uint256 startOffset
-    )
+    using Hashing for Value.Data;
+
+    function deserializeHash(bytes memory data, uint256 startOffset)
         public
         pure
-        returns(
-            bool, // valid
+        returns (
             uint256, // offset
             bytes32 // valHash
         )
     {
-        (bool valid, uint256 offset, Value.Data memory value) = Value.deserialize(data, startOffset);
-        return (valid, offset, Value.hash(value));
-    }
-
-    function deserializeMessageData(
-        bytes memory data,
-        uint256 startOffset
-    )
-        public
-        pure
-        returns(
-            bool, // valid
-            uint256, // offset
-            uint256, // msgType
-            address // sender
-        )
-    {
-        return Value.deserializeMessageData(data, startOffset);
-    }
-
-    function getERCTokenMsgData(
-        bytes memory data,
-        uint256 startOffset
-    )
-        public
-        pure
-        returns(
-            bool, // valid
-            uint256, // offset
-            address, // tokenAddress
-            address, // destination
-            uint256 // value
-        )
-    {
-        return Value.getERCTokenMsgData(data, startOffset);
-    }
-
-    function getEthMsgData(
-        bytes memory data,
-        uint256 startOffset
-    )
-        public
-        pure
-        returns(
-            bool, // valid
-            uint256, // offset
-            address, // destination
-            uint256 // value
-        )
-    {
-        return Value.getEthMsgData(data, startOffset);
+        (uint256 offset, Value.Data memory value) = Marshaling.deserialize(data, startOffset);
+        return (offset, value.hash());
     }
 
     function bytesToBytestackHash(
         bytes memory data,
         uint256 startOffset,
         uint256 dataLength
-    )
-        public
-        pure
-        returns(bytes32)
-    {
-        return Value.hash(Value.bytesToBytestackHash(data, startOffset, dataLength));
+    ) public pure returns (bytes32) {
+        return Marshaling.bytesToBytestack(data, startOffset, dataLength).hash();
     }
 
+    function bytestackToBytes(bytes memory data, uint256 offset)
+        public
+        pure
+        returns (
+            bool,
+            uint256,
+            bytes memory
+        )
+    {
+        return Marshaling.bytestackToBytes(data, offset);
+    }
+
+    function hashTuplePreImage(bytes32 innerHash, uint256 valueSize) public pure returns (bytes32) {
+        return Hashing.hashTuplePreImage(innerHash, valueSize);
+    }
+
+    function hashTestTuple() public pure returns (bytes32) {
+        Value.Data[] memory tupVals = new Value.Data[](2);
+        tupVals[0] = Value.newInt(uint256(111));
+        tupVals[1] = Value.newTuple(new Value.Data[](0));
+        return Value.newTuple(tupVals).hash();
+    }
 }

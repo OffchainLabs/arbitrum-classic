@@ -15,7 +15,6 @@
  */
 
 #include "cmachine.h"
-#include "bigint_utils.hpp"
 #include "utils.hpp"
 
 #include <avm/machine.hpp>
@@ -31,11 +30,13 @@ typedef struct {
 } cassertion;
 
 Machine* read_files(std::string filename) {
-    auto ret = Machine::loadFromFile(filename);
-    if (!ret.second) {
+    try {
+        return new Machine(Machine::loadFromFile(filename));
+    } catch (const std::exception& e) {
+        std::cerr << "Error loading machine " << filename << ": " << e.what()
+                  << "\n";
         return nullptr;
     }
-    return new Machine(std::move(ret.first));
 }
 
 // cmachine_t *machine_create(char *data)
@@ -45,8 +46,9 @@ CMachine* machineCreate(const char* filename) {
 }
 
 void machineDestroy(CMachine* m) {
-    if (m == NULL)
+    if (m == nullptr) {
         return;
+    }
     delete static_cast<Machine*>(m);
 }
 
@@ -92,7 +94,7 @@ CStatus machineCurrentStatus(CMachine* m) {
         case Status::Halted:
             return STATUS_HALT;
         default:
-            throw std::runtime_error("Bad machine status type");
+            return STATE_UNKNOWN;
     }
 }
 
@@ -113,20 +115,19 @@ struct ReasonConverter {
         return CBlockReason{BLOCK_TYPE_BREAKPOINT, ByteSlice{nullptr, 0}};
     }
 
-    CBlockReason operator()(const InboxBlocked& val) const {
-        std::vector<unsigned char> inboxDataVec;
-        marshal_uint256_t(val.timout, inboxDataVec);
-        return CBlockReason{BLOCK_TYPE_INBOX, returnCharVector(inboxDataVec)};
+    CBlockReason operator()(const InboxBlocked&) const {
+        return CBlockReason{BLOCK_TYPE_INBOX, ByteSlice{nullptr, 0}};
+    }
+
+    CBlockReason operator()(const SideloadBlocked&) const {
+        return CBlockReason{BLOCK_TYPE_SIDELOAD, ByteSlice{nullptr, 0}};
     }
 };
 
-CBlockReason machineIsBlocked(CMachine* m,
-                              void* currentTimeData,
-                              int newMessages) {
+CBlockReason machineIsBlocked(CMachine* m, int newMessages) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    auto currentTime = receiveUint256(currentTimeData);
-    auto blockReason = mach->isBlocked(currentTime, newMessages != 0);
+    auto blockReason = mach->isBlocked(newMessages != 0);
     return nonstd::visit(ReasonConverter{}, blockReason);
 }
 
@@ -137,44 +138,116 @@ ByteSlice machineMarshallForProof(CMachine* m) {
     return returnCharVector(mach->marshalForProof());
 }
 
-RawAssertion machineExecuteAssertion(CMachine* m,
-                                     uint64_t maxSteps,
-                                     void* lowerBoundBlockData,
-                                     void* upperBoundBlockData,
-                                     void* lowerBoundTimestampData,
-                                     void* upperBoundTimestampData,
-                                     void* inbox,
-                                     uint64_t wallLimit) {
+ByteSlice machineMarshallState(CMachine* m) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    auto lowerBoundBlock = receiveUint256(lowerBoundBlockData);
-    auto upperBoundBlock = receiveUint256(upperBoundBlockData);
-    auto lowerBoundTimestamp = receiveUint256(lowerBoundTimestampData);
-    auto upperBoundTimestamp = receiveUint256(upperBoundTimestampData);
+    std::vector<unsigned char> buffer;
+    return returnCharVector(mach->marshalState());
+}
 
-    auto inboxData = reinterpret_cast<const char*>(inbox);
-    auto messages = deserialize_value(inboxData, mach->getPool());
-
-    TimeBounds timeBounds{lowerBoundBlock, upperBoundBlock, lowerBoundTimestamp,
-                          upperBoundTimestamp};
-
-    Assertion assertion =
-        mach->run(maxSteps, timeBounds, nonstd::get<Tuple>(std::move(messages)),
-                  std::chrono::seconds{wallLimit});
+RawAssertion makeRawAssertion(Assertion& assertion) {
     std::vector<unsigned char> outMsgData;
     for (const auto& outMsg : assertion.outMessages) {
-        mach->marshal_value(outMsg, outMsgData);
+        marshal_value(outMsg, outMsgData);
     }
     std::vector<unsigned char> logData;
     for (const auto& log : assertion.logs) {
-        mach->marshal_value(log, logData);
+        marshal_value(log, logData);
     }
 
-    return {returnCharVector(outMsgData),
+    return {assertion.inbox_messages_consumed,
+            returnCharVector(outMsgData),
             static_cast<int>(assertion.outMessages.size()),
             returnCharVector(logData),
             static_cast<int>(assertion.logs.size()),
             assertion.stepCount,
-            assertion.gasCount,
-            assertion.didInboxInsn};
+            assertion.gasCount};
+}
+
+RawAssertion makeEmptyAssertion() {
+    return {0, returnCharVector(std::vector<char>{}),
+            0, returnCharVector(std::vector<char>{}),
+            0, 0,
+            0};
+}
+
+Tuple getTuple(void* data) {
+    auto charData = reinterpret_cast<const char*>(data);
+    return nonstd::get<Tuple>(deserialize_value(charData));
+}
+
+std::vector<Tuple> getInboxMessages(void* data, uint64_t message_count) {
+    auto charData = reinterpret_cast<const char*>(data);
+    std::vector<Tuple> messages;
+    for (uint64_t i = 0; i < message_count; ++i) {
+        messages.push_back(deserialize_value(charData).get<Tuple>());
+    }
+    return messages;
+}
+
+RawAssertion executeAssertion(CMachine* m,
+                              uint64_t maxSteps,
+                              void* inbox_messages,
+                              uint64_t message_count,
+                              uint64_t wallLimit) {
+    assert(m);
+    Machine* mach = static_cast<Machine*>(m);
+    auto messages = getInboxMessages(inbox_messages, message_count);
+
+    try {
+        Assertion assertion = mach->run(maxSteps, std::move(messages),
+                                        std::chrono::seconds{wallLimit});
+        return makeRawAssertion(assertion);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to make assertion " << e.what() << "\n";
+        return makeEmptyAssertion();
+    }
+}
+
+RawAssertion executeCallServerAssertion(CMachine* m,
+                                        uint64_t maxSteps,
+                                        void* inbox_messages,
+                                        uint64_t message_count,
+                                        void* fake_inbox_peek_value,
+                                        uint64_t wallLimit) {
+    assert(m);
+    Machine* mach = static_cast<Machine*>(m);
+
+    auto messages = getInboxMessages(inbox_messages, message_count);
+    auto fake_inbox_peek_value_data =
+        reinterpret_cast<const char*>(fake_inbox_peek_value);
+    auto fake_inbox_peek = deserialize_value(fake_inbox_peek_value_data);
+
+    try {
+        Assertion assertion = mach->runCallServer(
+            maxSteps, std::move(messages), std::chrono::seconds{wallLimit},
+            std::move(fake_inbox_peek));
+        return makeRawAssertion(assertion);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to make assertion " << e.what() << "\n";
+        return makeEmptyAssertion();
+    }
+}
+
+RawAssertion executeSideloadedAssertion(CMachine* m,
+                                        uint64_t maxSteps,
+                                        void* inbox_messages,
+                                        uint64_t message_count,
+                                        void* sideload,
+                                        uint64_t wallLimit) {
+    assert(m);
+    Machine* mach = static_cast<Machine*>(m);
+
+    auto messages = getInboxMessages(inbox_messages, message_count);
+    auto sideload_value = getTuple(sideload);
+
+    try {
+        Assertion assertion = mach->runSideloaded(
+            maxSteps, std::move(messages), std::chrono::seconds{wallLimit},
+            std::move(sideload_value));
+        return makeRawAssertion(assertion);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to make assertion " << e.what() << "\n";
+        return makeEmptyAssertion();
+    }
 }

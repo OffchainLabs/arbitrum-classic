@@ -24,8 +24,10 @@
 extern "C" {
 #endif
 
-CCheckpointStorage* createCheckpointStorage(const char* filename,
-                                            const char* contract_path);
+CCheckpointStorage* createCheckpointStorage(const char* filename);
+int initializeCheckpointStorage(CCheckpointStorage* storage_ptr,
+                                const char* executable_path);
+int checkpointStorageInitialized(CCheckpointStorage* storage_ptr);
 void destroyCheckpointStorage(CCheckpointStorage* storage);
 CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr);
 CMachine* getMachine(const CCheckpointStorage* storage_ptr,
@@ -48,7 +50,7 @@ int deleteData(CCheckpointStorage* storage_ptr,
                int key_length);
 
 CBlockStore* createBlockStore(CCheckpointStorage* storage_ptr);
-CConfirmedNodeStore* createConfirmedNodeStore(CCheckpointStorage* storage_ptr);
+CAggregatorStore* createAggregatorStore(CCheckpointStorage* storage_ptr);
 
 #ifdef __cplusplus
 }

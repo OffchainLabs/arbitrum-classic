@@ -23,7 +23,7 @@
 
 #include <unordered_map>
 
-enum BlockType { Not, Halt, Error, Breakpoint, Inbox };
+enum BlockType { Not, Halt, Error, Breakpoint, Inbox, Sideload };
 
 struct NotBlocked {
     static constexpr BlockType type = Not;
@@ -43,22 +43,25 @@ struct BreakpointBlocked {
 
 struct InboxBlocked {
     static constexpr BlockType type = Inbox;
-    uint256_t timout;
+};
 
-    InboxBlocked(uint256_t timeout_) { timout = timeout_; }
+struct SideloadBlocked {
+    static constexpr BlockType type = Sideload;
 };
 
 using BlockReason = nonstd::variant<NotBlocked,
                                     HaltBlocked,
                                     ErrorBlocked,
                                     BreakpointBlocked,
-                                    InboxBlocked>;
+                                    InboxBlocked,
+                                    SideloadBlocked>;
 
 std::ostream& operator<<(std::ostream& os, const NotBlocked& val);
 std::ostream& operator<<(std::ostream& os, const HaltBlocked& val);
 std::ostream& operator<<(std::ostream& os, const ErrorBlocked& val);
 std::ostream& operator<<(std::ostream& os, const BreakpointBlocked& val);
 std::ostream& operator<<(std::ostream& os, const InboxBlocked& val);
+std::ostream& operator<<(std::ostream& os, const SideloadBlocked& val);
 std::ostream& operator<<(std::ostream& os, const BlockReason& val);
 
 #endif /* blockreason_hpp */

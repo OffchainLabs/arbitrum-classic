@@ -16,8 +16,7 @@
 
 #include <avm/machinestate/datastack.hpp>
 
-#include <avm_values/util.hpp>
-#include <bigint_utils.hpp>
+#include <iostream>
 
 uint256_t Datastack::hash() const {
     auto h_value = getHashPreImage();
@@ -39,19 +38,22 @@ HashPreImage Datastack::getHashPreImage() const {
 }
 
 std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
-    const std::vector<bool>& stackInfo,
-    const Code& code) {
+    const std::vector<MarshalLevel>& stackInfo,
+    const Code& code) const {
     calculateAllHashes();
     Datastack c = *this;
     std::vector<unsigned char> buf;
-    for (auto const& si : stackInfo) {
-        value val = c.pop();
-        if (si) {
-            ::marshalForProof(val, buf, code);
-        } else {
-            marshalStub(val, buf, code);
-        }
+    std::vector<value> values;
+    for (size_t i = 0; i < stackInfo.size(); ++i) {
+        values.push_back(c.pop());
     }
+
+    // Marshal the values from deepest to most shallow in the stack
+    for (size_t i = 0; i < stackInfo.size(); ++i) {
+        auto index = stackInfo.size() - 1 - i;
+        ::marshalForProof(values[index], stackInfo[index], buf, code);
+    }
+
     return std::make_pair(c.getHashPreImage(), std::move(buf));
 }
 
@@ -67,10 +69,10 @@ std::ostream& operator<<(std::ostream& os, const Datastack& val) {
     return os;
 }
 
-Tuple Datastack::getTupleRepresentation(TuplePool* pool) const {
+Tuple Datastack::getTupleRepresentation() const {
     Tuple rep;
     for (size_t i = 0; i < values.size(); i++) {
-        rep = Tuple(values[values.size() - 1 - i], rep, pool);
+        rep = Tuple(values[values.size() - 1 - i], rep);
     }
     return rep;
 }
@@ -84,16 +86,16 @@ Datastack::Datastack(Tuple tuple_rep) : Datastack() {
 }
 
 void Datastack::addHash() const {
-    HashPreImage prev;
-    if (hashes.size() > 0) {
-        prev = hashes.back();
-    } else {
-        prev = Tuple().getHashPreImage();
-    }
+    HashPreImage prev = [&]() {
+        if (hashes.size() > 0) {
+            return hashes.back();
+        } else {
+            return Tuple().getHashPreImage();
+        }
+    }();
 
     auto newVal = values[hashes.size()];
-    TuplePool pool;
-    auto tup = Tuple(newVal, prev, &pool);
+    auto tup = Tuple(newVal, prev);
     hashes.emplace_back(tup.getHashPreImage());
 }
 

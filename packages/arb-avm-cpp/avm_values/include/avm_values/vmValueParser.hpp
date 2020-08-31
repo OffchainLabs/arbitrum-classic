@@ -17,20 +17,21 @@
 #ifndef vmValueParser_hpp
 #define vmValueParser_hpp
 
-#include <avm_values/codepoint.hpp>
+#include <avm_values/code.hpp>
 #include <avm_values/tuple.hpp>
 
-struct StaticVmValues {
-    Code code;
-    value staticVal;
+#include <nlohmann/json.hpp>
 
-    StaticVmValues() = default;
-    StaticVmValues(Code code_, value staticVal_)
-        : code(std::move(code_)), staticVal(std::move(staticVal_)) {}
+struct LoadedExecutable {
+    std::shared_ptr<CodeSegment> code;
+    value static_val;
+
+    LoadedExecutable(std::shared_ptr<CodeSegment> code_, value static_val_)
+        : code(std::move(code_)), static_val(std::move(static_val_)) {}
 };
 
-std::pair<StaticVmValues, bool> parseStaticVmValues(
-    const std::string& contract_filename,
-    TuplePool& pool);
+value simple_value_from_json(const nlohmann::json& value_json);
+
+LoadedExecutable loadExecutable(const std::string& executable_filename);
 
 #endif /* vmValueParser_hpp */

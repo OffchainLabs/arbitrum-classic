@@ -1,66 +1,46 @@
 syntax = "proto3";
 package valprotocol;
 import "arb-util/common/common.proto";
-import "arb-util/protocol/protocol.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol";
 
-message PreconditionBuf {
-    common.HashBuf beforeHash = 1;
-    protocol.TimeBoundsBlocksBuf timeBounds = 2;
-    common.HashBuf beforeInbox = 3;
-}
-
 message ExecutionAssertionStubBuf {
-    common.HashBuf afterHash = 1;
-    bool   didInboxInsn = 2;
-    uint64 numGas = 3;
-    common.HashBuf firstMessageHash = 4;
-    common.HashBuf lastMessageHash = 5;
-    common.HashBuf firstLogHash = 6;
-    common.HashBuf lastLogHash = 7;
+    uint64 numGas = 1;
+    common.HashBuf beforeMachineHash = 2;
+    common.HashBuf afterMachineHash = 3;
+    common.HashBuf beforeInboxHash = 4;
+    common.HashBuf afterInboxHash = 5;
+    common.HashBuf firstMessageHash = 6;
+    common.HashBuf lastMessageHash = 7;
+    uint64 messageCount = 8;
+    common.HashBuf firstLogHash = 9;
+    common.HashBuf lastLogHash = 10;
+    uint64 logCount = 11;
 }
 
 message ChainParamsBuf {
     common.BigIntegerBuf stakeRequirement = 1;
-    common.TimeTicksBuf gracePeriod = 2;
-    uint64 maxExecutionSteps = 3;
-    uint64 maxBlockBoundsWidth = 4;
-    uint64 maxTimestampBoundsWidth = 5;
-    uint64 ArbGasSpeedLimitPerTick = 6;
-}
-
-message TokenTypeBuf {
-    bytes value = 1;
-}
-
-message MessageBuf {
-    bytes value = 1;
-    TokenTypeBuf tokenType = 2;
-    common.BigIntegerBuf amount = 3;
-    common.AddressBuf sender = 4;
+    common.AddressBuf stakeToken = 2;
+    common.TimeTicksBuf gracePeriod = 3;
+    uint64 maxExecutionSteps = 4;
+    uint64 ArbGasSpeedLimitPerTick = 5;
 }
 
 message VMProtoDataBuf {
     common.HashBuf machineHash = 1;
     common.HashBuf inboxTop = 2;
     common.BigIntegerBuf inboxCount = 3;
+    common.BigIntegerBuf messageCount = 4;
+    common.BigIntegerBuf logCount = 5;
 }
 
 message AssertionParamsBuf {
     uint64 numSteps = 1;
-    protocol.TimeBoundsBlocksBuf timeBounds = 2;
-    common.BigIntegerBuf importedMessageCount = 3;
-}
-
-message AssertionClaimBuf {
-    common.HashBuf afterInboxTop = 1;
-    common.HashBuf importedMessagesSlice = 2;
-    valprotocol.ExecutionAssertionStubBuf assertionStub = 3;
+    common.BigIntegerBuf importedMessageCount = 2;
 }
 
 message DisputableNodeBuf {
     AssertionParamsBuf assertionParams = 1;
-    AssertionClaimBuf assertionClaim = 2;
+    valprotocol.ExecutionAssertionStubBuf assertion = 2;
     common.HashBuf maxInboxTop = 3;
     common.BigIntegerBuf maxInboxCount = 4;
 }

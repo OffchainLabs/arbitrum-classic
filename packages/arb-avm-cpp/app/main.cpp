@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-#include "bigint_utils.hpp"
-
 #include <avm/machine.hpp>
+#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/storageresult.hpp>
+#include <data_storage/value/machine.hpp>
 
-#include <boost/algorithm/hex.hpp>
+#include <boost/filesystem.hpp>
 
 #include <sys/stat.h>
 #include <fstream>
@@ -26,63 +27,95 @@
 #include <string>
 #include <thread>
 
-std::vector<char> hexStringToBytes(const std::string& hexstr) {
-    std::vector<char> bytes;
-    bytes.reserve(hexstr.size() / 2);
-    boost::algorithm::unhex(hexstr.begin(), hexstr.end(), bytes.begin());
-    return bytes;
-}
+std::string temp_dp_path = "arb_runner_temp_db";
+
+struct DBDeleter {
+    DBDeleter() { boost::filesystem::remove_all(temp_dp_path); }
+    ~DBDeleter() { boost::filesystem::remove_all(temp_dp_path); }
+};
 
 int main(int argc, char* argv[]) {
     using namespace std::chrono_literals;
-    std::string filename;
-    unsigned long long stepCount = 10000000000;
-    if (argc < 2) {
-        std::cout << "Usage: AVMTest <ao file>" << std::endl;
-        std::cout << "   defaulting to use add.ao" << std::endl;
-        filename = "add.ao";
+    if (argc < 3 || (std::string(argv[1]) != "--hexops" &&
+                     std::string(argv[1]) != "--mexe")) {
+        std::cout << "Usage: \n"
+                     "avm_runner --hexops filename [--inbox filename]\n"
+                     "avm_runner --mexe filename [--inbox filename]\n";
+        return 1;
+    }
+    auto mode = std::string(argv[1]);
+    std::string filename = argv[2];
+
+    DBDeleter deleter;
+    CheckpointStorage storage{temp_dp_path};
+
+    if (mode == "--hexops") {
+        std::ifstream file(filename, std::ios::binary);
+        if (!file.is_open()) {
+            throw std::runtime_error("Couldn't open file");
+        }
+        std::vector<unsigned char> raw_ops(
+            (std::istreambuf_iterator<char>(file)),
+            std::istreambuf_iterator<char>());
+
+        std::vector<Operation> ops;
+        for (auto op : raw_ops) {
+            ops.push_back(Operation{static_cast<OpCode>(op)});
+        }
+
+        auto code = std::make_shared<CodeSegment>(0, ops);
+        storage.initialize(LoadedExecutable{std::move(code), Tuple()});
     } else {
-        filename = argv[1];
+        storage.initialize(filename);
     }
-    std::cout << filename << std::endl;
 
-    auto ret = Machine::loadFromFile(filename);
-    if (!ret.second) {
-        std::cerr << "Failed to load machine";
-        return -1;
+    auto mach = storage.getInitialMachine();
+
+    std::vector<Tuple> inbox_messages;
+    if (argc == 5) {
+        if (std::string(argv[3]) == "--inbox") {
+            std::ifstream file(argv[4], std::ios::binary);
+            if (!file.is_open()) {
+                throw std::runtime_error("Couldn't open file");
+            }
+            std::vector<unsigned char> raw_inbox(
+                (std::istreambuf_iterator<char>(file)),
+                std::istreambuf_iterator<char>());
+            auto data = reinterpret_cast<const char*>(raw_inbox.data());
+            auto inbox_val = nonstd::get<Tuple>(deserialize_value(data));
+            while (inbox_val != Tuple{}) {
+                inbox_messages.push_back(
+                    std::move(inbox_val.get_element(1).get<Tuple>()));
+                inbox_val =
+                    nonstd::get<Tuple>(std::move(inbox_val.get_element(0)));
+            }
+            std::reverse(inbox_messages.begin(), inbox_messages.end());
+        } else if (std::string(argv[3]) == "--json-inbox") {
+            std::ifstream file(argv[4], std::ios::binary);
+            nlohmann::json j;
+            file >> j;
+
+            for (auto& val : j["inbox"]) {
+                inbox_messages.push_back(
+                    simple_value_from_json(std::move(val)).get<Tuple>());
+            }
+        }
     }
-    Machine mach = std::move(ret.first);
 
-    auto start = std::chrono::high_resolution_clock::now();
+    auto assertion =
+        mach.run(100000000, std::move(inbox_messages), std::chrono::seconds(0));
 
-    auto msg1DataRaw = hexStringToBytes(
-        "06000000000000000000000000000000000000000000000000000000000000000afe00"
-        "7ec3319c8348582438bc9155320d99b577975540efd44c0878246f4007110342060000"
-        "0000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000c7711f36b2c13e00821ffd9ec54b04a60aefbd1b070000000000"
-        "0000000000000000d02bec7ee5ee73a271b144e829eed1c19218d81300ffffffffffff"
-        "fffffffffffffffffffffffffffffffffffffffffffffffffffe000000000000000000"
-        "000000000000000000000000000000000000000000000000050b030b03030303030303"
-        "000aefbd1b000000000000000000000000000000000000000000000000000000000303"
-        "0303030070a08231000000000000000000000000c7711f36b2c13e00821ffd9ec54b04"
-        "a6000000000000000000000000000000000000000000000000000000000000000024");
+    std::cout << "Produced " << assertion.logs.size() << " logs\n";
 
-    auto msg1DataRawPtr = const_cast<const char*>(msg1DataRaw.data());
+    std::cout << "Ran " << assertion.stepCount << " steps in "
+              << assertion.gasCount << " gas ending in state "
+              << static_cast<int>(mach.currentStatus()) << "\n";
 
-    auto msg1 =
-        nonstd::get<Tuple>(deserialize_value(msg1DataRawPtr, mach.getPool()));
+    auto tx = storage.makeTransaction();
+    saveMachine(*tx, mach);
+    tx->commit();
 
-    std::cout << "Msg " << msg1 << std::endl;
-
-    Assertion assertion1 = mach.run(stepCount, {0, 0, 0, 0}, std::move(msg1),
-                                    std::chrono::seconds{1000});
-
-    auto finish = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = finish - start;
-    std::cout << assertion1.stepCount << " "
-              << " steps in " << elapsed.count() * 1000 << " milliseconds"
-              << std::endl;
-    std::cout << to_hex_str(mach.hash()) << "\n" << mach << std::endl;
-    std::this_thread::sleep_for(1s);
+    auto mach2 = storage.getMachine(mach.hash());
+    mach2.run(0, {}, std::chrono::seconds(0));
     return 0;
 }

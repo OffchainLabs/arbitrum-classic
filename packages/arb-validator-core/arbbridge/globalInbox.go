@@ -20,24 +20,22 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type GlobalInboxWatcher interface {
 	ContractWatcher
 
-	GetAllReceived(
-		ctx context.Context,
-		fromBlock *big.Int,
-		toBlock *big.Int,
-	) ([]message.Received, error)
-
 	GetDeliveredEvents(
 		ctx context.Context,
 		fromBlock *big.Int,
 		toBlock *big.Int,
+	) ([]MessageDeliveredEvent, error)
+
+	GetDeliveredEventsInBlock(
+		ctx context.Context,
+		blockId *common.BlockId,
+		timestamp *big.Int,
 	) ([]MessageDeliveredEvent, error)
 
 	GetERC20Balance(
@@ -55,48 +53,34 @@ type GlobalInboxWatcher interface {
 type GlobalInbox interface {
 	GlobalInboxWatcher
 
-	SendTransactionMessage(
+	SendL2Message(
 		ctx context.Context,
 		data []byte,
-		vmAddress common.Address,
-		contactAddress common.Address,
-		amount *big.Int,
-		seqNumber *big.Int,
-	) error
+	) (MessageDeliveredEvent, error)
 
-	DeliverTransactionBatch(
-		ctx context.Context,
-		chain common.Address,
-		transactions []message.BatchTx,
-	) error
-
-	// DeliverTransactionBatchNoWait calls DeliverTransactionBatch without
+	// SendL2MessageNoWait calls SendL2Message without
 	// blocking while waiting for the receipt. This behavior is different from
 	// the other ArbBridge methods. At some point other methods should be
 	// updated to behave this way once we can be confident that it will not
 	// create any security problems
-	DeliverTransactionBatchNoWait(
+	SendL2MessageNoWait(
 		ctx context.Context,
-		chain common.Address,
-		transactions []message.BatchTx,
-	) error
+		data []byte,
+	) (common.Hash, error)
 
 	DepositEthMessage(
 		ctx context.Context,
-		vmAddress common.Address,
 		destination common.Address,
 		value *big.Int,
 	) error
 	DepositERC20Message(
 		ctx context.Context,
-		vmAddress common.Address,
 		tokenAddress common.Address,
 		destination common.Address,
 		value *big.Int,
 	) error
 	DepositERC721Message(
 		ctx context.Context,
-		vmAddress common.Address,
 		tokenAddress common.Address,
 		destination common.Address,
 		value *big.Int,

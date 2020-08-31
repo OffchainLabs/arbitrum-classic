@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,57 +16,48 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
-import "../vm/IStaking.sol";
+import "../rollup/IStaking.sol";
 import "../libraries/RollupTime.sol";
-import "./ChallengeType.sol";
+import "../libraries/Cloneable.sol";
 
+contract Challenge is Cloneable {
+    enum State { NoChallenge, AsserterTurn, ChallengerTurn }
 
-contract Challenge is ChallengeType {
-
-    enum State {
-        NoChallenge,
-        AsserterTurn,
-        ChallengerTurn
-    }
-
-    event InitiatedChallenge(
-        uint256 deadlineTicks
-    );
+    event InitiatedChallenge(uint256 deadlineTicks);
 
     event AsserterTimedOut();
     event ChallengerTimedOut();
 
     // Can online initialize once
-    string constant CHAL_INIT_STATE = "CHAL_INIT_STATE";
+    string private constant CHAL_INIT_STATE = "CHAL_INIT_STATE";
     // Can only continue challenge in response to bisection
 
-    string constant CON_STATE = "CON_STATE";
+    string private constant CON_STATE = "CON_STATE";
     // deadline expired
-    string constant CON_DEADLINE = "CON_DEADLINE";
+    string private constant CON_DEADLINE = "CON_DEADLINE";
     // Only original challenger can continue challenge
-    string constant CON_SENDER = "CON_SENDER";
+    string private constant CON_SENDER = "CON_SENDER";
 
     // Can only bisect assertion in response to a challenge
-    string constant BIS_STATE = "BIS_STATE";
+    string private constant BIS_STATE = "BIS_STATE";
     // deadline expired
-    string constant BIS_DEADLINE = "BIS_DEADLINE";
+    string private constant BIS_DEADLINE = "BIS_DEADLINE";
     // Only original asserter can continue bisect
-    string constant BIS_SENDER = "BIS_SENDER";
+    string private constant BIS_SENDER = "BIS_SENDER";
 
+    address internal rollupAddress;
+    address payable internal asserter;
+    address payable internal challenger;
 
-    address vmAddress;
-    address payable asserter;
-    address payable challenger;
-
-    uint256 deadlineTicks;
+    uint256 internal deadlineTicks;
 
     // The current deadline at which the challenge timeouts and a winner is
     // declared. This deadline resets at each step in the challenge
-    uint256 challengePeriodTicks;
+    uint256 private challengePeriodTicks;
 
-    State state;
+    State private state;
 
     modifier asserterAction {
         require(State.AsserterTurn == state, BIS_STATE);
@@ -93,25 +86,21 @@ contract Challenge is ChallengeType {
     }
 
     function initializeChallenge(
-        address _vmAddress,
+        address _rollupAddress,
         address payable _asserter,
         address payable _challenger,
         uint256 _challengePeriodTicks
-    )
-        internal
-    {
+    ) internal {
         require(state == State.NoChallenge, CHAL_INIT_STATE);
 
-        vmAddress = _vmAddress;
+        rollupAddress = _rollupAddress;
         asserter = _asserter;
         challenger = _challenger;
         challengePeriodTicks = _challengePeriodTicks;
         state = State.AsserterTurn;
         updateDeadline();
 
-        emit InitiatedChallenge(
-            deadlineTicks
-        );
+        emit InitiatedChallenge(deadlineTicks);
     }
 
     function updateDeadline() internal {
@@ -129,16 +118,12 @@ contract Challenge is ChallengeType {
     }
 
     function _asserterWin() internal {
-        resolveChallengeAsserterWon();
-        selfdestruct(msg.sender);
+        IStaking(rollupAddress).resolveChallenge(asserter, challenger);
+        safeSelfDestruct(msg.sender);
     }
 
     function _challengerWin() internal {
-        resolveChallengeChallengerWon();
-        selfdestruct(msg.sender);
+        IStaking(rollupAddress).resolveChallenge(challenger, asserter);
+        safeSelfDestruct(msg.sender);
     }
-
-    function resolveChallengeAsserterWon() internal;
-
-    function resolveChallengeChallengerWon() internal;
 }

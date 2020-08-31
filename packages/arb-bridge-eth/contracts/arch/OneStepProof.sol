@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,1573 +16,1045 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
+import "./IOneStepProof.sol";
 import "./Value.sol";
 import "./Machine.sol";
+import "../inbox/Messages.sol";
+import "../libraries/Keccak.sol";
 
-// Sourced from https://github.com/leapdao/solEVM-enforcer/tree/master
+// Originally forked from https://github.com/leapdao/solEVM-enforcer/tree/master
 
-library OneStepProof {
+contract OneStepProof is IOneStepProof {
     using Machine for Machine.Data;
+    using Hashing for Value.Data;
     using Value for Value.Data;
 
-    uint256 constant send_size_limit = 10000;
+    uint256 private constant SEND_SIZE_LIMIT = 10000;
 
-    struct ValidateProofData {
-        bytes32 beforeHash;
-        uint128[4] timeBounds;
-        Value.Data beforeInbox;
-        bytes32 afterHash;
-        bool    didInboxInsn;
-        bytes32 firstMessage;
-        bytes32 lastMessage;
-        bytes32 firstLog;
-        bytes32 lastLog;
-        uint64  gas;
-        bytes proof;
+    uint256 private constant MAX_UINT256 = ((1 << 128) + 1) * ((1 << 128) - 1);
+
+    string private constant BAD_IMM_TYP = "BAD_IMM_TYP";
+    string private constant NO_IMM = "NO_IMM";
+    string private constant STACK_MISSING = "STACK_MISSING";
+    string private constant AUX_MISSING = "AUX_MISSING";
+    string private constant STACK_MANY = "STACK_MANY";
+    string private constant AUX_MANY = "AUX_MANY";
+    string private constant INBOX_VAL = "INBOX_VAL";
+
+    function executeStep(
+        bytes32 inboxAcc,
+        bytes32 messagesAcc,
+        bytes32 logsAcc,
+        bytes calldata proof
+    ) external pure returns (uint64 gas, bytes32[5] memory fields) {
+        AssertionContext memory context = initializeExecutionContext(
+            inboxAcc,
+            messagesAcc,
+            logsAcc,
+            proof
+        );
+
+        executeOp(context);
+
+        return returnContext(context);
     }
 
-    function validateProof(
-        bytes32 beforeHash,
-        uint128[4] memory timeBounds,
-        bytes32 beforeInbox,
-        uint256 beforeInboxValueSize,
-        bytes32 afterHash,
-        bool    didInboxInsn,
-        bytes32 firstMessage,
-        bytes32 lastMessage,
-        bytes32 firstLog,
-        bytes32 lastLog,
-        uint64  gas,
-        bytes memory proof
-    )
-        public
+    function executeStepWithMessage(
+        bytes32 inboxAcc,
+        bytes32 messagesAcc,
+        bytes32 logsAcc,
+        bytes calldata proof,
+        uint8 _kind,
+        uint256 _blockNumber,
+        uint256 _timestamp,
+        address _sender,
+        uint256 _inboxSeqNum,
+        bytes calldata _msgData
+    ) external pure returns (uint64 gas, bytes32[5] memory fields) {
+        AssertionContext memory context = initializeExecutionContext(
+            inboxAcc,
+            messagesAcc,
+            logsAcc,
+            proof
+        );
+
+        context.inboxMessageHash = Messages.messageHash(
+            _kind,
+            _sender,
+            _blockNumber,
+            _timestamp,
+            _inboxSeqNum,
+            keccak256(_msgData)
+        );
+
+        context.inboxMessage = Messages.messageValue(
+            _kind,
+            _blockNumber,
+            _timestamp,
+            _sender,
+            _inboxSeqNum,
+            _msgData
+        );
+        executeOp(context);
+        return returnContext(context);
+    }
+
+    // fields
+    // startMachineHash,
+    // endMachineHash,
+    // afterInboxHash,
+    // afterMessagesHash,
+    // afterLogsHash
+
+    function returnContext(AssertionContext memory context)
+        private
         pure
-        returns(uint)
+        returns (uint64 gas, bytes32[5] memory fields)
     {
-        return checkProof(
-            ValidateProofData(
-                beforeHash,
-                timeBounds,
-                Value.newTuplePreImage(
-                    beforeInbox,
-                    beforeInboxValueSize),
-                afterHash,
-                didInboxInsn,
-                firstMessage,
-                lastMessage,
-                firstLog,
-                lastLog,
-                gas,
-                proof
-            )
+        return (
+            context.gas,
+            [
+                Machine.hash(context.startMachine),
+                Machine.hash(context.afterMachine),
+                context.inboxAcc,
+                context.messageAcc,
+                context.logAcc
+            ]
         );
     }
+
+    struct ValueStack {
+        uint256 length;
+        Value.Data[] values;
+    }
+
+    function popVal(ValueStack memory stack) private pure returns (Value.Data memory) {
+        Value.Data memory val = stack.values[stack.length - 1];
+        stack.length--;
+        return val;
+    }
+
+    function pushVal(ValueStack memory stack, Value.Data memory val) private pure {
+        stack.values[stack.length] = val;
+        stack.length++;
+    }
+
+    struct AssertionContext {
+        Machine.Data startMachine;
+        Machine.Data afterMachine;
+        bytes32 inboxAcc;
+        bytes32 messageAcc;
+        bytes32 logAcc;
+        uint64 gas;
+        Value.Data inboxMessage;
+        bytes32 inboxMessageHash;
+        ValueStack stack;
+        ValueStack auxstack;
+        bool hadImmediate;
+        uint8 opcode;
+        bytes proof;
+        uint256 offset;
+    }
+
+    function handleError(AssertionContext memory context) private pure {
+        if (context.afterMachine.errHandlerHash == CODE_POINT_ERROR) {
+            context.afterMachine.setErrorStop();
+        } else {
+            context.afterMachine.instructionStackHash = context.afterMachine.errHandlerHash;
+        }
+    }
+
+    function handleOpcodeError(AssertionContext memory context) private pure {
+        handleError(context);
+        // Also clear the stack and auxstack
+        context.stack.length = 0;
+        context.auxstack.length = 0;
+    }
+
+    function initializeExecutionContext(
+        bytes32 inboxAcc,
+        bytes32 messagesAcc,
+        bytes32 logsAcc,
+        bytes memory proof
+    ) internal pure returns (AssertionContext memory) {
+        uint8 stackCount = uint8(proof[0]);
+        uint8 auxstackCount = uint8(proof[1]);
+        uint256 offset = 2;
+
+        // Leave some extra space for values pushed on the stack in the proofs
+        Value.Data[] memory stackVals = new Value.Data[](stackCount + 4);
+        Value.Data[] memory auxstackVals = new Value.Data[](auxstackCount + 4);
+        for (uint256 i = 0; i < stackCount; i++) {
+            (offset, stackVals[i]) = Marshaling.deserialize(proof, offset);
+        }
+        for (uint256 i = 0; i < auxstackCount; i++) {
+            (offset, auxstackVals[i]) = Marshaling.deserialize(proof, offset);
+        }
+        Machine.Data memory mach;
+        (offset, mach) = Machine.deserializeMachine(proof, offset);
+
+        uint8 immediate = uint8(proof[offset]);
+        uint8 opCode = uint8(proof[offset + 1]);
+        offset += 2;
+        AssertionContext memory context = AssertionContext(
+            mach,
+            mach.clone(),
+            inboxAcc,
+            messagesAcc,
+            logsAcc,
+            0,
+            Value.newEmptyTuple(),
+            0,
+            ValueStack(stackCount, stackVals),
+            ValueStack(auxstackCount, auxstackVals),
+            immediate == 1,
+            opCode,
+            proof,
+            offset
+        );
+
+        require(immediate == 0 || immediate == 1, BAD_IMM_TYP);
+        Value.Data memory cp;
+        if (immediate == 0) {
+            cp = Value.newCodePoint(uint8(opCode), context.startMachine.instructionStackHash);
+        } else {
+            // If we have an immediate, there must be at least one stack value
+            require(stackVals.length > 0, NO_IMM);
+            cp = Value.newCodePoint(
+                uint8(opCode),
+                context.startMachine.instructionStackHash,
+                stackVals[stackCount - 1]
+            );
+        }
+        context.startMachine.instructionStackHash = cp.hash();
+
+        // Add the stack and auxstack values to the start machine
+        uint256 i = 0;
+        for (i = 0; i < stackCount - immediate; i++) {
+            context.startMachine.addDataStackValue(stackVals[i]);
+        }
+        for (i = 0; i < auxstackCount; i++) {
+            context.startMachine.addAuxStackValue(auxstackVals[i]);
+        }
+
+        return context;
+    }
+
+    function executeOp(AssertionContext memory context) internal pure {
+        (
+            uint256 dataPopCount,
+            uint256 auxPopCount,
+            uint64 gasCost,
+            function(AssertionContext memory) internal pure impl
+        ) = opInfo(context.opcode);
+        context.gas = gasCost;
+
+        // Update end machine gas remaining before running opcode
+        // No need to overflow check since the check for whether we
+        // have sufficient gas fixes the overflow case
+        context.afterMachine.arbGasRemaining = context.afterMachine.arbGasRemaining - gasCost;
+
+        if (context.startMachine.arbGasRemaining < gasCost) {
+            context.afterMachine.arbGasRemaining = MAX_UINT256;
+            handleError(context);
+            return;
+        }
+
+        if (context.stack.length < dataPopCount) {
+            // If we have insufficient values, reject the proof unless the stack has been fully exhausted
+            require(
+                context.afterMachine.dataStack.hash() == Value.newEmptyTuple().hash(),
+                STACK_MISSING
+            );
+            // If the stack is empty, the instruction underflowed so we have hit an error
+            handleError(context);
+            return;
+        }
+
+        if (context.auxstack.length < auxPopCount) {
+            // If we have insufficient values, reject the proof unless the auxstack has been fully exhausted
+            require(
+                context.afterMachine.auxStack.hash() == Value.newEmptyTuple().hash(),
+                AUX_MISSING
+            );
+            // If the auxstack is empty, the instruction underflowed so we have hit an error
+            handleError(context);
+            return;
+        }
+
+        // Require the prover to submit the minimal number of stack items
+        require(
+            ((dataPopCount > 0 || !context.hadImmediate) && context.stack.length == dataPopCount) ||
+                (context.hadImmediate && dataPopCount == 0 && context.stack.length == 1),
+            STACK_MANY
+        );
+        require(context.auxstack.length == auxPopCount, AUX_MANY);
+
+        impl(context);
+
+        // Add the stack and auxstack values to the start machine
+        uint256 i = 0;
+
+        for (i = 0; i < context.stack.length; i++) {
+            context.afterMachine.addDataStackValue(context.stack.values[i]);
+        }
+
+        for (i = 0; i < context.auxstack.length; i++) {
+            context.afterMachine.addAuxStackValue(context.auxstack.values[i]);
+        }
+    }
+
+    /* solhint-disable no-inline-assembly */
 
     // Arithmetic
 
-    function executeAddInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
+    function binaryMathOp(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
         if (!val1.isInt() || !val2.isInt()) {
-            return false;
+            handleOpcodeError(context);
+            return;
         }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        uint c;
-        assembly {
-            c := add(a, b)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
+        uint256 a = val1.intVal;
+        uint256 b = val2.intVal;
 
-    function executeMulInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        uint c;
-        assembly {
-            c := mul(a, b)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    function executeSubInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        uint c;
-        assembly {
-            c := sub(a, b)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    function executeDivInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        if (b == 0) {
-            return false;
-        }
-        uint c;
-        assembly {
-            c := div(a, b)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    function executeSdivInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        if (b == 0) {
-            return false;
-        }
-        uint c;
-        assembly {
-            c := sdiv(a, b)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    function executeModInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        if (b == 0) {
-            return false;
-        }
-        uint c;
-        assembly {
-            c := mod(a, b)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    function executeSmodInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        if (b == 0) {
-            return false;
-        }
-        uint c;
-        assembly {
-            c := smod(a, b)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    function executeAddmodInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2,
-        Value.Data memory val3
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        uint m = val3.intVal;
-        if (m == 0) {
-            return false;
-        }
-        uint c;
-        assembly {
-            c := addmod(a, b, m)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    function executeMulmodInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2,
-        Value.Data memory val3
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        uint m = val3.intVal;
-        if (m == 0) {
-            return false;
-        }
-        uint c;
-        assembly {
-            c := mulmod(a, b, m)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    function executeExpInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        uint c;
-        assembly {
-            c := exp(a, b)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    // Comparison
-
-    function executeLtInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        uint c;
-        assembly {
-            c := lt(a, b)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    function executeGtInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        uint c;
-        assembly {
-            c := gt(a, b)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    function executeSltInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        uint c;
-        assembly {
-            c := slt(a, b)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    function executeSgtInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        uint c;
-        assembly {
-            c := sgt(a, b)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    function executeEqInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.addDataStackValue(Value.newBoolean(val1.hash() == val2.hash()));
-        return true;
-    }
-
-    function executeIszeroInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt()) {
-            machine.addDataStackInt(0);
+        uint256 c;
+        if (context.opcode == OP_ADD) {
+            assembly {
+                c := add(a, b)
+            }
+        } else if (context.opcode == OP_MUL) {
+            assembly {
+                c := mul(a, b)
+            }
+        } else if (context.opcode == OP_SUB) {
+            assembly {
+                c := sub(a, b)
+            }
+        } else if (context.opcode == OP_EXP) {
+            assembly {
+                c := exp(a, b)
+            }
+        } else if (context.opcode == OP_SIGNEXTEND) {
+            assembly {
+                c := signextend(a, b)
+            }
+        } else if (context.opcode == OP_LT) {
+            assembly {
+                c := lt(a, b)
+            }
+        } else if (context.opcode == OP_GT) {
+            assembly {
+                c := gt(a, b)
+            }
+        } else if (context.opcode == OP_SLT) {
+            assembly {
+                c := slt(a, b)
+            }
+        } else if (context.opcode == OP_SGT) {
+            assembly {
+                c := sgt(a, b)
+            }
+        } else if (context.opcode == OP_AND) {
+            assembly {
+                c := and(a, b)
+            }
+        } else if (context.opcode == OP_OR) {
+            assembly {
+                c := or(a, b)
+            }
+        } else if (context.opcode == OP_XOR) {
+            assembly {
+                c := xor(a, b)
+            }
+        } else if (context.opcode == OP_BYTE) {
+            assembly {
+                c := byte(a, b)
+            }
+        } else if (context.opcode == OP_SHL) {
+            assembly {
+                c := shl(a, b)
+            }
+        } else if (context.opcode == OP_SHR) {
+            assembly {
+                c := shr(a, b)
+            }
+        } else if (context.opcode == OP_SAR) {
+            assembly {
+                c := sar(a, b)
+            }
+        } else if (context.opcode == OP_ETHHASH2) {
+            c = uint256(keccak256(abi.encodePacked(a, b)));
         } else {
-            uint a = val1.intVal;
-            uint c;
+            assert(false);
+        }
+
+        pushVal(context.stack, Value.newInt(c));
+    }
+
+    function binaryMathOpZero(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        if (!val1.isInt() || !val2.isInt() || val2.intVal == 0) {
+            handleOpcodeError(context);
+            return;
+        }
+        uint256 a = val1.intVal;
+        uint256 b = val2.intVal;
+
+        uint256 c;
+        if (context.opcode == OP_DIV) {
+            assembly {
+                c := div(a, b)
+            }
+        } else if (context.opcode == OP_SDIV) {
+            assembly {
+                c := sdiv(a, b)
+            }
+        } else if (context.opcode == OP_MOD) {
+            assembly {
+                c := mod(a, b)
+            }
+        } else if (context.opcode == OP_SMOD) {
+            assembly {
+                c := smod(a, b)
+            }
+        } else {
+            assert(false);
+        }
+
+        pushVal(context.stack, Value.newInt(c));
+    }
+
+    function executeMathModInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val3 = popVal(context.stack);
+        if (!val1.isInt() || !val2.isInt() || !val3.isInt() || val3.intVal == 0) {
+            handleOpcodeError(context);
+            return;
+        }
+        uint256 a = val1.intVal;
+        uint256 b = val2.intVal;
+        uint256 m = val3.intVal;
+
+        uint256 c;
+
+        if (context.opcode == OP_ADDMOD) {
+            assembly {
+                c := addmod(a, b, m)
+            }
+        } else if (context.opcode == OP_MULMOD) {
+            assembly {
+                c := mulmod(a, b, m)
+            }
+        } else {
+            assert(false);
+        }
+
+        pushVal(context.stack, Value.newInt(c));
+    }
+
+    function executeEqInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        pushVal(context.stack, Value.newBoolean(val1.hash() == val2.hash()));
+    }
+
+    function executeIszeroInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        if (!val1.isInt()) {
+            pushVal(context.stack, Value.newInt(0));
+        } else {
+            uint256 a = val1.intVal;
+            uint256 c;
             assembly {
                 c := iszero(a)
             }
-            machine.addDataStackInt(c);
+            pushVal(context.stack, Value.newInt(c));
         }
-        return true;
     }
 
-    function executeAndInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        uint c;
-        assembly {
-            c := and(a, b)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    function executeOrInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        uint c;
-        assembly {
-            c := or(a, b)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    function executeXorInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        uint c;
-        assembly {
-            c := xor(a, b)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    function executeNotInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1
-    )
-        internal
-        pure
-        returns (bool)
-    {
+    function executeNotInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
         if (!val1.isInt()) {
-            return false;
+            handleOpcodeError(context);
+            return;
         }
-        uint a = val1.intVal;
-        uint c;
+        uint256 a = val1.intVal;
+        uint256 c;
         assembly {
             c := not(a)
         }
-        machine.addDataStackInt(c);
-        return true;
+        pushVal(context.stack, Value.newInt(c));
     }
 
-    function executeByteInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint x = val1.intVal;
-        uint n = val2.intVal;
-        uint c;
-        assembly {
-            c := byte(n, x)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
-
-    function executeSignextendInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
-        }
-        uint b = val1.intVal;
-        uint a = val2.intVal;
-        uint c;
-        assembly {
-            c := signextend(a, b)
-        }
-        machine.addDataStackInt(c);
-        return true;
-    }
+    /* solhint-enable no-inline-assembly */
 
     // Hash
 
-    function executeSha3Insn(
-        Machine.Data memory machine,
-        Value.Data memory val1
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.addDataStackInt(uint256(val1.hash()));
-        return true;
+    function executeHashInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val = popVal(context.stack);
+        pushVal(context.stack, Value.newInt(uint256(val.hash())));
     }
 
-    function executeTypeInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.addDataStackValue(val1.typeCodeVal());
-        return true;
+    function executeTypeInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val = popVal(context.stack);
+        pushVal(context.stack, val.typeCodeVal());
     }
 
-    function executeEthhash2Insn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isInt()) {
-            return false;
+    function executeKeccakFInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val = popVal(context.stack);
+        if (!val.isTuple() || val.tupleVal.length != 7) {
+            handleOpcodeError(context);
+            return;
         }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
-        bytes32 res = keccak256(abi.encodePacked(a, b));
-        machine.addDataStackInt(uint256(res));
-        return true;
-    }
 
+        Value.Data[] memory values = val.tupleVal;
+        for (uint256 i = 0; i < 7; i++) {
+            if (!values[i].isInt()) {
+                handleOpcodeError(context);
+                return;
+            }
+        }
+        uint256[25] memory data;
+        for (uint256 i = 0; i < 25; i++) {
+            data[5 * (i % 5) + i / 5] = uint256(uint64(values[i / 4].intVal >> ((i % 4) * 64)));
+        }
+
+        data = Keccak.keccakF(data);
+
+        Value.Data[] memory outValues = new Value.Data[](7);
+        for (uint256 i = 0; i < 7; i++) {
+            outValues[i] = Value.newInt(0);
+        }
+
+        for (uint256 i = 0; i < 25; i++) {
+            outValues[i / 4].intVal |= data[5 * (i % 5) + i / 5] << ((i % 4) * 64);
+        }
+
+        pushVal(context.stack, Value.newTuple(outValues));
+    }
 
     // Stack ops
 
-    function executePopInsn(
-        Machine.Data memory,
-        Value.Data memory
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        return true;
+    function executePopInsn(AssertionContext memory context) internal pure {
+        popVal(context.stack);
     }
 
-    function executeSpushInsn(
-        Machine.Data memory machine
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.addDataStackValue(machine.staticVal);
-        return true;
+    function executeSpushInsn(AssertionContext memory context) internal pure {
+        pushVal(context.stack, context.afterMachine.staticVal);
     }
 
-    function executeRpushInsn(
-        Machine.Data memory machine
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.addDataStackValue(machine.registerVal);
-        return true;
+    function executeRpushInsn(AssertionContext memory context) internal pure {
+        pushVal(context.stack, context.afterMachine.registerVal);
     }
 
-    function executeRsetInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.registerVal = val1;
-        return true;
+    function executeRsetInsn(AssertionContext memory context) internal pure {
+        context.afterMachine.registerVal = popVal(context.stack);
     }
 
-    function executeJumpInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.instructionStack = val1;
-        return true;
-    }
-
-    function executeCjumpInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isCodePoint()) {
-            return false;
+    function executeJumpInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val = popVal(context.stack);
+        if (!val.isCodePoint()) {
+            handleOpcodeError(context);
+            return;
         }
-        if (!val2.isInt()) {
-            return false;
+        context.afterMachine.instructionStackHash = val.hash();
+    }
+
+    function executeCjumpInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        if (!val1.isCodePoint() || !val2.isInt()) {
+            handleOpcodeError(context);
+            return;
         }
         if (val2.intVal != 0) {
-            machine.instructionStack = val1;
+            context.afterMachine.instructionStackHash = val1.hash();
         }
-        return true;
     }
 
-    function executeStackemptyInsn(
-        Machine.Data memory machine
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.addDataStackValue(
-            Value.newBoolean(Value.hash(machine.dataStack) == Value.hashEmptyTuple())
-        );
-        return true;
+    function executeStackemptyInsn(AssertionContext memory context) internal pure {
+        bool empty = context.stack.length == 0 &&
+            context.afterMachine.dataStack.hash() == Value.newEmptyTuple().hash();
+        pushVal(context.stack, Value.newBoolean(empty));
     }
 
-    function executePcpushInsn(
-        Machine.Data memory machine,
-        Value.Data memory pc
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.addDataStackValue(pc);
-        return true;
+    function executePcpushInsn(AssertionContext memory context) internal pure {
+        pushVal(context.stack, Value.newHashedValue(context.startMachine.instructionStackHash, 1));
     }
 
-    function executeAuxpushInsn(
-        Machine.Data memory machine,
-        Value.Data memory val
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.addAuxStackValue(val);
-        return true;
+    function executeAuxpushInsn(AssertionContext memory context) internal pure {
+        pushVal(context.auxstack, popVal(context.stack));
     }
 
-    function executeAuxstackemptyInsn(
-        Machine.Data memory machine
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.addDataStackValue(
-            Value.newBoolean(Value.hash(machine.auxStack) == Value.hashEmptyTuple())
-        );
-        return true;
+    function executeAuxpopInsn(AssertionContext memory context) internal pure {
+        pushVal(context.stack, popVal(context.auxstack));
     }
 
-    function executeErrpushInsn(
-        Machine.Data memory machine
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.addDataStackValue(machine.errHandler);
-        return true;
+    function executeAuxstackemptyInsn(AssertionContext memory context) internal pure {
+        bool empty = context.auxstack.length == 0 &&
+            context.afterMachine.auxStack.hash() == Value.newEmptyTuple().hash();
+        pushVal(context.stack, Value.newBoolean(empty));
     }
 
-    function executeErrsetInsn(
-        Machine.Data memory machine,
-        Value.Data memory val
-    )
-        internal
-        pure
-        returns (bool)
-    {
+    function executeNopInsn(AssertionContext memory) internal pure {}
+
+    function executeErrpushInsn(AssertionContext memory context) internal pure {
+        pushVal(context.stack, Value.newHashedValue(context.afterMachine.errHandlerHash, 1));
+    }
+
+    function executeErrsetInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val = popVal(context.stack);
         if (!val.isCodePoint()) {
-            return false;
+            handleOpcodeError(context);
+            return;
         }
-        machine.errHandler = val;
-        return true;
+        context.afterMachine.errHandlerHash = val.hash();
     }
 
     // Dup ops
 
-    function executeDup0Insn(
-        Machine.Data memory machine,
-        Value.Data memory val1
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.addDataStackValue(val1);
-        machine.addDataStackValue(val1);
-        return true;
+    function executeDup0Insn(AssertionContext memory context) internal pure {
+        Value.Data memory val = popVal(context.stack);
+        pushVal(context.stack, val);
+        pushVal(context.stack, val);
     }
 
-    function executeDup1Insn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.addDataStackValue(val2);
-        machine.addDataStackValue(val1);
-        machine.addDataStackValue(val2);
-        return true;
+    function executeDup1Insn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        pushVal(context.stack, val2);
+        pushVal(context.stack, val1);
+        pushVal(context.stack, val2);
     }
 
-    function executeDup2Insn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2,
-        Value.Data memory val3
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.addDataStackValue(val3);
-        machine.addDataStackValue(val2);
-        machine.addDataStackValue(val1);
-        machine.addDataStackValue(val3);
-        return true;
+    function executeDup2Insn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val3 = popVal(context.stack);
+        pushVal(context.stack, val3);
+        pushVal(context.stack, val2);
+        pushVal(context.stack, val1);
+        pushVal(context.stack, val3);
     }
 
     // Swap ops
 
-    function executeSwap1Insn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.addDataStackValue(val1);
-        machine.addDataStackValue(val2);
-        return true;
+    function executeSwap1Insn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        pushVal(context.stack, val1);
+        pushVal(context.stack, val2);
     }
 
-    function executeSwap2Insn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2,
-        Value.Data memory val3
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        machine.addDataStackValue(val1);
-        machine.addDataStackValue(val2);
-        machine.addDataStackValue(val3);
-        return true;
+    function executeSwap2Insn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val3 = popVal(context.stack);
+        pushVal(context.stack, val1);
+        pushVal(context.stack, val2);
+        pushVal(context.stack, val3);
     }
 
     // Tuple ops
 
-    function executeTgetInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val1.isInt() || !val2.isTuple()) {
-            return false;
+    function executeTgetInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        if (!val1.isInt() || !val2.isTuple() || val1.intVal >= val2.valLength()) {
+            handleOpcodeError(context);
+            return;
         }
-
-        if (val1.intVal >= val2.valLength()) {
-            return false;
-        }
-
-        machine.addDataStackValue(val2.tupleVal[val1.intVal]);
-        return true;
+        pushVal(context.stack, val2.tupleVal[val1.intVal]);
     }
 
-    function executeTsetInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory val2,
-        Value.Data memory val3
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (!val2.isTuple() || !val1.isInt()) {
-            return false;
+    function executeTsetInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val3 = popVal(context.stack);
+        if (!val1.isInt() || !val2.isTuple() || val1.intVal >= val2.valLength()) {
+            handleOpcodeError(context);
+            return;
         }
-
-        if (val1.intVal >= val2.valLength()) {
-            return false;
-        }
-        Value.Data[] memory tuple_vals = val2.tupleVal;
-        tuple_vals[val1.intVal] = val3;
-
-        machine.addDataStackValue(Value.newTuple(tuple_vals));
-        return true;
+        Value.Data[] memory tupleVals = val2.tupleVal;
+        tupleVals[val1.intVal] = val3;
+        pushVal(context.stack, Value.newTuple(tupleVals));
     }
 
-    function executeTlenInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1
-    )
-        internal
-        pure
-        returns (bool)
-    {
+    function executeTlenInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
         if (!val1.isTuple()) {
-            return false;
+            handleOpcodeError(context);
+            return;
         }
-        machine.addDataStackInt(val1.valLength());
-        return true;
+        pushVal(context.stack, Value.newInt(val1.valLength()));
+    }
+
+    function executeXgetInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory auxVal = popVal(context.auxstack);
+        if (!val1.isInt() || !auxVal.isTuple() || val1.intVal >= auxVal.valLength()) {
+            handleOpcodeError(context);
+            return;
+        }
+        pushVal(context.auxstack, auxVal);
+        pushVal(context.stack, auxVal.tupleVal[val1.intVal]);
+    }
+
+    function executeXsetInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory auxVal = popVal(context.auxstack);
+        if (!auxVal.isTuple() || !val1.isInt() || val1.intVal >= auxVal.valLength()) {
+            handleOpcodeError(context);
+            return;
+        }
+        Value.Data[] memory tupleVals = auxVal.tupleVal;
+        tupleVals[val1.intVal] = val2;
+        pushVal(context.auxstack, Value.newTuple(tupleVals));
     }
 
     // Logging
 
-    function executeBreakpointInsn(Machine.Data memory) internal pure returns (bool) {
-        return true;
-    }
-
-    function executeLogInsn(
-        Machine.Data memory,
-        Value.Data memory val1
-    )
-        internal
-        pure
-        returns (bool, bytes32)
-    {
-        return (true, val1.hash());
+    function executeLogInsn(AssertionContext memory context) internal pure {
+        context.logAcc = keccak256(abi.encodePacked(context.logAcc, popVal(context.stack).hash()));
     }
 
     // System operations
 
-    function executeSendInsn(
-        Machine.Data memory,
-        Value.Data memory val1
-    )
-        internal
-        pure
-        returns (bool, bytes32)
-    {
+    function executeSendInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        if (val1.size > SEND_SIZE_LIMIT || !val1.isValidTypeForSend()) {
+            handleOpcodeError(context);
+            return;
+        }
+        context.messageAcc = keccak256(abi.encodePacked(context.messageAcc, val1.hash()));
+    }
 
-        if(val1.size <= send_size_limit){
-            return (true, val1.hash());
-        }else{
-            return (true, 0);
+    function incrementInbox(AssertionContext memory context)
+        private
+        pure
+        returns (Value.Data memory)
+    {
+        require(context.inboxMessageHash != 0, INBOX_VAL);
+        context.inboxAcc = Messages.addMessageToInbox(context.inboxAcc, context.inboxMessageHash);
+        return context.inboxMessage;
+    }
+
+    function executeInboxPeekInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val = popVal(context.stack);
+        if (context.afterMachine.pendingMessage.hash() != Value.newEmptyTuple().hash()) {
+            context.afterMachine.pendingMessage = incrementInbox(context);
+        }
+        // The pending message must be a tuple of size at least 2
+        pushVal(
+            context.stack,
+            Value.newBoolean(context.afterMachine.pendingMessage.tupleVal[1].hash() == val.hash())
+        );
+    }
+
+    function executeInboxInsn(AssertionContext memory context) internal pure {
+        if (context.afterMachine.pendingMessage.hash() != Value.newEmptyTuple().hash()) {
+            // The pending message field is already full
+            pushVal(context.stack, context.afterMachine.pendingMessage);
+            context.afterMachine.pendingMessage = Value.newEmptyTuple();
+        } else {
+            pushVal(context.stack, incrementInbox(context));
         }
     }
 
-    function executeInboxInsn(
-        Machine.Data memory machine,
-        Value.Data memory val1,
-        Value.Data memory beforeInbox,
-        uint lowerTimeBound
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        if (! val1.isInt()) {
-            return false;
+    function executeSetGasInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        if (!val1.isInt()) {
+            handleOpcodeError(context);
+            return;
         }
-        require(
-            val1.intVal >= lowerTimeBound ||
-            Value.hash(beforeInbox) != Value.hashEmptyTuple(),
-            "Inbox instruction was blocked"
-        );
-        machine.addDataStackValue(beforeInbox);
-        return true;
+        context.afterMachine.arbGasRemaining = val1.intVal;
+    }
+
+    function executePushGasInsn(AssertionContext memory context) internal pure {
+        pushVal(context.stack, Value.newInt(context.afterMachine.arbGasRemaining));
+    }
+
+    function executeErrCodePointInsn(AssertionContext memory context) internal pure {
+        pushVal(context.stack, Value.newHashedValue(CODE_POINT_ERROR, 1));
+    }
+
+    function executePushInsnInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        if (!val1.isInt() || !val2.isCodePoint()) {
+            handleOpcodeError(context);
+            return;
+        }
+        pushVal(context.stack, Value.newCodePoint(uint8(val1.intVal), val2.hash()));
+    }
+
+    function executePushInsnImmInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val3 = popVal(context.stack);
+        if (!val1.isInt() || !val3.isCodePoint()) {
+            handleOpcodeError(context);
+            return;
+        }
+        pushVal(context.stack, Value.newCodePoint(uint8(val1.intVal), val3.hash(), val2));
+    }
+
+    function executeSideloadInsn(AssertionContext memory context) internal pure {
+        Value.Data[] memory values = new Value.Data[](0);
+        pushVal(context.stack, Value.newTuple(values));
+    }
+
+    function executeECRecoverInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val3 = popVal(context.stack);
+        Value.Data memory val4 = popVal(context.stack);
+        if (!val1.isInt() || !val2.isInt() || !val3.isInt() || !val4.isInt()) {
+            handleOpcodeError(context);
+            return;
+        }
+        bytes32 r = bytes32(val1.intVal);
+        bytes32 s = bytes32(val2.intVal);
+        if (val3.intVal != 0 && val3.intVal != 1) {
+            pushVal(context.stack, Value.newInt(0));
+            return;
+        }
+        uint8 v = uint8(val3.intVal) + 27;
+        bytes32 message = bytes32(val4.intVal);
+        address ret = ecrecover(message, v, r, s);
+        pushVal(context.stack, Value.newInt(uint256(ret)));
+    }
+
+    function executeErrorInsn(AssertionContext memory context) internal pure {
+        handleOpcodeError(context);
+    }
+
+    function executeStopInsn(AssertionContext memory context) internal pure {
+        context.afterMachine.setHalt();
     }
 
     // Stop and arithmetic ops
-    uint8 constant internal OP_ADD = 0x01;
-    uint8 constant internal OP_MUL = 0x02;
-    uint8 constant internal OP_SUB = 0x03;
-    uint8 constant internal OP_DIV = 0x04;
-    uint8 constant internal OP_SDIV = 0x05;
-    uint8 constant internal OP_MOD = 0x06;
-    uint8 constant internal OP_SMOD = 0x07;
-    uint8 constant internal OP_ADDMOD = 0x08;
-    uint8 constant internal OP_MULMOD = 0x09;
-    uint8 constant internal OP_EXP = 0x0a;
+    uint8 private constant OP_ADD = 0x01;
+    uint8 private constant OP_MUL = 0x02;
+    uint8 private constant OP_SUB = 0x03;
+    uint8 private constant OP_DIV = 0x04;
+    uint8 private constant OP_SDIV = 0x05;
+    uint8 private constant OP_MOD = 0x06;
+    uint8 private constant OP_SMOD = 0x07;
+    uint8 private constant OP_ADDMOD = 0x08;
+    uint8 private constant OP_MULMOD = 0x09;
+    uint8 private constant OP_EXP = 0x0a;
+    uint8 private constant OP_SIGNEXTEND = 0x0b;
 
     // Comparison & bitwise logic
-    uint8 constant internal OP_LT = 0x10;
-    uint8 constant internal OP_GT = 0x11;
-    uint8 constant internal OP_SLT = 0x12;
-    uint8 constant internal OP_SGT = 0x13;
-    uint8 constant internal OP_EQ = 0x14;
-    uint8 constant internal OP_ISZERO = 0x15;
-    uint8 constant internal OP_AND = 0x16;
-    uint8 constant internal OP_OR = 0x17;
-    uint8 constant internal OP_XOR = 0x18;
-    uint8 constant internal OP_NOT = 0x19;
-    uint8 constant internal OP_BYTE = 0x1a;
-    uint8 constant internal OP_SIGNEXTEND = 0x1b;
+    uint8 private constant OP_LT = 0x10;
+    uint8 private constant OP_GT = 0x11;
+    uint8 private constant OP_SLT = 0x12;
+    uint8 private constant OP_SGT = 0x13;
+    uint8 private constant OP_EQ = 0x14;
+    uint8 private constant OP_ISZERO = 0x15;
+    uint8 private constant OP_AND = 0x16;
+    uint8 private constant OP_OR = 0x17;
+    uint8 private constant OP_XOR = 0x18;
+    uint8 private constant OP_NOT = 0x19;
+    uint8 private constant OP_BYTE = 0x1a;
+    uint8 private constant OP_SHL = 0x1b;
+    uint8 private constant OP_SHR = 0x1c;
+    uint8 private constant OP_SAR = 0x1d;
 
     // SHA3
-    uint8 constant internal OP_SHA3 = 0x20;
-    uint8 constant internal OP_TYPE = 0x21;
-    uint8 constant internal OP_ETHHASH2 = 0x22;
+    uint8 private constant OP_HASH = 0x20;
+    uint8 private constant OP_TYPE = 0x21;
+    uint8 private constant OP_ETHHASH2 = 0x22;
+    uint8 private constant OP_KECCAK_F = 0x23;
 
     // Stack, Memory, Storage and Flow Operations
-    uint8 constant internal OP_POP = 0x30;
-    uint8 constant internal OP_SPUSH = 0x31;
-    uint8 constant internal OP_RPUSH = 0x32;
-    uint8 constant internal OP_RSET = 0x33;
-    uint8 constant internal OP_JUMP = 0x34;
-    uint8 constant internal OP_CJUMP = 0x35;
-    uint8 constant internal OP_STACKEMPTY = 0x36;
-    uint8 constant internal OP_PCPUSH = 0x37;
-    uint8 constant internal OP_AUXPUSH = 0x38;
-    uint8 constant internal OP_AUXPOP = 0x39;
-    uint8 constant internal OP_AUXSTACKEMPTY = 0x3a;
-    uint8 constant internal OP_NOP = 0x3b;
-    uint8 constant internal OP_ERRPUSH = 0x3c;
-    uint8 constant internal OP_ERRSET = 0x3d;
+    uint8 private constant OP_POP = 0x30;
+    uint8 private constant OP_SPUSH = 0x31;
+    uint8 private constant OP_RPUSH = 0x32;
+    uint8 private constant OP_RSET = 0x33;
+    uint8 private constant OP_JUMP = 0x34;
+    uint8 private constant OP_CJUMP = 0x35;
+    uint8 private constant OP_STACKEMPTY = 0x36;
+    uint8 private constant OP_PCPUSH = 0x37;
+    uint8 private constant OP_AUXPUSH = 0x38;
+    uint8 private constant OP_AUXPOP = 0x39;
+    uint8 private constant OP_AUXSTACKEMPTY = 0x3a;
+    uint8 private constant OP_NOP = 0x3b;
+    uint8 private constant OP_ERRPUSH = 0x3c;
+    uint8 private constant OP_ERRSET = 0x3d;
 
     // Duplication and Exchange operations
-    uint8 constant internal OP_DUP0 = 0x40;
-    uint8 constant internal OP_DUP1 = 0x41;
-    uint8 constant internal OP_DUP2 = 0x42;
-    uint8 constant internal OP_SWAP1 = 0x43;
-    uint8 constant internal OP_SWAP2 = 0x44;
+    uint8 private constant OP_DUP0 = 0x40;
+    uint8 private constant OP_DUP1 = 0x41;
+    uint8 private constant OP_DUP2 = 0x42;
+    uint8 private constant OP_SWAP1 = 0x43;
+    uint8 private constant OP_SWAP2 = 0x44;
 
     // Tuple opertations
-    uint8 constant internal OP_TGET = 0x50;
-    uint8 constant internal OP_TSET = 0x51;
-    uint8 constant internal OP_TLEN = 0x52;
+    uint8 private constant OP_TGET = 0x50;
+    uint8 private constant OP_TSET = 0x51;
+    uint8 private constant OP_TLEN = 0x52;
+    uint8 private constant OP_XGET = 0x53;
+    uint8 private constant OP_XSET = 0x54;
 
     // Logging opertations
-    uint8 constant internal OP_BREAKPOINT = 0x60;
-    uint8 constant internal OP_LOG = 0x61;
+    uint8 private constant OP_BREAKPOINT = 0x60;
+    uint8 private constant OP_LOG = 0x61;
 
     // System operations
-    uint8 constant internal OP_SEND = 0x70;
-    uint8 constant internal OP_GETTIME = 0x71;
-    uint8 constant internal OP_INBOX = 0x72;
-    uint8 constant internal OP_ERROR = 0x73;
-    uint8 constant internal OP_STOP = 0x74;
+    uint8 private constant OP_SEND = 0x70;
+    uint8 private constant OP_INBOX_PEEK = 0x71;
+    uint8 private constant OP_INBOX = 0x72;
+    uint8 private constant OP_ERROR = 0x73;
+    uint8 private constant OP_STOP = 0x74;
+    uint8 private constant OP_SETGAS = 0x75;
+    uint8 private constant OP_PUSHGAS = 0x76;
+    uint8 private constant OP_ERR_CODE_POINT = 0x77;
+    uint8 private constant OP_PUSH_INSN = 0x78;
+    uint8 private constant OP_PUSH_INSN_IMM = 0x79;
+    // uint8 private constant OP_OPEN_INSN = 0x7a;
+    uint8 private constant OP_SIDELOAD = 0x7b;
 
-    function opInfo(uint opCode) internal pure returns (uint, uint) {
-        if (opCode == OP_ADD) {
-            return (2, 1);
-        } else if (opCode == OP_MUL) {
-            return (2, 1);
-        } else if (opCode == OP_SUB) {
-            return (2, 1);
-        } else if (opCode == OP_DIV) {
-            return (2, 1);
-        } else if (opCode == OP_SDIV) {
-            return (2, 1);
-        } else if (opCode == OP_MOD) {
-            return (2, 1);
-        } else if (opCode == OP_SMOD) {
-            return (2, 1);
-        } else if (opCode == OP_ADDMOD) {
-            return (3, 1);
-        } else if (opCode == OP_MULMOD) {
-            return (3, 1);
-        } else if (opCode == OP_EXP) {
-            return (2, 1);
-        } else if (opCode == OP_LT) {
-            return (2, 1);
-        } else if (opCode == OP_GT) {
-            return (2, 1);
-        } else if (opCode == OP_SLT) {
-            return (2, 1);
-        } else if (opCode == OP_SGT) {
-            return (2, 1);
-        } else if (opCode == OP_EQ) {
-            return (2, 1);
-        } else if (opCode == OP_ISZERO) {
-            return (1, 1);
-        } else if (opCode == OP_AND) {
-            return (2, 1);
-        } else if (opCode == OP_OR) {
-            return (2, 1);
-        } else if (opCode == OP_XOR) {
-            return (2, 1);
-        } else if (opCode == OP_NOT) {
-            return (1, 1);
-        } else if (opCode == OP_BYTE) {
-            return (2, 1);
-        } else if (opCode == OP_SIGNEXTEND) {
-            return (2, 1);
-        } else if (opCode == OP_SHA3) {
-            return (1, 1);
-        } else if (opCode == OP_TYPE) {
-            return (1, 1);
-        } else if (opCode == OP_ETHHASH2) {
-            return (2, 1);
-        } else if (opCode == OP_POP) {
-            return (1, 0);
-        } else if (opCode == OP_SPUSH) {
-            return (0, 1);
-        } else if (opCode == OP_RPUSH) {
-            return (0, 1);
-        } else if (opCode == OP_RSET) {
-            return (1, 0);
-        } else if (opCode == OP_JUMP) {
-            return (1, 0);
-        } else if (opCode == OP_CJUMP) {
-            return (2, 0);
-        } else if (opCode == OP_STACKEMPTY) {
-            return (0, 1);
-        } else if (opCode == OP_PCPUSH) {
-            return (0, 1);
-        } else if (opCode == OP_AUXPUSH) {
-            return (1, 0);
-        } else if (opCode == OP_AUXPOP) {
-            return (0, 1);
-        } else if (opCode == OP_AUXSTACKEMPTY) {
-            return (0, 1);
-        } else if (opCode == OP_NOP) {
-            return (0, 0);
-        } else if (opCode == OP_ERRPUSH) {
-            return (0, 1);
-        } else if (opCode == OP_ERRSET) {
-            return (1, 0);
-        } else if (opCode == OP_DUP0) {
-            return (1, 2);
-        } else if (opCode == OP_DUP1) {
-            return (2, 3);
-        } else if (opCode == OP_DUP2) {
-            return (3, 4);
-        } else if (opCode == OP_SWAP1) {
-            return (2, 2);
-        } else if (opCode == OP_SWAP2) {
-            return (3, 3);
-        } else if (opCode == OP_TGET) {
-            return (2, 1);
-        } else if (opCode == OP_TSET) {
-            return (3, 1);
-        } else if (opCode == OP_TLEN) {
-            return (1, 1);
-        } else if (opCode == OP_BREAKPOINT) {
-            return (0, 0);
-        } else if (opCode == OP_LOG) {
-            return (1, 0);
-        } else if (opCode == OP_SEND) {
-            return (1, 0);
-        } else if (opCode == OP_GETTIME) {
-            return (0, 1);
-        } else if (opCode == OP_INBOX) {
-            return (1, 1);
-        } else if (opCode == OP_ERROR) {
-            return (0, 0);
-        } else if (opCode == OP_STOP) {
-            return (0, 0);
-        } else {
-            require(false, "Invalid opcode: opInfo()");
-        }
-    }
+    uint8 private constant OP_ECRECOVER = 0x80;
 
-    function opPopCount(uint8 opCode) internal pure returns(uint) {
-        uint popCount;
-        uint pushCount;
-        (popCount, pushCount) = opInfo(opCode);
-        return popCount;
-    }
-
-    function opGasCost(uint8 opCode) internal pure returns(uint64) {
-       if (opCode == OP_ADD) {
-            return 3;
-        } else if (opCode == OP_MUL) {
-            return 3;
-        } else if (opCode == OP_SUB) {
-            return 3;
-        } else if (opCode == OP_DIV) {
-            return 4;
-        } else if (opCode == OP_SDIV) {
-            return 7;
-        } else if (opCode == OP_MOD) {
-            return 4;
-        } else if (opCode == OP_SMOD) {
-            return 7;
-        } else if (opCode == OP_ADDMOD) {
-            return 4;
-        } else if (opCode == OP_MULMOD) {
-            return 4;
-        } else if (opCode == OP_EXP) {
-            return 25;
-        } else if (opCode == OP_LT) {
-            return 2;
-        } else if (opCode == OP_GT) {
-            return 2;
-        } else if (opCode == OP_SLT) {
-            return 2;
-        } else if (opCode == OP_SGT) {
-            return 2;
-        } else if (opCode == OP_EQ) {
-            return 2;
-        } else if (opCode == OP_ISZERO) {
-            return 1;
-        } else if (opCode == OP_AND) {
-            return 2;
-        } else if (opCode == OP_OR) {
-            return 2;
-        } else if (opCode == OP_XOR) {
-            return 2;
-        } else if (opCode == OP_NOT) {
-            return 1;
-        } else if (opCode == OP_BYTE) {
-            return 4;
-        } else if (opCode == OP_SIGNEXTEND) {
-            return 7;
-        } else if (opCode == OP_SHA3) {
-            return 7;
-        } else if (opCode == OP_TYPE) {
-            return 3;
-       } else if (opCode == OP_ETHHASH2) {
-            return 8;
-        } else if (opCode == OP_POP) {
-            return 1;
-        } else if (opCode == OP_SPUSH) {
-            return 1;
-        } else if (opCode == OP_RPUSH) {
-            return 1;
-        } else if (opCode == OP_RSET) {
-            return 2;
-        } else if (opCode == OP_JUMP) {
-            return 4;
-        } else if (opCode == OP_CJUMP) {
-            return 4;
-        } else if (opCode == OP_STACKEMPTY) {
-            return 2;
-        } else if (opCode == OP_PCPUSH) {
-            return 1;
-        } else if (opCode == OP_AUXPUSH) {
-            return 1;
-        } else if (opCode == OP_AUXPOP) {
-            return 1;
-        } else if (opCode == OP_AUXSTACKEMPTY) {
-            return 2;
-        } else if (opCode == OP_NOP) {
-            return 1;
-        } else if (opCode == OP_ERRPUSH) {
-            return 1;
-        } else if (opCode == OP_ERRSET) {
-            return 1;
-        } else if (opCode == OP_DUP0) {
-            return 1;
-        } else if (opCode == OP_DUP1) {
-            return 1;
-        } else if (opCode == OP_DUP2) {
-            return 1;
-        } else if (opCode == OP_SWAP1) {
-            return 1;
-        } else if (opCode == OP_SWAP2) {
-            return 1;
-        } else if (opCode == OP_TGET) {
-            return 2;
-        } else if (opCode == OP_TSET) {
-            return 40;
-        } else if (opCode == OP_TLEN) {
-            return 2;
-        } else if (opCode == OP_BREAKPOINT) {
-            return 100;
-        } else if (opCode == OP_LOG) {
-            return 100;
-        } else if (opCode == OP_SEND) {
-            return 100;
-        } else if (opCode == OP_GETTIME) {
-            return 40;
-        } else if (opCode == OP_INBOX) {
-            return 40;
-        } else if (opCode == OP_ERROR) {
-            return 5;
-        } else if (opCode == OP_STOP) {
-            return 10;
-        } else {
-            require(false, "Invalid opcode: opGasCost()");
-        }
-    }
-
-    function loadMachine(
-        ValidateProofData memory _data
-    )
-        internal
-        pure
-        returns (
-            uint8,
-            Value.Data[] memory,
-            Machine.Data memory,
-            Machine.Data memory,
-            uint
-        )
-    {
-        uint offset = 0;
-        bool valid;
-        Machine.Data memory startMachine;
-        startMachine.setExtensive();
-        (valid, offset, startMachine) = Machine.deserializeMachine(_data.proof, offset);
-
-        require (valid, "loadMachine(): invalid machine");
-
-        Machine.Data memory endMachine = startMachine.clone();
-        uint8 immediate = uint8(_data.proof[offset]);
-        uint8 opCode = uint8(_data.proof[offset + 1]);
-        uint popCount = opPopCount(opCode);
-        Value.Data[] memory stackVals = new Value.Data[](popCount);
-        offset += 2;
-
-        require(immediate == 0 || immediate == 1, "Proof had bad operation type");
-        if (immediate == 0) {
-            startMachine.instructionStack = Value.newCodePoint(
-                uint8(opCode),
-                Value.hash(startMachine.instructionStack)
-            );
-        } else {
-            Value.Data memory immediateVal;
-            (valid, offset, immediateVal) = Value.deserialize(_data.proof, offset);
-            // string(abi.encodePacked("Proof had bad immediate value ", uint2str(valid)))
-            require(valid, "Proof had bad immediate value");
-            if (popCount > 0) {
-                stackVals[0] = immediateVal;
-            } else {
-                endMachine.addDataStackValue(immediateVal);
-            }
-
-            startMachine.instructionStack = Value.newCodePoint(
-                uint8(opCode),
-                Value.hash(startMachine.instructionStack),
-                Value.hash(immediateVal)
-            );
-        }
-
-        uint i = 0;
-        for (i = immediate; i < popCount; i++) {
-            (valid, offset, stackVals[i]) = Value.deserialize(_data.proof, offset);
-            require(valid, "Proof had bad stack value");
-        }
-        if (stackVals.length > 0) {
-            for (i = 0; i < stackVals.length - immediate; i++) {
-                startMachine.addDataStackValue(stackVals[stackVals.length - 1 - i]);
-            }
-        }
-        return (opCode, stackVals, startMachine, endMachine, offset);
-    }
-
-    uint8 constant CODE_POINT_TYPECODE = 1;
-    bytes32 constant CODE_POINT_ERROR = keccak256(
-        abi.encodePacked(
-            CODE_POINT_TYPECODE,
-            uint8(0),
-            bytes32(0)
-        )
+    uint8 private constant CODE_POINT_TYPECODE = 1;
+    bytes32 private constant CODE_POINT_ERROR = keccak256(
+        abi.encodePacked(CODE_POINT_TYPECODE, uint8(0), bytes32(0))
     );
 
-
-    function checkProof(ValidateProofData memory _data) internal pure returns(uint) {
-        uint8 opCode;
-        bool valid;
-        uint offset;
-        Value.Data[] memory stackVals;
-        Machine.Data memory startMachine;
-        Machine.Data memory endMachine;
-        (opCode, stackVals, startMachine, endMachine, offset) = loadMachine(_data);
-
-        bool correct = true;
-        bytes32 messageHash;
-        require(_data.gas == opGasCost(opCode), "Invalid gas in proof");
-        require((_data.didInboxInsn && opCode==OP_INBOX) || (!_data.didInboxInsn && opCode!=OP_INBOX),
-            "Invalid didInboxInsn claim");
-        if (opCode == OP_ADD) {
-            correct = executeAddInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_MUL) {
-            correct = executeMulInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_SUB) {
-            correct = executeSubInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_DIV) {
-            correct = executeDivInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_SDIV) {
-            correct = executeSdivInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_MOD) {
-            correct = executeModInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_SMOD) {
-            correct = executeSmodInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_ADDMOD) {
-            correct = executeAddmodInsn(
-                endMachine,
-                stackVals[0],
-                stackVals[1],
-                stackVals[2]
-            );
-        } else if (opCode == OP_MULMOD) {
-            correct = executeMulmodInsn(
-                endMachine,
-                stackVals[0],
-                stackVals[1],
-                stackVals[2]
-            );
+    function opInfo(uint256 opCode)
+        private
+        pure
+        returns (
+            uint256, // stack pops
+            uint256, // auxstack pops
+            uint64, // gas used
+            function(AssertionContext memory) internal pure // impl
+        )
+    {
+        if (opCode == OP_ADD || opCode == OP_MUL || opCode == OP_SUB) {
+            return (2, 0, 3, binaryMathOp);
+        } else if (opCode == OP_DIV || opCode == OP_MOD) {
+            return (2, 0, 4, binaryMathOpZero);
+        } else if (opCode == OP_SDIV || opCode == OP_SMOD) {
+            return (2, 0, 7, binaryMathOpZero);
+        } else if (opCode == OP_ADDMOD || opCode == OP_MULMOD) {
+            return (3, 0, 4, executeMathModInsn);
         } else if (opCode == OP_EXP) {
-            correct = executeExpInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_LT) {
-            correct = executeLtInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_GT) {
-            correct = executeGtInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_SLT) {
-            correct = executeSltInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_SGT) {
-            correct = executeSgtInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_EQ) {
-            correct = executeEqInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_ISZERO) {
-            correct = executeIszeroInsn(endMachine, stackVals[0]);
-        } else if (opCode == OP_AND) {
-            correct = executeAndInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_OR) {
-            correct = executeOrInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_XOR) {
-            correct = executeXorInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_NOT) {
-            correct = executeNotInsn(endMachine, stackVals[0]);
-        } else if (opCode == OP_BYTE) {
-            correct = executeByteInsn(endMachine, stackVals[0], stackVals[1]);
+            return (2, 0, 25, binaryMathOp);
         } else if (opCode == OP_SIGNEXTEND) {
-            correct = executeSignextendInsn(endMachine, stackVals[0], stackVals[1]);
-        } else if (opCode == OP_SHA3) {
-            correct = executeSha3Insn(endMachine, stackVals[0]);
+            return (2, 0, 7, binaryMathOp);
+        } else if (
+            opCode == OP_LT ||
+            opCode == OP_GT ||
+            opCode == OP_SLT ||
+            opCode == OP_SGT ||
+            opCode == OP_AND ||
+            opCode == OP_OR ||
+            opCode == OP_XOR
+        ) {
+            return (2, 0, 2, binaryMathOp);
+        } else if (opCode == OP_EQ) {
+            return (2, 0, 2, executeEqInsn);
+        } else if (opCode == OP_ISZERO) {
+            return (1, 0, 1, executeIszeroInsn);
+        } else if (opCode == OP_NOT) {
+            return (1, 0, 1, executeNotInsn);
+        } else if (opCode == OP_BYTE || opCode == OP_SHL || opCode == OP_SHR || opCode == OP_SAR) {
+            return (2, 0, 4, binaryMathOp);
+        } else if (opCode == OP_HASH) {
+            return (1, 0, 7, executeHashInsn);
         } else if (opCode == OP_TYPE) {
-            correct = executeTypeInsn(endMachine, stackVals[0]);
+            return (1, 0, 3, executeTypeInsn);
         } else if (opCode == OP_ETHHASH2) {
-            correct = executeEthhash2Insn(endMachine, stackVals[0], stackVals[1]);
+            return (2, 0, 8, binaryMathOp);
+        } else if (opCode == OP_KECCAK_F) {
+            return (1, 0, 600, executeKeccakFInsn);
         } else if (opCode == OP_POP) {
-            correct = executePopInsn(endMachine, stackVals[0]);
+            return (1, 0, 1, executePopInsn);
         } else if (opCode == OP_SPUSH) {
-            correct = executeSpushInsn(endMachine);
+            return (0, 0, 1, executeSpushInsn);
         } else if (opCode == OP_RPUSH) {
-            correct = executeRpushInsn(endMachine);
+            return (0, 0, 1, executeRpushInsn);
         } else if (opCode == OP_RSET) {
-            correct = executeRsetInsn(endMachine, stackVals[0]);
+            return (1, 0, 2, executeRsetInsn);
         } else if (opCode == OP_JUMP) {
-            correct = executeJumpInsn(endMachine, stackVals[0]);
+            return (1, 0, 4, executeJumpInsn);
         } else if (opCode == OP_CJUMP) {
-            correct = executeCjumpInsn(endMachine, stackVals[0], stackVals[1]);
+            return (2, 0, 4, executeCjumpInsn);
         } else if (opCode == OP_STACKEMPTY) {
-            correct = executeStackemptyInsn(endMachine);
+            return (0, 0, 2, executeStackemptyInsn);
         } else if (opCode == OP_PCPUSH) {
-            correct = executePcpushInsn(endMachine, startMachine.instructionStack);
+            return (0, 0, 1, executePcpushInsn);
         } else if (opCode == OP_AUXPUSH) {
-            correct = executeAuxpushInsn(endMachine, stackVals[0]);
+            return (1, 0, 1, executeAuxpushInsn);
         } else if (opCode == OP_AUXPOP) {
-            Value.Data memory auxVal;
-            (valid, offset, auxVal) = Value.deserialize(_data.proof, offset);
-            require(valid, "Proof of auxpop had bad aux value");
-            startMachine.addAuxStackValue(auxVal);
-            endMachine.addDataStackValue(auxVal);
+            return (0, 1, 1, executeAuxpopInsn);
         } else if (opCode == OP_AUXSTACKEMPTY) {
-            correct = executeAuxstackemptyInsn(endMachine);
+            return (0, 0, 2, executeAuxstackemptyInsn);
         } else if (opCode == OP_NOP) {
+            return (0, 0, 1, executeNopInsn);
         } else if (opCode == OP_ERRPUSH) {
-            correct = executeErrpushInsn(endMachine);
+            return (0, 0, 1, executeErrpushInsn);
         } else if (opCode == OP_ERRSET) {
-            correct = executeErrsetInsn(endMachine, stackVals[0]);
+            return (1, 0, 1, executeErrsetInsn);
         } else if (opCode == OP_DUP0) {
-            correct = executeDup0Insn(endMachine, stackVals[0]);
+            return (1, 0, 1, executeDup0Insn);
         } else if (opCode == OP_DUP1) {
-            correct = executeDup1Insn(endMachine, stackVals[0], stackVals[1]);
+            return (2, 0, 1, executeDup1Insn);
         } else if (opCode == OP_DUP2) {
-            correct = executeDup2Insn(
-                endMachine,
-                stackVals[0],
-                stackVals[1],
-                stackVals[2]
-            );
+            return (3, 0, 1, executeDup2Insn);
         } else if (opCode == OP_SWAP1) {
-            correct = executeSwap1Insn(endMachine, stackVals[0], stackVals[1]);
+            return (2, 0, 1, executeSwap1Insn);
         } else if (opCode == OP_SWAP2) {
-            correct = executeSwap2Insn(
-                endMachine,
-                stackVals[0],
-                stackVals[1],
-                stackVals[2]
-            );
+            return (3, 0, 1, executeSwap2Insn);
         } else if (opCode == OP_TGET) {
-            correct = executeTgetInsn(endMachine, stackVals[0], stackVals[1]);
+            return (2, 0, 2, executeTgetInsn);
         } else if (opCode == OP_TSET) {
-            correct = executeTsetInsn(
-                endMachine,
-                stackVals[0],
-                stackVals[1],
-                stackVals[2]
-            );
+            return (3, 0, 40, executeTsetInsn);
         } else if (opCode == OP_TLEN) {
-            correct = executeTlenInsn(endMachine, stackVals[0]);
+            return (1, 0, 2, executeTlenInsn);
+        } else if (opCode == OP_XGET) {
+            return (1, 1, 3, executeXgetInsn);
+        } else if (opCode == OP_XSET) {
+            return (2, 1, 41, executeXsetInsn);
         } else if (opCode == OP_BREAKPOINT) {
-            correct = executeBreakpointInsn(endMachine);
+            return (0, 0, 100, executeNopInsn);
         } else if (opCode == OP_LOG) {
-            (correct, messageHash) = executeLogInsn(endMachine, stackVals[0]);
-            if (correct) {
-                require(
-                    keccak256(
-                        abi.encodePacked(
-                            _data.firstLog,
-                            messageHash
-                        )
-                    ) == _data.lastLog,
-                    "Logged value doesn't match output log"
-                );
-                require(_data.firstMessage == _data.lastMessage, "Send not called, but message is nonzero");
-            } else {
-                messageHash = 0;
-            }
-
+            return (1, 0, 100, executeLogInsn);
         } else if (opCode == OP_SEND) {
-            (correct, messageHash) = executeSendInsn(endMachine, stackVals[0]);
-            if (correct) {
-                if(messageHash == 0){
-                    require(_data.firstMessage == _data.lastMessage, "Send value exceeds size limit, no message should be sent");
-                }else{
-                    require(
-                        keccak256(
-                            abi.encodePacked(
-                                _data.firstMessage,
-                                messageHash
-                            )
-                        ) == _data.lastMessage,
-                        "sent message doesn't match output message"
-                    );
-
-                    require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
-                }
-            } else {
-                messageHash = 0;
-            }
-
-        } else if (opCode == OP_GETTIME) {
-            Value.Data[] memory contents = new Value.Data[](4);
-            contents[0] = Value.newInt(_data.timeBounds[0]);
-            contents[1] = Value.newInt(_data.timeBounds[1]);
-            contents[2] = Value.newInt(_data.timeBounds[2]);
-            contents[3] = Value.newInt(_data.timeBounds[3]);
-            endMachine.addDataStackValue(Value.newTuple(contents));
+            return (1, 0, 100, executeSendInsn);
+        } else if (opCode == OP_INBOX_PEEK) {
+            return (1, 0, 40, executeInboxPeekInsn);
         } else if (opCode == OP_INBOX) {
-            correct = executeInboxInsn(
-                endMachine,
-                stackVals[0],
-                _data.beforeInbox,
-                _data.timeBounds[0]);
+            return (0, 0, 40, executeInboxInsn);
         } else if (opCode == OP_ERROR) {
-            correct = false;
+            return (0, 0, 5, executeErrorInsn);
         } else if (opCode == OP_STOP) {
-            endMachine.setHalt();
+            return (0, 0, 10, executeStopInsn);
+        } else if (opCode == OP_SETGAS) {
+            return (1, 0, 0, executeSetGasInsn);
+        } else if (opCode == OP_PUSHGAS) {
+            return (0, 0, 1, executePushGasInsn);
+        } else if (opCode == OP_ERR_CODE_POINT) {
+            return (0, 0, 25, executeErrCodePointInsn);
+        } else if (opCode == OP_PUSH_INSN) {
+            return (2, 0, 25, executePushInsnInsn);
+        } else if (opCode == OP_PUSH_INSN_IMM) {
+            return (3, 0, 25, executePushInsnImmInsn);
+        } else if (opCode == OP_SIDELOAD) {
+            return (0, 0, 10, executeSideloadInsn);
+        } else if (opCode == OP_ECRECOVER) {
+            return (4, 0, 20000, executeECRecoverInsn);
         } else {
-            correct = false;
+            return (0, 0, 0, executeErrorInsn);
         }
-
-        if (messageHash == 0) {
-            require(_data.firstMessage == _data.lastMessage, "Send not called, but message is nonzero");
-            require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
-        }
-
-        if (!correct) {
-            if (Value.hash(endMachine.errHandler) == CODE_POINT_ERROR) {
-                endMachine.setErrorStop();
-            } else {
-                endMachine.instructionStack = endMachine.errHandler;
-            }
-        }
-
-        require(_data.beforeHash == startMachine.hash(), "Proof had non matching start state");
-        require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
-
-        // require(
-        //     _data.beforeHash == startMachine.hash(),
-        //     string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString(),
-        //     " beforeHash = ", DebugPrint.bytes32string(_data.beforeHash), "\nstartMachine = ", DebugPrint.bytes32string(startMachine.hash())))
-        // );
-        // require(
-        //     _data.afterHash == endMachine.hash(),
-        //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
-        //     " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
-        // );
-
-        return 0;
     }
 }

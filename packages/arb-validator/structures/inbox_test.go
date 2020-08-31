@@ -20,70 +20,12 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-func getStack() *MessageStack {
-	msg1 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(2868),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(64521)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
-
-	msg2 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(2868),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(64521)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
-
-	msg3 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(2868),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(64521)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
-
-	msg4 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(2868),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(64521)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
-
-	messageStack := NewMessageStack()
-	messageStack.DeliverMessage(msg1)
-	messageStack.DeliverMessage(msg2)
-	messageStack.DeliverMessage(msg3)
-	messageStack.DeliverMessage(msg4)
-	return messageStack
-}
-
 func TestBisection(t *testing.T) {
-	messageStack := getStack()
+	messageStack := NewRandomMessageStack(6)
 
 	bottomHash, err := messageStack.GetHashAtIndex(big.NewInt(0))
 	if err != nil {
@@ -101,7 +43,7 @@ func TestBisection(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			msg, err := messageStack.GenerateOneStepProof(section)
+			msg, err := messageStack.InboxMessageAfter(section)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -125,37 +67,18 @@ func TestInboxInsert(t *testing.T) {
 		t.Error("marshal/unmarshal changes hash of empty inbox")
 	}
 
-	msg1 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(2868),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(64521)),
-			Timestamp: big.NewInt(5435254),
-		},
-	}
+	msg1 := inbox.NewRandomInboxMessage()
+	msg1.InboxSeqNum = big.NewInt(1)
+	msg2 := inbox.NewRandomInboxMessage()
+	msg2.InboxSeqNum = big.NewInt(2)
 
-	msg2 := message.Received{
-		Message: message.Eth{
-			To:    common.Address{},
-			From:  common.Address{},
-			Value: big.NewInt(8741),
-		},
-		ChainTime: message.ChainTime{
-			BlockNum:  common.NewTimeBlocks(big.NewInt(1735)),
-			Timestamp: big.NewInt(5435254),
-		},
+	if err := pi.DeliverMessage(msg1); err != nil {
+		t.Fatal(err)
 	}
-
-	pi.DeliverMessage(msg1)
 	msg1Delivered := pi.newest.message
-	if !msg1Delivered.GetReceived().Equals(msg1) {
+
+	if !msg1Delivered.Equals(msg1) {
 		t.Error("newest of Inbox wrong at val1")
-	}
-	if msg1Delivered.TxId.Cmp(big.NewInt(1)) != 0 {
-		t.Error("msg 1 messageNum should have been 1, but was", msg1Delivered.TxId)
 	}
 	pi2, err = marshalUnmarshal(pi)
 	if err != nil {
@@ -165,13 +88,12 @@ func TestInboxInsert(t *testing.T) {
 		t.Error("marshal/unmarshal changes hash of one-item inbox")
 	}
 
-	pi.DeliverMessage(msg2)
-	msg2Delivered := pi.newest.message
-	if !msg2Delivered.GetReceived().Equals(msg2) {
-		t.Error("newest of Inbox wrong at val2")
+	if err := pi.DeliverMessage(msg2); err != nil {
+		t.Fatal(err)
 	}
-	if msg2Delivered.TxId.Cmp(big.NewInt(2)) != 0 {
-		t.Error("msg 2 messageNum should have been 2, but was", msg2Delivered.TxId)
+	msg2Delivered := pi.newest.message
+	if !msg2Delivered.Equals(msg2) {
+		t.Error("newest of Inbox wrong at val2")
 	}
 	pi2, err = marshalUnmarshal(pi)
 	if err != nil {

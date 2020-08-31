@@ -17,31 +17,35 @@ set (CMAKE_CXX_STANDARD 14)
 
 project (avm_tests)
 
-set(TEST_CASES_PATH ${CMAKE_CURRENT_BINARY_DIR}/test_cases.json)
-set(TEST_CONTRACT_PATH ${CMAKE_CURRENT_BINARY_DIR}/contract.ao)
+set(TEST_CASES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/test_cases.json)
+set(TEST_CONTRACT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/contract.mexe)
+set(ARB_OS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../arbos.mexe)
+set(ARB_OS_TEST_CASES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/arbos-cases)
+set(MACHINE_TEST_CASES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/machine-cases)
 
 configure_file (
     "${CMAKE_CURRENT_SOURCE_DIR}/config.hpp.in"
     "${CMAKE_CURRENT_SOURCE_DIR}/config.hpp"
 )
 
-configure_file(test_cases.json ${CMAKE_CURRENT_BINARY_DIR}/test_cases.json COPYONLY)
-configure_file(contract.ao ${CMAKE_CURRENT_BINARY_DIR}/contract.ao COPYONLY)
+add_executable(avm_tests aggregator.cpp arbos.cpp code.cpp main.cpp opcodes.cpp value.cpp checkpoint.cpp datastack.cpp machine.cpp keyvaluestore.cpp blockstore.cpp)
 
-add_executable(avm_tests main.cpp opcodes.cpp value.cpp checkpoint.cpp datastack.cpp machine.cpp keyvaluestore.cpp blockstore.cpp confirmednodestore.cpp)
+target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic)
+# target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)
 
 target_link_libraries(
 	avm_tests
 PRIVATE
     cavm
 	avm
-    avm_utils
-	CONAN_PKG::Catch2
-	CONAN_PKG::jsonformoderncpp
+	Catch2::Catch2
+	nlohmann_json::nlohmann_json
+    Boost::filesystem
+    Boost::system
 )
 
 include(CTest)
-include(lib/cmake/Catch2/Catch)
+include(Catch)
 catch_discover_tests(avm_tests)
 
 target_code_coverage(avm_tests AUTO ALL EXCLUDE external/* tests/*)

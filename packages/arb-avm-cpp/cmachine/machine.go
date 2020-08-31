@@ -18,7 +18,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb
+#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lsecp256k1 -lff -lgmp -lkeccak -ldl
 #include "../cavm/cmachine.h"
 #include "../cavm/ccheckpointstorage.h"
 #include <stdio.h>
@@ -29,6 +29,7 @@ import "C"
 import (
 	"bytes"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"runtime"
 	"time"
 	"unsafe"
@@ -45,7 +46,6 @@ type Machine struct {
 
 func New(codeFile string) (*Machine, error) {
 	cFilename := C.CString(codeFile)
-
 	cMachine := C.machineCreate(cFilename)
 	if cMachine == nil {
 		return nil, fmt.Errorf("error loading machine %v", codeFile)
@@ -86,15 +86,12 @@ func (m *Machine) CurrentStatus() machine.Status {
 	}
 }
 
-func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) machine.BlockReason {
-	currentTimeDataC := intToData(currentTime.AsInt())
-
+func (m *Machine) IsBlocked(newMessages bool) machine.BlockReason {
 	newMessagesInt := 0
 	if newMessages {
 		newMessagesInt = 1
 	}
-	cBlockReason := C.machineIsBlocked(m.c, currentTimeDataC, C.int(newMessagesInt))
-	C.free(currentTimeDataC)
+	cBlockReason := C.machineIsBlocked(m.c, C.int(newMessagesInt))
 	switch cBlockReason.blockType {
 	case C.BLOCK_TYPE_NOT_BLOCKED:
 		return nil
@@ -105,12 +102,7 @@ func (m *Machine) IsBlocked(currentTime *common.TimeBlocks, newMessages bool) ma
 	case C.BLOCK_TYPE_BREAKPOINT:
 		return machine.BreakpointBlocked{}
 	case C.BLOCK_TYPE_INBOX:
-		rawTimeoutBytes := toByteSlice(cBlockReason.val)
-		timeout, err := value.NewIntValueFromReader(bytes.NewReader(rawTimeoutBytes[:]))
-		if err != nil {
-			panic(err)
-		}
-		return machine.InboxBlocked{Timeout: timeout}
+		return machine.InboxBlocked{}
 	default:
 	}
 	return nil
@@ -120,46 +112,18 @@ func (m *Machine) PrintState() {
 	C.machinePrint(m.c)
 }
 
-func (m *Machine) ExecuteAssertion(
-	maxSteps uint64,
-	timeBounds *protocol.TimeBounds,
-	inbox value.TupleValue,
-	maxWallTime time.Duration,
+func makeExecutionAssertion(
+	assertion C.RawAssertion,
+	beforeMachineHash common.Hash,
+	afterMachineHash common.Hash,
 ) (*protocol.ExecutionAssertion, uint64) {
-	lowerBoundBlockDataC := intToData(timeBounds.LowerBoundBlock.AsInt())
-	defer C.free(lowerBoundBlockDataC)
-	upperBoundBlockDataC := intToData(timeBounds.UpperBoundBlock.AsInt())
-	defer C.free(upperBoundBlockDataC)
-	lowerBoundTimestampDataC := intToData(timeBounds.LowerBoundTimestamp)
-	defer C.free(lowerBoundTimestampDataC)
-	upperBoundTimestampDataC := intToData(timeBounds.UpperBoundTimestamp)
-	defer C.free(upperBoundTimestampDataC)
-
-	var buf bytes.Buffer
-	_ = value.MarshalValue(inbox, &buf)
-
-	msgData := buf.Bytes()
-	msgDataC := C.CBytes(msgData)
-	defer C.free(msgDataC)
-
-	assertion := C.machineExecuteAssertion(
-		m.c,
-		C.uint64_t(maxSteps),
-		lowerBoundBlockDataC,
-		upperBoundBlockDataC,
-		lowerBoundTimestampDataC,
-		upperBoundTimestampDataC,
-		msgDataC,
-		C.uint64_t(uint64(maxWallTime.Seconds())),
-	)
-
 	outMessagesRaw := toByteSlice(assertion.outMessages)
 	logsRaw := toByteSlice(assertion.logs)
-
 	return protocol.NewExecutionAssertion(
-		m.Hash(),
-		int(assertion.didInboxInsn) != 0,
+		beforeMachineHash,
+		afterMachineHash,
 		uint64(assertion.numGas),
+		uint64(assertion.inbox_messages_consumed),
 		outMessagesRaw,
 		uint64(assertion.outMessageCount),
 		logsRaw,
@@ -167,9 +131,98 @@ func (m *Machine) ExecuteAssertion(
 	), uint64(assertion.numSteps)
 }
 
+func encodeInboxMessages(inboxMessages []inbox.InboxMessage) []byte {
+	var buf bytes.Buffer
+	for _, msg := range inboxMessages {
+		_ = value.MarshalValue(msg.AsValue(), &buf)
+	}
+	return buf.Bytes()
+}
+
+func encodeValue(val value.Value) []byte {
+	var buf bytes.Buffer
+	_ = value.MarshalValue(val, &buf)
+	return buf.Bytes()
+}
+
+func (m *Machine) ExecuteAssertion(
+	maxSteps uint64,
+	inboxMessages []inbox.InboxMessage,
+	maxWallTime time.Duration,
+) (*protocol.ExecutionAssertion, uint64) {
+	msgDataC := C.CBytes(encodeInboxMessages(inboxMessages))
+	defer C.free(msgDataC)
+
+	beforeHash := m.Hash()
+	assertion := C.executeAssertion(
+		m.c,
+		C.uint64_t(maxSteps),
+		msgDataC,
+		C.uint64_t(len(inboxMessages)),
+		C.uint64_t(uint64(maxWallTime.Seconds())),
+	)
+
+	return makeExecutionAssertion(assertion, beforeHash, m.Hash())
+}
+
+func (m *Machine) ExecuteCallServerAssertion(
+	maxSteps uint64,
+	inboxMessages []inbox.InboxMessage,
+	fakeInboxPeekValue value.Value,
+	maxWallTime time.Duration,
+) (*protocol.ExecutionAssertion, uint64) {
+	msgDataC := C.CBytes(encodeInboxMessages(inboxMessages))
+	defer C.free(msgDataC)
+
+	inboxPeekDataC := C.CBytes(encodeValue(fakeInboxPeekValue))
+	defer C.free(inboxPeekDataC)
+
+	beforeHash := m.Hash()
+	assertion := C.executeCallServerAssertion(
+		m.c,
+		C.uint64_t(maxSteps),
+		msgDataC,
+		C.uint64_t(len(inboxMessages)),
+		inboxPeekDataC,
+		C.uint64_t(uint64(maxWallTime.Seconds())),
+	)
+
+	return makeExecutionAssertion(assertion, beforeHash, m.Hash())
+}
+
+func (m *Machine) ExecuteSideloadedAssertion(
+	maxSteps uint64,
+	inboxMessages []inbox.InboxMessage,
+	sideloadValue value.TupleValue,
+	maxWallTime time.Duration,
+) (*protocol.ExecutionAssertion, uint64) {
+	msgDataC := C.CBytes(encodeInboxMessages(inboxMessages))
+	defer C.free(msgDataC)
+
+	sideloadDataC := C.CBytes(encodeValue(sideloadValue))
+	defer C.free(sideloadDataC)
+
+	beforeHash := m.Hash()
+	assertion := C.executeSideloadedAssertion(
+		m.c,
+		C.uint64_t(maxSteps),
+		msgDataC,
+		C.uint64_t(len(inboxMessages)),
+		sideloadDataC,
+		C.uint64_t(uint64(maxWallTime.Seconds())),
+	)
+
+	return makeExecutionAssertion(assertion, beforeHash, m.Hash())
+}
+
 func (m *Machine) MarshalForProof() ([]byte, error) {
 	rawProof := C.machineMarshallForProof(m.c)
 	return C.GoBytes(unsafe.Pointer(rawProof.data), rawProof.length), nil
+}
+
+func (m *Machine) MarshalState() ([]byte, error) {
+	stateData := C.machineMarshallState(m.c)
+	return C.GoBytes(unsafe.Pointer(stateData.data), stateData.length), nil
 }
 
 func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {

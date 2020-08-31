@@ -103,7 +103,7 @@ else()
         "See the ${CMAKE_CURRENT_LIST_FILE} for more details.")
     endif()
   endif()
-  find_package_handle_standard_args(ROCKSDB DEFAULT_MSG
+  find_package_handle_standard_args(RocksDB DEFAULT_MSG
                                     ROCKSDB_LIBRARY _ROCKSDB_INCLUDE_DIR)
 endif()
 
@@ -122,6 +122,7 @@ else()
   set_target_properties(RocksDB::RocksDB PROPERTIES
     IMPORTED_LOCATION "${ROCKSDB_LIBRARIES}"
     INTERFACE_INCLUDE_DIRECTORIES "${ROCKSDB_INCLUDE_DIRS}"
+    IMPORTED_LINK_INTERFACE_LIBRARIES "dl"
   )
   if(_ROCKSDB_output)
     message(STATUS

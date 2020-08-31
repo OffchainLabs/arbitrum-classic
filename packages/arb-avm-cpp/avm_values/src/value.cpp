@@ -14,167 +14,193 @@
  * limitations under the License.
  */
 
-#include <avm_values/codepoint.hpp>
+#include <avm_values/code.hpp>
+#include <avm_values/codepointstub.hpp>
 #include <avm_values/pool.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/value.hpp>
 
-#include <avm_values/util.hpp>
-#include <bigint_utils.hpp>
+#include <boost/endian/conversion.hpp>
 
 #include <ostream>
 
-#define UINT256_SIZE 32
-
-namespace {
-Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
-    Tuple tup;
-    if (size > 0) {
-        tup = Tuple(&pool, size);
-        for (int i = 0; i < size; i++) {
-            tup.set_element(i, deserialize_value(bufptr, pool));
-        }
-    }
-
-    return tup;
+uint64_t deserialize_uint64_t(const char*& bufptr) {
+    uint64_t val = intx::be::unsafe::load<uint64_t>(
+        reinterpret_cast<const unsigned char*>(bufptr));
+    bufptr += sizeof(val);
+    return val;
 }
 
-CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool) {
-    CodePoint ret;
-    memcpy(&ret.pc, bufptr, sizeof(ret.pc));
-    bufptr += sizeof(ret.pc);
-    ret.pc = boost::endian::big_to_native(ret.pc);
-    ret.op = deserializeOperation(bufptr, pool);
-    ret.nextHash = from_big_endian(bufptr, bufptr + UINT256_SIZE);
-    bufptr += UINT256_SIZE;
-
-    return ret;
+CodePointRef deserializeCodePointRef(const char*& bufptr) {
+    uint64_t segment = deserialize_uint64_t(bufptr);
+    uint64_t pc = deserialize_uint64_t(bufptr);
+    return {segment, pc};
 }
-}  // namespace
+
+CodePointStub deserializeCodePointStub(const char*& bufptr) {
+    auto ref = deserializeCodePointRef(bufptr);
+    auto hash_val = deserializeUint256t(bufptr);
+    return {ref, hash_val};
+}
 
 uint256_t deserializeUint256t(const char*& bufptr) {
-    uint256_t ret = from_big_endian(bufptr, bufptr + UINT256_SIZE);
-    bufptr += UINT256_SIZE;
+    auto ret = intx::be::unsafe::load<uint256_t>(
+        reinterpret_cast<const unsigned char*>(bufptr));
+    bufptr += 32;
     return ret;
 }
 
-Operation deserializeOperation(const char*& bufptr, TuplePool& pool) {
-    uint8_t immediateCount;
-    memcpy(&immediateCount, bufptr, sizeof(immediateCount));
-    bufptr += sizeof(immediateCount);
-    OpCode opcode;
-    memcpy(&opcode, bufptr, sizeof(opcode));
-    bufptr += sizeof(opcode);
-
-    if (immediateCount == 1) {
-        return {opcode, deserialize_value(bufptr, pool)};
-    } else {
-        return {opcode};
-    }
-}
-
-value deserialize_value(const char*& bufptr, TuplePool& pool) {
-    uint8_t valType;
-    memcpy(&valType, bufptr, sizeof(valType));
-    bufptr += sizeof(valType);
-    switch (valType) {
-        case NUM:
-            return deserializeUint256t(bufptr);
-        case CODEPT: {
-            return CodePointStub{deserializeCodePoint(bufptr, pool)};
-        }
-        default:
-            if (valType >= TUPLE && valType <= TUPLE + 8) {
-                return deserializeTuple(bufptr, valType - TUPLE, pool);
-            } else {
-                std::printf("in deserialize_value, unhandled type = %X\n",
-                            valType);
-                throw std::runtime_error("Tried to deserialize unhandled type");
+value deserialize_value(const char*& bufptr) {
+    // Iteratively read all values leaving placeholder for the tuples
+    std::vector<DeserializedValue> values;
+    uint64_t values_to_read = 1;
+    while (values_to_read > 0) {
+        uint8_t valType;
+        memcpy(&valType, bufptr, sizeof(valType));
+        bufptr += sizeof(valType);
+        --values_to_read;
+        switch (valType) {
+            case NUM: {
+                values.push_back(value{deserializeUint256t(bufptr)});
+                break;
             }
+            case CODEPT: {
+                values.push_back(value{deserializeCodePointStub(bufptr)});
+                break;
+            }
+            default: {
+                if (valType >= TUPLE && valType <= TUPLE + 8) {
+                    uint8_t tuple_size = valType - TUPLE;
+                    values_to_read += tuple_size;
+                    values.push_back(TuplePlaceholder{tuple_size});
+                } else {
+                    std::printf("in deserialize_value, unhandled type = %X\n",
+                                valType);
+                    throw std::runtime_error(
+                        "Tried to deserialize unhandled type");
+                }
+                break;
+            }
+        }
     }
+    return assembleValueFromDeserialized(std::move(values));
 }
 
-void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
-    std::array<unsigned char, 32> tmpbuf;
-    to_big_endian(val, tmpbuf.begin());
-    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-}
-
-void marshal_value(const value& val,
-                   std::vector<unsigned char>& buf,
-                   const Code& code) {
-    if (nonstd::holds_alternative<Tuple>(val)) {
-        nonstd::get<Tuple>(val).marshal(buf, code);
-    } else if (nonstd::holds_alternative<uint256_t>(val)) {
-        buf.push_back(NUM);
-        marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
-    } else if (nonstd::holds_alternative<CodePointStub>(val)) {
-        auto cpr = nonstd::get<CodePointStub>(val);
-        code[cpr].marshal(buf, code);
-    } else if (nonstd::holds_alternative<HashPreImage>(val)) {
-        nonstd::get<HashPreImage>(val).marshal(buf);
+value assembleValueFromDeserialized(std::vector<DeserializedValue> values) {
+    // Next form the full value out of the interleaved values and placeholders
+    size_t total_values_size = values.size();
+    for (size_t i = 0; i < total_values_size; ++i) {
+        size_t val_pos = total_values_size - 1 - i;
+        auto& val = values[val_pos];
+        if (nonstd::holds_alternative<value>(val)) {
+            continue;
+        }
+        auto holder = val.get<TuplePlaceholder>();
+        Tuple tup(holder.values);
+        for (uint8_t j = 0; j < holder.values; ++j) {
+            tup.set_element(j, std::move(values[val_pos + 1 + j].get<value>()));
+        }
+        values.erase(values.begin() + val_pos + 1,
+                     values.begin() + val_pos + 1 + holder.values);
+        values[val_pos] = std::move(tup);
     }
+    return values.back().get<value>();
 }
 
-void marshalStub(const value& val,
-                 std::vector<unsigned char>& buf,
-                 const Code& code) {
-    if (nonstd::holds_alternative<Tuple>(val)) {
-        auto tup = nonstd::get<Tuple>(val);
-        marshalForProof(tup.getHashPreImage(), buf, code);
-    } else {
-        marshalForProof(val, buf, code);
+void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
+    uint64_t big_endian_val = boost::endian::native_to_big(val);
+    const unsigned char* data =
+        reinterpret_cast<const unsigned char*>(&big_endian_val);
+    buf.insert(buf.end(), data, data + sizeof(big_endian_val));
+}
+
+void marshal_value(const value& full_val, std::vector<unsigned char>& buf) {
+    std::vector<value> values{full_val};
+    while (!values.empty()) {
+        const auto val = std::move(values.back());
+        values.pop_back();
+        if (nonstd::holds_alternative<Tuple>(val)) {
+            const auto& tup = val.get<Tuple>();
+            auto size = tup.tuple_size();
+            buf.push_back(TUPLE + size);
+            // queue elements in reverse order for serialization
+            for (uint64_t i = 0; i < size; i++) {
+                values.push_back(tup.get_element(size - 1 - i));
+            }
+        } else if (nonstd::holds_alternative<uint256_t>(val)) {
+            buf.push_back(NUM);
+            marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
+        } else if (nonstd::holds_alternative<CodePointStub>(val)) {
+            buf.push_back(CODE_POINT_STUB);
+            nonstd::get<CodePointStub>(val).marshal(buf);
+        } else if (nonstd::holds_alternative<HashPreImage>(val)) {
+            buf.push_back(HASH_PRE_IMAGE);
+            nonstd::get<HashPreImage>(val).marshal(buf);
+        }
     }
-}
-
-void marshalForProof(const CodePoint& cp,
-                     std::vector<unsigned char>& buf,
-                     const Code& code) {
-    buf.push_back(CODEPT);
-    cp.op.marshalForProof(buf, false, code);
-    std::array<unsigned char, 32> hashVal;
-    to_big_endian(cp.nextHash, hashVal.begin());
-    buf.insert(buf.end(), hashVal.begin(), hashVal.end());
 }
 
 namespace {
-// see similar functionality in tuple.cloneShallow and tuple.marshal
-void marshalForProof(const Tuple& val,
-                     std::vector<unsigned char>& buf,
-                     const Code& code) {
-    buf.push_back(TUPLE + val.tuple_size());
-    for (uint64_t i = 0; i < val.tuple_size(); i++) {
-        auto itemval = val.get_element(i);
-        marshalStub(itemval, buf, code);
-    }
-}
-
-void marshalForProof(const CodePointStub& val,
-                     std::vector<unsigned char>& buf,
-                     const Code& code) {
-    marshalForProof(code[val], buf, code);
-}
-
-void marshalForProof(const uint256_t& val,
-                     std::vector<unsigned char>& buf,
-                     const Code&) {
-    buf.push_back(NUM);
-    marshal_uint256_t(val, buf);
-}
-
 void marshalForProof(const HashPreImage& val,
+                     MarshalLevel,
                      std::vector<unsigned char>& buf,
                      const Code&) {
     buf.push_back(HASH_PRE_IMAGE);
     val.marshal(buf);
 }
+
+MarshalLevel childNestLevel(MarshalLevel level) {
+    if (level == MarshalLevel::FULL) {
+        return MarshalLevel::FULL;
+    } else {
+        return MarshalLevel::STUB;
+    }
+}
+
+void marshalForProof(const Tuple& val,
+                     MarshalLevel marshal_level,
+                     std::vector<unsigned char>& buf,
+                     const Code& code) {
+    if (marshal_level == MarshalLevel::STUB) {
+        marshalForProof(val.getHashPreImage(), marshal_level, buf, code);
+    } else {
+        buf.push_back(TUPLE + val.tuple_size());
+        MarshalLevel nested_level = childNestLevel(marshal_level);
+        for (uint64_t i = 0; i < val.tuple_size(); i++) {
+            auto itemval = val.get_element(i);
+            marshalForProof(itemval, nested_level, buf, code);
+        }
+    }
+}
+
+void marshalForProof(const CodePointStub& val,
+                     MarshalLevel marshal_level,
+                     std::vector<unsigned char>& buf,
+                     const Code& code) {
+    auto& cp = code.loadCodePoint(val.pc);
+    buf.push_back(CODEPT);
+    cp.op.marshalForProof(buf, childNestLevel(marshal_level), code);
+    marshal_uint256_t(cp.nextHash, buf);
+}
+
+void marshalForProof(const uint256_t& val,
+                     MarshalLevel,
+                     std::vector<unsigned char>& buf,
+                     const Code&) {
+    buf.push_back(NUM);
+    marshal_uint256_t(val, buf);
+}
 }  // namespace
 
 void marshalForProof(const value& val,
+                     MarshalLevel marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code) {
     return nonstd::visit(
-        [&](const auto& v) { return marshalForProof(v, buf, code); }, val);
+        [&](const auto& v) {
+            return marshalForProof(v, marshal_level, buf, code);
+        },
+        val);
 }
 
 uint256_t hash_value(const value& value) {
@@ -206,7 +232,7 @@ struct ValuePrinter {
     }
 
     std::ostream* operator()(const uint256_t& val) const {
-        os << val;
+        os << intx::to_string(val);
         return &os;
     }
 
@@ -217,7 +243,7 @@ struct ValuePrinter {
 
     std::ostream* operator()(const CodePointStub& val) const {
         //        std::printf("in CodePoint ostream operator\n");
-        os << "CodePointStub(" << val.pc << ")";
+        os << "CodePointStub(" << val.pc.pc << ")";
         return &os;
     }
 };

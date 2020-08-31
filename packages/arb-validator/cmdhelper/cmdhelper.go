@@ -20,24 +20,21 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
-
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/gorilla/rpc"
-	"github.com/gorilla/rpc/json"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
+
+var ContractName = "contract.mexe"
 
 // ValidateRollupChain creates a validator given the managerCreationFunc.
 // This allows for the abstraction of the manager setup away from command line
@@ -53,8 +50,7 @@ func ValidateRollupChain(
 	// Check number of args
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
-	walletVars := utils.AddFlags(validateCmd)
-	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
+	walletVars := utils.AddWalletFlags(validateCmd)
 	blocktime := validateCmd.Int64(
 		"blocktime",
 		2,
@@ -94,30 +90,31 @@ func ValidateRollupChain(
 	}
 	client := ethbridge.NewEthAuthClient(ethclint, auth)
 
-	if err := arbbridge.WaitForNonZeroBalance(
-		context.Background(),
-		client,
-		common.NewAddressFromEth(auth.From),
-	); err != nil {
-		return err
-	}
-
-	rollupActor, err := client.NewRollup(rollupArgs.Address)
+	rollup, err := client.NewRollup(rollupArgs.Address)
 	if err != nil {
 		return err
 	}
 
-	validatorListener := rollup.NewValidatorChainListener(
+	params, err := rollup.GetParams(context.Background())
+	if err != nil {
+		return err
+	}
+
+	if err := arbbridge.WaitForBalance(context.Background(), client, params.StakeToken, common.NewAddressFromEth(auth.From)); err != nil {
+		return err
+	}
+
+	validatorListener := chainlistener.NewValidatorChainListener(
 		context.Background(),
 		rollupArgs.Address,
-		rollupActor,
+		rollup,
 	)
 	err = validatorListener.AddStaker(client)
 	if err != nil {
 		return err
 	}
 
-	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "contract.ao")
+	contractFile := filepath.Join(rollupArgs.ValidatorFolder, ContractName)
 	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
 
 	manager, err := managerCreationFunc(
@@ -130,44 +127,10 @@ func ValidateRollupChain(
 	if err != nil {
 		return err
 	}
-	manager.AddListener(&rollup.AnnouncerListener{})
+	manager.AddListener(&chainlistener.AnnouncerListener{})
 	manager.AddListener(validatorListener)
 
-	if *rpcEnable {
-		validatorServer, err := rollupvalidator.NewRPCServer(manager, time.Second*60)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if err := launchRPC(
-			validatorServer,
-			"Validator",
-			"1235",
-		); err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		wait := make(chan bool)
-		<-wait
-	}
+	wait := make(chan bool)
+	<-wait
 	return nil
-}
-
-func launchRPC(receiver interface{}, name string, port string) error {
-	// Run server
-	s := rpc.NewServer()
-	s.RegisterCodec(
-		json.NewCodec(),
-		"application/json",
-	)
-	s.RegisterCodec(
-		json.NewCodec(),
-		"application/json;charset=UTF-8",
-	)
-
-	if err := s.RegisterService(receiver, name); err != nil {
-		return err
-	}
-
-	return utils.LaunchRPC(s, port)
 }

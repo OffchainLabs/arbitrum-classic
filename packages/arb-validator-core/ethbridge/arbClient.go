@@ -19,6 +19,8 @@ package ethbridge
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"math/big"
 	"sync"
@@ -27,24 +29,29 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/executionchallenge"
 )
 
 type EthArbClient struct {
-	client *ethclient.Client
+	client ethutils.EthClient
 }
 
-func NewEthClient(client *ethclient.Client) *EthArbClient {
+func NewEthClient(client ethutils.EthClient) *EthArbClient {
 	return &EthArbClient{client}
 }
 
 var reorgError = errors.New("reorg occured")
 var headerRetryDelay = time.Second * 2
 var maxFetchAttempts = 5
+
+func (c *EthArbClient) SubscribeBlockHeadersAfter(ctx context.Context, prevBlockId *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
+	blockIdChan := make(chan arbbridge.MaybeBlockId, 100)
+	if err := c.subscribeBlockHeadersAfter(ctx, prevBlockId, blockIdChan); err != nil {
+		return nil, err
+	}
+	return blockIdChan, nil
+}
 
 func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
 	blockIdChan := make(chan arbbridge.MaybeBlockId, 100)
@@ -55,6 +62,22 @@ func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *
 	}
 	blockIdChan <- arbbridge.MaybeBlockId{BlockId: startBlockId, Timestamp: new(big.Int).SetUint64(startHeader.Time)}
 	prevBlockId := startBlockId
+	if err := c.subscribeBlockHeadersAfter(ctx, prevBlockId, blockIdChan); err != nil {
+		return nil, err
+	}
+	return blockIdChan, nil
+}
+
+func (c *EthArbClient) subscribeBlockHeadersAfter(ctx context.Context, prevBlockId *common.BlockId, blockIdChan chan<- arbbridge.MaybeBlockId) error {
+	prevBlockIdCheck, err := c.BlockIdForHeight(ctx, prevBlockId.Height)
+	if err != nil {
+		return err
+	}
+
+	if !prevBlockId.Equals(prevBlockIdCheck) {
+		return fmt.Errorf("can't subscribe to headers, block hash %v doesn't match expected value %v", prevBlockIdCheck, prevBlockId)
+	}
+
 	go func() {
 		defer close(blockIdChan)
 
@@ -63,8 +86,9 @@ func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *
 			fetchErrorCount := 0
 			for {
 				var err error
-				nextHeader, err = c.client.HeaderByNumber(ctx, new(big.Int).Add(prevBlockId.Height.AsInt(), big.NewInt(1)))
-				if err == nil {
+				targetHeight := new(big.Int).Add(prevBlockId.Height.AsInt(), big.NewInt(1))
+				nextHeader, err = c.client.HeaderByNumber(ctx, targetHeight)
+				if err == nil && nextHeader.Number.Cmp(targetHeight) == 0 {
 					// Got next header
 					break
 				}
@@ -99,8 +123,7 @@ func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *
 			blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId, Timestamp: new(big.Int).SetUint64(nextHeader.Time)}
 		}
 	}()
-
-	return blockIdChan, nil
+	return nil
 }
 
 func (c *EthArbClient) NewArbFactoryWatcher(address common.Address) (arbbridge.ArbFactoryWatcher, error) {
@@ -119,16 +142,12 @@ func (c *EthArbClient) NewExecutionChallengeWatcher(address common.Address) (arb
 	return newExecutionChallengeWatcher(address.ToEthAddress(), c.client)
 }
 
-func (c *EthArbClient) NewMessagesChallengeWatcher(address common.Address) (arbbridge.MessagesChallengeWatcher, error) {
-	return newMessagesChallengeWatcher(address.ToEthAddress(), c.client)
-}
-
 func (c *EthArbClient) NewInboxTopChallengeWatcher(address common.Address) (arbbridge.InboxTopChallengeWatcher, error) {
 	return newInboxTopChallengeWatcher(address.ToEthAddress(), c.client)
 }
 
-func (c *EthArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepProof, error) {
-	return newOneStepProof(address.ToEthAddress(), c.client)
+func (c *EthArbClient) NewIERC20Watcher(address common.Address) (arbbridge.IERC20Watcher, error) {
+	return newIERC20Watcher(address.ToEthAddress(), c.client)
 }
 
 func (c *EthArbClient) GetBalance(ctx context.Context, account common.Address) (*big.Int, error) {
@@ -148,7 +167,21 @@ func (c *EthArbClient) BlockIdForHeight(ctx context.Context, height *common.Time
 	if err != nil {
 		return nil, err
 	}
+	if header == nil {
+		return nil, errors.New("couldn't get header at height")
+	}
 	return getBlockID(header), nil
+}
+
+func (c *EthArbClient) TimestampForBlockHash(ctx context.Context, hash common.Hash) (*big.Int, error) {
+	header, err := c.client.HeaderByHash(ctx, hash.ToEthHash())
+	if err != nil {
+		return nil, err
+	}
+	if header == nil {
+		return nil, errors.New("couldn't get header at height")
+	}
+	return new(big.Int).SetUint64(header.Time), nil
 }
 
 type TransactAuth struct {
@@ -173,7 +206,7 @@ type EthArbAuthClient struct {
 	auth *TransactAuth
 }
 
-func NewEthAuthClient(client *ethclient.Client, auth *bind.TransactOpts) *EthArbAuthClient {
+func NewEthAuthClient(client ethutils.EthClient, auth *bind.TransactOpts) *EthArbAuthClient {
 	return &EthArbAuthClient{
 		EthArbClient: NewEthClient(client),
 		auth:         &TransactAuth{auth: auth},
@@ -204,33 +237,10 @@ func (c *EthArbAuthClient) NewExecutionChallenge(address common.Address) (arbbri
 	return newExecutionChallenge(address.ToEthAddress(), c.client, c.auth)
 }
 
-func (c *EthArbAuthClient) NewMessagesChallenge(address common.Address) (arbbridge.MessagesChallenge, error) {
-	return newMessagesChallenge(address.ToEthAddress(), c.client, c.auth)
-}
-
 func (c *EthArbAuthClient) NewInboxTopChallenge(address common.Address) (arbbridge.InboxTopChallenge, error) {
 	return newInboxTopChallenge(address.ToEthAddress(), c.client, c.auth)
 }
 
-func (c *EthArbAuthClient) DeployOneStepProof(ctx context.Context) (arbbridge.OneStepProof, error) {
-	c.auth.Lock()
-	defer c.auth.Unlock()
-	ospAddress, tx, _, err := executionchallenge.DeployOneStepProof(c.auth.auth, c.client)
-	if err != nil {
-		return nil, err
-	}
-	if err := waitForReceipt(
-		ctx,
-		c.client,
-		c.auth.auth.From,
-		tx,
-		"DeployOneStepProof",
-	); err != nil {
-		return nil, err
-	}
-	osp, err := c.NewOneStepProof(common.NewAddressFromEth(ospAddress))
-	if err != nil {
-		return nil, err
-	}
-	return osp, nil
+func (c *EthArbAuthClient) NewIERC20(address common.Address) (arbbridge.IERC20, error) {
+	return newIERC20(address.ToEthAddress(), c.client, c.auth)
 }

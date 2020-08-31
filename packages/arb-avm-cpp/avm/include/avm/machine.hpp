@@ -27,14 +27,20 @@
 struct Assertion {
     uint64_t stepCount;
     uint64_t gasCount;
+    uint64_t inbox_messages_consumed;
     std::vector<value> outMessages;
     std::vector<value> logs;
-    bool didInboxInsn;
 };
 
 class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
-    BlockReason runOne();
+
+    Assertion executeMachine(uint64_t stepCount,
+                             std::chrono::seconds wallLimit,
+                             std::vector<Tuple> inbox_messages,
+                             Tuple sideload,
+                             bool blockingSideload_,
+                             nonstd::optional<value> fake_inbox_peek_value_);
 
    public:
     MachineState machine_state;
@@ -42,37 +48,38 @@ class Machine {
     Machine() = default;
     Machine(MachineState machine_state_)
         : machine_state(std::move(machine_state_)) {}
-    Machine(std::shared_ptr<const StaticVmValues> static_values,
-            std::shared_ptr<TuplePool> pool_)
-        : machine_state(std::move(static_values), std::move(pool_)) {}
+    Machine(std::shared_ptr<Code> code, value static_val)
+        : machine_state(std::move(code), std::move(static_val)) {}
 
-    static std::pair<Machine, bool> loadFromFile(
-        const std::string& contract_filename) {
-        auto result = MachineState::loadFromFile(contract_filename);
-        if (!result.second) {
-            return std::make_pair(Machine{}, false);
-        }
-        return std::make_pair(Machine{std::move(result.first)}, true);
+    static Machine loadFromFile(const std::string& executable_filename) {
+        return {MachineState::loadFromFile(executable_filename)};
     }
 
+    Assertion runSideloaded(uint64_t stepCount,
+                            std::vector<Tuple> inbox_messages,
+                            std::chrono::seconds wallLimit,
+                            Tuple sideload);
+
     Assertion run(uint64_t stepCount,
-                  const TimeBounds& timeBounds,
-                  Tuple messages,
+                  std::vector<Tuple> inbox_messages,
                   std::chrono::seconds wallLimit);
+
+    Assertion runCallServer(uint64_t stepCount,
+                            std::vector<Tuple> inbox_messages,
+                            std::chrono::seconds wallLimit,
+                            value fake_inbox_peek_value);
 
     Status currentStatus() { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }
-    BlockReason isBlocked(uint256_t currentTime, bool newMessages) const {
-        return machine_state.isBlocked(currentTime, newMessages);
+    BlockReason isBlocked(bool newMessages) const {
+        return machine_state.isBlocked(newMessages);
     }
     std::vector<unsigned char> marshalForProof() {
         return machine_state.marshalForProof();
     }
 
-    TuplePool& getPool() { return *machine_state.pool; }
-
-    void marshal_value(const value& val, std::vector<unsigned char>& buf) {
-        return ::marshal_value(val, buf, machine_state.static_values->code);
+    std::vector<unsigned char> marshalState() const {
+        return machine_state.marshalState();
     }
 };
 

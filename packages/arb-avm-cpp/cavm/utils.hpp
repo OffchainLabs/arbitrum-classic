@@ -19,7 +19,7 @@
 
 #include "ctypes.h"
 
-#include <avm_values/codepoint.hpp>
+#include <avm_values/codepointstub.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/value.hpp>
 #include <data_storage/storageresult.hpp>
@@ -30,12 +30,23 @@
 
 inline unsigned char* returnCharVectorRaw(
     const std::vector<unsigned char>& data) {
-    unsigned char* cData = (unsigned char*)malloc(data.size());
+    unsigned char* cData =
+        reinterpret_cast<unsigned char*>(malloc(data.size()));
     std::copy(data.begin(), data.end(), cData);
     return cData;
 }
 
 inline ByteSlice returnCharVector(const std::vector<unsigned char>& data) {
+    return {returnCharVectorRaw(data), static_cast<int>(data.size())};
+}
+
+inline char* returnCharVectorRaw(const std::vector<char>& data) {
+    char* cData = reinterpret_cast<char*>(malloc(data.size()));
+    std::copy(data.begin(), data.end(), cData);
+    return cData;
+}
+
+inline ByteSlice returnCharVector(const std::vector<char>& data) {
     return {returnCharVectorRaw(data), static_cast<int>(data.size())};
 }
 
@@ -71,16 +82,15 @@ inline Uint64Result returnUint64Result(const ValueResult<uint64_t>& val) {
     return {val.data, true};
 }
 
-inline ByteSlice returnValueResult(const DbResult<value>& res,
-                                   const Code& code) {
+inline ByteSlice returnValueResult(const DbResult<value>& res) {
     if (!res.status.ok()) {
         return {nullptr, 0};
     }
 
     std::vector<unsigned char> value;
-    marshal_value(res.data, value, code);
+    marshal_value(res.data, value);
 
-    auto value_data = (unsigned char*)malloc(value.size());
+    auto value_data = reinterpret_cast<unsigned char*>(malloc(value.size()));
     std::copy(value.begin(), value.end(), value_data);
 
     auto void_data = reinterpret_cast<void*>(value_data);

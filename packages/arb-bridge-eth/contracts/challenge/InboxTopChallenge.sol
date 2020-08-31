@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2019, Offchain Labs, Inc.
  *
@@ -14,45 +16,29 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.11;
 
 import "./BisectionChallenge.sol";
 import "./ChallengeUtils.sol";
 
-import "../Messages.sol";
-
+import "../inbox/Messages.sol";
 
 contract InboxTopChallenge is BisectionChallenge {
-
-    event Bisected(
-        bytes32[] chainHashes,
-        uint256 totalLength,
-        uint256 deadlineTicks
-    );
+    event Bisected(bytes32[] chainHashes, uint256 totalLength, uint256 deadlineTicks);
 
     event OneStepProofCompleted();
 
     // Proof was incorrect
-    string constant HC_OSP_PROOF = "HC_OSP_PROOF";
+    string private constant HC_OSP_PROOF = "HC_OSP_PROOF";
 
-    function bisect(
-        bytes32[] memory _chainHashes,
-        uint256 _chainLength
-    )
-        public
-        asserterAction
-    {
+    function bisect(bytes32[] calldata _chainHashes, uint256 _chainLength) external asserterAction {
         uint256 bisectionCount = _chainHashes.length - 1;
 
         requireMatchesPrevState(
-            ChallengeUtils.inboxTopHash(
-                _chainHashes[0],
-                _chainHashes[bisectionCount],
-                _chainLength
-            )
+            ChallengeUtils.inboxTopHash(_chainHashes[0], _chainHashes[bisectionCount], _chainLength)
         );
 
-        require(_chainLength > 1, "Can't bisect chain of less than 2");
+        require(_chainLength > 1, "bisection too short");
         bytes32[] memory hashes = new bytes32[](bisectionCount);
         hashes[0] = ChallengeUtils.inboxTopHash(
             _chainHashes[0],
@@ -69,31 +55,19 @@ contract InboxTopChallenge is BisectionChallenge {
 
         commitToSegment(hashes);
         asserterResponded();
-        emit Bisected(
-            _chainHashes,
-            _chainLength,
-            deadlineTicks
-        );
+        emit Bisected(_chainHashes, _chainLength, deadlineTicks);
     }
 
-    function oneStepProof(bytes32 _lowerHash, bytes32 _value) public asserterAction {
+    function oneStepProof(bytes32 _lowerHash, bytes32 _value) external asserterAction {
         requireMatchesPrevState(
             ChallengeUtils.inboxTopHash(
                 _lowerHash,
-                Messages.addDeliveredMessageToInbox(_lowerHash, _value),
+                Messages.addMessageToInbox(_lowerHash, _value),
                 1
             )
         );
 
         emit OneStepProofCompleted();
         _asserterWin();
-    }
-
-    function resolveChallengeAsserterWon() internal {
-        IStaking(vmAddress).resolveChallenge(asserter, challenger, INVALID_INBOX_TOP_TYPE);
-    }
-
-    function resolveChallengeChallengerWon() internal {
-        IStaking(vmAddress).resolveChallenge(challenger, asserter, INVALID_INBOX_TOP_TYPE);
     }
 }

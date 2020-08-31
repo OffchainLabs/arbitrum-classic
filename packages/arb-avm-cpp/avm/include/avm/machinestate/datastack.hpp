@@ -26,7 +26,11 @@ class Transaction;
 struct SaveResults;
 
 class Datastack {
-    static constexpr int lazyCount = 100;
+    // lazyCount defines how many unhashed items are allowed on the stack
+    // This serves to bound the total time it can take to hash the machine
+    // while removing the need to hash the stack while churn is occuring
+    // near the top
+    static constexpr int lazyCount = 10000;
 
     void addHash() const;
     void calculateAllHashes() const;
@@ -36,26 +40,32 @@ class Datastack {
     mutable std::vector<HashPreImage> hashes;
 
     Datastack() {
-        values.reserve(1000);
-        hashes.reserve(1000);
+        values.reserve(lazyCount);
+        hashes.reserve(lazyCount);
     }
 
     Datastack(Tuple tuple_rep);
 
-    Tuple getTupleRepresentation(TuplePool* pool) const;
+    Tuple getTupleRepresentation() const;
 
     void push(value&& newdata) {
         values.push_back(std::move(newdata));
         if (values.size() > hashes.size() + lazyCount) {
             addHash();
         }
-    };
+    }
 
     const value& operator[](size_t index) const {
+        if (index >= values.size()) {
+            throw stack_too_small();
+        }
         return values[values.size() - 1 - index];
     }
 
     value& operator[](size_t index) {
+        if (index >= values.size()) {
+            throw stack_too_small();
+        }
         return values[values.size() - 1 - index];
     }
 
@@ -71,12 +81,18 @@ class Datastack {
     }
 
     void prepForMod(int count) {
-        while (hashes.size() > values.size() - count) {
+        if (static_cast<size_t>(count) > values.size()) {
+            throw stack_too_small();
+        }
+        while (!hashes.empty() && hashes.size() > values.size() - count) {
             hashes.pop_back();
         }
     }
 
     void popClear() {
+        if (values.empty()) {
+            throw stack_too_small();
+        }
         values.pop_back();
         if (hashes.size() > values.size()) {
             hashes.pop_back();
@@ -84,12 +100,12 @@ class Datastack {
     }
 
     std::pair<HashPreImage, std::vector<unsigned char>> marshalForProof(
-        const std::vector<bool>& stackInfo,
-        const Code& code);
+        const std::vector<MarshalLevel>& stackInfo,
+        const Code& code) const;
 
     value& peek() {
-        if (values.size() == 0) {
-            throw std::runtime_error("Stack is empty");
+        if (values.empty()) {
+            throw stack_too_small();
         }
 
         return values.back();

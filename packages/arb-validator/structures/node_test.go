@@ -17,16 +17,14 @@
 package structures
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ckptcontext"
+	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"google.golang.org/protobuf/proto"
 	"testing"
 )
 
-var contractPath = "../contract.ao"
+var contractPath = arbos.Path()
 
 func TestMarshalNode(t *testing.T) {
 	mach, err := loader.LoadMachineFromFile(contractPath, false, "cpp")
@@ -34,15 +32,9 @@ func TestMarshalNode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	node := NewInitialNode(mach.Clone(), common.Hash{})
-
-	results := make([]evm.Result, 0, 5)
-	for i := int32(0); i < 5; i++ {
-		stop := evm.NewRandomStop(message.NewRandomEth(), 2)
-		results = append(results, stop)
-	}
-
-	nextNode := NewRandomNodeFromValidPrev(node, results)
+	node := NewInitialNode(mach.Clone())
+	ms := NewRandomMessageStack(20)
+	nextNode := NewRandomNodeFromValidPrev(node, ms, 5)
 
 	checkpointContext := ckptcontext.NewCheckpointContext()
 	nodeBuf := nextNode.MarshalForCheckpoint(checkpointContext, true)

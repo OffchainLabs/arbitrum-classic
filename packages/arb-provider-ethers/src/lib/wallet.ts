@@ -16,264 +16,128 @@
 /* eslint-env node */
 'use strict'
 
+import { L1Bridge } from './l1bridge'
+
+import { L2Transaction } from './message'
 import { ArbProvider } from './provider'
-import { GlobalInbox } from './abi/GlobalInbox'
-import { ArbSysFactory } from './abi/ArbSysFactory'
-import * as Hashing from './hashing'
+import { TransactionOverrides } from './abi'
 
 import * as ethers from 'ethers'
 
-const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
-
-export class ArbWallet extends ethers.Signer {
-  public signer: ethers.Signer
+export class ArbWallet extends L1Bridge implements ethers.Signer {
+  public l1Signer: ethers.Signer
   public provider: ArbProvider
-  public globalInboxCache?: GlobalInbox
-  public seqCache?: number
-  public pubkey?: string
 
-  constructor(signer: ethers.Signer, provider: ArbProvider) {
-    super()
-    this.signer = signer
+  constructor(l1Signer: ethers.Signer, provider: ArbProvider) {
+    super(l1Signer, provider.chainAddress)
+    this.l1Signer = l1Signer
     this.provider = provider
-    this.seqCache = undefined
-    this.pubkey = undefined
-  }
-
-  public async generateSeq(): Promise<number> {
-    if (!this.seqCache) {
-      const seq = await this.provider.getTransactionCount(
-        await this.getAddress()
-      )
-      this.seqCache = seq
-      return seq
-    }
-    return this.seqCache
-  }
-
-  public async generateAndIncrementSeq(): Promise<number> {
-    if (!this.seqCache) {
-      const seq = await this.provider.getTransactionCount(
-        await this.getAddress()
-      )
-      this.seqCache = seq + 1
-      return seq
-    }
-    const currentSeq = this.seqCache
-    this.seqCache = currentSeq + 1
-    return currentSeq
-  }
-
-  public incrementSeq(): void {
-    if (this.seqCache === undefined) {
-      throw Error('Sequence number must have already been generated')
-    }
-    this.seqCache++
-  }
-
-  public async globalInboxConn(): Promise<GlobalInbox> {
-    if (!this.globalInboxCache) {
-      const globalInbox = await this.provider.globalInboxConn()
-      const linkedGlobalInbox = globalInbox.connect(this.signer)
-      this.globalInboxCache = linkedGlobalInbox
-      return linkedGlobalInbox
-    }
-    return this.globalInboxCache
   }
 
   public getAddress(): Promise<string> {
-    return this.signer.getAddress()
+    return this.l1Signer.getAddress()
   }
 
   public signMessage(message: ethers.utils.Arrayish | string): Promise<string> {
-    return this.signer.signMessage(message)
-  }
-
-  public async withdrawEthFromChain(
-    value: ethers.utils.BigNumberish
-  ): Promise<ethers.providers.TransactionResponse> {
-    const valueNum = ethers.utils.bigNumberify(value)
-    const arbsys = ArbSysFactory.connect(ARB_SYS_ADDRESS, this)
-    return arbsys.withdrawEth(await this.getAddress(), valueNum)
-  }
-
-  public async withdrawEth(): Promise<ethers.providers.TransactionResponse> {
-    const globalInbox = await this.globalInboxConn()
-    return globalInbox.withdrawEth()
-  }
-
-  public async withdrawERC20(
-    erc20: string
-  ): Promise<ethers.providers.TransactionResponse> {
-    const globalInbox = await this.globalInboxConn()
-    return globalInbox.withdrawERC20(erc20)
-  }
-
-  public async withdrawERC721(
-    erc721: string,
-    tokenId: ethers.utils.BigNumberish
-  ): Promise<ethers.providers.TransactionResponse> {
-    const globalInbox = await this.globalInboxConn()
-    return globalInbox.withdrawERC721(erc721, tokenId)
+    return this.l1Signer.signMessage(message)
   }
 
   public async depositERC20(
     to: string,
     erc20: string,
-    value: ethers.utils.BigNumberish
+    value: ethers.utils.BigNumberish,
+    overrides?: TransactionOverrides
   ): Promise<ethers.providers.TransactionResponse> {
-    const sendValue = ethers.utils.bigNumberify(value)
-    const chain = await this.provider.getVmID()
-    const globalInbox = await this.globalInboxConn()
-    const tx = await globalInbox.depositERC20Message(
-      chain,
-      to,
-      erc20,
-      sendValue
-    )
+    const tx = await super.depositERC20(to, erc20, value, overrides)
     return this.provider._wrapTransaction(tx, tx.hash)
   }
 
   public async depositERC721(
     to: string,
     erc721: string,
-    tokenId: ethers.utils.BigNumberish
+    tokenId: ethers.utils.BigNumberish,
+    overrides?: TransactionOverrides
   ): Promise<ethers.providers.TransactionResponse> {
-    const chain = await this.provider.getVmID()
-    const globalInbox = await this.globalInboxConn()
-    const tx = await globalInbox.depositERC721Message(
-      chain,
-      to,
-      erc721,
-      tokenId
-    )
+    const tx = await super.depositERC20(to, erc721, tokenId, overrides)
     return this.provider._wrapTransaction(tx, tx.hash)
   }
 
   public async depositETH(
     to: string,
-    value: ethers.utils.BigNumberish
+    value: ethers.utils.BigNumberish,
+    overrides?: TransactionOverrides
   ): Promise<ethers.providers.TransactionResponse> {
-    const chain = await this.provider.getVmID()
-    const globalInbox = await this.globalInboxConn()
-    const tx = await globalInbox.depositEthMessage(chain, to, { value })
+    const tx = await super.depositETH(to, value, overrides)
     return this.provider._wrapTransaction(tx, tx.hash)
   }
 
-  public async transferPayment(
-    originalOwner: string,
-    newOwner: string,
-    nodeHash: string,
-    messageIndex: ethers.utils.BigNumberish
-  ): Promise<ethers.providers.TransactionResponse> {
-    const msgIndex = ethers.utils.bigNumberify(messageIndex)
-    const globalInbox = await this.globalInboxConn()
-    const tx = await globalInbox.transferPayment(
-      originalOwner,
-      newOwner,
-      nodeHash,
-      msgIndex
-    )
-    return tx
-  }
-
   public async sendTransactionMessage(
-    to: string,
-    value: ethers.utils.BigNumberish,
-    data: string
+    l2tx: L2Transaction,
+    from: string,
+    overrides?: TransactionOverrides
   ): Promise<ethers.providers.TransactionResponse> {
-    const vmId = await this.provider.getVmID()
-    const valueNum = ethers.utils.bigNumberify(value)
-    const globalInbox = await this.globalInboxConn()
-    const seq = await this.generateAndIncrementSeq()
-    const from = await this.getAddress()
-
-    try {
-      if (this.provider.aggregator) {
-        const arbTxHash = Hashing.calculateTransactionHash(
-          vmId,
-          to,
-          from,
-          ethers.utils.bigNumberify(seq),
-          valueNum,
-          data
-        )
-
-        const batchTxHash = Hashing.calculateBatchTransactionHash(
-          vmId,
-          to,
-          ethers.utils.bigNumberify(seq),
-          valueNum,
-          data
-        )
-
-        const messageHashBytes = ethers.utils.arrayify(batchTxHash)
-        const sig = await this.signer.signMessage(messageHashBytes)
-
-        if (!this.pubkey) {
-          this.pubkey = ethers.utils.recoverPublicKey(
-            ethers.utils.arrayify(ethers.utils.hashMessage(messageHashBytes)),
-            sig
-          )
-        }
-
-        this.provider.aggregator.sendTransaction(
-          to,
-          ethers.utils.bigNumberify(seq),
-          valueNum,
-          data,
-          this.pubkey,
-          sig
-        )
-
-        const tx: ethers.utils.Transaction = {
-          data: data,
-          from: from,
-          gasLimit: ethers.utils.bigNumberify(1),
-          gasPrice: ethers.utils.bigNumberify(1),
-          hash: arbTxHash,
-          nonce: seq,
-          to: to,
-          value: valueNum,
-          chainId: this.provider.chainId,
-        }
-
-        return this.provider._wrapTransaction(tx, arbTxHash)
-      } else {
-        const tx = await globalInbox.sendTransactionMessage(
-          vmId,
-          to,
-          seq,
-          valueNum,
-          data
-        )
-        const tx2 = this.provider._wrapTransaction(tx, tx.hash)
-        return tx2
-      }
-    } catch (err) {
-      if (this.seqCache) {
-        this.seqCache -= 1
-      }
-      throw err
+    this.sendL2Message(l2tx, from, overrides)
+    const network = await this.provider.getNetwork()
+    const tx: ethers.utils.Transaction = {
+      data: ethers.utils.hexlify(l2tx.calldata),
+      from: from,
+      gasLimit: l2tx.maxGas,
+      gasPrice: l2tx.gasPriceBid,
+      hash: l2tx.messageID(from, network.chainId),
+      nonce: l2tx.sequenceNum.toNumber(),
+      to: l2tx.destAddress,
+      value: l2tx.payment,
+      chainId: network.chainId,
     }
+    return this.provider._wrapTransaction(tx, tx.hash)
   }
 
   public async sendTransaction(
     transaction: ethers.providers.TransactionRequest
   ): Promise<ethers.providers.TransactionResponse> {
-    if (!transaction.to) {
-      throw Error("Can't send transaction without destination")
-    }
-    const to = await transaction.to
-    let data = '0x'
-    if (transaction.data) {
-      data = ethers.utils.hexlify(await transaction.data)
+    // try {
+    //   return this.l1Signer.sendTransaction(transaction)
+    // } catch (e) {
+
+    // }
+    // Using the L1 wallet plugin, we can only send non-batched transactions
+    // because we only have access to an L1 signer, not an L2 signer
+    return this.sendTransactionAtL1(transaction)
+  }
+
+  private async sendTransactionAtL1(
+    transaction: ethers.providers.TransactionRequest
+  ): Promise<ethers.providers.TransactionResponse> {
+    let gasLimit = await transaction.gasLimit
+    if (!gasLimit) {
+      // default to 90000 based on spec
+      gasLimit = 90000
     }
 
-    let value = ethers.utils.bigNumberify(0)
-    if (transaction.value) {
-      value = ethers.utils.bigNumberify(await transaction.value) // eslint-disable-line require-atomic-updates
+    let gasPrice = await transaction.gasPrice
+    if (!gasPrice) {
+      // What do we want to make the default for this
+      gasPrice = 0
     }
-    return this.sendTransactionMessage(to, value, data)
+
+    let from = await transaction.from
+    if (!from) {
+      from = await this.getAddress()
+    }
+
+    let nonce = await transaction.nonce
+    if (!nonce) {
+      nonce = await this.provider.getTransactionCount(from)
+    }
+
+    const tx = new L2Transaction(
+      gasLimit,
+      gasPrice,
+      nonce,
+      await transaction.to,
+      await transaction.value,
+      await transaction.data
+    )
+    return this.sendTransactionMessage(tx, from)
   }
 }

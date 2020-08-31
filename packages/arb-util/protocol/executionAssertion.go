@@ -23,22 +23,24 @@ import (
 )
 
 func NewExecutionAssertion(
-	afterHash common.Hash,
-	didInboxInsn bool,
+	beforeMachineHash common.Hash,
+	afterMachineHash common.Hash,
 	numGas uint64,
+	inboxMessagesConsumed uint64,
 	outMsgsData []byte,
 	outMsgsCount uint64,
 	logsData []byte,
 	logsCount uint64,
 ) *ExecutionAssertion {
 	return &ExecutionAssertion{
-		AfterHash:    afterHash.MarshalToBuf(),
-		DidInboxInsn: didInboxInsn,
-		NumGas:       numGas,
-		OutMsgsData:  outMsgsData,
-		OutMsgsCount: outMsgsCount,
-		LogsData:     logsData,
-		LogsCount:    logsCount,
+		NumGas:                numGas,
+		BeforeMachineHash:     beforeMachineHash.MarshalToBuf(),
+		AfterMachineHash:      afterMachineHash.MarshalToBuf(),
+		InboxMessagesConsumed: inboxMessagesConsumed,
+		OutMsgsData:           outMsgsData,
+		OutMsgsCount:          outMsgsCount,
+		LogsData:              logsData,
+		LogsCount:             logsCount,
 	}
 }
 
@@ -51,40 +53,42 @@ func valuesToRaw(values []value.Value) []byte {
 }
 
 func NewExecutionAssertionFromValues(
-	afterHash common.Hash,
-	didInboxInsn bool,
+	beforeMachineHash common.Hash,
+	afterMachineHash common.Hash,
 	numGas uint64,
+	inboxMessagesConsumed uint64,
 	outMsgs []value.Value,
 	logs []value.Value,
 ) *ExecutionAssertion {
 	return &ExecutionAssertion{
-		AfterHash:    afterHash.MarshalToBuf(),
-		DidInboxInsn: didInboxInsn,
-		NumGas:       numGas,
-		OutMsgsData:  valuesToRaw(outMsgs),
-		OutMsgsCount: uint64(len(outMsgs)),
-		LogsData:     valuesToRaw(logs),
-		LogsCount:    uint64(len(logs)),
+		BeforeMachineHash:     beforeMachineHash.MarshalToBuf(),
+		AfterMachineHash:      afterMachineHash.MarshalToBuf(),
+		NumGas:                numGas,
+		InboxMessagesConsumed: inboxMessagesConsumed,
+		OutMsgsData:           valuesToRaw(outMsgs),
+		OutMsgsCount:          uint64(len(outMsgs)),
+		LogsData:              valuesToRaw(logs),
+		LogsCount:             uint64(len(logs)),
 	}
 }
 
-func (a *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {
-	return a.AfterHash == b.AfterHash &&
-		a.DidInboxInsn != b.DidInboxInsn &&
-		a.NumGas != b.NumGas &&
-		a.OutMsgsCount != b.OutMsgsCount &&
-		bytes.Equal(a.OutMsgsData, b.OutMsgsData) &&
-		a.LogsCount != b.LogsCount &&
-		bytes.Equal(a.LogsData, b.LogsData)
-
+func (x *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {
+	return bytes.Equal(x.BeforeMachineHash.Value, b.BeforeMachineHash.Value) &&
+		bytes.Equal(x.AfterMachineHash.Value, b.AfterMachineHash.Value) &&
+		x.NumGas == b.NumGas &&
+		x.InboxMessagesConsumed == b.InboxMessagesConsumed &&
+		x.OutMsgsCount == b.OutMsgsCount &&
+		bytes.Equal(x.OutMsgsData, b.OutMsgsData) &&
+		x.LogsCount == b.LogsCount &&
+		bytes.Equal(x.LogsData, b.LogsData)
 }
 
-func (a *ExecutionAssertion) ParseOutMessages() []value.Value {
-	return bytesArrayToVals(a.OutMsgsData, a.OutMsgsCount)
+func (x *ExecutionAssertion) ParseOutMessages() []value.Value {
+	return bytesArrayToVals(x.OutMsgsData, x.OutMsgsCount)
 }
 
-func (a *ExecutionAssertion) ParseLogs() []value.Value {
-	return bytesArrayToVals(a.LogsData, a.LogsCount)
+func (x *ExecutionAssertion) ParseLogs() []value.Value {
+	return bytesArrayToVals(x.LogsData, x.LogsCount)
 }
 
 func bytesArrayToVals(data []byte, valCount uint64) []value.Value {

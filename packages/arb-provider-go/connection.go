@@ -2,88 +2,62 @@ package goarbitrum
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	errors2 "github.com/pkg/errors"
+	"log"
 	"math/big"
 	"sync"
 	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-var ARB_SYS_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000064")
-var ARB_INFO_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000065")
-
 type ArbConnection struct {
-	proxy       ValidatorProxy
-	vmId        common.Address
-	globalInbox arbbridge.GlobalInbox
-	sequenceNum *big.Int
+	proxy         ValidatorProxy
+	rollupAddress common.Address
+	pk            *ecdsa.PrivateKey
+	// This maps the hash of the ethereum transaction that the wallet thinks it sent
+	// to the hash of the actual arbitrum transaction sent. This is a stopgap around
+	// abigen support for EIP 155
+	sentTransactions map[ethcommon.Hash]ethcommon.Hash
 }
 
-func Dial(url string, auth *bind.TransactOpts, ethclint *ethclient.Client) (*ArbConnection, error) {
-	client := ethbridge.NewEthAuthClient(ethclint, auth)
-	proxy := NewValidatorProxyImpl(url)
-	vmIdStr, err := proxy.GetVMInfo(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	vmId := common.HexToAddress(vmIdStr)
-	rollup, err := client.NewRollupWatcher(vmId)
-	if err != nil {
-		return nil, err
-	}
-	inboxAddr, err := rollup.InboxAddress(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	globalInbox, err := client.NewGlobalInbox(inboxAddr, vmId)
-	if err != nil {
-		return nil, err
-	}
-	return &ArbConnection{proxy: proxy, vmId: vmId, globalInbox: globalInbox}, nil
-}
-
-func (conn *ArbConnection) getInfoCon() (*ArbInfo, error) {
-	return NewArbInfo(ARB_INFO_ADDRESS, conn)
-}
-
-func (conn *ArbConnection) getSysCon() (*ArbSys, error) {
-	return NewArbSys(ARB_SYS_ADDRESS, conn)
-}
-
-// PendingNonceAt retrieves the current pending nonce associated with an account.
-func (conn *ArbConnection) getCurrentNonce(
-	ctx context.Context,
-	account ethcommon.Address,
-) (*big.Int, error) {
-	if conn.sequenceNum != nil {
-		return conn.sequenceNum, nil
-	}
-	sysConn, err := conn.getSysCon()
-	if err != nil {
-		return nil, err
-	}
-	num, err := sysConn.GetTransactionCount(
-		&bind.CallOpts{Context: ctx, Pending: true},
-		account,
+func Dial(url string, pk *ecdsa.PrivateKey, rollupAddress common.Address) *ArbConnection {
+	return NewArbConnection(
+		NewValidatorProxyImpl(url),
+		pk,
+		rollupAddress,
 	)
-	if err != nil {
-		return nil, err
+}
+
+func NewArbConnection(connection ValidatorProxy, pk *ecdsa.PrivateKey, rollupAddress common.Address) *ArbConnection {
+	return &ArbConnection{
+		proxy:            connection,
+		rollupAddress:    rollupAddress,
+		pk:               pk,
+		sentTransactions: make(map[ethcommon.Hash]ethcommon.Hash),
 	}
-	conn.sequenceNum = num
-	return num, nil
+}
+
+func (conn *ArbConnection) getInfoCon() (*arboscontracts.ArbInfo, error) {
+	return arboscontracts.NewArbInfo(arbos.ARB_INFO_ADDRESS, conn)
+}
+
+func (conn *ArbConnection) getSysCon() (*arboscontracts.ArbSys, error) {
+	return arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, conn)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -100,21 +74,26 @@ func (conn *ArbConnection) CodeAt(
 	if err != nil {
 		return nil, err
 	}
-	return infoCon.GetCode(&bind.CallOpts{
+	code, err := infoCon.GetCode(&bind.CallOpts{
 		Context:     ctx,
 		BlockNumber: blockNumber,
 	}, contract)
+	if err != nil {
+		return nil, errors2.Wrap(err, "couldn't get code")
+	}
+	return code, nil
 }
 
 func processCallRet(retValue value.Value) ([]byte, error) {
-	logVal, err := evm.ProcessLog(retValue)
+	logVal, err := evm.NewTxResultFromValue(retValue)
 	if err != nil {
 		return nil, err
 	}
-	if !logVal.Valid() {
-		return nil, fmt.Errorf("call reverted %v", logVal)
+	log.Println("Got call result", logVal.ResultCode, hexutil.Encode(logVal.ReturnData))
+	if logVal.ResultCode != evm.ReturnCode && logVal.ResultCode != evm.RevertCode {
+		return nil, fmt.Errorf("call failed %v", logVal)
 	}
-	return logVal.GetReturnData(), nil
+	return logVal.ReturnData, nil
 }
 
 // CallContract executes an Ethereum contract call with the specified data as the
@@ -124,7 +103,25 @@ func (conn *ArbConnection) CallContract(
 	call ethereum.CallMsg,
 	blockNumber *big.Int,
 ) ([]byte, error) {
-	retValue, err := conn.proxy.CallMessage(ctx, *call.To, call.From, call.Data)
+	var dest common.Address
+	if call.To != nil {
+		dest = common.NewAddressFromEth(*call.To)
+	}
+	gasPriceBid := big.NewInt(0)
+	if call.GasPrice != nil {
+		gasPriceBid = call.GasPrice
+	}
+	if call.Value == nil {
+		call.Value = big.NewInt(0)
+	}
+	tx := message.ContractTransaction{
+		MaxGas:      new(big.Int).SetUint64(call.Gas),
+		GasPriceBid: gasPriceBid,
+		DestAddress: dest,
+		Payment:     call.Value,
+		Data:        call.Data,
+	}
+	retValue, err := conn.proxy.Call(ctx, tx, call.From)
 	if err != nil {
 		return nil, err
 	}
@@ -143,19 +140,45 @@ func (conn *ArbConnection) PendingCodeAt(
 	if err != nil {
 		return nil, err
 	}
-	return infoCon.GetCode(&bind.CallOpts{
+	code, err := infoCon.GetCode(&bind.CallOpts{
 		Context: ctx,
 		Pending: true,
 	}, account)
+	if err != nil {
+		return nil, errors2.Wrap(err, "couldn't get pending code")
+	}
+	return code, nil
 }
 
 // PendingCallContract executes an Ethereum contract call against the pending state.
 func (conn *ArbConnection) PendingCallContract(ctx context.Context, call ethereum.CallMsg) ([]byte, error) {
-	retValue, err := conn.proxy.PendingCall(ctx, *call.To, call.From, call.Data)
+	retValue, err := conn.pendingCall(ctx, call)
 	if err != nil {
 		return nil, err
 	}
 	return processCallRet(retValue)
+}
+
+func (conn *ArbConnection) pendingCall(ctx context.Context, call ethereum.CallMsg) (value.Value, error) {
+	var dest common.Address
+	if call.To != nil {
+		dest = common.NewAddressFromEth(*call.To)
+	}
+	gasPriceBid := big.NewInt(0)
+	if call.GasPrice != nil {
+		gasPriceBid = call.GasPrice
+	}
+	if call.Value == nil {
+		call.Value = big.NewInt(0)
+	}
+	tx := message.ContractTransaction{
+		MaxGas:      new(big.Int).SetUint64(call.Gas),
+		GasPriceBid: gasPriceBid,
+		DestAddress: dest,
+		Payment:     call.Value,
+		Data:        call.Data,
+	}
+	return conn.proxy.PendingCall(ctx, tx, call.From)
 }
 
 // PendingNonceAt retrieves the current pending nonce associated with an account.
@@ -176,15 +199,9 @@ func (conn *ArbConnection) PendingNonceAt(
 
 // SuggestGasPrice retrieves the currently suggested gas price to allow a timely
 // execution of a transaction.
-func (conn *ArbConnection) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
+func (conn *ArbConnection) SuggestGasPrice(_ context.Context) (*big.Int, error) {
 	return big.NewInt(0), nil
 }
-
-// EstimateGas tries to estimate the gas needed to execute a specific
-// transaction based on the current pending state of the backend blockchain.
-// There is no guarantee that this is the true gas limit requirement as other
-// transactions may be added or removed by miners, but it should provide a basis
-// for setting a reasonable default.
 
 // EstimateGas tries to estimate the gas needed to execute a specific
 // transaction based on the current pending state of the backend blockchain.
@@ -194,13 +211,38 @@ func (conn *ArbConnection) SuggestGasPrice(ctx context.Context) (*big.Int, error
 func (conn *ArbConnection) EstimateGas(
 	ctx context.Context,
 	call ethereum.CallMsg,
-) (gas uint64, err error) {
-	return 100000, nil
+) (uint64, error) {
+	retValue, err := conn.pendingCall(ctx, call)
+	if err != nil {
+		return 0, err
+	}
+	res, err := evm.NewTxResultFromValue(retValue)
+	if err != nil {
+		return 0, err
+	}
+	if res.ResultCode != evm.ReturnCode {
+		return 0, errors.New("Transaction always failing")
+	}
+	return res.GasUsed.Uint64() + 1000000, nil
 }
 
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	return conn.globalInbox.SendTransactionMessage(ctx, tx.Data(), conn.vmId, common.NewAddressFromEth(*tx.To()), tx.Value(), new(big.Int).SetUint64(tx.Nonce()))
+	// This is a stopgap measure until https://github.com/ethereum/go-ethereum/issues/16484 is solved
+	signer := types.NewEIP155Signer(message.ChainAddressToID(conn.rollupAddress))
+	signedTx, err := types.SignTx(tx, signer, conn.pk)
+	if err != nil {
+		return err
+	}
+	conn.sentTransactions[tx.Hash()] = signedTx.Hash()
+	txHash, err := conn.proxy.SendTransaction(ctx, signedTx)
+	if err != nil {
+		return err
+	}
+	if txHash.ToEthHash() != signedTx.Hash() {
+		return errors.New("send transaction returned wrong address")
+	}
+	return nil
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -283,10 +325,18 @@ func newSubscription(ctx context.Context, conn *ArbConnection, query ethereum.Fi
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
+				endHeight, err := conn.proxy.GetBlockCount(ctx)
+				if err != nil {
+					sub.errChan <- err
+					return
+				}
+				if query.ToBlock != nil && query.ToBlock.Uint64() < endHeight {
+					endHeight = query.ToBlock.Uint64()
+				}
 				logInfos, err := conn.proxy.FindLogs(
 					ctx,
 					_extractQueryHeight(query.FromBlock),
-					_extractQueryHeight(query.ToBlock),
+					&endHeight,
 					query.Addresses,
 					query.Topics,
 				)
@@ -297,12 +347,9 @@ func newSubscription(ctx context.Context, conn *ArbConnection, query ethereum.Fi
 				for _, l := range logInfos {
 					sub.logChan <- *l.ToEVMLog()
 				}
-				// We will always receive logs in order by block and always
-				// receive all logs from a given block in a single query.
-				// Therefore the next query can start with block height one
-				// greater than the last log in the previous query
-				if len(logInfos) > 0 {
-					query.FromBlock = new(big.Int).SetUint64(logInfos[len(logInfos)-1].Location.NodeHeight + 1)
+				query.FromBlock = new(big.Int).SetUint64(endHeight + 1)
+				if query.ToBlock != nil && query.FromBlock.Cmp(query.ToBlock) > 0 {
+					return
 				}
 			}
 		}
@@ -335,28 +382,25 @@ func (sub *subscription) Err() <-chan error {
 // TransactionReceipt returns the receipt of a transaction by transaction hash.
 // Note that the receipt is not available for pending transactions.
 func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (*types.Receipt, error) {
-	txInfo, err := conn.proxy.GetMessageResult(ctx, txHash.Bytes())
-	if err != nil {
-		return nil, errors2.Wrap(err, "TransactionReceipt error:")
+	if realHash, ok := conn.sentTransactions[txHash]; ok {
+		txHash = realHash
 	}
-	if txInfo == nil {
+	val, err := conn.proxy.GetRequestResult(ctx, common.NewHashFromEth(txHash))
+	if val == nil || err != nil {
 		return nil, ethereum.NotFound
 	}
-
-	return txInfo.ToEthReceipt()
-}
-
-func (conn *ArbConnection) TxToMessage(tx *types.Transaction, from common.Address) message.Transaction {
-	return message.Transaction{
-		Chain:       conn.vmId,
-		To:          common.NewAddressFromEth(*tx.To()),
-		From:        from,
-		SequenceNum: new(big.Int).SetUint64(tx.Nonce()),
-		Value:       tx.Value(),
-		Data:        tx.Data(),
+	result, err := evm.NewTxResultFromValue(val)
+	if err != nil {
+		return nil, err
 	}
-}
 
-func (conn *ArbConnection) TxHash(tx *types.Transaction, from common.Address) common.Hash {
-	return conn.TxToMessage(tx, from).ReceiptHash()
+	if result.IncomingRequest.MessageID.ToEthHash() != txHash {
+		return nil, errors.New("tx hash doesn't match")
+	}
+
+	blockHash, err := conn.proxy.BlockHash(ctx, result.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
+	if err != nil {
+		return nil, err
+	}
+	return result.ToEthReceipt(blockHash), nil
 }

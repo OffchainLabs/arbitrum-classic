@@ -1,4 +1,0 @@
--i https://pypi.org/simple
-virtualenv
-web3
-eth-account

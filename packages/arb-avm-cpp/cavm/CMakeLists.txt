@@ -20,19 +20,19 @@ project (cavm LANGUAGES CXX)
 
 
 set(LIB_HEADERS
+  caggregator.h
   cblockstore.h
   cmachine.h
   ccheckpointstorage.h
-  cconfirmednodestore.h
   utils.hpp
   ctypes.h
 )
 
 set(LIB_SOURCES
+  caggregator.cpp
   cblockstore.cpp
   cmachine.cpp
   ccheckpointstorage.cpp
-  cconfirmednodestore.cpp
 )
 
 add_library(cavm STATIC ${LIB_HEADERS} ${LIB_SOURCES})
@@ -49,7 +49,8 @@ target_include_directories(cavm PUBLIC
 )
 
 target_compile_options(cavm PRIVATE -Wall -Wextra -Wpedantic)
+# target_compile_options(cavm PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)
 
-target_link_libraries(cavm PUBLIC data_storage avm PRIVATE avm_utils)
+target_link_libraries(cavm PUBLIC data_storage avm)
 
 source_group(cavm FILES ${LIB_HEADERS} ${LIB_SOURCES})

@@ -27,31 +27,31 @@
 struct GetResults;
 class Machine;
 class BlockStore;
-class ConfirmedNodeStore;
+class AggregatorStore;
 
 namespace rocksdb {
 class TransactionDB;
 }
 
 class CheckpointStorage {
-   private:
     std::shared_ptr<DataStorage> datastorage;
-    std::shared_ptr<const StaticVmValues> initial_state;
+    std::shared_ptr<Code> code;
 
    public:
-    std::shared_ptr<TuplePool> pool;
-    CheckpointStorage(const std::string& db_path,
-                      const std::string& contract_path);
+    CheckpointStorage(const std::string& db_path);
     bool closeCheckpointStorage();
+    void initialize(LoadedExecutable executable);
+    void initialize(const std::string& executable_path);
+    bool initialized() const;
+
     std::unique_ptr<Transaction> makeTransaction();
     std::unique_ptr<const Transaction> makeConstTransaction() const;
     std::unique_ptr<KeyValueStore> makeKeyValueStore();
     std::unique_ptr<BlockStore> getBlockStore() const;
-    std::unique_ptr<ConfirmedNodeStore> getConfirmedNodeStore() const;
+    std::unique_ptr<AggregatorStore> getAggregatorStore() const;
 
-    const Code& getCode() const { return initial_state->code; }
     Machine getInitialMachine() const;
-    std::pair<Machine, bool> getMachine(uint256_t machineHash) const;
+    Machine getMachine(uint256_t machineHash) const;
     DbResult<value> getValue(uint256_t value_hash) const;
 };
 

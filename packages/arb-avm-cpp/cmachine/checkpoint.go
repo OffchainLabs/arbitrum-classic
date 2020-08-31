@@ -18,7 +18,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb
+#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lkeccak -ldl
 #include "../cavm/ccheckpointstorage.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,6 +26,7 @@ package cmachine
 import "C"
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"runtime"
 	"unsafe"
@@ -39,10 +40,11 @@ type CheckpointStorage struct {
 	c unsafe.Pointer
 }
 
-func NewCheckpoint(dbPath string, contractPath string) (*CheckpointStorage, error) {
+func NewCheckpoint(dbPath string) (*CheckpointStorage, error) {
 	cDbPath := C.CString(dbPath)
-	cContractPath := C.CString(contractPath)
-	cCheckpointStorage := C.createCheckpointStorage(cDbPath, cContractPath)
+	defer C.free(unsafe.Pointer(cDbPath))
+
+	cCheckpointStorage := C.createCheckpointStorage(cDbPath)
 
 	if cCheckpointStorage == nil {
 		return nil, fmt.Errorf("error creating CheckpointStorage %v", dbPath)
@@ -51,16 +53,26 @@ func NewCheckpoint(dbPath string, contractPath string) (*CheckpointStorage, erro
 	returnVal := &CheckpointStorage{cCheckpointStorage}
 	runtime.SetFinalizer(returnVal, cDestroyCheckpointStorage)
 
-	C.free(unsafe.Pointer(cDbPath))
-	C.free(unsafe.Pointer(cContractPath))
-
 	return returnVal, nil
 }
 
-func (checkpoint *CheckpointStorage) CloseCheckpointStorage() bool {
-	success := C.closeCheckpointStorage(checkpoint.c)
+func (checkpoint *CheckpointStorage) Initialize(contractPath string) error {
+	cContractPath := C.CString(contractPath)
+	defer C.free(unsafe.Pointer(cContractPath))
+	success := C.initializeCheckpointStorage(checkpoint.c, cContractPath)
 
-	return success == 1
+	if success == 0 {
+		return errors.New("failed to initialize storage")
+	}
+	return nil
+}
+
+func (checkpoint *CheckpointStorage) Initialized() bool {
+	return C.checkpointStorageInitialized(checkpoint.c) == 1
+}
+
+func (checkpoint *CheckpointStorage) CloseCheckpointStorage() bool {
+	return C.closeCheckpointStorage(checkpoint.c) == 1
 }
 
 func cDestroyCheckpointStorage(cCheckpointStorage *CheckpointStorage) {
@@ -179,8 +191,8 @@ func (checkpoint *CheckpointStorage) GetBlockStore() machine.BlockStore {
 	return NewBlockStore(bs)
 }
 
-func (checkpoint *CheckpointStorage) GetConfirmedNodeStore() machine.ConfirmedNodeStore {
-	bs := C.createConfirmedNodeStore(checkpoint.c)
+func (checkpoint *CheckpointStorage) GetAggregatorStore() *AggregatorStore {
+	bs := C.createAggregatorStore(checkpoint.c)
 
-	return NewConfirmedNodeStore(bs)
+	return NewAggregatorStore(bs)
 }

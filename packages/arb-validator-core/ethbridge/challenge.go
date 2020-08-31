@@ -19,6 +19,8 @@ package ethbridge
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"strings"
 
 	errors2 "github.com/pkg/errors"
@@ -26,11 +28,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge/executionchallenge"
 )
 
 var initiatedChallengeID ethcommon.Hash
@@ -38,25 +37,25 @@ var timedOutAsserterID ethcommon.Hash
 var timedOutChallengerID ethcommon.Hash
 
 func init() {
-	parsed, err := abi.JSON(strings.NewReader(executionchallenge.ExecutionChallengeABI))
+	parsed, err := abi.JSON(strings.NewReader(ethbridgecontracts.ExecutionChallengeABI))
 	if err != nil {
 		panic(err)
 	}
-	initiatedChallengeID = parsed.Events["InitiatedChallenge"].ID()
-	timedOutAsserterID = parsed.Events["AsserterTimedOut"].ID()
-	timedOutChallengerID = parsed.Events["ChallengerTimedOut"].ID()
+	initiatedChallengeID = parsed.Events["InitiatedChallenge"].ID
+	timedOutAsserterID = parsed.Events["AsserterTimedOut"].ID
+	timedOutChallengerID = parsed.Events["ChallengerTimedOut"].ID
 }
 
 type challenge struct {
-	Challenge *executionchallenge.Challenge
+	Challenge *ethbridgecontracts.Challenge
 
-	client          *ethclient.Client
+	client          ethutils.EthClient
 	auth            *TransactAuth
 	contractAddress ethcommon.Address
 }
 
-func newChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*challenge, error) {
-	challengeContract, err := executionchallenge.NewChallenge(address, client)
+func newChallenge(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*challenge, error) {
+	challengeContract, err := ethbridgecontracts.NewChallenge(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
@@ -84,11 +83,11 @@ func (c *challenge) waitForReceipt(ctx context.Context, tx *types.Transaction, m
 }
 
 type challengeWatcher struct {
-	Challenge *executionchallenge.Challenge
+	Challenge *ethbridgecontracts.Challenge
 }
 
-func newChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*challengeWatcher, error) {
-	challengeContract, err := executionchallenge.NewChallenge(address, client)
+func newChallengeWatcher(address ethcommon.Address, client ethutils.EthClient) (*challengeWatcher, error) {
+	challengeContract, err := ethbridgecontracts.NewChallenge(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
