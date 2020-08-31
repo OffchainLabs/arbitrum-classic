@@ -1,7 +1,7 @@
 ---
-id: Executable_Creation
-title: Executable Creation
-sidebar_label: Executable Creation
+id: Contract_Deployment
+title: Contract Deployment
+sidebar_label: Contract Deployment
 ---
 
 Arbitrum supports standard EVM contract deployment. This allows standard Solidity smart contracts to be deployed on Arbitrum Chains using existing developer tools.
