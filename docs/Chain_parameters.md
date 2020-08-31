@@ -33,7 +33,7 @@ For executing in a production-like setting, we suggest the following parameters:
 - speed limit: 1.0
 - max assertion size: 50 seconds
 
-(We say "production-like setting" because we currently **srongly recommend against** using Arbitrum Rollup in a true
+(We say "production-like setting" because we currently **strongly recommend against** using Arbitrum Rollup in a true
 production setting on the main chain.)
 
 If you're debugging your dApp, you care more about fast turnaround than security, so we suggest the following parameters:
