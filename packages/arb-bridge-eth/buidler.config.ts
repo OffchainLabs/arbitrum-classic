@@ -96,9 +96,6 @@ module.exports = {
     },
   },
   etherscan: {
-    // The url for the Etherscan API you want to use.
-    // For example, here we're using the one for the Ropsten test network
-    url: 'https://api-kovan.etherscan.io/api',
     apiKey: process.env['ETHERSCAN_API_KEY'],
   },
 }
