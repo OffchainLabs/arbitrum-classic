@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"math/big"
@@ -74,7 +75,7 @@ func (c *EthArbClient) subscribeBlockHeadersAfter(ctx context.Context, prevBlock
 	}
 
 	if !prevBlockId.Equals(prevBlockIdCheck) {
-		return errors.New("can't subscribe to headers, block id doesn't match expected value")
+		return fmt.Errorf("can't subscribe to headers, block hash %v doesn't match expected value %v", prevBlockIdCheck, prevBlockId)
 	}
 
 	go func() {

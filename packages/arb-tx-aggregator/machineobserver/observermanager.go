@@ -154,6 +154,7 @@ func RunObserver(
 				if err := db.RestoreFromCheckpoint(ctx); err != nil {
 					log.Fatal(err)
 				}
+			} else {
 				firstRun = false
 			}
 
