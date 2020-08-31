@@ -61,7 +61,7 @@
     "@types/mocha": "^7.0.2",
     "@typescript-eslint/eslint-plugin": "^3.4.0",
     "@typescript-eslint/parser": "^3.4.0",
-    "arb-provider-ethers": "^0.6.5",
+    "arb-provider-ethers": "^0.7.0",
     "buidler-gas-reporter": "^0.1.3",
     "buidler-spdx-license-identifier": "^1.0.2",
     "buidler-typechain": "^0.1.1",
