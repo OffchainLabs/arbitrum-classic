@@ -99,7 +99,7 @@ func (bs *BlockStore) GetBlock(id *common.BlockId) ([]byte, error) {
 	)
 
 	if result.found == 0 {
-		return nil, errors.New("not found")
+		return nil, errors.New("block not found in block store")
 	}
 
 	return toByteSlice(result.slice), nil

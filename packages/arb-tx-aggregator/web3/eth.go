@@ -279,7 +279,8 @@ func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionRece
 
 	header, err := s.srv.GetBlockHeaderByNumber(r.Context(), result.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
 	if err != nil {
-		return err
+		// If header has been reorged, don't return a receipt
+		return nil
 	}
 
 	receipt := result.ToEthReceipt(arbcommon.NewHashFromEth(header.Hash()))
