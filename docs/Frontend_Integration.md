@@ -6,7 +6,7 @@ sidebar_label: Frontend Integration
 
 Arbitrum comes with tools to make front-end integration as seamless as possible for Ethereum web developers.
 
-Arbitrum aggregators support the [Ethereum JSON-RPC API](https://eth.wiki/json-rpc/API); thus, popular Ethereum liberies for interacting with the Ethereum chain can be used for Arbitrum interactions with little to no modifications.
+Arbitrum aggregators support the [Ethereum JSON-RPC API](https://eth.wiki/json-rpc/API); thus, popular Ethereum libraries for interacting with the Ethereum chain can be used for Arbitrum interactions with little to no modifications.
 
 For Ethereum/Arbitrum "bridge" functionality — methods that involve communicating between the L1 Ethereum chain and the L2 Arbitrum chain (i.e., depositing and withdrawing assets), we provide our own libraries for convenience.
 
