@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/ethereum/go-ethereum v1.9.20
 	github.com/golang/protobuf v1.4.2
+	github.com/gorilla/rpc v1.2.0 // indirect
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.0
 	github.com/offchainlabs/arbitrum/packages/arb-checkpointer v0.7.0
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.0

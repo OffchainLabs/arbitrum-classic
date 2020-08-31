@@ -171,7 +171,7 @@ func RunObserver(
 					start := new(big.Int).Add(db.LatestBlockId().Height.AsInt(), big.NewInt(1))
 					fetchEnd, err := calculateCatchupFetch(runCtx, start, clnt, maxReorg)
 					if err != nil {
-						return err
+						return errors2.Wrap(err, "error calculating fast catchup")
 					}
 					if fetchEnd == nil {
 						break
@@ -184,10 +184,10 @@ func RunObserver(
 
 					endBlock, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(fetchEnd))
 					if err != nil {
-						return err
+						return errors2.Wrap(err, "error getting end block in fast catchup")
 					}
 					if err := db.AddMessages(runCtx, inboxDeliveredEvents, endBlock); err != nil {
-						return err
+						return errors2.Wrap(err, "error adding messages to db")
 					}
 				}
 
@@ -198,7 +198,7 @@ func RunObserver(
 				}
 				for maybeBlockId := range headersChan {
 					if maybeBlockId.Err != nil {
-						return errors2.Wrap(maybeBlockId.Err, "Error getting new header")
+						return errors2.Wrap(maybeBlockId.Err, "error getting new header")
 					}
 
 					blockId := maybeBlockId.BlockId
@@ -206,18 +206,18 @@ func RunObserver(
 
 					inboxEvents, err := inboxWatcher.GetDeliveredEventsInBlock(runCtx, blockId, timestamp)
 					if err != nil {
-						return errors2.Wrapf(err, "Manager hit error getting inbox events with block %v", blockId)
+						return errors2.Wrapf(err, "manager hit error getting inbox events with block %v", blockId)
 					}
 
 					if err := db.AddMessages(runCtx, inboxEvents, blockId); err != nil {
-						return err
+						return errors2.Wrap(err, "error adding messages to db")
 					}
 				}
 				return nil
 			}()
 
 			if err != nil {
-				log.Println(err)
+				log.Println("Error in observer manager:", err)
 			}
 
 			cancelFunc()

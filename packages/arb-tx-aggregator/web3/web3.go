@@ -24,6 +24,6 @@ type Web3 struct {
 }
 
 func (web3 *Web3) ClientVersion(r *http.Request, _ *EmptyArgs, reply *string) error {
-	*reply = "arb-tx-aggregator/v0.6.5"
+	*reply = "arb-tx-aggregator/v0.7.0"
 	return nil
 }

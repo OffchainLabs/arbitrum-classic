@@ -26,7 +26,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	errors2 "github.com/pkg/errors"
-	"log"
 	"math/big"
 	"math/rand"
 
@@ -405,7 +404,6 @@ func NewResultFromValue(val value.Value) (Result, error) {
 	kind, _ := tup.GetByInt64(0)
 	kindInt, ok := kind.(value.IntValue)
 	if !ok {
-		log.Println("RESULT", tup)
 		return nil, errors.New(" result kind must be an int")
 	}
 
