@@ -32,12 +32,15 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
+	//_ "net/http/pprof"
 )
 
 func main() {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	walletArgs := utils.AddWalletFlags(fs)
 	rpcVars := utils2.AddRPCFlags(fs)
+
+	//go http.ListenAndServe("localhost:6060", nil)
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {

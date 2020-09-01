@@ -98,15 +98,15 @@ func NewBatcher(
 				for {
 					tx, accountIndex, cont := server.pendingBatch.popRandomTx(server.queuedTxes, signer)
 					if tx != nil {
-						newSnap := server.pendingBatch.snap.Clone()
-						server.Unlock()
-						newSnap, err := snapWithTx(newSnap, tx, signer)
-						server.Lock()
-						if err != nil {
-							log.Println("Aggregator ignored invalid tx", err)
-							continue
-						}
-						server.pendingBatch.addUpdatedSnap(tx, newSnap)
+						//newSnap := server.pendingBatch.snap.Clone()
+						//server.Unlock()
+						//newSnap, err := snapWithTx(newSnap, tx, signer)
+						//server.Lock()
+						//if err != nil {
+						//	log.Println("Aggregator ignored invalid tx", err)
+						//	continue
+						//}
+						server.pendingBatch.addIncludedTx(tx)
 						server.queuedTxes.maybeRemoveAccountAtIndex(accountIndex)
 					}
 					if server.pendingBatch.full || (!cont && time.Since(lastBatch) > maxBatchTime) {
@@ -194,10 +194,11 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 }
 
 func (m *Batcher) PendingSnapshot() *snapshot.Snapshot {
-	m.Lock()
-	defer m.Unlock()
-	m.setupPending()
-	return m.pendingBatch.snap.Clone()
+	//m.Lock()
+	//defer m.Unlock()
+	return m.db.LatestSnapshot()
+	//m.setupPending()
+	//return m.pendingBatch.snap.Clone()
 }
 
 func (m *Batcher) PendingTransactionCount(account common.Address) *uint64 {
@@ -245,29 +246,29 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 }
 
 func (m *Batcher) setupPending() {
-	snap := m.db.LatestSnapshot()
-	if m.pendingBatch.snap.Height().Cmp(snap.Height()) < 0 {
-		// Add all of the already broadcast transactions to the snapshot
-		// If they were already included, they'll be ignored because they will
-		// have invalid sequence numbers
-		n := m.pendingSentBatches.Front()
-		for n != nil {
-			item := n.Value.(*pendingSentBatch)
-			for _, tx := range item.txes {
-				var err error
-				newSnap, err := snapWithTx(snap, tx, m.signer)
-				if err != nil {
-					continue
-				}
-				snap = newSnap
-			}
-			n = n.Next()
-		}
-		for _, tx := range m.pendingBatch.appliedTxes {
-			// Add the pending, but not broadcast txes back into the queue
-			// If there's an error here, just throw out the tx
-			_ = m.queuedTxes.addTransaction(tx, m.signer)
-		}
-		m.pendingBatch = newPendingBatch(snap, maxBatchSize, m.signer)
-	}
+	//snap := m.db.LatestSnapshot()
+	//if m.pendingBatch.snap.Height().Cmp(snap.Height()) < 0 {
+	//	// Add all of the already broadcast transactions to the snapshot
+	//	// If they were already included, they'll be ignored because they will
+	//	// have invalid sequence numbers
+	//	n := m.pendingSentBatches.Front()
+	//	for n != nil {
+	//		item := n.Value.(*pendingSentBatch)
+	//		for _, tx := range item.txes {
+	//			var err error
+	//			newSnap, err := snapWithTx(snap, tx, m.signer)
+	//			if err != nil {
+	//				continue
+	//			}
+	//			snap = newSnap
+	//		}
+	//		n = n.Next()
+	//	}
+	//	for _, tx := range m.pendingBatch.appliedTxes {
+	//		// Add the pending, but not broadcast txes back into the queue
+	//		// If there's an error here, just throw out the tx
+	//		_ = m.queuedTxes.addTransaction(tx, m.signer)
+	//	}
+	//	m.pendingBatch = newPendingBatch(snap, maxBatchSize, m.signer)
+	//}
 }

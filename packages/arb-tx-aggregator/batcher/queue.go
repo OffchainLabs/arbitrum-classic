@@ -4,12 +4,10 @@ import (
 	"container/heap"
 	"errors"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"log"
 	"math/rand"
 )
 
@@ -221,6 +219,10 @@ func snapWithTx(snap *snapshot.Snapshot, tx *types.Transaction, signer types.Sig
 
 func (p *pendingBatch) addUpdatedSnap(tx *types.Transaction, newSnap *snapshot.Snapshot) {
 	p.snap = newSnap
+	p.addIncludedTx(tx)
+}
+
+func (p *pendingBatch) addIncludedTx(tx *types.Transaction) {
 	p.appliedTxes = append(p.appliedTxes, tx)
 	p.sizeBytes += tx.Size()
 	sender, _ := types.Sender(p.signer, tx)
@@ -228,25 +230,25 @@ func (p *pendingBatch) addUpdatedSnap(tx *types.Transaction, newSnap *snapshot.S
 }
 
 func (p *pendingBatch) checkValidForQueue(tx *types.Transaction) error {
-	ethSender, _ := types.Sender(p.signer, tx)
-	sender := arbcommon.NewAddressFromEth(ethSender)
-	txCount, err := p.snap.GetTransactionCount(sender)
-	if err != nil {
-		return err
-	}
-
-	if tx.Nonce() < txCount.Uint64() {
-		return core.ErrNonceTooLow
-	}
-
-	amount, err := p.snap.GetBalance(sender)
-	if err != nil {
-		return err
-	}
-
-	if tx.Cost().Cmp(amount) > 0 {
-		log.Println("tx rejected for insufficient funds:", tx.Value(), tx.GasPrice(), tx.Gas(), amount)
-		return core.ErrInsufficientFunds
-	}
+	//ethSender, _ := types.Sender(p.signer, tx)
+	//sender := arbcommon.NewAddressFromEth(ethSender)
+	//txCount, err := p.snap.GetTransactionCount(sender)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//if tx.Nonce() < txCount.Uint64() {
+	//	return core.ErrNonceTooLow
+	//}
+	//
+	//amount, err := p.snap.GetBalance(sender)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//if tx.Cost().Cmp(amount) > 0 {
+	//	log.Println("tx rejected for insufficient funds:", tx.Value(), tx.GasPrice(), tx.Gas(), amount)
+	//	return core.ErrInsufficientFunds
+	//}
 	return nil
 }
