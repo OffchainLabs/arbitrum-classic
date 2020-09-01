@@ -1,7 +1,7 @@
 ---
-id: ArbGas and Runtime
+id: ArbGas
 title: ArbGas and running time in Arbitrum
-sidebar_label: ArbGas
+sidebar_label: ArbGas and Runtime
 ---
 
 ArbGas is used by Arbitrum to track the cost of execution on an Arbitrum chain. It is similar in concept to Ethereum gas, in the sense that every Arbitrum Virtual Machine instruction has an ArbGas cost, and the cost of a computation is the sum of the ArbGas costs of the instructions in it.
