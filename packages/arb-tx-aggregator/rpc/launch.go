@@ -18,6 +18,9 @@ package rpc
 
 import (
 	"context"
+	"github.com/gorilla/handlers"
+	"log"
+	"net/http"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -90,6 +93,23 @@ func LaunchAggregator(
 			errChan <- utils2.LaunchRPC(web3Server, web3Port, flags)
 		}()
 	}
+
+	go func() {
+		headersOk := handlers.AllowedHeaders(
+			[]string{"X-Requested-With", "Content-Type", "Authorization"},
+		)
+		originsOk := handlers.AllowedOrigins([]string{"*"})
+		methodsOk := handlers.AllowedMethods(
+			[]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"},
+		)
+		h := handlers.CORS(headersOk, originsOk, methodsOk)(web3Server.WebsocketHandler([]string{"0.0.0.0"}))
+
+		log.Println("Launching rpc server over http")
+		errChan <- http.ListenAndServe(
+			":8548",
+			h,
+		)
+	}()
 
 	return <-errChan
 }
