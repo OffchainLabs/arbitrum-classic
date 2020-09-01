@@ -148,6 +148,8 @@ func NewBatcher(
 						log.Fatal("Error submitted batch", err)
 					}
 
+					log.Println("Batch", receipt.TxHash, "completed at block", receipt.BlockNumber, "using", receipt.GasUsed, "gas")
+
 					// batch succeeded
 					server.Lock()
 					server.pendingSentBatches.Remove(server.pendingSentBatches.Front())
