@@ -43,8 +43,8 @@ function depositERC721Message(
 - Eth: The ArbSys library can be used to withdraw Eth, `ArbSys(100).withdrawEth(destAddress, amount)`
 - ERC-20 and ERC-721: The system generated token contracts in Arbitrum contain a withdraw method
   ```
-  function withdraw(address account, uint256 amount) public; // ERC-20
-  function withdraw(address account, uint256 tokenId) public; // ERC-721
+  function withdrawERC20(address dest, uint256 amount) external;
+  function withdrawERC721(address dest, uint256 id) external;
   ```
 
 In all cases, withdrawing is similar to a transfer, except the balance is burned on the Arbitrum side, and eventually those funds away become available to their destination on the Ethereum side.
@@ -62,7 +62,7 @@ All client-generated transaction calls on the Arbitrum chain are sent through th
 function sendL2Message(address chain, bytes calldata messageData) external;
 ```
 
-Generally calls will come in batches from an aggregator as described in Transaction Lifestyle. However, Arbitrum supports a number number of different message types described in [ArbOS Formats](ArbOS_Formats.ms).
+Generally calls will come in batches from an aggregator as described in Transaction Lifestyle. However, Arbitrum supports a number number of different message types described in [ArbOS Formats](ArbOS_Formats.md).
 
 ## Transaction calls from Arbitrum to Ethereum
 
