@@ -36,7 +36,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
-const maxBatchSize ethcommon.StorageSize = 500000
+const maxBatchSize ethcommon.StorageSize = 120000
 
 type TransactionBatcher interface {
 	PendingTransactionCount(account common.Address) *uint64
@@ -217,14 +217,14 @@ func (m *Batcher) PendingTransactionCount(account common.Address) *uint64 {
 // SendTransaction takes a request signed transaction l2message from a client
 // and puts it in a queue to be included in the next transaction batch
 func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
-	ethSender, err := types.Sender(m.signer, tx)
+	_, err := types.Sender(m.signer, tx)
 	if err != nil {
 		log.Println("Error processing transaction", err)
 		return common.Hash{}, err
 	}
 
 	txHash := common.NewHashFromEth(tx.Hash())
-	log.Println("Got tx: with hash", txHash, "from", ethSender.Hex())
+	//log.Println("Got tx: with hash", txHash, "from", ethSender.Hex())
 
 	m.Lock()
 	defer m.Unlock()

@@ -224,10 +224,10 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 
 		switch res := res.(type) {
 		case *evm.TxResult:
-			log.Println("Got result for", res.IncomingRequest.MessageID, res.ResultCode)
 			if err := txdb.as.SaveRequest(res.IncomingRequest.MessageID, logIndex); err != nil {
 				return nil, err
 			}
+			//log.Println("Got result for", res.IncomingRequest.MessageID, res.ResultCode)
 		case *evm.BlockInfo:
 			if i != len(avmLogs)-1 {
 				return nil, errors.New("block info should only come at end of assertion")
