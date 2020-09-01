@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	errors2 "github.com/pkg/errors"
-	"log"
 	"math/big"
-	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -31,76 +29,69 @@ func NewServer(
 	return &Server{srv: srv}
 }
 
-func (s *Server) ChainId(_ *http.Request, _ *EmptyArgs, reply *string) error {
-	*reply = hexutil.EncodeBig(message.ChainAddressToID(arbcommon.NewAddressFromEth(s.srv.GetChainAddress())))
-	return nil
+func (s *Server) ChainId() hexutil.Uint64 {
+	return hexutil.Uint64(message.ChainAddressToID(
+		arbcommon.NewAddressFromEth(s.srv.GetChainAddress()),
+	).Uint64())
 }
 
-func (s *Server) BlockNumber(_ *http.Request, _ *BlockNumberArgs, reply *string) error {
-	block := s.srv.GetBlockCount()
-	*reply = "0x" + new(big.Int).SetUint64(block).Text(16)
-	return nil
+func (s *Server) BlockNumber() hexutil.Uint64 {
+	return hexutil.Uint64(s.srv.GetBlockCount())
 }
 
-func (s *Server) GetBalance(r *http.Request, args *AccountInfoArgs, reply *string) error {
-	snap, err := s.getSnapshot(r.Context(), args.BlockNum)
+func (s *Server) GetBalance(ctx context.Context, address *common.Address, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
+	snap, err := s.getSnapshot(ctx, blockNum)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	balance, err := snap.GetBalance(arbcommon.NewAddressFromEth(*args.Address))
+	balance, err := snap.GetBalance(arbcommon.NewAddressFromEth(*address))
 	if err != nil {
-		return errors2.Wrap(err, "error getting balance")
+		return nil, errors2.Wrap(err, "error getting balance")
 	}
-	*reply = hexutil.EncodeBig(balance)
-	return nil
+	return (*hexutil.Big)(balance), nil
 }
 
-func (s *Server) GetTransactionCount(r *http.Request, args *AccountInfoArgs, reply *string) error {
-	account := arbcommon.NewAddressFromEth(*args.Address)
-	if args.BlockNum == nil || *args.BlockNum == rpc.PendingBlockNumber {
+func (s *Server) GetTransactionCount(ctx context.Context, address *common.Address, blockNum *rpc.BlockNumber) (hexutil.Uint64, error) {
+	account := arbcommon.NewAddressFromEth(*address)
+	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
 		count := s.srv.PendingTransactionCount(account)
 		if count != nil {
-			*reply = hexutil.EncodeUint64(*count)
-			return nil
+			return hexutil.Uint64(*count), nil
 		}
 	}
-	snap, err := s.getSnapshot(r.Context(), args.BlockNum)
+	snap, err := s.getSnapshot(ctx, blockNum)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	txCount, err := snap.GetTransactionCount(account)
 	if err != nil {
-		return errors2.Wrap(err, "error getting transaction count")
+		return 0, errors2.Wrap(err, "error getting transaction count")
 	}
-	*reply = hexutil.EncodeBig(txCount)
-	return nil
+	return hexutil.Uint64(txCount.Uint64()), nil
 }
 
-func (s *Server) GetCode(r *http.Request, args *AccountInfoArgs, reply *string) error {
-	snap, err := s.getSnapshot(r.Context(), args.BlockNum)
+func (s *Server) GetCode(ctx context.Context, address *common.Address, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
+	snap, err := s.getSnapshot(ctx, blockNum)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	code, err := snap.GetCode(arbcommon.NewAddressFromEth(*args.Address))
+	code, err := snap.GetCode(arbcommon.NewAddressFromEth(*address))
 	if err != nil {
-		return errors2.Wrap(err, "error getting code")
+		return nil, errors2.Wrap(err, "error getting code")
 	}
-	*reply = hexutil.Encode(code)
-	return nil
+	return hexutil.Bytes(code), nil
 }
 
-func (s *Server) GetStorageAt(r *http.Request, args *GetStorageAtArgs, reply *string) error {
-	snap, err := s.getSnapshot(r.Context(), args.BlockNum)
+func (s *Server) GetStorageAt(ctx context.Context, address *common.Address, index *hexutil.Big, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
+	snap, err := s.getSnapshot(ctx, blockNum)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*args.Address), (*big.Int)(args.Index))
+	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*address), (*big.Int)(index))
 	if err != nil {
-		return errors2.Wrap(err, "error getting storage")
+		return nil, errors2.Wrap(err, "error getting storage")
 	}
-	log.Println("Storage val", storageVal)
-	*reply = hexutil.EncodeBig(storageVal)
-	return nil
+	return (*hexutil.Big)(storageVal), nil
 }
 
 func (s *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
@@ -113,37 +104,35 @@ func (s *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
 	}
 }
 
-func (s *Server) GetBlockByHash(r *http.Request, args *GetBlockByHashArgs, reply **GetBlockResult) error {
+func (s *Server) GetBlockByHash(ctx context.Context, blockHashRaw hexutil.Bytes, includeTxData bool) (*GetBlockResult, error) {
 	var blockHash arbcommon.Hash
-	copy(blockHash[:], args.BlockHash)
+	copy(blockHash[:], blockHashRaw)
 
-	header, err := s.srv.GetBlockHeaderByHash(r.Context(), blockHash)
+	header, err := s.srv.GetBlockHeaderByHash(ctx, blockHash)
 	if err != nil {
 		// If we can't get the header, return nil
-		*reply = nil
-		return nil
+		return nil, nil
 	}
-	return s.getBlock(header, args.IncludeTxData, reply)
+	return s.getBlock(header, includeTxData)
 }
 
-func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, reply **GetBlockResult) error {
-	height, err := s.blockNum(args.BlockNum)
+func (s *Server) GetBlockByNumber(ctx context.Context, blockNum *rpc.BlockNumber, includeTxData bool) (*GetBlockResult, error) {
+	height, err := s.blockNum(blockNum)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	header, err := s.srv.GetBlockHeaderByNumber(r.Context(), height)
+	header, err := s.srv.GetBlockHeaderByNumber(ctx, height)
 	if err != nil {
 		// If we can't get the header, return nil
-		*reply = nil
-		return nil
+		return nil, err
 	}
-	return s.getBlock(header, args.IncludeTxData, reply)
+	return s.getBlock(header, includeTxData)
 }
 
-func (s *Server) getBlock(header *types.Header, includeTxData bool, reply **GetBlockResult) error {
+func (s *Server) getBlock(header *types.Header, includeTxData bool) (*GetBlockResult, error) {
 	results, err := s.srv.GetBlockResults(header.Number.Uint64())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var transactions interface{}
@@ -152,7 +141,7 @@ func (s *Server) getBlock(header *types.Header, includeTxData bool, reply **GetB
 		for _, res := range results {
 			txRes, err := s.makeTransactionResult(res)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			txes = append(txes, txRes)
 		}
@@ -166,7 +155,7 @@ func (s *Server) getBlock(header *types.Header, includeTxData bool, reply **GetB
 	}
 	size := uint64(0)
 	uncles := make([]hexutil.Bytes, 0)
-	*reply = &GetBlockResult{
+	return &GetBlockResult{
 		Number:           (*hexutil.Big)(header.Number),
 		Hash:             header.Hash().Bytes(),
 		ParentHash:       header.ParentHash.Bytes(),
@@ -187,11 +176,10 @@ func (s *Server) getBlock(header *types.Header, includeTxData bool, reply **GetB
 		Timestamp:        (*hexutil.Uint64)(&header.Time),
 		Transactions:     transactions,
 		Uncles:           &uncles,
-	}
-	return nil
+	}, nil
 }
 
-func buildCallMsg(args *CallTxArgs) (arbcommon.Address, message.ContractTransaction) {
+func buildCallMsg(args CallTxArgs) (arbcommon.Address, message.ContractTransaction) {
 	var from arbcommon.Address
 	if args.From != nil {
 		from = arbcommon.NewAddressFromEth(*args.From)
@@ -226,7 +214,7 @@ func buildCallMsg(args *CallTxArgs) (arbcommon.Address, message.ContractTransact
 	}
 }
 
-func (s *Server) executeCall(ctx context.Context, args *CallTxArgs, blockNum *rpc.BlockNumber) (*evm.TxResult, error) {
+func (s *Server) executeCall(ctx context.Context, args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.TxResult, error) {
 	snap, err := s.getSnapshot(ctx, blockNum)
 	if err != nil {
 		return nil, err
@@ -236,67 +224,61 @@ func (s *Server) executeCall(ctx context.Context, args *CallTxArgs, blockNum *rp
 	return snap.Call(msg, from)
 }
 
-func (s *Server) Call(r *http.Request, args *CallArgs, reply *string) error {
-	res, err := s.executeCall(r.Context(), args.CallArgs, args.BlockNum)
+func (s *Server) Call(ctx context.Context, callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
+	res, err := s.executeCall(ctx, callArgs, blockNum)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	*reply = hexutil.Encode(res.ReturnData)
-	return nil
+	return res.ReturnData, nil
 }
 
-func (s *Server) EstimateGas(r *http.Request, args *CallTxArgs, reply *string) error {
+func (s *Server) EstimateGas(ctx context.Context, args CallTxArgs) (hexutil.Uint64, error) {
 	blockNum := rpc.PendingBlockNumber
-	res, err := s.executeCall(r.Context(), args, &blockNum)
+	res, err := s.executeCall(ctx, args, &blockNum)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	*reply = hexutil.EncodeUint64(res.GasUsed.Uint64() + 1000000)
-	return nil
+	return hexutil.Uint64(res.GasUsed.Uint64() + 1000000), nil
 }
 
-func (s *Server) GasPrice(_ *http.Request, _ *EmptyArgs, reply *string) error {
-	*reply = "0x" + big.NewInt(0).Text(16)
-	return nil
+func (s *Server) GasPrice() hexutil.Uint64 {
+	return 0
 }
 
-func (s *Server) SendRawTransaction(_ *http.Request, args *SendTransactionArgs, reply *string) error {
+func (s *Server) SendRawTransaction(data hexutil.Bytes) (hexutil.Bytes, error) {
 	tx := new(types.Transaction)
-	if err := rlp.DecodeBytes(*args.Data, tx); err != nil {
-		return err
+	if err := rlp.DecodeBytes(data, tx); err != nil {
+		return nil, err
 	}
 	txHash, err := s.srv.SendTransaction(tx)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	*reply = txHash.String()
-	return nil
+	return txHash[:], nil
 }
 
-func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionReceiptArgs, reply **GetTransactionReceiptResult) error {
+func (s *Server) GetTransactionReceipt(ctx context.Context, txHash hexutil.Bytes) (*GetTransactionReceiptResult, error) {
 	var requestId arbcommon.Hash
-	copy(requestId[:], *args.Data)
+	copy(requestId[:], txHash)
 	val, err := s.srv.GetRequestResult(requestId)
 	if val == nil || err != nil {
-		*reply = nil
-		return nil
+		return nil, nil
 	}
 	result, err := evm.NewTxResultFromValue(val)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	blockInfo, err := s.srv.BlockInfo(result.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if blockInfo == nil {
-		log.Println("failed to get block info for block with tx")
-		return nil
+		return nil, nil
 	}
 
 	receipt := result.ToEthReceipt(blockInfo.Hash)
-	*reply = &GetTransactionReceiptResult{
+	return &GetTransactionReceiptResult{
 		Status:            receipt.Status,
 		CumulativeGasUsed: receipt.CumulativeGasUsed,
 		Bloom:             hexutil.Encode(receipt.Bloom.Bytes()),
@@ -307,8 +289,7 @@ func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionRece
 		BlockHash:         receipt.BlockHash,
 		BlockNumber:       receipt.BlockNumber,
 		TransactionIndex:  receipt.TransactionIndex,
-	}
-	return nil
+	}, nil
 }
 
 func (s *Server) makeTransactionResult(res *evm.TxResult) (*TransactionResult, error) {
@@ -347,31 +328,30 @@ func (s *Server) makeTransactionResult(res *evm.TxResult) (*TransactionResult, e
 	}, nil
 }
 
-func (s *Server) GetTransactionByHash(_ *http.Request, args *GetTransactionReceiptArgs, reply **TransactionResult) error {
+func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult, error) {
 	var requestId arbcommon.Hash
-	copy(requestId[:], *args.Data)
+	copy(requestId[:], txHash)
 	val, err := s.srv.GetRequestResult(requestId)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	res, err := evm.NewTxResultFromValue(val)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	txRes, err := s.makeTransactionResult(res)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	*reply = txRes
-	return nil
+	return txRes, nil
 }
 
-func (s *Server) GetLogs(r *http.Request, args *GetLogsArgs, reply *[]LogResult) error {
+func (s *Server) GetLogs(ctx context.Context, args *GetLogsArgs) ([]LogResult, error) {
 	var fromHeight *uint64
 	if args.FromBlock != nil {
 		from, err := s.blockNum(args.FromBlock)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		fromHeight = &from
 	}
@@ -380,7 +360,7 @@ func (s *Server) GetLogs(r *http.Request, args *GetLogsArgs, reply *[]LogResult)
 	if args.ToBlock != nil {
 		to, err := s.blockNum(args.ToBlock)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		toHeight = &to
 	}
@@ -395,18 +375,18 @@ func (s *Server) GetLogs(r *http.Request, args *GetLogsArgs, reply *[]LogResult)
 		topicGroups = append(topicGroups, topic.topics)
 	}
 
-	logs, err := s.srv.FindLogs(r.Context(), fromHeight, toHeight, addresses, topicGroups)
+	logs, err := s.srv.FindLogs(ctx, fromHeight, toHeight, addresses, topicGroups)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	*reply = make([]LogResult, 0, len(logs))
+	res := make([]LogResult, 0, len(logs))
 	for _, evmLog := range logs {
 		logIndex := hexutil.EncodeUint64(evmLog.Index)
 		txIndex := hexutil.EncodeUint64(evmLog.TxIndex)
 		txHash := evmLog.TxHash.ToEthHash()
 		blockHash := evmLog.Block.HeaderHash.ToEthHash()
 		blockNum := hexutil.EncodeBig(evmLog.Block.Height.AsInt())
-		*reply = append(*reply, LogResult{
+		res = append(res, LogResult{
 			Removed:          false,
 			LogIndex:         &logIndex,
 			TransactionIndex: &txIndex,
@@ -418,7 +398,7 @@ func (s *Server) GetLogs(r *http.Request, args *GetLogsArgs, reply *[]LogResult)
 			Topics:           arbcommon.NewEthHashesFromHashes(evmLog.Topics),
 		})
 	}
-	return nil
+	return res, nil
 }
 
 func (s *Server) getSnapshot(ctx context.Context, blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {

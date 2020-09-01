@@ -16,14 +16,9 @@
 
 package web3
 
-import (
-	"net/http"
-)
-
 type Web3 struct {
 }
 
-func (web3 *Web3) ClientVersion(r *http.Request, _ *EmptyArgs, reply *string) error {
-	*reply = "arb-tx-aggregator/v0.7.1"
-	return nil
+func (web3 *Web3) ClientVersion() string {
+	return "arb-tx-aggregator/v0.7.1"
 }

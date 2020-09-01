@@ -1,70 +1,12 @@
 package web3
 
 import (
-	"encoding/json"
-	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
-	errors2 "github.com/pkg/errors"
 	"math/big"
 )
-
-type BlockNumberArgs struct{}
-
-type AccountInfoArgs struct {
-	Address  *common.Address
-	BlockNum *ethrpc.BlockNumber
-}
-
-func (n *AccountInfoArgs) UnmarshalJSON(buf []byte) error {
-	err := unmarshalJSONArray(buf, []interface{}{&n.Address, &n.BlockNum})
-	if err != nil {
-		return errors2.Wrap(err, "error parsing account info args")
-	}
-	return nil
-}
-
-type GetStorageAtArgs struct {
-	Address  *common.Address
-	Index    *hexutil.Big
-	BlockNum *ethrpc.BlockNumber
-}
-
-func (n *GetStorageAtArgs) UnmarshalJSON(buf []byte) error {
-	err := unmarshalJSONArray(buf, []interface{}{&n.Address, &n.Index, &n.BlockNum})
-	if err != nil {
-		return errors2.Wrap(err, "error parsing storage args")
-	}
-	return nil
-}
-
-type GetBlockByHashArgs struct {
-	BlockHash     hexutil.Bytes
-	IncludeTxData bool
-}
-
-func (n *GetBlockByHashArgs) UnmarshalJSON(buf []byte) error {
-	err := unmarshalJSONArray(buf, []interface{}{&n.BlockHash, &n.IncludeTxData})
-	if err != nil {
-		return errors2.Wrap(err, "error parsing block number args")
-	}
-	return nil
-}
-
-type GetBlockByNumberArgs struct {
-	BlockNum      *ethrpc.BlockNumber
-	IncludeTxData bool
-}
-
-func (n *GetBlockByNumberArgs) UnmarshalJSON(buf []byte) error {
-	err := unmarshalJSONArray(buf, []interface{}{&n.BlockNum, &n.IncludeTxData})
-	if err != nil {
-		return errors2.Wrap(err, "error parsing block number args")
-	}
-	return nil
-}
 
 type GetBlockResult struct {
 	Number           *hexutil.Big      `json:"number"`
@@ -96,45 +38,6 @@ type CallTxArgs struct {
 	GasPrice *hexutil.Big    `json:"gasPrice"`
 	Value    *hexutil.Big    `json:"value"`
 	Data     *hexutil.Bytes  `json:"data"`
-}
-
-type CallArgs struct {
-	CallArgs *CallTxArgs
-	BlockNum *ethrpc.BlockNumber
-}
-
-func (n *CallArgs) UnmarshalJSON(buf []byte) error {
-	err := unmarshalJSONArray(buf, []interface{}{&n.CallArgs, &n.BlockNum})
-	if err != nil {
-		return errors2.Wrapf(err, "error parsing call args %v", string(buf))
-	}
-	return nil
-}
-
-type EmptyArgs struct{}
-
-type SendTransactionArgs struct {
-	Data *hexutil.Bytes
-}
-
-func (n *SendTransactionArgs) UnmarshalJSON(buf []byte) error {
-	err := unmarshalJSONArray(buf, []interface{}{&n.Data})
-	if err != nil {
-		return errors2.Wrap(err, "error parsing send transaction args")
-	}
-	return nil
-}
-
-type GetTransactionReceiptArgs struct {
-	Data *hexutil.Bytes
-}
-
-func (n *GetTransactionReceiptArgs) UnmarshalJSON(buf []byte) error {
-	err := unmarshalJSONArray(buf, []interface{}{&n.Data})
-	if err != nil {
-		return errors2.Wrap(err, "error parsing get transaction args")
-	}
-	return nil
 }
 
 // Receipt represents the results of a transaction.
@@ -226,15 +129,4 @@ type LogResult struct {
 	Address          string        `json:"address"`
 	Data             string        `json:"data"`
 	Topics           []common.Hash `json:"topics"`
-}
-
-func unmarshalJSONArray(buf []byte, fields []interface{}) error {
-	wantLen := len(fields)
-	if err := json.Unmarshal(buf, &fields); err != nil {
-		return err
-	}
-	if g, e := len(fields), wantLen; g != e {
-		return fmt.Errorf("wrong number of fields in CallArgs: %d != %d", g, e)
-	}
-	return nil
 }
