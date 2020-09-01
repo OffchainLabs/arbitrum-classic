@@ -148,7 +148,7 @@ func NewBatcher(
 						log.Fatal("Error submitted batch", err)
 					}
 
-					log.Println("Batch", receipt.TxHash, "completed at block", receipt.BlockNumber, "using", receipt.GasUsed, "gas")
+					log.Println("Batch with tx", receipt.TxHash.Hex(), "completed at block", receipt.BlockNumber, "using", receipt.GasUsed, "gas")
 
 					// batch succeeded
 					server.Lock()
