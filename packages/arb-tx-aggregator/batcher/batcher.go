@@ -86,7 +86,7 @@ func NewBatcher(
 
 	go func() {
 		lastBatch := time.Now()
-		ticker := time.NewTicker(time.Millisecond * 10)
+		ticker := time.NewTicker(time.Millisecond * 1000)
 		defer ticker.Stop()
 		for {
 			select {

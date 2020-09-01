@@ -89,7 +89,7 @@ func main() {
 		"1235",
 		"8547",
 		rpcVars,
-		time.Second*5,
+		time.Second*15,
 	); err != nil {
 		log.Fatal(err)
 	}
