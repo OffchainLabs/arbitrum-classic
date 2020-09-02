@@ -204,7 +204,6 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 		}
 	}
 
-	var lastBlock *common.BlockId
 	avmLogs := assertion.ParseLogs()
 	for i, avmLog := range avmLogs {
 		logIndex, err := txdb.as.LogCount()
@@ -222,64 +221,61 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 			continue
 		}
 
-		switch res := res.(type) {
-		case *evm.TxResult:
-			log.Println("Got result for", res.IncomingRequest.MessageID, res.ResultCode)
-			if err := txdb.as.SaveRequest(res.IncomingRequest.MessageID, logIndex); err != nil {
-				return nil, err
-			}
-		case *evm.BlockInfo:
-			if i != len(avmLogs)-1 {
-				return nil, errors.New("block info should only come at end of assertion")
-			}
+		blockInfo, ok := res.(*evm.BlockInfo)
+		if !ok {
+			continue
+		}
 
-			txCount := res.BlockStats.TxCount.Uint64()
-			startLog := res.FirstAVMLog().Uint64()
-			ethLogs := make([]*types.Log, 0)
-			txResults := make([]*evm.TxResult, 0, txCount)
-			for i := uint64(0); i < txCount; i++ {
-				avmLog, err := txdb.GetLog(startLog + i)
-				if err != nil {
-					return nil, err
-				}
-				txRes, err := evm.NewTxResultFromValue(avmLog)
-				if err != nil {
-					return nil, err
-				}
-				txResults = append(txResults, txRes)
-			}
+		if i != len(avmLogs)-1 {
+			return nil, errors.New("block info should only come at end of assertion")
+		}
 
-			for _, txRes := range txResults {
-				for _, evmLog := range txRes.EVMLogs {
-					ethLogs = append(ethLogs, &types.Log{
-						Address: evmLog.Address.ToEthAddress(),
-						Topics:  common.NewEthHashesFromHashes(evmLog.Topics),
-					})
-				}
-			}
-
-			block, err := txdb.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(res.BlockNum))
+		txCount := blockInfo.BlockStats.TxCount.Uint64()
+		startLog := blockInfo.FirstAVMLog().Uint64()
+		ethLogs := make([]*types.Log, 0)
+		txResults := make([]*evm.TxResult, 0, txCount)
+		for i := uint64(0); i < txCount; i++ {
+			avmLog, err := txdb.GetLog(startLog + i)
 			if err != nil {
 				return nil, err
 			}
-			logBloom := types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
-			if err := txdb.as.SaveBlock(block, logIndex, logBloom); err != nil {
+			txRes, err := evm.NewTxResultFromValue(avmLog)
+			if err != nil {
 				return nil, err
 			}
-
-			for i, txRes := range txResults {
-				if err := txdb.as.SaveRequest(txRes.IncomingRequest.MessageID, startLog+uint64(i)); err != nil {
-					return nil, err
-				}
-			}
-
-			lastBlock = block
-			txdb.callMut.Lock()
-			txdb.addSnap(res.BlockNum, res.Timestamp)
-			txdb.callMut.Unlock()
+			txResults = append(txResults, txRes)
 		}
+
+		for _, txRes := range txResults {
+			for _, evmLog := range txRes.EVMLogs {
+				ethLogs = append(ethLogs, &types.Log{
+					Address: evmLog.Address.ToEthAddress(),
+					Topics:  common.NewEthHashesFromHashes(evmLog.Topics),
+				})
+			}
+		}
+
+		block, err := txdb.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(blockInfo.BlockNum))
+		if err != nil {
+			return nil, err
+		}
+		logBloom := types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
+		if err := txdb.as.SaveBlock(block, logIndex, logBloom); err != nil {
+			return nil, err
+		}
+
+		for i, txRes := range txResults {
+			if err := txdb.as.SaveRequest(txRes.IncomingRequest.MessageID, startLog+uint64(i)); err != nil {
+				return nil, err
+			}
+		}
+
+		txdb.callMut.Lock()
+		txdb.addSnap(blockInfo.BlockNum, blockInfo.Timestamp)
+		txdb.callMut.Unlock()
+		return block, nil
 	}
-	return lastBlock, nil
+	return nil, nil
 }
 
 func (txdb *TxDB) GetMessage(index uint64) (value.Value, error) {

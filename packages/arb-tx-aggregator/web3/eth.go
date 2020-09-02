@@ -119,7 +119,9 @@ func (s *Server) GetBlockByHash(r *http.Request, args *GetBlockByHashArgs, reply
 
 	header, err := s.srv.GetBlockHeaderByHash(r.Context(), blockHash)
 	if err != nil {
-		return err
+		// If we can't get the header, return nil
+		*reply = nil
+		return nil
 	}
 	return s.getBlock(header, args.IncludeTxData, reply)
 }
@@ -131,7 +133,9 @@ func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, r
 	}
 	header, err := s.srv.GetBlockHeaderByNumber(r.Context(), height)
 	if err != nil {
-		return err
+		// If we can't get the header, return nil
+		*reply = nil
+		return nil
 	}
 	return s.getBlock(header, args.IncludeTxData, reply)
 }
@@ -282,13 +286,16 @@ func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionRece
 		return err
 	}
 
-	header, err := s.srv.GetBlockHeaderByNumber(r.Context(), result.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
+	blockInfo, err := s.srv.BlockInfo(result.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
 	if err != nil {
-		// If header has been reorged, don't return a receipt
+		return err
+	}
+	if blockInfo == nil {
+		log.Println("failed to get block info for block with tx")
 		return nil
 	}
 
-	receipt := result.ToEthReceipt(arbcommon.NewHashFromEth(header.Hash()))
+	receipt := result.ToEthReceipt(blockInfo.Hash)
 	*reply = &GetTransactionReceiptResult{
 		Status:            receipt.Status,
 		CumulativeGasUsed: receipt.CumulativeGasUsed,
