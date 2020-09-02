@@ -31,6 +31,11 @@ func NewServer(
 	return &Server{srv: srv}
 }
 
+func (s *Server) ChainId(_ *http.Request, _ *EmptyArgs, reply *string) error {
+	*reply = hexutil.EncodeBig(message.ChainAddressToID(arbcommon.NewAddressFromEth(s.srv.GetChainAddress())))
+	return nil
+}
+
 func (s *Server) BlockNumber(_ *http.Request, _ *BlockNumberArgs, reply *string) error {
 	block := s.srv.GetBlockCount()
 	*reply = "0x" + new(big.Int).SetUint64(block).Text(16)
