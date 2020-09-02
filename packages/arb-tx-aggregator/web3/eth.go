@@ -286,13 +286,16 @@ func (s *Server) GetTransactionReceipt(r *http.Request, args *GetTransactionRece
 		return err
 	}
 
-	header, err := s.srv.GetBlockHeaderByNumber(r.Context(), result.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
+	blockInfo, err := s.srv.BlockInfo(result.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
 	if err != nil {
-		// If header has been reorged, don't return a receipt
+		return err
+	}
+	if blockInfo == nil {
+		log.Println("failed to get block info for block with tx")
 		return nil
 	}
 
-	receipt := result.ToEthReceipt(arbcommon.NewHashFromEth(header.Hash()))
+	receipt := result.ToEthReceipt(blockInfo.Hash)
 	*reply = &GetTransactionReceiptResult{
 		Status:            receipt.Status,
 		CumulativeGasUsed: receipt.CumulativeGasUsed,
