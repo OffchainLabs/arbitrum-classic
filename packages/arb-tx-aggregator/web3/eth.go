@@ -119,7 +119,9 @@ func (s *Server) GetBlockByHash(r *http.Request, args *GetBlockByHashArgs, reply
 
 	header, err := s.srv.GetBlockHeaderByHash(r.Context(), blockHash)
 	if err != nil {
-		return err
+		// If we can't get the header, return nil
+		*reply = nil
+		return nil
 	}
 	return s.getBlock(header, args.IncludeTxData, reply)
 }
@@ -131,7 +133,9 @@ func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, r
 	}
 	header, err := s.srv.GetBlockHeaderByNumber(r.Context(), height)
 	if err != nil {
-		return err
+		// If we can't get the header, return nil
+		*reply = nil
+		return nil
 	}
 	return s.getBlock(header, args.IncludeTxData, reply)
 }
