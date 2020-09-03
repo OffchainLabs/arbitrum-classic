@@ -85,12 +85,12 @@ func New(
 }
 
 // addSnap must be called with callMut locked or during construction
-func (txdb *TxDB) addSnap(blockNum *big.Int, timestamp *big.Int) {
+func (txdb *TxDB) addSnap(mach machine.Machine, blockNum *big.Int, timestamp *big.Int) {
 	currentTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocks(new(big.Int).Set(blockNum)),
 		Timestamp: new(big.Int).Set(timestamp),
 	}
-	snap := snapshot.NewSnapshot(txdb.mach.Clone(), currentTime, message.ChainAddressToID(txdb.chain), new(big.Int).Set(txdb.lastInboxSeq))
+	snap := snapshot.NewSnapshot(mach, currentTime, message.ChainAddressToID(txdb.chain), new(big.Int).Set(txdb.lastInboxSeq))
 	txdb.snapCache.addSnapshot(snap)
 }
 
@@ -132,8 +132,13 @@ func (txdb *TxDB) RestoreFromCheckpoint(ctx context.Context) error {
 	defer txdb.callMut.Unlock()
 	txdb.lastBlockProcessed = blockId
 	txdb.lastInboxSeq = lastInboxSeq
-	txdb.addSnap(block.BlockNum, block.Timestamp)
+	txdb.addSnap(mach.Clone(), block.BlockNum, block.Timestamp)
 	return nil
+}
+
+type blockData struct {
+	block     *common.BlockId
+	blockInfo *evm.BlockInfo
 }
 
 func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent, finishedBlock *common.BlockId) error {
@@ -142,13 +147,22 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 		return err
 	}
 
-	var lastBlock *common.BlockId
+	var lastBlock *blockData
 	for _, msg := range msgs {
-		block, err := txdb.processMessage(ctx, msg.Message)
+		// TODO: Give ExecuteAssertion the ability to run unbounded until it blocks
+		// The max steps here is a hack since it should just run until it blocks
+		assertion, _ := txdb.mach.ExecuteAssertion(1000000000000, []inbox.InboxMessage{msg.Message}, 0)
+		txdb.callMut.Lock()
+		txdb.lastInboxSeq = msg.Message.InboxSeqNum
+		txdb.callMut.Unlock()
+		block, err := txdb.processAssertion(ctx, assertion)
 		if err != nil {
 			return err
 		}
 		if block != nil {
+			txdb.callMut.Lock()
+			txdb.addSnap(txdb.mach.Clone(), block.blockInfo.BlockNum, block.blockInfo.Timestamp)
+			txdb.callMut.Unlock()
 			lastBlock = block
 		}
 	}
@@ -162,6 +176,9 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 		return err
 	}
 	if block != nil {
+		txdb.callMut.Lock()
+		txdb.addSnap(txdb.mach.Clone(), block.blockInfo.BlockNum, block.blockInfo.Timestamp)
+		txdb.callMut.Unlock()
 		lastBlock = block
 	}
 
@@ -171,7 +188,7 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 
 	latestSnap := txdb.snapCache.latest()
 	if latestSnap == nil || latestSnap.Height().Cmp(finishedBlock.Height) < 0 {
-		txdb.addSnap(finishedBlock.Height.AsInt(), timestamp)
+		txdb.addSnap(txdb.mach.Clone(), finishedBlock.Height.AsInt(), timestamp)
 	}
 	txdb.callMut.Unlock()
 
@@ -182,30 +199,19 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 		cpData := make([]byte, 64)
 		copy(cpData[:], machHash[:])
 		copy(cpData[32:], math.U256Bytes(lastInboxSeq))
-		txdb.checkpointer.AsyncSaveCheckpoint(lastBlock, cpData, ctx)
+		txdb.checkpointer.AsyncSaveCheckpoint(lastBlock.block, cpData, ctx)
 	}
 	return nil
 }
 
-func (txdb *TxDB) processMessage(ctx context.Context, msg inbox.InboxMessage) (*common.BlockId, error) {
-	// TODO: Give ExecuteAssertion the ability to run unbounded until it blocks
-	// The max steps here is a hack since it should just run until it blocks
-	assertion, _ := txdb.mach.ExecuteAssertion(1000000000000, []inbox.InboxMessage{msg}, 0)
-	txdb.callMut.Lock()
-	txdb.lastInboxSeq = msg.InboxSeqNum
-	txdb.callMut.Unlock()
-	return txdb.processAssertion(ctx, assertion)
-}
-
-func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.ExecutionAssertion) (*common.BlockId, error) {
+func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.ExecutionAssertion) (*blockData, error) {
 	for _, avmMessage := range assertion.ParseOutMessages() {
 		if err := txdb.as.SaveMessage(avmMessage); err != nil {
 			return nil, err
 		}
 	}
 
-	var lastBlock *common.BlockId
-	var lastBlockInfo *evm.BlockInfo
+	var lastBlock *blockData
 	for _, avmLog := range assertion.ParseLogs() {
 		if err := txdb.as.SaveLog(avmLog); err != nil {
 			return nil, err
@@ -227,7 +233,7 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 		ethLogs := make([]*types.Log, 0)
 		txResults := make([]*evm.TxResult, 0, txCount)
 		for i := uint64(0); i < txCount; i++ {
-			avmLog, err := txdb.GetLog(startLog + i)
+			avmLog, err := txdb.as.GetLog(startLog + i)
 			if err != nil {
 				return nil, err
 			}
@@ -264,14 +270,10 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 			}
 		}
 
-		lastBlock = block
-		lastBlockInfo = blockInfo
-	}
-
-	if lastBlockInfo != nil {
-		txdb.callMut.Lock()
-		txdb.addSnap(lastBlockInfo.BlockNum, lastBlockInfo.Timestamp)
-		txdb.callMut.Unlock()
+		lastBlock = &blockData{
+			block:     block,
+			blockInfo: blockInfo,
+		}
 	}
 	return lastBlock, nil
 }
