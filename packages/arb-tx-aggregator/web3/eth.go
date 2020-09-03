@@ -387,12 +387,12 @@ func (s *Server) GetLogs(r *http.Request, args *GetLogsArgs, reply *[]LogResult)
 
 	addresses := make([]common.Address, 0, 1)
 	if args.Address != nil {
-		addresses = append(addresses, *args.Address)
+		addresses = args.Address.addresses
 	}
 
 	topicGroups := make([][]common.Hash, 0, len(args.Topics))
 	for _, topic := range args.Topics {
-		topicGroups = append(topicGroups, []common.Hash{topic})
+		topicGroups = append(topicGroups, topic.topics)
 	}
 
 	logs, err := s.srv.FindLogs(r.Context(), fromHeight, toHeight, addresses, topicGroups)
