@@ -49,22 +49,22 @@ type TupleValue struct {
 	deferredHashing bool
 }
 
-func NewEmptyTuple() TupleValue {
-	return TupleValue{[MaxTupleSize]Value{}, 0, zeroHash.Hash(), zeroHash, 1, false}
+func NewEmptyTuple() *TupleValue {
+	return &TupleValue{[MaxTupleSize]Value{}, 0, zeroHash.Hash(), zeroHash, 1, false}
 }
 
-func NewTupleOfSizeWithContents(contents [MaxTupleSize]Value, size int8) (TupleValue, error) {
+func NewTupleOfSizeWithContents(contents [MaxTupleSize]Value, size int8) (*TupleValue, error) {
 	if !IsValidTupleSizeI64(int64(size)) {
-		return TupleValue{}, errors.New("requested empty tuple size is too big")
+		return nil, errors.New("requested empty tuple size is too big")
 	}
-	ret := TupleValue{contents, size, common.Hash{}, HashPreImage{}, 0, true}
+	ret := &TupleValue{contents, size, common.Hash{}, HashPreImage{}, 0, true}
 	ret.size = ret.internalSize()
 	return ret, nil
 }
 
-func NewTupleFromSlice(slice []Value) (TupleValue, error) {
+func NewTupleFromSlice(slice []Value) (*TupleValue, error) {
 	if !IsValidTupleSizeI64(int64(len(slice))) {
-		return TupleValue{}, errors.New("requested tuple size is too big")
+		return nil, errors.New("requested tuple size is too big")
 	}
 	var contents [MaxTupleSize]Value
 	for i, v := range slice {
@@ -73,26 +73,26 @@ func NewTupleFromSlice(slice []Value) (TupleValue, error) {
 	return NewTupleOfSizeWithContents(contents, int8(len(slice)))
 }
 
-func NewTuple2(value1 Value, value2 Value) TupleValue {
-	ret := TupleValue{[MaxTupleSize]Value{value1, value2}, 2, common.Hash{}, HashPreImage{}, 0, true}
+func NewTuple2(value1 Value, value2 Value) *TupleValue {
+	ret := &TupleValue{[MaxTupleSize]Value{value1, value2}, 2, common.Hash{}, HashPreImage{}, 0, true}
 	ret.size = ret.internalSize()
 	return ret
 }
 
-func NewSizedTupleFromReader(rd io.Reader, size byte) (TupleValue, error) {
+func NewSizedTupleFromReader(rd io.Reader, size byte) (*TupleValue, error) {
 	var contentsArr [MaxTupleSize]Value
 	sz := int8(size)
 	for i := 0; i < int(sz); i++ {
 		boxedVal, err := UnmarshalValue(rd)
 		if err != nil {
-			return TupleValue{}, err
+			return nil, err
 		}
 		contentsArr[i] = boxedVal
 	}
 	return NewTupleOfSizeWithContents(contentsArr, sz)
 }
 
-func (tv TupleValue) Marshal(wr io.Writer) error {
+func (tv *TupleValue) Marshal(wr io.Writer) error {
 	for _, v := range tv.Contents() {
 		if err := MarshalValue(v, wr); err != nil {
 			return err
@@ -105,38 +105,38 @@ func IsValidTupleSizeI64(size int64) bool {
 	return size >= 0 && size <= MaxTupleSize
 }
 
-func (tv TupleValue) Contents() []Value {
+func (tv *TupleValue) Contents() []Value {
 	return tv.contentsArr[:tv.itemCount]
 }
 
-func (tv TupleValue) Len() int64 {
+func (tv *TupleValue) Len() int64 {
 	return int64(tv.itemCount)
 }
 
-func (tv TupleValue) GetByInt64(idx int64) (Value, error) {
+func (tv *TupleValue) GetByInt64(idx int64) (Value, error) {
 	if idx < 0 || idx >= tv.Len() {
 		return nil, errors.New("tuple index out of bounds")
 	}
 	return tv.contentsArr[idx], nil
 }
 
-func (tv TupleValue) TypeCode() uint8 {
+func (tv *TupleValue) TypeCode() uint8 {
 	return TypeCodeTuple + byte(tv.itemCount)
 }
 
-func (tv TupleValue) Clone() Value {
+func (tv *TupleValue) Clone() Value {
 	var newContents [MaxTupleSize]Value
 	for i, b := range tv.Contents() {
 		newContents[i] = b.Clone()
 	}
-	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.cachedPreImage, tv.size, tv.deferredHashing}
+	return &TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.cachedPreImage, tv.size, tv.deferredHashing}
 }
 
-func (tv TupleValue) Equal(val Value) bool {
+func (tv *TupleValue) Equal(val Value) bool {
 	if preImage, ok := val.(HashPreImage); ok {
 		return tv.Hash() == preImage.Hash()
 	}
-	tup, ok := val.(TupleValue)
+	tup, ok := val.(*TupleValue)
 	if !ok {
 		return false
 	}
@@ -146,7 +146,7 @@ func (tv TupleValue) Equal(val Value) bool {
 	return tv.Hash() == tup.Hash()
 }
 
-func (tv TupleValue) internalSize() int64 {
+func (tv *TupleValue) internalSize() int64 {
 	ret := int64(1)
 	for _, bv := range tv.Contents() {
 		ret = ret + bv.Size()
@@ -154,11 +154,11 @@ func (tv TupleValue) internalSize() int64 {
 	return ret
 }
 
-func (tv TupleValue) Size() int64 {
+func (tv *TupleValue) Size() int64 {
 	return tv.size
 }
 
-func (tv TupleValue) String() string {
+func (tv *TupleValue) String() string {
 	var buf bytes.Buffer
 	buf.WriteString("Tuple(")
 	for i, v := range tv.Contents() {
@@ -171,7 +171,7 @@ func (tv TupleValue) String() string {
 	return buf.String()
 }
 
-func (tv TupleValue) getPreImage() common.Hash {
+func (tv *TupleValue) getPreImage() common.Hash {
 	hashes := make([]common.Hash, 0, tv.itemCount)
 	for _, v := range tv.Contents() {
 		hashes = append(hashes, v.Hash())
@@ -184,13 +184,13 @@ func (tv TupleValue) getPreImage() common.Hash {
 	return firstHash
 }
 
-func (tv TupleValue) hash() (HashPreImage, common.Hash) {
+func (tv *TupleValue) hash() (HashPreImage, common.Hash) {
 	preImageHash := tv.getPreImage()
 	preImage := HashPreImage{preImageHash, tv.Size()}
 	return preImage, preImage.Hash()
 }
 
-func (tv TupleValue) GetPreImage() HashPreImage {
+func (tv *TupleValue) GetPreImage() HashPreImage {
 	if tv.deferredHashing {
 		tv.cachedPreImage, tv.cachedHash = tv.hash()
 		tv.deferredHashing = false
@@ -198,7 +198,7 @@ func (tv TupleValue) GetPreImage() HashPreImage {
 	return tv.cachedPreImage
 }
 
-func (tv TupleValue) Hash() common.Hash {
+func (tv *TupleValue) Hash() common.Hash {
 	if tv.deferredHashing {
 		tv.cachedPreImage, tv.cachedHash = tv.hash()
 		tv.deferredHashing = false

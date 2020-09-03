@@ -116,7 +116,7 @@ func (l Log) String() string {
 }
 
 func NewLogFromValue(val value.Value) (Log, error) {
-	tupVal, ok := val.(value.TupleValue)
+	tupVal, ok := val.(*value.TupleValue)
 	if !ok {
 		return Log{}, errors.New("log must be a tuple")
 	}
@@ -148,7 +148,7 @@ func NewLogFromValue(val value.Value) (Log, error) {
 	return Log{address, topics, logData}, nil
 }
 
-func (l Log) AsValue() value.TupleValue {
+func (l Log) AsValue() *value.TupleValue {
 	data := []value.Value{
 		value.NewValueFromAddress(l.Address),
 		inbox.BytesToByteStack(l.Data),
@@ -177,7 +177,7 @@ func LogStackToLogs(val value.Value) ([]Log, error) {
 	return logs, nil
 }
 
-func LogsToLogStack(logs []Log) value.TupleValue {
+func LogsToLogStack(logs []Log) *value.TupleValue {
 	logValues := make([]value.Value, 0, len(logs))
 	for i := range logs {
 		logValues = append(logValues, logs[len(logs)-1-i].AsValue())

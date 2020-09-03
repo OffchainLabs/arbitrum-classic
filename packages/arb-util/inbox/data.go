@@ -50,7 +50,7 @@ var errInt = errors.New("expected int value")
 var errTupleSize2 = errors.New("expected 2-tuple value")
 
 func StackValueToList(val value.Value) ([]value.Value, error) {
-	tupVal, ok := val.(value.TupleValue)
+	tupVal, ok := val.(*value.TupleValue)
 	if !ok {
 		return nil, errors2.Wrap(errTupleSize2, val.String())
 	}
@@ -63,7 +63,7 @@ func StackValueToList(val value.Value) ([]value.Value, error) {
 		member, _ := tupVal.GetByInt64(0)
 		val, _ := tupVal.GetByInt64(1)
 
-		tupVal, ok = val.(value.TupleValue)
+		tupVal, ok = val.(*value.TupleValue)
 		if !ok {
 			return nil, errors2.Wrap(errTupleSize2, val.String())
 		}
@@ -78,7 +78,7 @@ func StackValueToList(val value.Value) ([]value.Value, error) {
 	return values, nil
 }
 
-func ListToStackValue(vals []value.Value) value.TupleValue {
+func ListToStackValue(vals []value.Value) *value.TupleValue {
 	ret := value.NewEmptyTuple()
 	for _, val := range vals {
 		ret = value.NewTuple2(val, ret)
@@ -87,7 +87,7 @@ func ListToStackValue(vals []value.Value) value.TupleValue {
 }
 
 func ByteStackToHex(val value.Value) ([]byte, error) {
-	tup, ok := val.(value.TupleValue)
+	tup, ok := val.(*value.TupleValue)
 	if !ok {
 		return nil, errors2.Wrap(errTupleSize2, val.String())
 	}
@@ -124,7 +124,7 @@ func ByteStackToHex(val value.Value) ([]byte, error) {
 	return buf.Bytes()[:intLength], nil
 }
 
-func BytesToByteStack(val []byte) value.TupleValue {
+func BytesToByteStack(val []byte) *value.TupleValue {
 	chunks := bytesToValues(val)
 	ret := ListToStackValue(chunks)
 	return value.NewTuple2(value.NewInt64Value(int64(len(val))), ret)

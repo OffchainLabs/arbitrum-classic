@@ -94,7 +94,7 @@ func valueToJSON(val value.Value) (JSONValue, error) {
 	case value.IntValue:
 		intString := val.BigInt().Text(16)
 		return JSONValue{Int: &intString}, nil
-	case value.TupleValue:
+	case *value.TupleValue:
 		vals := make([]JSONValue, 0)
 		for _, subVal := range val.Contents() {
 			jsonSubVal, err := valueToJSON(subVal)
