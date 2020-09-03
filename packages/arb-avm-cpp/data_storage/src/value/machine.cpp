@@ -119,12 +119,25 @@ DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
 
         deleteCode(transaction, segment_counts);
 
-        if (!(delete_static_res.status.ok() &&
-              delete_register_res.status.ok() &&
-              delete_datastack_res.status.ok() &&
-              delete_auxstack_res.status.ok() &&
-              delete_staged_message_res.status.ok())) {
-            std::cout << "error deleting checkpoint" << std::endl;
+        if (!delete_static_res.status.ok()) {
+            std::cout << "error deleting static in checkpoint" << std::endl;
+        }
+
+        if (!delete_register_res.status.ok()) {
+            std::cout << "error deleting register in checkpoint" << std::endl;
+        }
+
+        if (!delete_datastack_res.status.ok()) {
+            std::cout << "error deleting datastack in checkpoint" << std::endl;
+        }
+
+        if (!delete_auxstack_res.status.ok()) {
+            std::cout << "error deleting auxstack in checkpoint" << std::endl;
+        }
+
+        if (!delete_staged_message_res.status.ok()) {
+            std::cout << "error deleting staged message in checkpoint"
+                      << std::endl;
         }
     }
     return delete_results;
