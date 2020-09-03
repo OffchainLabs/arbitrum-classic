@@ -168,6 +168,9 @@ func init() {
 	ignoredMethods["eth_getBlockByNumber"] = true
 	ignoredMethods["eth_getTransactionReceipt"] = true
 	ignoredMethods["net_version"] = true
+	ignoredMethods["eth_getCode"] = true
+	ignoredMethods["eth_getTransactionCount"] = true
+	ignoredMethods["eth_gasPrice"] = true
 }
 
 func (c *CodecRequest) ReadRequest(args interface{}) error {
