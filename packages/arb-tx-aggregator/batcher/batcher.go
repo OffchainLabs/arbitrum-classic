@@ -224,7 +224,6 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 	}
 
 	txHash := common.NewHashFromEth(tx.Hash())
-	//log.Println("Got tx: with hash", txHash, "from", ethSender.Hex())
 
 	m.Lock()
 	defer m.Unlock()
@@ -248,7 +247,7 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 }
 
 func (m *Batcher) setupPending() {
-	//snap := m.db.LatestSnapshot()
+	//snap := m.db.LatestSnapshot().Clone()
 	//if m.pendingBatch.snap.Height().Cmp(snap.Height()) < 0 {
 	//	// Add all of the already broadcast transactions to the snapshot
 	//	// If they were already included, they'll be ignored because they will
