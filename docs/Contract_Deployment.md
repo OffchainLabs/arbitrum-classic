@@ -28,7 +28,7 @@ To port an existing truffle configuration:
 
     const mnemonic =
       'jar deny prosper gasp flush glass core corn alarm treat leg smart'
-    const arbProviderUrl = 'http://localhost:1234/'
+    const arbProviderUrl = 'http://localhost:8547/'
     ```
 
 
