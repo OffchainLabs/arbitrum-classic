@@ -25,7 +25,7 @@ Validators will deposit currency stakes, which they will lose if they behave dis
 
 An ArbChain contains a set of contracts.
 Over time, you can launch new contracts in an ArbChain, and contracts can self-destruct, exactly as they do on the Ethereum blockchain.
-Arbitrum supports EVM, and therefore supports Solidity contracts. See (Solidity Support)[Solidity_Support.md] for a list of the few Solidity features which Arbitrum does not support.
+Arbitrum supports EVM, and therefore supports Solidity contracts. See [Solidity Support](Solidity_Support.md) for a list of the few Solidity features which Arbitrum does not support.
 
 
 ## How to make an ArbChain
@@ -33,7 +33,7 @@ Arbitrum supports EVM, and therefore supports Solidity contracts. See (Solidity 
 
 Suppose you’re a developer who has written a dApp for the Ethereum platform. Arbitrum interoperates with Ethereum, so you can launch your dapp on an Arbitrum Rollup chain and get better speed and scalability. 
 
-You’re starting with a dapp—or you’re planning to develop one—that’s made up of some contracts written in Solidity, along with a browser-based front end.  Here’s how to use Arbitrum with your dapp. Arbitrum supports dynamic launching of contracts on deployed chains just as in Ethereum by sending transactions to address zero or by using the CREATE and CREATE2 opcodes. Arbitrum is fully compatible with standard build tools (e.g. Truffle, Buidler). You can either launch your dApp on a new Rollup or deploy it to an existing one. Here, we describe the process for launching a new chain.
+You’re starting with a dapp—or you’re planning to develop one—that’s made up of some contracts written in Solidity, along with a browser-based front end.  Here’s how to use Arbitrum with your dapp. Arbitrum supports dynamic launching of contracts on deployed chains just as in Ethereum by sending transactions to address zero or by using the `CREATE` and `CREATE2` opcodes. Arbitrum is fully compatible with standard build tools (e.g. Truffle, Buidler). You can either launch your dApp on a new Rollup or deploy it to an existing one. Here, we describe the process for launching a new chain.
 
 First, you’ll want to identify an initial set of validators for your chain. We’ll talk later about how you might choose validators, and why people might want to validate a chain. Of course, validators will be able to come and go at will once the chain is going.  
 
@@ -58,14 +58,14 @@ The Arbitrum protocol ensures that an honest party can always win challenges.
 This deters dishonesty, and it ensures that any one honest party can force correct behavior, even if everyone else is dishonest.
 That's what makes ArbChains trustless.
 
-For more information on how validators advance a chain and resolve disputes, see [Progress and Dispute Resolution](Dispute_Resolution.md)
+For more information on how validators advance a chain and resolve disputes, see [Progress and Dispute Resolution](Dispute_Resolution.md).
 
 ### Who will validate your ArbChain?
 
 At this point, you might be wondering who will be validators of your ArbChain.
 Arbitrum allows anyone to validate any ArbChain, but who will step up and do it?
 
-Although validation is permissionless and anyone _can_ validate, it's important to make sure that each ArbChain always has one honest validator that is paying attention. As a dApp developer, you would probably want to validate your dApp's ArbChain, to help ensure its correctness and show confidence in your dApp.
+Although validation is permissionless and anyone _can_ validate, it's important to make sure that each ArbChain always has at least one honest validator that is paying attention. As a dApp developer, you would probably want to validate your dApp's ArbChain, to help ensure its correctness and show confidence in your dApp.
 
 For developers who do not want to validate themselves, you'll be able to hire a validator-as-a-service to validate your ArbChain once Arbitrum is released for production.  
 You might want to hire more than one, if you or your users worry that one might misbehave. As long as any validator behaves honestly, the Arbitrum protocol guarantees that all contracts in the ArbChain will run correctly according to their code. 
