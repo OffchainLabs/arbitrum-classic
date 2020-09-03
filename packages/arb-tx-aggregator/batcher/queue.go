@@ -3,12 +3,16 @@ package batcher
 import (
 	"container/heap"
 	"errors"
+	"log"
+	"math/rand"
+
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"math/rand"
 )
 
 // An TxHeap is a min-heap of transactions sorted by nonce.
@@ -217,9 +221,8 @@ func snapWithTx(snap *snapshot.Snapshot, tx *types.Transaction, signer types.Sig
 	return snap, err
 }
 
-func (p *pendingBatch) addUpdatedSnap(tx *types.Transaction, newSnap *snapshot.Snapshot) {
+func (p *pendingBatch) updateSnap(newSnap *snapshot.Snapshot) {
 	p.snap = newSnap
-	p.addIncludedTx(tx)
 }
 
 func (p *pendingBatch) addIncludedTx(tx *types.Transaction) {
@@ -230,25 +233,25 @@ func (p *pendingBatch) addIncludedTx(tx *types.Transaction) {
 }
 
 func (p *pendingBatch) checkValidForQueue(tx *types.Transaction) error {
-	//ethSender, _ := types.Sender(p.signer, tx)
-	//sender := arbcommon.NewAddressFromEth(ethSender)
-	//txCount, err := p.snap.GetTransactionCount(sender)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//if tx.Nonce() < txCount.Uint64() {
-	//	return core.ErrNonceTooLow
-	//}
-	//
-	//amount, err := p.snap.GetBalance(sender)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//if tx.Cost().Cmp(amount) > 0 {
-	//	log.Println("tx rejected for insufficient funds:", tx.Value(), tx.GasPrice(), tx.Gas(), amount)
-	//	return core.ErrInsufficientFunds
-	//}
+	ethSender, _ := types.Sender(p.signer, tx)
+	sender := arbcommon.NewAddressFromEth(ethSender)
+	txCount, err := p.snap.GetTransactionCount(sender)
+	if err != nil {
+		return err
+	}
+
+	if tx.Nonce() < txCount.Uint64() {
+		return core.ErrNonceTooLow
+	}
+
+	amount, err := p.snap.GetBalance(sender)
+	if err != nil {
+		return err
+	}
+
+	if tx.Cost().Cmp(amount) > 0 {
+		log.Println("tx rejected for insufficient funds:", tx.Value(), tx.GasPrice(), tx.Gas(), amount)
+		return core.ErrInsufficientFunds
+	}
 	return nil
 }

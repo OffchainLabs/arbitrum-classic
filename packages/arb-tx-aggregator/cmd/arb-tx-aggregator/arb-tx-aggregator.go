@@ -39,6 +39,7 @@ func main() {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	walletArgs := utils.AddWalletFlags(fs)
 	rpcVars := utils2.AddRPCFlags(fs)
+	keepPendingState := fs.Bool("pending", false, "enable pending state tracking")
 
 	//go http.ListenAndServe("localhost:6060", nil)
 
@@ -90,6 +91,7 @@ func main() {
 		"8547",
 		rpcVars,
 		time.Second*15,
+		*keepPendingState,
 	); err != nil {
 		log.Fatal(err)
 	}
