@@ -207,11 +207,6 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 	var lastBlock *common.BlockId
 	var lastBlockInfo *evm.BlockInfo
 	for _, avmLog := range assertion.ParseLogs() {
-		logIndex, err := txdb.as.LogCount()
-		if err != nil {
-			return nil, err
-		}
-
 		if err := txdb.as.SaveLog(avmLog); err != nil {
 			return nil, err
 		}
@@ -257,7 +252,9 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 			return nil, err
 		}
 		logBloom := types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
-		if err := txdb.as.SaveBlock(block, logIndex, logBloom); err != nil {
+
+		avmLogIndex := blockInfo.ChainStats.AVMLogCount.Uint64() - 1
+		if err := txdb.as.SaveBlock(block, avmLogIndex, logBloom); err != nil {
 			return nil, err
 		}
 
