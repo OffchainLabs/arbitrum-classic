@@ -204,8 +204,9 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 		}
 	}
 
-	avmLogs := assertion.ParseLogs()
-	for i, avmLog := range avmLogs {
+	var lastBlock *common.BlockId
+	var lastBlockInfo *evm.BlockInfo
+	for _, avmLog := range assertion.ParseLogs() {
 		logIndex, err := txdb.as.LogCount()
 		if err != nil {
 			return nil, err
@@ -224,10 +225,6 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 		blockInfo, ok := res.(*evm.BlockInfo)
 		if !ok {
 			continue
-		}
-
-		if i != len(avmLogs)-1 {
-			return nil, errors.New("block info should only come at end of assertion")
 		}
 
 		txCount := blockInfo.BlockStats.TxCount.Uint64()
@@ -270,12 +267,16 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 			}
 		}
 
-		txdb.callMut.Lock()
-		txdb.addSnap(blockInfo.BlockNum, blockInfo.Timestamp)
-		txdb.callMut.Unlock()
-		return block, nil
+		lastBlock = block
+		lastBlockInfo = blockInfo
 	}
-	return nil, nil
+
+	if lastBlockInfo != nil {
+		txdb.callMut.Lock()
+		txdb.addSnap(lastBlockInfo.BlockNum, lastBlockInfo.Timestamp)
+		txdb.callMut.Unlock()
+	}
+	return lastBlock, nil
 }
 
 func (txdb *TxDB) GetMessage(index uint64) (value.Value, error) {
