@@ -155,15 +155,19 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 		txdb.callMut.Lock()
 		txdb.lastInboxSeq = msg.Message.InboxSeqNum
 		txdb.callMut.Unlock()
-		block, err := txdb.processAssertion(ctx, assertion)
+		processedAssertion, err := txdb.processAssertion(ctx, assertion)
 		if err != nil {
 			return err
 		}
-		if block != nil {
+		if err := saveAssertion(txdb.as, processedAssertion); err != nil {
+			return err
+		}
+		if len(processedAssertion.blocks) > 0 {
+			block := processedAssertion.blocks[len(processedAssertion.blocks)-1]
 			txdb.callMut.Lock()
 			txdb.addSnap(txdb.mach.Clone(), block.blockInfo.BlockNum, block.blockInfo.Timestamp)
 			txdb.callMut.Unlock()
-			lastBlock = block
+			lastBlock = &block
 		}
 	}
 
@@ -171,15 +175,19 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 	// TODO: Give ExecuteCallServerAssertion the ability to run unbounded until it blocks
 	// The max steps here is a hack since it should just run until it blocks
 	assertion, _ := txdb.mach.ExecuteCallServerAssertion(1000000000000, nil, value.NewIntValue(nextBlockHeight), 0)
-	block, err := txdb.processAssertion(ctx, assertion)
+	processedAssertion, err := txdb.processAssertion(ctx, assertion)
 	if err != nil {
 		return err
 	}
-	if block != nil {
+	if err := saveAssertion(txdb.as, processedAssertion); err != nil {
+		return err
+	}
+	if len(processedAssertion.blocks) > 0 {
+		block := processedAssertion.blocks[len(processedAssertion.blocks)-1]
 		txdb.callMut.Lock()
 		txdb.addSnap(txdb.mach.Clone(), block.blockInfo.BlockNum, block.blockInfo.Timestamp)
 		txdb.callMut.Unlock()
-		lastBlock = block
+		lastBlock = &block
 	}
 
 	txdb.callMut.Lock()
@@ -204,19 +212,16 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 	return nil
 }
 
-func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.ExecutionAssertion) (*blockData, error) {
-	for _, avmMessage := range assertion.ParseOutMessages() {
-		if err := txdb.as.SaveMessage(avmMessage); err != nil {
-			return nil, err
-		}
-	}
+type processedAssertion struct {
+	avmLogs   []value.Value
+	blocks    []blockData
+	assertion *protocol.ExecutionAssertion
+}
 
-	var lastBlock *blockData
-	for _, avmLog := range assertion.ParseLogs() {
-		if err := txdb.as.SaveLog(avmLog); err != nil {
-			return nil, err
-		}
-
+func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.ExecutionAssertion) (processedAssertion, error) {
+	blocks := make([]blockData, 0)
+	avmLogs := assertion.ParseLogs()
+	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
 		if err != nil {
 			log.Println("Error parsing log result", err)
@@ -228,18 +233,53 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 			continue
 		}
 
-		txCount := blockInfo.BlockStats.TxCount.Uint64()
-		startLog := blockInfo.FirstAVMLog().Uint64()
+		block, err := txdb.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(blockInfo.BlockNum))
+		if err != nil {
+			return processedAssertion{}, err
+		}
+
+		blocks = append(blocks, blockData{
+			block:     block,
+			blockInfo: blockInfo,
+		})
+	}
+
+	return processedAssertion{
+		avmLogs:   avmLogs,
+		blocks:    blocks,
+		assertion: assertion,
+	}, nil
+}
+
+func saveAssertion(
+	as *cmachine.AggregatorStore,
+	processed processedAssertion,
+) error {
+	for _, avmLog := range processed.avmLogs {
+		if err := as.SaveLog(avmLog); err != nil {
+			return err
+		}
+	}
+
+	for _, avmMessage := range processed.assertion.ParseOutMessages() {
+		if err := as.SaveMessage(avmMessage); err != nil {
+			return err
+		}
+	}
+
+	for _, info := range processed.blocks {
+		txCount := info.blockInfo.BlockStats.TxCount.Uint64()
+		startLog := info.blockInfo.FirstAVMLog().Uint64()
 		ethLogs := make([]*types.Log, 0)
 		txResults := make([]*evm.TxResult, 0, txCount)
 		for i := uint64(0); i < txCount; i++ {
-			avmLog, err := txdb.as.GetLog(startLog + i)
+			avmLog, err := as.GetLog(startLog + i)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			txRes, err := evm.NewTxResultFromValue(avmLog)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			txResults = append(txResults, txRes)
 		}
@@ -253,29 +293,20 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 			}
 		}
 
-		block, err := txdb.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(blockInfo.BlockNum))
-		if err != nil {
-			return nil, err
-		}
 		logBloom := types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
 
-		avmLogIndex := blockInfo.ChainStats.AVMLogCount.Uint64() - 1
-		if err := txdb.as.SaveBlock(block, avmLogIndex, logBloom); err != nil {
-			return nil, err
+		avmLogIndex := info.blockInfo.ChainStats.AVMLogCount.Uint64() - 1
+		if err := as.SaveBlock(info.block, avmLogIndex, logBloom); err != nil {
+			return err
 		}
 
 		for i, txRes := range txResults {
-			if err := txdb.as.SaveRequest(txRes.IncomingRequest.MessageID, startLog+uint64(i)); err != nil {
-				return nil, err
+			if err := as.SaveRequest(txRes.IncomingRequest.MessageID, startLog+uint64(i)); err != nil {
+				return err
 			}
 		}
-
-		lastBlock = &blockData{
-			block:     block,
-			blockInfo: blockInfo,
-		}
 	}
-	return lastBlock, nil
+	return nil
 }
 
 func (txdb *TxDB) GetMessage(index uint64) (value.Value, error) {
