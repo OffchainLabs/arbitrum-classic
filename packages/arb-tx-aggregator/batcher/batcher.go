@@ -50,9 +50,10 @@ type pendingSentBatch struct {
 }
 
 type Batcher struct {
-	signer           types.Signer
-	client           ethutils.EthClient
-	globalInbox      arbbridge.GlobalInbox
+	signer      types.Signer
+	client      ethutils.EthClient
+	globalInbox arbbridge.GlobalInbox
+
 	keepPendingState bool
 
 	db *txdb.TxDB
@@ -89,7 +90,7 @@ func NewBatcher(
 
 	go func() {
 		lastBatch := time.Now()
-		ticker := time.NewTicker(time.Millisecond * 1000)
+		ticker := time.NewTicker(time.Millisecond * 100)
 		defer ticker.Stop()
 		for {
 			select {
@@ -154,7 +155,7 @@ func NewBatcher(
 						log.Fatal("Error submitted batch", err)
 					}
 
-					log.Println("Batch with tx", receipt.TxHash.Hex(), "completed at block", receipt.BlockNumber, "using", receipt.GasUsed, "gas")
+					log.Println("Got receipt for batch in tx", receipt.TxHash.Hex(), "completed at block", receipt.BlockNumber, "using", receipt.GasUsed, "gas")
 
 					// batch succeeded
 					server.Lock()
