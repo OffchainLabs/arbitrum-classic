@@ -41,7 +41,7 @@ func NewOutMessage(msg Message, sender common.Address) OutMessage {
 
 func NewOutMessageFromValue(val value.Value) (OutMessage, error) {
 	failRet := OutMessage{}
-	tup, ok := val.(value.TupleValue)
+	tup, ok := val.(*value.TupleValue)
 	if !ok {
 		return failRet, errors.New("val must be a tuple")
 	}

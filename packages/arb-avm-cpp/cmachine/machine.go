@@ -193,7 +193,7 @@ func (m *Machine) ExecuteCallServerAssertion(
 func (m *Machine) ExecuteSideloadedAssertion(
 	maxSteps uint64,
 	inboxMessages []inbox.InboxMessage,
-	sideloadValue value.TupleValue,
+	sideloadValue *value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
 	msgDataC := C.CBytes(encodeInboxMessages(inboxMessages))

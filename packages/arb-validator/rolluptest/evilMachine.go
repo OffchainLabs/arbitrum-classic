@@ -75,7 +75,7 @@ func (e EvilMachine) ExecuteAssertion(
 func (e EvilMachine) ExecuteSideloadedAssertion(
 	maxSteps uint64,
 	inboxMessages []inbox.InboxMessage,
-	sideloadValue value.TupleValue,
+	sideloadValue *value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
 	assn, numSteps := e.Machine.ExecuteSideloadedAssertion(maxSteps, inboxMessages, sideloadValue, maxWallTime)
