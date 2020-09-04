@@ -41,7 +41,7 @@ import (
 //go:generate protoc -I. -I ../.. --go_out=paths=source_relative:. chainobserver.proto
 
 type ChainObserver struct {
-	*sync.RWMutex
+	sync.RWMutex
 	NodeGraph           *nodegraph.StakedNodeGraph
 	rollupAddr          common.Address
 	Inbox               *structures.Inbox
@@ -227,7 +227,7 @@ func (chain *ChainObserver) AddListener(
 	chain.listeners = append(chain.listeners, listener)
 	chain.Unlock()
 	chain.RLock()
-	listener.AddedToChain(ctx, chain.PendingCorrectNodes())
+	listener.AddedToChain(ctx, chain.pendingCorrectNodes())
 	chain.RUnlock()
 }
 
@@ -282,7 +282,6 @@ func (x *ChainObserverBuf) unmarshalFromCheckpoint(
 	}
 
 	return &ChainObserver{
-		RWMutex:             &sync.RWMutex{},
 		NodeGraph:           nodeGraph,
 		rollupAddr:          x.ContractAddress.Unmarshal(),
 		Inbox:               &structures.Inbox{MessageStack: inbox},
@@ -305,7 +304,6 @@ func newChain(
 	}
 	nodeGraph := nodegraph.NewStakedNodeGraph(mach, vmParams)
 	return &ChainObserver{
-		RWMutex:             &sync.RWMutex{},
 		NodeGraph:           nodeGraph,
 		rollupAddr:          rollupAddr,
 		Inbox:               structures.NewInbox(),
@@ -417,9 +415,7 @@ func (chain *ChainObserver) RestartFromLatestValid(ctx context.Context) {
 	}
 }
 
-func (chain *ChainObserver) PendingCorrectNodes() []*structures.Node {
-	chain.RLock()
-	defer chain.RUnlock()
+func (chain *ChainObserver) pendingCorrectNodes() []*structures.Node {
 	var nodes []*structures.Node
 	for node := chain.calculatedValidNode; node != chain.NodeGraph.LatestConfirmed(); node = node.Prev() {
 		nodes = append(nodes, node)
