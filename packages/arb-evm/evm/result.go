@@ -196,7 +196,7 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 }
 
 func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.Value, chainInfo value.Value) (*TxResult, error) {
-	resultTup, ok := resultInfo.(value.TupleValue)
+	resultTup, ok := resultInfo.(*value.TupleValue)
 	if !ok || resultTup.Len() != 3 {
 		return nil, fmt.Errorf("advise expected result info tuple of length 3, but recieved %v", resultTup)
 	}
@@ -204,14 +204,14 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 	returnData, _ := resultTup.GetByInt64(1)
 	evmLogs, _ := resultTup.GetByInt64(2)
 
-	gasInfoTup, ok := gasInfo.(value.TupleValue)
+	gasInfoTup, ok := gasInfo.(*value.TupleValue)
 	if !ok || gasInfoTup.Len() != 2 {
 		return nil, fmt.Errorf("advise expected gas info tuple of length 2, but recieved %v", gasInfoTup)
 	}
 	gasUsed, _ := gasInfoTup.GetByInt64(0)
 	gasPrice, _ := gasInfoTup.GetByInt64(1)
 
-	chainInfoTup, ok := chainInfo.(value.TupleValue)
+	chainInfoTup, ok := chainInfo.(*value.TupleValue)
 	if !ok || chainInfoTup.Len() != 3 {
 		return nil, fmt.Errorf("advise expected tx block data tuple of length 3, but recieved %v", resultTup)
 	}
@@ -357,7 +357,7 @@ func parseBlockResult(blockNum value.Value, timestamp value.Value, gasLimit valu
 }
 
 func parseOutputStatistics(val value.Value) (*OutputStatistics, error) {
-	tup, ok := val.(value.TupleValue)
+	tup, ok := val.(*value.TupleValue)
 	if !ok || tup.Len() != 5 {
 		return nil, errors.New("expected result to be nonempty tuple")
 	}
@@ -397,7 +397,7 @@ func parseOutputStatistics(val value.Value) (*OutputStatistics, error) {
 }
 
 func NewResultFromValue(val value.Value) (Result, error) {
-	tup, ok := val.(value.TupleValue)
+	tup, ok := val.(*value.TupleValue)
 	if !ok || tup.Len() == 0 {
 		return nil, errors.New("expected result to be nonempty tuple")
 	}
