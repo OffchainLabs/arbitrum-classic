@@ -171,7 +171,10 @@ func (tv *TupleValue) String() string {
 	return buf.String()
 }
 
-func (tv *TupleValue) getPreImage() common.Hash {
+func (tv *TupleValue) cacheHashImpl() {
+	if !tv.deferredHashing {
+		return
+	}
 	hashes := make([]common.Hash, 0, tv.itemCount)
 	for _, v := range tv.Contents() {
 		hashes = append(hashes, v.Hash())
@@ -181,27 +184,46 @@ func (tv *TupleValue) getPreImage() common.Hash {
 		hashing.Uint8(byte(tv.itemCount)),
 		hashing.Bytes32ArrayEncoded(hashes),
 	)
-	return firstHash
+
+	tv.cachedPreImage = HashPreImage{firstHash, tv.Size()}
+	tv.cachedHash = tv.cachedPreImage.Hash()
+	tv.deferredHashing = false
 }
 
-func (tv *TupleValue) hash() (HashPreImage, common.Hash) {
-	preImageHash := tv.getPreImage()
-	preImage := HashPreImage{preImageHash, tv.Size()}
-	return preImage, preImage.Hash()
+func (tv *TupleValue) cacheHash() {
+	unhashed := []*TupleValue{tv}
+	for len(unhashed) > 0 {
+		tup := unhashed[len(unhashed)-1]
+		if !tup.deferredHashing {
+			// Remove from the list if the tup is hashed
+			unhashed = unhashed[:len(unhashed)-1]
+			continue
+		}
+		unhashedMember := false
+		for _, v := range tup.Contents() {
+			nestedTup, ok := v.(*TupleValue)
+			if !ok {
+				continue
+			}
+			if nestedTup.deferredHashing {
+				unhashedMember = true
+				unhashed = append(unhashed, nestedTup)
+			}
+		}
+		if !unhashedMember {
+			tup.cacheHashImpl()
+			// Remove from the list if the tup is hashed
+			unhashed = unhashed[:len(unhashed)-1]
+		}
+	}
 }
 
 func (tv *TupleValue) GetPreImage() HashPreImage {
-	if tv.deferredHashing {
-		tv.cachedPreImage, tv.cachedHash = tv.hash()
-		tv.deferredHashing = false
-	}
+	tv.cacheHash()
 	return tv.cachedPreImage
 }
 
 func (tv *TupleValue) Hash() common.Hash {
-	if tv.deferredHashing {
-		tv.cachedPreImage, tv.cachedHash = tv.hash()
-		tv.deferredHashing = false
-	}
+	tv.cacheHash()
 	return tv.cachedHash
 }
