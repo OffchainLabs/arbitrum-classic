@@ -40,7 +40,7 @@ func ensureInitialized(
 	rollupAddr common.Address,
 ) error {
 	if err := db.Load(ctx); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// If we're already initialized, do nothing
