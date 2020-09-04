@@ -3,14 +3,16 @@ package batcher
 import (
 	"container/heap"
 	"errors"
+	"log"
+	"math/rand"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"log"
-	"math/rand"
 )
 
 // An TxHeap is a min-heap of transactions sorted by nonce.
@@ -219,8 +221,11 @@ func snapWithTx(snap *snapshot.Snapshot, tx *types.Transaction, signer types.Sig
 	return snap, err
 }
 
-func (p *pendingBatch) addUpdatedSnap(tx *types.Transaction, newSnap *snapshot.Snapshot) {
+func (p *pendingBatch) updateSnap(newSnap *snapshot.Snapshot) {
 	p.snap = newSnap
+}
+
+func (p *pendingBatch) addIncludedTx(tx *types.Transaction) {
 	p.appliedTxes = append(p.appliedTxes, tx)
 	p.sizeBytes += tx.Size()
 	sender, _ := types.Sender(p.signer, tx)

@@ -174,7 +174,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 							for _, lis := range chain.listeners {
 								lis.AssertionPrepared(
 									ctx,
-									chain.GetChainParams(),
+									chain.NodeGraph.Params(),
 									chain.NodeGraph,
 									chain.KnownValidNode,
 									prepared.Clone(),

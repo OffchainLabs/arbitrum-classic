@@ -278,10 +278,10 @@ func (t ContractTransaction) AsData() ([]byte, error) {
 
 func (t ContractTransaction) AsDataSafe() []byte {
 	ret := make([]byte, 0)
-	ret = append(ret, math.U256Bytes(t.MaxGas)...)
-	ret = append(ret, math.U256Bytes(t.GasPriceBid)...)
+	ret = append(ret, math.U256Bytes(new(big.Int).Set(t.MaxGas))...)
+	ret = append(ret, math.U256Bytes(new(big.Int).Set(t.GasPriceBid))...)
 	ret = append(ret, addressData(t.DestAddress)...)
-	ret = append(ret, math.U256Bytes(t.Payment)...)
+	ret = append(ret, math.U256Bytes(new(big.Int).Set(t.Payment))...)
 	ret = append(ret, t.Data...)
 	return ret
 }

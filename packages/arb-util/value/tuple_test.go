@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-package web3
+package value
 
-import (
-	"net/http"
-)
+import "testing"
 
-type Web3 struct {
-}
-
-func (web3 *Web3) ClientVersion(r *http.Request, _ *EmptyArgs, reply *string) error {
-	*reply = "arb-tx-aggregator/v0.7.1"
-	return nil
+func TestTupHash(t *testing.T) {
+	tup := NewEmptyTuple()
+	for i := 0; i < 10; i++ {
+		tup = NewTuple2(tup, tup)
+	}
+	tup.Hash()
 }
