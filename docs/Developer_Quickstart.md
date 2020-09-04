@@ -7,57 +7,26 @@ custom_edit_url:https://github.com/OffchainLabs/arbitrum/edit/master/docs/Develo
 
 Arbitrum is a suite of Ethereum scaling solutions that enables high-throughput, low cost smart contracts while remaining trustlessly secure. Arbitrum has three modes: AnyTrust Channels, AnyTrust Sidechains, and Arbitrum Rollup. The following documentation describes how to use Arbitrum Rollup, which is currently live on testnet. Whether you're a developer that just wants to start building or you're curious into digging deeper into the internals of Arbitrum and how it works, this site is the right place for you.
 
-
 ### How does Arbitrum work?
 
 If you're looking to discover how Arbitrum works, the best place to begin is by the [Rollups basics](Rollup_basics.md) section, which gives a high level overview of Arbitrum's internals. From there, you can jump into more detailed explainers on various components of the system.
-  
+
 ### How Can I Start Buidling
 
-The very first step to start building with Arbitrum is [installing](Installation.md) Arbitrum and its dependencies. Next, you'll need to have deploy an Arbitrum chain on an L1 blockchain. Arbitrum Rollup supports deployment both on a [local testnet](Local_Blockchain.md) and on the [Rinkeby Testnet](Rinkeby.md). The following quickstart walks through deployment of an Arbitrum Rollup chain on the local testnet. 
+The very first step to start building with Arbitrum is [installing](Installation.md) Arbitrum and its dependencies. Next, you'll need to have deploy an Arbitrum chain on an L1 blockchain. Arbitrum Rollup supports deployment both on a [local testnet](Local_Blockchain.md) and on the [Rinkeby Testnet](Rinkeby.md). The following quickstart walks through deployment of an Arbitrum Rollup chain on the local testnet.
 
-Note that Abitrum chains support dynamic launching of contracts, so you don't need to setup an Arbitrum chain for each application you build, and indeed you may deploy your contracts on a testnet chain which you did not launch. The benefits of having multiple applications on the same Arbitrum Rollup chain is that they'll be able to interact synchronously, just as they would if they were launched directly on Ethereum. 
+Note that Abitrum chains support dynamic launching of contracts, so you don't need to setup an Arbitrum chain for each application you build, and indeed you may deploy your contracts on a testnet chain which you did not launch. The benefits of having multiple applications on the same Arbitrum Rollup chain is that they'll be able to interact synchronously, just as they would if they were launched directly on Ethereum.
 
 Once you have deployed Arbitrum, you can [build and run the demo app](#hello-arbitrum) or [deploy your own contracts](Contract_Deployment.md).
 
 **Want to learn more? Check out the** [**open source code**](https://github.com/offchainlabs/arbitrum)**. Join the team on** [**Discord**](https://discord.gg/ZpZuw7p)**.**
 
-## Setup Blockchain
+## Setup Local Geth and Rollup BlockChain
 
-To build a docker image hosting a local test blockchain docker image with Arbitrum smart contracts already deployed, run:
-
-```bash
-yarn docker:build:geth
-```
-
-To start the local blockchain inside the Arbitrum monorepo, run:
-
-```bash
-yarn docker:geth
-```
-
-## Setup Rollup
-
-To deploy a rollup chain, and initialize one or more validators, run:
-
-```bash
-yarn demo:initialize [--validatorcount N]
-```
-
-To launch the validators initialized in the previous step, run:
-
-```bash
-yarn demo:deploy
-```
-
-    > Note: this step may take about 10 minutes the very first time. Subsequent
-    > builds are much faster. You can also use the `--up` flag to skip builds
-    > if one has completed successfully before.
-
-The local test blockchain and the validators should be running for all steps inside this tutorial. Note that
-stopping and restarting the client will lose all blockchain state, but the validators can be relaunched without losing state.
+See [Local Blockchain Setup](https://github.com/OffchainLabs/arbitrum/blob/master/docs/Local_Blockchain.md).
 
 ## Hello, Arbitrum
+
 Now you'll deploy and run a demo dApp on Arbitrum. The dApp is based on
 a simple Pet Shop dApp that is used in a Truffle tutorial.
 
