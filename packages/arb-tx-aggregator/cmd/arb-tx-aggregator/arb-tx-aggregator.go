@@ -41,10 +41,10 @@ func main() {
 	rpcVars := utils2.AddRPCFlags(fs)
 	keepPendingState := fs.Bool("pending", false, "enable pending state tracking")
 
-	blocktime := fs.Int64(
-		"blocktime",
-		2,
-		"blocktime=NumSeconds",
+	maxBatchTime := fs.Int64(
+		"maxBatchTime",
+		10,
+		"maxBatchTime=NumSeconds",
 	)
 
 	//go http.ListenAndServe("localhost:6060", nil)
@@ -56,13 +56,11 @@ func main() {
 
 	if fs.NArg() != 3 {
 		log.Fatalf(
-			"usage: arb-tx-aggregator [--blocktime=NumSeconds] %v %v",
+			"usage: arb-tx-aggregator [--maxBatchTime=NumSeconds] %v %v",
 			utils.WalletArgsString,
 			utils.RollupArgsString,
 		)
 	}
-
-	common.SetDurationPerBlock(time.Duration(*blocktime) * time.Second)
 
 	rollupArgs := utils.ParseRollupCommand(fs, 0)
 
@@ -98,7 +96,7 @@ func main() {
 		"1235",
 		"8547",
 		rpcVars,
-		common.GetDurationPerBlock(), // Submit at least 1 batch per block if there are pending txes
+		time.Duration(*maxBatchTime)*time.Second,
 		*keepPendingState,
 	); err != nil {
 		log.Fatal(err)

@@ -156,7 +156,7 @@ func maybeMatchesLogQuery(logFilter types.Bloom, addresses []common.Address, top
 	if len(addresses) > 0 {
 		match := false
 		for _, addr := range addresses {
-			if logFilter.TestBytes(addr[:]) {
+			if types.BloomLookup(logFilter, addr) {
 				match = true
 				break
 			}
@@ -172,7 +172,7 @@ func maybeMatchesLogQuery(logFilter types.Bloom, addresses []common.Address, top
 		}
 		match := false
 		for _, topic := range topicGroup {
-			if logFilter.TestBytes(topic[:]) {
+			if types.BloomLookup(logFilter, topic) {
 				match = true
 				break
 			}
