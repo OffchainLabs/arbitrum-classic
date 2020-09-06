@@ -18,7 +18,7 @@ package main
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"io/ioutil"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -26,6 +26,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
 func main() {
@@ -96,6 +97,9 @@ func generateTestCase(ethURL string, rollupAddress common.Address, contract stri
 	if err != nil {
 		return err
 	}
-	log.Println(string(data))
+
+	if err := ioutil.WriteFile("log.json", data, 0644); err != nil {
+		return err
+	}
 	return nil
 }
