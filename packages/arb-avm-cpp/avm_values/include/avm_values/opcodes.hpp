@@ -103,6 +103,7 @@ enum class OpCode : uint8_t {
     SIDELOAD = 0x7B,
 
     ECRECOVER = 0x80,
+    ECPAIRING = 0x83,
 
     DEBUG_PRINT = 0x90,
 };

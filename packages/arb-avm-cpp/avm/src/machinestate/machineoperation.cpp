@@ -15,6 +15,8 @@
  */
 
 #include <avm/machinestate/machineoperation.hpp>
+
+#include <avm/machinestate/ecops.hpp>
 #include <avm/machinestate/machinestate.hpp>
 
 #include <ethash/keccak.h>
@@ -70,6 +72,14 @@ uint64_t assumeInt64(uint256_t& val) {
 }
 
 Tuple& assumeTuple(value& val) {
+    auto tup = nonstd::get_if<Tuple>(&val);
+    if (!tup) {
+        throw bad_pop_type{};
+    }
+    return *tup;
+}
+
+const Tuple& assumeTuple(const value& val) {
     auto tup = nonstd::get_if<Tuple>(&val);
     if (!tup) {
         throw bad_pop_type{};
@@ -679,6 +689,40 @@ void ec_recover(MachineState& m) {
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();
+    ++m.pc;
+}
+
+void ec_pairing(MachineState& m) {
+    m.stack.prepForMod(1);
+
+    std::vector<std::array<uint256_t, 6>> points;
+
+    const Tuple* val = &assumeTuple(m.stack[0]);
+    while (val->tuple_size() != 0) {
+        if (val->tuple_size() != 2) {
+            throw bad_pop_type{};
+        }
+        auto& next = assumeTuple(val->get_element_unsafe(0));
+        val = &assumeTuple(val->get_element_unsafe(1));
+
+        if (next.tuple_size() != 6) {
+            throw bad_pop_type{};
+        }
+        points.push_back({assumeInt(next.get_element_unsafe(0)),
+                          assumeInt(next.get_element_unsafe(1)),
+                          assumeInt(next.get_element_unsafe(2)),
+                          assumeInt(next.get_element_unsafe(3)),
+                          assumeInt(next.get_element_unsafe(4)),
+                          assumeInt(next.get_element_unsafe(5))});
+    }
+
+    auto ret = ecpairing(points);
+    if (nonstd::holds_alternative<std::string>(ret)) {
+        m.state = Status::Error;
+        return;
+    }
+
+    m.stack[0] = ret.get<bool>() ? 1 : 0;
     ++m.pc;
 }
 

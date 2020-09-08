@@ -78,6 +78,7 @@ void tlen(MachineState& m);
 void xget(MachineState& m);
 void xset(MachineState& m);
 void ec_recover(MachineState& m);
+void ec_pairing(MachineState& m);
 BlockReason breakpoint(MachineState&);
 void log(MachineState& m);
 void debug(MachineState& m);
