@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "ecops.hpp"
+
 #include <avm/machine.hpp>
 #include <avm/machinestate/machineoperation.hpp>
 
@@ -987,6 +989,20 @@ TEST_CASE("ecrecover opcode is correct") {
             return machines[i].runOp(OpCode::ECRECOVER);
         });
     };
+}
+
+TEST_CASE("ECPAIRING") {
+    for (const auto& testCase : prepareCases()) {
+        Tuple p1(testCase.a.x, testCase.a.y, testCase.b.x0, testCase.b.x1,
+                 testCase.b.y0, testCase.b.y1);
+        Tuple p2(testCase.c.x, testCase.c.y, testCase.d.x0, testCase.d.x1,
+                 testCase.d.y0, testCase.d.y1);
+        MachineState mach;
+        mach.stack.push(Tuple(p2, Tuple(p1, Tuple())));
+        mach.runOp(OpCode::ECPAIRING);
+        REQUIRE(mach.state == Status::Extensive);
+        REQUIRE(mach.stack[0] == value(1));
+    }
 }
 
 TEST_CASE("INBOX opcode is correct") {
