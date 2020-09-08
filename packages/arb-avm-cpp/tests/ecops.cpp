@@ -147,6 +147,13 @@ TEST_CASE("ECPairing: ecpairing_internal") {
     REQUIRE(prod == ecpairing_internal(all_points));
 }
 
+struct PairingTestCase {
+    G1<alt_bn128_pp> a;
+    G2<alt_bn128_pp> b;
+    G1<alt_bn128_pp> c;
+    G2<alt_bn128_pp> d;
+};
+
 TEST_CASE("ECPairing: ecpairing") {
     G1<alt_bn128_pp> P =
         (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
@@ -160,44 +167,22 @@ TEST_CASE("ECPairing: ecpairing") {
     G1<alt_bn128_pp> sP = s * P;
     G2<alt_bn128_pp> sQ = s * Q;
 
-    auto pg1 = toArbPoint(negone * P);
-    auto sqg2 = toArbPoint(sQ);
-    auto spg1 = toArbPoint(sP);
-    auto qg2 = toArbPoint(Q);
+    std::vector<PairingTestCase> cases;
+    cases.push_back({negone * P, sQ, sP, Q});
+    cases.push_back({P, negone * sQ, sP, Q});
+    cases.push_back({P, sQ, negone * sP, Q});
+    cases.push_back({P, sQ, sP, negone * Q});
 
-    std::vector<std::array<uint256_t, 6>> all_points = {
-        {pg1.x, pg1.y, sqg2.x0, sqg2.x1, sqg2.y0, sqg2.y1},
-        {spg1.x, spg1.y, qg2.x0, qg2.x1, qg2.y0, qg2.y1}};
+    for (const auto& testCase : cases) {
+        auto pg1 = toArbPoint(testCase.a);
+        auto sqg2 = toArbPoint(testCase.b);
+        auto spg1 = toArbPoint(testCase.c);
+        auto qg2 = toArbPoint(testCase.d);
 
-    REQUIRE(ecpairing(all_points) != 0);
+        std::vector<std::array<uint256_t, 6>> all_points = {
+            {pg1.x, pg1.y, sqg2.x0, sqg2.x1, sqg2.y0, sqg2.y1},
+            {spg1.x, spg1.y, qg2.x0, qg2.x1, qg2.y0, qg2.y1}};
 
-    pg1 = toArbPoint(P);
-    sqg2 = toArbPoint(negone * sQ);
-    spg1 = toArbPoint(sP);
-    qg2 = toArbPoint(Q);
-
-    all_points = {{pg1.x, pg1.y, sqg2.x0, sqg2.x1, sqg2.y0, sqg2.y1},
-                  {spg1.x, spg1.y, qg2.x0, qg2.x1, qg2.y0, qg2.y1}};
-
-    REQUIRE(ecpairing(all_points) != 0);
-
-    pg1 = toArbPoint(P);
-    sqg2 = toArbPoint(sQ);
-    spg1 = toArbPoint(negone * sP);
-    qg2 = toArbPoint(Q);
-
-    all_points = {{pg1.x, pg1.y, sqg2.x0, sqg2.x1, sqg2.y0, sqg2.y1},
-                  {spg1.x, spg1.y, qg2.x0, qg2.x1, qg2.y0, qg2.y1}};
-
-    REQUIRE(ecpairing(all_points) != 0);
-
-    pg1 = toArbPoint(P);
-    sqg2 = toArbPoint(sQ);
-    spg1 = toArbPoint(sP);
-    qg2 = toArbPoint(negone * Q);
-
-    all_points = {{pg1.x, pg1.y, sqg2.x0, sqg2.x1, sqg2.y0, sqg2.y1},
-                  {spg1.x, spg1.y, qg2.x0, qg2.x1, qg2.y0, qg2.y1}};
-
-    REQUIRE(ecpairing(all_points) != 0);
+        REQUIRE(ecpairing(all_points) != 0);
+    }
 }
