@@ -103,9 +103,9 @@ TEST_CASE("ECPairing: g1PfromBytes") {
     G1<alt_bn128_pp> P =
         (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
 
-    G1<alt_bn128_pp> outP = g1PfromBytes(toArbPoint(P));
-
-    REQUIRE(outP == P);
+    auto outP = g1PfromBytes(toArbPoint(P));
+    REQUIRE(nonstd::holds_alternative<G1<alt_bn128_pp>>(outP));
+    REQUIRE(outP.get<G1<alt_bn128_pp>>() == P);
 }
 
 TEST_CASE("ECPairing: g2PfromBytes") {
@@ -114,9 +114,9 @@ TEST_CASE("ECPairing: g2PfromBytes") {
     G2<alt_bn128_pp> P =
         (Fr<alt_bn128_pp>::random_element()) * G2<alt_bn128_pp>::one();
 
-    G2<alt_bn128_pp> outP = g2PfromBytes(toArbPoint(P));
-
-    REQUIRE(outP == P);
+    auto outP = g2PfromBytes(toArbPoint(P));
+    REQUIRE(nonstd::holds_alternative<G2<alt_bn128_pp>>(outP));
+    REQUIRE(outP.get<G2<alt_bn128_pp>>() == P);
 }
 
 TEST_CASE("ECPairing: ecpairing_internal") {
@@ -144,7 +144,9 @@ TEST_CASE("ECPairing: ecpairing_internal") {
     for (int i = 0; i < numPairs; i++) {
         prod = prod * alt_bn128_pp::reduced_pairing(P[i], Q[i]);
     }
-    REQUIRE(prod == ecpairing_internal(all_points));
+    auto res = ecpairing_internal(all_points);
+    REQUIRE(nonstd::holds_alternative<alt_bn128_GT>(res));
+    REQUIRE(prod == res.get<alt_bn128_GT>());
 }
 
 struct PairingTestCase {
@@ -183,6 +185,8 @@ TEST_CASE("ECPairing: ecpairing") {
             {pg1.x, pg1.y, sqg2.x0, sqg2.x1, sqg2.y0, sqg2.y1},
             {spg1.x, spg1.y, qg2.x0, qg2.x1, qg2.y0, qg2.y1}};
 
-        REQUIRE(ecpairing(all_points) != 0);
+        auto res = ecpairing(all_points);
+        REQUIRE(nonstd::holds_alternative<bool>(res));
+        REQUIRE(res.get<bool>());
     }
 }

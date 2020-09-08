@@ -11,6 +11,8 @@
 #include <libff/algebra/curves/alt_bn128/alt_bn128_pp.hpp>
 #include <libff/common/profiling.hpp>
 
+#include <nonstd/variant.hpp>
+
 using namespace libff;
 
 namespace {
@@ -27,7 +29,8 @@ static Init init;
 // also assumes 64 bytes, 0..31 for X and 32...64 for Y, representing a curve
 // point using affine coordinates if either X or Y is less than 32 bytes, they
 // are assumed to be padded with leading 0s
-G1<alt_bn128_pp> g1PfromBytes(const G1Point& point) {
+nonstd::variant<G1<alt_bn128_pp>, std::string> g1PfromBytes(
+    const G1Point& point) {
     uint8_t xbytes[32];
     intx::be::store(xbytes, point.x);
     uint8_t ybytes[32];
@@ -49,11 +52,11 @@ G1<alt_bn128_pp> g1PfromBytes(const G1Point& point) {
     }
 
     if (mpz_cmp(mpzx, modulus) >= 0) {
-        throw -2;  // change to throw AVM exception
+        return std::string("bad x");
     }
 
     if (mpz_cmp(mpzy, modulus) >= 0) {
-        throw -3;  // change to throw AVM exception
+        return std::string("bad y");
     }
 
     bigint<4L> xbi(mpzx);
@@ -66,7 +69,7 @@ G1<alt_bn128_pp> g1PfromBytes(const G1Point& point) {
 
     mpz_clears(mpzx, mpzy, modulus, NULL);
     if (!P.is_well_formed()) {
-        throw -1;  // change to throw AVM exception
+        return std::string("badly formed g1 point");
     }
     return P;
 }
@@ -75,7 +78,8 @@ G1<alt_bn128_pp> g1PfromBytes(const G1Point& point) {
 // also assumes 128 bytes representing a curve point using affine coordinates
 // if either X or Y is less than 64 bytes, they are assumed to be padded with
 // leading 0s
-G2<alt_bn128_pp> g2PfromBytes(const G2Point& point) {
+nonstd::variant<G2<alt_bn128_pp>, std::string> g2PfromBytes(
+    const G2Point& point) {
     uint8_t xc0bytes[32];
     intx::be::store(xc0bytes, point.x0);
     uint8_t xc1bytes[32];
@@ -103,19 +107,19 @@ G2<alt_bn128_pp> g2PfromBytes(const G2Point& point) {
     }
 
     if (mpz_cmp(mpzxc0, modulus) >= 0) {
-        throw -2;  // change to throw AVM exception
+        return std::string("bad x0");
     }
 
     if (mpz_cmp(mpzxc1, modulus) >= 0) {
-        throw -3;  // change to throw AVM exception
+        return std::string("bad x1");
     }
 
     if (mpz_cmp(mpzyc0, modulus) >= 0) {
-        throw -4;  // change to throw AVM exception
+        return std::string("bad y0");
     }
 
     if (mpz_cmp(mpzyc1, modulus) >= 0) {
-        throw -5;  // change to throw AVM exception
+        return std::string("bad y1");
     }
 
     bigint<4L> xc0bi(mpzxc0);
@@ -136,29 +140,36 @@ G2<alt_bn128_pp> g2PfromBytes(const G2Point& point) {
 
     mpz_clears(mpzxc0, mpzxc1, mpzyc0, mpzyc1, modulus, NULL);
     if (!P.is_well_formed()) {
-        throw -1;  // change to throw AVM exception
+        return std::string("badly formed g2 point");
     }
     return P;
 }
 
-alt_bn128_GT ecpairing_internal(
+nonstd::variant<alt_bn128_GT, std::string> ecpairing_internal(
     const std::vector<std::array<uint256_t, 6>>& input) {
-    if (input.size() > 20) {
-        throw -2;  // change to throw AVM exception
-    }
-
     alt_bn128_Fq12 prod = alt_bn128_Fq12::one();
 
     for (const auto& item : input) {
-        prod = prod * alt_bn128_pp::pairing(
-                          g1PfromBytes({item[0], item[1]}),
-                          g2PfromBytes({item[2], item[3], item[4], item[5]}));
+        auto g1 = g1PfromBytes({item[0], item[1]});
+        auto g2 = g2PfromBytes({item[2], item[3], item[4], item[5]});
+        if (nonstd::holds_alternative<std::string>(g1)) {
+            return g1.get<std::string>();
+        }
+        if (nonstd::holds_alternative<std::string>(g2)) {
+            return g2.get<std::string>();
+        }
+        prod = prod * alt_bn128_pp::pairing(g1.get<G1<alt_bn128_pp>>(),
+                                            g2.get<G2<alt_bn128_pp>>());
     }
 
-    const alt_bn128_GT result = alt_bn128_final_exponentiation(prod);
-    return result;
+    return alt_bn128_final_exponentiation(prod);
 }
 
-int ecpairing(const std::vector<std::array<uint256_t, 6>>& input) {
-    return ecpairing_internal(input) == GT<alt_bn128_pp>::one();
+nonstd::variant<bool, std::string> ecpairing(
+    const std::vector<std::array<uint256_t, 6>>& input) {
+    auto res = ecpairing_internal(input);
+    if (nonstd::holds_alternative<std::string>(res)) {
+        return res.get<std::string>();
+    }
+    return res.get<alt_bn128_GT>() == GT<alt_bn128_pp>::one();
 }

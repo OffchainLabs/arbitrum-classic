@@ -13,6 +13,8 @@
 #include <libff/algebra/curves/alt_bn128/alt_bn128_pp.hpp>
 #include <libff/algebra/curves/public_params.hpp>
 
+#include <nonstd/variant.hpp>
+
 #include <vector>
 
 struct G1Point {
@@ -27,12 +29,15 @@ struct G2Point {
     uint256_t y1;
 };
 
-libff::G1<libff::alt_bn128_pp> g1PfromBytes(const G1Point& point);
-libff::G2<libff::alt_bn128_pp> g2PfromBytes(const G2Point& point);
+nonstd::variant<libff::G1<libff::alt_bn128_pp>, std::string> g1PfromBytes(
+    const G1Point& point);
+nonstd::variant<libff::G2<libff::alt_bn128_pp>, std::string> g2PfromBytes(
+    const G2Point& point);
 
-libff::alt_bn128_GT ecpairing_internal(
+nonstd::variant<libff::alt_bn128_GT, std::string> ecpairing_internal(
     const std::vector<std::array<uint256_t, 6>>& input);
 
-int ecpairing(const std::vector<std::array<uint256_t, 6>>& input);
+nonstd::variant<bool, std::string> ecpairing(
+    const std::vector<std::array<uint256_t, 6>>& input);
 
 #endif /* ecops_hpp */
