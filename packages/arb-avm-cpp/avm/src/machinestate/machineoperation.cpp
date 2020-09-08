@@ -20,7 +20,8 @@
 #include <ethash/keccak.h>
 #include <secp256k1_recovery.h>
 #include <ethash/keccak.hpp>
-#include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
+
+#include <iostream>
 
 // Many opcode implementations were inspired from the Apache 2.0 licensed EVM
 // implementation https://github.com/ethereum/evmone

@@ -26,6 +26,7 @@ set(LIB_HEADERS
   include/avm/machinestate/datastack.hpp
   include/avm/machinestate/machineoperation.hpp
   include/avm/machinestate/blockreason.hpp
+  include/avm/machinestate/ecops.hpp
 )
 
 set(LIB_SOURCES
@@ -34,6 +35,7 @@ set(LIB_SOURCES
   src/machinestate/machineoperation.cpp
   src/machinestate/datastack.cpp
   src/machinestate/blockreason.cpp
+  src/machinestate/ecops.cpp
 )
 
 add_library(avm STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES} )
