@@ -27,12 +27,11 @@ static Init init;
 // also assumes 64 bytes, 0..31 for X and 32...64 for Y, representing a curve
 // point using affine coordinates if either X or Y is less than 32 bytes, they
 // are assumed to be padded with leading 0s
-G1<alt_bn128_pp> g1PfromBytes(std::vector<uint8_t> input) {
-    if (input.size() != 64) {
-        throw -1;  // change to throw AVM exception
-    }
-    uint8_t* xbytes = &input[0];
-    uint8_t* ybytes = &input[32];
+G1<alt_bn128_pp> g1PfromBytes(const G1Point& point) {
+    uint8_t xbytes[32];
+    intx::be::store(xbytes, point.x);
+    uint8_t ybytes[32];
+    intx::be::store(ybytes, point.y);
 
     mpz_t mpzx, mpzy, modulus;
     mpz_inits(mpzx, mpzy, modulus, NULL);
@@ -76,14 +75,15 @@ G1<alt_bn128_pp> g1PfromBytes(std::vector<uint8_t> input) {
 // also assumes 128 bytes representing a curve point using affine coordinates
 // if either X or Y is less than 64 bytes, they are assumed to be padded with
 // leading 0s
-G2<alt_bn128_pp> g2PfromBytes(std::vector<uint8_t> input) {
-    if (input.size() != 128) {
-        throw -1;  // change to throw AVM exception
-    }
-    uint8_t* xc0bytes = &input[0];
-    uint8_t* xc1bytes = &input[32];
-    uint8_t* yc0bytes = &input[64];
-    uint8_t* yc1bytes = &input[96];
+G2<alt_bn128_pp> g2PfromBytes(const G2Point& point) {
+    uint8_t xc0bytes[32];
+    intx::be::store(xc0bytes, point.x0);
+    uint8_t xc1bytes[32];
+    intx::be::store(xc1bytes, point.x1);
+    uint8_t yc0bytes[32];
+    intx::be::store(yc0bytes, point.y0);
+    uint8_t yc1bytes[32];
+    intx::be::store(yc1bytes, point.y1);
 
     mpz_t mpzxc0, mpzxc1, mpzyc0, mpzyc1, modulus;
     mpz_inits(mpzxc0, mpzxc1, mpzyc0, mpzyc1, modulus, NULL);
@@ -154,19 +154,23 @@ alt_bn128_GT ecpairing_internal(std::vector<uint8_t> input) {
 
     alt_bn128_Fq12 prod = alt_bn128_Fq12::one();
 
-    std::vector<uint8_t>::const_iterator first;
-    std::vector<uint8_t>::const_iterator last;
     for (uint8_t i = 0; i < numPairs; i++) {
-        first = input.begin() + 192 * i;
-        last = input.begin() + 192 * i + 64;
-        std::vector<uint8_t> g1Vec(first, last);
-
-        first = input.begin() + 192 * i + 64;
-        last = input.begin() + 192 * i + 192;
-        std::vector<uint8_t> g2Vec(first, last);
+        auto g1x =
+            intx::be::unsafe::load<uint256_t>(input.data() + 192 * i + 32 * 0);
+        auto g1y =
+            intx::be::unsafe::load<uint256_t>(input.data() + 192 * i + 32 * 1);
+        auto g2x0 =
+            intx::be::unsafe::load<uint256_t>(input.data() + 192 * i + 32 * 2);
+        auto g2x1 =
+            intx::be::unsafe::load<uint256_t>(input.data() + 192 * i + 32 * 3);
+        auto g2y0 =
+            intx::be::unsafe::load<uint256_t>(input.data() + 192 * i + 32 * 4);
+        auto g2y1 =
+            intx::be::unsafe::load<uint256_t>(input.data() + 192 * i + 32 * 5);
 
         prod = prod *
-               alt_bn128_pp::pairing(g1PfromBytes(g1Vec), g2PfromBytes(g2Vec));
+               alt_bn128_pp::pairing(g1PfromBytes({g1x, g1y}),
+                                     g2PfromBytes({g2x0, g2x1, g2y0, g2y1}));
     }
 
     const alt_bn128_GT result = alt_bn128_final_exponentiation(prod);
@@ -174,5 +178,5 @@ alt_bn128_GT ecpairing_internal(std::vector<uint8_t> input) {
 }
 
 int ecpairing(std::vector<uint8_t> input) {
-    return (ecpairing_internal(input) == GT<alt_bn128_pp>::one());
+    return ecpairing_internal(input) == GT<alt_bn128_pp>::one();
 }
