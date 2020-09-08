@@ -30,8 +30,9 @@ struct G2Point {
 libff::G1<libff::alt_bn128_pp> g1PfromBytes(const G1Point& point);
 libff::G2<libff::alt_bn128_pp> g2PfromBytes(const G2Point& point);
 
-libff::alt_bn128_GT ecpairing_internal(std::vector<uint8_t> input);
+libff::alt_bn128_GT ecpairing_internal(
+    const std::vector<std::array<uint256_t, 6>>& input);
 
-int ecpairing(std::vector<uint8_t> input);
+int ecpairing(const std::vector<std::array<uint256_t, 6>>& input);
 
 #endif /* ecops_hpp */

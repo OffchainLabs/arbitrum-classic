@@ -141,42 +141,24 @@ G2<alt_bn128_pp> g2PfromBytes(const G2Point& point) {
     return P;
 }
 
-alt_bn128_GT ecpairing_internal(std::vector<uint8_t> input) {
-    if (input.size() % 192 != 0) {
-        throw -1;  // change to throw AVM exception
-    }
-
-    uint64_t numPairs =
-        input.size() / 192;  // TODO: can you give so many pairs to overflow?
-    if (numPairs > 20) {
+alt_bn128_GT ecpairing_internal(
+    const std::vector<std::array<uint256_t, 6>>& input) {
+    if (input.size() > 20) {
         throw -2;  // change to throw AVM exception
     }
 
     alt_bn128_Fq12 prod = alt_bn128_Fq12::one();
 
-    for (uint8_t i = 0; i < numPairs; i++) {
-        auto g1x =
-            intx::be::unsafe::load<uint256_t>(input.data() + 192 * i + 32 * 0);
-        auto g1y =
-            intx::be::unsafe::load<uint256_t>(input.data() + 192 * i + 32 * 1);
-        auto g2x0 =
-            intx::be::unsafe::load<uint256_t>(input.data() + 192 * i + 32 * 2);
-        auto g2x1 =
-            intx::be::unsafe::load<uint256_t>(input.data() + 192 * i + 32 * 3);
-        auto g2y0 =
-            intx::be::unsafe::load<uint256_t>(input.data() + 192 * i + 32 * 4);
-        auto g2y1 =
-            intx::be::unsafe::load<uint256_t>(input.data() + 192 * i + 32 * 5);
-
-        prod = prod *
-               alt_bn128_pp::pairing(g1PfromBytes({g1x, g1y}),
-                                     g2PfromBytes({g2x0, g2x1, g2y0, g2y1}));
+    for (const auto& item : input) {
+        prod = prod * alt_bn128_pp::pairing(
+                          g1PfromBytes({item[0], item[1]}),
+                          g2PfromBytes({item[2], item[3], item[4], item[5]}));
     }
 
     const alt_bn128_GT result = alt_bn128_final_exponentiation(prod);
     return result;
 }
 
-int ecpairing(std::vector<uint8_t> input) {
+int ecpairing(const std::vector<std::array<uint256_t, 6>>& input) {
     return ecpairing_internal(input) == GT<alt_bn128_pp>::one();
 }
