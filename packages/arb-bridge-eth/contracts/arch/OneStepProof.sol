@@ -831,6 +831,81 @@ contract OneStepProof is IOneStepProof {
         pushVal(context.stack, Value.newInt(uint256(ret)));
     }
 
+    function executeECPairingInsn(AssertionContext memory context) internal view {
+        // Allocate the maximum amount of space we might need
+        uint256[] memory input = new uint256[](20 * 6);
+        Value.Data memory val = popVal(context.stack);
+        uint256 i;
+        for (i = 0; i < 20; i++) {
+            if (!val.isTuple()) {
+                handleOpcodeError(context);
+                return;
+            }
+            Value.Data[] memory stackTupleVals = val.tupleVal;
+            if (stackTupleVals.length == 0) {
+                // We reached the bottom of the stack
+                break;
+            }
+            if (stackTupleVals.length != 2) {
+                handleOpcodeError(context);
+                return;
+            }
+            Value.Data memory pointVal = stackTupleVals[0];
+            val = stackTupleVals[1];
+
+            if (!pointVal.isTuple()) {
+                handleOpcodeError(context);
+                return;
+            }
+
+            Value.Data[] memory pointTupleVals = pointVal.tupleVal;
+            if (pointTupleVals.length != 6) {
+                handleOpcodeError(context);
+                return;
+            }
+
+            for (uint256 j = 0; j < 6; j++) {
+                if (!pointTupleVals[j].isInt()) {
+                    handleOpcodeError(context);
+                    return;
+                }
+                input[i * 6 + j] = pointTupleVals[j].intVal;
+            }
+        }
+
+        if (!val.isTuple() || val.tupleVal.length != 0) {
+            // Must end on empty tuple
+            handleOpcodeError(context);
+            return;
+        }
+        uint256 inputSize = i * 6;
+        uint256[1] memory out;
+        bool success;
+        // solium-disable-next-line security/no-inline-assembly
+        assembly {
+            success := staticcall(
+                sub(gas(), 2000),
+                8,
+                add(input, 0x20),
+                mul(inputSize, 0x20),
+                out,
+                0x20
+            )
+            switch success
+                case 0 {
+                    invalid()
+                }
+        }
+
+        if (!success) {
+            // Must end on empty tuple
+            handleOpcodeError(context);
+            return;
+        }
+
+        pushVal(context.stack, Value.newBoolean(out[0] != 0));
+    }
+
     function executeErrorInsn(AssertionContext memory context) internal pure {
         handleOpcodeError(context);
     }
@@ -923,6 +998,7 @@ contract OneStepProof is IOneStepProof {
     uint8 private constant OP_SIDELOAD = 0x7b;
 
     uint8 private constant OP_ECRECOVER = 0x80;
+    uint8 private constant OP_ECPAIRING = 0x83;
 
     uint8 private constant CODE_POINT_TYPECODE = 1;
     bytes32 private constant CODE_POINT_ERROR = keccak256(
@@ -1053,6 +1129,8 @@ contract OneStepProof is IOneStepProof {
             return (0, 0, 10, executeSideloadInsn);
         } else if (opCode == OP_ECRECOVER) {
             return (4, 0, 20000, executeECRecoverInsn);
+        } else if (opCode == OP_ECPAIRING) {
+            return (1, 0, 20000, executeECPairingInsn);
         } else {
             return (0, 0, 0, executeErrorInsn);
         }

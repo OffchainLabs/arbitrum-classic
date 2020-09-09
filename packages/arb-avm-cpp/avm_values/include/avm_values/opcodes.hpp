@@ -185,6 +185,7 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::SIDELOAD, "sideload"},
 
     {OpCode::ECRECOVER, "ecrecover"},
+    {OpCode::ECPAIRING, "ecpairing"},
     {OpCode::DEBUG_PRINT, "debugprint"}};
 
 enum class MarshalLevel { STUB, SINGLE, FULL };
@@ -275,7 +276,8 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
 
         {OpCode::ECRECOVER,
          {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE,
-          MarshalLevel::SINGLE}}};
+          MarshalLevel::SINGLE}},
+        {OpCode::ECPAIRING, {MarshalLevel::FULL}}};
 
 const std::unordered_map<OpCode, std::vector<MarshalLevel>>
     InstructionAuxStackPops = {{static_cast<OpCode>(0), {}},
@@ -354,7 +356,8 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
                                {OpCode::SIDELOAD, {}},
                                {OpCode::DEBUG_PRINT, {}},
 
-                               {OpCode::ECRECOVER, {}}};
+                               {OpCode::ECRECOVER, {}},
+                               {OpCode::ECPAIRING, {}}};
 
 const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::ADD, 3},
@@ -432,7 +435,8 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::SIDELOAD, 10},
     {OpCode::DEBUG_PRINT, 1},
 
-    {OpCode::ECRECOVER, 20000}};
+    {OpCode::ECRECOVER, 20000},
+    {OpCode::ECPAIRING, 20000}};
 
 constexpr size_t MaxValidOpcode =
     static_cast<size_t>(std::numeric_limits<uint8_t>::max());
