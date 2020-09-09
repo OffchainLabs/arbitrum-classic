@@ -3,6 +3,7 @@ package web3
 import (
 	"context"
 	"errors"
+	"github.com/ethereum/go-ethereum"
 	errors2 "github.com/pkg/errors"
 	"math/big"
 
@@ -105,10 +106,10 @@ func (s *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
 }
 
 func (s *Server) GetBlockByHash(ctx context.Context, blockHashRaw hexutil.Bytes, includeTxData bool) (*GetBlockResult, error) {
-	var blockHash arbcommon.Hash
+	var blockHash common.Hash
 	copy(blockHash[:], blockHashRaw)
 
-	header, err := s.srv.GetBlockHeaderByHash(ctx, blockHash)
+	header, err := s.srv.Client.HeaderByHash(ctx, blockHash)
 	if err != nil {
 		// If we can't get the header, return nil
 		return nil, nil
@@ -121,7 +122,7 @@ func (s *Server) GetBlockByNumber(ctx context.Context, blockNum *rpc.BlockNumber
 	if err != nil {
 		return nil, err
 	}
-	header, err := s.srv.GetBlockHeaderByNumber(ctx, height)
+	header, err := s.srv.Client.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
 	if err != nil {
 		// If we can't get the header, return nil
 		return nil, err
@@ -130,10 +131,22 @@ func (s *Server) GetBlockByNumber(ctx context.Context, blockNum *rpc.BlockNumber
 }
 
 func (s *Server) getBlock(header *types.Header, includeTxData bool) (*GetBlockResult, error) {
-	results, err := s.srv.GetBlockResults(header.Number.Uint64())
+	block, err := s.srv.BlockInfo(header.Number.Uint64())
 	if err != nil {
 		return nil, err
 	}
+
+	blockInfo, err := s.srv.GetBlockInfo(block)
+	if err != nil {
+		return nil, err
+	}
+
+	results, err := s.srv.GetBlockResults(blockInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	bloom, gasLimit, gasUsed := aggregator.GetBlockFields(block, blockInfo)
 
 	var transactions interface{}
 	if includeTxData {
@@ -162,7 +175,7 @@ func (s *Server) getBlock(header *types.Header, includeTxData bool) (*GetBlockRe
 		MixDigest:        header.MixDigest.Bytes(),
 		Nonce:            &header.Nonce,
 		Sha3Uncles:       header.UncleHash.Bytes(),
-		LogsBloom:        header.Bloom.Bytes(),
+		LogsBloom:        bloom.Bytes(),
 		TransactionsRoot: header.TxHash.Bytes(),
 		StateRoot:        header.Root.Bytes(),
 		ReceiptsRoot:     header.ReceiptHash.Bytes(),
@@ -171,8 +184,8 @@ func (s *Server) getBlock(header *types.Header, includeTxData bool) (*GetBlockRe
 		TotalDifficulty:  (*hexutil.Big)(header.Difficulty),
 		ExtraData:        (*hexutil.Bytes)(&header.Extra),
 		Size:             (*hexutil.Uint64)(&size),
-		GasLimit:         (*hexutil.Uint64)(&header.GasLimit),
-		GasUsed:          (*hexutil.Uint64)(&header.GasUsed),
+		GasLimit:         (*hexutil.Uint64)(&gasLimit),
+		GasUsed:          (*hexutil.Uint64)(&gasUsed),
 		Timestamp:        (*hexutil.Uint64)(&header.Time),
 		Transactions:     transactions,
 		Uncles:           &uncles,
@@ -346,10 +359,12 @@ func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult,
 	return txRes, nil
 }
 
-func (s *Server) GetLogs(ctx context.Context, args *GetLogsArgs) ([]LogResult, error) {
+func (s *Server) GetLogs(ctx context.Context, args ethereum.FilterQuery) ([]*types.Log, error) {
 	var fromHeight *uint64
+
 	if args.FromBlock != nil {
-		from, err := s.blockNum(args.FromBlock)
+		fromRaw := args.FromBlock.Int64()
+		from, err := s.blockNum((*rpc.BlockNumber)(&fromRaw))
 		if err != nil {
 			return nil, err
 		}
@@ -358,45 +373,21 @@ func (s *Server) GetLogs(ctx context.Context, args *GetLogsArgs) ([]LogResult, e
 
 	var toHeight *uint64
 	if args.ToBlock != nil {
-		to, err := s.blockNum(args.ToBlock)
+		toRaw := args.FromBlock.Int64()
+		to, err := s.blockNum((*rpc.BlockNumber)(&toRaw))
 		if err != nil {
 			return nil, err
 		}
 		toHeight = &to
 	}
 
-	addresses := make([]common.Address, 0, 1)
-	if args.Address != nil {
-		addresses = args.Address.addresses
-	}
-
-	topicGroups := make([][]common.Hash, 0, len(args.Topics))
-	for _, topic := range args.Topics {
-		topicGroups = append(topicGroups, topic.topics)
-	}
-
-	logs, err := s.srv.FindLogs(ctx, fromHeight, toHeight, addresses, topicGroups)
+	logs, err := s.srv.FindLogs(ctx, fromHeight, toHeight, args.Addresses, args.Topics)
 	if err != nil {
 		return nil, err
 	}
-	res := make([]LogResult, 0, len(logs))
+	res := make([]*types.Log, 0, len(logs))
 	for _, evmLog := range logs {
-		logIndex := hexutil.EncodeUint64(evmLog.Index)
-		txIndex := hexutil.EncodeUint64(evmLog.TxIndex)
-		txHash := evmLog.TxHash.ToEthHash()
-		blockHash := evmLog.Block.HeaderHash.ToEthHash()
-		blockNum := hexutil.EncodeBig(evmLog.Block.Height.AsInt())
-		res = append(res, LogResult{
-			Removed:          false,
-			LogIndex:         &logIndex,
-			TransactionIndex: &txIndex,
-			TransactionHash:  &txHash,
-			BlockHash:        &blockHash,
-			BlockNumber:      &blockNum,
-			Address:          evmLog.Address.Hex(),
-			Data:             hexutil.Encode(evmLog.Data),
-			Topics:           arbcommon.NewEthHashesFromHashes(evmLog.Topics),
-		})
+		res = append(res, evmLog.ToEVMLog())
 	}
 	return res, nil
 }
