@@ -3,7 +3,7 @@ package web3
 import (
 	"context"
 	"errors"
-	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/eth/filters"
 	errors2 "github.com/pkg/errors"
 	"math/big"
 
@@ -359,7 +359,7 @@ func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult,
 	return txRes, nil
 }
 
-func (s *Server) GetLogs(ctx context.Context, args ethereum.FilterQuery) ([]*types.Log, error) {
+func (s *Server) GetLogs(ctx context.Context, args filters.FilterCriteria) ([]*types.Log, error) {
 	var fromHeight *uint64
 
 	if args.FromBlock != nil {
