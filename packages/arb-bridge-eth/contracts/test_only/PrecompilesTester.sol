@@ -18,10 +18,10 @@
 
 pragma solidity ^0.5.11;
 
-import "../libraries/Keccak.sol";
+import "../libraries/Precompiles.sol";
 
-library KeccakTester {
+library PrecompilesTester {
     function keccakF(uint256[25] memory input) public pure returns (uint256[25] memory) {
-        return Keccak.keccakF(input);
+        return Precompiles.keccakF(input);
     }
 }

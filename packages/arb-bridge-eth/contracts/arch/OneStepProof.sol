@@ -22,7 +22,7 @@ import "./IOneStepProof.sol";
 import "./Value.sol";
 import "./Machine.sol";
 import "../inbox/Messages.sol";
-import "../libraries/Keccak.sol";
+import "../libraries/Precompiles.sol";
 
 // Originally forked from https://github.com/leapdao/solEVM-enforcer/tree/master
 
@@ -524,7 +524,7 @@ contract OneStepProof is IOneStepProof {
             data[5 * (i % 5) + i / 5] = uint256(uint64(values[i / 4].intVal >> ((i % 4) * 64)));
         }
 
-        data = Keccak.keccakF(data);
+        data = Precompiles.keccakF(data);
 
         Value.Data[] memory outValues = new Value.Data[](7);
         for (uint256 i = 0; i < 7; i++) {
