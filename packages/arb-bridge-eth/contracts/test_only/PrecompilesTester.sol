@@ -24,4 +24,8 @@ library PrecompilesTester {
     function keccakF(uint256[25] memory input) public pure returns (uint256[25] memory) {
         return Precompiles.keccakF(input);
     }
+
+    function sha256Block(uint256[25] memory input) public pure returns (uint256[25] memory) {
+        return Precompiles.sha256Block(input);
+    }
 }

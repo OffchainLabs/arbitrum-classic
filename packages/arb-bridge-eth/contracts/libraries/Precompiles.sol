@@ -176,4 +176,8 @@ library Precompiles {
 
         return a;
     }
+
+    function sha256Block(uint256[25] memory a) internal pure returns (uint256[25] memory) {
+        return a;
+    }
 }
