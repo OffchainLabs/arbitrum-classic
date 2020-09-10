@@ -473,7 +473,7 @@ async function createRollup(): Promise<ArbRollup> {
   return ArbRollup.attach(chainAddress) as ArbRollup
 }
 
-describe('ArbRollup', async () => {
+describe('ArbRollup', () => {
   it('should deploy contracts', async function () {
     accounts = await ethers.getSigners()
     const { ArbFactory } = await deploy_contracts(bre)

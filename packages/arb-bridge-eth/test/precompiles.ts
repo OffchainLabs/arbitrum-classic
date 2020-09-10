@@ -29,7 +29,7 @@ const { expect } = chai
 
 let precompilesTester: PrecompilesTester
 
-describe('Precompiles', async () => {
+describe('Precompiles', () => {
   before(async () => {
     const PrecompilesTester = await ethers.getContractFactory(
       'PrecompilesTester'
@@ -110,10 +110,6 @@ describe('Precompiles', async () => {
     ]
 
     const output = '0x1'
-    console.log('ReachedHere')
-
-    await expect(precompilesTester.sha256Block(input)).to.eventually.equal(
-      output
-    )
+    expect(await precompilesTester.sha256Block(input)).to.equal(output)
   })
 })
