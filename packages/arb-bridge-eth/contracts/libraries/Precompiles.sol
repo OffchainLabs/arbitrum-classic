@@ -189,18 +189,15 @@ library Precompiles {
         return ((e & f) ^ ((~e) & g));
     }
 
-    function sha256Block(uint32[64] memory input) internal pure returns (uint256) {
-        uint32[8] memory hA = [
-            0x6a09e667,
-            0xbb67ae85,
-            0x3c6ef372,
-            0xa54ff53a,
-            0x510e527f,
-            0x9b05688c,
-            0x1f83d9ab,
-            0x5be0cd19
-        ];
-
+    // SHA256 compression function that operates on a 512 bit chunk
+    // Note that the input must be padded by the caller
+    // For the initial chunk, the initial values from the SHA256 spec should be passed in as hashState
+    // For subseuqent rounds, hashState is the output from the previous round
+    function sha256Block(uint256[2] memory inputChunk, uint256 hashState)
+        internal
+        pure
+        returns (uint256)
+    {
         uint32[64] memory k = [
             0x428a2f98,
             0x71374491,
@@ -270,8 +267,9 @@ library Precompiles {
 
         uint32[64] memory w;
         uint32 i;
-        for (i = 0; i < 16; i++) {
-            w[i] = input[i];
+        for (i = 0; i < 8; i++) {
+            w[i] = uint32(inputChunk[0] >> (224 - (32 * i)));
+            w[i + 8] = uint32(inputChunk[1] >> (224 - (32 * i)));
         }
 
         uint32 s0;
@@ -285,14 +283,10 @@ library Precompiles {
 
         uint32[8] memory state;
 
-        state[0] = hA[0];
-        state[1] = hA[1];
-        state[2] = hA[2];
-        state[3] = hA[3];
-        state[4] = hA[4];
-        state[5] = hA[5];
-        state[6] = hA[6];
-        state[7] = hA[7];
+        for (i = 0; i < 8; i++) {
+            state[i] = uint32(hashState >> (224 - (32 * i)));
+        }
+
         uint32 temp1;
         uint32 temp2;
         uint32 maj;
@@ -315,19 +309,14 @@ library Precompiles {
             state[0] = temp1 + temp2;
         }
 
-        hA[0] += state[0];
-        hA[1] += state[1];
-        hA[2] += state[2];
-        hA[3] += state[3];
-        hA[4] += state[4];
-        hA[5] += state[5];
-        hA[6] += state[6];
-        hA[7] += state[7];
+        for (i = 0; i < 8; i++) {
+            state[i] += uint32(hashState >> (224 - (32 * i)));
+        }
 
         uint256 result;
 
         for (i = 0; i < 8; i++) {
-            result |= (uint256(hA[i]) << (256 - (32 * i)));
+            result |= (uint256(state[i]) << (224 - (32 * i)));
         }
 
         return result;
