@@ -992,7 +992,7 @@ TEST_CASE("ecrecover opcode is correct") {
 }
 
 TEST_CASE("ECPAIRING") {
-    for (const auto& testCase : prepareCases()) {
+    for (const auto& testCase : preparePairingCases()) {
         Tuple p1(testCase.a.x, testCase.a.y, testCase.b.x0, testCase.b.x1,
                  testCase.b.y0, testCase.b.y1);
         Tuple p2(testCase.c.x, testCase.c.y, testCase.d.x0, testCase.d.x1,
@@ -1002,6 +1002,33 @@ TEST_CASE("ECPAIRING") {
         mach.runOp(OpCode::ECPAIRING);
         REQUIRE(mach.state == Status::Extensive);
         REQUIRE(mach.stack[0] == value(1));
+    }
+}
+
+TEST_CASE("ECADD") {
+    for (const auto& test_case : prepareECAddCases()) {
+        MachineState mach;
+        mach.stack.push(test_case.b.y);
+        mach.stack.push(test_case.b.x);
+        mach.stack.push(test_case.a.y);
+        mach.stack.push(test_case.a.x);
+        mach.runOp(OpCode::ECADD);
+        REQUIRE(mach.state == Status::Extensive);
+        REQUIRE(mach.stack[1] == value{test_case.res.y});
+        REQUIRE(mach.stack[0] == value{test_case.res.x});
+    }
+}
+
+TEST_CASE("ECMUL") {
+    for (const auto& test_case : prepareECMulCases()) {
+        MachineState mach;
+        mach.stack.push(test_case.k);
+        mach.stack.push(test_case.a.y);
+        mach.stack.push(test_case.a.x);
+        mach.runOp(OpCode::ECMUL);
+        REQUIRE(mach.state == Status::Extensive);
+        REQUIRE(mach.stack[1] == value{test_case.res.y});
+        REQUIRE(mach.stack[0] == value{test_case.res.x});
     }
 }
 

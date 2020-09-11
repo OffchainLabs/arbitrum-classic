@@ -20,7 +20,7 @@
 
 using namespace libff;
 
-TEST_CASE("ECPairing: g1PfromBytes") {
+TEST_CASE("ECOp: g1PfromBytes") {
     alt_bn128_pp::init_public_params();
 
     G1<alt_bn128_pp> P =
@@ -31,7 +31,7 @@ TEST_CASE("ECPairing: g1PfromBytes") {
     REQUIRE(outP.get<G1<alt_bn128_pp>>() == P);
 }
 
-TEST_CASE("ECPairing: g2PfromBytes") {
+TEST_CASE("ECOp: g2PfromBytes") {
     alt_bn128_pp::init_public_params();
 
     G2<alt_bn128_pp> P =
@@ -72,8 +72,8 @@ TEST_CASE("ECPairing: ecpairing_internal") {
     REQUIRE(prod == res.get<alt_bn128_GT>());
 }
 
-TEST_CASE("ECPairing: ecpairing") {
-    for (const auto& testCase : prepareCases()) {
+TEST_CASE("ECOp: ecpairing") {
+    for (const auto& testCase : preparePairingCases()) {
         std::vector<std::pair<G1Point, G2Point>> all_points = {
             {testCase.a, testCase.b}, {testCase.c, testCase.d}};
 
@@ -83,44 +83,20 @@ TEST_CASE("ECPairing: ecpairing") {
     }
 }
 
-TEST_CASE("ECAdd: ecadd") {
-    alt_bn128_pp::init_public_params();
-
-    G1<alt_bn128_pp> Pff =
-        (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
-    G1<alt_bn128_pp> Qff =
-        (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
-
-    auto P = toArbPoint(Pff);
-    auto Q = toArbPoint(Qff);
-
-    G1Point sum = toArbPoint(Pff + Qff);
-    auto res = ecadd(P, Q);
-    REQUIRE(nonstd::holds_alternative<G1Point>(res));
-    REQUIRE(sum.x == res.get<G1Point>().x);
-    REQUIRE(sum.y == res.get<G1Point>().y);
+TEST_CASE("ECOp: ecadd") {
+    for (const auto& test_case : prepareECAddCases()) {
+        auto res = ecadd(test_case.a, test_case.b);
+        REQUIRE(nonstd::holds_alternative<G1Point>(res));
+        REQUIRE(test_case.res.x == res.get<G1Point>().x);
+        REQUIRE(test_case.res.y == res.get<G1Point>().y);
+    }
 }
 
-TEST_CASE("ECMul: ecmul") {
-    alt_bn128_pp::init_public_params();
-
-    G1<alt_bn128_pp> Pff =
-        (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
-    uint256_t sui = hexToInt(
-        "b7abaaf2f45b6d1c1b23afb835719050a28b98cea191d94bff8feb3025ddbfc8");
-
-    uint8_t sbytes[32];
-    intx::be::store(sbytes, sui);
-    mpz_t smpz;
-    mpz_init(smpz);
-    mpz_import(smpz, 32, 1, 1, 1, 0, sbytes);
-    bigint<BIG_INT_FOR_UINT256> s(smpz);
-
-    auto P = toArbPoint(Pff);
-
-    G1Point prod = toArbPoint(s * Pff);
-    auto res = ecmul(P, sui);
-    REQUIRE(nonstd::holds_alternative<G1Point>(res));
-    REQUIRE(prod.x == res.get<G1Point>().x);
-    REQUIRE(prod.y == res.get<G1Point>().y);
+TEST_CASE("ECOp: ecmul") {
+    for (const auto& test_case : prepareECMulCases()) {
+        auto res = ecmul(test_case.a, test_case.k);
+        REQUIRE(nonstd::holds_alternative<G1Point>(res));
+        REQUIRE(test_case.res.x == res.get<G1Point>().x);
+        REQUIRE(test_case.res.y == res.get<G1Point>().y);
+    }
 }

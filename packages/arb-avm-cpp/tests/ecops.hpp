@@ -24,6 +24,13 @@
 
 using namespace libff;
 
+inline uint256_t hexToInt(const std::string& hexstr) {
+    std::vector<unsigned char> bytes;
+    bytes.resize(hexstr.size() / 2);
+    boost::algorithm::unhex(hexstr.begin(), hexstr.end(), bytes.begin());
+    return intx::be::unsafe::load<uint256_t>(bytes.data());
+}
+
 struct PairingTestCase {
     G1Point a;
     G2Point b;
@@ -40,7 +47,7 @@ struct PairingTestCase {
           d(toArbPoint(d_)) {}
 };
 
-inline std::vector<PairingTestCase> prepareCases() {
+inline std::vector<PairingTestCase> preparePairingCases() {
     G1<alt_bn128_pp> P =
         (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
     G2<alt_bn128_pp> Q =
@@ -61,11 +68,51 @@ inline std::vector<PairingTestCase> prepareCases() {
     return cases;
 }
 
-inline uint256_t hexToInt(const std::string& hexstr) {
-    std::vector<unsigned char> bytes;
-    bytes.resize(hexstr.size() / 2);
-    boost::algorithm::unhex(hexstr.begin(), hexstr.end(), bytes.begin());
-    return intx::be::unsafe::load<uint256_t>(bytes.data());
+struct ECAddTestCase {
+    G1Point a;
+    G1Point b;
+    G1Point res;
+};
+
+inline std::vector<ECAddTestCase> prepareECAddCases() {
+    alt_bn128_pp::init_public_params();
+
+    G1<alt_bn128_pp> Pff =
+        (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
+    G1<alt_bn128_pp> Qff =
+        (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
+
+    auto P = toArbPoint(Pff);
+    auto Q = toArbPoint(Qff);
+    G1Point sum = toArbPoint(Pff + Qff);
+    return {{P, Q, sum}};
+}
+
+struct ECMulTestCase {
+    G1Point a;
+    uint256_t k;
+    G1Point res;
+};
+
+inline std::vector<ECMulTestCase> prepareECMulCases() {
+    alt_bn128_pp::init_public_params();
+
+    G1<alt_bn128_pp> Pff =
+        (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
+    uint256_t sui = hexToInt(
+        "b7abaaf2f45b6d1c1b23afb835719050a28b98cea191d94bff8feb3025ddbfc8");
+
+    uint8_t sbytes[32];
+    intx::be::store(sbytes, sui);
+    mpz_t smpz;
+    mpz_init(smpz);
+    mpz_import(smpz, 32, 1, 1, 1, 0, sbytes);
+    bigint<BIG_INT_FOR_UINT256> s(smpz);
+
+    auto P = toArbPoint(Pff);
+
+    G1Point prod = toArbPoint(s * Pff);
+    return {{P, sui, prod}};
 }
 
 #endif /* test_ecops_hpp */
