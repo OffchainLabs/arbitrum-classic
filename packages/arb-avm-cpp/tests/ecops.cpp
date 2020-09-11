@@ -50,7 +50,7 @@ TEST_CASE("ECPairing: ecpairing_internal") {
     std::array<G1<alt_bn128_pp>, numPairs> P;
     std::array<G2<alt_bn128_pp>, numPairs> Q;
 
-    std::vector<std::array<uint256_t, 6>> all_points;
+    std::vector<std::pair<G1Point, G2Point>> all_points;
 
     for (int i = 0; i < numPairs; i++) {
         P[i] = (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
@@ -59,7 +59,7 @@ TEST_CASE("ECPairing: ecpairing_internal") {
         auto g1 = toArbPoint(P[i]);
         auto g2 = toArbPoint(Q[i]);
 
-        all_points.push_back({g1.x, g1.y, g2.x0, g2.x1, g2.y0, g2.y1});
+        all_points.push_back({g1, g2});
     }
 
     GT<alt_bn128_pp> prod = GT<alt_bn128_pp>::one();
@@ -74,11 +74,8 @@ TEST_CASE("ECPairing: ecpairing_internal") {
 
 TEST_CASE("ECPairing: ecpairing") {
     for (const auto& testCase : prepareCases()) {
-        std::vector<std::array<uint256_t, 6>> all_points = {
-            {testCase.a.x, testCase.a.y, testCase.b.x0, testCase.b.x1,
-             testCase.b.y0, testCase.b.y1},
-            {testCase.c.x, testCase.c.y, testCase.d.x0, testCase.d.x1,
-             testCase.d.y0, testCase.d.y1}};
+        std::vector<std::pair<G1Point, G2Point>> all_points = {
+            {testCase.a, testCase.b}, {testCase.c, testCase.d}};
 
         auto res = ecpairing(all_points);
         REQUIRE(nonstd::holds_alternative<bool>(res));
@@ -97,10 +94,8 @@ TEST_CASE("ECAdd: ecadd") {
     auto P = toArbPoint(Pff);
     auto Q = toArbPoint(Qff);
 
-    std::array<uint256_t, 4> all_points({P.x, P.y, Q.x, Q.y});
-
     G1Point sum = toArbPoint(Pff + Qff);
-    auto res = ecadd(all_points);
+    auto res = ecadd(P, Q);
     REQUIRE(nonstd::holds_alternative<G1Point>(res));
     REQUIRE(sum.x == res.get<G1Point>().x);
     REQUIRE(sum.y == res.get<G1Point>().y);
@@ -123,10 +118,8 @@ TEST_CASE("ECMul: ecmul") {
 
     auto P = toArbPoint(Pff);
 
-    std::array<uint256_t, 3> all_points({P.x, P.y, sui});
-
     G1Point prod = toArbPoint(s * Pff);
-    auto res = ecmul(all_points);
+    auto res = ecmul(P, sui);
     REQUIRE(nonstd::holds_alternative<G1Point>(res));
     REQUIRE(prod.x == res.get<G1Point>().x);
     REQUIRE(prod.y == res.get<G1Point>().y);

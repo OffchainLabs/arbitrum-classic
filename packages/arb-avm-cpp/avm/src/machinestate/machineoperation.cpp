@@ -695,7 +695,7 @@ void ec_recover(MachineState& m) {
 void ec_pairing(MachineState& m) {
     m.stack.prepForMod(1);
 
-    std::vector<std::array<uint256_t, 6>> points;
+    std::vector<std::pair<G1Point, G2Point>> points;
 
     const Tuple* val = &assumeTuple(m.stack[0]);
     while (val->tuple_size() != 0) {
@@ -708,12 +708,12 @@ void ec_pairing(MachineState& m) {
         if (next.tuple_size() != 6) {
             throw bad_pop_type{};
         }
-        points.push_back({assumeInt(next.get_element_unsafe(0)),
-                          assumeInt(next.get_element_unsafe(1)),
-                          assumeInt(next.get_element_unsafe(2)),
-                          assumeInt(next.get_element_unsafe(3)),
-                          assumeInt(next.get_element_unsafe(4)),
-                          assumeInt(next.get_element_unsafe(5))});
+        points.push_back({{assumeInt(next.get_element_unsafe(0)),
+                           assumeInt(next.get_element_unsafe(1))},
+                          {assumeInt(next.get_element_unsafe(2)),
+                           assumeInt(next.get_element_unsafe(3)),
+                           assumeInt(next.get_element_unsafe(4)),
+                           assumeInt(next.get_element_unsafe(5))}});
     }
 
     auto ret = ecpairing(points);
@@ -727,20 +727,13 @@ void ec_pairing(MachineState& m) {
 }
 
 void ec_add(MachineState& m) {
-    m.stack.prepForMod(1);
+    m.stack.prepForMod(4);
+    auto& aVal = assumeInt(m.stack[0]);
+    auto& bVal = assumeInt(m.stack[1]);
+    auto& cVal = assumeInt(m.stack[2]);
+    auto& dVal = assumeInt(m.stack[3]);
 
-    const Tuple val = assumeTuple(m.stack[0]);
-
-    if (val.tuple_size() != 4) {
-        throw bad_pop_type{};
-    }
-
-    std::array<uint256_t, 4> points{assumeInt(val.get_element_unsafe(0)),
-                                    assumeInt(val.get_element_unsafe(1)),
-                                    assumeInt(val.get_element_unsafe(2)),
-                                    assumeInt(val.get_element_unsafe(3))};
-
-    auto ret = ecadd(points);
+    auto ret = ecadd({aVal, bVal}, {cVal, dVal});
 
     if (nonstd::holds_alternative<std::string>(ret)) {
         m.state = Status::Error;
@@ -755,19 +748,12 @@ void ec_add(MachineState& m) {
 }
 
 void ec_mul(MachineState& m) {
-    m.stack.prepForMod(1);
+    m.stack.prepForMod(3);
+    auto& aVal = assumeInt(m.stack[0]);
+    auto& bVal = assumeInt(m.stack[1]);
+    auto& cVal = assumeInt(m.stack[2]);
 
-    const Tuple val = assumeTuple(m.stack[0]);
-
-    if (val.tuple_size() != 3) {
-        throw bad_pop_type{};
-    }
-
-    std::array<uint256_t, 3> points{assumeInt(val.get_element_unsafe(0)),
-                                    assumeInt(val.get_element_unsafe(1)),
-                                    assumeInt(val.get_element_unsafe(2))};
-
-    auto ret = ecmul(points);
+    auto ret = ecmul({aVal, bVal}, cVal);
 
     if (nonstd::holds_alternative<std::string>(ret)) {
         m.state = Status::Error;

@@ -34,6 +34,89 @@ struct Init {
 static Init init;
 }  // namespace
 
+void mpz_export_and_pad32(uint8_t* output, mpz_t input) {
+    size_t countp;
+    mpz_export(output, &countp, 1, 1, 1, 0, input);
+
+    if (countp < 32) {
+        uint8_t difference = 32 - countp;
+
+        for (int i = 0; i < 32 - difference; i++) {
+            output[32 - difference - i] = output[32 - difference - i - 1];
+        }
+
+        for (int i = 0; i < difference; i++) {
+            output[i] = 0;
+        }
+    }
+}
+
+G1Point toArbPoint(G1<alt_bn128_pp> P) {
+    P.to_affine_coordinates();
+
+    alt_bn128_Fq X = P.X;
+    alt_bn128_Fq Y = P.Y;
+
+    bigint<alt_bn128_q_limbs> xbi = X.as_bigint();
+    bigint<alt_bn128_q_limbs> ybi = Y.as_bigint();
+
+    mpz_t mpx, mpy;
+    mpz_inits(mpx, mpy, NULL);
+    xbi.to_mpz(mpx);
+    ybi.to_mpz(mpy);
+
+    uint8_t xbytes[32];
+    uint8_t ybytes[32];
+
+    mpz_export_and_pad32(xbytes, mpx);
+    mpz_export_and_pad32(ybytes, mpy);
+
+    auto x_int = intx::be::load<uint256_t>(xbytes);
+    auto y_int = intx::be::load<uint256_t>(ybytes);
+
+    mpz_clears(mpx, mpy, NULL);
+
+    return {x_int, y_int};
+}
+
+G2Point toArbPoint(G2<alt_bn128_pp> P) {
+    P.to_affine_coordinates();
+    alt_bn128_Fq2 X = P.X;
+    alt_bn128_Fq2 Y = P.Y;
+
+    alt_bn128_Fq xc0 = X.c0;
+    alt_bn128_Fq xc1 = X.c1;
+
+    alt_bn128_Fq yc0 = Y.c0;
+    alt_bn128_Fq yc1 = Y.c1;
+
+    bigint<alt_bn128_q_limbs> xc0bi = xc0.as_bigint();
+    bigint<alt_bn128_q_limbs> xc1bi = xc1.as_bigint();
+    bigint<alt_bn128_q_limbs> yc0bi = yc0.as_bigint();
+    bigint<alt_bn128_q_limbs> yc1bi = yc1.as_bigint();
+
+    mpz_t mpzxc0, mpzxc1, mpzyc0, mpzyc1;
+    mpz_inits(mpzxc0, mpzxc1, mpzyc0, mpzyc1, NULL);
+
+    xc0bi.to_mpz(mpzxc0);
+    xc1bi.to_mpz(mpzxc1);
+    yc0bi.to_mpz(mpzyc0);
+    yc1bi.to_mpz(mpzyc1);
+
+    uint8_t raw_bytes[32];
+    mpz_export_and_pad32(raw_bytes, mpzxc0);
+    auto x0_int = intx::be::load<uint256_t>(raw_bytes);
+    mpz_export_and_pad32(raw_bytes, mpzxc1);
+    auto x1_int = intx::be::load<uint256_t>(raw_bytes);
+    mpz_export_and_pad32(raw_bytes, mpzyc0);
+    auto y0_int = intx::be::load<uint256_t>(raw_bytes);
+    mpz_export_and_pad32(raw_bytes, mpzyc1);
+    auto y1_int = intx::be::load<uint256_t>(raw_bytes);
+
+    mpz_clears(mpzxc0, mpzxc1, mpzyc0, mpzyc1, NULL);
+    return {x0_int, x1_int, y0_int, y1_int};
+}
+
 // assumes bytes are big endian
 // also assumes 64 bytes, 0..31 for X and 32...64 for Y, representing a curve
 // point using affine coordinates if either X or Y is less than 32 bytes, they
@@ -155,12 +238,12 @@ nonstd::variant<G2<alt_bn128_pp>, std::string> g2PfromBytes(
 }
 
 nonstd::variant<alt_bn128_GT, std::string> ecpairing_internal(
-    const std::vector<std::array<uint256_t, 6>>& input) {
+    const std::vector<std::pair<G1Point, G2Point>>& input) {
     alt_bn128_Fq12 prod = alt_bn128_Fq12::one();
 
     for (const auto& item : input) {
-        auto g1 = g1PfromBytes({item[0], item[1]});
-        auto g2 = g2PfromBytes({item[2], item[3], item[4], item[5]});
+        auto g1 = g1PfromBytes(item.first);
+        auto g2 = g2PfromBytes(item.second);
         if (nonstd::holds_alternative<std::string>(g1)) {
             return g1.get<std::string>();
         }
@@ -175,7 +258,7 @@ nonstd::variant<alt_bn128_GT, std::string> ecpairing_internal(
 }
 
 nonstd::variant<bool, std::string> ecpairing(
-    const std::vector<std::array<uint256_t, 6>>& input) {
+    const std::vector<std::pair<G1Point, G2Point>>& input) {
     auto res = ecpairing_internal(input);
     if (nonstd::holds_alternative<std::string>(res)) {
         return res.get<std::string>();
@@ -183,10 +266,10 @@ nonstd::variant<bool, std::string> ecpairing(
     return res.get<alt_bn128_GT>() == GT<alt_bn128_pp>::one();
 }
 
-nonstd::variant<G1Point, std::string> ecadd(
-    const std::array<uint256_t, 4>& input) {
-    auto a = g1PfromBytes({input[0], input[1]});
-    auto b = g1PfromBytes({input[2], input[3]});
+nonstd::variant<G1Point, std::string> ecadd(const G1Point& input_a,
+                                            const G1Point& input_b) {
+    auto a = g1PfromBytes(input_a);
+    auto b = g1PfromBytes(input_b);
     if (nonstd::holds_alternative<std::string>(a)) {
         return a.get<std::string>();
     }
@@ -196,16 +279,16 @@ nonstd::variant<G1Point, std::string> ecadd(
     return toArbPoint(a.get<G1<alt_bn128_pp>>() + b.get<G1<alt_bn128_pp>>());
 }
 
-nonstd::variant<G1Point, std::string> ecmul(
-    const std::array<uint256_t, 3>& input) {
-    auto a = g1PfromBytes({input[0], input[1]});
+nonstd::variant<G1Point, std::string> ecmul(const G1Point& point,
+                                            const uint256_t& factor) {
+    auto a = g1PfromBytes(point);
 
     if (nonstd::holds_alternative<std::string>(a)) {
         return a.get<std::string>();
     }
 
     uint8_t sbytes[32];
-    intx::be::store(sbytes, input[2]);
+    intx::be::store(sbytes, factor);
 
     mpz_t mpzs;
     mpz_init(mpzs);

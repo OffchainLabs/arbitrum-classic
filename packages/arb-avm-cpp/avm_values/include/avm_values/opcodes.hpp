@@ -103,9 +103,9 @@ enum class OpCode : uint8_t {
     SIDELOAD = 0x7B,
 
     ECRECOVER = 0x80,
-    ECPAIRING = 0x83,
-    ECADD = 0x84,
-    ECMUL = 0x85,
+    ECADD,
+    ECMUL,
+    ECPAIRING,
 
     DEBUG_PRINT = 0x90,
 };
@@ -187,6 +187,8 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::SIDELOAD, "sideload"},
 
     {OpCode::ECRECOVER, "ecrecover"},
+    {OpCode::ECADD, "ecadd"},
+    {OpCode::ECMUL, "ecmul"},
     {OpCode::ECPAIRING, "ecpairing"},
     {OpCode::DEBUG_PRINT, "debugprint"}};
 
@@ -279,6 +281,11 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::ECRECOVER,
          {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE,
           MarshalLevel::SINGLE}},
+        {OpCode::ECADD,
+         {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE,
+          MarshalLevel::SINGLE}},
+        {OpCode::ECMUL,
+         {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
         {OpCode::ECPAIRING, {MarshalLevel::FULL}}};
 
 const std::unordered_map<OpCode, std::vector<MarshalLevel>>
@@ -359,6 +366,8 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
                                {OpCode::DEBUG_PRINT, {}},
 
                                {OpCode::ECRECOVER, {}},
+                               {OpCode::ECADD, {}},
+                               {OpCode::ECMUL, {}},
                                {OpCode::ECPAIRING, {}}};
 
 const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
@@ -438,6 +447,8 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::DEBUG_PRINT, 1},
 
     {OpCode::ECRECOVER, 20000},
+    {OpCode::ECADD, 20000},
+    {OpCode::ECMUL, 20000},
     {OpCode::ECPAIRING, 20000}};
 
 constexpr size_t MaxValidOpcode =
