@@ -333,7 +333,7 @@ func (s *Server) makeTransactionResult(res *evm.TxResult) (*TransactionResult, e
 		Input:            hexutil.Encode(tx.Data()),
 		Nonce:            hexutil.EncodeUint64(tx.Nonce()),
 		To:               to,
-		TransactionIndex: &txIndex,
+		TransactionIndex: (*hexutil.Uint64)(&txIndex),
 		Value:            hexutil.EncodeBig(tx.Value()),
 		V:                hexutil.EncodeBig(vVal),
 		R:                hexutil.EncodeBig(rVal),
