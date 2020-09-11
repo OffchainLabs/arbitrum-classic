@@ -48,7 +48,7 @@ contract OneStepProof is IOneStepProof {
         bytes32 messagesAcc,
         bytes32 logsAcc,
         bytes calldata proof
-    ) external pure returns (uint64 gas, bytes32[5] memory fields) {
+    ) external view returns (uint64 gas, bytes32[5] memory fields) {
         AssertionContext memory context = initializeExecutionContext(
             inboxAcc,
             messagesAcc,
@@ -72,7 +72,7 @@ contract OneStepProof is IOneStepProof {
         address _sender,
         uint256 _inboxSeqNum,
         bytes calldata _msgData
-    ) external pure returns (uint64 gas, bytes32[5] memory fields) {
+    ) external view returns (uint64 gas, bytes32[5] memory fields) {
         AssertionContext memory context = initializeExecutionContext(
             inboxAcc,
             messagesAcc,
@@ -242,12 +242,12 @@ contract OneStepProof is IOneStepProof {
         return context;
     }
 
-    function executeOp(AssertionContext memory context) internal pure {
+    function executeOp(AssertionContext memory context) internal view {
         (
             uint256 dataPopCount,
             uint256 auxPopCount,
             uint64 gasCost,
-            function(AssertionContext memory) internal pure impl
+            function(AssertionContext memory) internal view impl
         ) = opInfo(context.opcode);
         context.gas = gasCost;
 
@@ -831,6 +831,63 @@ contract OneStepProof is IOneStepProof {
         pushVal(context.stack, Value.newInt(uint256(ret)));
     }
 
+    function executeECAddInsn(AssertionContext memory context) internal view {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val3 = popVal(context.stack);
+        Value.Data memory val4 = popVal(context.stack);
+        if (!val1.isInt() || !val2.isInt() || !val3.isInt() || !val4.isInt()) {
+            handleOpcodeError(context);
+            return;
+        }
+        uint256[4] memory bnAddInput = [val1.intVal, val2.intVal, val3.intVal, val4.intVal];
+        uint256[2] memory ret;
+        bool success;
+        // solium-disable-next-line security/no-inline-assembly
+        assembly {
+            success := staticcall(sub(gas(), 2000), 6, bnAddInput, 0x80, ret, 0x40)
+            switch success
+                case 0 {
+                    invalid()
+                }
+        }
+        if (!success) {
+            // Must end on empty tuple
+            handleOpcodeError(context);
+            return;
+        }
+        pushVal(context.stack, Value.newInt(uint256(ret[1])));
+        pushVal(context.stack, Value.newInt(uint256(ret[0])));
+    }
+
+    function executeECMulInsn(AssertionContext memory context) internal view {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val3 = popVal(context.stack);
+        if (!val1.isInt() || !val2.isInt() || !val3.isInt()) {
+            handleOpcodeError(context);
+            return;
+        }
+        uint256[3] memory bnAddInput = [val1.intVal, val2.intVal, val3.intVal];
+        uint256[2] memory ret;
+        bool success;
+        // solium-disable-next-line security/no-inline-assembly
+        assembly {
+            success := staticcall(sub(gas(), 2000), 7, bnAddInput, 0x80, ret, 0x40)
+            switch success
+                case 0 {
+                    invalid()
+                }
+        }
+        if (!success) {
+            // Must end on empty tuple
+            handleOpcodeError(context);
+            return;
+        }
+        pushVal(context.stack, Value.newInt(uint256(ret[1])));
+        pushVal(context.stack, Value.newInt(uint256(ret[0])));
+    }
+
     function executeECPairingInsn(AssertionContext memory context) internal view {
         // Allocate the maximum amount of space we might need
         uint256[] memory input = new uint256[](20 * 6);
@@ -998,6 +1055,8 @@ contract OneStepProof is IOneStepProof {
     uint8 private constant OP_SIDELOAD = 0x7b;
 
     uint8 private constant OP_ECRECOVER = 0x80;
+    uint8 private constant OP_ECADD = 0x81;
+    uint8 private constant OP_ECMUL = 0x82;
     uint8 private constant OP_ECPAIRING = 0x83;
 
     uint8 private constant CODE_POINT_TYPECODE = 1;
@@ -1012,7 +1071,7 @@ contract OneStepProof is IOneStepProof {
             uint256, // stack pops
             uint256, // auxstack pops
             uint64, // gas used
-            function(AssertionContext memory) internal pure // impl
+            function(AssertionContext memory) internal view // impl
         )
     {
         if (opCode == OP_ADD || opCode == OP_MUL || opCode == OP_SUB) {
@@ -1129,6 +1188,10 @@ contract OneStepProof is IOneStepProof {
             return (0, 0, 10, executeSideloadInsn);
         } else if (opCode == OP_ECRECOVER) {
             return (4, 0, 20000, executeECRecoverInsn);
+        } else if (opCode == OP_ECADD) {
+            return (4, 0, 20000, executeECAddInsn);
+        } else if (opCode == OP_ECMUL) {
+            return (3, 0, 20000, executeECMulInsn);
         } else if (opCode == OP_ECPAIRING) {
             return (1, 0, 20000, executeECPairingInsn);
         } else {
