@@ -183,7 +183,7 @@ nonstd::variant<bool, std::string> ecpairing(
     return res.get<alt_bn128_GT>() == GT<alt_bn128_pp>::one();
 }
 
-nonstd::variant<alt_bn128_G1, std::string> ecadd(
+nonstd::variant<G1Point, std::string> ecadd(
     const std::array<uint256_t, 4>& input) {
     auto a = g1PfromBytes({input[0], input[1]});
     auto b = g1PfromBytes({input[2], input[3]});
@@ -193,10 +193,10 @@ nonstd::variant<alt_bn128_G1, std::string> ecadd(
     if (nonstd::holds_alternative<std::string>(b)) {
         return b.get<std::string>();
     }
-    return a.get<G1<alt_bn128_pp>>() + b.get<G1<alt_bn128_pp>>();
+    return toArbPoint(a.get<G1<alt_bn128_pp>>() + b.get<G1<alt_bn128_pp>>());
 }
 
-nonstd::variant<alt_bn128_G1, std::string> ecsmult(
+nonstd::variant<G1Point, std::string> ecmul(
     const std::array<uint256_t, 3>& input) {
     auto a = g1PfromBytes({input[0], input[1]});
 
@@ -212,5 +212,5 @@ nonstd::variant<alt_bn128_G1, std::string> ecsmult(
     mpz_import(mpzs, 32, 1, 1, 1, 0, sbytes);
     bigint<BIG_INT_FOR_UINT256> s(mpzs);
     mpz_clear(mpzs);
-    return s * a.get<G1<alt_bn128_pp>>();
+    return toArbPoint(s * a.get<G1<alt_bn128_pp>>());
 }

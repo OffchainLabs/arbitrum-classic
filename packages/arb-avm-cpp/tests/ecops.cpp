@@ -99,13 +99,14 @@ TEST_CASE("ECAdd: ecadd") {
 
     std::array<uint256_t, 4> all_points({P.x, P.y, Q.x, Q.y});
 
-    G1<alt_bn128_pp> sum = Pff + Qff;
+    G1Point sum = toArbPoint(Pff + Qff);
     auto res = ecadd(all_points);
-    REQUIRE(nonstd::holds_alternative<alt_bn128_G1>(res));
-    REQUIRE(sum == res.get<alt_bn128_G1>());
+    REQUIRE(nonstd::holds_alternative<G1Point>(res));
+    REQUIRE(sum.x == res.get<G1Point>().x);
+    REQUIRE(sum.y == res.get<G1Point>().y);
 }
 
-TEST_CASE("ECMult: ecmult") {
+TEST_CASE("ECMul: ecmul") {
     alt_bn128_pp::init_public_params();
 
     G1<alt_bn128_pp> Pff =
@@ -124,8 +125,9 @@ TEST_CASE("ECMult: ecmult") {
 
     std::array<uint256_t, 3> all_points({P.x, P.y, sui});
 
-    G1<alt_bn128_pp> prod = s * Pff;
-    auto res = ecsmult(all_points);
-    REQUIRE(nonstd::holds_alternative<alt_bn128_G1>(res));
-    REQUIRE(prod == res.get<alt_bn128_G1>());
+    G1Point prod = toArbPoint(s * Pff);
+    auto res = ecmul(all_points);
+    REQUIRE(nonstd::holds_alternative<G1Point>(res));
+    REQUIRE(prod.x == res.get<G1Point>().x);
+    REQUIRE(prod.y == res.get<G1Point>().y);
 }
