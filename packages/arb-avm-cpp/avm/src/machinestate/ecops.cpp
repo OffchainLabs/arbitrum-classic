@@ -68,8 +68,8 @@ nonstd::variant<G1<alt_bn128_pp>, std::string> g1PfromBytes(
         return std::string("bad y");
     }
 
-    bigint<4L> xbi(mpzx);
-    bigint<4L> ybi(mpzy);
+    bigint<alt_bn128_q_limbs> xbi(mpzx);
+    bigint<alt_bn128_q_limbs> ybi(mpzy);
     alt_bn128_Fq X(mpzx);
     alt_bn128_Fq Y(mpzy);
 
@@ -131,10 +131,10 @@ nonstd::variant<G2<alt_bn128_pp>, std::string> g2PfromBytes(
         return std::string("bad y1");
     }
 
-    bigint<4L> xc0bi(mpzxc0);
-    bigint<4L> xc1bi(mpzxc1);
-    bigint<4L> yc0bi(mpzyc0);
-    bigint<4L> yc1bi(mpzyc1);
+    bigint<alt_bn128_q_limbs> xc0bi(mpzxc0);
+    bigint<alt_bn128_q_limbs> xc1bi(mpzxc1);
+    bigint<alt_bn128_q_limbs> yc0bi(mpzyc0);
+    bigint<alt_bn128_q_limbs> yc1bi(mpzyc1);
 
     alt_bn128_Fq Xc0(mpzxc0);
     alt_bn128_Fq Xc1(mpzxc1);
