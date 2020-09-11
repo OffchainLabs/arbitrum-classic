@@ -4,7 +4,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"math/big"
 )
 
 type GetBlockResult struct {
@@ -41,35 +40,35 @@ type CallTxArgs struct {
 
 // Receipt represents the results of a transaction.
 type GetTransactionReceiptResult struct {
-	Status            uint64       `json:"status"`
-	CumulativeGasUsed uint64       `json:"cumulativeGasUsed"`
-	Bloom             string       `json:"logsBloom"`
-	Logs              []*types.Log `json:"logs"`
+	Status            hexutil.Uint64 `json:"status"`
+	CumulativeGasUsed hexutil.Uint64 `json:"cumulativeGasUsed"`
+	Bloom             hexutil.Bytes  `json:"logsBloom"`
+	Logs              []*types.Log   `json:"logs"`
 	// They are stored in the chain database.
-	TxHash          common.Hash `json:"transactionHash"`
-	ContractAddress string      `json:"contractAddress"`
-	GasUsed         uint64      `json:"gasUsed"`
+	TxHash          common.Hash     `json:"transactionHash"`
+	ContractAddress *common.Address `json:"contractAddress"`
+	GasUsed         hexutil.Uint64  `json:"gasUsed"`
 
 	// Inclusion information: These fields provide information about the inclusion of the
 	// transaction corresponding to this receipt.
-	BlockHash        common.Hash `json:"blockHash"`
-	BlockNumber      *big.Int    `json:"blockNumber"`
-	TransactionIndex uint        `json:"transactionIndex"`
+	BlockHash        common.Hash    `json:"blockHash"`
+	BlockNumber      *hexutil.Big   `json:"blockNumber"`
+	TransactionIndex hexutil.Uint64 `json:"transactionIndex"`
 }
 
 type TransactionResult struct {
 	BlockHash        *common.Hash    `json:"blockHash"`
-	BlockNumber      *string         `json:"blockNumber"`
-	From             string          `json:"from"`
-	Gas              string          `json:"gas"`
-	GasPrice         string          `json:"gasPrice"`
+	BlockNumber      *hexutil.Big    `json:"blockNumber"`
+	From             common.Address  `json:"from"`
+	Gas              hexutil.Uint64  `json:"gas"`
+	GasPrice         *hexutil.Big    `json:"gasPrice"`
 	Hash             common.Hash     `json:"hash"`
-	Input            string          `json:"input"`
-	Nonce            string          `json:"nonce"`
-	To               *string         `json:"to"`
+	Input            hexutil.Bytes   `json:"input"`
+	Nonce            hexutil.Uint64  `json:"nonce"`
+	To               *common.Address `json:"to"`
 	TransactionIndex *hexutil.Uint64 `json:"transactionIndex"`
-	Value            string          `json:"value"`
-	V                string          `json:"v"`
-	R                string          `json:"r"`
-	S                string          `json:"s"`
+	Value            *hexutil.Big    `json:"value"`
+	V                *hexutil.Big    `json:"v"`
+	R                hexutil.Bytes   `json:"r"`
+	S                hexutil.Bytes   `json:"s"`
 }

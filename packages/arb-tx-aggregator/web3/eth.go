@@ -291,17 +291,24 @@ func (s *Server) GetTransactionReceipt(ctx context.Context, txHash hexutil.Bytes
 	}
 
 	receipt := result.ToEthReceipt(blockInfo.Hash)
+
+	var contractAddress *common.Address
+	emptyAddress := common.Address{}
+	if receipt.ContractAddress != emptyAddress {
+		contractAddress = &receipt.ContractAddress
+	}
+
 	return &GetTransactionReceiptResult{
-		Status:            receipt.Status,
-		CumulativeGasUsed: receipt.CumulativeGasUsed,
-		Bloom:             hexutil.Encode(receipt.Bloom.Bytes()),
+		Status:            hexutil.Uint64(receipt.Status),
+		CumulativeGasUsed: hexutil.Uint64(receipt.CumulativeGasUsed),
+		Bloom:             receipt.Bloom.Bytes(),
 		Logs:              receipt.Logs,
 		TxHash:            receipt.TxHash,
-		ContractAddress:   receipt.ContractAddress.Hex(),
-		GasUsed:           receipt.GasUsed,
+		ContractAddress:   contractAddress,
+		GasUsed:           hexutil.Uint64(receipt.GasUsed),
 		BlockHash:         receipt.BlockHash,
-		BlockNumber:       receipt.BlockNumber,
-		TransactionIndex:  receipt.TransactionIndex,
+		BlockNumber:       (*hexutil.Big)(receipt.BlockNumber),
+		TransactionIndex:  hexutil.Uint64(receipt.TransactionIndex),
 	}, nil
 }
 
@@ -316,28 +323,23 @@ func (s *Server) makeTransactionResult(res *evm.TxResult) (*TransactionResult, e
 	}
 	vVal, rVal, sVal := tx.RawSignatureValues()
 	txIndex := res.TxIndex.Uint64()
-	blockNum := hexutil.EncodeBig(res.IncomingRequest.ChainTime.BlockNum.AsInt())
+	blockNum := res.IncomingRequest.ChainTime.BlockNum.AsInt()
 	blockHash := blockInfo.Hash.ToEthHash()
-	var to *string
-	if tx.To() != nil {
-		toStr := tx.To().Hex()
-		to = &toStr
-	}
 	return &TransactionResult{
 		BlockHash:        &blockHash,
-		BlockNumber:      &blockNum,
-		From:             res.IncomingRequest.Sender.ToEthAddress().Hex(),
-		Gas:              hexutil.EncodeUint64(tx.Gas()),
-		GasPrice:         hexutil.EncodeBig(tx.GasPrice()),
+		BlockNumber:      (*hexutil.Big)(blockNum),
+		From:             res.IncomingRequest.Sender.ToEthAddress(),
+		Gas:              hexutil.Uint64(tx.Gas()),
+		GasPrice:         (*hexutil.Big)(tx.GasPrice()),
 		Hash:             tx.Hash(),
-		Input:            hexutil.Encode(tx.Data()),
-		Nonce:            hexutil.EncodeUint64(tx.Nonce()),
-		To:               to,
+		Input:            tx.Data(),
+		Nonce:            hexutil.Uint64(tx.Nonce()),
+		To:               tx.To(),
 		TransactionIndex: (*hexutil.Uint64)(&txIndex),
-		Value:            hexutil.EncodeBig(tx.Value()),
-		V:                hexutil.EncodeBig(vVal),
-		R:                hexutil.EncodeBig(rVal),
-		S:                hexutil.EncodeBig(sVal),
+		Value:            (*hexutil.Big)(tx.Value()),
+		V:                (*hexutil.Big)(vVal),
+		R:                rVal.Bytes(),
+		S:                sVal.Bytes(),
 	}, nil
 }
 
