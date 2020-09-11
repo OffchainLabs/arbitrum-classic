@@ -741,9 +741,8 @@ void ec_add(MachineState& m) {
     }
 
     G1Point ans = ret.get<G1Point>();
-
-    const Tuple retup(ans.x, ans.y);
-    m.stack[0] = retup;
+    cVal = ans.x;
+    dVal = ans.y;
     ++m.pc;
 }
 
@@ -761,9 +760,8 @@ void ec_mul(MachineState& m) {
     }
 
     G1Point ans = ret.get<G1Point>();
-
-    const Tuple retup(ans.x, ans.y);
-    m.stack[0] = retup;
+    bVal = ans.x;
+    cVal = ans.y;
     ++m.pc;
 }
 
