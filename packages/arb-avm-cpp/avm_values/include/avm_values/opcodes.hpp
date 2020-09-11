@@ -104,6 +104,8 @@ enum class OpCode : uint8_t {
 
     ECRECOVER = 0x80,
     ECPAIRING = 0x83,
+    ECADD = 0x84,
+    ECMUL = 0x85,
 
     DEBUG_PRINT = 0x90,
 };

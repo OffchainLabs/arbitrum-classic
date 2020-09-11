@@ -726,6 +726,61 @@ void ec_pairing(MachineState& m) {
     ++m.pc;
 }
 
+void ec_add(MachineState& m) {
+    m.stack.prepForMod(1);
+
+    const Tuple val = assumeTuple(m.stack[0]);
+
+    if (val.tuple_size() != 4) {
+        throw bad_pop_type{};
+    }
+
+    std::array<uint256_t, 4> points{assumeInt(val.get_element_unsafe(0)),
+                                    assumeInt(val.get_element_unsafe(1)),
+                                    assumeInt(val.get_element_unsafe(2)),
+                                    assumeInt(val.get_element_unsafe(3))};
+
+    auto ret = ecadd(points);
+
+    if (nonstd::holds_alternative<std::string>(ret)) {
+        m.state = Status::Error;
+        return;
+    }
+
+    G1Point ans = ret.get<G1Point>();
+
+    const Tuple retup(ans.x, ans.y);
+    m.stack[0] = retup;
+    ++m.pc;
+}
+
+void ec_mul(MachineState& m) {
+    m.stack.prepForMod(1);
+
+    const Tuple val = assumeTuple(m.stack[0]);
+
+    if (val.tuple_size() != 3) {
+        throw bad_pop_type{};
+    }
+
+    std::array<uint256_t, 3> points{assumeInt(val.get_element_unsafe(0)),
+                                    assumeInt(val.get_element_unsafe(1)),
+                                    assumeInt(val.get_element_unsafe(2))};
+
+    auto ret = ecmul(points);
+
+    if (nonstd::holds_alternative<std::string>(ret)) {
+        m.state = Status::Error;
+        return;
+    }
+
+    G1Point ans = ret.get<G1Point>();
+
+    const Tuple retup(ans.x, ans.y);
+    m.stack[0] = retup;
+    ++m.pc;
+}
+
 BlockReason breakpoint(MachineState& m) {
     ++m.pc;
     return BreakpointBlocked{};
