@@ -425,6 +425,9 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::KECCAKF:
             machineoperation::keccakF(*this);
             break;
+        case OpCode::SHA256F:
+            machineoperation::sha256F(*this);
+            break;
 
             /***********************************************/
             /*  Stack, Memory, Storage and Flow Operations */

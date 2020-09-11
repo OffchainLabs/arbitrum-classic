@@ -17,6 +17,7 @@
 #include <avm/machinestate/machineoperation.hpp>
 #include <avm/machinestate/machinestate.hpp>
 
+#include <PicoSHA2/picosha2.h>
 #include <ethash/keccak.h>
 #include <secp256k1_recovery.h>
 #include <ethash/keccak.hpp>
@@ -448,6 +449,46 @@ void keccakF(MachineState& m) {
     ethash_keccakf1600(state);
 
     m.stack[0] = internal::decodeKeccakState(state);
+    ++m.pc;
+}
+
+namespace internal {
+uint256_t sha256_block(const uint256_t& digest_int,
+                       std::array<uint8_t, 64>& input_data) {
+    uint32_t digest_data[8];
+    picosha2::word_t digest[8];
+    intx::be::unsafe::store(reinterpret_cast<uint8_t*>(&digest_data),
+                            bswap(digest_int));
+    for (int i = 0; i < 8; ++i) {
+        digest[7 - i] = digest_data[i];
+    }
+
+    picosha2::detail::hash256_block(digest, input_data.begin(),
+                                    input_data.end());
+
+    for (int i = 0; i < 8; ++i) {
+        digest_data[7 - i] = static_cast<uint32_t>(digest[i]);
+    }
+
+    return bswap(intx::be::unsafe::load<uint256_t>(
+        reinterpret_cast<const uint8_t*>(&digest_data)));
+}
+}  // namespace internal
+
+void sha256F(MachineState& m) {
+    m.stack.prepForMod(3);
+    auto& digest_int = assumeInt(m.stack[0]);
+    auto& input_first_int = assumeInt(m.stack[1]);
+    auto& input_second_int = assumeInt(m.stack[2]);
+
+    std::array<uint8_t, 64> input_data;
+    intx::be::unsafe::store(input_data.data(), input_first_int);
+    intx::be::unsafe::store(input_data.data() + 32, input_second_int);
+
+    input_second_int = internal::sha256_block(digest_int, input_data);
+
+    m.stack.popClear();
+    m.stack.popClear();
     ++m.pc;
 }
 
