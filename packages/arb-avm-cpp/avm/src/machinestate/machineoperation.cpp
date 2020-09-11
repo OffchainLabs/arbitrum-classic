@@ -708,12 +708,14 @@ void ec_pairing(MachineState& m) {
         if (next.tuple_size() != 6) {
             throw bad_pop_type{};
         }
-        points.push_back({{assumeInt(next.get_element_unsafe(0)),
-                           assumeInt(next.get_element_unsafe(1))},
-                          {assumeInt(next.get_element_unsafe(2)),
-                           assumeInt(next.get_element_unsafe(3)),
-                           assumeInt(next.get_element_unsafe(4)),
-                           assumeInt(next.get_element_unsafe(5))}});
+
+        G1Point g1{assumeInt(next.get_element_unsafe(0)),
+                   assumeInt(next.get_element_unsafe(1))};
+        G2Point g2{assumeInt(next.get_element_unsafe(2)),
+                   assumeInt(next.get_element_unsafe(3)),
+                   assumeInt(next.get_element_unsafe(4)),
+                   assumeInt(next.get_element_unsafe(5))};
+        points.push_back({g1, g2});
     }
 
     auto ret = ecpairing(points);
@@ -743,6 +745,8 @@ void ec_add(MachineState& m) {
     G1Point ans = ret.get<G1Point>();
     cVal = ans.x;
     dVal = ans.y;
+    m.stack.popClear();
+    m.stack.popClear();
     ++m.pc;
 }
 
@@ -762,6 +766,7 @@ void ec_mul(MachineState& m) {
     G1Point ans = ret.get<G1Point>();
     bVal = ans.x;
     cVal = ans.y;
+    m.stack.popClear();
     ++m.pc;
 }
 

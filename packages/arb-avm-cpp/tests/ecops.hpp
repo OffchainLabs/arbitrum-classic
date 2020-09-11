@@ -47,26 +47,7 @@ struct PairingTestCase {
           d(toArbPoint(d_)) {}
 };
 
-inline std::vector<PairingTestCase> preparePairingCases() {
-    G1<alt_bn128_pp> P =
-        (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
-    G2<alt_bn128_pp> Q =
-        (Fr<alt_bn128_pp>::random_element()) * G2<alt_bn128_pp>::one();
-
-    Fr<alt_bn128_pp> s = Fr<alt_bn128_pp>::random_element();
-    Fr<alt_bn128_pp> negone = Fr<alt_bn128_pp>(-1);
-
-    // Fr<ppT> s = Fr<ppT>("2");
-    G1<alt_bn128_pp> sP = s * P;
-    G2<alt_bn128_pp> sQ = s * Q;
-
-    std::vector<PairingTestCase> cases;
-    cases.push_back({negone * P, sQ, sP, Q});
-    cases.push_back({P, negone * sQ, sP, Q});
-    cases.push_back({P, sQ, negone * sP, Q});
-    cases.push_back({P, sQ, sP, negone * Q});
-    return cases;
-}
+std::vector<PairingTestCase> preparePairingCases();
 
 struct ECAddTestCase {
     G1Point a;

@@ -20,6 +20,27 @@
 
 using namespace libff;
 
+std::vector<PairingTestCase> preparePairingCases() {
+    G1<alt_bn128_pp> P =
+        (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
+    G2<alt_bn128_pp> Q =
+        (Fr<alt_bn128_pp>::random_element()) * G2<alt_bn128_pp>::one();
+
+    Fr<alt_bn128_pp> s = Fr<alt_bn128_pp>::random_element();
+    Fr<alt_bn128_pp> negone = Fr<alt_bn128_pp>(-1);
+
+    // Fr<ppT> s = Fr<ppT>("2");
+    G1<alt_bn128_pp> sP = s * P;
+    G2<alt_bn128_pp> sQ = s * Q;
+
+    std::vector<PairingTestCase> cases;
+    cases.push_back({negone * P, sQ, sP, Q});
+    cases.push_back({P, negone * sQ, sP, Q});
+    cases.push_back({P, sQ, negone * sP, Q});
+    cases.push_back({P, sQ, sP, negone * Q});
+    return cases;
+}
+
 TEST_CASE("ECOp: g1PfromBytes") {
     alt_bn128_pp::init_public_params();
 
@@ -42,7 +63,7 @@ TEST_CASE("ECOp: g2PfromBytes") {
     REQUIRE(outP.get<G2<alt_bn128_pp>>() == P);
 }
 
-TEST_CASE("ECPairing: ecpairing_internal") {
+TEST_CASE("ECOp: ecpairing_internal") {
     alt_bn128_pp::init_public_params();
 
     constexpr int numPairs = 3;
