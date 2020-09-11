@@ -1023,13 +1023,6 @@ TEST_CASE("HALT opcode is correct") {
     }
 }
 
-uint256_t hexToInt(const std::string& hexstr) {
-    std::vector<unsigned char> bytes;
-    bytes.resize(hexstr.size() / 2);
-    boost::algorithm::unhex(hexstr.begin(), hexstr.end(), bytes.begin());
-    return intx::be::unsafe::load<uint256_t>(bytes.data());
-}
-
 TEST_CASE("KECCAKF opcode is correct") {
     auto code = std::make_shared<Code>();
     SECTION("Inverts correctly") {

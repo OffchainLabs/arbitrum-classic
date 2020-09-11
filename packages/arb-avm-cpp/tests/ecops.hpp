@@ -17,9 +17,9 @@
 #ifndef test_ecops_hpp
 #define test_ecops_hpp
 
-#include <avm/machinestate/ecops.hpp>
-
 #include <gmpxx.h>
+#include <avm/machinestate/ecops.hpp>
+#include <boost/algorithm/hex.hpp>
 #include <libff/algebra/curves/alt_bn128/alt_bn128_pp.hpp>
 
 using namespace libff;
@@ -47,8 +47,8 @@ inline G1Point toArbPoint(G1<alt_bn128_pp> P) {
     alt_bn128_Fq X = P.X;
     alt_bn128_Fq Y = P.Y;
 
-    bigint<4L> xbi = X.as_bigint();
-    bigint<4l> ybi = Y.as_bigint();
+    bigint<alt_bn128_q_limbs> xbi = X.as_bigint();
+    bigint<alt_bn128_q_limbs> ybi = Y.as_bigint();
 
     mpz_t mpx, mpy;
     mpz_inits(mpx, mpy, NULL);
@@ -80,10 +80,10 @@ inline G2Point toArbPoint(G2<alt_bn128_pp> P) {
     alt_bn128_Fq yc0 = Y.c0;
     alt_bn128_Fq yc1 = Y.c1;
 
-    bigint<4L> xc0bi = xc0.as_bigint();
-    bigint<4l> xc1bi = xc1.as_bigint();
-    bigint<4L> yc0bi = yc0.as_bigint();
-    bigint<4l> yc1bi = yc1.as_bigint();
+    bigint<alt_bn128_q_limbs> xc0bi = xc0.as_bigint();
+    bigint<alt_bn128_q_limbs> xc1bi = xc1.as_bigint();
+    bigint<alt_bn128_q_limbs> yc0bi = yc0.as_bigint();
+    bigint<alt_bn128_q_limbs> yc1bi = yc1.as_bigint();
 
     mpz_t mpzxc0, mpzxc1, mpzyc0, mpzyc1;
     mpz_inits(mpzxc0, mpzxc1, mpzyc0, mpzyc1, NULL);
@@ -142,6 +142,13 @@ inline std::vector<PairingTestCase> prepareCases() {
     cases.push_back({P, sQ, negone * sP, Q});
     cases.push_back({P, sQ, sP, negone * Q});
     return cases;
+}
+
+inline uint256_t hexToInt(const std::string& hexstr) {
+    std::vector<unsigned char> bytes;
+    bytes.resize(hexstr.size() / 2);
+    boost::algorithm::unhex(hexstr.begin(), hexstr.end(), bytes.begin());
+    return intx::be::unsafe::load<uint256_t>(bytes.data());
 }
 
 #endif /* test_ecops_hpp */

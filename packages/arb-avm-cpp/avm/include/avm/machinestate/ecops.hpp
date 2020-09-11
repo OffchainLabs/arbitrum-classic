@@ -26,6 +26,8 @@
 
 #include <vector>
 
+const mp_size_t BIG_INT_FOR_UINT256 = (256 + GMP_NUMB_BITS - 1) / GMP_NUMB_BITS;
+
 struct G1Point {
     uint256_t x;
     uint256_t y;
@@ -48,5 +50,11 @@ nonstd::variant<libff::alt_bn128_GT, std::string> ecpairing_internal(
 
 nonstd::variant<bool, std::string> ecpairing(
     const std::vector<std::array<uint256_t, 6>>& input);
+
+nonstd::variant<libff::alt_bn128_G1, std::string> ecadd(
+    const std::array<uint256_t, 4>& input);
+
+nonstd::variant<libff::alt_bn128_G1, std::string> ecsmult(
+    const std::array<uint256_t, 3>& input);
 
 #endif /* ecops_hpp */

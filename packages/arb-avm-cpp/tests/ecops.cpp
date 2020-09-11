@@ -85,3 +85,47 @@ TEST_CASE("ECPairing: ecpairing") {
         REQUIRE(res.get<bool>());
     }
 }
+
+TEST_CASE("ECAdd: ecadd") {
+    alt_bn128_pp::init_public_params();
+
+    G1<alt_bn128_pp> Pff =
+        (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
+    G1<alt_bn128_pp> Qff =
+        (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
+
+    auto P = toArbPoint(Pff);
+    auto Q = toArbPoint(Qff);
+
+    std::array<uint256_t, 4> all_points({P.x, P.y, Q.x, Q.y});
+
+    G1<alt_bn128_pp> sum = Pff + Qff;
+    auto res = ecadd(all_points);
+    REQUIRE(nonstd::holds_alternative<alt_bn128_G1>(res));
+    REQUIRE(sum == res.get<alt_bn128_G1>());
+}
+
+TEST_CASE("ECMult: ecmult") {
+    alt_bn128_pp::init_public_params();
+
+    G1<alt_bn128_pp> Pff =
+        (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
+    uint256_t sui = hexToInt(
+        "b7abaaf2f45b6d1c1b23afb835719050a28b98cea191d94bff8feb3025ddbfc8");
+
+    uint8_t sbytes[32];
+    intx::be::store(sbytes, sui);
+    mpz_t smpz;
+    mpz_init(smpz);
+    mpz_import(smpz, 32, 1, 1, 1, 0, sbytes);
+    bigint<BIG_INT_FOR_UINT256> s(smpz);
+
+    auto P = toArbPoint(Pff);
+
+    std::array<uint256_t, 3> all_points({P.x, P.y, sui});
+
+    G1<alt_bn128_pp> prod = s * Pff;
+    auto res = ecsmult(all_points);
+    REQUIRE(nonstd::holds_alternative<alt_bn128_G1>(res));
+    REQUIRE(prod == res.get<alt_bn128_G1>());
+}

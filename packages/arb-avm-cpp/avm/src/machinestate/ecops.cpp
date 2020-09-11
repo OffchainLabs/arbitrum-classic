@@ -182,3 +182,35 @@ nonstd::variant<bool, std::string> ecpairing(
     }
     return res.get<alt_bn128_GT>() == GT<alt_bn128_pp>::one();
 }
+
+nonstd::variant<alt_bn128_G1, std::string> ecadd(
+    const std::array<uint256_t, 4>& input) {
+    auto a = g1PfromBytes({input[0], input[1]});
+    auto b = g1PfromBytes({input[2], input[3]});
+    if (nonstd::holds_alternative<std::string>(a)) {
+        return a.get<std::string>();
+    }
+    if (nonstd::holds_alternative<std::string>(b)) {
+        return b.get<std::string>();
+    }
+    return a.get<G1<alt_bn128_pp>>() + b.get<G1<alt_bn128_pp>>();
+}
+
+nonstd::variant<alt_bn128_G1, std::string> ecsmult(
+    const std::array<uint256_t, 3>& input) {
+    auto a = g1PfromBytes({input[0], input[1]});
+
+    if (nonstd::holds_alternative<std::string>(a)) {
+        return a.get<std::string>();
+    }
+
+    uint8_t sbytes[32];
+    intx::be::store(sbytes, input[2]);
+
+    mpz_t mpzs;
+    mpz_init(mpzs);
+    mpz_import(mpzs, 32, 1, 1, 1, 0, sbytes);
+    bigint<BIG_INT_FOR_UINT256> s(mpzs);
+    mpz_clear(mpzs);
+    return s * a.get<G1<alt_bn128_pp>>();
+}
