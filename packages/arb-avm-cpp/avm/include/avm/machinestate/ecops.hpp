@@ -35,12 +35,16 @@ struct G1Point {
     uint256_t y;
 };
 
+std::ostream& operator<<(std::ostream& os, const G1Point& val);
+
 struct G2Point {
     uint256_t x0;
     uint256_t x1;
     uint256_t y0;
     uint256_t y1;
 };
+
+std::ostream& operator<<(std::ostream& os, const G2Point& val);
 
 void mpz_export_and_pad32(uint8_t* output, mpz_t input);
 G1Point toArbPoint(G1<alt_bn128_pp> P);

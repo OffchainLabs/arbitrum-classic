@@ -297,3 +297,16 @@ nonstd::variant<G1Point, std::string> ecmul(const G1Point& point,
     mpz_clear(mpzs);
     return toArbPoint(s * a.get<G1<alt_bn128_pp>>());
 }
+
+std::ostream& operator<<(std::ostream& os, const G1Point& val) {
+    os << "(" << intx::to_string(val.x) << ", " << intx::to_string(val.y)
+       << ")";
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const G2Point& val) {
+    os << "(" << intx::to_string(val.x0) << ", " << intx::to_string(val.x1)
+       << ", " << intx::to_string(val.y0) << ", " << intx::to_string(val.y1)
+       << ")";
+    return os;
+}
