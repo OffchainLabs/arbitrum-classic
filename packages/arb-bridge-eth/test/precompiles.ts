@@ -20,10 +20,8 @@ import { ethers } from '@nomiclabs/buidler'
 import * as chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { PrecompilesTester } from '../build/types/PrecompilesTester'
-import { solidity } from 'ethereum-waffle'
 
 chai.use(chaiAsPromised)
-chai.use(solidity)
 
 const { expect } = chai
 
