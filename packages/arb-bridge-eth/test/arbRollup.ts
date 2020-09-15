@@ -500,7 +500,7 @@ describe('ArbRollup', () => {
       await arbFactory.globalInboxAddress(),
       '0x'
     )
-    expect(templateRollup.owner()).to.eventually.equal(
+    await expect(templateRollup.owner()).to.eventually.equal(
       await accounts[0].getAddress()
     )
     await expect(templateRollup.ownerShutdown()).to.be.revertedWith('NOT_CLONE')
