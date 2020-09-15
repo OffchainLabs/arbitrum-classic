@@ -192,7 +192,7 @@ library Precompiles {
     // SHA256 compression function that operates on a 512 bit chunk
     // Note that the input must be padded by the caller
     // For the initial chunk, the initial values from the SHA256 spec should be passed in as hashState
-    // For subseuqent rounds, hashState is the output from the previous round
+    // For subsequent rounds, hashState is the output from the previous round
     function sha256Block(uint256[2] memory inputChunk, uint256 hashState)
         internal
         pure

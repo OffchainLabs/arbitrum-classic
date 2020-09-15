@@ -258,10 +258,10 @@ The function carries out three steps.
 
 ### Definition of `sha256f`
 
-The `sha256f` function is computer by the `sha256f` instruction. The function takes 3 Integers as input, and produces, and produces an Integer as output.
+The `sha256f` function is computed by the `sha256f` instruction. The function takes 3 Integers as input, and produces, and produces an Integer as output.
 
 The function carries out three steps.
 
-1. The 32 byte little-endian represention of the first item from the stack is interpretted as the digest and the 32 byte representations of the second and third items from the stack are concatenated and interpretted as the input array.
+1. The 32 byte little-endian representation of the first item from the stack is interpreted as the digest and the 32 byte representations of the second and third items from the stack are concatenated and interpreted as the input array.
 2. Using the digest and input array from Step 1, compute the SHA256 compression function, producing a 32 byte string as output
 3. Using the result of Step 2 as input, derive an Integer from the little-endian interpretation of the output
