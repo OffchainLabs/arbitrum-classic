@@ -54,6 +54,7 @@ void hashOp(MachineState& m);
 void typeOp(MachineState& m);
 void ethhash2Op(MachineState& m);
 void keccakF(MachineState& m);
+void sha256F(MachineState& m);
 void pop(MachineState& m);
 void spush(MachineState& m);
 void rpush(MachineState& m);
@@ -97,6 +98,9 @@ BlockReason sideload(MachineState& m);
 namespace internal {
 void encodeKeccakState(const Tuple& tup, uint64_t* state);
 Tuple decodeKeccakState(const uint64_t* state);
+
+uint256_t sha256_block(const uint256_t& digest_int,
+                       std::array<uint8_t, 64>& input_data);
 }  // namespace internal
 }  // namespace machineoperation
 

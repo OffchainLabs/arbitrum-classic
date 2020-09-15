@@ -70,7 +70,7 @@ let address2: string
 let address3: string
 let address4: string
 
-describe('GlobalInbox', async () => {
+describe('GlobalInbox', () => {
   before(async () => {
     accounts = await ethers.getSigners()
 

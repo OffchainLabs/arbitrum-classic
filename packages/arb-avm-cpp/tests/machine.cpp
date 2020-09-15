@@ -178,10 +178,10 @@ TEST_CASE("MachineTestVectors") {
     DBDeleter deleter;
 
     std::vector<std::string> files = {
-        "opcodetestarbgas",   "opcodetestdup",    "opcodetestecrecover",
-        "opcodetestethhash2", "opcodetesthash",   "opcodetestlogic",
-        "opcodetestmath",     "opcodeteststack",  "opcodetesttuple",
-        "opcodetestcode",     "opcodetestkeccakf"};
+        "opcodetestarbgas",   "opcodetestdup",     "opcodetestecrecover",
+        "opcodetestethhash2", "opcodetesthash",    "opcodetestlogic",
+        "opcodetestmath",     "opcodeteststack",   "opcodetesttuple",
+        "opcodetestcode",     "opcodetestkeccakf", "opcodetestsha256f"};
 
     for (const auto& filename : files) {
         DYNAMIC_SECTION(filename) {

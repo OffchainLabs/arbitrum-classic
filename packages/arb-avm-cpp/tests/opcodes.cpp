@@ -1055,6 +1055,18 @@ TEST_CASE("OPCODE: HALT opcode is correct") {
     }
 }
 
+std::vector<unsigned char> hexToVec(const std::string& hexstr) {
+    std::vector<unsigned char> bytes;
+    bytes.resize(hexstr.size() / 2);
+    boost::algorithm::unhex(hexstr.begin(), hexstr.end(), bytes.begin());
+    return bytes;
+}
+
+uint256_t hexToInt(const std::string& hexstr) {
+    auto bytes = hexToVec(hexstr);
+    return intx::be::unsafe::load<uint256_t>(bytes.data());
+}
+
 TEST_CASE("OPCODE: KECCAKF opcode is correct") {
     auto code = std::make_shared<Code>();
     SECTION("Inverts correctly") {
@@ -1176,6 +1188,88 @@ TEST_CASE("OPCODE: KECCAKF opcode is correct") {
             REQUIRE(parts[4] == correct4);
             REQUIRE(parts[5] == correct5);
             REQUIRE(parts[6] == correct6);
+        }
+    }
+}
+
+TEST_CASE("OPCODE: SHA256F opcode is correct") {
+    uint256_t initial_hash_state = hexToInt(
+        "6a09e667bb67ae853c6ef372a54ff53a510e527f9b05688c1f83d9ab5be0cd19");
+    struct Sha256Case {
+        std::vector<unsigned char> raw_input_data;
+        uint256_t input_first;
+        uint256_t input_second;
+        uint256_t output_digest;
+    };
+    std::vector<Sha256Case> cases = {
+        {hexToVec(
+             "00000000000000000000000000000000000000000000000000000000000000000"
+             "000000000000000000000000000000000000000000000000000000000000000"),
+         0_u256, 0_u256,
+         hexToInt("da5698be17b9b46962335799779fbeca8ce5d491c0d26243bafef9ea1837"
+                  "a9d8")},
+        {hexToVec(
+             "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+             "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+         hexToInt("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+                  "FFFF"),
+         hexToInt("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+                  "FFFF"),
+         hexToInt("ef0c748df4da50a8d6c43c013edc3ce76c9d9fa9a1458ade56eb86c0a644"
+                  "92d2")},
+        {hexToVec(
+             "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2"
+             "02122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"),
+         hexToInt("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d"
+                  "1e1f"),
+         hexToInt("202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d"
+                  "3e3f"),
+         hexToInt("fc99a2df88f42a7a7bb9d18033cdc6a20256755f9d5b9a5044a9cc315abe"
+                  "84a7")},
+        {hexToVec(
+             "243f6a8885a308d313198a2e03707344a4093822299f31d0082efa98ec4e6c894"
+             "52821e638d01377be5466cf34e90c6cc0ac29b7c97c50dd3f84d5b5b5470917"),
+         hexToInt("243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E"
+                  "6C89"),
+         hexToInt("452821E638D01377BE5466CF34E90C6CC0AC29B7C97C50DD3f84D5B5b547"
+                  "0917"),
+         hexToInt("cf0ae4eb67d38ffeb94068984b22abde4e92bc548d14585e48dca8882d7b"
+                  "09ce")},
+    };
+
+    SECTION("Block works correction") {
+        int i = 0;
+        for (const auto& test_case : cases) {
+            DYNAMIC_SECTION(i) {
+                std::array<uint8_t, 64> input_data;
+                std::copy(test_case.raw_input_data.begin(),
+                          test_case.raw_input_data.end(), input_data.begin());
+                auto ret = machineoperation::internal::sha256_block(
+                    initial_hash_state, input_data);
+                REQUIRE(ret == test_case.output_digest);
+            }
+            ++i;
+        }
+    }
+
+    SECTION("Hashes correctly") {
+        auto code = std::make_shared<Code>();
+        auto stub = code->addSegment();
+        stub = code->addOperation(stub.pc, Operation(OpCode::SHA256F));
+        MachineState m{std::move(code), Tuple()};
+
+        int i = 0;
+        for (const auto& test_case : cases) {
+            DYNAMIC_SECTION(i) {
+                m.stack.push(test_case.input_second);
+                m.stack.push(test_case.input_first);
+                m.stack.push(initial_hash_state);
+                m.runOne();
+                auto ret = m.stack.pop();
+                REQUIRE(nonstd::holds_alternative<uint256_t>(ret));
+                REQUIRE(ret.get<uint256_t>() == test_case.output_digest);
+            }
+            ++i;
         }
     }
 }

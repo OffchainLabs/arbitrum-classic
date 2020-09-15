@@ -190,6 +190,8 @@ def halt_docker(sudo_flag):
 
 
 def main():
+    run("./scripts/create-network")
+
     parser = argparse.ArgumentParser(prog=NAME, description=DESCRIPTION)
     # Required
     parser.add_argument("rollup", type=str, help="The address of the rollup chain.")

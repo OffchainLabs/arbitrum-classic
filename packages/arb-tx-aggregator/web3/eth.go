@@ -114,10 +114,10 @@ func (s *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
 }
 
 func (s *Server) GetBlockByHash(r *http.Request, args *GetBlockByHashArgs, reply **GetBlockResult) error {
-	var blockHash arbcommon.Hash
+	var blockHash common.Hash
 	copy(blockHash[:], args.BlockHash)
 
-	header, err := s.srv.GetBlockHeaderByHash(r.Context(), blockHash)
+	header, err := s.srv.Client.HeaderByHash(r.Context(), blockHash)
 	if err != nil {
 		// If we can't get the header, return nil
 		*reply = nil
@@ -131,7 +131,7 @@ func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, r
 	if err != nil {
 		return err
 	}
-	header, err := s.srv.GetBlockHeaderByNumber(r.Context(), height)
+	header, err := s.srv.Client.HeaderByNumber(r.Context(), new(big.Int).SetUint64(height))
 	if err != nil {
 		// If we can't get the header, return nil
 		*reply = nil
@@ -141,10 +141,22 @@ func (s *Server) GetBlockByNumber(r *http.Request, args *GetBlockByNumberArgs, r
 }
 
 func (s *Server) getBlock(header *types.Header, includeTxData bool, reply **GetBlockResult) error {
-	results, err := s.srv.GetBlockResults(header.Number.Uint64())
+	block, err := s.srv.BlockInfo(header.Number.Uint64())
 	if err != nil {
 		return err
 	}
+
+	blockInfo, err := s.srv.GetBlockInfo(block)
+	if err != nil {
+		return err
+	}
+
+	results, err := s.srv.GetBlockResults(blockInfo)
+	if err != nil {
+		return err
+	}
+
+	bloom, gasLimit, gasUsed := aggregator.GetBlockFields(block, blockInfo)
 
 	var transactions interface{}
 	if includeTxData {
@@ -173,7 +185,7 @@ func (s *Server) getBlock(header *types.Header, includeTxData bool, reply **GetB
 		MixDigest:        header.MixDigest.Bytes(),
 		Nonce:            &header.Nonce,
 		Sha3Uncles:       header.UncleHash.Bytes(),
-		LogsBloom:        header.Bloom.Bytes(),
+		LogsBloom:        bloom.Bytes(),
 		TransactionsRoot: header.TxHash.Bytes(),
 		StateRoot:        header.Root.Bytes(),
 		ReceiptsRoot:     header.ReceiptHash.Bytes(),
@@ -182,8 +194,8 @@ func (s *Server) getBlock(header *types.Header, includeTxData bool, reply **GetB
 		TotalDifficulty:  (*hexutil.Big)(header.Difficulty),
 		ExtraData:        (*hexutil.Bytes)(&header.Extra),
 		Size:             (*hexutil.Uint64)(&size),
-		GasLimit:         (*hexutil.Uint64)(&header.GasLimit),
-		GasUsed:          (*hexutil.Uint64)(&header.GasUsed),
+		GasLimit:         (*hexutil.Uint64)(&gasLimit),
+		GasUsed:          (*hexutil.Uint64)(&gasUsed),
 		Timestamp:        (*hexutil.Uint64)(&header.Time),
 		Transactions:     transactions,
 		Uncles:           &uncles,

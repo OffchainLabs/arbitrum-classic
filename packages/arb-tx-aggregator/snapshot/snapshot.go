@@ -92,7 +92,7 @@ func (s *Snapshot) TryTx(msg message.Message, sender common.Address, targetHash 
 
 func (s *Snapshot) makeBasicCall(data []byte, dest common.Address) (*evm.TxResult, error) {
 	msg := message.ContractTransaction{
-		MaxGas:      big.NewInt(10000000),
+		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		DestAddress: dest,
 		Payment:     big.NewInt(0),

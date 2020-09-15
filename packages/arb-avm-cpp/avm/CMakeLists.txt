@@ -63,7 +63,7 @@ target_include_directories(avm PRIVATE
 find_package(GMP REQUIRED)
 find_package(GMPXX REQUIRED)
 
-target_link_libraries(avm PUBLIC avm_values RocksDB::RocksDB Threads::Threads secp256k1 ff ${GMP_LIBRARY} ${GMPXX_LIBRARY} PRIVATE Boost::boost)
+target_link_libraries(avm PUBLIC avm_values RocksDB::RocksDB Threads::Threads secp256k1 ff picosha2 ${GMP_LIBRARY} ${GMPXX_LIBRARY} PRIVATE Boost::boost)
 
 target_code_coverage(avm AUTO ALL)
 
