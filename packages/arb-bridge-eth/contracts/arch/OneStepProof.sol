@@ -994,7 +994,7 @@ contract OneStepProof is IOneStepProof {
         } else if (opCode == OP_KECCAK_F) {
             return (1, 0, 600, executeKeccakFInsn);
         } else if (opCode == OP_SHA256_F) {
-            return (3, 0, 600, executeSha256FInsn);
+            return (3, 0, 250, executeSha256FInsn);
         } else if (opCode == OP_POP) {
             return (1, 0, 1, executePopInsn);
         } else if (opCode == OP_SPUSH) {

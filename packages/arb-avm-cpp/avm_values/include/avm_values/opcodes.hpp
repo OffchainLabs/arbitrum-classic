@@ -392,7 +392,7 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::TYPE, 3},
     {OpCode::ETHHASH2, 8},
     {OpCode::KECCAKF, 600},
-    {OpCode::SHA256F, 600},
+    {OpCode::SHA256F, 250},
 
     {OpCode::POP, 1},
     {OpCode::SPUSH, 1},
