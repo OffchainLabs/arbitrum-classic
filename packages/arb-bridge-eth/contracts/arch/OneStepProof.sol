@@ -542,7 +542,7 @@ contract OneStepProof is IOneStepProof {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
-        if (!val1.isInt() || !val2.isInt() || !val3.isInt() || val3.intVal == 0) {
+        if (!val1.isInt() || !val2.isInt() || !val3.isInt()) {
             handleOpcodeError(context);
             return;
         }
