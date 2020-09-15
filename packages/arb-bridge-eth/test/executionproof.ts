@@ -44,7 +44,7 @@ interface Proof {
 
 let ospTester: OneStepProof
 
-describe('OneStepProof', async () => {
+describe('OneStepProof', () => {
   before(async () => {
     const OneStepProof = await ethers.getContractFactory('OneStepProof')
     ospTester = (await OneStepProof.deploy()) as OneStepProof

@@ -22,7 +22,7 @@ import "./IOneStepProof.sol";
 import "./Value.sol";
 import "./Machine.sol";
 import "../inbox/Messages.sol";
-import "../libraries/Keccak.sol";
+import "../libraries/Precompiles.sol";
 
 // Originally forked from https://github.com/leapdao/solEVM-enforcer/tree/master
 
@@ -524,7 +524,7 @@ contract OneStepProof is IOneStepProof {
             data[5 * (i % 5) + i / 5] = uint256(uint64(values[i / 4].intVal >> ((i % 4) * 64)));
         }
 
-        data = Keccak.keccakF(data);
+        data = Precompiles.keccakF(data);
 
         Value.Data[] memory outValues = new Value.Data[](7);
         for (uint256 i = 0; i < 7; i++) {
@@ -536,6 +536,21 @@ contract OneStepProof is IOneStepProof {
         }
 
         pushVal(context.stack, Value.newTuple(outValues));
+    }
+
+    function executeSha256FInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val3 = popVal(context.stack);
+        if (!val1.isInt() || !val2.isInt() || !val3.isInt()) {
+            handleOpcodeError(context);
+            return;
+        }
+        uint256 a = val1.intVal;
+        uint256 b = val2.intVal;
+        uint256 c = val3.intVal;
+
+        pushVal(context.stack, Value.newInt(Precompiles.sha256Block([b, c], a)));
     }
 
     // Stack ops
@@ -873,6 +888,7 @@ contract OneStepProof is IOneStepProof {
     uint8 private constant OP_TYPE = 0x21;
     uint8 private constant OP_ETHHASH2 = 0x22;
     uint8 private constant OP_KECCAK_F = 0x23;
+    uint8 private constant OP_SHA256_F = 0x24;
 
     // Stack, Memory, Storage and Flow Operations
     uint8 private constant OP_POP = 0x30;
@@ -977,6 +993,8 @@ contract OneStepProof is IOneStepProof {
             return (2, 0, 8, binaryMathOp);
         } else if (opCode == OP_KECCAK_F) {
             return (1, 0, 600, executeKeccakFInsn);
+        } else if (opCode == OP_SHA256_F) {
+            return (3, 0, 250, executeSha256FInsn);
         } else if (opCode == OP_POP) {
             return (1, 0, 1, executePopInsn);
         } else if (opCode == OP_SPUSH) {

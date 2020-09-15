@@ -473,7 +473,7 @@ async function createRollup(): Promise<ArbRollup> {
   return ArbRollup.attach(chainAddress) as ArbRollup
 }
 
-describe('ArbRollup', async () => {
+describe('ArbRollup', () => {
   it('should deploy contracts', async function () {
     accounts = await ethers.getSigners()
     const { ArbFactory } = await deploy_contracts(bre)
@@ -500,7 +500,7 @@ describe('ArbRollup', async () => {
       await arbFactory.globalInboxAddress(),
       '0x'
     )
-    expect(templateRollup.owner()).to.eventually.equal(
+    await expect(templateRollup.owner()).to.eventually.equal(
       await accounts[0].getAddress()
     )
     await expect(templateRollup.ownerShutdown()).to.be.revertedWith('NOT_CLONE')

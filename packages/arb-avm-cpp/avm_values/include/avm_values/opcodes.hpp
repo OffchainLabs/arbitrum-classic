@@ -58,6 +58,7 @@ enum class OpCode : uint8_t {
     TYPE,
     ETHHASH2,
     KECCAKF,
+    SHA256F,
 
     POP = 0x30,
     SPUSH,          // 31
@@ -140,6 +141,7 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::TYPE, "type"},
     {OpCode::ETHHASH2, "ethhash2"},
     {OpCode::KECCAKF, "keccakf"},
+    {OpCode::SHA256F, "sha256f"},
 
     {OpCode::POP, "pop"},
     {OpCode::SPUSH, "spush"},
@@ -224,6 +226,8 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::TYPE, {MarshalLevel::SINGLE}},
         {OpCode::ETHHASH2, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
         {OpCode::KECCAKF, {MarshalLevel::SINGLE}},
+        {OpCode::SHA256F,
+         {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
 
         {OpCode::POP, {MarshalLevel::STUB}},
         {OpCode::SPUSH, {}},
@@ -309,6 +313,7 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
                                {OpCode::TYPE, {}},
                                {OpCode::ETHHASH2, {}},
                                {OpCode::KECCAKF, {}},
+                               {OpCode::SHA256F, {}},
 
                                {OpCode::POP, {}},
                                {OpCode::SPUSH, {}},
@@ -387,6 +392,7 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::TYPE, 3},
     {OpCode::ETHHASH2, 8},
     {OpCode::KECCAKF, 600},
+    {OpCode::SHA256F, 250},
 
     {OpCode::POP, 1},
     {OpCode::SPUSH, 1},
