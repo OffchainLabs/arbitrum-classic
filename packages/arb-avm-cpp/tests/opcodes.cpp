@@ -991,23 +991,6 @@ TEST_CASE("OPCODE: ecrecover opcode is correct") {
     };
 }
 
-TEST_CASE("OPCODE: ECPAIRING") {
-    alt_bn128_pp::init_public_params();
-    auto cases = preparePairingCases();
-    for (const auto& testCase : cases) {
-        REQUIRE(testCase.a.x != uint256_t{0});
-        Tuple p1(testCase.a.x, testCase.a.y, testCase.b.x0, testCase.b.x1,
-                 testCase.b.y0, testCase.b.y1);
-        Tuple p2(testCase.c.x, testCase.c.y, testCase.d.x0, testCase.d.x1,
-                 testCase.d.y0, testCase.d.y1);
-        MachineState mach;
-        mach.stack.push(Tuple(p2, Tuple(p1, Tuple())));
-        mach.runOp(OpCode::ECPAIRING);
-        REQUIRE(mach.state == Status::Extensive);
-        REQUIRE(mach.stack[0] == value(1));
-    }
-}
-
 TEST_CASE("OPCODE: ECADD") {
     alt_bn128_pp::init_public_params();
     for (const auto& test_case : prepareECAddCases()) {
@@ -1037,6 +1020,23 @@ TEST_CASE("OPCODE: ECMUL") {
     }
 }
 
+TEST_CASE("OPCODE: ECPAIRING") {
+    alt_bn128_pp::init_public_params();
+    auto cases = preparePairingCases();
+    for (const auto& testCase : cases) {
+        REQUIRE(testCase.a.x != uint256_t{0});
+        Tuple p1(testCase.a.x, testCase.a.y, testCase.b.x0, testCase.b.x1,
+                 testCase.b.y0, testCase.b.y1);
+        Tuple p2(testCase.c.x, testCase.c.y, testCase.d.x0, testCase.d.x1,
+                 testCase.d.y0, testCase.d.y1);
+        MachineState mach;
+        mach.stack.push(Tuple(p2, Tuple(p1, Tuple())));
+        mach.runOp(OpCode::ECPAIRING);
+        REQUIRE(mach.state == Status::Extensive);
+        REQUIRE(mach.stack[0] == value(1));
+    }
+}
+
 TEST_CASE("OPCODE: INBOX opcode is correct") {
     SECTION("inbox") {
         // TODO: fill in inbox test
@@ -1053,18 +1053,6 @@ TEST_CASE("OPCODE: HALT opcode is correct") {
     SECTION("halt") {
         // TODO: fill in halt test
     }
-}
-
-std::vector<unsigned char> hexToVec(const std::string& hexstr) {
-    std::vector<unsigned char> bytes;
-    bytes.resize(hexstr.size() / 2);
-    boost::algorithm::unhex(hexstr.begin(), hexstr.end(), bytes.begin());
-    return bytes;
-}
-
-uint256_t hexToInt(const std::string& hexstr) {
-    auto bytes = hexToVec(hexstr);
-    return intx::be::unsafe::load<uint256_t>(bytes.data());
 }
 
 TEST_CASE("OPCODE: KECCAKF opcode is correct") {

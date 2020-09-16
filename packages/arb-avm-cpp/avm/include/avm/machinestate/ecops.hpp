@@ -30,6 +30,8 @@ using namespace libff;
 
 const mp_size_t BIG_INT_FOR_UINT256 = (256 + GMP_NUMB_BITS - 1) / GMP_NUMB_BITS;
 
+void initEcOps();
+
 struct G1Point {
     uint256_t x;
     uint256_t y;

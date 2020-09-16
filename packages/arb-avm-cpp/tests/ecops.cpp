@@ -41,9 +41,40 @@ std::vector<PairingTestCase> preparePairingCases() {
     return cases;
 }
 
-TEST_CASE("ECOp: g1PfromBytes") {
+std::vector<ECAddTestCase> prepareECAddCases() {
     alt_bn128_pp::init_public_params();
 
+    G1<alt_bn128_pp> Pff =
+        (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
+    G1<alt_bn128_pp> Qff =
+        (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
+
+    auto P = toArbPoint(Pff);
+    auto Q = toArbPoint(Qff);
+    G1Point sum = toArbPoint(Pff + Qff);
+    return {{P, Q, sum}};
+}
+
+PairingTestCase::PairingTestCase(const std::string& data) {
+    a = {hexToInt({data.begin(), data.begin() + 64}),
+         hexToInt({data.begin() + 64, data.begin() + 64 * 2})};
+
+    b = {hexToInt({data.begin() + 64 * 2, data.begin() + 64 * 3}),
+         hexToInt({data.begin() + 64 * 3, data.begin() + 64 * 4}),
+         hexToInt({data.begin() + 64 * 4, data.begin() + 64 * 5}),
+         hexToInt({data.begin() + 64 * 5, data.begin() + 64 * 6})};
+
+    c = {hexToInt({data.begin() + 64 * 6, data.begin() + 64 * 7}),
+         hexToInt({data.begin() + 64 * 7, data.begin() + 64 * 8})};
+
+    d = {hexToInt({data.begin() + 64 * 8, data.begin() + 64 * 9}),
+         hexToInt({data.begin() + 64 * 9, data.begin() + 64 * 10}),
+         hexToInt({data.begin() + 64 * 10, data.begin() + 64 * 11}),
+         hexToInt({data.begin() + 64 * 11, data.begin() + 64 * 12})};
+}
+
+TEST_CASE("ECOp: g1PfromBytes") {
+    initEcOps();
     G1<alt_bn128_pp> P =
         (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
 
@@ -53,8 +84,7 @@ TEST_CASE("ECOp: g1PfromBytes") {
 }
 
 TEST_CASE("ECOp: g2PfromBytes") {
-    alt_bn128_pp::init_public_params();
-
+    initEcOps();
     G2<alt_bn128_pp> P =
         (Fr<alt_bn128_pp>::random_element()) * G2<alt_bn128_pp>::one();
 
@@ -64,8 +94,7 @@ TEST_CASE("ECOp: g2PfromBytes") {
 }
 
 TEST_CASE("ECOp: ecpairing_internal") {
-    alt_bn128_pp::init_public_params();
-
+    initEcOps();
     constexpr int numPairs = 3;
 
     std::array<G1<alt_bn128_pp>, numPairs> P;
@@ -99,6 +128,11 @@ TEST_CASE("ECOp: ecpairing") {
             {testCase.a, testCase.b}, {testCase.c, testCase.d}};
 
         auto res = ecpairing(all_points);
+        std::string msg;
+        if (nonstd::holds_alternative<std::string>(res)) {
+            msg = res.get<std::string>();
+        }
+        INFO(msg);
         REQUIRE(nonstd::holds_alternative<bool>(res));
         REQUIRE(res.get<bool>());
     }
@@ -107,6 +141,7 @@ TEST_CASE("ECOp: ecpairing") {
 TEST_CASE("ECOp: ecadd") {
     for (const auto& test_case : prepareECAddCases()) {
         auto res = ecadd(test_case.a, test_case.b);
+        REQUIRE(!nonstd::holds_alternative<std::string>(res));
         REQUIRE(nonstd::holds_alternative<G1Point>(res));
         REQUIRE(test_case.res.x == res.get<G1Point>().x);
         REQUIRE(test_case.res.y == res.get<G1Point>().y);

@@ -24,10 +24,15 @@
 
 using namespace libff;
 
-inline uint256_t hexToInt(const std::string& hexstr) {
+inline std::vector<unsigned char> hexToVec(const std::string& hexstr) {
     std::vector<unsigned char> bytes;
     bytes.resize(hexstr.size() / 2);
     boost::algorithm::unhex(hexstr.begin(), hexstr.end(), bytes.begin());
+    return bytes;
+}
+
+inline uint256_t hexToInt(const std::string& hexstr) {
+    auto bytes = hexToVec(hexstr);
     return intx::be::unsafe::load<uint256_t>(bytes.data());
 }
 
@@ -45,6 +50,8 @@ struct PairingTestCase {
           b(toArbPoint(b_)),
           c(toArbPoint(c_)),
           d(toArbPoint(d_)) {}
+
+    PairingTestCase(const std::string& data);
 };
 
 std::vector<PairingTestCase> preparePairingCases();
@@ -55,19 +62,7 @@ struct ECAddTestCase {
     G1Point res;
 };
 
-inline std::vector<ECAddTestCase> prepareECAddCases() {
-    alt_bn128_pp::init_public_params();
-
-    G1<alt_bn128_pp> Pff =
-        (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
-    G1<alt_bn128_pp> Qff =
-        (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
-
-    auto P = toArbPoint(Pff);
-    auto Q = toArbPoint(Qff);
-    G1Point sum = toArbPoint(Pff + Qff);
-    return {{P, Q, sum}};
-}
+std::vector<ECAddTestCase> prepareECAddCases();
 
 struct ECMulTestCase {
     G1Point a;

@@ -24,15 +24,14 @@
 
 using namespace libff;
 
-namespace {
-struct Init {
-    Init() {
-        libff::inhibit_profiling_counters = true;
+void initEcOps() {
+    static bool initialized;
+    if (!initialized) {
+        inhibit_profiling_counters = true;
         alt_bn128_pp::init_public_params();
+        initialized = true;
     }
-};
-static Init init;
-}  // namespace
+}
 
 void mpz_export_and_pad32(uint8_t* output, mpz_t input) {
     size_t countp;
@@ -114,7 +113,7 @@ G2Point toArbPoint(G2<alt_bn128_pp> P) {
     auto y1_int = intx::be::load<uint256_t>(raw_bytes);
 
     mpz_clears(mpzxc0, mpzxc1, mpzyc0, mpzyc1, NULL);
-    return {x0_int, x1_int, y0_int, y1_int};
+    return {x1_int, x0_int, y1_int, y0_int};
 }
 
 // assumes bytes are big endian
@@ -173,13 +172,13 @@ nonstd::variant<G1<alt_bn128_pp>, std::string> g1PfromBytes(
 nonstd::variant<G2<alt_bn128_pp>, std::string> g2PfromBytes(
     const G2Point& point) {
     uint8_t xc0bytes[32];
-    intx::be::store(xc0bytes, point.x0);
+    intx::be::store(xc0bytes, point.x1);
     uint8_t xc1bytes[32];
-    intx::be::store(xc1bytes, point.x1);
+    intx::be::store(xc1bytes, point.x0);
     uint8_t yc0bytes[32];
-    intx::be::store(yc0bytes, point.y0);
+    intx::be::store(yc0bytes, point.y1);
     uint8_t yc1bytes[32];
-    intx::be::store(yc1bytes, point.y1);
+    intx::be::store(yc1bytes, point.y0);
 
     mpz_t mpzxc0, mpzxc1, mpzyc0, mpzyc1, modulus;
     mpz_inits(mpzxc0, mpzxc1, mpzyc0, mpzyc1, modulus, NULL);
@@ -259,6 +258,7 @@ nonstd::variant<alt_bn128_GT, std::string> ecpairing_internal(
 
 nonstd::variant<bool, std::string> ecpairing(
     const std::vector<std::pair<G1Point, G2Point>>& input) {
+    initEcOps();
     auto res = ecpairing_internal(input);
     if (nonstd::holds_alternative<std::string>(res)) {
         return res.get<std::string>();
@@ -268,6 +268,7 @@ nonstd::variant<bool, std::string> ecpairing(
 
 nonstd::variant<G1Point, std::string> ecadd(const G1Point& input_a,
                                             const G1Point& input_b) {
+    initEcOps();
     auto a = g1PfromBytes(input_a);
     auto b = g1PfromBytes(input_b);
     if (nonstd::holds_alternative<std::string>(a)) {
@@ -281,6 +282,7 @@ nonstd::variant<G1Point, std::string> ecadd(const G1Point& input_a,
 
 nonstd::variant<G1Point, std::string> ecmul(const G1Point& point,
                                             const uint256_t& factor) {
+    initEcOps();
     auto a = g1PfromBytes(point);
 
     if (nonstd::holds_alternative<std::string>(a)) {

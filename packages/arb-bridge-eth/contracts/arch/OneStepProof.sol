@@ -861,10 +861,6 @@ contract OneStepProof is IOneStepProof {
         // solium-disable-next-line security/no-inline-assembly
         assembly {
             success := staticcall(sub(gas(), 2000), 6, bnAddInput, 0x80, ret, 0x40)
-            switch success
-                case 0 {
-                    invalid()
-                }
         }
         if (!success) {
             // Must end on empty tuple
@@ -889,10 +885,6 @@ contract OneStepProof is IOneStepProof {
         // solium-disable-next-line security/no-inline-assembly
         assembly {
             success := staticcall(sub(gas(), 2000), 7, bnAddInput, 0x80, ret, 0x40)
-            switch success
-                case 0 {
-                    invalid()
-                }
         }
         if (!success) {
             // Must end on empty tuple
@@ -905,7 +897,7 @@ contract OneStepProof is IOneStepProof {
 
     function executeECPairingInsn(AssertionContext memory context) internal view {
         // Allocate the maximum amount of space we might need
-        uint256[] memory input = new uint256[](20 * 6);
+        uint256[20] memory input;
         Value.Data memory val = popVal(context.stack);
         uint256 i;
         for (i = 0; i < 20; i++) {
@@ -950,27 +942,16 @@ contract OneStepProof is IOneStepProof {
             handleOpcodeError(context);
             return;
         }
-        uint256 inputSize = i * 6;
+
+        uint256 inputSize = i * 6 * 0x20;
         uint256[1] memory out;
         bool success;
-        // solium-disable-next-line security/no-inline-assembly
+        // // solium-disable-next-line security/no-inline-assembly
         assembly {
-            success := staticcall(
-                sub(gas(), 2000),
-                8,
-                add(input, 0x20),
-                mul(inputSize, 0x20),
-                out,
-                0x20
-            )
-            switch success
-                case 0 {
-                    invalid()
-                }
+            success := staticcall(sub(gas(), 2000), 8, input, inputSize, out, 0x20)
         }
 
         if (!success) {
-            // Must end on empty tuple
             handleOpcodeError(context);
             return;
         }

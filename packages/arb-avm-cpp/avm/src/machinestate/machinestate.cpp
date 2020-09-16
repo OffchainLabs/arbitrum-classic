@@ -567,14 +567,14 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::ECRECOVER:
             machineoperation::ec_recover(*this);
             break;
-        case OpCode::ECPAIRING:
-            machineoperation::ec_pairing(*this);
-            break;
         case OpCode::ECADD:
             machineoperation::ec_add(*this);
             break;
         case OpCode::ECMUL:
             machineoperation::ec_mul(*this);
+            break;
+        case OpCode::ECPAIRING:
+            machineoperation::ec_pairing(*this);
             break;
         default:
             std::cerr << "Unhandled opcode <" << InstructionNames.at(opcode)
