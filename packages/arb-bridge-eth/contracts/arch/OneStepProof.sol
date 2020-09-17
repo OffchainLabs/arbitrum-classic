@@ -34,6 +34,7 @@ contract OneStepProof is IOneStepProof {
     uint256 private constant SEND_SIZE_LIMIT = 10000;
 
     uint256 private constant MAX_UINT256 = ((1 << 128) + 1) * ((1 << 128) - 1);
+    uint256 private constant MAX_PAIRING_COUNT = 20;
 
     string private constant BAD_IMM_TYP = "BAD_IMM_TYP";
     string private constant NO_IMM = "NO_IMM";
@@ -897,10 +898,10 @@ contract OneStepProof is IOneStepProof {
 
     function executeECPairingInsn(AssertionContext memory context) internal view {
         // Allocate the maximum amount of space we might need
-        uint256[20] memory input;
+        uint256[MAX_PAIRING_COUNT * 6] memory input;
         Value.Data memory val = popVal(context.stack);
         uint256 i;
-        for (i = 0; i < 20; i++) {
+        for (i = 0; i < MAX_PAIRING_COUNT; i++) {
             if (!val.isTuple()) {
                 handleOpcodeError(context);
                 return;
@@ -946,7 +947,7 @@ contract OneStepProof is IOneStepProof {
         uint256 inputSize = i * 6 * 0x20;
         uint256[1] memory out;
         bool success;
-        // // solium-disable-next-line security/no-inline-assembly
+        // solium-disable-next-line security/no-inline-assembly
         assembly {
             success := staticcall(sub(gas(), 2000), 8, input, inputSize, out, 0x20)
         }
