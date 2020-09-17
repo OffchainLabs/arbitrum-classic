@@ -34,7 +34,7 @@ contract OneStepProof is IOneStepProof {
     uint256 private constant SEND_SIZE_LIMIT = 10000;
 
     uint256 private constant MAX_UINT256 = ((1 << 128) + 1) * ((1 << 128) - 1);
-    uint256 private constant MAX_PAIRING_COUNT = 20;
+    uint256 private constant MAX_PAIRING_COUNT = 30;
 
     string private constant BAD_IMM_TYP = "BAD_IMM_TYP";
     string private constant NO_IMM = "NO_IMM";
