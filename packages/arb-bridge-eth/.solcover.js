@@ -5,4 +5,7 @@ module.exports = {
     invert: true,
   },
   skipFiles: ['test_only'],
+  providerOptions: {
+    gasPrice: '0x2710',
+  },
 }
