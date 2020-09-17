@@ -61,6 +61,10 @@ describe('OneStepProof', function () {
       for (const proof of data.slice(0, 25)) {
         const proofData = Buffer.from(proof.Proof, 'base64')
         const opcode = proofData[proofData.length - 1]
+        if (opcode == 131) {
+          // Skip too expensive opcode
+          continue
+        }
         const { fields, gas } = await ospTester.executeStep(
           proof.Assertion.AfterInboxHash,
           proof.Assertion.FirstMessageHash,
@@ -84,7 +88,7 @@ describe('OneStepProof', function () {
       }
     })
 
-    it(`efficiently run proofs from ${filename}`, async function () {
+    it(`efficiently run proofs from ${filename} [ @skip-on-coverage ]`, async function () {
       this.timeout(60000)
 
       for (const proof of data.slice(0, 25)) {
