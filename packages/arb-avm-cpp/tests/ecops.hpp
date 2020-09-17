@@ -37,21 +37,20 @@ inline uint256_t hexToInt(const std::string& hexstr) {
 }
 
 struct PairingTestCase {
-    G1Point a;
-    G2Point b;
-    G1Point c;
-    G2Point d;
+    std::vector<std::pair<G1Point, G2Point>> points;
+    bool valid;
 
-    PairingTestCase(const G1<alt_bn128_pp>& a_,
-                    const G2<alt_bn128_pp>& b_,
-                    const G1<alt_bn128_pp>& c_,
-                    const G2<alt_bn128_pp>& d_)
-        : a(toArbPoint(a_)),
-          b(toArbPoint(b_)),
-          c(toArbPoint(c_)),
-          d(toArbPoint(d_)) {}
+    PairingTestCase(
+        std::vector<std::pair<G1<alt_bn128_pp>, G2<alt_bn128_pp>>> pairs_,
+        bool valid_)
+        : valid(valid_) {
+        for (const auto& point : pairs_) {
+            points.push_back(
+                {toArbPoint(point.first), toArbPoint(point.second)});
+        }
+    }
 
-    PairingTestCase(const std::string& data);
+    PairingTestCase(const std::string& data, bool valid);
 };
 
 std::vector<PairingTestCase> preparePairingCases();

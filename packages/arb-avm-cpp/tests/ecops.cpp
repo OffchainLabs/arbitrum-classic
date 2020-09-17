@@ -34,10 +34,10 @@ std::vector<PairingTestCase> preparePairingCases() {
     G2<alt_bn128_pp> sQ = s * Q;
 
     std::vector<PairingTestCase> cases;
-    cases.push_back({negone * P, sQ, sP, Q});
-    cases.push_back({P, negone * sQ, sP, Q});
-    cases.push_back({P, sQ, negone * sP, Q});
-    cases.push_back({P, sQ, sP, negone * Q});
+    cases.push_back({{{negone * P, sQ}, {sP, Q}}, true});
+    cases.push_back({{{P, negone * sQ}, {sP, Q}}, true});
+    cases.push_back({{{P, sQ}, {negone * sP, Q}}, true});
+    cases.push_back({{{P, sQ}, {sP, negone * Q}}, true});
     return cases;
 }
 
@@ -55,22 +55,26 @@ std::vector<ECAddTestCase> prepareECAddCases() {
     return {{P, Q, sum}};
 }
 
-PairingTestCase::PairingTestCase(const std::string& data) {
-    a = {hexToInt({data.begin(), data.begin() + 64}),
-         hexToInt({data.begin() + 64, data.begin() + 64 * 2})};
+PairingTestCase::PairingTestCase(const std::string& data, bool valid_)
+    : valid(valid_) {
+    G1Point a = {hexToInt({data.begin(), data.begin() + 64}),
+                 hexToInt({data.begin() + 64, data.begin() + 64 * 2})};
 
-    b = {hexToInt({data.begin() + 64 * 2, data.begin() + 64 * 3}),
-         hexToInt({data.begin() + 64 * 3, data.begin() + 64 * 4}),
-         hexToInt({data.begin() + 64 * 4, data.begin() + 64 * 5}),
-         hexToInt({data.begin() + 64 * 5, data.begin() + 64 * 6})};
+    G2Point b = {hexToInt({data.begin() + 64 * 2, data.begin() + 64 * 3}),
+                 hexToInt({data.begin() + 64 * 3, data.begin() + 64 * 4}),
+                 hexToInt({data.begin() + 64 * 4, data.begin() + 64 * 5}),
+                 hexToInt({data.begin() + 64 * 5, data.begin() + 64 * 6})};
 
-    c = {hexToInt({data.begin() + 64 * 6, data.begin() + 64 * 7}),
-         hexToInt({data.begin() + 64 * 7, data.begin() + 64 * 8})};
+    G1Point c = {hexToInt({data.begin() + 64 * 6, data.begin() + 64 * 7}),
+                 hexToInt({data.begin() + 64 * 7, data.begin() + 64 * 8})};
 
-    d = {hexToInt({data.begin() + 64 * 8, data.begin() + 64 * 9}),
-         hexToInt({data.begin() + 64 * 9, data.begin() + 64 * 10}),
-         hexToInt({data.begin() + 64 * 10, data.begin() + 64 * 11}),
-         hexToInt({data.begin() + 64 * 11, data.begin() + 64 * 12})};
+    G2Point d = {hexToInt({data.begin() + 64 * 8, data.begin() + 64 * 9}),
+                 hexToInt({data.begin() + 64 * 9, data.begin() + 64 * 10}),
+                 hexToInt({data.begin() + 64 * 10, data.begin() + 64 * 11}),
+                 hexToInt({data.begin() + 64 * 11, data.begin() + 64 * 12})};
+
+    points.push_back({a, b});
+    points.push_back({c, d});
 }
 
 TEST_CASE("ECOp: g1PfromBytes") {
@@ -123,11 +127,8 @@ TEST_CASE("ECOp: ecpairing_internal") {
 }
 
 TEST_CASE("ECOp: ecpairing") {
-    for (const auto& testCase : preparePairingCases()) {
-        std::vector<std::pair<G1Point, G2Point>> all_points = {
-            {testCase.a, testCase.b}, {testCase.c, testCase.d}};
-
-        auto res = ecpairing(all_points);
+    for (const auto& test_case : preparePairingCases()) {
+        auto res = ecpairing(test_case.points);
         std::string msg;
         if (nonstd::holds_alternative<std::string>(res)) {
             msg = res.get<std::string>();

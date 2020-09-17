@@ -23,6 +23,7 @@ struct MachineState;
 class Tuple;
 
 const int send_size_limit = 10000;
+constexpr int max_ec_pairing_points = 100;
 
 namespace machineoperation {
 void add(MachineState& m);

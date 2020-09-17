@@ -1024,16 +1024,18 @@ TEST_CASE("OPCODE: ECPAIRING") {
     alt_bn128_pp::init_public_params();
     auto cases = preparePairingCases();
     for (const auto& testCase : cases) {
-        REQUIRE(testCase.a.x != uint256_t{0});
-        Tuple p1(testCase.a.x, testCase.a.y, testCase.b.x0, testCase.b.x1,
-                 testCase.b.y0, testCase.b.y1);
-        Tuple p2(testCase.c.x, testCase.c.y, testCase.d.x0, testCase.d.x1,
-                 testCase.d.y0, testCase.d.y1);
+        Tuple tup;
+        for (const auto& point : testCase.points) {
+            tup =
+                Tuple(Tuple(point.first.x, point.first.y, point.second.x0,
+                            point.second.x1, point.second.y0, point.second.y1),
+                      tup);
+        }
         MachineState mach;
-        mach.stack.push(Tuple(p2, Tuple(p1, Tuple())));
+        mach.stack.push(tup);
         mach.runOp(OpCode::ECPAIRING);
         REQUIRE(mach.state == Status::Extensive);
-        REQUIRE(mach.stack[0] == value(1));
+        REQUIRE(mach.stack[0] == value(testCase.valid ? 1 : 0));
     }
 }
 

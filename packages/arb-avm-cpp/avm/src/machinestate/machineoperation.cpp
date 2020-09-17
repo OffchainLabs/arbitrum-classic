@@ -739,7 +739,10 @@ void ec_pairing(MachineState& m) {
     std::vector<std::pair<G1Point, G2Point>> points;
 
     const Tuple* val = &assumeTuple(m.stack[0]);
-    while (val->tuple_size() != 0) {
+    for (int i = 0; i < max_ec_pairing_points; i++) {
+        if (val->tuple_size() == 0) {
+            break;
+        }
         if (val->tuple_size() != 2) {
             throw bad_pop_type{};
         }
@@ -758,9 +761,13 @@ void ec_pairing(MachineState& m) {
                    assumeInt(next.get_element_unsafe(5))};
         points.push_back({g1, g2});
     }
+    if (val->tuple_size() != 0) {
+        throw bad_pop_type{};
+    }
 
     auto ret = ecpairing(points);
     if (nonstd::holds_alternative<std::string>(ret)) {
+        std::cout << "EC pairing error " << ret.get<std::string>() << std::endl;
         m.state = Status::Error;
         return;
     }
