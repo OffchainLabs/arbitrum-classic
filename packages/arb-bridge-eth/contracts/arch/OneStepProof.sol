@@ -167,6 +167,18 @@ contract OneStepProof is IOneStepProof {
         }
     }
 
+    function deductGas(AssertionContext memory context, uint64 amount) private pure returns (bool) {
+        context.gas += amount;
+        if (context.afterMachine.arbGasRemaining < amount) {
+            context.afterMachine.arbGasRemaining = MAX_UINT256;
+            handleError(context);
+            return true;
+        } else {
+            context.afterMachine.arbGasRemaining -= amount;
+            return false;
+        }
+    }
+
     function handleOpcodeError(AssertionContext memory context) private pure {
         handleError(context);
         // Also clear the stack and auxstack
@@ -250,16 +262,9 @@ contract OneStepProof is IOneStepProof {
             uint64 gasCost,
             function(AssertionContext memory) internal view impl
         ) = opInfo(context.opcode);
-        context.gas = gasCost;
 
         // Update end machine gas remaining before running opcode
-        // No need to overflow check since the check for whether we
-        // have sufficient gas fixes the overflow case
-        context.afterMachine.arbGasRemaining = context.afterMachine.arbGasRemaining - gasCost;
-
-        if (context.startMachine.arbGasRemaining < gasCost) {
-            context.afterMachine.arbGasRemaining = MAX_UINT256;
-            handleError(context);
+        if (deductGas(context, gasCost)) {
             return;
         }
 
@@ -897,11 +902,11 @@ contract OneStepProof is IOneStepProof {
     }
 
     function executeECPairingInsn(AssertionContext memory context) internal view {
-        // Allocate the maximum amount of space we might need
-        uint256[MAX_PAIRING_COUNT * 6] memory input;
         Value.Data memory val = popVal(context.stack);
-        uint256 i;
-        for (i = 0; i < MAX_PAIRING_COUNT; i++) {
+
+        Value.Data[MAX_PAIRING_COUNT] memory items;
+        uint256 count;
+        for (count = 0; count < MAX_PAIRING_COUNT; count++) {
             if (!val.isTuple()) {
                 handleOpcodeError(context);
                 return;
@@ -915,9 +920,24 @@ contract OneStepProof is IOneStepProof {
                 handleOpcodeError(context);
                 return;
             }
-            Value.Data memory pointVal = stackTupleVals[0];
+            items[count] = stackTupleVals[0];
             val = stackTupleVals[1];
+        }
 
+        if (deductGas(context, uint64(EC_PAIRING_POINT_GAS_COST * count))) {
+            return;
+        }
+
+        if (!val.isTuple() || val.tupleVal.length != 0) {
+            // Must end on empty tuple
+            handleOpcodeError(context);
+            return;
+        }
+
+        // Allocate the maximum amount of space we might need
+        uint256[MAX_PAIRING_COUNT * 6] memory input;
+        for (uint256 i = 0; i < count; i++) {
+            Value.Data memory pointVal = items[i];
             if (!pointVal.isTuple()) {
                 handleOpcodeError(context);
                 return;
@@ -938,13 +958,7 @@ contract OneStepProof is IOneStepProof {
             }
         }
 
-        if (!val.isTuple() || val.tupleVal.length != 0) {
-            // Must end on empty tuple
-            handleOpcodeError(context);
-            return;
-        }
-
-        uint256 inputSize = i * 6 * 0x20;
+        uint256 inputSize = count * 6 * 0x20;
         uint256[1] memory out;
         bool success;
         // solium-disable-next-line security/no-inline-assembly
@@ -1056,6 +1070,8 @@ contract OneStepProof is IOneStepProof {
     uint8 private constant OP_ECADD = 0x81;
     uint8 private constant OP_ECMUL = 0x82;
     uint8 private constant OP_ECPAIRING = 0x83;
+
+    uint64 private constant EC_PAIRING_POINT_GAS_COST = 500000;
 
     uint8 private constant CODE_POINT_TYPECODE = 1;
     bytes32 private constant CODE_POINT_ERROR = keccak256(
@@ -1189,11 +1205,11 @@ contract OneStepProof is IOneStepProof {
         } else if (opCode == OP_ECRECOVER) {
             return (4, 0, 20000, executeECRecoverInsn);
         } else if (opCode == OP_ECADD) {
-            return (4, 0, 20000, executeECAddInsn);
+            return (4, 0, 3500, executeECAddInsn);
         } else if (opCode == OP_ECMUL) {
-            return (3, 0, 20000, executeECMulInsn);
+            return (3, 0, 82000, executeECMulInsn);
         } else if (opCode == OP_ECPAIRING) {
-            return (1, 0, 20000, executeECPairingInsn);
+            return (1, 0, 1000, executeECPairingInsn);
         } else {
             return (0, 0, 0, executeErrorInsn);
         }

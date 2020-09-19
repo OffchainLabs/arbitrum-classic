@@ -733,49 +733,6 @@ void ec_recover(MachineState& m) {
     ++m.pc;
 }
 
-void ec_pairing(MachineState& m) {
-    m.stack.prepForMod(1);
-
-    std::vector<std::pair<G1Point, G2Point>> points;
-
-    const Tuple* val = &assumeTuple(m.stack[0]);
-    for (int i = 0; i < max_ec_pairing_points; i++) {
-        if (val->tuple_size() == 0) {
-            break;
-        }
-        if (val->tuple_size() != 2) {
-            throw bad_pop_type{};
-        }
-        auto& next = assumeTuple(val->get_element_unsafe(0));
-        val = &assumeTuple(val->get_element_unsafe(1));
-
-        if (next.tuple_size() != 6) {
-            throw bad_pop_type{};
-        }
-
-        G1Point g1{assumeInt(next.get_element_unsafe(0)),
-                   assumeInt(next.get_element_unsafe(1))};
-        G2Point g2{assumeInt(next.get_element_unsafe(2)),
-                   assumeInt(next.get_element_unsafe(3)),
-                   assumeInt(next.get_element_unsafe(4)),
-                   assumeInt(next.get_element_unsafe(5))};
-        points.push_back({g1, g2});
-    }
-    if (val->tuple_size() != 0) {
-        throw bad_pop_type{};
-    }
-
-    auto ret = ecpairing(points);
-    if (nonstd::holds_alternative<std::string>(ret)) {
-        std::cout << "EC pairing error " << ret.get<std::string>() << std::endl;
-        m.state = Status::Error;
-        return;
-    }
-
-    m.stack[0] = ret.get<bool>() ? 1 : 0;
-    ++m.pc;
-}
-
 void ec_add(MachineState& m) {
     m.stack.prepForMod(4);
     auto& aVal = assumeInt(m.stack[0]);
@@ -816,6 +773,71 @@ void ec_mul(MachineState& m) {
     cVal = ans.y;
     m.stack.popClear();
     ++m.pc;
+}
+
+void ec_pairing(MachineState& m) {
+    m.stack.prepForMod(1);
+
+    std::vector<std::pair<G1Point, G2Point>> points;
+
+    const Tuple* val = &assumeTuple(m.stack[0]);
+    for (int i = 0; i < max_ec_pairing_points; i++) {
+        if (val->tuple_size() == 0) {
+            break;
+        }
+        if (val->tuple_size() != 2) {
+            throw bad_pop_type{};
+        }
+        auto& next = assumeTuple(val->get_element_unsafe(0));
+        val = &assumeTuple(val->get_element_unsafe(1));
+
+        if (next.tuple_size() != 6) {
+            throw bad_pop_type{};
+        }
+
+        G1Point g1{assumeInt(next.get_element_unsafe(0)),
+                   assumeInt(next.get_element_unsafe(1))};
+        G2Point g2{assumeInt(next.get_element_unsafe(2)),
+                   assumeInt(next.get_element_unsafe(3)),
+                   assumeInt(next.get_element_unsafe(4)),
+                   assumeInt(next.get_element_unsafe(5))};
+        points.push_back({g1, g2});
+    }
+    if (val->tuple_size() != 0) {
+        throw bad_pop_type{};
+    }
+
+    auto ret = ecpairing(points);
+    if (nonstd::holds_alternative<std::string>(ret)) {
+        m.state = Status::Error;
+        return;
+    }
+
+    m.stack[0] = ret.get<bool>() ? 1 : 0;
+    ++m.pc;
+}
+
+uint64_t ec_pairing_variable_gas_cost(const MachineState& m) {
+    uint64_t gas_cost = 0;
+    if (m.stack.stacksize() == 0) {
+        return gas_cost;
+    }
+    try {
+        const Tuple* val = &assumeTuple(m.stack[0]);
+        for (int i = 0; i < max_ec_pairing_points; i++) {
+            if (val->tuple_size() == 0) {
+                break;
+            }
+            if (val->tuple_size() != 2) {
+                throw bad_pop_type{};
+            }
+            val = &assumeTuple(val->get_element_unsafe(1));
+            gas_cost += 500'000;
+        }
+    } catch (const std::exception&) {
+    }
+
+    return gas_cost;
 }
 
 BlockReason breakpoint(MachineState& m) {

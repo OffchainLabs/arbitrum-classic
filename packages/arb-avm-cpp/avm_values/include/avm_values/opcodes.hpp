@@ -453,9 +453,9 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::DEBUG_PRINT, 1},
 
     {OpCode::ECRECOVER, 20000},
-    {OpCode::ECADD, 20000},
-    {OpCode::ECMUL, 20000},
-    {OpCode::ECPAIRING, 20000}};
+    {OpCode::ECADD, 3500},
+    {OpCode::ECMUL, 82000},
+    {OpCode::ECPAIRING, 1000}};
 
 constexpr size_t MaxValidOpcode =
     static_cast<size_t>(std::numeric_limits<uint8_t>::max());
