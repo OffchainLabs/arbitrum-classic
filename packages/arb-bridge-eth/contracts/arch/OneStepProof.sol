@@ -954,8 +954,13 @@ contract OneStepProof is IOneStepProof {
                     handleOpcodeError(context);
                     return;
                 }
-                input[i * 6 + j] = pointTupleVals[j].intVal;
             }
+            input[i * 6] = pointTupleVals[0].intVal;
+            input[i * 6 + 1] = pointTupleVals[1].intVal;
+            input[i * 6 + 2] = pointTupleVals[3].intVal;
+            input[i * 6 + 3] = pointTupleVals[2].intVal;
+            input[i * 6 + 4] = pointTupleVals[5].intVal;
+            input[i * 6 + 5] = pointTupleVals[4].intVal;
         }
 
         uint256 inputSize = count * 6 * 0x20;

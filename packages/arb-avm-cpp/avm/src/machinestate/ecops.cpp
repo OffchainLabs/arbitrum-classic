@@ -113,7 +113,7 @@ G2Point toG2ArbPoint(G2<alt_bn128_pp> P) {
     auto y1_int = intx::be::load<uint256_t>(raw_bytes);
 
     mpz_clears(mpzxc0, mpzxc1, mpzyc0, mpzyc1, NULL);
-    return {x1_int, x0_int, y1_int, y0_int};
+    return {x0_int, x1_int, y0_int, y1_int};
 }
 
 // assumes bytes are big endian
@@ -172,13 +172,13 @@ nonstd::variant<G1<alt_bn128_pp>, std::string> g1PfromBytes(
 nonstd::variant<G2<alt_bn128_pp>, std::string> g2PfromBytes(
     const G2Point& point) {
     uint8_t xc0bytes[32];
-    intx::be::store(xc0bytes, point.x1);
+    intx::be::store(xc0bytes, point.x0);
     uint8_t xc1bytes[32];
-    intx::be::store(xc1bytes, point.x0);
+    intx::be::store(xc1bytes, point.x1);
     uint8_t yc0bytes[32];
-    intx::be::store(yc0bytes, point.y1);
+    intx::be::store(yc0bytes, point.y0);
     uint8_t yc1bytes[32];
-    intx::be::store(yc1bytes, point.y0);
+    intx::be::store(yc1bytes, point.y1);
 
     mpz_t mpzxc0, mpzxc1, mpzyc0, mpzyc1, modulus;
     mpz_inits(mpzxc0, mpzxc1, mpzyc0, mpzyc1, modulus, NULL);
