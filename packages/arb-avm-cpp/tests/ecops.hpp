@@ -46,7 +46,7 @@ struct PairingTestCase {
         : valid(valid_) {
         for (const auto& point : pairs_) {
             points.push_back(
-                {toArbPoint(point.first), toArbPoint(point.second)});
+                {toG1ArbPoint(point.first), toG2ArbPoint(point.second)});
         }
     }
 
@@ -84,9 +84,9 @@ inline std::vector<ECMulTestCase> prepareECMulCases() {
     mpz_import(smpz, 32, 1, 1, 1, 0, sbytes);
     bigint<BIG_INT_FOR_UINT256> s(smpz);
 
-    auto P = toArbPoint(Pff);
+    auto P = toG1ArbPoint(Pff);
 
-    G1Point prod = toArbPoint(s * Pff);
+    G1Point prod = toG1ArbPoint(s * Pff);
     return {{P, sui, prod}};
 }
 

@@ -50,7 +50,7 @@ void mpz_export_and_pad32(uint8_t* output, mpz_t input) {
     }
 }
 
-G1Point toArbPoint(G1<alt_bn128_pp> P) {
+G1Point toG1ArbPoint(G1<alt_bn128_pp> P) {
     P.to_affine_coordinates();
 
     alt_bn128_Fq X = P.X;
@@ -78,7 +78,7 @@ G1Point toArbPoint(G1<alt_bn128_pp> P) {
     return {x_int, y_int};
 }
 
-G2Point toArbPoint(G2<alt_bn128_pp> P) {
+G2Point toG2ArbPoint(G2<alt_bn128_pp> P) {
     P.to_affine_coordinates();
     alt_bn128_Fq2 X = P.X;
     alt_bn128_Fq2 Y = P.Y;
@@ -277,7 +277,7 @@ nonstd::variant<G1Point, std::string> ecadd(const G1Point& input_a,
     if (nonstd::holds_alternative<std::string>(b)) {
         return b.get<std::string>();
     }
-    return toArbPoint(a.get<G1<alt_bn128_pp>>() + b.get<G1<alt_bn128_pp>>());
+    return toG1ArbPoint(a.get<G1<alt_bn128_pp>>() + b.get<G1<alt_bn128_pp>>());
 }
 
 nonstd::variant<G1Point, std::string> ecmul(const G1Point& point,
@@ -297,7 +297,7 @@ nonstd::variant<G1Point, std::string> ecmul(const G1Point& point,
     mpz_import(mpzs, 32, 1, 1, 1, 0, sbytes);
     bigint<BIG_INT_FOR_UINT256> s(mpzs);
     mpz_clear(mpzs);
-    return toArbPoint(s * a.get<G1<alt_bn128_pp>>());
+    return toG1ArbPoint(s * a.get<G1<alt_bn128_pp>>());
 }
 
 std::ostream& operator<<(std::ostream& os, const G1Point& val) {

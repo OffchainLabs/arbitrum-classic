@@ -49,9 +49,9 @@ std::vector<ECAddTestCase> prepareECAddCases() {
     G1<alt_bn128_pp> Qff =
         (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
 
-    auto P = toArbPoint(Pff);
-    auto Q = toArbPoint(Qff);
-    G1Point sum = toArbPoint(Pff + Qff);
+    auto P = toG1ArbPoint(Pff);
+    auto Q = toG1ArbPoint(Qff);
+    G1Point sum = toG1ArbPoint(Pff + Qff);
     return {{P, Q, sum}};
 }
 
@@ -82,7 +82,7 @@ TEST_CASE("ECOp: g1PfromBytes") {
     G1<alt_bn128_pp> P =
         (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
 
-    auto outP = g1PfromBytes(toArbPoint(P));
+    auto outP = g1PfromBytes(toG1ArbPoint(P));
     REQUIRE(nonstd::holds_alternative<G1<alt_bn128_pp>>(outP));
     REQUIRE(outP.get<G1<alt_bn128_pp>>() == P);
 }
@@ -92,7 +92,7 @@ TEST_CASE("ECOp: g2PfromBytes") {
     G2<alt_bn128_pp> P =
         (Fr<alt_bn128_pp>::random_element()) * G2<alt_bn128_pp>::one();
 
-    auto outP = g2PfromBytes(toArbPoint(P));
+    auto outP = g2PfromBytes(toG2ArbPoint(P));
     REQUIRE(nonstd::holds_alternative<G2<alt_bn128_pp>>(outP));
     REQUIRE(outP.get<G2<alt_bn128_pp>>() == P);
 }
@@ -110,8 +110,8 @@ TEST_CASE("ECOp: ecpairing_internal") {
         P[i] = (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
         Q[i] = (Fr<alt_bn128_pp>::random_element()) * G2<alt_bn128_pp>::one();
 
-        auto g1 = toArbPoint(P[i]);
-        auto g2 = toArbPoint(Q[i]);
+        auto g1 = toG1ArbPoint(P[i]);
+        auto g2 = toG2ArbPoint(Q[i]);
 
         all_points.push_back({g1, g2});
     }

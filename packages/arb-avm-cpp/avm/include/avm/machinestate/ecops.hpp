@@ -49,8 +49,8 @@ struct G2Point {
 std::ostream& operator<<(std::ostream& os, const G2Point& val);
 
 void mpz_export_and_pad32(uint8_t* output, mpz_t input);
-G1Point toArbPoint(G1<alt_bn128_pp> P);
-G2Point toArbPoint(G2<alt_bn128_pp> P);
+G1Point toG1ArbPoint(G1<alt_bn128_pp> P);
+G2Point toG2ArbPoint(G2<alt_bn128_pp> P);
 
 nonstd::variant<libff::G1<libff::alt_bn128_pp>, std::string> g1PfromBytes(
     const G1Point& point);
