@@ -239,6 +239,16 @@ const CodePoint& MachineState::loadCurrentInstruction() const {
     return (*loaded_segment->segment)[pc.pc];
 }
 
+uint64_t MachineState::nextGasCost() const {
+    auto& instruction = loadCurrentInstruction();
+    auto base_gas =
+        instructionGasCosts()[static_cast<size_t>(instruction.op.opcode)];
+    if (instruction.op.opcode == OpCode::ECPAIRING) {
+        base_gas += machineoperation::ec_pairing_variable_gas_cost(*this);
+    }
+    return base_gas;
+}
+
 BlockReason MachineState::runOne() {
     if (state == Status::Error) {
         return ErrorBlocked();
@@ -266,8 +276,7 @@ BlockReason MachineState::runOne() {
             return NotBlocked();
         }
 
-        uint64_t gas_cost =
-            instructionGasCosts()[static_cast<size_t>(instruction.op.opcode)];
+        uint64_t gas_cost = nextGasCost();
         if (arb_gas_remaining < gas_cost) {
             // If there's insufficient gas remaining, execute by transitioning
             // to the error state with remaining gas set to max
@@ -566,6 +575,15 @@ BlockReason MachineState::runOp(OpCode opcode) {
             /*****************/
         case OpCode::ECRECOVER:
             machineoperation::ec_recover(*this);
+            break;
+        case OpCode::ECADD:
+            machineoperation::ec_add(*this);
+            break;
+        case OpCode::ECMUL:
+            machineoperation::ec_mul(*this);
+            break;
+        case OpCode::ECPAIRING:
+            machineoperation::ec_pairing(*this);
             break;
         default:
             std::cerr << "Unhandled opcode <" << InstructionNames.at(opcode)

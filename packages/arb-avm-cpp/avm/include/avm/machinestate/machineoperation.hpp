@@ -23,6 +23,8 @@ struct MachineState;
 class Tuple;
 
 const int send_size_limit = 10000;
+constexpr int max_ec_pairing_points = 30;
+constexpr int ec_pair_gas_cost = 500'000;
 
 namespace machineoperation {
 void add(MachineState& m);
@@ -79,6 +81,10 @@ void tlen(MachineState& m);
 void xget(MachineState& m);
 void xset(MachineState& m);
 void ec_recover(MachineState& m);
+void ec_add(MachineState& m);
+void ec_mul(MachineState& m);
+void ec_pairing(MachineState& m);
+uint64_t ec_pairing_variable_gas_cost(const MachineState& m);
 BlockReason breakpoint(MachineState&);
 void log(MachineState& m);
 void debug(MachineState& m);

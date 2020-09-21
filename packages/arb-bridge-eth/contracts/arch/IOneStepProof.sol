@@ -24,7 +24,7 @@ interface IOneStepProof {
         bytes32 messagesAcc,
         bytes32 logsAcc,
         bytes calldata proof
-    ) external pure returns (uint64 gas, bytes32[5] memory fields);
+    ) external view returns (uint64 gas, bytes32[5] memory fields);
 
     function executeStepWithMessage(
         bytes32 inboxAcc,
@@ -37,5 +37,5 @@ interface IOneStepProof {
         address _sender,
         uint256 _inboxSeqNum,
         bytes calldata _msgData
-    ) external pure returns (uint64 gas, bytes32[5] memory fields);
+    ) external view returns (uint64 gas, bytes32[5] memory fields);
 }
