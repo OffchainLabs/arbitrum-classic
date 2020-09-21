@@ -818,6 +818,7 @@ void ec_pairing(MachineState& m) {
 }
 
 uint64_t ec_pairing_variable_gas_cost(const MachineState& m) {
+    // The fixed cost of the the pairing opcode is applied elsewhere
     uint64_t gas_cost = 0;
     if (m.stack.stacksize() == 0) {
         return gas_cost;
