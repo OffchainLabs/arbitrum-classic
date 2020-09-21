@@ -26,6 +26,7 @@ set(LIB_HEADERS
   include/avm/machinestate/datastack.hpp
   include/avm/machinestate/machineoperation.hpp
   include/avm/machinestate/blockreason.hpp
+  include/avm/machinestate/ecops.hpp
 )
 
 set(LIB_SOURCES
@@ -34,6 +35,7 @@ set(LIB_SOURCES
   src/machinestate/machineoperation.cpp
   src/machinestate/datastack.cpp
   src/machinestate/blockreason.cpp
+  src/machinestate/ecops.cpp
 )
 
 add_library(avm STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES} )
@@ -59,8 +61,9 @@ target_include_directories(avm PRIVATE
 )
 
 find_package(GMP REQUIRED)
+find_package(GMPXX REQUIRED)
 
-target_link_libraries(avm PUBLIC avm_values RocksDB::RocksDB Threads::Threads secp256k1 ff picosha2 PRIVATE Boost::boost ${GMP_LIBRARY})
+target_link_libraries(avm PUBLIC avm_values RocksDB::RocksDB Threads::Threads secp256k1 ff picosha2 ${GMP_LIBRARY} ${GMPXX_LIBRARY} PRIVATE Boost::boost)
 
 target_code_coverage(avm AUTO ALL)
 

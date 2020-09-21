@@ -104,6 +104,9 @@ enum class OpCode : uint8_t {
     SIDELOAD = 0x7B,
 
     ECRECOVER = 0x80,
+    ECADD,
+    ECMUL,
+    ECPAIRING,
 
     DEBUG_PRINT = 0x90,
 };
@@ -186,6 +189,9 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::SIDELOAD, "sideload"},
 
     {OpCode::ECRECOVER, "ecrecover"},
+    {OpCode::ECADD, "ecadd"},
+    {OpCode::ECMUL, "ecmul"},
+    {OpCode::ECPAIRING, "ecpairing"},
     {OpCode::DEBUG_PRINT, "debugprint"}};
 
 enum class MarshalLevel { STUB, SINGLE, FULL };
@@ -278,7 +284,13 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
 
         {OpCode::ECRECOVER,
          {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE,
-          MarshalLevel::SINGLE}}};
+          MarshalLevel::SINGLE}},
+        {OpCode::ECADD,
+         {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE,
+          MarshalLevel::SINGLE}},
+        {OpCode::ECMUL,
+         {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::ECPAIRING, {MarshalLevel::FULL}}};
 
 const std::unordered_map<OpCode, std::vector<MarshalLevel>>
     InstructionAuxStackPops = {{static_cast<OpCode>(0), {}},
@@ -358,7 +370,10 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
                                {OpCode::SIDELOAD, {}},
                                {OpCode::DEBUG_PRINT, {}},
 
-                               {OpCode::ECRECOVER, {}}};
+                               {OpCode::ECRECOVER, {}},
+                               {OpCode::ECADD, {}},
+                               {OpCode::ECMUL, {}},
+                               {OpCode::ECPAIRING, {}}};
 
 const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::ADD, 3},
@@ -437,7 +452,10 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::SIDELOAD, 10},
     {OpCode::DEBUG_PRINT, 1},
 
-    {OpCode::ECRECOVER, 20000}};
+    {OpCode::ECRECOVER, 20000},
+    {OpCode::ECADD, 3500},
+    {OpCode::ECMUL, 82000},
+    {OpCode::ECPAIRING, 1000}};
 
 constexpr size_t MaxValidOpcode =
     static_cast<size_t>(std::numeric_limits<uint8_t>::max());

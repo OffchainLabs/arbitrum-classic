@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "ecops.hpp"
+
 #include <avm/machine.hpp>
 #include <avm/machinestate/machineoperation.hpp>
 
@@ -90,7 +92,7 @@ void testTertiaryOp(uint256_t arg1,
     REQUIRE(m.stack.stacksize() == 0);
 }
 
-TEST_CASE("ADD opcode is correct") {
+TEST_CASE("OPCODE: ADD opcode is correct") {
     SECTION("Non overlow is correct") {
         testBinaryOp(4_u256, 3_u256, 7_u256, OpCode::ADD);
     }
@@ -108,7 +110,7 @@ TEST_CASE("ADD opcode is correct") {
     }
 }
 
-TEST_CASE("MUL opcode is correct") {
+TEST_CASE("OPCODE: MUL opcode is correct") {
     SECTION("Non overlow is correct") {
         testBinaryOp(4_u256, 3_u256, 12_u256, OpCode::MUL);
     }
@@ -126,7 +128,7 @@ TEST_CASE("MUL opcode is correct") {
     }
 }
 
-TEST_CASE("SUB opcode is correct") {
+TEST_CASE("OPCODE: SUB opcode is correct") {
     SECTION("Non overlow is correct") {
         testBinaryOp(4_u256, 3_u256, 1_u256, OpCode::SUB);
     }
@@ -136,7 +138,7 @@ TEST_CASE("SUB opcode is correct") {
     }
 }
 
-TEST_CASE("DIV opcode is correct") {
+TEST_CASE("OPCODE: DIV opcode is correct") {
     SECTION("Non overlow is correct") {
         testBinaryOp(12_u256, 3_u256, 4_u256, OpCode::DIV);
     }
@@ -175,7 +177,7 @@ TEST_CASE("SDIV opcode is correct") {
     }
 }
 
-TEST_CASE("MOD opcode is correct") {
+TEST_CASE("OPCODE: MOD opcode is correct") {
     SECTION("8 mod 3") { testBinaryOp(8_u256, 3_u256, 2_u256, OpCode::MOD); }
 
     SECTION("8 mod very large") {
@@ -190,7 +192,7 @@ TEST_CASE("MOD opcode is correct") {
     }
 }
 
-TEST_CASE("SMOD opcode is correct") {
+TEST_CASE("OPCODE: SMOD opcode is correct") {
     SECTION("Positive mod positive") {
         testBinaryOp(8_u256, 3_u256, 2_u256, OpCode::SMOD);
     }
@@ -212,7 +214,7 @@ TEST_CASE("SMOD opcode is correct") {
     }
 }
 
-TEST_CASE("ADDMOD opcode is correct") {
+TEST_CASE("OPCODE: ADDMOD opcode is correct") {
     SECTION("(8+5)%3") {
         testTertiaryOp(8_u256, 5_u256, 3_u256, 1_u256, OpCode::ADDMOD);
     }
@@ -235,7 +237,7 @@ TEST_CASE("ADDMOD opcode is correct") {
     }
 }
 
-TEST_CASE("MULMOD opcode is correct") {
+TEST_CASE("OPCODE: MULMOD opcode is correct") {
     SECTION("(8*2)%3") {
         testTertiaryOp(8_u256, 2_u256, 3_u256, 1_u256, OpCode::MULMOD);
     }
@@ -254,21 +256,21 @@ TEST_CASE("MULMOD opcode is correct") {
     }
 }
 
-TEST_CASE("EXP opcode is correct") {
+TEST_CASE("OPCODE: EXP opcode is correct") {
     SECTION("All positive") {
         testBinaryOp(3_u256, 2_u256, 9_u256, OpCode::EXP);
     }
     SECTION("wrap") { testBinaryOp(2_u256, 256_u256, 0_u256, OpCode::EXP); }
 }
 
-TEST_CASE("LT opcode is correct") {
+TEST_CASE("OPCODE: LT opcode is correct") {
     SECTION("less") { testBinaryOp(3, 9, 1, OpCode::LT); }
     SECTION("greater") { testBinaryOp(9, 3, 0, OpCode::LT); }
     SECTION("equal") { testBinaryOp(3, 3, 0, OpCode::LT); }
     SECTION("First neg, second pos") { testBinaryOp(-3, 9, 0, OpCode::LT); }
 }
 
-TEST_CASE("GT opcode is correct") {
+TEST_CASE("OPCODE: GT opcode is correct") {
     testBinaryOp(3, 9, 0, OpCode::GT);
     testBinaryOp(9, 3, 1, OpCode::GT);
     testBinaryOp(3, 3, 0, OpCode::GT);
@@ -291,7 +293,7 @@ TEST_CASE("GT opcode is correct") {
     };
 }
 
-TEST_CASE("SLT opcode is correct") {
+TEST_CASE("OPCODE: SLT opcode is correct") {
     SECTION("All positive true") {
         testBinaryOp(7_u256, 3_u256, 0_u256, OpCode::SLT);
     }
@@ -313,7 +315,7 @@ TEST_CASE("SLT opcode is correct") {
     SECTION("equal") { testBinaryOp(3_u256, 3_u256, 0_u256, OpCode::SLT); }
 }
 
-TEST_CASE("SGT opcode is correct") {
+TEST_CASE("OPCODE: SGT opcode is correct") {
     SECTION("All positive true") {
         testBinaryOp(7_u256, 3_u256, 1_u256, OpCode::SGT);
     }
@@ -335,7 +337,7 @@ TEST_CASE("SGT opcode is correct") {
     SECTION("equal") { testBinaryOp(3_u256, 3_u256, 0_u256, OpCode::SGT); }
 }
 
-TEST_CASE("EQ opcode is correct") {
+TEST_CASE("OPCODE: EQ opcode is correct") {
     SECTION("Not equal") { testBinaryOp(7_u256, 3_u256, 0_u256, OpCode::EQ); }
     SECTION("equal") { testBinaryOp(3_u256, 3_u256, 1_u256, OpCode::EQ); }
     SECTION("matching tuples") {
@@ -362,38 +364,38 @@ TEST_CASE("EQ opcode is correct") {
     }
 }
 
-TEST_CASE("ISZERO opcode is correct") {
+TEST_CASE("OPCODE: ISZERO opcode is correct") {
     SECTION("true") { testUnaryOp(0, 1, OpCode::ISZERO); }
     SECTION("false") { testUnaryOp(2, 0, OpCode::ISZERO); }
 }
 
-TEST_CASE("AND opcode is correct") {
+TEST_CASE("OPCODE: AND opcode is correct") {
     SECTION("3 and 9 = 1") { testBinaryOp(3, 9, 1, OpCode::BITWISE_AND); }
     SECTION("3 and 3 = 3") { testBinaryOp(3, 3, 3, OpCode::BITWISE_AND); }
 }
 
-TEST_CASE("OR opcode is correct") {
+TEST_CASE("OPCODE: OR opcode is correct") {
     SECTION("3 or 9 = 11") { testBinaryOp(3, 9, 11, OpCode::BITWISE_OR); }
     SECTION("3 or 3 = 3") { testBinaryOp(3, 3, 3, OpCode::BITWISE_OR); }
 }
 
-TEST_CASE("XOR opcode is correct") {
+TEST_CASE("OPCODE: XOR opcode is correct") {
     SECTION("3 or 9 = 11") { testBinaryOp(3, 9, 10, OpCode::BITWISE_XOR); }
     SECTION("3 or 3 = 3") { testBinaryOp(3, 3, 0, OpCode::BITWISE_XOR); }
 }
 
-TEST_CASE("NOT opcode is correct") {
+TEST_CASE("OPCODE: NOT opcode is correct") {
     SECTION("0") { testUnaryOp(0_u256, -1_u256, OpCode::BITWISE_NOT); }
     SECTION("3") { testUnaryOp(3_u256, -4_u256, OpCode::BITWISE_NOT); }
     SECTION("-4") { testUnaryOp(-4_u256, 3_u256, OpCode::BITWISE_NOT); }
 }
 
-TEST_CASE("BYTE opcode is correct") {
+TEST_CASE("OPCODE: BYTE opcode is correct") {
     SECTION("31st byte of 16 = 16") { testBinaryOp(31, 16, 16, OpCode::BYTE); }
     SECTION("3rd byte of 3 = 0") { testBinaryOp(3, 3, 0, OpCode::BYTE); }
 }
 
-TEST_CASE("SIGNEXTEND opcode is correct") {
+TEST_CASE("OPCODE: SIGNEXTEND opcode is correct") {
     SECTION("test1") {
         testBinaryOp(0_u256, -1_u256, -1_u256, OpCode::SIGNEXTEND);
     }
@@ -426,7 +428,7 @@ TEST_CASE("SIGNEXTEND opcode is correct") {
     }
 }
 
-TEST_CASE("HASH opcode is correct") {
+TEST_CASE("OPCODE: HASH opcode is correct") {
     SECTION("10") {
         testUnaryOp(
             10,
@@ -436,7 +438,7 @@ TEST_CASE("HASH opcode is correct") {
     }
 }
 
-TEST_CASE("TYPE opcode is correct") {
+TEST_CASE("OPCODE: TYPE opcode is correct") {
     SECTION("type int") {
         MachineState m;
         m.stack.push(value{uint256_t(3)});
@@ -469,7 +471,7 @@ TEST_CASE("TYPE opcode is correct") {
     }
 }
 
-TEST_CASE("POP opcode is correct") {
+TEST_CASE("OPCODE: POP opcode is correct") {
     SECTION("pop") {
         MachineState m;
         m.stack.push(uint256_t{3});
@@ -479,7 +481,7 @@ TEST_CASE("POP opcode is correct") {
     }
 }
 
-TEST_CASE("SPUSH opcode is correct") {
+TEST_CASE("OPCODE: SPUSH opcode is correct") {
     SECTION("spush") {
         auto code = std::make_shared<Code>();
         code->addSegment();
@@ -492,7 +494,7 @@ TEST_CASE("SPUSH opcode is correct") {
     }
 }
 
-TEST_CASE("RPUSH opcode is correct") {
+TEST_CASE("OPCODE: RPUSH opcode is correct") {
     SECTION("rpush") {
         MachineState m;
         m.registerVal = uint256_t(5);
@@ -504,7 +506,7 @@ TEST_CASE("RPUSH opcode is correct") {
     }
 }
 
-TEST_CASE("RSET opcode is correct") {
+TEST_CASE("OPCODE: RSET opcode is correct") {
     SECTION("rset") {
         MachineState m;
         m.stack.push(value{uint256_t(5)});
@@ -514,7 +516,7 @@ TEST_CASE("RSET opcode is correct") {
     }
 }
 
-TEST_CASE("JUMP opcode is correct") {
+TEST_CASE("OPCODE: JUMP opcode is correct") {
     SECTION("jump") {
         MachineState m;
         CodePointRef cpr{0, 2};
@@ -525,7 +527,7 @@ TEST_CASE("JUMP opcode is correct") {
     }
 }
 
-TEST_CASE("CJUMP opcode is correct") {
+TEST_CASE("OPCODE: CJUMP opcode is correct") {
     SECTION("cjump true") {
         MachineState m;
         CodePointRef cpr{0, 2};
@@ -548,7 +550,7 @@ TEST_CASE("CJUMP opcode is correct") {
     }
 }
 
-TEST_CASE("STACKEMPTY opcode is correct") {
+TEST_CASE("OPCODE: STACKEMPTY opcode is correct") {
     SECTION("empty") {
         MachineState m;
         m.runOp(OpCode::STACKEMPTY);
@@ -568,7 +570,7 @@ TEST_CASE("STACKEMPTY opcode is correct") {
     }
 }
 
-TEST_CASE("PCPUSH opcode is correct") {
+TEST_CASE("OPCODE: PCPUSH opcode is correct") {
     SECTION("pcpush") {
         auto code = std::make_shared<Code>();
         auto stub = code->addSegment();
@@ -584,7 +586,7 @@ TEST_CASE("PCPUSH opcode is correct") {
     }
 }
 
-TEST_CASE("AUXPUSH opcode is correct") {
+TEST_CASE("OPCODE: AUXPUSH opcode is correct") {
     SECTION("auxpush") {
         MachineState m;
         m.stack.push(value{uint256_t(5)});
@@ -596,7 +598,7 @@ TEST_CASE("AUXPUSH opcode is correct") {
     }
 }
 
-TEST_CASE("AUXPOP opcode is correct") {
+TEST_CASE("OPCODE: AUXPOP opcode is correct") {
     SECTION("auxpop") {
         MachineState m;
         m.auxstack.push(value{uint256_t(5)});
@@ -608,7 +610,7 @@ TEST_CASE("AUXPOP opcode is correct") {
     }
 }
 
-TEST_CASE("AUXSTACKEMPTY opcode is correct") {
+TEST_CASE("OPCODE: AUXSTACKEMPTY opcode is correct") {
     SECTION("empty") {
         MachineState m;
         m.runOp(OpCode::AUXSTACKEMPTY);
@@ -636,7 +638,7 @@ MachineState createTestMachineState(OpCode op) {
     return {std::move(code), Tuple()};
 }
 
-TEST_CASE("NOP opcode is correct") {
+TEST_CASE("OPCODE: NOP opcode is correct") {
     SECTION("nop") {
         MachineState m = createTestMachineState(OpCode::NOP);
         auto start_pc = m.pc;
@@ -647,7 +649,7 @@ TEST_CASE("NOP opcode is correct") {
     }
 }
 
-TEST_CASE("ERRPUSH opcode is correct") {
+TEST_CASE("OPCODE: ERRPUSH opcode is correct") {
     SECTION("errpush") {
         auto code = std::make_shared<Code>();
         auto stub = code->addSegment();
@@ -663,7 +665,7 @@ TEST_CASE("ERRPUSH opcode is correct") {
     }
 }
 
-TEST_CASE("ERRSET opcode is correct") {
+TEST_CASE("OPCODE: ERRSET opcode is correct") {
     SECTION("errset") {
         MachineState m = createTestMachineState(OpCode::ERRSET);
         auto start_pc = m.pc;
@@ -676,7 +678,7 @@ TEST_CASE("ERRSET opcode is correct") {
     }
 }
 
-TEST_CASE("DUP0 opcode is correct") {
+TEST_CASE("OPCODE: DUP0 opcode is correct") {
     SECTION("dup") {
         MachineState m = createTestMachineState(OpCode::DUP0);
         auto start_pc = m.pc;
@@ -691,7 +693,7 @@ TEST_CASE("DUP0 opcode is correct") {
     }
 }
 
-TEST_CASE("DUP1 opcode is correct") {
+TEST_CASE("OPCODE: DUP1 opcode is correct") {
     SECTION("dup") {
         MachineState m = createTestMachineState(OpCode::DUP1);
         auto start_pc = m.pc;
@@ -709,7 +711,7 @@ TEST_CASE("DUP1 opcode is correct") {
     }
 }
 
-TEST_CASE("DUP2 opcode is correct") {
+TEST_CASE("OPCODE: DUP2 opcode is correct") {
     SECTION("dup") {
         MachineState m = createTestMachineState(OpCode::DUP2);
         auto start_pc = m.pc;
@@ -730,7 +732,7 @@ TEST_CASE("DUP2 opcode is correct") {
     }
 }
 
-TEST_CASE("SWAP1 opcode is correct") {
+TEST_CASE("OPCODE: SWAP1 opcode is correct") {
     SECTION("swap") {
         MachineState m = createTestMachineState(OpCode::SWAP1);
         auto start_pc = m.pc;
@@ -746,7 +748,7 @@ TEST_CASE("SWAP1 opcode is correct") {
     }
 }
 
-TEST_CASE("SWAP2 opcode is correct") {
+TEST_CASE("OPCODE: SWAP2 opcode is correct") {
     SECTION("swap") {
         MachineState m = createTestMachineState(OpCode::SWAP2);
         auto start_pc = m.pc;
@@ -765,7 +767,7 @@ TEST_CASE("SWAP2 opcode is correct") {
     }
 }
 
-TEST_CASE("TGET opcode is correct") {
+TEST_CASE("OPCODE: TGET opcode is correct") {
     SECTION("tget") {
         MachineState m;
         m.stack.push(
@@ -793,7 +795,7 @@ TEST_CASE("TGET opcode is correct") {
     }
 }
 
-TEST_CASE("TSET opcode is correct") {
+TEST_CASE("OPCODE: TSET opcode is correct") {
     SECTION("2 tup") {
         MachineState m;
         m.stack.push(uint256_t{3});
@@ -821,7 +823,7 @@ TEST_CASE("TSET opcode is correct") {
     }
 }
 
-TEST_CASE("TLEN opcode is correct") {
+TEST_CASE("OPCODE: TLEN opcode is correct") {
     SECTION("tlen") {
         MachineState m;
         m.stack.push(
@@ -833,7 +835,7 @@ TEST_CASE("TLEN opcode is correct") {
     }
 }
 
-TEST_CASE("XGET opcode is correct") {
+TEST_CASE("OPCODE: XGET opcode is correct") {
     SECTION("correct") {
         MachineState m;
         m.auxstack.push(
@@ -858,7 +860,7 @@ TEST_CASE("XGET opcode is correct") {
     }
 }
 
-TEST_CASE("XSET opcode is correct") {
+TEST_CASE("OPCODE: XSET opcode is correct") {
     SECTION("2 tup") {
         MachineState m;
         m.auxstack.push(Tuple{uint256_t{1}, uint256_t{2}});
@@ -872,7 +874,7 @@ TEST_CASE("XSET opcode is correct") {
     }
 }
 
-TEST_CASE("BREAKPOINT opcode is correct") {
+TEST_CASE("OPCODE: BREAKPOINT opcode is correct") {
     SECTION("break") {
         MachineState m;
         auto blockReason = m.runOp(OpCode::BREAKPOINT);
@@ -882,7 +884,7 @@ TEST_CASE("BREAKPOINT opcode is correct") {
     }
 }
 
-TEST_CASE("LOG opcode is correct") {
+TEST_CASE("OPCODE: LOG opcode is correct") {
     SECTION("log") {
         MachineState m;
         m.stack.push(uint256_t{3});
@@ -892,7 +894,7 @@ TEST_CASE("LOG opcode is correct") {
     }
 }
 
-TEST_CASE("SEND opcode is correct") {
+TEST_CASE("OPCODE: SEND opcode is correct") {
     SECTION("send") {
         // TODO: fill in send test
         MachineState m;
@@ -905,7 +907,7 @@ TEST_CASE("SEND opcode is correct") {
     }
 }
 
-TEST_CASE("PUSHGAS opcode is correct") {
+TEST_CASE("OPCODE: PUSHGAS opcode is correct") {
     MachineState m;
     m.arb_gas_remaining = 250;
     m.runOp(OpCode::PUSH_GAS);
@@ -915,7 +917,7 @@ TEST_CASE("PUSHGAS opcode is correct") {
     REQUIRE(m.auxstack.stacksize() == 0);
 }
 
-TEST_CASE("SET_GAS opcode is correct") {
+TEST_CASE("OPCODE: SET_GAS opcode is correct") {
     MachineState m;
     m.stack.push(uint256_t{100});
     m.runOp(OpCode::SET_GAS);
@@ -932,7 +934,7 @@ uint256_t& assumeInt(value& val) {
     return *aNum;
 }
 
-TEST_CASE("ecrecover opcode is correct") {
+TEST_CASE("OPCODE: ecrecover opcode is correct") {
     std::array<unsigned char, 32> msg;
     std::generate(msg.begin(), msg.end(), std::rand);
     std::array<unsigned char, 32> seckey;
@@ -989,37 +991,73 @@ TEST_CASE("ecrecover opcode is correct") {
     };
 }
 
-TEST_CASE("INBOX opcode is correct") {
+TEST_CASE("OPCODE: ECADD") {
+    alt_bn128_pp::init_public_params();
+    for (const auto& test_case : prepareECAddCases()) {
+        MachineState mach;
+        mach.stack.push(test_case.b.y);
+        mach.stack.push(test_case.b.x);
+        mach.stack.push(test_case.a.y);
+        mach.stack.push(test_case.a.x);
+        mach.runOp(OpCode::ECADD);
+        REQUIRE(mach.state == Status::Extensive);
+        REQUIRE(mach.stack[1] == value{test_case.res.y});
+        REQUIRE(mach.stack[0] == value{test_case.res.x});
+    }
+}
+
+TEST_CASE("OPCODE: ECMUL") {
+    alt_bn128_pp::init_public_params();
+    for (const auto& test_case : prepareECMulCases()) {
+        MachineState mach;
+        mach.stack.push(test_case.k);
+        mach.stack.push(test_case.a.y);
+        mach.stack.push(test_case.a.x);
+        mach.runOp(OpCode::ECMUL);
+        REQUIRE(mach.state == Status::Extensive);
+        REQUIRE(mach.stack[1] == value{test_case.res.y});
+        REQUIRE(mach.stack[0] == value{test_case.res.x});
+    }
+}
+
+TEST_CASE("OPCODE: ECPAIRING") {
+    alt_bn128_pp::init_public_params();
+    auto cases = preparePairingCases();
+    for (const auto& testCase : cases) {
+        Tuple tup;
+        for (const auto& point : testCase.points) {
+            tup =
+                Tuple(Tuple(point.first.x, point.first.y, point.second.x0,
+                            point.second.x1, point.second.y0, point.second.y1),
+                      tup);
+        }
+        MachineState mach;
+        mach.stack.push(tup);
+        mach.runOp(OpCode::ECPAIRING);
+        REQUIRE(mach.state == Status::Extensive);
+        REQUIRE(mach.stack[0] == value(testCase.valid ? 1 : 0));
+    }
+}
+
+TEST_CASE("OPCODE: INBOX opcode is correct") {
     SECTION("inbox") {
         // TODO: fill in inbox test
     }
 }
 
-TEST_CASE("ERROR opcode is correct") {
+TEST_CASE("OPCODE: ERROR opcode is correct") {
     SECTION("error") {
         // TODO: fill in error test
     }
 }
 
-TEST_CASE("HALT opcode is correct") {
+TEST_CASE("OPCODE: HALT opcode is correct") {
     SECTION("halt") {
         // TODO: fill in halt test
     }
 }
 
-std::vector<unsigned char> hexToVec(const std::string& hexstr) {
-    std::vector<unsigned char> bytes;
-    bytes.resize(hexstr.size() / 2);
-    boost::algorithm::unhex(hexstr.begin(), hexstr.end(), bytes.begin());
-    return bytes;
-}
-
-uint256_t hexToInt(const std::string& hexstr) {
-    auto bytes = hexToVec(hexstr);
-    return intx::be::unsafe::load<uint256_t>(bytes.data());
-}
-
-TEST_CASE("KECCAKF opcode is correct") {
+TEST_CASE("OPCODE: KECCAKF opcode is correct") {
     auto code = std::make_shared<Code>();
     SECTION("Inverts correctly") {
         Tuple input_data(intx::from_string<uint256_t>(
@@ -1144,7 +1182,7 @@ TEST_CASE("KECCAKF opcode is correct") {
     }
 }
 
-TEST_CASE("SHA256F opcode is correct") {
+TEST_CASE("OPCODE: SHA256F opcode is correct") {
     uint256_t initial_hash_state = hexToInt(
         "6a09e667bb67ae853c6ef372a54ff53a510e527f9b05688c1f83d9ab5be0cd19");
     struct Sha256Case {
@@ -1226,7 +1264,7 @@ TEST_CASE("SHA256F opcode is correct") {
     }
 }
 
-TEST_CASE("Stack underflow") {
+TEST_CASE("OPCODE: Stack underflow") {
     for (uint8_t op = static_cast<uint8_t>(OpCode::ADD);
          op <= static_cast<uint8_t>(OpCode::ECRECOVER); ++op) {
         auto code = std::make_shared<Code>();

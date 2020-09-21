@@ -79,6 +79,7 @@ func (m *Machine) CurrentStatus() machine.Status {
 		return machine.Extensive
 	case C.STATUS_ERROR_STOP:
 		return machine.ErrorStop
+
 	case C.STATUS_HALT:
 		return machine.Halt
 	default:

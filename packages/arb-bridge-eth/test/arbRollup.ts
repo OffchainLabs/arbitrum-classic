@@ -25,6 +25,7 @@ import { RollupTester } from '../build/types/RollupTester'
 import { InboxTopChallenge } from '../build/types/InboxTopChallenge'
 import { ArbValue } from 'arb-provider-ethers'
 import deploy_contracts from '../scripts/deploy'
+import { initializeAccounts } from './utils'
 
 chai.use(chaiAsPromised)
 
@@ -473,9 +474,27 @@ async function createRollup(): Promise<ArbRollup> {
   return ArbRollup.attach(chainAddress) as ArbRollup
 }
 
+async function tryAdvanceChain(blocks: number): Promise<void> {
+  try {
+    for (let i = 0; i < blocks; i++) {
+      await ethers.provider.send('evm_mine', [])
+    }
+  } catch (e) {
+    // EVM mine failed. Try advancing the chain by sending txes if the node
+    // is in dev mode and mints blocks when txes are sent
+    for (let i = 0; i < blocks; i++) {
+      const tx = await accounts[0].sendTransaction({
+        value: 0,
+        to: await accounts[0].getAddress(),
+      })
+      await tx.wait()
+    }
+  }
+}
+
 describe('ArbRollup', () => {
   it('should deploy contracts', async function () {
-    accounts = await ethers.getSigners()
+    accounts = await initializeAccounts()
     const { ArbFactory } = await deploy_contracts(bre)
     arbFactory = ArbFactory as ArbFactory
 
@@ -671,18 +690,12 @@ describe('ArbRollup', () => {
   })
 
   it('should timeout the challenge', async () => {
-    await ethers.provider.send('evm_mine', [])
-    await ethers.provider.send('evm_mine', [])
-    await ethers.provider.send('evm_mine', [])
-
+    await tryAdvanceChain(3)
     await challenge.timeoutChallenge()
   })
 
   it('should confirm invalid inbox top node', async () => {
-    await ethers.provider.send('evm_mine', [])
-    await ethers.provider.send('evm_mine', [])
-    await ethers.provider.send('evm_mine', [])
-
+    await tryAdvanceChain(3)
     await expect(
       arbRollup.confirm(
         assertionInfo.prevProtoData.hash(),
@@ -785,10 +798,7 @@ describe('ArbRollup', () => {
   })
 
   it('should confirm valid node', async () => {
-    await ethers.provider.send('evm_mine', [])
-    await ethers.provider.send('evm_mine', [])
-    await ethers.provider.send('evm_mine', [])
-
+    await tryAdvanceChain(3)
     const { validNodeHashes, lastNodeHash } = await rollupTester.confirm(
       await arbRollup.latestConfirmed(),
       assertionInfo.prevProtoData.hash(),

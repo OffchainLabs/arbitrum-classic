@@ -60,6 +60,7 @@ option(AVM_BUILD_TESTING "Build SelfTest project" ON)
 
 find_package(Threads REQUIRED)
 find_package(GMP REQUIRED)
+find_package(GMPXX REQUIRED)
 find_package(Boost 1.65 COMPONENTS filesystem system REQUIRED)
 if(NOT TARGET Boost::boost)
     add_library(Boost::boost IMPORTED INTERFACE)
