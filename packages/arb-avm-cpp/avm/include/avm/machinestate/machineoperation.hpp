@@ -24,6 +24,7 @@ class Tuple;
 
 const int send_size_limit = 10000;
 constexpr int max_ec_pairing_points = 100;
+constexpr int ec_pair_gas_cost = 500'000;
 
 namespace machineoperation {
 void add(MachineState& m);

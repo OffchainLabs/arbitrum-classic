@@ -832,7 +832,7 @@ uint64_t ec_pairing_variable_gas_cost(const MachineState& m) {
                 throw bad_pop_type{};
             }
             val = &assumeTuple(val->get_element_unsafe(1));
-            gas_cost += 500'000;
+            gas_cost += ec_pair_gas_cost;
         }
     } catch (const std::exception&) {
     }
