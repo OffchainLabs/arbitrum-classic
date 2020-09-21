@@ -30,7 +30,7 @@ func TestKeccak(t *testing.T) {
 	client, pks := test.SimulatedBackend()
 	auth := bind.NewKeyedTransactor(pks[0])
 
-	_, _, keccakTester, err := ethbridgetestcontracts.DeployKeccakTester(
+	_, _, precompilesTester, err := ethbridgetestcontracts.DeployPrecompilesTester(
 		auth,
 		client,
 	)
@@ -49,7 +49,7 @@ func TestKeccak(t *testing.T) {
 		bigData[i] = new(big.Int).SetUint64(data[5*(i%5)+i/5])
 	}
 
-	ret, err := keccakTester.KeccakF(nil, bigData)
+	ret, err := precompilesTester.KeccakF(nil, bigData)
 	if err != nil {
 		t.Fatal(err)
 	}

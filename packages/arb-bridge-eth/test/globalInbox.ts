@@ -25,6 +25,7 @@ import { deployMockContract } from '@ethereum-waffle/mock-contract'
 import { GlobalInbox } from '../build/types/GlobalInbox'
 import { EthBuddyErc20 } from '../build/types/EthBuddyErc20'
 import { ArbValue, Message } from 'arb-provider-ethers'
+import { initializeAccounts } from './utils'
 
 chai.use(chaiAsPromised)
 
@@ -70,9 +71,9 @@ let address2: string
 let address3: string
 let address4: string
 
-describe('GlobalInbox', async () => {
+describe('GlobalInbox', () => {
   before(async () => {
-    accounts = await ethers.getSigners()
+    accounts = await initializeAccounts()
 
     const GlobalInbox = await ethers.getContractFactory('GlobalInbox')
     globalInbox = (await GlobalInbox.deploy()) as GlobalInbox

@@ -96,11 +96,11 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts
 			if err != nil {
 				t.Fatal("proof invalid with error", err)
 			}
+			if machineData.Gas != proof.Assertion.NumGas {
+				t.Fatalf("wrong gas %v instead of %v", machineData.Gas, proof.Assertion.NumGas)
+			}
 			if machineData.Fields[0] != proof.Assertion.BeforeMachineHash {
 				t.Fatal("wrong before machine")
-			}
-			if machineData.Fields[1] != proof.Assertion.AfterMachineHash {
-				t.Fatal("wrong after machine")
 			}
 			if machineData.Fields[2] != proof.Assertion.AfterInboxHash {
 				t.Fatal("wrong DidInboxInsn")
@@ -111,8 +111,8 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts
 			if machineData.Fields[4] != proof.Assertion.LastMessageHash {
 				t.Fatal("wrong message")
 			}
-			if machineData.Gas != proof.Assertion.NumGas {
-				t.Fatal("wrong gas")
+			if machineData.Fields[1] != proof.Assertion.AfterMachineHash {
+				t.Fatal("wrong after machine")
 			}
 		})
 	}

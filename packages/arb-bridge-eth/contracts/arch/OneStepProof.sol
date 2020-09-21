@@ -22,7 +22,7 @@ import "./IOneStepProof.sol";
 import "./Value.sol";
 import "./Machine.sol";
 import "../inbox/Messages.sol";
-import "../libraries/Keccak.sol";
+import "../libraries/Precompiles.sol";
 
 // Originally forked from https://github.com/leapdao/solEVM-enforcer/tree/master
 
@@ -34,6 +34,7 @@ contract OneStepProof is IOneStepProof {
     uint256 private constant SEND_SIZE_LIMIT = 10000;
 
     uint256 private constant MAX_UINT256 = ((1 << 128) + 1) * ((1 << 128) - 1);
+    uint256 private constant MAX_PAIRING_COUNT = 30;
 
     string private constant BAD_IMM_TYP = "BAD_IMM_TYP";
     string private constant NO_IMM = "NO_IMM";
@@ -48,7 +49,7 @@ contract OneStepProof is IOneStepProof {
         bytes32 messagesAcc,
         bytes32 logsAcc,
         bytes calldata proof
-    ) external pure returns (uint64 gas, bytes32[5] memory fields) {
+    ) external view returns (uint64 gas, bytes32[5] memory fields) {
         AssertionContext memory context = initializeExecutionContext(
             inboxAcc,
             messagesAcc,
@@ -72,7 +73,7 @@ contract OneStepProof is IOneStepProof {
         address _sender,
         uint256 _inboxSeqNum,
         bytes calldata _msgData
-    ) external pure returns (uint64 gas, bytes32[5] memory fields) {
+    ) external view returns (uint64 gas, bytes32[5] memory fields) {
         AssertionContext memory context = initializeExecutionContext(
             inboxAcc,
             messagesAcc,
@@ -166,6 +167,18 @@ contract OneStepProof is IOneStepProof {
         }
     }
 
+    function deductGas(AssertionContext memory context, uint64 amount) private pure returns (bool) {
+        context.gas += amount;
+        if (context.afterMachine.arbGasRemaining < amount) {
+            context.afterMachine.arbGasRemaining = MAX_UINT256;
+            handleError(context);
+            return true;
+        } else {
+            context.afterMachine.arbGasRemaining -= amount;
+            return false;
+        }
+    }
+
     function handleOpcodeError(AssertionContext memory context) private pure {
         handleError(context);
         // Also clear the stack and auxstack
@@ -242,23 +255,16 @@ contract OneStepProof is IOneStepProof {
         return context;
     }
 
-    function executeOp(AssertionContext memory context) internal pure {
+    function executeOp(AssertionContext memory context) internal view {
         (
             uint256 dataPopCount,
             uint256 auxPopCount,
             uint64 gasCost,
-            function(AssertionContext memory) internal pure impl
+            function(AssertionContext memory) internal view impl
         ) = opInfo(context.opcode);
-        context.gas = gasCost;
 
         // Update end machine gas remaining before running opcode
-        // No need to overflow check since the check for whether we
-        // have sufficient gas fixes the overflow case
-        context.afterMachine.arbGasRemaining = context.afterMachine.arbGasRemaining - gasCost;
-
-        if (context.startMachine.arbGasRemaining < gasCost) {
-            context.afterMachine.arbGasRemaining = MAX_UINT256;
-            handleError(context);
+        if (deductGas(context, gasCost)) {
             return;
         }
 
@@ -524,7 +530,7 @@ contract OneStepProof is IOneStepProof {
             data[5 * (i % 5) + i / 5] = uint256(uint64(values[i / 4].intVal >> ((i % 4) * 64)));
         }
 
-        data = Keccak.keccakF(data);
+        data = Precompiles.keccakF(data);
 
         Value.Data[] memory outValues = new Value.Data[](7);
         for (uint256 i = 0; i < 7; i++) {
@@ -536,6 +542,21 @@ contract OneStepProof is IOneStepProof {
         }
 
         pushVal(context.stack, Value.newTuple(outValues));
+    }
+
+    function executeSha256FInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val3 = popVal(context.stack);
+        if (!val1.isInt() || !val2.isInt() || !val3.isInt()) {
+            handleOpcodeError(context);
+            return;
+        }
+        uint256 a = val1.intVal;
+        uint256 b = val2.intVal;
+        uint256 c = val3.intVal;
+
+        pushVal(context.stack, Value.newInt(Precompiles.sha256Block([b, c], a)));
     }
 
     // Stack ops
@@ -831,6 +852,133 @@ contract OneStepProof is IOneStepProof {
         pushVal(context.stack, Value.newInt(uint256(ret)));
     }
 
+    function executeECAddInsn(AssertionContext memory context) internal view {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val3 = popVal(context.stack);
+        Value.Data memory val4 = popVal(context.stack);
+        if (!val1.isInt() || !val2.isInt() || !val3.isInt() || !val4.isInt()) {
+            handleOpcodeError(context);
+            return;
+        }
+        uint256[4] memory bnAddInput = [val1.intVal, val2.intVal, val3.intVal, val4.intVal];
+        uint256[2] memory ret;
+        bool success;
+        // solium-disable-next-line security/no-inline-assembly
+        assembly {
+            success := staticcall(sub(gas(), 2000), 6, bnAddInput, 0x80, ret, 0x40)
+        }
+        if (!success) {
+            // Must end on empty tuple
+            handleOpcodeError(context);
+            return;
+        }
+        pushVal(context.stack, Value.newInt(uint256(ret[1])));
+        pushVal(context.stack, Value.newInt(uint256(ret[0])));
+    }
+
+    function executeECMulInsn(AssertionContext memory context) internal view {
+        Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val3 = popVal(context.stack);
+        if (!val1.isInt() || !val2.isInt() || !val3.isInt()) {
+            handleOpcodeError(context);
+            return;
+        }
+        uint256[3] memory bnAddInput = [val1.intVal, val2.intVal, val3.intVal];
+        uint256[2] memory ret;
+        bool success;
+        // solium-disable-next-line security/no-inline-assembly
+        assembly {
+            success := staticcall(sub(gas(), 2000), 7, bnAddInput, 0x80, ret, 0x40)
+        }
+        if (!success) {
+            // Must end on empty tuple
+            handleOpcodeError(context);
+            return;
+        }
+        pushVal(context.stack, Value.newInt(uint256(ret[1])));
+        pushVal(context.stack, Value.newInt(uint256(ret[0])));
+    }
+
+    function executeECPairingInsn(AssertionContext memory context) internal view {
+        Value.Data memory val = popVal(context.stack);
+
+        Value.Data[MAX_PAIRING_COUNT] memory items;
+        uint256 count;
+        for (count = 0; count < MAX_PAIRING_COUNT; count++) {
+            if (!val.isTuple()) {
+                handleOpcodeError(context);
+                return;
+            }
+            Value.Data[] memory stackTupleVals = val.tupleVal;
+            if (stackTupleVals.length == 0) {
+                // We reached the bottom of the stack
+                break;
+            }
+            if (stackTupleVals.length != 2) {
+                handleOpcodeError(context);
+                return;
+            }
+            items[count] = stackTupleVals[0];
+            val = stackTupleVals[1];
+        }
+
+        if (deductGas(context, uint64(EC_PAIRING_POINT_GAS_COST * count))) {
+            return;
+        }
+
+        if (!val.isTuple() || val.tupleVal.length != 0) {
+            // Must end on empty tuple
+            handleOpcodeError(context);
+            return;
+        }
+
+        // Allocate the maximum amount of space we might need
+        uint256[MAX_PAIRING_COUNT * 6] memory input;
+        for (uint256 i = 0; i < count; i++) {
+            Value.Data memory pointVal = items[i];
+            if (!pointVal.isTuple()) {
+                handleOpcodeError(context);
+                return;
+            }
+
+            Value.Data[] memory pointTupleVals = pointVal.tupleVal;
+            if (pointTupleVals.length != 6) {
+                handleOpcodeError(context);
+                return;
+            }
+
+            for (uint256 j = 0; j < 6; j++) {
+                if (!pointTupleVals[j].isInt()) {
+                    handleOpcodeError(context);
+                    return;
+                }
+            }
+            input[i * 6] = pointTupleVals[0].intVal;
+            input[i * 6 + 1] = pointTupleVals[1].intVal;
+            input[i * 6 + 2] = pointTupleVals[3].intVal;
+            input[i * 6 + 3] = pointTupleVals[2].intVal;
+            input[i * 6 + 4] = pointTupleVals[5].intVal;
+            input[i * 6 + 5] = pointTupleVals[4].intVal;
+        }
+
+        uint256 inputSize = count * 6 * 0x20;
+        uint256[1] memory out;
+        bool success;
+        // solium-disable-next-line security/no-inline-assembly
+        assembly {
+            success := staticcall(sub(gas(), 2000), 8, input, inputSize, out, 0x20)
+        }
+
+        if (!success) {
+            handleOpcodeError(context);
+            return;
+        }
+
+        pushVal(context.stack, Value.newBoolean(out[0] != 0));
+    }
+
     function executeErrorInsn(AssertionContext memory context) internal pure {
         handleOpcodeError(context);
     }
@@ -873,6 +1021,7 @@ contract OneStepProof is IOneStepProof {
     uint8 private constant OP_TYPE = 0x21;
     uint8 private constant OP_ETHHASH2 = 0x22;
     uint8 private constant OP_KECCAK_F = 0x23;
+    uint8 private constant OP_SHA256_F = 0x24;
 
     // Stack, Memory, Storage and Flow Operations
     uint8 private constant OP_POP = 0x30;
@@ -923,6 +1072,11 @@ contract OneStepProof is IOneStepProof {
     uint8 private constant OP_SIDELOAD = 0x7b;
 
     uint8 private constant OP_ECRECOVER = 0x80;
+    uint8 private constant OP_ECADD = 0x81;
+    uint8 private constant OP_ECMUL = 0x82;
+    uint8 private constant OP_ECPAIRING = 0x83;
+
+    uint64 private constant EC_PAIRING_POINT_GAS_COST = 500000;
 
     uint8 private constant CODE_POINT_TYPECODE = 1;
     bytes32 private constant CODE_POINT_ERROR = keccak256(
@@ -936,7 +1090,7 @@ contract OneStepProof is IOneStepProof {
             uint256, // stack pops
             uint256, // auxstack pops
             uint64, // gas used
-            function(AssertionContext memory) internal pure // impl
+            function(AssertionContext memory) internal view // impl
         )
     {
         if (opCode == OP_ADD || opCode == OP_MUL || opCode == OP_SUB) {
@@ -977,6 +1131,8 @@ contract OneStepProof is IOneStepProof {
             return (2, 0, 8, binaryMathOp);
         } else if (opCode == OP_KECCAK_F) {
             return (1, 0, 600, executeKeccakFInsn);
+        } else if (opCode == OP_SHA256_F) {
+            return (3, 0, 250, executeSha256FInsn);
         } else if (opCode == OP_POP) {
             return (1, 0, 1, executePopInsn);
         } else if (opCode == OP_SPUSH) {
@@ -1053,6 +1209,12 @@ contract OneStepProof is IOneStepProof {
             return (0, 0, 10, executeSideloadInsn);
         } else if (opCode == OP_ECRECOVER) {
             return (4, 0, 20000, executeECRecoverInsn);
+        } else if (opCode == OP_ECADD) {
+            return (4, 0, 3500, executeECAddInsn);
+        } else if (opCode == OP_ECMUL) {
+            return (3, 0, 82000, executeECMulInsn);
+        } else if (opCode == OP_ECPAIRING) {
+            return (1, 0, 1000, executeECPairingInsn);
         } else {
             return (0, 0, 0, executeErrorInsn);
         }
