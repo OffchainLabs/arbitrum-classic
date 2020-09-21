@@ -171,6 +171,8 @@ github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416/go.mod h1:NBIhNtsFMo
 github.com/offchainlabs/arbitrum v0.7.1 h1:JBkSbMZFObg/2rqIiXiLrKLxN7WelEtBOGRY6jalmoc=
 github.com/offchainlabs/arbitrum/packages/arb-evm v0.7.1 h1:Heo6Sq3JuZSsvPuQccjcqGK5dsdNcvUHWwaUa2j6nm8=
 github.com/offchainlabs/arbitrum/packages/arb-evm v0.7.1/go.mod h1:4XbYeQDzNKgK4YA0b4wxF5XcaOIAo11RTClyfagDZRI=
+github.com/offchainlabs/arbitrum/packages/arb-provider-go v0.7.1 h1:6fysrPTjQlUFaYfQ05McjEmSfNpUUwv7VbEY68nJm7w=
+github.com/offchainlabs/arbitrum/packages/arb-provider-go v0.7.1/go.mod h1:DtCRF5PKzE0cY7Vxd9UOrFHIitI2btg4svU93H3bQaE=
 github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator v0.7.1 h1:tjNbbHa3mpmaGrwQN07ihWEDri3hwCk8Hezz/dyKsW0=
 github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator v0.7.1/go.mod h1:qJjvnJjDg33KWxiVj+6IU9kxmbSRzheyGt+fsJZHrfc=
 github.com/offchainlabs/go-solidity-sha3 v0.1.2 h1:IJ/KUv8zW5+Rtq/VvhNjq/Q7MDXjDx1ArAvkJhBRQAs=
