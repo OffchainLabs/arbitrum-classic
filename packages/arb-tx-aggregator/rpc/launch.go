@@ -18,9 +18,6 @@ package rpc
 
 import (
 	"context"
-	"github.com/gorilla/handlers"
-	"log"
-	"net/http"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -43,7 +40,8 @@ func LaunchAggregator(
 	executable string,
 	dbPath string,
 	aggPort string,
-	web3Port string,
+	web3RPCPort string,
+	web3WSPort string,
 	flags utils2.RPCFlags,
 	maxBatchTime time.Duration,
 	keepPendingState bool,
@@ -88,28 +86,16 @@ func LaunchAggregator(
 			errChan <- utils2.LaunchRPC(aggServer, aggPort, flags)
 		}()
 	}
-	if web3Port != "" {
+	if web3RPCPort != "" {
 		go func() {
-			errChan <- utils2.LaunchRPC(web3Server, web3Port, flags)
+			errChan <- utils2.LaunchRPC(web3Server, web3RPCPort, flags)
 		}()
 	}
-
-	go func() {
-		headersOk := handlers.AllowedHeaders(
-			[]string{"X-Requested-With", "Content-Type", "Authorization"},
-		)
-		originsOk := handlers.AllowedOrigins([]string{"*"})
-		methodsOk := handlers.AllowedMethods(
-			[]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"},
-		)
-		h := handlers.CORS(headersOk, originsOk, methodsOk)(web3Server.WebsocketHandler([]string{"0.0.0.0"}))
-
-		log.Println("Launching rpc server over http")
-		errChan <- http.ListenAndServe(
-			":8548",
-			h,
-		)
-	}()
+	if web3WSPort != "" {
+		go func() {
+			errChan <- utils2.LaunchWS(web3Server, web3WSPort, flags)
+		}()
+	}
 
 	return <-errChan
 }
