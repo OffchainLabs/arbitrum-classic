@@ -31,17 +31,14 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-func TestSha256(t *testing.T) {
+func runSha256(t *testing.T, data []byte) *evm.TxResult {
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
-	addr := common.Address{1, 2, 3, 4, 5}
-
-	data := common.RandBytes(100)
 
 	inboxMessages := make([]inbox.InboxMessage, 0)
-	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg(), addr, big.NewInt(0), chainTime))
+	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg(), common.RandAddress(), big.NewInt(0), chainTime))
 	inboxMessages = append(inboxMessages, message.NewInboxMessage(
 		message.NewSafeL2Message(message.Transaction{
 			MaxGas:      big.NewInt(100000000),
@@ -51,14 +48,10 @@ func TestSha256(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        data,
 		}),
-		addr,
+		common.RandAddress(),
 		big.NewInt(1),
 		chainTime,
 	))
-
-	sha256 := crypto.SHA256.New()
-	sha256.Write(data)
-	hashedCorrect := sha256.Sum(nil)
 
 	mach, err := cmachine.New(arbos.Path())
 	if err != nil {
@@ -66,12 +59,6 @@ func TestSha256(t *testing.T) {
 	}
 
 	assertion, _ := mach.ExecuteAssertion(1000000000, inboxMessages, 0)
-	//data, err := value.TestVectorJSON(inbox, assertion.ParseLogs(), assertion.ParseOutMessages())
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//t.Log(string(data))
-
 	logs := assertion.ParseLogs()
 
 	if len(logs) != 1 {
@@ -93,8 +80,21 @@ func TestSha256(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	return res
+}
+
+func TestSha256(t *testing.T) {
+	data := common.RandBytes(100)
+
+	sha256 := crypto.SHA256.New()
+	sha256.Write(data)
+	hashedCorrect := sha256.Sum(nil)
+
+	res := runSha256(t, data)
 
 	if !bytes.Equal(res.ReturnData, hashedCorrect) {
 		t.Error("calculated hash incorrectly")
 	}
+
+	t.Logf("Used %v gas", res.GasUsed)
 }
