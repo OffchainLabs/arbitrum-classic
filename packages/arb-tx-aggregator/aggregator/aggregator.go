@@ -213,6 +213,19 @@ func (m *Server) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
 	return results, nil
 }
 
+func (m *Server) GetTxInBlockAtIndexResults(res *evm.BlockInfo, index uint64) (*evm.TxResult, error) {
+	txCount := res.BlockStats.TxCount.Uint64()
+	if index >= txCount {
+		return nil, errors.New("index out of bounds")
+	}
+	startLog := res.FirstAVMLog().Uint64()
+	avmLog, err := m.db.GetLog(startLog + index)
+	if err != nil {
+		return nil, err
+	}
+	return evm.NewTxResultFromValue(avmLog)
+}
+
 func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, error) {
 	header, err := m.GetBlockHeaderByNumber(ctx, height)
 	if err != nil {
