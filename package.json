@@ -56,5 +56,12 @@
     "eslint-plugin-prettier": "^3.1.4",
     "prettier": "^2.0.5",
     "prettier-plugin-solidity": "^1.0.0-alpha.54"
+  },
+  "resolutions": {
+    "arb-provider-ethers/ethers": "~4.0.47",
+    "eth-sig-util/ethereumjs-abi": "^0.6.8",
+    "typechain/truffle-v4/truffle": "^4.0.0",
+    "typechain/truffle-v5/truffle": "^5.0.0",
+    "typechain/web3-v1/web3": "^1.0.0"
   }
 }
