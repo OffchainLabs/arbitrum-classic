@@ -277,7 +277,7 @@ func GetTransaction(msg evm.IncomingRequest) (*types.Transaction, error) {
 	return ethMsg.AsEthTx(), nil
 }
 
-func (m *Server) AdjustGas(msg message.ContractTransaction) message.ContractTransaction {
+func (m *Server) AdjustGas(msg message.Call) message.Call {
 	if msg.MaxGas.Cmp(big.NewInt(0)) == 0 || msg.MaxGas.Cmp(m.maxCallGas) > 0 {
 		msg.MaxGas = m.maxCallGas
 	}
@@ -286,14 +286,14 @@ func (m *Server) AdjustGas(msg message.ContractTransaction) message.ContractTran
 
 // Call takes a request from a Client to process in a temporary context
 // and return the result
-func (m *Server) Call(msg message.ContractTransaction, sender ethcommon.Address) (*evm.TxResult, error) {
+func (m *Server) Call(msg message.Call, sender ethcommon.Address) (*evm.TxResult, error) {
 	msg = m.AdjustGas(msg)
 	return m.db.LatestSnapshot().Call(msg, common.NewAddressFromEth(sender))
 }
 
 // PendingCall takes a request from a Client to process in a temporary context
 // and return the result
-func (m *Server) PendingCall(msg message.ContractTransaction, sender ethcommon.Address) (*evm.TxResult, error) {
+func (m *Server) PendingCall(msg message.Call, sender ethcommon.Address) (*evm.TxResult, error) {
 	return m.Call(msg, sender)
 }
 

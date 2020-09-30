@@ -80,7 +80,7 @@ func (s *Snapshot) Height() *common.TimeBlocks {
 	return s.time.BlockNum
 }
 
-func (s *Snapshot) Call(msg message.ContractTransaction, sender common.Address) (*evm.TxResult, error) {
+func (s *Snapshot) Call(msg message.Call, sender common.Address) (*evm.TxResult, error) {
 	targetHash := hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
 	return s.TryTx(message.NewSafeL2Message(msg), sender, targetHash)
 }
@@ -91,12 +91,14 @@ func (s *Snapshot) TryTx(msg message.Message, sender common.Address, targetHash 
 }
 
 func (s *Snapshot) makeBasicCall(data []byte, dest common.Address) (*evm.TxResult, error) {
-	msg := message.ContractTransaction{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		DestAddress: dest,
-		Payment:     big.NewInt(0),
-		Data:        data,
+	msg := message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(1000000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: dest,
+			Payment:     big.NewInt(0),
+			Data:        data,
+		},
 	}
 	return s.Call(msg, common.Address{})
 }

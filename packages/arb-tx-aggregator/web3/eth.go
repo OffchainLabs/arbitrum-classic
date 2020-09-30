@@ -408,7 +408,7 @@ func (s *Server) makeTransactionResult(res *evm.TxResult) (*TransactionResult, e
 	}, nil
 }
 
-func buildCallMsg(args CallTxArgs) (arbcommon.Address, message.ContractTransaction) {
+func buildCallMsg(args CallTxArgs) (arbcommon.Address, message.Call) {
 	var from arbcommon.Address
 	if args.From != nil {
 		from = arbcommon.NewAddressFromEth(*args.From)
@@ -434,12 +434,14 @@ func buildCallMsg(args CallTxArgs) (arbcommon.Address, message.ContractTransacti
 	if args.To != nil {
 		dest = arbcommon.NewAddressFromEth(*args.To)
 	}
-	return from, message.ContractTransaction{
-		MaxGas:      new(big.Int).SetUint64(gas),
-		GasPriceBid: gasPrice,
-		DestAddress: dest,
-		Payment:     value,
-		Data:        data,
+	return from, message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      new(big.Int).SetUint64(gas),
+			GasPriceBid: gasPrice,
+			DestAddress: dest,
+			Payment:     value,
+			Data:        data,
+		},
 	}
 }
 

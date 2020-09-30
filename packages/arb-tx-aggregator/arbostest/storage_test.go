@@ -53,19 +53,23 @@ func TestGetStorageAt(t *testing.T) {
 	)
 
 	getStorageAtTx := message.ContractTransaction{
-		MaxGas:      big.NewInt(100000000000),
-		GasPriceBid: big.NewInt(0),
-		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
-		Payment:     big.NewInt(0),
-		Data:        snapshot.GetStorageAtData(connAddr, big.NewInt(1)),
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
+			Payment:     big.NewInt(0),
+			Data:        snapshot.GetStorageAtData(connAddr, big.NewInt(1)),
+		},
 	}
 
 	failGetStorageAtTx := message.ContractTransaction{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		DestAddress: connAddr,
-		Payment:     big.NewInt(0),
-		Data:        hexutil.MustDecode("0x188f9139"),
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(1000000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: connAddr,
+			Payment:     big.NewInt(0),
+			Data:        hexutil.MustDecode("0x188f9139"),
+		},
 	}
 
 	inboxMessages := []inbox.InboxMessage{
