@@ -3,6 +3,7 @@ package web3
 import (
 	"context"
 	"errors"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rlp"
 	errors2 "github.com/pkg/errors"
@@ -402,8 +403,8 @@ func (s *Server) makeTransactionResult(res *evm.TxResult) (*TransactionResult, e
 		TransactionIndex: (*hexutil.Uint64)(&txIndex),
 		Value:            (*hexutil.Big)(tx.Value()),
 		V:                (*hexutil.Big)(vVal),
-		R:                rVal.Bytes(),
-		S:                sVal.Bytes(),
+		R:                math.U256Bytes(rVal),
+		S:                math.U256Bytes(sVal),
 	}, nil
 }
 
