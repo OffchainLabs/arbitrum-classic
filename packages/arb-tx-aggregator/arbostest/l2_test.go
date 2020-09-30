@@ -17,7 +17,9 @@
 package arbostest
 
 import (
+	"bytes"
 	"crypto/ecdsa"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"log"
 	"math/big"
 	"testing"
@@ -37,7 +39,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-func TestContractTx(t *testing.T) {
+var contractCreator = common.HexToAddress("0xba59937520bd4c1067bac24fb774b981b4b8c115")
+var connAddress = common.HexToAddress("0x9493d820aa2023afdedfc0eba1f86254a253ecdf")
+
+func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.SafeAbstractL2Message) ([]message.AbstractL2Message, *snapshot.Snapshot) {
 	chain := common.RandAddress()
 	mach, err := cmachine.New(arbos.Path())
 	if err != nil {
@@ -51,15 +56,6 @@ func TestContractTx(t *testing.T) {
 	messages := make([]inbox.InboxMessage, 0)
 
 	sender := common.RandAddress()
-	tx := message.ContractTransaction{
-		BasicTx: message.BasicTx{
-			MaxGas:      big.NewInt(100000000000),
-			GasPriceBid: big.NewInt(0),
-			DestAddress: common.RandAddress(),
-			Payment:     big.NewInt(0),
-			Data:        []byte{},
-		},
-	}
 
 	messages = append(
 		messages,
@@ -73,43 +69,195 @@ func TestContractTx(t *testing.T) {
 	messages = append(
 		messages,
 		message.NewInboxMessage(
-			message.NewSafeL2Message(tx),
-			sender,
+			message.Eth{
+				Dest:  sender,
+				Value: big.NewInt(100),
+			},
+			chain,
 			big.NewInt(1),
+			chainTime,
+		),
+	)
+
+	createTx := message.Transaction{
+		MaxGas:      big.NewInt(10000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(0),
+		DestAddress: common.Address{},
+		Payment:     big.NewInt(0),
+		Data:        hexutil.MustDecode(arbostestcontracts.ReceiverBin),
+	}
+
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			message.NewSafeL2Message(createTx),
+			contractCreator,
+			big.NewInt(2),
+			chainTime,
+		),
+	)
+
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			message.NewSafeL2Message(msg),
+			sender,
+			big.NewInt(3),
+			chainTime,
+		),
+	)
+
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			message.NewSafeL2Message(msg2),
+			sender,
+			big.NewInt(4),
 			chainTime,
 		),
 	)
 
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
 	logs := assertion.ParseLogs()
-	if len(logs) != 1 {
+	if len(logs) != 3 {
 		t.Fatal("incorrect log output count", len(logs))
 	}
-	result, err := evm.NewTxResultFromValue(logs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected result code", result.ResultCode)
-	}
-	if result.IncomingRequest.Sender != sender {
-		t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, sender)
-	}
-	if result.IncomingRequest.Kind != message.L2Type {
-		t.Error("l2message has incorrect type")
-	}
-	l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
+
+	createRes, err := evm.NewTxResultFromValue(logs[0])
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	targetHash := hashing.SoliditySHA3(hashing.Uint256(message.ChainAddressToID(chain)), hashing.Uint256(big.NewInt(1)))
-	if result.IncomingRequest.MessageID != targetHash {
-		t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, targetHash)
+	if !bytes.Equal(connAddress.Bytes(), createRes.ReturnData[12:]) {
+		t.Fatal("incorrect created contract address")
 	}
-	_, ok := l2Message.(message.ContractTransaction)
-	if !ok {
-		t.Error("bad transaction format")
+
+	msgs := make([]message.AbstractL2Message, 0)
+	for i, avmLog := range logs[1:] {
+		result, err := evm.NewTxResultFromValue(avmLog)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.ResultCode != evm.ReturnCode {
+			t.Fatal("unexpected result code", result.ResultCode)
+		}
+		if result.IncomingRequest.Sender != sender {
+			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, sender)
+		}
+		if result.IncomingRequest.Kind != message.L2Type {
+			t.Error("l2message has incorrect type")
+		}
+		l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		targetHash := hashing.SoliditySHA3(hashing.Uint256(message.ChainAddressToID(chain)), hashing.Uint256(big.NewInt(int64(3+i))))
+		if result.IncomingRequest.MessageID != targetHash {
+			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, targetHash)
+		}
+
+		msgs = append(msgs, l2Message)
+	}
+
+	snap := snapshot.NewSnapshot(mach.Clone(), inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
+	}, message.ChainAddressToID(chain), big.NewInt(4))
+
+	return msgs, snap
+}
+
+func TestCallTx(t *testing.T) {
+	tx := message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: common.RandAddress(),
+			Payment:     big.NewInt(10),
+			Data:        []byte{},
+		},
+	}
+
+	tx2 := message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: connAddress,
+			Payment:     big.NewInt(10),
+			Data:        []byte{},
+		},
+	}
+	msgs, snap := testBasicTx(t, tx, tx2)
+
+	for _, l2Message := range msgs {
+		_, ok := l2Message.(message.Call)
+		if !ok {
+			t.Error("bad transaction format")
+		}
+	}
+
+	balance, err := snap.GetBalance(tx.DestAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if balance.Cmp(big.NewInt(0)) != 0 {
+		t.Errorf("After call to non-contract, balance should still be 0, but was %v", balance)
+	}
+
+	balance2, err := snap.GetBalance(tx2.DestAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if balance2.Cmp(big.NewInt(0)) != 0 {
+		t.Errorf("After call to contract, balance should still be 0, but was %v", balance2)
+	}
+}
+
+func TestContractTx(t *testing.T) {
+	tx := message.ContractTransaction{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: common.RandAddress(),
+			Payment:     big.NewInt(10),
+			Data:        []byte{},
+		},
+	}
+
+	tx2 := message.ContractTransaction{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: connAddress,
+			Payment:     big.NewInt(10),
+			Data:        []byte{},
+		},
+	}
+	msgs, snap := testBasicTx(t, tx, tx2)
+
+	for _, l2Message := range msgs {
+		_, ok := l2Message.(message.ContractTransaction)
+		if !ok {
+			t.Error("bad transaction format")
+		}
+	}
+
+	balance, err := snap.GetBalance(tx.DestAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if balance.Cmp(tx.Payment) != 0 {
+		t.Errorf("After call to non-contract, balance should be updated, but was %v", balance)
+	}
+
+	balance2, err := snap.GetBalance(tx2.DestAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if balance2.Cmp(tx2.Payment) != 0 {
+		t.Errorf("After call to contract, balance should be updated, but was %v", balance)
 	}
 }
 
