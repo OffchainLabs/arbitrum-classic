@@ -114,12 +114,14 @@ func (conn *ArbConnection) CallContract(
 	if call.Value == nil {
 		call.Value = big.NewInt(0)
 	}
-	tx := message.ContractTransaction{
-		MaxGas:      new(big.Int).SetUint64(call.Gas),
-		GasPriceBid: gasPriceBid,
-		DestAddress: dest,
-		Payment:     call.Value,
-		Data:        call.Data,
+	tx := message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      new(big.Int).SetUint64(call.Gas),
+			GasPriceBid: gasPriceBid,
+			DestAddress: dest,
+			Payment:     call.Value,
+			Data:        call.Data,
+		},
 	}
 	retValue, err := conn.proxy.Call(ctx, tx, call.From)
 	if err != nil {
@@ -171,12 +173,14 @@ func (conn *ArbConnection) pendingCall(ctx context.Context, call ethereum.CallMs
 	if call.Value == nil {
 		call.Value = big.NewInt(0)
 	}
-	tx := message.ContractTransaction{
-		MaxGas:      new(big.Int).SetUint64(call.Gas),
-		GasPriceBid: gasPriceBid,
-		DestAddress: dest,
-		Payment:     call.Value,
-		Data:        call.Data,
+	tx := message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      new(big.Int).SetUint64(call.Gas),
+			GasPriceBid: gasPriceBid,
+			DestAddress: dest,
+			Payment:     call.Value,
+			Data:        call.Data,
+		},
 	}
 	return conn.proxy.PendingCall(ctx, tx, call.From)
 }

@@ -226,7 +226,7 @@ func (m *RPCServer) PendingCall(
 func (m *RPCServer) callImpl(
 	args *evm.CallMessageArgs,
 	reply *evm.CallMessageReply,
-	call func(msg message.ContractTransaction, sender ethcommon.Address) (*evm.TxResult, error),
+	call func(msg message.Call, sender ethcommon.Address) (*evm.TxResult, error),
 ) error {
 	var sender ethcommon.Address
 	if len(args.Sender) > 0 {
@@ -237,7 +237,7 @@ func (m *RPCServer) callImpl(
 		return err
 	}
 
-	callMsg := message.NewContractTransactionFromData(dataBytes)
+	callMsg := message.NewCallFromData(dataBytes)
 	val, err := call(callMsg, sender)
 	if err != nil {
 		return err

@@ -232,7 +232,7 @@ func (t Transaction) MessageID(sender common.Address, chain common.Address) comm
 	return hashing.SoliditySHA3(addressData(sender), hashing.Bytes32(inner))
 }
 
-type ContractTransaction struct {
+type BasicTx struct {
 	MaxGas      *big.Int
 	GasPriceBid *big.Int
 	DestAddress common.Address
@@ -240,12 +240,12 @@ type ContractTransaction struct {
 	Data        []byte
 }
 
-func NewContractTransactionFromData(data []byte) ContractTransaction {
+func newBasicTxFromData(data []byte) BasicTx {
 	maxGas, data := extractUInt256(data)
 	gasPriceBid, data := extractUInt256(data)
 	destAddress, data := extractAddress(data)
 	payment, data := extractUInt256(data)
-	return ContractTransaction{
+	return BasicTx{
 		MaxGas:      maxGas,
 		GasPriceBid: gasPriceBid,
 		DestAddress: destAddress,
@@ -254,8 +254,8 @@ func NewContractTransactionFromData(data []byte) ContractTransaction {
 	}
 }
 
-func NewRandomContractTransaction() ContractTransaction {
-	return ContractTransaction{
+func newRandomBasicTx() BasicTx {
+	return BasicTx{
 		MaxGas:      common.RandBigInt(),
 		GasPriceBid: common.RandBigInt(),
 		DestAddress: common.RandAddress(),
@@ -264,19 +264,15 @@ func NewRandomContractTransaction() ContractTransaction {
 	}
 }
 
-func (t ContractTransaction) Destination() common.Address {
+func (t BasicTx) Destination() common.Address {
 	return t.DestAddress
 }
 
-func (t ContractTransaction) L2Type() L2SubType {
-	return ContractTransactionType
-}
-
-func (t ContractTransaction) AsData() ([]byte, error) {
+func (t BasicTx) AsData() ([]byte, error) {
 	return t.AsDataSafe(), nil
 }
 
-func (t ContractTransaction) AsDataSafe() []byte {
+func (t BasicTx) AsDataSafe() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, math.U256Bytes(new(big.Int).Set(t.MaxGas))...)
 	ret = append(ret, math.U256Bytes(new(big.Int).Set(t.GasPriceBid))...)
@@ -286,49 +282,36 @@ func (t ContractTransaction) AsDataSafe() []byte {
 	return ret
 }
 
+type ContractTransaction struct {
+	BasicTx
+}
+
+func NewContractTransactionFromData(data []byte) ContractTransaction {
+	return ContractTransaction{BasicTx: newBasicTxFromData(data)}
+}
+
+func NewRandomContractTransaction() ContractTransaction {
+	return ContractTransaction{BasicTx: newRandomBasicTx()}
+}
+
+func (t ContractTransaction) L2Type() L2SubType {
+	return ContractTransactionType
+}
+
 type Call struct {
-	MaxGas      *big.Int
-	GasPriceBid *big.Int
-	DestAddress common.Address
-	Data        []byte
+	BasicTx
 }
 
 func NewCallFromData(data []byte) Call {
-	maxGas, data := extractUInt256(data)
-	gasPriceBid, data := extractUInt256(data)
-	destAddress, data := extractAddress(data)
-	return Call{
-		MaxGas:      maxGas,
-		GasPriceBid: gasPriceBid,
-		DestAddress: destAddress,
-		Data:        data,
-	}
+	return Call{BasicTx: newBasicTxFromData(data)}
 }
 
 func NewRandomCall() Call {
-	return Call{
-		MaxGas:      common.RandBigInt(),
-		GasPriceBid: common.RandBigInt(),
-		DestAddress: common.RandAddress(),
-		Data:        common.RandBytes(200),
-	}
-}
-
-func (c Call) Destination() common.Address {
-	return c.DestAddress
+	return Call{BasicTx: newRandomBasicTx()}
 }
 
 func (c Call) L2Type() L2SubType {
 	return CallType
-}
-
-func (c Call) AsData() ([]byte, error) {
-	ret := make([]byte, 0)
-	ret = append(ret, math.U256Bytes(c.MaxGas)...)
-	ret = append(ret, math.U256Bytes(c.GasPriceBid)...)
-	ret = append(ret, addressData(c.DestAddress)...)
-	ret = append(ret, c.Data...)
-	return ret, nil
 }
 
 type SignedTransaction struct {

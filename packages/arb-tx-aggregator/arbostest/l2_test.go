@@ -52,11 +52,13 @@ func TestContractTx(t *testing.T) {
 
 	sender := common.RandAddress()
 	tx := message.ContractTransaction{
-		MaxGas:      big.NewInt(100000000000),
-		GasPriceBid: big.NewInt(0),
-		DestAddress: common.RandAddress(),
-		Payment:     big.NewInt(0),
-		Data:        []byte{},
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: common.RandAddress(),
+			Payment:     big.NewInt(0),
+			Data:        []byte{},
+		},
 	}
 
 	messages = append(
