@@ -20,4 +20,4 @@ Although Arbitrum supports Solidity code, there are differences in the effects o
 
 # Time
 
-Abitrum supports `block.number` and `block.timestamp`. For the semantics of these features in the Arbitrum context, please see [Time in Arbitrum](Time_in_Arbitrum.md).
+Arbitrum supports `block.number` and `block.timestamp`. For the semantics of these features in the Arbitrum context, please see [Time in Arbitrum](Time_in_Arbitrum.md).
