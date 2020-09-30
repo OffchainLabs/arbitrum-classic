@@ -186,7 +186,7 @@ func TestCallTx(t *testing.T) {
 			GasPriceBid: big.NewInt(0),
 			DestAddress: connAddress,
 			Payment:     big.NewInt(10),
-			Data:        []byte{},
+			Data:        hexutil.MustDecode("0x7795b5fc"),
 		},
 	}
 	msgs, snap := testBasicTx(t, tx, tx2)
@@ -213,6 +213,22 @@ func TestCallTx(t *testing.T) {
 	if balance2.Cmp(big.NewInt(0)) != 0 {
 		t.Errorf("After call to contract, balance should still be 0, but was %v", balance2)
 	}
+
+	callRes, err := snap.Call(message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: tx2.DestAddress,
+			Payment:     big.NewInt(0),
+			Data:        hexutil.MustDecode("0xf8a8fd6d"),
+		},
+	}, common.Address{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if new(big.Int).SetBytes(callRes.ReturnData).Cmp(big.NewInt(5)) != 0 {
+		t.Errorf("Storage was updated")
+	}
 }
 
 func TestContractTx(t *testing.T) {
@@ -232,7 +248,7 @@ func TestContractTx(t *testing.T) {
 			GasPriceBid: big.NewInt(0),
 			DestAddress: connAddress,
 			Payment:     big.NewInt(10),
-			Data:        []byte{},
+			Data:        hexutil.MustDecode("0x7795b5fc"),
 		},
 	}
 	msgs, snap := testBasicTx(t, tx, tx2)
@@ -258,6 +274,22 @@ func TestContractTx(t *testing.T) {
 	}
 	if balance2.Cmp(tx2.Payment) != 0 {
 		t.Errorf("After call to contract, balance should be updated, but was %v", balance)
+	}
+
+	callRes, err := snap.Call(message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: tx2.DestAddress,
+			Payment:     big.NewInt(0),
+			Data:        hexutil.MustDecode("0xf8a8fd6d"),
+		},
+	}, common.Address{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if new(big.Int).SetBytes(callRes.ReturnData).Cmp(big.NewInt(6)) != 0 {
+		t.Errorf("Storage wasn't updated")
 	}
 }
 

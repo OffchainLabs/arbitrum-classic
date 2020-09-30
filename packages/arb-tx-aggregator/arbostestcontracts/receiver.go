@@ -27,10 +27,16 @@ var (
 )
 
 // ReceiverABI is the input ABI used to generate the binding from.
-const ReceiverABI = "[{\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"fallback\"}]"
+const ReceiverABI = "[{\"constant\":false,\"inputs\":[],\"name\":\"mutate\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"test\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+
+// ReceiverFuncSigs maps the 4-byte function signature to its string representation.
+var ReceiverFuncSigs = map[string]string{
+	"7795b5fc": "mutate()",
+	"f8a8fd6d": "test()",
+}
 
 // ReceiverBin is the compiled bytecode used for deploying new contracts.
-var ReceiverBin = "0x6080604052348015600f57600080fd5b50603b80601d6000396000f3fe608060405200fea265627a7a723158205134243ef195701df4f002349579b3d25454b612ccdde712395df0d5895ab09964736f6c63430005110032"
+var ReceiverBin = "0x60806040526005600055348015601457600080fd5b506099806100236000396000f3fe60806040526004361060265760003560e01c80637795b5fc14602b578063f8a8fd6d146033575b600080fd5b60316057565b005b348015603e57600080fd5b506045605e565b60408051918252519081900360200190f35b6006600055565b6000548156fea265627a7a72315820dd18b31f63de2e74078a0d8eaec68161770bda6d0442e412c7bf081db686272c64736f6c63430005110032"
 
 // DeployReceiver deploys a new Ethereum contract, binding an instance of Receiver to it.
 func DeployReceiver(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Receiver, error) {
@@ -188,23 +194,49 @@ func (_Receiver *ReceiverTransactorRaw) Transact(opts *bind.TransactOpts, method
 	return _Receiver.Contract.contract.Transact(opts, method, params...)
 }
 
-// Fallback is a paid mutator transaction binding the contract fallback function.
+// Test is a free data retrieval call binding the contract method 0xf8a8fd6d.
 //
-// Solidity: fallback() payable returns()
-func (_Receiver *ReceiverTransactor) Fallback(opts *bind.TransactOpts, calldata []byte) (*types.Transaction, error) {
-	return _Receiver.contract.RawTransact(opts, calldata)
+// Solidity: function test() view returns(uint256)
+func (_Receiver *ReceiverCaller) Test(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _Receiver.contract.Call(opts, out, "test")
+	return *ret0, err
 }
 
-// Fallback is a paid mutator transaction binding the contract fallback function.
+// Test is a free data retrieval call binding the contract method 0xf8a8fd6d.
 //
-// Solidity: fallback() payable returns()
-func (_Receiver *ReceiverSession) Fallback(calldata []byte) (*types.Transaction, error) {
-	return _Receiver.Contract.Fallback(&_Receiver.TransactOpts, calldata)
+// Solidity: function test() view returns(uint256)
+func (_Receiver *ReceiverSession) Test() (*big.Int, error) {
+	return _Receiver.Contract.Test(&_Receiver.CallOpts)
 }
 
-// Fallback is a paid mutator transaction binding the contract fallback function.
+// Test is a free data retrieval call binding the contract method 0xf8a8fd6d.
 //
-// Solidity: fallback() payable returns()
-func (_Receiver *ReceiverTransactorSession) Fallback(calldata []byte) (*types.Transaction, error) {
-	return _Receiver.Contract.Fallback(&_Receiver.TransactOpts, calldata)
+// Solidity: function test() view returns(uint256)
+func (_Receiver *ReceiverCallerSession) Test() (*big.Int, error) {
+	return _Receiver.Contract.Test(&_Receiver.CallOpts)
+}
+
+// Mutate is a paid mutator transaction binding the contract method 0x7795b5fc.
+//
+// Solidity: function mutate() payable returns()
+func (_Receiver *ReceiverTransactor) Mutate(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Receiver.contract.Transact(opts, "mutate")
+}
+
+// Mutate is a paid mutator transaction binding the contract method 0x7795b5fc.
+//
+// Solidity: function mutate() payable returns()
+func (_Receiver *ReceiverSession) Mutate() (*types.Transaction, error) {
+	return _Receiver.Contract.Mutate(&_Receiver.TransactOpts)
+}
+
+// Mutate is a paid mutator transaction binding the contract method 0x7795b5fc.
+//
+// Solidity: function mutate() payable returns()
+func (_Receiver *ReceiverTransactorSession) Mutate() (*types.Transaction, error) {
+	return _Receiver.Contract.Mutate(&_Receiver.TransactOpts)
 }

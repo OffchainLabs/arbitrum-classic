@@ -19,5 +19,9 @@
 pragma solidity ^0.5.17;
 
 contract Receiver {
-    function() external payable {}
+    uint256 public test = 5;
+
+    function mutate() external payable {
+        test = 6;
+    }
 }
