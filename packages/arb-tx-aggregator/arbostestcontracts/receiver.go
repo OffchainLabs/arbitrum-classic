@@ -27,25 +27,26 @@ var (
 )
 
 // ReceiverABI is the input ABI used to generate the binding from.
-const ReceiverABI = "[{\"constant\":false,\"inputs\":[],\"name\":\"mutate\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"test\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const ReceiverABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"otherReciver\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":false,\"inputs\":[],\"name\":\"mutate\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"other\",\"outputs\":[{\"internalType\":\"contractReceiver2\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"test\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // ReceiverFuncSigs maps the 4-byte function signature to its string representation.
 var ReceiverFuncSigs = map[string]string{
 	"7795b5fc": "mutate()",
+	"85295877": "other()",
 	"f8a8fd6d": "test()",
 }
 
 // ReceiverBin is the compiled bytecode used for deploying new contracts.
-var ReceiverBin = "0x60806040526005600055348015601457600080fd5b506099806100236000396000f3fe60806040526004361060265760003560e01c80637795b5fc14602b578063f8a8fd6d146033575b600080fd5b60316057565b005b348015603e57600080fd5b506045605e565b60408051918252519081900360200190f35b6006600055565b6000548156fea265627a7a72315820dd18b31f63de2e74078a0d8eaec68161770bda6d0442e412c7bf081db686272c64736f6c63430005110032"
+var ReceiverBin = "0x6080604052600560005534801561001557600080fd5b506040516101ae3803806101ae8339818101604052602081101561003857600080fd5b5051600180546001600160a01b0319166001600160a01b03909216919091179055610146806100686000396000f3fe6080604052600436106100345760003560e01c80637795b5fc146100395780638529587714610043578063f8a8fd6d14610074575b600080fd5b61004161009b565b005b34801561004f57600080fd5b506100586100fc565b604080516001600160a01b039092168252519081900360200190f35b34801561008057600080fd5b5061008961010b565b60408051918252519081900360200190f35b6006600090815560015460408051631de56d7f60e21b815290516001600160a01b0390921692637795b5fc9260048084019382900301818387803b1580156100e257600080fd5b505af11580156100f6573d6000803e3d6000fd5b50505050565b6001546001600160a01b031681565b6000548156fea265627a7a72315820be3faac533474f1cb03f84747a867670a834d342dc6fcec813e89f537af6abcc64736f6c63430005110032"
 
 // DeployReceiver deploys a new Ethereum contract, binding an instance of Receiver to it.
-func DeployReceiver(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Receiver, error) {
+func DeployReceiver(auth *bind.TransactOpts, backend bind.ContractBackend, otherReciver common.Address) (common.Address, *types.Transaction, *Receiver, error) {
 	parsed, err := abi.JSON(strings.NewReader(ReceiverABI))
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ReceiverBin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ReceiverBin), backend, otherReciver)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -194,6 +195,32 @@ func (_Receiver *ReceiverTransactorRaw) Transact(opts *bind.TransactOpts, method
 	return _Receiver.Contract.contract.Transact(opts, method, params...)
 }
 
+// Other is a free data retrieval call binding the contract method 0x85295877.
+//
+// Solidity: function other() view returns(address)
+func (_Receiver *ReceiverCaller) Other(opts *bind.CallOpts) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _Receiver.contract.Call(opts, out, "other")
+	return *ret0, err
+}
+
+// Other is a free data retrieval call binding the contract method 0x85295877.
+//
+// Solidity: function other() view returns(address)
+func (_Receiver *ReceiverSession) Other() (common.Address, error) {
+	return _Receiver.Contract.Other(&_Receiver.CallOpts)
+}
+
+// Other is a free data retrieval call binding the contract method 0x85295877.
+//
+// Solidity: function other() view returns(address)
+func (_Receiver *ReceiverCallerSession) Other() (common.Address, error) {
+	return _Receiver.Contract.Other(&_Receiver.CallOpts)
+}
+
 // Test is a free data retrieval call binding the contract method 0xf8a8fd6d.
 //
 // Solidity: function test() view returns(uint256)
@@ -239,4 +266,219 @@ func (_Receiver *ReceiverSession) Mutate() (*types.Transaction, error) {
 // Solidity: function mutate() payable returns()
 func (_Receiver *ReceiverTransactorSession) Mutate() (*types.Transaction, error) {
 	return _Receiver.Contract.Mutate(&_Receiver.TransactOpts)
+}
+
+// Receiver2ABI is the input ABI used to generate the binding from.
+const Receiver2ABI = "[{\"constant\":false,\"inputs\":[],\"name\":\"mutate\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"test\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+
+// Receiver2FuncSigs maps the 4-byte function signature to its string representation.
+var Receiver2FuncSigs = map[string]string{
+	"7795b5fc": "mutate()",
+	"f8a8fd6d": "test()",
+}
+
+// Receiver2Bin is the compiled bytecode used for deploying new contracts.
+var Receiver2Bin = "0x60806040526007600055348015601457600080fd5b506099806100236000396000f3fe60806040526004361060265760003560e01c80637795b5fc14602b578063f8a8fd6d146033575b600080fd5b60316057565b005b348015603e57600080fd5b506045605e565b60408051918252519081900360200190f35b6008600055565b6000548156fea265627a7a723158204e071dd7cff3f68051284f0207a60d6ee41d5f1505378e20f0d38e1154b194a964736f6c63430005110032"
+
+// DeployReceiver2 deploys a new Ethereum contract, binding an instance of Receiver2 to it.
+func DeployReceiver2(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Receiver2, error) {
+	parsed, err := abi.JSON(strings.NewReader(Receiver2ABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(Receiver2Bin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &Receiver2{Receiver2Caller: Receiver2Caller{contract: contract}, Receiver2Transactor: Receiver2Transactor{contract: contract}, Receiver2Filterer: Receiver2Filterer{contract: contract}}, nil
+}
+
+// Receiver2 is an auto generated Go binding around an Ethereum contract.
+type Receiver2 struct {
+	Receiver2Caller     // Read-only binding to the contract
+	Receiver2Transactor // Write-only binding to the contract
+	Receiver2Filterer   // Log filterer for contract events
+}
+
+// Receiver2Caller is an auto generated read-only Go binding around an Ethereum contract.
+type Receiver2Caller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// Receiver2Transactor is an auto generated write-only Go binding around an Ethereum contract.
+type Receiver2Transactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// Receiver2Filterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type Receiver2Filterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// Receiver2Session is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type Receiver2Session struct {
+	Contract     *Receiver2        // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// Receiver2CallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type Receiver2CallerSession struct {
+	Contract *Receiver2Caller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts    // Call options to use throughout this session
+}
+
+// Receiver2TransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type Receiver2TransactorSession struct {
+	Contract     *Receiver2Transactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
+}
+
+// Receiver2Raw is an auto generated low-level Go binding around an Ethereum contract.
+type Receiver2Raw struct {
+	Contract *Receiver2 // Generic contract binding to access the raw methods on
+}
+
+// Receiver2CallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type Receiver2CallerRaw struct {
+	Contract *Receiver2Caller // Generic read-only contract binding to access the raw methods on
+}
+
+// Receiver2TransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type Receiver2TransactorRaw struct {
+	Contract *Receiver2Transactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewReceiver2 creates a new instance of Receiver2, bound to a specific deployed contract.
+func NewReceiver2(address common.Address, backend bind.ContractBackend) (*Receiver2, error) {
+	contract, err := bindReceiver2(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &Receiver2{Receiver2Caller: Receiver2Caller{contract: contract}, Receiver2Transactor: Receiver2Transactor{contract: contract}, Receiver2Filterer: Receiver2Filterer{contract: contract}}, nil
+}
+
+// NewReceiver2Caller creates a new read-only instance of Receiver2, bound to a specific deployed contract.
+func NewReceiver2Caller(address common.Address, caller bind.ContractCaller) (*Receiver2Caller, error) {
+	contract, err := bindReceiver2(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &Receiver2Caller{contract: contract}, nil
+}
+
+// NewReceiver2Transactor creates a new write-only instance of Receiver2, bound to a specific deployed contract.
+func NewReceiver2Transactor(address common.Address, transactor bind.ContractTransactor) (*Receiver2Transactor, error) {
+	contract, err := bindReceiver2(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &Receiver2Transactor{contract: contract}, nil
+}
+
+// NewReceiver2Filterer creates a new log filterer instance of Receiver2, bound to a specific deployed contract.
+func NewReceiver2Filterer(address common.Address, filterer bind.ContractFilterer) (*Receiver2Filterer, error) {
+	contract, err := bindReceiver2(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &Receiver2Filterer{contract: contract}, nil
+}
+
+// bindReceiver2 binds a generic wrapper to an already deployed contract.
+func bindReceiver2(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(Receiver2ABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Receiver2 *Receiver2Raw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Receiver2.Contract.Receiver2Caller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Receiver2 *Receiver2Raw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Receiver2.Contract.Receiver2Transactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Receiver2 *Receiver2Raw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Receiver2.Contract.Receiver2Transactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Receiver2 *Receiver2CallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Receiver2.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Receiver2 *Receiver2TransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Receiver2.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Receiver2 *Receiver2TransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Receiver2.Contract.contract.Transact(opts, method, params...)
+}
+
+// Test is a free data retrieval call binding the contract method 0xf8a8fd6d.
+//
+// Solidity: function test() view returns(uint256)
+func (_Receiver2 *Receiver2Caller) Test(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _Receiver2.contract.Call(opts, out, "test")
+	return *ret0, err
+}
+
+// Test is a free data retrieval call binding the contract method 0xf8a8fd6d.
+//
+// Solidity: function test() view returns(uint256)
+func (_Receiver2 *Receiver2Session) Test() (*big.Int, error) {
+	return _Receiver2.Contract.Test(&_Receiver2.CallOpts)
+}
+
+// Test is a free data retrieval call binding the contract method 0xf8a8fd6d.
+//
+// Solidity: function test() view returns(uint256)
+func (_Receiver2 *Receiver2CallerSession) Test() (*big.Int, error) {
+	return _Receiver2.Contract.Test(&_Receiver2.CallOpts)
+}
+
+// Mutate is a paid mutator transaction binding the contract method 0x7795b5fc.
+//
+// Solidity: function mutate() payable returns()
+func (_Receiver2 *Receiver2Transactor) Mutate(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Receiver2.contract.Transact(opts, "mutate")
+}
+
+// Mutate is a paid mutator transaction binding the contract method 0x7795b5fc.
+//
+// Solidity: function mutate() payable returns()
+func (_Receiver2 *Receiver2Session) Mutate() (*types.Transaction, error) {
+	return _Receiver2.Contract.Mutate(&_Receiver2.TransactOpts)
+}
+
+// Mutate is a paid mutator transaction binding the contract method 0x7795b5fc.
+//
+// Solidity: function mutate() payable returns()
+func (_Receiver2 *Receiver2TransactorSession) Mutate() (*types.Transaction, error) {
+	return _Receiver2.Contract.Mutate(&_Receiver2.TransactOpts)
 }

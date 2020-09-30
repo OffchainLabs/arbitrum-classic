@@ -20,8 +20,23 @@ pragma solidity ^0.5.17;
 
 contract Receiver {
     uint256 public test = 5;
+    Receiver2 public other;
+
+    constructor(address otherReciver) public {
+        other = Receiver2(otherReciver);
+    }
 
     function mutate() external payable {
         test = 6;
+
+        other.mutate();
+    }
+}
+
+contract Receiver2 {
+    uint256 public test = 7;
+
+    function mutate() external payable {
+        test = 8;
     }
 }
