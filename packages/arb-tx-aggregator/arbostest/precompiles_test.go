@@ -127,6 +127,11 @@ func TestSha256(t *testing.T) {
 	testPrecompile(t, 2, data, hashedCorrect)
 }
 
+func TestIdentityPrecompile(t *testing.T) {
+	data := common.RandBytes(100)
+	testPrecompile(t, 4, data, data)
+}
+
 func TestECAdd(t *testing.T) {
 	_, g1x, err := bn256.RandomG1(rand.Reader)
 	if err != nil {
