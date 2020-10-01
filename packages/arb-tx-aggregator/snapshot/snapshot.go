@@ -90,7 +90,7 @@ func (s *Snapshot) TryTx(msg message.Message, sender common.Address, targetHash 
 	return runTx(s.mach.Clone(), inboxMsg, targetHash)
 }
 
-func (s *Snapshot) makeBasicCall(data []byte, dest common.Address) (*evm.TxResult, error) {
+func (s *Snapshot) BasicCall(data []byte, dest common.Address) (*evm.TxResult, error) {
 	msg := message.Call{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(1000000000),
@@ -111,7 +111,7 @@ func checkValidResult(res *evm.TxResult) error {
 }
 
 func (s *Snapshot) GetBalance(account common.Address) (*big.Int, error) {
-	res, err := s.makeBasicCall(getBalanceData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
+	res, err := s.BasicCall(getBalanceData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (s *Snapshot) GetBalance(account common.Address) (*big.Int, error) {
 }
 
 func (s *Snapshot) GetTransactionCount(account common.Address) (*big.Int, error) {
-	res, err := s.makeBasicCall(getTransactionCountData(account), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+	res, err := s.BasicCall(getTransactionCountData(account), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (s *Snapshot) GetTransactionCount(account common.Address) (*big.Int, error)
 }
 
 func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
-	res, err := s.makeBasicCall(getCodeData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
+	res, err := s.BasicCall(getCodeData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
 }
 
 func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.Int, error) {
-	res, err := s.makeBasicCall(GetStorageAtData(account, index), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+	res, err := s.BasicCall(GetStorageAtData(account, index), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
