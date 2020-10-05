@@ -59,5 +59,7 @@ void marshalForProof(const value& val,
 uint256_t getSize(const value& val);
 
 value assembleValueFromDeserialized(std::vector<DeserializedValue> values);
+value assembleSingleValueFromDeserialized(
+    std::vector<DeserializedValue> values);
 
 #endif /* value_hpp */

@@ -127,7 +127,8 @@ ByteSlice getValue(const CCheckpointStorage* storage_ptr,
                    const void* hash_key) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
     auto hash = receiveUint256(hash_key);
-    return returnValueResult(storage->getValue(hash));
+    ValueCache value_cache{};
+    return returnValueResult(storage->getValue(hash, value_cache));
 }
 
 int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {

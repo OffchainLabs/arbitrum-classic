@@ -107,6 +107,22 @@ value assembleValueFromDeserialized(std::vector<DeserializedValue> values) {
     return values.back().get<value>();
 }
 
+value assembleSingleValueFromDeserialized(
+    std::vector<DeserializedValue> values) {
+    auto& val = values[0];
+    if (nonstd::holds_alternative<TuplePlaceholder>(val)) {
+        auto holder = val.get<TuplePlaceholder>();
+        Tuple tup(holder.values);
+        for (uint8_t j = 0; j < holder.values; ++j) {
+            tup.set_element(j, std::move(values[j + 1].get<value>()));
+        }
+
+        values[0] = tup;
+    }
+
+    return values[0].get<value>();
+}
+
 void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
     uint64_t big_endian_val = boost::endian::native_to_big(val);
     const unsigned char* data =

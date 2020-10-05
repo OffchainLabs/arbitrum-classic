@@ -53,12 +53,12 @@ std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
 
         switch (value_type) {
             case NUM: {
-                return_vector.push_back(deserializeUint256t(buf));
+                return_vector.emplace_back(deserializeUint256t(buf));
                 iter += TUP_NUM_LENGTH;
                 break;
             }
             case CODE_POINT_STUB: {
-                return_vector.push_back(deserializeCodePointStub(buf));
+                return_vector.emplace_back(deserializeCodePointStub(buf));
                 iter += TUP_CODEPT_LENGTH;
                 break;
             }
@@ -66,14 +66,13 @@ std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
                 throw std::runtime_error("HASH_ONLY item");
             }
             case TUPLE: {
-                return_vector.push_back(ValueHash{deserializeUint256t(buf)});
+                return_vector.emplace_back(ValueHash{deserializeUint256t(buf)});
                 iter += TUP_TUPLE_LENGTH;
                 break;
             }
             default: {
                 throw std::runtime_error(
                     "tried to parse tuple value with invalid typecode");
-                break;
             }
         }
     }
@@ -181,102 +180,155 @@ void deleteParsedValue(const std::vector<ParsedTupVal>& tup,
 
 GetResults processVal(const Transaction& transaction,
                       const ValueHash& val_hash,
-                      std::vector<DeserializedValue>& vals,
-                      std::vector<ParsedTupVal>& raw_vals,
-                      std::set<uint64_t>& segment_ids);
+                      std::vector<std::vector<DeserializedValue>>& vals_stack,
+                      std::vector<std::vector<ParsedTupVal>>& raw_vals_stack,
+                      std::vector<uint32_t>& reference_count_stack,
+                      std::set<uint64_t>& segment_ids,
+                      ValueCache& val_cache);
 
 GetResults processVal(const Transaction&,
                       const uint256_t& val,
-                      std::vector<DeserializedValue>& vals,
-                      std::vector<ParsedTupVal>&,
-                      std::set<uint64_t>&) {
-    vals.push_back(value{val});
+                      std::vector<std::vector<DeserializedValue>>& vals_stack,
+                      std::vector<std::vector<ParsedTupVal>>&,
+                      std::vector<uint32_t>& reference_count_stack,
+                      std::set<uint64_t>&,
+                      ValueCache& val_cache) {
+    if (reference_count_stack.back() > 1) {
+        val_cache[hash_value(val)] = val;
+    }
+
+    vals_stack.back().push_back(value{val});
     return GetResults{1, rocksdb::Status::OK(), {}};
 }
 
 GetResults processVal(const Transaction&,
                       const CodePointStub& val,
-                      std::vector<DeserializedValue>& vals,
-                      std::vector<ParsedTupVal>&,
-                      std::set<uint64_t>& segment_ids) {
+                      std::vector<std::vector<DeserializedValue>>& vals_stack,
+                      std::vector<std::vector<ParsedTupVal>>&,
+                      std::vector<uint32_t>& reference_count_stack,
+                      std::set<uint64_t>& segment_ids,
+                      ValueCache& val_cache) {
+    if (reference_count_stack.back() > 1) {
+        val_cache[hash_value(val)] = val;
+    }
+
     segment_ids.insert(val.pc.segment);
-    vals.push_back(value{val});
+    vals_stack.back().push_back(value{val});
     return GetResults{1, rocksdb::Status::OK(), {}};
 }
 
 GetResults processVal(const Transaction&,
                       const std::vector<ParsedTupVal>& val,
-                      std::vector<DeserializedValue>& vals,
-                      std::vector<ParsedTupVal>& raw_vals,
-                      std::set<uint64_t>&) {
-    vals.push_back(TuplePlaceholder{static_cast<uint8_t>(val.size())});
-    raw_vals.insert(raw_vals.end(), val.rbegin(), val.rend());
+                      std::vector<std::vector<DeserializedValue>>& vals_stack,
+                      std::vector<std::vector<ParsedTupVal>>& raw_vals_stack,
+                      std::vector<uint32_t>& reference_count_stack,
+                      std::set<uint64_t>&,
+                      ValueCache&) {
+    vals_stack.emplace_back();
+    vals_stack.back().push_back(
+        TuplePlaceholder{static_cast<uint8_t>(val.size())});
+    raw_vals_stack.emplace_back();
+    raw_vals_stack.back().insert(raw_vals_stack.back().end(), val.rbegin(),
+                                 val.rend());
+    reference_count_stack.push_back(0);
     return GetResults{1, rocksdb::Status::OK(), {}};
 }
 
 GetResults processVal(const Transaction& transaction,
                       const ValueHash& val_hash,
-                      std::vector<DeserializedValue>& vals,
-                      std::vector<ParsedTupVal>& raw_vals,
-                      std::set<uint64_t>& segment_ids) {
+                      std::vector<std::vector<DeserializedValue>>& vals_stack,
+                      std::vector<std::vector<ParsedTupVal>>& raw_vals_stack,
+                      std::vector<uint32_t>& reference_count_stack,
+                      std::set<uint64_t>& segment_ids,
+                      ValueCache& val_cache) {
+    auto cached_value = val_cache.find(val_hash.hash);
+    if (cached_value != val_cache.end()) {
+        vals_stack.back().push_back(cached_value->second);
+        return {0, rocksdb::Status::OK(), {}};
+    }
+
     std::vector<unsigned char> hash_key;
     marshal_uint256_t(val_hash.hash, hash_key);
     auto key = vecToSlice(hash_key);
     auto results = getRefCountedData(*transaction.transaction, key);
+    reference_count_stack.back() = results.reference_count;
     if (!results.status.ok()) {
         return results;
     }
 
     auto record = parseRecord(results.stored_value);
+
     auto nested_ret = nonstd::visit(
         [&](const auto& val) {
-            return processVal(transaction, val, vals, raw_vals, segment_ids);
+            return processVal(transaction, val, vals_stack, raw_vals_stack,
+                              reference_count_stack, segment_ids, val_cache);
         },
         record);
     if (!nested_ret.status.ok()) {
         return nested_ret;
     }
+
     return results;
 }
 
 DbResult<value> getValueImpl(const Transaction& transaction,
                              uint256_t value_hash,
-                             std::set<uint64_t>& segment_ids) {
-    std::vector<DeserializedValue> vals;
-    std::vector<ParsedTupVal> raw_vals{ValueHash{value_hash}};
-    bool first = true;
-    GetResults ret;
-    while (!raw_vals.empty()) {
-        auto next = std::move(raw_vals.back());
-        raw_vals.pop_back();
-        auto results = nonstd::visit(
-            [&](const auto& val) {
-                return processVal(transaction, val, vals, raw_vals,
-                                  segment_ids);
-            },
-            next);
-        if (!results.status.ok()) {
-            return {results.status, 0, Tuple()};
-        }
-        if (first) {
-            ret = results;
-            first = false;
+                             std::set<uint64_t>& segment_ids,
+                             ValueCache& value_cache) {
+    std::vector<std::vector<DeserializedValue>> vals_stack{{}};
+    std::vector<std::vector<ParsedTupVal>> raw_vals_stack{
+        {ValueHash{value_hash}}};
+    std::vector<uint32_t> reference_count_stack{0};
+    while ((raw_vals_stack.size() > 1) || !raw_vals_stack[0].empty()) {
+        if (!raw_vals_stack.back().empty()) {
+            auto next = std::move(raw_vals_stack.back().back());
+            raw_vals_stack.back().pop_back();
+
+            auto results = nonstd::visit(
+                [&](const auto& val) {
+                    return processVal(transaction, val, vals_stack,
+                                      raw_vals_stack, reference_count_stack,
+                                      segment_ids, value_cache);
+                },
+                next);
+            if (!results.status.ok()) {
+                return {results.status, 0, Tuple()};
+            }
+        } else {
+            // All child values resolved
+            raw_vals_stack.pop_back();
+
+            auto value = assembleSingleValueFromDeserialized(
+                std::move(vals_stack.back()));
+            vals_stack.pop_back();
+
+            reference_count_stack.pop_back();
+            auto reference_count = reference_count_stack.back();
+
+            if (reference_count > 1) {
+                value_cache[hash_value(value)] = value;
+            }
+
+            vals_stack.back().emplace_back(std::move(value));
         }
     }
-    return {ret.status, ret.reference_count,
-            assembleValueFromDeserialized(std::move(vals))};
+
+    return {rocksdb::Status::OK(), reference_count_stack.back(),
+            std::move(vals_stack.back().back().get<value>())};
 }
 
-DbResult<value> getValue(const Transaction& transaction, uint256_t value_hash) {
+DbResult<value> getValue(const Transaction& transaction,
+                         uint256_t value_hash,
+                         ValueCache& value_cache) {
     std::set<uint64_t> segment_ids;
-    return getValueImpl(transaction, value_hash, segment_ids);
+    return getValueImpl(transaction, value_hash, segment_ids, value_cache);
 }
 
 SaveResults saveValueImpl(Transaction& transaction,
                           const value& val,
                           std::map<uint64_t, uint64_t>& segment_counts) {
     bool first = true;
-    SaveResults ret;
+    SaveResults ret{};
     std::vector<value> items_to_save{val};
     while (!items_to_save.empty()) {
         auto next_item = std::move(items_to_save.back());
@@ -315,10 +367,10 @@ DeleteResults deleteValueImpl(Transaction& transaction,
                               const uint256_t& value_hash,
                               std::map<uint64_t, uint64_t>& segment_counts) {
     bool first = true;
-    DeleteResults ret;
+    DeleteResults ret{};
     std::vector<uint256_t> items_to_delete{value_hash};
     while (!items_to_delete.empty()) {
-        auto next_item = std::move(items_to_delete.back());
+        auto next_item = items_to_delete.back();
         items_to_delete.pop_back();
         std::vector<unsigned char> hash_key;
         marshal_uint256_t(next_item, hash_key);

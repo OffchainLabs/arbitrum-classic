@@ -19,6 +19,7 @@
 
 #include <avm_values/vmValueParser.hpp>
 #include <data_storage/datastorage.hpp>
+#include <data_storage/value/value.hpp>
 
 #include <memory>
 #include <string>
@@ -38,7 +39,7 @@ class CheckpointStorage {
     std::shared_ptr<Code> code;
 
    public:
-    CheckpointStorage(const std::string& db_path);
+    explicit CheckpointStorage(const std::string& db_path);
     bool closeCheckpointStorage();
     void initialize(LoadedExecutable executable);
     void initialize(const std::string& executable_path);
@@ -52,7 +53,8 @@ class CheckpointStorage {
 
     Machine getInitialMachine() const;
     Machine getMachine(uint256_t machineHash) const;
-    DbResult<value> getValue(uint256_t value_hash) const;
+    DbResult<value> getValue(uint256_t value_hash,
+                             ValueCache& value_cache) const;
 };
 
 #endif /* checkpointstorage_hpp */
