@@ -20,6 +20,7 @@
 #include <avm_values/bigint.hpp>
 #include <avm_values/opcodes.hpp>
 #include <avm_values/valuetype.hpp>
+#include <avm_values/buffer.hpp>
 
 #include <nonstd/variant.hpp>
 
@@ -31,7 +32,7 @@ class Code;
 struct CodePointStub;
 struct CodePointRef;
 
-using value = nonstd::variant<Tuple, uint256_t, CodePointStub, HashPreImage>;
+using value = nonstd::variant<Tuple, uint256_t, CodePointStub, HashPreImage, Buffer>;
 
 struct TuplePlaceholder {
     uint8_t values;

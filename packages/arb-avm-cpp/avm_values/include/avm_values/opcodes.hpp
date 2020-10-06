@@ -105,6 +105,14 @@ enum class OpCode : uint8_t {
     ECRECOVER = 0x80,
 
     DEBUG_PRINT = 0x90,
+
+    NEW_BUFFER = 0xa0,
+    GET_BUFFER8,
+    GET_BUFFER64,
+    GET_BUFFER256,
+    SET_BUFFER8,
+    SET_BUFFER64,
+    SET_BUFFER256,
 };
 
 const std::unordered_map<OpCode, std::string> InstructionNames = {

@@ -214,6 +214,8 @@ struct GetSize {
 
     uint256_t operator()(const Tuple& val) const { return val.getSize(); }
 
+    uint256_t operator()(const Buffer& val) const { return 1024; }
+
     uint256_t operator()(const uint256_t&) const { return 1; }
 
     uint256_t operator()(const CodePointStub&) const { return 1; }
@@ -225,6 +227,11 @@ uint256_t getSize(const value& val) {
 
 struct ValuePrinter {
     std::ostream& os;
+
+    std::ostream* operator()(const Buffer& val) const {
+        os << "Buffer";
+        return &os;
+    }
 
     std::ostream* operator()(const Tuple& val) const {
         os << val;

@@ -564,6 +564,27 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::ECRECOVER:
             machineoperation::ec_recover(*this);
             break;
+        case OpCode::NEW_BUFFER:
+            machineoperation::newbuffer(*this);
+            break;
+        case OpCode::GET_BUFFER8:
+            machineoperation::getbuffer8(*this);
+            break;
+        case OpCode::GET_BUFFER64:
+            machineoperation::getbuffer64(*this);
+            break;
+        case OpCode::GET_BUFFER256:
+            machineoperation::getbuffer256(*this);
+            break;
+        case OpCode::SET_BUFFER8:
+            machineoperation::setbuffer8(*this);
+            break;
+        case OpCode::SET_BUFFER64:
+            machineoperation::setbuffer64(*this);
+            break;
+        case OpCode::SET_BUFFER256:
+            machineoperation::setbuffer256(*this);
+            break;
         default:
             std::cerr << "Unhandled opcode <" << InstructionNames.at(opcode)
                       << ">" << std::hex << static_cast<int>(opcode);
