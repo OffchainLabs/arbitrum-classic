@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include "config.hpp"
 #include "helper.hpp"
 
 #include <data_storage/checkpointstorage.hpp>
@@ -36,7 +35,8 @@ void initializeDatastack(const Transaction& transaction,
                          uint256_t tuple_hash,
                          uint256_t expected_hash,
                          uint64_t expected_size) {
-    auto results = ::getValue(transaction, tuple_hash);
+    ValueCache value_cache{};
+    auto results = ::getValue(transaction, tuple_hash, value_cache);
     REQUIRE(results.status.ok());
     REQUIRE(nonstd::holds_alternative<Tuple>(results.data));
 
@@ -46,7 +46,7 @@ void initializeDatastack(const Transaction& transaction,
     REQUIRE(data_stack.stacksize() == expected_size);
 }
 
-void saveDataStack(Datastack data_stack) {
+void saveDataStack(const Datastack& data_stack) {
     CheckpointStorage storage(dbpath);
     std::vector<CodePoint> code;
     auto transaction = storage.makeTransaction();
@@ -59,7 +59,7 @@ void saveDataStack(Datastack data_stack) {
     REQUIRE(results.reference_count == 1);
 }
 
-void saveDataStackTwice(Datastack data_stack) {
+void saveDataStackTwice(const Datastack& data_stack) {
     CheckpointStorage storage(dbpath);
     std::vector<CodePoint> code;
     auto transaction = storage.makeTransaction();
@@ -74,14 +74,15 @@ void saveDataStackTwice(Datastack data_stack) {
 }
 
 void saveAndGetDataStack(Transaction& transaction,
-                         Datastack data_stack,
+                         const Datastack& data_stack,
                          uint256_t expected_hash) {
     auto tuple_ret = data_stack.getTupleRepresentation();
     auto results = saveValue(transaction, tuple_ret);
     REQUIRE(results.status.ok());
     transaction.commit();
 
-    auto get_results = getValue(transaction, expected_hash);
+    ValueCache value_cache{};
+    auto get_results = getValue(transaction, expected_hash, value_cache);
 
     REQUIRE(nonstd::holds_alternative<Tuple>(get_results.data));
     REQUIRE(get_results.status.ok());
@@ -90,7 +91,7 @@ void saveAndGetDataStack(Transaction& transaction,
 }
 
 void saveTwiceAndGetDataStack(Transaction& transaction,
-                              Datastack data_stack,
+                              const Datastack& data_stack,
                               uint256_t expected_hash) {
     auto tuple_ret = data_stack.getTupleRepresentation();
     auto results = saveValue(transaction, tuple_ret);
@@ -99,7 +100,8 @@ void saveTwiceAndGetDataStack(Transaction& transaction,
     REQUIRE(results2.status.ok());
     transaction.commit();
 
-    auto get_results = getValue(transaction, expected_hash);
+    ValueCache value_cache{};
+    auto get_results = getValue(transaction, expected_hash, value_cache);
 
     REQUIRE(nonstd::holds_alternative<Tuple>(get_results.data));
     REQUIRE(get_results.status.ok());
