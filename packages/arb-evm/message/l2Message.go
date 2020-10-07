@@ -445,7 +445,7 @@ func (t SignedTransaction) AsData() ([]byte, error) {
 	data = append(data, t.Tx.Data()...)
 	data = append(data, math.U256Bytes(r)...)
 	data = append(data, math.U256Bytes(s)...)
-	data = append(data, vBit+1%2)
+	data = append(data, vBit)
 	return data, nil
 }
 
