@@ -1026,9 +1026,10 @@ void getbuffer256(MachineState& m) {
     m.stack.popClear();
     m.stack.popClear();
     uint256_t res = 0;
+    // std::cerr << "hmm getting " << offset << std::endl;
     for (int i = 0; i < 32; i++) {
         res = res << 8;
-        res = res | md.get(offset+7-i);
+        res = res | md.get(offset+i);
     }
     m.stack.push(res);
     ++m.pc;
@@ -1056,7 +1057,7 @@ void setbuffer64(MachineState& m) {
     m.stack.popClear();
     m.stack.popClear();
     for (int i = 0; i < 8; i++) {
-        res = res.set(offset, val&0xff);
+        res = res.set(offset+7-i, val&0xff);
         val = val >> 8;
     }
     m.stack.push(res);
@@ -1071,8 +1072,9 @@ void setbuffer256(MachineState& m) {
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();
+    // std::cerr << "hmm setting " << offset << std::endl;
     for (int i = 0; i < 32; i++) {
-        res = res.set(offset, static_cast<uint8_t>(val&0xff));
+        res = res.set(offset+31-i, static_cast<uint8_t>(val&0xff));
         val = val >> 8;
     }
     m.stack.push(res);

@@ -115,6 +115,8 @@ int main(int argc, char* argv[]) {
     saveMachine(*tx, mach);
     tx->commit();
 
+    std::cout << "Saved machine\n";
+
     auto mach2 = storage.getMachine(mach.hash());
     mach2.run(0, {}, std::chrono::seconds(0));
     return 0;

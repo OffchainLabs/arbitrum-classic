@@ -174,11 +174,15 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
                                   currentResult.stored_value);
     }
 
+    // std::cerr << "saving 1\n";
+
     auto& machinestate = machine.machine_state;
     auto static_val_results =
         saveValueImpl(transaction, machinestate.static_val, segment_counts);
+    // std::cerr << "saving 1.5\n";
     auto register_val_results =
         saveValueImpl(transaction, machinestate.registerVal, segment_counts);
+    // std::cerr << "saving 2\n";
     auto datastack_tup = machinestate.stack.getTupleRepresentation();
     auto datastack_results =
         saveValueImpl(transaction, datastack_tup, segment_counts);
@@ -187,6 +191,7 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
         saveValueImpl(transaction, auxstack_tup, segment_counts);
     auto staged_message_results =
         saveValueImpl(transaction, machinestate.staged_message, segment_counts);
+    // std::cerr << "saving 3\n";
     if (!datastack_results.status.ok() || !auxstack_results.status.ok() ||
         !register_val_results.status.ok() ||
         !staged_message_results.status.ok()) {
@@ -197,6 +202,7 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
     ++segment_counts[machinestate.errpc.pc.segment];
 
     saveCode(transaction, *machinestate.code, segment_counts);
+    // std::cerr << "saving 4\n";
 
     auto machine_state_data =
         MachineStateKeys{hash_value(machinestate.static_val),
@@ -208,6 +214,8 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
                          machinestate.errpc,
                          hash_value(machinestate.staged_message),
                          machinestate.state};
+    // std::cerr << "saving 5\n";
     auto serialized_state = serializeStateKeys(machine_state_data);
+    // std::cerr << "saving 6\n";
     return saveRefCountedData(*transaction.transaction, key, serialized_state);
 }

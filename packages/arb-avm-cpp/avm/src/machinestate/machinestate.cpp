@@ -336,6 +336,8 @@ BlockReason MachineState::runOne() {
 }
 
 BlockReason MachineState::runOp(OpCode opcode) {
+    // std::cerr << "Running opcode <" << InstructionNames.at(opcode) << ">" << std::hex << static_cast<int>(opcode) << std::endl;
+
     switch (opcode) {
             /**************************/
             /*  Arithmetic Operations */
@@ -570,12 +572,6 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::SIDELOAD:
             machineoperation::sideload(*this);
             break;
-            /*****************/
-            /*  Precompiles  */
-            /*****************/
-        case OpCode::ECRECOVER:
-            machineoperation::ec_recover(*this);
-            break;
         case OpCode::NEW_BUFFER:
             machineoperation::newbuffer(*this);
             break;
@@ -596,6 +592,13 @@ BlockReason MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::SET_BUFFER256:
             machineoperation::setbuffer256(*this);
+            break;
+        /*****************/
+        /*  Precompiles  */
+        /*****************/
+        case OpCode::ECRECOVER:
+            machineoperation::ec_recover(*this);
+            break;
         case OpCode::ECADD:
             machineoperation::ec_add(*this);
             break;

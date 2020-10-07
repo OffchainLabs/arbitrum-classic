@@ -49,19 +49,19 @@ class Buffer {
     }
 
     Buffer(int level_, bool) : leaf(nullptr), node(nullptr) {
-        is_leaf = false;
+        is_leaf = (level_ == 0);
         level = level_;
     }
 
    public:
     Buffer() : leaf(nullptr), node(nullptr) {
-        std::cerr << "creating buffer\n";
+        // std::cerr << "creating buffer\n";
         is_leaf = true;
         level = 0;
     }
 
     Buffer set(uint64_t offset, uint8_t v) {
-        std::cerr << "setting buffer" << offset << " to "<< v << std::endl;
+        // std::cerr << "setting buffer " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
         if (is_leaf) {
             if (offset >= 1024) {
                 std::shared_ptr<std::vector<uint8_t> > empty = std::make_shared<std::vector<uint8_t>>();
@@ -73,11 +73,13 @@ class Buffer {
                 Buffer buf = Buffer(vec, 1);
                 return buf.set(offset, v);
             }
-            auto buf = std::make_shared<std::vector<uint8_t> >(*leaf);
+            auto buf = leaf ? std::make_shared<std::vector<uint8_t> >(*leaf) : std::make_shared<std::vector<uint8_t> >();
             if (buf->size() < 1024) {
+                // std::cerr << "resize buf" << std::endl;
                 buf->resize(1024, 0);
             }
             (*buf)[offset] = v;
+            // std::cerr << "updated leaf " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
             return Buffer(buf);
         } else {
             if (offset >= calc_len(level)) {
@@ -105,7 +107,7 @@ class Buffer {
     }
 
     uint8_t get(uint64_t pos) const {
-        std::cerr << "getting buffer" << pos << std::endl;
+        // std::cerr << "getting buffer " << pos << std::endl;
         if (is_leaf) {
             if (!leaf) return 0;
             if (leaf->size() < pos) return 0;
@@ -129,15 +131,5 @@ inline uint256_t hash(const Buffer&) {
 inline bool operator==(const Buffer& val1, const Buffer& val2) {
     return hash(val1) == hash(val2);
 }
-
-/*
-inline bool operator!=(const Tuple& val1, const Tuple& val2) {
-    if (val1.tuple_size() == val2.tuple_size())
-        return false;
-    return hash(val1) != hash(val2);
-}
-
-std::ostream& operator<<(std::ostream& os, const Tuple& val);
-*/
 
 #endif /* buffer_hpp */

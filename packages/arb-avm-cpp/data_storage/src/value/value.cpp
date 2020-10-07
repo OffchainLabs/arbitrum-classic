@@ -26,6 +26,7 @@
 
 constexpr int TUP_TUPLE_LENGTH = 33;
 constexpr int TUP_NUM_LENGTH = 33;
+constexpr int TUP_BUFFER_LENGTH = 1;
 constexpr int TUP_CODEPT_LENGTH = 49;
 
 namespace {
@@ -34,7 +35,7 @@ struct ValueHash {
     uint256_t hash;
 };
 
-using ParsedTupVal = nonstd::variant<uint256_t, CodePointStub, ValueHash>;
+using ParsedTupVal = nonstd::variant<uint256_t, CodePointStub, Buffer, ValueHash>;
 
 using ParsedSerializedVal =
     nonstd::variant<uint256_t, CodePointStub, std::vector<ParsedTupVal>>;
@@ -52,6 +53,11 @@ std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
         ++buf;
 
         switch (value_type) {
+            case BUFFER: {
+                return_vector.push_back(Buffer());
+                iter += TUP_BUFFER_LENGTH;
+                break;
+            }
             case NUM: {
                 return_vector.push_back(deserializeUint256t(buf));
                 iter += TUP_NUM_LENGTH;
@@ -147,6 +153,12 @@ std::vector<value> serializeValue(const HashPreImage&,
                                   std::map<uint64_t, uint64_t>&) {
     throw std::runtime_error("Can't serialize hash preimage in db");
 }
+std::vector<value> serializeValue(const Buffer&,
+                                  std::vector<unsigned char>& value_vector,
+                                  std::map<uint64_t, uint64_t>&) {
+    value_vector.push_back(BUFFER);
+    return {};
+}
 std::vector<value> serializeValue(
     const value& val,
     std::vector<unsigned char>& value_vector,
@@ -187,6 +199,15 @@ GetResults processVal(const Transaction& transaction,
 
 GetResults processVal(const Transaction&,
                       const uint256_t& val,
+                      std::vector<DeserializedValue>& vals,
+                      std::vector<ParsedTupVal>&,
+                      std::set<uint64_t>&) {
+    vals.push_back(value{val});
+    return GetResults{1, rocksdb::Status::OK(), {}};
+}
+
+GetResults processVal(const Transaction&,
+                      const Buffer& val,
                       std::vector<DeserializedValue>& vals,
                       std::vector<ParsedTupVal>&,
                       std::set<uint64_t>&) {
@@ -281,20 +302,27 @@ SaveResults saveValueImpl(Transaction& transaction,
     while (!items_to_save.empty()) {
         auto next_item = std::move(items_to_save.back());
         items_to_save.pop_back();
+        // std::cerr << "got item " << next_item << std::endl;
         auto hash = hash_value(next_item);
         std::vector<unsigned char> hash_key;
+        // std::cerr << "got item 2" << std::endl;
         marshal_uint256_t(hash, hash_key);
         auto key = vecToSlice(hash_key);
         auto results = getRefCountedData(*transaction.transaction, key);
+        // std::cerr << "got item 3" << std::endl;
         SaveResults save_ret;
         if (results.status.ok() && results.reference_count > 0) {
+            // std::cerr << "got item inc" << std::endl;
             save_ret = incrementReference(*transaction.transaction, key);
         } else {
             std::vector<unsigned char> value_vector;
+            // std::cerr << "got item ser" << std::endl;
             auto new_items_to_save =
                 serializeValue(next_item, value_vector, segment_counts);
+            // std::cerr << "got item ser" << std::endl;
             items_to_save.insert(items_to_save.end(), new_items_to_save.begin(),
                                  new_items_to_save.end());
+            // std::cerr << "got item ser" << std::endl;
             save_ret =
                 saveRefCountedData(*transaction.transaction, key, value_vector);
         }
