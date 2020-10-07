@@ -424,25 +424,25 @@ func TestSignedTx(t *testing.T) {
 		),
 	)
 
-	//tx2 := types.NewContractCreation(1, big.NewInt(0), 100000000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
-	//signedTx2, err := types.SignTx(tx2, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//
-	//l2msg2, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx2})
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//messages = append(
-	//	messages,
-	//	message.NewInboxMessage(
-	//		l2msg2,
-	//		common.RandAddress(),
-	//		big.NewInt(2),
-	//		chainTime,
-	//	),
-	//)
+	tx2 := types.NewContractCreation(1, big.NewInt(0), 100000000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
+	signedTx2, err := types.SignTx(tx2, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	l2msg2, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			l2msg2,
+			common.RandAddress(),
+			big.NewInt(2),
+			chainTime,
+		),
+	)
 
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
 	logs := assertion.ParseLogs()
@@ -451,7 +451,7 @@ func TestSignedTx(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log(string(testCase))
-	if len(logs) != 1 {
+	if len(logs) != 2 {
 		t.Fatal("incorrect log output count", len(logs))
 	}
 	for i, avmLog := range logs {
@@ -477,7 +477,7 @@ func TestSignedTx(t *testing.T) {
 		if i == 0 {
 			correctHash = signedTx.Hash()
 		} else {
-			//correctHash = signedTx2.Hash()
+			correctHash = signedTx2.Hash()
 		}
 
 		if result.IncomingRequest.MessageID.ToEthHash() != correctHash {
@@ -706,4 +706,107 @@ func TestBatch(t *testing.T) {
 		}
 		log.Printf("message: %T\n", l2Message)
 	}
+}
+
+func TestCompressedECDSATx(t *testing.T) {
+	chain := common.RandAddress()
+	mach, err := cmachine.New(arbos.Path())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dest := common.RandAddress()
+	pk, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
+
+	chainTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
+	}
+
+	messages := make([]inbox.InboxMessage, 0)
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			initMsg(),
+			chain,
+			big.NewInt(0),
+			chainTime,
+		),
+	)
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			message.Eth{
+				Dest:  addr,
+				Value: big.NewInt(1000),
+			},
+			common.RandAddress(),
+			big.NewInt(1),
+			chainTime,
+		),
+	)
+
+	tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	l2msg, err := message.NewL2Message(message.CompressedECDSATransaction{Tx: signedTx})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			l2msg,
+			common.RandAddress(),
+			big.NewInt(2),
+			chainTime,
+		),
+	)
+
+	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
+	logs := assertion.ParseLogs()
+	testCase, err := inbox.TestVectorJSON(messages, logs, assertion.ParseOutMessages())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(string(testCase))
+	if len(logs) != 1 {
+		t.Fatal("incorrect log output count", len(logs))
+	}
+	avmLog := logs[0]
+	result, err := evm.NewTxResultFromValue(avmLog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.ResultCode != evm.ReturnCode {
+		t.Fatal("unexpected result code", result.ResultCode)
+	}
+	if result.IncomingRequest.Sender != addr {
+		t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, addr)
+	}
+	if result.IncomingRequest.Kind != message.L2Type {
+		t.Error("l2message has incorrect type")
+	}
+	l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result.IncomingRequest.MessageID.ToEthHash() != signedTx.Hash() {
+		t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, signedTx.Hash().Hex())
+	}
+
+	_, ok := l2Message.(message.SignedTransaction)
+	if !ok {
+		t.Error("bad transaction format", l2Message)
+	}
+
 }

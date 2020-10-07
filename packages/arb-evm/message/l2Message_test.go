@@ -19,6 +19,9 @@ package message
 import (
 	"bytes"
 	"fmt"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -84,5 +87,37 @@ func TestTransactionHash(t *testing.T) {
 
 	if newTransactionFromData(txData).MessageID(sender, chain) != targetHash {
 		t.Error("incorrect hash")
+	}
+}
+
+func TestCompressedECDSAFormat(t *testing.T) {
+	calldata := []byte{119, 22, 2, 247, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	gasLimit, correct := new(big.Int).SetString("e8d4a51000", 16)
+	if !correct {
+		t.Fatal("bad gas limit")
+	}
+	tx := types.NewTransaction(
+		0,
+		ethcommon.HexToAddress("0xf3657c93fad96709257a672ca0d6e651772e0349"),
+		big.NewInt(0),
+		gasLimit.Uint64(),
+		big.NewInt(0),
+		calldata,
+	)
+	encoded, err := encodeUnsignedTx(tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r, _ := new(big.Int).SetString("22139494912332618468746784620225298078926562928862475257085431569185247929854", 10)
+	s, _ := new(big.Int).SetString("11879572248721183921017568834333234971060281339844537723742821302023917743080", 10)
+	v, _ := new(big.Int).SetString("2258", 10)
+
+	encoded = append(encoded, encodeECDSASig(v, r, s)...)
+
+	correctEncoded := []byte{128, 128, 133, 232, 212, 165, 16, 0, 148, 243, 101, 124, 147, 250, 217, 103, 9, 37, 122, 103, 44, 160, 214, 230, 81, 119, 46, 3, 73, 128, 119, 22, 2, 247, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 48, 242, 130, 147, 4, 245, 114, 73, 189, 227, 45, 98, 143, 159, 80, 204, 118, 150, 152, 52, 26, 32, 58, 251, 218, 23, 113, 41, 44, 137, 37, 254, 26, 67, 153, 128, 134, 97, 76, 163, 86, 191, 84, 156, 105, 228, 138, 94, 56, 87, 196, 213, 22, 68, 22, 238, 39, 162, 182, 18, 31, 165, 43, 232, 210}
+
+	if !bytes.Equal(encoded, correctEncoded) {
+		t.Error("incorrect encoded output")
 	}
 }

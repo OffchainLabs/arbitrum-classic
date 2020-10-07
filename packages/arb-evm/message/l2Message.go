@@ -374,7 +374,7 @@ func (t SignedTransaction) AsEthTx() *types.Transaction {
 }
 
 func (t SignedTransaction) L2Type() L2SubType {
-	return CompressedECDSA
+	return SignedTransactionType
 }
 
 func (t SignedTransaction) Equals(o SignedTransaction) bool {
@@ -389,63 +389,38 @@ func (t SignedTransaction) Equals(o SignedTransaction) bool {
 	return bytes.Equal(tJson, oJson)
 }
 
-func encodeAmount(amount *big.Int) ([]byte, error) {
-	mod := big.NewInt(10)
-	zero := big.NewInt(0)
-	exp := byte(0)
-	for amount.Cmp(zero) > 0 && new(big.Int).Mod(amount, mod).Cmp(zero) == 0 {
-		amount = amount.Div(amount, mod)
-		exp++
-	}
-	amountData, err := rlp.EncodeToBytes(amount)
-	if err != nil {
-		return nil, err
-	}
-
-	if amount.Cmp(zero) == 0 {
-		return amountData, nil
-	}
-	return append(amountData, exp), nil
+func (t SignedTransaction) AsData() ([]byte, error) {
+	return rlp.EncodeToBytes(t.Tx)
 }
 
-func (t SignedTransaction) AsData() ([]byte, error) {
-	nonceData, err := rlp.EncodeToBytes(t.Tx.Nonce())
-	if err != nil {
-		return nil, err
-	}
-	gasPriceData, err := rlp.EncodeToBytes(t.Tx.GasPrice())
-	if err != nil {
-		return nil, err
-	}
-	gasLimitData, err := rlp.EncodeToBytes(t.Tx.Gas())
-	if err != nil {
-		return nil, err
-	}
-	paymentData, err := encodeAmount(t.Tx.Value())
-	if err != nil {
-		return nil, err
-	}
+type CompressedECDSATransaction struct {
+	Tx *types.Transaction
+}
 
-	v, r, s := t.Tx.RawSignatureValues()
-	vBit := byte(v.Uint64() & 0xff)
-	data := []byte{}
-	data = append(data, nonceData...)
-	data = append(data, gasPriceData...)
-	data = append(data, gasLimitData...)
-	if t.Tx.To() == nil {
-		data = append(data, 0x80)
+func (t CompressedECDSATransaction) String() string {
+	j, err := t.Tx.MarshalJSON()
+	if err != nil {
+		return fmt.Sprintf("CompressedECDSATransaction(%v)", err)
 	} else {
-		destData, err := rlp.EncodeToBytes(t.Tx.To().Bytes())
-		if err != nil {
-			return nil, err
-		}
-		data = append(data, destData...)
+		return string(j)
 	}
-	data = append(data, paymentData...)
-	data = append(data, t.Tx.Data()...)
-	data = append(data, math.U256Bytes(r)...)
-	data = append(data, math.U256Bytes(s)...)
-	data = append(data, vBit)
+}
+
+func (t CompressedECDSATransaction) AsEthTx() *types.Transaction {
+	return t.Tx
+}
+
+func (t CompressedECDSATransaction) L2Type() L2SubType {
+	return CompressedECDSA
+}
+
+func (t CompressedECDSATransaction) AsData() ([]byte, error) {
+	data, err := encodeUnsignedTx(t.Tx)
+	if err != nil {
+		return nil, err
+	}
+	v, r, s := t.Tx.RawSignatureValues()
+	data = append(data, encodeECDSASig(v, r, s)...)
 	return data, nil
 }
 

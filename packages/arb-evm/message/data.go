@@ -18,6 +18,8 @@ package message
 
 import (
 	ethmath "github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"math/big"
 
@@ -66,4 +68,68 @@ func marshaledBytesHash(data []byte) common.Hash {
 		)
 	}
 	return ret
+}
+
+func encodeAmount(amount *big.Int) ([]byte, error) {
+	mod := big.NewInt(10)
+	zero := big.NewInt(0)
+	exp := byte(0)
+	for amount.Cmp(zero) > 0 && new(big.Int).Mod(amount, mod).Cmp(zero) == 0 {
+		amount = amount.Div(amount, mod)
+		exp++
+	}
+	amountData, err := rlp.EncodeToBytes(amount)
+	if err != nil {
+		return nil, err
+	}
+
+	if amount.Cmp(zero) == 0 {
+		return amountData, nil
+	}
+	return append(amountData, exp), nil
+}
+
+func encodeUnsignedTx(tx *types.Transaction) ([]byte, error) {
+	nonceData, err := rlp.EncodeToBytes(tx.Nonce())
+	if err != nil {
+		return nil, err
+	}
+	gasPriceData, err := rlp.EncodeToBytes(tx.GasPrice())
+	if err != nil {
+		return nil, err
+	}
+	gasLimitData, err := rlp.EncodeToBytes(tx.Gas())
+	if err != nil {
+		return nil, err
+	}
+	paymentData, err := encodeAmount(tx.Value())
+	if err != nil {
+		return nil, err
+	}
+
+	data := []byte{}
+	data = append(data, nonceData...)
+	data = append(data, gasPriceData...)
+	data = append(data, gasLimitData...)
+	if tx.To() == nil {
+		data = append(data, 0x80)
+	} else {
+		destData, err := rlp.EncodeToBytes(tx.To().Bytes())
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, destData...)
+	}
+	data = append(data, paymentData...)
+	data = append(data, tx.Data()...)
+	return data, nil
+}
+
+func encodeECDSASig(v, r, s *big.Int) []byte {
+	vBit := byte(v.Uint64() & 0xff)
+	data := make([]byte, 0, 65)
+	data = append(data, ethmath.U256Bytes(r)...)
+	data = append(data, ethmath.U256Bytes(s)...)
+	data = append(data, vBit)
+	return data
 }
