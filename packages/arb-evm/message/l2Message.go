@@ -457,8 +457,11 @@ func (t TransactionBatch) AsData() ([]byte, error) {
 func (t TransactionBatch) AsDataSafe() []byte {
 	ret := make([]byte, 0)
 	for _, tx := range t.Transactions {
-		encodedLength := make([]byte, 8)
-		binary.BigEndian.PutUint64(encodedLength[:], uint64(len(tx)))
+		encodedLength, err := rlp.EncodeToBytes(big.NewInt(int64(len(tx))))
+		if err != nil {
+			// This should never occur
+			panic(err)
+		}
 		ret = append(ret, encodedLength[:]...)
 		ret = append(ret, tx...)
 	}
