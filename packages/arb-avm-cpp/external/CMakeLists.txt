@@ -32,3 +32,6 @@ add_subdirectory(json)
 
 add_subdirectory(variant-lite)
 add_subdirectory(optional-lite)
+
+add_library(picosha2 INTERFACE)
+set_property(TARGET picosha2 PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR})

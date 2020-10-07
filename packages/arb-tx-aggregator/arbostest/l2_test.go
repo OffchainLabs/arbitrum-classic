@@ -17,7 +17,9 @@
 package arbostest
 
 import (
+	"bytes"
 	"crypto/ecdsa"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"log"
 	"math/big"
 	"testing"
@@ -37,7 +39,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-func TestContractTx(t *testing.T) {
+var contractCreator = common.HexToAddress("0xba59937520bd4c1067bac24fb774b981b4b8c115")
+var connAddress = common.HexToAddress("0x9493d820aa2023afdedfc0eba1f86254a253ecdf")
+var connAddress2 = common.HexToAddress("0x9276e6abd1b8cb06e5abd72db5140d216148bed3")
+
+func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.SafeAbstractL2Message) ([]message.AbstractL2Message, *snapshot.Snapshot) {
 	chain := common.RandAddress()
 	mach, err := cmachine.New(arbos.Path())
 	if err != nil {
@@ -51,13 +57,6 @@ func TestContractTx(t *testing.T) {
 	messages := make([]inbox.InboxMessage, 0)
 
 	sender := common.RandAddress()
-	tx := message.ContractTransaction{
-		MaxGas:      big.NewInt(100000000000),
-		GasPriceBid: big.NewInt(0),
-		DestAddress: common.RandAddress(),
-		Payment:     big.NewInt(0),
-		Data:        []byte{},
-	}
 
 	messages = append(
 		messages,
@@ -71,43 +70,295 @@ func TestContractTx(t *testing.T) {
 	messages = append(
 		messages,
 		message.NewInboxMessage(
-			message.NewSafeL2Message(tx),
-			sender,
+			message.Eth{
+				Dest:  sender,
+				Value: big.NewInt(100),
+			},
+			chain,
 			big.NewInt(1),
+			chainTime,
+		),
+	)
+
+	createTx := message.Transaction{
+		MaxGas:      big.NewInt(10000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(0),
+		DestAddress: common.Address{},
+		Payment:     big.NewInt(0),
+		Data:        hexutil.MustDecode(arbostestcontracts.Receiver2Bin),
+	}
+
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			message.NewSafeL2Message(createTx),
+			contractCreator,
+			big.NewInt(2),
+			chainTime,
+		),
+	)
+
+	var param common.Hash
+	copy(param[12:], connAddress.Bytes())
+	createTx2 := message.Transaction{
+		MaxGas:      big.NewInt(10000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(1),
+		DestAddress: common.Address{},
+		Payment:     big.NewInt(0),
+		Data:        append(hexutil.MustDecode(arbostestcontracts.ReceiverBin), param.Bytes()...),
+	}
+
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			message.NewSafeL2Message(createTx2),
+			contractCreator,
+			big.NewInt(3),
+			chainTime,
+		),
+	)
+
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			message.NewSafeL2Message(msg),
+			sender,
+			big.NewInt(4),
+			chainTime,
+		),
+	)
+
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			message.NewSafeL2Message(msg2),
+			sender,
+			big.NewInt(5),
 			chainTime,
 		),
 	)
 
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
 	logs := assertion.ParseLogs()
-	if len(logs) != 1 {
+	if len(logs) != 4 {
 		t.Fatal("incorrect log output count", len(logs))
 	}
-	result, err := evm.NewTxResultFromValue(logs[0])
+
+	createRes, err := evm.NewTxResultFromValue(logs[0])
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected result code", result.ResultCode)
-	}
-	if result.IncomingRequest.Sender != sender {
-		t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, sender)
-	}
-	if result.IncomingRequest.Kind != message.L2Type {
-		t.Error("l2message has incorrect type")
-	}
-	l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
-	if err != nil {
-		t.Fatal(err)
+	if createRes.ResultCode != evm.ReturnCode {
+		t.Fatal("failed to create tx")
 	}
 
-	targetHash := hashing.SoliditySHA3(hashing.Uint256(message.ChainAddressToID(chain)), hashing.Uint256(big.NewInt(1)))
-	if result.IncomingRequest.MessageID != targetHash {
-		t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, targetHash)
+	if !bytes.Equal(connAddress.Bytes(), createRes.ReturnData[12:]) {
+		t.Fatal("incorrect created contract address")
 	}
-	_, ok := l2Message.(message.ContractTransaction)
-	if !ok {
-		t.Error("bad transaction format")
+
+	createRes2, err := evm.NewTxResultFromValue(logs[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if createRes2.ResultCode != evm.ReturnCode {
+		t.Fatal("failed to create tx 2", createRes2.ResultCode)
+	}
+
+	if !bytes.Equal(connAddress2.Bytes(), createRes2.ReturnData[12:]) {
+		t.Fatal("incorrect created contract address", hexutil.Encode(createRes2.ReturnData[12:]))
+	}
+
+	msgs := make([]message.AbstractL2Message, 0)
+	for i, avmLog := range logs[2:] {
+		result, err := evm.NewTxResultFromValue(avmLog)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.ResultCode != evm.ReturnCode {
+			t.Fatal("unexpected result code", i, result.ResultCode)
+		}
+		if result.IncomingRequest.Sender != sender {
+			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, sender)
+		}
+		if result.IncomingRequest.Kind != message.L2Type {
+			t.Error("l2message has incorrect type")
+		}
+		l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		targetHash := hashing.SoliditySHA3(hashing.Uint256(message.ChainAddressToID(chain)), hashing.Uint256(big.NewInt(int64(4+i))))
+		if result.IncomingRequest.MessageID != targetHash {
+			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, targetHash)
+		}
+
+		msgs = append(msgs, l2Message)
+	}
+
+	snap := snapshot.NewSnapshot(mach.Clone(), inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
+	}, message.ChainAddressToID(chain), big.NewInt(4))
+
+	return msgs, snap
+}
+
+func TestCallTx(t *testing.T) {
+	tx := message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: common.RandAddress(),
+			Payment:     big.NewInt(10),
+			Data:        []byte{},
+		},
+	}
+
+	tx2 := message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: connAddress2,
+			Payment:     big.NewInt(10),
+			Data:        hexutil.MustDecode("0x7795b5fc"),
+		},
+	}
+	msgs, snap := testBasicTx(t, tx, tx2)
+
+	for _, l2Message := range msgs {
+		_, ok := l2Message.(message.Call)
+		if !ok {
+			t.Error("bad transaction format")
+		}
+	}
+
+	balance, err := snap.GetBalance(tx.DestAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if balance.Cmp(big.NewInt(0)) != 0 {
+		t.Errorf("After call to non-contract, balance should still be 0, but was %v", balance)
+	}
+
+	balance2, err := snap.GetBalance(tx2.DestAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if balance2.Cmp(big.NewInt(0)) != 0 {
+		t.Errorf("After call to contract, balance should still be 0, but was %v", balance2)
+	}
+
+	callRes, err := snap.Call(message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: connAddress,
+			Payment:     big.NewInt(0),
+			Data:        hexutil.MustDecode("0xf8a8fd6d"),
+		},
+	}, common.Address{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if new(big.Int).SetBytes(callRes.ReturnData).Cmp(big.NewInt(7)) != 0 {
+		t.Errorf("Storage was updated %X", callRes.ReturnData)
+	}
+
+	call2Res, err := snap.Call(message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: connAddress2,
+			Payment:     big.NewInt(0),
+			Data:        hexutil.MustDecode("0xf8a8fd6d"),
+		},
+	}, common.Address{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if new(big.Int).SetBytes(call2Res.ReturnData).Cmp(big.NewInt(5)) != 0 {
+		t.Errorf("Storage was updated")
+	}
+}
+
+func TestContractTx(t *testing.T) {
+	tx := message.ContractTransaction{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: common.RandAddress(),
+			Payment:     big.NewInt(10),
+			Data:        []byte{},
+		},
+	}
+
+	tx2 := message.ContractTransaction{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: connAddress2,
+			Payment:     big.NewInt(10),
+			Data:        hexutil.MustDecode("0x7795b5fc"),
+		},
+	}
+	msgs, snap := testBasicTx(t, tx, tx2)
+
+	for _, l2Message := range msgs {
+		_, ok := l2Message.(message.ContractTransaction)
+		if !ok {
+			t.Error("bad transaction format")
+		}
+	}
+
+	balance, err := snap.GetBalance(tx.DestAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if balance.Cmp(tx.Payment) != 0 {
+		t.Errorf("After call to non-contract, balance should be updated, but was %v", balance)
+	}
+
+	balance2, err := snap.GetBalance(tx2.DestAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if balance2.Cmp(tx2.Payment) != 0 {
+		t.Errorf("After call to contract, balance should be updated, but was %v", balance)
+	}
+
+	callRes, err := snap.Call(message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: connAddress2,
+			Payment:     big.NewInt(0),
+			Data:        hexutil.MustDecode("0xf8a8fd6d"),
+		},
+	}, common.Address{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if new(big.Int).SetBytes(callRes.ReturnData).Cmp(big.NewInt(6)) != 0 {
+		t.Errorf("Storage wasn't updated %X", callRes.ReturnData)
+	}
+
+	callRes2, err := snap.Call(message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: connAddress,
+			Payment:     big.NewInt(0),
+			Data:        hexutil.MustDecode("0xf8a8fd6d"),
+		},
+	}, common.Address{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if new(big.Int).SetBytes(callRes2.ReturnData).Cmp(big.NewInt(8)) != 0 {
+		t.Errorf("Storage wasn't updated")
 	}
 }
 

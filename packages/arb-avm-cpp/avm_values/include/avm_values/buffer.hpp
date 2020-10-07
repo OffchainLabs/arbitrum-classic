@@ -20,6 +20,7 @@
 #include <memory>
 #include <vector>
 #include <cstdint>
+#include <iostream>
 #include <avm_values/bigint.hpp>
 
 inline uint64_t calc_len(int h) {
@@ -54,11 +55,13 @@ class Buffer {
 
    public:
     Buffer() : leaf(nullptr), node(nullptr) {
+        std::cerr << "creating buffer\n";
         is_leaf = true;
         level = 0;
     }
 
     Buffer set(uint64_t offset, uint8_t v) {
+        std::cerr << "setting buffer" << offset << " to "<< v << std::endl;
         if (is_leaf) {
             if (offset >= 1024) {
                 std::shared_ptr<std::vector<uint8_t> > empty = std::make_shared<std::vector<uint8_t>>();
@@ -102,6 +105,7 @@ class Buffer {
     }
 
     uint8_t get(uint64_t pos) const {
+        std::cerr << "getting buffer" << pos << std::endl;
         if (is_leaf) {
             if (!leaf) return 0;
             if (leaf->size() < pos) return 0;

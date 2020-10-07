@@ -23,6 +23,8 @@ struct MachineState;
 class Tuple;
 
 const int send_size_limit = 10000;
+constexpr int max_ec_pairing_points = 30;
+constexpr int ec_pair_gas_cost = 500'000;
 
 namespace machineoperation {
 void add(MachineState& m);
@@ -54,6 +56,7 @@ void hashOp(MachineState& m);
 void typeOp(MachineState& m);
 void ethhash2Op(MachineState& m);
 void keccakF(MachineState& m);
+void sha256F(MachineState& m);
 void pop(MachineState& m);
 void spush(MachineState& m);
 void rpush(MachineState& m);
@@ -78,6 +81,10 @@ void tlen(MachineState& m);
 void xget(MachineState& m);
 void xset(MachineState& m);
 void ec_recover(MachineState& m);
+void ec_add(MachineState& m);
+void ec_mul(MachineState& m);
+void ec_pairing(MachineState& m);
+uint64_t ec_pairing_variable_gas_cost(const MachineState& m);
 BlockReason breakpoint(MachineState&);
 void log(MachineState& m);
 void debug(MachineState& m);
@@ -102,6 +109,9 @@ void setbuffer256(MachineState& m);
 namespace internal {
 void encodeKeccakState(const Tuple& tup, uint64_t* state);
 Tuple decodeKeccakState(const uint64_t* state);
+
+uint256_t sha256_block(const uint256_t& digest_int,
+                       std::array<uint8_t, 64>& input_data);
 }  // namespace internal
 }  // namespace machineoperation
 
