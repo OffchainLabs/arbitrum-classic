@@ -424,25 +424,25 @@ func TestSignedTx(t *testing.T) {
 		),
 	)
 
-	tx2 := types.NewContractCreation(1, big.NewInt(0), 100000000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
-	signedTx2, err := types.SignTx(tx2, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	l2msg2, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx2})
-	if err != nil {
-		t.Fatal(err)
-	}
-	messages = append(
-		messages,
-		message.NewInboxMessage(
-			l2msg2,
-			common.RandAddress(),
-			big.NewInt(2),
-			chainTime,
-		),
-	)
+	//tx2 := types.NewContractCreation(1, big.NewInt(0), 100000000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
+	//signedTx2, err := types.SignTx(tx2, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//
+	//l2msg2, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx2})
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//messages = append(
+	//	messages,
+	//	message.NewInboxMessage(
+	//		l2msg2,
+	//		common.RandAddress(),
+	//		big.NewInt(2),
+	//		chainTime,
+	//	),
+	//)
 
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
 	logs := assertion.ParseLogs()
@@ -451,7 +451,7 @@ func TestSignedTx(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log(string(testCase))
-	if len(logs) != 2 {
+	if len(logs) != 1 {
 		t.Fatal("incorrect log output count", len(logs))
 	}
 	for i, avmLog := range logs {
@@ -477,7 +477,7 @@ func TestSignedTx(t *testing.T) {
 		if i == 0 {
 			correctHash = signedTx.Hash()
 		} else {
-			correctHash = signedTx2.Hash()
+			//correctHash = signedTx2.Hash()
 		}
 
 		if result.IncomingRequest.MessageID.ToEthHash() != correctHash {
