@@ -98,6 +98,46 @@ class Buffer {
         }
     }
 
+    Buffer set_many(uint64_t offset, std::vector<uint8_t> arr) {
+        // std::cerr << "setting buffer " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
+        if (is_leaf) {
+            if (offset >= 1024) {
+                std::shared_ptr<std::vector<uint8_t> > empty = std::make_shared<std::vector<uint8_t>>();
+                std::shared_ptr<std::vector<Buffer> > vec = std::make_shared<std::vector<Buffer>>();
+                vec->push_back(Buffer(leaf));
+                for (int i = 1; i < 128; i++) {
+                    vec->push_back(Buffer(empty));
+                }
+                Buffer buf = Buffer(vec, 1);
+                return buf.set_many(offset, arr);
+            }
+            auto buf = leaf ? std::make_shared<std::vector<uint8_t> >(*leaf) : std::make_shared<std::vector<uint8_t> >();
+            if (buf->size() < 1024) {
+                // std::cerr << "resize buf" << std::endl;
+                buf->resize(1024, 0);
+            }
+            for (unsigned int i = 0; i < arr.size(); i++) {
+                (*buf)[offset+i] = arr[i];
+            }
+            // std::cerr << "updated leaf " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
+            return Buffer(buf);
+        } else {
+            if (offset >= calc_len(level)) {
+                std::shared_ptr<std::vector<Buffer> > vec = std::make_shared<std::vector<Buffer>>();
+                vec->push_back(Buffer(node, level));
+                for (int i = 1; i < 128; i++) {
+                    vec->push_back(Buffer(level, true));
+                }
+                Buffer buf = Buffer(vec, level+1);
+                return buf.set_many(offset, arr);
+            }
+            auto vec = std::make_shared<std::vector<Buffer> >(node ? *node : Buffer::make_empty(level-1));
+            auto cell_len = calc_len(level-1);
+            (*vec)[offset / cell_len] = (*vec)[offset / cell_len].set_many(offset % cell_len, arr);
+            return Buffer(vec, level);
+        }
+    }
+
     static std::vector<Buffer> make_empty(int level) {
         auto vec = std::vector<Buffer>();
         for (int i = 0; i < 128; i++) {
@@ -119,6 +159,26 @@ class Buffer {
                 return 0;
             }
             return (*node)[pos / cell_len].get(pos % cell_len);
+        }
+    }
+
+    std::vector<uint8_t> get_many(uint64_t pos, int len) const {
+        // std::cerr << "getting buffer " << pos << std::endl;
+        if (is_leaf) {
+            auto res = std::vector<uint8_t>(len, 0);
+            for (int i = 0; i < len; i++) {
+                if (!leaf) res[i] = 0;
+                else if (leaf->size() < pos+i) res[i] = 0;
+                else res[i] = (*leaf)[pos+i];
+            }
+            return res;
+        } else {
+            uint64_t ln = calc_len(level);
+            uint64_t cell_len = calc_len(level-1);
+            if (pos > ln || !node) {
+                return std::vector<uint8_t>(len, 0);
+            }
+            return (*node)[pos / cell_len].get_many(pos % cell_len, len);
         }
     }
 
