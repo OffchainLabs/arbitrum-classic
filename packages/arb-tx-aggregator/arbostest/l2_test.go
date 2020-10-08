@@ -750,8 +750,11 @@ func TestCompressedECDSATx(t *testing.T) {
 		),
 	)
 
+	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
 	tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
+	t.Log("Unsigned hash:", signer.Hash(tx).Hex())
+	t.Log("Unsigned tx hash", new(big.Int).SetBytes(signer.Hash(tx).Bytes()))
+	signedTx, err := types.SignTx(tx, signer, pk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -801,13 +804,14 @@ func TestCompressedECDSATx(t *testing.T) {
 	if result.IncomingRequest.Kind != message.L2Type {
 		t.Error("l2message has incorrect type")
 	}
+
+	if result.IncomingRequest.MessageID.ToEthHash() != signedTx.Hash() {
+		t.Errorf("l2message has incorrect id %v instead of %v", result.IncomingRequest.MessageID, signedTx.Hash().Hex())
+	}
+
 	l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	if result.IncomingRequest.MessageID.ToEthHash() != signedTx.Hash() {
-		t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, signedTx.Hash().Hex())
 	}
 
 	_, ok := l2Message.(message.SignedTransaction)
