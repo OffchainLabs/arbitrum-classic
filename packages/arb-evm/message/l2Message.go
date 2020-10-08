@@ -397,6 +397,14 @@ type CompressedECDSATransaction struct {
 	Tx *types.Transaction
 }
 
+func newCompressedECDSATransactionFromData(data []byte) (CompressedECDSATransaction, error) {
+	tx := new(types.Transaction)
+	if err := rlp.DecodeBytes(data, tx); err != nil {
+		return CompressedECDSATransaction{}, err
+	}
+	return CompressedECDSATransaction{Tx: tx}, nil
+}
+
 func (t CompressedECDSATransaction) String() string {
 	j, err := t.Tx.MarshalJSON()
 	if err != nil {

@@ -17,10 +17,16 @@
 package message
 
 import (
+	"bytes"
+	"errors"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethmath "github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"io"
+	"io/ioutil"
+	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -89,6 +95,34 @@ func encodeAmount(amount *big.Int) ([]byte, error) {
 	return append(amountData, exp), nil
 }
 
+func decodeAmount(r io.Reader) (*big.Int, error) {
+	var a *big.Int
+	if err := rlp.Decode(r, a); err != nil {
+		return nil, err
+	}
+	if a.Cmp(big.NewInt(0)) == 0 {
+		return a, nil
+	}
+	bData := make([]byte, 1)
+	n, _ := r.Read(bData)
+	if n != 1 {
+		return nil, errors.New("not enough data for exponent in amount")
+	}
+	amount := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(bData[0])), nil)
+	return amount.Mul(amount, a), nil
+}
+
+func decodeAddress(r io.Reader) (*ethcommon.Address, error) {
+	var rawAddr interface{}
+	if err := rlp.Decode(r, rawAddr); err != nil {
+		return nil, err
+	}
+	if rawAddr, ok := rawAddr.([]byte); ok {
+		log.Println(rawAddr)
+	}
+	panic("not implemented")
+}
+
 func encodeUnsignedTx(tx *types.Transaction) ([]byte, error) {
 	nonceData, err := rlp.EncodeToBytes(tx.Nonce())
 	if err != nil {
@@ -123,6 +157,46 @@ func encodeUnsignedTx(tx *types.Transaction) ([]byte, error) {
 	data = append(data, paymentData...)
 	data = append(data, tx.Data()...)
 	return data, nil
+}
+
+func decodeUnsignedTx(data []byte) (*types.Transaction, error) {
+	r := bytes.NewReader(data)
+
+	var nonce *big.Int
+	if err := rlp.Decode(r, nonce); err != nil {
+		return nil, err
+	}
+
+	var gasPrice *big.Int
+	if err := rlp.Decode(r, gasPrice); err != nil {
+		return nil, err
+	}
+
+	address, err := decodeAddress(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var gasLimit *big.Int
+	if err := rlp.Decode(r, gasLimit); err != nil {
+		return nil, err
+	}
+
+	payment, err := decodeAmount(r)
+	if err != nil {
+		return nil, err
+	}
+
+	calldata, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	if address != nil {
+		return types.NewTransaction(nonce.Uint64(), *address, payment, gasLimit.Uint64(), gasPrice, calldata), nil
+	} else {
+		return types.NewContractCreation(nonce.Uint64(), payment, gasLimit.Uint64(), gasPrice, calldata), nil
+	}
+
 }
 
 func encodeECDSASig(v, r, s *big.Int) []byte {
