@@ -26,6 +26,7 @@
 
 HashPreImage zeroPreimage();
 struct BasicValChecker;
+struct ValueBeingParsed;
 
 class Tuple {
    private:
@@ -33,8 +34,17 @@ class Tuple {
 
     void calculateHashPreImage() const;
 
+    void unsafe_set_element(uint64_t pos, value&& newval) {
+        if (pos >= tuple_size()) {
+            throw bad_tuple_index{};
+        }
+        tpl->data[pos] = std::move(newval);
+        tpl->deferredHashing = true;
+    }
+
     friend BasicValChecker;
     friend RawTuple;
+    friend ValueBeingParsed;
 
    public:
     Tuple() : tpl(nullptr) {}

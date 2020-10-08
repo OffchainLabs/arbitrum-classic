@@ -69,7 +69,8 @@ int main(int argc, char* argv[]) {
         storage.initialize(filename);
     }
 
-    auto mach = storage.getInitialMachine();
+    ValueCache value_cache{};
+    auto mach = storage.getInitialMachine(value_cache);
 
     std::vector<Tuple> inbox_messages;
     if (argc == 5) {
@@ -115,7 +116,7 @@ int main(int argc, char* argv[]) {
     saveMachine(*tx, mach);
     tx->commit();
 
-    auto mach2 = storage.getMachine(mach.hash());
+    auto mach2 = storage.getMachine(mach.hash(), value_cache);
     mach2.run(0, {}, std::chrono::seconds(0));
     return 0;
 }

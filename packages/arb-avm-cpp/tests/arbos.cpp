@@ -31,6 +31,7 @@
 
 TEST_CASE("ARBOS test vectors") {
     DBDeleter deleter;
+    ValueCache value_cache{};
 
     std::vector<std::string> files = {
         "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
@@ -60,7 +61,7 @@ TEST_CASE("ARBOS test vectors") {
 
             CheckpointStorage storage(dbpath);
             storage.initialize(arb_os_path);
-            auto mach = storage.getInitialMachine();
+            auto mach = storage.getInitialMachine(value_cache);
             mach.machine_state.stack.push(uint256_t{0});
             auto assertion =
                 mach.run(1000000000, messages, std::chrono::seconds{0});
@@ -76,12 +77,12 @@ TEST_CASE("ARBOS test vectors") {
                 tx->commit();
             }
             auto mach_hash = mach.hash();
-            auto mach2 = storage.getMachine(mach_hash);
+            auto mach2 = storage.getMachine(mach_hash, value_cache);
             REQUIRE(mach_hash == mach2.hash());
             storage.closeCheckpointStorage();
 
             CheckpointStorage storage2(dbpath);
-            auto mach3 = storage2.getMachine(mach_hash);
+            auto mach3 = storage2.getMachine(mach_hash, value_cache);
             REQUIRE(mach_hash == mach3.hash());
 
             {
