@@ -18,6 +18,7 @@
 #define checkpoint_code_hpp
 
 #include <cstdint>
+#include <data_storage/value/value.hpp>
 #include <map>
 #include <memory>
 #include <set>
@@ -30,7 +31,8 @@ uint64_t getNextSegmentID(const Transaction& transaction);
 
 std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
                                             uint64_t segment_id,
-                                            std::set<uint64_t>& segment_ids);
+                                            std::set<uint64_t>& segment_ids,
+                                            ValueCache& value_cache);
 void saveCode(Transaction& transaction,
               const Code& code,
               std::map<uint64_t, uint64_t>& segment_counts);

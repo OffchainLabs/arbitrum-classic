@@ -78,8 +78,9 @@ CAggregatorStore* createAggregatorStore(CCheckpointStorage* storage_ptr) {
 
 CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
+    ValueCache value_cache{};
     try {
-        return new Machine(storage->getInitialMachine());
+        return new Machine(storage->getInitialMachine(value_cache));
     } catch (const std::exception&) {
         return nullptr;
     }
@@ -89,8 +90,9 @@ CMachine* getMachine(const CCheckpointStorage* storage_ptr,
                      const void* machine_hash) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
     auto hash = receiveUint256(machine_hash);
+    ValueCache value_cache{};
     try {
-        return new Machine(storage->getMachine(hash));
+        return new Machine(storage->getMachine(hash, value_cache));
     } catch (const std::exception&) {
         return nullptr;
     }
@@ -127,7 +129,8 @@ ByteSlice getValue(const CCheckpointStorage* storage_ptr,
                    const void* hash_key) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
     auto hash = receiveUint256(hash_key);
-    return returnValueResult(storage->getValue(hash));
+    ValueCache value_cache{};
+    return returnValueResult(storage->getValue(hash, value_cache));
 }
 
 int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {
