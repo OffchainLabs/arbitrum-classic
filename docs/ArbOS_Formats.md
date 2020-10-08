@@ -170,6 +170,24 @@ The destination address is encoded consistently with Ethereum: a zero address is
 
 **Subtype 6: heartbeat message** has no subtype-specific data. This message has no effect, except to notify ArbOS that the block number and timestamp in the enclosing L1 message has been reached. ArbOS merely notes the block number and timestamp, then discards the message.
 
+**Subtype 7: compressed signed tx** has subtype specific data of:
+
+- sequence number (RLP-encoded uint)
+- ArbGas price bid, in wei (RLP-encoded uint)
+- ArbGas limit (RLP-encoded uint)
+- destination [compressed address]
+- callvalue [(A,B) where A is an RLP-encoded uint and B is a byte; represents the value A*(10^B); if A==0 then omit B]
+- calldata [bytes]
+- r [32 byte uint, big-endian]
+- s [32 byte uint, big-endian]
+- v low-order byte of signature v
+
+Here, the compressed address is one of three things:
+
+- a single byte 0x80, which is interpreted as the null address
+- an RLP-encoding of a value 1-19 bytes in length, which is interpreted as an index into the IndexedAddressTable
+- an RLP-encoding of a 20-byte value which is interpreted as an address
+
 ## Logs
 
 ArbOS emits two types of log items: transaction receipts and block summaries.
