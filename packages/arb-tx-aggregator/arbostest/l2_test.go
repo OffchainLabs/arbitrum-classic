@@ -759,7 +759,7 @@ func TestCompressedECDSATx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	l2msg, err := message.NewL2Message(message.CompressedECDSATransaction{Tx: signedTx})
+	l2msg, err := message.NewL2Message(message.NewCompressedECDSAFromEth(signedTx))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -767,7 +767,7 @@ func TestCompressedECDSATx(t *testing.T) {
 	t.Log("Chain address:", chain)
 	t.Log("Chain ID:", message.ChainAddressToID(chain))
 	t.Log("Sender Address:", crypto.PubkeyToAddress(pk.PublicKey).Hex())
-	t.Log("TX:", message.CompressedECDSATransaction{Tx: signedTx})
+	t.Log("TX:", message.NewCompressedECDSAFromEth(signedTx))
 	t.Log("L2 message data:", hexutil.Encode(l2msg.Data))
 
 	messages = append(

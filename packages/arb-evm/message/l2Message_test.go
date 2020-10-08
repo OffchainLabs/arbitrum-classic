@@ -19,8 +19,6 @@ package message
 import (
 	"bytes"
 	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 	"testing"
 
@@ -96,14 +94,16 @@ func TestCompressedECDSAFormat(t *testing.T) {
 	if !correct {
 		t.Fatal("bad gas limit")
 	}
-	tx := types.NewTransaction(
-		0,
-		ethcommon.HexToAddress("0xf3657c93fad96709257a672ca0d6e651772e0349"),
-		big.NewInt(0),
-		gasLimit.Uint64(),
-		big.NewInt(0),
-		calldata,
-	)
+
+	dest := common.HexToAddress("0xf3657c93fad96709257a672ca0d6e651772e0349")
+	tx := CompressedTx{
+		SequenceNum: 0,
+		GasPrice:    big.NewInt(0),
+		GasLimit:    gasLimit.Uint64(),
+		To:          &dest,
+		Payment:     big.NewInt(0),
+		Calldata:    calldata,
+	}
 	encoded, err := encodeUnsignedTx(tx)
 	if err != nil {
 		t.Fatal(err)

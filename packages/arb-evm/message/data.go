@@ -123,20 +123,20 @@ func decodeAddress(r io.Reader) (*ethcommon.Address, error) {
 	panic("not implemented")
 }
 
-func encodeUnsignedTx(tx *types.Transaction) ([]byte, error) {
-	nonceData, err := rlp.EncodeToBytes(tx.Nonce())
+func encodeUnsignedTx(tx CompressedTx) ([]byte, error) {
+	nonceData, err := rlp.EncodeToBytes(tx.SequenceNum)
 	if err != nil {
 		return nil, err
 	}
-	gasPriceData, err := rlp.EncodeToBytes(tx.GasPrice())
+	gasPriceData, err := rlp.EncodeToBytes(tx.GasPrice)
 	if err != nil {
 		return nil, err
 	}
-	gasLimitData, err := rlp.EncodeToBytes(tx.Gas())
+	gasLimitData, err := rlp.EncodeToBytes(tx.GasLimit)
 	if err != nil {
 		return nil, err
 	}
-	paymentData, err := encodeAmount(tx.Value())
+	paymentData, err := encodeAmount(tx.Payment)
 	if err != nil {
 		return nil, err
 	}
@@ -145,17 +145,17 @@ func encodeUnsignedTx(tx *types.Transaction) ([]byte, error) {
 	data = append(data, nonceData...)
 	data = append(data, gasPriceData...)
 	data = append(data, gasLimitData...)
-	if tx.To() == nil {
+	if tx.To == nil {
 		data = append(data, 0x80)
 	} else {
-		destData, err := rlp.EncodeToBytes(tx.To().Bytes())
+		destData, err := rlp.EncodeToBytes(tx.To.Bytes())
 		if err != nil {
 			return nil, err
 		}
 		data = append(data, destData...)
 	}
 	data = append(data, paymentData...)
-	data = append(data, tx.Data()...)
+	data = append(data, tx.Calldata...)
 	return data, nil
 }
 
