@@ -17,16 +17,13 @@
 package message
 
 import (
-	"bytes"
 	"errors"
-	ethcommon "github.com/ethereum/go-ethereum/common"
+	"fmt"
 	ethmath "github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"io"
 	"io/ioutil"
-	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -96,7 +93,7 @@ func encodeAmount(amount *big.Int) ([]byte, error) {
 }
 
 func decodeAmount(r io.Reader) (*big.Int, error) {
-	var a *big.Int
+	a := new(big.Int)
 	if err := rlp.Decode(r, a); err != nil {
 		return nil, err
 	}
@@ -112,15 +109,59 @@ func decodeAmount(r io.Reader) (*big.Int, error) {
 	return amount.Mul(amount, a), nil
 }
 
-func decodeAddress(r io.Reader) (*ethcommon.Address, error) {
-	var rawAddr interface{}
-	if err := rlp.Decode(r, rawAddr); err != nil {
-		return nil, err
+type CompressedAddress interface {
+	fmt.Stringer
+	isCompressedAddress()
+	Encode() ([]byte, error)
+}
+
+type CompressedAddressIndex struct {
+	*big.Int
+}
+
+func (c CompressedAddressIndex) isCompressedAddress() {}
+
+func (c CompressedAddressIndex) Encode() ([]byte, error) {
+	return rlp.EncodeToBytes(c.Int)
+}
+
+func (c CompressedAddressIndex) String() string {
+	return fmt.Sprintf("Index[%v]", c)
+}
+
+type CompressedAddressFull struct {
+	common.Address
+}
+
+func (c CompressedAddressFull) isCompressedAddress() {}
+
+func (c CompressedAddressFull) Encode() ([]byte, error) {
+	return rlp.EncodeToBytes(c.Bytes())
+}
+
+func (c CompressedAddressFull) String() string {
+	return fmt.Sprintf("Address[%v]", c.Hex())
+}
+
+func decodeAddress(r io.Reader) (CompressedAddress, error) {
+	addressIndex := new(big.Int)
+	if err := rlp.Decode(r, addressIndex); err == nil {
+		return CompressedAddressIndex{addressIndex}, nil
 	}
-	if rawAddr, ok := rawAddr.([]byte); ok {
-		log.Println(rawAddr)
+	addressBytes := make([]byte, 0)
+	if err := rlp.Decode(r, addressBytes); err != nil {
+		return nil, fmt.Errorf("couldn't parse address")
 	}
-	panic("not implemented")
+
+	if len(addressBytes) == 0 {
+		return nil, nil
+	}
+	if len(addressBytes) == 20 {
+		var address common.Address
+		copy(address[:], addressBytes)
+		return CompressedAddressFull{address}, nil
+	}
+	return nil, fmt.Errorf("unexpected address length %v", len(addressBytes))
 }
 
 func encodeUnsignedTx(tx CompressedTx) ([]byte, error) {
@@ -148,7 +189,7 @@ func encodeUnsignedTx(tx CompressedTx) ([]byte, error) {
 	if tx.To == nil {
 		data = append(data, 0x80)
 	} else {
-		destData, err := rlp.EncodeToBytes(tx.To.Bytes())
+		destData, err := tx.To.Encode()
 		if err != nil {
 			return nil, err
 		}
@@ -159,43 +200,44 @@ func encodeUnsignedTx(tx CompressedTx) ([]byte, error) {
 	return data, nil
 }
 
-func decodeUnsignedTx(data []byte) (*types.Transaction, error) {
-	r := bytes.NewReader(data)
-
-	var nonce *big.Int
+func decodeCompressedTx(r io.Reader) (CompressedTx, error) {
+	nonce := new(big.Int)
 	if err := rlp.Decode(r, nonce); err != nil {
-		return nil, err
+		return CompressedTx{}, err
 	}
 
-	var gasPrice *big.Int
+	gasPrice := new(big.Int)
 	if err := rlp.Decode(r, gasPrice); err != nil {
-		return nil, err
+		return CompressedTx{}, err
+	}
+
+	gasLimit := new(big.Int)
+	if err := rlp.Decode(r, gasLimit); err != nil {
+		return CompressedTx{}, err
 	}
 
 	address, err := decodeAddress(r)
 	if err != nil {
-		return nil, err
-	}
-
-	var gasLimit *big.Int
-	if err := rlp.Decode(r, gasLimit); err != nil {
-		return nil, err
+		return CompressedTx{}, err
 	}
 
 	payment, err := decodeAmount(r)
 	if err != nil {
-		return nil, err
+		return CompressedTx{}, err
 	}
 
 	calldata, err := ioutil.ReadAll(r)
 	if err != nil {
-		return nil, err
+		return CompressedTx{}, err
 	}
-	if address != nil {
-		return types.NewTransaction(nonce.Uint64(), *address, payment, gasLimit.Uint64(), gasPrice, calldata), nil
-	} else {
-		return types.NewContractCreation(nonce.Uint64(), payment, gasLimit.Uint64(), gasPrice, calldata), nil
-	}
+	return CompressedTx{
+		SequenceNum: nonce,
+		GasPrice:    gasPrice,
+		GasLimit:    gasLimit,
+		To:          address,
+		Payment:     payment,
+		Calldata:    calldata,
+	}, nil
 
 }
 
@@ -206,4 +248,20 @@ func encodeECDSASig(v, r, s *big.Int) []byte {
 	data = append(data, ethmath.U256Bytes(s)...)
 	data = append(data, vBit)
 	return data
+}
+
+func decodeECDSASig(rd io.Reader) (v, r, s *big.Int, err error) {
+	rData := make([]byte, 32)
+	if count, _ := rd.Read(rData); count != len(rData) {
+		return nil, nil, nil, errors.New("couldn't read r")
+	}
+	sData := make([]byte, 32)
+	if count, _ := rd.Read(sData); count != len(sData) {
+		return nil, nil, nil, errors.New("couldn't read s")
+	}
+	vData := make([]byte, 1)
+	if count, _ := rd.Read(vData); count != len(vData) {
+		return nil, nil, nil, errors.New("couldn't read v")
+	}
+	return new(big.Int).SetBytes(vData), new(big.Int).SetBytes(rData), new(big.Int).SetBytes(sData), nil
 }

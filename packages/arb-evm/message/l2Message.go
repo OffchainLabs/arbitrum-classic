@@ -121,7 +121,7 @@ func (l L2Message) AbstractMessage() (AbstractL2Message, error) {
 	case SignedTransactionType:
 		return newSignedTransactionFromData(data)
 	case CompressedECDSA:
-		return newSignedTransactionFromData(data)
+		return newCompressedECDSATxFromData(data)
 	default:
 		return nil, errors.New("invalid l2 l2message type")
 	}
@@ -394,24 +394,23 @@ func (t SignedTransaction) AsData() ([]byte, error) {
 }
 
 type CompressedTx struct {
-	SequenceNum uint64
+	SequenceNum *big.Int
 	GasPrice    *big.Int
-	GasLimit    uint64
-	To          *common.Address
+	GasLimit    *big.Int
+	To          CompressedAddress
 	Payment     *big.Int
 	Calldata    []byte
 }
 
 func newCompressedTxFromEth(tx *types.Transaction) CompressedTx {
-	var to *common.Address
+	var to CompressedAddress
 	if tx.To() != nil {
-		tmp := common.NewAddressFromEth(*tx.To())
-		to = &tmp
+		to = CompressedAddressFull{common.NewAddressFromEth(*tx.To())}
 	}
 	return CompressedTx{
-		SequenceNum: tx.Nonce(),
+		SequenceNum: new(big.Int).SetUint64(tx.Nonce()),
 		GasPrice:    tx.GasPrice(),
-		GasLimit:    tx.Gas(),
+		GasLimit:    new(big.Int).SetUint64(tx.Gas()),
 		To:          to,
 		Payment:     tx.Value(),
 		Calldata:    tx.Data(),
@@ -436,10 +435,31 @@ func NewCompressedECDSAFromEth(tx *types.Transaction) CompressedECDSATransaction
 	}
 }
 
+func newCompressedECDSATxFromData(data []byte) (CompressedECDSATransaction, error) {
+	if len(data) < 65 {
+		return CompressedECDSATransaction{}, errors.New("data is too short")
+	}
+
+	compressedTx, err := decodeCompressedTx(bytes.NewReader(data[:len(data)-65]))
+	if err != nil {
+		return CompressedECDSATransaction{}, err
+	}
+	v, r, s, err := decodeECDSASig(bytes.NewReader(data[len(data)-65:]))
+	if err != nil {
+		return CompressedECDSATransaction{}, err
+	}
+	return CompressedECDSATransaction{
+		CompressedTx: compressedTx,
+		V:            v,
+		R:            r,
+		S:            s,
+	}, nil
+}
+
 func (t CompressedECDSATransaction) String() string {
 	dest := "ContractCreation"
 	if t.To != nil {
-		dest = t.To.Hex()
+		dest = t.To.String()
 	}
 	return fmt.Sprintf("CompressedECDSATransaction(%v, %v, %v, %v, %v, 0x%X)", t.SequenceNum, t.GasPrice, t.GasLimit, dest, t.Payment, t.Calldata)
 }
