@@ -26,6 +26,7 @@
 
 #include <avm_values/vmValueParser.hpp>
 
+#define CATCH_CONFIG_ENABLE_BENCHMARKING 1
 #include <catch2/catch.hpp>
 
 void saveValue(Transaction& transaction,
@@ -270,6 +271,29 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(*transaction, tuple, 1, true);
         getTuple(*transaction, inner_tuple, 2, true);
     }
+}
+
+TEST_CASE("Checkpoint Benchmark") {
+    DBDeleter deleter;
+    CheckpointStorage storage(dbpath);
+    auto transaction = storage.makeTransaction();
+    uint256_t num = 1;
+    value tuple = Tuple(num);
+    for (uint64_t i = 1; i < 10000; i++) {
+        tuple = Tuple(tuple);
+    }
+    saveValue(*transaction, tuple);
+
+    auto tuple_hash = hash_value(tuple);
+    // Initial get to populate cache
+    getValue(*transaction, tuple_hash);
+
+    BENCHMARK_ADVANCED("restoreCheckpoint1")
+    (Catch::Benchmark::Chronometer meter) {
+        meter.measure([&transaction, tuple_hash] {
+            return getValue(*transaction, tuple_hash);
+        });
+    };
 }
 
 void saveState(Transaction& transaction,
