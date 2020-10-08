@@ -43,7 +43,7 @@ contract Merkle {
         else return 1+calcHeight(loc>>1);
     }
 
-    function set(bytes32 buf, uint loc, bytes32 v, bytes32[] memory proof) public view returns (bytes32) {
+    function set(bytes32 buf, uint loc, bytes32 v, bytes32[] memory proof, uint loc2, bytes32[] memory proof2) public view returns (bytes32) {
         // three possibilities, the tree depth stays same, it becomes lower or it's extended
         bytes32 acc = keccak1(v);
         // check that the proof matches original
@@ -63,17 +63,29 @@ contract Merkle {
             }
             return keccak2(buf, acc);
         }
-        bytes32 last_nonzero = zeros[0];
         for (uint i = 1; i < proof.length; i++) {
             bytes32 a = loc & 1 == 1 ? proof[i] : acc;
             bytes32 b = loc & 1 == 1 ? acc : proof[i];
             acc = keccak2(a, b);
-            if (b != zeros[i]) {
-                last_nonzero = acc;
-            }
             loc = loc >> 1;
         }
-        return last_nonzero;
+        if (v != bytes32(0)) return acc;
+        require(proof2.length <= proof.length);
+        require(proof2.length > 0);
+        bytes32 acc2 = keccak1(proof2[0]);
+        for (uint i = 1; i < proof2.length-1; i++) {
+            if (loc2 & 1 == 1) acc2 = keccak2(acc2, proof2[i]);
+            else acc2 = keccak2(proof2[i], acc2);
+            loc2 = loc2 >> 1;
+        }
+        require(acc2 != zeros[proof2.length]);
+        bytes32 res = keccak2(proof2[proof2.length-1], acc2);
+        acc2 = res;
+        for (uint i = proof.length-1; i < proof.length; i++) {
+            acc2 = keccak2(res, zeros[i]);
+        }
+        require(acc2 == acc);
+        return res;
     }
     
 }
