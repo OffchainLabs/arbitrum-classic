@@ -30,6 +30,12 @@ inline uint64_t calc_len(int h) {
     return 128*calc_len(h-1);
 }
 
+struct Packed {
+    uint256_t hash;
+    int size; // total size
+    int packed; // packed levels
+};
+
 class Buffer {
    private:
     bool is_leaf;
@@ -182,11 +188,12 @@ class Buffer {
         }
     }
 
+    uint256_t hash() const;
+    Packed hash_aux() const;
+
 };
 
-inline uint256_t hash(const Buffer&) {
-    return 0;
-}
+uint256_t hash(const Buffer&);
 
 inline bool operator==(const Buffer& val1, const Buffer& val2) {
     return hash(val1) == hash(val2);
