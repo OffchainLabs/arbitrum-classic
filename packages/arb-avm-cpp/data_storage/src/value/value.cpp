@@ -40,6 +40,7 @@ Buffer deserializeBuffer(const char* buf, uint64_t size) {
     for (uint64_t i = 0; i < size/1024; i++) {
         res = res.set_many(i*1024, std::vector<uint8_t>(buf+i*1024, buf+i*1024+1024));
     }
+    // std::cerr << "De Serialized " << res.size() << " hash " << res.hash() << std::endl;
     return res;
 }
 
@@ -170,6 +171,7 @@ std::vector<value> serializeValue(const Buffer&b,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(BUFFER);
+    // std::cerr << "Serialized " << b.size() << " hash " << b.hash() << std::endl;
     marshal_uint256_t(b.size(), value_vector);
     for (uint64_t i = 0; i < b.size(); i++) {
         value_vector.push_back(b.get(i));

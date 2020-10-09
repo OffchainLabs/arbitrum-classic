@@ -40,6 +40,7 @@ class Buffer {
    private:
     bool is_leaf;
     int level;
+    uint256_t savedHash;
 
     std::shared_ptr<std::vector<uint8_t> > leaf;
     std::shared_ptr<std::vector<Buffer> > node;
@@ -47,16 +48,19 @@ class Buffer {
     Buffer(std::shared_ptr<std::vector<uint8_t> > leaf_) : leaf(leaf_), node(nullptr) {
         is_leaf = true;
         level = 0;
+        savedHash = 0;
     }
 
     Buffer(std::shared_ptr<std::vector<Buffer> > node_, int level_) : leaf(nullptr), node(node_) {
         is_leaf = false;
         level = level_;
+        savedHash = 0;
     }
 
     Buffer(int level_, bool) : leaf(nullptr), node(nullptr) {
         is_leaf = (level_ == 0);
         level = level_;
+        savedHash = 0;
     }
 
    public:
@@ -64,6 +68,7 @@ class Buffer {
         // std::cerr << "creating buffer\n";
         is_leaf = true;
         level = 0;
+        savedHash = 0;
     }
 
     Buffer set(uint64_t offset, uint8_t v) {
@@ -186,8 +191,8 @@ class Buffer {
         }
     }
 
-    uint256_t hash() const;
-    Packed hash_aux() const;
+    uint256_t hash();
+    Packed hash_aux();
 
     uint64_t size() const {
         return calc_len(level);
@@ -198,6 +203,7 @@ class Buffer {
 uint256_t hash(const Buffer&);
 
 inline bool operator==(const Buffer& val1, const Buffer& val2) {
+    std::cerr << "Test eq " << std::endl;
     return hash(val1) == hash(val2);
 }
 

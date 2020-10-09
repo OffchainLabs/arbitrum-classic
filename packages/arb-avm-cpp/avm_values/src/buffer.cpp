@@ -62,6 +62,7 @@ Packed hash_buf(uint8_t *buf, int offset, int sz) {
         uint256_t res = intx::be::load<uint256_t>(hash_val);
         return normal(res, 32);
     }
+    // std::cerr << "hashing " << offset << " to " << (offset+sz) << std::endl;
     auto h1 = hash_buf(buf, offset, sz/2);
     auto h2 = hash_buf(buf, offset+sz/2, sz/2);
     if (is_zero_hash(h2)) {
@@ -71,36 +72,44 @@ Packed hash_buf(uint8_t *buf, int offset, int sz) {
 }
 
 Packed hash_node(Buffer *buf, int offset, int len, int sz) {
+    //    std::cerr << "hashing " << sz << " " << offset << " " << len << std::endl;
     if (len == 1) {
         return buf[0].hash_aux();
     }
     auto h1 = hash_node(buf, offset, len/2, sz/2);
     auto h2 = hash_node(buf, offset + len/2, len/2, sz/2);
+    //    std::cerr << "hashed " << sz << " " << offset << " " << len << std::endl;
     if (is_zero_hash(h2)) {
         return pack(h1);
     }
     return normal(hash(unpack(h1), unpack(h2)), sz);
 }
 
-uint256_t Buffer::hash() const {
-    return hash_aux().hash;
+uint256_t Buffer::hash() {
+    if (savedHash) {
+        std::cerr << "found saved hash" << std::endl;
+        return savedHash;
+    }
+    uint256_t res = hash_aux().hash;
+    std::cerr << "Finished hashing " << size() << std::endl;
+    return res;
 }
 
-Packed Buffer::hash_aux() const {
+Packed Buffer::hash_aux() {
+    Packed res;
     if (level == 0) {
-        if (!leaf) {
-            return zero_packed(1024);
-        }
-        return hash_buf(leaf->data(), 0, 1024);
+        if (!leaf) res = zero_packed(1024);
+        else res = hash_buf(leaf->data(), 0, 1024);
     } else {
-        if (!leaf) {
-            return zero_packed(calc_len(level));
-        }
-        return hash_node(node->data(), 0, 128, calc_len(level));
+        if (!node) res = zero_packed(calc_len(level));
+        else res = hash_node(node->data(), 0, 128, calc_len(level));
     }
+    savedHash = res.hash;
+    return res;
 }
 
 uint256_t hash(const Buffer& b) {
-    return b.hash();
+    auto unsafe = const_cast<Buffer&>(b);
+    return unsafe.hash();
 }
 
