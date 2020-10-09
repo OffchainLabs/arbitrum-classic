@@ -30,7 +30,7 @@ class Datastack {
     // This serves to bound the total time it can take to hash the machine
     // while removing the need to hash the stack while churn is occuring
     // near the top
-    static constexpr int lazyCount = 10000;
+    static constexpr int lazyCount = 15000;
 
     void addHash() const;
     void calculateAllHashes() const;

@@ -1068,6 +1068,7 @@ void setbuffer8(MachineState& m) {
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();
+    // std::cerr << "hmm setting " << offset << std::endl;
     md.set(offset, val);
     m.stack.push(md.set(offset, val));
     ++m.pc;
@@ -1097,7 +1098,7 @@ void setbuffer256(MachineState& m) {
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();
-    // std::cerr << "hmm setting " << offset << std::endl;
+    // std::cerr << "hmm SETTING " << offset << std::endl;
     auto buf = std::vector<uint8_t>(32);
     for (int i = 0; i < 32; i++) {
         buf[31-i] = static_cast<uint8_t>(val&0xff);

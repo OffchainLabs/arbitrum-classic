@@ -36,52 +36,69 @@ struct Packed {
     int packed; // packed levels
 };
 
-class Buffer {
+Packed zero_packed(int sz);
+
+class RawBuffer {
    private:
     bool is_leaf;
     int level;
-    uint256_t savedHash;
+    bool saved;
+    Packed savedHash;
 
     std::shared_ptr<std::vector<uint8_t> > leaf;
-    std::shared_ptr<std::vector<Buffer> > node;
+    std::shared_ptr<std::vector<RawBuffer> > node;
 
-    Buffer(std::shared_ptr<std::vector<uint8_t> > leaf_) : leaf(leaf_), node(nullptr) {
+/*
+    RawBuffer(const RawBuffer& copy) : leaf(copy.leaf), node(copy.node) {
+        is_leaf = copy.is_leaf;
+        level = copy.level;
+        saved = copy.saved;
+        savedHash = copy.savedHash;
+    }
+*/
+
+    RawBuffer(std::shared_ptr<std::vector<uint8_t> > leaf_) : leaf(leaf_), node(nullptr) {
+        // std::cerr << "creating buffer 0" << std::endl;
         is_leaf = true;
         level = 0;
-        savedHash = 0;
+        saved = false;
     }
 
-    Buffer(std::shared_ptr<std::vector<Buffer> > node_, int level_) : leaf(nullptr), node(node_) {
+    RawBuffer(std::shared_ptr<std::vector<RawBuffer> > node_, int level_) : leaf(nullptr), node(node_) {
+        // std::cerr << "creating buffer " << level_ << std::endl;
         is_leaf = false;
         level = level_;
-        savedHash = 0;
+        saved = false;
     }
 
-    Buffer(int level_, bool) : leaf(nullptr), node(nullptr) {
+    RawBuffer(int level_, bool) : leaf(nullptr), node(nullptr) {
+        // std::cerr << "creating buffer " << level_ << std::endl;
         is_leaf = (level_ == 0);
         level = level_;
-        savedHash = 0;
+        saved = true;
+        savedHash = zero_packed(calc_len(level));
     }
 
    public:
-    Buffer() : leaf(nullptr), node(nullptr) {
+    RawBuffer() : leaf(nullptr), node(nullptr) {
         // std::cerr << "creating buffer\n";
         is_leaf = true;
         level = 0;
-        savedHash = 0;
+        saved = true;
+        savedHash = zero_packed(1024);
     }
 
-    Buffer set(uint64_t offset, uint8_t v) {
+    RawBuffer set(uint64_t offset, uint8_t v) {
         // std::cerr << "setting buffer " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
         if (is_leaf) {
             if (offset >= 1024) {
                 std::shared_ptr<std::vector<uint8_t> > empty = std::make_shared<std::vector<uint8_t>>();
-                std::shared_ptr<std::vector<Buffer> > vec = std::make_shared<std::vector<Buffer>>();
-                vec->push_back(Buffer(leaf));
+                std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
+                vec->push_back(RawBuffer(leaf));
                 for (int i = 1; i < 128; i++) {
-                    vec->push_back(Buffer(empty));
+                    vec->push_back(RawBuffer(empty));
                 }
-                Buffer buf = Buffer(vec, 1);
+                RawBuffer buf = RawBuffer(vec, 1);
                 return buf.set(offset, v);
             }
             auto buf = leaf ? std::make_shared<std::vector<uint8_t> >(*leaf) : std::make_shared<std::vector<uint8_t> >();
@@ -91,35 +108,35 @@ class Buffer {
             }
             (*buf)[offset] = v;
             // std::cerr << "updated leaf " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
-            return Buffer(buf);
+            return RawBuffer(buf);
         } else {
             if (offset >= calc_len(level)) {
-                std::shared_ptr<std::vector<Buffer> > vec = std::make_shared<std::vector<Buffer>>();
-                vec->push_back(Buffer(node, level));
+                std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
+                vec->push_back(RawBuffer(node, level));
                 for (int i = 1; i < 128; i++) {
-                    vec->push_back(Buffer(level, true));
+                    vec->push_back(RawBuffer(level, true));
                 }
-                Buffer buf = Buffer(vec, level+1);
+                RawBuffer buf = RawBuffer(vec, level+1);
                 return buf.set(offset, v);
             }
-            auto vec = std::make_shared<std::vector<Buffer> >(node ? *node : Buffer::make_empty(level-1));
+            auto vec = std::make_shared<std::vector<RawBuffer> >(node ? *node : RawBuffer::make_empty(level-1));
             auto cell_len = calc_len(level-1);
             (*vec)[offset / cell_len] = (*vec)[offset / cell_len].set(offset % cell_len, v);
-            return Buffer(vec, level);
+            return RawBuffer(vec, level);
         }
     }
 
-    Buffer set_many(uint64_t offset, std::vector<uint8_t> arr) {
+    RawBuffer set_many(uint64_t offset, std::vector<uint8_t> arr) {
         // std::cerr << "setting buffer " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
         if (is_leaf) {
             if (offset >= 1024) {
                 std::shared_ptr<std::vector<uint8_t> > empty = std::make_shared<std::vector<uint8_t>>();
-                std::shared_ptr<std::vector<Buffer> > vec = std::make_shared<std::vector<Buffer>>();
-                vec->push_back(Buffer(leaf));
+                std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
+                vec->push_back(RawBuffer(leaf));
                 for (int i = 1; i < 128; i++) {
-                    vec->push_back(Buffer(empty));
+                    vec->push_back(RawBuffer(empty));
                 }
-                Buffer buf = Buffer(vec, 1);
+                RawBuffer buf = RawBuffer(vec, 1);
                 return buf.set_many(offset, arr);
             }
             auto buf = leaf ? std::make_shared<std::vector<uint8_t> >(*leaf) : std::make_shared<std::vector<uint8_t> >();
@@ -131,28 +148,28 @@ class Buffer {
                 (*buf)[offset+i] = arr[i];
             }
             // std::cerr << "updated leaf " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
-            return Buffer(buf);
+            return RawBuffer(buf);
         } else {
             if (offset >= calc_len(level)) {
-                std::shared_ptr<std::vector<Buffer> > vec = std::make_shared<std::vector<Buffer>>();
-                vec->push_back(Buffer(node, level));
+                std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
+                vec->push_back(RawBuffer(node, level));
                 for (int i = 1; i < 128; i++) {
-                    vec->push_back(Buffer(level, true));
+                    vec->push_back(RawBuffer(level, true));
                 }
-                Buffer buf = Buffer(vec, level+1);
+                RawBuffer buf = RawBuffer(vec, level+1);
                 return buf.set_many(offset, arr);
             }
-            auto vec = std::make_shared<std::vector<Buffer> >(node ? *node : Buffer::make_empty(level-1));
+            auto vec = std::make_shared<std::vector<RawBuffer> >(node ? *node : RawBuffer::make_empty(level-1));
             auto cell_len = calc_len(level-1);
             (*vec)[offset / cell_len] = (*vec)[offset / cell_len].set_many(offset % cell_len, arr);
-            return Buffer(vec, level);
+            return RawBuffer(vec, level);
         }
     }
 
-    static std::vector<Buffer> make_empty(int level) {
-        auto vec = std::vector<Buffer>();
+    static std::vector<RawBuffer> make_empty(int level) {
+        auto vec = std::vector<RawBuffer>();
         for (int i = 0; i < 128; i++) {
-            vec.push_back(Buffer(level, true));
+            vec.push_back(RawBuffer(level, true));
         }
         return vec;
     }
@@ -200,10 +217,51 @@ class Buffer {
 
 };
 
-uint256_t hash(const Buffer&);
+class Buffer {
+   private:
+    std::shared_ptr<RawBuffer> buf;
+
+    Buffer(const RawBuffer &buffer) {
+        buf = std::make_shared<RawBuffer>(buffer);
+    }
+
+   public:
+    Buffer() {
+        buf = std::make_shared<RawBuffer>();
+    }
+
+    Buffer set(uint64_t offset, uint8_t v) {
+        return Buffer(buf->set(offset, v));
+    }
+
+    Buffer set_many(uint64_t offset, std::vector<uint8_t> arr) {
+        return Buffer(buf->set_many(offset, arr));
+    }
+
+    uint8_t get(uint64_t pos) const {
+        return buf->get(pos);
+    }
+
+    std::vector<uint8_t> get_many(uint64_t pos, int len) const {
+        return buf->get_many(pos, len);
+    }
+
+    uint64_t size() const {
+        return buf->size();
+    }
+
+    uint256_t hash() const {
+        return buf->hash();
+    }
+
+};
+
+inline uint256_t hash(const Buffer& b) {
+    return b.hash();
+}
+
 
 inline bool operator==(const Buffer& val1, const Buffer& val2) {
-    std::cerr << "Test eq " << std::endl;
     return hash(val1) == hash(val2);
 }
 

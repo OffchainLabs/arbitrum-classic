@@ -71,7 +71,7 @@ Packed hash_buf(uint8_t *buf, int offset, int sz) {
     return normal(hash(unpack(h1), unpack(h2)), sz);
 }
 
-Packed hash_node(Buffer *buf, int offset, int len, int sz) {
+Packed hash_node(RawBuffer *buf, int offset, int len, int sz) {
     //    std::cerr << "hashing " << sz << " " << offset << " " << len << std::endl;
     if (len == 1) {
         return buf[0].hash_aux();
@@ -85,31 +85,32 @@ Packed hash_node(Buffer *buf, int offset, int len, int sz) {
     return normal(hash(unpack(h1), unpack(h2)), sz);
 }
 
-uint256_t Buffer::hash() {
-    if (savedHash) {
-        std::cerr << "found saved hash" << std::endl;
-        return savedHash;
-    }
+uint256_t RawBuffer::hash() {
     uint256_t res = hash_aux().hash;
-    std::cerr << "Finished hashing " << size() << std::endl;
+    // std::cerr << "Finished hashing " << size() << ":" << static_cast<uint64_t>(res) << std::endl;
     return res;
 }
 
-Packed Buffer::hash_aux() {
+Packed RawBuffer::hash_aux() {
+    if (saved) {
+        // std::cerr << "found saved hash" << std::endl;
+        return savedHash;
+    }
     Packed res;
     if (level == 0) {
+        // std::cerr << "Hashing buffer..." << std::endl;
         if (!leaf) res = zero_packed(1024);
         else res = hash_buf(leaf->data(), 0, 1024);
     } else {
         if (!node) res = zero_packed(calc_len(level));
-        else res = hash_node(node->data(), 0, 128, calc_len(level));
+        else {
+            // std::cerr << "Hashing node..." << static_cast<void*>(this) << std::endl;
+            res = hash_node(node->data(), 0, 128, calc_len(level));
+        }
     }
-    savedHash = res.hash;
+    saved = true;
+    savedHash = res;
+    // std::cerr << "Finished hashing " << size() << ":" << static_cast<uint64_t>(res.hash) << " ? " << saved << std::endl;
     return res;
-}
-
-uint256_t hash(const Buffer& b) {
-    auto unsafe = const_cast<Buffer&>(b);
-    return unsafe.hash();
 }
 

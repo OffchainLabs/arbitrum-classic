@@ -102,8 +102,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    std::cerr << "Where" << std::endl;
-
     auto assertion = mach.run(10000000000000, std::move(inbox_messages),
                               std::chrono::seconds(0));
 
