@@ -22,6 +22,7 @@ import (
 	ethmath "github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	errors2 "github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -144,23 +145,25 @@ func (c CompressedAddressFull) String() string {
 }
 
 func decodeAddress(r io.Reader) (CompressedAddress, error) {
-	addressIndex := new(big.Int)
-	if err := rlp.Decode(r, addressIndex); err == nil {
-		return CompressedAddressIndex{addressIndex}, nil
-	}
 	addressBytes := make([]byte, 0)
-	if err := rlp.Decode(r, addressBytes); err != nil {
-		return nil, fmt.Errorf("couldn't parse address")
+	if err := rlp.Decode(r, &addressBytes); err != nil {
+		return nil, errors2.Wrap(err, "couldn't parse address")
 	}
 
 	if len(addressBytes) == 0 {
 		return nil, nil
 	}
+
+	if len(addressBytes) < 20 {
+		return CompressedAddressIndex{new(big.Int).SetBytes(addressBytes)}, nil
+	}
+
 	if len(addressBytes) == 20 {
 		var address common.Address
 		copy(address[:], addressBytes)
 		return CompressedAddressFull{address}, nil
 	}
+
 	return nil, fmt.Errorf("unexpected address length %v", len(addressBytes))
 }
 
