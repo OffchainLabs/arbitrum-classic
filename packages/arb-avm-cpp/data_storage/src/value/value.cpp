@@ -36,10 +36,9 @@ struct ValueHash {
 };
 
 Buffer deserializeBuffer(const char* buf, uint64_t size) {
-    std::cerr << "reading buffer " << size << std::endl;
     Buffer res;
-    for (uint64_t i = 0; i < size; i++) {
-        res = res.set(i, buf[i]);
+    for (uint64_t i = 0; i < size/1024; i++) {
+        res = res.set_many(i*1024, std::vector<uint8_t>(buf+i*1024, buf+i*1024+1024));
     }
     return res;
 }
@@ -171,10 +170,8 @@ std::vector<value> serializeValue(const Buffer&b,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(BUFFER);
-    std::cerr << "searilizing " << b.size() << std::endl;
     marshal_uint256_t(b.size(), value_vector);
     for (uint64_t i = 0; i < b.size(); i++) {
-        // std::cerr << "searilizing " << i << std::endl;
         value_vector.push_back(b.get(i));
     }
     return {};
