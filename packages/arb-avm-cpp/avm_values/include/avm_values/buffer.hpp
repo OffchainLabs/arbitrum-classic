@@ -153,15 +153,14 @@ class Buffer {
     }
 
     uint8_t get(uint64_t pos) const {
-        // std::cerr << "getting buffer " << pos << std::endl;
         if (is_leaf) {
             if (!leaf) return 0;
-            if (leaf->size() < pos) return 0;
+            if (leaf->size() <= pos) return 0;
             return (*leaf)[pos];
         } else {
             uint64_t len = calc_len(level);
             uint64_t cell_len = calc_len(level-1);
-            if (pos > len || !node) {
+            if (pos > len || !node || (pos / cell_len) >= node->size()) {
                 return 0;
             }
             return (*node)[pos / cell_len].get(pos % cell_len);
@@ -169,7 +168,6 @@ class Buffer {
     }
 
     std::vector<uint8_t> get_many(uint64_t pos, int len) const {
-        // std::cerr << "getting buffer " << pos << std::endl;
         if (is_leaf) {
             auto res = std::vector<uint8_t>(len, 0);
             for (int i = 0; i < len; i++) {
@@ -190,6 +188,10 @@ class Buffer {
 
     uint256_t hash() const;
     Packed hash_aux() const;
+
+    uint64_t size() const {
+        return calc_len(level);
+    }
 
 };
 

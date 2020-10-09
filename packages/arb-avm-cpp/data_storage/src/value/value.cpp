@@ -26,7 +26,7 @@
 
 constexpr int TUP_TUPLE_LENGTH = 33;
 constexpr int TUP_NUM_LENGTH = 33;
-constexpr int TUP_BUFFER_LENGTH = 1;
+constexpr int TUP_BUFFER_LENGTH = 33;
 constexpr int TUP_CODEPT_LENGTH = 49;
 
 namespace {
@@ -35,10 +35,19 @@ struct ValueHash {
     uint256_t hash;
 };
 
+Buffer deserializeBuffer(const char* buf, uint64_t size) {
+    std::cerr << "reading buffer " << size << std::endl;
+    Buffer res;
+    for (uint64_t i = 0; i < size; i++) {
+        res = res.set(i, buf[i]);
+    }
+    return res;
+}
+
 using ParsedTupVal = nonstd::variant<uint256_t, CodePointStub, Buffer, ValueHash>;
 
 using ParsedSerializedVal =
-    nonstd::variant<uint256_t, CodePointStub, std::vector<ParsedTupVal>>;
+    nonstd::variant<uint256_t, CodePointStub, Buffer, std::vector<ParsedTupVal>>;
 
 std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
     std::vector<ParsedTupVal> return_vector;
@@ -54,8 +63,9 @@ std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
 
         switch (value_type) {
             case BUFFER: {
-                return_vector.push_back(Buffer());
-                iter += TUP_BUFFER_LENGTH;
+                uint64_t size = static_cast<uint64_t>(deserializeUint256t(buf));
+                iter += TUP_BUFFER_LENGTH + size;
+                return_vector.push_back(deserializeBuffer(buf+TUP_BUFFER_LENGTH-1, size));
                 break;
             }
             case NUM: {
@@ -100,6 +110,10 @@ ParsedSerializedVal parseRecord(const std::vector<unsigned char>& data) {
         }
         case HASH_PRE_IMAGE: {
             throw std::runtime_error("HASH_ONLY item");
+        }
+        case BUFFER: {
+            uint64_t size = static_cast<uint64_t>(deserializeUint256t(buf));
+            return deserializeBuffer(buf+TUP_BUFFER_LENGTH-1, size);
         }
         default: {
             if (value_type - TUPLE > 8) {
@@ -153,10 +167,16 @@ std::vector<value> serializeValue(const HashPreImage&,
                                   std::map<uint64_t, uint64_t>&) {
     throw std::runtime_error("Can't serialize hash preimage in db");
 }
-std::vector<value> serializeValue(const Buffer&,
+std::vector<value> serializeValue(const Buffer&b,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(BUFFER);
+    std::cerr << "searilizing " << b.size() << std::endl;
+    marshal_uint256_t(b.size(), value_vector);
+    for (uint64_t i = 0; i < b.size(); i++) {
+        // std::cerr << "searilizing " << i << std::endl;
+        value_vector.push_back(b.get(i));
+    }
     return {};
 }
 std::vector<value> serializeValue(
@@ -172,6 +192,9 @@ std::vector<value> serializeValue(
 
 // Returns a list of value hashes to be deleted
 void deleteParsedValue(const uint256_t&,
+                       std::vector<uint256_t>&,
+                       std::map<uint64_t, uint64_t>&) {}
+void deleteParsedValue(const Buffer&,
                        std::vector<uint256_t>&,
                        std::map<uint64_t, uint64_t>&) {}
 void deleteParsedValue(const CodePointStub& cp,
