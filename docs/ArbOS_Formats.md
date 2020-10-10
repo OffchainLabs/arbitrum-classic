@@ -176,7 +176,7 @@ The destination address is encoded consistently with Ethereum: a zero address is
 - ArbGas price bid, in wei (RLP-encoded uint)
 - ArbGas limit (RLP-encoded uint)
 - destination [compressed address]
-- callvalue [(A,B) where A is an RLP-encoded uint and B is a byte; represents the value A*(10^B); if A==0 then omit B]
+- callvalue [compressed amount]
 - calldata [bytes]
 - r [32 byte uint, big-endian]
 - s [32 byte uint, big-endian]
@@ -184,9 +184,14 @@ The destination address is encoded consistently with Ethereum: a zero address is
 
 Here, the compressed address is one of three things:
 
-- a single byte 0x80, which is interpreted as the null address
+- an RLP encoding of a null value interpreted as the null address
 - an RLP-encoding of a value 1-19 bytes in length, which is interpreted as an index into the IndexedAddressTable
 - an RLP-encoding of a 20-byte value which is interpreted as an address
+
+Compressed amount is encoded in scientific notation as A\*10^B:
+
+- A is an RLP-encoded uint
+- If A > 0, include B as a byte, otherwise do nothing
 
 ## Logs
 
