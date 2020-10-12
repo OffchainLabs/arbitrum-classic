@@ -49,9 +49,9 @@ type RPCEthClient struct {
 }
 
 type BlockInfo struct {
-	Hash       common.Hash `json:"hash"`
-	ParentHash common.Hash `json:"parentHash"`
-	Time       uint64      `json:"timestamp"`
+	Hash       common.Hash    `json:"hash"`
+	ParentHash common.Hash    `json:"parentHash"`
+	Time       hexutil.Uint64 `json:"timestamp"`
 }
 
 func NewRPCEthClient(url string) (*RPCEthClient, error) {
@@ -104,6 +104,6 @@ func (r *SimulatedEthClient) BlockInfoByNumber(ctx context.Context, number *big.
 	return &BlockInfo{
 		Hash:       header.Hash(),
 		ParentHash: header.ParentHash,
-		Time:       header.Time,
+		Time:       hexutil.Uint64(header.Time),
 	}, nil
 }

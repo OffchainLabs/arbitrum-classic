@@ -123,7 +123,7 @@ func (c *EthArbClient) subscribeBlockHeadersAfter(ctx context.Context, prevBlock
 				Height:     common.NewTimeBlocks(targetHeight),
 				HeaderHash: common.NewHashFromEth(blockInfo.Hash),
 			}
-			blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId, Timestamp: new(big.Int).SetUint64(blockInfo.Time)}
+			blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId, Timestamp: new(big.Int).SetUint64(uint64(blockInfo.Time))}
 		}
 	}()
 	return nil
