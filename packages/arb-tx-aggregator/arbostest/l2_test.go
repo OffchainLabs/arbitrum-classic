@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"log"
 	"math/big"
 	"testing"
@@ -664,7 +665,7 @@ func TestBatch(t *testing.T) {
 		}
 		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 		senders = append(senders, addr)
-		txes = append(txes, message.SignedTransaction{Tx: signedTx})
+		txes = append(txes, message.NewCompressedECDSAFromEth(signedTx))
 		hashes = append(hashes, common.NewHashFromEth(signedTx.Hash()))
 	}
 
@@ -706,4 +707,145 @@ func TestBatch(t *testing.T) {
 		}
 		log.Printf("message: %T\n", l2Message)
 	}
+}
+
+func generateTestTransactions(t *testing.T, chain common.Address) []*types.Transaction {
+	pk, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
+	tx := types.NewTransaction(0, common.RandAddress().ToEthAddress(), big.NewInt(1), 100000000000, big.NewInt(0), []byte{})
+	signedTx, err := types.SignTx(tx, signer, pk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx2 := types.NewTransaction(1, common.RandAddress().ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
+	signedTx2, err := types.SignTx(tx2, signer, pk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx3 := types.NewContractCreation(2, big.NewInt(0), 100000000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
+	signedTx3, err := types.SignTx(tx3, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return []*types.Transaction{signedTx, signedTx2, signedTx3}
+}
+
+func verifyTxLogs(t *testing.T, signer types.Signer, txes []*types.Transaction, logs []value.Value) {
+	for i, avmLog := range logs {
+		result, err := evm.NewTxResultFromValue(avmLog)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.ResultCode != evm.ReturnCode {
+			t.Error(i, "unexpected result code", result.ResultCode)
+		}
+		sender, err := signer.Sender(txes[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.IncomingRequest.Sender.ToEthAddress() != sender {
+			t.Error(i, "l2message had incorrect sender", result.IncomingRequest.Sender, sender.Hex())
+		}
+		if result.IncomingRequest.Kind != message.L2Type {
+			t.Error(i, "l2message has incorrect type")
+		}
+		l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if result.IncomingRequest.MessageID.ToEthHash() != txes[i].Hash() {
+			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, txes[i].Hash().Hex())
+		}
+
+		_, ok := l2Message.(message.SignedTransaction)
+		if !ok {
+			t.Error("bad transaction format", l2Message)
+		}
+	}
+}
+
+func TestCompressedECDSATx(t *testing.T) {
+	chain := common.RandAddress()
+	t.Log("Chain address:", chain)
+	t.Log("Chain ID:", message.ChainAddressToID(chain))
+
+	mach, err := cmachine.New(arbos.Path())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
+
+	txes := generateTestTransactions(t, chain)
+
+	sender, err := signer.Sender(txes[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := common.NewAddressFromEth(sender)
+
+	t.Log("Sender Address:", addr.Hex())
+
+	chainTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
+	}
+
+	messages := make([]inbox.InboxMessage, 0)
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			initMsg(),
+			chain,
+			big.NewInt(0),
+			chainTime,
+		),
+	)
+	messages = append(
+		messages,
+		message.NewInboxMessage(
+			message.Eth{
+				Dest:  addr,
+				Value: big.NewInt(1000),
+			},
+			common.RandAddress(),
+			big.NewInt(1),
+			chainTime,
+		),
+	)
+
+	for i, tx := range txes {
+		l2msg, err := message.NewL2Message(message.NewCompressedECDSAFromEth(tx))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		messages = append(
+			messages,
+			message.NewInboxMessage(
+				l2msg,
+				common.RandAddress(),
+				big.NewInt(int64(2+i)),
+				chainTime,
+			),
+		)
+	}
+
+	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
+	logs := assertion.ParseLogs()
+	testCase, err := inbox.TestVectorJSON(messages, logs, assertion.ParseOutMessages())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(string(testCase))
+	if len(logs) != len(txes) {
+		t.Fatal("incorrect log output count", len(logs))
+	}
+	verifyTxLogs(t, signer, txes, logs)
 }
