@@ -54,34 +54,40 @@ type TxDB struct {
 }
 
 func New(
-	ctx context.Context,
 	clnt arbbridge.ChainTimeGetter,
 	checkpointer checkpointing.RollupCheckpointer,
 	as *cmachine.AggregatorStore,
 	chain common.Address,
-) (*TxDB, error) {
-	txdb := &TxDB{
+) *TxDB {
+	return &TxDB{
 		View:         View{as: as},
 		checkpointer: checkpointer,
 		timeGetter:   clnt,
 		chain:        chain,
 		snapCache:    newSnapshotCache(snapshotCacheSize),
 	}
-	if checkpointer.HasCheckpointedState() {
-		if err := txdb.RestoreFromCheckpoint(ctx); err == nil {
-			return txdb, nil
+}
+
+func (txdb *TxDB) Load(ctx context.Context) error {
+	if txdb.checkpointer.HasCheckpointedState() {
+		if err := txdb.restoreFromCheckpoint(ctx); err == nil {
+			return nil
 		} else {
 			log.Println("Failed to restore from checkpoint, falling back to fresh start")
 		}
 	}
 	// We failed to restore from a checkpoint
-	mach, err := checkpointer.GetInitialMachine()
+	mach, err := txdb.checkpointer.GetInitialMachine()
 	if err != nil {
-		return nil, err
+		return err
 	}
+
 	txdb.mach = mach
+	txdb.callMut.Lock()
+	defer txdb.callMut.Unlock()
+	txdb.lastBlockProcessed = nil
 	txdb.lastInboxSeq = big.NewInt(0)
-	return txdb, nil
+	return nil
 }
 
 // addSnap must be called with callMut locked or during construction
@@ -94,7 +100,7 @@ func (txdb *TxDB) addSnap(mach machine.Machine, blockNum *big.Int, timestamp *bi
 	txdb.snapCache.addSnapshot(snap)
 }
 
-func (txdb *TxDB) RestoreFromCheckpoint(ctx context.Context) error {
+func (txdb *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 	var mach machine.Machine
 	var blockId *common.BlockId
 	var lastInboxSeq *big.Int

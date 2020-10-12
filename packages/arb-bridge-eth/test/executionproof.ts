@@ -20,7 +20,7 @@ import { ethers } from '@nomiclabs/buidler'
 import { utils } from 'ethers'
 import { use, expect } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { OneStepProof } from '../build/types/OneStepProof'
+import { OneStepProofTester } from '../build/types/OneStepProofTester'
 import * as fs from 'fs'
 
 use(chaiAsPromised)
@@ -42,12 +42,12 @@ interface Proof {
   Proof: string
 }
 
-let ospTester: OneStepProof
+let ospTester: OneStepProofTester
 
-describe('OneStepProof', async () => {
+describe('OneStepProof', function () {
   before(async () => {
-    const OneStepProof = await ethers.getContractFactory('OneStepProof')
-    ospTester = (await OneStepProof.deploy()) as OneStepProof
+    const OneStepProof = await ethers.getContractFactory('OneStepProofTester')
+    ospTester = (await OneStepProof.deploy()) as OneStepProofTester
     await ospTester.deployed()
   })
 
@@ -55,18 +55,21 @@ describe('OneStepProof', async () => {
   for (const filename of files) {
     const file = fs.readFileSync('./test/proofs/' + filename)
     const data = JSON.parse(file.toString()) as Proof[]
-    it(`handle proofs from ${filename}`, async () => {
-      let i = 0
-      for (const proof of data) {
-        if (i > 25) {
-          // Some tests are too big to run every case
-          return
+    it(`should handle proofs from ${filename}`, async function () {
+      this.timeout(60000)
+
+      for (const proof of data.slice(0, 25)) {
+        const proofData = Buffer.from(proof.Proof, 'base64')
+        const opcode = proofData[proofData.length - 1]
+        if (opcode == 131) {
+          // Skip too expensive opcode
+          continue
         }
         const { fields, gas } = await ospTester.executeStep(
           proof.Assertion.AfterInboxHash,
           proof.Assertion.FirstMessageHash,
           proof.Assertion.FirstLogHash,
-          Buffer.from(proof.Proof, 'base64')
+          proofData
         )
         expect(fields[0]).to.equal(
           utils.hexlify(proof.Assertion.BeforeMachineHash)
@@ -82,9 +85,28 @@ describe('OneStepProof', async () => {
           utils.hexlify(proof.Assertion.LastMessageHash)
         )
         expect(gas).to.equal(proof.Assertion.NumGas)
-
-        i++
       }
-    }).timeout(20000)
+    })
+
+    it(`efficiently run proofs from ${filename} [ @skip-on-coverage ]`, async function () {
+      this.timeout(60000)
+
+      for (const proof of data.slice(0, 25)) {
+        const proofData = Buffer.from(proof.Proof, 'base64')
+        const opcode = proofData[proofData.length - 1]
+        const tx = await ospTester.executeStepTest(
+          proof.Assertion.AfterInboxHash,
+          proof.Assertion.FirstMessageHash,
+          proof.Assertion.FirstLogHash,
+          proofData
+        )
+        const receipt = await tx.wait()
+        const gas = receipt.gasUsed!.toNumber()
+        if (gas > 1000000) {
+          console.log(`opcode ${opcode} used ${gas} gas`)
+        }
+        expect(gas).to.be.lessThan(2500000)
+      }
+    })
   }
 })

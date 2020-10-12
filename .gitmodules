@@ -19,3 +19,6 @@
 [submodule "packages/arb-avm-cpp/cmake/cable"]
 	path = packages/arb-avm-cpp/cmake/cable
 	url = https://github.com/ethereum/cable
+[submodule "packages/arb-avm-cpp/external/PicoSHA2"]
+	path = packages/arb-avm-cpp/external/PicoSHA2
+	url = https://github.com/okdshin/PicoSHA2
