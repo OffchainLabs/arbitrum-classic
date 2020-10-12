@@ -177,7 +177,7 @@ func (c *EthArbClient) BlockIdForHeight(ctx context.Context, height *common.Time
 		return nil, err
 	}
 	var raw json.RawMessage
-	if err := cl.CallContext(ctx, &raw, "eth_getBlockByNumber", hexutil.EncodeBig(height.AsInt())); err != nil {
+	if err := cl.CallContext(ctx, &raw, "eth_getBlockByNumber", hexutil.EncodeBig(height.AsInt()), false); err != nil {
 		return nil, err
 	}
 	var ret blockHashRPC
