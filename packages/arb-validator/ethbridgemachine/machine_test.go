@@ -27,6 +27,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"math/big"
@@ -34,7 +35,8 @@ import (
 )
 
 func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
-	client, pks := test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend()
+	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 	auth := bind.NewKeyedTransactor(pks[0])
 
 	_, machineTx, deployedMachineTester, err := ethbridgetestcontracts.DeployMachineTester(

@@ -21,6 +21,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"testing"
 	"time"
@@ -29,7 +30,8 @@ import (
 var testerAddress ethcommon.Address
 
 func TestChallenges(t *testing.T) {
-	client, pks := test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend()
+	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 
 	auths := make([]*bind.TransactOpts, 0)
 	for _, pk := range pks {

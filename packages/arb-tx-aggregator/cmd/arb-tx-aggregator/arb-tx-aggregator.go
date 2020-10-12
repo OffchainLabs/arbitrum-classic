@@ -20,12 +20,11 @@ import (
 	"context"
 	"flag"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -69,7 +68,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ethclint, err := ethclient.Dial(rollupArgs.EthURL)
+	ethclint, err := ethutils.NewRPCEthClient(rollupArgs.EthURL)
 	if err != nil {
 		log.Fatal(err)
 	}

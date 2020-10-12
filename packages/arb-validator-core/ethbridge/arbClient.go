@@ -18,12 +18,8 @@ package ethbridge
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	errors2 "github.com/pkg/errors"
 	"log"
@@ -33,7 +29,6 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
@@ -87,13 +82,13 @@ func (c *EthArbClient) subscribeBlockHeadersAfter(ctx context.Context, prevBlock
 		defer close(blockIdChan)
 
 		for {
-			var nextHeader *types.Header
+			var blockInfo *ethutils.BlockInfo
 			fetchErrorCount := 0
+			targetHeight := new(big.Int).Add(prevBlockId.Height.AsInt(), big.NewInt(1))
 			for {
 				var err error
-				targetHeight := new(big.Int).Add(prevBlockId.Height.AsInt(), big.NewInt(1))
-				nextHeader, err = c.client.HeaderByNumber(ctx, targetHeight)
-				if err == nil && nextHeader.Number.Cmp(targetHeight) == 0 {
+				blockInfo, err = c.client.BlockInfoByNumber(ctx, targetHeight)
+				if err == nil {
 					// Got next header
 					break
 				}
@@ -119,13 +114,16 @@ func (c *EthArbClient) subscribeBlockHeadersAfter(ctx context.Context, prevBlock
 				time.Sleep(headerRetryDelay)
 			}
 
-			if nextHeader.ParentHash != prevBlockId.HeaderHash.ToEthHash() {
+			if blockInfo.ParentHash != prevBlockId.HeaderHash.ToEthHash() {
 				blockIdChan <- arbbridge.MaybeBlockId{Err: reorgError}
 				return
 			}
 
-			prevBlockId = getBlockID(nextHeader)
-			blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId, Timestamp: new(big.Int).SetUint64(nextHeader.Time)}
+			prevBlockId = &common.BlockId{
+				Height:     common.NewTimeBlocks(targetHeight),
+				HeaderHash: common.NewHashFromEth(blockInfo.Hash),
+			}
+			blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId, Timestamp: new(big.Int).SetUint64(blockInfo.Time)}
 		}
 	}()
 	return nil
@@ -159,42 +157,19 @@ func (c *EthArbClient) GetBalance(ctx context.Context, account common.Address) (
 	return c.client.BalanceAt(ctx, account.ToEthAddress(), nil)
 }
 
-func (c *EthArbClient) CurrentBlockId(ctx context.Context) (*common.BlockId, error) {
-	header, err := c.client.HeaderByNumber(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	return getBlockID(header), nil
-}
-
-type blockHashRPC struct {
-	Hash ethcommon.Hash `json:"hash"`
-}
-
 func (c *EthArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error) {
-	cl, err := rpc.DialContext(context.Background(), "https://kovan.infura.io/v3/8838d00c028a46449be87e666387c71a")
+	var num *big.Int
+	if height != nil {
+		num = height.AsInt()
+	}
+	blockInfo, err := c.client.BlockInfoByNumber(ctx, num)
 	if err != nil {
 		return nil, err
 	}
-	var raw json.RawMessage
-	if err := cl.CallContext(ctx, &raw, "eth_getBlockByNumber", hexutil.EncodeBig(height.AsInt()), false); err != nil {
-		return nil, err
-	}
-	var ret blockHashRPC
-	if err := json.Unmarshal(raw, &ret); err != nil {
-		return nil, err
-	}
-
-	log.Println("Got block hash", height.AsInt(), ret.Hash.Hex())
-
-	header, err := c.client.HeaderByNumber(ctx, height.AsInt())
-	if err != nil {
-		return nil, err
-	}
-	if header == nil {
-		return nil, errors.New("couldn't get header at height")
-	}
-	return getBlockID(header), nil
+	return &common.BlockId{
+		Height:     height.Clone(),
+		HeaderHash: common.NewHashFromEth(blockInfo.Hash),
+	}, nil
 }
 
 func (c *EthArbClient) TimestampForBlockHash(ctx context.Context, hash common.Hash) (*big.Int, error) {

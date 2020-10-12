@@ -42,13 +42,6 @@ func (a ArbAddresses) ArbFactoryAddress() common.Address {
 	return common.NewAddressFromEth(ethcommon.HexToAddress(a.ArbFactory))
 }
 
-func getBlockID(header *types.Header) *common.BlockId {
-	return &common.BlockId{
-		Height:     common.NewTimeBlocks(header.Number),
-		HeaderHash: common.NewHashFromEth(header.Hash()),
-	}
-}
-
 func getLogBlockID(ethLog types.Log) *common.BlockId {
 	return &common.BlockId{
 		Height:     common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),

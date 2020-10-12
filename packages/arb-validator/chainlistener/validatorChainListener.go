@@ -196,7 +196,7 @@ func (lis *ValidatorChainListener) AssertionPrepared(
 			continue
 		}
 		lis.Lock()
-		currentTime, err := stakingKey.client.CurrentBlockId(ctx)
+		currentTime, err := stakingKey.client.BlockIdForHeight(ctx, nil)
 		if err != nil {
 			log.Println("Validator couldn't get time")
 			break
