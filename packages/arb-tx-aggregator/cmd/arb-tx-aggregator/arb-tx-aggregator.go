@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
@@ -84,6 +85,8 @@ func main() {
 
 	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "contract.mexe")
 	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
+
+	log.Println("Launching aggregator for chain", rollupArgs.Address, "with chain id", message.ChainAddressToID(rollupArgs.Address))
 
 	if err := rpc.LaunchAggregator(
 		context.Background(),
