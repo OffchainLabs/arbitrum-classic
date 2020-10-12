@@ -27,7 +27,7 @@ var (
 )
 
 // CloneFactoryABI is the input ABI used to generate the binding from.
-const CloneFactoryABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"salt\",\"type\":\"uint256\"}],\"name\":\"create2Clone\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"result\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const CloneFactoryABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"clone\",\"type\":\"address\"}],\"name\":\"CreatedClone\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"salt\",\"type\":\"uint256\"}],\"name\":\"create2Clone\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // CloneFactoryFuncSigs maps the 4-byte function signature to its string representation.
 var CloneFactoryFuncSigs = map[string]string{
@@ -35,7 +35,7 @@ var CloneFactoryFuncSigs = map[string]string{
 }
 
 // CloneFactoryBin is the compiled bytecode used for deploying new contracts.
-var CloneFactoryBin = "0x608060405234801561001057600080fd5b5060fb8061001f6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063c91091c314602d575b600080fd5b605660048036036040811015604157600080fd5b506001600160a01b0381351690602001356072565b604080516001600160a01b039092168252519081900360200190f35b6000808360601b9050604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b81528160148201526e5af43d82803e903d91602b57fd5bf360881b6028820152836037826000f59594505050505056fea265627a7a72315820e1f8d2f52ba720ad58cf99c4bbcf98d3163ae2e93384f4993d07ddf2b0050b1c64736f6c63430005110032"
+var CloneFactoryBin = "0x6080604052348015600f57600080fd5b5061011f8061001f6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063c91091c314602d575b600080fd5b605660048036036040811015604157600080fd5b506001600160a01b0381351690602001356058565b005b60008260601b90506000604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b81528260148201526e5af43d82803e903d91602b57fd5bf360881b6028820152836037826000f5604080516001600160a01b038316815290519193507f8bbdbba0e10077e3bdd81d5076242c5eca7c410250c1bf0ff4a0d8e40a6a8b31925081900360200190a15050505056fea265627a7a723158204cccd4475747ad6350a41adcafffde68f93482fe1a82635f44272947efe3de8f64736f6c63430005110032"
 
 // DeployCloneFactory deploys a new Ethereum contract, binding an instance of CloneFactory to it.
 func DeployCloneFactory(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *CloneFactory, error) {
@@ -195,21 +195,154 @@ func (_CloneFactory *CloneFactoryTransactorRaw) Transact(opts *bind.TransactOpts
 
 // Create2Clone is a paid mutator transaction binding the contract method 0xc91091c3.
 //
-// Solidity: function create2Clone(address target, uint256 salt) returns(address result)
+// Solidity: function create2Clone(address target, uint256 salt) returns()
 func (_CloneFactory *CloneFactoryTransactor) Create2Clone(opts *bind.TransactOpts, target common.Address, salt *big.Int) (*types.Transaction, error) {
 	return _CloneFactory.contract.Transact(opts, "create2Clone", target, salt)
 }
 
 // Create2Clone is a paid mutator transaction binding the contract method 0xc91091c3.
 //
-// Solidity: function create2Clone(address target, uint256 salt) returns(address result)
+// Solidity: function create2Clone(address target, uint256 salt) returns()
 func (_CloneFactory *CloneFactorySession) Create2Clone(target common.Address, salt *big.Int) (*types.Transaction, error) {
 	return _CloneFactory.Contract.Create2Clone(&_CloneFactory.TransactOpts, target, salt)
 }
 
 // Create2Clone is a paid mutator transaction binding the contract method 0xc91091c3.
 //
-// Solidity: function create2Clone(address target, uint256 salt) returns(address result)
+// Solidity: function create2Clone(address target, uint256 salt) returns()
 func (_CloneFactory *CloneFactoryTransactorSession) Create2Clone(target common.Address, salt *big.Int) (*types.Transaction, error) {
 	return _CloneFactory.Contract.Create2Clone(&_CloneFactory.TransactOpts, target, salt)
+}
+
+// CloneFactoryCreatedCloneIterator is returned from FilterCreatedClone and is used to iterate over the raw logs and unpacked data for CreatedClone events raised by the CloneFactory contract.
+type CloneFactoryCreatedCloneIterator struct {
+	Event *CloneFactoryCreatedClone // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *CloneFactoryCreatedCloneIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(CloneFactoryCreatedClone)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(CloneFactoryCreatedClone)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *CloneFactoryCreatedCloneIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *CloneFactoryCreatedCloneIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// CloneFactoryCreatedClone represents a CreatedClone event raised by the CloneFactory contract.
+type CloneFactoryCreatedClone struct {
+	Clone common.Address
+	Raw   types.Log // Blockchain specific contextual infos
+}
+
+// FilterCreatedClone is a free log retrieval operation binding the contract event 0x8bbdbba0e10077e3bdd81d5076242c5eca7c410250c1bf0ff4a0d8e40a6a8b31.
+//
+// Solidity: event CreatedClone(address clone)
+func (_CloneFactory *CloneFactoryFilterer) FilterCreatedClone(opts *bind.FilterOpts) (*CloneFactoryCreatedCloneIterator, error) {
+
+	logs, sub, err := _CloneFactory.contract.FilterLogs(opts, "CreatedClone")
+	if err != nil {
+		return nil, err
+	}
+	return &CloneFactoryCreatedCloneIterator{contract: _CloneFactory.contract, event: "CreatedClone", logs: logs, sub: sub}, nil
+}
+
+// WatchCreatedClone is a free log subscription operation binding the contract event 0x8bbdbba0e10077e3bdd81d5076242c5eca7c410250c1bf0ff4a0d8e40a6a8b31.
+//
+// Solidity: event CreatedClone(address clone)
+func (_CloneFactory *CloneFactoryFilterer) WatchCreatedClone(opts *bind.WatchOpts, sink chan<- *CloneFactoryCreatedClone) (event.Subscription, error) {
+
+	logs, sub, err := _CloneFactory.contract.WatchLogs(opts, "CreatedClone")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(CloneFactoryCreatedClone)
+				if err := _CloneFactory.contract.UnpackLog(event, "CreatedClone", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseCreatedClone is a log parse operation binding the contract event 0x8bbdbba0e10077e3bdd81d5076242c5eca7c410250c1bf0ff4a0d8e40a6a8b31.
+//
+// Solidity: event CreatedClone(address clone)
+func (_CloneFactory *CloneFactoryFilterer) ParseCreatedClone(log types.Log) (*CloneFactoryCreatedClone, error) {
+	event := new(CloneFactoryCreatedClone)
+	if err := _CloneFactory.contract.UnpackLog(event, "CreatedClone", log); err != nil {
+		return nil, err
+	}
+	return event, nil
 }
