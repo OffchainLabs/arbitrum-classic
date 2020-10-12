@@ -84,11 +84,11 @@ func (c *EthArbClient) subscribeBlockHeadersAfter(ctx context.Context, prevBlock
 		for {
 			var blockInfo *ethutils.BlockInfo
 			fetchErrorCount := 0
-			targetHeight := new(big.Int).Add(prevBlockId.Height.AsInt(), big.NewInt(1))
 			for {
 				var err error
+				targetHeight := new(big.Int).Add(prevBlockId.Height.AsInt(), big.NewInt(1))
 				blockInfo, err = c.client.BlockInfoByNumber(ctx, targetHeight)
-				if err == nil {
+				if err == nil && (*big.Int)(blockInfo.Number).Cmp(targetHeight) == 0 {
 					// Got next header
 					break
 				}
@@ -120,7 +120,7 @@ func (c *EthArbClient) subscribeBlockHeadersAfter(ctx context.Context, prevBlock
 			}
 
 			prevBlockId = &common.BlockId{
-				Height:     common.NewTimeBlocks(targetHeight),
+				Height:     common.NewTimeBlocks((*big.Int)(blockInfo.Number)),
 				HeaderHash: common.NewHashFromEth(blockInfo.Hash),
 			}
 			blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId, Timestamp: new(big.Int).SetUint64(uint64(blockInfo.Time))}
