@@ -19,6 +19,7 @@ package aggregator
 import (
 	"bytes"
 	errors2 "github.com/pkg/errors"
+	"math/big"
 	"net/http"
 	"strconv"
 
@@ -195,11 +196,11 @@ func (m *RPCServer) BlockHash(
 	args *evm.BlockHashArgs,
 	reply *evm.BlockHashReply,
 ) error {
-	header, err := m.srv.GetBlockHeaderByNumber(r.Context(), args.Height)
+	blockInfo, err := m.srv.Client.BlockInfoByNumber(r.Context(), new(big.Int).SetUint64(args.Height))
 	if err != nil {
 		return err
 	}
-	reply.Hash = hexutil.Encode(header.Hash().Bytes())
+	reply.Hash = hexutil.Encode(blockInfo.Hash.Bytes())
 	return nil
 }
 

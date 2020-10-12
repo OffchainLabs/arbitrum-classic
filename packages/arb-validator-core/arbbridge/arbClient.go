@@ -30,7 +30,6 @@ type MaybeBlockId struct {
 }
 
 type ChainTimeGetter interface {
-	CurrentBlockId(ctx context.Context) (*common.BlockId, error)
 	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
 	TimestampForBlockHash(ctx context.Context, hash common.Hash) (*big.Int, error)
 }

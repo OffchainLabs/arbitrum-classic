@@ -227,6 +227,10 @@ func (m *Server) GetTxInBlockAtIndexResults(res *evm.BlockInfo, index uint64) (*
 }
 
 func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, error) {
+	l1BlockInfo, err := m.Client.BlockInfoByNumber(ctx, new(big.Int).SetUint64(height))
+	if err != nil {
+		return nil, err
+	}
 	header, err := m.GetBlockHeaderByNumber(ctx, height)
 	if err != nil {
 		return nil, err
@@ -250,7 +254,7 @@ func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, err
 	transactions := make([]*types.Transaction, 0, len(results))
 	receipts := make([]*types.Receipt, 0, len(results))
 	for _, res := range results {
-		receipt := res.ToEthReceipt(common.NewHashFromEth(header.Hash()))
+		receipt := res.ToEthReceipt(common.NewHashFromEth(l1BlockInfo.Hash))
 		receipts = append(receipts, receipt)
 		tx, err := GetTransaction(res.IncomingRequest)
 		if err != nil {

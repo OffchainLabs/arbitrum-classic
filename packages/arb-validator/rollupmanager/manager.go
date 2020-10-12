@@ -235,7 +235,7 @@ func CreateManagerAdvanced(
 					blockId := maybeBlockId.BlockId
 					timestamp := maybeBlockId.Timestamp
 
-					currentOnChain, err := clnt.CurrentBlockId(runCtx)
+					currentOnChain, err := clnt.BlockIdForHeight(runCtx, nil)
 					if err != nil {
 						return err
 					}

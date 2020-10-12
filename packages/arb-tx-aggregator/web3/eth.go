@@ -159,7 +159,7 @@ func (s *Server) GetBlockByHash(ctx context.Context, blockHashRaw hexutil.Bytes,
 		// If we can't get the header, return nil
 		return nil, nil
 	}
-	return s.getBlock(header, includeTxData)
+	return s.getBlock(header, blockHash, includeTxData)
 }
 
 func (s *Server) GetBlockByNumber(ctx context.Context, blockNum *rpc.BlockNumber, includeTxData bool) (*GetBlockResult, error) {
@@ -172,7 +172,12 @@ func (s *Server) GetBlockByNumber(ctx context.Context, blockNum *rpc.BlockNumber
 		// If we can't get the header, return nil
 		return nil, err
 	}
-	return s.getBlock(header, includeTxData)
+	l1BlockInfo, err := s.srv.Client.BlockInfoByNumber(ctx, new(big.Int).SetUint64(height))
+	if err != nil {
+		return nil, err
+	}
+
+	return s.getBlock(header, l1BlockInfo.Hash, includeTxData)
 }
 
 func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult, error) {
@@ -315,7 +320,7 @@ func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint
 	return s.makeTransactionResult(txRes)
 }
 
-func (s *Server) getBlock(header *types.Header, includeTxData bool) (*GetBlockResult, error) {
+func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTxData bool) (*GetBlockResult, error) {
 	block, err := s.srv.BlockInfo(header.Number.Uint64())
 	if err != nil {
 		return nil, err
@@ -355,7 +360,7 @@ func (s *Server) getBlock(header *types.Header, includeTxData bool) (*GetBlockRe
 	uncles := make([]hexutil.Bytes, 0)
 	return &GetBlockResult{
 		Number:           (*hexutil.Big)(header.Number),
-		Hash:             header.Hash().Bytes(),
+		Hash:             blockHash.Bytes(),
 		ParentHash:       header.ParentHash.Bytes(),
 		MixDigest:        header.MixDigest.Bytes(),
 		Nonce:            &header.Nonce,

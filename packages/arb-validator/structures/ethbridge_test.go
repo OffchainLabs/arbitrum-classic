@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"math/big"
 	"testing"
@@ -35,7 +36,8 @@ import (
 var tester *ethbridgetestcontracts.RollupTester
 
 func TestMainSetup(m *testing.T) {
-	client, pks := test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend()
+	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 	auth := bind.NewKeyedTransactor(pks[0])
 
 	_, machineTx, deployedArbRollup, err := ethbridgetestcontracts.DeployRollupTester(

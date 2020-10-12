@@ -87,7 +87,7 @@ func getNextEventWithTimeout(
 		case <-ctx.Done():
 			return nil, 0, errors.New("context cancelled while waiting for event")
 		case <-ticker.C:
-			blockId, err := client.CurrentBlockId(ctx)
+			blockId, err := client.BlockIdForHeight(ctx, nil)
 			if err != nil {
 				return nil, 0, err
 			}
