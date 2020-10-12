@@ -18,8 +18,12 @@ package ethbridge
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	errors2 "github.com/pkg/errors"
 	"log"
@@ -163,7 +167,26 @@ func (c *EthArbClient) CurrentBlockId(ctx context.Context) (*common.BlockId, err
 	return getBlockID(header), nil
 }
 
+type blockHashRPC struct {
+	Hash ethcommon.Hash `json:"hash"`
+}
+
 func (c *EthArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error) {
+	cl, err := rpc.DialContext(context.Background(), "https://kovan.infura.io/v3/8838d00c028a46449be87e666387c71a")
+	if err != nil {
+		return nil, err
+	}
+	var raw json.RawMessage
+	if err := cl.CallContext(ctx, &raw, "eth_getBlockByNumber", hexutil.EncodeBig(height.AsInt())); err != nil {
+		return nil, err
+	}
+	var ret blockHashRPC
+	if err := json.Unmarshal(raw, &ret); err != nil {
+		return nil, err
+	}
+
+	log.Println("Got block hash", height.AsInt(), ret.Hash.Hex())
+
 	header, err := c.client.HeaderByNumber(ctx, height.AsInt())
 	if err != nil {
 		return nil, err
