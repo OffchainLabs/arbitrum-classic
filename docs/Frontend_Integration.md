@@ -53,7 +53,7 @@ Arbitrum offers two options for accessing the Arbitrum/Ethereum bridge methods:
 **Installation**:
 
 ```
-yarn add token-bride-sdk
+yarn add token-bridge-sdk
 ```
 
 **Usage**:
