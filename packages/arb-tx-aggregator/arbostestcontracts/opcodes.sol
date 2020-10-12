@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2012, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +16,10 @@
  * limitations under the License.
  */
 
-package web3
+pragma solidity ^0.5.17;
 
-import (
-	"strconv"
-)
-
-type Net struct {
-	chainId uint64
-}
-
-func (net *Net) Version() string {
-	return strconv.FormatUint(net.chainId, 10)
+contract OpCodes {
+    function getBlockHash() external returns (bytes32) {
+        return blockhash(block.number - 1);
+    }
 }

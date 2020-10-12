@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2012, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +16,27 @@
  * limitations under the License.
  */
 
-package web3
+pragma solidity ^0.5.17;
 
-import (
-	"strconv"
-)
+contract Receiver {
+    uint256 public test = 5;
+    Receiver2 public other;
 
-type Net struct {
-	chainId uint64
+    constructor(address otherReciver) public {
+        other = Receiver2(otherReciver);
+    }
+
+    function mutate() external payable {
+        test = 6;
+
+        other.mutate();
+    }
 }
 
-func (net *Net) Version() string {
-	return strconv.FormatUint(net.chainId, 10)
+contract Receiver2 {
+    uint256 public test = 7;
+
+    function mutate() external payable {
+        test = 8;
+    }
 }

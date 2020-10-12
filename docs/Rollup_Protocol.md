@@ -5,11 +5,11 @@ sidebar_label: Arbitrum Rollup Protocol
 ---
 # Arbitrum Rollup Protocol Design
 
-Arbitrum Rollup is an off-chain protocol that is managed by an on-chain Ethereum contract. A dApp developer has a contracts or set of contracts written in Solidity, and the developer wants to deploy those contracts onto a Layer 2 Arbitrum Rollup chain (ArbChain).
+Arbitrum Rollup is an off-chain protocol that is managed by an on-chain Ethereum contract. A dApp developer has a contract or set of contracts written in Solidity, and the developer wants to deploy those contracts onto a Layer 2 Arbitrum Rollup chain (ArbChain).
 
 This document describes the design conceptually, and then somewhat more formally. Finally, we prove that the protocol guarantees safety and eventual progress, assuming one honest staker.
 
-**Basics of Rollup**
+##Basics of Rollup
 
 Let’s start with the basics. The state of your VM is organized as a Merkle Tree, so a cryptographic hash of the VM’s state can be computed. At any point in the protocol, there is some state of the VM that is fully confirmed and final. Its hash is stored on-chain.
 
@@ -19,7 +19,7 @@ A participant in the protocol can make a *Disputable Assertion* (DA) which claim
 
 As depicted above, a Disputable Assertion creates a logical decision point that the protocol will eventually have to resolve. If the DA is valid, the system will enter a new state on the upper right, with a new state hash, and with the side-effects (payments and logs) specified in the DA. Or on the other branch the DA is invalid; it is rejected and the VM's state is unchanged.
 
-**The Arbitrum 2.0 protocol**
+###The Arbitrum 2.0 protocol
 The  Arbitrum 2.0 protocol
 
 
@@ -28,7 +28,7 @@ The current Arbitrum protocol makes important advances over the original Arbitru
 
 ![img](https://miro.medium.com/max/677/1*fvTU8HKrjp77Qsp8flDOWw.png)
 
-**Staking**
+###Staking
 
 Another important part of the protocol is staking. Anybody can put a stake on one of the square boxes in the tree. By staking on a square you are asserting that that square will eventually be confirmed by the protocol. In other words, you’re asserting that you have taken the correct branch at each DA along the path from the current state to the square you’re staked on. If you are wrong, you can expect to lose your stake.
 
@@ -42,11 +42,11 @@ At this point you might be worried that the tree of possibilities can get very l
 
 ![img](https://miro.medium.com/max/1092/1*02Ob2iYuOmdAtnVnekASvQ.png)
 
-**Staking Deadlines**
+###Staking Deadlines
 
 We need the system to make a decision about each Disputable Assertion before too much time passes. So when a DA is added to the chain, creating a branch point, a deadline is associated with that DA. The deadline is far enough in the future that everyone will have time to check whether the DA is valid and get a transaction on-chain to stake on an outcome of the DA, if they choose to do so. If anyone wants to commit themselves to a stake for or against the validity of that DA, they must do so before the deadline. (Stakes can still be introduced after the deadline, but they do not participate in deciding for or against that DA.) Once the deadline has been reached, all of the stakes relevant to deciding that DA will be known.
 
-**Disputes**
+###Disputes
 
 If Alice and Bob are staked on different squares, one of two things will be true. Either there will be a rightward-moving path from one of them to the other — meaning their claims are consistent with each other — or there will not be such a path. If there is not a rightward-moving path connecting Alice and Bob’s squares, then they must disagree about something. There will always be a unique point of dispute between them — a unique DA for which one of them is staked on that DA being valid and the other is staked on it being invalid.
 
@@ -60,13 +60,13 @@ Dispute resolution determines that one of the two disputant parties was incorrec
 
 Multiple disputes can be going on at the same time, but each staker can be in at most one dispute at a time. Because losers’ stakes will be removed, each dispute will reduce the amount of disagreement in the system. Parties who lose their stakes can re-stake if they want, but the new stakes won’t be able to affect DAs whose staking deadlines have already passed. The effect of this is that after a DA’s staking deadline has passed, disputes will progressively eliminate any disagreement about how to treat that DA.
 
-**Confirming Results**
+###Confirming Results
 
 Once a DA’s staking deadline has passed, and all of the timely (placed before the staking deadline) stakes that remain are on the same (upper or lower) branch from that DA, the system can confirm the result of that DA. The DA is either accepted or rejected, and the current state moves to the appropriate square to the right of the DA. If the DA is confirmed as valid, its side-effects, such as payments, are effectuated on-chain. This is how the state of the VM moves forward.
 
 In the common case, parties will behave honestly, because they won’t want to lose their stakes by staking on false claims. Only valid DAs will be asserted, in a single chain, and nobody will stake on the invalid branch of any DA. In this case, every DA can be confirmed immediately when its staking deadline expires.
 
-**Why It’s Trustless**
+###Why It’s Trustless
 
 An important property of Arbitrum Rollup is that it’s trustless — a single honest party can force the VM to behave correctly and make progress. To see why, imagine that Alice always stakes on the truthful branch at each DA, and she asserts DAs if the tree ever gets empty.  If anybody else makes a false DA, Alice stakes against it.
 
@@ -78,7 +78,7 @@ Because the system is trustless in this way, if Alice is staked on a square and 
 
 Even if you’re not staked on a path, if you see that several people are staked on it, and you trust that at least one of those people is honest, then you can be sure that that path will be confirmed eventually — as far as you are concerned, that path is as good as final.
 
-**Benefits of trustless finality**
+###Benefits of trustless finality
 
 Why is it valuable to have trustless finality for outcomes? The classic example comes from previous discussions of other rollup protocols. Suppose a VM is going to make a payment to Alice. The payment event is on the honest path, but it’s going to be a while before the square where the payment happens will be confirmed on-chain.
 
@@ -88,7 +88,7 @@ The key point is that the viability of this kind of market mechanism depends on 
 
 This is true not only for payments but for other things a VM does. If the VM is going to emit a log item announcing that something has happened, trustless finality means that anyone can act with certainty that the log item will be recognized on-chain.
 
-**Delay attacks**
+###Delay attacks
 
 Because the system is trustless, bad actors can’t force an incorrect outcome. What they can try to do is slow down progress. Doing this requires them to sacrifice stakes, which will be costly if the stake amount is significant.
 
@@ -101,7 +101,7 @@ All that an attacker can do is to stake on false branches to delay on-chain conf
 What if the attacker places multiple stakes on false outcomes? Then those stakes will have to be taken one by one in disputes. If there are multiple people staked on the honest outcome, those people can all enter disputes against the attackers, working in parallel to take the attacker stakes. And notice that it will be obvious to everyone what is happening, and lots of people will want to get in on the action, staking on the true outcome so they can join the feeding frenzy of people using disputes to grab attacker stakes. If there are *K* people staking on the honest side, it will cost the attacker *K* stakes to buy one dispute period of delay. If the attacker puts down even more stakes, that will likely attract even more honest stakers. That’s a bad dynamic for the attacker.
 
 
-**Optimizations**
+###Optimizations
 
 Various optimizations are possible to reduce the amount of on-chain bookkeeping that is necessary to operate the protocol, to reduce the on-chain gas cost, and to make beneficial feeding frenzies against delay attackers easier to mount. The purpose of this document is to give a general and accessible overview into the Rollup protocol, and as such we won’t drill down into the optimizations here. But if you’re worried about the cost of implementing this, we can assure you that the EthBridge’s cost to monitor all of this will be less than you expect.  For details, you can consult the [Arbitrum Rollup code](https://github.com/offchainlabs/arbitrum).
 

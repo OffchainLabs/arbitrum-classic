@@ -17,8 +17,7 @@
 package web3
 
 import (
-	"github.com/gorilla/rpc/v2"
-
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -26,25 +25,18 @@ import (
 
 func GenerateWeb3Server(server *aggregator.Server) (*rpc.Server, error) {
 	s := rpc.NewServer()
-	// Register our own Codec
-	s.RegisterCodec(NewUpCodec(), "application/json")
-	s.RegisterCodec(NewUpCodec(), "application/json;charset=UTF-8")
 
-	err := s.RegisterService(NewServer(server), "Eth")
-	if err != nil {
-		panic(err)
+	if err := s.RegisterName("eth", NewServer(server)); err != nil {
+		return nil, err
 	}
 
 	net := &Net{chainId: message.ChainAddressToID(common.NewAddressFromEth(server.GetChainAddress())).Uint64()}
-	err = s.RegisterService(net, "Net")
-	if err != nil {
-		panic(err)
+	if err := s.RegisterName("net", net); err != nil {
+		return nil, err
 	}
 
-	web3 := &Web3{}
-	err = s.RegisterService(web3, "Web3")
-	if err != nil {
-		panic(err)
+	if err := s.RegisterName("web3", &Web3{}); err != nil {
+		return nil, err
 	}
 
 	return s, nil

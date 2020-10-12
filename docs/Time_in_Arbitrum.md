@@ -13,4 +13,4 @@ Messages in an ArbChain's inbox are processed in order. Generally, some time wil
 
 Generally Arbitrum will execute a transaction based on the time it was submitted into the inbox.
 
-If your Solidity contract, running on Arbitrum Rollup, accesses `block.number` or `block.timestamp`, this will give you the block or timestamp that the message entered the inbox respectively. These values with only ever increase since they are marked by Ethereum in order.
+If your Solidity contract, running on Arbitrum Rollup, accesses `block.number` or `block.timestamp`, this will give you the block or timestamp that the message entered the inbox respectively. These values will only ever increase since they are marked by Ethereum in order.

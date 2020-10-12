@@ -95,6 +95,7 @@ func main() {
 		dbPath,
 		"1235",
 		"8547",
+		"8548",
 		rpcVars,
 		time.Duration(*maxBatchTime)*time.Second,
 		*keepPendingState,

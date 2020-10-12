@@ -17,6 +17,9 @@
 package message
 
 import (
+	"bytes"
+	"github.com/ethereum/go-ethereum/rlp"
+	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -33,5 +36,57 @@ func TestMarshaledBytesHash(t *testing.T) {
 	correct := common.HexToHash("0x4fc384a19926e9ff7ec8f2376a0d146dc273031df1db4d133236d209700e4780")
 	if hash != correct {
 		t.Fatal("incorrect result", hash, correct)
+	}
+}
+
+func TestDecodeAddressIndex(t *testing.T) {
+	rawIndex, err := rlp.EncodeToBytes(big.NewInt(1000))
+	if err != nil {
+		t.Fatal(err)
+	}
+	address, err := decodeAddress(bytes.NewReader(rawIndex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr, ok := address.(CompressedAddressIndex)
+	if !ok {
+		t.Fatal("recovered wrong address type")
+	}
+	if addr.Int.Cmp(big.NewInt(1000)) != 0 {
+		t.Error("recovered wrong address index")
+	}
+}
+
+func TestDecodeAddressFull(t *testing.T) {
+	orig := common.HexToAddress("0x81183C9C61bdf79DB7330BBcda47Be30c0a85064")
+	rawIndex, err := rlp.EncodeToBytes(orig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	address, err := decodeAddress(bytes.NewReader(rawIndex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(address)
+	addr, ok := address.(CompressedAddressFull)
+	if !ok {
+		t.Fatalf("recovered wrong address type %T", address)
+	}
+	if addr.Address != orig {
+		t.Error("recovered wrong address")
+	}
+}
+
+func TestDecodeAddressNone(t *testing.T) {
+	rawIndex, err := rlp.EncodeToBytes([]byte{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	address, err := decodeAddress(bytes.NewReader(rawIndex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if address != nil {
+		t.Fatalf("recovered wrong address type %T", address)
 	}
 }
