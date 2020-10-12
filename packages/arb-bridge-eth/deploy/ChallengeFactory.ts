@@ -23,7 +23,7 @@ const func: DeployFunction = async (bre: BuidlerRuntimeEnvironment) => {
       ],
     })
     contract = await deployments.get('ChallengeFactory')
-    if (deployResult.newlyDeployed) {
+    if (deployResult.newlyDeployed && deployResult.receipt) {
       log(
         `ChallengeFactory deployed at ${contract.address} for ${deployResult.receipt.gasUsed}`
       )

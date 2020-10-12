@@ -17,8 +17,7 @@ export default function setupVerifyTask(): void {
         const contractInfo = contracts[contractName as keyof typeof contracts]
         console.log(`Verifying ${contractName}`)
         try {
-          await bre.run('verify-contract', {
-            contractName,
+          await bre.run('verify', {
             address: contractInfo.address,
             constructorArguments: contractInfo.args,
           })

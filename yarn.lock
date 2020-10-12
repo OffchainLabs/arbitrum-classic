@@ -727,14 +727,17 @@
   resolved "https://registry.yarnpkg.com/@nomiclabs/buidler-ethers/-/buidler-ethers-1.3.4.tgz#3f200e1ef5843f844a356fe00d1d11685218817c"
   integrity sha512-kz2YtkQl/eUuNkYpZqj1xtkDpzy+2AdUNc9xfmvU/zEf0HL0eOsj+a9Ltvl2xhL86eTaYbfrIzJvWGmpIJndNA==
 
-"@nomiclabs/buidler-etherscan@^1.3.3":
-  version "1.3.3"
-  resolved "https://registry.yarnpkg.com/@nomiclabs/buidler-etherscan/-/buidler-etherscan-1.3.3.tgz#a7cbba220c7ad88ae04f26440e1f7236569db145"
-  integrity sha512-Pmo890t8ZvO9/9Q+9uxQl7SLai6Sqp8m5CdUc4MWO/YIIsv6dt1+68VaUDOhkF5+xwUDgp89Cdu0fJp4PODsxw==
+"@nomiclabs/buidler-etherscan@^2.1.0":
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/@nomiclabs/buidler-etherscan/-/buidler-etherscan-2.1.0.tgz#cdebc96f7683de9586935fb446efce78e98cf973"
+  integrity sha512-Rh1PGCtIVNU9zDSnLn6WlJDMBM9LXzkwNnzRFnTrMdA+Aa9nMVX7qwbAXG9pyIIsuqNH6MRfk7CDvi8aMoojng==
   dependencies:
+    "@ethersproject/abi" "^5.0.2"
+    "@ethersproject/address" "^5.0.2"
+    cbor "^5.0.2"
     ethereumjs-abi "^0.6.8"
-    request "^2.88.0"
-    request-promise "^4.2.4"
+    node-fetch "^2.6.0"
+    semver "^6.3.0"
 
 "@nomiclabs/buidler-waffle@^1.3.5":
   version "1.3.5"
@@ -744,10 +747,10 @@
     "@types/sinon-chai" "^3.2.3"
     "@types/web3" "1.0.19"
 
-"@nomiclabs/buidler@^1.3.7", "@nomiclabs/buidler@^1.4.4":
-  version "1.4.5"
-  resolved "https://registry.yarnpkg.com/@nomiclabs/buidler/-/buidler-1.4.5.tgz#9e332918bf0c19416494e3c4580fd3ca350ed70b"
-  integrity sha512-jaaVvG7OsrObhEBnLtQ/8L3J92+Jgioaw2+296dDO4Uc+MO/kprORbnpbE/WKvPL1geKQ4uj6VdCpM7qNCwL3g==
+"@nomiclabs/buidler@^1.4.3", "@nomiclabs/buidler@^1.4.7":
+  version "1.4.7"
+  resolved "https://registry.yarnpkg.com/@nomiclabs/buidler/-/buidler-1.4.7.tgz#88436ba53e0e830d37c16601df59da4dbffde524"
+  integrity sha512-TyJKwKyKwu82uYPneqLf5HKFr96QX7cHDT7O7Ro93zmk1b84+EH9tn3zNIO/+96DMGISp8cCRwZhct89OwblRA==
   dependencies:
     "@nomiclabs/ethereumjs-vm" "^4.1.1"
     "@sentry/node" "^5.18.1"
@@ -763,6 +766,7 @@
     deepmerge "^2.1.0"
     download "^7.1.0"
     enquirer "^2.3.0"
+    env-paths "^2.2.0"
     eth-sig-util "^2.5.2"
     ethereum-cryptography "^0.1.2"
     ethereumjs-abi "^0.6.8"
@@ -2716,10 +2720,10 @@ bufferutil@^4.0.1:
   dependencies:
     node-gyp-build "~3.7.0"
 
-buidler-deploy@^0.5.18:
-  version "0.5.18"
-  resolved "https://registry.yarnpkg.com/buidler-deploy/-/buidler-deploy-0.5.18.tgz#8c07acb62010512909ed5eb67d82d5f9041c892b"
-  integrity sha512-RfvSR3uB/HOrkCj4baO4OHFVof43mb+8zE2W5Kl0+muEhGLwKEaoVe6D5RTD8dzSQgheDLFfFWwKSFy5B10YVA==
+buidler-deploy@^0.6.0-beta.16:
+  version "0.6.0-beta.16"
+  resolved "https://registry.yarnpkg.com/buidler-deploy/-/buidler-deploy-0.6.0-beta.16.tgz#36b51f3e782c256510b9205b91f84188ee440272"
+  integrity sha512-av71JFINiliNLivUe5pnfSlpynhJ3Mt1zPbnjgyjYe2XLny2zJ0IhahTxXgLZWRrVvyFk+CwDzXsU6Fz0oAldw==
   dependencies:
     "@ethersproject/abi" "^5.0.2"
     "@ethersproject/abstract-signer" "^5.0.2"
@@ -2897,6 +2901,14 @@ caw@^2.0.1:
     isurl "^1.0.0-alpha5"
     tunnel-agent "^0.6.0"
     url-to-options "^1.0.1"
+
+cbor@^5.0.2:
+  version "5.1.0"
+  resolved "https://registry.yarnpkg.com/cbor/-/cbor-5.1.0.tgz#c3be220dcbbd96a338d279a664237aed3f596904"
+  integrity sha512-qzEc7kUShdMbWTaUH7X+aHW8owvBU3FS0dfYR1lGYpoZr0mGJhhojLlZJH653x/DfeMZ56h315FRNBUIG1R7qg==
+  dependencies:
+    bignumber.js "^9.0.0"
+    nofilter "^1.0.4"
 
 chai-as-promised@^7.1.1:
   version "7.1.1"
@@ -3995,6 +4007,11 @@ enquirer@^2.3.0, enquirer@^2.3.5:
   integrity sha512-yjNnPr315/FjS4zIsUxYguYUPP2e1NK4d7E7ZOLiyYCcbFBiTMyID+2wvm2w6+pZ/odMA7cRkjhsPbltwBOrLg==
   dependencies:
     ansi-colors "^4.1.1"
+
+env-paths@^2.2.0:
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/env-paths/-/env-paths-2.2.0.tgz#cdca557dc009152917d6166e2febe1f039685e43"
+  integrity sha512-6u0VYSCo/OW6IoD5WCLLy9JUGARbamfSavcNXry/eu8aHVFei6CD3Sw+VGX5alea1i9pgPHW0mbu6Xj0uBh7gA==
 
 errno@~0.1.1:
   version "0.1.7"
@@ -8328,6 +8345,11 @@ node-preload@^0.2.1:
   dependencies:
     process-on-spawn "^1.0.0"
 
+nofilter@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/nofilter/-/nofilter-1.0.4.tgz#78d6f4b6a613e7ced8b015cec534625f7667006e"
+  integrity sha512-N8lidFp+fCz+TD51+haYdbDGrcBWwuHX40F5+z0qkUjMJ5Tp+rdSuAkMJ9N9eoolDlEVTf6u5icM+cNKkKW2mA==
+
 nopt@3.x:
   version "3.0.6"
   resolved "https://registry.yarnpkg.com/nopt/-/nopt-3.0.6.tgz#c6465dbf08abcd4db359317f79ac68a646b28ff9"
@@ -9686,7 +9708,7 @@ request-promise-native@^1.0.5:
     stealthy-require "^1.1.1"
     tough-cookie "^2.3.3"
 
-request-promise@^4.2.2, request-promise@^4.2.4:
+request-promise@^4.2.2:
   version "4.2.5"
   resolved "https://registry.yarnpkg.com/request-promise/-/request-promise-4.2.5.tgz#186222c59ae512f3497dfe4d75a9c8461bd0053c"
   integrity sha512-ZgnepCykFdmpq86fKGwqntyTiUrHycALuGggpyCZwMvGaZWgxW6yagT0FHkgo5LzYvOaCNvxYwWYIjevSH1EDg==
