@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
 	"sync"
@@ -58,7 +59,7 @@ func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *
 
 	startHeader, err := c.client.HeaderByHash(ctx, startBlockId.HeaderHash.ToEthHash())
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrapf(err, "can't find initial header %v", startBlockId)
 	}
 	blockIdChan <- arbbridge.MaybeBlockId{BlockId: startBlockId, Timestamp: new(big.Int).SetUint64(startHeader.Time)}
 	prevBlockId := startBlockId

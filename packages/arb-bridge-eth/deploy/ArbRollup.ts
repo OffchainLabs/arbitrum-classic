@@ -12,7 +12,7 @@ const func: DeployFunction = async (bre: BuidlerRuntimeEnvironment) => {
   if (!contract) {
     const deployResult = await deploy('ArbRollup', { from: deployer })
     contract = await deployments.get('ArbRollup')
-    if (deployResult.newlyDeployed) {
+    if (deployResult.newlyDeployed && deployResult.receipt) {
       log(
         `ArbRollup deployed at ${contract.address} for ${deployResult.receipt.gasUsed}`
       )
