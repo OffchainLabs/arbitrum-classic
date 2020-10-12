@@ -124,10 +124,13 @@ func TestFib(t *testing.T) {
 	}
 
 	getFibTx := message.Call{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		DestAddress: fibAddress,
-		Data:        append(getFibSignature, getFibData...),
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(1000000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: fibAddress,
+			Payment:     big.NewInt(0),
+			Data:        append(getFibSignature, getFibData...),
+		},
 	}
 
 	getFibResult, err := runValidTransaction(t, mach, getFibTx, addr)

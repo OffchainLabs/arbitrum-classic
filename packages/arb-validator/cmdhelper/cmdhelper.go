@@ -20,11 +20,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -84,7 +83,7 @@ func ValidateRollupChain(
 	}
 
 	// Rollup creation
-	ethclint, err := ethclient.Dial(rollupArgs.EthURL)
+	ethclint, err := ethutils.NewRPCEthClient(rollupArgs.EthURL)
 	if err != nil {
 		return err
 	}

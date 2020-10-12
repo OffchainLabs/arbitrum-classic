@@ -175,7 +175,7 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 	}
 	batchTxes := make([]message.AbstractL2Message, 0, len(txes))
 	for _, tx := range txes {
-		batchTxes = append(batchTxes, message.SignedTransaction{Tx: tx})
+		batchTxes = append(batchTxes, message.NewCompressedECDSAFromEth(tx))
 	}
 	batchTx, err := message.NewTransactionBatchFromMessages(batchTxes)
 	if err != nil {

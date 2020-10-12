@@ -55,7 +55,7 @@ contract ArbRollup is IArbRollup, Cloneable, NodeGraph, Staking {
     // Only callable by owner
     string private constant ONLY_OWNER = "ONLY_OWNER";
 
-    string public constant VERSION = "0.7.0";
+    string public constant VERSION = "0.7.2";
 
     address payable public owner;
 
@@ -172,7 +172,7 @@ contract ArbRollup is IArbRollup, Cloneable, NodeGraph, Staking {
         bytes32[] calldata latestConfirmedProof,
         bytes32[] calldata stakerProof
     ) external {
-        bytes32 stakerLocation = getStakerLocation(msg.sender);
+        bytes32 stakerLocation = getStakerLocation(stakerAddress);
         require(
             latestConfirmedProof[0] != stakerProof[0] &&
                 RollupUtils.calculateLeafFromPath(node, latestConfirmedProof) ==
@@ -193,7 +193,7 @@ contract ArbRollup is IArbRollup, Cloneable, NodeGraph, Staking {
         bytes32 vmProtoStateHash,
         bytes32[] calldata proof
     ) external {
-        bytes32 stakerLocation = getStakerLocation(msg.sender);
+        bytes32 stakerLocation = getStakerLocation(stakerAddress);
         bytes32 nextNode = RollupUtils.childNodeHash(
             stakerLocation,
             deadlineTicks,

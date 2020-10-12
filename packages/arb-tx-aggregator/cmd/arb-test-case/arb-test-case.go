@@ -18,9 +18,8 @@ package main
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
-
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
@@ -42,7 +41,7 @@ func main() {
 func generateTestCase(ethURL string, rollupAddress common.Address, contract string) error {
 	ctx := context.Background()
 
-	ethclint, err := ethclient.Dial(ethURL)
+	ethclint, err := ethutils.NewRPCEthClient(ethURL)
 	if err != nil {
 		return err
 	}

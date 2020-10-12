@@ -18,9 +18,9 @@ package chainobserver
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
@@ -49,7 +48,7 @@ import (
 var dbPath = "./testdb"
 
 var rollupTester *ethbridgetestcontracts.RollupTester
-var ethclnt *backends.SimulatedBackend
+var ethclnt *ethutils.SimulatedEthClient
 var auth *bind.TransactOpts
 
 func ethTransfer(dest common.Address, amount *big.Int) value.Value {
@@ -76,8 +75,8 @@ func checkBalance(t *testing.T, globalInbox arbbridge.GlobalInbox, address commo
 }
 
 func TestMain(m *testing.M) {
-	var pks []*ecdsa.PrivateKey
-	ethclnt, pks = test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend()
+	ethclnt = &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 	auth = bind.NewKeyedTransactor(pks[0])
 
 	go func() {
@@ -224,7 +223,7 @@ func TestConfirmAssertion(t *testing.T) {
 		[]value.Value{},
 	)
 
-	currentBlock, err := clnt.CurrentBlockId(context.Background())
+	currentBlock, err := clnt.BlockIdForHeight(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,7 +256,7 @@ func TestConfirmAssertion(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	currentTime, err := clnt.CurrentBlockId(context.Background())
+	currentTime, err := clnt.BlockIdForHeight(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

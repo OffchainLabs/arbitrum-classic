@@ -357,7 +357,7 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 }
 
 func (chain *ChainObserver) UpdateAssumedValidBlock(ctx context.Context, clnt arbbridge.ChainTimeGetter, assumedValidDepth int64) error {
-	latestL1BlockId, err := clnt.CurrentBlockId(ctx)
+	latestL1BlockId, err := clnt.BlockIdForHeight(ctx, nil)
 	if err != nil {
 		return errors2.Wrap(err, "Getting current block header")
 	}

@@ -139,6 +139,7 @@ func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollup
 			db+"/aggregator",
 			"2235",
 			"9546",
+			"9547",
 			utils2.RPCFlags{},
 			time.Second,
 			true,
@@ -280,7 +281,8 @@ func TestFib(t *testing.T) {
 		}
 	}()
 
-	l1Client, pks := test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend()
+	l1Client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 	go func() {
 		t := time.NewTicker(time.Second * 2)
 		for range t.C {

@@ -21,6 +21,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"math/big"
 	"os"
@@ -29,8 +30,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
 
 	errors2 "github.com/pkg/errors"
-
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -88,7 +87,7 @@ func createRollupChain() error {
 		return err
 	}
 
-	ethclint, err := ethclient.Dial(ethURL)
+	ethclint, err := ethutils.NewRPCEthClient(ethURL)
 	if err != nil {
 		return err
 	}
