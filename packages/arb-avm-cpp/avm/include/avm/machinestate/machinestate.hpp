@@ -95,6 +95,7 @@ struct MachineState {
     BlockReason isBlocked(bool newMessages) const;
 
     const CodePoint& loadCurrentInstruction() const;
+    uint64_t nextGasCost() const;
 };
 
 #endif /* machinestate_hpp */

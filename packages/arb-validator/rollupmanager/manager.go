@@ -18,6 +18,7 @@ package rollupmanager
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/observer"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainobserver"
 	errors2 "github.com/pkg/errors"
@@ -169,26 +170,13 @@ func CreateManagerAdvanced(
 					nextEventId := man.activeChain.CurrentEventId()
 					startHeight := nextEventId.BlockId.Height.AsInt()
 
-					currentOnChain, err := clnt.CurrentBlockId(runCtx)
+					fetchEnd, err := observer.CalculateCatchupFetch(runCtx, startHeight, clnt, maxReorg)
 					if err != nil {
-						return err
+						return errors2.Wrap(err, "error calculating fast catchup")
 					}
-					currentL1Height := currentOnChain.Height.AsInt()
-
-					fastCatchupEndHeight := new(big.Int).Sub(currentL1Height, maxReorg)
-					if startHeight.Cmp(fastCatchupEndHeight) >= 0 {
+					if fetchEnd == nil {
 						break
 					}
-
-					fetchSize := new(big.Int).Sub(fastCatchupEndHeight, startHeight)
-					if fetchSize.Cmp(big.NewInt(1)) <= 0 {
-						break
-					}
-					if fetchSize.Cmp(maxReorg) >= 0 {
-						fetchSize = maxReorg
-					}
-					fetchEnd := new(big.Int).Add(startHeight, fetchSize)
-					fetchEnd = fetchEnd.Sub(fetchEnd, big.NewInt(1))
 
 					log.Println("Getting events between", startHeight, "and", fetchEnd)
 					inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, startHeight, fetchEnd)

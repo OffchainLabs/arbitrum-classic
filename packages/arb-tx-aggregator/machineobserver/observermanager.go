@@ -18,6 +18,7 @@ package machineobserver
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/observer"
 	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
@@ -31,29 +32,77 @@ import (
 
 const defaultMaxReorgDepth = 100
 
-func calculateCatchupFetch(ctx context.Context, start *big.Int, clnt arbbridge.ChainTimeGetter, maxReorg *big.Int) (*big.Int, error) {
-	currentLocalHeight := start
-	currentOnChain, err := clnt.CurrentBlockId(ctx)
+func ensureInitialized(
+	ctx context.Context,
+	cp *checkpointing.IndexedCheckpointer,
+	db *txdb.TxDB,
+	clnt arbbridge.ArbClient,
+	rollupAddr common.Address,
+) error {
+	if err := db.Load(ctx); err != nil {
+		return err
+	}
+
+	// If we're already initialized, do nothing
+	if db.LatestBlockId() != nil {
+		return nil
+	}
+
+	rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
 	if err != nil {
-		return nil, err
-	}
-	currentL1Height := currentOnChain.Height.AsInt()
-
-	fastCatchupEndHeight := new(big.Int).Sub(currentL1Height, maxReorg)
-	if currentLocalHeight.Cmp(fastCatchupEndHeight) >= 0 {
-		return nil, nil
+		return err
 	}
 
-	fetchSize := new(big.Int).Sub(fastCatchupEndHeight, currentLocalHeight)
-	if fetchSize.Cmp(big.NewInt(1)) <= 0 {
-		return nil, nil
+	inboxAddr, err := rollupWatcher.InboxAddress(ctx)
+	if err != nil {
+		return err
 	}
-	if fetchSize.Cmp(maxReorg) >= 0 {
-		fetchSize = maxReorg
+
+	// We're starting from scratch. Process the messages from the partial block
+	inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
+	if err != nil {
+		return err
 	}
-	fetchEnd := new(big.Int).Add(currentLocalHeight, fetchSize)
-	fetchEnd = fetchEnd.Sub(fetchEnd, big.NewInt(1))
-	return fetchEnd, nil
+
+	initialMachine, err := cp.GetInitialMachine()
+	if err != nil {
+		return err
+	}
+
+	if err := rollupWatcher.VerifyArbChain(ctx, initialMachine.Hash()); err != nil {
+		return err
+	}
+
+	_, eventCreated, _, creationTimestamp, err := rollupWatcher.GetCreationInfo(ctx)
+	if err != nil {
+		return err
+	}
+
+	events, err := inboxWatcher.GetDeliveredEventsInBlock(ctx, eventCreated.BlockId, creationTimestamp)
+	if err != nil {
+		return err
+	}
+
+	// filter out events before nextEventId
+	if len(events) > 0 {
+		startIndex := -1
+		for i, ev := range events {
+			if ev.ChainInfo.Cmp(eventCreated) > 0 {
+				startIndex = i
+			}
+		}
+		if startIndex >= 0 {
+			events = events[startIndex:]
+		} else {
+			events = nil
+		}
+	}
+
+	if err := db.AddMessages(ctx, events, eventCreated.BlockId); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func RunObserver(
@@ -78,16 +127,9 @@ func RunObserver(
 			return nil, err
 		}
 	}
-	initialMachine, err := cp.GetInitialMachine()
-	if err != nil {
-		return nil, err
-	}
 
 	rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
 	if err != nil {
-		return nil, err
-	}
-	if err := rollupWatcher.VerifyArbChain(ctx, initialMachine.Hash()); err != nil {
 		return nil, err
 	}
 
@@ -96,52 +138,13 @@ func RunObserver(
 		return nil, err
 	}
 
-	_, eventCreated, _, creationTimestamp, err := rollupWatcher.GetCreationInfo(ctx)
-	if err != nil {
+	db := txdb.New(clnt, cp, cp.GetAggregatorStore(), rollupAddr)
+
+	if err := ensureInitialized(ctx, cp, db, clnt, rollupAddr); err != nil {
 		return nil, err
-	}
-
-	db, err := txdb.New(ctx, clnt, cp, cp.GetAggregatorStore(), rollupAddr)
-	if err != nil {
-		return nil, err
-	}
-
-	if db.LatestBlockId() == nil {
-		// We're starting from scratch. Process the messages from the partial block
-		inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
-		if err != nil {
-			return nil, err
-		}
-
-		events, err := inboxWatcher.GetDeliveredEventsInBlock(ctx, eventCreated.BlockId, creationTimestamp)
-		if err != nil {
-			return nil, err
-		}
-
-		// filter out events before nextEventId
-		if len(events) > 0 {
-			startIndex := -1
-			for i, ev := range events {
-				if ev.ChainInfo.Cmp(eventCreated) > 0 {
-					startIndex = i
-				}
-			}
-			if startIndex >= 0 {
-				events = events[startIndex:]
-			} else {
-				events = nil
-			}
-		}
-
-		if err := db.AddMessages(ctx, events, eventCreated.BlockId); err != nil {
-			return nil, err
-		}
 	}
 
 	go func() {
-
-		firstRun := true
-
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
 
@@ -150,12 +153,8 @@ func RunObserver(
 				log.Fatal(err)
 			}
 
-			if !firstRun {
-				if err := db.RestoreFromCheckpoint(ctx); err != nil {
-					log.Fatal(err)
-				}
-			} else {
-				firstRun = false
+			if err := ensureInitialized(ctx, cp, db, clnt, rollupAddr); err != nil {
+				log.Fatal(err)
 			}
 
 			err = func() error {
@@ -169,7 +168,7 @@ func RunObserver(
 				maxReorg := cp.MaxReorgHeight()
 				for {
 					start := new(big.Int).Add(db.LatestBlockId().Height.AsInt(), big.NewInt(1))
-					fetchEnd, err := calculateCatchupFetch(runCtx, start, clnt, maxReorg)
+					fetchEnd, err := observer.CalculateCatchupFetch(runCtx, start, clnt, maxReorg)
 					if err != nil {
 						return errors2.Wrap(err, "error calculating fast catchup")
 					}

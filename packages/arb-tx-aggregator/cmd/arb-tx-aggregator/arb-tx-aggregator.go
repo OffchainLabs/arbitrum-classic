@@ -32,12 +32,22 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
+	//_ "net/http/pprof"
 )
 
 func main() {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	walletArgs := utils.AddWalletFlags(fs)
 	rpcVars := utils2.AddRPCFlags(fs)
+	keepPendingState := fs.Bool("pending", false, "enable pending state tracking")
+
+	maxBatchTime := fs.Int64(
+		"maxBatchTime",
+		10,
+		"maxBatchTime=NumSeconds",
+	)
+
+	//go http.ListenAndServe("localhost:6060", nil)
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
@@ -46,7 +56,7 @@ func main() {
 
 	if fs.NArg() != 3 {
 		log.Fatalf(
-			"usage: arb-tx-aggregator %v %v",
+			"usage: arb-tx-aggregator [--maxBatchTime=NumSeconds] %v %v",
 			utils.WalletArgsString,
 			utils.RollupArgsString,
 		)
@@ -85,8 +95,10 @@ func main() {
 		dbPath,
 		"1235",
 		"8547",
+		"8548",
 		rpcVars,
-		time.Second*5,
+		time.Duration(*maxBatchTime)*time.Second,
+		*keepPendingState,
 	); err != nil {
 		log.Fatal(err)
 	}

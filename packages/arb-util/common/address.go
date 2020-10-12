@@ -49,6 +49,10 @@ func AddressArrayToEth(addresses []Address) []ethcommon.Address {
 	return ret
 }
 
+func (a Address) Bytes() []byte {
+	return a[:]
+}
+
 func (a Address) String() string {
 	return a.Hex()
 }

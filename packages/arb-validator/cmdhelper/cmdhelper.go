@@ -63,7 +63,7 @@ func ValidateRollupChain(
 
 	if validateCmd.NArg() != 3 {
 		return fmt.Errorf(
-			"usage: %v validate %v [--rpc] [--blocktime=NumSeconds] %v",
+			"usage: %v validate %v [--blocktime=NumSeconds] %v",
 			execName,
 			utils.WalletArgsString,
 			utils.RollupArgsString,

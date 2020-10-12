@@ -79,6 +79,7 @@ func (m *Machine) CurrentStatus() machine.Status {
 		return machine.Extensive
 	case C.STATUS_ERROR_STOP:
 		return machine.ErrorStop
+
 	case C.STATUS_HALT:
 		return machine.Halt
 	default:
@@ -193,7 +194,7 @@ func (m *Machine) ExecuteCallServerAssertion(
 func (m *Machine) ExecuteSideloadedAssertion(
 	maxSteps uint64,
 	inboxMessages []inbox.InboxMessage,
-	sideloadValue value.TupleValue,
+	sideloadValue *value.TupleValue,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, uint64) {
 	msgDataC := C.CBytes(encodeInboxMessages(inboxMessages))

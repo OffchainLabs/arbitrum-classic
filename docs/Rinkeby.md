@@ -6,7 +6,7 @@ sidebar_label: Rinkeby
 
 ## Launching the chain
 
-To set up a rollup chain the the Arbitrum Rollup Deployment [tool](https://developer.offchainlabs.com/tools/deployment/).
+To set up a rollup chain use the Arbitrum Rollup Deployment [tool](https://developer.offchainlabs.com/tools/deployment/).
 
 The deployment tool will assist you in configuring and launching your Rollup Chain. After you've successfully launched your chain, it will give you the chain's Ethereum address.
 

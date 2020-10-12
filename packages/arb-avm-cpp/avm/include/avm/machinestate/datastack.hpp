@@ -111,7 +111,7 @@ class Datastack {
         return values.back();
     }
 
-    uint64_t stacksize() { return values.size(); }
+    uint64_t stacksize() const { return values.size(); }
 
     uint256_t hash() const;
 

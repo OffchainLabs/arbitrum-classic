@@ -64,6 +64,9 @@ const (
 	CallType                          = 2
 	TransactionBatchType              = 3
 	SignedTransactionType             = 4
+	BuddyRequestType                  = 5
+	HeartbeatType                     = 6
+	CompressedECDSA                   = 7
 )
 
 type AbstractL2Message interface {
@@ -117,6 +120,8 @@ func (l L2Message) AbstractMessage() (AbstractL2Message, error) {
 		return newTransactionBatchFromData(data), nil
 	case SignedTransactionType:
 		return newSignedTransactionFromData(data)
+	case CompressedECDSA:
+		return newCompressedECDSATxFromData(data)
 	default:
 		return nil, errors.New("invalid l2 l2message type")
 	}
@@ -232,7 +237,7 @@ func (t Transaction) MessageID(sender common.Address, chain common.Address) comm
 	return hashing.SoliditySHA3(addressData(sender), hashing.Bytes32(inner))
 }
 
-type ContractTransaction struct {
+type BasicTx struct {
 	MaxGas      *big.Int
 	GasPriceBid *big.Int
 	DestAddress common.Address
@@ -240,12 +245,12 @@ type ContractTransaction struct {
 	Data        []byte
 }
 
-func NewContractTransactionFromData(data []byte) ContractTransaction {
+func newBasicTxFromData(data []byte) BasicTx {
 	maxGas, data := extractUInt256(data)
 	gasPriceBid, data := extractUInt256(data)
 	destAddress, data := extractAddress(data)
 	payment, data := extractUInt256(data)
-	return ContractTransaction{
+	return BasicTx{
 		MaxGas:      maxGas,
 		GasPriceBid: gasPriceBid,
 		DestAddress: destAddress,
@@ -254,8 +259,8 @@ func NewContractTransactionFromData(data []byte) ContractTransaction {
 	}
 }
 
-func NewRandomContractTransaction() ContractTransaction {
-	return ContractTransaction{
+func newRandomBasicTx() BasicTx {
+	return BasicTx{
 		MaxGas:      common.RandBigInt(),
 		GasPriceBid: common.RandBigInt(),
 		DestAddress: common.RandAddress(),
@@ -264,71 +269,54 @@ func NewRandomContractTransaction() ContractTransaction {
 	}
 }
 
-func (t ContractTransaction) Destination() common.Address {
+func (t BasicTx) Destination() common.Address {
 	return t.DestAddress
+}
+
+func (t BasicTx) AsData() ([]byte, error) {
+	return t.AsDataSafe(), nil
+}
+
+func (t BasicTx) AsDataSafe() []byte {
+	ret := make([]byte, 0)
+	ret = append(ret, math.U256Bytes(new(big.Int).Set(t.MaxGas))...)
+	ret = append(ret, math.U256Bytes(new(big.Int).Set(t.GasPriceBid))...)
+	ret = append(ret, addressData(t.DestAddress)...)
+	ret = append(ret, math.U256Bytes(new(big.Int).Set(t.Payment))...)
+	ret = append(ret, t.Data...)
+	return ret
+}
+
+type ContractTransaction struct {
+	BasicTx
+}
+
+func NewContractTransactionFromData(data []byte) ContractTransaction {
+	return ContractTransaction{BasicTx: newBasicTxFromData(data)}
+}
+
+func NewRandomContractTransaction() ContractTransaction {
+	return ContractTransaction{BasicTx: newRandomBasicTx()}
 }
 
 func (t ContractTransaction) L2Type() L2SubType {
 	return ContractTransactionType
 }
 
-func (t ContractTransaction) AsData() ([]byte, error) {
-	return t.AsDataSafe(), nil
-}
-
-func (t ContractTransaction) AsDataSafe() []byte {
-	ret := make([]byte, 0)
-	ret = append(ret, math.U256Bytes(t.MaxGas)...)
-	ret = append(ret, math.U256Bytes(t.GasPriceBid)...)
-	ret = append(ret, addressData(t.DestAddress)...)
-	ret = append(ret, math.U256Bytes(t.Payment)...)
-	ret = append(ret, t.Data...)
-	return ret
-}
-
 type Call struct {
-	MaxGas      *big.Int
-	GasPriceBid *big.Int
-	DestAddress common.Address
-	Data        []byte
+	BasicTx
 }
 
 func NewCallFromData(data []byte) Call {
-	maxGas, data := extractUInt256(data)
-	gasPriceBid, data := extractUInt256(data)
-	destAddress, data := extractAddress(data)
-	return Call{
-		MaxGas:      maxGas,
-		GasPriceBid: gasPriceBid,
-		DestAddress: destAddress,
-		Data:        data,
-	}
+	return Call{BasicTx: newBasicTxFromData(data)}
 }
 
 func NewRandomCall() Call {
-	return Call{
-		MaxGas:      common.RandBigInt(),
-		GasPriceBid: common.RandBigInt(),
-		DestAddress: common.RandAddress(),
-		Data:        common.RandBytes(200),
-	}
-}
-
-func (c Call) Destination() common.Address {
-	return c.DestAddress
+	return Call{BasicTx: newRandomBasicTx()}
 }
 
 func (c Call) L2Type() L2SubType {
 	return CallType
-}
-
-func (c Call) AsData() ([]byte, error) {
-	ret := make([]byte, 0)
-	ret = append(ret, math.U256Bytes(c.MaxGas)...)
-	ret = append(ret, math.U256Bytes(c.GasPriceBid)...)
-	ret = append(ret, addressData(c.DestAddress)...)
-	ret = append(ret, c.Data...)
-	return ret, nil
 }
 
 type SignedTransaction struct {
@@ -405,6 +393,91 @@ func (t SignedTransaction) AsData() ([]byte, error) {
 	return rlp.EncodeToBytes(t.Tx)
 }
 
+type CompressedTx struct {
+	SequenceNum *big.Int
+	GasPrice    *big.Int
+	GasLimit    *big.Int
+	To          CompressedAddress
+	Payment     *big.Int
+	Calldata    []byte
+}
+
+func newCompressedTxFromEth(tx *types.Transaction) CompressedTx {
+	var to CompressedAddress
+	if tx.To() != nil {
+		to = CompressedAddressFull{common.NewAddressFromEth(*tx.To())}
+	}
+	return CompressedTx{
+		SequenceNum: new(big.Int).SetUint64(tx.Nonce()),
+		GasPrice:    tx.GasPrice(),
+		GasLimit:    new(big.Int).SetUint64(tx.Gas()),
+		To:          to,
+		Payment:     tx.Value(),
+		Calldata:    tx.Data(),
+	}
+}
+
+type CompressedECDSATransaction struct {
+	CompressedTx
+
+	V *big.Int
+	R *big.Int
+	S *big.Int
+}
+
+func NewCompressedECDSAFromEth(tx *types.Transaction) CompressedECDSATransaction {
+	v, r, s := tx.RawSignatureValues()
+	return CompressedECDSATransaction{
+		CompressedTx: newCompressedTxFromEth(tx),
+		V:            v,
+		R:            r,
+		S:            s,
+	}
+}
+
+func newCompressedECDSATxFromData(data []byte) (CompressedECDSATransaction, error) {
+	if len(data) < 65 {
+		return CompressedECDSATransaction{}, errors.New("data is too short")
+	}
+
+	compressedTx, err := decodeCompressedTx(bytes.NewReader(data[:len(data)-65]))
+	if err != nil {
+		return CompressedECDSATransaction{}, err
+	}
+	v, r, s, err := decodeECDSASig(bytes.NewReader(data[len(data)-65:]))
+	if err != nil {
+		return CompressedECDSATransaction{}, err
+	}
+	return CompressedECDSATransaction{
+		CompressedTx: compressedTx,
+		V:            v,
+		R:            r,
+		S:            s,
+	}, nil
+}
+
+func (t CompressedECDSATransaction) String() string {
+	dest := "ContractCreation"
+	if t.To != nil {
+		dest = t.To.String()
+	}
+	return fmt.Sprintf("CompressedECDSATransaction(%v, %v, %v, %v, %v, 0x%X)", t.SequenceNum, t.GasPrice, t.GasLimit, dest, t.Payment, t.Calldata)
+}
+
+func (t CompressedECDSATransaction) L2Type() L2SubType {
+	return CompressedECDSA
+}
+
+func (t CompressedECDSATransaction) AsData() ([]byte, error) {
+	data, err := encodeUnsignedTx(t.CompressedTx)
+	if err != nil {
+		return nil, err
+	}
+
+	data = append(data, encodeECDSASig(t.V, t.R, t.S)...)
+	return data, nil
+}
+
 type TransactionBatch struct {
 	Transactions [][]byte
 }
@@ -474,8 +547,11 @@ func (t TransactionBatch) AsData() ([]byte, error) {
 func (t TransactionBatch) AsDataSafe() []byte {
 	ret := make([]byte, 0)
 	for _, tx := range t.Transactions {
-		encodedLength := make([]byte, 8)
-		binary.BigEndian.PutUint64(encodedLength[:], uint64(len(tx)))
+		encodedLength, err := rlp.EncodeToBytes(big.NewInt(int64(len(tx))))
+		if err != nil {
+			// This should never occur
+			panic(err)
+		}
 		ret = append(ret, encodedLength[:]...)
 		ret = append(ret, tx...)
 	}

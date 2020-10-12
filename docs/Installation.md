@@ -22,8 +22,7 @@ open -a Docker
 ```
 
 Once the Docker app appears in the menu bar, wait until the yellow light turns
-green (no need to log into Docker). Also check that node version 10 is installed
-correctly by running `node -v`.
+green (no need to log into Docker).
 
 #### Ubuntu 18.04
 
@@ -36,14 +35,19 @@ sudo apt install -y curl python3 python3-pip
 
 Then setup docker using the [official instructions](https://docs.docker.com/engine/install/ubuntu/)
 
-### 2. Install yarn and truffle
+Also setup docker compose using the [official instructions](https://docs.docker.com/compose/install/)
+
+### 2. Install node, yarn and truffle
 
 ```bash
 touch ~/.bashrc
 curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.35.3/install.sh | bash
-curl -o- -L https://yarnpkg.com/install.sh | bash
 . ~/.bashrc
 nvm install 10.16.3
+
+curl -o- -L https://yarnpkg.com/install.sh | bash
+. ~/.bashrc
+
 yarn global add truffle
 ```
 
@@ -62,12 +66,12 @@ Here are the important dependencies in case you are not running on a supported O
 
 > Requires`python3 --version` 3.6 or greater
 
-## Install Arbitrum
+## Download Arbitrum
 
 Download the Arbitrum Monorepo from source:
 
 ```bash
-git clone -b v0.7.0 https://github.com/offchainlabs/arbitrum.git
+git clone -b v0.7.1 https://github.com/offchainlabs/arbitrum.git
 cd arbitrum
 yarn
 yarn build
@@ -86,14 +90,14 @@ brew install autoconf automake boost cmake gmp go libtool rocksdb
 #### Ubuntu 18.04
 
 ```bash
-sudo add-apt-repository ppa:longsleep/golang-backports
+sudo add-apt-repository -y ppa:longsleep/golang-backports
 sudo apt update
-sudo apt install -y autoconf automake cmake libboost-dev libboost-filesystem-dev libgmp-dev librocksdb-dev libssl-dev libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libtool golang-go
+sudo apt install -y autoconf automake cmake libboost-dev libboost-filesystem-dev libgmp-dev librocksdb-dev libssl-dev libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libtool golang-go clang-format cmake-format
 
 git clone -b v6.11.4 https://github.com/facebook/rocksdb
 cd rocksdb
 make shared_lib
-cd make install
+make install
 ```
 
 ## Install Arbitrum

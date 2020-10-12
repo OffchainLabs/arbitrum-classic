@@ -61,7 +61,7 @@ type Machine interface {
 	ExecuteSideloadedAssertion(
 		maxSteps uint64,
 		messages []inbox.InboxMessage,
-		sideloadValue value.TupleValue,
+		sideloadValue *value.TupleValue,
 		maxWallTime time.Duration,
 	) (*protocol.ExecutionAssertion, uint64)
 

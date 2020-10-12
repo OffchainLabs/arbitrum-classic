@@ -40,9 +40,11 @@ func LaunchAggregator(
 	executable string,
 	dbPath string,
 	aggPort string,
-	web3Port string,
+	web3RPCPort string,
+	web3WSPort string,
 	flags utils2.RPCFlags,
 	maxBatchTime time.Duration,
+	keepPendingState bool,
 ) error {
 	arbClient := ethbridge.NewEthClient(client)
 	db, err := machineobserver.RunObserver(ctx, rollupAddress, arbClient, executable, dbPath)
@@ -64,7 +66,7 @@ func LaunchAggregator(
 		return err
 	}
 
-	batch := batcher.NewBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
+	batch := batcher.NewBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime, keepPendingState)
 
 	srv := aggregator.NewServer(client, batch, rollupAddress, db)
 	errChan := make(chan error, 1)
@@ -84,9 +86,14 @@ func LaunchAggregator(
 			errChan <- utils2.LaunchRPC(aggServer, aggPort, flags)
 		}()
 	}
-	if web3Port != "" {
+	if web3RPCPort != "" {
 		go func() {
-			errChan <- utils2.LaunchRPC(web3Server, web3Port, flags)
+			errChan <- utils2.LaunchRPC(web3Server, web3RPCPort, flags)
+		}()
+	}
+	if web3WSPort != "" {
+		go func() {
+			errChan <- utils2.LaunchWS(web3Server, web3WSPort, flags)
 		}()
 	}
 

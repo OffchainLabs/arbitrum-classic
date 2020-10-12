@@ -17,13 +17,17 @@
 package web3
 
 import (
-	"net/http"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 type Web3 struct {
 }
 
-func (web3 *Web3) ClientVersion(r *http.Request, _ *EmptyArgs, reply *string) error {
-	*reply = "arb-tx-aggregator/v0.7.0"
-	return nil
+func (web3 *Web3) ClientVersion() string {
+	return "arb-tx-aggregator/v0.7.1"
+}
+
+func (web3 *Web3) Sha3(data hexutil.Bytes) hexutil.Bytes {
+	return crypto.Keccak256(data)
 }

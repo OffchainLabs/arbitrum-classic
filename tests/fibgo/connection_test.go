@@ -139,8 +139,10 @@ func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollup
 			db+"/aggregator",
 			"2235",
 			"9546",
+			"9547",
 			utils2.RPCFlags{},
 			time.Second,
+			true,
 		); err != nil {
 			log.Fatal(err)
 		}

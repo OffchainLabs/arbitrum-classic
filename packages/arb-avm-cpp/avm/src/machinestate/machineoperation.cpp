@@ -15,12 +15,16 @@
  */
 
 #include <avm/machinestate/machineoperation.hpp>
+
+#include <avm/machinestate/ecops.hpp>
 #include <avm/machinestate/machinestate.hpp>
 
+#include <PicoSHA2/picosha2.h>
 #include <ethash/keccak.h>
 #include <secp256k1_recovery.h>
 #include <ethash/keccak.hpp>
-#include <libff/algebra/curves/alt_bn128/alt_bn128_g1.hpp>
+
+#include <iostream>
 
 // Many opcode implementations were inspired from the Apache 2.0 licensed EVM
 // implementation https://github.com/ethereum/evmone
@@ -69,6 +73,14 @@ uint64_t assumeInt64(uint256_t& val) {
 }
 
 Tuple& assumeTuple(value& val) {
+    auto tup = nonstd::get_if<Tuple>(&val);
+    if (!tup) {
+        throw bad_pop_type{};
+    }
+    return *tup;
+}
+
+const Tuple& assumeTuple(const value& val) {
     auto tup = nonstd::get_if<Tuple>(&val);
     if (!tup) {
         throw bad_pop_type{};
@@ -451,6 +463,46 @@ void keccakF(MachineState& m) {
     ++m.pc;
 }
 
+namespace internal {
+uint256_t sha256_block(const uint256_t& digest_int,
+                       std::array<uint8_t, 64>& input_data) {
+    uint32_t digest_data[8];
+    picosha2::word_t digest[8];
+    intx::be::unsafe::store(reinterpret_cast<uint8_t*>(&digest_data),
+                            bswap(digest_int));
+    for (int i = 0; i < 8; ++i) {
+        digest[7 - i] = digest_data[i];
+    }
+
+    picosha2::detail::hash256_block(digest, input_data.begin(),
+                                    input_data.end());
+
+    for (int i = 0; i < 8; ++i) {
+        digest_data[7 - i] = static_cast<uint32_t>(digest[i]);
+    }
+
+    return bswap(intx::be::unsafe::load<uint256_t>(
+        reinterpret_cast<const uint8_t*>(&digest_data)));
+}
+}  // namespace internal
+
+void sha256F(MachineState& m) {
+    m.stack.prepForMod(3);
+    auto& digest_int = assumeInt(m.stack[0]);
+    auto& input_first_int = assumeInt(m.stack[1]);
+    auto& input_second_int = assumeInt(m.stack[2]);
+
+    std::array<uint8_t, 64> input_data;
+    intx::be::unsafe::store(input_data.data(), input_first_int);
+    intx::be::unsafe::store(input_data.data() + 32, input_second_int);
+
+    input_second_int = internal::sha256_block(digest_int, input_data);
+
+    m.stack.popClear();
+    m.stack.popClear();
+    ++m.pc;
+}
+
 void pop(MachineState& m) {
     m.stack.popClear();
     ++m.pc;
@@ -679,6 +731,114 @@ void ec_recover(MachineState& m) {
     m.stack.popClear();
     m.stack.popClear();
     ++m.pc;
+}
+
+void ec_add(MachineState& m) {
+    m.stack.prepForMod(4);
+    auto& aVal = assumeInt(m.stack[0]);
+    auto& bVal = assumeInt(m.stack[1]);
+    auto& cVal = assumeInt(m.stack[2]);
+    auto& dVal = assumeInt(m.stack[3]);
+
+    auto ret = ecadd({aVal, bVal}, {cVal, dVal});
+
+    if (nonstd::holds_alternative<std::string>(ret)) {
+        m.state = Status::Error;
+        return;
+    }
+
+    G1Point ans = ret.get<G1Point>();
+    cVal = ans.x;
+    dVal = ans.y;
+    m.stack.popClear();
+    m.stack.popClear();
+    ++m.pc;
+}
+
+void ec_mul(MachineState& m) {
+    m.stack.prepForMod(3);
+    auto& aVal = assumeInt(m.stack[0]);
+    auto& bVal = assumeInt(m.stack[1]);
+    auto& cVal = assumeInt(m.stack[2]);
+
+    auto ret = ecmul({aVal, bVal}, cVal);
+
+    if (nonstd::holds_alternative<std::string>(ret)) {
+        m.state = Status::Error;
+        return;
+    }
+
+    G1Point ans = ret.get<G1Point>();
+    bVal = ans.x;
+    cVal = ans.y;
+    m.stack.popClear();
+    ++m.pc;
+}
+
+void ec_pairing(MachineState& m) {
+    m.stack.prepForMod(1);
+
+    std::vector<std::pair<G1Point, G2Point>> points;
+
+    const Tuple* val = &assumeTuple(m.stack[0]);
+    for (int i = 0; i < max_ec_pairing_points; i++) {
+        if (val->tuple_size() == 0) {
+            break;
+        }
+        if (val->tuple_size() != 2) {
+            throw bad_pop_type{};
+        }
+        auto& next = assumeTuple(val->get_element_unsafe(0));
+        val = &assumeTuple(val->get_element_unsafe(1));
+
+        if (next.tuple_size() != 6) {
+            throw bad_pop_type{};
+        }
+
+        G1Point g1{assumeInt(next.get_element_unsafe(0)),
+                   assumeInt(next.get_element_unsafe(1))};
+        G2Point g2{assumeInt(next.get_element_unsafe(2)),
+                   assumeInt(next.get_element_unsafe(3)),
+                   assumeInt(next.get_element_unsafe(4)),
+                   assumeInt(next.get_element_unsafe(5))};
+        points.push_back({g1, g2});
+    }
+    if (val->tuple_size() != 0) {
+        throw bad_pop_type{};
+    }
+
+    auto ret = ecpairing(points);
+    if (nonstd::holds_alternative<std::string>(ret)) {
+        m.state = Status::Error;
+        return;
+    }
+
+    m.stack[0] = ret.get<bool>() ? 1 : 0;
+    ++m.pc;
+}
+
+uint64_t ec_pairing_variable_gas_cost(const MachineState& m) {
+    // The fixed cost of the the pairing opcode is applied elsewhere
+    uint64_t gas_cost = 0;
+    if (m.stack.stacksize() == 0) {
+        return gas_cost;
+    }
+    try {
+        const Tuple* val = &assumeTuple(m.stack[0]);
+        for (int i = 0; i < max_ec_pairing_points; i++) {
+            if (val->tuple_size() == 0) {
+                break;
+            }
+            if (val->tuple_size() != 2) {
+                throw bad_pop_type{};
+            }
+            val = &assumeTuple(val->get_element_unsafe(1));
+            gas_cost += ec_pair_gas_cost;
+        }
+    } catch (const std::exception&) {
+    }
+
+    return gas_cost;
 }
 
 BlockReason breakpoint(MachineState& m) {

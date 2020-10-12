@@ -69,7 +69,8 @@ int main(int argc, char* argv[]) {
         storage.initialize(filename);
     }
 
-    auto mach = storage.getInitialMachine();
+    ValueCache value_cache{};
+    auto mach = storage.getInitialMachine(value_cache);
 
     std::vector<Tuple> inbox_messages;
     if (argc == 5) {
@@ -102,8 +103,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    auto assertion =
-        mach.run(100000000, std::move(inbox_messages), std::chrono::seconds(0));
+    auto assertion = mach.run(10000000000000, std::move(inbox_messages),
+                              std::chrono::seconds(0));
 
     std::cout << "Produced " << assertion.logs.size() << " logs\n";
 
@@ -115,7 +116,7 @@ int main(int argc, char* argv[]) {
     saveMachine(*tx, mach);
     tx->commit();
 
-    auto mach2 = storage.getMachine(mach.hash());
+    auto mach2 = storage.getMachine(mach.hash(), value_cache);
     mach2.run(0, {}, std::chrono::seconds(0));
     return 0;
 }

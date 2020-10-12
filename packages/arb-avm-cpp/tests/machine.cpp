@@ -23,7 +23,9 @@
 #include <data_storage/value/value.hpp>
 
 #include <avm/machine.hpp>
+#include <avm/machinestate/ecops.hpp>
 
+#define CATCH_CONFIG_ENABLE_BENCHMARKING 1
 #include <catch2/catch.hpp>
 
 #include <boost/filesystem.hpp>
@@ -58,8 +60,10 @@ void deleteCheckpoint(Transaction& transaction, Machine& machine) {
     REQUIRE(results.reference_count == 0);
 }
 
-void restoreCheckpoint(CheckpointStorage& storage, Machine& expected_machine) {
-    auto mach = storage.getMachine(expected_machine.hash());
+void restoreCheckpoint(CheckpointStorage& storage,
+                       Machine& expected_machine,
+                       ValueCache& value_cache) {
+    auto mach = storage.getMachine(expected_machine.hash(), value_cache);
     REQUIRE(mach.hash() == expected_machine.hash());
 }
 
@@ -67,8 +71,9 @@ TEST_CASE("Checkpoint State") {
     DBDeleter deleter;
     CheckpointStorage storage(dbpath);
     storage.initialize(test_contract_path);
+    ValueCache value_cache{};
 
-    auto machine = storage.getInitialMachine();
+    auto machine = storage.getInitialMachine(value_cache);
     machine.run(1, {}, std::chrono::seconds{0});
 
     SECTION("default") { checkpointState(storage, machine); }
@@ -79,7 +84,7 @@ TEST_CASE("Checkpoint State") {
         auto results = saveMachine(*transaction, machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
-        auto machine2 = storage.getMachine(hash1);
+        auto machine2 = storage.getMachine(hash1, value_cache);
         auto hash2 = machine2.hash();
         REQUIRE(hash2 == hash1);
     }
@@ -89,12 +94,15 @@ TEST_CASE("Delete machine checkpoint") {
     DBDeleter deleter;
     CheckpointStorage storage(dbpath);
     storage.initialize(test_contract_path);
+    ValueCache value_cache{};
 
     SECTION("default") {
-        auto machine = storage.getInitialMachine();
+        auto machine = storage.getInitialMachine(value_cache);
         machine.run(1, {}, std::chrono::seconds{0});
         auto transaction = storage.makeTransaction();
-        auto results = saveMachine(*transaction, machine);
+        saveMachine(*transaction, machine);
+        machine.run(100, {}, std::chrono::seconds{0});
+        saveMachine(*transaction, machine);
         deleteCheckpoint(*transaction, machine);
         REQUIRE(transaction->commit().ok());
     }
@@ -104,14 +112,15 @@ TEST_CASE("Restore checkpoint") {
     DBDeleter deleter;
     CheckpointStorage storage(dbpath);
     storage.initialize(test_contract_path);
+    ValueCache value_cache{};
 
     SECTION("default") {
-        auto machine = storage.getInitialMachine();
+        auto machine = storage.getInitialMachine(value_cache);
         auto transaction = storage.makeTransaction();
         auto results = saveMachine(*transaction, machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
-        restoreCheckpoint(storage, machine);
+        restoreCheckpoint(storage, machine, value_cache);
     }
 }
 
@@ -136,8 +145,7 @@ TEST_CASE("Clone") {
     }
 
     for (int i = 0; i < 1000; i++) {
-        Machine m = machine;
-        REQUIRE(m.hash() != 3242);
+        REQUIRE(machine.hash() != 3242);
     }
 }
 
@@ -178,10 +186,10 @@ TEST_CASE("MachineTestVectors") {
     DBDeleter deleter;
 
     std::vector<std::string> files = {
-        "opcodetestarbgas",   "opcodetestdup",    "opcodetestecrecover",
-        "opcodetestethhash2", "opcodetesthash",   "opcodetestlogic",
-        "opcodetestmath",     "opcodeteststack",  "opcodetesttuple",
-        "opcodetestcode",     "opcodetestkeccakf"};
+        "opcodetestarbgas",   "opcodetestdup",     "opcodetestecops",
+        "opcodetestethhash2", "opcodetesthash",    "opcodetestlogic",
+        "opcodetestmath",     "opcodeteststack",   "opcodetesttuple",
+        "opcodetestcode",     "opcodetestkeccakf", "opcodetestsha256f"};
 
     for (const auto& filename : files) {
         DYNAMIC_SECTION(filename) {

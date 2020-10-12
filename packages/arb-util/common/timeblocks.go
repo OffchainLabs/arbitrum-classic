@@ -33,6 +33,10 @@ func SetDurationPerBlock(d time.Duration) {
 	_durationPerBlock = d
 }
 
+func GetDurationPerBlock() time.Duration {
+	return _durationPerBlock
+}
+
 func NewTimeBlocks(val *big.Int) *TimeBlocks {
 	return (*TimeBlocks)(val)
 }

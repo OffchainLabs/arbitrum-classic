@@ -18,6 +18,7 @@ package utils
 
 import (
 	"flag"
+	"github.com/ethereum/go-ethereum/rpc"
 	"log"
 	"net/http"
 
@@ -43,7 +44,14 @@ func AddRPCFlags(fs *flag.FlagSet) RPCFlags {
 func LaunchRPC(handler http.Handler, port string, flags RPCFlags) error {
 	r := mux.NewRouter()
 	r.Handle("/", handler).Methods("GET", "POST", "OPTIONS")
+	return launchServer(r, port, flags)
+}
 
+func LaunchWS(server *rpc.Server, port string, flags RPCFlags) error {
+	return launchServer(server.WebsocketHandler([]string{"0.0.0.0"}), port, flags)
+}
+
+func launchServer(handler http.Handler, port string, flags RPCFlags) error {
 	headersOk := handlers.AllowedHeaders(
 		[]string{"X-Requested-With", "Content-Type", "Authorization"},
 	)
@@ -51,7 +59,7 @@ func LaunchRPC(handler http.Handler, port string, flags RPCFlags) error {
 	methodsOk := handlers.AllowedMethods(
 		[]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"},
 	)
-	h := handlers.CORS(headersOk, originsOk, methodsOk)(r)
+	h := handlers.CORS(headersOk, originsOk, methodsOk)(handler)
 
 	if flags.certFile != nil && flags.keyFile != nil && *flags.certFile != "" && *flags.keyFile != "" {
 		log.Println("Launching rpc server over https with cert", *flags.certFile, "and key", *flags.keyFile)
@@ -68,5 +76,4 @@ func LaunchRPC(handler http.Handler, port string, flags RPCFlags) error {
 			h,
 		)
 	}
-
 }

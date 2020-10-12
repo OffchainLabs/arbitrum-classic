@@ -41,7 +41,7 @@ import (
 )
 
 type Server struct {
-	client      ethutils.EthClient
+	Client      ethutils.EthClient
 	chain       common.Address
 	batch       *batcher.Batcher
 	db          *txdb.TxDB
@@ -57,7 +57,7 @@ func NewServer(
 	db *txdb.TxDB,
 ) *Server {
 	return &Server{
-		client:      client,
+		Client:      client,
 		chain:       rollupAddress,
 		batch:       batch,
 		db:          db,
@@ -66,7 +66,7 @@ func NewServer(
 	}
 }
 
-// SendTransaction takes a request signed transaction l2message from a client
+// SendTransaction takes a request signed transaction l2message from a Client
 // and puts it in a queue to be included in the next transaction batch
 func (m *Server) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 	return m.batch.SendTransaction(tx)
@@ -126,7 +126,7 @@ func (m *Server) BlockInfo(height uint64) (*machine.BlockInfo, error) {
 }
 
 func (m *Server) GetBlockHeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
-	ethHeader, err := m.client.HeaderByHash(ctx, hash.ToEthHash())
+	ethHeader, err := m.Client.HeaderByHash(ctx, hash.ToEthHash())
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (m *Server) GetBlockHeaderByHash(ctx context.Context, hash common.Hash) (*t
 		return nil, err
 	}
 
-	return m.getBlockHeader(currentBlock, ethHeader)
+	return getBlockHeader(currentBlock, ethHeader)
 }
 
 func (m *Server) GetBlockHeaderByNumber(ctx context.Context, height uint64) (*types.Header, error) {
@@ -147,51 +147,54 @@ func (m *Server) GetBlockHeaderByNumber(ctx context.Context, height uint64) (*ty
 
 	var ethHeader *types.Header
 	if currentBlock != nil {
-		ethHeader, err = m.client.HeaderByHash(ctx, currentBlock.Hash.ToEthHash())
+		ethHeader, err = m.Client.HeaderByHash(ctx, currentBlock.Hash.ToEthHash())
 	} else {
-		ethHeader, err = m.client.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
+		ethHeader, err = m.Client.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
 	}
 	if err != nil {
 		return nil, err
 	}
-	return m.getBlockHeader(currentBlock, ethHeader)
+	return getBlockHeader(currentBlock, ethHeader)
 }
 
-func (m *Server) getBlockHeader(currentBlock *machine.BlockInfo, ethHeader *types.Header) (*types.Header, error) {
+func GetBlockFields(currentBlock *machine.BlockInfo, res *evm.BlockInfo) (types.Bloom, uint64, uint64) {
 	gasUsed := uint64(0)
 	gasLimit := uint64(100000000)
 	bloom := types.Bloom{}
 	if currentBlock != nil {
-		res, err := evm.NewBlockResultFromValue(currentBlock.BlockLog)
-		if err != nil {
-			return nil, err
-		}
 		gasUsed = res.BlockStats.GasUsed.Uint64()
 		gasLimit = res.GasLimit.Uint64()
 		bloom = currentBlock.Bloom
 	}
+	return bloom, gasLimit, gasUsed
+}
 
-	ethHeader.Bloom = bloom
-	ethHeader.GasLimit = gasLimit
-	ethHeader.GasUsed = gasUsed
+func getBlockHeader(currentBlock *machine.BlockInfo, ethHeader *types.Header) (*types.Header, error) {
+	var res *evm.BlockInfo
+	if currentBlock != nil {
+		var err error
+		res, err = evm.NewBlockResultFromValue(currentBlock.BlockLog)
+		if err != nil {
+			return nil, err
+		}
+	}
 
+	ethHeader.Bloom, ethHeader.GasLimit, ethHeader.GasUsed = GetBlockFields(currentBlock, res)
 	return ethHeader, nil
 }
 
-func (m *Server) GetBlockResults(height uint64) ([]*evm.TxResult, error) {
-	currentBlock, err := m.db.GetBlock(height)
-	if err != nil {
-		return nil, err
-	}
-
-	if currentBlock == nil {
+func (m *Server) GetBlockInfo(block *machine.BlockInfo) (*evm.BlockInfo, error) {
+	if block == nil {
 		// No arbitrum block at this height
 		return nil, nil
 	}
 
-	res, err := evm.NewBlockResultFromValue(currentBlock.BlockLog)
-	if err != nil {
-		return nil, err
+	return evm.NewBlockResultFromValue(block.BlockLog)
+}
+
+func (m *Server) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
+	if res == nil {
+		return nil, nil
 	}
 	txCount := res.BlockStats.TxCount.Uint64()
 	startLog := res.FirstAVMLog().Uint64()
@@ -210,13 +213,36 @@ func (m *Server) GetBlockResults(height uint64) ([]*evm.TxResult, error) {
 	return results, nil
 }
 
+func (m *Server) GetTxInBlockAtIndexResults(res *evm.BlockInfo, index uint64) (*evm.TxResult, error) {
+	txCount := res.BlockStats.TxCount.Uint64()
+	if index >= txCount {
+		return nil, errors.New("index out of bounds")
+	}
+	startLog := res.FirstAVMLog().Uint64()
+	avmLog, err := m.db.GetLog(startLog + index)
+	if err != nil {
+		return nil, err
+	}
+	return evm.NewTxResultFromValue(avmLog)
+}
+
 func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, error) {
 	header, err := m.GetBlockHeaderByNumber(ctx, height)
 	if err != nil {
 		return nil, err
 	}
 
-	results, err := m.GetBlockResults(height)
+	block, err := m.BlockInfo(height)
+	if err != nil {
+		return nil, err
+	}
+
+	blockInfo, err := m.GetBlockInfo(block)
+	if err != nil {
+		return nil, err
+	}
+
+	results, err := m.GetBlockResults(blockInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -251,29 +277,29 @@ func GetTransaction(msg evm.IncomingRequest) (*types.Transaction, error) {
 	return ethMsg.AsEthTx(), nil
 }
 
-func (m *Server) AdjustGas(msg message.ContractTransaction) message.ContractTransaction {
+func (m *Server) AdjustGas(msg message.Call) message.Call {
 	if msg.MaxGas.Cmp(big.NewInt(0)) == 0 || msg.MaxGas.Cmp(m.maxCallGas) > 0 {
 		msg.MaxGas = m.maxCallGas
 	}
 	return msg
 }
 
-// Call takes a request from a client to process in a temporary context
+// Call takes a request from a Client to process in a temporary context
 // and return the result
-func (m *Server) Call(msg message.ContractTransaction, sender ethcommon.Address) (*evm.TxResult, error) {
+func (m *Server) Call(msg message.Call, sender ethcommon.Address) (*evm.TxResult, error) {
 	msg = m.AdjustGas(msg)
 	return m.db.LatestSnapshot().Call(msg, common.NewAddressFromEth(sender))
 }
 
-// PendingCall takes a request from a client to process in a temporary context
+// PendingCall takes a request from a Client to process in a temporary context
 // and return the result
-func (m *Server) PendingCall(msg message.ContractTransaction, sender ethcommon.Address) (*evm.TxResult, error) {
+func (m *Server) PendingCall(msg message.Call, sender ethcommon.Address) (*evm.TxResult, error) {
 	return m.Call(msg, sender)
 }
 
 func (m *Server) GetSnapshot(ctx context.Context, blockHeight uint64) (*snapshot.Snapshot, error) {
 	height := new(big.Int).SetUint64(blockHeight)
-	header, err := m.client.HeaderByNumber(ctx, height)
+	header, err := m.Client.HeaderByNumber(ctx, height)
 	if err != nil {
 		return nil, err
 	}
