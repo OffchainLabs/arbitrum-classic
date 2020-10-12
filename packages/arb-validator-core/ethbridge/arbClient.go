@@ -167,7 +167,7 @@ func (c *EthArbClient) BlockIdForHeight(ctx context.Context, height *common.Time
 		return nil, err
 	}
 	return &common.BlockId{
-		Height:     height.Clone(),
+		Height:     common.NewTimeBlocks((*big.Int)(blockInfo.Number)),
 		HeaderHash: common.NewHashFromEth(blockInfo.Hash),
 	}, nil
 }
