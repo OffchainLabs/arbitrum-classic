@@ -1288,11 +1288,8 @@ contract OneStepProof is IOneStepProof {
             return (1, 0, 1000, executeECPairingInsn);
         } else if (opCode == OP_NEWBUFFER) {
             return (1, 0, 1, executeNewBuffer);
-        } else if (opCode == OP_SETBUFFER8 || opCode == OP_SETBUFFER64 || opCode == OP_SETBUFFER256) {
-            return (3, 0, 100, executeSetBuffer);
-        } else if (opCode == OP_GETBUFFER8 || opCode == OP_GETBUFFER64 || opCode == OP_GETBUFFER256) {
-            return (2, 0, 10, executeGetBuffer);
-        } else {
+        } else if (opCode == OP_SETBUFFER8 || opCode == OP_SETBUFFER64 || opCode == OP_SETBUFFER256 || opCode == OP_GETBUFFER8 || opCode == OP_GETBUFFER64 || opCode == OP_GETBUFFER256) {
+            return (3, 0, 100, executeBuffer);
             return (0, 0, 0, executeErrorInsn);
         }
     }
