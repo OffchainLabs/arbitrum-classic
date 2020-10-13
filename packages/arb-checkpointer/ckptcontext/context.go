@@ -25,8 +25,8 @@ import (
 )
 
 type RestoreContext interface {
-	GetValue(common.Hash) value.Value
-	GetMachine(common.Hash) machine.Machine
+	GetValue(common.Hash, machine.ValueCache) value.Value
+	GetMachine(common.Hash, machine.ValueCache) machine.Machine
 }
 
 type CheckpointContext struct {
@@ -71,11 +71,11 @@ func (ctx *CheckpointContext) Machines() map[common.Hash]machine.Machine {
 	return ctx.machines
 }
 
-func (ctx *CheckpointContext) GetValue(h common.Hash) value.Value {
+func (ctx *CheckpointContext) GetValue(h common.Hash, vc machine.ValueCache) value.Value {
 	return ctx.values[h]
 }
 
-func (ctx *CheckpointContext) GetMachine(h common.Hash) machine.Machine {
+func (ctx *CheckpointContext) GetMachine(h common.Hash, vc machine.ValueCache) machine.Machine {
 	return ctx.machines[h]
 }
 
@@ -101,12 +101,12 @@ func NewSimpleRestore(db machine.CheckpointStorage) *SimpleRestore {
 	return &SimpleRestore{db: db}
 }
 
-func (sr *SimpleRestore) GetValue(h common.Hash) value.Value {
-	return sr.db.GetValue(h)
+func (sr *SimpleRestore) GetValue(h common.Hash, v machine.ValueCache) value.Value {
+	return sr.db.GetValue(h, v)
 }
 
-func (sr *SimpleRestore) GetMachine(h common.Hash) machine.Machine {
-	ret, err := sr.db.GetMachine(h)
+func (sr *SimpleRestore) GetMachine(h common.Hash, v machine.ValueCache) machine.Machine {
+	ret, err := sr.db.GetMachine(h, v)
 	if err != nil {
 		log.Fatal(err)
 	}

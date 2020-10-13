@@ -56,12 +56,12 @@ func (e *EvilRollupCheckpointer) Initialized() bool {
 	return e.cp.Initialized()
 }
 
-func (e EvilRollupCheckpointer) GetValue(h common.Hash) value.Value {
-	return e.cp.(ckptcontext.RestoreContext).GetValue(h)
+func (e EvilRollupCheckpointer) GetValue(h common.Hash, vc machine.ValueCache) value.Value {
+	return e.cp.(ckptcontext.RestoreContext).GetValue(h, vc)
 }
 
-func (e EvilRollupCheckpointer) GetMachine(h common.Hash) machine.Machine {
-	return NewEvilMachine(e.cp.(ckptcontext.RestoreContext).GetMachine(h).(*cmachine.Machine))
+func (e EvilRollupCheckpointer) GetMachine(h common.Hash, vc machine.ValueCache) machine.Machine {
+	return NewEvilMachine(e.cp.(ckptcontext.RestoreContext).GetMachine(h, vc).(*cmachine.Machine))
 }
 
 func (e EvilRollupCheckpointer) HasCheckpointedState() bool {
@@ -86,16 +86,16 @@ type evilRestoreContext struct {
 	rc ckptcontext.RestoreContext
 }
 
-func (erc *evilRestoreContext) GetValue(h common.Hash) value.Value {
-	return erc.rc.GetValue(h)
+func (erc *evilRestoreContext) GetValue(h common.Hash, vc machine.ValueCache) value.Value {
+	return erc.rc.GetValue(h, vc)
 }
 
-func (erc *evilRestoreContext) GetMachine(h common.Hash) machine.Machine {
-	return NewEvilMachine(erc.rc.GetMachine(h).(*cmachine.Machine))
+func (erc *evilRestoreContext) GetMachine(h common.Hash, vc machine.ValueCache) machine.Machine {
+	return NewEvilMachine(erc.rc.GetMachine(h, vc).(*cmachine.Machine))
 }
 
-func (e EvilRollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
-	m, err := e.cp.GetInitialMachine()
+func (e EvilRollupCheckpointer) GetInitialMachine(vc machine.ValueCache) (machine.Machine, error) {
+	m, err := e.cp.GetInitialMachine(vc)
 	if err != nil {
 		return m, err
 	}

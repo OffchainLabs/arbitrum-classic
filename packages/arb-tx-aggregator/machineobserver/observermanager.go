@@ -18,16 +18,17 @@ package machineobserver
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/observer"
 	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/observer"
 )
 
 const defaultMaxReorgDepth = 100
@@ -64,7 +65,13 @@ func ensureInitialized(
 		return err
 	}
 
-	initialMachine, err := cp.GetInitialMachine()
+	valueCache, err := cmachine.NewValueCache()
+	if err != nil {
+		return err
+	}
+	defer cmachine.DestroyValueCache(valueCache)
+
+	initialMachine, err := cp.GetInitialMachine(valueCache)
 	if err != nil {
 		return err
 	}

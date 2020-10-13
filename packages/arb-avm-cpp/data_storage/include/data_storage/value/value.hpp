@@ -18,6 +18,7 @@
 #define checkpoint_value_hpp
 
 #include <avm_values/value.hpp>
+#include <data_storage/value/valuecache.hpp>
 
 #include <map>
 #include <set>
@@ -28,14 +29,6 @@ class Transaction;
 
 template <typename T>
 struct DbResult;
-
-struct ValueCacheHasher {
-    std::size_t operator()(const uint256_t& v) const noexcept {
-        return intx::narrow_cast<std::size_t>(v);
-    }
-};
-
-using ValueCache = std::unordered_map<uint256_t, value, ValueCacheHasher>;
 
 SaveResults saveValueImpl(Transaction& transaction,
                           const value& val,

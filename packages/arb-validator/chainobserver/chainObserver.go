@@ -28,6 +28,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -298,7 +299,13 @@ func newChain(
 	checkpointer checkpointing.RollupCheckpointer,
 	vmParams valprotocol.ChainParams,
 ) (*ChainObserver, error) {
-	mach, err := checkpointer.GetInitialMachine()
+	valueCache, err := cmachine.NewValueCache()
+	if err != nil {
+		return nil, err
+	}
+	defer cmachine.DestroyValueCache(valueCache)
+
+	mach, err := checkpointer.GetInitialMachine(valueCache)
 	if err != nil {
 		return nil, err
 	}

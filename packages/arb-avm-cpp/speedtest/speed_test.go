@@ -49,6 +49,12 @@ func runExecutableFile(b *testing.B, filePath string) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	valueCache, err := cmachine.NewValueCache()
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer cmachine.DestroyValueCache(valueCache)
+
 	ckp, err := cmachine.NewCheckpoint(ckpDir)
 	if err != nil {
 		b.Fatal(err)
@@ -56,7 +62,7 @@ func runExecutableFile(b *testing.B, filePath string) {
 	if err := ckp.Initialize(filePath); err != nil {
 		b.Fatal(err)
 	}
-	mach, err := ckp.GetInitialMachine()
+	mach, err := ckp.GetInitialMachine(valueCache)
 	if err != nil {
 		b.Fatal(err)
 	}

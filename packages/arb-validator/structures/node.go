@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"math/rand"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -412,8 +413,14 @@ func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Node
 		numStakers:   0,
 	}
 
+	valueCache, err := cmachine.NewValueCache()
+	if err != nil {
+		return nil, err
+	}
+	defer cmachine.DestroyValueCache(valueCache)
+
 	if x.MachineHash != nil {
-		node.machine = ctx.GetMachine(x.MachineHash.Unmarshal())
+		node.machine = ctx.GetMachine(x.MachineHash.Unmarshal(), valueCache)
 	}
 
 	// can't set up prev and successorHash fields yet; caller must do this later

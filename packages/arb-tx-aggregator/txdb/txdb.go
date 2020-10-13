@@ -72,12 +72,18 @@ func (txdb *TxDB) Load(ctx context.Context) error {
 	if txdb.checkpointer.HasCheckpointedState() {
 		if err := txdb.restoreFromCheckpoint(ctx); err == nil {
 			return nil
-		} else {
-			log.Println("Failed to restore from checkpoint, falling back to fresh start")
 		}
+
+		log.Println("Failed to restore from checkpoint, falling back to fresh start")
 	}
 	// We failed to restore from a checkpoint
-	mach, err := txdb.checkpointer.GetInitialMachine()
+	valueCache, err := cmachine.NewValueCache()
+	if err != nil {
+		return err
+	}
+	defer cmachine.DestroyValueCache(valueCache)
+
+	mach, err := txdb.checkpointer.GetInitialMachine(valueCache)
 	if err != nil {
 		return err
 	}
@@ -108,7 +114,12 @@ func (txdb *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 		var machineHash common.Hash
 		copy(machineHash[:], chainObserverBytes)
 		lastInboxSeq = new(big.Int).SetBytes(chainObserverBytes[32:])
-		mach = restoreCtx.GetMachine(machineHash)
+		valueCache, err := cmachine.NewValueCache()
+		if err != nil {
+			return err
+		}
+		defer cmachine.DestroyValueCache(valueCache)
+		mach = restoreCtx.GetMachine(machineHash, valueCache)
 		blockId = restoreBlockId
 		return nil
 	}); err != nil {
