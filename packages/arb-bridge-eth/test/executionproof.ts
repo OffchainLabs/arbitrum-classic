@@ -112,7 +112,7 @@ describe('OneStepProof', function () {
         if (gas > 1000000) {
           console.log(`opcode ${opcode} used ${gas} gas`)
         }
-        expect(gas).to.be.lessThan(2500000)
+        expect(gas).to.be.lessThan(5000000)
       }
     })
   }

@@ -1,5 +1,6 @@
 import { BuidlerRuntimeEnvironment } from '@nomiclabs/buidler/types'
 import { Contract } from 'ethers'
+import { OneStepProofFactory } from '../build/types/OneStepProofFactory'
 
 type ContractName =
   | 'ArbFactory'
@@ -21,10 +22,15 @@ export default async function deploy_contracts(
 ): Promise<Record<ContractName, Contract>> {
   const ethers = bre.ethers
 
+  const UtilLibrary = await ethers.getContractFactory('MerkleUtil')
+  const utilLibrary = await UtilLibrary.deploy()
   const ExecutionChallenge = await ethers.getContractFactory(
     'ExecutionChallenge'
   )
-  const OneStepProof = await ethers.getContractFactory('OneStepProof')
+  const link = {
+    ["__$dadff4c8e57a85477fa98436c23c3d6d3b$__"]: utilLibrary.address
+  }
+  const OneStepProof = new OneStepProofFactory(link, (await ethers.signers())[0])
   const InboxTopChallenge = await ethers.getContractFactory('InboxTopChallenge')
   const ArbRollup = await ethers.getContractFactory('ArbRollup')
   const GlobalInbox = await ethers.getContractFactory('GlobalInbox')

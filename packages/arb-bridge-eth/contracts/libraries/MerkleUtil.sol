@@ -134,6 +134,7 @@ library MerkleUtil {
         } else if (op == 0xa5) {
             return setBuffer64(buf, offset, bytes32(b), proof1, nproof1, proof2, nproof2);
         } else if (op == 0xa6) {
+            return setBuffer256(buf, offset, bytes32(b), proof1, nproof1, proof2, nproof2);
         }
     }
 
@@ -204,15 +205,37 @@ library MerkleUtil {
         if (offset%32 + 8 >= 32) {
             bytes32 nword2 = get(buf, offset/32 + 1, proof2); 
             for (uint i = 0; i < 8 - (offset%32 + 8 - 32); i++) {
-                nword = setByte(nword, offset%32 + i, arr[i]);
+                nword = setByte(nword, offset%32 + i, arr[i+24]);
             }
             for (uint i = 8 - (offset%32 + 8 - 32); i < 8; i++) {
-                nword2 = setByte(nword2, (offset+i)%32, arr[i]);
+                nword2 = setByte(nword2, (offset+i)%32, arr[i+24]);
                 buf = set(buf, offset/32, nword, proof1, nproof1);
                 buf = set(buf, offset/32 + 1, nword2, proof2, nproof2);
             }
         } else {
             for (uint i = 0; i < 8; i++) {
+                nword = setByte(nword, offset%32 + i, arr[i+24]);
+            }
+            buf = set(buf, offset/32, nword, proof1, nproof1);
+        }
+        return buf;
+    }
+
+    function setBuffer256(bytes32 buf, uint256 offset, bytes32 val, bytes32[] memory proof1, bytes32[] memory nproof1, bytes32[] memory proof2, bytes32[] memory nproof2) internal pure returns (bytes32) {
+        bytes memory arr = bytes32ToArray(val);
+        bytes32 nword = get(buf, offset/32, proof1);
+        if (offset%32 + 32 >= 32) {
+            bytes32 nword2 = get(buf, offset/32 + 1, proof2); 
+            for (uint i = 0; i < 32 - (offset%32 + 32 - 32); i++) {
+                nword = setByte(nword, offset%32 + i, arr[i]);
+            }
+            for (uint i = 32 - (offset%32 + 32 - 32); i < 32; i++) {
+                nword2 = setByte(nword2, (offset+i)%32, arr[i]);
+                buf = set(buf, offset/32, nword, proof1, nproof1);
+                buf = set(buf, offset/32 + 1, nword2, proof2, nproof2);
+            }
+        } else {
+            for (uint i = 0; i < 32; i++) {
                 nword = setByte(nword, offset%32 + i, arr[i]);
             }
             buf = set(buf, offset/32, nword, proof1, nproof1);

@@ -206,17 +206,6 @@ library Value {
         return Data(0, _val, new Data[](0), 0, CODE_POINT_TYPECODE, uint256(1));
     }
 
-    function newBuffer() internal pure returns (Data memory) {
-        return Data(
-                uint256(0),
-                CodePoint(0, 0, new Data[](0)),
-                new Data[](0),
-                keccak256(abi.encodePacked(bytes32(0))),
-                BUFFER_TYPECODE,
-                uint(1)
-            );
-    }
-
     function newBuffer(bytes32 bufHash) internal pure returns (Data memory) {
         return Data(
                 uint256(0),
