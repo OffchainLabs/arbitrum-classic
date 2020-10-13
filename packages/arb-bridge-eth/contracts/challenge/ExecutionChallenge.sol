@@ -34,6 +34,7 @@ contract ExecutionChallenge is IExecutionChallenge, BisectionChallenge {
     event OneStepProofCompleted();
 
     IOneStepProof private executor;
+    IOneStepProof2 private executor2;
 
     // Incorrect previous state
     string private constant BIS_INPLEN = "BIS_INPLEN";
@@ -50,8 +51,9 @@ contract ExecutionChallenge is IExecutionChallenge, BisectionChallenge {
         uint64 totalSteps;
     }
 
-    function connectOneStepProof(address oneStepProof) external {
+    function connectOneStepProof(address oneStepProof, address oneStepProof2) external {
         executor = IOneStepProof(oneStepProof);
+        executor2 = IOneStepProof2(oneStepProof2);
     }
 
     function bisectAssertion(
@@ -214,6 +216,24 @@ contract ExecutionChallenge is IExecutionChallenge, BisectionChallenge {
             _firstMessage,
             _firstLog,
             _proof
+        );
+
+        checkProof(gas, _firstInbox, _firstMessage, _firstLog, fields);
+    }
+
+    function oneStepProofBuffer(
+        bytes32 _firstInbox,
+        bytes32 _firstMessage,
+        bytes32 _firstLog,
+        bytes memory _proof,
+        bytes memory _bproof
+    ) public asserterAction {
+        (uint64 gas, bytes32[5] memory fields) = executor2.executeStep(
+            _firstInbox,
+            _firstMessage,
+            _firstLog,
+            _proof,
+            _bproof
         );
 
         checkProof(gas, _firstInbox, _firstMessage, _firstLog, fields);

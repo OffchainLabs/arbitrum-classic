@@ -2,6 +2,7 @@
 
 pragma solidity ^0.5.11;
 
+
 library MerkleUtil {
     
     function makeZeros() internal pure returns (bytes32[] memory) {
@@ -120,7 +121,21 @@ library MerkleUtil {
         }
     }
 
-    function bufferOp(uint8 op, bytes32 buf, uint offset, uint256 b, bytes32[] memory proof1, bytes32[] memory nproof1, bytes32[] memory proof2, bytes32[] memory nproof2) public pure returns (bytes32) {
+    function decode(bytes memory arr, bytes1 _start, bytes1 _len) internal pure returns (bytes32[] memory) {
+        uint len = uint(uint8(_len));
+        uint start = uint(uint8(_start));
+        bytes32[] memory res = new bytes32[](len);
+        for (uint i = 0; i < len; i++) {
+            res[i] = bytes32(bytes32FromArray(arr, (start+i)*32));
+        }
+        return res;
+    }
+
+    function bufferOp(uint8 op, bytes32 buf, uint offset, uint256 b, bytes memory proof) public pure returns (bytes32) {
+        bytes32[] memory proof1 = decode(proof, proof[0], proof[1]);
+        bytes32[] memory nproof1 = decode(proof, proof[2], proof[3]);
+        bytes32[] memory proof2 = decode(proof, proof[4], proof[5]);
+        bytes32[] memory nproof2 = decode(proof, proof[6], proof[7]);
         if (op == 0xa1) {
             return bytes32(getByte(get(buf, offset/32, proof1), offset%32));
         } else if (op == 0xa2) {
@@ -143,6 +158,15 @@ library MerkleUtil {
         for (uint i = 0; i < arr.length; i++) {
             res = res << 8;
             res = res | uint256(uint8(arr[arr.length-1-i]));
+        }
+        return res;
+    }
+
+    function bytes32FromArray(bytes memory arr, uint offset) internal pure returns (uint256) {
+        uint256 res = 0;
+        for (uint i = 0; i < 32; i++) {
+            res = res << 8;
+            res = res | uint256(uint8(arr[offset+32-1-i]));
         }
         return res;
     }

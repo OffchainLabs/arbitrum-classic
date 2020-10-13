@@ -27,10 +27,8 @@ export default async function deploy_contracts(
   const ExecutionChallenge = await ethers.getContractFactory(
     'ExecutionChallenge'
   )
-  const link = {
-    ["__$dadff4c8e57a85477fa98436c23c3d6d3b$__"]: utilLibrary.address
-  }
-  const OneStepProof = new OneStepProofFactory(link, (await ethers.signers())[0])
+  const OneStepProof = await ethers.getContractFactory('OneStepProof')
+  const OneStepProof2 = await ethers.getContractFactory('OneStepProof2')
   const InboxTopChallenge = await ethers.getContractFactory('InboxTopChallenge')
   const ArbRollup = await ethers.getContractFactory('ArbRollup')
   const GlobalInbox = await ethers.getContractFactory('GlobalInbox')
@@ -39,6 +37,8 @@ export default async function deploy_contracts(
 
   const oneStepProof = await OneStepProof.deploy()
   logDeploy('OneStepProof', oneStepProof)
+  const oneStepProof2 = await OneStepProof2.deploy()
+  logDeploy('OneStepProof2', oneStepProof2)
   const inboxTopChallenge = await InboxTopChallenge.deploy()
   logDeploy('InboxTopChallenge', inboxTopChallenge)
   const executionChallenge = await ExecutionChallenge.deploy()
@@ -51,7 +51,8 @@ export default async function deploy_contracts(
   const challengeFactory = await ChallengeFactory.deploy(
     inboxTopChallenge.address,
     executionChallenge.address,
-    oneStepProof.address
+    oneStepProof.address,
+    oneStepProof2.address
   )
   logDeploy('ChallengeFactory', challengeFactory)
 
@@ -65,6 +66,9 @@ export default async function deploy_contracts(
   await Promise.all([
     oneStepProof.deployed().then(() => {
       console.log('OneStepProof deployed')
+    }),
+    oneStepProof2.deployed().then(() => {
+      console.log('OneStepProof2 deployed')
     }),
     inboxTopChallenge.deployed().then(() => {
       console.log('InboxTopChallenge deployed')

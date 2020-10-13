@@ -1003,18 +1003,6 @@ contract OneStepProof is IOneStepProof {
         pushVal(context.stack, Value.newBuffer(keccak256(abi.encodePacked(bytes32(0)))));
     }
 
-    function executeBuffer(AssertionContext memory context) internal pure {
-        Value.Data memory val1 = popVal(context.stack);
-        Value.Data memory val2 = popVal(context.stack);
-        Value.Data memory val3 = popVal(context.stack);
-        if (!val2.isInt() || !val3.isInt() || !val1.isBuffer()) {
-            handleOpcodeError(context);
-            return;
-        }
-        bytes32 res = MerkleUtil.bufferOp(context.opcode, val1.bufferHash, val2.intVal, val3.intVal, context.buf1.bufProof, context.buf1.normalProof, context.buf2.bufProof, context.buf2.normalProof);
-        pushVal(context.stack, context.opcode > OP_GETBUFFER256 ? Value.newBuffer(res) : Value.newInt(uint256(res)));
-    }
-
     // Stop and arithmetic ops
     uint8 private constant OP_ADD = 0x01;
     uint8 private constant OP_MUL = 0x02;
@@ -1254,8 +1242,6 @@ contract OneStepProof is IOneStepProof {
             return (1, 0, 1000, executeECPairingInsn);
         } else if (opCode == OP_NEWBUFFER) {
             return (1, 0, 1, executeNewBuffer);
-        } else if (opCode == OP_SETBUFFER8 || opCode == OP_SETBUFFER64 || opCode == OP_SETBUFFER256 || opCode == OP_GETBUFFER8 || opCode == OP_GETBUFFER64 || opCode == OP_GETBUFFER256) {
-            return (3, 0, 100, executeBuffer);
         } else {
             return (0, 0, 0, executeErrorInsn);
         }
