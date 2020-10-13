@@ -1,16 +1,18 @@
-pragma solidity ^0.6.1;
+// SPDX-License-Identifier: Apache-2.0
 
-contract Merkle {
+pragma solidity ^0.5.11;
+
+contract MerkleUtil {
     
     bytes32[] zeros;
-    
+
     constructor() public {
         zeros[0] = keccak1(0);
         for (uint i = 1; i < 64; i++) {
             zeros[i] = keccak2(zeros[i-1], zeros[i-1]);
         }
     }
-    
+
     function keccak1(bytes32 b) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(b));
     }
@@ -79,5 +81,5 @@ contract Merkle {
         require(acc2 == acc);
         return res;
     }
-    
+
 }
