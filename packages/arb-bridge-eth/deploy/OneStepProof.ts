@@ -10,7 +10,14 @@ const func: DeployFunction = async (bre: BuidlerRuntimeEnvironment) => {
 
   let contract = await deployments.getOrNull('OneStepProof')
   if (!contract) {
-    const deployResult = await deploy('OneStepProof', { from: deployer })
+    const utilLibrary = await deploy("MerkleUtil", { from: deployer });
+
+    const deployResult = await deploy('OneStepProof', {
+      from: deployer,
+      libraries: {
+        ['MerkleUtil']: utilLibrary.address,
+      }
+    })
     contract = await deployments.get('OneStepProof')
     if (deployResult.newlyDeployed) {
       log(

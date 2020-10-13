@@ -21,6 +21,7 @@ import { utils } from 'ethers'
 import { use, expect } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { OneStepProofTester } from '../build/types/OneStepProofTester'
+import { OneStepProofTesterFactory } from '../build/types/OneStepProofTesterFactory'
 import * as fs from 'fs'
 
 use(chaiAsPromised)
@@ -46,7 +47,13 @@ let ospTester: OneStepProofTester
 
 describe('OneStepProof', function () {
   before(async () => {
-    const OneStepProof = await ethers.getContractFactory('OneStepProofTester')
+    const UtilLibrary = await ethers.getContractFactory('MerkleUtil')
+    const utilLibrary = await UtilLibrary.deploy()
+    const link = {
+      ["__$dadff4c8e57a85477fa98436c23c3d6d3b$__"]: utilLibrary.address
+    }
+    const OneStepProof = new OneStepProofTesterFactory(link, (await ethers.signers())[0])
+    // await ethers.getContractFactory('OneStepProofTester')
     ospTester = (await OneStepProof.deploy()) as OneStepProofTester
     await ospTester.deployed()
   })

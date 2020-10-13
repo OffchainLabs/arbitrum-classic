@@ -27,7 +27,7 @@ import "../libraries/MerkleUtil.sol";
 
 // Originally forked from https://github.com/leapdao/solEVM-enforcer/tree/master
 
-contract OneStepProof is IOneStepProof, MerkleUtil {
+contract OneStepProof is IOneStepProof {
     using Machine for Machine.Data;
     using Hashing for Value.Data;
     using Value for Value.Data;
@@ -145,10 +145,9 @@ contract OneStepProof is IOneStepProof, MerkleUtil {
 
     struct BufferProof {
         bytes32[] bufProof;
-        uint bufNormalization;
-        bytes32 bufNormalLeft;
-        bytes32 bufNormalRight;
+        bytes32[] normalProof;
     }
+
 
     struct AssertionContext {
         Machine.Data startMachine;
@@ -237,8 +236,8 @@ contract OneStepProof is IOneStepProof, MerkleUtil {
             opCode,
             proof,
             offset,
-            BufferProof(new bytes32[](0), 0, 0, 0),
-            BufferProof(new bytes32[](0), 0, 0, 0)
+            BufferProof(new bytes32[](0), new bytes32[](0)),
+            BufferProof(new bytes32[](0), new bytes32[](0))
         );
 
         require(immediate == 0 || immediate == 1, BAD_IMM_TYP);
@@ -1009,109 +1008,19 @@ contract OneStepProof is IOneStepProof, MerkleUtil {
         pushVal(context.stack, Value.newBuffer());
     }
 
-    function getByte(bytes32 word, uint256 num) internal pure returns (uint256) {
-        return (uint256(word) >> ((31-num)*8)) & 0xff;
-    }
-
-    function setByte(bytes32 word, uint256 num, uint256 b) internal pure returns (bytes32) {
-        bytes memory arr = bytes32ToArray(word);
-        arr[num] = bytes1(uint8(b));
-        return bytes32(bytes32FromArray(arr));
-    }
-
-    function setByte(bytes32 word, uint256 num, bytes1 b) internal pure returns (bytes32) {
-        bytes memory arr = bytes32ToArray(word);
-        arr[num] = b;
-        return bytes32(bytes32FromArray(arr));
-    }
-
-    function bytes32FromArray(bytes memory arr) internal pure returns (uint256) {
-        uint256 res = 0;
-        for (uint i = 0; i < arr.length; i++) {
-            res = res << 8;
-            res = res | uint256(uint8(arr[arr.length-1-i]));
-        }
-        return res;
-    } 
-
-    function bytes32ToArray(bytes32 b) internal pure returns (bytes memory arr) {
-        uint256 acc = uint256(b);
-        bytes memory res = new bytes(32);
-        for (uint i = 0; i < arr.length; i++) {
-            res[31-i] = bytes1(uint8(acc));
-            acc = acc >> 8;
-        }
-        return res;
-    } 
-
-    function executeGetBuffer8(AssertionContext memory context) internal pure {
+/*
+    function executeGetBuffer(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         if (!val2.isInt() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
         }
-        uint256 offset = val2.intVal;
-        bytes32 buf = val1.bufferHash;
-        bytes32 word = get(buf, offset/32, context.buf1.bufProof); 
-        pushVal(context.stack, Value.newInt(getByte(word, offset%32)));
+        uint res = MerkleUtil.getOp(context.opcode, val1.bufferHash, val2.intVal, context.buf1.bufProof, context.buf2.bufProof);
+        pushVal(context.stack, Value.newInt(res));
     }
 
-    function executeGetBuffer64(AssertionContext memory context) internal pure {
-        Value.Data memory val1 = popVal(context.stack);
-        Value.Data memory val2 = popVal(context.stack);
-        if (!val2.isInt() || !val1.isBuffer()) {
-            handleOpcodeError(context);
-            return;
-        }
-        uint256 offset = val2.intVal;
-        bytes32 buf = val1.bufferHash;
-        bytes memory res = new bytes(8);
-        bytes32 word = get(buf, offset/32, context.buf1.bufProof); 
-        if (offset%32 + 8 >= 32) {
-            bytes32 word2 = get(buf, offset/32 + 1, context.buf2.bufProof); 
-            for (uint i = 0; i < 8 - (offset%32 + 8 - 32); i++) {
-                res[i] = bytes1(uint8(getByte(word, offset%32 + i)));
-            }
-            for (uint i = 8 - (offset%32 + 8 - 32); i < 8; i++) {
-                res[i] = bytes1(uint8(getByte(word2, (offset + i) % 32)));
-            }
-        } else {
-            for (uint i = 0; i < 8; i++) {
-                res[i] = bytes1(uint8(getByte(word, offset%32 + i)));
-            }
-        }
-        pushVal(context.stack, Value.newInt(bytes32FromArray(res)));
-    }
-
-    function executeGetBuffer256(AssertionContext memory context) internal pure {
-        Value.Data memory val1 = popVal(context.stack);
-        Value.Data memory val2 = popVal(context.stack);
-        if (!val2.isInt() || !val1.isBuffer()) {
-            handleOpcodeError(context);
-            return;
-        }
-        uint256 offset = val2.intVal;
-        bytes32 buf = val1.bufferHash;
-        bytes memory res = new bytes(32);
-        bytes32 word = get(buf, offset/32, context.buf1.bufProof); 
-        if (offset%32 + 32 >= 32) {
-            bytes32 word2 = get(buf, offset/32 + 1, context.buf2.bufProof); 
-            for (uint i = 0; i < 32 - (offset%32 + 32 - 32); i++) {
-                res[i] = bytes1(uint8(getByte(word, offset%32 + i)));
-            }
-            for (uint i = 32 - (offset%32 + 32 - 32); i < 32; i++) {
-                res[i] = bytes1(uint8(getByte(word2, (offset + i) % 32)));
-            }
-        } else {
-            for (uint i = 0; i < 32; i++) {
-                res[i] = bytes1(uint8(getByte(word, offset%32 + i)));
-            }
-        }
-        pushVal(context.stack, Value.newInt(bytes32FromArray(res)));
-    }
-
-    function executeSetBuffer8(AssertionContext memory context) internal view {
+    function executeSetBuffer(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
@@ -1119,48 +1028,25 @@ contract OneStepProof is IOneStepProof, MerkleUtil {
             handleOpcodeError(context);
             return;
         }
-        uint256 offset = val2.intVal;
-        uint256 b = val2.intVal;
-        bytes32 buf = val1.bufferHash;
-        bytes32 word = get(buf, offset/32, context.buf1.bufProof);
-        bytes32 nword = setByte(word, offset%32, b);
-        pushVal(context.stack, Value.newBuffer(set(buf, offset/32, nword, context.buf1.bufProof, context.buf1.bufNormalization, context.buf1.bufNormalLeft, context.buf1.bufNormalRight)));
+        bytes32 res = MerkleUtil.setOp(context.opcode, val1.bufferHash, val2.intVal, val3.intVal, context.buf1.bufProof, context.buf1.normalProof, context.buf2.bufProof, context.buf2.normalProof);
+        pushVal(context.stack, Value.newBuffer(res));
     }
+*/
 
-    function executeSetBuffer64(AssertionContext memory context) internal view {
+    function executeBuffer(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
-        if (!val2.isInt() || !val1.isBuffer() || !val3.isInt()) {
+        if (!val2.isInt() || !val3.isInt() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
         }
-        uint256 offset = val2.intVal;
-        bytes memory arr = bytes32ToArray(bytes32(val2.intVal));
-        bytes32 buf = val1.bufferHash;
-        bytes32 word = get(buf, offset/32, context.buf1.bufProof);
-        bytes32 nword = word;
-        if (offset%32 + 8 >= 32) {
-            bytes32 word2 = get(buf, offset/32 + 1, context.buf2.bufProof); 
-            bytes32 nword2 = word2;
-            for (uint i = 0; i < 8 - (offset%32 + 8 - 32); i++) {
-                nword = setByte(nword, offset%32 + i, arr[i]);
-            }
-            for (uint i = 8 - (offset%32 + 8 - 32); i < 8; i++) {
-                nword2 = setByte(nword2, (offset+i)%32, arr[i]);
-                buf = set(buf, offset/32, nword, context.buf1.bufProof, context.buf1.bufNormalization, context.buf1.bufNormalLeft, context.buf1.bufNormalRight);
-                buf = set(buf, offset/32 + 1, nword2, context.buf2.bufProof, context.buf2.bufNormalization, context.buf2.bufNormalLeft, context.buf2.bufNormalRight);
-            }
+        bytes32 res = MerkleUtil.bufferOp(context.opcode, val1.bufferHash, val2.intVal, val3.intVal, context.buf1.bufProof, context.buf1.normalProof, context.buf2.bufProof, context.buf2.normalProof);
+        if (context.op > OP_GETBUFFER256) {
+            pushVal(context.stack, Value.newBuffer(res));
         } else {
-            for (uint i = 0; i < 8; i++) {
-                nword = setByte(nword, offset%32 + i, arr[i]);
-            }
-            buf = set(buf, offset/32, nword, context.buf1.bufProof, context.buf1.bufNormalization, context.buf1.bufNormalLeft, context.buf1.bufNormalRight);
+            pushVal(context.stack, Value.newInt(uint256(res)));
         }
-        pushVal(context.stack, Value.newBuffer(buf));
-    }
-
-    function executeSetBuffer256(AssertionContext memory context) internal pure {
     }
 
     // Stop and arithmetic ops
@@ -1402,18 +1288,10 @@ contract OneStepProof is IOneStepProof, MerkleUtil {
             return (1, 0, 1000, executeECPairingInsn);
         } else if (opCode == OP_NEWBUFFER) {
             return (1, 0, 1, executeNewBuffer);
-        } else if (opCode == OP_SETBUFFER8) {
-            return (3, 0, 100, executeSetBuffer8);
-        } else if (opCode == OP_SETBUFFER64) {
-            return (3, 0, 100, executeSetBuffer64);
-        } else if (opCode == OP_SETBUFFER256) {
-            return (3, 0, 100, executeSetBuffer256);
-        } else if (opCode == OP_GETBUFFER8) {
-            return (2, 0, 10, executeGetBuffer8);
-        } else if (opCode == OP_GETBUFFER64) {
-            return (2, 0, 10, executeGetBuffer64);
-        } else if (opCode == OP_GETBUFFER256) {
-            return (2, 0, 10, executeGetBuffer256);
+        } else if (opCode == OP_SETBUFFER8 || opCode == OP_SETBUFFER64 || opCode == OP_SETBUFFER256) {
+            return (3, 0, 100, executeSetBuffer);
+        } else if (opCode == OP_GETBUFFER8 || opCode == OP_GETBUFFER64 || opCode == OP_GETBUFFER256) {
+            return (2, 0, 10, executeGetBuffer);
         } else {
             return (0, 0, 0, executeErrorInsn);
         }
