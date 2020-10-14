@@ -95,7 +95,7 @@ const arbSigner = arbProvider.getSigner(0)
 const l1Bridge = new L1Bridge(ethSigner, '0xArbChainAddress')
 
 // deposit eth:
-const txnResponse = await ethWallet.depositETH('0xwalletaddress', weiValue)
+const txnResponse = await l1Bridge.depositETH('0xwalletaddress', weiValue)
 
 //withdraw eth
 const txnResponse = await withdrawEth(arbSigner, weiValue)
