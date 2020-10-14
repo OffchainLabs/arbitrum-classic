@@ -30,6 +30,14 @@ For a deeper dive into deploying with truffle see [here](Contract_Deployment.md)
 
 Porting your frontend is just as easy as deploying your contracts. Just take your existing frontend and point it at our RPC endpoint after deploying your contract. For more information and code samples see [here](Frontend_Integration.md)
 
+If you're using metamask, add a custom RPC network to connect to the Arbitrum testnet:
+
+- Network Name: Arbitrum Testnet
+- New RPC URL: https://node.offchainlabs.com:8547
+- ChainID (Optional): 215728282823301
+- Symbol: ETH
+- Block Explorer URL: https://blockscout.com/poa/sokol
+
 ## Observing transactions
 
 If you'd like to see your transactions in action, check out our [block explorer](https://explorer.offchainlabs.com/#/chain/kovan-alpha)!
