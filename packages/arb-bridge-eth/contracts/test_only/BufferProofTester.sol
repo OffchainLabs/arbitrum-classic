@@ -27,6 +27,10 @@ contract BufferProofTester is OneStepProof2 {
         return get(buf, loc, proof);
     }
 
+    function testSet(bytes32 buf, uint loc, bytes32 v, bytes32[] memory proof, uint nh, bytes32 normal1, bytes32 normal2) public pure returns (bytes32) {
+        return set(buf, loc, v, proof, nh, normal1, normal2);
+    }
+
     function executeStepTest(
         bytes32 inboxAcc,
         bytes32 messagesAcc,

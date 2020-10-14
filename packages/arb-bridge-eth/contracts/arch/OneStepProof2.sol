@@ -311,16 +311,16 @@ contract OneStepProof2 is IOneStepProof2 {
     function get(bytes32 buf, uint loc, bytes32[] memory proof) internal pure returns (bytes32) {
         // empty tree is full of zeros
         if (proof.length == 0) {
-            require(buf == bytes32(0));
+            require(buf == keccak1(bytes32(0)), "expected empty buffer");
             return 0;
         }
         bytes32 acc = keccak1(proof[0]);
         for (uint i = 1; i < proof.length; i++) {
-            if (loc & 1 == 1) acc = keccak2(acc, proof[i]);
-            else acc = keccak2(proof[i], acc);
+            if (loc & 1 == 1) acc = keccak2(proof[i], acc);
+            else acc = keccak2(acc, proof[i]);
             loc = loc >> 1;
         }
-        require(acc == buf);
+        require(acc == buf, "expected correct root");
         // maybe it is a zero outside the actual tree
         if (loc > 0) return 0;
         return proof[0];
@@ -359,13 +359,13 @@ contract OneStepProof2 is IOneStepProof2 {
             loc = loc >> 1;
         }
         if (v != bytes32(0)) return acc;
-        require(normal2 != zeros[nh]);
+        require(normal2 != zeros[nh], "right subtree cannot be zero");
         bytes32 res = keccak2(normal1, normal2);
         bytes32 acc2 = res;
         for (uint i = nh; i < proof.length; i++) {
             acc2 = keccak2(res, zeros[i]);
         }
-        require(acc2 == acc);
+        require(acc2 == acc, "expected match");
         return res;
     }
 

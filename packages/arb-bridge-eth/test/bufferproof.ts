@@ -36,11 +36,39 @@ function keccak2(a: bytes32, b: bytes32) : bytes32 {
   return utils.solidityKeccak256(['bytes32', 'bytes32'], [a, b]);
 }
 
-function merkleHash(arr: bytes32[], offset: number, sz: number) {
-  
+function merkleHash(arr: bytes32[], offset: number, sz: number) : bytes32 {
+  if (sz === 1) {
+    return keccak1(arr[offset])
+  } else {
+    return keccak2(merkleHash(arr, offset, sz/2), merkleHash(arr, offset+sz/2, sz/2))
+  }
 }
 
-describe('OneStepProof', function () {
+function makeProof(arr: bytes32[], offset: number, sz: number, loc: number) : bytes32[] {
+  if (sz === 1) {
+    return [arr[loc]]
+  } else if (loc < offset + sz/2) {
+    const proof = makeProof(arr, offset, sz/2, loc)
+    return proof.concat([merkleHash(arr, offset+sz/2, sz/2)])
+  } else {
+    const proof = makeProof(arr, offset+sz/2, sz/2, loc)
+    return proof.concat([merkleHash(arr, offset, sz/2)])
+  }
+}
+
+function normalizationProof(arr: bytes32[], sz: number) {
+  return {
+    left: merkleHash(arr, 0, sz/2),
+    right: merkleHash(arr, sz/2, sz/2),
+    height: makeProof(arr, 0, sz, 0).length,
+  }
+}
+
+function elem(a: number): bytes32 {
+  return '0x' + a.toString(16).padStart(64, '0')
+}
+
+describe('BufferProof', function () {
   before(async () => {
     const OneStepProof = await ethers.getContractFactory('BufferProofTester')
     ospTester = (await OneStepProof.deploy()) as BufferProofTester
@@ -48,11 +76,47 @@ describe('OneStepProof', function () {
   })
 
   describe('#get', function () {
-
     it('should work with correct proof', async () => {
-
+      let arr : bytes32[] = []
+      for (let i = 0; i < 32; i++) {
+        arr.push(elem(i))
+      }
+      let buf = merkleHash(arr, 0, 32)
+      let proof = makeProof(arr, 0, 32, 23)
+      // console.log(proof)
+      const res = await ospTester.testGet(buf, 23, proof)
+      // console.log(res)
+      expect(res).to.equal(elem(23))
     })
 
+    it('should be filled with zeros', async () => {
+      let arr : bytes32[] = []
+      for (let i = 0; i < 32; i++) {
+        arr.push(elem(i))
+      }
+      let buf = merkleHash(arr, 0, 32)
+      let proof = makeProof(arr, 0, 32, 230%32)
+      // console.log(proof)
+      const res = await ospTester.testGet(buf, 230, proof)
+      // console.log(res)
+      expect(res).to.equal(elem(0))
+    })
+  })
+
+  describe('#set', function () {
+    it('should work with correct proof', async () => {
+      let arr : bytes32[] = []
+      for (let i = 0; i < 32; i++) {
+        arr.push(elem(i))
+      }
+      let buf = merkleHash(arr, 0, 32)
+      let proof = makeProof(arr, 0, 32, 23)
+      arr[23] = elem(10)
+      const nproof = normalizationProof(arr, 32)
+      const res = await ospTester.testSet(buf, 23, elem(10), proof, nproof.height, nproof.left, nproof.right)
+      // console.log(res, merkleHash(arr, 0, 32))
+      expect(res).to.equal(merkleHash(arr, 0, 32))
+    })
   })
 
 })
