@@ -16,6 +16,10 @@ Hosted Aggregator Node (JSON-RPC Endpoint): [https://node.offchainlabs.com:8547]
 
 Rollup Chain ID: 215728282823301
 
+Testnet Version: v1
+
+Chain Launched on October 14, 2020
+
 ## Deploying your contracts
 
 Deploying your contracts onto the Arbitrum testnet is as easy as changing your RPC endpoint to https://node.offchainlabs.com:8547
