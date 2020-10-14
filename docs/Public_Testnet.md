@@ -8,7 +8,7 @@ In order to make it easy for people to get started using Arbitrum Rollup, we've 
 
 For a general introduction to the Arbitrum Testnet, see our [announcement](https://medium.com/offchainlabs/arbitrum-rollup-testnet-full-featured-and-open-to-all-da3255b562ea).
 
-For a convinient landing page for all your testnet needs, see our [website](https://arbitrum.io/testnet/).
+For a convenient landing page for all your testnet needs, see our [website](https://arbitrum.io/testnet/).
 
 ## Connection Information
 
@@ -42,10 +42,10 @@ We're running an aggregator and validator for our testnet, so you don't have to 
 
 The very first step to start building with Arbitrum is [installing](Installation.md). After that you can initialize your local setup by running:
 ```bash
-yarn prod:initialize 0x175c0b09453cbb44fb7f56ba5638c43427aa6a85 https://kovan.infura.io/v3/INSERT_API_ID
+yarn prod:initialize 0x175c0b09453cbb44fb7f56ba5638c43427aa6a85 https://kovan.infura.io/v3/YOUR_INFURA_API_ID
 ```
 
-Running the `prod:initialize` command will create a `arbitrum/rollups/0x175c0b09453cbb44fb7f56ba5638c43427aa6a85` folder two subfolders, one configured for an aggregator, and the other a validator.
+Running the `prod:initialize` command will create a `arbitrum/rollups/0x175c0b09453cbb44fb7f56ba5638c43427aa6a85` folder with two subfolders, one configured for an aggregator, and the other a validator.
 
 To deploy the validator and aggregator, run
 
@@ -62,8 +62,8 @@ All contracts are deployed from https://github.com/OffchainLabs/arbitrum/tree/v0
 #### Important Addresses
 
 - Main L1 Rollup Contract: [0x175c0b09453cbb44fb7f56ba5638c43427aa6a85](https://kovan.etherscan.io/address/0x175c0b09453cbb44fb7f56ba5638c43427aa6a85)
-- Hosted Aggregator Address: [0x1d143638962dc93c52c4053a3dcce71cccb30bd3](https://kovan.etherscan.io/address/0x1d143638962dc93c52c4053a3dcce71cccb30bd3)
-- Hosted Validator Address: [0x705c33d9364dd570bc2998a1a1e788221c14d2da](https://kovan.etherscan.io/address/0x705c33d9364dd570bc2998a1a1e788221c14d2da)
+- Our Hosted Aggregator Address: [0x1d143638962dc93c52c4053a3dcce71cccb30bd3](https://kovan.etherscan.io/address/0x1d143638962dc93c52c4053a3dcce71cccb30bd3)
+- Our Hosted Validator Address: [0x705c33d9364dd570bc2998a1a1e788221c14d2da](https://kovan.etherscan.io/address/0x705c33d9364dd570bc2998a1a1e788221c14d2da)
 
 #### Rollup Contracts
 - [ArbFactory](https://github.com/OffchainLabs/arbitrum/blob/v0.7.2/packages/arb-bridge-eth/contracts/rollup/ArbFactory.sol) - [0xee1250962014364aCf506061E66e78e65b8bCEEC](https://kovan.etherscan.io/address/0xee1250962014364aCf506061E66e78e65b8bCEEC)
