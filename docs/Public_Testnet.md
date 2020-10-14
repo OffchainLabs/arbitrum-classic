@@ -6,6 +6,10 @@ sidebar_label: Public Testnet
 
 In order to make it easy for people to get started using Arbitrum Rollup, we've launched our own hosted Arbitrum Rollup chain hosted on the Kovan testnet.
 
+For a general introduction to the Arbitrum Testnet, see our [announcement](https://TODO.com).
+
+For a convinient landing page for all your testnet needs, see our [website](https://arbitrum.io/testnet/).
+
 ## Chain Information
 
 Hosted Aggregator Node: [https://node.offchainlabs.com:8547](https://node.offchainlabs.com:8547)
@@ -54,6 +58,8 @@ yarn deploy:validators 0x175c0b09453cbb44fb7f56ba5638c43427aa6a85 --password=[pa
 The password argument is used to secure the validator keystore. On the first deployment you set the password to any value, and on later deployments you must resubmit the same password.
 
 ## Kovan Deployment
+
+All contracts are deployed from https://github.com/OffchainLabs/arbitrum/tree/v0.7.2/packages/arb-bridge-eth/contracts
 
 #### Rollup
 - [ArbFactory](https://github.com/OffchainLabs/arbitrum/blob/v0.7.2/packages/arb-bridge-eth/contracts/rollup/ArbFactory.sol) - [0xee1250962014364aCf506061E66e78e65b8bCEEC](https://kovan.etherscan.io/address/0xee1250962014364aCf506061E66e78e65b8bCEEC)
