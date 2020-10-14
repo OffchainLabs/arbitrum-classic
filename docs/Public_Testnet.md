@@ -36,7 +36,7 @@ If you're using metamask, add a custom RPC network to connect to the Arbitrum te
 - New RPC URL: https://node.offchainlabs.com:8547
 - ChainID (Optional): 215728282823301
 - Symbol: ETH
-- Block Explorer URL: https://blockscout.com/poa/sokol
+- Block Explorer URL: https://explorer.offchainlabs.com/#/
 
 ## Observing transactions
 
