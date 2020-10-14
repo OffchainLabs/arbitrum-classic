@@ -6,7 +6,7 @@ sidebar_label: Public Testnet
 
 In order to make it easy for people to get started using Arbitrum Rollup, we've launched our own hosted Arbitrum Rollup chain hosted on the Kovan testnet.
 
-For a general introduction to the Arbitrum Testnet, see our [announcement](https://TODO.com).
+For a general introduction to the Arbitrum Testnet, see our [announcement](https://medium.com/offchainlabs/arbitrum-rollup-testnet-full-featured-and-open-to-all-da3255b562ea).
 
 For a convinient landing page for all your testnet needs, see our [website](https://arbitrum.io/testnet/).
 
