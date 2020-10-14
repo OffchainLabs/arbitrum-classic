@@ -57,11 +57,9 @@ All contracts are deployed from https://github.com/OffchainLabs/arbitrum/tree/v0
 
 #### Important Addresses
 
-Main L1 Rollup Contract: [0x175c0b09453cbb44fb7f56ba5638c43427aa6a85](https://kovan.etherscan.io/address/0x175c0b09453cbb44fb7f56ba5638c43427aa6a85)
-
-Hosted Aggregator Address: [0x1d143638962dc93c52c4053a3dcce71cccb30bd3](https://kovan.etherscan.io/address/0x1d143638962dc93c52c4053a3dcce71cccb30bd3)
-
-Hosted Validator Address: [0x705c33d9364dd570bc2998a1a1e788221c14d2da](https://kovan.etherscan.io/address/0x705c33d9364dd570bc2998a1a1e788221c14d2da)
+- Main L1 Rollup Contract: [0x175c0b09453cbb44fb7f56ba5638c43427aa6a85](https://kovan.etherscan.io/address/0x175c0b09453cbb44fb7f56ba5638c43427aa6a85)
+- Hosted Aggregator Address: [0x1d143638962dc93c52c4053a3dcce71cccb30bd3](https://kovan.etherscan.io/address/0x1d143638962dc93c52c4053a3dcce71cccb30bd3)
+- Hosted Validator Address: [0x705c33d9364dd570bc2998a1a1e788221c14d2da](https://kovan.etherscan.io/address/0x705c33d9364dd570bc2998a1a1e788221c14d2da)
 
 #### Rollup Contracts
 - [ArbFactory](https://github.com/OffchainLabs/arbitrum/blob/v0.7.2/packages/arb-bridge-eth/contracts/rollup/ArbFactory.sol) - [0xee1250962014364aCf506061E66e78e65b8bCEEC](https://kovan.etherscan.io/address/0xee1250962014364aCf506061E66e78e65b8bCEEC)
