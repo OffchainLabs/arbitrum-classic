@@ -1069,7 +1069,7 @@ void setbuffer8(MachineState& m) {
     m.stack.popClear();
     m.stack.popClear();
     // std::cerr << "hmm setting " << offset << std::endl;
-    md.set(offset, val);
+    // md.set(offset, val);
     m.stack.push(md.set(offset, val));
     ++m.pc;
 }

@@ -200,9 +200,22 @@ std::vector<unsigned char> makeProof(uint8_t *arr, uint64_t offset, uint64_t sz,
 
 std::vector<unsigned char> bufferToVec(const Buffer& b) {
     std::vector<unsigned char> res;
-    for (int i = 0; i < b.size(); i++) {
+    for (uint64_t i = 0; i < b.size(); i++) {
         res.push_back(b.get(i));
     }
+    return res;
+}
+
+std::vector<unsigned char>  makeNormalizationProof(uint8_t *arr, uint64_t sz) {
+    std::vector<unsigned char> res;
+    for (int i = 0; i < 31; i++) {
+        res.push_back(0);
+    }
+    res.push_back(makeProof(arr, 0, sz, 0).size()/32);
+
+    merkleHash(arr, 0, sz/2),
+    marshal_uint256_t(merkleHash(arr, 0, sz/2), res);
+    marshal_uint256_t(merkleHash(arr, sz/2, sz/2), res);
     return res;
 }
 
@@ -224,8 +237,76 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
     }
     auto loc = static_cast<uint64_t>(*offset);
     if (opcode == OpCode::GET_BUFFER8) {
-        auto proof = makeProof(bufferToVec(*buffer).data(), 0, buffer->size(), (loc*32)%buffer->size());
+        auto proof = makeProof(bufferToVec(*buffer).data(), 0, buffer->size(), loc%buffer->size());
         buf.insert(buf.end(), proof.begin(), proof.end());
+    } else if (opcode == OpCode::GET_BUFFER64) {
+        auto proof1 = makeProof(bufferToVec(*buffer).data(), 0, buffer->size(), loc%buffer->size());
+        auto proof2 = makeProof(bufferToVec(*buffer).data(), 0, buffer->size(), (loc+7)%buffer->size());
+        buf.insert(buf.end(), proof1.begin(), proof1.end());
+        buf.insert(buf.end(), proof2.begin(), proof2.end());
+    } else if (opcode == OpCode::GET_BUFFER256) {
+        auto proof1 = makeProof(bufferToVec(*buffer).data(), 0, buffer->size(), loc%buffer->size());
+        auto proof2 = makeProof(bufferToVec(*buffer).data(), 0, buffer->size(), (loc+31)%buffer->size());
+        buf.insert(buf.end(), proof1.begin(), proof1.end());
+        buf.insert(buf.end(), proof2.begin(), proof2.end());
+    } else {
+        auto val = nonstd::get_if<uint256_t>(&stack[2]);
+        if (!val) {
+          return buf;
+        }
+        if (opcode == OpCode::SET_BUFFER8) {
+            Buffer nbuffer = buffer->set(loc, static_cast<uint8_t>(*val));
+            auto proof1 = makeProof(bufferToVec(*buffer).data(), 0, buffer->size(), loc%buffer->size());
+            auto nproof1 = makeNormalizationProof(bufferToVec(nbuffer).data(), buffer->size());
+            buf.insert(buf.end(), proof1.begin(), proof1.end());
+            buf.insert(buf.end(), nproof1.begin(), nproof1.end());
+        } else if (opcode == OpCode::SET_BUFFER64) {
+            Buffer nbuffer = buffer->set(loc, static_cast<uint8_t>(*val));
+            uint256_t v = *val;
+            Buffer nbuffer1 = nbuffer;
+            bool aligned = true;
+            for (int i = 0; i < 8; i++) {
+                if (loc+7-i == 0) {
+                    nbuffer1 = nbuffer;
+                    aligned = false;
+                }
+                nbuffer = nbuffer.set(loc+7-i, static_cast<uint8_t>(v&0xff));
+                v = v >> 8;
+            }
+            auto proof1 = makeProof(bufferToVec(*buffer).data(), 0, buffer->size(), loc%buffer->size());
+            auto nproof1 = makeNormalizationProof(bufferToVec(nbuffer1).data(), buffer->size());
+            auto proof2 = makeProof(bufferToVec(nbuffer1).data(), 0, buffer->size(), (loc+7)%buffer->size());
+            auto nproof2 = makeNormalizationProof(bufferToVec(nbuffer).data(), buffer->size());
+            buf.insert(buf.end(), proof1.begin(), proof1.end());
+            buf.insert(buf.end(), nproof1.begin(), nproof1.end());
+            if (!aligned) {
+                buf.insert(buf.end(), proof2.begin(), proof2.end());
+                buf.insert(buf.end(), nproof2.begin(), nproof2.end());
+            }
+        } else if (opcode == OpCode::SET_BUFFER256) {
+            Buffer nbuffer = buffer->set(loc, static_cast<uint8_t>(*val));
+            uint256_t v = *val;
+            Buffer nbuffer1 = nbuffer;
+            bool aligned = true;
+            for (int i = 0; i < 32; i++) {
+                if (loc+31-i == 0) {
+                    nbuffer1 = nbuffer;
+                    aligned = false;
+                }
+                nbuffer = nbuffer.set(loc+31-i, static_cast<uint8_t>(v&0xff));
+                v = v >> 8;
+            }
+            auto proof1 = makeProof(bufferToVec(*buffer).data(), 0, buffer->size(), loc%buffer->size());
+            auto nproof1 = makeNormalizationProof(bufferToVec(nbuffer1).data(), buffer->size());
+            auto proof2 = makeProof(bufferToVec(nbuffer1).data(), 0, buffer->size(), (loc+31)%buffer->size());
+            auto nproof2 = makeNormalizationProof(bufferToVec(nbuffer).data(), buffer->size());
+            buf.insert(buf.end(), proof1.begin(), proof1.end());
+            buf.insert(buf.end(), nproof1.begin(), nproof1.end());
+            if (!aligned) {
+                buf.insert(buf.end(), proof2.begin(), proof2.end());
+                buf.insert(buf.end(), nproof2.begin(), nproof2.end());
+            }
+        }
     }
 
     // when setting, have to simulate intermediate results
