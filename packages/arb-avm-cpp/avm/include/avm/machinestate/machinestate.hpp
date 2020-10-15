@@ -88,6 +88,7 @@ struct MachineState {
 
     uint256_t getMachineSize();
     std::vector<unsigned char> marshalForProof();
+    std::vector<unsigned char> marshalBufferProof();
     std::vector<unsigned char> marshalState() const;
     BlockReason runOp(OpCode opcode);
     BlockReason runOne();

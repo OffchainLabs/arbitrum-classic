@@ -172,6 +172,67 @@ std::vector<unsigned char> MachineState::marshalState() const {
     return buf;
 }
 
+uint256_t merkleHash(uint8_t *buf, int offset, int sz) {
+    if (sz == 32) {
+        auto hash_val = ethash::keccak256(buf+offset, 32);
+        uint256_t res = intx::be::load<uint256_t>(hash_val);
+        return res;
+    }
+    // std::cerr << "hashing " << offset << " to " << (offset+sz) << std::endl;
+    auto h1 = merkleHash(buf, offset, sz/2);
+    auto h2 = merkleHash(buf, offset+sz/2, sz/2);
+    return hash(h1, h2);
+}
+
+std::vector<unsigned char> makeProof(uint8_t *arr, uint64_t offset, uint64_t sz, uint64_t loc) {
+    if (sz == 32) {
+        return std::vector<unsigned char>(arr+loc, arr+loc+32);
+    } else if (loc < offset + sz/2) {
+        auto proof = makeProof(arr, offset, sz/2, loc);
+        marshal_uint256_t(merkleHash(arr, offset+sz/2, sz/2), proof);
+        return proof;
+    } else {
+        auto proof = makeProof(arr, offset+sz/2, sz/2, loc);
+        marshal_uint256_t(merkleHash(arr, offset, sz/2), proof);
+        return proof;
+    }
+}
+
+std::vector<unsigned char> bufferToVec(const Buffer& b) {
+    std::vector<unsigned char> res;
+    for (int i = 0; i < b.size(); i++) {
+        res.push_back(b.get(i));
+    }
+    return res;
+}
+
+std::vector<unsigned char> MachineState::marshalBufferProof() {
+    std::vector<unsigned char> buf;
+    auto opcode = loadCurrentInstruction().op.opcode;
+    // Find the buffer
+    auto buffer = nonstd::get_if<Buffer>(&stack[0]);
+    if (!buffer) {
+        return buf;
+    }
+    // Also need the offset
+    auto offset = nonstd::get_if<uint256_t>(&stack[1]);
+    if (!offset) {
+        return buf;
+    }
+    if (*offset > std::numeric_limits<uint64_t>::max()) {
+        return buf;
+    }
+    auto loc = static_cast<uint64_t>(*offset);
+    if (opcode == OpCode::GET_BUFFER8) {
+        auto proof = makeProof(bufferToVec(*buffer).data(), 0, buffer->size(), (loc*32)%buffer->size());
+        buf.insert(buf.end(), proof.begin(), proof.end());
+    }
+
+    // when setting, have to simulate intermediate results
+
+    return buf;
+}
+
 std::vector<unsigned char> MachineState::marshalForProof() {
     auto currentInstruction = loadCurrentInstruction();
     auto& current_op = currentInstruction.op;

@@ -190,6 +190,15 @@ void marshalForProof(const uint256_t& val,
     buf.push_back(NUM);
     marshal_uint256_t(val, buf);
 }
+
+void marshalForProof(const Buffer& val,
+                     MarshalLevel,
+                     std::vector<unsigned char>& buf,
+                     const Code&) {
+    buf.push_back(BUFFER);
+    marshal_uint256_t(val.hash(), buf);
+}
+
 }  // namespace
 
 void marshalForProof(const value& val,

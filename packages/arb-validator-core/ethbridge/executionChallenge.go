@@ -127,6 +127,38 @@ func (c *executionChallenge) OneStepProof(
 	return c.waitForReceipt(ctx, tx, "OneStepProof")
 }
 
+func (c *executionChallenge) OneStepProofBuffer(
+	ctx context.Context,
+	assertion *valprotocol.ExecutionAssertionStub,
+	proof []byte,
+	bproof []byte,
+) error {
+	c.auth.Lock()
+	defer c.auth.Unlock()
+	tx, err := c.challenge.OneStepProofBuffer(
+		c.auth.getAuth(ctx),
+		assertion.AfterInboxHash,
+		assertion.FirstMessageHash,
+		assertion.FirstLogHash,
+		proof,
+		bproof,
+	)
+	if err != nil {
+		return c.challenge.OneStepProofBufferCall(
+			ctx,
+			c.client,
+			c.auth.auth.From,
+			c.contractAddress,
+			assertion.AfterInboxHash,
+			assertion.FirstMessageHash,
+			assertion.FirstLogHash,
+			proof,
+			bproof,
+		)
+	}
+	return c.waitForReceipt(ctx, tx, "OneStepProof")
+}
+
 func (c *executionChallenge) OneStepProofWithMessage(
 	ctx context.Context,
 	assertion *valprotocol.ExecutionAssertionStub,
