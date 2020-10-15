@@ -16,9 +16,6 @@
 
 package machine
 
-import "unsafe"
-
 type ValueCache interface {
 	Clear()
-	UnsafePointer() unsafe.Pointer
 }

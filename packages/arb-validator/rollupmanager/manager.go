@@ -94,7 +94,6 @@ func CreateManagerAdvanced(
 	if err != nil {
 		return nil, err
 	}
-	defer cmachine.DestroyValueCache(valueCache)
 
 	initialMachine, err := checkpointer.GetInitialMachine(valueCache)
 	if err != nil {

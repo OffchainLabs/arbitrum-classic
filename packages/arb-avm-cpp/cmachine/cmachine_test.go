@@ -33,7 +33,6 @@ func TestMachineCreation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer DestroyValueCache(valueCache)
 
 	mach1, err := New(codeFile)
 	if err != nil {

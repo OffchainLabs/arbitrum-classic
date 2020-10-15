@@ -303,7 +303,6 @@ func newChain(
 	if err != nil {
 		return nil, err
 	}
-	defer cmachine.DestroyValueCache(valueCache)
 
 	mach, err := checkpointer.GetInitialMachine(valueCache)
 	if err != nil {

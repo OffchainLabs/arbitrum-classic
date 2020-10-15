@@ -312,7 +312,6 @@ func newRestoreContextLocked(db machine.CheckpointStorage, manifest *ckptcontext
 	if err != nil {
 		return nil, err
 	}
-	defer cmachine.DestroyValueCache(valueCache)
 
 	for _, valHash := range manifest.GetValues() {
 		hash := valHash.Unmarshal()

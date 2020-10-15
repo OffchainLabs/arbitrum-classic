@@ -53,7 +53,6 @@ func runExecutableFile(b *testing.B, filePath string) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	defer cmachine.DestroyValueCache(valueCache)
 
 	ckp, err := cmachine.NewCheckpoint(ckpDir)
 	if err != nil {

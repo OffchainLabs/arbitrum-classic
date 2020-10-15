@@ -210,7 +210,6 @@ func (x *InboxBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Mes
 	if err != nil {
 		return nil, err
 	}
-	defer cmachine.DestroyValueCache(valueCache)
 
 	for i := len(x.Items) - 1; i >= 0; i = i - 1 {
 		val := ctx.GetValue(x.Items[i].Unmarshal(), valueCache)

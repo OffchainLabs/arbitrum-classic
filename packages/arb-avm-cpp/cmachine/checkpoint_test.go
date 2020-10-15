@@ -56,7 +56,6 @@ func TestCheckpointMachine(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer DestroyValueCache(valueCache)
 
 	checkpointStorage, err := NewCheckpoint(dePath)
 	if err != nil {

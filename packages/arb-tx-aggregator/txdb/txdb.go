@@ -81,7 +81,6 @@ func (txdb *TxDB) Load(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer cmachine.DestroyValueCache(valueCache)
 
 	mach, err := txdb.checkpointer.GetInitialMachine(valueCache)
 	if err != nil {
@@ -118,7 +117,6 @@ func (txdb *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		defer cmachine.DestroyValueCache(valueCache)
 		mach = restoreCtx.GetMachine(machineHash, valueCache)
 		blockId = restoreBlockId
 		return nil

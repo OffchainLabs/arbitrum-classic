@@ -69,7 +69,6 @@ func ensureInitialized(
 	if err != nil {
 		return err
 	}
-	defer cmachine.DestroyValueCache(valueCache)
 
 	initialMachine, err := cp.GetInitialMachine(valueCache)
 	if err != nil {

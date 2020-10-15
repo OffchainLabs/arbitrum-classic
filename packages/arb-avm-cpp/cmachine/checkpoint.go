@@ -81,7 +81,7 @@ func cDestroyCheckpointStorage(cCheckpointStorage *CheckpointStorage) {
 }
 
 func (checkpoint *CheckpointStorage) GetInitialMachine(valueCache machine.ValueCache) (machine.Machine, error) {
-	cMachine := C.getInitialMachine(checkpoint.c, valueCache.UnsafePointer())
+	cMachine := C.getInitialMachine(checkpoint.c, valueCache.(*ValueCache).c)
 
 	if cMachine == nil {
 		return nil, fmt.Errorf("error getting initial machine from checkpointstorage")
@@ -93,7 +93,7 @@ func (checkpoint *CheckpointStorage) GetInitialMachine(valueCache machine.ValueC
 }
 
 func (checkpoint *CheckpointStorage) GetMachine(machineHash common.Hash, valueCache machine.ValueCache) (machine.Machine, error) {
-	cMachine := C.getMachine(checkpoint.c, unsafe.Pointer(&machineHash[0]), valueCache.UnsafePointer())
+	cMachine := C.getMachine(checkpoint.c, unsafe.Pointer(&machineHash[0]), valueCache.(*ValueCache).c)
 
 	if cMachine == nil {
 		return nil, fmt.Errorf("error getting machine from checkpointstorage")
@@ -125,7 +125,7 @@ func (checkpoint *CheckpointStorage) SaveValue(val value.Value) bool {
 }
 
 func (checkpoint *CheckpointStorage) GetValue(hashValue common.Hash, valueCache machine.ValueCache) value.Value {
-	cData := C.getValue(checkpoint.c, unsafe.Pointer(&hashValue[0]), valueCache.UnsafePointer())
+	cData := C.getValue(checkpoint.c, unsafe.Pointer(&hashValue[0]), valueCache.(*ValueCache).c)
 	if cData.data == nil {
 		return nil
 	}

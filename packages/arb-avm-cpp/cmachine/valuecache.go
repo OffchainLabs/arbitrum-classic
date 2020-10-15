@@ -26,6 +26,7 @@ package cmachine
 import "C"
 import (
 	"fmt"
+	"runtime"
 	"unsafe"
 )
 
@@ -40,6 +41,7 @@ func NewValueCache() (*ValueCache, error) {
 		return nil, fmt.Errorf("error loading value cache")
 	}
 	ret := &ValueCache{cValueCache}
+	runtime.SetFinalizer(ret, DestroyValueCache)
 	return ret, nil
 }
 
@@ -49,8 +51,4 @@ func DestroyValueCache(cValueCache *ValueCache) {
 
 func (valueCache *ValueCache) Clear() {
 	C.clearValueCache(valueCache.c)
-}
-
-func (valueCache *ValueCache) UnsafePointer() unsafe.Pointer {
-	return valueCache.c
 }

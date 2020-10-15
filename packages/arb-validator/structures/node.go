@@ -417,7 +417,6 @@ func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Node
 	if err != nil {
 		return nil, err
 	}
-	defer cmachine.DestroyValueCache(valueCache)
 
 	if x.MachineHash != nil {
 		node.machine = ctx.GetMachine(x.MachineHash.Unmarshal(), valueCache)
