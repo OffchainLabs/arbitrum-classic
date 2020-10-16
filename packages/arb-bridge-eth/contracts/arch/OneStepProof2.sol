@@ -385,8 +385,8 @@ contract OneStepProof2 is IOneStepProof2 {
         return bytes32(bytes32FromArray(arr));
     }
 
-    function decode(bytes memory arr, bytes1 _start, bytes1 _len) internal pure returns (bytes32[] memory) {
-        uint len = uint(uint8(_len));
+    function decode(bytes memory arr, bytes1 _start, bytes1 _end) internal pure returns (bytes32[] memory) {
+        uint len = uint(uint8(_end-_start));
         uint start = uint(uint8(_start));
         bytes32[] memory res = new bytes32[](len);
         for (uint i = 0; i < len; i++) {
@@ -404,9 +404,9 @@ contract OneStepProof2 is IOneStepProof2 {
 
     function decodeProof(bytes memory proof) internal pure returns (BufferProof memory) {
         bytes32[] memory proof1 = decode(proof, proof[0], proof[1]);
-        bytes32[] memory nproof1 = decode(proof, proof[2], proof[3]);
-        bytes32[] memory proof2 = decode(proof, proof[4], proof[5]);
-        bytes32[] memory nproof2 = decode(proof, proof[6], proof[7]);
+        bytes32[] memory nproof1 = decode(proof, proof[1], proof[2]);
+        bytes32[] memory proof2 = decode(proof, proof[2], proof[3]);
+        bytes32[] memory nproof2 = decode(proof, proof[3], proof[4]);
         return BufferProof(proof1, nproof1, proof2, nproof2);
     }
 
