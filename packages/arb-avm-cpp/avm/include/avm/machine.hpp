@@ -77,6 +77,9 @@ class Machine {
     std::vector<unsigned char> marshalForProof() {
         return machine_state.marshalForProof();
     }
+    std::vector<unsigned char> marshalBufferProof() {
+        return machine_state.marshalBufferProof();
+    }
 
     std::vector<unsigned char> marshalState() const {
         return machine_state.marshalState();

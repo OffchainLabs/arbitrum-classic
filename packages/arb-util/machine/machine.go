@@ -67,6 +67,8 @@ type Machine interface {
 
 	MarshalForProof() ([]byte, error)
 
+	MarshalBufferProof() ([]byte, error)
+
 	MarshalState() ([]byte, error)
 
 	Checkpoint(storage CheckpointStorage) bool

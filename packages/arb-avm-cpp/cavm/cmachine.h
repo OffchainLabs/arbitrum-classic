@@ -90,6 +90,7 @@ RawAssertion executeSideloadedAssertion(CMachine* m,
                                         uint64_t wallLimit);
 
 ByteSlice machineMarshallForProof(CMachine* m);
+ByteSlice machineMarshallBufferProof(CMachine* m);
 
 ByteSlice machineMarshallState(CMachine* m);
 
