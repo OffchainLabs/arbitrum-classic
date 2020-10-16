@@ -20,223 +20,11 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
 )
-
-// IOneStepProof2ABI is the input ABI used to generate the binding from.
-const IOneStepProof2ABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"inboxAcc\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"messagesAcc\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"logsAcc\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"bproof\",\"type\":\"bytes\"}],\"name\":\"executeStep\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"gas\",\"type\":\"uint64\"},{\"internalType\":\"bytes32[5]\",\"name\":\"fields\",\"type\":\"bytes32[5]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
-
-// IOneStepProof2FuncSigs maps the 4-byte function signature to its string representation.
-var IOneStepProof2FuncSigs = map[string]string{
-	"1041c884": "executeStep(bytes32,bytes32,bytes32,bytes,bytes)",
-}
-
-// IOneStepProof2 is an auto generated Go binding around an Ethereum contract.
-type IOneStepProof2 struct {
-	IOneStepProof2Caller     // Read-only binding to the contract
-	IOneStepProof2Transactor // Write-only binding to the contract
-	IOneStepProof2Filterer   // Log filterer for contract events
-}
-
-// IOneStepProof2Caller is an auto generated read-only Go binding around an Ethereum contract.
-type IOneStepProof2Caller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// IOneStepProof2Transactor is an auto generated write-only Go binding around an Ethereum contract.
-type IOneStepProof2Transactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// IOneStepProof2Filterer is an auto generated log filtering Go binding around an Ethereum contract events.
-type IOneStepProof2Filterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// IOneStepProof2Session is an auto generated Go binding around an Ethereum contract,
-// with pre-set call and transact options.
-type IOneStepProof2Session struct {
-	Contract     *IOneStepProof2   // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts     // Call options to use throughout this session
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
-}
-
-// IOneStepProof2CallerSession is an auto generated read-only Go binding around an Ethereum contract,
-// with pre-set call options.
-type IOneStepProof2CallerSession struct {
-	Contract *IOneStepProof2Caller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts         // Call options to use throughout this session
-}
-
-// IOneStepProof2TransactorSession is an auto generated write-only Go binding around an Ethereum contract,
-// with pre-set transact options.
-type IOneStepProof2TransactorSession struct {
-	Contract     *IOneStepProof2Transactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts         // Transaction auth options to use throughout this session
-}
-
-// IOneStepProof2Raw is an auto generated low-level Go binding around an Ethereum contract.
-type IOneStepProof2Raw struct {
-	Contract *IOneStepProof2 // Generic contract binding to access the raw methods on
-}
-
-// IOneStepProof2CallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
-type IOneStepProof2CallerRaw struct {
-	Contract *IOneStepProof2Caller // Generic read-only contract binding to access the raw methods on
-}
-
-// IOneStepProof2TransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
-type IOneStepProof2TransactorRaw struct {
-	Contract *IOneStepProof2Transactor // Generic write-only contract binding to access the raw methods on
-}
-
-// NewIOneStepProof2 creates a new instance of IOneStepProof2, bound to a specific deployed contract.
-func NewIOneStepProof2(address common.Address, backend bind.ContractBackend) (*IOneStepProof2, error) {
-	contract, err := bindIOneStepProof2(address, backend, backend, backend)
-	if err != nil {
-		return nil, err
-	}
-	return &IOneStepProof2{IOneStepProof2Caller: IOneStepProof2Caller{contract: contract}, IOneStepProof2Transactor: IOneStepProof2Transactor{contract: contract}, IOneStepProof2Filterer: IOneStepProof2Filterer{contract: contract}}, nil
-}
-
-// NewIOneStepProof2Caller creates a new read-only instance of IOneStepProof2, bound to a specific deployed contract.
-func NewIOneStepProof2Caller(address common.Address, caller bind.ContractCaller) (*IOneStepProof2Caller, error) {
-	contract, err := bindIOneStepProof2(address, caller, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &IOneStepProof2Caller{contract: contract}, nil
-}
-
-// NewIOneStepProof2Transactor creates a new write-only instance of IOneStepProof2, bound to a specific deployed contract.
-func NewIOneStepProof2Transactor(address common.Address, transactor bind.ContractTransactor) (*IOneStepProof2Transactor, error) {
-	contract, err := bindIOneStepProof2(address, nil, transactor, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &IOneStepProof2Transactor{contract: contract}, nil
-}
-
-// NewIOneStepProof2Filterer creates a new log filterer instance of IOneStepProof2, bound to a specific deployed contract.
-func NewIOneStepProof2Filterer(address common.Address, filterer bind.ContractFilterer) (*IOneStepProof2Filterer, error) {
-	contract, err := bindIOneStepProof2(address, nil, nil, filterer)
-	if err != nil {
-		return nil, err
-	}
-	return &IOneStepProof2Filterer{contract: contract}, nil
-}
-
-// bindIOneStepProof2 binds a generic wrapper to an already deployed contract.
-func bindIOneStepProof2(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(IOneStepProof2ABI))
-	if err != nil {
-		return nil, err
-	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
-}
-
-// ParseIOneStepProof2ABI parses the ABI
-func ParseIOneStepProof2ABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(IOneStepProof2ABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_IOneStepProof2 *IOneStepProof2Raw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _IOneStepProof2.Contract.IOneStepProof2Caller.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_IOneStepProof2 *IOneStepProof2Raw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IOneStepProof2.Contract.IOneStepProof2Transactor.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_IOneStepProof2 *IOneStepProof2Raw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _IOneStepProof2.Contract.IOneStepProof2Transactor.contract.Transact(opts, method, params...)
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_IOneStepProof2 *IOneStepProof2CallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _IOneStepProof2.Contract.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_IOneStepProof2 *IOneStepProof2TransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IOneStepProof2.Contract.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_IOneStepProof2 *IOneStepProof2TransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _IOneStepProof2.Contract.contract.Transact(opts, method, params...)
-}
-
-// ExecuteStep is a free data retrieval call binding the contract method 0x1041c884.
-//
-// Solidity: function executeStep(bytes32 inboxAcc, bytes32 messagesAcc, bytes32 logsAcc, bytes proof, bytes bproof) constant returns(uint64 gas, bytes32[5] fields)
-func (_IOneStepProof2 *IOneStepProof2Caller) ExecuteStep(opts *bind.CallOpts, inboxAcc [32]byte, messagesAcc [32]byte, logsAcc [32]byte, proof []byte, bproof []byte) (struct {
-	Gas    uint64
-	Fields [5][32]byte
-}, error) {
-	ret := new(struct {
-		Gas    uint64
-		Fields [5][32]byte
-	})
-	out := ret
-	err := _IOneStepProof2.contract.Call(opts, out, "executeStep", inboxAcc, messagesAcc, logsAcc, proof, bproof)
-	return *ret, err
-}
-
-// ExecuteStep is a free data retrieval call binding the contract method 0x1041c884.
-//
-// Solidity: function executeStep(bytes32 inboxAcc, bytes32 messagesAcc, bytes32 logsAcc, bytes proof, bytes bproof) constant returns(uint64 gas, bytes32[5] fields)
-func (_IOneStepProof2 *IOneStepProof2Session) ExecuteStep(inboxAcc [32]byte, messagesAcc [32]byte, logsAcc [32]byte, proof []byte, bproof []byte) (struct {
-	Gas    uint64
-	Fields [5][32]byte
-}, error) {
-	return _IOneStepProof2.Contract.ExecuteStep(&_IOneStepProof2.CallOpts, inboxAcc, messagesAcc, logsAcc, proof, bproof)
-}
-
-// ExecuteStep is a free data retrieval call binding the contract method 0x1041c884.
-//
-// Solidity: function executeStep(bytes32 inboxAcc, bytes32 messagesAcc, bytes32 logsAcc, bytes proof, bytes bproof) constant returns(uint64 gas, bytes32[5] fields)
-func (_IOneStepProof2 *IOneStepProof2CallerSession) ExecuteStep(inboxAcc [32]byte, messagesAcc [32]byte, logsAcc [32]byte, proof []byte, bproof []byte) (struct {
-	Gas    uint64
-	Fields [5][32]byte
-}, error) {
-	return _IOneStepProof2.Contract.ExecuteStep(&_IOneStepProof2.CallOpts, inboxAcc, messagesAcc, logsAcc, proof, bproof)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_IOneStepProof2 *IOneStepProof2Filterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _IOneStepProof2.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
-}
 
 // MerkleUtilABI is the input ABI used to generate the binding from.
 const MerkleUtilABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"op\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"buf\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"offset\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"b\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"}],\"name\":\"bufferOp\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"op\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"buf\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"offset\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"}],\"name\":\"getOp\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"op\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"buf\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"offset\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"b\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"nproof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"nproof2\",\"type\":\"bytes32[]\"}],\"name\":\"setOp\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"}]"
@@ -369,15 +157,6 @@ func bindMerkleUtil(address common.Address, caller bind.ContractCaller, transact
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-// ParseMerkleUtilABI parses the ABI
-func ParseMerkleUtilABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(MerkleUtilABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -418,7 +197,7 @@ func (_MerkleUtil *MerkleUtilTransactorRaw) Transact(opts *bind.TransactOpts, me
 
 // BufferOp is a free data retrieval call binding the contract method 0x585ec5ad.
 //
-// Solidity: function bufferOp(uint8 op, bytes32 buf, uint256 offset, uint256 b, bytes proof) constant returns(bytes32)
+// Solidity: function bufferOp(uint8 op, bytes32 buf, uint256 offset, uint256 b, bytes proof) pure returns(bytes32)
 func (_MerkleUtil *MerkleUtilCaller) BufferOp(opts *bind.CallOpts, op uint8, buf [32]byte, offset *big.Int, b *big.Int, proof []byte) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -430,21 +209,21 @@ func (_MerkleUtil *MerkleUtilCaller) BufferOp(opts *bind.CallOpts, op uint8, buf
 
 // BufferOp is a free data retrieval call binding the contract method 0x585ec5ad.
 //
-// Solidity: function bufferOp(uint8 op, bytes32 buf, uint256 offset, uint256 b, bytes proof) constant returns(bytes32)
+// Solidity: function bufferOp(uint8 op, bytes32 buf, uint256 offset, uint256 b, bytes proof) pure returns(bytes32)
 func (_MerkleUtil *MerkleUtilSession) BufferOp(op uint8, buf [32]byte, offset *big.Int, b *big.Int, proof []byte) ([32]byte, error) {
 	return _MerkleUtil.Contract.BufferOp(&_MerkleUtil.CallOpts, op, buf, offset, b, proof)
 }
 
 // BufferOp is a free data retrieval call binding the contract method 0x585ec5ad.
 //
-// Solidity: function bufferOp(uint8 op, bytes32 buf, uint256 offset, uint256 b, bytes proof) constant returns(bytes32)
+// Solidity: function bufferOp(uint8 op, bytes32 buf, uint256 offset, uint256 b, bytes proof) pure returns(bytes32)
 func (_MerkleUtil *MerkleUtilCallerSession) BufferOp(op uint8, buf [32]byte, offset *big.Int, b *big.Int, proof []byte) ([32]byte, error) {
 	return _MerkleUtil.Contract.BufferOp(&_MerkleUtil.CallOpts, op, buf, offset, b, proof)
 }
 
 // GetOp is a free data retrieval call binding the contract method 0x1424c514.
 //
-// Solidity: function getOp(uint8 op, bytes32 buf, uint256 offset, bytes32[] proof1, bytes32[] proof2) constant returns(uint256)
+// Solidity: function getOp(uint8 op, bytes32 buf, uint256 offset, bytes32[] proof1, bytes32[] proof2) pure returns(uint256)
 func (_MerkleUtil *MerkleUtilCaller) GetOp(opts *bind.CallOpts, op uint8, buf [32]byte, offset *big.Int, proof1 [][32]byte, proof2 [][32]byte) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -456,21 +235,21 @@ func (_MerkleUtil *MerkleUtilCaller) GetOp(opts *bind.CallOpts, op uint8, buf [3
 
 // GetOp is a free data retrieval call binding the contract method 0x1424c514.
 //
-// Solidity: function getOp(uint8 op, bytes32 buf, uint256 offset, bytes32[] proof1, bytes32[] proof2) constant returns(uint256)
+// Solidity: function getOp(uint8 op, bytes32 buf, uint256 offset, bytes32[] proof1, bytes32[] proof2) pure returns(uint256)
 func (_MerkleUtil *MerkleUtilSession) GetOp(op uint8, buf [32]byte, offset *big.Int, proof1 [][32]byte, proof2 [][32]byte) (*big.Int, error) {
 	return _MerkleUtil.Contract.GetOp(&_MerkleUtil.CallOpts, op, buf, offset, proof1, proof2)
 }
 
 // GetOp is a free data retrieval call binding the contract method 0x1424c514.
 //
-// Solidity: function getOp(uint8 op, bytes32 buf, uint256 offset, bytes32[] proof1, bytes32[] proof2) constant returns(uint256)
+// Solidity: function getOp(uint8 op, bytes32 buf, uint256 offset, bytes32[] proof1, bytes32[] proof2) pure returns(uint256)
 func (_MerkleUtil *MerkleUtilCallerSession) GetOp(op uint8, buf [32]byte, offset *big.Int, proof1 [][32]byte, proof2 [][32]byte) (*big.Int, error) {
 	return _MerkleUtil.Contract.GetOp(&_MerkleUtil.CallOpts, op, buf, offset, proof1, proof2)
 }
 
 // SetOp is a free data retrieval call binding the contract method 0xc58ed997.
 //
-// Solidity: function setOp(uint8 op, bytes32 buf, uint256 offset, uint256 b, bytes32[] proof1, bytes32[] nproof1, bytes32[] proof2, bytes32[] nproof2) constant returns(bytes32)
+// Solidity: function setOp(uint8 op, bytes32 buf, uint256 offset, uint256 b, bytes32[] proof1, bytes32[] nproof1, bytes32[] proof2, bytes32[] nproof2) pure returns(bytes32)
 func (_MerkleUtil *MerkleUtilCaller) SetOp(opts *bind.CallOpts, op uint8, buf [32]byte, offset *big.Int, b *big.Int, proof1 [][32]byte, nproof1 [][32]byte, proof2 [][32]byte, nproof2 [][32]byte) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -482,32 +261,16 @@ func (_MerkleUtil *MerkleUtilCaller) SetOp(opts *bind.CallOpts, op uint8, buf [3
 
 // SetOp is a free data retrieval call binding the contract method 0xc58ed997.
 //
-// Solidity: function setOp(uint8 op, bytes32 buf, uint256 offset, uint256 b, bytes32[] proof1, bytes32[] nproof1, bytes32[] proof2, bytes32[] nproof2) constant returns(bytes32)
+// Solidity: function setOp(uint8 op, bytes32 buf, uint256 offset, uint256 b, bytes32[] proof1, bytes32[] nproof1, bytes32[] proof2, bytes32[] nproof2) pure returns(bytes32)
 func (_MerkleUtil *MerkleUtilSession) SetOp(op uint8, buf [32]byte, offset *big.Int, b *big.Int, proof1 [][32]byte, nproof1 [][32]byte, proof2 [][32]byte, nproof2 [][32]byte) ([32]byte, error) {
 	return _MerkleUtil.Contract.SetOp(&_MerkleUtil.CallOpts, op, buf, offset, b, proof1, nproof1, proof2, nproof2)
 }
 
 // SetOp is a free data retrieval call binding the contract method 0xc58ed997.
 //
-// Solidity: function setOp(uint8 op, bytes32 buf, uint256 offset, uint256 b, bytes32[] proof1, bytes32[] nproof1, bytes32[] proof2, bytes32[] nproof2) constant returns(bytes32)
+// Solidity: function setOp(uint8 op, bytes32 buf, uint256 offset, uint256 b, bytes32[] proof1, bytes32[] nproof1, bytes32[] proof2, bytes32[] nproof2) pure returns(bytes32)
 func (_MerkleUtil *MerkleUtilCallerSession) SetOp(op uint8, buf [32]byte, offset *big.Int, b *big.Int, proof1 [][32]byte, nproof1 [][32]byte, proof2 [][32]byte, nproof2 [][32]byte) ([32]byte, error) {
 	return _MerkleUtil.Contract.SetOp(&_MerkleUtil.CallOpts, op, buf, offset, b, proof1, nproof1, proof2, nproof2)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_MerkleUtil *MerkleUtilFilterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _MerkleUtil.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
 }
 
 // OneStepProofABI is the input ABI used to generate the binding from.
@@ -640,15 +403,6 @@ func bindOneStepProof(address common.Address, caller bind.ContractCaller, transa
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-// ParseOneStepProofABI parses the ABI
-func ParseOneStepProofABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(OneStepProofABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -689,7 +443,7 @@ func (_OneStepProof *OneStepProofTransactorRaw) Transact(opts *bind.TransactOpts
 
 // ExecuteStep is a free data retrieval call binding the contract method 0x385bc114.
 //
-// Solidity: function executeStep(bytes32 inboxAcc, bytes32 messagesAcc, bytes32 logsAcc, bytes proof) constant returns(uint64 gas, bytes32[5] fields)
+// Solidity: function executeStep(bytes32 inboxAcc, bytes32 messagesAcc, bytes32 logsAcc, bytes proof) view returns(uint64 gas, bytes32[5] fields)
 func (_OneStepProof *OneStepProofCaller) ExecuteStep(opts *bind.CallOpts, inboxAcc [32]byte, messagesAcc [32]byte, logsAcc [32]byte, proof []byte) (struct {
 	Gas    uint64
 	Fields [5][32]byte
@@ -705,7 +459,7 @@ func (_OneStepProof *OneStepProofCaller) ExecuteStep(opts *bind.CallOpts, inboxA
 
 // ExecuteStep is a free data retrieval call binding the contract method 0x385bc114.
 //
-// Solidity: function executeStep(bytes32 inboxAcc, bytes32 messagesAcc, bytes32 logsAcc, bytes proof) constant returns(uint64 gas, bytes32[5] fields)
+// Solidity: function executeStep(bytes32 inboxAcc, bytes32 messagesAcc, bytes32 logsAcc, bytes proof) view returns(uint64 gas, bytes32[5] fields)
 func (_OneStepProof *OneStepProofSession) ExecuteStep(inboxAcc [32]byte, messagesAcc [32]byte, logsAcc [32]byte, proof []byte) (struct {
 	Gas    uint64
 	Fields [5][32]byte
@@ -715,7 +469,7 @@ func (_OneStepProof *OneStepProofSession) ExecuteStep(inboxAcc [32]byte, message
 
 // ExecuteStep is a free data retrieval call binding the contract method 0x385bc114.
 //
-// Solidity: function executeStep(bytes32 inboxAcc, bytes32 messagesAcc, bytes32 logsAcc, bytes proof) constant returns(uint64 gas, bytes32[5] fields)
+// Solidity: function executeStep(bytes32 inboxAcc, bytes32 messagesAcc, bytes32 logsAcc, bytes proof) view returns(uint64 gas, bytes32[5] fields)
 func (_OneStepProof *OneStepProofCallerSession) ExecuteStep(inboxAcc [32]byte, messagesAcc [32]byte, logsAcc [32]byte, proof []byte) (struct {
 	Gas    uint64
 	Fields [5][32]byte
@@ -725,7 +479,7 @@ func (_OneStepProof *OneStepProofCallerSession) ExecuteStep(inboxAcc [32]byte, m
 
 // ExecuteStepWithMessage is a free data retrieval call binding the contract method 0x96105dce.
 //
-// Solidity: function executeStepWithMessage(bytes32 inboxAcc, bytes32 messagesAcc, bytes32 logsAcc, bytes proof, uint8 _kind, uint256 _blockNumber, uint256 _timestamp, address _sender, uint256 _inboxSeqNum, bytes _msgData) constant returns(uint64 gas, bytes32[5] fields)
+// Solidity: function executeStepWithMessage(bytes32 inboxAcc, bytes32 messagesAcc, bytes32 logsAcc, bytes proof, uint8 _kind, uint256 _blockNumber, uint256 _timestamp, address _sender, uint256 _inboxSeqNum, bytes _msgData) view returns(uint64 gas, bytes32[5] fields)
 func (_OneStepProof *OneStepProofCaller) ExecuteStepWithMessage(opts *bind.CallOpts, inboxAcc [32]byte, messagesAcc [32]byte, logsAcc [32]byte, proof []byte, _kind uint8, _blockNumber *big.Int, _timestamp *big.Int, _sender common.Address, _inboxSeqNum *big.Int, _msgData []byte) (struct {
 	Gas    uint64
 	Fields [5][32]byte
@@ -741,7 +495,7 @@ func (_OneStepProof *OneStepProofCaller) ExecuteStepWithMessage(opts *bind.CallO
 
 // ExecuteStepWithMessage is a free data retrieval call binding the contract method 0x96105dce.
 //
-// Solidity: function executeStepWithMessage(bytes32 inboxAcc, bytes32 messagesAcc, bytes32 logsAcc, bytes proof, uint8 _kind, uint256 _blockNumber, uint256 _timestamp, address _sender, uint256 _inboxSeqNum, bytes _msgData) constant returns(uint64 gas, bytes32[5] fields)
+// Solidity: function executeStepWithMessage(bytes32 inboxAcc, bytes32 messagesAcc, bytes32 logsAcc, bytes proof, uint8 _kind, uint256 _blockNumber, uint256 _timestamp, address _sender, uint256 _inboxSeqNum, bytes _msgData) view returns(uint64 gas, bytes32[5] fields)
 func (_OneStepProof *OneStepProofSession) ExecuteStepWithMessage(inboxAcc [32]byte, messagesAcc [32]byte, logsAcc [32]byte, proof []byte, _kind uint8, _blockNumber *big.Int, _timestamp *big.Int, _sender common.Address, _inboxSeqNum *big.Int, _msgData []byte) (struct {
 	Gas    uint64
 	Fields [5][32]byte
@@ -751,28 +505,12 @@ func (_OneStepProof *OneStepProofSession) ExecuteStepWithMessage(inboxAcc [32]by
 
 // ExecuteStepWithMessage is a free data retrieval call binding the contract method 0x96105dce.
 //
-// Solidity: function executeStepWithMessage(bytes32 inboxAcc, bytes32 messagesAcc, bytes32 logsAcc, bytes proof, uint8 _kind, uint256 _blockNumber, uint256 _timestamp, address _sender, uint256 _inboxSeqNum, bytes _msgData) constant returns(uint64 gas, bytes32[5] fields)
+// Solidity: function executeStepWithMessage(bytes32 inboxAcc, bytes32 messagesAcc, bytes32 logsAcc, bytes proof, uint8 _kind, uint256 _blockNumber, uint256 _timestamp, address _sender, uint256 _inboxSeqNum, bytes _msgData) view returns(uint64 gas, bytes32[5] fields)
 func (_OneStepProof *OneStepProofCallerSession) ExecuteStepWithMessage(inboxAcc [32]byte, messagesAcc [32]byte, logsAcc [32]byte, proof []byte, _kind uint8, _blockNumber *big.Int, _timestamp *big.Int, _sender common.Address, _inboxSeqNum *big.Int, _msgData []byte) (struct {
 	Gas    uint64
 	Fields [5][32]byte
 }, error) {
 	return _OneStepProof.Contract.ExecuteStepWithMessage(&_OneStepProof.CallOpts, inboxAcc, messagesAcc, logsAcc, proof, _kind, _blockNumber, _timestamp, _sender, _inboxSeqNum, _msgData)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_OneStepProof *OneStepProofFilterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _OneStepProof.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
 }
 
 // PrecompilesABI is the input ABI used to generate the binding from.
@@ -899,15 +637,6 @@ func bindPrecompiles(address common.Address, caller bind.ContractCaller, transac
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-// ParsePrecompilesABI parses the ABI
-func ParsePrecompilesABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(PrecompilesABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -944,20 +673,4 @@ func (_Precompiles *PrecompilesTransactorRaw) Transfer(opts *bind.TransactOpts) 
 // Transact invokes the (paid) contract method with params as input values.
 func (_Precompiles *PrecompilesTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _Precompiles.Contract.contract.Transact(opts, method, params...)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_Precompiles *PrecompilesFilterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _Precompiles.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
 }

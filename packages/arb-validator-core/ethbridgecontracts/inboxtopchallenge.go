@@ -20,7 +20,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -159,15 +158,6 @@ func bindBisectionChallenge(address common.Address, caller bind.ContractCaller, 
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-// ParseBisectionChallengeABI parses the ABI
-func ParseBisectionChallengeABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(BisectionChallengeABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -208,7 +198,7 @@ func (_BisectionChallenge *BisectionChallengeTransactorRaw) Transact(opts *bind.
 
 // IsMaster is a free data retrieval call binding the contract method 0x6f791d29.
 //
-// Solidity: function isMaster() constant returns(bool)
+// Solidity: function isMaster() view returns(bool)
 func (_BisectionChallenge *BisectionChallengeCaller) IsMaster(opts *bind.CallOpts) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -220,14 +210,14 @@ func (_BisectionChallenge *BisectionChallengeCaller) IsMaster(opts *bind.CallOpt
 
 // IsMaster is a free data retrieval call binding the contract method 0x6f791d29.
 //
-// Solidity: function isMaster() constant returns(bool)
+// Solidity: function isMaster() view returns(bool)
 func (_BisectionChallenge *BisectionChallengeSession) IsMaster() (bool, error) {
 	return _BisectionChallenge.Contract.IsMaster(&_BisectionChallenge.CallOpts)
 }
 
 // IsMaster is a free data retrieval call binding the contract method 0x6f791d29.
 //
-// Solidity: function isMaster() constant returns(bool)
+// Solidity: function isMaster() view returns(bool)
 func (_BisectionChallenge *BisectionChallengeCallerSession) IsMaster() (bool, error) {
 	return _BisectionChallenge.Contract.IsMaster(&_BisectionChallenge.CallOpts)
 }
@@ -293,30 +283,6 @@ func (_BisectionChallenge *BisectionChallengeSession) TimeoutChallenge() (*types
 // Solidity: function timeoutChallenge() returns()
 func (_BisectionChallenge *BisectionChallengeTransactorSession) TimeoutChallenge() (*types.Transaction, error) {
 	return _BisectionChallenge.Contract.TimeoutChallenge(&_BisectionChallenge.TransactOpts)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_BisectionChallenge *BisectionChallengeFilterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _BisectionChallenge.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	case "AsserterTimedOut":
-		event, err = _BisectionChallenge.ParseAsserterTimedOut(log)
-	case "ChallengerTimedOut":
-		event, err = _BisectionChallenge.ParseChallengerTimedOut(log)
-	case "Continued":
-		event, err = _BisectionChallenge.ParseContinued(log)
-	case "InitiatedChallenge":
-		event, err = _BisectionChallenge.ParseInitiatedChallenge(log)
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
 }
 
 // BisectionChallengeAsserterTimedOutIterator is returned from FilterAsserterTimedOut and is used to iterate over the raw logs and unpacked data for AsserterTimedOut events raised by the BisectionChallenge contract.
@@ -980,15 +946,6 @@ func bindChallenge(address common.Address, caller bind.ContractCaller, transacto
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-// ParseChallengeABI parses the ABI
-func ParseChallengeABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(ChallengeABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -1029,7 +986,7 @@ func (_Challenge *ChallengeTransactorRaw) Transact(opts *bind.TransactOpts, meth
 
 // IsMaster is a free data retrieval call binding the contract method 0x6f791d29.
 //
-// Solidity: function isMaster() constant returns(bool)
+// Solidity: function isMaster() view returns(bool)
 func (_Challenge *ChallengeCaller) IsMaster(opts *bind.CallOpts) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -1041,14 +998,14 @@ func (_Challenge *ChallengeCaller) IsMaster(opts *bind.CallOpts) (bool, error) {
 
 // IsMaster is a free data retrieval call binding the contract method 0x6f791d29.
 //
-// Solidity: function isMaster() constant returns(bool)
+// Solidity: function isMaster() view returns(bool)
 func (_Challenge *ChallengeSession) IsMaster() (bool, error) {
 	return _Challenge.Contract.IsMaster(&_Challenge.CallOpts)
 }
 
 // IsMaster is a free data retrieval call binding the contract method 0x6f791d29.
 //
-// Solidity: function isMaster() constant returns(bool)
+// Solidity: function isMaster() view returns(bool)
 func (_Challenge *ChallengeCallerSession) IsMaster() (bool, error) {
 	return _Challenge.Contract.IsMaster(&_Challenge.CallOpts)
 }
@@ -1072,28 +1029,6 @@ func (_Challenge *ChallengeSession) TimeoutChallenge() (*types.Transaction, erro
 // Solidity: function timeoutChallenge() returns()
 func (_Challenge *ChallengeTransactorSession) TimeoutChallenge() (*types.Transaction, error) {
 	return _Challenge.Contract.TimeoutChallenge(&_Challenge.TransactOpts)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_Challenge *ChallengeFilterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _Challenge.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	case "AsserterTimedOut":
-		event, err = _Challenge.ParseAsserterTimedOut(log)
-	case "ChallengerTimedOut":
-		event, err = _Challenge.ParseChallengerTimedOut(log)
-	case "InitiatedChallenge":
-		event, err = _Challenge.ParseInitiatedChallenge(log)
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
 }
 
 // ChallengeAsserterTimedOutIterator is returned from FilterAsserterTimedOut and is used to iterate over the raw logs and unpacked data for AsserterTimedOut events raised by the Challenge contract.
@@ -1627,15 +1562,6 @@ func bindInboxTopChallenge(address common.Address, caller bind.ContractCaller, t
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-// ParseInboxTopChallengeABI parses the ABI
-func ParseInboxTopChallengeABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(InboxTopChallengeABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -1676,7 +1602,7 @@ func (_InboxTopChallenge *InboxTopChallengeTransactorRaw) Transact(opts *bind.Tr
 
 // IsMaster is a free data retrieval call binding the contract method 0x6f791d29.
 //
-// Solidity: function isMaster() constant returns(bool)
+// Solidity: function isMaster() view returns(bool)
 func (_InboxTopChallenge *InboxTopChallengeCaller) IsMaster(opts *bind.CallOpts) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -1688,14 +1614,14 @@ func (_InboxTopChallenge *InboxTopChallengeCaller) IsMaster(opts *bind.CallOpts)
 
 // IsMaster is a free data retrieval call binding the contract method 0x6f791d29.
 //
-// Solidity: function isMaster() constant returns(bool)
+// Solidity: function isMaster() view returns(bool)
 func (_InboxTopChallenge *InboxTopChallengeSession) IsMaster() (bool, error) {
 	return _InboxTopChallenge.Contract.IsMaster(&_InboxTopChallenge.CallOpts)
 }
 
 // IsMaster is a free data retrieval call binding the contract method 0x6f791d29.
 //
-// Solidity: function isMaster() constant returns(bool)
+// Solidity: function isMaster() view returns(bool)
 func (_InboxTopChallenge *InboxTopChallengeCallerSession) IsMaster() (bool, error) {
 	return _InboxTopChallenge.Contract.IsMaster(&_InboxTopChallenge.CallOpts)
 }
@@ -1803,34 +1729,6 @@ func (_InboxTopChallenge *InboxTopChallengeSession) TimeoutChallenge() (*types.T
 // Solidity: function timeoutChallenge() returns()
 func (_InboxTopChallenge *InboxTopChallengeTransactorSession) TimeoutChallenge() (*types.Transaction, error) {
 	return _InboxTopChallenge.Contract.TimeoutChallenge(&_InboxTopChallenge.TransactOpts)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_InboxTopChallenge *InboxTopChallengeFilterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _InboxTopChallenge.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	case "AsserterTimedOut":
-		event, err = _InboxTopChallenge.ParseAsserterTimedOut(log)
-	case "Bisected":
-		event, err = _InboxTopChallenge.ParseBisected(log)
-	case "ChallengerTimedOut":
-		event, err = _InboxTopChallenge.ParseChallengerTimedOut(log)
-	case "Continued":
-		event, err = _InboxTopChallenge.ParseContinued(log)
-	case "InitiatedChallenge":
-		event, err = _InboxTopChallenge.ParseInitiatedChallenge(log)
-	case "OneStepProofCompleted":
-		event, err = _InboxTopChallenge.ParseOneStepProofCompleted(log)
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
 }
 
 // InboxTopChallengeAsserterTimedOutIterator is returned from FilterAsserterTimedOut and is used to iterate over the raw logs and unpacked data for AsserterTimedOut events raised by the InboxTopChallenge contract.

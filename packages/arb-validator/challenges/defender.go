@@ -134,24 +134,33 @@ func (ad AssertionDefender) NBisect(slices uint64) []AssertionDefender {
 	return defenders
 }
 
-func (ad AssertionDefender) SolidityOneStepProof() ([]byte, *inbox.InboxMessage, error) {
+func (ad AssertionDefender) SolidityOneStepProof() ([]byte, []byte, *inbox.InboxMessage, error) {
 	proofData, err := ad.initState.MarshalForProof()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
+	}
+
+	bProofData, err := ad.initState.MarshalBufferProof()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if len(bProofData) > 0 {
+		return proofData, bProofData, nil, nil
 	}
 
 	messages, err := ad.inbox.GetAssertionMessages(ad.assertion.BeforeInboxHash, ad.assertion.AfterInboxHash)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	if len(messages) > 1 {
-		return nil, nil, errors.New("can't prove assertion with more than one message")
+		return nil, nil, nil, errors.New("can't prove assertion with more than one message")
 	}
 	if len(messages) == 1 {
-		return proofData, &messages[0], nil
+		return proofData, nil, &messages[0], nil
 	}
-	return proofData, nil, nil
+	return proofData, nil, nil, nil
 }
 
 func assertionMatches(

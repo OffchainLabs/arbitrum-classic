@@ -20,7 +20,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -162,15 +161,6 @@ func bindChallengeFactory(address common.Address, caller bind.ContractCaller, tr
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-// ParseChallengeFactoryABI parses the ABI
-func ParseChallengeFactoryABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(ChallengeFactoryABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -211,7 +201,7 @@ func (_ChallengeFactory *ChallengeFactoryTransactorRaw) Transact(opts *bind.Tran
 
 // INVALIDTYPESTR is a free data retrieval call binding the contract method 0xe6fcd194.
 //
-// Solidity: function INVALID_TYPE_STR() constant returns(string)
+// Solidity: function INVALID_TYPE_STR() view returns(string)
 func (_ChallengeFactory *ChallengeFactoryCaller) INVALIDTYPESTR(opts *bind.CallOpts) (string, error) {
 	var (
 		ret0 = new(string)
@@ -223,21 +213,21 @@ func (_ChallengeFactory *ChallengeFactoryCaller) INVALIDTYPESTR(opts *bind.CallO
 
 // INVALIDTYPESTR is a free data retrieval call binding the contract method 0xe6fcd194.
 //
-// Solidity: function INVALID_TYPE_STR() constant returns(string)
+// Solidity: function INVALID_TYPE_STR() view returns(string)
 func (_ChallengeFactory *ChallengeFactorySession) INVALIDTYPESTR() (string, error) {
 	return _ChallengeFactory.Contract.INVALIDTYPESTR(&_ChallengeFactory.CallOpts)
 }
 
 // INVALIDTYPESTR is a free data retrieval call binding the contract method 0xe6fcd194.
 //
-// Solidity: function INVALID_TYPE_STR() constant returns(string)
+// Solidity: function INVALID_TYPE_STR() view returns(string)
 func (_ChallengeFactory *ChallengeFactoryCallerSession) INVALIDTYPESTR() (string, error) {
 	return _ChallengeFactory.Contract.INVALIDTYPESTR(&_ChallengeFactory.CallOpts)
 }
 
 // ExecutionChallengeTemplate is a free data retrieval call binding the contract method 0x9b5f4dfc.
 //
-// Solidity: function executionChallengeTemplate() constant returns(address)
+// Solidity: function executionChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) ExecutionChallengeTemplate(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -249,21 +239,21 @@ func (_ChallengeFactory *ChallengeFactoryCaller) ExecutionChallengeTemplate(opts
 
 // ExecutionChallengeTemplate is a free data retrieval call binding the contract method 0x9b5f4dfc.
 //
-// Solidity: function executionChallengeTemplate() constant returns(address)
+// Solidity: function executionChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactorySession) ExecutionChallengeTemplate() (common.Address, error) {
 	return _ChallengeFactory.Contract.ExecutionChallengeTemplate(&_ChallengeFactory.CallOpts)
 }
 
 // ExecutionChallengeTemplate is a free data retrieval call binding the contract method 0x9b5f4dfc.
 //
-// Solidity: function executionChallengeTemplate() constant returns(address)
+// Solidity: function executionChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCallerSession) ExecutionChallengeTemplate() (common.Address, error) {
 	return _ChallengeFactory.Contract.ExecutionChallengeTemplate(&_ChallengeFactory.CallOpts)
 }
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) GenerateCloneAddress(opts *bind.CallOpts, asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -275,21 +265,21 @@ func (_ChallengeFactory *ChallengeFactoryCaller) GenerateCloneAddress(opts *bind
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_ChallengeFactory *ChallengeFactorySession) GenerateCloneAddress(asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	return _ChallengeFactory.Contract.GenerateCloneAddress(&_ChallengeFactory.CallOpts, asserter, challenger, challengeType)
 }
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
 //
-// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) constant returns(address)
+// Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCallerSession) GenerateCloneAddress(asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
 	return _ChallengeFactory.Contract.GenerateCloneAddress(&_ChallengeFactory.CallOpts, asserter, challenger, challengeType)
 }
 
 // InboxTopChallengeTemplate is a free data retrieval call binding the contract method 0xf089f1c2.
 //
-// Solidity: function inboxTopChallengeTemplate() constant returns(address)
+// Solidity: function inboxTopChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) InboxTopChallengeTemplate(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -301,21 +291,21 @@ func (_ChallengeFactory *ChallengeFactoryCaller) InboxTopChallengeTemplate(opts 
 
 // InboxTopChallengeTemplate is a free data retrieval call binding the contract method 0xf089f1c2.
 //
-// Solidity: function inboxTopChallengeTemplate() constant returns(address)
+// Solidity: function inboxTopChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactorySession) InboxTopChallengeTemplate() (common.Address, error) {
 	return _ChallengeFactory.Contract.InboxTopChallengeTemplate(&_ChallengeFactory.CallOpts)
 }
 
 // InboxTopChallengeTemplate is a free data retrieval call binding the contract method 0xf089f1c2.
 //
-// Solidity: function inboxTopChallengeTemplate() constant returns(address)
+// Solidity: function inboxTopChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCallerSession) InboxTopChallengeTemplate() (common.Address, error) {
 	return _ChallengeFactory.Contract.InboxTopChallengeTemplate(&_ChallengeFactory.CallOpts)
 }
 
 // OneStepProofAddress is a free data retrieval call binding the contract method 0x52ddf4a5.
 //
-// Solidity: function oneStepProofAddress() constant returns(address)
+// Solidity: function oneStepProofAddress() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) OneStepProofAddress(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -327,21 +317,21 @@ func (_ChallengeFactory *ChallengeFactoryCaller) OneStepProofAddress(opts *bind.
 
 // OneStepProofAddress is a free data retrieval call binding the contract method 0x52ddf4a5.
 //
-// Solidity: function oneStepProofAddress() constant returns(address)
+// Solidity: function oneStepProofAddress() view returns(address)
 func (_ChallengeFactory *ChallengeFactorySession) OneStepProofAddress() (common.Address, error) {
 	return _ChallengeFactory.Contract.OneStepProofAddress(&_ChallengeFactory.CallOpts)
 }
 
 // OneStepProofAddress is a free data retrieval call binding the contract method 0x52ddf4a5.
 //
-// Solidity: function oneStepProofAddress() constant returns(address)
+// Solidity: function oneStepProofAddress() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCallerSession) OneStepProofAddress() (common.Address, error) {
 	return _ChallengeFactory.Contract.OneStepProofAddress(&_ChallengeFactory.CallOpts)
 }
 
 // OneStepProofAddress2 is a free data retrieval call binding the contract method 0x4930fdc5.
 //
-// Solidity: function oneStepProofAddress2() constant returns(address)
+// Solidity: function oneStepProofAddress2() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) OneStepProofAddress2(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -353,14 +343,14 @@ func (_ChallengeFactory *ChallengeFactoryCaller) OneStepProofAddress2(opts *bind
 
 // OneStepProofAddress2 is a free data retrieval call binding the contract method 0x4930fdc5.
 //
-// Solidity: function oneStepProofAddress2() constant returns(address)
+// Solidity: function oneStepProofAddress2() view returns(address)
 func (_ChallengeFactory *ChallengeFactorySession) OneStepProofAddress2() (common.Address, error) {
 	return _ChallengeFactory.Contract.OneStepProofAddress2(&_ChallengeFactory.CallOpts)
 }
 
 // OneStepProofAddress2 is a free data retrieval call binding the contract method 0x4930fdc5.
 //
-// Solidity: function oneStepProofAddress2() constant returns(address)
+// Solidity: function oneStepProofAddress2() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCallerSession) OneStepProofAddress2() (common.Address, error) {
 	return _ChallengeFactory.Contract.OneStepProofAddress2(&_ChallengeFactory.CallOpts)
 }
@@ -384,20 +374,4 @@ func (_ChallengeFactory *ChallengeFactorySession) CreateChallenge(_asserter comm
 // Solidity: function createChallenge(address _asserter, address _challenger, uint256 _challengePeriodTicks, bytes32 _challengeHash, uint256 challengeType) returns(address)
 func (_ChallengeFactory *ChallengeFactoryTransactorSession) CreateChallenge(_asserter common.Address, _challenger common.Address, _challengePeriodTicks *big.Int, _challengeHash [32]byte, challengeType *big.Int) (*types.Transaction, error) {
 	return _ChallengeFactory.Contract.CreateChallenge(&_ChallengeFactory.TransactOpts, _asserter, _challenger, _challengePeriodTicks, _challengeHash, challengeType)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_ChallengeFactory *ChallengeFactoryFilterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _ChallengeFactory.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
 }

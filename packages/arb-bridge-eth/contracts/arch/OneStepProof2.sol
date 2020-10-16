@@ -386,7 +386,7 @@ contract OneStepProof2 is IOneStepProof2 {
     }
 
     function decode(bytes memory arr, bytes1 _start, bytes1 _end) internal pure returns (bytes32[] memory) {
-        uint len = uint(uint8(_end-_start));
+        uint len = uint(uint8(_end)-uint8(_start));
         uint start = uint(uint8(_start));
         bytes32[] memory res = new bytes32[](len);
         for (uint i = 0; i < len; i++) {

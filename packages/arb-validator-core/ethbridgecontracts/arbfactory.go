@@ -20,7 +20,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -159,15 +158,6 @@ func bindArbFactory(address common.Address, caller bind.ContractCaller, transact
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-// ParseArbFactoryABI parses the ABI
-func ParseArbFactoryABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(ArbFactoryABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -208,7 +198,7 @@ func (_ArbFactory *ArbFactoryTransactorRaw) Transact(opts *bind.TransactOpts, me
 
 // ChallengeFactoryAddress is a free data retrieval call binding the contract method 0x62e3c0b1.
 //
-// Solidity: function challengeFactoryAddress() constant returns(address)
+// Solidity: function challengeFactoryAddress() view returns(address)
 func (_ArbFactory *ArbFactoryCaller) ChallengeFactoryAddress(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -220,21 +210,21 @@ func (_ArbFactory *ArbFactoryCaller) ChallengeFactoryAddress(opts *bind.CallOpts
 
 // ChallengeFactoryAddress is a free data retrieval call binding the contract method 0x62e3c0b1.
 //
-// Solidity: function challengeFactoryAddress() constant returns(address)
+// Solidity: function challengeFactoryAddress() view returns(address)
 func (_ArbFactory *ArbFactorySession) ChallengeFactoryAddress() (common.Address, error) {
 	return _ArbFactory.Contract.ChallengeFactoryAddress(&_ArbFactory.CallOpts)
 }
 
 // ChallengeFactoryAddress is a free data retrieval call binding the contract method 0x62e3c0b1.
 //
-// Solidity: function challengeFactoryAddress() constant returns(address)
+// Solidity: function challengeFactoryAddress() view returns(address)
 func (_ArbFactory *ArbFactoryCallerSession) ChallengeFactoryAddress() (common.Address, error) {
 	return _ArbFactory.Contract.ChallengeFactoryAddress(&_ArbFactory.CallOpts)
 }
 
 // GlobalInboxAddress is a free data retrieval call binding the contract method 0x582923c7.
 //
-// Solidity: function globalInboxAddress() constant returns(address)
+// Solidity: function globalInboxAddress() view returns(address)
 func (_ArbFactory *ArbFactoryCaller) GlobalInboxAddress(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -246,21 +236,21 @@ func (_ArbFactory *ArbFactoryCaller) GlobalInboxAddress(opts *bind.CallOpts) (co
 
 // GlobalInboxAddress is a free data retrieval call binding the contract method 0x582923c7.
 //
-// Solidity: function globalInboxAddress() constant returns(address)
+// Solidity: function globalInboxAddress() view returns(address)
 func (_ArbFactory *ArbFactorySession) GlobalInboxAddress() (common.Address, error) {
 	return _ArbFactory.Contract.GlobalInboxAddress(&_ArbFactory.CallOpts)
 }
 
 // GlobalInboxAddress is a free data retrieval call binding the contract method 0x582923c7.
 //
-// Solidity: function globalInboxAddress() constant returns(address)
+// Solidity: function globalInboxAddress() view returns(address)
 func (_ArbFactory *ArbFactoryCallerSession) GlobalInboxAddress() (common.Address, error) {
 	return _ArbFactory.Contract.GlobalInboxAddress(&_ArbFactory.CallOpts)
 }
 
 // RollupTemplate is a free data retrieval call binding the contract method 0x8689d996.
 //
-// Solidity: function rollupTemplate() constant returns(address)
+// Solidity: function rollupTemplate() view returns(address)
 func (_ArbFactory *ArbFactoryCaller) RollupTemplate(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -272,14 +262,14 @@ func (_ArbFactory *ArbFactoryCaller) RollupTemplate(opts *bind.CallOpts) (common
 
 // RollupTemplate is a free data retrieval call binding the contract method 0x8689d996.
 //
-// Solidity: function rollupTemplate() constant returns(address)
+// Solidity: function rollupTemplate() view returns(address)
 func (_ArbFactory *ArbFactorySession) RollupTemplate() (common.Address, error) {
 	return _ArbFactory.Contract.RollupTemplate(&_ArbFactory.CallOpts)
 }
 
 // RollupTemplate is a free data retrieval call binding the contract method 0x8689d996.
 //
-// Solidity: function rollupTemplate() constant returns(address)
+// Solidity: function rollupTemplate() view returns(address)
 func (_ArbFactory *ArbFactoryCallerSession) RollupTemplate() (common.Address, error) {
 	return _ArbFactory.Contract.RollupTemplate(&_ArbFactory.CallOpts)
 }
@@ -303,24 +293,6 @@ func (_ArbFactory *ArbFactorySession) CreateRollup(_vmState [32]byte, _gracePeri
 // Solidity: function createRollup(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint64 _maxExecutionSteps, uint128 _stakeRequirement, address _stakeToken, address _owner, bytes _extraConfig) returns()
 func (_ArbFactory *ArbFactoryTransactorSession) CreateRollup(_vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint64, _stakeRequirement *big.Int, _stakeToken common.Address, _owner common.Address, _extraConfig []byte) (*types.Transaction, error) {
 	return _ArbFactory.Contract.CreateRollup(&_ArbFactory.TransactOpts, _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _stakeRequirement, _stakeToken, _owner, _extraConfig)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_ArbFactory *ArbFactoryFilterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _ArbFactory.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	case "RollupCreated":
-		event, err = _ArbFactory.ParseRollupCreated(log)
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
 }
 
 // ArbFactoryRollupCreatedIterator is returned from FilterRollupCreated and is used to iterate over the raw logs and unpacked data for RollupCreated events raised by the ArbFactory contract.

@@ -43,6 +43,7 @@ type ExecutionChallenge interface {
 		ctx context.Context,
 		assertion *valprotocol.ExecutionAssertionStub,
 		proof []byte,
+		bproof []byte,
 	) error
 
 	OneStepProofWithMessage(

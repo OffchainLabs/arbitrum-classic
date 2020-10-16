@@ -20,7 +20,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -180,15 +179,6 @@ func bindArbRollup(address common.Address, caller bind.ContractCaller, transacto
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-// ParseArbRollupABI parses the ABI
-func ParseArbRollupABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(ArbRollupABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -229,7 +219,7 @@ func (_ArbRollup *ArbRollupTransactorRaw) Transact(opts *bind.TransactOpts, meth
 
 // VERSION is a free data retrieval call binding the contract method 0xffa1ad74.
 //
-// Solidity: function VERSION() constant returns(string)
+// Solidity: function VERSION() view returns(string)
 func (_ArbRollup *ArbRollupCaller) VERSION(opts *bind.CallOpts) (string, error) {
 	var (
 		ret0 = new(string)
@@ -241,21 +231,21 @@ func (_ArbRollup *ArbRollupCaller) VERSION(opts *bind.CallOpts) (string, error) 
 
 // VERSION is a free data retrieval call binding the contract method 0xffa1ad74.
 //
-// Solidity: function VERSION() constant returns(string)
+// Solidity: function VERSION() view returns(string)
 func (_ArbRollup *ArbRollupSession) VERSION() (string, error) {
 	return _ArbRollup.Contract.VERSION(&_ArbRollup.CallOpts)
 }
 
 // VERSION is a free data retrieval call binding the contract method 0xffa1ad74.
 //
-// Solidity: function VERSION() constant returns(string)
+// Solidity: function VERSION() view returns(string)
 func (_ArbRollup *ArbRollupCallerSession) VERSION() (string, error) {
 	return _ArbRollup.Contract.VERSION(&_ArbRollup.CallOpts)
 }
 
 // ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
 //
-// Solidity: function challengeFactory() constant returns(address)
+// Solidity: function challengeFactory() view returns(address)
 func (_ArbRollup *ArbRollupCaller) ChallengeFactory(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -267,21 +257,21 @@ func (_ArbRollup *ArbRollupCaller) ChallengeFactory(opts *bind.CallOpts) (common
 
 // ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
 //
-// Solidity: function challengeFactory() constant returns(address)
+// Solidity: function challengeFactory() view returns(address)
 func (_ArbRollup *ArbRollupSession) ChallengeFactory() (common.Address, error) {
 	return _ArbRollup.Contract.ChallengeFactory(&_ArbRollup.CallOpts)
 }
 
 // ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
 //
-// Solidity: function challengeFactory() constant returns(address)
+// Solidity: function challengeFactory() view returns(address)
 func (_ArbRollup *ArbRollupCallerSession) ChallengeFactory() (common.Address, error) {
 	return _ArbRollup.Contract.ChallengeFactory(&_ArbRollup.CallOpts)
 }
 
 // GetStakeRequired is a free data retrieval call binding the contract method 0xd16c305d.
 //
-// Solidity: function getStakeRequired() constant returns(uint128)
+// Solidity: function getStakeRequired() view returns(uint128)
 func (_ArbRollup *ArbRollupCaller) GetStakeRequired(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -293,21 +283,21 @@ func (_ArbRollup *ArbRollupCaller) GetStakeRequired(opts *bind.CallOpts) (*big.I
 
 // GetStakeRequired is a free data retrieval call binding the contract method 0xd16c305d.
 //
-// Solidity: function getStakeRequired() constant returns(uint128)
+// Solidity: function getStakeRequired() view returns(uint128)
 func (_ArbRollup *ArbRollupSession) GetStakeRequired() (*big.Int, error) {
 	return _ArbRollup.Contract.GetStakeRequired(&_ArbRollup.CallOpts)
 }
 
 // GetStakeRequired is a free data retrieval call binding the contract method 0xd16c305d.
 //
-// Solidity: function getStakeRequired() constant returns(uint128)
+// Solidity: function getStakeRequired() view returns(uint128)
 func (_ArbRollup *ArbRollupCallerSession) GetStakeRequired() (*big.Int, error) {
 	return _ArbRollup.Contract.GetStakeRequired(&_ArbRollup.CallOpts)
 }
 
 // GetStakeToken is a free data retrieval call binding the contract method 0x500a1564.
 //
-// Solidity: function getStakeToken() constant returns(address)
+// Solidity: function getStakeToken() view returns(address)
 func (_ArbRollup *ArbRollupCaller) GetStakeToken(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -319,21 +309,21 @@ func (_ArbRollup *ArbRollupCaller) GetStakeToken(opts *bind.CallOpts) (common.Ad
 
 // GetStakeToken is a free data retrieval call binding the contract method 0x500a1564.
 //
-// Solidity: function getStakeToken() constant returns(address)
+// Solidity: function getStakeToken() view returns(address)
 func (_ArbRollup *ArbRollupSession) GetStakeToken() (common.Address, error) {
 	return _ArbRollup.Contract.GetStakeToken(&_ArbRollup.CallOpts)
 }
 
 // GetStakeToken is a free data retrieval call binding the contract method 0x500a1564.
 //
-// Solidity: function getStakeToken() constant returns(address)
+// Solidity: function getStakeToken() view returns(address)
 func (_ArbRollup *ArbRollupCallerSession) GetStakeToken() (common.Address, error) {
 	return _ArbRollup.Contract.GetStakeToken(&_ArbRollup.CallOpts)
 }
 
 // GlobalInbox is a free data retrieval call binding the contract method 0xd489113a.
 //
-// Solidity: function globalInbox() constant returns(address)
+// Solidity: function globalInbox() view returns(address)
 func (_ArbRollup *ArbRollupCaller) GlobalInbox(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -345,21 +335,21 @@ func (_ArbRollup *ArbRollupCaller) GlobalInbox(opts *bind.CallOpts) (common.Addr
 
 // GlobalInbox is a free data retrieval call binding the contract method 0xd489113a.
 //
-// Solidity: function globalInbox() constant returns(address)
+// Solidity: function globalInbox() view returns(address)
 func (_ArbRollup *ArbRollupSession) GlobalInbox() (common.Address, error) {
 	return _ArbRollup.Contract.GlobalInbox(&_ArbRollup.CallOpts)
 }
 
 // GlobalInbox is a free data retrieval call binding the contract method 0xd489113a.
 //
-// Solidity: function globalInbox() constant returns(address)
+// Solidity: function globalInbox() view returns(address)
 func (_ArbRollup *ArbRollupCallerSession) GlobalInbox() (common.Address, error) {
 	return _ArbRollup.Contract.GlobalInbox(&_ArbRollup.CallOpts)
 }
 
 // IsMaster is a free data retrieval call binding the contract method 0x6f791d29.
 //
-// Solidity: function isMaster() constant returns(bool)
+// Solidity: function isMaster() view returns(bool)
 func (_ArbRollup *ArbRollupCaller) IsMaster(opts *bind.CallOpts) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -371,21 +361,21 @@ func (_ArbRollup *ArbRollupCaller) IsMaster(opts *bind.CallOpts) (bool, error) {
 
 // IsMaster is a free data retrieval call binding the contract method 0x6f791d29.
 //
-// Solidity: function isMaster() constant returns(bool)
+// Solidity: function isMaster() view returns(bool)
 func (_ArbRollup *ArbRollupSession) IsMaster() (bool, error) {
 	return _ArbRollup.Contract.IsMaster(&_ArbRollup.CallOpts)
 }
 
 // IsMaster is a free data retrieval call binding the contract method 0x6f791d29.
 //
-// Solidity: function isMaster() constant returns(bool)
+// Solidity: function isMaster() view returns(bool)
 func (_ArbRollup *ArbRollupCallerSession) IsMaster() (bool, error) {
 	return _ArbRollup.Contract.IsMaster(&_ArbRollup.CallOpts)
 }
 
 // IsStaked is a free data retrieval call binding the contract method 0x6177fd18.
 //
-// Solidity: function isStaked(address _stakerAddress) constant returns(bool)
+// Solidity: function isStaked(address _stakerAddress) view returns(bool)
 func (_ArbRollup *ArbRollupCaller) IsStaked(opts *bind.CallOpts, _stakerAddress common.Address) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -397,21 +387,21 @@ func (_ArbRollup *ArbRollupCaller) IsStaked(opts *bind.CallOpts, _stakerAddress 
 
 // IsStaked is a free data retrieval call binding the contract method 0x6177fd18.
 //
-// Solidity: function isStaked(address _stakerAddress) constant returns(bool)
+// Solidity: function isStaked(address _stakerAddress) view returns(bool)
 func (_ArbRollup *ArbRollupSession) IsStaked(_stakerAddress common.Address) (bool, error) {
 	return _ArbRollup.Contract.IsStaked(&_ArbRollup.CallOpts, _stakerAddress)
 }
 
 // IsStaked is a free data retrieval call binding the contract method 0x6177fd18.
 //
-// Solidity: function isStaked(address _stakerAddress) constant returns(bool)
+// Solidity: function isStaked(address _stakerAddress) view returns(bool)
 func (_ArbRollup *ArbRollupCallerSession) IsStaked(_stakerAddress common.Address) (bool, error) {
 	return _ArbRollup.Contract.IsStaked(&_ArbRollup.CallOpts, _stakerAddress)
 }
 
 // IsValidLeaf is a free data retrieval call binding the contract method 0x57ca6d1b.
 //
-// Solidity: function isValidLeaf(bytes32 leaf) constant returns(bool)
+// Solidity: function isValidLeaf(bytes32 leaf) view returns(bool)
 func (_ArbRollup *ArbRollupCaller) IsValidLeaf(opts *bind.CallOpts, leaf [32]byte) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -423,21 +413,21 @@ func (_ArbRollup *ArbRollupCaller) IsValidLeaf(opts *bind.CallOpts, leaf [32]byt
 
 // IsValidLeaf is a free data retrieval call binding the contract method 0x57ca6d1b.
 //
-// Solidity: function isValidLeaf(bytes32 leaf) constant returns(bool)
+// Solidity: function isValidLeaf(bytes32 leaf) view returns(bool)
 func (_ArbRollup *ArbRollupSession) IsValidLeaf(leaf [32]byte) (bool, error) {
 	return _ArbRollup.Contract.IsValidLeaf(&_ArbRollup.CallOpts, leaf)
 }
 
 // IsValidLeaf is a free data retrieval call binding the contract method 0x57ca6d1b.
 //
-// Solidity: function isValidLeaf(bytes32 leaf) constant returns(bool)
+// Solidity: function isValidLeaf(bytes32 leaf) view returns(bool)
 func (_ArbRollup *ArbRollupCallerSession) IsValidLeaf(leaf [32]byte) (bool, error) {
 	return _ArbRollup.Contract.IsValidLeaf(&_ArbRollup.CallOpts, leaf)
 }
 
 // LatestConfirmed is a free data retrieval call binding the contract method 0x65f7f80d.
 //
-// Solidity: function latestConfirmed() constant returns(bytes32)
+// Solidity: function latestConfirmed() view returns(bytes32)
 func (_ArbRollup *ArbRollupCaller) LatestConfirmed(opts *bind.CallOpts) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -449,21 +439,21 @@ func (_ArbRollup *ArbRollupCaller) LatestConfirmed(opts *bind.CallOpts) ([32]byt
 
 // LatestConfirmed is a free data retrieval call binding the contract method 0x65f7f80d.
 //
-// Solidity: function latestConfirmed() constant returns(bytes32)
+// Solidity: function latestConfirmed() view returns(bytes32)
 func (_ArbRollup *ArbRollupSession) LatestConfirmed() ([32]byte, error) {
 	return _ArbRollup.Contract.LatestConfirmed(&_ArbRollup.CallOpts)
 }
 
 // LatestConfirmed is a free data retrieval call binding the contract method 0x65f7f80d.
 //
-// Solidity: function latestConfirmed() constant returns(bytes32)
+// Solidity: function latestConfirmed() view returns(bytes32)
 func (_ArbRollup *ArbRollupCallerSession) LatestConfirmed() ([32]byte, error) {
 	return _ArbRollup.Contract.LatestConfirmed(&_ArbRollup.CallOpts)
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
 //
-// Solidity: function owner() constant returns(address)
+// Solidity: function owner() view returns(address)
 func (_ArbRollup *ArbRollupCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -475,21 +465,21 @@ func (_ArbRollup *ArbRollupCaller) Owner(opts *bind.CallOpts) (common.Address, e
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
 //
-// Solidity: function owner() constant returns(address)
+// Solidity: function owner() view returns(address)
 func (_ArbRollup *ArbRollupSession) Owner() (common.Address, error) {
 	return _ArbRollup.Contract.Owner(&_ArbRollup.CallOpts)
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
 //
-// Solidity: function owner() constant returns(address)
+// Solidity: function owner() view returns(address)
 func (_ArbRollup *ArbRollupCallerSession) Owner() (common.Address, error) {
 	return _ArbRollup.Contract.Owner(&_ArbRollup.CallOpts)
 }
 
 // VmParams is a free data retrieval call binding the contract method 0xbbc2cc00.
 //
-// Solidity: function vmParams() constant returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps)
+// Solidity: function vmParams() view returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps)
 func (_ArbRollup *ArbRollupCaller) VmParams(opts *bind.CallOpts) (struct {
 	GracePeriodTicks        *big.Int
 	ArbGasSpeedLimitPerTick *big.Int
@@ -507,7 +497,7 @@ func (_ArbRollup *ArbRollupCaller) VmParams(opts *bind.CallOpts) (struct {
 
 // VmParams is a free data retrieval call binding the contract method 0xbbc2cc00.
 //
-// Solidity: function vmParams() constant returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps)
+// Solidity: function vmParams() view returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps)
 func (_ArbRollup *ArbRollupSession) VmParams() (struct {
 	GracePeriodTicks        *big.Int
 	ArbGasSpeedLimitPerTick *big.Int
@@ -518,7 +508,7 @@ func (_ArbRollup *ArbRollupSession) VmParams() (struct {
 
 // VmParams is a free data retrieval call binding the contract method 0xbbc2cc00.
 //
-// Solidity: function vmParams() constant returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps)
+// Solidity: function vmParams() view returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps)
 func (_ArbRollup *ArbRollupCallerSession) VmParams() (struct {
 	GracePeriodTicks        *big.Int
 	ArbGasSpeedLimitPerTick *big.Int
@@ -655,21 +645,21 @@ func (_ArbRollup *ArbRollupTransactorSession) OwnerShutdown() (*types.Transactio
 
 // PlaceStake is a paid mutator transaction binding the contract method 0xe0620d64.
 //
-// Solidity: function placeStake(bytes32[] proof1, bytes32[] proof2) returns()
+// Solidity: function placeStake(bytes32[] proof1, bytes32[] proof2) payable returns()
 func (_ArbRollup *ArbRollupTransactor) PlaceStake(opts *bind.TransactOpts, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
 	return _ArbRollup.contract.Transact(opts, "placeStake", proof1, proof2)
 }
 
 // PlaceStake is a paid mutator transaction binding the contract method 0xe0620d64.
 //
-// Solidity: function placeStake(bytes32[] proof1, bytes32[] proof2) returns()
+// Solidity: function placeStake(bytes32[] proof1, bytes32[] proof2) payable returns()
 func (_ArbRollup *ArbRollupSession) PlaceStake(proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
 	return _ArbRollup.Contract.PlaceStake(&_ArbRollup.TransactOpts, proof1, proof2)
 }
 
 // PlaceStake is a paid mutator transaction binding the contract method 0xe0620d64.
 //
-// Solidity: function placeStake(bytes32[] proof1, bytes32[] proof2) returns()
+// Solidity: function placeStake(bytes32[] proof1, bytes32[] proof2) payable returns()
 func (_ArbRollup *ArbRollupTransactorSession) PlaceStake(proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
 	return _ArbRollup.Contract.PlaceStake(&_ArbRollup.TransactOpts, proof1, proof2)
 }
@@ -819,44 +809,6 @@ func (_ArbRollup *ArbRollupSession) StartChallenge(asserterAddress common.Addres
 // Solidity: function startChallenge(address asserterAddress, address challengerAddress, bytes32 prevNode, uint256 deadlineTicks, uint256[2] stakerNodeTypes, bytes32[2] vmProtoHashes, bytes32[] asserterProof, bytes32[] challengerProof, bytes32 asserterNodeHash, bytes32 challengerDataHash, uint128 challengerPeriodTicks) returns()
 func (_ArbRollup *ArbRollupTransactorSession) StartChallenge(asserterAddress common.Address, challengerAddress common.Address, prevNode [32]byte, deadlineTicks *big.Int, stakerNodeTypes [2]*big.Int, vmProtoHashes [2][32]byte, asserterProof [][32]byte, challengerProof [][32]byte, asserterNodeHash [32]byte, challengerDataHash [32]byte, challengerPeriodTicks *big.Int) (*types.Transaction, error) {
 	return _ArbRollup.Contract.StartChallenge(&_ArbRollup.TransactOpts, asserterAddress, challengerAddress, prevNode, deadlineTicks, stakerNodeTypes, vmProtoHashes, asserterProof, challengerProof, asserterNodeHash, challengerDataHash, challengerPeriodTicks)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_ArbRollup *ArbRollupFilterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _ArbRollup.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	case "ConfirmedAssertion":
-		event, err = _ArbRollup.ParseConfirmedAssertion(log)
-	case "ConfirmedValidAssertion":
-		event, err = _ArbRollup.ParseConfirmedValidAssertion(log)
-	case "RollupAsserted":
-		event, err = _ArbRollup.ParseRollupAsserted(log)
-	case "RollupChallengeCompleted":
-		event, err = _ArbRollup.ParseRollupChallengeCompleted(log)
-	case "RollupChallengeStarted":
-		event, err = _ArbRollup.ParseRollupChallengeStarted(log)
-	case "RollupConfirmed":
-		event, err = _ArbRollup.ParseRollupConfirmed(log)
-	case "RollupCreated":
-		event, err = _ArbRollup.ParseRollupCreated(log)
-	case "RollupPruned":
-		event, err = _ArbRollup.ParseRollupPruned(log)
-	case "RollupStakeCreated":
-		event, err = _ArbRollup.ParseRollupStakeCreated(log)
-	case "RollupStakeMoved":
-		event, err = _ArbRollup.ParseRollupStakeMoved(log)
-	case "RollupStakeRefunded":
-		event, err = _ArbRollup.ParseRollupStakeRefunded(log)
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
 }
 
 // ArbRollupConfirmedAssertionIterator is returned from FilterConfirmedAssertion and is used to iterate over the raw logs and unpacked data for ConfirmedAssertion events raised by the ArbRollup contract.
@@ -2470,15 +2422,6 @@ func bindIERC20(address common.Address, caller bind.ContractCaller, transactor b
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-// ParseIERC20ABI parses the ABI
-func ParseIERC20ABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(IERC20ABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -2519,7 +2462,7 @@ func (_IERC20 *IERC20TransactorRaw) Transact(opts *bind.TransactOpts, method str
 
 // Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
 //
-// Solidity: function allowance(address owner, address spender) constant returns(uint256)
+// Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_IERC20 *IERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -2531,21 +2474,21 @@ func (_IERC20 *IERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address
 
 // Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
 //
-// Solidity: function allowance(address owner, address spender) constant returns(uint256)
+// Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_IERC20 *IERC20Session) Allowance(owner common.Address, spender common.Address) (*big.Int, error) {
 	return _IERC20.Contract.Allowance(&_IERC20.CallOpts, owner, spender)
 }
 
 // Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
 //
-// Solidity: function allowance(address owner, address spender) constant returns(uint256)
+// Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_IERC20 *IERC20CallerSession) Allowance(owner common.Address, spender common.Address) (*big.Int, error) {
 	return _IERC20.Contract.Allowance(&_IERC20.CallOpts, owner, spender)
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
 //
-// Solidity: function balanceOf(address account) constant returns(uint256)
+// Solidity: function balanceOf(address account) view returns(uint256)
 func (_IERC20 *IERC20Caller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -2557,21 +2500,21 @@ func (_IERC20 *IERC20Caller) BalanceOf(opts *bind.CallOpts, account common.Addre
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
 //
-// Solidity: function balanceOf(address account) constant returns(uint256)
+// Solidity: function balanceOf(address account) view returns(uint256)
 func (_IERC20 *IERC20Session) BalanceOf(account common.Address) (*big.Int, error) {
 	return _IERC20.Contract.BalanceOf(&_IERC20.CallOpts, account)
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
 //
-// Solidity: function balanceOf(address account) constant returns(uint256)
+// Solidity: function balanceOf(address account) view returns(uint256)
 func (_IERC20 *IERC20CallerSession) BalanceOf(account common.Address) (*big.Int, error) {
 	return _IERC20.Contract.BalanceOf(&_IERC20.CallOpts, account)
 }
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
 //
-// Solidity: function totalSupply() constant returns(uint256)
+// Solidity: function totalSupply() view returns(uint256)
 func (_IERC20 *IERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -2583,14 +2526,14 @@ func (_IERC20 *IERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) 
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
 //
-// Solidity: function totalSupply() constant returns(uint256)
+// Solidity: function totalSupply() view returns(uint256)
 func (_IERC20 *IERC20Session) TotalSupply() (*big.Int, error) {
 	return _IERC20.Contract.TotalSupply(&_IERC20.CallOpts)
 }
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
 //
-// Solidity: function totalSupply() constant returns(uint256)
+// Solidity: function totalSupply() view returns(uint256)
 func (_IERC20 *IERC20CallerSession) TotalSupply() (*big.Int, error) {
 	return _IERC20.Contract.TotalSupply(&_IERC20.CallOpts)
 }
@@ -2656,26 +2599,6 @@ func (_IERC20 *IERC20Session) TransferFrom(sender common.Address, recipient comm
 // Solidity: function transferFrom(address sender, address recipient, uint256 amount) returns(bool)
 func (_IERC20 *IERC20TransactorSession) TransferFrom(sender common.Address, recipient common.Address, amount *big.Int) (*types.Transaction, error) {
 	return _IERC20.Contract.TransferFrom(&_IERC20.TransactOpts, sender, recipient, amount)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_IERC20 *IERC20Filterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _IERC20.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	case "Approval":
-		event, err = _IERC20.ParseApproval(log)
-	case "Transfer":
-		event, err = _IERC20.ParseTransfer(log)
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
 }
 
 // IERC20ApprovalIterator is returned from FilterApproval and is used to iterate over the raw logs and unpacked data for Approval events raised by the IERC20 contract.
@@ -3116,15 +3039,6 @@ func bindNodeGraph(address common.Address, caller bind.ContractCaller, transacto
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-// ParseNodeGraphABI parses the ABI
-func ParseNodeGraphABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(NodeGraphABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -3165,7 +3079,7 @@ func (_NodeGraph *NodeGraphTransactorRaw) Transact(opts *bind.TransactOpts, meth
 
 // IsValidLeaf is a free data retrieval call binding the contract method 0x57ca6d1b.
 //
-// Solidity: function isValidLeaf(bytes32 leaf) constant returns(bool)
+// Solidity: function isValidLeaf(bytes32 leaf) view returns(bool)
 func (_NodeGraph *NodeGraphCaller) IsValidLeaf(opts *bind.CallOpts, leaf [32]byte) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -3177,21 +3091,21 @@ func (_NodeGraph *NodeGraphCaller) IsValidLeaf(opts *bind.CallOpts, leaf [32]byt
 
 // IsValidLeaf is a free data retrieval call binding the contract method 0x57ca6d1b.
 //
-// Solidity: function isValidLeaf(bytes32 leaf) constant returns(bool)
+// Solidity: function isValidLeaf(bytes32 leaf) view returns(bool)
 func (_NodeGraph *NodeGraphSession) IsValidLeaf(leaf [32]byte) (bool, error) {
 	return _NodeGraph.Contract.IsValidLeaf(&_NodeGraph.CallOpts, leaf)
 }
 
 // IsValidLeaf is a free data retrieval call binding the contract method 0x57ca6d1b.
 //
-// Solidity: function isValidLeaf(bytes32 leaf) constant returns(bool)
+// Solidity: function isValidLeaf(bytes32 leaf) view returns(bool)
 func (_NodeGraph *NodeGraphCallerSession) IsValidLeaf(leaf [32]byte) (bool, error) {
 	return _NodeGraph.Contract.IsValidLeaf(&_NodeGraph.CallOpts, leaf)
 }
 
 // LatestConfirmed is a free data retrieval call binding the contract method 0x65f7f80d.
 //
-// Solidity: function latestConfirmed() constant returns(bytes32)
+// Solidity: function latestConfirmed() view returns(bytes32)
 func (_NodeGraph *NodeGraphCaller) LatestConfirmed(opts *bind.CallOpts) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
@@ -3203,21 +3117,21 @@ func (_NodeGraph *NodeGraphCaller) LatestConfirmed(opts *bind.CallOpts) ([32]byt
 
 // LatestConfirmed is a free data retrieval call binding the contract method 0x65f7f80d.
 //
-// Solidity: function latestConfirmed() constant returns(bytes32)
+// Solidity: function latestConfirmed() view returns(bytes32)
 func (_NodeGraph *NodeGraphSession) LatestConfirmed() ([32]byte, error) {
 	return _NodeGraph.Contract.LatestConfirmed(&_NodeGraph.CallOpts)
 }
 
 // LatestConfirmed is a free data retrieval call binding the contract method 0x65f7f80d.
 //
-// Solidity: function latestConfirmed() constant returns(bytes32)
+// Solidity: function latestConfirmed() view returns(bytes32)
 func (_NodeGraph *NodeGraphCallerSession) LatestConfirmed() ([32]byte, error) {
 	return _NodeGraph.Contract.LatestConfirmed(&_NodeGraph.CallOpts)
 }
 
 // VmParams is a free data retrieval call binding the contract method 0xbbc2cc00.
 //
-// Solidity: function vmParams() constant returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps)
+// Solidity: function vmParams() view returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps)
 func (_NodeGraph *NodeGraphCaller) VmParams(opts *bind.CallOpts) (struct {
 	GracePeriodTicks        *big.Int
 	ArbGasSpeedLimitPerTick *big.Int
@@ -3235,7 +3149,7 @@ func (_NodeGraph *NodeGraphCaller) VmParams(opts *bind.CallOpts) (struct {
 
 // VmParams is a free data retrieval call binding the contract method 0xbbc2cc00.
 //
-// Solidity: function vmParams() constant returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps)
+// Solidity: function vmParams() view returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps)
 func (_NodeGraph *NodeGraphSession) VmParams() (struct {
 	GracePeriodTicks        *big.Int
 	ArbGasSpeedLimitPerTick *big.Int
@@ -3246,7 +3160,7 @@ func (_NodeGraph *NodeGraphSession) VmParams() (struct {
 
 // VmParams is a free data retrieval call binding the contract method 0xbbc2cc00.
 //
-// Solidity: function vmParams() constant returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps)
+// Solidity: function vmParams() view returns(uint256 gracePeriodTicks, uint256 arbGasSpeedLimitPerTick, uint64 maxExecutionSteps)
 func (_NodeGraph *NodeGraphCallerSession) VmParams() (struct {
 	GracePeriodTicks        *big.Int
 	ArbGasSpeedLimitPerTick *big.Int
@@ -3274,28 +3188,6 @@ func (_NodeGraph *NodeGraphSession) PruneLeaves(fromNodes [][32]byte, leafProofs
 // Solidity: function pruneLeaves(bytes32[] fromNodes, bytes32[] leafProofs, uint256[] leafProofLengths, bytes32[] latestConfProofs, uint256[] latestConfirmedProofLengths) returns()
 func (_NodeGraph *NodeGraphTransactorSession) PruneLeaves(fromNodes [][32]byte, leafProofs [][32]byte, leafProofLengths []*big.Int, latestConfProofs [][32]byte, latestConfirmedProofLengths []*big.Int) (*types.Transaction, error) {
 	return _NodeGraph.Contract.PruneLeaves(&_NodeGraph.TransactOpts, fromNodes, leafProofs, leafProofLengths, latestConfProofs, latestConfirmedProofLengths)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_NodeGraph *NodeGraphFilterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _NodeGraph.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	case "RollupAsserted":
-		event, err = _NodeGraph.ParseRollupAsserted(log)
-	case "RollupConfirmed":
-		event, err = _NodeGraph.ParseRollupConfirmed(log)
-	case "RollupPruned":
-		event, err = _NodeGraph.ParseRollupPruned(log)
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
 }
 
 // NodeGraphRollupAssertedIterator is returned from FilterRollupAsserted and is used to iterate over the raw logs and unpacked data for RollupAsserted events raised by the NodeGraph contract.
@@ -3829,15 +3721,6 @@ func bindNodeGraphUtils(address common.Address, caller bind.ContractCaller, tran
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-// ParseNodeGraphUtilsABI parses the ABI
-func ParseNodeGraphUtilsABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(NodeGraphUtilsABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -3874,22 +3757,6 @@ func (_NodeGraphUtils *NodeGraphUtilsTransactorRaw) Transfer(opts *bind.Transact
 // Transact invokes the (paid) contract method with params as input values.
 func (_NodeGraphUtils *NodeGraphUtilsTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _NodeGraphUtils.Contract.contract.Transact(opts, method, params...)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_NodeGraphUtils *NodeGraphUtilsFilterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _NodeGraphUtils.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
 }
 
 // RollupUtilsABI is the input ABI used to generate the binding from.
@@ -4016,15 +3883,6 @@ func bindRollupUtils(address common.Address, caller bind.ContractCaller, transac
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-// ParseRollupUtilsABI parses the ABI
-func ParseRollupUtilsABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(RollupUtilsABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -4061,22 +3919,6 @@ func (_RollupUtils *RollupUtilsTransactorRaw) Transfer(opts *bind.TransactOpts) 
 // Transact invokes the (paid) contract method with params as input values.
 func (_RollupUtils *RollupUtilsTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _RollupUtils.Contract.contract.Transact(opts, method, params...)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_RollupUtils *RollupUtilsFilterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _RollupUtils.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
 }
 
 // SafeMathABI is the input ABI used to generate the binding from.
@@ -4203,15 +4045,6 @@ func bindSafeMath(address common.Address, caller bind.ContractCaller, transactor
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-// ParseSafeMathABI parses the ABI
-func ParseSafeMathABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(SafeMathABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -4248,22 +4081,6 @@ func (_SafeMath *SafeMathTransactorRaw) Transfer(opts *bind.TransactOpts) (*type
 // Transact invokes the (paid) contract method with params as input values.
 func (_SafeMath *SafeMathTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _SafeMath.Contract.contract.Transact(opts, method, params...)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_SafeMath *SafeMathFilterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _SafeMath.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
 }
 
 // StakingABI is the input ABI used to generate the binding from.
@@ -4401,15 +4218,6 @@ func bindStaking(address common.Address, caller bind.ContractCaller, transactor 
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-// ParseStakingABI parses the ABI
-func ParseStakingABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(StakingABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -4450,7 +4258,7 @@ func (_Staking *StakingTransactorRaw) Transact(opts *bind.TransactOpts, method s
 
 // ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
 //
-// Solidity: function challengeFactory() constant returns(address)
+// Solidity: function challengeFactory() view returns(address)
 func (_Staking *StakingCaller) ChallengeFactory(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -4462,21 +4270,21 @@ func (_Staking *StakingCaller) ChallengeFactory(opts *bind.CallOpts) (common.Add
 
 // ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
 //
-// Solidity: function challengeFactory() constant returns(address)
+// Solidity: function challengeFactory() view returns(address)
 func (_Staking *StakingSession) ChallengeFactory() (common.Address, error) {
 	return _Staking.Contract.ChallengeFactory(&_Staking.CallOpts)
 }
 
 // ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
 //
-// Solidity: function challengeFactory() constant returns(address)
+// Solidity: function challengeFactory() view returns(address)
 func (_Staking *StakingCallerSession) ChallengeFactory() (common.Address, error) {
 	return _Staking.Contract.ChallengeFactory(&_Staking.CallOpts)
 }
 
 // GetStakeRequired is a free data retrieval call binding the contract method 0xd16c305d.
 //
-// Solidity: function getStakeRequired() constant returns(uint128)
+// Solidity: function getStakeRequired() view returns(uint128)
 func (_Staking *StakingCaller) GetStakeRequired(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -4488,21 +4296,21 @@ func (_Staking *StakingCaller) GetStakeRequired(opts *bind.CallOpts) (*big.Int, 
 
 // GetStakeRequired is a free data retrieval call binding the contract method 0xd16c305d.
 //
-// Solidity: function getStakeRequired() constant returns(uint128)
+// Solidity: function getStakeRequired() view returns(uint128)
 func (_Staking *StakingSession) GetStakeRequired() (*big.Int, error) {
 	return _Staking.Contract.GetStakeRequired(&_Staking.CallOpts)
 }
 
 // GetStakeRequired is a free data retrieval call binding the contract method 0xd16c305d.
 //
-// Solidity: function getStakeRequired() constant returns(uint128)
+// Solidity: function getStakeRequired() view returns(uint128)
 func (_Staking *StakingCallerSession) GetStakeRequired() (*big.Int, error) {
 	return _Staking.Contract.GetStakeRequired(&_Staking.CallOpts)
 }
 
 // GetStakeToken is a free data retrieval call binding the contract method 0x500a1564.
 //
-// Solidity: function getStakeToken() constant returns(address)
+// Solidity: function getStakeToken() view returns(address)
 func (_Staking *StakingCaller) GetStakeToken(opts *bind.CallOpts) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
@@ -4514,21 +4322,21 @@ func (_Staking *StakingCaller) GetStakeToken(opts *bind.CallOpts) (common.Addres
 
 // GetStakeToken is a free data retrieval call binding the contract method 0x500a1564.
 //
-// Solidity: function getStakeToken() constant returns(address)
+// Solidity: function getStakeToken() view returns(address)
 func (_Staking *StakingSession) GetStakeToken() (common.Address, error) {
 	return _Staking.Contract.GetStakeToken(&_Staking.CallOpts)
 }
 
 // GetStakeToken is a free data retrieval call binding the contract method 0x500a1564.
 //
-// Solidity: function getStakeToken() constant returns(address)
+// Solidity: function getStakeToken() view returns(address)
 func (_Staking *StakingCallerSession) GetStakeToken() (common.Address, error) {
 	return _Staking.Contract.GetStakeToken(&_Staking.CallOpts)
 }
 
 // IsStaked is a free data retrieval call binding the contract method 0x6177fd18.
 //
-// Solidity: function isStaked(address _stakerAddress) constant returns(bool)
+// Solidity: function isStaked(address _stakerAddress) view returns(bool)
 func (_Staking *StakingCaller) IsStaked(opts *bind.CallOpts, _stakerAddress common.Address) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -4540,14 +4348,14 @@ func (_Staking *StakingCaller) IsStaked(opts *bind.CallOpts, _stakerAddress comm
 
 // IsStaked is a free data retrieval call binding the contract method 0x6177fd18.
 //
-// Solidity: function isStaked(address _stakerAddress) constant returns(bool)
+// Solidity: function isStaked(address _stakerAddress) view returns(bool)
 func (_Staking *StakingSession) IsStaked(_stakerAddress common.Address) (bool, error) {
 	return _Staking.Contract.IsStaked(&_Staking.CallOpts, _stakerAddress)
 }
 
 // IsStaked is a free data retrieval call binding the contract method 0x6177fd18.
 //
-// Solidity: function isStaked(address _stakerAddress) constant returns(bool)
+// Solidity: function isStaked(address _stakerAddress) view returns(bool)
 func (_Staking *StakingCallerSession) IsStaked(_stakerAddress common.Address) (bool, error) {
 	return _Staking.Contract.IsStaked(&_Staking.CallOpts, _stakerAddress)
 }
@@ -4613,32 +4421,6 @@ func (_Staking *StakingSession) StartChallenge(asserterAddress common.Address, c
 // Solidity: function startChallenge(address asserterAddress, address challengerAddress, bytes32 prevNode, uint256 deadlineTicks, uint256[2] stakerNodeTypes, bytes32[2] vmProtoHashes, bytes32[] asserterProof, bytes32[] challengerProof, bytes32 asserterNodeHash, bytes32 challengerDataHash, uint128 challengerPeriodTicks) returns()
 func (_Staking *StakingTransactorSession) StartChallenge(asserterAddress common.Address, challengerAddress common.Address, prevNode [32]byte, deadlineTicks *big.Int, stakerNodeTypes [2]*big.Int, vmProtoHashes [2][32]byte, asserterProof [][32]byte, challengerProof [][32]byte, asserterNodeHash [32]byte, challengerDataHash [32]byte, challengerPeriodTicks *big.Int) (*types.Transaction, error) {
 	return _Staking.Contract.StartChallenge(&_Staking.TransactOpts, asserterAddress, challengerAddress, prevNode, deadlineTicks, stakerNodeTypes, vmProtoHashes, asserterProof, challengerProof, asserterNodeHash, challengerDataHash, challengerPeriodTicks)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_Staking *StakingFilterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _Staking.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	case "RollupChallengeCompleted":
-		event, err = _Staking.ParseRollupChallengeCompleted(log)
-	case "RollupChallengeStarted":
-		event, err = _Staking.ParseRollupChallengeStarted(log)
-	case "RollupStakeCreated":
-		event, err = _Staking.ParseRollupStakeCreated(log)
-	case "RollupStakeMoved":
-		event, err = _Staking.ParseRollupStakeMoved(log)
-	case "RollupStakeRefunded":
-		event, err = _Staking.ParseRollupStakeRefunded(log)
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
 }
 
 // StakingRollupChallengeCompletedIterator is returned from FilterRollupChallengeCompleted and is used to iterate over the raw logs and unpacked data for RollupChallengeCompleted events raised by the Staking contract.
@@ -5437,15 +5219,6 @@ func bindVM(address common.Address, caller bind.ContractCaller, transactor bind.
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-// ParseVMABI parses the ABI
-func ParseVMABI() (*abi.ABI, error) {
-	parsed, err := abi.JSON(strings.NewReader(VMABI))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
@@ -5482,20 +5255,4 @@ func (_VM *VMTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transactio
 // Transact invokes the (paid) contract method with params as input values.
 func (_VM *VMTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _VM.Contract.contract.Transact(opts, method, params...)
-}
-
-// TryParseLog attempts to parse a log. Returns the parsed log, evenName and whether it was succesfull
-func (_VM *VMFilterer) TryParseLog(log types.Log) (eventName string, event interface{}, ok bool, err error) {
-	eventName, ok, err = _VM.contract.LogEventName(log)
-	if err != nil || !ok {
-		return "", nil, false, err
-	}
-
-	switch eventName {
-	}
-	if err != nil {
-		return "", nil, false, err
-	}
-
-	return eventName, event, ok, nil
 }

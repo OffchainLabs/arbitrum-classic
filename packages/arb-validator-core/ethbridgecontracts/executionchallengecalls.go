@@ -40,6 +40,10 @@ func (_ExecutionChallenge *ExecutionChallengeTransactor) OneStepProofCall(ctx co
 	return callCheckExec(ctx, client, from, contractAddress, "oneStepProof", _inboxHash, _firstMessage, _firstLog, _proof)
 }
 
+func (_ExecutionChallenge *ExecutionChallengeTransactor) OneStepProofBufferCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, _inboxHash [32]byte, _firstMessage [32]byte, _firstLog [32]byte, _proof []byte, _bproof []byte) error {
+	return callCheckExec(ctx, client, from, contractAddress, "oneStepProofBuffer", _inboxHash, _firstMessage, _firstLog, _proof, _bproof)
+}
+
 func (_ExecutionChallenge *ExecutionChallengeTransactor) OneStepProofInboxCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, _firstInbox [32]byte, _firstMessage [32]byte, _firstLog [32]byte, _proof []byte, _kind uint8, _blockNumber *big.Int, _timestamp *big.Int, _sender common.Address, _inboxSeqNum *big.Int, _msgData []byte) error {
 	return callCheckExec(ctx, client, from, contractAddress, "oneStepProofInbox", _firstInbox, _firstMessage, _firstLog, _proof, _kind, _blockNumber, _timestamp, _sender, _inboxSeqNum, _msgData)
 }
