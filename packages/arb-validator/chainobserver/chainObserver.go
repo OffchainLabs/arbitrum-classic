@@ -335,7 +335,6 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 	defer chain.Unlock()
 	switch ev := event.(type) {
 	case arbbridge.MessageDeliveredEvent:
-		log.Println("Got message event", ev.BlockId.Height, ev.LogIndex, ev.Message.InboxSeqNum)
 		if err := chain.messageDelivered(ctx, ev); err != nil {
 			return err
 		}
@@ -363,6 +362,15 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 		LogIndex: event.GetChainInfo().LogIndex + 1,
 	}
 	return nil
+}
+
+func (chain *ChainObserver) NotifyNextEvent(blockId *common.BlockId) {
+	chain.Lock()
+	defer chain.Unlock()
+	chain.currentEventId = arbbridge.ChainInfo{
+		BlockId:  blockId.Clone(),
+		LogIndex: 0,
+	}
 }
 
 func (chain *ChainObserver) UpdateAssumedValidBlock(ctx context.Context, clnt arbbridge.ChainTimeGetter, assumedValidDepth int64) error {
