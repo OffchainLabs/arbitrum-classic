@@ -147,6 +147,11 @@ func ObserveRollupChain(
 ) error {
 	// Check number of args
 	validateCmd := flag.NewFlagSet("observe", flag.ExitOnError)
+	quietFlag := validateCmd.Bool(
+		"q",
+		false,
+		"quiet validator output",
+	)
 	err := validateCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
@@ -182,7 +187,9 @@ func ObserveRollupChain(
 	if err != nil {
 		return err
 	}
-	manager.AddListener(&chainlistener.AnnouncerListener{})
+	if !*quietFlag {
+		manager.AddListener(&chainlistener.AnnouncerListener{})
+	}
 
 	wait := make(chan bool)
 	<-wait
