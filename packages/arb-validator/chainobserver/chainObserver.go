@@ -335,7 +335,10 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 	defer chain.Unlock()
 	switch ev := event.(type) {
 	case arbbridge.MessageDeliveredEvent:
-		return chain.messageDelivered(ctx, ev)
+		log.Println("Got message event", ev.BlockId.Height, ev.LogIndex, ev.Message.InboxSeqNum)
+		if err := chain.messageDelivered(ctx, ev); err != nil {
+			return err
+		}
 	case arbbridge.StakeCreatedEvent:
 		chain.createStake(ctx, ev)
 	case arbbridge.ChallengeStartedEvent:
@@ -351,7 +354,13 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 	case arbbridge.AssertedEvent:
 		chain.notifyAssert(ctx, ev)
 	case arbbridge.ConfirmedEvent:
-		return chain.confirmNode(ctx, ev)
+		if err := chain.confirmNode(ctx, ev); err != nil {
+			return err
+		}
+	}
+	chain.currentEventId = arbbridge.ChainInfo{
+		BlockId:  event.GetChainInfo().BlockId.Clone(),
+		LogIndex: event.GetChainInfo().LogIndex + 1,
 	}
 	return nil
 }
@@ -380,10 +389,6 @@ func (chain *ChainObserver) UpdateAssumedValidBlock(ctx context.Context, clnt ar
 func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
-	chain.currentEventId = arbbridge.ChainInfo{
-		BlockId:  blockId,
-		LogIndex: 0,
-	}
 	ckptCtx := ckptcontext.NewCheckpointContext()
 	buf, err := chain.marshalToBytes(ckptCtx)
 	if err != nil {
