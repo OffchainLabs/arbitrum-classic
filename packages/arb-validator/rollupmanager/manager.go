@@ -214,7 +214,12 @@ func CreateManagerAdvanced(
 					if fetchEnd.Cmp(startHeight) > 0 {
 						man.activeChain.NotifyNewBlock(endBlockId)
 					}
-					man.activeChain.NotifyNextEvent(endBlockId)
+					nextBlockHeight := common.NewTimeBlocks(new(big.Int).Add(endBlockId.Height.AsInt(), big.NewInt(1)))
+					nextBlockId, err := clnt.BlockIdForHeight(runCtx, nextBlockHeight)
+					if err != nil {
+						return err
+					}
+					man.activeChain.NotifyNextEvent(nextBlockId)
 				}
 
 				startEventId := man.activeChain.CurrentEventId()
