@@ -135,7 +135,7 @@ func (ms *MessageStack) bottomIndex() *big.Int {
 func (ms *MessageStack) DeliverMessage(msg inbox.InboxMessage) error {
 	newTopCount := new(big.Int).Add(ms.TopCount(), big.NewInt(1))
 	if msg.InboxSeqNum.Cmp(newTopCount) != 0 {
-		return errors.New("didn't get messages in correct order")
+		return fmt.Errorf("didn't get messages in correct order. Received message %v after message %v", msg.InboxSeqNum, ms.TopCount())
 	}
 	if ms.newest == nil {
 		item := &messageStackItem{
