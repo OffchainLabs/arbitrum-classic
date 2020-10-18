@@ -37,7 +37,7 @@ describe('Contract Parsing', function () {
     }
   })
 
-  it("should load ArbOS and calulculate it's hash", async () => {
+  it("should load ArbOS and calulculate it's hash", function () {
     const data = fs.readFileSync('../../arbos.mexe', 'utf8')
     const machineHash = program.programMachineHash(data)
     console.log(machineHash)
