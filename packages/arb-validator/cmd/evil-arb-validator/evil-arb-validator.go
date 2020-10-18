@@ -51,7 +51,7 @@ func main() {
 	}
 }
 
-func createEvilManager(rollupAddress common.Address, client arbbridge.ArbAuthClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
+func createEvilManager(rollupAddress common.Address, client arbbridge.ArbClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
 	cp, err := rolluptest.NewEvilRollupCheckpointer(
 		rollupAddress,
 		dbPath,
