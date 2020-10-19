@@ -204,13 +204,16 @@ func (ms *MessageStack) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext)
 func (x *InboxBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*MessageStack, error) {
 	ret := NewMessageStack()
 	ret.hashOfRest = x.HashOfRest.Unmarshal()
+
 	for i := len(x.Items) - 1; i >= 0; i = i - 1 {
 		val := ctx.GetValue(x.Items[i].Unmarshal())
 		msg, err := inbox.NewInboxMessageFromValue(val)
 		if err != nil {
 			return nil, err
 		}
-		ret.DeliverMessage(msg)
+		if err := ret.DeliverMessage(msg); err != nil {
+			return nil, err
+		}
 	}
 	return ret, nil
 }

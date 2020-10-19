@@ -19,6 +19,7 @@ package checkpointing
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"math/big"
 	"os"
@@ -122,8 +123,8 @@ func (cp *IndexedCheckpointer) HasCheckpointedState() bool {
 	return !cp.bs.IsBlockStoreEmpty()
 }
 
-func (cp *IndexedCheckpointer) GetInitialMachine() (machine.Machine, error) {
-	return cp.db.GetInitialMachine()
+func (cp *IndexedCheckpointer) GetInitialMachine(vc machine.ValueCache) (machine.Machine, error) {
+	return cp.db.GetInitialMachine(vc)
 }
 
 type writableCheckpoint struct {
@@ -191,7 +192,13 @@ func restoreLatestState(
 			// If something went wrong, try the next block
 			continue
 		}
-		if err := unmarshalFunc(ckpWithMan.Contents, &restoreContextLocked{db}, onchainId); err != nil {
+
+		rcl, err := newRestoreContextLocked(db, ckpWithMan.Manifest)
+		if err != nil {
+			log.Println("Failed load manifest data at height", height, "with error", err)
+			continue
+		}
+		if err := unmarshalFunc(ckpWithMan.Contents, rcl, onchainId); err != nil {
 			log.Println("Failed load checkpoint at height", height, "with error", err)
 			continue
 		}
@@ -293,15 +300,57 @@ func deleteCheckpointForKey(bs machine.BlockStore, db machine.CheckpointStorage,
 }
 
 type restoreContextLocked struct {
-	db machine.CheckpointStorage
+	db         machine.CheckpointStorage
+	values     map[common.Hash]value.Value
+	machines   map[common.Hash]machine.Machine
+	valueCache machine.ValueCache
+}
+
+func newRestoreContextLocked(db machine.CheckpointStorage, manifest *ckptcontext.CheckpointManifest) (*restoreContextLocked, error) {
+	valueCache, err := cmachine.NewValueCache()
+	if err != nil {
+		return nil, err
+	}
+
+	rcl := restoreContextLocked{db, map[common.Hash]value.Value{}, map[common.Hash]machine.Machine{}, valueCache}
+
+	for _, valHash := range manifest.GetValues() {
+		hash := valHash.Unmarshal()
+		val := rcl.db.GetValue(hash, rcl.valueCache)
+		if val == nil {
+			return nil, fmt.Errorf("unable to find the value hash: %s", hash.String())
+		}
+
+		rcl.values[hash] = val
+	}
+
+	for _, machHash := range manifest.GetMachines() {
+		hash := machHash.Unmarshal()
+		mach, err := rcl.db.GetMachine(hash, valueCache)
+		if err != nil {
+			return nil, err
+		}
+
+		rcl.machines[hash] = mach
+	}
+
+	return &rcl, nil
 }
 
 func (rcl *restoreContextLocked) GetValue(h common.Hash) value.Value {
-	return rcl.db.GetValue(h)
+	if val, ok := rcl.values[h]; ok {
+		return val
+	}
+
+	return rcl.db.GetValue(h, rcl.valueCache)
 }
 
 func (rcl *restoreContextLocked) GetMachine(h common.Hash) machine.Machine {
-	ret, err := rcl.db.GetMachine(h)
+	if mach, ok := rcl.machines[h]; ok {
+		return mach
+	}
+
+	ret, err := rcl.db.GetMachine(h, rcl.valueCache)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -20,6 +20,7 @@ package cmachine
 #cgo CFLAGS: -I.
 #cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lkeccak -ldl
 #include "../cavm/ccheckpointstorage.h"
+#include "../cavm/cvaluecache.h"
 #include <stdio.h>
 #include <stdlib.h>
 */
@@ -79,8 +80,8 @@ func cDestroyCheckpointStorage(cCheckpointStorage *CheckpointStorage) {
 	C.destroyCheckpointStorage(cCheckpointStorage.c)
 }
 
-func (checkpoint *CheckpointStorage) GetInitialMachine() (machine.Machine, error) {
-	cMachine := C.getInitialMachine(checkpoint.c)
+func (checkpoint *CheckpointStorage) GetInitialMachine(valueCache machine.ValueCache) (machine.Machine, error) {
+	cMachine := C.getInitialMachine(checkpoint.c, valueCache.(*ValueCache).c)
 
 	if cMachine == nil {
 		return nil, fmt.Errorf("error getting initial machine from checkpointstorage")
@@ -91,8 +92,8 @@ func (checkpoint *CheckpointStorage) GetInitialMachine() (machine.Machine, error
 	return ret, nil
 }
 
-func (checkpoint *CheckpointStorage) GetMachine(machineHash common.Hash) (machine.Machine, error) {
-	cMachine := C.getMachine(checkpoint.c, unsafe.Pointer(&machineHash[0]))
+func (checkpoint *CheckpointStorage) GetMachine(machineHash common.Hash, valueCache machine.ValueCache) (machine.Machine, error) {
+	cMachine := C.getMachine(checkpoint.c, unsafe.Pointer(&machineHash[0]), valueCache.(*ValueCache).c)
 
 	if cMachine == nil {
 		return nil, fmt.Errorf("error getting machine from checkpointstorage")
@@ -123,8 +124,8 @@ func (checkpoint *CheckpointStorage) SaveValue(val value.Value) bool {
 	return success == 1
 }
 
-func (checkpoint *CheckpointStorage) GetValue(hashValue common.Hash) value.Value {
-	cData := C.getValue(checkpoint.c, unsafe.Pointer(&hashValue[0]))
+func (checkpoint *CheckpointStorage) GetValue(hashValue common.Hash, valueCache machine.ValueCache) value.Value {
+	cData := C.getValue(checkpoint.c, unsafe.Pointer(&hashValue[0]), valueCache.(*ValueCache).c)
 	if cData.data == nil {
 		return nil
 	}

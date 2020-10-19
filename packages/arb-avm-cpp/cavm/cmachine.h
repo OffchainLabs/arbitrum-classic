@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef Machine_h
-#define Machine_h
+#ifndef cmachine_h
+#define cmachine_h
 
 #include <stdint.h>
 #include "ccheckpointstorage.h"
@@ -101,4 +101,4 @@ int checkpointMachine(CMachine* m, CCheckpointStorage* storage);
 }
 #endif
 
-#endif /* Machine_h */
+#endif /* cmachine_h */

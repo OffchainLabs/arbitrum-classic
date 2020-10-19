@@ -94,8 +94,8 @@ func (erc *evilRestoreContext) GetMachine(h common.Hash) machine.Machine {
 	return NewEvilMachine(erc.rc.GetMachine(h).(*cmachine.Machine))
 }
 
-func (e EvilRollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
-	m, err := e.cp.GetInitialMachine()
+func (e EvilRollupCheckpointer) GetInitialMachine(vc machine.ValueCache) (machine.Machine, error) {
+	m, err := e.cp.GetInitialMachine(vc)
 	if err != nil {
 		return m, err
 	}

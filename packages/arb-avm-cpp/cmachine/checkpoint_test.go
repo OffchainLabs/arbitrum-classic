@@ -52,6 +52,11 @@ func TestCheckpoint(t *testing.T) {
 func TestCheckpointMachine(t *testing.T) {
 	dePath := "dbPath2"
 
+	valueCache, err := NewValueCache()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	checkpointStorage, err := NewCheckpoint(dePath)
 	if err != nil {
 		t.Fatal(err)
@@ -61,7 +66,7 @@ func TestCheckpointMachine(t *testing.T) {
 	}
 	defer checkpointStorage.CloseCheckpointStorage()
 
-	mach, err := checkpointStorage.GetInitialMachine()
+	mach, err := checkpointStorage.GetInitialMachine(valueCache)
 	if err != nil {
 		t.Error(err)
 	}
@@ -80,7 +85,7 @@ func TestCheckpointMachine(t *testing.T) {
 		t.Error("Failed to checkpoint machine")
 	}
 
-	loadedMach, err := checkpointStorage.GetMachine(mach.Hash())
+	loadedMach, err := checkpointStorage.GetMachine(mach.Hash(), valueCache)
 	if err != nil {
 		t.Error(err)
 	}
