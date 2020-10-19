@@ -32,17 +32,16 @@ import (
 )
 
 type arbFactory struct {
-	contract *ethbridgecontracts.ArbFactory
-	client   ethutils.EthClient
-	auth     *TransactAuth
+	*arbFactoryWatcher
+	auth *TransactAuth
 }
 
 func newArbFactory(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*arbFactory, error) {
-	vmCreatorContract, err := ethbridgecontracts.NewArbFactory(address, client)
+	watcher, err := newArbFactoryWatcher(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
+		return nil, err
 	}
-	return &arbFactory{vmCreatorContract, client, auth}, nil
+	return &arbFactory{arbFactoryWatcher: watcher, auth: auth}, nil
 }
 
 func DeployRollupFactory(auth *bind.TransactOpts, client ethutils.EthClient) (ethcommon.Address, error) {
