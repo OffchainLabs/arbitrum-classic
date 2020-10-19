@@ -207,13 +207,19 @@ func CreateManagerAdvanced(
 							return errors2.Wrap(err, "Manager hit error processing event during fast catchup")
 						}
 					}
+					endBlockId, err := clnt.BlockIdForHeight(runCtx, common.NewTimeBlocks(fetchEnd))
+					if err != nil {
+						return err
+					}
 					if fetchEnd.Cmp(startHeight) > 0 {
-						endBlockId, err := clnt.BlockIdForHeight(runCtx, common.NewTimeBlocks(fetchEnd))
-						if err != nil {
-							return err
-						}
 						man.activeChain.NotifyNewBlock(endBlockId)
 					}
+					nextBlockHeight := common.NewTimeBlocks(new(big.Int).Add(endBlockId.Height.AsInt(), big.NewInt(1)))
+					nextBlockId, err := clnt.BlockIdForHeight(runCtx, nextBlockHeight)
+					if err != nil {
+						return err
+					}
+					man.activeChain.NotifyNextEvent(nextBlockId)
 				}
 
 				startEventId := man.activeChain.CurrentEventId()
