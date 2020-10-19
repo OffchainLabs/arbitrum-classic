@@ -102,19 +102,11 @@ func NewBatcher(
 				for {
 					tx, accountIndex, cont := server.pendingBatch.popRandomTx(server.queuedTxes, signer)
 					if tx != nil {
-						if keepPendingState {
-							newSnap := server.pendingBatch.snap.Clone()
-							server.Unlock()
-							newSnap, err := snapWithTx(newSnap, tx, signer)
-							server.Lock()
-							if err != nil {
-								log.Println("Aggregator ignored invalid tx", err)
-								continue
-							}
-							server.pendingBatch.updateSnap(newSnap)
-						}
-						server.pendingBatch.addIncludedTx(tx)
+						validTx := processTx(keepPendingState, server, tx, signer)
 						server.queuedTxes.maybeRemoveAccountAtIndex(accountIndex)
+						if !validTx {
+							continue
+						}
 					}
 					if server.pendingBatch.full || (!cont && time.Since(lastBatch) > maxBatchTime) {
 						lastBatch = time.Now()
@@ -166,6 +158,28 @@ func NewBatcher(
 		}
 	}()
 	return server
+}
+
+// processTx returns true if batch processing should occur, false otherwise
+func processTx(keepPendingState bool, server *Batcher, tx *types.Transaction, signer types.EIP155Signer) bool {
+	if keepPendingState {
+		newSnap := server.pendingBatch.snap.Clone()
+		server.Unlock()
+		newSnap, err := snapWithTx(newSnap, tx, signer)
+		server.Lock()
+		if err != nil {
+			log.Println("Aggregator ignored invalid tx", err)
+			return false
+		}
+		server.pendingBatch.updateSnap(newSnap)
+	}
+	err := server.pendingBatch.addIncludedTx(tx)
+	if err != nil {
+		log.Println("Aggregator couldn't add tx", err)
+		return false
+	}
+
+	return true
 }
 
 func (m *Batcher) sendBatch(ctx context.Context) {

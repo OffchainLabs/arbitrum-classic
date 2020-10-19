@@ -67,6 +67,7 @@ func runExecutableFile(b *testing.B, filePath string) {
 	}
 
 	b.ResetTimer()
+	// Last parameter is number of steps executed
 	_, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, nil, time.Hour)
 }
 
@@ -103,7 +104,7 @@ func BenchmarkInsns(b *testing.B) {
 }
 
 func getExecutables() []string {
-	ret := []string{}
+	var ret []string
 	fileInfos, err := ioutil.ReadDir("./executables/")
 	if err != nil {
 		log.Fatal(err)

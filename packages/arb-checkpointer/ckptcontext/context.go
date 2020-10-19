@@ -18,14 +18,15 @@ package ckptcontext
 
 import (
 	"errors"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type RestoreContext interface {
-	GetValue(common.Hash) value.Value
-	GetMachine(common.Hash) machine.Machine
+	GetValue(common.Hash) (value.Value, error)
+	GetMachine(common.Hash) (machine.Machine, error)
 }
 
 type CheckpointContext struct {
@@ -70,12 +71,20 @@ func (ctx *CheckpointContext) Machines() map[common.Hash]machine.Machine {
 	return ctx.machines
 }
 
-func (ctx *CheckpointContext) GetValue(h common.Hash) value.Value {
-	return ctx.values[h]
+func (ctx *CheckpointContext) GetValue(h common.Hash) (value.Value, error) {
+	if val, ok := ctx.values[h]; ok {
+		return val, nil
+	}
+
+	return nil, fmt.Errorf("context does not contain value with hash %s", h.String())
 }
 
-func (ctx *CheckpointContext) GetMachine(h common.Hash) machine.Machine {
-	return ctx.machines[h]
+func (ctx *CheckpointContext) GetMachine(h common.Hash) (machine.Machine, error) {
+	if mach, ok := ctx.machines[h]; ok {
+		return mach, nil
+	}
+
+	return nil, fmt.Errorf("context does not contain machine with hash %s", h.String())
 }
 
 func SaveCheckpointContext(db machine.CheckpointStorage, ckpCtx *CheckpointContext) error {

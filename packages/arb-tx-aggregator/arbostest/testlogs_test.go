@@ -43,6 +43,8 @@ func TestArbOSCases(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			// Last parameter returned is number of steps executed
 			assertion, _ := mach.ExecuteAssertion(100000000000, inboxMessages, 0)
 			calcLogs := assertion.ParseLogs()
 			calcSends := assertion.ParseOutMessages()

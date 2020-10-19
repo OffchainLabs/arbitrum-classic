@@ -18,6 +18,7 @@ package nodegraph
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -50,33 +51,32 @@ func newPruneParams(
 	}
 }
 
-func confirmNodeOpp(currentNode *structures.Node) valprotocol.ConfirmNodeOpportunity {
+func confirmNodeOpp(currentNode *structures.Node) (valprotocol.ConfirmNodeOpportunity, error) {
 	coreOpp := &valprotocol.ConfirmNodeOpportunityCore{
 		Branch:           currentNode.LinkType(),
 		DeadlineTicks:    currentNode.Deadline(),
 		PrevVMProtoState: currentNode.Prev().VMProtoData(),
 		VMProtoState:     currentNode.VMProtoData(),
 	}
-	var confOpp valprotocol.ConfirmNodeOpportunity
+
 	if currentNode.LinkType() == valprotocol.ValidChildType {
 		// We need to know the contents of the actual assertion to confirm it
 		// We've only seen the hash accumulator of the messages before whereas this requires the full values
 		assertion := currentNode.Assertion()
 		if assertion == nil {
-			return nil
-		} else {
-			confOpp = valprotocol.ConfirmValidOpportunity{
-				ConfirmNodeOpportunityCore: coreOpp,
-				MessagesData:               assertion.OutMsgsData,
-				MessageCount:               assertion.OutMsgsCount,
-				LogsAcc:                    currentNode.Disputable().Assertion.LastLogHash,
-			}
+			return nil, fmt.Errorf("assertion missing for node with hash %v", currentNode)
 		}
-	} else {
-		confOpp = valprotocol.ConfirmInvalidOpportunity{
+
+		return valprotocol.ConfirmValidOpportunity{
 			ConfirmNodeOpportunityCore: coreOpp,
-			ChallengeNodeData:          currentNode.NodeDataHash(),
-		}
+			MessagesData:               assertion.OutMsgsData,
+			MessageCount:               assertion.OutMsgsCount,
+			LogsAcc:                    currentNode.Disputable().Assertion.LastLogHash,
+		}, nil
 	}
-	return confOpp
+
+	return valprotocol.ConfirmInvalidOpportunity{
+		ConfirmNodeOpportunityCore: coreOpp,
+		ChallengeNodeData:          currentNode.NodeDataHash(),
+	}, nil
 }

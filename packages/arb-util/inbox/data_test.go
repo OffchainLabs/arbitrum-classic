@@ -70,6 +70,7 @@ func TestStackValueToListFailures(t *testing.T) {
 		t.Error("should fail when passed non-tuple")
 	}
 
+	// Static slice correct size, so error can be ignored
 	tup, _ := value.NewTupleFromSlice([]value.Value{intVal, intVal, intVal})
 	if _, err := StackValueToList(tup); err == nil {
 		t.Error("should fail when passed tuple not of size 2")
@@ -82,22 +83,26 @@ func TestByteStackToHexFailures(t *testing.T) {
 		t.Error("should fail when passed non-tuple")
 	}
 
+	// Static slice correct size, so error can be ignored
 	tup, _ := value.NewTupleFromSlice([]value.Value{intVal, intVal, intVal})
 	if _, err := ByteStackToHex(tup); err == nil {
 		t.Error("should fail when passed tuple not of size 2")
 	}
 
+	// Static slice correct size, so error can be ignored
 	tup, _ = value.NewTupleFromSlice([]value.Value{value.NewEmptyTuple(), intVal})
 	if _, err := ByteStackToHex(tup); err == nil {
 		t.Error("should fail when first value is not an int")
 	}
 
+	// Static slice correct size, so error can be ignored
 	tup, _ = value.NewTupleFromSlice([]value.Value{intVal, intVal})
 	if _, err := ByteStackToHex(tup); err == nil {
 		t.Error("should fail when second value is not a stack value")
 	}
 
 	listVal := ListToStackValue([]value.Value{value.NewEmptyTuple()})
+	// Static slice correct size, so error can be ignored
 	tup, _ = value.NewTupleFromSlice([]value.Value{intVal, listVal})
 	if _, err := ByteStackToHex(tup); err == nil {
 		t.Error("should fail when second value contains non ints in the stack")

@@ -125,6 +125,8 @@ func setupValidators(
 		managers = append(managers, manager)
 	}
 
+	_ = managers
+
 	return nil
 }
 

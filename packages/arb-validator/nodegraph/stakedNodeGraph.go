@@ -17,6 +17,7 @@
 package nodegraph
 
 import (
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
@@ -53,8 +54,8 @@ type StakedNodeGraph struct {
 	Challenges *ChallengeSet
 }
 
-func (sg *StakedNodeGraph) Stakers() *StakerSet {
-	return sg.stakers
+func (sng *StakedNodeGraph) Stakers() *StakerSet {
+	return sng.stakers
 }
 
 func NewStakedNodeGraph(machine machine.Machine, params valprotocol.ChainParams) *StakedNodeGraph {
@@ -159,7 +160,7 @@ func (sng *StakedNodeGraph) ChallengeResolved(contract, winner, loser common.Add
 	sng.Challenges.Delete(contract)
 }
 
-func (sng *StakedNodeGraph) GenerateNodePruneInfo(stakers *StakerSet) []valprotocol.PruneParams {
+func (sng *StakedNodeGraph) GenerateNodePruneInfo() []valprotocol.PruneParams {
 	var prunesToDo []valprotocol.PruneParams
 	sng.leaves.forall(func(leaf *structures.Node) {
 		if leaf != sng.latestConfirmed {
@@ -180,9 +181,7 @@ func (sng *StakedNodeGraph) GenerateNodePruneInfo(stakers *StakerSet) []valproto
 	return prunesToDo
 }
 
-func (sng *StakedNodeGraph) GenerateNextConfProof(
-	currentTime common.TimeTicks,
-) (*valprotocol.ConfirmOpportunity, []*structures.Node) {
+func (sng *StakedNodeGraph) GenerateNextConfProof(currentTime common.TimeTicks) (*valprotocol.ConfirmOpportunity, []*structures.Node, error) {
 	stakerAddrs := make([]common.Address, 0)
 	sng.stakers.forall(func(st *Staker) {
 		stakerAddrs = append(stakerAddrs, st.address)
@@ -191,9 +190,10 @@ func (sng *StakedNodeGraph) GenerateNextConfProof(
 
 	nodeOps := make([]valprotocol.ConfirmNodeOpportunity, 0)
 	currentConfirmedNode := sng.latestConfirmed
-	keepChecking := true
 	confNodes := make([]*structures.Node, 0)
-	for ; keepChecking; keepChecking = false {
+	for {
+		keepChecking := false
+
 		for _, successor := range currentConfirmedNode.SuccessorHashes() {
 			if successor == ZeroBytes32 {
 				continue
@@ -206,28 +206,33 @@ func (sng *StakedNodeGraph) GenerateNextConfProof(
 				stakerAddrs,
 			)
 			if confirmable {
-				confOpp := confirmNodeOpp(currentNode)
-
-				if confOpp != nil {
-					confNodes = append(confNodes, currentNode)
-					nodeOps = append(nodeOps, confOpp)
-					currentConfirmedNode = currentNode
-					keepChecking = true
+				confOpp, err := confirmNodeOpp(currentNode)
+				if err != nil {
+					return nil, nil, err
 				}
+
+				confNodes = append(confNodes, currentNode)
+				nodeOps = append(nodeOps, confOpp)
+				currentConfirmedNode = currentNode
+				keepChecking = true
 				break
 			}
+		}
+
+		if keepChecking {
+			break
 		}
 	}
 
 	if len(nodeOps) == 0 {
-		return nil, nil
-	} else {
-		return sng.makeConfirmOpp(
-			nodeOps,
-			confNodes,
-			currentTime,
-			stakerAddrs)
+		return nil, nil, fmt.Errorf("no node opportunities found")
 	}
+
+	return sng.makeConfirmOpp(
+		nodeOps,
+		confNodes,
+		currentTime,
+		stakerAddrs)
 }
 
 func (sng *StakedNodeGraph) generateAlignedStakersProofs(
@@ -365,30 +370,7 @@ func (sng *StakedNodeGraph) CheckChallengeOpportunityAny(staker *Staker) *Challe
 	return ret
 }
 
-func (sng *StakedNodeGraph) checkChallengeOpportunityAllPairs() []*ChallengeOpportunity {
-	var ret []*ChallengeOpportunity
-	var stakers []*Staker
-	sng.stakers.forall(func(s *Staker) {
-		stakers = append(stakers, s)
-	})
-	for i, s1 := range stakers {
-		for j := i + 1; j < len(stakers); j++ {
-			opp := sng.CheckChallengeOpportunityPair(s1, stakers[j])
-			if opp != nil {
-				ret = append(ret, opp)
-				break
-			}
-		}
-	}
-	return ret
-}
-
-func (sng *StakedNodeGraph) makeConfirmOpp(
-	nodeOps []valprotocol.ConfirmNodeOpportunity,
-	confNodes []*structures.Node,
-	currentTime common.TimeTicks,
-	stakerAddrs []common.Address,
-) (*valprotocol.ConfirmOpportunity, []*structures.Node) {
+func (sng *StakedNodeGraph) makeConfirmOpp(nodeOps []valprotocol.ConfirmNodeOpportunity, confNodes []*structures.Node, currentTime common.TimeTicks, stakerAddrs []common.Address) (*valprotocol.ConfirmOpportunity, []*structures.Node, error) {
 	nodeLimit := len(nodeOps)
 	for nodeLimit > 0 {
 		totalSize := 0
@@ -409,8 +391,9 @@ func (sng *StakedNodeGraph) makeConfirmOpp(
 				CurrentLatestConfirmed: sng.latestConfirmed.Hash(),
 				StakerAddresses:        stakerAddrs,
 				StakerProofs:           proofs,
-			}, confNodes
+			}, confNodes, nil
 		}
 	}
-	panic("Unreachable code")
+
+	return nil, nil, fmt.Errorf("unreachable code")
 }

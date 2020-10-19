@@ -29,9 +29,9 @@ type CheckpointStorage interface {
 	GetInitialMachine(valueCache ValueCache) (Machine, error)
 	GetMachine(machineHash common.Hash, valueCache ValueCache) (Machine, error)
 	SaveValue(val value.Value) bool
-	GetValue(hashValue common.Hash, valueCache ValueCache) value.Value
+	GetValue(hashValue common.Hash, valueCache ValueCache) (value.Value, error)
 	DeleteValue(hashValue common.Hash) bool
 	SaveData(key []byte, serializedValue []byte) bool
-	GetData(key []byte) []byte
+	GetData(key []byte) ([]byte, error)
 	DeleteData(key []byte) bool
 }

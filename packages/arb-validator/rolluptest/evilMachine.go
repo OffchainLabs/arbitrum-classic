@@ -57,11 +57,6 @@ func _tweakHash(h common.Hash) common.Hash {
 	}
 }
 
-func _inverseTweakHash(h common.Hash) common.Hash {
-	// the inverse of _tweakHash
-	return _tweakHash(h)
-}
-
 func (e EvilMachine) ExecuteAssertion(
 	maxSteps uint64,
 	inboxMessages []inbox.InboxMessage,

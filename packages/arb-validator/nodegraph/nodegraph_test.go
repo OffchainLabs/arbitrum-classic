@@ -164,6 +164,7 @@ func TestPrunePrevNodes(t *testing.T) {
 	mach, stakedNodeGraph := getNodeGraph(t)
 	initialNode := structures.NewInitialNode(mach)
 	dispNode, execAssert := getDisputableNode(initialNode)
+	// Last value returned is simply a list of nodes
 	err, nextValid, _ := createNodesOnAssert(
 		stakedNodeGraph,
 		initialNode,
@@ -264,6 +265,7 @@ func TestHasReferenceWithSuccessors(t *testing.T) {
 	initialNode := structures.NewInitialNode(mach)
 
 	dispNode, execAssert := getDisputableNode(initialNode)
+	// Last value returned is simply a list of nodes
 	_, _, _ = createNodesOnAssert(
 		stakedNodeGraph,
 		initialNode,
@@ -285,6 +287,7 @@ func TestPruneNewNode(t *testing.T) {
 	mach, stakedNodeGraph := getNodeGraph(t)
 	initialNode := structures.NewInitialNode(mach)
 	dispNode, execAssert := getDisputableNode(initialNode)
+	// Last value returned is simply a list of nodes
 	err, nextValid, _ := createNodesOnAssert(
 		stakedNodeGraph,
 		initialNode,
@@ -396,7 +399,6 @@ func createNodesOnAssert(
 func getDisputableNode(baseNode *structures.Node) (*valprotocol.DisputableNode, *protocol.ExecutionAssertion) {
 	theMachine := baseNode.Machine()
 	execAssertion, numSteps := theMachine.ExecuteAssertion(1, nil, time.Hour)
-	_ = execAssertion
 
 	assertionParams := &valprotocol.AssertionParams{
 		NumSteps:             numSteps,

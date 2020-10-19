@@ -71,7 +71,7 @@ func waitForReceipt(ctx context.Context, client ethutils.EthClient, from ethcomm
 func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.EthClient, txHash ethcommon.Hash) (*types.Receipt, error) {
 	for {
 		select {
-		case _ = <-time.After(time.Second):
+		case <-time.After(time.Second):
 			receipt, err := client.TransactionReceipt(ctx, txHash)
 			if receipt == nil && err == nil {
 				continue
@@ -84,7 +84,7 @@ func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.EthCli
 				return nil, err
 			}
 			return receipt, nil
-		case _ = <-ctx.Done():
+		case <-ctx.Done():
 			return nil, errors.New("Receipt not found")
 		}
 	}
@@ -96,10 +96,6 @@ func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, f
 		return nil, err
 	}
 	if receipt.Status != 1 {
-		data, err := receipt.MarshalJSON()
-		if err != nil {
-			return nil, errors.New("Failed unmarshalling receipt")
-		}
 		callMsg := ethereum.CallMsg{
 			From:     from,
 			To:       tx.To(),
@@ -108,11 +104,11 @@ func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, f
 			Value:    tx.Value(),
 			Data:     tx.Data(),
 		}
-		data, err = client.CallContract(ctx, callMsg, receipt.BlockNumber)
+		data, err := client.CallContract(ctx, callMsg, receipt.BlockNumber)
 		if err != nil {
-			return nil, fmt.Errorf("Transaction %v failed with error %v", methodName, err)
+			return nil, fmt.Errorf("transaction %v failed with error %v", methodName, err)
 		}
-		return nil, fmt.Errorf("Transaction %v failed with tx %v", methodName, string(data))
+		return nil, fmt.Errorf("transaction %v failed with tx %v", methodName, string(data))
 	}
 	return receipt, nil
 }

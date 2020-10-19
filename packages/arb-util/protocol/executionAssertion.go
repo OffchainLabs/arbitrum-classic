@@ -47,6 +47,7 @@ func NewExecutionAssertion(
 func valuesToRaw(values []value.Value) []byte {
 	var buf bytes.Buffer
 	for _, val := range values {
+		// Error can only occur with writes and bytes.Buffer is safe
 		_ = value.MarshalValue(val, &buf)
 	}
 	return buf.Bytes()

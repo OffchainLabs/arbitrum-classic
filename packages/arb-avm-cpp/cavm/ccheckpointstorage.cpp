@@ -144,11 +144,6 @@ ByteSlice getValue(const CCheckpointStorage* storage_ptr,
     auto hash = receiveUint256(hash_key);
     auto value_cache = static_cast<ValueCache*>(value_cache_ptr);
 
-    if (value_cache == nullptr) {
-        ValueCache cache;
-        return returnValueResult(storage->getValue(hash, cache));
-    }
-
     return returnValueResult(storage->getValue(hash, *value_cache));
 }
 

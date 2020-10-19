@@ -48,6 +48,8 @@ func NewOutMessageFromValue(val value.Value) (OutMessage, error) {
 	if tup.Len() != 3 {
 		return failRet, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
 	}
+
+	// Tuple size already verified above, so error can be ignored
 	kind, _ := tup.GetByInt64(0)
 	sender, _ := tup.GetByInt64(1)
 	messageData, _ := tup.GetByInt64(2)
@@ -77,6 +79,7 @@ func NewRandomOutMessage(msg Message) OutMessage {
 }
 
 func (im OutMessage) AsValue() value.Value {
+	// Static slice correct size, so error can be ignored
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(int64(im.Kind)),
 		inbox.NewIntFromAddress(im.Sender),

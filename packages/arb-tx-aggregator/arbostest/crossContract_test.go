@@ -105,6 +105,7 @@ func TestCrossContract(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Last parameter returned is number of steps executed
 	assertion, _ := mach.ExecuteAssertion(1000000000, inboxMessages, 0)
 	data, err := inbox.TestVectorJSON(inboxMessages, assertion.ParseLogs(), assertion.ParseOutMessages())
 	if err != nil {

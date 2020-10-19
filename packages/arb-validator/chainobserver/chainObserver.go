@@ -151,8 +151,11 @@ func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
 					chain.RUnlock()
 					break
 				}
-				confOpp, _ := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(chain.currentEventId.BlockId.Height))
-				if confOpp != nil {
+
+				confOpp, _, err := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(chain.currentEventId.BlockId.Height))
+				if err != nil {
+					log.Printf("Error generating next proof: %v", err)
+				} else {
 					for _, listener := range chain.listeners {
 						listener.ConfirmableNodes(ctx, confOpp)
 					}
@@ -195,7 +198,7 @@ func (chain *ChainObserver) startCleanupThread(ctx context.Context) {
 					chain.RUnlock()
 					break
 				}
-				prunesToDo := chain.NodeGraph.GenerateNodePruneInfo(chain.NodeGraph.Stakers())
+				prunesToDo := chain.NodeGraph.GenerateNodePruneInfo()
 				mootedToDo, oldToDo := chain.NodeGraph.GenerateStakerPruneInfo()
 				chain.RUnlock()
 
@@ -581,6 +584,6 @@ func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.Asser
 
 func (chain *ChainObserver) equals(co2 *ChainObserver) bool {
 	return chain.NodeGraph.Equals(co2.NodeGraph) &&
-		bytes.Compare(chain.rollupAddr[:], co2.rollupAddr[:]) == 0 &&
+		bytes.Equal(chain.rollupAddr[:], co2.rollupAddr[:]) &&
 		chain.Inbox.Equals(co2.Inbox)
 }
