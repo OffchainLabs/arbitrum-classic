@@ -36,18 +36,30 @@ func NewStressTestClient(client ArbClient, reorgInterval time.Duration) *ArbClie
 
 var reorgError = errors.New("reorg occured")
 
-func (st *ArbClientStressTest) SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan MaybeBlockId, error) {
-	rawHeadersChan, err := st.ArbClient.SubscribeBlockHeaders(ctx, startBlockId)
+func (st *ArbClientStressTest) SubscribeBlockHeadersAfter(ctx context.Context, prevBlockId *common.BlockId) (<-chan MaybeBlockId, error) {
+	headers, err := st.ArbClient.SubscribeBlockHeadersAfter(ctx, prevBlockId)
 	if err != nil {
 		return nil, err
 	}
+	return st.addReorgs(headers), nil
+}
+
+func (st *ArbClientStressTest) SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan MaybeBlockId, error) {
+	headers, err := st.ArbClient.SubscribeBlockHeaders(ctx, startBlockId)
+	if err != nil {
+		return nil, err
+	}
+	return st.addReorgs(headers), nil
+}
+
+func (st *ArbClientStressTest) addReorgs(blockIdChan <-chan MaybeBlockId) <-chan MaybeBlockId {
 	ticker := time.NewTicker(st.reorgInterval)
 	headerChan := make(chan MaybeBlockId, 10)
 	go func() {
 		defer close(headerChan)
 		for {
 			select {
-			case maybeHeader, ok := <-rawHeadersChan:
+			case maybeHeader, ok := <-blockIdChan:
 				if !ok {
 					return
 				}
@@ -63,5 +75,5 @@ func (st *ArbClientStressTest) SubscribeBlockHeaders(ctx context.Context, startB
 			}
 		}
 	}()
-	return headerChan, nil
+	return headerChan
 }
