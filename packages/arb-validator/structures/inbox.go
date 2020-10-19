@@ -22,7 +22,6 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -206,21 +205,14 @@ func (x *InboxBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Mes
 	ret := NewMessageStack()
 	ret.hashOfRest = x.HashOfRest.Unmarshal()
 
-	valueCache, err := cmachine.NewValueCache()
-	if err != nil {
-		return nil, err
-	}
-
 	for i := len(x.Items) - 1; i >= 0; i = i - 1 {
-		val := ctx.GetValue(x.Items[i].Unmarshal(), valueCache)
+		val := ctx.GetValue(x.Items[i].Unmarshal())
 		msg, err := inbox.NewInboxMessageFromValue(val)
 		if err != nil {
 			return nil, err
 		}
-		err = ret.DeliverMessage(msg)
-		if err != nil {
-			// ##### Were these errors ignored on purpose? #####
-			continue
+		if err := ret.DeliverMessage(msg); err != nil {
+			return nil, err
 		}
 	}
 	return ret, nil

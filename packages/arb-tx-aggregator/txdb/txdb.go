@@ -113,11 +113,7 @@ func (txdb *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 		var machineHash common.Hash
 		copy(machineHash[:], chainObserverBytes)
 		lastInboxSeq = new(big.Int).SetBytes(chainObserverBytes[32:])
-		valueCache, err := cmachine.NewValueCache()
-		if err != nil {
-			return err
-		}
-		mach = restoreCtx.GetMachine(machineHash, valueCache)
+		mach = restoreCtx.GetMachine(machineHash)
 		blockId = restoreBlockId
 		return nil
 	}); err != nil {

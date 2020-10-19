@@ -21,7 +21,8 @@ void ValueCache::clear() {
 }
 
 void ValueCache::maybeSave(value val) {
-    cache.emplace(hash_value(val), std::move(val));
+    auto value_hash = hash_value(val);
+    cache.emplace(value_hash, std::move(val));
 }
 
 nonstd::optional<value> ValueCache::loadIfExists(const uint256_t& hash) {

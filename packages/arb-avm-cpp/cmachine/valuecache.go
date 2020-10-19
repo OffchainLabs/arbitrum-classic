@@ -41,11 +41,11 @@ func NewValueCache() (*ValueCache, error) {
 		return nil, fmt.Errorf("error loading value cache")
 	}
 	ret := &ValueCache{cValueCache}
-	runtime.SetFinalizer(ret, DestroyValueCache)
+	runtime.SetFinalizer(ret, destroyValueCache)
 	return ret, nil
 }
 
-func DestroyValueCache(cValueCache *ValueCache) {
+func destroyValueCache(cValueCache *ValueCache) {
 	C.destroyValueCache(cValueCache.c)
 }
 

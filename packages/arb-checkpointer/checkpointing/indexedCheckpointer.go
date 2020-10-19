@@ -300,22 +300,23 @@ func deleteCheckpointForKey(bs machine.BlockStore, db machine.CheckpointStorage,
 }
 
 type restoreContextLocked struct {
-	db       machine.CheckpointStorage
-	values   map[common.Hash]value.Value
-	machines map[common.Hash]machine.Machine
+	db         machine.CheckpointStorage
+	values     map[common.Hash]value.Value
+	machines   map[common.Hash]machine.Machine
+	valueCache machine.ValueCache
 }
 
 func newRestoreContextLocked(db machine.CheckpointStorage, manifest *ckptcontext.CheckpointManifest) (*restoreContextLocked, error) {
-	rcl := restoreContextLocked{db, map[common.Hash]value.Value{}, map[common.Hash]machine.Machine{}}
-
 	valueCache, err := cmachine.NewValueCache()
 	if err != nil {
 		return nil, err
 	}
 
+	rcl := restoreContextLocked{db, map[common.Hash]value.Value{}, map[common.Hash]machine.Machine{}, valueCache}
+
 	for _, valHash := range manifest.GetValues() {
 		hash := valHash.Unmarshal()
-		val := rcl.db.GetValue(hash, valueCache)
+		val := rcl.db.GetValue(hash, rcl.valueCache)
 		if val == nil {
 			return nil, fmt.Errorf("unable to find the value hash: %s", hash.String())
 		}
@@ -336,20 +337,20 @@ func newRestoreContextLocked(db machine.CheckpointStorage, manifest *ckptcontext
 	return &rcl, nil
 }
 
-func (rcl *restoreContextLocked) GetValue(h common.Hash, vc machine.ValueCache) value.Value {
+func (rcl *restoreContextLocked) GetValue(h common.Hash) value.Value {
 	if val, ok := rcl.values[h]; ok {
 		return val
 	}
 
-	return rcl.db.GetValue(h, vc)
+	return rcl.db.GetValue(h, rcl.valueCache)
 }
 
-func (rcl *restoreContextLocked) GetMachine(h common.Hash, vc machine.ValueCache) machine.Machine {
+func (rcl *restoreContextLocked) GetMachine(h common.Hash) machine.Machine {
 	if mach, ok := rcl.machines[h]; ok {
 		return mach
 	}
 
-	ret, err := rcl.db.GetMachine(h, vc)
+	ret, err := rcl.db.GetMachine(h, rcl.valueCache)
 	if err != nil {
 		log.Fatal(err)
 	}
