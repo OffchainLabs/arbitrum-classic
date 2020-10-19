@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package rollupmanager
+package arbbridge
 
 import (
 	"context"
@@ -23,27 +23,26 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
 type ArbClientStressTest struct {
-	arbbridge.ArbClient
+	ArbClient
 	reorgInterval time.Duration
 }
 
-func NewStressTestClient(client arbbridge.ArbClient, reorgInterval time.Duration) *ArbClientStressTest {
+func NewStressTestClient(client ArbClient, reorgInterval time.Duration) *ArbClientStressTest {
 	return &ArbClientStressTest{client, reorgInterval}
 }
 
 var reorgError = errors.New("reorg occured")
 
-func (st *ArbClientStressTest) SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
+func (st *ArbClientStressTest) SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan MaybeBlockId, error) {
 	rawHeadersChan, err := st.ArbClient.SubscribeBlockHeaders(ctx, startBlockId)
 	if err != nil {
 		return nil, err
 	}
 	ticker := time.NewTicker(st.reorgInterval)
-	headerChan := make(chan arbbridge.MaybeBlockId, 10)
+	headerChan := make(chan MaybeBlockId, 10)
 	go func() {
 		defer close(headerChan)
 		for {
@@ -59,7 +58,7 @@ func (st *ArbClientStressTest) SubscribeBlockHeaders(ctx context.Context, startB
 
 			case <-ticker.C:
 				log.Println("Manually triggering reorg")
-				headerChan <- arbbridge.MaybeBlockId{Err: reorgError}
+				headerChan <- MaybeBlockId{Err: reorgError}
 				return
 			}
 		}
