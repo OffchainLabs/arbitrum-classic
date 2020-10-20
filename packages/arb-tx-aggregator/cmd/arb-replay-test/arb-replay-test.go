@@ -13,6 +13,9 @@ import (
 )
 
 func main() {
+	// Enable line numbers in logging
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	file := os.Args[1]
 	log.Println("Running test:", file)
 	data, err := ioutil.ReadFile(file)

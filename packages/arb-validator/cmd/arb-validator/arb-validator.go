@@ -41,6 +41,9 @@ import (
 )
 
 func main() {
+	// Enable line numbers in logging
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	// Check number of args
 	flag.Parse()
 	switch os.Args[1] {

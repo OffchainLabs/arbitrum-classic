@@ -36,6 +36,9 @@ import (
 )
 
 func main() {
+	// Enable line numbers in logging
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	walletArgs := utils.AddWalletFlags(fs)
 	rpcVars := utils2.AddRPCFlags(fs)

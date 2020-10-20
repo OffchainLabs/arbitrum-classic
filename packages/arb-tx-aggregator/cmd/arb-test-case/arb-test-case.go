@@ -29,6 +29,9 @@ import (
 )
 
 func main() {
+	// Enable line numbers in logging
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	if err := generateTestCase(
 		"http://localhost:7545",
 		common.HexToAddress("0xc68DCee7b8cA57F41D1A417103CB65836E99e013"),
