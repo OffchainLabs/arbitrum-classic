@@ -13,6 +13,7 @@ require (
 	github.com/offchainlabs/arbitrum/packages/arb-checkpointer v0.7.2
 	github.com/offchainlabs/arbitrum/packages/arb-evm v0.7.2
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.2
+	github.com/offchainlabs/arbitrum/packages/arb-validator v0.7.2
 	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.7.2
 	github.com/pkg/errors v0.9.1
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
