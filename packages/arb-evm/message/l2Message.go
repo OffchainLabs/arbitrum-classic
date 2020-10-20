@@ -420,16 +420,22 @@ func newCompressedTxFromEth(tx *types.Transaction) CompressedTx {
 type CompressedECDSATransaction struct {
 	CompressedTx
 
-	V *big.Int
+	V byte
 	R *big.Int
 	S *big.Int
 }
 
 func NewCompressedECDSAFromEth(tx *types.Transaction) CompressedECDSATransaction {
 	v, r, s := tx.RawSignatureValues()
+	vByte := byte(0)
+	if v.Cmp(big.NewInt(27)) == 0 || v.Cmp(big.NewInt(28)) == 0 {
+		vByte = byte(v.Uint64())
+	} else {
+		vByte = byte(v.Uint64() % 2)
+	}
 	return CompressedECDSATransaction{
 		CompressedTx: newCompressedTxFromEth(tx),
-		V:            v,
+		V:            vByte,
 		R:            r,
 		S:            s,
 	}

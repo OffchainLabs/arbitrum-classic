@@ -718,15 +718,15 @@ func generateTestTransactions(t *testing.T, chain common.Address) []*types.Trans
 	if err != nil {
 		t.Fatal(err)
 	}
-	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
+
 	tx := types.NewTransaction(0, common.RandAddress().ToEthAddress(), big.NewInt(1), 100000000000, big.NewInt(0), []byte{})
-	signedTx, err := types.SignTx(tx, signer, pk)
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	tx2 := types.NewTransaction(1, common.RandAddress().ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
-	signedTx2, err := types.SignTx(tx2, signer, pk)
+	signedTx2, err := types.SignTx(tx2, types.HomesteadSigner{}, pk)
 	if err != nil {
 		t.Fatal(err)
 	}
