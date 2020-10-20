@@ -79,7 +79,7 @@ library Value {
     }
 
     function typeCodeVal(Data memory val) internal pure returns (Data memory) {
-        require(val.typeCode != 2, "invalid type code");
+        require(val.typeCode != 2, "invalid type code ???");
         return newInt(val.typeCode);
     }
 

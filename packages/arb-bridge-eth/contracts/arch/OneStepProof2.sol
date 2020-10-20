@@ -286,6 +286,11 @@ contract OneStepProof2 is IOneStepProof2 {
     }
 
     function executeNewBuffer(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        if (!val1.isInt()) {
+            handleOpcodeError(context);
+            return;
+        }
         pushVal(context.stack, Value.newBuffer(keccak256(abi.encodePacked(bytes32(0)))));
     }
 
@@ -397,8 +402,8 @@ contract OneStepProof2 is IOneStepProof2 {
 
     struct BufferProof {
         bytes32[] proof1;
-        bytes32[] proof2;
         bytes32[] nproof1;
+        bytes32[] proof2;
         bytes32[] nproof2;
     }
 
@@ -414,7 +419,7 @@ contract OneStepProof2 is IOneStepProof2 {
         uint256 res = 0;
         for (uint i = 0; i < arr.length; i++) {
             res = res << 8;
-            res = res | uint256(uint8(arr[arr.length-1-i]));
+            res = res | uint256(uint8(arr[i]));
         }
         return res;
     }
@@ -481,12 +486,14 @@ contract OneStepProof2 is IOneStepProof2 {
     }
 
     function set(bytes32 buf, uint loc, bytes32 v, bytes32[] memory proof, bytes32[] memory nproof) internal pure returns (bytes32) {
+        require(nproof.length == 3, "normalization proof has wrong size");
         return set(buf, loc, v, proof, uint256(nproof[0]), nproof[1], nproof[2]);
     }
 
     function setBuffer8(bytes32 buf, uint256 offset, uint256 b, BufferProof memory proof) internal pure returns (bytes32) {
         bytes32 word = get(buf, offset/32, proof.proof1);
         bytes32 nword = setByte(word, offset%32, b);
+        require(getByte(nword, offset%32) == b, "set byte or get byte progen");
         return set(buf, offset/32, nword, proof.proof1, proof.nproof1);
     }
 
@@ -537,8 +544,7 @@ contract OneStepProof2 is IOneStepProof2 {
     function executeGetBuffer8(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
-        Value.Data memory val3 = popVal(context.stack);
-        if (!val2.isInt() || !val3.isInt() || !val1.isBuffer()) {
+        if (!val2.isInt() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
         }
@@ -549,8 +555,7 @@ contract OneStepProof2 is IOneStepProof2 {
     function executeGetBuffer64(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
-        Value.Data memory val3 = popVal(context.stack);
-        if (!val2.isInt() || !val3.isInt() || !val1.isBuffer()) {
+        if (!val2.isInt() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
         }
@@ -561,8 +566,7 @@ contract OneStepProof2 is IOneStepProof2 {
     function executeGetBuffer256(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
-        Value.Data memory val3 = popVal(context.stack);
-        if (!val2.isInt() || !val3.isInt() || !val1.isBuffer()) {
+        if (!val2.isInt() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
         }
@@ -724,18 +728,18 @@ contract OneStepProof2 is IOneStepProof2 {
        
         if (opCode == OP_NEWBUFFER) {
             return (1, 0, 1, executeNewBuffer);
-        } else if (opCode == OP_SETBUFFER8) {
+        } else if (opCode == OP_GETBUFFER8) {
             return (2, 0, 10, executeGetBuffer8);
         } else if (opCode == OP_GETBUFFER64) {
             return (2, 0, 10, executeGetBuffer64);
-        } else if (opCode == OP_GETBUFFER8) {
+        } else if (opCode == OP_GETBUFFER256) {
             return (2, 0, 10, executeGetBuffer256);
         } else if (opCode == OP_SETBUFFER8) {
-            return (3, 0, 100, executeSetBuffer8);
+            return (3, 0, 10, executeSetBuffer8);
         } else if (opCode == OP_SETBUFFER64) {
-            return (3, 0, 100, executeSetBuffer64);
-        } else if (opCode == OP_SETBUFFER8) {
-            return (3, 0, 100, executeSetBuffer256);
+            return (3, 0, 10, executeSetBuffer64);
+        } else if (opCode == OP_SETBUFFER256) {
+            return (3, 0, 10, executeSetBuffer256);
         } else {
             return (0, 0, 0, executeErrorInsn);
         }

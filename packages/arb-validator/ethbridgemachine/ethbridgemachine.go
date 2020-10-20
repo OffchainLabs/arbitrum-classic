@@ -18,6 +18,8 @@ package ethbridgemachine
 
 import (
 	"errors"
+	"fmt"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -28,9 +30,10 @@ import (
 )
 
 type proofData struct {
-	Assertion *valprotocol.ExecutionAssertionStub
-	Proof     []byte
-	Message   *inbox.InboxMessage
+	Assertion   *valprotocol.ExecutionAssertionStub
+	Proof       []byte
+	BufferProof []byte
+	Message     *inbox.InboxMessage
 }
 
 func generateProofCases(contract string) ([]*proofData, error) {
@@ -50,7 +53,14 @@ func generateProofCases(contract string) ([]*proofData, error) {
 		if err != nil {
 			return nil, err
 		}
-		beforeMach := mach.Clone()
+		mach.PrintState()
+		bproof, err := mach.MarshalBufferProof()
+		fmt.Printf("Got buffer proof %v\n", len(bproof))
+		if err != nil {
+			fmt.Printf("Got error %v\n", err)
+			return nil, err
+		}
+		// beforeMach := mach.Clone()
 		messages, err := ms.GetMessages(prevInboxHash, 1)
 		if err != nil {
 			return nil, err
@@ -63,9 +73,13 @@ func generateProofCases(contract string) ([]*proofData, error) {
 			return nil, errors.New("executed incorrect step count")
 		}
 		if mach.CurrentStatus() == machine.ErrorStop {
+			fmt.Println("Machine stopped in error state")
+			return proofs, nil
+			/*
 			beforeMach.PrintState()
 			mach.PrintState()
 			return nil, errors.New("machine stopped in error state")
+			*/
 		}
 		stub := structures.NewExecutionAssertionStubFromWholeAssertion(a, prevInboxHash, ms)
 		var msg *inbox.InboxMessage
@@ -75,6 +89,7 @@ func generateProofCases(contract string) ([]*proofData, error) {
 		proofs = append(proofs, &proofData{
 			Assertion: stub,
 			Proof:     proof,
+			BufferProof:     bproof,
 			Message:   msg,
 		})
 		prevInboxHash = stub.AfterInboxHash

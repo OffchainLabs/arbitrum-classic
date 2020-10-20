@@ -179,7 +179,8 @@ std::vector<unsigned char> bufferToVec(const Buffer& b) {
         size--;
     }
     uint64_t size_ext = b.size();
-    while (size_ext/2 > size) {
+    if (size_ext < 32) size_ext = 32;
+    while (size_ext/2 > size && size_ext > 32) {
         size_ext = size_ext/2;
     }
     for (uint64_t i = 0; i < size_ext; i++) {
@@ -203,6 +204,7 @@ uint256_t merkleHash(uint8_t *buf, int offset, int sz) {
 std::vector<unsigned char> makeProof(uint8_t *arr, uint64_t offset, uint64_t sz, uint64_t loc) {
     if (sz == 32) {
         return std::vector<unsigned char>(arr+loc, arr+loc+32);
+        // return std::vector<unsigned char>();
     } else if (loc < offset + sz/2) {
         auto proof = makeProof(arr, offset, sz/2, loc);
         marshal_uint256_t(merkleHash(arr, offset+sz/2, sz/2), proof);
@@ -226,7 +228,12 @@ std::vector<unsigned char> makeNormalizationProof(uint8_t *arr, uint64_t sz) {
     }
     res.push_back(makeProof(arr, 0, sz, 0).size()/32);
 
-    merkleHash(arr, 0, sz/2),
+    if (sz == 32) {
+        res.insert(res.end(), arr, arr+32);
+        res.insert(res.end(), arr, arr+32);
+        return res;
+    }
+
     marshal_uint256_t(merkleHash(arr, 0, sz/2), res);
     marshal_uint256_t(merkleHash(arr, sz/2, sz/2), res);
     return res;
@@ -240,10 +247,13 @@ std::vector<unsigned char> makeNormalizationProof(Buffer &buf) {
 void insertSizes(std::vector<unsigned char> &buf, int sz1, int sz2, int sz3, int sz4) {
     int acc = 1;
     buf.push_back(static_cast<uint8_t>(acc));
+    std::cerr << "Setting sizes " << acc << std::endl;
     acc += sz1/32;
     buf.push_back(static_cast<uint8_t>(acc));
+    std::cerr << "Setting sizes " << acc << std::endl;
     acc += sz2/32;
     buf.push_back(static_cast<uint8_t>(acc));
+    std::cerr << "Setting sizes " << acc << std::endl;
     acc += sz3/32;
     buf.push_back(static_cast<uint8_t>(acc));
     acc += sz4/32;
@@ -280,13 +290,15 @@ void makeSetBufferProof(std::vector<unsigned char> &buf, uint64_t loc, Buffer bu
         buf.insert(buf.end(), nproof1.begin(), nproof1.end());
         buf.insert(buf.end(), proof2.begin(), proof2.end());
         buf.insert(buf.end(), nproof2.begin(), nproof2.end());
-
     }
 }
 
 std::vector<unsigned char> MachineState::marshalBufferProof() {
     std::vector<unsigned char> buf;
     auto opcode = loadCurrentInstruction().op.opcode;
+    if (opcode < OpCode::GET_BUFFER8 || opcode > OpCode::SET_BUFFER256) {
+        return buf;
+    } 
     // Find the buffer
     auto buffer = nonstd::get_if<Buffer>(&stack[0]);
     if (!buffer) {
@@ -323,8 +335,11 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
           return buf;
         }
         if (opcode == OpCode::SET_BUFFER8) {
+            std::cerr << "Here" << std::endl;
             Buffer nbuffer = buffer->set(loc, static_cast<uint8_t>(*val));
+            std::cerr << "Making proof" << std::endl;
             auto proof1 = makeProof(*buffer, loc);
+            std::cerr << "Normalize" << std::endl;
             auto nproof1 = makeNormalizationProof(nbuffer);
             insertSizes(buf, proof1.size(), nproof1.size(), 0, 0);
             buf.insert(buf.end(), proof1.begin(), proof1.end());
@@ -335,8 +350,6 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
             makeSetBufferProof(buf, loc, *buffer, *val, 32);
         }
     }
-
-    // when setting, have to simulate intermediate results
 
     return buf;
 }
@@ -787,6 +800,7 @@ BlockReason MachineState::runOp(OpCode opcode) {
 }
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
+    os << "hash " << intx::to_string(val.hash(), 16) << "\n";
     os << "status " << static_cast<int>(val.state) << "\n";
     os << "pc " << val.pc << "\n";
     os << "data stack: " << val.stack << "\n";

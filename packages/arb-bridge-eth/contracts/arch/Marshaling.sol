@@ -52,6 +52,18 @@ library Marshaling {
         return (startOffset + 32, data.toUint(startOffset));
     }
 
+    function deserializeBytes32(bytes memory data, uint256 startOffset)
+        internal
+        pure
+        returns (
+            uint256, // offset
+            bytes32 // val
+        )
+    {
+        require(data.length >= startOffset && data.length - startOffset >= 32, "too short");
+        return (startOffset + 32, data.toBytes32(startOffset));
+    }
+
     function deserializeCheckedInt(bytes memory data, uint256 startOffset)
         internal
         pure
@@ -134,6 +146,10 @@ library Marshaling {
             return (offset, Value.newInt(intVal));
         } else if (valType == Value.codePointTypeCode()) {
             return deserializeCodePoint(data, offset);
+        } else if (valType == Value.bufferTypeCode()) {
+            bytes32 hashVal;
+            (offset, hashVal) = deserializeBytes32(data, offset);
+            return (offset, Value.newBuffer(hashVal));
         } else if (valType == Value.tuplePreImageTypeCode()) {
             return deserializeHashPreImage(data, offset);
         } else if (valType >= Value.tupleTypeCode() && valType < Value.valueTypeCode()) {
