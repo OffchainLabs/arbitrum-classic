@@ -65,6 +65,8 @@ func setupRollup(ctx context.Context, client ethutils.EthClient, auth *bind.Tran
 	return rollupAddress, inboxAddress, err
 }
 
+// TestReorg launches an Observer against a aggressively reorging chain in order
+// to test it's ability to handle reorgs
 func TestReorg(t *testing.T) {
 	clnt, pks := test.SimulatedBackend()
 	l1Client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
