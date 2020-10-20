@@ -21,13 +21,12 @@ import (
 	"fmt"
 	ethmath "github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	errors2 "github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"math/big"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 func extractUInt256(data []byte) (*big.Int, []byte) {
@@ -244,33 +243,26 @@ func decodeCompressedTx(r io.Reader) (CompressedTx, error) {
 
 }
 
-func encodeECDSASig(v, r, s *big.Int) []byte {
-	vByte := byte(0)
-	if v.Cmp(big.NewInt(27)) == 0 || v.Cmp(big.NewInt(28)) == 0 {
-		vByte = byte(v.Uint64())
-	} else {
-		vByte = byte(v.Uint64() % 2)
-	}
-
+func encodeECDSASig(v byte, r, s *big.Int) []byte {
 	data := make([]byte, 0, 65)
 	data = append(data, ethmath.U256Bytes(r)...)
 	data = append(data, ethmath.U256Bytes(s)...)
-	data = append(data, vByte)
+	data = append(data, v)
 	return data
 }
 
-func decodeECDSASig(rd io.Reader) (v, r, s *big.Int, err error) {
+func decodeECDSASig(rd io.Reader) (v byte, r, s *big.Int, err error) {
 	rData := make([]byte, 32)
 	if count, _ := rd.Read(rData); count != len(rData) {
-		return nil, nil, nil, errors.New("couldn't read r")
+		return 0, nil, nil, errors.New("couldn't read r")
 	}
 	sData := make([]byte, 32)
 	if count, _ := rd.Read(sData); count != len(sData) {
-		return nil, nil, nil, errors.New("couldn't read s")
+		return 0, nil, nil, errors.New("couldn't read s")
 	}
 	vData := make([]byte, 1)
 	if count, _ := rd.Read(vData); count != len(vData) {
-		return nil, nil, nil, errors.New("couldn't read v")
+		return 0, nil, nil, errors.New("couldn't read v")
 	}
-	return new(big.Int).SetBytes(vData), new(big.Int).SetBytes(rData), new(big.Int).SetBytes(sData), nil
+	return vData[0], new(big.Int).SetBytes(rData), new(big.Int).SetBytes(sData), nil
 }
