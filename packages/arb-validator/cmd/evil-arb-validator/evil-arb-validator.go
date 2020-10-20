@@ -40,6 +40,9 @@ import (
 // 3) Global EthBridge addresses json file
 // 4) ethURL
 func main() {
+	// Enable line numbers in logging
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	// Check number of args
 	flag.Parse()
 	switch os.Args[1] {
