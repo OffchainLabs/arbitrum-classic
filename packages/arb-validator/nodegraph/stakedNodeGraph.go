@@ -371,7 +371,7 @@ func (sng *StakedNodeGraph) makeConfirmOpp(nodeOps []valprotocol.ConfirmNodeOppo
 	}
 
 	var proofs [][]common.Hash
-	for ; nodeLimit >= 1; nodeLimit-- {
+	for {
 		totalSize := 0
 		for _, opp := range nodeOps[:nodeLimit] {
 			totalSize += opp.ProofSize()
@@ -384,9 +384,10 @@ func (sng *StakedNodeGraph) makeConfirmOpp(nodeOps []valprotocol.ConfirmNodeOppo
 		for _, proof := range proofs {
 			totalSize += len(proof)
 		}
-		if totalSize < MaxAssertionSize {
+		if totalSize < MaxAssertionSize || nodeLimit == 1 {
 			break
 		}
+		nodeLimit--
 	}
 
 	return &valprotocol.ConfirmOpportunity{

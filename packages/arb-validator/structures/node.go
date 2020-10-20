@@ -130,7 +130,7 @@ func NewRandomInvalidNodeFromValidPrev(prev *Node, stub *valprotocol.ExecutionAs
 		common.NewTimeBlocks(common.RandBigInt()),
 	)
 
-	if kind != valprotocol.ValidChildType {
+	if kind == valprotocol.ValidChildType {
 		panic("Must provide invalid child type")
 	}
 
