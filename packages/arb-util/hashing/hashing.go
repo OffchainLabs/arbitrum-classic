@@ -18,7 +18,6 @@ package hashing
 
 import (
 	"golang.org/x/crypto/sha3"
-	"log"
 	"math/big"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -34,8 +33,8 @@ func SoliditySHA3(data ...interface{}) common.Hash {
 	for _, b := range data {
 		_, err := hash.Write(b.([]byte))
 		if err != nil {
-			// Continue even if some parts were unable to be written
-			log.Printf("Error writing some SoliditySHA3 data")
+			// This code should never be reached
+			panic("Error writing SoliditySHA3 data")
 		}
 	}
 	hash.Sum(ret[:0])
