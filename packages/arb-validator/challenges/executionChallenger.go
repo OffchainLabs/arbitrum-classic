@@ -60,7 +60,7 @@ func ChallengeExecutionClaim(
 		log.Fatal("before inbox hash must be valid")
 	}
 
-	// Last value returned is the number of steps executed
+	// Last value returned is not an error type
 	assertion, _ := startMachine.Clone().ExecuteAssertion(numSteps, messages, 0)
 	stub := structures.NewExecutionAssertionStubFromWholeAssertion(assertion, beforeInboxHash, inboxStack)
 

@@ -17,21 +17,20 @@
 package ethbridge
 
 import (
-	"context"
-	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"log"
-	"math/big"
-	"time"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-
-	"github.com/pkg/errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	errors2 "github.com/pkg/errors"
+
+	"context"
+	"fmt"
+	"log"
+	"math/big"
+	"time"
 )
 
 type ArbAddresses struct {
@@ -85,7 +84,7 @@ func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.EthCli
 			}
 			return receipt, nil
 		case <-ctx.Done():
-			return nil, errors.New("Receipt not found")
+			return nil, fmt.Errorf("receipt not found")
 		}
 	}
 }
@@ -106,7 +105,7 @@ func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, f
 		}
 		data, err := client.CallContract(ctx, callMsg, receipt.BlockNumber)
 		if err != nil {
-			return nil, fmt.Errorf("transaction %v failed with error %v", methodName, err)
+			return nil, errors2.Wrapf(err, "transaction %v failed", methodName)
 		}
 		return nil, fmt.Errorf("transaction %v failed with tx %v", methodName, string(data))
 	}

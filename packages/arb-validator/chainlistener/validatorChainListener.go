@@ -245,7 +245,7 @@ func (lis *ValidatorChainListener) StakeCreated(
 			}
 		}
 	} else {
-		opp := lis.challengeStakerIfPossible(ctx, nodeGraph, ev.Staker)
+		opp := lis.challengeStakerIfPossible(nodeGraph, ev.Staker)
 		if opp != nil {
 			_, err := InitiateChallenge(ctx, lis.actor, opp)
 			if err != nil {
@@ -260,7 +260,7 @@ func (lis *ValidatorChainListener) StakeMoved(
 	nodeGraph *nodegraph.StakedNodeGraph,
 	ev arbbridge.StakeMovedEvent,
 ) {
-	opp := lis.challengeStakerIfPossible(ctx, nodeGraph, ev.Staker)
+	opp := lis.challengeStakerIfPossible(nodeGraph, ev.Staker)
 
 	if opp != nil {
 		_, err := InitiateChallenge(ctx, lis.actor, opp)
@@ -270,11 +270,7 @@ func (lis *ValidatorChainListener) StakeMoved(
 	}
 }
 
-func (lis *ValidatorChainListener) challengeStakerIfPossible(
-	_ context.Context,
-	nodeGraph *nodegraph.StakedNodeGraph,
-	stakerAddr common.Address,
-) *nodegraph.ChallengeOpportunity {
+func (lis *ValidatorChainListener) challengeStakerIfPossible(nodeGraph *nodegraph.StakedNodeGraph, stakerAddr common.Address) *nodegraph.ChallengeOpportunity {
 	_, ok := lis.stakingKeys[stakerAddr]
 	if ok {
 		// Don't challenge yourself
@@ -436,7 +432,7 @@ func (lis *ValidatorChainListener) CompletedChallenge(
 	if ok {
 		lis.lostChallenge(ev)
 	}
-	opp := lis.challengeStakerIfPossible(ctx, nodeGraph, ev.Winner)
+	opp := lis.challengeStakerIfPossible(nodeGraph, ev.Winner)
 	if opp != nil {
 		_, err := InitiateChallenge(ctx, lis.actor, opp)
 		LogChallengeResult(err)

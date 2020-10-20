@@ -119,7 +119,7 @@ func NewRandomNodeFromValidPrev(prev *Node, inboxStack *MessageStack, messageCou
 	return nextNode
 }
 
-func NewRandomInvalidNodeFromValidPrev(prev *Node, stub *valprotocol.ExecutionAssertionStub, kind valprotocol.ChildType, params valprotocol.ChainParams) (*Node, error) {
+func NewRandomInvalidNodeFromValidPrev(prev *Node, stub *valprotocol.ExecutionAssertionStub, kind valprotocol.ChildType, params valprotocol.ChainParams) *Node {
 	disputableNode := valprotocol.NewRandomDisputableNode(stub)
 
 	nextNode := NewInvalidNodeFromPrev(
@@ -130,8 +130,13 @@ func NewRandomInvalidNodeFromValidPrev(prev *Node, stub *valprotocol.ExecutionAs
 		common.NewTimeBlocks(common.RandBigInt()),
 	)
 
-	err := nextNode.UpdateInvalidOpinion()
-	return nextNode, err
+	if kind != valprotocol.ValidChildType {
+		panic("Must provide invalid child type")
+	}
+
+	// Safe to ignore error message because already validated above
+	_ = nextNode.UpdateInvalidOpinion()
+	return nextNode
 }
 
 func NewInvalidNodeFromPrev(

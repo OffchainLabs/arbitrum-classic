@@ -166,7 +166,7 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 	for _, msg := range msgs {
 		// TODO: Give ExecuteAssertion the ability to run unbounded until it blocks
 		// The max steps here is a hack since it should just run until it blocks
-		// Last value returned is the number of steps executed
+		// Last value returned is not an error type
 		assertion, _ := txdb.mach.ExecuteAssertion(1000000000000, []inbox.InboxMessage{msg.Message}, 0)
 		txdb.callMut.Lock()
 		txdb.lastInboxSeq = msg.Message.InboxSeqNum
@@ -190,7 +190,7 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 	nextBlockHeight := new(big.Int).Add(finishedBlock.Height.AsInt(), big.NewInt(1))
 	// TODO: Give ExecuteCallServerAssertion the ability to run unbounded until it blocks
 	// The max steps here is a hack since it should just run until it blocks
-	// Last value returned is the number of steps executed
+	// Last value returned is not an error type
 	assertion, _ := txdb.mach.ExecuteCallServerAssertion(1000000000000, nil, value.NewIntValue(nextBlockHeight), 0)
 	processedAssertion, err := txdb.processAssertion(ctx, assertion)
 	if err != nil {

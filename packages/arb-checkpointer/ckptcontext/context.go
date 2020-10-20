@@ -18,7 +18,6 @@ package ckptcontext
 
 import (
 	"errors"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -76,7 +75,7 @@ func (ctx *CheckpointContext) GetValue(h common.Hash) (value.Value, error) {
 		return val, nil
 	}
 
-	return nil, fmt.Errorf("context does not contain value with hash %s", h.String())
+	return nil, &machine.ValueNotFoundError{HashValue: h}
 }
 
 func (ctx *CheckpointContext) GetMachine(h common.Hash) (machine.Machine, error) {
@@ -84,7 +83,7 @@ func (ctx *CheckpointContext) GetMachine(h common.Hash) (machine.Machine, error)
 		return mach, nil
 	}
 
-	return nil, fmt.Errorf("context does not contain machine with hash %s", h.String())
+	return nil, &machine.MachineNotFoundError{HashValue: h}
 }
 
 func SaveCheckpointContext(db machine.CheckpointStorage, ckpCtx *CheckpointContext) error {

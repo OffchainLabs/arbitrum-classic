@@ -268,8 +268,8 @@ func TestConfirmAssertion(t *testing.T) {
 	}
 	confTime := new(big.Int).Add(currentTime.Height.AsInt(), big.NewInt(1))
 
-	opp, nodes, err := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(common.NewTimeBlocks(confTime)))
-	if err != nil {
+	opp, nodes := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(common.NewTimeBlocks(confTime)))
+	if opp == nil {
 		t.Fatal("Error generating proof")
 	}
 	t.Log("Confirming", len(nodes), "nodes")
@@ -369,8 +369,9 @@ func TestConfirmAssertion(t *testing.T) {
 		t.Fatal("unexpected final prevNodeHash")
 	}
 
-	opp, _, err = chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(common.NewTimeBlocks(confTime)))
-	if err != nil {
+	// Last value returned is not an error type
+	opp, _ = chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(common.NewTimeBlocks(confTime)))
+	if opp == nil {
 		t.Fatal("Error generating proof")
 	}
 	proof = opp.PrepareProof()

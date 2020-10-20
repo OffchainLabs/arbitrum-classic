@@ -152,10 +152,8 @@ func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
 					break
 				}
 
-				confOpp, _, err := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(chain.currentEventId.BlockId.Height))
-				if err != nil {
-					log.Printf("Error generating next proof: %v", err)
-				} else {
+				confOpp, _ := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(chain.currentEventId.BlockId.Height))
+				if confOpp != nil {
 					for _, listener := range chain.listeners {
 						listener.ConfirmableNodes(ctx, confOpp)
 					}

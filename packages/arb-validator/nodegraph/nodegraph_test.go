@@ -164,7 +164,7 @@ func TestPrunePrevNodes(t *testing.T) {
 	mach, stakedNodeGraph := getNodeGraph(t)
 	initialNode := structures.NewInitialNode(mach)
 	dispNode, execAssert := getDisputableNode(initialNode)
-	// Last value returned is simply a list of nodes
+	// Last value returned is not an error type
 	err, nextValid, _ := createNodesOnAssert(
 		stakedNodeGraph,
 		initialNode,
@@ -265,7 +265,7 @@ func TestHasReferenceWithSuccessors(t *testing.T) {
 	initialNode := structures.NewInitialNode(mach)
 
 	dispNode, execAssert := getDisputableNode(initialNode)
-	// Last value returned is simply a list of nodes
+	// Last value returned is not an error type
 	_, _, _ = createNodesOnAssert(
 		stakedNodeGraph,
 		initialNode,
@@ -287,7 +287,7 @@ func TestPruneNewNode(t *testing.T) {
 	mach, stakedNodeGraph := getNodeGraph(t)
 	initialNode := structures.NewInitialNode(mach)
 	dispNode, execAssert := getDisputableNode(initialNode)
-	// Last value returned is simply a list of nodes
+	// Last value returned is not an error type
 	err, nextValid, _ := createNodesOnAssert(
 		stakedNodeGraph,
 		initialNode,

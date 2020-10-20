@@ -82,7 +82,7 @@ func generateTestCase(ethURL string, rollupAddress common.Address, contract stri
 		return err
 	}
 
-	// Last return value is number of steps executed
+	// Last value returned is not an error type
 	assertion, _ := mach.ExecuteAssertion(
 		1000000000000,
 		messages,

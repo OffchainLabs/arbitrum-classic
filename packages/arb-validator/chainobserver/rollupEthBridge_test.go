@@ -172,10 +172,7 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 
 	prevNode := chain.NodeGraph.LatestConfirmed()
 	assertion, assertionStub := randomAssertion(t, chain.Inbox.MessageStack, prevNode)
-	newNode, err := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertionStub, valprotocol.InvalidInboxTopChildType, chain.GetChainParams())
-	if err != nil {
-		t.Fatal(err)
-	}
+	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertionStub, valprotocol.InvalidInboxTopChildType, chain.GetChainParams())
 
 	msgs := chain.Inbox.GetAllMessages()
 	prepared, err := chain.prepareAssertion(&common.BlockId{
@@ -232,10 +229,7 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 
 	prevNode := chain.NodeGraph.LatestConfirmed()
 	assertion, assertionStub := randomAssertion(t, chain.Inbox.MessageStack, prevNode)
-	newNode, err := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertionStub, valprotocol.InvalidExecutionChildType, chain.GetChainParams())
-	if err != nil {
-		t.Fatal(err)
-	}
+	newNode := structures.NewRandomInvalidNodeFromValidPrev(prevNode, assertionStub, valprotocol.InvalidExecutionChildType, chain.GetChainParams())
 
 	msgs := chain.Inbox.GetAllMessages()
 	prepared, err := chain.prepareAssertion(&common.BlockId{

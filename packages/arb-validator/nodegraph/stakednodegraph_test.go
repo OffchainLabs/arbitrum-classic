@@ -140,15 +140,15 @@ func stake2ndAndVerify(
 }
 
 func TestAddStake(t *testing.T) {
-	// Last value returned can be ignored
+	// Last value returned is not an error type
 	stakedNodeGraph, expectedNode, _, _ := graphWithOneStaker(t)
-	// Last value returned can be ignored
+	// Last value returned is not an error type
 	newNode, _ := assertAndCreateNodes(t, expectedNode, stakedNodeGraph)
 	stake2ndAndVerify(t, stakedNodeGraph, newNode, common.Address{2})
 }
 
 func TestStakerPruneInfoInitial(t *testing.T) {
-	// Last value returned can be ignored
+	// Last value returned is not an error type
 	stakedNodeGraph, _, _, _ := graphWithOneStaker(t)
 	mootedParams, oldParams := stakedNodeGraph.GenerateStakerPruneInfo()
 	if len(mootedParams) != 0 {
@@ -160,7 +160,7 @@ func TestStakerPruneInfoInitial(t *testing.T) {
 }
 
 func TestNodePruneInfoInitial(t *testing.T) {
-	// Last value returned can be ignored
+	// Last value returned is not an error type
 	stakedNodeGraph, _, _, _ := graphWithOneStaker(t)
 	params := stakedNodeGraph.GenerateNodePruneInfo()
 	if len(params) != 0 {
@@ -186,7 +186,7 @@ func TestStakerPruneInfoBase(t *testing.T) {
 }
 
 func TestNodePruneInfoBase(t *testing.T) {
-	// Last value returned can be ignored
+	// Last value returned is not an error type
 	stakedNodeGraph, initialNode, _, _ := graphWithOneStaker(t)
 	_, _ = assertAndCreateNodes(t, initialNode, stakedNodeGraph)
 
@@ -201,7 +201,7 @@ func stakeAllNodes(stakedNodeGraph *StakedNodeGraph, nodes []*structures.Node, s
 	for index, node := range nodes {
 		var addrr = byte(startAddress + index)
 		stakerAddress := common.Address{addrr}
-		// Last value returned can be ignored
+		// Last value returned is not an error type
 		stakeEvent, _ := getStakeData(stakerAddress, node)
 		stakedNodeGraph.CreateStake(stakeEvent)
 	}
@@ -274,7 +274,7 @@ func TestNodePruneInfo3(t *testing.T) {
 	initialNode := structures.NewInitialNode(mach)
 
 	nextValid, nodes := assertAndCreateNodes(t, initialNode, stakedNodeGraph)
-	// Last value returned can be ignored
+	// Last value returned is not an error type
 	nextValid2, _ := assertAndCreateNodes(t, nextValid, stakedNodeGraph)
 
 	stakeAllNodes(stakedNodeGraph, nodes, 2)
@@ -289,7 +289,7 @@ func TestNodePruneInfo3(t *testing.T) {
 func TestStakerPruneInfo3(t *testing.T) {
 	mach, stakedNodeGraph := getStakedNodeGraph(t)
 	initialNode := structures.NewInitialNode(mach)
-	// Last value returned can be ignored
+	// Last value returned is not an error type
 	nextValid, _ := assertAndCreateNodes(t, initialNode, stakedNodeGraph)
 	nextValid2, nodes2 := assertAndCreateNodes(t, nextValid, stakedNodeGraph)
 
@@ -309,7 +309,7 @@ func TestStakerPruneInfo4(t *testing.T) {
 	mach, stakedNodeGraph := getStakedNodeGraph(t)
 	initialNode := structures.NewInitialNode(mach)
 	nextValid, nodes := assertAndCreateNodes(t, initialNode, stakedNodeGraph)
-	// Last value returned can be ignored
+	// Last value returned is not an error type
 	nextValid2, _ := assertAndCreateNodes(t, nextValid, stakedNodeGraph)
 	stakeAllNodes(stakedNodeGraph, nodes, 2)
 	stakedNodeGraph.UpdateLatestConfirmed(nextValid2)
@@ -325,7 +325,7 @@ func TestStakerPruneInfo4(t *testing.T) {
 
 func TestMoveStake(t *testing.T) {
 	stakedNodeGraph, expectedNode, stakerAddress, stakeEvent := graphWithOneStaker(t)
-	// Last value returned can be ignored
+	// Last value returned is not an error type
 	newNode, _ := assertAndCreateNodes(t, expectedNode, stakedNodeGraph)
 
 	stakedNodeGraph.MoveStake(stakerAddress, newNode.Hash())
@@ -352,9 +352,9 @@ func TestMoveStake(t *testing.T) {
 }
 
 func TestRemoveStake(t *testing.T) {
-	// Last value returned can be ignored
+	// Last value returned is not an error type
 	stakedNodeGraph, expectedNode, stakerAddress, _ := graphWithOneStaker(t)
-	// Last value returned can be ignored
+	// Last value returned is not an error type
 	newNode, _ := assertAndCreateNodes(t, expectedNode, stakedNodeGraph)
 
 	stakerAddress2 := common.Address{2}
@@ -391,7 +391,7 @@ func TestNodeGraphChallenges(t *testing.T) {
 	stakerAddress2 := common.Address{2}
 	challengeContract := common.Address{3}
 	stakeEvent, expectedStaker := getStakeData(stakerAddress, initialNode)
-	// Last value returned can be ignored
+	// Last value returned is not an error type
 	stakeEvent2, _ := getStakeData(stakerAddress2, initialNode)
 	stakedNodeGraph.CreateStake(stakeEvent)
 	stakedNodeGraph.CreateStake(stakeEvent2)
@@ -452,7 +452,7 @@ func TestHasReferenceWithStakers(t *testing.T) {
 	}
 
 	stakerAddress := common.Address{1}
-	// Last value returned can be ignored
+	// Last value returned is not an error type
 	stakeEvent, _ := getStakeData(stakerAddress, initialNode)
 	stakedNodeGraph.CreateStake(stakeEvent)
 

@@ -38,7 +38,7 @@ func NewValueCache() (*ValueCache, error) {
 	cValueCache := C.createValueCache()
 
 	if cValueCache == nil {
-		return nil, fmt.Errorf("error loading value cache")
+		return nil, fmt.Errorf("error creating value cache")
 	}
 	ret := &ValueCache{cValueCache}
 	runtime.SetFinalizer(ret, destroyValueCache)

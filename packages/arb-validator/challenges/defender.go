@@ -18,14 +18,15 @@ package challenges
 
 import (
 	"errors"
-	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 
+	errors2 "github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type AssertionDefender struct {
@@ -64,10 +65,10 @@ func (ad AssertionDefender) MoveDefender(bisectionEvent arbbridge.ExecutionBisec
 	// Update mach, precondition, deadline
 	messages, err := ad.inbox.GetAssertionMessages(ad.assertion.BeforeInboxHash, ad.assertion.AfterInboxHash)
 	if err != nil {
-		return nil, fmt.Errorf("assertion defender must have valid messages: %s %s, %s", ad.assertion.BeforeInboxHash, ad.assertion.AfterInboxHash, err)
+		return nil, errors2.Wrapf(err, "assertion defender must have valid messages: %s %s", ad.assertion.BeforeInboxHash, ad.assertion.AfterInboxHash)
 	}
 
-	// Last value returned is the number of steps executed
+	// Last value returned is not an error type
 	skippedAssertion, _ := ad.initState.ExecuteAssertion(
 		stepsToSkip,
 		messages,
@@ -81,7 +82,7 @@ func (ad AssertionDefender) MoveDefender(bisectionEvent arbbridge.ExecutionBisec
 		ad.inbox,
 	)
 
-	// Last value returned is the number of steps executed
+	// Last value returned is not an error type
 	assertion, _ := ad.initState.Clone().ExecuteAssertion(steps, messages[skippedAssertion.InboxMessagesConsumed:], 0)
 	assertionStub := structures.NewExecutionAssertionStubFromAssertion(
 		assertion,
@@ -115,7 +116,7 @@ func (ad AssertionDefender) NBisect(slices uint64) []AssertionDefender {
 			log.Fatal("inbox messages must exist for assertion that you're defending ", beforeInboxHash, ad.assertion.AfterInboxHash)
 		}
 
-		// Last value returned is the number of steps executed
+		// Last value returned is not an error type
 		assertion, numSteps := m.ExecuteAssertion(
 			steps,
 			inboxMessages,

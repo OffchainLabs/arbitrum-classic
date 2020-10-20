@@ -30,7 +30,7 @@ type Eth struct {
 
 func NewEthFromData(data []byte) Eth {
 	destAddress, data := extractAddress(data)
-	// Last value returned is array of bytes
+	// Last value returned is not an error type
 	payment, _ := extractUInt256(data)
 	return Eth{
 		Dest:  destAddress,
@@ -65,7 +65,7 @@ type ERC20 struct {
 func NewERC20FromData(data []byte) ERC20 {
 	token, data := extractAddress(data)
 	destAddress, data := extractAddress(data)
-	// Last value returned is array of bytes
+	// Last value returned is not an error type
 	payment, _ := extractUInt256(data)
 	return ERC20{
 		Token: token,
@@ -103,7 +103,7 @@ type ERC721 struct {
 func NewERC721FromData(data []byte) ERC721 {
 	token, data := extractAddress(data)
 	destAddress, data := extractAddress(data)
-	// Last value returned is array of bytes
+	// Last value returned is not an error type
 	id, _ := extractUInt256(data)
 	return ERC721{
 		Token: token,

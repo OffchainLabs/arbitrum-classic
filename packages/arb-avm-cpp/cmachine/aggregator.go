@@ -129,7 +129,7 @@ func (as *AggregatorStore) LatestBlock() (*common.BlockId, error) {
 	if result.found == 0 {
 		return nil, errors.New("failed to load block count")
 	}
-	// Last returned value is types.Bloom
+	// Last value returned is not an error type
 	_, hash, _ := parseBlockData(toByteSlice(result.data))
 	return &common.BlockId{
 		Height:     common.NewTimeBlocks(new(big.Int).SetUint64(uint64(result.height))),

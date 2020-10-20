@@ -19,7 +19,6 @@ package checkpointing
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"math/big"
 	"os"
@@ -270,7 +269,8 @@ func cleanup(bs machine.BlockStore, db machine.CheckpointStorage, maxReorgHeight
 			for _, id := range prevIds {
 				err := deleteCheckpointForKey(bs, db, id)
 				if err != nil {
-					log.Printf("Error deleting checkpoint for key %s: %s", id.String(), err.Error())
+					// Can still continue if error
+					log.Printf("Nonfatal error deleting checkpoint for key %s: %s", id.String(), err.Error())
 				}
 			}
 			prevIds = blockIds
@@ -321,7 +321,7 @@ func newRestoreContextLocked(db machine.CheckpointStorage, manifest *ckptcontext
 		hash := valHash.Unmarshal()
 		val, err := rcl.db.GetValue(hash, rcl.valueCache)
 		if err != nil {
-			return nil, fmt.Errorf("unable to find the value hash %s: %v", hash.String(), err)
+			return nil, err
 		}
 
 		rcl.values[hash] = val

@@ -34,7 +34,8 @@ func SoliditySHA3(data ...interface{}) common.Hash {
 	for _, b := range data {
 		_, err := hash.Write(b.([]byte))
 		if err != nil {
-			log.Printf("Error writing SoliditySHA3 data")
+			// Continue even if some parts were unable to be written
+			log.Printf("Error writing some SoliditySHA3 data")
 		}
 	}
 	hash.Sum(ret[:0])

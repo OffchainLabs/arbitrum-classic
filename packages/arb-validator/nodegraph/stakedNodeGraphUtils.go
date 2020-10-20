@@ -18,7 +18,6 @@ package nodegraph
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -51,7 +50,7 @@ func newPruneParams(
 	}
 }
 
-func confirmNodeOpp(currentNode *structures.Node) (valprotocol.ConfirmNodeOpportunity, error) {
+func confirmNodeOpp(currentNode *structures.Node) valprotocol.ConfirmNodeOpportunity {
 	coreOpp := &valprotocol.ConfirmNodeOpportunityCore{
 		Branch:           currentNode.LinkType(),
 		DeadlineTicks:    currentNode.Deadline(),
@@ -64,7 +63,8 @@ func confirmNodeOpp(currentNode *structures.Node) (valprotocol.ConfirmNodeOpport
 		// We've only seen the hash accumulator of the messages before whereas this requires the full values
 		assertion := currentNode.Assertion()
 		if assertion == nil {
-			return nil, fmt.Errorf("assertion missing for node with hash %v", currentNode)
+			// Other thread hasn't filled assertion yet
+			return nil
 		}
 
 		return valprotocol.ConfirmValidOpportunity{
@@ -72,11 +72,11 @@ func confirmNodeOpp(currentNode *structures.Node) (valprotocol.ConfirmNodeOpport
 			MessagesData:               assertion.OutMsgsData,
 			MessageCount:               assertion.OutMsgsCount,
 			LogsAcc:                    currentNode.Disputable().Assertion.LastLogHash,
-		}, nil
+		}
 	}
 
 	return valprotocol.ConfirmInvalidOpportunity{
 		ConfirmNodeOpportunityCore: coreOpp,
 		ChallengeNodeData:          currentNode.NodeDataHash(),
-	}, nil
+	}
 }
