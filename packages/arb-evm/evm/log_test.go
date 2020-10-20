@@ -27,7 +27,10 @@ func TestLog(t *testing.T) {
 	logs := make([]Log, 0)
 	for i := 0; i < 10; i++ {
 		l := NewRandomLog(3)
-		logVal := l.AsValue()
+		logVal, err := l.AsValue()
+		if err != nil {
+			t.Fatal(err)
+		}
 		l2, err := NewLogFromValue(logVal)
 		if err != nil {
 			t.Fatal(err)

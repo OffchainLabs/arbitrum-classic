@@ -217,6 +217,7 @@ func TestBlocks(t *testing.T) {
 		)
 	}
 
+	// Last value returned is not an error type
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
 	avmLogs := assertion.ParseLogs()
 	t.Log("Got", len(avmLogs), "logs")

@@ -61,6 +61,8 @@ func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 	if tup.Len() != 6 {
 		return failRet, fmt.Errorf("expected tuple of length 6, but recieved %v", tup)
 	}
+
+	// Tuple size already verified above, so error can be ignored
 	kind, _ := tup.GetByInt64(0)
 	blockNumber, _ := tup.GetByInt64(1)
 	timestamp, _ := tup.GetByInt64(2)
@@ -132,6 +134,7 @@ func (im InboxMessage) String() string {
 }
 
 func (im InboxMessage) AsValue() value.Value {
+	// Static slice correct size, so error can be ignored
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(int64(im.Kind)),
 		value.NewIntValue(im.ChainTime.BlockNum.AsInt()),

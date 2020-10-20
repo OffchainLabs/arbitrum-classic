@@ -136,6 +136,7 @@ func TestCreate2(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(existsCloneTx), sender, big.NewInt(4), chainTime),
 	}
 
+	// Last parameter returned is number of tests executed
 	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
 	//testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.ParseLogs(), assertion.ParseOutMessages())
 	//if err != nil {

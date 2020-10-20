@@ -244,7 +244,9 @@ func (m *RPCServer) callImpl(
 		return err
 	}
 	var buf bytes.Buffer
-	_ = value.MarshalValue(val.AsValue(), &buf) // error can only occur from writes and bytes.Buffer is safe
+
+	// error can only occur from writes and bytes.Buffer is safe
+	_ = value.MarshalValue(val.AsValue(), &buf)
 	reply.RawVal = hexutil.Encode(buf.Bytes())
 	return nil
 }

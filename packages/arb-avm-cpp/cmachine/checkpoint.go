@@ -96,7 +96,7 @@ func (checkpoint *CheckpointStorage) GetMachine(machineHash common.Hash, valueCa
 	cMachine := C.getMachine(checkpoint.c, unsafe.Pointer(&machineHash[0]), valueCache.(*ValueCache).c)
 
 	if cMachine == nil {
-		return nil, fmt.Errorf("error getting machine from checkpointstorage")
+		return nil, &machine.MachineNotFoundError{HashValue: machineHash}
 	}
 
 	ret := &Machine{cMachine}
@@ -124,20 +124,20 @@ func (checkpoint *CheckpointStorage) SaveValue(val value.Value) bool {
 	return success == 1
 }
 
-func (checkpoint *CheckpointStorage) GetValue(hashValue common.Hash, valueCache machine.ValueCache) value.Value {
+func (checkpoint *CheckpointStorage) GetValue(hashValue common.Hash, valueCache machine.ValueCache) (value.Value, error) {
 	cData := C.getValue(checkpoint.c, unsafe.Pointer(&hashValue[0]), valueCache.(*ValueCache).c)
 	if cData.data == nil {
-		return nil
+		return nil, &machine.ValueNotFoundError{HashValue: hashValue}
 	}
 
 	dataBuff := toByteSlice(cData)
 
 	val, err := value.UnmarshalValue(bytes.NewReader(dataBuff[:]))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return val
+	return val, nil
 }
 
 func (checkpoint *CheckpointStorage) DeleteValue(hashValue common.Hash) bool {
@@ -170,14 +170,14 @@ func (checkpoint *CheckpointStorage) SaveData(key []byte, data []byte) bool {
 	return success == 1
 }
 
-func (checkpoint *CheckpointStorage) GetData(key []byte) []byte {
+func (checkpoint *CheckpointStorage) GetData(key []byte) ([]byte, error) {
 	cData := C.getData(checkpoint.c, unsafe.Pointer(&key[0]), C.int(len(key)))
 
 	if cData.found == 0 {
-		return nil
+		return nil, &machine.DataNotFoundError{Key: key}
 	}
 
-	return toByteSlice(cData.slice)
+	return toByteSlice(cData.slice), nil
 }
 
 func (checkpoint *CheckpointStorage) DeleteData(key []byte) bool {

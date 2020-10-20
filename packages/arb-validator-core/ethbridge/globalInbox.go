@@ -52,6 +52,9 @@ func (con *globalInbox) SendL2Message(ctx context.Context, data []byte) (arbbrid
 		con.rollupAddress,
 		data,
 	)
+	if err != nil {
+		return arbbridge.MessageDeliveredEvent{}, err
+	}
 	receipt, err := WaitForReceiptWithResults(ctx, con.client, con.auth.auth.From, tx, "SendL2MessageFromOrigin")
 	if err != nil {
 		return arbbridge.MessageDeliveredEvent{}, err
@@ -67,7 +70,7 @@ func (con *globalInbox) SendL2Message(ctx context.Context, data []byte) (arbbrid
 		timestamp := new(big.Int).SetUint64(blockHeader.Time)
 		return con.parseMessageFromOrigin(*evmLog, timestamp, data)
 	}
-	return arbbridge.MessageDeliveredEvent{}, errors.New("Didn't output l2message delivered event")
+	return arbbridge.MessageDeliveredEvent{}, errors.New("didn't output l2message delivered event")
 }
 
 func (con *globalInbox) SendL2MessageNoWait(ctx context.Context, data []byte) (common.Hash, error) {

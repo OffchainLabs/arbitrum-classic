@@ -18,14 +18,15 @@ package challenges
 
 import (
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 
+	errors2 "github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type AssertionDefender struct {
@@ -52,10 +53,7 @@ func (ad AssertionDefender) AssertionStub() *valprotocol.ExecutionAssertionStub 
 	return ad.assertion
 }
 
-func (ad AssertionDefender) MoveDefender(
-	bisectionEvent arbbridge.ExecutionBisectionEvent,
-	continueEvent arbbridge.ContinueChallengeEvent,
-) AssertionDefender {
+func (ad AssertionDefender) MoveDefender(bisectionEvent arbbridge.ExecutionBisectionEvent, continueEvent arbbridge.ContinueChallengeEvent) (*AssertionDefender, error) {
 	segmentCount := uint64(len(bisectionEvent.AssertionHashes))
 	stepsToSkip := computeStepsUpTo(continueEvent.SegmentIndex.Uint64(), segmentCount, ad.numSteps)
 	steps := valprotocol.CalculateBisectionStepCount(
@@ -67,9 +65,10 @@ func (ad AssertionDefender) MoveDefender(
 	// Update mach, precondition, deadline
 	messages, err := ad.inbox.GetAssertionMessages(ad.assertion.BeforeInboxHash, ad.assertion.AfterInboxHash)
 	if err != nil {
-		log.Fatal("assertion defender must have valid messages", ad.assertion.BeforeInboxHash, ad.assertion.AfterInboxHash)
+		return nil, errors2.Wrapf(err, "assertion defender must have valid messages: %s %s", ad.assertion.BeforeInboxHash, ad.assertion.AfterInboxHash)
 	}
 
+	// Last value returned is not an error type
 	skippedAssertion, _ := ad.initState.ExecuteAssertion(
 		stepsToSkip,
 		messages,
@@ -83,6 +82,7 @@ func (ad AssertionDefender) MoveDefender(
 		ad.inbox,
 	)
 
+	// Last value returned is not an error type
 	assertion, _ := ad.initState.Clone().ExecuteAssertion(steps, messages[skippedAssertion.InboxMessagesConsumed:], 0)
 	assertionStub := structures.NewExecutionAssertionStubFromAssertion(
 		assertion,
@@ -91,7 +91,8 @@ func (ad AssertionDefender) MoveDefender(
 		skippedAssertionStub.LastMessageHash,
 		ad.inbox,
 	)
-	return NewAssertionDefender(steps, ad.initState, ad.inbox, assertionStub)
+	assertionDefender := NewAssertionDefender(steps, ad.initState, ad.inbox, assertionStub)
+	return &assertionDefender, nil
 }
 
 func (ad AssertionDefender) NBisect(slices uint64) []AssertionDefender {
@@ -115,6 +116,7 @@ func (ad AssertionDefender) NBisect(slices uint64) []AssertionDefender {
 			log.Fatal("inbox messages must exist for assertion that you're defending ", beforeInboxHash, ad.assertion.AfterInboxHash)
 		}
 
+		// Last value returned is not an error type
 		assertion, numSteps := m.ExecuteAssertion(
 			steps,
 			inboxMessages,
@@ -152,47 +154,4 @@ func (ad AssertionDefender) SolidityOneStepProof() ([]byte, *inbox.InboxMessage,
 		return proofData, &messages[0], nil
 	}
 	return proofData, nil, nil
-}
-
-func assertionMatches(
-	stub *valprotocol.ExecutionAssertionStub,
-	assertion *protocol.ExecutionAssertion,
-	inboxMessages []inbox.InboxMessage,
-) bool {
-	return assertion.InboxMessagesConsumed != uint64(len(inboxMessages)) &&
-		assertion.NumGas == stub.NumGas &&
-		assertion.BeforeMachineHash.Unmarshal() == stub.BeforeMachineHash &&
-		assertion.AfterMachineHash.Unmarshal() == stub.AfterMachineHash &&
-		valprotocol.BytesArrayAccumHash(stub.FirstMessageHash, assertion.OutMsgsData, assertion.OutMsgsCount) == stub.LastMessageHash &&
-		assertion.OutMsgsCount == stub.MessageCount &&
-		valprotocol.BytesArrayAccumHash(stub.FirstLogHash, assertion.LogsData, assertion.LogsCount) == stub.LastLogHash &&
-		assertion.LogsCount == stub.LogCount
-}
-
-func ChooseAssertionToChallenge(
-	m machine.Machine,
-	inbox *structures.MessageStack,
-	assertions []*valprotocol.ExecutionAssertionStub,
-	totalSteps uint64,
-) (uint16, machine.Machine, error) {
-	assertionCount := uint64(len(assertions))
-	for i := range assertions {
-		steps := valprotocol.CalculateBisectionStepCount(uint64(i), assertionCount, totalSteps)
-		inboxMessages, err := inbox.GetAssertionMessages(assertions[i].BeforeInboxHash, assertions[i].AfterInboxHash)
-		if err != nil {
-			// AfterInboxHash must have been invalid
-			return uint16(i), m, nil
-		}
-		initState := m.Clone()
-		generatedAssertion, numSteps := m.ExecuteAssertion(
-			steps,
-			inboxMessages,
-			0,
-		)
-		if numSteps != steps || !assertionMatches(assertions[i], generatedAssertion, inboxMessages) {
-			return uint16(i), initState, nil
-		}
-		inboxMessages = inboxMessages[generatedAssertion.InboxMessagesConsumed:]
-	}
-	return 0, nil, errors.New("all segments in false ExecutionAssertion are valid")
 }

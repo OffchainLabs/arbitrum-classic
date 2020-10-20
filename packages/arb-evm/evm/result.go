@@ -37,13 +37,13 @@ type ResultType int
 
 const (
 	ReturnCode               ResultType = 0
-	RevertCode                          = 1
-	CongestionCode                      = 2
-	InsufficientGasFundsCode            = 3
-	InsufficientTxFundsCode             = 4
-	BadSequenceCode                     = 5
-	InvalidMessageFormatCode            = 6
-	UnknownErrorCode                    = 255
+	RevertCode               ResultType = 1
+	CongestionCode           ResultType = 2
+	InsufficientGasFundsCode ResultType = 3
+	InsufficientTxFundsCode  ResultType = 4
+	BadSequenceCode          ResultType = 5
+	InvalidMessageFormatCode ResultType = 6
+	UnknownErrorCode         ResultType = 255
 )
 
 type Result interface {
@@ -119,18 +119,21 @@ func (r *TxResult) String() string {
 }
 
 func (r *TxResult) AsValue() value.Value {
+	// Static slice correct size, so error can be ignored
 	resultInfo, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(int64(r.ResultCode)),
 		inbox.BytesToByteStack(r.ReturnData),
 		LogsToLogStack(r.EVMLogs),
 	})
 
+	// Static slice correct size, so error can be ignored
 	chainInfo, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewIntValue(r.CumulativeGas),
 		value.NewIntValue(r.TxIndex),
 		value.NewIntValue(r.StartLogIndex),
 	})
 
+	// Static slice correct size, so error can be ignored
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(0),
 		r.IncomingRequest.AsValue(),
@@ -200,6 +203,8 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 	if !ok || resultTup.Len() != 3 {
 		return nil, fmt.Errorf("advise expected result info tuple of length 3, but recieved %v", resultTup)
 	}
+
+	// Tuple size already verified above, so error can be ignored
 	resultCode, _ := resultTup.GetByInt64(0)
 	returnData, _ := resultTup.GetByInt64(1)
 	evmLogs, _ := resultTup.GetByInt64(2)
@@ -208,6 +213,8 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 	if !ok || gasInfoTup.Len() != 2 {
 		return nil, fmt.Errorf("advise expected gas info tuple of length 2, but recieved %v", gasInfoTup)
 	}
+
+	// Tuple size already verified above, so error can be ignored
 	gasUsed, _ := gasInfoTup.GetByInt64(0)
 	gasPrice, _ := gasInfoTup.GetByInt64(1)
 
@@ -215,6 +222,8 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 	if !ok || chainInfoTup.Len() != 3 {
 		return nil, fmt.Errorf("advise expected tx block data tuple of length 3, but recieved %v", resultTup)
 	}
+
+	// Tuple size already verified above, so error can be ignored
 	cumulativeGas, _ := chainInfoTup.GetByInt64(0)
 	txIndex, _ := chainInfoTup.GetByInt64(1)
 	startLogIndex, _ := chainInfoTup.GetByInt64(2)
@@ -278,6 +287,7 @@ type OutputStatistics struct {
 }
 
 func (os *OutputStatistics) AsValue() value.Value {
+	// Static slice correct size, so error can be ignored
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewIntValue(os.GasUsed),
 		value.NewIntValue(os.TxCount),
@@ -313,6 +323,7 @@ func (b *BlockInfo) FirstAVMSend() *big.Int {
 }
 
 func (b *BlockInfo) AsValue() value.Value {
+	// Static slice correct size, so error can be ignored
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
 		value.NewIntValue(b.BlockNum),
@@ -361,6 +372,8 @@ func parseOutputStatistics(val value.Value) (*OutputStatistics, error) {
 	if !ok || tup.Len() != 5 {
 		return nil, errors.New("expected result to be nonempty tuple")
 	}
+
+	// Tuple size already verified above, so error can be ignored
 	gasUsed, _ := tup.GetByInt64(0)
 	txCount, _ := tup.GetByInt64(1)
 	evmLogCount, _ := tup.GetByInt64(2)
@@ -401,6 +414,8 @@ func NewResultFromValue(val value.Value) (Result, error) {
 	if !ok || tup.Len() == 0 {
 		return nil, errors.New("expected result to be nonempty tuple")
 	}
+
+	// Tuple size already verified above, so error can be ignored
 	kind, _ := tup.GetByInt64(0)
 	kindInt, ok := kind.(value.IntValue)
 	if !ok {
@@ -411,12 +426,19 @@ func NewResultFromValue(val value.Value) (Result, error) {
 		if tup.Len() != 5 {
 			return nil, fmt.Errorf("tx result expected tuple of length 5, but recieved len %v: %v", tup.Len(), tup)
 		}
+
+		// Tuple size already verified above, so error can be ignored
 		l1MsgVal, _ := tup.GetByInt64(1)
 		resultInfo, _ := tup.GetByInt64(2)
 		gasInfo, _ := tup.GetByInt64(3)
 		chainInfo, _ := tup.GetByInt64(4)
 		return parseTxResult(l1MsgVal, resultInfo, gasInfo, chainInfo)
 	} else if kindInt.BigInt().Uint64() == 1 {
+		if tup.Len() != 6 {
+			return nil, fmt.Errorf("tx result expected tuple of length 6, but recieved len %v: %v", tup.Len(), tup)
+		}
+
+		// Tuple size already verified above, so error can be ignored
 		blockNum, _ := tup.GetByInt64(1)
 		timestamp, _ := tup.GetByInt64(2)
 		gasLimit, _ := tup.GetByInt64(3)

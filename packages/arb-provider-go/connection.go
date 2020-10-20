@@ -225,7 +225,7 @@ func (conn *ArbConnection) EstimateGas(
 		return 0, err
 	}
 	if res.ResultCode != evm.ReturnCode {
-		return 0, errors.New("Transaction always failing")
+		return 0, errors.New("transaction always failing")
 	}
 	return res.GasUsed.Uint64() + 1000000, nil
 }

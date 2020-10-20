@@ -145,7 +145,11 @@ func defendExecution(
 			defender = defenders[continueEvent.SegmentIndex.Uint64()]
 		} else {
 			// Replayed from existing event
-			defender = defender.MoveDefender(bisectionEvent, continueEvent)
+			defenderPointer, err := defender.MoveDefender(bisectionEvent, continueEvent)
+			if err != nil {
+				return 0, err
+			}
+			defender = *defenderPointer
 		}
 	}
 }
@@ -173,6 +177,9 @@ func executionDefenderUpdate(
 			return nil, 0, defenders, makeBisection, err
 		}
 		event, state, err = getNextEvent(eventChan)
+		if err != nil {
+			return nil, 0, defenders, makeBisection, err
+		}
 	}
 
 	return event, state, defenders, makeBisection, err
@@ -204,11 +211,14 @@ func runExecutionOneStepProof(
 				proof,
 			)
 		}
-
 		if err != nil {
 			return 0, err
 		}
+
 		event, state, err = getNextEvent(eventChan)
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	if challengeEnded(state, err) {

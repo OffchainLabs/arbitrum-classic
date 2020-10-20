@@ -102,6 +102,9 @@ func TestCalculateLeafFromPath(t *testing.T) {
 	path := GeneratePathProof(node, nextNode)
 
 	bridgeHash, err := tester.CalculateLeafFromPath(nil, node.Hash(), common.HashSliceToRaw(path))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if nextNode.Hash().ToEthHash() != bridgeHash {
 		fmt.Println(bridgeHash)
 		fmt.Println(nextNode.Hash().ToEthHash())
@@ -126,6 +129,9 @@ func TestChildNodeHash(t *testing.T) {
 		nextNode.NodeDataHash(),
 		new(big.Int).SetUint64(uint64(nextNode.LinkType())),
 		nextNode.VMProtoData().Hash())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if nextNode.Hash().ToEthHash() != bridgeHash {
 		fmt.Println(bridgeHash)
@@ -153,6 +159,9 @@ func TestProtoStateHash(t *testing.T) {
 		protoState.MessageCount,
 		protoState.LogCount,
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if protoState.Hash().ToEthHash() != bridgeHash {
 		fmt.Println(bridgeHash)

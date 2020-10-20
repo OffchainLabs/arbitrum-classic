@@ -19,7 +19,6 @@ package checkpointing
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"math/big"
 	"os"
@@ -268,7 +267,11 @@ func cleanup(bs machine.BlockStore, db machine.CheckpointStorage, maxReorgHeight
 		blockIds := bs.BlocksAtHeight(height)
 		if len(blockIds) > 0 {
 			for _, id := range prevIds {
-				_ = deleteCheckpointForKey(bs, db, id)
+				err := deleteCheckpointForKey(bs, db, id)
+				if err != nil {
+					// Can still continue if error
+					log.Printf("Nonfatal error deleting checkpoint for key %s: %s", id.String(), err.Error())
+				}
 			}
 			prevIds = blockIds
 		}
@@ -316,9 +319,9 @@ func newRestoreContextLocked(db machine.CheckpointStorage, manifest *ckptcontext
 
 	for _, valHash := range manifest.GetValues() {
 		hash := valHash.Unmarshal()
-		val := rcl.db.GetValue(hash, rcl.valueCache)
-		if val == nil {
-			return nil, fmt.Errorf("unable to find the value hash: %s", hash.String())
+		val, err := rcl.db.GetValue(hash, rcl.valueCache)
+		if err != nil {
+			return nil, err
 		}
 
 		rcl.values[hash] = val
@@ -337,22 +340,18 @@ func newRestoreContextLocked(db machine.CheckpointStorage, manifest *ckptcontext
 	return &rcl, nil
 }
 
-func (rcl *restoreContextLocked) GetValue(h common.Hash) value.Value {
+func (rcl *restoreContextLocked) GetValue(h common.Hash) (value.Value, error) {
 	if val, ok := rcl.values[h]; ok {
-		return val
+		return val, nil
 	}
 
 	return rcl.db.GetValue(h, rcl.valueCache)
 }
 
-func (rcl *restoreContextLocked) GetMachine(h common.Hash) machine.Machine {
+func (rcl *restoreContextLocked) GetMachine(h common.Hash) (machine.Machine, error) {
 	if mach, ok := rcl.machines[h]; ok {
-		return mach
+		return mach, nil
 	}
 
-	ret, err := rcl.db.GetMachine(h, rcl.valueCache)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return ret
+	return rcl.db.GetMachine(h, rcl.valueCache)
 }

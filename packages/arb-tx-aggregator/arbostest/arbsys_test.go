@@ -267,6 +267,7 @@ func TestWithdrawEth(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(tx), addr, big.NewInt(2), chainTime),
 	}
 
+	// Last parameter returned is number of steps executed
 	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
 	testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.ParseLogs(), assertion.ParseOutMessages())
 	if err != nil {

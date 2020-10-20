@@ -185,7 +185,7 @@ func encodeUnsignedTx(tx CompressedTx) ([]byte, error) {
 		return nil, err
 	}
 
-	data := []byte{}
+	var data []byte
 	data = append(data, nonceData...)
 	data = append(data, gasPriceData...)
 	data = append(data, gasLimitData...)

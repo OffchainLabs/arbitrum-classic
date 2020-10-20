@@ -24,8 +24,8 @@ import (
 )
 
 type RestoreContext interface {
-	GetValue(common.Hash) value.Value
-	GetMachine(common.Hash) machine.Machine
+	GetValue(common.Hash) (value.Value, error)
+	GetMachine(common.Hash) (machine.Machine, error)
 }
 
 type CheckpointContext struct {
@@ -70,12 +70,20 @@ func (ctx *CheckpointContext) Machines() map[common.Hash]machine.Machine {
 	return ctx.machines
 }
 
-func (ctx *CheckpointContext) GetValue(h common.Hash) value.Value {
-	return ctx.values[h]
+func (ctx *CheckpointContext) GetValue(h common.Hash) (value.Value, error) {
+	if val, ok := ctx.values[h]; ok {
+		return val, nil
+	}
+
+	return nil, &machine.ValueNotFoundError{HashValue: h}
 }
 
-func (ctx *CheckpointContext) GetMachine(h common.Hash) machine.Machine {
-	return ctx.machines[h]
+func (ctx *CheckpointContext) GetMachine(h common.Hash) (machine.Machine, error) {
+	if mach, ok := ctx.machines[h]; ok {
+		return mach, nil
+	}
+
+	return nil, &machine.MachineNotFoundError{HashValue: h}
 }
 
 func SaveCheckpointContext(db machine.CheckpointStorage, ckpCtx *CheckpointContext) error {

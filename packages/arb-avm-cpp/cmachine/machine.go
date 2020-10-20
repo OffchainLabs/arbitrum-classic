@@ -29,12 +29,12 @@ import "C"
 import (
 	"bytes"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"runtime"
 	"time"
 	"unsafe"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -48,7 +48,7 @@ func New(codeFile string) (*Machine, error) {
 	cFilename := C.CString(codeFile)
 	cMachine := C.machineCreate(cFilename)
 	if cMachine == nil {
-		return nil, fmt.Errorf("error loading machine %v", codeFile)
+		return nil, fmt.Errorf("error creating machine from file %s", codeFile)
 	}
 	ret := &Machine{cMachine}
 	runtime.SetFinalizer(ret, cdestroyVM)
@@ -135,6 +135,7 @@ func makeExecutionAssertion(
 func encodeInboxMessages(inboxMessages []inbox.InboxMessage) []byte {
 	var buf bytes.Buffer
 	for _, msg := range inboxMessages {
+		// Error just occurs on write, and bytes.Buffer is safe
 		_ = value.MarshalValue(msg.AsValue(), &buf)
 	}
 	return buf.Bytes()
@@ -142,6 +143,8 @@ func encodeInboxMessages(inboxMessages []inbox.InboxMessage) []byte {
 
 func encodeValue(val value.Value) []byte {
 	var buf bytes.Buffer
+
+	// Error just occurs on write, and bytes.Buffer is safe
 	_ = value.MarshalValue(val, &buf)
 	return buf.Bytes()
 }

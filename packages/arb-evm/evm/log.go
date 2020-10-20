@@ -123,6 +123,8 @@ func NewLogFromValue(val value.Value) (Log, error) {
 	if tupVal.Len() < 3 {
 		return Log{}, fmt.Errorf("log tuple must be at least size 3, but is %v", tupVal)
 	}
+
+	// Tuple size already verified above, so error can be ignored
 	contractIDVal, _ := tupVal.GetByInt64(0)
 	contractIDInt, ok := contractIDVal.(value.IntValue)
 	if !ok {
@@ -148,7 +150,7 @@ func NewLogFromValue(val value.Value) (Log, error) {
 	return Log{address, topics, logData}, nil
 }
 
-func (l Log) AsValue() *value.TupleValue {
+func (l Log) AsValue() (*value.TupleValue, error) {
 	data := []value.Value{
 		value.NewValueFromAddress(l.Address),
 		inbox.BytesToByteStack(l.Data),
@@ -156,8 +158,7 @@ func (l Log) AsValue() *value.TupleValue {
 	for _, topic := range l.Topics {
 		data = append(data, value.NewIntValue(new(big.Int).SetBytes(topic.Bytes())))
 	}
-	val, _ := value.NewTupleFromSlice(data)
-	return val
+	return value.NewTupleFromSlice(data)
 }
 
 func LogStackToLogs(val value.Value) ([]Log, error) {
@@ -180,7 +181,10 @@ func LogStackToLogs(val value.Value) ([]Log, error) {
 func LogsToLogStack(logs []Log) *value.TupleValue {
 	logValues := make([]value.Value, 0, len(logs))
 	for i := range logs {
-		logValues = append(logValues, logs[len(logs)-1-i].AsValue())
+		logValue, err := logs[len(logs)-1-i].AsValue()
+		if err == nil {
+			logValues = append(logValues, logValue)
+		}
 	}
 	return inbox.ListToStackValue(logValues)
 }

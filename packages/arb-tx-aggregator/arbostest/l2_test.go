@@ -141,6 +141,7 @@ func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.S
 		),
 	)
 
+	// Last parameter returned is number of steps executed
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
 	logs := assertion.ParseLogs()
 	if len(logs) != 4 {
@@ -445,6 +446,7 @@ func TestSignedTx(t *testing.T) {
 		),
 	)
 
+	// Last parameter returned is number of steps executed
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
 	logs := assertion.ParseLogs()
 	testCase, err := inbox.TestVectorJSON(messages, logs, assertion.ParseOutMessages())
@@ -564,6 +566,8 @@ func TestUnsignedTx(t *testing.T) {
 			chainTime,
 		),
 	)
+
+	// Last parameter returned is number of steps executed
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
 	logs := assertion.ParseLogs()
 	testCase, err := inbox.TestVectorJSON(messages, logs, assertion.ParseOutMessages())
@@ -837,6 +841,7 @@ func TestCompressedECDSATx(t *testing.T) {
 		)
 	}
 
+	// Last parameter returned is number of steps executed
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
 	logs := assertion.ParseLogs()
 	testCase, err := inbox.TestVectorJSON(messages, logs, assertion.ParseOutMessages())

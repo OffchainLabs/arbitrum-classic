@@ -89,7 +89,10 @@ func newTxQueues() *txQueues {
 }
 
 func (q *txQueues) addTransaction(tx *types.Transaction, signer types.Signer) error {
-	sender, _ := types.Sender(signer, tx)
+	sender, err := types.Sender(signer, tx)
+	if err != nil {
+		return err
+	}
 	queue, ok := q.queues[sender]
 	if !ok {
 		queue = newTxQueue()
@@ -110,13 +113,6 @@ func (q *txQueues) maybeRemoveAccountAtIndex(i int) {
 		q.accounts[i] = q.accounts[len(q.accounts)-1]
 		q.accounts = q.accounts[:len(q.accounts)-1]
 	}
-}
-
-func (q *txQueues) getRandomTx() (*types.Transaction, int) {
-	index := int(rand.Int31n(int32(len(q.accounts))))
-	nextAccount := q.queues[q.accounts[index]]
-	tx := nextAccount.Peek()
-	return tx, index
 }
 
 type pendingBatch struct {
@@ -189,7 +185,10 @@ func (p *pendingBatch) popRandomTx(queuedTxes *txQueues, signer types.Signer) (*
 		nextAccount := queuedTxes.queues[account]
 		tx := nextAccount.Peek()
 
-		sender, _ := types.Sender(signer, tx)
+		sender, err := types.Sender(signer, tx)
+		if err != nil {
+			continue
+		}
 		nextValidNonce := p.getTxCount(sender)
 		if tx.Nonce() > nextValidNonce {
 			continue
@@ -216,7 +215,11 @@ func snapWithTx(snap *snapshot.Snapshot, tx *types.Transaction, signer types.Sig
 		return nil, err
 	}
 
-	sender, _ := types.Sender(signer, tx)
+	sender, err := types.Sender(signer, tx)
+	if err != nil {
+		return nil, err
+	}
+
 	_, err = snap.AddMessage(msg, arbcommon.NewAddressFromEth(sender), arbcommon.NewHashFromEth(tx.Hash()))
 	return snap, err
 }
@@ -225,15 +228,23 @@ func (p *pendingBatch) updateSnap(newSnap *snapshot.Snapshot) {
 	p.snap = newSnap
 }
 
-func (p *pendingBatch) addIncludedTx(tx *types.Transaction) {
+func (p *pendingBatch) addIncludedTx(tx *types.Transaction) error {
+	sender, err := types.Sender(p.signer, tx)
+	if err != nil {
+		return err
+	}
+
 	p.appliedTxes = append(p.appliedTxes, tx)
 	p.sizeBytes += tx.Size()
-	sender, _ := types.Sender(p.signer, tx)
 	p.txCounts[sender] = tx.Nonce() + 1
+	return nil
 }
 
 func (p *pendingBatch) checkValidForQueue(tx *types.Transaction) error {
-	ethSender, _ := types.Sender(p.signer, tx)
+	ethSender, err := types.Sender(p.signer, tx)
+	if err != nil {
+		return err
+	}
 	sender := arbcommon.NewAddressFromEth(ethSender)
 	txCount, err := p.snap.GetTransactionCount(sender)
 	if err != nil {

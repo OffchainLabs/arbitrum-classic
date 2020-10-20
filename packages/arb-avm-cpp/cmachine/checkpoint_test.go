@@ -38,7 +38,10 @@ func TestCheckpoint(t *testing.T) {
 	}
 	defer checkpointStorage.CloseCheckpointStorage()
 
-	val := checkpointStorage.GetData([]byte("key"))
+	val, err := checkpointStorage.GetData([]byte("key"))
+	if err == nil {
+		t.Error("should have failed")
+	}
 
 	if len(val) != 0 {
 		t.Error("should have empty value")

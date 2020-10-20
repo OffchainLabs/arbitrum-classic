@@ -106,8 +106,10 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				chain.RUnlock()
 				chain.Lock()
 				if newOpinion == valprotocol.ValidChildType {
+					// Already confirmed node is valid, so error can be ignored
 					_ = correctNode.UpdateValidOpinion(nextMachine, validExecution)
 				} else {
+					// Already confirmed node is invalid, so error can be ignored
 					_ = correctNode.UpdateInvalidOpinion()
 				}
 				log.Println("Formed opinion that", newOpinion, successorHashes[newOpinion], "is the successor of", currentHash, "with after hash", correctNode.Machine().Hash())
@@ -226,7 +228,11 @@ func (chain *ChainObserver) prepareAssertion(maxValidBlock *common.BlockId) (*ch
 	beforeInboxTop := beforeState.InboxTop
 	newMessageCount := new(big.Int).Sub(maxMessageCount, beforeState.InboxCount)
 
-	messages, _ := chain.Inbox.GetMessages(beforeInboxTop, newMessageCount.Uint64())
+	messages, err := chain.Inbox.GetMessages(beforeInboxTop, newMessageCount.Uint64())
+	if err != nil {
+		log.Println("Nonfatal error getting messages", err)
+	}
+
 	mach := currentOpinion.Machine().Clone()
 	maxSteps := chain.NodeGraph.Params().MaxExecutionSteps
 	chain.RUnlock()

@@ -60,13 +60,13 @@ type L2SubType uint8
 
 const (
 	TransactionType         L2SubType = 0
-	ContractTransactionType           = 1
-	CallType                          = 2
-	TransactionBatchType              = 3
-	SignedTransactionType             = 4
-	BuddyRequestType                  = 5
-	HeartbeatType                     = 6
-	CompressedECDSA                   = 7
+	ContractTransactionType L2SubType = 1
+	CallType                L2SubType = 2
+	TransactionBatchType    L2SubType = 3
+	SignedTransactionType   L2SubType = 4
+	BuddyRequestType        L2SubType = 5
+	HeartbeatType           L2SubType = 6
+	CompressedECDSA         L2SubType = 7
 )
 
 type AbstractL2Message interface {
