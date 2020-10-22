@@ -180,12 +180,13 @@ std::vector<unsigned char> bufferToVec(const Buffer& b) {
     }
     uint64_t size_ext = b.size();
     if (size_ext < 32) size_ext = 32;
-    while (size_ext/2 > size && size_ext > 32) {
+    while (size_ext/2 >= size && size_ext > 32) {
         size_ext = size_ext/2;
     }
     for (uint64_t i = 0; i < size_ext; i++) {
         res.push_back(b.get(i));
     }
+    // std::cerr << "Buffer size " << size << " ext " << size_ext << std::endl;
     return res;
 }
 
@@ -203,7 +204,13 @@ uint256_t merkleHash(uint8_t *buf, int offset, int sz) {
 
 std::vector<unsigned char> makeProof(uint8_t *arr, uint64_t offset, uint64_t sz, uint64_t loc) {
     if (sz == 32) {
-        return std::vector<unsigned char>(arr+loc, arr+loc+32);
+        auto res = std::vector<unsigned char>(arr+loc, arr+loc+32);
+        /*
+        for (int i = 0; i < 32; i++) {
+            std::cerr << "hmm " << i << " " << int(arr[loc+i]) << " " << int(res[i]) << std::endl;
+        }
+        */
+        return res;
         // return std::vector<unsigned char>();
     } else if (loc < offset + sz/2) {
         auto proof = makeProof(arr, offset, sz/2, loc);
@@ -218,7 +225,9 @@ std::vector<unsigned char> makeProof(uint8_t *arr, uint64_t offset, uint64_t sz,
 
 std::vector<unsigned char> makeProof(Buffer &buf, uint64_t loc) {
     auto arr = bufferToVec(buf);
-    return makeProof(arr.data(), 0, arr.size(), loc % arr.size());
+    auto res = makeProof(arr.data(), 0, arr.size(), ((loc/32) % (arr.size()/32))*32);
+    // std::cerr << "Making " << arr.size() << " -- " << res.size()/32 << std::endl;
+    return res;
 }
 
 std::vector<unsigned char> makeNormalizationProof(uint8_t *arr, uint64_t sz) {
@@ -226,14 +235,16 @@ std::vector<unsigned char> makeNormalizationProof(uint8_t *arr, uint64_t sz) {
     for (int i = 0; i < 31; i++) {
         res.push_back(0);
     }
-    res.push_back(makeProof(arr, 0, sz, 0).size()/32);
 
     if (sz == 32) {
-        res.insert(res.end(), arr, arr+32);
-        res.insert(res.end(), arr, arr+32);
+        // std::cerr << "Simple normalization" << std::endl;
+        res.push_back(0);
+        marshal_uint256_t(merkleHash(arr, 0, sz), res);
+        marshal_uint256_t(merkleHash(arr, 0, sz), res);
         return res;
     }
 
+    res.push_back(makeProof(arr, 0, sz, 0).size()/32);
     marshal_uint256_t(merkleHash(arr, 0, sz/2), res);
     marshal_uint256_t(merkleHash(arr, sz/2, sz/2), res);
     return res;
@@ -241,23 +252,26 @@ std::vector<unsigned char> makeNormalizationProof(uint8_t *arr, uint64_t sz) {
 
 std::vector<unsigned char> makeNormalizationProof(Buffer &buf) {
     auto arr = bufferToVec(buf);
+    // std::cerr << "Making normal " << arr.size() << std::endl;
     return makeNormalizationProof(arr.data(), arr.size());
 }
 
 void insertSizes(std::vector<unsigned char> &buf, int sz1, int sz2, int sz3, int sz4) {
     int acc = 1;
     buf.push_back(static_cast<uint8_t>(acc));
-    std::cerr << "Setting sizes " << acc << std::endl;
+    // std::cerr << "Setting sizes " << acc << std::endl;
     acc += sz1/32;
     buf.push_back(static_cast<uint8_t>(acc));
-    std::cerr << "Setting sizes " << acc << std::endl;
+    // std::cerr << "Setting sizes " << acc << std::endl;
     acc += sz2/32;
     buf.push_back(static_cast<uint8_t>(acc));
-    std::cerr << "Setting sizes " << acc << std::endl;
+    // std::cerr << "Setting sizes " << acc << std::endl;
     acc += sz3/32;
     buf.push_back(static_cast<uint8_t>(acc));
+    // std::cerr << "Setting sizes " << acc << std::endl;
     acc += sz4/32;
     buf.push_back(static_cast<uint8_t>(acc));
+    // std::cerr << "Setting sizes " << acc << std::endl;
     for (int i = 5; i < 32; i++) {
         buf.push_back(0);
     }
@@ -268,12 +282,13 @@ void makeSetBufferProof(std::vector<unsigned char> &buf, uint64_t loc, Buffer bu
     Buffer nbuffer1 = nbuffer;
     bool aligned = true;
     for (int i = 0; i < wordSize; i++) {
-        if (loc + (wordSize-1) - i == 0) {
+        if ((loc + i) % 32 == 0 && i > 0) {
+            // std::cerr << "Unaligned " << std::endl;
             nbuffer1 = nbuffer;
             aligned = false;
         }
-        nbuffer = nbuffer.set(loc + (wordSize-1) - i, static_cast<uint8_t>(v & 0xff));
-        v = v >> 8;
+        // std::cerr << "Setting to " << (loc+i) << " " << int(static_cast<uint8_t>((v >> ((wordSize-1-i)*8)) & 0xff)) << std::endl;
+        nbuffer = nbuffer.set(loc + i, static_cast<uint8_t>((v >> ((wordSize-1-i)*8)) & 0xff));
     }
     auto proof1 = makeProof(buffer, loc);
     auto nproof1 = makeNormalizationProof(nbuffer1);
@@ -335,11 +350,12 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
           return buf;
         }
         if (opcode == OpCode::SET_BUFFER8) {
-            std::cerr << "Here" << std::endl;
+            // std::cerr << "Here " << intx::to_string(buffer->hash(), 16) << std::endl;
             Buffer nbuffer = buffer->set(loc, static_cast<uint8_t>(*val));
-            std::cerr << "Making proof" << std::endl;
+            // std::cerr << "Making proof" << std::endl;
             auto proof1 = makeProof(*buffer, loc);
-            std::cerr << "Normalize" << std::endl;
+            // std::cerr << "Proof: " << int(proof1[0]) << " -- " << int(proof1[31]) << std::endl;
+            // std::cerr << "Normalize" << std::endl;
             auto nproof1 = makeNormalizationProof(nbuffer);
             insertSizes(buf, proof1.size(), nproof1.size(), 0, 0);
             buf.insert(buf.end(), proof1.begin(), proof1.end());

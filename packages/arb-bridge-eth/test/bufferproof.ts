@@ -57,6 +57,13 @@ function makeProof(arr: bytes32[], offset: number, sz: number, loc: number) : by
 }
 
 function normalizationProof(arr: bytes32[], sz: number) {
+  if (sz == 1) {
+    return {
+      left: merkleHash(arr, 0, 1),
+      right: merkleHash(arr, 0, 1),
+      height: 0,
+    }
+  }
   return {
     left: merkleHash(arr, 0, sz/2),
     right: merkleHash(arr, sz/2, sz/2),
@@ -67,6 +74,17 @@ function normalizationProof(arr: bytes32[], sz: number) {
 function elem(a: number): bytes32 {
   return '0x' + a.toString(16).padStart(64, '0')
 }
+
+function makeZeros(): bytes32[] {
+  let zeros : bytes32[] = []
+  let acc = keccak1(elem(0))
+  for (let i = 0; i < 64; i++) {
+    zeros.push(acc)
+    acc = keccak2(zeros[i], zeros[i])
+  }
+  return zeros
+}
+
 
 describe('BufferProof', function () {
   before(async () => {
@@ -111,11 +129,46 @@ describe('BufferProof', function () {
       }
       let buf = merkleHash(arr, 0, 32)
       let proof = makeProof(arr, 0, 32, 23)
+      console.log("proof length", proof.length)
       arr[23] = elem(10)
       const nproof = normalizationProof(arr, 32)
       const res = await ospTester.testSet(buf, 23, elem(10), proof, nproof.height, nproof.left, nproof.right)
       // console.log(res, merkleHash(arr, 0, 32))
       expect(res).to.equal(merkleHash(arr, 0, 32))
+    })
+
+    it('extending should work', async () => {
+      let arr : bytes32[] = [elem(1)]
+      let buf = merkleHash(arr, 0, 1)
+      let proof = makeProof(arr, 0, 1, 0)
+      let narr : bytes32[] = [elem(1), elem(2)]
+      const nproof = normalizationProof(narr, 2)
+      const res = await ospTester.testSet(buf, 1, elem(2), proof, nproof.height, nproof.left, nproof.right)
+      // console.log(res, merkleHash(arr, 0, 32))
+      expect(res).to.equal(merkleHash(narr, 0, 2))
+    })
+
+    it('extending more should work', async () => {
+      let arr : bytes32[] = [elem(1)]
+      let buf = merkleHash(arr, 0, 1)
+      let proof = makeProof(arr, 0, 1, 0)
+      let narr : bytes32[] = [elem(1), elem(0), elem(0), elem(0), elem(0), elem(2), elem(0), elem(0)]
+      const nproof = normalizationProof(narr, 8)
+      const res = await ospTester.testSet(buf, 5, elem(2), proof, nproof.height, nproof.left, nproof.right)
+      // console.log(res, merkleHash(arr, 0, 32))
+      expect(res).to.equal(merkleHash(narr, 0, 8))
+    })
+
+    it('shrinking should work', async () => {
+      let arr : bytes32[] = [elem(1), elem(0), elem(0), elem(0), elem(0), elem(2), elem(0), elem(0)]
+      let narr : bytes32[] = [elem(1)]
+      let buf = merkleHash(arr, 0, 8)
+      let narr2 : bytes32[] = [elem(1), elem(0), elem(0), elem(0), elem(0), elem(0), elem(0), elem(0)]
+      let proof = makeProof(arr, 0, 8, 5)
+      const nproof = normalizationProof(narr, 1)
+      const res = await ospTester.testSet(buf, 5, elem(0), proof, nproof.height, nproof.left, nproof.right)
+      // console.log(res, merkleHash(arr, 0, 32))
+      expect(res).to.equal(merkleHash(narr, 0, 1))
     })
   })
 

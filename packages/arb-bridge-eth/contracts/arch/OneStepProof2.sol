@@ -332,7 +332,7 @@ contract OneStepProof2 is IOneStepProof2 {
     }
 
     function calcHeight(uint loc) internal pure returns (uint) {
-        if (loc == 0) return 0;
+        if (loc == 0) return 1;
         else return 1+calcHeight(loc>>1);
     }
 
@@ -343,16 +343,16 @@ contract OneStepProof2 is IOneStepProof2 {
         get(buf, loc, proof);
         bytes32[] memory zeros = makeZeros();
         // extended
-        if (loc > (proof.length << 2)) {
+        if (loc >= (1 << (proof.length-1))) {
             if (v == 0) return buf;
             uint height = calcHeight(loc);
             // build the left branch
             for (uint i = proof.length; i < height-1; i++) {
-                buf = keccak2(buf, zeros[i]);
+                buf = keccak2(buf, zeros[i-1]);
             }
             for (uint i = 1; i < height-1; i++) {
-                if (loc & 1 == 1) acc = keccak2(acc, zeros[i]);
-                else acc = keccak2(zeros[i], acc);
+                if (loc & 1 == 1) acc = keccak2(zeros[i-1], acc);
+                else acc = keccak2(acc, zeros[i-1]);
                 loc = loc >> 1;
             }
             return keccak2(buf, acc);
@@ -364,11 +364,11 @@ contract OneStepProof2 is IOneStepProof2 {
             loc = loc >> 1;
         }
         if (v != bytes32(0)) return acc;
-        require(normal2 != zeros[nh], "right subtree cannot be zero");
-        bytes32 res = keccak2(normal1, normal2);
+        require(normal2 != zeros[nh] || nh == 0, "right subtree cannot be zero");
+        bytes32 res = nh == 0 ? normal1 : keccak2(normal1, normal2);
         bytes32 acc2 = res;
-        for (uint i = nh; i < proof.length; i++) {
-            acc2 = keccak2(res, zeros[i]);
+        for (uint i = nh; i < proof.length-1; i++) {
+            acc2 = keccak2(acc2, zeros[i]);
         }
         require(acc2 == acc, "expected match");
         return res;
@@ -428,15 +428,15 @@ contract OneStepProof2 is IOneStepProof2 {
         uint256 res = 0;
         for (uint i = 0; i < 32; i++) {
             res = res << 8;
-            res = res | uint256(uint8(arr[offset+32-1-i]));
+            res = res | uint256(uint8(arr[offset+i]));
         }
         return res;
     }
 
-    function bytes32ToArray(bytes32 b) internal pure returns (bytes memory arr) {
+    function bytes32ToArray(bytes32 b) internal pure returns (bytes memory) {
         uint256 acc = uint256(b);
         bytes memory res = new bytes(32);
-        for (uint i = 0; i < arr.length; i++) {
+        for (uint i = 0; i < 32; i++) {
             res[31-i] = bytes1(uint8(acc));
             acc = acc >> 8;
         }
@@ -493,23 +493,23 @@ contract OneStepProof2 is IOneStepProof2 {
     function setBuffer8(bytes32 buf, uint256 offset, uint256 b, BufferProof memory proof) internal pure returns (bytes32) {
         bytes32 word = get(buf, offset/32, proof.proof1);
         bytes32 nword = setByte(word, offset%32, b);
-        require(getByte(nword, offset%32) == b, "set byte or get byte progen");
-        return set(buf, offset/32, nword, proof.proof1, proof.nproof1);
+        bytes32 res = set(buf, offset/32, nword, proof.proof1, proof.nproof1);
+        return res;
     }
 
     function setBuffer64(bytes32 buf, uint256 offset, uint256 val, BufferProof memory proof) internal pure returns (bytes32) {
         bytes memory arr = bytes32ToArray(bytes32(val));
         bytes32 nword = get(buf, offset/32, proof.proof1);
         if (offset%32 + 8 >= 32) {
-            bytes32 nword2 = get(buf, offset/32 + 1, proof.proof2); 
             for (uint i = 0; i < 8 - (offset%32 + 8 - 32); i++) {
-                nword = setByte(nword, offset%32 + i, arr[i+24]);
+                nword = setByte(nword, (offset+i)%32, arr[i+24]);
             }
+            buf = set(buf, offset/32, nword, proof.proof1, proof.nproof1);
+            bytes32 nword2 = get(buf, offset/32 + 1, proof.proof2); 
             for (uint i = 8 - (offset%32 + 8 - 32); i < 8; i++) {
                 nword2 = setByte(nword2, (offset+i)%32, arr[i+24]);
-                buf = set(buf, offset/32, nword, proof.proof1, proof.nproof1);
-                buf = set(buf, offset/32 + 1, nword2, proof.proof2, proof.nproof2);
             }
+            buf = set(buf, offset/32 + 1, nword2, proof.proof2, proof.nproof2);
         } else {
             for (uint i = 0; i < 8; i++) {
                 nword = setByte(nword, offset%32 + i, arr[i+24]);
@@ -523,15 +523,15 @@ contract OneStepProof2 is IOneStepProof2 {
         bytes memory arr = bytes32ToArray(bytes32(val));
         bytes32 nword = get(buf, offset/32, proof.proof1);
         if (offset%32 + 32 >= 32) {
-            bytes32 nword2 = get(buf, offset/32 + 1, proof.proof2); 
             for (uint i = 0; i < 32 - (offset%32 + 32 - 32); i++) {
                 nword = setByte(nword, offset%32 + i, arr[i]);
             }
+            buf = set(buf, offset/32, nword, proof.proof1, proof.nproof1);
+            bytes32 nword2 = get(buf, offset/32 + 1, proof.proof2); 
             for (uint i = 32 - (offset%32 + 32 - 32); i < 32; i++) {
                 nword2 = setByte(nword2, (offset+i)%32, arr[i]);
-                buf = set(buf, offset/32, nword, proof.proof1, proof.nproof1);
-                buf = set(buf, offset/32 + 1, nword2, proof.proof2, proof.nproof2);
             }
+            buf = set(buf, offset/32 + 1, nword2, proof.proof2, proof.nproof2);
         } else {
             for (uint i = 0; i < 32; i++) {
                 nword = setByte(nword, offset%32 + i, arr[i]);
