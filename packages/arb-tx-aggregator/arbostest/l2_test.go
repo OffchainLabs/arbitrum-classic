@@ -627,7 +627,7 @@ func TestBatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dest, err := deployContract(t, mach, common.RandAddress(), constructorData, big.NewInt(0))
+	dest, err := deployContract(t, mach, common.RandAddress(), constructorData, big.NewInt(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

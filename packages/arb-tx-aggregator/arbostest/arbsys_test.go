@@ -162,7 +162,7 @@ func TestTransactionCount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fibAddress, err := deployContract(t, mach, addr, constructorData, big.NewInt(int64(correctTxCount)))
+	fibAddress, err := deployContract(t, mach, addr, constructorData, big.NewInt(int64(correctTxCount)), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

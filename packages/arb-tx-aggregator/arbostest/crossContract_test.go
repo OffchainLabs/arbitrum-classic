@@ -73,14 +73,14 @@ func TestCrossContract(t *testing.T) {
 	inboxMessages := make([]inbox.InboxMessage, 0)
 	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg(), addr, big.NewInt(0), chainTime))
 	inboxMessages = append(inboxMessages, message.NewInboxMessage(
-		message.NewSafeL2Message(makeConstructorTx(distributionsConstructorData, big.NewInt(0))),
+		message.NewSafeL2Message(makeConstructorTx(distributionsConstructorData, big.NewInt(0), nil)),
 		addr,
 		big.NewInt(1),
 		chainTime,
 	))
 
 	inboxMessages = append(inboxMessages, message.NewInboxMessage(
-		message.NewSafeL2Message(makeConstructorTx(pointsConstructorData, big.NewInt(1))),
+		message.NewSafeL2Message(makeConstructorTx(pointsConstructorData, big.NewInt(1), nil)),
 		addr,
 		big.NewInt(2),
 		chainTime,

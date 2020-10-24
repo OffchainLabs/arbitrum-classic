@@ -5,3 +5,4 @@ abigen --sol=storage.sol --pkg=arbostestcontracts --out=storage.go
 abigen --sol=create2.sol --pkg=arbostestcontracts --out=create2.go
 abigen --sol=receiver.sol --pkg=arbostestcontracts --out=receiver.go
 abigen --sol=opcodes.sol --pkg=arbostestcontracts --out=opcodes.go
+abigen --sol=transfer.sol --pkg=arbostestcontracts --out=transfer.go
