@@ -50,27 +50,132 @@ type Result interface {
 	AsValue() value.Value
 }
 
+type Provenance struct {
+	L1SeqNum        *big.Int
+	ParentRequestId common.Hash
+	IndexInParent   *big.Int
+}
+
+func NewProvenanceFromValue(val value.Value) (Provenance, error) {
+	failRet := Provenance{}
+	tup, ok := val.(*value.TupleValue)
+	if !ok {
+		return failRet, errors.New("val must be a tuple")
+	}
+	if tup.Len() != 3 {
+		return failRet, fmt.Errorf("expected tuple of length 3, but recieved tuple of length %v", tup.Len())
+	}
+
+	// Tuple size already verified above, so error can be ignored
+	l1SeqNumVal, _ := tup.GetByInt64(0)
+	parentRequestIdVal, _ := tup.GetByInt64(1)
+	indexInParentVal, _ := tup.GetByInt64(2)
+
+	l1SeqNumInt, ok := l1SeqNumVal.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("provenance l1SeqNum must be an int")
+	}
+
+	parentRequestIdInt, ok := parentRequestIdVal.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("provenance parentRequestId must be an int")
+	}
+
+	indexInParentInt, ok := indexInParentVal.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("provenance indexInParent must be an int")
+	}
+
+	indexInParent := indexInParentInt.BigInt()
+	if indexInParent.Cmp(math.MaxBig256) == 0 {
+		indexInParent = nil
+	}
+
+	var parentRequestId common.Hash
+	copy(parentRequestId[:], math.U256Bytes(parentRequestIdInt.BigInt()))
+
+	return Provenance{
+		L1SeqNum:        l1SeqNumInt.BigInt(),
+		ParentRequestId: parentRequestId,
+		IndexInParent:   indexInParent,
+	}, nil
+}
+
 type IncomingRequest struct {
-	Kind      inbox.Type
-	Sender    common.Address
-	MessageID common.Hash
-	Data      []byte
-	ChainTime inbox.ChainTime
+	Kind       inbox.Type
+	Sender     common.Address
+	MessageID  common.Hash
+	Data       []byte
+	ChainTime  inbox.ChainTime
+	Provenance Provenance
 }
 
 func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
-	msg, err := inbox.NewInboxMessageFromValue(val)
-	if err != nil {
-		return IncomingRequest{}, err
+	failRet := IncomingRequest{}
+	tup, ok := val.(*value.TupleValue)
+	if !ok {
+		return failRet, errors.New("val must be a tuple")
+	}
+	if tup.Len() != 7 {
+		return failRet, fmt.Errorf("expected tuple of length 7, but recieved tuple of length %v", tup.Len())
+	}
+
+	// Tuple size already verified above, so error can be ignored
+	kind, _ := tup.GetByInt64(0)
+	blockNumber, _ := tup.GetByInt64(1)
+	timestamp, _ := tup.GetByInt64(2)
+	sender, _ := tup.GetByInt64(3)
+	inboxSeqNum, _ := tup.GetByInt64(4)
+	messageData, _ := tup.GetByInt64(5)
+	provenanceVal, _ := tup.GetByInt64(6)
+
+	kindInt, ok := kind.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("inbox message kind must be an int")
+	}
+
+	blockNumberInt, ok := blockNumber.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("blockNumber must be an int")
+	}
+
+	timestampInt, ok := timestamp.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("timestamp must be an int")
+	}
+
+	senderInt, ok := sender.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("sender must be an int")
+	}
+
+	messageIDInt, ok := inboxSeqNum.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("inboxSeqNum must be an int")
 	}
 	var messageID common.Hash
-	copy(messageID[:], math.U256Bytes(msg.InboxSeqNum))
+	copy(messageID[:], math.U256Bytes(messageIDInt.BigInt()))
+
+	data, err := inbox.ByteStackToHex(messageData)
+	if err != nil {
+		return failRet, errors2.Wrap(err, "unmarshalling input data")
+	}
+
+	provenance, err := NewProvenanceFromValue(provenanceVal)
+	if err != nil {
+		return failRet, err
+	}
+
 	return IncomingRequest{
-		Kind:      msg.Kind,
-		Sender:    msg.Sender,
+		Kind:      inbox.Type(kindInt.BigInt().Uint64()),
+		Sender:    inbox.NewAddressFromInt(senderInt),
 		MessageID: messageID,
-		Data:      msg.Data,
-		ChainTime: msg.ChainTime,
+		Data:      data,
+		ChainTime: inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocks(blockNumberInt.BigInt()),
+			Timestamp: timestampInt.BigInt(),
+		},
+		Provenance: provenance,
 	}, nil
 }
 

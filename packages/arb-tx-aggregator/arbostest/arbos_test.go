@@ -234,7 +234,7 @@ func TestBlocks(t *testing.T) {
 		totalAVMLogCount = totalAVMLogCount.Add(totalAVMLogCount, big.NewInt(1))
 		res, err := evm.NewResultFromValue(avmLog)
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 
 		if i%2 == 0 {
