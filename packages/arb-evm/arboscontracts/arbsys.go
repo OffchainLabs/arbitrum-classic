@@ -27,7 +27,7 @@ var (
 )
 
 // ArbSysABI is the input ABI used to generate the binding from.
-const ArbSysABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Erc20Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"Erc721Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"EthWithdrawal\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getStorageAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"}]"
+const ArbSysABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Erc20Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"Erc721Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"EthWithdrawal\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getStorageAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"}]"
 
 // ArbSysFuncSigs maps the 4-byte function signature to its string representation.
 var ArbSysFuncSigs = map[string]string{
@@ -382,10 +382,19 @@ type ArbSysErc20Withdrawal struct {
 
 // FilterErc20Withdrawal is a free log retrieval operation binding the contract event 0x1ba8ee6862bcdb02b78ff2fbed4d3ddf03a83aaf046e65df3e586478dd78dd1c.
 //
-// Solidity: event Erc20Withdrawal(address destAddr, address tokenAddr, uint256 amount)
-func (_ArbSys *ArbSysFilterer) FilterErc20Withdrawal(opts *bind.FilterOpts) (*ArbSysErc20WithdrawalIterator, error) {
+// Solidity: event Erc20Withdrawal(address indexed destAddr, address indexed tokenAddr, uint256 amount)
+func (_ArbSys *ArbSysFilterer) FilterErc20Withdrawal(opts *bind.FilterOpts, destAddr []common.Address, tokenAddr []common.Address) (*ArbSysErc20WithdrawalIterator, error) {
 
-	logs, sub, err := _ArbSys.contract.FilterLogs(opts, "Erc20Withdrawal")
+	var destAddrRule []interface{}
+	for _, destAddrItem := range destAddr {
+		destAddrRule = append(destAddrRule, destAddrItem)
+	}
+	var tokenAddrRule []interface{}
+	for _, tokenAddrItem := range tokenAddr {
+		tokenAddrRule = append(tokenAddrRule, tokenAddrItem)
+	}
+
+	logs, sub, err := _ArbSys.contract.FilterLogs(opts, "Erc20Withdrawal", destAddrRule, tokenAddrRule)
 	if err != nil {
 		return nil, err
 	}
@@ -394,10 +403,19 @@ func (_ArbSys *ArbSysFilterer) FilterErc20Withdrawal(opts *bind.FilterOpts) (*Ar
 
 // WatchErc20Withdrawal is a free log subscription operation binding the contract event 0x1ba8ee6862bcdb02b78ff2fbed4d3ddf03a83aaf046e65df3e586478dd78dd1c.
 //
-// Solidity: event Erc20Withdrawal(address destAddr, address tokenAddr, uint256 amount)
-func (_ArbSys *ArbSysFilterer) WatchErc20Withdrawal(opts *bind.WatchOpts, sink chan<- *ArbSysErc20Withdrawal) (event.Subscription, error) {
+// Solidity: event Erc20Withdrawal(address indexed destAddr, address indexed tokenAddr, uint256 amount)
+func (_ArbSys *ArbSysFilterer) WatchErc20Withdrawal(opts *bind.WatchOpts, sink chan<- *ArbSysErc20Withdrawal, destAddr []common.Address, tokenAddr []common.Address) (event.Subscription, error) {
 
-	logs, sub, err := _ArbSys.contract.WatchLogs(opts, "Erc20Withdrawal")
+	var destAddrRule []interface{}
+	for _, destAddrItem := range destAddr {
+		destAddrRule = append(destAddrRule, destAddrItem)
+	}
+	var tokenAddrRule []interface{}
+	for _, tokenAddrItem := range tokenAddr {
+		tokenAddrRule = append(tokenAddrRule, tokenAddrItem)
+	}
+
+	logs, sub, err := _ArbSys.contract.WatchLogs(opts, "Erc20Withdrawal", destAddrRule, tokenAddrRule)
 	if err != nil {
 		return nil, err
 	}
@@ -431,7 +449,7 @@ func (_ArbSys *ArbSysFilterer) WatchErc20Withdrawal(opts *bind.WatchOpts, sink c
 
 // ParseErc20Withdrawal is a log parse operation binding the contract event 0x1ba8ee6862bcdb02b78ff2fbed4d3ddf03a83aaf046e65df3e586478dd78dd1c.
 //
-// Solidity: event Erc20Withdrawal(address destAddr, address tokenAddr, uint256 amount)
+// Solidity: event Erc20Withdrawal(address indexed destAddr, address indexed tokenAddr, uint256 amount)
 func (_ArbSys *ArbSysFilterer) ParseErc20Withdrawal(log types.Log) (*ArbSysErc20Withdrawal, error) {
 	event := new(ArbSysErc20Withdrawal)
 	if err := _ArbSys.contract.UnpackLog(event, "Erc20Withdrawal", log); err != nil {
@@ -517,10 +535,19 @@ type ArbSysErc721Withdrawal struct {
 
 // FilterErc721Withdrawal is a free log retrieval operation binding the contract event 0xefb6491629e398677590acbb4f49f56c5266e28d7ad0fd117a7251ff1e1d52d4.
 //
-// Solidity: event Erc721Withdrawal(address destAddr, address tokenAddr, uint256 id)
-func (_ArbSys *ArbSysFilterer) FilterErc721Withdrawal(opts *bind.FilterOpts) (*ArbSysErc721WithdrawalIterator, error) {
+// Solidity: event Erc721Withdrawal(address indexed destAddr, address indexed tokenAddr, uint256 id)
+func (_ArbSys *ArbSysFilterer) FilterErc721Withdrawal(opts *bind.FilterOpts, destAddr []common.Address, tokenAddr []common.Address) (*ArbSysErc721WithdrawalIterator, error) {
 
-	logs, sub, err := _ArbSys.contract.FilterLogs(opts, "Erc721Withdrawal")
+	var destAddrRule []interface{}
+	for _, destAddrItem := range destAddr {
+		destAddrRule = append(destAddrRule, destAddrItem)
+	}
+	var tokenAddrRule []interface{}
+	for _, tokenAddrItem := range tokenAddr {
+		tokenAddrRule = append(tokenAddrRule, tokenAddrItem)
+	}
+
+	logs, sub, err := _ArbSys.contract.FilterLogs(opts, "Erc721Withdrawal", destAddrRule, tokenAddrRule)
 	if err != nil {
 		return nil, err
 	}
@@ -529,10 +556,19 @@ func (_ArbSys *ArbSysFilterer) FilterErc721Withdrawal(opts *bind.FilterOpts) (*A
 
 // WatchErc721Withdrawal is a free log subscription operation binding the contract event 0xefb6491629e398677590acbb4f49f56c5266e28d7ad0fd117a7251ff1e1d52d4.
 //
-// Solidity: event Erc721Withdrawal(address destAddr, address tokenAddr, uint256 id)
-func (_ArbSys *ArbSysFilterer) WatchErc721Withdrawal(opts *bind.WatchOpts, sink chan<- *ArbSysErc721Withdrawal) (event.Subscription, error) {
+// Solidity: event Erc721Withdrawal(address indexed destAddr, address indexed tokenAddr, uint256 id)
+func (_ArbSys *ArbSysFilterer) WatchErc721Withdrawal(opts *bind.WatchOpts, sink chan<- *ArbSysErc721Withdrawal, destAddr []common.Address, tokenAddr []common.Address) (event.Subscription, error) {
 
-	logs, sub, err := _ArbSys.contract.WatchLogs(opts, "Erc721Withdrawal")
+	var destAddrRule []interface{}
+	for _, destAddrItem := range destAddr {
+		destAddrRule = append(destAddrRule, destAddrItem)
+	}
+	var tokenAddrRule []interface{}
+	for _, tokenAddrItem := range tokenAddr {
+		tokenAddrRule = append(tokenAddrRule, tokenAddrItem)
+	}
+
+	logs, sub, err := _ArbSys.contract.WatchLogs(opts, "Erc721Withdrawal", destAddrRule, tokenAddrRule)
 	if err != nil {
 		return nil, err
 	}
@@ -566,7 +602,7 @@ func (_ArbSys *ArbSysFilterer) WatchErc721Withdrawal(opts *bind.WatchOpts, sink 
 
 // ParseErc721Withdrawal is a log parse operation binding the contract event 0xefb6491629e398677590acbb4f49f56c5266e28d7ad0fd117a7251ff1e1d52d4.
 //
-// Solidity: event Erc721Withdrawal(address destAddr, address tokenAddr, uint256 id)
+// Solidity: event Erc721Withdrawal(address indexed destAddr, address indexed tokenAddr, uint256 id)
 func (_ArbSys *ArbSysFilterer) ParseErc721Withdrawal(log types.Log) (*ArbSysErc721Withdrawal, error) {
 	event := new(ArbSysErc721Withdrawal)
 	if err := _ArbSys.contract.UnpackLog(event, "Erc721Withdrawal", log); err != nil {
@@ -651,10 +687,15 @@ type ArbSysEthWithdrawal struct {
 
 // FilterEthWithdrawal is a free log retrieval operation binding the contract event 0xc32d3c7eb0f275cbb5b72b3d3c688269430f30e5b9bb36980396edd9101c615c.
 //
-// Solidity: event EthWithdrawal(address destAddr, uint256 amount)
-func (_ArbSys *ArbSysFilterer) FilterEthWithdrawal(opts *bind.FilterOpts) (*ArbSysEthWithdrawalIterator, error) {
+// Solidity: event EthWithdrawal(address indexed destAddr, uint256 amount)
+func (_ArbSys *ArbSysFilterer) FilterEthWithdrawal(opts *bind.FilterOpts, destAddr []common.Address) (*ArbSysEthWithdrawalIterator, error) {
 
-	logs, sub, err := _ArbSys.contract.FilterLogs(opts, "EthWithdrawal")
+	var destAddrRule []interface{}
+	for _, destAddrItem := range destAddr {
+		destAddrRule = append(destAddrRule, destAddrItem)
+	}
+
+	logs, sub, err := _ArbSys.contract.FilterLogs(opts, "EthWithdrawal", destAddrRule)
 	if err != nil {
 		return nil, err
 	}
@@ -663,10 +704,15 @@ func (_ArbSys *ArbSysFilterer) FilterEthWithdrawal(opts *bind.FilterOpts) (*ArbS
 
 // WatchEthWithdrawal is a free log subscription operation binding the contract event 0xc32d3c7eb0f275cbb5b72b3d3c688269430f30e5b9bb36980396edd9101c615c.
 //
-// Solidity: event EthWithdrawal(address destAddr, uint256 amount)
-func (_ArbSys *ArbSysFilterer) WatchEthWithdrawal(opts *bind.WatchOpts, sink chan<- *ArbSysEthWithdrawal) (event.Subscription, error) {
+// Solidity: event EthWithdrawal(address indexed destAddr, uint256 amount)
+func (_ArbSys *ArbSysFilterer) WatchEthWithdrawal(opts *bind.WatchOpts, sink chan<- *ArbSysEthWithdrawal, destAddr []common.Address) (event.Subscription, error) {
 
-	logs, sub, err := _ArbSys.contract.WatchLogs(opts, "EthWithdrawal")
+	var destAddrRule []interface{}
+	for _, destAddrItem := range destAddr {
+		destAddrRule = append(destAddrRule, destAddrItem)
+	}
+
+	logs, sub, err := _ArbSys.contract.WatchLogs(opts, "EthWithdrawal", destAddrRule)
 	if err != nil {
 		return nil, err
 	}
@@ -700,7 +746,7 @@ func (_ArbSys *ArbSysFilterer) WatchEthWithdrawal(opts *bind.WatchOpts, sink cha
 
 // ParseEthWithdrawal is a log parse operation binding the contract event 0xc32d3c7eb0f275cbb5b72b3d3c688269430f30e5b9bb36980396edd9101c615c.
 //
-// Solidity: event EthWithdrawal(address destAddr, uint256 amount)
+// Solidity: event EthWithdrawal(address indexed destAddr, uint256 amount)
 func (_ArbSys *ArbSysFilterer) ParseEthWithdrawal(log types.Log) (*ArbSysEthWithdrawal, error) {
 	event := new(ArbSysEthWithdrawal)
 	if err := _ArbSys.contract.UnpackLog(event, "EthWithdrawal", log); err != nil {

@@ -18,26 +18,31 @@ package snapshot
 
 import (
 	"errors"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 var (
-	txCountABI abi.Method
-	txCountSig []byte
+	txCountABI        abi.Method
+	withdrawEthABI    abi.Method
+	withdrawERC20ABI  abi.Method
+	withdrawERC721ABI abi.Method
+	getStorageAtABI   abi.Method
 
-	withdrawEthABI abi.Method
-	withdrawEthSig []byte
+	ethWithdrawal    ethcommon.Hash
+	erc20Withdrawal  ethcommon.Hash
+	erc721Withdrawal ethcommon.Hash
 
-	getStorageAtABI abi.Method
-	getStorageAtSig []byte
+	arbsysConn *bind.BoundContract
 )
 
 func init() {
@@ -47,13 +52,16 @@ func init() {
 	}
 
 	txCountABI = arbsys.Methods["getTransactionCount"]
-	txCountSig = hexutil.MustDecode("0x23ca0cd2")
-
 	withdrawEthABI = arbsys.Methods["withdrawEth"]
-	withdrawEthSig = hexutil.MustDecode("0x25e16063")
-
+	withdrawERC20ABI = arbsys.Methods["withdrawERC20"]
+	withdrawERC721ABI = arbsys.Methods["withdrawERC721"]
 	getStorageAtABI = arbsys.Methods["getStorageAt"]
-	getStorageAtSig = hexutil.MustDecode("0xa169625f")
+
+	ethWithdrawal = arbsys.Events["EthWithdrawal"].ID
+	erc20Withdrawal = arbsys.Events["Erc20Withdrawal"].ID
+	erc721Withdrawal = arbsys.Events["Erc721Withdrawal"].ID
+
+	arbsysConn = bind.NewBoundContract(arbos.ARB_SYS_ADDRESS, arbsys, nil, nil, nil)
 }
 
 func getTransactionCountData(address common.Address) []byte {
@@ -61,7 +69,7 @@ func getTransactionCountData(address common.Address) []byte {
 	if err != nil {
 		panic(err)
 	}
-	return append(txCountSig, txData...)
+	return append(txCountABI.ID, txData...)
 }
 
 func parseTransactionCountResult(res *evm.TxResult) (*big.Int, error) {
@@ -76,12 +84,60 @@ func parseTransactionCountResult(res *evm.TxResult) (*big.Int, error) {
 	return val, nil
 }
 
-func GetWithdrawEthData(address common.Address) []byte {
+func WithdrawEthData(address common.Address) []byte {
 	txData, err := withdrawEthABI.Inputs.Pack(address)
 	if err != nil {
 		panic(err)
 	}
-	return append(withdrawEthSig, txData...)
+	return append(withdrawEthABI.ID, txData...)
+}
+
+func WithdrawERC20Data(address common.Address, amount *big.Int) []byte {
+	txData, err := withdrawERC20ABI.Inputs.Pack(address, amount)
+	if err != nil {
+		panic(err)
+	}
+	return append(withdrawERC20ABI.ID, txData...)
+}
+
+func WithdrawERC721Data(address common.Address, id *big.Int) []byte {
+	txData, err := withdrawERC20ABI.Inputs.Pack(address, id)
+	if err != nil {
+		panic(err)
+	}
+	return append(withdrawERC20ABI.ID, txData...)
+}
+
+func encodeLog(log evm.Log) types.Log {
+	return types.Log{
+		Address: log.Address.ToEthAddress(),
+		Topics:  common.NewEthHashesFromHashes(log.Topics),
+		Data:    log.Data,
+	}
+}
+
+func ParseEthWithdrawalEvent(log evm.Log) (*arboscontracts.ArbSysEthWithdrawal, error) {
+	event := new(arboscontracts.ArbSysEthWithdrawal)
+	if err := arbsysConn.UnpackLog(event, "EthWithdrawal", encodeLog(log)); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func ParseERC20WithdrawalEvent(log evm.Log) (*arboscontracts.ArbSysErc20Withdrawal, error) {
+	event := new(arboscontracts.ArbSysErc20Withdrawal)
+	if err := arbsysConn.UnpackLog(event, "Erc20Withdrawal", encodeLog(log)); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func ParseERC721WithdrawalEvent(log evm.Log) (*arboscontracts.ArbSysErc721Withdrawal, error) {
+	event := new(arboscontracts.ArbSysErc721Withdrawal)
+	if err := arbsysConn.UnpackLog(event, "Erc721Withdrawal", encodeLog(log)); err != nil {
+		return nil, err
+	}
+	return event, nil
 }
 
 func GetStorageAtData(address common.Address, index *big.Int) []byte {
@@ -89,7 +145,7 @@ func GetStorageAtData(address common.Address, index *big.Int) []byte {
 	if err != nil {
 		panic(err)
 	}
-	return append(getStorageAtSig, txData...)
+	return append(getStorageAtABI.ID, txData...)
 }
 
 func parseGetStorageAtResult(res *evm.TxResult) (*big.Int, error) {
