@@ -185,7 +185,7 @@ func bindMessageTester(address common.Address, caller bind.ContractCaller, trans
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_MessageTester *MessageTesterRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_MessageTester *MessageTesterRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _MessageTester.Contract.MessageTesterCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -204,7 +204,7 @@ func (_MessageTester *MessageTesterRaw) Transact(opts *bind.TransactOpts, method
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_MessageTester *MessageTesterCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_MessageTester *MessageTesterCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _MessageTester.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -223,12 +223,17 @@ func (_MessageTester *MessageTesterTransactorRaw) Transact(opts *bind.TransactOp
 //
 // Solidity: function addMessageToInbox(bytes32 inbox, bytes32 message) pure returns(bytes32)
 func (_MessageTester *MessageTesterCaller) AddMessageToInbox(opts *bind.CallOpts, inbox [32]byte, message [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
-	out := ret0
-	err := _MessageTester.contract.Call(opts, out, "addMessageToInbox", inbox, message)
-	return *ret0, err
+	var out []interface{}
+	err := _MessageTester.contract.Call(opts, &out, "addMessageToInbox", inbox, message)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
 }
 
 // AddMessageToInbox is a free data retrieval call binding the contract method 0xa3b39209.
@@ -249,12 +254,17 @@ func (_MessageTester *MessageTesterCallerSession) AddMessageToInbox(inbox [32]by
 //
 // Solidity: function messageHash(uint8 messageType, address sender, uint256 blockNumber, uint256 timestamp, uint256 inboxSeqNum, bytes32 messageDataHash) pure returns(bytes32)
 func (_MessageTester *MessageTesterCaller) MessageHash(opts *bind.CallOpts, messageType uint8, sender common.Address, blockNumber *big.Int, timestamp *big.Int, inboxSeqNum *big.Int, messageDataHash [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
-	out := ret0
-	err := _MessageTester.contract.Call(opts, out, "messageHash", messageType, sender, blockNumber, timestamp, inboxSeqNum, messageDataHash)
-	return *ret0, err
+	var out []interface{}
+	err := _MessageTester.contract.Call(opts, &out, "messageHash", messageType, sender, blockNumber, timestamp, inboxSeqNum, messageDataHash)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
 }
 
 // MessageHash is a free data retrieval call binding the contract method 0xfdaf43c1.
@@ -275,12 +285,17 @@ func (_MessageTester *MessageTesterCallerSession) MessageHash(messageType uint8,
 //
 // Solidity: function messageValueHash(uint8 messageType, uint256 blockNumber, uint256 timestamp, address sender, uint256 inboxSeqNum, bytes messageData) pure returns(bytes32)
 func (_MessageTester *MessageTesterCaller) MessageValueHash(opts *bind.CallOpts, messageType uint8, blockNumber *big.Int, timestamp *big.Int, sender common.Address, inboxSeqNum *big.Int, messageData []byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
-	out := ret0
-	err := _MessageTester.contract.Call(opts, out, "messageValueHash", messageType, blockNumber, timestamp, sender, inboxSeqNum, messageData)
-	return *ret0, err
+	var out []interface{}
+	err := _MessageTester.contract.Call(opts, &out, "messageValueHash", messageType, blockNumber, timestamp, sender, inboxSeqNum, messageData)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
 }
 
 // MessageValueHash is a free data retrieval call binding the contract method 0x9aa86e86.
@@ -304,13 +319,19 @@ func (_MessageTester *MessageTesterCaller) ParseERC20Message(opts *bind.CallOpts
 	Valid   bool
 	Message MessagesERC20Message
 }, error) {
-	ret := new(struct {
+	var out []interface{}
+	err := _MessageTester.contract.Call(opts, &out, "parseERC20Message", data)
+
+	outstruct := new(struct {
 		Valid   bool
 		Message MessagesERC20Message
 	})
-	out := ret
-	err := _MessageTester.contract.Call(opts, out, "parseERC20Message", data)
-	return *ret, err
+
+	outstruct.Valid = out[0].(bool)
+	outstruct.Message = out[1].(MessagesERC20Message)
+
+	return *outstruct, err
+
 }
 
 // ParseERC20Message is a free data retrieval call binding the contract method 0x6520427f.
@@ -340,13 +361,19 @@ func (_MessageTester *MessageTesterCaller) ParseERC721Message(opts *bind.CallOpt
 	Valid   bool
 	Message MessagesERC721Message
 }, error) {
-	ret := new(struct {
+	var out []interface{}
+	err := _MessageTester.contract.Call(opts, &out, "parseERC721Message", data)
+
+	outstruct := new(struct {
 		Valid   bool
 		Message MessagesERC721Message
 	})
-	out := ret
-	err := _MessageTester.contract.Call(opts, out, "parseERC721Message", data)
-	return *ret, err
+
+	outstruct.Valid = out[0].(bool)
+	outstruct.Message = out[1].(MessagesERC721Message)
+
+	return *outstruct, err
+
 }
 
 // ParseERC721Message is a free data retrieval call binding the contract method 0xfe517bd0.
@@ -376,13 +403,19 @@ func (_MessageTester *MessageTesterCaller) ParseEthMessage(opts *bind.CallOpts, 
 	Valid   bool
 	Message MessagesEthMessage
 }, error) {
-	ret := new(struct {
+	var out []interface{}
+	err := _MessageTester.contract.Call(opts, &out, "parseEthMessage", data)
+
+	outstruct := new(struct {
 		Valid   bool
 		Message MessagesEthMessage
 	})
-	out := ret
-	err := _MessageTester.contract.Call(opts, out, "parseEthMessage", data)
-	return *ret, err
+
+	outstruct.Valid = out[0].(bool)
+	outstruct.Message = out[1].(MessagesEthMessage)
+
+	return *outstruct, err
+
 }
 
 // ParseEthMessage is a free data retrieval call binding the contract method 0xec65668c.
@@ -409,22 +442,21 @@ func (_MessageTester *MessageTesterCallerSession) ParseEthMessage(data []byte) (
 //
 // Solidity: function unmarshalOutgoingMessage(bytes data, uint256 startOffset) pure returns(bool, uint256, uint8, address, bytes)
 func (_MessageTester *MessageTesterCaller) UnmarshalOutgoingMessage(opts *bind.CallOpts, data []byte, startOffset *big.Int) (bool, *big.Int, uint8, common.Address, []byte, error) {
-	var (
-		ret0 = new(bool)
-		ret1 = new(*big.Int)
-		ret2 = new(uint8)
-		ret3 = new(common.Address)
-		ret4 = new([]byte)
-	)
-	out := &[]interface{}{
-		ret0,
-		ret1,
-		ret2,
-		ret3,
-		ret4,
+	var out []interface{}
+	err := _MessageTester.contract.Call(opts, &out, "unmarshalOutgoingMessage", data, startOffset)
+
+	if err != nil {
+		return *new(bool), *new(*big.Int), *new(uint8), *new(common.Address), *new([]byte), err
 	}
-	err := _MessageTester.contract.Call(opts, out, "unmarshalOutgoingMessage", data, startOffset)
-	return *ret0, *ret1, *ret2, *ret3, *ret4, err
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	out2 := *abi.ConvertType(out[2], new(uint8)).(*uint8)
+	out3 := *abi.ConvertType(out[3], new(common.Address)).(*common.Address)
+	out4 := *abi.ConvertType(out[4], new([]byte)).(*[]byte)
+
+	return out0, out1, out2, out3, out4, err
+
 }
 
 // UnmarshalOutgoingMessage is a free data retrieval call binding the contract method 0x6b0d3519.

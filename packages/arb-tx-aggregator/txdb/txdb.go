@@ -310,7 +310,7 @@ func saveAssertion(
 			}
 		}
 
-		logBloom := types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
+		logBloom := types.BytesToBloom(types.LogsBloom(ethLogs))
 
 		avmLogIndex := info.blockInfo.ChainStats.AVMLogCount.Uint64() - 1
 		if err := as.SaveBlock(info.block, avmLogIndex, logBloom); err != nil {

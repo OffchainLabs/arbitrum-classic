@@ -19,9 +19,9 @@ package arbostest
 import (
 	"bytes"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 	"math/big"
@@ -33,7 +33,7 @@ import (
 )
 
 func TestBuddyContract(t *testing.T) {
-	arbERC20Data, err := hexutil.Decode(arbostestcontracts.ArbERC20Bin)
+	arbERC20Data, err := hexutil.Decode(arboscontracts.ArbERC20Bin)
 	if err != nil {
 		t.Fatal(err)
 	}

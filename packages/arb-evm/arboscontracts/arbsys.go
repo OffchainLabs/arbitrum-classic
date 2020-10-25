@@ -27,7 +27,7 @@ var (
 )
 
 // ArbSysABI is the input ABI used to generate the binding from.
-const ArbSysABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getStorageAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"}]"
+const ArbSysABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Erc20Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"Erc721Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"EthWithdrawal\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getStorageAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"}]"
 
 // ArbSysFuncSigs maps the 4-byte function signature to its string representation.
 var ArbSysFuncSigs = map[string]string{
@@ -146,7 +146,7 @@ func bindArbSys(address common.Address, caller bind.ContractCaller, transactor b
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ArbSys *ArbSysRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_ArbSys *ArbSysRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _ArbSys.Contract.ArbSysCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -165,7 +165,7 @@ func (_ArbSys *ArbSysRaw) Transact(opts *bind.TransactOpts, method string, param
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ArbSys *ArbSysCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_ArbSys *ArbSysCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _ArbSys.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -184,12 +184,17 @@ func (_ArbSys *ArbSysTransactorRaw) Transact(opts *bind.TransactOpts, method str
 //
 // Solidity: function getStorageAt(address account, uint256 index) view returns(uint256)
 func (_ArbSys *ArbSysCaller) GetStorageAt(opts *bind.CallOpts, account common.Address, index *big.Int) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _ArbSys.contract.Call(opts, out, "getStorageAt", account, index)
-	return *ret0, err
+	var out []interface{}
+	err := _ArbSys.contract.Call(opts, &out, "getStorageAt", account, index)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // GetStorageAt is a free data retrieval call binding the contract method 0xa169625f.
@@ -210,12 +215,17 @@ func (_ArbSys *ArbSysCallerSession) GetStorageAt(account common.Address, index *
 //
 // Solidity: function getTransactionCount(address account) view returns(uint256)
 func (_ArbSys *ArbSysCaller) GetTransactionCount(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _ArbSys.contract.Call(opts, out, "getTransactionCount", account)
-	return *ret0, err
+	var out []interface{}
+	err := _ArbSys.contract.Call(opts, &out, "getTransactionCount", account)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // GetTransactionCount is a free data retrieval call binding the contract method 0x23ca0cd2.
@@ -293,4 +303,408 @@ func (_ArbSys *ArbSysSession) WithdrawEth(dest common.Address) (*types.Transacti
 // Solidity: function withdrawEth(address dest) payable returns()
 func (_ArbSys *ArbSysTransactorSession) WithdrawEth(dest common.Address) (*types.Transaction, error) {
 	return _ArbSys.Contract.WithdrawEth(&_ArbSys.TransactOpts, dest)
+}
+
+// ArbSysErc20WithdrawalIterator is returned from FilterErc20Withdrawal and is used to iterate over the raw logs and unpacked data for Erc20Withdrawal events raised by the ArbSys contract.
+type ArbSysErc20WithdrawalIterator struct {
+	Event *ArbSysErc20Withdrawal // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ArbSysErc20WithdrawalIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ArbSysErc20Withdrawal)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ArbSysErc20Withdrawal)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ArbSysErc20WithdrawalIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ArbSysErc20WithdrawalIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ArbSysErc20Withdrawal represents a Erc20Withdrawal event raised by the ArbSys contract.
+type ArbSysErc20Withdrawal struct {
+	DestAddr  common.Address
+	TokenAddr common.Address
+	Amount    *big.Int
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterErc20Withdrawal is a free log retrieval operation binding the contract event 0x1ba8ee6862bcdb02b78ff2fbed4d3ddf03a83aaf046e65df3e586478dd78dd1c.
+//
+// Solidity: event Erc20Withdrawal(address destAddr, address tokenAddr, uint256 amount)
+func (_ArbSys *ArbSysFilterer) FilterErc20Withdrawal(opts *bind.FilterOpts) (*ArbSysErc20WithdrawalIterator, error) {
+
+	logs, sub, err := _ArbSys.contract.FilterLogs(opts, "Erc20Withdrawal")
+	if err != nil {
+		return nil, err
+	}
+	return &ArbSysErc20WithdrawalIterator{contract: _ArbSys.contract, event: "Erc20Withdrawal", logs: logs, sub: sub}, nil
+}
+
+// WatchErc20Withdrawal is a free log subscription operation binding the contract event 0x1ba8ee6862bcdb02b78ff2fbed4d3ddf03a83aaf046e65df3e586478dd78dd1c.
+//
+// Solidity: event Erc20Withdrawal(address destAddr, address tokenAddr, uint256 amount)
+func (_ArbSys *ArbSysFilterer) WatchErc20Withdrawal(opts *bind.WatchOpts, sink chan<- *ArbSysErc20Withdrawal) (event.Subscription, error) {
+
+	logs, sub, err := _ArbSys.contract.WatchLogs(opts, "Erc20Withdrawal")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ArbSysErc20Withdrawal)
+				if err := _ArbSys.contract.UnpackLog(event, "Erc20Withdrawal", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseErc20Withdrawal is a log parse operation binding the contract event 0x1ba8ee6862bcdb02b78ff2fbed4d3ddf03a83aaf046e65df3e586478dd78dd1c.
+//
+// Solidity: event Erc20Withdrawal(address destAddr, address tokenAddr, uint256 amount)
+func (_ArbSys *ArbSysFilterer) ParseErc20Withdrawal(log types.Log) (*ArbSysErc20Withdrawal, error) {
+	event := new(ArbSysErc20Withdrawal)
+	if err := _ArbSys.contract.UnpackLog(event, "Erc20Withdrawal", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// ArbSysErc721WithdrawalIterator is returned from FilterErc721Withdrawal and is used to iterate over the raw logs and unpacked data for Erc721Withdrawal events raised by the ArbSys contract.
+type ArbSysErc721WithdrawalIterator struct {
+	Event *ArbSysErc721Withdrawal // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ArbSysErc721WithdrawalIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ArbSysErc721Withdrawal)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ArbSysErc721Withdrawal)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ArbSysErc721WithdrawalIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ArbSysErc721WithdrawalIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ArbSysErc721Withdrawal represents a Erc721Withdrawal event raised by the ArbSys contract.
+type ArbSysErc721Withdrawal struct {
+	DestAddr  common.Address
+	TokenAddr common.Address
+	Id        *big.Int
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterErc721Withdrawal is a free log retrieval operation binding the contract event 0xefb6491629e398677590acbb4f49f56c5266e28d7ad0fd117a7251ff1e1d52d4.
+//
+// Solidity: event Erc721Withdrawal(address destAddr, address tokenAddr, uint256 id)
+func (_ArbSys *ArbSysFilterer) FilterErc721Withdrawal(opts *bind.FilterOpts) (*ArbSysErc721WithdrawalIterator, error) {
+
+	logs, sub, err := _ArbSys.contract.FilterLogs(opts, "Erc721Withdrawal")
+	if err != nil {
+		return nil, err
+	}
+	return &ArbSysErc721WithdrawalIterator{contract: _ArbSys.contract, event: "Erc721Withdrawal", logs: logs, sub: sub}, nil
+}
+
+// WatchErc721Withdrawal is a free log subscription operation binding the contract event 0xefb6491629e398677590acbb4f49f56c5266e28d7ad0fd117a7251ff1e1d52d4.
+//
+// Solidity: event Erc721Withdrawal(address destAddr, address tokenAddr, uint256 id)
+func (_ArbSys *ArbSysFilterer) WatchErc721Withdrawal(opts *bind.WatchOpts, sink chan<- *ArbSysErc721Withdrawal) (event.Subscription, error) {
+
+	logs, sub, err := _ArbSys.contract.WatchLogs(opts, "Erc721Withdrawal")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ArbSysErc721Withdrawal)
+				if err := _ArbSys.contract.UnpackLog(event, "Erc721Withdrawal", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseErc721Withdrawal is a log parse operation binding the contract event 0xefb6491629e398677590acbb4f49f56c5266e28d7ad0fd117a7251ff1e1d52d4.
+//
+// Solidity: event Erc721Withdrawal(address destAddr, address tokenAddr, uint256 id)
+func (_ArbSys *ArbSysFilterer) ParseErc721Withdrawal(log types.Log) (*ArbSysErc721Withdrawal, error) {
+	event := new(ArbSysErc721Withdrawal)
+	if err := _ArbSys.contract.UnpackLog(event, "Erc721Withdrawal", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// ArbSysEthWithdrawalIterator is returned from FilterEthWithdrawal and is used to iterate over the raw logs and unpacked data for EthWithdrawal events raised by the ArbSys contract.
+type ArbSysEthWithdrawalIterator struct {
+	Event *ArbSysEthWithdrawal // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ArbSysEthWithdrawalIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ArbSysEthWithdrawal)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ArbSysEthWithdrawal)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ArbSysEthWithdrawalIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ArbSysEthWithdrawalIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ArbSysEthWithdrawal represents a EthWithdrawal event raised by the ArbSys contract.
+type ArbSysEthWithdrawal struct {
+	DestAddr common.Address
+	Amount   *big.Int
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterEthWithdrawal is a free log retrieval operation binding the contract event 0xc32d3c7eb0f275cbb5b72b3d3c688269430f30e5b9bb36980396edd9101c615c.
+//
+// Solidity: event EthWithdrawal(address destAddr, uint256 amount)
+func (_ArbSys *ArbSysFilterer) FilterEthWithdrawal(opts *bind.FilterOpts) (*ArbSysEthWithdrawalIterator, error) {
+
+	logs, sub, err := _ArbSys.contract.FilterLogs(opts, "EthWithdrawal")
+	if err != nil {
+		return nil, err
+	}
+	return &ArbSysEthWithdrawalIterator{contract: _ArbSys.contract, event: "EthWithdrawal", logs: logs, sub: sub}, nil
+}
+
+// WatchEthWithdrawal is a free log subscription operation binding the contract event 0xc32d3c7eb0f275cbb5b72b3d3c688269430f30e5b9bb36980396edd9101c615c.
+//
+// Solidity: event EthWithdrawal(address destAddr, uint256 amount)
+func (_ArbSys *ArbSysFilterer) WatchEthWithdrawal(opts *bind.WatchOpts, sink chan<- *ArbSysEthWithdrawal) (event.Subscription, error) {
+
+	logs, sub, err := _ArbSys.contract.WatchLogs(opts, "EthWithdrawal")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ArbSysEthWithdrawal)
+				if err := _ArbSys.contract.UnpackLog(event, "EthWithdrawal", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseEthWithdrawal is a log parse operation binding the contract event 0xc32d3c7eb0f275cbb5b72b3d3c688269430f30e5b9bb36980396edd9101c615c.
+//
+// Solidity: event EthWithdrawal(address destAddr, uint256 amount)
+func (_ArbSys *ArbSysFilterer) ParseEthWithdrawal(log types.Log) (*ArbSysEthWithdrawal, error) {
+	event := new(ArbSysEthWithdrawal)
+	if err := _ArbSys.contract.UnpackLog(event, "EthWithdrawal", log); err != nil {
+		return nil, err
+	}
+	return event, nil
 }

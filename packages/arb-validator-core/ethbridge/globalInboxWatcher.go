@@ -231,13 +231,13 @@ func (gi *globalInboxWatcher) processLog(
 			MessageData []byte
 		}
 
-		var args TransactionBatchTxCallArgs
-		err = l2MessageFromOriginCallABI.Inputs.Unpack(&args, tx.Data()[4:])
+		args := make(map[string]interface{})
+		err = l2MessageFromOriginCallABI.Inputs.UnpackIntoMap(args, tx.Data()[4:])
 		if err != nil {
 			return arbbridge.MessageDeliveredEvent{}, err
 		}
 
-		return gi.parseMessageFromOrigin(evmLog, timestamp, args.MessageData)
+		return gi.parseMessageFromOrigin(evmLog, timestamp, args["MessageData"].([]byte))
 	default:
 		return arbbridge.MessageDeliveredEvent{}, errors2.New("unknown arbitrum event type")
 	}

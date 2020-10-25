@@ -1,7 +1,7 @@
 // Code generated - DO NOT EDIT.
 // This file is a generated binding and any manual changes will be lost.
 
-package test
+package arbostestcontracts
 
 import (
 	"math/big"
@@ -36,7 +36,7 @@ var FibonacciFuncSigs = map[string]string{
 }
 
 // FibonacciBin is the compiled bytecode used for deploying new contracts.
-var FibonacciBin = "0x608060405234801561001057600080fd5b506101b7806100206000396000f3fe6080604052600436106100295760003560e01c80632ddec39b1461002e57806390a3e3de1461004d575b600080fd5b61004b6004803603602081101561004457600080fd5b5035610089565b005b34801561005957600080fd5b506100776004803603602081101561007057600080fd5b5035610162565b60408051918252519081900360200190f35b60008054600181810183558280527f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563918201819055825480820190935591015560025b8181101561012b5760008060028303815481106100e557fe5b90600052602060002001546000600184038154811061010057fe5b60009182526020808320909101548454600181810187559584529190922092909101910155016100cc565b506040805182815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a150565b600080828154811061017057fe5b9060005260206000200154905091905056fea265627a7a72315820515bc6d82b0eb4cda80d59fa288f11175d5bd6b6c66b463c2e85e8ff6fe2fd7964736f6c63430005110032"
+var FibonacciBin = "0x608060405234801561001057600080fd5b506101b7806100206000396000f3fe6080604052600436106100295760003560e01c80632ddec39b1461002e57806390a3e3de1461004d575b600080fd5b61004b6004803603602081101561004457600080fd5b5035610089565b005b34801561005957600080fd5b506100776004803603602081101561007057600080fd5b5035610162565b60408051918252519081900360200190f35b60008054600181810183558280527f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563918201819055825480820190935591015560025b8181101561012b5760008060028303815481106100e557fe5b90600052602060002001546000600184038154811061010057fe5b60009182526020808320909101548454600181810187559584529190922092909101910155016100cc565b506040805182815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a150565b600080828154811061017057fe5b9060005260206000200154905091905056fea265627a7a7231582016bbb77b999f1a5356725ee9eafbe33a75183a7feec2b6baaa49ec1d7aadcb6b64736f6c63430005110032"
 
 // DeployFibonacci deploys a new Ethereum contract, binding an instance of Fibonacci to it.
 func DeployFibonacci(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Fibonacci, error) {
@@ -160,7 +160,7 @@ func bindFibonacci(address common.Address, caller bind.ContractCaller, transacto
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Fibonacci *FibonacciRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Fibonacci *FibonacciRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Fibonacci.Contract.FibonacciCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -179,7 +179,7 @@ func (_Fibonacci *FibonacciRaw) Transact(opts *bind.TransactOpts, method string,
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Fibonacci *FibonacciCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Fibonacci *FibonacciCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Fibonacci.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -198,12 +198,17 @@ func (_Fibonacci *FibonacciTransactorRaw) Transact(opts *bind.TransactOpts, meth
 //
 // Solidity: function getFib(uint256 n) view returns(uint256)
 func (_Fibonacci *FibonacciCaller) GetFib(opts *bind.CallOpts, n *big.Int) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Fibonacci.contract.Call(opts, out, "getFib", n)
-	return *ret0, err
+	var out []interface{}
+	err := _Fibonacci.contract.Call(opts, &out, "getFib", n)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // GetFib is a free data retrieval call binding the contract method 0x90a3e3de.
