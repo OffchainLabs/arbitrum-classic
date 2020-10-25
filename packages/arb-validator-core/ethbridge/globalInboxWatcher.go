@@ -225,19 +225,12 @@ func (gi *globalInboxWatcher) processLog(
 		if err != nil {
 			return arbbridge.MessageDeliveredEvent{}, err
 		}
-
-		type TransactionBatchTxCallArgs struct {
-			Chain       ethcommon.Address
-			MessageData []byte
-		}
-
 		args := make(map[string]interface{})
 		err = l2MessageFromOriginCallABI.Inputs.UnpackIntoMap(args, tx.Data()[4:])
 		if err != nil {
 			return arbbridge.MessageDeliveredEvent{}, err
 		}
-
-		return gi.parseMessageFromOrigin(evmLog, timestamp, args["MessageData"].([]byte))
+		return gi.parseMessageFromOrigin(evmLog, timestamp, args["messageData"].([]byte))
 	default:
 		return arbbridge.MessageDeliveredEvent{}, errors2.New("unknown arbitrum event type")
 	}
