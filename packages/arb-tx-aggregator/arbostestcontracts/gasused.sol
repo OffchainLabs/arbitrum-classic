@@ -18,16 +18,14 @@
 
 pragma solidity ^0.5.17;
 
-contract Transfer {
+contract GasUsed {
+    uint256 a;
+
     constructor() public payable {}
 
-    function() external payable {}
+    function noop() external {}
 
-    function send() external {
-        msg.sender.transfer(1);
-    }
-
-    function send2(address payable wrapped) external {
-        Transfer(wrapped).send();
+    function sstore() external {
+        a++;
     }
 }

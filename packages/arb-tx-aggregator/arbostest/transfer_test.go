@@ -165,7 +165,7 @@ func TestTransfer(t *testing.T) {
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.Address{0},
-		Payment:     big.NewInt(0),
+		Payment:     big.NewInt(100),
 		Data:        constructorData,
 	}
 
@@ -184,9 +184,11 @@ func TestTransfer(t *testing.T) {
 	}
 
 	sendABI := transferABI.Methods["send2"]
+
 	sendData, err := sendABI.Inputs.Pack(transfer2Address)
 	if err != nil {
 		t.Fatal(err)
+
 	}
 
 	connCallTx := message.Transaction{
@@ -201,9 +203,9 @@ func TestTransfer(t *testing.T) {
 	inboxMessages := []inbox.InboxMessage{
 		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.Eth{Dest: sender, Value: big.NewInt(10000)}, chain, big.NewInt(1), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(constructorTx1), sender, big.NewInt(1), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(constructorTx2), sender, big.NewInt(2), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(connCallTx), sender, big.NewInt(2), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(constructorTx1), sender, big.NewInt(2), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(constructorTx2), sender, big.NewInt(3), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(connCallTx), sender, big.NewInt(4), chainTime),
 	}
 
 	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
@@ -226,14 +228,15 @@ func TestTransfer(t *testing.T) {
 	checkConstructorResult(t, logs[0], transfer1Address)
 	checkConstructorResult(t, logs[1], transfer2Address)
 
-	res2, err := evm.NewTxResultFromValue(logs[2])
+	res, err := evm.NewTxResultFromValue(logs[2])
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log("GasUsed", res2.GasUsed)
+	t.Log("GasUsed", res.GasUsed)
 	t.Log("GasLimit", connCallTx.MaxGas)
-	if res2.ResultCode != evm.ReturnCode {
-		t.Error("unexpected result", res2.ResultCode)
+	if res.ResultCode != evm.ReturnCode {
+		t.Log("result", res)
+		t.Error("unexpected result", res.ResultCode)
 	}
 
 	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(4))
