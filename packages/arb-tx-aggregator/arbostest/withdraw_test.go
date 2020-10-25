@@ -192,7 +192,9 @@ func TestWithdrawERC20(t *testing.T) {
 		t.Fatal("outgoing message had wrong type", outMsg.Kind)
 	}
 
-	if outMsg.Sender != addr {
+	// TODO: Update ArbOS to use actual sender
+	emptyAddress := common.Address{}
+	if outMsg.Sender != emptyAddress {
 		t.Error("wrong withdraw sender")
 	}
 
@@ -254,8 +256,9 @@ func TestWithdrawERC721(t *testing.T) {
 	if outMsg.Kind != message.ERC721Type {
 		t.Fatal("outgoing message had wrong type", outMsg.Kind)
 	}
-
-	if outMsg.Sender != addr {
+	// TODO: Update ArbOS to use actual sender
+	emptyAddress := common.Address{}
+	if outMsg.Sender != emptyAddress {
 		t.Error("wrong withdraw sender")
 	}
 

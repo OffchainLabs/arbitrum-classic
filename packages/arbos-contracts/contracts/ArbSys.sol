@@ -40,5 +40,5 @@ interface ArbSys {
 
     event EthWithdrawal(address indexed destAddr, uint256 amount);
     event ERC20Withdrawal(address indexed destAddr, address indexed tokenAddr, uint256 amount);
-    event ERC721Withdrawal(address indexed destAddr, address indexed tokenAddr, uint256 id);
+    event ERC721Withdrawal(address indexed destAddr, address indexed tokenAddr, uint256 indexed id);
 }
