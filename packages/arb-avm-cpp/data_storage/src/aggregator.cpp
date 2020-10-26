@@ -101,7 +101,8 @@ struct EntrySaver {
     std::string loadEntry(rocksdb::Transaction& tx, uint64_t index) {
         auto full_key = this->entryKey(index);
         std::string value;
-        auto s = tx.Get(rocksdb::ReadOptions{}, vecToSlice(full_key), &value);
+        auto s = tx.GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(full_key),
+                                 &value);
         if (!s.ok()) {
             throw std::runtime_error("failed load value");
         }
@@ -122,7 +123,8 @@ template <size_t N, const std::array<char, N>& key>
 struct FlatSaver : private EntrySaver<N, key> {
     uint64_t count(rocksdb::Transaction& tx) {
         std::string value;
-        auto s = tx.Get(rocksdb::ReadOptions{}, vecToSlice(key), &value);
+        auto s =
+            tx.GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(key), &value);
         if (s.IsNotFound()) {
             return 0;
         } else if (!s.ok()) {
@@ -158,7 +160,8 @@ template <size_t N, const std::array<char, N>& key>
 struct HeightSaver : public EntrySaver<N, key> {
     uint64_t max(rocksdb::Transaction& tx) {
         std::string value;
-        auto s = tx.Get(rocksdb::ReadOptions{}, vecToSlice(key), &value);
+        auto s =
+            tx.GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(key), &value);
         if (!s.ok()) {
             throw std::runtime_error("no max saved");
         }
@@ -241,7 +244,8 @@ uint64_t AggregatorStore::getPossibleRequestInfo(
     auto tx = data_storage->beginTransaction();
     auto key = requestKey(request_id);
     std::string request_value;
-    auto s = tx->Get(rocksdb::ReadOptions{}, vecToSlice(key), &request_value);
+    auto s = tx->GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(key),
+                              &request_value);
     if (!s.ok()) {
         throw std::runtime_error("couldn't find request");
     }
