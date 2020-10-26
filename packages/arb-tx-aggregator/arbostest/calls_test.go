@@ -119,14 +119,36 @@ func runTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Me
 	return results[0], nil
 }
 
-func withdrawEthTx(t *testing.T, sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
+func withdrawEthTx(sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
 	return message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: sequenceNum,
 		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 		Payment:     amount,
-		Data:        snapshot.GetWithdrawEthData(dest),
+		Data:        snapshot.WithdrawEthData(dest),
+	}
+}
+
+func withdrawERC20Tx(sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
+	return message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: sequenceNum,
+		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
+		Payment:     big.NewInt(0),
+		Data:        snapshot.WithdrawERC20Data(dest, amount),
+	}
+}
+
+func withdrawERC721Tx(sequenceNum *big.Int, id *big.Int, dest common.Address) message.Transaction {
+	return message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: sequenceNum,
+		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
+		Payment:     big.NewInt(0),
+		Data:        snapshot.WithdrawERC721Data(dest, id),
 	}
 }
 

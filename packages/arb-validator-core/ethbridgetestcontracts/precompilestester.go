@@ -160,7 +160,7 @@ func bindPrecompilesTester(address common.Address, caller bind.ContractCaller, t
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_PrecompilesTester *PrecompilesTesterRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_PrecompilesTester *PrecompilesTesterRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _PrecompilesTester.Contract.PrecompilesTesterCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -179,7 +179,7 @@ func (_PrecompilesTester *PrecompilesTesterRaw) Transact(opts *bind.TransactOpts
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_PrecompilesTester *PrecompilesTesterCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_PrecompilesTester *PrecompilesTesterCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _PrecompilesTester.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -198,12 +198,17 @@ func (_PrecompilesTester *PrecompilesTesterTransactorRaw) Transact(opts *bind.Tr
 //
 // Solidity: function keccakF(uint256[25] input) pure returns(uint256[25])
 func (_PrecompilesTester *PrecompilesTesterCaller) KeccakF(opts *bind.CallOpts, input [25]*big.Int) ([25]*big.Int, error) {
-	var (
-		ret0 = new([25]*big.Int)
-	)
-	out := ret0
-	err := _PrecompilesTester.contract.Call(opts, out, "keccakF", input)
-	return *ret0, err
+	var out []interface{}
+	err := _PrecompilesTester.contract.Call(opts, &out, "keccakF", input)
+
+	if err != nil {
+		return *new([25]*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([25]*big.Int)).(*[25]*big.Int)
+
+	return out0, err
+
 }
 
 // KeccakF is a free data retrieval call binding the contract method 0xac90ed46.
@@ -224,12 +229,17 @@ func (_PrecompilesTester *PrecompilesTesterCallerSession) KeccakF(input [25]*big
 //
 // Solidity: function sha256Block(uint256[2] inputChunk, uint256 hashState) pure returns(uint256)
 func (_PrecompilesTester *PrecompilesTesterCaller) Sha256Block(opts *bind.CallOpts, inputChunk [2]*big.Int, hashState *big.Int) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _PrecompilesTester.contract.Call(opts, out, "sha256Block", inputChunk, hashState)
-	return *ret0, err
+	var out []interface{}
+	err := _PrecompilesTester.contract.Call(opts, &out, "sha256Block", inputChunk, hashState)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // Sha256Block is a free data retrieval call binding the contract method 0x7757783d.

@@ -187,7 +187,7 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 		PostState:         []byte{0},
 		Status:            status,
 		CumulativeGasUsed: r.CumulativeGas.Uint64(),
-		Bloom:             types.BytesToBloom(types.LogsBloom(evmLogs).Bytes()),
+		Bloom:             types.BytesToBloom(types.LogsBloom(evmLogs)),
 		Logs:              evmLogs,
 		TxHash:            r.IncomingRequest.MessageID.ToEthHash(),
 		ContractAddress:   contractAddress,
