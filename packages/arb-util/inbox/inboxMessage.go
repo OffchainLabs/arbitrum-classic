@@ -59,7 +59,7 @@ func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 		return failRet, errors.New("val must be a tuple")
 	}
 	if tup.Len() != 6 {
-		return failRet, fmt.Errorf("expected tuple of length 6, but recieved %v", tup)
+		return failRet, fmt.Errorf("expected tuple of length 6, but recieved tuple of length %v", tup.Len())
 	}
 
 	// Tuple size already verified above, so error can be ignored
