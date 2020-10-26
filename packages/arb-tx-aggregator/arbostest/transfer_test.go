@@ -32,117 +32,6 @@ import (
 	"testing"
 )
 
-//func TestTransferConstructor(t *testing.T) {
-//	mach, err := cmachine.New(arbos.Path())
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//	chain := common.HexToAddress("0x037c4d7bbb0407d1e2c64981855ad8681d0d86d1")
-//	sender := common.HexToAddress("0xe91e00167939cb6694d2c422acd208a007293948")
-//	transfer1Address := common.HexToAddress("0x2aad3e8302f74e0818b7bcd10c2c050526707755")
-//
-//	runMessage(t, mach, initMsg(), chain)
-//	depositEth(t, mach, sender, big.NewInt(1000))
-//
-//	constructorData := hexutil.MustDecode(arbostestcontracts.TransferBin)
-//
-//	chainTime := inbox.ChainTime{
-//		BlockNum:  common.NewTimeBlocksInt(0),
-//		Timestamp: big.NewInt(0),
-//	}
-//
-//	constructorTx1 := message.Transaction{
-//		MaxGas:      big.NewInt(1000000000),
-//		GasPriceBid: big.NewInt(0),
-//		SequenceNum: big.NewInt(0),
-//		DestAddress: common.Address{0},
-//		Payment:     big.NewInt(0),
-//		Data:        constructorData,
-//	}
-//
-//	constructorTx2 := message.Transaction{
-//		MaxGas:      big.NewInt(1000000000),
-//		GasPriceBid: big.NewInt(0),
-//		SequenceNum: big.NewInt(1),
-//		DestAddress: common.Address{0},
-//		Payment:     big.NewInt(100),
-//		Data:        constructorData,
-//	}
-//
-//	//transferABI, err := abi.JSON(strings.NewReader(arbostestcontracts.TransferABI))
-//	//if err != nil {
-//	//	t.Fatal(err)
-//	//}
-//	//
-//	//sendABI := transferABI.Methods["send2"]
-//	//sendData, err := sendABI.Inputs.Pack(transfer2Address)
-//	//if err != nil {
-//	//	t.Fatal(err)
-//	//}
-//	//
-//	//connCallTx := message.Transaction{
-//	//	MaxGas:      big.NewInt(1000000000),
-//	//	GasPriceBid: big.NewInt(0),
-//	//	SequenceNum: big.NewInt(2),
-//	//	DestAddress: transfer1Address,
-//	//	Payment:     big.NewInt(0),
-//	//	Data:        append(hexutil.MustDecode("0x3386b1a2"), sendData...),
-//	//}
-//
-//	inboxMessages := []inbox.InboxMessage{
-//		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
-//		message.NewInboxMessage(message.NewSafeL2Message(constructorTx1), sender, big.NewInt(1), chainTime),
-//		message.NewInboxMessage(message.NewSafeL2Message(constructorTx2), sender, big.NewInt(2), chainTime),
-//		//message.NewInboxMessage(message.NewSafeL2Message(connCallTx), sender, big.NewInt(2), chainTime),
-//	}
-//
-//	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-//	logs := assertion.ParseLogs()
-//	sends := assertion.ParseOutMessages()
-//	//testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
-//	//if err != nil {
-//	//	t.Fatal(err)
-//	//}
-//	//t.Log(string(testCase))
-//
-//	if len(logs) != 2 {
-//		t.Fatal("unxpected log count", len(logs))
-//	}
-//
-//	if len(sends) != 0 {
-//		t.Fatal("unxpected send count", len(sends))
-//	}
-//
-//	checkConstructorResult(t, logs[0], transfer1Address)
-//	checkConstructorResult(t, logs[1], transfer2Address)
-//
-//	//res2, err := evm.NewTxResultFromValue(logs[2])
-//	//if err != nil {
-//	//	t.Fatal(err)
-//	//}
-//	//if res2.ResultCode != evm.ReturnCode {
-//	//	t.Error("unexpected result", res2.ResultCode)
-//	//}
-//
-//	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(4))
-//	transfer1Balance, err := snap.GetBalance(transfer1Address)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//	transfer2Balance, err := snap.GetBalance(transfer2Address)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//	senderBalance, err := snap.GetBalance(sender)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	t.Log("transfer1Balance", transfer1Balance)
-//	t.Log("transfer2Balance", transfer2Balance)
-//	t.Log("senderBalance", senderBalance)
-//}
-
 func TestTransfer(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
 	if err != nil {
@@ -253,7 +142,15 @@ func TestTransfer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Log("transfer1Balance", transfer1Balance)
-	t.Log("transfer2Balance", transfer2Balance)
-	t.Log("senderBalance", senderBalance)
+	if transfer1Balance.Cmp(big.NewInt(101)) != 0 {
+		t.Error("unexpected transfer conn1 balance", transfer1Balance)
+	}
+
+	if transfer2Balance.Cmp(big.NewInt(99)) != 0 {
+		t.Error("unexpected transfer conn2 balance", transfer2Balance)
+	}
+
+	if senderBalance.Cmp(big.NewInt(9800)) != 0 {
+		t.Error("unexpected sender balance", senderBalance)
+	}
 }
