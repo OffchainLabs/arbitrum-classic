@@ -85,8 +85,8 @@ contract MessageTester {
             uint256 value
         )
     {
-        (bool valid, Messages.EthMessage memory message) = Messages.parseEthMessage(data);
-        return (valid, message.dest, message.value);
+        (bool isValid, Messages.EthMessage memory message) = Messages.parseEthMessage(data);
+        return (isValid, message.dest, message.value);
     }
 
     function parseERC20Message(bytes memory data)
@@ -99,8 +99,8 @@ contract MessageTester {
             uint256 value
         )
     {
-        (bool valid, Messages.ERC20Message memory message) = Messages.parseERC20Message(data);
-        return (valid, message.token, message.dest, message.value);
+        (bool isValid, Messages.ERC20Message memory message) = Messages.parseERC20Message(data);
+        return (isValid, message.token, message.dest, message.value);
     }
 
     function parseERC721Message(bytes memory data)
@@ -113,7 +113,7 @@ contract MessageTester {
             uint256 id
         )
     {
-        (bool valid, Messages.ERC721Message memory message) = Messages.parseERC721Message(data);
-        return (valid, message.token, message.dest, message.id);
+        (bool isValid, Messages.ERC721Message memory message) = Messages.parseERC721Message(data);
+        return (isValid, message.token, message.dest, message.id);
     }
 }
