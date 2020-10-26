@@ -257,7 +257,8 @@ uint64_t AggregatorStore::getPossibleRequestInfo(
 std::pair<uint64_t, std::vector<char>> AggregatorStore::latestBlock() const {
     auto tx = data_storage->beginTransaction();
     uint64_t latest_block = BlockSaver{}.max(*tx);
-    return {latest_block, getBlock(latest_block)};
+    auto block_value = BlockSaver{}.load(*tx, latest_block);
+    return {latest_block, {block_value.begin(), block_value.end()}};
 }
 
 void AggregatorStore::saveBlock(uint64_t height,
