@@ -101,6 +101,20 @@ func NewProvenanceFromValue(val value.Value) (Provenance, error) {
 	}, nil
 }
 
+func (p Provenance) AsValue() value.Value {
+	parent := p.IndexInParent
+	if parent == nil {
+		parent = math.MaxBig256
+	}
+	// Static slice correct size, so error can be ignored
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewIntValue(p.L1SeqNum),
+		value.NewIntValue(new(big.Int).SetBytes(p.ParentRequestId[:])),
+		value.NewIntValue(parent),
+	})
+	return tup
+}
+
 type IncomingRequest struct {
 	Kind       inbox.Type
 	Sender     common.Address
@@ -190,13 +204,17 @@ func NewRandomIncomingRequest() IncomingRequest {
 }
 
 func (ir IncomingRequest) AsValue() value.Value {
-	return inbox.InboxMessage{
-		Kind:        ir.Kind,
-		Sender:      ir.Sender,
-		InboxSeqNum: new(big.Int).SetBytes(ir.MessageID[:]),
-		Data:        ir.Data,
-		ChainTime:   ir.ChainTime,
-	}.AsValue()
+	// Static slice correct size, so error can be ignored
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(int64(ir.Kind)),
+		value.NewIntValue(ir.ChainTime.BlockNum.AsInt()),
+		value.NewIntValue(ir.ChainTime.Timestamp),
+		inbox.NewIntFromAddress(ir.Sender),
+		value.NewIntValue(new(big.Int).SetBytes(ir.MessageID[:])),
+		inbox.BytesToByteStack(ir.Data),
+		ir.Provenance.AsValue(),
+	})
+	return tup
 }
 
 type TxResult struct {
