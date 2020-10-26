@@ -33,7 +33,8 @@ contract OneStepProofTester is OneStepProof {
             inboxAcc,
             messagesAcc,
             logsAcc,
-            proof
+            proof,
+            new bytes(0)
         );
 
         executeOp(context);
