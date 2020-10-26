@@ -160,7 +160,7 @@ func bindArbInfo(address common.Address, caller bind.ContractCaller, transactor 
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ArbInfo *ArbInfoRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_ArbInfo *ArbInfoRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _ArbInfo.Contract.ArbInfoCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -179,7 +179,7 @@ func (_ArbInfo *ArbInfoRaw) Transact(opts *bind.TransactOpts, method string, par
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ArbInfo *ArbInfoCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_ArbInfo *ArbInfoCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _ArbInfo.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -198,12 +198,17 @@ func (_ArbInfo *ArbInfoTransactorRaw) Transact(opts *bind.TransactOpts, method s
 //
 // Solidity: function getBalance(address account) view returns(uint256)
 func (_ArbInfo *ArbInfoCaller) GetBalance(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _ArbInfo.contract.Call(opts, out, "getBalance", account)
-	return *ret0, err
+	var out []interface{}
+	err := _ArbInfo.contract.Call(opts, &out, "getBalance", account)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // GetBalance is a free data retrieval call binding the contract method 0xf8b2cb4f.
@@ -224,12 +229,17 @@ func (_ArbInfo *ArbInfoCallerSession) GetBalance(account common.Address) (*big.I
 //
 // Solidity: function getCode(address account) view returns(bytes)
 func (_ArbInfo *ArbInfoCaller) GetCode(opts *bind.CallOpts, account common.Address) ([]byte, error) {
-	var (
-		ret0 = new([]byte)
-	)
-	out := ret0
-	err := _ArbInfo.contract.Call(opts, out, "getCode", account)
-	return *ret0, err
+	var out []interface{}
+	err := _ArbInfo.contract.Call(opts, &out, "getCode", account)
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
 }
 
 // GetCode is a free data retrieval call binding the contract method 0x7e105ce2.

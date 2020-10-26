@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/c-bata/go-prompt v0.2.4-0.20200903090133-56c224c88aba
 	github.com/emirpasic/gods v1.12.0
-	github.com/ethereum/go-ethereum v1.9.22
+	github.com/ethereum/go-ethereum v1.9.23
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/rpc v1.2.0

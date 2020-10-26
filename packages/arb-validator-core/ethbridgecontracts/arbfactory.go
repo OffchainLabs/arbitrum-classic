@@ -162,7 +162,7 @@ func bindArbFactory(address common.Address, caller bind.ContractCaller, transact
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ArbFactory *ArbFactoryRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_ArbFactory *ArbFactoryRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _ArbFactory.Contract.ArbFactoryCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -181,7 +181,7 @@ func (_ArbFactory *ArbFactoryRaw) Transact(opts *bind.TransactOpts, method strin
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ArbFactory *ArbFactoryCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_ArbFactory *ArbFactoryCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _ArbFactory.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -200,12 +200,17 @@ func (_ArbFactory *ArbFactoryTransactorRaw) Transact(opts *bind.TransactOpts, me
 //
 // Solidity: function challengeFactoryAddress() view returns(address)
 func (_ArbFactory *ArbFactoryCaller) ChallengeFactoryAddress(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ArbFactory.contract.Call(opts, out, "challengeFactoryAddress")
-	return *ret0, err
+	var out []interface{}
+	err := _ArbFactory.contract.Call(opts, &out, "challengeFactoryAddress")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // ChallengeFactoryAddress is a free data retrieval call binding the contract method 0x62e3c0b1.
@@ -226,12 +231,17 @@ func (_ArbFactory *ArbFactoryCallerSession) ChallengeFactoryAddress() (common.Ad
 //
 // Solidity: function globalInboxAddress() view returns(address)
 func (_ArbFactory *ArbFactoryCaller) GlobalInboxAddress(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ArbFactory.contract.Call(opts, out, "globalInboxAddress")
-	return *ret0, err
+	var out []interface{}
+	err := _ArbFactory.contract.Call(opts, &out, "globalInboxAddress")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // GlobalInboxAddress is a free data retrieval call binding the contract method 0x582923c7.
@@ -252,12 +262,17 @@ func (_ArbFactory *ArbFactoryCallerSession) GlobalInboxAddress() (common.Address
 //
 // Solidity: function rollupTemplate() view returns(address)
 func (_ArbFactory *ArbFactoryCaller) RollupTemplate(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ArbFactory.contract.Call(opts, out, "rollupTemplate")
-	return *ret0, err
+	var out []interface{}
+	err := _ArbFactory.contract.Call(opts, &out, "rollupTemplate")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // RollupTemplate is a free data retrieval call binding the contract method 0x8689d996.

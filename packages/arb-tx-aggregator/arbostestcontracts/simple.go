@@ -159,7 +159,7 @@ func bindSimple(address common.Address, caller bind.ContractCaller, transactor b
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Simple *SimpleRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Simple *SimpleRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Simple.Contract.SimpleCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -178,7 +178,7 @@ func (_Simple *SimpleRaw) Transact(opts *bind.TransactOpts, method string, param
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Simple *SimpleCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Simple *SimpleCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Simple.Contract.contract.Call(opts, result, method, params...)
 }
 

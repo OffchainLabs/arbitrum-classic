@@ -37,4 +37,8 @@ interface ArbSys {
     // This function is only callable from address 0 to prevent contracts from being
     // able to call it
     function getStorageAt(address account, uint256 index) external view returns (uint256);
+
+    event EthWithdrawal(address indexed destAddr, uint256 amount);
+    event ERC20Withdrawal(address indexed destAddr, address indexed tokenAddr, uint256 amount);
+    event ERC721Withdrawal(address indexed destAddr, address indexed tokenAddr, uint256 indexed id);
 }
