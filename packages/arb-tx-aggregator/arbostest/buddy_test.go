@@ -18,40 +18,27 @@ package arbostest
 
 import (
 	"bytes"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"log"
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 func TestBuddyContract(t *testing.T) {
-	arbERC20Data, err := hexutil.Decode(arbostestcontracts.ArbERC20Bin)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	getNameSignature, err := hexutil.Decode("0x06fdde03")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
 	addr := common.Address{1, 2, 3, 4, 5}
-
-	messages := make([]inbox.InboxMessage, 0)
-
-	messages = append(messages, message.NewInboxMessage(initMsg(), addr, big.NewInt(0), chainTime))
 
 	l1contract := common.RandAddress()
 
@@ -59,28 +46,23 @@ func TestBuddyContract(t *testing.T) {
 		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		Payment:     big.NewInt(0),
-		Data:        arbERC20Data,
+		Data:        hexutil.MustDecode(arbostestcontracts.SimpleBin),
 	}
-	messages = append(messages, message.NewInboxMessage(
-		buddyConstructor,
-		l1contract,
-		big.NewInt(1),
-		chainTime,
-	))
 
-	messages = append(messages, message.NewInboxMessage(
-		message.NewSafeL2Message(message.Transaction{
-			MaxGas:      big.NewInt(100000000),
-			GasPriceBid: big.NewInt(0),
-			SequenceNum: big.NewInt(0),
-			DestAddress: l1contract,
-			Payment:     big.NewInt(0),
-			Data:        getNameSignature,
-		}),
-		common.RandAddress(),
-		big.NewInt(2),
-		chainTime,
-	))
+	l2Tx := message.Transaction{
+		MaxGas:      big.NewInt(100000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(0),
+		DestAddress: l1contract,
+		Payment:     big.NewInt(0),
+		Data:        hexutil.MustDecode("0x267c4ae4"),
+	}
+
+	messages := []inbox.InboxMessage{
+		message.NewInboxMessage(initMsg(), addr, big.NewInt(0), chainTime),
+		message.NewInboxMessage(buddyConstructor, l1contract, big.NewInt(1), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(l2Tx), common.RandAddress(), big.NewInt(2), chainTime),
+	}
 
 	mach, err := cmachine.New(arbos.Path())
 	if err != nil {

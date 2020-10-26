@@ -160,7 +160,7 @@ func bindGasUsed(address common.Address, caller bind.ContractCaller, transactor 
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_GasUsed *GasUsedRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_GasUsed *GasUsedRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _GasUsed.Contract.GasUsedCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -179,7 +179,7 @@ func (_GasUsed *GasUsedRaw) Transact(opts *bind.TransactOpts, method string, par
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_GasUsed *GasUsedCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_GasUsed *GasUsedCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _GasUsed.Contract.contract.Call(opts, result, method, params...)
 }
 

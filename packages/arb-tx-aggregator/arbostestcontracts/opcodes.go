@@ -159,7 +159,7 @@ func bindOpCodes(address common.Address, caller bind.ContractCaller, transactor 
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_OpCodes *OpCodesRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_OpCodes *OpCodesRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _OpCodes.Contract.OpCodesCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -178,7 +178,7 @@ func (_OpCodes *OpCodesRaw) Transact(opts *bind.TransactOpts, method string, par
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_OpCodes *OpCodesCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_OpCodes *OpCodesCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _OpCodes.Contract.contract.Call(opts, result, method, params...)
 }
 

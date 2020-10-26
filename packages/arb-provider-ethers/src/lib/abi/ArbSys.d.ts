@@ -31,7 +31,27 @@ interface ArbSysInterface extends Interface {
     withdrawEth: TypedFunctionDescription<{ encode([dest]: [string]): string }>
   }
 
-  events: {}
+  events: {
+    ERC20Withdrawal: TypedEventDescription<{
+      encodeTopics([destAddr, tokenAddr, amount]: [
+        string | null,
+        string | null,
+        null
+      ]): string[]
+    }>
+
+    ERC721Withdrawal: TypedEventDescription<{
+      encodeTopics([destAddr, tokenAddr, id]: [
+        string | null,
+        string | null,
+        BigNumberish | null
+      ]): string[]
+    }>
+
+    EthWithdrawal: TypedEventDescription<{
+      encodeTopics([destAddr, amount]: [string | null, null]): string[]
+    }>
+  }
 }
 
 export class ArbSys extends Contract {
@@ -161,7 +181,21 @@ export class ArbSys extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
-  filters: {}
+  filters: {
+    ERC20Withdrawal(
+      destAddr: string | null,
+      tokenAddr: string | null,
+      amount: null
+    ): EventFilter
+
+    ERC721Withdrawal(
+      destAddr: string | null,
+      tokenAddr: string | null,
+      id: BigNumberish | null
+    ): EventFilter
+
+    EthWithdrawal(destAddr: string | null, amount: null): EventFilter
+  }
 
   estimate: {
     getStorageAt(

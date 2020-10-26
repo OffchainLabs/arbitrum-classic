@@ -15,4 +15,3 @@ abigen --sol=$TESTER_PREFIX/MessageTester.sol --pkg=$PACKAGE --out=messagetester
 abigen --sol=$TESTER_PREFIX/PrecompilesTester.sol --pkg=$PACKAGE --out=precompilestester.go --exc=$IGNORED
 abigen --sol=$TESTER_PREFIX/ValueTester.sol --pkg=$PACKAGE --out=valuetester.go --exc=$IGNORED
 abigen --sol=$TESTER_PREFIX/RollupTester.sol --pkg=$PACKAGE --out=rolluptester.go --exc=$IGNORED
-#abigen --sol=$TESTER_PREFIX/BuddyERC20.sol --pkg=$PACKAGE --out=buddyERC20.go --exc=$IGNORED
