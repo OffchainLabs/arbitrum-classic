@@ -95,6 +95,10 @@ library Value {
         return val.typeCode == INT_TYPECODE;
     }
 
+    function isInt64(Data memory val) internal pure returns (bool) {
+        return val.typeCode == INT_TYPECODE && val.intVal < (1 << 64);
+    }
+
     function isCodePoint(Data memory val) internal pure returns (bool) {
         return val.typeCode == CODE_POINT_TYPECODE;
     }

@@ -314,7 +314,7 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
     function executeGetBuffer8(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
-        if (!val2.isInt() || !val1.isBuffer()) {
+        if (!val2.isInt64() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
         }
@@ -325,10 +325,11 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
     function executeGetBuffer64(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
-        if (!val2.isInt() || !val1.isBuffer()) {
+        if (!val2.isInt64() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
         }
+        require(val1.intVal < (1 << 64), "buffer index must be 64-bit");
         uint256 res = getBuffer64(val1.bufferHash, val2.intVal, decodeProof(context.bufProof));
         pushVal(context.stack, Value.newInt(res));
     }
@@ -336,10 +337,11 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
     function executeGetBuffer256(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
-        if (!val2.isInt() || !val1.isBuffer()) {
+        if (!val2.isInt64() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
         }
+        require(val1.intVal < (1 << 64), "buffer index must be 64-bit");
         uint256 res = getBuffer256(val1.bufferHash, val2.intVal, decodeProof(context.bufProof));
         pushVal(context.stack, Value.newInt(res));
     }
@@ -348,7 +350,7 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
-        if (!val2.isInt() || !val3.isInt() || !val1.isBuffer()) {
+        if (!val2.isInt64() || !val3.isInt() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
         }
@@ -360,7 +362,7 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
-        if (!val2.isInt() || !val3.isInt() || !val1.isBuffer()) {
+        if (!val2.isInt64() || !val3.isInt() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
         }
@@ -372,7 +374,7 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
-        if (!val2.isInt() || !val3.isInt() || !val1.isBuffer()) {
+        if (!val2.isInt64() || !val3.isInt() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
         }
