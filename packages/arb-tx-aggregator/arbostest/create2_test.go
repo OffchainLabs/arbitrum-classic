@@ -82,15 +82,9 @@ func TestCreate2(t *testing.T) {
 	chain := common.RandAddress()
 	sender := common.NewAddressFromEth(auth.From)
 
-	factoryConstructorTx := makeConstructorTx(
-		hexutil.MustDecode(arbostestcontracts.CloneFactoryBin),
-		big.NewInt(0),
-	)
+	factoryConstructorTx := makeConstructorTx(hexutil.MustDecode(arbostestcontracts.CloneFactoryBin), big.NewInt(0), nil)
 
-	simpleConstructorTx := makeConstructorTx(
-		hexutil.MustDecode(arbostestcontracts.SimpleBin),
-		big.NewInt(1),
-	)
+	simpleConstructorTx := makeConstructorTx(hexutil.MustDecode(arbostestcontracts.SimpleBin), big.NewInt(1), nil)
 
 	factoryABI, err := abi.JSON(strings.NewReader(arbostestcontracts.CloneFactoryABI))
 	if err != nil {

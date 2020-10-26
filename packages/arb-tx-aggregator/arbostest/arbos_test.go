@@ -66,7 +66,7 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fibAddress, err := deployContract(t, mach, addr, constructorData, big.NewInt(0))
+	fibAddress, err := deployContract(t, mach, addr, constructorData, big.NewInt(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
