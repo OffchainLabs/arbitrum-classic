@@ -49,7 +49,7 @@ func TestBlockHash(t *testing.T) {
 
 	runMessage(t, mach, initMsg(), chain)
 
-	connAddress, err := deployContract(t, mach, addr, hexutil.MustDecode(arbostestcontracts.OpCodesBin), big.NewInt(0))
+	connAddress, err := deployContract(t, mach, addr, hexutil.MustDecode(arbostestcontracts.OpCodesBin), big.NewInt(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
