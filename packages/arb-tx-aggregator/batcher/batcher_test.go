@@ -28,11 +28,13 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"math/big"
 	"math/rand"
+	"sync"
 	"testing"
 	"time"
 )
 
 type mock struct {
+	sync.Mutex
 	t            *testing.T
 	sentL1Txes   map[common.Hash]bool
 	seenTxesChan chan<- message.CompressedECDSATransaction
@@ -47,6 +49,8 @@ func newMock(t *testing.T, seenTxesChan chan<- message.CompressedECDSATransactio
 }
 
 func (m *mock) SendL2MessageNoWait(_ context.Context, data []byte) (common.Hash, error) {
+	m.Lock()
+	defer m.Unlock()
 	l1Hash := common.RandHash()
 	m.sentL1Txes[l1Hash] = true
 
@@ -77,6 +81,8 @@ func (m *mock) SendL2MessageNoWait(_ context.Context, data []byte) (common.Hash,
 }
 
 func (m *mock) TransactionReceipt(_ context.Context, txHash ethcommon.Hash) (*types.Receipt, error) {
+	m.Lock()
+	defer m.Unlock()
 	_, ok := m.sentL1Txes[common.NewHashFromEth(txHash)]
 	if !ok {
 		return nil, errors.New("tx not sent")
