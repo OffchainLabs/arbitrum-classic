@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/rlp"
 	errors2 "github.com/pkg/errors"
+	"log"
 	"math/big"
 	"strings"
 
@@ -428,7 +429,8 @@ type CompressedECDSATransaction struct {
 func NewCompressedECDSAFromEth(tx *types.Transaction) CompressedECDSATransaction {
 	v, r, s := tx.RawSignatureValues()
 	vByte := byte(0)
-	if v.Cmp(big.NewInt(27)) == 0 || v.Cmp(big.NewInt(28)) == 0 {
+	if !tx.Protected() {
+		// None EIP-155 tx
 		vByte = byte(v.Uint64())
 	} else {
 		vByte = byte(v.Uint64() % 2)
@@ -484,6 +486,12 @@ func (t CompressedECDSATransaction) AsData() ([]byte, error) {
 	return data, nil
 }
 
+func (t CompressedECDSATransaction) IsEIP155() bool {
+	// If transaction is an EIP-155 transaction, v will be 0 or 1
+	// If transaction is a pre-EIP-155 transaction, it will be 27 or 28
+	return t.V == 0 || t.V == 1
+}
+
 func (t CompressedECDSATransaction) AsEthTx(chainId *big.Int) (*types.Transaction, error) {
 	to, ok := t.To.(CompressedAddressFull)
 	if !ok {
@@ -495,7 +503,7 @@ func (t CompressedECDSATransaction) AsEthTx(chainId *big.Int) (*types.Transactio
 		dest = to.Address[:]
 	}
 	var v *big.Int
-	if t.V == 27 || t.V == 28 {
+	if !t.IsEIP155() {
 		v = big.NewInt(int64(t.V))
 	} else {
 		v = new(big.Int).Mul(chainId, big.NewInt(2))
@@ -550,6 +558,7 @@ func newTransactionBatchFromData(data []byte) TransactionBatch {
 		}
 		if big.NewInt(int64(r.Len())).Cmp(msgLength) < 0 {
 			// Not enough data remaining
+			log.Println("Received batch containing invalid data at end")
 			break
 		}
 		txData := make([]byte, msgLength.Uint64())
