@@ -318,7 +318,11 @@ func (m *Server) LatestSnapshot() *snapshot.Snapshot {
 }
 
 func (m *Server) PendingSnapshot() *snapshot.Snapshot {
-	return m.batch.PendingSnapshot()
+	pending := m.batch.PendingSnapshot()
+	if pending == nil {
+		return m.LatestSnapshot()
+	}
+	return pending
 }
 
 func (m *Server) PendingTransactionCount(account common.Address) *uint64 {

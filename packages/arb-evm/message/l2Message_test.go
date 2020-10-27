@@ -19,7 +19,9 @@ package message
 import (
 	"bytes"
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
+	"math/rand"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -88,7 +90,7 @@ func TestTransactionHash(t *testing.T) {
 	}
 }
 
-func TestCompressedECDSAFormat(t *testing.T) {
+func TestCompressedECDSAEncoding(t *testing.T) {
 	calldata := []byte{119, 22, 2, 247, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 	gasLimit, correct := new(big.Int).SetString("e8d4a51000", 16)
 	if !correct {
@@ -145,5 +147,49 @@ func TestCompressedECDSAFormat(t *testing.T) {
 	t.Log(hexutil.Encode(recovered))
 	if !bytes.Equal(correctEncoded, recovered) {
 		t.Error("failed to unmarshall correctly")
+	}
+}
+
+func TestCompressedECDSAConversion(t *testing.T) {
+	chain := common.RandAddress()
+	chainId := ChainAddressToID(chain)
+	signer := types.NewEIP155Signer(chainId)
+	tx := types.NewTransaction(rand.Uint64(), common.RandAddress().ToEthAddress(), common.RandBigInt(), rand.Uint64(), common.RandBigInt(), common.RandBytes(100))
+	pk, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedTx, err := types.SignTx(tx, signer, pk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	compressed := NewCompressedECDSAFromEth(signedTx)
+	tx2, err := compressed.AsEthTx(chainId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx1JSON, err := signedTx.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx2JSON, err := tx2.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(string(tx1JSON))
+	t.Log(string(tx2JSON))
+	sender1, err := types.Sender(signer, signedTx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sender2, err := types.Sender(signer, tx2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sender1 != sender2 {
+		t.Fatal("senders don't match")
+	}
+	if signedTx.Hash() != tx2.Hash() {
+		t.Fatal("decoded tx incorrectly")
 	}
 }
