@@ -50,9 +50,7 @@ type GlobalInboxWatcher interface {
 	) (*big.Int, error)
 }
 
-type GlobalInbox interface {
-	GlobalInboxWatcher
-
+type GlobalInboxSender interface {
 	SendL2Message(
 		ctx context.Context,
 		data []byte,
@@ -85,4 +83,9 @@ type GlobalInbox interface {
 		destination common.Address,
 		value *big.Int,
 	) error
+}
+
+type GlobalInbox interface {
+	GlobalInboxWatcher
+	GlobalInboxSender
 }

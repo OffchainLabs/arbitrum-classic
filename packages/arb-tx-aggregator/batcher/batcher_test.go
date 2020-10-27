@@ -19,6 +19,8 @@ package batcher
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
@@ -27,6 +29,13 @@ import (
 	"testing"
 	"time"
 )
+
+type mock struct {
+}
+
+func (m *mock) TransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (*types.Receipt, error) {
+	return nil, nil
+}
 
 func TestStatelessBatcher(t *testing.T) {
 	client, pks := test.SimulatedBackend()
@@ -46,10 +55,12 @@ func TestStatelessBatcher(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	mock := &mock{}
+
 	batcher := NewStatelessBatcher(
 		context.Background(),
 		chain,
-		l1Client,
+		mock,
 		globalInbox,
 		time.Second,
 	)

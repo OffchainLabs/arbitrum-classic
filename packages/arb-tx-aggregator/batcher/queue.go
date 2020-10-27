@@ -97,11 +97,7 @@ func newTxQueues() *txQueues {
 	}
 }
 
-func (q *txQueues) addTransaction(tx *types.Transaction, signer types.Signer) error {
-	sender, err := types.Sender(signer, tx)
-	if err != nil {
-		return err
-	}
+func (q *txQueues) addTransaction(tx *types.Transaction, sender common.Address) error {
 	queue, ok := q.queues[sender]
 	if !ok {
 		queue = newTxQueue()

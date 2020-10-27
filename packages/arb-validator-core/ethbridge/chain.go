@@ -67,7 +67,7 @@ func waitForReceipt(ctx context.Context, client ethutils.EthClient, from ethcomm
 	return err
 }
 
-func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.EthClient, txHash ethcommon.Hash) (*types.Receipt, error) {
+func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.ReceiptFetcher, txHash ethcommon.Hash) (*types.Receipt, error) {
 	for {
 		select {
 		case <-time.After(time.Second):

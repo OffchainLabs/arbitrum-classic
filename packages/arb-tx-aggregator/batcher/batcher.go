@@ -70,9 +70,7 @@ type pendingSentBatch struct {
 }
 
 type Batcher struct {
-	signer      types.Signer
-	client      ethutils.EthClient
-	globalInbox arbbridge.GlobalInbox
+	signer types.Signer
 
 	sync.Mutex
 	valid bool
@@ -86,7 +84,7 @@ func NewStatefulBatcher(
 	ctx context.Context,
 	db *txdb.TxDB,
 	rollupAddress common.Address,
-	client ethutils.EthClient,
+	receiptFetcher ethutils.ReceiptFetcher,
 	globalInbox arbbridge.GlobalInbox,
 	maxBatchTime time.Duration,
 ) *Batcher {
@@ -94,7 +92,7 @@ func NewStatefulBatcher(
 	return newBatcher(
 		ctx,
 		rollupAddress,
-		client,
+		receiptFetcher,
 		globalInbox,
 		maxBatchTime,
 		newStatefulBatch(db, maxBatchSize, signer),
@@ -104,14 +102,14 @@ func NewStatefulBatcher(
 func NewStatelessBatcher(
 	ctx context.Context,
 	rollupAddress common.Address,
-	client ethutils.EthClient,
-	globalInbox arbbridge.GlobalInbox,
+	receiptFetcher ethutils.ReceiptFetcher,
+	globalInbox arbbridge.GlobalInboxSender,
 	maxBatchTime time.Duration,
 ) *Batcher {
 	return newBatcher(
 		ctx,
 		rollupAddress,
-		client,
+		receiptFetcher,
 		globalInbox,
 		maxBatchTime,
 		newStatelessBatch(maxBatchSize),
@@ -121,15 +119,13 @@ func NewStatelessBatcher(
 func newBatcher(
 	ctx context.Context,
 	rollupAddress common.Address,
-	client ethutils.EthClient,
-	globalInbox arbbridge.GlobalInbox,
+	receiptFetcher ethutils.ReceiptFetcher,
+	globalInbox arbbridge.GlobalInboxSender,
 	maxBatchTime time.Duration,
 	pendingBatch batch,
 ) *Batcher {
 	server := &Batcher{
 		signer:             types.NewEIP155Signer(message.ChainAddressToID(rollupAddress)),
-		client:             client,
-		globalInbox:        globalInbox,
 		valid:              true,
 		queuedTxes:         newTxQueues(),
 		pendingBatch:       pendingBatch,
@@ -159,7 +155,7 @@ func newBatcher(
 					}
 					if server.pendingBatch.isFull() || (!cont && time.Since(lastBatch) > maxBatchTime) {
 						lastBatch = time.Now()
-						server.sendBatch(ctx)
+						server.sendBatch(ctx, globalInbox)
 					}
 
 					if !cont {
@@ -190,7 +186,7 @@ func newBatcher(
 					batch := server.pendingSentBatches.Front().Value.(*pendingSentBatch)
 					txHash := batch.txHash.ToEthHash()
 					server.Unlock()
-					receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, client, txHash)
+					receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, receiptFetcher, txHash)
 					if err != nil || receipt.Status != 1 {
 						// batch failed
 						log.Fatal("Error submitted batch", err)
@@ -209,7 +205,7 @@ func newBatcher(
 	return server
 }
 
-func (m *Batcher) sendBatch(ctx context.Context) {
+func (m *Batcher) sendBatch(ctx context.Context, inbox arbbridge.GlobalInboxSender) {
 	txes := m.pendingBatch.getAppliedTxes()
 	if len(txes) == 0 {
 		return
@@ -225,7 +221,7 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 		return
 	}
 	log.Println("Submitting batch with", len(txes), "transactions")
-	txHash, err := m.globalInbox.SendL2MessageNoWait(
+	txHash, err := inbox.SendL2MessageNoWait(
 		ctx,
 		message.NewSafeL2Message(batchTx).AsData(),
 	)
@@ -264,7 +260,7 @@ func (m *Batcher) PendingTransactionCount(account common.Address) *uint64 {
 // SendTransaction takes a request signed transaction l2message from a client
 // and puts it in a queue to be included in the next transaction batch
 func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
-	_, err := types.Sender(m.signer, tx)
+	sender, err := types.Sender(m.signer, tx)
 	if err != nil {
 		log.Println("Error processing transaction", err)
 		return common.Hash{}, err
@@ -285,7 +281,7 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 		return common.Hash{}, err
 	}
 
-	if err := m.queuedTxes.addTransaction(tx, m.signer); err != nil {
+	if err := m.queuedTxes.addTransaction(tx, sender); err != nil {
 		return common.Hash{}, err
 	}
 
