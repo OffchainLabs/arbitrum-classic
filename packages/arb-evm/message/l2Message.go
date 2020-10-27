@@ -19,10 +19,10 @@ package message
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/rlp"
+	errors2 "github.com/pkg/errors"
 	"math/big"
 	"strings"
 
@@ -484,6 +484,45 @@ func (t CompressedECDSATransaction) AsData() ([]byte, error) {
 	return data, nil
 }
 
+func (t CompressedECDSATransaction) AsEthTx(chainId *big.Int) (*types.Transaction, error) {
+	to, ok := t.To.(CompressedAddressFull)
+	if !ok {
+		return nil, errors.New("can only convert to tx if address is full")
+	}
+	var dest []byte
+	emptyAddress := common.Address{}
+	if to.Address != emptyAddress {
+		dest = to.Address[:]
+	}
+	var v *big.Int
+	if t.V == 27 || t.V == 28 {
+		v = big.NewInt(int64(t.V))
+	} else {
+		v = new(big.Int).Mul(chainId, big.NewInt(2))
+		v = v.Add(v, big.NewInt(35+int64(1-t.V)))
+	}
+	txData := []interface{}{
+		t.SequenceNum,
+		t.GasPrice,
+		t.GasLimit,
+		dest,
+		t.Payment,
+		t.Calldata,
+		v,
+		t.R,
+		t.S,
+	}
+	rlpTxData, err := rlp.EncodeToBytes(txData)
+	if err != nil {
+		return nil, errors2.Wrap(err, "error encoding transaction")
+	}
+	tx := new(types.Transaction)
+	if err := rlp.DecodeBytes(rlpTxData, tx); err != nil {
+		return nil, errors2.Wrap(err, "error decoding transaction")
+	}
+	return tx, nil
+}
+
 type TransactionBatch struct {
 	Transactions [][]byte
 }
@@ -502,15 +541,21 @@ func NewTransactionBatchFromMessages(messages []AbstractL2Message) (TransactionB
 
 func newTransactionBatchFromData(data []byte) TransactionBatch {
 	txes := make([][]byte, 0)
-	for len(data) >= 8 {
-		msgLength := binary.BigEndian.Uint64(data[:])
-		data = data[8:]
-		if uint64(len(data)) < msgLength {
+
+	r := bytes.NewReader(data)
+	for {
+		msgLength := new(big.Int)
+		if err := rlp.Decode(r, msgLength); err != nil {
+			break
+		}
+		if big.NewInt(int64(r.Len())).Cmp(msgLength) < 0 {
 			// Not enough data remaining
 			break
 		}
-		txes = append(txes, data[:msgLength])
-		data = data[msgLength:]
+		txData := make([]byte, msgLength.Uint64())
+		// Read wont error since we've already checked for remaining length
+		_, _ = r.Read(txData)
+		txes = append(txes, txData)
 	}
 	return TransactionBatch{Transactions: txes}
 }

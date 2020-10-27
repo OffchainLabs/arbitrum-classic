@@ -134,7 +134,7 @@ func newBatcher(
 
 	go func() {
 		lastBatch := time.Now()
-		ticker := time.NewTicker(time.Millisecond * 100)
+		ticker := time.NewTicker(time.Millisecond * 500)
 		defer ticker.Stop()
 		for {
 			select {
@@ -220,7 +220,7 @@ func (m *Batcher) sendBatch(ctx context.Context, inbox arbbridge.GlobalInboxSend
 		m.valid = false
 		return
 	}
-	log.Println("Submitting batch with", len(txes), "transactions")
+	log.Println("Submitting batch with", len(batchTxes), "transactions")
 	txHash, err := inbox.SendL2MessageNoWait(
 		ctx,
 		message.NewSafeL2Message(batchTx).AsData(),
