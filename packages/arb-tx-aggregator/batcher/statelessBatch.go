@@ -56,7 +56,7 @@ func (p *statelessBatch) checkValidForQueue(*types.Transaction) error {
 	return nil
 }
 
-func (p *statelessBatch) updateFromCurrentSnap(*snapshot.Snapshot, *list.List) {
+func (p *statelessBatch) updateCurrentSnap(*list.List) {
 
 }
 

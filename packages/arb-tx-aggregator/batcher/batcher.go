@@ -53,7 +53,7 @@ type batch interface {
 	isFull() bool
 	getAppliedTxes() []*types.Transaction
 	addIncludedTx(tx *types.Transaction) error
-	updateFromCurrentSnap(currentSnap *snapshot.Snapshot, pendingSentBatches *list.List)
+	updateCurrentSnap(pendingSentBatches *list.List)
 	checkValidForQueue(tx *types.Transaction) error
 	getLatestSnap() *snapshot.Snapshot
 }
@@ -74,8 +74,6 @@ type Batcher struct {
 	client      ethutils.EthClient
 	globalInbox arbbridge.GlobalInbox
 
-	db *txdb.TxDB
-
 	sync.Mutex
 	valid bool
 
@@ -84,27 +82,54 @@ type Batcher struct {
 	pendingSentBatches *list.List
 }
 
-func NewBatcher(
+func NewStatefulBatcher(
 	ctx context.Context,
 	db *txdb.TxDB,
 	rollupAddress common.Address,
 	client ethutils.EthClient,
 	globalInbox arbbridge.GlobalInbox,
 	maxBatchTime time.Duration,
-	keepPendingState bool,
 ) *Batcher {
 	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
-	var pendingBatch batch
-	if keepPendingState {
-		pendingBatch = newStatefulBatch(db.LatestSnapshot(), maxBatchSize, signer)
-	} else {
-		pendingBatch = newStatelessBatch(maxBatchSize)
-	}
+	return newBatcher(
+		ctx,
+		rollupAddress,
+		client,
+		globalInbox,
+		maxBatchTime,
+		newStatefulBatch(db, maxBatchSize, signer),
+	)
+}
+
+func NewStatelessBatcher(
+	ctx context.Context,
+	rollupAddress common.Address,
+	client ethutils.EthClient,
+	globalInbox arbbridge.GlobalInbox,
+	maxBatchTime time.Duration,
+) *Batcher {
+	return newBatcher(
+		ctx,
+		rollupAddress,
+		client,
+		globalInbox,
+		maxBatchTime,
+		newStatelessBatch(maxBatchSize),
+	)
+}
+
+func newBatcher(
+	ctx context.Context,
+	rollupAddress common.Address,
+	client ethutils.EthClient,
+	globalInbox arbbridge.GlobalInbox,
+	maxBatchTime time.Duration,
+	pendingBatch batch,
+) *Batcher {
 	server := &Batcher{
-		signer:             signer,
+		signer:             types.NewEIP155Signer(message.ChainAddressToID(rollupAddress)),
 		client:             client,
 		globalInbox:        globalInbox,
-		db:                 db,
 		valid:              true,
 		queuedTxes:         newTxQueues(),
 		pendingBatch:       pendingBatch,
@@ -221,12 +246,8 @@ func (m *Batcher) sendBatch(ctx context.Context) {
 func (m *Batcher) PendingSnapshot() *snapshot.Snapshot {
 	m.Lock()
 	defer m.Unlock()
-	m.pendingBatch.updateFromCurrentSnap(m.db.LatestSnapshot(), m.pendingSentBatches)
-	latestSnap := m.pendingBatch.getLatestSnap()
-	if latestSnap == nil {
-		return m.db.LatestSnapshot()
-	}
-	return latestSnap
+	m.pendingBatch.updateCurrentSnap(m.pendingSentBatches)
+	return m.pendingBatch.getLatestSnap()
 }
 
 func (m *Batcher) PendingTransactionCount(account common.Address) *uint64 {
@@ -258,7 +279,7 @@ func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
 		return common.Hash{}, errors.New("tx aggregator is not running")
 	}
 
-	m.pendingBatch.updateFromCurrentSnap(m.db.LatestSnapshot(), m.pendingSentBatches)
+	m.pendingBatch.updateCurrentSnap(m.pendingSentBatches)
 
 	if err := m.pendingBatch.checkValidForQueue(tx); err != nil {
 		return common.Hash{}, err

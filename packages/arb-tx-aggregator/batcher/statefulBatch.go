@@ -23,21 +23,24 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"log"
 )
 
 type statefulBatch struct {
 	*statelessBatch
+	db       *txdb.TxDB
 	snap     *snapshot.Snapshot
 	txCounts map[common.Address]uint64
 	signer   types.Signer
 }
 
-func newStatefulBatch(snap *snapshot.Snapshot, maxSize common.StorageSize, signer types.Signer) *statefulBatch {
+func newStatefulBatch(db *txdb.TxDB, maxSize common.StorageSize, signer types.Signer) *statefulBatch {
 	return &statefulBatch{
 		statelessBatch: newStatelessBatch(maxSize),
-		snap:           snap,
+		db:             db,
+		snap:           db.LatestSnapshot(),
 		txCounts:       make(map[common.Address]uint64),
 		signer:         signer,
 	}
@@ -46,6 +49,7 @@ func newStatefulBatch(snap *snapshot.Snapshot, maxSize common.StorageSize, signe
 func (p *statefulBatch) newFromExisting() batch {
 	return &statefulBatch{
 		statelessBatch: p.statelessBatch.newFromExisting().(*statelessBatch),
+		db:             p.db,
 		snap:           p.snap,
 		txCounts:       p.txCounts,
 		signer:         p.signer,
@@ -148,8 +152,8 @@ func (p *statefulBatch) checkValidForQueue(tx *types.Transaction) error {
 	return nil
 }
 
-func (p *statefulBatch) updateFromCurrentSnap(currentSnap *snapshot.Snapshot, pendingSentBatches *list.List) {
-	snap := currentSnap.Clone()
+func (p *statefulBatch) updateCurrentSnap(pendingSentBatches *list.List) {
+	snap := p.db.LatestSnapshot().Clone()
 	if p.snap.Height().Cmp(snap.Height()) < 0 {
 		// Add all of the already broadcast transactions to the snapshot
 		// If they were already included, they'll be ignored because they will

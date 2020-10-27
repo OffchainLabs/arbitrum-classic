@@ -28,7 +28,7 @@ import (
 	"time"
 )
 
-func TestBatcher(t *testing.T) {
+func TestStatelessBatcher(t *testing.T) {
 	client, pks := test.SimulatedBackend()
 	l1Client := &ethutils.SimulatedEthClient{SimulatedBackend: client}
 	auth := bind.NewKeyedTransactor(pks[0])
@@ -46,14 +46,12 @@ func TestBatcher(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	batcher := NewBatcher(
+	batcher := NewStatelessBatcher(
 		context.Background(),
-		nil,
 		chain,
 		l1Client,
 		globalInbox,
 		time.Second,
-		false,
 	)
 	t.Log(batcher)
 }
