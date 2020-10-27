@@ -53,7 +53,7 @@ Arbitrum offers two options for accessing the Arbitrum/Ethereum bridge methods:
 **Installation**:
 
 ```
-yarn add token-bride-sdk
+yarn add token-bridge-sdk
 ```
 
 **Usage**:
@@ -72,7 +72,7 @@ const App = () => {
 }
 ```
 
-See [token-bridge-sdk](https://github.com/OffchainLabs/token-bridge-sdk/blob/master/src/hooks/useArbTokenBridge.ts) for available methods (documentation coming soon)
+See [token-bridge-sdk documentation](https://bridgedocs.offchainlabs.com) for full API.
 
 #### 2. Arb Provider Ethers Bridge (minimal)
 

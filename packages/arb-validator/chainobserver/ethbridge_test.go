@@ -18,9 +18,9 @@ package chainobserver
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
@@ -49,18 +48,21 @@ import (
 var dbPath = "./testdb"
 
 var rollupTester *ethbridgetestcontracts.RollupTester
-var ethclnt *backends.SimulatedBackend
+var ethclnt *ethutils.SimulatedEthClient
 var auth *bind.TransactOpts
 
-func ethTransfer(dest common.Address, amount *big.Int) value.Value {
+func ethTransfer(t *testing.T, dest common.Address, amount *big.Int) value.Value {
 	ethData := make([]byte, 0)
 	ethData = append(ethData, math.U256Bytes(inbox.NewIntFromAddress(dest).BigInt())...)
 	ethData = append(ethData, math.U256Bytes(amount)...)
-	tup, _ := value.NewTupleFromSlice([]value.Value{
+	tup, err := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(0), // ETH type
 		inbox.NewIntFromAddress(common.NewAddressFromEth(auth.From)),
 		inbox.BytesToByteStack(ethData),
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	return tup
 }
 
@@ -76,8 +78,8 @@ func checkBalance(t *testing.T, globalInbox arbbridge.GlobalInbox, address commo
 }
 
 func TestMain(m *testing.M) {
-	var pks []*ecdsa.PrivateKey
-	ethclnt, pks = test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend()
+	ethclnt = &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 	auth = bind.NewKeyedTransactor(pks[0])
 
 	go func() {
@@ -91,10 +93,10 @@ func TestMain(m *testing.M) {
 		auth,
 		ethclnt,
 	)
-
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	_, err = ethbridge.WaitForReceiptWithResults(
 		context.Background(),
 		ethclnt,
@@ -102,6 +104,9 @@ func TestMain(m *testing.M) {
 		tx,
 		"DeployRollupTester",
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 	rollupTester = deployedTester
 
 	code := m.Run()
@@ -213,7 +218,7 @@ func TestConfirmAssertion(t *testing.T) {
 	rand.Seed(time.Now().Unix())
 	dest := common.RandAddress()
 	sends := make([]value.Value, 0)
-	sends = append(sends, ethTransfer(dest, big.NewInt(75)))
+	sends = append(sends, ethTransfer(t, dest, big.NewInt(75)))
 
 	assertion := protocol.NewExecutionAssertionFromValues(
 		chain.calculatedValidNode.VMProtoData().MachineHash,
@@ -224,7 +229,7 @@ func TestConfirmAssertion(t *testing.T) {
 		[]value.Value{},
 	)
 
-	currentBlock, err := clnt.CurrentBlockId(context.Background())
+	currentBlock, err := clnt.BlockIdForHeight(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,7 +262,7 @@ func TestConfirmAssertion(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	currentTime, err := clnt.CurrentBlockId(context.Background())
+	currentTime, err := clnt.BlockIdForHeight(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +270,7 @@ func TestConfirmAssertion(t *testing.T) {
 
 	opp, nodes := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(common.NewTimeBlocks(confTime)))
 	if opp == nil {
-		t.Fatal("should have had opp")
+		t.Fatal("Error generating proof")
 	}
 	t.Log("Confirming", len(nodes), "nodes")
 	proof := opp.PrepareProof()
@@ -364,9 +369,10 @@ func TestConfirmAssertion(t *testing.T) {
 		t.Fatal("unexpected final prevNodeHash")
 	}
 
+	// Last value returned is not an error type
 	opp, _ = chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(common.NewTimeBlocks(confTime)))
 	if opp == nil {
-		t.Fatal("should have had opp")
+		t.Fatal("Error generating proof")
 	}
 	proof = opp.PrepareProof()
 	t.Log(

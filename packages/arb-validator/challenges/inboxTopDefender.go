@@ -156,6 +156,10 @@ func inboxDefenderUpdate(
 ) (arbbridge.Event, ChallengeState, error) {
 	// Wait to check if we've already committed bisection
 	makeTransaction, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
+	if err != nil {
+		return nil, state, err
+	}
+
 	if makeTransaction {
 		chainHashes, err := inbox.GenerateBisection(currentStartState, bisectionCount, messageCount)
 		if err != nil {
@@ -166,6 +170,9 @@ func inboxDefenderUpdate(
 			return nil, 0, errors2.Wrap(err, "Error bisecting")
 		}
 		event, state, err = getNextEvent(eventChan)
+		if err != nil {
+			return nil, state, err
+		}
 	}
 
 	return event, state, err
@@ -189,6 +196,9 @@ func runInboxOneStepProof(
 			return 0, errors2.Wrap(err, "Error making one step proof")
 		}
 		event, state, err = getNextEvent(eventChan)
+		if err != nil {
+			return 0, errors2.Wrap(err, "Error getting next event")
+		}
 	}
 
 	if challengeEnded(state, err) {

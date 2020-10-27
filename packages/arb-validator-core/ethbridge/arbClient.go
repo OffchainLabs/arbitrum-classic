@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
 	"sync"
@@ -28,7 +29,6 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
@@ -58,7 +58,7 @@ func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *
 
 	startHeader, err := c.client.HeaderByHash(ctx, startBlockId.HeaderHash.ToEthHash())
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrapf(err, "can't find initial header %v", startBlockId)
 	}
 	blockIdChan <- arbbridge.MaybeBlockId{BlockId: startBlockId, Timestamp: new(big.Int).SetUint64(startHeader.Time)}
 	prevBlockId := startBlockId
@@ -82,13 +82,13 @@ func (c *EthArbClient) subscribeBlockHeadersAfter(ctx context.Context, prevBlock
 		defer close(blockIdChan)
 
 		for {
-			var nextHeader *types.Header
+			var blockInfo *ethutils.BlockInfo
 			fetchErrorCount := 0
 			for {
 				var err error
 				targetHeight := new(big.Int).Add(prevBlockId.Height.AsInt(), big.NewInt(1))
-				nextHeader, err = c.client.HeaderByNumber(ctx, targetHeight)
-				if err == nil && nextHeader.Number.Cmp(targetHeight) == 0 {
+				blockInfo, err = c.client.BlockInfoByNumber(ctx, targetHeight)
+				if err == nil && (*big.Int)(blockInfo.Number).Cmp(targetHeight) == 0 {
 					// Got next header
 					break
 				}
@@ -114,13 +114,16 @@ func (c *EthArbClient) subscribeBlockHeadersAfter(ctx context.Context, prevBlock
 				time.Sleep(headerRetryDelay)
 			}
 
-			if nextHeader.ParentHash != prevBlockId.HeaderHash.ToEthHash() {
+			if blockInfo.ParentHash != prevBlockId.HeaderHash.ToEthHash() {
 				blockIdChan <- arbbridge.MaybeBlockId{Err: reorgError}
 				return
 			}
 
-			prevBlockId = getBlockID(nextHeader)
-			blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId, Timestamp: new(big.Int).SetUint64(nextHeader.Time)}
+			prevBlockId = &common.BlockId{
+				Height:     common.NewTimeBlocks((*big.Int)(blockInfo.Number)),
+				HeaderHash: common.NewHashFromEth(blockInfo.Hash),
+			}
+			blockIdChan <- arbbridge.MaybeBlockId{BlockId: prevBlockId, Timestamp: new(big.Int).SetUint64(uint64(blockInfo.Time))}
 		}
 	}()
 	return nil
@@ -154,23 +157,19 @@ func (c *EthArbClient) GetBalance(ctx context.Context, account common.Address) (
 	return c.client.BalanceAt(ctx, account.ToEthAddress(), nil)
 }
 
-func (c *EthArbClient) CurrentBlockId(ctx context.Context) (*common.BlockId, error) {
-	header, err := c.client.HeaderByNumber(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	return getBlockID(header), nil
-}
-
 func (c *EthArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error) {
-	header, err := c.client.HeaderByNumber(ctx, height.AsInt())
+	var num *big.Int
+	if height != nil {
+		num = height.AsInt()
+	}
+	blockInfo, err := c.client.BlockInfoByNumber(ctx, num)
 	if err != nil {
 		return nil, err
 	}
-	if header == nil {
-		return nil, errors.New("couldn't get header at height")
-	}
-	return getBlockID(header), nil
+	return &common.BlockId{
+		Height:     common.NewTimeBlocks((*big.Int)(blockInfo.Number)),
+		HeaderHash: common.NewHashFromEth(blockInfo.Hash),
+	}, nil
 }
 
 func (c *EthArbClient) TimestampForBlockHash(ctx context.Context, hash common.Hash) (*big.Int, error) {

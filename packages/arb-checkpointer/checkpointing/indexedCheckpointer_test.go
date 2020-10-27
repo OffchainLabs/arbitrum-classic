@@ -67,10 +67,6 @@ type TimeGetterMock struct {
 	blockIdFunc func(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
 }
 
-func (m *TimeGetterMock) CurrentBlockId(context.Context) (*common.BlockId, error) {
-	return nil, errors.New("unsupported method")
-}
-
 func (m *TimeGetterMock) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error) {
 	return m.blockIdFunc(ctx, height)
 }
@@ -112,6 +108,7 @@ func TestWriteCheckpoint(t *testing.T) {
 	if err == nil {
 		t.Error("block shouldn't exist before writing")
 	}
+	_ = blockData
 
 	checkpointContext := ckptcontext.NewCheckpointContext()
 	if err = writeCheckpoint(cp.bs, cp.db, &writableCheckpoint{

@@ -196,7 +196,7 @@ func (lis *ValidatorChainListener) AssertionPrepared(
 			continue
 		}
 		lis.Lock()
-		currentTime, err := stakingKey.client.CurrentBlockId(ctx)
+		currentTime, err := stakingKey.client.BlockIdForHeight(ctx, nil)
 		if err != nil {
 			log.Println("Validator couldn't get time")
 			break
@@ -239,12 +239,18 @@ func (lis *ValidatorChainListener) StakeCreated(
 		}
 		opp := nodeGraph.CheckChallengeOpportunityAny(staker)
 		if opp != nil {
-			InitiateChallenge(ctx, lis.actor, opp)
+			_, err := InitiateChallenge(ctx, lis.actor, opp)
+			if err != nil {
+				log.Printf("Stake %v unable to initiate challenge: %v", ev.Staker, err)
+			}
 		}
 	} else {
-		opp := lis.challengeStakerIfPossible(ctx, nodeGraph, ev.Staker)
+		opp := lis.challengeStakerIfPossible(nodeGraph, ev.Staker)
 		if opp != nil {
-			InitiateChallenge(ctx, lis.actor, opp)
+			_, err := InitiateChallenge(ctx, lis.actor, opp)
+			if err != nil {
+				log.Printf("Stake %v unable to initiate challenge: %v", ev.Staker, err)
+			}
 		}
 	}
 }
@@ -254,18 +260,17 @@ func (lis *ValidatorChainListener) StakeMoved(
 	nodeGraph *nodegraph.StakedNodeGraph,
 	ev arbbridge.StakeMovedEvent,
 ) {
-	opp := lis.challengeStakerIfPossible(ctx, nodeGraph, ev.Staker)
+	opp := lis.challengeStakerIfPossible(nodeGraph, ev.Staker)
 
 	if opp != nil {
-		InitiateChallenge(ctx, lis.actor, opp)
+		_, err := InitiateChallenge(ctx, lis.actor, opp)
+		if err != nil {
+			log.Printf("Stake %v unable to initiate challenge: %v", ev.Staker, err)
+		}
 	}
 }
 
-func (lis *ValidatorChainListener) challengeStakerIfPossible(
-	ctx context.Context,
-	nodeGraph *nodegraph.StakedNodeGraph,
-	stakerAddr common.Address,
-) *nodegraph.ChallengeOpportunity {
+func (lis *ValidatorChainListener) challengeStakerIfPossible(nodeGraph *nodegraph.StakedNodeGraph, stakerAddr common.Address) *nodegraph.ChallengeOpportunity {
 	_, ok := lis.stakingKeys[stakerAddr]
 	if ok {
 		// Don't challenge yourself
@@ -427,7 +432,7 @@ func (lis *ValidatorChainListener) CompletedChallenge(
 	if ok {
 		lis.lostChallenge(ev)
 	}
-	opp := lis.challengeStakerIfPossible(ctx, nodeGraph, ev.Winner)
+	opp := lis.challengeStakerIfPossible(nodeGraph, ev.Winner)
 	if opp != nil {
 		_, err := InitiateChallenge(ctx, lis.actor, opp)
 		LogChallengeResult(err)
@@ -494,13 +499,16 @@ func (lis *ValidatorChainListener) MootableStakes(ctx context.Context, params []
 	for _, moot := range params {
 		mootCopy := moot
 		go func() {
-			lis.actor.RecoverStakeMooted(
+			_, err := lis.actor.RecoverStakeMooted(
 				ctx,
 				mootCopy.AncestorHash,
 				mootCopy.Addr,
 				mootCopy.LcProof,
 				mootCopy.StProof,
 			)
+			if err != nil {
+				log.Printf("Unable to recover mooted stake at EthAddress %v", mootCopy.Addr.ToEthAddress())
+			}
 		}()
 	}
 }
@@ -510,11 +518,14 @@ func (lis *ValidatorChainListener) OldStakes(ctx context.Context, params []nodeg
 	for _, old := range params {
 		oldCopy := old
 		go func() {
-			lis.actor.RecoverStakeOld(
+			_, err := lis.actor.RecoverStakeOld(
 				ctx,
 				oldCopy.Addr,
 				oldCopy.Proof,
 			)
+			if err != nil {
+				log.Printf("Unable to recover old stakes at EthAddress %v", oldCopy.Addr.ToEthAddress())
+			}
 		}()
 	}
 }

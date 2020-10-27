@@ -1,6 +1,6 @@
 {
   "name": "arbos-contracts",
-  "version": "0.7.0",
+  "version": "0.7.2",
   "private": true,
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -17,7 +17,7 @@
     "build": "truffle compile"
   },
   "devDependencies": {
-    "@nomiclabs/buidler": "^1.3.7",
+    "@nomiclabs/buidler": "^1.4.7",
     "@openzeppelin/contracts": "^2.5.0",
     "@typechain/ethers-v4": "^1.0.0",
     "@typechain/truffle-v4": "^2.0.3",

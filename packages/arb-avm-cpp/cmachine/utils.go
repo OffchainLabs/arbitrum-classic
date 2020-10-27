@@ -32,6 +32,8 @@ import (
 
 func intToData(val *big.Int) unsafe.Pointer {
 	var lowerBoundBlockBuf bytes.Buffer
+
+	// Potential error can be ignored, bytes.Buffer is safe
 	_ = value.NewIntValue(val).Marshal(&lowerBoundBlockBuf)
 	return C.CBytes(lowerBoundBlockBuf.Bytes())
 }
@@ -39,22 +41,18 @@ func intToData(val *big.Int) unsafe.Pointer {
 func dataToInt(ptr unsafe.Pointer) *big.Int {
 	dataBuff := C.GoBytes(ptr, 32)
 	buf := bytes.NewBuffer(dataBuff)
+
+	// Potential error can be ignored, bytes.Buffer is safe
 	intVal, _ := value.NewIntValueFromReader(buf)
 	return intVal.BigInt()
 }
 
 func hashToData(val common.Hash) unsafe.Pointer {
 	var lowerBoundBlockBuf bytes.Buffer
+
+	// Potential error can be ignored, bytes.Buffer is safe
 	_ = value.NewIntValue(new(big.Int).SetBytes(val[:])).Marshal(&lowerBoundBlockBuf)
 	return C.CBytes(lowerBoundBlockBuf.Bytes())
-}
-
-func dataToHash(ptr unsafe.Pointer) common.Hash {
-	defer C.free(ptr)
-	dataBuff := C.GoBytes(ptr, 32)
-	var hash common.Hash
-	copy(hash[:], dataBuff)
-	return hash
 }
 
 func toByteSlice(slice C.ByteSlice) []byte {

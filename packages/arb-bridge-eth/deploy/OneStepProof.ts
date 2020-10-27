@@ -19,7 +19,7 @@ const func: DeployFunction = async (bre: BuidlerRuntimeEnvironment) => {
       }
     })
     contract = await deployments.get('OneStepProof')
-    if (deployResult.newlyDeployed) {
+    if (deployResult.newlyDeployed && deployResult.receipt) {
       log(
         `OneStepProof deployed at ${contract.address} for ${deployResult.receipt.gasUsed}`
       )

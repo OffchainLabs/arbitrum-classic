@@ -114,16 +114,12 @@ func NewRandomNodeFromValidPrev(prev *Node, inboxStack *MessageStack, messageCou
 		common.NewTimeBlocks(common.RandBigInt()),
 	)
 
+	// NextNode was setup properly above, so can ignore error
 	_ = nextNode.UpdateValidOpinion(nil, assertion)
 	return nextNode
 }
 
-func NewRandomInvalidNodeFromValidPrev(
-	prev *Node,
-	stub *valprotocol.ExecutionAssertionStub,
-	kind valprotocol.ChildType,
-	params valprotocol.ChainParams,
-) *Node {
+func NewRandomInvalidNodeFromValidPrev(prev *Node, stub *valprotocol.ExecutionAssertionStub, kind valprotocol.ChildType, params valprotocol.ChainParams) *Node {
 	disputableNode := valprotocol.NewRandomDisputableNode(stub)
 
 	nextNode := NewInvalidNodeFromPrev(
@@ -134,6 +130,11 @@ func NewRandomInvalidNodeFromValidPrev(
 		common.NewTimeBlocks(common.RandBigInt()),
 	)
 
+	if kind == valprotocol.ValidChildType {
+		panic("Must provide invalid child type")
+	}
+
+	// Safe to ignore error message because already validated above
 	_ = nextNode.UpdateInvalidOpinion()
 	return nextNode
 }
@@ -413,7 +414,12 @@ func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Node
 	}
 
 	if x.MachineHash != nil {
-		node.machine = ctx.GetMachine(x.MachineHash.Unmarshal())
+		var err error
+		node.machine, err = ctx.GetMachine(x.MachineHash.Unmarshal())
+		if err != nil {
+			return nil, err
+		}
+
 	}
 
 	// can't set up prev and successorHash fields yet; caller must do this later

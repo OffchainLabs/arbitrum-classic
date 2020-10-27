@@ -20,6 +20,7 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"strconv"
 
 	"encoding/json"
@@ -129,8 +130,8 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts
 
 func TestValidateProof(t *testing.T) {
 	testMachines := gotest.OpCodeTestFiles()
-
-	client, pks := test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend()
+	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 	auth := bind.NewKeyedTransactor(pks[0])
 	_, tx, osp, err := ethbridgecontracts.DeployOneStepProof(auth, client)
 	if err != nil {

@@ -92,7 +92,7 @@ value assembleValueFromDeserialized(std::vector<DeserializedValue> values) {
     for (size_t i = 0; i < total_values_size; ++i) {
         size_t val_pos = total_values_size - 1 - i;
         auto& val = values[val_pos];
-        if (nonstd::holds_alternative<value>(val)) {
+        if (!nonstd::holds_alternative<TuplePlaceholder>(val)) {
             continue;
         }
         auto holder = val.get<TuplePlaceholder>();

@@ -52,14 +52,6 @@ func testChallengerCatchUp(
 	challengerFuncStop ChallengeFunc,
 	testerAddress ethcommon.Address,
 ) {
-	current, err := client.HeaderByNumber(context.Background(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	blockId := &common.BlockId{
-		Height:     common.NewTimeBlocks(current.Number),
-		HeaderHash: common.NewHashFromEth(current.Hash()),
-	}
 	asserterClient, challengerClient, challengeAddress, _, err := getChallengeInfo(
 		client,
 		asserter,
@@ -70,6 +62,11 @@ func testChallengerCatchUp(
 	)
 	if err != nil {
 		t.Fatal("Error starting challenge", err)
+	}
+
+	blockId, err := asserterClient.BlockIdForHeight(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	asserterEndChan := make(chan ChallengeState)
@@ -119,23 +116,19 @@ func testChallengerCatchUp(
 
 	go func() {
 		cBlockId := blockId.MarshalToBuf().Unmarshal()
-		for {
-			endState, err := challengerFuncStop(challengeAddress, challengerClient, cBlockId)
-			if endState == ChallengerDiscontinued {
-				break
-			}
+		endState, err := challengerFuncStop(challengeAddress, challengerClient, cBlockId)
+		if endState != ChallengerDiscontinued {
 			asserterErrChan <- err
 			return
 		}
-		for {
-			endState, err := challengerFunc(challengeAddress, challengerClient, cBlockId)
-			if err == nil {
-				asserterEndChan <- endState
-				return
-			}
+
+		endState, err = challengerFunc(challengeAddress, challengerClient, cBlockId)
+		if err != nil {
 			asserterErrChan <- err
 			return
 		}
+
+		asserterEndChan <- endState
 	}()
 
 	resolveChallenge(t, asserterEndChan, asserterErrChan, challengerEndChan, challengerErrChan)
@@ -152,14 +145,6 @@ func testChallenge(
 	challengerFunc ChallengeFunc,
 	testerAddress ethcommon.Address,
 ) {
-	current, err := client.HeaderByNumber(context.Background(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	blockId := &common.BlockId{
-		Height:     common.NewTimeBlocks(current.Number),
-		HeaderHash: common.NewHashFromEth(current.Hash()),
-	}
 	asserterClient, challengerClient, challengeAddress, _, err := getChallengeInfo(
 		client,
 		asserter,
@@ -172,34 +157,35 @@ func testChallenge(
 		t.Fatal("Error starting challenge", err)
 	}
 
+	blockId, err := asserterClient.BlockIdForHeight(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	asserterEndChan := make(chan ChallengeState)
 	asserterErrChan := make(chan error)
 	challengerEndChan := make(chan ChallengeState)
 	challengerErrChan := make(chan error)
 
 	go func() {
-		for {
-			endState, err := asserterFunc(challengeAddress, asserterClient, blockId)
-			if err == nil {
-				asserterEndChan <- endState
-				return
-			}
+		endState, err := asserterFunc(challengeAddress, asserterClient, blockId)
+		if err != nil {
 			asserterErrChan <- err
 			return
 		}
+
+		asserterEndChan <- endState
 	}()
 
 	go func() {
 		cBlockId := blockId.MarshalToBuf().Unmarshal()
-		for {
-			endState, err := challengerFunc(challengeAddress, challengerClient, cBlockId)
-			if err == nil {
-				asserterEndChan <- endState
-				return
-			}
+		endState, err := challengerFunc(challengeAddress, challengerClient, cBlockId)
+		if err != nil {
 			asserterErrChan <- err
 			return
 		}
+
+		asserterEndChan <- endState
 	}()
 
 	resolveChallenge(t, asserterEndChan, asserterErrChan, challengerEndChan, challengerErrChan)

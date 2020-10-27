@@ -48,14 +48,6 @@ func getSegmentCount(count, segments, index uint64) uint64 {
 	}
 }
 
-func getSegmentStart(count, segments, index uint64) uint64 {
-	start := uint64(0)
-	for i := uint64(0); i < index; i++ {
-		start += getSegmentCount(count, segments, 0)
-	}
-	return start
-}
-
 func getAfterState(event arbbridge.Event) ChallengeState {
 	switch event.(type) {
 	case arbbridge.AsserterTimeoutEvent:
@@ -87,7 +79,7 @@ func getNextEventWithTimeout(
 		case <-ctx.Done():
 			return nil, 0, errors.New("context cancelled while waiting for event")
 		case <-ticker.C:
-			blockId, err := client.CurrentBlockId(ctx)
+			blockId, err := client.BlockIdForHeight(ctx, nil)
 			if err != nil {
 				return nil, 0, err
 			}

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
 	"log"
@@ -102,7 +103,7 @@ func setupValidators(
 		manager, err := rollupmanager.CreateManager(
 			ctx,
 			rollupAddress,
-			rollupmanager.NewStressTestClient(client, time.Second*15),
+			arbbridge.NewStressTestClient(client, time.Second*15),
 			contract,
 			dbName,
 		)
@@ -124,6 +125,8 @@ func setupValidators(
 		manager.AddListener(validatorListener)
 		managers = append(managers, manager)
 	}
+
+	_ = managers
 
 	return nil
 }
@@ -191,12 +194,12 @@ type ListenerError struct {
 
 func startFibTestEventListener(
 	t *testing.T,
-	fibonacci *Fibonacci,
+	fibonacci *arbostestcontracts.Fibonacci,
 	ch chan interface{},
 	timeLimit time.Duration,
 ) {
 	go func() {
-		evCh := make(chan *FibonacciTestEvent, 2)
+		evCh := make(chan *arbostestcontracts.FibonacciTestEvent, 2)
 		start := uint64(0)
 		watch := &bind.WatchOpts{
 			Context: context.Background(),
@@ -281,7 +284,8 @@ func TestFib(t *testing.T) {
 		}
 	}()
 
-	l1Client, pks := test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend()
+	l1Client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 	go func() {
 		t := time.NewTicker(time.Second * 2)
 		for range t.C {
@@ -327,7 +331,7 @@ func TestFib(t *testing.T) {
 	)
 
 	auth := bind.NewKeyedTransactor(pk)
-	_, tx, _, err := DeployFibonacci(auth, client)
+	_, tx, _, err := arbostestcontracts.DeployFibonacci(auth, client)
 	if err != nil {
 		t.Fatal("DeployFibonacci failed", err)
 	}
@@ -346,13 +350,13 @@ func TestFib(t *testing.T) {
 
 	t.Log("Fib contract is at", receipt.ContractAddress.Hex())
 
-	fib, err := NewFibonacci(receipt.ContractAddress, client)
+	fib, err := arbostestcontracts.NewFibonacci(receipt.ContractAddress, client)
 	if err != nil {
 		t.Fatal("connect fib failed", err)
 	}
 
 	//Wrap the Token contract instance into a session
-	session := &FibonacciSession{
+	session := &arbostestcontracts.FibonacciSession{
 		Contract: fib,
 		CallOpts: bind.CallOpts{
 			From:    auth.From,
@@ -408,7 +412,7 @@ func TestFib(t *testing.T) {
 	Loop:
 		for ev := range eventChan {
 			switch event := ev.(type) {
-			case *FibonacciTestEvent:
+			case *arbostestcontracts.FibonacciTestEvent:
 				testEventRcvd = true
 				break Loop
 			case ListenerError:

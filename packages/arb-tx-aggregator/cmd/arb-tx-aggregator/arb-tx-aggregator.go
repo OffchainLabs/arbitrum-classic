@@ -19,13 +19,13 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -36,6 +36,9 @@ import (
 )
 
 func main() {
+	// Enable line numbers in logging
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	walletArgs := utils.AddWalletFlags(fs)
 	rpcVars := utils2.AddRPCFlags(fs)
@@ -69,7 +72,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ethclint, err := ethclient.Dial(rollupArgs.EthURL)
+	ethclint, err := ethutils.NewRPCEthClient(rollupArgs.EthURL)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -85,6 +88,8 @@ func main() {
 
 	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "contract.mexe")
 	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
+
+	log.Println("Launching aggregator for chain", rollupArgs.Address, "with chain id", message.ChainAddressToID(rollupArgs.Address))
 
 	if err := rpc.LaunchAggregator(
 		context.Background(),

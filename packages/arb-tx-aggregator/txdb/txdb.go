@@ -72,12 +72,17 @@ func (txdb *TxDB) Load(ctx context.Context) error {
 	if txdb.checkpointer.HasCheckpointedState() {
 		if err := txdb.restoreFromCheckpoint(ctx); err == nil {
 			return nil
-		} else {
-			log.Println("Failed to restore from checkpoint, falling back to fresh start")
 		}
+
+		log.Println("Failed to restore from checkpoint, falling back to fresh start")
 	}
 	// We failed to restore from a checkpoint
-	mach, err := txdb.checkpointer.GetInitialMachine()
+	valueCache, err := cmachine.NewValueCache()
+	if err != nil {
+		return err
+	}
+
+	mach, err := txdb.checkpointer.GetInitialMachine(valueCache)
 	if err != nil {
 		return err
 	}
@@ -108,7 +113,11 @@ func (txdb *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 		var machineHash common.Hash
 		copy(machineHash[:], chainObserverBytes)
 		lastInboxSeq = new(big.Int).SetBytes(chainObserverBytes[32:])
-		mach = restoreCtx.GetMachine(machineHash)
+		var err error
+		mach, err = restoreCtx.GetMachine(machineHash)
+		if err != nil {
+			return err
+		}
 		blockId = restoreBlockId
 		return nil
 	}); err != nil {
@@ -157,6 +166,7 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 	for _, msg := range msgs {
 		// TODO: Give ExecuteAssertion the ability to run unbounded until it blocks
 		// The max steps here is a hack since it should just run until it blocks
+		// Last value returned is not an error type
 		assertion, _ := txdb.mach.ExecuteAssertion(1000000000000, []inbox.InboxMessage{msg.Message}, 0)
 		txdb.callMut.Lock()
 		txdb.lastInboxSeq = msg.Message.InboxSeqNum
@@ -180,6 +190,7 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 	nextBlockHeight := new(big.Int).Add(finishedBlock.Height.AsInt(), big.NewInt(1))
 	// TODO: Give ExecuteCallServerAssertion the ability to run unbounded until it blocks
 	// The max steps here is a hack since it should just run until it blocks
+	// Last value returned is not an error type
 	assertion, _ := txdb.mach.ExecuteCallServerAssertion(1000000000000, nil, value.NewIntValue(nextBlockHeight), 0)
 	processedAssertion, err := txdb.processAssertion(ctx, assertion)
 	if err != nil {
@@ -299,7 +310,7 @@ func saveAssertion(
 			}
 		}
 
-		logBloom := types.BytesToBloom(types.LogsBloom(ethLogs).Bytes())
+		logBloom := types.BytesToBloom(types.LogsBloom(ethLogs))
 
 		avmLogIndex := info.blockInfo.ChainStats.AVMLogCount.Uint64() - 1
 		if err := as.SaveBlock(info.block, avmLogIndex, logBloom); err != nil {

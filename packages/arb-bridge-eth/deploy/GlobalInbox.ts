@@ -12,7 +12,7 @@ const func: DeployFunction = async (bre: BuidlerRuntimeEnvironment) => {
   if (!contract) {
     const deployResult = await deploy('GlobalInbox', { from: deployer })
     contract = await deployments.get('GlobalInbox')
-    if (deployResult.newlyDeployed) {
+    if (deployResult.newlyDeployed && deployResult.receipt) {
       log(
         `GlobalInbox deployed at ${contract.address} for ${deployResult.receipt.gasUsed}`
       )

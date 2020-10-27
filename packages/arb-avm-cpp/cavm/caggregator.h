@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef caggregator_hpp
-#define caggregator_hpp
+#ifndef caggregator_h
+#define caggregator_h
 
 #include "ctypes.h"
 
@@ -84,4 +84,4 @@ int aggregatorSaveRequest(CAggregatorStore* agg,
 }
 #endif
 
-#endif /* caggregator_hpp */
+#endif /* caggregator_h */

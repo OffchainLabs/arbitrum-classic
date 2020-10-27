@@ -28,6 +28,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -150,6 +151,7 @@ func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
 					chain.RUnlock()
 					break
 				}
+
 				confOpp, _ := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(chain.currentEventId.BlockId.Height))
 				if confOpp != nil {
 					for _, listener := range chain.listeners {
@@ -194,7 +196,7 @@ func (chain *ChainObserver) startCleanupThread(ctx context.Context) {
 					chain.RUnlock()
 					break
 				}
-				prunesToDo := chain.NodeGraph.GenerateNodePruneInfo(chain.NodeGraph.Stakers())
+				prunesToDo := chain.NodeGraph.GenerateNodePruneInfo()
 				mootedToDo, oldToDo := chain.NodeGraph.GenerateStakerPruneInfo()
 				chain.RUnlock()
 
@@ -298,7 +300,12 @@ func newChain(
 	checkpointer checkpointing.RollupCheckpointer,
 	vmParams valprotocol.ChainParams,
 ) (*ChainObserver, error) {
-	mach, err := checkpointer.GetInitialMachine()
+	valueCache, err := cmachine.NewValueCache()
+	if err != nil {
+		return nil, err
+	}
+
+	mach, err := checkpointer.GetInitialMachine(valueCache)
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +342,9 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 	defer chain.Unlock()
 	switch ev := event.(type) {
 	case arbbridge.MessageDeliveredEvent:
-		return chain.messageDelivered(ctx, ev)
+		if err := chain.messageDelivered(ctx, ev); err != nil {
+			return err
+		}
 	case arbbridge.StakeCreatedEvent:
 		chain.createStake(ctx, ev)
 	case arbbridge.ChallengeStartedEvent:
@@ -351,13 +360,28 @@ func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbri
 	case arbbridge.AssertedEvent:
 		chain.notifyAssert(ctx, ev)
 	case arbbridge.ConfirmedEvent:
-		return chain.confirmNode(ctx, ev)
+		if err := chain.confirmNode(ctx, ev); err != nil {
+			return err
+		}
+	}
+	chain.currentEventId = arbbridge.ChainInfo{
+		BlockId:  event.GetChainInfo().BlockId.Clone(),
+		LogIndex: event.GetChainInfo().LogIndex + 1,
 	}
 	return nil
 }
 
+func (chain *ChainObserver) NotifyNextEvent(blockId *common.BlockId) {
+	chain.Lock()
+	defer chain.Unlock()
+	chain.currentEventId = arbbridge.ChainInfo{
+		BlockId:  blockId.Clone(),
+		LogIndex: 0,
+	}
+}
+
 func (chain *ChainObserver) UpdateAssumedValidBlock(ctx context.Context, clnt arbbridge.ChainTimeGetter, assumedValidDepth int64) error {
-	latestL1BlockId, err := clnt.CurrentBlockId(ctx)
+	latestL1BlockId, err := clnt.BlockIdForHeight(ctx, nil)
 	if err != nil {
 		return errors2.Wrap(err, "Getting current block header")
 	}
@@ -380,10 +404,6 @@ func (chain *ChainObserver) UpdateAssumedValidBlock(ctx context.Context, clnt ar
 func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
-	chain.currentEventId = arbbridge.ChainInfo{
-		BlockId:  blockId,
-		LogIndex: 0,
-	}
 	ckptCtx := ckptcontext.NewCheckpointContext()
 	buf, err := chain.marshalToBytes(ckptCtx)
 	if err != nil {
@@ -562,6 +582,6 @@ func (chain *ChainObserver) notifyAssert(ctx context.Context, ev arbbridge.Asser
 
 func (chain *ChainObserver) equals(co2 *ChainObserver) bool {
 	return chain.NodeGraph.Equals(co2.NodeGraph) &&
-		bytes.Compare(chain.rollupAddr[:], co2.rollupAddr[:]) == 0 &&
+		bytes.Equal(chain.rollupAddr[:], co2.rollupAddr[:]) &&
 		chain.Inbox.Equals(co2.Inbox)
 }

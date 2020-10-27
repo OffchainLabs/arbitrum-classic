@@ -76,21 +76,35 @@ CAggregatorStore* createAggregatorStore(CCheckpointStorage* storage_ptr) {
     return storage->getAggregatorStore().release();
 }
 
-CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {
+CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr,
+                            CValueCache* value_cache_ptr) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
+    auto value_cache = static_cast<ValueCache*>(value_cache_ptr);
     try {
-        return new Machine(storage->getInitialMachine());
+        if (value_cache == nullptr) {
+            ValueCache cache;
+            return new Machine(storage->getInitialMachine(cache));
+        }
+
+        return new Machine(storage->getInitialMachine(*value_cache));
     } catch (const std::exception&) {
         return nullptr;
     }
 }
 
 CMachine* getMachine(const CCheckpointStorage* storage_ptr,
-                     const void* machine_hash) {
+                     const void* machine_hash,
+                     CValueCache* value_cache_ptr) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
     auto hash = receiveUint256(machine_hash);
+    auto value_cache = static_cast<ValueCache*>(value_cache_ptr);
     try {
-        return new Machine(storage->getMachine(hash));
+        if (value_cache == nullptr) {
+            ValueCache cache;
+            return new Machine(storage->getMachine(hash, cache));
+        }
+
+        return new Machine(storage->getMachine(hash, *value_cache));
     } catch (const std::exception&) {
         return nullptr;
     }
@@ -124,10 +138,13 @@ int saveValue(CCheckpointStorage* storage_ptr, const void* value_data) {
 }
 
 ByteSlice getValue(const CCheckpointStorage* storage_ptr,
-                   const void* hash_key) {
+                   const void* hash_key,
+                   CValueCache* value_cache_ptr) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
     auto hash = receiveUint256(hash_key);
-    return returnValueResult(storage->getValue(hash));
+    auto value_cache = static_cast<ValueCache*>(value_cache_ptr);
+
+    return returnValueResult(storage->getValue(hash, *value_cache));
 }
 
 int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {

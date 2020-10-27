@@ -60,10 +60,13 @@ type L2SubType uint8
 
 const (
 	TransactionType         L2SubType = 0
-	ContractTransactionType           = 1
-	CallType                          = 2
-	TransactionBatchType              = 3
-	SignedTransactionType             = 4
+	ContractTransactionType L2SubType = 1
+	CallType                L2SubType = 2
+	TransactionBatchType    L2SubType = 3
+	SignedTransactionType   L2SubType = 4
+	BuddyRequestType        L2SubType = 5
+	HeartbeatType           L2SubType = 6
+	CompressedECDSA         L2SubType = 7
 )
 
 type AbstractL2Message interface {
@@ -117,6 +120,8 @@ func (l L2Message) AbstractMessage() (AbstractL2Message, error) {
 		return newTransactionBatchFromData(data), nil
 	case SignedTransactionType:
 		return newSignedTransactionFromData(data)
+	case CompressedECDSA:
+		return newCompressedECDSATxFromData(data)
 	default:
 		return nil, errors.New("invalid l2 l2message type")
 	}
@@ -388,6 +393,97 @@ func (t SignedTransaction) AsData() ([]byte, error) {
 	return rlp.EncodeToBytes(t.Tx)
 }
 
+type CompressedTx struct {
+	SequenceNum *big.Int
+	GasPrice    *big.Int
+	GasLimit    *big.Int
+	To          CompressedAddress
+	Payment     *big.Int
+	Calldata    []byte
+}
+
+func newCompressedTxFromEth(tx *types.Transaction) CompressedTx {
+	var to CompressedAddress
+	if tx.To() != nil {
+		to = CompressedAddressFull{common.NewAddressFromEth(*tx.To())}
+	}
+	return CompressedTx{
+		SequenceNum: new(big.Int).SetUint64(tx.Nonce()),
+		GasPrice:    tx.GasPrice(),
+		GasLimit:    new(big.Int).SetUint64(tx.Gas()),
+		To:          to,
+		Payment:     tx.Value(),
+		Calldata:    tx.Data(),
+	}
+}
+
+type CompressedECDSATransaction struct {
+	CompressedTx
+
+	V byte
+	R *big.Int
+	S *big.Int
+}
+
+func NewCompressedECDSAFromEth(tx *types.Transaction) CompressedECDSATransaction {
+	v, r, s := tx.RawSignatureValues()
+	vByte := byte(0)
+	if v.Cmp(big.NewInt(27)) == 0 || v.Cmp(big.NewInt(28)) == 0 {
+		vByte = byte(v.Uint64())
+	} else {
+		vByte = byte(v.Uint64() % 2)
+	}
+	return CompressedECDSATransaction{
+		CompressedTx: newCompressedTxFromEth(tx),
+		V:            vByte,
+		R:            r,
+		S:            s,
+	}
+}
+
+func newCompressedECDSATxFromData(data []byte) (CompressedECDSATransaction, error) {
+	if len(data) < 65 {
+		return CompressedECDSATransaction{}, errors.New("data is too short")
+	}
+
+	compressedTx, err := decodeCompressedTx(bytes.NewReader(data[:len(data)-65]))
+	if err != nil {
+		return CompressedECDSATransaction{}, err
+	}
+	v, r, s, err := decodeECDSASig(bytes.NewReader(data[len(data)-65:]))
+	if err != nil {
+		return CompressedECDSATransaction{}, err
+	}
+	return CompressedECDSATransaction{
+		CompressedTx: compressedTx,
+		V:            v,
+		R:            r,
+		S:            s,
+	}, nil
+}
+
+func (t CompressedECDSATransaction) String() string {
+	dest := "ContractCreation"
+	if t.To != nil {
+		dest = t.To.String()
+	}
+	return fmt.Sprintf("CompressedECDSATransaction(%v, %v, %v, %v, %v, 0x%X)", t.SequenceNum, t.GasPrice, t.GasLimit, dest, t.Payment, t.Calldata)
+}
+
+func (t CompressedECDSATransaction) L2Type() L2SubType {
+	return CompressedECDSA
+}
+
+func (t CompressedECDSATransaction) AsData() ([]byte, error) {
+	data, err := encodeUnsignedTx(t.CompressedTx)
+	if err != nil {
+		return nil, err
+	}
+
+	data = append(data, encodeECDSASig(t.V, t.R, t.S)...)
+	return data, nil
+}
+
 type TransactionBatch struct {
 	Transactions [][]byte
 }
@@ -457,8 +553,11 @@ func (t TransactionBatch) AsData() ([]byte, error) {
 func (t TransactionBatch) AsDataSafe() []byte {
 	ret := make([]byte, 0)
 	for _, tx := range t.Transactions {
-		encodedLength := make([]byte, 8)
-		binary.BigEndian.PutUint64(encodedLength[:], uint64(len(tx)))
+		encodedLength, err := rlp.EncodeToBytes(big.NewInt(int64(len(tx))))
+		if err != nil {
+			// This should never occur
+			panic(err)
+		}
 		ret = append(ret, encodedLength[:]...)
 		ret = append(ret, tx...)
 	}

@@ -24,7 +24,7 @@ import (
 
 func CalculateCatchupFetch(ctx context.Context, start *big.Int, clnt arbbridge.ChainTimeGetter, maxReorg *big.Int) (*big.Int, error) {
 	currentLocalHeight := start
-	currentOnChain, err := clnt.CurrentBlockId(ctx)
+	currentOnChain, err := clnt.BlockIdForHeight(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

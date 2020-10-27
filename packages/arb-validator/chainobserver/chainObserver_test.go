@@ -145,7 +145,6 @@ func doAnAssertion(chain *ChainObserver, baseNode *structures.Node) error {
 	theMachine := baseNode.Machine()
 	var messages []inbox.InboxMessage
 	execAssertion, numSteps := theMachine.ExecuteAssertion(1, messages, time.Hour)
-	_ = execAssertion
 
 	assertionParams := &valprotocol.AssertionParams{
 		NumSteps:             numSteps,

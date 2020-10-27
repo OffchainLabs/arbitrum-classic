@@ -21,7 +21,6 @@
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/code.hpp>
 #include <data_storage/value/machine.hpp>
-#include <data_storage/value/value.hpp>
 
 #include <avm/machine.hpp>
 
@@ -31,10 +30,9 @@
 
 #include <rocksdb/options.h>
 #include <rocksdb/utilities/transaction.h>
-#include <rocksdb/utilities/transaction_db.h>
 
 namespace {
-const std::string initial_slice_label = "initial";
+constexpr auto initial_slice_label = "initial";
 }
 
 CheckpointStorage::CheckpointStorage(const std::string& db_path)
@@ -73,9 +71,9 @@ void CheckpointStorage::initialize(LoadedExecutable executable) {
 bool CheckpointStorage::initialized() const {
     auto tx = makeConstTransaction();
     std::string initial_raw;
-    auto s =
-        tx->transaction->Get(rocksdb::ReadOptions(),
-                             rocksdb::Slice(initial_slice_label), &initial_raw);
+    auto s = tx->transaction->GetForUpdate(rocksdb::ReadOptions(),
+                                           rocksdb::Slice(initial_slice_label),
+                                           &initial_raw);
     return s.ok();
 }
 
@@ -111,22 +109,23 @@ std::unique_ptr<AggregatorStore> CheckpointStorage::getAggregatorStore() const {
     return std::make_unique<AggregatorStore>(datastorage);
 }
 
-Machine CheckpointStorage::getInitialMachine() const {
+Machine CheckpointStorage::getInitialMachine(ValueCache& value_cache) const {
     auto tx = makeConstTransaction();
     std::string initial_raw;
-    auto s =
-        tx->transaction->Get(rocksdb::ReadOptions(),
-                             rocksdb::Slice(initial_slice_label), &initial_raw);
+    auto s = tx->transaction->GetForUpdate(rocksdb::ReadOptions(),
+                                           rocksdb::Slice(initial_slice_label),
+                                           &initial_raw);
     if (!s.ok()) {
         throw std::runtime_error("failed to load initial val");
     }
 
     auto machine_hash = intx::be::unsafe::load<uint256_t>(
         reinterpret_cast<const unsigned char*>(initial_raw.data()));
-    return getMachine(machine_hash);
+    return getMachine(machine_hash, value_cache);
 }
 
-Machine CheckpointStorage::getMachine(uint256_t machineHash) const {
+Machine CheckpointStorage::getMachine(uint256_t machineHash,
+                                      ValueCache& value_cache) const {
     std::set<uint64_t> segment_ids;
     auto transaction = makeConstTransaction();
     auto results = getMachineState(*transaction, machineHash);
@@ -136,34 +135,34 @@ Machine CheckpointStorage::getMachine(uint256_t machineHash) const {
 
     auto state_data = results.data;
 
-    auto static_results =
-        ::getValueImpl(*transaction, state_data.static_hash, segment_ids);
+    auto static_results = ::getValueImpl(*transaction, state_data.static_hash,
+                                         segment_ids, value_cache);
     if (!static_results.status.ok()) {
         throw std::runtime_error("failed loaded core machine static");
     }
 
-    auto register_results =
-        ::getValueImpl(*transaction, state_data.register_hash, segment_ids);
+    auto register_results = ::getValueImpl(
+        *transaction, state_data.register_hash, segment_ids, value_cache);
     if (!register_results.status.ok()) {
         throw std::runtime_error("failed to load machine register");
     }
 
-    auto stack_results =
-        ::getValueImpl(*transaction, state_data.datastack_hash, segment_ids);
+    auto stack_results = ::getValueImpl(*transaction, state_data.datastack_hash,
+                                        segment_ids, value_cache);
     if (!stack_results.status.ok() ||
         !nonstd::holds_alternative<Tuple>(stack_results.data)) {
         throw std::runtime_error("failed to load machine stack");
     }
 
-    auto auxstack_results =
-        ::getValueImpl(*transaction, state_data.auxstack_hash, segment_ids);
+    auto auxstack_results = ::getValueImpl(
+        *transaction, state_data.auxstack_hash, segment_ids, value_cache);
     if (!auxstack_results.status.ok() ||
         !nonstd::holds_alternative<Tuple>(auxstack_results.data)) {
         throw std::runtime_error("failed to load machine auxstack");
     }
 
     auto staged_message_results = ::getValueImpl(
-        *transaction, state_data.staged_message_hash, segment_ids);
+        *transaction, state_data.staged_message_hash, segment_ids, value_cache);
     if (!staged_message_results.status.ok()) {
         throw std::runtime_error("failed to load machine saved message");
     }
@@ -180,7 +179,8 @@ Machine CheckpointStorage::getMachine(uint256_t machineHash) const {
                 // If the segment is already loaded, no need to restore it
                 continue;
             }
-            auto segment = getCodeSegment(*transaction, *it, next_segment_ids);
+            auto segment = getCodeSegment(*transaction, *it, next_segment_ids,
+                                          value_cache);
             code->restoreExistingSegment(std::move(segment));
             loaded_segment = true;
         }
@@ -199,7 +199,8 @@ Machine CheckpointStorage::getMachine(uint256_t machineHash) const {
                         std::move(staged_message_results.data.get<Tuple>())};
 }
 
-DbResult<value> CheckpointStorage::getValue(uint256_t value_hash) const {
+DbResult<value> CheckpointStorage::getValue(uint256_t value_hash,
+                                            ValueCache& value_cache) const {
     auto tx = makeConstTransaction();
-    return ::getValue(*tx, value_hash);
+    return ::getValue(*tx, value_hash, value_cache);
 }

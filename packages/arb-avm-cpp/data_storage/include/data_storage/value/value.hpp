@@ -18,6 +18,7 @@
 #define checkpoint_value_hpp
 
 #include <avm_values/value.hpp>
+#include <data_storage/value/valuecache.hpp>
 
 #include <map>
 #include <set>
@@ -37,9 +38,12 @@ DeleteResults deleteValueImpl(Transaction& transaction,
                               std::map<uint64_t, uint64_t>& segment_counts);
 DbResult<value> getValueImpl(const Transaction& transaction,
                              uint256_t value_hash,
-                             std::set<uint64_t>& segment_ids);
+                             std::set<uint64_t>& segment_ids,
+                             ValueCache& value_cache);
 
-DbResult<value> getValue(const Transaction& transaction, uint256_t value_hash);
+DbResult<value> getValue(const Transaction& transaction,
+                         uint256_t value_hash,
+                         ValueCache& value_cache);
 SaveResults saveValue(Transaction& transaction, const value& val);
 DeleteResults deleteValue(Transaction& transaction, uint256_t value_hash);
 

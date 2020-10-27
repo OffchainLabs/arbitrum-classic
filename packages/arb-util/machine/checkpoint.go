@@ -17,6 +17,7 @@
 package machine
 
 import (
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -26,12 +27,36 @@ type CheckpointStorage interface {
 	Initialize(contractPath string) error
 	Initialized() bool
 	CloseCheckpointStorage() bool
-	GetInitialMachine() (Machine, error)
-	GetMachine(machineHash common.Hash) (Machine, error)
+	GetInitialMachine(valueCache ValueCache) (Machine, error)
+	GetMachine(machineHash common.Hash, valueCache ValueCache) (Machine, error)
 	SaveValue(val value.Value) bool
-	GetValue(hashValue common.Hash) value.Value
+	GetValue(hashValue common.Hash, valueCache ValueCache) (value.Value, error)
 	DeleteValue(hashValue common.Hash) bool
 	SaveData(key []byte, serializedValue []byte) bool
-	GetData(key []byte) []byte
+	GetData(key []byte) ([]byte, error)
 	DeleteData(key []byte) bool
+}
+
+type ValueNotFoundError struct {
+	HashValue common.Hash
+}
+
+func (e *ValueNotFoundError) Error() string {
+	return fmt.Sprintf("value with hash %s not found", e.HashValue.String())
+}
+
+type MachineNotFoundError struct {
+	HashValue common.Hash
+}
+
+func (e *MachineNotFoundError) Error() string {
+	return fmt.Sprintf("machine with hash %s not found", e.HashValue.String())
+}
+
+type DataNotFoundError struct {
+	Key []byte
+}
+
+func (e *DataNotFoundError) Error() string {
+	return fmt.Sprintf("data with key 0x%x not found", e.Key)
 }

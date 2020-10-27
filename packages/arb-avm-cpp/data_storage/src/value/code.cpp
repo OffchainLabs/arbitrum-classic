@@ -21,7 +21,6 @@
 
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
-#include <data_storage/value/value.hpp>
 
 #include <avm_values/code.hpp>
 
@@ -31,12 +30,12 @@
 
 namespace {
 
-const std::string max_code_segment_key = "max_code_segment";
+constexpr auto max_code_segment_key = "max_code_segment";
 constexpr auto segment_key_prefix = std::array<char, 1>{87};
 constexpr auto segment_key_size = segment_key_prefix.size() + sizeof(uint64_t);
 
 std::array<unsigned char, segment_key_size> segment_key(uint64_t segment_id) {
-    std::array<unsigned char, segment_key_size> key;
+    std::array<unsigned char, segment_key_size> key{};
     auto it = std::copy(segment_key_prefix.begin(), segment_key_prefix.end(),
                         key.begin());
     auto big_id = boost::endian::native_to_big(segment_id);
@@ -54,7 +53,7 @@ struct RawCodePoint {
 RawCodePoint extractRawCodePoint(const char*& ptr) {
     bool is_immediate = static_cast<bool>(*ptr);
     ++ptr;
-    OpCode opcode = static_cast<OpCode>(*ptr);
+    auto opcode = static_cast<OpCode>(*ptr);
     ++ptr;
     uint256_t next_hash = deserializeUint256t(ptr);
     if (!is_immediate) {
@@ -65,7 +64,7 @@ RawCodePoint extractRawCodePoint(const char*& ptr) {
 }
 
 std::vector<RawCodePoint> extractRawCodeSegment(
-    const std::vector<unsigned char> stored_value) {
+    const std::vector<unsigned char>& stored_value) {
     auto iter = stored_value.begin();
     auto ptr = reinterpret_cast<const char*>(&*iter);
     auto cp_count = deserialize_uint64_t(ptr);
@@ -133,7 +132,8 @@ std::vector<unsigned char> prepareToSaveCodeSegment(
 
 std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
                                             uint64_t segment_id,
-                                            std::set<uint64_t>& segment_ids) {
+                                            std::set<uint64_t>& segment_ids,
+                                            ValueCache& value_cache) {
     auto key_vec = segment_key(segment_id);
     auto key = vecToSlice(key_vec);
     auto results = getRefCountedData(*transaction.transaction, key);
@@ -149,8 +149,8 @@ std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
         if (!raw_cp.immediateHash) {
             cps.emplace_back(Operation{raw_cp.opcode}, raw_cp.next_hash);
         } else {
-            auto imm =
-                getValueImpl(transaction, *raw_cp.immediateHash, segment_ids);
+            auto imm = getValueImpl(transaction, *raw_cp.immediateHash,
+                                    segment_ids, value_cache);
             if (!imm.status.ok()) {
                 throw std::runtime_error("failed to load immediate value");
             }
@@ -174,9 +174,9 @@ void saveNextSegmentID(Transaction& transaction, uint64_t next_segment_id) {
 
 uint64_t getNextSegmentID(const Transaction& transaction) {
     std::string segment_id_raw;
-    auto s = transaction.transaction->Get(rocksdb::ReadOptions(),
-                                          rocksdb::Slice(max_code_segment_key),
-                                          &segment_id_raw);
+    auto s = transaction.transaction->GetForUpdate(
+        rocksdb::ReadOptions(), rocksdb::Slice(max_code_segment_key),
+        &segment_id_raw);
     if (s.IsNotFound()) {
         return 0;
     }
@@ -191,7 +191,7 @@ template <typename Func>
 std::unordered_map<uint64_t, uint64_t> breadthFirstSearch(
     std::map<uint64_t, uint64_t>& segment_counts,
     Func&& func) {
-    std::unordered_map<uint64_t, uint64_t> total_segment_counts;
+    std::unordered_map<uint64_t, uint64_t> total_segment_counts{};
     auto current_segment_counts = segment_counts;
 
     bool found = true;
@@ -214,7 +214,7 @@ std::unordered_map<uint64_t, uint64_t> breadthFirstSearch(
 
 void deleteCode(Transaction& transaction,
                 std::map<uint64_t, uint64_t>& segment_counts) {
-    std::unordered_map<uint64_t, GetResults> current_values;
+    std::unordered_map<uint64_t, GetResults> current_values{};
     auto current_segment_counts = segment_counts;
 
     auto total_deleted_segment_references = breadthFirstSearch(
@@ -264,7 +264,7 @@ void saveCode(Transaction& transaction,
     saveNextSegmentID(transaction, snapshots.op_count);
 
     std::unordered_map<uint64_t, std::vector<unsigned char>>
-        code_segments_to_save;
+        code_segments_to_save{};
 
     auto total_segment_counts = breadthFirstSearch(
         segment_counts, [&](uint64_t segment_id, uint64_t total_reference_count,

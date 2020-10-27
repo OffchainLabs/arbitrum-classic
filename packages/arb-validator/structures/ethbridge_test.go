@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"math/big"
 	"testing"
@@ -35,7 +36,8 @@ import (
 var tester *ethbridgetestcontracts.RollupTester
 
 func TestMainSetup(m *testing.T) {
-	client, pks := test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend()
+	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 	auth := bind.NewKeyedTransactor(pks[0])
 
 	_, machineTx, deployedArbRollup, err := ethbridgetestcontracts.DeployRollupTester(
@@ -100,6 +102,9 @@ func TestCalculateLeafFromPath(t *testing.T) {
 	path := GeneratePathProof(node, nextNode)
 
 	bridgeHash, err := tester.CalculateLeafFromPath(nil, node.Hash(), common.HashSliceToRaw(path))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if nextNode.Hash().ToEthHash() != bridgeHash {
 		fmt.Println(bridgeHash)
 		fmt.Println(nextNode.Hash().ToEthHash())
@@ -124,6 +129,9 @@ func TestChildNodeHash(t *testing.T) {
 		nextNode.NodeDataHash(),
 		new(big.Int).SetUint64(uint64(nextNode.LinkType())),
 		nextNode.VMProtoData().Hash())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if nextNode.Hash().ToEthHash() != bridgeHash {
 		fmt.Println(bridgeHash)
@@ -151,6 +159,9 @@ func TestProtoStateHash(t *testing.T) {
 		protoState.MessageCount,
 		protoState.LogCount,
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if protoState.Hash().ToEthHash() != bridgeHash {
 		fmt.Println(bridgeHash)

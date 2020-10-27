@@ -19,6 +19,7 @@ package chainobserver
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"math/big"
 	"math/rand"
@@ -42,7 +43,8 @@ import (
 var tester *ethbridgetestcontracts.RollupTester
 
 func TestMainSetup(m *testing.T) {
-	client, pks := test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend()
+	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 	auth := bind.NewKeyedTransactor(pks[0])
 
 	_, machineTx, deployedArbRollup, err := ethbridgetestcontracts.DeployRollupTester(
@@ -143,7 +145,7 @@ func TestComputePrevLeaf(t *testing.T) {
 func randomAssertion(t *testing.T, ms *structures.MessageStack, prevNode *structures.Node) (*protocol.ExecutionAssertion, *valprotocol.ExecutionAssertionStub) {
 	logs := make([]value.Value, 0, 5)
 	sends := make([]value.Value, 0)
-	sends = append(sends, ethTransfer(common.Address{}, big.NewInt(75)))
+	sends = append(sends, ethTransfer(t, common.Address{}, big.NewInt(75)))
 
 	beforeInboxHash := prevNode.VMProtoData().InboxTop
 	messages, err := ms.GetMessages(beforeInboxHash, 5)
@@ -208,6 +210,9 @@ func TestGenerateInvalidInboxLeaf(t *testing.T) {
 		newNode.NodeDataHash(),
 		new(big.Int).SetUint64(uint64(valprotocol.InvalidInboxTopChildType)),
 		newNode.VMProtoData().Hash())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if newNode.Hash().ToEthHash() != invalidInboxHash {
 		t.Log(invalidInboxHash)
@@ -262,6 +267,9 @@ func TestGenerateInvalidExecutionLeaf(t *testing.T) {
 		newNode.NodeDataHash(),
 		new(big.Int).SetUint64(uint64(valprotocol.InvalidExecutionChildType)),
 		newNode.VMProtoData().Hash())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if newNode.Hash().ToEthHash() != invalidExecutionHash {
 		t.Log(invalidExecutionHash)
