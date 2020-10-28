@@ -86,7 +86,10 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         );
 
         if (challengeType == ChallengeUtils.getInvalidExType()) {
-            IExecutionChallenge(clone).connectOneStepProof(oneStepProofAddress, oneStepProofAddress2);
+            IExecutionChallenge(clone).connectOneStepProof(
+                oneStepProofAddress,
+                oneStepProofAddress2
+            );
         }
         return address(clone);
     }

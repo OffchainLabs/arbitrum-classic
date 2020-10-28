@@ -146,7 +146,8 @@ library Value {
     }
 
     function newInt(uint256 _val) internal pure returns (Data memory) {
-        return Data(_val, CodePoint(0, 0, new Data[](0)), new Data[](0), 0, INT_TYPECODE, uint256(1));
+        return
+            Data(_val, CodePoint(0, 0, new Data[](0)), new Data[](0), 0, INT_TYPECODE, uint256(1));
     }
 
     function newHashedValue(bytes32 valueHash, uint256 valueSize)
@@ -211,13 +212,14 @@ library Value {
     }
 
     function newBuffer(bytes32 bufHash) internal pure returns (Data memory) {
-        return Data(
+        return
+            Data(
                 uint256(0),
                 CodePoint(0, 0, new Data[](0)),
                 new Data[](0),
                 bufHash,
                 BUFFER_TYPECODE,
-                uint(1)
+                uint256(1)
             );
     }
 }

@@ -48,5 +48,4 @@ interface IOneStepProof2 {
         bytes calldata proof,
         bytes calldata bproof
     ) external view returns (uint64 gas, bytes32[5] memory fields);
-
 }

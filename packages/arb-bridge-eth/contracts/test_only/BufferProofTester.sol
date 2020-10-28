@@ -23,11 +23,23 @@ import "../arch/OneStepProof2.sol";
 contract BufferProofTester is OneStepProof2 {
     event BufferProofTestEvent();
 
-    function testGet(bytes32 buf, uint loc, bytes32[] memory proof) public pure returns (bytes32) {
+    function testGet(
+        bytes32 buf,
+        uint256 loc,
+        bytes32[] memory proof
+    ) public pure returns (bytes32) {
         return get(buf, loc, proof);
     }
 
-    function testSet(bytes32 buf, uint loc, bytes32 v, bytes32[] memory proof, uint nh, bytes32 normal1, bytes32 normal2) public pure returns (bytes32) {
+    function testSet(
+        bytes32 buf,
+        uint256 loc,
+        bytes32 v,
+        bytes32[] memory proof,
+        uint256 nh,
+        bytes32 normal1,
+        bytes32 normal2
+    ) public pure returns (bytes32) {
         return set(buf, loc, v, proof, nh, normal1, normal2);
     }
 

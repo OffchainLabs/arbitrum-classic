@@ -109,7 +109,11 @@ contract OneStepProofCommon {
         }
     }
 
-    function deductGas(AssertionContext memory context, uint64 amount) internal pure returns (bool) {
+    function deductGas(AssertionContext memory context, uint64 amount)
+        internal
+        pure
+        returns (bool)
+    {
         context.gas += amount;
         if (context.afterMachine.arbGasRemaining < amount) {
             context.afterMachine.arbGasRemaining = MAX_UINT256;
@@ -165,7 +169,7 @@ contract OneStepProofCommon {
             uint8(proof[offset]) == 1,
             uint8(proof[offset + 1]),
             proof,
-            offset+2,
+            offset + 2,
             bproof
         );
 
@@ -257,7 +261,7 @@ contract OneStepProofCommon {
         }
     }
 
-        // Stop and arithmetic ops
+    // Stop and arithmetic ops
     uint8 internal constant OP_ADD = 0x01;
     uint8 internal constant OP_MUL = 0x02;
     uint8 internal constant OP_SUB = 0x03;
