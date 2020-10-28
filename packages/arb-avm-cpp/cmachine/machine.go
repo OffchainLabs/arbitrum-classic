@@ -29,6 +29,7 @@ import "C"
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"runtime"
 	"time"
 	"unsafe"
@@ -120,6 +121,13 @@ func makeExecutionAssertion(
 ) (*protocol.ExecutionAssertion, uint64) {
 	outMessagesRaw := toByteSlice(assertion.outMessages)
 	logsRaw := toByteSlice(assertion.logs)
+	debugPrints := protocol.BytesArrayToVals(toByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
+	if len(debugPrints) > 0 {
+		log.Println("Produced assertion containing debug prints")
+		for _, d := range debugPrints {
+			log.Println("DebugPrint:", d)
+		}
+	}
 	return protocol.NewExecutionAssertion(
 		beforeMachineHash,
 		afterMachineHash,

@@ -36,6 +36,7 @@ struct AssertionContext {
     nonstd::optional<value> fake_inbox_peek_value;
     std::vector<value> outMessage;
     std::vector<value> logs;
+    std::vector<value> debug_prints;
 
     AssertionContext() : inbox_messages_consumed(0), numSteps(0), numGas(0) {}
 
