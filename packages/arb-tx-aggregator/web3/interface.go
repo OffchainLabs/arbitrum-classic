@@ -56,10 +56,7 @@ type GetTransactionReceiptResult struct {
 	TransactionIndex hexutil.Uint64 `json:"transactionIndex"`
 
 	// Arbitrum Specific Fields
-	ReturnCode      hexutil.Uint64 `json:"returnCode"`
-	L1SeqNum        *hexutil.Big   `json:"l1SequenceNumber"`
-	ParentRequestId *common.Hash   `json:"parentRequestId"`
-	IndexInParent   *hexutil.Big   `json:"indexInParent"`
+	ReturnCode hexutil.Uint64 `json:"returnCode"`
 }
 
 type TransactionResult struct {
@@ -77,4 +74,9 @@ type TransactionResult struct {
 	V                *hexutil.Big    `json:"v"`
 	R                hexutil.Bytes   `json:"r"`
 	S                hexutil.Bytes   `json:"s"`
+
+	// Arbitrum Specific Fields
+	L1SeqNum        *hexutil.Big `json:"l1SequenceNumber"`
+	ParentRequestId *common.Hash `json:"parentRequestId"`
+	IndexInParent   *hexutil.Big `json:"indexInParent"`
 }
