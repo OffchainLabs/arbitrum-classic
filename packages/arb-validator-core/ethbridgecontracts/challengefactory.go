@@ -165,7 +165,7 @@ func bindChallengeFactory(address common.Address, caller bind.ContractCaller, tr
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ChallengeFactory *ChallengeFactoryRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_ChallengeFactory *ChallengeFactoryRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _ChallengeFactory.Contract.ChallengeFactoryCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -184,7 +184,7 @@ func (_ChallengeFactory *ChallengeFactoryRaw) Transact(opts *bind.TransactOpts, 
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ChallengeFactory *ChallengeFactoryCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_ChallengeFactory *ChallengeFactoryCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _ChallengeFactory.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -203,12 +203,17 @@ func (_ChallengeFactory *ChallengeFactoryTransactorRaw) Transact(opts *bind.Tran
 //
 // Solidity: function INVALID_TYPE_STR() view returns(string)
 func (_ChallengeFactory *ChallengeFactoryCaller) INVALIDTYPESTR(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
-	out := ret0
-	err := _ChallengeFactory.contract.Call(opts, out, "INVALID_TYPE_STR")
-	return *ret0, err
+	var out []interface{}
+	err := _ChallengeFactory.contract.Call(opts, &out, "INVALID_TYPE_STR")
+
+	if err != nil {
+		return *new(string), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(string)).(*string)
+
+	return out0, err
+
 }
 
 // INVALIDTYPESTR is a free data retrieval call binding the contract method 0xe6fcd194.
@@ -229,12 +234,17 @@ func (_ChallengeFactory *ChallengeFactoryCallerSession) INVALIDTYPESTR() (string
 //
 // Solidity: function executionChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) ExecutionChallengeTemplate(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ChallengeFactory.contract.Call(opts, out, "executionChallengeTemplate")
-	return *ret0, err
+	var out []interface{}
+	err := _ChallengeFactory.contract.Call(opts, &out, "executionChallengeTemplate")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // ExecutionChallengeTemplate is a free data retrieval call binding the contract method 0x9b5f4dfc.
@@ -255,12 +265,17 @@ func (_ChallengeFactory *ChallengeFactoryCallerSession) ExecutionChallengeTempla
 //
 // Solidity: function generateCloneAddress(address asserter, address challenger, uint256 challengeType) view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) GenerateCloneAddress(opts *bind.CallOpts, asserter common.Address, challenger common.Address, challengeType *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ChallengeFactory.contract.Call(opts, out, "generateCloneAddress", asserter, challenger, challengeType)
-	return *ret0, err
+	var out []interface{}
+	err := _ChallengeFactory.contract.Call(opts, &out, "generateCloneAddress", asserter, challenger, challengeType)
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // GenerateCloneAddress is a free data retrieval call binding the contract method 0x729406c8.
@@ -281,12 +296,17 @@ func (_ChallengeFactory *ChallengeFactoryCallerSession) GenerateCloneAddress(ass
 //
 // Solidity: function inboxTopChallengeTemplate() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) InboxTopChallengeTemplate(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ChallengeFactory.contract.Call(opts, out, "inboxTopChallengeTemplate")
-	return *ret0, err
+	var out []interface{}
+	err := _ChallengeFactory.contract.Call(opts, &out, "inboxTopChallengeTemplate")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // InboxTopChallengeTemplate is a free data retrieval call binding the contract method 0xf089f1c2.
@@ -307,12 +327,17 @@ func (_ChallengeFactory *ChallengeFactoryCallerSession) InboxTopChallengeTemplat
 //
 // Solidity: function oneStepProofAddress() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) OneStepProofAddress(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ChallengeFactory.contract.Call(opts, out, "oneStepProofAddress")
-	return *ret0, err
+	var out []interface{}
+	err := _ChallengeFactory.contract.Call(opts, &out, "oneStepProofAddress")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // OneStepProofAddress is a free data retrieval call binding the contract method 0x52ddf4a5.
@@ -333,12 +358,17 @@ func (_ChallengeFactory *ChallengeFactoryCallerSession) OneStepProofAddress() (c
 //
 // Solidity: function oneStepProofAddress2() view returns(address)
 func (_ChallengeFactory *ChallengeFactoryCaller) OneStepProofAddress2(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ChallengeFactory.contract.Call(opts, out, "oneStepProofAddress2")
-	return *ret0, err
+	var out []interface{}
+	err := _ChallengeFactory.contract.Call(opts, &out, "oneStepProofAddress2")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // OneStepProofAddress2 is a free data retrieval call binding the contract method 0x4930fdc5.

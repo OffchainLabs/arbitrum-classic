@@ -159,7 +159,7 @@ func bindOneStepProof2(address common.Address, caller bind.ContractCaller, trans
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_OneStepProof2 *OneStepProof2Raw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_OneStepProof2 *OneStepProof2Raw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _OneStepProof2.Contract.OneStepProof2Caller.contract.Call(opts, result, method, params...)
 }
 
@@ -178,7 +178,7 @@ func (_OneStepProof2 *OneStepProof2Raw) Transact(opts *bind.TransactOpts, method
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_OneStepProof2 *OneStepProof2CallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_OneStepProof2 *OneStepProof2CallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _OneStepProof2.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -200,13 +200,19 @@ func (_OneStepProof2 *OneStepProof2Caller) ExecuteStep(opts *bind.CallOpts, inbo
 	Gas    uint64
 	Fields [5][32]byte
 }, error) {
-	ret := new(struct {
+	var out []interface{}
+	err := _OneStepProof2.contract.Call(opts, &out, "executeStep", inboxAcc, messagesAcc, logsAcc, proof, bproof)
+
+	outstruct := new(struct {
 		Gas    uint64
 		Fields [5][32]byte
 	})
-	out := ret
-	err := _OneStepProof2.contract.Call(opts, out, "executeStep", inboxAcc, messagesAcc, logsAcc, proof, bproof)
-	return *ret, err
+
+	outstruct.Gas = out[0].(uint64)
+	outstruct.Fields = out[1].([5][32]byte)
+
+	return *outstruct, err
+
 }
 
 // ExecuteStep is a free data retrieval call binding the contract method 0x1041c884.

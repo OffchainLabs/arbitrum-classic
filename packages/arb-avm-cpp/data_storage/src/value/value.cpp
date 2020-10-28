@@ -286,11 +286,23 @@ GetResults processFirstVal(const Transaction&,
 
 GetResults processVal(const Transaction&,
                       const Buffer& val,
-                      std::vector<DeserializedValue>& vals,
-                      std::vector<ParsedTupVal>&,
-                      std::set<uint64_t>&) {
-    vals.push_back(value{val});
-    return GetResults{1, rocksdb::Status::OK(), {}};
+                      std::vector<ValueBeingParsed>& val_stack,
+                      std::set<uint64_t>&,
+                      uint32_t reference_count,
+                      ValueCache&) {
+    return applyValue(val, reference_count, val_stack);
+}
+
+GetResults processFirstVal(const Transaction&,
+                           const Buffer& val,
+                           std::vector<ValueBeingParsed>& val_stack,
+                           std::set<uint64_t>&,
+                           uint32_t reference_count,
+                           ValueCache&) {
+    // Single number requested
+    val_stack.emplace_back(val, reference_count);
+
+    return GetResults{reference_count, rocksdb::Status::OK(), {}};
 }
 
 GetResults processVal(const Transaction&,
