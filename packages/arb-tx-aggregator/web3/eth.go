@@ -240,14 +240,15 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 	if receipt.ContractAddress != emptyAddress {
 		contractAddress = &receipt.ContractAddress
 	}
-	provenance := result.IncomingRequest.Provenance
 
+	provenance := result.IncomingRequest.Provenance
 	var parentRequestId *common.Hash
 	emptyParent := arbcommon.Hash{}
 	if provenance.ParentRequestId != emptyParent {
 		h := provenance.ParentRequestId.ToEthHash()
 		parentRequestId = &h
 	}
+
 	return &GetTransactionReceiptResult{
 		Status:            hexutil.Uint64(receipt.Status),
 		CumulativeGasUsed: hexutil.Uint64(receipt.CumulativeGasUsed),
@@ -259,6 +260,7 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 		BlockHash:         receipt.BlockHash,
 		BlockNumber:       (*hexutil.Big)(receipt.BlockNumber),
 		TransactionIndex:  hexutil.Uint64(receipt.TransactionIndex),
+		ReturnCode:        hexutil.Uint64(result.ResultCode),
 		L1SeqNum:          (*hexutil.Big)(provenance.L1SeqNum),
 		ParentRequestId:   parentRequestId,
 		IndexInParent:     (*hexutil.Big)(provenance.IndexInParent),
