@@ -1,5 +1,5 @@
 import { ethers } from '@nomiclabs/buidler'
-import { Signer, utils } from 'ethers'
+import { Signer } from 'ethers'
 
 export async function initializeAccounts(): Promise<Signer[]> {
   const [account0] = await ethers.getSigners()

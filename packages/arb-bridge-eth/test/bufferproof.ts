@@ -83,7 +83,7 @@ function elem(a: number): bytes32 {
   return '0x' + a.toString(16).padStart(64, '0')
 }
 
-function makeZeros(): bytes32[] {
+export function makeZeros(): bytes32[] {
   const zeros: bytes32[] = []
   let acc = keccak1(elem(0))
   for (let i = 0; i < 64; i++) {
