@@ -296,7 +296,7 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         bytes32[] memory proof,
         bytes32[] memory nproof
     ) internal pure returns (bytes32) {
-        require(nproof.length == 3, "normalization proof has wrong size");
+        require(nproof.length == 3, "BAD_NORMALIZATION_PROOF");
         return set(buf, loc, v, proof, uint256(nproof[0]), nproof[1], nproof[2]);
     }
 

@@ -412,6 +412,7 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
         pushVal(context.stack, Value.newBoolean(empty));
     }
 
+    /* solhint-disable-next-line no-empty-blocks */
     function executeNopInsn(AssertionContext memory) internal pure {}
 
     function executeErrpushInsn(AssertionContext memory context) internal pure {
@@ -642,6 +643,8 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
         pushVal(context.stack, Value.newInt(uint256(ret)));
     }
 
+    /* solhint-disable no-inline-assembly */
+
     function executeECAddInsn(AssertionContext memory context) internal view {
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
@@ -768,6 +771,8 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
 
         pushVal(context.stack, Value.newBoolean(out[0] != 0));
     }
+
+    /* solhint-enable no-inline-assembly */
 
     function executeErrorInsn(AssertionContext memory context) internal pure {
         handleOpcodeError(context);

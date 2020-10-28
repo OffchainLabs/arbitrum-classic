@@ -29,18 +29,18 @@ contract OneStepProofCommon {
     using Hashing for Value.Data;
     using Value for Value.Data;
 
-    uint256 constant SEND_SIZE_LIMIT = 10000;
+    uint256 internal constant SEND_SIZE_LIMIT = 10000;
 
-    uint256 constant MAX_UINT256 = ((1 << 128) + 1) * ((1 << 128) - 1);
-    uint256 constant MAX_PAIRING_COUNT = 30;
+    uint256 internal constant MAX_UINT256 = ((1 << 128) + 1) * ((1 << 128) - 1);
+    uint256 internal constant MAX_PAIRING_COUNT = 30;
 
-    string constant BAD_IMM_TYP = "BAD_IMM_TYP";
-    string constant NO_IMM = "NO_IMM";
-    string constant STACK_MISSING = "STACK_MISSING";
-    string constant AUX_MISSING = "AUX_MISSING";
-    string constant STACK_MANY = "STACK_MANY";
-    string constant AUX_MANY = "AUX_MANY";
-    string constant INBOX_VAL = "INBOX_VAL";
+    string internal constant BAD_IMM_TYP = "BAD_IMM_TYP";
+    string internal constant NO_IMM = "NO_IMM";
+    string internal constant STACK_MISSING = "STACK_MISSING";
+    string internal constant AUX_MISSING = "AUX_MISSING";
+    string internal constant STACK_MANY = "STACK_MANY";
+    string internal constant AUX_MANY = "AUX_MANY";
+    string internal constant INBOX_VAL = "INBOX_VAL";
 
     // fields
     // startMachineHash,
