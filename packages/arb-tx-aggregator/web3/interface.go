@@ -54,6 +54,11 @@ type GetTransactionReceiptResult struct {
 	BlockHash        common.Hash    `json:"blockHash"`
 	BlockNumber      *hexutil.Big   `json:"blockNumber"`
 	TransactionIndex hexutil.Uint64 `json:"transactionIndex"`
+
+	// Arbitrum Specific Fields
+	L1SeqNum        *hexutil.Big
+	ParentRequestId *common.Hash
+	IndexInParent   *hexutil.Big
 }
 
 type TransactionResult struct {
