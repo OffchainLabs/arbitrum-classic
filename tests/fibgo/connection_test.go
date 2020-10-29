@@ -195,6 +195,17 @@ func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollup
 			if err := conn.Close(); err != nil {
 				return err
 			}
+			conn, err = net.DialTimeout(
+				"tcp",
+				net.JoinHostPort("127.0.0.1", "9548"),
+				time.Second,
+			)
+			if err != nil || conn == nil {
+				break
+			}
+			if err := conn.Close(); err != nil {
+				return err
+			}
 			// Wait for the validator to catch up to head
 			time.Sleep(time.Second * 2)
 			return nil
