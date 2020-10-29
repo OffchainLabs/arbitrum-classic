@@ -143,7 +143,7 @@ func (c CompressedAddressFull) String() string {
 	return fmt.Sprintf("Address[%v]", c.Hex())
 }
 
-func decodeAddress(r io.Reader) (CompressedAddress, error) {
+func DecodeAddress(r io.Reader) (CompressedAddress, error) {
 	addressBytes := make([]byte, 0)
 	if err := rlp.Decode(r, &addressBytes); err != nil {
 		return nil, errors2.Wrap(err, "couldn't parse address")
@@ -218,7 +218,7 @@ func decodeCompressedTx(r io.Reader) (CompressedTx, error) {
 		return CompressedTx{}, err
 	}
 
-	address, err := decodeAddress(r)
+	address, err := DecodeAddress(r)
 	if err != nil {
 		return CompressedTx{}, err
 	}

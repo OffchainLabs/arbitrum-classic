@@ -122,7 +122,7 @@ func (s *Snapshot) GetBalance(account common.Address) (*big.Int, error) {
 }
 
 func (s *Snapshot) GetTransactionCount(account common.Address) (*big.Int, error) {
-	res, err := s.BasicCall(getTransactionCountData(account), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+	res, err := s.BasicCall(TransactionCountData(account), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
 }
 
 func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.Int, error) {
-	res, err := s.BasicCall(GetStorageAtData(account, index), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+	res, err := s.BasicCall(StorageAtData(account, index), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
