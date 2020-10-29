@@ -51,14 +51,6 @@ func main() {
 	)
 
 	forwardTxURL := fs.String("forward-url", "", "url of another aggregator to send transactions through")
-	var batcherMode rpc.BatcherMode
-	if *forwardTxURL != "" {
-		batcherMode = rpc.ForwarderBatcherMode{NodeURL: *forwardTxURL}
-	} else if *keepPendingState {
-		batcherMode = rpc.StatefulBatcherMode{}
-	} else {
-		batcherMode = rpc.StatelessBatcherMode{}
-	}
 
 	//go http.ListenAndServe("localhost:6060", nil)
 
@@ -77,34 +69,47 @@ func main() {
 
 	rollupArgs := utils.ParseRollupCommand(fs, 0)
 
-	auth, err := utils.GetKeystore(rollupArgs.ValidatorFolder, walletArgs, fs)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	ethclint, err := ethutils.NewRPCEthClient(rollupArgs.EthURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := arbbridge.WaitForBalance(
-		context.Background(),
-		ethbridge.NewEthClient(ethclint),
-		common.Address{},
-		common.NewAddressFromEth(auth.From),
-	); err != nil {
-		log.Fatal(err)
+	log.Println("Launching aggregator for chain", rollupArgs.Address, "with chain id", message.ChainAddressToID(rollupArgs.Address))
+
+	var batcherMode rpc.BatcherMode
+	if *forwardTxURL != "" {
+		log.Println("Aggregator starting in forwarder mode sending transactions to", *forwardTxURL)
+		batcherMode = rpc.ForwarderBatcherMode{NodeURL: *forwardTxURL}
+	} else {
+		auth, err := utils.GetKeystore(rollupArgs.ValidatorFolder, walletArgs, fs)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Println("Aggregator submitting batches from address", auth.From)
+
+		if err := arbbridge.WaitForBalance(
+			context.Background(),
+			ethbridge.NewEthClient(ethclint),
+			common.Address{},
+			common.NewAddressFromEth(auth.From),
+		); err != nil {
+			log.Fatal(err)
+		}
+
+		if *keepPendingState {
+			batcherMode = rpc.StatefulBatcherMode{Auth: auth}
+		} else {
+			batcherMode = rpc.StatelessBatcherMode{Auth: auth}
+		}
 	}
 
 	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "contract.mexe")
 	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
 
-	log.Println("Launching aggregator for chain", rollupArgs.Address, "with chain id", message.ChainAddressToID(rollupArgs.Address))
-
 	if err := rpc.LaunchAggregator(
 		context.Background(),
 		ethclint,
-		auth,
 		rollupArgs.Address,
 		contractFile,
 		dbPath,

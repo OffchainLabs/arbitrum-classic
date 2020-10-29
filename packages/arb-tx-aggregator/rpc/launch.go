@@ -44,11 +44,13 @@ type ForwarderBatcherMode struct {
 func (b ForwarderBatcherMode) isBatcherMode() {}
 
 type StatefulBatcherMode struct {
+	Auth *bind.TransactOpts
 }
 
 func (b StatefulBatcherMode) isBatcherMode() {}
 
 type StatelessBatcherMode struct {
+	Auth *bind.TransactOpts
 }
 
 func (b StatelessBatcherMode) isBatcherMode() {}
@@ -56,7 +58,6 @@ func (b StatelessBatcherMode) isBatcherMode() {}
 func LaunchAggregator(
 	ctx context.Context,
 	client ethutils.EthClient,
-	auth *bind.TransactOpts,
 	rollupAddress common.Address,
 	executable string,
 	dbPath string,
@@ -72,17 +73,11 @@ func LaunchAggregator(
 	if err != nil {
 		return err
 	}
-
-	authClient := ethbridge.NewEthAuthClient(client, auth)
 	rollupContract, err := arbClient.NewRollupWatcher(rollupAddress)
 	if err != nil {
 		return err
 	}
 	inboxAddress, err := rollupContract.InboxAddress(context.Background())
-	if err != nil {
-		return err
-	}
-	globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
 	if err != nil {
 		return err
 	}
@@ -96,8 +91,18 @@ func LaunchAggregator(
 		}
 		batch = batcher.NewForwarder(forwardClient)
 	case StatelessBatcherMode:
+		authClient := ethbridge.NewEthAuthClient(client, batcherMode.Auth)
+		globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
+		if err != nil {
+			return err
+		}
 		batch = batcher.NewStatelessBatcher(ctx, rollupAddress, client, globalInbox, maxBatchTime)
 	case StatefulBatcherMode:
+		authClient := ethbridge.NewEthAuthClient(client, batcherMode.Auth)
+		globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
+		if err != nil {
+			return err
+		}
 		batch = batcher.NewStatefulBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
 	}
 
