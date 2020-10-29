@@ -252,6 +252,7 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 		BlockHash:         receipt.BlockHash,
 		BlockNumber:       (*hexutil.Big)(receipt.BlockNumber),
 		TransactionIndex:  hexutil.Uint64(receipt.TransactionIndex),
+		ReturnCode:        hexutil.Uint64(result.ResultCode),
 	}, nil
 }
 
@@ -395,6 +396,15 @@ func (s *Server) makeTransactionResult(res *evm.TxResult) (*TransactionResult, e
 	txIndex := res.TxIndex.Uint64()
 	blockNum := res.IncomingRequest.ChainTime.BlockNum.AsInt()
 	blockHash := blockInfo.Hash.ToEthHash()
+
+	provenance := res.IncomingRequest.Provenance
+	var parentRequestId *common.Hash
+	emptyParent := arbcommon.Hash{}
+	if provenance.ParentRequestId != emptyParent {
+		h := provenance.ParentRequestId.ToEthHash()
+		parentRequestId = &h
+	}
+
 	return &TransactionResult{
 		BlockHash:        &blockHash,
 		BlockNumber:      (*hexutil.Big)(blockNum),
@@ -410,6 +420,9 @@ func (s *Server) makeTransactionResult(res *evm.TxResult) (*TransactionResult, e
 		V:                (*hexutil.Big)(vVal),
 		R:                math.U256Bytes(rVal),
 		S:                math.U256Bytes(sVal),
+		L1SeqNum:         (*hexutil.Big)(provenance.L1SeqNum),
+		ParentRequestId:  parentRequestId,
+		IndexInParent:    (*hexutil.Big)(provenance.IndexInParent),
 	}, nil
 }
 
