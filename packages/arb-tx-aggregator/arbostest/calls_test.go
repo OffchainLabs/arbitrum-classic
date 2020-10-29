@@ -20,7 +20,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"log"
 	"math/big"
 	"testing"
 
@@ -119,30 +121,56 @@ func runTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Me
 	return results[0], nil
 }
 
-func withdrawEthTx(t *testing.T, sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
+func withdrawEthTx(sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
 	return message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: sequenceNum,
 		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 		Payment:     amount,
-		Data:        snapshot.GetWithdrawEthData(dest),
+		Data:        snapshot.WithdrawEthData(dest),
 	}
 }
 
-func makeConstructorTx(code []byte, sequenceNum *big.Int) message.Transaction {
+func withdrawERC20Tx(sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
+	return message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: sequenceNum,
+		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
+		Payment:     big.NewInt(0),
+		Data:        snapshot.WithdrawERC20Data(dest, amount),
+	}
+}
+
+func withdrawERC721Tx(sequenceNum *big.Int, id *big.Int, dest common.Address) message.Transaction {
+	return message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: sequenceNum,
+		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
+		Payment:     big.NewInt(0),
+		Data:        snapshot.WithdrawERC721Data(dest, id),
+	}
+}
+
+func makeConstructorTx(code []byte, sequenceNum *big.Int, payment *big.Int) message.Transaction {
+	if payment == nil {
+		payment = big.NewInt(0)
+	}
 	return message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: sequenceNum,
 		DestAddress: common.Address{},
-		Payment:     big.NewInt(0),
+		Payment:     payment,
 		Data:        code,
 	}
 }
 
-func deployContract(t *testing.T, mach machine.Machine, sender common.Address, code []byte, sequenceNum *big.Int) (common.Address, error) {
-	constructorTx := makeConstructorTx(code, sequenceNum)
+func deployContract(t *testing.T, mach machine.Machine, sender common.Address, code []byte, sequenceNum *big.Int, payment *big.Int) (common.Address, error) {
+	constructorTx := makeConstructorTx(code, sequenceNum, payment)
+	log.Println("sent tx", payment)
 	constructorResult, err := runValidTransaction(t, mach, constructorTx, sender)
 	if err != nil {
 		return common.Address{}, err
@@ -157,6 +185,23 @@ func getConstructorResult(constructorResult *evm.TxResult) (common.Address, erro
 	var contractAddress common.Address
 	copy(contractAddress[:], constructorResult.ReturnData[12:])
 	return contractAddress, nil
+}
+
+func checkConstructorResult(t *testing.T, avmLog value.Value, correctAddress common.Address) {
+	constructorRes, err := evm.NewTxResultFromValue(avmLog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if constructorRes.ResultCode != evm.ReturnCode {
+		t.Fatal("unexpected constructor result", constructorRes.ResultCode)
+	}
+	connAddrCalc, err := getConstructorResult(constructorRes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if connAddrCalc != correctAddress {
+		t.Fatal("constructed address doesn't match:", connAddrCalc, "instead of", correctAddress)
+	}
 }
 
 func depositEth(t *testing.T, mach machine.Machine, dest common.Address, amount *big.Int) {

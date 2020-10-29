@@ -71,9 +71,9 @@ void CheckpointStorage::initialize(LoadedExecutable executable) {
 bool CheckpointStorage::initialized() const {
     auto tx = makeConstTransaction();
     std::string initial_raw;
-    auto s =
-        tx->transaction->Get(rocksdb::ReadOptions(),
-                             rocksdb::Slice(initial_slice_label), &initial_raw);
+    auto s = tx->transaction->GetForUpdate(rocksdb::ReadOptions(),
+                                           rocksdb::Slice(initial_slice_label),
+                                           &initial_raw);
     return s.ok();
 }
 
@@ -112,9 +112,9 @@ std::unique_ptr<AggregatorStore> CheckpointStorage::getAggregatorStore() const {
 Machine CheckpointStorage::getInitialMachine(ValueCache& value_cache) const {
     auto tx = makeConstTransaction();
     std::string initial_raw;
-    auto s =
-        tx->transaction->Get(rocksdb::ReadOptions(),
-                             rocksdb::Slice(initial_slice_label), &initial_raw);
+    auto s = tx->transaction->GetForUpdate(rocksdb::ReadOptions(),
+                                           rocksdb::Slice(initial_slice_label),
+                                           &initial_raw);
     if (!s.ok()) {
         throw std::runtime_error("failed to load initial val");
     }

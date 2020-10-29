@@ -160,7 +160,7 @@ func bindFailedSend(address common.Address, caller bind.ContractCaller, transact
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_FailedSend *FailedSendRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_FailedSend *FailedSendRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _FailedSend.Contract.FailedSendCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -179,7 +179,7 @@ func (_FailedSend *FailedSendRaw) Transact(opts *bind.TransactOpts, method strin
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_FailedSend *FailedSendCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_FailedSend *FailedSendCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _FailedSend.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -352,7 +352,7 @@ func bindIFailedSend(address common.Address, caller bind.ContractCaller, transac
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IFailedSend *IFailedSendRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_IFailedSend *IFailedSendRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _IFailedSend.Contract.IFailedSendCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -371,7 +371,7 @@ func (_IFailedSend *IFailedSendRaw) Transact(opts *bind.TransactOpts, method str
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IFailedSend *IFailedSendCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_IFailedSend *IFailedSendCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _IFailedSend.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -523,7 +523,7 @@ func bindSys(address common.Address, caller bind.ContractCaller, transactor bind
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Sys *SysRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Sys *SysRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Sys.Contract.SysCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -542,7 +542,7 @@ func (_Sys *SysRaw) Transact(opts *bind.TransactOpts, method string, params ...i
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Sys *SysCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Sys *SysCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Sys.Contract.contract.Call(opts, result, method, params...)
 }
 

@@ -66,7 +66,12 @@ func LaunchAggregator(
 		return err
 	}
 
-	batch := batcher.NewBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime, keepPendingState)
+	var batch *batcher.Batcher
+	if keepPendingState {
+		batch = batcher.NewStatefulBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
+	} else {
+		batch = batcher.NewStatelessBatcher(ctx, rollupAddress, client, globalInbox, maxBatchTime)
+	}
 
 	srv := aggregator.NewServer(client, batch, rollupAddress, db)
 	errChan := make(chan error, 1)

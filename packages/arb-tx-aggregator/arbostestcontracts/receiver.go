@@ -161,7 +161,7 @@ func bindReceiver(address common.Address, caller bind.ContractCaller, transactor
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Receiver *ReceiverRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Receiver *ReceiverRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Receiver.Contract.ReceiverCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -180,7 +180,7 @@ func (_Receiver *ReceiverRaw) Transact(opts *bind.TransactOpts, method string, p
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Receiver *ReceiverCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Receiver *ReceiverCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Receiver.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -199,12 +199,17 @@ func (_Receiver *ReceiverTransactorRaw) Transact(opts *bind.TransactOpts, method
 //
 // Solidity: function other() view returns(address)
 func (_Receiver *ReceiverCaller) Other(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _Receiver.contract.Call(opts, out, "other")
-	return *ret0, err
+	var out []interface{}
+	err := _Receiver.contract.Call(opts, &out, "other")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // Other is a free data retrieval call binding the contract method 0x85295877.
@@ -225,12 +230,17 @@ func (_Receiver *ReceiverCallerSession) Other() (common.Address, error) {
 //
 // Solidity: function test() view returns(uint256)
 func (_Receiver *ReceiverCaller) Test(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Receiver.contract.Call(opts, out, "test")
-	return *ret0, err
+	var out []interface{}
+	err := _Receiver.contract.Call(opts, &out, "test")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // Test is a free data retrieval call binding the contract method 0xf8a8fd6d.
@@ -402,7 +412,7 @@ func bindReceiver2(address common.Address, caller bind.ContractCaller, transacto
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Receiver2 *Receiver2Raw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Receiver2 *Receiver2Raw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Receiver2.Contract.Receiver2Caller.contract.Call(opts, result, method, params...)
 }
 
@@ -421,7 +431,7 @@ func (_Receiver2 *Receiver2Raw) Transact(opts *bind.TransactOpts, method string,
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Receiver2 *Receiver2CallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Receiver2 *Receiver2CallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Receiver2.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -440,12 +450,17 @@ func (_Receiver2 *Receiver2TransactorRaw) Transact(opts *bind.TransactOpts, meth
 //
 // Solidity: function test() view returns(uint256)
 func (_Receiver2 *Receiver2Caller) Test(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Receiver2.contract.Call(opts, out, "test")
-	return *ret0, err
+	var out []interface{}
+	err := _Receiver2.contract.Call(opts, &out, "test")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // Test is a free data retrieval call binding the contract method 0xf8a8fd6d.

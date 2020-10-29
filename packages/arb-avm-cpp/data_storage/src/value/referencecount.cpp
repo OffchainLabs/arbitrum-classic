@@ -117,7 +117,8 @@ GetResults getRefCountedData(rocksdb::Transaction& transaction,
                              const rocksdb::Slice& hash_key) {
     auto read_options = rocksdb::ReadOptions();
     std::string return_value;
-    auto get_status = transaction.Get(read_options, hash_key, &return_value);
+    auto get_status =
+        transaction.GetForUpdate(read_options, hash_key, &return_value);
 
     if (!get_status.ok()) {
         auto unsuccessful = rocksdb::Status().NotFound();
