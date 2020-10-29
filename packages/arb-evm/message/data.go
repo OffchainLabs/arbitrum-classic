@@ -245,8 +245,8 @@ func decodeCompressedTx(r io.Reader) (CompressedTx, error) {
 
 func encodeECDSASig(v byte, r, s *big.Int) []byte {
 	data := make([]byte, 0, 65)
-	data = append(data, ethmath.U256Bytes(r)...)
-	data = append(data, ethmath.U256Bytes(s)...)
+	data = append(data, ethmath.U256Bytes(new(big.Int).Set(r))...)
+	data = append(data, ethmath.U256Bytes(new(big.Int).Set(s))...)
 	data = append(data, v)
 	return data
 }
