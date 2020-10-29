@@ -144,6 +144,24 @@ func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollup
 			"9547",
 			utils2.RPCFlags{},
 			time.Second,
+			rpc.ForwarderBatcherMode{NodeURL: "http://localhost:9548"},
+		); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	go func() {
+		if err := rpc.LaunchAggregator(
+			context.Background(),
+			client,
+			rollupAddress,
+			contract,
+			db+"/aggregator2",
+			"2236",
+			"9548",
+			"9549",
+			utils2.RPCFlags{},
+			time.Second,
 			rpc.StatelessBatcherMode{Auth: auth},
 		); err != nil {
 			log.Fatal(err)
@@ -305,9 +323,9 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := setupValidators(rollupAddress, l1Client, pks[3:5]); err != nil {
-		t.Fatalf("Validator setup error %v", err)
-	}
+	//if err := setupValidators(rollupAddress, l1Client, pks[3:5]); err != nil {
+	//	t.Fatalf("Validator setup error %v", err)
+	//}
 
 	if err := launchAggregator(
 		l1Client,
