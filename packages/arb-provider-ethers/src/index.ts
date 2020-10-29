@@ -23,5 +23,5 @@ export { ArbValue, Message, abi, Program }
 export { ArbProvider } from './lib/provider'
 export { ArbWallet } from './lib/wallet'
 export { L1Bridge } from './lib/l1bridge'
-export { withdrawEth } from './lib/l2bridge'
+export { withdrawEth, getAddressIndex } from './lib/l2bridge'
 export { ArbConversion } from './lib/conversion'
