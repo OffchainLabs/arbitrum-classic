@@ -76,7 +76,7 @@ func (s *Server) GetStorageAt(ctx context.Context, address *common.Address, inde
 func (s *Server) GetTransactionCount(ctx context.Context, address *common.Address, blockNum *rpc.BlockNumber) (hexutil.Uint64, error) {
 	account := arbcommon.NewAddressFromEth(*address)
 	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
-		count := s.srv.PendingTransactionCount(account)
+		count := s.srv.PendingTransactionCount(ctx, account)
 		if count != nil {
 			return hexutil.Uint64(*count), nil
 		}
@@ -121,16 +121,16 @@ func (s *Server) GetCode(ctx context.Context, address *common.Address, blockNum 
 	return code, nil
 }
 
-func (s *Server) SendRawTransaction(data hexutil.Bytes) (hexutil.Bytes, error) {
+func (s *Server) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (hexutil.Bytes, error) {
 	tx := new(types.Transaction)
 	if err := rlp.DecodeBytes(data, tx); err != nil {
 		return nil, err
 	}
-	txHash, err := s.srv.SendTransaction(tx)
+	err := s.srv.SendTransaction(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
-	return txHash[:], nil
+	return tx.Hash().Bytes(), nil
 }
 
 func (s *Server) Call(ctx context.Context, callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {

@@ -18,6 +18,7 @@ package rpc
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -32,6 +33,26 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
+type BatcherMode interface {
+	isBatcherMode()
+}
+
+type ForwarderBatcherMode struct {
+	NodeURL string
+}
+
+func (b ForwarderBatcherMode) isBatcherMode() {}
+
+type StatefulBatcherMode struct {
+}
+
+func (b StatefulBatcherMode) isBatcherMode() {}
+
+type StatelessBatcherMode struct {
+}
+
+func (b StatelessBatcherMode) isBatcherMode() {}
+
 func LaunchAggregator(
 	ctx context.Context,
 	client ethutils.EthClient,
@@ -44,7 +65,7 @@ func LaunchAggregator(
 	web3WSPort string,
 	flags utils2.RPCFlags,
 	maxBatchTime time.Duration,
-	keepPendingState bool,
+	batcherMode BatcherMode,
 ) error {
 	arbClient := ethbridge.NewEthClient(client)
 	db, err := machineobserver.RunObserver(ctx, rollupAddress, arbClient, executable, dbPath)
@@ -66,11 +87,18 @@ func LaunchAggregator(
 		return err
 	}
 
-	var batch *batcher.Batcher
-	if keepPendingState {
-		batch = batcher.NewStatefulBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
-	} else {
+	var batch batcher.TransactionBatcher
+	switch batcherMode := batcherMode.(type) {
+	case ForwarderBatcherMode:
+		forwardClient, err := ethclient.DialContext(ctx, batcherMode.NodeURL)
+		if err != nil {
+			return err
+		}
+		batch = batcher.NewForwarder(forwardClient)
+	case StatelessBatcherMode:
 		batch = batcher.NewStatelessBatcher(ctx, rollupAddress, client, globalInbox, maxBatchTime)
+	case StatefulBatcherMode:
+		batch = batcher.NewStatefulBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
 	}
 
 	srv := aggregator.NewServer(client, batch, rollupAddress, db)

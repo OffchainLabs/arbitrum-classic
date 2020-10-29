@@ -50,6 +50,16 @@ func main() {
 		"maxBatchTime=NumSeconds",
 	)
 
+	forwardTxURL := fs.String("forward-url", "", "url of another aggregator to send transactions through")
+	var batcherMode rpc.BatcherMode
+	if *forwardTxURL != "" {
+		batcherMode = rpc.ForwarderBatcherMode{NodeURL: *forwardTxURL}
+	} else if *keepPendingState {
+		batcherMode = rpc.StatefulBatcherMode{}
+	} else {
+		batcherMode = rpc.StatelessBatcherMode{}
+	}
+
 	//go http.ListenAndServe("localhost:6060", nil)
 
 	err := fs.Parse(os.Args[1:])
@@ -103,7 +113,7 @@ func main() {
 		"8548",
 		rpcVars,
 		time.Duration(*maxBatchTime)*time.Second,
-		*keepPendingState,
+		batcherMode,
 	); err != nil {
 		log.Fatal(err)
 	}

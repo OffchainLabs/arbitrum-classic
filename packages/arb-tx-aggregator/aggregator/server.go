@@ -45,7 +45,7 @@ func NewRPCServer(srv *Server) *RPCServer {
 
 // SendTransaction takes a request signed transaction l2message from a client
 // and puts it in a queue to be included in the next transaction batch
-func (m *RPCServer) SendTransaction(_ *http.Request, args *evm.SendTransactionArgs, reply *evm.SendTransactionReply) error {
+func (m *RPCServer) SendTransaction(r *http.Request, args *evm.SendTransactionArgs, reply *evm.SendTransactionReply) error {
 	encodedTx, err := hexutil.Decode(args.SignedTransaction)
 	if err != nil {
 		return errors2.Wrap(err, "error decoding signed transaction")
@@ -55,11 +55,10 @@ func (m *RPCServer) SendTransaction(_ *http.Request, args *evm.SendTransactionAr
 	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
 		return err
 	}
-	hash, err := m.srv.SendTransaction(tx)
-	if err != nil {
+	if err := m.srv.SendTransaction(r.Context(), tx); err != nil {
 		return err
 	}
-	reply.TransactionHash = hash.String()
+	reply.TransactionHash = tx.Hash().Hex()
 	return nil
 }
 

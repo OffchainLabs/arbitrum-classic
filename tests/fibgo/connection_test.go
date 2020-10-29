@@ -145,7 +145,7 @@ func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollup
 			"9547",
 			utils2.RPCFlags{},
 			time.Second,
-			true,
+			rpc.StatelessBatcherMode{},
 		); err != nil {
 			log.Fatal(err)
 		}
