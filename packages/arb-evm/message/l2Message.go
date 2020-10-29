@@ -444,11 +444,15 @@ func NewCompressedECDSAFromEth(tx *types.Transaction) CompressedECDSATransaction
 }
 
 func newCompressedECDSATxFromData(data []byte) (CompressedECDSATransaction, error) {
-	if len(data) < 65 {
+	if len(data) < 66 {
 		return CompressedECDSATransaction{}, errors.New("data is too short")
 	}
 
-	compressedTx, err := decodeCompressedTx(bytes.NewReader(data[:len(data)-65]))
+	if data[0] != 0xff {
+		return CompressedECDSATransaction{}, errors.New("parsing compressed tx using function table not supported")
+	}
+
+	compressedTx, err := decodeCompressedTx(bytes.NewReader(data[1 : len(data)-65]))
 	if err != nil {
 		return CompressedECDSATransaction{}, err
 	}
@@ -477,11 +481,12 @@ func (t CompressedECDSATransaction) L2Type() L2SubType {
 }
 
 func (t CompressedECDSATransaction) AsData() ([]byte, error) {
-	data, err := encodeUnsignedTx(t.CompressedTx)
+	data := []byte{0xff}
+	txData, err := encodeUnsignedTx(t.CompressedTx)
 	if err != nil {
 		return nil, err
 	}
-
+	data = append(data, txData...)
 	data = append(data, encodeECDSASig(t.V, t.R, t.S)...)
 	return data, nil
 }

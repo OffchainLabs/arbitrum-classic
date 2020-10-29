@@ -38,6 +38,71 @@ interface ArbSys {
     // able to call it
     function getStorageAt(address account, uint256 index) external view returns (uint256);
 
+    // Register an address in the address table
+    // Return index of the address (existing index, or newly created index if not already registered)
+    function addressTable_register(address addr) external returns (uint256);
+
+    // Return index of an address in the address table (revert if address isn't in the table)
+    function addressTable_lookup(address addr) external view returns (uint256);
+
+    // Check whether an address exists in the address table
+    function addressTable_addressExists(address addr) external view returns (bool);
+
+    // Get size of address table (= first unused index)
+    function addressTable_size() external view returns (uint256);
+
+    // Return address at a given index in address table (revert if index is beyond end of table)
+    function addressTable_lookupIndex(uint256 index) external view returns (address);
+
+    // Read a compressed address from a bytes buffer
+    // Return resulting address and updated offset into the buffer (revert if buffer is too short)
+    function addressTable_decompress(bytes calldata buf, uint256 offset)
+        external
+        view
+        returns (address, uint256);
+
+    // Compress an address and return the result
+    function addressTable_compress(address addr) external view returns (bytes memory);
+
+    // Associate a BLS public key with the caller's address
+    function registerBlsKey(
+        uint256 x0,
+        uint256 x1,
+        uint256 y0,
+        uint256 y1
+    ) external;
+
+    // Get the BLS public key associated with an address (revert if there isn't one)
+    function getBlsPublicKey(address addr)
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        );
+
+    // Upload a serialized function table and associate it with the caller's address
+    // If caller already had a function table, this will overwrite the old one
+    // Revert if buf is mal-formatted
+    // (Caller will typically be an aggregator)
+    function uploadFunctionTable(bytes calldata buf) external;
+
+    // Get the size of addr's function table; revert if addr doesn't have a function table
+    function functionTableSize(address addr) external view returns (uint256);
+
+    // Get the entry from addr's function table, at index; revert if addr has no table or index out of bounds
+    // Returns (functionCode, isPayable, gasLimit)
+    function functionTableGet(address addr, uint256 index)
+        external
+        view
+        returns (
+            uint256,
+            bool,
+            uint256
+        );
+
     event EthWithdrawal(address indexed destAddr, uint256 amount);
     event ERC20Withdrawal(address indexed destAddr, address indexed tokenAddr, uint256 amount);
     event ERC721Withdrawal(address indexed destAddr, address indexed tokenAddr, uint256 indexed id);
