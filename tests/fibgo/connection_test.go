@@ -424,35 +424,34 @@ func TestFib(t *testing.T) {
 		)
 	}
 
-	t.Run("TestEvent", func(t *testing.T) {
-		eventChan := make(chan interface{}, 2)
-		startFibTestEventListener(t, session.Contract, eventChan, time.Second*20)
-		testEventRcvd := false
+	t.Log("testing events and log fetching")
 
-		fibsize := 15
-		time.Sleep(5 * time.Second)
-		_, err := session.GenerateFib(big.NewInt(int64(fibsize)))
-		if err != nil {
-			t.Errorf("GenerateFib error %v", err)
-			return
-		}
+	eventChan := make(chan interface{}, 2)
+	startFibTestEventListener(t, session.Contract, eventChan, time.Second*20)
+	testEventRcvd := false
 
-	Loop:
-		for ev := range eventChan {
-			switch event := ev.(type) {
-			case *arbostestcontracts.FibonacciTestEvent:
-				testEventRcvd = true
-				break Loop
-			case ListenerError:
-				t.Errorf("errorEvent %v %v", event.ListenerName, event.Err)
-				break Loop
-			default:
-				t.Error("eventLoop: unknown event type", ev)
-				break Loop
-			}
+	time.Sleep(5 * time.Second)
+	_, err = session.GenerateFib(big.NewInt(int64(fibsize)))
+	if err != nil {
+		t.Errorf("GenerateFib error %v", err)
+		return
+	}
+
+Loop:
+	for ev := range eventChan {
+		switch event := ev.(type) {
+		case *arbostestcontracts.FibonacciTestEvent:
+			testEventRcvd = true
+			break Loop
+		case ListenerError:
+			t.Errorf("errorEvent %v %v", event.ListenerName, event.Err)
+			break Loop
+		default:
+			t.Error("eventLoop: unknown event type", ev)
+			break Loop
 		}
-		if testEventRcvd != true {
-			t.Error("eventLoop: FibonacciTestEvent not received")
-		}
-	})
+	}
+	if testEventRcvd != true {
+		t.Error("eventLoop: FibonacciTestEvent not received")
+	}
 }
