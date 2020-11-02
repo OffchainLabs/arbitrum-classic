@@ -471,11 +471,11 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         } else if (opCode == OP_GETBUFFER256) {
             return (2, 0, 10, executeGetBuffer256);
         } else if (opCode == OP_SETBUFFER8) {
-            return (3, 0, 10, executeSetBuffer8);
+            return (3, 0, 100, executeSetBuffer8);
         } else if (opCode == OP_SETBUFFER64) {
-            return (3, 0, 10, executeSetBuffer64);
+            return (3, 0, 100, executeSetBuffer64);
         } else if (opCode == OP_SETBUFFER256) {
-            return (3, 0, 10, executeSetBuffer256);
+            return (3, 0, 100, executeSetBuffer256);
         } else {
             return (0, 0, 0, executeErrorInsn);
         }
