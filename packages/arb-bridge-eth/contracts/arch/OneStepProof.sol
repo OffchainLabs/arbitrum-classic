@@ -1029,7 +1029,7 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
         } else if (opCode == OP_ECPAIRING) {
             return (1, 0, 1000, executeECPairingInsn);
         } else if (opCode == OP_NEWBUFFER) {
-            return (1, 0, 10, executeNewBuffer);
+            return (1, 0, 1, executeNewBuffer);
         } else {
             return (0, 0, 0, executeErrorInsn);
         }
