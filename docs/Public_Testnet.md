@@ -98,4 +98,4 @@ For connecting to our older, "v1" Arbitrum chain (also running on Kovan), use th
 - Chain ID: 215728282823301
 - Rollup Contract Address: [0x175c0b09453cbb44fb7f56ba5638c43427aa6a85](https://kovan.etherscan.io/address/0x175c0b09453cbb44fb7f56ba5638c43427aa6a85)
 - Hosted Aggregator Address: [0x1d143638962dc93c52c4053a3dcce71cccb30bd3](https://kovan.etherscan.io/address/0x1d143638962dc93c52c4053a3dcce71cccb30bd3)
-- Hostexd Validator Address: [0x705c33d9364dd570bc2998a1a1e788221c14d2da](https://kovan.etherscan.io/address/0x705c33d9364dd570bc2998a1a1e788221c14d2da)
+- Hosted Validator Address: [0x705c33d9364dd570bc2998a1a1e788221c14d2da](https://kovan.etherscan.io/address/0x705c33d9364dd570bc2998a1a1e788221c14d2da)
