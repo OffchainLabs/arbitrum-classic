@@ -59,7 +59,7 @@ export const getAddressIndex = (() => {
       console.info('*** address/index retreived: *** ', address, index)
       return index
     } catch (err) {
-      console.info('Address not registered:', address)
+      console.info('Error: Address not registered:', address, err)
       return -1
     }
   }
