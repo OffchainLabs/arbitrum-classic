@@ -270,7 +270,7 @@ func (s *Server) GetLogs(ctx context.Context, args filters.FilterCriteria) ([]*t
 
 	var toHeight *uint64
 	if args.ToBlock != nil {
-		toRaw := args.FromBlock.Int64()
+		toRaw := args.ToBlock.Int64()
 		to, err := s.blockNum((*rpc.BlockNumber)(&toRaw))
 		if err != nil {
 			return nil, err
