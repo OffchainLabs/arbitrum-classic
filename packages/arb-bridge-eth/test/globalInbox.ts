@@ -297,6 +297,13 @@ describe('GlobalInbox', () => {
     await globalInbox.sendL2Message(chainAddress, data)
   })
 
+  it('should make an empty L2 message', async () => {
+    const data = '0x'
+    const tx = await globalInbox.sendL2Message(chainAddress, data)
+    const receipt = await tx.wait()
+    console.log('Empty batch gas:', receipt.gasUsed?.toNumber())
+  })
+
   it('tradeable-exits: initial', async () => {
     await expect(
       globalInbox.getPaymentOwner(originalOwner, messageIndex),
