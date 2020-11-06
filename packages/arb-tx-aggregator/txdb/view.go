@@ -80,7 +80,7 @@ func (txdb *View) FindLogs(
 		return nil, err
 	}
 	startHeight := uint64(0)
-	endHeight := latestBlock.Height.AsInt().Uint64()
+	endHeight := latestBlock.Height.AsInt().Uint64() + 1
 	if fromHeight != nil && *fromHeight > 0 {
 		startHeight = *fromHeight
 	}
