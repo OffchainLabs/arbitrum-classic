@@ -56,7 +56,6 @@ export const getAddressIndex = (() => {
 
     try {
       const index = await (await arbSys.addressTable_lookup(address)).toNumber()
-      console.info('*** address/index retreived: *** ', address, index)
       return index
     } catch (err) {
       console.info('Error: Address not registered:', address, err)
