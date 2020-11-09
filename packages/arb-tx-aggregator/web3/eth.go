@@ -253,6 +253,7 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 		BlockNumber:       (*hexutil.Big)(receipt.BlockNumber),
 		TransactionIndex:  hexutil.Uint64(receipt.TransactionIndex),
 		ReturnCode:        hexutil.Uint64(result.ResultCode),
+		ReturnData:        result.ReturnData,
 	}, nil
 }
 

@@ -57,6 +57,7 @@ type GetTransactionReceiptResult struct {
 
 	// Arbitrum Specific Fields
 	ReturnCode hexutil.Uint64 `json:"returnCode"`
+	ReturnData hexutil.Bytes  `json:"returnData"`
 }
 
 type TransactionResult struct {
