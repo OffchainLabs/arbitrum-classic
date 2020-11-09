@@ -59,9 +59,13 @@ type batch interface {
 }
 
 type TransactionBatcher interface {
-	PendingTransactionCount(account common.Address) *uint64
-	SendTransaction(tx *types.Transaction) (common.Hash, error)
-	PendingSnapshot() (*snapshot.Snapshot, bool)
+	// Return nil if no pending transaction count is available
+	PendingTransactionCount(ctx context.Context, account common.Address) *uint64
+
+	SendTransaction(ctx context.Context, tx *types.Transaction) error
+
+	// Return nil if no pending snapshot is available
+	PendingSnapshot() *snapshot.Snapshot
 }
 
 type pendingSentBatch struct {
@@ -246,7 +250,7 @@ func (m *Batcher) PendingSnapshot() *snapshot.Snapshot {
 	return m.pendingBatch.getLatestSnap()
 }
 
-func (m *Batcher) PendingTransactionCount(account common.Address) *uint64 {
+func (m *Batcher) PendingTransactionCount(_ context.Context, account common.Address) *uint64 {
 	m.Lock()
 	defer m.Unlock()
 	q, ok := m.queuedTxes.queues[account.ToEthAddress()]
@@ -259,31 +263,25 @@ func (m *Batcher) PendingTransactionCount(account common.Address) *uint64 {
 
 // SendTransaction takes a request signed transaction l2message from a client
 // and puts it in a queue to be included in the next transaction batch
-func (m *Batcher) SendTransaction(tx *types.Transaction) (common.Hash, error) {
+func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) error {
 	sender, err := types.Sender(m.signer, tx)
 	if err != nil {
 		log.Println("Error processing transaction", err)
-		return common.Hash{}, err
+		return err
 	}
-
-	txHash := common.NewHashFromEth(tx.Hash())
 
 	m.Lock()
 	defer m.Unlock()
 
 	if !m.valid {
-		return common.Hash{}, errors.New("tx aggregator is not running")
+		return errors.New("tx aggregator is not running")
 	}
 
 	m.pendingBatch.updateCurrentSnap(m.pendingSentBatches)
 
 	if err := m.pendingBatch.checkValidForQueue(tx); err != nil {
-		return common.Hash{}, err
+		return err
 	}
 
-	if err := m.queuedTxes.addTransaction(tx, sender); err != nil {
-		return common.Hash{}, err
-	}
-
-	return txHash, nil
+	return m.queuedTxes.addTransaction(tx, sender)
 }

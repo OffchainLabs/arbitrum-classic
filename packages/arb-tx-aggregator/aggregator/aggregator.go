@@ -43,7 +43,7 @@ import (
 type Server struct {
 	Client      ethutils.EthClient
 	chain       common.Address
-	batch       *batcher.Batcher
+	batch       batcher.TransactionBatcher
 	db          *txdb.TxDB
 	maxCallTime time.Duration
 	maxCallGas  *big.Int
@@ -52,7 +52,7 @@ type Server struct {
 // NewServer returns a new instance of the Server class
 func NewServer(
 	client ethutils.EthClient,
-	batch *batcher.Batcher,
+	batch batcher.TransactionBatcher,
 	rollupAddress common.Address,
 	db *txdb.TxDB,
 ) *Server {
@@ -68,8 +68,8 @@ func NewServer(
 
 // SendTransaction takes a request signed transaction l2message from a Client
 // and puts it in a queue to be included in the next transaction batch
-func (m *Server) SendTransaction(tx *types.Transaction) (common.Hash, error) {
-	return m.batch.SendTransaction(tx)
+func (m *Server) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	return m.batch.SendTransaction(ctx, tx)
 }
 
 //FindLogs takes a set of parameters and return the list of all logs that match
@@ -325,6 +325,6 @@ func (m *Server) PendingSnapshot() *snapshot.Snapshot {
 	return pending
 }
 
-func (m *Server) PendingTransactionCount(account common.Address) *uint64 {
-	return m.batch.PendingTransactionCount(account)
+func (m *Server) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
+	return m.batch.PendingTransactionCount(ctx, account)
 }

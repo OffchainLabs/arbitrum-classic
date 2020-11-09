@@ -153,8 +153,7 @@ func TestStatelessBatcher(t *testing.T) {
 	)
 
 	for _, tx := range txes {
-		_, err := batcher.SendTransaction(tx)
-		if err != nil {
+		if err := batcher.SendTransaction(context.Background(), tx); err != nil {
 			t.Fatal(err)
 		}
 		<-time.After(time.Millisecond * 20)
