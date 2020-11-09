@@ -144,24 +144,6 @@ func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollup
 			"9547",
 			utils2.RPCFlags{},
 			time.Second,
-			rpc.ForwarderBatcherMode{NodeURL: "http://localhost:9548"},
-		); err != nil {
-			log.Fatal(err)
-		}
-	}()
-
-	go func() {
-		if err := rpc.LaunchAggregator(
-			context.Background(),
-			client,
-			rollupAddress,
-			contract,
-			db+"/aggregator2",
-			"2236",
-			"9548",
-			"9549",
-			utils2.RPCFlags{},
-			time.Second,
 			rpc.StatelessBatcherMode{Auth: auth},
 		); err != nil {
 			log.Fatal(err)
@@ -187,17 +169,6 @@ func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollup
 			conn, err = net.DialTimeout(
 				"tcp",
 				net.JoinHostPort("127.0.0.1", "9546"),
-				time.Second,
-			)
-			if err != nil || conn == nil {
-				break
-			}
-			if err := conn.Close(); err != nil {
-				return err
-			}
-			conn, err = net.DialTimeout(
-				"tcp",
-				net.JoinHostPort("127.0.0.1", "9548"),
 				time.Second,
 			)
 			if err != nil || conn == nil {
@@ -424,34 +395,35 @@ func TestFib(t *testing.T) {
 		)
 	}
 
-	t.Log("testing events and log fetching")
+	t.Run("TestEvent", func(t *testing.T) {
+		eventChan := make(chan interface{}, 2)
+		startFibTestEventListener(t, session.Contract, eventChan, time.Second*20)
+		testEventRcvd := false
 
-	eventChan := make(chan interface{}, 2)
-	startFibTestEventListener(t, session.Contract, eventChan, time.Second*20)
-	testEventRcvd := false
-
-	time.Sleep(5 * time.Second)
-	_, err = session.GenerateFib(big.NewInt(int64(fibsize)))
-	if err != nil {
-		t.Errorf("GenerateFib error %v", err)
-		return
-	}
-
-Loop:
-	for ev := range eventChan {
-		switch event := ev.(type) {
-		case *arbostestcontracts.FibonacciTestEvent:
-			testEventRcvd = true
-			break Loop
-		case ListenerError:
-			t.Errorf("errorEvent %v %v", event.ListenerName, event.Err)
-			break Loop
-		default:
-			t.Error("eventLoop: unknown event type", ev)
-			break Loop
+		fibsize := 15
+		time.Sleep(5 * time.Second)
+		_, err := session.GenerateFib(big.NewInt(int64(fibsize)))
+		if err != nil {
+			t.Errorf("GenerateFib error %v", err)
+			return
 		}
-	}
-	if testEventRcvd != true {
-		t.Error("eventLoop: FibonacciTestEvent not received")
-	}
+
+	Loop:
+		for ev := range eventChan {
+			switch event := ev.(type) {
+			case *arbostestcontracts.FibonacciTestEvent:
+				testEventRcvd = true
+				break Loop
+			case ListenerError:
+				t.Errorf("errorEvent %v %v", event.ListenerName, event.Err)
+				break Loop
+			default:
+				t.Error("eventLoop: unknown event type", ev)
+				break Loop
+			}
+		}
+		if testEventRcvd != true {
+			t.Error("eventLoop: FibonacciTestEvent not received")
+		}
+	})
 }
