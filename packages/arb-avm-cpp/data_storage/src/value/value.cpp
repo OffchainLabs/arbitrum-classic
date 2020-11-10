@@ -36,15 +36,6 @@ struct ValueHash {
     uint256_t hash;
 };
 
-Buffer deserializeBuffer(const char* buf, uint64_t size) {
-    Buffer res;
-    for (uint64_t i = 0; i < size/1024; i++) {
-        res = res.set_many(i*1024, std::vector<uint8_t>(buf+i*1024, buf+i*1024+1024));
-    }
-    // std::cerr << "De Serialized " << res.size() << " hash " << res.hash() << std::endl;
-    return res;
-}
-
 using ParsedTupVal = nonstd::variant<uint256_t, CodePointStub, Buffer, ValueHash>;
 
 using ParsedSerializedVal =
@@ -82,7 +73,10 @@ std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
         switch (value_type) {
             case BUFFER: {
                 int len = 0;
-                return_vector.push_back(Buffer::deserialize(buf, len));
+                Buffer res = Buffer::deserialize(buf, len);
+                // std::cerr << "Deserializing " << res.size() << " hash " << res.hash() << std::endl;
+
+                return_vector.push_back(res);
                 iter += len + 1;
                 break;
             }
@@ -130,7 +124,9 @@ ParsedSerializedVal parseRecord(const std::vector<unsigned char>& data) {
         }
         case BUFFER: {
             int len = 0;
-            return Buffer::deserialize(buf, len);
+            auto res = Buffer::deserialize(buf, len);
+            // std::cerr << "Deserializing " << res.size() << " hash " << res.hash() << std::endl;
+            return res;
         }
         default: {
             if (value_type - TUPLE > 8) {
@@ -188,14 +184,14 @@ std::vector<value> serializeValue(const Buffer&b,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(BUFFER);
-    std::cerr << "Serializing " << b.size() << " hash " << b.hash() << std::endl;
+    // std::cerr << "Serializing " << b.size() << " hash " << b.hash() << std::endl;
     b.serialize(value_vector);
-    std::cerr << "Serialized " << b.size() << " hash " << b.hash() << std::endl;
     /*
-    marshal_uint256_t(b.size(), value_vector);
-    for (uint64_t i = 0; i < b.size(); i++) {
-        value_vector.push_back(b.get(i));
-    }
+    std::vector<unsigned char> buf;
+    b.serialize(buf);
+    int len = 0;
+    Buffer res = Buffer::deserialize((char*)(buf.data()), len);
+    std::cerr << "Deserializing " << res.size() << " hash " << res.hash() << " Ser size " << buf.size() << " Deser size " << len << std::endl;
     */
     return {};
 }

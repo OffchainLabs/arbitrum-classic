@@ -115,8 +115,11 @@ Packed RawBuffer::hash_aux() {
 }
 
 RawBuffer RawBuffer::normalize() {
-    if (hash() == zero_hash(32) || level == 0) {
+    if (hash() == zero_hash(32)) {
         return RawBuffer();
+    }
+    if (level == 0) {
+        return *this;
     }
     // check if is a shrinkable node
     // cannot be null, otherwise the hash would have been zero
@@ -152,7 +155,7 @@ void RawBuffer::serialize(std::vector<unsigned char>& value_vector) {
     }
     if (level > 0) {
         value_vector.push_back(1);
-        for (int i = 1; i < 128; i++) {
+        for (int i = 0; i < 128; i++) {
             (*node)[i].serialize(value_vector);
         }
     }
@@ -181,6 +184,7 @@ RawBuffer RawBuffer::deserialize(const char *buf, int level, int &len) {
     for (unsigned int i = 0; i < 128; i++) {
         int nlen = 0;
         res->push_back(RawBuffer::deserialize(buf, level-1, nlen));
+        // std::cerr << "deserlen " << i << ": " << nlen << std::endl;
         len += nlen;
         buf += nlen;
     }
