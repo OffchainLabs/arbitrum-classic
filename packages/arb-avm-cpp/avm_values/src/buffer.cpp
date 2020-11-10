@@ -99,7 +99,7 @@ Packed RawBuffer::hash_aux() {
     Packed res;
     if (level == 0) {
         // std::cerr << "Hashing buffer..." << std::endl;
-        if (!leaf) res = zero_packed(1024);
+        if (!leaf || leaf->size() == 0) res = zero_packed(1024);
         else res = hash_buf(leaf->data(), 0, 1024);
     } else {
         if (!node) res = zero_packed(calc_len(level));
@@ -114,3 +114,76 @@ Packed RawBuffer::hash_aux() {
     return res;
 }
 
+RawBuffer RawBuffer::normalize() {
+    if (hash() == zero_hash(32) || level == 0) {
+        return RawBuffer();
+    }
+    // check if is a shrinkable node
+    // cannot be null, otherwise the hash would have been zero
+    // std::cerr << "Normalizing " << size() << ":" << static_cast<uint64_t>(hash()) << " ? " << node->size() << std::endl;
+    bool shrinkable = true;
+    for (int i = 1; i < 128; i++) {
+
+        if ((*node)[i].hash() != zero_hash(32)) {
+            shrinkable = false;
+            break;
+        }
+    }
+    if (shrinkable) {
+        return (*node)[0].normalize();
+    }
+    return *this;
+}
+
+void RawBuffer::serialize(std::vector<unsigned char>& value_vector) {
+    // first check if it's empty
+    // std::cerr << "NSerializing " << size() << ":" << static_cast<uint64_t>(hash()) << " ? " << saved << std::endl;
+    if (hash() == zero_hash(32)) {
+        value_vector.push_back(0);
+        return;
+    }
+    // save leaf (just save all the data)
+    if (level == 0) {
+        value_vector.push_back(1);
+        for (int i = 0; i < 1024; i++) {
+            if (leaf->size() < i) value_vector.push_back(0);
+            else value_vector.push_back((*leaf)[i]);
+        }
+    }
+    if (level > 0) {
+        value_vector.push_back(1);
+        for (int i = 1; i < 128; i++) {
+            (*node)[i].serialize(value_vector);
+        }
+    }
+}
+
+RawBuffer RawBuffer::deserialize(const char *buf, int level, int &len) {
+    // empty
+    if (buf[0] == 0) {
+        len++;
+        return RawBuffer(level, true);
+    }
+    // otherwise buf[0] == 1
+    len++;
+    buf++;
+    if (level == 0) {
+        auto res = std::make_shared<std::vector<uint8_t> >();
+        res->resize(1024, 0);
+        for (unsigned int i = 0; i < 1024; i++) {
+            (*res)[i] = buf[i];
+        }
+        len += 1024;
+        return RawBuffer(res);
+    }
+    // node
+    auto res = std::make_shared<std::vector<RawBuffer> >();
+    for (unsigned int i = 0; i < 128; i++) {
+        int nlen = 0;
+        res->push_back(RawBuffer::deserialize(buf, level-1, nlen));
+        len += nlen;
+        buf += nlen;
+    }
+
+    return RawBuffer(res, level);
+}

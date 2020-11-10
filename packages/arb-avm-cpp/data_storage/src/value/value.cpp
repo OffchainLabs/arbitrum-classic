@@ -81,9 +81,9 @@ std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
 
         switch (value_type) {
             case BUFFER: {
-                uint64_t size = static_cast<uint64_t>(deserializeUint256t(buf));
-                iter += TUP_BUFFER_LENGTH + size;
-                return_vector.push_back(deserializeBuffer(buf+TUP_BUFFER_LENGTH-1, size));
+                int len = 0;
+                return_vector.push_back(Buffer::deserialize(buf, len));
+                iter += len + 1;
                 break;
             }
             case NUM: {
@@ -129,8 +129,8 @@ ParsedSerializedVal parseRecord(const std::vector<unsigned char>& data) {
             throw std::runtime_error("HASH_ONLY item");
         }
         case BUFFER: {
-            uint64_t size = static_cast<uint64_t>(deserializeUint256t(buf));
-            return deserializeBuffer(buf+TUP_BUFFER_LENGTH-1, size);
+            int len = 0;
+            return Buffer::deserialize(buf, len);
         }
         default: {
             if (value_type - TUPLE > 8) {
@@ -188,13 +188,18 @@ std::vector<value> serializeValue(const Buffer&b,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(BUFFER);
-    // std::cerr << "Serialized " << b.size() << " hash " << b.hash() << std::endl;
+    std::cerr << "Serializing " << b.size() << " hash " << b.hash() << std::endl;
+    b.serialize(value_vector);
+    std::cerr << "Serialized " << b.size() << " hash " << b.hash() << std::endl;
+    /*
     marshal_uint256_t(b.size(), value_vector);
     for (uint64_t i = 0; i < b.size(); i++) {
         value_vector.push_back(b.get(i));
     }
+    */
     return {};
 }
+
 std::vector<value> serializeValue(
     const value& val,
     std::vector<unsigned char>& value_vector,

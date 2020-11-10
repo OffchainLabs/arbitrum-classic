@@ -48,15 +48,6 @@ class RawBuffer {
     std::shared_ptr<std::vector<uint8_t> > leaf;
     std::shared_ptr<std::vector<RawBuffer> > node;
 
-/*
-    RawBuffer(const RawBuffer& copy) : leaf(copy.leaf), node(copy.node) {
-        is_leaf = copy.is_leaf;
-        level = copy.level;
-        saved = copy.saved;
-        savedHash = copy.savedHash;
-    }
-*/
-
     RawBuffer(std::shared_ptr<std::vector<uint8_t> > leaf_) : leaf(leaf_), node(nullptr) {
         // std::cerr << "creating buffer 0" << std::endl;
         is_leaf = true;
@@ -211,9 +202,17 @@ class RawBuffer {
     uint256_t hash();
     Packed hash_aux();
 
+    void serialize(std::vector<unsigned char>& value_vector);
+
+    RawBuffer normalize();
+
     uint64_t size() const {
         return calc_len(level);
     }
+
+    static RawBuffer deserialize(const char *buf, int level, int &len);
+
+    friend class Buffer;
 
 };
 
@@ -254,6 +253,17 @@ class Buffer {
         return buf->hash();
     }
 
+    void serialize(std::vector<unsigned char>& value_vector) const {
+        RawBuffer nbuf = buf->normalize();
+        value_vector.push_back(static_cast<uint8_t>(nbuf.level));
+        nbuf.serialize(value_vector);
+    }
+
+    static Buffer deserialize(const char *buf, int &len) {
+        uint8_t level = buf[0];
+        len++;
+        return Buffer(RawBuffer::deserialize(buf+1, level, len));
+    }
 };
 
 inline uint256_t hash(const Buffer& b) {
