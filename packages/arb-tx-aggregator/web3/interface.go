@@ -73,8 +73,8 @@ type TransactionResult struct {
 	TransactionIndex *hexutil.Uint64 `json:"transactionIndex"`
 	Value            *hexutil.Big    `json:"value"`
 	V                *hexutil.Big    `json:"v"`
-	R                hexutil.Bytes   `json:"r"`
-	S                hexutil.Bytes   `json:"s"`
+	R                *hexutil.Big    `json:"r"`
+	S                *hexutil.Big    `json:"s"`
 
 	// Arbitrum Specific Fields
 	L1SeqNum        *hexutil.Big `json:"l1SequenceNumber"`

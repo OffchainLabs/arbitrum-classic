@@ -3,9 +3,9 @@ package web3
 import (
 	"context"
 	"errors"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/trie"
 	errors2 "github.com/pkg/errors"
 	"math/big"
 
@@ -191,7 +191,11 @@ func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult,
 	if err != nil {
 		return nil, err
 	}
-	return s.makeTransactionResult(res)
+	tx, err := aggregator.GetTransaction(res.IncomingRequest)
+	if err != nil {
+		return nil, err
+	}
+	return s.makeTransactionResult(tx, res)
 }
 
 func (s *Server) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint64) (*TransactionResult, error) {
@@ -319,7 +323,11 @@ func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint
 	if err != nil {
 		return nil, err
 	}
-	return s.makeTransactionResult(txRes)
+	tx, err := aggregator.GetTransaction(txRes.IncomingRequest)
+	if err != nil {
+		return nil, err
+	}
+	return s.makeTransactionResult(tx, txRes)
 }
 
 func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTxData bool) (*GetBlockResult, error) {
@@ -340,23 +348,39 @@ func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTx
 
 	bloom, gasLimit, gasUsed := aggregator.GetBlockFields(block, blockInfo)
 
+	txes := make([]*types.Transaction, 0, len(results))
+	for _, res := range results {
+		tx, err := aggregator.GetTransaction(res.IncomingRequest)
+		if err != nil {
+			return nil, err
+		}
+		txes = append(txes, tx)
+	}
+
 	var transactions interface{}
 	if includeTxData {
-		txes := make([]*TransactionResult, 0, len(results))
-		for _, res := range results {
-			txRes, err := s.makeTransactionResult(res)
+		txResults := make([]*TransactionResult, 0, len(results))
+		for i, res := range results {
+			txRes, err := s.makeTransactionResult(txes[i], res)
 			if err != nil {
 				return nil, err
 			}
-			txes = append(txes, txRes)
+			txResults = append(txResults, txRes)
 		}
-		transactions = txes
+		transactions = txResults
 	} else {
 		txes := make([]hexutil.Bytes, 0, len(results))
 		for _, res := range results {
 			txes = append(txes, res.IncomingRequest.MessageID.Bytes())
 		}
 		transactions = txes
+	}
+
+	var txRoot common.Hash
+	if len(txes) != 0 {
+		txRoot = types.DeriveSha(types.Transactions(txes), new(trie.Trie))
+	} else {
+		txRoot = types.EmptyRootHash
 	}
 	size := uint64(0)
 	uncles := make([]hexutil.Bytes, 0)
@@ -368,7 +392,7 @@ func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTx
 		Nonce:            &header.Nonce,
 		Sha3Uncles:       header.UncleHash.Bytes(),
 		LogsBloom:        bloom.Bytes(),
-		TransactionsRoot: header.TxHash.Bytes(),
+		TransactionsRoot: txRoot.Bytes(),
 		StateRoot:        header.Root.Bytes(),
 		ReceiptsRoot:     header.ReceiptHash.Bytes(),
 		Miner:            header.Coinbase.Bytes(),
@@ -384,11 +408,7 @@ func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTx
 	}, nil
 }
 
-func (s *Server) makeTransactionResult(res *evm.TxResult) (*TransactionResult, error) {
-	tx, err := aggregator.GetTransaction(res.IncomingRequest)
-	if err != nil {
-		return nil, err
-	}
+func (s *Server) makeTransactionResult(tx *types.Transaction, res *evm.TxResult) (*TransactionResult, error) {
 	blockInfo, err := s.srv.BlockInfo(res.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
 	if err != nil {
 		return nil, err
@@ -419,8 +439,8 @@ func (s *Server) makeTransactionResult(res *evm.TxResult) (*TransactionResult, e
 		TransactionIndex: (*hexutil.Uint64)(&txIndex),
 		Value:            (*hexutil.Big)(tx.Value()),
 		V:                (*hexutil.Big)(vVal),
-		R:                math.U256Bytes(rVal),
-		S:                math.U256Bytes(sVal),
+		R:                (*hexutil.Big)(rVal),
+		S:                (*hexutil.Big)(sVal),
 		L1SeqNum:         (*hexutil.Big)(provenance.L1SeqNum),
 		ParentRequestId:  parentRequestId,
 		IndexInParent:    (*hexutil.Big)(provenance.IndexInParent),
