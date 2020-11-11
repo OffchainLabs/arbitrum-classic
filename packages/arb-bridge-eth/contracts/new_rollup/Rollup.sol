@@ -10,6 +10,7 @@ contract Rollup {
         // currentChallenge is 0 if staker is not in a challenge
         address currentChallenge;
         bool isZombie;
+        bool isStaked;
     }
 
     uint256 latestConfirmed;
@@ -56,17 +57,27 @@ contract Rollup {
         discardUnresolvedNode();
     }
 
-    function newStakeOnExistingNode(uint256 nodeNum) external payable {
+    function newStakeOnExistingNode(
+        bytes32 blockHash,
+        uint256 blockNumber,
+        uint256 nodeNum
+    ) external payable {
+        require(blockhash(blockNumber) == blockHash, "invalid known block");
         verifyCanStake();
+        // Must stake on valid node
+        checkValidNodeNumForStake(nodeNum);
         Node node = nodes[nodeNum];
         require(node.prev() == latestConfirmed);
         addStaker(nodeNum, node);
     }
 
     function newStakeOnNewNode(
+        bytes32 blockHash,
+        uint256 blockNumber,
         uint256 nodeNum,
         uint256 prev /* assertion data */
     ) external payable {
+        require(blockhash(blockNumber) == blockHash, "invalid known block");
         verifyCanStake();
         require(nodeNum == latestNodeCreated + 1);
         require(prev == latestConfirmed);
@@ -79,14 +90,20 @@ contract Rollup {
             latestConfirmed,
             block.number,
             0, // TODO: deadline block
-            1
+            0
         );
         addStaker(nodeNum, node);
         nodes[nodeNum] = node;
         latestNodeCreated++;
     }
 
-    function addStakeOnExistingNode(uint256 nodeNum) external {
+    function addStakeOnExistingNode(
+        bytes32 blockHash,
+        uint256 blockNumber,
+        uint256 nodeNum
+    ) external {
+        require(blockhash(blockNumber) == blockHash, "invalid known block");
+        checkValidNodeNumForStake(nodeNum);
         Staker storage staker = stakers[msg.sender];
         require(!staker.isZombie);
         Node node = nodes[nodeNum];
@@ -95,7 +112,12 @@ contract Rollup {
         staker.latestStakedNode = nodeNum;
     }
 
-    function addStakeOnNewNode(uint256 nodeNum) external {
+    function addStakeOnNewNode(
+        bytes32 blockHash,
+        uint256 blockNumber,
+        uint256 nodeNum
+    ) external {
+        require(blockhash(blockNumber) == blockHash, "invalid known block");
         require(nodeNum == latestNodeCreated + 1);
         Staker storage staker = stakers[msg.sender];
         require(!staker.isZombie);
@@ -109,11 +131,12 @@ contract Rollup {
             staker.latestStakedNode,
             block.number,
             0, // TODO: deadline block
-            1
+            0
         );
         node.addStaker(msg.sender);
         nodes[nodeNum] = node;
         staker.latestStakedNode = nodeNum;
+        latestNodeCreated++;
     }
 
     function returnOldDeposit(address payable stakerAddress) external {
@@ -123,7 +146,7 @@ contract Rollup {
         require(staker.currentChallenge == address(0));
 
         delete stakers[stakerAddress];
-        // Staker could force transfer to revert. We may want to allow funds to be withdrawn separately
+        // TODO: Staker could force transfer to revert. We may want to allow funds to be withdrawn separately
         stakerAddress.transfer(staker.amountStaked);
     }
 
@@ -228,14 +251,17 @@ contract Rollup {
 
     function verifyCanStake() private {
         // Verify that sender is not already a staker
-        // TODO: Can we assume that all stakers are staked on the latest confirmed?
-        require(!nodes[latestConfirmed].stakers(msg.sender));
+        require(!stakers[msg.sender].isStaked);
         require(msg.value >= currentRequiredStake());
     }
 
     function addStaker(uint256 nodeNum, Node node) private {
-        require(stakers[msg.sender].latestStakedNode == 0, "ALREADY_STAKED");
-        stakers[msg.sender] = Staker(nodeNum, msg.value, address(0), false);
+        require(!stakers[msg.sender].isStaked, "ALREADY_STAKED");
+        stakers[msg.sender] = Staker(nodeNum, msg.value, address(0), false, true);
         node.addStaker(msg.sender);
+    }
+
+    function checkValidNodeNumForStake(uint256 nodeNum) private view {
+        require(nodeNum >= firstUnresolvedNode && nodeNum <= latestNodeCreated);
     }
 }
