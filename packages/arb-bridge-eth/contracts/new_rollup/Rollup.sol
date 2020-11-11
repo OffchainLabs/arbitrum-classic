@@ -174,7 +174,7 @@ contract Rollup {
         // TODO: How to we want to handle the two challenge types
 
         // TODO: Actually launch challenge
-        address challengeAddress = 0;
+        address challengeAddress = address(0);
         staker1.currentChallenge = challengeAddress;
         staker2.currentChallenge = challengeAddress;
     }
@@ -189,9 +189,9 @@ contract Rollup {
 
         uint256 winnerPrize = 0;
         if (winner.amountStaked > loser.amountStaked) {
-            winer.amountStaked += loser.amountStaked / 2;
+            winner.amountStaked += loser.amountStaked / 2;
         } else {
-            winer.amountStaked += winner.amountStaked / 2;
+            winner.amountStaked += winner.amountStaked / 2;
 
             winnerPrize = winner.amountStaked / 2;
         }
