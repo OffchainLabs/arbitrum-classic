@@ -140,10 +140,9 @@ contract Rollup {
     }
 
     function returnOldDeposit(address payable stakerAddress) external {
-        Staker memory staker = stakers[stakerAddress];
-        require(!staker.isZombie);
+        Staker storage staker = stakers[stakerAddress];
+        checkUnchallengedStaker(staker);
         require(staker.latestStakedNode <= latestConfirmed);
-        require(staker.currentChallenge == address(0));
 
         delete stakers[stakerAddress];
         // TODO: Staker could force transfer to revert. We may want to allow funds to be withdrawn separately
@@ -151,16 +150,14 @@ contract Rollup {
     }
 
     function addToDeposit() external payable {
-        Staker memory staker = stakers[msg.sender];
-        require(!staker.isZombie);
-        require(staker.currentChallenge == address(0));
+        Staker storage staker = stakers[msg.sender];
+        checkUnchallengedStaker(staker);
         staker.amountStaked += msg.value;
     }
 
     function reduceDeposit(uint256 maxReduction) external {
-        Staker memory staker = stakers[msg.sender];
-        require(!staker.isZombie);
-        require(staker.currentChallenge == address(0));
+        Staker storage staker = stakers[msg.sender];
+        checkUnchallengedStaker(staker);
         uint256 currentRequired = currentRequiredStake();
         require(staker.amountStaked > currentRequired);
         uint256 withdrawAmount = staker.amountStaked - currentRequired;
@@ -171,9 +168,8 @@ contract Rollup {
         msg.sender.transfer(withdrawAmount);
     }
 
-    function removeZombieStake(uint256 nodeNum, address stakerAddress) external {
+    function removeZombieStaker(uint256 nodeNum, address stakerAddress) external {
         require(stakers[stakerAddress].isZombie);
-        require(nodeNum >= firstUnresolvedNode);
         nodes[nodeNum].removeStaker(stakerAddress);
     }
 
@@ -188,17 +184,16 @@ contract Rollup {
         Node node1 = nodes[nodeNum1];
         Node node2 = nodes[nodeNum2];
 
-        require(!staker1.isZombie);
-        require(staker1.currentChallenge == address(0));
+        checkUnchallengedStaker(staker1);
         require(node1.stakers(staker1Address));
 
-        require(!staker2.isZombie);
-        require(staker2.currentChallenge == address(0));
+        checkUnchallengedStaker(staker2);
         require(node2.stakers(staker2Address));
 
         require(node1.prev() == node2.prev());
         require(latestConfirmed < nodeNum1);
         require(nodeNum1 < nodeNum2);
+        require(nodeNum2 <= latestNodeCreated);
 
         // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
         // TODO: How to we want to handle the two challenge types
@@ -209,7 +204,7 @@ contract Rollup {
         staker2.currentChallenge = challengeAddress;
     }
 
-    function completeChallenge(address winningStaker, address losingStaker) external {
+    function completeChallenge(address winningStaker, address payable losingStaker) external {
         Staker storage winner = stakers[winningStaker];
         Staker storage loser = stakers[losingStaker];
 
@@ -217,20 +212,26 @@ contract Rollup {
         require(winner.currentChallenge == msg.sender);
         require(loser.currentChallenge == msg.sender);
 
-        uint256 winnerPrize = 0;
-        if (winner.amountStaked > loser.amountStaked) {
-            winner.amountStaked += loser.amountStaked / 2;
-        } else {
-            winner.amountStaked += winner.amountStaked / 2;
-
-            winnerPrize = winner.amountStaked / 2;
+        if (loser.amountStaked > winner.amountStaked) {
+            uint256 extraLoserStake = loser.amountStaked - winner.amountStaked;
+            // TODO: unsafe to transfer to the loser directly
+            losingStaker.transfer(extraLoserStake);
+            loser.amountStaked -= extraLoserStake;
         }
+
+        winner.amountStaked += loser.amountStaked / 2;
+
+        // TODO: deposit extra loser stake into ArbOS
 
         loser.amountStaked = 0;
         loser.isZombie = true;
+        winner.currentChallenge = address(0);
+        loser.currentChallenge = address(0);
     }
 
     function currentRequiredStake() public view returns (uint256) {
+        uint256 MAX_INT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+
         uint256 latestConfirmedAge = block.number - nodes[latestConfirmed].deadlineBlock();
         uint256 challengePeriodsPassed = latestConfirmedAge / challengePeriod;
         if (challengePeriodsPassed > 255) {
@@ -240,6 +241,11 @@ contract Rollup {
         if (multiplier == 0) {
             multiplier = 1;
         }
+
+        if (multiplier > MAX_INT / baseStake) {
+            return MAX_INT;
+        }
+
         return baseStake * multiplier;
     }
 
@@ -263,5 +269,10 @@ contract Rollup {
 
     function checkValidNodeNumForStake(uint256 nodeNum) private view {
         require(nodeNum >= firstUnresolvedNode && nodeNum <= latestNodeCreated);
+    }
+
+    function checkUnchallengedStaker(Staker storage staker) private view {
+        require(!staker.isZombie);
+        require(staker.currentChallenge == address(0));
     }
 }
