@@ -14,7 +14,7 @@ contract Rollup {
 
     uint256 latestConfirmed;
     uint256 firstUnresolvedNode;
-    uint256 highestNode;
+    uint256 latestNodeCreated;
     Node[] nodes;
     uint256 lastStakeBlock;
     uint256 stakerCount;
@@ -71,7 +71,7 @@ contract Rollup {
         uint256 prev /* assertion data */
     ) external payable {
         verifyCanStake();
-        require(nodeNum == highestNode + 1);
+        require(nodeNum == latestNodeCreated + 1);
         require(prev == latestConfirmed);
 
         // TODO: Verify that the preconditions of assertion are consistent with the postconditions of prev
@@ -86,7 +86,7 @@ contract Rollup {
         );
         addStaker(nodeNum, node);
         nodes[nodeNum] = node;
-        highestNode++;
+        latestNodeCreated++;
     }
 
     function addStakeOnExistingNode(uint256 nodeNum) external {
@@ -99,7 +99,7 @@ contract Rollup {
     }
 
     function addStakeOnNewNode(uint256 nodeNum) external {
-        require(nodeNum == highestNode + 1);
+        require(nodeNum == latestNodeCreated + 1);
         Staker storage staker = stakers[msg.sender];
         require(!staker.isZombie);
 
