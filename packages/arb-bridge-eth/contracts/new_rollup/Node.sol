@@ -30,9 +30,12 @@ contract Node {
         stakerCount = _stakerCount;
     }
 
-    function confirmValid(uint256 totalStakerCount) external onlyRollup {
+    function confirmValid(uint256 totalStakerCount, uint256 latestConfirmed) external onlyRollup {
         // Verify the block's deadline has passed
         require(deadlineBlock <= block.number);
+
+        // Check that prev is latest confirmed
+        require(prev == latestConfirmed);
 
         // All non-zombie stakers are staked on this node, and no zombie stakers are staked here
         require(stakerCount == totalStakerCount);

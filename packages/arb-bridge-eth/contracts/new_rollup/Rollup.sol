@@ -43,9 +43,6 @@ contract Rollup {
 
     // If the node previous to this one is not the latest confirmed, we can reject immediately
     function rejectNextNodeOutOfOrder() external {
-        // No stake has been placed during the last challengePeriod blocks
-        require(block.number - lastStakeBlock >= challengePeriod);
-
         nodes[firstUnresolvedNode].confirmOutOfOrder(latestConfirmed);
 
         discardUnresolvedNode();
@@ -55,7 +52,7 @@ contract Rollup {
         // No stake has been placed during the last challengePeriod blocks
         require(block.number - lastStakeBlock >= challengePeriod);
 
-        nodes[firstUnresolvedNode].confirmValid(stakerCount);
+        nodes[firstUnresolvedNode].confirmValid(stakerCount, latestConfirmed);
         discardUnresolvedNode();
     }
 
