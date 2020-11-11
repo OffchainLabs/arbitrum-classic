@@ -1,16 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.5.17;
 
-contract Rollup {
-    struct Node {
-        bytes32 assertionHash;
-        uint256 prev;
-        uint256 proposedBlock;
-        uint256 deadlineBlock;
-        uint256 stakerCount;
-        mapping(address => bool) stakers;
-    }
+import "./Node.sol";
 
+contract Rollup {
     struct Staker {
         uint256 latestStakedNode;
         uint256 amountStaked;
@@ -29,31 +22,47 @@ contract Rollup {
     uint256 baseStake;
     uint256 challengePeriod;
 
-    function rejectNextNode(uint256 successorWithStake, address staker) external {
-        verifyRejectable(successorWithStake, staker);
+    function rejectNextNode(uint256 successorWithStake, address stakerAddress) external {
+        // No stake has been placed during the last challengePeriod blocks
+        require(block.number - lastStakeBlock >= challengePeriod);
+
+        Staker storage staker = stakers[stakerAddress];
+        // TODO: verify staker is not a zombie
+
+        // Confirm that someone is staked on some sibling node
+        Node stakedSiblingNode = nodes[successorWithStake];
+        // stakedSiblingNode is a child of latestConfirmed
+        require(stakedSiblingNode.prev() == latestConfirmed);
+        // staker is actually staked on stakedSiblingNode
+        require(stakedSiblingNode.stakers(stakerAddress));
+
+        nodes[firstUnresolvedNode].confirmInvalid();
+
+        discardUnresolvedNode();
+    }
+
+    // If the node previous to this one is not the latest confirmed, we can reject immediately
+    function rejectNextNodeOutOfOrder() external {
+        // No stake has been placed during the last challengePeriod blocks
+        require(block.number - lastStakeBlock >= challengePeriod);
+
+        nodes[firstUnresolvedNode].confirmOutOfOrder(latestConfirmed);
+
         discardUnresolvedNode();
     }
 
     function confirmNextNode() external {
-        Node storage node = nodes[firstUnresolvedNode];
-        // Verify the blocks deadline has passed
-        require(node.deadlineBlock <= block.number);
-
-        // All non-zombie stakers are staked on this node, and no zombie stakers are staked here
-        require(stakerCount == node.stakerCount);
-        // There is at least one non-zombie staker
-        require(stakerCount > 0);
-
         // No stake has been placed during the last challengePeriod blocks
         require(block.number - lastStakeBlock >= challengePeriod);
 
+        nodes[firstUnresolvedNode].confirmValid(stakerCount);
         discardUnresolvedNode();
     }
 
     function newStakeOnExistingNode(uint256 nodeNum) external payable {
         verifyCanStake();
-        Node storage node = nodes[nodeNum];
-        require(node.prev == latestConfirmed);
+        Node node = nodes[nodeNum];
+        require(node.prev() == latestConfirmed);
         addStaker(nodeNum, node);
     }
 
@@ -68,24 +77,24 @@ contract Rollup {
         // TODO: Verify that the preconditions of assertion are consistent with the postconditions of prev
         // TODO: Verify that assertion meets the minimum size requirement
         // TODO: Verify that assertion meets the minimum Delta time requirement
-        nodes[nodeNum] = Node(
+        Node node = new Node(
             0, // TODO: assertion hash
             latestConfirmed,
             block.number,
             0, // TODO: deadline block
             1
         );
-        Node storage node = nodes[nodeNum];
         addStaker(nodeNum, node);
+        nodes[nodeNum] = node;
         highestNode++;
     }
 
     function addStakeOnExistingNode(uint256 nodeNum) external {
         Staker storage staker = stakers[msg.sender];
         // TODO: Verify that caller is a non-zombie staker
-        Node storage node = nodes[nodeNum];
-        require(staker.latestStakedNode == node.prev);
-        node.stakers[msg.sender] = true;
+        Node node = nodes[nodeNum];
+        require(staker.latestStakedNode == node.prev());
+        node.addStaker(msg.sender);
         staker.latestStakedNode = nodeNum;
     }
 
@@ -98,15 +107,15 @@ contract Rollup {
         // TODO: Verify that assertion meets the minimum size requirement
         // TODO: Verify that assertion meets the minimum Delta time requirement
 
-        nodes[nodeNum] = Node(
+        Node node = new Node(
             0, // TODO: assertion hash
             staker.latestStakedNode,
             block.number,
             0, // TODO: deadline block
             1
         );
-        Node storage node = nodes[nodeNum];
-        node.stakers[msg.sender] = true;
+        node.addStaker(msg.sender);
+        nodes[nodeNum] = node;
         staker.latestStakedNode = nodeNum;
     }
 
@@ -145,8 +154,7 @@ contract Rollup {
     function removeZombieStake(uint256 nodeNum, address stakerAddress) external {
         // TODO: Verify that zombieStaker is a zombie
         require(nodeNum >= firstUnresolvedNode);
-        Node storage node = nodes[nodeNum];
-        node.stakers[stakerAddress] = false;
+        nodes[nodeNum].removeStaker(stakerAddress);
     }
 
     function createChallenge(
@@ -157,16 +165,16 @@ contract Rollup {
     ) external {
         Staker storage staker1 = stakers[staker1Address];
         Staker storage staker2 = stakers[staker2Address];
-        Node storage node1 = nodes[nodeNum1];
-        Node storage node2 = nodes[nodeNum2];
+        Node node1 = nodes[nodeNum1];
+        Node node2 = nodes[nodeNum2];
         // TODO: Verify that staker1 is not a zombie
         // TODO: Verify that staker2 is not a zombie
         require(staker1.currentChallenge == address(0));
-        require(node1.stakers[staker1Address]);
+        require(node1.stakers(staker1Address));
         require(staker2.currentChallenge == address(0));
-        require(node2.stakers[staker2Address]);
+        require(node2.stakers(staker2Address));
 
-        require(node1.prev == node2.prev);
+        require(node1.prev() == node2.prev());
         require(latestConfirmed < nodeNum1);
         require(nodeNum1 < nodeNum2);
 
@@ -200,7 +208,7 @@ contract Rollup {
     }
 
     function currentRequiredStake() public view returns (uint256) {
-        uint256 latestConfirmedAge = block.number - nodes[latestConfirmed].deadlineBlock;
+        uint256 latestConfirmedAge = block.number - nodes[latestConfirmed].deadlineBlock();
         uint256 challengePeriodsPassed = latestConfirmedAge / challengePeriod;
         if (challengePeriodsPassed > 255) {
             challengePeriodsPassed = 255;
@@ -214,45 +222,19 @@ contract Rollup {
 
     function discardUnresolvedNode() private {
         // node can be discarded
+        nodes[firstUnresolvedNode] = Node(0);
         firstUnresolvedNode++;
-    }
-
-    function verifyRejectable(uint256 successorWithStake, address stakerAddress) private view {
-        Node storage node = nodes[firstUnresolvedNode];
-
-        // If the node previous to this one is not the latest confirmed, we can reject immediately
-        if (node.prev != latestConfirmed) {
-            return;
-        }
-
-        // Verify the blocks deadline has passed
-        require(node.deadlineBlock <= block.number);
-
-        // No stake has been placed during the last challengePeriod blocks
-        require(block.number - lastStakeBlock >= challengePeriod);
-
-        // Verify that no staker is staked on this node
-        require(node.stakerCount == 0);
-
-        Staker storage staker = stakers[stakerAddress];
-        // TODO: verify staker is not a zombie
-
-        Node storage stakedSiblingNode = nodes[successorWithStake];
-        // stakedSiblingNode is a child of latestConfirmed
-        require(stakedSiblingNode.prev == latestConfirmed);
-        // staker is actually staked on stakedSiblingNode
-        require(stakedSiblingNode.stakers[stakerAddress]);
     }
 
     function verifyCanStake() private {
         // Verify that sender is not already a staker
         // TODO: Can we assume that all stakers are staked on the latest confirmed?
-        require(!nodes[latestConfirmed].stakers[msg.sender]);
+        require(!nodes[latestConfirmed].stakers(msg.sender));
         require(msg.value >= currentRequiredStake());
     }
 
-    function addStaker(uint256 nodeNum, Node storage node) private {
+    function addStaker(uint256 nodeNum, Node node) private {
         stakers[msg.sender] = Staker(nodeNum, msg.value, address(0));
-        node.stakers[msg.sender] = true;
+        node.addStaker(msg.sender);
     }
 }
