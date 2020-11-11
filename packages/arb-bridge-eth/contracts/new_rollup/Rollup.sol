@@ -9,6 +9,7 @@ contract Rollup {
         uint256 amountStaked;
         // currentChallenge is 0 if staker is not in a challenge
         address currentChallenge;
+        bool isZombie;
     }
 
     uint256 latestConfirmed;
@@ -26,8 +27,7 @@ contract Rollup {
         // No stake has been placed during the last challengePeriod blocks
         require(block.number - lastStakeBlock >= challengePeriod);
 
-        Staker storage staker = stakers[stakerAddress];
-        // TODO: verify staker is not a zombie
+        require(!stakers[stakerAddress].isZombie);
 
         // Confirm that someone is staked on some sibling node
         Node stakedSiblingNode = nodes[successorWithStake];
@@ -91,7 +91,7 @@ contract Rollup {
 
     function addStakeOnExistingNode(uint256 nodeNum) external {
         Staker storage staker = stakers[msg.sender];
-        // TODO: Verify that caller is a non-zombie staker
+        require(!staker.isZombie);
         Node node = nodes[nodeNum];
         require(staker.latestStakedNode == node.prev());
         node.addStaker(msg.sender);
@@ -101,7 +101,7 @@ contract Rollup {
     function addStakeOnNewNode(uint256 nodeNum) external {
         require(nodeNum == highestNode + 1);
         Staker storage staker = stakers[msg.sender];
-        // TODO: Verify that caller is a non-zombie staker
+        require(!staker.isZombie);
 
         // TODO: Verify that the preconditions of assertion are consistent with the postconditions of prev
         // TODO: Verify that assertion meets the minimum size requirement
@@ -121,7 +121,7 @@ contract Rollup {
 
     function returnOldDeposit(address payable stakerAddress) external {
         Staker memory staker = stakers[stakerAddress];
-        // Verify that staker is a non-zombie staker
+        require(!staker.isZombie);
         require(staker.latestStakedNode <= latestConfirmed);
         require(staker.currentChallenge == address(0));
 
@@ -132,14 +132,14 @@ contract Rollup {
 
     function addToDeposit() external payable {
         Staker memory staker = stakers[msg.sender];
-        // Verify that staker is a non-zombie staker
+        require(!staker.isZombie);
         require(staker.currentChallenge == address(0));
         staker.amountStaked += msg.value;
     }
 
     function reduceDeposit(uint256 maxReduction) external {
         Staker memory staker = stakers[msg.sender];
-        // Verify that staker is a non-zombie staker
+        require(!staker.isZombie);
         require(staker.currentChallenge == address(0));
         uint256 currentRequired = currentRequiredStake();
         require(staker.amountStaked > currentRequired);
@@ -152,7 +152,7 @@ contract Rollup {
     }
 
     function removeZombieStake(uint256 nodeNum, address stakerAddress) external {
-        // TODO: Verify that zombieStaker is a zombie
+        require(stakers[stakerAddress].isZombie);
         require(nodeNum >= firstUnresolvedNode);
         nodes[nodeNum].removeStaker(stakerAddress);
     }
@@ -167,10 +167,12 @@ contract Rollup {
         Staker storage staker2 = stakers[staker2Address];
         Node node1 = nodes[nodeNum1];
         Node node2 = nodes[nodeNum2];
-        // TODO: Verify that staker1 is not a zombie
-        // TODO: Verify that staker2 is not a zombie
+
+        require(!staker1.isZombie);
         require(staker1.currentChallenge == address(0));
         require(node1.stakers(staker1Address));
+
+        require(!staker2.isZombie);
         require(staker2.currentChallenge == address(0));
         require(node2.stakers(staker2Address));
 
@@ -205,6 +207,7 @@ contract Rollup {
         }
 
         loser.amountStaked = 0;
+        loser.isZombie = true;
     }
 
     function currentRequiredStake() public view returns (uint256) {
@@ -234,7 +237,8 @@ contract Rollup {
     }
 
     function addStaker(uint256 nodeNum, Node node) private {
-        stakers[msg.sender] = Staker(nodeNum, msg.value, address(0));
+        require(stakers[msg.sender].latestStakedNode == 0, "ALREADY_STAKED");
+        stakers[msg.sender] = Staker(nodeNum, msg.value, address(0), false);
         node.addStaker(msg.sender);
     }
 }
