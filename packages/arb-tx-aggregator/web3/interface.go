@@ -77,7 +77,9 @@ type TransactionResult struct {
 	S                *hexutil.Big    `json:"s"`
 
 	// Arbitrum Specific Fields
-	L1SeqNum        *hexutil.Big `json:"l1SequenceNumber"`
-	ParentRequestId *common.Hash `json:"parentRequestId"`
-	IndexInParent   *hexutil.Big `json:"indexInParent"`
+	L1SeqNum        *hexutil.Big    `json:"l1SequenceNumber"`
+	ParentRequestId *common.Hash    `json:"parentRequestId"`
+	IndexInParent   *hexutil.Big    `json:"indexInParent"`
+	ArbType         hexutil.Uint64  `json:"arbType"`
+	ArbL2SubType    *hexutil.Uint64 `json:"arbSubType"`
 }

@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/ethereum/go-ethereum/trie"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -226,47 +225,22 @@ func (m *Server) GetTxInBlockAtIndexResults(res *evm.BlockInfo, index uint64) (*
 	return evm.NewTxResultFromValue(avmLog)
 }
 
-func (m *Server) GetBlock(ctx context.Context, height uint64) (*types.Block, error) {
-	l1BlockInfo, err := m.Client.BlockInfoByNumber(ctx, new(big.Int).SetUint64(height))
-	if err != nil {
-		return nil, err
-	}
-	header, err := m.GetBlockHeaderByNumber(ctx, height)
-	if err != nil {
-		return nil, err
-	}
-
-	block, err := m.BlockInfo(height)
-	if err != nil {
-		return nil, err
-	}
-
-	blockInfo, err := m.GetBlockInfo(block)
-	if err != nil {
-		return nil, err
-	}
-
-	results, err := m.GetBlockResults(blockInfo)
-	if err != nil {
-		return nil, err
-	}
-
-	transactions := make([]*types.Transaction, 0, len(results))
-	receipts := make([]*types.Receipt, 0, len(results))
-	for _, res := range results {
-		receipt := res.ToEthReceipt(common.NewHashFromEth(l1BlockInfo.Hash))
-		receipts = append(receipts, receipt)
-		tx, err := GetTransaction(res.IncomingRequest)
-		if err != nil {
-			return nil, err
-		}
-		transactions = append(transactions, tx)
-	}
-
-	return types.NewBlock(header, transactions, nil, receipts, new(trie.Trie)), nil
+type ProcessedTx struct {
+	Tx        *types.Transaction
+	Kind      inbox.Type
+	L2Subtype *message.L2SubType
 }
 
-func GetTransaction(msg evm.IncomingRequest) (*types.Transaction, error) {
+func GetTransaction(msg evm.IncomingRequest) (*ProcessedTx, error) {
+	// Special handling for buddy deploy
+	if msg.Kind == message.L2BuddyDeploy {
+		buddyDeployMessage := message.NewBuddyDeploymentFromData(msg.Data)
+		return &ProcessedTx{
+			Tx:   buddyDeployMessage.AsEthTx(),
+			Kind: msg.Kind,
+		}, nil
+	}
+
 	if msg.Kind != message.L2Type {
 		return nil, errors.New("result is not a transaction")
 	}
@@ -278,7 +252,12 @@ func GetTransaction(msg evm.IncomingRequest) (*types.Transaction, error) {
 	if !ok {
 		return nil, errors.New("message not convertible to receipt")
 	}
-	return ethMsg.AsEthTx(), nil
+	l2Type := l2msg.L2Type()
+	return &ProcessedTx{
+		Tx:        ethMsg.AsEthTx(),
+		Kind:      msg.Kind,
+		L2Subtype: &l2Type,
+	}, nil
 }
 
 func (m *Server) AdjustGas(msg message.Call) message.Call {

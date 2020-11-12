@@ -304,6 +304,15 @@ func (t ContractTransaction) L2Type() L2SubType {
 	return ContractTransactionType
 }
 
+func (t ContractTransaction) AsEthTx() *types.Transaction {
+	emptyAddress := common.Address{}
+	if t.DestAddress == emptyAddress {
+		return types.NewContractCreation(0, t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
+	} else {
+		return types.NewTransaction(0, t.DestAddress.ToEthAddress(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
+	}
+}
+
 type Call struct {
 	BasicTx
 }
