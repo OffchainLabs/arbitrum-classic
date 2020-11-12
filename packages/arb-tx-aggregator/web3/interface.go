@@ -81,5 +81,5 @@ type TransactionResult struct {
 	ParentRequestId *common.Hash    `json:"parentRequestId"`
 	IndexInParent   *hexutil.Big    `json:"indexInParent"`
 	ArbType         hexutil.Uint64  `json:"arbType"`
-	ArbL2SubType    *hexutil.Uint64 `json:"arbSubType"`
+	ArbSubType      *hexutil.Uint64 `json:"arbSubType"`
 }

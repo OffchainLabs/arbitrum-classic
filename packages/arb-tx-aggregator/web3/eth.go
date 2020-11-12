@@ -463,7 +463,7 @@ func makeTransactionResult(processedTx *aggregator.ProcessedTx, res *evm.TxResul
 		ParentRequestId:  parentRequestId,
 		IndexInParent:    (*hexutil.Big)(provenance.IndexInParent),
 		ArbType:          hexutil.Uint64(processedTx.Kind),
-		ArbL2SubType:     l2Subtype,
+		ArbSubType:       l2Subtype,
 	}
 }
 
