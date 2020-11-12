@@ -249,83 +249,113 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
         asserterResponded();
     }
 
-    function oneStepProofWithMessage(
-        bytes32 _firstInbox,
-        bytes32 _firstMessage,
-        bytes32 _firstLog,
-        bytes memory _proof,
-        uint8 _kind,
-        uint256 _blockNumber,
-        uint256 _timestamp,
-        address _sender,
-        uint256 _inboxSeqNum,
-        bytes memory _msgData
-    ) public asserterAction {
-        (uint64 gas, bytes32[5] memory fields) = executor.executeStepWithMessage(
-            _firstInbox,
-            _firstMessage,
-            _firstLog,
-            _proof,
-            _kind,
-            _blockNumber,
-            _timestamp,
-            _sender,
-            _inboxSeqNum,
-            _msgData
-        );
+    // function oneStepProofWithMessage(
+    //     bytes32 _firstInbox,
+    //     bytes32 _firstMessage,
+    //     bytes32 _firstLog,
+    //     bytes memory _proof,
+    //     uint8 _kind,
+    //     uint256 _blockNumber,
+    //     uint256 _timestamp,
+    //     address _sender,
+    //     uint256 _inboxSeqNum,
+    //     bytes memory _msgData
+    // ) public asserterAction {
+    //     (uint64 gas, bytes32[5] memory fields) = executor.executeStepWithMessage(
+    //         _firstInbox,
+    //         _firstMessage,
+    //         _firstLog,
+    //         _proof,
+    //         _kind,
+    //         _blockNumber,
+    //         _timestamp,
+    //         _sender,
+    //         _inboxSeqNum,
+    //         _msgData
+    //     );
 
-        checkProof(gas, _firstInbox, _firstMessage, _firstLog, fields);
-    }
+    //     checkProof(gas, _firstInbox, _firstMessage, _firstLog, fields);
+    // }
 
-    function oneStepProof(
-        bytes32 _firstInbox,
-        bytes32 _firstMessage,
-        bytes32 _firstLog,
-        bytes memory _proof
-    ) public asserterAction {
-        (uint64 gas, bytes32[5] memory fields) = executor.executeStep(
-            _firstInbox,
-            _firstMessage,
-            _firstLog,
-            _proof
-        );
+    // function oneStepProofFirst(
+    //     bytes32 _firstInbox,
+    //     bytes32 _firstMessage,
+    //     bytes32 _firstLog,
+    //     bytes memory _proof
+    // ) public asserterAction {
+    //     (uint64 gas, bytes32[5] memory fields) = executor.executeStep(
+    //         _firstInbox,
+    //         _firstMessage,
+    //         _firstLog,
+    //         _proof
+    //     );
 
-        checkProof(gas, _firstInbox, _firstMessage, _firstLog, fields);
-    }
+    //     (bytes32 preconditionHash, bytes32 assertionsHash) = calculateProof(gas, _firstInbox, _firstMessage, _firstLog, fields);
 
-    function checkProof(
-        uint64 gas,
-        bytes32 firstInbox,
-        bytes32 firstMessage,
-        bytes32 firstLog,
-        bytes32[5] memory fields
-    ) private {
-        bytes32 startMachineHash = fields[0];
-        bytes32 endMachineHash = fields[1];
-        bytes32 afterInboxHash = fields[2];
-        bytes32 afterMessagesHash = fields[3];
-        bytes32 afterLogsHash = fields[4];
-        // The one step proof already guarantees us that firstMessage and lastMessage
-        // are either one or 0 messages apart and the same is true for logs. Therefore
-        // we can infer the message count and log count based on whether the fields
-        // are equal or not
-        ChallengeUtils.ExecutionAssertion memory assertion = ChallengeUtils.ExecutionAssertion(
-            1,
-            gas,
-            startMachineHash,
-            endMachineHash,
-            firstInbox,
-            afterInboxHash,
-            firstMessage,
-            afterMessagesHash,
-            firstMessage == afterMessagesHash ? 0 : 1,
-            firstLog,
-            afterLogsHash,
-            firstLog == afterLogsHash ? 0 : 1
-        );
-        requireMatchesPrevState(assertion.hash());
+    //     requireMatchesPrevState(
+    //         keccak256(abi.encodePacked(preconditionHash, assertionHash, 1))
+    //     );
 
-        emit OneStepProofCompleted();
-        _asserterWin();
-    }
+    //     emit OneStepProofCompleted();
+    //     _asserterWin();
+    // }
+
+    // function oneStepProofOther(
+    //     bytes32 _firstInbox,
+    //     bytes32 _firstMessage,
+    //     bytes32 _firstLog,
+    //     bytes memory _proof
+    // ) public asserterAction {
+    //     (uint64 gas, bytes32[5] memory fields) = executor.executeStep(
+    //         _firstInbox,
+    //         _firstMessage,
+    //         _firstLog,
+    //         _proof
+    //     );
+
+    //     (bytes32 preconditionHash, bytes32 assertionsHash) = calculateProof(gas, _firstInbox, _firstMessage, _firstLog, fields);
+
+    //     requireMatchesPrevState(
+    //         keccak256(abi.encodePacked(preconditionHash, assertionHash, 1))
+    //     );
+
+    //     emit OneStepProofCompleted();
+    //     _asserterWin();
+    // }
+
+    // function calculateProof(
+    //     uint64 gas,
+    //     bytes32 firstInbox,
+    //     bytes32 firstMessage,
+    //     bytes32 firstLog,
+    //     bytes32[5] memory fields
+    // ) private returns (bytes32, bytes32) {
+    //     bytes32 startMachineHash = fields[0];
+    //     bytes32 endMachineHash = fields[1];
+    //     bytes32 afterInboxHash = fields[2];
+    //     bytes32 afterMessagesHash = fields[3];
+    //     bytes32 afterLogsHash = fields[4];
+
+    //     bytes32 preconditionHash = hash(BisectionPrecondition(
+    //         startMachineHash,
+    //         firstInbox,
+    //         firstMessage,
+    //         firstLog
+    //     ));
+
+    //     // The one step proof already guarantees us that firstMessage and lastMessage
+    //     // are either one or 0 messages apart and the same is true for logs. Therefore
+    //     // we can infer the message count and log count based on whether the fields
+    //     // are equal or not
+    //     bytes32 assertionHash = hash(BisectionAssertion(
+    //         gas,
+    //         endMachineHash,
+    //         afterInboxHash,
+    //         afterMessagesHash,
+    //         firstMessage == afterMessagesHash ? 0 : 1,
+    //         afterLogsHash,
+    //         firstLog == afterLogsHash ? 0 : 1
+    //     ));
+    //     return (preconditionHash, assertionHash);
+    // }
 }
