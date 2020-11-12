@@ -99,72 +99,73 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
         _bisectAssertion(_preconditionHash, _assertionHash, _numSteps, _bisectionHashes);
     }
 
-    // fields1
-    //   _beforeMachineHash
-    //   _beforeInboxAcc
-    //   _beforeMessageAcc
-    //   _beforeLogAcc
+    // _beforeMachine
+    //   _machineHash
+    //   _inboxAcc
+    //   _messageAcc
+    //   _logAcc
+    function makeBisectionPrecondition(bytes32[4] memory _beforeMachine)
+        private
+        pure
+        returns (BisectionPrecondition memory)
+    {
+        return
+            BisectionPrecondition(
+                _beforeMachine[0],
+                _beforeMachine[1],
+                _beforeMachine[2],
+                _beforeMachine[3]
+            );
+    }
 
-    //   _afterMachineHashA1
-    //   _afterInboxAccA1
-    //   _afterMessageAccA1
-    //   _afterLogAccA1
+    // _afterMachine
+    //   _machineHash
+    //   _inboxAcc
+    //   _messageAcc
+    //   _logAcc
 
-    //   _afterMachineHashA2
-    //   _afterInboxAccA2
-    //   _afterMessageAccA2
-    //   _afterLogAccA2
-
-    // fields2
-    //   _totalStepsA1
-    //   _totalStepsA2
-    //   _gasUsedA1
-    //   _gasUsedA2
-    //   _messageCountA1
-    //   _messageCountA2
-    //   _logCountA1
-    //   _logCountA2
+    // _assertionData
+    //   _totalSteps
+    //   _gasUsed
+    //   _messageCount
+    //   _logCount
+    function makeBisectionAssertion(
+        bytes32[4] memory _afterMachine,
+        uint64[4] memory _assertionData
+    ) private pure returns (BisectionAssertion memory) {
+        return
+            BisectionAssertion(
+                _assertionData[1],
+                _afterMachine[0],
+                _afterMachine[1],
+                _afterMachine[2],
+                _assertionData[2],
+                _afterMachine[3],
+                _assertionData[3]
+            );
+    }
 
     function bisectAssertionOther(
-        bytes32[12] memory _assertionFields1,
-        uint64[8] memory _assertionFields2,
+        bytes32[4] memory _beforeMachine,
+        bytes32[4] memory _afterA1Machine,
+        bytes32[4] memory _afterA2Machine,
+        uint64[4] memory _assertion1Fields,
+        uint64[4] memory _assertion2Fields,
         bytes32[] memory _bisectionHashes
     ) public {
         // steps of A2 >= steps of A1
-        require(_assertionFields2[1] >= _assertionFields2[0]);
+        require(_assertion2Fields[0] >= _assertion1Fields[0]);
         // gas of A2 >= gas of A1
-        require(_assertionFields2[3] >= _assertionFields2[2]);
+        require(_assertion2Fields[1] >= _assertion1Fields[1]);
         // message count of A2 >= message count of A1
-        require(_assertionFields2[5] >= _assertionFields2[4]);
+        require(_assertion2Fields[2] >= _assertion1Fields[2]);
         // log count of A2 >= log count of A1
-        require(_assertionFields2[7] >= _assertionFields2[6]);
+        require(_assertion2Fields[3] >= _assertion1Fields[3]);
 
-        BisectionPrecondition memory pre = BisectionPrecondition(
-            _assertionFields1[0],
-            _assertionFields1[1],
-            _assertionFields1[2],
-            _assertionFields1[3]
-        );
+        BisectionPrecondition memory pre = makeBisectionPrecondition(_beforeMachine);
 
-        BisectionAssertion memory a1 = BisectionAssertion(
-            _assertionFields2[2],
-            _assertionFields1[4],
-            _assertionFields1[5],
-            _assertionFields1[6],
-            _assertionFields2[4],
-            _assertionFields1[7],
-            _assertionFields2[6]
-        );
-
-        BisectionAssertion memory a2 = BisectionAssertion(
-            _assertionFields2[3],
-            _assertionFields1[8],
-            _assertionFields1[9],
-            _assertionFields1[10],
-            _assertionFields2[5],
-            _assertionFields1[11],
-            _assertionFields2[6]
-        );
+        BisectionAssertion memory a1 = makeBisectionAssertion(_afterA1Machine, _assertion1Fields);
+        BisectionAssertion memory a2 = makeBisectionAssertion(_afterA2Machine, _assertion2Fields);
 
         requireMatchesPrevState(
             keccak256(
@@ -172,35 +173,25 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
                     hash(pre),
                     hash(a1),
                     hash(a2),
-                    _assertionFields2[1] - _assertionFields2[0]
+                    _assertion2Fields[0] - _assertion1Fields[0]
                 )
             )
         );
 
-        bytes32 newPreHash = hash(
-            BisectionPrecondition(
-                _assertionFields1[4],
-                _assertionFields1[5],
-                _assertionFields1[6],
-                _assertionFields1[7]
-            )
+        bytes32 newPreHash = hash(makeBisectionPrecondition(_afterA1Machine));
+
+        uint64[4] memory assertionDiffFields = [
+            _assertion2Fields[0] - _assertion1Fields[0],
+            _assertion2Fields[1] - _assertion1Fields[1],
+            _assertion2Fields[2] - _assertion1Fields[2],
+            _assertion2Fields[3] - _assertion1Fields[3]
+        ];
+        BisectionAssertion memory aDiff = makeBisectionAssertion(
+            _afterA2Machine,
+            assertionDiffFields
         );
 
-        uint64 stepsDiff = _assertionFields2[3] - _assertionFields2[2];
-
-        bytes32 aDiffHash = hash(
-            BisectionAssertion(
-                stepsDiff,
-                _assertionFields1[8],
-                _assertionFields1[9],
-                _assertionFields1[10],
-                _assertionFields2[5] - _assertionFields2[4],
-                _assertionFields1[11],
-                _assertionFields2[7] - _assertionFields2[6]
-            )
-        );
-
-        _bisectAssertion(newPreHash, aDiffHash, stepsDiff, _bisectionHashes);
+        _bisectAssertion(newPreHash, hash(aDiff), assertionDiffFields[0], _bisectionHashes);
     }
 
     function _bisectAssertion(
