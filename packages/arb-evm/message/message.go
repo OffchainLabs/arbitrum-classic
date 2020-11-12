@@ -19,6 +19,7 @@ package message
 import (
 	"errors"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 
@@ -116,4 +117,8 @@ func (t BuddyDeployment) AsData() []byte {
 	ret = append(ret, math.U256Bytes(t.Payment)...)
 	ret = append(ret, t.Data...)
 	return ret
+}
+
+func (t BuddyDeployment) AsEthTx() *types.Transaction {
+	return types.NewContractCreation(0, t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
 }

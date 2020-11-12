@@ -3,10 +3,11 @@ package web3
 import (
 	"context"
 	"errors"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/trie"
 	errors2 "github.com/pkg/errors"
+	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -191,7 +192,17 @@ func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult,
 	if err != nil {
 		return nil, err
 	}
-	return s.makeTransactionResult(res)
+	tx, err := aggregator.GetTransaction(res.IncomingRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	blockInfo, err := s.srv.BlockInfo(res.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
+	if err != nil {
+		return nil, err
+	}
+
+	return makeTransactionResult(tx, res, blockInfo.Hash.ToEthHash()), nil
 }
 
 func (s *Server) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint64) (*TransactionResult, error) {
@@ -253,6 +264,7 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 		BlockNumber:       (*hexutil.Big)(receipt.BlockNumber),
 		TransactionIndex:  hexutil.Uint64(receipt.TransactionIndex),
 		ReturnCode:        hexutil.Uint64(result.ResultCode),
+		ReturnData:        result.ReturnData,
 	}, nil
 }
 
@@ -318,7 +330,11 @@ func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint
 	if err != nil {
 		return nil, err
 	}
-	return s.makeTransactionResult(txRes)
+	tx, err := aggregator.GetTransaction(txRes.IncomingRequest)
+	if err != nil {
+		return nil, err
+	}
+	return makeTransactionResult(tx, txRes, block.Hash.ToEthHash()), nil
 }
 
 func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTxData bool) (*GetBlockResult, error) {
@@ -339,23 +355,48 @@ func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTx
 
 	bloom, gasLimit, gasUsed := aggregator.GetBlockFields(block, blockInfo)
 
+	processedTxes := make([]*aggregator.ProcessedTx, 0, len(results))
+	safeResults := make([]*evm.TxResult, 0, len(results))
+	for _, res := range results {
+		kind := res.IncomingRequest.Kind
+		// Ignore other message types
+		if kind != message.L2Type && kind != message.L2BuddyDeploy {
+			continue
+		}
+		tx, err := aggregator.GetTransaction(res.IncomingRequest)
+		if err != nil {
+			log.Println("Couldn't return transaction for request", res.IncomingRequest.MessageID)
+			continue
+		}
+		processedTxes = append(processedTxes, tx)
+		safeResults = append(safeResults, res)
+	}
+
 	var transactions interface{}
 	if includeTxData {
-		txes := make([]*TransactionResult, 0, len(results))
-		for _, res := range results {
-			txRes, err := s.makeTransactionResult(res)
-			if err != nil {
-				return nil, err
-			}
-			txes = append(txes, txRes)
+		txResults := make([]*TransactionResult, 0, len(safeResults))
+		for i, res := range safeResults {
+			txResults = append(txResults, makeTransactionResult(processedTxes[i], res, blockHash))
 		}
-		transactions = txes
+		transactions = txResults
 	} else {
-		txes := make([]hexutil.Bytes, 0, len(results))
-		for _, res := range results {
-			txes = append(txes, res.IncomingRequest.MessageID.Bytes())
+		txHashes := make([]hexutil.Bytes, 0, len(safeResults))
+		for _, res := range safeResults {
+			txHashes = append(txHashes, res.IncomingRequest.MessageID.Bytes())
 		}
-		transactions = txes
+		transactions = processedTxes
+	}
+
+	var txRoot common.Hash
+	if len(processedTxes) != 0 {
+
+		txes := make([]*types.Transaction, 0, len(processedTxes))
+		for _, tx := range processedTxes {
+			txes = append(txes, tx.Tx)
+		}
+		txRoot = types.DeriveSha(types.Transactions(txes), new(trie.Trie))
+	} else {
+		txRoot = types.EmptyRootHash
 	}
 	size := uint64(0)
 	uncles := make([]hexutil.Bytes, 0)
@@ -367,7 +408,7 @@ func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTx
 		Nonce:            &header.Nonce,
 		Sha3Uncles:       header.UncleHash.Bytes(),
 		LogsBloom:        bloom.Bytes(),
-		TransactionsRoot: header.TxHash.Bytes(),
+		TransactionsRoot: txRoot.Bytes(),
 		StateRoot:        header.Root.Bytes(),
 		ReceiptsRoot:     header.ReceiptHash.Bytes(),
 		Miner:            header.Coinbase.Bytes(),
@@ -383,19 +424,11 @@ func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTx
 	}, nil
 }
 
-func (s *Server) makeTransactionResult(res *evm.TxResult) (*TransactionResult, error) {
-	tx, err := aggregator.GetTransaction(res.IncomingRequest)
-	if err != nil {
-		return nil, err
-	}
-	blockInfo, err := s.srv.BlockInfo(res.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
-	if err != nil {
-		return nil, err
-	}
+func makeTransactionResult(processedTx *aggregator.ProcessedTx, res *evm.TxResult, blockHash common.Hash) *TransactionResult {
+	tx := processedTx.Tx
 	vVal, rVal, sVal := tx.RawSignatureValues()
 	txIndex := res.TxIndex.Uint64()
 	blockNum := res.IncomingRequest.ChainTime.BlockNum.AsInt()
-	blockHash := blockInfo.Hash.ToEthHash()
 
 	provenance := res.IncomingRequest.Provenance
 	var parentRequestId *common.Hash
@@ -405,25 +438,33 @@ func (s *Server) makeTransactionResult(res *evm.TxResult) (*TransactionResult, e
 		parentRequestId = &h
 	}
 
+	var l2Subtype *hexutil.Uint64
+	if processedTx.L2Subtype != nil {
+		st := hexutil.Uint64(*processedTx.L2Subtype)
+		l2Subtype = &st
+	}
+
 	return &TransactionResult{
 		BlockHash:        &blockHash,
 		BlockNumber:      (*hexutil.Big)(blockNum),
 		From:             res.IncomingRequest.Sender.ToEthAddress(),
 		Gas:              hexutil.Uint64(tx.Gas()),
 		GasPrice:         (*hexutil.Big)(tx.GasPrice()),
-		Hash:             tx.Hash(),
+		Hash:             res.IncomingRequest.MessageID.ToEthHash(),
 		Input:            tx.Data(),
 		Nonce:            hexutil.Uint64(tx.Nonce()),
 		To:               tx.To(),
 		TransactionIndex: (*hexutil.Uint64)(&txIndex),
 		Value:            (*hexutil.Big)(tx.Value()),
 		V:                (*hexutil.Big)(vVal),
-		R:                math.U256Bytes(rVal),
-		S:                math.U256Bytes(sVal),
+		R:                (*hexutil.Big)(rVal),
+		S:                (*hexutil.Big)(sVal),
 		L1SeqNum:         (*hexutil.Big)(provenance.L1SeqNum),
 		ParentRequestId:  parentRequestId,
 		IndexInParent:    (*hexutil.Big)(provenance.IndexInParent),
-	}, nil
+		ArbType:          hexutil.Uint64(processedTx.Kind),
+		ArbSubType:       l2Subtype,
+	}
 }
 
 func buildCallMsg(args CallTxArgs) (arbcommon.Address, message.Call) {
