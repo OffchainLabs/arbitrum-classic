@@ -268,28 +268,34 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
     //     checkProof(gas, _firstInbox, _firstMessage, _firstLog, fields);
     // }
 
-    // function oneStepProofFirst(
-    //     bytes32 _firstInbox,
-    //     bytes32 _firstMessage,
-    //     bytes32 _firstLog,
-    //     bytes memory _proof
-    // ) public asserterAction {
-    //     (uint64 gas, bytes32[5] memory fields) = executor.executeStep(
-    //         _firstInbox,
-    //         _firstMessage,
-    //         _firstLog,
-    //         _proof
-    //     );
+    function oneStepProofFirst(
+        bytes32 _firstInbox,
+        bytes32 _firstMessage,
+        bytes32 _firstLog,
+        bytes memory _proof
+    ) public asserterAction {
+        (uint64 gas, bytes32[5] memory fields) = executor.executeStep(
+            _firstInbox,
+            _firstMessage,
+            _firstLog,
+            _proof
+        );
 
-    //     (bytes32 preconditionHash, bytes32 assertionsHash) = calculateProof(gas, _firstInbox, _firstMessage, _firstLog, fields);
+        (bytes32 preconditionHash, bytes32 assertionHash) = calculateProof(
+            gas,
+            _firstInbox,
+            _firstMessage,
+            _firstLog,
+            fields
+        );
 
-    //     requireMatchesPrevState(
-    //         keccak256(abi.encodePacked(preconditionHash, assertionHash, 1))
-    //     );
+        requireMatchesPrevState(
+            keccak256(abi.encodePacked(preconditionHash, assertionHash, uint64(1)))
+        );
 
-    //     emit OneStepProofCompleted();
-    //     _asserterWin();
-    // }
+        emit OneStepProofCompleted();
+        _asserterWin();
+    }
 
     // function oneStepProofOther(
     //     bytes32 _firstInbox,
@@ -314,39 +320,39 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
     //     _asserterWin();
     // }
 
-    // function calculateProof(
-    //     uint64 gas,
-    //     bytes32 firstInbox,
-    //     bytes32 firstMessage,
-    //     bytes32 firstLog,
-    //     bytes32[5] memory fields
-    // ) private returns (bytes32, bytes32) {
-    //     bytes32 startMachineHash = fields[0];
-    //     bytes32 endMachineHash = fields[1];
-    //     bytes32 afterInboxHash = fields[2];
-    //     bytes32 afterMessagesHash = fields[3];
-    //     bytes32 afterLogsHash = fields[4];
+    // fields
+    //  startMachineHash
+    //  endMachineHash
+    //  afterInboxHash
+    //  afterMessagesHash
+    //  afterLogsHash
 
-    //     bytes32 preconditionHash = hash(BisectionPrecondition(
-    //         startMachineHash,
-    //         firstInbox,
-    //         firstMessage,
-    //         firstLog
-    //     ));
+    function calculateProof(
+        uint64 gas,
+        bytes32 firstInbox,
+        bytes32 firstMessage,
+        bytes32 firstLog,
+        bytes32[5] memory fields
+    ) private pure returns (bytes32, bytes32) {
+        bytes32 preconditionHash = hash(
+            BisectionPrecondition(fields[0], firstInbox, firstMessage, firstLog)
+        );
 
-    //     // The one step proof already guarantees us that firstMessage and lastMessage
-    //     // are either one or 0 messages apart and the same is true for logs. Therefore
-    //     // we can infer the message count and log count based on whether the fields
-    //     // are equal or not
-    //     bytes32 assertionHash = hash(BisectionAssertion(
-    //         gas,
-    //         endMachineHash,
-    //         afterInboxHash,
-    //         afterMessagesHash,
-    //         firstMessage == afterMessagesHash ? 0 : 1,
-    //         afterLogsHash,
-    //         firstLog == afterLogsHash ? 0 : 1
-    //     ));
-    //     return (preconditionHash, assertionHash);
-    // }
+        // The one step proof already guarantees us that firstMessage and lastMessage
+        // are either one or 0 messages apart and the same is true for logs. Therefore
+        // we can infer the message count and log count based on whether the fields
+        // are equal or not
+        bytes32 assertionHash = hash(
+            BisectionAssertion(
+                gas,
+                fields[1],
+                fields[2],
+                fields[3],
+                firstMessage == fields[3] ? 0 : 1,
+                fields[4],
+                firstLog == fields[4] ? 0 : 1
+            )
+        );
+        return (preconditionHash, assertionHash);
+    }
 }
