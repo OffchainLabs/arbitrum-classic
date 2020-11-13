@@ -998,9 +998,10 @@ void getbuffer8(MachineState& m) {
     m.stack.prepForMod(2);
     auto offset = assumeInt64(assumeInt(m.stack[1]));
     Buffer& md = assumeBuffer(m.stack[0]);
+    auto res = uint256_t(md.get(offset));
     m.stack.popClear();
     m.stack.popClear();
-    m.stack.push(uint256_t(md.get(offset)));
+    m.stack.push(res);
     ++m.pc;
 }
 
@@ -1008,13 +1009,13 @@ void getbuffer64(MachineState& m) {
     m.stack.prepForMod(2);
     auto offset = assumeInt64(assumeInt(m.stack[1]));
     Buffer& md = assumeBuffer(m.stack[0]);
-    m.stack.popClear();
-    m.stack.popClear();
     uint64_t res = 0;
     for (int i = 0; i < 8; i++) {
         res = res << 8;
         res = res | md.get(offset+i);
     }
+    m.stack.popClear();
+    m.stack.popClear();
     m.stack.push(uint256_t(res));
     ++m.pc;
 }
@@ -1025,11 +1026,9 @@ void getbuffer256(MachineState& m) {
     m.stack.prepForMod(2);
     auto offset = assumeInt64(assumeInt(m.stack[1]));
     Buffer& md = assumeBuffer(m.stack[0]);
-    m.stack.popClear();
-    m.stack.popClear();
     uint256_t res = 0;
     // std::cerr << "hmm getting " << offset << std::endl;
-    std::vector<uint8_t> data;
+    std::vector<uint8_t> data(32);
     if ((offset + 31) % ALIGN < offset % ALIGN) {
         data = md.get_many(offset, ALIGN-(offset%ALIGN));
         auto data2 = md.get_many(offset + ALIGN-(offset%ALIGN), 32-(ALIGN-(offset%ALIGN)));
@@ -1055,6 +1054,8 @@ void getbuffer256(MachineState& m) {
         res = res << 8;
         res = res | data[i];
     }
+    m.stack.popClear();
+    m.stack.popClear();
     m.stack.push(res);
     ++m.pc;
 }
@@ -1065,12 +1066,13 @@ void setbuffer8(MachineState& m) {
     auto val_int = assumeInt(m.stack[2]);
     auto val = static_cast<uint8_t>(val_int);
     Buffer& md = assumeBuffer(m.stack[0]);
+    auto res = md.set(offset, val);
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();
     // std::cerr << "hmm setting " << offset << std::endl;
     // md.set(offset, val);
-    m.stack.push(md.set(offset, val));
+    m.stack.push(res);
     ++m.pc;
 }
 
@@ -1078,6 +1080,7 @@ void setbuffer64(MachineState& m) {
     m.stack.prepForMod(3);
     auto offset = assumeInt64(assumeInt(m.stack[1]));
     auto val = assumeInt64(assumeInt(m.stack[2]));
+    // The initial value is copied here, there might be a way to optimize that away
     Buffer res = assumeBuffer(m.stack[0]);
     m.stack.popClear();
     m.stack.popClear();
@@ -1094,6 +1097,7 @@ void setbuffer256(MachineState& m) {
     m.stack.prepForMod(3);
     auto offset = assumeInt64(assumeInt(m.stack[1]));
     auto val = assumeInt(m.stack[2]);
+    // The initial value is copied here, there might be a way to optimize that away
     Buffer res = assumeBuffer(m.stack[0]);
     m.stack.popClear();
     m.stack.popClear();
@@ -1111,7 +1115,7 @@ void setbuffer256(MachineState& m) {
         res = res.set_many(offset, data1);
         res = res.set_many(offset + ALIGN-(offset%ALIGN), data2);
         /*
-        std::cerr << "unaligned read "
+        std::cerr << "unaligned set "
             << offset
             << " len1 " << (1024-(offset%1024))
             << " pos2 " << (offset + 1024-(offset%1024))
