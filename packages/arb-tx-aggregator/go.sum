@@ -190,6 +190,7 @@ github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416/go.mod h1:NBIhNtsFMo
 github.com/nxadm/tail v1.4.4 h1:DQuhQpB1tVlglWS2hLQ5OV6B5r8aGxSrPc5Qo6uTN78=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/offchainlabs/arbitrum v0.7.2 h1:usZyIKIRT/8yw5jH7uHnntwS5fGt5NuUkYx6+Fv8+kU=
+github.com/offchainlabs/arbitrum/packages/arb-provider-go v0.7.1/go.mod h1:DtCRF5PKzE0cY7Vxd9UOrFHIitI2btg4svU93H3bQaE=
 github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator v0.7.1/go.mod h1:qJjvnJjDg33KWxiVj+6IU9kxmbSRzheyGt+fsJZHrfc=
 github.com/offchainlabs/arbitrum/packages/arb-validator v0.7.2 h1:9htTnpsbA3PysvNHlEt3w+TKZDGQYVlzK7BU+5f3KXk=
 github.com/offchainlabs/arbitrum/packages/arb-validator v0.7.2/go.mod h1:YZoyeGsg5G79/imza9O1aSAh05cbyovcUGHWrup2ytk=
