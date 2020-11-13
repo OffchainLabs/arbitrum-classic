@@ -14,7 +14,8 @@ A Value can have the following types:
 
 - Integer: a 256-bit integer;
 - Codepoint: a Value that represents a point in the executable code (implemented as (operation, nextcodehash);
-- Tuple: an array of up to 8 slots, numbered consecutively from zero, with each slot containing a Value.
+- Tuple: an array of up to 8 slots, numbered consecutively from zero, with each slot containing a Value;
+- Buffer: an array of bytes, up to length 2^64.
 
 Note that integer values are not explicitly specified as signed or unsigned. Where the distinction matters, this specification states which operations treat values as signed and which treat them as unsigned. (Where there is no difference, this spec does not specify signed vs. unsigned.)
 
@@ -75,6 +76,14 @@ A Tuple marshals to
 - byte val of (3 + the number of items in the tuple)
 - the concatenation of the results of marshaling the Value in each slot of the Tuple.
 
+A buffer marshals to
+
+- bytes val of 12
+- 32-byte big-endian representation of the length of buffer (LENGTH)
+- LENGTH bytes representing the value of the buffer
+
+Length of buffer buf is defined to be the length of smallest prefix pre such that b = pre || post and post contains only zeros.
+
 ## Hashing Values
 
 The Hash of an Integer is the Keccak-256 of the 32-byte big endian encoding of the integer, encoded as an Integer in big-endian fashion.
@@ -84,6 +93,8 @@ The Hash of a Tuple is computed by concatenating the byte value (3 + number of i
 The Hash of a Codepoint containing a BasicOp is computed by concatenating the byte value 1, followed by the 1-byte representation of the opcode, followed by the 32-byte nextHash value, and computing the Keccak-256 of the result, encoded as an Integer in big-endian fashion.
 
 The Hash of a Codepoint containing an ImmediateOp is computed by concatenating the byte value 1, followed by the 1-byte representation of the opcode, followed by the 32-byte Hash of the immediate value, followed by the 32-byte nextHash value, and computing the Keccak-256 of the result, encoded as an Integer in big-endian fashion.
+
+The Hash of a Buffer is the Merkle tree hash of LENGTH first bytes of the buffer (length is rounded up the next power of two), read in 32 byte chunks. Hash of empty buffer is Keccak-256 of 32 zeros. More precisely, ROUNDED_LENGTH is the smallest X such that X <= LENGTH, X >= 32 and there's N such that X = 2**N. Hash of a buffer slice of size 32 is Hash(buf) = Keccak-256(buf), and Hash(buf) = Keccak-256(Hash(buf[0..size/2]) || Hash(buf[size/2..size])).
 
 ## Virtual Machine State
 
@@ -248,6 +259,15 @@ The instructions are as follows:
 | 0x81                                            | ecadd         | Pop four values (A, B, C, D) off the Datastack. This operation adds two points on the alt_bn128 curve. If not all of the values are integers raise an error. A and B are interpreted as the X and Y coordinates of a point from G1, C and D are interpreted as the X and Y coordinates of a second point. The two points are added resulting in a new point, R. The y coordinate of R is pushed to the Datastack, then the X coordinate or R is pushed to the Datastack.                                                                                                                                                                                                                                                                                                                                                                                                                                                | 3500                      |
 | 0x82                                            | ecmul         | Pop four values (A, B, C, D) off the Datastack. This operation multiplies a point by a scalar on the alt_bn128 curve. If not all of the values are integers raise an error. A and B are interpreted as the X and Y coordinates of a point from G1, C is interpreted as a scalar. The point is multiplied by the scalar resulting in a new point, R. The y coordinate of R is pushed to the Datastack, then the X coordinate or R is pushed to the Datastack.                                                                                                                                                                                                                                                                                                                                                                                                                                                            | 82000                     |
 | 0x83                                            | ecpairing     | Pop a value (A) off the Datastack.The Value A is interpreted as a nested stack of 2-Tuples where the first member is a Value and the second member is either a 2-Tuple or and empty Tuple signaling the termination of the stack. If A does not have that form, or there were more than 30 values in the stack, or not all values in the stack were 6-Tuples containing all integers, raise an error. The number of items extracted from the Tuple stack is k. The first and second Tuple elements are the X and Y coordinates of a G1 point, the third and fourth elements are interpreted as the two parts of the X coordinate of a G2 point and the fifth and sixth elements are interpreted as the two parts of the Y coordinate of the G2 point. The alt_bn128 pairing operation is applied to that list of points, and a push a 1 to the Datastack if the result is the one point on alt_bn128, push 0 otherwise. | 1000 + 500000\*min(k, 30) |
+
+| 0xa0                                            | newbuffer     | Push an empty buffer to stack | 10 |
+
+| 0xa1                                            | getbuffer8     | Pop two values (A) and (B) off the stack. The value A must be a buffer and B must be an integer smaller than 2**64. Pushes to the stack Bth byte of buffer A. | 10 |
+| 0xa2                                            | getbuffer64     | Pop two values (A) and (B) off the stack. The value A must be a buffer and B must be an integer smaller than 2**64-7. Pushes to the stack B..B+7 bytes of buffer A as BE integer. | 10 |
+| 0xa3                                            | getbuffer256     | Pop two values (A) and (B) off the stack. The value A must be a buffer and B must be an integer smaller than 2**64-31. Pushes to the stack B..B+31 bytes of buffer A as BE integer. | 10 |
+| 0xa4                                            | setbuffer8     | Pop three values (A), (B) and (C) off the stack. The value A must be a buffer, B must be an integer smaller than 2**64 and C must be an integer. Pushes to stack a new buffer that is same as A except that byte in position B is now C. | 100 |
+| 0xa5                                            | setbuffer64     | Pop three values (A), (B) and (C) off the stack. The value A must be a buffer, B must be an integer smaller than 2**64-7 and C must be an integer. Pushes to stack a new buffer that is same as A except that bytes in positions B..B+7 are now BE representation of C as 64-bit integer. | 100 |
+| 0xa6                                            | setbuffer256     | Pop three values (A), (B) and (C) off the stack. The value A must be a buffer, B must be an integer smaller than 2**64-31 and C must be an integer. Pushes to stack a new buffer that is same as A except that bytes in positions B..B+31 are now BE representation of C as 256-bit integer. | 100 |
 
 ### Definition of `keccakf`
 
