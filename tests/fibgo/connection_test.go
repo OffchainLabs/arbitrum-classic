@@ -155,7 +155,7 @@ func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollup
 		case <-ticker.C:
 			conn, err := net.DialTimeout(
 				"tcp",
-				net.JoinHostPort("127.0.0.1", "2235"),
+				net.JoinHostPort("127.0.0.1", "9546"),
 				time.Second,
 			)
 			if err != nil || conn == nil {
@@ -244,6 +244,8 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	t.Log("Created rollup chain", rollupAddress)
+
 	if err := setupValidators(rollupAddress, l1Client, pks[3:5]); err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
@@ -261,6 +263,8 @@ func TestFib(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	t.Log("Connected to aggregator")
 
 	auth := bind.NewKeyedTransactor(pk)
 	_, tx, _, err := arbostestcontracts.DeployFibonacci(auth, client)
