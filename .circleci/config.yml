@@ -56,7 +56,7 @@ jobs:
       - restore_cache: *restore_go_cache
       - run:
           command: |
-            cd test/fibgo
+            cd tests/fibgo
             go mod download
       - save_cache: *save_go_cache
   frontend:
