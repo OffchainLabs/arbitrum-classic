@@ -21,7 +21,7 @@ cd arb-validator
 go generate ./...
 cd ..
 
-cd arb-provider-go
+cd arb-checkpointer
 go generate ./...
 cd ..
 

@@ -5,7 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
@@ -191,61 +191,6 @@ type ListenerError struct {
 	Err          error
 }
 
-func startFibTestEventListener(
-	t *testing.T,
-	fibonacci *arbostestcontracts.Fibonacci,
-	ch chan interface{},
-	timeLimit time.Duration,
-) {
-	go func() {
-		evCh := make(chan *arbostestcontracts.FibonacciTestEvent, 2)
-		start := uint64(0)
-		watch := &bind.WatchOpts{
-			Context: context.Background(),
-			Start:   &start,
-		}
-		sub, err := fibonacci.WatchTestEvent(watch, evCh)
-		if err != nil {
-			t.Errorf("WatchTestEvent error %v", err)
-			return
-		}
-		defer sub.Unsubscribe()
-		errChan := sub.Err()
-		for {
-			select {
-			case <-time.After(timeLimit):
-				ch <- &ListenerError{
-					ListenerName: "FibonacciTestEvent ",
-					Err:          errors.New("timed out"),
-				}
-			case ev, ok := <-evCh:
-				if ok {
-					ch <- ev
-				} else {
-					ch <- &ListenerError{
-						"FibonacciTestEvent ",
-						errors.New("channel closed"),
-					}
-					return
-				}
-			case err, ok := <-errChan:
-				if ok {
-					ch <- &ListenerError{
-						"FibonacciTestEvent error:",
-						err,
-					}
-				} else {
-					ch <- &ListenerError{
-						"FibonacciTestEvent ",
-						errors.New("error channel closed"),
-					}
-					return
-				}
-			}
-		}
-	}()
-}
-
 func waitForReceipt(
 	client bind.DeployBackend,
 	tx *types.Transaction,
@@ -305,9 +250,9 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := setupValidators(rollupAddress, l1Client, pks[3:5]); err != nil {
-		t.Fatalf("Validator setup error %v", err)
-	}
+	//if err := setupValidators(rollupAddress, l1Client, pks[3:5]); err != nil {
+	//	t.Fatalf("Validator setup error %v", err)
+	//}
 
 	if err := launchAggregator(
 		l1Client,
@@ -318,16 +263,10 @@ func TestFib(t *testing.T) {
 	}
 	pk := pks[0]
 
-	//client, err := ethclient.Dial("http://localhost:8546")
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-
-	client := goarbitrum.Dial(
-		"http://localhost:2235",
-		pk,
-		rollupAddress,
-	)
+	client, err := ethclient.Dial("http://localhost:9546")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	auth := bind.NewKeyedTransactor(pk)
 	_, tx, _, err := arbostestcontracts.DeployFibonacci(auth, client)
@@ -395,35 +334,33 @@ func TestFib(t *testing.T) {
 		)
 	}
 
-	t.Run("TestEvent", func(t *testing.T) {
-		eventChan := make(chan interface{}, 2)
-		startFibTestEventListener(t, session.Contract, eventChan, time.Second*20)
-		testEventRcvd := false
+	start := uint64(0)
 
-		fibsize := 15
-		time.Sleep(5 * time.Second)
-		_, err := session.GenerateFib(big.NewInt(int64(fibsize)))
+Loop:
+	for {
+		select {
+		case <-time.After(time.Second * 20):
+			return
+		default:
+		}
+
+		filter := &bind.FilterOpts{
+			Start:   start,
+			End:     nil,
+			Context: context.Background(),
+		}
+
+		it, err := session.Contract.FilterTestEvent(filter)
 		if err != nil {
-			t.Errorf("GenerateFib error %v", err)
+			t.Fatalf("FilterTestEvent error %v", err)
 			return
 		}
 
-	Loop:
-		for ev := range eventChan {
-			switch event := ev.(type) {
-			case *arbostestcontracts.FibonacciTestEvent:
-				testEventRcvd = true
-				break Loop
-			case ListenerError:
-				t.Errorf("errorEvent %v %v", event.ListenerName, event.Err)
-				break Loop
-			default:
-				t.Error("eventLoop: unknown event type", ev)
-				break Loop
+		for it.Next() {
+			if it.Event.Number.Cmp(big.NewInt(int64(fibsize))) != 0 {
+				t.Error("test event had wrong number")
 			}
+			break Loop
 		}
-		if testEventRcvd != true {
-			t.Error("eventLoop: FibonacciTestEvent not received")
-		}
-	})
+	}
 }
