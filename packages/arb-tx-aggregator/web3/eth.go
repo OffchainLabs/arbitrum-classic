@@ -384,7 +384,7 @@ func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTx
 		for _, res := range safeResults {
 			txHashes = append(txHashes, res.IncomingRequest.MessageID.Bytes())
 		}
-		transactions = processedTxes
+		transactions = txHashes
 	}
 
 	var txRoot common.Hash
