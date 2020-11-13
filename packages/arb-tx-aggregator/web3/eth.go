@@ -185,8 +185,9 @@ func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult,
 	var requestId arbcommon.Hash
 	copy(requestId[:], txHash)
 	val, err := s.srv.GetRequestResult(requestId)
-	if err != nil {
-		return nil, err
+	// If the transaction wasn't found, return nil
+	if val == nil || err != nil {
+		return nil, nil
 	}
 	res, err := evm.NewTxResultFromValue(val)
 	if err != nil {
