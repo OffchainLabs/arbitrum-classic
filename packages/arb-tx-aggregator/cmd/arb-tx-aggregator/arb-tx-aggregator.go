@@ -113,7 +113,6 @@ func main() {
 		rollupArgs.Address,
 		contractFile,
 		dbPath,
-		"1235",
 		"8547",
 		"8548",
 		rpcVars,

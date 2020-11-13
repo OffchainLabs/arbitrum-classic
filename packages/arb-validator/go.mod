@@ -8,7 +8,6 @@ require (
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.2
 	github.com/offchainlabs/arbitrum/packages/arb-checkpointer v0.7.2
-	github.com/offchainlabs/arbitrum/packages/arb-provider-go v0.7.1 // indirect
 	github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator v0.7.1 // indirect
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.2
 	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.7.2

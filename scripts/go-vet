@@ -25,7 +25,7 @@ cd arb-evm
 go vet ./...
 cd ..
 
-cd arb-provider-go
+cd arb-checkpointer
 go vet ./...
 cd ..
 

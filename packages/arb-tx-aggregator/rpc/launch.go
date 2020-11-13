@@ -61,7 +61,6 @@ func LaunchAggregator(
 	rollupAddress common.Address,
 	executable string,
 	dbPath string,
-	aggPort string,
 	web3RPCPort string,
 	web3WSPort string,
 	flags utils2.RPCFlags,
@@ -109,21 +108,11 @@ func LaunchAggregator(
 	srv := aggregator.NewServer(client, batch, rollupAddress, db)
 	errChan := make(chan error, 1)
 
-	aggServer, err := aggregator.GenerateRPCServer(srv)
-	if err != nil {
-		return err
-	}
-
 	web3Server, err := web3.GenerateWeb3Server(srv)
 	if err != nil {
 		return err
 	}
 
-	if aggPort != "" {
-		go func() {
-			errChan <- utils2.LaunchRPC(aggServer, aggPort, flags)
-		}()
-	}
 	if web3RPCPort != "" {
 		go func() {
 			errChan <- utils2.LaunchRPC(web3Server, web3RPCPort, flags)
