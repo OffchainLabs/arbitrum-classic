@@ -139,7 +139,6 @@ func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollup
 			rollupAddress,
 			contract,
 			db+"/aggregator",
-			"2235",
 			"9546",
 			"9547",
 			utils2.RPCFlags{},
@@ -184,11 +183,6 @@ func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollup
 			return errors.New("couldn't connect to rpc")
 		}
 	}
-}
-
-type ListenerError struct {
-	ListenerName string
-	Err          error
 }
 
 func waitForReceipt(
@@ -250,9 +244,9 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//if err := setupValidators(rollupAddress, l1Client, pks[3:5]); err != nil {
-	//	t.Fatalf("Validator setup error %v", err)
-	//}
+	if err := setupValidators(rollupAddress, l1Client, pks[3:5]); err != nil {
+		t.Fatalf("Validator setup error %v", err)
+	}
 
 	if err := launchAggregator(
 		l1Client,
