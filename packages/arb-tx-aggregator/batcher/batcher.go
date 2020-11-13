@@ -19,7 +19,6 @@ package batcher
 import (
 	"container/list"
 	"context"
-	"errors"
 	"log"
 	"sync"
 	"time"
@@ -77,7 +76,6 @@ type Batcher struct {
 	signer types.Signer
 
 	sync.Mutex
-	valid bool
 
 	queuedTxes         *txQueues
 	pendingBatch       batch
@@ -130,7 +128,6 @@ func newBatcher(
 ) *Batcher {
 	server := &Batcher{
 		signer:             types.NewEIP155Signer(message.ChainAddressToID(rollupAddress)),
-		valid:              true,
 		queuedTxes:         newTxQueues(),
 		pendingBatch:       pendingBatch,
 		pendingSentBatches: list.New(),
@@ -220,9 +217,7 @@ func (m *Batcher) sendBatch(ctx context.Context, inbox arbbridge.GlobalInboxSend
 	}
 	batchTx, err := message.NewTransactionBatchFromMessages(batchTxes)
 	if err != nil {
-		log.Println("transaction aggregator failed: ", err)
-		m.valid = false
-		return
+		log.Fatal("transaction aggregator failed: ", err)
 	}
 	log.Println("Submitting batch with", len(batchTxes), "transactions")
 	txHash, err := inbox.SendL2MessageNoWait(
@@ -231,8 +226,7 @@ func (m *Batcher) sendBatch(ctx context.Context, inbox arbbridge.GlobalInboxSend
 	)
 
 	if err != nil {
-		log.Println("transaction aggregator failed: ", err)
-		m.valid = false
+		log.Fatal("transaction aggregator failed: ", err)
 		return
 	}
 
@@ -272,10 +266,6 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 
 	m.Lock()
 	defer m.Unlock()
-
-	if !m.valid {
-		return errors.New("tx aggregator is not running")
-	}
 
 	m.pendingBatch.updateCurrentSnap(m.pendingSentBatches)
 
