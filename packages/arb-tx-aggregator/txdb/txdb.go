@@ -318,6 +318,14 @@ func saveAssertion(
 		}
 
 		for i, txRes := range txResults {
+			if txRes.ResultCode == evm.BadSequenceCode {
+				// If this log failed with incorrect sequence number, only save the request if it hasn't been saved before
+				_, err := as.GetPossibleRequestInfo(txRes.IncomingRequest.MessageID)
+				if err == nil {
+					continue
+				}
+			}
+
 			if err := as.SaveRequest(txRes.IncomingRequest.MessageID, startLog+uint64(i)); err != nil {
 				return err
 			}
