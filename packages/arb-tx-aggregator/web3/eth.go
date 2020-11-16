@@ -347,6 +347,10 @@ func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint
 }
 
 func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTxData bool) (*GetBlockResult, error) {
+	// If the db hasn't yet processed the requested block, don't return a header
+	if header.Number.Cmp(new(big.Int).SetUint64(s.srv.GetBlockCount())) > 0 {
+		return nil, nil
+	}
 	block, err := s.srv.BlockInfo(header.Number.Uint64())
 	if err != nil {
 		return nil, err
