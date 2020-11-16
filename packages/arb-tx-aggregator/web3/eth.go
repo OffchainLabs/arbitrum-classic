@@ -247,6 +247,11 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 
 	receipt := result.ToEthReceipt(blockInfo.Hash)
 
+	tx, err := aggregator.GetTransaction(result.IncomingRequest)
+	if err != nil {
+		return nil, err
+	}
+
 	var contractAddress *common.Address
 	emptyAddress := common.Address{}
 	if receipt.ContractAddress != emptyAddress {
@@ -254,18 +259,21 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 	}
 
 	return &GetTransactionReceiptResult{
-		Status:            hexutil.Uint64(receipt.Status),
-		CumulativeGasUsed: hexutil.Uint64(receipt.CumulativeGasUsed),
-		Bloom:             receipt.Bloom.Bytes(),
-		Logs:              receipt.Logs,
-		TxHash:            receipt.TxHash,
-		ContractAddress:   contractAddress,
-		GasUsed:           hexutil.Uint64(receipt.GasUsed),
+		TransactionHash:   receipt.TxHash,
+		TransactionIndex:  hexutil.Uint64(receipt.TransactionIndex),
 		BlockHash:         receipt.BlockHash,
 		BlockNumber:       (*hexutil.Big)(receipt.BlockNumber),
-		TransactionIndex:  hexutil.Uint64(receipt.TransactionIndex),
-		ReturnCode:        hexutil.Uint64(result.ResultCode),
-		ReturnData:        result.ReturnData,
+		From:              result.IncomingRequest.Sender.ToEthAddress(),
+		To:                tx.Tx.To(),
+		CumulativeGasUsed: hexutil.Uint64(receipt.CumulativeGasUsed),
+		GasUsed:           hexutil.Uint64(receipt.GasUsed),
+		ContractAddress:   contractAddress,
+		Logs:              receipt.Logs,
+		LogsBloom:         receipt.Bloom.Bytes(),
+		Status:            hexutil.Uint64(receipt.Status),
+
+		ReturnCode: hexutil.Uint64(result.ResultCode),
+		ReturnData: result.ReturnData,
 	}, nil
 }
 
