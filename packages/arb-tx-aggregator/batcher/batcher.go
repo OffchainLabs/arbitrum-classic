@@ -19,9 +19,10 @@ package batcher
 import (
 	"container/list"
 	"context"
-	"log"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -150,7 +151,7 @@ func newBatcher(
 						err := server.pendingBatch.addIncludedTx(tx)
 						server.queuedTxes.maybeRemoveAccountAtIndex(accountIndex)
 						if err != nil {
-							log.Println("Aggregator ignored invalid tx", err)
+							log.Err(err).Msg("Aggregator ignored invalid tx")
 							continue
 						}
 					}
@@ -190,10 +191,15 @@ func newBatcher(
 					receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, receiptFetcher, txHash)
 					if err != nil || receipt.Status != 1 {
 						// batch failed
-						log.Fatal("Error submitted batch", err)
+						log.Fatal().Err(err).Msg("Error submitted batch")
 					}
 
-					log.Println("Got receipt for batch in tx", receipt.TxHash.Hex(), "completed at block", receipt.BlockNumber, "using", receipt.GasUsed, "gas")
+					receiptJSON, err := receipt.MarshalJSON()
+					if err != nil {
+						log.Err(err).Msg("failed to generate json for receipt")
+					} else {
+						log.Info().RawJSON("receipt", receiptJSON).Msg("batch receipt")
+					}
 
 					// batch succeeded
 					server.Lock()
@@ -217,16 +223,16 @@ func (m *Batcher) sendBatch(ctx context.Context, inbox arbbridge.GlobalInboxSend
 	}
 	batchTx, err := message.NewTransactionBatchFromMessages(batchTxes)
 	if err != nil {
-		log.Fatal("transaction aggregator failed: ", err)
+		log.Fatal().Err(err).Msg("transaction aggregator failed")
 	}
-	log.Println("Submitting batch with", len(batchTxes), "transactions")
+	log.Info().Int("txcount", len(batchTxes)).Msg("Submitting batch")
 	txHash, err := inbox.SendL2MessageNoWait(
 		ctx,
 		message.NewSafeL2Message(batchTx).AsData(),
 	)
 
 	if err != nil {
-		log.Fatal("transaction aggregator failed: ", err)
+		log.Fatal().Err(err).Msg("transaction aggregator failed")
 		return
 	}
 
@@ -260,8 +266,15 @@ func (m *Batcher) PendingTransactionCount(_ context.Context, account common.Addr
 func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) error {
 	sender, err := types.Sender(m.signer, tx)
 	if err != nil {
-		log.Println("Error processing transaction", err)
+		log.Err(err).Msg("error processing user transaction")
 		return err
+	}
+
+	txJSON, err := tx.MarshalJSON()
+	if err != nil {
+		log.Err(err).Msg("failed to marshal tx into json")
+	} else {
+		log.Info().RawJSON("tx", txJSON).Str("sender", sender.Hex()).Msg("user tx")
 	}
 
 	m.Lock()
