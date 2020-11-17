@@ -8,8 +8,6 @@ FROM offchainlabs/cpp-base:0.2.5 as arb-avm-cpp
 
 # Copy source code
 COPY --chown=user arb-avm-cpp/ ./
-# Copy build cache
-COPY --chown=user --from=arb-validator /cpp-build build/
 # Build arb-avm-cpp
 RUN mkdir -p build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
@@ -40,8 +38,6 @@ COPY --chown=user arb-validator-core/ /home/user/arb-validator-core/
 COPY --chown=user arb-checkpointer/ /home/user/arb-checkpointer/
 COPY --chown=user arb-evm/ /home/user/arb-evm/
 COPY --chown=user arb-tx-aggregator/ /home/user/arb-tx-aggregator/
-# Copy build cache
-COPY --from=arb-validator --chown=user /build /home/user/.cache/go-build
 # Build arb-validator
 RUN cd arb-validator && go install -v ./cmd/arb-validator && \
     cd ../arb-tx-aggregator && go install -v ./cmd/arb-tx-aggregator
@@ -50,11 +46,6 @@ FROM offchainlabs/cpp-base:0.2.5 as arb-validator
 # Export binary
 
 COPY --chown=user --from=arb-validator-builder /home/user/go/bin /home/user/go/bin
-
-# Build cache
-COPY --chown=user --from=arb-validator-builder /home/user/.cache/go-build /build
-COPY --from=arb-avm-cpp /home/user/build /cpp-build
-COPY --from=arb-avm-cpp /home/user/build /cpp-build
 COPY --chown=user arbos.mexe /home/user
 
 ENTRYPOINT ["/home/user/go/bin/arb-validator"]
