@@ -42,11 +42,11 @@ func (txdb *View) GetLog(index uint64) (value.Value, error) {
 }
 
 func (txdb *View) GetRequest(requestId common.Hash) (value.Value, error) {
-	requestCandidate, err := txdb.as.GetPossibleRequestInfo(requestId)
-	if err != nil {
-		return nil, err
+	requestCandidate := txdb.as.GetPossibleRequestInfo(requestId)
+	if requestCandidate == nil {
+		return nil, nil
 	}
-	logVal, err := txdb.as.GetLog(requestCandidate)
+	logVal, err := txdb.as.GetLog(*requestCandidate)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (txdb *View) GetRequest(requestId common.Hash) (value.Value, error) {
 		return nil, err
 	}
 	if res.IncomingRequest.MessageID != requestId {
-		return nil, errors.New("request not found")
+		return nil, nil
 	}
 	return logVal, nil
 }

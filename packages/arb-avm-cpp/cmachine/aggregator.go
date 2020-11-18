@@ -180,15 +180,16 @@ func (as *AggregatorStore) Reorg(height uint64, messageCount uint64, logCount ui
 	return nil
 }
 
-func (as *AggregatorStore) GetPossibleRequestInfo(requestId common.Hash) (uint64, error) {
+func (as *AggregatorStore) GetPossibleRequestInfo(requestId common.Hash) *uint64 {
 	cHash := hashToData(requestId)
 	defer C.free(cHash)
 
 	result := C.aggregatorGetPossibleRequestInfo(as.c, cHash)
 	if result.found == 0 {
-		return 0, errors.New("failed to get request")
+		return nil
 	}
-	return uint64(result.value), nil
+	index := uint64(result.value)
+	return &index
 }
 
 func (as *AggregatorStore) SaveRequest(requestId common.Hash, logIndex uint64) error {
@@ -196,6 +197,28 @@ func (as *AggregatorStore) SaveRequest(requestId common.Hash, logIndex uint64) e
 	defer C.free(cHash)
 
 	if C.aggregatorSaveRequest(as.c, cHash, C.uint64_t(logIndex)) == 0 {
+		return errors.New("failed to save request")
+	}
+	return nil
+}
+
+func (as *AggregatorStore) GetPossibleBlock(blockHash common.Hash) *uint64 {
+	cHash := hashToData(blockHash)
+	defer C.free(cHash)
+
+	result := C.aggregatorGetPossibleBlock(as.c, cHash)
+	if result.found == 0 {
+		return nil
+	}
+	index := uint64(result.value)
+	return &index
+}
+
+func (as *AggregatorStore) SaveBlockHash(blockHash common.Hash, blockHeight uint64) error {
+	cHash := hashToData(blockHash)
+	defer C.free(cHash)
+
+	if C.aggregatorSaveBlockHash(as.c, cHash, C.uint64_t(blockHeight)) == 0 {
 		return errors.New("failed to save request")
 	}
 	return nil

@@ -320,8 +320,7 @@ func saveAssertion(
 		for i, txRes := range txResults {
 			if txRes.ResultCode == evm.BadSequenceCode {
 				// If this log failed with incorrect sequence number, only save the request if it hasn't been saved before
-				_, err := as.GetPossibleRequestInfo(txRes.IncomingRequest.MessageID)
-				if err == nil {
+				if as.GetPossibleRequestInfo(txRes.IncomingRequest.MessageID) == nil {
 					continue
 				}
 			}
@@ -340,25 +339,6 @@ func (txdb *TxDB) GetMessage(index uint64) (value.Value, error) {
 
 func (txdb *TxDB) GetLog(index uint64) (value.Value, error) {
 	return txdb.as.GetLog(index)
-}
-
-func (txdb *TxDB) GetRequest(requestId common.Hash) (value.Value, error) {
-	requestCandidate, err := txdb.as.GetPossibleRequestInfo(requestId)
-	if err != nil {
-		return nil, err
-	}
-	logVal, err := txdb.as.GetLog(requestCandidate)
-	if err != nil {
-		return nil, err
-	}
-	res, err := evm.NewTxResultFromValue(logVal)
-	if err != nil {
-		return nil, err
-	}
-	if res.IncomingRequest.MessageID != requestId {
-		return nil, errors.New("request not found")
-	}
-	return logVal, nil
 }
 
 func (txdb *TxDB) GetBlock(height uint64) (*machine.BlockInfo, error) {

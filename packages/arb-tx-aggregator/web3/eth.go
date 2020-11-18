@@ -185,8 +185,10 @@ func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult,
 	var requestId arbcommon.Hash
 	copy(requestId[:], txHash)
 	val, err := s.srv.GetRequestResult(requestId)
-	// If the transaction wasn't found, return nil
-	if val == nil || err != nil {
+	if err != nil {
+		return nil, err
+	}
+	if val == nil {
 		return nil, nil
 	}
 	res, err := evm.NewTxResultFromValue(val)
@@ -229,7 +231,10 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 	var requestId arbcommon.Hash
 	copy(requestId[:], txHash)
 	val, err := s.srv.GetRequestResult(requestId)
-	if val == nil || err != nil {
+	if err != nil {
+		return nil, err
+	}
+	if val == nil {
 		return nil, nil
 	}
 	result, err := evm.NewTxResultFromValue(val)
