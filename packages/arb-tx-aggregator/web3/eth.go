@@ -195,7 +195,7 @@ func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult,
 	if err != nil {
 		return nil, err
 	}
-	tx, err := aggregator.GetTransaction(res.IncomingRequest)
+	tx, err := evm.GetTransaction(res.IncomingRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +252,7 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 
 	receipt := result.ToEthReceipt(blockInfo.Hash)
 
-	tx, err := aggregator.GetTransaction(result.IncomingRequest)
+	tx, err := evm.GetTransaction(result.IncomingRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -344,7 +344,7 @@ func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint
 	if err != nil {
 		return nil, err
 	}
-	tx, err := aggregator.GetTransaction(txRes.IncomingRequest)
+	tx, err := evm.GetTransaction(txRes.IncomingRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +373,7 @@ func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTx
 
 	bloom, gasLimit, gasUsed := aggregator.GetBlockFields(block, blockInfo)
 
-	processedTxes := make([]*aggregator.ProcessedTx, 0, len(results))
+	processedTxes := make([]*evm.ProcessedTx, 0, len(results))
 	safeResults := make([]*evm.TxResult, 0, len(results))
 	for _, res := range results {
 		kind := res.IncomingRequest.Kind
@@ -381,7 +381,7 @@ func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTx
 		if kind != message.L2Type && kind != message.L2BuddyDeploy {
 			continue
 		}
-		tx, err := aggregator.GetTransaction(res.IncomingRequest)
+		tx, err := evm.GetTransaction(res.IncomingRequest)
 		if err != nil {
 			log.Println("Couldn't return transaction for request", res.IncomingRequest.MessageID)
 			continue
@@ -442,7 +442,7 @@ func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTx
 	}, nil
 }
 
-func makeTransactionResult(processedTx *aggregator.ProcessedTx, res *evm.TxResult, blockHash common.Hash) *TransactionResult {
+func makeTransactionResult(processedTx *evm.ProcessedTx, res *evm.TxResult, blockHash common.Hash) *TransactionResult {
 	tx := processedTx.Tx
 	vVal, rVal, sVal := tx.RawSignatureValues()
 	txIndex := res.TxIndex.Uint64()
