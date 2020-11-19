@@ -140,7 +140,7 @@ Uint64Result aggregatorGetPossibleRequestInfo(const CAggregatorStore* agg,
     auto index =
         static_cast<const AggregatorStore*>(agg)->getPossibleRequestInfo(
             receiveUint256(request_id));
-    if (index != nullptr) {
+    if (index) {
         return {*index, true};
     } else {
         return {0, false};
