@@ -23,11 +23,15 @@
 #include <iostream>
 #include <avm_values/bigint.hpp>
 
+const int LEAF_SIZE = 1024;
+const int NODE_SIZE = 8;
+const uint64_t ALIGN = LEAF_SIZE;
+
 inline uint64_t calc_len(int h) {
     if (h == 0) {
-        return 1024;
+        return LEAF_SIZE;
     }
-    return 128*calc_len(h-1);
+    return NODE_SIZE*calc_len(h-1);
 }
 
 struct Packed {
@@ -40,7 +44,6 @@ Packed zero_packed(int sz);
 
 class RawBuffer {
    private:
-    bool is_leaf;
     int level;
     bool saved;
     Packed savedHash;
@@ -50,21 +53,18 @@ class RawBuffer {
 
     RawBuffer(std::shared_ptr<std::vector<uint8_t> > leaf_) : leaf(leaf_), node(nullptr) {
         // std::cerr << "creating buffer 0" << std::endl;
-        is_leaf = true;
         level = 0;
         saved = false;
     }
 
     RawBuffer(std::shared_ptr<std::vector<RawBuffer> > node_, int level_) : leaf(nullptr), node(node_) {
         // std::cerr << "creating buffer " << level_ << std::endl;
-        is_leaf = false;
         level = level_;
         saved = false;
     }
 
     RawBuffer(int level_, bool) : leaf(nullptr), node(nullptr) {
         // std::cerr << "creating buffer " << level_ << std::endl;
-        is_leaf = (level_ == 0);
         level = level_;
         saved = true;
         savedHash = zero_packed(calc_len(level));
@@ -73,29 +73,28 @@ class RawBuffer {
    public:
     RawBuffer() : leaf(nullptr), node(nullptr) {
         // std::cerr << "creating buffer\n";
-        is_leaf = true;
         level = 0;
         saved = true;
-        savedHash = zero_packed(1024);
+        savedHash = zero_packed(LEAF_SIZE);
     }
 
     RawBuffer set(uint64_t offset, uint8_t v) {
         // std::cerr << "setting buffer " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
-        if (is_leaf) {
-            if (offset >= 1024) {
+        if (level == 0) {
+            if (offset >= LEAF_SIZE) {
                 std::shared_ptr<std::vector<uint8_t> > empty = std::make_shared<std::vector<uint8_t>>();
                 std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
                 vec->push_back(RawBuffer(leaf));
-                for (int i = 1; i < 128; i++) {
+                for (int i = 1; i < NODE_SIZE; i++) {
                     vec->push_back(RawBuffer(empty));
                 }
                 RawBuffer buf = RawBuffer(vec, 1);
                 return buf.set(offset, v);
             }
             auto buf = leaf ? std::make_shared<std::vector<uint8_t> >(*leaf) : std::make_shared<std::vector<uint8_t> >();
-            if (buf->size() < 1024) {
+            if (buf->size() < LEAF_SIZE) {
                 // std::cerr << "resize buf" << std::endl;
-                buf->resize(1024, 0);
+                buf->resize(LEAF_SIZE, 0);
             }
             (*buf)[offset] = v;
             // std::cerr << "updated leaf " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
@@ -104,7 +103,7 @@ class RawBuffer {
             if (offset >= calc_len(level)) {
                 std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
                 vec->push_back(RawBuffer(node, level));
-                for (int i = 1; i < 128; i++) {
+                for (int i = 1; i < NODE_SIZE; i++) {
                     vec->push_back(RawBuffer(level, true));
                 }
                 RawBuffer buf = RawBuffer(vec, level+1);
@@ -119,21 +118,21 @@ class RawBuffer {
 
     RawBuffer set_many(uint64_t offset, std::vector<uint8_t> arr) {
         // std::cerr << "setting buffer " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
-        if (is_leaf) {
-            if (offset >= 1024) {
+        if (level == 0) {
+            if (offset >= LEAF_SIZE) {
                 std::shared_ptr<std::vector<uint8_t> > empty = std::make_shared<std::vector<uint8_t>>();
                 std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
                 vec->push_back(RawBuffer(leaf));
-                for (int i = 1; i < 128; i++) {
+                for (int i = 1; i < NODE_SIZE; i++) {
                     vec->push_back(RawBuffer(empty));
                 }
                 RawBuffer buf = RawBuffer(vec, 1);
                 return buf.set_many(offset, arr);
             }
             auto buf = leaf ? std::make_shared<std::vector<uint8_t> >(*leaf) : std::make_shared<std::vector<uint8_t> >();
-            if (buf->size() < 1024) {
+            if (buf->size() < LEAF_SIZE) {
                 // std::cerr << "resize buf" << std::endl;
-                buf->resize(1024, 0);
+                buf->resize(LEAF_SIZE, 0);
             }
             for (unsigned int i = 0; i < arr.size(); i++) {
                 (*buf)[offset+i] = arr[i];
@@ -144,7 +143,7 @@ class RawBuffer {
             if (offset >= calc_len(level)) {
                 std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
                 vec->push_back(RawBuffer(node, level));
-                for (int i = 1; i < 128; i++) {
+                for (int i = 1; i < NODE_SIZE; i++) {
                     vec->push_back(RawBuffer(level, true));
                 }
                 RawBuffer buf = RawBuffer(vec, level+1);
@@ -159,14 +158,14 @@ class RawBuffer {
 
     static std::vector<RawBuffer> make_empty(int level) {
         auto vec = std::vector<RawBuffer>();
-        for (int i = 0; i < 128; i++) {
+        for (int i = 0; i < NODE_SIZE; i++) {
             vec.push_back(RawBuffer(level, true));
         }
         return vec;
     }
 
     uint8_t get(uint64_t pos) const {
-        if (is_leaf) {
+        if (level == 0) {
             if (!leaf) return 0;
             if (leaf->size() <= pos) return 0;
             return (*leaf)[pos];
@@ -181,7 +180,7 @@ class RawBuffer {
     }
 
     std::vector<uint8_t> get_many(uint64_t pos, int len) const {
-        if (is_leaf) {
+        if (level == 0) {
             auto res = std::vector<uint8_t>(len, 0);
             for (int i = 0; i < len; i++) {
                 if (!leaf) res[i] = 0;

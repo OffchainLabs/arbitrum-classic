@@ -1020,8 +1020,6 @@ void getbuffer64(MachineState& m) {
     ++m.pc;
 }
 
-const uint64_t ALIGN = 1024;
-
 void getbuffer256(MachineState& m) {
     m.stack.prepForMod(2);
     auto offset = assumeInt64(assumeInt(m.stack[1]));

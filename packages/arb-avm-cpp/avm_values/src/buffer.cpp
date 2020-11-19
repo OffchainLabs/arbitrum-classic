@@ -74,7 +74,7 @@ Packed hash_buf(uint8_t *buf, int offset, int sz) {
 Packed hash_node(RawBuffer *buf, int offset, int len, int sz) {
     //    std::cerr << "hashing " << sz << " " << offset << " " << len << std::endl;
     if (len == 1) {
-        return buf[0].hash_aux();
+        return buf[offset].hash_aux();
     }
     auto h1 = hash_node(buf, offset, len/2, sz/2);
     auto h2 = hash_node(buf, offset + len/2, len/2, sz/2);
@@ -99,13 +99,13 @@ Packed RawBuffer::hash_aux() {
     Packed res;
     if (level == 0) {
         // std::cerr << "Hashing buffer..." << std::endl;
-        if (!leaf || leaf->size() == 0) res = zero_packed(1024);
-        else res = hash_buf(leaf->data(), 0, 1024);
+        if (!leaf || leaf->size() == 0) res = zero_packed(LEAF_SIZE);
+        else res = hash_buf(leaf->data(), 0, LEAF_SIZE);
     } else {
         if (!node) res = zero_packed(calc_len(level));
         else {
             // std::cerr << "Hashing node..." << static_cast<void*>(this) << std::endl;
-            res = hash_node(node->data(), 0, 128, calc_len(level));
+            res = hash_node(node->data(), 0, NODE_SIZE, calc_len(level));
         }
     }
     saved = true;
@@ -125,7 +125,7 @@ RawBuffer RawBuffer::normalize() {
     // cannot be null, otherwise the hash would have been zero
     // std::cerr << "Normalizing " << size() << ":" << static_cast<uint64_t>(hash()) << " ? " << node->size() << std::endl;
     bool shrinkable = true;
-    for (int i = 1; i < 128; i++) {
+    for (int i = 1; i < NODE_SIZE; i++) {
 
         if ((*node)[i].hash() != zero_hash(32)) {
             shrinkable = false;
@@ -148,14 +148,14 @@ void RawBuffer::serialize(std::vector<unsigned char>& value_vector) {
     // save leaf (just save all the data)
     if (level == 0) {
         value_vector.push_back(1);
-        for (int i = 0; i < 1024; i++) {
+        for (int i = 0; i < LEAF_SIZE; i++) {
             if (leaf->size() < i) value_vector.push_back(0);
             else value_vector.push_back((*leaf)[i]);
         }
     }
     if (level > 0) {
         value_vector.push_back(1);
-        for (int i = 0; i < 128; i++) {
+        for (int i = 0; i < NODE_SIZE; i++) {
             (*node)[i].serialize(value_vector);
         }
     }
@@ -172,16 +172,16 @@ RawBuffer RawBuffer::deserialize(const char *buf, int level, int &len) {
     buf++;
     if (level == 0) {
         auto res = std::make_shared<std::vector<uint8_t> >();
-        res->resize(1024, 0);
-        for (unsigned int i = 0; i < 1024; i++) {
+        res->resize(LEAF_SIZE, 0);
+        for (unsigned int i = 0; i < LEAF_SIZE; i++) {
             (*res)[i] = buf[i];
         }
-        len += 1024;
+        len += LEAF_SIZE;
         return RawBuffer(res);
     }
     // node
     auto res = std::make_shared<std::vector<RawBuffer> >();
-    for (unsigned int i = 0; i < 128; i++) {
+    for (unsigned int i = 0; i < NODE_SIZE; i++) {
         int nlen = 0;
         res->push_back(RawBuffer::deserialize(buf, level-1, nlen));
         // std::cerr << "deserlen " << i << ": " << nlen << std::endl;
