@@ -64,6 +64,7 @@ func main() {
 }
 
 func createRollupChain() error {
+	ctx := context.Background()
 	createCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	walletVars := utils.AddWalletFlags(createCmd)
 	tokenAddressString := createCmd.String("staketoken", "", "staketoken=TokenAddress")
@@ -102,7 +103,7 @@ func createRollupChain() error {
 	// Rollup creation
 	client := ethbridge.NewEthAuthClient(ethclint, auth)
 
-	if err := arbbridge.WaitForBalance(context.Background(), client, common.Address{}, common.NewAddressFromEth(auth.From)); err != nil {
+	if err := arbbridge.WaitForBalance(ctx, client, common.Address{}, common.NewAddressFromEth(auth.From)); err != nil {
 		return err
 	}
 
@@ -126,7 +127,7 @@ func createRollupChain() error {
 	}
 
 	address, _, err := factory.CreateRollup(
-		context.Background(),
+		ctx,
 		mach.Hash(),
 		params,
 		common.Address{},
