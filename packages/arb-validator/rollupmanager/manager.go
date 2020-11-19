@@ -324,12 +324,12 @@ func CreateManagerAdvanced(
 	return man, nil
 }
 
-func (man *Manager) AddListener(listener chainlistener.ChainListener) {
+func (man *Manager) AddListener(ctx context.Context, listener chainlistener.ChainListener) {
 	man.Lock()
 	defer man.Unlock()
 	man.listeners = append(man.listeners, listener)
 	if man.activeChain != nil {
-		man.activeChain.AddListener(context.Background(), listener)
+		man.activeChain.AddListener(ctx, listener)
 	}
 }
 

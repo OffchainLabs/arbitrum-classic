@@ -76,7 +76,7 @@ func LaunchAggregator(
 	if err != nil {
 		return err
 	}
-	inboxAddress, err := rollupContract.InboxAddress(context.Background())
+	inboxAddress, err := rollupContract.InboxAddress(ctx)
 	if err != nil {
 		return err
 	}

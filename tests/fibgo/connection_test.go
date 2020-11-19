@@ -111,7 +111,7 @@ func setupValidators(
 			return err
 		}
 
-		manager.AddListener(&chainlistener.AnnouncerListener{Prefix: "validator " + client.Address().String() + ": "})
+		manager.AddListener(ctx, &chainlistener.AnnouncerListener{Prefix: "validator " + client.Address().String() + ": "})
 
 		validatorListener := chainlistener.NewValidatorChainListener(
 			context.Background(),
@@ -122,7 +122,7 @@ func setupValidators(
 		if err != nil {
 			return err
 		}
-		manager.AddListener(validatorListener)
+		manager.AddListener(ctx, validatorListener)
 		managers = append(managers, manager)
 	}
 

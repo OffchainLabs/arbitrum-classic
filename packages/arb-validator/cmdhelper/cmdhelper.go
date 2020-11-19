@@ -46,6 +46,7 @@ func ValidateRollupChain(
 		contractFile string, dbPath string,
 	) (*rollupmanager.Manager, error),
 ) error {
+	ctx := context.Background()
 	// Check number of args
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
@@ -94,17 +95,17 @@ func ValidateRollupChain(
 		return err
 	}
 
-	params, err := rollup.GetParams(context.Background())
+	params, err := rollup.GetParams(ctx)
 	if err != nil {
 		return err
 	}
 
-	if err := arbbridge.WaitForBalance(context.Background(), client, params.StakeToken, common.NewAddressFromEth(auth.From)); err != nil {
+	if err := arbbridge.WaitForBalance(ctx, client, params.StakeToken, common.NewAddressFromEth(auth.From)); err != nil {
 		return err
 	}
 
 	validatorListener := chainlistener.NewValidatorChainListener(
-		context.Background(),
+		ctx,
 		rollupArgs.Address,
 		rollup,
 	)
@@ -126,8 +127,8 @@ func ValidateRollupChain(
 	if err != nil {
 		return err
 	}
-	manager.AddListener(&chainlistener.AnnouncerListener{})
-	manager.AddListener(validatorListener)
+	manager.AddListener(ctx, &chainlistener.AnnouncerListener{})
+	manager.AddListener(ctx, validatorListener)
 
 	wait := make(chan bool)
 	<-wait
@@ -145,6 +146,7 @@ func ObserveRollupChain(
 		contractFile string, dbPath string,
 	) (*rollupmanager.Manager, error),
 ) error {
+	ctx := context.Background()
 	// Check number of args
 	validateCmd := flag.NewFlagSet("observe", flag.ExitOnError)
 	quietFlag := validateCmd.Bool(
@@ -188,7 +190,7 @@ func ObserveRollupChain(
 		return err
 	}
 	if !*quietFlag {
-		manager.AddListener(&chainlistener.AnnouncerListener{})
+		manager.AddListener(ctx, &chainlistener.AnnouncerListener{})
 	}
 
 	wait := make(chan bool)
