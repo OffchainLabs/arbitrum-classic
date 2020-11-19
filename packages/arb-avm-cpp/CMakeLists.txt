@@ -57,7 +57,6 @@ set(AVM_VERSION_STRING ${AVM_VERSION_MAJOR}.${AVM_VERSION_MINOR}.${AVM_VERSION_P
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 
 option(AVM_BUILD_TESTING "Build tests" ON)
-option(AVM_ONLY_DEPS "Build only dependencies" OFF)
 
 find_package(Threads REQUIRED)
 find_package(GMP REQUIRED)
@@ -115,11 +114,20 @@ file(COPY ${ETHASH_LIB} DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/cmachine)
 add_subdirectory(external)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/external/Catch2/contrib)
 
-if (NOT ONLY_DEPS)
+
+if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/avm_values")
     add_subdirectory(avm_values)
+endif()
+if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data_storage")
     add_subdirectory(data_storage)
+endif()
+if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/avm")
     add_subdirectory(avm)
+endif()
+if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm")
     add_subdirectory(cavm)
+endif()
+if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/app")
     add_subdirectory(app)
 endif()
 
