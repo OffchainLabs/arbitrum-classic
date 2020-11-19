@@ -78,4 +78,4 @@ FROM offchainlabs/cpp-base:0.2.5 as arb-validator
 COPY --chown=user --from=arb-validator-builder /home/user/go/bin /home/user/go/bin
 
 ENTRYPOINT ["/home/user/go/bin/arb-validator"]
-EXPOSE 1235 1236
+EXPOSE 8547 8548
