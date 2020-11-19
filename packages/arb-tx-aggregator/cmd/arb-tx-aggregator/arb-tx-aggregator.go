@@ -39,6 +39,7 @@ func main() {
 	// Enable line numbers in logging
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
+	ctx := context.Background()
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	walletArgs := utils.AddWalletFlags(fs)
 	rpcVars := utils2.AddRPCFlags(fs)
@@ -89,7 +90,7 @@ func main() {
 		log.Println("Aggregator submitting batches from address", auth.From)
 
 		if err := arbbridge.WaitForBalance(
-			context.Background(),
+			ctx,
 			ethbridge.NewEthClient(ethclint),
 			common.Address{},
 			common.NewAddressFromEth(auth.From),
@@ -108,7 +109,7 @@ func main() {
 	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
 
 	if err := rpc.LaunchAggregator(
-		context.Background(),
+		ctx,
 		ethclint,
 		rollupArgs.Address,
 		contractFile,
