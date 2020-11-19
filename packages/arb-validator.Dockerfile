@@ -6,11 +6,20 @@
 
 FROM offchainlabs/cpp-base:0.2.5 as arb-avm-cpp
 
+# Copy external dependencies
+COPY --chown=user arb-avm-cpp/CMakeLists.txt .
+COPY --chown=user arb-avm-cpp/external ./external
+COPY --chown=user arb-avm-cpp/cmake ./cmake
+# Build arb-avm-cpp
+RUN mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 -DONLY_DEPS=1 && \
+    cmake --build . -j $(nproc)
+
 # Copy source code
 COPY --chown=user arb-avm-cpp/ ./
 # Build arb-avm-cpp
 RUN mkdir -p build && cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 -DONLY_DEPS=0 && \
     cmake --build . -j $(nproc) && \
     cd ../ && \
     ./scripts/install-cmachine-build

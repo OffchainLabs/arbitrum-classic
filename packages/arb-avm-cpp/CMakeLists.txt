@@ -56,7 +56,8 @@ set(AVM_VERSION_STRING ${AVM_VERSION_MAJOR}.${AVM_VERSION_MINOR}.${AVM_VERSION_P
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 
-option(AVM_BUILD_TESTING "Build SelfTest project" ON)
+option(AVM_BUILD_TESTING "Build tests" ON)
+option(AVM_ONLY_DEPS "Build only dependencies" OFF)
 
 find_package(Threads REQUIRED)
 find_package(GMP REQUIRED)
@@ -113,11 +114,14 @@ get_target_property(ETHASH_LIB ethash::keccak "LOCATION_Release")
 file(COPY ${ETHASH_LIB} DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/cmachine)
 add_subdirectory(external)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/external/Catch2/contrib)
-add_subdirectory(avm_values)
-add_subdirectory(data_storage)
-add_subdirectory(avm)
-add_subdirectory(cavm)
-add_subdirectory(app)
+
+if (NOT ONLY_DEPS)
+    add_subdirectory(avm_values)
+    add_subdirectory(data_storage)
+    add_subdirectory(avm)
+    add_subdirectory(cavm)
+    add_subdirectory(app)
+endif()
 
 if (BUILD_TESTING)
   add_subdirectory(tests)
