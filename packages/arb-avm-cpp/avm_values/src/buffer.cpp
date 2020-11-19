@@ -19,7 +19,7 @@
 
 #include <ethash/keccak.hpp>
 
-uint256_t zero_hash(int sz) {
+uint256_t zero_hash(uint64_t sz) {
     if (sz == 32) {
         return hash(0);
     }
@@ -27,7 +27,7 @@ uint256_t zero_hash(int sz) {
     return hash(h1, h1);
 }
 
-Packed normal(uint256_t hash, int sz) {
+Packed normal(uint256_t hash, uint64_t sz) {
     return Packed{hash, sz, 0};
 }
 
@@ -41,22 +41,22 @@ bool is_zero_hash(const Packed& packed) {
 
 uint256_t unpack(const Packed &packed) {
     uint256_t res = packed.hash;
-    int sz = packed.size;
-    for (int i = 0; i < packed.packed; i++) {
+    uint64_t sz = packed.size;
+    for (uint64_t i = 0; i < packed.packed; i++) {
         res = hash(res, zero_hash(sz));
         sz = sz*2;
     }
     return res;
 }
 
-Packed zero_packed(int sz) {
+Packed zero_packed(uint64_t sz) {
     if (sz == 32) {
         return normal(zero_hash(32), 32);
     }
     return pack(zero_packed(sz/2));
 }
 
-Packed hash_buf(uint8_t *buf, int offset, int sz) {
+Packed hash_buf(uint8_t *buf, uint64_t offset, uint64_t sz) {
     if (sz == 32) {
         auto hash_val = ethash::keccak256(buf+offset, 32);
         uint256_t res = intx::be::load<uint256_t>(hash_val);
@@ -71,7 +71,7 @@ Packed hash_buf(uint8_t *buf, int offset, int sz) {
     return normal(hash(unpack(h1), unpack(h2)), sz);
 }
 
-Packed hash_node(RawBuffer *buf, int offset, int len, int sz) {
+Packed hash_node(RawBuffer *buf, uint64_t offset, uint64_t len, uint64_t sz) {
     //    std::cerr << "hashing " << sz << " " << offset << " " << len << std::endl;
     if (len == 1) {
         return buf[offset].hash_aux();
@@ -125,7 +125,7 @@ RawBuffer RawBuffer::normalize() {
     // cannot be null, otherwise the hash would have been zero
     // std::cerr << "Normalizing " << size() << ":" << static_cast<uint64_t>(hash()) << " ? " << node->size() << std::endl;
     bool shrinkable = true;
-    for (int i = 1; i < NODE_SIZE; i++) {
+    for (uint64_t i = 1; i < NODE_SIZE; i++) {
 
         if ((*node)[i].hash() != zero_hash(32)) {
             shrinkable = false;
@@ -148,14 +148,14 @@ void RawBuffer::serialize(std::vector<unsigned char>& value_vector) {
     // save leaf (just save all the data)
     if (level == 0) {
         value_vector.push_back(1);
-        for (int i = 0; i < LEAF_SIZE; i++) {
+        for (uint64_t i = 0; i < LEAF_SIZE; i++) {
             if (leaf->size() < i) value_vector.push_back(0);
             else value_vector.push_back((*leaf)[i]);
         }
     }
     if (level > 0) {
         value_vector.push_back(1);
-        for (int i = 0; i < NODE_SIZE; i++) {
+        for (uint64_t i = 0; i < NODE_SIZE; i++) {
             (*node)[i].serialize(value_vector);
         }
     }
@@ -173,7 +173,7 @@ RawBuffer RawBuffer::deserialize(const char *buf, int level, int &len) {
     if (level == 0) {
         auto res = std::make_shared<std::vector<uint8_t> >();
         res->resize(LEAF_SIZE, 0);
-        for (unsigned int i = 0; i < LEAF_SIZE; i++) {
+        for (uint64_t i = 0; i < LEAF_SIZE; i++) {
             (*res)[i] = buf[i];
         }
         len += LEAF_SIZE;
@@ -181,7 +181,7 @@ RawBuffer RawBuffer::deserialize(const char *buf, int level, int &len) {
     }
     // node
     auto res = std::make_shared<std::vector<RawBuffer> >();
-    for (unsigned int i = 0; i < NODE_SIZE; i++) {
+    for (uint64_t i = 0; i < NODE_SIZE; i++) {
         int nlen = 0;
         res->push_back(RawBuffer::deserialize(buf, level-1, nlen));
         // std::cerr << "deserlen " << i << ": " << nlen << std::endl;

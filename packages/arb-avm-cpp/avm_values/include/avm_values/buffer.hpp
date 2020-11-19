@@ -23,8 +23,8 @@
 #include <iostream>
 #include <avm_values/bigint.hpp>
 
-const int LEAF_SIZE = 1024;
-const int NODE_SIZE = 8;
+const uint64_t LEAF_SIZE = 1024;
+const uint64_t NODE_SIZE = 8;
 const uint64_t ALIGN = LEAF_SIZE;
 
 inline uint64_t calc_len(int h) {
@@ -36,11 +36,11 @@ inline uint64_t calc_len(int h) {
 
 struct Packed {
     uint256_t hash;
-    int size; // total size
+    uint64_t size; // total size
     int packed; // packed levels
 };
 
-Packed zero_packed(int sz);
+Packed zero_packed(uint64_t sz);
 
 class RawBuffer {
    private:
@@ -85,7 +85,7 @@ class RawBuffer {
                 std::shared_ptr<std::vector<uint8_t> > empty = std::make_shared<std::vector<uint8_t>>();
                 std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
                 vec->push_back(RawBuffer(leaf));
-                for (int i = 1; i < NODE_SIZE; i++) {
+                for (uint64_t i = 1; i < NODE_SIZE; i++) {
                     vec->push_back(RawBuffer(empty));
                 }
                 RawBuffer buf = RawBuffer(vec, 1);
@@ -103,7 +103,7 @@ class RawBuffer {
             if (offset >= calc_len(level)) {
                 std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
                 vec->push_back(RawBuffer(node, level));
-                for (int i = 1; i < NODE_SIZE; i++) {
+                for (uint64_t i = 1; i < NODE_SIZE; i++) {
                     vec->push_back(RawBuffer(level, true));
                 }
                 RawBuffer buf = RawBuffer(vec, level+1);
@@ -111,6 +111,7 @@ class RawBuffer {
             }
             auto vec = std::make_shared<std::vector<RawBuffer> >(node ? *node : RawBuffer::make_empty(level-1));
             auto cell_len = calc_len(level-1);
+            // std::cerr << "setting node " << (offset / cell_len) << " at " << offset << " cell len " << cell_len << std::endl;
             (*vec)[offset / cell_len] = (*vec)[offset / cell_len].set(offset % cell_len, v);
             return RawBuffer(vec, level);
         }
@@ -123,7 +124,7 @@ class RawBuffer {
                 std::shared_ptr<std::vector<uint8_t> > empty = std::make_shared<std::vector<uint8_t>>();
                 std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
                 vec->push_back(RawBuffer(leaf));
-                for (int i = 1; i < NODE_SIZE; i++) {
+                for (uint64_t i = 1; i < NODE_SIZE; i++) {
                     vec->push_back(RawBuffer(empty));
                 }
                 RawBuffer buf = RawBuffer(vec, 1);
@@ -143,7 +144,7 @@ class RawBuffer {
             if (offset >= calc_len(level)) {
                 std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
                 vec->push_back(RawBuffer(node, level));
-                for (int i = 1; i < NODE_SIZE; i++) {
+                for (uint64_t i = 1; i < NODE_SIZE; i++) {
                     vec->push_back(RawBuffer(level, true));
                 }
                 RawBuffer buf = RawBuffer(vec, level+1);
@@ -158,7 +159,7 @@ class RawBuffer {
 
     static std::vector<RawBuffer> make_empty(int level) {
         auto vec = std::vector<RawBuffer>();
-        for (int i = 0; i < NODE_SIZE; i++) {
+        for (uint64_t i = 0; i < NODE_SIZE; i++) {
             vec.push_back(RawBuffer(level, true));
         }
         return vec;
