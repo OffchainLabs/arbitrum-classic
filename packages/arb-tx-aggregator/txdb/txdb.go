@@ -99,15 +99,7 @@ func (db *TxDB) Load(ctx context.Context) error {
 }
 
 func (db *TxDB) AddInitialBlock(ctx context.Context, initialBlockHeight *big.Int) error {
-	id, err := db.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(initialBlockHeight))
-	if err != nil {
-		return err
-	}
-	timestamp, err := db.timeGetter.TimestampForBlockHash(ctx, id.HeaderHash)
-	if err != nil {
-		return err
-	}
-	return db.saveEmptyBlock(ethcommon.Hash{}, initialBlockHeight, timestamp.Uint64())
+	return db.saveEmptyBlock(ctx, ethcommon.Hash{}, initialBlockHeight)
 }
 
 // addSnap must be called with callMut locked or during construction
@@ -196,7 +188,7 @@ func (db *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliver
 		if err != nil {
 			return err
 		}
-		if err := db.saveAssertion(processedAssertion); err != nil {
+		if err := db.saveAssertion(ctx, processedAssertion); err != nil {
 			return err
 		}
 		if len(processedAssertion.blocks) > 0 {
@@ -217,7 +209,7 @@ func (db *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliver
 	if err != nil {
 		return err
 	}
-	if err := db.saveAssertion(processedAssertion); err != nil {
+	if err := db.saveAssertion(ctx, processedAssertion); err != nil {
 		return err
 	}
 	if len(processedAssertion.blocks) > 0 {
@@ -281,14 +273,23 @@ func (db *TxDB) processAssertion(assertion *protocol.ExecutionAssertion) (proces
 	}, nil
 }
 
-func (db *TxDB) saveEmptyBlock(prev ethcommon.Hash, number *big.Int, time uint64) error {
+func (db *TxDB) saveEmptyBlock(ctx context.Context, prev ethcommon.Hash, number *big.Int) error {
+	blockId, err := db.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(number))
+	if err != nil {
+		return err
+	}
+	time, err := db.timeGetter.TimestampForBlockHash(ctx, blockId.HeaderHash)
+	if err != nil {
+		return err
+	}
 	header := &types.Header{
 		ParentHash: prev,
 		Difficulty: big.NewInt(0),
 		Number:     new(big.Int).Set(number),
 		GasLimit:   10000000,
 		GasUsed:    0,
-		Time:       time,
+		Time:       time.Uint64(),
+		Extra:      blockId.HeaderHash.Bytes(),
 	}
 	block := types.NewBlock(header, nil, nil, nil, new(trie.Trie))
 	if err := db.as.SaveEmptyBlock(block.Header()); err != nil {
@@ -298,7 +299,7 @@ func (db *TxDB) saveEmptyBlock(prev ethcommon.Hash, number *big.Int, time uint64
 	return db.as.SaveBlockHash(common.NewHashFromEth(header.Hash()), header.Number.Uint64())
 }
 
-func (db *TxDB) saveAssertion(processed processedAssertion) error {
+func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion) error {
 	for _, avmLog := range processed.avmLogs {
 		if err := db.as.SaveLog(avmLog); err != nil {
 			return err
@@ -326,7 +327,7 @@ func (db *TxDB) saveAssertion(processed processedAssertion) error {
 			if prev == nil {
 				return fmt.Errorf("trying to add block %v, but prev header was not found", next)
 			}
-			if err := db.saveEmptyBlock(prev.Header.Hash(), next, prev.Header.Time); err != nil {
+			if err := db.saveEmptyBlock(ctx, prev.Header.Hash(), next); err != nil {
 				return err
 			}
 			next = next.Add(next, big.NewInt(1))
@@ -359,13 +360,25 @@ func (db *TxDB) saveAssertion(processed processedAssertion) error {
 			ethReceipts = append(ethReceipts, res.ToEthReceipt(common.Hash{}))
 		}
 
+		id, err := db.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(info.BlockNum))
+		if err != nil {
+			return err
+		}
+		prev, err := db.GetBlock(info.BlockNum.Uint64() - 1)
+		if err != nil {
+			return err
+		}
+		if prev == nil {
+			return fmt.Errorf("trying to add block %v, but prev header was not found", next)
+		}
 		header := &types.Header{
-			ParentHash: ethcommon.Hash{},
+			ParentHash: prev.Header.Hash(),
 			Difficulty: big.NewInt(0),
 			Number:     new(big.Int).Set(info.BlockNum),
 			GasLimit:   info.GasLimit.Uint64(),
 			GasUsed:    info.BlockStats.GasUsed.Uint64(),
 			Time:       info.Timestamp.Uint64(),
+			Extra:      id.HeaderHash.Bytes(),
 		}
 
 		block := types.NewBlock(header, ethTxes, nil, ethReceipts, new(trie.Trie))
