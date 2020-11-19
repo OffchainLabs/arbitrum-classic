@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
@@ -50,8 +50,8 @@ func (s *Server) BlockNumber() hexutil.Uint64 {
 	return hexutil.Uint64(s.srv.GetBlockCount())
 }
 
-func (s *Server) GetBalance(ctx context.Context, address *common.Address, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
-	snap, err := s.getSnapshot(ctx, blockNum)
+func (s *Server) GetBalance(address *common.Address, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
+	snap, err := s.getSnapshot(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +62,8 @@ func (s *Server) GetBalance(ctx context.Context, address *common.Address, blockN
 	return (*hexutil.Big)(balance), nil
 }
 
-func (s *Server) GetStorageAt(ctx context.Context, address *common.Address, index *hexutil.Big, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
-	snap, err := s.getSnapshot(ctx, blockNum)
+func (s *Server) GetStorageAt(address *common.Address, index *hexutil.Big, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
+	snap, err := s.getSnapshot(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (s *Server) GetTransactionCount(ctx context.Context, address *common.Addres
 			return hexutil.Uint64(*count), nil
 		}
 	}
-	snap, err := s.getSnapshot(ctx, blockNum)
+	snap, err := s.getSnapshot(blockNum)
 	if err != nil {
 		return 0, err
 	}
@@ -93,13 +93,12 @@ func (s *Server) GetTransactionCount(ctx context.Context, address *common.Addres
 	return hexutil.Uint64(txCount.Uint64()), nil
 }
 
-func (s *Server) GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) (*hexutil.Big, error) {
-	header, err := s.srv.Client.HeaderByHash(ctx, blockHash)
-	if err != nil {
-		// If we can't get the header, return nil
-		return nil, nil
+func (s *Server) GetBlockTransactionCountByHash(blockHash common.Hash) (*hexutil.Big, error) {
+	info, err := s.srv.BlockInfoByHash(arbcommon.NewHashFromEth(blockHash))
+	if err != nil || info == nil {
+		return nil, err
 	}
-	return s.getBlockTransactionCount(header.Number.Uint64())
+	return s.getBlockTransactionCount(info)
 }
 
 func (s *Server) GetBlockTransactionCountByNumber(blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
@@ -107,11 +106,15 @@ func (s *Server) GetBlockTransactionCountByNumber(blockNum *rpc.BlockNumber) (*h
 	if err != nil {
 		return nil, err
 	}
-	return s.getBlockTransactionCount(height)
+	info, err := s.srv.BlockInfoByNumber(height)
+	if err != nil || info == nil {
+		return nil, err
+	}
+	return s.getBlockTransactionCount(info)
 }
 
-func (s *Server) GetCode(ctx context.Context, address *common.Address, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
-	snap, err := s.getSnapshot(ctx, blockNum)
+func (s *Server) GetCode(address *common.Address, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
+	snap, err := s.getSnapshot(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -134,65 +137,68 @@ func (s *Server) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (he
 	return tx.Hash().Bytes(), nil
 }
 
-func (s *Server) Call(ctx context.Context, callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
-	res, err := s.executeCall(ctx, callArgs, blockNum)
+func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
+	res, err := s.executeCall(callArgs, blockNum)
 	if err != nil {
 		return nil, err
 	}
 	return res.ReturnData, nil
 }
 
-func (s *Server) EstimateGas(ctx context.Context, args CallTxArgs) (hexutil.Uint64, error) {
+func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	blockNum := rpc.PendingBlockNumber
-	res, err := s.executeCall(ctx, args, &blockNum)
+	res, err := s.executeCall(args, &blockNum)
 	if err != nil {
 		return 0, err
 	}
 	return hexutil.Uint64(res.GasUsed.Uint64() + 1000000), nil
 }
 
-func (s *Server) GetBlockByHash(ctx context.Context, blockHashRaw hexutil.Bytes, includeTxData bool) (*GetBlockResult, error) {
-	var blockHash common.Hash
+func (s *Server) GetBlockByHash(blockHashRaw hexutil.Bytes, includeTxData bool) (*GetBlockResult, error) {
+	var blockHash arbcommon.Hash
 	copy(blockHash[:], blockHashRaw)
-
-	header, err := s.srv.Client.HeaderByHash(ctx, blockHash)
-	if err != nil {
-		// If we can't get the header, return nil
-		return nil, nil
+	info, err := s.srv.BlockInfoByHash(blockHash)
+	if err != nil || info == nil {
+		return nil, err
 	}
-	return s.getBlock(header, blockHash, includeTxData)
+	return s.getBlock(info, includeTxData)
 }
 
-func (s *Server) GetBlockByNumber(ctx context.Context, blockNum *rpc.BlockNumber, includeTxData bool) (*GetBlockResult, error) {
+func (s *Server) GetBlockByNumber(blockNum *rpc.BlockNumber, includeTxData bool) (*GetBlockResult, error) {
 	height, err := s.blockNum(blockNum)
 	if err != nil {
 		return nil, err
 	}
-	header, err := s.srv.Client.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
-	if err != nil {
-		// If we can't get the header, return nil
+	info, err := s.srv.BlockInfoByNumber(height)
+	if err != nil || info == nil {
 		return nil, err
 	}
-	l1BlockInfo, err := s.srv.Client.BlockInfoByNumber(ctx, new(big.Int).SetUint64(height))
-	if err != nil {
-		return nil, err
-	}
-
-	return s.getBlock(header, l1BlockInfo.Hash, includeTxData)
+	return s.getBlock(info, includeTxData)
 }
 
-func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult, error) {
+func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, *machine.BlockInfo, error) {
 	var requestId arbcommon.Hash
 	copy(requestId[:], txHash)
 	val, err := s.srv.GetRequestResult(requestId)
-	if err != nil {
-		return nil, err
+	if err != nil || val == nil {
+		return nil, nil, err
 	}
-	if val == nil {
-		return nil, nil
-	}
+
 	res, err := evm.NewTxResultFromValue(val)
 	if err != nil {
+		return nil, nil, err
+	}
+
+	info, err := s.srv.BlockInfoByNumber(res.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
+	if err != nil || info == nil {
+		return nil, nil, err
+	}
+	return res, info, nil
+}
+
+func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult, error) {
+	res, info, err := s.getTransactionInfoByHash(txHash)
+	if err != nil || res == nil {
 		return nil, err
 	}
 	tx, err := evm.GetTransaction(res.IncomingRequest)
@@ -200,22 +206,21 @@ func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult,
 		return nil, err
 	}
 
-	blockInfo, err := s.srv.BlockInfo(res.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
-	if err != nil {
-		return nil, err
+	var blockHash *common.Hash
+	if info != nil {
+		h := info.Header.Hash()
+		blockHash = &h
 	}
 
-	return makeTransactionResult(tx, res, blockInfo.Hash.ToEthHash()), nil
+	return makeTransactionResult(tx, res, blockHash), nil
 }
 
-func (s *Server) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint64) (*TransactionResult, error) {
-	header, err := s.srv.Client.HeaderByHash(ctx, blockHash)
-	if err != nil {
-		// If we can't get the header, return nil
-		return nil, nil
+func (s *Server) GetTransactionByBlockHashAndIndex(blockHash common.Hash, index hexutil.Uint64) (*TransactionResult, error) {
+	info, err := s.srv.BlockInfoByHash(arbcommon.NewHashFromEth(blockHash))
+	if err != nil || info == nil {
+		return nil, err
 	}
-
-	return s.getTransactionByBlockAndIndex(header.Number.Uint64(), index)
+	return s.getTransactionByBlockAndIndex(info.Header.Number.Uint64(), index)
 }
 
 func (s *Server) GetTransactionByBlockNumberAndIndex(blockNum *rpc.BlockNumber, index hexutil.Uint64) (*TransactionResult, error) {
@@ -228,31 +233,14 @@ func (s *Server) GetTransactionByBlockNumberAndIndex(blockNum *rpc.BlockNumber, 
 }
 
 func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionReceiptResult, error) {
-	var requestId arbcommon.Hash
-	copy(requestId[:], txHash)
-	val, err := s.srv.GetRequestResult(requestId)
-	if err != nil {
-		return nil, err
-	}
-	if val == nil {
-		return nil, nil
-	}
-	result, err := evm.NewTxResultFromValue(val)
-	if err != nil {
+	res, info, err := s.getTransactionInfoByHash(txHash)
+	if err != nil || res == nil {
 		return nil, err
 	}
 
-	blockInfo, err := s.srv.BlockInfo(result.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
-	if err != nil {
-		return nil, err
-	}
-	if blockInfo == nil {
-		return nil, nil
-	}
+	receipt := res.ToEthReceipt(arbcommon.NewHashFromEth(info.Header.Hash()))
 
-	receipt := result.ToEthReceipt(blockInfo.Hash)
-
-	tx, err := evm.GetTransaction(result.IncomingRequest)
+	tx, err := evm.GetTransaction(res.IncomingRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +256,7 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 		TransactionIndex:  hexutil.Uint64(receipt.TransactionIndex),
 		BlockHash:         receipt.BlockHash,
 		BlockNumber:       (*hexutil.Big)(receipt.BlockNumber),
-		From:              result.IncomingRequest.Sender.ToEthAddress(),
+		From:              res.IncomingRequest.Sender.ToEthAddress(),
 		To:                tx.Tx.To(),
 		CumulativeGasUsed: hexutil.Uint64(receipt.CumulativeGasUsed),
 		GasUsed:           hexutil.Uint64(receipt.GasUsed),
@@ -277,8 +265,8 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 		LogsBloom:         receipt.Bloom.Bytes(),
 		Status:            hexutil.Uint64(receipt.Status),
 
-		ReturnCode: hexutil.Uint64(result.ResultCode),
-		ReturnData: result.ReturnData,
+		ReturnCode: hexutil.Uint64(res.ResultCode),
+		ReturnData: res.ReturnData,
 	}, nil
 }
 
@@ -315,27 +303,31 @@ func (s *Server) GetLogs(ctx context.Context, args filters.FilterCriteria) ([]*t
 	return res, nil
 }
 
-func (s *Server) getBlockTransactionCount(height uint64) (*hexutil.Big, error) {
-	block, err := s.srv.BlockInfo(height)
-	if err != nil {
-		return nil, err
+func (s *Server) getBlockTransactionCount(block *machine.BlockInfo) (*hexutil.Big, error) {
+	if block.BlockLog == nil {
+		// No arbitrum block at this height
+		return (*hexutil.Big)(big.NewInt(0)), nil
 	}
 
-	blockInfo, err := s.srv.GetBlockInfo(block)
+	arbBlock, err := evm.NewBlockResultFromValue(block.BlockLog)
 	if err != nil {
 		return nil, err
 	}
-	return (*hexutil.Big)(blockInfo.BlockStats.TxCount), nil
+	return (*hexutil.Big)(arbBlock.BlockStats.TxCount), nil
 }
 
 func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint64) (*TransactionResult, error) {
-	block, err := s.srv.BlockInfo(height)
-	if err != nil {
-		// If we can't get the header, return nil
+	block, err := s.srv.BlockInfoByNumber(height)
+	if err != nil || block == nil {
+		return nil, err
+	}
+
+	if block.BlockLog == nil {
+		// No arbitrum block at this height
 		return nil, nil
 	}
 
-	blockInfo, err := s.srv.GetBlockInfo(block)
+	blockInfo, err := evm.NewBlockResultFromValue(block.BlockLog)
 	if err != nil {
 		return nil, err
 	}
@@ -348,17 +340,15 @@ func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint
 	if err != nil {
 		return nil, err
 	}
-	return makeTransactionResult(tx, txRes, block.Hash.ToEthHash()), nil
+	blockHash := block.Header.Hash()
+	return makeTransactionResult(tx, txRes, &blockHash), nil
 }
 
-func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTxData bool) (*GetBlockResult, error) {
-	// If the db hasn't yet processed the requested block, don't return a header
-	if header.Number.Cmp(new(big.Int).SetUint64(s.srv.GetBlockCount())) > 0 {
-		return nil, nil
-	}
-	block, err := s.srv.BlockInfo(header.Number.Uint64())
-	if err != nil {
-		return nil, err
+func (s *Server) getBlock(block *machine.BlockInfo, includeTxData bool) (*GetBlockResult, error) {
+	blockHash := block.Header.Hash()
+	if block.BlockLog == nil {
+		// No arb block at this height
+		return makeBlockResult(block.Header, nil), nil
 	}
 
 	blockInfo, err := s.srv.GetBlockInfo(block)
@@ -370,8 +360,6 @@ func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTx
 	if err != nil {
 		return nil, err
 	}
-
-	bloom, gasLimit, gasUsed := aggregator.GetBlockFields(block, blockInfo)
 
 	processedTxes := make([]*evm.ProcessedTx, 0, len(results))
 	safeResults := make([]*evm.TxResult, 0, len(results))
@@ -394,7 +382,7 @@ func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTx
 	if includeTxData {
 		txResults := make([]*TransactionResult, 0, len(safeResults))
 		for i, res := range safeResults {
-			txResults = append(txResults, makeTransactionResult(processedTxes[i], res, blockHash))
+			txResults = append(txResults, makeTransactionResult(processedTxes[i], res, &blockHash))
 		}
 		transactions = txResults
 	} else {
@@ -405,28 +393,21 @@ func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTx
 		transactions = txHashes
 	}
 
-	var txRoot common.Hash
-	if len(processedTxes) != 0 {
+	return makeBlockResult(block.Header, transactions), nil
+}
 
-		txes := make([]*types.Transaction, 0, len(processedTxes))
-		for _, tx := range processedTxes {
-			txes = append(txes, tx.Tx)
-		}
-		txRoot = types.DeriveSha(types.Transactions(txes), new(trie.Trie))
-	} else {
-		txRoot = types.EmptyRootHash
-	}
+func makeBlockResult(header *types.Header, transactions interface{}) *GetBlockResult {
 	size := uint64(0)
 	uncles := make([]hexutil.Bytes, 0)
 	return &GetBlockResult{
 		Number:           (*hexutil.Big)(header.Number),
-		Hash:             blockHash.Bytes(),
+		Hash:             header.Hash().Bytes(),
 		ParentHash:       header.ParentHash.Bytes(),
 		MixDigest:        header.MixDigest.Bytes(),
 		Nonce:            &header.Nonce,
 		Sha3Uncles:       header.UncleHash.Bytes(),
-		LogsBloom:        bloom.Bytes(),
-		TransactionsRoot: txRoot.Bytes(),
+		LogsBloom:        header.Bloom.Bytes(),
+		TransactionsRoot: header.TxHash.Bytes(),
 		StateRoot:        header.Root.Bytes(),
 		ReceiptsRoot:     header.ReceiptHash.Bytes(),
 		Miner:            header.Coinbase.Bytes(),
@@ -434,15 +415,15 @@ func (s *Server) getBlock(header *types.Header, blockHash common.Hash, includeTx
 		TotalDifficulty:  (*hexutil.Big)(header.Difficulty),
 		ExtraData:        (*hexutil.Bytes)(&header.Extra),
 		Size:             (*hexutil.Uint64)(&size),
-		GasLimit:         (*hexutil.Uint64)(&gasLimit),
-		GasUsed:          (*hexutil.Uint64)(&gasUsed),
+		GasLimit:         (*hexutil.Uint64)(&header.GasLimit),
+		GasUsed:          (*hexutil.Uint64)(&header.GasUsed),
 		Timestamp:        (*hexutil.Uint64)(&header.Time),
 		Transactions:     transactions,
 		Uncles:           &uncles,
-	}, nil
+	}
 }
 
-func makeTransactionResult(processedTx *evm.ProcessedTx, res *evm.TxResult, blockHash common.Hash) *TransactionResult {
+func makeTransactionResult(processedTx *evm.ProcessedTx, res *evm.TxResult, blockHash *common.Hash) *TransactionResult {
 	tx := processedTx.Tx
 	vVal, rVal, sVal := tx.RawSignatureValues()
 	txIndex := res.TxIndex.Uint64()
@@ -463,7 +444,7 @@ func makeTransactionResult(processedTx *evm.ProcessedTx, res *evm.TxResult, bloc
 	}
 
 	return &TransactionResult{
-		BlockHash:        &blockHash,
+		BlockHash:        blockHash,
 		BlockNumber:      (*hexutil.Big)(blockNum),
 		From:             res.IncomingRequest.Sender.ToEthAddress(),
 		Gas:              hexutil.Uint64(tx.Gas()),
@@ -522,8 +503,8 @@ func buildCallMsg(args CallTxArgs) (arbcommon.Address, message.Call) {
 	}
 }
 
-func (s *Server) executeCall(ctx context.Context, args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.TxResult, error) {
-	snap, err := s.getSnapshot(ctx, blockNum)
+func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.TxResult, error) {
+	snap, err := s.getSnapshot(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -532,7 +513,7 @@ func (s *Server) executeCall(ctx context.Context, args CallTxArgs, blockNum *rpc
 	return snap.Call(msg, from)
 }
 
-func (s *Server) getSnapshot(ctx context.Context, blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {
+func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {
 	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
 		return s.srv.PendingSnapshot(), nil
 	}
@@ -541,7 +522,7 @@ func (s *Server) getSnapshot(ctx context.Context, blockNum *rpc.BlockNumber) (*s
 		return s.srv.LatestSnapshot(), nil
 	}
 
-	snap, err := s.srv.GetSnapshot(ctx, uint64(*blockNum))
+	snap, err := s.srv.GetSnapshot(uint64(*blockNum))
 	if err != nil {
 		return nil, err
 	}

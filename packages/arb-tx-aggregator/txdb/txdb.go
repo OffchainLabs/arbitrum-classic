@@ -18,9 +18,11 @@ package txdb
 
 import (
 	"context"
-	"errors"
+	"fmt"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/trie"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
@@ -68,12 +70,13 @@ func New(
 	}
 }
 
-func (txdb *TxDB) Load(ctx context.Context) error {
-	if txdb.checkpointer.HasCheckpointedState() {
-		if err := txdb.restoreFromCheckpoint(ctx); err == nil {
+func (db *TxDB) Load(ctx context.Context) error {
+	if db.checkpointer.HasCheckpointedState() {
+		err := db.restoreFromCheckpoint(ctx)
+		if err == nil {
 			return nil
 		}
-
+		log.Println("Error restoring from checkpoint:", err)
 		log.Println("Failed to restore from checkpoint, falling back to fresh start")
 	}
 	// We failed to restore from a checkpoint
@@ -82,34 +85,46 @@ func (txdb *TxDB) Load(ctx context.Context) error {
 		return err
 	}
 
-	mach, err := txdb.checkpointer.GetInitialMachine(valueCache)
+	mach, err := db.checkpointer.GetInitialMachine(valueCache)
 	if err != nil {
 		return err
 	}
 
-	txdb.mach = mach
-	txdb.callMut.Lock()
-	defer txdb.callMut.Unlock()
-	txdb.lastBlockProcessed = nil
-	txdb.lastInboxSeq = big.NewInt(0)
+	db.mach = mach
+	db.callMut.Lock()
+	defer db.callMut.Unlock()
+	db.lastBlockProcessed = nil
+	db.lastInboxSeq = big.NewInt(0)
 	return nil
 }
 
+func (db *TxDB) AddInitialBlock(ctx context.Context, initialBlockHeight *big.Int) error {
+	id, err := db.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(initialBlockHeight))
+	if err != nil {
+		return err
+	}
+	timestamp, err := db.timeGetter.TimestampForBlockHash(ctx, id.HeaderHash)
+	if err != nil {
+		return err
+	}
+	return db.saveEmptyBlock(ethcommon.Hash{}, initialBlockHeight, timestamp.Uint64())
+}
+
 // addSnap must be called with callMut locked or during construction
-func (txdb *TxDB) addSnap(mach machine.Machine, blockNum *big.Int, timestamp *big.Int) {
+func (db *TxDB) addSnap(mach machine.Machine, blockNum *big.Int, timestamp *big.Int) {
 	currentTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocks(new(big.Int).Set(blockNum)),
 		Timestamp: new(big.Int).Set(timestamp),
 	}
-	snap := snapshot.NewSnapshot(mach, currentTime, message.ChainAddressToID(txdb.chain), new(big.Int).Set(txdb.lastInboxSeq))
-	txdb.snapCache.addSnapshot(snap)
+	snap := snapshot.NewSnapshot(mach, currentTime, message.ChainAddressToID(db.chain), new(big.Int).Set(db.lastInboxSeq))
+	db.snapCache.addSnapshot(snap)
 }
 
-func (txdb *TxDB) restoreFromCheckpoint(ctx context.Context) error {
+func (db *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 	var mach machine.Machine
 	var blockId *common.BlockId
 	var lastInboxSeq *big.Int
-	if err := txdb.checkpointer.RestoreLatestState(ctx, txdb.timeGetter, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext, restoreBlockId *common.BlockId) error {
+	if err := db.checkpointer.RestoreLatestState(ctx, db.timeGetter, func(chainObserverBytes []byte, restoreCtx ckptcontext.RestoreContext, restoreBlockId *common.BlockId) error {
 		var machineHash common.Hash
 		copy(machineHash[:], chainObserverBytes)
 		lastInboxSeq = new(big.Int).SetBytes(chainObserverBytes[32:])
@@ -123,18 +138,29 @@ func (txdb *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 	}); err != nil {
 		return err
 	}
-	blockInfo, err := txdb.as.GetBlock(blockId.Height.AsInt().Uint64())
+
+	restoreHeight := blockId.Height.AsInt().Uint64()
+	// Find the previous block checkout that included an AVM log to find the max
+	// avm log and avm send index at restore point
+	var blockLog value.Value
+	for blockLog == nil {
+		blockInfo, err := db.as.GetBlock(restoreHeight)
+		if err != nil {
+			return err
+		}
+		if blockInfo == nil {
+			return fmt.Errorf("no block saved at height %v", restoreHeight)
+		}
+		blockLog = blockInfo.BlockLog
+		restoreHeight--
+	}
+
+	block, err := evm.NewBlockResultFromValue(blockLog)
 	if err != nil {
 		return err
 	}
-	if blockInfo == nil {
-		return errors.New("should only checkpoint at non-empty blocks")
-	}
-	block, err := evm.NewBlockResultFromValue(blockInfo.BlockLog)
-	if err != nil {
-		return err
-	}
-	if err := txdb.as.Reorg(
+
+	if err := db.as.Reorg(
 		blockId.Height.AsInt().Uint64(),
 		block.ChainStats.AVMSendCount.Uint64(),
 		block.ChainStats.AVMLogCount.Uint64(),
@@ -142,48 +168,43 @@ func (txdb *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 		return err
 	}
 
-	txdb.mach = mach
-	txdb.callMut.Lock()
-	defer txdb.callMut.Unlock()
-	txdb.lastBlockProcessed = blockId
-	txdb.lastInboxSeq = lastInboxSeq
-	txdb.addSnap(mach.Clone(), block.BlockNum, block.Timestamp)
+	db.mach = mach
+	db.callMut.Lock()
+	defer db.callMut.Unlock()
+	db.lastBlockProcessed = blockId
+	db.lastInboxSeq = lastInboxSeq
+	db.addSnap(mach.Clone(), block.BlockNum, block.Timestamp)
 	return nil
 }
 
-type blockData struct {
-	block     *common.BlockId
-	blockInfo *evm.BlockInfo
-}
-
-func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent, finishedBlock *common.BlockId) error {
-	timestamp, err := txdb.timeGetter.TimestampForBlockHash(ctx, finishedBlock.HeaderHash)
+func (db *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent, finishedBlock *common.BlockId) error {
+	timestamp, err := db.timeGetter.TimestampForBlockHash(ctx, finishedBlock.HeaderHash)
 	if err != nil {
 		return err
 	}
 
-	var lastBlock *blockData
+	var lastBlock *evm.BlockInfo
 	for _, msg := range msgs {
 		// TODO: Give ExecuteAssertion the ability to run unbounded until it blocks
 		// The max steps here is a hack since it should just run until it blocks
 		// Last value returned is not an error type
-		assertion, _ := txdb.mach.ExecuteAssertion(1000000000000, []inbox.InboxMessage{msg.Message}, 0)
-		txdb.callMut.Lock()
-		txdb.lastInboxSeq = msg.Message.InboxSeqNum
-		txdb.callMut.Unlock()
-		processedAssertion, err := txdb.processAssertion(ctx, assertion)
+		assertion, _ := db.mach.ExecuteAssertion(1000000000000, []inbox.InboxMessage{msg.Message}, 0)
+		db.callMut.Lock()
+		db.lastInboxSeq = msg.Message.InboxSeqNum
+		db.callMut.Unlock()
+		processedAssertion, err := db.processAssertion(assertion)
 		if err != nil {
 			return err
 		}
-		if err := saveAssertion(txdb.as, processedAssertion); err != nil {
+		if err := db.saveAssertion(processedAssertion); err != nil {
 			return err
 		}
 		if len(processedAssertion.blocks) > 0 {
 			block := processedAssertion.blocks[len(processedAssertion.blocks)-1]
-			txdb.callMut.Lock()
-			txdb.addSnap(txdb.mach.Clone(), block.blockInfo.BlockNum, block.blockInfo.Timestamp)
-			txdb.callMut.Unlock()
-			lastBlock = &block
+			db.callMut.Lock()
+			db.addSnap(db.mach.Clone(), block.BlockNum, block.Timestamp)
+			db.callMut.Unlock()
+			lastBlock = block
 		}
 	}
 
@@ -191,52 +212,52 @@ func (txdb *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliv
 	// TODO: Give ExecuteCallServerAssertion the ability to run unbounded until it blocks
 	// The max steps here is a hack since it should just run until it blocks
 	// Last value returned is not an error type
-	assertion, _ := txdb.mach.ExecuteCallServerAssertion(1000000000000, nil, value.NewIntValue(nextBlockHeight), 0)
-	processedAssertion, err := txdb.processAssertion(ctx, assertion)
+	assertion, _ := db.mach.ExecuteCallServerAssertion(1000000000000, nil, value.NewIntValue(nextBlockHeight), 0)
+	processedAssertion, err := db.processAssertion(assertion)
 	if err != nil {
 		return err
 	}
-	if err := saveAssertion(txdb.as, processedAssertion); err != nil {
+	if err := db.saveAssertion(processedAssertion); err != nil {
 		return err
 	}
 	if len(processedAssertion.blocks) > 0 {
 		block := processedAssertion.blocks[len(processedAssertion.blocks)-1]
-		txdb.callMut.Lock()
-		txdb.addSnap(txdb.mach.Clone(), block.blockInfo.BlockNum, block.blockInfo.Timestamp)
-		txdb.callMut.Unlock()
-		lastBlock = &block
+		db.callMut.Lock()
+		db.addSnap(db.mach.Clone(), block.BlockNum, block.Timestamp)
+		db.callMut.Unlock()
+		lastBlock = block
 	}
 
-	txdb.callMut.Lock()
-	txdb.lastBlockProcessed = finishedBlock
-	lastInboxSeq := new(big.Int).Set(txdb.lastInboxSeq)
+	db.callMut.Lock()
+	db.lastBlockProcessed = finishedBlock
+	lastInboxSeq := new(big.Int).Set(db.lastInboxSeq)
 
-	latestSnap := txdb.snapCache.latest()
+	latestSnap := db.snapCache.latest()
 	if latestSnap == nil || latestSnap.Height().Cmp(finishedBlock.Height) < 0 {
-		txdb.addSnap(txdb.mach.Clone(), finishedBlock.Height.AsInt(), timestamp)
+		db.addSnap(db.mach.Clone(), finishedBlock.Height.AsInt(), timestamp)
 	}
-	txdb.callMut.Unlock()
+	db.callMut.Unlock()
 
 	if lastBlock != nil {
 		ctx := ckptcontext.NewCheckpointContext()
-		ctx.AddMachine(txdb.mach)
-		machHash := txdb.mach.Hash()
+		ctx.AddMachine(db.mach)
+		machHash := db.mach.Hash()
 		cpData := make([]byte, 64)
 		copy(cpData[:], machHash[:])
 		copy(cpData[32:], math.U256Bytes(lastInboxSeq))
-		txdb.checkpointer.AsyncSaveCheckpoint(lastBlock.block, cpData, ctx)
+		db.checkpointer.AsyncSaveCheckpoint(finishedBlock, cpData, ctx)
 	}
 	return nil
 }
 
 type processedAssertion struct {
 	avmLogs   []value.Value
-	blocks    []blockData
+	blocks    []*evm.BlockInfo
 	assertion *protocol.ExecutionAssertion
 }
 
-func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.ExecutionAssertion) (processedAssertion, error) {
-	blocks := make([]blockData, 0)
+func (db *TxDB) processAssertion(assertion *protocol.ExecutionAssertion) (processedAssertion, error) {
+	blocks := make([]*evm.BlockInfo, 0)
 	avmLogs := assertion.ParseLogs()
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
@@ -250,15 +271,7 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 			continue
 		}
 
-		block, err := txdb.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(blockInfo.BlockNum))
-		if err != nil {
-			return processedAssertion{}, err
-		}
-
-		blocks = append(blocks, blockData{
-			block:     block,
-			blockInfo: blockInfo,
-		})
+		blocks = append(blocks, blockInfo)
 	}
 
 	return processedAssertion{
@@ -268,29 +281,62 @@ func (txdb *TxDB) processAssertion(ctx context.Context, assertion *protocol.Exec
 	}, nil
 }
 
-func saveAssertion(
-	as *cmachine.AggregatorStore,
-	processed processedAssertion,
-) error {
+func (db *TxDB) saveEmptyBlock(prev ethcommon.Hash, number *big.Int, time uint64) error {
+	header := &types.Header{
+		ParentHash: prev,
+		Difficulty: big.NewInt(0),
+		Number:     new(big.Int).Set(number),
+		GasLimit:   10000000,
+		GasUsed:    0,
+		Time:       time,
+	}
+	block := types.NewBlock(header, nil, nil, nil, new(trie.Trie))
+	if err := db.as.SaveEmptyBlock(block.Header()); err != nil {
+		return err
+	}
+
+	return db.as.SaveBlockHash(common.NewHashFromEth(header.Hash()), header.Number.Uint64())
+}
+
+func (db *TxDB) saveAssertion(processed processedAssertion) error {
 	for _, avmLog := range processed.avmLogs {
-		if err := as.SaveLog(avmLog); err != nil {
+		if err := db.as.SaveLog(avmLog); err != nil {
 			return err
 		}
 	}
 
 	for _, avmMessage := range processed.assertion.ParseOutMessages() {
-		if err := as.SaveMessage(avmMessage); err != nil {
+		if err := db.as.SaveMessage(avmMessage); err != nil {
 			return err
 		}
 	}
 
 	for _, info := range processed.blocks {
-		txCount := info.blockInfo.BlockStats.TxCount.Uint64()
-		startLog := info.blockInfo.FirstAVMLog().Uint64()
-		ethLogs := make([]*types.Log, 0)
+		latest, err := db.as.LatestBlock()
+		if err != nil {
+			return err
+		}
+		next := new(big.Int).Add(latest.Height.AsInt(), big.NewInt(1))
+		// Fill in empty blocks
+		for next.Cmp(info.BlockNum) < 0 {
+			prev, err := db.GetBlock(next.Uint64() - 1)
+			if err != nil {
+				return err
+			}
+			if prev == nil {
+				return fmt.Errorf("trying to add block %v, but prev header was not found", next)
+			}
+			if err := db.saveEmptyBlock(prev.Header.Hash(), next, prev.Header.Time); err != nil {
+				return err
+			}
+			next = next.Add(next, big.NewInt(1))
+		}
+
+		txCount := info.BlockStats.TxCount.Uint64()
+		startLog := info.FirstAVMLog().Uint64()
 		txResults := make([]*evm.TxResult, 0, txCount)
 		for i := uint64(0); i < txCount; i++ {
-			avmLog, err := as.GetLog(startLog + i)
+			avmLog, err := db.as.GetLog(startLog + i)
 			if err != nil {
 				return err
 			}
@@ -301,76 +347,91 @@ func saveAssertion(
 			txResults = append(txResults, txRes)
 		}
 
-		for _, txRes := range txResults {
-			for _, evmLog := range txRes.EVMLogs {
-				ethLogs = append(ethLogs, &types.Log{
-					Address: evmLog.Address.ToEthAddress(),
-					Topics:  common.NewEthHashesFromHashes(evmLog.Topics),
-				})
+		ethTxes := make([]*types.Transaction, 0, len(txResults))
+		ethReceipts := make([]*types.Receipt, 0, len(txResults))
+		for _, res := range txResults {
+			tx, err := evm.GetTransaction(res.IncomingRequest)
+			// Skip logs that aren't for transactions
+			if err != nil {
+				continue
 			}
+			ethTxes = append(ethTxes, tx.Tx)
+			ethReceipts = append(ethReceipts, res.ToEthReceipt(common.Hash{}))
 		}
 
-		logBloom := types.BytesToBloom(types.LogsBloom(ethLogs))
+		header := &types.Header{
+			ParentHash: ethcommon.Hash{},
+			Difficulty: big.NewInt(0),
+			Number:     new(big.Int).Set(info.BlockNum),
+			GasLimit:   info.GasLimit.Uint64(),
+			GasUsed:    info.BlockStats.GasUsed.Uint64(),
+			Time:       info.Timestamp.Uint64(),
+		}
 
-		avmLogIndex := info.blockInfo.ChainStats.AVMLogCount.Uint64() - 1
-		if err := as.SaveBlock(info.block, avmLogIndex, logBloom); err != nil {
+		block := types.NewBlock(header, ethTxes, nil, ethReceipts, new(trie.Trie))
+		avmLogIndex := info.ChainStats.AVMLogCount.Uint64() - 1
+		if err := db.as.SaveBlock(block.Header(), avmLogIndex); err != nil {
 			return err
 		}
 
 		for i, txRes := range txResults {
 			if txRes.ResultCode == evm.BadSequenceCode {
 				// If this log failed with incorrect sequence number, only save the request if it hasn't been saved before
-				if as.GetPossibleRequestInfo(txRes.IncomingRequest.MessageID) == nil {
+				if db.as.GetPossibleRequestInfo(txRes.IncomingRequest.MessageID) == nil {
 					continue
 				}
 			}
 
-			if err := as.SaveRequest(txRes.IncomingRequest.MessageID, startLog+uint64(i)); err != nil {
+			if err := db.as.SaveRequest(txRes.IncomingRequest.MessageID, startLog+uint64(i)); err != nil {
 				return err
 			}
+		}
+
+		if err := db.as.SaveBlockHash(common.NewHashFromEth(header.Hash()), header.Number.Uint64()); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func (txdb *TxDB) GetMessage(index uint64) (value.Value, error) {
-	return txdb.as.GetMessage(index)
+func (db *TxDB) GetMessage(index uint64) (value.Value, error) {
+	return db.as.GetMessage(index)
 }
 
-func (txdb *TxDB) GetLog(index uint64) (value.Value, error) {
-	return txdb.as.GetLog(index)
+func (db *TxDB) GetLog(index uint64) (value.Value, error) {
+	return db.as.GetLog(index)
 }
 
-func (txdb *TxDB) GetBlock(height uint64) (*machine.BlockInfo, error) {
-	latest := txdb.LatestBlock()
+func (db *TxDB) GetBlock(height uint64) (*machine.BlockInfo, error) {
+	latest := db.LatestBlock()
 	if height > latest.Height.AsInt().Uint64() {
 		return nil, nil
 	}
-	return txdb.as.GetBlock(height)
+	return db.as.GetBlock(height)
 }
 
-func (txdb *TxDB) LatestBlock() *common.BlockId {
-	block, err := txdb.as.LatestBlock()
+func (db *TxDB) LatestBlock() *common.BlockId {
+	block, err := db.as.LatestBlock()
 	if err != nil {
-		return txdb.lastBlockProcessed
+		return db.lastBlockProcessed
 	}
 	return block
 }
 
-func (txdb *TxDB) LatestSnapshot() *snapshot.Snapshot {
-	txdb.callMut.Lock()
-	defer txdb.callMut.Unlock()
-	return txdb.snapCache.latest()
+func (db *TxDB) LatestSnapshot() *snapshot.Snapshot {
+	db.callMut.Lock()
+	defer db.callMut.Unlock()
+	return db.snapCache.latest()
 }
 
-func (txdb *TxDB) GetSnapshot(time inbox.ChainTime) *snapshot.Snapshot {
-	txdb.callMut.Lock()
-	defer txdb.callMut.Unlock()
-	return txdb.snapCache.getSnapshot(time)
+func (db *TxDB) GetSnapshot(time inbox.ChainTime) *snapshot.Snapshot {
+	db.callMut.Lock()
+	defer db.callMut.Unlock()
+	return db.snapCache.getSnapshot(time)
 }
 
-func (txdb *TxDB) LatestBlockId() *common.BlockId {
-	txdb.callMut.Lock()
-	defer txdb.callMut.Unlock()
-	return txdb.lastBlockProcessed
+func (db *TxDB) LatestBlockId() *common.BlockId {
+	db.callMut.Lock()
+	defer db.callMut.Unlock()
+	return db.lastBlockProcessed
 }

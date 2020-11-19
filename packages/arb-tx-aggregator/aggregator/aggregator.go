@@ -36,11 +36,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
 type Server struct {
-	Client      ethutils.EthClient
 	chain       common.Address
 	batch       batcher.TransactionBatcher
 	db          *txdb.TxDB
@@ -50,13 +48,11 @@ type Server struct {
 
 // NewServer returns a new instance of the Server class
 func NewServer(
-	client ethutils.EthClient,
 	batch batcher.TransactionBatcher,
 	rollupAddress common.Address,
 	db *txdb.TxDB,
 ) *Server {
 	return &Server{
-		Client:      client,
 		chain:       rollupAddress,
 		batch:       batch,
 		db:          db,
@@ -120,70 +116,16 @@ func (m *Server) GetChainAddress() ethcommon.Address {
 	return m.chain.ToEthAddress()
 }
 
-func (m *Server) BlockInfo(height uint64) (*machine.BlockInfo, error) {
+func (m *Server) BlockInfoByNumber(height uint64) (*machine.BlockInfo, error) {
 	return m.db.GetBlock(height)
 }
 
-func (m *Server) GetBlockHeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
-	ethHeader, err := m.Client.HeaderByHash(ctx, hash.ToEthHash())
-	if err != nil {
-		return nil, err
-	}
-
-	currentBlock, err := m.db.GetBlock(ethHeader.Number.Uint64())
-	if err != nil {
-		return nil, err
-	}
-
-	return getBlockHeader(currentBlock, ethHeader)
-}
-
-func (m *Server) GetBlockHeaderByNumber(ctx context.Context, height uint64) (*types.Header, error) {
-	currentBlock, err := m.db.GetBlock(height)
-	if err != nil {
-		return nil, err
-	}
-
-	var ethHeader *types.Header
-	if currentBlock != nil {
-		ethHeader, err = m.Client.HeaderByHash(ctx, currentBlock.Hash.ToEthHash())
-	} else {
-		ethHeader, err = m.Client.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
-	}
-	if err != nil {
-		return nil, err
-	}
-	return getBlockHeader(currentBlock, ethHeader)
-}
-
-func GetBlockFields(currentBlock *machine.BlockInfo, res *evm.BlockInfo) (types.Bloom, uint64, uint64) {
-	gasUsed := uint64(0)
-	gasLimit := uint64(100000000)
-	bloom := types.Bloom{}
-	if currentBlock != nil {
-		gasUsed = res.BlockStats.GasUsed.Uint64()
-		gasLimit = res.GasLimit.Uint64()
-		bloom = currentBlock.Bloom
-	}
-	return bloom, gasLimit, gasUsed
-}
-
-func getBlockHeader(currentBlock *machine.BlockInfo, ethHeader *types.Header) (*types.Header, error) {
-	var res *evm.BlockInfo
-	if currentBlock != nil {
-		var err error
-		res, err = evm.NewBlockResultFromValue(currentBlock.BlockLog)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	ethHeader.Bloom, ethHeader.GasLimit, ethHeader.GasUsed = GetBlockFields(currentBlock, res)
-	return ethHeader, nil
+func (m *Server) BlockInfoByHash(hash common.Hash) (*machine.BlockInfo, error) {
+	return m.db.GetBlockWithHash(hash)
 }
 
 func (m *Server) GetBlockInfo(block *machine.BlockInfo) (*evm.BlockInfo, error) {
-	if block == nil {
+	if block.BlockLog == nil {
 		// No arbitrum block at this height
 		return nil, nil
 	}
@@ -245,15 +187,14 @@ func (m *Server) PendingCall(msg message.Call, sender ethcommon.Address) (*evm.T
 	return m.Call(msg, sender)
 }
 
-func (m *Server) GetSnapshot(ctx context.Context, blockHeight uint64) (*snapshot.Snapshot, error) {
-	height := new(big.Int).SetUint64(blockHeight)
-	header, err := m.Client.HeaderByNumber(ctx, height)
-	if err != nil {
+func (m *Server) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {
+	info, err := m.BlockInfoByNumber(blockHeight)
+	if err != nil || info == nil {
 		return nil, err
 	}
 	return m.db.GetSnapshot(inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocks(height),
-		Timestamp: new(big.Int).SetUint64(header.Time),
+		BlockNum:  common.NewTimeBlocks(new(big.Int).SetUint64(blockHeight)),
+		Timestamp: new(big.Int).SetUint64(info.Header.Time),
 	}), nil
 }
 

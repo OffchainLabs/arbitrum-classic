@@ -20,8 +20,6 @@ import (
 	"context"
 	"errors"
 	"github.com/ethereum/go-ethereum/core/types"
-	"math/big"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -58,6 +56,21 @@ func (txdb *View) GetRequest(requestId common.Hash) (value.Value, error) {
 		return nil, nil
 	}
 	return logVal, nil
+}
+
+func (txdb *View) GetBlockWithHash(blockHash common.Hash) (*machine.BlockInfo, error) {
+	blockHeight := txdb.as.GetPossibleBlock(blockHash)
+	if blockHeight == nil {
+		return nil, nil
+	}
+	info, err := txdb.as.GetBlock(*blockHeight)
+	if err != nil {
+		return nil, err
+	}
+	if info.Header.Hash() != blockHash.ToEthHash() {
+		return nil, nil
+	}
+	return info, err
 }
 
 func (txdb *View) GetBlock(height uint64) (*machine.BlockInfo, error) {
@@ -110,7 +123,7 @@ func (txdb *View) FindLogs(
 			// No arbitrum txes in this block
 			continue
 		}
-		if !maybeMatchesLogQuery(blockInfo.Bloom, address, topics) {
+		if !maybeMatchesLogQuery(blockInfo.Header.Bloom, address, topics) {
 			continue
 		}
 
@@ -140,8 +153,8 @@ func (txdb *View) FindLogs(
 						TxHash:  res.IncomingRequest.MessageID,
 						Index:   logIndex,
 						Block: &common.BlockId{
-							Height:     common.NewTimeBlocks(new(big.Int).SetUint64(i)),
-							HeaderHash: blockInfo.Hash,
+							Height:     common.NewTimeBlocks(blockInfo.Header.Number),
+							HeaderHash: common.NewHashFromEth(blockInfo.Header.Hash()),
 						},
 					})
 				}
