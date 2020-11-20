@@ -581,7 +581,7 @@ func NewTxResultFromValue(val value.Value) (*TxResult, error) {
 	}
 	txRes, ok := res.(*TxResult)
 	if !ok {
-		return nil, errors.New("unexpected avm result type")
+		return nil, errors.New("got block result but expected transaction")
 	}
 	return txRes, nil
 }
@@ -593,7 +593,7 @@ func NewBlockResultFromValue(val value.Value) (*BlockInfo, error) {
 	}
 	txRes, ok := res.(*BlockInfo)
 	if !ok {
-		return nil, errors.New("unexpected avm result type")
+		return nil, errors.New("got transaction result but expected block")
 	}
 	return txRes, nil
 }

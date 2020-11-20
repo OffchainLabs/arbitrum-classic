@@ -19,12 +19,9 @@ package machine
 import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type BlockInfo struct {
-	Hash     common.Hash
 	BlockLog value.Value
-	Bloom    types.Bloom
+	Header   *types.Header
 }

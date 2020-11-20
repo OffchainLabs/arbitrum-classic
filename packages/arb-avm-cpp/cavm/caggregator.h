@@ -80,6 +80,13 @@ int aggregatorSaveRequest(CAggregatorStore* agg,
                           const void* request_id,
                           uint64_t log_index);
 
+// block_hash is 32 bytes long
+Uint64Result aggregatorGetPossibleBlock(const CAggregatorStore* agg,
+                                        const void* block_hash);
+int aggregatorSaveBlockHash(CAggregatorStore* agg,
+                            const void* block_hash,
+                            uint64_t block_height);
+
 #ifdef __cplusplus
 }
 #endif

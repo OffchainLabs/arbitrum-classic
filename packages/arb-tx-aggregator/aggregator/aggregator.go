@@ -36,11 +36,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
 type Server struct {
-	Client      ethutils.EthClient
 	chain       common.Address
 	batch       batcher.TransactionBatcher
 	db          *txdb.TxDB
@@ -50,13 +48,11 @@ type Server struct {
 
 // NewServer returns a new instance of the Server class
 func NewServer(
-	client ethutils.EthClient,
 	batch batcher.TransactionBatcher,
 	rollupAddress common.Address,
 	db *txdb.TxDB,
 ) *Server {
 	return &Server{
-		Client:      client,
 		chain:       rollupAddress,
 		batch:       batch,
 		db:          db,
@@ -120,96 +116,25 @@ func (m *Server) GetChainAddress() ethcommon.Address {
 	return m.chain.ToEthAddress()
 }
 
-func (m *Server) BlockInfo(height uint64) (*machine.BlockInfo, error) {
+func (m *Server) BlockInfoByNumber(height uint64) (*machine.BlockInfo, error) {
 	return m.db.GetBlock(height)
 }
 
-func (m *Server) GetBlockHeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
-	ethHeader, err := m.Client.HeaderByHash(ctx, hash.ToEthHash())
-	if err != nil {
-		return nil, err
-	}
-
-	currentBlock, err := m.db.GetBlock(ethHeader.Number.Uint64())
-	if err != nil {
-		return nil, err
-	}
-
-	return getBlockHeader(currentBlock, ethHeader)
+func (m *Server) BlockInfoByHash(hash common.Hash) (*machine.BlockInfo, error) {
+	return m.db.GetBlockWithHash(hash)
 }
 
-func (m *Server) GetBlockHeaderByNumber(ctx context.Context, height uint64) (*types.Header, error) {
-	currentBlock, err := m.db.GetBlock(height)
-	if err != nil {
-		return nil, err
-	}
-
-	var ethHeader *types.Header
-	if currentBlock != nil {
-		ethHeader, err = m.Client.HeaderByHash(ctx, currentBlock.Hash.ToEthHash())
-	} else {
-		ethHeader, err = m.Client.HeaderByNumber(ctx, new(big.Int).SetUint64(height))
-	}
-	if err != nil {
-		return nil, err
-	}
-	return getBlockHeader(currentBlock, ethHeader)
-}
-
-func GetBlockFields(currentBlock *machine.BlockInfo, res *evm.BlockInfo) (types.Bloom, uint64, uint64) {
-	gasUsed := uint64(0)
-	gasLimit := uint64(100000000)
-	bloom := types.Bloom{}
-	if currentBlock != nil {
-		gasUsed = res.BlockStats.GasUsed.Uint64()
-		gasLimit = res.GasLimit.Uint64()
-		bloom = currentBlock.Bloom
-	}
-	return bloom, gasLimit, gasUsed
-}
-
-func getBlockHeader(currentBlock *machine.BlockInfo, ethHeader *types.Header) (*types.Header, error) {
-	var res *evm.BlockInfo
-	if currentBlock != nil {
-		var err error
-		res, err = evm.NewBlockResultFromValue(currentBlock.BlockLog)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	ethHeader.Bloom, ethHeader.GasLimit, ethHeader.GasUsed = GetBlockFields(currentBlock, res)
-	return ethHeader, nil
-}
-
-func (m *Server) GetBlockInfo(block *machine.BlockInfo) (*evm.BlockInfo, error) {
-	if block == nil {
-		// No arbitrum block at this height
+func (m *Server) GetBlockResults(block *machine.BlockInfo) ([]*evm.TxResult, error) {
+	if block.BlockLog == nil {
+		// No arb block at this height
 		return nil, nil
 	}
 
-	return evm.NewBlockResultFromValue(block.BlockLog)
-}
-
-func (m *Server) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
-	if res == nil {
-		return nil, nil
+	res, err := evm.NewBlockResultFromValue(block.BlockLog)
+	if err != nil {
+		return nil, err
 	}
-	txCount := res.BlockStats.TxCount.Uint64()
-	startLog := res.FirstAVMLog().Uint64()
-	results := make([]*evm.TxResult, 0, txCount)
-	for i := uint64(0); i < txCount; i++ {
-		avmLog, err := m.db.GetLog(startLog + i)
-		if err != nil {
-			return nil, err
-		}
-		res, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			return nil, err
-		}
-		results = append(results, res)
-	}
-	return results, nil
+	return m.db.GetBlockResults(res)
 }
 
 func (m *Server) GetTxInBlockAtIndexResults(res *evm.BlockInfo, index uint64) (*evm.TxResult, error) {
@@ -223,41 +148,6 @@ func (m *Server) GetTxInBlockAtIndexResults(res *evm.BlockInfo, index uint64) (*
 		return nil, err
 	}
 	return evm.NewTxResultFromValue(avmLog)
-}
-
-type ProcessedTx struct {
-	Tx        *types.Transaction
-	Kind      inbox.Type
-	L2Subtype *message.L2SubType
-}
-
-func GetTransaction(msg evm.IncomingRequest) (*ProcessedTx, error) {
-	// Special handling for buddy deploy
-	if msg.Kind == message.L2BuddyDeploy {
-		buddyDeployMessage := message.NewBuddyDeploymentFromData(msg.Data)
-		return &ProcessedTx{
-			Tx:   buddyDeployMessage.AsEthTx(),
-			Kind: msg.Kind,
-		}, nil
-	}
-
-	if msg.Kind != message.L2Type {
-		return nil, errors.New("result is not a transaction")
-	}
-	l2msg, err := message.L2Message{Data: msg.Data}.AbstractMessage()
-	if err != nil {
-		return nil, err
-	}
-	ethMsg, ok := l2msg.(message.EthConvertable)
-	if !ok {
-		return nil, errors.New("message not convertible to receipt")
-	}
-	l2Type := l2msg.L2Type()
-	return &ProcessedTx{
-		Tx:        ethMsg.AsEthTx(),
-		Kind:      msg.Kind,
-		L2Subtype: &l2Type,
-	}, nil
 }
 
 func (m *Server) AdjustGas(msg message.Call) message.Call {
@@ -280,15 +170,14 @@ func (m *Server) PendingCall(msg message.Call, sender ethcommon.Address) (*evm.T
 	return m.Call(msg, sender)
 }
 
-func (m *Server) GetSnapshot(ctx context.Context, blockHeight uint64) (*snapshot.Snapshot, error) {
-	height := new(big.Int).SetUint64(blockHeight)
-	header, err := m.Client.HeaderByNumber(ctx, height)
-	if err != nil {
+func (m *Server) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {
+	info, err := m.BlockInfoByNumber(blockHeight)
+	if err != nil || info == nil {
 		return nil, err
 	}
 	return m.db.GetSnapshot(inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocks(height),
-		Timestamp: new(big.Int).SetUint64(header.Time),
+		BlockNum:  common.NewTimeBlocks(new(big.Int).SetUint64(blockHeight)),
+		Timestamp: new(big.Int).SetUint64(info.Header.Time),
 	}), nil
 }
 

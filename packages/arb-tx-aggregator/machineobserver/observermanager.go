@@ -84,6 +84,10 @@ func ensureInitialized(
 		return err
 	}
 
+	if err := db.AddInitialBlock(ctx, new(big.Int).Sub(eventCreated.BlockId.Height.AsInt(), big.NewInt(1))); err != nil {
+		return err
+	}
+
 	events, err := inboxWatcher.GetDeliveredEventsInBlock(ctx, eventCreated.BlockId, creationTimestamp)
 	if err != nil {
 		return err
@@ -181,7 +185,11 @@ func RunObserver(
 					if fetchEnd == nil {
 						break
 					}
-					log.Println("Getting events between", start, "and", fetchEnd)
+					currentOnChain, err := clnt.BlockIdForHeight(ctx, nil)
+					if err != nil {
+						return err
+					}
+					log.Println("Getting events between", start, "and", fetchEnd, "with", new(big.Int).Sub(currentOnChain.Height.AsInt(), start), "blocks remaining")
 					inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, start, fetchEnd)
 					if err != nil {
 						return errors2.Wrap(err, "Manager hit error doing fast catchup")

@@ -115,13 +115,20 @@ func (as *AggregatorStore) GetMessage(index uint64) (value.Value, error) {
 	return value.UnmarshalValue(bytes.NewBuffer(logBytes))
 }
 
-func parseBlockData(data []byte) (uint64, common.Hash, types.Bloom) {
-	logIndex := binary.BigEndian.Uint64(data)
-	data = data[8:]
-	var hash common.Hash
-	copy(hash[:], data[:])
-	data = data[32:]
-	return logIndex, hash, types.BytesToBloom(data[:])
+func parseBlockData(data []byte) (*types.Header, *uint64, error) {
+	blockType := data[0]
+	data = data[1:]
+	var logIndex *uint64
+	if blockType == 1 {
+		index := binary.BigEndian.Uint64(data)
+		logIndex = &index
+		data = data[8:]
+	}
+	header := &types.Header{}
+	if err := header.UnmarshalJSON(data); err != nil {
+		return nil, nil, err
+	}
+	return header, logIndex, nil
 }
 
 func (as *AggregatorStore) LatestBlock() (*common.BlockId, error) {
@@ -129,23 +136,49 @@ func (as *AggregatorStore) LatestBlock() (*common.BlockId, error) {
 	if result.found == 0 {
 		return nil, errors.New("failed to load block count")
 	}
-	// Last value returned is not an error type
-	_, hash, _ := parseBlockData(toByteSlice(result.data))
+
+	header, _, err := parseBlockData(toByteSlice(result.data))
+	if err != nil {
+		return nil, err
+	}
 	return &common.BlockId{
 		Height:     common.NewTimeBlocks(new(big.Int).SetUint64(uint64(result.height))),
-		HeaderHash: hash,
+		HeaderHash: common.NewHashFromEth(header.Hash()),
 	}, nil
 }
 
-func (as *AggregatorStore) SaveBlock(id *common.BlockId, logIndex uint64, logBloom types.Bloom) error {
-	blockData := make([]byte, 8)
-	binary.BigEndian.PutUint64(blockData[:], logIndex)
-	blockData = append(blockData, id.HeaderHash.Bytes()...)
-	blockData = append(blockData, logBloom.Bytes()...)
+func (as *AggregatorStore) SaveBlock(header *types.Header, logIndex uint64) error {
+	blockData := []byte{1}
+
+	logIndexData := make([]byte, 8)
+	binary.BigEndian.PutUint64(logIndexData[:], logIndex)
+	blockData = append(blockData, logIndexData...)
+
+	headerJSON, err := header.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	blockData = append(blockData, headerJSON...)
 	cBlockData := C.CBytes(blockData)
 	defer C.free(cBlockData)
 
-	if C.aggregatorSaveBlock(as.c, C.uint64_t(id.Height.AsInt().Uint64()), cBlockData, C.int(len(blockData))) == 0 {
+	if C.aggregatorSaveBlock(as.c, C.uint64_t(header.Number.Uint64()), cBlockData, C.int(len(blockData))) == 0 {
+		return errors.New("failed to save block")
+	}
+	return nil
+}
+
+func (as *AggregatorStore) SaveEmptyBlock(header *types.Header) error {
+	blockData := []byte{0}
+	headerJSON, err := header.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	blockData = append(blockData, headerJSON...)
+	cBlockData := C.CBytes(blockData)
+	defer C.free(cBlockData)
+
+	if C.aggregatorSaveBlock(as.c, C.uint64_t(header.Number.Uint64()), cBlockData, C.int(len(blockData))) == 0 {
 		return errors.New("failed to save block")
 	}
 	return nil
@@ -156,16 +189,21 @@ func (as *AggregatorStore) GetBlock(height uint64) (*machine.BlockInfo, error) {
 	if blockData.found == 0 {
 		return nil, nil
 	}
-	logIndex, hash, bloom := parseBlockData(toByteSlice(blockData.data))
-	avmLog, err := as.GetLog(logIndex)
+	header, logIndex, err := parseBlockData(toByteSlice(blockData.data))
 	if err != nil {
 		return nil, err
 	}
-	return &machine.BlockInfo{
-		Hash:     hash,
-		BlockLog: avmLog,
-		Bloom:    bloom,
-	}, nil
+	info := &machine.BlockInfo{
+		Header: header,
+	}
+	if logIndex != nil {
+		avmLog, err := as.GetLog(*logIndex)
+		if err != nil {
+			return nil, err
+		}
+		info.BlockLog = avmLog
+	}
+	return info, nil
 }
 
 func (as *AggregatorStore) Reorg(height uint64, messageCount uint64, logCount uint64) error {
@@ -180,15 +218,16 @@ func (as *AggregatorStore) Reorg(height uint64, messageCount uint64, logCount ui
 	return nil
 }
 
-func (as *AggregatorStore) GetPossibleRequestInfo(requestId common.Hash) (uint64, error) {
+func (as *AggregatorStore) GetPossibleRequestInfo(requestId common.Hash) *uint64 {
 	cHash := hashToData(requestId)
 	defer C.free(cHash)
 
 	result := C.aggregatorGetPossibleRequestInfo(as.c, cHash)
 	if result.found == 0 {
-		return 0, errors.New("failed to get request")
+		return nil
 	}
-	return uint64(result.value), nil
+	index := uint64(result.value)
+	return &index
 }
 
 func (as *AggregatorStore) SaveRequest(requestId common.Hash, logIndex uint64) error {
@@ -196,6 +235,28 @@ func (as *AggregatorStore) SaveRequest(requestId common.Hash, logIndex uint64) e
 	defer C.free(cHash)
 
 	if C.aggregatorSaveRequest(as.c, cHash, C.uint64_t(logIndex)) == 0 {
+		return errors.New("failed to save request")
+	}
+	return nil
+}
+
+func (as *AggregatorStore) GetPossibleBlock(blockHash common.Hash) *uint64 {
+	cHash := hashToData(blockHash)
+	defer C.free(cHash)
+
+	result := C.aggregatorGetPossibleBlock(as.c, cHash)
+	if result.found == 0 {
+		return nil
+	}
+	index := uint64(result.value)
+	return &index
+}
+
+func (as *AggregatorStore) SaveBlockHash(blockHash common.Hash, blockHeight uint64) error {
+	cHash := hashToData(blockHash)
+	defer C.free(cHash)
+
+	if C.aggregatorSaveBlockHash(as.c, cHash, C.uint64_t(blockHeight)) == 0 {
 		return errors.New("failed to save request")
 	}
 	return nil
