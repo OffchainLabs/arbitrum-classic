@@ -326,6 +326,24 @@ func (db *TxDB) fillEmptyBlocks(ctx context.Context, max *big.Int) error {
 	return nil
 }
 
+func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
+	txCount := res.BlockStats.TxCount.Uint64()
+	startLog := res.FirstAVMLog().Uint64()
+	results := make([]*evm.TxResult, 0, txCount)
+	for i := uint64(0); i < txCount; i++ {
+		avmLog, err := db.GetLog(startLog + i)
+		if err != nil {
+			return nil, err
+		}
+		res, err := evm.NewTxResultFromValue(avmLog)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, res)
+	}
+	return results, nil
+}
+
 func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion) error {
 	for _, avmLog := range processed.avmLogs {
 		if err := db.as.SaveLog(avmLog); err != nil {
@@ -344,31 +362,19 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 			return err
 		}
 
-		txCount := info.BlockStats.TxCount.Uint64()
 		startLog := info.FirstAVMLog().Uint64()
-		txResults := make([]*evm.TxResult, 0, txCount)
-		for i := uint64(0); i < txCount; i++ {
-			avmLog, err := db.as.GetLog(startLog + i)
-			if err != nil {
-				return err
-			}
-			txRes, err := evm.NewTxResultFromValue(avmLog)
-			if err != nil {
-				return err
-			}
-			txResults = append(txResults, txRes)
+		txResults, err := db.GetBlockResults(info)
+		if err != nil {
+			return err
 		}
+
+		processedResults := evm.FilterEthTxResults(txResults)
 
 		ethTxes := make([]*types.Transaction, 0, len(txResults))
 		ethReceipts := make([]*types.Receipt, 0, len(txResults))
-		for _, res := range txResults {
-			tx, err := evm.GetTransaction(res.IncomingRequest)
-			// Skip logs that aren't for transactions
-			if err != nil {
-				continue
-			}
-			ethTxes = append(ethTxes, tx.Tx)
-			ethReceipts = append(ethReceipts, res.ToEthReceipt(common.Hash{}))
+		for _, res := range processedResults {
+			ethTxes = append(ethTxes, res.Tx)
+			ethReceipts = append(ethReceipts, res.Result.ToEthReceipt(common.Hash{}))
 		}
 
 		id, err := db.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(info.BlockNum))

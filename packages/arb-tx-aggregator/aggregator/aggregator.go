@@ -124,34 +124,17 @@ func (m *Server) BlockInfoByHash(hash common.Hash) (*machine.BlockInfo, error) {
 	return m.db.GetBlockWithHash(hash)
 }
 
-func (m *Server) GetBlockInfo(block *machine.BlockInfo) (*evm.BlockInfo, error) {
+func (m *Server) GetBlockResults(block *machine.BlockInfo) ([]*evm.TxResult, error) {
 	if block.BlockLog == nil {
-		// No arbitrum block at this height
+		// No arb block at this height
 		return nil, nil
 	}
 
-	return evm.NewBlockResultFromValue(block.BlockLog)
-}
-
-func (m *Server) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
-	if res == nil {
-		return nil, nil
+	res, err := evm.NewBlockResultFromValue(block.BlockLog)
+	if err != nil {
+		return nil, err
 	}
-	txCount := res.BlockStats.TxCount.Uint64()
-	startLog := res.FirstAVMLog().Uint64()
-	results := make([]*evm.TxResult, 0, txCount)
-	for i := uint64(0); i < txCount; i++ {
-		avmLog, err := m.db.GetLog(startLog + i)
-		if err != nil {
-			return nil, err
-		}
-		res, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			return nil, err
-		}
-		results = append(results, res)
-	}
-	return results, nil
+	return m.db.GetBlockResults(res)
 }
 
 func (m *Server) GetTxInBlockAtIndexResults(res *evm.BlockInfo, index uint64) (*evm.TxResult, error) {

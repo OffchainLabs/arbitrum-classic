@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	errors2 "github.com/pkg/errors"
-	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -201,7 +200,7 @@ func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult,
 	if err != nil || res == nil {
 		return nil, err
 	}
-	tx, err := evm.GetTransaction(res.IncomingRequest)
+	tx, err := evm.GetTransaction(res)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +211,7 @@ func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult,
 		blockHash = &h
 	}
 
-	return makeTransactionResult(tx, res, blockHash), nil
+	return makeTransactionResult(tx, blockHash), nil
 }
 
 func (s *Server) GetTransactionByBlockHashAndIndex(blockHash common.Hash, index hexutil.Uint64) (*TransactionResult, error) {
@@ -240,7 +239,7 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 
 	receipt := res.ToEthReceipt(arbcommon.NewHashFromEth(info.Header.Hash()))
 
-	tx, err := evm.GetTransaction(res.IncomingRequest)
+	tx, err := evm.GetTransaction(res)
 	if err != nil {
 		return nil, err
 	}
@@ -336,59 +335,34 @@ func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint
 	if err != nil {
 		return nil, err
 	}
-	tx, err := evm.GetTransaction(txRes.IncomingRequest)
+	tx, err := evm.GetTransaction(txRes)
 	if err != nil {
 		return nil, err
 	}
 	blockHash := block.Header.Hash()
-	return makeTransactionResult(tx, txRes, &blockHash), nil
+	return makeTransactionResult(tx, &blockHash), nil
 }
 
 func (s *Server) getBlock(block *machine.BlockInfo, includeTxData bool) (*GetBlockResult, error) {
-	blockHash := block.Header.Hash()
-	if block.BlockLog == nil {
-		// No arb block at this height
-		return makeBlockResult(block.Header, nil), nil
-	}
-
-	blockInfo, err := s.srv.GetBlockInfo(block)
+	results, err := s.srv.GetBlockResults(block)
 	if err != nil {
 		return nil, err
 	}
 
-	results, err := s.srv.GetBlockResults(blockInfo)
-	if err != nil {
-		return nil, err
-	}
-
-	processedTxes := make([]*evm.ProcessedTx, 0, len(results))
-	safeResults := make([]*evm.TxResult, 0, len(results))
-	for _, res := range results {
-		kind := res.IncomingRequest.Kind
-		// Ignore other message types
-		if kind != message.L2Type && kind != message.L2BuddyDeploy {
-			continue
-		}
-		tx, err := evm.GetTransaction(res.IncomingRequest)
-		if err != nil {
-			log.Println("Couldn't return transaction for request", res.IncomingRequest.MessageID)
-			continue
-		}
-		processedTxes = append(processedTxes, tx)
-		safeResults = append(safeResults, res)
-	}
+	processedTxes := evm.FilterEthTxResults(results)
 
 	var transactions interface{}
 	if includeTxData {
-		txResults := make([]*TransactionResult, 0, len(safeResults))
-		for i, res := range safeResults {
-			txResults = append(txResults, makeTransactionResult(processedTxes[i], res, &blockHash))
+		blockHash := block.Header.Hash()
+		txResults := make([]*TransactionResult, 0, len(processedTxes))
+		for _, res := range processedTxes {
+			txResults = append(txResults, makeTransactionResult(res, &blockHash))
 		}
 		transactions = txResults
 	} else {
-		txHashes := make([]hexutil.Bytes, 0, len(safeResults))
-		for _, res := range safeResults {
-			txHashes = append(txHashes, res.IncomingRequest.MessageID.Bytes())
+		txHashes := make([]hexutil.Bytes, 0, len(processedTxes))
+		for _, res := range processedTxes {
+			txHashes = append(txHashes, res.Result.IncomingRequest.MessageID.Bytes())
 		}
 		transactions = txHashes
 	}
@@ -423,8 +397,9 @@ func makeBlockResult(header *types.Header, transactions interface{}) *GetBlockRe
 	}
 }
 
-func makeTransactionResult(processedTx *evm.ProcessedTx, res *evm.TxResult, blockHash *common.Hash) *TransactionResult {
+func makeTransactionResult(processedTx *evm.ProcessedTx, blockHash *common.Hash) *TransactionResult {
 	tx := processedTx.Tx
+	res := processedTx.Result
 	vVal, rVal, sVal := tx.RawSignatureValues()
 	txIndex := res.TxIndex.Uint64()
 	blockNum := res.IncomingRequest.ChainTime.BlockNum.AsInt()
