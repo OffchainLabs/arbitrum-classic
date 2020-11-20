@@ -136,7 +136,7 @@ func (as *AggregatorStore) LatestBlock() (*common.BlockId, error) {
 	if result.found == 0 {
 		return nil, errors.New("failed to load block count")
 	}
-	// Last value returned is not an error type
+
 	header, _, err := parseBlockData(toByteSlice(result.data))
 	if err != nil {
 		return nil, err
