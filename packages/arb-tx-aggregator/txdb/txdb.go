@@ -40,7 +40,7 @@ import (
 	"sync"
 )
 
-var snapshotCacheSize = 10
+var snapshotCacheSize = 100
 
 type TxDB struct {
 	View
@@ -230,6 +230,10 @@ func (db *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliver
 	}
 	db.callMut.Unlock()
 
+	if err := db.fillEmptyBlocks(ctx, new(big.Int).Add(finishedBlock.Height.AsInt(), big.NewInt(1))); err != nil {
+		return err
+	}
+
 	if lastBlock != nil {
 		ctx := ckptcontext.NewCheckpointContext()
 		ctx.AddMachine(db.mach)
@@ -299,6 +303,29 @@ func (db *TxDB) saveEmptyBlock(ctx context.Context, prev ethcommon.Hash, number 
 	return db.as.SaveBlockHash(common.NewHashFromEth(header.Hash()), header.Number.Uint64())
 }
 
+func (db *TxDB) fillEmptyBlocks(ctx context.Context, max *big.Int) error {
+	latest, err := db.as.LatestBlock()
+	if err != nil {
+		return err
+	}
+	next := new(big.Int).Add(latest.Height.AsInt(), big.NewInt(1))
+	// Fill in empty blocks
+	for next.Cmp(max) < 0 {
+		prev, err := db.GetBlock(next.Uint64() - 1)
+		if err != nil {
+			return err
+		}
+		if prev == nil {
+			return fmt.Errorf("trying to add block %v, but prev header was not found", next)
+		}
+		if err := db.saveEmptyBlock(ctx, prev.Header.Hash(), next); err != nil {
+			return err
+		}
+		next = next.Add(next, big.NewInt(1))
+	}
+	return nil
+}
+
 func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion) error {
 	for _, avmLog := range processed.avmLogs {
 		if err := db.as.SaveLog(avmLog); err != nil {
@@ -313,24 +340,8 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 	}
 
 	for _, info := range processed.blocks {
-		latest, err := db.as.LatestBlock()
-		if err != nil {
+		if err := db.fillEmptyBlocks(ctx, info.BlockNum); err != nil {
 			return err
-		}
-		next := new(big.Int).Add(latest.Height.AsInt(), big.NewInt(1))
-		// Fill in empty blocks
-		for next.Cmp(info.BlockNum) < 0 {
-			prev, err := db.GetBlock(next.Uint64() - 1)
-			if err != nil {
-				return err
-			}
-			if prev == nil {
-				return fmt.Errorf("trying to add block %v, but prev header was not found", next)
-			}
-			if err := db.saveEmptyBlock(ctx, prev.Header.Hash(), next); err != nil {
-				return err
-			}
-			next = next.Add(next, big.NewInt(1))
 		}
 
 		txCount := info.BlockStats.TxCount.Uint64()
@@ -369,7 +380,7 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 			return err
 		}
 		if prev == nil {
-			return fmt.Errorf("trying to add block %v, but prev header was not found", next)
+			return fmt.Errorf("trying to add block %v, but prev header was not found", info.BlockNum.Uint64())
 		}
 		header := &types.Header{
 			ParentHash: prev.Header.Hash(),
