@@ -411,7 +411,7 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 			}
 		}
 
-		if err := db.as.SaveBlockHash(common.NewHashFromEth(header.Hash()), header.Number.Uint64()); err != nil {
+		if err := db.as.SaveBlockHash(common.NewHashFromEth(block.Hash()), block.Number().Uint64()); err != nil {
 			return err
 		}
 	}
