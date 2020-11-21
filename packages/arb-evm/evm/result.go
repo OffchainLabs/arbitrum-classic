@@ -270,6 +270,26 @@ func (r *TxResult) AsValue() value.Value {
 	return tup
 }
 
+func (r *TxResult) EthLogs(blockHash common.Hash) []*types.Log {
+	evmLogs := make([]*types.Log, 0, len(r.EVMLogs))
+	logIndex := r.StartLogIndex.Uint64()
+	for _, l := range r.EVMLogs {
+		ethLog := &types.Log{
+			Address:     l.Address.ToEthAddress(),
+			Topics:      common.NewEthHashesFromHashes(l.Topics),
+			Data:        l.Data,
+			BlockNumber: r.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64(),
+			TxHash:      r.IncomingRequest.MessageID.ToEthHash(),
+			TxIndex:     uint(r.TxIndex.Uint64()),
+			BlockHash:   blockHash.ToEthHash(),
+			Index:       uint(logIndex),
+		}
+		logIndex++
+		evmLogs = append(evmLogs, ethLog)
+	}
+	return evmLogs
+}
+
 func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 	contractAddress := ethcommon.Address{}
 	if r.IncomingRequest.Kind == message.L2Type && r.ResultCode == ReturnCode {
@@ -289,23 +309,7 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 		status = 1
 	}
 
-	evmLogs := make([]*types.Log, 0, len(r.EVMLogs))
-	logIndex := r.StartLogIndex.Uint64()
-	for _, l := range r.EVMLogs {
-		ethLog := &types.Log{
-			Address:     l.Address.ToEthAddress(),
-			Topics:      common.NewEthHashesFromHashes(l.Topics),
-			Data:        l.Data,
-			BlockNumber: r.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64(),
-			TxHash:      r.IncomingRequest.MessageID.ToEthHash(),
-			TxIndex:     uint(r.TxIndex.Uint64()),
-			BlockHash:   blockHash.ToEthHash(),
-			Index:       uint(logIndex),
-		}
-		logIndex++
-		evmLogs = append(evmLogs, ethLog)
-	}
-
+	evmLogs := r.EthLogs(blockHash)
 	return &types.Receipt{
 		PostState:         []byte{0},
 		Status:            status,

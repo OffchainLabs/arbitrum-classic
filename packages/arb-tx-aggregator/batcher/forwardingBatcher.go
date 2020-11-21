@@ -18,15 +18,18 @@ package batcher
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"log"
 )
 
 type Forwarder struct {
-	client *ethclient.Client
+	client    *ethclient.Client
+	newTxFeed event.Feed
 }
 
 func NewForwarder(client *ethclient.Client) *Forwarder {
@@ -44,9 +47,15 @@ func (b *Forwarder) PendingTransactionCount(ctx context.Context, account common.
 }
 
 func (b *Forwarder) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	txes := []*types.Transaction{tx}
+	b.newTxFeed.Send(core.NewTxsEvent{Txs: txes})
 	return b.client.SendTransaction(ctx, tx)
 }
 
 func (b *Forwarder) PendingSnapshot() *snapshot.Snapshot {
 	return nil
+}
+
+func (b *Forwarder) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
+	return b.newTxFeed.Subscribe(ch)
 }

@@ -344,7 +344,7 @@ func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint
 }
 
 func (s *Server) getBlock(block *machine.BlockInfo, includeTxData bool) (*GetBlockResult, error) {
-	results, err := s.srv.GetBlockResults(block)
+	results, err := s.srv.GetMachineBlockResults(block)
 	if err != nil {
 		return nil, err
 	}

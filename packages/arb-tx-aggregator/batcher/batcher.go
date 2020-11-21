@@ -25,7 +25,9 @@ import (
 	"github.com/rs/zerolog/log"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
@@ -64,6 +66,8 @@ type TransactionBatcher interface {
 
 	SendTransaction(ctx context.Context, tx *types.Transaction) error
 
+	SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription
+
 	// Return nil if no pending snapshot is available
 	PendingSnapshot() *snapshot.Snapshot
 }
@@ -81,6 +85,7 @@ type Batcher struct {
 	queuedTxes         *txQueues
 	pendingBatch       batch
 	pendingSentBatches *list.List
+	newTxFeed          event.Feed
 }
 
 func NewStatefulBatcher(
@@ -236,6 +241,8 @@ func (m *Batcher) sendBatch(ctx context.Context, inbox arbbridge.GlobalInboxSend
 		return
 	}
 
+	m.newTxFeed.Send(core.NewTxsEvent{Txs: txes})
+
 	m.pendingBatch = m.pendingBatch.newFromExisting()
 	m.pendingSentBatches.PushBack(&pendingSentBatch{
 		txHash: txHash,
@@ -287,4 +294,8 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 	}
 
 	return m.queuedTxes.addTransaction(tx, sender)
+}
+
+func (m *Batcher) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
+	return m.newTxFeed.Subscribe(ch)
 }

@@ -20,6 +20,11 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/bloombits"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/event"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -44,6 +49,7 @@ type Server struct {
 	db          *txdb.TxDB
 	maxCallTime time.Duration
 	maxCallGas  *big.Int
+	scope       event.SubscriptionScope
 }
 
 // NewServer returns a new instance of the Server class
@@ -124,17 +130,8 @@ func (m *Server) BlockInfoByHash(hash common.Hash) (*machine.BlockInfo, error) {
 	return m.db.GetBlockWithHash(hash)
 }
 
-func (m *Server) GetBlockResults(block *machine.BlockInfo) ([]*evm.TxResult, error) {
-	if block.BlockLog == nil {
-		// No arb block at this height
-		return nil, nil
-	}
-
-	res, err := evm.NewBlockResultFromValue(block.BlockLog)
-	if err != nil {
-		return nil, err
-	}
-	return m.db.GetBlockResults(res)
+func (m *Server) GetMachineBlockResults(block *machine.BlockInfo) ([]*evm.TxResult, error) {
+	return m.db.GetMachineBlockResults(block)
 }
 
 func (m *Server) GetTxInBlockAtIndexResults(res *evm.BlockInfo, index uint64) (*evm.TxResult, error) {
@@ -195,4 +192,82 @@ func (m *Server) PendingSnapshot() *snapshot.Snapshot {
 
 func (m *Server) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
 	return m.batch.PendingTransactionCount(ctx, account)
+}
+
+func (m *Server) ChainDb() ethdb.Database {
+	return nil
+}
+
+func (m *Server) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
+	var blockNumber uint64
+	if blockNr == rpc.LatestBlockNumber || blockNr == rpc.PendingBlockNumber {
+		blockId := m.db.LatestBlockId()
+		blockNumber = blockId.Height.AsInt().Uint64()
+	} else {
+		blockNumber = uint64(blockNr)
+	}
+
+	info, err := m.BlockInfoByNumber(blockNumber)
+	if err != nil || info == nil {
+		return nil, err
+	}
+
+	return info.Header, nil
+}
+
+func (m *Server) HeaderByHash(ctx context.Context, blockHash ethcommon.Hash) (*types.Header, error) {
+	info, err := m.BlockInfoByHash(common.Hash(blockHash))
+	if err != nil || info == nil {
+		return nil, err
+	}
+
+	return info.Header, nil
+}
+
+func (m *Server) GetReceipts(ctx context.Context, blockHash ethcommon.Hash) (types.Receipts, error) {
+	return m.db.GetReceipts(ctx, blockHash)
+}
+
+func (m *Server) GetLogs(ctx context.Context, blockHash ethcommon.Hash) ([][]*types.Log, error) {
+	return m.db.GetLogs(ctx, blockHash)
+}
+
+func (m *Server) BloomStatus() (uint64, uint64) {
+	return 0, 0
+}
+
+func (m *Server) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
+	// Currently not implemented
+}
+
+func (m *Server) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
+	return m.scope.Track(m.batch.SubscribeNewTxsEvent(ch))
+}
+
+func (m *Server) SubscribePendingLogsEvent(ch chan<- []*types.Log) event.Subscription {
+	return m.scope.Track(m.db.SubscribePendingLogsEvent(ch))
+}
+
+func (m *Server) SubscribeChainEvent(ch chan<- core.ChainEvent) event.Subscription {
+	return m.scope.Track(m.db.SubscribeChainEvent(ch))
+}
+
+func (m *Server) SubscribeChainHeadEvent(ch chan<- core.ChainEvent) event.Subscription {
+	return m.scope.Track(m.db.SubscribeChainHeadEvent(ch))
+}
+
+func (m *Server) SubscribeChainSideEvent(ch chan<- core.ChainEvent) event.Subscription {
+	return m.scope.Track(m.db.SubscribeChainSideEvent(ch))
+}
+
+func (m *Server) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {
+	return m.scope.Track(m.db.SubscribeRemovedLogsEvent(ch))
+}
+
+func (m *Server) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
+	return m.scope.Track(m.db.SubscribeLogsEvent(ch))
+}
+
+func (m *Server) SubscribeBlockProcessingEvent(ch chan<- []*types.Log) event.Subscription {
+	return m.scope.Track(m.db.SubscribeBlockProcessingEvent(ch))
 }
