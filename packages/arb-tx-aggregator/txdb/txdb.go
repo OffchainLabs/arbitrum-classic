@@ -164,7 +164,7 @@ func (db *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 
 	// Collect all logs that will be removed so they can be sent to rmLogs subscription
 	oldEthLogs := make([]*types.Log, 0)
-	currentHeight := db.LatestBlockId().Height.AsInt().Uint64()
+	currentHeight := db.LatestBlock().Height.AsInt().Uint64()
 	for logBlockHeight := restoreHeight; logBlockHeight <= currentHeight; logBlockHeight++ {
 		logBlockInfo, err := db.as.GetBlock(logBlockHeight)
 		if err != nil {
