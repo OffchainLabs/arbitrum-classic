@@ -163,33 +163,32 @@ func (db *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 	}
 
 	// Collect all logs that will be removed so they can be sent to rmLogs subscription
-	oldEthLogs := make([]*types.Log, 0)
 	latest, err := db.as.LatestBlock()
-	if err != nil {
-		return err
-	}
-	currentHeight := latest.Height.AsInt().Uint64()
-	for logBlockHeight := restoreHeight; logBlockHeight <= currentHeight; logBlockHeight++ {
-		logBlockInfo, err := db.as.GetBlock(logBlockHeight)
-		if err != nil {
-			return err
-		}
-		if logBlockInfo == nil {
-			// No block at this height so go to the next
-			continue
-		}
+	if err == nil {
+		oldEthLogs := make([]*types.Log, 0)
+		currentHeight := latest.Height.AsInt().Uint64()
+		for logBlockHeight := restoreHeight; logBlockHeight <= currentHeight; logBlockHeight++ {
+			logBlockInfo, err := db.as.GetBlock(logBlockHeight)
+			if err != nil {
+				return err
+			}
+			if logBlockInfo == nil {
+				// No block at this height so go to the next
+				continue
+			}
 
-		results, err := db.GetMachineBlockResults(logBlockInfo)
-		if err != nil {
-			return err
-		}
+			results, err := db.GetMachineBlockResults(logBlockInfo)
+			if err != nil {
+				return err
+			}
 
-		for _, result := range results {
-			oldEthLogs = append(oldEthLogs, result.EthLogs(common.NewHashFromEth(logBlockInfo.Header.Hash()))...)
+			for _, result := range results {
+				oldEthLogs = append(oldEthLogs, result.EthLogs(common.NewHashFromEth(logBlockInfo.Header.Hash()))...)
+			}
 		}
-	}
-	if len(oldEthLogs) > 0 {
-		db.rmLogsFeed.Send(oldEthLogs)
+		if len(oldEthLogs) > 0 {
+			db.rmLogsFeed.Send(oldEthLogs)
+		}
 	}
 
 	if err := db.as.Reorg(
