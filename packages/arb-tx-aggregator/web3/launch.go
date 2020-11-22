@@ -17,6 +17,7 @@
 package web3
 
 import (
+	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
@@ -27,6 +28,10 @@ func GenerateWeb3Server(server *aggregator.Server) (*rpc.Server, error) {
 	s := rpc.NewServer()
 
 	if err := s.RegisterName("eth", NewServer(server)); err != nil {
+		return nil, err
+	}
+
+	if err := s.RegisterName("eth", filters.NewPublicFilterAPI(server, false)); err != nil {
 		return nil, err
 	}
 

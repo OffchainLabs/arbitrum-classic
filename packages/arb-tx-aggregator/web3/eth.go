@@ -3,7 +3,6 @@ package web3
 import (
 	"context"
 	"errors"
-	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	errors2 "github.com/pkg/errors"
@@ -269,39 +268,6 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 	}, nil
 }
 
-func (s *Server) GetLogs(ctx context.Context, args filters.FilterCriteria) ([]*types.Log, error) {
-	var fromHeight *uint64
-
-	if args.FromBlock != nil {
-		fromRaw := args.FromBlock.Int64()
-		from, err := s.blockNum((*rpc.BlockNumber)(&fromRaw))
-		if err != nil {
-			return nil, err
-		}
-		fromHeight = &from
-	}
-
-	var toHeight *uint64
-	if args.ToBlock != nil {
-		toRaw := args.ToBlock.Int64()
-		to, err := s.blockNum((*rpc.BlockNumber)(&toRaw))
-		if err != nil {
-			return nil, err
-		}
-		toHeight = &to
-	}
-
-	logs, err := s.srv.FindLogs(ctx, fromHeight, toHeight, args.Addresses, args.Topics)
-	if err != nil {
-		return nil, err
-	}
-	res := make([]*types.Log, 0, len(logs))
-	for _, evmLog := range logs {
-		res = append(res, evmLog.ToEVMLog())
-	}
-	return res, nil
-}
-
 func (s *Server) getBlockTransactionCount(block *machine.BlockInfo) (*hexutil.Big, error) {
 	if block.BlockLog == nil {
 		// No arbitrum block at this height
@@ -344,7 +310,7 @@ func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint
 }
 
 func (s *Server) getBlock(block *machine.BlockInfo, includeTxData bool) (*GetBlockResult, error) {
-	results, err := s.srv.GetBlockResults(block)
+	results, err := s.srv.GetMachineBlockResults(block)
 	if err != nil {
 		return nil, err
 	}
