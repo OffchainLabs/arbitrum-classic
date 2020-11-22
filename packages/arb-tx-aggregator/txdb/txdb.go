@@ -181,7 +181,7 @@ func (db *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 		}
 
 		for _, result := range results {
-			oldEthLogs = append(oldEthLogs, result.EthLogs(logBlockInfo.BlockLog.Hash())...)
+			oldEthLogs = append(oldEthLogs, result.EthLogs(common.NewHashFromEth(logBlockInfo.Header.Hash()))...)
 		}
 	}
 	if len(oldEthLogs) > 0 {
@@ -492,8 +492,8 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 		}
 
 		ethLogs := make([]*types.Log, 0)
-		for _, receipt := range ethReceipts {
-			ethLogs = append(ethLogs, receipt.Logs...)
+		for _, res := range processedResults {
+			ethLogs = append(ethLogs, res.Result.EthLogs(common.NewHashFromEth(block.Hash()))...)
 		}
 		db.chainFeed.Send(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: ethLogs})
 		if finalBlockIndex == blockIndex {
