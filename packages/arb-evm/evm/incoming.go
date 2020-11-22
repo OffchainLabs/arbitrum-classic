@@ -22,8 +22,9 @@ func GetTransaction(res *TxResult) (*ProcessedTx, error) {
 	if msg.Kind == message.L2BuddyDeploy {
 		buddyDeployMessage := message.NewBuddyDeploymentFromData(msg.Data)
 		return &ProcessedTx{
-			Tx:   buddyDeployMessage.AsEthTx(),
-			Kind: msg.Kind,
+			Result: res,
+			Tx:     buddyDeployMessage.AsEthTx(),
+			Kind:   msg.Kind,
 		}, nil
 	}
 
