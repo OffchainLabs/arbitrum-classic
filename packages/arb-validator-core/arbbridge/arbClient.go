@@ -18,8 +18,6 @@ package arbbridge
 
 import (
 	"context"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -38,8 +36,6 @@ type ChainTimeGetter interface {
 
 type ArbClient interface {
 	ChainTimeGetter
-	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
-	HeaderByHash(ctx context.Context, hash ethcommon.Hash) (*types.Header, error)
 	SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan MaybeBlockId, error)
 	SubscribeBlockHeadersAfter(ctx context.Context, prevBlockId *common.BlockId) (<-chan MaybeBlockId, error)
 

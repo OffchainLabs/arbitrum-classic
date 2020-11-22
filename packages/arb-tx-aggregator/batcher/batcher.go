@@ -241,8 +241,6 @@ func (m *Batcher) sendBatch(ctx context.Context, inbox arbbridge.GlobalInboxSend
 		return
 	}
 
-	m.newTxFeed.Send(core.NewTxsEvent{Txs: txes})
-
 	m.pendingBatch = m.pendingBatch.newFromExisting()
 	m.pendingSentBatches.PushBack(&pendingSentBatch{
 		txHash: txHash,
@@ -276,6 +274,8 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		log.Err(err).Msg("error processing user transaction")
 		return err
 	}
+
+	m.newTxFeed.Send(core.NewTxsEvent{Txs: []*types.Transaction{tx}})
 
 	txJSON, err := tx.MarshalJSON()
 	if err != nil {

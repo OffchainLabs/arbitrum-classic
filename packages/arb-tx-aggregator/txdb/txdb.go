@@ -163,25 +163,25 @@ func (db *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 	}
 
 	// Collect all logs that will be removed so they can be sent to rmLogs subscription
-	logCount, err := db.as.LogCount()
-	if err != nil {
-		return err
-	}
 	oldEthLogs := make([]*types.Log, 0)
-	for logIndex := block.ChainStats.AVMLogCount.Uint64(); logIndex < logCount; logIndex++ {
-		avmLog, err := db.as.GetLog(logIndex)
+	currentHeight := db.LatestBlockId().Height.AsInt().Uint64()
+	for logBlockHeight := restoreHeight; logBlockHeight <= currentHeight; logBlockHeight++ {
+		logBlockInfo, err := db.as.GetBlock(logBlockHeight)
 		if err != nil {
 			return err
 		}
-		txRes, err := evm.NewTxResultFromValue(avmLog)
+		if logBlockInfo == nil {
+			// No block at this height so go to the next
+			continue
+		}
+
+		results, err := db.GetMachineBlockResults(logBlockInfo)
 		if err != nil {
 			return err
 		}
-		for _, evmLog := range txRes.EVMLogs {
-			oldEthLogs = append(oldEthLogs, &types.Log{
-				Address: evmLog.Address.ToEthAddress(),
-				Topics:  common.NewEthHashesFromHashes(evmLog.Topics),
-			})
+
+		for _, result := range results {
+			oldEthLogs = append(oldEthLogs, result.EthLogs(logBlockInfo.BlockLog.Hash())...)
 		}
 	}
 	if len(oldEthLogs) > 0 {
@@ -397,7 +397,7 @@ func (db *TxDB) GetMachineBlockResults(block *machine.BlockInfo) ([]*evm.TxResul
 }
 
 func (db *TxDB) GetReceipts(_ context.Context, blockHash ethcommon.Hash) (types.Receipts, error) {
-	info, err := db.GetBlockWithHash(common.Hash(blockHash))
+	info, err := db.GetBlockWithHash(common.NewHashFromEth(blockHash))
 	if err != nil || info == nil {
 		return nil, err
 	}
@@ -408,13 +408,13 @@ func (db *TxDB) GetReceipts(_ context.Context, blockHash ethcommon.Hash) (types.
 	}
 	receipts := make(types.Receipts, 0, len(results))
 	for _, res := range results {
-		receipts = append(receipts, res.ToEthReceipt(common.Hash(blockHash)))
+		receipts = append(receipts, res.ToEthReceipt(common.NewHashFromEth(blockHash)))
 	}
 	return receipts, nil
 }
 
 func (db *TxDB) GetLogs(_ context.Context, blockHash ethcommon.Hash) ([][]*types.Log, error) {
-	info, err := db.GetBlockWithHash(common.Hash(blockHash))
+	info, err := db.GetBlockWithHash(common.NewHashFromEth(blockHash))
 	if err != nil || info == nil {
 		return nil, err
 	}
@@ -491,13 +491,9 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 			return err
 		}
 
-		ethLogsList, err := db.GetLogs(ctx, block.Hash())
-		if err != nil {
-			return err
-		}
-		ethLogs := make([]*types.Log, len(ethLogsList))
-		for _, logs := range ethLogsList {
-			ethLogs = append(ethLogs, logs...)
+		ethLogs := make([]*types.Log, 0)
+		for _, receipt := range ethReceipts {
+			ethLogs = append(ethLogs, receipt.Logs...)
 		}
 		db.chainFeed.Send(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: ethLogs})
 		if finalBlockIndex == blockIndex {
@@ -572,21 +568,27 @@ func (db *TxDB) LatestBlockId() *common.BlockId {
 func (db *TxDB) SubscribeChainEvent(ch chan<- core.ChainEvent) event.Subscription {
 	return db.chainFeed.Subscribe(ch)
 }
+
 func (db *TxDB) SubscribeChainHeadEvent(ch chan<- core.ChainEvent) event.Subscription {
 	return db.chainHeadFeed.Subscribe(ch)
 }
+
 func (db *TxDB) SubscribeChainSideEvent(ch chan<- core.ChainEvent) event.Subscription {
 	return db.chainSideFeed.Subscribe(ch)
 }
+
 func (db *TxDB) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {
 	return db.rmLogsFeed.Subscribe(ch)
 }
+
 func (db *TxDB) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
 	return db.logsFeed.Subscribe(ch)
 }
+
 func (db *TxDB) SubscribePendingLogsEvent(ch chan<- []*types.Log) event.Subscription {
 	return db.pendingLogsFeed.Subscribe(ch)
 }
+
 func (db *TxDB) SubscribeBlockProcessingEvent(ch chan<- []*types.Log) event.Subscription {
 	return db.blockProcFeed.Subscribe(ch)
 }

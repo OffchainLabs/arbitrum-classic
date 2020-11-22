@@ -20,8 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	errors2 "github.com/pkg/errors"
 	"log"
@@ -46,14 +44,6 @@ func NewEthClient(client ethutils.EthClient) *EthArbClient {
 var reorgError = errors.New("reorg occured")
 var headerRetryDelay = time.Second * 2
 var maxFetchAttempts = 5
-
-func (c *EthArbClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
-	return c.client.HeaderByNumber(ctx, number)
-}
-
-func (c *EthArbClient) HeaderByHash(ctx context.Context, hash ethcommon.Hash) (*types.Header, error) {
-	return c.client.HeaderByHash(ctx, hash)
-}
 
 func (c *EthArbClient) SubscribeBlockHeadersAfter(ctx context.Context, prevBlockId *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
 	blockIdChan := make(chan arbbridge.MaybeBlockId, 100)

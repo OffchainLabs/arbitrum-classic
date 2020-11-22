@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/bloombits"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -93,6 +94,16 @@ func (m *Server) FindLogs(ctx context.Context, fromHeight, toHeight *uint64, add
 func (m *Server) GetBlockCount() uint64 {
 	id := m.db.LatestBlockId()
 	return id.Height.AsInt().Uint64()
+}
+
+func (m *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
+	if *block == rpc.LatestBlockNumber || *block == rpc.PendingBlockNumber {
+		return m.GetBlockCount(), nil
+	} else if *block >= 0 {
+		return uint64(*block), nil
+	} else {
+		return 0, fmt.Errorf("unsupported BlockNumber: %v", block.Int64())
+	}
 }
 
 func (m *Server) GetOutputMessage(
@@ -198,16 +209,13 @@ func (m *Server) ChainDb() ethdb.Database {
 	return nil
 }
 
-func (m *Server) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
-	var blockNumber uint64
-	if blockNr == rpc.LatestBlockNumber || blockNr == rpc.PendingBlockNumber {
-		blockId := m.db.LatestBlockId()
-		blockNumber = blockId.Height.AsInt().Uint64()
-	} else {
-		blockNumber = uint64(blockNr)
+func (m *Server) HeaderByNumber(ctx context.Context, blockNumber rpc.BlockNumber) (*types.Header, error) {
+	height, err := m.blockNum(&blockNumber)
+	if err != nil {
+		return nil, err
 	}
 
-	info, err := m.BlockInfoByNumber(blockNumber)
+	info, err := m.BlockInfoByNumber(height)
 	if err != nil || info == nil {
 		return nil, err
 	}
@@ -216,7 +224,7 @@ func (m *Server) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*
 }
 
 func (m *Server) HeaderByHash(ctx context.Context, blockHash ethcommon.Hash) (*types.Header, error) {
-	info, err := m.BlockInfoByHash(common.Hash(blockHash))
+	info, err := m.BlockInfoByHash(common.NewHashFromEth(blockHash))
 	if err != nil || info == nil {
 		return nil, err
 	}
