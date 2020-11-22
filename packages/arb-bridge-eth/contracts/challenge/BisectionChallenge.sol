@@ -58,12 +58,10 @@ contract BisectionChallenge is IBisectionChallenge, Challenge {
     function chooseSegment(
         uint256 _segmentToChallenge,
         bytes memory _proof,
-        bytes32 _bisectionRoot,
         bytes32 _bisectionHash
     ) public challengerAction {
-        require(_bisectionRoot == challengeState, CON_PREV);
         require(
-            MerkleLib.verifyProof(_proof, _bisectionRoot, _bisectionHash, _segmentToChallenge + 1),
+            MerkleLib.verifyProof(_proof, challengeState, _bisectionHash, _segmentToChallenge + 1),
             CON_PROOF
         );
 

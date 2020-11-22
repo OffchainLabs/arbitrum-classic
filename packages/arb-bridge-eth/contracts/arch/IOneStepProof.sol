@@ -19,17 +19,13 @@
 pragma solidity ^0.5.11;
 
 interface IOneStepProof {
-    function executeStep(
-        bytes32 inboxAcc,
-        bytes32 messagesAcc,
-        bytes32 logsAcc,
-        bytes calldata proof
-    ) external view returns (uint64 gas, bytes32[5] memory fields);
+    function executeStep(bytes32[3] calldata _machineFields, bytes calldata proof)
+        external
+        view
+        returns (uint64 gas, bytes32[5] memory fields);
 
     function executeStepWithMessage(
-        bytes32 inboxAcc,
-        bytes32 messagesAcc,
-        bytes32 logsAcc,
+        bytes32[3] calldata _machineFields,
         bytes calldata proof,
         uint8 _kind,
         uint256 _blockNumber,

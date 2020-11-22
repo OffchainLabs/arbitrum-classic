@@ -188,9 +188,7 @@ contract ExecutionChallenge is IExecutionChallenge, BisectionChallenge {
         bytes memory _msgData
     ) public asserterAction {
         (uint64 gas, bytes32[5] memory fields) = executor.executeStepWithMessage(
-            _firstInbox,
-            _firstMessage,
-            _firstLog,
+            [_firstInbox, _firstMessage, _firstLog],
             _proof,
             _kind,
             _blockNumber,
@@ -210,9 +208,7 @@ contract ExecutionChallenge is IExecutionChallenge, BisectionChallenge {
         bytes memory _proof
     ) public asserterAction {
         (uint64 gas, bytes32[5] memory fields) = executor.executeStep(
-            _firstInbox,
-            _firstMessage,
-            _firstLog,
+            [_firstInbox, _firstMessage, _firstLog],
             _proof
         );
 

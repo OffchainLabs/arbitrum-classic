@@ -44,16 +44,19 @@ contract OneStepProof is IOneStepProof {
     string private constant AUX_MANY = "AUX_MANY";
     string private constant INBOX_VAL = "INBOX_VAL";
 
-    function executeStep(
-        bytes32 inboxAcc,
-        bytes32 messagesAcc,
-        bytes32 logsAcc,
-        bytes calldata proof
-    ) external view returns (uint64 gas, bytes32[5] memory fields) {
+    // machineFields
+    //  initialInbox
+    //  initialMessage
+    //  initialLog
+    function executeStep(bytes32[3] calldata _machineFields, bytes calldata proof)
+        external
+        view
+        returns (uint64 gas, bytes32[5] memory fields)
+    {
         AssertionContext memory context = initializeExecutionContext(
-            inboxAcc,
-            messagesAcc,
-            logsAcc,
+            _machineFields[0],
+            _machineFields[1],
+            _machineFields[2],
             proof
         );
 
@@ -62,10 +65,12 @@ contract OneStepProof is IOneStepProof {
         return returnContext(context);
     }
 
+    // machineFields
+    //  initialInbox
+    //  initialMessage
+    //  initialLog
     function executeStepWithMessage(
-        bytes32 inboxAcc,
-        bytes32 messagesAcc,
-        bytes32 logsAcc,
+        bytes32[3] calldata _machineFields,
         bytes calldata proof,
         uint8 _kind,
         uint256 _blockNumber,
@@ -75,9 +80,9 @@ contract OneStepProof is IOneStepProof {
         bytes calldata _msgData
     ) external view returns (uint64 gas, bytes32[5] memory fields) {
         AssertionContext memory context = initializeExecutionContext(
-            inboxAcc,
-            messagesAcc,
-            logsAcc,
+            _machineFields[0],
+            _machineFields[1],
+            _machineFields[2],
             proof
         );
 

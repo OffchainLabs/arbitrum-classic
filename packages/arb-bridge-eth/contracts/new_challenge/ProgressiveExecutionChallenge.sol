@@ -42,317 +42,160 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
         executor = IOneStepProof(oneStepProof);
     }
 
-    struct BisectionPrecondition {
-        bytes32 beforeMachineHash;
-        bytes32 beforeInboxHash;
-        bytes32 beforeMessageHash;
-        bytes32 beforeLogHash;
-    }
-
-    function hash(BisectionPrecondition memory pre) internal pure returns (bytes32) {
+    function hashBisectionAssertion(
+        bytes32 machineHash,
+        bytes32 inboxAcc,
+        bytes32 messageAcc,
+        bytes32 logAcc,
+        uint64 gasUsed,
+        uint64 messageCount,
+        uint64 logCount
+    ) private pure returns (bytes32) {
         return
             keccak256(
                 abi.encodePacked(
-                    pre.beforeMachineHash,
-                    pre.beforeInboxHash,
-                    pre.beforeMessageHash,
-                    pre.beforeLogHash
+                    machineHash,
+                    inboxAcc,
+                    messageAcc,
+                    logAcc,
+                    gasUsed,
+                    messageCount,
+                    logCount
                 )
             );
     }
 
-    struct BisectionAssertion {
-        uint64 numArbGas;
-        bytes32 afterMachineHash;
-        bytes32 afterInboxHash;
-        bytes32 lastMessageHash;
-        uint64 messageCount;
-        bytes32 lastLogHash;
-        uint64 logCount;
-    }
-
-    function hash(BisectionAssertion memory assertion) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    assertion.numArbGas,
-                    assertion.afterMachineHash,
-                    assertion.afterInboxHash,
-                    assertion.lastMessageHash,
-                    assertion.messageCount,
-                    assertion.lastLogHash,
-                    assertion.logCount
-                )
-            );
-    }
-
-    function bisectAssertionFirst(
-        bytes32 _preconditionHash,
-        bytes32 _assertionHash,
-        uint64 _numSteps,
-        bytes32[] memory _bisectionHashes
-    ) public {
-        requireMatchesPrevState(
-            keccak256(abi.encodePacked(_preconditionHash, _assertionHash, _numSteps))
-        );
-
-        _bisectAssertion(_preconditionHash, _assertionHash, _numSteps, _bisectionHashes);
-    }
-
-    // _beforeMachine
-    //   _machineHash
-    //   _inboxAcc
-    //   _messageAcc
-    //   _logAcc
-    function makeBisectionPrecondition(bytes32[4] memory _beforeMachine)
-        private
-        pure
-        returns (BisectionPrecondition memory)
-    {
-        return
-            BisectionPrecondition(
-                _beforeMachine[0],
-                _beforeMachine[1],
-                _beforeMachine[2],
-                _beforeMachine[3]
-            );
-    }
-
-    // _afterMachine
-    //   _machineHash
-    //   _inboxAcc
-    //   _messageAcc
-    //   _logAcc
-
-    // _assertionData
-    //   _totalSteps
-    //   _gasUsed
-    //   _messageCount
-    //   _logCount
-    function makeBisectionAssertion(
-        bytes32[4] memory _afterMachine,
-        uint64[4] memory _assertionData
-    ) private pure returns (BisectionAssertion memory) {
-        return
-            BisectionAssertion(
-                _assertionData[1],
-                _afterMachine[0],
-                _afterMachine[1],
-                _afterMachine[2],
-                _assertionData[2],
-                _afterMachine[3],
-                _assertionData[3]
-            );
-    }
-
-    function bisectAssertionOther(
-        bytes32[4] memory _beforeMachine,
-        bytes32[4] memory _afterA1Machine,
-        bytes32[4] memory _afterA2Machine,
-        uint64[4] memory _assertion1Fields,
-        uint64[4] memory _assertion2Fields,
-        bytes32[] memory _bisectionHashes
-    ) public {
-        // steps of A2 >= steps of A1
-        require(_assertion2Fields[0] >= _assertion1Fields[0]);
-        // gas of A2 >= gas of A1
-        require(_assertion2Fields[1] >= _assertion1Fields[1]);
-        // message count of A2 >= message count of A1
-        require(_assertion2Fields[2] >= _assertion1Fields[2]);
-        // log count of A2 >= log count of A1
-        require(_assertion2Fields[3] >= _assertion1Fields[3]);
-
-        BisectionPrecondition memory pre = makeBisectionPrecondition(_beforeMachine);
-
-        BisectionAssertion memory a1 = makeBisectionAssertion(_afterA1Machine, _assertion1Fields);
-        BisectionAssertion memory a2 = makeBisectionAssertion(_afterA2Machine, _assertion2Fields);
-
-        requireMatchesPrevState(
-            keccak256(
-                abi.encodePacked(
-                    hash(pre),
-                    hash(a1),
-                    hash(a2),
-                    _assertion2Fields[0] - _assertion1Fields[0]
-                )
-            )
-        );
-
-        bytes32 newPreHash = hash(makeBisectionPrecondition(_afterA1Machine));
-
-        uint64[4] memory assertionDiffFields = [
-            _assertion2Fields[0] - _assertion1Fields[0],
-            _assertion2Fields[1] - _assertion1Fields[1],
-            _assertion2Fields[2] - _assertion1Fields[2],
-            _assertion2Fields[3] - _assertion1Fields[3]
-        ];
-        BisectionAssertion memory aDiff = makeBisectionAssertion(
-            _afterA2Machine,
-            assertionDiffFields
-        );
-
-        _bisectAssertion(newPreHash, hash(aDiff), assertionDiffFields[0], _bisectionHashes);
-    }
-
-    function _bisectAssertion(
-        bytes32 _preHash,
-        bytes32 _fullAssertionHash,
+    function bisectAssertion(
+        bytes32 _a1Hash,
+        bytes32 _a2Hash,
         uint64 _totalSteps,
-        bytes32[] memory _bisectionHashes
-    ) private {
-        // require(
-        //     bisectionCount == SPLIT_COUNT ||
-        //     (_totalSteps < SPLIT_COUNT && bisectionCount == _totalSteps),
-        //     "Incorrect bisection count"
-        // );
+        bytes32[] calldata _bisectionHashes
+    ) external {
+        requireMatchesPrevState(keccak256(abi.encodePacked(_a1Hash, _a2Hash, _totalSteps)));
 
-        uint256 bisectionCount = _bisectionHashes.length + 1;
-        bytes32[] memory hashes = new bytes32[](bisectionCount);
+        uint256 innerCuts = _bisectionHashes.length;
+        uint256 totalCuts = innerCuts + 2;
+        bytes32[] memory hashes = new bytes32[](totalCuts);
         hashes[0] = keccak256(
             abi.encodePacked(
-                _preHash,
+                _a1Hash,
                 _bisectionHashes[0],
-                uint64(firstSegmentSize(uint256(_totalSteps), bisectionCount))
+                uint64(firstSegmentSize(uint256(_totalSteps), totalCuts))
             )
         );
 
-        uint64 otherStepCount = uint64(otherSegmentSize(uint256(_totalSteps), bisectionCount));
-        for (uint256 i = 1; i < bisectionCount - 1; i++) {
+        uint64 otherStepCount = uint64(otherSegmentSize(uint256(_totalSteps), totalCuts));
+        for (uint256 i = 0; i < innerCuts; i++) {
             hashes[i] = keccak256(
-                abi.encodePacked(
-                    _preHash,
-                    _bisectionHashes[i - 1],
-                    _bisectionHashes[i],
-                    otherStepCount
-                )
+                abi.encodePacked(_bisectionHashes[i - 1], _bisectionHashes[i], otherStepCount)
             );
         }
-        hashes[bisectionCount] = keccak256(
-            abi.encodePacked(
-                _preHash,
-                _bisectionHashes[bisectionCount - 1],
-                _fullAssertionHash,
-                otherStepCount
-            )
+        hashes[totalCuts - 1] = keccak256(
+            abi.encodePacked(_bisectionHashes[innerCuts - 1], _a2Hash, otherStepCount)
         );
 
         commitToSegment(hashes);
         asserterResponded();
     }
 
-    // function oneStepProofWithMessage(
-    //     bytes32 _firstInbox,
-    //     bytes32 _firstMessage,
-    //     bytes32 _firstLog,
-    //     bytes memory _proof,
-    //     uint8 _kind,
-    //     uint256 _blockNumber,
-    //     uint256 _timestamp,
-    //     address _sender,
-    //     uint256 _inboxSeqNum,
-    //     bytes memory _msgData
-    // ) public asserterAction {
-    //     (uint64 gas, bytes32[5] memory fields) = executor.executeStepWithMessage(
-    //         _firstInbox,
-    //         _firstMessage,
-    //         _firstLog,
-    //         _proof,
-    //         _kind,
-    //         _blockNumber,
-    //         _timestamp,
-    //         _sender,
-    //         _inboxSeqNum,
-    //         _msgData
-    //     );
-
-    //     checkProof(gas, _firstInbox, _firstMessage, _firstLog, fields);
-    // }
-
-    function oneStepProofFirst(
-        bytes32 _firstInbox,
-        bytes32 _firstMessage,
-        bytes32 _firstLog,
-        bytes memory _proof
+    // machineFields
+    //  initialInbox
+    //  initialMessage
+    //  initialLog
+    function oneStepProofWithMessage(
+        bytes32[3] memory _machineFields,
+        uint64 _initialGasUsed,
+        uint64 _initialMessageCount,
+        uint64 _initialLogCount,
+        bytes memory _proof,
+        uint8 _kind,
+        uint256 _blockNumber,
+        uint256 _timestamp,
+        address _sender,
+        uint256 _inboxSeqNum,
+        bytes memory _msgData
     ) public asserterAction {
-        (uint64 gas, bytes32[5] memory fields) = executor.executeStep(
-            _firstInbox,
-            _firstMessage,
-            _firstLog,
-            _proof
+        (uint64 gas, bytes32[5] memory proofFields) = executor.executeStepWithMessage(
+            _machineFields,
+            _proof,
+            _kind,
+            _blockNumber,
+            _timestamp,
+            _sender,
+            _inboxSeqNum,
+            _msgData
         );
 
-        (bytes32 preconditionHash, bytes32 assertionHash) = calculateProof(
+        checkProof(
             gas,
-            _firstInbox,
-            _firstMessage,
-            _firstLog,
-            fields
+            _machineFields,
+            _initialGasUsed,
+            _initialMessageCount,
+            _initialLogCount,
+            proofFields
         );
-
-        requireMatchesPrevState(
-            keccak256(abi.encodePacked(preconditionHash, assertionHash, uint64(1)))
-        );
-
-        emit OneStepProofCompleted();
-        _asserterWin();
     }
 
-    // function oneStepProofOther(
-    //     bytes32 _firstInbox,
-    //     bytes32 _firstMessage,
-    //     bytes32 _firstLog,
-    //     bytes memory _proof
-    // ) public asserterAction {
-    //     (uint64 gas, bytes32[5] memory fields) = executor.executeStep(
-    //         _firstInbox,
-    //         _firstMessage,
-    //         _firstLog,
-    //         _proof
-    //     );
+    function oneStepProof(
+        bytes32[3] memory _machineFields,
+        uint64 _initialGasUsed,
+        uint64 _initialMessageCount,
+        uint64 _initialLogCount,
+        bytes memory _proof
+    ) public asserterAction {
+        (uint64 gas, bytes32[5] memory proofFields) = executor.executeStep(_machineFields, _proof);
 
-    //     (bytes32 preconditionHash, bytes32 assertionsHash) = calculateProof(gas, _firstInbox, _firstMessage, _firstLog, fields);
-
-    //     requireMatchesPrevState(
-    //         keccak256(abi.encodePacked(preconditionHash, assertionHash, 1))
-    //     );
-
-    //     emit OneStepProofCompleted();
-    //     _asserterWin();
-    // }
+        checkProof(
+            gas,
+            _machineFields,
+            _initialGasUsed,
+            _initialMessageCount,
+            _initialLogCount,
+            proofFields
+        );
+    }
 
     // fields
-    //  startMachineHash
-    //  endMachineHash
+    //  initialMachineHash
+    //  afterMachineHash
     //  afterInboxHash
     //  afterMessagesHash
     //  afterLogsHash
-
-    function calculateProof(
-        uint64 gas,
-        bytes32 firstInbox,
-        bytes32 firstMessage,
-        bytes32 firstLog,
+    function checkProof(
+        uint64 gasUsed,
+        bytes32[3] memory _machineFields,
+        uint64 initialGasUsed,
+        uint64 initialMessageCount,
+        uint64 initialLogCount,
         bytes32[5] memory fields
-    ) private pure returns (bytes32, bytes32) {
-        bytes32 preconditionHash = hash(
-            BisectionPrecondition(fields[0], firstInbox, firstMessage, firstLog)
+    ) private {
+        bytes32 a1Hash = hashBisectionAssertion(
+            fields[0],
+            _machineFields[0],
+            _machineFields[1],
+            _machineFields[2],
+            initialGasUsed,
+            initialMessageCount,
+            initialLogCount
         );
 
         // The one step proof already guarantees us that firstMessage and lastMessage
         // are either one or 0 messages apart and the same is true for logs. Therefore
         // we can infer the message count and log count based on whether the fields
         // are equal or not
-        bytes32 assertionHash = hash(
-            BisectionAssertion(
-                gas,
-                fields[1],
-                fields[2],
-                fields[3],
-                firstMessage == fields[3] ? 0 : 1,
-                fields[4],
-                firstLog == fields[4] ? 0 : 1
-            )
+        bytes32 a2Hash = hashBisectionAssertion(
+            fields[1],
+            fields[2],
+            fields[3],
+            fields[4],
+            initialGasUsed + gasUsed,
+            initialMessageCount + (_machineFields[1] == fields[3] ? 0 : 1),
+            initialLogCount + (_machineFields[2] == fields[4] ? 0 : 1)
         );
-        return (preconditionHash, assertionHash);
+
+        requireMatchesPrevState(keccak256(abi.encodePacked(a1Hash, a2Hash, uint64(1))));
+
+        emit OneStepProofCompleted();
+        _asserterWin();
     }
 }
