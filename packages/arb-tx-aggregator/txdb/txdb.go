@@ -167,8 +167,10 @@ func (db *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 	if err == nil {
 		oldEthLogs := make([]*types.Log, 0)
 		currentHeight := latest.Height.AsInt().Uint64()
-		for logBlockHeight := restoreHeight; logBlockHeight <= currentHeight; logBlockHeight++ {
-			logBlockInfo, err := db.as.GetBlock(logBlockHeight)
+		blocksToReorg := currentHeight - restoreHeight
+		for i := uint64(0); i < blocksToReorg; i++ {
+			height := latest.Height.AsInt().Uint64() - i
+			logBlockInfo, err := db.as.GetBlock(height)
 			if err != nil {
 				return err
 			}
@@ -182,12 +184,17 @@ func (db *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 				return err
 			}
 
-			for _, result := range results {
-				oldEthLogs = append(oldEthLogs, result.EthLogs(common.NewHashFromEth(logBlockInfo.Header.Hash()))...)
+			for i := range results {
+				result := results[len(results)-1-i]
+				logs := result.EthLogs(common.NewHashFromEth(logBlockInfo.Header.Hash()))
+				for j := range logs {
+					// Add logs in reverse
+					oldEthLogs = append(oldEthLogs, logs[len(logs)-1-j])
+				}
 			}
 		}
 		if len(oldEthLogs) > 0 {
-			db.rmLogsFeed.Send(oldEthLogs)
+			db.rmLogsFeed.Send(core.RemovedLogsEvent{Logs: oldEthLogs})
 		}
 	}
 
