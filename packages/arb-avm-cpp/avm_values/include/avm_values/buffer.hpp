@@ -79,45 +79,13 @@ class RawBuffer {
     }
 
     RawBuffer set(uint64_t offset, uint8_t v) {
-        // std::cerr << "setting buffer " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
-        if (level == 0) {
-            if (offset >= LEAF_SIZE) {
-                std::shared_ptr<std::vector<uint8_t> > empty = std::make_shared<std::vector<uint8_t>>();
-                std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
-                vec->push_back(RawBuffer(leaf));
-                for (uint64_t i = 1; i < NODE_SIZE; i++) {
-                    vec->push_back(RawBuffer(empty));
-                }
-                RawBuffer buf = RawBuffer(vec, 1);
-                return buf.set(offset, v);
-            }
-            auto buf = leaf ? std::make_shared<std::vector<uint8_t> >(*leaf) : std::make_shared<std::vector<uint8_t> >();
-            if (buf->size() < LEAF_SIZE) {
-                // std::cerr << "resize buf" << std::endl;
-                buf->resize(LEAF_SIZE, 0);
-            }
-            (*buf)[offset] = v;
-            // std::cerr << "updated leaf " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
-            return RawBuffer(buf);
-        } else {
-            if (offset >= calc_len(level)) {
-                std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
-                vec->push_back(RawBuffer(node, level));
-                for (uint64_t i = 1; i < NODE_SIZE; i++) {
-                    vec->push_back(RawBuffer(level, true));
-                }
-                RawBuffer buf = RawBuffer(vec, level+1);
-                return buf.set(offset, v);
-            }
-            auto vec = std::make_shared<std::vector<RawBuffer> >(node ? *node : RawBuffer::make_empty(level-1));
-            auto cell_len = calc_len(level-1);
-            // std::cerr << "setting node " << (offset / cell_len) << " at " << offset << " cell len " << cell_len << std::endl;
-            (*vec)[offset / cell_len] = (*vec)[offset / cell_len].set(offset % cell_len, v);
-            return RawBuffer(vec, level);
-        }
+        std::vector<uint8_t> arr(1);
+        arr[0] = v;
+        return set_many(offset, arr);
     }
 
-    RawBuffer set_many(uint64_t offset, std::vector<uint8_t> arr) {
+    // Note: pos and len must be aligned so that the data to be written is in one leaf
+    RawBuffer set_many(uint64_t offset, std::vector<uint8_t> &arr) {
         // std::cerr << "setting buffer " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
         if (level == 0) {
             if (offset >= LEAF_SIZE) {
@@ -166,20 +134,11 @@ class RawBuffer {
     }
 
     uint8_t get(uint64_t pos) const {
-        if (level == 0) {
-            if (!leaf) return 0;
-            if (leaf->size() <= pos) return 0;
-            return (*leaf)[pos];
-        } else {
-            uint64_t len = calc_len(level);
-            uint64_t cell_len = calc_len(level-1);
-            if (pos > len || !node || (pos / cell_len) >= node->size()) {
-                return 0;
-            }
-            return (*node)[pos / cell_len].get(pos % cell_len);
-        }
+        auto res = get_many(pos, 1);
+        return res[0];
     }
 
+    // Note: pos and len must be aligned so that the data to be read is from one leaf
     std::vector<uint8_t> get_many(uint64_t pos, int len) const {
         if (level == 0) {
             auto res = std::vector<uint8_t>(len, 0);
