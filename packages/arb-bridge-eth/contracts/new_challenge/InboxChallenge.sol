@@ -82,13 +82,21 @@ contract InboxTopChallenge is Challenge {
         emit Bisected(_chainHashes, _chainLength, deadlineTicks);
     }
 
-    function oneStepProof(bytes32 _lowerHash, bytes32 _value) external asserterAction {
+    function oneStepProof(
+        uint256 _segmentToChallenge,
+        bytes calldata _proof,
+        bytes32 _lowerHash,
+        bytes32 _value
+    ) external {
         bytes32 prevHash = ChallengeUtils.inboxTopHash(
             _lowerHash,
             Messages.addMessageToInbox(_lowerHash, _value),
             1
         );
-        require(challengeState == prevHash, BIS_PREV);
+        require(
+            MerkleLib.verifyProof(_proof, challengeState, prevHash, _segmentToChallenge + 1),
+            CON_PROOF
+        );
 
         emit OneStepProofCompleted();
         _asserterWin();
