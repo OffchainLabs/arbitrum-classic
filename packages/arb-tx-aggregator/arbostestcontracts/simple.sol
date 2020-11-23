@@ -22,4 +22,8 @@ contract Simple {
     function exists() external returns (uint256) {
         return 10;
     }
+
+    function reverts() external {
+        require(false, "this is a test");
+    }
 }
