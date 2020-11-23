@@ -51,8 +51,8 @@ TEST_CASE("Buffer") {
     SECTION("empty buffer") {
         Buffer buf;
         assert(buf.hash() == hash(0));
-        // std::cerr << intx::to_string(buf.hash(), 16) << std::endl;
-        // std::cerr << intx::to_string(hash(0), 16) << std::endl;
+        std::cerr << intx::to_string(buf.hash(), 16) << std::endl;
+        std::cerr << intx::to_string(hash(0), 16) << std::endl;
     }
 
     SECTION("setting") {
