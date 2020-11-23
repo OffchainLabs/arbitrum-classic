@@ -49,9 +49,7 @@ export const serializeParams = async (
 ) => {
   const formattedParams: string[] = []
 
-  for (let i = 0; i < params.length; i++) {
-    const param = params[i]
-
+  for (const param of params) {
     // handle arrays
     if (Array.isArray(param)) {
       let paramArray: PrimativeType[] = param as PrimativeType[]
