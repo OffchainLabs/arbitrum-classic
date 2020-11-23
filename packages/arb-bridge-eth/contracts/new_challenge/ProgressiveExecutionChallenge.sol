@@ -47,22 +47,13 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
         bytes32 inboxAcc,
         bytes32 messageAcc,
         bytes32 logAcc,
-        uint64 gasUsed,
-        uint64 messageCount,
-        uint64 logCount
+        uint256 gasUsed,
+        uint256 inboxCount,
+        uint256 messageCount,
+        uint256 logCount
     ) private pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    machineHash,
-                    inboxAcc,
-                    messageAcc,
-                    logAcc,
-                    gasUsed,
-                    messageCount,
-                    logCount
-                )
-            );
+        bytes32 stateHash = keccak256(abi.encodePacked(machineHash, inboxAcc, messageAcc, logAcc));
+        return keccak256(abi.encodePacked(stateHash, gasUsed, inboxCount, messageCount, logCount));
     }
 
     function bisectAssertion(
@@ -104,9 +95,10 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
     //  initialLog
     function oneStepProofWithMessage(
         bytes32[3] memory _machineFields,
-        uint64 _initialGasUsed,
-        uint64 _initialMessageCount,
-        uint64 _initialLogCount,
+        uint256 _initialGasUsed,
+        uint256 _initialInboxCount,
+        uint256 _initialMessageCount,
+        uint256 _initialLogCount,
         bytes memory _proof,
         uint8 _kind,
         uint256 _blockNumber,
@@ -130,6 +122,7 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
             gas,
             _machineFields,
             _initialGasUsed,
+            _initialInboxCount,
             _initialMessageCount,
             _initialLogCount,
             proofFields
@@ -139,8 +132,9 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
     function oneStepProof(
         bytes32[3] memory _machineFields,
         uint64 _initialGasUsed,
-        uint64 _initialMessageCount,
-        uint64 _initialLogCount,
+        uint256 _initialInboxCount,
+        uint256 _initialMessageCount,
+        uint256 _initialLogCount,
         bytes memory _proof
     ) public asserterAction {
         (uint64 gas, bytes32[5] memory proofFields) = executor.executeStep(_machineFields, _proof);
@@ -149,6 +143,7 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
             gas,
             _machineFields,
             _initialGasUsed,
+            _initialInboxCount,
             _initialMessageCount,
             _initialLogCount,
             proofFields
@@ -162,23 +157,14 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
     //  afterMessagesHash
     //  afterLogsHash
     function checkProof(
-        uint64 gasUsed,
+        uint256 gasUsed,
         bytes32[3] memory _machineFields,
-        uint64 initialGasUsed,
-        uint64 initialMessageCount,
-        uint64 initialLogCount,
+        uint256 initialGasUsed,
+        uint256 initialInboxCount,
+        uint256 initialMessageCount,
+        uint256 initialLogCount,
         bytes32[5] memory fields
     ) private {
-        bytes32 a1Hash = hashBisectionAssertion(
-            fields[0],
-            _machineFields[0],
-            _machineFields[1],
-            _machineFields[2],
-            initialGasUsed,
-            initialMessageCount,
-            initialLogCount
-        );
-
         // The one step proof already guarantees us that firstMessage and lastMessage
         // are either one or 0 messages apart and the same is true for logs. Therefore
         // we can infer the message count and log count based on whether the fields
@@ -189,8 +175,20 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
             fields[3],
             fields[4],
             initialGasUsed + gasUsed,
+            initialInboxCount + (_machineFields[0] == fields[2] ? 0 : 1),
             initialMessageCount + (_machineFields[1] == fields[3] ? 0 : 1),
             initialLogCount + (_machineFields[2] == fields[4] ? 0 : 1)
+        );
+
+        bytes32 a1Hash = hashBisectionAssertion(
+            fields[0],
+            _machineFields[0],
+            _machineFields[1],
+            _machineFields[2],
+            initialGasUsed,
+            initialInboxCount,
+            initialMessageCount,
+            initialLogCount
         );
 
         requireMatchesPrevState(keccak256(abi.encodePacked(a1Hash, a2Hash, uint64(1))));

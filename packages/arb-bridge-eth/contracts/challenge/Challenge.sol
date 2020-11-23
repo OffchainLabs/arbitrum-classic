@@ -59,6 +59,16 @@ contract Challenge is Cloneable {
 
     State private state;
 
+    modifier asserterOrChallengerAction {
+        require(
+            (State.AsserterTurn == state && msg.sender == asserter) ||
+                (State.ChallengerTurn == state && msg.sender == challenger),
+            BIS_STATE
+        );
+        require(RollupTime.blocksToTicks(block.number) <= deadlineTicks, BIS_DEADLINE);
+        _;
+    }
+
     modifier asserterAction {
         require(State.AsserterTurn == state, BIS_STATE);
         require(RollupTime.blocksToTicks(block.number) <= deadlineTicks, BIS_DEADLINE);
@@ -105,6 +115,15 @@ contract Challenge is Cloneable {
 
     function updateDeadline() internal {
         deadlineTicks = RollupTime.blocksToTicks(block.number) + challengePeriodTicks;
+    }
+
+    function responded() internal {
+        if (state == State.ChallengerTurn) {
+            state = State.AsserterTurn;
+        } else {
+            state = State.ChallengerTurn;
+        }
+        updateDeadline();
     }
 
     function asserterResponded() internal {

@@ -2,8 +2,14 @@
 pragma solidity ^0.5.17;
 
 import "./Node.sol";
+import "./Assertion.sol";
+
+import "../inbox/IGlobalInbox.sol";
+import "../rollup/RollupUtils.sol";
 
 contract Rollup {
+    event SentLogs(bytes32 logsAccHash);
+
     struct Staker {
         uint256 latestStakedNode;
         uint256 amountStaked;
@@ -24,6 +30,26 @@ contract Rollup {
     uint256 baseStake;
     uint256 challengePeriod;
 
+    IGlobalInbox public globalInbox;
+
+    constructor(bytes32 machineHash) public {
+        bytes32 assertionHash = Assertion.hashAssertion(machineHash, 0, 0, 0, 0, 0, 0, 0);
+
+        bytes32 inboxNodeHash = Assertion.hashInboxNode(0, 0, 0);
+
+        bytes32 executionNodeHash = Assertion.hashExecutionNode(assertionHash, assertionHash, 0);
+
+        Node node = new Node(
+            inboxNodeHash,
+            executionNodeHash,
+            latestConfirmed,
+            block.number,
+            0, // TODO: deadline block
+            0
+        );
+        nodes[0] = node;
+    }
+
     function rejectNextNode(uint256 successorWithStake, address stakerAddress) external {
         // No stake has been placed during the last challengePeriod blocks
         require(block.number - lastStakeBlock >= challengePeriod);
@@ -37,24 +63,46 @@ contract Rollup {
         // staker is actually staked on stakedSiblingNode
         require(stakedSiblingNode.stakers(stakerAddress));
 
-        nodes[firstUnresolvedNode].confirmInvalid();
-
+        Node node = nodes[firstUnresolvedNode];
+        node.confirmInvalid();
         discardUnresolvedNode();
+        node.destroy();
     }
 
     // If the node previous to this one is not the latest confirmed, we can reject immediately
     function rejectNextNodeOutOfOrder() external {
-        nodes[firstUnresolvedNode].confirmOutOfOrder(latestConfirmed);
-
+        Node node = nodes[firstUnresolvedNode];
+        node.confirmOutOfOrder(latestConfirmed);
         discardUnresolvedNode();
+        node.destroy();
     }
 
-    function confirmNextNode() external {
+    function confirmNextNode(
+        bytes32 logAcc,
+        bytes calldata messages,
+        uint256 beforeSendCount,
+        uint256 sendCount
+    ) external {
         // No stake has been placed during the last challengePeriod blocks
         require(block.number - lastStakeBlock >= challengePeriod);
+        Node node = nodes[firstUnresolvedNode];
+        node.confirmValid(stakerCount, latestConfirmed);
 
-        nodes[firstUnresolvedNode].confirmValid(stakerCount, latestConfirmed);
+        (bytes32 lastMsgHash, ) = RollupUtils.generateLastMessageHash(messages, 0, sendCount);
+
+        bytes32 confirmData = keccak256(
+            abi.encodePacked(lastMsgHash, logAcc, beforeSendCount, sendCount)
+        );
+
+        // TODO: check that confirmData matches up with node
+
+        // Send all messages is a single batch
+        globalInbox.sendMessages(messages, beforeSendCount, beforeSendCount + sendCount);
+
+        emit SentLogs(logAcc);
+
         discardUnresolvedNode();
+        node.destroy();
     }
 
     function newStakeOnExistingNode(
@@ -75,18 +123,42 @@ contract Rollup {
         bytes32 blockHash,
         uint256 blockNumber,
         uint256 nodeNum,
-        uint256 prev /* assertion data */
+        uint256 prev,
+        bytes32 beforeInnerAssertion,
+        bytes32 beforeInboxHash,
+        uint256 beforeInboxCount,
+        bytes32 afterInnerAssertion,
+        bytes32 afterInboxHash,
+        uint256 afterInboxCount,
+        uint64 numSteps
     ) external payable {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         verifyCanStake();
         require(nodeNum == latestNodeCreated + 1);
         require(prev == latestConfirmed);
+        require(afterInboxCount >= beforeInboxCount);
 
-        // TODO: Verify that the preconditions of assertion are consistent with the postconditions of prev
+        (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(address(this));
+
+        require(afterInboxCount <= inboxCount);
+
+        bytes32 inboxNodeHash = Assertion.hashInboxNode(
+            afterInboxHash,
+            inboxValue,
+            inboxCount - afterInboxCount
+        );
+
+        bytes32 executionNodeHash = Assertion.hashExecutionNode(
+            Assertion.hashAssertion(beforeInnerAssertion, beforeInboxCount, beforeInboxHash),
+            Assertion.hashAssertion(afterInnerAssertion, afterInboxCount, afterInboxHash),
+            numSteps
+        );
+
         // TODO: Verify that assertion meets the minimum size requirement
         // TODO: Verify that assertion meets the minimum Delta time requirement
         Node node = new Node(
-            0, // TODO: assertion hash
+            inboxNodeHash,
+            executionNodeHash,
             latestConfirmed,
             block.number,
             0, // TODO: deadline block
@@ -127,6 +199,7 @@ contract Rollup {
         // TODO: Verify that assertion meets the minimum Delta time requirement
 
         Node node = new Node(
+            0,
             0, // TODO: assertion hash
             staker.latestStakedNode,
             block.number,

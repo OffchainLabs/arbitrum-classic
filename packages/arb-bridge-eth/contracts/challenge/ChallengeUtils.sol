@@ -77,4 +77,20 @@ library ChallengeUtils {
                 )
             );
     }
+
+    function firstSegmentSize(uint256 totalCount, uint256 bisectionCount)
+        internal
+        pure
+        returns (uint256)
+    {
+        return totalCount / bisectionCount + (totalCount % bisectionCount);
+    }
+
+    function otherSegmentSize(uint256 totalCount, uint256 bisectionCount)
+        internal
+        pure
+        returns (uint256)
+    {
+        return totalCount / bisectionCount;
+    }
 }
