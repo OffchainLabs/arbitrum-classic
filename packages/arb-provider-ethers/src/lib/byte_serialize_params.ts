@@ -11,8 +11,7 @@ type BytesNumber = 1 | 4 | 8 | 16 | 32
 
 // to use:
 // const mySerializeParamsFunction = initSerializeAndLookUpIndices("myAggregatorUrl")
-export const initSerializeAndLookUpIndices = (arbAggregatorUrl: string) => {
-  const arbProvider = new JsonRpcProvider(arbAggregatorUrl)
+export const initSerializeAndLookUpIndices = (arbProvider: JsonRpcProvider) => {
   return async (params: PrimativeOrPrimativeArray[]) => {
     return await serializeParams(params, async (address: string) => {
       return await getAddressIndex(address, arbProvider)
