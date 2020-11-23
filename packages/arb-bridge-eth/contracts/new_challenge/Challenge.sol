@@ -1,0 +1,3 @@
+contract Challenge {
+    function executionWasBlocked() {}
+}

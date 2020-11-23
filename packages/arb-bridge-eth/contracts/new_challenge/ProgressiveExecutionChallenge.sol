@@ -19,7 +19,7 @@
 pragma solidity ^0.5.11;
 
 import "../challenge/IExecutionChallenge.sol";
-import "../challenge/BisectionChallenge.sol";
+import "./BisectionChallenge.sol";
 import "../challenge/ChallengeUtils.sol";
 
 import "../arch/IOneStepProof.sol";
@@ -28,8 +28,6 @@ import "../libraries/MerkleLib.sol";
 
 contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChallenge {
     using ChallengeUtils for ChallengeUtils.ExecutionAssertion;
-
-    event BisectedAssertion(bytes32[] assertionHashes, uint256 deadlineTicks);
 
     event OneStepProofCompleted();
 
@@ -56,39 +54,6 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
         return keccak256(abi.encodePacked(stateHash, gasUsed, inboxCount, messageCount, logCount));
     }
 
-    function bisectAssertion(
-        bytes32 _a1Hash,
-        bytes32 _a2Hash,
-        uint64 _totalSteps,
-        bytes32[] calldata _bisectionHashes
-    ) external {
-        requireMatchesPrevState(keccak256(abi.encodePacked(_a1Hash, _a2Hash, _totalSteps)));
-
-        uint256 innerCuts = _bisectionHashes.length;
-        uint256 totalCuts = innerCuts + 2;
-        bytes32[] memory hashes = new bytes32[](totalCuts);
-        hashes[0] = keccak256(
-            abi.encodePacked(
-                _a1Hash,
-                _bisectionHashes[0],
-                uint64(firstSegmentSize(uint256(_totalSteps), totalCuts))
-            )
-        );
-
-        uint64 otherStepCount = uint64(otherSegmentSize(uint256(_totalSteps), totalCuts));
-        for (uint256 i = 0; i < innerCuts; i++) {
-            hashes[i] = keccak256(
-                abi.encodePacked(_bisectionHashes[i - 1], _bisectionHashes[i], otherStepCount)
-            );
-        }
-        hashes[totalCuts - 1] = keccak256(
-            abi.encodePacked(_bisectionHashes[innerCuts - 1], _a2Hash, otherStepCount)
-        );
-
-        commitToSegment(hashes);
-        asserterResponded();
-    }
-
     // machineFields
     //  initialInbox
     //  initialMessage
@@ -106,7 +71,7 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
         address _sender,
         uint256 _inboxSeqNum,
         bytes memory _msgData
-    ) public asserterAction {
+    ) public onlyOnTurn {
         (uint64 gas, bytes32[5] memory proofFields) = executor.executeStepWithMessage(
             _machineFields,
             _proof,
@@ -136,7 +101,7 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
         uint256 _initialMessageCount,
         uint256 _initialLogCount,
         bytes memory _proof
-    ) public asserterAction {
+    ) public onlyOnTurn {
         (uint64 gas, bytes32[5] memory proofFields) = executor.executeStep(_machineFields, _proof);
 
         checkProof(

@@ -18,14 +18,14 @@
 
 pragma solidity ^0.5.11;
 
-import "../challenge/Challenge.sol";
+import "./BisectionChallenge.sol";
 import "../challenge/ChallengeUtils.sol";
 
 import "../inbox/Messages.sol";
 
 import "../libraries/MerkleLib.sol";
 
-contract InboxTopChallenge is Challenge {
+contract InboxTopChallenge is BisectionChallenge {
     event Bisected(bytes32[] chainHashes, uint256 totalLength, uint256 deadlineTicks);
 
     event OneStepProofCompleted();
@@ -39,55 +39,12 @@ contract InboxTopChallenge is Challenge {
     // Invalid assertion selected
     string private constant CON_PROOF = "CON_PROOF";
 
-    bytes32 private challengeState;
-
-    function bisect(
-        uint256 _segmentToChallenge,
-        bytes calldata _proof,
-        bytes32 _oldEndHash,
-        bytes32[] calldata _chainHashes,
-        uint256 _chainLength
-    ) external asserterOrChallengerAction {
-        uint256 bisectionCount = _chainHashes.length - 1;
-
-        require(_chainHashes[bisectionCount] != _oldEndHash);
-        require(_chainLength > 1, "bisection too short");
-
-        bytes32 bisectionHash = ChallengeUtils.inboxTopHash(
-            _chainHashes[0],
-            _oldEndHash,
-            _chainLength
-        );
-
-        require(
-            MerkleLib.verifyProof(_proof, challengeState, bisectionHash, _segmentToChallenge + 1),
-            CON_PROOF
-        );
-
-        bytes32[] memory hashes = new bytes32[](bisectionCount);
-        hashes[0] = ChallengeUtils.inboxTopHash(
-            _chainHashes[0],
-            _chainHashes[1],
-            ChallengeUtils.firstSegmentSize(_chainLength, bisectionCount)
-        );
-        for (uint256 i = 1; i < bisectionCount; i++) {
-            hashes[i] = ChallengeUtils.inboxTopHash(
-                _chainHashes[i],
-                _chainHashes[i + 1],
-                ChallengeUtils.otherSegmentSize(_chainLength, bisectionCount)
-            );
-        }
-        challengeState = MerkleLib.generateRoot(hashes);
-        responded();
-        emit Bisected(_chainHashes, _chainLength, deadlineTicks);
-    }
-
     function oneStepProof(
         uint256 _segmentToChallenge,
         bytes calldata _proof,
         bytes32 _lowerHash,
         bytes32 _value
-    ) external {
+    ) external onlyOnTurn {
         bytes32 prevHash = ChallengeUtils.inboxTopHash(
             _lowerHash,
             Messages.addMessageToInbox(_lowerHash, _value),
