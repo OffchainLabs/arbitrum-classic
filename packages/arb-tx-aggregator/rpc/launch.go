@@ -76,7 +76,7 @@ func LaunchAggregator(
 	if err != nil {
 		return err
 	}
-	inboxAddress, err := rollupContract.InboxAddress(context.Background())
+	inboxAddress, err := rollupContract.InboxAddress(ctx)
 	if err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func LaunchAggregator(
 		batch = batcher.NewStatefulBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
 	}
 
-	srv := aggregator.NewServer(client, batch, rollupAddress, db)
+	srv := aggregator.NewServer(batch, rollupAddress, db)
 	errChan := make(chan error, 1)
 
 	web3Server, err := web3.GenerateWeb3Server(srv)

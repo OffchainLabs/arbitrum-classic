@@ -21,6 +21,8 @@
 
 #include <rocksdb/utilities/transaction.h>
 
+#include <nonstd/optional.hpp>
+
 class DataStorage;
 
 struct BlockData {
@@ -52,8 +54,13 @@ class AggregatorStore {
     void saveBlock(uint64_t height, const std::vector<char>& data);
     std::vector<char> getBlock(uint64_t height) const;
 
-    uint64_t getPossibleRequestInfo(const uint256_t& request_id) const;
+    nonstd::optional<uint64_t> getPossibleRequestInfo(
+        const uint256_t& request_id) const;
     void saveRequest(const uint256_t& request_id, uint64_t log_index);
+
+    nonstd::optional<uint64_t> getPossibleBlock(
+        const uint256_t& block_hash) const;
+    void saveBlockHash(const uint256_t& block_hash, uint64_t block_height);
 
     void reorg(uint64_t block_height,
                uint64_t message_count,
