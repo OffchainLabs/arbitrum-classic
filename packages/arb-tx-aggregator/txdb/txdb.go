@@ -349,7 +349,7 @@ func (db *TxDB) saveEmptyBlock(ctx context.Context, prev ethcommon.Hash, number 
 		return err
 	}
 
-	return db.as.SaveBlockHash(common.NewHashFromEth(header.Hash()), header.Number.Uint64())
+	return db.as.SaveBlockHash(common.NewHashFromEth(block.Hash()), block.NumberU64())
 }
 
 func (db *TxDB) fillEmptyBlocks(ctx context.Context, max *big.Int) error {
@@ -516,7 +516,7 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 		for i, txRes := range txResults {
 			if txRes.ResultCode == evm.BadSequenceCode {
 				// If this log failed with incorrect sequence number, only save the request if it hasn't been saved before
-				if db.as.GetPossibleRequestInfo(txRes.IncomingRequest.MessageID) == nil {
+				if db.as.GetPossibleRequestInfo(txRes.IncomingRequest.MessageID) != nil {
 					continue
 				}
 			}
