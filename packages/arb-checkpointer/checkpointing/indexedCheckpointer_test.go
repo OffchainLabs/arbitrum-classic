@@ -108,6 +108,7 @@ func TestWriteCheckpoint(t *testing.T) {
 	if err == nil {
 		t.Error("block shouldn't exist before writing")
 	}
+	_ = blockData
 
 	checkpointContext := ckptcontext.NewCheckpointContext()
 	if err = writeCheckpoint(cp.bs, cp.db, &writableCheckpoint{

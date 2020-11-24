@@ -70,7 +70,7 @@ All contracts are deployed from https://github.com/OffchainLabs/arbitrum/tree/v0
 
 #### Important Addresses
 
-- Main L1 Rollup Contract: [ 0xC34Fd04E698dB75f8381BFA7298e8Ae379bFDA71](https://kovan.etherscan.io/address/ 0xC34Fd04E698dB75f8381BFA7298e8Ae379bFDA71)
+- Main L1 Rollup Contract: [0xC34Fd04E698dB75f8381BFA7298e8Ae379bFDA71](https://kovan.etherscan.io/address/0xC34Fd04E698dB75f8381BFA7298e8Ae379bFDA71)
 - Our Hosted Aggregator Address: [0x569753e1d905ba9e74abdd65f4d41d80a0ce4dfc](https://kovan.etherscan.io/address/0x1d143638962dc93c52c4053a3dcce71cccb30bd3)
 - Our Hosted Validator Address: [0x51eefd904c9317ef4a242de47cd48c9183f60143](https://kovan.etherscan.io/address/0x705c33d9364dd570bc2998a1a1e788221c14d2da)
 

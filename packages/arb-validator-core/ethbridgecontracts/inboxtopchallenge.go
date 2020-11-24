@@ -162,7 +162,7 @@ func bindBisectionChallenge(address common.Address, caller bind.ContractCaller, 
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_BisectionChallenge *BisectionChallengeRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_BisectionChallenge *BisectionChallengeRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _BisectionChallenge.Contract.BisectionChallengeCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -181,7 +181,7 @@ func (_BisectionChallenge *BisectionChallengeRaw) Transact(opts *bind.TransactOp
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_BisectionChallenge *BisectionChallengeCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_BisectionChallenge *BisectionChallengeCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _BisectionChallenge.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -200,12 +200,17 @@ func (_BisectionChallenge *BisectionChallengeTransactorRaw) Transact(opts *bind.
 //
 // Solidity: function isMaster() view returns(bool)
 func (_BisectionChallenge *BisectionChallengeCaller) IsMaster(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _BisectionChallenge.contract.Call(opts, out, "isMaster")
-	return *ret0, err
+	var out []interface{}
+	err := _BisectionChallenge.contract.Call(opts, &out, "isMaster")
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
 }
 
 // IsMaster is a free data retrieval call binding the contract method 0x6f791d29.
@@ -950,7 +955,7 @@ func bindChallenge(address common.Address, caller bind.ContractCaller, transacto
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Challenge *ChallengeRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Challenge *ChallengeRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Challenge.Contract.ChallengeCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -969,7 +974,7 @@ func (_Challenge *ChallengeRaw) Transact(opts *bind.TransactOpts, method string,
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Challenge *ChallengeCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Challenge *ChallengeCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Challenge.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -988,12 +993,17 @@ func (_Challenge *ChallengeTransactorRaw) Transact(opts *bind.TransactOpts, meth
 //
 // Solidity: function isMaster() view returns(bool)
 func (_Challenge *ChallengeCaller) IsMaster(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _Challenge.contract.Call(opts, out, "isMaster")
-	return *ret0, err
+	var out []interface{}
+	err := _Challenge.contract.Call(opts, &out, "isMaster")
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
 }
 
 // IsMaster is a free data retrieval call binding the contract method 0x6f791d29.
@@ -1566,7 +1576,7 @@ func bindInboxTopChallenge(address common.Address, caller bind.ContractCaller, t
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_InboxTopChallenge *InboxTopChallengeRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_InboxTopChallenge *InboxTopChallengeRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _InboxTopChallenge.Contract.InboxTopChallengeCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -1585,7 +1595,7 @@ func (_InboxTopChallenge *InboxTopChallengeRaw) Transact(opts *bind.TransactOpts
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_InboxTopChallenge *InboxTopChallengeCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_InboxTopChallenge *InboxTopChallengeCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _InboxTopChallenge.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -1604,12 +1614,17 @@ func (_InboxTopChallenge *InboxTopChallengeTransactorRaw) Transact(opts *bind.Tr
 //
 // Solidity: function isMaster() view returns(bool)
 func (_InboxTopChallenge *InboxTopChallengeCaller) IsMaster(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _InboxTopChallenge.contract.Call(opts, out, "isMaster")
-	return *ret0, err
+	var out []interface{}
+	err := _InboxTopChallenge.contract.Call(opts, &out, "isMaster")
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
 }
 
 // IsMaster is a free data retrieval call binding the contract method 0x6f791d29.

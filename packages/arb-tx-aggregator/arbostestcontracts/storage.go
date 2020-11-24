@@ -159,7 +159,7 @@ func bindStorage(address common.Address, caller bind.ContractCaller, transactor 
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Storage *StorageRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Storage *StorageRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Storage.Contract.StorageCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -178,7 +178,7 @@ func (_Storage *StorageRaw) Transact(opts *bind.TransactOpts, method string, par
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Storage *StorageCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Storage *StorageCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Storage.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -330,7 +330,7 @@ func bindSys2(address common.Address, caller bind.ContractCaller, transactor bin
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Sys2 *Sys2Raw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Sys2 *Sys2Raw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Sys2.Contract.Sys2Caller.contract.Call(opts, result, method, params...)
 }
 
@@ -349,7 +349,7 @@ func (_Sys2 *Sys2Raw) Transact(opts *bind.TransactOpts, method string, params ..
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Sys2 *Sys2CallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Sys2 *Sys2CallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Sys2.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -368,12 +368,17 @@ func (_Sys2 *Sys2TransactorRaw) Transact(opts *bind.TransactOpts, method string,
 //
 // Solidity: function getStorageAt(address account, uint256 index) view returns(uint256)
 func (_Sys2 *Sys2Caller) GetStorageAt(opts *bind.CallOpts, account common.Address, index *big.Int) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Sys2.contract.Call(opts, out, "getStorageAt", account, index)
-	return *ret0, err
+	var out []interface{}
+	err := _Sys2.contract.Call(opts, &out, "getStorageAt", account, index)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // GetStorageAt is a free data retrieval call binding the contract method 0xa169625f.

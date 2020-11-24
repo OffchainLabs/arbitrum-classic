@@ -307,10 +307,9 @@ GetResults processVal(const Transaction& transaction,
                       std::set<uint64_t>& segment_ids,
                       uint32_t,
                       ValueCache& val_cache) {
-    auto cached_value = val_cache.find(val_hash.hash);
-    if (cached_value != val_cache.end()) {
+    if (auto val = val_cache.loadIfExists(val_hash.hash)) {
         // Use cached value
-        return applyValue(value(cached_value->second), 0, val_stack);
+        return applyValue(std::move(*val), 0, val_stack);
     }
 
     // Value not in cache, so need to load from database
@@ -335,10 +334,9 @@ GetResults processFirstVal(const Transaction& transaction,
                            std::set<uint64_t>& segment_ids,
                            uint32_t,
                            ValueCache& val_cache) {
-    auto cached_value = val_cache.find(val_hash.hash);
-    if (cached_value != val_cache.end()) {
+    if (auto val = val_cache.loadIfExists(val_hash.hash)) {
         // Use cached value
-        val_stack.emplace_back(value(cached_value->second), 0);
+        val_stack.emplace_back(std::move(*val), 0);
         return GetResults{0, rocksdb::Status::OK(), {}};
     }
 
@@ -401,14 +399,14 @@ DbResult<value> getValueImpl(const Transaction& transaction,
             auto reference_count = current.reference_count;
             val_stack.pop_back();
 
-            if (reference_count > 1) {
-                value_cache[hash_value(val)] = val;
-            }
-
             if (val_stack.empty()) {
                 // All values resolved
-                value_cache[hash_value(val)] = val;
+                value_cache.maybeSave(val);
                 return {rocksdb::Status::OK(), reference_count, std::move(val)};
+            }
+
+            if (reference_count > 1) {
+                value_cache.maybeSave(val);
             }
 
             applyValue(std::move(val), reference_count, val_stack);

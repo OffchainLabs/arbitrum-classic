@@ -40,6 +40,9 @@ import (
 // 3) Global EthBridge addresses json file
 // 4) ethURL
 func main() {
+	// Enable line numbers in logging
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	// Check number of args
 	flag.Parse()
 	switch os.Args[1] {
@@ -51,7 +54,7 @@ func main() {
 	}
 }
 
-func createEvilManager(rollupAddress common.Address, client arbbridge.ArbAuthClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
+func createEvilManager(rollupAddress common.Address, client arbbridge.ArbClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
 	cp, err := rolluptest.NewEvilRollupCheckpointer(
 		rollupAddress,
 		dbPath,

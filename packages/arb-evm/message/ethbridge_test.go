@@ -60,11 +60,10 @@ func TestParseEthMessage(t *testing.T) {
 	if !ret.Valid {
 		t.Error("invalid l2message")
 	}
-	parsedMsg := ret.Message
-	if parsedMsg.Value.Cmp(msg.Value) != 0 {
+	if ret.Value.Cmp(msg.Value) != 0 {
 		t.Error("incorrect value")
 	}
-	if parsedMsg.Dest != msg.Dest.ToEthAddress() {
+	if ret.Dest != msg.Dest.ToEthAddress() {
 		t.Error("incorrect address")
 	}
 }
@@ -78,14 +77,13 @@ func TestParseERC20Message(t *testing.T) {
 	if !ret.Valid {
 		t.Error("invalid l2message")
 	}
-	parsedMsg := ret.Message
-	if parsedMsg.Token != msg.Token.ToEthAddress() {
+	if ret.Token != msg.Token.ToEthAddress() {
 		t.Error("incorrect token")
 	}
-	if parsedMsg.Value.Cmp(msg.Value) != 0 {
+	if ret.Value.Cmp(msg.Value) != 0 {
 		t.Error("incorrect value")
 	}
-	if parsedMsg.Dest != msg.Dest.ToEthAddress() {
+	if ret.Dest != msg.Dest.ToEthAddress() {
 		t.Error("incorrect address")
 	}
 }
@@ -99,14 +97,13 @@ func TestParseERC721Message(t *testing.T) {
 	if !ret.Valid {
 		t.Error("invalid l2message")
 	}
-	parsedMsg := ret.Message
-	if parsedMsg.Token != msg.Token.ToEthAddress() {
+	if ret.Token != msg.Token.ToEthAddress() {
 		t.Error("incorrect token")
 	}
-	if parsedMsg.Id.Cmp(msg.ID) != 0 {
+	if ret.Id.Cmp(msg.ID) != 0 {
 		t.Error("incorrect value")
 	}
-	if parsedMsg.Dest != msg.Dest.ToEthAddress() {
+	if ret.Dest != msg.Dest.ToEthAddress() {
 		t.Error("incorrect address")
 	}
 }

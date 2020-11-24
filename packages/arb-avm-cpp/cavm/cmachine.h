@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef Machine_h
-#define Machine_h
+#ifndef cmachine_h
+#define cmachine_h
 
 #include <stdint.h>
 #include "ccheckpointstorage.h"
@@ -54,6 +54,8 @@ typedef struct {
     int outMessageCount;
     ByteSlice logs;
     int logCount;
+    ByteSlice debugPrints;
+    int debugPrintCount;
     uint64_t numSteps;
     uint64_t numGas;
 } RawAssertion;
@@ -101,4 +103,4 @@ int checkpointMachine(CMachine* m, CCheckpointStorage* storage);
 }
 #endif
 
-#endif /* Machine_h */
+#endif /* cmachine_h */

@@ -160,7 +160,7 @@ func bindOneStepProof(address common.Address, caller bind.ContractCaller, transa
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_OneStepProof *OneStepProofRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_OneStepProof *OneStepProofRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _OneStepProof.Contract.OneStepProofCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -179,7 +179,7 @@ func (_OneStepProof *OneStepProofRaw) Transact(opts *bind.TransactOpts, method s
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_OneStepProof *OneStepProofCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_OneStepProof *OneStepProofCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _OneStepProof.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -201,13 +201,19 @@ func (_OneStepProof *OneStepProofCaller) ExecuteStep(opts *bind.CallOpts, inboxA
 	Gas    uint64
 	Fields [5][32]byte
 }, error) {
-	ret := new(struct {
+	var out []interface{}
+	err := _OneStepProof.contract.Call(opts, &out, "executeStep", inboxAcc, messagesAcc, logsAcc, proof)
+
+	outstruct := new(struct {
 		Gas    uint64
 		Fields [5][32]byte
 	})
-	out := ret
-	err := _OneStepProof.contract.Call(opts, out, "executeStep", inboxAcc, messagesAcc, logsAcc, proof)
-	return *ret, err
+
+	outstruct.Gas = out[0].(uint64)
+	outstruct.Fields = out[1].([5][32]byte)
+
+	return *outstruct, err
+
 }
 
 // ExecuteStep is a free data retrieval call binding the contract method 0x385bc114.
@@ -237,13 +243,19 @@ func (_OneStepProof *OneStepProofCaller) ExecuteStepWithMessage(opts *bind.CallO
 	Gas    uint64
 	Fields [5][32]byte
 }, error) {
-	ret := new(struct {
+	var out []interface{}
+	err := _OneStepProof.contract.Call(opts, &out, "executeStepWithMessage", inboxAcc, messagesAcc, logsAcc, proof, _kind, _blockNumber, _timestamp, _sender, _inboxSeqNum, _msgData)
+
+	outstruct := new(struct {
 		Gas    uint64
 		Fields [5][32]byte
 	})
-	out := ret
-	err := _OneStepProof.contract.Call(opts, out, "executeStepWithMessage", inboxAcc, messagesAcc, logsAcc, proof, _kind, _blockNumber, _timestamp, _sender, _inboxSeqNum, _msgData)
-	return *ret, err
+
+	outstruct.Gas = out[0].(uint64)
+	outstruct.Fields = out[1].([5][32]byte)
+
+	return *outstruct, err
+
 }
 
 // ExecuteStepWithMessage is a free data retrieval call binding the contract method 0x96105dce.
@@ -394,7 +406,7 @@ func bindPrecompiles(address common.Address, caller bind.ContractCaller, transac
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Precompiles *PrecompilesRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Precompiles *PrecompilesRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Precompiles.Contract.PrecompilesCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -413,7 +425,7 @@ func (_Precompiles *PrecompilesRaw) Transact(opts *bind.TransactOpts, method str
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Precompiles *PrecompilesCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Precompiles *PrecompilesCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Precompiles.Contract.contract.Call(opts, result, method, params...)
 }
 

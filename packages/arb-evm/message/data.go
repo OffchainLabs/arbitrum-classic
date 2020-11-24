@@ -21,13 +21,12 @@ import (
 	"fmt"
 	ethmath "github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	errors2 "github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"math/big"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 func extractUInt256(data []byte) (*big.Int, []byte) {
@@ -144,7 +143,7 @@ func (c CompressedAddressFull) String() string {
 	return fmt.Sprintf("Address[%v]", c.Hex())
 }
 
-func decodeAddress(r io.Reader) (CompressedAddress, error) {
+func DecodeAddress(r io.Reader) (CompressedAddress, error) {
 	addressBytes := make([]byte, 0)
 	if err := rlp.Decode(r, &addressBytes); err != nil {
 		return nil, errors2.Wrap(err, "couldn't parse address")
@@ -185,7 +184,7 @@ func encodeUnsignedTx(tx CompressedTx) ([]byte, error) {
 		return nil, err
 	}
 
-	data := []byte{}
+	var data []byte
 	data = append(data, nonceData...)
 	data = append(data, gasPriceData...)
 	data = append(data, gasLimitData...)
@@ -219,7 +218,7 @@ func decodeCompressedTx(r io.Reader) (CompressedTx, error) {
 		return CompressedTx{}, err
 	}
 
-	address, err := decodeAddress(r)
+	address, err := DecodeAddress(r)
 	if err != nil {
 		return CompressedTx{}, err
 	}
@@ -244,27 +243,26 @@ func decodeCompressedTx(r io.Reader) (CompressedTx, error) {
 
 }
 
-func encodeECDSASig(v, r, s *big.Int) []byte {
-	vBit := byte(v.Uint64() & 0xff)
+func encodeECDSASig(v byte, r, s *big.Int) []byte {
 	data := make([]byte, 0, 65)
-	data = append(data, ethmath.U256Bytes(r)...)
-	data = append(data, ethmath.U256Bytes(s)...)
-	data = append(data, vBit)
+	data = append(data, ethmath.U256Bytes(new(big.Int).Set(r))...)
+	data = append(data, ethmath.U256Bytes(new(big.Int).Set(s))...)
+	data = append(data, v)
 	return data
 }
 
-func decodeECDSASig(rd io.Reader) (v, r, s *big.Int, err error) {
+func decodeECDSASig(rd io.Reader) (v byte, r, s *big.Int, err error) {
 	rData := make([]byte, 32)
 	if count, _ := rd.Read(rData); count != len(rData) {
-		return nil, nil, nil, errors.New("couldn't read r")
+		return 0, nil, nil, errors.New("couldn't read r")
 	}
 	sData := make([]byte, 32)
 	if count, _ := rd.Read(sData); count != len(sData) {
-		return nil, nil, nil, errors.New("couldn't read s")
+		return 0, nil, nil, errors.New("couldn't read s")
 	}
 	vData := make([]byte, 1)
 	if count, _ := rd.Read(vData); count != len(vData) {
-		return nil, nil, nil, errors.New("couldn't read v")
+		return 0, nil, nil, errors.New("couldn't read v")
 	}
-	return new(big.Int).SetBytes(vData), new(big.Int).SetBytes(rData), new(big.Int).SetBytes(sData), nil
+	return vData[0], new(big.Int).SetBytes(rData), new(big.Int).SetBytes(sData), nil
 }

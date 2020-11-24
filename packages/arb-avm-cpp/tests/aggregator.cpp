@@ -48,10 +48,12 @@ TEST_CASE("Aggregator tests") {
     }
 
     SECTION("requests") {
-        CHECK_THROWS(store->getPossibleRequestInfo(10));
+        REQUIRE(!store->getPossibleRequestInfo(10).has_value());
         store->saveRequest(10, 5);
-        REQUIRE(store->getPossibleRequestInfo(10) == 5);
-        CHECK_THROWS(store->getPossibleRequestInfo(8));
+        auto requestIndex = store->getPossibleRequestInfo(10);
+        REQUIRE(requestIndex.has_value());
+        REQUIRE(*requestIndex == 5);
+        REQUIRE(!store->getPossibleRequestInfo(8).has_value());
     }
 
     SECTION("blocks") {

@@ -30,6 +30,7 @@ set(LIB_HEADERS
   include/data_storage/value/code.hpp
   include/data_storage/value/machine.hpp
   include/data_storage/value/value.hpp
+  include/data_storage/value/valuecache.hpp
 )
 
 set(LIB_PRIVATE_HEADERS
@@ -47,6 +48,7 @@ set(LIB_SOURCES
   src/value/machine.cpp
   src/value/referencecount.cpp
   src/value/value.cpp
+  src/value/valuecache.cpp
 )
 
 add_library(data_storage STATIC ${LIB_HEADERS} ${LIB_PRIVATE_HEADERS} ${LIB_SOURCES})

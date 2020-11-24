@@ -855,8 +855,7 @@ void log(MachineState& m) {
 
 void debug(MachineState& m) {
     m.stack.prepForMod(1);
-    auto val = m.stack.pop();
-    std::cout << "debugprint " << val << std::endl;
+    m.context.debug_prints.push_back(m.stack.pop());
     ++m.pc;
 }
 

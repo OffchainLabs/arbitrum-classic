@@ -174,9 +174,9 @@ void saveNextSegmentID(Transaction& transaction, uint64_t next_segment_id) {
 
 uint64_t getNextSegmentID(const Transaction& transaction) {
     std::string segment_id_raw;
-    auto s = transaction.transaction->Get(rocksdb::ReadOptions(),
-                                          rocksdb::Slice(max_code_segment_key),
-                                          &segment_id_raw);
+    auto s = transaction.transaction->GetForUpdate(
+        rocksdb::ReadOptions(), rocksdb::Slice(max_code_segment_key),
+        &segment_id_raw);
     if (s.IsNotFound()) {
         return 0;
     }

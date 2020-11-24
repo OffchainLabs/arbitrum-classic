@@ -92,31 +92,41 @@ describe('Messages', async () => {
 
   it('can parse eth messages', async () => {
     const msg = new Message.EthMessage(dest, value)
-    const { valid: valid2, message } = await messageTester.parseEthMessage(
-      msg.asData()
-    )
+    const {
+      valid: valid2,
+      dest: dest2,
+      value: value2,
+    } = await messageTester.parseEthMessage(msg.asData())
     assert.isTrue(valid2, 'did not parse eth message correctly')
-    assert.equal(message.dest, dest, 'Incorrect dest')
-    expect(message.value, 'Incorrect value').to.equal(value)
+    assert.equal(dest2, dest, 'Incorrect dest')
+    expect(value2, 'Incorrect value').to.equal(value)
   })
 
   it('can parse erc20 messages', async () => {
     const msg = new Message.ERC20Message(token, dest, value)
-    const { valid: valid2, message } = await messageTester.parseERC20Message(
-      msg.asData()
-    )
+    const {
+      valid: valid2,
+      token: token2,
+      dest: dest2,
+      value: value2,
+    } = await messageTester.parseERC20Message(msg.asData())
     assert.isTrue(valid2, 'did not parse eth message correctly')
-    assert.equal(message.dest, dest, 'Incorrect dest')
-    expect(message.value, 'Incorrect value').to.equal(value)
+    assert.equal(token2, token, 'Incorrect token')
+    assert.equal(dest2, dest, 'Incorrect dest')
+    expect(value2, 'Incorrect value').to.equal(value)
   })
 
   it('can parse erc721 messages', async () => {
     const msg = new Message.ERC721Message(token, dest, value)
-    const { valid: valid2, message } = await messageTester.parseERC721Message(
-      msg.asData()
-    )
+    const {
+      valid: valid2,
+      token: token2,
+      dest: dest2,
+      id: id2,
+    } = await messageTester.parseERC721Message(msg.asData())
     assert.isTrue(valid2, 'did not parse eth message correctly')
-    assert.equal(message.dest, dest, 'Incorrect dest')
-    expect(message.id, 'Incorrect id').to.equal(value)
+    assert.equal(token2, token, 'Incorrect token')
+    assert.equal(dest2, dest, 'Incorrect dest')
+    expect(id2, 'Incorrect id').to.equal(value)
   })
 })

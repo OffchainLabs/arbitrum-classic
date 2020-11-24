@@ -42,10 +42,11 @@ func ValidateRollupChain(
 	execName string,
 	managerCreationFunc func(
 		rollupAddress common.Address,
-		client arbbridge.ArbAuthClient,
+		client arbbridge.ArbClient,
 		contractFile string, dbPath string,
 	) (*rollupmanager.Manager, error),
 ) error {
+	ctx := context.Background()
 	// Check number of args
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
@@ -94,17 +95,17 @@ func ValidateRollupChain(
 		return err
 	}
 
-	params, err := rollup.GetParams(context.Background())
+	params, err := rollup.GetParams(ctx)
 	if err != nil {
 		return err
 	}
 
-	if err := arbbridge.WaitForBalance(context.Background(), client, params.StakeToken, common.NewAddressFromEth(auth.From)); err != nil {
+	if err := arbbridge.WaitForBalance(ctx, client, params.StakeToken, common.NewAddressFromEth(auth.From)); err != nil {
 		return err
 	}
 
 	validatorListener := chainlistener.NewValidatorChainListener(
-		context.Background(),
+		ctx,
 		rollupArgs.Address,
 		rollup,
 	)
@@ -126,8 +127,71 @@ func ValidateRollupChain(
 	if err != nil {
 		return err
 	}
-	manager.AddListener(&chainlistener.AnnouncerListener{})
-	manager.AddListener(validatorListener)
+	manager.AddListener(ctx, &chainlistener.AnnouncerListener{})
+	manager.AddListener(ctx, validatorListener)
+
+	wait := make(chan bool)
+	<-wait
+	return nil
+}
+
+// ValidateRollupChain creates a validator given the managerCreationFunc.
+// This allows for the abstraction of the manager setup away from command line
+// parsing and initialization of common structures and behavior
+func ObserveRollupChain(
+	execName string,
+	managerCreationFunc func(
+		rollupAddress common.Address,
+		client arbbridge.ArbClient,
+		contractFile string, dbPath string,
+	) (*rollupmanager.Manager, error),
+) error {
+	ctx := context.Background()
+	// Check number of args
+	validateCmd := flag.NewFlagSet("observe", flag.ExitOnError)
+	quietFlag := validateCmd.Bool(
+		"q",
+		false,
+		"quiet validator output",
+	)
+	err := validateCmd.Parse(os.Args[2:])
+	if err != nil {
+		return err
+	}
+
+	if validateCmd.NArg() != 3 {
+		return fmt.Errorf(
+			"usage: %v validate %v",
+			execName,
+			utils.RollupArgsString,
+		)
+	}
+
+	rollupArgs := utils.ParseRollupCommand(validateCmd, 0)
+
+	// Rollup creation
+	ethclint, err := ethutils.NewRPCEthClient(rollupArgs.EthURL)
+	if err != nil {
+		return err
+	}
+	client := ethbridge.NewEthClient(ethclint)
+
+	contractFile := filepath.Join(rollupArgs.ValidatorFolder, ContractName)
+	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
+
+	manager, err := managerCreationFunc(
+		rollupArgs.Address,
+		client,
+		contractFile,
+		dbPath,
+	)
+
+	if err != nil {
+		return err
+	}
+	if !*quietFlag {
+		manager.AddListener(ctx, &chainlistener.AnnouncerListener{})
+	}
 
 	wait := make(chan bool)
 	<-wait

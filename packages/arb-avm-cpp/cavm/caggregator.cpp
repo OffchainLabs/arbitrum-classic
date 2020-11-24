@@ -137,12 +137,12 @@ int aggregatorReorg(CAggregatorStore* agg,
 // request_id is 32 bytes long
 Uint64Result aggregatorGetPossibleRequestInfo(const CAggregatorStore* agg,
                                               const void* request_id) {
-    try {
-        auto index =
-            static_cast<const AggregatorStore*>(agg)->getPossibleRequestInfo(
-                receiveUint256(request_id));
-        return {index, true};
-    } catch (const std::exception&) {
+    auto index =
+        static_cast<const AggregatorStore*>(agg)->getPossibleRequestInfo(
+            receiveUint256(request_id));
+    if (index) {
+        return {*index, true};
+    } else {
         return {0, false};
     }
 }
@@ -153,6 +153,30 @@ int aggregatorSaveRequest(CAggregatorStore* agg,
     try {
         static_cast<AggregatorStore*>(agg)->saveRequest(
             receiveUint256(request_id), log_index);
+        return 1;
+    } catch (const std::exception&) {
+        return 0;
+    }
+}
+
+// block_hash is 32 bytes long
+Uint64Result aggregatorGetPossibleBlock(const CAggregatorStore* agg,
+                                        const void* block_hash) {
+    auto index = static_cast<const AggregatorStore*>(agg)->getPossibleBlock(
+        receiveUint256(block_hash));
+    if (index) {
+        return {*index, true};
+    } else {
+        return {0, false};
+    }
+}
+
+int aggregatorSaveBlockHash(CAggregatorStore* agg,
+                            const void* block_hash,
+                            uint64_t block_height) {
+    try {
+        static_cast<AggregatorStore*>(agg)->saveBlockHash(
+            receiveUint256(block_hash), block_height);
         return 1;
     } catch (const std::exception&) {
         return 0;

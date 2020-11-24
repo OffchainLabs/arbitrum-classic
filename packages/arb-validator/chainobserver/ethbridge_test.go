@@ -51,15 +51,18 @@ var rollupTester *ethbridgetestcontracts.RollupTester
 var ethclnt *ethutils.SimulatedEthClient
 var auth *bind.TransactOpts
 
-func ethTransfer(dest common.Address, amount *big.Int) value.Value {
+func ethTransfer(t *testing.T, dest common.Address, amount *big.Int) value.Value {
 	ethData := make([]byte, 0)
 	ethData = append(ethData, math.U256Bytes(inbox.NewIntFromAddress(dest).BigInt())...)
 	ethData = append(ethData, math.U256Bytes(amount)...)
-	tup, _ := value.NewTupleFromSlice([]value.Value{
+	tup, err := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(0), // ETH type
 		inbox.NewIntFromAddress(common.NewAddressFromEth(auth.From)),
 		inbox.BytesToByteStack(ethData),
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	return tup
 }
 
@@ -90,10 +93,10 @@ func TestMain(m *testing.M) {
 		auth,
 		ethclnt,
 	)
-
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	_, err = ethbridge.WaitForReceiptWithResults(
 		context.Background(),
 		ethclnt,
@@ -101,6 +104,9 @@ func TestMain(m *testing.M) {
 		tx,
 		"DeployRollupTester",
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 	rollupTester = deployedTester
 
 	code := m.Run()
@@ -212,7 +218,7 @@ func TestConfirmAssertion(t *testing.T) {
 	rand.Seed(time.Now().Unix())
 	dest := common.RandAddress()
 	sends := make([]value.Value, 0)
-	sends = append(sends, ethTransfer(dest, big.NewInt(75)))
+	sends = append(sends, ethTransfer(t, dest, big.NewInt(75)))
 
 	assertion := protocol.NewExecutionAssertionFromValues(
 		chain.calculatedValidNode.VMProtoData().MachineHash,
@@ -264,7 +270,7 @@ func TestConfirmAssertion(t *testing.T) {
 
 	opp, nodes := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(common.NewTimeBlocks(confTime)))
 	if opp == nil {
-		t.Fatal("should have had opp")
+		t.Fatal("Error generating proof")
 	}
 	t.Log("Confirming", len(nodes), "nodes")
 	proof := opp.PrepareProof()
@@ -363,9 +369,10 @@ func TestConfirmAssertion(t *testing.T) {
 		t.Fatal("unexpected final prevNodeHash")
 	}
 
+	// Last value returned is not an error type
 	opp, _ = chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(common.NewTimeBlocks(confTime)))
 	if opp == nil {
-		t.Fatal("should have had opp")
+		t.Fatal("Error generating proof")
 	}
 	proof = opp.PrepareProof()
 	t.Log(

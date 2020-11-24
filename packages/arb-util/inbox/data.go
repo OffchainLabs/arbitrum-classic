@@ -60,6 +60,7 @@ func StackValueToList(val value.Value) ([]value.Value, error) {
 			return nil, errors2.Wrap(errTupleSize2, val.String())
 		}
 
+		// Tuple size already verified above, so error can be ignored
 		member, _ := tupVal.GetByInt64(0)
 		val, _ := tupVal.GetByInt64(1)
 
@@ -94,6 +95,8 @@ func ByteStackToHex(val value.Value) ([]byte, error) {
 	if tup.Len() != 2 {
 		return nil, errors2.Wrap(errTupleSize2, val.String())
 	}
+
+	// Tuple size already verified above, so error can be ignored
 	lengthVal, _ := tup.GetByInt64(0)
 	lengthIntVal, ok := lengthVal.(value.IntValue)
 	if !ok {

@@ -160,7 +160,7 @@ func bindMachineTester(address common.Address, caller bind.ContractCaller, trans
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_MachineTester *MachineTesterRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_MachineTester *MachineTesterRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _MachineTester.Contract.MachineTesterCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -179,7 +179,7 @@ func (_MachineTester *MachineTesterRaw) Transact(opts *bind.TransactOpts, method
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_MachineTester *MachineTesterCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_MachineTester *MachineTesterCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _MachineTester.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -198,12 +198,17 @@ func (_MachineTester *MachineTesterTransactorRaw) Transact(opts *bind.TransactOp
 //
 // Solidity: function addStackVal(bytes data1, bytes data2) pure returns(bytes32)
 func (_MachineTester *MachineTesterCaller) AddStackVal(opts *bind.CallOpts, data1 []byte, data2 []byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
-	out := ret0
-	err := _MachineTester.contract.Call(opts, out, "addStackVal", data1, data2)
-	return *ret0, err
+	var out []interface{}
+	err := _MachineTester.contract.Call(opts, &out, "addStackVal", data1, data2)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
 }
 
 // AddStackVal is a free data retrieval call binding the contract method 0x5f098d7f.
@@ -224,16 +229,18 @@ func (_MachineTester *MachineTesterCallerSession) AddStackVal(data1 []byte, data
 //
 // Solidity: function deserializeMachine(bytes data) pure returns(uint256, bytes32)
 func (_MachineTester *MachineTesterCaller) DeserializeMachine(opts *bind.CallOpts, data []byte) (*big.Int, [32]byte, error) {
-	var (
-		ret0 = new(*big.Int)
-		ret1 = new([32]byte)
-	)
-	out := &[]interface{}{
-		ret0,
-		ret1,
+	var out []interface{}
+	err := _MachineTester.contract.Call(opts, &out, "deserializeMachine", data)
+
+	if err != nil {
+		return *new(*big.Int), *new([32]byte), err
 	}
-	err := _MachineTester.contract.Call(opts, out, "deserializeMachine", data)
-	return *ret0, *ret1, err
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	out1 := *abi.ConvertType(out[1], new([32]byte)).(*[32]byte)
+
+	return out0, out1, err
+
 }
 
 // DeserializeMachine is a free data retrieval call binding the contract method 0x5270f3e9.

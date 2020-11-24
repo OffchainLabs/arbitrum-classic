@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2012, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +16,16 @@
  * limitations under the License.
  */
 
-package aggregator
+pragma solidity ^0.5.17;
 
-import (
-	"github.com/gorilla/rpc/v2"
-	"github.com/gorilla/rpc/v2/json"
-)
+contract GasUsed {
+    uint256 a;
 
-func GenerateRPCServer(server *Server) (*rpc.Server, error) {
-	arbServer := NewRPCServer(server)
-	s := rpc.NewServer()
-	s.RegisterCodec(
-		json.NewCodec(),
-		"application/json",
-	)
-	s.RegisterCodec(
-		json.NewCodec(),
-		"application/json;charset=UTF-8",
-	)
+    constructor() public payable {}
 
-	if err := s.RegisterService(arbServer, "Aggregator"); err != nil {
-		return nil, err
-	}
-	return s, nil
+    function noop() external {}
+
+    function sstore() external {
+        a++;
+    }
 }

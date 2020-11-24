@@ -31,9 +31,13 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+type ReceiptFetcher interface {
+	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
+}
+
 type EthClient interface {
 	bind.ContractBackend
-	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
+	ReceiptFetcher
 
 	HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error)
 	BlockInfoByNumber(ctx context.Context, number *big.Int) (*BlockInfo, error)

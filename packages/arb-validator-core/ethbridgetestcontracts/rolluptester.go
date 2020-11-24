@@ -154,7 +154,7 @@ func bindNodeGraphUtils(address common.Address, caller bind.ContractCaller, tran
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_NodeGraphUtils *NodeGraphUtilsRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_NodeGraphUtils *NodeGraphUtilsRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _NodeGraphUtils.Contract.NodeGraphUtilsCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -173,7 +173,7 @@ func (_NodeGraphUtils *NodeGraphUtilsRaw) Transact(opts *bind.TransactOpts, meth
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_NodeGraphUtils *NodeGraphUtilsCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_NodeGraphUtils *NodeGraphUtilsCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _NodeGraphUtils.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -330,7 +330,7 @@ func bindRollupTester(address common.Address, caller bind.ContractCaller, transa
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_RollupTester *RollupTesterRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_RollupTester *RollupTesterRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _RollupTester.Contract.RollupTesterCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -349,7 +349,7 @@ func (_RollupTester *RollupTesterRaw) Transact(opts *bind.TransactOpts, method s
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_RollupTester *RollupTesterCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_RollupTester *RollupTesterCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _RollupTester.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -368,12 +368,17 @@ func (_RollupTester *RollupTesterTransactorRaw) Transact(opts *bind.TransactOpts
 //
 // Solidity: function calculateLeafFromPath(bytes32 from, bytes32[] proof) pure returns(bytes32)
 func (_RollupTester *RollupTesterCaller) CalculateLeafFromPath(opts *bind.CallOpts, from [32]byte, proof [][32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
-	out := ret0
-	err := _RollupTester.contract.Call(opts, out, "calculateLeafFromPath", from, proof)
-	return *ret0, err
+	var out []interface{}
+	err := _RollupTester.contract.Call(opts, &out, "calculateLeafFromPath", from, proof)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
 }
 
 // CalculateLeafFromPath is a free data retrieval call binding the contract method 0x9584b946.
@@ -394,12 +399,17 @@ func (_RollupTester *RollupTesterCallerSession) CalculateLeafFromPath(from [32]b
 //
 // Solidity: function childNodeHash(bytes32 prevNodeHash, uint256 deadlineTicks, bytes32 nodeDataHash, uint256 childType, bytes32 vmProtoStateHash) pure returns(bytes32)
 func (_RollupTester *RollupTesterCaller) ChildNodeHash(opts *bind.CallOpts, prevNodeHash [32]byte, deadlineTicks *big.Int, nodeDataHash [32]byte, childType *big.Int, vmProtoStateHash [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
-	out := ret0
-	err := _RollupTester.contract.Call(opts, out, "childNodeHash", prevNodeHash, deadlineTicks, nodeDataHash, childType, vmProtoStateHash)
-	return *ret0, err
+	var out []interface{}
+	err := _RollupTester.contract.Call(opts, &out, "childNodeHash", prevNodeHash, deadlineTicks, nodeDataHash, childType, vmProtoStateHash)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
 }
 
 // ChildNodeHash is a free data retrieval call binding the contract method 0xdf8f77ed.
@@ -423,13 +433,19 @@ func (_RollupTester *RollupTesterCaller) ComputePrevLeaf(opts *bind.CallOpts, fi
 	PrevLeaf          [32]byte
 	VmProtoHashBefore [32]byte
 }, error) {
-	ret := new(struct {
+	var out []interface{}
+	err := _RollupTester.contract.Call(opts, &out, "computePrevLeaf", fields, fields2, prevChildType, numSteps, numArbGas, messageCount, logCount)
+
+	outstruct := new(struct {
 		PrevLeaf          [32]byte
 		VmProtoHashBefore [32]byte
 	})
-	out := ret
-	err := _RollupTester.contract.Call(opts, out, "computePrevLeaf", fields, fields2, prevChildType, numSteps, numArbGas, messageCount, logCount)
-	return *ret, err
+
+	outstruct.PrevLeaf = out[0].([32]byte)
+	outstruct.VmProtoHashBefore = out[1].([32]byte)
+
+	return *outstruct, err
+
 }
 
 // ComputePrevLeaf is a free data retrieval call binding the contract method 0x28ef9d40.
@@ -456,12 +472,17 @@ func (_RollupTester *RollupTesterCallerSession) ComputePrevLeaf(fields [8][32]by
 //
 // Solidity: function computeProtoHashBefore(bytes32 machineHash, bytes32 inboxTop, uint256 inboxCount, uint256 messageCount, uint256 logCount) pure returns(bytes32)
 func (_RollupTester *RollupTesterCaller) ComputeProtoHashBefore(opts *bind.CallOpts, machineHash [32]byte, inboxTop [32]byte, inboxCount *big.Int, messageCount *big.Int, logCount *big.Int) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
-	out := ret0
-	err := _RollupTester.contract.Call(opts, out, "computeProtoHashBefore", machineHash, inboxTop, inboxCount, messageCount, logCount)
-	return *ret0, err
+	var out []interface{}
+	err := _RollupTester.contract.Call(opts, &out, "computeProtoHashBefore", machineHash, inboxTop, inboxCount, messageCount, logCount)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
 }
 
 // ComputeProtoHashBefore is a free data retrieval call binding the contract method 0x47994dc6.
@@ -486,14 +507,21 @@ func (_RollupTester *RollupTesterCaller) Confirm(opts *bind.CallOpts, confNode [
 	VmProtoStateHash [32]byte
 	LastNodeHash     [32]byte
 }, error) {
-	ret := new(struct {
+	var out []interface{}
+	err := _RollupTester.contract.Call(opts, &out, "confirm", confNode, initalProtoStateHash, beforeSendCount, branches, deadlineTicks, challengeNodeData, logsAcc, vmProtoStateHashes, messageCounts, messages)
+
+	outstruct := new(struct {
 		ValidNodeHashes  [][32]byte
 		VmProtoStateHash [32]byte
 		LastNodeHash     [32]byte
 	})
-	out := ret
-	err := _RollupTester.contract.Call(opts, out, "confirm", confNode, initalProtoStateHash, beforeSendCount, branches, deadlineTicks, challengeNodeData, logsAcc, vmProtoStateHashes, messageCounts, messages)
-	return *ret, err
+
+	outstruct.ValidNodeHashes = out[0].([][32]byte)
+	outstruct.VmProtoStateHash = out[1].([32]byte)
+	outstruct.LastNodeHash = out[2].([32]byte)
+
+	return *outstruct, err
+
 }
 
 // Confirm is a free data retrieval call binding the contract method 0xdcea8ab2.
@@ -522,12 +550,17 @@ func (_RollupTester *RollupTesterCallerSession) Confirm(confNode [32]byte, inita
 //
 // Solidity: function generateInvalidExecutionLeaf(uint256 gracePeriodTicks, uint256 checkTimeTicks, uint256 deadlineTicks, bytes32[8] fields, uint256[5] fields2, uint32 prevChildType, uint64 numSteps, uint64 numArbGas, uint64 messageCount, uint64 logCount) pure returns(bytes32)
 func (_RollupTester *RollupTesterCaller) GenerateInvalidExecutionLeaf(opts *bind.CallOpts, gracePeriodTicks *big.Int, checkTimeTicks *big.Int, deadlineTicks *big.Int, fields [8][32]byte, fields2 [5]*big.Int, prevChildType uint32, numSteps uint64, numArbGas uint64, messageCount uint64, logCount uint64) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
-	out := ret0
-	err := _RollupTester.contract.Call(opts, out, "generateInvalidExecutionLeaf", gracePeriodTicks, checkTimeTicks, deadlineTicks, fields, fields2, prevChildType, numSteps, numArbGas, messageCount, logCount)
-	return *ret0, err
+	var out []interface{}
+	err := _RollupTester.contract.Call(opts, &out, "generateInvalidExecutionLeaf", gracePeriodTicks, checkTimeTicks, deadlineTicks, fields, fields2, prevChildType, numSteps, numArbGas, messageCount, logCount)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
 }
 
 // GenerateInvalidExecutionLeaf is a free data retrieval call binding the contract method 0x5f2de795.
@@ -548,12 +581,17 @@ func (_RollupTester *RollupTesterCallerSession) GenerateInvalidExecutionLeaf(gra
 //
 // Solidity: function generateInvalidInboxTopLeaf(uint256[4] invalidInboxData, bytes32[8] fields, uint256[5] fields2, uint32 prevChildType, uint64 numSteps, uint64 numArbGas, uint64 messageCount, uint64 logCount) pure returns(bytes32)
 func (_RollupTester *RollupTesterCaller) GenerateInvalidInboxTopLeaf(opts *bind.CallOpts, invalidInboxData [4]*big.Int, fields [8][32]byte, fields2 [5]*big.Int, prevChildType uint32, numSteps uint64, numArbGas uint64, messageCount uint64, logCount uint64) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
-	out := ret0
-	err := _RollupTester.contract.Call(opts, out, "generateInvalidInboxTopLeaf", invalidInboxData, fields, fields2, prevChildType, numSteps, numArbGas, messageCount, logCount)
-	return *ret0, err
+	var out []interface{}
+	err := _RollupTester.contract.Call(opts, &out, "generateInvalidInboxTopLeaf", invalidInboxData, fields, fields2, prevChildType, numSteps, numArbGas, messageCount, logCount)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
 }
 
 // GenerateInvalidInboxTopLeaf is a free data retrieval call binding the contract method 0x65aee548.
@@ -574,16 +612,18 @@ func (_RollupTester *RollupTesterCallerSession) GenerateInvalidInboxTopLeaf(inva
 //
 // Solidity: function generateLastMessageHash(bytes messages, uint256 startOffset, uint256 length) pure returns(bytes32, uint256)
 func (_RollupTester *RollupTesterCaller) GenerateLastMessageHash(opts *bind.CallOpts, messages []byte, startOffset *big.Int, length *big.Int) ([32]byte, *big.Int, error) {
-	var (
-		ret0 = new([32]byte)
-		ret1 = new(*big.Int)
-	)
-	out := &[]interface{}{
-		ret0,
-		ret1,
+	var out []interface{}
+	err := _RollupTester.contract.Call(opts, &out, "generateLastMessageHash", messages, startOffset, length)
+
+	if err != nil {
+		return *new([32]byte), *new(*big.Int), err
 	}
-	err := _RollupTester.contract.Call(opts, out, "generateLastMessageHash", messages, startOffset, length)
-	return *ret0, *ret1, err
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+
+	return out0, out1, err
+
 }
 
 // GenerateLastMessageHash is a free data retrieval call binding the contract method 0x02be0bd0.
@@ -604,12 +644,17 @@ func (_RollupTester *RollupTesterCallerSession) GenerateLastMessageHash(messages
 //
 // Solidity: function generateValidLeaf(uint256 deadlineTicks, bytes32[8] fields, uint256[5] fields2, uint32 prevChildType, uint64 numSteps, uint64 numArbGas, uint64 messageCount, uint64 logCount) pure returns(bytes32)
 func (_RollupTester *RollupTesterCaller) GenerateValidLeaf(opts *bind.CallOpts, deadlineTicks *big.Int, fields [8][32]byte, fields2 [5]*big.Int, prevChildType uint32, numSteps uint64, numArbGas uint64, messageCount uint64, logCount uint64) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
-	out := ret0
-	err := _RollupTester.contract.Call(opts, out, "generateValidLeaf", deadlineTicks, fields, fields2, prevChildType, numSteps, numArbGas, messageCount, logCount)
-	return *ret0, err
+	var out []interface{}
+	err := _RollupTester.contract.Call(opts, &out, "generateValidLeaf", deadlineTicks, fields, fields2, prevChildType, numSteps, numArbGas, messageCount, logCount)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
 }
 
 // GenerateValidLeaf is a free data retrieval call binding the contract method 0x785b5774.
@@ -635,15 +680,23 @@ func (_RollupTester *RollupTesterCaller) ProcessValidNode(opts *bind.CallOpts, l
 	NodeDataHash     [32]byte
 	VmProtoStateHash [32]byte
 }, error) {
-	ret := new(struct {
+	var out []interface{}
+	err := _RollupTester.contract.Call(opts, &out, "processValidNode", logsAcc, vmProtoStateHashes, messageCounts, messages, validNum, beforeSendCount, startOffset)
+
+	outstruct := new(struct {
 		AfterSendCount   *big.Int
 		AfterOffset      *big.Int
 		NodeDataHash     [32]byte
 		VmProtoStateHash [32]byte
 	})
-	out := ret
-	err := _RollupTester.contract.Call(opts, out, "processValidNode", logsAcc, vmProtoStateHashes, messageCounts, messages, validNum, beforeSendCount, startOffset)
-	return *ret, err
+
+	outstruct.AfterSendCount = out[0].(*big.Int)
+	outstruct.AfterOffset = out[1].(*big.Int)
+	outstruct.NodeDataHash = out[2].([32]byte)
+	outstruct.VmProtoStateHash = out[3].([32]byte)
+
+	return *outstruct, err
+
 }
 
 // ProcessValidNode is a free data retrieval call binding the contract method 0xb1fca916.
@@ -798,7 +851,7 @@ func bindRollupUtils(address common.Address, caller bind.ContractCaller, transac
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_RollupUtils *RollupUtilsRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_RollupUtils *RollupUtilsRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _RollupUtils.Contract.RollupUtilsCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -817,7 +870,7 @@ func (_RollupUtils *RollupUtilsRaw) Transact(opts *bind.TransactOpts, method str
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_RollupUtils *RollupUtilsCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_RollupUtils *RollupUtilsCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _RollupUtils.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -960,7 +1013,7 @@ func bindSafeMath(address common.Address, caller bind.ContractCaller, transactor
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_SafeMath *SafeMathRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_SafeMath *SafeMathRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _SafeMath.Contract.SafeMathCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -979,7 +1032,7 @@ func (_SafeMath *SafeMathRaw) Transact(opts *bind.TransactOpts, method string, p
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_SafeMath *SafeMathCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_SafeMath *SafeMathCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _SafeMath.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -1122,7 +1175,7 @@ func bindVM(address common.Address, caller bind.ContractCaller, transactor bind.
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_VM *VMRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_VM *VMRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _VM.Contract.VMCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -1141,7 +1194,7 @@ func (_VM *VMRaw) Transact(opts *bind.TransactOpts, method string, params ...int
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_VM *VMCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_VM *VMCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _VM.Contract.contract.Call(opts, result, method, params...)
 }
 

@@ -82,15 +82,9 @@ func TestCreate2(t *testing.T) {
 	chain := common.RandAddress()
 	sender := common.NewAddressFromEth(auth.From)
 
-	factoryConstructorTx := makeConstructorTx(
-		hexutil.MustDecode(arbostestcontracts.CloneFactoryBin),
-		big.NewInt(0),
-	)
+	factoryConstructorTx := makeConstructorTx(hexutil.MustDecode(arbostestcontracts.CloneFactoryBin), big.NewInt(0), nil)
 
-	simpleConstructorTx := makeConstructorTx(
-		hexutil.MustDecode(arbostestcontracts.SimpleBin),
-		big.NewInt(1),
-	)
+	simpleConstructorTx := makeConstructorTx(hexutil.MustDecode(arbostestcontracts.SimpleBin), big.NewInt(1), nil)
 
 	factoryABI, err := abi.JSON(strings.NewReader(arbostestcontracts.CloneFactoryABI))
 	if err != nil {
@@ -136,6 +130,7 @@ func TestCreate2(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(existsCloneTx), sender, big.NewInt(4), chainTime),
 	}
 
+	// Last parameter returned is number of tests executed
 	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
 	//testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.ParseLogs(), assertion.ParseOutMessages())
 	//if err != nil {

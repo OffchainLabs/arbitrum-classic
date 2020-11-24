@@ -160,7 +160,7 @@ func bindChallengeTester(address common.Address, caller bind.ContractCaller, tra
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ChallengeTester *ChallengeTesterRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_ChallengeTester *ChallengeTesterRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _ChallengeTester.Contract.ChallengeTesterCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -179,7 +179,7 @@ func (_ChallengeTester *ChallengeTesterRaw) Transact(opts *bind.TransactOpts, me
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ChallengeTester *ChallengeTesterCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_ChallengeTester *ChallengeTesterCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _ChallengeTester.Contract.contract.Call(opts, result, method, params...)
 }
 

@@ -29,6 +29,11 @@ func TestMachineCreation(t *testing.T) {
 		log.Fatal(err)
 	}
 
+	valueCache, err := NewValueCache()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	mach1, err := New(codeFile)
 	if err != nil {
 		t.Fatal(err)
@@ -42,7 +47,7 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer checkpointStorage.CloseCheckpointStorage()
-	mach2, err := checkpointStorage.GetInitialMachine()
+	mach2, err := checkpointStorage.GetInitialMachine(valueCache)
 	if err != nil {
 		t.Fatal(err)
 	}

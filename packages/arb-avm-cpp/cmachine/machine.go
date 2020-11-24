@@ -29,12 +29,13 @@ import "C"
 import (
 	"bytes"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"log"
 	"runtime"
 	"time"
 	"unsafe"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -48,7 +49,7 @@ func New(codeFile string) (*Machine, error) {
 	cFilename := C.CString(codeFile)
 	cMachine := C.machineCreate(cFilename)
 	if cMachine == nil {
-		return nil, fmt.Errorf("error loading machine %v", codeFile)
+		return nil, fmt.Errorf("error creating machine from file %s", codeFile)
 	}
 	ret := &Machine{cMachine}
 	runtime.SetFinalizer(ret, cdestroyVM)
@@ -120,6 +121,13 @@ func makeExecutionAssertion(
 ) (*protocol.ExecutionAssertion, uint64) {
 	outMessagesRaw := toByteSlice(assertion.outMessages)
 	logsRaw := toByteSlice(assertion.logs)
+	debugPrints := protocol.BytesArrayToVals(toByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
+	if len(debugPrints) > 0 {
+		log.Println("Produced assertion containing debug prints")
+		for _, d := range debugPrints {
+			log.Println("DebugPrint:", d)
+		}
+	}
 	return protocol.NewExecutionAssertion(
 		beforeMachineHash,
 		afterMachineHash,
@@ -135,6 +143,7 @@ func makeExecutionAssertion(
 func encodeInboxMessages(inboxMessages []inbox.InboxMessage) []byte {
 	var buf bytes.Buffer
 	for _, msg := range inboxMessages {
+		// Error just occurs on write, and bytes.Buffer is safe
 		_ = value.MarshalValue(msg.AsValue(), &buf)
 	}
 	return buf.Bytes()
@@ -142,6 +151,8 @@ func encodeInboxMessages(inboxMessages []inbox.InboxMessage) []byte {
 
 func encodeValue(val value.Value) []byte {
 	var buf bytes.Buffer
+
+	// Error just occurs on write, and bytes.Buffer is safe
 	_ = value.MarshalValue(val, &buf)
 	return buf.Bytes()
 }

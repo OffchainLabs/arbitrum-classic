@@ -40,6 +40,9 @@ func TestMarshalNode(t *testing.T) {
 	nodeBuf := nextNode.MarshalForCheckpoint(checkpointContext, true)
 
 	rawNodeData, err := proto.Marshal(nodeBuf)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	nodeBuf2 := &NodeBuf{}
 	if err := proto.Unmarshal(rawNodeData, nodeBuf2); err != nil {

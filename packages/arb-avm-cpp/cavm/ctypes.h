@@ -62,6 +62,7 @@ typedef void CMachine;
 typedef void CCheckpointStorage;
 typedef void CBlockStore;
 typedef void CAggregatorStore;
+typedef void CValueCache;
 
 #ifdef __cplusplus
 }

@@ -18,7 +18,7 @@ package main
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"io/ioutil"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -26,9 +26,13 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
 func main() {
+	// Enable line numbers in logging
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	if err := generateTestCase(
 		"http://localhost:7545",
 		common.HexToAddress("0xc68DCee7b8cA57F41D1A417103CB65836E99e013"),
@@ -82,6 +86,7 @@ func generateTestCase(ethURL string, rollupAddress common.Address, contract stri
 		return err
 	}
 
+	// Last value returned is not an error type
 	assertion, _ := mach.ExecuteAssertion(
 		1000000000000,
 		messages,
@@ -92,6 +97,9 @@ func generateTestCase(ethURL string, rollupAddress common.Address, contract stri
 	if err != nil {
 		return err
 	}
-	log.Println(string(data))
+
+	if err := ioutil.WriteFile("log.json", data, 0644); err != nil {
+		return err
+	}
 	return nil
 }

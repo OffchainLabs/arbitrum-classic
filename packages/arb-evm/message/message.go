@@ -19,6 +19,7 @@ package message
 import (
 	"errors"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 
@@ -58,20 +59,20 @@ func NewRandomInboxMessage(msg Message) inbox.InboxMessage {
 	)
 }
 
-func NestedMessage(im inbox.InboxMessage) (Message, error) {
-	switch im.Kind {
+func NestedMessage(data []byte, kind inbox.Type) (Message, error) {
+	switch kind {
 	case EthType:
-		return NewEthFromData(im.Data), nil
+		return NewEthFromData(data), nil
 	case ERC20Type:
-		return NewERC20FromData(im.Data), nil
+		return NewERC20FromData(data), nil
 	case ERC721Type:
-		return NewERC721FromData(im.Data), nil
+		return NewERC721FromData(data), nil
 	case L2Type:
-		return L2Message{Data: im.Data}, nil
+		return L2Message{Data: data}, nil
 	case InitType:
-		return NewInitFromData(im.Data), nil
+		return NewInitFromData(data), nil
 	case L2BuddyDeploy:
-		return NewBuddyDeploymentFromData(im.Data), nil
+		return NewBuddyDeploymentFromData(data), nil
 	default:
 		return nil, errors.New("unknown inbox l2message type")
 	}
@@ -116,4 +117,8 @@ func (t BuddyDeployment) AsData() []byte {
 	ret = append(ret, math.U256Bytes(t.Payment)...)
 	ret = append(ret, t.Data...)
 	return ret
+}
+
+func (t BuddyDeployment) AsEthTx() *types.Transaction {
+	return types.NewContractCreation(0, t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
 }

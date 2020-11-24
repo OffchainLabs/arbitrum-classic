@@ -31,7 +31,11 @@ func SoliditySHA3(data ...interface{}) common.Hash {
 	var ret common.Hash
 	hash := sha3.NewLegacyKeccak256()
 	for _, b := range data {
-		hash.Write(b.([]byte))
+		_, err := hash.Write(b.([]byte))
+		if err != nil {
+			// This code should never be reached
+			panic("Error writing SoliditySHA3 data")
+		}
 	}
 	hash.Sum(ret[:0])
 	return ret

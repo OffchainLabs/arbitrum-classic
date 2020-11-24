@@ -18,18 +18,19 @@ package rollupmanager
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/observer"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainobserver"
 	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
 	"sync"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/observer"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainobserver"
 )
 
 type Manager struct {
@@ -88,7 +89,13 @@ func CreateManagerAdvanced(
 			return nil, err
 		}
 	}
-	initialMachine, err := checkpointer.GetInitialMachine()
+
+	valueCache, err := cmachine.NewValueCache()
+	if err != nil {
+		return nil, err
+	}
+
+	initialMachine, err := checkpointer.GetInitialMachine(valueCache)
 	if err != nil {
 		return nil, err
 	}
@@ -207,13 +214,19 @@ func CreateManagerAdvanced(
 							return errors2.Wrap(err, "Manager hit error processing event during fast catchup")
 						}
 					}
+					endBlockId, err := clnt.BlockIdForHeight(runCtx, common.NewTimeBlocks(fetchEnd))
+					if err != nil {
+						return err
+					}
 					if fetchEnd.Cmp(startHeight) > 0 {
-						endBlockId, err := clnt.BlockIdForHeight(runCtx, common.NewTimeBlocks(fetchEnd))
-						if err != nil {
-							return err
-						}
 						man.activeChain.NotifyNewBlock(endBlockId)
 					}
+					nextBlockHeight := common.NewTimeBlocks(new(big.Int).Add(endBlockId.Height.AsInt(), big.NewInt(1)))
+					nextBlockId, err := clnt.BlockIdForHeight(runCtx, nextBlockHeight)
+					if err != nil {
+						return err
+					}
+					man.activeChain.NotifyNextEvent(nextBlockId)
 				}
 
 				startEventId := man.activeChain.CurrentEventId()
@@ -311,12 +324,12 @@ func CreateManagerAdvanced(
 	return man, nil
 }
 
-func (man *Manager) AddListener(listener chainlistener.ChainListener) {
+func (man *Manager) AddListener(ctx context.Context, listener chainlistener.ChainListener) {
 	man.Lock()
 	defer man.Unlock()
 	man.listeners = append(man.listeners, listener)
 	if man.activeChain != nil {
-		man.activeChain.AddListener(context.Background(), listener)
+		man.activeChain.AddListener(ctx, listener)
 	}
 }
 

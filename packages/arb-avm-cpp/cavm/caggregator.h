@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef caggregator_hpp
-#define caggregator_hpp
+#ifndef caggregator_h
+#define caggregator_h
 
 #include "ctypes.h"
 
@@ -80,8 +80,15 @@ int aggregatorSaveRequest(CAggregatorStore* agg,
                           const void* request_id,
                           uint64_t log_index);
 
+// block_hash is 32 bytes long
+Uint64Result aggregatorGetPossibleBlock(const CAggregatorStore* agg,
+                                        const void* block_hash);
+int aggregatorSaveBlockHash(CAggregatorStore* agg,
+                            const void* block_hash,
+                            uint64_t block_height);
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* caggregator_hpp */
+#endif /* caggregator_h */

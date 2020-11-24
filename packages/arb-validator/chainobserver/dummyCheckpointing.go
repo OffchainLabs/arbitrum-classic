@@ -57,7 +57,7 @@ func (dcp *DummyCheckpointer) RestoreLatestState(context.Context, arbbridge.Chai
 	return errors.New("no checkpoints in database")
 }
 
-func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
+func (dcp *DummyCheckpointer) GetInitialMachine(valueCache machine.ValueCache) (machine.Machine, error) {
 	return dcp.initialMachine.Clone(), nil
 }
 

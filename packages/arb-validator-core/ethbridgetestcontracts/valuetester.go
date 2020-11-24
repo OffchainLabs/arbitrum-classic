@@ -163,7 +163,7 @@ func bindValueTester(address common.Address, caller bind.ContractCaller, transac
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ValueTester *ValueTesterRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_ValueTester *ValueTesterRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _ValueTester.Contract.ValueTesterCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -182,7 +182,7 @@ func (_ValueTester *ValueTesterRaw) Transact(opts *bind.TransactOpts, method str
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ValueTester *ValueTesterCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_ValueTester *ValueTesterCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _ValueTester.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -201,12 +201,17 @@ func (_ValueTester *ValueTesterTransactorRaw) Transact(opts *bind.TransactOpts, 
 //
 // Solidity: function bytesToBytestackHash(bytes data, uint256 startOffset, uint256 dataLength) pure returns(bytes32)
 func (_ValueTester *ValueTesterCaller) BytesToBytestackHash(opts *bind.CallOpts, data []byte, startOffset *big.Int, dataLength *big.Int) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
-	out := ret0
-	err := _ValueTester.contract.Call(opts, out, "bytesToBytestackHash", data, startOffset, dataLength)
-	return *ret0, err
+	var out []interface{}
+	err := _ValueTester.contract.Call(opts, &out, "bytesToBytestackHash", data, startOffset, dataLength)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
 }
 
 // BytesToBytestackHash is a free data retrieval call binding the contract method 0xb325b7d0.
@@ -227,18 +232,19 @@ func (_ValueTester *ValueTesterCallerSession) BytesToBytestackHash(data []byte, 
 //
 // Solidity: function bytestackToBytes(bytes data, uint256 offset) pure returns(bool, uint256, bytes)
 func (_ValueTester *ValueTesterCaller) BytestackToBytes(opts *bind.CallOpts, data []byte, offset *big.Int) (bool, *big.Int, []byte, error) {
-	var (
-		ret0 = new(bool)
-		ret1 = new(*big.Int)
-		ret2 = new([]byte)
-	)
-	out := &[]interface{}{
-		ret0,
-		ret1,
-		ret2,
+	var out []interface{}
+	err := _ValueTester.contract.Call(opts, &out, "bytestackToBytes", data, offset)
+
+	if err != nil {
+		return *new(bool), *new(*big.Int), *new([]byte), err
 	}
-	err := _ValueTester.contract.Call(opts, out, "bytestackToBytes", data, offset)
-	return *ret0, *ret1, *ret2, err
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	out2 := *abi.ConvertType(out[2], new([]byte)).(*[]byte)
+
+	return out0, out1, out2, err
+
 }
 
 // BytestackToBytes is a free data retrieval call binding the contract method 0xe4d476f4.
@@ -259,16 +265,18 @@ func (_ValueTester *ValueTesterCallerSession) BytestackToBytes(data []byte, offs
 //
 // Solidity: function deserializeHash(bytes data, uint256 startOffset) pure returns(uint256, bytes32)
 func (_ValueTester *ValueTesterCaller) DeserializeHash(opts *bind.CallOpts, data []byte, startOffset *big.Int) (*big.Int, [32]byte, error) {
-	var (
-		ret0 = new(*big.Int)
-		ret1 = new([32]byte)
-	)
-	out := &[]interface{}{
-		ret0,
-		ret1,
+	var out []interface{}
+	err := _ValueTester.contract.Call(opts, &out, "deserializeHash", data, startOffset)
+
+	if err != nil {
+		return *new(*big.Int), *new([32]byte), err
 	}
-	err := _ValueTester.contract.Call(opts, out, "deserializeHash", data, startOffset)
-	return *ret0, *ret1, err
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	out1 := *abi.ConvertType(out[1], new([32]byte)).(*[32]byte)
+
+	return out0, out1, err
+
 }
 
 // DeserializeHash is a free data retrieval call binding the contract method 0x98206792.
@@ -289,12 +297,17 @@ func (_ValueTester *ValueTesterCallerSession) DeserializeHash(data []byte, start
 //
 // Solidity: function hashTestTuple() pure returns(bytes32)
 func (_ValueTester *ValueTesterCaller) HashTestTuple(opts *bind.CallOpts) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
-	out := ret0
-	err := _ValueTester.contract.Call(opts, out, "hashTestTuple")
-	return *ret0, err
+	var out []interface{}
+	err := _ValueTester.contract.Call(opts, &out, "hashTestTuple")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
 }
 
 // HashTestTuple is a free data retrieval call binding the contract method 0xfd5d0c8b.
@@ -315,12 +328,17 @@ func (_ValueTester *ValueTesterCallerSession) HashTestTuple() ([32]byte, error) 
 //
 // Solidity: function hashTuplePreImage(bytes32 innerHash, uint256 valueSize) pure returns(bytes32)
 func (_ValueTester *ValueTesterCaller) HashTuplePreImage(opts *bind.CallOpts, innerHash [32]byte, valueSize *big.Int) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
-	out := ret0
-	err := _ValueTester.contract.Call(opts, out, "hashTuplePreImage", innerHash, valueSize)
-	return *ret0, err
+	var out []interface{}
+	err := _ValueTester.contract.Call(opts, &out, "hashTuplePreImage", innerHash, valueSize)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
 }
 
 // HashTuplePreImage is a free data retrieval call binding the contract method 0xc6d25c8e.

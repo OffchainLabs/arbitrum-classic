@@ -127,7 +127,10 @@ func TestDeserialize(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	byteValue, _ := ioutil.ReadAll(jsonFile)
+	byteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		t.Error(err)
+	}
 	var testCases []TestCase
 	err = json.Unmarshal(byteValue, &testCases)
 	if err != nil {

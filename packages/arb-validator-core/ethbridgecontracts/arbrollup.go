@@ -183,7 +183,7 @@ func bindArbRollup(address common.Address, caller bind.ContractCaller, transacto
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ArbRollup *ArbRollupRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_ArbRollup *ArbRollupRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _ArbRollup.Contract.ArbRollupCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -202,7 +202,7 @@ func (_ArbRollup *ArbRollupRaw) Transact(opts *bind.TransactOpts, method string,
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ArbRollup *ArbRollupCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_ArbRollup *ArbRollupCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _ArbRollup.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -221,12 +221,17 @@ func (_ArbRollup *ArbRollupTransactorRaw) Transact(opts *bind.TransactOpts, meth
 //
 // Solidity: function VERSION() view returns(string)
 func (_ArbRollup *ArbRollupCaller) VERSION(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
-	out := ret0
-	err := _ArbRollup.contract.Call(opts, out, "VERSION")
-	return *ret0, err
+	var out []interface{}
+	err := _ArbRollup.contract.Call(opts, &out, "VERSION")
+
+	if err != nil {
+		return *new(string), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(string)).(*string)
+
+	return out0, err
+
 }
 
 // VERSION is a free data retrieval call binding the contract method 0xffa1ad74.
@@ -247,12 +252,17 @@ func (_ArbRollup *ArbRollupCallerSession) VERSION() (string, error) {
 //
 // Solidity: function challengeFactory() view returns(address)
 func (_ArbRollup *ArbRollupCaller) ChallengeFactory(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ArbRollup.contract.Call(opts, out, "challengeFactory")
-	return *ret0, err
+	var out []interface{}
+	err := _ArbRollup.contract.Call(opts, &out, "challengeFactory")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
@@ -273,12 +283,17 @@ func (_ArbRollup *ArbRollupCallerSession) ChallengeFactory() (common.Address, er
 //
 // Solidity: function getStakeRequired() view returns(uint128)
 func (_ArbRollup *ArbRollupCaller) GetStakeRequired(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _ArbRollup.contract.Call(opts, out, "getStakeRequired")
-	return *ret0, err
+	var out []interface{}
+	err := _ArbRollup.contract.Call(opts, &out, "getStakeRequired")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // GetStakeRequired is a free data retrieval call binding the contract method 0xd16c305d.
@@ -299,12 +314,17 @@ func (_ArbRollup *ArbRollupCallerSession) GetStakeRequired() (*big.Int, error) {
 //
 // Solidity: function getStakeToken() view returns(address)
 func (_ArbRollup *ArbRollupCaller) GetStakeToken(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ArbRollup.contract.Call(opts, out, "getStakeToken")
-	return *ret0, err
+	var out []interface{}
+	err := _ArbRollup.contract.Call(opts, &out, "getStakeToken")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // GetStakeToken is a free data retrieval call binding the contract method 0x500a1564.
@@ -325,12 +345,17 @@ func (_ArbRollup *ArbRollupCallerSession) GetStakeToken() (common.Address, error
 //
 // Solidity: function globalInbox() view returns(address)
 func (_ArbRollup *ArbRollupCaller) GlobalInbox(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ArbRollup.contract.Call(opts, out, "globalInbox")
-	return *ret0, err
+	var out []interface{}
+	err := _ArbRollup.contract.Call(opts, &out, "globalInbox")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // GlobalInbox is a free data retrieval call binding the contract method 0xd489113a.
@@ -351,12 +376,17 @@ func (_ArbRollup *ArbRollupCallerSession) GlobalInbox() (common.Address, error) 
 //
 // Solidity: function isMaster() view returns(bool)
 func (_ArbRollup *ArbRollupCaller) IsMaster(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _ArbRollup.contract.Call(opts, out, "isMaster")
-	return *ret0, err
+	var out []interface{}
+	err := _ArbRollup.contract.Call(opts, &out, "isMaster")
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
 }
 
 // IsMaster is a free data retrieval call binding the contract method 0x6f791d29.
@@ -377,12 +407,17 @@ func (_ArbRollup *ArbRollupCallerSession) IsMaster() (bool, error) {
 //
 // Solidity: function isStaked(address _stakerAddress) view returns(bool)
 func (_ArbRollup *ArbRollupCaller) IsStaked(opts *bind.CallOpts, _stakerAddress common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _ArbRollup.contract.Call(opts, out, "isStaked", _stakerAddress)
-	return *ret0, err
+	var out []interface{}
+	err := _ArbRollup.contract.Call(opts, &out, "isStaked", _stakerAddress)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
 }
 
 // IsStaked is a free data retrieval call binding the contract method 0x6177fd18.
@@ -403,12 +438,17 @@ func (_ArbRollup *ArbRollupCallerSession) IsStaked(_stakerAddress common.Address
 //
 // Solidity: function isValidLeaf(bytes32 leaf) view returns(bool)
 func (_ArbRollup *ArbRollupCaller) IsValidLeaf(opts *bind.CallOpts, leaf [32]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _ArbRollup.contract.Call(opts, out, "isValidLeaf", leaf)
-	return *ret0, err
+	var out []interface{}
+	err := _ArbRollup.contract.Call(opts, &out, "isValidLeaf", leaf)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
 }
 
 // IsValidLeaf is a free data retrieval call binding the contract method 0x57ca6d1b.
@@ -429,12 +469,17 @@ func (_ArbRollup *ArbRollupCallerSession) IsValidLeaf(leaf [32]byte) (bool, erro
 //
 // Solidity: function latestConfirmed() view returns(bytes32)
 func (_ArbRollup *ArbRollupCaller) LatestConfirmed(opts *bind.CallOpts) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
-	out := ret0
-	err := _ArbRollup.contract.Call(opts, out, "latestConfirmed")
-	return *ret0, err
+	var out []interface{}
+	err := _ArbRollup.contract.Call(opts, &out, "latestConfirmed")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
 }
 
 // LatestConfirmed is a free data retrieval call binding the contract method 0x65f7f80d.
@@ -455,12 +500,17 @@ func (_ArbRollup *ArbRollupCallerSession) LatestConfirmed() ([32]byte, error) {
 //
 // Solidity: function owner() view returns(address)
 func (_ArbRollup *ArbRollupCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _ArbRollup.contract.Call(opts, out, "owner")
-	return *ret0, err
+	var out []interface{}
+	err := _ArbRollup.contract.Call(opts, &out, "owner")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -485,14 +535,21 @@ func (_ArbRollup *ArbRollupCaller) VmParams(opts *bind.CallOpts) (struct {
 	ArbGasSpeedLimitPerTick *big.Int
 	MaxExecutionSteps       uint64
 }, error) {
-	ret := new(struct {
+	var out []interface{}
+	err := _ArbRollup.contract.Call(opts, &out, "vmParams")
+
+	outstruct := new(struct {
 		GracePeriodTicks        *big.Int
 		ArbGasSpeedLimitPerTick *big.Int
 		MaxExecutionSteps       uint64
 	})
-	out := ret
-	err := _ArbRollup.contract.Call(opts, out, "vmParams")
-	return *ret, err
+
+	outstruct.GracePeriodTicks = out[0].(*big.Int)
+	outstruct.ArbGasSpeedLimitPerTick = out[1].(*big.Int)
+	outstruct.MaxExecutionSteps = out[2].(uint64)
+
+	return *outstruct, err
+
 }
 
 // VmParams is a free data retrieval call binding the contract method 0xbbc2cc00.
@@ -2426,7 +2483,7 @@ func bindIERC20(address common.Address, caller bind.ContractCaller, transactor b
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IERC20 *IERC20Raw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_IERC20 *IERC20Raw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _IERC20.Contract.IERC20Caller.contract.Call(opts, result, method, params...)
 }
 
@@ -2445,7 +2502,7 @@ func (_IERC20 *IERC20Raw) Transact(opts *bind.TransactOpts, method string, param
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IERC20 *IERC20CallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_IERC20 *IERC20CallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _IERC20.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -2464,12 +2521,17 @@ func (_IERC20 *IERC20TransactorRaw) Transact(opts *bind.TransactOpts, method str
 //
 // Solidity: function allowance(address owner, address spender) view returns(uint256)
 func (_IERC20 *IERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _IERC20.contract.Call(opts, out, "allowance", owner, spender)
-	return *ret0, err
+	var out []interface{}
+	err := _IERC20.contract.Call(opts, &out, "allowance", owner, spender)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
@@ -2490,12 +2552,17 @@ func (_IERC20 *IERC20CallerSession) Allowance(owner common.Address, spender comm
 //
 // Solidity: function balanceOf(address account) view returns(uint256)
 func (_IERC20 *IERC20Caller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _IERC20.contract.Call(opts, out, "balanceOf", account)
-	return *ret0, err
+	var out []interface{}
+	err := _IERC20.contract.Call(opts, &out, "balanceOf", account)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -2516,12 +2583,17 @@ func (_IERC20 *IERC20CallerSession) BalanceOf(account common.Address) (*big.Int,
 //
 // Solidity: function totalSupply() view returns(uint256)
 func (_IERC20 *IERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _IERC20.contract.Call(opts, out, "totalSupply")
-	return *ret0, err
+	var out []interface{}
+	err := _IERC20.contract.Call(opts, &out, "totalSupply")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
@@ -3043,7 +3115,7 @@ func bindNodeGraph(address common.Address, caller bind.ContractCaller, transacto
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_NodeGraph *NodeGraphRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_NodeGraph *NodeGraphRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _NodeGraph.Contract.NodeGraphCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -3062,7 +3134,7 @@ func (_NodeGraph *NodeGraphRaw) Transact(opts *bind.TransactOpts, method string,
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_NodeGraph *NodeGraphCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_NodeGraph *NodeGraphCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _NodeGraph.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -3081,12 +3153,17 @@ func (_NodeGraph *NodeGraphTransactorRaw) Transact(opts *bind.TransactOpts, meth
 //
 // Solidity: function isValidLeaf(bytes32 leaf) view returns(bool)
 func (_NodeGraph *NodeGraphCaller) IsValidLeaf(opts *bind.CallOpts, leaf [32]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _NodeGraph.contract.Call(opts, out, "isValidLeaf", leaf)
-	return *ret0, err
+	var out []interface{}
+	err := _NodeGraph.contract.Call(opts, &out, "isValidLeaf", leaf)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
 }
 
 // IsValidLeaf is a free data retrieval call binding the contract method 0x57ca6d1b.
@@ -3107,12 +3184,17 @@ func (_NodeGraph *NodeGraphCallerSession) IsValidLeaf(leaf [32]byte) (bool, erro
 //
 // Solidity: function latestConfirmed() view returns(bytes32)
 func (_NodeGraph *NodeGraphCaller) LatestConfirmed(opts *bind.CallOpts) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
-	out := ret0
-	err := _NodeGraph.contract.Call(opts, out, "latestConfirmed")
-	return *ret0, err
+	var out []interface{}
+	err := _NodeGraph.contract.Call(opts, &out, "latestConfirmed")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
 }
 
 // LatestConfirmed is a free data retrieval call binding the contract method 0x65f7f80d.
@@ -3137,14 +3219,21 @@ func (_NodeGraph *NodeGraphCaller) VmParams(opts *bind.CallOpts) (struct {
 	ArbGasSpeedLimitPerTick *big.Int
 	MaxExecutionSteps       uint64
 }, error) {
-	ret := new(struct {
+	var out []interface{}
+	err := _NodeGraph.contract.Call(opts, &out, "vmParams")
+
+	outstruct := new(struct {
 		GracePeriodTicks        *big.Int
 		ArbGasSpeedLimitPerTick *big.Int
 		MaxExecutionSteps       uint64
 	})
-	out := ret
-	err := _NodeGraph.contract.Call(opts, out, "vmParams")
-	return *ret, err
+
+	outstruct.GracePeriodTicks = out[0].(*big.Int)
+	outstruct.ArbGasSpeedLimitPerTick = out[1].(*big.Int)
+	outstruct.MaxExecutionSteps = out[2].(uint64)
+
+	return *outstruct, err
+
 }
 
 // VmParams is a free data retrieval call binding the contract method 0xbbc2cc00.
@@ -3725,7 +3814,7 @@ func bindNodeGraphUtils(address common.Address, caller bind.ContractCaller, tran
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_NodeGraphUtils *NodeGraphUtilsRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_NodeGraphUtils *NodeGraphUtilsRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _NodeGraphUtils.Contract.NodeGraphUtilsCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -3744,7 +3833,7 @@ func (_NodeGraphUtils *NodeGraphUtilsRaw) Transact(opts *bind.TransactOpts, meth
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_NodeGraphUtils *NodeGraphUtilsCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_NodeGraphUtils *NodeGraphUtilsCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _NodeGraphUtils.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -3887,7 +3976,7 @@ func bindRollupUtils(address common.Address, caller bind.ContractCaller, transac
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_RollupUtils *RollupUtilsRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_RollupUtils *RollupUtilsRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _RollupUtils.Contract.RollupUtilsCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -3906,7 +3995,7 @@ func (_RollupUtils *RollupUtilsRaw) Transact(opts *bind.TransactOpts, method str
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_RollupUtils *RollupUtilsCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_RollupUtils *RollupUtilsCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _RollupUtils.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -4049,7 +4138,7 @@ func bindSafeMath(address common.Address, caller bind.ContractCaller, transactor
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_SafeMath *SafeMathRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_SafeMath *SafeMathRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _SafeMath.Contract.SafeMathCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -4068,7 +4157,7 @@ func (_SafeMath *SafeMathRaw) Transact(opts *bind.TransactOpts, method string, p
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_SafeMath *SafeMathCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_SafeMath *SafeMathCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _SafeMath.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -4222,7 +4311,7 @@ func bindStaking(address common.Address, caller bind.ContractCaller, transactor 
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Staking *StakingRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Staking *StakingRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Staking.Contract.StakingCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -4241,7 +4330,7 @@ func (_Staking *StakingRaw) Transact(opts *bind.TransactOpts, method string, par
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Staking *StakingCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_Staking *StakingCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _Staking.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -4260,12 +4349,17 @@ func (_Staking *StakingTransactorRaw) Transact(opts *bind.TransactOpts, method s
 //
 // Solidity: function challengeFactory() view returns(address)
 func (_Staking *StakingCaller) ChallengeFactory(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _Staking.contract.Call(opts, out, "challengeFactory")
-	return *ret0, err
+	var out []interface{}
+	err := _Staking.contract.Call(opts, &out, "challengeFactory")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
@@ -4286,12 +4380,17 @@ func (_Staking *StakingCallerSession) ChallengeFactory() (common.Address, error)
 //
 // Solidity: function getStakeRequired() view returns(uint128)
 func (_Staking *StakingCaller) GetStakeRequired(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Staking.contract.Call(opts, out, "getStakeRequired")
-	return *ret0, err
+	var out []interface{}
+	err := _Staking.contract.Call(opts, &out, "getStakeRequired")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // GetStakeRequired is a free data retrieval call binding the contract method 0xd16c305d.
@@ -4312,12 +4411,17 @@ func (_Staking *StakingCallerSession) GetStakeRequired() (*big.Int, error) {
 //
 // Solidity: function getStakeToken() view returns(address)
 func (_Staking *StakingCaller) GetStakeToken(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _Staking.contract.Call(opts, out, "getStakeToken")
-	return *ret0, err
+	var out []interface{}
+	err := _Staking.contract.Call(opts, &out, "getStakeToken")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // GetStakeToken is a free data retrieval call binding the contract method 0x500a1564.
@@ -4338,12 +4442,17 @@ func (_Staking *StakingCallerSession) GetStakeToken() (common.Address, error) {
 //
 // Solidity: function isStaked(address _stakerAddress) view returns(bool)
 func (_Staking *StakingCaller) IsStaked(opts *bind.CallOpts, _stakerAddress common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _Staking.contract.Call(opts, out, "isStaked", _stakerAddress)
-	return *ret0, err
+	var out []interface{}
+	err := _Staking.contract.Call(opts, &out, "isStaked", _stakerAddress)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
 }
 
 // IsStaked is a free data retrieval call binding the contract method 0x6177fd18.
@@ -5223,7 +5332,7 @@ func bindVM(address common.Address, caller bind.ContractCaller, transactor bind.
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_VM *VMRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_VM *VMRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _VM.Contract.VMCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -5242,7 +5351,7 @@ func (_VM *VMRaw) Transact(opts *bind.TransactOpts, method string, params ...int
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_VM *VMCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_VM *VMCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _VM.Contract.contract.Call(opts, result, method, params...)
 }
 

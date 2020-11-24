@@ -49,6 +49,11 @@ func runExecutableFile(b *testing.B, filePath string) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	valueCache, err := cmachine.NewValueCache()
+	if err != nil {
+		b.Fatal(err)
+	}
+
 	ckp, err := cmachine.NewCheckpoint(ckpDir)
 	if err != nil {
 		b.Fatal(err)
@@ -56,12 +61,13 @@ func runExecutableFile(b *testing.B, filePath string) {
 	if err := ckp.Initialize(filePath); err != nil {
 		b.Fatal(err)
 	}
-	mach, err := ckp.GetInitialMachine()
+	mach, err := ckp.GetInitialMachine(valueCache)
 	if err != nil {
 		b.Fatal(err)
 	}
 
 	b.ResetTimer()
+	// Last parameter is number of steps executed
 	_, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, nil, time.Hour)
 }
 
@@ -98,7 +104,7 @@ func BenchmarkInsns(b *testing.B) {
 }
 
 func getExecutables() []string {
-	ret := []string{}
+	var ret []string
 	fileInfos, err := ioutil.ReadDir("./executables/")
 	if err != nil {
 		log.Fatal(err)

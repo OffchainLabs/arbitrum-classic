@@ -94,7 +94,7 @@ func (s *Staker) DebugString(prefix string) string {
 }
 
 func (s *Staker) Equals(s2 *Staker) bool {
-	if bytes.Compare(s.address[:], s2.address[:]) != 0 {
+	if !bytes.Equal(s.address[:], s2.address[:]) {
 		return false
 	}
 	if s.location.Hash() != s2.location.Hash() {

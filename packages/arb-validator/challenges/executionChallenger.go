@@ -60,6 +60,7 @@ func ChallengeExecutionClaim(
 		log.Fatal("before inbox hash must be valid")
 	}
 
+	// Last value returned is not an error type
 	assertion, _ := startMachine.Clone().ExecuteAssertion(numSteps, messages, 0)
 	stub := structures.NewExecutionAssertionStubFromWholeAssertion(assertion, beforeInboxHash, inboxStack)
 
@@ -161,7 +162,11 @@ func challengeExecution(
 		// Update mach, precondition, deadline
 		if !chooseSegment {
 			// Replayed from existing event
-			defender = defender.MoveDefender(bisectionEvent, continueEvent)
+			defenderPointer, err := defender.MoveDefender(bisectionEvent, continueEvent)
+			if err != nil {
+				return 0, err
+			}
+			defender = *defenderPointer
 		}
 		deadline = continueEvent.Deadline
 	}

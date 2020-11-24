@@ -46,7 +46,7 @@ func TestFailedNestedSend(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	failedSendAddress, err := deployContract(t, mach, sender, constructorData, big.NewInt(0))
+	failedSendAddress, err := deployContract(t, mach, sender, constructorData, big.NewInt(0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

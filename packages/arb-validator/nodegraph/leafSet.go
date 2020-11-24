@@ -43,7 +43,6 @@ func (ll *LeafSet) NumLeaves() int {
 }
 
 func (ll *LeafSet) add(node *structures.Node) {
-	log.Println("Added leaf", node.LinkType(), node.Hash())
 	if ll.IsLeaf(node) {
 		log.Fatal("tried to insert leaf twice")
 	}
@@ -51,7 +50,6 @@ func (ll *LeafSet) add(node *structures.Node) {
 }
 
 func (ll *LeafSet) delete(node *structures.Node) {
-	log.Println("Removed leaf", node.LinkType(), node.Hash())
 	delete(ll.idx, node.Hash())
 }
 

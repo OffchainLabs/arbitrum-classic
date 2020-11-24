@@ -160,7 +160,7 @@ func bindGlobalEthWallet(address common.Address, caller bind.ContractCaller, tra
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_GlobalEthWallet *GlobalEthWalletRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_GlobalEthWallet *GlobalEthWalletRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _GlobalEthWallet.Contract.GlobalEthWalletCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -179,7 +179,7 @@ func (_GlobalEthWallet *GlobalEthWalletRaw) Transact(opts *bind.TransactOpts, me
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_GlobalEthWallet *GlobalEthWalletCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_GlobalEthWallet *GlobalEthWalletCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _GlobalEthWallet.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -198,12 +198,17 @@ func (_GlobalEthWallet *GlobalEthWalletTransactorRaw) Transact(opts *bind.Transa
 //
 // Solidity: function getEthBalance(address _owner) view returns(uint256)
 func (_GlobalEthWallet *GlobalEthWalletCaller) GetEthBalance(opts *bind.CallOpts, _owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _GlobalEthWallet.contract.Call(opts, out, "getEthBalance", _owner)
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalEthWallet.contract.Call(opts, &out, "getEthBalance", _owner)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // GetEthBalance is a free data retrieval call binding the contract method 0x4d2301cc.
@@ -378,7 +383,7 @@ func bindGlobalFTWallet(address common.Address, caller bind.ContractCaller, tran
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_GlobalFTWallet *GlobalFTWalletRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_GlobalFTWallet *GlobalFTWalletRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _GlobalFTWallet.Contract.GlobalFTWalletCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -397,7 +402,7 @@ func (_GlobalFTWallet *GlobalFTWalletRaw) Transact(opts *bind.TransactOpts, meth
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_GlobalFTWallet *GlobalFTWalletCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_GlobalFTWallet *GlobalFTWalletCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _GlobalFTWallet.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -416,12 +421,17 @@ func (_GlobalFTWallet *GlobalFTWalletTransactorRaw) Transact(opts *bind.Transact
 //
 // Solidity: function FAILED_TRANSFER() view returns(string)
 func (_GlobalFTWallet *GlobalFTWalletCaller) FAILEDTRANSFER(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
-	out := ret0
-	err := _GlobalFTWallet.contract.Call(opts, out, "FAILED_TRANSFER")
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalFTWallet.contract.Call(opts, &out, "FAILED_TRANSFER")
+
+	if err != nil {
+		return *new(string), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(string)).(*string)
+
+	return out0, err
+
 }
 
 // FAILEDTRANSFER is a free data retrieval call binding the contract method 0x56434fe9.
@@ -442,12 +452,17 @@ func (_GlobalFTWallet *GlobalFTWalletCallerSession) FAILEDTRANSFER() (string, er
 //
 // Solidity: function getERC20Balance(address _tokenContract, address _owner) view returns(uint256)
 func (_GlobalFTWallet *GlobalFTWalletCaller) GetERC20Balance(opts *bind.CallOpts, _tokenContract common.Address, _owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _GlobalFTWallet.contract.Call(opts, out, "getERC20Balance", _tokenContract, _owner)
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalFTWallet.contract.Call(opts, &out, "getERC20Balance", _tokenContract, _owner)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // GetERC20Balance is a free data retrieval call binding the contract method 0xc3a8962c.
@@ -468,12 +483,17 @@ func (_GlobalFTWallet *GlobalFTWalletCallerSession) GetERC20Balance(_tokenContra
 //
 // Solidity: function isPairedContract(address _tokenContract, address _chain) view returns(uint8)
 func (_GlobalFTWallet *GlobalFTWalletCaller) IsPairedContract(opts *bind.CallOpts, _tokenContract common.Address, _chain common.Address) (uint8, error) {
-	var (
-		ret0 = new(uint8)
-	)
-	out := ret0
-	err := _GlobalFTWallet.contract.Call(opts, out, "isPairedContract", _tokenContract, _chain)
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalFTWallet.contract.Call(opts, &out, "isPairedContract", _tokenContract, _chain)
+
+	if err != nil {
+		return *new(uint8), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
+
+	return out0, err
+
 }
 
 // IsPairedContract is a free data retrieval call binding the contract method 0x659e42cd.
@@ -494,12 +514,17 @@ func (_GlobalFTWallet *GlobalFTWalletCallerSession) IsPairedContract(_tokenContr
 //
 // Solidity: function ownedERC20s(address _owner) view returns(address[])
 func (_GlobalFTWallet *GlobalFTWalletCaller) OwnedERC20s(opts *bind.CallOpts, _owner common.Address) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
-	out := ret0
-	err := _GlobalFTWallet.contract.Call(opts, out, "ownedERC20s", _owner)
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalFTWallet.contract.Call(opts, &out, "ownedERC20s", _owner)
+
+	if err != nil {
+		return *new([]common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
+
+	return out0, err
+
 }
 
 // OwnedERC20s is a free data retrieval call binding the contract method 0x6e2b89c5.
@@ -691,7 +716,7 @@ func bindGlobalInbox(address common.Address, caller bind.ContractCaller, transac
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_GlobalInbox *GlobalInboxRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_GlobalInbox *GlobalInboxRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _GlobalInbox.Contract.GlobalInboxCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -710,7 +735,7 @@ func (_GlobalInbox *GlobalInboxRaw) Transact(opts *bind.TransactOpts, method str
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_GlobalInbox *GlobalInboxCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_GlobalInbox *GlobalInboxCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _GlobalInbox.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -729,12 +754,17 @@ func (_GlobalInbox *GlobalInboxTransactorRaw) Transact(opts *bind.TransactOpts, 
 //
 // Solidity: function FAILED_TRANSFER() view returns(string)
 func (_GlobalInbox *GlobalInboxCaller) FAILEDTRANSFER(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
-	out := ret0
-	err := _GlobalInbox.contract.Call(opts, out, "FAILED_TRANSFER")
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalInbox.contract.Call(opts, &out, "FAILED_TRANSFER")
+
+	if err != nil {
+		return *new(string), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(string)).(*string)
+
+	return out0, err
+
 }
 
 // FAILEDTRANSFER is a free data retrieval call binding the contract method 0x56434fe9.
@@ -755,12 +785,17 @@ func (_GlobalInbox *GlobalInboxCallerSession) FAILEDTRANSFER() (string, error) {
 //
 // Solidity: function getERC20Balance(address _tokenContract, address _owner) view returns(uint256)
 func (_GlobalInbox *GlobalInboxCaller) GetERC20Balance(opts *bind.CallOpts, _tokenContract common.Address, _owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _GlobalInbox.contract.Call(opts, out, "getERC20Balance", _tokenContract, _owner)
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalInbox.contract.Call(opts, &out, "getERC20Balance", _tokenContract, _owner)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // GetERC20Balance is a free data retrieval call binding the contract method 0xc3a8962c.
@@ -781,12 +816,17 @@ func (_GlobalInbox *GlobalInboxCallerSession) GetERC20Balance(_tokenContract com
 //
 // Solidity: function getERC721Tokens(address _erc721, address _owner) view returns(uint256[])
 func (_GlobalInbox *GlobalInboxCaller) GetERC721Tokens(opts *bind.CallOpts, _erc721 common.Address, _owner common.Address) ([]*big.Int, error) {
-	var (
-		ret0 = new([]*big.Int)
-	)
-	out := ret0
-	err := _GlobalInbox.contract.Call(opts, out, "getERC721Tokens", _erc721, _owner)
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalInbox.contract.Call(opts, &out, "getERC721Tokens", _erc721, _owner)
+
+	if err != nil {
+		return *new([]*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
+
+	return out0, err
+
 }
 
 // GetERC721Tokens is a free data retrieval call binding the contract method 0x0758fb0a.
@@ -807,12 +847,17 @@ func (_GlobalInbox *GlobalInboxCallerSession) GetERC721Tokens(_erc721 common.Add
 //
 // Solidity: function getEthBalance(address _owner) view returns(uint256)
 func (_GlobalInbox *GlobalInboxCaller) GetEthBalance(opts *bind.CallOpts, _owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _GlobalInbox.contract.Call(opts, out, "getEthBalance", _owner)
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalInbox.contract.Call(opts, &out, "getEthBalance", _owner)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // GetEthBalance is a free data retrieval call binding the contract method 0x4d2301cc.
@@ -833,16 +878,18 @@ func (_GlobalInbox *GlobalInboxCallerSession) GetEthBalance(_owner common.Addres
 //
 // Solidity: function getInbox(address account) view returns(bytes32, uint256)
 func (_GlobalInbox *GlobalInboxCaller) GetInbox(opts *bind.CallOpts, account common.Address) ([32]byte, *big.Int, error) {
-	var (
-		ret0 = new([32]byte)
-		ret1 = new(*big.Int)
-	)
-	out := &[]interface{}{
-		ret0,
-		ret1,
+	var out []interface{}
+	err := _GlobalInbox.contract.Call(opts, &out, "getInbox", account)
+
+	if err != nil {
+		return *new([32]byte), *new(*big.Int), err
 	}
-	err := _GlobalInbox.contract.Call(opts, out, "getInbox", account)
-	return *ret0, *ret1, err
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+
+	return out0, out1, err
+
 }
 
 // GetInbox is a free data retrieval call binding the contract method 0x02201681.
@@ -863,12 +910,17 @@ func (_GlobalInbox *GlobalInboxCallerSession) GetInbox(account common.Address) (
 //
 // Solidity: function getPaymentOwner(address originalOwner, uint256 messageIndex) view returns(address)
 func (_GlobalInbox *GlobalInboxCaller) GetPaymentOwner(opts *bind.CallOpts, originalOwner common.Address, messageIndex *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _GlobalInbox.contract.Call(opts, out, "getPaymentOwner", originalOwner, messageIndex)
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalInbox.contract.Call(opts, &out, "getPaymentOwner", originalOwner, messageIndex)
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // GetPaymentOwner is a free data retrieval call binding the contract method 0x0547e1b4.
@@ -889,12 +941,17 @@ func (_GlobalInbox *GlobalInboxCallerSession) GetPaymentOwner(originalOwner comm
 //
 // Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) view returns(bool)
 func (_GlobalInbox *GlobalInboxCaller) HasERC721(opts *bind.CallOpts, _erc721 common.Address, _owner common.Address, _tokenId *big.Int) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _GlobalInbox.contract.Call(opts, out, "hasERC721", _erc721, _owner, _tokenId)
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalInbox.contract.Call(opts, &out, "hasERC721", _erc721, _owner, _tokenId)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
 }
 
 // HasERC721 is a free data retrieval call binding the contract method 0x45a53f09.
@@ -915,12 +972,17 @@ func (_GlobalInbox *GlobalInboxCallerSession) HasERC721(_erc721 common.Address, 
 //
 // Solidity: function isPairedContract(address _tokenContract, address _chain) view returns(uint8)
 func (_GlobalInbox *GlobalInboxCaller) IsPairedContract(opts *bind.CallOpts, _tokenContract common.Address, _chain common.Address) (uint8, error) {
-	var (
-		ret0 = new(uint8)
-	)
-	out := ret0
-	err := _GlobalInbox.contract.Call(opts, out, "isPairedContract", _tokenContract, _chain)
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalInbox.contract.Call(opts, &out, "isPairedContract", _tokenContract, _chain)
+
+	if err != nil {
+		return *new(uint8), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
+
+	return out0, err
+
 }
 
 // IsPairedContract is a free data retrieval call binding the contract method 0x659e42cd.
@@ -941,12 +1003,17 @@ func (_GlobalInbox *GlobalInboxCallerSession) IsPairedContract(_tokenContract co
 //
 // Solidity: function ownedERC20s(address _owner) view returns(address[])
 func (_GlobalInbox *GlobalInboxCaller) OwnedERC20s(opts *bind.CallOpts, _owner common.Address) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
-	out := ret0
-	err := _GlobalInbox.contract.Call(opts, out, "ownedERC20s", _owner)
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalInbox.contract.Call(opts, &out, "ownedERC20s", _owner)
+
+	if err != nil {
+		return *new([]common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
+
+	return out0, err
+
 }
 
 // OwnedERC20s is a free data retrieval call binding the contract method 0x6e2b89c5.
@@ -967,12 +1034,17 @@ func (_GlobalInbox *GlobalInboxCallerSession) OwnedERC20s(_owner common.Address)
 //
 // Solidity: function ownedERC721s(address _owner) view returns(address[])
 func (_GlobalInbox *GlobalInboxCaller) OwnedERC721s(opts *bind.CallOpts, _owner common.Address) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
-	out := ret0
-	err := _GlobalInbox.contract.Call(opts, out, "ownedERC721s", _owner)
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalInbox.contract.Call(opts, &out, "ownedERC721s", _owner)
+
+	if err != nil {
+		return *new([]common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
+
+	return out0, err
+
 }
 
 // OwnedERC721s is a free data retrieval call binding the contract method 0x33f2ac42.
@@ -2126,7 +2198,7 @@ func bindGlobalNFTWallet(address common.Address, caller bind.ContractCaller, tra
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_GlobalNFTWallet *GlobalNFTWalletRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_GlobalNFTWallet *GlobalNFTWalletRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _GlobalNFTWallet.Contract.GlobalNFTWalletCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -2145,7 +2217,7 @@ func (_GlobalNFTWallet *GlobalNFTWalletRaw) Transact(opts *bind.TransactOpts, me
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_GlobalNFTWallet *GlobalNFTWalletCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_GlobalNFTWallet *GlobalNFTWalletCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _GlobalNFTWallet.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -2164,12 +2236,17 @@ func (_GlobalNFTWallet *GlobalNFTWalletTransactorRaw) Transact(opts *bind.Transa
 //
 // Solidity: function getERC721Tokens(address _erc721, address _owner) view returns(uint256[])
 func (_GlobalNFTWallet *GlobalNFTWalletCaller) GetERC721Tokens(opts *bind.CallOpts, _erc721 common.Address, _owner common.Address) ([]*big.Int, error) {
-	var (
-		ret0 = new([]*big.Int)
-	)
-	out := ret0
-	err := _GlobalNFTWallet.contract.Call(opts, out, "getERC721Tokens", _erc721, _owner)
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalNFTWallet.contract.Call(opts, &out, "getERC721Tokens", _erc721, _owner)
+
+	if err != nil {
+		return *new([]*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
+
+	return out0, err
+
 }
 
 // GetERC721Tokens is a free data retrieval call binding the contract method 0x0758fb0a.
@@ -2190,12 +2267,17 @@ func (_GlobalNFTWallet *GlobalNFTWalletCallerSession) GetERC721Tokens(_erc721 co
 //
 // Solidity: function hasERC721(address _erc721, address _owner, uint256 _tokenId) view returns(bool)
 func (_GlobalNFTWallet *GlobalNFTWalletCaller) HasERC721(opts *bind.CallOpts, _erc721 common.Address, _owner common.Address, _tokenId *big.Int) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _GlobalNFTWallet.contract.Call(opts, out, "hasERC721", _erc721, _owner, _tokenId)
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalNFTWallet.contract.Call(opts, &out, "hasERC721", _erc721, _owner, _tokenId)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
 }
 
 // HasERC721 is a free data retrieval call binding the contract method 0x45a53f09.
@@ -2216,12 +2298,17 @@ func (_GlobalNFTWallet *GlobalNFTWalletCallerSession) HasERC721(_erc721 common.A
 //
 // Solidity: function ownedERC721s(address _owner) view returns(address[])
 func (_GlobalNFTWallet *GlobalNFTWalletCaller) OwnedERC721s(opts *bind.CallOpts, _owner common.Address) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
-	out := ret0
-	err := _GlobalNFTWallet.contract.Call(opts, out, "ownedERC721s", _owner)
-	return *ret0, err
+	var out []interface{}
+	err := _GlobalNFTWallet.contract.Call(opts, &out, "ownedERC721s", _owner)
+
+	if err != nil {
+		return *new([]common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
+
+	return out0, err
+
 }
 
 // OwnedERC721s is a free data retrieval call binding the contract method 0x33f2ac42.
@@ -2375,7 +2462,7 @@ func bindIERC165(address common.Address, caller bind.ContractCaller, transactor 
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IERC165 *IERC165Raw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_IERC165 *IERC165Raw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _IERC165.Contract.IERC165Caller.contract.Call(opts, result, method, params...)
 }
 
@@ -2394,7 +2481,7 @@ func (_IERC165 *IERC165Raw) Transact(opts *bind.TransactOpts, method string, par
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IERC165 *IERC165CallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_IERC165 *IERC165CallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _IERC165.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -2413,12 +2500,17 @@ func (_IERC165 *IERC165TransactorRaw) Transact(opts *bind.TransactOpts, method s
 //
 // Solidity: function supportsInterface(bytes4 interfaceID) view returns(bool)
 func (_IERC165 *IERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceID [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _IERC165.contract.Call(opts, out, "supportsInterface", interfaceID)
-	return *ret0, err
+	var out []interface{}
+	err := _IERC165.contract.Call(opts, &out, "supportsInterface", interfaceID)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -2559,7 +2651,7 @@ func bindIERC721(address common.Address, caller bind.ContractCaller, transactor 
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IERC721 *IERC721Raw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_IERC721 *IERC721Raw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _IERC721.Contract.IERC721Caller.contract.Call(opts, result, method, params...)
 }
 
@@ -2578,7 +2670,7 @@ func (_IERC721 *IERC721Raw) Transact(opts *bind.TransactOpts, method string, par
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IERC721 *IERC721CallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_IERC721 *IERC721CallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _IERC721.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -2597,12 +2689,17 @@ func (_IERC721 *IERC721TransactorRaw) Transact(opts *bind.TransactOpts, method s
 //
 // Solidity: function balanceOf(address _owner) view returns(uint256)
 func (_IERC721 *IERC721Caller) BalanceOf(opts *bind.CallOpts, _owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _IERC721.contract.Call(opts, out, "balanceOf", _owner)
-	return *ret0, err
+	var out []interface{}
+	err := _IERC721.contract.Call(opts, &out, "balanceOf", _owner)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -2623,12 +2720,17 @@ func (_IERC721 *IERC721CallerSession) BalanceOf(_owner common.Address) (*big.Int
 //
 // Solidity: function getApproved(uint256 _tokenId) view returns(address)
 func (_IERC721 *IERC721Caller) GetApproved(opts *bind.CallOpts, _tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _IERC721.contract.Call(opts, out, "getApproved", _tokenId)
-	return *ret0, err
+	var out []interface{}
+	err := _IERC721.contract.Call(opts, &out, "getApproved", _tokenId)
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -2649,12 +2751,17 @@ func (_IERC721 *IERC721CallerSession) GetApproved(_tokenId *big.Int) (common.Add
 //
 // Solidity: function isApprovedForAll(address _owner, address _operator) view returns(bool)
 func (_IERC721 *IERC721Caller) IsApprovedForAll(opts *bind.CallOpts, _owner common.Address, _operator common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _IERC721.contract.Call(opts, out, "isApprovedForAll", _owner, _operator)
-	return *ret0, err
+	var out []interface{}
+	err := _IERC721.contract.Call(opts, &out, "isApprovedForAll", _owner, _operator)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -2675,12 +2782,17 @@ func (_IERC721 *IERC721CallerSession) IsApprovedForAll(_owner common.Address, _o
 //
 // Solidity: function ownerOf(uint256 _tokenId) view returns(address)
 func (_IERC721 *IERC721Caller) OwnerOf(opts *bind.CallOpts, _tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _IERC721.contract.Call(opts, out, "ownerOf", _tokenId)
-	return *ret0, err
+	var out []interface{}
+	err := _IERC721.contract.Call(opts, &out, "ownerOf", _tokenId)
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -3395,7 +3507,7 @@ func bindIPairedErc20(address common.Address, caller bind.ContractCaller, transa
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IPairedErc20 *IPairedErc20Raw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_IPairedErc20 *IPairedErc20Raw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _IPairedErc20.Contract.IPairedErc20Caller.contract.Call(opts, result, method, params...)
 }
 
@@ -3414,7 +3526,7 @@ func (_IPairedErc20 *IPairedErc20Raw) Transact(opts *bind.TransactOpts, method s
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IPairedErc20 *IPairedErc20CallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_IPairedErc20 *IPairedErc20CallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _IPairedErc20.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -3433,12 +3545,17 @@ func (_IPairedErc20 *IPairedErc20TransactorRaw) Transact(opts *bind.TransactOpts
 //
 // Solidity: function balanceOf(address account) view returns(uint256)
 func (_IPairedErc20 *IPairedErc20Caller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _IPairedErc20.contract.Call(opts, out, "balanceOf", account)
-	return *ret0, err
+	var out []interface{}
+	err := _IPairedErc20.contract.Call(opts, &out, "balanceOf", account)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -3631,7 +3748,7 @@ func bindPaymentRecords(address common.Address, caller bind.ContractCaller, tran
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_PaymentRecords *PaymentRecordsRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_PaymentRecords *PaymentRecordsRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _PaymentRecords.Contract.PaymentRecordsCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -3650,7 +3767,7 @@ func (_PaymentRecords *PaymentRecordsRaw) Transact(opts *bind.TransactOpts, meth
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_PaymentRecords *PaymentRecordsCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+func (_PaymentRecords *PaymentRecordsCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _PaymentRecords.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -3669,12 +3786,17 @@ func (_PaymentRecords *PaymentRecordsTransactorRaw) Transact(opts *bind.Transact
 //
 // Solidity: function getPaymentOwner(address originalOwner, uint256 messageIndex) view returns(address)
 func (_PaymentRecords *PaymentRecordsCaller) GetPaymentOwner(opts *bind.CallOpts, originalOwner common.Address, messageIndex *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _PaymentRecords.contract.Call(opts, out, "getPaymentOwner", originalOwner, messageIndex)
-	return *ret0, err
+	var out []interface{}
+	err := _PaymentRecords.contract.Call(opts, &out, "getPaymentOwner", originalOwner, messageIndex)
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
 // GetPaymentOwner is a free data retrieval call binding the contract method 0x0547e1b4.

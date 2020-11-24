@@ -47,10 +47,7 @@ func TestGetStorageAt(t *testing.T) {
 
 	connAddr := common.HexToAddress("0x7cc1af94bfb4676c4facfc6a56430ec35c45b8b0")
 
-	constructorTx := makeConstructorTx(
-		hexutil.MustDecode(arbostestcontracts.StorageBin),
-		big.NewInt(0),
-	)
+	constructorTx := makeConstructorTx(hexutil.MustDecode(arbostestcontracts.StorageBin), big.NewInt(0), nil)
 
 	getStorageAtTx := message.ContractTransaction{
 		BasicTx: message.BasicTx{
@@ -58,7 +55,7 @@ func TestGetStorageAt(t *testing.T) {
 			GasPriceBid: big.NewInt(0),
 			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 			Payment:     big.NewInt(0),
-			Data:        snapshot.GetStorageAtData(connAddr, big.NewInt(1)),
+			Data:        snapshot.StorageAtData(connAddr, big.NewInt(1)),
 		},
 	}
 
@@ -79,6 +76,7 @@ func TestGetStorageAt(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(failGetStorageAtTx), sender, big.NewInt(3), chainTime),
 	}
 
+	// Last parameter returned is number of steps executed
 	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
 	testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.ParseLogs(), assertion.ParseOutMessages())
 	if err != nil {

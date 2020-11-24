@@ -57,26 +57,26 @@ func confirmNodeOpp(currentNode *structures.Node) valprotocol.ConfirmNodeOpportu
 		PrevVMProtoState: currentNode.Prev().VMProtoData(),
 		VMProtoState:     currentNode.VMProtoData(),
 	}
-	var confOpp valprotocol.ConfirmNodeOpportunity
+
 	if currentNode.LinkType() == valprotocol.ValidChildType {
 		// We need to know the contents of the actual assertion to confirm it
 		// We've only seen the hash accumulator of the messages before whereas this requires the full values
 		assertion := currentNode.Assertion()
 		if assertion == nil {
+			// Other thread hasn't filled assertion yet
 			return nil
-		} else {
-			confOpp = valprotocol.ConfirmValidOpportunity{
-				ConfirmNodeOpportunityCore: coreOpp,
-				MessagesData:               assertion.OutMsgsData,
-				MessageCount:               assertion.OutMsgsCount,
-				LogsAcc:                    currentNode.Disputable().Assertion.LastLogHash,
-			}
 		}
-	} else {
-		confOpp = valprotocol.ConfirmInvalidOpportunity{
+
+		return valprotocol.ConfirmValidOpportunity{
 			ConfirmNodeOpportunityCore: coreOpp,
-			ChallengeNodeData:          currentNode.NodeDataHash(),
+			MessagesData:               assertion.OutMsgsData,
+			MessageCount:               assertion.OutMsgsCount,
+			LogsAcc:                    currentNode.Disputable().Assertion.LastLogHash,
 		}
 	}
-	return confOpp
+
+	return valprotocol.ConfirmInvalidOpportunity{
+		ConfirmNodeOpportunityCore: coreOpp,
+		ChallengeNodeData:          currentNode.NodeDataHash(),
+	}
 }

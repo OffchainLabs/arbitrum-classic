@@ -116,23 +116,19 @@ func testChallengerCatchUp(
 
 	go func() {
 		cBlockId := blockId.MarshalToBuf().Unmarshal()
-		for {
-			endState, err := challengerFuncStop(challengeAddress, challengerClient, cBlockId)
-			if endState == ChallengerDiscontinued {
-				break
-			}
+		endState, err := challengerFuncStop(challengeAddress, challengerClient, cBlockId)
+		if endState != ChallengerDiscontinued {
 			asserterErrChan <- err
 			return
 		}
-		for {
-			endState, err := challengerFunc(challengeAddress, challengerClient, cBlockId)
-			if err == nil {
-				asserterEndChan <- endState
-				return
-			}
+
+		endState, err = challengerFunc(challengeAddress, challengerClient, cBlockId)
+		if err != nil {
 			asserterErrChan <- err
 			return
 		}
+
+		asserterEndChan <- endState
 	}()
 
 	resolveChallenge(t, asserterEndChan, asserterErrChan, challengerEndChan, challengerErrChan)
@@ -172,28 +168,24 @@ func testChallenge(
 	challengerErrChan := make(chan error)
 
 	go func() {
-		for {
-			endState, err := asserterFunc(challengeAddress, asserterClient, blockId)
-			if err == nil {
-				asserterEndChan <- endState
-				return
-			}
+		endState, err := asserterFunc(challengeAddress, asserterClient, blockId)
+		if err != nil {
 			asserterErrChan <- err
 			return
 		}
+
+		asserterEndChan <- endState
 	}()
 
 	go func() {
 		cBlockId := blockId.MarshalToBuf().Unmarshal()
-		for {
-			endState, err := challengerFunc(challengeAddress, challengerClient, cBlockId)
-			if err == nil {
-				asserterEndChan <- endState
-				return
-			}
+		endState, err := challengerFunc(challengeAddress, challengerClient, cBlockId)
+		if err != nil {
 			asserterErrChan <- err
 			return
 		}
+
+		asserterEndChan <- endState
 	}()
 
 	resolveChallenge(t, asserterEndChan, asserterErrChan, challengerEndChan, challengerErrChan)

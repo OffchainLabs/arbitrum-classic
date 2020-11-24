@@ -35,6 +35,9 @@ constexpr auto block_key = std::array<char, 1>{-52};
 constexpr auto request_key_prefix = std::array<char, 1>{-54};
 constexpr auto request_key_size = request_key_prefix.size() + 32;
 
+constexpr auto block_hash_key_prefix = std::array<char, 1>{-55};
+constexpr auto block_hash_key_size = block_hash_key_prefix.size() + 32;
+
 namespace {
 
 void commitTx(rocksdb::Transaction& tx) {
@@ -75,9 +78,19 @@ std::array<char, sizeof(uint64_t)> uint64Value(uint64_t height) {
 }
 
 std::array<char, sizeof(uint64_t)> requestValue(uint64_t log_index) {
-    std::array<char, sizeof(uint64_t)> key;
-    addUint64ToKey(log_index, key.begin());
+    return uint64Value(log_index);
+}
+
+std::array<char, request_key_size> blockHashKey(const uint256_t& block_hash) {
+    std::array<char, block_hash_key_size> key;
+    auto it = std::copy(block_hash_key_prefix.begin(),
+                        block_hash_key_prefix.end(), key.begin());
+    to_big_endian(block_hash, it);
     return key;
+}
+
+std::array<char, sizeof(uint64_t)> blockHashValue(uint64_t block_height) {
+    return uint64Value(block_height);
 }
 }  // namespace
 
@@ -101,7 +114,8 @@ struct EntrySaver {
     std::string loadEntry(rocksdb::Transaction& tx, uint64_t index) {
         auto full_key = this->entryKey(index);
         std::string value;
-        auto s = tx.Get(rocksdb::ReadOptions{}, vecToSlice(full_key), &value);
+        auto s = tx.GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(full_key),
+                                 &value);
         if (!s.ok()) {
             throw std::runtime_error("failed load value");
         }
@@ -122,7 +136,8 @@ template <size_t N, const std::array<char, N>& key>
 struct FlatSaver : private EntrySaver<N, key> {
     uint64_t count(rocksdb::Transaction& tx) {
         std::string value;
-        auto s = tx.Get(rocksdb::ReadOptions{}, vecToSlice(key), &value);
+        auto s =
+            tx.GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(key), &value);
         if (s.IsNotFound()) {
             return 0;
         } else if (!s.ok()) {
@@ -158,7 +173,8 @@ template <size_t N, const std::array<char, N>& key>
 struct HeightSaver : public EntrySaver<N, key> {
     uint64_t max(rocksdb::Transaction& tx) {
         std::string value;
-        auto s = tx.Get(rocksdb::ReadOptions{}, vecToSlice(key), &value);
+        auto s =
+            tx.GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(key), &value);
         if (!s.ok()) {
             throw std::runtime_error("no max saved");
         }
@@ -236,24 +252,49 @@ void AggregatorStore::saveRequest(const uint256_t& request_id,
     }
 }
 
-uint64_t AggregatorStore::getPossibleRequestInfo(
-    const uint256_t& request_id) const {
-    auto tx = data_storage->beginTransaction();
-    auto key = requestKey(request_id);
+namespace {
+template <typename Key>
+nonstd::optional<uint64_t> returnIndex(rocksdb::Transaction& tx,
+                                       const Key& key) {
     std::string request_value;
-    auto s = tx->Get(rocksdb::ReadOptions{}, vecToSlice(key), &request_value);
+    auto s = tx.GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(key),
+                             &request_value);
     if (!s.ok()) {
-        throw std::runtime_error("couldn't find request");
+        return nonstd::nullopt;
     }
     auto it = request_value.begin();
-    uint64_t log_index = extractUint64(it);
-    return log_index;
+    return extractUint64(it);
+}
+}  // namespace
+
+nonstd::optional<uint64_t> AggregatorStore::getPossibleRequestInfo(
+    const uint256_t& request_id) const {
+    auto tx = data_storage->beginTransaction();
+    return returnIndex(*tx, requestKey(request_id));
+}
+
+void AggregatorStore::saveBlockHash(const uint256_t& block_hash,
+                                    uint64_t block_height) {
+    auto key = blockHashKey(block_hash);
+    auto value = blockHashValue(block_height);
+    auto s = data_storage->txn_db->Put(rocksdb::WriteOptions{}, vecToSlice(key),
+                                       vecToSlice(value));
+    if (!s.ok()) {
+        throw std::runtime_error("failed to save block hash");
+    }
+}
+
+nonstd::optional<uint64_t> AggregatorStore::getPossibleBlock(
+    const uint256_t& block_hash) const {
+    auto tx = data_storage->beginTransaction();
+    return returnIndex(*tx, blockHashKey(block_hash));
 }
 
 std::pair<uint64_t, std::vector<char>> AggregatorStore::latestBlock() const {
     auto tx = data_storage->beginTransaction();
     uint64_t latest_block = BlockSaver{}.max(*tx);
-    return {latest_block, getBlock(latest_block)};
+    auto block_value = BlockSaver{}.load(*tx, latest_block);
+    return {latest_block, {block_value.begin(), block_value.end()}};
 }
 
 void AggregatorStore::saveBlock(uint64_t height,

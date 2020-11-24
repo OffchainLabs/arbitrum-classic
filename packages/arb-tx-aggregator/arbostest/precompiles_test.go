@@ -62,6 +62,7 @@ func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byt
 		t.Fatal(err)
 	}
 
+	// Last parameter returned is number of steps executed
 	assertion, _ := mach.ExecuteAssertion(1000000000, inboxMessages, 0)
 	logs := assertion.ParseLogs()
 
@@ -121,7 +122,10 @@ func TestECRecover(t *testing.T) {
 func TestSha256(t *testing.T) {
 	data := common.RandBytes(100)
 	sha256 := crypto.SHA256.New()
-	sha256.Write(data)
+	_, err := sha256.Write(data)
+	if err != nil {
+		t.Fatal(err)
+	}
 	hashedCorrect := sha256.Sum(nil)
 
 	testPrecompile(t, 2, data, hashedCorrect)

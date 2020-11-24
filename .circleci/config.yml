@@ -56,7 +56,7 @@ jobs:
       - restore_cache: *restore_go_cache
       - run:
           command: |
-            cd packages/arb-provider-go
+            cd tests/fibgo
             go mod download
       - save_cache: *save_go_cache
   frontend:
@@ -225,6 +225,15 @@ jobs:
             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator-core.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
           working_directory: /home/user/project/packages/arb-validator-core
       - run:
+          name: test arb-checkpointer
+          command: |
+            export CGO_LDFLAGS="-lgcov --coverage"
+            cd ..
+            export ARB_PACKAGES=$(go list ./... | grep -v 'evilRollupServer' | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
+            cd arb-checkpointer
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-checkpointer.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
+          working_directory: /home/user/project/packages/arb-checkpointer
+      - run:
           name: test arb-validator
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
@@ -233,15 +242,6 @@ jobs:
             cd arb-validator
             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
           working_directory: /home/user/project/packages/arb-validator
-      - run:
-          name: test arb-provider-go
-          command: |
-            export CGO_LDFLAGS="-lgcov --coverage"
-            cd ..
-            export ARB_PACKAGES=$(go list ./... | grep -v 'evilRollupServer' | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
-            cd arb-provider-go
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
-          working_directory: /home/user/project/packages/arb-provider-go
       - run:
           name: test arb-evm
           command: |
