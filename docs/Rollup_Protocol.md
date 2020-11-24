@@ -22,8 +22,6 @@ As depicted above, a Disputable Assertion creates a logical decision point that 
 
 ### The Arbitrum 2.0 protocol
 
-The Arbitrum 2.0 protocol
-
 The current Arbitrum protocol makes important advances over the original Arbitrum protocol in that it supports multiple pipelined DAs In the new protocol, each state can have at most one DA following from it. If a DA has no following state, then anybody can create a DA that follows it, creating a new branch point. The result will be a tree of possible futures, like the one shown below.
 
 ![img](assets/rollupGraph2.png)
