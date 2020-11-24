@@ -17,10 +17,12 @@
 'use strict'
 
 import { ArbSysFactory } from './abi/ArbSysFactory'
+import { ArbSys } from './abi/ArbSys'
+
 import { TransactionOverrides } from './abi'
 
 import * as ethers from 'ethers'
-
+import { JsonRpcProvider } from 'ethers/providers'
 const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
 
 export async function withdrawEth(
@@ -34,3 +36,30 @@ export async function withdrawEth(
     value,
   })
 }
+
+interface AddressIndexMemo {
+  [address: string]: number
+}
+
+export const getAddressIndex = (() => {
+  const addressToIndexMemo: AddressIndexMemo = {}
+  let arbSys: ArbSys | undefined
+
+  return async (
+    address: string,
+    signerOrProvider: ethers.Signer | JsonRpcProvider
+  ) => {
+    if (addressToIndexMemo[address]) {
+      return addressToIndexMemo[address]
+    }
+    arbSys = arbSys || ArbSysFactory.connect(ARB_SYS_ADDRESS, signerOrProvider)
+
+    try {
+      const index = await (await arbSys.addressTable_lookup(address)).toNumber()
+      return index
+    } catch (err) {
+      console.info('Error: Address not registered:', address, err)
+      return -1
+    }
+  }
+})()
