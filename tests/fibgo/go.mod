@@ -3,7 +3,7 @@ module github.com/offchainlabs/arbitrum/tests/fibgo
 go 1.13
 
 require (
-	github.com/ethereum/go-ethereum v1.9.23
+	github.com/ethereum/go-ethereum v1.9.24
 	github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator v0.7.2
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.2
 	github.com/offchainlabs/arbitrum/packages/arb-validator v0.7.2

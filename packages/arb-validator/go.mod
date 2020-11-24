@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/c-bata/go-prompt v0.2.3 // indirect
-	github.com/ethereum/go-ethereum v1.9.23
+	github.com/ethereum/go-ethereum v1.9.24
 	github.com/golang/protobuf v1.4.2
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.2
