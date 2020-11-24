@@ -102,9 +102,8 @@ func TestRevert(t *testing.T) {
 	checkConstructorResult(t, logs[0], connAddr)
 	revertedTxCheck(t, results[1])
 
-	//correctResult := []byte("this is a test")
-	correctResult := []byte("")
-	if !bytes.Equal(correctResult, results[1].ReturnData) {
+	correctResult := []byte("this is a test")
+	if !bytes.Contains(results[1].ReturnData, correctResult) {
 		t.Error("incorrect return data", hexutil.Encode(results[1].ReturnData))
 	}
 }
