@@ -3,32 +3,20 @@
 # Exit on error
 set -e
 
+packages=(
+    arb-util
+    arb-avm-cpp
+    arb-validator-core
+    arb-validator
+    arb-evm
+    arb-checkpointer
+    arb-tx-aggregator
+)
+
 cd packages
 
-cd arb-util
-go vet ./...
-cd ..
-
-cd arb-avm-cpp
-go vet ./...
-cd ..
-
-cd arb-validator-core
-go vet ./...
-cd ..
-
-cd arb-validator
-go vet ./...
-cd ..
-
-cd arb-evm
-go vet ./...
-cd ..
-
-cd arb-checkpointer
-go vet ./...
-cd ..
-
-cd arb-tx-aggregator
-go vet ./...
-cd ..
+for i in "${packages[@]}"; do
+    cd $i
+    go vet ./...
+    cd ..
+done
