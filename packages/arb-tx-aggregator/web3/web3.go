@@ -25,7 +25,7 @@ type Web3 struct {
 }
 
 func (web3 *Web3) ClientVersion() string {
-	return "arb-tx-aggregator/v0.7.2"
+	return "arb-tx-aggregator/v0.7.3"
 }
 
 func (web3 *Web3) Sha3(data hexutil.Bytes) hexutil.Bytes {
