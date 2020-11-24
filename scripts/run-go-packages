@@ -14,9 +14,8 @@ packages=(
 )
 
 cd packages
-
 for i in "${packages[@]}"; do
     cd $i
-    go vet ./...
+    $1
     cd ..
 done
