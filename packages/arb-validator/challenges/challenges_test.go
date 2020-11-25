@@ -17,8 +17,10 @@
 package challenges
 
 import (
+	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
@@ -33,17 +35,30 @@ func TestChallenges(t *testing.T) {
 	clnt, pks := test.SimulatedBackend()
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 
-	auths := make([]*bind.TransactOpts, 0)
+	ctx := context.Background()
+	txOpts := make([]*bind.TransactOpts, 0, len(pks))
+	authClients := make([]*ethbridge.EthArbAuthClient, 0, len(pks))
 	for _, pk := range pks {
-		auths = append(auths, bind.NewKeyedTransactor(pk))
+		txOpt := bind.NewKeyedTransactor(pk)
+
+		authClient, err := ethbridge.NewEthAuthClient(ctx, client, txOpt)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		txOpts = append(txOpts, txOpt)
+		authClients = append(authClients, authClient)
 	}
 
-	factorAddr, err := ethbridge.DeployChallengeFactory(auths[0], client)
+	factorAddr, _, err := ethbridge.DeployChallengeFactory(ctx, authClients[0], client)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	testerAddress, _, _, err = ethbridgetestcontracts.DeployChallengeTester(auths[0], client, factorAddr)
+	testerAddress, _, err = authClients[0].MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, error) {
+		addr, tx, _, err := ethbridgetestcontracts.DeployChallengeTester(auth, client, factorAddr)
+		return addr, tx, err
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,9 +72,9 @@ func TestChallenges(t *testing.T) {
 	}()
 
 	t.Run("Inbox Top Challenge", func(t *testing.T) {
-		testInboxTopChallenge(t, client, auths[0], auths[1])
+		testInboxTopChallenge(t, ctx, client, authClients[0], authClients[1])
 	})
 	t.Run("Execution Challenge", func(t *testing.T) {
-		testExecutionChallenge(t, client, auths[4], auths[5])
+		testExecutionChallenge(t, ctx, client, authClients[4], authClients[5])
 	})
 }

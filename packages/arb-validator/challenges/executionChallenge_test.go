@@ -18,7 +18,6 @@ package challenges
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
@@ -28,94 +27,77 @@ import (
 	"testing"
 )
 
-func testExecutionChallenge(
-	t *testing.T,
-	client ethutils.EthClient,
-	asserter *bind.TransactOpts,
-	challenger *bind.TransactOpts,
-) {
+func testExecutionChallenge(t *testing.T, ctx context.Context, client ethutils.EthClient, asserterClient *ethbridge.EthArbAuthClient, challengerClient *ethbridge.EthArbAuthClient) {
 	t.Parallel()
 
 	mach := getTestMachine(t)
 	challengeHash, assertion, inboxStack, numSteps := getExecutionChallengeData(mach)
 
-	testChallengerCatchUp(
-		t,
-		client,
-		asserter,
-		challenger,
-		valprotocol.InvalidExecutionChildType,
-		challengeHash,
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
-			return DefendExecutionClaim(
-				context.Background(),
-				client,
-				challengeAddress,
-				blockId,
-				0,
-				mach.Clone(),
-				assertion,
-				inboxStack,
-				numSteps,
-				4,
-				StandardExecutionChallenge(),
-			)
-		},
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
-			return DefendExecutionClaim(
-				context.Background(),
-				client,
-				challengeAddress,
-				blockId,
-				0,
-				mach.Clone(),
-				assertion,
-				inboxStack,
-				numSteps,
-				4,
-				ExecutionChallengeInfo{
-					true,
-					2,
-					0,
-				},
-			)
-		},
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
-			return ChallengeExecutionClaim(
-				context.Background(),
-				client,
-				challengeAddress,
-				blockId,
-				0,
-				inboxStack,
-				numSteps,
-				mach.Clone(),
-				assertion.BeforeInboxHash,
+	testChallengerCatchUp(t, ctx, client, asserterClient, challengerClient, valprotocol.InvalidExecutionChildType, challengeHash, func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
+		return DefendExecutionClaim(
+			context.Background(),
+			client,
+			challengeAddress,
+			blockId,
+			0,
+			mach.Clone(),
+			assertion,
+			inboxStack,
+			numSteps,
+			4,
+			StandardExecutionChallenge(),
+		)
+	}, func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
+		return DefendExecutionClaim(
+			context.Background(),
+			client,
+			challengeAddress,
+			blockId,
+			0,
+			mach.Clone(),
+			assertion,
+			inboxStack,
+			numSteps,
+			4,
+			ExecutionChallengeInfo{
 				true,
-				StandardExecutionChallenge(),
-			)
-		},
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
-			return ChallengeExecutionClaim(
-				context.Background(),
-				client,
-				challengeAddress,
-				blockId,
+				2,
 				0,
-				inboxStack,
-				numSteps,
-				mach.Clone(),
-				assertion.BeforeInboxHash,
+			},
+		)
+	}, func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
+		return ChallengeExecutionClaim(
+			context.Background(),
+			client,
+			challengeAddress,
+			blockId,
+			0,
+			inboxStack,
+			numSteps,
+			mach.Clone(),
+			assertion.BeforeInboxHash,
+			true,
+			StandardExecutionChallenge(),
+		)
+	}, func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
+		return ChallengeExecutionClaim(
+			context.Background(),
+			client,
+			challengeAddress,
+			blockId,
+			0,
+			inboxStack,
+			numSteps,
+			mach.Clone(),
+			assertion.BeforeInboxHash,
+			true,
+			ExecutionChallengeInfo{
 				true,
-				ExecutionChallengeInfo{
-					true,
-					2,
-					0,
-				},
-			)
-		},
-		testerAddress,
-	)
+				2,
+				0,
+			},
+		)
+	}, testerAddress)
 }
 
 func getExecutionChallengeData(mach machine.Machine) (common.Hash, *valprotocol.ExecutionAssertionStub, *structures.MessageStack, uint64) {

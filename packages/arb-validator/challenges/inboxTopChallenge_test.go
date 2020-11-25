@@ -21,8 +21,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
@@ -30,51 +28,36 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-func testInboxTopChallenge(
-	t *testing.T,
-	client ethutils.EthClient,
-	asserter *bind.TransactOpts,
-	challenger *bind.TransactOpts,
-) {
+func testInboxTopChallenge(t *testing.T, ctx context.Context, client ethutils.EthClient, asserterClient *ethbridge.EthArbAuthClient, challengerClient *ethbridge.EthArbAuthClient) {
 	t.Parallel()
 
 	messageStack := structures.NewRandomMessageStack(10)
 	count := new(big.Int).Sub(messageStack.TopCount(), big.NewInt(1))
 	bottomHash, challengeHash := getChallengeData(t, messageStack, count)
 
-	testChallenge(
-		t,
-		client,
-		asserter,
-		challenger,
-		valprotocol.InvalidInboxTopChildType,
-		challengeHash,
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
-			return DefendInboxTopClaim(
-				context.Background(),
-				client,
-				challengeAddress,
-				blockId,
-				0,
-				messageStack,
-				bottomHash,
-				count,
-				2,
-			)
-		},
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
-			return ChallengeInboxTopClaim(
-				context.Background(),
-				client,
-				challengeAddress,
-				blockId,
-				0,
-				messageStack,
-				true,
-			)
-		},
-		testerAddress,
-	)
+	testChallenge(t, ctx, client, asserterClient, challengerClient, valprotocol.InvalidInboxTopChildType, challengeHash, func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
+		return DefendInboxTopClaim(
+			context.Background(),
+			client,
+			challengeAddress,
+			blockId,
+			0,
+			messageStack,
+			bottomHash,
+			count,
+			2,
+		)
+	}, func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
+		return ChallengeInboxTopClaim(
+			context.Background(),
+			client,
+			challengeAddress,
+			blockId,
+			0,
+			messageStack,
+			true,
+		)
+	}, testerAddress)
 }
 
 func getChallengeData(t *testing.T, messageStack *structures.MessageStack, messageCount *big.Int) (common.Hash, common.Hash) {

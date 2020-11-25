@@ -18,7 +18,9 @@ package chainobserver
 
 import (
 	"context"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -82,6 +84,10 @@ func TestMain(m *testing.M) {
 	ctx := context.Background()
 	ethclnt = &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 	auth = bind.NewKeyedTransactor(pks[0])
+	authClient, err := ethbridge.NewEthAuthClient(ctx, ethclnt, auth)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	go func() {
 		t := time.NewTicker(time.Second * 1)
@@ -90,10 +96,10 @@ func TestMain(m *testing.M) {
 		}
 	}()
 
-	_, tx, deployedTester, err := ethbridgetestcontracts.DeployRollupTester(
-		auth,
-		ethclnt,
-	)
+	rollupAddr, tx, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, error) {
+		rollupAddress, tx, _, err := ethbridgetestcontracts.DeployRollupTester(auth, ethclnt)
+		return rollupAddress, tx, err
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -108,7 +114,11 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	rollupTester = deployedTester
+
+	rollupTester, err = ethbridgetestcontracts.NewRollupTester(rollupAddr, ethclnt)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	code := m.Run()
 	if err := os.RemoveAll(dbPath); err != nil {
@@ -119,7 +129,7 @@ func TestMain(m *testing.M) {
 
 func TestConfirmAssertion(t *testing.T) {
 	ctx := context.Background()
-	clnt, err := ethbridge.NewEthAuthClient(ctx, ethclnt, auth)
+	authClient, err := ethbridge.NewEthAuthClient(ctx, ethclnt, auth)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,12 +141,12 @@ func TestConfirmAssertion(t *testing.T) {
 		ArbGasSpeedLimitPerTick: 100000,
 	}
 
-	arbFactoryAddress, err := ethbridge.DeployRollupFactory(auth, ethclnt)
+	arbFactoryAddress, err := ethbridge.DeployRollupFactory(ctx, authClient, ethclnt)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	factory, err := clnt.NewArbFactory(common.NewAddressFromEth(arbFactoryAddress))
+	factory, err := authClient.NewArbFactory(common.NewAddressFromEth(arbFactoryAddress))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +166,7 @@ func TestConfirmAssertion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rollupContract, err := clnt.NewRollup(rollupAddress)
+	rollupContract, err := authClient.NewRollup(rollupAddress)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +176,7 @@ func TestConfirmAssertion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	globalInbox, err := clnt.NewGlobalInbox(ctx, inboxAddress, rollupAddress)
+	globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,7 +244,7 @@ func TestConfirmAssertion(t *testing.T) {
 		[]value.Value{},
 	)
 
-	currentBlock, err := clnt.BlockIdForHeight(ctx, nil)
+	currentBlock, err := authClient.BlockIdForHeight(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -267,7 +277,7 @@ func TestConfirmAssertion(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	currentTime, err := clnt.BlockIdForHeight(ctx, nil)
+	currentTime, err := authClient.BlockIdForHeight(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

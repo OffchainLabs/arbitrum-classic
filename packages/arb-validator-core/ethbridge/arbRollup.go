@@ -47,22 +47,19 @@ func newRollup(address ethcommon.Address, client ethutils.EthClient, auth *Trans
 func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof1 []common.Hash, proof2 []common.Hash) ([]arbbridge.Event, error) {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
+
+	blankAddress := ethcommon.Address{}
+	st, err := vm.ArbRollup.GetStakeToken(&bind.CallOpts{Context: ctx})
+	if err != nil {
+		return nil, err
+	}
+
 	tx, err := vm.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		call := &bind.TransactOpts{
-			From:    auth.From,
-			Signer:  auth.Signer,
-			Context: ctx,
-		}
-		blankAddress := ethcommon.Address{}
-		st, err := vm.ArbRollup.GetStakeToken(&bind.CallOpts{Context: ctx})
-		if err != nil {
-			return nil, err
-		}
 		if st == blankAddress {
-			call.Value = stakeAmount
+			auth.Value = stakeAmount
 		}
 		return vm.ArbRollup.PlaceStake(
-			call,
+			auth,
 			common.HashSliceToRaw(proof1),
 			common.HashSliceToRaw(proof2),
 		)

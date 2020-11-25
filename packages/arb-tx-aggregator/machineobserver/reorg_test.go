@@ -21,7 +21,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
-func setupRollup(ctx context.Context, client ethutils.EthClient, auth *bind.TransactOpts) (common.Address, common.Address, error) {
+func setupRollup(ctx context.Context, client ethutils.EthClient, authClient *ethbridge.EthArbAuthClient) (common.Address, common.Address, error) {
 	config := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(10),
 		StakeToken:              common.Address{},
@@ -30,17 +30,12 @@ func setupRollup(ctx context.Context, client ethutils.EthClient, auth *bind.Tran
 		ArbGasSpeedLimitPerTick: 200000,
 	}
 
-	factoryAddr, err := ethbridge.DeployRollupFactory(auth, client)
+	factoryAddr, err := ethbridge.DeployRollupFactory(ctx, authClient, client)
 	if err != nil {
 		return common.Address{}, common.Address{}, err
 	}
 
-	arbClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
-	if err != nil {
-		return common.Address{}, common.Address{}, err
-	}
-
-	factory, err := arbClient.NewArbFactory(common.NewAddressFromEth(factoryAddr))
+	factory, err := authClient.NewArbFactory(common.NewAddressFromEth(factoryAddr))
 	if err != nil {
 		return common.Address{}, common.Address{}, err
 	}
@@ -83,11 +78,6 @@ func TestReorg(t *testing.T) {
 
 	common.SetDurationPerBlock(time.Millisecond * 10)
 
-	rollupAddress, inboxAddress, err := setupRollup(context.Background(), l1Client, bind.NewKeyedTransactor(pks[0]))
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	dbPath := "dbPath"
 
 	if err := os.RemoveAll(dbPath); err != nil {
@@ -99,21 +89,26 @@ func TestReorg(t *testing.T) {
 		}
 	}()
 
-	auth := bind.NewKeyedTransactor(pks[0])
+	txOpts := bind.NewKeyedTransactor(pks[0])
 
-	authClient, err := ethbridge.NewEthAuthClient(ctx, l1Client, auth)
+	authClient, err := ethbridge.NewEthAuthClient(ctx, l1Client, txOpts)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	inboxConn, err := authClient.NewGlobalInbox(ctx, inboxAddress, rollupAddress)
+	rollupAddress, inboxAddress, err := setupRollup(ctx, l1Client, authClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	inboxConn, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	dest := common.RandAddress()
 
-	if err := inboxConn.DepositEthMessage(context.Background(), common.NewAddressFromEth(auth.From), big.NewInt(100000)); err != nil {
+	if err := inboxConn.DepositEthMessage(ctx, authClient.Address(), big.NewInt(100000)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -132,7 +127,7 @@ func TestReorg(t *testing.T) {
 				return
 			}
 
-			ev, err := inboxConn.SendL2Message(context.Background(), msg.AsData())
+			ev, err := inboxConn.SendL2Message(ctx, msg.AsData())
 			if err != nil {
 				errChan <- err
 				return
@@ -143,7 +138,7 @@ func TestReorg(t *testing.T) {
 	}()
 
 	_, err = RunObserver(
-		context.Background(),
+		ctx,
 		rollupAddress,
 		arbbridge.NewStressTestClient(ethbridge.NewEthClient(l1Client), time.Second),
 		arbos.Path(),

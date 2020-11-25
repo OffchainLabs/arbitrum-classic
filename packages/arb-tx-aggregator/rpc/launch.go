@@ -94,7 +94,7 @@ func LaunchAggregator(
 		if err != nil {
 			return err
 		}
-		globalInbox, err := authClient.NewGlobalInbox(ctx, inboxAddress, rollupAddress)
+		globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
 		if err != nil {
 			return err
 		}
@@ -104,7 +104,7 @@ func LaunchAggregator(
 		if err != nil {
 			return err
 		}
-		globalInbox, err := authClient.NewGlobalInbox(ctx, inboxAddress, rollupAddress)
+		globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
 		if err != nil {
 			return err
 		}

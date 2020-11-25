@@ -44,21 +44,36 @@ func newChallengeFactory(address ethcommon.Address, client ethutils.EthClient, a
 	return &challengeFactory{vmCreatorContract, client, auth}, nil
 }
 
-func DeployChallengeFactory(auth *bind.TransactOpts, client ethutils.EthClient) (ethcommon.Address, error) {
-	inboxTopAddr, _, _, err := ethbridgecontracts.DeployInboxTopChallenge(auth, client)
+func DeployChallengeFactory(ctx context.Context, authClient *EthArbAuthClient, client ethutils.EthClient) (ethcommon.Address, *types.Transaction, error) {
+	inboxTopAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, error) {
+		inboxTopAddr, tx, _, err := ethbridgecontracts.DeployInboxTopChallenge(auth, client)
+		return inboxTopAddr, tx, err
+	})
 	if err != nil {
-		return ethcommon.Address{}, err
+		return ethcommon.Address{}, nil, err
 	}
-	executionAddr, _, _, err := ethbridgecontracts.DeployExecutionChallenge(auth, client)
+
+	executionAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, error) {
+		executionAddr, tx, _, err := ethbridgecontracts.DeployExecutionChallenge(auth, client)
+		return executionAddr, tx, err
+	})
 	if err != nil {
-		return ethcommon.Address{}, err
+		return ethcommon.Address{}, nil, err
 	}
-	ospAddr, _, _, err := ethbridgecontracts.DeployOneStepProof(auth, client)
+
+	ospAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, error) {
+		ospAddr, tx, _, err := ethbridgecontracts.DeployOneStepProof(auth, client)
+		return ospAddr, tx, err
+	})
 	if err != nil {
-		return ethcommon.Address{}, err
+		return ethcommon.Address{}, nil, err
 	}
-	factoryAddr, _, _, err := ethbridgecontracts.DeployChallengeFactory(auth, client, inboxTopAddr, executionAddr, ospAddr)
-	return factoryAddr, err
+
+	factoryAddr, tx, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, error) {
+		factoryAddr, tx, _, err := ethbridgecontracts.DeployChallengeFactory(auth, client, inboxTopAddr, executionAddr, ospAddr)
+		return factoryAddr, tx, err
+	})
+	return factoryAddr, tx, err
 }
 
 func (con *challengeFactory) CreateChallenge(

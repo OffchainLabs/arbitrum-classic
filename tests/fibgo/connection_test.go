@@ -44,17 +44,17 @@ func setupRollup(ctx context.Context, client ethutils.EthClient, auth *bind.Tran
 		ArbGasSpeedLimitPerTick: 200000,
 	}
 
-	factoryAddr, err := ethbridge.DeployRollupFactory(auth, client)
+	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
 	if err != nil {
 		return common.Address{}, err
 	}
 
-	arbClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
+	factoryAddr, err := ethbridge.DeployRollupFactory(ctx, authClient, client)
 	if err != nil {
 		return common.Address{}, err
 	}
 
-	factory, err := arbClient.NewArbFactory(common.NewAddressFromEth(factoryAddr))
+	factory, err := authClient.NewArbFactory(common.NewAddressFromEth(factoryAddr))
 	if err != nil {
 		return common.Address{}, err
 	}
