@@ -36,19 +36,10 @@ type globalInbox struct {
 	auth *TransactAuth
 }
 
-func newGlobalInbox(ctx context.Context, address ethcommon.Address, chain ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*globalInbox, error) {
+func newGlobalInbox(address ethcommon.Address, chain ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*globalInbox, error) {
 	watcher, err := newGlobalInboxWatcher(address, chain, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to GlobalInbox")
-	}
-	auth.Lock()
-	defer auth.Unlock()
-	if auth.auth.Nonce == nil {
-		nonce, err := client.PendingNonceAt(ctx, auth.auth.From)
-		if err != nil {
-			return nil, errors2.Wrap(err, "Failed to get nonce for GlobalInbox")
-		}
-		auth.auth.Nonce = new(big.Int).SetUint64(nonce)
 	}
 	return &globalInbox{watcher, auth}, nil
 }

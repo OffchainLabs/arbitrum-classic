@@ -88,7 +88,10 @@ func ValidateRollupChain(
 	if err != nil {
 		return err
 	}
-	client := ethbridge.NewEthAuthClient(ethclint, auth)
+	client, err := ethbridge.NewEthAuthClient(ctx, ethclint, auth)
+	if err != nil {
+		return err
+	}
 
 	rollup, err := client.NewRollup(rollupArgs.Address)
 	if err != nil {

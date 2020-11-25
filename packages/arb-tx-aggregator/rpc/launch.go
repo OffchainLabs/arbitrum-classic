@@ -90,14 +90,20 @@ func LaunchAggregator(
 		}
 		batch = batcher.NewForwarder(forwardClient)
 	case StatelessBatcherMode:
-		authClient := ethbridge.NewEthAuthClient(client, batcherMode.Auth)
+		authClient, err := ethbridge.NewEthAuthClient(ctx, client, batcherMode.Auth)
+		if err != nil {
+			return err
+		}
 		globalInbox, err := authClient.NewGlobalInbox(ctx, inboxAddress, rollupAddress)
 		if err != nil {
 			return err
 		}
 		batch = batcher.NewStatelessBatcher(ctx, rollupAddress, client, globalInbox, maxBatchTime)
 	case StatefulBatcherMode:
-		authClient := ethbridge.NewEthAuthClient(client, batcherMode.Auth)
+		authClient, err := ethbridge.NewEthAuthClient(ctx, client, batcherMode.Auth)
+		if err != nil {
+			return err
+		}
 		globalInbox, err := authClient.NewGlobalInbox(ctx, inboxAddress, rollupAddress)
 		if err != nil {
 			return err

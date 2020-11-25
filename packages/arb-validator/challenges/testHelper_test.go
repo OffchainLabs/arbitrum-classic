@@ -243,8 +243,15 @@ func getChallengeInfo(
 	challengeHash [32]byte,
 	testerAddress ethcommon.Address,
 ) (*ethbridge.EthArbAuthClient, *ethbridge.EthArbAuthClient, common.Address, *common.BlockId, error) {
-	asserterClient := ethbridge.NewEthAuthClient(client, asserter)
-	challengerClient := ethbridge.NewEthAuthClient(client, challenger)
+	ctx := context.Background()
+	asserterClient, err := ethbridge.NewEthAuthClient(ctx, client, asserter)
+	if err != nil {
+		return nil, nil, common.Address{}, nil, err
+	}
+	challengerClient, err := ethbridge.NewEthAuthClient(ctx, client, challenger)
+	if err != nil {
+		return nil, nil, common.Address{}, nil, err
+	}
 
 	tester, err := ethbridgetestcontracts.NewChallengeTester(testerAddress, client)
 	if err != nil {

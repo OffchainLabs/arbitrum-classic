@@ -49,7 +49,10 @@ func setupRollup(ctx context.Context, client ethutils.EthClient, auth *bind.Tran
 		return common.Address{}, err
 	}
 
-	arbClient := ethbridge.NewEthAuthClient(client, auth)
+	arbClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
+	if err != nil {
+		return common.Address{}, err
+	}
 
 	factory, err := arbClient.NewArbFactory(common.NewAddressFromEth(factoryAddr))
 	if err != nil {
@@ -85,12 +88,15 @@ func setupValidators(
 	// seed := int64(1559616168133477000)
 	rand.Seed(seed)
 
+	ctx := context.Background()
 	clients := make([]arbbridge.ArbAuthClient, 0, len(pks))
 	for _, pk := range pks {
-		clients = append(clients, ethbridge.NewEthAuthClient(client, bind.NewKeyedTransactor(pk)))
+		client, err := ethbridge.NewEthAuthClient(ctx, client, bind.NewKeyedTransactor(pk))
+		if err != nil {
+			return err
+		}
+		clients = append(clients, client)
 	}
-
-	ctx := context.Background()
 
 	managers := make([]*rollupmanager.Manager, 0, len(clients))
 	for _, client := range clients {

@@ -35,7 +35,10 @@ func setupRollup(ctx context.Context, client ethutils.EthClient, auth *bind.Tran
 		return common.Address{}, common.Address{}, err
 	}
 
-	arbClient := ethbridge.NewEthAuthClient(client, auth)
+	arbClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
+	if err != nil {
+		return common.Address{}, common.Address{}, err
+	}
 
 	factory, err := arbClient.NewArbFactory(common.NewAddressFromEth(factoryAddr))
 	if err != nil {
@@ -98,7 +101,11 @@ func TestReorg(t *testing.T) {
 
 	auth := bind.NewKeyedTransactor(pks[0])
 
-	authClient := ethbridge.NewEthAuthClient(l1Client, auth)
+	authClient, err := ethbridge.NewEthAuthClient(ctx, l1Client, auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	inboxConn, err := authClient.NewGlobalInbox(ctx, inboxAddress, rollupAddress)
 	if err != nil {
 		t.Fatal(err)

@@ -234,11 +234,18 @@ type EthArbAuthClient struct {
 	auth *TransactAuth
 }
 
-func NewEthAuthClient(client ethutils.EthClient, auth *bind.TransactOpts) *EthArbAuthClient {
+func NewEthAuthClient(ctx context.Context, client ethutils.EthClient, auth *bind.TransactOpts) (*EthArbAuthClient, error) {
+	if auth.Nonce == nil {
+		nonce, err := client.PendingNonceAt(ctx, auth.From)
+		if err != nil {
+			return nil, errors2.Wrap(err, "Failed to get nonce for GlobalInbox")
+		}
+		auth.Nonce = new(big.Int).SetUint64(nonce)
+	}
 	return &EthArbAuthClient{
 		EthArbClient: NewEthClient(client),
 		auth:         &TransactAuth{auth: auth},
-	}
+	}, nil
 }
 
 func (c *EthArbAuthClient) Address() common.Address {
@@ -254,7 +261,7 @@ func (c *EthArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollu
 }
 
 func (c *EthArbAuthClient) NewGlobalInbox(ctx context.Context, address common.Address, rollupAddress common.Address) (arbbridge.GlobalInbox, error) {
-	return newGlobalInbox(ctx, address.ToEthAddress(), rollupAddress.ToEthAddress(), c.client, c.auth)
+	return newGlobalInbox(address.ToEthAddress(), rollupAddress.ToEthAddress(), c.client, c.auth)
 }
 
 func (c *EthArbAuthClient) NewChallengeFactory(address common.Address) (arbbridge.ChallengeFactory, error) {

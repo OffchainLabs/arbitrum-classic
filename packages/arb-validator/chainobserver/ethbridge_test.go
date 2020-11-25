@@ -118,8 +118,11 @@ func TestMain(m *testing.M) {
 }
 
 func TestConfirmAssertion(t *testing.T) {
-	clnt := ethbridge.NewEthAuthClient(ethclnt, auth)
 	ctx := context.Background()
+	clnt, err := ethbridge.NewEthAuthClient(ctx, ethclnt, auth)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	chainParams := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(0),

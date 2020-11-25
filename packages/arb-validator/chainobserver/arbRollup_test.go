@@ -122,7 +122,11 @@ func TestRecoverStake(t *testing.T) {
 }
 
 func getRollup(t *testing.T) arbbridge.ArbRollup {
-	clnt := ethbridge.NewEthAuthClient(ethclnt, auth)
+	ctx := context.Background()
+	clnt, err := ethbridge.NewEthAuthClient(ctx, ethclnt, auth)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	chainParams := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(0),
