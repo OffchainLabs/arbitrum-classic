@@ -18,7 +18,9 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
@@ -70,16 +72,18 @@ func (c *executionChallenge) BisectAssertion(
 	}
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	tx, err := c.challenge.BisectAssertion(
-		c.auth.getAuth(ctx),
-		machineHashes,
-		inboxHashes,
-		messageAccs,
-		logAccs,
-		outCounts,
-		gasses,
-		totalSteps,
-	)
+	tx, err := c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return c.challenge.BisectAssertion(
+			auth,
+			machineHashes,
+			inboxHashes,
+			messageAccs,
+			logAccs,
+			outCounts,
+			gasses,
+			totalSteps,
+		)
+	})
 	if err != nil {
 		return c.challenge.BisectAssertionCall(
 			ctx,
@@ -105,13 +109,15 @@ func (c *executionChallenge) OneStepProof(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	tx, err := c.challenge.OneStepProof(
-		c.auth.getAuth(ctx),
-		assertion.AfterInboxHash,
-		assertion.FirstMessageHash,
-		assertion.FirstLogHash,
-		proof,
-	)
+	tx, err := c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return c.challenge.OneStepProof(
+			auth,
+			assertion.AfterInboxHash,
+			assertion.FirstMessageHash,
+			assertion.FirstLogHash,
+			proof,
+		)
+	})
 	if err != nil {
 		return c.challenge.OneStepProofCall(
 			ctx,
@@ -135,19 +141,21 @@ func (c *executionChallenge) OneStepProofWithMessage(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	tx, err := c.challenge.OneStepProofWithMessage(
-		c.auth.getAuth(ctx),
-		assertion.AfterInboxHash,
-		assertion.FirstMessageHash,
-		assertion.FirstLogHash,
-		proof,
-		uint8(msg.Kind),
-		msg.ChainTime.BlockNum.AsInt(),
-		msg.ChainTime.Timestamp,
-		msg.Sender.ToEthAddress(),
-		msg.InboxSeqNum,
-		msg.Data,
-	)
+	tx, err := c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return c.challenge.OneStepProofWithMessage(
+			auth,
+			assertion.AfterInboxHash,
+			assertion.FirstMessageHash,
+			assertion.FirstLogHash,
+			proof,
+			uint8(msg.Kind),
+			msg.ChainTime.BlockNum.AsInt(),
+			msg.ChainTime.Timestamp,
+			msg.Sender.ToEthAddress(),
+			msg.InboxSeqNum,
+			msg.Data,
+		)
+	})
 	if err != nil {
 		return c.challenge.OneStepProofInboxCall(
 			ctx,

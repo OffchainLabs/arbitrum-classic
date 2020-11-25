@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"errors"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
@@ -76,13 +77,15 @@ func (c *bisectionChallenge) chooseSegment(
 	}
 
 	tree := NewMerkleTree(segments)
-	tx, err := c.BisectionChallenge.ChooseSegment(
-		c.auth.getAuth(ctx),
-		big.NewInt(int64(segmentToChallenge)),
-		tree.GetProofFlat(int(segmentToChallenge)),
-		tree.GetRoot(),
-		tree.GetNode(int(segmentToChallenge)),
-	)
+	tx, err := c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return c.BisectionChallenge.ChooseSegment(
+			auth,
+			big.NewInt(int64(segmentToChallenge)),
+			tree.GetProofFlat(int(segmentToChallenge)),
+			tree.GetRoot(),
+			tree.GetNode(int(segmentToChallenge)),
+		)
+	})
 	if err != nil {
 		return c.BisectionChallenge.ChooseSegmentCall(
 			ctx,

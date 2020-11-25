@@ -69,6 +69,7 @@ func setupRollup(ctx context.Context, client ethutils.EthClient, auth *bind.Tran
 // to test it's ability to handle reorgs
 func TestReorg(t *testing.T) {
 	clnt, pks := test.SimulatedBackend()
+	ctx := context.Background()
 	l1Client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 	go func() {
 		t := time.NewTicker(time.Millisecond * 10)
@@ -98,7 +99,7 @@ func TestReorg(t *testing.T) {
 	auth := bind.NewKeyedTransactor(pks[0])
 
 	authClient := ethbridge.NewEthAuthClient(l1Client, auth)
-	inboxConn, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
+	inboxConn, err := authClient.NewGlobalInbox(ctx, inboxAddress, rollupAddress)
 	if err != nil {
 		t.Fatal(err)
 	}

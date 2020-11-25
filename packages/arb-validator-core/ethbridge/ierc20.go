@@ -46,11 +46,13 @@ func newIERC20(address ethcommon.Address, client ethutils.EthClient, auth *Trans
 func (con *IERC20) Approve(ctx context.Context, spender common.Address, amount *big.Int) error {
 	con.auth.Lock()
 	defer con.auth.Unlock()
-	tx, err := con.IERC20.Approve(
-		con.auth.getAuth(ctx),
-		spender.ToEthAddress(),
-		amount,
-	)
+	tx, err := con.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return con.IERC20.Approve(
+			auth,
+			spender.ToEthAddress(),
+			amount,
+		)
+	})
 	if err != nil {
 		return err
 	}

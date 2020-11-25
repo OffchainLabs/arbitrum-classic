@@ -20,10 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
@@ -188,6 +190,33 @@ type TransactAuth struct {
 	auth *bind.TransactOpts
 }
 
+func (t *TransactAuth) makeTx(ctx context.Context, txFunc func(auth *bind.TransactOpts) (*types.Transaction, error)) (*types.Transaction, error) {
+	const smallNonceRepeatCount = 5
+	const smallNonceError = "Try increasing the gas price or incrementing the nonce."
+
+	auth := t.getAuth(ctx)
+
+	tx, err := txFunc(auth)
+
+	if t.auth.Nonce == nil {
+		// Not incrementing nonce, so nothing else to do
+		return tx, err
+	}
+
+	for i := 0; i < smallNonceRepeatCount && err != nil && strings.Contains(err.Error(), smallNonceError); i++ {
+		// Increment nonce and try again
+		t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
+		tx, err = txFunc(auth)
+	}
+
+	if err == nil {
+		// Transaction successful, increment nonce for next time
+		t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
+	}
+
+	return tx, err
+}
+
 func (t *TransactAuth) getAuth(ctx context.Context) *bind.TransactOpts {
 	return &bind.TransactOpts{
 		From:     t.auth.From,
@@ -224,8 +253,8 @@ func (c *EthArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollu
 	return newRollup(address.ToEthAddress(), c.client, c.auth)
 }
 
-func (c *EthArbAuthClient) NewGlobalInbox(address common.Address, rollupAddress common.Address) (arbbridge.GlobalInbox, error) {
-	return newGlobalInbox(address.ToEthAddress(), rollupAddress.ToEthAddress(), c.client, c.auth)
+func (c *EthArbAuthClient) NewGlobalInbox(ctx context.Context, address common.Address, rollupAddress common.Address) (arbbridge.GlobalInbox, error) {
+	return newGlobalInbox(ctx, address.ToEthAddress(), rollupAddress.ToEthAddress(), c.client, c.auth)
 }
 
 func (c *EthArbAuthClient) NewChallengeFactory(address common.Address) (arbbridge.ChallengeFactory, error) {

@@ -36,10 +36,19 @@ type globalInbox struct {
 	auth *TransactAuth
 }
 
-func newGlobalInbox(address ethcommon.Address, chain ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*globalInbox, error) {
+func newGlobalInbox(ctx context.Context, address ethcommon.Address, chain ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*globalInbox, error) {
 	watcher, err := newGlobalInboxWatcher(address, chain, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to GlobalInbox")
+	}
+	auth.Lock()
+	defer auth.Unlock()
+	if auth.auth.Nonce == nil {
+		nonce, err := client.PendingNonceAt(ctx, auth.auth.From)
+		if err != nil {
+			return nil, errors2.Wrap(err, "Failed to get nonce for GlobalInbox")
+		}
+		auth.auth.Nonce = new(big.Int).SetUint64(nonce)
 	}
 	return &globalInbox{watcher, auth}, nil
 }
@@ -47,11 +56,13 @@ func newGlobalInbox(address ethcommon.Address, chain ethcommon.Address, client e
 func (con *globalInbox) SendL2Message(ctx context.Context, data []byte) (arbbridge.MessageDeliveredEvent, error) {
 	con.auth.Lock()
 	defer con.auth.Unlock()
-	tx, err := con.GlobalInbox.SendL2MessageFromOrigin(
-		con.auth.getAuth(ctx),
-		con.rollupAddress,
-		data,
-	)
+	tx, err := con.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return con.GlobalInbox.SendL2MessageFromOrigin(
+			auth,
+			con.rollupAddress,
+			data,
+		)
+	})
 	if err != nil {
 		return arbbridge.MessageDeliveredEvent{}, err
 	}
@@ -76,11 +87,13 @@ func (con *globalInbox) SendL2Message(ctx context.Context, data []byte) (arbbrid
 func (con *globalInbox) SendL2MessageNoWait(ctx context.Context, data []byte) (common.Hash, error) {
 	con.auth.Lock()
 	defer con.auth.Unlock()
-	tx, err := con.GlobalInbox.SendL2MessageFromOrigin(
-		con.auth.getAuth(ctx),
-		con.rollupAddress,
-		data,
-	)
+	tx, err := con.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return con.GlobalInbox.SendL2MessageFromOrigin(
+			auth,
+			con.rollupAddress,
+			data,
+		)
+	})
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -92,18 +105,22 @@ func (con *globalInbox) DepositEthMessage(
 	destination common.Address,
 	value *big.Int,
 ) error {
-
-	tx, err := con.GlobalInbox.DepositEthMessage(
-		&bind.TransactOpts{
-			From:     con.auth.auth.From,
-			Signer:   con.auth.auth.Signer,
-			GasLimit: con.auth.auth.GasLimit,
-			Value:    value,
-			Context:  ctx,
-		},
-		con.rollupAddress,
-		destination.ToEthAddress(),
-	)
+	con.auth.Lock()
+	defer con.auth.Unlock()
+	tx, err := con.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return con.GlobalInbox.DepositEthMessage(
+			&bind.TransactOpts{
+				From:     auth.From,
+				Signer:   auth.Signer,
+				GasLimit: auth.GasLimit,
+				Nonce:    auth.Nonce,
+				Value:    value,
+				Context:  ctx,
+			},
+			con.rollupAddress,
+			destination.ToEthAddress(),
+		)
+	})
 
 	if err != nil {
 		return err
@@ -120,13 +137,15 @@ func (con *globalInbox) DepositERC20Message(
 ) error {
 	con.auth.Lock()
 	defer con.auth.Unlock()
-	tx, err := con.GlobalInbox.DepositERC20Message(
-		con.auth.getAuth(ctx),
-		con.rollupAddress,
-		tokenAddress.ToEthAddress(),
-		destination.ToEthAddress(),
-		value,
-	)
+	tx, err := con.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return con.GlobalInbox.DepositERC20Message(
+			auth,
+			con.rollupAddress,
+			tokenAddress.ToEthAddress(),
+			destination.ToEthAddress(),
+			value,
+		)
+	})
 
 	if err != nil {
 		return err
@@ -143,13 +162,15 @@ func (con *globalInbox) DepositERC721Message(
 ) error {
 	con.auth.Lock()
 	defer con.auth.Unlock()
-	tx, err := con.GlobalInbox.DepositERC721Message(
-		con.auth.getAuth(ctx),
-		con.rollupAddress,
-		tokenAddress.ToEthAddress(),
-		destination.ToEthAddress(),
-		value,
-	)
+	tx, err := con.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return con.GlobalInbox.DepositERC721Message(
+			auth,
+			con.rollupAddress,
+			tokenAddress.ToEthAddress(),
+			destination.ToEthAddress(),
+			value,
+		)
+	})
 
 	if err != nil {
 		return err

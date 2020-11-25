@@ -40,7 +40,7 @@ func NewForwarder(client *ethclient.Client) *Forwarder {
 func (b *Forwarder) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
 	nonce, err := b.client.PendingNonceAt(ctx, account.ToEthAddress())
 	if err != nil {
-		log.Println("Error fetching pending nice")
+		log.Println("Error fetching pending nonce")
 		return nil
 	}
 	return &nonce

@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"errors"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"strings"
@@ -66,7 +67,9 @@ func newChallenge(address ethcommon.Address, client ethutils.EthClient, auth *Tr
 func (c *challenge) TimeoutChallenge(ctx context.Context) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	tx, err := c.Challenge.TimeoutChallenge(c.auth.getAuth(ctx))
+	tx, err := c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return c.Challenge.TimeoutChallenge(auth)
+	})
 	if err != nil {
 		return c.Challenge.TimeoutChallengeCall(
 			ctx,

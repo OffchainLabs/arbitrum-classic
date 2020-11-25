@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
@@ -70,14 +71,16 @@ func (con *challengeFactory) CreateChallenge(
 ) (common.Address, error) {
 	con.auth.Lock()
 	defer con.auth.Unlock()
-	tx, err := con.contract.CreateChallenge(
-		con.auth.getAuth(ctx),
-		asserter.ToEthAddress(),
-		challenger.ToEthAddress(),
-		challengePeriod.Val,
-		challengeHash,
-		challengeType,
-	)
+	tx, err := con.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return con.contract.CreateChallenge(
+			auth,
+			asserter.ToEthAddress(),
+			challenger.ToEthAddress(),
+			challengePeriod.Val,
+			challengeHash,
+			challengeType,
+		)
+	})
 	if err != nil {
 		return common.Address{}, errors2.Wrap(err, "Failed to call to challengeFactory.CreateChallenge")
 	}

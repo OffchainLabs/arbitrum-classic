@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
@@ -69,17 +70,19 @@ func (con *arbFactory) CreateRollup(
 ) (common.Address, *common.BlockId, error) {
 	con.auth.Lock()
 	defer con.auth.Unlock()
-	tx, err := con.contract.CreateRollup(
-		con.auth.getAuth(ctx),
-		vmState,
-		params.GracePeriod.Val,
-		new(big.Int).SetUint64(params.ArbGasSpeedLimitPerTick),
-		params.MaxExecutionSteps,
-		params.StakeRequirement,
-		params.StakeToken.ToEthAddress(),
-		owner.ToEthAddress(),
-		[]byte{},
-	)
+	tx, err := con.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return con.contract.CreateRollup(
+			auth,
+			vmState,
+			params.GracePeriod.Val,
+			new(big.Int).SetUint64(params.ArbGasSpeedLimitPerTick),
+			params.MaxExecutionSteps,
+			params.StakeRequirement,
+			params.StakeToken.ToEthAddress(),
+			owner.ToEthAddress(),
+			[]byte{},
+		)
+	})
 	if err != nil {
 		return common.Address{}, nil, errors2.Wrap(err, "Failed to call to ChainFactory.CreateChain")
 	}

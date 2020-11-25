@@ -18,6 +18,8 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
@@ -54,11 +56,13 @@ func (c *inboxTopChallenge) Bisect(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	tx, err := c.contract.Bisect(
-		c.auth.getAuth(ctx),
-		common.HashSliceToRaw(chainHashes),
-		chainLength,
-	)
+	tx, err := c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return c.contract.Bisect(
+			auth,
+			common.HashSliceToRaw(chainHashes),
+			chainLength,
+		)
+	})
 	if err != nil {
 		return c.contract.BisectCall(
 			ctx,
@@ -79,11 +83,13 @@ func (c *inboxTopChallenge) OneStepProof(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	tx, err := c.contract.OneStepProof(
-		c.auth.getAuth(ctx),
-		lowerHashA,
-		value,
-	)
+	tx, err := c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return c.contract.OneStepProof(
+			auth,
+			lowerHashA,
+			value,
+		)
+	})
 	if err != nil {
 		return err
 	}
