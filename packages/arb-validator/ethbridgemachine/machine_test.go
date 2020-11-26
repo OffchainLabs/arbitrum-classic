@@ -22,7 +22,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
@@ -30,23 +32,30 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"log"
 	"math/big"
 	"testing"
 )
 
 func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
-	clnt, pks := test.SimulatedBackend()
-	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
+	backend, pks := test.SimulatedBackend()
+	ctx := context.Background()
+	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth := bind.NewKeyedTransactor(pks[0])
+	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	_, machineTx, deployedMachineTester, err := ethbridgetestcontracts.DeployMachineTester(
-		auth,
-		client,
-	)
+	machineTesterAddr, machineTx, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgetestcontracts.DeployMachineTester(auth, client)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	client.Commit()
+
 	_, err = ethbridge.WaitForReceiptWithResults(
 		context.Background(),
 		client,
@@ -56,6 +65,11 @@ func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
 	)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	deployedMachineTester, err := ethbridgetestcontracts.NewMachineTester(machineTesterAddr, client)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	return deployedMachineTester

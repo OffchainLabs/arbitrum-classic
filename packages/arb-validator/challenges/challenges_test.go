@@ -55,9 +55,8 @@ func TestChallenges(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testerAddress, _, err = authClients[0].MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, error) {
-		addr, tx, _, err := ethbridgetestcontracts.DeployChallengeTester(auth, client, factorAddr)
-		return addr, tx, err
+	testerAddress, _, err = authClients[0].MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgetestcontracts.DeployChallengeTester(auth, client, factorAddr)
 	})
 	if err != nil {
 		t.Fatal(err)

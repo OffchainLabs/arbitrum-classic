@@ -50,7 +50,7 @@ import (
 var dbPath = "./testdb"
 
 var rollupTester *ethbridgetestcontracts.RollupTester
-var ethclnt *ethutils.SimulatedEthClient
+var client *ethutils.SimulatedEthClient
 var auth *bind.TransactOpts
 
 func ethTransfer(t *testing.T, dest common.Address, amount *big.Int) value.Value {
@@ -80,11 +80,11 @@ func checkBalance(t *testing.T, ctx context.Context, globalInbox arbbridge.Globa
 }
 
 func TestMain(m *testing.M) {
-	clnt, pks := test.SimulatedBackend()
+	backend, pks := test.SimulatedBackend()
 	ctx := context.Background()
-	ethclnt = &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
+	client = &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth = bind.NewKeyedTransactor(pks[0])
-	authClient, err := ethbridge.NewEthAuthClient(ctx, ethclnt, auth)
+	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -92,13 +92,12 @@ func TestMain(m *testing.M) {
 	go func() {
 		t := time.NewTicker(time.Second * 1)
 		for range t.C {
-			ethclnt.Commit()
+			client.Commit()
 		}
 	}()
 
-	rollupAddr, tx, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, error) {
-		rollupAddress, tx, _, err := ethbridgetestcontracts.DeployRollupTester(auth, ethclnt)
-		return rollupAddress, tx, err
+	rollupAddr, tx, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgetestcontracts.DeployRollupTester(auth, client)
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -106,7 +105,7 @@ func TestMain(m *testing.M) {
 
 	_, err = ethbridge.WaitForReceiptWithResults(
 		ctx,
-		ethclnt,
+		client,
 		auth.From,
 		tx,
 		"DeployRollupTester",
@@ -115,7 +114,7 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	rollupTester, err = ethbridgetestcontracts.NewRollupTester(rollupAddr, ethclnt)
+	rollupTester, err = ethbridgetestcontracts.NewRollupTester(rollupAddr, client)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -129,7 +128,7 @@ func TestMain(m *testing.M) {
 
 func TestConfirmAssertion(t *testing.T) {
 	ctx := context.Background()
-	authClient, err := ethbridge.NewEthAuthClient(ctx, ethclnt, auth)
+	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +140,7 @@ func TestConfirmAssertion(t *testing.T) {
 		ArbGasSpeedLimitPerTick: 100000,
 	}
 
-	arbFactoryAddress, err := ethbridge.DeployRollupFactory(ctx, authClient, ethclnt)
+	arbFactoryAddress, err := ethbridge.DeployRollupFactory(ctx, authClient, client)
 	if err != nil {
 		t.Fatal(err)
 	}

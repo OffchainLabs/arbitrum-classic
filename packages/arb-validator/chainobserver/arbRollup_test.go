@@ -123,7 +123,7 @@ func TestRecoverStake(t *testing.T) {
 
 func getRollup(t *testing.T) arbbridge.ArbRollup {
 	ctx := context.Background()
-	authClient, err := ethbridge.NewEthAuthClient(ctx, ethclnt, auth)
+	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func getRollup(t *testing.T) arbbridge.ArbRollup {
 		ArbGasSpeedLimitPerTick: 100000,
 	}
 
-	arbFactoryAddress, err := ethbridge.DeployRollupFactory(ctx, authClient, ethclnt)
+	arbFactoryAddress, err := ethbridge.DeployRollupFactory(ctx, authClient, client)
 	if err != nil {
 		t.Fatal(err)
 	}

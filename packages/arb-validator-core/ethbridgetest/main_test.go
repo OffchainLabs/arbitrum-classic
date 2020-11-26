@@ -17,7 +17,12 @@
 package ethbridgetest
 
 import (
+	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"os"
 	"testing"
@@ -30,29 +35,40 @@ var valueTester *ethbridgetestcontracts.ValueTester
 var messageTester *ethbridgetestcontracts.MessageTester
 
 func TestMain(m *testing.M) {
-	client, pks := test.SimulatedBackend()
+	ctx := context.Background()
+	backend, pks := test.SimulatedBackend()
+	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth := bind.NewKeyedTransactor(pks[0])
-
-	_, _, deployedValueTester, err := ethbridgetestcontracts.DeployValueTester(
-		auth,
-		client,
-	)
+	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	_, _, deployedMessageTester, err := ethbridgetestcontracts.DeployMessageTester(
-		auth,
-		client,
-	)
+	valueTesterAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgetestcontracts.DeployValueTester(auth, client)
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	messageTesterAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgetestcontracts.DeployMessageTester(auth, client)
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	client.Commit()
 
-	valueTester = deployedValueTester
-	messageTester = deployedMessageTester
+	valueTester, err = ethbridgetestcontracts.NewValueTester(valueTesterAddr, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	messageTester, err = ethbridgetestcontracts.NewMessageTester(messageTesterAddr, client)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	code := m.Run()
 	os.Exit(code)

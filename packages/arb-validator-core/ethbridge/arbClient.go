@@ -191,13 +191,13 @@ type TransactAuth struct {
 	auth *bind.TransactOpts
 }
 
-func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, error)) (ethcommon.Address, *types.Transaction, error) {
+func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error)) (ethcommon.Address, *types.Transaction, error) {
 	const smallNonceRepeatCount = 5
 	const smallNonceError = "Try increasing the gas price or incrementing the nonce."
 
 	auth := t.getAuth(ctx)
 
-	addr, tx, err := contractFunc(auth)
+	addr, tx, _, err := contractFunc(auth)
 
 	if t.auth.Nonce == nil {
 		// Not incrementing nonce, so nothing else to do
@@ -207,7 +207,7 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 	for i := 0; i < smallNonceRepeatCount && err != nil && strings.Contains(err.Error(), smallNonceError); i++ {
 		// Increment nonce and try again
 		t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
-		addr, tx, err = contractFunc(auth)
+		addr, tx, _, err = contractFunc(auth)
 	}
 
 	if err == nil {
@@ -276,7 +276,7 @@ func NewEthAuthClient(ctx context.Context, client ethutils.EthClient, auth *bind
 	}, nil
 }
 
-func (c *EthArbAuthClient) MakeContract(ctx context.Context, contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, error)) (ethcommon.Address, *types.Transaction, error) {
+func (c *EthArbAuthClient) MakeContract(ctx context.Context, contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error)) (ethcommon.Address, *types.Transaction, error) {
 	return c.auth.makeContract(ctx, contractFunc)
 }
 
