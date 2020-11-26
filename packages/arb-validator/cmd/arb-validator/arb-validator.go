@@ -142,6 +142,6 @@ func createRollupChain() error {
 	return nil
 }
 
-func createManager(rollupAddress common.Address, client arbbridge.ArbClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
-	return rollupmanager.CreateManager(context.Background(), rollupAddress, client, contractFile, dbPath)
+func createManager(ctx context.Context, rollupAddress common.Address, client arbbridge.ArbClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
+	return rollupmanager.CreateManager(ctx, rollupAddress, client, contractFile, dbPath)
 }

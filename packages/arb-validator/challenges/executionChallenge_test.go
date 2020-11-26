@@ -35,7 +35,7 @@ func testExecutionChallenge(t *testing.T, ctx context.Context, client ethutils.E
 
 	testChallengerCatchUp(t, ctx, client, asserterClient, challengerClient, valprotocol.InvalidExecutionChildType, challengeHash, func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 		return DefendExecutionClaim(
-			context.Background(),
+			ctx,
 			client,
 			challengeAddress,
 			blockId,
@@ -49,7 +49,7 @@ func testExecutionChallenge(t *testing.T, ctx context.Context, client ethutils.E
 		)
 	}, func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 		return DefendExecutionClaim(
-			context.Background(),
+			ctx,
 			client,
 			challengeAddress,
 			blockId,
@@ -67,7 +67,7 @@ func testExecutionChallenge(t *testing.T, ctx context.Context, client ethutils.E
 		)
 	}, func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 		return ChallengeExecutionClaim(
-			context.Background(),
+			ctx,
 			client,
 			challengeAddress,
 			blockId,
@@ -81,7 +81,7 @@ func testExecutionChallenge(t *testing.T, ctx context.Context, client ethutils.E
 		)
 	}, func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 		return ChallengeExecutionClaim(
-			context.Background(),
+			ctx,
 			client,
 			challengeAddress,
 			blockId,

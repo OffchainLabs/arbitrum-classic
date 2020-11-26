@@ -37,7 +37,7 @@ func testInboxTopChallenge(t *testing.T, ctx context.Context, client ethutils.Et
 
 	testChallenge(t, ctx, client, asserterClient, challengerClient, valprotocol.InvalidInboxTopChildType, challengeHash, func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 		return DefendInboxTopClaim(
-			context.Background(),
+			ctx,
 			client,
 			challengeAddress,
 			blockId,
@@ -49,7 +49,7 @@ func testInboxTopChallenge(t *testing.T, ctx context.Context, client ethutils.Et
 		)
 	}, func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *common.BlockId) (ChallengeState, error) {
 		return ChallengeInboxTopClaim(
-			context.Background(),
+			ctx,
 			client,
 			challengeAddress,
 			blockId,

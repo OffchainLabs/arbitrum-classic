@@ -45,11 +45,12 @@ func TestContructor(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := client.SendTransaction(context.Background(), signedTx); err != nil {
+	ctx := context.Background()
+	if err := client.SendTransaction(ctx, signedTx); err != nil {
 		t.Fatal(err)
 	}
 	client.Commit()
-	ethReceipt, err := client.TransactionReceipt(context.Background(), signedTx.Hash())
+	ethReceipt, err := client.TransactionReceipt(ctx, signedTx.Hash())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +118,7 @@ func TestContructor(t *testing.T) {
 		t.Error("contracts deployed at different addresses")
 	}
 
-	ethCode, err := client.CodeAt(context.Background(), ethReceipt.ContractAddress, nil)
+	ethCode, err := client.CodeAt(ctx, ethReceipt.ContractAddress, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

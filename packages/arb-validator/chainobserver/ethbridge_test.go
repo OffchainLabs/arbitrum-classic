@@ -52,6 +52,7 @@ var dbPath = "./testdb"
 var rollupTester *ethbridgetestcontracts.RollupTester
 var client *ethutils.SimulatedEthClient
 var auth *bind.TransactOpts
+var ctx context.Context
 
 func ethTransfer(t *testing.T, dest common.Address, amount *big.Int) value.Value {
 	ethData := make([]byte, 0)
@@ -81,7 +82,7 @@ func checkBalance(t *testing.T, ctx context.Context, globalInbox arbbridge.Globa
 
 func TestMain(m *testing.M) {
 	backend, pks := test.SimulatedBackend()
-	ctx := context.Background()
+	ctx = context.Background()
 	client = &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth = bind.NewKeyedTransactor(pks[0])
 	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
@@ -127,7 +128,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestConfirmAssertion(t *testing.T) {
-	ctx := context.Background()
 	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
 	if err != nil {
 		t.Fatal(err)

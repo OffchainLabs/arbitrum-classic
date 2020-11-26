@@ -39,6 +39,8 @@ import (
 func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts.OneStepProof) {
 	t.Log("proof test contact: ", contract)
 
+	ctx := context.Background()
+
 	proofs, err := generateProofCases(contract)
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +74,7 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts
 
 			if proof.Message != nil {
 				machineData, err = osp.ExecuteStepWithMessage(
-					&bind.CallOpts{Context: context.Background()},
+					&bind.CallOpts{Context: ctx},
 					proof.Assertion.AfterInboxHash,
 					proof.Assertion.FirstMessageHash,
 					proof.Assertion.FirstLogHash,
@@ -86,7 +88,7 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts
 				)
 			} else {
 				machineData, err = osp.ExecuteStep(
-					&bind.CallOpts{Context: context.Background()},
+					&bind.CallOpts{Context: ctx},
 					proof.Assertion.AfterInboxHash,
 					proof.Assertion.FirstMessageHash,
 					proof.Assertion.FirstLogHash,

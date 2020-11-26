@@ -52,7 +52,7 @@ func main() {
 	}
 }
 
-func createStressedManager(rollupAddress common.Address, client arbbridge.ArbClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
+func createStressedManager(ctx context.Context, rollupAddress common.Address, client arbbridge.ArbClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
 	return rollupmanager.CreateManager(
 		context.Background(),
 		rollupAddress,

@@ -30,8 +30,9 @@ import (
 
 func TestMoveStake(t *testing.T) {
 	rollup := getRollup(t)
+	ctx := context.Background()
 	_, err := rollup.MoveStake(
-		context.Background(),
+		ctx,
 		[]common.Hash{},
 		[]common.Hash{},
 	)
@@ -40,7 +41,7 @@ func TestMoveStake(t *testing.T) {
 	}
 
 	_, err = rollup.PlaceStake(
-		context.Background(),
+		ctx,
 		big.NewInt(0),
 		[]common.Hash{},
 		[]common.Hash{},
@@ -50,7 +51,7 @@ func TestMoveStake(t *testing.T) {
 	}
 
 	_, err = rollup.MoveStake(
-		context.Background(),
+		ctx,
 		[]common.Hash{},
 		[]common.Hash{},
 	)
@@ -62,8 +63,9 @@ func TestMoveStake(t *testing.T) {
 func TestRecoverStakeOld(t *testing.T) {
 	rollup := getRollup(t)
 
+	ctx := context.Background()
 	_, err := rollup.RecoverStakeOld(
-		context.Background(),
+		ctx,
 		common.Address{},
 		[]common.Hash{},
 	)
@@ -72,7 +74,7 @@ func TestRecoverStakeOld(t *testing.T) {
 	}
 
 	_, err = rollup.PlaceStake(
-		context.Background(),
+		ctx,
 		big.NewInt(0),
 		[]common.Hash{},
 		[]common.Hash{},
@@ -82,7 +84,7 @@ func TestRecoverStakeOld(t *testing.T) {
 	}
 
 	_, err = rollup.RecoverStakeOld(
-		context.Background(),
+		ctx,
 		common.Address{},
 		[]common.Hash{},
 	)
@@ -94,8 +96,9 @@ func TestRecoverStakeOld(t *testing.T) {
 func TestRecoverStake(t *testing.T) {
 	rollup := getRollup(t)
 
+	ctx := context.Background()
 	_, err := rollup.RecoverStakeConfirmed(
-		context.Background(),
+		ctx,
 		[]common.Hash{},
 	)
 	if err == nil {
@@ -103,7 +106,7 @@ func TestRecoverStake(t *testing.T) {
 	}
 
 	_, err = rollup.PlaceStake(
-		context.Background(),
+		ctx,
 		big.NewInt(0),
 		[]common.Hash{},
 		[]common.Hash{},
@@ -113,7 +116,7 @@ func TestRecoverStake(t *testing.T) {
 	}
 
 	_, err = rollup.RecoverStakeConfirmed(
-		context.Background(),
+		ctx,
 		[]common.Hash{},
 	)
 	if err != nil {
@@ -151,7 +154,7 @@ func getRollup(t *testing.T) arbbridge.ArbRollup {
 	}
 
 	rollupAddress, _, err := factory.CreateRollup(
-		context.Background(),
+		ctx,
 		mach.Hash(),
 		chainParams,
 		common.Address{},

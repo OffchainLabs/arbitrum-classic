@@ -120,7 +120,7 @@ func setupValidators(
 		manager.AddListener(ctx, &chainlistener.AnnouncerListener{Prefix: "validator " + client.Address().String() + ": "})
 
 		validatorListener := chainlistener.NewValidatorChainListener(
-			context.Background(),
+			ctx,
 			rollupAddress,
 			rollupActor,
 		)
@@ -245,7 +245,8 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rollupAddress, err := setupRollup(context.Background(), l1Client, bind.NewKeyedTransactor(pks[2]))
+	ctx := context.Background()
+	rollupAddress, err := setupRollup(ctx, l1Client, bind.NewKeyedTransactor(pks[2]))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -351,7 +352,7 @@ Loop:
 		filter := &bind.FilterOpts{
 			Start:   start,
 			End:     nil,
-			Context: context.Background(),
+			Context: ctx,
 		}
 
 		it, err := session.Contract.FilterTestEvent(filter)

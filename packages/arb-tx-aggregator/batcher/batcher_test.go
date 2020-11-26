@@ -144,8 +144,9 @@ func TestStatelessBatcher(t *testing.T) {
 	txes, txCounts := generateTxes(t, chain)
 	seenTxesChan := make(chan message.CompressedECDSATransaction, 1000)
 	mock := newMock(t, seenTxesChan, txes)
+	ctx := context.Background()
 	batcher := NewStatelessBatcher(
-		context.Background(),
+		ctx,
 		chain,
 		mock,
 		mock,
@@ -153,7 +154,7 @@ func TestStatelessBatcher(t *testing.T) {
 	)
 
 	for _, tx := range txes {
-		if err := batcher.SendTransaction(context.Background(), tx); err != nil {
+		if err := batcher.SendTransaction(ctx, tx); err != nil {
 			t.Fatal(err)
 		}
 		<-time.After(time.Millisecond * 20)

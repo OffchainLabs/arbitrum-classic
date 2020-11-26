@@ -54,7 +54,7 @@ func main() {
 	}
 }
 
-func createEvilManager(rollupAddress common.Address, client arbbridge.ArbClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
+func createEvilManager(ctx context.Context, rollupAddress common.Address, client arbbridge.ArbClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
 	cp, err := rolluptest.NewEvilRollupCheckpointer(
 		rollupAddress,
 		dbPath,
@@ -65,7 +65,7 @@ func createEvilManager(rollupAddress common.Address, client arbbridge.ArbClient,
 		return nil, err
 	}
 	return rollupmanager.CreateManagerAdvanced(
-		context.Background(),
+		ctx,
 		rollupAddress,
 		true,
 		client,

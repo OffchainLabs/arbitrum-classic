@@ -57,7 +57,7 @@ func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
 	client.Commit()
 
 	_, err = ethbridge.WaitForReceiptWithResults(
-		context.Background(),
+		ctx,
 		client,
 		auth.From,
 		machineTx,

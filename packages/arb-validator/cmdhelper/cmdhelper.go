@@ -41,6 +41,7 @@ var ContractName = "contract.mexe"
 func ValidateRollupChain(
 	execName string,
 	managerCreationFunc func(
+		ctx context.Context,
 		rollupAddress common.Address,
 		client arbbridge.ArbClient,
 		contractFile string, dbPath string,
@@ -121,6 +122,7 @@ func ValidateRollupChain(
 	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
 
 	manager, err := managerCreationFunc(
+		ctx,
 		rollupArgs.Address,
 		client,
 		contractFile,
@@ -144,6 +146,7 @@ func ValidateRollupChain(
 func ObserveRollupChain(
 	execName string,
 	managerCreationFunc func(
+		ctx context.Context,
 		rollupAddress common.Address,
 		client arbbridge.ArbClient,
 		contractFile string, dbPath string,
@@ -183,6 +186,7 @@ func ObserveRollupChain(
 	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
 
 	manager, err := managerCreationFunc(
+		ctx,
 		rollupArgs.Address,
 		client,
 		contractFile,

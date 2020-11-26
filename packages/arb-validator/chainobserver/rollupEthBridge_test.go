@@ -64,7 +64,7 @@ func TestMainSetup(m *testing.T) {
 	client.Commit()
 
 	_, err = ethbridge.WaitForReceiptWithResults(
-		context.Background(),
+		ctx,
 		client,
 		auth.From,
 		machineTx,
