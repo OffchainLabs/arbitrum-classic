@@ -277,10 +277,14 @@ func NewEthAuthClient(ctx context.Context, client ethutils.EthClient, auth *bind
 }
 
 func (c *EthArbAuthClient) MakeContract(ctx context.Context, contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error)) (ethcommon.Address, *types.Transaction, error) {
+	c.auth.Lock()
+	defer c.auth.Unlock()
 	return c.auth.makeContract(ctx, contractFunc)
 }
 
 func (c *EthArbAuthClient) MakeTx(ctx context.Context, txFunc func(auth *bind.TransactOpts) (*types.Transaction, error)) (*types.Transaction, error) {
+	c.auth.Lock()
+	defer c.auth.Unlock()
 	return c.auth.makeTx(ctx, txFunc)
 }
 
