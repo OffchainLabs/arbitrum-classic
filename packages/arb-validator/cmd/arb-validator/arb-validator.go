@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	zerolog "github.com/rs/zerolog/log"
 	"log"
 	"math/big"
 	"os"
@@ -43,6 +44,7 @@ import (
 func main() {
 	// Enable line numbers in logging
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	zerolog.Logger = zerolog.With().Caller().Logger()
 
 	// Check number of args
 	flag.Parse()

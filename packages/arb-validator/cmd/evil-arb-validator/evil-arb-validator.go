@@ -32,6 +32,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
+	zerolog "github.com/rs/zerolog/log"
 )
 
 // Launches the rollup validator with the following command line arguments:
@@ -42,6 +44,7 @@ import (
 func main() {
 	// Enable line numbers in logging
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	zerolog.Logger = zerolog.With().Caller().Logger()
 
 	// Check number of args
 	flag.Parse()

@@ -24,7 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	errors2 "github.com/pkg/errors"
-	"log"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"strings"
 	"sync"
@@ -35,6 +35,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
+
+const smallNonceRepeatCount = 5
+const smallNonceError = "Try increasing the gas price or incrementing the nonce."
 
 type EthArbClient struct {
 	client ethutils.EthClient
@@ -192,56 +195,96 @@ type TransactAuth struct {
 }
 
 func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error)) (ethcommon.Address, *types.Transaction, error) {
-	const smallNonceRepeatCount = 5
-	const smallNonceError = "Try increasing the gas price or incrementing the nonce."
-
 	auth := t.getAuth(ctx)
 
 	addr, tx, _, err := contractFunc(auth)
 
-	if t.auth.Nonce == nil {
+	if auth.Nonce == nil {
 		// Not incrementing nonce, so nothing else to do
+		if err != nil {
+			log.Err(err).Str("nonce", "nil").Msg("makeContract")
+			return addr, nil, err
+		}
+
+		txJSON, err := tx.MarshalJSON()
+		if err != nil {
+			log.Err(err).Str("nonce", "nil").Msg("makeContract failed to marshal tx into json")
+			return addr, tx, err
+		}
+
+		log.Info().RawJSON("tx", txJSON).Str("nonce", "nil").Str("sender", t.auth.From.Hex()).Msg("makeContract")
 		return addr, nil, err
 	}
 
 	for i := 0; i < smallNonceRepeatCount && err != nil && strings.Contains(err.Error(), smallNonceError); i++ {
 		// Increment nonce and try again
+		log.Err(err).Str("nonce", auth.Nonce.Text(16)).Msg("makeContract incrementing nonce and submitting tx again")
+
 		auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
 		addr, tx, _, err = contractFunc(auth)
 	}
 
-	if err == nil {
-		// Transaction successful, increment nonce for next time
-		t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
+	if err != nil {
+		log.Err(err).Str("nonce", auth.Nonce.Text(16)).Msg("makeContract")
+		return addr, nil, err
 	}
 
+	// Transaction successful, increment nonce for next time
+	txJSON, err := tx.MarshalJSON()
+	if err != nil {
+		log.Err(err).Str("nonce", auth.Nonce.Text(16)).Msg("makeContract failed to marshal tx into json")
+	} else {
+		log.Info().RawJSON("tx", txJSON).Str("nonce", auth.Nonce.Text(16)).Str("sender", t.auth.From.Hex()).Msg("makeContract")
+	}
+
+	t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
 	return addr, tx, err
 }
 
 func (t *TransactAuth) makeTx(ctx context.Context, txFunc func(auth *bind.TransactOpts) (*types.Transaction, error)) (*types.Transaction, error) {
-	const smallNonceRepeatCount = 5
-	const smallNonceError = "Try increasing the gas price or incrementing the nonce."
-
 	auth := t.getAuth(ctx)
 
 	tx, err := txFunc(auth)
 
-	if t.auth.Nonce == nil {
+	if auth.Nonce == nil {
 		// Not incrementing nonce, so nothing else to do
+		if err != nil {
+			log.Err(err).Str("nonce", "nil").Msg("makeTx")
+			return nil, err
+		}
+
+		txJSON, err := tx.MarshalJSON()
+		if err != nil {
+			log.Err(err).Str("nonce", "nil").Msg("makeTx failed to marshal tx into json")
+			return tx, err
+		}
+
+		log.Info().RawJSON("tx", txJSON).Str("nonce", "nil").Str("sender", t.auth.From.Hex()).Msg("makeTx")
 		return tx, err
 	}
 
 	for i := 0; i < smallNonceRepeatCount && err != nil && strings.Contains(err.Error(), smallNonceError); i++ {
 		// Increment nonce and try again
+		log.Err(err).Str("nonce", auth.Nonce.Text(16)).Msg("makeTx incrementing nonce and submitting tx again")
+
 		auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
 		tx, err = txFunc(auth)
 	}
 
-	if err == nil {
-		// Transaction successful, increment nonce for next time
-		t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
+	if err != nil {
+		log.Err(err).Str("nonce", auth.Nonce.Text(16)).Msg("makeTx")
+		return nil, err
 	}
 
+	// Transaction successful, increment nonce for next time
+	txJSON, err := tx.MarshalJSON()
+	if err != nil {
+		log.Err(err).Str("nonce", auth.Nonce.Text(16)).Msg("makeTx failed to marshal tx into json")
+	} else {
+		log.Info().RawJSON("tx", txJSON).Str("nonce", auth.Nonce.Text(16)).Str("sender", t.auth.From.Hex()).Msg("makeTx")
+	}
+
+	t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
 	return tx, err
 }
 

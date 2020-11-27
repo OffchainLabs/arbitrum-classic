@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	zerolog "github.com/rs/zerolog/log"
 	"io/ioutil"
 	"log"
 
@@ -32,6 +33,7 @@ import (
 func main() {
 	// Enable line numbers in logging
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	zerolog.Logger = zerolog.With().Caller().Logger()
 
 	if err := generateTestCase(
 		"http://localhost:7545",

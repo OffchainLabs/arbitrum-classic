@@ -22,6 +22,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	zerolog "github.com/rs/zerolog/log"
 	"log"
 	"os"
 	"path/filepath"
@@ -38,6 +39,7 @@ import (
 func main() {
 	// Enable line numbers in logging
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	zerolog.Logger = zerolog.With().Caller().Logger()
 
 	ctx := context.Background()
 	fs := flag.NewFlagSet("", flag.ContinueOnError)

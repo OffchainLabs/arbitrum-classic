@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	zerolog "github.com/rs/zerolog/log"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -194,6 +195,7 @@ func (a *App) Execute(line string) {
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	zerolog.Logger = zerolog.With().Caller().Logger()
 	file := os.Args[1]
 	log.Println("Running test:", file)
 	data, err := ioutil.ReadFile(file)

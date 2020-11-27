@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	zerolog "github.com/rs/zerolog/log"
 	"log"
 	"os"
 	"time"
@@ -40,6 +41,7 @@ import (
 func main() {
 	// Enable line numbers in logging
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	zerolog.Logger = zerolog.With().Caller().Logger()
 
 	// Check number of args
 	flag.Parse()
