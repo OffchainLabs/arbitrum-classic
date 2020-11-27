@@ -206,7 +206,7 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 
 	for i := 0; i < smallNonceRepeatCount && err != nil && strings.Contains(err.Error(), smallNonceError); i++ {
 		// Increment nonce and try again
-		t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
+		auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
 		addr, tx, _, err = contractFunc(auth)
 	}
 
@@ -233,7 +233,7 @@ func (t *TransactAuth) makeTx(ctx context.Context, txFunc func(auth *bind.Transa
 
 	for i := 0; i < smallNonceRepeatCount && err != nil && strings.Contains(err.Error(), smallNonceError); i++ {
 		// Increment nonce and try again
-		t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
+		auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
 		tx, err = txFunc(auth)
 	}
 
