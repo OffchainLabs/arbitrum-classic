@@ -146,6 +146,7 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         if (v != bytes32(0)) return acc;
         require(normal2 != zeros[nh] || nh == 0, "right subtree cannot be zero");
         bytes32 res = nh == 0 ? normal1 : keccak2(normal1, normal2);
+        if (nh > 0) nh--;
         bytes32 acc2 = res;
         for (uint256 i = nh; i < proof.length - 1; i++) {
             acc2 = keccak2(acc2, zeros[i]);
@@ -337,6 +338,11 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             buf = set(buf, offset / 32, nword, proof.proof1, proof.nproof1);
         }
         return buf;
+    }
+
+    function parseProof(bytes memory proof) public pure returns (bytes32[] memory, bytes32[] memory, bytes32[] memory, bytes32[] memory) {
+        BufferProof memory p = decodeProof(proof);
+        return (p.proof1, p.nproof1, p.proof2, p.nproof2);
     }
 
     function setBuffer256(

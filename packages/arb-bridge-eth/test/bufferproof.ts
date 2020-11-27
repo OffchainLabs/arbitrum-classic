@@ -40,10 +40,9 @@ function merkleHash(arr: bytes32[], offset: number, sz: number): bytes32 {
   if (sz === 1) {
     return keccak1(arr[offset])
   } else {
-    return keccak2(
-      merkleHash(arr, offset, sz / 2),
-      merkleHash(arr, offset + sz / 2, sz / 2)
-    )
+    let h1 = merkleHash(arr, offset, sz / 2)
+    let h2 = merkleHash(arr, offset + sz / 2, sz / 2)
+    return keccak2(h1, h2)
   }
 }
 
@@ -91,6 +90,15 @@ export function makeZeros(): bytes32[] {
     acc = keccak2(zeros[i], zeros[i])
   }
   return zeros
+}
+
+function fromBytes(buf: Buffer) {
+  let str = buf.toString("hex")
+  let res = []
+  for (let i = 0; i < buf.length/32; i++) {
+    res.push("0x"+str.substr(i*64, 64))
+  }
+  return res
 }
 
 describe('BufferProof', function () {

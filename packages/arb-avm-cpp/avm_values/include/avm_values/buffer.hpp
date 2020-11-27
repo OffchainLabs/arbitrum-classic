@@ -143,9 +143,15 @@ class RawBuffer {
         if (level == 0) {
             auto res = std::vector<uint8_t>(len, 0);
             for (int i = 0; i < len; i++) {
-                if (!leaf) res[i] = 0;
-                else if (leaf->size() < pos+i) res[i] = 0;
-                else res[i] = (*leaf)[pos+i];
+                if (!leaf) {
+                    res[i] = 0;
+                }
+                else if (leaf->size() <= pos+i) {
+                    res[i] = 0;
+                }
+                else {
+                    res[i] = (*leaf)[pos+i];
+                }
             }
             return res;
         } else {
@@ -154,7 +160,8 @@ class RawBuffer {
             if (pos > ln || !node) {
                 return std::vector<uint8_t>(len, 0);
             }
-            return (*node)[pos / cell_len].get_many(pos % cell_len, len);
+            auto next = (*node)[pos / cell_len];
+            return next.get_many(pos % cell_len, len);
         }
     }
 

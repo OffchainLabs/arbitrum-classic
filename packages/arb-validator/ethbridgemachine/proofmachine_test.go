@@ -18,10 +18,11 @@ package ethbridgemachine
 
 import (
 	"context"
+	"strconv"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"strconv"
 
 	"encoding/json"
 	"errors"
@@ -84,25 +85,31 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts
 					proof.Message.InboxSeqNum,
 					proof.Message.Data,
 				)
-				} else if len(proof.BufferProof) > 0 {
-					machineData, err = osp2.ExecuteStep(
-						&bind.CallOpts{Context: context.Background()},
-						proof.Assertion.AfterInboxHash,
-						proof.Assertion.FirstMessageHash,
-						proof.Assertion.FirstLogHash,
-						proof.Proof,
-						proof.BufferProof,
-					)
-				} else {
-					machineData, err = osp.ExecuteStep(
-						&bind.CallOpts{Context: context.Background()},
-						proof.Assertion.AfterInboxHash,
-						proof.Assertion.FirstMessageHash,
-						proof.Assertion.FirstLogHash,
-						proof.Proof,
-					)
-				}
-					t.Log("Opcode", opcode)
+			} else if len(proof.BufferProof) > 0 {
+				t.Log("Proof len", len(proof.BufferProof), len(proof.Proof))
+				t.Log("Data", proof.Assertion.AfterInboxHash,
+					proof.Assertion.FirstMessageHash,
+					proof.Assertion.FirstLogHash,
+					proof.Proof,
+					proof.BufferProof)
+				machineData, err = osp2.ExecuteStep(
+					&bind.CallOpts{Context: context.Background()},
+					proof.Assertion.AfterInboxHash,
+					proof.Assertion.FirstMessageHash,
+					proof.Assertion.FirstLogHash,
+					proof.Proof,
+					proof.BufferProof,
+				)
+			} else {
+				machineData, err = osp.ExecuteStep(
+					&bind.CallOpts{Context: context.Background()},
+					proof.Assertion.AfterInboxHash,
+					proof.Assertion.FirstMessageHash,
+					proof.Assertion.FirstLogHash,
+					proof.Proof,
+				)
+			}
+			t.Log("Opcode", opcode)
 			if err != nil {
 				t.Fatal("proof invalid with error", err)
 			}
