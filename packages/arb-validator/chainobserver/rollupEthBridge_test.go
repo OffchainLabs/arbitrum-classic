@@ -17,11 +17,9 @@
 package chainobserver
 
 import (
-	"context"
 	"errors"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"log"
 	"math/big"
 	"math/rand"
@@ -37,7 +35,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
@@ -45,15 +42,6 @@ import (
 var tester *ethbridgetestcontracts.RollupTester
 
 func TestMainSetup(m *testing.T) {
-	backend, pks := test.SimulatedBackend()
-	ctx := context.Background()
-	client = &ethutils.SimulatedEthClient{SimulatedBackend: backend}
-	auth = bind.NewKeyedTransactor(pks[0])
-	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	rollupAddr, machineTx, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
 		return ethbridgetestcontracts.DeployRollupTester(auth, client)
 	})
@@ -66,7 +54,7 @@ func TestMainSetup(m *testing.T) {
 	_, err = ethbridge.WaitForReceiptWithResults(
 		ctx,
 		client,
-		auth.From,
+		authClient.Address().ToEthAddress(),
 		machineTx,
 		"deployedMachineTester",
 	)

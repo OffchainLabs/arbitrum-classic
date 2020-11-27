@@ -51,7 +51,7 @@ var dbPath = "./testdb"
 
 var rollupTester *ethbridgetestcontracts.RollupTester
 var client *ethutils.SimulatedEthClient
-var auth *bind.TransactOpts
+var authClient *ethbridge.EthArbAuthClient
 var ctx context.Context
 
 func ethTransfer(t *testing.T, dest common.Address, amount *big.Int) value.Value {
@@ -60,7 +60,7 @@ func ethTransfer(t *testing.T, dest common.Address, amount *big.Int) value.Value
 	ethData = append(ethData, math.U256Bytes(amount)...)
 	tup, err := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(0), // ETH type
-		inbox.NewIntFromAddress(common.NewAddressFromEth(auth.From)),
+		inbox.NewIntFromAddress(authClient.Address()),
 		inbox.BytesToByteStack(ethData),
 	})
 	if err != nil {
@@ -84,8 +84,9 @@ func TestMain(m *testing.M) {
 	backend, pks := test.SimulatedBackend()
 	ctx = context.Background()
 	client = &ethutils.SimulatedEthClient{SimulatedBackend: backend}
-	auth = bind.NewKeyedTransactor(pks[0])
-	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
+	auth := bind.NewKeyedTransactor(pks[0])
+	var err error
+	authClient, err = ethbridge.NewEthAuthClient(ctx, client, auth)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -107,7 +108,7 @@ func TestMain(m *testing.M) {
 	_, err = ethbridge.WaitForReceiptWithResults(
 		ctx,
 		client,
-		auth.From,
+		authClient.Address().ToEthAddress(),
 		tx,
 		"DeployRollupTester",
 	)
@@ -128,11 +129,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestConfirmAssertion(t *testing.T) {
-	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	chainParams := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(0),
 		GracePeriod:             common.TicksFromSeconds(1),
@@ -182,7 +178,7 @@ func TestConfirmAssertion(t *testing.T) {
 
 	if err := globalInbox.DepositEthMessage(
 		ctx,
-		common.NewAddressFromEth(auth.From),
+		authClient.Address(),
 		big.NewInt(100),
 	); err != nil {
 		t.Fatal(err)
