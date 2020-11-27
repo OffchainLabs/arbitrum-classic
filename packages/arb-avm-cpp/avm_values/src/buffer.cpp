@@ -27,6 +27,10 @@ uint256_t zero_hash(uint64_t sz) {
     return hash(h1, h1);
 }
 
+uint256_t hash2(uint256_t a, uint256_t b) {
+    return hash(a, b);
+}
+
 Packed normal(uint256_t hash, uint64_t sz) {
     return Packed{hash, sz, 0};
 }
@@ -191,3 +195,100 @@ RawBuffer RawBuffer::deserialize(const char *buf, int level, int &len) {
 
     return RawBuffer(res, level);
 }
+
+uint64_t RawBuffer::sizePow2() const {
+    uint64_t size = 0;
+    if (level == 0 && leaf && leaf->size() > 0) {
+        std::cerr << "check size leaf" << std::endl;
+        for (int i = LEAF_SIZE-1; i >= 0; i--) {
+            if ((*leaf)[i] != 0) {
+                size = i;
+                break;
+            }
+        }
+    }
+    else if (node && node->size() > 0) {
+        std::cerr << "check size node" << std::endl;
+        for (int i = NODE_SIZE-1; i >= 0; i--) {
+            if ((*node)[i].hash() != zero_hash(32)) {
+                size = (i+1)*calc_len(level-1);
+                break;
+            }
+        }
+    }
+    uint64_t size_ext = calc_len(level);
+    if (size_ext < 32) size_ext = 32;
+    while (size_ext/2 >= size && size_ext > 32) {
+        size_ext = size_ext/2;
+    }
+    return size_ext;
+}
+
+std::vector<unsigned char> RawBuffer::makeProof(uint64_t offset, uint64_t sz, uint64_t loc) {
+    std::cerr << "makeProof " << offset << " sz " << sz << " loc " << loc << std::endl;
+    if (sz == 32) {
+        if (!leaf || leaf->size() == 0) {
+            return std::vector<unsigned char>(32, 0);
+        }
+        auto res = std::vector<unsigned char>(leaf->begin()+loc, leaf->begin()+loc+32);
+        return res;
+    } else if (level > 0 && sz == calc_len(level-1) && node) {
+        return (*node)[offset/calc_len(level-1)].makeProof(offset%calc_len(level-1), sz, loc%calc_len(level-1));
+    } else if (loc < offset + sz/2) {
+        auto proof = makeProof(offset, sz/2, loc);
+        marshal_uint256_t(merkleHash(offset+sz/2, sz/2), proof);
+        return proof;
+    } else {
+        auto proof = makeProof(offset+sz/2, sz/2, loc);
+        marshal_uint256_t(merkleHash(offset, sz/2), proof);
+        return proof;
+    }
+}
+
+uint256_t RawBuffer::merkleHash(uint64_t offset, uint64_t sz) {
+    std::cerr << "merkle hash " << offset << " sz " << sz << std::endl;
+    if (hash() == zero_hash(32)) {
+        return zero_hash(sz);
+    }
+    if (sz == 32) {
+        auto hash_val = ethash::keccak256(leaf->data()+offset, 32);
+        uint256_t res = intx::be::load<uint256_t>(hash_val);
+        return res;
+    } else if (level > 0 && sz == calc_len(level-1) && node) {
+        return (*node)[offset/calc_len(level-1)].merkleHash(0, sz);
+    }
+    std::cerr << "hashing " << offset << " to " << (offset+sz) << std::endl;
+    auto h1 = merkleHash(offset, sz/2);
+    auto h2 = merkleHash(offset+sz/2, sz/2);
+    return hash2(h1, h2);
+}
+
+std::vector<unsigned char> RawBuffer::makeProof(uint64_t loc) {
+    auto size = sizePow2();
+    std::cerr << "Got size " << size << std::endl;
+    auto res = makeProof(0, size, ((loc/32) % (size/32))*32);
+    std::cerr << "Making " << size << " -- " << res.size()/32 << std::endl;
+    return res;
+}
+
+std::vector<unsigned char> RawBuffer::makeNormalizationProof() {
+    uint64_t sz = sizePow2();
+    std::vector<unsigned char> res;
+    for (int i = 0; i < 31; i++) {
+        res.push_back(0);
+    }
+
+    if (sz == 32) {
+        std::cerr << "Simple normalization" << std::endl;
+        res.push_back(0);
+        marshal_uint256_t(merkleHash(0, sz), res);
+        marshal_uint256_t(merkleHash(0, sz), res);
+        return res;
+    }
+
+    res.push_back(makeProof(0, sz, 0).size()/32);
+    marshal_uint256_t(merkleHash(0, sz/2), res);
+    marshal_uint256_t(merkleHash(sz/2, sz/2), res);
+    return res;
+}
+

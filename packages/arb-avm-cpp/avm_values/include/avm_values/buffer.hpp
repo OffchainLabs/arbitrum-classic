@@ -176,6 +176,14 @@ class RawBuffer {
         return calc_len(level);
     }
 
+    uint64_t sizePow2() const;
+
+    std::vector<unsigned char> makeProof(uint64_t offset, uint64_t sz, uint64_t loc);
+    uint256_t merkleHash(uint64_t offset, uint64_t sz);
+
+    std::vector<unsigned char> makeProof(uint64_t loc);
+    std::vector<unsigned char> makeNormalizationProof();
+
     static RawBuffer deserialize(const char *buf, int level, int &len);
 
     friend class Buffer;
@@ -217,6 +225,17 @@ class Buffer {
 
     uint256_t hash() const {
         return buf->hash();
+    }
+
+    std::vector<unsigned char> makeProof(uint64_t loc) {
+        RawBuffer nbuf = buf->normalize();
+        std::cerr << "normalized" << std::endl;
+        return nbuf.makeProof(loc);
+    }
+
+    std::vector<unsigned char> makeNormalizationProof() {
+        RawBuffer nbuf = buf->normalize();
+        return nbuf.makeNormalizationProof();
     }
 
     void serialize(std::vector<unsigned char>& value_vector) const {

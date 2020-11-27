@@ -24,6 +24,19 @@
 
 #include <iostream>
 
+#include <sstream>
+#include <iomanip>
+
+std::string hexStr(std::vector<unsigned char> vec) {
+     std::stringstream ss;
+     ss << std::hex;
+
+     for( int i(0) ; i < vec.size(); ++i )
+         ss << std::setw(2) << std::setfill('0') << (int)vec[i];
+
+     return ss.str();
+}
+
 namespace {
 uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
 }  // namespace
@@ -229,8 +242,10 @@ std::vector<unsigned char> makeProof(uint8_t *arr, uint64_t offset, uint64_t sz,
 std::vector<unsigned char> makeProof(Buffer &buf, uint64_t loc) {
     auto arr = bufferToVec(buf);
     auto res = makeProof(arr.data(), 0, arr.size(), ((loc/32) % (arr.size()/32))*32);
-    std::cerr << "Making " << arr.size() << " -- " << res.size()/32 << std::endl;
-    return res;
+    auto res2 = buf.makeProof(loc);
+    std::cerr << "Making " << arr.size() << " -- " << res.size()/32 << " " << hexStr(res) << std::endl;
+    std::cerr << "Making 2 " << arr.size() << " -- " << res.size()/32 << " " << hexStr(res2) << std::endl;
+    return res2;
 }
 
 std::vector<unsigned char> makeNormalizationProof(uint8_t *arr, uint64_t sz) {
@@ -256,7 +271,11 @@ std::vector<unsigned char> makeNormalizationProof(uint8_t *arr, uint64_t sz) {
 std::vector<unsigned char> makeNormalizationProof(Buffer &buf) {
     auto arr = bufferToVec(buf);
     std::cerr << "Making normal " << arr.size() << std::endl;
-    return makeNormalizationProof(arr.data(), arr.size());
+    auto res = makeNormalizationProof(arr.data(), arr.size());
+    auto res2 = buf.makeNormalizationProof();
+    std::cerr << "Making " << arr.size() << " -- " << res.size()/32 << " " << hexStr(res) << std::endl;
+    std::cerr << "Making 2 " << arr.size() << " -- " << res.size()/32 << " " << hexStr(res2) << std::endl;
+    return res2;
 }
 
 void insertSizes(std::vector<unsigned char> &buf, int sz1, int sz2, int sz3, int sz4) {
