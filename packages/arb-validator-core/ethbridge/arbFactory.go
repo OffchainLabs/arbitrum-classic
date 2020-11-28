@@ -94,7 +94,7 @@ func (con *arbFactory) CreateRollup(
 		)
 	})
 	if err != nil {
-		return common.Address{}, nil, errors2.Wrap(err, "Failed to call to ChainFactory.CreateChain")
+		return common.Address{}, nil, errors2.WithStack(errors2.Wrap(err, "Failed to call to ChainFactory.CreateChain"))
 	}
 	receipt, err := WaitForReceiptWithResults(ctx, con.client, con.auth.auth.From, tx, "CreateChain")
 	if err != nil {
@@ -119,7 +119,7 @@ type arbFactoryWatcher struct {
 func newArbFactoryWatcher(address ethcommon.Address, client ethutils.EthClient) (*arbFactoryWatcher, error) {
 	vmCreatorContract, err := ethbridgecontracts.NewArbFactory(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
+		return nil, errors2.WithStack(errors2.Wrap(err, "Failed to connect to arbFactory"))
 	}
 	return &arbFactoryWatcher{contract: vmCreatorContract, client: client, address: address}, nil
 }

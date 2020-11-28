@@ -3,9 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
-	zerolog "github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
 	"io/ioutil"
-	"log"
+	golog "log"
 	"math/big"
 	"os"
 	"strings"
@@ -63,9 +65,9 @@ func newApp(data []byte) (*App, error) {
 	}
 
 	if err := a.verify(); err != nil {
-		log.Println("Logs incorrect:", err)
+		log.Warn().Stack().Err(err).Msg("logs incorrect")
 	} else {
-		log.Println("Logs verified")
+		log.Info().Msg("logs verified")
 	}
 	return a, nil
 }
@@ -94,9 +96,7 @@ func (a *App) verify() error {
 			return err
 		}
 		if !value.Eq(calcRes.AsValue(), res.AsValue()) {
-			log.Println("Calculated:", calcRes)
-			log.Println("Correct:", res)
-			return errors.New("wrong log")
+			log.Warn().Str("calculated", calcRes.AsValue().String()).Str("correct", res.AsValue().String()).Msg("wrong log")
 		}
 	}
 
@@ -154,7 +154,7 @@ func (a *App) constructors() error {
 		}
 		var contractAddress common.Address
 		copy(contractAddress[:], txRes.ReturnData[12:])
-		log.Println("Tx", txRes.IncomingRequest.MessageID, "created", contractAddress)
+		log.Info().Str("Tx", txRes.IncomingRequest.MessageID.String()).Str("address", contractAddress.Hex()).Msg("contract created")
 	}
 	return nil
 }
@@ -164,7 +164,7 @@ func (a *App) getCode(account common.Address) error {
 	if err != nil {
 		return err
 	}
-	log.Println(hexutil.Encode(code))
+	log.Info().Str("code", hexutil.Encode(code))
 	return nil
 }
 
@@ -184,20 +184,27 @@ func (a *App) Execute(line string) {
 	switch blocks[0] {
 	case "code":
 		if err := a.getCode(common.HexToAddress(blocks[1])); err != nil {
-			log.Println("failed getting code", err)
+			log.Warn().Stack().Err(err).Msg("failed getting code")
 		}
 	case "constructors":
 		if err := a.constructors(); err != nil {
-			log.Println("failed getting constructors", err)
+			log.Warn().Stack().Err(err).Msg("failed getting constructors")
 		}
 	}
 }
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	zerolog.Logger = zerolog.With().Caller().Logger()
+	// Enable line numbers in logging
+	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
+
+	// Print stack trace when `.Error().Stack().Err(err).` is added to zerolog call
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+
+	// Print line number that log was created on
+	log.Logger = log.With().Caller().Logger()
+
 	file := os.Args[1]
-	log.Println("Running test:", file)
+	log.Info().Str("file", file).Msg("Running test")
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		panic(err)

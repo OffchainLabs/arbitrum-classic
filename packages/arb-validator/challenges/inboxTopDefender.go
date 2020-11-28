@@ -167,7 +167,7 @@ func inboxDefenderUpdate(
 		}
 		err = contract.Bisect(ctx, chainHashes, new(big.Int).SetUint64(messageCount))
 		if err != nil {
-			return nil, 0, errors2.Wrap(err, "Error bisecting")
+			return nil, 0, errors2.WithStack(errors2.Wrap(err, "Error bisecting"))
 		}
 		event, state, err = getNextEvent(eventChan)
 		if err != nil {
@@ -193,11 +193,11 @@ func runInboxOneStepProof(
 		}
 		err = contract.OneStepProof(ctx, currentStartState, msg.CommitmentHash())
 		if err != nil {
-			return 0, errors2.Wrap(err, "Error making one step proof")
+			return 0, errors2.WithStack(errors2.Wrap(err, "Error making one step proof"))
 		}
 		event, state, err = getNextEvent(eventChan)
 		if err != nil {
-			return 0, errors2.Wrap(err, "Error getting next event")
+			return 0, errors2.WithStack(errors2.Wrap(err, "Error getting next event"))
 		}
 	}
 

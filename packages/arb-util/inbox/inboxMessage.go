@@ -97,7 +97,7 @@ func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 
 	data, err := ByteStackToHex(messageData)
 	if err != nil {
-		return failRet, errors2.Wrap(err, "unmarshalling input data")
+		return failRet, errors2.WithStack(errors2.Wrap(err, "unmarshalling input data"))
 	}
 
 	return InboxMessage{

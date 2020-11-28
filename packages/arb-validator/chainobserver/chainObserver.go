@@ -383,7 +383,7 @@ func (chain *ChainObserver) NotifyNextEvent(blockId *common.BlockId) {
 func (chain *ChainObserver) UpdateAssumedValidBlock(ctx context.Context, clnt arbbridge.ChainTimeGetter, assumedValidDepth int64) error {
 	latestL1BlockId, err := clnt.BlockIdForHeight(ctx, nil)
 	if err != nil {
-		return errors2.Wrap(err, "Getting current block header")
+		return errors2.WithStack(errors2.Wrap(err, "Getting current block header"))
 	}
 
 	validHeight := new(big.Int).Sub(latestL1BlockId.Height.AsInt(), big.NewInt(assumedValidDepth))

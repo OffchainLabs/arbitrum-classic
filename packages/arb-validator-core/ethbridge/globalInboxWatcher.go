@@ -67,7 +67,7 @@ func newGlobalInboxWatcher(
 		client,
 	)
 	if err != nil {
-		return nil, errors2.Wrap(err, "failed to connect to inbox")
+		return nil, errors2.WithStack(errors2.Wrap(err, "failed to connect to inbox"))
 	}
 
 	return &globalInboxWatcher{

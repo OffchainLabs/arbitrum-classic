@@ -146,7 +146,7 @@ func (c CompressedAddressFull) String() string {
 func DecodeAddress(r io.Reader) (CompressedAddress, error) {
 	addressBytes := make([]byte, 0)
 	if err := rlp.Decode(r, &addressBytes); err != nil {
-		return nil, errors2.Wrap(err, "couldn't parse address")
+		return nil, errors2.WithStack(errors2.Wrap(err, "couldn't parse address"))
 	}
 
 	if len(addressBytes) == 0 {

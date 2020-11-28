@@ -20,15 +20,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	errors2 "github.com/pkg/errors"
 	"math/big"
 	"strings"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type Log struct {
@@ -164,7 +162,7 @@ func (l Log) AsValue() (*value.TupleValue, error) {
 func LogStackToLogs(val value.Value) ([]Log, error) {
 	logValues, err := inbox.StackValueToList(val)
 	if err != nil {
-		return nil, errors2.Wrap(err, "log stack was not a stack")
+		return nil, errors2.WithStack(errors2.Wrap(err, "log stack was not a stack"))
 	}
 	logs := make([]Log, 0, len(logValues))
 	for i := range logValues {

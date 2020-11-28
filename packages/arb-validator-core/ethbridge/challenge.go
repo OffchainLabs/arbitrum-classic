@@ -58,7 +58,7 @@ type challenge struct {
 func newChallenge(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*challenge, error) {
 	challengeContract, err := ethbridgecontracts.NewChallenge(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
+		return nil, errors2.WithStack(errors2.Wrap(err, "Failed to connect to ChallengeManager"))
 	}
 
 	return &challenge{Challenge: challengeContract, client: client, auth: auth, contractAddress: address}, nil
@@ -92,7 +92,7 @@ type challengeWatcher struct {
 func newChallengeWatcher(address ethcommon.Address, client ethutils.EthClient) (*challengeWatcher, error) {
 	challengeContract, err := ethbridgecontracts.NewChallenge(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
+		return nil, errors2.WithStack(errors2.Wrap(err, "Failed to connect to ChallengeManager"))
 	}
 
 	return &challengeWatcher{Challenge: challengeContract}, nil

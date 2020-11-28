@@ -24,13 +24,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	errors2 "github.com/pkg/errors"
 	"math/big"
 	"math/rand"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type ResultType int
@@ -172,7 +171,7 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 
 	data, err := inbox.ByteStackToHex(messageData)
 	if err != nil {
-		return failRet, errors2.Wrap(err, "unmarshalling input data")
+		return failRet, errors2.WithStack(errors2.Wrap(err, "unmarshalling input data"))
 	}
 
 	provenance, err := NewProvenanceFromValue(provenanceVal)
@@ -361,11 +360,11 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 	}
 	returnBytes, err := inbox.ByteStackToHex(returnData)
 	if err != nil {
-		return nil, errors2.Wrap(err, "umarshalling return data")
+		return nil, errors2.WithStack(errors2.Wrap(err, "umarshalling return data"))
 	}
 	logs, err := LogStackToLogs(evmLogs)
 	if err != nil {
-		return nil, errors2.Wrap(err, "unmarshaling logs")
+		return nil, errors2.WithStack(errors2.Wrap(err, "unmarshaling logs"))
 	}
 	resultCodeInt, ok := resultCode.(value.IntValue)
 	if !ok {

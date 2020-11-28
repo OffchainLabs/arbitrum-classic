@@ -19,8 +19,10 @@ package main
 import (
 	"context"
 	"flag"
-	zerolog "github.com/rs/zerolog/log"
-	"log"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
+	golog "log"
 	"os"
 	"time"
 
@@ -40,15 +42,20 @@ import (
 // 4) ethURL
 func main() {
 	// Enable line numbers in logging
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	zerolog.Logger = zerolog.With().Caller().Logger()
+	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
+
+	// Print stack trace when `.Error().Stack().Err(err).` is added to zerolog call
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+
+	// Print line number that log was created on
+	log.Logger = log.With().Caller().Logger()
 
 	// Check number of args
 	flag.Parse()
 	switch os.Args[1] {
 	case "validate":
 		if err := cmdhelper.ValidateRollupChain("evil-arb-validator", createStressedManager); err != nil {
-			log.Fatal(err)
+			log.Fatal().Stack().Err(err).Msg("error validating rollup chain")
 		}
 	default:
 	}

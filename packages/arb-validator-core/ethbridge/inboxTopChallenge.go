@@ -44,7 +44,7 @@ func newInboxTopChallenge(address ethcommon.Address, client ethutils.EthClient, 
 	}
 	inboxTopContract, err := ethbridgecontracts.NewInboxTopChallenge(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to InboxTopChallenge")
+		return nil, errors2.WithStack(errors2.Wrap(err, "Failed to connect to InboxTopChallenge"))
 	}
 	return &inboxTopChallenge{bisectionChallenge: bisectionChallenge, contract: inboxTopContract}, nil
 }

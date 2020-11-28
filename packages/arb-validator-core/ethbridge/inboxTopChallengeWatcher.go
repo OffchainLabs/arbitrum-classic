@@ -60,7 +60,7 @@ func newInboxTopChallengeWatcher(address ethcommon.Address, client ethutils.EthC
 	}
 	inboxTopContract, err := ethbridgecontracts.NewInboxTopChallenge(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to InboxTopChallenge")
+		return nil, errors2.WithStack(errors2.Wrap(err, "Failed to connect to InboxTopChallenge"))
 	}
 	tops := []ethcommon.Hash{
 		inboxTopBisectedID,

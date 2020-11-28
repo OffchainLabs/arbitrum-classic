@@ -55,7 +55,7 @@ func (s *Server) GetBalance(address *common.Address, blockNum *rpc.BlockNumber) 
 	}
 	balance, err := snap.GetBalance(arbcommon.NewAddressFromEth(*address))
 	if err != nil {
-		return nil, errors2.Wrap(err, "error getting balance")
+		return nil, errors2.WithStack(errors2.Wrap(err, "error getting balance"))
 	}
 	return (*hexutil.Big)(balance), nil
 }
@@ -67,7 +67,7 @@ func (s *Server) GetStorageAt(address *common.Address, index *hexutil.Big, block
 	}
 	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*address), (*big.Int)(index))
 	if err != nil {
-		return nil, errors2.Wrap(err, "error getting storage")
+		return nil, errors2.WithStack(errors2.Wrap(err, "error getting storage"))
 	}
 	return (*hexutil.Big)(storageVal), nil
 }
@@ -86,7 +86,7 @@ func (s *Server) GetTransactionCount(ctx context.Context, address *common.Addres
 	}
 	txCount, err := snap.GetTransactionCount(account)
 	if err != nil {
-		return 0, errors2.Wrap(err, "error getting transaction count")
+		return 0, errors2.WithStack(errors2.Wrap(err, "error getting transaction count"))
 	}
 	return hexutil.Uint64(txCount.Uint64()), nil
 }
@@ -118,7 +118,7 @@ func (s *Server) GetCode(address *common.Address, blockNum *rpc.BlockNumber) (he
 	}
 	code, err := snap.GetCode(arbcommon.NewAddressFromEth(*address))
 	if err != nil {
-		return nil, errors2.Wrap(err, "error getting code")
+		return nil, errors2.WithStack(errors2.Wrap(err, "error getting code"))
 	}
 	return code, nil
 }

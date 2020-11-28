@@ -56,7 +56,7 @@ func newBisectionChallenge(address ethcommon.Address, client ethutils.EthClient,
 	}
 	bisectionContract, err := ethbridgecontracts.NewBisectionChallenge(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
+		return nil, errors2.WithStack(errors2.Wrap(err, "Failed to connect to ChallengeManager"))
 	}
 	vm := &bisectionChallenge{
 		challenge:          challenge,
@@ -113,7 +113,7 @@ func newBisectionChallengeWatcher(address ethcommon.Address, client ethutils.Eth
 	}
 	bisectionContract, err := ethbridgecontracts.NewBisectionChallenge(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
+		return nil, errors2.WithStack(errors2.Wrap(err, "Failed to connect to ChallengeManager"))
 	}
 	vm := &bisectionChallengeWatcher{
 		challengeWatcher:   challenge,

@@ -180,7 +180,7 @@ func RunObserver(
 					start := new(big.Int).Add(db.LatestBlockId().Height.AsInt(), big.NewInt(1))
 					fetchEnd, err := observer.CalculateCatchupFetch(runCtx, start, clnt, maxReorg)
 					if err != nil {
-						return errors2.Wrap(err, "error calculating fast catchup")
+						return errors2.WithStack(errors2.Wrap(err, "error calculating fast catchup"))
 					}
 					if fetchEnd == nil {
 						break
@@ -192,26 +192,26 @@ func RunObserver(
 					log.Println("Getting events between", start, "and", fetchEnd, "with", new(big.Int).Sub(currentOnChain.Height.AsInt(), start), "blocks remaining")
 					inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, start, fetchEnd)
 					if err != nil {
-						return errors2.Wrap(err, "Manager hit error doing fast catchup")
+						return errors2.WithStack(errors2.Wrap(err, "Manager hit error doing fast catchup"))
 					}
 
 					endBlock, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(fetchEnd))
 					if err != nil {
-						return errors2.Wrap(err, "error getting end block in fast catchup")
+						return errors2.WithStack(errors2.Wrap(err, "error getting end block in fast catchup"))
 					}
 					if err := db.AddMessages(runCtx, inboxDeliveredEvents, endBlock); err != nil {
-						return errors2.Wrap(err, "error adding messages to db")
+						return errors2.WithStack(errors2.Wrap(err, "error adding messages to db"))
 					}
 				}
 
 				latest := db.LatestBlockId()
 				headersChan, err := clnt.SubscribeBlockHeadersAfter(runCtx, latest)
 				if err != nil {
-					return errors2.Wrap(err, "can't restart header subscription")
+					return errors2.WithStack(errors2.Wrap(err, "can't restart header subscription"))
 				}
 				for maybeBlockId := range headersChan {
 					if maybeBlockId.Err != nil {
-						return errors2.Wrap(maybeBlockId.Err, "error getting new header")
+						return errors2.WithStack(errors2.Wrap(maybeBlockId.Err, "error getting new header"))
 					}
 
 					blockId := maybeBlockId.BlockId
@@ -223,7 +223,7 @@ func RunObserver(
 					}
 
 					if err := db.AddMessages(runCtx, inboxEvents, blockId); err != nil {
-						return errors2.Wrap(err, "error adding messages to db")
+						return errors2.WithStack(errors2.Wrap(err, "error adding messages to db"))
 					}
 				}
 				return nil

@@ -19,21 +19,18 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
+	golog "log"
 	"math/big"
 	"os"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/cmdhelper"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rolluptest"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
-	zerolog "github.com/rs/zerolog/log"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/cmdhelper"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rolluptest"
 )
 
 // Launches the rollup validator with the following command line arguments:
@@ -43,15 +40,20 @@ import (
 // 4) ethURL
 func main() {
 	// Enable line numbers in logging
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	zerolog.Logger = zerolog.With().Caller().Logger()
+	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
+
+	// Print stack trace when `.Error().Stack().Err(err).` is added to zerolog call
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+
+	// Print line number that log was created on
+	log.Logger = log.With().Caller().Logger()
 
 	// Check number of args
 	flag.Parse()
 	switch os.Args[1] {
 	case "validate":
 		if err := cmdhelper.ValidateRollupChain("evil-arb-validator", createEvilManager); err != nil {
-			log.Fatal(err)
+			log.Fatal().Stack().Err(err).Msg("Error with ValidateRollupChain")
 		}
 	default:
 	}

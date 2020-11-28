@@ -61,7 +61,7 @@ func newExecutionChallengeWatcher(address ethcommon.Address, client ethutils.Eth
 	}
 	executionContract, err := ethbridgecontracts.NewExecutionChallenge(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
+		return nil, errors2.WithStack(errors2.Wrap(err, "Failed to connect to ChallengeManager"))
 	}
 	tops := []ethcommon.Hash{
 		bisectedAssertionID,
