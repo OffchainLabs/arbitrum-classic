@@ -216,7 +216,7 @@ func TestFib(t *testing.T) {
 	l1Client := &ethutils.SimulatedEthClient{SimulatedBackend: l1Backend}
 
 	// pks[0]:     setupRollup     (L1)
-	// pks[1,2,3]: setupValidators (L1)
+	// pks[1,2]:   setupValidators (L1)
 
 	// pks[4]:     launchAggregator            (not tied to client)
 	// pks[5]:     DeployFibonacci and session (L2, not tied to client)
@@ -224,7 +224,7 @@ func TestFib(t *testing.T) {
 	auths := make([]*bind.TransactOpts, 0)
 	authClients := make([]*ethbridge.EthArbAuthClient, 0)
 	// 0-3 are on L1
-	for _, pk := range pks[0:4] {
+	for _, pk := range pks[0:3] {
 		auth := bind.NewKeyedTransactor(pk)
 		auths = append(auths, auth)
 
@@ -262,7 +262,7 @@ func TestFib(t *testing.T) {
 
 	t.Log("Created rollup chain", rollupAddress)
 
-	if err := setupValidators(ctx, rollupAddress, l1Client, authClients[1:4]); err != nil {
+	if err := setupValidators(ctx, rollupAddress, l1Client, authClients[1:3]); err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
 
