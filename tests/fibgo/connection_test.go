@@ -208,30 +208,37 @@ func TestFib(t *testing.T) {
 		}
 	}()
 
-	ctx := context.Background()
-	backend, pks := test.SimulatedBackend()
-	l1Client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
+	// Output line numbers with each log message
+	log.Logger = log.With().Caller().Logger()
 
-	// pks[0],   auth[0],   authClients[0]:   setupRollup
-	// pks[1:3], auth[1:3], authClients[1:3]: setupValidators
-	// pks[4],   auth[4]:                     launchAggregator
-	// pks[5],   auth[5]:                     DeployFibonacci and session
+	ctx := context.Background()
+	l1Backend, pks := test.SimulatedBackend()
+	l1Client := &ethutils.SimulatedEthClient{SimulatedBackend: l1Backend}
+
+	// pks[0]:     setupRollup     (L1)
+	// pks[1,2,3]: setupValidators (L1)
+
+	// pks[4]:     launchAggregator            (not tied to client)
+	// pks[5]:     DeployFibonacci and session (L2, not tied to client)
 
 	auths := make([]*bind.TransactOpts, 0)
 	authClients := make([]*ethbridge.EthArbAuthClient, 0)
-	for i, pk := range pks {
+	// 0-3 are on L1
+	for _, pk := range pks[0:4] {
 		auth := bind.NewKeyedTransactor(pk)
 		auths = append(auths, auth)
 
-		if i < 4 {
-			authClient, err := ethbridge.NewEthAuthClient(ctx, l1Client, auth)
-			if err != nil {
-				t.Fatal(err)
-			}
-			authClients = append(authClients, authClient)
+		authClient, err := ethbridge.NewEthAuthClient(ctx, l1Client, auth)
+		if err != nil {
+			t.Fatal(err)
 		}
-
+		authClients = append(authClients, authClient)
 	}
+	// 4 just uses auth, authClient created inside launchAggregator
+	auths = append(auths, bind.NewKeyedTransactor(pks[4]))
+
+	// 5 is on L2, doesn't use ethbridge
+	auths = append(auths, bind.NewKeyedTransactor(pks[5]))
 
 	go func() {
 		t := time.NewTicker(time.Second * 2)
@@ -255,7 +262,7 @@ func TestFib(t *testing.T) {
 
 	t.Log("Created rollup chain", rollupAddress)
 
-	if err := setupValidators(ctx, rollupAddress, l1Client, authClients[1:3]); err != nil {
+	if err := setupValidators(ctx, rollupAddress, l1Client, authClients[1:4]); err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
 
@@ -274,7 +281,6 @@ func TestFib(t *testing.T) {
 
 	t.Log("Connected to aggregator")
 
-	// auths[5] is also used in session below, so don't create authClient with it
 	_, tx, _, err := arbostestcontracts.DeployFibonacci(auths[5], l2Client)
 	if err != nil {
 		t.Fatal("DeployFibonacci failed", err)
@@ -299,7 +305,7 @@ func TestFib(t *testing.T) {
 		t.Fatal("connect fib failed", err)
 	}
 
-	//Wrap the Token contract instance into a session
+	// Wrap the Token contract instance into a session
 	session := &arbostestcontracts.FibonacciSession{
 		Contract: fib,
 		CallOpts: bind.CallOpts{
