@@ -218,8 +218,8 @@ func TestFib(t *testing.T) {
 	// pks[0]:     setupRollup     (L1)
 	// pks[1,2]:   setupValidators (L1)
 
-	// pks[4]:     launchAggregator            (not tied to client)
-	// pks[5]:     DeployFibonacci and session (L2, not tied to client)
+	// pks[3]:     launchAggregator            (not tied to client)
+	// pks[4]:     DeployFibonacci and session (L2, not tied to client)
 
 	auths := make([]*bind.TransactOpts, 0)
 	authClients := make([]*ethbridge.EthArbAuthClient, 0)
@@ -234,11 +234,11 @@ func TestFib(t *testing.T) {
 		}
 		authClients = append(authClients, authClient)
 	}
-	// 4 just uses auth, authClient created inside launchAggregator
-	auths = append(auths, bind.NewKeyedTransactor(pks[4]))
+	// 3 just uses auth, authClient created inside launchAggregator
+	auths = append(auths, bind.NewKeyedTransactor(pks[3]))
 
-	// 5 is on L2, doesn't use ethbridge
-	auths = append(auths, bind.NewKeyedTransactor(pks[5]))
+	// 4 is on L2, doesn't use ethbridge
+	auths = append(auths, bind.NewKeyedTransactor(pks[4]))
 
 	go func() {
 		t := time.NewTicker(time.Second * 2)
@@ -268,7 +268,7 @@ func TestFib(t *testing.T) {
 
 	if err := launchAggregator(
 		l1Client,
-		auths[4],
+		auths[3],
 		rollupAddress,
 	); err != nil {
 		t.Fatal(err)
@@ -281,7 +281,7 @@ func TestFib(t *testing.T) {
 
 	t.Log("Connected to aggregator")
 
-	_, tx, _, err := arbostestcontracts.DeployFibonacci(auths[5], l2Client)
+	_, tx, _, err := arbostestcontracts.DeployFibonacci(auths[4], l2Client)
 	if err != nil {
 		t.Fatal("DeployFibonacci failed", err)
 	}
@@ -309,10 +309,10 @@ func TestFib(t *testing.T) {
 	session := &arbostestcontracts.FibonacciSession{
 		Contract: fib,
 		CallOpts: bind.CallOpts{
-			From:    auths[5].From,
+			From:    auths[4].From,
 			Pending: true,
 		},
-		TransactOpts: *auths[5],
+		TransactOpts: *auths[4],
 	}
 
 	fibsize := 15
