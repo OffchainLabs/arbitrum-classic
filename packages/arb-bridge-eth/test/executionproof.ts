@@ -95,21 +95,6 @@ describe('OneStepProof', function () {
     ospTester2 = (await BufferProof.deploy()) as BufferProofTester
     await ospTester2.deployed()
   })
-/*
-  it.only('brokne', async function () {
-    const proof = {"Assertion":{"NumGas":100,"BeforeMachineHash":[22,26,222,129,246,169,171,31,19,48,37,252,54,210,192,111,173,62,58,236,98,13,130,109,227,132,115,15,18,177,54,51],"AfterMachineHash":[139,170,226,20,198,170,140,240,45,156,144,8,70,185,74,125,213,253,48,164,193,77,129,69,50,72,243,206,109,11,186,76],"BeforeInboxHash":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"AfterInboxHash":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"FirstMessageHash":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"LastMessageHash":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"MessageCount":0,"FirstLogHash":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"LastLogHash":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"LogCount":0},
-    
-    "Proof":"AwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+gMI6X6CB+5tPg4MxPTfhUByEU+PqvuNkHkk1LYQs55bnZ8+6xg57IWgRvbtpSe8tpRJftP4uYRRFye0BgrCbseWLw2eJ56HigUNkZCKYKPgX1mEve0d9Zlkf+WqeBkvMmKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHMbmPFQRxGkqQ+7LPxk44erbkP24+O/B+6Wp94OwRUNgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKArw2eJ56HigUNkZCKYKPgX1mEve0d9Zlkf+WqeBkvMmKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAECep2sgv5Jt1soimVIHajYCrY/nZaomUYUkzxEoOwId/QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/////////////////////////////////////////32tMAGFfldwkmTQHX8xmmUdZa69uBwrICln3na6YqpMvADAKY=",
-    "BufferProof":"AQgLEhUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACkN7NlUi2Ko1gNFqYg4b8hLpryVSEAI9jYvkxYO8+VjYz3E19pyVmYKiS+PFgSkS1QyZJzI7FyzztTE5qyU3R2JB0Co6wbOm+Qiy42lza/CtYwKXiQDbFeN4qQzyCj/fTuOwJ4Cb9wwU2XfyU4YmoGzjHWXs9lBwnnwQuggbgvYScSjQVW3vFQDtU/ETbDwwJhVi3FM+Np9Pf58O2Ic3CsbTLRvfxdrOhZstfFOwXfExpROCoYcntskb8UWQdazxgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHbT4mNtSIG+m6bSPv72mVwhDMPMx/XDmJDSoXKy1TVB4bTLRvfxdrOhZstfFOwXfExpROCoYcntskb8UWQdazxgAr3FRd8r3tAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKQ3s2VSLYqjWA0WpiDhvyEumvJVIQAj2Ni+TFg7z5WNjPcTX2nJWZgqJL48WBKRLVDJknMjsXLPO1MTmrJTdHYkHQKjrBs6b5CLLjaXNr8K1jApeJANsV43ipDPIKP99O47AngJv3DBTZd/JThiagbOMdZez2UHCefBC6CBuC9js1Q7uOOOGvWK+m+25kHBpUbZf4FO9nYpSGvdT0Tni2m0+JjbUiBvpum0j7+9plcIQzDzMf1w5iQ0qFystU1QeAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMVKSit8YiluSHCQV6DmMcfyH66DeJJwutDHfS+7k+62gIQ04PE5S49sCful6xTYvCJt/HVJawWeqqvQ8jwM6ct",
-    "Message":null}
-    const proofData = Buffer.from(proof.Proof, 'base64')
-    const opcode = proofData[proofData.length - 1]
-    const bufferProofData = Buffer.from(proof.BufferProof || '', 'base64')
-    console.log(await ospTester2.parseProof(bufferProofData))
-    const { fields, gas } = await executeStep(proof)
-    console.log("opcode", opcode, fields)
-  })
-*/
   const files = fs.readdirSync('./test/proofs')
   for (const filename of files) {
     const file = fs.readFileSync('./test/proofs/' + filename)

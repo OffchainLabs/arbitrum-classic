@@ -229,7 +229,7 @@ class Buffer {
 
     std::vector<unsigned char> makeProof(uint64_t loc) {
         RawBuffer nbuf = buf->normalize();
-        std::cerr << "normalized" << std::endl;
+        // std::cerr << "normalized" << std::endl;
         return nbuf.makeProof(loc);
     }
 

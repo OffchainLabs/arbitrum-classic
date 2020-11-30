@@ -185,96 +185,23 @@ std::vector<unsigned char> MachineState::marshalState() const {
     return buf;
 }
 
-std::vector<unsigned char> bufferToVec(const Buffer& b) {
-    std::vector<unsigned char> res;
-    uint64_t size = b.size();
-    std::cerr << "Buffer size " << size << std::endl;
-    while (size > 0 && b.get(size-1) == 0) {
-        // std::cerr << "Buffer size " << size << std::endl;
-        size--;
-    }
-    uint64_t size_ext = b.size();
-    if (size_ext < 32) size_ext = 32;
-    while (size_ext/2 >= size && size_ext > 32) {
-        size_ext = size_ext/2;
-    }
-    std::cerr << "Buffer size ext " << size_ext << std::endl;
-    for (uint64_t i = 0; i < size_ext; i++) {
-        res.push_back(b.get(i));
-    }
-    std::cerr << "Buffer size " << size << " ext " << size_ext << " orig " << b.size() << std::endl;
-    return res;
-}
-
-uint256_t merkleHash(uint8_t *buf, int offset, int sz) {
-    if (sz == 32) {
-        auto hash_val = ethash::keccak256(buf+offset, 32);
-        uint256_t res = intx::be::load<uint256_t>(hash_val);
-        return res;
-    }
-    // std::cerr << "hashing " << offset << " to " << (offset+sz) << std::endl;
-    auto h1 = merkleHash(buf, offset, sz/2);
-    auto h2 = merkleHash(buf, offset+sz/2, sz/2);
-    return hash(h1, h2);
-}
-
-std::vector<unsigned char> makeProof(uint8_t *arr, uint64_t offset, uint64_t sz, uint64_t loc) {
-    if (sz == 32) {
-        auto res = std::vector<unsigned char>(arr+loc, arr+loc+32);
-        /*
-        for (int i = 0; i < 32; i++) {
-            std::cerr << "hmm " << i << " " << int(arr[loc+i]) << " " << int(res[i]) << std::endl;
-        }
-        */
-        return res;
-        // return std::vector<unsigned char>();
-    } else if (loc < offset + sz/2) {
-        auto proof = makeProof(arr, offset, sz/2, loc);
-        marshal_uint256_t(merkleHash(arr, offset+sz/2, sz/2), proof);
-        return proof;
-    } else {
-        auto proof = makeProof(arr, offset+sz/2, sz/2, loc);
-        marshal_uint256_t(merkleHash(arr, offset, sz/2), proof);
-        return proof;
-    }
-}
-
 std::vector<unsigned char> makeProof(Buffer &buf, uint64_t loc) {
-    auto arr = bufferToVec(buf);
-    auto res = makeProof(arr.data(), 0, arr.size(), ((loc/32) % (arr.size()/32))*32);
+    // auto arr = bufferToVec(buf);
+    // auto res = makeProof(arr.data(), 0, arr.size(), ((loc/32) % (arr.size()/32))*32);
     auto res2 = buf.makeProof(loc);
-    std::cerr << "Making " << arr.size() << " -- " << res.size()/32 << " " << hexStr(res) << std::endl;
-    std::cerr << "Making 2 " << arr.size() << " -- " << res.size()/32 << " " << hexStr(res2) << std::endl;
+    // std::cerr << "Making " << arr.size() << " -- " << res.size()/32 << " " << hexStr(res) << std::endl;
+    // std::cerr << "Making 2 " << arr.size() << " -- " << res.size()/32 << " " << hexStr(res2) << std::endl;
     return res2;
 }
 
-std::vector<unsigned char> makeNormalizationProof(uint8_t *arr, uint64_t sz) {
-    std::vector<unsigned char> res;
-    for (int i = 0; i < 31; i++) {
-        res.push_back(0);
-    }
-
-    if (sz == 32) {
-        std::cerr << "Simple normalization" << std::endl;
-        res.push_back(0);
-        marshal_uint256_t(merkleHash(arr, 0, sz), res);
-        marshal_uint256_t(merkleHash(arr, 0, sz), res);
-        return res;
-    }
-
-    res.push_back(makeProof(arr, 0, sz, 0).size()/32);
-    marshal_uint256_t(merkleHash(arr, 0, sz/2), res);
-    marshal_uint256_t(merkleHash(arr, sz/2, sz/2), res);
-    return res;
-}
 
 std::vector<unsigned char> makeNormalizationProof(Buffer &buf) {
-    auto arr = bufferToVec(buf);
-    std::cerr << "Making normal " << arr.size() << std::endl;
-    auto res = makeNormalizationProof(arr.data(), arr.size());
+    // auto arr = bufferToVec(buf);
+    // std::cerr << "Making normal " << arr.size() << std::endl;
+    // auto res = makeNormalizationProof(arr.data(), arr.size());
     auto res2 = buf.makeNormalizationProof();
-    std::cerr << "Making " << arr.size() << " -- " << res.size()/32 << " " << hexStr(res) << std::endl;
-    std::cerr << "Making 2 " << arr.size() << " -- " << res.size()/32 << " " << hexStr(res2) << std::endl;
+    // std::cerr << "Making " << arr.size() << " -- " << res.size()/32 << " " << hexStr(res) << std::endl;
+    // std::cerr << "Making 2 " << arr.size() << " -- " << res.size()/32 << " " << hexStr(res2) << std::endl;
     return res2;
 }
 
@@ -305,11 +232,11 @@ void makeSetBufferProof(std::vector<unsigned char> &buf, uint64_t loc, Buffer bu
     bool aligned = true;
     for (int i = 0; i < wordSize; i++) {
         if ((loc + i) % 32 == 0 && i > 0) {
-            std::cerr << "Unaligned " << std::endl;
+            // std::cerr << "Unaligned " << std::endl;
             nbuffer1 = nbuffer;
             aligned = false;
         }
-        std::cerr << "Setting to " << (loc+i) << " " << int(static_cast<uint8_t>((v >> ((wordSize-1-i)*8)) & 0xff)) << " size " << nbuffer.size() << std::endl;
+        // std::cerr << "Setting to " << (loc+i) << " " << int(static_cast<uint8_t>((v >> ((wordSize-1-i)*8)) & 0xff)) << " size " << nbuffer.size() << std::endl;
         nbuffer = nbuffer.set(loc + i, static_cast<uint8_t>((v >> ((wordSize-1-i)*8)) & 0xff));
     }
     auto proof1 = makeProof(buffer, loc);
@@ -321,9 +248,9 @@ void makeSetBufferProof(std::vector<unsigned char> &buf, uint64_t loc, Buffer bu
         buf.insert(buf.end(), nproof1.begin(), nproof1.end());
     } else {
         auto proof2 = makeProof(nbuffer1, loc + (wordSize-1));
-        std::cerr << "Loc 1" << std::endl;
+        // std::cerr << "Loc 1" << std::endl;
         auto nproof2 = makeNormalizationProof(nbuffer);
-        std::cerr << "Loc 2" << std::endl;
+        // std::cerr << "Loc 2" << std::endl;
         insertSizes(buf, proof1.size(), nproof1.size(), proof2.size(), nproof2.size());
         buf.insert(buf.end(), proof1.begin(), proof1.end());
         buf.insert(buf.end(), nproof1.begin(), nproof1.end());
