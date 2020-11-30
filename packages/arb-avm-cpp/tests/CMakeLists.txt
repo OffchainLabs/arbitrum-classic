@@ -42,6 +42,8 @@ add_executable(
 		datastack.cpp
 		ecops.cpp
 		ecops.hpp
+		interview.cpp
+		interview.hpp
         machine.cpp
 		main.cpp
         messagestore.cpp
