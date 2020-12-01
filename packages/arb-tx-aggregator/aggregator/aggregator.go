@@ -44,12 +44,13 @@ import (
 )
 
 type Server struct {
-	chain       common.Address
-	batch       batcher.TransactionBatcher
-	db          *txdb.TxDB
-	maxCallTime time.Duration
-	maxCallGas  *big.Int
-	scope       event.SubscriptionScope
+	chain              common.Address
+	batch              batcher.TransactionBatcher
+	db                 *txdb.TxDB
+	maxCallTime        time.Duration
+	maxCallGas         *big.Int
+	initialBlockHeight *big.Int
+	scope              event.SubscriptionScope
 }
 
 // NewServer returns a new instance of the Server class
@@ -57,13 +58,15 @@ func NewServer(
 	batch batcher.TransactionBatcher,
 	rollupAddress common.Address,
 	db *txdb.TxDB,
+	createdHeight *big.Int,
 ) *Server {
 	return &Server{
-		chain:       rollupAddress,
-		batch:       batch,
-		db:          db,
-		maxCallTime: 0,
-		maxCallGas:  big.NewInt(100000000),
+		chain:              rollupAddress,
+		batch:              batch,
+		db:                 db,
+		maxCallTime:        0,
+		maxCallGas:         big.NewInt(100000000),
+		initialBlockHeight: new(big.Int).Sub(createdHeight, big.NewInt(1)),
 	}
 }
 
@@ -93,6 +96,10 @@ func (m *Server) FindLogs(ctx context.Context, fromHeight, toHeight *uint64, add
 func (m *Server) GetBlockCount() uint64 {
 	id := m.db.LatestBlockId()
 	return id.Height.AsInt().Uint64()
+}
+
+func (m *Server) InitialBlockHeight() *big.Int {
+	return m.initialBlockHeight
 }
 
 func (m *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
