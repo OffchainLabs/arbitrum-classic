@@ -73,12 +73,6 @@ func (s *Server) GetStorageAt(address *common.Address, index *hexutil.Big, block
 
 func (s *Server) GetTransactionCount(ctx context.Context, address *common.Address, blockNum *rpc.BlockNumber) (hexutil.Uint64, error) {
 	account := arbcommon.NewAddressFromEth(*address)
-	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
-		count := s.srv.PendingTransactionCount(ctx, account)
-		if count != nil {
-			return hexutil.Uint64(*count), nil
-		}
-	}
 	snap, err := s.getSnapshot(blockNum)
 	if err != nil {
 		return 0, err
@@ -87,7 +81,18 @@ func (s *Server) GetTransactionCount(ctx context.Context, address *common.Addres
 	if err != nil {
 		return 0, errors.Wrap(err, "error getting transaction count")
 	}
-	return hexutil.Uint64(txCount.Uint64()), nil
+
+	count := txCount.Uint64()
+	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
+		pending := s.srv.PendingTransactionCount(ctx, account)
+		if pending != nil {
+			if *pending > count {
+				count = *pending
+			}
+		}
+	}
+
+	return hexutil.Uint64(count), nil
 }
 
 func (s *Server) GetBlockTransactionCountByHash(blockHash common.Hash) (*hexutil.Big, error) {
