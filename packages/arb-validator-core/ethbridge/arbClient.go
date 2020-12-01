@@ -202,89 +202,52 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 	if auth.Nonce == nil {
 		// Not incrementing nonce, so nothing else to do
 		if err != nil {
-			log.Err(err).Str("nonce", "nil").Msg("makeContract")
+			log.Err(err).Str("nonce", "nil").Msg("error when nonce not set")
 			return addr, nil, err
 		}
 
 		txJSON, err := tx.MarshalJSON()
 		if err != nil {
-			log.Err(err).Str("nonce", "nil").Msg("makeContract failed to marshal tx into json")
+			log.Err(err).Str("nonce", "nil").Msg("failed to marshal tx into json")
 			return addr, tx, err
 		}
 
-		log.Info().RawJSON("tx", txJSON).Str("nonce", "nil").Str("sender", t.auth.From.Hex()).Msg("makeContract")
+		log.Info().RawJSON("tx", txJSON).Str("nonce", "nil").Hex("sender", t.auth.From.Bytes()).Msg("make")
 		return addr, nil, err
 	}
 
 	for i := 0; i < smallNonceRepeatCount && err != nil && strings.Contains(err.Error(), smallNonceError); i++ {
 		// Increment nonce and try again
-		log.Err(err).Str("nonce", auth.Nonce.Text(16)).Msg("makeContract incrementing nonce and submitting tx again")
+		log.Err(err).Str("nonce", auth.Nonce.Text(16)).Msg("incrementing nonce and submitting tx again")
 
-		auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
+		t.auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
+		auth.Nonce = t.auth.Nonce
 		addr, tx, _, err = contractFunc(auth)
 	}
 
 	if err != nil {
-		log.Err(err).Str("nonce", auth.Nonce.Text(16)).Msg("makeContract")
+		log.Err(err).Str("nonce", auth.Nonce.Text(16)).Msg("make")
 		return addr, nil, err
 	}
 
 	// Transaction successful, increment nonce for next time
 	txJSON, err := tx.MarshalJSON()
 	if err != nil {
-		log.Err(err).Str("nonce", auth.Nonce.Text(16)).Msg("makeContract failed to marshal tx into json")
+		log.Err(err).Str("nonce", auth.Nonce.Text(16)).Msg("failed to marshal tx into json")
 	} else {
-		log.Info().RawJSON("tx", txJSON).Str("nonce", auth.Nonce.Text(16)).Str("sender", t.auth.From.Hex()).Msg("makeContract")
+		log.Info().RawJSON("tx", txJSON).Str("nonce", auth.Nonce.Text(16)).Hex("sender", t.auth.From.Bytes()).Msg("make")
 	}
 
-	t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
+	t.auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
 	return addr, tx, err
 }
 
 func (t *TransactAuth) makeTx(ctx context.Context, txFunc func(auth *bind.TransactOpts) (*types.Transaction, error)) (*types.Transaction, error) {
-	auth := t.getAuth(ctx)
+	_, tx, err := t.makeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		tx, err := txFunc(auth)
+		return ethcommon.BigToAddress(big.NewInt(0)), tx, nil, err
+	})
 
-	tx, err := txFunc(auth)
-
-	if auth.Nonce == nil {
-		// Not incrementing nonce, so nothing else to do
-		if err != nil {
-			log.Err(err).Str("nonce", "nil").Msg("makeTx")
-			return nil, err
-		}
-
-		txJSON, err := tx.MarshalJSON()
-		if err != nil {
-			log.Err(err).Str("nonce", "nil").Msg("makeTx failed to marshal tx into json")
-			return tx, err
-		}
-
-		log.Info().RawJSON("tx", txJSON).Str("nonce", "nil").Str("sender", t.auth.From.Hex()).Msg("makeTx")
-		return tx, err
-	}
-
-	for i := 0; i < smallNonceRepeatCount && err != nil && strings.Contains(err.Error(), smallNonceError); i++ {
-		// Increment nonce and try again
-		log.Err(err).Str("nonce", auth.Nonce.Text(16)).Msg("makeTx incrementing nonce and submitting tx again")
-
-		auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
-		tx, err = txFunc(auth)
-	}
-
-	if err != nil {
-		log.Err(err).Str("nonce", auth.Nonce.Text(16)).Msg("makeTx")
-		return nil, err
-	}
-
-	// Transaction successful, increment nonce for next time
-	txJSON, err := tx.MarshalJSON()
-	if err != nil {
-		log.Err(err).Str("nonce", auth.Nonce.Text(16)).Msg("makeTx failed to marshal tx into json")
-	} else {
-		log.Info().RawJSON("tx", txJSON).Str("nonce", auth.Nonce.Text(16)).Str("sender", t.auth.From.Hex()).Msg("makeTx")
-	}
-
-	t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
 	return tx, err
 }
 

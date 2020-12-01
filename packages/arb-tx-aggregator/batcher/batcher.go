@@ -281,7 +281,7 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 	if err != nil {
 		log.Err(err).Msg("failed to marshal tx into json")
 	} else {
-		log.Info().RawJSON("tx", txJSON).Str("sender", sender.Hex()).Msg("user tx")
+		log.Info().RawJSON("tx", txJSON).Hex("sender", sender.Bytes()).Msg("user tx")
 	}
 
 	m.Lock()
