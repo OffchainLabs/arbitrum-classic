@@ -18,15 +18,13 @@ package ethbridge
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"math/big"
 	"strings"
 
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -79,7 +77,7 @@ func newRollupWatcher(
 ) (*ethRollupWatcher, error) {
 	arbitrumRollupContract, err := ethbridgecontracts.NewArbRollup(rollupAddress, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to arbRollup")
+		return nil, errors.Wrap(err, "Failed to connect to arbRollup")
 	}
 
 	return &ethRollupWatcher{
@@ -280,7 +278,7 @@ func (vm *ethRollupWatcher) processEvents(
 			LogsAccHash: hashSliceToHashes(eventVal.LogsAccHash),
 		}, nil
 	default:
-		return nil, errors2.New("unknown arbitrum event type")
+		return nil, errors.New("unknown arbitrum event type")
 	}
 }
 
@@ -390,7 +388,7 @@ func (vm *ethRollupWatcher) VerifyArbChain(ctx context.Context, machHash common.
 	}
 
 	if ethbridgeVersion != validEthBridgeVersion {
-		return fmt.Errorf("VM has EthBridge version %v, but validator implements version %v."+
+		return errors.Errorf("VM has EthBridge version %v, but validator implements version %v."+
 			" To find a validator version which supports your EthBridge, visit "+
 			"https://offchainlabs.com/ethbridge-version-support",
 			ethbridgeVersion, validEthBridgeVersion)
@@ -402,7 +400,7 @@ func (vm *ethRollupWatcher) VerifyArbChain(ctx context.Context, machHash common.
 	}
 
 	if machHash != initialVMHash {
-		return fmt.Errorf("ArbChain was initialized with VM with hash %v, but local validator has VM with hash %v", initialVMHash, machHash)
+		return errors.Errorf("ArbChain was initialized with VM with hash %v, but local validator has VM with hash %v", initialVMHash, machHash)
 	}
 	return nil
 }

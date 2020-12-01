@@ -18,14 +18,13 @@ package ethbridge
 
 import (
 	"context"
-	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -94,14 +93,14 @@ func (con *arbFactory) CreateRollup(
 		)
 	})
 	if err != nil {
-		return common.Address{}, nil, errors2.Wrap(err, "Failed to call to ChainFactory.CreateChain")
+		return common.Address{}, nil, errors.Wrap(err, "Failed to call to ChainFactory.CreateChain")
 	}
 	receipt, err := WaitForReceiptWithResults(ctx, con.client, con.auth.auth.From, tx, "CreateChain")
 	if err != nil {
 		return common.Address{}, nil, err
 	}
 	if len(receipt.Logs) != 3 {
-		return common.Address{}, nil, fmt.Errorf("wrong receipt count %v instead of 2", len(receipt.Logs))
+		return common.Address{}, nil, errors.Errorf("wrong receipt count %v instead of 2", len(receipt.Logs))
 	}
 	event, err := con.contract.ParseRollupCreated(*receipt.Logs[2])
 	if err != nil {
@@ -119,7 +118,7 @@ type arbFactoryWatcher struct {
 func newArbFactoryWatcher(address ethcommon.Address, client ethutils.EthClient) (*arbFactoryWatcher, error) {
 	vmCreatorContract, err := ethbridgecontracts.NewArbFactory(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
+		return nil, errors.Wrap(err, "Failed to connect to arbFactory")
 	}
 	return &arbFactoryWatcher{contract: vmCreatorContract, client: client, address: address}, nil
 }

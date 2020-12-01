@@ -18,7 +18,7 @@ package machineobserver
 
 import (
 	"context"
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"log"
 	"math/big"
 	"time"
@@ -180,7 +180,7 @@ func RunObserver(
 					start := new(big.Int).Add(db.LatestBlockId().Height.AsInt(), big.NewInt(1))
 					fetchEnd, err := observer.CalculateCatchupFetch(runCtx, start, clnt, maxReorg)
 					if err != nil {
-						return errors2.Wrap(err, "error calculating fast catchup")
+						return errors.Wrap(err, "error calculating fast catchup")
 					}
 					if fetchEnd == nil {
 						break
@@ -192,26 +192,26 @@ func RunObserver(
 					log.Println("Getting events between", start, "and", fetchEnd, "with", new(big.Int).Sub(currentOnChain.Height.AsInt(), start), "blocks remaining")
 					inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, start, fetchEnd)
 					if err != nil {
-						return errors2.Wrap(err, "Manager hit error doing fast catchup")
+						return errors.Wrap(err, "Manager hit error doing fast catchup")
 					}
 
 					endBlock, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(fetchEnd))
 					if err != nil {
-						return errors2.Wrap(err, "error getting end block in fast catchup")
+						return errors.Wrap(err, "error getting end block in fast catchup")
 					}
 					if err := db.AddMessages(runCtx, inboxDeliveredEvents, endBlock); err != nil {
-						return errors2.Wrap(err, "error adding messages to db")
+						return errors.Wrap(err, "error adding messages to db")
 					}
 				}
 
 				latest := db.LatestBlockId()
 				headersChan, err := clnt.SubscribeBlockHeadersAfter(runCtx, latest)
 				if err != nil {
-					return errors2.Wrap(err, "can't restart header subscription")
+					return errors.Wrap(err, "can't restart header subscription")
 				}
 				for maybeBlockId := range headersChan {
 					if maybeBlockId.Err != nil {
-						return errors2.Wrap(maybeBlockId.Err, "error getting new header")
+						return errors.Wrap(maybeBlockId.Err, "error getting new header")
 					}
 
 					blockId := maybeBlockId.BlockId
@@ -219,11 +219,11 @@ func RunObserver(
 
 					inboxEvents, err := inboxWatcher.GetDeliveredEventsInBlock(runCtx, blockId, timestamp)
 					if err != nil {
-						return errors2.Wrapf(err, "manager hit error getting inbox events with block %v", blockId)
+						return errors.Wrapf(err, "manager hit error getting inbox events with block %v", blockId)
 					}
 
 					if err := db.AddMessages(runCtx, inboxEvents, blockId); err != nil {
-						return errors2.Wrap(err, "error adding messages to db")
+						return errors.Wrap(err, "error adding messages to db")
 					}
 				}
 				return nil

@@ -18,8 +18,7 @@ package ethbridge
 
 import (
 	"context"
-	"errors"
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -39,7 +38,7 @@ type globalInbox struct {
 func newGlobalInbox(address ethcommon.Address, chain ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*globalInbox, error) {
 	watcher, err := newGlobalInboxWatcher(address, chain, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to GlobalInbox")
+		return nil, errors.Wrap(err, "Failed to connect to GlobalInbox")
 	}
 	return &globalInbox{watcher, auth}, nil
 }

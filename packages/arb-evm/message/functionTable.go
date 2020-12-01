@@ -18,9 +18,9 @@ package message
 
 import (
 	"bytes"
-	"errors"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/pkg/errors"
 	"math/big"
 	"math/rand"
 )

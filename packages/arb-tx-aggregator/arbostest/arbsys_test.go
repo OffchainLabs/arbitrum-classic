@@ -18,7 +18,7 @@ package arbostest
 
 import (
 	"bytes"
-	"fmt"
+	"github.com/pkg/errors"
 	"math/big"
 	"strings"
 	"testing"
@@ -84,7 +84,7 @@ func TestTransactionCount(t *testing.T) {
 			t.Fatal(err)
 		}
 		if txCount.Cmp(big.NewInt(int64(target))) != 0 {
-			return fmt.Errorf("wrong tx count %v", txCount)
+			return errors.Errorf("wrong tx count %v", txCount)
 		}
 		t.Log("Current tx count is", txCount)
 		return nil

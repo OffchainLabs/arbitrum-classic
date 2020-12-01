@@ -19,8 +19,8 @@ package cmdhelper
 import (
 	"context"
 	"flag"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
 	"time"
@@ -63,7 +63,7 @@ func ValidateRollupChain(
 	}
 
 	if validateCmd.NArg() != 3 {
-		return fmt.Errorf(
+		return errors.Errorf(
 			"usage: %v validate %v [--blocktime=NumSeconds] %v",
 			execName,
 			utils.WalletArgsString,
@@ -166,7 +166,7 @@ func ObserveRollupChain(
 	}
 
 	if validateCmd.NArg() != 3 {
-		return fmt.Errorf(
+		return errors.Errorf(
 			"usage: %v validate %v",
 			execName,
 			utils.RollupArgsString,

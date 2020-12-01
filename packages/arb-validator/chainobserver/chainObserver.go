@@ -19,8 +19,7 @@ package chainobserver
 import (
 	"bytes"
 	"context"
-	"fmt"
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"log"
 	"math/big"
 	"sync"
@@ -275,12 +274,12 @@ func (x *ChainObserverBuf) unmarshalFromCheckpoint(
 	}
 	knownValidNode := nodeGraph.NodeFromHash(x.KnownValidNode.Unmarshal())
 	if knownValidNode == nil {
-		return nil, fmt.Errorf("knownValidNode %v was nil", x.KnownValidNode.Unmarshal())
+		return nil, errors.Errorf("knownValidNode %v was nil", x.KnownValidNode.Unmarshal())
 	}
 
 	calculatedValidNode := nodeGraph.NodeFromHash(x.CalculatedValidNode.Unmarshal())
 	if calculatedValidNode == nil {
-		return nil, fmt.Errorf("calculatedValidNode %v was nil", x.CalculatedValidNode.Unmarshal())
+		return nil, errors.Errorf("calculatedValidNode %v was nil", x.CalculatedValidNode.Unmarshal())
 	}
 
 	return &ChainObserver{
@@ -383,7 +382,7 @@ func (chain *ChainObserver) NotifyNextEvent(blockId *common.BlockId) {
 func (chain *ChainObserver) UpdateAssumedValidBlock(ctx context.Context, clnt arbbridge.ChainTimeGetter, assumedValidDepth int64) error {
 	latestL1BlockId, err := clnt.BlockIdForHeight(ctx, nil)
 	if err != nil {
-		return errors2.Wrap(err, "Getting current block header")
+		return errors.Wrap(err, "Getting current block header")
 	}
 
 	validHeight := new(big.Int).Sub(latestL1BlockId.Height.AsInt(), big.NewInt(assumedValidDepth))
@@ -392,7 +391,7 @@ func (chain *ChainObserver) UpdateAssumedValidBlock(ctx context.Context, clnt ar
 	}
 	assumedValidBlock, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(validHeight))
 	if err != nil {
-		return errors2.Wrapf(err, "Getting assumed valid block header at height %v", validHeight)
+		return errors.Wrapf(err, "Getting assumed valid block header at height %v", validHeight)
 	}
 
 	chain.Lock()

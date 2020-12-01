@@ -26,7 +26,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -44,7 +44,7 @@ func newInboxTopChallenge(address ethcommon.Address, client ethutils.EthClient, 
 	}
 	inboxTopContract, err := ethbridgecontracts.NewInboxTopChallenge(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to InboxTopChallenge")
+		return nil, errors.Wrap(err, "Failed to connect to InboxTopChallenge")
 	}
 	return &inboxTopChallenge{bisectionChallenge: bisectionChallenge, contract: inboxTopContract}, nil
 }

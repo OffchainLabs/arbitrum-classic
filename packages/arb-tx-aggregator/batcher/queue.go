@@ -18,9 +18,9 @@ package batcher
 
 import (
 	"container/heap"
-	"errors"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
 	"math/rand"
 )
 

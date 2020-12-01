@@ -18,7 +18,7 @@ package arbbridge
 
 import (
 	"context"
-	"errors"
+	"github.com/pkg/errors"
 	"log"
 	"math/big"
 	"time"

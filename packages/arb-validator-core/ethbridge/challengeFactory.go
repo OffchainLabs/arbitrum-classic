@@ -24,7 +24,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -39,7 +39,7 @@ type challengeFactory struct {
 func newChallengeFactory(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*challengeFactory, error) {
 	vmCreatorContract, err := ethbridgecontracts.NewChallengeFactory(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
+		return nil, errors.Wrap(err, "Failed to connect to arbFactory")
 	}
 	return &challengeFactory{vmCreatorContract, client, auth}, nil
 }
@@ -93,7 +93,7 @@ func (con *challengeFactory) CreateChallenge(
 		)
 	})
 	if err != nil {
-		return common.Address{}, errors2.Wrap(err, "Failed to call to challengeFactory.CreateChallenge")
+		return common.Address{}, errors.Wrap(err, "Failed to call to challengeFactory.CreateChallenge")
 	}
 
 	receipt, err := WaitForReceiptWithResults(ctx, con.client, con.auth.auth.From, tx, "CreateChallenge")
@@ -102,7 +102,7 @@ func (con *challengeFactory) CreateChallenge(
 	}
 
 	if len(receipt.Logs) != 1 {
-		return common.Address{}, errors2.New("Wrong receipt count")
+		return common.Address{}, errors.New("Wrong receipt count")
 	}
 
 	return common.NewAddressFromEth(receipt.Logs[0].Address), nil

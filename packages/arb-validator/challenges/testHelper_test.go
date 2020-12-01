@@ -19,7 +19,7 @@ package challenges
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/core/types"
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"log"
 	"math/big"
 	"testing"
@@ -217,16 +217,16 @@ func getChallengeInfo(ctx context.Context, client ethutils.EthClient, asserterCl
 		)
 	})
 	if err != nil {
-		return common.Address{}, nil, errors2.Wrap(err, "Error starting challenge")
+		return common.Address{}, nil, errors.Wrap(err, "Error starting challenge")
 	}
 
 	receipt, err := ethbridge.WaitForReceiptWithResults(ctx, client, asserterClient.Address().ToEthAddress(), tx, "StartChallenge")
 	if err != nil {
-		return common.Address{}, nil, errors2.Wrap(err, "Error starting challenge")
+		return common.Address{}, nil, errors.Wrap(err, "Error starting challenge")
 	}
 
 	if len(receipt.Logs) != 1 {
-		return common.Address{}, nil, errors2.Wrap(err, "Error starting challenge")
+		return common.Address{}, nil, errors.Wrap(err, "Error starting challenge")
 	}
 
 	challengeAddress := common.NewAddressFromEth(receipt.Logs[0].Address)

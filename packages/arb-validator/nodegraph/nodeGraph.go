@@ -17,10 +17,9 @@
 package nodegraph
 
 import (
-	"errors"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/pkg/errors"
 	"log"
 	"strconv"
 
@@ -127,7 +126,7 @@ func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (
 		if nd.HasAncestor() {
 			prev, ok := chain.nodeFromHash[nd.PrevHash()]
 			if !ok {
-				return nil, fmt.Errorf("Prev node %v not found for node %v while unmarshalling graph\n", nd.PrevHash(), nd.Hash())
+				return nil, errors.Errorf("Prev node %v not found for node %v while unmarshalling graph\n", nd.PrevHash(), nd.Hash())
 			}
 			if err := structures.Link(nd, prev); err != nil {
 				// This can only fail if prev is not actually the prev of nd

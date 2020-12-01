@@ -18,8 +18,7 @@ package challenges
 
 import (
 	"context"
-	"errors"
-	"fmt"
+	"github.com/pkg/errors"
 	"log"
 	"math/rand"
 
@@ -95,7 +94,7 @@ func challengeExecution(
 	}
 	ev, ok := event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, fmt.Errorf("ExecutionChallenge challenger expected InitiateChallengeEvent but got %T", event)
+		return 0, errors.Errorf("ExecutionChallenge challenger expected InitiateChallengeEvent but got %T", event)
 	}
 
 	deadline := ev.Deadline
@@ -129,7 +128,7 @@ func challengeExecution(
 
 		bisectionEvent, ok := event.(arbbridge.ExecutionBisectionEvent)
 		if !ok {
-			return 0, fmt.Errorf("ExecutionChallenge challenger expected ExecutionBisectionEvent but got %T", event)
+			return 0, errors.Errorf("ExecutionChallenge challenger expected ExecutionBisectionEvent but got %T", event)
 		}
 
 		chooseSegment, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
@@ -156,7 +155,7 @@ func challengeExecution(
 
 		continueEvent, ok := event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, fmt.Errorf("ExecutionChallenge challenger expected ContinueChallengeEvent but got %T", event)
+			return 0, errors.Errorf("ExecutionChallenge challenger expected ContinueChallengeEvent but got %T", event)
 		}
 
 		// Update mach, precondition, deadline

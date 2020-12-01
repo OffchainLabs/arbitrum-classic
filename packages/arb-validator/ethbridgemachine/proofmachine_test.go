@@ -24,7 +24,7 @@ import (
 	"strconv"
 
 	"encoding/json"
-	"errors"
+	"github.com/pkg/errors"
 	"io/ioutil"
 
 	"path/filepath"
