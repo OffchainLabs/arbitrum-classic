@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
@@ -32,7 +31,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
 
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -84,7 +83,7 @@ func createRollupChain() error {
 	}
 
 	if createCmd.NArg() != 3 {
-		return fmt.Errorf("usage: arb-validator create %v <validator_folder> <ethURL> <factoryAddress> [staketoken=TokenAddress] [staketoken=TokenAddress]", utils.WalletArgsString)
+		return errors.Errorf("usage: arb-validator create %v <validator_folder> <ethURL> <factoryAddress> [staketoken=TokenAddress] [staketoken=TokenAddress]", utils.WalletArgsString)
 	}
 
 	validatorFolder := createCmd.Arg(0)
@@ -96,7 +95,7 @@ func createRollupChain() error {
 	// 1) Compiled Arbitrum bytecode
 	mach, err := loader.LoadMachineFromFile(contractFile, true, "cpp")
 	if err != nil {
-		return errors2.WithStack(errors2.Wrap(err, "loader error"))
+		return errors.Wrap(err, "loader error")
 	}
 
 	auth, err := utils.GetKeystore(validatorFolder, walletVars, createCmd)

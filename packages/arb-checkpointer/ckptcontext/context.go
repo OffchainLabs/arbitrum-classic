@@ -17,10 +17,10 @@
 package ckptcontext
 
 import (
-	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/pkg/errors"
 )
 
 type RestoreContext interface {

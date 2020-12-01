@@ -18,7 +18,7 @@ package chainobserver
 
 import (
 	"context"
-	"errors"
+	"github.com/pkg/errors"
 	"log"
 	"math/big"
 	"sync"

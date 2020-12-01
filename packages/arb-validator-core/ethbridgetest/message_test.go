@@ -17,7 +17,7 @@
 package ethbridgetest
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 	"math/rand"
 	"testing"
 	"time"

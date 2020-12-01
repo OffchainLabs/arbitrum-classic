@@ -18,14 +18,13 @@ package ethbridge
 
 import (
 	"context"
-	"errors"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 	"strings"
 
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -56,7 +55,7 @@ func newBisectionChallenge(address ethcommon.Address, client ethutils.EthClient,
 	}
 	bisectionContract, err := ethbridgecontracts.NewBisectionChallenge(address, client)
 	if err != nil {
-		return nil, errors2.WithStack(errors2.Wrap(err, "Failed to connect to ChallengeManager"))
+		return nil, errors.Wrap(err, "Failed to connect to ChallengeManager")
 	}
 	vm := &bisectionChallenge{
 		challenge:          challenge,
@@ -113,7 +112,7 @@ func newBisectionChallengeWatcher(address ethcommon.Address, client ethutils.Eth
 	}
 	bisectionContract, err := ethbridgecontracts.NewBisectionChallenge(address, client)
 	if err != nil {
-		return nil, errors2.WithStack(errors2.Wrap(err, "Failed to connect to ChallengeManager"))
+		return nil, errors.Wrap(err, "Failed to connect to ChallengeManager")
 	}
 	vm := &bisectionChallengeWatcher{
 		challengeWatcher:   challenge,

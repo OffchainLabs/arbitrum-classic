@@ -1,8 +1,8 @@
 package evm
 
 import (
-	"errors"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"

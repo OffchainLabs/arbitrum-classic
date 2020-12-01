@@ -18,12 +18,10 @@ package ethbridge
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"math/big"
 	"strings"
@@ -66,7 +64,7 @@ func (c *EthArbClient) SubscribeBlockHeaders(ctx context.Context, startBlockId *
 
 	startHeader, err := c.client.HeaderByHash(ctx, startBlockId.HeaderHash.ToEthHash())
 	if err != nil {
-		return nil, errors2.Wrapf(err, "can't find initial header %v", startBlockId)
+		return nil, errors.Wrapf(err, "can't find initial header %v", startBlockId)
 	}
 	blockIdChan <- arbbridge.MaybeBlockId{BlockId: startBlockId, Timestamp: new(big.Int).SetUint64(startHeader.Time)}
 	prevBlockId := startBlockId
@@ -83,7 +81,7 @@ func (c *EthArbClient) subscribeBlockHeadersAfter(ctx context.Context, prevBlock
 	}
 
 	if !prevBlockId.Equals(prevBlockIdCheck) {
-		return fmt.Errorf("can't subscribe to headers, block hash %v doesn't match expected value %v", prevBlockIdCheck, prevBlockId)
+		return errors.Errorf("can't subscribe to headers, block hash %v doesn't match expected value %v", prevBlockIdCheck, prevBlockId)
 	}
 
 	go func() {
@@ -274,7 +272,7 @@ func NewEthAuthClient(ctx context.Context, client ethutils.EthClient, auth *bind
 	if auth.Nonce == nil {
 		nonce, err := client.PendingNonceAt(ctx, auth.From)
 		if err != nil {
-			return nil, errors2.WithStack(errors2.Wrap(err, "Failed to get nonce for GlobalInbox"))
+			return nil, errors.Wrap(err, "Failed to get nonce for GlobalInbox")
 		}
 		auth.Nonce = new(big.Int).SetUint64(nonce)
 	}

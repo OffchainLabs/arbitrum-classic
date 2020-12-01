@@ -19,8 +19,6 @@ package aggregator
 import (
 	"bytes"
 	"context"
-	"errors"
-	"fmt"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/bloombits"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -29,6 +27,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/pkg/errors"
 	"math/big"
 	"time"
 
@@ -102,7 +101,7 @@ func (m *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
 	} else if *block >= 0 {
 		return uint64(*block), nil
 	} else {
-		return 0, fmt.Errorf("unsupported BlockNumber: %v", block.Int64())
+		return 0, errors.Errorf("unsupported BlockNumber: %v", block.Int64())
 	}
 }
 

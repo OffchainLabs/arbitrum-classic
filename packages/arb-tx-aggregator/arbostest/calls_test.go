@@ -17,11 +17,10 @@
 package arbostest
 
 import (
-	"errors"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/pkg/errors"
 	"log"
 	"math/big"
 	"testing"
@@ -101,7 +100,7 @@ func runValidTransaction(t *testing.T, mach machine.Machine, msg message.Abstrac
 		return nil, err
 	}
 	if result.ResultCode != evm.ReturnCode {
-		return nil, fmt.Errorf("transaction failed unexpectedly %v", result)
+		return nil, errors.Errorf("transaction failed unexpectedly %v", result)
 	}
 	return result, nil
 }
@@ -113,10 +112,10 @@ func runTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Me
 	}
 	results, sends := runMessage(t, mach, l2, sender)
 	if len(results) != 1 {
-		return nil, fmt.Errorf("unexpected log count %v", len(results))
+		return nil, errors.Errorf("unexpected log count %v", len(results))
 	}
 	if len(sends) != 0 {
-		return nil, fmt.Errorf("unexpected send count %v", len(sends))
+		return nil, errors.Errorf("unexpected send count %v", len(sends))
 	}
 	return results[0], nil
 }

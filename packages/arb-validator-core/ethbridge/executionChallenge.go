@@ -26,7 +26,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 )
 
 type executionChallenge struct {
@@ -41,7 +41,7 @@ func newExecutionChallenge(address ethcommon.Address, client ethutils.EthClient,
 	}
 	executionContract, err := ethbridgecontracts.NewExecutionChallenge(address, client)
 	if err != nil {
-		return nil, errors2.WithStack(errors2.Wrap(err, "Failed to connect to ChallengeManager"))
+		return nil, errors.Wrap(err, "Failed to connect to ChallengeManager")
 	}
 	return &executionChallenge{bisectionChallenge: bisectionChallenge, challenge: executionContract}, nil
 }

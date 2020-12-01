@@ -1,8 +1,8 @@
 package arbos
 
 import (
-	"errors"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 	"log"
 	"path/filepath"
 	"runtime"

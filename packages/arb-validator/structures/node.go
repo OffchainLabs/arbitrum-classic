@@ -17,8 +17,8 @@
 package structures
 
 import (
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 	"log"
 	"math/big"
 	"math/rand"

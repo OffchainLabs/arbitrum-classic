@@ -2,12 +2,11 @@ package test
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"math/big"
 	"math/rand"
@@ -180,7 +179,7 @@ func waitForReceipt(
 	for {
 		select {
 		case <-ticker.C:
-			return nil, fmt.Errorf("timed out waiting for receipt for tx %v", tx.Hash().Hex())
+			return nil, errors.Errorf("timed out waiting for receipt for tx %v", tx.Hash().Hex())
 		default:
 		}
 		receipt, err := client.TransactionReceipt(

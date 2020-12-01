@@ -19,7 +19,6 @@ package ethbridgemachine
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -32,6 +31,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"github.com/pkg/errors"
 	"log"
 	"math/big"
 	"testing"

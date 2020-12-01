@@ -18,7 +18,7 @@ package challenges
 
 import (
 	"context"
-	"errors"
+	"github.com/pkg/errors"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"

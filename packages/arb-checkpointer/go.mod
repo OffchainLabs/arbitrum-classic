@@ -7,6 +7,7 @@ require (
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.7.3
+	github.com/pkg/errors v0.9.1
 	google.golang.org/protobuf v1.25.0
 )
 

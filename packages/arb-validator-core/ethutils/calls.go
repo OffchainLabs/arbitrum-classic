@@ -18,7 +18,7 @@ package ethutils
 
 import (
 	"context"
-	"fmt"
+	"github.com/pkg/errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum"
@@ -43,11 +43,11 @@ func CallCheck(ctx context.Context, client EthClient, from common.Address, contr
 	}
 
 	if len(output) < 69 {
-		return fmt.Errorf("%v had short output %v, %v", method, len(output), output)
+		return errors.Errorf("%v had short output %v, %v", method, len(output), output)
 	}
 	length := new(big.Int).SetBytes(output[36:68])
 	if uint64(len(output)) < 68+length.Uint64()+1 {
-		return fmt.Errorf("%v had short output %v, %v", method, len(output), output)
+		return errors.Errorf("%v had short output %v, %v", method, len(output), output)
 	}
-	return fmt.Errorf("%v returned val: %v", method, string(output[68:68+length.Uint64()]))
+	return errors.Errorf("%v returned val: %v", method, string(output[68:68+length.Uint64()]))
 }

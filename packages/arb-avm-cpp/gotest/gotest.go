@@ -17,7 +17,7 @@
 package gotest
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"log"
 	"path/filepath"

@@ -25,7 +25,7 @@ package cmachine
 */
 import "C"
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"runtime"
 	"unsafe"
 )
@@ -38,7 +38,7 @@ func NewValueCache() (*ValueCache, error) {
 	cValueCache := C.createValueCache()
 
 	if cValueCache == nil {
-		return nil, fmt.Errorf("error creating value cache")
+		return nil, errors.Errorf("error creating value cache")
 	}
 	ret := &ValueCache{cValueCache}
 	runtime.SetFinalizer(ret, destroyValueCache)

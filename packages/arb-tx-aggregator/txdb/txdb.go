@@ -18,7 +18,6 @@ package txdb
 
 import (
 	"context"
-	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core"
@@ -37,6 +36,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/pkg/errors"
 	"log"
 	"math/big"
 	"sync"
@@ -151,7 +151,7 @@ func (db *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 			return err
 		}
 		if blockInfo == nil {
-			return fmt.Errorf("no block saved at height %v", restoreHeight)
+			return errors.Errorf("no block saved at height %v", restoreHeight)
 		}
 		blockLog = blockInfo.BlockLog
 		restoreHeight--
@@ -365,7 +365,7 @@ func (db *TxDB) fillEmptyBlocks(ctx context.Context, max *big.Int) error {
 			return err
 		}
 		if prev == nil {
-			return fmt.Errorf("trying to add block %v, but prev header was not found", next)
+			return errors.Errorf("trying to add block %v, but prev header was not found", next)
 		}
 		if err := db.saveEmptyBlock(ctx, prev.Header.Hash(), next); err != nil {
 			return err
@@ -483,7 +483,7 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 			return err
 		}
 		if prev == nil {
-			return fmt.Errorf("trying to add block %v, but prev header was not found", info.BlockNum.Uint64())
+			return errors.Errorf("trying to add block %v, but prev header was not found", info.BlockNum.Uint64())
 		}
 		header := &types.Header{
 			ParentHash: prev.Header.Hash(),

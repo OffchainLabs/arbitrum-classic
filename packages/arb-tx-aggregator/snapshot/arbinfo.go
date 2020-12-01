@@ -17,7 +17,7 @@
 package snapshot
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 	"math/big"
 	"strings"
 

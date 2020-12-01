@@ -18,13 +18,11 @@ package evm
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"math/big"
 	"strings"
 )
@@ -119,7 +117,7 @@ func NewLogFromValue(val value.Value) (Log, error) {
 		return Log{}, errors.New("log must be a tuple")
 	}
 	if tupVal.Len() < 3 {
-		return Log{}, fmt.Errorf("log tuple must be at least size 3, but is %v", tupVal)
+		return Log{}, errors.Errorf("log tuple must be at least size 3, but is %v", tupVal)
 	}
 
 	// Tuple size already verified above, so error can be ignored
@@ -162,7 +160,7 @@ func (l Log) AsValue() (*value.TupleValue, error) {
 func LogStackToLogs(val value.Value) ([]Log, error) {
 	logValues, err := inbox.StackValueToList(val)
 	if err != nil {
-		return nil, errors2.WithStack(errors2.Wrap(err, "log stack was not a stack"))
+		return nil, errors.Wrap(err, "log stack was not a stack")
 	}
 	logs := make([]Log, 0, len(logValues))
 	for i := range logValues {

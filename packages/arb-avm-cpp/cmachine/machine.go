@@ -28,7 +28,7 @@ import "C"
 
 import (
 	"bytes"
-	"fmt"
+	"github.com/pkg/errors"
 	"log"
 	"runtime"
 	"time"
@@ -49,7 +49,7 @@ func New(codeFile string) (*Machine, error) {
 	cFilename := C.CString(codeFile)
 	cMachine := C.machineCreate(cFilename)
 	if cMachine == nil {
-		return nil, fmt.Errorf("error creating machine from file %s", codeFile)
+		return nil, errors.Errorf("error creating machine from file %s", codeFile)
 	}
 	ret := &Machine{cMachine}
 	runtime.SetFinalizer(ret, cdestroyVM)

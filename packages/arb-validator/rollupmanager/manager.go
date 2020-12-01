@@ -18,7 +18,7 @@ package rollupmanager
 
 import (
 	"context"
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"log"
 	"math/big"
 	"sync"
@@ -179,7 +179,7 @@ func CreateManagerAdvanced(
 
 					fetchEnd, err := observer.CalculateCatchupFetch(runCtx, startHeight, clnt, maxReorg)
 					if err != nil {
-						return errors2.WithStack(errors2.Wrap(err, "error calculating fast catchup"))
+						return errors.Wrap(err, "error calculating fast catchup")
 					}
 					if fetchEnd == nil {
 						break
@@ -188,7 +188,7 @@ func CreateManagerAdvanced(
 					log.Println("Getting events between", startHeight, "and", fetchEnd)
 					inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, startHeight, fetchEnd)
 					if err != nil {
-						return errors2.WithStack(errors2.Wrap(err, "Manager hit error doing fast catchup"))
+						return errors.Wrap(err, "Manager hit error doing fast catchup")
 					}
 					inboxEvents := make([]arbbridge.Event, 0, len(inboxDeliveredEvents))
 					for _, ev := range inboxDeliveredEvents {
@@ -196,7 +196,7 @@ func CreateManagerAdvanced(
 					}
 					events, err := rollupWatcher.GetAllEvents(runCtx, startHeight, fetchEnd)
 					if err != nil {
-						return errors2.WithStack(errors2.Wrap(err, "Manager hit error doing fast catchup"))
+						return errors.Wrap(err, "Manager hit error doing fast catchup")
 					}
 					allEvents := arbbridge.MergeEventsUnsafe(inboxEvents, events)
 					for _, ev := range allEvents {
@@ -211,7 +211,7 @@ func CreateManagerAdvanced(
 						}
 						err := man.activeChain.HandleNotification(runCtx, ev)
 						if err != nil {
-							return errors2.WithStack(errors2.Wrap(err, "Manager hit error processing event during fast catchup"))
+							return errors.Wrap(err, "Manager hit error processing event during fast catchup")
 						}
 					}
 					endBlockId, err := clnt.BlockIdForHeight(runCtx, common.NewTimeBlocks(fetchEnd))
@@ -232,13 +232,13 @@ func CreateManagerAdvanced(
 				startEventId := man.activeChain.CurrentEventId()
 				headersChan, err := clnt.SubscribeBlockHeaders(runCtx, startEventId.BlockId)
 				if err != nil {
-					return errors2.WithStack(errors2.Wrap(err, "Error subscribing to block headers"))
+					return errors.Wrap(err, "Error subscribing to block headers")
 				}
 
 				lastDebugPrint := time.Now()
 				for maybeBlockId := range headersChan {
 					if maybeBlockId.Err != nil {
-						return errors2.WithStack(errors2.Wrap(maybeBlockId.Err, "Error getting new header"))
+						return errors.Wrap(maybeBlockId.Err, "Error getting new header")
 					}
 
 					if err := man.activeChain.UpdateAssumedValidBlock(runCtx, clnt, assumedValidThreshold); err != nil {
@@ -268,7 +268,7 @@ func CreateManagerAdvanced(
 
 					inboxEvents, err := inboxWatcher.GetEvents(runCtx, blockId, timestamp)
 					if err != nil {
-						return errors2.WithStack(errors2.Wrapf(err, "Manager hit error getting inbox events with block %v", blockId))
+						return errors.Wrapf(err, "Manager hit error getting inbox events with block %v", blockId)
 					}
 					// It's safe to process inbox events out of order with rollup events as long
 					// as the inbox events are ahead of the rollup ones
@@ -279,13 +279,13 @@ func CreateManagerAdvanced(
 						}
 						err := man.activeChain.HandleNotification(runCtx, ev)
 						if err != nil {
-							return errors2.WithStack(errors2.Wrap(err, "Manager hit error processing event"))
+							return errors.Wrap(err, "Manager hit error processing event")
 						}
 					}
 
 					events, err := rollupWatcher.GetEvents(runCtx, blockId, timestamp)
 					if err != nil {
-						return errors2.WithStack(errors2.Wrapf(err, "Manager hit error getting rollup events with block %v", blockId))
+						return errors.Wrapf(err, "Manager hit error getting rollup events with block %v", blockId)
 					}
 
 					for _, ev := range events {
@@ -295,7 +295,7 @@ func CreateManagerAdvanced(
 						}
 						err := man.activeChain.HandleNotification(runCtx, ev)
 						if err != nil {
-							return errors2.WithStack(errors2.Wrap(err, "Manager hit error processing event"))
+							return errors.Wrap(err, "Manager hit error processing event")
 						}
 					}
 				}

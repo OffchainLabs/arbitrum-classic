@@ -18,8 +18,7 @@ package challenges
 
 import (
 	"context"
-	"errors"
-	"fmt"
+	"github.com/pkg/errors"
 	"log"
 	"math/rand"
 
@@ -73,7 +72,7 @@ func challengeInboxTop(
 	}
 	ev, ok := event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, fmt.Errorf("InboxTopChallenge challenger expected InitiateChallengeEvent but got %T", event)
+		return 0, errors.Errorf("InboxTopChallenge challenger expected InitiateChallengeEvent but got %T", event)
 	}
 
 	deadline := ev.Deadline
@@ -96,7 +95,7 @@ func challengeInboxTop(
 
 		bisectEvent, ok := event.(arbbridge.InboxTopBisectionEvent)
 		if !ok {
-			return 0, fmt.Errorf("InboxTopChallenge challenger expected InboxTopBisectionEvent but got %T", event)
+			return 0, errors.Errorf("InboxTopChallenge challenger expected InboxTopBisectionEvent but got %T", event)
 		}
 
 		event, state, err = inboxChallengerUpdate(
@@ -113,7 +112,7 @@ func challengeInboxTop(
 
 		continueEvent, ok := event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, fmt.Errorf("InboxTopChallenge challenger expected ContinueChallengeEvent but got %T", event)
+			return 0, errors.Errorf("InboxTopChallenge challenger expected ContinueChallengeEvent but got %T", event)
 		}
 		deadline = continueEvent.Deadline
 	}

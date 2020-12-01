@@ -17,7 +17,6 @@
 package evm
 
 import (
-	"errors"
 	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -27,7 +26,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"math/big"
 	"math/rand"
 )
@@ -62,7 +61,7 @@ func NewProvenanceFromValue(val value.Value) (Provenance, error) {
 		return failRet, errors.New("val must be a tuple")
 	}
 	if tup.Len() != 3 {
-		return failRet, fmt.Errorf("expected tuple of length 3, but recieved tuple of length %v", tup.Len())
+		return failRet, errors.Errorf("expected tuple of length 3, but recieved tuple of length %v", tup.Len())
 	}
 
 	// Tuple size already verified above, so error can be ignored
@@ -130,7 +129,7 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 		return failRet, errors.New("val must be a tuple")
 	}
 	if tup.Len() != 7 {
-		return failRet, fmt.Errorf("expected tuple of length 7, but recieved tuple of length %v", tup.Len())
+		return failRet, errors.Errorf("expected tuple of length 7, but recieved tuple of length %v", tup.Len())
 	}
 
 	// Tuple size already verified above, so error can be ignored
@@ -171,7 +170,7 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 
 	data, err := inbox.ByteStackToHex(messageData)
 	if err != nil {
-		return failRet, errors2.WithStack(errors2.Wrap(err, "unmarshalling input data"))
+		return failRet, errors.Wrap(err, "unmarshalling input data")
 	}
 
 	provenance, err := NewProvenanceFromValue(provenanceVal)
@@ -327,7 +326,7 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.Value, chainInfo value.Value) (*TxResult, error) {
 	resultTup, ok := resultInfo.(*value.TupleValue)
 	if !ok || resultTup.Len() != 3 {
-		return nil, fmt.Errorf("advise expected result info tuple of length 3, but recieved %v", resultTup)
+		return nil, errors.Errorf("advise expected result info tuple of length 3, but recieved %v", resultTup)
 	}
 
 	// Tuple size already verified above, so error can be ignored
@@ -337,7 +336,7 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 
 	gasInfoTup, ok := gasInfo.(*value.TupleValue)
 	if !ok || gasInfoTup.Len() != 2 {
-		return nil, fmt.Errorf("advise expected gas info tuple of length 2, but recieved %v", gasInfoTup)
+		return nil, errors.Errorf("advise expected gas info tuple of length 2, but recieved %v", gasInfoTup)
 	}
 
 	// Tuple size already verified above, so error can be ignored
@@ -346,7 +345,7 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 
 	chainInfoTup, ok := chainInfo.(*value.TupleValue)
 	if !ok || chainInfoTup.Len() != 3 {
-		return nil, fmt.Errorf("advise expected tx block data tuple of length 3, but recieved %v", resultTup)
+		return nil, errors.Errorf("advise expected tx block data tuple of length 3, but recieved %v", resultTup)
 	}
 
 	// Tuple size already verified above, so error can be ignored
@@ -360,11 +359,11 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 	}
 	returnBytes, err := inbox.ByteStackToHex(returnData)
 	if err != nil {
-		return nil, errors2.WithStack(errors2.Wrap(err, "umarshalling return data"))
+		return nil, errors.Wrap(err, "umarshalling return data")
 	}
 	logs, err := LogStackToLogs(evmLogs)
 	if err != nil {
-		return nil, errors2.WithStack(errors2.Wrap(err, "unmarshaling logs"))
+		return nil, errors.Wrap(err, "unmarshaling logs")
 	}
 	resultCodeInt, ok := resultCode.(value.IntValue)
 	if !ok {
@@ -550,7 +549,7 @@ func NewResultFromValue(val value.Value) (Result, error) {
 
 	if kindInt.BigInt().Uint64() == 0 {
 		if tup.Len() != 5 {
-			return nil, fmt.Errorf("tx result expected tuple of length 5, but recieved len %v: %v", tup.Len(), tup)
+			return nil, errors.Errorf("tx result expected tuple of length 5, but recieved len %v: %v", tup.Len(), tup)
 		}
 
 		// Tuple size already verified above, so error can be ignored
@@ -561,7 +560,7 @@ func NewResultFromValue(val value.Value) (Result, error) {
 		return parseTxResult(l1MsgVal, resultInfo, gasInfo, chainInfo)
 	} else if kindInt.BigInt().Uint64() == 1 {
 		if tup.Len() != 6 {
-			return nil, fmt.Errorf("tx result expected tuple of length 6, but recieved len %v: %v", tup.Len(), tup)
+			return nil, errors.Errorf("tx result expected tuple of length 6, but recieved len %v: %v", tup.Len(), tup)
 		}
 
 		// Tuple size already verified above, so error can be ignored
