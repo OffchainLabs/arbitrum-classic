@@ -18,8 +18,12 @@ package batcher
 
 import (
 	"container/list"
+
+	"github.com/rs/zerolog/log"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -80,19 +84,28 @@ func (p *statelessBatch) addIncludedTx(tx *types.Transaction) error {
 
 func (p *statelessBatch) validateTx(tx *types.Transaction) txResponse {
 	// If we don't have access to a db, skip this check
+	rejectLogger := log.With().Hex("tx", tx.Hash().Bytes()).Logger()
+	rejectMsg := "rejected user tx"
 	if p.db != nil {
 		sender, err := types.Sender(p.signer, tx)
 		if err != nil {
+			rejectLogger.Info().Err(err).Str("reason", "sender").Msg(rejectMsg)
 			return REMOVE
 		}
 
 		txCount, err := p.db.LatestSnapshot().GetTransactionCount(arbcommon.NewAddressFromEth(sender))
 		if err != nil {
+			rejectLogger.Info().Err(err).Str("reason", "snapshot").Msg(rejectMsg)
 			return REMOVE
 		}
 
 		// If the transaction's nonce is less than the latest state tx count, we can ignore
 		if tx.Nonce() < txCount.Uint64() {
+			rejectLogger.Info().
+				Str("reason", "nonce").
+				Uint64("nonce", tx.Nonce()).
+				Uint64("txcount", txCount.Uint64()).
+				Msg(rejectMsg)
 			return REMOVE
 		}
 	}
