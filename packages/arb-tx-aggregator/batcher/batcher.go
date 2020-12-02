@@ -109,18 +109,20 @@ func NewStatefulBatcher(
 
 func NewStatelessBatcher(
 	ctx context.Context,
+	db *txdb.TxDB,
 	rollupAddress common.Address,
 	receiptFetcher ethutils.ReceiptFetcher,
 	globalInbox arbbridge.GlobalInboxSender,
 	maxBatchTime time.Duration,
 ) *Batcher {
+	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
 	return newBatcher(
 		ctx,
 		rollupAddress,
 		receiptFetcher,
 		globalInbox,
 		maxBatchTime,
-		newStatelessBatch(maxBatchSize),
+		newStatelessBatch(db, maxBatchSize, signer),
 	)
 }
 

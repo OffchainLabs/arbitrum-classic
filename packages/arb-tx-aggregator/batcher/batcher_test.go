@@ -147,6 +147,7 @@ func TestStatelessBatcher(t *testing.T) {
 	ctx := context.Background()
 	batcher := NewStatelessBatcher(
 		ctx,
+		nil,
 		chain,
 		mock,
 		mock,
