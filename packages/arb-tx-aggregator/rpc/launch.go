@@ -111,7 +111,12 @@ func LaunchAggregator(
 		batch = batcher.NewStatefulBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
 	}
 
-	srv := aggregator.NewServer(batch, rollupAddress, db)
+	_, eventCreated, _, _, err := rollupContract.GetCreationInfo(ctx)
+	if err != nil {
+		return err
+	}
+
+	srv := aggregator.NewServer(batch, rollupAddress, db, eventCreated.BlockId.Height.AsInt())
 	errChan := make(chan error, 1)
 
 	web3Server, err := web3.GenerateWeb3Server(srv)
