@@ -18,6 +18,8 @@ package batcher
 
 import (
 	"container/list"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog/log"
 
@@ -64,10 +66,6 @@ func (p *statelessBatch) getAppliedTxes() []*types.Transaction {
 	return p.appliedTxes
 }
 
-func (p *statelessBatch) checkValidForQueue(*types.Transaction) error {
-	return nil
-}
-
 func (p *statelessBatch) updateCurrentSnap(*list.List) {
 
 }
@@ -82,7 +80,7 @@ func (p *statelessBatch) addIncludedTx(tx *types.Transaction) error {
 	return nil
 }
 
-func (p *statelessBatch) validateTx(tx *types.Transaction) txResponse {
+func (p *statelessBatch) validateTx(tx *types.Transaction) (txResponse, error) {
 	// If we don't have access to a db, skip this check
 	rejectLogger := log.With().Hex("tx", tx.Hash().Bytes()).Logger()
 	rejectMsg := "rejected user tx"
@@ -90,13 +88,13 @@ func (p *statelessBatch) validateTx(tx *types.Transaction) txResponse {
 		sender, err := types.Sender(p.signer, tx)
 		if err != nil {
 			rejectLogger.Info().Err(err).Str("reason", "sender").Msg(rejectMsg)
-			return REMOVE
+			return REMOVE, errors.New("couldn't recover sender")
 		}
 
 		txCount, err := p.db.LatestSnapshot().GetTransactionCount(arbcommon.NewAddressFromEth(sender))
 		if err != nil {
 			rejectLogger.Info().Err(err).Str("reason", "snapshot").Msg(rejectMsg)
-			return REMOVE
+			return REMOVE, errors.New("aggregator failed to verify nonce")
 		}
 
 		// If the transaction's nonce is less than the latest state tx count, we can ignore
@@ -106,15 +104,15 @@ func (p *statelessBatch) validateTx(tx *types.Transaction) txResponse {
 				Uint64("nonce", tx.Nonce()).
 				Uint64("txcount", txCount.Uint64()).
 				Msg(rejectMsg)
-			return REMOVE
+			return REMOVE, core.ErrNonceTooLow
 		}
 	}
 
 	if p.sizeBytes+tx.Size() > p.maxSize {
 		p.full = true
-		return FULL
+		return FULL, nil
 	}
-	return ACCEPT
+	return ACCEPT, nil
 }
 
 func (p *statelessBatch) isFull() bool {
