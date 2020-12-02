@@ -98,7 +98,7 @@ func LaunchAggregator(
 		if err != nil {
 			return err
 		}
-		batch = batcher.NewStatelessBatcher(ctx, rollupAddress, client, globalInbox, maxBatchTime)
+		batch = batcher.NewStatelessBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
 	case StatefulBatcherMode:
 		authClient, err := ethbridge.NewEthAuthClient(ctx, client, batcherMode.Auth)
 		if err != nil {

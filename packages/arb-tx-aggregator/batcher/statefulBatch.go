@@ -30,29 +30,23 @@ import (
 
 type statefulBatch struct {
 	*statelessBatch
-	db       *txdb.TxDB
 	snap     *snapshot.Snapshot
 	txCounts map[common.Address]uint64
-	signer   types.Signer
 }
 
 func newStatefulBatch(db *txdb.TxDB, maxSize common.StorageSize, signer types.Signer) *statefulBatch {
 	return &statefulBatch{
-		statelessBatch: newStatelessBatch(maxSize),
-		db:             db,
+		statelessBatch: newStatelessBatch(db, maxSize, signer),
 		snap:           db.LatestSnapshot(),
 		txCounts:       make(map[common.Address]uint64),
-		signer:         signer,
 	}
 }
 
 func (p *statefulBatch) newFromExisting() batch {
 	return &statefulBatch{
 		statelessBatch: p.statelessBatch.newFromExisting().(*statelessBatch),
-		db:             p.db,
 		snap:           p.snap,
 		txCounts:       p.txCounts,
-		signer:         p.signer,
 	}
 }
 

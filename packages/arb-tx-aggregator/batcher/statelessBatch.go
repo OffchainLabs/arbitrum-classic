@@ -21,17 +21,23 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
+	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type statelessBatch struct {
+	db          *txdb.TxDB
+	signer      types.Signer
 	appliedTxes []*types.Transaction
 	sizeBytes   common.StorageSize
 	maxSize     common.StorageSize
 	full        bool
 }
 
-func newStatelessBatch(maxSize common.StorageSize) *statelessBatch {
+func newStatelessBatch(db *txdb.TxDB, maxSize common.StorageSize, signer types.Signer) *statelessBatch {
 	return &statelessBatch{
+		db:          db,
+		signer:      signer,
 		appliedTxes: nil,
 		sizeBytes:   0,
 		maxSize:     maxSize,
@@ -41,6 +47,8 @@ func newStatelessBatch(maxSize common.StorageSize) *statelessBatch {
 
 func (p *statelessBatch) newFromExisting() batch {
 	return &statelessBatch{
+		db:          p.db,
+		signer:      p.signer,
 		appliedTxes: nil,
 		sizeBytes:   0,
 		maxSize:     p.maxSize,
@@ -71,6 +79,24 @@ func (p *statelessBatch) addIncludedTx(tx *types.Transaction) error {
 }
 
 func (p *statelessBatch) validateTx(tx *types.Transaction) txResponse {
+	// If we don't have access to a db, skip this check
+	if p.db != nil {
+		sender, err := types.Sender(p.signer, tx)
+		if err != nil {
+			return REMOVE
+		}
+
+		txCount, err := p.db.LatestSnapshot().GetTransactionCount(arbcommon.NewAddressFromEth(sender))
+		if err != nil {
+			return REMOVE
+		}
+
+		// If the transaction's nonce is less than the latest state tx count, we can ignore
+		if tx.Nonce() < txCount.Uint64() {
+			return REMOVE
+		}
+	}
+
 	if p.sizeBytes+tx.Size() > p.maxSize {
 		p.full = true
 		return FULL
