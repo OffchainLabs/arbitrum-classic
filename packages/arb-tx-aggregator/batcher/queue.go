@@ -143,7 +143,9 @@ func popRandomTx(b batch, queuedTxes *txQueues) (*types.Transaction, int, bool) 
 		nextAccount := queuedTxes.queues[account]
 		tx := nextAccount.Peek()
 
-		switch b.validateTx(tx) {
+		// err param can be ignored
+		action, _ := b.validateTx(tx)
+		switch action {
 		case REMOVE:
 			queuedTxes.removeTxFromAccountAtIndex(index)
 		case SKIP:

@@ -19,6 +19,7 @@ package batcher
 import (
 	"container/list"
 	"context"
+	"github.com/pkg/errors"
 	"sync"
 	"time"
 
@@ -51,12 +52,11 @@ const (
 
 type batch interface {
 	newFromExisting() batch
-	validateTx(tx *types.Transaction) txResponse
+	validateTx(tx *types.Transaction) (txResponse, error)
 	isFull() bool
 	getAppliedTxes() []*types.Transaction
 	addIncludedTx(tx *types.Transaction) error
 	updateCurrentSnap(pendingSentBatches *list.List)
-	checkValidForQueue(tx *types.Transaction) error
 	getLatestSnap() *snapshot.Snapshot
 }
 
@@ -277,6 +277,11 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		return err
 	}
 
+	action, err := m.pendingBatch.validateTx(tx)
+	if action == REMOVE {
+		return errors.Wrap(err, "transaction rejected")
+	}
+
 	m.newTxFeed.Send(core.NewTxsEvent{Txs: []*types.Transaction{tx}})
 
 	txJSON, err := tx.MarshalJSON()
@@ -290,10 +295,6 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 	defer m.Unlock()
 
 	m.pendingBatch.updateCurrentSnap(m.pendingSentBatches)
-
-	if err := m.pendingBatch.checkValidForQueue(tx); err != nil {
-		return err
-	}
 
 	return m.queuedTxes.addTransaction(tx, sender)
 }
