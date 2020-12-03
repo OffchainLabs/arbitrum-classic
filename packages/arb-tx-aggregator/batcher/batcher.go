@@ -277,9 +277,18 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		return err
 	}
 
+	m.Lock()
+	defer m.Unlock()
+
 	action, err := m.pendingBatch.validateTx(tx)
 	if action == REMOVE {
 		return errors.Wrap(err, "transaction rejected")
+	}
+
+	m.pendingBatch.updateCurrentSnap(m.pendingSentBatches)
+
+	if err := m.queuedTxes.addTransaction(tx, sender); err != nil {
+		return err
 	}
 
 	m.newTxFeed.Send(core.NewTxsEvent{Txs: []*types.Transaction{tx}})
@@ -290,13 +299,7 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 	} else {
 		log.Info().RawJSON("tx", txJSON).Hex("sender", sender.Bytes()).Msg("user tx")
 	}
-
-	m.Lock()
-	defer m.Unlock()
-
-	m.pendingBatch.updateCurrentSnap(m.pendingSentBatches)
-
-	return m.queuedTxes.addTransaction(tx, sender)
+	return nil
 }
 
 func (m *Batcher) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
