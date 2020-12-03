@@ -76,6 +76,9 @@ func (q *txQueue) Empty() bool {
 }
 
 func (q *txQueue) Peek() *types.Transaction {
+	if q == nil || len(q.txes) == 0 {
+		return nil
+	}
 	return q.txes[0]
 }
 
@@ -142,6 +145,11 @@ func popRandomTx(b batch, queuedTxes *txQueues) (*types.Transaction, int, bool) 
 		account := queuedTxes.accounts[index]
 		nextAccount := queuedTxes.queues[account]
 		tx := nextAccount.Peek()
+		// No tx in account
+		if tx == nil {
+			queuedTxes.maybeRemoveAccountAtIndex(index)
+			continue
+		}
 
 		// err param can be ignored
 		action, _ := b.validateTx(tx)
