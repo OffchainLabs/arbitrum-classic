@@ -19,6 +19,7 @@ package batcher
 import (
 	"container/list"
 	"context"
+	"github.com/pkg/errors"
 	"sync"
 	"time"
 
@@ -51,12 +52,11 @@ const (
 
 type batch interface {
 	newFromExisting() batch
-	validateTx(tx *types.Transaction) txResponse
+	validateTx(tx *types.Transaction) (txResponse, error)
 	isFull() bool
 	getAppliedTxes() []*types.Transaction
 	addIncludedTx(tx *types.Transaction) error
 	updateCurrentSnap(pendingSentBatches *list.List)
-	checkValidForQueue(tx *types.Transaction) error
 	getLatestSnap() *snapshot.Snapshot
 }
 
@@ -109,18 +109,20 @@ func NewStatefulBatcher(
 
 func NewStatelessBatcher(
 	ctx context.Context,
+	db *txdb.TxDB,
 	rollupAddress common.Address,
 	receiptFetcher ethutils.ReceiptFetcher,
 	globalInbox arbbridge.GlobalInboxSender,
 	maxBatchTime time.Duration,
 ) *Batcher {
+	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
 	return newBatcher(
 		ctx,
 		rollupAddress,
 		receiptFetcher,
 		globalInbox,
 		maxBatchTime,
-		newStatelessBatch(maxBatchSize),
+		newStatelessBatch(db, maxBatchSize, signer),
 	)
 }
 
@@ -275,6 +277,20 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		return err
 	}
 
+	m.Lock()
+	defer m.Unlock()
+
+	action, err := m.pendingBatch.validateTx(tx)
+	if action == REMOVE {
+		return errors.Wrap(err, "transaction rejected")
+	}
+
+	m.pendingBatch.updateCurrentSnap(m.pendingSentBatches)
+
+	if err := m.queuedTxes.addTransaction(tx, sender); err != nil {
+		return err
+	}
+
 	m.newTxFeed.Send(core.NewTxsEvent{Txs: []*types.Transaction{tx}})
 
 	txJSON, err := tx.MarshalJSON()
@@ -283,17 +299,7 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 	} else {
 		log.Info().RawJSON("tx", txJSON).Hex("sender", sender.Bytes()).Msg("user tx")
 	}
-
-	m.Lock()
-	defer m.Unlock()
-
-	m.pendingBatch.updateCurrentSnap(m.pendingSentBatches)
-
-	if err := m.pendingBatch.checkValidForQueue(tx); err != nil {
-		return err
-	}
-
-	return m.queuedTxes.addTransaction(tx, sender)
+	return nil
 }
 
 func (m *Batcher) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
