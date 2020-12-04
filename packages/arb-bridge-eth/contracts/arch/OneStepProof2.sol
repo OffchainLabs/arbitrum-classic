@@ -35,8 +35,13 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         bytes calldata proof,
         bytes calldata bproof
     ) external view returns (uint64 gas, bytes32[5] memory fields) {
-        AssertionContext memory context =
-            initializeExecutionContext(inboxAcc, messagesAcc, logsAcc, proof, bproof);
+        AssertionContext memory context = initializeExecutionContext(
+            inboxAcc,
+            messagesAcc,
+            logsAcc,
+            proof,
+            bproof
+        );
 
         executeOp(context);
 
@@ -421,8 +426,12 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             return;
         }
         require(val2.intVal < (1 << 64), "buffer index must be 64-bit");
-        bytes32 res =
-            setBuffer8(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
+        bytes32 res = setBuffer8(
+            val1.bufferHash,
+            val2.intVal,
+            val3.intVal,
+            decodeProof(context.bufProof)
+        );
         pushVal(context.stack, Value.newBuffer(res));
     }
 
@@ -435,8 +444,12 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             return;
         }
         require(val2.intVal + 7 < (1 << 64), "buffer index must be 64-bit");
-        bytes32 res =
-            setBuffer64(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
+        bytes32 res = setBuffer64(
+            val1.bufferHash,
+            val2.intVal,
+            val3.intVal,
+            decodeProof(context.bufProof)
+        );
         pushVal(context.stack, Value.newBuffer(res));
     }
 
@@ -449,8 +462,12 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             return;
         }
         require(val2.intVal + 31 < (1 << 64), "buffer index must be 64-bit");
-        bytes32 res =
-            setBuffer256(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
+        bytes32 res = setBuffer256(
+            val1.bufferHash,
+            val2.intVal,
+            val3.intVal,
+            decodeProof(context.bufProof)
+        );
         pushVal(context.stack, Value.newBuffer(res));
     }
 
