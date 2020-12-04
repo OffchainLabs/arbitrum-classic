@@ -19,7 +19,7 @@ package machineobserver
 import (
 	"context"
 	"github.com/pkg/errors"
-	"log"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"time"
 
@@ -160,48 +160,39 @@ func RunObserver(
 
 			inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal().Stack().Err(err)
 			}
 
 			if err := ensureInitialized(ctx, cp, db, clnt, rollupAddr); err != nil {
-				log.Fatal(err)
+				log.Fatal().Stack().Err(err)
 			}
 
 			err = func() error {
-				log.Println("Starting observer after", db.LatestBlockId())
+				log.Info().Str("latestBlock", db.LatestBlockId().String()).Msg("Starting observer")
 
 				// If the local chain is significantly behind the L1, catch up
 				// more efficiently. We process `MaxReorgHeight` blocks at a
 				// time up to `MaxReorgHeight` blocks before the current head
 				// and and assume that no reorg will occur affecting the blocks
 				// we are processing
+				maxRetryCount := 10
+				retrySleepDuration := time.Second * 60
 				maxReorg := cp.MaxReorgHeight()
-				for {
-					start := new(big.Int).Add(db.LatestBlockId().Height.AsInt(), big.NewInt(1))
-					fetchEnd, err := observer.CalculateCatchupFetch(runCtx, start, clnt, maxReorg)
+				retryCount := 0
+				done := false
+				for !done {
+					done, err = processBlocks(db, runCtx, clnt, maxReorg, ctx, inboxWatcher)
 					if err != nil {
-						return errors.Wrap(err, "error calculating fast catchup")
-					}
-					if fetchEnd == nil {
-						break
-					}
-					currentOnChain, err := clnt.BlockIdForHeight(ctx, nil)
-					if err != nil {
-						return err
-					}
-					log.Println("Getting events between", start, "and", fetchEnd, "with", new(big.Int).Sub(currentOnChain.Height.AsInt(), start), "blocks remaining")
-					inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, start, fetchEnd)
-					if err != nil {
-						return errors.Wrap(err, "Manager hit error doing fast catchup")
+						if retryCount < maxRetryCount {
+							retryCount++
+							time.Sleep(retrySleepDuration)
+							continue
+						}
+
+						return errors.Wrap(err, "too many retries while catching up local chain")
 					}
 
-					endBlock, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(fetchEnd))
-					if err != nil {
-						return errors.Wrap(err, "error getting end block in fast catchup")
-					}
-					if err := db.AddMessages(runCtx, inboxDeliveredEvents, endBlock); err != nil {
-						return errors.Wrap(err, "error adding messages to db")
-					}
+					retryCount = 0
 				}
 
 				latest := db.LatestBlockId()
@@ -230,7 +221,7 @@ func RunObserver(
 			}()
 
 			if err != nil {
-				log.Println("Error in observer manager:", err)
+				log.Error().Stack().Err(err).Msg("Error in observer manager")
 			}
 
 			cancelFunc()
@@ -246,4 +237,33 @@ func RunObserver(
 		}
 	}()
 	return db, nil
+}
+
+func processBlocks(db *txdb.TxDB, runCtx context.Context, clnt arbbridge.ArbClient, maxReorg *big.Int, ctx context.Context, inboxWatcher arbbridge.GlobalInboxWatcher) (bool, error) {
+	start := new(big.Int).Add(db.LatestBlockId().Height.AsInt(), big.NewInt(1))
+	fetchEnd, err := observer.CalculateCatchupFetch(runCtx, start, clnt, maxReorg)
+	if err != nil {
+		return true, errors.Wrap(err, "error calculating fast catchup")
+	}
+	if fetchEnd == nil {
+		return true, nil
+	}
+	currentOnChain, err := clnt.BlockIdForHeight(ctx, nil)
+	if err != nil {
+		return true, err
+	}
+	log.Info().Hex("start", start.Bytes()).Hex("end", fetchEnd.Bytes()).Int64("remaining", new(big.Int).Sub(currentOnChain.Height.AsInt(), start).Int64()).Msg("Getting events")
+	inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, start, fetchEnd)
+	if err != nil {
+		return true, errors.Wrap(err, "Manager hit error doing fast catchup")
+	}
+
+	endBlock, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(fetchEnd))
+	if err != nil {
+		return true, errors.Wrap(err, "error getting end block in fast catchup")
+	}
+	if err := db.AddMessages(runCtx, inboxDeliveredEvents, endBlock); err != nil {
+		return true, errors.Wrap(err, "error adding messages to db")
+	}
+	return false, nil
 }
