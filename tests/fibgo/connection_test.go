@@ -281,7 +281,9 @@ func TestFib(t *testing.T) {
 	t.Log("Connected to aggregator")
 
 	// Do not wrap with MakeContract because auth is wrapped in session below
+	auths[4].Nonce = big.NewInt(0)
 	_, tx, _, err := arbostestcontracts.DeployFibonacci(auths[4], l2Client)
+	auths[4].Nonce = auths[4].Nonce.Add(auths[4].Nonce, big.NewInt(1))
 	if err != nil {
 		t.Fatal("DeployFibonacci failed", err)
 	}
