@@ -19,6 +19,8 @@ package ethbridgemachine
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"strconv"
@@ -122,11 +124,22 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts
 }
 
 func TestValidateProof(t *testing.T) {
+	ctx := context.Background()
 	testMachines := gotest.OpCodeTestFiles()
-	clnt, pks := test.SimulatedBackend()
-	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
+	backend, pks := test.SimulatedBackend()
+	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth := bind.NewKeyedTransactor(pks[0])
-	_, tx, osp, err := ethbridgecontracts.DeployOneStepProof(auth, client)
+	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ospAddr, tx, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgecontracts.DeployOneStepProof(auth, client)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	osp, err := ethbridgecontracts.NewOneStepProof(ospAddr, backend)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -372,13 +372,26 @@ func (vm *ethRollupWatcher) IsStaked(address common.Address) (bool, error) {
 }
 
 func (vm *ethRollupWatcher) VerifyArbChain(ctx context.Context, machHash common.Hash) error {
-	backend, pks := test.SimulatedBackend()
-	_, _, rollupSim, err := ethbridgecontracts.DeployArbRollup(bind.NewKeyedTransactor(pks[0]), backend)
+	simulatedBackend, pks := test.SimulatedBackend()
+	simulatedClient := &ethutils.SimulatedEthClient{SimulatedBackend: simulatedBackend}
+	simulatedAuth := bind.NewKeyedTransactor(pks[0])
+	authClient, err := NewEthAuthClient(ctx, simulatedClient, simulatedAuth)
 	if err != nil {
 		return err
 	}
-	backend.Commit()
-	validEthBridgeVersion, err := rollupSim.VERSION(&bind.CallOpts{Context: ctx})
+
+	simulatedRollupAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgecontracts.DeployArbRollup(auth, simulatedBackend)
+	})
+	if err != nil {
+		return err
+	}
+	simulatedRollup, err := ethbridgecontracts.NewArbRollup(simulatedRollupAddr, simulatedBackend)
+	if err != nil {
+		return err
+	}
+	simulatedBackend.Commit()
+	validEthBridgeVersion, err := simulatedRollup.VERSION(&bind.CallOpts{Context: ctx})
 	if err != nil {
 		return err
 	}
