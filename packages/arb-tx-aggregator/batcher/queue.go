@@ -133,6 +133,9 @@ func popRandomTx(b batch, queuedTxes *txQueues) (*types.Transaction, int, bool) 
 	lastIndex := index
 	index--
 	for {
+		if len(queuedTxes.accounts) == 0 {
+			return nil, 0, false
+		}
 		index++
 		if index == len(queuedTxes.accounts) {
 			index = 0
