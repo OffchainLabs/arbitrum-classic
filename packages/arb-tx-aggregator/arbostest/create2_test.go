@@ -103,7 +103,7 @@ func TestCreate2(t *testing.T) {
 
 	factoryABI, err := abi.JSON(strings.NewReader(arbostestcontracts.CloneFactoryABI))
 	if err != nil {
-		t.Fatal(factoryABI)
+		t.Fatal(err)
 	}
 
 	create2ABI := factoryABI.Methods["create2Clone"]
@@ -112,29 +112,28 @@ func TestCreate2(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
-	if err != nil {
-		t.Fatal(factoryABI)
-	}
-
-	existsABI := simpleABI.Methods["exists"]
-
 	create2Tx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(2),
 		DestAddress: common.NewAddressFromEth(factoryConnAddress),
 		Payment:     big.NewInt(0),
-		Data:        append(hexutil.MustDecode("0xc91091c3"), create2Data...),
+		Data:        append(create2ABI.ID, create2Data...),
 	}
 
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	existsABI := simpleABI.Methods["exists"]
 	existsCloneTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(3),
 		DestAddress: common.NewAddressFromEth(cloneConnAddress),
 		Payment:     big.NewInt(0),
-		Data:        hexutil.MustDecode("0x267c4ae4"),
+		Data:        existsABI.ID,
 	}
 
 	inboxMessages := []inbox.InboxMessage{

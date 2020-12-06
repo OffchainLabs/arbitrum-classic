@@ -70,22 +70,18 @@ func TestTransfer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	sendABI := transferABI.Methods["send2"]
-
 	sendData, err := sendABI.Inputs.Pack(transfer2Address)
 	if err != nil {
 		t.Fatal(err)
-
 	}
-
 	connCallTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(2),
 		DestAddress: transfer1Address,
 		Payment:     big.NewInt(0),
-		Data:        append(hexutil.MustDecode("0x3386b1a2"), sendData...),
+		Data:        append(sendABI.ID, sendData...),
 	}
 
 	inboxMessages := []inbox.InboxMessage{
