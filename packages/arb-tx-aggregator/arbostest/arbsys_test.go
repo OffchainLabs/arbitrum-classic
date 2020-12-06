@@ -229,10 +229,6 @@ func TestAddressTable(t *testing.T) {
 	targetAddress2 := common.RandAddress()
 	targetAddress3 := common.RandAddress()
 	unregisteredAddress := common.RandAddress()
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
 
 	encodedIndex2, err := message.CompressedAddressIndex{Int: big.NewInt(2)}.Encode()
 	failIfError(t, err)
@@ -274,16 +270,14 @@ func TestAddressTable(t *testing.T) {
 		snapshot.AddressTableCompressData(targetAddress2),
 	}
 
-	inboxMessages := []inbox.InboxMessage{message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime)}
-	inboxSeqNum := int64(1)
 	senderSeq := int64(0)
+	var messages []message.Message
 	for _, msg := range arbSysCalls {
-		inboxMessages = append(inboxMessages, message.NewInboxMessage(makeArbSysTx(msg, big.NewInt(senderSeq)), sender, big.NewInt(inboxSeqNum), chainTime))
-		inboxSeqNum++
+		messages = append(messages, makeArbSysTx(msg, big.NewInt(senderSeq)))
 		senderSeq++
 	}
 
-	logs, _, _ := runAssertion(t, inboxMessages, len(arbSysCalls), 0)
+	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), len(arbSysCalls), 0)
 	results := processTxResults(t, logs)
 
 	revertedTxCheck(t, results[0])
@@ -386,10 +380,6 @@ func TestAddressTable(t *testing.T) {
 func TestArbSysBLS(t *testing.T) {
 	x0a, x1a, y0a, y1a := common.RandBigInt(), common.RandBigInt(), common.RandBigInt(), common.RandBigInt()
 	x0b, x1b, y0b, y1b := common.RandBigInt(), common.RandBigInt(), common.RandBigInt(), common.RandBigInt()
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
 
 	arbSysCalls := [][]byte{
 		// Lookup the key for the sender who hasn't registered
@@ -404,16 +394,14 @@ func TestArbSysBLS(t *testing.T) {
 		snapshot.GetBLSPublicKeyData(sender),
 	}
 
-	inboxMessages := []inbox.InboxMessage{message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime)}
-	inboxSeqNum := int64(1)
 	senderSeq := int64(0)
+	var messages []message.Message
 	for _, msg := range arbSysCalls {
-		inboxMessages = append(inboxMessages, message.NewInboxMessage(makeArbSysTx(msg, big.NewInt(senderSeq)), sender, big.NewInt(inboxSeqNum), chainTime))
-		inboxSeqNum++
+		messages = append(messages, makeArbSysTx(msg, big.NewInt(senderSeq)))
 		senderSeq++
 	}
 
-	logs, _, _ := runAssertion(t, inboxMessages, len(arbSysCalls), 0)
+	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), len(arbSysCalls), 0)
 	results := processTxResults(t, logs)
 
 	revertedTxCheck(t, results[0])
@@ -442,11 +430,6 @@ func TestArbSysBLS(t *testing.T) {
 }
 
 func TestArbSysFunctionTable(t *testing.T) {
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
-
 	functionTable1 := message.FunctionTable{
 		message.NewRandomFunctionTableEntry(),
 		message.NewRandomFunctionTableEntry(),
@@ -479,16 +462,14 @@ func TestArbSysFunctionTable(t *testing.T) {
 		snapshot.FunctionTableGetData(sender, big.NewInt(0)),
 	}
 
-	inboxMessages := []inbox.InboxMessage{message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime)}
-	inboxSeqNum := int64(1)
 	senderSeq := int64(0)
+	var messages []message.Message
 	for _, msg := range arbSysCalls {
-		inboxMessages = append(inboxMessages, message.NewInboxMessage(makeArbSysTx(msg, big.NewInt(senderSeq)), sender, big.NewInt(inboxSeqNum), chainTime))
-		inboxSeqNum++
+		messages = append(messages, makeArbSysTx(msg, big.NewInt(senderSeq)))
 		senderSeq++
 	}
 
-	logs, _, _ := runAssertion(t, inboxMessages, len(arbSysCalls), 0)
+	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), len(arbSysCalls), 0)
 	results := processTxResults(t, logs)
 
 	revertedTxCheck(t, results[0])

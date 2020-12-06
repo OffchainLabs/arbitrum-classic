@@ -25,7 +25,6 @@ import (
 	gethcrypto "github.com/ethereum/go-ethereum/crypto"
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"testing"
 
@@ -33,26 +32,16 @@ import (
 )
 
 func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byte) {
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
+	tx := message.Transaction{
+		MaxGas:      big.NewInt(100000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(0),
+		DestAddress: common.NewAddressFromEth(ethcommon.BytesToAddress([]byte{precompileNum})),
+		Payment:     big.NewInt(0),
+		Data:        data,
 	}
 
-	inboxMessages := make([]inbox.InboxMessage, 0)
-	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg(), common.RandAddress(), big.NewInt(0), chainTime))
-	inboxMessages = append(inboxMessages, message.NewInboxMessage(
-		message.NewSafeL2Message(message.Transaction{
-			MaxGas:      big.NewInt(100000000),
-			GasPriceBid: big.NewInt(0),
-			SequenceNum: big.NewInt(0),
-			DestAddress: common.NewAddressFromEth(ethcommon.BytesToAddress([]byte{precompileNum})),
-			Payment:     big.NewInt(0),
-			Data:        data,
-		}),
-		common.RandAddress(),
-		big.NewInt(1),
-		chainTime,
-	))
+	inboxMessages := makeSimpleInbox([]message.Message{message.NewSafeL2Message(tx)})
 
 	logs, _, _ := runAssertion(t, inboxMessages, 1, 0)
 	results := processTxResults(t, logs)

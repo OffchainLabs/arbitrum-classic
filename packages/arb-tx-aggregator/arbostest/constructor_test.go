@@ -57,15 +57,7 @@ func TestContructor(t *testing.T) {
 	l2Message, err := message.NewL2Message(message.NewCompressedECDSAFromEth(signedTx))
 	failIfError(t, err)
 
-	inboxMessages := make([]inbox.InboxMessage, 0)
-	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime))
-	inboxMessages = append(inboxMessages, message.NewInboxMessage(
-		l2Message,
-		common.RandAddress(),
-		big.NewInt(1),
-		chainTime,
-	))
-
+	inboxMessages := makeSimpleInbox([]message.Message{l2Message})
 	logs, _, mach := runAssertion(t, inboxMessages, 1, 0)
 	results := processTxResults(t, logs)
 
