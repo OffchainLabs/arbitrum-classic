@@ -30,7 +30,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
@@ -147,30 +146,20 @@ func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.S
 		t.Fatal("incorrect log output count", len(results))
 	}
 
+	allResultsSucceeded(t, results)
 	createRes := results[0]
-
-	if createRes.ResultCode != evm.ReturnCode {
-		t.Fatal("failed to create tx")
-	}
 
 	if !bytes.Equal(connAddress.Bytes(), createRes.ReturnData[12:]) {
 		t.Fatal("incorrect created contract address")
 	}
 
 	createRes2 := results[1]
-	if createRes2.ResultCode != evm.ReturnCode {
-		t.Fatal("failed to create tx 2", createRes2.ResultCode)
-	}
-
 	if !bytes.Equal(connAddress2.Bytes(), createRes2.ReturnData[12:]) {
 		t.Fatal("incorrect created contract address", hexutil.Encode(createRes2.ReturnData[12:]))
 	}
 
 	msgs := make([]message.AbstractL2Message, 0)
 	for i, result := range results[2:] {
-		if result.ResultCode != evm.ReturnCode {
-			t.Fatal("unexpected result code", i, result.ResultCode)
-		}
 		if result.IncomingRequest.Sender != sender {
 			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, sender)
 		}
@@ -448,10 +437,8 @@ func TestSignedTx(t *testing.T) {
 	if len(results) != 2 {
 		t.Fatal("incorrect log output count", len(results))
 	}
+	allResultsSucceeded(t, results)
 	for i, result := range results {
-		if result.ResultCode != evm.ReturnCode {
-			t.Fatal("unexpected result code", result.ResultCode)
-		}
 		if result.IncomingRequest.Sender != addr {
 			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, addr)
 		}
@@ -566,10 +553,8 @@ func TestUnsignedTx(t *testing.T) {
 	if len(results) != 2 {
 		t.Fatal("incorrect log output count", len(results))
 	}
+	allResultsSucceeded(t, results)
 	for i, result := range results {
-		if result.ResultCode != evm.ReturnCode {
-			t.Fatal("unexpected result code", result.ResultCode)
-		}
 		if result.IncomingRequest.Sender != sender {
 			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, sender)
 		}
@@ -725,10 +710,8 @@ func generateTestTransactions(t *testing.T, chain common.Address) []*types.Trans
 
 func verifyTxLogs(t *testing.T, signer types.Signer, txes []*types.Transaction, logs []value.Value) {
 	results := processTxResults(t, logs)
+	allResultsSucceeded(t, results)
 	for i, result := range results {
-		if result.ResultCode != evm.ReturnCode {
-			t.Error(i, "unexpected result code", result.ResultCode)
-		}
 		sender, err := signer.Sender(txes[i])
 		if err != nil {
 			t.Fatal(err)

@@ -59,12 +59,8 @@ func testWithdrawal(t *testing.T, depositMsg message.Message, withdrawalTx messa
 	sends := assertion.ParseOutMessages()
 
 	results := processTxResults(t, assertion.ParseLogs())
-	for _, res := range results {
-		if res.ResultCode != evm.ReturnCode {
-			t.Fatal("incorrect tx response", res.ResultCode)
-		}
-		t.Log(res.IncomingRequest)
-	}
+
+	allResultsSucceeded(t, results)
 
 	parsedSends := make([]message.OutMessage, 0, len(sends))
 	for _, avmSend := range sends {

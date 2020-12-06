@@ -19,7 +19,6 @@ package arbostest
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
@@ -97,9 +96,7 @@ func TestGetStorageAt(t *testing.T) {
 	getStorageAtRes := results[1]
 	failGetStorageAtRes := results[2]
 
-	if constructorRes.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected constructor result", constructorRes.ResultCode)
-	}
+	succeededTxCheck(t, constructorRes)
 	connAddrCalc, err := getConstructorResult(constructorRes)
 	if err != nil {
 		t.Fatal(err)
@@ -108,16 +105,11 @@ func TestGetStorageAt(t *testing.T) {
 		t.Fatal("constructed address doesn't match:", connAddrCalc, "instead of", connAddr)
 	}
 
-	if getStorageAtRes.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected get storage at result", getStorageAtRes.ResultCode)
-	}
+	succeededTxCheck(t, getStorageAtRes)
 	storageVal := new(big.Int).SetBytes(getStorageAtRes.ReturnData)
 	if storageVal.Cmp(big.NewInt(12345)) != 0 {
 		t.Fatal("expected storage to be 12345 but got", storageVal)
 	}
 
-	t.Logf(hexutil.Encode(getStorageAtRes.ReturnData))
-	if failGetStorageAtRes.ResultCode != evm.RevertCode {
-		t.Fatal("unexpected fail get storage at result", failGetStorageAtRes.ResultCode)
-	}
+	revertedTxCheck(t, failGetStorageAtRes)
 }

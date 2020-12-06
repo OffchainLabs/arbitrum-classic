@@ -20,7 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
@@ -115,16 +114,14 @@ func TestTransfer(t *testing.T) {
 		t.Fatal("unxpected send count", len(sends))
 	}
 
+	allResultsSucceeded(t, results)
+
 	checkConstructorResult(t, results[0], transfer1Address)
 	checkConstructorResult(t, results[1], transfer2Address)
 
 	res := results[2]
 	t.Log("GasUsed", res.GasUsed)
 	t.Log("GasLimit", connCallTx.MaxGas)
-	if res.ResultCode != evm.ReturnCode {
-		t.Log("result", res)
-		t.Error("unexpected result", res.ResultCode)
-	}
 
 	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(4))
 	transfer1Balance, err := snap.GetBalance(transfer1Address)

@@ -118,6 +118,8 @@ func TestGas(t *testing.T) {
 		t.Fatal("unxpected send count", len(sends))
 	}
 
+	allResultsSucceeded(t, results)
+
 	checkConstructorResult(t, results[0], connAddress)
 	validGasCheck(t, results[1])
 	validGasCheck(t, results[2])
@@ -127,9 +129,5 @@ func TestGas(t *testing.T) {
 
 func validGasCheck(t *testing.T, res *evm.TxResult) *big.Int {
 	t.Log("GasUsed", res.GasUsed)
-	if res.ResultCode != evm.ReturnCode {
-		t.Log("result", res)
-		t.Error("unexpected result", res.ResultCode)
-	}
 	return res.GasUsed
 }

@@ -25,7 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -84,12 +83,8 @@ func TestBuddyContract(t *testing.T) {
 	if len(sends) != 1 {
 		t.Fatal("unexpected send count", len(sends))
 	}
-
+	allResultsSucceeded(t, results)
 	for i, res := range results {
-		if res.ResultCode != evm.ReturnCode {
-			t.Error("tx", i, "failed", res.ResultCode)
-		}
-
 		if i == 0 {
 			if len(res.ReturnData) != 32 {
 				t.Fatal("Unexpected return data length")
