@@ -17,6 +17,7 @@
 package arbostest
 
 import (
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -205,20 +206,23 @@ func processTxResults(t *testing.T, logs []value.Value) []*evm.TxResult {
 	return results
 }
 
-func revertedTxCheck(t *testing.T, res *evm.TxResult) {
+func txResultCheck(t *testing.T, res *evm.TxResult, correct evm.ResultType) {
 	t.Helper()
-	if res.ResultCode != evm.RevertCode {
+	if res.ResultCode != correct {
 		t.Log("result", res)
+		t.Log("data", hexutil.Encode(res.ReturnData))
 		t.Fatal("unexpected result", res.ResultCode)
 	}
 }
 
+func revertedTxCheck(t *testing.T, res *evm.TxResult) {
+	t.Helper()
+	txResultCheck(t, res, evm.RevertCode)
+}
+
 func succeededTxCheck(t *testing.T, res *evm.TxResult) {
 	t.Helper()
-	if res.ResultCode != evm.ReturnCode {
-		t.Log("result", res)
-		t.Fatal("unexpected result", res.ResultCode)
-	}
+	txResultCheck(t, res, evm.ReturnCode)
 }
 
 func allResultsSucceeded(t *testing.T, results []*evm.TxResult) {

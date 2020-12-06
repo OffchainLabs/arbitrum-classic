@@ -18,21 +18,19 @@ package arbostest
 
 import (
 	"bytes"
-	"github.com/pkg/errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 func generateFib(val *big.Int) ([]byte, error) {
@@ -48,155 +46,166 @@ func generateFib(val *big.Int) ([]byte, error) {
 	return append(generateFibABI.ID, generateFibData...), nil
 }
 
+func makeTxCountCall(account common.Address) message.L2Message {
+	call := message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(1000000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
+			Payment:     big.NewInt(0),
+			Data:        snapshot.TransactionCountData(account),
+		},
+	}
+	return message.NewSafeL2Message(call)
+}
+
+func checkTxCountResult(t *testing.T, res *evm.TxResult, correctCount *big.Int) {
+	t.Helper()
+	succeededTxCheck(t, res)
+	txCount, err := snapshot.ParseTransactionCountResult(res)
+	failIfError(t, err)
+	if correctCount.Cmp(txCount) != 0 {
+		t.Fatal("unexpected tx count")
+	}
+}
+
 func TestTransactionCount(t *testing.T) {
-	mach, err := cmachine.New(arbos.Path())
+	randDest := common.RandAddress()
+
+	// Valid contract deployment
+	tx1 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(0),
+		DestAddress: common.Address{},
+		Payment:     big.NewInt(0),
+		Data:        hexutil.MustDecode(arbostestcontracts.FibonacciBin),
+	}
+
+	// Valid value tranfer to EOA
+	tx2 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(1),
+		DestAddress: randDest,
+		Payment:     big.NewInt(300),
+		Data:        []byte{},
+	}
+
+	// Invalid sequencer number
+	tx3 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(3),
+		DestAddress: randDest,
+		Payment:     big.NewInt(10),
+		Data:        []byte{},
+	}
+
+	// Insufficient balance
+	tx4 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(2),
+		DestAddress: randDest,
+		Payment:     big.NewInt(30000),
+		Data:        []byte{},
+	}
+
+	fibData, err := generateFib(big.NewInt(20))
 	failIfError(t, err)
 
-	randDest := common.RandAddress()
-	correctTxCount := 0
+	// Valid transaction to contract
+	tx5 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(2),
+		DestAddress: connAddress1,
+		Payment:     big.NewInt(300),
+		Data:        fibData,
+	}
+
+	// Transaction to contract with incorrect sequence number
+	tx6 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(4),
+		DestAddress: connAddress1,
+		Payment:     big.NewInt(300),
+		Data:        fibData,
+	}
+
+	// Transaction to contract with insufficient balance
+	tx7 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(3),
+		DestAddress: connAddress1,
+		Payment:     big.NewInt(100000),
+		Data:        fibData,
+	}
 
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
 
-	checkTxCount := func(target int) error {
-		snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(9999999))
-		txCount, err := snap.GetTransactionCount(sender)
-		failIfError(t, err)
-		if txCount.Cmp(big.NewInt(int64(target))) != 0 {
-			return errors.Errorf("wrong tx count %v", txCount)
-		}
-		t.Log("Current tx count is", txCount)
-		return nil
+	messages := []inbox.InboxMessage{
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(1), chainTime),
+		message.NewInboxMessage(message.Eth{Dest: sender, Value: big.NewInt(1000)}, sender, big.NewInt(2), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(3), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx1), sender, big.NewInt(4), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(5), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx2), sender, big.NewInt(6), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(7), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx3), sender, big.NewInt(8), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(9), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx4), sender, big.NewInt(10), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(11), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx5), sender, big.NewInt(12), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(13), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx6), sender, big.NewInt(14), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(15), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx7), sender, big.NewInt(16), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(17), chainTime),
 	}
 
-	runMessage(t, mach, initMsg(), chain)
-	if err := checkTxCount(0); err != nil {
-		t.Fatal(err)
-	}
+	logs, _, _ := runAssertion(t, messages, len(messages)-2, 0)
+	results := processTxResults(t, logs)
 
-	depositEth(t, mach, sender, big.NewInt(1000))
+	checkTxCountResult(t, results[0], big.NewInt(0))
 
 	// Deposit doesn't increase tx count
-	if err := checkTxCount(correctTxCount); err != nil {
-		t.Fatal(err)
-	}
-
-	tx1 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(int64(correctTxCount)),
-		DestAddress: randDest,
-		Payment:     big.NewInt(300),
-		Data:        []byte{},
-	}
-
-	runValidTransaction(t, mach, tx1, sender)
-	correctTxCount++
-
-	// Payment to EOA increases tx count
-	if err := checkTxCount(correctTxCount); err != nil {
-		t.Fatal(err)
-	}
-
-	tx2 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(int64(correctTxCount) + 1),
-		DestAddress: randDest,
-		Payment:     big.NewInt(10),
-		Data:        []byte{},
-	}
-
-	runMessage(t, mach, message.NewSafeL2Message(tx2), sender)
-
-	// Payment to EOA with incorrect sequence number shouldn't increase tx count
-	if err := checkTxCount(correctTxCount); err != nil {
-		t.Fatal(err)
-	}
-
-	tx3 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(int64(correctTxCount)),
-		DestAddress: randDest,
-		Payment:     big.NewInt(30000),
-		Data:        []byte{},
-	}
-
-	runTransaction(t, mach, tx3, sender)
-	// Payment to EOA with insufficient funds shouldn't increase tx count
-	if err := checkTxCount(correctTxCount); err != nil {
-		t.Fatal(err)
-	}
-
-	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
-	failIfError(t, err)
-
-	fibAddress, err := deployContract(t, mach, sender, constructorData, big.NewInt(int64(correctTxCount)), nil)
-	failIfError(t, err)
-	correctTxCount++
+	checkTxCountResult(t, results[1], big.NewInt(0))
 
 	// Contract deployment increases tx count
-	if err := checkTxCount(correctTxCount); err != nil {
-		t.Fatal(err)
-	}
+	succeededTxCheck(t, results[2])
+	checkTxCountResult(t, results[3], big.NewInt(1))
 
-	fibData, err := generateFib(big.NewInt(20))
-	failIfError(t, err)
+	// Payment to EOA increases tx count
+	succeededTxCheck(t, results[4])
+	checkTxCountResult(t, results[5], big.NewInt(2))
 
-	generateTx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(int64(correctTxCount)),
-		DestAddress: fibAddress,
-		Payment:     big.NewInt(300),
-		Data:        fibData,
-	}
+	// Payment to EOA with incorrect sequence number shouldn't increase tx count
+	txResultCheck(t, results[6], evm.BadSequenceCode)
+	checkTxCountResult(t, results[7], big.NewInt(2))
 
-	runValidTransaction(t, mach, generateTx, sender)
-	correctTxCount++
+	// Payment to EOA with insufficient funds shouldn't increase tx count
+	txResultCheck(t, results[8], evm.InsufficientTxFundsCode)
+	checkTxCountResult(t, results[9], big.NewInt(2))
 
-	// Tx call increases tx count
-	if err := checkTxCount(correctTxCount); err != nil {
-		t.Fatal(err)
-	}
-
-	generateTx2 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(int64(correctTxCount + 1)),
-		DestAddress: fibAddress,
-		Payment:     big.NewInt(300),
-		Data:        fibData,
-	}
-
-	runMessage(t, mach, message.NewSafeL2Message(generateTx2), sender)
+	// Contract to contract increases tx count
+	succeededTxCheck(t, results[10])
+	checkTxCountResult(t, results[11], big.NewInt(3))
 
 	// Tx call with incorrect sequence number doesn't affect the count
-	if err := checkTxCount(correctTxCount); err != nil {
-		t.Fatal(err)
-	}
-
-	generateTx3 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(int64(correctTxCount)),
-		DestAddress: fibAddress,
-		Payment:     big.NewInt(100000),
-		Data:        fibData,
-	}
-
-	res := runTransaction(t, mach, generateTx3, sender)
-	if res.ResultCode != evm.InsufficientTxFundsCode {
-		t.Fatal("incorrect return code", res.ResultCode)
-	}
+	txResultCheck(t, results[12], evm.BadSequenceCode)
+	checkTxCountResult(t, results[13], big.NewInt(3))
 
 	// Tx call with insufficient balance doesn't affect the count
-	if err := checkTxCount(correctTxCount); err != nil {
-		t.Fatal(err)
-	}
+	txResultCheck(t, results[14], evm.InsufficientTxFundsCode)
+	checkTxCountResult(t, results[15], big.NewInt(3))
 }
 
 func makeArbSysTx(data []byte, seq *big.Int) message.Message {
