@@ -41,31 +41,20 @@ func TestFib(t *testing.T) {
 		Timestamp: big.NewInt(0),
 	}
 
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
-
 	fib, err := abi.JSON(strings.NewReader(arbostestcontracts.FibonacciABI))
 	failIfError(t, err)
-
-	pk, err := crypto.GenerateKey()
-	failIfError(t, err)
-
-	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
-
-	runMessage(t, mach, initMsg(), chain)
 
 	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
 	failIfError(t, err)
 
-	fibAddress, err := deployContract(t, mach, addr, constructorData, big.NewInt(0), nil)
-	failIfError(t, err)
-
-	snap := snapshot.NewSnapshot(mach.Clone(), chainTime, message.ChainAddressToID(chain), big.NewInt(1))
-	code, err := snap.GetCode(fibAddress)
-	failIfError(t, err)
-	t.Log("code", len(code))
-
-	depositEth(t, mach, addr, big.NewInt(1000))
+	constructTx := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(0),
+		DestAddress: common.Address{},
+		Payment:     big.NewInt(0),
+		Data:        constructorData,
+	}
 
 	fibData, err := generateFib(big.NewInt(20))
 	failIfError(t, err)
@@ -74,24 +63,9 @@ func TestFib(t *testing.T) {
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
-		DestAddress: fibAddress,
+		DestAddress: connAddress1,
 		Payment:     big.NewInt(300),
 		Data:        fibData,
-	}
-
-	generateResult := runValidTransaction(t, mach, generateTx, addr)
-	if len(generateResult.EVMLogs) != 1 {
-		t.Fatal("incorrect log count")
-	}
-	evmLog := generateResult.EVMLogs[0]
-	if evmLog.Address != fibAddress {
-		t.Fatal("log came from incorrect address")
-	}
-	if evmLog.Topics[0].ToEthHash() != fib.Events["TestEvent"].ID {
-		t.Fatal("incorrect log topic")
-	}
-	if hexutil.Encode(evmLog.Data) != "0x0000000000000000000000000000000000000000000000000000000000000014" {
-		t.Fatal("incorrect log data")
 	}
 
 	getFibABI := fib.Methods["getFib"]
@@ -101,16 +75,51 @@ func TestFib(t *testing.T) {
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(1000000000),
 			GasPriceBid: big.NewInt(0),
-			DestAddress: fibAddress,
+			DestAddress: connAddress1,
 			Payment:     big.NewInt(0),
 			Data:        append(getFibABI.ID, getFibData...),
 		},
 	}
 
-	getFibResult := runValidTransaction(t, mach, getFibTx, addr)
-	if hexutil.Encode(getFibResult.ReturnData) != "0x0000000000000000000000000000000000000000000000000000000000000008" {
+	inboxMessages := makeSimpleInbox([]message.Message{
+		message.NewSafeL2Message(constructTx),
+		message.Eth{
+			Dest:  sender,
+			Value: big.NewInt(1000),
+		},
+		message.NewSafeL2Message(generateTx),
+		message.NewSafeL2Message(getFibTx),
+	})
+
+	logs, _, mach := runAssertion(t, inboxMessages, 3, 0)
+	results := processTxResults(t, logs)
+	allResultsSucceeded(t, results)
+	checkConstructorResult(t, results[0], connAddress1)
+
+	generateResult := results[1]
+	if len(generateResult.EVMLogs) != 1 {
+		t.Fatal("incorrect log count")
+	}
+	evmLog := generateResult.EVMLogs[0]
+	if evmLog.Address != connAddress1 {
+		t.Fatal("log came from incorrect address")
+	}
+	if evmLog.Topics[0].ToEthHash() != fib.Events["TestEvent"].ID {
+		t.Fatal("incorrect log topic")
+	}
+	if hexutil.Encode(evmLog.Data) != "0x0000000000000000000000000000000000000000000000000000000000000014" {
+		t.Fatal("incorrect log data")
+	}
+
+	if hexutil.Encode(results[2].ReturnData) != "0x0000000000000000000000000000000000000000000000000000000000000008" {
 		t.Fatal("getFib had incorrect result")
 	}
+
+	snap := snapshot.NewSnapshot(mach.Clone(), chainTime, message.ChainAddressToID(chain), big.NewInt(1))
+	code, err := snap.GetCode(connAddress1)
+	failIfError(t, err)
+	t.Log("code", len(code))
+
 }
 func TestDeposit(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
