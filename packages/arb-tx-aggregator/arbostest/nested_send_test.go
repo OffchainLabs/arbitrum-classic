@@ -41,16 +41,13 @@ func TestFailedNestedSend(t *testing.T) {
 
 	failedSend, err := abi.JSON(strings.NewReader(arbostestcontracts.FailedSendABI))
 	failIfError(t, err)
-	failedSendABI := failedSend.Methods["send"]
-	failedSendData, err := failedSendABI.Inputs.Pack(dest)
-	failIfError(t, err)
 	sendTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: connAddress1,
 		Payment:     big.NewInt(300),
-		Data:        append(failedSendABI.ID, failedSendData...),
+		Data:        makeFuncData(t, failedSend.Methods["send"], dest),
 	}
 
 	messages := []message.Message{

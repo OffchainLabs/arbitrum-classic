@@ -52,28 +52,22 @@ func TestFib(t *testing.T) {
 		Data:        constructorData,
 	}
 
-	fibData, err := generateFib(big.NewInt(20))
-	failIfError(t, err)
-
 	generateTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: connAddress1,
 		Payment:     big.NewInt(300),
-		Data:        fibData,
+		Data:        generateFib(t, big.NewInt(20)),
 	}
 
-	getFibABI := fib.Methods["getFib"]
-	getFibData, err := getFibABI.Inputs.Pack(big.NewInt(5))
-	failIfError(t, err)
 	getFibTx := message.Call{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(1000000000),
 			GasPriceBid: big.NewInt(0),
 			DestAddress: connAddress1,
 			Payment:     big.NewInt(0),
-			Data:        append(getFibABI.ID, getFibData...),
+			Data:        makeFuncData(t, fib.Methods["getFib"], big.NewInt(5)),
 		},
 	}
 

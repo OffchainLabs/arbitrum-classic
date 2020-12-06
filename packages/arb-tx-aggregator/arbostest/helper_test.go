@@ -17,6 +17,7 @@
 package arbostest
 
 import (
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
@@ -195,4 +196,11 @@ func checkBalance(t *testing.T, snap *snapshot.Snapshot, account common.Address,
 	if bal.Cmp(balance) != 0 {
 		t.Error("unexpected balance", bal, "for account", account)
 	}
+}
+
+func makeFuncData(t *testing.T, methodABI abi.Method, args ...interface{}) []byte {
+	t.Helper()
+	methodData, err := methodABI.Inputs.Pack(args...)
+	failIfError(t, err)
+	return append(methodABI.ID, methodData...)
 }
