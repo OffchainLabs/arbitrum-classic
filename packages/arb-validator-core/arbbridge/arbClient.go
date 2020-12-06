@@ -18,10 +18,13 @@ package arbbridge
 
 import (
 	"context"
+	"github.com/rs/zerolog/log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
+
+var logger = log.With().Str("component", "arbbridge").Logger()
 
 type MaybeBlockId struct {
 	BlockId   *common.BlockId

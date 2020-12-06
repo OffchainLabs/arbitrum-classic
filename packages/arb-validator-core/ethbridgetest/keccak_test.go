@@ -26,7 +26,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
-	"log"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -39,7 +38,7 @@ func TestKeccak(t *testing.T) {
 	auth := bind.NewKeyedTransactor(pks[0])
 	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	precompilesTesterAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {

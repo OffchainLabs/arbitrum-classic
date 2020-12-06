@@ -17,12 +17,13 @@
 package structures
 
 import (
-	"log"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/rs/zerolog/log"
 )
+
+var logger = log.With().Str("component", "structures").Logger()
 
 func NewExecutionAssertionStubFromWholeAssertion(
 	a *protocol.ExecutionAssertion,
@@ -42,7 +43,7 @@ func NewExecutionAssertionStubFromAssertion(
 	// The after inbox hash
 	afterInboxHash, ok := inboxStack.itemSkippedAfterHash(beforeInboxHash, a.InboxMessagesConsumed)
 	if !ok {
-		log.Fatal("Assertion consumed more messages then exist")
+		logger.Fatal().Msg("Assertion consumed more messages then exist")
 	}
 	return &valprotocol.ExecutionAssertionStub{
 		BeforeMachineHash: a.BeforeMachineHash.Unmarshal(),

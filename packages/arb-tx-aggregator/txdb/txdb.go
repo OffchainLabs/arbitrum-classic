@@ -42,6 +42,8 @@ import (
 	"sync"
 )
 
+var logger = log.With().Str("component", "txdb").Logger()
+
 var snapshotCacheSize = 100
 
 type TxDB struct {
@@ -86,7 +88,7 @@ func (db *TxDB) Load(ctx context.Context) error {
 		if err == nil {
 			return nil
 		}
-		log.Error().Stack().Err(err).Msg("Failed to restore from checkpoint, falling back to fresh start")
+		logger.Error().Stack().Err(err).Msg("Failed to restore from checkpoint, falling back to fresh start")
 	}
 	// We failed to restore from a checkpoint
 	valueCache, err := cmachine.NewValueCache()
@@ -306,7 +308,7 @@ func (db *TxDB) processAssertion(assertion *protocol.ExecutionAssertion) (proces
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
 		if err != nil {
-			log.Error().Stack().Err(err).Msg("Error parsing log result")
+			logger.Error().Stack().Err(err).Msg("Error parsing log result")
 			continue
 		}
 
@@ -459,6 +461,7 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 		}
 
 		startLog := info.FirstAVMLog().Uint64()
+		// Instead of pulling from DB everytime, should use what we already have
 		txResults, err := db.GetBlockResults(info)
 		if err != nil {
 			return err

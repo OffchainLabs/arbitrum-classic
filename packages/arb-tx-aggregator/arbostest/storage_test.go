@@ -26,7 +26,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"log"
 	"math/big"
 	"testing"
 )
@@ -87,11 +86,11 @@ func TestGetStorageAt(t *testing.T) {
 	sends := assertion.ParseOutMessages()
 
 	if len(logs) != 3 {
-		log.Println("unxpected log count", len(logs))
+		logger.Error().Int("count", len(logs)).Msg("Unexpected log count")
 	}
 
 	if len(sends) != 0 {
-		log.Println("unxpected send count", len(sends))
+		logger.Error().Int("count", len(logs)).Msg("Unexpected send count")
 	}
 
 	constructorRes, err := evm.NewTxResultFromValue(logs[0])
@@ -119,7 +118,7 @@ func TestGetStorageAt(t *testing.T) {
 	if storageVal.Cmp(big.NewInt(12345)) != 0 {
 		t.Fatal("expected storage to be 12345 but got", storageVal)
 	}
-	log.Println(hexutil.Encode(getStorageAtRes.ReturnData))
+	logger.Info().Hex("returnData", getStorageAtRes.ReturnData).Msg("data")
 	failGetStorageAtRes, err := evm.NewTxResultFromValue(logs[2])
 	if err != nil {
 		t.Fatal(err)

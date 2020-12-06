@@ -27,6 +27,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
+var logger zerolog.Logger
+
 type App struct {
 	inboxMessages []inbox.InboxMessage
 	avmLogs       []value.Value
@@ -65,9 +67,9 @@ func newApp(data []byte) (*App, error) {
 	}
 
 	if err := a.verify(); err != nil {
-		log.Warn().Stack().Err(err).Msg("logs incorrect")
+		logger.Warn().Stack().Err(err).Msg("logs incorrect")
 	} else {
-		log.Info().Msg("logs verified")
+		logger.Info().Msg("logs verified")
 	}
 	return a, nil
 }
@@ -96,7 +98,7 @@ func (a *App) verify() error {
 			return err
 		}
 		if !value.Eq(calcRes.AsValue(), res.AsValue()) {
-			log.Warn().Str("calculated", calcRes.AsValue().String()).Str("correct", res.AsValue().String()).Msg("wrong log")
+			logger.Warn().Str("calculated", calcRes.AsValue().String()).Str("correct", res.AsValue().String()).Msg("wrong log")
 		}
 	}
 
@@ -154,7 +156,7 @@ func (a *App) constructors() error {
 		}
 		var contractAddress common.Address
 		copy(contractAddress[:], txRes.ReturnData[12:])
-		log.Info().Str("Tx", txRes.IncomingRequest.MessageID.String()).Str("address", contractAddress.Hex()).Msg("contract created")
+		logger.Info().Str("Tx", txRes.IncomingRequest.MessageID.String()).Str("address", contractAddress.Hex()).Msg("contract created")
 	}
 	return nil
 }
@@ -164,7 +166,7 @@ func (a *App) getCode(account common.Address) error {
 	if err != nil {
 		return err
 	}
-	log.Info().Str("code", hexutil.Encode(code))
+	logger.Info().Str("code", hexutil.Encode(code))
 	return nil
 }
 
@@ -184,11 +186,11 @@ func (a *App) Execute(line string) {
 	switch blocks[0] {
 	case "code":
 		if err := a.getCode(common.HexToAddress(blocks[1])); err != nil {
-			log.Warn().Stack().Err(err).Msg("failed getting code")
+			logger.Warn().Stack().Err(err).Msg("failed getting code")
 		}
 	case "constructors":
 		if err := a.constructors(); err != nil {
-			log.Warn().Stack().Err(err).Msg("failed getting constructors")
+			logger.Warn().Stack().Err(err).Msg("failed getting constructors")
 		}
 	}
 }
@@ -202,9 +204,10 @@ func main() {
 
 	// Print line number that log was created on
 	log.Logger = log.With().Caller().Logger()
+	logger = log.With().Str("component", "arb-replay-test").Logger()
 
 	file := os.Args[1]
-	log.Info().Str("file", file).Msg("Running test")
+	logger.Info().Str("file", file).Msg("Running test")
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		panic(err)

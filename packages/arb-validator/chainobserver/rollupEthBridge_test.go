@@ -20,7 +20,6 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
-	"log"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -46,7 +45,7 @@ func TestMainSetup(m *testing.T) {
 		return ethbridgetestcontracts.DeployRollupTester(auth, client)
 	})
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 
 	client.Commit()
@@ -59,12 +58,12 @@ func TestMainSetup(m *testing.T) {
 		"deployedMachineTester",
 	)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 
 	tester, err = ethbridgetestcontracts.NewRollupTester(rollupAddr, client)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 }
 

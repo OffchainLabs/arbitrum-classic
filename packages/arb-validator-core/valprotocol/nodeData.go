@@ -125,6 +125,19 @@ type AssertionParams struct {
 	ImportedMessageCount *big.Int
 }
 
+func (ct ChildType) String() string {
+	switch ct {
+	case InvalidInboxTopChildType:
+		return "InvalidInboxTopChildType"
+	case InvalidExecutionChildType:
+		return "InvalidExecutionChildType"
+	case ValidChildType:
+		return "ValidChildType"
+	}
+
+	return "UnknownChildType"
+}
+
 func NewRandomAssertionParams() *AssertionParams {
 	return &AssertionParams{
 		NumSteps:             rand.Uint64(),

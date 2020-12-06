@@ -17,7 +17,6 @@
 package cmachine
 
 import (
-	"log"
 	"os"
 	"testing"
 )
@@ -26,7 +25,7 @@ func TestMachineCreation(t *testing.T) {
 	dePath := "dbPath"
 
 	if err := os.RemoveAll(dePath); err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 
 	valueCache, err := NewValueCache()
@@ -57,6 +56,6 @@ func TestMachineCreation(t *testing.T) {
 	}
 
 	if err := os.RemoveAll(dePath); err != nil {
-		log.Fatal(err)
 	}
+	logger.Fatal().Stack().Err(err).Msg("error")
 }

@@ -20,7 +20,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"github.com/pkg/errors"
-	"log"
+	"github.com/rs/zerolog/log"
 	"strconv"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -28,6 +28,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
+
+var logger = log.With().Str("component", "ethbridgemachine").Logger()
 
 //go:generate protoc -I. -I ../.. --go_out=paths=source_relative:. nodegraph.proto
 
@@ -251,10 +253,10 @@ func (ng *NodeGraph) CreateNodesOnAssert(
 	newNodes := make([]*structures.Node, 0, 3)
 	_, ok := ng.nodeFromHash[prevNode.Hash()]
 	if !ok {
-		log.Fatal("can't assert on non-existent node")
+		logger.Fatal().Msg("can't assert on non-existent node")
 	}
 	if !ng.leaves.IsLeaf(prevNode) {
-		log.Fatal("can't assert on non-leaf node")
+		logger.Fatal().Msg("can't assert on non-leaf node")
 	}
 	ng.leaves.delete(prevNode)
 

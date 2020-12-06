@@ -19,7 +19,7 @@ package machineobserver
 import (
 	"context"
 	"github.com/pkg/errors"
-	"log"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"time"
 
@@ -30,6 +30,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/observer"
 )
+
+var logger = log.With().Str("component", "machineobserver").Logger()
 
 const defaultMaxReorgDepth = 100
 
@@ -160,15 +162,17 @@ func RunObserver(
 
 			inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
 			if err != nil {
-				log.Fatal(err)
+				logger.Fatal().Stack().Err(err).Msg("error")
 			}
 
 			if err := ensureInitialized(ctx, cp, db, clnt, rollupAddr); err != nil {
-				log.Fatal(err)
+				logger.Fatal().Stack().Err(err).Msg("error")
 			}
 
 			err = func() error {
-				log.Println("Starting observer after", db.LatestBlockId())
+				logger.Info().
+					Str("blockId", db.LatestBlockId().String()).
+					Msg("Starting observer")
 
 				// If the local chain is significantly behind the L1, catch up
 				// more efficiently. We process `MaxReorgHeight` blocks at a
@@ -189,7 +193,11 @@ func RunObserver(
 					if err != nil {
 						return err
 					}
-					log.Println("Getting events between", start, "and", fetchEnd, "with", new(big.Int).Sub(currentOnChain.Height.AsInt(), start), "blocks remaining")
+					logger.Info().
+						Str("startEvent", start.String()).
+						Str("endEvent", fetchEnd.String()).
+						Str("blocksRemaining", new(big.Int).Sub(currentOnChain.Height.AsInt(), start).String()).
+						Msg("Getting events")
 					inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, start, fetchEnd)
 					if err != nil {
 						return errors.Wrap(err, "Manager hit error doing fast catchup")
@@ -230,7 +238,7 @@ func RunObserver(
 			}()
 
 			if err != nil {
-				log.Println("Error in observer manager:", err)
+				logger.Error().Stack().Err(err).Msg("Error in observer manager")
 			}
 
 			cancelFunc()

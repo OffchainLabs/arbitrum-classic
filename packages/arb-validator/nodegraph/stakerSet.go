@@ -18,7 +18,6 @@ package nodegraph
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"log"
 )
 
 type StakerSet struct {
@@ -32,7 +31,7 @@ func NewStakerSet() *StakerSet {
 func (sl *StakerSet) Add(newStaker *Staker) {
 	newStaker.location.AddStaker()
 	if _, ok := sl.idx[newStaker.address]; ok {
-		log.Fatal("tried to insert staker twice")
+		logger.Fatal().Msg("tried to insert staker twice")
 	}
 	sl.idx[newStaker.address] = newStaker
 }

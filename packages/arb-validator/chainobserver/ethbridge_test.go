@@ -24,7 +24,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"log"
 	"math/big"
 	"math/rand"
 	"os"
@@ -88,7 +87,7 @@ func TestMain(m *testing.M) {
 	var err error
 	authClient, err = ethbridge.NewEthAuthClient(ctx, client, auth)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 
 	go func() {
@@ -102,7 +101,7 @@ func TestMain(m *testing.M) {
 		return ethbridgetestcontracts.DeployRollupTester(auth, client)
 	})
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 
 	_, err = ethbridge.WaitForReceiptWithResults(
@@ -113,17 +112,17 @@ func TestMain(m *testing.M) {
 		"DeployRollupTester",
 	)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 
 	rollupTester, err = ethbridgetestcontracts.NewRollupTester(rollupAddr, client)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 
 	code := m.Run()
 	if err := os.RemoveAll(dbPath); err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 	os.Exit(code)
 }

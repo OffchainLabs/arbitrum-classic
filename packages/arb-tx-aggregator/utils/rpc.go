@@ -19,12 +19,14 @@ package utils
 import (
 	"flag"
 	"github.com/ethereum/go-ethereum/rpc"
-	"log"
+	"github.com/rs/zerolog/log"
 	"net/http"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
+
+var logger = log.With().Str("component", "rpc").Logger()
 
 type RPCFlags struct {
 	certFile *string
@@ -62,7 +64,10 @@ func launchServer(handler http.Handler, port string, flags RPCFlags) error {
 	h := handlers.CORS(headersOk, originsOk, methodsOk)(handler)
 
 	if flags.certFile != nil && flags.keyFile != nil && *flags.certFile != "" && *flags.keyFile != "" {
-		log.Println("Launching rpc server over https with cert", *flags.certFile, "and key", *flags.keyFile)
+		logger.Info().
+			Str("certFile", *flags.certFile).
+			Str("keyFile", *flags.keyFile).
+			Msg("Launching rpc server of https")
 		return http.ListenAndServeTLS(
 			":"+port,
 			*flags.certFile,
@@ -70,7 +75,7 @@ func launchServer(handler http.Handler, port string, flags RPCFlags) error {
 			h,
 		)
 	} else {
-		log.Println("Launching rpc server over http")
+		logger.Info().Msg("Launching rpc server over http")
 		return http.ListenAndServe(
 			":"+port,
 			h,

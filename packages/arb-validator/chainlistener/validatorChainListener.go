@@ -24,7 +24,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"github.com/rs/zerolog/log"
 	"math/big"
 	"sync"
 	"time"
@@ -98,7 +97,7 @@ func stakeLatestValid(
 	proof2 := structures.GeneratePathProof(location, nodeGraph.GetLeaf(location))
 	stakeAmount := nodeGraph.Params().StakeRequirement
 
-	log.Info().
+	logger.Info().
 		Hex("address", stakingKey.client.Address().Bytes()).
 		Msg("Placing stake")
 	_, err := stakingKey.contract.PlaceStake(ctx, stakeAmount, proof1, proof2)
@@ -175,24 +174,30 @@ func (lis *ValidatorChainListener) AssertionPrepared(
 		lis.Lock()
 		lis.broadcastAssertions[prepared.Prev.Hash()] = prepared.Params
 		lis.Unlock()
-		log.Info().
+		logger.Info().
 			Hex("address", stakingAddress.Bytes()).
 			Msg("Making assertion")
 		go func() {
 			_, err := MakeAssertion(ctx, stakingKey.contract, prepared.Clone(), proof)
 			if err != nil {
-				log.Error().Stack().Err(err).Hex("address", stakingAddress.Bytes()).Msg("Error making assertion")
+				logger.Error().
+					Stack().
+					Err(err).
+					Hex("address", stakingAddress.Bytes()).
+					Msg("Error making assertion")
 				lis.Lock()
 				delete(lis.broadcastAssertions, prepared.Prev.Hash())
 				lis.Unlock()
 			} else {
-				log.Info().Hex("address", stakingAddress.Bytes()).Msg("Successfully made assertion")
+				logger.Info().
+					Hex("address", stakingAddress.Bytes()).
+					Msg("Successfully made assertion")
 			}
 		}()
 		return
 	}
 
-	log.Info().Msg("Maybe putting down stake")
+	logger.Info().Msg("Maybe putting down stake")
 	for stakingAddress, stakingKey := range lis.stakingKeys {
 		stakerPos := nodeGraph.Stakers().Get(stakingAddress)
 		if stakerPos != nil {
@@ -202,19 +207,22 @@ func (lis *ValidatorChainListener) AssertionPrepared(
 		lis.Lock()
 		currentTime, err := stakingKey.client.BlockIdForHeight(ctx, nil)
 		if err != nil {
-			log.Error().Stack().Err(err).Msg("Validator couldn't get time")
+			logger.Error().
+				Stack().
+				Err(err).
+				Msg("Validator couldn't get time")
 			break
 		}
 		stakeTime, placedStake := lis.broadcastCreateStakes[stakingAddress]
 		if placedStake {
-			log.Info().
+			logger.Info().
 				Str("currentHeight", currentTime.Height.AsInt().String()).
 				Str("stakeHeight", new(big.Int).Add(stakeTime.AsInt(), big.NewInt(3)).String()).
 				Msg("Thinking about placing stake")
 		}
 		if !placedStake || currentTime.Height.AsInt().Cmp(new(big.Int).Add(stakeTime.AsInt(), big.NewInt(3))) >= 0 {
 			lis.broadcastCreateStakes[stakingAddress] = currentTime.Height
-			log.Info().Msg("No stake is currently down, so setting up a stake")
+			logger.Info().Msg("No stake is currently down, so setting up a stake")
 			lis.Unlock()
 			// Put down new stake so that we can assert next time
 			go func() {
@@ -223,7 +231,7 @@ func (lis *ValidatorChainListener) AssertionPrepared(
 					lis.Lock()
 					delete(lis.broadcastCreateStakes, stakingAddress)
 					lis.Unlock()
-					log.Error().Stack().Err(err).Msg("Error placing stake")
+					logger.Error().Stack().Err(err).Msg("Error placing stake")
 				}
 			}()
 			return
@@ -248,7 +256,7 @@ func (lis *ValidatorChainListener) StakeCreated(
 		if opp != nil {
 			_, err := InitiateChallenge(ctx, lis.actor, opp)
 			if err != nil {
-				log.Error().
+				logger.Error().
 					Stack().
 					Err(err).
 					Hex("staker", ev.Staker.Bytes()).
@@ -260,7 +268,7 @@ func (lis *ValidatorChainListener) StakeCreated(
 		if opp != nil {
 			_, err := InitiateChallenge(ctx, lis.actor, opp)
 			if err != nil {
-				log.Error().
+				logger.Error().
 					Stack().
 					Err(err).
 					Hex("staker", ev.Staker.Bytes()).
@@ -280,7 +288,7 @@ func (lis *ValidatorChainListener) StakeMoved(
 	if opp != nil {
 		_, err := InitiateChallenge(ctx, lis.actor, opp)
 		if err != nil {
-			log.Error().
+			logger.Error().
 				Stack().
 				Err(err).
 				Hex("staker", ev.Staker.Bytes()).
@@ -298,7 +306,7 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(nodeGraph *nodegrap
 
 	newStaker := nodeGraph.Stakers().Get(stakerAddr)
 	if newStaker == nil {
-		log.Fatal().
+		logger.Fatal().
 			Stack().
 			Hex("staker", stakerAddr.Bytes()).
 			Msg("Nonexistant staker moved")
@@ -362,12 +370,12 @@ func (lis *ValidatorChainListener) launchChallenge(
 					100,
 				)
 				if err != nil {
-					log.Error().
+					logger.Error().
 						Stack().
 						Err(err).
 						Msg("Failed defending inbox top claim")
 				} else {
-					log.Info().
+					logger.Info().
 						Str("challengeState", res.String()).
 						Msg("Completed defending inbox top claim")
 				}
@@ -388,18 +396,20 @@ func (lis *ValidatorChainListener) launchChallenge(
 					challenges.StandardExecutionChallenge(),
 				)
 				if err != nil {
-					log.Error().
+					logger.Error().
 						Stack().
 						Err(err).
 						Msg("Failed defending execution claim")
 				} else {
-					log.Info().
+					logger.Info().
 						Str("challengeState", res.String()).
 						Msg("Completed defending execution claim")
 				}
 			}()
 		default:
-			log.Fatal().Uint("challengeType", uint(chal.ConflictNode().LinkType())).Msg("Unexpected challenge type")
+			logger.Fatal().
+				Uint("challengeType", uint(chal.ConflictNode().LinkType())).
+				Msg("Unexpected challenge type")
 		}
 	}
 
@@ -418,12 +428,12 @@ func (lis *ValidatorChainListener) launchChallenge(
 					false,
 				)
 				if err != nil {
-					log.Error().
+					logger.Error().
 						Stack().
 						Err(err).
 						Msg("Failed challenging inbox top claim")
 				} else {
-					log.Info().
+					logger.Info().
 						Str("challengeState", res.String()).
 						Msg("Completed challenging inbox top claim")
 				}
@@ -444,18 +454,18 @@ func (lis *ValidatorChainListener) launchChallenge(
 					challenges.StandardExecutionChallenge(),
 				)
 				if err != nil {
-					log.Error().
+					logger.Error().
 						Stack().
 						Err(err).
 						Msg("Failed challenging execution claim")
 				} else {
-					log.Info().
+					logger.Info().
 						Str("challengeState", res.String()).
 						Msg("Completed challenging execution claim")
 				}
 			}()
 		default:
-			log.Fatal().Stack().Msg("Unexpected challenge type")
+			logger.Fatal().Stack().Msg("Unexpected challenge type")
 		}
 	}
 }
@@ -497,7 +507,7 @@ func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, conf *v
 	go func() {
 		_, err := lis.actor.Confirm(ctx, confClone)
 		if err != nil {
-			log.Error().Stack().Err(err).Msg("Failed to confirm valid node")
+			logger.Error().Stack().Err(err).Msg("Failed to confirm valid node")
 			lis.Lock()
 			delete(lis.broadcastConfirmations, confClone.CurrentLatestConfirmed)
 			lis.Unlock()
@@ -526,7 +536,7 @@ func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, params []v
 	go func() {
 		_, err := lis.actor.PruneLeaves(ctx, leavesToPrune)
 		if err != nil {
-			log.Error().Stack().Err(err).Msg("Failed pruning leaves")
+			logger.Error().Stack().Err(err).Msg("Failed pruning leaves")
 			lis.Lock()
 			for _, prune := range leavesToPrune {
 				delete(lis.broadcastLeafPrunes, prune.LeafHash)
@@ -549,7 +559,7 @@ func (lis *ValidatorChainListener) MootableStakes(ctx context.Context, params []
 				mootCopy.StProof,
 			)
 			if err != nil {
-				log.Error().
+				logger.Error().
 					Stack().
 					Err(err).
 					Hex("address", mootCopy.Addr.Bytes()).
@@ -570,7 +580,7 @@ func (lis *ValidatorChainListener) OldStakes(ctx context.Context, params []nodeg
 				oldCopy.Proof,
 			)
 			if err != nil {
-				log.Error().
+				logger.Error().
 					Stack().
 					Err(err).
 					Hex("address", oldCopy.Addr.Bytes()).
@@ -631,7 +641,7 @@ func (lis *ValidatorChainListener) AdvancedKnownNode(
 			_, err := lis.actor.MoveStake(ctx, proof1, proof2)
 			lis.Lock()
 			if err != nil {
-				log.Error().Stack().Err(err).Msg("Failed moving stake")
+				logger.Error().Stack().Err(err).Msg("Failed moving stake")
 				delete(lis.broadcastMovedStakes, stakingAddr)
 			} else {
 				prevMove, alreadySent := lis.broadcastMovedStakes[stakingAddr]

@@ -34,7 +34,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
-	"log"
 	"math/big"
 	"strings"
 	"testing"
@@ -158,11 +157,11 @@ func TestCreate2(t *testing.T) {
 	sends := assertion.ParseOutMessages()
 
 	if len(logs) != 4 {
-		log.Println("unxpected log count", len(logs))
+		logger.Error().Int("count", len(logs)).Msg("Unexpected log count")
 	}
 
 	if len(sends) != 0 {
-		log.Println("unxpected send count", len(sends))
+		logger.Error().Int("count", len(logs)).Msg("Unexpected send count")
 	}
 
 	factoryConstructorRes, err := evm.NewTxResultFromValue(logs[0])

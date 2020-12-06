@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/pkg/errors"
-	"log"
 	"math/big"
 	"testing"
 
@@ -44,7 +43,7 @@ func TestMainSetup(m *testing.T) {
 	auth := bind.NewKeyedTransactor(pks[0])
 	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
 	if err != nil {
-		log.Fatal(err)
+		m.Fatal(err)
 	}
 
 	rollupAddr, machineTx, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
@@ -61,7 +60,7 @@ func TestMainSetup(m *testing.T) {
 		"deployedMachineTester",
 	)
 	if err != nil {
-		log.Fatal(err)
+		m.Fatal(err)
 	}
 
 	tester, err = ethbridgetestcontracts.NewRollupTester(rollupAddr, client)

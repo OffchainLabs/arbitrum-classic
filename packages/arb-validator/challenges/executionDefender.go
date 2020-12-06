@@ -18,14 +18,12 @@ package challenges
 
 import (
 	"context"
-	"github.com/pkg/errors"
-	"log"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/pkg/errors"
 )
 
 func DefendExecutionClaim(
@@ -54,7 +52,7 @@ func DefendExecutionClaim(
 	}
 
 	if startMachine == nil {
-		log.Fatal("nil startMachine in DefendExecutionClaim")
+		logger.Fatal().Msg("nil startMachine in DefendExecutionClaim")
 	}
 	return defendExecution(
 		reorgCtx,

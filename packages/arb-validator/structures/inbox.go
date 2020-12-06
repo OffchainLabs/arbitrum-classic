@@ -19,7 +19,6 @@ package structures
 import (
 	"fmt"
 	"github.com/pkg/errors"
-	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
@@ -73,8 +72,7 @@ func NewRandomMessageStack(count int) *MessageStack {
 		randMsg := inbox.NewRandomInboxMessage()
 		randMsg.InboxSeqNum = big.NewInt(int64(i + 1))
 		if err := ms.DeliverMessage(randMsg); err != nil {
-			// This can never happen
-			log.Fatal(err)
+			logger.Fatal().Stack().Err(err).Msg("This can never happen")
 		}
 	}
 	return ms

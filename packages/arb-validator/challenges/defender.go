@@ -17,8 +17,6 @@
 package challenges
 
 import (
-	"log"
-
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -112,7 +110,10 @@ func (ad AssertionDefender) NBisect(slices uint64) []AssertionDefender {
 
 		inboxMessages, err := ad.inbox.GetAssertionMessages(beforeInboxHash, ad.assertion.AfterInboxHash)
 		if err != nil {
-			log.Fatal("inbox messages must exist for assertion that you're defending ", beforeInboxHash, ad.assertion.AfterInboxHash)
+			logger.Fatal().
+				Hex("beforeInbox", beforeInboxHash.Bytes()).
+				Hex("afterInbox", ad.assertion.AfterInboxHash.Bytes()).
+				Msg("inbox messages must exist for assertion that you're defending")
 		}
 
 		// Last value returned is not an error type

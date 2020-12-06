@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/pkg/errors"
-	"log"
 	"math/big"
 	"strings"
 
@@ -571,7 +570,7 @@ func newTransactionBatchFromData(data []byte) TransactionBatch {
 		}
 		if big.NewInt(int64(r.Len())).Cmp(msgLength) < 0 {
 			// Not enough data remaining
-			log.Println("Received batch containing invalid data at end")
+			logger.Warn().Msg("Received batch containing invalid data at end")
 			break
 		}
 		txData := make([]byte, msgLength.Uint64())

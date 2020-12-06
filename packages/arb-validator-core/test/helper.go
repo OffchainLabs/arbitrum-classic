@@ -22,9 +22,11 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
-	"log"
+	"github.com/rs/zerolog/log"
 	"math/big"
 )
+
+var logger = log.With().Str("component", "test").Logger()
 
 func SimulatedBackend() (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
 	genesisAlloc := make(map[ethcommon.Address]core.GenesisAccount)
@@ -33,7 +35,7 @@ func SimulatedBackend() (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
 	for i := 0; i < 15; i++ {
 		privateKey, err := crypto.GenerateKey()
 		if err != nil {
-			log.Fatal(err)
+			logger.Fatal().Stack().Err(err).Msg("error")
 		}
 		pks = append(pks, privateKey)
 
