@@ -21,12 +21,10 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
@@ -69,13 +67,8 @@ func TestContructor(t *testing.T) {
 		chainTime,
 	))
 
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
-
-	// Last parameter returned is number of steps executed
-	assertion, _ := mach.ExecuteAssertion(1000000000, inboxMessages, 0)
-
-	results := processTxResults(t, assertion.ParseLogs())
+	logs, _, mach := runAssertion(t, inboxMessages)
+	results := processTxResults(t, logs)
 	if len(results) != 1 {
 		t.Fatal("unexpected log count", len(results))
 	}

@@ -226,11 +226,6 @@ func makeArbSysTx(data []byte, seq *big.Int) message.Message {
 }
 
 func TestAddressTable(t *testing.T) {
-	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	chain := common.RandAddress()
 	sender := common.RandAddress()
 	targetAddress := common.RandAddress()
@@ -291,20 +286,12 @@ func TestAddressTable(t *testing.T) {
 		senderSeq++
 	}
 
-	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-
-	sends := assertion.ParseOutMessages()
-	//testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//t.Log(string(testCase))
-
+	logs, sends, _ := runAssertion(t, inboxMessages)
 	if len(sends) != 0 {
 		t.Fatal("unxpected send count", len(sends))
 	}
 
-	results := processTxResults(t, assertion.ParseLogs())
+	results := processTxResults(t, logs)
 	if len(results) != len(arbSysCalls) {
 		t.Fatal("unxpected log count", len(results))
 	}
@@ -407,9 +394,6 @@ func TestAddressTable(t *testing.T) {
 }
 
 func TestArbSysBLS(t *testing.T) {
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
-
 	chain := common.RandAddress()
 	sender := common.RandAddress()
 	x0a, x1a, y0a, y1a := common.RandBigInt(), common.RandBigInt(), common.RandBigInt(), common.RandBigInt()
@@ -441,19 +425,11 @@ func TestArbSysBLS(t *testing.T) {
 		senderSeq++
 	}
 
-	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-
-	sends := assertion.ParseOutMessages()
-	//testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//t.Log(string(testCase))
-
+	logs, sends, _ := runAssertion(t, inboxMessages)
 	if len(sends) != 0 {
 		t.Fatal("unxpected send count", len(sends))
 	}
-	results := processTxResults(t, assertion.ParseLogs())
+	results := processTxResults(t, logs)
 
 	if len(results) != len(arbSysCalls) {
 		t.Fatal("unxpected log count", len(results))
@@ -485,9 +461,6 @@ func TestArbSysBLS(t *testing.T) {
 }
 
 func TestArbSysFunctionTable(t *testing.T) {
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
-
 	chain := common.RandAddress()
 	sender := common.RandAddress()
 	chainTime := inbox.ChainTime{
@@ -536,20 +509,12 @@ func TestArbSysFunctionTable(t *testing.T) {
 		senderSeq++
 	}
 
-	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-
-	sends := assertion.ParseOutMessages()
-	//testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//t.Log(string(testCase))
-
+	logs, sends, _ := runAssertion(t, inboxMessages)
 	if len(sends) != 0 {
 		t.Fatal("unxpected send count", len(sends))
 	}
 
-	results := processTxResults(t, assertion.ParseLogs())
+	results := processTxResults(t, logs)
 
 	if len(results) != len(arbSysCalls) {
 		t.Fatal("unxpected log count", len(results))

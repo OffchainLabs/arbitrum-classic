@@ -18,7 +18,6 @@ package arbostest
 
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
@@ -30,9 +29,6 @@ import (
 )
 
 func TestGetStorageAt(t *testing.T) {
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
-
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
@@ -40,7 +36,6 @@ func TestGetStorageAt(t *testing.T) {
 
 	chain := common.RandAddress()
 	sender := common.HexToAddress("0x8c988ec54f112dd35666e19e7b0904bb12df1b6c")
-
 	connAddr := common.HexToAddress("0x7cc1af94bfb4676c4facfc6a56430ec35c45b8b0")
 
 	constructorTx := makeConstructorTx(hexutil.MustDecode(arbostestcontracts.StorageBin), big.NewInt(0), nil)
@@ -72,14 +67,8 @@ func TestGetStorageAt(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(failGetStorageAtTx), sender, big.NewInt(3), chainTime),
 	}
 
-	// Last parameter returned is number of steps executed
-	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-	testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.ParseLogs(), assertion.ParseOutMessages())
-	failIfError(t, err)
-	t.Log(string(testCase))
-	sends := assertion.ParseOutMessages()
-
-	results := processTxResults(t, assertion.ParseLogs())
+	logs, sends, _ := runAssertion(t, inboxMessages)
+	results := processTxResults(t, logs)
 	if len(results) != 3 {
 		t.Fatal("unxpected log count", len(results))
 	}

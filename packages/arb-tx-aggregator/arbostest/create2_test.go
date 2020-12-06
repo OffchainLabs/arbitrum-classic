@@ -23,11 +23,9 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
@@ -71,9 +69,6 @@ func TestCreate2(t *testing.T) {
 	failIfError(t, err)
 
 	cloneConnAddress := ethEv.Clone
-
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
 
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
@@ -122,15 +117,8 @@ func TestCreate2(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(existsCloneTx), sender, big.NewInt(4), chainTime),
 	}
 
-	// Last parameter returned is number of tests executed
-	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-	//testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.ParseLogs(), assertion.ParseOutMessages())
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//t.Log(string(testCase))
-	sends := assertion.ParseOutMessages()
-	results := processTxResults(t, assertion.ParseLogs())
+	logs, sends, mach := runAssertion(t, inboxMessages)
+	results := processTxResults(t, logs)
 	if len(results) != 4 {
 		t.Fatal("unxpected log count", len(results))
 	}

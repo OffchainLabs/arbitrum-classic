@@ -19,11 +19,9 @@ package arbostest
 import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
@@ -32,8 +30,6 @@ import (
 )
 
 func TestTransfer(t *testing.T) {
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
 	chain := common.HexToAddress("0x037c4d7bbb0407d1e2c64981855ad8681d0d86d1")
 	sender := common.HexToAddress("0xe91e00167939cb6694d2c422acd208a007293948")
 	transfer1Address := common.HexToAddress("0x2aad3e8302f74e0818b7bcd10c2c050526707755")
@@ -86,14 +82,8 @@ func TestTransfer(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(connCallTx), sender, big.NewInt(4), chainTime),
 	}
 
-	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-	logs := assertion.ParseLogs()
-	sends := assertion.ParseOutMessages()
-	testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
-	failIfError(t, err)
-	t.Log(string(testCase))
-
-	results := processTxResults(t, assertion.ParseLogs())
+	logs, sends, mach := runAssertion(t, inboxMessages)
+	results := processTxResults(t, logs)
 	if len(results) != 3 {
 		t.Fatal("unxpected log count", len(results))
 	}
