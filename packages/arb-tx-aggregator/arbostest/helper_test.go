@@ -86,30 +86,25 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 	return results, sends
 }
 
-func runValidTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Message, sender common.Address) (*evm.TxResult, error) {
-	result, err := runTransaction(t, mach, msg, sender)
-	if err != nil {
-		return nil, err
-	}
-	if result.ResultCode != evm.ReturnCode {
-		return nil, errors.Errorf("transaction failed unexpectedly %v", result)
-	}
-	return result, nil
+func runValidTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Message, sender common.Address) *evm.TxResult {
+	t.Helper()
+	result := runTransaction(t, mach, msg, sender)
+	succeededTxCheck(t, result)
+	return result
 }
 
-func runTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Message, sender common.Address) (*evm.TxResult, error) {
+func runTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Message, sender common.Address) *evm.TxResult {
+	t.Helper()
 	l2, err := message.NewL2Message(msg)
-	if err != nil {
-		return nil, err
-	}
+	failIfError(t, err)
 	results, sends := runMessage(t, mach, l2, sender)
 	if len(results) != 1 {
-		return nil, errors.Errorf("unexpected log count %v", len(results))
+		t.Fatalf("unexpected log count %v", len(results))
 	}
 	if len(sends) != 0 {
-		return nil, errors.Errorf("unexpected send count %v", len(sends))
+		t.Fatalf("unexpected send count %v", len(sends))
 	}
-	return results[0], nil
+	return results[0]
 }
 
 func withdrawEthTx(sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
@@ -161,13 +156,7 @@ func makeConstructorTx(code []byte, sequenceNum *big.Int, payment *big.Int) mess
 
 func deployContract(t *testing.T, mach machine.Machine, sender common.Address, code []byte, sequenceNum *big.Int, payment *big.Int) (common.Address, error) {
 	constructorTx := makeConstructorTx(code, sequenceNum, payment)
-	if payment != nil {
-		logger.Info().Str("payment", payment.String()).Msg("Sent")
-	}
-	constructorResult, err := runValidTransaction(t, mach, constructorTx, sender)
-	if err != nil {
-		return common.Address{}, err
-	}
+	constructorResult := runValidTransaction(t, mach, constructorTx, sender)
 	return getConstructorResult(constructorResult)
 }
 
@@ -184,9 +173,7 @@ func checkConstructorResult(t *testing.T, res *evm.TxResult, correctAddress comm
 	t.Helper()
 	succeededTxCheck(t, res)
 	connAddrCalc, err := getConstructorResult(res)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if connAddrCalc != correctAddress {
 		t.Fatal("constructed address doesn't match:", connAddrCalc, "instead of", correctAddress)
 	}
@@ -212,9 +199,7 @@ func processTxResults(t *testing.T, logs []value.Value) []*evm.TxResult {
 	results := make([]*evm.TxResult, 0, len(logs))
 	for _, avmLog := range logs {
 		res, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 		results = append(results, res)
 	}
 	return results

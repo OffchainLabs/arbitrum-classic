@@ -99,8 +99,7 @@ func TestTransactionCount(t *testing.T) {
 		Data:        []byte{},
 	}
 
-	_, err = runValidTransaction(t, mach, tx1, addr)
-	failIfError(t, err)
+	runValidTransaction(t, mach, tx1, addr)
 	correctTxCount++
 
 	// Payment to EOA increases tx count
@@ -133,9 +132,7 @@ func TestTransactionCount(t *testing.T) {
 		Data:        []byte{},
 	}
 
-	_, err = runTransaction(t, mach, tx3, addr)
-	failIfError(t, err)
-
+	runTransaction(t, mach, tx3, addr)
 	// Payment to EOA with insufficient funds shouldn't increase tx count
 	if err := checkTxCount(correctTxCount); err != nil {
 		t.Fatal(err)
@@ -165,9 +162,7 @@ func TestTransactionCount(t *testing.T) {
 		Data:        fibData,
 	}
 
-	_, err = runValidTransaction(t, mach, generateTx, addr)
-	failIfError(t, err)
-
+	runValidTransaction(t, mach, generateTx, addr)
 	correctTxCount++
 
 	// Tx call increases tx count
@@ -200,8 +195,7 @@ func TestTransactionCount(t *testing.T) {
 		Data:        fibData,
 	}
 
-	res, err := runTransaction(t, mach, generateTx3, addr)
-	failIfError(t, err)
+	res := runTransaction(t, mach, generateTx3, addr)
 	if res.ResultCode != evm.InsufficientTxFundsCode {
 		t.Fatal("incorrect return code", res.ResultCode)
 	}

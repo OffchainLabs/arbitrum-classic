@@ -79,8 +79,7 @@ func TestFib(t *testing.T) {
 		Data:        fibData,
 	}
 
-	generateResult, err := runValidTransaction(t, mach, generateTx, addr)
-	failIfError(t, err)
+	generateResult := runValidTransaction(t, mach, generateTx, addr)
 	if len(generateResult.EVMLogs) != 1 {
 		t.Fatal("incorrect log count")
 	}
@@ -108,8 +107,7 @@ func TestFib(t *testing.T) {
 		},
 	}
 
-	getFibResult, err := runValidTransaction(t, mach, getFibTx, addr)
-	failIfError(t, err)
+	getFibResult := runValidTransaction(t, mach, getFibTx, addr)
 	if hexutil.Encode(getFibResult.ReturnData) != "0x0000000000000000000000000000000000000000000000000000000000000008" {
 		t.Fatal("getFib had incorrect result")
 	}
