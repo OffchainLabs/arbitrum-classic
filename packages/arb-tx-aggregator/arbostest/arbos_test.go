@@ -242,9 +242,7 @@ func TestBlocks(t *testing.T) {
 			if !ok {
 				t.Error("incorrect result type")
 			}
-			if res.ResultCode != evm.ReturnCode {
-				t.Error("tx failed unexpectedly")
-			}
+			succeededTxCheck(t, res)
 			blockGasUsed = blockGasUsed.Add(blockGasUsed, res.GasUsed)
 			blockEVMLogCount = blockEVMLogCount.Add(blockEVMLogCount, big.NewInt(int64(len(res.EVMLogs))))
 			blockTxCount = blockTxCount.Add(blockTxCount, big.NewInt(1))

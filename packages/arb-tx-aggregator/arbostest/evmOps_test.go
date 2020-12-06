@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
@@ -59,9 +58,7 @@ func TestBlockHash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ret.ResultCode != evm.ReturnCode {
-		t.Fatal("block hash call failed")
-	}
+	succeededTxCheck(t, ret)
 	if !bytes.Equal(ret.ReturnData, common.Hash{}.Bytes()) {
 		t.Error("Unexpected block hash result")
 	}

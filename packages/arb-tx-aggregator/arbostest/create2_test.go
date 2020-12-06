@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
@@ -163,14 +162,13 @@ func TestCreate2(t *testing.T) {
 		t.Fatal("Unexpected send count", len(sends))
 	}
 
+	allResultsSucceeded(t, results)
+
 	factoryConstructorRes := results[0]
 	simpleConstructorRes := results[1]
 	create2Res := results[2]
 	existsCloneRes := results[3]
 
-	if factoryConstructorRes.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected constructor result", factoryConstructorRes.ResultCode)
-	}
 	factoryConnAddrCalc, err := getConstructorResult(factoryConstructorRes)
 	if err != nil {
 		t.Fatal(err)
@@ -179,9 +177,6 @@ func TestCreate2(t *testing.T) {
 		t.Fatal("constructed address doesn't match:", factoryConnAddrCalc, "instead of", factoryConnAddress.Hex())
 	}
 
-	if simpleConstructorRes.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected constructor result", simpleConstructorRes.ResultCode)
-	}
 	simpleConnAddrCalc, err := getConstructorResult(simpleConstructorRes)
 	if err != nil {
 		t.Fatal(err)
@@ -190,9 +185,6 @@ func TestCreate2(t *testing.T) {
 		t.Fatal("constructed address doesn't match:", simpleConnAddrCalc, "instead of", simpleConnAddress.Hex())
 	}
 
-	if create2Res.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected create2 result", create2Res.ResultCode)
-	}
 	if len(create2Res.EVMLogs) != 1 {
 		t.Fatal("wrong EVM log count")
 	}
@@ -205,10 +197,6 @@ func TestCreate2(t *testing.T) {
 
 	if ev.Clone != cloneConnAddress {
 		t.Fatal("incorrect clone address")
-	}
-
-	if existsCloneRes.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected exists clone result", existsCloneRes.ResultCode)
 	}
 
 	existsCloneOutputs, err := existsABI.Outputs.UnpackValues(existsCloneRes.ReturnData)

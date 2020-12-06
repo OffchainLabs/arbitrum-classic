@@ -635,20 +635,6 @@ func TestArbSysFunctionTable(t *testing.T) {
 	}
 }
 
-func revertedTxCheck(t *testing.T, res *evm.TxResult) {
-	if res.ResultCode != evm.RevertCode {
-		t.Log("result", res)
-		t.Fatal("unexpected result", res.ResultCode)
-	}
-}
-
-func succeededTxCheck(t *testing.T, res *evm.TxResult) {
-	if res.ResultCode != evm.ReturnCode {
-		t.Log("result", res)
-		t.Fatal("unexpected result", res.ResultCode)
-	}
-}
-
 func returnedInt(t *testing.T, res *evm.TxResult) *big.Int {
 	if len(res.ReturnData) != 32 {
 		t.Fatal("unexpected return data length")

@@ -25,7 +25,6 @@ import (
 	gethcrypto "github.com/ethereum/go-ethereum/crypto"
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -71,10 +70,7 @@ func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byt
 	}
 
 	res := results[0]
-	if res.ResultCode != evm.ReturnCode {
-		t.Error("tx failed", res.ResultCode)
-	}
-
+	succeededTxCheck(t, res)
 	if res.IncomingRequest.Kind != message.L2Type {
 		t.Fatal("wrong request type")
 	}

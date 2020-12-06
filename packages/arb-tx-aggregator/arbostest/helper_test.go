@@ -182,9 +182,7 @@ func getConstructorResult(constructorResult *evm.TxResult) (common.Address, erro
 }
 
 func checkConstructorResult(t *testing.T, res *evm.TxResult, correctAddress common.Address) {
-	if res.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected constructor result", res.ResultCode)
-	}
+	succeededTxCheck(t, res)
 	connAddrCalc, err := getConstructorResult(res)
 	if err != nil {
 		t.Fatal(err)
@@ -219,4 +217,24 @@ func processTxResults(t *testing.T, logs []value.Value) []*evm.TxResult {
 		results = append(results, res)
 	}
 	return results
+}
+
+func revertedTxCheck(t *testing.T, res *evm.TxResult) {
+	if res.ResultCode != evm.RevertCode {
+		t.Log("result", res)
+		t.Fatal("unexpected result", res.ResultCode)
+	}
+}
+
+func succeededTxCheck(t *testing.T, res *evm.TxResult) {
+	if res.ResultCode != evm.ReturnCode {
+		t.Log("result", res)
+		t.Fatal("unexpected result", res.ResultCode)
+	}
+}
+
+func allResultsSucceeded(t *testing.T, results []*evm.TxResult) {
+	for _, res := range results {
+		succeededTxCheck(t, res)
+	}
 }
