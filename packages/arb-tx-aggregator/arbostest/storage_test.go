@@ -31,9 +31,7 @@ import (
 
 func TestGetStorageAt(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
@@ -77,9 +75,7 @@ func TestGetStorageAt(t *testing.T) {
 	// Last parameter returned is number of steps executed
 	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
 	testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.ParseLogs(), assertion.ParseOutMessages())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	t.Log(string(testCase))
 	sends := assertion.ParseOutMessages()
 
@@ -98,9 +94,7 @@ func TestGetStorageAt(t *testing.T) {
 
 	succeededTxCheck(t, constructorRes)
 	connAddrCalc, err := getConstructorResult(constructorRes)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if connAddrCalc != connAddr {
 		t.Fatal("constructed address doesn't match:", connAddrCalc, "instead of", connAddr)
 	}

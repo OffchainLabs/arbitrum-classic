@@ -63,9 +63,7 @@ func TestBuddyContract(t *testing.T) {
 	}
 
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	// Last parameter returned is number of steps executed
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
@@ -104,9 +102,7 @@ func TestBuddyContract(t *testing.T) {
 
 	for _, sendVal := range assertion.ParseOutMessages() {
 		msg, err := message.NewOutMessageFromValue(sendVal)
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 		if msg.Sender != l1contract {
 			t.Error("Buddy contract created at wrong address")
 		}

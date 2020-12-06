@@ -45,9 +45,7 @@ var connAddress2 = common.HexToAddress("0x9276e6abd1b8cb06e5abd72db5140d216148be
 func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.SafeAbstractL2Message) ([]message.AbstractL2Message, *snapshot.Snapshot) {
 	chain := common.RandAddress()
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
@@ -167,9 +165,7 @@ func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.S
 			t.Error("l2message has incorrect type")
 		}
 		l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 
 		targetHash := hashing.SoliditySHA3(hashing.Uint256(message.ChainAddressToID(chain)), hashing.Uint256(big.NewInt(int64(4+i))))
 		if result.IncomingRequest.MessageID != targetHash {
@@ -217,17 +213,13 @@ func TestCallTx(t *testing.T) {
 	}
 
 	balance, err := snap.GetBalance(tx.DestAddress)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if balance.Cmp(big.NewInt(0)) != 0 {
 		t.Errorf("After call to non-contract, balance should still be 0, but was %v", balance)
 	}
 
 	balance2, err := snap.GetBalance(tx2.DestAddress)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if balance2.Cmp(big.NewInt(0)) != 0 {
 		t.Errorf("After call to contract, balance should still be 0, but was %v", balance2)
 	}
@@ -241,9 +233,7 @@ func TestCallTx(t *testing.T) {
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
 	}, common.Address{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if new(big.Int).SetBytes(callRes.ReturnData).Cmp(big.NewInt(7)) != 0 {
 		t.Errorf("Storage was updated %X", callRes.ReturnData)
 	}
@@ -257,9 +247,7 @@ func TestCallTx(t *testing.T) {
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
 	}, common.Address{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if new(big.Int).SetBytes(call2Res.ReturnData).Cmp(big.NewInt(5)) != 0 {
 		t.Errorf("Storage was updated")
 	}
@@ -295,17 +283,13 @@ func TestContractTx(t *testing.T) {
 	}
 
 	balance, err := snap.GetBalance(tx.DestAddress)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if balance.Cmp(tx.Payment) != 0 {
 		t.Errorf("After call to non-contract, balance should be updated, but was %v", balance)
 	}
 
 	balance2, err := snap.GetBalance(tx2.DestAddress)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if balance2.Cmp(tx2.Payment) != 0 {
 		t.Errorf("After call to contract, balance should be updated, but was %v", balance)
 	}
@@ -319,9 +303,7 @@ func TestContractTx(t *testing.T) {
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
 	}, common.Address{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if new(big.Int).SetBytes(callRes.ReturnData).Cmp(big.NewInt(6)) != 0 {
 		t.Errorf("Storage wasn't updated %X", callRes.ReturnData)
 	}
@@ -335,9 +317,7 @@ func TestContractTx(t *testing.T) {
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
 	}, common.Address{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if new(big.Int).SetBytes(callRes2.ReturnData).Cmp(big.NewInt(8)) != 0 {
 		t.Errorf("Storage wasn't updated")
 	}
@@ -346,15 +326,11 @@ func TestContractTx(t *testing.T) {
 func TestSignedTx(t *testing.T) {
 	chain := common.RandAddress()
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	dest := common.RandAddress()
 	pk, err := crypto.GenerateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 
 	chainTime := inbox.ChainTime{
@@ -387,14 +363,10 @@ func TestSignedTx(t *testing.T) {
 
 	tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	l2msg, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx})
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	messages = append(
 		messages,
 		message.NewInboxMessage(
@@ -407,14 +379,10 @@ func TestSignedTx(t *testing.T) {
 
 	tx2 := types.NewContractCreation(1, big.NewInt(0), 100000000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
 	signedTx2, err := types.SignTx(tx2, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	l2msg2, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx2})
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	messages = append(
 		messages,
 		message.NewInboxMessage(
@@ -429,9 +397,7 @@ func TestSignedTx(t *testing.T) {
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
 	logs := assertion.ParseLogs()
 	testCase, err := inbox.TestVectorJSON(messages, logs, assertion.ParseOutMessages())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	t.Log(string(testCase))
 	results := processTxResults(t, assertion.ParseLogs())
 	if len(results) != 2 {
@@ -446,9 +412,7 @@ func TestSignedTx(t *testing.T) {
 			t.Error("l2message has incorrect type")
 		}
 		l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 
 		var correctHash ethcommon.Hash
 		if i == 0 {
@@ -472,9 +436,7 @@ func TestSignedTx(t *testing.T) {
 func TestUnsignedTx(t *testing.T) {
 	chain := common.RandAddress()
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
@@ -545,9 +507,7 @@ func TestUnsignedTx(t *testing.T) {
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
 	logs := assertion.ParseLogs()
 	testCase, err := inbox.TestVectorJSON(messages, logs, assertion.ParseOutMessages())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	t.Log(string(testCase))
 	results := processTxResults(t, assertion.ParseLogs())
 	if len(results) != 2 {
@@ -562,9 +522,7 @@ func TestUnsignedTx(t *testing.T) {
 			t.Error("l2message has incorrect type")
 		}
 		l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 
 		var correctHash common.Hash
 		if i == 0 {
@@ -585,29 +543,21 @@ func TestUnsignedTx(t *testing.T) {
 func TestBatch(t *testing.T) {
 	chain := common.RandAddress()
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	runMessage(t, mach, initMsg(), chain)
 
 	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	dest, err := deployContract(t, mach, common.RandAddress(), constructorData, big.NewInt(0), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	batchSize := 21
 	senders := make([]common.Address, 0, batchSize)
 	pks := make([]*ecdsa.PrivateKey, 0)
 	for i := 0; i < batchSize; i++ {
 		pk, err := crypto.GenerateKey()
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 		depositEth(t, mach, addr, big.NewInt(1000))
 		pks = append(pks, pk)
@@ -633,9 +583,7 @@ func TestBatch(t *testing.T) {
 	for _, pk := range pks[1:] {
 		tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
 		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 		senders = append(senders, addr)
 		txes = append(txes, message.NewCompressedECDSAFromEth(signedTx))
@@ -643,9 +591,7 @@ func TestBatch(t *testing.T) {
 	}
 
 	msg, err := message.NewTransactionBatchFromMessages(txes)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	results, sends := runMessage(t, mach, message.NewSafeL2Message(msg), batchSender)
 	if len(results) != len(txes) {
 		t.Fatal("incorrect result count", len(results), "instead of", len(txes))
@@ -664,9 +610,7 @@ func TestBatch(t *testing.T) {
 			t.Error("l2message had incorrect id", result.IncomingRequest.MessageID, hashes[i])
 		}
 		l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 		if i < 10 {
 			_, ok := l2Message.(message.Transaction)
 			if !ok {
@@ -684,27 +628,19 @@ func TestBatch(t *testing.T) {
 
 func generateTestTransactions(t *testing.T, chain common.Address) []*types.Transaction {
 	pk, err := crypto.GenerateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	tx := types.NewTransaction(0, common.RandAddress().ToEthAddress(), big.NewInt(1), 100000000000, big.NewInt(0), []byte{})
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	tx2 := types.NewTransaction(1, common.RandAddress().ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
 	signedTx2, err := types.SignTx(tx2, types.HomesteadSigner{}, pk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	tx3 := types.NewContractCreation(2, big.NewInt(0), 100000000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
 	signedTx3, err := types.SignTx(tx3, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	return []*types.Transaction{signedTx, signedTx2, signedTx3}
 }
 
@@ -713,9 +649,7 @@ func verifyTxLogs(t *testing.T, signer types.Signer, txes []*types.Transaction, 
 	allResultsSucceeded(t, results)
 	for i, result := range results {
 		sender, err := signer.Sender(txes[i])
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 		if result.IncomingRequest.Sender.ToEthAddress() != sender {
 			t.Error(i, "l2message had incorrect sender", result.IncomingRequest.Sender, sender.Hex())
 		}
@@ -723,9 +657,7 @@ func verifyTxLogs(t *testing.T, signer types.Signer, txes []*types.Transaction, 
 			t.Error(i, "l2message has incorrect type")
 		}
 		l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 
 		if result.IncomingRequest.MessageID.ToEthHash() != txes[i].Hash() {
 			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, txes[i].Hash().Hex())
@@ -744,18 +676,14 @@ func TestCompressedECDSATx(t *testing.T) {
 	t.Log("Chain ID:", message.ChainAddressToID(chain))
 
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
 
 	txes := generateTestTransactions(t, chain)
 
 	sender, err := signer.Sender(txes[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	addr := common.NewAddressFromEth(sender)
 
 	t.Log("Sender Address:", addr.Hex())
@@ -790,9 +718,7 @@ func TestCompressedECDSATx(t *testing.T) {
 
 	for i, tx := range txes {
 		l2msg, err := message.NewL2Message(message.NewCompressedECDSAFromEth(tx))
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 
 		messages = append(
 			messages,
@@ -809,9 +735,7 @@ func TestCompressedECDSATx(t *testing.T) {
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
 	logs := assertion.ParseLogs()
 	testCase, err := inbox.TestVectorJSON(messages, logs, assertion.ParseOutMessages())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	t.Log(string(testCase))
 	if len(logs) != len(txes) {
 		t.Fatal("incorrect log output count", len(logs))

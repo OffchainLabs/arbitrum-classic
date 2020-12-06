@@ -57,9 +57,7 @@ func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byt
 	))
 
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	// Last parameter returned is number of steps executed
 	assertion, _ := mach.ExecuteAssertion(1000000000, inboxMessages, 0)
@@ -75,9 +73,7 @@ func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byt
 		t.Fatal("wrong request type")
 	}
 	_, err = message.L2Message{Data: res.IncomingRequest.Data}.AbstractMessage()
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	if !bytes.Equal(res.ReturnData, correct) {
 		t.Logf("Got result 0x%x", res.ReturnData)
@@ -90,15 +86,11 @@ func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byt
 
 func TestECRecover(t *testing.T) {
 	pk, err := gethcrypto.GenerateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	hashedMsg := common.RandHash()
 	sig, err := gethcrypto.Sign(hashedMsg[:], pk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	sig[64] += 27
 
 	data := hashedMsg.Bytes()
@@ -116,9 +108,7 @@ func TestSha256(t *testing.T) {
 	data := common.RandBytes(100)
 	sha256 := crypto.SHA256.New()
 	_, err := sha256.Write(data)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	hashedCorrect := sha256.Sum(nil)
 
 	testPrecompile(t, 2, data, hashedCorrect)
@@ -131,13 +121,9 @@ func TestIdentityPrecompile(t *testing.T) {
 
 func TestECAdd(t *testing.T) {
 	_, g1x, err := bn256.RandomG1(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	_, g1y, err := bn256.RandomG1(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	data := append(g1x.Marshal(), g1y.Marshal()...)
 	correct := new(bn256.G1).Add(g1x, g1y).Marshal()
 
@@ -146,9 +132,7 @@ func TestECAdd(t *testing.T) {
 
 func TestECMul(t *testing.T) {
 	_, g1x, err := bn256.RandomG1(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	k := common.RandBigInt()
 	data := append(g1x.Marshal(), math.U256Bytes(k)...)
 	correct := new(bn256.G1).ScalarMult(g1x, k).Marshal()
@@ -181,13 +165,9 @@ func testECPairing(t *testing.T, g1Points []*bn256.G1, g2Points []*bn256.G2) {
 
 func TestECPairing(t *testing.T) {
 	_, p, err := bn256.RandomG1(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	_, q, err := bn256.RandomG2(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	s := common.RandBigInt()
 	negOne := big.NewInt(-1)
@@ -214,16 +194,11 @@ func TestECPairingRandom(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		_, g1, err := bn256.RandomG1(rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 		_, g2, err := bn256.RandomG2(rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 		g1Points = append(g1Points, g1)
 		g2Points = append(g2Points, g2)
-
 	}
 
 	testECPairing(t, g1Points, g2Points)

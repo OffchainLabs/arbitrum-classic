@@ -79,9 +79,7 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 	sends := make([]message.OutMessage, 0)
 	for _, send := range assertion.ParseOutMessages() {
 		msg, err := message.NewOutMessageFromValue(send)
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 		sends = append(sends, msg)
 	}
 	return results, sends
@@ -208,6 +206,7 @@ func depositEth(t *testing.T, mach machine.Machine, dest common.Address, amount 
 }
 
 func processTxResults(t *testing.T, logs []value.Value) []*evm.TxResult {
+	t.Helper()
 	results := make([]*evm.TxResult, 0, len(logs))
 	for _, avmLog := range logs {
 		res, err := evm.NewTxResultFromValue(avmLog)
@@ -220,6 +219,7 @@ func processTxResults(t *testing.T, logs []value.Value) []*evm.TxResult {
 }
 
 func revertedTxCheck(t *testing.T, res *evm.TxResult) {
+	t.Helper()
 	if res.ResultCode != evm.RevertCode {
 		t.Log("result", res)
 		t.Fatal("unexpected result", res.ResultCode)
@@ -227,6 +227,7 @@ func revertedTxCheck(t *testing.T, res *evm.TxResult) {
 }
 
 func succeededTxCheck(t *testing.T, res *evm.TxResult) {
+	t.Helper()
 	if res.ResultCode != evm.ReturnCode {
 		t.Log("result", res)
 		t.Fatal("unexpected result", res.ResultCode)
@@ -234,7 +235,15 @@ func succeededTxCheck(t *testing.T, res *evm.TxResult) {
 }
 
 func allResultsSucceeded(t *testing.T, results []*evm.TxResult) {
+	t.Helper()
 	for _, res := range results {
 		succeededTxCheck(t, res)
+	}
+}
+
+func failIfError(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatal(err)
 	}
 }

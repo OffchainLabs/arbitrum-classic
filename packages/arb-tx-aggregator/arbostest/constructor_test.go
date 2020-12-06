@@ -41,9 +41,7 @@ func TestContructor(t *testing.T) {
 
 	tx := types.NewContractCreation(0, big.NewInt(0), 1000000, big.NewInt(0), constructorData)
 	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, pks[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	ctx := context.Background()
 	if err := client.SendTransaction(ctx, signedTx); err != nil {
@@ -51,9 +49,7 @@ func TestContructor(t *testing.T) {
 	}
 	client.Commit()
 	ethReceipt, err := client.TransactionReceipt(ctx, signedTx.Hash())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
@@ -61,9 +57,7 @@ func TestContructor(t *testing.T) {
 	}
 
 	l2Message, err := message.NewL2Message(message.NewCompressedECDSAFromEth(signedTx))
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	chain := common.RandAddress()
 	inboxMessages := make([]inbox.InboxMessage, 0)
@@ -76,9 +70,7 @@ func TestContructor(t *testing.T) {
 	))
 
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	// Last parameter returned is number of steps executed
 	assertion, _ := mach.ExecuteAssertion(1000000000, inboxMessages, 0)
@@ -108,23 +100,17 @@ func TestContructor(t *testing.T) {
 	}
 
 	arbAddress, err := getConstructorResult(res)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if arbAddress.ToEthAddress() != ethReceipt.ContractAddress {
 		t.Error("contracts deployed at different addresses")
 	}
 
 	ethCode, err := client.CodeAt(ctx, ethReceipt.ContractAddress, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(9999999))
 	arbCode, err := snap.GetCode(arbAddress)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	if !bytes.Equal(arbCode, ethCode) {
 		t.Error("deployed code is different")
