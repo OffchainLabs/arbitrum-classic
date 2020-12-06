@@ -33,8 +33,6 @@ func testWithdrawal(t *testing.T, depositMsg message.Message, withdrawalTx messa
 		Timestamp: big.NewInt(0),
 	}
 
-	chain := common.RandAddress()
-
 	inboxMessages := []inbox.InboxMessage{
 		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
 		message.NewInboxMessage(depositMsg, common.RandAddress(), big.NewInt(1), chainTime),

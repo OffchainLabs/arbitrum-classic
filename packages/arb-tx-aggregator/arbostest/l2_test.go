@@ -17,7 +17,6 @@
 package arbostest
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -38,42 +37,16 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-var contractCreator = common.HexToAddress("0xba59937520bd4c1067bac24fb774b981b4b8c115")
-var connAddress = common.HexToAddress("0x9493d820aa2023afdedfc0eba1f86254a253ecdf")
-var connAddress2 = common.HexToAddress("0x9276e6abd1b8cb06e5abd72db5140d216148bed3")
-
 func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.SafeAbstractL2Message) ([]message.AbstractL2Message, *snapshot.Snapshot) {
-	chain := common.RandAddress()
-
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
-	messages := make([]inbox.InboxMessage, 0)
 
-	sender := common.RandAddress()
-
-	messages = append(
-		messages,
-		message.NewInboxMessage(
-			initMsg(),
-			chain,
-			big.NewInt(0),
-			chainTime,
-		),
-	)
-	messages = append(
-		messages,
-		message.NewInboxMessage(
-			message.Eth{
-				Dest:  sender,
-				Value: big.NewInt(100),
-			},
-			chain,
-			big.NewInt(1),
-			chainTime,
-		),
-	)
+	ethDeposit := message.Eth{
+		Dest:  sender,
+		Value: big.NewInt(100),
+	}
 
 	createTx := message.Transaction{
 		MaxGas:      big.NewInt(10000000000),
@@ -84,18 +57,8 @@ func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.S
 		Data:        hexutil.MustDecode(arbostestcontracts.Receiver2Bin),
 	}
 
-	messages = append(
-		messages,
-		message.NewInboxMessage(
-			message.NewSafeL2Message(createTx),
-			contractCreator,
-			big.NewInt(2),
-			chainTime,
-		),
-	)
-
 	var param common.Hash
-	copy(param[12:], connAddress.Bytes())
+	copy(param[12:], connAddress1.Bytes())
 	createTx2 := message.Transaction{
 		MaxGas:      big.NewInt(10000000000),
 		GasPriceBid: big.NewInt(0),
@@ -105,35 +68,14 @@ func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.S
 		Data:        append(hexutil.MustDecode(arbostestcontracts.ReceiverBin), param.Bytes()...),
 	}
 
-	messages = append(
-		messages,
-		message.NewInboxMessage(
-			message.NewSafeL2Message(createTx2),
-			contractCreator,
-			big.NewInt(3),
-			chainTime,
-		),
-	)
-
-	messages = append(
-		messages,
-		message.NewInboxMessage(
-			message.NewSafeL2Message(msg),
-			sender,
-			big.NewInt(4),
-			chainTime,
-		),
-	)
-
-	messages = append(
-		messages,
-		message.NewInboxMessage(
-			message.NewSafeL2Message(msg2),
-			sender,
-			big.NewInt(5),
-			chainTime,
-		),
-	)
+	messages := []inbox.InboxMessage{
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
+		message.NewInboxMessage(ethDeposit, sender, big.NewInt(1), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(createTx), sender, big.NewInt(2), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(createTx2), sender, big.NewInt(3), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(msg), sender, big.NewInt(4), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(msg2), sender, big.NewInt(5), chainTime),
+	}
 
 	logs, _, mach := runAssertion(t, messages)
 	results := processTxResults(t, logs)
@@ -142,16 +84,9 @@ func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.S
 	}
 
 	allResultsSucceeded(t, results)
-	createRes := results[0]
 
-	if !bytes.Equal(connAddress.Bytes(), createRes.ReturnData[12:]) {
-		t.Fatal("incorrect created contract address")
-	}
-
-	createRes2 := results[1]
-	if !bytes.Equal(connAddress2.Bytes(), createRes2.ReturnData[12:]) {
-		t.Fatal("incorrect created contract address", hexutil.Encode(createRes2.ReturnData[12:]))
-	}
+	checkConstructorResult(t, results[0], connAddress1)
+	checkConstructorResult(t, results[1], connAddress2)
 
 	msgs := make([]message.AbstractL2Message, 0)
 	for i, result := range results[2:] {
@@ -225,7 +160,7 @@ func TestCallTx(t *testing.T) {
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
-			DestAddress: connAddress,
+			DestAddress: connAddress1,
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
@@ -309,7 +244,7 @@ func TestContractTx(t *testing.T) {
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
-			DestAddress: connAddress,
+			DestAddress: connAddress1,
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
@@ -321,8 +256,6 @@ func TestContractTx(t *testing.T) {
 }
 
 func TestSignedTx(t *testing.T) {
-	chain := common.RandAddress()
-
 	dest := common.RandAddress()
 	pk, err := crypto.GenerateKey()
 	failIfError(t, err)
@@ -424,8 +357,6 @@ func TestSignedTx(t *testing.T) {
 }
 
 func TestUnsignedTx(t *testing.T) {
-	chain := common.RandAddress()
-
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
@@ -440,7 +371,6 @@ func TestUnsignedTx(t *testing.T) {
 			chainTime,
 		),
 	)
-	sender := common.RandAddress()
 	messages = append(
 		messages,
 		message.NewInboxMessage(
@@ -524,7 +454,6 @@ func TestUnsignedTx(t *testing.T) {
 }
 
 func TestBatch(t *testing.T) {
-	chain := common.RandAddress()
 	mach, err := cmachine.New(arbos.Path())
 	failIfError(t, err)
 
@@ -654,7 +583,6 @@ func verifyTxLogs(t *testing.T, signer types.Signer, txes []*types.Transaction, 
 }
 
 func TestCompressedECDSATx(t *testing.T) {
-	chain := common.RandAddress()
 	t.Log("Chain address:", chain)
 	t.Log("Chain ID:", message.ChainAddressToID(chain))
 

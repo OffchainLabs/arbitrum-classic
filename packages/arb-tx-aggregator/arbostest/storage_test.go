@@ -34,10 +34,6 @@ func TestGetStorageAt(t *testing.T) {
 		Timestamp: big.NewInt(0),
 	}
 
-	chain := common.RandAddress()
-	sender := common.HexToAddress("0x8c988ec54f112dd35666e19e7b0904bb12df1b6c")
-	connAddr := common.HexToAddress("0x7cc1af94bfb4676c4facfc6a56430ec35c45b8b0")
-
 	constructorTx := makeConstructorTx(hexutil.MustDecode(arbostestcontracts.StorageBin), big.NewInt(0), nil)
 
 	getStorageAtTx := message.ContractTransaction{
@@ -46,7 +42,7 @@ func TestGetStorageAt(t *testing.T) {
 			GasPriceBid: big.NewInt(0),
 			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 			Payment:     big.NewInt(0),
-			Data:        snapshot.StorageAtData(connAddr, big.NewInt(1)),
+			Data:        snapshot.StorageAtData(connAddress1, big.NewInt(1)),
 		},
 	}
 
@@ -54,7 +50,7 @@ func TestGetStorageAt(t *testing.T) {
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(1000000000),
 			GasPriceBid: big.NewInt(0),
-			DestAddress: connAddr,
+			DestAddress: connAddress1,
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode("0x188f9139"),
 		},
@@ -84,8 +80,8 @@ func TestGetStorageAt(t *testing.T) {
 	succeededTxCheck(t, constructorRes)
 	connAddrCalc, err := getConstructorResult(constructorRes)
 	failIfError(t, err)
-	if connAddrCalc != connAddr {
-		t.Fatal("constructed address doesn't match:", connAddrCalc, "instead of", connAddr)
+	if connAddrCalc != connAddress1 {
+		t.Fatal("constructed address doesn't match:", connAddrCalc, "instead of", connAddress1)
 	}
 
 	succeededTxCheck(t, getStorageAtRes)

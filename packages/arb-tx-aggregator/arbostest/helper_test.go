@@ -181,6 +181,7 @@ func getConstructorResult(constructorResult *evm.TxResult) (common.Address, erro
 }
 
 func checkConstructorResult(t *testing.T, res *evm.TxResult, correctAddress common.Address) {
+	t.Helper()
 	succeededTxCheck(t, res)
 	connAddrCalc, err := getConstructorResult(res)
 	if err != nil {
@@ -259,5 +260,5 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]value.Val
 	testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
 	failIfError(t, err)
 	t.Log(string(testCase))
-	return logs, sends, nil
+	return logs, sends, mach
 }

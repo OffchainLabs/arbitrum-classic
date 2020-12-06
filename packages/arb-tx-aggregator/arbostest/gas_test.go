@@ -28,10 +28,6 @@ import (
 )
 
 func TestGas(t *testing.T) {
-	chain := common.HexToAddress("0x037c4d7bbb0407d1e2c64981855ad8681d0d86d1")
-	sender := common.HexToAddress("0xe91e00167939cb6694d2c422acd208a007293948")
-	connAddress := common.HexToAddress("0x2aad3e8302f74e0818b7bcd10c2c050526707755")
-
 	constructorData := hexutil.MustDecode(arbostestcontracts.GasUsedBin)
 
 	chainTime := inbox.ChainTime{
@@ -61,7 +57,7 @@ func TestGas(t *testing.T) {
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(2),
-		DestAddress: connAddress,
+		DestAddress: connAddress1,
 		Payment:     big.NewInt(0),
 		Data:        hexutil.MustDecode("0x5dfc2e4a"),
 	}
@@ -70,7 +66,7 @@ func TestGas(t *testing.T) {
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(3),
-		DestAddress: connAddress,
+		DestAddress: connAddress1,
 		Payment:     big.NewInt(0),
 		Data:        hexutil.MustDecode("0x703c2d1a"),
 	}
@@ -79,7 +75,7 @@ func TestGas(t *testing.T) {
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(4),
-		DestAddress: connAddress,
+		DestAddress: connAddress1,
 		Payment:     big.NewInt(0),
 		Data:        hexutil.MustDecode("0x703c2d1a"),
 	}
@@ -106,7 +102,7 @@ func TestGas(t *testing.T) {
 
 	allResultsSucceeded(t, results)
 
-	checkConstructorResult(t, results[0], connAddress)
+	checkConstructorResult(t, results[0], connAddress1)
 	validGasCheck(t, results[1])
 	validGasCheck(t, results[2])
 	validGasCheck(t, results[3])

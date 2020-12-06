@@ -58,7 +58,6 @@ func TestTransactionCount(t *testing.T) {
 	failIfError(t, err)
 
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
-	chain := common.RandAddress()
 	randDest := common.RandAddress()
 	correctTxCount := 0
 
@@ -226,8 +225,6 @@ func makeArbSysTx(data []byte, seq *big.Int) message.Message {
 }
 
 func TestAddressTable(t *testing.T) {
-	chain := common.RandAddress()
-	sender := common.RandAddress()
 	targetAddress := common.RandAddress()
 	targetAddress2 := common.RandAddress()
 	targetAddress3 := common.RandAddress()
@@ -394,8 +391,6 @@ func TestAddressTable(t *testing.T) {
 }
 
 func TestArbSysBLS(t *testing.T) {
-	chain := common.RandAddress()
-	sender := common.RandAddress()
 	x0a, x1a, y0a, y1a := common.RandBigInt(), common.RandBigInt(), common.RandBigInt(), common.RandBigInt()
 	x0b, x1b, y0b, y1b := common.RandBigInt(), common.RandBigInt(), common.RandBigInt(), common.RandBigInt()
 	chainTime := inbox.ChainTime{
@@ -461,8 +456,6 @@ func TestArbSysBLS(t *testing.T) {
 }
 
 func TestArbSysFunctionTable(t *testing.T) {
-	chain := common.RandAddress()
-	sender := common.RandAddress()
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),

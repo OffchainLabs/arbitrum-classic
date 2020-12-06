@@ -51,7 +51,6 @@ func TestFib(t *testing.T) {
 	failIfError(t, err)
 
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
-	chain := common.RandAddress()
 
 	runMessage(t, mach, initMsg(), chain)
 
@@ -127,7 +126,6 @@ func TestDeposit(t *testing.T) {
 		Timestamp: big.NewInt(0),
 	}
 
-	chain := common.RandAddress()
 	runMessage(t, mach, initMsg(), chain)
 
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
@@ -144,7 +142,6 @@ func TestDeposit(t *testing.T) {
 }
 
 func TestBlocks(t *testing.T) {
-	chain := common.RandAddress()
 	messages := make([]inbox.InboxMessage, 0)
 	messages = append(
 		messages,

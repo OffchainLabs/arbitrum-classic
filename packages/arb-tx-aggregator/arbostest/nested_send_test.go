@@ -32,8 +32,6 @@ import (
 func TestFailedNestedSend(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
 	failIfError(t, err)
-	chain := common.RandAddress()
-	sender := common.RandAddress()
 	dest := common.RandAddress()
 
 	runMessage(t, mach, initMsg(), chain)
