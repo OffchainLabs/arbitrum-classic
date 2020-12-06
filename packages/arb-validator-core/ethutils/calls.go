@@ -39,7 +39,7 @@ func CallCheck(ctx context.Context, client EthClient, from common.Address, contr
 
 	output, err = client.PendingCallContract(ctx, msg)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if len(output) < 69 {

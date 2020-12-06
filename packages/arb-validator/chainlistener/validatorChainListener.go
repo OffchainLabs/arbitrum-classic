@@ -24,7 +24,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"log"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"sync"
 	"time"
@@ -98,7 +98,9 @@ func stakeLatestValid(
 	proof2 := structures.GeneratePathProof(location, nodeGraph.GetLeaf(location))
 	stakeAmount := nodeGraph.Params().StakeRequirement
 
-	log.Println("Placing stake for", stakingKey.client.Address())
+	log.Info().
+		Hex("address", stakingKey.client.Address().Bytes()).
+		Msg("Placing stake")
 	_, err := stakingKey.contract.PlaceStake(ctx, stakeAmount, proof1, proof2)
 	return err
 }
@@ -173,22 +175,24 @@ func (lis *ValidatorChainListener) AssertionPrepared(
 		lis.Lock()
 		lis.broadcastAssertions[prepared.Prev.Hash()] = prepared.Params
 		lis.Unlock()
-		log.Printf("%v is making an assertion\n", stakingAddress)
+		log.Info().
+			Hex("address", stakingAddress.Bytes()).
+			Msg("Making assertion")
 		go func() {
 			_, err := MakeAssertion(ctx, stakingKey.contract, prepared.Clone(), proof)
 			if err != nil {
-				log.Println("Error making assertion", err)
+				log.Error().Stack().Err(err).Msg("Error making assertion")
 				lis.Lock()
 				delete(lis.broadcastAssertions, prepared.Prev.Hash())
 				lis.Unlock()
 			} else {
-				log.Println("Successfully made assertion")
+				log.Info().Msg("Successfully made assertion")
 			}
 		}()
 		return
 	}
 
-	log.Println("Maybe putting down stake")
+	log.Info().Msg("Maybe putting down stake")
 	for stakingAddress, stakingKey := range lis.stakingKeys {
 		stakerPos := nodeGraph.Stakers().Get(stakingAddress)
 		if stakerPos != nil {
@@ -198,16 +202,19 @@ func (lis *ValidatorChainListener) AssertionPrepared(
 		lis.Lock()
 		currentTime, err := stakingKey.client.BlockIdForHeight(ctx, nil)
 		if err != nil {
-			log.Println("Validator couldn't get time")
+			log.Error().Stack().Err(err).Msg("Validator couldn't get time")
 			break
 		}
 		stakeTime, placedStake := lis.broadcastCreateStakes[stakingAddress]
 		if placedStake {
-			log.Println("Thinking about placing stake", currentTime.Height.AsInt(), new(big.Int).Add(stakeTime.AsInt(), big.NewInt(3)))
+			log.Info().
+				Str("currentHeight", currentTime.Height.AsInt().String()).
+				Str("stakeHeight", new(big.Int).Add(stakeTime.AsInt(), big.NewInt(3)).String()).
+				Msg("Thinking about placing stake")
 		}
 		if !placedStake || currentTime.Height.AsInt().Cmp(new(big.Int).Add(stakeTime.AsInt(), big.NewInt(3))) >= 0 {
 			lis.broadcastCreateStakes[stakingAddress] = currentTime.Height
-			log.Println("No stake is currently down, so setting up a stake")
+			log.Info().Msg("No stake is currently down, so setting up a stake")
 			lis.Unlock()
 			// Put down new stake so that we can assert next time
 			go func() {
@@ -216,7 +223,7 @@ func (lis *ValidatorChainListener) AssertionPrepared(
 					lis.Lock()
 					delete(lis.broadcastCreateStakes, stakingAddress)
 					lis.Unlock()
-					log.Println("Error placing stake", err)
+					log.Error().Stack().Err(err).Msg("Error placing stake")
 				}
 			}()
 			return
@@ -241,7 +248,11 @@ func (lis *ValidatorChainListener) StakeCreated(
 		if opp != nil {
 			_, err := InitiateChallenge(ctx, lis.actor, opp)
 			if err != nil {
-				log.Printf("Stake %v unable to initiate challenge: %v", ev.Staker, err)
+				log.Error().
+					Stack().
+					Err(err).
+					Hex("staker", ev.Staker.Bytes()).
+					Msg("Unable to initiate challenge")
 			}
 		}
 	} else {
@@ -249,7 +260,11 @@ func (lis *ValidatorChainListener) StakeCreated(
 		if opp != nil {
 			_, err := InitiateChallenge(ctx, lis.actor, opp)
 			if err != nil {
-				log.Printf("Stake %v unable to initiate challenge: %v", ev.Staker, err)
+				log.Error().
+					Stack().
+					Err(err).
+					Hex("staker", ev.Staker.Bytes()).
+					Msg("Unable to initiate challenge")
 			}
 		}
 	}
@@ -265,7 +280,11 @@ func (lis *ValidatorChainListener) StakeMoved(
 	if opp != nil {
 		_, err := InitiateChallenge(ctx, lis.actor, opp)
 		if err != nil {
-			log.Printf("Stake %v unable to initiate challenge: %v", ev.Staker, err)
+			log.Error().
+				Stack().
+				Err(err).
+				Hex("staker", ev.Staker.Bytes()).
+				Msg("Unable to initiate challenge")
 		}
 	}
 }
@@ -279,7 +298,10 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(nodeGraph *nodegrap
 
 	newStaker := nodeGraph.Stakers().Get(stakerAddr)
 	if newStaker == nil {
-		log.Fatalf("Nonexistant staker moved %v", stakerAddr)
+		log.Fatal().
+			Stack().
+			Hex("staker", stakerAddr.Bytes()).
+			Msg("Nonexistant staker moved")
 	}
 
 	// Search for an already staked staking key
@@ -340,9 +362,14 @@ func (lis *ValidatorChainListener) launchChallenge(
 					100,
 				)
 				if err != nil {
-					log.Println("Failed defending inbox top claim", err)
+					log.Error().
+						Stack().
+						Err(err).
+						Msg("Failed defending inbox top claim")
 				} else {
-					log.Println("Completed defending inbox top claim", res)
+					log.Info().
+						Str("challengeState", res.String()).
+						Msg("Completed defending inbox top claim")
 				}
 			}()
 		case valprotocol.InvalidExecutionChildType:
@@ -361,13 +388,18 @@ func (lis *ValidatorChainListener) launchChallenge(
 					challenges.StandardExecutionChallenge(),
 				)
 				if err != nil {
-					log.Println("Failed defending execution claim", err)
+					log.Error().
+						Stack().
+						Err(err).
+						Msg("Failed defending execution claim")
 				} else {
-					log.Println("Completed defending execution claim", res)
+					log.Info().
+						Str("challengeState", res.String()).
+						Msg("Completed defending execution claim")
 				}
 			}()
 		default:
-			log.Fatal("unexpected challenge type")
+			log.Fatal().Uint("challengeType", uint(chal.ConflictNode().LinkType())).Msg("Unexpected challenge type")
 		}
 	}
 
@@ -386,9 +418,14 @@ func (lis *ValidatorChainListener) launchChallenge(
 					false,
 				)
 				if err != nil {
-					log.Println("Failed challenging inbox top claim", err)
+					log.Error().
+						Stack().
+						Err(err).
+						Msg("Failed challenging inbox top claim")
 				} else {
-					log.Println("Completed challenging inbox top claim", res)
+					log.Info().
+						Str("challengeState", res.String()).
+						Msg("Completed challenging inbox top claim")
 				}
 			}()
 		case valprotocol.InvalidExecutionChildType:
@@ -407,13 +444,18 @@ func (lis *ValidatorChainListener) launchChallenge(
 					challenges.StandardExecutionChallenge(),
 				)
 				if err != nil {
-					log.Println("Failed challenging execution claim", err)
+					log.Error().
+						Stack().
+						Err(err).
+						Msg("Failed challenging execution claim")
 				} else {
-					log.Println("Completed challenging execution claim", res)
+					log.Info().
+						Str("challengeState", res.String()).
+						Msg("Completed challenging execution claim")
 				}
 			}()
 		default:
-			log.Fatal("unexpected challenge type")
+			log.Fatal().Stack().Msg("Unexpected challenge type")
 		}
 	}
 }
@@ -455,7 +497,7 @@ func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, conf *v
 	go func() {
 		_, err := lis.actor.Confirm(ctx, confClone)
 		if err != nil {
-			log.Println("Failed to confirm valid node", err)
+			log.Error().Stack().Err(err).Msg("Failed to confirm valid node")
 			lis.Lock()
 			delete(lis.broadcastConfirmations, confClone.CurrentLatestConfirmed)
 			lis.Unlock()
@@ -484,7 +526,7 @@ func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, params []v
 	go func() {
 		_, err := lis.actor.PruneLeaves(ctx, leavesToPrune)
 		if err != nil {
-			log.Println("Failed pruning leaves", err)
+			log.Error().Stack().Err(err).Msg("Failed pruning leaves")
 			lis.Lock()
 			for _, prune := range leavesToPrune {
 				delete(lis.broadcastLeafPrunes, prune.LeafHash)
@@ -507,7 +549,11 @@ func (lis *ValidatorChainListener) MootableStakes(ctx context.Context, params []
 				mootCopy.StProof,
 			)
 			if err != nil {
-				log.Printf("Unable to recover mooted stake at EthAddress %v", mootCopy.Addr.ToEthAddress())
+				log.Error().
+					Stack().
+					Err(err).
+					Hex("address", mootCopy.Addr.Bytes()).
+					Msg("Unable to recover mooted stake")
 			}
 		}()
 	}
@@ -524,7 +570,11 @@ func (lis *ValidatorChainListener) OldStakes(ctx context.Context, params []nodeg
 				oldCopy.Proof,
 			)
 			if err != nil {
-				log.Printf("Unable to recover old stakes at EthAddress %v", oldCopy.Addr.ToEthAddress())
+				log.Error().
+					Stack().
+					Err(err).
+					Hex("address", oldCopy.Addr.Bytes()).
+					Msg("Unable to recover old stake")
 			}
 		}()
 	}
@@ -581,7 +631,7 @@ func (lis *ValidatorChainListener) AdvancedKnownNode(
 			_, err := lis.actor.MoveStake(ctx, proof1, proof2)
 			lis.Lock()
 			if err != nil {
-				log.Println("Failed moving stake", err)
+				log.Error().Stack().Err(err).Msg("Failed moving stake")
 				delete(lis.broadcastMovedStakes, stakingAddr)
 			} else {
 				prevMove, alreadySent := lis.broadcastMovedStakes[stakingAddr]

@@ -20,6 +20,7 @@ import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"github.com/pkg/errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -251,7 +252,7 @@ func (vm *arbRollup) MakeAssertion(
 			assertion.NumGas,
 			common.HashSliceToRaw(stakerProof),
 		)
-		return nil, callErr
+		return nil, errors.WithStack(callErr)
 	}
 	return vm.waitForReceipt(ctx, tx, "MakeAssertion")
 }
