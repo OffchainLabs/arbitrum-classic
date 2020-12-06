@@ -90,22 +90,7 @@ func TestTransfer(t *testing.T) {
 	t.Log("GasLimit", connCallTx.MaxGas)
 
 	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(4))
-	transfer1Balance, err := snap.GetBalance(connAddress1)
-	failIfError(t, err)
-	transfer2Balance, err := snap.GetBalance(connAddress2)
-	failIfError(t, err)
-	senderBalance, err := snap.GetBalance(sender)
-	failIfError(t, err)
-
-	if transfer1Balance.Cmp(big.NewInt(101)) != 0 {
-		t.Error("unexpected transfer conn1 balance", transfer1Balance)
-	}
-
-	if transfer2Balance.Cmp(big.NewInt(99)) != 0 {
-		t.Error("unexpected transfer conn2 balance", transfer2Balance)
-	}
-
-	if senderBalance.Cmp(big.NewInt(9800)) != 0 {
-		t.Error("unexpected sender balance", senderBalance)
-	}
+	checkBalance(t, snap, connAddress1, big.NewInt(101))
+	checkBalance(t, snap, connAddress2, big.NewInt(99))
+	checkBalance(t, snap, sender, big.NewInt(9800))
 }

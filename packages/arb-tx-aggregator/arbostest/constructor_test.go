@@ -80,11 +80,8 @@ func TestContructor(t *testing.T) {
 		return
 	}
 
-	arbAddress, err := getConstructorResult(res)
-	failIfError(t, err)
-	if arbAddress.ToEthAddress() != ethReceipt.ContractAddress {
-		t.Error("contracts deployed at different addresses")
-	}
+	arbAddress := common.NewAddressFromEth(ethReceipt.ContractAddress)
+	checkConstructorResult(t, res, arbAddress)
 
 	ethCode, err := client.CodeAt(ctx, ethReceipt.ContractAddress, nil)
 	failIfError(t, err)

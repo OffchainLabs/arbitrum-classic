@@ -126,12 +126,7 @@ func TestCreate2(t *testing.T) {
 	existsCloneRes := results[3]
 
 	checkConstructorResult(t, factoryConstructorRes, common.NewAddressFromEth(factoryConnAddress))
-
-	simpleConnAddrCalc, err := getConstructorResult(simpleConstructorRes)
-	failIfError(t, err)
-	if simpleConnAddrCalc.ToEthAddress() != simpleConnAddress {
-		t.Fatal("constructed address doesn't match:", simpleConnAddrCalc, "instead of", simpleConnAddress.Hex())
-	}
+	checkConstructorResult(t, simpleConstructorRes, common.NewAddressFromEth(simpleConnAddress))
 
 	if len(create2Res.EVMLogs) != 1 {
 		t.Fatal("wrong EVM log count")
