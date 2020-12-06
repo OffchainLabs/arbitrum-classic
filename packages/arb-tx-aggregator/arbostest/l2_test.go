@@ -28,10 +28,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -362,27 +360,16 @@ func TestUnsignedTx(t *testing.T) {
 }
 
 func TestBatch(t *testing.T) {
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
-
-	runMessage(t, mach, initMsg(), chain)
-
-	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
-	failIfError(t, err)
-
-	dest, err := deployContract(t, mach, common.RandAddress(), constructorData, big.NewInt(0), nil)
-	failIfError(t, err)
 	batchSize := 21
 	senders := make([]common.Address, 0, batchSize)
 	pks := make([]*ecdsa.PrivateKey, 0)
 	for i := 0; i < batchSize; i++ {
 		pk, err := crypto.GenerateKey()
 		failIfError(t, err)
-		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
-		depositEth(t, mach, addr, big.NewInt(1000))
 		pks = append(pks, pk)
 	}
-	batchSender := common.NewAddressFromEth(crypto.PubkeyToAddress(pks[0].PublicKey))
+
+	dest := common.RandAddress()
 	txes := make([]message.AbstractL2Message, 0)
 	hashes := make([]common.Hash, 0)
 	batchSenderSeq := int64(0)
@@ -395,9 +382,9 @@ func TestBatch(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        []byte{},
 		}
-		senders = append(senders, batchSender)
+		senders = append(senders, sender)
 		txes = append(txes, tx)
-		hashes = append(hashes, tx.MessageID(batchSender, chain))
+		hashes = append(hashes, tx.MessageID(sender, chain))
 		batchSenderSeq++
 	}
 	for _, pk := range pks[1:] {
@@ -412,13 +399,20 @@ func TestBatch(t *testing.T) {
 
 	msg, err := message.NewTransactionBatchFromMessages(txes)
 	failIfError(t, err)
-	results, sends := runMessage(t, mach, message.NewSafeL2Message(msg), batchSender)
-	if len(results) != len(txes) {
-		t.Fatal("incorrect result count", len(results), "instead of", len(txes))
+
+	var messages []message.Message
+	for _, pk := range pks {
+		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
+		messages = append(messages, message.Eth{
+			Dest:  addr,
+			Value: big.NewInt(1000),
+		})
 	}
-	if len(sends) != 0 {
-		t.Fatal("incorrect send count", len(sends), "instead of 0")
-	}
+	messages = append(messages, message.NewSafeL2Message(msg))
+
+	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), len(txes), 0)
+	results := processTxResults(t, logs)
+
 	for i, result := range results {
 		if result.IncomingRequest.Sender != senders[i] {
 			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, senders[i])

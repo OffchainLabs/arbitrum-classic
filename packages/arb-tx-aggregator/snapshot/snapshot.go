@@ -128,7 +128,7 @@ func (s *Snapshot) GetTransactionCount(account common.Address) (*big.Int, error)
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return parseTransactionCountResult(res)
+	return ParseTransactionCountResult(res)
 }
 
 func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
