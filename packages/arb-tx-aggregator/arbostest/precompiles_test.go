@@ -64,16 +64,13 @@ func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byt
 
 	// Last parameter returned is number of steps executed
 	assertion, _ := mach.ExecuteAssertion(1000000000, inboxMessages, 0)
-	logs := assertion.ParseLogs()
 
-	if len(logs) != 1 {
-		t.Fatal("unexpected log count", len(logs))
+	results := processTxResults(t, assertion.ParseLogs())
+	if len(results) != 1 {
+		t.Fatal("unexpected log count", len(results))
 	}
 
-	res, err := evm.NewTxResultFromValue(logs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	res := results[0]
 	if res.ResultCode != evm.ReturnCode {
 		t.Error("tx failed", res.ResultCode)
 	}

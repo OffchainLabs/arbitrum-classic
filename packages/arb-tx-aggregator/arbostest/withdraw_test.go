@@ -56,23 +56,17 @@ func testWithdrawal(t *testing.T, depositMsg message.Message, withdrawalTx messa
 	}
 	t.Log(string(testCase))
 
-	logs := assertion.ParseLogs()
 	sends := assertion.ParseOutMessages()
 
-	results := make([]*evm.TxResult, 0, len(logs))
-	for _, avmLog := range logs {
-		res, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			t.Fatal(err)
-		}
+	results := processTxResults(t, assertion.ParseLogs())
+	for _, res := range results {
 		if res.ResultCode != evm.ReturnCode {
 			t.Fatal("incorrect tx response", res.ResultCode)
 		}
-		results = append(results, res)
 		t.Log(res.IncomingRequest)
 	}
 
-	parsedSends := make([]message.OutMessage, 0, len(logs))
+	parsedSends := make([]message.OutMessage, 0, len(sends))
 	for _, avmSend := range sends {
 		outMsg, err := message.NewOutMessageFromValue(avmSend)
 		if err != nil {

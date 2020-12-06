@@ -25,7 +25,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 	"testing"
 )
@@ -110,26 +109,23 @@ func TestGas(t *testing.T) {
 	}
 	t.Log(string(testCase))
 
-	if len(logs) != len(inboxMessages)-2 {
-		t.Fatal("unxpected log count", len(logs))
+	results := processTxResults(t, logs)
+	if len(results) != len(inboxMessages)-2 {
+		t.Fatal("unxpected log count", len(results))
 	}
 
 	if len(sends) != 0 {
 		t.Fatal("unxpected send count", len(sends))
 	}
 
-	checkConstructorResult(t, logs[0], connAddress)
-	validGasCheck(t, logs[1])
-	validGasCheck(t, logs[2])
-	validGasCheck(t, logs[3])
-	validGasCheck(t, logs[4])
+	checkConstructorResult(t, results[0], connAddress)
+	validGasCheck(t, results[1])
+	validGasCheck(t, results[2])
+	validGasCheck(t, results[3])
+	validGasCheck(t, results[4])
 }
 
-func validGasCheck(t *testing.T, avmLog value.Value) *big.Int {
-	res, err := evm.NewTxResultFromValue(avmLog)
-	if err != nil {
-		t.Fatal(err)
-	}
+func validGasCheck(t *testing.T, res *evm.TxResult) *big.Int {
 	t.Log("GasUsed", res.GasUsed)
 	if res.ResultCode != evm.ReturnCode {
 		t.Log("result", res)

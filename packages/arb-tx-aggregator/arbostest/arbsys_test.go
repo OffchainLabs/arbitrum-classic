@@ -326,7 +326,7 @@ func TestAddressTable(t *testing.T) {
 	}
 
 	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-	logs := assertion.ParseLogs()
+
 	sends := assertion.ParseOutMessages()
 	//testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
 	//if err != nil {
@@ -338,17 +338,9 @@ func TestAddressTable(t *testing.T) {
 		t.Fatal("unxpected send count", len(sends))
 	}
 
-	results := make([]*evm.TxResult, 0, len(logs))
-	for _, avmLog := range logs {
-		res, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			t.Fatal(err)
-		}
-		results = append(results, res)
-	}
-
+	results := processTxResults(t, assertion.ParseLogs())
 	if len(results) != len(arbSysCalls) {
-		t.Fatal("unxpected log count", len(logs))
+		t.Fatal("unxpected log count", len(results))
 	}
 
 	revertedTxCheck(t, results[0])
@@ -490,7 +482,7 @@ func TestArbSysBLS(t *testing.T) {
 	}
 
 	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-	logs := assertion.ParseLogs()
+
 	sends := assertion.ParseOutMessages()
 	//testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
 	//if err != nil {
@@ -501,18 +493,10 @@ func TestArbSysBLS(t *testing.T) {
 	if len(sends) != 0 {
 		t.Fatal("unxpected send count", len(sends))
 	}
-
-	results := make([]*evm.TxResult, 0, len(logs))
-	for _, avmLog := range logs {
-		res, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			t.Fatal(err)
-		}
-		results = append(results, res)
-	}
+	results := processTxResults(t, assertion.ParseLogs())
 
 	if len(results) != len(arbSysCalls) {
-		t.Fatal("unxpected log count", len(logs))
+		t.Fatal("unxpected log count", len(results))
 	}
 
 	revertedTxCheck(t, results[0])
@@ -600,7 +584,7 @@ func TestArbSysFunctionTable(t *testing.T) {
 	}
 
 	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-	logs := assertion.ParseLogs()
+
 	sends := assertion.ParseOutMessages()
 	//testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
 	//if err != nil {
@@ -612,17 +596,10 @@ func TestArbSysFunctionTable(t *testing.T) {
 		t.Fatal("unxpected send count", len(sends))
 	}
 
-	results := make([]*evm.TxResult, 0, len(logs))
-	for _, avmLog := range logs {
-		res, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			t.Fatal(err)
-		}
-		results = append(results, res)
-	}
+	results := processTxResults(t, assertion.ParseLogs())
 
 	if len(results) != len(arbSysCalls) {
-		t.Fatal("unxpected log count", len(logs))
+		t.Fatal("unxpected log count", len(results))
 	}
 
 	revertedTxCheck(t, results[0])

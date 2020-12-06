@@ -153,21 +153,21 @@ func TestCreate2(t *testing.T) {
 	//	t.Fatal(err)
 	//}
 	//t.Log(string(testCase))
-	logs := assertion.ParseLogs()
 	sends := assertion.ParseOutMessages()
-
-	if len(logs) != 4 {
-		t.Fatal("Unexpected log count", len(logs))
+	results := processTxResults(t, assertion.ParseLogs())
+	if len(results) != 4 {
+		t.Fatal("unxpected log count", len(results))
 	}
 
 	if len(sends) != 0 {
 		t.Fatal("Unexpected send count", len(sends))
 	}
 
-	factoryConstructorRes, err := evm.NewTxResultFromValue(logs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	factoryConstructorRes := results[0]
+	simpleConstructorRes := results[1]
+	create2Res := results[2]
+	existsCloneRes := results[3]
+
 	if factoryConstructorRes.ResultCode != evm.ReturnCode {
 		t.Fatal("unexpected constructor result", factoryConstructorRes.ResultCode)
 	}
@@ -178,10 +178,7 @@ func TestCreate2(t *testing.T) {
 	if factoryConnAddrCalc.ToEthAddress() != factoryConnAddress {
 		t.Fatal("constructed address doesn't match:", factoryConnAddrCalc, "instead of", factoryConnAddress.Hex())
 	}
-	simpleConstructorRes, err := evm.NewTxResultFromValue(logs[1])
-	if err != nil {
-		t.Fatal(err)
-	}
+
 	if simpleConstructorRes.ResultCode != evm.ReturnCode {
 		t.Fatal("unexpected constructor result", simpleConstructorRes.ResultCode)
 	}
@@ -193,10 +190,6 @@ func TestCreate2(t *testing.T) {
 		t.Fatal("constructed address doesn't match:", simpleConnAddrCalc, "instead of", simpleConnAddress.Hex())
 	}
 
-	create2Res, err := evm.NewTxResultFromValue(logs[2])
-	if err != nil {
-		t.Fatal(err)
-	}
 	if create2Res.ResultCode != evm.ReturnCode {
 		t.Fatal("unexpected create2 result", create2Res.ResultCode)
 	}
@@ -214,10 +207,6 @@ func TestCreate2(t *testing.T) {
 		t.Fatal("incorrect clone address")
 	}
 
-	existsCloneRes, err := evm.NewTxResultFromValue(logs[3])
-	if err != nil {
-		t.Fatal(err)
-	}
 	if existsCloneRes.ResultCode != evm.ReturnCode {
 		t.Fatal("unexpected exists clone result", existsCloneRes.ResultCode)
 	}

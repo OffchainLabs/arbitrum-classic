@@ -75,10 +75,9 @@ func TestBuddyContract(t *testing.T) {
 	//	t.Fatal(err)
 	//}
 	//t.Log(string(data))
-
-	logs := assertion.ParseLogs()
-	if len(logs) != 2 {
-		t.Fatal("unexpected log count", len(logs))
+	results := processTxResults(t, assertion.ParseLogs())
+	if len(results) != 2 {
+		t.Fatal("unexpected log count", len(results))
 	}
 
 	sends := assertion.ParseOutMessages()
@@ -86,11 +85,7 @@ func TestBuddyContract(t *testing.T) {
 		t.Fatal("unexpected send count", len(sends))
 	}
 
-	for i, logVal := range assertion.ParseLogs() {
-		res, err := evm.NewTxResultFromValue(logVal)
-		if err != nil {
-			t.Fatal(err)
-		}
+	for i, res := range results {
 		if res.ResultCode != evm.ReturnCode {
 			t.Error("tx", i, "failed", res.ResultCode)
 		}
