@@ -19,10 +19,8 @@ package arbostest
 import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/big"
 	"strings"
@@ -30,21 +28,19 @@ import (
 )
 
 func TestFailedNestedSend(t *testing.T) {
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
 	dest := common.RandAddress()
 
-	runMessage(t, mach, initMsg(), chain)
-	depositEth(t, mach, sender, big.NewInt(1000))
-
-	constructorData := hexutil.MustDecode(arbostestcontracts.FailedSendBin)
-
-	failedSendAddress, err := deployContract(t, mach, sender, constructorData, big.NewInt(0), nil)
-	failIfError(t, err)
+	tx := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(0),
+		DestAddress: common.Address{},
+		Payment:     big.NewInt(0),
+		Data:        hexutil.MustDecode(arbostestcontracts.FailedSendBin),
+	}
 
 	failedSend, err := abi.JSON(strings.NewReader(arbostestcontracts.FailedSendABI))
 	failIfError(t, err)
-
 	failedSendABI := failedSend.Methods["send"]
 	failedSendData, err := failedSendABI.Inputs.Pack(dest)
 	failIfError(t, err)
@@ -52,9 +48,19 @@ func TestFailedNestedSend(t *testing.T) {
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
-		DestAddress: failedSendAddress,
+		DestAddress: connAddress1,
 		Payment:     big.NewInt(300),
 		Data:        append(failedSendABI.ID, failedSendData...),
 	}
-	runTransaction(t, mach, sendTx, sender)
+
+	messages := []message.Message{
+		message.Eth{Dest: sender, Value: big.NewInt(1000)},
+		message.NewSafeL2Message(tx),
+		message.NewSafeL2Message(sendTx),
+	}
+
+	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), 2, 0)
+	results := processTxResults(t, logs)
+	checkConstructorResult(t, results[0], connAddress1)
+	revertedTxCheck(t, results[1])
 }

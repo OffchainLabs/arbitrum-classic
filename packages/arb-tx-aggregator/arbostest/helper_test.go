@@ -87,27 +87,6 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 	return results, sends
 }
 
-func runValidTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Message, sender common.Address) *evm.TxResult {
-	t.Helper()
-	result := runTransaction(t, mach, msg, sender)
-	succeededTxCheck(t, result)
-	return result
-}
-
-func runTransaction(t *testing.T, mach machine.Machine, msg message.AbstractL2Message, sender common.Address) *evm.TxResult {
-	t.Helper()
-	l2, err := message.NewL2Message(msg)
-	failIfError(t, err)
-	results, sends := runMessage(t, mach, l2, sender)
-	if len(results) != 1 {
-		t.Fatalf("unexpected log count %v", len(results))
-	}
-	if len(sends) != 0 {
-		t.Fatalf("unexpected send count %v", len(sends))
-	}
-	return results[0]
-}
-
 func withdrawEthTx(sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
 	return message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
@@ -153,12 +132,6 @@ func makeConstructorTx(code []byte, sequenceNum *big.Int, payment *big.Int) mess
 		Payment:     payment,
 		Data:        code,
 	}
-}
-
-func deployContract(t *testing.T, mach machine.Machine, sender common.Address, code []byte, sequenceNum *big.Int, payment *big.Int) (common.Address, error) {
-	constructorTx := makeConstructorTx(code, sequenceNum, payment)
-	constructorResult := runValidTransaction(t, mach, constructorTx, sender)
-	return getConstructorResult(constructorResult)
 }
 
 func getConstructorResult(constructorResult *evm.TxResult) (common.Address, error) {
