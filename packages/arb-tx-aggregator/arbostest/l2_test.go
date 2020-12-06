@@ -142,15 +142,13 @@ func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.S
 
 	// Last parameter returned is number of steps executed
 	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
-	logs := assertion.ParseLogs()
-	if len(logs) != 4 {
-		t.Fatal("incorrect log output count", len(logs))
+	results := processTxResults(t, assertion.ParseLogs())
+	if len(results) != 4 {
+		t.Fatal("incorrect log output count", len(results))
 	}
 
-	createRes, err := evm.NewTxResultFromValue(logs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	createRes := results[0]
+
 	if createRes.ResultCode != evm.ReturnCode {
 		t.Fatal("failed to create tx")
 	}
@@ -159,10 +157,7 @@ func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.S
 		t.Fatal("incorrect created contract address")
 	}
 
-	createRes2, err := evm.NewTxResultFromValue(logs[1])
-	if err != nil {
-		t.Fatal(err)
-	}
+	createRes2 := results[1]
 	if createRes2.ResultCode != evm.ReturnCode {
 		t.Fatal("failed to create tx 2", createRes2.ResultCode)
 	}
@@ -172,11 +167,7 @@ func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.S
 	}
 
 	msgs := make([]message.AbstractL2Message, 0)
-	for i, avmLog := range logs[2:] {
-		result, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			t.Fatal(err)
-		}
+	for i, result := range results[2:] {
 		if result.ResultCode != evm.ReturnCode {
 			t.Fatal("unexpected result code", i, result.ResultCode)
 		}
@@ -453,14 +444,11 @@ func TestSignedTx(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log(string(testCase))
-	if len(logs) != 2 {
-		t.Fatal("incorrect log output count", len(logs))
+	results := processTxResults(t, assertion.ParseLogs())
+	if len(results) != 2 {
+		t.Fatal("incorrect log output count", len(results))
 	}
-	for i, avmLog := range logs {
-		result, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			t.Fatal(err)
-		}
+	for i, result := range results {
 		if result.ResultCode != evm.ReturnCode {
 			t.Fatal("unexpected result code", result.ResultCode)
 		}
@@ -574,14 +562,11 @@ func TestUnsignedTx(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log(string(testCase))
-	if len(logs) != 2 {
-		t.Fatal("incorrect log output count", len(logs))
+	results := processTxResults(t, assertion.ParseLogs())
+	if len(results) != 2 {
+		t.Fatal("incorrect log output count", len(results))
 	}
-	for i, avmLog := range logs {
-		result, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			t.Fatal(err)
-		}
+	for i, result := range results {
 		if result.ResultCode != evm.ReturnCode {
 			t.Fatal("unexpected result code", result.ResultCode)
 		}
@@ -739,11 +724,8 @@ func generateTestTransactions(t *testing.T, chain common.Address) []*types.Trans
 }
 
 func verifyTxLogs(t *testing.T, signer types.Signer, txes []*types.Transaction, logs []value.Value) {
-	for i, avmLog := range logs {
-		result, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			t.Fatal(err)
-		}
+	results := processTxResults(t, logs)
+	for i, result := range results {
 		if result.ResultCode != evm.ReturnCode {
 			t.Error(i, "unexpected result code", result.ResultCode)
 		}

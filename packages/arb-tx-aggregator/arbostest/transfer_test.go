@@ -106,21 +106,19 @@ func TestTransfer(t *testing.T) {
 	}
 	t.Log(string(testCase))
 
-	if len(logs) != 3 {
-		t.Fatal("unxpected log count", len(logs))
+	results := processTxResults(t, assertion.ParseLogs())
+	if len(results) != 3 {
+		t.Fatal("unxpected log count", len(results))
 	}
 
 	if len(sends) != 0 {
 		t.Fatal("unxpected send count", len(sends))
 	}
 
-	checkConstructorResult(t, logs[0], transfer1Address)
-	checkConstructorResult(t, logs[1], transfer2Address)
+	checkConstructorResult(t, results[0], transfer1Address)
+	checkConstructorResult(t, results[1], transfer2Address)
 
-	res, err := evm.NewTxResultFromValue(logs[2])
-	if err != nil {
-		t.Fatal(err)
-	}
+	res := results[2]
 	t.Log("GasUsed", res.GasUsed)
 	t.Log("GasLimit", connCallTx.MaxGas)
 	if res.ResultCode != evm.ReturnCode {

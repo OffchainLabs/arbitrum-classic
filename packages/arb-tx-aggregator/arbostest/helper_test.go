@@ -74,14 +74,8 @@ func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender 
 	if _, ok := blockReason.(machine.InboxBlocked); !ok {
 		t.Fatal("Machine blocked for weird reason", blockReason)
 	}
-	results := make([]*evm.TxResult, 0)
-	for _, avmLog := range assertion.ParseLogs() {
-		result, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			t.Fatal(err)
-		}
-		results = append(results, result)
-	}
+
+	results := processTxResults(t, assertion.ParseLogs())
 	sends := make([]message.OutMessage, 0)
 	for _, send := range assertion.ParseOutMessages() {
 		msg, err := message.NewOutMessageFromValue(send)
@@ -187,15 +181,11 @@ func getConstructorResult(constructorResult *evm.TxResult) (common.Address, erro
 	return contractAddress, nil
 }
 
-func checkConstructorResult(t *testing.T, avmLog value.Value, correctAddress common.Address) {
-	constructorRes, err := evm.NewTxResultFromValue(avmLog)
-	if err != nil {
-		t.Fatal(err)
+func checkConstructorResult(t *testing.T, res *evm.TxResult, correctAddress common.Address) {
+	if res.ResultCode != evm.ReturnCode {
+		t.Fatal("unexpected constructor result", res.ResultCode)
 	}
-	if constructorRes.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected constructor result", constructorRes.ResultCode)
-	}
-	connAddrCalc, err := getConstructorResult(constructorRes)
+	connAddrCalc, err := getConstructorResult(res)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,4 +207,16 @@ func depositEth(t *testing.T, mach machine.Machine, dest common.Address, amount 
 	if len(sendResults) != 0 {
 		t.Fatal("deposit should not trigger sends")
 	}
+}
+
+func processTxResults(t *testing.T, logs []value.Value) []*evm.TxResult {
+	results := make([]*evm.TxResult, 0, len(logs))
+	for _, avmLog := range logs {
+		res, err := evm.NewTxResultFromValue(avmLog)
+		if err != nil {
+			t.Fatal(err)
+		}
+		results = append(results, res)
+	}
+	return results
 }

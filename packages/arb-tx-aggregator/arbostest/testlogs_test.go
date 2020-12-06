@@ -19,7 +19,6 @@ package arbostest
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -59,15 +58,12 @@ func TestArbOSCases(t *testing.T) {
 				commonSendCount = len(calcSends)
 			}
 
+			calcResults := processTxResults(t, assertion.ParseLogs())
+			results := processTxResults(t, assertion.ParseLogs())
+
 			for i := 0; i < commonLogCount; i++ {
-				calcRes, err := evm.NewTxResultFromValue(calcLogs[i])
-				if err != nil {
-					t.Fatal(err)
-				}
-				res, err := evm.NewTxResultFromValue(avmLogs[i])
-				if err != nil {
-					t.Fatal(err)
-				}
+				calcRes := calcResults[i]
+				res := results[i]
 				if !value.Eq(calcRes.AsValue(), res.AsValue()) {
 					t.Log("Calculated:", calcRes)
 					t.Log("Correct", res)

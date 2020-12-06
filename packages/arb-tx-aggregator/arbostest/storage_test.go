@@ -82,21 +82,21 @@ func TestGetStorageAt(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log(string(testCase))
-	logs := assertion.ParseLogs()
 	sends := assertion.ParseOutMessages()
 
-	if len(logs) != 3 {
-		t.Fatal("unexpected log count", len(logs))
+	results := processTxResults(t, assertion.ParseLogs())
+	if len(results) != 3 {
+		t.Fatal("unxpected log count", len(results))
 	}
 
 	if len(sends) != 0 {
 		t.Fatal("unexpected send count", len(sends))
 	}
 
-	constructorRes, err := evm.NewTxResultFromValue(logs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	constructorRes := results[0]
+	getStorageAtRes := results[1]
+	failGetStorageAtRes := results[2]
+
 	if constructorRes.ResultCode != evm.ReturnCode {
 		t.Fatal("unexpected constructor result", constructorRes.ResultCode)
 	}
@@ -107,10 +107,7 @@ func TestGetStorageAt(t *testing.T) {
 	if connAddrCalc != connAddr {
 		t.Fatal("constructed address doesn't match:", connAddrCalc, "instead of", connAddr)
 	}
-	getStorageAtRes, err := evm.NewTxResultFromValue(logs[1])
-	if err != nil {
-		t.Fatal(err)
-	}
+
 	if getStorageAtRes.ResultCode != evm.ReturnCode {
 		t.Fatal("unexpected get storage at result", getStorageAtRes.ResultCode)
 	}
@@ -118,11 +115,8 @@ func TestGetStorageAt(t *testing.T) {
 	if storageVal.Cmp(big.NewInt(12345)) != 0 {
 		t.Fatal("expected storage to be 12345 but got", storageVal)
 	}
+
 	t.Logf(hexutil.Encode(getStorageAtRes.ReturnData))
-	failGetStorageAtRes, err := evm.NewTxResultFromValue(logs[2])
-	if err != nil {
-		t.Fatal(err)
-	}
 	if failGetStorageAtRes.ResultCode != evm.RevertCode {
 		t.Fatal("unexpected fail get storage at result", failGetStorageAtRes.ResultCode)
 	}
