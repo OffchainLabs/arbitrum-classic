@@ -33,9 +33,7 @@ import (
 
 func TestTransfer(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	chain := common.HexToAddress("0x037c4d7bbb0407d1e2c64981855ad8681d0d86d1")
 	sender := common.HexToAddress("0xe91e00167939cb6694d2c422acd208a007293948")
 	transfer1Address := common.HexToAddress("0x2aad3e8302f74e0818b7bcd10c2c050526707755")
@@ -67,14 +65,10 @@ func TestTransfer(t *testing.T) {
 	}
 
 	transferABI, err := abi.JSON(strings.NewReader(arbostestcontracts.TransferABI))
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	sendABI := transferABI.Methods["send2"]
 	sendData, err := sendABI.Inputs.Pack(transfer2Address)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	connCallTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
@@ -96,9 +90,7 @@ func TestTransfer(t *testing.T) {
 	logs := assertion.ParseLogs()
 	sends := assertion.ParseOutMessages()
 	testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	t.Log(string(testCase))
 
 	results := processTxResults(t, assertion.ParseLogs())
@@ -121,17 +113,11 @@ func TestTransfer(t *testing.T) {
 
 	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(4))
 	transfer1Balance, err := snap.GetBalance(transfer1Address)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	transfer2Balance, err := snap.GetBalance(transfer2Address)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	senderBalance, err := snap.GetBalance(sender)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	if transfer1Balance.Cmp(big.NewInt(101)) != 0 {
 		t.Error("unexpected transfer conn1 balance", transfer1Balance)

@@ -39,9 +39,7 @@ func TestBlockHash(t *testing.T) {
 	}
 
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	addr := common.RandAddress()
 	chain := common.RandAddress()
@@ -49,15 +47,11 @@ func TestBlockHash(t *testing.T) {
 	runMessage(t, mach, initMsg(), chain)
 
 	connAddress, err := deployContract(t, mach, addr, hexutil.MustDecode(arbostestcontracts.OpCodesBin), big.NewInt(0), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	snap := snapshot.NewSnapshot(mach.Clone(), chainTime, message.ChainAddressToID(chain), big.NewInt(2))
 	ret, err := snap.BasicCall(hexutil.MustDecode("0x9663f88f"), connAddress)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	succeededTxCheck(t, ret)
 	if !bytes.Equal(ret.ReturnData, common.Hash{}.Bytes()) {
 		t.Error("Unexpected block hash result")

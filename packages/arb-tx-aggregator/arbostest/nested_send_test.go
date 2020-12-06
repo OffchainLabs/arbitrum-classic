@@ -31,9 +31,7 @@ import (
 
 func TestFailedNestedSend(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	chain := common.RandAddress()
 	sender := common.RandAddress()
 	dest := common.RandAddress()
@@ -41,41 +39,25 @@ func TestFailedNestedSend(t *testing.T) {
 	runMessage(t, mach, initMsg(), chain)
 	depositEth(t, mach, sender, big.NewInt(1000))
 
-	constructorData, err := hexutil.Decode(arbostestcontracts.FailedSendBin)
-	if err != nil {
-		t.Fatal(err)
-	}
+	constructorData := hexutil.MustDecode(arbostestcontracts.FailedSendBin)
 
 	failedSendAddress, err := deployContract(t, mach, sender, constructorData, big.NewInt(0), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	failedSend, err := abi.JSON(strings.NewReader(arbostestcontracts.FailedSendABI))
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	failedSendABI := failedSend.Methods["send"]
 	failedSendData, err := failedSendABI.Inputs.Pack(dest)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	failedSendSignature, err := hexutil.Decode("0x3e58c58c")
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	sendTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: failedSendAddress,
 		Payment:     big.NewInt(300),
-		Data:        append(failedSendSignature, failedSendData...),
+		Data:        append(failedSendABI.ID, failedSendData...),
 	}
 	_, err = runTransaction(t, mach, sendTx, sender)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 }

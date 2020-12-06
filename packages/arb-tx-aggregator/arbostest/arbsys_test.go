@@ -42,30 +42,20 @@ func generateFib(val *big.Int) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	generateFibABI := fib.Methods["generateFib"]
 	generateFibData, err := generateFibABI.Inputs.Pack(val)
 	if err != nil {
 		return nil, err
 	}
-
-	generateSignature, err := hexutil.Decode("0x2ddec39b")
-	if err != nil {
-		return nil, err
-	}
-	return append(generateSignature, generateFibData...), nil
+	return append(generateFibABI.ID, generateFibData...), nil
 }
 
 func TestTransactionCount(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	pk, err := crypto.GenerateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 	chain := common.RandAddress()
@@ -80,9 +70,7 @@ func TestTransactionCount(t *testing.T) {
 	checkTxCount := func(target int) error {
 		snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(9999999))
 		txCount, err := snap.GetTransactionCount(addr)
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 		if txCount.Cmp(big.NewInt(int64(target))) != 0 {
 			return errors.Errorf("wrong tx count %v", txCount)
 		}
@@ -113,9 +101,7 @@ func TestTransactionCount(t *testing.T) {
 	}
 
 	_, err = runValidTransaction(t, mach, tx1, addr)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	correctTxCount++
 
 	// Payment to EOA increases tx count
@@ -149,9 +135,7 @@ func TestTransactionCount(t *testing.T) {
 	}
 
 	_, err = runTransaction(t, mach, tx3, addr)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	// Payment to EOA with insufficient funds shouldn't increase tx count
 	if err := checkTxCount(correctTxCount); err != nil {
@@ -159,14 +143,10 @@ func TestTransactionCount(t *testing.T) {
 	}
 
 	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	fibAddress, err := deployContract(t, mach, addr, constructorData, big.NewInt(int64(correctTxCount)), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	correctTxCount++
 
 	// Contract deployment increases tx count
@@ -175,9 +155,7 @@ func TestTransactionCount(t *testing.T) {
 	}
 
 	fibData, err := generateFib(big.NewInt(20))
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	generateTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
@@ -189,9 +167,7 @@ func TestTransactionCount(t *testing.T) {
 	}
 
 	_, err = runValidTransaction(t, mach, generateTx, addr)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	correctTxCount++
 
@@ -226,9 +202,7 @@ func TestTransactionCount(t *testing.T) {
 	}
 
 	res, err := runTransaction(t, mach, generateTx3, addr)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if res.ResultCode != evm.InsufficientTxFundsCode {
 		t.Fatal("incorrect return code", res.ResultCode)
 	}
@@ -269,19 +243,11 @@ func TestAddressTable(t *testing.T) {
 	}
 
 	encodedIndex2, err := message.CompressedAddressIndex{Int: big.NewInt(2)}.Encode()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	failIfError(t, err)
 	encodedIndex3, err := message.CompressedAddressIndex{Int: big.NewInt(3)}.Encode()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	failIfError(t, err)
 	encodedAddress3, err := message.CompressedAddressFull{Address: targetAddress3}.Encode()
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	arbSysCalls := [][]byte{
 		// lookup nonexistent key
@@ -418,9 +384,7 @@ func TestAddressTable(t *testing.T) {
 	succeededTxCheck(t, results[13])
 	compressedUnregistereddAddress := returnedBytes(t, results[13])
 	decoded, err := message.DecodeAddress(bytes.NewReader(compressedUnregistereddAddress))
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	addr, ok := decoded.(message.CompressedAddressFull)
 	if !ok {
 		t.Fatal("decoded to wrong type of address")
@@ -432,9 +396,7 @@ func TestAddressTable(t *testing.T) {
 	succeededTxCheck(t, results[14])
 	compressedRegisteredAddress := returnedBytes(t, results[14])
 	decoded, err = message.DecodeAddress(bytes.NewReader(compressedRegisteredAddress))
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	addressIndex, ok := decoded.(message.CompressedAddressIndex)
 	if !ok {
 		t.Fatal("decoded to wrong type of address")
@@ -446,9 +408,7 @@ func TestAddressTable(t *testing.T) {
 
 func TestArbSysBLS(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	chain := common.RandAddress()
 	sender := common.RandAddress()
@@ -526,9 +486,7 @@ func TestArbSysBLS(t *testing.T) {
 
 func TestArbSysFunctionTable(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	chain := common.RandAddress()
 	sender := common.RandAddress()
@@ -546,14 +504,9 @@ func TestArbSysFunctionTable(t *testing.T) {
 	}
 
 	functionTableEncoded1, err := functionTable1.Encode()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	failIfError(t, err)
 	functionTableEncoded2, err := functionTable2.Encode()
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	arbSysCalls := [][]byte{
 		// Get size of non existent table
@@ -658,9 +611,7 @@ func returnedFunctionTableEntry(t *testing.T, res *evm.TxResult) message.Functio
 		t.Fatal("unexpected return data length")
 	}
 	entry, err := snapshot.ParseFunctionTableGetDataResult(res.ReturnData)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	return entry
 }
 

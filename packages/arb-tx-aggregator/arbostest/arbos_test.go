@@ -42,19 +42,13 @@ func TestFib(t *testing.T) {
 	}
 
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	fib, err := abi.JSON(strings.NewReader(arbostestcontracts.FibonacciABI))
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	pk, err := crypto.GenerateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 	chain := common.RandAddress()
@@ -62,28 +56,20 @@ func TestFib(t *testing.T) {
 	runMessage(t, mach, initMsg(), chain)
 
 	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	fibAddress, err := deployContract(t, mach, addr, constructorData, big.NewInt(0), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	snap := snapshot.NewSnapshot(mach.Clone(), chainTime, message.ChainAddressToID(chain), big.NewInt(1))
 	code, err := snap.GetCode(fibAddress)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	t.Log("code", len(code))
 
 	depositEth(t, mach, addr, big.NewInt(1000))
 
 	fibData, err := generateFib(big.NewInt(20))
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	generateTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
@@ -95,9 +81,7 @@ func TestFib(t *testing.T) {
 	}
 
 	generateResult, err := runValidTransaction(t, mach, generateTx, addr)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if len(generateResult.EVMLogs) != 1 {
 		t.Fatal("incorrect log count")
 	}
@@ -114,43 +98,29 @@ func TestFib(t *testing.T) {
 
 	getFibABI := fib.Methods["getFib"]
 	getFibData, err := getFibABI.Inputs.Pack(big.NewInt(5))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	getFibSignature, err := hexutil.Decode("0x90a3e3de")
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	failIfError(t, err)
 	getFibTx := message.Call{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(1000000000),
 			GasPriceBid: big.NewInt(0),
 			DestAddress: fibAddress,
 			Payment:     big.NewInt(0),
-			Data:        append(getFibSignature, getFibData...),
+			Data:        append(getFibABI.ID, getFibData...),
 		},
 	}
 
 	getFibResult, err := runValidTransaction(t, mach, getFibTx, addr)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if hexutil.Encode(getFibResult.ReturnData) != "0x0000000000000000000000000000000000000000000000000000000000000008" {
 		t.Fatal("getFib had incorrect result")
 	}
 }
 func TestDeposit(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	pk, err := crypto.GenerateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
@@ -167,9 +137,7 @@ func TestDeposit(t *testing.T) {
 
 	snap := snapshot.NewSnapshot(mach.Clone(), chainTime, message.ChainAddressToID(chain), big.NewInt(1))
 	balance, err := snap.GetBalance(addr)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if balance.Cmp(amount) != 0 {
 		t.Fatal("incorrect balance")
 	}
@@ -178,9 +146,7 @@ func TestDeposit(t *testing.T) {
 func TestBlocks(t *testing.T) {
 	chain := common.RandAddress()
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	messages := make([]inbox.InboxMessage, 0)
 	messages = append(
 		messages,
@@ -233,9 +199,7 @@ func TestBlocks(t *testing.T) {
 	for i, avmLog := range avmLogs {
 		totalAVMLogCount = totalAVMLogCount.Add(totalAVMLogCount, big.NewInt(1))
 		res, err := evm.NewResultFromValue(avmLog)
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 
 		if i%2 == 0 {
 			res, ok := res.(*evm.TxResult)

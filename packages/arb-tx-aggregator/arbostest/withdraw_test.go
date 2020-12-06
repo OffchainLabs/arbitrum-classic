@@ -31,9 +31,7 @@ import (
 
 func testWithdrawal(t *testing.T, depositMsg message.Message, withdrawalTx message.Transaction, withdrawalSender common.Address) ([]*evm.TxResult, []message.OutMessage) {
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
@@ -51,9 +49,7 @@ func testWithdrawal(t *testing.T, depositMsg message.Message, withdrawalTx messa
 	// Last parameter returned is number of steps executed
 	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
 	testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.ParseLogs(), assertion.ParseOutMessages())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	t.Log(string(testCase))
 
 	sends := assertion.ParseOutMessages()
@@ -65,9 +61,7 @@ func testWithdrawal(t *testing.T, depositMsg message.Message, withdrawalTx messa
 	parsedSends := make([]message.OutMessage, 0, len(sends))
 	for _, avmSend := range sends {
 		outMsg, err := message.NewOutMessageFromValue(avmSend)
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 		parsedSends = append(parsedSends, outMsg)
 	}
 
@@ -98,9 +92,7 @@ func TestWithdrawEth(t *testing.T) {
 		t.Fatal("unexpected log count")
 	}
 	ev, err := snapshot.ParseEthWithdrawalEvent(res.EVMLogs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if ev.Amount.Cmp(withdrawValue) != 0 {
 		t.Error("unexpected withdrawal value")
 	}
@@ -160,9 +152,7 @@ func TestWithdrawERC20(t *testing.T) {
 		t.Fatal("unexpected log count", len(withdrawRes.EVMLogs))
 	}
 	ev, err := snapshot.ParseERC20WithdrawalEvent(withdrawRes.EVMLogs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if ev.Amount.Cmp(withdrawValue) != 0 {
 		t.Error("unexpected withdrawal value")
 	}
@@ -225,9 +215,7 @@ func TestWithdrawERC721(t *testing.T) {
 		t.Fatal("unexpected log count", len(withdrawRes.EVMLogs))
 	}
 	ev, err := snapshot.ParseERC721WithdrawalEvent(withdrawRes.EVMLogs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if ev.Id.Cmp(depositMsg.ID) != 0 {
 		t.Error("unexpected withdrawal id")
 	}

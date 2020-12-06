@@ -30,18 +30,12 @@ func TestArbOSCases(t *testing.T) {
 	arbosTests := gotest.ArbOSTestFiles()
 	for _, testFile := range arbosTests {
 		data, err := ioutil.ReadFile(testFile)
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 		t.Run(testFile, func(t *testing.T) {
 			inboxMessages, avmLogs, avmSends, err := inbox.LoadTestVector(data)
-			if err != nil {
-				t.Fatal(err)
-			}
+			failIfError(t, err)
 			mach, err := cmachine.New(arbos.Path())
-			if err != nil {
-				t.Fatal(err)
-			}
+			failIfError(t, err)
 
 			// Last parameter returned is number of steps executed
 			assertion, _ := mach.ExecuteAssertion(100000000000, inboxMessages, 0)

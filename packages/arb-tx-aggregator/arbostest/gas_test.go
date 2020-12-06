@@ -31,9 +31,7 @@ import (
 
 func TestGas(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	chain := common.HexToAddress("0x037c4d7bbb0407d1e2c64981855ad8681d0d86d1")
 	sender := common.HexToAddress("0xe91e00167939cb6694d2c422acd208a007293948")
 	connAddress := common.HexToAddress("0x2aad3e8302f74e0818b7bcd10c2c050526707755")
@@ -104,9 +102,7 @@ func TestGas(t *testing.T) {
 	logs := assertion.ParseLogs()
 	sends := assertion.ParseOutMessages()
 	testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	t.Log(string(testCase))
 
 	results := processTxResults(t, logs)
