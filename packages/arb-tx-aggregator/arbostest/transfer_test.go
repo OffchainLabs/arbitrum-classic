@@ -70,13 +70,12 @@ func TestTransfer(t *testing.T) {
 		Data:        append(sendABI.ID, sendData...),
 	}
 
-	inboxMessages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.Eth{Dest: sender, Value: big.NewInt(10000)}, chain, big.NewInt(1), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(constructorTx1), sender, big.NewInt(2), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(constructorTx2), sender, big.NewInt(3), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(connCallTx), sender, big.NewInt(4), chainTime),
-	}
+	inboxMessages := makeSimpleInbox([]message.Message{
+		message.Eth{Dest: sender, Value: big.NewInt(10000)},
+		message.NewSafeL2Message(constructorTx1),
+		message.NewSafeL2Message(constructorTx2),
+		message.NewSafeL2Message(connCallTx),
+	})
 
 	logs, _, mach := runAssertion(t, inboxMessages, 3, 0)
 	results := processTxResults(t, logs)

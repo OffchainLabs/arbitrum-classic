@@ -38,11 +38,6 @@ import (
 )
 
 func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.SafeAbstractL2Message) ([]message.AbstractL2Message, *snapshot.Snapshot) {
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
-
 	ethDeposit := message.Eth{
 		Dest:  sender,
 		Value: big.NewInt(100),
@@ -68,14 +63,13 @@ func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.S
 		Data:        append(hexutil.MustDecode(arbostestcontracts.ReceiverBin), param.Bytes()...),
 	}
 
-	messages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
-		message.NewInboxMessage(ethDeposit, sender, big.NewInt(1), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(createTx), sender, big.NewInt(2), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(createTx2), sender, big.NewInt(3), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(msg), sender, big.NewInt(4), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(msg2), sender, big.NewInt(5), chainTime),
-	}
+	messages := makeSimpleInbox([]message.Message{
+		ethDeposit,
+		message.NewSafeL2Message(createTx),
+		message.NewSafeL2Message(createTx2),
+		message.NewSafeL2Message(msg),
+		message.NewSafeL2Message(msg2),
+	})
 
 	logs, _, mach := runAssertion(t, messages, 4, 0)
 	results := processTxResults(t, logs)
@@ -258,49 +252,12 @@ func TestSignedTx(t *testing.T) {
 	failIfError(t, err)
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
-
-	messages := make([]inbox.InboxMessage, 0)
-	messages = append(
-		messages,
-		message.NewInboxMessage(
-			initMsg(),
-			chain,
-			big.NewInt(0),
-			chainTime,
-		),
-	)
-	messages = append(
-		messages,
-		message.NewInboxMessage(
-			message.Eth{
-				Dest:  addr,
-				Value: big.NewInt(1000),
-			},
-			common.RandAddress(),
-			big.NewInt(1),
-			chainTime,
-		),
-	)
-
 	tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
 	failIfError(t, err)
 
 	l2msg, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx})
 	failIfError(t, err)
-	messages = append(
-		messages,
-		message.NewInboxMessage(
-			l2msg,
-			common.RandAddress(),
-			big.NewInt(2),
-			chainTime,
-		),
-	)
 
 	tx2 := types.NewContractCreation(1, big.NewInt(0), 100000000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
 	signedTx2, err := types.SignTx(tx2, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
@@ -308,15 +265,15 @@ func TestSignedTx(t *testing.T) {
 
 	l2msg2, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx2})
 	failIfError(t, err)
-	messages = append(
-		messages,
-		message.NewInboxMessage(
-			l2msg2,
-			common.RandAddress(),
-			big.NewInt(2),
-			chainTime,
-		),
-	)
+
+	messages := makeSimpleInbox([]message.Message{
+		message.Eth{
+			Dest:  addr,
+			Value: big.NewInt(1000),
+		},
+		l2msg,
+		l2msg2,
+	})
 
 	logs, _, _ := runAssertion(t, messages, 2, 0)
 	results := processTxResults(t, logs)
@@ -351,32 +308,10 @@ func TestSignedTx(t *testing.T) {
 }
 
 func TestUnsignedTx(t *testing.T) {
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
+	ethDeposit := message.Eth{
+		Dest:  sender,
+		Value: big.NewInt(1000),
 	}
-	messages := make([]inbox.InboxMessage, 0)
-	messages = append(
-		messages,
-		message.NewInboxMessage(
-			initMsg(),
-			chain,
-			big.NewInt(0),
-			chainTime,
-		),
-	)
-	messages = append(
-		messages,
-		message.NewInboxMessage(
-			message.Eth{
-				Dest:  sender,
-				Value: big.NewInt(1000),
-			},
-			common.RandAddress(),
-			big.NewInt(1),
-			chainTime,
-		),
-	)
 
 	tx1 := message.Transaction{
 		MaxGas:      big.NewInt(100000000000),
@@ -396,24 +331,11 @@ func TestUnsignedTx(t *testing.T) {
 		Data:        []byte{},
 	}
 
-	messages = append(
-		messages,
-		message.NewInboxMessage(
-			message.NewSafeL2Message(tx1),
-			sender,
-			big.NewInt(2),
-			chainTime,
-		),
-	)
-	messages = append(
-		messages,
-		message.NewInboxMessage(
-			message.NewSafeL2Message(tx2),
-			sender,
-			big.NewInt(3),
-			chainTime,
-		),
-	)
+	messages := makeSimpleInbox([]message.Message{
+		ethDeposit,
+		message.NewSafeL2Message(tx1),
+		message.NewSafeL2Message(tx2),
+	})
 
 	logs, _, _ := runAssertion(t, messages, 2, 0)
 	results := processTxResults(t, logs)
@@ -587,49 +509,24 @@ func TestCompressedECDSATx(t *testing.T) {
 
 	t.Log("Sender Address:", addr.Hex())
 
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
-
-	messages := make([]inbox.InboxMessage, 0)
+	messages := make([]message.Message, 0)
 	messages = append(
 		messages,
-		message.NewInboxMessage(
-			initMsg(),
-			chain,
-			big.NewInt(0),
-			chainTime,
-		),
-	)
-	messages = append(
-		messages,
-		message.NewInboxMessage(
-			message.Eth{
-				Dest:  addr,
-				Value: big.NewInt(1000),
-			},
-			common.RandAddress(),
-			big.NewInt(1),
-			chainTime,
-		),
+		message.Eth{
+			Dest:  addr,
+			Value: big.NewInt(1000),
+		},
 	)
 
-	for i, tx := range txes {
+	for _, tx := range txes {
 		l2msg, err := message.NewL2Message(message.NewCompressedECDSAFromEth(tx))
 		failIfError(t, err)
-
 		messages = append(
 			messages,
-			message.NewInboxMessage(
-				l2msg,
-				common.RandAddress(),
-				big.NewInt(int64(2+i)),
-				chainTime,
-			),
+			l2msg,
 		)
 	}
 
-	logs, _, _ := runAssertion(t, messages, len(txes), 0)
+	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), len(txes), 0)
 	verifyTxLogs(t, signer, txes, logs)
 }

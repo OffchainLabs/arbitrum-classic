@@ -271,3 +271,17 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int
 
 	return logs, sends, mach
 }
+
+func makeSimpleInbox(messages []message.Message) []inbox.InboxMessage {
+	chainTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
+	}
+
+	inboxMessages := make([]inbox.InboxMessage, 0)
+	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime))
+	for i, msg := range messages {
+		inboxMessages = append(inboxMessages, message.NewInboxMessage(msg, sender, big.NewInt(int64(1+i)), chainTime))
+	}
+	return inboxMessages
+}

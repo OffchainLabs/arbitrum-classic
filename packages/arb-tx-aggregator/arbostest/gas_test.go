@@ -22,26 +22,18 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"testing"
 )
 
 func TestGas(t *testing.T) {
-	constructorData := hexutil.MustDecode(arbostestcontracts.GasUsedBin)
-
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
-
 	constructorTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.Address{0},
 		Payment:     big.NewInt(0),
-		Data:        constructorData,
+		Data:        hexutil.MustDecode(arbostestcontracts.GasUsedBin),
 	}
 
 	noopEOACallTx := message.Transaction{
@@ -80,15 +72,14 @@ func TestGas(t *testing.T) {
 		Data:        hexutil.MustDecode("0x703c2d1a"),
 	}
 
-	inboxMessages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.Eth{Dest: sender, Value: big.NewInt(10000)}, chain, big.NewInt(1), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(constructorTx), sender, big.NewInt(2), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(noopEOACallTx), sender, big.NewInt(3), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(noopFuncCallTx), sender, big.NewInt(4), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(storeFuncCallTx), sender, big.NewInt(5), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(store2FuncCallTx), sender, big.NewInt(6), chainTime),
-	}
+	inboxMessages := makeSimpleInbox([]message.Message{
+		message.Eth{Dest: sender, Value: big.NewInt(10000)},
+		message.NewSafeL2Message(constructorTx),
+		message.NewSafeL2Message(noopEOACallTx),
+		message.NewSafeL2Message(noopFuncCallTx),
+		message.NewSafeL2Message(storeFuncCallTx),
+		message.NewSafeL2Message(store2FuncCallTx),
+	})
 
 	logs, _, _ := runAssertion(t, inboxMessages, len(inboxMessages)-2, 0)
 	results := processTxResults(t, logs)
