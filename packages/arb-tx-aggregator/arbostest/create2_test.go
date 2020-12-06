@@ -120,26 +120,21 @@ func TestCreate2(t *testing.T) {
 
 	allResultsSucceeded(t, results)
 
-	factoryConstructorRes := results[0]
-	simpleConstructorRes := results[1]
+	checkConstructorResult(t, results[0], common.NewAddressFromEth(factoryConnAddress))
+	checkConstructorResult(t, results[1], common.NewAddressFromEth(simpleConnAddress))
+
 	create2Res := results[2]
-	existsCloneRes := results[3]
-
-	checkConstructorResult(t, factoryConstructorRes, common.NewAddressFromEth(factoryConnAddress))
-	checkConstructorResult(t, simpleConstructorRes, common.NewAddressFromEth(simpleConnAddress))
-
 	if len(create2Res.EVMLogs) != 1 {
 		t.Fatal("wrong EVM log count")
 	}
-
 	ev, err := cf.ParseCreatedClone(*create2Res.ToEthReceipt(common.Hash{}).Logs[0])
 	failIfError(t, err)
 	t.Log("ArbOS clone address:", ev.Clone.Hex())
-
 	if ev.Clone != cloneConnAddress {
 		t.Fatal("incorrect clone address")
 	}
 
+	existsCloneRes := results[3]
 	existsCloneOutputs, err := existsABI.Outputs.UnpackValues(existsCloneRes.ReturnData)
 	failIfError(t, err)
 	if len(existsCloneOutputs) != 1 {
@@ -148,6 +143,7 @@ func TestCreate2(t *testing.T) {
 	if existsCloneOutputs[0].(*big.Int).Cmp(big.NewInt(10)) != 0 {
 		t.Fatal("wrong exists clone output")
 	}
+
 	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(4))
 	cloneCode, err := snap.GetCode(common.NewAddressFromEth(cloneConnAddress))
 	failIfError(t, err)

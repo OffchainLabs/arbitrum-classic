@@ -37,7 +37,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.SafeAbstractL2Message) ([]message.AbstractL2Message, *snapshot.Snapshot) {
+func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.AbstractL2Message) ([]message.AbstractL2Message, *snapshot.Snapshot) {
 	ethDeposit := message.Eth{
 		Dest:  sender,
 		Value: big.NewInt(100),
@@ -63,12 +63,18 @@ func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.S
 		Data:        append(hexutil.MustDecode(arbostestcontracts.ReceiverBin), param.Bytes()...),
 	}
 
+	l2Message, err := message.NewL2Message(msg)
+	failIfError(t, err)
+
+	l2Message2, err := message.NewL2Message(msg2)
+	failIfError(t, err)
+
 	messages := makeSimpleInbox([]message.Message{
 		ethDeposit,
 		message.NewSafeL2Message(createTx),
 		message.NewSafeL2Message(createTx2),
-		message.NewSafeL2Message(msg),
-		message.NewSafeL2Message(msg2),
+		l2Message,
+		l2Message2,
 	})
 
 	logs, _, mach := runAssertion(t, messages, 4, 0)
@@ -84,10 +90,15 @@ func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.S
 		if result.IncomingRequest.Sender != sender {
 			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, sender)
 		}
-		if result.IncomingRequest.Kind != message.L2Type {
-			t.Error("l2message has incorrect type")
+		msg, err := message.NestedMessage(result.IncomingRequest.Data, result.IncomingRequest.Kind)
+		failIfError(t, err)
+
+		l2Msg, ok := msg.(message.L2Message)
+		if !ok {
+			t.Fatal("expected l2 message")
 		}
-		l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
+
+		l2Message, err := l2Msg.AbstractMessage()
 		failIfError(t, err)
 
 		targetHash := hashing.SoliditySHA3(hashing.Uint256(message.ChainAddressToID(chain)), hashing.Uint256(big.NewInt(int64(4+i))))
