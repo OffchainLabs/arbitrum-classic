@@ -23,14 +23,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
@@ -121,27 +117,25 @@ func TestFib(t *testing.T) {
 	t.Log("code", len(code))
 
 }
+
 func TestDeposit(t *testing.T) {
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
-
-	pk, err := crypto.GenerateKey()
-	failIfError(t, err)
-
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
 
-	runMessage(t, mach, initMsg(), chain)
-
-	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
-
 	amount := big.NewInt(1000)
-	depositEth(t, mach, addr, amount)
+	messages := []message.Message{
+		message.Eth{
+			Dest:  sender,
+			Value: amount,
+		},
+	}
+
+	_, _, mach := runAssertion(t, makeSimpleInbox(messages), 0, 0)
 
 	snap := snapshot.NewSnapshot(mach.Clone(), chainTime, message.ChainAddressToID(chain), big.NewInt(1))
-	checkBalance(t, snap, addr, amount)
+	checkBalance(t, snap, sender, amount)
 }
 
 func TestBlocks(t *testing.T) {
