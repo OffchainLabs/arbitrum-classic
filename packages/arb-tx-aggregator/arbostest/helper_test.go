@@ -17,6 +17,7 @@
 package arbostest
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -246,4 +247,17 @@ func failIfError(t *testing.T, err error) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]value.Value, []value.Value, machine.Machine) {
+	t.Helper()
+	mach, err := cmachine.New(arbos.Path())
+	failIfError(t, err)
+	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
+	logs := assertion.ParseLogs()
+	sends := assertion.ParseOutMessages()
+	testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
+	failIfError(t, err)
+	t.Log(string(testCase))
+	return logs, sends, nil
 }

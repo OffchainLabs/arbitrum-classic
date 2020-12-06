@@ -145,8 +145,6 @@ func TestDeposit(t *testing.T) {
 
 func TestBlocks(t *testing.T) {
 	chain := common.RandAddress()
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
 	messages := make([]inbox.InboxMessage, 0)
 	messages = append(
 		messages,
@@ -184,8 +182,7 @@ func TestBlocks(t *testing.T) {
 	}
 
 	// Last value returned is not an error type
-	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
-	avmLogs := assertion.ParseLogs()
+	avmLogs, _, _ := runAssertion(t, messages)
 	t.Log("Got", len(avmLogs), "logs")
 	blockGasUsed := big.NewInt(0)
 	blockAVMLogCount := big.NewInt(0)

@@ -44,8 +44,6 @@ var connAddress2 = common.HexToAddress("0x9276e6abd1b8cb06e5abd72db5140d216148be
 
 func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.SafeAbstractL2Message) ([]message.AbstractL2Message, *snapshot.Snapshot) {
 	chain := common.RandAddress()
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
 
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
@@ -137,9 +135,8 @@ func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.S
 		),
 	)
 
-	// Last parameter returned is number of steps executed
-	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
-	results := processTxResults(t, assertion.ParseLogs())
+	logs, _, mach := runAssertion(t, messages)
+	results := processTxResults(t, logs)
 	if len(results) != 4 {
 		t.Fatal("incorrect log output count", len(results))
 	}
@@ -325,8 +322,6 @@ func TestContractTx(t *testing.T) {
 
 func TestSignedTx(t *testing.T) {
 	chain := common.RandAddress()
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
 
 	dest := common.RandAddress()
 	pk, err := crypto.GenerateKey()
@@ -393,13 +388,8 @@ func TestSignedTx(t *testing.T) {
 		),
 	)
 
-	// Last parameter returned is number of steps executed
-	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
-	logs := assertion.ParseLogs()
-	testCase, err := inbox.TestVectorJSON(messages, logs, assertion.ParseOutMessages())
-	failIfError(t, err)
-	t.Log(string(testCase))
-	results := processTxResults(t, assertion.ParseLogs())
+	logs, _, _ := runAssertion(t, messages)
+	results := processTxResults(t, logs)
 	if len(results) != 2 {
 		t.Fatal("incorrect log output count", len(results))
 	}
@@ -435,8 +425,6 @@ func TestSignedTx(t *testing.T) {
 
 func TestUnsignedTx(t *testing.T) {
 	chain := common.RandAddress()
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
 
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
@@ -503,13 +491,8 @@ func TestUnsignedTx(t *testing.T) {
 		),
 	)
 
-	// Last parameter returned is number of steps executed
-	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
-	logs := assertion.ParseLogs()
-	testCase, err := inbox.TestVectorJSON(messages, logs, assertion.ParseOutMessages())
-	failIfError(t, err)
-	t.Log(string(testCase))
-	results := processTxResults(t, assertion.ParseLogs())
+	logs, _, _ := runAssertion(t, messages)
+	results := processTxResults(t, logs)
 	if len(results) != 2 {
 		t.Fatal("incorrect log output count", len(results))
 	}
@@ -675,9 +658,6 @@ func TestCompressedECDSATx(t *testing.T) {
 	t.Log("Chain address:", chain)
 	t.Log("Chain ID:", message.ChainAddressToID(chain))
 
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
-
 	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
 
 	txes := generateTestTransactions(t, chain)
@@ -731,12 +711,7 @@ func TestCompressedECDSATx(t *testing.T) {
 		)
 	}
 
-	// Last parameter returned is number of steps executed
-	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
-	logs := assertion.ParseLogs()
-	testCase, err := inbox.TestVectorJSON(messages, logs, assertion.ParseOutMessages())
-	failIfError(t, err)
-	t.Log(string(testCase))
+	logs, _, _ := runAssertion(t, messages)
 	if len(logs) != len(txes) {
 		t.Fatal("incorrect log output count", len(logs))
 	}

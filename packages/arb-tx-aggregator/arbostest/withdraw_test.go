@@ -21,18 +21,13 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 func testWithdrawal(t *testing.T, depositMsg message.Message, withdrawalTx message.Transaction, withdrawalSender common.Address) ([]*evm.TxResult, []message.OutMessage) {
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
-
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
@@ -47,14 +42,8 @@ func testWithdrawal(t *testing.T, depositMsg message.Message, withdrawalTx messa
 	}
 
 	// Last parameter returned is number of steps executed
-	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-	testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.ParseLogs(), assertion.ParseOutMessages())
-	failIfError(t, err)
-	t.Log(string(testCase))
-
-	sends := assertion.ParseOutMessages()
-
-	results := processTxResults(t, assertion.ParseLogs())
+	logs, sends, _ := runAssertion(t, inboxMessages)
+	results := processTxResults(t, logs)
 
 	allResultsSucceeded(t, results)
 

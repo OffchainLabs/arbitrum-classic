@@ -24,9 +24,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
@@ -62,22 +60,13 @@ func TestBuddyContract(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(l2Tx), common.RandAddress(), big.NewInt(2), chainTime),
 	}
 
-	mach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
+	logs, sends, _ := runAssertion(t, messages)
 
-	// Last parameter returned is number of steps executed
-	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
-	//data, err := inbox.TestVectorJSON(messages, assertion.ParseLogs(), assertion.ParseOutMessages())
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//t.Log(string(data))
-	results := processTxResults(t, assertion.ParseLogs())
+	results := processTxResults(t, logs)
 	if len(results) != 2 {
 		t.Fatal("unexpected log count", len(results))
 	}
 
-	sends := assertion.ParseOutMessages()
 	if len(sends) != 1 {
 		t.Fatal("unexpected send count", len(sends))
 	}
@@ -100,7 +89,7 @@ func TestBuddyContract(t *testing.T) {
 		}
 	}
 
-	for _, sendVal := range assertion.ParseOutMessages() {
+	for _, sendVal := range sends {
 		msg, err := message.NewOutMessageFromValue(sendVal)
 		failIfError(t, err)
 		if msg.Sender != l1contract {

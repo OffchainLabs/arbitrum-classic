@@ -17,9 +17,7 @@
 package arbostest
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"io/ioutil"
@@ -34,13 +32,8 @@ func TestArbOSCases(t *testing.T) {
 		t.Run(testFile, func(t *testing.T) {
 			inboxMessages, avmLogs, avmSends, err := inbox.LoadTestVector(data)
 			failIfError(t, err)
-			mach, err := cmachine.New(arbos.Path())
-			failIfError(t, err)
 
-			// Last parameter returned is number of steps executed
-			assertion, _ := mach.ExecuteAssertion(100000000000, inboxMessages, 0)
-			calcLogs := assertion.ParseLogs()
-			calcSends := assertion.ParseOutMessages()
+			calcLogs, calcSends, _ := runAssertion(t, inboxMessages)
 
 			commonLogCount := len(avmLogs)
 			if len(calcLogs) < commonLogCount {
@@ -52,8 +45,8 @@ func TestArbOSCases(t *testing.T) {
 				commonSendCount = len(calcSends)
 			}
 
-			calcResults := processTxResults(t, assertion.ParseLogs())
-			results := processTxResults(t, assertion.ParseLogs())
+			calcResults := processTxResults(t, calcLogs)
+			results := processTxResults(t, avmLogs)
 
 			for i := 0; i < commonLogCount; i++ {
 				calcRes := calcResults[i]
@@ -78,6 +71,5 @@ func TestArbOSCases(t *testing.T) {
 				t.Error("wrong send count")
 			}
 		})
-
 	}
 }
