@@ -19,7 +19,6 @@ package challenges
 import (
 	"context"
 	"github.com/pkg/errors"
-	"log"
 	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -56,7 +55,7 @@ func ChallengeExecutionClaim(
 
 	messages, err := inboxStack.GetAllMessagesAfter(beforeInboxHash)
 	if err != nil {
-		log.Fatal("before inbox hash must be valid")
+		logger.Fatal().Msg("before inbox hash must be valid")
 	}
 
 	// Last value returned is not an error type

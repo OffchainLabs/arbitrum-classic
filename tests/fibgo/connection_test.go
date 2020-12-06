@@ -33,6 +33,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 )
 
+var logger zerolog.Logger
+
 var db = "./testman"
 var contract = arbos.Path()
 
@@ -72,7 +74,7 @@ func setupRollup(ctx context.Context, client ethutils.EthClient, authClient *eth
 /********************************************/
 /*    Validators                            */
 /********************************************/
-func setupValidators(ctx context.Context, rollupAddress common.Address, client ethutils.EthClient, authClients []*ethbridge.EthArbAuthClient) error {
+func setupValidators(ctx context.Context, rollupAddress common.Address, authClients []*ethbridge.EthArbAuthClient) error {
 	if len(authClients) < 1 {
 		panic("must have at least 1 authClient")
 	}
@@ -133,7 +135,7 @@ func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollup
 			time.Second,
 			rpc.StatelessBatcherMode{Auth: auth},
 		); err != nil {
-			log.Fatal().Stack().Err(err).Msg("LaunchAggregator failed")
+			logger.Fatal().Stack().Err(err).Msg("LaunchAggregator failed")
 		}
 	}()
 
@@ -193,7 +195,7 @@ func waitForReceipt(
 			if err.Error() == "not found" {
 				continue
 			}
-			log.Error().Stack().Err(err).Msg("Failure getting TransactionReceipt")
+			logger.Error().Stack().Err(err).Msg("Failure getting TransactionReceipt")
 			return nil, err
 		}
 		return receipt, nil
@@ -218,6 +220,7 @@ func TestFib(t *testing.T) {
 
 	// Print line number that log was created on
 	log.Logger = log.With().Caller().Logger()
+	logger = log.With().Str("component", "connection-test").Logger()
 
 	ctx := context.Background()
 	l1Backend, pks := test.SimulatedBackend()
@@ -270,7 +273,7 @@ func TestFib(t *testing.T) {
 
 	t.Log("Created rollup chain", rollupAddress)
 
-	if err := setupValidators(ctx, rollupAddress, l1Client, authClients[1:3]); err != nil {
+	if err := setupValidators(ctx, rollupAddress, authClients[1:3]); err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
 

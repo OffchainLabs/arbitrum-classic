@@ -17,8 +17,8 @@
 package speedtest
 
 import (
+	"github.com/rs/zerolog/log"
 	"io/ioutil"
-	"log"
 	"strconv"
 	"strings"
 	"testing"
@@ -27,17 +27,27 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 )
 
+var logger = log.With().Str("component", "speedtest").Logger()
+
 func getInsnMultiplier(filePath string) uint64 {
 	ll := len(filePath)
 	numPopsStr := filePath[ll-6 : ll-5]
 	numPops, err := strconv.Atoi(numPopsStr)
 	if err != nil {
-		log.Fatal(filePath, " ", err)
+		logger.Fatal().
+			Stack().
+			Err(err).
+			Str("filepath", filePath).
+			Msg("numPops failed string conversion")
 	}
 	numPushesStr := filePath[ll-8 : ll-7]
 	numPushes, err := strconv.Atoi(numPushesStr)
 	if err != nil {
-		log.Fatal(filePath, " ", err)
+		logger.Fatal().
+			Stack().
+			Err(err).
+			Str("filepath", filePath).
+			Msg("numPushes failed string conversion")
 	}
 	numExtraUnderscores := strings.Count(filePath, "_") - 2
 	return uint64(1 + numExtraUnderscores + numPops + numPushes)
@@ -78,12 +88,20 @@ func nameFromFn(fn string) string {
 	numPopsStr := fn[ll-6 : ll-5]
 	numPops, err := strconv.Atoi(numPopsStr)
 	if err != nil {
-		log.Fatal(fn, " ", err)
+		logger.Fatal().
+			Stack().
+			Err(err).
+			Str("fn", fn).
+			Msg("numPops failed string conversion")
 	}
 	numPushesStr := fn[ll-8 : ll-7]
 	numPushes, err := strconv.Atoi(numPushesStr)
 	if err != nil {
-		log.Fatal(fn, " ", err)
+		logger.Fatal().
+			Stack().
+			Err(err).
+			Str("fn", fn).
+			Msg("numPushes failed string conversion")
 	}
 	for i := 0; i < numPushes; i++ {
 		ret = "push_" + ret
@@ -107,7 +125,10 @@ func getExecutables() []string {
 	var ret []string
 	fileInfos, err := ioutil.ReadDir("./executables/")
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().
+			Stack().
+			Err(err).
+			Msg("Error reading executables directory")
 	}
 	for _, fileInfo := range fileInfos {
 		if !fileInfo.IsDir() && strings.HasSuffix(fileInfo.Name(), ".mexe") {

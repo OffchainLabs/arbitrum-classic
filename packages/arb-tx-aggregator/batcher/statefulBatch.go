@@ -26,7 +26,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/pkg/errors"
-	"log"
 )
 
 type statefulBatch struct {
@@ -71,11 +70,11 @@ func (p *statefulBatch) validateTx(tx *types.Transaction) (txResponse, error) {
 	}
 	nextValidNonce := p.getTxCount(sender)
 	if tx.Nonce() > nextValidNonce {
-		return SKIP, core.ErrNonceTooHigh
+		return SKIP, errors.WithStack(core.ErrNonceTooHigh)
 	}
 	if tx.Nonce() < nextValidNonce {
 		// Just discard this tx since it is old
-		return REMOVE, core.ErrNonceTooLow
+		return REMOVE, errors.WithStack(core.ErrNonceTooLow)
 	}
 
 	amount, err := p.snap.GetBalance(arbcommon.NewAddressFromEth(sender))
@@ -84,8 +83,13 @@ func (p *statefulBatch) validateTx(tx *types.Transaction) (txResponse, error) {
 	}
 
 	if tx.Cost().Cmp(amount) > 0 {
-		log.Println("tx rejected for insufficient funds:", tx.Value(), tx.GasPrice(), tx.Gas(), amount)
-		return REMOVE, core.ErrInsufficientFunds
+		logger.Warn().
+			Str("value", tx.Value().String()).
+			Str("gasPrice", tx.GasPrice().String()).
+			Uint64("Gas", tx.Gas()).
+			Str("amount", amount.String()).
+			Msg("tx rejected for insufficient funds")
+		return REMOVE, errors.WithStack(core.ErrInsufficientFunds)
 	}
 
 	return p.statelessBatch.validateTx(tx)

@@ -17,14 +17,12 @@
 package ethbridge
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"log"
-
 	ethereum "github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/pkg/errors"
 
 	"context"
@@ -83,10 +81,10 @@ func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.Receip
 				}
 
 				if err.Error() == parityErr2 {
-					log.Printf("WARNING: issue getting receipt for %v: %v", txHash.Hex(), err)
+					logger.Warn().Stack().Err(err).Hex("tx", txHash.Bytes()).Msg("WARNING: issue getting receipt")
 					continue
 				}
-				log.Printf("ERROR getting receipt for %v: %v", txHash.Hex(), err)
+				logger.Error().Stack().Err(err).Hex("tx", txHash.Bytes()).Msg("ERROR getting receipt")
 				return nil, err
 			}
 			return receipt, nil

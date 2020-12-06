@@ -19,7 +19,6 @@ package arbbridge
 import (
 	"context"
 	"github.com/pkg/errors"
-	"log"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -69,7 +68,7 @@ func (st *ArbClientStressTest) addReorgs(blockIdChan <-chan MaybeBlockId) <-chan
 				}
 
 			case <-ticker.C:
-				log.Println("Manually triggering reorg")
+				logger.Info().Msg("Manually triggering reorg")
 				headerChan <- MaybeBlockId{Err: reorgError}
 				return
 			}

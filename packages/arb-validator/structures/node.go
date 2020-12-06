@@ -19,7 +19,6 @@ package structures
 import (
 	"fmt"
 	"github.com/pkg/errors"
-	"log"
 	"math/big"
 	"math/rand"
 
@@ -331,7 +330,7 @@ func (node *Node) ChallengeNodeData(params valprotocol.ChainParams) (common.Hash
 		challengePeriod := params.GracePeriod.Add(node.disputable.Assertion.CheckTime(params))
 		return ret, challengePeriod
 	default:
-		log.Fatal("Unhandled challenge type", node.linkType)
+		logger.Fatal().Int("challengeType", int(node.linkType)).Msg("Unhandled challenge type")
 		return common.Hash{}, common.TimeTicks{}
 	}
 }

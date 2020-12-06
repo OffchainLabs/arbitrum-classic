@@ -19,7 +19,6 @@ package arbbridge
 import (
 	"context"
 	"github.com/pkg/errors"
-	"log"
 	"math/big"
 	"time"
 
@@ -36,7 +35,7 @@ func WaitForBalance(ctx context.Context, client ArbClient, tokenAddress common.A
 		if balance.Cmp(big.NewInt(0)) > 0 {
 			return nil
 		}
-		log.Println("Waiting for account", userAddress, "to receive ETH")
+		logger.Info().Hex("account", userAddress.Bytes()).Msg("Waiting for account to receive ETH")
 		timer := time.NewTicker(time.Second * 5)
 		for {
 			select {
@@ -64,7 +63,10 @@ func WaitForBalance(ctx context.Context, client ArbClient, tokenAddress common.A
 		if balance.Cmp(big.NewInt(0)) > 0 {
 			return nil
 		}
-		log.Println("Waiting for account", userAddress, "to receive ERC-20 token from contract", tokenAddress)
+		logger.Info().
+			Hex("account", userAddress.Bytes()).
+			Hex("contract", tokenAddress.Bytes()).
+			Msg("Waiting for account to receive ERC-20 token from contract")
 		timer := time.NewTicker(time.Second * 5)
 		for {
 			select {

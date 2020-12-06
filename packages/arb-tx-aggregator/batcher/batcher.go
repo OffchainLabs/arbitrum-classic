@@ -39,6 +39,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
+var logger = log.With().Str("component", "batcher").Logger()
+
 const maxBatchSize ethcommon.StorageSize = 120000
 
 type txResponse int
@@ -158,7 +160,7 @@ func newBatcher(
 						err := server.pendingBatch.addIncludedTx(tx)
 						server.queuedTxes.maybeRemoveAccountAtIndex(accountIndex)
 						if err != nil {
-							log.Error().Stack().Err(err).Msg("Aggregator ignored invalid tx")
+							logger.Error().Stack().Err(err).Msg("Aggregator ignored invalid tx")
 							continue
 						}
 					}
@@ -198,14 +200,14 @@ func newBatcher(
 					receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, receiptFetcher, txHash)
 					if err != nil || receipt.Status != 1 {
 						// batch failed
-						log.Fatal().Stack().Err(err).Msg("Error submitted batch")
+						logger.Fatal().Stack().Err(err).Msg("Error submitted batch")
 					}
 
 					receiptJSON, err := receipt.MarshalJSON()
 					if err != nil {
-						log.Error().Stack().Err(err).Msg("failed to generate json for receipt")
+						logger.Error().Stack().Err(err).Msg("failed to generate json for receipt")
 					} else {
-						log.Info().RawJSON("receipt", receiptJSON).Msg("batch receipt")
+						logger.Info().RawJSON("receipt", receiptJSON).Msg("batch receipt")
 					}
 
 					// batch succeeded
@@ -230,16 +232,16 @@ func (m *Batcher) sendBatch(ctx context.Context, inbox arbbridge.GlobalInboxSend
 	}
 	batchTx, err := message.NewTransactionBatchFromMessages(batchTxes)
 	if err != nil {
-		log.Fatal().Stack().Err(err).Msg("transaction aggregator failed")
+		logger.Fatal().Stack().Err(err).Msg("transaction aggregator failed")
 	}
-	log.Info().Int("txcount", len(batchTxes)).Msg("Submitting batch")
+	logger.Info().Int("txcount", len(batchTxes)).Msg("Submitting batch")
 	txHash, err := inbox.SendL2MessageNoWait(
 		ctx,
 		message.NewSafeL2Message(batchTx).AsData(),
 	)
 
 	if err != nil {
-		log.Fatal().Stack().Err(err).Msg("transaction aggregator failed")
+		logger.Fatal().Stack().Err(err).Msg("transaction aggregator failed")
 		return
 	}
 
@@ -273,7 +275,7 @@ func (m *Batcher) PendingTransactionCount(_ context.Context, account common.Addr
 func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) error {
 	sender, err := types.Sender(m.signer, tx)
 	if err != nil {
-		log.Error().Stack().Err(err).Msg("error processing user transaction")
+		logger.Error().Stack().Err(err).Msg("error processing user transaction")
 		return err
 	}
 
@@ -295,9 +297,9 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 
 	txJSON, err := tx.MarshalJSON()
 	if err != nil {
-		log.Error().Stack().Err(err).Msg("failed to marshal tx into json")
+		logger.Error().Stack().Err(err).Msg("failed to marshal tx into json")
 	} else {
-		log.Info().RawJSON("tx", txJSON).Hex("sender", sender.Bytes()).Msg("user tx")
+		logger.Info().RawJSON("tx", txJSON).Hex("sender", sender.Bytes()).Msg("user tx")
 	}
 	return nil
 }

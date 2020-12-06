@@ -19,11 +19,14 @@ package challenges
 import (
 	"context"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
+
+var logger = log.With().Str("component", "challenges").Logger()
 
 type ChallengeState uint8
 

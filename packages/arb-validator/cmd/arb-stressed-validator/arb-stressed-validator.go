@@ -35,6 +35,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
+var logger zerolog.Logger
+
 // Launches the rollup validator with the following command line arguments:
 // 1) Compiled Arbitrum bytecode file
 // 2) private key file
@@ -49,13 +51,14 @@ func main() {
 
 	// Print line number that log was created on
 	log.Logger = log.With().Caller().Logger()
+	logger = log.With().Str("component", "arb-stressed-validator").Logger()
 
 	// Check number of args
 	flag.Parse()
 	switch os.Args[1] {
 	case "validate":
 		if err := cmdhelper.ValidateRollupChain("evil-arb-validator", createStressedManager); err != nil {
-			log.Fatal().Stack().Err(err).Msg("error validating rollup chain")
+			logger.Fatal().Stack().Err(err).Msg("error validating rollup chain")
 		}
 	default:
 	}

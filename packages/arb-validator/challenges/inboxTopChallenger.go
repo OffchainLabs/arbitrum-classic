@@ -19,7 +19,6 @@ package challenges
 import (
 	"context"
 	"github.com/pkg/errors"
-	"log"
 	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -47,7 +46,7 @@ func ChallengeInboxTopClaim(
 	if err != nil {
 		return 0, err
 	}
-	log.Println("=======> challenging inbox top claim")
+	logger.Info().Msg("=======> challenging inbox top claim")
 	return challengeInboxTop(
 		reorgCtx,
 		eventChan,

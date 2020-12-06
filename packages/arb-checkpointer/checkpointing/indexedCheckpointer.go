@@ -19,7 +19,6 @@ package checkpointing
 import (
 	"context"
 	"github.com/pkg/errors"
-	"log"
 	"math/big"
 	"os"
 	"sync"
@@ -194,11 +193,11 @@ func restoreLatestState(
 
 		rcl, err := newRestoreContextLocked(db, ckpWithMan.Manifest)
 		if err != nil {
-			log.Println("Failed load manifest data at height", height, "with error", err)
+			logger.Error().Stack().Err(err).Str("height", height.String()).Msg("Failed load manifest data")
 			continue
 		}
 		if err := unmarshalFunc(ckpWithMan.Contents, rcl, onchainId); err != nil {
-			log.Println("Failed load checkpoint at height", height, "with error", err)
+			logger.Error().Stack().Err(err).Str("height", height.String()).Msg("Failed load checkpoint")
 			continue
 		}
 		return nil
@@ -218,7 +217,7 @@ func (cp *IndexedCheckpointer) writeDaemon() {
 		if checkpoint != nil {
 			err := writeCheckpoint(cp.bs, cp.db, checkpoint)
 			if err != nil {
-				log.Println("Error writing checkpoint: {}", err)
+				logger.Error().Stack().Err(err).Msg("Error writing checkpoint")
 			}
 			checkpoint.errChan <- err
 			close(checkpoint.errChan)
@@ -270,7 +269,7 @@ func cleanup(bs machine.BlockStore, db machine.CheckpointStorage, maxReorgHeight
 				err := deleteCheckpointForKey(bs, db, id)
 				if err != nil {
 					// Can still continue if error
-					log.Printf("Nonfatal error deleting checkpoint for key %s: %s", id.String(), err.Error())
+					logger.Warn().Stack().Err(err).Str("id", id.String()).Msg("Error deleting checkpoint")
 				}
 			}
 			prevIds = blockIds

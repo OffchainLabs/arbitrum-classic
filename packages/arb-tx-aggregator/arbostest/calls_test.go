@@ -21,7 +21,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/pkg/errors"
-	"log"
 	"math/big"
 	"testing"
 
@@ -169,7 +168,9 @@ func makeConstructorTx(code []byte, sequenceNum *big.Int, payment *big.Int) mess
 
 func deployContract(t *testing.T, mach machine.Machine, sender common.Address, code []byte, sequenceNum *big.Int, payment *big.Int) (common.Address, error) {
 	constructorTx := makeConstructorTx(code, sequenceNum, payment)
-	log.Println("sent tx", payment)
+	if payment != nil {
+		logger.Info().Str("payment", payment.String()).Msg("Sent")
+	}
 	constructorResult, err := runValidTransaction(t, mach, constructorTx, sender)
 	if err != nil {
 		return common.Address{}, err

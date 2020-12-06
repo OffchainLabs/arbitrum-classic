@@ -23,13 +23,15 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"log"
+	"github.com/rs/zerolog/log"
 	"os"
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 )
+
+var logger = log.With().Str("component", "ethbridgetest").Logger()
 
 var valueTester *ethbridgetestcontracts.ValueTester
 var messageTester *ethbridgetestcontracts.MessageTester
@@ -41,33 +43,33 @@ func TestMain(m *testing.M) {
 	auth := bind.NewKeyedTransactor(pks[0])
 	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 
 	valueTesterAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
 		return ethbridgetestcontracts.DeployValueTester(auth, client)
 	})
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 
 	messageTesterAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
 		return ethbridgetestcontracts.DeployMessageTester(auth, client)
 	})
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 
 	client.Commit()
 
 	valueTester, err = ethbridgetestcontracts.NewValueTester(valueTesterAddr, client)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 
 	messageTester, err = ethbridgetestcontracts.NewMessageTester(messageTesterAddr, client)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 
 	code := m.Run()

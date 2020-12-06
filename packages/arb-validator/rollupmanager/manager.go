@@ -19,7 +19,7 @@ package rollupmanager
 import (
 	"context"
 	"github.com/pkg/errors"
-	"log"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"sync"
 	"time"
@@ -32,6 +32,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainobserver"
 )
+
+var logger = log.With().Str("component", "rollupmanager").Logger()
 
 type Manager struct {
 	// The mutex should be held whenever listeres or reorgCache are accessed or
@@ -119,17 +121,17 @@ func CreateManagerAdvanced(
 
 			rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
 			if err != nil {
-				log.Fatal(err)
+				logger.Fatal().Stack().Err(err).Msg("NewRollupWatcher")
 			}
 
 			inboxAddr, err := rollupWatcher.InboxAddress(runCtx)
 			if err != nil {
-				log.Fatal(err)
+				logger.Fatal().Stack().Err(err).Msg("InboxAddress")
 			}
 
 			inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
 			if err != nil {
-				log.Fatal(err)
+				logger.Fatal().Stack().Err(err).Msg("NewGlobalInboxWatcher")
 			}
 
 			chain, err := chainobserver.NewChainObserver(
@@ -142,7 +144,7 @@ func CreateManagerAdvanced(
 				assumedValidThreshold,
 			)
 			if err != nil {
-				log.Fatal(err)
+				logger.Fatal().Stack().Err(err).Msg("NewChainObserver")
 			}
 
 			man.Lock()
@@ -155,7 +157,9 @@ func CreateManagerAdvanced(
 
 			time.Sleep(time.Second) // give time for things to settle, post-reorg, before restarting stuff
 
-			log.Println("Starting validator from", man.activeChain.CurrentEventId().BlockId)
+			logger.Info().
+				Str("blockId", man.activeChain.CurrentEventId().BlockId.String()).
+				Msg("Starting validator")
 
 			man.activeChain.RestartFromLatestValid(runCtx)
 
@@ -185,7 +189,10 @@ func CreateManagerAdvanced(
 						break
 					}
 
-					log.Println("Getting events between", startHeight, "and", fetchEnd)
+					logger.Info().
+						Str("start", startHeight.String()).
+						Str("end", fetchEnd.String()).
+						Msg("Getting events")
 					inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, startHeight, fetchEnd)
 					if err != nil {
 						return errors.Wrap(err, "Manager hit error doing fast catchup")
@@ -256,13 +263,13 @@ func CreateManagerAdvanced(
 					if !caughtUpToL1 && blockId.Height.Cmp(currentOnChain.Height) >= 0 {
 						caughtUpToL1 = true
 						man.activeChain.NowAtHead()
-						log.Println("Now at head")
+						logger.Info().Msg("Now at head")
 					}
 
 					man.activeChain.NotifyNewBlock(blockId.Clone())
 
 					if caughtUpToL1 || time.Since(lastDebugPrint).Seconds() > 5 {
-						log.Print(man.activeChain.DebugString("== "))
+						logger.Info().Msg(man.activeChain.DebugString("== "))
 						lastDebugPrint = time.Now()
 					}
 
@@ -303,7 +310,7 @@ func CreateManagerAdvanced(
 			}()
 
 			if err != nil {
-				log.Println(err)
+				logger.Error().Stack().Err(err).Msg("error")
 			}
 
 			man.Lock()

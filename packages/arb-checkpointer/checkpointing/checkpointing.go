@@ -22,8 +22,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/rs/zerolog/log"
 	"math/big"
 )
+
+var logger = log.With().Str("component", "checkpointing").Logger()
 
 type RollupCheckpointer interface {
 	Initialize(arbitrumCodeFilePath string) error

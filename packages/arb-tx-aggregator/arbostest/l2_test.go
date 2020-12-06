@@ -21,8 +21,8 @@ import (
 	"crypto/ecdsa"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"log"
 	"math/big"
+	"reflect"
 	"testing"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -709,7 +709,7 @@ func TestBatch(t *testing.T) {
 				t.Error("bad transaction format")
 			}
 		}
-		log.Printf("message: %T\n", l2Message)
+		logger.Info().Str("l2Message", reflect.TypeOf(l2Message).String()).Msg("message")
 	}
 }
 

@@ -22,7 +22,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/rs/zerolog/log"
 )
+
+var logger = log.With().Str("component", "chainlistener").Logger()
 
 const (
 	PruneSizeLimit = 120
