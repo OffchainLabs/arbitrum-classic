@@ -58,16 +58,13 @@ func TestTransfer(t *testing.T) {
 
 	transferABI, err := abi.JSON(strings.NewReader(arbostestcontracts.TransferABI))
 	failIfError(t, err)
-	sendABI := transferABI.Methods["send2"]
-	sendData, err := sendABI.Inputs.Pack(connAddress2)
-	failIfError(t, err)
 	connCallTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(2),
 		DestAddress: connAddress1,
 		Payment:     big.NewInt(0),
-		Data:        append(sendABI.ID, sendData...),
+		Data:        makeFuncData(t, transferABI.Methods["send2"], connAddress2),
 	}
 
 	inboxMessages := makeSimpleInbox([]message.Message{

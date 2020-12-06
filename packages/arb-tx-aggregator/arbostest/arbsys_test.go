@@ -33,17 +33,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func generateFib(val *big.Int) ([]byte, error) {
+func generateFib(t *testing.T, val *big.Int) []byte {
+	t.Helper()
 	fib, err := abi.JSON(strings.NewReader(arbostestcontracts.FibonacciABI))
-	if err != nil {
-		return nil, err
-	}
-	generateFibABI := fib.Methods["generateFib"]
-	generateFibData, err := generateFibABI.Inputs.Pack(val)
-	if err != nil {
-		return nil, err
-	}
-	return append(generateFibABI.ID, generateFibData...), nil
+	failIfError(t, err)
+	return makeFuncData(t, fib.Methods["generateFib"], val)
 }
 
 func makeTxCountCall(account common.Address) message.L2Message {
@@ -112,9 +106,6 @@ func TestTransactionCount(t *testing.T) {
 		Data:        []byte{},
 	}
 
-	fibData, err := generateFib(big.NewInt(20))
-	failIfError(t, err)
-
 	// Valid transaction to contract
 	tx5 := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
@@ -122,7 +113,7 @@ func TestTransactionCount(t *testing.T) {
 		SequenceNum: big.NewInt(2),
 		DestAddress: connAddress1,
 		Payment:     big.NewInt(300),
-		Data:        fibData,
+		Data:        generateFib(t, big.NewInt(20)),
 	}
 
 	// Transaction to contract with incorrect sequence number
@@ -132,7 +123,7 @@ func TestTransactionCount(t *testing.T) {
 		SequenceNum: big.NewInt(4),
 		DestAddress: connAddress1,
 		Payment:     big.NewInt(300),
-		Data:        fibData,
+		Data:        generateFib(t, big.NewInt(20)),
 	}
 
 	// Transaction to contract with insufficient balance
@@ -142,7 +133,7 @@ func TestTransactionCount(t *testing.T) {
 		SequenceNum: big.NewInt(3),
 		DestAddress: connAddress1,
 		Payment:     big.NewInt(100000),
-		Data:        fibData,
+		Data:        generateFib(t, big.NewInt(20)),
 	}
 
 	chainTime := inbox.ChainTime{

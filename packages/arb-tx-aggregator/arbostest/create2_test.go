@@ -81,17 +81,13 @@ func TestCreate2(t *testing.T) {
 
 	factoryABI, err := abi.JSON(strings.NewReader(arbostestcontracts.CloneFactoryABI))
 	failIfError(t, err)
-
-	create2ABI := factoryABI.Methods["create2Clone"]
-	create2Data, err := create2ABI.Inputs.Pack(simpleConnAddress, big.NewInt(0))
-	failIfError(t, err)
 	create2Tx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(2),
 		DestAddress: common.NewAddressFromEth(factoryConnAddress),
 		Payment:     big.NewInt(0),
-		Data:        append(create2ABI.ID, create2Data...),
+		Data:        makeFuncData(t, factoryABI.Methods["create2Clone"], simpleConnAddress, big.NewInt(0)),
 	}
 
 	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
