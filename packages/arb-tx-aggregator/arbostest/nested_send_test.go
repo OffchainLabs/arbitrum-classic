@@ -56,6 +56,5 @@ func TestFailedNestedSend(t *testing.T) {
 		Payment:     big.NewInt(300),
 		Data:        append(failedSendABI.ID, failedSendData...),
 	}
-	_, err = runTransaction(t, mach, sendTx, sender)
-	failIfError(t, err)
+	runTransaction(t, mach, sendTx, sender)
 }
