@@ -25,8 +25,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -54,10 +52,6 @@ func TestTransactionCount(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
 	failIfError(t, err)
 
-	pk, err := crypto.GenerateKey()
-	failIfError(t, err)
-
-	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 	randDest := common.RandAddress()
 	correctTxCount := 0
 
@@ -68,7 +62,7 @@ func TestTransactionCount(t *testing.T) {
 
 	checkTxCount := func(target int) error {
 		snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(9999999))
-		txCount, err := snap.GetTransactionCount(addr)
+		txCount, err := snap.GetTransactionCount(sender)
 		failIfError(t, err)
 		if txCount.Cmp(big.NewInt(int64(target))) != 0 {
 			return errors.Errorf("wrong tx count %v", txCount)
@@ -78,12 +72,11 @@ func TestTransactionCount(t *testing.T) {
 	}
 
 	runMessage(t, mach, initMsg(), chain)
-
 	if err := checkTxCount(0); err != nil {
 		t.Fatal(err)
 	}
 
-	depositEth(t, mach, addr, big.NewInt(1000))
+	depositEth(t, mach, sender, big.NewInt(1000))
 
 	// Deposit doesn't increase tx count
 	if err := checkTxCount(correctTxCount); err != nil {
@@ -99,7 +92,7 @@ func TestTransactionCount(t *testing.T) {
 		Data:        []byte{},
 	}
 
-	runValidTransaction(t, mach, tx1, addr)
+	runValidTransaction(t, mach, tx1, sender)
 	correctTxCount++
 
 	// Payment to EOA increases tx count
@@ -116,7 +109,7 @@ func TestTransactionCount(t *testing.T) {
 		Data:        []byte{},
 	}
 
-	runMessage(t, mach, message.NewSafeL2Message(tx2), addr)
+	runMessage(t, mach, message.NewSafeL2Message(tx2), sender)
 
 	// Payment to EOA with incorrect sequence number shouldn't increase tx count
 	if err := checkTxCount(correctTxCount); err != nil {
@@ -132,7 +125,7 @@ func TestTransactionCount(t *testing.T) {
 		Data:        []byte{},
 	}
 
-	runTransaction(t, mach, tx3, addr)
+	runTransaction(t, mach, tx3, sender)
 	// Payment to EOA with insufficient funds shouldn't increase tx count
 	if err := checkTxCount(correctTxCount); err != nil {
 		t.Fatal(err)
@@ -141,7 +134,7 @@ func TestTransactionCount(t *testing.T) {
 	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
 	failIfError(t, err)
 
-	fibAddress, err := deployContract(t, mach, addr, constructorData, big.NewInt(int64(correctTxCount)), nil)
+	fibAddress, err := deployContract(t, mach, sender, constructorData, big.NewInt(int64(correctTxCount)), nil)
 	failIfError(t, err)
 	correctTxCount++
 
@@ -162,7 +155,7 @@ func TestTransactionCount(t *testing.T) {
 		Data:        fibData,
 	}
 
-	runValidTransaction(t, mach, generateTx, addr)
+	runValidTransaction(t, mach, generateTx, sender)
 	correctTxCount++
 
 	// Tx call increases tx count
@@ -179,7 +172,7 @@ func TestTransactionCount(t *testing.T) {
 		Data:        fibData,
 	}
 
-	runMessage(t, mach, message.NewSafeL2Message(generateTx2), addr)
+	runMessage(t, mach, message.NewSafeL2Message(generateTx2), sender)
 
 	// Tx call with incorrect sequence number doesn't affect the count
 	if err := checkTxCount(correctTxCount); err != nil {
@@ -195,7 +188,7 @@ func TestTransactionCount(t *testing.T) {
 		Data:        fibData,
 	}
 
-	res := runTransaction(t, mach, generateTx3, addr)
+	res := runTransaction(t, mach, generateTx3, sender)
 	if res.ResultCode != evm.InsufficientTxFundsCode {
 		t.Fatal("incorrect return code", res.ResultCode)
 	}
