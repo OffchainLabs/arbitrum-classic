@@ -219,8 +219,7 @@ func TestFib(t *testing.T) {
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 
 	// Print line number that log was created on
-	log.Logger = log.With().Caller().Logger()
-	logger = log.With().Str("component", "connection-test").Logger()
+	logger = log.With().Caller().Str("component", "connection-test").Logger()
 
 	ctx := context.Background()
 	l1Backend, pks := test.SimulatedBackend()

@@ -26,7 +26,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
-var logger = log.With().Str("component", "challenges").Logger()
+var logger = log.With().Caller().Str("component", "challenges").Logger()
 
 type ChallengeState uint8
 

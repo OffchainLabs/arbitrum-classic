@@ -203,8 +203,7 @@ func main() {
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 
 	// Print line number that log was created on
-	log.Logger = log.With().Caller().Logger()
-	logger = log.With().Str("component", "arb-replay-test").Logger()
+	logger = log.With().Caller().Str("component", "arb-replay-test").Logger()
 
 	file := os.Args[1]
 	logger.Info().Str("file", file).Msg("Running test")

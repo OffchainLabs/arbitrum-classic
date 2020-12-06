@@ -26,7 +26,7 @@ import (
 	"math/big"
 )
 
-var logger = log.With().Str("component", "checkpointing").Logger()
+var logger = log.With().Caller().Str("component", "checkpointing").Logger()
 
 type RollupCheckpointer interface {
 	Initialize(arbitrumCodeFilePath string) error

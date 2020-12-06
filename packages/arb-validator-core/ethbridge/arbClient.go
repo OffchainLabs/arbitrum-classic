@@ -34,7 +34,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
-var logger = log.With().Str("component", "ethbridge").Logger()
+var logger = log.With().Caller().Str("component", "ethbridge").Logger()
 
 const (
 	smallNonceRepeatCount = 5

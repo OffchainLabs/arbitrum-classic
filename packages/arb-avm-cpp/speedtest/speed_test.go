@@ -27,7 +27,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 )
 
-var logger = log.With().Str("component", "speedtest").Logger()
+var logger = log.With().Caller().Str("component", "speedtest").Logger()
 
 func getInsnMultiplier(filePath string) uint64 {
 	ll := len(filePath)

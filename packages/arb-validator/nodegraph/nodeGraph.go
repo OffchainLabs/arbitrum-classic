@@ -29,7 +29,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
-var logger = log.With().Str("component", "ethbridgemachine").Logger()
+var logger = log.With().Caller().Str("component", "ethbridgemachine").Logger()
 
 //go:generate protoc -I. -I ../.. --go_out=paths=source_relative:. nodegraph.proto
 

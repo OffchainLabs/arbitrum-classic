@@ -42,7 +42,7 @@ import (
 	"sync"
 )
 
-var logger = log.With().Str("component", "txdb").Logger()
+var logger = log.With().Caller().Str("component", "txdb").Logger()
 
 var snapshotCacheSize = 100
 

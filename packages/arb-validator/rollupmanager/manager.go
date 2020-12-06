@@ -33,7 +33,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainobserver"
 )
 
-var logger = log.With().Str("component", "rollupmanager").Logger()
+var logger = log.With().Caller().Str("component", "rollupmanager").Logger()
 
 type Manager struct {
 	// The mutex should be held whenever listeres or reorgCache are accessed or
