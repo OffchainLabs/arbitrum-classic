@@ -181,12 +181,12 @@ func (lis *ValidatorChainListener) AssertionPrepared(
 		go func() {
 			_, err := MakeAssertion(ctx, stakingKey.contract, prepared.Clone(), proof)
 			if err != nil {
-				log.Error().Stack().Err(err).Msg("Error making assertion")
+				log.Error().Stack().Err(err).Hex("address", stakingAddress.Bytes()).Msg("Error making assertion")
 				lis.Lock()
 				delete(lis.broadcastAssertions, prepared.Prev.Hash())
 				lis.Unlock()
 			} else {
-				log.Info().Msg("Successfully made assertion")
+				log.Info().Hex("address", stakingAddress.Bytes()).Msg("Successfully made assertion")
 			}
 		}()
 		return
