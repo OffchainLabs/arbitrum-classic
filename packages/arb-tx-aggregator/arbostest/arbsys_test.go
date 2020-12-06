@@ -283,15 +283,8 @@ func TestAddressTable(t *testing.T) {
 		senderSeq++
 	}
 
-	logs, sends, _ := runAssertion(t, inboxMessages)
-	if len(sends) != 0 {
-		t.Fatal("unxpected send count", len(sends))
-	}
-
+	logs, _, _ := runAssertion(t, inboxMessages, len(arbSysCalls), 0)
 	results := processTxResults(t, logs)
-	if len(results) != len(arbSysCalls) {
-		t.Fatal("unxpected log count", len(results))
-	}
 
 	revertedTxCheck(t, results[0])
 
@@ -420,15 +413,8 @@ func TestArbSysBLS(t *testing.T) {
 		senderSeq++
 	}
 
-	logs, sends, _ := runAssertion(t, inboxMessages)
-	if len(sends) != 0 {
-		t.Fatal("unxpected send count", len(sends))
-	}
+	logs, _, _ := runAssertion(t, inboxMessages, len(arbSysCalls), 0)
 	results := processTxResults(t, logs)
-
-	if len(results) != len(arbSysCalls) {
-		t.Fatal("unxpected log count", len(results))
-	}
 
 	revertedTxCheck(t, results[0])
 
@@ -502,16 +488,8 @@ func TestArbSysFunctionTable(t *testing.T) {
 		senderSeq++
 	}
 
-	logs, sends, _ := runAssertion(t, inboxMessages)
-	if len(sends) != 0 {
-		t.Fatal("unxpected send count", len(sends))
-	}
-
+	logs, _, _ := runAssertion(t, inboxMessages, len(arbSysCalls), 0)
 	results := processTxResults(t, logs)
-
-	if len(results) != len(arbSysCalls) {
-		t.Fatal("unxpected log count", len(results))
-	}
 
 	revertedTxCheck(t, results[0])
 

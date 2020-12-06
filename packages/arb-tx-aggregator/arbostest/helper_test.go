@@ -250,7 +250,7 @@ func failIfError(t *testing.T, err error) {
 	}
 }
 
-func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]value.Value, []value.Value, machine.Machine) {
+func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, []value.Value, machine.Machine) {
 	t.Helper()
 	mach, err := cmachine.New(arbos.Path())
 	failIfError(t, err)
@@ -260,5 +260,14 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]value.Val
 	testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
 	failIfError(t, err)
 	t.Log(string(testCase))
+
+	if len(logs) != logCount {
+		t.Fatal("unexpected log count ", len(logs))
+	}
+
+	if len(sends) != sendCount {
+		t.Fatal("unxpected send count ", len(sends))
+	}
+
 	return logs, sends, mach
 }

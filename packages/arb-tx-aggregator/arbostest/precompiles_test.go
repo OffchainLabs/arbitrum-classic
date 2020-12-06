@@ -54,11 +54,8 @@ func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byt
 		chainTime,
 	))
 
-	logs, _, _ := runAssertion(t, inboxMessages)
+	logs, _, _ := runAssertion(t, inboxMessages, 1, 0)
 	results := processTxResults(t, logs)
-	if len(results) != 1 {
-		t.Fatal("unexpected log count", len(results))
-	}
 
 	res := results[0]
 	succeededTxCheck(t, res)

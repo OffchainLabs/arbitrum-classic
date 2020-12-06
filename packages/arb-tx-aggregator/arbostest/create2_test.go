@@ -115,15 +115,8 @@ func TestCreate2(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(existsCloneTx), sender, big.NewInt(4), chainTime),
 	}
 
-	logs, sends, mach := runAssertion(t, inboxMessages)
+	logs, _, mach := runAssertion(t, inboxMessages, 4, 0)
 	results := processTxResults(t, logs)
-	if len(results) != 4 {
-		t.Fatal("unxpected log count", len(results))
-	}
-
-	if len(sends) != 0 {
-		t.Fatal("Unexpected send count", len(sends))
-	}
 
 	allResultsSucceeded(t, results)
 

@@ -179,7 +179,7 @@ func TestBlocks(t *testing.T) {
 	}
 
 	// Last value returned is not an error type
-	avmLogs, _, _ := runAssertion(t, messages)
+	avmLogs, _, _ := runAssertion(t, messages, 9, 0)
 	t.Log("Got", len(avmLogs), "logs")
 	blockGasUsed := big.NewInt(0)
 	blockAVMLogCount := big.NewInt(0)

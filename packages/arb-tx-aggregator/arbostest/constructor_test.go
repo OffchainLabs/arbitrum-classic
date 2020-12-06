@@ -66,11 +66,8 @@ func TestContructor(t *testing.T) {
 		chainTime,
 	))
 
-	logs, _, mach := runAssertion(t, inboxMessages)
+	logs, _, mach := runAssertion(t, inboxMessages, 1, 0)
 	results := processTxResults(t, logs)
-	if len(results) != 1 {
-		t.Fatal("unexpected log count", len(results))
-	}
 
 	res := results[0]
 
