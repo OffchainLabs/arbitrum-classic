@@ -17,7 +17,6 @@
 package arbostest
 
 import (
-	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"math/big"
 	"testing"
@@ -64,21 +63,13 @@ func TestBuddyContract(t *testing.T) {
 	results := processTxResults(t, logs)
 
 	allResultsSucceeded(t, results)
-	for i, res := range results {
-		if i == 0 {
-			if len(res.ReturnData) != 32 {
-				t.Fatal("Unexpected return data length")
-			}
-			if !bytes.Equal(res.ReturnData[12:], l1contract[:]) {
-				t.Log("Returned address", hexutil.Encode(res.ReturnData))
-				t.Log("l1 address", l1contract)
-				t.Error("constructor returned incorrect address")
-			}
-		} else {
-			t.Log("ReturnData", hexutil.Encode(res.ReturnData))
-			if len(res.ReturnData) == 0 {
-				t.Error("expected return data")
-			}
+
+	checkConstructorResult(t, results[0], l1contract)
+
+	for _, res := range results[1:] {
+		t.Log("ReturnData", hexutil.Encode(res.ReturnData))
+		if len(res.ReturnData) == 0 {
+			t.Error("expected return data")
 		}
 	}
 
