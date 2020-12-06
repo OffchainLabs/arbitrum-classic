@@ -27,7 +27,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-func testWithdrawal(t *testing.T, depositMsg message.Message, withdrawalTx message.Transaction, withdrawalSender common.Address) ([]*evm.TxResult, []message.OutMessage) {
+func testWithdrawal(t *testing.T, depositMsg message.Message, withdrawalTx message.Transaction, withdrawalSender common.Address, logCount int) ([]*evm.TxResult, []message.OutMessage) {
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
@@ -39,8 +39,7 @@ func testWithdrawal(t *testing.T, depositMsg message.Message, withdrawalTx messa
 		message.NewInboxMessage(message.NewSafeL2Message(withdrawalTx), withdrawalSender, big.NewInt(1), chainTime),
 	}
 
-	// Last parameter returned is number of steps executed
-	logs, sends, _ := runAssertion(t, inboxMessages)
+	logs, sends, _ := runAssertion(t, inboxMessages, logCount, 1)
 	results := processTxResults(t, logs)
 
 	allResultsSucceeded(t, results)
@@ -67,7 +66,7 @@ func TestWithdrawEth(t *testing.T) {
 	withdrawDest := common.RandAddress()
 	tx := withdrawEthTx(big.NewInt(0), withdrawValue, withdrawDest)
 
-	results, sends := testWithdrawal(t, depositMsg, tx, addr)
+	results, sends := testWithdrawal(t, depositMsg, tx, addr, 1)
 
 	if len(results) != 1 {
 		t.Fatal("unexpected log count", len(results))
@@ -126,7 +125,7 @@ func TestWithdrawERC20(t *testing.T) {
 	withdrawDest := common.RandAddress()
 	tx := withdrawERC20Tx(big.NewInt(1), withdrawValue, withdrawDest)
 
-	results, sends := testWithdrawal(t, depositMsg, tx, token)
+	results, sends := testWithdrawal(t, depositMsg, tx, token, 2)
 
 	if len(results) != 2 {
 		t.Fatal("unexpected log count", len(results))
@@ -189,7 +188,7 @@ func TestWithdrawERC721(t *testing.T) {
 	withdrawDest := common.RandAddress()
 	tx := withdrawERC721Tx(big.NewInt(1), depositMsg.ID, withdrawDest)
 
-	results, sends := testWithdrawal(t, depositMsg, tx, token)
+	results, sends := testWithdrawal(t, depositMsg, tx, token, 2)
 
 	if len(results) != 2 {
 		t.Fatal("unexpected log count", len(results))

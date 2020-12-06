@@ -78,15 +78,8 @@ func TestTransfer(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(connCallTx), sender, big.NewInt(4), chainTime),
 	}
 
-	logs, sends, mach := runAssertion(t, inboxMessages)
+	logs, _, mach := runAssertion(t, inboxMessages, 3, 0)
 	results := processTxResults(t, logs)
-	if len(results) != 3 {
-		t.Fatal("unxpected log count", len(results))
-	}
-
-	if len(sends) != 0 {
-		t.Fatal("unxpected send count", len(sends))
-	}
 
 	allResultsSucceeded(t, results)
 

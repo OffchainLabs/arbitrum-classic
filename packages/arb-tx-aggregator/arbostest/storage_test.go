@@ -63,15 +63,8 @@ func TestGetStorageAt(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(failGetStorageAtTx), sender, big.NewInt(3), chainTime),
 	}
 
-	logs, sends, _ := runAssertion(t, inboxMessages)
+	logs, _, _ := runAssertion(t, inboxMessages, 3, 0)
 	results := processTxResults(t, logs)
-	if len(results) != 3 {
-		t.Fatal("unxpected log count", len(results))
-	}
-
-	if len(sends) != 0 {
-		t.Fatal("unexpected send count", len(sends))
-	}
 
 	constructorRes := results[0]
 	getStorageAtRes := results[1]

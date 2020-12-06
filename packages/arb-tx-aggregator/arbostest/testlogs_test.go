@@ -33,22 +33,12 @@ func TestArbOSCases(t *testing.T) {
 			inboxMessages, avmLogs, avmSends, err := inbox.LoadTestVector(data)
 			failIfError(t, err)
 
-			calcLogs, calcSends, _ := runAssertion(t, inboxMessages)
-
-			commonLogCount := len(avmLogs)
-			if len(calcLogs) < commonLogCount {
-				commonLogCount = len(calcLogs)
-			}
-
-			commonSendCount := len(avmSends)
-			if len(calcSends) < commonSendCount {
-				commonSendCount = len(calcSends)
-			}
+			calcLogs, calcSends, _ := runAssertion(t, inboxMessages, len(avmLogs), len(avmSends))
 
 			calcResults := processTxResults(t, calcLogs)
 			results := processTxResults(t, avmLogs)
 
-			for i := 0; i < commonLogCount; i++ {
+			for i := 0; i < len(calcLogs); i++ {
 				calcRes := calcResults[i]
 				res := results[i]
 				if !value.Eq(calcRes.AsValue(), res.AsValue()) {
@@ -58,7 +48,7 @@ func TestArbOSCases(t *testing.T) {
 				}
 			}
 
-			for i := 0; i < commonSendCount; i++ {
+			for i := 0; i < len(calcSends); i++ {
 				if !value.Eq(calcSends[i], avmSends[i]) {
 					t.Error("wrong send")
 				}

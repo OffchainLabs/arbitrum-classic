@@ -90,15 +90,8 @@ func TestGas(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(store2FuncCallTx), sender, big.NewInt(6), chainTime),
 	}
 
-	logs, sends, _ := runAssertion(t, inboxMessages)
+	logs, _, _ := runAssertion(t, inboxMessages, len(inboxMessages)-2, 0)
 	results := processTxResults(t, logs)
-	if len(results) != len(inboxMessages)-2 {
-		t.Fatal("unxpected log count", len(results))
-	}
-
-	if len(sends) != 0 {
-		t.Fatal("unxpected send count", len(sends))
-	}
 
 	allResultsSucceeded(t, results)
 

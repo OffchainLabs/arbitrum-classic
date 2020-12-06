@@ -77,11 +77,8 @@ func testBasicTx(t *testing.T, msg message.SafeAbstractL2Message, msg2 message.S
 		message.NewInboxMessage(message.NewSafeL2Message(msg2), sender, big.NewInt(5), chainTime),
 	}
 
-	logs, _, mach := runAssertion(t, messages)
+	logs, _, mach := runAssertion(t, messages, 4, 0)
 	results := processTxResults(t, logs)
-	if len(results) != 4 {
-		t.Fatal("incorrect log output count", len(results))
-	}
 
 	allResultsSucceeded(t, results)
 
@@ -321,11 +318,8 @@ func TestSignedTx(t *testing.T) {
 		),
 	)
 
-	logs, _, _ := runAssertion(t, messages)
+	logs, _, _ := runAssertion(t, messages, 2, 0)
 	results := processTxResults(t, logs)
-	if len(results) != 2 {
-		t.Fatal("incorrect log output count", len(results))
-	}
 	allResultsSucceeded(t, results)
 	for i, result := range results {
 		if result.IncomingRequest.Sender != addr {
@@ -421,11 +415,8 @@ func TestUnsignedTx(t *testing.T) {
 		),
 	)
 
-	logs, _, _ := runAssertion(t, messages)
+	logs, _, _ := runAssertion(t, messages, 2, 0)
 	results := processTxResults(t, logs)
-	if len(results) != 2 {
-		t.Fatal("incorrect log output count", len(results))
-	}
 	allResultsSucceeded(t, results)
 	for i, result := range results {
 		if result.IncomingRequest.Sender != sender {
@@ -639,9 +630,6 @@ func TestCompressedECDSATx(t *testing.T) {
 		)
 	}
 
-	logs, _, _ := runAssertion(t, messages)
-	if len(logs) != len(txes) {
-		t.Fatal("incorrect log output count", len(logs))
-	}
+	logs, _, _ := runAssertion(t, messages, len(txes), 0)
 	verifyTxLogs(t, signer, txes, logs)
 }

@@ -60,16 +60,9 @@ func TestBuddyContract(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(l2Tx), common.RandAddress(), big.NewInt(2), chainTime),
 	}
 
-	logs, sends, _ := runAssertion(t, messages)
-
+	logs, sends, _ := runAssertion(t, messages, 2, 1)
 	results := processTxResults(t, logs)
-	if len(results) != 2 {
-		t.Fatal("unexpected log count", len(results))
-	}
 
-	if len(sends) != 1 {
-		t.Fatal("unexpected send count", len(sends))
-	}
 	allResultsSucceeded(t, results)
 	for i, res := range results {
 		if i == 0 {
