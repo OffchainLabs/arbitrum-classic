@@ -198,10 +198,8 @@ func TestContractTx(t *testing.T) {
 		}
 	}
 
-	// After call to non-contract, balance should still be 0
-	checkBalance(t, snap, tx.DestAddress, big.NewInt(0))
-	// After call to contract, balance should still be 0
-	checkBalance(t, snap, tx2.DestAddress, big.NewInt(0))
+	checkBalance(t, snap, tx.DestAddress, tx.Payment)
+	checkBalance(t, snap, tx2.DestAddress, tx2.Payment)
 
 	callRes, err := snap.Call(message.Call{
 		BasicTx: message.BasicTx{
