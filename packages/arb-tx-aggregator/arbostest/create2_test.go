@@ -75,9 +75,6 @@ func TestCreate2(t *testing.T) {
 		Timestamp: big.NewInt(0),
 	}
 
-	chain := common.RandAddress()
-	sender := authClient.Address()
-
 	factoryConstructorTx := makeConstructorTx(hexutil.MustDecode(arbostestcontracts.CloneFactoryBin), big.NewInt(0), nil)
 
 	simpleConstructorTx := makeConstructorTx(hexutil.MustDecode(arbostestcontracts.SimpleBin), big.NewInt(1), nil)
@@ -109,6 +106,7 @@ func TestCreate2(t *testing.T) {
 		Data:        existsABI.ID,
 	}
 
+	sender := authClient.Address()
 	inboxMessages := []inbox.InboxMessage{
 		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(factoryConstructorTx), sender, big.NewInt(1), chainTime),
@@ -134,11 +132,7 @@ func TestCreate2(t *testing.T) {
 	create2Res := results[2]
 	existsCloneRes := results[3]
 
-	factoryConnAddrCalc, err := getConstructorResult(factoryConstructorRes)
-	failIfError(t, err)
-	if factoryConnAddrCalc.ToEthAddress() != factoryConnAddress {
-		t.Fatal("constructed address doesn't match:", factoryConnAddrCalc, "instead of", factoryConnAddress.Hex())
-	}
+	checkConstructorResult(t, factoryConstructorRes, common.NewAddressFromEth(factoryConnAddress))
 
 	simpleConnAddrCalc, err := getConstructorResult(simpleConstructorRes)
 	failIfError(t, err)

@@ -41,12 +41,9 @@ func TestBlockHash(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
 	failIfError(t, err)
 
-	addr := common.RandAddress()
-	chain := common.RandAddress()
-
 	runMessage(t, mach, initMsg(), chain)
 
-	connAddress, err := deployContract(t, mach, addr, hexutil.MustDecode(arbostestcontracts.OpCodesBin), big.NewInt(0), nil)
+	connAddress, err := deployContract(t, mach, sender, hexutil.MustDecode(arbostestcontracts.OpCodesBin), big.NewInt(0), nil)
 	failIfError(t, err)
 
 	snap := snapshot.NewSnapshot(mach.Clone(), chainTime, message.ChainAddressToID(chain), big.NewInt(2))

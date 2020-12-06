@@ -30,10 +30,6 @@ import (
 )
 
 func TestTransfer(t *testing.T) {
-	chain := common.HexToAddress("0x037c4d7bbb0407d1e2c64981855ad8681d0d86d1")
-	sender := common.HexToAddress("0xe91e00167939cb6694d2c422acd208a007293948")
-	transfer1Address := common.HexToAddress("0x2aad3e8302f74e0818b7bcd10c2c050526707755")
-	transfer2Address := common.HexToAddress("0x016cb751543d1cca5dd02976ac8dbdc0ecaacafd")
 
 	constructorData := hexutil.MustDecode(arbostestcontracts.TransferBin)
 
@@ -63,13 +59,13 @@ func TestTransfer(t *testing.T) {
 	transferABI, err := abi.JSON(strings.NewReader(arbostestcontracts.TransferABI))
 	failIfError(t, err)
 	sendABI := transferABI.Methods["send2"]
-	sendData, err := sendABI.Inputs.Pack(transfer2Address)
+	sendData, err := sendABI.Inputs.Pack(connAddress2)
 	failIfError(t, err)
 	connCallTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(2),
-		DestAddress: transfer1Address,
+		DestAddress: connAddress1,
 		Payment:     big.NewInt(0),
 		Data:        append(sendABI.ID, sendData...),
 	}
@@ -94,17 +90,17 @@ func TestTransfer(t *testing.T) {
 
 	allResultsSucceeded(t, results)
 
-	checkConstructorResult(t, results[0], transfer1Address)
-	checkConstructorResult(t, results[1], transfer2Address)
+	checkConstructorResult(t, results[0], connAddress1)
+	checkConstructorResult(t, results[1], connAddress2)
 
 	res := results[2]
 	t.Log("GasUsed", res.GasUsed)
 	t.Log("GasLimit", connCallTx.MaxGas)
 
 	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(4))
-	transfer1Balance, err := snap.GetBalance(transfer1Address)
+	transfer1Balance, err := snap.GetBalance(connAddress1)
 	failIfError(t, err)
-	transfer2Balance, err := snap.GetBalance(transfer2Address)
+	transfer2Balance, err := snap.GetBalance(connAddress2)
 	failIfError(t, err)
 	senderBalance, err := snap.GetBalance(sender)
 	failIfError(t, err)

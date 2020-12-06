@@ -57,7 +57,6 @@ func TestContructor(t *testing.T) {
 	l2Message, err := message.NewL2Message(message.NewCompressedECDSAFromEth(signedTx))
 	failIfError(t, err)
 
-	chain := common.RandAddress()
 	inboxMessages := make([]inbox.InboxMessage, 0)
 	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime))
 	inboxMessages = append(inboxMessages, message.NewInboxMessage(
