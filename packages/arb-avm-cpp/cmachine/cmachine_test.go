@@ -30,32 +30,32 @@ func TestMachineCreation(t *testing.T) {
 
 	valueCache, err := NewValueCache()
 	if err != nil {
-		t.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 
 	mach1, err := New(codeFile)
 	if err != nil {
-		t.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 
 	checkpointStorage, err := NewCheckpoint("dbPath")
 	if err != nil {
-		t.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 	if err := checkpointStorage.Initialize(codeFile); err != nil {
-		t.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 	defer checkpointStorage.CloseCheckpointStorage()
 	mach2, err := checkpointStorage.GetInitialMachine(valueCache)
 	if err != nil {
-		t.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 
 	if mach1.Hash() != mach2.Hash() {
-		t.Error("Machine hashes not equal")
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
 
 	if err := os.RemoveAll(dePath); err != nil {
+		logger.Fatal().Stack().Err(err).Msg("error")
 	}
-	logger.Fatal().Stack().Err(err).Msg("error")
 }
