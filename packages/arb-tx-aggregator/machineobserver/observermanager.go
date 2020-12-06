@@ -31,7 +31,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/observer"
 )
 
-var logger = log.With().Str("component", "machineobserver").Logger()
+var logger = log.With().Caller().Str("component", "machineobserver").Logger()
 
 const defaultMaxReorgDepth = 100
 

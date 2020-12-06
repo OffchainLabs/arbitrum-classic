@@ -39,7 +39,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
-var logger = log.With().Str("component", "batcher").Logger()
+var logger = log.With().Caller().Str("component", "batcher").Logger()
 
 const maxBatchSize ethcommon.StorageSize = 120000
 

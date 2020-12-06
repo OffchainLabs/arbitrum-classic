@@ -41,7 +41,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-var logger = log.With().Str("component", "cmachine").Logger()
+var logger = log.With().Caller().Str("component", "cmachine").Logger()
 
 type Machine struct {
 	c unsafe.Pointer

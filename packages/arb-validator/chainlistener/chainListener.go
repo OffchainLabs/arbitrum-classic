@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Str("component", "chainlistener").Logger()
+var logger = log.With().Caller().Str("component", "chainlistener").Logger()
 
 const (
 	PruneSizeLimit = 120

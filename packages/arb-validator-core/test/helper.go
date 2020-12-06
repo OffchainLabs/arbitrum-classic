@@ -26,7 +26,7 @@ import (
 	"math/big"
 )
 
-var logger = log.With().Str("component", "test").Logger()
+var logger = log.With().Caller().Str("component", "test").Logger()
 
 func SimulatedBackend() (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
 	genesisAlloc := make(map[ethcommon.Address]core.GenesisAccount)

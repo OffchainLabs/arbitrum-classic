@@ -44,7 +44,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-var logger = log.With().Str("component", "aggregator").Logger()
+var logger = log.With().Caller().Str("component", "aggregator").Logger()
 
 type Server struct {
 	chain              common.Address

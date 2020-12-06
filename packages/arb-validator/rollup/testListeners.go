@@ -28,7 +28,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
-var logger = log.With().Str("component", "rollup").Logger()
+var logger = log.With().Caller().Str("component", "rollup").Logger()
 
 // WARNING: The code in this file is badly behaved, on purpose. It is for testing only.
 //     If you call this in production, you will be sorry.

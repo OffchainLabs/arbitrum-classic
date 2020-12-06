@@ -31,7 +31,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 )
 
-var logger = log.With().Str("component", "ethbridgetest").Logger()
+var logger = log.With().Caller().Str("component", "ethbridgetest").Logger()
 
 var valueTester *ethbridgetestcontracts.ValueTester
 var messageTester *ethbridgetestcontracts.MessageTester

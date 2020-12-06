@@ -52,8 +52,7 @@ func main() {
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 
 	// Print line number that log was created on
-	log.Logger = log.With().Caller().Logger()
-	logger = log.With().Str("component", "arb-validator").Logger()
+	logger = log.With().Caller().Str("component", "arb-validator").Logger()
 
 	// Check number of args
 	flag.Parse()

@@ -23,7 +23,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Str("component", "structures").Logger()
+var logger = log.With().Caller().Str("component", "structures").Logger()
 
 func NewExecutionAssertionStubFromWholeAssertion(
 	a *protocol.ExecutionAssertion,
