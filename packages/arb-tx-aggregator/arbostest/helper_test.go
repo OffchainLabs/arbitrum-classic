@@ -22,7 +22,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/pkg/errors"
 	"math/big"
 	"testing"
 
@@ -46,45 +45,6 @@ func initMsg() message.Init {
 		Owner:       common.Address{},
 		ExtraConfig: []byte{},
 	}
-}
-
-func runMessage(t *testing.T, mach machine.Machine, msg message.Message, sender common.Address) ([]*evm.TxResult, []message.OutMessage) {
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
-
-	assertion, steps := mach.ExecuteAssertion(
-		1000000000,
-		[]inbox.InboxMessage{message.NewInboxMessage(msg, sender, big.NewInt(0), chainTime)},
-		0,
-	)
-	//data, err := value.TestVectorJSON(inbox, assertion.ParseLogs(), assertion.ParseOutMessages())
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//t.Log(string(data))
-	t.Log("Ran assertion for", steps, "steps and had", assertion.LogsCount, "logs and", assertion.OutMsgsCount, "messages")
-	if mach.CurrentStatus() != machine.Extensive {
-		t.Fatal("machine should still be working")
-	}
-	blockReason := mach.IsBlocked(false)
-	if blockReason == nil {
-		t.Fatal("machine not blocked")
-	}
-
-	if _, ok := blockReason.(machine.InboxBlocked); !ok {
-		t.Fatal("Machine blocked for weird reason", blockReason)
-	}
-
-	results := processTxResults(t, assertion.ParseLogs())
-	sends := make([]message.OutMessage, 0)
-	for _, send := range assertion.ParseOutMessages() {
-		msg, err := message.NewOutMessageFromValue(send)
-		failIfError(t, err)
-		sends = append(sends, msg)
-	}
-	return results, sends
 }
 
 func withdrawEthTx(sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
@@ -134,37 +94,17 @@ func makeConstructorTx(code []byte, sequenceNum *big.Int, payment *big.Int) mess
 	}
 }
 
-func getConstructorResult(constructorResult *evm.TxResult) (common.Address, error) {
-	if len(constructorResult.ReturnData) != 32 {
-		return common.Address{}, errors.New("unexpected constructor result length")
-	}
-	var contractAddress common.Address
-	copy(contractAddress[:], constructorResult.ReturnData[12:])
-	return contractAddress, nil
-}
-
 func checkConstructorResult(t *testing.T, res *evm.TxResult, correctAddress common.Address) {
 	t.Helper()
 	succeededTxCheck(t, res)
-	connAddrCalc, err := getConstructorResult(res)
-	failIfError(t, err)
+
+	if len(res.ReturnData) != 32 {
+		t.Fatal("unexpected constructor result length")
+	}
+	var connAddrCalc common.Address
+	copy(connAddrCalc[:], res.ReturnData[12:])
 	if connAddrCalc != correctAddress {
 		t.Fatal("constructed address doesn't match:", connAddrCalc, "instead of", correctAddress)
-	}
-}
-
-func depositEth(t *testing.T, mach machine.Machine, dest common.Address, amount *big.Int) {
-	msg := message.Eth{
-		Dest:  dest,
-		Value: amount,
-	}
-
-	depositResults, sendResults := runMessage(t, mach, msg, dest)
-	if len(depositResults) != 0 {
-		t.Fatal("deposit should not have had a result")
-	}
-	if len(sendResults) != 0 {
-		t.Fatal("deposit should not trigger sends")
 	}
 }
 
