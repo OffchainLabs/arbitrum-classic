@@ -70,13 +70,7 @@ func TestGetStorageAt(t *testing.T) {
 	getStorageAtRes := results[1]
 	failGetStorageAtRes := results[2]
 
-	succeededTxCheck(t, constructorRes)
-	connAddrCalc, err := getConstructorResult(constructorRes)
-	failIfError(t, err)
-	if connAddrCalc != connAddress1 {
-		t.Fatal("constructed address doesn't match:", connAddrCalc, "instead of", connAddress1)
-	}
-
+	checkConstructorResult(t, constructorRes, connAddress1)
 	succeededTxCheck(t, getStorageAtRes)
 	storageVal := new(big.Int).SetBytes(getStorageAtRes.ReturnData)
 	if storageVal.Cmp(big.NewInt(12345)) != 0 {

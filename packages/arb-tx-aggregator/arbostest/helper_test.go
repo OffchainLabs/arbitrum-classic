@@ -285,3 +285,12 @@ func makeSimpleInbox(messages []message.Message) []inbox.InboxMessage {
 	}
 	return inboxMessages
 }
+
+func checkBalance(t *testing.T, snap *snapshot.Snapshot, account common.Address, balance *big.Int) {
+	t.Helper()
+	bal, err := snap.GetBalance(account)
+	failIfError(t, err)
+	if bal.Cmp(balance) != 0 {
+		t.Error("unexpected balance", bal, "for account", account)
+	}
+}

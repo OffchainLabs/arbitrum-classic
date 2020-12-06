@@ -135,17 +135,10 @@ func TestCallTx(t *testing.T) {
 		}
 	}
 
-	balance, err := snap.GetBalance(tx.DestAddress)
-	failIfError(t, err)
-	if balance.Cmp(big.NewInt(0)) != 0 {
-		t.Errorf("After call to non-contract, balance should still be 0, but was %v", balance)
-	}
-
-	balance2, err := snap.GetBalance(tx2.DestAddress)
-	failIfError(t, err)
-	if balance2.Cmp(big.NewInt(0)) != 0 {
-		t.Errorf("After call to contract, balance should still be 0, but was %v", balance2)
-	}
+	// After call to non-contract, balance should still be 0
+	checkBalance(t, snap, tx.DestAddress, big.NewInt(0))
+	// After call to contract, balance should still be 0
+	checkBalance(t, snap, tx2.DestAddress, big.NewInt(0))
 
 	callRes, err := snap.Call(message.Call{
 		BasicTx: message.BasicTx{
@@ -205,17 +198,10 @@ func TestContractTx(t *testing.T) {
 		}
 	}
 
-	balance, err := snap.GetBalance(tx.DestAddress)
-	failIfError(t, err)
-	if balance.Cmp(tx.Payment) != 0 {
-		t.Errorf("After call to non-contract, balance should be updated, but was %v", balance)
-	}
-
-	balance2, err := snap.GetBalance(tx2.DestAddress)
-	failIfError(t, err)
-	if balance2.Cmp(tx2.Payment) != 0 {
-		t.Errorf("After call to contract, balance should be updated, but was %v", balance)
-	}
+	// After call to non-contract, balance should still be 0
+	checkBalance(t, snap, tx.DestAddress, big.NewInt(0))
+	// After call to contract, balance should still be 0
+	checkBalance(t, snap, tx2.DestAddress, big.NewInt(0))
 
 	callRes, err := snap.Call(message.Call{
 		BasicTx: message.BasicTx{

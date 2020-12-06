@@ -134,11 +134,7 @@ func TestDeposit(t *testing.T) {
 	depositEth(t, mach, addr, amount)
 
 	snap := snapshot.NewSnapshot(mach.Clone(), chainTime, message.ChainAddressToID(chain), big.NewInt(1))
-	balance, err := snap.GetBalance(addr)
-	failIfError(t, err)
-	if balance.Cmp(amount) != 0 {
-		t.Fatal("incorrect balance")
-	}
+	checkBalance(t, snap, addr, amount)
 }
 
 func TestBlocks(t *testing.T) {
