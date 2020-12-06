@@ -37,7 +37,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/pkg/errors"
-	"log"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"sync"
 )
@@ -86,8 +86,7 @@ func (db *TxDB) Load(ctx context.Context) error {
 		if err == nil {
 			return nil
 		}
-		log.Println("Error restoring from checkpoint:", err)
-		log.Println("Failed to restore from checkpoint, falling back to fresh start")
+		log.Error().Stack().Err(err).Msg("Failed to restore from checkpoint, falling back to fresh start")
 	}
 	// We failed to restore from a checkpoint
 	valueCache, err := cmachine.NewValueCache()
@@ -307,7 +306,7 @@ func (db *TxDB) processAssertion(assertion *protocol.ExecutionAssertion) (proces
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
 		if err != nil {
-			log.Println("Error parsing log result", err)
+			log.Error().Stack().Err(err).Msg("Error parsing log result")
 			continue
 		}
 

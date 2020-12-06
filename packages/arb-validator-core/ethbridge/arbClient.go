@@ -109,10 +109,12 @@ func (c *EthArbClient) subscribeBlockHeadersAfter(ctx context.Context, prevBlock
 				if err != nil && err.Error() != ethereum.NotFound.Error() {
 					log.Warn().Stack().Err(err).Int("attempt", fetchErrorCount).Msg("Failed to fetch next header")
 					fetchErrorCount++
+				} else {
+					fetchErrorCount = 0
 				}
 
 				if fetchErrorCount >= maxFetchAttempts {
-					blockIdChan <- arbbridge.MaybeBlockId{Err: err}
+					blockIdChan <- arbbridge.MaybeBlockId{Err: errors.Wrap(err, "maxFetchAttempts exceeded")}
 					return
 				}
 

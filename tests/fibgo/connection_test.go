@@ -7,7 +7,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
+	golog "log"
 	"math/big"
 	"math/rand"
 	"net"
@@ -207,7 +210,13 @@ func TestFib(t *testing.T) {
 		}
 	}()
 
-	// Output line numbers with each log message
+	// Enable line numbers in logging
+	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
+
+	// Print stack trace when `.Error().Stack().Err(err).` is added to zerolog call
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+
+	// Print line number that log was created on
 	log.Logger = log.With().Caller().Logger()
 
 	ctx := context.Background()
@@ -283,10 +292,10 @@ func TestFib(t *testing.T) {
 	// Do not wrap with MakeContract because auth is wrapped in session below
 	auths[4].Nonce = big.NewInt(0)
 	_, tx, _, err := arbostestcontracts.DeployFibonacci(auths[4], l2Client)
-	auths[4].Nonce = auths[4].Nonce.Add(auths[4].Nonce, big.NewInt(1))
 	if err != nil {
 		t.Fatal("DeployFibonacci failed", err)
 	}
+	auths[4].Nonce = auths[4].Nonce.Add(auths[4].Nonce, big.NewInt(1))
 
 	receipt, err := waitForReceipt(
 		l2Client,
