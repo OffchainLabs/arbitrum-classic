@@ -34,7 +34,7 @@ func TestGetStorageAt(t *testing.T) {
 		Timestamp: big.NewInt(0),
 	}
 
-	constructorTx := makeConstructorTx(hexutil.MustDecode(arbostestcontracts.StorageBin), big.NewInt(0), nil)
+	constructorTx := makeSimpleConstructorTx(hexutil.MustDecode(arbostestcontracts.StorageBin), big.NewInt(0))
 
 	getStorageAtTx := message.ContractTransaction{
 		BasicTx: message.BasicTx{

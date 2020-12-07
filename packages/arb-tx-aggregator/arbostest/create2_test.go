@@ -75,9 +75,8 @@ func TestCreate2(t *testing.T) {
 		Timestamp: big.NewInt(0),
 	}
 
-	factoryConstructorTx := makeConstructorTx(hexutil.MustDecode(arbostestcontracts.CloneFactoryBin), big.NewInt(0), nil)
-
-	simpleConstructorTx := makeConstructorTx(hexutil.MustDecode(arbostestcontracts.SimpleBin), big.NewInt(1), nil)
+	factoryConstructorTx := makeSimpleConstructorTx(hexutil.MustDecode(arbostestcontracts.CloneFactoryBin), big.NewInt(0))
+	simpleConstructorTx := makeSimpleConstructorTx(hexutil.MustDecode(arbostestcontracts.SimpleBin), big.NewInt(1))
 
 	factoryABI, err := abi.JSON(strings.NewReader(arbostestcontracts.CloneFactoryABI))
 	failIfError(t, err)
