@@ -81,10 +81,11 @@ func withdrawERC721Tx(sequenceNum *big.Int, id *big.Int, dest common.Address) me
 	}
 }
 
+func makeSimpleConstructorTx(code []byte, sequenceNum *big.Int) message.Transaction {
+	return makeConstructorTx(code, sequenceNum, big.NewInt(0))
+}
+
 func makeConstructorTx(code []byte, sequenceNum *big.Int, payment *big.Int) message.Transaction {
-	if payment == nil {
-		payment = big.NewInt(0)
-	}
 	return message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
