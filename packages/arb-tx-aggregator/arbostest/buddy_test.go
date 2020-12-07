@@ -97,9 +97,7 @@ func TestBuddyContract(t *testing.T) {
 
 		if i == 0 {
 			if len(res.ReturnData) != 32 {
-				logger.Fatal().
-					Int("length", len(res.ReturnData)).
-					Msg("Unexpected return data length")
+				t.Fatal("Unexpected return data length")
 			}
 			if !bytes.Equal(res.ReturnData[12:], l1contract[:]) {
 				t.Log("Returned address", hexutil.Encode(res.ReturnData))

@@ -127,7 +127,7 @@ func makeExecutionAssertion(
 	if len(debugPrints) > 0 {
 		logger.Debug().Msg("Produced assertion containing debug prints")
 		for _, d := range debugPrints {
-			logger.Debug().Str("DebugPrint", d.String()).Msg("makeExecutionAssertion")
+			logger.Debug().Str("DebugPrint", d.String()).Send()
 		}
 	}
 	return protocol.NewExecutionAssertion(

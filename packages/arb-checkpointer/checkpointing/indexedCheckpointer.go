@@ -176,6 +176,7 @@ func restoreLatestState(
 	lowestHeight := bs.MinBlockStoreHeight()
 
 	for height := startHeight; height.Cmp(lowestHeight) >= 0; height = common.NewTimeBlocks(new(big.Int).Sub(height.AsInt(), big.NewInt(1))) {
+		logger := logger.With().Str("height", height.String()).Logger()
 		onchainId, err := clnt.BlockIdForHeight(ctx, height)
 		if err != nil {
 			return err
@@ -193,11 +194,11 @@ func restoreLatestState(
 
 		rcl, err := newRestoreContextLocked(db, ckpWithMan.Manifest)
 		if err != nil {
-			logger.Error().Stack().Err(err).Str("height", height.String()).Msg("Failed load manifest data")
+			logger.Error().Stack().Err(err).Msg("Failed load manifest data")
 			continue
 		}
 		if err := unmarshalFunc(ckpWithMan.Contents, rcl, onchainId); err != nil {
-			logger.Error().Stack().Err(err).Str("height", height.String()).Msg("Failed load checkpoint")
+			logger.Error().Stack().Err(err).Msg("Failed load checkpoint")
 			continue
 		}
 		return nil
@@ -269,7 +270,7 @@ func cleanup(bs machine.BlockStore, db machine.CheckpointStorage, maxReorgHeight
 				err := deleteCheckpointForKey(bs, db, id)
 				if err != nil {
 					// Can still continue if error
-					logger.Warn().Stack().Err(err).Str("id", id.String()).Msg("Error deleting checkpoint")
+					logger.Warn().Stack().Err(err).Object("id", id).Msg("Error deleting checkpoint")
 				}
 			}
 			prevIds = blockIds

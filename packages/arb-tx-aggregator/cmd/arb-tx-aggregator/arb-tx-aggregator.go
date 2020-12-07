@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
@@ -87,7 +86,7 @@ func main() {
 		logger.Fatal().Stack().Err(err).Msg("Error running NewRPcEthClient")
 	}
 
-	logger.Info().Str("chainaddress", rollupArgs.Address.Hex()).Str("chainid", hexutil.Encode(message.ChainAddressToID(rollupArgs.Address).Bytes())).Msg("Launching aggregator")
+	logger.Info().Hex("chainaddress", rollupArgs.Address.Bytes()).Hex("chainid", message.ChainAddressToID(rollupArgs.Address).Bytes()).Msg("Launching aggregator")
 
 	var batcherMode rpc.BatcherMode
 	if *forwardTxURL != "" {
@@ -99,7 +98,7 @@ func main() {
 			logger.Fatal().Stack().Err(err).Msg("Error running GetKeystore")
 		}
 
-		logger.Info().Str("from", auth.From.Hex()).Msg("Aggregator submitting batches")
+		logger.Info().Hex("from", auth.From.Bytes()).Msg("Aggregator submitting batches")
 
 		if err := arbbridge.WaitForBalance(
 			ctx,

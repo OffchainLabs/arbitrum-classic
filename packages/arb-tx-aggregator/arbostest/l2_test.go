@@ -22,7 +22,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
-	"reflect"
 	"testing"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -709,7 +708,7 @@ func TestBatch(t *testing.T) {
 				t.Error("bad transaction format")
 			}
 		}
-		logger.Info().Str("l2Message", reflect.TypeOf(l2Message).String()).Msg("message")
+		t.Logf("message: %T", l2Message)
 	}
 }
 

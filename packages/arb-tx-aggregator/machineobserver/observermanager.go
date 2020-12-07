@@ -162,16 +162,16 @@ func RunObserver(
 
 			inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
 			if err != nil {
-				logger.Fatal().Stack().Err(err).Msg("error")
+				logger.Fatal().Stack().Err(err).Send()
 			}
 
 			if err := ensureInitialized(ctx, cp, db, clnt, rollupAddr); err != nil {
-				logger.Fatal().Stack().Err(err).Msg("error")
+				logger.Fatal().Stack().Err(err).Send()
 			}
 
 			err = func() error {
 				logger.Info().
-					Str("blockId", db.LatestBlockId().String()).
+					Object("blockId", db.LatestBlockId()).
 					Msg("Starting observer")
 
 				// If the local chain is significantly behind the L1, catch up

@@ -158,7 +158,7 @@ func CreateManagerAdvanced(
 			time.Sleep(time.Second) // give time for things to settle, post-reorg, before restarting stuff
 
 			logger.Info().
-				Str("blockId", man.activeChain.CurrentEventId().BlockId.String()).
+				Object("blockId", man.activeChain.CurrentEventId().BlockId).
 				Msg("Starting validator")
 
 			man.activeChain.RestartFromLatestValid(runCtx)
@@ -310,7 +310,7 @@ func CreateManagerAdvanced(
 			}()
 
 			if err != nil {
-				logger.Error().Stack().Err(err).Msg("error")
+				logger.Error().Stack().Err(err).Send()
 			}
 
 			man.Lock()

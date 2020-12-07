@@ -87,7 +87,7 @@ func TestMain(m *testing.M) {
 	var err error
 	authClient, err = ethbridge.NewEthAuthClient(ctx, client, auth)
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Fatal().Stack().Err(err).Send()
 	}
 
 	go func() {
@@ -101,7 +101,7 @@ func TestMain(m *testing.M) {
 		return ethbridgetestcontracts.DeployRollupTester(auth, client)
 	})
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Fatal().Stack().Err(err).Send()
 	}
 
 	_, err = ethbridge.WaitForReceiptWithResults(
@@ -112,17 +112,17 @@ func TestMain(m *testing.M) {
 		"DeployRollupTester",
 	)
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Fatal().Stack().Err(err).Send()
 	}
 
 	rollupTester, err = ethbridgetestcontracts.NewRollupTester(rollupAddr, client)
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Fatal().Stack().Err(err).Send()
 	}
 
 	code := m.Run()
 	if err := os.RemoveAll(dbPath); err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Fatal().Stack().Err(err).Send()
 	}
 	os.Exit(code)
 }

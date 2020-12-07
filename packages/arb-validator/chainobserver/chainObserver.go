@@ -408,7 +408,7 @@ func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	ckptCtx := ckptcontext.NewCheckpointContext()
 	buf, err := chain.marshalToBytes(ckptCtx)
 	if err != nil {
-		logger.Error().Stack().Err(err).Msg("error")
+		logger.Fatal().Stack().Err(err).Send()
 	}
 	chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx)
 }
