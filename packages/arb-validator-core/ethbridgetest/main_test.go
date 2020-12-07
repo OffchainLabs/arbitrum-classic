@@ -43,33 +43,33 @@ func TestMain(m *testing.M) {
 	auth := bind.NewKeyedTransactor(pks[0])
 	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Fatal().Stack().Err(err).Send()
 	}
 
 	valueTesterAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
 		return ethbridgetestcontracts.DeployValueTester(auth, client)
 	})
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Fatal().Stack().Err(err).Send()
 	}
 
 	messageTesterAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
 		return ethbridgetestcontracts.DeployMessageTester(auth, client)
 	})
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Fatal().Stack().Err(err).Send()
 	}
 
 	client.Commit()
 
 	valueTester, err = ethbridgetestcontracts.NewValueTester(valueTesterAddr, client)
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Fatal().Stack().Err(err).Send()
 	}
 
 	messageTester, err = ethbridgetestcontracts.NewMessageTester(messageTesterAddr, client)
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Fatal().Stack().Err(err).Send()
 	}
 
 	code := m.Run()

@@ -45,7 +45,7 @@ func TestMainSetup(m *testing.T) {
 		return ethbridgetestcontracts.DeployRollupTester(auth, client)
 	})
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Fatal().Stack().Err(err).Send()
 	}
 
 	client.Commit()
@@ -58,12 +58,12 @@ func TestMainSetup(m *testing.T) {
 		"deployedMachineTester",
 	)
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Fatal().Stack().Err(err).Send()
 	}
 
 	tester, err = ethbridgetestcontracts.NewRollupTester(rollupAddr, client)
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Fatal().Stack().Err(err).Send()
 	}
 }
 

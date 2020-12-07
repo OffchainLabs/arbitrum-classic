@@ -191,7 +191,7 @@ func TestNodePruneInfoBase(t *testing.T) {
 
 	params := stakedNodeGraph.GenerateNodePruneInfo()
 	if len(params) != 0 {
-		logger.Error().Msgf("params %v", params)
+		t.Logf("params %v", params)
 		t.Fatal("incorrect results")
 	}
 }
@@ -231,7 +231,7 @@ func TestNodePruneInfo(t *testing.T) {
 
 	params := stakedNodeGraph.GenerateNodePruneInfo()
 	if len(params) != 0 {
-		logger.Error().Msgf("params %v", params)
+		t.Logf("params %v", params)
 		t.Fatal("incorrect results")
 	}
 }
@@ -246,7 +246,7 @@ func TestNodePruneInfo2(t *testing.T) {
 
 	params := stakedNodeGraph.GenerateNodePruneInfo()
 	if len(params) != 0 {
-		logger.Error().Msgf("params %v", params)
+		t.Logf("params %v", params)
 		t.Fatal("incorrect results")
 	}
 }

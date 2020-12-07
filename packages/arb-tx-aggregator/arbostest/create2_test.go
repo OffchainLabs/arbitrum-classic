@@ -157,11 +157,11 @@ func TestCreate2(t *testing.T) {
 	sends := assertion.ParseOutMessages()
 
 	if len(logs) != 4 {
-		logger.Error().Int("count", len(logs)).Msg("Unexpected log count")
+		t.Fatal("Unexpected log count", len(logs))
 	}
 
 	if len(sends) != 0 {
-		logger.Error().Int("count", len(logs)).Msg("Unexpected send count")
+		t.Fatal("Unexpected send count", len(sends))
 	}
 
 	factoryConstructorRes, err := evm.NewTxResultFromValue(logs[0])

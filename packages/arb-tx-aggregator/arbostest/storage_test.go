@@ -86,11 +86,11 @@ func TestGetStorageAt(t *testing.T) {
 	sends := assertion.ParseOutMessages()
 
 	if len(logs) != 3 {
-		logger.Error().Int("count", len(logs)).Msg("Unexpected log count")
+		t.Fatal("unexpected log count", len(logs))
 	}
 
 	if len(sends) != 0 {
-		logger.Error().Int("count", len(logs)).Msg("Unexpected send count")
+		t.Fatal("unexpected send count", len(sends))
 	}
 
 	constructorRes, err := evm.NewTxResultFromValue(logs[0])
@@ -118,7 +118,7 @@ func TestGetStorageAt(t *testing.T) {
 	if storageVal.Cmp(big.NewInt(12345)) != 0 {
 		t.Fatal("expected storage to be 12345 but got", storageVal)
 	}
-	logger.Info().Hex("returnData", getStorageAtRes.ReturnData).Msg("data")
+	t.Logf(hexutil.Encode(getStorageAtRes.ReturnData))
 	failGetStorageAtRes, err := evm.NewTxResultFromValue(logs[2])
 	if err != nil {
 		t.Fatal(err)

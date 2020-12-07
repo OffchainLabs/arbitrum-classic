@@ -46,7 +46,7 @@ func InitiateChallenge(
 
 func LogChallengeResult(err error) {
 	if err != nil {
-		logger.Error().Stack().Err(err).Msg("Failed to initiate challenge")
+		logger.Warn().Stack().Err(err).Msg("Failed to initiate challenge")
 	} else {
 		logger.Info().Msg("Successfully initiated challeng")
 	}

@@ -35,7 +35,7 @@ func SimulatedBackend() (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
 	for i := 0; i < 15; i++ {
 		privateKey, err := crypto.GenerateKey()
 		if err != nil {
-			logger.Fatal().Stack().Err(err).Msg("error")
+			logger.Fatal().Stack().Err(err).Send()
 		}
 		pks = append(pks, privateKey)
 

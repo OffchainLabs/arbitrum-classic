@@ -56,7 +56,7 @@ func FilterEthTxResults(results []*TxResult) []*ProcessedTx {
 		}
 		processed, err := GetTransaction(res)
 		if err != nil {
-			logger.Error().
+			logger.Info().
 				Stack().
 				Err(err).
 				Hex("request", res.IncomingRequest.MessageID.Bytes()).

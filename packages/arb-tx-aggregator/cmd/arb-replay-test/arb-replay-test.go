@@ -14,8 +14,6 @@ import (
 
 	"github.com/c-bata/go-prompt"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -156,7 +154,7 @@ func (a *App) constructors() error {
 		}
 		var contractAddress common.Address
 		copy(contractAddress[:], txRes.ReturnData[12:])
-		logger.Info().Str("Tx", txRes.IncomingRequest.MessageID.String()).Str("address", contractAddress.Hex()).Msg("contract created")
+		logger.Info().Hex("Tx", txRes.IncomingRequest.MessageID.Bytes()).Hex("address", contractAddress.Bytes()).Msg("contract created")
 	}
 	return nil
 }
@@ -166,7 +164,7 @@ func (a *App) getCode(account common.Address) error {
 	if err != nil {
 		return err
 	}
-	logger.Info().Str("code", hexutil.Encode(code))
+	logger.Info().Hex("code", code)
 	return nil
 }
 

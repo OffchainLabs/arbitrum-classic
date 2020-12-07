@@ -77,7 +77,7 @@ func (m *TimeGetterMock) TimestampForBlockHash(context.Context, common.Hash) (*b
 func TestMain(m *testing.M) {
 	code := m.Run()
 	if err := os.RemoveAll(dbPath); err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Fatal().Stack().Err(err).Send()
 	}
 	os.Exit(code)
 }

@@ -232,7 +232,7 @@ func getChallengeInfo(ctx context.Context, client ethutils.EthClient, asserterCl
 	blockId := ethbridge.GetReceiptBlockID(receipt)
 
 	logger.Info().
-		Str("block", blockId.String()).
+		Object("block", blockId).
 		Msg("Starting challenge")
 
 	return challengeAddress, blockId, nil

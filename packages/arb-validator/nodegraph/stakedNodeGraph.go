@@ -113,7 +113,7 @@ func (sng *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
 func (sng *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent) {
 	nd, ok := sng.nodeFromHash[ev.NodeHash]
 	if !ok {
-		logger.Panic().
+		logger.Fatal().
 			Hex("node", ev.NodeHash.Bytes()).
 			Msg("Tried to create stake on bad node")
 	}

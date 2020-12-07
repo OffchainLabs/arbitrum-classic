@@ -180,7 +180,7 @@ func (lis *ValidatorChainListener) AssertionPrepared(
 		go func() {
 			_, err := MakeAssertion(ctx, stakingKey.contract, prepared.Clone(), proof)
 			if err != nil {
-				logger.Error().
+				logger.Warn().
 					Stack().
 					Err(err).
 					Hex("address", stakingAddress.Bytes()).
@@ -231,7 +231,7 @@ func (lis *ValidatorChainListener) AssertionPrepared(
 					lis.Lock()
 					delete(lis.broadcastCreateStakes, stakingAddress)
 					lis.Unlock()
-					logger.Error().Stack().Err(err).Msg("Error placing stake")
+					logger.Warn().Stack().Err(err).Msg("Error placing stake")
 				}
 			}()
 			return
@@ -256,7 +256,7 @@ func (lis *ValidatorChainListener) StakeCreated(
 		if opp != nil {
 			_, err := InitiateChallenge(ctx, lis.actor, opp)
 			if err != nil {
-				logger.Error().
+				logger.Warn().
 					Stack().
 					Err(err).
 					Hex("staker", ev.Staker.Bytes()).
@@ -268,7 +268,7 @@ func (lis *ValidatorChainListener) StakeCreated(
 		if opp != nil {
 			_, err := InitiateChallenge(ctx, lis.actor, opp)
 			if err != nil {
-				logger.Error().
+				logger.Warn().
 					Stack().
 					Err(err).
 					Hex("staker", ev.Staker.Bytes()).
@@ -288,7 +288,7 @@ func (lis *ValidatorChainListener) StakeMoved(
 	if opp != nil {
 		_, err := InitiateChallenge(ctx, lis.actor, opp)
 		if err != nil {
-			logger.Error().
+			logger.Warn().
 				Stack().
 				Err(err).
 				Hex("staker", ev.Staker.Bytes()).
@@ -507,7 +507,7 @@ func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, conf *v
 	go func() {
 		_, err := lis.actor.Confirm(ctx, confClone)
 		if err != nil {
-			logger.Error().Stack().Err(err).Msg("Failed to confirm valid node")
+			logger.Warn().Stack().Err(err).Msg("Failed to confirm valid node")
 			lis.Lock()
 			delete(lis.broadcastConfirmations, confClone.CurrentLatestConfirmed)
 			lis.Unlock()
@@ -536,7 +536,7 @@ func (lis *ValidatorChainListener) PrunableLeafs(ctx context.Context, params []v
 	go func() {
 		_, err := lis.actor.PruneLeaves(ctx, leavesToPrune)
 		if err != nil {
-			logger.Error().Stack().Err(err).Msg("Failed pruning leaves")
+			logger.Warn().Stack().Err(err).Msg("Failed pruning leaves")
 			lis.Lock()
 			for _, prune := range leavesToPrune {
 				delete(lis.broadcastLeafPrunes, prune.LeafHash)
@@ -559,7 +559,7 @@ func (lis *ValidatorChainListener) MootableStakes(ctx context.Context, params []
 				mootCopy.StProof,
 			)
 			if err != nil {
-				logger.Error().
+				logger.Warn().
 					Stack().
 					Err(err).
 					Hex("address", mootCopy.Addr.Bytes()).
@@ -580,7 +580,7 @@ func (lis *ValidatorChainListener) OldStakes(ctx context.Context, params []nodeg
 				oldCopy.Proof,
 			)
 			if err != nil {
-				logger.Error().
+				logger.Warn().
 					Stack().
 					Err(err).
 					Hex("address", oldCopy.Addr.Bytes()).
@@ -641,7 +641,7 @@ func (lis *ValidatorChainListener) AdvancedKnownNode(
 			_, err := lis.actor.MoveStake(ctx, proof1, proof2)
 			lis.Lock()
 			if err != nil {
-				logger.Error().Stack().Err(err).Msg("Failed moving stake")
+				logger.Warn().Stack().Err(err).Msg("Failed moving stake")
 				delete(lis.broadcastMovedStakes, stakingAddr)
 			} else {
 				prevMove, alreadySent := lis.broadcastMovedStakes[stakingAddr]

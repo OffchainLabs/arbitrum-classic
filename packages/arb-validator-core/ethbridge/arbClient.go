@@ -216,7 +216,7 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 			return addr, tx, err
 		}
 
-		logger.Info().RawJSON("tx", txJSON).Str("nonce", "nil").Hex("sender", t.auth.From.Bytes()).Msg("make")
+		logger.Info().RawJSON("tx", txJSON).Str("nonce", "nil").Hex("sender", t.auth.From.Bytes()).Send()
 		return addr, nil, err
 	}
 
@@ -230,7 +230,7 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 	}
 
 	if err != nil {
-		logger.Error().Stack().Err(err).Str("nonce", auth.Nonce.String()).Msg("make")
+		logger.Error().Stack().Err(err).Str("nonce", auth.Nonce.String()).Send()
 		return addr, nil, err
 	}
 
@@ -239,7 +239,7 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 	if err != nil {
 		logger.Error().Stack().Err(err).Str("nonce", auth.Nonce.String()).Msg("failed to marshal tx into json")
 	} else {
-		logger.Info().RawJSON("tx", txJSON).Str("nonce", auth.Nonce.String()).Str("sender", t.auth.From.Hex()).Msg("make")
+		logger.Info().RawJSON("tx", txJSON).Str("nonce", auth.Nonce.String()).Hex("sender", t.auth.From.Bytes()).Send()
 	}
 
 	t.auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))

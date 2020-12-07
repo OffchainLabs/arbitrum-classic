@@ -25,37 +25,45 @@ func TestMachineCreation(t *testing.T) {
 	dePath := "dbPath"
 
 	if err := os.RemoveAll(dePath); err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Error().Stack().Err(err).Send()
+		t.Fatal(err)
 	}
 
 	valueCache, err := NewValueCache()
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Error().Stack().Err(err).Send()
+		t.Fatal(err)
 	}
 
 	mach1, err := New(codeFile)
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Error().Stack().Err(err).Send()
+		t.Fatal(err)
 	}
 
 	checkpointStorage, err := NewCheckpoint("dbPath")
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Error().Stack().Err(err).Send()
+		t.Fatal(err)
 	}
 	if err := checkpointStorage.Initialize(codeFile); err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Error().Stack().Err(err).Send()
+		t.Fatal(err)
 	}
 	defer checkpointStorage.CloseCheckpointStorage()
 	mach2, err := checkpointStorage.GetInitialMachine(valueCache)
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Error().Stack().Err(err).Send()
+		t.Fatal(err)
 	}
 
 	if mach1.Hash() != mach2.Hash() {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Error().Stack().Err(err).Send()
+		t.Fatal(err)
 	}
 
 	if err := os.RemoveAll(dePath); err != nil {
-		logger.Fatal().Stack().Err(err).Msg("error")
+		logger.Error().Stack().Err(err).Send()
+		t.Fatal(err)
 	}
 }
