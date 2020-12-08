@@ -44,7 +44,6 @@ Packed zero_packed(uint64_t sz);
 
 class RawBuffer {
    private:
-    int level;
     bool saved;
     Packed savedHash;
 
@@ -61,6 +60,8 @@ class RawBuffer {
     }*/
 
    public:
+    int level;
+
     RawBuffer(std::shared_ptr<std::vector<RawBuffer> > node_, int level_) : leaf(nullptr), node(node_) {
         // std::cerr << "creating buffer " << level_ << std::endl;
         level = level_;
@@ -175,6 +176,7 @@ class RawBuffer {
     }
 
     uint256_t hash();
+    // uint256_t hash_with_level();
     Packed hash_aux();
 
     std::vector<RawBuffer> serialize(std::vector<unsigned char>& value_vector);
@@ -253,12 +255,11 @@ class Buffer {
 };
 
 inline uint256_t hash(const Buffer& b) {
-    return b.hash();
+    return hash(123, b.hash());
 }
 
-
 inline bool operator==(const Buffer& val1, const Buffer& val2) {
-    return hash(val1) == hash(val2);
+    return val1.hash() == val1.hash();
 }
 
 #endif /* buffer_hpp */

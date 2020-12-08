@@ -95,6 +95,11 @@ uint256_t RawBuffer::hash() {
     return res;
 }
 
+/*
+uint256_t RawBuffer::hash_with_level() {
+    return hash2(level, hash());
+}*/
+
 Packed RawBuffer::hash_aux() {
     if (saved) {
         // std::cerr << "found saved hash" << std::endl;
@@ -144,7 +149,7 @@ RawBuffer RawBuffer::normalize() {
 
 std::vector<RawBuffer> RawBuffer::serialize(std::vector<unsigned char>& value_vector) {
     // first check if it's empty
-    std::cerr << "NSerializing " << size() << ":" << static_cast<uint64_t>(hash()) << " ? " << saved << std::endl;
+    // std::cerr << "NSerializing " << size() << ":" << static_cast<uint64_t>(hash()) << " ? " << saved << std::endl;
     std::vector<RawBuffer> ret{};
     if (hash() == zero_hash(32)) {
         value_vector.push_back(0);
@@ -162,9 +167,9 @@ std::vector<RawBuffer> RawBuffer::serialize(std::vector<unsigned char>& value_ve
     if (level > 0) {
         value_vector.push_back(1);
         for (uint64_t i = 0; i < NODE_SIZE; i++) {
-            uint256_t hash = (*node)[i].hash();
-            std::cerr << "NODE " << size() << ":" << static_cast<uint64_t>(hash) << " ? " << saved << std::endl;
-            marshal_uint256_t(hash, value_vector);
+            uint256_t hash_ = hash2(123, (*node)[i].hash());
+            // std::cerr << "NODE " << size() << ":" << static_cast<uint64_t>(hash) << " ? " << saved << std::endl;
+            marshal_uint256_t(hash_, value_vector);
             // (*node)[i].serialize(value_vector);
             ret.push_back((*node)[i]);
         }
