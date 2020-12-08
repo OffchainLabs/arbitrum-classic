@@ -36,15 +36,22 @@ struct ValueHash {
     uint256_t hash;
 };
 
-using ParsedTupVal = nonstd::variant<uint256_t, CodePointStub, Buffer, ValueHash>;
+struct ParsedBuffer {
+    uint256_t level;
+    std::vector<uint256_t> nodes;
+};
+
+using ParsedTupVal = nonstd::variant<uint256_t, CodePointStub, Buffer, ValueHash, ParsedBuffer >;
 
 using ParsedSerializedVal =
-    nonstd::variant<uint256_t, CodePointStub, Buffer, std::vector<ParsedTupVal>>;
+    nonstd::variant<uint256_t, CodePointStub, Buffer, std::vector<ParsedTupVal>, ParsedBuffer >;
 
 struct ValueBeingParsed {
     value val;
     uint32_t reference_count;
     std::vector<ParsedTupVal> raw_vals;
+    ParsedBuffer buf_vals;
+    RawBuffer buf;
 
     ValueBeingParsed(value&& v, uint32_t count)
         : val{std::move(v)}, reference_count{count}, raw_vals{} {}
@@ -57,6 +64,10 @@ struct ValueBeingParsed {
 };
 
 namespace {
+
+ParsedTupVal parseBuffer(const std::vector<unsigned char>& data) {
+    
+}
 
 std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
     std::vector<ParsedTupVal> return_vector{};
@@ -74,7 +85,7 @@ std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
             case BUFFER: {
                 int len = 0;
                 Buffer res = Buffer::deserialize(buf, len);
-                // std::cerr << "Deserializing " << res.size() << " hash " << res.hash() << std::endl;
+                std::cerr << "Deserializing " << res.size() << " hash " << res.hash() << std::endl;
 
                 return_vector.push_back(res);
                 iter += len + 1;
@@ -184,8 +195,13 @@ std::vector<value> serializeValue(const Buffer&b,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(BUFFER);
-    // std::cerr << "Serializing " << b.size() << " hash " << b.hash() << std::endl;
-    b.serialize(value_vector);
+    std::cerr << "Serializing " << b.size() << " hash " << b.hash() << std::endl;
+    std::vector<RawBuffer> res = b.serialize(value_vector);
+    std::vector<value> ret{};
+    for (int i = 0; i < res.size(); i++) {
+        std::cerr << "Extra\n";
+        ret.push_back(Buffer(res[i]));
+    }
     /*
     std::vector<unsigned char> buf;
     b.serialize(buf);
@@ -193,7 +209,7 @@ std::vector<value> serializeValue(const Buffer&b,
     Buffer res = Buffer::deserialize((char*)(buf.data()), len);
     std::cerr << "Deserializing " << res.size() << " hash " << res.hash() << " Ser size " << buf.size() << " Deser size " << len << std::endl;
     */
-    return {};
+    return ret;
 }
 
 std::vector<value> serializeValue(

@@ -142,12 +142,13 @@ RawBuffer RawBuffer::normalize() {
     return *this;
 }
 
-void RawBuffer::serialize(std::vector<unsigned char>& value_vector) {
+std::vector<RawBuffer> RawBuffer::serialize(std::vector<unsigned char>& value_vector) {
     // first check if it's empty
-    // std::cerr << "NSerializing " << size() << ":" << static_cast<uint64_t>(hash()) << " ? " << saved << std::endl;
+    std::cerr << "NSerializing " << size() << ":" << static_cast<uint64_t>(hash()) << " ? " << saved << std::endl;
+    std::vector<RawBuffer> ret{};
     if (hash() == zero_hash(32)) {
         value_vector.push_back(0);
-        return;
+        return ret;
     }
     // save leaf (just save all the data)
     if (level == 0) {
@@ -157,12 +158,23 @@ void RawBuffer::serialize(std::vector<unsigned char>& value_vector) {
             else value_vector.push_back((*leaf)[i]);
         }
     }
+
     if (level > 0) {
         value_vector.push_back(1);
         for (uint64_t i = 0; i < NODE_SIZE; i++) {
-            (*node)[i].serialize(value_vector);
+            marshal_uint256_t((*node)[i].hash(), value_vector);
+            // (*node)[i].serialize(value_vector);
+            ret.push_back((*node)[i]);
         }
     }
+    return ret;
+}
+
+uint256_t deserializeHash(const char*& bufptr) {
+    auto ret = intx::be::unsafe::load<uint256_t>(
+        reinterpret_cast<const unsigned char*>(bufptr));
+    bufptr += 32;
+    return ret;
 }
 
 RawBuffer RawBuffer::deserialize(const char *buf, int level, int &len) {
@@ -184,11 +196,16 @@ RawBuffer RawBuffer::deserialize(const char *buf, int level, int &len) {
         return RawBuffer(res);
     }
     // node
-    auto res = std::make_shared<std::vector<RawBuffer> >();
+    auto res = std::vector<uint256_t>();
     for (uint64_t i = 0; i < NODE_SIZE; i++) {
+        int nlen = 32;
+        uint256_t hash = deserializeHash(buf);
+        res.push_back(hash);
+        /*
         int nlen = 0;
         res->push_back(RawBuffer::deserialize(buf, level-1, nlen));
         // std::cerr << "deserlen " << i << ": " << nlen << std::endl;
+        */
         len += nlen;
         buf += nlen;
     }

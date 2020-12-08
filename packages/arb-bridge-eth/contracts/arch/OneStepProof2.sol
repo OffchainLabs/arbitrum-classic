@@ -481,9 +481,7 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             function(AssertionContext memory) internal view // impl
         )
     {
-        if (opCode == OP_NEWBUFFER) {
-            return (1, 0, 1, executeNewBuffer);
-        } else if (opCode == OP_GETBUFFER8) {
+        if (opCode == OP_GETBUFFER8) {
             return (2, 0, 10, executeGetBuffer8);
         } else if (opCode == OP_GETBUFFER64) {
             return (2, 0, 10, executeGetBuffer64);
@@ -496,7 +494,8 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         } else if (opCode == OP_SETBUFFER256) {
             return (3, 0, 100, executeSetBuffer256);
         } else {
-            return (0, 0, 0, executeErrorInsn);
+            revert();
+            // return (0, 0, 0, executeErrorInsn);
         }
     }
 }
