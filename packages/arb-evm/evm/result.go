@@ -41,6 +41,7 @@ const (
 	InsufficientTxFundsCode  ResultType = 4
 	BadSequenceCode          ResultType = 5
 	InvalidMessageFormatCode ResultType = 6
+	ContractAlreadyExists    ResultType = 7
 	UnknownErrorCode         ResultType = 255
 )
 
