@@ -99,7 +99,7 @@ func TestRevert(t *testing.T) {
 		log.Println("unxpected send count", len(sends))
 	}
 
-	checkConstructorResult(t, logs[0], connAddr)
+	checkConstructorResult(t, results[0], connAddr)
 	revertedTxCheck(t, results[1])
 
 	correctResult := []byte("this is a test")
