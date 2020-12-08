@@ -20,6 +20,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
+	gethlog "github.com/ethereum/go-ethereum/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -211,6 +212,8 @@ func TestFib(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
+
+	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
 
 	// Enable line numbers in logging
 	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
