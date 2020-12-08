@@ -60,15 +60,16 @@ class RawBuffer {
         saved = false;
     }*/
 
-    RawBuffer(std::shared_ptr<std::vector<uint8_t> > leaf_) : leaf(leaf_), node(nullptr) {
-        // std::cerr << "creating buffer 0" << std::endl;
-        level = 0;
-        saved = false;
-    }
-
+   public:
     RawBuffer(std::shared_ptr<std::vector<RawBuffer> > node_, int level_) : leaf(nullptr), node(node_) {
         // std::cerr << "creating buffer " << level_ << std::endl;
         level = level_;
+        saved = false;
+    }
+
+    RawBuffer(std::shared_ptr<std::vector<uint8_t> > leaf_) : leaf(leaf_), node(nullptr) {
+        // std::cerr << "creating buffer 0" << std::endl;
+        level = 0;
         saved = false;
     }
 
@@ -79,7 +80,6 @@ class RawBuffer {
         savedHash = zero_packed(calc_len(level));
     }
 
-   public:
     RawBuffer() : leaf(nullptr), node(nullptr) {
         // std::cerr << "creating buffer\n";
         level = 0;
@@ -193,17 +193,14 @@ class RawBuffer {
     std::vector<unsigned char> makeProof(uint64_t loc);
     std::vector<unsigned char> makeNormalizationProof();
 
-    static RawBuffer deserialize(const char *buf, int level, int &len);
-
     friend class Buffer;
 
 };
 
 class Buffer {
-   private:
+   public:
     std::shared_ptr<RawBuffer> buf;
 
-   public:
     Buffer(const RawBuffer &buffer) {
         buf = std::make_shared<RawBuffer>(buffer);
     }
@@ -253,11 +250,6 @@ class Buffer {
         return nbuf.serialize(value_vector);
     }
 
-    static Buffer deserialize(const char *buf, int &len) {
-        uint8_t level = buf[0];
-        len++;
-        return Buffer(RawBuffer::deserialize(buf+1, level, len));
-    }
 };
 
 inline uint256_t hash(const Buffer& b) {

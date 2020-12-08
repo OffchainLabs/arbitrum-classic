@@ -37,11 +37,13 @@ struct ValueHash {
 };
 
 struct ParsedBuffer {
-    uint256_t level;
+    uint64_t level;
     std::vector<uint256_t> nodes;
 };
 
 using ParsedTupVal = nonstd::variant<uint256_t, CodePointStub, Buffer, ValueHash, ParsedBuffer >;
+
+using ParsedBufVal = nonstd::variant<Buffer, ParsedBuffer >;
 
 using ParsedSerializedVal =
     nonstd::variant<uint256_t, CodePointStub, Buffer, std::vector<ParsedTupVal>, ParsedBuffer >;
@@ -50,8 +52,8 @@ struct ValueBeingParsed {
     value val;
     uint32_t reference_count;
     std::vector<ParsedTupVal> raw_vals;
-    ParsedBuffer buf_vals;
-    RawBuffer buf;
+    // ParsedBuffer buf_vals;
+    // RawBuffer buf;
 
     ValueBeingParsed(value&& v, uint32_t count)
         : val{std::move(v)}, reference_count{count}, raw_vals{} {}
@@ -65,8 +67,68 @@ struct ValueBeingParsed {
 
 namespace {
 
-ParsedTupVal parseBuffer(const std::vector<unsigned char>& data) {
-    
+ParsedSerializedVal parseBuffer(const char* buf, int &len) {
+    uint8_t level = buf[0];
+    len++;
+    // Empty
+    if (buf[1] == 0) {
+        std::cerr << "Empty " << std::endl;
+        len++;
+        return Buffer(RawBuffer(level, true));
+    }
+    len++;
+    if (level == 0) {
+        std::cerr << "Deserializing leaf " << std::endl;
+        auto res = std::make_shared<std::vector<uint8_t> >();
+        res->resize(LEAF_SIZE, 0);
+        for (uint64_t i = 0; i < LEAF_SIZE; i++) {
+            (*res)[i] = buf[i+2];
+        }
+        len += LEAF_SIZE;
+        return Buffer(RawBuffer(res));
+    }
+    std::cerr << "Deserializing node " << int(level) << std::endl;
+    buf += 2;
+    auto res = std::vector<uint256_t>();
+    for (uint64_t i = 0; i < NODE_SIZE; i++) {
+        uint256_t hash = deserializeUint256t(buf);
+        res.push_back(hash);
+        len += 32;
+    }
+    return ParsedBuffer{level, res};
+}
+
+ParsedTupVal parseBuffer2(const char* buf, int &len) {
+    uint8_t level = buf[0];
+    len++;
+    // Empty
+    if (buf[1] == 0) {
+        std::cerr << "Empty " << std::endl;
+        len++;
+        return Buffer(RawBuffer(level, true));
+    }
+    len++;
+    if (level == 0) {
+        std::cerr << "Deserializing leaf " << std::endl;
+        auto res = std::make_shared<std::vector<uint8_t> >();
+        res->resize(LEAF_SIZE, 0);
+        for (uint64_t i = 0; i < LEAF_SIZE; i++) {
+            (*res)[i] = buf[i+2];
+        }
+        len += LEAF_SIZE;
+        return Buffer(RawBuffer(res));
+    }
+    std::cerr << "Deserializing node " << int(level) << std::endl;
+    buf += 2;
+    auto res = std::vector<uint256_t>();
+    for (uint64_t i = 0; i < NODE_SIZE; i++) {
+        uint256_t hash = deserializeUint256t(buf);
+        std::cerr << "foudn hash " << (void*)buf << " : "<< len << " " << static_cast<uint64_t>(hash) << std::endl;
+        res.push_back(hash);
+        len += 32;
+    }
+    return ParsedBuffer{level, res};
+
 }
 
 std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
@@ -84,8 +146,8 @@ std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
         switch (value_type) {
             case BUFFER: {
                 int len = 0;
-                Buffer res = Buffer::deserialize(buf, len);
-                std::cerr << "Deserializing " << res.size() << " hash " << res.hash() << std::endl;
+                auto res = parseBuffer2(buf, len);
+                std::cerr << "parsed buffer " << len << std::endl;
 
                 return_vector.push_back(res);
                 iter += len + 1;
@@ -135,7 +197,7 @@ ParsedSerializedVal parseRecord(const std::vector<unsigned char>& data) {
         }
         case BUFFER: {
             int len = 0;
-            auto res = Buffer::deserialize(buf, len);
+            auto res = parseBuffer(buf, len);
             // std::cerr << "Deserializing " << res.size() << " hash " << res.hash() << std::endl;
             return res;
         }
@@ -181,7 +243,10 @@ std::vector<value> serializeValue(
             marshal_uint256_t(hash(nested_tup), value_vector);
             ret.push_back(nested);
         } else {
-            serializeValue(nested, value_vector, segment_counts);
+            auto res = serializeValue(nested, value_vector, segment_counts);
+            for (int i = 0; i < res.size(); i++) {
+                ret.push_back(res[i]);
+            }
         }
     }
     return ret;
@@ -196,10 +261,14 @@ std::vector<value> serializeValue(const Buffer&b,
                                   std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(BUFFER);
     std::cerr << "Serializing " << b.size() << " hash " << b.hash() << std::endl;
+    int l1 = value_vector.size();
     std::vector<RawBuffer> res = b.serialize(value_vector);
+    int l2 = value_vector.size();
+    std::cerr << "Serializzed size " << (l2 - l1) << std::endl;
+    int len = 0;
+    parseBuffer2((char*)value_vector.data() + l1, len);
     std::vector<value> ret{};
     for (int i = 0; i < res.size(); i++) {
-        std::cerr << "Extra\n";
         ret.push_back(Buffer(res[i]));
     }
     /*
@@ -228,6 +297,9 @@ void deleteParsedValue(const uint256_t&,
                        std::vector<uint256_t>&,
                        std::map<uint64_t, uint64_t>&) {}
 void deleteParsedValue(const Buffer&,
+                       std::vector<uint256_t>&,
+                       std::map<uint64_t, uint64_t>&) {}
+void deleteParsedValue(const ParsedBuffer&,
                        std::vector<uint256_t>&,
                        std::map<uint64_t, uint64_t>&) {}
 void deleteParsedValue(const CodePointStub& cp,
@@ -266,6 +338,13 @@ GetResults applyValue(value&& val,
 
 GetResults processVal(const Transaction& transaction,
                       const ValueHash& val_hash,
+                      std::vector<ValueBeingParsed>& val_stack,
+                      std::set<uint64_t>& segment_ids,
+                      uint32_t,
+                      ValueCache& val_cache);
+
+GetResults processVal(const Transaction& transaction,
+                      const ParsedBuffer& val_hash,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>& segment_ids,
                       uint32_t,
@@ -320,6 +399,66 @@ GetResults processFirstVal(const Transaction&,
     val_stack.emplace_back(val, reference_count);
 
     return GetResults{reference_count, rocksdb::Status::OK(), {}};
+}
+
+Buffer processBuffer(const Transaction& transaction,
+                           const ParsedBuffer& val,
+                           ValueCache& val_cache) {
+    
+    std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>(NODE_SIZE);
+    for (uint64_t i = 0; i < NODE_SIZE; i++) {
+        auto val_hash = ValueHash{val.nodes[i]};
+        if (auto val = val_cache.loadIfExists(val_hash.hash)) {
+            (*vec)[i] = *(*val).get<Buffer>().buf;
+            continue;
+        }
+
+        // Value not in cache, so need to load from database
+        auto results = getStoredValue(transaction, val_hash);
+        if (!results.status.ok()) {
+            std::cerr << "Error loading buffer record " << static_cast<uint64_t>(val_hash.hash) << std::endl;
+            return Buffer();
+        }
+
+        std::cerr << "Found record " << static_cast<uint64_t>(val_hash.hash) << " len " << results.stored_value.size() << std::endl;
+
+        auto record = parseRecord(results.stored_value);
+
+        std::cerr << "parsed record\n";
+
+        if (nonstd::holds_alternative<Buffer>(record)) {
+            Buffer buf = record.get<Buffer>();
+            val_cache.maybeSave(buf);
+            (*vec)[i] = *buf.buf;
+        } else if (nonstd::holds_alternative<ParsedBuffer>(record)) {
+            Buffer buf = processBuffer(transaction, record.get<ParsedBuffer>(), val_cache);
+            val_cache.maybeSave(buf);
+            (*vec)[i] = *buf.buf;
+        } else {
+            std::cerr << "Error loading buffer from record" << std::endl;
+            return Buffer();
+        }
+    }
+    return Buffer(RawBuffer(vec, val.level));
+}
+
+GetResults processVal(const Transaction& transaction,
+                      const ParsedBuffer& val,
+                      std::vector<ValueBeingParsed>& val_stack,
+                      std::set<uint64_t>&,
+                      uint32_t reference_count,
+                      ValueCache& val_cache) {
+    return applyValue(processBuffer(transaction, val, val_cache), reference_count, val_stack);
+}
+
+GetResults processFirstVal(const Transaction& transaction,
+                           const ParsedBuffer& val,
+                           std::vector<ValueBeingParsed>& val_stack,
+                           std::set<uint64_t>&segs,
+                           uint32_t reference_count,
+                           ValueCache& val_cache) {
+    
+    return applyValue(processBuffer(transaction, val, val_cache), reference_count, val_stack);
 }
 
 GetResults processVal(const Transaction&,
@@ -504,15 +643,18 @@ SaveResults saveValueImpl(Transaction& transaction,
     while (!items_to_save.empty()) {
         auto next_item = std::move(items_to_save.back());
         items_to_save.pop_back();
-        auto hash = hash_value(next_item);
+        auto hash_ = hash_value(next_item);
         std::vector<unsigned char> hash_key;
-        marshal_uint256_t(hash, hash_key);
+        marshal_uint256_t(hash_, hash_key);
         auto key = vecToSlice(hash_key);
         auto results = getRefCountedData(*transaction.transaction, key);
         SaveResults save_ret;
         if (results.status.ok() && results.reference_count > 0) {
             save_ret = incrementReference(*transaction.transaction, key);
         } else {
+            if (nonstd::holds_alternative<Buffer>(next_item)) {
+                std::cerr << "processinf " << static_cast<uint64_t>(hash_value(next_item)) << std::endl;
+            }
             std::vector<unsigned char> value_vector{};
             auto new_items_to_save =
                 serializeValue(next_item, value_vector, segment_counts);

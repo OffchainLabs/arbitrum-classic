@@ -162,55 +162,14 @@ std::vector<RawBuffer> RawBuffer::serialize(std::vector<unsigned char>& value_ve
     if (level > 0) {
         value_vector.push_back(1);
         for (uint64_t i = 0; i < NODE_SIZE; i++) {
-            marshal_uint256_t((*node)[i].hash(), value_vector);
+            uint256_t hash = (*node)[i].hash();
+            std::cerr << "NODE " << size() << ":" << static_cast<uint64_t>(hash) << " ? " << saved << std::endl;
+            marshal_uint256_t(hash, value_vector);
             // (*node)[i].serialize(value_vector);
             ret.push_back((*node)[i]);
         }
     }
     return ret;
-}
-
-uint256_t deserializeHash(const char*& bufptr) {
-    auto ret = intx::be::unsafe::load<uint256_t>(
-        reinterpret_cast<const unsigned char*>(bufptr));
-    bufptr += 32;
-    return ret;
-}
-
-RawBuffer RawBuffer::deserialize(const char *buf, int level, int &len) {
-    // empty
-    if (buf[0] == 0) {
-        len++;
-        return RawBuffer(level, true);
-    }
-    // otherwise buf[0] == 1
-    len++;
-    buf++;
-    if (level == 0) {
-        auto res = std::make_shared<std::vector<uint8_t> >();
-        res->resize(LEAF_SIZE, 0);
-        for (uint64_t i = 0; i < LEAF_SIZE; i++) {
-            (*res)[i] = buf[i];
-        }
-        len += LEAF_SIZE;
-        return RawBuffer(res);
-    }
-    // node
-    auto res = std::vector<uint256_t>();
-    for (uint64_t i = 0; i < NODE_SIZE; i++) {
-        int nlen = 32;
-        uint256_t hash = deserializeHash(buf);
-        res.push_back(hash);
-        /*
-        int nlen = 0;
-        res->push_back(RawBuffer::deserialize(buf, level-1, nlen));
-        // std::cerr << "deserlen " << i << ": " << nlen << std::endl;
-        */
-        len += nlen;
-        buf += nlen;
-    }
-
-    return RawBuffer(res, level);
 }
 
 uint64_t RawBuffer::sizePow2() const {
