@@ -22,7 +22,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"github.com/pkg/errors"
-	"log"
 	"math/big"
 )
 
@@ -48,7 +47,7 @@ func DefendInboxTopClaim(
 	if err != nil {
 		return 0, err
 	}
-	log.Println("=======> defending inbox top claim")
+	logger.Info().Msg("=======> defending inbox top claim")
 
 	return defendInboxTop(
 		reorgCtx,

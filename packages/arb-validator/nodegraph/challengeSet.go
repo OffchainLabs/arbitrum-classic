@@ -17,8 +17,6 @@
 package nodegraph
 
 import (
-	"log"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -36,7 +34,7 @@ func (cs *ChallengeSet) GetSize() int {
 
 func (cs *ChallengeSet) Add(newChallenge *Challenge) {
 	if _, ok := cs.idx[newChallenge.contract]; ok {
-		log.Fatal("tried to insert challenge twice")
+		logger.Fatal().Msg("tried to insert challenge twice")
 	}
 	cs.idx[newChallenge.contract] = newChallenge
 }

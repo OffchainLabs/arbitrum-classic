@@ -20,7 +20,6 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
-	"log"
 	"math/big"
 	"testing"
 	"time"
@@ -69,7 +68,7 @@ func testChallengerCatchUp(t *testing.T, ctx context.Context, client ethutils.Et
 				return
 			}
 			tryCount += 1
-			log.Println("Restarting asserter", err)
+			logger.Warn().Stack().Err(err).Msg("Restarting asserter")
 			cBlockId, err = asserterClient.BlockIdForHeight(ctx, cBlockId.Height)
 			if err != nil {
 				asserterErrChan <- err
@@ -87,7 +86,7 @@ func testChallengerCatchUp(t *testing.T, ctx context.Context, client ethutils.Et
 				return
 			}
 			tryCount += 1
-			log.Println("Restarting asserter", err)
+			logger.Warn().Stack().Err(err).Msg("Restarting asserter")
 			cBlockId, err = asserterClient.BlockIdForHeight(ctx, cBlockId.Height)
 			if err != nil {
 				asserterErrChan <- err
@@ -232,7 +231,9 @@ func getChallengeInfo(ctx context.Context, client ethutils.EthClient, asserterCl
 	challengeAddress := common.NewAddressFromEth(receipt.Logs[0].Address)
 	blockId := ethbridge.GetReceiptBlockID(receipt)
 
-	log.Println("Started challenge at block", blockId)
+	logger.Info().
+		Object("block", blockId).
+		Msg("Starting challenge")
 
 	return challengeAddress, blockId, nil
 }

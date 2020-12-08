@@ -29,7 +29,7 @@ import "C"
 import (
 	"bytes"
 	"github.com/pkg/errors"
-	"log"
+	"github.com/rs/zerolog/log"
 	"runtime"
 	"time"
 	"unsafe"
@@ -40,6 +40,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
+
+var logger = log.With().Caller().Str("component", "cmachine").Logger()
 
 type Machine struct {
 	c unsafe.Pointer
@@ -123,9 +125,9 @@ func makeExecutionAssertion(
 	logsRaw := toByteSlice(assertion.logs)
 	debugPrints := protocol.BytesArrayToVals(toByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
 	if len(debugPrints) > 0 {
-		log.Println("Produced assertion containing debug prints")
+		logger.Debug().Msg("Produced assertion containing debug prints")
 		for _, d := range debugPrints {
-			log.Println("DebugPrint:", d)
+			logger.Debug().Str("DebugPrint", d.String()).Send()
 		}
 	}
 	return protocol.NewExecutionAssertion(

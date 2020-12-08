@@ -23,18 +23,14 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
-	"log"
 	"math/big"
 	"strings"
 	"testing"
@@ -45,100 +41,67 @@ func TestCreate2(t *testing.T) {
 	backend, pks := test.SimulatedBackend()
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	authClient, err := ethbridge.NewEthAuthClient(ctx, client, bind.NewKeyedTransactor(pks[0]))
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	factoryConnAddress, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
 		return arbostestcontracts.DeployCloneFactory(auth, client)
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	cf, err := arbostestcontracts.NewCloneFactory(factoryConnAddress, backend)
-
+	failIfError(t, err)
 	simpleConnAddress, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
 		return arbostestcontracts.DeploySimple(auth, client)
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	backend.Commit()
 
 	tx, err := authClient.MakeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return cf.Create2Clone(auth, simpleConnAddress, big.NewInt(0))
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	backend.Commit()
 
 	receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	ethEv, err := cf.ParseCreatedClone(*receipt.Logs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	cloneConnAddress := ethEv.Clone
-
-	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
 
-	chain := common.RandAddress()
-	sender := authClient.Address()
-
-	factoryConstructorTx := makeConstructorTx(hexutil.MustDecode(arbostestcontracts.CloneFactoryBin), big.NewInt(0), nil)
-
-	simpleConstructorTx := makeConstructorTx(hexutil.MustDecode(arbostestcontracts.SimpleBin), big.NewInt(1), nil)
+	factoryConstructorTx := makeSimpleConstructorTx(hexutil.MustDecode(arbostestcontracts.CloneFactoryBin), big.NewInt(0))
+	simpleConstructorTx := makeSimpleConstructorTx(hexutil.MustDecode(arbostestcontracts.SimpleBin), big.NewInt(1))
 
 	factoryABI, err := abi.JSON(strings.NewReader(arbostestcontracts.CloneFactoryABI))
-	if err != nil {
-		t.Fatal(factoryABI)
-	}
-
-	create2ABI := factoryABI.Methods["create2Clone"]
-	create2Data, err := create2ABI.Inputs.Pack(simpleConnAddress, big.NewInt(0))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
-	if err != nil {
-		t.Fatal(factoryABI)
-	}
-
-	existsABI := simpleABI.Methods["exists"]
-
+	failIfError(t, err)
 	create2Tx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(2),
 		DestAddress: common.NewAddressFromEth(factoryConnAddress),
 		Payment:     big.NewInt(0),
-		Data:        append(hexutil.MustDecode("0xc91091c3"), create2Data...),
+		Data:        makeFuncData(t, factoryABI.Methods["create2Clone"], simpleConnAddress, big.NewInt(0)),
 	}
 
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
+	failIfError(t, err)
+	existsABI := simpleABI.Methods["exists"]
 	existsCloneTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(3),
 		DestAddress: common.NewAddressFromEth(cloneConnAddress),
 		Payment:     big.NewInt(0),
-		Data:        hexutil.MustDecode("0x267c4ae4"),
+		Data:        existsABI.ID,
 	}
 
+	sender := authClient.Address()
 	inboxMessages := []inbox.InboxMessage{
 		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(factoryConstructorTx), sender, big.NewInt(1), chainTime),
@@ -147,97 +110,38 @@ func TestCreate2(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(existsCloneTx), sender, big.NewInt(4), chainTime),
 	}
 
-	// Last parameter returned is number of tests executed
-	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-	//testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.ParseLogs(), assertion.ParseOutMessages())
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//t.Log(string(testCase))
-	logs := assertion.ParseLogs()
-	sends := assertion.ParseOutMessages()
+	logs, _, mach := runAssertion(t, inboxMessages, 4, 0)
+	results := processTxResults(t, logs)
 
-	if len(logs) != 4 {
-		log.Println("unxpected log count", len(logs))
-	}
+	allResultsSucceeded(t, results)
 
-	if len(sends) != 0 {
-		log.Println("unxpected send count", len(sends))
-	}
+	checkConstructorResult(t, results[0], common.NewAddressFromEth(factoryConnAddress))
+	checkConstructorResult(t, results[1], common.NewAddressFromEth(simpleConnAddress))
 
-	factoryConstructorRes, err := evm.NewTxResultFromValue(logs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if factoryConstructorRes.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected constructor result", factoryConstructorRes.ResultCode)
-	}
-	factoryConnAddrCalc, err := getConstructorResult(factoryConstructorRes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if factoryConnAddrCalc.ToEthAddress() != factoryConnAddress {
-		t.Fatal("constructed address doesn't match:", factoryConnAddrCalc, "instead of", factoryConnAddress.Hex())
-	}
-	simpleConstructorRes, err := evm.NewTxResultFromValue(logs[1])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if simpleConstructorRes.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected constructor result", simpleConstructorRes.ResultCode)
-	}
-	simpleConnAddrCalc, err := getConstructorResult(simpleConstructorRes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if simpleConnAddrCalc.ToEthAddress() != simpleConnAddress {
-		t.Fatal("constructed address doesn't match:", simpleConnAddrCalc, "instead of", simpleConnAddress.Hex())
-	}
-
-	create2Res, err := evm.NewTxResultFromValue(logs[2])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if create2Res.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected create2 result", create2Res.ResultCode)
-	}
+	create2Res := results[2]
 	if len(create2Res.EVMLogs) != 1 {
 		t.Fatal("wrong EVM log count")
 	}
-
 	ev, err := cf.ParseCreatedClone(*create2Res.ToEthReceipt(common.Hash{}).Logs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	t.Log("ArbOS clone address:", ev.Clone.Hex())
-
 	if ev.Clone != cloneConnAddress {
 		t.Fatal("incorrect clone address")
 	}
 
-	existsCloneRes, err := evm.NewTxResultFromValue(logs[3])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if existsCloneRes.ResultCode != evm.ReturnCode {
-		t.Fatal("unexpected exists clone result", existsCloneRes.ResultCode)
-	}
-
+	existsCloneRes := results[3]
 	existsCloneOutputs, err := existsABI.Outputs.UnpackValues(existsCloneRes.ReturnData)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if len(existsCloneOutputs) != 1 {
 		t.Fatal("wrong output count")
 	}
 	if existsCloneOutputs[0].(*big.Int).Cmp(big.NewInt(10)) != 0 {
 		t.Fatal("wrong exists clone output")
 	}
+
 	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(4))
 	cloneCode, err := snap.GetCode(common.NewAddressFromEth(cloneConnAddress))
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if len(cloneCode) != 45 {
 		t.Fatal("wrong clone code length")
 	}

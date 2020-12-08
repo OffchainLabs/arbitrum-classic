@@ -18,8 +18,6 @@ package arbbridge
 
 import (
 	"context"
-	"log"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -37,12 +35,12 @@ func HandleBlockchainEvents(
 		defer close(eventChan)
 		headersChan, err := client.SubscribeBlockHeaders(ctx, startBlockId)
 		if err != nil {
-			log.Println("error subscribing to headers", err)
+			logger.Error().Stack().Err(err).Msg("Error subscribing to headers")
 			return
 		}
 		for maybeBlockId := range headersChan {
 			if maybeBlockId.Err != nil {
-				log.Println("error getting header", maybeBlockId.Err)
+				logger.Error().Stack().Err(maybeBlockId.Err).Msg("Error getting header")
 				return
 			}
 
@@ -50,7 +48,7 @@ func HandleBlockchainEvents(
 
 			events, err := contract.GetEvents(ctx, blockId, maybeBlockId.Timestamp)
 			if err != nil {
-				log.Println("error getting events", err)
+				logger.Error().Stack().Err(err).Msg("Error getting events")
 				return
 			}
 

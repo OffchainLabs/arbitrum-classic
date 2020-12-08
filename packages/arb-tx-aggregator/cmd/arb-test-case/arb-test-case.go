@@ -32,6 +32,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
+var logger zerolog.Logger
+
 func main() {
 	// Enable line numbers in logging
 	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
@@ -40,14 +42,14 @@ func main() {
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 
 	// Print line number that log was created on
-	log.Logger = log.With().Caller().Logger()
+	logger = log.With().Caller().Str("component", "arb-test-case").Logger()
 
 	if err := generateTestCase(
 		"http://localhost:7545",
 		common.HexToAddress("0xc68DCee7b8cA57F41D1A417103CB65836E99e013"),
 		arbos.Path(),
 	); err != nil {
-		log.Fatal().Stack().Err(err).Msg("error generating test")
+		logger.Fatal().Stack().Err(err).Msg("error generating test")
 	}
 }
 

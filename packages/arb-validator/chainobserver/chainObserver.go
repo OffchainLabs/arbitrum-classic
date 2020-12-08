@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"context"
 	"github.com/pkg/errors"
-	"log"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"sync"
 	"time"
@@ -37,6 +37,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
+
+var logger = log.With().Caller().Str("component", "chainobserver").Logger()
 
 //go:generate protoc -I. -I ../.. --go_out=paths=source_relative:. chainobserver.proto
 
@@ -406,7 +408,7 @@ func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	ckptCtx := ckptcontext.NewCheckpointContext()
 	buf, err := chain.marshalToBytes(ckptCtx)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Send()
 	}
 	chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx)
 }

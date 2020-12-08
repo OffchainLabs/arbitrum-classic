@@ -22,7 +22,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"log"
 	"math/big"
 	"testing"
 )
@@ -192,7 +191,7 @@ func TestNodePruneInfoBase(t *testing.T) {
 
 	params := stakedNodeGraph.GenerateNodePruneInfo()
 	if len(params) != 0 {
-		log.Println("params ", params)
+		t.Logf("params %v", params)
 		t.Fatal("incorrect results")
 	}
 }
@@ -232,7 +231,7 @@ func TestNodePruneInfo(t *testing.T) {
 
 	params := stakedNodeGraph.GenerateNodePruneInfo()
 	if len(params) != 0 {
-		log.Println("params ", params)
+		t.Logf("params %v", params)
 		t.Fatal("incorrect results")
 	}
 }
@@ -247,7 +246,7 @@ func TestNodePruneInfo2(t *testing.T) {
 
 	params := stakedNodeGraph.GenerateNodePruneInfo()
 	if len(params) != 0 {
-		log.Println("params ", params)
+		t.Logf("params %v", params)
 		t.Fatal("incorrect results")
 	}
 }

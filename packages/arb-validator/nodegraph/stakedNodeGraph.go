@@ -19,7 +19,6 @@ package nodegraph
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"log"
 	"sort"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -114,8 +113,9 @@ func (sng *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
 func (sng *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent) {
 	nd, ok := sng.nodeFromHash[ev.NodeHash]
 	if !ok {
-		log.Println("Bad location", ev.NodeHash)
-		panic("Tried to create stake on bad node")
+		logger.Fatal().
+			Hex("node", ev.NodeHash.Bytes()).
+			Msg("Tried to create stake on bad node")
 	}
 	sng.stakers.Add(&Staker{
 		ev.Staker,
@@ -128,13 +128,23 @@ func (sng *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent) {
 func (sng *StakedNodeGraph) MoveStake(stakerAddr common.Address, nodeHash common.Hash) {
 	staker := sng.stakers.Get(stakerAddr)
 	if staker == nil {
-		log.Fatalf("Moved nonexistant staker %v to node %v", stakerAddr, nodeHash)
+		logger.Fatal().
+			Hex("staker", stakerAddr.Bytes()).
+			Hex("node", nodeHash.Bytes()).
+			Msg("Moved nonexistant staker")
+
+		panic("Will not be reached")
 	}
 	staker.location.RemoveStaker()
 	// no need to consider pruning staker.location, because a successor of it is getting a stake
 	newLocation, ok := sng.nodeFromHash[nodeHash]
 	if !ok {
-		log.Fatalf("Moved staker %v to nonexistant node %v", stakerAddr, nodeHash)
+		logger.Fatal().
+			Hex("staker", stakerAddr.Bytes()).
+			Hex("node", nodeHash.Bytes()).
+			Msg("Moved staker to nonexistant node")
+
+		panic("Will not be reached")
 	}
 	staker.location = newLocation
 	staker.location.AddStaker()

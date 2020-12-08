@@ -28,6 +28,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"time"
 
@@ -42,6 +43,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
+
+var logger = log.With().Caller().Str("component", "aggregator").Logger()
 
 type Server struct {
 	chain              common.Address

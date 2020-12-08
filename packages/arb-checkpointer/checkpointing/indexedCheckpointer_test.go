@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"github.com/pkg/errors"
-	"log"
 	"math/big"
 	"os"
 	"testing"
@@ -78,7 +77,7 @@ func (m *TimeGetterMock) TimestampForBlockHash(context.Context, common.Hash) (*b
 func TestMain(m *testing.M) {
 	code := m.Run()
 	if err := os.RemoveAll(dbPath); err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Send()
 	}
 	os.Exit(code)
 }

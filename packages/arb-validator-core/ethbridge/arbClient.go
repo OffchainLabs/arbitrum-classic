@@ -34,6 +34,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
+var logger = log.With().Caller().Str("component", "ethbridge").Logger()
+
 const (
 	smallNonceRepeatCount = 5
 	smallNonceError       = "Try increasing the gas price or incrementing the nonce."
@@ -107,12 +109,14 @@ func (c *EthArbClient) subscribeBlockHeadersAfter(ctx context.Context, prevBlock
 				}
 
 				if err != nil && err.Error() != ethereum.NotFound.Error() {
-					log.Warn().Stack().Err(err).Int("attempt", fetchErrorCount).Msg("Failed to fetch next header")
+					logger.Warn().Stack().Err(err).Int("attempt", fetchErrorCount).Msg("Failed to fetch next header")
 					fetchErrorCount++
+				} else {
+					fetchErrorCount = 0
 				}
 
 				if fetchErrorCount >= maxFetchAttempts {
-					blockIdChan <- arbbridge.MaybeBlockId{Err: err}
+					blockIdChan <- arbbridge.MaybeBlockId{Err: errors.Wrap(err, "maxFetchAttempts exceeded")}
 					return
 				}
 
@@ -202,23 +206,23 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 	if auth.Nonce == nil {
 		// Not incrementing nonce, so nothing else to do
 		if err != nil {
-			log.Error().Stack().Err(err).Str("nonce", "nil").Msg("error when nonce not set")
+			logger.Error().Stack().Err(err).Str("nonce", "nil").Msg("error when nonce not set")
 			return addr, nil, err
 		}
 
 		txJSON, err := tx.MarshalJSON()
 		if err != nil {
-			log.Error().Stack().Err(err).Str("nonce", "nil").Msg("failed to marshal tx into json")
+			logger.Error().Stack().Err(err).Str("nonce", "nil").Msg("failed to marshal tx into json")
 			return addr, tx, err
 		}
 
-		log.Info().RawJSON("tx", txJSON).Str("nonce", "nil").Hex("sender", t.auth.From.Bytes()).Msg("make")
+		logger.Info().RawJSON("tx", txJSON).Str("nonce", "nil").Hex("sender", t.auth.From.Bytes()).Send()
 		return addr, nil, err
 	}
 
 	for i := 0; i < smallNonceRepeatCount && err != nil && strings.Contains(err.Error(), smallNonceError); i++ {
 		// Increment nonce and try again
-		log.Error().Stack().Err(err).Str("nonce", auth.Nonce.String()).Msg("incrementing nonce and submitting tx again")
+		logger.Error().Stack().Err(err).Str("nonce", auth.Nonce.String()).Msg("incrementing nonce and submitting tx again")
 
 		t.auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
 		auth.Nonce = t.auth.Nonce
@@ -226,16 +230,16 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 	}
 
 	if err != nil {
-		log.Error().Stack().Err(err).Str("nonce", auth.Nonce.String()).Msg("make")
+		logger.Error().Stack().Err(err).Str("nonce", auth.Nonce.String()).Send()
 		return addr, nil, err
 	}
 
 	// Transaction successful, increment nonce for next time
 	txJSON, err := tx.MarshalJSON()
 	if err != nil {
-		log.Error().Stack().Err(err).Str("nonce", auth.Nonce.String()).Msg("failed to marshal tx into json")
+		logger.Error().Stack().Err(err).Str("nonce", auth.Nonce.String()).Msg("failed to marshal tx into json")
 	} else {
-		log.Info().RawJSON("tx", txJSON).Str("nonce", auth.Nonce.String()).Str("sender", t.auth.From.Hex()).Msg("make")
+		logger.Info().RawJSON("tx", txJSON).Str("nonce", auth.Nonce.String()).Hex("sender", t.auth.From.Bytes()).Send()
 	}
 
 	t.auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))

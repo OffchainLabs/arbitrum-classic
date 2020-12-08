@@ -16,6 +16,11 @@
 
 package arbostest
 
-import "github.com/rs/zerolog/log"
+import "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
-var logger = log.With().Caller().Str("component", "arbostest").Logger()
+var (
+	chain        = common.HexToAddress("0x037c4d7bbb0407d1e2c64981855ad8681d0d86d1")
+	sender       = common.HexToAddress("0xe91e00167939cb6694d2c422acd208a007293948")
+	connAddress1 = common.HexToAddress("0x2aad3e8302f74e0818b7bcd10c2c050526707755")
+	connAddress2 = common.HexToAddress("0x016cb751543d1cca5dd02976ac8dbdc0ecaacafd")
+)

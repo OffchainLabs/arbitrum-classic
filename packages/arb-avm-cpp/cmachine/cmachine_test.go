@@ -17,7 +17,6 @@
 package cmachine
 
 import (
-	"log"
 	"os"
 	"testing"
 )
@@ -26,37 +25,45 @@ func TestMachineCreation(t *testing.T) {
 	dePath := "dbPath"
 
 	if err := os.RemoveAll(dePath); err != nil {
-		log.Fatal(err)
+		logger.Error().Stack().Err(err).Send()
+		t.Fatal(err)
 	}
 
 	valueCache, err := NewValueCache()
 	if err != nil {
+		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 
 	mach1, err := New(codeFile)
 	if err != nil {
+		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 
 	checkpointStorage, err := NewCheckpoint("dbPath")
 	if err != nil {
+		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 	if err := checkpointStorage.Initialize(codeFile); err != nil {
+		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 	defer checkpointStorage.CloseCheckpointStorage()
 	mach2, err := checkpointStorage.GetInitialMachine(valueCache)
 	if err != nil {
+		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 
 	if mach1.Hash() != mach2.Hash() {
-		t.Error("Machine hashes not equal")
+		logger.Error().Stack().Err(err).Send()
+		t.Fatal(err)
 	}
 
 	if err := os.RemoveAll(dePath); err != nil {
-		log.Fatal(err)
+		logger.Error().Stack().Err(err).Send()
+		t.Fatal(err)
 	}
 }

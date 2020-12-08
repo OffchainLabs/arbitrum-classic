@@ -21,12 +21,10 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
@@ -41,9 +39,7 @@ func TestContructor(t *testing.T) {
 
 	tx := types.NewContractCreation(0, big.NewInt(0), 1000000, big.NewInt(0), constructorData)
 	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, pks[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	ctx := context.Background()
 	if err := client.SendTransaction(ctx, signedTx); err != nil {
@@ -51,9 +47,7 @@ func TestContructor(t *testing.T) {
 	}
 	client.Commit()
 	ethReceipt, err := client.TransactionReceipt(ctx, signedTx.Hash())
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
@@ -61,37 +55,13 @@ func TestContructor(t *testing.T) {
 	}
 
 	l2Message, err := message.NewL2Message(message.NewCompressedECDSAFromEth(signedTx))
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
-	chain := common.RandAddress()
-	inboxMessages := make([]inbox.InboxMessage, 0)
-	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime))
-	inboxMessages = append(inboxMessages, message.NewInboxMessage(
-		l2Message,
-		common.RandAddress(),
-		big.NewInt(1),
-		chainTime,
-	))
+	inboxMessages := makeSimpleInbox([]message.Message{l2Message})
+	logs, _, mach := runAssertion(t, inboxMessages, 1, 0)
+	results := processTxResults(t, logs)
 
-	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Last parameter returned is number of steps executed
-	assertion, _ := mach.ExecuteAssertion(1000000000, inboxMessages, 0)
-	logs := assertion.ParseLogs()
-
-	if len(logs) != 1 {
-		t.Fatal("unexpected log count", len(logs))
-	}
-
-	res, err := evm.NewTxResultFromValue(logs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	res := results[0]
 
 	if res.ResultCode == evm.ReturnCode {
 		if ethReceipt.Status != 1 {
@@ -110,24 +80,15 @@ func TestContructor(t *testing.T) {
 		return
 	}
 
-	arbAddress, err := getConstructorResult(res)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if arbAddress.ToEthAddress() != ethReceipt.ContractAddress {
-		t.Error("contracts deployed at different addresses")
-	}
+	arbAddress := common.NewAddressFromEth(ethReceipt.ContractAddress)
+	checkConstructorResult(t, res, arbAddress)
 
 	ethCode, err := client.CodeAt(ctx, ethReceipt.ContractAddress, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(9999999))
 	arbCode, err := snap.GetCode(arbAddress)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	if !bytes.Equal(arbCode, ethCode) {
 		t.Error("deployed code is different")

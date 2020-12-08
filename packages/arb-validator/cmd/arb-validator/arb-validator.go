@@ -42,6 +42,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 )
 
+var logger zerolog.Logger
+
 func main() {
 	// Enable line numbers in logging
 	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
@@ -50,22 +52,22 @@ func main() {
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 
 	// Print line number that log was created on
-	log.Logger = log.With().Caller().Logger()
+	logger = log.With().Caller().Str("component", "arb-validator").Logger()
 
 	// Check number of args
 	flag.Parse()
 	switch os.Args[1] {
 	case "create":
 		if err := createRollupChain(); err != nil {
-			log.Fatal().Stack().Err(err).Msg("Error with createRollupChain")
+			logger.Fatal().Stack().Err(err).Msg("Error with createRollupChain")
 		}
 	case "validate":
 		if err := cmdhelper.ValidateRollupChain("arb-validator", createManager); err != nil {
-			log.Fatal().Stack().Err(err).Msg("Error with ValidateRollupChain")
+			logger.Fatal().Stack().Err(err).Msg("Error with ValidateRollupChain")
 		}
 	case "observe":
 		if err := cmdhelper.ObserveRollupChain("arb-validator", createManager); err != nil {
-			log.Fatal().Stack().Err(err).Msg("Error with ObserveRollupChain")
+			logger.Fatal().Stack().Err(err).Msg("Error with ObserveRollupChain")
 		}
 	default:
 	}

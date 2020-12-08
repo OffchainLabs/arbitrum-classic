@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
@@ -39,6 +38,8 @@ import (
 	//_ "net/http/pprof"
 )
 
+var logger zerolog.Logger
+
 func main() {
 	// Enable line numbers in logging
 	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
@@ -47,7 +48,7 @@ func main() {
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 
 	// Print line number that log was created on
-	log.Logger = log.With().Caller().Logger()
+	logger = log.With().Caller().Str("component", "arb-tx-aggregator").Logger()
 
 	ctx := context.Background()
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
@@ -67,11 +68,11 @@ func main() {
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
-		log.Fatal().Stack().Err(err).Msg("Error parsing arguments")
+		logger.Fatal().Stack().Err(err).Msg("Error parsing arguments")
 	}
 
 	if fs.NArg() != 3 {
-		log.Fatal().Msgf(
+		logger.Fatal().Msgf(
 			"usage: arb-tx-aggregator [--maxBatchTime=NumSeconds] %s %s",
 			utils.WalletArgsString,
 			utils.RollupArgsString,
@@ -82,22 +83,22 @@ func main() {
 
 	ethclint, err := ethutils.NewRPCEthClient(rollupArgs.EthURL)
 	if err != nil {
-		log.Fatal().Stack().Err(err).Msg("Error running NewRPcEthClient")
+		logger.Fatal().Stack().Err(err).Msg("Error running NewRPcEthClient")
 	}
 
-	log.Info().Str("chainaddress", rollupArgs.Address.Hex()).Str("chainid", hexutil.Encode(message.ChainAddressToID(rollupArgs.Address).Bytes())).Msg("Launching aggregator")
+	logger.Info().Hex("chainaddress", rollupArgs.Address.Bytes()).Hex("chainid", message.ChainAddressToID(rollupArgs.Address).Bytes()).Msg("Launching aggregator")
 
 	var batcherMode rpc.BatcherMode
 	if *forwardTxURL != "" {
-		log.Info().Str("forwardTxURL", *forwardTxURL).Msg("Aggregator starting in forwarder mode")
+		logger.Info().Str("forwardTxURL", *forwardTxURL).Msg("Aggregator starting in forwarder mode")
 		batcherMode = rpc.ForwarderBatcherMode{NodeURL: *forwardTxURL}
 	} else {
 		auth, err := utils.GetKeystore(rollupArgs.ValidatorFolder, walletArgs, fs)
 		if err != nil {
-			log.Fatal().Stack().Err(err).Msg("Error running GetKeystore")
+			logger.Fatal().Stack().Err(err).Msg("Error running GetKeystore")
 		}
 
-		log.Info().Str("from", auth.From.Hex()).Msg("Aggregator submitting batches")
+		logger.Info().Hex("from", auth.From.Bytes()).Msg("Aggregator submitting batches")
 
 		if err := arbbridge.WaitForBalance(
 			ctx,
@@ -105,7 +106,7 @@ func main() {
 			common.Address{},
 			common.NewAddressFromEth(auth.From),
 		); err != nil {
-			log.Fatal().Stack().Err(err).Msg("error waiting for balance")
+			logger.Fatal().Stack().Err(err).Msg("error waiting for balance")
 		}
 
 		if *keepPendingState {
@@ -130,6 +131,6 @@ func main() {
 		time.Duration(*maxBatchTime)*time.Second,
 		batcherMode,
 	); err != nil {
-		log.Fatal().Stack().Err(err).Msg("Error running LaunchAggregator")
+		logger.Fatal().Stack().Err(err).Msg("Error running LaunchAggregator")
 	}
 }

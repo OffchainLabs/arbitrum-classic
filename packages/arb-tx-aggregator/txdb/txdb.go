@@ -37,10 +37,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/pkg/errors"
-	"log"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"sync"
 )
+
+var logger = log.With().Caller().Str("component", "txdb").Logger()
 
 var snapshotCacheSize = 100
 
@@ -86,8 +88,7 @@ func (db *TxDB) Load(ctx context.Context) error {
 		if err == nil {
 			return nil
 		}
-		log.Println("Error restoring from checkpoint:", err)
-		log.Println("Failed to restore from checkpoint, falling back to fresh start")
+		logger.Error().Stack().Err(err).Msg("Failed to restore from checkpoint, falling back to fresh start")
 	}
 	// We failed to restore from a checkpoint
 	valueCache, err := cmachine.NewValueCache()
@@ -307,7 +308,7 @@ func (db *TxDB) processAssertion(assertion *protocol.ExecutionAssertion) (proces
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
 		if err != nil {
-			log.Println("Error parsing log result", err)
+			logger.Error().Stack().Err(err).Msg("Error parsing log result")
 			continue
 		}
 
@@ -460,6 +461,7 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 		}
 
 		startLog := info.FirstAVMLog().Uint64()
+		// Instead of pulling from DB everytime, should use what we already have
 		txResults, err := db.GetBlockResults(info)
 		if err != nil {
 			return err

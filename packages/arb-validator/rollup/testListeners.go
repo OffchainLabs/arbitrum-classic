@@ -22,11 +22,13 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"log"
+	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
+
+var logger = log.With().Caller().Str("component", "rollup").Logger()
 
 // WARNING: The code in this file is badly behaved, on purpose. It is for testing only.
 //     If you call this in production, you will be sorry.
@@ -63,12 +65,12 @@ func (lis *evil_WrongAssertionListener) AssertionPrepared(
 	switch lis.kind {
 	case WrongInboxTopAssertion:
 		prepared.AssertionStub.AfterInboxHash = badHash
-		log.Println("Prepared EVIL inbox top assertion")
+		logger.Info().Msg("Prepared EVIL inbox top assertion")
 	case WrongExecutionAssertion:
 		prepared.AssertionStub.AfterMachineHash = badHash
-		log.Println("Prepared EVIL execution assertion")
+		logger.Info().Msg("Prepared EVIL execution assertion")
 	default:
-		log.Fatal("unrecognized evil listener type")
+		logger.Fatal().Msg("unrecognized evil listener type")
 	}
 	lis.ValidatorChainListener.AssertionPrepared(ctx, params, nodeGraph, nodeLocation, prepared)
 }

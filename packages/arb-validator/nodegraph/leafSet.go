@@ -17,10 +17,8 @@
 package nodegraph
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"log"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type LeafSet struct {
@@ -44,7 +42,7 @@ func (ll *LeafSet) NumLeaves() int {
 
 func (ll *LeafSet) add(node *structures.Node) {
 	if ll.IsLeaf(node) {
-		log.Fatal("tried to insert leaf twice")
+		logger.Fatal().Msg("tried to insert leaf twice")
 	}
 	ll.idx[node.Hash()] = node
 }

@@ -23,9 +23,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"strings"
 )
+
+var logger = log.With().Caller().Str("component", "evm").Logger()
 
 type Log struct {
 	Address common.Address

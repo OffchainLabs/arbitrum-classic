@@ -32,7 +32,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/pkg/errors"
-	"log"
 	"math/big"
 	"testing"
 )
@@ -44,7 +43,7 @@ func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
 	auth := bind.NewKeyedTransactor(pks[0])
 	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	machineTesterAddr, machineTx, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
@@ -69,7 +68,7 @@ func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
 
 	deployedMachineTester, err := ethbridgetestcontracts.NewMachineTester(machineTesterAddr, client)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	return deployedMachineTester

@@ -18,225 +18,185 @@ package arbostest
 
 import (
 	"bytes"
-	"github.com/pkg/errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-func generateFib(val *big.Int) ([]byte, error) {
+func generateFib(t *testing.T, val *big.Int) []byte {
+	t.Helper()
 	fib, err := abi.JSON(strings.NewReader(arbostestcontracts.FibonacciABI))
-	if err != nil {
-		return nil, err
-	}
+	failIfError(t, err)
+	return makeFuncData(t, fib.Methods["generateFib"], val)
+}
 
-	generateFibABI := fib.Methods["generateFib"]
-	generateFibData, err := generateFibABI.Inputs.Pack(val)
-	if err != nil {
-		return nil, err
+func makeTxCountCall(account common.Address) message.L2Message {
+	call := message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(1000000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
+			Payment:     big.NewInt(0),
+			Data:        snapshot.TransactionCountData(account),
+		},
 	}
+	return message.NewSafeL2Message(call)
+}
 
-	generateSignature, err := hexutil.Decode("0x2ddec39b")
-	if err != nil {
-		return nil, err
+func checkTxCountResult(t *testing.T, res *evm.TxResult, correctCount *big.Int) {
+	t.Helper()
+	succeededTxCheck(t, res)
+	txCount, err := snapshot.ParseTransactionCountResult(res)
+	failIfError(t, err)
+	if correctCount.Cmp(txCount) != 0 {
+		t.Fatal("unexpected tx count")
 	}
-	return append(generateSignature, generateFibData...), nil
 }
 
 func TestTransactionCount(t *testing.T) {
-	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pk, err := crypto.GenerateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
-	chain := common.RandAddress()
 	randDest := common.RandAddress()
-	correctTxCount := 0
+
+	// Valid contract deployment
+	tx1 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(0),
+		DestAddress: common.Address{},
+		Payment:     big.NewInt(0),
+		Data:        hexutil.MustDecode(arbostestcontracts.FibonacciBin),
+	}
+
+	// Valid value tranfer to EOA
+	tx2 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(1),
+		DestAddress: randDest,
+		Payment:     big.NewInt(300),
+		Data:        []byte{},
+	}
+
+	// Invalid sequencer number
+	tx3 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(3),
+		DestAddress: randDest,
+		Payment:     big.NewInt(10),
+		Data:        []byte{},
+	}
+
+	// Insufficient balance
+	tx4 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(2),
+		DestAddress: randDest,
+		Payment:     big.NewInt(30000),
+		Data:        []byte{},
+	}
+
+	// Valid transaction to contract
+	tx5 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(2),
+		DestAddress: connAddress1,
+		Payment:     big.NewInt(300),
+		Data:        generateFib(t, big.NewInt(20)),
+	}
+
+	// Transaction to contract with incorrect sequence number
+	tx6 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(4),
+		DestAddress: connAddress1,
+		Payment:     big.NewInt(300),
+		Data:        generateFib(t, big.NewInt(20)),
+	}
+
+	// Transaction to contract with insufficient balance
+	tx7 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(3),
+		DestAddress: connAddress1,
+		Payment:     big.NewInt(100000),
+		Data:        generateFib(t, big.NewInt(20)),
+	}
 
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
 
-	checkTxCount := func(target int) error {
-		snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(9999999))
-		txCount, err := snap.GetTransactionCount(addr)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if txCount.Cmp(big.NewInt(int64(target))) != 0 {
-			return errors.Errorf("wrong tx count %v", txCount)
-		}
-		t.Log("Current tx count is", txCount)
-		return nil
+	messages := []inbox.InboxMessage{
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(1), chainTime),
+		message.NewInboxMessage(message.Eth{Dest: sender, Value: big.NewInt(1000)}, sender, big.NewInt(2), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(3), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx1), sender, big.NewInt(4), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(5), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx2), sender, big.NewInt(6), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(7), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx3), sender, big.NewInt(8), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(9), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx4), sender, big.NewInt(10), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(11), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx5), sender, big.NewInt(12), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(13), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx6), sender, big.NewInt(14), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(15), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx7), sender, big.NewInt(16), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(17), chainTime),
 	}
 
-	runMessage(t, mach, initMsg(), chain)
+	logs, _, _ := runAssertion(t, messages, len(messages)-2, 0)
+	results := processTxResults(t, logs)
 
-	if err := checkTxCount(0); err != nil {
-		t.Fatal(err)
-	}
-
-	depositEth(t, mach, addr, big.NewInt(1000))
+	checkTxCountResult(t, results[0], big.NewInt(0))
 
 	// Deposit doesn't increase tx count
-	if err := checkTxCount(correctTxCount); err != nil {
-		t.Fatal(err)
-	}
-
-	tx1 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(int64(correctTxCount)),
-		DestAddress: randDest,
-		Payment:     big.NewInt(300),
-		Data:        []byte{},
-	}
-
-	_, err = runValidTransaction(t, mach, tx1, addr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	correctTxCount++
-
-	// Payment to EOA increases tx count
-	if err := checkTxCount(correctTxCount); err != nil {
-		t.Fatal(err)
-	}
-
-	tx2 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(int64(correctTxCount) + 1),
-		DestAddress: randDest,
-		Payment:     big.NewInt(10),
-		Data:        []byte{},
-	}
-
-	runMessage(t, mach, message.NewSafeL2Message(tx2), addr)
-
-	// Payment to EOA with incorrect sequence number shouldn't increase tx count
-	if err := checkTxCount(correctTxCount); err != nil {
-		t.Fatal(err)
-	}
-
-	tx3 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(int64(correctTxCount)),
-		DestAddress: randDest,
-		Payment:     big.NewInt(30000),
-		Data:        []byte{},
-	}
-
-	_, err = runTransaction(t, mach, tx3, addr)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Payment to EOA with insufficient funds shouldn't increase tx count
-	if err := checkTxCount(correctTxCount); err != nil {
-		t.Fatal(err)
-	}
-
-	constructorData, err := hexutil.Decode(arbostestcontracts.FibonacciBin)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	fibAddress, err := deployContract(t, mach, addr, constructorData, big.NewInt(int64(correctTxCount)), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	correctTxCount++
+	checkTxCountResult(t, results[1], big.NewInt(0))
 
 	// Contract deployment increases tx count
-	if err := checkTxCount(correctTxCount); err != nil {
-		t.Fatal(err)
-	}
+	succeededTxCheck(t, results[2])
+	checkTxCountResult(t, results[3], big.NewInt(1))
 
-	fibData, err := generateFib(big.NewInt(20))
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Payment to EOA increases tx count
+	succeededTxCheck(t, results[4])
+	checkTxCountResult(t, results[5], big.NewInt(2))
 
-	generateTx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(int64(correctTxCount)),
-		DestAddress: fibAddress,
-		Payment:     big.NewInt(300),
-		Data:        fibData,
-	}
+	// Payment to EOA with incorrect sequence number shouldn't increase tx count
+	txResultCheck(t, results[6], evm.BadSequenceCode)
+	checkTxCountResult(t, results[7], big.NewInt(2))
 
-	_, err = runValidTransaction(t, mach, generateTx, addr)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Payment to EOA with insufficient funds shouldn't increase tx count
+	txResultCheck(t, results[8], evm.InsufficientTxFundsCode)
+	checkTxCountResult(t, results[9], big.NewInt(2))
 
-	correctTxCount++
-
-	// Tx call increases tx count
-	if err := checkTxCount(correctTxCount); err != nil {
-		t.Fatal(err)
-	}
-
-	generateTx2 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(int64(correctTxCount + 1)),
-		DestAddress: fibAddress,
-		Payment:     big.NewInt(300),
-		Data:        fibData,
-	}
-
-	runMessage(t, mach, message.NewSafeL2Message(generateTx2), addr)
+	// Contract to contract increases tx count
+	succeededTxCheck(t, results[10])
+	checkTxCountResult(t, results[11], big.NewInt(3))
 
 	// Tx call with incorrect sequence number doesn't affect the count
-	if err := checkTxCount(correctTxCount); err != nil {
-		t.Fatal(err)
-	}
-
-	generateTx3 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(int64(correctTxCount)),
-		DestAddress: fibAddress,
-		Payment:     big.NewInt(100000),
-		Data:        fibData,
-	}
-
-	res, err := runTransaction(t, mach, generateTx3, addr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if res.ResultCode != evm.InsufficientTxFundsCode {
-		t.Fatal("incorrect return code", res.ResultCode)
-	}
+	txResultCheck(t, results[12], evm.BadSequenceCode)
+	checkTxCountResult(t, results[13], big.NewInt(3))
 
 	// Tx call with insufficient balance doesn't affect the count
-	if err := checkTxCount(correctTxCount); err != nil {
-		t.Fatal(err)
-	}
+	txResultCheck(t, results[14], evm.InsufficientTxFundsCode)
+	checkTxCountResult(t, results[15], big.NewInt(3))
 }
 
 func makeArbSysTx(data []byte, seq *big.Int) message.Message {
@@ -252,36 +212,17 @@ func makeArbSysTx(data []byte, seq *big.Int) message.Message {
 }
 
 func TestAddressTable(t *testing.T) {
-	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	chain := common.RandAddress()
-	sender := common.RandAddress()
 	targetAddress := common.RandAddress()
 	targetAddress2 := common.RandAddress()
 	targetAddress3 := common.RandAddress()
 	unregisteredAddress := common.RandAddress()
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
 
 	encodedIndex2, err := message.CompressedAddressIndex{Int: big.NewInt(2)}.Encode()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	failIfError(t, err)
 	encodedIndex3, err := message.CompressedAddressIndex{Int: big.NewInt(3)}.Encode()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	failIfError(t, err)
 	encodedAddress3, err := message.CompressedAddressFull{Address: targetAddress3}.Encode()
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	arbSysCalls := [][]byte{
 		// lookup nonexistent key
@@ -316,40 +257,15 @@ func TestAddressTable(t *testing.T) {
 		snapshot.AddressTableCompressData(targetAddress2),
 	}
 
-	inboxMessages := []inbox.InboxMessage{message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime)}
-	inboxSeqNum := int64(1)
 	senderSeq := int64(0)
+	var messages []message.Message
 	for _, msg := range arbSysCalls {
-		inboxMessages = append(inboxMessages, message.NewInboxMessage(makeArbSysTx(msg, big.NewInt(senderSeq)), sender, big.NewInt(inboxSeqNum), chainTime))
-		inboxSeqNum++
+		messages = append(messages, makeArbSysTx(msg, big.NewInt(senderSeq)))
 		senderSeq++
 	}
 
-	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-	logs := assertion.ParseLogs()
-	sends := assertion.ParseOutMessages()
-	//testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//t.Log(string(testCase))
-
-	if len(sends) != 0 {
-		t.Fatal("unxpected send count", len(sends))
-	}
-
-	results := make([]*evm.TxResult, 0, len(logs))
-	for _, avmLog := range logs {
-		res, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			t.Fatal(err)
-		}
-		results = append(results, res)
-	}
-
-	if len(results) != len(arbSysCalls) {
-		t.Fatal("unxpected log count", len(logs))
-	}
+	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), len(arbSysCalls), 0)
+	results := processTxResults(t, logs)
 
 	revertedTxCheck(t, results[0])
 
@@ -426,9 +342,7 @@ func TestAddressTable(t *testing.T) {
 	succeededTxCheck(t, results[13])
 	compressedUnregistereddAddress := returnedBytes(t, results[13])
 	decoded, err := message.DecodeAddress(bytes.NewReader(compressedUnregistereddAddress))
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	addr, ok := decoded.(message.CompressedAddressFull)
 	if !ok {
 		t.Fatal("decoded to wrong type of address")
@@ -440,9 +354,7 @@ func TestAddressTable(t *testing.T) {
 	succeededTxCheck(t, results[14])
 	compressedRegisteredAddress := returnedBytes(t, results[14])
 	decoded, err = message.DecodeAddress(bytes.NewReader(compressedRegisteredAddress))
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	addressIndex, ok := decoded.(message.CompressedAddressIndex)
 	if !ok {
 		t.Fatal("decoded to wrong type of address")
@@ -453,19 +365,8 @@ func TestAddressTable(t *testing.T) {
 }
 
 func TestArbSysBLS(t *testing.T) {
-	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	chain := common.RandAddress()
-	sender := common.RandAddress()
 	x0a, x1a, y0a, y1a := common.RandBigInt(), common.RandBigInt(), common.RandBigInt(), common.RandBigInt()
 	x0b, x1b, y0b, y1b := common.RandBigInt(), common.RandBigInt(), common.RandBigInt(), common.RandBigInt()
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
 
 	arbSysCalls := [][]byte{
 		// Lookup the key for the sender who hasn't registered
@@ -480,40 +381,15 @@ func TestArbSysBLS(t *testing.T) {
 		snapshot.GetBLSPublicKeyData(sender),
 	}
 
-	inboxMessages := []inbox.InboxMessage{message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime)}
-	inboxSeqNum := int64(1)
 	senderSeq := int64(0)
+	var messages []message.Message
 	for _, msg := range arbSysCalls {
-		inboxMessages = append(inboxMessages, message.NewInboxMessage(makeArbSysTx(msg, big.NewInt(senderSeq)), sender, big.NewInt(inboxSeqNum), chainTime))
-		inboxSeqNum++
+		messages = append(messages, makeArbSysTx(msg, big.NewInt(senderSeq)))
 		senderSeq++
 	}
 
-	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-	logs := assertion.ParseLogs()
-	sends := assertion.ParseOutMessages()
-	//testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//t.Log(string(testCase))
-
-	if len(sends) != 0 {
-		t.Fatal("unxpected send count", len(sends))
-	}
-
-	results := make([]*evm.TxResult, 0, len(logs))
-	for _, avmLog := range logs {
-		res, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			t.Fatal(err)
-		}
-		results = append(results, res)
-	}
-
-	if len(results) != len(arbSysCalls) {
-		t.Fatal("unxpected log count", len(logs))
-	}
+	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), len(arbSysCalls), 0)
+	results := processTxResults(t, logs)
 
 	revertedTxCheck(t, results[0])
 
@@ -541,18 +417,6 @@ func TestArbSysBLS(t *testing.T) {
 }
 
 func TestArbSysFunctionTable(t *testing.T) {
-	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	chain := common.RandAddress()
-	sender := common.RandAddress()
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
-
 	functionTable1 := message.FunctionTable{
 		message.NewRandomFunctionTableEntry(),
 		message.NewRandomFunctionTableEntry(),
@@ -562,14 +426,9 @@ func TestArbSysFunctionTable(t *testing.T) {
 	}
 
 	functionTableEncoded1, err := functionTable1.Encode()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	failIfError(t, err)
 	functionTableEncoded2, err := functionTable2.Encode()
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 
 	arbSysCalls := [][]byte{
 		// Get size of non existent table
@@ -590,40 +449,15 @@ func TestArbSysFunctionTable(t *testing.T) {
 		snapshot.FunctionTableGetData(sender, big.NewInt(0)),
 	}
 
-	inboxMessages := []inbox.InboxMessage{message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime)}
-	inboxSeqNum := int64(1)
 	senderSeq := int64(0)
+	var messages []message.Message
 	for _, msg := range arbSysCalls {
-		inboxMessages = append(inboxMessages, message.NewInboxMessage(makeArbSysTx(msg, big.NewInt(senderSeq)), sender, big.NewInt(inboxSeqNum), chainTime))
-		inboxSeqNum++
+		messages = append(messages, makeArbSysTx(msg, big.NewInt(senderSeq)))
 		senderSeq++
 	}
 
-	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-	logs := assertion.ParseLogs()
-	sends := assertion.ParseOutMessages()
-	//testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//t.Log(string(testCase))
-
-	if len(sends) != 0 {
-		t.Fatal("unxpected send count", len(sends))
-	}
-
-	results := make([]*evm.TxResult, 0, len(logs))
-	for _, avmLog := range logs {
-		res, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			t.Fatal(err)
-		}
-		results = append(results, res)
-	}
-
-	if len(results) != len(arbSysCalls) {
-		t.Fatal("unxpected log count", len(logs))
-	}
+	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), len(arbSysCalls), 0)
+	results := processTxResults(t, logs)
 
 	revertedTxCheck(t, results[0])
 
@@ -658,20 +492,6 @@ func TestArbSysFunctionTable(t *testing.T) {
 	}
 }
 
-func revertedTxCheck(t *testing.T, res *evm.TxResult) {
-	if res.ResultCode != evm.RevertCode {
-		t.Log("result", res)
-		t.Fatal("unexpected result", res.ResultCode)
-	}
-}
-
-func succeededTxCheck(t *testing.T, res *evm.TxResult) {
-	if res.ResultCode != evm.ReturnCode {
-		t.Log("result", res)
-		t.Fatal("unexpected result", res.ResultCode)
-	}
-}
-
 func returnedInt(t *testing.T, res *evm.TxResult) *big.Int {
 	if len(res.ReturnData) != 32 {
 		t.Fatal("unexpected return data length")
@@ -695,9 +515,7 @@ func returnedFunctionTableEntry(t *testing.T, res *evm.TxResult) message.Functio
 		t.Fatal("unexpected return data length")
 	}
 	entry, err := snapshot.ParseFunctionTableGetDataResult(res.ReturnData)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	return entry
 }
 

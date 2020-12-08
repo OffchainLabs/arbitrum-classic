@@ -93,7 +93,7 @@ func TransactionCountData(address common.Address) []byte {
 	return makeFuncData(txCountABI, address)
 }
 
-func parseTransactionCountResult(res *evm.TxResult) (*big.Int, error) {
+func ParseTransactionCountResult(res *evm.TxResult) (*big.Int, error) {
 	vals, err := txCountABI.Outputs.UnpackValues(res.ReturnData)
 	if err != nil {
 		return nil, err

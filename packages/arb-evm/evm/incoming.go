@@ -2,11 +2,9 @@ package evm
 
 import (
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/pkg/errors"
-	"log"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/pkg/errors"
 )
 
 type ProcessedTx struct {
@@ -58,7 +56,11 @@ func FilterEthTxResults(results []*TxResult) []*ProcessedTx {
 		}
 		processed, err := GetTransaction(res)
 		if err != nil {
-			log.Println("Couldn't return transaction for request", res.IncomingRequest.MessageID)
+			logger.Info().
+				Stack().
+				Err(err).
+				Hex("request", res.IncomingRequest.MessageID.Bytes()).
+				Msg("Couldn't return transaction for request")
 			continue
 		}
 		filteredResults = append(filteredResults, processed)
