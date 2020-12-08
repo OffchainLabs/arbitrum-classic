@@ -136,16 +136,21 @@ func RunObserver(
 		return nil, err
 	}
 
+	inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
+	if err != nil {
+		logger.Fatal().Stack().Err(err).Send()
+	}
+
 	db := txdb.New(clnt, cp, cp.GetAggregatorStore(), rollupAddr)
+
+	// Make first call to ensureInitialized outside of thread to avoid race conditions
+	if err := ensureInitialized(ctx, cp, db, rollupWatcher, inboxWatcher); err != nil {
+		logger.Fatal().Stack().Err(err).Send()
+	}
 
 	go func() {
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
-
-			inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
-			if err != nil {
-				logger.Fatal().Stack().Err(err).Send()
-			}
 
 			if err := ensureInitialized(ctx, cp, db, rollupWatcher, inboxWatcher); err != nil {
 				logger.Fatal().Stack().Err(err).Send()
