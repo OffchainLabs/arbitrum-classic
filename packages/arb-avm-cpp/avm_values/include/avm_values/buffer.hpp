@@ -259,7 +259,7 @@ inline uint256_t hash(const Buffer& b) {
 }
 
 inline bool operator==(const Buffer& val1, const Buffer& val2) {
-    return val1.hash() == val1.hash();
+    return val1.hash() == val2.hash();
 }
 
 #endif /* buffer_hpp */

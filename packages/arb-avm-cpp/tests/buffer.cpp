@@ -84,7 +84,7 @@ TEST_CASE("Buffer") {
         // std::cerr << intx::to_string(hash_acc(arr, SIZE), 16) << std::endl;
         assert(hash_buffer(arr, 0, 131072, true) == hash_acc(arr, SIZE));
     }
-
+/*
     SECTION("serialize") {
         Buffer buf1;
         Buffer buf2;
@@ -119,5 +119,6 @@ TEST_CASE("Buffer") {
         // std::cerr << intx::to_string(buf2.hash(), 16) << std::endl;
         assert(buf.hash() == buf2.hash());
     }
+    */
 }
 
