@@ -175,6 +175,10 @@ func restoreLatestState(
 	startHeight := bs.MaxBlockStoreHeight()
 	lowestHeight := bs.MinBlockStoreHeight()
 
+	logger.Info().
+		Str("max", bs.MaxBlockStoreHeight().String()).
+		Str("min", bs.MinBlockStoreHeight().String()).
+		Msg("Restoring latest state")
 	for height := startHeight; height.Cmp(lowestHeight) >= 0; height = common.NewTimeBlocks(new(big.Int).Sub(height.AsInt(), big.NewInt(1))) {
 		logger := logger.With().Str("height", height.String()).Logger()
 		onchainId, err := clnt.BlockIdForHeight(ctx, height)
@@ -189,6 +193,7 @@ func restoreLatestState(
 		ckpWithMan := &CheckpointWithManifest{}
 		if err := proto.Unmarshal(blockData, ckpWithMan); err != nil {
 			// If something went wrong, try the next block
+			logger.Warn().Err(err).Msg("Invalid block found when restoring state")
 			continue
 		}
 
@@ -201,6 +206,7 @@ func restoreLatestState(
 			logger.Error().Stack().Err(err).Msg("Failed load checkpoint")
 			continue
 		}
+		logger.Info().Msg("Restored state")
 		return nil
 	}
 	return errNoMatchingCheckpoint
