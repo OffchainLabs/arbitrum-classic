@@ -67,38 +67,7 @@ struct ValueBeingParsed {
 
 namespace {
 
-ParsedSerializedVal parseBuffer(const char* buf, int &len) {
-    uint8_t level = buf[0];
-    len++;
-    // Empty
-    if (buf[1] == 0) {
-        // std::cerr << "Empty " << std::endl;
-        len++;
-        return Buffer(RawBuffer(level, true));
-    }
-    len++;
-    if (level == 0) {
-        // std::cerr << "Deserializing leaf " << std::endl;
-        auto res = std::make_shared<std::vector<uint8_t> >();
-        res->resize(LEAF_SIZE, 0);
-        for (uint64_t i = 0; i < LEAF_SIZE; i++) {
-            (*res)[i] = buf[i+2];
-        }
-        len += LEAF_SIZE;
-        return Buffer(RawBuffer(res));
-    }
-    // std::cerr << "Deserializing node " << int(level) << std::endl;
-    buf += 2;
-    auto res = std::vector<uint256_t>();
-    for (uint64_t i = 0; i < NODE_SIZE; i++) {
-        uint256_t hash = deserializeUint256t(buf);
-        res.push_back(hash);
-        len += 32;
-    }
-    return ParsedBuffer{level, res};
-}
-
-ParsedTupVal parseBuffer2(const char* buf, int &len) {
+template<class T> T parseBuffer(const char* buf, int &len) {
     uint8_t level = buf[0];
     len++;
     // Empty
@@ -146,7 +115,7 @@ std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
         switch (value_type) {
             case BUFFER: {
                 int len = 0;
-                auto res = parseBuffer2(buf, len);
+                auto res = parseBuffer<ParsedTupVal>(buf, len);
                 // std::cerr << "parsed buffer " << len << std::endl;
 
                 return_vector.push_back(res);
@@ -197,7 +166,7 @@ ParsedSerializedVal parseRecord(const std::vector<unsigned char>& data) {
         }
         case BUFFER: {
             int len = 0;
-            auto res = parseBuffer(buf, len);
+            auto res = parseBuffer<ParsedSerializedVal>(buf, len);
             // std::cerr << "Deserializing " << res.size() << " hash " << res.hash() << std::endl;
             return res;
         }
@@ -266,7 +235,7 @@ std::vector<value> serializeValue(const Buffer&b,
     int l2 = value_vector.size();
     // std::cerr << "Serializzed size " << (l2 - l1) << std::endl;
     int len = 0;
-    parseBuffer2((char*)value_vector.data() + l1, len);
+    parseBuffer<ParsedBufVal>((char*)value_vector.data() + l1, len);
     std::vector<value> ret{};
     for (int i = 0; i < res.size(); i++) {
         ret.push_back(Buffer(res[i]));
@@ -299,9 +268,13 @@ void deleteParsedValue(const uint256_t&,
 void deleteParsedValue(const Buffer&,
                        std::vector<uint256_t>&,
                        std::map<uint64_t, uint64_t>&) {}
-void deleteParsedValue(const ParsedBuffer&,
-                       std::vector<uint256_t>&,
-                       std::map<uint64_t, uint64_t>&) {}
+void deleteParsedValue(const ParsedBuffer& parsed,
+                       std::vector<uint256_t>&vals_to_delete,
+                       std::map<uint64_t, uint64_t>&) {
+    for (const auto& val : parsed.nodes) {
+        vals_to_delete.push_back(val);
+    }
+}
 void deleteParsedValue(const CodePointStub& cp,
                        std::vector<uint256_t>&,
                        std::map<uint64_t, uint64_t>& segment_counts) {
@@ -314,6 +287,11 @@ void deleteParsedValue(const std::vector<ParsedTupVal>& tup,
         // We only need to delete tuples since other values are recorded inline
         if (nonstd::holds_alternative<ValueHash>(val)) {
             vals_to_delete.push_back(val.get<ValueHash>().hash);
+        } else if (nonstd::holds_alternative<ParsedBuffer>(val)) {
+            auto parsed = val.get<ParsedBuffer>();
+            for (const auto& val : parsed.nodes) {
+                vals_to_delete.push_back(val);
+            }
         }
     }
 }
