@@ -260,7 +260,7 @@ func NewResultFromValue(val value.Value) (Result, error) {
 		chainInfo, _ := tup.GetByInt64(4)
 		return parseTxResult(l1MsgVal, resultInfo, gasInfo, chainInfo)
 	} else if kindInt.BigInt().Uint64() == 1 {
-		if tup.Len() != 7 {
+		if tup.Len() != 6 {
 			return nil, errors.Errorf("tx result expected tuple of length 6, but received len %v: %v", tup.Len(), tup)
 		}
 

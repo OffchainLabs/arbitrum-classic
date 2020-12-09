@@ -63,7 +63,8 @@ func (b *BlockInfo) LastAVMSend() *big.Int {
 }
 
 func (b *BlockInfo) FirstAVMSend() *big.Int {
-	return new(big.Int).Sub(b.LastAVMSend(), b.BlockStats.AVMSendCount)
+	val := new(big.Int).Sub(b.LastAVMSend(), b.BlockStats.AVMSendCount)
+	return val.Add(val, big.NewInt(1))
 }
 
 func (b *BlockInfo) AsValue() value.Value {
