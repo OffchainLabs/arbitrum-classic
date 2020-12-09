@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -18,6 +19,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
+
+var logger = log.With().Caller().Str("component", "web3").Logger()
 
 type Server struct {
 	srv *aggregator.Server
@@ -142,6 +145,7 @@ func (s *Server) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (he
 func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
 	res, err := s.executeCall(callArgs, blockNum)
 	if err != nil {
+		logger.Warn().Err(err).Msg("error executing call")
 		return nil, err
 	}
 	return res.ReturnData, nil
@@ -151,6 +155,7 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	blockNum := rpc.PendingBlockNumber
 	res, err := s.executeCall(args, &blockNum)
 	if err != nil {
+		logger.Warn().Err(err).Msg("error estimating gas")
 		return 0, err
 	}
 	return hexutil.Uint64(res.GasUsed.Uint64() + 1000000), nil
@@ -460,22 +465,28 @@ func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.T
 
 func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {
 	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
-		return s.srv.PendingSnapshot(), nil
+		pending := s.srv.PendingSnapshot()
+		if pending == nil {
+			return nil, errors.New("couldn't fetch pending snapshot")
+		}
+		return pending, nil
 	}
 
 	if *blockNum == rpc.LatestBlockNumber {
-		return s.srv.LatestSnapshot(), nil
+		snap := s.srv.LatestSnapshot()
+		if snap == nil {
+			return nil, errors.New("couldn't fetch latest snapshot")
+		}
 	}
 
 	snap, err := s.srv.GetSnapshot(uint64(*blockNum))
 	if err != nil {
 		return nil, err
 	}
-	if snap != nil {
-		return snap, nil
+	if snap == nil {
+		return nil, errors.New("unsupported block number")
 	}
-
-	return nil, errors.New("unsupported block number")
+	return snap, nil
 }
 
 func (s *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {

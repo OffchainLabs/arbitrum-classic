@@ -39,8 +39,8 @@ func ensureInitialized(
 	ctx context.Context,
 	cp *checkpointing.IndexedCheckpointer,
 	db *txdb.TxDB,
-	clnt arbbridge.ArbClient,
-	rollupAddr common.Address,
+	rollupWatcher arbbridge.ArbRollupWatcher,
+	inboxWatcher arbbridge.GlobalInboxWatcher,
 ) error {
 	if err := db.Load(ctx); err != nil {
 		return err
@@ -51,22 +51,7 @@ func ensureInitialized(
 		return nil
 	}
 
-	rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
-	if err != nil {
-		return err
-	}
-
-	inboxAddr, err := rollupWatcher.InboxAddress(ctx)
-	if err != nil {
-		return err
-	}
-
-	// We're starting from scratch. Process the messages from the partial block
-	inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
-	if err != nil {
-		return err
-	}
-
+	// Verify contract version
 	valueCache, err := cmachine.NewValueCache()
 	if err != nil {
 		return err
@@ -81,6 +66,7 @@ func ensureInitialized(
 		return err
 	}
 
+	// We're starting from scratch.  Process the messages from initial block
 	_, eventCreated, _, creationTimestamp, err := rollupWatcher.GetCreationInfo(ctx)
 	if err != nil {
 		return err
@@ -95,7 +81,7 @@ func ensureInitialized(
 		return err
 	}
 
-	// filter out events before nextEventId
+	// filter out events before contract was created
 	if len(events) > 0 {
 		startIndex := -1
 		for i, ev := range events {
@@ -150,22 +136,23 @@ func RunObserver(
 		return nil, err
 	}
 
+	inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
+	if err != nil {
+		logger.Fatal().Stack().Err(err).Send()
+	}
+
 	db := txdb.New(clnt, cp, cp.GetAggregatorStore(), rollupAddr)
 
-	if err := ensureInitialized(ctx, cp, db, clnt, rollupAddr); err != nil {
-		return nil, err
+	// Make first call to ensureInitialized outside of thread to avoid race conditions
+	if err := ensureInitialized(ctx, cp, db, rollupWatcher, inboxWatcher); err != nil {
+		logger.Fatal().Stack().Err(err).Send()
 	}
 
 	go func() {
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
 
-			inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
-			if err != nil {
-				logger.Fatal().Stack().Err(err).Send()
-			}
-
-			if err := ensureInitialized(ctx, cp, db, clnt, rollupAddr); err != nil {
+			if err := ensureInitialized(ctx, cp, db, rollupWatcher, inboxWatcher); err != nil {
 				logger.Fatal().Stack().Err(err).Send()
 			}
 
