@@ -17,6 +17,7 @@
 package arbostest
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"math/big"
 	"strings"
 	"testing"
@@ -134,17 +135,19 @@ func TestDeposit(t *testing.T) {
 
 func TestBlocks(t *testing.T) {
 	messages := make([]inbox.InboxMessage, 0)
+	startTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
+	}
+
 	messages = append(
 		messages,
-		message.NewInboxMessage(
-			initMsg(),
-			chain,
-			big.NewInt(0),
-			inbox.ChainTime{
-				BlockNum:  common.NewTimeBlocksInt(0),
-				Timestamp: big.NewInt(0),
-			},
-		),
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), startTime),
+	)
+
+	messages = append(
+		messages,
+		message.NewInboxMessage(message.Eth{Value: big.NewInt(100), Dest: sender}, chain, big.NewInt(0), startTime),
 	)
 
 	blockTimes := make([]inbox.ChainTime, 0)
@@ -160,25 +163,25 @@ func TestBlocks(t *testing.T) {
 		tx := message.Transaction{
 			MaxGas:      big.NewInt(100000000000),
 			GasPriceBid: big.NewInt(0),
-			SequenceNum: big.NewInt(0),
-			DestAddress: common.RandAddress(),
-			Payment:     big.NewInt(0),
-			Data:        []byte{},
+			SequenceNum: big.NewInt(i * 2),
+			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
+			Payment:     big.NewInt(i * 2),
+			Data:        snapshot.WithdrawEthData(common.Address{}),
 		}
 		tx2 := message.Transaction{
 			MaxGas:      big.NewInt(100000000000),
 			GasPriceBid: big.NewInt(0),
-			SequenceNum: big.NewInt(0),
-			DestAddress: common.RandAddress(),
-			Payment:     big.NewInt(0),
-			Data:        []byte{},
+			SequenceNum: big.NewInt(i*2 + 1),
+			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
+			Payment:     big.NewInt(i*2 + 1),
+			Data:        snapshot.WithdrawEthData(common.Address{}),
 		}
 		messages = append(
 			messages,
 			message.NewInboxMessage(
 				message.NewSafeL2Message(tx),
-				common.RandAddress(),
-				big.NewInt(i*2+1),
+				sender,
+				big.NewInt(i*2+2),
 				blockTimes[i],
 			),
 		)
@@ -186,7 +189,7 @@ func TestBlocks(t *testing.T) {
 			messages,
 			message.NewInboxMessage(
 				message.NewSafeL2Message(tx2),
-				common.RandAddress(),
+				sender,
 				big.NewInt(i*2+2),
 				blockTimes[i],
 			),
@@ -194,7 +197,7 @@ func TestBlocks(t *testing.T) {
 	}
 
 	// Last value returned is not an error type
-	avmLogs, _, _ := runAssertion(t, messages, 14, 0)
+	avmLogs, sends, _ := runAssertion(t, messages, 14, 10)
 	results := make([]evm.Result, 0)
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
@@ -258,7 +261,7 @@ func TestBlocks(t *testing.T) {
 			if res.BlockStats.AVMLogCount.Cmp(blockAVMLogCount) != 0 {
 				t.Error("unexpected block log count", res.BlockStats.AVMLogCount, "instead of", blockAVMLogCount)
 			}
-			if res.BlockStats.AVMSendCount.Cmp(big.NewInt(0)) != 0 {
+			if res.BlockStats.AVMSendCount.Cmp(big.NewInt(2)) != 0 {
 				t.Error("unexpected block send count")
 			}
 			if res.BlockStats.EVMLogCount.Cmp(blockEVMLogCount) != 0 {
@@ -274,7 +277,7 @@ func TestBlocks(t *testing.T) {
 			if res.ChainStats.AVMLogCount.Cmp(totalAVMLogCount) != 0 {
 				t.Error("unexpected chain log count", res.ChainStats.AVMLogCount, "instead of", totalAVMLogCount)
 			}
-			if res.ChainStats.AVMSendCount.Cmp(big.NewInt(0)) != 0 {
+			if res.ChainStats.AVMSendCount.Cmp(big.NewInt(int64(blockCount*2)+2)) != 0 {
 				t.Error("unexpected chain send count")
 			}
 			if res.ChainStats.EVMLogCount.Cmp(totalEVMLogCount) != 0 {
@@ -293,7 +296,22 @@ func TestBlocks(t *testing.T) {
 		}
 	}
 
-	for _, block := range blocks {
+	parsedSends := make([]message.Eth, 0)
+	for _, send := range sends {
+		outMsg, err := message.NewOutMessageFromValue(send)
+		failIfError(t, err)
+
+		if outMsg.Kind != message.EthType {
+			t.Fatal("outgoing message had wrong type", outMsg.Kind)
+		}
+
+		if outMsg.Sender != sender {
+			t.Fatal("wrong withdraw sender")
+		}
+		parsedSends = append(parsedSends, message.NewEthFromData(outMsg.Data))
+	}
+
+	for blockIndex, block := range blocks {
 		txCount := block.BlockStats.TxCount.Uint64()
 		startLog := block.FirstAVMLog().Uint64()
 		for i := uint64(0); i < txCount; i++ {
@@ -306,6 +324,19 @@ func TestBlocks(t *testing.T) {
 			}
 			if txRes.IncomingRequest.ChainTime.Timestamp.Cmp(block.Timestamp) != 0 {
 				t.Error("tx in block had wrong timestamp")
+			}
+		}
+
+		sendCount := block.BlockStats.AVMSendCount.Uint64()
+		startSend := block.FirstAVMSend().Uint64()
+		if sendCount != 2 {
+			t.Fatal("wrong send count")
+		}
+
+		for i := uint64(0); i < sendCount; i++ {
+			send := parsedSends[startSend+i]
+			if send.Value.Cmp(big.NewInt(int64(blockIndex*int(i)))) != 0 {
+				t.Fatal("wrong send value", send.Value)
 			}
 		}
 	}
