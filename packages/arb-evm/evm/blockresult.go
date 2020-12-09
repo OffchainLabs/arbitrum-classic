@@ -43,11 +43,12 @@ func (os *OutputStatistics) AsValue() value.Value {
 }
 
 type BlockInfo struct {
-	BlockNum   *big.Int
-	Timestamp  *big.Int
-	GasLimit   *big.Int
-	BlockStats *OutputStatistics
-	ChainStats *OutputStatistics
+	BlockNum      *big.Int
+	Timestamp     *big.Int
+	GasLimit      *big.Int
+	BlockStats    *OutputStatistics
+	ChainStats    *OutputStatistics
+	PreviousBlock *big.Int
 }
 
 func (b *BlockInfo) LastAVMLog() *big.Int {
@@ -75,11 +76,19 @@ func (b *BlockInfo) AsValue() value.Value {
 		value.NewIntValue(b.GasLimit),
 		b.BlockStats.AsValue(),
 		b.ChainStats.AsValue(),
+		value.NewIntValue(b.PreviousBlock),
 	})
 	return tup
 }
 
-func parseBlockResult(blockNum value.Value, timestamp value.Value, gasLimit value.Value, blockStatsRaw value.Value, chainStatsRaw value.Value) (*BlockInfo, error) {
+func parseBlockResult(
+	blockNum value.Value,
+	timestamp value.Value,
+	gasLimit value.Value,
+	blockStatsRaw value.Value,
+	chainStatsRaw value.Value,
+	previousBlock value.Value,
+) (*BlockInfo, error) {
 	blockNumInt, ok := blockNum.(value.IntValue)
 	if !ok {
 		return nil, errors.New("blockNum must be an int")
@@ -102,12 +111,18 @@ func parseBlockResult(blockNum value.Value, timestamp value.Value, gasLimit valu
 		return nil, err
 	}
 
+	previousBlockInt, ok := previousBlock.(value.IntValue)
+	if !ok {
+		return nil, errors.New("previousBlock must be an int")
+	}
+
 	return &BlockInfo{
-		BlockNum:   blockNumInt.BigInt(),
-		Timestamp:  timestampInt.BigInt(),
-		GasLimit:   gasLimitInt.BigInt(),
-		BlockStats: blockStats,
-		ChainStats: chainStats,
+		BlockNum:      blockNumInt.BigInt(),
+		Timestamp:     timestampInt.BigInt(),
+		GasLimit:      gasLimitInt.BigInt(),
+		BlockStats:    blockStats,
+		ChainStats:    chainStats,
+		PreviousBlock: previousBlockInt.BigInt(),
 	}, nil
 }
 
