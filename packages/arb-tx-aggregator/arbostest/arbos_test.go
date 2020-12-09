@@ -215,6 +215,8 @@ func TestBlocks(t *testing.T) {
 	prevBlockNum := abi.MaxUint256
 	blockCount := 0
 
+	blocks := make([]*evm.BlockInfo, 0)
+
 	for i, res := range results {
 		totalAVMLogCount = totalAVMLogCount.Add(totalAVMLogCount, big.NewInt(1))
 
@@ -237,6 +239,7 @@ func TestBlocks(t *testing.T) {
 			if !ok {
 				t.Fatal("incorrect result type")
 			}
+			blocks = append(blocks, res)
 			if res.PreviousBlock.Cmp(prevBlockNum) != 0 {
 				t.Error("unexpected previous block")
 			}
@@ -287,6 +290,23 @@ func TestBlocks(t *testing.T) {
 			blockTxCount = big.NewInt(0)
 			prevBlockNum = res.BlockNum
 			blockCount++
+		}
+	}
+
+	for _, block := range blocks {
+		txCount := block.BlockStats.TxCount.Uint64()
+		startLog := block.FirstAVMLog().Uint64()
+		for i := uint64(0); i < txCount; i++ {
+			txRes, ok := results[startLog+i].(*evm.TxResult)
+			if !ok {
+				t.Fatal("block results must be tx results")
+			}
+			if txRes.IncomingRequest.ChainTime.BlockNum.AsInt().Cmp(block.BlockNum) != 0 {
+				t.Error("tx in block had wrong block num")
+			}
+			if txRes.IncomingRequest.ChainTime.Timestamp.Cmp(block.Timestamp) != 0 {
+				t.Error("tx in block had wrong timestamp")
+			}
 		}
 	}
 }
