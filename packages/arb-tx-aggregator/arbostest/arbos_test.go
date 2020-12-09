@@ -215,6 +215,7 @@ func TestBlocks(t *testing.T) {
 	totalEVMLogCount := big.NewInt(0)
 	totalTxCount := big.NewInt(0)
 	blockCount := 0
+	prevBlockNum := abi.MaxUint256
 
 	blocks := make([]*evm.BlockInfo, 0)
 
@@ -286,10 +287,15 @@ func TestBlocks(t *testing.T) {
 				t.Error("incorrect last log")
 			}
 
+			if res.PreviousHeight.Cmp(prevBlockNum) != 0 {
+				t.Error("incorrect prev block num")
+			}
+
 			blockGasUsed = big.NewInt(0)
 			blockAVMLogCount = big.NewInt(0)
 			blockEVMLogCount = big.NewInt(0)
 			blockTxCount = big.NewInt(0)
+			prevBlockNum = res.BlockNum
 			blockCount++
 		}
 	}

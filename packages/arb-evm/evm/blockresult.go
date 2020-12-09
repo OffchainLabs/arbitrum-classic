@@ -43,11 +43,12 @@ func (os *OutputStatistics) AsValue() value.Value {
 }
 
 type BlockInfo struct {
-	BlockNum   *big.Int
-	Timestamp  *big.Int
-	GasLimit   *big.Int
-	BlockStats *OutputStatistics
-	ChainStats *OutputStatistics
+	BlockNum       *big.Int
+	Timestamp      *big.Int
+	GasLimit       *big.Int
+	BlockStats     *OutputStatistics
+	ChainStats     *OutputStatistics
+	PreviousHeight *big.Int
 }
 
 func (b *BlockInfo) LastAVMLog() *big.Int {
@@ -87,6 +88,7 @@ func parseBlockResult(
 	gasLimit value.Value,
 	blockStatsRaw value.Value,
 	chainStatsRaw value.Value,
+	previousHeight value.Value,
 ) (*BlockInfo, error) {
 	blockNumInt, ok := blockNum.(value.IntValue)
 	if !ok {
@@ -109,13 +111,18 @@ func parseBlockResult(
 	if err != nil {
 		return nil, err
 	}
+	previousHeightInt, ok := previousHeight.(value.IntValue)
+	if !ok {
+		return nil, errors.New("previousHeight must be an int")
+	}
 
 	return &BlockInfo{
-		BlockNum:   blockNumInt.BigInt(),
-		Timestamp:  timestampInt.BigInt(),
-		GasLimit:   gasLimitInt.BigInt(),
-		BlockStats: blockStats,
-		ChainStats: chainStats,
+		BlockNum:       blockNumInt.BigInt(),
+		Timestamp:      timestampInt.BigInt(),
+		GasLimit:       gasLimitInt.BigInt(),
+		BlockStats:     blockStats,
+		ChainStats:     chainStats,
+		PreviousHeight: previousHeightInt.BigInt(),
 	}, nil
 }
 

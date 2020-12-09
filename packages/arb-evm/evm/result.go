@@ -260,8 +260,8 @@ func NewResultFromValue(val value.Value) (Result, error) {
 		chainInfo, _ := tup.GetByInt64(4)
 		return parseTxResult(l1MsgVal, resultInfo, gasInfo, chainInfo)
 	} else if kindInt.BigInt().Uint64() == 1 {
-		if tup.Len() != 6 {
-			return nil, errors.Errorf("tx result expected tuple of length 6, but received len %v: %v", tup.Len(), tup)
+		if tup.Len() != 7 {
+			return nil, errors.Errorf("tx result expected tuple of length 7, but received len %v: %v", tup.Len(), tup)
 		}
 
 		// Tuple size already verified above, so error can be ignored
@@ -270,8 +270,9 @@ func NewResultFromValue(val value.Value) (Result, error) {
 		gasLimit, _ := tup.GetByInt64(3)
 		blockStatsRaw, _ := tup.GetByInt64(4)
 		chainStatsRaw, _ := tup.GetByInt64(5)
+		previousHeight, _ := tup.GetByInt64(6)
 
-		return parseBlockResult(blockNum, timestamp, gasLimit, blockStatsRaw, chainStatsRaw)
+		return parseBlockResult(blockNum, timestamp, gasLimit, blockStatsRaw, chainStatsRaw, previousHeight)
 	} else {
 		return nil, errors.New("unknown result kind")
 	}
