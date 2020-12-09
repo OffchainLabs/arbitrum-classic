@@ -11,6 +11,9 @@ var logger = log.With().Caller().Str("component", "arbos").Logger()
 
 var ARB_SYS_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000064")
 var ARB_INFO_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000065")
+var ARB_ADDRESS_TABLE_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000066")
+var ARB_BLS_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000067")
+var ARB_FUNCTION_TABLE_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000068")
 
 func Path() string {
 	_, filename, _, ok := runtime.Caller(0)

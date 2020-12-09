@@ -199,12 +199,12 @@ func TestTransactionCount(t *testing.T) {
 	checkTxCountResult(t, results[15], big.NewInt(3))
 }
 
-func makeArbSysTx(data []byte, seq *big.Int) message.Message {
+func makeSyscallTx(data []byte, seq *big.Int, addr common.Address) message.Message {
 	tx := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: seq,
-		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
+		DestAddress: addr,
 		Payment:     big.NewInt(0),
 		Data:        data,
 	}
@@ -224,7 +224,7 @@ func TestAddressTable(t *testing.T) {
 	encodedAddress3, err := message.CompressedAddressFull{Address: targetAddress3}.Encode()
 	failIfError(t, err)
 
-	arbSysCalls := [][]byte{
+	addressTableCalls := [][]byte{
 		// lookup nonexistent key
 		snapshot.AddressTableLookupData(targetAddress),
 		// register that key
@@ -259,12 +259,12 @@ func TestAddressTable(t *testing.T) {
 
 	senderSeq := int64(0)
 	var messages []message.Message
-	for _, msg := range arbSysCalls {
-		messages = append(messages, makeArbSysTx(msg, big.NewInt(senderSeq)))
+	for _, msg := range addressTableCalls {
+		messages = append(messages, makeSyscallTx(msg, big.NewInt(senderSeq), common.NewAddressFromEth(arbos.ARB_ADDRESS_TABLE_ADDRESS)))
 		senderSeq++
 	}
 
-	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), len(arbSysCalls), 0)
+	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), len(addressTableCalls), 0)
 	results := processTxResults(t, logs)
 
 	revertedTxCheck(t, results[0])
@@ -384,7 +384,7 @@ func TestArbSysBLS(t *testing.T) {
 	senderSeq := int64(0)
 	var messages []message.Message
 	for _, msg := range arbSysCalls {
-		messages = append(messages, makeArbSysTx(msg, big.NewInt(senderSeq)))
+		messages = append(messages, makeSyscallTx(msg, big.NewInt(senderSeq), common.NewAddressFromEth(arbos.ARB_BLS_ADDRESS)))
 		senderSeq++
 	}
 
@@ -452,7 +452,7 @@ func TestArbSysFunctionTable(t *testing.T) {
 	senderSeq := int64(0)
 	var messages []message.Message
 	for _, msg := range arbSysCalls {
-		messages = append(messages, makeArbSysTx(msg, big.NewInt(senderSeq)))
+		messages = append(messages, makeSyscallTx(msg, big.NewInt(senderSeq), common.NewAddressFromEth(arbos.ARB_FUNCTION_TABLE_ADDRESS)))
 		senderSeq++
 	}
 
