@@ -55,7 +55,9 @@ func (b *BlockInfo) LastAVMLog() *big.Int {
 }
 
 func (b *BlockInfo) FirstAVMLog() *big.Int {
-	return new(big.Int).Sub(b.LastAVMLog(), b.BlockStats.AVMLogCount)
+	val := new(big.Int).Sub(b.ChainStats.AVMLogCount, b.BlockStats.AVMLogCount)
+	// Move back one further to account for the block log itself
+	return val.Sub(val, big.NewInt(1))
 }
 
 func (b *BlockInfo) LastAVMSend() *big.Int {
@@ -63,8 +65,7 @@ func (b *BlockInfo) LastAVMSend() *big.Int {
 }
 
 func (b *BlockInfo) FirstAVMSend() *big.Int {
-	val := new(big.Int).Sub(b.LastAVMSend(), b.BlockStats.AVMSendCount)
-	return val.Add(val, big.NewInt(1))
+	return new(big.Int).Sub(b.ChainStats.AVMSendCount, b.BlockStats.AVMSendCount)
 }
 
 func (b *BlockInfo) AsValue() value.Value {
