@@ -162,8 +162,8 @@ func TestBlocks(t *testing.T) {
 				common.RandAddress(),
 				big.NewInt(i+1),
 				inbox.ChainTime{
-					BlockNum:  common.NewTimeBlocksInt(i + 1),
-					Timestamp: big.NewInt(10 + i + 1),
+					BlockNum:  common.NewTimeBlocksInt(i*2 + 1),
+					Timestamp: big.NewInt(10 + i*2 + 1),
 				},
 			),
 		)
@@ -181,6 +181,8 @@ func TestBlocks(t *testing.T) {
 	totalAVMLogCount := big.NewInt(0)
 	totalEVMLogCount := big.NewInt(0)
 	totalTxCount := big.NewInt(0)
+	prevBlockNum := abi.MaxUint256
+
 	for i, avmLog := range avmLogs {
 		totalAVMLogCount = totalAVMLogCount.Add(totalAVMLogCount, big.NewInt(1))
 		res, err := evm.NewResultFromValue(avmLog)
@@ -205,11 +207,14 @@ func TestBlocks(t *testing.T) {
 			if !ok {
 				t.Fatal("incorrect result type")
 			}
-			if res.BlockNum.Cmp(big.NewInt(int64(i/2+1))) != 0 {
-				t.Error("unexpected block height")
+			if res.PreviousBlock.Cmp(prevBlockNum) != 0 {
+				t.Error("unexpected previous block")
 			}
-			if res.Timestamp.Cmp(big.NewInt(int64(10+i/2+1))) != 0 {
-				t.Error("unexpected block height")
+			if res.BlockNum.Cmp(big.NewInt(int64(i))) != 0 {
+				t.Error("unexpected block height", res.BlockNum, i)
+			}
+			if res.Timestamp.Cmp(big.NewInt(int64(10+i))) != 0 {
+				t.Error("unexpected timestamp", res.Timestamp, 10+i)
 			}
 
 			if res.BlockStats.GasUsed.Cmp(blockGasUsed) != 0 {
@@ -248,6 +253,7 @@ func TestBlocks(t *testing.T) {
 			blockAVMLogCount = big.NewInt(0)
 			blockEVMLogCount = big.NewInt(0)
 			blockTxCount = big.NewInt(0)
+			prevBlockNum = res.BlockNum
 		}
 	}
 }
