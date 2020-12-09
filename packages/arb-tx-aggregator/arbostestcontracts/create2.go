@@ -27,7 +27,7 @@ var (
 )
 
 // CloneFactoryABI is the input ABI used to generate the binding from.
-const CloneFactoryABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"clone\",\"type\":\"address\"}],\"name\":\"CreatedClone\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"salt\",\"type\":\"uint256\"}],\"name\":\"create2Clone\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const CloneFactoryABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"clone\",\"type\":\"address\"}],\"name\":\"CreatedClone\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"salt\",\"type\":\"uint256\"}],\"name\":\"create2Clone\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // CloneFactoryFuncSigs maps the 4-byte function signature to its string representation.
 var CloneFactoryFuncSigs = map[string]string{
@@ -35,7 +35,7 @@ var CloneFactoryFuncSigs = map[string]string{
 }
 
 // CloneFactoryBin is the compiled bytecode used for deploying new contracts.
-var CloneFactoryBin = "0x6080604052348015600f57600080fd5b5061011f8061001f6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063c91091c314602d575b600080fd5b605660048036036040811015604157600080fd5b506001600160a01b0381351690602001356058565b005b60008260601b90506000604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b81528260148201526e5af43d82803e903d91602b57fd5bf360881b6028820152836037826000f5604080516001600160a01b038316815290519193507f8bbdbba0e10077e3bdd81d5076242c5eca7c410250c1bf0ff4a0d8e40a6a8b31925081900360200190a15050505056fea265627a7a72315820be8f54da8b801da2ace46f4a0fdc5063686c9c9ecdc98934e46cafdd0f2d0a3964736f6c63430005110032"
+var CloneFactoryBin = "0x608060405234801561001057600080fd5b50610142806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c8063c91091c314610030575b600080fd5b61005c6004803603604081101561004657600080fd5b506001600160a01b038135169060200135610078565b604080516001600160a01b039092168252519081900360200190f35b6000808360601b90506000604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b81528260148201526e5af43d82803e903d91602b57fd5bf360881b6028820152846037826000f5604080516001600160a01b038316815290519193507f8bbdbba0e10077e3bdd81d5076242c5eca7c410250c1bf0ff4a0d8e40a6a8b31925081900360200190a194935050505056fea265627a7a723158203a8429cd04e6f17e78f0d9365e7eb9d50cfddf8083fcc2c3b76bfae6e360373564736f6c63430005110032"
 
 // DeployCloneFactory deploys a new Ethereum contract, binding an instance of CloneFactory to it.
 func DeployCloneFactory(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *CloneFactory, error) {
@@ -195,21 +195,21 @@ func (_CloneFactory *CloneFactoryTransactorRaw) Transact(opts *bind.TransactOpts
 
 // Create2Clone is a paid mutator transaction binding the contract method 0xc91091c3.
 //
-// Solidity: function create2Clone(address target, uint256 salt) returns()
+// Solidity: function create2Clone(address target, uint256 salt) returns(address)
 func (_CloneFactory *CloneFactoryTransactor) Create2Clone(opts *bind.TransactOpts, target common.Address, salt *big.Int) (*types.Transaction, error) {
 	return _CloneFactory.contract.Transact(opts, "create2Clone", target, salt)
 }
 
 // Create2Clone is a paid mutator transaction binding the contract method 0xc91091c3.
 //
-// Solidity: function create2Clone(address target, uint256 salt) returns()
+// Solidity: function create2Clone(address target, uint256 salt) returns(address)
 func (_CloneFactory *CloneFactorySession) Create2Clone(target common.Address, salt *big.Int) (*types.Transaction, error) {
 	return _CloneFactory.Contract.Create2Clone(&_CloneFactory.TransactOpts, target, salt)
 }
 
 // Create2Clone is a paid mutator transaction binding the contract method 0xc91091c3.
 //
-// Solidity: function create2Clone(address target, uint256 salt) returns()
+// Solidity: function create2Clone(address target, uint256 salt) returns(address)
 func (_CloneFactory *CloneFactoryTransactorSession) Create2Clone(target common.Address, salt *big.Int) (*types.Transaction, error) {
 	return _CloneFactory.Contract.Create2Clone(&_CloneFactory.TransactOpts, target, salt)
 }

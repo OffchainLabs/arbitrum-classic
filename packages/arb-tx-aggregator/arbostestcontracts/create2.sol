@@ -21,7 +21,7 @@ pragma solidity ^0.5.17;
 contract CloneFactory {
     event CreatedClone(address clone);
 
-    function create2Clone(address target, uint256 salt) external {
+    function create2Clone(address target, uint256 salt) external returns (address) {
         bytes20 targetBytes = bytes20(target);
         address result;
         assembly {
@@ -35,5 +35,6 @@ contract CloneFactory {
             result := create2(0, clone, 0x37, salt)
         }
         emit CreatedClone(result);
+        return result;
     }
 }
