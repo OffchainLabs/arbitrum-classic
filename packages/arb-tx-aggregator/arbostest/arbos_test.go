@@ -146,8 +146,26 @@ func TestBlocks(t *testing.T) {
 			},
 		),
 	)
+
+	blockTimes := make([]inbox.ChainTime, 0)
+	for i := int64(0); i < 5; i++ {
+		time := inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocksInt(1 + i),
+			Timestamp: big.NewInt(10 + i),
+		}
+		blockTimes = append(blockTimes, time)
+	}
+
 	for i := int64(0); i < 5; i++ {
 		tx := message.Transaction{
+			MaxGas:      big.NewInt(100000000000),
+			GasPriceBid: big.NewInt(0),
+			SequenceNum: big.NewInt(0),
+			DestAddress: common.RandAddress(),
+			Payment:     big.NewInt(0),
+			Data:        []byte{},
+		}
+		tx2 := message.Transaction{
 			MaxGas:      big.NewInt(100000000000),
 			GasPriceBid: big.NewInt(0),
 			SequenceNum: big.NewInt(0),
@@ -160,17 +178,30 @@ func TestBlocks(t *testing.T) {
 			message.NewInboxMessage(
 				message.NewSafeL2Message(tx),
 				common.RandAddress(),
-				big.NewInt(i+1),
-				inbox.ChainTime{
-					BlockNum:  common.NewTimeBlocksInt(i*2 + 1),
-					Timestamp: big.NewInt(10 + i*2 + 1),
-				},
+				big.NewInt(i*2+1),
+				blockTimes[i],
+			),
+		)
+		messages = append(
+			messages,
+			message.NewInboxMessage(
+				message.NewSafeL2Message(tx2),
+				common.RandAddress(),
+				big.NewInt(i*2+2),
+				blockTimes[i],
 			),
 		)
 	}
 
 	// Last value returned is not an error type
-	avmLogs, _, _ := runAssertion(t, messages, 9, 0)
+	avmLogs, _, _ := runAssertion(t, messages, 14, 0)
+	results := make([]evm.Result, 0)
+	for _, avmLog := range avmLogs {
+		res, err := evm.NewResultFromValue(avmLog)
+		failIfError(t, err)
+		results = append(results, res)
+	}
+
 	t.Log("Got", len(avmLogs), "logs")
 	blockGasUsed := big.NewInt(0)
 	blockAVMLogCount := big.NewInt(0)
@@ -182,13 +213,12 @@ func TestBlocks(t *testing.T) {
 	totalEVMLogCount := big.NewInt(0)
 	totalTxCount := big.NewInt(0)
 	prevBlockNum := abi.MaxUint256
+	blockCount := 0
 
-	for i, avmLog := range avmLogs {
+	for i, res := range results {
 		totalAVMLogCount = totalAVMLogCount.Add(totalAVMLogCount, big.NewInt(1))
-		res, err := evm.NewResultFromValue(avmLog)
-		failIfError(t, err)
 
-		if i%2 == 0 {
+		if i%3 == 0 || i%3 == 1 {
 			res, ok := res.(*evm.TxResult)
 			if !ok {
 				t.Error("incorrect result type")
@@ -210,10 +240,12 @@ func TestBlocks(t *testing.T) {
 			if res.PreviousBlock.Cmp(prevBlockNum) != 0 {
 				t.Error("unexpected previous block")
 			}
-			if res.BlockNum.Cmp(big.NewInt(int64(i))) != 0 {
+
+			correctTime := blockTimes[blockCount]
+			if res.BlockNum.Cmp(correctTime.BlockNum.AsInt()) != 0 {
 				t.Error("unexpected block height", res.BlockNum, i)
 			}
-			if res.Timestamp.Cmp(big.NewInt(int64(10+i))) != 0 {
+			if res.Timestamp.Cmp(correctTime.Timestamp) != 0 {
 				t.Error("unexpected timestamp", res.Timestamp, 10+i)
 			}
 
@@ -254,6 +286,7 @@ func TestBlocks(t *testing.T) {
 			blockEVMLogCount = big.NewInt(0)
 			blockTxCount = big.NewInt(0)
 			prevBlockNum = res.BlockNum
+			blockCount++
 		}
 	}
 }
