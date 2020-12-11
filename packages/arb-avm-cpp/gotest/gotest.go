@@ -55,11 +55,14 @@ func ArbOSTestFiles() []string {
 		log.Fatal(err)
 	}
 	filenames := make([]string, 0, len(files))
-	extension := ".aoslog"
+	extensions := []string{".aoslog", ".json"}
 	for _, file := range files {
 		name := file.Name()
-		if len(name) > len(extension) && name[len(name)-len(extension):] == extension {
-			filenames = append(filenames, filepath.Join(testCaseDir, file.Name()))
+		for _, extension := range extensions {
+			if len(name) > len(extension) && name[len(name)-len(extension):] == extension {
+				filenames = append(filenames, filepath.Join(testCaseDir, file.Name()))
+				break
+			}
 		}
 	}
 
