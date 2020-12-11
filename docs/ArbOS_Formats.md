@@ -115,8 +115,6 @@ Type-specific data:
 
 - Unsigned Transaction or Contract transaction as defined in the L2 message section below
 
-This message type is reserved for internal use by ArbOS. It should never appear in the inbox.
-
 ## L2 messages
 
 As noted above, an L2 message is one type of incoming message that can be put into an L2 chain's inbox. The purpose of an L2 message is to convey information, typically a transaction request, to ArbOS. The EthBridge does not examine or interpret the contents of an L2 message.
