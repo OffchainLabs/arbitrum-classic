@@ -17,6 +17,8 @@
 package evm
 
 import (
+	"bytes"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -30,6 +32,20 @@ type Provenance struct {
 	L1SeqNum        *big.Int
 	ParentRequestId common.Hash
 	IndexInParent   *big.Int
+}
+
+func CompareProvenances(prov1 Provenance, prov2 Provenance) []string {
+	var differences []string
+	if prov1.L1SeqNum.Cmp(prov2.L1SeqNum) != 0 {
+		differences = append(differences, fmt.Sprintf("different seq nums %v and %v", prov1.L1SeqNum, prov2.L1SeqNum))
+	}
+	if prov1.ParentRequestId != prov2.ParentRequestId {
+		differences = append(differences, fmt.Sprintf("different parents %v and %v", prov1.ParentRequestId, prov2.ParentRequestId))
+	}
+	if prov1.IndexInParent.Cmp(prov2.IndexInParent) != 0 {
+		differences = append(differences, fmt.Sprintf("different indexes %v and %v", prov1.IndexInParent, prov2.IndexInParent))
+	}
+	return differences
 }
 
 func NewProvenanceFromValue(val value.Value) (Provenance, error) {
@@ -98,6 +114,30 @@ type IncomingRequest struct {
 	Data       []byte
 	ChainTime  inbox.ChainTime
 	Provenance Provenance
+}
+
+func CompareIncomingRequests(req1 IncomingRequest, req2 IncomingRequest) []string {
+	var differences []string
+	if req1.Kind != req2.Kind {
+		differences = append(differences, fmt.Sprintf("different kinds %v and %v", req1.Kind, req2.Kind))
+	}
+	if req1.Sender != req2.Sender {
+		differences = append(differences, fmt.Sprintf("different senders %v and %v", req1.Sender, req2.Sender))
+	}
+	if req1.MessageID != req2.MessageID {
+		differences = append(differences, fmt.Sprintf("different message ids %v and %v", req1.MessageID, req2.MessageID))
+	}
+	if !bytes.Equal(req1.Data, req2.Data) {
+		differences = append(differences, fmt.Sprintf("different data 0x%X and 0x%X", req1.Data, req2.Data))
+	}
+	if req1.ChainTime.BlockNum.Cmp(req2.ChainTime.BlockNum) != 0 {
+		differences = append(differences, fmt.Sprintf("different block nums %v and %v", req1.ChainTime.BlockNum, req2.ChainTime.BlockNum))
+	}
+	if req1.ChainTime.Timestamp.Cmp(req2.ChainTime.Timestamp) != 0 {
+		differences = append(differences, fmt.Sprintf("different timestamps %v and %v", req1.ChainTime.Timestamp, req2.ChainTime.Timestamp))
+	}
+	differences = append(differences, CompareProvenances(req1.Provenance, req2.Provenance)...)
+	return differences
 }
 
 func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
