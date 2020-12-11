@@ -17,11 +17,13 @@
 package arbostest
 
 import (
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -31,8 +33,12 @@ import (
 func TestDepositEthTx(t *testing.T) {
 	depositDest := common.RandAddress()
 
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
+	failIfError(t, err)
+
 	deployTx := makeSimpleConstructorTx(hexutil.MustDecode(arbostestcontracts.SimpleBin), big.NewInt(0))
 
+	// Deposit to EOA
 	tx := message.EthDepositTx{
 		L2Message: message.NewSafeL2Message(message.Transaction{
 			MaxGas:      big.NewInt(1000000),
@@ -44,34 +50,93 @@ func TestDepositEthTx(t *testing.T) {
 		}),
 	}
 
+	getBalance1 := message.Transaction{
+		MaxGas:      big.NewInt(1000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(2),
+		DestAddress: common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS),
+		Payment:     big.NewInt(0),
+		Data:        snapshot.GetBalanceData(depositDest),
+	}
+
+	// Deposit to contract that succeeds
 	tx2 := message.EthDepositTx{
 		L2Message: message.NewSafeL2Message(message.Transaction{
 			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
-			SequenceNum: big.NewInt(2),
+			SequenceNum: big.NewInt(3),
 			DestAddress: connAddress1,
-			Payment:     big.NewInt(100),
-			Data:        nil,
+			Payment:     big.NewInt(200),
+			Data:        makeFuncData(t, simpleABI.Methods["acceptPayment"]),
 		}),
 	}
 
-	messages := []message.Message{message.NewSafeL2Message(deployTx), tx, tx2}
-	logs, _, mach := runAssertion(t, makeSimpleInbox(messages), 3, 0)
+	getBalance2 := message.Transaction{
+		MaxGas:      big.NewInt(1000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(4),
+		DestAddress: common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS),
+		Payment:     big.NewInt(0),
+		Data:        snapshot.GetBalanceData(connAddress1),
+	}
+
+	// Deposit to contract that reverts
+	tx3 := message.EthDepositTx{
+		L2Message: message.NewSafeL2Message(message.Transaction{
+			MaxGas:      big.NewInt(10000000),
+			GasPriceBid: big.NewInt(0),
+			SequenceNum: big.NewInt(5),
+			DestAddress: connAddress1,
+			Payment:     big.NewInt(50),
+			Data:        makeFuncData(t, simpleABI.Methods["rejectPayment"]),
+		}),
+	}
+
+	getBalance3 := message.Transaction{
+		MaxGas:      big.NewInt(1000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(6),
+		DestAddress: common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS),
+		Payment:     big.NewInt(0),
+		Data:        snapshot.GetBalanceData(connAddress1),
+	}
+
+	messages := []message.Message{
+		message.NewSafeL2Message(deployTx),
+		tx,
+		message.NewSafeL2Message(getBalance1),
+		tx2,
+		message.NewSafeL2Message(getBalance2),
+		tx3,
+		message.NewSafeL2Message(getBalance3),
+	}
+	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), 7, 0)
 	results := processTxResults(t, logs)
 
 	checkConstructorResult(t, results[0], connAddress1)
 	succeededTxCheck(t, results[1])
 	succeededTxCheck(t, results[2])
+	succeededTxCheck(t, results[3])
+	succeededTxCheck(t, results[4])
+	revertedTxCheck(t, results[5])
+	succeededTxCheck(t, results[6])
 
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
+	balance1, err := snapshot.ParseBalanceResult(results[2])
+	failIfError(t, err)
+	balance2, err := snapshot.ParseBalanceResult(results[4])
+	failIfError(t, err)
+	balance3, err := snapshot.ParseBalanceResult(results[6])
+	failIfError(t, err)
+
+	if balance1.Cmp(big.NewInt(100)) != 0 {
+		t.Error("wrong balance1", balance1)
 	}
 
-	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(2))
-	balance1, err := snap.GetBalance(depositDest)
-	failIfError(t, err)
-	if balance1.Cmp(big.NewInt(100)) != 00 {
-		t.Fatal("wrong clone code length")
+	if balance2.Cmp(big.NewInt(200)) != 0 {
+		t.Error("wrong balance2", balance2)
+	}
+
+	if balance3.Cmp(big.NewInt(250)) != 0 {
+		t.Error("wrong balance3", balance3)
 	}
 }

@@ -27,16 +27,18 @@ var (
 )
 
 // SimpleABI is the input ABI used to generate the binding from.
-const SimpleABI = "[{\"constant\":false,\"inputs\":[],\"name\":\"exists\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"reverts\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const SimpleABI = "[{\"constant\":false,\"inputs\":[],\"name\":\"acceptPayment\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"exists\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"rejectPayment\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"reverts\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // SimpleFuncSigs maps the 4-byte function signature to its string representation.
 var SimpleFuncSigs = map[string]string{
+	"ae0aba8c": "acceptPayment()",
 	"267c4ae4": "exists()",
+	"9436bc1f": "rejectPayment()",
 	"3bccbbc9": "reverts()",
 }
 
 // SimpleBin is the compiled bytecode used for deploying new contracts.
-var SimpleBin = "0x6080604052348015600f57600080fd5b5060cf8061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060325760003560e01c8063267c4ae41460375780633bccbbc914604f575b600080fd5b603d6057565b60408051918252519081900360200190f35b6055605c565b005b600a90565b6040805162461bcd60e51b815260206004820152600e60248201526d1d1a1a5cc81a5cc818481d195cdd60921b604482015290519081900360640190fdfea265627a7a72315820a1bebf005deeb67c66fa3d5a4bb2303b2aff05f35c9c6053c88cf6305b72012e64736f6c63430005110032"
+var SimpleBin = "0x608060405234801561001057600080fd5b50610109806100206000396000f3fe608060405260043610603a5760003560e01c8063267c4ae414603f5780633bccbbc91460635780639436bc1f146077578063ae0aba8c146089575b600080fd5b348015604a57600080fd5b506051608f565b60408051918252519081900360200190f35b348015606e57600080fd5b5060756094565b005b348015608257600080fd5b50607560d2565b607560d2565b600a90565b6040805162461bcd60e51b815260206004820152600e60248201526d1d1a1a5cc81a5cc818481d195cdd60921b604482015290519081900360640190fd5b56fea265627a7a723158200ac69f78729ce918ccf02cd319b7a7178d700d4eac67f305ea4071b40b71a40b64736f6c63430005110032"
 
 // DeploySimple deploys a new Ethereum contract, binding an instance of Simple to it.
 func DeploySimple(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Simple, error) {
@@ -194,6 +196,27 @@ func (_Simple *SimpleTransactorRaw) Transact(opts *bind.TransactOpts, method str
 	return _Simple.Contract.contract.Transact(opts, method, params...)
 }
 
+// AcceptPayment is a paid mutator transaction binding the contract method 0xae0aba8c.
+//
+// Solidity: function acceptPayment() payable returns()
+func (_Simple *SimpleTransactor) AcceptPayment(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Simple.contract.Transact(opts, "acceptPayment")
+}
+
+// AcceptPayment is a paid mutator transaction binding the contract method 0xae0aba8c.
+//
+// Solidity: function acceptPayment() payable returns()
+func (_Simple *SimpleSession) AcceptPayment() (*types.Transaction, error) {
+	return _Simple.Contract.AcceptPayment(&_Simple.TransactOpts)
+}
+
+// AcceptPayment is a paid mutator transaction binding the contract method 0xae0aba8c.
+//
+// Solidity: function acceptPayment() payable returns()
+func (_Simple *SimpleTransactorSession) AcceptPayment() (*types.Transaction, error) {
+	return _Simple.Contract.AcceptPayment(&_Simple.TransactOpts)
+}
+
 // Exists is a paid mutator transaction binding the contract method 0x267c4ae4.
 //
 // Solidity: function exists() returns(uint256)
@@ -213,6 +236,27 @@ func (_Simple *SimpleSession) Exists() (*types.Transaction, error) {
 // Solidity: function exists() returns(uint256)
 func (_Simple *SimpleTransactorSession) Exists() (*types.Transaction, error) {
 	return _Simple.Contract.Exists(&_Simple.TransactOpts)
+}
+
+// RejectPayment is a paid mutator transaction binding the contract method 0x9436bc1f.
+//
+// Solidity: function rejectPayment() returns()
+func (_Simple *SimpleTransactor) RejectPayment(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Simple.contract.Transact(opts, "rejectPayment")
+}
+
+// RejectPayment is a paid mutator transaction binding the contract method 0x9436bc1f.
+//
+// Solidity: function rejectPayment() returns()
+func (_Simple *SimpleSession) RejectPayment() (*types.Transaction, error) {
+	return _Simple.Contract.RejectPayment(&_Simple.TransactOpts)
+}
+
+// RejectPayment is a paid mutator transaction binding the contract method 0x9436bc1f.
+//
+// Solidity: function rejectPayment() returns()
+func (_Simple *SimpleTransactorSession) RejectPayment() (*types.Transaction, error) {
+	return _Simple.Contract.RejectPayment(&_Simple.TransactOpts)
 }
 
 // Reverts is a paid mutator transaction binding the contract method 0x3bccbbc9.

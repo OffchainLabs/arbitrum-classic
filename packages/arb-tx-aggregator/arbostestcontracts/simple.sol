@@ -26,4 +26,8 @@ contract Simple {
     function reverts() external {
         require(false, "this is a test");
     }
+
+    function acceptPayment() external payable {}
+
+    function rejectPayment() external {}
 }

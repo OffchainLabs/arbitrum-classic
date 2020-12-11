@@ -110,14 +110,14 @@ func checkValidResult(res *evm.TxResult) error {
 }
 
 func (s *Snapshot) GetBalance(account common.Address) (*big.Int, error) {
-	res, err := s.BasicCall(getBalanceData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
+	res, err := s.BasicCall(GetBalanceData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return parseBalanceResult(res)
+	return ParseBalanceResult(res)
 }
 
 func (s *Snapshot) GetTransactionCount(account common.Address) (*big.Int, error) {
