@@ -119,8 +119,8 @@ func NewLogFromValue(val value.Value) (Log, error) {
 	if !ok {
 		return Log{}, errors.New("log must be a tuple")
 	}
-	if tupVal.Len() < 3 {
-		return Log{}, errors.Errorf("log tuple must be at least size 3, but is %v", tupVal)
+	if tupVal.Len() < 2 {
+		return Log{}, errors.Errorf("log tuple must be at least size 2, but is %v", tupVal)
 	}
 
 	// Tuple size already verified above, so error can be ignored
