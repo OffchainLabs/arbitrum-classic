@@ -17,6 +17,7 @@
 package evm
 
 import (
+	"bytes"
 	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -57,6 +58,41 @@ type TxResult struct {
 	CumulativeGas   *big.Int
 	TxIndex         *big.Int
 	StartLogIndex   *big.Int
+}
+
+func CompareResults(res1 *TxResult, res2 *TxResult) []string {
+	var differences []string
+	differences = append(differences, CompareIncomingRequests(res1.IncomingRequest, res2.IncomingRequest)...)
+	if res1.ResultCode != res2.ResultCode {
+		differences = append(differences, fmt.Sprintf("different result code %v and %v", res1.ResultCode, res2.ResultCode))
+	}
+	if !bytes.Equal(res1.ReturnData, res2.ReturnData) {
+		differences = append(differences, fmt.Sprintf("different return data 0x%X and 0x%X", res1.ReturnData, res2.ReturnData))
+	}
+	if len(res1.EVMLogs) != len(res2.EVMLogs) {
+
+	} else {
+		for i, log1 := range res1.EVMLogs {
+			log2 := res2.EVMLogs[i]
+			differences = append(differences, CompareLogs(log1, log2)...)
+		}
+	}
+	if res1.GasUsed.Cmp(res2.GasUsed) != 0 {
+		differences = append(differences, fmt.Sprintf("different gas used %v and %v", res1.GasUsed, res2.GasUsed))
+	}
+	if res1.GasPrice.Cmp(res2.GasPrice) != 0 {
+		differences = append(differences, fmt.Sprintf("different gas price %v and %v", res1.GasPrice, res2.GasPrice))
+	}
+	if res1.CumulativeGas.Cmp(res2.CumulativeGas) != 0 {
+		differences = append(differences, fmt.Sprintf("different cumulative gas %v and %v", res1.CumulativeGas, res2.CumulativeGas))
+	}
+	if res1.TxIndex.Cmp(res2.TxIndex) != 0 {
+		differences = append(differences, fmt.Sprintf("different tx index %v and %v", res1.TxIndex, res2.TxIndex))
+	}
+	if res1.StartLogIndex.Cmp(res2.StartLogIndex) != 0 {
+		differences = append(differences, fmt.Sprintf("different start log index %v and %v", res1.StartLogIndex, res2.StartLogIndex))
+	}
+	return differences
 }
 
 func (r *TxResult) String() string {
