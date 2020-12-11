@@ -110,6 +110,27 @@ func TestDepositEthTx(t *testing.T) {
 		Data:        snapshot.GetBalanceData(sender),
 	}
 
+	tx4 := message.EthDepositTx{
+		L2Message: message.NewSafeL2Message(message.ContractTransaction{
+			BasicTx: message.BasicTx{
+				MaxGas:      big.NewInt(10000000),
+				GasPriceBid: big.NewInt(0),
+				DestAddress: connAddress1,
+				Payment:     big.NewInt(100),
+				Data:        makeFuncData(t, simpleABI.Methods["acceptPayment"]),
+			},
+		}),
+	}
+
+	getBalance5 := message.Transaction{
+		MaxGas:      big.NewInt(1000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(9),
+		DestAddress: common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS),
+		Payment:     big.NewInt(0),
+		Data:        snapshot.GetBalanceData(connAddress1),
+	}
+
 	messages := []message.Message{
 		message.NewSafeL2Message(deployTx),
 		tx,
@@ -119,8 +140,10 @@ func TestDepositEthTx(t *testing.T) {
 		tx3,
 		message.NewSafeL2Message(getBalance3),
 		message.NewSafeL2Message(getBalance4),
+		tx4,
+		message.NewSafeL2Message(getBalance5),
 	}
-	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), 8, 0)
+	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), 10, 0)
 	results := processTxResults(t, logs)
 
 	checkConstructorResult(t, results[0], connAddress1)
@@ -131,6 +154,8 @@ func TestDepositEthTx(t *testing.T) {
 	revertedTxCheck(t, results[5])
 	succeededTxCheck(t, results[6])
 	succeededTxCheck(t, results[7])
+	succeededTxCheck(t, results[8])
+	succeededTxCheck(t, results[9])
 
 	balance1, err := snapshot.ParseBalanceResult(results[2])
 	failIfError(t, err)
@@ -139,6 +164,8 @@ func TestDepositEthTx(t *testing.T) {
 	balance3, err := snapshot.ParseBalanceResult(results[6])
 	failIfError(t, err)
 	balance4, err := snapshot.ParseBalanceResult(results[7])
+	failIfError(t, err)
+	balance5, err := snapshot.ParseBalanceResult(results[9])
 	failIfError(t, err)
 
 	if balance1.Cmp(big.NewInt(100)) != 0 {
@@ -154,6 +181,10 @@ func TestDepositEthTx(t *testing.T) {
 	}
 
 	if balance4.Cmp(big.NewInt(50)) != 0 {
-		t.Error("wrong balance3", balance3)
+		t.Error("wrong balance4", balance4)
+	}
+
+	if balance5.Cmp(big.NewInt(300)) != 0 {
+		t.Error("wrong balance5", balance5)
 	}
 }
