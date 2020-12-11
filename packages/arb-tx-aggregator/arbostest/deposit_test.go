@@ -188,13 +188,10 @@ func TestDepositEthTx(t *testing.T) {
 		t.Error("wrong balance5", balance5)
 	}
 
-	req := results[1].IncomingRequest
-	msg, err := message.NestedMessage(req.Data, req.Kind)
-	failIfError(t, err)
-	t.Log(msg)
-
-	req2 := results[8].IncomingRequest
-	msg2, err := message.NestedMessage(req2.Data, req2.Kind)
-	failIfError(t, err)
-	t.Log(msg2)
+	if results[1].IncomingRequest.Kind != message.EthDepositTxType {
+		t.Error("wrong msg type")
+	}
+	if results[8].IncomingRequest.Kind != message.EthDepositTxType {
+		t.Error("wrong msg type")
+	}
 }
