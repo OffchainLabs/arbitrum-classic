@@ -101,6 +101,15 @@ func TestDepositEthTx(t *testing.T) {
 		Data:        snapshot.GetBalanceData(connAddress1),
 	}
 
+	getBalance4 := message.Transaction{
+		MaxGas:      big.NewInt(1000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(7),
+		DestAddress: common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS),
+		Payment:     big.NewInt(0),
+		Data:        snapshot.GetBalanceData(sender),
+	}
+
 	messages := []message.Message{
 		message.NewSafeL2Message(deployTx),
 		tx,
@@ -109,8 +118,9 @@ func TestDepositEthTx(t *testing.T) {
 		message.NewSafeL2Message(getBalance2),
 		tx3,
 		message.NewSafeL2Message(getBalance3),
+		message.NewSafeL2Message(getBalance4),
 	}
-	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), 7, 0)
+	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), 8, 0)
 	results := processTxResults(t, logs)
 
 	checkConstructorResult(t, results[0], connAddress1)
@@ -120,12 +130,15 @@ func TestDepositEthTx(t *testing.T) {
 	succeededTxCheck(t, results[4])
 	revertedTxCheck(t, results[5])
 	succeededTxCheck(t, results[6])
+	succeededTxCheck(t, results[7])
 
 	balance1, err := snapshot.ParseBalanceResult(results[2])
 	failIfError(t, err)
 	balance2, err := snapshot.ParseBalanceResult(results[4])
 	failIfError(t, err)
 	balance3, err := snapshot.ParseBalanceResult(results[6])
+	failIfError(t, err)
+	balance4, err := snapshot.ParseBalanceResult(results[7])
 	failIfError(t, err)
 
 	if balance1.Cmp(big.NewInt(100)) != 0 {
@@ -136,7 +149,11 @@ func TestDepositEthTx(t *testing.T) {
 		t.Error("wrong balance2", balance2)
 	}
 
-	if balance3.Cmp(big.NewInt(250)) != 0 {
+	if balance3.Cmp(big.NewInt(200)) != 0 {
+		t.Error("wrong balance3", balance3)
+	}
+
+	if balance4.Cmp(big.NewInt(50)) != 0 {
 		t.Error("wrong balance3", balance3)
 	}
 }
