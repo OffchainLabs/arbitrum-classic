@@ -187,4 +187,14 @@ func TestDepositEthTx(t *testing.T) {
 	if balance5.Cmp(big.NewInt(300)) != 0 {
 		t.Error("wrong balance5", balance5)
 	}
+
+	req := results[1].IncomingRequest
+	msg, err := message.NestedMessage(req.Data, req.Kind)
+	failIfError(t, err)
+	t.Log(msg)
+
+	req2 := results[8].IncomingRequest
+	msg2, err := message.NestedMessage(req2.Data, req2.Kind)
+	failIfError(t, err)
+	t.Log(msg2)
 }
