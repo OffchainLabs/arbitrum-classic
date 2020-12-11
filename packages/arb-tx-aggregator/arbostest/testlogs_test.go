@@ -18,6 +18,7 @@ package arbostest
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"io/ioutil"
@@ -26,39 +27,49 @@ import (
 
 func TestArbOSCases(t *testing.T) {
 	arbosTests := gotest.ArbOSTestFiles()
+	t.Log("Running", len(arbosTests), "test cases")
 	for _, testFile := range arbosTests {
 		data, err := ioutil.ReadFile(testFile)
 		failIfError(t, err)
+
 		t.Run(testFile, func(t *testing.T) {
 			inboxMessages, avmLogs, avmSends, err := inbox.LoadTestVector(data)
 			failIfError(t, err)
 
 			calcLogs, calcSends, _ := runAssertion(t, inboxMessages, len(avmLogs), len(avmSends))
 
-			calcResults := processTxResults(t, calcLogs)
-			results := processTxResults(t, avmLogs)
+			for i, calcLog := range calcLogs {
+				if !value.Eq(calcLog, avmLogs[i]) {
+					calcRes, err := evm.NewResultFromValue(calcLog)
+					res, err2 := evm.NewResultFromValue(avmLogs[i])
+					if err == nil && err2 == nil {
+						calcTxRes, ok1 := calcRes.(*evm.TxResult)
+						txRes, ok2 := res.(*evm.TxResult)
+						if ok1 && ok2 {
+							for _, difference := range evm.CompareResults(calcTxRes, txRes) {
+								t.Log(difference)
+							}
+						} else {
+							t.Log("Calculated:", calcRes)
+							t.Log("Correct:", res)
+						}
 
-			for i := 0; i < len(calcLogs); i++ {
-				calcRes := calcResults[i]
-				res := results[i]
-				if !value.Eq(calcRes.AsValue(), res.AsValue()) {
-					t.Log("Calculated:", calcRes)
-					t.Log("Correct", res)
+					} else {
+						if err != nil {
+							t.Log("Error generating result", err)
+						}
+						if err2 != nil {
+							t.Log("Error generating result2", err2)
+						}
+					}
 					t.Error("wrong log")
 				}
 			}
 
-			for i := 0; i < len(calcSends); i++ {
-				if !value.Eq(calcSends[i], avmSends[i]) {
+			for i, calcSend := range calcSends {
+				if !value.Eq(calcSend, avmSends[i]) {
 					t.Error("wrong send")
 				}
-			}
-
-			if len(calcLogs) != len(avmLogs) {
-				t.Error("wrong log count")
-			}
-			if len(calcSends) != len(avmSends) {
-				t.Error("wrong send count")
 			}
 		})
 	}

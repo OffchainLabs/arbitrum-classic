@@ -18,6 +18,7 @@ package evm
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -34,6 +35,27 @@ type Log struct {
 	Address common.Address
 	Topics  []common.Hash
 	Data    []byte
+}
+
+func CompareLogs(log1 Log, log2 Log) []string {
+	var differences []string
+	if log1.Address != log2.Address {
+		differences = append(differences, fmt.Sprintf("different address %v and %v", log1.Address, log2.Address))
+	}
+	if len(log1.Topics) != len(log2.Topics) {
+		differences = append(differences, fmt.Sprintf("different topic count %v and %v", len(log1.Topics), len(log2.Topics)))
+	} else {
+		for i, topic1 := range log1.Topics {
+			topic2 := log2.Topics[i]
+			if topic1 != topic2 {
+				differences = append(differences, fmt.Sprintf("different topic %v and %v", topic1, topic2))
+			}
+		}
+	}
+	if !bytes.Equal(log1.Data, log2.Data) {
+		differences = append(differences, fmt.Sprintf("different address 0x%X and 0x%X", log1.Data, log2.Data))
+	}
+	return differences
 }
 
 func NewRandomLog(topicCount int32) Log {
