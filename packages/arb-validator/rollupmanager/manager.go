@@ -242,6 +242,8 @@ func CreateManagerAdvanced(
 					return errors.Wrap(err, "Error subscribing to block headers")
 				}
 
+				log.Info().Msg("Beginning regular block monitoring")
+
 				lastDebugPrint := time.Now()
 				for maybeBlockId := range headersChan {
 					if maybeBlockId.Err != nil {
@@ -259,6 +261,11 @@ func CreateManagerAdvanced(
 					if err != nil {
 						return err
 					}
+
+					log.Info().
+						Object("l2block", maybeBlockId.BlockId).
+						Object("l1block", currentOnChain).
+						Msg("processing block")
 
 					if !caughtUpToL1 && blockId.Height.Cmp(currentOnChain.Height) >= 0 {
 						caughtUpToL1 = true
