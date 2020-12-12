@@ -20,6 +20,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"strconv"
 
@@ -182,6 +183,56 @@ func (ng *NodeGraph) DebugStringForNodeRecursive(node *structures.Node, stakers 
 		}
 	}
 	return ret
+}
+
+type NodeDisplay struct {
+	LinkType   valprotocol.ChildType
+	Hash       common.Hash
+	Leaf       bool
+	labels     []string
+	stakers    []string
+	successors []NodeDisplay
+}
+
+func (nd NodeDisplay) MarshalZerologObject(e *zerolog.Event) {
+	successors := zerolog.Arr()
+	for _, succ := range nd.successors {
+		successors = successors.Object(succ)
+	}
+	e.Int("linktype", int(nd.LinkType)).
+		Hex("hash", nd.Hash.Bytes()).
+		Bool("leaf", nd.Leaf).
+		Strs("labels", nd.labels).
+		Strs("stakers", nd.stakers).Array("successors", successors)
+}
+
+func (ng *NodeGraph) DisplayData(stakers *StakerSet) NodeDisplay {
+	return ng.DisplayDataRecursive(ng.oldestNode, stakers)
+}
+
+func (ng *NodeGraph) DisplayDataRecursive(node *structures.Node, stakers *StakerSet) NodeDisplay {
+	var stakerList []string
+	stakers.forall(func(s *Staker) {
+		if s.location.Equals(node) {
+			stakerList = append(stakerList, s.address.Hex())
+		}
+	})
+
+	nj := NodeDisplay{
+		LinkType: node.LinkType(),
+		Hash:     node.Hash(),
+		Leaf:     ng.leaves.IsLeaf(node),
+		stakers:  stakerList,
+	}
+
+	for i := valprotocol.MinChildType; i <= valprotocol.MaxChildType; i++ {
+		succi := node.SuccessorHashes()[i]
+		if !succi.Equals(common.Hash{}) {
+			child := ng.DisplayDataRecursive(ng.nodeFromHash[succi], stakers)
+			nj.successors = append(nj.successors, child)
+		}
+	}
+	return nj
 }
 
 func (ng *NodeGraph) Equals(ng2 *NodeGraph) bool {

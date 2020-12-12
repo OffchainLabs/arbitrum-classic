@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"math/big"
 	"sync"
@@ -336,6 +337,12 @@ func (chain *ChainObserver) DebugString(prefix string) string {
 	labels[chain.calculatedValidNode] = append(labels[chain.calculatedValidNode], "calculatedValidNode")
 	labels[chain.KnownValidNode] = append(labels[chain.KnownValidNode], "knownValidNode")
 	return chain.NodeGraph.DebugString(prefix, labels)
+}
+
+func (chain *ChainObserver) MarshalZerologObject(e *zerolog.Event) {
+	e.EmbedObject(chain.NodeGraph).
+		Hex("calculated_valid", chain.calculatedValidNode.Hash().Bytes()).
+		Hex("known_valid", chain.KnownValidNode.Hash().Bytes())
 }
 
 func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbridge.Event) error {

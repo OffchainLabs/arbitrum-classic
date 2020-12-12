@@ -262,8 +262,9 @@ func CreateManagerAdvanced(
 						return err
 					}
 
-					log.Info().
-						Object("l2block", maybeBlockId.BlockId).
+					logger := logger.With().Object("l2block", maybeBlockId.BlockId).Logger()
+
+					logger.Info().
 						Object("l1block", currentOnChain).
 						Msg("processing block")
 
@@ -275,8 +276,8 @@ func CreateManagerAdvanced(
 
 					man.activeChain.NotifyNewBlock(blockId.Clone())
 
-					if caughtUpToL1 || time.Since(lastDebugPrint).Seconds() > 5 {
-						logger.Info().Msg(man.activeChain.DebugString("== "))
+					if caughtUpToL1 || time.Since(lastDebugPrint).Seconds() > 10 {
+						logger.Info().Object("chain", man.activeChain).Msg("current graph")
 						lastDebugPrint = time.Now()
 					}
 
@@ -284,6 +285,8 @@ func CreateManagerAdvanced(
 					if err != nil {
 						return errors.Wrapf(err, "Manager hit error getting inbox events with block %v", blockId)
 					}
+
+					logger.Info().Msg("got inbox events")
 					// It's safe to process inbox events out of order with rollup events as long
 					// as the inbox events are ahead of the rollup ones
 					for _, ev := range inboxEvents {
@@ -297,10 +300,14 @@ func CreateManagerAdvanced(
 						}
 					}
 
+					logger.Info().Msg("processed inbox events")
+
 					events, err := rollupWatcher.GetEvents(runCtx, blockId, timestamp)
 					if err != nil {
 						return errors.Wrapf(err, "Manager hit error getting rollup events with block %v", blockId)
 					}
+
+					logger.Info().Msg("got rollup events")
 
 					for _, ev := range events {
 						if ev.GetChainInfo().Cmp(startEventId) < 0 {
@@ -312,6 +319,8 @@ func CreateManagerAdvanced(
 							return errors.Wrap(err, "Manager hit error processing event")
 						}
 					}
+
+					logger.Info().Msg("processed rollup events")
 				}
 				return nil
 			}()
