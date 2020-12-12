@@ -405,12 +405,16 @@ func (chain *ChainObserver) UpdateAssumedValidBlock(ctx context.Context, clnt ar
 func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
-	ckptCtx := ckptcontext.NewCheckpointContext()
-	buf, err := chain.marshalToBytes(ckptCtx)
-	if err != nil {
-		logger.Fatal().Stack().Err(err).Send()
+
+	// Only save every 5 blocks since saving is quite slow
+	if blockId.Height.AsInt().Uint64()%5 == 0 {
+		ckptCtx := ckptcontext.NewCheckpointContext()
+		buf, err := chain.marshalToBytes(ckptCtx)
+		if err != nil {
+			logger.Fatal().Stack().Err(err).Send()
+		}
+		chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx)
 	}
-	chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx)
 }
 
 func (chain *ChainObserver) CurrentEventId() arbbridge.ChainInfo {
