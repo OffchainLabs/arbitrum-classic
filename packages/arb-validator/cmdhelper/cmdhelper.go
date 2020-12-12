@@ -19,21 +19,31 @@ package cmdhelper
 import (
 	"context"
 	"flag"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 
+	_ "net/http/pprof"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 )
 
 var ContractName = "contract.mexe"
+var pprofMux *http.ServeMux
+
+func init() {
+	pprofMux = http.DefaultServeMux
+	http.DefaultServeMux = http.NewServeMux()
+}
 
 // ValidateRollupChain creates a validator given the managerCreationFunc.
 // This allows for the abstraction of the manager setup away from command line
@@ -57,6 +67,7 @@ func ValidateRollupChain(
 		2,
 		"blocktime=NumSeconds",
 	)
+	enablePProf := validateCmd.Bool("pprof", false, "enable profiling server")
 	err := validateCmd.Parse(os.Args[2:])
 	if err != nil {
 		return err
@@ -69,6 +80,13 @@ func ValidateRollupChain(
 			utils.WalletArgsString,
 			utils.RollupArgsString,
 		)
+	}
+
+	if *enablePProf {
+		go func() {
+			err := http.ListenAndServe("localhost:8081", pprofMux)
+			log.Error().Err(err).Msg("profiling server failed")
+		}()
 	}
 
 	common.SetDurationPerBlock(time.Duration(*blocktime) * time.Second)
