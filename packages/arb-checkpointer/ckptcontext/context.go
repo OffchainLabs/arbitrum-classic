@@ -44,6 +44,10 @@ func (ctx *CheckpointContext) AddValue(val value.Value) {
 	ctx.values[val.Hash()] = val
 }
 
+func (ctx *CheckpointContext) AddValueWithHash(val value.Value, valueHash common.Hash) {
+	ctx.values[valueHash] = val
+}
+
 func (ctx *CheckpointContext) AddMachine(mach machine.Machine) {
 	if ctx.machines[mach.Hash()] == nil {
 		ctx.machines[mach.Hash()] = mach.Clone()
