@@ -18,6 +18,7 @@ package nodegraph
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/rs/zerolog"
 )
 
 type StakerSet struct {
@@ -61,6 +62,14 @@ func (ss *StakerSet) DebugString(prefix string) string {
 		ret = ret + s.DebugString(subPrefix)
 	})
 	return ret
+}
+
+func (ss *StakerSet) MarshalZerologObject(e *zerolog.Event) {
+	stakers := zerolog.Arr()
+	ss.forall(func(s *Staker) {
+		stakers = stakers.Object(s)
+	})
+	e.Array("stakers", stakers)
 }
 
 func (ss *StakerSet) Equals(ss2 *StakerSet) bool {

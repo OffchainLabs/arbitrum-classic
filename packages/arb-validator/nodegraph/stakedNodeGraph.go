@@ -19,6 +19,7 @@ package nodegraph
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/rs/zerolog"
 	"sort"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -102,6 +103,12 @@ func (x *StakedNodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreCont
 func (sng *StakedNodeGraph) DebugString(prefix string, labels map[*structures.Node][]string) string {
 	subPrefix := prefix + "  "
 	return "\n" + prefix + "nodes:\n" + sng.NodeGraph.DebugString(sng.stakers, subPrefix, labels) + sng.stakers.DebugString(prefix)
+}
+
+func (sng *StakedNodeGraph) MarshalZerologObject(e *zerolog.Event) {
+	e.Hex("latest_confirmed", sng.latestConfirmed.Hash().Bytes())
+	e.Hex("oldest", sng.oldestNode.Hash().Bytes())
+	e.Object("nodes", sng.NodeGraph.DisplayData(sng.stakers))
 }
 
 func (sng *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
