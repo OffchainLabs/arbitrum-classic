@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"math/big"
 	"sync"
@@ -338,6 +339,12 @@ func (chain *ChainObserver) DebugString(prefix string) string {
 	return chain.NodeGraph.DebugString(prefix, labels)
 }
 
+func (chain *ChainObserver) MarshalZerologObject(e *zerolog.Event) {
+	e.EmbedObject(chain.NodeGraph).
+		Hex("calculated_valid", chain.calculatedValidNode.Hash().Bytes()).
+		Hex("known_valid", chain.KnownValidNode.Hash().Bytes())
+}
+
 func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbridge.Event) error {
 	chain.Lock()
 	defer chain.Unlock()
@@ -405,12 +412,16 @@ func (chain *ChainObserver) UpdateAssumedValidBlock(ctx context.Context, clnt ar
 func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
-	ckptCtx := ckptcontext.NewCheckpointContext()
-	buf, err := chain.marshalToBytes(ckptCtx)
-	if err != nil {
-		logger.Fatal().Stack().Err(err).Send()
+
+	// Only save every 5 blocks since saving is quite slow
+	if blockId.Height.AsInt().Uint64()%5 == 0 {
+		ckptCtx := ckptcontext.NewCheckpointContext()
+		buf, err := chain.marshalToBytes(ckptCtx)
+		if err != nil {
+			logger.Fatal().Stack().Err(err).Send()
+		}
+		chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx)
 	}
-	chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx)
 }
 
 func (chain *ChainObserver) CurrentEventId() arbbridge.ChainInfo {
