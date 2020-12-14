@@ -30,20 +30,26 @@ TEST_CASE("Aggregator tests") {
     SECTION("logs") {
         REQUIRE(store->logCount() == 0);
         CHECK_THROWS(store->getLog(0));
-        std::vector<char> sample_log{1, 2, 3, 4};
-        store->saveLog(sample_log);
+        std::vector<unsigned char> sample_log{1, 2, 3, 4};
+        std::vector<char> sample_log_signed{1, 2, 3, 4};
+        auto tx = storage->beginTransaction();
+        store->saveLog(*tx, sample_log);
+        tx = nullptr;
         REQUIRE(store->logCount() == 1);
-        REQUIRE(store->getLog(0) == sample_log);
+        REQUIRE(store->getLog(0) == sample_log_signed);
         CHECK_THROWS(store->getLog(1));
     }
 
     SECTION("messages") {
         REQUIRE(store->messageCount() == 0);
         CHECK_THROWS(store->getMessage(0));
-        std::vector<char> sample_message{1, 2, 3, 4};
-        store->saveMessage(sample_message);
+        std::vector<unsigned char> sample_message{1, 2, 3, 4};
+        std::vector<char> sample_message_signed{1, 2, 3, 4};
+        auto tx = storage->beginTransaction();
+        store->saveMessage(*tx, sample_message);
+        tx = nullptr;
         REQUIRE(store->messageCount() == 1);
-        REQUIRE(store->getMessage(0) == sample_message);
+        REQUIRE(store->getMessage(0) == sample_message_signed);
         CHECK_THROWS(store->getMessage(1));
     }
 
@@ -58,12 +64,14 @@ TEST_CASE("Aggregator tests") {
 
     SECTION("blocks") {
         CHECK_THROWS(store->latestBlock());
-        std::vector<char> data{1, 2, 3, 4};
-        store->saveLog(data);
-        store->saveLog(data);
-        store->saveMessage(data);
-        store->saveMessage(data);
-        store->saveMessage(data);
+        std::vector<unsigned char> data{1, 2, 3, 4};
+        auto tx = storage->beginTransaction();
+        store->saveLog(*tx, data);
+        store->saveLog(*tx, data);
+        store->saveMessage(*tx, data);
+        store->saveMessage(*tx, data);
+        store->saveMessage(*tx, data);
+        tx = nullptr;
         std::vector<char> block_data{1, 2, 3, 4};
         store->saveBlock(50, block_data);
         {
@@ -72,9 +80,11 @@ TEST_CASE("Aggregator tests") {
             REQUIRE(latest.second == block_data);
         }
 
-        store->saveLog(data);
-        store->saveLog(data);
-        store->saveMessage(data);
+        tx = storage->beginTransaction();
+        store->saveLog(*tx, data);
+        store->saveLog(*tx, data);
+        store->saveMessage(*tx, data);
+        tx = nullptr;
         std::vector<char> block_data2{1, 2, 3, 5};
         store->saveBlock(52, block_data2);
         {

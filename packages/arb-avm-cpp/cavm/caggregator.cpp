@@ -34,18 +34,6 @@ Uint64Result aggregatorLogCount(const CAggregatorStore* agg) {
     }
 }
 
-int aggregatorSaveLog(CAggregatorStore* agg,
-                      const void* data,
-                      uint64_t length) {
-    try {
-        auto ptr = reinterpret_cast<const char*>(data);
-        static_cast<AggregatorStore*>(agg)->saveLog({ptr, ptr + length});
-        return 1;
-    } catch (const std::exception&) {
-        return 0;
-    }
-}
-
 ByteSliceResult aggregatorGetLog(const CAggregatorStore* agg, uint64_t index) {
     try {
         auto data = returnCharVector(
@@ -61,18 +49,6 @@ Uint64Result aggregatorMessageCount(const CAggregatorStore* agg) {
         return {static_cast<const AggregatorStore*>(agg)->messageCount(), true};
     } catch (const std::exception&) {
         return {0, false};
-    }
-}
-
-int aggregatorSaveMessage(CAggregatorStore* agg,
-                          const void* data,
-                          uint64_t length) {
-    try {
-        auto ptr = reinterpret_cast<const char*>(data);
-        static_cast<AggregatorStore*>(agg)->saveMessage({ptr, ptr + length});
-        return 1;
-    } catch (const std::exception&) {
-        return 0;
     }
 }
 
