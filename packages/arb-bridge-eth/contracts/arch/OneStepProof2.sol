@@ -16,6 +16,32 @@
  * limitations under the License.
  */
 
+/*
+
+Structure of the extra proofs passed to operations accessing buffers (d, array of words):
+ * d_0: 32 bytes header, includes the locations of other proofs as the first 5 bytes b_0 ... b_1
+ * The words d[b_0..b_1]: merkle proof for first access, first element is the leaf that is accessed
+ * The words d[b_1..b_2]: normalization proof for the case the buffer shrinks
+ * The words d[b_2..b_3]: merkle proof for second access
+ * The words d[b_4..b_5]: normalization proof for second access
+
+Structure of merkle proofs:
+ * first element is the leaf
+ * other elements are the adjacent subtrees
+ * the location in the tree is known from the argument passed to opcodes
+ * if the access is outside the tree, the merkle proof is needed to confirm the size of the tree, and is the accessed location mod the original size of the tree
+
+Structure of normalization proof:
+ * needed if the tree shrinks
+ * has three words
+ * height of the tree (minus one)
+ * left subtree hash
+ * right subtree hash
+ * if the height of the tree is 0, the left subtree hash is the single leaf of the tree instead
+ * right subtree hash is checked that it's not zero, this ensures that the resulting tree is of minimal height
+
+*/
+
 pragma solidity ^0.5.11;
 
 import "./IOneStepProof.sol";
@@ -52,15 +78,6 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
 
     function executeErrorInsn(AssertionContext memory context) internal pure {
         handleOpcodeError(context);
-    }
-
-    function executeNewBuffer(AssertionContext memory context) internal pure {
-        Value.Data memory val1 = popVal(context.stack);
-        if (!val1.isInt()) {
-            handleOpcodeError(context);
-            return;
-        }
-        pushVal(context.stack, Value.newBuffer(keccak256(abi.encodePacked(bytes32(0)))));
     }
 
     function makeZeros() internal pure returns (bytes32[] memory) {
@@ -382,8 +399,8 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
     }
 
     function executeGetBuffer8(AssertionContext memory context) internal pure {
-        Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val1 = popVal(context.stack);
         if (!val2.isInt64() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
@@ -394,8 +411,8 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
     }
 
     function executeGetBuffer64(AssertionContext memory context) internal pure {
-        Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val1 = popVal(context.stack);
         if (!val2.isInt64() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
@@ -406,8 +423,8 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
     }
 
     function executeGetBuffer256(AssertionContext memory context) internal pure {
-        Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val1 = popVal(context.stack);
         if (!val2.isInt64() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
@@ -418,9 +435,9 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
     }
 
     function executeSetBuffer8(AssertionContext memory context) internal pure {
-        Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
+        Value.Data memory val1 = popVal(context.stack);
         if (!val2.isInt64() || !val3.isInt() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
@@ -436,9 +453,9 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
     }
 
     function executeSetBuffer64(AssertionContext memory context) internal pure {
-        Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
+        Value.Data memory val1 = popVal(context.stack);
         if (!val2.isInt64() || !val3.isInt() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
@@ -454,9 +471,9 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
     }
 
     function executeSetBuffer256(AssertionContext memory context) internal pure {
-        Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
+        Value.Data memory val1 = popVal(context.stack);
         if (!val2.isInt64() || !val3.isInt() || !val1.isBuffer()) {
             handleOpcodeError(context);
             return;
@@ -494,8 +511,7 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         } else if (opCode == OP_SETBUFFER256) {
             return (3, 0, 100, executeSetBuffer256);
         } else {
-            revert();
-            // return (0, 0, 0, executeErrorInsn);
+            revert("use another contract to handle other opcodes");
         }
     }
 }

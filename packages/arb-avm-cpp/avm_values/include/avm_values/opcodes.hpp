@@ -298,7 +298,7 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::SIDELOAD, {}},
         {OpCode::DEBUG_PRINT, {}},
 
-        {OpCode::NEW_BUFFER, {MarshalLevel::SINGLE}},
+        {OpCode::NEW_BUFFER, {}},
         {OpCode::GET_BUFFER8, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
         {OpCode::GET_BUFFER64, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
         {OpCode::GET_BUFFER256, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},

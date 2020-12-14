@@ -988,16 +988,15 @@ BlockReason sideload(MachineState& m) {
 }
 
 void newbuffer(MachineState& m) {
-    m.stack.prepForMod(1);
-    m.stack.popClear();
+    m.stack.prepForMod(0);
     m.stack.push(Buffer{});
     ++m.pc;
 }
 
 void getbuffer8(MachineState& m) {
     m.stack.prepForMod(2);
-    auto offset = assumeInt64(assumeInt(m.stack[1]));
-    Buffer& md = assumeBuffer(m.stack[0]);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    Buffer& md = assumeBuffer(m.stack[1]);
     auto res = uint256_t(md.get(offset));
     m.stack.popClear();
     m.stack.popClear();
@@ -1007,8 +1006,8 @@ void getbuffer8(MachineState& m) {
 
 void getbuffer64(MachineState& m) {
     m.stack.prepForMod(2);
-    auto offset = assumeInt64(assumeInt(m.stack[1]));
-    Buffer& md = assumeBuffer(m.stack[0]);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    Buffer& md = assumeBuffer(m.stack[1]);
     uint64_t res = 0;
     for (int i = 0; i < 8; i++) {
         res = res << 8;
@@ -1022,8 +1021,8 @@ void getbuffer64(MachineState& m) {
 
 void getbuffer256(MachineState& m) {
     m.stack.prepForMod(2);
-    auto offset = assumeInt64(assumeInt(m.stack[1]));
-    Buffer& md = assumeBuffer(m.stack[0]);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    Buffer& md = assumeBuffer(m.stack[1]);
     uint256_t res = 0;
     // std::cerr << "hmm getting " << offset << std::endl;
     std::vector<uint8_t> data(32);
@@ -1060,10 +1059,10 @@ void getbuffer256(MachineState& m) {
 
 void setbuffer8(MachineState& m) {
     m.stack.prepForMod(3);
-    auto offset = assumeInt64(assumeInt(m.stack[1]));
-    auto val_int = assumeInt(m.stack[2]);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    auto val_int = assumeInt(m.stack[1]);
     auto val = static_cast<uint8_t>(val_int);
-    Buffer& md = assumeBuffer(m.stack[0]);
+    Buffer& md = assumeBuffer(m.stack[2]);
     auto res = md.set(offset, val);
     m.stack.popClear();
     m.stack.popClear();
@@ -1076,10 +1075,10 @@ void setbuffer8(MachineState& m) {
 
 void setbuffer64(MachineState& m) {
     m.stack.prepForMod(3);
-    auto offset = assumeInt64(assumeInt(m.stack[1]));
-    auto val = assumeInt64(assumeInt(m.stack[2]));
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    auto val = assumeInt64(assumeInt(m.stack[1]));
     // The initial value is copied here, there might be a way to optimize that away
-    Buffer res = assumeBuffer(m.stack[0]);
+    Buffer res = assumeBuffer(m.stack[2]);
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();
@@ -1093,10 +1092,10 @@ void setbuffer64(MachineState& m) {
 
 void setbuffer256(MachineState& m) {
     m.stack.prepForMod(3);
-    auto offset = assumeInt64(assumeInt(m.stack[1]));
-    auto val = assumeInt(m.stack[2]);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    auto val = assumeInt(m.stack[1]);
     // The initial value is copied here, there might be a way to optimize that away
-    Buffer res = assumeBuffer(m.stack[0]);
+    Buffer res = assumeBuffer(m.stack[2]);
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();

@@ -783,11 +783,6 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
     }
 
     function executeNewBuffer(AssertionContext memory context) internal pure {
-        Value.Data memory val1 = popVal(context.stack);
-        if (!val1.isInt()) {
-            handleOpcodeError(context);
-            return;
-        }
         pushVal(context.stack, Value.newBuffer(keccak256(abi.encodePacked(bytes32(0)))));
     }
 
@@ -1029,7 +1024,9 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
         } else if (opCode == OP_ECPAIRING) {
             return (1, 0, 1000, executeECPairingInsn);
         } else if (opCode == OP_NEWBUFFER) {
-            return (1, 0, 1, executeNewBuffer);
+            return (0, 0, 1, executeNewBuffer);
+        } else if (opCode >= OP_GETBUFFER8 && opCode <= OP_SETBUFFER256) {
+            revert("use anotehr contract to handle buffer opcodes");
         } else {
             return (0, 0, 0, executeErrorInsn);
         }

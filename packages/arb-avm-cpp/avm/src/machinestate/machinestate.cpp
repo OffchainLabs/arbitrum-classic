@@ -261,45 +261,62 @@ void makeSetBufferProof(std::vector<unsigned char> &buf, uint64_t loc, Buffer bu
 
 std::vector<unsigned char> MachineState::marshalBufferProof() {
     std::vector<unsigned char> buf;
-    auto opcode = loadCurrentInstruction().op.opcode;
+    auto op = loadCurrentInstruction().op;
+    auto opcode = op.opcode;
     if (opcode < OpCode::GET_BUFFER8 || opcode > OpCode::SET_BUFFER256) {
         return buf;
-    } 
-    // Find the buffer
-    auto buffer = nonstd::get_if<Buffer>(&stack[0]);
-    if (!buffer) {
-        return buf;
     }
-    // Also need the offset
-    auto offset = nonstd::get_if<uint256_t>(&stack[1]);
-    if (!offset) {
-        return buf;
-    }
-    if (*offset > std::numeric_limits<uint64_t>::max()) {
-        return buf;
-    }
-    auto loc = static_cast<uint64_t>(*offset);
-    if (opcode == OpCode::GET_BUFFER8) {
-        auto proof = makeProof(*buffer, loc);
-        insertSizes(buf, proof.size(), 0, 0, 0);
-        buf.insert(buf.end(), proof.begin(), proof.end());
-    } else if (opcode == OpCode::GET_BUFFER64) {
-        auto proof1 = makeProof(*buffer, loc);
-        auto proof2 = makeProof(*buffer, loc+7);
-        insertSizes(buf, proof1.size(), 0, proof2.size(), 0);
-        buf.insert(buf.end(), proof1.begin(), proof1.end());
-        buf.insert(buf.end(), proof2.begin(), proof2.end());
-    } else if (opcode == OpCode::GET_BUFFER256) {
-        auto proof1 = makeProof(*buffer, loc);
-        auto proof2 = makeProof(*buffer, loc+31);
-        insertSizes(buf, proof1.size(), 0, proof2.size(), 0);
-        buf.insert(buf.end(), proof1.begin(), proof1.end());
-        buf.insert(buf.end(), proof2.begin(), proof2.end());
+    if (opcode == OpCode::GET_BUFFER8 || opcode == OpCode::GET_BUFFER64 ||
+        opcode == OpCode::GET_BUFFER256) {
+        // Find the buffer
+        auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0]) : nonstd::get_if<Buffer>(&stack[1]);
+        if (!buffer) {
+            return buf;
+        }
+        // Also need the offset
+        auto offset = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate) : nonstd::get_if<uint256_t>(&stack[0]);
+        if (!offset) {
+            return buf;
+        }
+        if (*offset > std::numeric_limits<uint64_t>::max()) {
+            return buf;
+        }
+        auto loc = static_cast<uint64_t>(*offset);
+        if (opcode == OpCode::GET_BUFFER8) {
+            auto proof = makeProof(*buffer, loc);
+            insertSizes(buf, proof.size(), 0, 0, 0);
+            buf.insert(buf.end(), proof.begin(), proof.end());
+        } else if (opcode == OpCode::GET_BUFFER64) {
+            auto proof1 = makeProof(*buffer, loc);
+            auto proof2 = makeProof(*buffer, loc + 7);
+            insertSizes(buf, proof1.size(), 0, proof2.size(), 0);
+            buf.insert(buf.end(), proof1.begin(), proof1.end());
+            buf.insert(buf.end(), proof2.begin(), proof2.end());
+        } else if (opcode == OpCode::GET_BUFFER256) {
+            auto proof1 = makeProof(*buffer, loc);
+            auto proof2 = makeProof(*buffer, loc + 31);
+            insertSizes(buf, proof1.size(), 0, proof2.size(), 0);
+            buf.insert(buf.end(), proof1.begin(), proof1.end());
+            buf.insert(buf.end(), proof2.begin(), proof2.end());
+        }
     } else {
-        auto val = nonstd::get_if<uint256_t>(&stack[2]);
+        auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[1]) : nonstd::get_if<Buffer>(&stack[2]);
+        if (!buffer) {
+            return buf;
+        }
+        // Also need the offset
+        auto offset = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate) : nonstd::get_if<uint256_t>(&stack[0]);
+        if (!offset) {
+            return buf;
+        }
+        if (*offset > std::numeric_limits<uint64_t>::max()) {
+            return buf;
+        }
+        auto val = op.immediate ? nonstd::get_if<uint256_t>(&stack[0]) : nonstd::get_if<uint256_t>(&stack[1]);
         if (!val) {
           return buf;
         }
+        auto loc = static_cast<uint64_t>(*offset);
         if (opcode == OpCode::SET_BUFFER8) {
             // std::cerr << "Here " << intx::to_string(buffer->hash(), 16) << std::endl;
             Buffer nbuffer = buffer->set(loc, static_cast<uint8_t>(*val));
