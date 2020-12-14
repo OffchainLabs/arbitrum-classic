@@ -119,18 +119,39 @@ contract Rollup {
         addStaker(nodeNum, node);
     }
 
+    /*
+
+    // Precondition Data
+    bytes32 beforeInboxAcc;
+    uint256 beforeInboxCount;
+
+    bytes32 topInboxAcc;
+    uint256 topInboxCount;
+
+    bytes32 beforeStateHash;
+
+    // Postcondition Data
+
+    bytes32 afterInboxAcc;
+    uint256 afterInboxCount;
+
+    bytes32 afterStateHash
+
+    uint256 totalSteps;
+    */
+
     function newStakeOnNewNode(
         bytes32 blockHash,
         uint256 blockNumber,
         uint256 nodeNum,
         uint256 prev,
-        bytes32 beforeInnerAssertion,
         bytes32 beforeInboxHash,
         uint256 beforeInboxCount,
-        bytes32 afterInnerAssertion,
+        bytes32 beforeStateHash,
         bytes32 afterInboxHash,
         uint256 afterInboxCount,
-        uint64 numSteps
+        bytes32 afterStateHash,
+        uint256 numSteps
     ) external payable {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         verifyCanStake();
@@ -149,8 +170,8 @@ contract Rollup {
         );
 
         bytes32 executionNodeHash = Assertion.hashExecutionNode(
-            Assertion.hashAssertion(beforeInnerAssertion, beforeInboxCount, beforeInboxHash),
-            Assertion.hashAssertion(afterInnerAssertion, afterInboxCount, afterInboxHash),
+            Assertion.hashAssertion(beforeStateHash, beforeInboxCount, beforeInboxHash),
+            Assertion.hashAssertion(afterStateHash, afterInboxCount, afterInboxHash),
             numSteps
         );
 
