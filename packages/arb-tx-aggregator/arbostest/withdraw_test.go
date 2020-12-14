@@ -39,7 +39,7 @@ func testWithdrawal(t *testing.T, depositMsg message.Message, withdrawalTx messa
 		message.NewInboxMessage(message.NewSafeL2Message(withdrawalTx), withdrawalSender, big.NewInt(1), chainTime),
 	}
 
-	logs, sends, _ := runAssertion(t, inboxMessages, logCount, 1)
+	logs, sends, _, _ := runAssertion(t, inboxMessages, logCount, 1)
 	results := processTxResults(t, logs)
 
 	allResultsSucceeded(t, results)

@@ -36,7 +36,7 @@ func TestArbOSCases(t *testing.T) {
 			inboxMessages, avmLogs, avmSends, err := inbox.LoadTestVector(data)
 			failIfError(t, err)
 
-			calcLogs, calcSends, _ := runAssertion(t, inboxMessages, len(avmLogs), len(avmSends))
+			calcLogs, calcSends, _, _ := runAssertion(t, inboxMessages, len(avmLogs), len(avmSends))
 
 			for i, calcLog := range calcLogs {
 				if !value.Eq(calcLog, avmLogs[i]) {
