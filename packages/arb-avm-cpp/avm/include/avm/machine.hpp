@@ -70,7 +70,7 @@ class Machine {
                             std::chrono::seconds wallLimit,
                             value fake_inbox_peek_value);
 
-    Status currentStatus() { return machine_state.state; }
+    Status currentStatus() const { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }
     BlockReason isBlocked(bool newMessages) const {
         return machine_state.isBlocked(newMessages);

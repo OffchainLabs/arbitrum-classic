@@ -285,7 +285,7 @@ TEST_CASE("OPCODE: GT opcode is correct") {
         std::fill(machines.begin(), machines.end(), sample_machine);
         meter.measure([&machines](int i) {
             auto& mach = machines[i];
-            for (int i = 0; i < 100; i++) {
+            for (int j = 0; j < 100; j++) {
                 mach.runOp(OpCode::GT);
             }
             return mach;
@@ -879,7 +879,7 @@ TEST_CASE("OPCODE: BREAKPOINT opcode is correct") {
         MachineState m;
         auto blockReason = m.runOp(OpCode::BREAKPOINT);
         REQUIRE(m.state == Status::Extensive);
-        REQUIRE(nonstd::get_if<BreakpointBlocked>(&blockReason));
+        REQUIRE(nonstd::get_if<BreakpointBlocked>(&blockReason) != nullptr);
         REQUIRE(m.stack.stacksize() == 0);
     }
 }

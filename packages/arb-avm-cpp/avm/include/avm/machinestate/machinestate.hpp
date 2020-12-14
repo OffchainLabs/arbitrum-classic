@@ -87,8 +87,8 @@ struct MachineState {
                  CodePointStub errpc_,
                  Tuple staged_message_);
 
-    uint256_t getMachineSize();
-    std::vector<unsigned char> marshalForProof();
+    uint256_t getMachineSize() const;
+    std::vector<unsigned char> marshalForProof() const;
     std::vector<unsigned char> marshalState() const;
     BlockReason runOp(OpCode opcode);
     BlockReason runOne();

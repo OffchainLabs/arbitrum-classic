@@ -21,17 +21,15 @@
 
 #include <boost/filesystem.hpp>
 
-#include <sys/stat.h>
-#include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
 
-std::string temp_dp_path = "arb_runner_temp_db";
+constexpr auto temp_db_path = "arb_runner_temp_db";
 
 struct DBDeleter {
-    DBDeleter() { boost::filesystem::remove_all(temp_dp_path); }
-    ~DBDeleter() { boost::filesystem::remove_all(temp_dp_path); }
+    DBDeleter() { boost::filesystem::remove_all(temp_db_path); }
+    ~DBDeleter() { boost::filesystem::remove_all(temp_db_path); }
 };
 
 int main(int argc, char* argv[]) {
@@ -47,7 +45,7 @@ int main(int argc, char* argv[]) {
     std::string filename = argv[2];
 
     DBDeleter deleter;
-    CheckpointStorage storage{temp_dp_path};
+    CheckpointStorage storage{temp_db_path};
 
     if (mode == "--hexops") {
         std::ifstream file(filename, std::ios::binary);
@@ -59,8 +57,9 @@ int main(int argc, char* argv[]) {
             std::istreambuf_iterator<char>());
 
         std::vector<Operation> ops;
+        ops.reserve(raw_ops.size());
         for (auto op : raw_ops) {
-            ops.push_back(Operation{static_cast<OpCode>(op)});
+            ops.emplace_back(static_cast<OpCode>(op));
         }
 
         auto code = std::make_shared<CodeSegment>(0, ops);
@@ -98,7 +97,7 @@ int main(int argc, char* argv[]) {
 
             for (auto& val : j["inbox"]) {
                 inbox_messages.push_back(
-                    simple_value_from_json(std::move(val)).get<Tuple>());
+                    simple_value_from_json(val).get<Tuple>());
             }
         }
     }

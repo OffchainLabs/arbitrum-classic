@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef cavm_utils_h
-#define cavm_utils_h
+#ifndef cavm_utils_hpp
+#define cavm_utils_hpp
 
 #include "ctypes.h"
 
@@ -30,8 +30,7 @@
 
 inline unsigned char* returnCharVectorRaw(
     const std::vector<unsigned char>& data) {
-    unsigned char* cData =
-        reinterpret_cast<unsigned char*>(malloc(data.size()));
+    auto cData = reinterpret_cast<unsigned char*>(malloc(data.size()));
     std::copy(data.begin(), data.end(), cData);
     return cData;
 }
@@ -97,4 +96,5 @@ inline ByteSlice returnValueResult(const DbResult<value>& res) {
     return {void_data, static_cast<int>(value.size())};
 }
 
-#endif /* cavm_utils_h */
+RawAssertion makeRawAssertion(Assertion& assertion) {
+#endif /* cavm_utils_hpp */

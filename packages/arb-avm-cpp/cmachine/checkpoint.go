@@ -192,7 +192,7 @@ func (checkpoint *CheckpointStorage) GetBlockStore() machine.BlockStore {
 }
 
 func (checkpoint *CheckpointStorage) GetAggregatorStore() *AggregatorStore {
-	bs := C.createAggregatorStore(checkpoint.c)
+	as := C.createAggregatorStore(checkpoint.c)
 
-	return NewAggregatorStore(bs)
+	return NewAggregatorStore(as)
 }

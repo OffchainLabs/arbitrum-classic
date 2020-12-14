@@ -68,8 +68,8 @@ TEST_CASE("ARBOS test vectors") {
             INFO("Machine ran for " << assertion.stepCount << " steps");
             REQUIRE(assertion.logs.size() == logs.size());
             auto log = logs[0].get<Tuple>();
-            for (size_t i = 0; i < assertion.logs.size(); ++i) {
-                REQUIRE(assertion.logs[i] == logs[i]);
+            for (size_t k = 0; k < assertion.logs.size(); ++k) {
+                REQUIRE(assertion.logs[k] == logs[k]);
             }
             {
                 auto tx = storage.makeTransaction();
