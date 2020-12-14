@@ -20,10 +20,10 @@
 #include <ethash/keccak.hpp>
 
 uint256_t zero_hash(uint64_t sz) {
-    if (sz == 32) {
+    if (sz == 5) {
         return hash(0);
     }
-    auto h1 = zero_hash(sz/2);
+    auto h1 = zero_hash(sz - 1);
     return hash(h1, h1);
 }
 
@@ -48,27 +48,27 @@ uint256_t unpack(const Packed &packed) {
     uint64_t sz = packed.size;
     for (uint64_t i = 0; i < packed.packed; i++) {
         res = hash(res, zero_hash(sz));
-        sz = sz*2;
+        sz = sz - 1;
     }
     return res;
 }
 
 Packed zero_packed(uint64_t sz) {
-    if (sz == 32) {
-        return normal(zero_hash(32), 32);
+    if (sz == 5) {
+        return normal(zero_hash(5), 5);
     }
-    return pack(zero_packed(sz/2));
+    return pack(zero_packed(sz-1));
 }
 
 Packed hash_buf(uint8_t *buf, uint64_t offset, uint64_t sz) {
-    if (sz == 32) {
+    if (sz == 5) {
         auto hash_val = ethash::keccak256(buf+offset, 32);
         uint256_t res = intx::be::load<uint256_t>(hash_val);
-        return normal(res, 32);
+        return normal(res, 5);
     }
     // std::cerr << "hashing " << offset << " to " << (offset+sz) << std::endl;
-    auto h1 = hash_buf(buf, offset, sz/2);
-    auto h2 = hash_buf(buf, offset+sz/2, sz/2);
+    auto h1 = hash_buf(buf, offset, sz-1);
+    auto h2 = hash_buf(buf, offset + (1 << (sz-1)), sz-1);
     if (is_zero_hash(h2)) {
         return pack(h1);
     }
@@ -80,8 +80,8 @@ Packed hash_node(RawBuffer *buf, uint64_t offset, uint64_t len, uint64_t sz) {
     if (len == 1) {
         return buf[offset].hash_aux();
     }
-    auto h1 = hash_node(buf, offset, len/2, sz/2);
-    auto h2 = hash_node(buf, offset + len/2, len/2, sz/2);
+    auto h1 = hash_node(buf, offset, len/2, sz-1);
+    auto h2 = hash_node(buf, offset + len/2, len/2, sz-1);
     //    std::cerr << "hashed " << sz << " " << offset << " " << len << std::endl;
     if (is_zero_hash(h2)) {
         return pack(h1);
@@ -108,13 +108,13 @@ Packed RawBuffer::hash_aux() {
     Packed res;
     if (level == 0) {
         // std::cerr << "Hashing buffer..." << std::endl;
-        if (!leaf || leaf->size() == 0) res = zero_packed(LEAF_SIZE);
-        else res = hash_buf(leaf->data(), 0, LEAF_SIZE);
+        if (!leaf || leaf->size() == 0) res = zero_packed(LEAF_SIZE2);
+        else res = hash_buf(leaf->data(), 0, LEAF_SIZE2);
     } else {
-        if (!node) res = zero_packed(calc_len(level));
+        if (!node) res = zero_packed(calc_height(level));
         else {
             // std::cerr << "Hashing node..." << static_cast<void*>(this) << std::endl;
-            res = hash_node(node->data(), 0, NODE_SIZE, calc_len(level));
+            res = hash_node(node->data(), 0, NODE_SIZE, calc_height(level));
         }
     }
     saved = true;
@@ -136,7 +136,7 @@ RawBuffer RawBuffer::normalize() {
     bool shrinkable = true;
     for (uint64_t i = 1; i < NODE_SIZE; i++) {
 
-        if ((*node)[i].hash() != zero_hash(32)) {
+        if ((*node)[i].hash() != zero_hash(5)) {
             shrinkable = false;
             break;
         }
@@ -151,7 +151,7 @@ std::vector<RawBuffer> RawBuffer::serialize(std::vector<unsigned char>& value_ve
     // first check if it's empty
     // std::cerr << "NSerializing " << size() << ":" << static_cast<uint64_t>(hash()) << " ? " << saved << std::endl;
     std::vector<RawBuffer> ret{};
-    if (hash() == zero_hash(32)) {
+    if (hash() == zero_hash(5)) {
         value_vector.push_back(0);
         return ret;
     }
@@ -191,7 +191,7 @@ uint64_t RawBuffer::sizePow2() const {
     else if (node && node->size() > 0) {
         // std::cerr << "check size node" << std::endl;
         for (int i = NODE_SIZE-1; i >= 0; i--) {
-            if ((*node)[i].hash() != zero_hash(32)) {
+            if ((*node)[i].hash() != zero_hash(5)) {
                 size = (i+1)*calc_len(level-1);
                 break;
             }

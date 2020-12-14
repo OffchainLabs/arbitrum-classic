@@ -1008,6 +1008,7 @@ void getbuffer64(MachineState& m) {
     m.stack.prepForMod(2);
     auto offset = assumeInt64(assumeInt(m.stack[0]));
     Buffer& md = assumeBuffer(m.stack[1]);
+    if (offset + 7 < offset) throw int_out_of_bounds{};
     uint64_t res = 0;
     for (int i = 0; i < 8; i++) {
         res = res << 8;
@@ -1023,6 +1024,7 @@ void getbuffer256(MachineState& m) {
     m.stack.prepForMod(2);
     auto offset = assumeInt64(assumeInt(m.stack[0]));
     Buffer& md = assumeBuffer(m.stack[1]);
+    if (offset + 31 < offset) throw int_out_of_bounds{};
     uint256_t res = 0;
     // std::cerr << "hmm getting " << offset << std::endl;
     std::vector<uint8_t> data(32);
@@ -1077,6 +1079,7 @@ void setbuffer64(MachineState& m) {
     m.stack.prepForMod(3);
     auto offset = assumeInt64(assumeInt(m.stack[0]));
     auto val = assumeInt64(assumeInt(m.stack[1]));
+    if (offset + 7 < offset) throw int_out_of_bounds{};
     // The initial value is copied here, there might be a way to optimize that away
     Buffer res = assumeBuffer(m.stack[2]);
     m.stack.popClear();
@@ -1093,6 +1096,7 @@ void setbuffer64(MachineState& m) {
 void setbuffer256(MachineState& m) {
     m.stack.prepForMod(3);
     auto offset = assumeInt64(assumeInt(m.stack[0]));
+    if (offset + 31 < offset) throw int_out_of_bounds{};
     auto val = assumeInt(m.stack[1]);
     // The initial value is copied here, there might be a way to optimize that away
     Buffer res = assumeBuffer(m.stack[2]);

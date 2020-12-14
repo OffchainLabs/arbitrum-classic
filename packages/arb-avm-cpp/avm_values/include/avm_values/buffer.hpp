@@ -23,8 +23,10 @@
 #include <iostream>
 #include <avm_values/bigint.hpp>
 
-const uint64_t LEAF_SIZE = 1024;
-const uint64_t NODE_SIZE = 8;
+const uint64_t LEAF_SIZE2 = 10;
+const uint64_t NODE_SIZE2 = 3;
+const uint64_t LEAF_SIZE = 1 << LEAF_SIZE2;
+const uint64_t NODE_SIZE = 1 << NODE_SIZE2;
 const uint64_t ALIGN = LEAF_SIZE;
 
 inline uint64_t calc_len(int h) {
@@ -34,9 +36,23 @@ inline uint64_t calc_len(int h) {
     return NODE_SIZE*calc_len(h-1);
 }
 
+inline uint64_t calc_height(int h) {
+    if (h == 0) {
+        return LEAF_SIZE2;
+    }
+    return NODE_SIZE2 + calc_height(h-1);
+}
+
+inline uint64_t needed_height(uint64_t offset) {
+    if (offset <= 1) {
+        return 1;
+    } else {
+        return 1 + needed_height(offset / 2);
+    }
+}
 struct Packed {
     uint256_t hash;
-    uint64_t size; // total size
+    uint64_t size; // total height
     int packed; // packed levels
 };
 
@@ -49,15 +65,6 @@ class RawBuffer {
 
     std::shared_ptr<std::vector<uint8_t> > leaf;
     std::shared_ptr<std::vector<RawBuffer> > node;
-
-/*    std::vector<uint256_t> tmp;
-
-
-    RawBuffer(std::vector<uint256_t> a, int level_) : leaf(nullptr), node(nullptr) {
-        level = level_;
-        tmp = a;
-        saved = false;
-    }*/
 
    public:
     int level;
@@ -78,14 +85,14 @@ class RawBuffer {
         // std::cerr << "creating buffer " << level_ << std::endl;
         level = level_;
         saved = true;
-        savedHash = zero_packed(calc_len(level));
+        savedHash = zero_packed(calc_height(level));
     }
 
     RawBuffer() : leaf(nullptr), node(nullptr) {
         // std::cerr << "creating buffer\n";
         level = 0;
         saved = true;
-        savedHash = zero_packed(LEAF_SIZE);
+        savedHash = zero_packed(LEAF_SIZE2);
     }
 
     RawBuffer set(uint64_t offset, uint8_t v) {
@@ -119,6 +126,7 @@ class RawBuffer {
             // std::cerr << "updated leaf " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
             return RawBuffer(buf);
         } else {
+            // if (needed_height(offset) > calc_height(level)) {
             if (offset >= calc_len(level)) {
                 std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
                 vec->push_back(RawBuffer(node, level));
@@ -166,8 +174,10 @@ class RawBuffer {
             return res;
         } else {
             uint64_t ln = calc_len(level);
+            // uint64_t ln = calc_height(level);
             uint64_t cell_len = calc_len(level-1);
-            if (pos > ln || !node) {
+            // if (needed_height(pos) > ln || !node) {
+            if (pos >= ln || !node) {
                 return std::vector<uint8_t>(len, 0);
             }
             auto next = (*node)[pos / cell_len];
