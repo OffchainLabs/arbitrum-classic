@@ -256,6 +256,7 @@ func TestFib(t *testing.T) {
 	go func() {
 		t := time.NewTicker(time.Second * 2)
 		for range t.C {
+			logger.Info().Msg("Commit")
 			l1Client.Commit()
 		}
 	}()
@@ -279,6 +280,8 @@ func TestFib(t *testing.T) {
 		t.Fatalf("Validator setup error %v", err)
 	}
 
+	logger.Info().Msg("Validators setup, launching aggregator")
+
 	if err := launchAggregator(
 		l1Client,
 		auths[3],
@@ -287,12 +290,16 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	logger.Info().Msg("Launched aggregator, connecting to RPC")
+
 	l2Client, err := ethclient.Dial("http://localhost:9546")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Log("Connected to aggregator")
+
+	logger.Info().Hex("account4", auths[4].From.Bytes()).Msg("Account being used to deploy fibonacci")
 
 	// Do not wrap with MakeContract because auth is wrapped in session below
 	auths[4].Nonce = big.NewInt(0)
@@ -301,6 +308,8 @@ func TestFib(t *testing.T) {
 		t.Fatal("DeployFibonacci failed", err)
 	}
 	auths[4].Nonce = auths[4].Nonce.Add(auths[4].Nonce, big.NewInt(1))
+
+	logger.Info().Hex("tx", tx.Hash().Bytes()).Msg("Fibonacci deployed")
 
 	receipt, err := waitForReceipt(
 		l2Client,
@@ -313,6 +322,8 @@ func TestFib(t *testing.T) {
 	if receipt.Status != 1 {
 		t.Fatal("tx deploying fib failed")
 	}
+
+	logger.Info().Hex("address", receipt.ContractAddress.Bytes()).Msg("Contract address found")
 
 	t.Log("Fib contract is at", receipt.ContractAddress.Hex())
 
