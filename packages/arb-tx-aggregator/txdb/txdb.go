@@ -507,13 +507,6 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 		for _, res := range processedResults {
 			ethLogs = append(ethLogs, res.Result.EthLogs(common.NewHashFromEth(block.Hash()))...)
 		}
-		db.chainFeed.Send(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: ethLogs})
-		if finalBlockIndex == blockIndex {
-			db.chainHeadFeed.Send(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: ethLogs})
-		}
-		if len(ethLogs) > 0 {
-			db.logsFeed.Send(ethLogs)
-		}
 
 		for i, txRes := range txResults {
 			if txRes.ResultCode == evm.BadSequenceCode {
@@ -530,6 +523,14 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 
 		if err := db.as.SaveBlockHash(common.NewHashFromEth(block.Hash()), block.Number().Uint64()); err != nil {
 			return err
+		}
+
+		db.chainFeed.Send(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: ethLogs})
+		if finalBlockIndex == blockIndex {
+			db.chainHeadFeed.Send(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: ethLogs})
+		}
+		if len(ethLogs) > 0 {
+			db.logsFeed.Send(ethLogs)
 		}
 	}
 	return nil
