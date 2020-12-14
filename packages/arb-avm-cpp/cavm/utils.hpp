@@ -19,6 +19,7 @@
 
 #include "ctypes.h"
 
+#include <avm/machine.hpp>
 #include <avm_values/codepointstub.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/value.hpp>
@@ -94,6 +95,55 @@ inline ByteSlice returnValueResult(const DbResult<value>& res) {
 
     auto void_data = reinterpret_cast<void*>(value_data);
     return {void_data, static_cast<int>(value.size())};
+}
+
+inline RawAssertion makeRawAssertion(Assertion& assertion) {
+    std::vector<unsigned char> outMsgData;
+    for (const auto& outMsg : assertion.outMessages) {
+        marshal_value(outMsg, outMsgData);
+    }
+    std::vector<unsigned char> logData;
+    for (const auto& log : assertion.logs) {
+        marshal_value(log, logData);
+    }
+
+    std::vector<unsigned char> debugPrintData;
+    for (const auto& debugPrint : assertion.debugPrints) {
+        marshal_value(debugPrint, debugPrintData);
+    }
+
+    return {assertion.inbox_messages_consumed,
+            returnCharVector(outMsgData),
+            static_cast<int>(assertion.outMessages.size()),
+            returnCharVector(logData),
+            static_cast<int>(assertion.logs.size()),
+            returnCharVector(debugPrintData),
+            static_cast<int>(assertion.debugPrints.size()),
+            assertion.stepCount,
+            assertion.gasCount};
+}
+
+inline RawAssertion makeEmptyAssertion() {
+    return {0, returnCharVector(std::vector<char>{}),
+            0, returnCharVector(std::vector<char>{}),
+            0, returnCharVector(std::vector<char>{}),
+            0, 0,
+            0};
+}
+
+inline Tuple getTuple(void* data) {
+    auto charData = reinterpret_cast<const char*>(data);
+    return nonstd::get<Tuple>(deserialize_value(charData));
+}
+
+inline std::vector<Tuple> getInboxMessages(void* data, uint64_t message_count) {
+    auto charData = reinterpret_cast<const char*>(data);
+    std::vector<Tuple> messages;
+    messages.reserve(message_count);
+    for (uint64_t i = 0; i < message_count; ++i) {
+        messages.push_back(deserialize_value(charData).get<Tuple>());
+    }
+    return messages;
 }
 
 #endif /* cavm_utils_hpp */

@@ -52,13 +52,9 @@ typedef struct CRequestInfoStruct CRequestInfo;
 void deleteAggregatorStore(CAggregatorStore* m);
 
 Uint64Result aggregatorLogCount(const CAggregatorStore* agg);
-int aggregatorSaveLog(CAggregatorStore* m, const void* data, uint64_t length);
 ByteSliceResult aggregatorGetLog(const CAggregatorStore* agg, uint64_t index);
 
 Uint64Result aggregatorMessageCount(const CAggregatorStore* agg);
-int aggregatorSaveMessage(CAggregatorStore* m,
-                          const void* data,
-                          uint64_t length);
 ByteSliceResult aggregatorGetMessage(const CAggregatorStore* agg,
                                      uint64_t index);
 

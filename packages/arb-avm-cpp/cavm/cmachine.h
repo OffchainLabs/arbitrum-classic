@@ -48,18 +48,6 @@ typedef struct {
     ByteSlice val;
 } CBlockReason;
 
-typedef struct {
-    uint64_t inbox_messages_consumed;
-    ByteSlice outMessages;
-    int outMessageCount;
-    ByteSlice logs;
-    int logCount;
-    ByteSlice debugPrints;
-    int debugPrintCount;
-    uint64_t numSteps;
-    uint64_t numGas;
-} RawAssertion;
-
 CMachine* machineCreate(const char* filename);
 void machineDestroy(CMachine* m);
 

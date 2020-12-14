@@ -21,21 +21,21 @@ project (avm LANGUAGES CXX)
 
 set(LIB_HEADERS
   include/avm/machine.hpp
-  include/avm/machinestate/status.hpp
-  include/avm/machinestate/machinestate.hpp
-  include/avm/machinestate/datastack.hpp
-  include/avm/machinestate/machineoperation.hpp
   include/avm/machinestate/blockreason.hpp
+  include/avm/machinestate/datastack.hpp
   include/avm/machinestate/ecops.hpp
+  include/avm/machinestate/machineoperation.hpp
+  include/avm/machinestate/machinestate.hpp
+  include/avm/machinestate/status.hpp
 )
 
 set(LIB_SOURCES
   src/machine.cpp
-  src/machinestate/machinestate.cpp
-  src/machinestate/machineoperation.cpp
-  src/machinestate/datastack.cpp
   src/machinestate/blockreason.cpp
+  src/machinestate/datastack.cpp
   src/machinestate/ecops.cpp
+  src/machinestate/machineoperation.cpp
+  src/machinestate/machinestate.cpp
 )
 
 add_library(avm STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES} )
@@ -63,7 +63,21 @@ target_include_directories(avm PRIVATE
 find_package(GMP REQUIRED)
 find_package(GMPXX REQUIRED)
 
-target_link_libraries(avm PUBLIC avm_values RocksDB::RocksDB Threads::Threads secp256k1 ff picosha2 ${GMP_LIBRARY} ${GMPXX_LIBRARY} PRIVATE Boost::boost)
+target_link_libraries(
+        avm
+PUBLIC
+        avm_values
+        data_storage
+        RocksDB::RocksDB
+        Threads::Threads
+        secp256k1
+        ff
+        picosha2
+        ${GMP_LIBRARY}
+        ${GMPXX_LIBRARY}
+PRIVATE
+        Boost::boost
+)
 
 target_code_coverage(avm AUTO ALL)
 

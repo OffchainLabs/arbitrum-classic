@@ -22,18 +22,20 @@ project (cavm LANGUAGES CXX)
 set(LIB_HEADERS
   caggregator.h
   cblockstore.h
-  cmachine.h
+  ccheckpointedmachine.h
   ccheckpointstorage.h
+  cmachine.h
+  ctypes.h
   cvaluecache.h
   utils.hpp
-  ctypes.h
 )
 
 set(LIB_SOURCES
   caggregator.cpp
   cblockstore.cpp
-  cmachine.cpp
+  ccheckpointedmachine.cpp
   ccheckpointstorage.cpp
+  cmachine.cpp
   cvaluecache.cpp
 )
 

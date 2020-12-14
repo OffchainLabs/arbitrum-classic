@@ -212,10 +212,9 @@ uint64_t AggregatorStore::logCount() const {
     return LogSaver{}.count(*tx);
 }
 
-void AggregatorStore::saveLog(const std::vector<char>& log) {
-    auto tx = data_storage->beginTransaction();
-    LogSaver{}.saveNext(*tx, log);
-    commitTx(*tx);
+void AggregatorStore::saveLog(rocksdb::Transaction& tx,
+                              const std::vector<unsigned char>& log) {
+    LogSaver{}.saveNext(tx, log);
 }
 
 std::vector<char> AggregatorStore::getLog(uint64_t index) const {
@@ -229,10 +228,9 @@ uint64_t AggregatorStore::messageCount() const {
     return MessageSaver{}.count(*tx);
 }
 
-void AggregatorStore::saveMessage(const std::vector<char>& output) {
-    auto tx = data_storage->beginTransaction();
-    MessageSaver{}.saveNext(*tx, output);
-    commitTx(*tx);
+void AggregatorStore::saveMessage(rocksdb::Transaction& tx,
+                                  const std::vector<unsigned char>& output) {
+    MessageSaver{}.saveNext(tx, output);
 }
 
 std::vector<char> AggregatorStore::getMessage(uint64_t index) const {

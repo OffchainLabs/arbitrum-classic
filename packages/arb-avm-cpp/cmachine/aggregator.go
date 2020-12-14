@@ -61,20 +61,6 @@ func (as *AggregatorStore) LogCount() (uint64, error) {
 	return uint64(result.value), nil
 }
 
-func (as *AggregatorStore) SaveLog(val value.Value) error {
-	var buf bytes.Buffer
-	if err := value.MarshalValue(val, &buf); err != nil {
-		return err
-	}
-
-	cData := C.CBytes(buf.Bytes())
-	defer C.free(cData)
-	if C.aggregatorSaveLog(as.c, cData, C.uint64_t(buf.Len())) == 0 {
-		return errors.New("failed to save log")
-	}
-	return nil
-}
-
 func (as *AggregatorStore) GetLog(index uint64) (value.Value, error) {
 	result := C.aggregatorGetLog(as.c, C.uint64_t(index))
 	if result.found == 0 {
