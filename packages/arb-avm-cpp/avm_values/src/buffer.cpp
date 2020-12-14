@@ -48,7 +48,7 @@ uint256_t unpack(const Packed &packed) {
     uint64_t sz = packed.size;
     for (uint64_t i = 0; i < packed.packed; i++) {
         res = hash(res, zero_hash(sz));
-        sz = sz - 1;
+        sz = sz + 1;
     }
     return res;
 }
@@ -66,7 +66,6 @@ Packed hash_buf(uint8_t *buf, uint64_t offset, uint64_t sz) {
         uint256_t res = intx::be::load<uint256_t>(hash_val);
         return normal(res, 5);
     }
-    // std::cerr << "hashing " << offset << " to " << (offset+sz) << std::endl;
     auto h1 = hash_buf(buf, offset, sz-1);
     auto h2 = hash_buf(buf, offset + (1 << (sz-1)), sz-1);
     if (is_zero_hash(h2)) {
@@ -76,13 +75,14 @@ Packed hash_buf(uint8_t *buf, uint64_t offset, uint64_t sz) {
 }
 
 Packed hash_node(RawBuffer *buf, uint64_t offset, uint64_t len, uint64_t sz) {
-    //    std::cerr << "hashing " << sz << " " << offset << " " << len << std::endl;
+    // std::cerr << "hashing node " << sz << " " << offset << " " << len << std::endl;
     if (len == 1) {
-        return buf[offset].hash_aux();
+        auto res = buf[offset].hash_aux();
+        return res;
     }
     auto h1 = hash_node(buf, offset, len/2, sz-1);
     auto h2 = hash_node(buf, offset + len/2, len/2, sz-1);
-    //    std::cerr << "hashed " << sz << " " << offset << " " << len << std::endl;
+    // std::cerr << "hashed node " << sz << " " << offset << " " << len << std::endl;
     if (is_zero_hash(h2)) {
         return pack(h1);
     }
@@ -124,7 +124,7 @@ Packed RawBuffer::hash_aux() {
 }
 
 RawBuffer RawBuffer::normalize() {
-    if (hash() == zero_hash(32)) {
+    if (hash() == zero_hash(5)) {
         return RawBuffer();
     }
     if (level == 0) {
@@ -197,17 +197,14 @@ uint64_t RawBuffer::sizePow2() const {
             }
         }
     }
-    uint64_t size_ext = calc_len(level);
-    if (size_ext < 32) size_ext = 32;
-    while (size_ext/2 >= size && size_ext > 32) {
-        size_ext = size_ext/2;
-    }
+    uint64_t size_ext = needed_height(size);
+    if (size_ext < 5) size_ext = 5;
     return size_ext;
 }
 
 std::vector<unsigned char> RawBuffer::makeProof(uint64_t offset, uint64_t sz, uint64_t loc) {
     // std::cerr << "makeProof " << offset << " sz " << sz << " loc " << loc << std::endl;
-    if (sz == 32) {
+    if (sz == 5) {
         if (!leaf || leaf->size() == 0) {
             return std::vector<unsigned char>(32, 0);
         }
@@ -228,19 +225,19 @@ std::vector<unsigned char> RawBuffer::makeProof(uint64_t offset, uint64_t sz, ui
 
 uint256_t RawBuffer::merkleHash(uint64_t offset, uint64_t sz) {
     // std::cerr << "merkle hash " << offset << " sz " << sz << std::endl;
-    if (hash() == zero_hash(32)) {
+    if (hash() == zero_hash(5)) {
         return zero_hash(sz);
     }
-    if (sz == 32) {
+    if (sz == 5) {
         auto hash_val = ethash::keccak256(leaf->data()+offset, 32);
         uint256_t res = intx::be::load<uint256_t>(hash_val);
         return res;
-    } else if (level > 0 && sz == calc_len(level-1) && node) {
+    } else if (level > 0 && sz == calc_height(level-1) && node) {
         return (*node)[offset/calc_len(level-1)].merkleHash(0, sz);
     }
     // std::cerr << "hashing " << offset << " to " << (offset+sz) << std::endl;
-    auto h1 = merkleHash(offset, sz/2);
-    auto h2 = merkleHash(offset+sz/2, sz/2);
+    auto h1 = merkleHash(offset, sz-1);
+    auto h2 = merkleHash(offset+(1 << (sz-1)), sz-1);
     return hash2(h1, h2);
 }
 
