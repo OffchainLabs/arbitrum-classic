@@ -96,5 +96,4 @@ inline ByteSlice returnValueResult(const DbResult<value>& res) {
     return {void_data, static_cast<int>(value.size())};
 }
 
-RawAssertion makeRawAssertion(Assertion& assertion) {
 #endif /* cavm_utils_hpp */
