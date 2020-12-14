@@ -29,7 +29,7 @@ typedef struct {
     uint64_t stepCount;
 } cassertion;
 
-Machine* read_files(std::string filename) {
+Machine* read_files(const std::string& filename) {
     try {
         return new Machine(Machine::loadFromFile(filename));
     } catch (const std::exception& e) {
@@ -66,26 +66,26 @@ int checkpointMachine(CMachine* m, CCheckpointStorage* s) {
 void machineHash(CMachine* m, void* ret) {
     assert(m);
     uint256_t retHash = static_cast<Machine*>(m)->hash();
-    std::array<unsigned char, 32> val;
+    std::array<unsigned char, 32> val{};
     to_big_endian(retHash, val.begin());
     std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
 }
 
 void* machineClone(CMachine* m) {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
-    Machine* cloneMach = new Machine(*mach);
+    auto mach = static_cast<Machine*>(m);
+    auto cloneMach = new Machine(*mach);
     return static_cast<void*>(cloneMach);
 }
 
 void machinePrint(CMachine* m) {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
+    auto mach = static_cast<Machine*>(m);
     std::cout << "Machine info\n" << *mach << std::endl;
 }
 
 CStatus machineCurrentStatus(CMachine* m) {
-    Machine* mach = static_cast<Machine*>(m);
+    auto mach = static_cast<Machine*>(m);
     switch (mach->currentStatus()) {
         case Status::Extensive:
             return STATUS_EXTENSIVE;
@@ -126,21 +126,21 @@ struct ReasonConverter {
 
 CBlockReason machineIsBlocked(CMachine* m, int newMessages) {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
+    auto mach = static_cast<Machine*>(m);
     auto blockReason = mach->isBlocked(newMessages != 0);
     return nonstd::visit(ReasonConverter{}, blockReason);
 }
 
 ByteSlice machineMarshallForProof(CMachine* m) {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
+    auto mach = static_cast<Machine*>(m);
     std::vector<unsigned char> buffer;
     return returnCharVector(mach->marshalForProof());
 }
 
 ByteSlice machineMarshallState(CMachine* m) {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
+    auto mach = static_cast<Machine*>(m);
     std::vector<unsigned char> buffer;
     return returnCharVector(mach->marshalState());
 }
@@ -199,7 +199,7 @@ RawAssertion executeAssertion(CMachine* m,
                               uint64_t message_count,
                               uint64_t wallLimit) {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
+    auto mach = static_cast<Machine*>(m);
     auto messages = getInboxMessages(inbox_messages, message_count);
 
     try {
@@ -219,7 +219,7 @@ RawAssertion executeCallServerAssertion(CMachine* m,
                                         void* fake_inbox_peek_value,
                                         uint64_t wallLimit) {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
+    auto mach = static_cast<Machine*>(m);
 
     auto messages = getInboxMessages(inbox_messages, message_count);
     auto fake_inbox_peek_value_data =
@@ -244,7 +244,7 @@ RawAssertion executeSideloadedAssertion(CMachine* m,
                                         void* sideload,
                                         uint64_t wallLimit) {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
+    auto mach = static_cast<Machine*>(m);
 
     auto messages = getInboxMessages(inbox_messages, message_count);
     auto sideload_value = getTuple(sideload);
