@@ -26,6 +26,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 	golog "log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -35,10 +36,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
-	//_ "net/http/pprof"
+	_ "net/http/pprof"
 )
 
 var logger zerolog.Logger
+var pprofMux *http.ServeMux
 
 func main() {
 	// Enable line numbers in logging
@@ -49,6 +51,8 @@ func main() {
 
 	// Print line number that log was created on
 	logger = log.With().Caller().Str("component", "arb-tx-aggregator").Logger()
+
+	pprofMux = http.DefaultServeMux
 
 	ctx := context.Background()
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
@@ -64,6 +68,8 @@ func main() {
 
 	forwardTxURL := fs.String("forward-url", "", "url of another aggregator to send transactions through")
 
+	enablePProf := fs.Bool("pprof", false, "enable profiling server")
+
 	//go http.ListenAndServe("localhost:6060", nil)
 
 	err := fs.Parse(os.Args[1:])
@@ -77,6 +83,13 @@ func main() {
 			utils.WalletArgsString,
 			utils.RollupArgsString,
 		)
+	}
+
+	if *enablePProf {
+		go func() {
+			err := http.ListenAndServe("localhost:8081", pprofMux)
+			log.Error().Err(err).Msg("profiling server failed")
+		}()
 	}
 
 	rollupArgs := utils.ParseRollupCommand(fs, 0)
