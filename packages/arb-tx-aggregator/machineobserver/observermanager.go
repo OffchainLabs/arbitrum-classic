@@ -159,14 +159,19 @@ func RunObserver(
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
+	firstLoop := true
 	go func() {
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
 
 			logger.Info().Msg("Observer thread")
 
-			if err := ensureInitialized(ctx, cp, db, rollupWatcher, inboxWatcher); err != nil {
-				logger.Fatal().Stack().Err(err).Send()
+			if firstLoop {
+				firstLoop = false
+			} else {
+				if err := ensureInitialized(ctx, cp, db, rollupWatcher, inboxWatcher); err != nil {
+					logger.Fatal().Stack().Err(err).Send()
+				}
 			}
 
 			err = func() error {
