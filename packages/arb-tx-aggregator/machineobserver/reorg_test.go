@@ -21,7 +21,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 )
 
-func setupRollup(ctx context.Context, client ethutils.EthClient, authClient *ethbridge.EthArbAuthClient) (common.Address, common.Address, error) {
+func setupRollup(ctx context.Context, authClient *ethbridge.EthArbAuthClient) (common.Address, common.Address, error) {
 	config := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(10),
 		StakeToken:              common.Address{},
@@ -30,7 +30,7 @@ func setupRollup(ctx context.Context, client ethutils.EthClient, authClient *eth
 		ArbGasSpeedLimitPerTick: 200000,
 	}
 
-	factoryAddr, err := ethbridge.DeployRollupFactory(ctx, authClient, client)
+	factoryAddr, err := ethbridge.DeployRollupFactory(ctx, authClient)
 	if err != nil {
 		return common.Address{}, common.Address{}, err
 	}
@@ -96,7 +96,7 @@ func TestReorg(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rollupAddress, inboxAddress, err := setupRollup(ctx, l1Client, authClient)
+	rollupAddress, inboxAddress, err := setupRollup(ctx, authClient)
 	if err != nil {
 		t.Fatal(err)
 	}

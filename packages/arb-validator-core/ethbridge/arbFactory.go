@@ -44,28 +44,28 @@ func newArbFactory(address ethcommon.Address, client ethutils.EthClient, auth *T
 	return &arbFactory{arbFactoryWatcher: watcher, auth: auth}, nil
 }
 
-func DeployRollupFactory(ctx context.Context, authClient *EthArbAuthClient, client ethutils.EthClient) (ethcommon.Address, error) {
+func DeployRollupFactory(ctx context.Context, authClient *EthArbAuthClient) (ethcommon.Address, error) {
 	rollupAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
-		return ethbridgecontracts.DeployArbRollup(auth, client)
+		return ethbridgecontracts.DeployArbRollup(auth, authClient.client)
 	})
 	if err != nil {
 		return ethcommon.Address{}, err
 	}
 
 	inbox, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
-		return ethbridgecontracts.DeployGlobalInbox(auth, client)
+		return ethbridgecontracts.DeployGlobalInbox(auth, authClient.client)
 	})
 	if err != nil {
 		return ethcommon.Address{}, err
 	}
 
-	chalFactory, _, err := DeployChallengeFactory(ctx, authClient, client)
+	chalFactory, _, err := DeployChallengeFactory(ctx, authClient, authClient.client)
 	if err != nil {
 		return ethcommon.Address{}, err
 	}
 
 	arbFactory, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
-		return ethbridgecontracts.DeployArbFactory(auth, client, rollupAddr, inbox, chalFactory)
+		return ethbridgecontracts.DeployArbFactory(auth, authClient.client, rollupAddr, inbox, chalFactory)
 	})
 
 	return arbFactory, err
