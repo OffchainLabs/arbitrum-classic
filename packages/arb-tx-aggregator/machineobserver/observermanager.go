@@ -42,9 +42,12 @@ func ensureInitialized(
 	rollupWatcher arbbridge.ArbRollupWatcher,
 	inboxWatcher arbbridge.GlobalInboxWatcher,
 ) error {
+	logger.Info().Msg("Loading database")
 	if err := db.Load(ctx); err != nil {
 		return err
 	}
+
+	logger.Info().Msg("Database loaded")
 
 	// If we're already initialized, do nothing
 	if db.LatestBlockId() != nil {
@@ -66,11 +69,15 @@ func ensureInitialized(
 		return err
 	}
 
+	logger.Info().Msg("L2 chain verified")
+
 	// We're starting from scratch.  Process the messages from initial block
 	_, eventCreated, _, creationTimestamp, err := rollupWatcher.GetCreationInfo(ctx)
 	if err != nil {
 		return err
 	}
+
+	logger.Info().Msg("Creation info retrieved")
 
 	if err := db.AddInitialBlock(ctx, new(big.Int).Sub(eventCreated.BlockId.Height.AsInt(), big.NewInt(1))); err != nil {
 		return err
@@ -100,6 +107,8 @@ func ensureInitialized(
 		return err
 	}
 
+	logger.Info().Msg("Initial messages from first block have been added")
+
 	return nil
 }
 
@@ -110,6 +119,7 @@ func RunObserver(
 	executablePath string,
 	dbPath string,
 ) (*txdb.TxDB, error) {
+	logger.Info().Msg("Creating indexed checkpointer")
 	cp, err := checkpointing.NewIndexedCheckpointer(
 		rollupAddr,
 		dbPath,
@@ -143,6 +153,7 @@ func RunObserver(
 
 	db := txdb.New(clnt, cp, cp.GetAggregatorStore(), rollupAddr)
 
+	logger.Info().Msg("Initializing database")
 	// Make first call to ensureInitialized outside of thread to avoid race conditions
 	if err := ensureInitialized(ctx, cp, db, rollupWatcher, inboxWatcher); err != nil {
 		logger.Fatal().Stack().Err(err).Send()
@@ -151,6 +162,8 @@ func RunObserver(
 	go func() {
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
+
+			logger.Info().Msg("Observer thread")
 
 			if err := ensureInitialized(ctx, cp, db, rollupWatcher, inboxWatcher); err != nil {
 				logger.Fatal().Stack().Err(err).Send()
