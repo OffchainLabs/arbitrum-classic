@@ -42,6 +42,11 @@ import (
 var logger zerolog.Logger
 var pprofMux *http.ServeMux
 
+func init() {
+	pprofMux = http.DefaultServeMux
+	http.DefaultServeMux = http.NewServeMux()
+}
+
 func main() {
 	// Enable line numbers in logging
 	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
@@ -51,8 +56,6 @@ func main() {
 
 	// Print line number that log was created on
 	logger = log.With().Caller().Str("component", "arb-tx-aggregator").Logger()
-
-	pprofMux = http.DefaultServeMux
 
 	ctx := context.Background()
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
