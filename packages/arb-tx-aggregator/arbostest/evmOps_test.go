@@ -44,7 +44,7 @@ func TestBlockHash(t *testing.T) {
 		Payment:     big.NewInt(0),
 		Data:        hexutil.MustDecode(arbostestcontracts.OpCodesBin),
 	}
-	logs, _, mach := runAssertion(t, makeSimpleInbox([]message.Message{message.NewSafeL2Message(tx)}), 1, 0)
+	logs, _, mach, _ := runAssertion(t, makeSimpleInbox([]message.Message{message.NewSafeL2Message(tx)}), 1, 0)
 	results := processTxResults(t, logs)
 	checkConstructorResult(t, results[0], connAddress1)
 

@@ -143,7 +143,7 @@ func TestDepositEthTx(t *testing.T) {
 		tx4,
 		message.NewSafeL2Message(getBalance5),
 	}
-	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), 10, 0)
+	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), 10, 0)
 	results := processTxResults(t, logs)
 
 	checkConstructorResult(t, results[0], connAddress1)

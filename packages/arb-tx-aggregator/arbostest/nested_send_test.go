@@ -56,7 +56,7 @@ func TestFailedNestedSend(t *testing.T) {
 		message.NewSafeL2Message(sendTx),
 	}
 
-	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), 2, 0)
+	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), 2, 0)
 	results := processTxResults(t, logs)
 	checkConstructorResult(t, results[0], connAddress1)
 	revertedTxCheck(t, results[1])

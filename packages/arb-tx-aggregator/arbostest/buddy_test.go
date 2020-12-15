@@ -59,7 +59,7 @@ func TestBuddyContract(t *testing.T) {
 		message.NewInboxMessage(buddyConstructor, connAddress2, big.NewInt(4), chainTime),
 	}
 
-	logs, sends, mach := runAssertion(t, messages, 4, 1)
+	logs, sends, mach, _ := runAssertion(t, messages, 4, 1)
 	results := processTxResults(t, logs)
 
 	checkConstructorResult(t, results[0], connAddress1)

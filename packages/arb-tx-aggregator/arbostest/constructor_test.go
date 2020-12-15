@@ -60,7 +60,7 @@ func TestContructor(t *testing.T) {
 	failIfError(t, err)
 
 	inboxMessages := makeSimpleInbox([]message.Message{l2Message})
-	logs, _, mach := runAssertion(t, inboxMessages, 1, 0)
+	logs, _, mach, _ := runAssertion(t, inboxMessages, 1, 0)
 	results := processTxResults(t, logs)
 
 	res := results[0]
@@ -120,7 +120,7 @@ func TestContructorExistingBalance(t *testing.T) {
 		message.NewSafeL2Message(tx),
 	}
 
-	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), 3, 0)
+	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), 3, 0)
 	results := processTxResults(t, logs)
 
 	checkConstructorResult(t, results[0], connAddress1)
