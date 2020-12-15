@@ -91,6 +91,8 @@ func (db *TxDB) Load(ctx context.Context) error {
 		logger.Error().Stack().Err(err).Msg("Failed to restore from checkpoint, falling back to fresh start")
 	}
 	// We failed to restore from a checkpoint
+	logger.Info().Msg("Starting database from scratch")
+
 	valueCache, err := cmachine.NewValueCache()
 	if err != nil {
 		return err
