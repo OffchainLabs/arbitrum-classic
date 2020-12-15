@@ -1,6 +1,9 @@
 pragma solidity >=0.4.21 <0.7.0;
 
 interface ArbSys {
+    // Get ArbOS version number
+    function arbOSVersion() external pure returns (uint256);
+
     // Send given amount of ERC-20 tokens to dest with token contract sender.
     // This is safe to freely call since the sender is authenticated and thus
     // you can only send fake tokens, not steal real ones

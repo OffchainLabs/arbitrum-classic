@@ -44,7 +44,7 @@ func initMsg() message.Init {
 			MaxExecutionSteps:       0,
 			ArbGasSpeedLimitPerTick: 0,
 		},
-		Owner:       common.Address{},
+		Owner:       owner,
 		ExtraConfig: []byte{},
 	}
 }
