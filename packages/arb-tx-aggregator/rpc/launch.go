@@ -19,6 +19,7 @@ package rpc
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -109,6 +110,34 @@ func LaunchAggregator(
 			return err
 		}
 		batch = batcher.NewStatefulBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
+	}
+
+	return LaunchAggregatorAdvanced(
+		ctx,
+		client,
+		db,
+		rollupAddress,
+		web3RPCPort,
+		web3WSPort,
+		flags,
+		batch,
+	)
+}
+
+func LaunchAggregatorAdvanced(
+	ctx context.Context,
+	client ethutils.EthClient,
+	db *txdb.TxDB,
+	rollupAddress common.Address,
+	web3RPCPort string,
+	web3WSPort string,
+	flags utils2.RPCFlags,
+	batch batcher.TransactionBatcher,
+) error {
+	arbClient := ethbridge.NewEthClient(client)
+	rollupContract, err := arbClient.NewRollupWatcher(rollupAddress)
+	if err != nil {
+		return err
 	}
 
 	_, eventCreated, _, _, err := rollupContract.GetCreationInfo(ctx)
