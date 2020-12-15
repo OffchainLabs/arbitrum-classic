@@ -17,9 +17,10 @@
 #ifndef checkpointstorage_hpp
 #define checkpointstorage_hpp
 
-#include <avm_values/vmValueParser.hpp>
-#include <data_storage/datastorage.hpp>
-#include <data_storage/value/value.hpp>
+#include "avm_values/vmValueParser.hpp"
+#include "data_storage/checkpointedmachine.hpp"
+#include "data_storage/datastorage.hpp"
+#include "data_storage/value/value.hpp"
 
 #include <memory>
 #include <string>
@@ -37,6 +38,7 @@ class TransactionDB;
 class CheckpointStorage {
     std::shared_ptr<DataStorage> datastorage;
     std::shared_ptr<Code> code;
+    std::shared_ptr<CheckpointedMachine> cmach;
 
    public:
     explicit CheckpointStorage(const std::string& db_path);
@@ -55,6 +57,20 @@ class CheckpointStorage {
     Machine getMachine(uint256_t machineHash, ValueCache& value_cache) const;
     DbResult<value> getValue(uint256_t value_hash,
                              ValueCache& value_cache) const;
+
+    Assertion run(uint64_t stepCount,
+                  std::vector<Tuple> inbox_messages,
+                  std::chrono::seconds wallLimit);
+
+    static Assertion runSideloaded(uint64_t stepCount,
+                                   std::vector<Tuple> inbox_messages,
+                                   std::chrono::seconds wallLimit,
+                                   Tuple sideload);
+
+    Assertion runCallServer(uint64_t stepCount,
+                            std::vector<Tuple> inbox_messages,
+                            std::chrono::seconds wallLimit,
+                            value fake_inbox_peek_value);
 };
 
 #endif /* checkpointstorage_hpp */

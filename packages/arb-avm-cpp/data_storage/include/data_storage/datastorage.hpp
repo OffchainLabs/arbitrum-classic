@@ -37,10 +37,10 @@ class DataStorage {
     std::unique_ptr<rocksdb::ColumnFamilyHandle> blocks_column;
     std::unique_ptr<rocksdb::ColumnFamilyHandle> node_column;
 
-    DataStorage(const std::string& db_path);
+    explicit DataStorage(const std::string& db_path);
     rocksdb::Status closeDb();
 
-    std::unique_ptr<rocksdb::Transaction> beginTransaction() {
+    std::unique_ptr<rocksdb::Transaction> beginTransaction() const {
         return std::unique_ptr<rocksdb::Transaction>{
             txn_db->BeginTransaction(rocksdb::WriteOptions())};
     }
@@ -56,9 +56,12 @@ class Transaction {
         : datastorage(std::move(datastorage_)),
           transaction(std::move(transaction_)) {}
 
-    rocksdb::Status commit() { return transaction->Commit(); }
+    rocksdb::Status commit() const { return transaction->Commit(); }
 
-    rocksdb::Status rollback() { return transaction->Rollback(); }
+    rocksdb::Status rollback() const { return transaction->Rollback(); }
+
+    static std::unique_ptr<Transaction> makeTransaction(
+        std::shared_ptr<DataStorage> store);
 };
 
 #endif /* datastorage_hpp */

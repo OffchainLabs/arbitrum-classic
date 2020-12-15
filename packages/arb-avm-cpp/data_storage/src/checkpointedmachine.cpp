@@ -23,51 +23,33 @@
 #include <iostream>
 #include <utility>
 
-void CheckpointedMachine::initialize(LoadedExecutable executable) {
-    db.initialize(std::move(executable));
-}
-
-void CheckpointedMachine::initialize(const std::string& executable_path) {
-    db.initialize(executable_path);
-}
-
-bool CheckpointedMachine::initialized() const {
-    return db.initialized();
-}
-
-bool CheckpointedMachine::closeCheckpointedMachine() {
-    return db.closeCheckpointStorage();
-}
-
-std::unique_ptr<AggregatorStore> CheckpointedMachine::getAggregatorStore()
-    const {
-    return db.getAggregatorStore();
-}
-
-Assertion CheckpointedMachine::run(uint64_t stepCount,
-                                   std::vector<Tuple> inbox_messages,
-                                   std::chrono::seconds wallLimit) {
+Assertion CheckpointedMachine::run(
+    uint64_t stepCount,
+    std::vector<Tuple> inbox_messages,
+    std::chrono::seconds wallLimit,
+    const std::shared_ptr<DataStorage>& storage) {
     Assertion assertion =
-        mach.run(stepCount, std::move(inbox_messages), wallLimit);
+        mach->run(stepCount, std::move(inbox_messages), wallLimit);
 
-    auto tx = db.makeTransaction();
-    auto as = db.getAggregatorStore();
+    auto tx = Transaction::makeTransaction(storage);
+    AggregatorStore as(storage);
 
-    auto result = saveMachine(*tx, mach);
+    auto result = saveMachine(*tx, *mach);
     if (!result.status.ok()) {
-        return Assertion();
+        throw std::runtime_error("error saving machine:" +
+                                 result.status.ToString());
     }
 
     for (const auto& log : assertion.logs) {
         std::vector<unsigned char> logData;
         marshal_value(log, logData);
-        as->saveLog(*tx->transaction, logData);
+        as.saveLog(*tx->transaction, logData);
     }
 
     for (const auto& msg : assertion.outMessages) {
         std::vector<unsigned char> msgData;
         marshal_value(msg, msgData);
-        as->saveMessage(*tx->transaction, msgData);
+        as.saveMessage(*tx->transaction, msgData);
     }
 
     return assertion;
@@ -77,14 +59,14 @@ Assertion CheckpointedMachine::runCallServer(uint64_t stepCount,
                                              std::vector<Tuple> inbox_messages,
                                              std::chrono::seconds wallLimit,
                                              value fake_inbox_peek_value) {
-    return mach.runCallServer(stepCount, std::move(inbox_messages), wallLimit,
-                              std::move(fake_inbox_peek_value));
+    return mach->runCallServer(stepCount, std::move(inbox_messages), wallLimit,
+                               std::move(fake_inbox_peek_value));
 }
 
 Assertion CheckpointedMachine::runSideloaded(uint64_t stepCount,
                                              std::vector<Tuple> inbox_messages,
                                              std::chrono::seconds wallLimit,
                                              Tuple sideload_value) {
-    return mach.runSideloaded(stepCount, std::move(inbox_messages), wallLimit,
-                              std::move(sideload_value));
+    return mach->runSideloaded(stepCount, std::move(inbox_messages), wallLimit,
+                               std::move(sideload_value));
 }
