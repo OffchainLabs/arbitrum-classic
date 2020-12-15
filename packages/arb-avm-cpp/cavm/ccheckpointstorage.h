@@ -56,6 +56,12 @@ int deleteData(CCheckpointStorage* storage_ptr,
 CBlockStore* createBlockStore(CCheckpointStorage* storage_ptr);
 CAggregatorStore* createAggregatorStore(CCheckpointStorage* storage_ptr);
 
+RawAssertion checkpointExecuteAssertion(CCheckpointStorage* storage_ptr,
+                                        uint64_t maxSteps,
+                                        void* inbox_messages,
+                                        uint64_t message_count,
+                                        uint64_t wallLimit);
+
 #ifdef __cplusplus
 }
 #endif

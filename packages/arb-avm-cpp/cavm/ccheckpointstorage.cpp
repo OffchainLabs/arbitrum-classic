@@ -27,6 +27,7 @@
 #include <avm/machine.hpp>
 #include <avm_values/value.hpp>
 
+#include <iostream>
 #include <string>
 
 CCheckpointStorage* createCheckpointStorage(const char* db_path) {
@@ -200,4 +201,24 @@ int deleteData(CCheckpointStorage* storage_ptr,
     auto key_slice = rocksdb::Slice(key_ptr, key_length);
 
     return keyvalue_store->deleteData(key_slice).ok();
+}
+
+RawAssertion checkpointExecuteAssertion(CCheckpointStorage* storage_ptr,
+                                        uint64_t maxSteps,
+                                        void* inbox_messages,
+                                        uint64_t message_count,
+                                        uint64_t wallLimit) {
+    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    auto messages = getInboxMessages(inbox_messages, message_count);
+
+    try {
+        auto assertion = storage->run(maxSteps, std::move(messages),
+                                      std::chrono::seconds{wallLimit});
+
+        return makeRawAssertion(assertion);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to make assertion, exception:" << e.what()
+                  << std::endl;
+        return makeEmptyAssertion();
+    }
 }

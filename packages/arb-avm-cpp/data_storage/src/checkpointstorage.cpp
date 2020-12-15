@@ -27,6 +27,7 @@
 #include <avm_values/codepointstub.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/vmValueParser.hpp>
+#include <utility>
 
 #include <rocksdb/options.h>
 #include <rocksdb/utilities/transaction.h>
@@ -49,9 +50,8 @@ void CheckpointStorage::initialize(LoadedExecutable executable) {
     code->addSegment(std::move(executable.code));
     Machine mach{MachineState{code, std::move(executable.static_val)}};
     auto res = saveMachine(*tx, mach);
-    auto save_exp = std::runtime_error("failed to save");
     if (!res.status.ok()) {
-        throw save_exp;
+        throw std::runtime_error("failed to save machine");
     }
     std::vector<unsigned char> value_data;
     marshal_uint256_t(mach.hash(), value_data);
@@ -60,11 +60,11 @@ void CheckpointStorage::initialize(LoadedExecutable executable) {
     auto s =
         tx->transaction->Put(rocksdb::Slice(initial_slice_label), value_slice);
     if (!s.ok()) {
-        throw save_exp;
+        throw std::runtime_error("failed to save initial values into db");
     }
     s = tx->commit();
     if (!s.ok()) {
-        throw save_exp;
+        throw std::runtime_error("failed to commit values into db");
     }
 }
 
@@ -83,10 +83,7 @@ bool CheckpointStorage::closeCheckpointStorage() {
 }
 
 std::unique_ptr<Transaction> CheckpointStorage::makeTransaction() {
-    rocksdb::WriteOptions writeOptions;
-    auto transaction = std::unique_ptr<rocksdb::Transaction>(
-        datastorage->txn_db->BeginTransaction(writeOptions));
-    return std::make_unique<Transaction>(datastorage, std::move(transaction));
+    return Transaction::makeTransaction(datastorage);
 }
 
 std::unique_ptr<const Transaction> CheckpointStorage::makeConstTransaction()
@@ -203,4 +200,24 @@ DbResult<value> CheckpointStorage::getValue(uint256_t value_hash,
                                             ValueCache& value_cache) const {
     auto tx = makeConstTransaction();
     return ::getValue(*tx, value_hash, value_cache);
+}
+Assertion CheckpointStorage::run(uint64_t stepCount,
+                                 std::vector<Tuple> inbox_messages,
+                                 std::chrono::seconds wallLimit) {
+    return cmach->run(stepCount, std::move(inbox_messages), wallLimit,
+                      datastorage);
+}
+
+Assertion CheckpointStorage::runSideloaded(uint64_t stepCount,
+                                           std::vector<Tuple> inbox_messages,
+                                           std::chrono::seconds wallLimit,
+                                           Tuple sideload) {
+    return Assertion();
+}
+
+Assertion CheckpointStorage::runCallServer(uint64_t stepCount,
+                                           std::vector<Tuple> inbox_messages,
+                                           std::chrono::seconds wallLimit,
+                                           value fake_inbox_peek_value) {
+    return Assertion();
 }

@@ -20,8 +20,6 @@
 #include <string>
 
 #include <rocksdb/options.h>
-#include <avm_values/codepointstub.hpp>
-#include <avm_values/tuple.hpp>
 
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>
@@ -34,15 +32,13 @@ DataStorage::DataStorage(const std::string& db_path) {
     options.create_if_missing = true;
     options.create_missing_column_families = true;
 
-    txn_db_path = std::move(db_path);
+    txn_db_path = db_path;
 
     std::vector<rocksdb::ColumnFamilyDescriptor> column_families;
-    column_families.push_back(rocksdb::ColumnFamilyDescriptor(
-        rocksdb::kDefaultColumnFamilyName, rocksdb::ColumnFamilyOptions()));
-    column_families.push_back(rocksdb::ColumnFamilyDescriptor(
-        "blocks", rocksdb::ColumnFamilyOptions()));
-    column_families.push_back(rocksdb::ColumnFamilyDescriptor(
-        "nodes", rocksdb::ColumnFamilyOptions()));
+    column_families.emplace_back(rocksdb::kDefaultColumnFamilyName,
+                                 rocksdb::ColumnFamilyOptions());
+    column_families.emplace_back("blocks", rocksdb::ColumnFamilyOptions());
+    column_families.emplace_back("nodes", rocksdb::ColumnFamilyOptions());
 
     rocksdb::TransactionDB* db = nullptr;
     std::vector<rocksdb::ColumnFamilyHandle*> handles;
@@ -69,4 +65,10 @@ rocksdb::Status DataStorage::closeDb() {
     auto s = txn_db->Close();
     txn_db.reset();
     return s;
+}
+
+std::unique_ptr<Transaction> Transaction::makeTransaction(
+    std::shared_ptr<DataStorage> store) {
+    auto tx = store->beginTransaction();
+    return std::make_unique<Transaction>(std::move(store), std::move(tx));
 }
