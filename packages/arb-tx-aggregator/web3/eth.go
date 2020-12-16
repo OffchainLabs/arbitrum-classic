@@ -471,6 +471,8 @@ func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.T
 		return nil, err
 	}
 	log.Debug().
+		Uint64("gaslimit", msg.MaxGas.Uint64()).
+		Uint64("gasused", res.GasUsed.Uint64()).
 		Hex("returndata", res.ReturnData).
 		Int("resultcode", int(res.ResultCode)).
 		Msg("executed call")

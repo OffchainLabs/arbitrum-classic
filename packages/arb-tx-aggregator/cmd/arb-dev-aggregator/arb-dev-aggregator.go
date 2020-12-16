@@ -47,6 +47,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"sync"
 	"time"
 )
 
@@ -130,7 +131,7 @@ func main() {
 	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
 	backend := NewBackend(db, l1, signer)
 
-	if err := backend.addInboxMessage(ctx, initMsg, rollupAddress); err != nil {
+	if err := backend.AddInboxMessage(ctx, initMsg, rollupAddress); err != nil {
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
@@ -155,7 +156,7 @@ func main() {
 			Dest:  common.NewAddressFromEth(account.Address),
 			Value: depositSize,
 		}
-		if err := backend.addInboxMessage(ctx, deposit, rollupAddress); err != nil {
+		if err := backend.AddInboxMessage(ctx, deposit, rollupAddress); err != nil {
 			logger.Fatal().Stack().Err(err).Send()
 		}
 		accounts = append(accounts, account)
@@ -184,7 +185,10 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		<-c
-		data, err := inbox.TestVectorJSON(backend.messages, nil, nil)
+		backend.Lock()
+		messages := backend.messages
+		backend.Unlock()
+		data, err := inbox.TestVectorJSON(messages, nil, nil)
 		if err != nil {
 			logger.Fatal().Err(err).Send()
 		}
@@ -215,6 +219,7 @@ type l1BlockInfo struct {
 }
 
 type Backend struct {
+	sync.Mutex
 	db         *txdb.TxDB
 	l1Emulator *L1Emulator
 	signer     types.Signer
@@ -235,10 +240,14 @@ func NewBackend(db *txdb.TxDB, l1 *L1Emulator, signer types.Signer) *Backend {
 
 // Return nil if no pending transaction count is available
 func (b *Backend) PendingTransactionCount(context.Context, common.Address) *uint64 {
+	b.Lock()
+	defer b.Unlock()
 	return nil
 }
 
 func (b *Backend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	b.Lock()
+	defer b.Unlock()
 	arbTx := message.NewCompressedECDSAFromEth(tx)
 	sender, err := types.Sender(b.signer, tx)
 	if err != nil {
@@ -250,6 +259,12 @@ func (b *Backend) SendTransaction(ctx context.Context, tx *types.Transaction) er
 	}
 
 	return b.addInboxMessage(ctx, arbMsg, common.NewAddressFromEth(sender))
+}
+
+func (b *Backend) AddInboxMessage(ctx context.Context, msg message.Message, sender common.Address) error {
+	b.Lock()
+	defer b.Unlock()
+	return b.addInboxMessage(ctx, msg, sender)
 }
 
 func (b *Backend) addInboxMessage(ctx context.Context, msg message.Message, sender common.Address) error {
@@ -272,11 +287,15 @@ func (b *Backend) addInboxMessage(ctx context.Context, msg message.Message, send
 }
 
 func (b *Backend) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
+	b.Lock()
+	defer b.Unlock()
 	return b.newTxFeed.Subscribe(ch)
 }
 
 // Return nil if no pending snapshot is available
 func (b *Backend) PendingSnapshot() *snapshot.Snapshot {
+	b.Lock()
+	defer b.Unlock()
 	return nil
 }
 

@@ -68,7 +68,7 @@ func NewServer(
 		batch:              batch,
 		db:                 db,
 		maxCallTime:        0,
-		maxCallGas:         big.NewInt(100000000),
+		maxCallGas:         big.NewInt(1000000000),
 		initialBlockHeight: new(big.Int).Sub(createdHeight, big.NewInt(1)),
 	}
 }
