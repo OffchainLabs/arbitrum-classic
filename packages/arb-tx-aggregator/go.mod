@@ -10,6 +10,7 @@ require (
 	github.com/gorilla/mux v1.7.4
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mattn/go-tty v0.0.3 // indirect
+	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-checkpointer v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-evm v0.7.3
