@@ -35,13 +35,6 @@ var logger = log.With().Caller().Str("component", "machineobserver").Logger()
 
 const defaultMaxReorgDepth = 100
 
-type TxDB interface {
-	Load(ctx context.Context) error
-	LatestBlockId() *common.BlockId
-	AddInitialBlock(ctx context.Context, initialBlockHeight *big.Int) error
-	AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent, finishedBlock *common.BlockId) error
-}
-
 func verifyRollupInstance(
 	ctx context.Context,
 	initialMachineHash common.Hash,
@@ -63,7 +56,7 @@ func verifyRollupInstance(
 
 func ensureInitialized(
 	ctx context.Context,
-	db TxDB,
+	db *txdb.TxDB,
 	inboxWatcher arbbridge.GlobalInboxWatcher,
 	eventCreated arbbridge.ChainInfo,
 	creationTimestamp *big.Int,
@@ -182,7 +175,7 @@ func ExecuteObserver(
 	clnt arbbridge.ArbClient,
 	initialMachineHash common.Hash,
 	maxReorgHeight *big.Int,
-	db TxDB,
+	db *txdb.TxDB,
 ) error {
 	rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
 	if err != nil {
@@ -217,7 +210,7 @@ func ExecuteObserver(
 func observerRunThread(
 	ctx context.Context,
 	clnt arbbridge.ChainInfoGetter,
-	db TxDB,
+	db *txdb.TxDB,
 	inboxWatcher arbbridge.GlobalInboxWatcher,
 	maxReorgHeight *big.Int,
 	eventCreated arbbridge.ChainInfo,

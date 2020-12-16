@@ -42,15 +42,22 @@ const (
 )
 
 type EthArbClient struct {
-	client ethutils.EthClient
+	client           ethutils.EthClient
+	headerRetryDelay time.Duration
 }
 
 func NewEthClient(client ethutils.EthClient) *EthArbClient {
-	return &EthArbClient{client}
+	return NewEthClientAdvanced(client, time.Second*2)
+}
+
+func NewEthClientAdvanced(client ethutils.EthClient, retryDelay time.Duration) *EthArbClient {
+	return &EthArbClient{
+		client:           client,
+		headerRetryDelay: retryDelay,
+	}
 }
 
 var reorgError = errors.New("reorg occured")
-var headerRetryDelay = time.Second * 2
 var maxFetchAttempts = 5
 
 func (c *EthArbClient) SubscribeBlockHeadersAfter(ctx context.Context, prevBlockId *common.BlockId) (<-chan arbbridge.MaybeBlockId, error) {
@@ -121,7 +128,7 @@ func (c *EthArbClient) subscribeBlockHeadersAfter(ctx context.Context, prevBlock
 				}
 
 				// Header was not found so wait before checking again
-				time.Sleep(headerRetryDelay)
+				time.Sleep(c.headerRetryDelay)
 			}
 
 			if blockInfo.ParentHash != prevBlockId.HeaderHash.ToEthHash() {
@@ -235,12 +242,7 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 	}
 
 	// Transaction successful, increment nonce for next time
-	txJSON, err := tx.MarshalJSON()
-	if err != nil {
-		logger.Error().Stack().Err(err).Str("nonce", auth.Nonce.String()).Msg("failed to marshal tx into json")
-	} else {
-		logger.Info().RawJSON("tx", txJSON).Str("nonce", auth.Nonce.String()).Hex("sender", t.auth.From.Bytes()).Send()
-	}
+	logger.Info().Str("nonce", auth.Nonce.String()).Hex("sender", t.auth.From.Bytes()).Send()
 
 	t.auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
 	return addr, tx, err
@@ -282,6 +284,20 @@ func NewEthAuthClient(ctx context.Context, client ethutils.EthClient, auth *bind
 	}
 	return &EthArbAuthClient{
 		EthArbClient: NewEthClient(client),
+		auth:         &TransactAuth{auth: auth},
+	}, nil
+}
+
+func NewEthAuthClientAdvanced(ctx context.Context, client *EthArbClient, auth *bind.TransactOpts) (*EthArbAuthClient, error) {
+	if auth.Nonce == nil {
+		nonce, err := client.client.PendingNonceAt(ctx, auth.From)
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed to get nonce for GlobalInbox")
+		}
+		auth.Nonce = new(big.Int).SetUint64(nonce)
+	}
+	return &EthArbAuthClient{
+		EthArbClient: client,
 		auth:         &TransactAuth{auth: auth},
 	}, nil
 }

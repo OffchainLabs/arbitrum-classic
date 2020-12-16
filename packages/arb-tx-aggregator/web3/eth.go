@@ -145,7 +145,13 @@ func (s *Server) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (he
 func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
 	res, err := s.executeCall(callArgs, blockNum)
 	if err != nil {
-		logger.Warn().Err(err).Msg("error executing call")
+		logMsg := logger.Warn().Err(err)
+		if blockNum != nil {
+			logMsg = logMsg.Int64("height", blockNum.Int64())
+		} else {
+			logMsg = logMsg.Str("height", "nil")
+		}
+		logMsg.Msg("error executing call")
 		return nil, err
 	}
 	return res.ReturnData, nil
@@ -477,6 +483,7 @@ func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, err
 		if snap == nil {
 			return nil, errors.New("couldn't fetch latest snapshot")
 		}
+		return snap, nil
 	}
 
 	snap, err := s.srv.GetSnapshot(uint64(*blockNum))
