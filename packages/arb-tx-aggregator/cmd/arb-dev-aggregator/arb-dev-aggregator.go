@@ -19,9 +19,12 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
+	accounts2 "github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
@@ -62,6 +65,8 @@ func main() {
 	// Print stack trace when `.Error().Stack().Err(err).` is added to zerolog call
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+
 	// Print line number that log was created on
 	logger = log.With().Caller().Str("component", "arb-dev-aggregator").Logger()
 
@@ -71,6 +76,11 @@ func main() {
 
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
 	saveMessages := fs.String("save", "", "save messages")
+	mnemonic := fs.String(
+		"mnemonic",
+		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
+		"mnemonic to generate accounts from",
+	)
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
@@ -123,6 +133,52 @@ func main() {
 	if err := backend.addInboxMessage(ctx, initMsg, rollupAddress); err != nil {
 		logger.Fatal().Stack().Err(err).Send()
 	}
+
+	wallet, err := hdwallet.NewFromMnemonic(*mnemonic)
+	if err != nil {
+		logger.Fatal().Stack().Err(err).Send()
+	}
+
+	depositSize, ok := new(big.Int).SetString("100000000000000000000", 10)
+	if !ok {
+		logger.Fatal().Stack().Send()
+	}
+
+	accounts := make([]accounts2.Account, 0)
+	for i := 0; i < 10; i++ {
+		path := hdwallet.MustParseDerivationPath(fmt.Sprintf("m/44'/60'/0'/0/%v", i))
+		account, err := wallet.Derive(path, false)
+		if err != nil {
+			logger.Fatal().Stack().Err(err).Send()
+		}
+		deposit := message.Eth{
+			Dest:  common.NewAddressFromEth(account.Address),
+			Value: depositSize,
+		}
+		if err := backend.addInboxMessage(ctx, deposit, rollupAddress); err != nil {
+			logger.Fatal().Stack().Err(err).Send()
+		}
+		accounts = append(accounts, account)
+	}
+
+	fmt.Println("Arbitrum Dev Chain")
+	fmt.Println("")
+	fmt.Println("Available Accounts")
+	fmt.Println("==================")
+	for i, account := range accounts {
+		fmt.Printf("(%v) %v (100 ETH)\n", i, account.Address.Hex())
+	}
+
+	fmt.Println("\nPrivate Keys")
+	fmt.Println("==================")
+	for i, account := range accounts {
+		privKey, err := wallet.PrivateKeyHex(account)
+		if err != nil {
+			logger.Fatal().Stack().Err(err).Send()
+		}
+		fmt.Printf("(%v) 0x%v\n", i, privKey)
+	}
+	fmt.Println("")
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

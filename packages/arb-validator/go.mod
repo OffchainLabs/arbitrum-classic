@@ -6,6 +6,7 @@ require (
 	github.com/ethereum/go-ethereum v1.9.24
 	github.com/golang/protobuf v1.4.3
 	github.com/kr/pretty v0.2.0 // indirect
+	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c // indirect
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-checkpointer v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator v0.7.3 // indirect

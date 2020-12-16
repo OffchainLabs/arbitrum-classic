@@ -145,13 +145,6 @@ func (s *Server) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (he
 func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
 	res, err := s.executeCall(callArgs, blockNum)
 	if err != nil {
-		logMsg := logger.Warn().Err(err)
-		if blockNum != nil {
-			logMsg = logMsg.Int64("height", blockNum.Int64())
-		} else {
-			logMsg = logMsg.Str("height", "nil")
-		}
-		logMsg.Msg("error executing call")
 		return nil, err
 	}
 	return res.ReturnData, nil
@@ -466,7 +459,26 @@ func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.T
 	}
 	from, msg := buildCallMsg(args)
 	msg = s.srv.AdjustGas(msg)
-	return snap.Call(msg, from)
+	res, err := snap.Call(msg, from)
+	if err != nil {
+		logMsg := logger.Warn().Err(err)
+		if blockNum != nil {
+			logMsg = logMsg.Int64("height", blockNum.Int64())
+		} else {
+			logMsg = logMsg.Str("height", "nil")
+		}
+		logMsg.Msg("error executing call")
+		return nil, err
+	}
+	log.Debug().
+		Hex("returndata", res.ReturnData).
+		Int("resultcode", int(res.ResultCode)).
+		Msg("executed call")
+
+	if res.ResultCode != evm.ReturnCode && res.ResultCode != evm.RevertCode {
+		return nil, errors.Errorf("failed to execute call with revert code %v", res.ResultCode)
+	}
+	return res, err
 }
 
 func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {
