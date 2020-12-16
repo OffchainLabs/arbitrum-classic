@@ -55,7 +55,7 @@ func TestGetStorageAt(t *testing.T) {
 			GasPriceBid: big.NewInt(0),
 			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 			Payment:     big.NewInt(0),
-			Data:        snapshot.GetStorageAtData(connAddr, big.NewInt(1)),
+			Data:        snapshot.StorageAtData(connAddr, big.NewInt(1)),
 		},
 	}
 

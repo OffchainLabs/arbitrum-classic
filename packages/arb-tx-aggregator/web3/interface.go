@@ -40,20 +40,22 @@ type CallTxArgs struct {
 
 // Receipt represents the results of a transaction.
 type GetTransactionReceiptResult struct {
-	Status            hexutil.Uint64 `json:"status"`
-	CumulativeGasUsed hexutil.Uint64 `json:"cumulativeGasUsed"`
-	Bloom             hexutil.Bytes  `json:"logsBloom"`
-	Logs              []*types.Log   `json:"logs"`
-	// They are stored in the chain database.
-	TxHash          common.Hash     `json:"transactionHash"`
-	ContractAddress *common.Address `json:"contractAddress"`
-	GasUsed         hexutil.Uint64  `json:"gasUsed"`
+	TransactionHash   common.Hash     `json:"transactionHash"`
+	TransactionIndex  hexutil.Uint64  `json:"transactionIndex"`
+	BlockHash         common.Hash     `json:"blockHash"`
+	BlockNumber       *hexutil.Big    `json:"blockNumber"`
+	From              common.Address  `json:"from"`
+	To                *common.Address `json:"to"`
+	CumulativeGasUsed hexutil.Uint64  `json:"cumulativeGasUsed"`
+	GasUsed           hexutil.Uint64  `json:"gasUsed"`
+	ContractAddress   *common.Address `json:"contractAddress"`
+	Logs              []*types.Log    `json:"logs"`
+	LogsBloom         hexutil.Bytes   `json:"logsBloom"`
+	Status            hexutil.Uint64  `json:"status"`
 
-	// Inclusion information: These fields provide information about the inclusion of the
-	// transaction corresponding to this receipt.
-	BlockHash        common.Hash    `json:"blockHash"`
-	BlockNumber      *hexutil.Big   `json:"blockNumber"`
-	TransactionIndex hexutil.Uint64 `json:"transactionIndex"`
+	// Arbitrum Specific Fields
+	ReturnCode hexutil.Uint64 `json:"returnCode"`
+	ReturnData hexutil.Bytes  `json:"returnData"`
 }
 
 type TransactionResult struct {
@@ -69,6 +71,13 @@ type TransactionResult struct {
 	TransactionIndex *hexutil.Uint64 `json:"transactionIndex"`
 	Value            *hexutil.Big    `json:"value"`
 	V                *hexutil.Big    `json:"v"`
-	R                hexutil.Bytes   `json:"r"`
-	S                hexutil.Bytes   `json:"s"`
+	R                *hexutil.Big    `json:"r"`
+	S                *hexutil.Big    `json:"s"`
+
+	// Arbitrum Specific Fields
+	L1SeqNum        *hexutil.Big    `json:"l1SequenceNumber"`
+	ParentRequestId *common.Hash    `json:"parentRequestId"`
+	IndexInParent   *hexutil.Big    `json:"indexInParent"`
+	ArbType         hexutil.Uint64  `json:"arbType"`
+	ArbSubType      *hexutil.Uint64 `json:"arbSubType"`
 }

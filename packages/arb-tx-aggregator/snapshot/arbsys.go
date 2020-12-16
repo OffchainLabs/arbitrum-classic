@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"math/big"
 	"strings"
@@ -32,11 +33,23 @@ import (
 )
 
 var (
-	txCountABI        abi.Method
-	withdrawEthABI    abi.Method
-	withdrawERC20ABI  abi.Method
-	withdrawERC721ABI abi.Method
-	getStorageAtABI   abi.Method
+	txCountABI                   abi.Method
+	withdrawEthABI               abi.Method
+	withdrawERC20ABI             abi.Method
+	withdrawERC721ABI            abi.Method
+	getStorageAtABI              abi.Method
+	addressTableRegisterABI      abi.Method
+	addressTableLookupABI        abi.Method
+	addressTableAddressExistsABI abi.Method
+	addressTableSizeABI          abi.Method
+	addressTableLookupIndexABI   abi.Method
+	addressTableDecompressABI    abi.Method
+	addressTableCompressABI      abi.Method
+	registerBLSKeyABI            abi.Method
+	getBLSPublicKeyABI           abi.Method
+	uploadFunctionTableABI       abi.Method
+	functionTableSizeABI         abi.Method
+	functionTableGetABI          abi.Method
 
 	ethWithdrawal    ethcommon.Hash
 	erc20Withdrawal  ethcommon.Hash
@@ -56,6 +69,18 @@ func init() {
 	withdrawERC20ABI = arbsys.Methods["withdrawERC20"]
 	withdrawERC721ABI = arbsys.Methods["withdrawERC721"]
 	getStorageAtABI = arbsys.Methods["getStorageAt"]
+	addressTableRegisterABI = arbsys.Methods["addressTable_register"]
+	addressTableLookupABI = arbsys.Methods["addressTable_lookup"]
+	addressTableAddressExistsABI = arbsys.Methods["addressTable_addressExists"]
+	addressTableSizeABI = arbsys.Methods["addressTable_size"]
+	addressTableLookupIndexABI = arbsys.Methods["addressTable_lookupIndex"]
+	addressTableDecompressABI = arbsys.Methods["addressTable_decompress"]
+	addressTableCompressABI = arbsys.Methods["addressTable_compress"]
+	registerBLSKeyABI = arbsys.Methods["registerBlsKey"]
+	getBLSPublicKeyABI = arbsys.Methods["getBlsPublicKey"]
+	uploadFunctionTableABI = arbsys.Methods["uploadFunctionTable"]
+	functionTableSizeABI = arbsys.Methods["functionTableSize"]
+	functionTableGetABI = arbsys.Methods["functionTableGet"]
 
 	ethWithdrawal = arbsys.Events["EthWithdrawal"].ID
 	erc20Withdrawal = arbsys.Events["ERC20Withdrawal"].ID
@@ -64,12 +89,8 @@ func init() {
 	arbsysConn = bind.NewBoundContract(arbos.ARB_SYS_ADDRESS, arbsys, nil, nil, nil)
 }
 
-func getTransactionCountData(address common.Address) []byte {
-	txData, err := txCountABI.Inputs.Pack(address)
-	if err != nil {
-		panic(err)
-	}
-	return append(txCountABI.ID, txData...)
+func TransactionCountData(address common.Address) []byte {
+	return makeFuncData(txCountABI, address)
 }
 
 func parseTransactionCountResult(res *evm.TxResult) (*big.Int, error) {
@@ -85,27 +106,15 @@ func parseTransactionCountResult(res *evm.TxResult) (*big.Int, error) {
 }
 
 func WithdrawEthData(address common.Address) []byte {
-	txData, err := withdrawEthABI.Inputs.Pack(address)
-	if err != nil {
-		panic(err)
-	}
-	return append(withdrawEthABI.ID, txData...)
+	return makeFuncData(withdrawEthABI, address)
 }
 
 func WithdrawERC20Data(address common.Address, amount *big.Int) []byte {
-	txData, err := withdrawERC20ABI.Inputs.Pack(address, amount)
-	if err != nil {
-		panic(err)
-	}
-	return append(withdrawERC20ABI.ID, txData...)
+	return makeFuncData(withdrawERC20ABI, address, amount)
 }
 
 func WithdrawERC721Data(address common.Address, id *big.Int) []byte {
-	txData, err := withdrawERC721ABI.Inputs.Pack(address, id)
-	if err != nil {
-		panic(err)
-	}
-	return append(withdrawERC721ABI.ID, txData...)
+	return makeFuncData(withdrawERC721ABI, address, id)
 }
 
 func encodeLog(log evm.Log) types.Log {
@@ -149,12 +158,8 @@ func ParseERC721WithdrawalEvent(log evm.Log) (*arboscontracts.ArbSysERC721Withdr
 	return event, nil
 }
 
-func GetStorageAtData(address common.Address, index *big.Int) []byte {
-	txData, err := getStorageAtABI.Inputs.Pack(address, index)
-	if err != nil {
-		panic(err)
-	}
-	return append(getStorageAtABI.ID, txData...)
+func StorageAtData(address common.Address, index *big.Int) []byte {
+	return makeFuncData(getStorageAtABI, address, index)
 }
 
 func parseGetStorageAtResult(res *evm.TxResult) (*big.Int, error) {
@@ -167,4 +172,98 @@ func parseGetStorageAtResult(res *evm.TxResult) (*big.Int, error) {
 		return nil, errors.New("unexpected tx result")
 	}
 	return val, nil
+}
+
+func AddressTableRegisterData(address common.Address) []byte {
+	return makeFuncData(addressTableRegisterABI, address)
+}
+
+func AddressTableLookupData(address common.Address) []byte {
+	return makeFuncData(addressTableLookupABI, address)
+}
+
+func AddressTableAddressExistsData(address common.Address) []byte {
+	return makeFuncData(addressTableAddressExistsABI, address)
+}
+
+func AddressTableSizeData() []byte {
+	return makeFuncData(addressTableSizeABI)
+}
+
+func AddressTableLookupIndexData(index *big.Int) []byte {
+	return makeFuncData(addressTableLookupIndexABI, index)
+}
+
+func AddressTableDecompressData(buf []byte, offset *big.Int) []byte {
+	return makeFuncData(addressTableDecompressABI, buf, offset)
+}
+
+func AddressTableCompressData(address common.Address) []byte {
+	return makeFuncData(addressTableCompressABI, address)
+}
+
+func RegisterBLSKeyData(x0, x1, y0, y1 *big.Int) []byte {
+	return makeFuncData(registerBLSKeyABI, x0, x1, y0, y1)
+}
+
+func GetBLSPublicKeyData(address common.Address) []byte {
+	return makeFuncData(getBLSPublicKeyABI, address)
+}
+
+func UploadFunctionTableData(buf []byte) []byte {
+	return makeFuncData(uploadFunctionTableABI, buf)
+}
+
+func FunctionTableSizeData(address common.Address) []byte {
+	return makeFuncData(functionTableSizeABI, address)
+}
+
+func FunctionTableGetData(address common.Address, index *big.Int) []byte {
+	return makeFuncData(functionTableGetABI, address, index)
+}
+
+func ParseFunctionTableGetDataResult(data []byte) (message.FunctionTableEntry, error) {
+	failRet := message.FunctionTableEntry{}
+	vals, err := functionTableGetABI.Outputs.UnpackValues(data)
+	if err != nil {
+		return failRet, err
+	}
+	if len(vals) != 3 {
+		return failRet, errors.New("unexpected return param count")
+	}
+	funcIdRaw, ok := vals[0].(*big.Int)
+	if !ok {
+		return failRet, errors.New("unexpected type for func id")
+	}
+	payableRaw, ok := vals[1].(bool)
+	if !ok {
+		return failRet, errors.New("unexpected type for payable")
+	}
+	maxGas, ok := vals[2].(*big.Int)
+	if !ok {
+		return failRet, errors.New("unexpected type for max gas")
+	}
+	funcBytes := funcIdRaw.Bytes()
+	if len(funcBytes) < 4 {
+		return failRet, errors.New("unexpected func id length")
+	}
+	var funcId [4]byte
+	copy(funcId[:], funcBytes)
+	var payable byte
+	if payableRaw {
+		payable = 1
+	}
+	return message.FunctionTableEntry{
+		FuncID:  funcId,
+		Payable: payable,
+		MaxGas:  maxGas,
+	}, nil
+}
+
+func makeFuncData(funcABI abi.Method, params ...interface{}) []byte {
+	txData, err := funcABI.Inputs.Pack(params...)
+	if err != nil {
+		panic(err)
+	}
+	return append(funcABI.ID, txData...)
 }

@@ -19,10 +19,11 @@ package message
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/rlp"
+	errors2 "github.com/pkg/errors"
+	"log"
 	"math/big"
 	"strings"
 
@@ -303,6 +304,15 @@ func (t ContractTransaction) L2Type() L2SubType {
 	return ContractTransactionType
 }
 
+func (t ContractTransaction) AsEthTx() *types.Transaction {
+	emptyAddress := common.Address{}
+	if t.DestAddress == emptyAddress {
+		return types.NewContractCreation(0, t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
+	} else {
+		return types.NewTransaction(0, t.DestAddress.ToEthAddress(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
+	}
+}
+
 type Call struct {
 	BasicTx
 }
@@ -428,7 +438,8 @@ type CompressedECDSATransaction struct {
 func NewCompressedECDSAFromEth(tx *types.Transaction) CompressedECDSATransaction {
 	v, r, s := tx.RawSignatureValues()
 	vByte := byte(0)
-	if v.Cmp(big.NewInt(27)) == 0 || v.Cmp(big.NewInt(28)) == 0 {
+	if !tx.Protected() {
+		// None EIP-155 tx
 		vByte = byte(v.Uint64())
 	} else {
 		vByte = byte(v.Uint64() % 2)
@@ -442,11 +453,15 @@ func NewCompressedECDSAFromEth(tx *types.Transaction) CompressedECDSATransaction
 }
 
 func newCompressedECDSATxFromData(data []byte) (CompressedECDSATransaction, error) {
-	if len(data) < 65 {
+	if len(data) < 66 {
 		return CompressedECDSATransaction{}, errors.New("data is too short")
 	}
 
-	compressedTx, err := decodeCompressedTx(bytes.NewReader(data[:len(data)-65]))
+	if data[0] != 0xff {
+		return CompressedECDSATransaction{}, errors.New("parsing compressed tx using function table not supported")
+	}
+
+	compressedTx, err := decodeCompressedTx(bytes.NewReader(data[1 : len(data)-65]))
 	if err != nil {
 		return CompressedECDSATransaction{}, err
 	}
@@ -475,13 +490,59 @@ func (t CompressedECDSATransaction) L2Type() L2SubType {
 }
 
 func (t CompressedECDSATransaction) AsData() ([]byte, error) {
-	data, err := encodeUnsignedTx(t.CompressedTx)
+	data := []byte{0xff}
+	txData, err := encodeUnsignedTx(t.CompressedTx)
 	if err != nil {
 		return nil, err
 	}
-
+	data = append(data, txData...)
 	data = append(data, encodeECDSASig(t.V, t.R, t.S)...)
 	return data, nil
+}
+
+func (t CompressedECDSATransaction) IsEIP155() bool {
+	// If transaction is an EIP-155 transaction, v will be 0 or 1
+	// If transaction is a pre-EIP-155 transaction, it will be 27 or 28
+	return t.V == 0 || t.V == 1
+}
+
+func (t CompressedECDSATransaction) AsEthTx(chainId *big.Int) (*types.Transaction, error) {
+	to, ok := t.To.(CompressedAddressFull)
+	if !ok {
+		return nil, errors.New("can only convert to tx if address is full")
+	}
+	var dest []byte
+	emptyAddress := common.Address{}
+	if to.Address != emptyAddress {
+		dest = to.Address[:]
+	}
+	var v *big.Int
+	if !t.IsEIP155() {
+		v = big.NewInt(int64(t.V))
+	} else {
+		v = new(big.Int).Mul(chainId, big.NewInt(2))
+		v = v.Add(v, big.NewInt(35+int64(1-t.V)))
+	}
+	txData := []interface{}{
+		t.SequenceNum,
+		t.GasPrice,
+		t.GasLimit,
+		dest,
+		t.Payment,
+		t.Calldata,
+		v,
+		t.R,
+		t.S,
+	}
+	rlpTxData, err := rlp.EncodeToBytes(txData)
+	if err != nil {
+		return nil, errors2.Wrap(err, "error encoding transaction")
+	}
+	tx := new(types.Transaction)
+	if err := rlp.DecodeBytes(rlpTxData, tx); err != nil {
+		return nil, errors2.Wrap(err, "error decoding transaction")
+	}
+	return tx, nil
 }
 
 type TransactionBatch struct {
@@ -502,15 +563,22 @@ func NewTransactionBatchFromMessages(messages []AbstractL2Message) (TransactionB
 
 func newTransactionBatchFromData(data []byte) TransactionBatch {
 	txes := make([][]byte, 0)
-	for len(data) >= 8 {
-		msgLength := binary.BigEndian.Uint64(data[:])
-		data = data[8:]
-		if uint64(len(data)) < msgLength {
-			// Not enough data remaining
+
+	r := bytes.NewReader(data)
+	for {
+		msgLength := new(big.Int)
+		if err := rlp.Decode(r, msgLength); err != nil {
 			break
 		}
-		txes = append(txes, data[:msgLength])
-		data = data[msgLength:]
+		if big.NewInt(int64(r.Len())).Cmp(msgLength) < 0 {
+			// Not enough data remaining
+			log.Println("Received batch containing invalid data at end")
+			break
+		}
+		txData := make([]byte, msgLength.Uint64())
+		// Read wont error since we've already checked for remaining length
+		_, _ = r.Read(txData)
+		txes = append(txes, txData)
 	}
 	return TransactionBatch{Transactions: txes}
 }

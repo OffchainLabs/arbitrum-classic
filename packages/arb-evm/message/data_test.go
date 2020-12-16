@@ -44,7 +44,7 @@ func TestDecodeAddressIndex(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	address, err := decodeAddress(bytes.NewReader(rawIndex))
+	address, err := DecodeAddress(bytes.NewReader(rawIndex))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestDecodeAddressFull(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	address, err := decodeAddress(bytes.NewReader(rawIndex))
+	address, err := DecodeAddress(bytes.NewReader(rawIndex))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestDecodeAddressNone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	address, err := decodeAddress(bytes.NewReader(rawIndex))
+	address, err := DecodeAddress(bytes.NewReader(rawIndex))
 	if err != nil {
 		t.Fatal(err)
 	}

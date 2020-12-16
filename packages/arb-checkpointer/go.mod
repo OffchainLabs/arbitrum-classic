@@ -3,10 +3,10 @@ module github.com/offchainlabs/arbitrum/packages/arb-checkpointer
 go 1.13
 
 require (
-	github.com/golang/protobuf v1.4.2
-	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.2
-	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.2
-	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.7.2
+	github.com/golang/protobuf v1.4.3
+	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.3
+	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.3
+	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.7.3
 	google.golang.org/protobuf v1.25.0
 )
 

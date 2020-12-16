@@ -18,6 +18,7 @@ package rpc
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -32,60 +33,86 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
+type BatcherMode interface {
+	isBatcherMode()
+}
+
+type ForwarderBatcherMode struct {
+	NodeURL string
+}
+
+func (b ForwarderBatcherMode) isBatcherMode() {}
+
+type StatefulBatcherMode struct {
+	Auth *bind.TransactOpts
+}
+
+func (b StatefulBatcherMode) isBatcherMode() {}
+
+type StatelessBatcherMode struct {
+	Auth *bind.TransactOpts
+}
+
+func (b StatelessBatcherMode) isBatcherMode() {}
+
 func LaunchAggregator(
 	ctx context.Context,
 	client ethutils.EthClient,
-	auth *bind.TransactOpts,
 	rollupAddress common.Address,
 	executable string,
 	dbPath string,
-	aggPort string,
 	web3RPCPort string,
 	web3WSPort string,
 	flags utils2.RPCFlags,
 	maxBatchTime time.Duration,
-	keepPendingState bool,
+	batcherMode BatcherMode,
 ) error {
 	arbClient := ethbridge.NewEthClient(client)
 	db, err := machineobserver.RunObserver(ctx, rollupAddress, arbClient, executable, dbPath)
 	if err != nil {
 		return err
 	}
-
-	authClient := ethbridge.NewEthAuthClient(client, auth)
 	rollupContract, err := arbClient.NewRollupWatcher(rollupAddress)
 	if err != nil {
 		return err
 	}
-	inboxAddress, err := rollupContract.InboxAddress(context.Background())
-	if err != nil {
-		return err
-	}
-	globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
+	inboxAddress, err := rollupContract.InboxAddress(ctx)
 	if err != nil {
 		return err
 	}
 
-	batch := batcher.NewBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime, keepPendingState)
+	var batch batcher.TransactionBatcher
+	switch batcherMode := batcherMode.(type) {
+	case ForwarderBatcherMode:
+		forwardClient, err := ethclient.DialContext(ctx, batcherMode.NodeURL)
+		if err != nil {
+			return err
+		}
+		batch = batcher.NewForwarder(forwardClient)
+	case StatelessBatcherMode:
+		authClient := ethbridge.NewEthAuthClient(client, batcherMode.Auth)
+		globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
+		if err != nil {
+			return err
+		}
+		batch = batcher.NewStatelessBatcher(ctx, rollupAddress, client, globalInbox, maxBatchTime)
+	case StatefulBatcherMode:
+		authClient := ethbridge.NewEthAuthClient(client, batcherMode.Auth)
+		globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
+		if err != nil {
+			return err
+		}
+		batch = batcher.NewStatefulBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
+	}
 
-	srv := aggregator.NewServer(client, batch, rollupAddress, db)
+	srv := aggregator.NewServer(batch, rollupAddress, db)
 	errChan := make(chan error, 1)
-
-	aggServer, err := aggregator.GenerateRPCServer(srv)
-	if err != nil {
-		return err
-	}
 
 	web3Server, err := web3.GenerateWeb3Server(srv)
 	if err != nil {
 		return err
 	}
 
-	if aggPort != "" {
-		go func() {
-			errChan <- utils2.LaunchRPC(aggServer, aggPort, flags)
-		}()
-	}
 	if web3RPCPort != "" {
 		go func() {
 			errChan <- utils2.LaunchRPC(web3Server, web3RPCPort, flags)

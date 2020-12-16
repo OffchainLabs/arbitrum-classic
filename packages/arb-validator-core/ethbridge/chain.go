@@ -20,6 +20,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"log"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -28,7 +29,6 @@ import (
 
 	"context"
 	"fmt"
-	"log"
 	"math/big"
 	"time"
 )
@@ -36,6 +36,9 @@ import (
 type ArbAddresses struct {
 	ArbFactory string `json:"ArbFactory"`
 }
+
+var parityErr = "Block information is incomplete while ancient block sync is still in progress, before it's finished we can't determine the existence of requested item."
+var parityErr2 = "missing required field 'transactionHash' for Log"
 
 func (a ArbAddresses) ArbFactoryAddress() common.Address {
 	return common.NewAddressFromEth(ethcommon.HexToAddress(a.ArbFactory))
@@ -67,7 +70,7 @@ func waitForReceipt(ctx context.Context, client ethutils.EthClient, from ethcomm
 	return err
 }
 
-func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.EthClient, txHash ethcommon.Hash) (*types.Receipt, error) {
+func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.ReceiptFetcher, txHash ethcommon.Hash) (*types.Receipt, error) {
 	for {
 		select {
 		case <-time.After(time.Second):
@@ -76,10 +79,15 @@ func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.EthCli
 				continue
 			}
 			if err != nil {
-				if err.Error() == ethereum.NotFound.Error() {
+				if err.Error() == ethereum.NotFound.Error() || err.Error() == parityErr {
 					continue
 				}
-				log.Println("ERROR getting receipt", err)
+
+				if err.Error() == parityErr2 {
+					log.Printf("WARNING: issue getting receipt for %v: %v", txHash.Hex(), err)
+					continue
+				}
+				log.Printf("ERROR getting receipt for %v: %v", txHash.Hex(), err)
 				return nil, err
 			}
 			return receipt, nil

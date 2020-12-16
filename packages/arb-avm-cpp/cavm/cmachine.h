@@ -54,6 +54,8 @@ typedef struct {
     int outMessageCount;
     ByteSlice logs;
     int logCount;
+    ByteSlice debugPrints;
+    int debugPrintCount;
     uint64_t numSteps;
     uint64_t numGas;
 } RawAssertion;

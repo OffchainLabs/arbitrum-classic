@@ -162,17 +162,25 @@ RawAssertion makeRawAssertion(Assertion& assertion) {
         marshal_value(log, logData);
     }
 
+    std::vector<unsigned char> debugPrintData;
+    for (const auto& debugPrint : assertion.debugPrints) {
+        marshal_value(debugPrint, debugPrintData);
+    }
+
     return {assertion.inbox_messages_consumed,
             returnCharVector(outMsgData),
             static_cast<int>(assertion.outMessages.size()),
             returnCharVector(logData),
             static_cast<int>(assertion.logs.size()),
+            returnCharVector(debugPrintData),
+            static_cast<int>(assertion.debugPrints.size()),
             assertion.stepCount,
             assertion.gasCount};
 }
 
 RawAssertion makeEmptyAssertion() {
     return {0, returnCharVector(std::vector<char>{}),
+            0, returnCharVector(std::vector<char>{}),
             0, returnCharVector(std::vector<char>{}),
             0, 0,
             0};

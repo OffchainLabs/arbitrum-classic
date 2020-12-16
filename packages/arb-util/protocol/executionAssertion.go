@@ -85,14 +85,14 @@ func (x *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {
 }
 
 func (x *ExecutionAssertion) ParseOutMessages() []value.Value {
-	return bytesArrayToVals(x.OutMsgsData, x.OutMsgsCount)
+	return BytesArrayToVals(x.OutMsgsData, x.OutMsgsCount)
 }
 
 func (x *ExecutionAssertion) ParseLogs() []value.Value {
-	return bytesArrayToVals(x.LogsData, x.LogsCount)
+	return BytesArrayToVals(x.LogsData, x.LogsCount)
 }
 
-func bytesArrayToVals(data []byte, valCount uint64) []value.Value {
+func BytesArrayToVals(data []byte, valCount uint64) []value.Value {
 	rd := bytes.NewReader(data)
 	vals := make([]value.Value, 0, valCount)
 	for i := uint64(0); i < valCount; i++ {
