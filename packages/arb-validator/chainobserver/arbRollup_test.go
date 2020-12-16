@@ -134,7 +134,7 @@ func getRollup(t *testing.T) arbbridge.ArbRollup {
 		ArbGasSpeedLimitPerTick: 100000,
 	}
 
-	arbFactoryAddress, err := ethbridge.DeployRollupFactory(ctx, authClient, client)
+	arbFactoryAddress, err := ethbridge.DeployRollupFactory(ctx, authClient)
 	if err != nil {
 		t.Fatal(err)
 	}

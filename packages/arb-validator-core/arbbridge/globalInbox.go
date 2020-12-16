@@ -83,6 +83,11 @@ type GlobalInboxSender interface {
 		destination common.Address,
 		value *big.Int,
 	) error
+
+	SendInitializationMessage(
+		ctx context.Context,
+		data []byte,
+	) error
 }
 
 type GlobalInbox interface {

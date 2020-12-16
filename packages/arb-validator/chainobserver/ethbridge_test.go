@@ -135,7 +135,7 @@ func TestConfirmAssertion(t *testing.T) {
 		ArbGasSpeedLimitPerTick: 100000,
 	}
 
-	arbFactoryAddress, err := ethbridge.DeployRollupFactory(ctx, authClient, client)
+	arbFactoryAddress, err := ethbridge.DeployRollupFactory(ctx, authClient)
 	if err != nil {
 		t.Fatal(err)
 	}

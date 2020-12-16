@@ -70,7 +70,7 @@ type TxDB struct {
 func New(
 	clnt arbbridge.ChainTimeGetter,
 	checkpointer checkpointing.RollupCheckpointer,
-	as *cmachine.AggregatorStore,
+	as machine.AggregatorStore,
 	chain common.Address,
 ) *TxDB {
 	return &TxDB{
@@ -121,6 +121,7 @@ func (db *TxDB) addSnap(mach machine.Machine, blockNum *big.Int, timestamp *big.
 		BlockNum:  common.NewTimeBlocks(new(big.Int).Set(blockNum)),
 		Timestamp: new(big.Int).Set(timestamp),
 	}
+	logger.Info().Uint64("block", blockNum.Uint64()).Msg("saving snapshot")
 	snap := snapshot.NewSnapshot(mach, currentTime, message.ChainAddressToID(db.chain), new(big.Int).Set(db.lastInboxSeq))
 	db.snapCache.addSnapshot(snap)
 }
@@ -218,7 +219,7 @@ func (db *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 	return nil
 }
 
-func (db *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent, finishedBlock *common.BlockId) error {
+func (db *TxDB) AddMessages(ctx context.Context, msgs []inbox.InboxMessage, finishedBlock *common.BlockId) error {
 	timestamp, err := db.timeGetter.TimestampForBlockHash(ctx, finishedBlock.HeaderHash)
 	db.blockProcFeed.Send(true)
 	defer db.blockProcFeed.Send(false)
@@ -232,9 +233,9 @@ func (db *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliver
 		// TODO: Give ExecuteAssertion the ability to run unbounded until it blocks
 		// The max steps here is a hack since it should just run until it blocks
 		// Last value returned is not an error type
-		assertion, _ := db.mach.ExecuteAssertion(1000000000000, []inbox.InboxMessage{msg.Message}, 0)
+		assertion, _ := db.mach.ExecuteAssertion(1000000000000, []inbox.InboxMessage{msg}, 0)
 		db.callMut.Lock()
-		db.lastInboxSeq = msg.Message.InboxSeqNum
+		db.lastInboxSeq = msg.InboxSeqNum
 		db.callMut.Unlock()
 		processedAssertion, err := db.processAssertion(assertion)
 		if err != nil {
