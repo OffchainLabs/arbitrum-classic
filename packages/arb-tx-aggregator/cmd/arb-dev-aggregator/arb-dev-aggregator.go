@@ -37,6 +37,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
+	"io/ioutil"
 	golog "log"
 	"math/big"
 	"net/http"
@@ -69,6 +70,7 @@ func main() {
 	rpcVars := utils2.AddRPCFlags(fs)
 
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
+	saveMessages := fs.String("save", "", "save messages")
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
@@ -126,21 +128,15 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		<-c
-		//messages, err := globalEth.GetDeliveredEvents(ctx, nil, nil)
-		//if err != nil {
-		//	logger.Fatal().Err(err).Send()
-		//}
-		//inboxMessages := make([]inbox.InboxMessage, 0)
-		//for _, msg := range messages {
-		//	inboxMessages = append(inboxMessages, msg.Message)
-		//}
-		//data, err := inbox.TestVectorJSON(inboxMessages, nil, nil)
-		//if err != nil {
-		//	logger.Fatal().Err(err).Send()
-		//}
-		//
-		//log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-		//log.Info().Msg(string(data))
+		data, err := inbox.TestVectorJSON(backend.messages, nil, nil)
+		if err != nil {
+			logger.Fatal().Err(err).Send()
+		}
+		if *saveMessages != "" {
+			if err := ioutil.WriteFile(*saveMessages, data, 777); err != nil {
+				logger.Fatal().Err(err).Send()
+			}
+		}
 		os.Exit(0)
 	}()
 
@@ -201,14 +197,14 @@ func (b *Backend) SendTransaction(ctx context.Context, tx *types.Transaction) er
 }
 
 func (b *Backend) addInboxMessage(ctx context.Context, msg message.Message, sender common.Address) error {
+	block := b.l1Emulator.generateBlock()
+
 	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(b.msgCount),
-		Timestamp: big.NewInt(time.Now().Unix()),
+		BlockNum:  block.blockId.Height,
+		Timestamp: block.timestamp,
 	}
 
 	inboxMessage := message.NewInboxMessage(msg, sender, big.NewInt(b.msgCount), chainTime)
-
-	block := b.l1Emulator.generateBlock()
 
 	if err := b.db.AddMessages(ctx, []inbox.InboxMessage{inboxMessage}, block.blockId); err != nil {
 		return err
