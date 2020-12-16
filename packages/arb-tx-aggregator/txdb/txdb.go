@@ -121,7 +121,6 @@ func (db *TxDB) addSnap(mach machine.Machine, blockNum *big.Int, timestamp *big.
 		BlockNum:  common.NewTimeBlocks(new(big.Int).Set(blockNum)),
 		Timestamp: new(big.Int).Set(timestamp),
 	}
-	logger.Info().Uint64("block", blockNum.Uint64()).Msg("saving snapshot")
 	snap := snapshot.NewSnapshot(mach, currentTime, message.ChainAddressToID(db.chain), new(big.Int).Set(db.lastInboxSeq))
 	db.snapCache.addSnapshot(snap)
 }

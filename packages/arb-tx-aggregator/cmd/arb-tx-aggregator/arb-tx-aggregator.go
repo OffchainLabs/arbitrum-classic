@@ -54,6 +54,8 @@ func main() {
 	// Print stack trace when `.Error().Stack().Err(err).` is added to zerolog call
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+
 	// Print line number that log was created on
 	logger = log.With().Caller().Str("component", "arb-tx-aggregator").Logger()
 
