@@ -19,6 +19,7 @@ package machineobserver
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"math/big"
@@ -98,7 +99,7 @@ func ensureInitialized(
 		}
 	}
 
-	if err := db.AddMessages(ctx, events, eventCreated.BlockId); err != nil {
+	if err := db.AddMessages(ctx, extractMessages(events), eventCreated.BlockId); err != nil {
 		return err
 	}
 
@@ -325,7 +326,7 @@ func fastCatchupEvents(
 		if err != nil {
 			return errors.Wrap(err, "error getting end block in fast catchup")
 		}
-		if err := db.AddMessages(ctx, inboxDeliveredEvents, endBlock); err != nil {
+		if err := db.AddMessages(ctx, extractMessages(inboxDeliveredEvents), endBlock); err != nil {
 			return errors.Wrap(err, "error adding messages to db")
 		}
 	}
@@ -356,9 +357,17 @@ func watchEvents(
 			return errors.Wrapf(err, "manager hit error getting inbox events with block %v", blockId)
 		}
 
-		if err := db.AddMessages(ctx, inboxEvents, blockId); err != nil {
+		if err := db.AddMessages(ctx, extractMessages(inboxEvents), blockId); err != nil {
 			return errors.Wrap(err, "error adding messages to db")
 		}
 	}
 	return nil
+}
+
+func extractMessages(inboxEvents []arbbridge.MessageDeliveredEvent) []inbox.InboxMessage {
+	inboxMessages := make([]inbox.InboxMessage, 0, len(inboxEvents))
+	for _, ev := range inboxEvents {
+		inboxMessages = append(inboxMessages, ev.Message)
+	}
+	return inboxMessages
 }
