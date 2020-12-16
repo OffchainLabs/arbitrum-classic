@@ -197,6 +197,26 @@ func ExecuteObserver(
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
+	return ExecuteObserverAdvanced(
+		ctx,
+		clnt,
+		maxReorgHeight,
+		db,
+		inboxWatcher,
+		eventCreated,
+		creationTimestamp,
+	)
+}
+
+func ExecuteObserverAdvanced(
+	ctx context.Context,
+	clnt arbbridge.ChainInfoGetter,
+	maxReorgHeight *big.Int,
+	db *txdb.TxDB,
+	inboxWatcher arbbridge.GlobalInboxWatcher,
+	eventCreated arbbridge.ChainInfo,
+	creationTimestamp *big.Int,
+) error {
 	logger.Info().Msg("Initializing database")
 	// Make first call to ensureInitialized outside of thread to avoid race conditions
 	if err := ensureInitialized(ctx, db, inboxWatcher, eventCreated, creationTimestamp); err != nil {

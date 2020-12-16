@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/machineobserver"
@@ -120,35 +119,8 @@ func main() {
 		logger.Fatal().Err(err).Send()
 	}
 
-	rollupFactoryAddress, err := ethbridge.DeployRollupFactory(ctx, ethAuthClient)
-	if err != nil {
-		logger.Fatal().Err(err).Send()
-	}
-
-	rollupFactory, err := ethAuthClient.NewArbFactory(common.NewAddressFromEth(rollupFactoryAddress))
-	if err != nil {
-		logger.Fatal().Err(err).Send()
-	}
-
-	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		logger.Fatal().Err(err).Send()
-	}
-
-	config := valprotocol.ChainParams{
-		StakeRequirement:        big.NewInt(10),
-		StakeToken:              common.Address{},
-		GracePeriod:             common.TimeTicks{Val: big.NewInt(13000 * 2)},
-		MaxExecutionSteps:       10000000000,
-		ArbGasSpeedLimitPerTick: 200000,
-	}
-
-	rollupAddress, _, err := rollupFactory.CreateRollup(ctx, mach.Hash(), config, common.NewAddressFromEth(auth.From))
-	if err != nil {
-		logger.Fatal().Err(err).Send()
-	}
-
-	logger.Info().Hex("chainaddress", rollupAddress.Bytes()).Hex("chainid", message.ChainAddressToID(rollupAddress).Bytes()).Msg("Launching aggregator")
+	inboxAddress, err := ethbridge.DeployGlobalInbox(ctx, ethAuthClient)
+	rollupAddress := common.NewAddressFromEth(auth.From)
 
 	logger.Info().Hex("from", auth.From.Bytes()).Msg("Aggregator submitting batches")
 
@@ -168,28 +140,49 @@ func main() {
 
 	db := txdb.New(ethAuthClient, cp, as, rollupAddress)
 
-	if err := machineobserver.ExecuteObserver(
+	globalEth, err := ethAuthClient.NewGlobalInbox(common.NewAddressFromEth(inboxAddress), rollupAddress)
+	if err != nil {
+		logger.Fatal().Err(err).Send()
+	}
+
+	startId, err := ethAuthClient.BlockIdForHeight(ctx, nil)
+	if err != nil {
+		logger.Fatal().Err(err).Send()
+	}
+
+	startTime, err := ethAuthClient.TimestampForBlockHash(ctx, startId.HeaderHash)
+	if err != nil {
+		logger.Fatal().Err(err).Send()
+	}
+
+	config := valprotocol.ChainParams{
+		StakeRequirement:        big.NewInt(10),
+		StakeToken:              common.Address{},
+		GracePeriod:             common.TimeTicks{Val: big.NewInt(13000 * 2)},
+		MaxExecutionSteps:       10000000000,
+		ArbGasSpeedLimitPerTick: 200000,
+	}
+	initMsg := message.Init{
+		ChainParams: config,
+		Owner:       common.NewAddressFromEth(auth.From),
+		ExtraConfig: nil,
+	}
+	if err := globalEth.SendInitializationMessage(ctx, initMsg.AsData()); err != nil {
+		logger.Fatal().Err(err).Send()
+	}
+
+	if err := machineobserver.ExecuteObserverAdvanced(
 		ctx,
-		rollupAddress,
 		ethAuthClient,
-		mach.Hash(),
 		big.NewInt(100000),
 		db,
+		globalEth,
+		arbbridge.ChainInfo{
+			BlockId:  startId,
+			LogIndex: 0,
+		},
+		startTime,
 	); err != nil {
-		logger.Fatal().Err(err).Send()
-	}
-
-	rollupContract, err := arbClient.NewRollupWatcher(rollupAddress)
-	if err != nil {
-		logger.Fatal().Err(err).Send()
-	}
-	inboxAddress, err := rollupContract.InboxAddress(ctx)
-	if err != nil {
-		logger.Fatal().Err(err).Send()
-	}
-
-	globalEth, err := ethAuthClient.NewGlobalInbox(inboxAddress, rollupAddress)
-	if err != nil {
 		logger.Fatal().Err(err).Send()
 	}
 
@@ -218,8 +211,7 @@ func main() {
 	}()
 
 	if err := rpc.LaunchAggregatorAdvanced(
-		ctx,
-		ethclint,
+		startId.Height.AsInt(),
 		db,
 		rollupAddress,
 		"8547",

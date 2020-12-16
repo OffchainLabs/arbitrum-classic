@@ -52,9 +52,7 @@ func DeployRollupFactory(ctx context.Context, authClient *EthArbAuthClient) (eth
 		return ethcommon.Address{}, err
 	}
 
-	inbox, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
-		return ethbridgecontracts.DeployGlobalInbox(auth, authClient.client)
-	})
+	inbox, err := DeployGlobalInbox(ctx, authClient)
 	if err != nil {
 		return ethcommon.Address{}, err
 	}
@@ -69,6 +67,13 @@ func DeployRollupFactory(ctx context.Context, authClient *EthArbAuthClient) (eth
 	})
 
 	return arbFactory, err
+}
+
+func DeployGlobalInbox(ctx context.Context, authClient *EthArbAuthClient) (ethcommon.Address, error) {
+	inbox, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgecontracts.DeployGlobalInbox(auth, authClient.client)
+	})
+	return inbox, err
 }
 
 func (con *arbFactory) CreateRollup(
