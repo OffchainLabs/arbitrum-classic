@@ -20,6 +20,7 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -112,9 +113,13 @@ func LaunchAggregator(
 		batch = batcher.NewStatefulBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
 	}
 
+	_, eventCreated, _, _, err := rollupContract.GetCreationInfo(ctx)
+	if err != nil {
+		return err
+	}
+
 	return LaunchAggregatorAdvanced(
-		ctx,
-		client,
+		eventCreated.BlockId.Height.AsInt(),
 		db,
 		rollupAddress,
 		web3RPCPort,
@@ -125,8 +130,7 @@ func LaunchAggregator(
 }
 
 func LaunchAggregatorAdvanced(
-	ctx context.Context,
-	client ethutils.EthClient,
+	initialHeight *big.Int,
 	db *txdb.TxDB,
 	rollupAddress common.Address,
 	web3RPCPort string,
@@ -134,18 +138,8 @@ func LaunchAggregatorAdvanced(
 	flags utils2.RPCFlags,
 	batch batcher.TransactionBatcher,
 ) error {
-	arbClient := ethbridge.NewEthClient(client)
-	rollupContract, err := arbClient.NewRollupWatcher(rollupAddress)
-	if err != nil {
-		return err
-	}
 
-	_, eventCreated, _, _, err := rollupContract.GetCreationInfo(ctx)
-	if err != nil {
-		return err
-	}
-
-	srv := aggregator.NewServer(batch, rollupAddress, db, eventCreated.BlockId.Height.AsInt())
+	srv := aggregator.NewServer(batch, rollupAddress, db, initialHeight)
 	errChan := make(chan error, 1)
 
 	web3Server, err := web3.GenerateWeb3Server(srv)
