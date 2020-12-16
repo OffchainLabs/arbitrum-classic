@@ -17,7 +17,10 @@
 package arbostest
 
 import (
+	"bytes"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"math/big"
 	"testing"
 
@@ -28,56 +31,62 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
+// TestBuddyContract verifies that buddy contract deployment works and that
+// regular contract deployment and buddy deployment interact correctly
 func TestBuddyContract(t *testing.T) {
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
-	addr := common.Address{1, 2, 3, 4, 5}
 
-	l1contract := common.RandAddress()
-
+	simpleCode := hexutil.MustDecode(arbostestcontracts.SimpleBin)
 	buddyConstructor := message.BuddyDeployment{
 		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		Payment:     big.NewInt(0),
-		Data:        hexutil.MustDecode(arbostestcontracts.SimpleBin),
+		Data:        simpleCode,
 	}
 
-	l2Tx := message.Transaction{
-		MaxGas:      big.NewInt(100000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(0),
-		DestAddress: l1contract,
-		Payment:     big.NewInt(0),
-		Data:        hexutil.MustDecode("0x267c4ae4"),
-	}
+	fibCode := hexutil.MustDecode(arbostestcontracts.FibonacciBin)
+	contractCreation := makeSimpleConstructorTx(fibCode, big.NewInt(0))
+	contractCreation2 := makeSimpleConstructorTx(fibCode, big.NewInt(1))
 
 	messages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), addr, big.NewInt(0), chainTime),
-		message.NewInboxMessage(buddyConstructor, l1contract, big.NewInt(1), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(l2Tx), common.RandAddress(), big.NewInt(2), chainTime),
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
+		message.NewInboxMessage(buddyConstructor, connAddress1, big.NewInt(1), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(contractCreation), sender, big.NewInt(2), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(contractCreation2), sender, big.NewInt(3), chainTime),
+		message.NewInboxMessage(buddyConstructor, connAddress2, big.NewInt(4), chainTime),
 	}
 
-	logs, sends, _ := runAssertion(t, messages, 2, 1)
+	logs, sends, mach, _ := runAssertion(t, messages, 4, 1)
 	results := processTxResults(t, logs)
 
-	allResultsSucceeded(t, results)
+	checkConstructorResult(t, results[0], connAddress1)
+	txResultCheck(t, results[1], evm.ContractAlreadyExists)
+	checkConstructorResult(t, results[2], connAddress2)
+	txResultCheck(t, results[3], evm.ContractAlreadyExists)
 
-	checkConstructorResult(t, results[0], l1contract)
-
-	for _, res := range results[1:] {
-		t.Log("ReturnData", hexutil.Encode(res.ReturnData))
-		if len(res.ReturnData) == 0 {
-			t.Error("expected return data")
-		}
+	msg, err := message.NewOutMessageFromValue(sends[0])
+	failIfError(t, err)
+	if msg.Sender != connAddress1 {
+		t.Error("Buddy contract created at wrong address")
 	}
 
-	for _, sendVal := range sends {
-		msg, err := message.NewOutMessageFromValue(sendVal)
-		failIfError(t, err)
-		if msg.Sender != l1contract {
-			t.Error("Buddy contract created at wrong address")
-		}
+	snap := snapshot.NewSnapshot(mach.Clone(), inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
+	}, message.ChainAddressToID(chain), big.NewInt(5))
+
+	conn1Code, err := snap.GetCode(connAddress1)
+	failIfError(t, err)
+	if !bytes.Contains(simpleCode, conn1Code) {
+		t.Error("wrong code for first contract")
+	}
+
+	conn2Code, err := snap.GetCode(connAddress2)
+	failIfError(t, err)
+	if !bytes.Contains(fibCode, conn2Code) {
+		t.Error("wrong code for second contract")
 	}
 }

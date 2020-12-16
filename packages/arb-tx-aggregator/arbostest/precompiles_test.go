@@ -43,7 +43,7 @@ func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byt
 
 	inboxMessages := makeSimpleInbox([]message.Message{message.NewSafeL2Message(tx)})
 
-	logs, _, _ := runAssertion(t, inboxMessages, 1, 0)
+	logs, _, _, _ := runAssertion(t, inboxMessages, 1, 0)
 	results := processTxResults(t, logs)
 
 	res := results[0]

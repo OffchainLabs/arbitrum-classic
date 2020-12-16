@@ -39,7 +39,7 @@ var logger zerolog.Logger
 var db = "./testman"
 var contract = arbos.Path()
 
-func setupRollup(ctx context.Context, client ethutils.EthClient, authClient *ethbridge.EthArbAuthClient) (common.Address, error) {
+func setupRollup(ctx context.Context, authClient *ethbridge.EthArbAuthClient) (common.Address, error) {
 	config := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(10),
 		StakeToken:              common.Address{},
@@ -48,7 +48,7 @@ func setupRollup(ctx context.Context, client ethutils.EthClient, authClient *eth
 		ArbGasSpeedLimitPerTick: 200000,
 	}
 
-	factoryAddr, err := ethbridge.DeployRollupFactory(ctx, authClient, client)
+	factoryAddr, err := ethbridge.DeployRollupFactory(ctx, authClient)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -269,7 +269,7 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rollupAddress, err := setupRollup(ctx, l1Client, authClients[0])
+	rollupAddress, err := setupRollup(ctx, authClients[0])
 	if err != nil {
 		t.Fatal(err)
 	}

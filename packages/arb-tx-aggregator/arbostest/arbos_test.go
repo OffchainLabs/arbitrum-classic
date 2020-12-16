@@ -82,7 +82,7 @@ func TestFib(t *testing.T) {
 		message.NewSafeL2Message(getFibTx),
 	})
 
-	logs, _, mach := runAssertion(t, inboxMessages, 3, 0)
+	logs, _, mach, _ := runAssertion(t, inboxMessages, 3, 0)
 	results := processTxResults(t, logs)
 	allResultsSucceeded(t, results)
 	checkConstructorResult(t, results[0], connAddress1)
@@ -127,7 +127,7 @@ func TestDeposit(t *testing.T) {
 		},
 	}
 
-	_, _, mach := runAssertion(t, makeSimpleInbox(messages), 0, 0)
+	_, _, mach, _ := runAssertion(t, makeSimpleInbox(messages), 0, 0)
 
 	snap := snapshot.NewSnapshot(mach.Clone(), chainTime, message.ChainAddressToID(chain), big.NewInt(1))
 	checkBalance(t, snap, sender, amount)
@@ -197,7 +197,7 @@ func TestBlocks(t *testing.T) {
 	}
 
 	// Last value returned is not an error type
-	avmLogs, sends, _ := runAssertion(t, messages, 14, 10)
+	avmLogs, sends, _, _ := runAssertion(t, messages, 14, 10)
 	results := make([]evm.Result, 0)
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
@@ -215,6 +215,7 @@ func TestBlocks(t *testing.T) {
 	totalEVMLogCount := big.NewInt(0)
 	totalTxCount := big.NewInt(0)
 	blockCount := 0
+	prevBlockNum := abi.MaxUint256
 
 	blocks := make([]*evm.BlockInfo, 0)
 
@@ -286,10 +287,15 @@ func TestBlocks(t *testing.T) {
 				t.Error("incorrect last log")
 			}
 
+			if res.PreviousHeight.Cmp(prevBlockNum) != 0 {
+				t.Error("incorrect prev block num")
+			}
+
 			blockGasUsed = big.NewInt(0)
 			blockAVMLogCount = big.NewInt(0)
 			blockEVMLogCount = big.NewInt(0)
 			blockTxCount = big.NewInt(0)
+			prevBlockNum = res.BlockNum
 			blockCount++
 		}
 	}

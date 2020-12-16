@@ -75,7 +75,7 @@ func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.Abstr
 		l2Message2,
 	})
 
-	logs, _, mach := runAssertion(t, messages, 4, 0)
+	logs, _, mach, _ := runAssertion(t, messages, 4, 0)
 	results := processTxResults(t, logs)
 
 	allResultsSucceeded(t, results)
@@ -268,7 +268,7 @@ func TestSignedTx(t *testing.T) {
 		l2msg2,
 	})
 
-	logs, _, _ := runAssertion(t, messages, 2, 0)
+	logs, _, _, _ := runAssertion(t, messages, 2, 0)
 	results := processTxResults(t, logs)
 	allResultsSucceeded(t, results)
 	for i, result := range results {
@@ -330,7 +330,7 @@ func TestUnsignedTx(t *testing.T) {
 		message.NewSafeL2Message(tx2),
 	})
 
-	logs, _, _ := runAssertion(t, messages, 2, 0)
+	logs, _, _, _ := runAssertion(t, messages, 2, 0)
 	results := processTxResults(t, logs)
 	allResultsSucceeded(t, results)
 	for i, result := range results {
@@ -410,7 +410,7 @@ func TestBatch(t *testing.T) {
 	}
 	messages = append(messages, message.NewSafeL2Message(msg))
 
-	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), len(txes), 0)
+	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(txes), 0)
 	results := processTxResults(t, logs)
 
 	for i, result := range results {
@@ -516,6 +516,6 @@ func TestCompressedECDSATx(t *testing.T) {
 		)
 	}
 
-	logs, _, _ := runAssertion(t, makeSimpleInbox(messages), len(txes), 0)
+	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(txes), 0)
 	verifyTxLogs(t, signer, txes, logs)
 }

@@ -27,24 +27,13 @@ var (
 )
 
 // ArbSysABI is the input ABI used to generate the binding from.
-const ArbSysABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"ERC20Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"ERC721Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"EthWithdrawal\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"addressTable_addressExists\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"addressTable_compress\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"buf\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"offset\",\"type\":\"uint256\"}],\"name\":\"addressTable_decompress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"addressTable_lookup\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"addressTable_lookupIndex\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"addressTable_register\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"addressTable_size\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"functionTableGet\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"functionTableSize\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"getBlsPublicKey\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getStorageAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"x0\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"x1\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"y0\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"y1\",\"type\":\"uint256\"}],\"name\":\"registerBlsKey\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"buf\",\"type\":\"bytes\"}],\"name\":\"uploadFunctionTable\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"}]"
+const ArbSysABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"ERC20Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"ERC721Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"EthWithdrawal\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"arbOSVersion\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getStorageAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"}]"
 
 // ArbSysFuncSigs maps the 4-byte function signature to its string representation.
 var ArbSysFuncSigs = map[string]string{
-	"43683c1b": "addressTable_addressExists(address)",
-	"2a890b98": "addressTable_compress(address)",
-	"be05f2b9": "addressTable_decompress(bytes,uint256)",
-	"8ee24222": "addressTable_lookup(address)",
-	"4c352200": "addressTable_lookupIndex(uint256)",
-	"aca1dc65": "addressTable_register(address)",
-	"03092fdb": "addressTable_size()",
-	"d6ed0f56": "functionTableGet(address,uint256)",
-	"1221c896": "functionTableSize(address)",
-	"647e0e98": "getBlsPublicKey(address)",
+	"051038f2": "arbOSVersion()",
 	"a169625f": "getStorageAt(address,uint256)",
 	"23ca0cd2": "getTransactionCount(address)",
-	"1ff548ca": "registerBlsKey(uint256,uint256,uint256,uint256)",
-	"b7cf9527": "uploadFunctionTable(bytes)",
 	"a1db9782": "withdrawERC20(address,uint256)",
 	"f3e414f8": "withdrawERC721(address,uint256)",
 	"25e16063": "withdrawEth(address)",
@@ -192,106 +181,12 @@ func (_ArbSys *ArbSysTransactorRaw) Transact(opts *bind.TransactOpts, method str
 	return _ArbSys.Contract.contract.Transact(opts, method, params...)
 }
 
-// AddressTableAddressExists is a free data retrieval call binding the contract method 0x43683c1b.
+// ArbOSVersion is a free data retrieval call binding the contract method 0x051038f2.
 //
-// Solidity: function addressTable_addressExists(address addr) view returns(bool)
-func (_ArbSys *ArbSysCaller) AddressTableAddressExists(opts *bind.CallOpts, addr common.Address) (bool, error) {
+// Solidity: function arbOSVersion() pure returns(uint256)
+func (_ArbSys *ArbSysCaller) ArbOSVersion(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
-	err := _ArbSys.contract.Call(opts, &out, "addressTable_addressExists", addr)
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// AddressTableAddressExists is a free data retrieval call binding the contract method 0x43683c1b.
-//
-// Solidity: function addressTable_addressExists(address addr) view returns(bool)
-func (_ArbSys *ArbSysSession) AddressTableAddressExists(addr common.Address) (bool, error) {
-	return _ArbSys.Contract.AddressTableAddressExists(&_ArbSys.CallOpts, addr)
-}
-
-// AddressTableAddressExists is a free data retrieval call binding the contract method 0x43683c1b.
-//
-// Solidity: function addressTable_addressExists(address addr) view returns(bool)
-func (_ArbSys *ArbSysCallerSession) AddressTableAddressExists(addr common.Address) (bool, error) {
-	return _ArbSys.Contract.AddressTableAddressExists(&_ArbSys.CallOpts, addr)
-}
-
-// AddressTableCompress is a free data retrieval call binding the contract method 0x2a890b98.
-//
-// Solidity: function addressTable_compress(address addr) view returns(bytes)
-func (_ArbSys *ArbSysCaller) AddressTableCompress(opts *bind.CallOpts, addr common.Address) ([]byte, error) {
-	var out []interface{}
-	err := _ArbSys.contract.Call(opts, &out, "addressTable_compress", addr)
-
-	if err != nil {
-		return *new([]byte), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
-
-	return out0, err
-
-}
-
-// AddressTableCompress is a free data retrieval call binding the contract method 0x2a890b98.
-//
-// Solidity: function addressTable_compress(address addr) view returns(bytes)
-func (_ArbSys *ArbSysSession) AddressTableCompress(addr common.Address) ([]byte, error) {
-	return _ArbSys.Contract.AddressTableCompress(&_ArbSys.CallOpts, addr)
-}
-
-// AddressTableCompress is a free data retrieval call binding the contract method 0x2a890b98.
-//
-// Solidity: function addressTable_compress(address addr) view returns(bytes)
-func (_ArbSys *ArbSysCallerSession) AddressTableCompress(addr common.Address) ([]byte, error) {
-	return _ArbSys.Contract.AddressTableCompress(&_ArbSys.CallOpts, addr)
-}
-
-// AddressTableDecompress is a free data retrieval call binding the contract method 0xbe05f2b9.
-//
-// Solidity: function addressTable_decompress(bytes buf, uint256 offset) view returns(address, uint256)
-func (_ArbSys *ArbSysCaller) AddressTableDecompress(opts *bind.CallOpts, buf []byte, offset *big.Int) (common.Address, *big.Int, error) {
-	var out []interface{}
-	err := _ArbSys.contract.Call(opts, &out, "addressTable_decompress", buf, offset)
-
-	if err != nil {
-		return *new(common.Address), *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
-
-	return out0, out1, err
-
-}
-
-// AddressTableDecompress is a free data retrieval call binding the contract method 0xbe05f2b9.
-//
-// Solidity: function addressTable_decompress(bytes buf, uint256 offset) view returns(address, uint256)
-func (_ArbSys *ArbSysSession) AddressTableDecompress(buf []byte, offset *big.Int) (common.Address, *big.Int, error) {
-	return _ArbSys.Contract.AddressTableDecompress(&_ArbSys.CallOpts, buf, offset)
-}
-
-// AddressTableDecompress is a free data retrieval call binding the contract method 0xbe05f2b9.
-//
-// Solidity: function addressTable_decompress(bytes buf, uint256 offset) view returns(address, uint256)
-func (_ArbSys *ArbSysCallerSession) AddressTableDecompress(buf []byte, offset *big.Int) (common.Address, *big.Int, error) {
-	return _ArbSys.Contract.AddressTableDecompress(&_ArbSys.CallOpts, buf, offset)
-}
-
-// AddressTableLookup is a free data retrieval call binding the contract method 0x8ee24222.
-//
-// Solidity: function addressTable_lookup(address addr) view returns(uint256)
-func (_ArbSys *ArbSysCaller) AddressTableLookup(opts *bind.CallOpts, addr common.Address) (*big.Int, error) {
-	var out []interface{}
-	err := _ArbSys.contract.Call(opts, &out, "addressTable_lookup", addr)
+	err := _ArbSys.contract.Call(opts, &out, "arbOSVersion")
 
 	if err != nil {
 		return *new(*big.Int), err
@@ -303,178 +198,18 @@ func (_ArbSys *ArbSysCaller) AddressTableLookup(opts *bind.CallOpts, addr common
 
 }
 
-// AddressTableLookup is a free data retrieval call binding the contract method 0x8ee24222.
+// ArbOSVersion is a free data retrieval call binding the contract method 0x051038f2.
 //
-// Solidity: function addressTable_lookup(address addr) view returns(uint256)
-func (_ArbSys *ArbSysSession) AddressTableLookup(addr common.Address) (*big.Int, error) {
-	return _ArbSys.Contract.AddressTableLookup(&_ArbSys.CallOpts, addr)
+// Solidity: function arbOSVersion() pure returns(uint256)
+func (_ArbSys *ArbSysSession) ArbOSVersion() (*big.Int, error) {
+	return _ArbSys.Contract.ArbOSVersion(&_ArbSys.CallOpts)
 }
 
-// AddressTableLookup is a free data retrieval call binding the contract method 0x8ee24222.
+// ArbOSVersion is a free data retrieval call binding the contract method 0x051038f2.
 //
-// Solidity: function addressTable_lookup(address addr) view returns(uint256)
-func (_ArbSys *ArbSysCallerSession) AddressTableLookup(addr common.Address) (*big.Int, error) {
-	return _ArbSys.Contract.AddressTableLookup(&_ArbSys.CallOpts, addr)
-}
-
-// AddressTableLookupIndex is a free data retrieval call binding the contract method 0x4c352200.
-//
-// Solidity: function addressTable_lookupIndex(uint256 index) view returns(address)
-func (_ArbSys *ArbSysCaller) AddressTableLookupIndex(opts *bind.CallOpts, index *big.Int) (common.Address, error) {
-	var out []interface{}
-	err := _ArbSys.contract.Call(opts, &out, "addressTable_lookupIndex", index)
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
-}
-
-// AddressTableLookupIndex is a free data retrieval call binding the contract method 0x4c352200.
-//
-// Solidity: function addressTable_lookupIndex(uint256 index) view returns(address)
-func (_ArbSys *ArbSysSession) AddressTableLookupIndex(index *big.Int) (common.Address, error) {
-	return _ArbSys.Contract.AddressTableLookupIndex(&_ArbSys.CallOpts, index)
-}
-
-// AddressTableLookupIndex is a free data retrieval call binding the contract method 0x4c352200.
-//
-// Solidity: function addressTable_lookupIndex(uint256 index) view returns(address)
-func (_ArbSys *ArbSysCallerSession) AddressTableLookupIndex(index *big.Int) (common.Address, error) {
-	return _ArbSys.Contract.AddressTableLookupIndex(&_ArbSys.CallOpts, index)
-}
-
-// AddressTableSize is a free data retrieval call binding the contract method 0x03092fdb.
-//
-// Solidity: function addressTable_size() view returns(uint256)
-func (_ArbSys *ArbSysCaller) AddressTableSize(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _ArbSys.contract.Call(opts, &out, "addressTable_size")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// AddressTableSize is a free data retrieval call binding the contract method 0x03092fdb.
-//
-// Solidity: function addressTable_size() view returns(uint256)
-func (_ArbSys *ArbSysSession) AddressTableSize() (*big.Int, error) {
-	return _ArbSys.Contract.AddressTableSize(&_ArbSys.CallOpts)
-}
-
-// AddressTableSize is a free data retrieval call binding the contract method 0x03092fdb.
-//
-// Solidity: function addressTable_size() view returns(uint256)
-func (_ArbSys *ArbSysCallerSession) AddressTableSize() (*big.Int, error) {
-	return _ArbSys.Contract.AddressTableSize(&_ArbSys.CallOpts)
-}
-
-// FunctionTableGet is a free data retrieval call binding the contract method 0xd6ed0f56.
-//
-// Solidity: function functionTableGet(address addr, uint256 index) view returns(uint256, bool, uint256)
-func (_ArbSys *ArbSysCaller) FunctionTableGet(opts *bind.CallOpts, addr common.Address, index *big.Int) (*big.Int, bool, *big.Int, error) {
-	var out []interface{}
-	err := _ArbSys.contract.Call(opts, &out, "functionTableGet", addr, index)
-
-	if err != nil {
-		return *new(*big.Int), *new(bool), *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-	out1 := *abi.ConvertType(out[1], new(bool)).(*bool)
-	out2 := *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
-
-	return out0, out1, out2, err
-
-}
-
-// FunctionTableGet is a free data retrieval call binding the contract method 0xd6ed0f56.
-//
-// Solidity: function functionTableGet(address addr, uint256 index) view returns(uint256, bool, uint256)
-func (_ArbSys *ArbSysSession) FunctionTableGet(addr common.Address, index *big.Int) (*big.Int, bool, *big.Int, error) {
-	return _ArbSys.Contract.FunctionTableGet(&_ArbSys.CallOpts, addr, index)
-}
-
-// FunctionTableGet is a free data retrieval call binding the contract method 0xd6ed0f56.
-//
-// Solidity: function functionTableGet(address addr, uint256 index) view returns(uint256, bool, uint256)
-func (_ArbSys *ArbSysCallerSession) FunctionTableGet(addr common.Address, index *big.Int) (*big.Int, bool, *big.Int, error) {
-	return _ArbSys.Contract.FunctionTableGet(&_ArbSys.CallOpts, addr, index)
-}
-
-// FunctionTableSize is a free data retrieval call binding the contract method 0x1221c896.
-//
-// Solidity: function functionTableSize(address addr) view returns(uint256)
-func (_ArbSys *ArbSysCaller) FunctionTableSize(opts *bind.CallOpts, addr common.Address) (*big.Int, error) {
-	var out []interface{}
-	err := _ArbSys.contract.Call(opts, &out, "functionTableSize", addr)
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// FunctionTableSize is a free data retrieval call binding the contract method 0x1221c896.
-//
-// Solidity: function functionTableSize(address addr) view returns(uint256)
-func (_ArbSys *ArbSysSession) FunctionTableSize(addr common.Address) (*big.Int, error) {
-	return _ArbSys.Contract.FunctionTableSize(&_ArbSys.CallOpts, addr)
-}
-
-// FunctionTableSize is a free data retrieval call binding the contract method 0x1221c896.
-//
-// Solidity: function functionTableSize(address addr) view returns(uint256)
-func (_ArbSys *ArbSysCallerSession) FunctionTableSize(addr common.Address) (*big.Int, error) {
-	return _ArbSys.Contract.FunctionTableSize(&_ArbSys.CallOpts, addr)
-}
-
-// GetBlsPublicKey is a free data retrieval call binding the contract method 0x647e0e98.
-//
-// Solidity: function getBlsPublicKey(address addr) view returns(uint256, uint256, uint256, uint256)
-func (_ArbSys *ArbSysCaller) GetBlsPublicKey(opts *bind.CallOpts, addr common.Address) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
-	var out []interface{}
-	err := _ArbSys.contract.Call(opts, &out, "getBlsPublicKey", addr)
-
-	if err != nil {
-		return *new(*big.Int), *new(*big.Int), *new(*big.Int), *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
-	out2 := *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
-	out3 := *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
-
-	return out0, out1, out2, out3, err
-
-}
-
-// GetBlsPublicKey is a free data retrieval call binding the contract method 0x647e0e98.
-//
-// Solidity: function getBlsPublicKey(address addr) view returns(uint256, uint256, uint256, uint256)
-func (_ArbSys *ArbSysSession) GetBlsPublicKey(addr common.Address) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
-	return _ArbSys.Contract.GetBlsPublicKey(&_ArbSys.CallOpts, addr)
-}
-
-// GetBlsPublicKey is a free data retrieval call binding the contract method 0x647e0e98.
-//
-// Solidity: function getBlsPublicKey(address addr) view returns(uint256, uint256, uint256, uint256)
-func (_ArbSys *ArbSysCallerSession) GetBlsPublicKey(addr common.Address) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
-	return _ArbSys.Contract.GetBlsPublicKey(&_ArbSys.CallOpts, addr)
+// Solidity: function arbOSVersion() pure returns(uint256)
+func (_ArbSys *ArbSysCallerSession) ArbOSVersion() (*big.Int, error) {
+	return _ArbSys.Contract.ArbOSVersion(&_ArbSys.CallOpts)
 }
 
 // GetStorageAt is a free data retrieval call binding the contract method 0xa169625f.
@@ -537,69 +272,6 @@ func (_ArbSys *ArbSysSession) GetTransactionCount(account common.Address) (*big.
 // Solidity: function getTransactionCount(address account) view returns(uint256)
 func (_ArbSys *ArbSysCallerSession) GetTransactionCount(account common.Address) (*big.Int, error) {
 	return _ArbSys.Contract.GetTransactionCount(&_ArbSys.CallOpts, account)
-}
-
-// AddressTableRegister is a paid mutator transaction binding the contract method 0xaca1dc65.
-//
-// Solidity: function addressTable_register(address addr) returns(uint256)
-func (_ArbSys *ArbSysTransactor) AddressTableRegister(opts *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
-	return _ArbSys.contract.Transact(opts, "addressTable_register", addr)
-}
-
-// AddressTableRegister is a paid mutator transaction binding the contract method 0xaca1dc65.
-//
-// Solidity: function addressTable_register(address addr) returns(uint256)
-func (_ArbSys *ArbSysSession) AddressTableRegister(addr common.Address) (*types.Transaction, error) {
-	return _ArbSys.Contract.AddressTableRegister(&_ArbSys.TransactOpts, addr)
-}
-
-// AddressTableRegister is a paid mutator transaction binding the contract method 0xaca1dc65.
-//
-// Solidity: function addressTable_register(address addr) returns(uint256)
-func (_ArbSys *ArbSysTransactorSession) AddressTableRegister(addr common.Address) (*types.Transaction, error) {
-	return _ArbSys.Contract.AddressTableRegister(&_ArbSys.TransactOpts, addr)
-}
-
-// RegisterBlsKey is a paid mutator transaction binding the contract method 0x1ff548ca.
-//
-// Solidity: function registerBlsKey(uint256 x0, uint256 x1, uint256 y0, uint256 y1) returns()
-func (_ArbSys *ArbSysTransactor) RegisterBlsKey(opts *bind.TransactOpts, x0 *big.Int, x1 *big.Int, y0 *big.Int, y1 *big.Int) (*types.Transaction, error) {
-	return _ArbSys.contract.Transact(opts, "registerBlsKey", x0, x1, y0, y1)
-}
-
-// RegisterBlsKey is a paid mutator transaction binding the contract method 0x1ff548ca.
-//
-// Solidity: function registerBlsKey(uint256 x0, uint256 x1, uint256 y0, uint256 y1) returns()
-func (_ArbSys *ArbSysSession) RegisterBlsKey(x0 *big.Int, x1 *big.Int, y0 *big.Int, y1 *big.Int) (*types.Transaction, error) {
-	return _ArbSys.Contract.RegisterBlsKey(&_ArbSys.TransactOpts, x0, x1, y0, y1)
-}
-
-// RegisterBlsKey is a paid mutator transaction binding the contract method 0x1ff548ca.
-//
-// Solidity: function registerBlsKey(uint256 x0, uint256 x1, uint256 y0, uint256 y1) returns()
-func (_ArbSys *ArbSysTransactorSession) RegisterBlsKey(x0 *big.Int, x1 *big.Int, y0 *big.Int, y1 *big.Int) (*types.Transaction, error) {
-	return _ArbSys.Contract.RegisterBlsKey(&_ArbSys.TransactOpts, x0, x1, y0, y1)
-}
-
-// UploadFunctionTable is a paid mutator transaction binding the contract method 0xb7cf9527.
-//
-// Solidity: function uploadFunctionTable(bytes buf) returns()
-func (_ArbSys *ArbSysTransactor) UploadFunctionTable(opts *bind.TransactOpts, buf []byte) (*types.Transaction, error) {
-	return _ArbSys.contract.Transact(opts, "uploadFunctionTable", buf)
-}
-
-// UploadFunctionTable is a paid mutator transaction binding the contract method 0xb7cf9527.
-//
-// Solidity: function uploadFunctionTable(bytes buf) returns()
-func (_ArbSys *ArbSysSession) UploadFunctionTable(buf []byte) (*types.Transaction, error) {
-	return _ArbSys.Contract.UploadFunctionTable(&_ArbSys.TransactOpts, buf)
-}
-
-// UploadFunctionTable is a paid mutator transaction binding the contract method 0xb7cf9527.
-//
-// Solidity: function uploadFunctionTable(bytes buf) returns()
-func (_ArbSys *ArbSysTransactorSession) UploadFunctionTable(buf []byte) (*types.Transaction, error) {
-	return _ArbSys.Contract.UploadFunctionTable(&_ArbSys.TransactOpts, buf)
 }
 
 // WithdrawERC20 is a paid mutator transaction binding the contract method 0xa1db9782.

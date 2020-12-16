@@ -111,6 +111,10 @@ func (m *mock) DepositERC721Message(context.Context, common.Address, common.Addr
 	panic("not used")
 }
 
+func (m *mock) SendInitializationMessage(context.Context, []byte) error {
+	panic("not used")
+}
+
 func generateTxes(t *testing.T, chain common.Address) ([]*types.Transaction, map[ethcommon.Address]uint64) {
 	rand.Seed(4537345)
 	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))

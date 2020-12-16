@@ -19,6 +19,7 @@ package arbostest
 import (
 	"bytes"
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
@@ -29,6 +30,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"math/big"
+	"strings"
 	"testing"
 )
 
@@ -58,7 +60,7 @@ func TestContructor(t *testing.T) {
 	failIfError(t, err)
 
 	inboxMessages := makeSimpleInbox([]message.Message{l2Message})
-	logs, _, mach := runAssertion(t, inboxMessages, 1, 0)
+	logs, _, mach, _ := runAssertion(t, inboxMessages, 1, 0)
 	results := processTxResults(t, logs)
 
 	res := results[0]
@@ -92,5 +94,39 @@ func TestContructor(t *testing.T) {
 
 	if !bytes.Equal(arbCode, ethCode) {
 		t.Error("deployed code is different")
+	}
+}
+
+func TestContructorExistingBalance(t *testing.T) {
+	factoryABI, err := abi.JSON(strings.NewReader(arbostestcontracts.CloneFactoryABI))
+	failIfError(t, err)
+
+	create2Address := common.HexToAddress("0xa0a7964936862853f101d4da3a338fe56d5e0482")
+
+	tx := message.Transaction{
+		MaxGas:      big.NewInt(10000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(2),
+		DestAddress: connAddress2,
+		Payment:     big.NewInt(0),
+		Data:        makeFuncData(t, factoryABI.Methods["create2Clone"], connAddress1, big.NewInt(0)),
+	}
+
+	messages := []message.Message{
+		message.Eth{Value: big.NewInt(100), Dest: connAddress1},
+		message.Eth{Value: big.NewInt(100), Dest: create2Address},
+		message.NewSafeL2Message(makeSimpleConstructorTx(constructorData, big.NewInt(0))),
+		message.NewSafeL2Message(makeSimpleConstructorTx(hexutil.MustDecode(arbostestcontracts.CloneFactoryBin), big.NewInt(1))),
+		message.NewSafeL2Message(tx),
+	}
+
+	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), 3, 0)
+	results := processTxResults(t, logs)
+
+	checkConstructorResult(t, results[0], connAddress1)
+	checkConstructorResult(t, results[1], connAddress2)
+	succeededTxCheck(t, results[2])
+	if !bytes.Equal(results[2].ReturnData[12:], create2Address.Bytes()) {
+		t.Fatal("incorrect create2 address which should have been", hexutil.Encode(results[2].ReturnData[12:]))
 	}
 }

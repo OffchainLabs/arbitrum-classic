@@ -55,7 +55,7 @@ func init() {
 	}
 }
 
-func getBalanceData(address common.Address) []byte {
+func GetBalanceData(address common.Address) []byte {
 	txData, err := getBalanceABI.Inputs.Pack(address)
 	if err != nil {
 		panic(err)
@@ -63,7 +63,7 @@ func getBalanceData(address common.Address) []byte {
 	return append(getBalanceSig, txData...)
 }
 
-func parseBalanceResult(res *evm.TxResult) (*big.Int, error) {
+func ParseBalanceResult(res *evm.TxResult) (*big.Int, error) {
 	vals, err := getBalanceABI.Outputs.UnpackValues(res.ReturnData)
 	if err != nil {
 		return nil, err

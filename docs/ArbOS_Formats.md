@@ -107,6 +107,14 @@ Type-specific data:
 
 This message type is reserved for internal use by ArbOS. It should never appear in the inbox.
 
+##### Message type 7: Eth deposit transaction
+
+This message type first transfers the given amount of Eth to the sender's account. Then it executes the given transaction.
+
+Type-specific data:
+
+- Unsigned Transaction or Contract transaction as defined in the L2 message section below
+
 ## L2 messages
 
 As noted above, an L2 message is one type of incoming message that can be put into an L2 chain's inbox. The purpose of an L2 message is to convey information, typically a transaction request, to ArbOS. The EthBridge does not examine or interpret the contents of an L2 message.

@@ -56,6 +56,22 @@ func (e Eth) Type() inbox.Type {
 	return EthType
 }
 
+type EthDepositTx struct {
+	L2Message
+}
+
+func NewEthDepositTxFromData(data []byte) EthDepositTx {
+	return EthDepositTx{L2Message: L2Message{Data: data}}
+}
+
+func (e EthDepositTx) AsData() []byte {
+	return e.L2Message.Data
+}
+
+func (e EthDepositTx) Type() inbox.Type {
+	return EthDepositTxType
+}
+
 type ERC20 struct {
 	Token common.Address
 	Dest  common.Address

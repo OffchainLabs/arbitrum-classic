@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"math/big"
@@ -43,7 +44,7 @@ func initMsg() message.Init {
 			MaxExecutionSteps:       0,
 			ArbGasSpeedLimitPerTick: 0,
 		},
-		Owner:       common.Address{},
+		Owner:       owner,
 		ExtraConfig: []byte{},
 	}
 }
@@ -154,7 +155,7 @@ func failIfError(t *testing.T, err error) {
 	}
 }
 
-func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, []value.Value, machine.Machine) {
+func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, []value.Value, machine.Machine, *protocol.ExecutionAssertion) {
 	t.Helper()
 	mach, err := cmachine.New(arbos.Path())
 	failIfError(t, err)
@@ -173,7 +174,7 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int
 		t.Fatal("unxpected send count ", len(sends))
 	}
 
-	return logs, sends, mach
+	return logs, sends, mach, assertion
 }
 
 func makeSimpleInbox(messages []message.Message) []inbox.InboxMessage {

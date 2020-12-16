@@ -18,10 +18,147 @@ package machine
 
 import (
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/pkg/errors"
 )
 
 type BlockInfo struct {
 	BlockLog value.Value
 	Header   *types.Header
+}
+
+type AggregatorStore interface {
+	GetMessage(index uint64) (value.Value, error)
+	GetLog(index uint64) (value.Value, error)
+	GetPossibleRequestInfo(requestId common.Hash) *uint64
+	GetPossibleBlock(blockHash common.Hash) *uint64
+	GetBlock(height uint64) (*BlockInfo, error)
+	LatestBlock() (*common.BlockId, error)
+
+	SaveLog(val value.Value) error
+	SaveMessage(val value.Value) error
+	SaveBlock(header *types.Header, logIndex uint64) error
+	SaveEmptyBlock(header *types.Header) error
+	SaveBlockHash(blockHash common.Hash, blockHeight uint64) error
+	SaveRequest(requestId common.Hash, logIndex uint64) error
+	Reorg(height uint64, messageCount uint64, logCount uint64) error
+}
+
+type BlockEntry struct {
+	header   *types.Header
+	logIndex *uint64
+}
+
+type InMemoryAggregatorStore struct {
+	messages     []value.Value
+	logs         []value.Value
+	blocks       []*BlockEntry
+	requestIndex map[common.Hash]uint64
+	blockIndex   map[common.Hash]uint64
+}
+
+func NewInMemoryAggregatorStore() *InMemoryAggregatorStore {
+	return &InMemoryAggregatorStore{
+		requestIndex: make(map[common.Hash]uint64),
+		blockIndex:   make(map[common.Hash]uint64),
+	}
+}
+
+func (as *InMemoryAggregatorStore) GetMessage(index uint64) (value.Value, error) {
+	if index >= uint64(len(as.messages)) {
+		return nil, errors.New("failed to get l2message")
+	}
+	return as.messages[index], nil
+}
+
+func (as *InMemoryAggregatorStore) GetLog(index uint64) (value.Value, error) {
+	if index >= uint64(len(as.logs)) {
+		return nil, errors.New("failed to get log")
+	}
+	return as.logs[index], nil
+}
+
+func (as *InMemoryAggregatorStore) GetPossibleRequestInfo(requestId common.Hash) *uint64 {
+	request, ok := as.requestIndex[requestId]
+	if !ok {
+		return nil
+	}
+	return &request
+}
+
+func (as *InMemoryAggregatorStore) GetPossibleBlock(blockHash common.Hash) *uint64 {
+	block, ok := as.blockIndex[blockHash]
+	if !ok {
+		return nil
+	}
+	return &block
+}
+
+func (as *InMemoryAggregatorStore) GetBlock(height uint64) (*BlockInfo, error) {
+	if height > uint64(len(as.blocks)) {
+		return nil, nil
+	}
+	var blockLog value.Value
+	rawBlock := as.blocks[height]
+	if rawBlock.logIndex != nil {
+		blockLog = as.logs[*rawBlock.logIndex]
+	}
+	return &BlockInfo{
+		BlockLog: blockLog,
+		Header:   rawBlock.header,
+	}, nil
+}
+
+func (as *InMemoryAggregatorStore) LatestBlock() (*common.BlockId, error) {
+	if len(as.blocks) == 0 {
+		return nil, errors.New("No blocks")
+	}
+	block := as.blocks[len(as.blocks)-1]
+	return &common.BlockId{
+		Height:     common.NewTimeBlocksInt(int64(len(as.blocks)) - 1),
+		HeaderHash: common.NewHashFromEth(block.header.Hash()),
+	}, nil
+}
+
+func (as *InMemoryAggregatorStore) SaveLog(val value.Value) error {
+	as.logs = append(as.logs, val)
+	return nil
+}
+
+func (as *InMemoryAggregatorStore) SaveMessage(val value.Value) error {
+	as.messages = append(as.messages, val)
+	return nil
+}
+
+func (as *InMemoryAggregatorStore) SaveBlock(header *types.Header, logIndex uint64) error {
+	as.blocks = append(as.blocks, &BlockEntry{
+		header:   header,
+		logIndex: &logIndex,
+	})
+	return nil
+}
+
+func (as *InMemoryAggregatorStore) SaveEmptyBlock(header *types.Header) error {
+	as.blocks = append(as.blocks, &BlockEntry{
+		header: header,
+	})
+	return nil
+}
+
+func (as *InMemoryAggregatorStore) SaveBlockHash(blockHash common.Hash, blockHeight uint64) error {
+	as.blockIndex[blockHash] = blockHeight
+	return nil
+}
+
+func (as *InMemoryAggregatorStore) SaveRequest(requestId common.Hash, logIndex uint64) error {
+	as.requestIndex[requestId] = logIndex
+	return nil
+}
+
+func (as *InMemoryAggregatorStore) Reorg(height uint64, messageCount uint64, logCount uint64) error {
+	as.messages = as.messages[:messageCount]
+	as.logs = as.logs[:logCount]
+	as.blocks = as.blocks[:height]
+	return nil
 }

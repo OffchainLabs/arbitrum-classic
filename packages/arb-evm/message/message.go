@@ -36,6 +36,8 @@ const (
 	L2Type
 	InitType
 	L2BuddyDeploy
+	EndOfBlockType
+	EthDepositTxType
 )
 
 type Message interface {
@@ -76,6 +78,8 @@ func NestedMessage(data []byte, kind inbox.Type) (Message, error) {
 		return NewInitFromData(data), nil
 	case L2BuddyDeploy:
 		return NewBuddyDeploymentFromData(data), nil
+	case EthDepositTxType:
+		return NewEthDepositTxFromData(data), nil
 	default:
 		return nil, errors.New("unknown inbox l2message type")
 	}
