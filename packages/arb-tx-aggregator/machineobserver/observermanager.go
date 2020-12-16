@@ -258,65 +258,14 @@ func observerRunThread(
 				Object("blockId", db.LatestBlockId()).
 				Msg("Starting observer")
 
-			// If the local chain is significantly behind the L1, catch up
-			// more efficiently. We process `MaxReorgHeight` blocks at a
-			// time up to `MaxReorgHeight` blocks before the current head
-			// and and assume that no reorg will occur affecting the blocks
-			// we are processing
-			for {
-				start := new(big.Int).Add(db.LatestBlockId().Height.AsInt(), big.NewInt(1))
-				fetchEnd, err := observer.CalculateCatchupFetch(runCtx, start, clnt, maxReorgHeight)
-				if err != nil {
-					return errors.Wrap(err, "error calculating fast catchup")
-				}
-				if fetchEnd == nil {
-					break
-				}
-				currentOnChain, err := clnt.BlockIdForHeight(ctx, nil)
-				if err != nil {
-					return err
-				}
-				logger.Info().
-					Str("startEvent", start.String()).
-					Str("endEvent", fetchEnd.String()).
-					Str("blocksRemaining", new(big.Int).Sub(currentOnChain.Height.AsInt(), start).String()).
-					Msg("Getting events")
-				inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, start, fetchEnd)
-				if err != nil {
-					return errors.Wrap(err, "Manager hit error doing fast catchup")
-				}
-
-				endBlock, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(fetchEnd))
-				if err != nil {
-					return errors.Wrap(err, "error getting end block in fast catchup")
-				}
-				if err := db.AddMessages(runCtx, inboxDeliveredEvents, endBlock); err != nil {
-					return errors.Wrap(err, "error adding messages to db")
-				}
+			if err := fastCatchupEvents(runCtx, clnt, db, inboxWatcher, maxReorgHeight); err != nil {
+				return err
 			}
 
-			latest := db.LatestBlockId()
-			headersChan, err := clnt.SubscribeBlockHeadersAfter(runCtx, latest)
-			if err != nil {
-				return errors.Wrap(err, "can't restart header subscription")
+			if err := watchEvents(runCtx, clnt, db, inboxWatcher); err != nil {
+				return err
 			}
-			for maybeBlockId := range headersChan {
-				if maybeBlockId.Err != nil {
-					return errors.Wrap(maybeBlockId.Err, "error getting new header")
-				}
 
-				blockId := maybeBlockId.BlockId
-				timestamp := maybeBlockId.Timestamp
-
-				inboxEvents, err := inboxWatcher.GetDeliveredEventsInBlock(runCtx, blockId, timestamp)
-				if err != nil {
-					return errors.Wrapf(err, "manager hit error getting inbox events with block %v", blockId)
-				}
-
-				if err := db.AddMessages(runCtx, inboxEvents, blockId); err != nil {
-					return errors.Wrap(err, "error adding messages to db")
-				}
-			}
 			return nil
 		}()
 
@@ -335,4 +284,81 @@ func observerRunThread(
 		// Wait for things to settle
 		time.Sleep(time.Second)
 	}
+}
+
+func fastCatchupEvents(
+	ctx context.Context,
+	clnt arbbridge.ChainInfoGetter,
+	db *txdb.TxDB,
+	inboxWatcher arbbridge.GlobalInboxWatcher,
+	maxReorgHeight *big.Int,
+) error {
+	// If the local chain is significantly behind the L1, catch up
+	// more efficiently. We process `MaxReorgHeight` blocks at a
+	// time up to `MaxReorgHeight` blocks before the current head
+	// and and assume that no reorg will occur affecting the blocks
+	// we are processing
+	for {
+		start := new(big.Int).Add(db.LatestBlockId().Height.AsInt(), big.NewInt(1))
+		fetchEnd, err := observer.CalculateCatchupFetch(ctx, start, clnt, maxReorgHeight)
+		if err != nil {
+			return errors.Wrap(err, "error calculating fast catchup")
+		}
+		if fetchEnd == nil {
+			break
+		}
+		currentOnChain, err := clnt.BlockIdForHeight(ctx, nil)
+		if err != nil {
+			return err
+		}
+		logger.Info().
+			Str("startEvent", start.String()).
+			Str("endEvent", fetchEnd.String()).
+			Str("blocksRemaining", new(big.Int).Sub(currentOnChain.Height.AsInt(), start).String()).
+			Msg("Getting events")
+		inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(ctx, start, fetchEnd)
+		if err != nil {
+			return errors.Wrap(err, "Manager hit error doing fast catchup")
+		}
+
+		endBlock, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(fetchEnd))
+		if err != nil {
+			return errors.Wrap(err, "error getting end block in fast catchup")
+		}
+		if err := db.AddMessages(ctx, inboxDeliveredEvents, endBlock); err != nil {
+			return errors.Wrap(err, "error adding messages to db")
+		}
+	}
+	return nil
+}
+
+func watchEvents(
+	ctx context.Context,
+	clnt arbbridge.ChainInfoGetter,
+	db *txdb.TxDB,
+	inboxWatcher arbbridge.GlobalInboxWatcher,
+) error {
+	latest := db.LatestBlockId()
+	headersChan, err := clnt.SubscribeBlockHeadersAfter(ctx, latest)
+	if err != nil {
+		return errors.Wrap(err, "can't restart header subscription")
+	}
+	for maybeBlockId := range headersChan {
+		if maybeBlockId.Err != nil {
+			return errors.Wrap(maybeBlockId.Err, "error getting new header")
+		}
+
+		blockId := maybeBlockId.BlockId
+		timestamp := maybeBlockId.Timestamp
+
+		inboxEvents, err := inboxWatcher.GetDeliveredEventsInBlock(ctx, blockId, timestamp)
+		if err != nil {
+			return errors.Wrapf(err, "manager hit error getting inbox events with block %v", blockId)
+		}
+
+		if err := db.AddMessages(ctx, inboxEvents, blockId); err != nil {
+			return errors.Wrap(err, "error adding messages to db")
+		}
+	}
+	return nil
 }
