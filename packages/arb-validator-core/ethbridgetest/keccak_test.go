@@ -17,9 +17,14 @@
 package ethbridgetest
 
 import (
+	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"math/big"
 	"math/rand"
@@ -27,17 +32,28 @@ import (
 )
 
 func TestKeccak(t *testing.T) {
-	client, pks := test.SimulatedBackend()
+	ctx := context.Background()
+	backend, pks := test.SimulatedBackend()
+	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth := bind.NewKeyedTransactor(pks[0])
-
-	_, _, precompilesTester, err := ethbridgetestcontracts.DeployPrecompilesTester(
-		auth,
-		client,
-	)
+	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	precompilesTesterAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgetestcontracts.DeployPrecompilesTester(auth, client)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	client.Commit()
+
+	precompilesTester, err := ethbridgetestcontracts.NewPrecompilesTester(precompilesTesterAddr, client)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	var data [25]uint64
 	var bigData [25]*big.Int

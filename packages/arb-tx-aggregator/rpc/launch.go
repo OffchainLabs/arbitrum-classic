@@ -90,14 +90,20 @@ func LaunchAggregator(
 		}
 		batch = batcher.NewForwarder(forwardClient)
 	case StatelessBatcherMode:
-		authClient := ethbridge.NewEthAuthClient(client, batcherMode.Auth)
+		authClient, err := ethbridge.NewEthAuthClient(ctx, client, batcherMode.Auth)
+		if err != nil {
+			return err
+		}
 		globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
 		if err != nil {
 			return err
 		}
-		batch = batcher.NewStatelessBatcher(ctx, rollupAddress, client, globalInbox, maxBatchTime)
+		batch = batcher.NewStatelessBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
 	case StatefulBatcherMode:
-		authClient := ethbridge.NewEthAuthClient(client, batcherMode.Auth)
+		authClient, err := ethbridge.NewEthAuthClient(ctx, client, batcherMode.Auth)
+		if err != nil {
+			return err
+		}
 		globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
 		if err != nil {
 			return err
@@ -105,7 +111,12 @@ func LaunchAggregator(
 		batch = batcher.NewStatefulBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
 	}
 
-	srv := aggregator.NewServer(batch, rollupAddress, db)
+	_, eventCreated, _, _, err := rollupContract.GetCreationInfo(ctx)
+	if err != nil {
+		return err
+	}
+
+	srv := aggregator.NewServer(batch, rollupAddress, db, eventCreated.BlockId.Height.AsInt())
 	errChan := make(chan error, 1)
 
 	web3Server, err := web3.GenerateWeb3Server(srv)

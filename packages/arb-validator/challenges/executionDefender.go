@@ -18,14 +18,12 @@ package challenges
 
 import (
 	"context"
-	"fmt"
-	"log"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/pkg/errors"
 )
 
 func DefendExecutionClaim(
@@ -54,7 +52,7 @@ func DefendExecutionClaim(
 	}
 
 	if startMachine == nil {
-		log.Fatal("nil startMachine in DefendExecutionClaim")
+		logger.Fatal().Msg("nil startMachine in DefendExecutionClaim")
 	}
 	return defendExecution(
 		reorgCtx,
@@ -87,7 +85,7 @@ func defendExecution(
 	}
 	_, ok = event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, fmt.Errorf("ExecutionChallenge expected InitiateChallengeEvent but got %T", event)
+		return 0, errors.Errorf("ExecutionChallenge expected InitiateChallengeEvent but got %T", event)
 	}
 
 	defender := startDefender
@@ -120,7 +118,7 @@ func defendExecution(
 
 		bisectionEvent, ok := event.(arbbridge.ExecutionBisectionEvent)
 		if !ok {
-			return 0, fmt.Errorf("ExecutionChallenge defender expected ExecutionBisectionEvent but got %T", event)
+			return 0, errors.Errorf("ExecutionChallenge defender expected ExecutionBisectionEvent but got %T", event)
 		}
 
 		// get challenger update
@@ -137,7 +135,7 @@ func defendExecution(
 
 		continueEvent, ok := event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, fmt.Errorf("ExecutionChallenge defender expected ContinueChallengeEvent but got %T", event)
+			return 0, errors.Errorf("ExecutionChallenge defender expected ContinueChallengeEvent but got %T", event)
 		}
 
 		if bisected {
@@ -234,7 +232,7 @@ func runExecutionOneStepProof(
 
 	_, ok := event.(arbbridge.OneStepProofEvent)
 	if !ok {
-		return 0, fmt.Errorf("ExecutionChallenge defender expected OneStepProof but got %T", event)
+		return 0, errors.Errorf("ExecutionChallenge defender expected OneStepProof but got %T", event)
 	}
 	return ChallengeAsserterWon, nil
 }

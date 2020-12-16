@@ -19,7 +19,10 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
+	golog "log"
 	"os"
 	"time"
 
@@ -32,6 +35,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
+var logger zerolog.Logger
+
 // Launches the rollup validator with the following command line arguments:
 // 1) Compiled Arbitrum bytecode file
 // 2) private key file
@@ -39,22 +44,28 @@ import (
 // 4) ethURL
 func main() {
 	// Enable line numbers in logging
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
+
+	// Print stack trace when `.Error().Stack().Err(err).` is added to zerolog call
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+
+	// Print line number that log was created on
+	logger = log.With().Caller().Str("component", "arb-stressed-validator").Logger()
 
 	// Check number of args
 	flag.Parse()
 	switch os.Args[1] {
 	case "validate":
 		if err := cmdhelper.ValidateRollupChain("evil-arb-validator", createStressedManager); err != nil {
-			log.Fatal(err)
+			logger.Fatal().Stack().Err(err).Msg("error validating rollup chain")
 		}
 	default:
 	}
 }
 
-func createStressedManager(rollupAddress common.Address, client arbbridge.ArbClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
+func createStressedManager(ctx context.Context, rollupAddress common.Address, client arbbridge.ArbClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
 	return rollupmanager.CreateManager(
-		context.Background(),
+		ctx,
 		rollupAddress,
 		arbbridge.NewStressTestClient(client, time.Second*10),
 		contractFile,

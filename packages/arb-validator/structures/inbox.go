@@ -17,9 +17,8 @@
 package structures
 
 import (
-	"errors"
 	"fmt"
-	"log"
+	"github.com/pkg/errors"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
@@ -29,11 +28,12 @@ import (
 )
 
 type messageStackItem struct {
-	message inbox.InboxMessage
-	prev    *messageStackItem
-	next    *messageStackItem
-	hash    common.Hash
-	count   *big.Int
+	message   inbox.InboxMessage
+	prev      *messageStackItem
+	next      *messageStackItem
+	valueHash common.Hash
+	hash      common.Hash
+	count     *big.Int
 }
 
 func (msi *messageStackItem) skipNext(n uint64) *messageStackItem {
@@ -73,8 +73,7 @@ func NewRandomMessageStack(count int) *MessageStack {
 		randMsg := inbox.NewRandomInboxMessage()
 		randMsg.InboxSeqNum = big.NewInt(int64(i + 1))
 		if err := ms.DeliverMessage(randMsg); err != nil {
-			// This can never happen
-			log.Fatal(err)
+			logger.Fatal().Stack().Err(err).Msg("This can never happen")
 		}
 	}
 	return ms
@@ -125,28 +124,34 @@ func (ms *MessageStack) bottomIndex() *big.Int {
 }
 
 func (ms *MessageStack) DeliverMessage(msg inbox.InboxMessage) error {
+	return ms.deliverMessageImpl(msg, msg.AsValue().Hash())
+}
+
+func (ms *MessageStack) deliverMessageImpl(msg inbox.InboxMessage, valueHash common.Hash) error {
 	newTopCount := new(big.Int).Add(ms.TopCount(), big.NewInt(1))
 	if msg.InboxSeqNum.Cmp(newTopCount) != 0 {
-		return fmt.Errorf("didn't get messages in correct order. Received message %v after message %v", msg.InboxSeqNum, ms.TopCount())
+		return errors.Errorf("didn't get messages in correct order. Received message %v after message %v", msg.InboxSeqNum, ms.TopCount())
 	}
 	if ms.newest == nil {
 		item := &messageStackItem{
-			message: msg,
-			prev:    nil,
-			next:    nil,
-			hash:    hash2(ms.hashOfRest, msg.CommitmentHash()),
-			count:   newTopCount,
+			message:   msg,
+			prev:      nil,
+			next:      nil,
+			valueHash: valueHash,
+			hash:      hash2(ms.hashOfRest, msg.CommitmentHash()),
+			count:     newTopCount,
 		}
 		ms.newest = item
 		ms.oldest = item
 		ms.index[item.hash] = item
 	} else {
 		item := &messageStackItem{
-			message: msg,
-			prev:    ms.newest,
-			next:    nil,
-			hash:    hash2(ms.newest.hash, msg.CommitmentHash()),
-			count:   newTopCount,
+			message:   msg,
+			prev:      ms.newest,
+			next:      nil,
+			valueHash: valueHash,
+			hash:      hash2(ms.newest.hash, msg.CommitmentHash()),
+			count:     newTopCount,
 		}
 		ms.newest = item
 		item.prev.next = item
@@ -177,9 +182,10 @@ func (ms *MessageStack) MarshalForCheckpoint(ctx *ckptcontext.CheckpointContext)
 	var items []*common.HashBuf
 	for item := ms.newest; item != nil; item = item.prev {
 		checkpointVal := item.message.AsValue()
-		ctx.AddValue(checkpointVal)
-		items = append(items, checkpointVal.Hash().MarshalToBuf())
+		ctx.AddValueWithHash(checkpointVal, item.valueHash)
+		items = append(items, item.valueHash.MarshalToBuf())
 	}
+	logger.Info().Int("count", len(items)).Msg("serializing message stack")
 	var topCount *big.Int
 	if ms.newest == nil {
 		topCount = big.NewInt(0)
@@ -198,7 +204,8 @@ func (x *InboxBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Mes
 	ret.hashOfRest = x.HashOfRest.Unmarshal()
 
 	for i := len(x.Items) - 1; i >= 0; i = i - 1 {
-		val, err := ctx.GetValue(x.Items[i].Unmarshal())
+		valueHash := x.Items[i].Unmarshal()
+		val, err := ctx.GetValue(valueHash)
 		if err != nil {
 			return nil, err
 		}
@@ -206,7 +213,7 @@ func (x *InboxBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Mes
 		if err != nil {
 			return nil, err
 		}
-		if err := ret.DeliverMessage(msg); err != nil {
+		if err := ret.deliverMessageImpl(msg, valueHash); err != nil {
 			return nil, err
 		}
 	}
@@ -264,7 +271,7 @@ func segmentSizes(segments, count uint64) (uint64, uint64, uint64) {
 func (ms *MessageStack) GenerateBisection(startItemHash common.Hash, segments, count uint64) ([]common.Hash, error) {
 	startItem, ok := ms.itemAfterHash(startItemHash)
 	if !ok {
-		return nil, fmt.Errorf("bisection startItemHash %s not found", startItemHash.String())
+		return nil, errors.Errorf("bisection startItemHash %s not found", startItemHash.String())
 	}
 
 	segments, firstSegmentSize, otherSegmentSize := segmentSizes(segments, count)
@@ -273,13 +280,13 @@ func (ms *MessageStack) GenerateBisection(startItemHash common.Hash, segments, c
 	cuts = append(cuts, startItemHash)
 	item := startItem.skipNext(firstSegmentSize - 1)
 	if item == nil {
-		return nil, fmt.Errorf("inbox %s too short start", startItemHash.String())
+		return nil, errors.Errorf("inbox %s too short start", startItemHash.String())
 	}
 	cuts = append(cuts, item.hash)
 	for i := uint64(1); i < segments; i++ {
 		item = item.skipNext(otherSegmentSize)
 		if item == nil {
-			return nil, fmt.Errorf("inbox %s too short rest", startItemHash.String())
+			return nil, errors.Errorf("inbox %s too short rest", startItemHash.String())
 		}
 		cuts = append(cuts, item.hash)
 	}
@@ -289,7 +296,7 @@ func (ms *MessageStack) GenerateBisection(startItemHash common.Hash, segments, c
 func (ms *MessageStack) InboxMessageAfter(startItemHash common.Hash) (inbox.InboxMessage, error) {
 	item, ok := ms.itemAfterHash(startItemHash)
 	if !ok {
-		return inbox.InboxMessage{}, fmt.Errorf("one step proof startItemHash %s not found ", startItemHash.String())
+		return inbox.InboxMessage{}, errors.Errorf("one step proof startItemHash %s not found ", startItemHash.String())
 	}
 	return item.message, nil
 }
@@ -300,14 +307,14 @@ func (ms *MessageStack) GetMessages(olderAcc common.Hash, count uint64) ([]inbox
 	}
 	oldItem, ok := ms.itemAfterHash(olderAcc)
 	if !ok {
-		return nil, fmt.Errorf("olderAcc not found for hash: %s", olderAcc.String())
+		return nil, errors.Errorf("olderAcc not found for hash: %s", olderAcc.String())
 	}
 
 	item := oldItem
 	messages := make([]inbox.InboxMessage, 0, count)
 	for i := uint64(0); i < count; i++ {
 		if item == nil {
-			return nil, fmt.Errorf("not enough Messages in inbox for hash %s", olderAcc.String())
+			return nil, errors.Errorf("not enough Messages in inbox for hash %s", olderAcc.String())
 		}
 		messages = append(messages, item.message)
 		item = item.next
@@ -321,7 +328,7 @@ func (ms *MessageStack) GetAssertionMessages(beforeInboxHash common.Hash, afterI
 	}
 	item, ok := ms.itemAfterHash(beforeInboxHash)
 	if !ok || item == nil {
-		return nil, fmt.Errorf("beforeInboxHash %s not found", beforeInboxHash.String())
+		return nil, errors.Errorf("beforeInboxHash %s not found", beforeInboxHash.String())
 	}
 
 	messages := make([]inbox.InboxMessage, 0)
@@ -329,7 +336,7 @@ func (ms *MessageStack) GetAssertionMessages(beforeInboxHash common.Hash, afterI
 		messages = append(messages, item.message)
 		item = item.next
 		if item == nil {
-			return nil, fmt.Errorf("not enough Messages in inbox, afterInboxHash %s not found", afterInboxHash.String())
+			return nil, errors.Errorf("not enough Messages in inbox, afterInboxHash %s not found", afterInboxHash.String())
 		}
 	}
 	return messages, nil
@@ -338,7 +345,7 @@ func (ms *MessageStack) GetAssertionMessages(beforeInboxHash common.Hash, afterI
 func (ms *MessageStack) GetAllMessagesAfter(olderAcc common.Hash) ([]inbox.InboxMessage, error) {
 	item, ok := ms.itemAfterHash(olderAcc)
 	if !ok {
-		return nil, fmt.Errorf("olderAcc %s not found", olderAcc.String())
+		return nil, errors.Errorf("olderAcc %s not found", olderAcc.String())
 	}
 
 	messages := make([]inbox.InboxMessage, 0)

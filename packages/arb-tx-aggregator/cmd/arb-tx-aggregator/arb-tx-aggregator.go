@@ -22,7 +22,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"log"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
+	golog "log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -32,12 +36,26 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
-	//_ "net/http/pprof"
+	_ "net/http/pprof"
 )
+
+var logger zerolog.Logger
+var pprofMux *http.ServeMux
+
+func init() {
+	pprofMux = http.DefaultServeMux
+	http.DefaultServeMux = http.NewServeMux()
+}
 
 func main() {
 	// Enable line numbers in logging
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
+
+	// Print stack trace when `.Error().Stack().Err(err).` is added to zerolog call
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+
+	// Print line number that log was created on
+	logger = log.With().Caller().Str("component", "arb-tx-aggregator").Logger()
 
 	ctx := context.Background()
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
@@ -53,41 +71,50 @@ func main() {
 
 	forwardTxURL := fs.String("forward-url", "", "url of another aggregator to send transactions through")
 
+	enablePProf := fs.Bool("pprof", false, "enable profiling server")
+
 	//go http.ListenAndServe("localhost:6060", nil)
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("Error parsing arguments")
 	}
 
 	if fs.NArg() != 3 {
-		log.Fatalf(
-			"usage: arb-tx-aggregator [--maxBatchTime=NumSeconds] %v %v",
+		logger.Fatal().Msgf(
+			"usage: arb-tx-aggregator [--maxBatchTime=NumSeconds] %s %s",
 			utils.WalletArgsString,
 			utils.RollupArgsString,
 		)
+	}
+
+	if *enablePProf {
+		go func() {
+			err := http.ListenAndServe("localhost:8081", pprofMux)
+			log.Error().Err(err).Msg("profiling server failed")
+		}()
 	}
 
 	rollupArgs := utils.ParseRollupCommand(fs, 0)
 
 	ethclint, err := ethutils.NewRPCEthClient(rollupArgs.EthURL)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("Error running NewRPcEthClient")
 	}
 
-	log.Println("Launching aggregator for chain", rollupArgs.Address, "with chain id", message.ChainAddressToID(rollupArgs.Address))
+	logger.Info().Hex("chainaddress", rollupArgs.Address.Bytes()).Hex("chainid", message.ChainAddressToID(rollupArgs.Address).Bytes()).Msg("Launching aggregator")
 
 	var batcherMode rpc.BatcherMode
 	if *forwardTxURL != "" {
-		log.Println("Aggregator starting in forwarder mode sending transactions to", *forwardTxURL)
+		logger.Info().Str("forwardTxURL", *forwardTxURL).Msg("Aggregator starting in forwarder mode")
 		batcherMode = rpc.ForwarderBatcherMode{NodeURL: *forwardTxURL}
 	} else {
 		auth, err := utils.GetKeystore(rollupArgs.ValidatorFolder, walletArgs, fs)
 		if err != nil {
-			log.Fatal(err)
+			logger.Fatal().Stack().Err(err).Msg("Error running GetKeystore")
 		}
 
-		log.Println("Aggregator submitting batches from address", auth.From)
+		logger.Info().Hex("from", auth.From.Bytes()).Msg("Aggregator submitting batches")
 
 		if err := arbbridge.WaitForBalance(
 			ctx,
@@ -95,7 +122,7 @@ func main() {
 			common.Address{},
 			common.NewAddressFromEth(auth.From),
 		); err != nil {
-			log.Fatal(err)
+			logger.Fatal().Stack().Err(err).Msg("error waiting for balance")
 		}
 
 		if *keepPendingState {
@@ -120,6 +147,6 @@ func main() {
 		time.Duration(*maxBatchTime)*time.Second,
 		batcherMode,
 	); err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Msg("Error running LaunchAggregator")
 	}
 }

@@ -18,9 +18,7 @@ package challenges
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"log"
+	"github.com/pkg/errors"
 	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -57,7 +55,7 @@ func ChallengeExecutionClaim(
 
 	messages, err := inboxStack.GetAllMessagesAfter(beforeInboxHash)
 	if err != nil {
-		log.Fatal("before inbox hash must be valid")
+		logger.Fatal().Msg("before inbox hash must be valid")
 	}
 
 	// Last value returned is not an error type
@@ -95,7 +93,7 @@ func challengeExecution(
 	}
 	ev, ok := event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, fmt.Errorf("ExecutionChallenge challenger expected InitiateChallengeEvent but got %T", event)
+		return 0, errors.Errorf("ExecutionChallenge challenger expected InitiateChallengeEvent but got %T", event)
 	}
 
 	deadline := ev.Deadline
@@ -129,7 +127,7 @@ func challengeExecution(
 
 		bisectionEvent, ok := event.(arbbridge.ExecutionBisectionEvent)
 		if !ok {
-			return 0, fmt.Errorf("ExecutionChallenge challenger expected ExecutionBisectionEvent but got %T", event)
+			return 0, errors.Errorf("ExecutionChallenge challenger expected ExecutionBisectionEvent but got %T", event)
 		}
 
 		chooseSegment, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
@@ -156,7 +154,7 @@ func challengeExecution(
 
 		continueEvent, ok := event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, fmt.Errorf("ExecutionChallenge challenger expected ContinueChallengeEvent but got %T", event)
+			return 0, errors.Errorf("ExecutionChallenge challenger expected ContinueChallengeEvent but got %T", event)
 		}
 
 		// Update mach, precondition, deadline

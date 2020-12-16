@@ -18,8 +18,7 @@ package inbox
 
 import (
 	"bytes"
-	"errors"
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -52,12 +51,12 @@ var errTupleSize2 = errors.New("expected 2-tuple value")
 func StackValueToList(val value.Value) ([]value.Value, error) {
 	tupVal, ok := val.(*value.TupleValue)
 	if !ok {
-		return nil, errors2.Wrap(errTupleSize2, val.String())
+		return nil, errors.Wrap(errTupleSize2, val.String())
 	}
 	values := make([]value.Value, 0)
 	for tupVal.Len() != 0 {
 		if tupVal.Len() != 2 {
-			return nil, errors2.Wrap(errTupleSize2, val.String())
+			return nil, errors.Wrap(errTupleSize2, val.String())
 		}
 
 		// Tuple size already verified above, so error can be ignored
@@ -66,7 +65,7 @@ func StackValueToList(val value.Value) ([]value.Value, error) {
 
 		tupVal, ok = val.(*value.TupleValue)
 		if !ok {
-			return nil, errors2.Wrap(errTupleSize2, val.String())
+			return nil, errors.Wrap(errTupleSize2, val.String())
 		}
 
 		values = append(values, member)
@@ -90,10 +89,10 @@ func ListToStackValue(vals []value.Value) *value.TupleValue {
 func ByteStackToHex(val value.Value) ([]byte, error) {
 	tup, ok := val.(*value.TupleValue)
 	if !ok {
-		return nil, errors2.Wrap(errTupleSize2, val.String())
+		return nil, errors.Wrap(errTupleSize2, val.String())
 	}
 	if tup.Len() != 2 {
-		return nil, errors2.Wrap(errTupleSize2, val.String())
+		return nil, errors.Wrap(errTupleSize2, val.String())
 	}
 
 	// Tuple size already verified above, so error can be ignored

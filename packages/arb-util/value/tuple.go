@@ -18,10 +18,10 @@ package value
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/pkg/errors"
 	"io"
 )
 

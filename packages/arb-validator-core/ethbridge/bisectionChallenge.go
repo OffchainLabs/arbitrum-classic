@@ -18,13 +18,13 @@ package ethbridge
 
 import (
 	"context"
-	"errors"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 	"strings"
 
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -55,7 +55,7 @@ func newBisectionChallenge(address ethcommon.Address, client ethutils.EthClient,
 	}
 	bisectionContract, err := ethbridgecontracts.NewBisectionChallenge(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
+		return nil, errors.Wrap(err, "Failed to connect to ChallengeManager")
 	}
 	vm := &bisectionChallenge{
 		challenge:          challenge,
@@ -76,13 +76,15 @@ func (c *bisectionChallenge) chooseSegment(
 	}
 
 	tree := NewMerkleTree(segments)
-	tx, err := c.BisectionChallenge.ChooseSegment(
-		c.auth.getAuth(ctx),
-		big.NewInt(int64(segmentToChallenge)),
-		tree.GetProofFlat(int(segmentToChallenge)),
-		tree.GetRoot(),
-		tree.GetNode(int(segmentToChallenge)),
-	)
+	tx, err := c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return c.BisectionChallenge.ChooseSegment(
+			auth,
+			big.NewInt(int64(segmentToChallenge)),
+			tree.GetProofFlat(int(segmentToChallenge)),
+			tree.GetRoot(),
+			tree.GetNode(int(segmentToChallenge)),
+		)
+	})
 	if err != nil {
 		return c.BisectionChallenge.ChooseSegmentCall(
 			ctx,
@@ -110,7 +112,7 @@ func newBisectionChallengeWatcher(address ethcommon.Address, client ethutils.Eth
 	}
 	bisectionContract, err := ethbridgecontracts.NewBisectionChallenge(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
+		return nil, errors.Wrap(err, "Failed to connect to ChallengeManager")
 	}
 	vm := &bisectionChallengeWatcher{
 		challengeWatcher:   challenge,

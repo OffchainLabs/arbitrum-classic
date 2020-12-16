@@ -19,6 +19,7 @@
 #include <avm/machinestate/machineoperation.hpp>
 #include <avm_values/exceptions.hpp>
 #include <avm_values/vmValueParser.hpp>
+#include <utility>
 
 #include <ethash/keccak.hpp>
 
@@ -80,7 +81,7 @@ MachineState::MachineState(std::shared_ptr<Code> code_,
                            Tuple staged_message_)
     : code(std::move(code_)),
       registerVal(std::move(register_val_)),
-      static_val(static_val_),
+      static_val(std::move(static_val_)),
       stack(std::move(stack_)),
       auxstack(std::move(auxstack_)),
       arb_gas_remaining(arb_gas_remaining_),
@@ -103,7 +104,7 @@ uint256_t MachineState::hash() const {
     if (state == Status::Error)
         return 1;
 
-    std::array<unsigned char, 32 * 8> data;
+    std::array<unsigned char, 32 * 8> data{};
     auto oit = data.begin();
     {
         auto val = ::hash(loadCurrentInstruction());
@@ -139,7 +140,7 @@ uint256_t MachineState::hash() const {
     return intx::be::load<uint256_t>(hash_val);
 }
 
-uint256_t MachineState::getMachineSize() {
+uint256_t MachineState::getMachineSize() const {
     uint256_t machine_size = 0;
 
     machine_size += getSize(static_val);
@@ -156,8 +157,8 @@ void marshalState(std::vector<unsigned char>& buf,
                   uint256_t next_codepoint_hash,
                   HashPreImage stackPreImage,
                   HashPreImage auxStackPreImage,
-                  value registerVal,
-                  value staticVal,
+                  const value& registerVal,
+                  const value& staticVal,
                   uint256_t arb_gas_remaining,
                   CodePointStub errpc,
                   const Tuple& staged_message) {
@@ -338,12 +339,13 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
     return buf;
 }
 
-std::vector<unsigned char> MachineState::marshalForProof() {
+std::vector<unsigned char> MachineState::marshalForProof() const {
     auto currentInstruction = loadCurrentInstruction();
     auto& current_op = currentInstruction.op;
     auto opcode = current_op.opcode;
     std::vector<MarshalLevel> stackPops = InstructionStackPops.at(opcode);
-    std::vector<MarshalLevel> auxStackPops = InstructionAuxStackPops.at(opcode);
+    const std::vector<MarshalLevel>& auxStackPops =
+        InstructionAuxStackPops.at(opcode);
 
     uint64_t stack_pop_count = stackPops.size();
 
@@ -353,7 +355,7 @@ std::vector<unsigned char> MachineState::marshalForProof() {
             stack_pop_count++;
         } else {
             immediateMarshalLevel = stackPops[0];
-            stackPops.erase(stackPops.begin());
+            stackPops.erase(stackPops.cbegin());
         }
     }
 
@@ -364,12 +366,12 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     auto stackProof = stack.marshalForProof(stackPops, *code);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
 
-    buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());
+    buf.insert(buf.cend(), stackProof.second.begin(), stackProof.second.end());
     if (current_op.immediate) {
         ::marshalForProof(*current_op.immediate, immediateMarshalLevel, buf,
                           *code);
     }
-    buf.insert(buf.end(), auxStackProof.second.begin(),
+    buf.insert(buf.cend(), auxStackProof.second.begin(),
                auxStackProof.second.end());
     ::marshalState(buf, *code, currentInstruction.nextHash, stackProof.first,
                    auxStackProof.first, registerVal, static_val,
@@ -400,7 +402,8 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
 
 const CodePoint& MachineState::loadCurrentInstruction() const {
     if (!loaded_segment || loaded_segment->segment->segmentID() != pc.segment) {
-        loaded_segment = code->loadCodeSegment(pc.segment);
+        loaded_segment =
+            nonstd::make_optional(code->loadCodeSegment(pc.segment));
     }
     return (*loaded_segment->segment)[pc.pc];
 }

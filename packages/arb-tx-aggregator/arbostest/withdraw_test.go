@@ -21,26 +21,17 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-func testWithdrawal(t *testing.T, depositMsg message.Message, withdrawalTx message.Transaction, withdrawalSender common.Address) ([]*evm.TxResult, []message.OutMessage) {
-	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
-
+func testWithdrawal(t *testing.T, depositMsg message.Message, withdrawalTx message.Transaction, withdrawalSender common.Address, logCount int) ([]*evm.TxResult, []message.OutMessage) {
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
-
-	chain := common.RandAddress()
 
 	inboxMessages := []inbox.InboxMessage{
 		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
@@ -48,36 +39,15 @@ func testWithdrawal(t *testing.T, depositMsg message.Message, withdrawalTx messa
 		message.NewInboxMessage(message.NewSafeL2Message(withdrawalTx), withdrawalSender, big.NewInt(1), chainTime),
 	}
 
-	// Last parameter returned is number of steps executed
-	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
-	testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.ParseLogs(), assertion.ParseOutMessages())
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(string(testCase))
+	logs, sends, _ := runAssertion(t, inboxMessages, logCount, 1)
+	results := processTxResults(t, logs)
 
-	logs := assertion.ParseLogs()
-	sends := assertion.ParseOutMessages()
+	allResultsSucceeded(t, results)
 
-	results := make([]*evm.TxResult, 0, len(logs))
-	for _, avmLog := range logs {
-		res, err := evm.NewTxResultFromValue(avmLog)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if res.ResultCode != evm.ReturnCode {
-			t.Fatal("incorrect tx response", res.ResultCode)
-		}
-		results = append(results, res)
-		t.Log(res.IncomingRequest)
-	}
-
-	parsedSends := make([]message.OutMessage, 0, len(logs))
+	parsedSends := make([]message.OutMessage, 0, len(sends))
 	for _, avmSend := range sends {
 		outMsg, err := message.NewOutMessageFromValue(avmSend)
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 		parsedSends = append(parsedSends, outMsg)
 	}
 
@@ -96,7 +66,7 @@ func TestWithdrawEth(t *testing.T) {
 	withdrawDest := common.RandAddress()
 	tx := withdrawEthTx(big.NewInt(0), withdrawValue, withdrawDest)
 
-	results, sends := testWithdrawal(t, depositMsg, tx, addr)
+	results, sends := testWithdrawal(t, depositMsg, tx, addr, 1)
 
 	if len(results) != 1 {
 		t.Fatal("unexpected log count", len(results))
@@ -108,9 +78,7 @@ func TestWithdrawEth(t *testing.T) {
 		t.Fatal("unexpected log count")
 	}
 	ev, err := snapshot.ParseEthWithdrawalEvent(res.EVMLogs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if ev.Amount.Cmp(withdrawValue) != 0 {
 		t.Error("unexpected withdrawal value")
 	}
@@ -157,7 +125,7 @@ func TestWithdrawERC20(t *testing.T) {
 	withdrawDest := common.RandAddress()
 	tx := withdrawERC20Tx(big.NewInt(1), withdrawValue, withdrawDest)
 
-	results, sends := testWithdrawal(t, depositMsg, tx, token)
+	results, sends := testWithdrawal(t, depositMsg, tx, token, 2)
 
 	if len(results) != 2 {
 		t.Fatal("unexpected log count", len(results))
@@ -170,9 +138,7 @@ func TestWithdrawERC20(t *testing.T) {
 		t.Fatal("unexpected log count", len(withdrawRes.EVMLogs))
 	}
 	ev, err := snapshot.ParseERC20WithdrawalEvent(withdrawRes.EVMLogs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if ev.Amount.Cmp(withdrawValue) != 0 {
 		t.Error("unexpected withdrawal value")
 	}
@@ -222,7 +188,7 @@ func TestWithdrawERC721(t *testing.T) {
 	withdrawDest := common.RandAddress()
 	tx := withdrawERC721Tx(big.NewInt(1), depositMsg.ID, withdrawDest)
 
-	results, sends := testWithdrawal(t, depositMsg, tx, token)
+	results, sends := testWithdrawal(t, depositMsg, tx, token, 2)
 
 	if len(results) != 2 {
 		t.Fatal("unexpected log count", len(results))
@@ -235,9 +201,7 @@ func TestWithdrawERC721(t *testing.T) {
 		t.Fatal("unexpected log count", len(withdrawRes.EVMLogs))
 	}
 	ev, err := snapshot.ParseERC721WithdrawalEvent(withdrawRes.EVMLogs[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	failIfError(t, err)
 	if ev.Id.Cmp(depositMsg.ID) != 0 {
 		t.Error("unexpected withdrawal id")
 	}

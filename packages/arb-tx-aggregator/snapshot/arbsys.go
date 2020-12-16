@@ -17,12 +17,12 @@
 package snapshot
 
 import (
-	"errors"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
+	"github.com/pkg/errors"
 	"math/big"
 	"strings"
 
@@ -93,7 +93,7 @@ func TransactionCountData(address common.Address) []byte {
 	return makeFuncData(txCountABI, address)
 }
 
-func parseTransactionCountResult(res *evm.TxResult) (*big.Int, error) {
+func ParseTransactionCountResult(res *evm.TxResult) (*big.Int, error) {
 	vals, err := txCountABI.Outputs.UnpackValues(res.ReturnData)
 	if err != nil {
 		return nil, err

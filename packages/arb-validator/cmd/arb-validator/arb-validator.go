@@ -18,18 +18,20 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"log"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
+	golog "log"
 	"math/big"
 	"os"
 	"path/filepath"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
 
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
@@ -40,24 +42,32 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 )
 
+var logger zerolog.Logger
+
 func main() {
 	// Enable line numbers in logging
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
+
+	// Print stack trace when `.Error().Stack().Err(err).` is added to zerolog call
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+
+	// Print line number that log was created on
+	logger = log.With().Caller().Str("component", "arb-validator").Logger()
 
 	// Check number of args
 	flag.Parse()
 	switch os.Args[1] {
 	case "create":
 		if err := createRollupChain(); err != nil {
-			log.Fatal(err)
+			logger.Fatal().Stack().Err(err).Msg("Error with createRollupChain")
 		}
 	case "validate":
 		if err := cmdhelper.ValidateRollupChain("arb-validator", createManager); err != nil {
-			log.Fatal(err)
+			logger.Fatal().Stack().Err(err).Msg("Error with ValidateRollupChain")
 		}
 	case "observe":
 		if err := cmdhelper.ObserveRollupChain("arb-validator", createManager); err != nil {
-			log.Fatal(err)
+			logger.Fatal().Stack().Err(err).Msg("Error with ObserveRollupChain")
 		}
 	default:
 	}
@@ -75,7 +85,7 @@ func createRollupChain() error {
 	}
 
 	if createCmd.NArg() != 3 {
-		return fmt.Errorf("usage: arb-validator create %v <validator_folder> <ethURL> <factoryAddress> [staketoken=TokenAddress] [staketoken=TokenAddress]", utils.WalletArgsString)
+		return errors.Errorf("usage: arb-validator create %v <validator_folder> <ethURL> <factoryAddress> [staketoken=TokenAddress] [staketoken=TokenAddress]", utils.WalletArgsString)
 	}
 
 	validatorFolder := createCmd.Arg(0)
@@ -87,7 +97,7 @@ func createRollupChain() error {
 	// 1) Compiled Arbitrum bytecode
 	mach, err := loader.LoadMachineFromFile(contractFile, true, "cpp")
 	if err != nil {
-		return errors2.Wrap(err, "loader error")
+		return errors.Wrap(err, "loader error")
 	}
 
 	auth, err := utils.GetKeystore(validatorFolder, walletVars, createCmd)
@@ -101,7 +111,10 @@ func createRollupChain() error {
 	}
 
 	// Rollup creation
-	client := ethbridge.NewEthAuthClient(ethclint, auth)
+	client, err := ethbridge.NewEthAuthClient(ctx, ethclint, auth)
+	if err != nil {
+		return err
+	}
 
 	if err := arbbridge.WaitForBalance(ctx, client, common.Address{}, common.NewAddressFromEth(auth.From)); err != nil {
 		return err
@@ -139,6 +152,6 @@ func createRollupChain() error {
 	return nil
 }
 
-func createManager(rollupAddress common.Address, client arbbridge.ArbClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
-	return rollupmanager.CreateManager(context.Background(), rollupAddress, client, contractFile, dbPath)
+func createManager(ctx context.Context, rollupAddress common.Address, client arbbridge.ArbClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
+	return rollupmanager.CreateManager(ctx, rollupAddress, client, contractFile, dbPath)
 }

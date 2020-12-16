@@ -19,11 +19,9 @@ package message
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/rlp"
-	errors2 "github.com/pkg/errors"
-	"log"
+	"github.com/pkg/errors"
 	"math/big"
 	"strings"
 
@@ -536,11 +534,11 @@ func (t CompressedECDSATransaction) AsEthTx(chainId *big.Int) (*types.Transactio
 	}
 	rlpTxData, err := rlp.EncodeToBytes(txData)
 	if err != nil {
-		return nil, errors2.Wrap(err, "error encoding transaction")
+		return nil, errors.Wrap(err, "error encoding transaction")
 	}
 	tx := new(types.Transaction)
 	if err := rlp.DecodeBytes(rlpTxData, tx); err != nil {
-		return nil, errors2.Wrap(err, "error decoding transaction")
+		return nil, errors.Wrap(err, "error decoding transaction")
 	}
 	return tx, nil
 }
@@ -572,7 +570,7 @@ func newTransactionBatchFromData(data []byte) TransactionBatch {
 		}
 		if big.NewInt(int64(r.Len())).Cmp(msgLength) < 0 {
 			// Not enough data remaining
-			log.Println("Received batch containing invalid data at end")
+			logger.Warn().Msg("Received batch containing invalid data at end")
 			break
 		}
 		txData := make([]byte, msgLength.Uint64())

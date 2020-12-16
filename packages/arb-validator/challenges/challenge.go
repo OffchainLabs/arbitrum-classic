@@ -18,12 +18,15 @@ package challenges
 
 import (
 	"context"
-	"errors"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
+
+var logger = log.With().Caller().Str("component", "challenges").Logger()
 
 type ChallengeState uint8
 
@@ -39,6 +42,25 @@ const (
 var replayTimeout = time.Second
 
 var challengeNoEvents = errors.New("challenge event channel terminated unexpectedly")
+
+func (cs ChallengeState) String() string {
+	switch cs {
+	case ChallengeContinuing:
+		return "ChallengeContinuing"
+	case ChallengeAsserterWon:
+		return "ChallengeAsserterWon"
+	case ChallengeAsserterTimedOut:
+		return "ChallengeAsserterTimedOut"
+	case ChallengeChallengerTimedOut:
+		return "ChallengeChallengerTimedOut:"
+	case ChallengerDiscontinued:
+		return "ChallengerDiscontinued"
+	case DefenderDiscontinued:
+		return "DefenderDiscontinued"
+	}
+
+	return "InvalidChallengeState"
+}
 
 func getSegmentCount(count, segments, index uint64) uint64 {
 	if index == 0 {

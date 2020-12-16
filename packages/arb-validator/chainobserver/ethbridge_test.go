@@ -18,11 +18,12 @@ package chainobserver
 
 import (
 	"context"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"log"
 	"math/big"
 	"math/rand"
 	"os"
@@ -48,8 +49,9 @@ import (
 var dbPath = "./testdb"
 
 var rollupTester *ethbridgetestcontracts.RollupTester
-var ethclnt *ethutils.SimulatedEthClient
-var auth *bind.TransactOpts
+var client *ethutils.SimulatedEthClient
+var authClient *ethbridge.EthArbAuthClient
+var ctx context.Context
 
 func ethTransfer(t *testing.T, dest common.Address, amount *big.Int) value.Value {
 	ethData := make([]byte, 0)
@@ -57,7 +59,7 @@ func ethTransfer(t *testing.T, dest common.Address, amount *big.Int) value.Value
 	ethData = append(ethData, math.U256Bytes(amount)...)
 	tup, err := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(0), // ETH type
-		inbox.NewIntFromAddress(common.NewAddressFromEth(auth.From)),
+		inbox.NewIntFromAddress(authClient.Address()),
 		inbox.BytesToByteStack(ethData),
 	})
 	if err != nil {
@@ -66,8 +68,8 @@ func ethTransfer(t *testing.T, dest common.Address, amount *big.Int) value.Value
 	return tup
 }
 
-func checkBalance(t *testing.T, globalInbox arbbridge.GlobalInbox, address common.Address, amount *big.Int) {
-	balance, err := globalInbox.GetEthBalance(context.Background(), address)
+func checkBalance(t *testing.T, ctx context.Context, globalInbox arbbridge.GlobalInbox, address common.Address, amount *big.Int) {
+	balance, err := globalInbox.GetEthBalance(ctx, address)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,47 +80,54 @@ func checkBalance(t *testing.T, globalInbox arbbridge.GlobalInbox, address commo
 }
 
 func TestMain(m *testing.M) {
-	clnt, pks := test.SimulatedBackend()
-	ethclnt = &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
-	auth = bind.NewKeyedTransactor(pks[0])
+	backend, pks := test.SimulatedBackend()
+	ctx = context.Background()
+	client = &ethutils.SimulatedEthClient{SimulatedBackend: backend}
+	auth := bind.NewKeyedTransactor(pks[0])
+	var err error
+	authClient, err = ethbridge.NewEthAuthClient(ctx, client, auth)
+	if err != nil {
+		logger.Fatal().Stack().Err(err).Send()
+	}
 
 	go func() {
 		t := time.NewTicker(time.Second * 1)
 		for range t.C {
-			ethclnt.Commit()
+			client.Commit()
 		}
 	}()
 
-	_, tx, deployedTester, err := ethbridgetestcontracts.DeployRollupTester(
-		auth,
-		ethclnt,
-	)
+	rollupAddr, tx, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgetestcontracts.DeployRollupTester(auth, client)
+	})
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Send()
 	}
 
 	_, err = ethbridge.WaitForReceiptWithResults(
-		context.Background(),
-		ethclnt,
-		auth.From,
+		ctx,
+		client,
+		authClient.Address().ToEthAddress(),
 		tx,
 		"DeployRollupTester",
 	)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Send()
 	}
-	rollupTester = deployedTester
+
+	rollupTester, err = ethbridgetestcontracts.NewRollupTester(rollupAddr, client)
+	if err != nil {
+		logger.Fatal().Stack().Err(err).Send()
+	}
 
 	code := m.Run()
 	if err := os.RemoveAll(dbPath); err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Send()
 	}
 	os.Exit(code)
 }
 
 func TestConfirmAssertion(t *testing.T) {
-	clnt := ethbridge.NewEthAuthClient(ethclnt, auth)
-
 	chainParams := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(0),
 		GracePeriod:             common.TicksFromSeconds(1),
@@ -126,12 +135,12 @@ func TestConfirmAssertion(t *testing.T) {
 		ArbGasSpeedLimitPerTick: 100000,
 	}
 
-	arbFactoryAddress, err := ethbridge.DeployRollupFactory(auth, ethclnt)
+	arbFactoryAddress, err := ethbridge.DeployRollupFactory(ctx, authClient, client)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	factory, err := clnt.NewArbFactory(common.NewAddressFromEth(arbFactoryAddress))
+	factory, err := authClient.NewArbFactory(common.NewAddressFromEth(arbFactoryAddress))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +151,7 @@ func TestConfirmAssertion(t *testing.T) {
 	}
 
 	rollupAddress, _, err := factory.CreateRollup(
-		context.Background(),
+		ctx,
 		mach.Hash(),
 		chainParams,
 		common.Address{},
@@ -151,30 +160,30 @@ func TestConfirmAssertion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rollupContract, err := clnt.NewRollup(rollupAddress)
+	rollupContract, err := authClient.NewRollup(rollupAddress)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	inboxAddress, err := rollupContract.InboxAddress(context.Background())
+	inboxAddress, err := rollupContract.InboxAddress(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	globalInbox, err := clnt.NewGlobalInbox(inboxAddress, rollupAddress)
+	globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if err := globalInbox.DepositEthMessage(
-		context.Background(),
-		common.NewAddressFromEth(auth.From),
+		ctx,
+		authClient.Address(),
 		big.NewInt(100),
 	); err != nil {
 		t.Fatal(err)
 	}
 
-	checkBalance(t, globalInbox, rollupAddress, big.NewInt(100))
+	checkBalance(t, ctx, globalInbox, rollupAddress, big.NewInt(100))
 
 	checkpointer, err := checkpointing.NewIndexedCheckpointer(
 		rollupAddress,
@@ -201,7 +210,7 @@ func TestConfirmAssertion(t *testing.T) {
 	chain.Inbox = &structures.Inbox{MessageStack: structures.NewRandomMessageStack(100)}
 
 	events, err := rollupContract.PlaceStake(
-		context.Background(),
+		ctx,
 		big.NewInt(0),
 		[]common.Hash{},
 		[]common.Hash{},
@@ -210,7 +219,7 @@ func TestConfirmAssertion(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, ev := range events {
-		if err := chain.HandleNotification(context.Background(), ev); err != nil {
+		if err := chain.HandleNotification(ctx, ev); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -229,7 +238,7 @@ func TestConfirmAssertion(t *testing.T) {
 		[]value.Value{},
 	)
 
-	currentBlock, err := clnt.BlockIdForHeight(context.Background(), nil)
+	currentBlock, err := authClient.BlockIdForHeight(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,12 +250,12 @@ func TestConfirmAssertion(t *testing.T) {
 	prepared.Assertion = assertion
 	prepared.AssertionStub = structures.NewExecutionAssertionStubFromWholeAssertion(assertion, chain.calculatedValidNode.VMProtoData().InboxTop, chain.Inbox.MessageStack)
 	var stakerProof []common.Hash
-	events, err = chainlistener.MakeAssertion(context.Background(), rollupContract, prepared, stakerProof)
+	events, err = chainlistener.MakeAssertion(ctx, rollupContract, prepared, stakerProof)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, ev := range events {
-		if err := chain.HandleNotification(context.Background(), ev); err != nil {
+		if err := chain.HandleNotification(ctx, ev); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -262,7 +271,7 @@ func TestConfirmAssertion(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	currentTime, err := clnt.BlockIdForHeight(context.Background(), nil)
+	currentTime, err := authClient.BlockIdForHeight(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -423,16 +432,16 @@ func TestConfirmAssertion(t *testing.T) {
 	if ret.ValidNodeHashes[0] != validNode.Hash() {
 		t.Fatal("wrong node hash")
 	}
-	events, err = rollupContract.Confirm(context.Background(), opp)
+	events, err = rollupContract.Confirm(ctx, opp)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, ev := range events {
-		if err := chain.HandleNotification(context.Background(), ev); err != nil {
+		if err := chain.HandleNotification(ctx, ev); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	checkBalance(t, globalInbox, rollupAddress, big.NewInt(25))
-	checkBalance(t, globalInbox, dest, big.NewInt(75))
+	checkBalance(t, ctx, globalInbox, rollupAddress, big.NewInt(25))
+	checkBalance(t, ctx, globalInbox, dest, big.NewInt(75))
 }

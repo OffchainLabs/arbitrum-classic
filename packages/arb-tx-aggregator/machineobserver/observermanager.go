@@ -18,8 +18,8 @@ package machineobserver
 
 import (
 	"context"
-	errors2 "github.com/pkg/errors"
-	"log"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"time"
 
@@ -31,40 +31,30 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/observer"
 )
 
+var logger = log.With().Caller().Str("component", "machineobserver").Logger()
+
 const defaultMaxReorgDepth = 100
 
 func ensureInitialized(
 	ctx context.Context,
 	cp *checkpointing.IndexedCheckpointer,
 	db *txdb.TxDB,
-	clnt arbbridge.ArbClient,
-	rollupAddr common.Address,
+	rollupWatcher arbbridge.ArbRollupWatcher,
+	inboxWatcher arbbridge.GlobalInboxWatcher,
 ) error {
+	logger.Info().Msg("Loading database")
 	if err := db.Load(ctx); err != nil {
 		return err
 	}
+
+	logger.Info().Msg("Database loaded")
 
 	// If we're already initialized, do nothing
 	if db.LatestBlockId() != nil {
 		return nil
 	}
 
-	rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
-	if err != nil {
-		return err
-	}
-
-	inboxAddr, err := rollupWatcher.InboxAddress(ctx)
-	if err != nil {
-		return err
-	}
-
-	// We're starting from scratch. Process the messages from the partial block
-	inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
-	if err != nil {
-		return err
-	}
-
+	// Verify contract version
 	valueCache, err := cmachine.NewValueCache()
 	if err != nil {
 		return err
@@ -79,10 +69,15 @@ func ensureInitialized(
 		return err
 	}
 
+	logger.Info().Msg("L2 chain verified")
+
+	// We're starting from scratch.  Process the messages from initial block
 	_, eventCreated, _, creationTimestamp, err := rollupWatcher.GetCreationInfo(ctx)
 	if err != nil {
 		return err
 	}
+
+	logger.Info().Msg("Creation info retrieved")
 
 	if err := db.AddInitialBlock(ctx, new(big.Int).Sub(eventCreated.BlockId.Height.AsInt(), big.NewInt(1))); err != nil {
 		return err
@@ -93,7 +88,7 @@ func ensureInitialized(
 		return err
 	}
 
-	// filter out events before nextEventId
+	// filter out events before contract was created
 	if len(events) > 0 {
 		startIndex := -1
 		for i, ev := range events {
@@ -112,6 +107,8 @@ func ensureInitialized(
 		return err
 	}
 
+	logger.Info().Msg("Initial messages from first block have been added")
+
 	return nil
 }
 
@@ -122,6 +119,7 @@ func RunObserver(
 	executablePath string,
 	dbPath string,
 ) (*txdb.TxDB, error) {
+	logger.Info().Msg("Creating indexed checkpointer")
 	cp, err := checkpointing.NewIndexedCheckpointer(
 		rollupAddr,
 		dbPath,
@@ -148,27 +146,38 @@ func RunObserver(
 		return nil, err
 	}
 
-	db := txdb.New(clnt, cp, cp.GetAggregatorStore(), rollupAddr)
-
-	if err := ensureInitialized(ctx, cp, db, clnt, rollupAddr); err != nil {
-		return nil, err
+	inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
+	if err != nil {
+		logger.Fatal().Stack().Err(err).Send()
 	}
 
+	db := txdb.New(clnt, cp, cp.GetAggregatorStore(), rollupAddr)
+
+	logger.Info().Msg("Initializing database")
+	// Make first call to ensureInitialized outside of thread to avoid race conditions
+	if err := ensureInitialized(ctx, cp, db, rollupWatcher, inboxWatcher); err != nil {
+		logger.Fatal().Stack().Err(err).Send()
+	}
+
+	firstLoop := true
 	go func() {
 		for {
 			runCtx, cancelFunc := context.WithCancel(ctx)
 
-			inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
-			if err != nil {
-				log.Fatal(err)
-			}
+			logger.Info().Msg("Observer thread")
 
-			if err := ensureInitialized(ctx, cp, db, clnt, rollupAddr); err != nil {
-				log.Fatal(err)
+			if firstLoop {
+				firstLoop = false
+			} else {
+				if err := ensureInitialized(ctx, cp, db, rollupWatcher, inboxWatcher); err != nil {
+					logger.Fatal().Stack().Err(err).Send()
+				}
 			}
 
 			err = func() error {
-				log.Println("Starting observer after", db.LatestBlockId())
+				logger.Info().
+					Object("blockId", db.LatestBlockId()).
+					Msg("Starting observer")
 
 				// If the local chain is significantly behind the L1, catch up
 				// more efficiently. We process `MaxReorgHeight` blocks at a
@@ -180,7 +189,7 @@ func RunObserver(
 					start := new(big.Int).Add(db.LatestBlockId().Height.AsInt(), big.NewInt(1))
 					fetchEnd, err := observer.CalculateCatchupFetch(runCtx, start, clnt, maxReorg)
 					if err != nil {
-						return errors2.Wrap(err, "error calculating fast catchup")
+						return errors.Wrap(err, "error calculating fast catchup")
 					}
 					if fetchEnd == nil {
 						break
@@ -189,29 +198,33 @@ func RunObserver(
 					if err != nil {
 						return err
 					}
-					log.Println("Getting events between", start, "and", fetchEnd, "with", new(big.Int).Sub(currentOnChain.Height.AsInt(), start), "blocks remaining")
+					logger.Info().
+						Str("startEvent", start.String()).
+						Str("endEvent", fetchEnd.String()).
+						Str("blocksRemaining", new(big.Int).Sub(currentOnChain.Height.AsInt(), start).String()).
+						Msg("Getting events")
 					inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, start, fetchEnd)
 					if err != nil {
-						return errors2.Wrap(err, "Manager hit error doing fast catchup")
+						return errors.Wrap(err, "Manager hit error doing fast catchup")
 					}
 
 					endBlock, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(fetchEnd))
 					if err != nil {
-						return errors2.Wrap(err, "error getting end block in fast catchup")
+						return errors.Wrap(err, "error getting end block in fast catchup")
 					}
 					if err := db.AddMessages(runCtx, inboxDeliveredEvents, endBlock); err != nil {
-						return errors2.Wrap(err, "error adding messages to db")
+						return errors.Wrap(err, "error adding messages to db")
 					}
 				}
 
 				latest := db.LatestBlockId()
 				headersChan, err := clnt.SubscribeBlockHeadersAfter(runCtx, latest)
 				if err != nil {
-					return errors2.Wrap(err, "can't restart header subscription")
+					return errors.Wrap(err, "can't restart header subscription")
 				}
 				for maybeBlockId := range headersChan {
 					if maybeBlockId.Err != nil {
-						return errors2.Wrap(maybeBlockId.Err, "error getting new header")
+						return errors.Wrap(maybeBlockId.Err, "error getting new header")
 					}
 
 					blockId := maybeBlockId.BlockId
@@ -219,18 +232,18 @@ func RunObserver(
 
 					inboxEvents, err := inboxWatcher.GetDeliveredEventsInBlock(runCtx, blockId, timestamp)
 					if err != nil {
-						return errors2.Wrapf(err, "manager hit error getting inbox events with block %v", blockId)
+						return errors.Wrapf(err, "manager hit error getting inbox events with block %v", blockId)
 					}
 
 					if err := db.AddMessages(runCtx, inboxEvents, blockId); err != nil {
-						return errors2.Wrap(err, "error adding messages to db")
+						return errors.Wrap(err, "error adding messages to db")
 					}
 				}
 				return nil
 			}()
 
 			if err != nil {
-				log.Println("Error in observer manager:", err)
+				logger.Error().Stack().Err(err).Msg("Error in observer manager")
 			}
 
 			cancelFunc()

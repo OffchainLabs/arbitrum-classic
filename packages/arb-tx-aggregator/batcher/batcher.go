@@ -19,6 +19,7 @@ package batcher
 import (
 	"container/list"
 	"context"
+	"github.com/pkg/errors"
 	"sync"
 	"time"
 
@@ -38,6 +39,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
+var logger = log.With().Caller().Str("component", "batcher").Logger()
+
 const maxBatchSize ethcommon.StorageSize = 120000
 
 type txResponse int
@@ -51,12 +54,11 @@ const (
 
 type batch interface {
 	newFromExisting() batch
-	validateTx(tx *types.Transaction) txResponse
+	validateTx(tx *types.Transaction) (txResponse, error)
 	isFull() bool
 	getAppliedTxes() []*types.Transaction
 	addIncludedTx(tx *types.Transaction) error
 	updateCurrentSnap(pendingSentBatches *list.List)
-	checkValidForQueue(tx *types.Transaction) error
 	getLatestSnap() *snapshot.Snapshot
 }
 
@@ -109,18 +111,20 @@ func NewStatefulBatcher(
 
 func NewStatelessBatcher(
 	ctx context.Context,
+	db *txdb.TxDB,
 	rollupAddress common.Address,
 	receiptFetcher ethutils.ReceiptFetcher,
 	globalInbox arbbridge.GlobalInboxSender,
 	maxBatchTime time.Duration,
 ) *Batcher {
+	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
 	return newBatcher(
 		ctx,
 		rollupAddress,
 		receiptFetcher,
 		globalInbox,
 		maxBatchTime,
-		newStatelessBatch(maxBatchSize),
+		newStatelessBatch(db, maxBatchSize, signer),
 	)
 }
 
@@ -156,7 +160,7 @@ func newBatcher(
 						err := server.pendingBatch.addIncludedTx(tx)
 						server.queuedTxes.maybeRemoveAccountAtIndex(accountIndex)
 						if err != nil {
-							log.Err(err).Msg("Aggregator ignored invalid tx")
+							logger.Error().Stack().Err(err).Msg("Aggregator ignored invalid tx")
 							continue
 						}
 					}
@@ -196,14 +200,14 @@ func newBatcher(
 					receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, receiptFetcher, txHash)
 					if err != nil || receipt.Status != 1 {
 						// batch failed
-						log.Fatal().Err(err).Msg("Error submitted batch")
+						logger.Fatal().Stack().Err(err).Msg("Error submitted batch")
 					}
 
 					receiptJSON, err := receipt.MarshalJSON()
 					if err != nil {
-						log.Err(err).Msg("failed to generate json for receipt")
+						logger.Error().Stack().Err(err).Msg("failed to generate json for receipt")
 					} else {
-						log.Info().RawJSON("receipt", receiptJSON).Msg("batch receipt")
+						logger.Info().RawJSON("receipt", receiptJSON).Msg("batch receipt")
 					}
 
 					// batch succeeded
@@ -228,16 +232,16 @@ func (m *Batcher) sendBatch(ctx context.Context, inbox arbbridge.GlobalInboxSend
 	}
 	batchTx, err := message.NewTransactionBatchFromMessages(batchTxes)
 	if err != nil {
-		log.Fatal().Err(err).Msg("transaction aggregator failed")
+		logger.Fatal().Stack().Err(err).Msg("transaction aggregator failed")
 	}
-	log.Info().Int("txcount", len(batchTxes)).Msg("Submitting batch")
+	logger.Info().Int("txcount", len(batchTxes)).Msg("Submitting batch")
 	txHash, err := inbox.SendL2MessageNoWait(
 		ctx,
 		message.NewSafeL2Message(batchTx).AsData(),
 	)
 
 	if err != nil {
-		log.Fatal().Err(err).Msg("transaction aggregator failed")
+		logger.Fatal().Stack().Err(err).Msg("transaction aggregator failed")
 		return
 	}
 
@@ -271,7 +275,21 @@ func (m *Batcher) PendingTransactionCount(_ context.Context, account common.Addr
 func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) error {
 	sender, err := types.Sender(m.signer, tx)
 	if err != nil {
-		log.Err(err).Msg("error processing user transaction")
+		logger.Error().Stack().Err(err).Msg("error processing user transaction")
+		return err
+	}
+
+	m.Lock()
+	defer m.Unlock()
+
+	action, err := m.pendingBatch.validateTx(tx)
+	if action == REMOVE {
+		return errors.Wrap(err, "transaction rejected")
+	}
+
+	m.pendingBatch.updateCurrentSnap(m.pendingSentBatches)
+
+	if err := m.queuedTxes.addTransaction(tx, sender); err != nil {
 		return err
 	}
 
@@ -279,21 +297,11 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 
 	txJSON, err := tx.MarshalJSON()
 	if err != nil {
-		log.Err(err).Msg("failed to marshal tx into json")
+		logger.Error().Stack().Err(err).Msg("failed to marshal tx into json")
 	} else {
-		log.Info().RawJSON("tx", txJSON).Str("sender", sender.Hex()).Msg("user tx")
+		logger.Info().RawJSON("tx", txJSON).Hex("sender", sender.Bytes()).Msg("user tx")
 	}
-
-	m.Lock()
-	defer m.Unlock()
-
-	m.pendingBatch.updateCurrentSnap(m.pendingSentBatches)
-
-	if err := m.pendingBatch.checkValidForQueue(tx); err != nil {
-		return err
-	}
-
-	return m.queuedTxes.addTransaction(tx, sender)
+	return nil
 }
 
 func (m *Batcher) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {

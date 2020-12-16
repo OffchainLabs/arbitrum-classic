@@ -17,12 +17,12 @@
 package ethbridgemachine
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -76,9 +76,9 @@ func generateProofCases(contract string) ([]*proofData, error) {
 			fmt.Println("Machine stopped in error state")
 			return proofs, nil
 			/*
-			beforeMach.PrintState()
-			mach.PrintState()
-			return nil, errors.New("machine stopped in error state")
+				beforeMach.PrintState()
+				mach.PrintState()
+				return nil, errors.New("machine stopped in error state")
 			*/
 		}
 		stub := structures.NewExecutionAssertionStubFromWholeAssertion(a, prevInboxHash, ms)
@@ -87,10 +87,10 @@ func generateProofCases(contract string) ([]*proofData, error) {
 			msg = &messages[0]
 		}
 		proofs = append(proofs, &proofData{
-			Assertion: stub,
-			Proof:     proof,
-			BufferProof:     bproof,
-			Message:   msg,
+			Assertion:   stub,
+			Proof:       proof,
+			BufferProof: bproof,
+			Message:     msg,
 		})
 		prevInboxHash = stub.AfterInboxHash
 	}

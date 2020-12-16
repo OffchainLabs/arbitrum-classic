@@ -18,8 +18,7 @@ package chainobserver
 
 import (
 	"context"
-	"errors"
-	"log"
+	"github.com/pkg/errors"
 	"math/big"
 	"sync"
 	"time"
@@ -35,7 +34,7 @@ import (
 
 func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	go func() {
-		log.Println("Launching opinion thread")
+		logger.Info().Msg("Launching opinion thread")
 		preparingAssertions := make(map[common.Hash]struct{})
 		preparedAssertions := make(map[common.Hash]*chainlistener.PreparedAssertion)
 		// This mutex protects all access to preparingAssertions and preparedAssertions
@@ -44,7 +43,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 		updateCurrent := func() {
 			currentOpinion := chain.calculatedValidNode
 			currentHash := currentOpinion.Hash()
-			log.Println("Building opinion on top of", currentHash)
+			logger.Info().Hex("current", currentHash.Bytes()).Msg("Building opinion on top")
 			successorHashes := currentOpinion.SuccessorHashes()
 			successor := func() *structures.Node {
 				for _, successor := range successorHashes {
@@ -89,7 +88,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					afterInboxTop = &afterInboxTopVal
 				}
 				nextMachine = currentOpinion.Machine().Clone()
-				log.Println("Forming opinion on", successor.Hash().ShortString())
+				logger.Info().Hex("successor", successor.Hash().Bytes()).Msg("Forming opinion on")
 
 				chain.RUnlock()
 
@@ -112,7 +111,12 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					// Already confirmed node is invalid, so error can be ignored
 					_ = correctNode.UpdateInvalidOpinion()
 				}
-				log.Println("Formed opinion that", newOpinion, successorHashes[newOpinion], "is the successor of", currentHash, "with after hash", correctNode.Machine().Hash())
+				logger.Info().
+					Str("opinion", newOpinion.String()).
+					Hex("successor", successorHashes[newOpinion].Bytes()).
+					Hex("current", currentHash.Bytes()).
+					Hex("machine", correctNode.Machine().Hash().Bytes()).
+					Msg("Formed new opinion")
 				chain.calculatedValidNode = correctNode
 				if correctNode.Depth() > chain.KnownValidNode.Depth() {
 					chain.KnownValidNode = correctNode
@@ -123,7 +127,9 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					listener.AdvancedKnownNode(ctx, chain.NodeGraph, correctNode)
 				}
 			} else {
-				log.Println("Formed opinion on nonexistant node", successorHashes[newOpinion])
+				logger.Info().
+					Hex("successor", successorHashes[newOpinion].Bytes()).
+					Msg("Formed opinion on nonexistant node")
 			}
 		}
 
@@ -185,7 +191,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 						} else {
 							assertionsMut.Lock()
 							// Prepared assertion is out of date
-							log.Println("Throwing out old assertion")
+							logger.Info().Hex("node", chain.calculatedValidNode.Hash().Bytes()).Msg("Throwing out old assertion")
 							delete(preparingAssertions, chain.calculatedValidNode.Hash())
 							delete(preparedAssertions, chain.calculatedValidNode.Hash())
 							assertionsMut.Unlock()
@@ -230,7 +236,7 @@ func (chain *ChainObserver) prepareAssertion(maxValidBlock *common.BlockId) (*ch
 
 	messages, err := chain.Inbox.GetMessages(beforeInboxTop, newMessageCount.Uint64())
 	if err != nil {
-		log.Println("Nonfatal error getting messages", err)
+		logger.Warn().Stack().Err(err).Msg("Nonfatal error getting messages")
 	}
 
 	mach := currentOpinion.Machine().Clone()
@@ -245,14 +251,12 @@ func (chain *ChainObserver) prepareAssertion(maxValidBlock *common.BlockId) (*ch
 
 	blockReason := mach.IsBlocked(false)
 
-	log.Printf(
-		"Prepared assertion of %v steps, from %v to %v with block reason %v on top of leaf %v\n",
-		stepsRun,
-		beforeHash,
-		afterHash,
-		blockReason,
-		currentOpinion.Hash(),
-	)
+	logger.Info().
+		Uint64("stepsRun", stepsRun).
+		Hex("before", beforeHash.Bytes()).
+		Hex("after", afterHash.Bytes()).
+		Hex("currentOpinion", currentOpinion.Hash().Bytes()).
+		Msgf("Prepared assertion with block reason: %v", blockReason)
 
 	chain.RLock()
 	defer chain.RUnlock()
@@ -279,14 +283,16 @@ func (chain *ChainObserver) getNodeOpinion(
 	mach machine.Machine,
 ) (valprotocol.ChildType, *protocol.ExecutionAssertion) {
 	if afterInboxTop == nil || assertionStub.AfterInboxHash != *afterInboxTop {
-		log.Println("Saw node with invalid after inbox top claim", assertionStub.AfterInboxHash)
+		logger.Info().
+			Hex("address", assertionStub.AfterInboxHash.Bytes()).
+			Msg("Saw node with invalid after inbox top claim")
 		return valprotocol.InvalidInboxTopChildType, nil
 	}
 
 	chain.RLock()
 	messages, err := chain.Inbox.GetMessages(assertionStub.BeforeInboxHash, params.ImportedMessageCount.Uint64())
 	if err != nil {
-		log.Fatal("accepted assertion can't overrun the inbox")
+		logger.Fatal().Stack().Err(err).Msg("accepted assertion can't overrun the inbox")
 	}
 	chain.RUnlock()
 
@@ -298,7 +304,7 @@ func (chain *ChainObserver) getNodeOpinion(
 	chain.RLock()
 	defer chain.RUnlock()
 	if params.NumSteps != stepsRun || !assertionStub.Equals(structures.NewExecutionAssertionStubFromWholeAssertion(assertion, assertionStub.BeforeInboxHash, chain.Inbox.MessageStack)) {
-		log.Println("Saw node with invalid execution claim")
+		logger.Warn().Msg("Saw node with invalid execution claim")
 		return valprotocol.InvalidExecutionChildType, nil
 	}
 

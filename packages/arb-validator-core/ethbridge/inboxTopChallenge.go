@@ -18,13 +18,15 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -42,7 +44,7 @@ func newInboxTopChallenge(address ethcommon.Address, client ethutils.EthClient, 
 	}
 	inboxTopContract, err := ethbridgecontracts.NewInboxTopChallenge(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to InboxTopChallenge")
+		return nil, errors.Wrap(err, "Failed to connect to InboxTopChallenge")
 	}
 	return &inboxTopChallenge{bisectionChallenge: bisectionChallenge, contract: inboxTopContract}, nil
 }
@@ -54,11 +56,13 @@ func (c *inboxTopChallenge) Bisect(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	tx, err := c.contract.Bisect(
-		c.auth.getAuth(ctx),
-		common.HashSliceToRaw(chainHashes),
-		chainLength,
-	)
+	tx, err := c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return c.contract.Bisect(
+			auth,
+			common.HashSliceToRaw(chainHashes),
+			chainLength,
+		)
+	})
 	if err != nil {
 		return c.contract.BisectCall(
 			ctx,
@@ -79,11 +83,13 @@ func (c *inboxTopChallenge) OneStepProof(
 ) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
-	tx, err := c.contract.OneStepProof(
-		c.auth.getAuth(ctx),
-		lowerHashA,
-		value,
-	)
+	tx, err := c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return c.contract.OneStepProof(
+			auth,
+			lowerHashA,
+			value,
+		)
+	})
 	if err != nil {
 		return err
 	}

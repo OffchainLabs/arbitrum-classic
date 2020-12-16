@@ -17,18 +17,15 @@
 package ethbridge
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"log"
-
 	ethereum "github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	errors2 "github.com/pkg/errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"github.com/pkg/errors"
 
 	"context"
-	"fmt"
 	"math/big"
 	"time"
 )
@@ -84,15 +81,15 @@ func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.Receip
 				}
 
 				if err.Error() == parityErr2 {
-					log.Printf("WARNING: issue getting receipt for %v: %v", txHash.Hex(), err)
+					logger.Warn().Stack().Err(err).Hex("tx", txHash.Bytes()).Msg("Issue getting receipt")
 					continue
 				}
-				log.Printf("ERROR getting receipt for %v: %v", txHash.Hex(), err)
+				logger.Error().Stack().Err(err).Hex("tx", txHash.Bytes()).Msg("Issue getting receipt")
 				return nil, err
 			}
 			return receipt, nil
 		case <-ctx.Done():
-			return nil, fmt.Errorf("receipt not found")
+			return nil, errors.Errorf("receipt not found")
 		}
 	}
 }
@@ -113,9 +110,9 @@ func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, f
 		}
 		data, err := client.CallContract(ctx, callMsg, receipt.BlockNumber)
 		if err != nil {
-			return nil, errors2.Wrapf(err, "transaction %v failed", methodName)
+			return nil, errors.Wrapf(err, "transaction %v failed", methodName)
 		}
-		return nil, fmt.Errorf("transaction %v failed with tx %v", methodName, string(data))
+		return nil, errors.Errorf("transaction %v failed with tx %v", methodName, string(data))
 	}
 	return receipt, nil
 }

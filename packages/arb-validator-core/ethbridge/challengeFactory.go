@@ -18,12 +18,14 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"math/big"
 
-	errors2 "github.com/pkg/errors"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+
+	"github.com/pkg/errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -38,30 +40,42 @@ type challengeFactory struct {
 func newChallengeFactory(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*challengeFactory, error) {
 	vmCreatorContract, err := ethbridgecontracts.NewChallengeFactory(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
+		return nil, errors.Wrap(err, "Failed to connect to arbFactory")
 	}
 	return &challengeFactory{vmCreatorContract, client, auth}, nil
 }
 
-func DeployChallengeFactory(auth *bind.TransactOpts, client ethutils.EthClient) (ethcommon.Address, error) {
-	inboxTopAddr, _, _, err := ethbridgecontracts.DeployInboxTopChallenge(auth, client)
+func DeployChallengeFactory(ctx context.Context, authClient *EthArbAuthClient, client ethutils.EthClient) (ethcommon.Address, *types.Transaction, error) {
+	inboxTopAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgecontracts.DeployInboxTopChallenge(auth, client)
+	})
 	if err != nil {
-		return ethcommon.Address{}, err
+		return ethcommon.Address{}, nil, err
 	}
-	executionAddr, _, _, err := ethbridgecontracts.DeployExecutionChallenge(auth, client)
+
+	executionAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgecontracts.DeployExecutionChallenge(auth, client)
+	})
 	if err != nil {
-		return ethcommon.Address{}, err
+		return ethcommon.Address{}, nil, err
 	}
-	ospAddr, _, _, err := ethbridgecontracts.DeployOneStepProof(auth, client)
+
+	ospAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgecontracts.DeployOneStepProof(auth, client)
+	})
 	if err != nil {
-		return ethcommon.Address{}, err
+		return ethcommon.Address{}, nil, err
 	}
-	ospAddr2, _, _, err := ethbridgecontracts.DeployOneStepProof2(auth, client)
+	ospAddr2, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgecontracts.DeployOneStepProof2(auth, client)
+	})
 	if err != nil {
-		return ethcommon.Address{}, err
+		return ethcommon.Address{}, nil, err
 	}
-	factoryAddr, _, _, err := ethbridgecontracts.DeployChallengeFactory(auth, client, inboxTopAddr, executionAddr, ospAddr, ospAddr2)
-	return factoryAddr, err
+	factoryAddr, tx, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgecontracts.DeployChallengeFactory(auth, client, inboxTopAddr, executionAddr, ospAddr, ospAddr2)
+	})
+	return factoryAddr, tx, err
 }
 
 func (con *challengeFactory) CreateChallenge(
@@ -74,16 +88,18 @@ func (con *challengeFactory) CreateChallenge(
 ) (common.Address, error) {
 	con.auth.Lock()
 	defer con.auth.Unlock()
-	tx, err := con.contract.CreateChallenge(
-		con.auth.getAuth(ctx),
-		asserter.ToEthAddress(),
-		challenger.ToEthAddress(),
-		challengePeriod.Val,
-		challengeHash,
-		challengeType,
-	)
+	tx, err := con.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return con.contract.CreateChallenge(
+			auth,
+			asserter.ToEthAddress(),
+			challenger.ToEthAddress(),
+			challengePeriod.Val,
+			challengeHash,
+			challengeType,
+		)
+	})
 	if err != nil {
-		return common.Address{}, errors2.Wrap(err, "Failed to call to challengeFactory.CreateChallenge")
+		return common.Address{}, errors.Wrap(err, "Failed to call to challengeFactory.CreateChallenge")
 	}
 
 	receipt, err := WaitForReceiptWithResults(ctx, con.client, con.auth.auth.From, tx, "CreateChallenge")
@@ -92,7 +108,7 @@ func (con *challengeFactory) CreateChallenge(
 	}
 
 	if len(receipt.Logs) != 1 {
-		return common.Address{}, errors2.New("Wrong receipt count")
+		return common.Address{}, errors.New("Wrong receipt count")
 	}
 
 	return common.NewAddressFromEth(receipt.Logs[0].Address), nil

@@ -19,8 +19,6 @@ package aggregator
 import (
 	"bytes"
 	"context"
-	"errors"
-	"fmt"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/bloombits"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -29,6 +27,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"time"
 
@@ -44,13 +44,16 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
+var logger = log.With().Caller().Str("component", "aggregator").Logger()
+
 type Server struct {
-	chain       common.Address
-	batch       batcher.TransactionBatcher
-	db          *txdb.TxDB
-	maxCallTime time.Duration
-	maxCallGas  *big.Int
-	scope       event.SubscriptionScope
+	chain              common.Address
+	batch              batcher.TransactionBatcher
+	db                 *txdb.TxDB
+	maxCallTime        time.Duration
+	maxCallGas         *big.Int
+	initialBlockHeight *big.Int
+	scope              event.SubscriptionScope
 }
 
 // NewServer returns a new instance of the Server class
@@ -58,13 +61,15 @@ func NewServer(
 	batch batcher.TransactionBatcher,
 	rollupAddress common.Address,
 	db *txdb.TxDB,
+	createdHeight *big.Int,
 ) *Server {
 	return &Server{
-		chain:       rollupAddress,
-		batch:       batch,
-		db:          db,
-		maxCallTime: 0,
-		maxCallGas:  big.NewInt(100000000),
+		chain:              rollupAddress,
+		batch:              batch,
+		db:                 db,
+		maxCallTime:        0,
+		maxCallGas:         big.NewInt(100000000),
+		initialBlockHeight: new(big.Int).Sub(createdHeight, big.NewInt(1)),
 	}
 }
 
@@ -96,13 +101,17 @@ func (m *Server) GetBlockCount() uint64 {
 	return id.Height.AsInt().Uint64()
 }
 
+func (m *Server) InitialBlockHeight() *big.Int {
+	return m.initialBlockHeight
+}
+
 func (m *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
 	if *block == rpc.LatestBlockNumber || *block == rpc.PendingBlockNumber {
 		return m.GetBlockCount(), nil
 	} else if *block >= 0 {
 		return uint64(*block), nil
 	} else {
-		return 0, fmt.Errorf("unsupported BlockNumber: %v", block.Int64())
+		return 0, errors.Errorf("unsupported BlockNumber: %v", block.Int64())
 	}
 }
 

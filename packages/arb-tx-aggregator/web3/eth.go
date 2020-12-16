@@ -2,10 +2,10 @@ package web3
 
 import (
 	"context"
-	"errors"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -19,6 +19,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
+
+var logger = log.With().Caller().Str("component", "web3").Logger()
 
 type Server struct {
 	srv *aggregator.Server
@@ -55,7 +57,7 @@ func (s *Server) GetBalance(address *common.Address, blockNum *rpc.BlockNumber) 
 	}
 	balance, err := snap.GetBalance(arbcommon.NewAddressFromEth(*address))
 	if err != nil {
-		return nil, errors2.Wrap(err, "error getting balance")
+		return nil, errors.Wrap(err, "error getting balance")
 	}
 	return (*hexutil.Big)(balance), nil
 }
@@ -67,28 +69,33 @@ func (s *Server) GetStorageAt(address *common.Address, index *hexutil.Big, block
 	}
 	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*address), (*big.Int)(index))
 	if err != nil {
-		return nil, errors2.Wrap(err, "error getting storage")
+		return nil, errors.Wrap(err, "error getting storage")
 	}
 	return (*hexutil.Big)(storageVal), nil
 }
 
 func (s *Server) GetTransactionCount(ctx context.Context, address *common.Address, blockNum *rpc.BlockNumber) (hexutil.Uint64, error) {
 	account := arbcommon.NewAddressFromEth(*address)
-	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
-		count := s.srv.PendingTransactionCount(ctx, account)
-		if count != nil {
-			return hexutil.Uint64(*count), nil
-		}
-	}
 	snap, err := s.getSnapshot(blockNum)
 	if err != nil {
 		return 0, err
 	}
 	txCount, err := snap.GetTransactionCount(account)
 	if err != nil {
-		return 0, errors2.Wrap(err, "error getting transaction count")
+		return 0, errors.Wrap(err, "error getting transaction count")
 	}
-	return hexutil.Uint64(txCount.Uint64()), nil
+
+	count := txCount.Uint64()
+	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
+		pending := s.srv.PendingTransactionCount(ctx, account)
+		if pending != nil {
+			if *pending > count {
+				count = *pending
+			}
+		}
+	}
+
+	return hexutil.Uint64(count), nil
 }
 
 func (s *Server) GetBlockTransactionCountByHash(blockHash common.Hash) (*hexutil.Big, error) {
@@ -118,7 +125,7 @@ func (s *Server) GetCode(address *common.Address, blockNum *rpc.BlockNumber) (he
 	}
 	code, err := snap.GetCode(arbcommon.NewAddressFromEth(*address))
 	if err != nil {
-		return nil, errors2.Wrap(err, "error getting code")
+		return nil, errors.Wrap(err, "error getting code")
 	}
 	return code, nil
 }
@@ -138,6 +145,7 @@ func (s *Server) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (he
 func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
 	res, err := s.executeCall(callArgs, blockNum)
 	if err != nil {
+		logger.Warn().Err(err).Msg("error executing call")
 		return nil, err
 	}
 	return res.ReturnData, nil
@@ -147,6 +155,7 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	blockNum := rpc.PendingBlockNumber
 	res, err := s.executeCall(args, &blockNum)
 	if err != nil {
+		logger.Warn().Err(err).Msg("error estimating gas")
 		return 0, err
 	}
 	return hexutil.Uint64(res.GasUsed.Uint64() + 1000000), nil
@@ -456,26 +465,34 @@ func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.T
 
 func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {
 	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
-		return s.srv.PendingSnapshot(), nil
+		pending := s.srv.PendingSnapshot()
+		if pending == nil {
+			return nil, errors.New("couldn't fetch pending snapshot")
+		}
+		return pending, nil
 	}
 
 	if *blockNum == rpc.LatestBlockNumber {
-		return s.srv.LatestSnapshot(), nil
+		snap := s.srv.LatestSnapshot()
+		if snap == nil {
+			return nil, errors.New("couldn't fetch latest snapshot")
+		}
 	}
 
 	snap, err := s.srv.GetSnapshot(uint64(*blockNum))
 	if err != nil {
 		return nil, err
 	}
-	if snap != nil {
-		return snap, nil
+	if snap == nil {
+		return nil, errors.New("unsupported block number")
 	}
-
-	return nil, errors.New("unsupported block number")
+	return snap, nil
 }
 
 func (s *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
-	if *block == rpc.LatestBlockNumber {
+	if *block == rpc.EarliestBlockNumber {
+		return s.srv.InitialBlockHeight().Uint64(), nil
+	} else if *block == rpc.LatestBlockNumber {
 		return s.srv.GetBlockCount(), nil
 	} else if *block >= 0 {
 		return uint64(*block), nil

@@ -1,17 +1,18 @@
 package main
 
 import (
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
 	"io/ioutil"
-	"log"
+	golog "log"
 	"math/big"
 	"os"
 	"strings"
 
 	"github.com/c-bata/go-prompt"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
@@ -23,6 +24,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
+
+var logger zerolog.Logger
 
 type App struct {
 	inboxMessages []inbox.InboxMessage
@@ -62,9 +65,9 @@ func newApp(data []byte) (*App, error) {
 	}
 
 	if err := a.verify(); err != nil {
-		log.Println("Logs incorrect:", err)
+		logger.Warn().Stack().Err(err).Msg("logs incorrect")
 	} else {
-		log.Println("Logs verified")
+		logger.Info().Msg("logs verified")
 	}
 	return a, nil
 }
@@ -93,9 +96,7 @@ func (a *App) verify() error {
 			return err
 		}
 		if !value.Eq(calcRes.AsValue(), res.AsValue()) {
-			log.Println("Calculated:", calcRes)
-			log.Println("Correct:", res)
-			return errors.New("wrong log")
+			logger.Warn().Str("calculated", calcRes.AsValue().String()).Str("correct", res.AsValue().String()).Msg("wrong log")
 		}
 	}
 
@@ -153,7 +154,7 @@ func (a *App) constructors() error {
 		}
 		var contractAddress common.Address
 		copy(contractAddress[:], txRes.ReturnData[12:])
-		log.Println("Tx", txRes.IncomingRequest.MessageID, "created", contractAddress)
+		logger.Info().Hex("Tx", txRes.IncomingRequest.MessageID.Bytes()).Hex("address", contractAddress.Bytes()).Msg("contract created")
 	}
 	return nil
 }
@@ -163,7 +164,7 @@ func (a *App) getCode(account common.Address) error {
 	if err != nil {
 		return err
 	}
-	log.Println(hexutil.Encode(code))
+	logger.Info().Hex("code", code)
 	return nil
 }
 
@@ -183,19 +184,27 @@ func (a *App) Execute(line string) {
 	switch blocks[0] {
 	case "code":
 		if err := a.getCode(common.HexToAddress(blocks[1])); err != nil {
-			log.Println("failed getting code", err)
+			logger.Warn().Stack().Err(err).Msg("failed getting code")
 		}
 	case "constructors":
 		if err := a.constructors(); err != nil {
-			log.Println("failed getting constructors", err)
+			logger.Warn().Stack().Err(err).Msg("failed getting constructors")
 		}
 	}
 }
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	// Enable line numbers in logging
+	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
+
+	// Print stack trace when `.Error().Stack().Err(err).` is added to zerolog call
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+
+	// Print line number that log was created on
+	logger = log.With().Caller().Str("component", "arb-replay-test").Logger()
+
 	file := os.Args[1]
-	log.Println("Running test:", file)
+	logger.Info().Str("file", file).Msg("Running test")
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		panic(err)

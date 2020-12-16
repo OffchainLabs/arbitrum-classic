@@ -18,12 +18,10 @@ package challenges
 
 import (
 	"context"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	errors2 "github.com/pkg/errors"
-	"log"
+	"github.com/pkg/errors"
 	"math/big"
 )
 
@@ -49,7 +47,7 @@ func DefendInboxTopClaim(
 	if err != nil {
 		return 0, err
 	}
-	log.Println("=======> defending inbox top claim")
+	logger.Info().Msg("=======> defending inbox top claim")
 
 	return defendInboxTop(
 		reorgCtx,
@@ -79,7 +77,7 @@ func defendInboxTop(
 	}
 	_, ok = event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, fmt.Errorf("InboxTopChallenge defender expected InitiateChallengeEvent but got %T", event)
+		return 0, errors.Errorf("InboxTopChallenge defender expected InitiateChallengeEvent but got %T", event)
 	}
 
 	currentStartState := inboxTopInitial
@@ -108,7 +106,7 @@ func defendInboxTop(
 
 		bisectionEvent, ok := event.(arbbridge.InboxTopBisectionEvent)
 		if !ok {
-			return 0, fmt.Errorf("InboxTopChallenge defender expected InboxTopBisectionEvent but got %T", event)
+			return 0, errors.Errorf("InboxTopChallenge defender expected InboxTopBisectionEvent but got %T", event)
 		}
 
 		// get challenger update
@@ -126,7 +124,7 @@ func defendInboxTop(
 
 		challengeContEvent, ok := event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, fmt.Errorf("InboxTopChallenge defender expected ContinueChallengeEvent but got %T", event)
+			return 0, errors.Errorf("InboxTopChallenge defender expected ContinueChallengeEvent but got %T", event)
 		}
 
 		currentStartState, messageCount = updateInboxChallengeData(challengeContEvent, bisectionEvent, messageCount)
@@ -167,7 +165,7 @@ func inboxDefenderUpdate(
 		}
 		err = contract.Bisect(ctx, chainHashes, new(big.Int).SetUint64(messageCount))
 		if err != nil {
-			return nil, 0, errors2.Wrap(err, "Error bisecting")
+			return nil, 0, errors.Wrap(err, "Error bisecting")
 		}
 		event, state, err = getNextEvent(eventChan)
 		if err != nil {
@@ -193,11 +191,11 @@ func runInboxOneStepProof(
 		}
 		err = contract.OneStepProof(ctx, currentStartState, msg.CommitmentHash())
 		if err != nil {
-			return 0, errors2.Wrap(err, "Error making one step proof")
+			return 0, errors.Wrap(err, "Error making one step proof")
 		}
 		event, state, err = getNextEvent(eventChan)
 		if err != nil {
-			return 0, errors2.Wrap(err, "Error getting next event")
+			return 0, errors.Wrap(err, "Error getting next event")
 		}
 	}
 
@@ -207,7 +205,7 @@ func runInboxOneStepProof(
 
 	_, ok := event.(arbbridge.OneStepProofEvent)
 	if !ok {
-		return 0, fmt.Errorf("InboxTopChallenge defender expected OneStepProof but got %T", event)
+		return 0, errors.Errorf("InboxTopChallenge defender expected OneStepProof but got %T", event)
 	}
 	return ChallengeAsserterWon, nil
 }

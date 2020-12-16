@@ -18,10 +18,9 @@ package inbox
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"math/big"
 	"math/rand"
 
@@ -59,7 +58,7 @@ func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 		return failRet, errors.New("val must be a tuple")
 	}
 	if tup.Len() != 6 {
-		return failRet, fmt.Errorf("expected tuple of length 6, but recieved tuple of length %v", tup.Len())
+		return failRet, errors.Errorf("expected tuple of length 6, but recieved tuple of length %v", tup.Len())
 	}
 
 	// Tuple size already verified above, so error can be ignored
@@ -97,7 +96,7 @@ func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 
 	data, err := ByteStackToHex(messageData)
 	if err != nil {
-		return failRet, errors2.Wrap(err, "unmarshalling input data")
+		return failRet, errors.Wrap(err, "unmarshalling input data")
 	}
 
 	return InboxMessage{

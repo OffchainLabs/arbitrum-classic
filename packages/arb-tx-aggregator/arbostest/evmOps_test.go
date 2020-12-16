@@ -23,12 +23,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
@@ -39,29 +36,22 @@ func TestBlockHash(t *testing.T) {
 		Timestamp: big.NewInt(0),
 	}
 
-	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
+	tx := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(0),
+		DestAddress: common.Address{},
+		Payment:     big.NewInt(0),
+		Data:        hexutil.MustDecode(arbostestcontracts.OpCodesBin),
 	}
-
-	addr := common.RandAddress()
-	chain := common.RandAddress()
-
-	runMessage(t, mach, initMsg(), chain)
-
-	connAddress, err := deployContract(t, mach, addr, hexutil.MustDecode(arbostestcontracts.OpCodesBin), big.NewInt(0), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	logs, _, mach := runAssertion(t, makeSimpleInbox([]message.Message{message.NewSafeL2Message(tx)}), 1, 0)
+	results := processTxResults(t, logs)
+	checkConstructorResult(t, results[0], connAddress1)
 
 	snap := snapshot.NewSnapshot(mach.Clone(), chainTime, message.ChainAddressToID(chain), big.NewInt(2))
-	ret, err := snap.BasicCall(hexutil.MustDecode("0x9663f88f"), connAddress)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if ret.ResultCode != evm.ReturnCode {
-		t.Fatal("block hash call failed")
-	}
+	ret, err := snap.BasicCall(hexutil.MustDecode("0x9663f88f"), connAddress1)
+	failIfError(t, err)
+	succeededTxCheck(t, ret)
 	if !bytes.Equal(ret.ReturnData, common.Hash{}.Bytes()) {
 		t.Error("Unexpected block hash result")
 	}

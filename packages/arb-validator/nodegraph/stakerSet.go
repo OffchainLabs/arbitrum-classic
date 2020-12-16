@@ -18,7 +18,7 @@ package nodegraph
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"log"
+	"github.com/rs/zerolog"
 )
 
 type StakerSet struct {
@@ -32,7 +32,7 @@ func NewStakerSet() *StakerSet {
 func (sl *StakerSet) Add(newStaker *Staker) {
 	newStaker.location.AddStaker()
 	if _, ok := sl.idx[newStaker.address]; ok {
-		log.Fatal("tried to insert staker twice")
+		logger.Fatal().Msg("tried to insert staker twice")
 	}
 	sl.idx[newStaker.address] = newStaker
 }
@@ -62,6 +62,14 @@ func (ss *StakerSet) DebugString(prefix string) string {
 		ret = ret + s.DebugString(subPrefix)
 	})
 	return ret
+}
+
+func (ss *StakerSet) MarshalZerologObject(e *zerolog.Event) {
+	stakers := zerolog.Arr()
+	ss.forall(func(s *Staker) {
+		stakers = stakers.Object(s)
+	})
+	e.Array("stakers", stakers)
 }
 
 func (ss *StakerSet) Equals(ss2 *StakerSet) bool {

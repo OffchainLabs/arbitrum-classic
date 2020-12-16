@@ -2,8 +2,8 @@ package inbox
 
 import (
 	"encoding/json"
-	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/pkg/errors"
 	"math/big"
 )
 

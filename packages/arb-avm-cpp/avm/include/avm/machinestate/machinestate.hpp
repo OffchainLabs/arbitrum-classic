@@ -88,8 +88,9 @@ struct MachineState {
                  Tuple staged_message_);
 
     uint256_t getMachineSize();
-    std::vector<unsigned char> marshalForProof();
     std::vector<unsigned char> marshalBufferProof();
+    uint256_t getMachineSize() const;
+    std::vector<unsigned char> marshalForProof() const;
     std::vector<unsigned char> marshalState() const;
     BlockReason runOp(OpCode opcode);
     BlockReason runOne();

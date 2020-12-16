@@ -89,8 +89,9 @@ Assertion Machine::runCallServer(uint64_t stepCount,
                                  std::vector<Tuple> inbox_messages,
                                  std::chrono::seconds wallLimit,
                                  value fake_inbox_peek_value) {
-    return executeMachine(stepCount, wallLimit, std::move(inbox_messages),
-                          Tuple(), false, std::move(fake_inbox_peek_value));
+    return executeMachine(
+        stepCount, wallLimit, std::move(inbox_messages), Tuple(), false,
+        nonstd::make_optional(std::move(fake_inbox_peek_value)));
 }
 
 Assertion Machine::runSideloaded(uint64_t stepCount,

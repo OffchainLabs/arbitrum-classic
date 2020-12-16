@@ -17,7 +17,7 @@
 package loader
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"strings"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -28,6 +28,6 @@ func LoadMachineFromFile(fileName string, warnMode bool, vmtype string) (machine
 	if strings.EqualFold(vmtype, "cpp") {
 		return cmachine.New(fileName)
 	} else {
-		return nil, fmt.Errorf("invalid machine type specified %v", vmtype)
+		return nil, errors.Errorf("invalid machine type specified %v", vmtype)
 	}
 }

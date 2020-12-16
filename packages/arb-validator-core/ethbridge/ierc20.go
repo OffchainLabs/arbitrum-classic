@@ -18,7 +18,7 @@ package ethbridge
 
 import (
 	"context"
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -46,11 +46,13 @@ func newIERC20(address ethcommon.Address, client ethutils.EthClient, auth *Trans
 func (con *IERC20) Approve(ctx context.Context, spender common.Address, amount *big.Int) error {
 	con.auth.Lock()
 	defer con.auth.Unlock()
-	tx, err := con.IERC20.Approve(
-		con.auth.getAuth(ctx),
-		spender.ToEthAddress(),
-		amount,
-	)
+	tx, err := con.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return con.IERC20.Approve(
+			auth,
+			spender.ToEthAddress(),
+			amount,
+		)
+	})
 	if err != nil {
 		return err
 	}
@@ -69,7 +71,7 @@ type IERC20Watcher struct {
 func newIERC20Watcher(address ethcommon.Address, client ethutils.EthClient) (*IERC20Watcher, error) {
 	ierc20Contract, err := ethbridgecontracts.NewIERC20(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to IERC20")
+		return nil, errors.Wrap(err, "Failed to connect to IERC20")
 	}
 	return &IERC20Watcher{ierc20Contract, client}, nil
 }

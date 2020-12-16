@@ -23,7 +23,7 @@ import (
 	"math/big"
 	"strings"
 
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -60,7 +60,7 @@ func newInboxTopChallengeWatcher(address ethcommon.Address, client ethutils.EthC
 	}
 	inboxTopContract, err := ethbridgecontracts.NewInboxTopChallenge(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to InboxTopChallenge")
+		return nil, errors.Wrap(err, "Failed to connect to InboxTopChallenge")
 	}
 	tops := []ethcommon.Hash{
 		inboxTopBisectedID,

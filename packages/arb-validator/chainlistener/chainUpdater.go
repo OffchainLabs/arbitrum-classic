@@ -20,7 +20,6 @@ import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
-	"log"
 )
 
 func InitiateChallenge(
@@ -47,8 +46,8 @@ func InitiateChallenge(
 
 func LogChallengeResult(err error) {
 	if err != nil {
-		log.Println("Failed to initiate challenge", err)
+		logger.Warn().Stack().Err(err).Msg("Failed to initiate challenge")
 	} else {
-		log.Println("Successfully initiated challenge")
+		logger.Info().Msg("Successfully initiated challeng")
 	}
 }

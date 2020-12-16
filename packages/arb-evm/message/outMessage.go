@@ -17,9 +17,8 @@
 package message
 
 import (
-	"errors"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -46,7 +45,7 @@ func NewOutMessageFromValue(val value.Value) (OutMessage, error) {
 		return failRet, errors.New("val must be a tuple")
 	}
 	if tup.Len() != 3 {
-		return failRet, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
+		return failRet, errors.Errorf("expected tuple of length 3, but recieved %v", tup)
 	}
 
 	// Tuple size already verified above, so error can be ignored

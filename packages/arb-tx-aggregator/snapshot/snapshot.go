@@ -17,8 +17,6 @@
 package snapshot
 
 import (
-	"errors"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
@@ -26,6 +24,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/pkg/errors"
 	"math/big"
 )
 
@@ -107,7 +106,7 @@ func checkValidResult(res *evm.TxResult) error {
 	if res.ResultCode == evm.ReturnCode {
 		return nil
 	}
-	return fmt.Errorf("error processing call %v", res.ResultCode)
+	return errors.Errorf("error processing call %v", res.ResultCode)
 }
 
 func (s *Snapshot) GetBalance(account common.Address) (*big.Int, error) {
@@ -129,7 +128,7 @@ func (s *Snapshot) GetTransactionCount(account common.Address) (*big.Int, error)
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return parseTransactionCountResult(res)
+	return ParseTransactionCountResult(res)
 }
 
 func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
@@ -161,7 +160,7 @@ func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash)
 	// blocked, return the block reason to give the client more information
 	// as opposed to just returning a general "call produced no output"
 	if br := mach.IsBlocked(true); steps == 0 && br != nil {
-		return nil, fmt.Errorf("can't produce solution since machine is blocked %v", br)
+		return nil, errors.Errorf("can't produce solution since machine is blocked %v", br)
 	}
 
 	avmLogs := assertion.ParseLogs()
@@ -175,7 +174,7 @@ func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash)
 	}
 
 	if res.IncomingRequest.MessageID != targetHash {
-		return nil, fmt.Errorf("call got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
+		return nil, errors.Errorf("call got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
 	}
 
 	return res, nil

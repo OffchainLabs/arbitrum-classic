@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"log"
 )
 
 type Forwarder struct {
@@ -40,7 +39,7 @@ func NewForwarder(client *ethclient.Client) *Forwarder {
 func (b *Forwarder) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
 	nonce, err := b.client.PendingNonceAt(ctx, account.ToEthAddress())
 	if err != nil {
-		log.Println("Error fetching pending nice")
+		logger.Error().Stack().Err(err).Msg("Error fetching pending nonce")
 		return nil
 	}
 	return &nonce

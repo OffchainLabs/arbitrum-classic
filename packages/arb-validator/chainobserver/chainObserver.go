@@ -19,9 +19,9 @@ package chainobserver
 import (
 	"bytes"
 	"context"
-	"fmt"
-	errors2 "github.com/pkg/errors"
-	"log"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"sync"
 	"time"
@@ -38,6 +38,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
+
+var logger = log.With().Caller().Str("component", "chainobserver").Logger()
 
 //go:generate protoc -I. -I ../.. --go_out=paths=source_relative:. chainobserver.proto
 
@@ -275,12 +277,12 @@ func (x *ChainObserverBuf) unmarshalFromCheckpoint(
 	}
 	knownValidNode := nodeGraph.NodeFromHash(x.KnownValidNode.Unmarshal())
 	if knownValidNode == nil {
-		return nil, fmt.Errorf("knownValidNode %v was nil", x.KnownValidNode.Unmarshal())
+		return nil, errors.Errorf("knownValidNode %v was nil", x.KnownValidNode.Unmarshal())
 	}
 
 	calculatedValidNode := nodeGraph.NodeFromHash(x.CalculatedValidNode.Unmarshal())
 	if calculatedValidNode == nil {
-		return nil, fmt.Errorf("calculatedValidNode %v was nil", x.CalculatedValidNode.Unmarshal())
+		return nil, errors.Errorf("calculatedValidNode %v was nil", x.CalculatedValidNode.Unmarshal())
 	}
 
 	return &ChainObserver{
@@ -337,6 +339,12 @@ func (chain *ChainObserver) DebugString(prefix string) string {
 	return chain.NodeGraph.DebugString(prefix, labels)
 }
 
+func (chain *ChainObserver) MarshalZerologObject(e *zerolog.Event) {
+	e.EmbedObject(chain.NodeGraph).
+		Hex("calculated_valid", chain.calculatedValidNode.Hash().Bytes()).
+		Hex("known_valid", chain.KnownValidNode.Hash().Bytes())
+}
+
 func (chain *ChainObserver) HandleNotification(ctx context.Context, event arbbridge.Event) error {
 	chain.Lock()
 	defer chain.Unlock()
@@ -383,7 +391,7 @@ func (chain *ChainObserver) NotifyNextEvent(blockId *common.BlockId) {
 func (chain *ChainObserver) UpdateAssumedValidBlock(ctx context.Context, clnt arbbridge.ChainTimeGetter, assumedValidDepth int64) error {
 	latestL1BlockId, err := clnt.BlockIdForHeight(ctx, nil)
 	if err != nil {
-		return errors2.Wrap(err, "Getting current block header")
+		return errors.Wrap(err, "Getting current block header")
 	}
 
 	validHeight := new(big.Int).Sub(latestL1BlockId.Height.AsInt(), big.NewInt(assumedValidDepth))
@@ -392,7 +400,7 @@ func (chain *ChainObserver) UpdateAssumedValidBlock(ctx context.Context, clnt ar
 	}
 	assumedValidBlock, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(validHeight))
 	if err != nil {
-		return errors2.Wrapf(err, "Getting assumed valid block header at height %v", validHeight)
+		return errors.Wrapf(err, "Getting assumed valid block header at height %v", validHeight)
 	}
 
 	chain.Lock()
@@ -404,12 +412,16 @@ func (chain *ChainObserver) UpdateAssumedValidBlock(ctx context.Context, clnt ar
 func (chain *ChainObserver) NotifyNewBlock(blockId *common.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
-	ckptCtx := ckptcontext.NewCheckpointContext()
-	buf, err := chain.marshalToBytes(ckptCtx)
-	if err != nil {
-		log.Fatal(err)
+
+	// Only save every 5 blocks since saving is quite slow
+	if blockId.Height.AsInt().Uint64()%5 == 0 {
+		ckptCtx := ckptcontext.NewCheckpointContext()
+		buf, err := chain.marshalToBytes(ckptCtx)
+		if err != nil {
+			logger.Fatal().Stack().Err(err).Send()
+		}
+		chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx)
 	}
-	chain.checkpointer.AsyncSaveCheckpoint(blockId.Clone(), buf, ckptCtx)
 }
 
 func (chain *ChainObserver) CurrentEventId() arbbridge.ChainInfo {

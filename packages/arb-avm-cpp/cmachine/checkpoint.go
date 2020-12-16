@@ -27,8 +27,7 @@ package cmachine
 import "C"
 import (
 	"bytes"
-	"errors"
-	"fmt"
+	"github.com/pkg/errors"
 	"runtime"
 	"unsafe"
 
@@ -48,7 +47,7 @@ func NewCheckpoint(dbPath string) (*CheckpointStorage, error) {
 	cCheckpointStorage := C.createCheckpointStorage(cDbPath)
 
 	if cCheckpointStorage == nil {
-		return nil, fmt.Errorf("error creating CheckpointStorage %v", dbPath)
+		return nil, errors.Errorf("error creating CheckpointStorage %v", dbPath)
 	}
 
 	returnVal := &CheckpointStorage{cCheckpointStorage}
@@ -84,7 +83,7 @@ func (checkpoint *CheckpointStorage) GetInitialMachine(valueCache machine.ValueC
 	cMachine := C.getInitialMachine(checkpoint.c, valueCache.(*ValueCache).c)
 
 	if cMachine == nil {
-		return nil, fmt.Errorf("error getting initial machine from checkpointstorage")
+		return nil, errors.Errorf("error getting initial machine from checkpointstorage")
 	}
 
 	ret := &Machine{cMachine}
@@ -193,7 +192,7 @@ func (checkpoint *CheckpointStorage) GetBlockStore() machine.BlockStore {
 }
 
 func (checkpoint *CheckpointStorage) GetAggregatorStore() *AggregatorStore {
-	bs := C.createAggregatorStore(checkpoint.c)
+	as := C.createAggregatorStore(checkpoint.c)
 
-	return NewAggregatorStore(bs)
+	return NewAggregatorStore(as)
 }

@@ -18,7 +18,7 @@ package ethbridge
 
 import (
 	"context"
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"math/big"
 	"strings"
 
@@ -67,7 +67,7 @@ func newGlobalInboxWatcher(
 		client,
 	)
 	if err != nil {
-		return nil, errors2.Wrap(err, "failed to connect to inbox")
+		return nil, errors.Wrap(err, "failed to connect to inbox")
 	}
 
 	return &globalInboxWatcher{
@@ -232,7 +232,7 @@ func (gi *globalInboxWatcher) processLog(
 		}
 		return gi.parseMessageFromOrigin(evmLog, timestamp, args["messageData"].([]byte))
 	default:
-		return arbbridge.MessageDeliveredEvent{}, errors2.New("unknown arbitrum event type")
+		return arbbridge.MessageDeliveredEvent{}, errors.New("unknown arbitrum event type")
 	}
 }
 

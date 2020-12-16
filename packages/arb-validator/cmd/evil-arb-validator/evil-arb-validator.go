@@ -19,20 +19,21 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
+	golog "log"
 	"math/big"
 	"os"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/cmdhelper"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rolluptest"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/cmdhelper"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rolluptest"
 )
+
+var logger zerolog.Logger
 
 // Launches the rollup validator with the following command line arguments:
 // 1) Compiled Arbitrum bytecode file
@@ -41,20 +42,26 @@ import (
 // 4) ethURL
 func main() {
 	// Enable line numbers in logging
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
+
+	// Print stack trace when `.Error().Stack().Err(err).` is added to zerolog call
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+
+	// Print line number that log was created on
+	logger = log.With().Caller().Str("component", "evil-arb-validator").Logger()
 
 	// Check number of args
 	flag.Parse()
 	switch os.Args[1] {
 	case "validate":
 		if err := cmdhelper.ValidateRollupChain("evil-arb-validator", createEvilManager); err != nil {
-			log.Fatal(err)
+			logger.Fatal().Stack().Err(err).Msg("Error with ValidateRollupChain")
 		}
 	default:
 	}
 }
 
-func createEvilManager(rollupAddress common.Address, client arbbridge.ArbClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
+func createEvilManager(ctx context.Context, rollupAddress common.Address, client arbbridge.ArbClient, contractFile string, dbPath string) (*rollupmanager.Manager, error) {
 	cp, err := rolluptest.NewEvilRollupCheckpointer(
 		rollupAddress,
 		dbPath,
@@ -65,7 +72,7 @@ func createEvilManager(rollupAddress common.Address, client arbbridge.ArbClient,
 		return nil, err
 	}
 	return rollupmanager.CreateManagerAdvanced(
-		context.Background(),
+		ctx,
 		rollupAddress,
 		true,
 		client,

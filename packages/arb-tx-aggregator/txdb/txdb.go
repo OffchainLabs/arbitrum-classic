@@ -18,7 +18,6 @@ package txdb
 
 import (
 	"context"
-	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core"
@@ -37,10 +36,13 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"log"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"sync"
 )
+
+var logger = log.With().Caller().Str("component", "txdb").Logger()
 
 var snapshotCacheSize = 100
 
@@ -86,10 +88,11 @@ func (db *TxDB) Load(ctx context.Context) error {
 		if err == nil {
 			return nil
 		}
-		log.Println("Error restoring from checkpoint:", err)
-		log.Println("Failed to restore from checkpoint, falling back to fresh start")
+		logger.Error().Stack().Err(err).Msg("Failed to restore from checkpoint, falling back to fresh start")
 	}
 	// We failed to restore from a checkpoint
+	logger.Info().Msg("Starting database from scratch")
+
 	valueCache, err := cmachine.NewValueCache()
 	if err != nil {
 		return err
@@ -151,7 +154,7 @@ func (db *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 			return err
 		}
 		if blockInfo == nil {
-			return fmt.Errorf("no block saved at height %v", restoreHeight)
+			return errors.Errorf("no block saved at height %v", restoreHeight)
 		}
 		blockLog = blockInfo.BlockLog
 		restoreHeight--
@@ -307,7 +310,7 @@ func (db *TxDB) processAssertion(assertion *protocol.ExecutionAssertion) (proces
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
 		if err != nil {
-			log.Println("Error parsing log result", err)
+			logger.Error().Stack().Err(err).Msg("Error parsing log result")
 			continue
 		}
 
@@ -365,7 +368,7 @@ func (db *TxDB) fillEmptyBlocks(ctx context.Context, max *big.Int) error {
 			return err
 		}
 		if prev == nil {
-			return fmt.Errorf("trying to add block %v, but prev header was not found", next)
+			return errors.Errorf("trying to add block %v, but prev header was not found", next)
 		}
 		if err := db.saveEmptyBlock(ctx, prev.Header.Hash(), next); err != nil {
 			return err
@@ -460,6 +463,7 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 		}
 
 		startLog := info.FirstAVMLog().Uint64()
+		// Instead of pulling from DB everytime, should use what we already have
 		txResults, err := db.GetBlockResults(info)
 		if err != nil {
 			return err
@@ -483,7 +487,7 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 			return err
 		}
 		if prev == nil {
-			return fmt.Errorf("trying to add block %v, but prev header was not found", info.BlockNum.Uint64())
+			return errors.Errorf("trying to add block %v, but prev header was not found", info.BlockNum.Uint64())
 		}
 		header := &types.Header{
 			ParentHash: prev.Header.Hash(),
@@ -505,13 +509,6 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 		for _, res := range processedResults {
 			ethLogs = append(ethLogs, res.Result.EthLogs(common.NewHashFromEth(block.Hash()))...)
 		}
-		db.chainFeed.Send(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: ethLogs})
-		if finalBlockIndex == blockIndex {
-			db.chainHeadFeed.Send(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: ethLogs})
-		}
-		if len(ethLogs) > 0 {
-			db.logsFeed.Send(ethLogs)
-		}
 
 		for i, txRes := range txResults {
 			if txRes.ResultCode == evm.BadSequenceCode {
@@ -528,6 +525,14 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 
 		if err := db.as.SaveBlockHash(common.NewHashFromEth(block.Hash()), block.Number().Uint64()); err != nil {
 			return err
+		}
+
+		db.chainFeed.Send(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: ethLogs})
+		if finalBlockIndex == blockIndex {
+			db.chainHeadFeed.Send(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: ethLogs})
+		}
+		if len(ethLogs) > 0 {
+			db.logsFeed.Send(ethLogs)
 		}
 	}
 	return nil

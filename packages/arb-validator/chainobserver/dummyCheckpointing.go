@@ -18,7 +18,7 @@ package chainobserver
 
 import (
 	"context"
-	"errors"
+	"github.com/pkg/errors"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"

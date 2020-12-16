@@ -19,8 +19,7 @@ package checkpointing
 import (
 	"bytes"
 	"context"
-	"errors"
-	"log"
+	"github.com/pkg/errors"
 	"math/big"
 	"os"
 	"testing"
@@ -78,7 +77,7 @@ func (m *TimeGetterMock) TimestampForBlockHash(context.Context, common.Hash) (*b
 func TestMain(m *testing.M) {
 	code := m.Run()
 	if err := os.RemoveAll(dbPath); err != nil {
-		log.Fatal(err)
+		logger.Fatal().Stack().Err(err).Send()
 	}
 	os.Exit(code)
 }
@@ -179,6 +178,8 @@ func TestRestoreSingleCheckpoint(t *testing.T) {
 	}
 	defer cp.db.CloseCheckpointStorage()
 
+	ctx := context.Background()
+
 	checkpointContext := ckptcontext.NewCheckpointContext()
 	if err = writeCheckpoint(cp.bs, cp.db, &writableCheckpoint{
 		blockId:  initialEntryBlockId,
@@ -197,7 +198,7 @@ func TestRestoreSingleCheckpoint(t *testing.T) {
 		},
 	}
 	// Should fail restore if checkpoint has changed
-	if err = cp.RestoreLatestState(context.Background(), tgm, func(bytes []byte, restoreContext ckptcontext.RestoreContext, _ *common.BlockId) error {
+	if err = cp.RestoreLatestState(ctx, tgm, func(bytes []byte, restoreContext ckptcontext.RestoreContext, _ *common.BlockId) error {
 		t.Error("unmarshal func called")
 		return nil
 	}); err != errNoMatchingCheckpoint {
@@ -213,7 +214,7 @@ func TestRestoreSingleCheckpoint(t *testing.T) {
 		},
 	}
 	// Should succeed restore if checkpoint hasn't changed
-	if err = cp.RestoreLatestState(context.Background(), tgm, func(data []byte, restoreContext ckptcontext.RestoreContext, _ *common.BlockId) error {
+	if err = cp.RestoreLatestState(ctx, tgm, func(data []byte, restoreContext ckptcontext.RestoreContext, _ *common.BlockId) error {
 		if !bytes.Equal(data, checkpointData) {
 			t.Error("incorrect checkpoint data restored")
 		}
@@ -272,9 +273,10 @@ func TestRestoreReorg(t *testing.T) {
 		}
 	}
 
+	ctx := context.Background()
 	tgm := &TimeGetterMock{generateReorgTimeGetterMock(laterEntryBlockId, initialEntryBlockId)}
 	// Should restore to latest without reorg
-	if err = cp.RestoreLatestState(context.Background(), tgm, func(data []byte, restoreContext ckptcontext.RestoreContext, _ *common.BlockId) error {
+	if err = cp.RestoreLatestState(ctx, tgm, func(data []byte, restoreContext ckptcontext.RestoreContext, _ *common.BlockId) error {
 		if !bytes.Equal(data, checkpointData2) {
 			t.Error("incorrect checkpoint data restored")
 		}
@@ -285,7 +287,7 @@ func TestRestoreReorg(t *testing.T) {
 
 	tgm = &TimeGetterMock{generateReorgTimeGetterMock(laterEntryBlockId2, initialEntryBlockId)}
 	// Should restore older after reorg
-	if err = cp.RestoreLatestState(context.Background(), tgm, func(data []byte, restoreContext ckptcontext.RestoreContext, _ *common.BlockId) error {
+	if err = cp.RestoreLatestState(ctx, tgm, func(data []byte, restoreContext ckptcontext.RestoreContext, _ *common.BlockId) error {
 		if !bytes.Equal(data, checkpointData) {
 			t.Error("incorrect checkpoint data restored")
 		}
@@ -296,7 +298,7 @@ func TestRestoreReorg(t *testing.T) {
 
 	tgm = &TimeGetterMock{generateReorgTimeGetterMock(laterEntryBlockId2, initialEntryBlockId2)}
 	// Should fail to restore if everything is reorged out
-	if err = cp.RestoreLatestState(context.Background(), tgm, func(data []byte, restoreContext ckptcontext.RestoreContext, _ *common.BlockId) error {
+	if err = cp.RestoreLatestState(ctx, tgm, func(data []byte, restoreContext ckptcontext.RestoreContext, _ *common.BlockId) error {
 		t.Error("shouldn't be able to restore")
 		return nil
 	}); err != errNoMatchingCheckpoint {
