@@ -19,14 +19,11 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/machineobserver"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
@@ -35,11 +32,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
@@ -76,23 +70,10 @@ func main() {
 
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
 
-	//go http.ListenAndServe("localhost:6060", nil)
-
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Msg("Error parsing arguments")
 	}
-
-	if fs.NArg() != 2 {
-		logger.Fatal().Msgf(
-			"usage: arb-dev-aggregator [--maxBatchTime=NumSeconds] %s %s",
-			utils.WalletArgsString,
-			utils.RollupArgsString,
-		)
-	}
-
-	ethURL := fs.Arg(0)
-	privKeyHash := fs.Arg(1)
 
 	if *enablePProf {
 		go func() {
@@ -101,59 +82,11 @@ func main() {
 		}()
 	}
 
-	ethclint, err := ethutils.NewRPCEthClient(ethURL)
-	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Error running NewRPcEthClient")
-	}
-
-	privKey, err := crypto.HexToECDSA(privKeyHash)
-	if err != nil {
-		logger.Fatal().Err(err).Send()
-	}
-	auth := bind.NewKeyedTransactor(privKey)
-
-	arbClient := ethbridge.NewEthClientAdvanced(ethclint, time.Millisecond*100)
-
-	ethAuthClient, err := ethbridge.NewEthAuthClientAdvanced(ctx, arbClient, auth)
-	if err != nil {
-		logger.Fatal().Err(err).Send()
-	}
-
-	inboxAddress, err := ethbridge.DeployGlobalInbox(ctx, ethAuthClient)
-	rollupAddress := common.NewAddressFromEth(auth.From)
-
-	logger.Info().Hex("from", auth.From.Bytes()).Msg("Aggregator submitting batches")
-
-	curBalance, err := ethclint.BalanceAt(ctx, auth.From, nil)
-	if err != nil {
-		logger.Fatal().Err(err).Send()
-	}
-	if curBalance.Cmp(big.NewInt(0)) <= 0 {
-		log.Fatal().Msg("insufficient balance")
-	}
-
 	cp := checkpointing.NewInMemoryCheckpointer()
 	if err := cp.Initialize(arbos.Path()); err != nil {
 		logger.Fatal().Err(err).Send()
 	}
 	as := machine.NewInMemoryAggregatorStore()
-
-	db := txdb.New(ethAuthClient, cp, as, rollupAddress)
-
-	globalEth, err := ethAuthClient.NewGlobalInbox(common.NewAddressFromEth(inboxAddress), rollupAddress)
-	if err != nil {
-		logger.Fatal().Err(err).Send()
-	}
-
-	startId, err := ethAuthClient.BlockIdForHeight(ctx, nil)
-	if err != nil {
-		logger.Fatal().Err(err).Send()
-	}
-
-	startTime, err := ethAuthClient.TimestampForBlockHash(ctx, startId.HeaderHash)
-	if err != nil {
-		logger.Fatal().Err(err).Send()
-	}
 
 	config := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(10),
@@ -162,31 +95,32 @@ func main() {
 		MaxExecutionSteps:       10000000000,
 		ArbGasSpeedLimitPerTick: 200000,
 	}
+	owner := common.RandAddress()
+	rollupAddress := common.RandAddress()
 	initMsg := message.Init{
 		ChainParams: config,
-		Owner:       common.NewAddressFromEth(auth.From),
+		Owner:       owner,
 		ExtraConfig: nil,
 	}
-	if err := globalEth.SendInitializationMessage(ctx, initMsg.AsData()); err != nil {
+
+	l1 := NewL1Emulator()
+
+	db := txdb.New(l1, cp, as, rollupAddress)
+
+	if err := db.Load(ctx); err != nil {
 		logger.Fatal().Err(err).Send()
 	}
 
-	if err := machineobserver.ExecuteObserverAdvanced(
-		ctx,
-		ethAuthClient,
-		big.NewInt(100000),
-		db,
-		globalEth,
-		arbbridge.ChainInfo{
-			BlockId:  startId,
-			LogIndex: 0,
-		},
-		startTime,
-	); err != nil {
+	if err := db.AddInitialBlock(ctx, big.NewInt(0)); err != nil {
 		logger.Fatal().Err(err).Send()
 	}
 
-	batch := &Batcher{globalInbox: globalEth}
+	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
+	backend := NewBackend(db, l1, signer)
+
+	if err := backend.addInboxMessage(ctx, initMsg, rollupAddress); err != nil {
+		logger.Fatal().Stack().Err(err).Send()
+	}
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -211,49 +145,138 @@ func main() {
 	}()
 
 	if err := rpc.LaunchAggregatorAdvanced(
-		startId.Height.AsInt(),
+		big.NewInt(0),
 		db,
 		rollupAddress,
 		"8547",
 		"8548",
 		rpcVars,
-		batch,
+		backend,
 	); err != nil {
 		logger.Fatal().Stack().Err(err).Msg("Error running LaunchAggregator")
 	}
 }
 
-type Batcher struct {
-	globalInbox arbbridge.GlobalInboxSender
-	newTxFeed   event.Feed
+type l1BlockInfo struct {
+	blockId   *common.BlockId
+	timestamp *big.Int
+}
 
+type Backend struct {
+	db         *txdb.TxDB
+	l1Emulator *L1Emulator
+	signer     types.Signer
+
+	newTxFeed event.Feed
+
+	msgCount int64
 	messages []inbox.InboxMessage
 }
 
+func NewBackend(db *txdb.TxDB, l1 *L1Emulator, signer types.Signer) *Backend {
+	return &Backend{
+		db:         db,
+		l1Emulator: l1,
+		signer:     signer,
+	}
+}
+
 // Return nil if no pending transaction count is available
-func (b *Batcher) PendingTransactionCount(context.Context, common.Address) *uint64 {
+func (b *Backend) PendingTransactionCount(context.Context, common.Address) *uint64 {
 	return nil
 }
 
-func (b *Batcher) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+func (b *Backend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 	arbTx := message.NewCompressedECDSAFromEth(tx)
+	sender, err := types.Sender(b.signer, tx)
+	if err != nil {
+		return err
+	}
 	arbMsg, err := message.NewL2Message(arbTx)
 	if err != nil {
 		return err
 	}
-	delivered, err := b.globalInbox.SendL2Message(ctx, arbMsg.Data)
-	if err != nil {
+
+	return b.addInboxMessage(ctx, arbMsg, common.NewAddressFromEth(sender))
+}
+
+func (b *Backend) addInboxMessage(ctx context.Context, msg message.Message, sender common.Address) error {
+	chainTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(b.msgCount),
+		Timestamp: big.NewInt(time.Now().Unix()),
+	}
+
+	inboxMessage := message.NewInboxMessage(msg, sender, big.NewInt(b.msgCount), chainTime)
+
+	block := b.l1Emulator.generateBlock()
+
+	if err := b.db.AddMessages(ctx, []inbox.InboxMessage{inboxMessage}, block.blockId); err != nil {
 		return err
 	}
-	b.messages = append(b.messages, delivered.Message)
+
+	b.messages = append(b.messages, inboxMessage)
+	b.msgCount++
 	return nil
 }
 
-func (b *Batcher) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
+func (b *Backend) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
 	return b.newTxFeed.Subscribe(ch)
 }
 
 // Return nil if no pending snapshot is available
-func (b *Batcher) PendingSnapshot() *snapshot.Snapshot {
+func (b *Backend) PendingSnapshot() *snapshot.Snapshot {
 	return nil
+}
+
+type L1Emulator struct {
+	l1Blocks       map[uint64]l1BlockInfo
+	l1BlocksByHash map[common.Hash]l1BlockInfo
+	latest         uint64
+}
+
+func NewL1Emulator() *L1Emulator {
+	genesis := l1BlockInfo{
+		blockId: &common.BlockId{
+			Height:     common.NewTimeBlocksInt(0),
+			HeaderHash: common.RandHash(),
+		},
+		timestamp: big.NewInt(time.Now().Unix()),
+	}
+
+	b := &L1Emulator{
+		l1Blocks:       make(map[uint64]l1BlockInfo),
+		l1BlocksByHash: make(map[common.Hash]l1BlockInfo),
+	}
+	b.addBlock(genesis)
+	return b
+}
+
+func (b *L1Emulator) BlockIdForHeight(_ context.Context, height *common.TimeBlocks) (*common.BlockId, error) {
+	return b.l1Blocks[height.AsInt().Uint64()].blockId, nil
+}
+
+func (b *L1Emulator) TimestampForBlockHash(_ context.Context, hash common.Hash) (*big.Int, error) {
+	info, ok := b.l1BlocksByHash[hash]
+	if !ok {
+		return nil, errors.Errorf("no info for block with hash %v", hash)
+	}
+	return info.timestamp, nil
+}
+
+func (b *L1Emulator) addBlock(info l1BlockInfo) {
+	b.l1Blocks[info.blockId.Height.AsInt().Uint64()] = info
+	b.l1BlocksByHash[info.blockId.HeaderHash] = info
+}
+
+func (b *L1Emulator) generateBlock() l1BlockInfo {
+	info := l1BlockInfo{
+		blockId: &common.BlockId{
+			Height:     common.NewTimeBlocksInt(int64(b.latest)),
+			HeaderHash: common.RandHash(),
+		},
+		timestamp: big.NewInt(time.Now().Unix()),
+	}
+	b.addBlock(info)
+	b.latest++
+	return info
 }
