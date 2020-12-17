@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/ethereum/go-ethereum"
 	accounts2 "github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -36,7 +37,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
@@ -326,13 +326,17 @@ func NewL1Emulator() *L1Emulator {
 }
 
 func (b *L1Emulator) BlockIdForHeight(_ context.Context, height *common.TimeBlocks) (*common.BlockId, error) {
-	return b.l1Blocks[height.AsInt().Uint64()].blockId, nil
+	info, ok := b.l1Blocks[height.AsInt().Uint64()]
+	if !ok {
+		return nil, ethereum.NotFound
+	}
+	return info.blockId, nil
 }
 
 func (b *L1Emulator) TimestampForBlockHash(_ context.Context, hash common.Hash) (*big.Int, error) {
 	info, ok := b.l1BlocksByHash[hash]
 	if !ok {
-		return nil, errors.Errorf("no info for block with hash %v", hash)
+		return nil, ethereum.NotFound
 	}
 	return info.timestamp, nil
 }
