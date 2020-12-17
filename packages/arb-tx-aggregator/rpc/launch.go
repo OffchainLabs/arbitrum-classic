@@ -126,6 +126,7 @@ func LaunchAggregator(
 		web3WSPort,
 		flags,
 		batch,
+		make(map[string]interface{}),
 	)
 }
 
@@ -137,12 +138,12 @@ func LaunchAggregatorAdvanced(
 	web3WSPort string,
 	flags utils2.RPCFlags,
 	batch batcher.TransactionBatcher,
+	plugins map[string]interface{},
 ) error {
-
 	srv := aggregator.NewServer(batch, rollupAddress, db, initialHeight)
 	errChan := make(chan error, 1)
 
-	web3Server, err := web3.GenerateWeb3Server(srv)
+	web3Server, err := web3.GenerateWeb3Server(srv, plugins)
 	if err != nil {
 		return err
 	}

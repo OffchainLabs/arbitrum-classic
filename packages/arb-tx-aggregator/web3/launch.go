@@ -24,7 +24,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func GenerateWeb3Server(server *aggregator.Server) (*rpc.Server, error) {
+func GenerateWeb3Server(server *aggregator.Server, plugins map[string]interface{}) (*rpc.Server, error) {
 	s := rpc.NewServer()
 
 	if err := s.RegisterName("eth", NewServer(server)); err != nil {
@@ -42,6 +42,12 @@ func GenerateWeb3Server(server *aggregator.Server) (*rpc.Server, error) {
 
 	if err := s.RegisterName("web3", &Web3{}); err != nil {
 		return nil, err
+	}
+
+	for name, val := range plugins {
+		if err := s.RegisterName(name, val); err != nil {
+			return nil, err
+		}
 	}
 
 	return s, nil

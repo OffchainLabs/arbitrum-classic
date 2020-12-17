@@ -200,6 +200,8 @@ func main() {
 		os.Exit(0)
 	}()
 
+	plugins := make(map[string]interface{})
+
 	if err := rpc.LaunchAggregatorAdvanced(
 		big.NewInt(0),
 		db,
@@ -208,6 +210,7 @@ func main() {
 		"8548",
 		rpcVars,
 		backend,
+		plugins,
 	); err != nil {
 		logger.Fatal().Stack().Err(err).Msg("Error running LaunchAggregator")
 	}
