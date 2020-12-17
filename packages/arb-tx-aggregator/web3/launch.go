@@ -17,6 +17,7 @@
 package web3
 
 import (
+	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -24,14 +25,20 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func GenerateWeb3Server(server *aggregator.Server, plugins map[string]interface{}) (*rpc.Server, error) {
+func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, plugins map[string]interface{}) (*rpc.Server, error) {
 	s := rpc.NewServer()
 
-	if err := s.RegisterName("eth", NewServer(server)); err != nil {
+	ethServer := NewServer(server)
+
+	if err := s.RegisterName("eth", ethServer); err != nil {
 		return nil, err
 	}
 
 	if err := s.RegisterName("eth", filters.NewPublicFilterAPI(server, false)); err != nil {
+		return nil, err
+	}
+
+	if err := s.RegisterName("eth", NewAccounts(ethServer, privateKeys)); err != nil {
 		return nil, err
 	}
 

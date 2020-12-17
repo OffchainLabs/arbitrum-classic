@@ -18,13 +18,16 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"flag"
 	"fmt"
 	"github.com/ethereum/go-ethereum"
 	accounts2 "github.com/ethereum/go-ethereum/accounts"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -57,9 +60,7 @@ var pprofMux *http.ServeMux
 func init() {
 	pprofMux = http.DefaultServeMux
 	http.DefaultServeMux = http.NewServeMux()
-}
 
-func main() {
 	// Enable line numbers in logging
 	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
 
@@ -68,9 +69,15 @@ func main() {
 
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+
+	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlDebug, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
+
 	// Print line number that log was created on
 	logger = log.With().Caller().Str("component", "arb-dev-aggregator").Logger()
+}
 
+func main() {
 	ctx := context.Background()
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	rpcVars := utils2.AddRPCFlags(fs)
@@ -181,6 +188,15 @@ func main() {
 	}
 	fmt.Println("")
 
+	privateKeys := make([]*ecdsa.PrivateKey, 0)
+	for _, account := range accounts {
+		privKey, err := wallet.PrivateKey(account)
+		if err != nil {
+			logger.Fatal().Stack().Err(err).Send()
+		}
+		privateKeys = append(privateKeys, privKey)
+	}
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
@@ -210,10 +226,25 @@ func main() {
 		"8548",
 		rpcVars,
 		backend,
+		privateKeys,
 		plugins,
 	); err != nil {
 		logger.Fatal().Stack().Err(err).Msg("Error running LaunchAggregator")
 	}
+}
+
+type Eth struct {
+	wallet    *hdwallet.Wallet
+	addresses []ethcommon.Address
+	accounts  []accounts2.Account
+}
+
+func (s *Eth) Accounts() []ethcommon.Address {
+	return s.addresses
+}
+
+func (s *Eth) SendTransaction() {
+
 }
 
 type l1BlockInfo struct {
@@ -260,6 +291,14 @@ func (b *Backend) SendTransaction(ctx context.Context, tx *types.Transaction) er
 	if err != nil {
 		return err
 	}
+
+	logger.
+		Info().
+		Uint64("gasLimit", tx.Gas()).
+		Str("gasPrice", tx.GasPrice().String()).
+		Uint64("nonce", tx.Nonce()).
+		Str("from", sender.Hex()).
+		Msg("sent transaction")
 
 	return b.addInboxMessage(ctx, arbMsg, common.NewAddressFromEth(sender))
 }
