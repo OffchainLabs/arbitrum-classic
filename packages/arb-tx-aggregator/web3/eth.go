@@ -38,8 +38,8 @@ func (s *Server) ChainId() hexutil.Uint64 {
 	).Uint64())
 }
 
-func (s *Server) GasPrice() hexutil.Uint64 {
-	return 0
+func (s *Server) GasPrice() *hexutil.Big {
+	return (*hexutil.Big)(big.NewInt(0))
 }
 
 func (s *Server) Accounts() []common.Address {
