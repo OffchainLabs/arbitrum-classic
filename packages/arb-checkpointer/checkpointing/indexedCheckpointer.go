@@ -18,6 +18,7 @@ package checkpointing
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum"
 	"github.com/pkg/errors"
 	"math/big"
 	"os"
@@ -183,8 +184,12 @@ func restoreLatestState(
 		logger := logger.With().Str("height", height.String()).Logger()
 		onchainId, err := clnt.BlockIdForHeight(ctx, height)
 		if err != nil {
+			if err == ethereum.NotFound {
+				continue
+			}
 			return err
 		}
+
 		blockData, err := bs.GetBlock(onchainId)
 		if err != nil {
 			// If no record was found, try the next block
