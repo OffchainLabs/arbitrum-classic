@@ -59,8 +59,6 @@ func ensureInitialized(
 	ctx context.Context,
 	db *txdb.TxDB,
 	inboxWatcher arbbridge.GlobalInboxWatcher,
-	eventCreated arbbridge.ChainInfo,
-	creationTimestamp *big.Int,
 ) error {
 	logger.Info().Msg("Loading database")
 	if err := db.Load(ctx); err != nil {
@@ -75,11 +73,7 @@ func ensureInitialized(
 	}
 
 	// We're starting from scratch.  Process the messages from initial block
-	if err := db.AddInitialBlock(ctx, new(big.Int).Sub(eventCreated.BlockId.Height.AsInt(), big.NewInt(1))); err != nil {
-		return err
-	}
-
-	events, err := inboxWatcher.GetDeliveredEventsInBlock(ctx, eventCreated.BlockId, creationTimestamp)
+	events, err := inboxWatcher.GetDeliveredEventsInBlock(ctx, db.EventCreated.BlockId, db.CreationTimestamp)
 	if err != nil {
 		return err
 	}
@@ -88,7 +82,7 @@ func ensureInitialized(
 	if len(events) > 0 {
 		startIndex := -1
 		for i, ev := range events {
-			if ev.ChainInfo.Cmp(eventCreated) > 0 {
+			if ev.ChainInfo.Cmp(db.EventCreated) > 0 {
 				startIndex = i
 			}
 		}
@@ -99,7 +93,7 @@ func ensureInitialized(
 		}
 	}
 
-	if err := db.AddMessages(ctx, extractMessages(events), eventCreated.BlockId); err != nil {
+	if err := db.AddMessages(ctx, extractMessages(events), db.EventCreated.BlockId); err != nil {
 		return err
 	}
 
@@ -155,42 +149,21 @@ func RunObserver(
 		return nil, err
 	}
 
-	db := txdb.New(clnt, cp, cp.GetAggregatorStore(), rollupAddr)
-
-	if err := ExecuteObserver(
-		ctx,
-		rollupAddr,
-		clnt,
-		initialMachine.Hash(),
-		cp.MaxReorgHeight(),
-		db,
-	); err != nil {
-		return nil, err
-	}
-	return db, nil
-}
-
-func ExecuteObserver(
-	ctx context.Context,
-	rollupAddr common.Address,
-	clnt arbbridge.ArbClient,
-	initialMachineHash common.Hash,
-	maxReorgHeight *big.Int,
-	db *txdb.TxDB,
-) error {
 	rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	eventCreated, creationTimestamp, err := verifyRollupInstance(ctx, initialMachineHash, rollupWatcher)
+	eventCreated, creationTimestamp, err := verifyRollupInstance(ctx, initialMachine.Hash(), rollupWatcher)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	db := txdb.New(clnt, cp, cp.GetAggregatorStore(), rollupAddr, eventCreated, creationTimestamp)
 
 	inboxAddr, err := rollupWatcher.InboxAddress(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
@@ -198,15 +171,17 @@ func ExecuteObserver(
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
-	return ExecuteObserverAdvanced(
+	if err := ExecuteObserverAdvanced(
 		ctx,
 		clnt,
-		maxReorgHeight,
+		cp.MaxReorgHeight(),
 		db,
 		inboxWatcher,
-		eventCreated,
-		creationTimestamp,
-	)
+	); err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }
 
 func ExecuteObserverAdvanced(
@@ -215,16 +190,14 @@ func ExecuteObserverAdvanced(
 	maxReorgHeight *big.Int,
 	db *txdb.TxDB,
 	inboxWatcher arbbridge.GlobalInboxWatcher,
-	eventCreated arbbridge.ChainInfo,
-	creationTimestamp *big.Int,
 ) error {
 	logger.Info().Msg("Initializing database")
 	// Make first call to ensureInitialized outside of thread to avoid race conditions
-	if err := ensureInitialized(ctx, db, inboxWatcher, eventCreated, creationTimestamp); err != nil {
+	if err := ensureInitialized(ctx, db, inboxWatcher); err != nil {
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
-	go observerRunThread(ctx, clnt, db, inboxWatcher, maxReorgHeight, eventCreated)
+	go observerRunThread(ctx, clnt, db, inboxWatcher, maxReorgHeight)
 	return nil
 }
 
@@ -234,7 +207,6 @@ func observerRunThread(
 	db *txdb.TxDB,
 	inboxWatcher arbbridge.GlobalInboxWatcher,
 	maxReorgHeight *big.Int,
-	eventCreated arbbridge.ChainInfo,
 ) {
 	firstLoop := true
 	for {
@@ -246,11 +218,7 @@ func observerRunThread(
 			if firstLoop {
 				firstLoop = false
 			} else {
-				creationTimestamp, err := clnt.TimestampForBlockHash(runCtx, eventCreated.BlockId.HeaderHash)
-				if err != nil {
-					return err
-				}
-				if err := ensureInitialized(ctx, db, inboxWatcher, eventCreated, creationTimestamp); err != nil {
+				if err := ensureInitialized(ctx, db, inboxWatcher); err != nil {
 					logger.Fatal().Stack().Err(err).Send()
 				}
 			}

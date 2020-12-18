@@ -122,7 +122,7 @@ func parseBlockResult(
 func parseOutputStatistics(val value.Value) (*OutputStatistics, error) {
 	tup, ok := val.(*value.TupleValue)
 	if !ok || tup.Len() != 5 {
-		return nil, errors.New("expected result to be nonempty tuple")
+		return nil, errors.New("expected result to be tuple of length 5")
 	}
 
 	// Tuple size already verified above, so error can be ignored
