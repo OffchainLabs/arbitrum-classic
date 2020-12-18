@@ -16,7 +16,7 @@
 
 #include "helper.hpp"
 
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 #include <data_storage/value/value.hpp>
@@ -85,7 +85,7 @@ void getTupleValues(const Transaction& transaction,
 
 TEST_CASE("Save value") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("save 1 num tuple") {
@@ -105,7 +105,7 @@ TEST_CASE("Save value") {
 
 TEST_CASE("Save tuple") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("save 1 num tuple") {
@@ -130,7 +130,7 @@ TEST_CASE("Save tuple") {
 
 TEST_CASE("Save and get value") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
     ValueCache value_cache{};
 
@@ -158,7 +158,7 @@ TEST_CASE("Save and get value") {
 
 TEST_CASE("Save and get tuple values") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
     ValueCache value_cache{};
 
@@ -214,7 +214,7 @@ TEST_CASE("Save and get tuple values") {
 
 TEST_CASE("Save And Get Tuple") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
     ValueCache value_cache{};
 
@@ -296,7 +296,7 @@ TEST_CASE("Save And Get Tuple") {
 
 TEST_CASE("Checkpoint Benchmark") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
     uint256_t num = 1;
     value tuple = Tuple(num);
@@ -430,7 +430,7 @@ Machine getDefaultMachine() {
 
 TEST_CASE("Save Machinestatedata") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("default") {
@@ -445,7 +445,7 @@ TEST_CASE("Save Machinestatedata") {
 
 TEST_CASE("Get Machinestate data") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("default") {
@@ -462,7 +462,7 @@ TEST_CASE("Get Machinestate data") {
 
 TEST_CASE("Delete checkpoint") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
 
     SECTION("default") {

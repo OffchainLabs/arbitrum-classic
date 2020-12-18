@@ -34,7 +34,7 @@ import (
 
 type IndexedCheckpointer struct {
 	*sync.Mutex
-	db                    *cmachine.CheckpointStorage
+	db                    *cmachine.ArbStorage
 	bs                    machine.BlockStore
 	nextCheckpointToWrite *writableCheckpoint
 	maxReorgHeight        *big.Int
@@ -158,7 +158,7 @@ func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbb
 func restoreLatestState(
 	ctx context.Context,
 	bs machine.BlockStore,
-	db machine.CheckpointStorage,
+	db machine.ArbStorage,
 	clnt arbbridge.ChainTimeGetter,
 	unmarshalFunc func([]byte, ckptcontext.RestoreContext, *common.BlockId) error,
 ) error {
@@ -230,7 +230,7 @@ func (cp *IndexedCheckpointer) writeDaemon() {
 	}
 }
 
-func writeCheckpoint(bs machine.BlockStore, db machine.CheckpointStorage, wc *writableCheckpoint) error {
+func writeCheckpoint(bs machine.BlockStore, db machine.ArbStorage, wc *writableCheckpoint) error {
 	// save values and machines
 	if err := ckptcontext.SaveCheckpointContext(db, wc.ckpCtx); err != nil {
 		return err
@@ -252,7 +252,7 @@ func writeCheckpoint(bs machine.BlockStore, db machine.CheckpointStorage, wc *wr
 	return nil
 }
 
-func cleanupDaemon(bs machine.BlockStore, db machine.CheckpointStorage, maxReorgHeight *big.Int) {
+func cleanupDaemon(bs machine.BlockStore, db machine.ArbStorage, maxReorgHeight *big.Int) {
 	ticker := time.NewTicker(common.NewTimeBlocksInt(25).Duration())
 	defer ticker.Stop()
 	for {
@@ -261,7 +261,7 @@ func cleanupDaemon(bs machine.BlockStore, db machine.CheckpointStorage, maxReorg
 	}
 }
 
-func cleanup(bs machine.BlockStore, db machine.CheckpointStorage, maxReorgHeight *big.Int) {
+func cleanup(bs machine.BlockStore, db machine.ArbStorage, maxReorgHeight *big.Int) {
 	currentMin := bs.MinBlockStoreHeight()
 	currentMax := bs.MaxBlockStoreHeight()
 	height := common.NewTimeBlocks(new(big.Int).Sub(currentMin.AsInt(), big.NewInt(1)))

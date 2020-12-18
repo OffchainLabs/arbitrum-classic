@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include "ccheckpointstorage.h"
+#include "carbstorage.h"
 #include "utils.hpp"
 
 #include <data_storage/aggregator.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/blockstore.hpp>
-#include <data_storage/checkpointstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 #include <data_storage/value/value.hpp>
@@ -30,19 +30,19 @@
 #include <iostream>
 #include <string>
 
-CCheckpointStorage* createCheckpointStorage(const char* db_path) {
+CArbStorage* createArbStorage(const char* db_path) {
     auto string_filename = std::string(db_path);
     try {
-        auto storage = new CheckpointStorage(string_filename);
+        auto storage = new ArbStorage(string_filename);
         return static_cast<void*>(storage);
     } catch (const std::exception&) {
         return nullptr;
     }
 }
 
-int initializeCheckpointStorage(CCheckpointStorage* storage_ptr,
-                                const char* executable_path) {
-    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+int initializeArbStorage(CArbStorage* storage_ptr,
+                         const char* executable_path) {
+    auto storage = static_cast<ArbStorage*>(storage_ptr);
     try {
         storage->initialize(executable_path);
         return true;
@@ -51,35 +51,35 @@ int initializeCheckpointStorage(CCheckpointStorage* storage_ptr,
     }
 }
 
-int checkpointStorageInitialized(CCheckpointStorage* storage_ptr) {
-    return static_cast<CheckpointStorage*>(storage_ptr)->initialized();
+int arbStorageInitialized(CArbStorage* storage_ptr) {
+    return static_cast<ArbStorage*>(storage_ptr)->initialized();
 }
 
-int closeCheckpointStorage(CCheckpointStorage* storage_ptr) {
-    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
-    return storage->closeCheckpointStorage();
+int closeArbStorage(CArbStorage* storage_ptr) {
+    auto storage = static_cast<ArbStorage*>(storage_ptr);
+    return storage->closeArbStorage();
 }
 
-void destroyCheckpointStorage(CCheckpointStorage* storage) {
+void destroyArbStorage(CArbStorage* storage) {
     if (storage == nullptr) {
         return;
     }
-    delete static_cast<CheckpointStorage*>(storage);
+    delete static_cast<ArbStorage*>(storage);
 }
 
-CBlockStore* createBlockStore(CCheckpointStorage* storage_ptr) {
-    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+CBlockStore* createBlockStore(CArbStorage* storage_ptr) {
+    auto storage = static_cast<ArbStorage*>(storage_ptr);
     return storage->getBlockStore().release();
 }
 
-CAggregatorStore* createAggregatorStore(CCheckpointStorage* storage_ptr) {
-    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+CAggregatorStore* createAggregatorStore(CArbStorage* storage_ptr) {
+    auto storage = static_cast<ArbStorage*>(storage_ptr);
     return storage->getAggregatorStore().release();
 }
 
-CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr,
+CMachine* getInitialMachine(const CArbStorage* storage_ptr,
                             CValueCache* value_cache_ptr) {
-    auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
+    auto storage = static_cast<const ArbStorage*>(storage_ptr);
     auto value_cache = static_cast<ValueCache*>(value_cache_ptr);
     try {
         if (value_cache == nullptr) {
@@ -93,10 +93,10 @@ CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr,
     }
 }
 
-CMachine* getMachine(const CCheckpointStorage* storage_ptr,
+CMachine* getMachine(const CArbStorage* storage_ptr,
                      const void* machine_hash,
                      CValueCache* value_cache_ptr) {
-    auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
+    auto storage = static_cast<const ArbStorage*>(storage_ptr);
     auto hash = receiveUint256(machine_hash);
     auto value_cache = static_cast<ValueCache*>(value_cache_ptr);
     try {
@@ -111,9 +111,8 @@ CMachine* getMachine(const CCheckpointStorage* storage_ptr,
     }
 }
 
-int deleteCheckpoint(CCheckpointStorage* storage_ptr,
-                     const void* machine_hash) {
-    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+int deleteCheckpoint(CArbStorage* storage_ptr, const void* machine_hash) {
+    auto storage = static_cast<ArbStorage*>(storage_ptr);
     auto hash = receiveUint256(machine_hash);
     auto transaction = storage->makeTransaction();
     auto results = deleteMachine(*transaction, hash);
@@ -123,8 +122,8 @@ int deleteCheckpoint(CCheckpointStorage* storage_ptr,
     return transaction->commit().ok();
 }
 
-int saveValue(CCheckpointStorage* storage_ptr, const void* value_data) {
-    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+int saveValue(CArbStorage* storage_ptr, const void* value_data) {
+    auto storage = static_cast<ArbStorage*>(storage_ptr);
     auto transaction = storage->makeTransaction();
 
     auto data_ptr = reinterpret_cast<const char*>(value_data);
@@ -138,18 +137,18 @@ int saveValue(CCheckpointStorage* storage_ptr, const void* value_data) {
     return transaction->commit().ok();
 }
 
-ByteSlice getValue(const CCheckpointStorage* storage_ptr,
+ByteSlice getValue(const CArbStorage* storage_ptr,
                    const void* hash_key,
                    CValueCache* value_cache_ptr) {
-    auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
+    auto storage = static_cast<const ArbStorage*>(storage_ptr);
     auto hash = receiveUint256(hash_key);
     auto value_cache = static_cast<ValueCache*>(value_cache_ptr);
 
     return returnValueResult(storage->getValue(hash, *value_cache));
 }
 
-int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {
-    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+int deleteValue(CArbStorage* storage_ptr, const void* hash_key) {
+    auto storage = static_cast<ArbStorage*>(storage_ptr);
     auto hash = receiveUint256(hash_key);
 
     auto transaction = storage->makeTransaction();
@@ -161,12 +160,12 @@ int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {
     return transaction->commit().ok();
 }
 
-int saveData(CCheckpointStorage* storage_ptr,
+int saveData(CArbStorage* storage_ptr,
              const void* key,
              int key_length,
              const void* data,
              int data_length) {
-    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    auto storage = static_cast<ArbStorage*>(storage_ptr);
     auto keyvalue_store = storage->makeKeyValueStore();
 
     auto key_ptr = reinterpret_cast<const char*>(key);
@@ -179,10 +178,10 @@ int saveData(CCheckpointStorage* storage_ptr,
     return keyvalue_store->saveData(key_slice, data_vector).ok();
 }
 
-ByteSliceResult getData(CCheckpointStorage* storage_ptr,
+ByteSliceResult getData(CArbStorage* storage_ptr,
                         const void* key,
                         int key_length) {
-    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    auto storage = static_cast<ArbStorage*>(storage_ptr);
     auto keyvalue_store = storage->makeKeyValueStore();
 
     auto key_ptr = reinterpret_cast<const char*>(key);
@@ -191,10 +190,8 @@ ByteSliceResult getData(CCheckpointStorage* storage_ptr,
     return returnDataResult(keyvalue_store->getData(key_slice));
 }
 
-int deleteData(CCheckpointStorage* storage_ptr,
-               const void* key,
-               int key_length) {
-    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+int deleteData(CArbStorage* storage_ptr, const void* key, int key_length) {
+    auto storage = static_cast<ArbStorage*>(storage_ptr);
     auto keyvalue_store = storage->makeKeyValueStore();
 
     auto key_ptr = reinterpret_cast<const char*>(key);
@@ -203,12 +200,12 @@ int deleteData(CCheckpointStorage* storage_ptr,
     return keyvalue_store->deleteData(key_slice).ok();
 }
 
-RawAssertion checkpointExecuteAssertion(CCheckpointStorage* storage_ptr,
-                                        uint64_t maxSteps,
-                                        void* inbox_messages,
-                                        uint64_t message_count,
-                                        uint64_t wallLimit) {
-    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+RawAssertion ArbExecuteAssertion(CArbStorage* storage_ptr,
+                                 uint64_t maxSteps,
+                                 void* inbox_messages,
+                                 uint64_t message_count,
+                                 uint64_t wallLimit) {
+    auto storage = static_cast<ArbStorage*>(storage_ptr);
     auto messages = getInboxMessages(inbox_messages, message_count);
 
     try {

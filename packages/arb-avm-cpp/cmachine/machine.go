@@ -20,7 +20,7 @@ package cmachine
 #cgo CFLAGS: -I.
 #cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lsecp256k1 -lff -lgmp -lkeccak -ldl
 #include "../cavm/cmachine.h"
-#include "../cavm/ccheckpointstorage.h"
+#include "../cavm/carbstorage.h"
 #include <stdio.h>
 #include <stdlib.h>
 */
@@ -214,9 +214,9 @@ func (m *Machine) MarshalState() ([]byte, error) {
 	return C.GoBytes(unsafe.Pointer(stateData.data), stateData.length), nil
 }
 
-func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
-	cCheckpointStorage := storage.(*CheckpointStorage)
-	success := C.checkpointMachine(m.c, cCheckpointStorage.c)
+func (m *Machine) Checkpoint(storage machine.ArbStorage) bool {
+	cArbStorage := storage.(*ArbStorage)
+	success := C.checkpointMachine(m.c, cArbStorage.c)
 
 	return success == 1
 }

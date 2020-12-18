@@ -187,14 +187,13 @@ func (cp *CheckpointedMachine) writeDaemon() {
 	}
 }
 
-func writeCheckpoint(cm *cmachine.CheckpointedMachine, wc *writableCheckpoint) error {
+func deleteCheckpointForKey(bs machine.BlockStore, db machine.ArbStorage, id *common.BlockId) error {
 
 	// TODO
 
 	return nil
 }
 
-func deleteCheckpointForKey(bs machine.BlockStore, db machine.CheckpointStorage, id *common.BlockId) error {
 	val, err := bs.GetBlock(id)
 	if err != nil {
 		return err
@@ -218,13 +217,13 @@ func deleteCheckpointForKey(bs machine.BlockStore, db machine.CheckpointStorage,
 }
 
 type restoreContextLocked struct {
-	db         machine.CheckpointStorage
+	db         machine.ArbStorage
 	values     map[common.Hash]value.Value
 	machines   map[common.Hash]machine.Machine
 	valueCache machine.ValueCache
 }
 
-func newRestoreContextLocked(db machine.CheckpointStorage, manifest *ckptcontext.CheckpointManifest) (*restoreContextLocked, error) {
+func newRestoreContextLocked(db machine.ArbStorage, manifest *ckptcontext.CheckpointManifest) (*restoreContextLocked, error) {
 	valueCache, err := cmachine.NewValueCache()
 	if err != nil {
 		return nil, err

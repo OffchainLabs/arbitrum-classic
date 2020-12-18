@@ -71,8 +71,8 @@ typedef struct {
 typedef struct HashResultStruct HashResult;
 
 typedef void CMachine;
+typedef void CArbStorage;
 typedef void CCheckpointedMachine;
-typedef void CCheckpointStorage;
 typedef void CBlockStore;
 typedef void CAggregatorStore;
 typedef void CValueCache;

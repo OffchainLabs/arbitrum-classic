@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef checkpointstorage_hpp
-#define checkpointstorage_hpp
+#ifndef arbstorage_hpp
+#define arbstorage_hpp
 
 #include "avm_values/vmValueParser.hpp"
 #include "data_storage/checkpointedmachine.hpp"
@@ -35,14 +35,14 @@ namespace rocksdb {
 class TransactionDB;
 }
 
-class CheckpointStorage {
+class ArbStorage {
     std::shared_ptr<DataStorage> datastorage;
     std::shared_ptr<Code> code;
     std::shared_ptr<CheckpointedMachine> cmach;
 
    public:
-    explicit CheckpointStorage(const std::string& db_path);
-    bool closeCheckpointStorage();
+    explicit ArbStorage(const std::string& db_path);
+    bool closeArbStorage();
     void initialize(LoadedExecutable executable);
     void initialize(const std::string& executable_path);
     bool initialized() const;
@@ -73,4 +73,4 @@ class CheckpointStorage {
                             value fake_inbox_peek_value);
 };
 
-#endif /* checkpointstorage_hpp */
+#endif /* arbstorage_hpp */

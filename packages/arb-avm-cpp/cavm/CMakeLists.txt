@@ -22,7 +22,7 @@ project (cavm LANGUAGES CXX)
 set(LIB_HEADERS
   caggregator.h
   cblockstore.h
-  ccheckpointstorage.h
+  carbstorage.h
   cmachine.h
   ctypes.h
   cvaluecache.h
@@ -32,7 +32,7 @@ set(LIB_HEADERS
 set(LIB_SOURCES
   caggregator.cpp
   cblockstore.cpp
-  ccheckpointstorage.cpp
+  carbstorage.cpp
   cmachine.cpp
   cvaluecache.cpp
 )

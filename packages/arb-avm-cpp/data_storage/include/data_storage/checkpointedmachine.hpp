@@ -25,19 +25,18 @@
 #include "nonstd/optional.hpp"
 #include "rocksdb/utilities/transaction.h"
 
-class DataStorage;
-
 class CheckpointedMachine {
     std::unique_ptr<Machine> mach;
+    std::shared_ptr<DataStorage> storage;
 
    public:
-    CheckpointedMachine(std::unique_ptr<Machine> mach)
-        : mach(std::move(mach)) {}
+    CheckpointedMachine(std::unique_ptr<Machine> mach,
+                        std::shared_ptr<DataStorage> storage)
+        : mach(std::move(mach)), storage(std::move(storage)) {}
 
     Assertion run(uint64_t stepCount,
                   std::vector<Tuple> inbox_messages,
-                  std::chrono::seconds wallLimit,
-                  const std::shared_ptr<DataStorage>& storage);
+                  std::chrono::seconds wallLimit);
 
     Assertion runSideloaded(uint64_t stepCount,
                             std::vector<Tuple> inbox_messages,

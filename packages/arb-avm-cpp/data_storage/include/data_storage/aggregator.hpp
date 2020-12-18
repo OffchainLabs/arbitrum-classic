@@ -43,13 +43,13 @@ class AggregatorStore {
         : data_storage(std::move(data_storage_)) {}
 
     uint64_t logCount() const;
-    void saveLog(rocksdb::Transaction& tx,
-                 const std::vector<unsigned char>& log);
+    static void saveLog(rocksdb::Transaction& tx,
+                        const std::vector<unsigned char>& log);
     std::vector<char> getLog(uint64_t index) const;
 
     uint64_t messageCount() const;
-    void saveMessage(rocksdb::Transaction& tx,
-                     const std::vector<unsigned char>& output);
+    static void saveMessage(rocksdb::Transaction& tx,
+                            const std::vector<unsigned char>& output);
     std::vector<char> getMessage(uint64_t index) const;
 
     std::pair<uint64_t, std::vector<char>> latestBlock() const;

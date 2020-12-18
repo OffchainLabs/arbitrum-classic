@@ -17,7 +17,7 @@
 #include "config.hpp"
 #include "helper.hpp"
 
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 
@@ -76,7 +76,7 @@ TEST_CASE("Code works correctly") {
 
 TEST_CASE("Code serialization") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     auto mach = generateTestMachine();
     auto tx = storage.makeTransaction();
     ValueCache value_cache{};

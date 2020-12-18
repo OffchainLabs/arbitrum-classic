@@ -18,7 +18,7 @@
 #include "utils.hpp"
 
 #include <avm/machine.hpp>
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/value/machine.hpp>
 
 #include <sys/stat.h>
@@ -52,9 +52,9 @@ void machineDestroy(CMachine* m) {
     delete static_cast<Machine*>(m);
 }
 
-int checkpointMachine(CMachine* m, CCheckpointStorage* s) {
+int checkpointMachine(CMachine* m, CArbStorage* s) {
     auto machine = static_cast<Machine*>(m);
-    auto storage = static_cast<CheckpointStorage*>(s);
+    auto storage = static_cast<ArbStorage*>(s);
     auto transaction = storage->makeTransaction();
     auto result = saveMachine(*transaction, *machine);
     if (!result.status.ok()) {

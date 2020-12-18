@@ -18,7 +18,7 @@
 #include "helper.hpp"
 
 #include <avm/machine.hpp>
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 
@@ -59,7 +59,7 @@ TEST_CASE("ARBOS test vectors") {
                 logs.push_back(simple_value_from_json(std::move(log_json)));
             }
 
-            CheckpointStorage storage(dbpath);
+            ArbStorage storage(dbpath);
             storage.initialize(arb_os_path);
             auto mach = storage.getInitialMachine(value_cache);
             mach.machine_state.stack.push(uint256_t{0});
@@ -79,9 +79,9 @@ TEST_CASE("ARBOS test vectors") {
             auto mach_hash = mach.hash();
             auto mach2 = storage.getMachine(mach_hash, value_cache);
             REQUIRE(mach_hash == mach2.hash());
-            storage.closeCheckpointStorage();
+            storage.closeArbStorage();
 
-            CheckpointStorage storage2(dbpath);
+            ArbStorage storage2(dbpath);
             auto mach3 = storage2.getMachine(mach_hash, value_cache);
             REQUIRE(mach_hash == mach3.hash());
 

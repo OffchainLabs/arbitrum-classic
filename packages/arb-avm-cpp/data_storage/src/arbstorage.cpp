@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 
 #include <data_storage/aggregator.hpp>
 #include <data_storage/blockstore.hpp>
@@ -24,7 +24,6 @@
 
 #include <avm/machine.hpp>
 
-#include <avm_values/codepointstub.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/vmValueParser.hpp>
 #include <utility>
@@ -36,16 +35,16 @@ namespace {
 constexpr auto initial_slice_label = "initial";
 }
 
-CheckpointStorage::CheckpointStorage(const std::string& db_path)
+ArbStorage::ArbStorage(const std::string& db_path)
     : datastorage(std::make_shared<DataStorage>(db_path)),
       code(std::make_shared<Code>(getNextSegmentID(*makeConstTransaction()))) {}
 
-void CheckpointStorage::initialize(const std::string& executable_path) {
+void ArbStorage::initialize(const std::string& executable_path) {
     auto executable = loadExecutable(executable_path);
     initialize(std::move(executable));
 }
 
-void CheckpointStorage::initialize(LoadedExecutable executable) {
+void ArbStorage::initialize(LoadedExecutable executable) {
     auto tx = makeTransaction();
     code->addSegment(std::move(executable.code));
     Machine mach{MachineState{code, std::move(executable.static_val)}};
@@ -68,7 +67,7 @@ void CheckpointStorage::initialize(LoadedExecutable executable) {
     }
 }
 
-bool CheckpointStorage::initialized() const {
+bool ArbStorage::initialized() const {
     auto tx = makeConstTransaction();
     std::string initial_raw;
     auto s = tx->transaction->GetForUpdate(rocksdb::ReadOptions(),
@@ -77,36 +76,35 @@ bool CheckpointStorage::initialized() const {
     return s.ok();
 }
 
-bool CheckpointStorage::closeCheckpointStorage() {
+bool ArbStorage::closeArbStorage() {
     auto status = datastorage->closeDb();
     return status.ok();
 }
 
-std::unique_ptr<Transaction> CheckpointStorage::makeTransaction() {
+std::unique_ptr<Transaction> ArbStorage::makeTransaction() {
     return Transaction::makeTransaction(datastorage);
 }
 
-std::unique_ptr<const Transaction> CheckpointStorage::makeConstTransaction()
-    const {
+std::unique_ptr<const Transaction> ArbStorage::makeConstTransaction() const {
     rocksdb::WriteOptions writeOptions;
     auto transaction = std::unique_ptr<rocksdb::Transaction>(
         datastorage->txn_db->BeginTransaction(writeOptions));
     return std::make_unique<Transaction>(datastorage, std::move(transaction));
 }
 
-std::unique_ptr<KeyValueStore> CheckpointStorage::makeKeyValueStore() {
+std::unique_ptr<KeyValueStore> ArbStorage::makeKeyValueStore() {
     return std::make_unique<KeyValueStore>(datastorage);
 }
 
-std::unique_ptr<BlockStore> CheckpointStorage::getBlockStore() const {
+std::unique_ptr<BlockStore> ArbStorage::getBlockStore() const {
     return std::make_unique<BlockStore>(datastorage);
 }
 
-std::unique_ptr<AggregatorStore> CheckpointStorage::getAggregatorStore() const {
+std::unique_ptr<AggregatorStore> ArbStorage::getAggregatorStore() const {
     return std::make_unique<AggregatorStore>(datastorage);
 }
 
-Machine CheckpointStorage::getInitialMachine(ValueCache& value_cache) const {
+Machine ArbStorage::getInitialMachine(ValueCache& value_cache) const {
     auto tx = makeConstTransaction();
     std::string initial_raw;
     auto s = tx->transaction->GetForUpdate(rocksdb::ReadOptions(),
@@ -121,8 +119,8 @@ Machine CheckpointStorage::getInitialMachine(ValueCache& value_cache) const {
     return getMachine(machine_hash, value_cache);
 }
 
-Machine CheckpointStorage::getMachine(uint256_t machineHash,
-                                      ValueCache& value_cache) const {
+Machine ArbStorage::getMachine(uint256_t machineHash,
+                               ValueCache& value_cache) const {
     std::set<uint64_t> segment_ids;
     auto transaction = makeConstTransaction();
     auto results = getMachineState(*transaction, machineHash);
@@ -196,28 +194,27 @@ Machine CheckpointStorage::getMachine(uint256_t machineHash,
                         std::move(staged_message_results.data.get<Tuple>())};
 }
 
-DbResult<value> CheckpointStorage::getValue(uint256_t value_hash,
-                                            ValueCache& value_cache) const {
+DbResult<value> ArbStorage::getValue(uint256_t value_hash,
+                                     ValueCache& value_cache) const {
     auto tx = makeConstTransaction();
     return ::getValue(*tx, value_hash, value_cache);
 }
-Assertion CheckpointStorage::run(uint64_t stepCount,
-                                 std::vector<Tuple> inbox_messages,
-                                 std::chrono::seconds wallLimit) {
-    return cmach->run(stepCount, std::move(inbox_messages), wallLimit,
-                      datastorage);
+Assertion ArbStorage::run(uint64_t stepCount,
+                          std::vector<Tuple> inbox_messages,
+                          std::chrono::seconds wallLimit) {
+    return cmach->run(stepCount, std::move(inbox_messages), wallLimit);
 }
 
-Assertion CheckpointStorage::runSideloaded(uint64_t stepCount,
-                                           std::vector<Tuple> inbox_messages,
-                                           std::chrono::seconds wallLimit,
-                                           Tuple sideload) {
+Assertion ArbStorage::runSideloaded(uint64_t stepCount,
+                                    std::vector<Tuple> inbox_messages,
+                                    std::chrono::seconds wallLimit,
+                                    Tuple sideload) {
     return Assertion();
 }
 
-Assertion CheckpointStorage::runCallServer(uint64_t stepCount,
-                                           std::vector<Tuple> inbox_messages,
-                                           std::chrono::seconds wallLimit,
-                                           value fake_inbox_peek_value) {
+Assertion ArbStorage::runCallServer(uint64_t stepCount,
+                                    std::vector<Tuple> inbox_messages,
+                                    std::chrono::seconds wallLimit,
+                                    value fake_inbox_peek_value) {
     return Assertion();
 }
