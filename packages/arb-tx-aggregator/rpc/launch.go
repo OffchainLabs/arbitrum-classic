@@ -128,6 +128,7 @@ func LaunchAggregator(
 		flags,
 		batch,
 		nil,
+		false,
 		make(map[string]interface{}),
 	)
 }
@@ -141,12 +142,13 @@ func LaunchAggregatorAdvanced(
 	flags utils2.RPCFlags,
 	batch batcher.TransactionBatcher,
 	privateKeys []*ecdsa.PrivateKey,
+	ganacheMode bool,
 	plugins map[string]interface{},
 ) error {
 	srv := aggregator.NewServer(batch, rollupAddress, db, initialHeight)
 	errChan := make(chan error, 1)
 
-	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, plugins)
+	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, ganacheMode, plugins)
 	if err != nil {
 		return err
 	}

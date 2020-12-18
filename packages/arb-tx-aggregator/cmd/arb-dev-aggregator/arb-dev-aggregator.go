@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum"
 	accounts2 "github.com/ethereum/go-ethereum/accounts"
-	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
@@ -217,6 +217,7 @@ func main() {
 	}()
 
 	plugins := make(map[string]interface{})
+	plugins["evm"] = &EVM{backend: backend}
 
 	if err := rpc.LaunchAggregatorAdvanced(
 		big.NewInt(0),
@@ -227,24 +228,29 @@ func main() {
 		rpcVars,
 		backend,
 		privateKeys,
+		true,
 		plugins,
 	); err != nil {
 		logger.Fatal().Stack().Err(err).Msg("Error running LaunchAggregator")
 	}
 }
 
-type Eth struct {
-	wallet    *hdwallet.Wallet
-	addresses []ethcommon.Address
-	accounts  []accounts2.Account
+type EVM struct {
+	backend *Backend
 }
 
-func (s *Eth) Accounts() []ethcommon.Address {
-	return s.addresses
+func (s *EVM) Snapshot() (hexutil.Uint64, error) {
+	logger.Info().Msg("snapshot")
+	return hexutil.Uint64(0), nil
 }
 
-func (s *Eth) SendTransaction() {
-
+func (s *EVM) Revert(ctx context.Context, snapId hexutil.Uint64) error {
+	logger.Info().Uint64("snap", uint64(snapId)).Msg("revert")
+	err := s.backend.Reorg(ctx, uint64(snapId))
+	if err != nil {
+		logger.Error().Err(err).Msg("can't revert")
+	}
+	return err
 }
 
 type l1BlockInfo struct {
@@ -270,6 +276,11 @@ func NewBackend(db *txdb.TxDB, l1 *L1Emulator, signer types.Signer) *Backend {
 		l1Emulator: l1,
 		signer:     signer,
 	}
+}
+
+func (b *Backend) Reorg(ctx context.Context, height uint64) error {
+	b.l1Emulator.Reorg(height)
+	return b.db.Load(ctx)
 }
 
 // Return nil if no pending transaction count is available
@@ -362,6 +373,14 @@ func NewL1Emulator() *L1Emulator {
 	}
 	b.addBlock(genesis)
 	return b
+}
+
+func (b *L1Emulator) Reorg(height uint64) {
+	for i := b.latest; i > height; i-- {
+		info := b.l1Blocks[i]
+		delete(b.l1Blocks, i)
+		delete(b.l1BlocksByHash, info.blockId.HeaderHash)
+	}
 }
 
 func (b *L1Emulator) BlockIdForHeight(_ context.Context, height *common.TimeBlocks) (*common.BlockId, error) {

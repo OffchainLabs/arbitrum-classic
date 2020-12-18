@@ -25,10 +25,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, plugins map[string]interface{}) (*rpc.Server, error) {
+func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, ganacheMode bool, plugins map[string]interface{}) (*rpc.Server, error) {
 	s := rpc.NewServer()
 
-	ethServer := NewServer(server)
+	ethServer := NewServer(server, ganacheMode)
 
 	if err := s.RegisterName("eth", ethServer); err != nil {
 		return nil, err
