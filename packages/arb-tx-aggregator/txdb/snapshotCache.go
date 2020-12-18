@@ -41,6 +41,12 @@ func newSnapshotCache(max int) *snapshotCache {
 	}
 }
 
+func (sc *snapshotCache) clear() {
+	sc.tree = redblacktree.NewWith(func(a, b interface{}) int {
+		return a.(*common.TimeBlocks).Cmp(b.(*common.TimeBlocks))
+	})
+}
+
 func (sc *snapshotCache) latest() *snapshot.Snapshot {
 	node := sc.tree.Right()
 	if node == nil {
@@ -75,5 +81,14 @@ func (sc *snapshotCache) addSnapshot(snap *snapshot.Snapshot) {
 	sc.tree.Put(snap.Height(), snap)
 	for sc.tree.Size() > sc.max {
 		sc.tree.Remove(sc.tree.Left().Key)
+	}
+}
+
+func (sc *snapshotCache) clearAfter(maxHeight *common.TimeBlocks) {
+	for sc.tree.Size() > 0 {
+		if sc.tree.Right().Key.(*common.TimeBlocks).Cmp(maxHeight) <= 0 {
+			break
+		}
+		sc.tree.Remove(sc.tree.Right().Key)
 	}
 }
