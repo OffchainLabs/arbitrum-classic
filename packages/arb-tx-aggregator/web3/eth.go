@@ -551,10 +551,12 @@ func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.T
 func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {
 	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
 		pending := s.srv.PendingSnapshot()
-		if pending == nil {
-			return nil, errors.New("couldn't fetch pending snapshot")
+		if pending != nil {
+			return pending, nil
 		}
-		return pending, nil
+		// If pending isn't available, we can fall back to latest
+		latest := rpc.LatestBlockNumber
+		blockNum = &latest
 	}
 
 	if *blockNum == rpc.LatestBlockNumber {
