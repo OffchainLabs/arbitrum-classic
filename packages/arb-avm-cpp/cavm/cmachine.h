@@ -18,7 +18,7 @@
 #define cmachine_h
 
 #include <stdint.h>
-#include "ccheckpointstorage.h"
+#include "carbstorage.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -86,7 +86,7 @@ ByteSlice machineMarshallState(CMachine* m);
 
 void machinePrint(CMachine* m);
 
-int checkpointMachine(CMachine* m, CCheckpointStorage* storage);
+int checkpointMachine(CMachine* m, CArbStorage* storage);
 
 #ifdef __cplusplus
 }

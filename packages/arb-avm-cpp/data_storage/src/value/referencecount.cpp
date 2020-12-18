@@ -64,7 +64,7 @@ SaveResults saveRefCountedData(rocksdb::Transaction& transaction,
                                uint32_t new_references,
                                bool allow_replacement) {
     auto results = getRefCountedData(transaction, hash_key);
-    int ref_count;
+    uint32_t ref_count;
 
     if (results.status.ok()) {
         if (!allow_replacement && results.stored_value != value) {
@@ -121,7 +121,7 @@ GetResults getRefCountedData(rocksdb::Transaction& transaction,
         transaction.GetForUpdate(read_options, hash_key, &return_value);
 
     if (!get_status.ok()) {
-        auto unsuccessful = rocksdb::Status().NotFound();
+        auto unsuccessful = rocksdb::Status::NotFound();
         return GetResults{0, unsuccessful, std::vector<unsigned char>()};
     }
     if (return_value.empty()) {

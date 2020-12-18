@@ -15,7 +15,7 @@
  */
 
 #include <avm/machine.hpp>
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 
@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
     std::string filename = argv[2];
 
     DBDeleter deleter;
-    CheckpointStorage storage{temp_db_path};
+    ArbStorage storage{temp_db_path};
 
     if (mode == "--hexops") {
         std::ifstream file(filename, std::ios::binary);

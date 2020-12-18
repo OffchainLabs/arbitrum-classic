@@ -17,7 +17,7 @@
 #include "config.hpp"
 #include "helper.hpp"
 
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 #include <data_storage/value/value.hpp>
@@ -32,7 +32,7 @@
 
 auto execution_path = boost::filesystem::current_path();
 
-void checkpointState(CheckpointStorage& storage, Machine& machine) {
+void checkpointState(ArbStorage& storage, Machine& machine) {
     auto transaction = storage.makeTransaction();
     auto results = saveMachine(*transaction, machine);
     REQUIRE(results.status.ok());
@@ -40,7 +40,7 @@ void checkpointState(CheckpointStorage& storage, Machine& machine) {
     REQUIRE(transaction->commit().ok());
 }
 
-void checkpointStateTwice(CheckpointStorage& storage, Machine& machine) {
+void checkpointStateTwice(ArbStorage& storage, Machine& machine) {
     auto transaction1 = storage.makeTransaction();
     auto results = saveMachine(*transaction1, machine);
     REQUIRE(results.status.ok());
@@ -60,7 +60,7 @@ void deleteCheckpoint(Transaction& transaction, Machine& machine) {
     REQUIRE(results.reference_count == 0);
 }
 
-void restoreCheckpoint(CheckpointStorage& storage,
+void restoreCheckpoint(ArbStorage& storage,
                        Machine& expected_machine,
                        ValueCache& value_cache) {
     auto mach = storage.getMachine(expected_machine.hash(), value_cache);
@@ -69,7 +69,7 @@ void restoreCheckpoint(CheckpointStorage& storage,
 
 TEST_CASE("Checkpoint State") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     storage.initialize(test_contract_path);
     ValueCache value_cache{};
 
@@ -92,7 +92,7 @@ TEST_CASE("Checkpoint State") {
 
 TEST_CASE("Delete machine checkpoint") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     storage.initialize(test_contract_path);
     ValueCache value_cache{};
 
@@ -110,7 +110,7 @@ TEST_CASE("Delete machine checkpoint") {
 
 TEST_CASE("Restore checkpoint") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     storage.initialize(test_contract_path);
     ValueCache value_cache{};
 

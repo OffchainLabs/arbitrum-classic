@@ -84,7 +84,7 @@ func TestEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer cp.db.CloseCheckpointStorage()
+	defer cp.db.CloseArbStorage()
 
 	if cp.HasCheckpointedState() {
 		t.Error("checkpoint should start empty")
@@ -97,7 +97,7 @@ func TestWriteCheckpoint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer cp.db.CloseCheckpointStorage()
+	defer cp.db.CloseArbStorage()
 
 	blockData, err := cp.bs.GetBlock(initialEntryBlockId)
 	if err == nil {
@@ -161,7 +161,7 @@ func TestRestoreEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer cp.db.CloseCheckpointStorage()
+	defer cp.db.CloseArbStorage()
 
 	if err = cp.RestoreLatestState(context.Background(), &TimeGetterMock{}, func(bytes []byte, restoreContext ckptcontext.RestoreContext, _ *common.BlockId) error {
 		return nil
@@ -177,7 +177,7 @@ func TestRestoreSingleCheckpoint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer cp.db.CloseCheckpointStorage()
+	defer cp.db.CloseArbStorage()
 
 	/* TODO
 	ctx := context.Background()
@@ -234,7 +234,7 @@ func TestRestoreReorg(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer cp.db.CloseCheckpointStorage()
+	defer cp.db.CloseArbStorage()
 
 	/* TOOD
 	checkpointContext := ckptcontext.NewCheckpointContext()
@@ -318,7 +318,7 @@ func TestCleanup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer cp.db.CloseCheckpointStorage()
+	defer cp.db.CloseArbStorage()
 
 	/* TODO
 	checkpointContext := ckptcontext.NewCheckpointContext()

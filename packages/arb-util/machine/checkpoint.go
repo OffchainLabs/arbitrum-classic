@@ -22,11 +22,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type CheckpointStorage interface {
+type ArbStorage interface {
 	DeleteCheckpoint(machineHash common.Hash) bool
 	Initialize(contractPath string) error
 	Initialized() bool
-	CloseCheckpointStorage() bool
+	CloseArbStorage() bool
 	GetInitialMachine(valueCache ValueCache) (Machine, error)
 	GetMachine(machineHash common.Hash, valueCache ValueCache) (Machine, error)
 	SaveValue(val value.Value) bool

@@ -23,16 +23,13 @@
 #include <iostream>
 #include <utility>
 
-Assertion CheckpointedMachine::run(
-    uint64_t stepCount,
-    std::vector<Tuple> inbox_messages,
-    std::chrono::seconds wallLimit,
-    const std::shared_ptr<DataStorage>& storage) {
+Assertion CheckpointedMachine::run(uint64_t stepCount,
+                                   std::vector<Tuple> inbox_messages,
+                                   std::chrono::seconds wallLimit) {
     Assertion assertion =
         mach->run(stepCount, std::move(inbox_messages), wallLimit);
 
     auto tx = Transaction::makeTransaction(storage);
-    AggregatorStore as(storage);
 
     auto result = saveMachine(*tx, *mach);
     if (!result.status.ok()) {
@@ -43,13 +40,13 @@ Assertion CheckpointedMachine::run(
     for (const auto& log : assertion.logs) {
         std::vector<unsigned char> logData;
         marshal_value(log, logData);
-        as.saveLog(*tx->transaction, logData);
+        AggregatorStore::saveLog(*tx->transaction, logData);
     }
 
     for (const auto& msg : assertion.outMessages) {
         std::vector<unsigned char> msgData;
         marshal_value(msg, msgData);
-        as.saveMessage(*tx->transaction, msgData);
+        AggregatorStore::saveMessage(*tx->transaction, msgData);
     }
 
     return assertion;

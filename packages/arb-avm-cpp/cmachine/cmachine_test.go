@@ -41,17 +41,17 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	checkpointStorage, err := NewCheckpoint("dbPath")
+	arbStorage, err := NewCheckpoint("dbPath")
 	if err != nil {
 		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
-	if err := checkpointStorage.Initialize(codeFile); err != nil {
+	if err := arbStorage.Initialize(codeFile); err != nil {
 		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
-	defer checkpointStorage.CloseCheckpointStorage()
-	mach2, err := checkpointStorage.GetInitialMachine(valueCache)
+	defer arbStorage.CloseArbStorage()
+	mach2, err := arbStorage.GetInitialMachine(valueCache)
 	if err != nil {
 		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)

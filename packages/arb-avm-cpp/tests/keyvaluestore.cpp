@@ -17,9 +17,9 @@
 #include "config.hpp"
 #include "helper.hpp"
 
-#include <ccheckpointstorage.h>
+#include <carbstorage.h>
 
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <boost/filesystem.hpp>
@@ -37,7 +37,7 @@ std::vector<unsigned char> value2 = {'v', 'a', 'l', 'u', 'e', '2'};
 
 TEST_CASE("KeyValueStore test") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     auto store = storage.makeKeyValueStore();
 
     auto status = store->saveData(hash_key1, value1);
@@ -54,12 +54,12 @@ TEST_CASE("KeyValueStore test") {
     REQUIRE(res2.data == value4);
 }
 
-TEST_CASE("CCheckpointStorage test") {
+TEST_CASE("CArbStorage test") {
     DBDeleter deleter;
-    auto store = createCheckpointStorage(dbpath.c_str());
+    auto store = createArbStorage(dbpath.c_str());
     auto res = getData(store, hash_key2.data(), hash_key2.size());
 
     REQUIRE(res.found == false);
     REQUIRE(res.slice.length == 0);
-    destroyCheckpointStorage(store);
+    destroyArbStorage(store);
 }

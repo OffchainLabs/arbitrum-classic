@@ -55,5 +55,5 @@ type Machine interface {
 
 	MarshalState() ([]byte, error)
 
-	Checkpoint(storage CheckpointStorage) bool
+	Checkpoint(storage ArbStorage) bool
 }

@@ -23,7 +23,7 @@ set(LIB_HEADERS
   include/data_storage/aggregator.hpp
   include/data_storage/blockstore.hpp
   include/data_storage/checkpointedmachine.hpp
-  include/data_storage/checkpointstorage.hpp
+  include/data_storage/arbstorage.hpp
   include/data_storage/datastorage.hpp
   include/data_storage/keyvaluestore.hpp
   include/data_storage/storageresult.hpp
@@ -43,7 +43,7 @@ set(LIB_SOURCES
   src/aggregator.cpp
   src/blockstore.cpp
   src/checkpointedmachine.cpp
-  src/checkpointstorage.cpp
+  src/arbstorage.cpp
   src/datastorage.cpp
   src/keyvaluestore.cpp
   src/value/code.cpp
