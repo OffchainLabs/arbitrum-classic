@@ -200,8 +200,8 @@ func LogStackToLogs(val value.Value) ([]Log, error) {
 
 func LogsToLogStack(logs []Log) *value.TupleValue {
 	logValues := make([]value.Value, 0, len(logs))
-	for i := range logs {
-		logValue, err := logs[len(logs)-1-i].AsValue()
+	for _, evmLog := range logs {
+		logValue, err := evmLog.AsValue()
 		if err == nil {
 			logValues = append(logValues, logValue)
 		}
