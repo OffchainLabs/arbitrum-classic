@@ -92,11 +92,11 @@ func New(
 	}, nil
 }
 
-func (db *TxDB) Load(ctx context.Context) error {
+func (db *TxDB) Load(ctx context.Context) (bool, error) {
 	if db.checkpointer.HasCheckpointedState() {
 		err := db.restoreFromCheckpoint(ctx)
 		if err == nil {
-			return nil
+			return false, nil
 		}
 		logger.Error().Stack().Err(err).Msg("Failed to restore from checkpoint, falling back to fresh start")
 	}
@@ -104,17 +104,17 @@ func (db *TxDB) Load(ctx context.Context) error {
 	logger.Info().Msg("Starting database from scratch")
 
 	if err := db.as.Reorg(0, 0, 0); err != nil {
-		return err
+		return false, err
 	}
 
 	valueCache, err := cmachine.NewValueCache()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	mach, err := db.checkpointer.GetInitialMachine(valueCache)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	initialHeight := new(big.Int).Sub(db.EventCreated.BlockId.Height.AsInt(), big.NewInt(1))
@@ -124,7 +124,7 @@ func (db *TxDB) Load(ctx context.Context) error {
 	defer db.callMut.Unlock()
 	db.lastBlockProcessed = nil
 	db.lastInboxSeq = big.NewInt(0)
-	return db.saveEmptyBlock(ctx, ethcommon.Hash{}, initialHeight)
+	return true, db.saveEmptyBlock(ctx, ethcommon.Hash{}, initialHeight)
 }
 
 // addSnap must be called with callMut locked or during construction
