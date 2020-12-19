@@ -76,7 +76,11 @@ func New(
 	chain common.Address,
 	eventCreated arbbridge.ChainInfo,
 	creationTimestamp *big.Int,
-) *TxDB {
+) (*TxDB, error) {
+	if eventCreated.BlockId.Height.AsInt().Cmp(big.NewInt(0)) == 0 {
+		return nil, errors.New("chain can't be created in 0 block")
+	}
+
 	return &TxDB{
 		View:              View{as: as},
 		checkpointer:      checkpointer,
@@ -85,7 +89,7 @@ func New(
 		snapCache:         newSnapshotCache(snapshotCacheSize),
 		EventCreated:      eventCreated,
 		CreationTimestamp: creationTimestamp,
-	}
+	}, nil
 }
 
 func (db *TxDB) Load(ctx context.Context) error {
@@ -113,17 +117,23 @@ func (db *TxDB) Load(ctx context.Context) error {
 		return err
 	}
 
+	initialHeight := new(big.Int).Sub(db.EventCreated.BlockId.Height.AsInt(), big.NewInt(1))
+	initialBlockId, err := db.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(initialHeight))
+	if err != nil {
+		return err
+	}
+	initialTimestamp, err := db.timeGetter.TimestampForBlockHash(ctx, initialBlockId.HeaderHash)
+	if err != nil {
+		return err
+	}
+
 	db.mach = mach
 	db.callMut.Lock()
 	defer db.callMut.Unlock()
 	db.lastBlockProcessed = nil
 	db.lastInboxSeq = big.NewInt(0)
 	db.snapCache.clear()
-
-	if db.EventCreated.BlockId.Height.AsInt().Cmp(big.NewInt(0)) == 0 {
-		logger.Fatal().Msg("chain can't be created in 0 block")
-	}
-	initialHeight := new(big.Int).Sub(db.EventCreated.BlockId.Height.AsInt(), big.NewInt(1))
+	db.addSnap(mach, initialHeight, initialTimestamp)
 	return db.saveEmptyBlock(ctx, ethcommon.Hash{}, initialHeight)
 }
 

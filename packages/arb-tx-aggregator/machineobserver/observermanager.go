@@ -159,7 +159,10 @@ func RunObserver(
 		return nil, err
 	}
 
-	db := txdb.New(clnt, cp, cp.GetAggregatorStore(), rollupAddr, eventCreated, creationTimestamp)
+	db, err := txdb.New(clnt, cp, cp.GetAggregatorStore(), rollupAddr, eventCreated, creationTimestamp)
+	if err != nil {
+		return nil, err
+	}
 
 	inboxAddr, err := rollupWatcher.InboxAddress(ctx)
 	if err != nil {
