@@ -20,11 +20,11 @@ aliases:
 
   - &restore_go_cache
     keys:
-      - go-mod-v10-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
-      - go-mod-v10-{{ .Branch }}-
-      - go-mod-v10-
+      - go-mod-v11-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
+      - go-mod-v11-{{ .Branch }}-
+      - go-mod-v11-
   - &save_go_cache
-    key: go-mod-v10-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
+    key: go-mod-v11-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
     paths:
       - ~/go/pkg/mod
   - &test-path /tmp/test-results
