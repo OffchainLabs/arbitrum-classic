@@ -118,14 +118,6 @@ func (db *TxDB) Load(ctx context.Context) error {
 	}
 
 	initialHeight := new(big.Int).Sub(db.EventCreated.BlockId.Height.AsInt(), big.NewInt(1))
-	initialBlockId, err := db.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(initialHeight))
-	if err != nil {
-		return err
-	}
-	initialTimestamp, err := db.timeGetter.TimestampForBlockHash(ctx, initialBlockId.HeaderHash)
-	if err != nil {
-		return err
-	}
 
 	db.mach = mach
 	db.callMut.Lock()
@@ -133,7 +125,6 @@ func (db *TxDB) Load(ctx context.Context) error {
 	db.lastBlockProcessed = nil
 	db.lastInboxSeq = big.NewInt(0)
 	db.snapCache.clear()
-	db.addSnap(mach, initialHeight, initialTimestamp)
 	return db.saveEmptyBlock(ctx, ethcommon.Hash{}, initialHeight)
 }
 
