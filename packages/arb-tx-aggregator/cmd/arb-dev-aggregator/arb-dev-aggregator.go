@@ -130,7 +130,10 @@ func main() {
 		BlockId:  initialBlock.blockId,
 		LogIndex: 0,
 	}
-	db := txdb.New(l1, cp, as, rollupAddress, eventCreated, initialBlock.timestamp)
+	db, err := txdb.New(l1, cp, as, rollupAddress, eventCreated, initialBlock.timestamp)
+	if err != nil {
+		logger.Fatal().Stack().Err(err).Send()
+	}
 
 	if err := db.Load(ctx); err != nil {
 		logger.Fatal().Err(err).Send()
