@@ -124,7 +124,6 @@ func (db *TxDB) Load(ctx context.Context) error {
 	defer db.callMut.Unlock()
 	db.lastBlockProcessed = nil
 	db.lastInboxSeq = big.NewInt(0)
-	db.snapCache.clear()
 	return db.saveEmptyBlock(ctx, ethcommon.Hash{}, initialHeight)
 }
 
@@ -227,8 +226,6 @@ func (db *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 	); err != nil {
 		return err
 	}
-
-	db.snapCache.clearAfter(blockId.Height)
 
 	db.mach = mach
 	db.callMut.Lock()
