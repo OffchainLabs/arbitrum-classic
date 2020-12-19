@@ -43,6 +43,13 @@ func (txdb *View) GetRequest(requestId common.Hash) (value.Value, error) {
 	if requestCandidate == nil {
 		return nil, nil
 	}
+	totalLogCount, err := txdb.as.LogCount()
+	if err != nil {
+		return nil, err
+	}
+	if *requestCandidate >= totalLogCount {
+		return nil, nil
+	}
 	logVal, err := txdb.as.GetLog(*requestCandidate)
 	if err != nil {
 		return nil, err

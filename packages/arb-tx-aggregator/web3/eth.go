@@ -2,6 +2,8 @@ package web3
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/pkg/errors"
@@ -23,13 +25,15 @@ import (
 var logger = log.With().Caller().Str("component", "web3").Logger()
 
 type Server struct {
-	srv *aggregator.Server
+	srv         *aggregator.Server
+	ganacheMode bool
 }
 
 func NewServer(
 	srv *aggregator.Server,
+	ganacheMode bool,
 ) *Server {
-	return &Server{srv: srv}
+	return &Server{srv: srv, ganacheMode: ganacheMode}
 }
 
 func (s *Server) ChainId() hexutil.Uint64 {
@@ -38,8 +42,8 @@ func (s *Server) ChainId() hexutil.Uint64 {
 	).Uint64())
 }
 
-func (s *Server) GasPrice() hexutil.Uint64 {
-	return 0
+func (s *Server) GasPrice() *hexutil.Big {
+	return (*hexutil.Big)(big.NewInt(0))
 }
 
 func (s *Server) Accounts() []common.Address {
@@ -142,10 +146,68 @@ func (s *Server) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (he
 	return tx.Hash().Bytes(), nil
 }
 
+type revertError struct {
+	error
+	reason interface{}
+}
+
+// ErrorCode returns the JSON error code for a revertal.
+// See: https://github.com/ethereum/wiki/wiki/JSON-RPC-Error-Codes-Improvement-Proposal
+func (e revertError) ErrorCode() int {
+	return 3
+}
+
+// ErrorData returns the hex encoded revert reason.
+func (e revertError) ErrorData() interface{} {
+	return e.reason
+}
+
+type ganacheErrorData struct {
+	Error  string `json:"error"`
+	Return string `json:"return"`
+	Reason string `json:"reason"`
+}
+
+func handleCallError(res *evm.TxResult, ganacheMode bool) error {
+	if len(res.ReturnData) > 0 {
+		err := vm.ErrExecutionReverted
+		reason := ""
+		revertReason, unpackError := abi.UnpackRevert(res.ReturnData)
+		if unpackError == nil {
+			err = errors.Errorf("execution reverted: %v", revertReason)
+			reason = revertReason
+		}
+
+		var errorReason interface{}
+		if ganacheMode {
+			errMap := make(map[string]ganacheErrorData)
+			errMap[res.IncomingRequest.MessageID.String()] = ganacheErrorData{
+				Error:  err.Error(),
+				Return: hexutil.Encode(res.ReturnData),
+				Reason: reason,
+			}
+			errorReason = errMap
+		} else {
+			errorReason = hexutil.Encode(res.ReturnData)
+		}
+
+		return revertError{
+			error:  err,
+			reason: errorReason,
+		}
+	} else {
+		return vm.ErrExecutionReverted
+	}
+}
+
 func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
 	res, err := s.executeCall(callArgs, blockNum)
 	if err != nil {
 		return nil, err
+	}
+
+	if res.ResultCode == evm.RevertCode {
+		return nil, handleCallError(res, s.ganacheMode)
 	}
 	return res.ReturnData, nil
 }
@@ -156,6 +218,9 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	if err != nil {
 		logger.Warn().Err(err).Msg("error estimating gas")
 		return 0, err
+	}
+	if res.ResultCode == evm.RevertCode {
+		return 0, handleCallError(res, s.ganacheMode)
 	}
 	return hexutil.Uint64(res.GasUsed.Uint64() + 1000000), nil
 }
@@ -486,10 +551,12 @@ func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.T
 func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {
 	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
 		pending := s.srv.PendingSnapshot()
-		if pending == nil {
-			return nil, errors.New("couldn't fetch pending snapshot")
+		if pending != nil {
+			return pending, nil
 		}
-		return pending, nil
+		// If pending isn't available, we can fall back to latest
+		latest := rpc.LatestBlockNumber
+		blockNum = &latest
 	}
 
 	if *blockNum == rpc.LatestBlockNumber {

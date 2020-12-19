@@ -72,6 +72,14 @@ func (sc *snapshotCache) getSnapshot(time inbox.ChainTime) *snapshot.Snapshot {
 }
 
 func (sc *snapshotCache) addSnapshot(snap *snapshot.Snapshot) {
+	// Clear out any snapshots that occur at or after this snapshot's height
+	for sc.tree.Size() > 0 {
+		if sc.tree.Right().Key.(*common.TimeBlocks).Cmp(snap.Height()) < 0 {
+			break
+		}
+		sc.tree.Remove(sc.tree.Right().Key)
+	}
+
 	sc.tree.Put(snap.Height(), snap)
 	for sc.tree.Size() > sc.max {
 		sc.tree.Remove(sc.tree.Left().Key)

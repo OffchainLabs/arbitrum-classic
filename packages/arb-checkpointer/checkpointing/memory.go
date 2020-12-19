@@ -2,6 +2,7 @@ package checkpointing
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -46,15 +47,18 @@ func (cp *InMemoryCheckpointer) Initialized() bool {
 }
 
 func (cp *InMemoryCheckpointer) HasCheckpointedState() bool {
-	return false
+	return len(cp.checkpoints) > 0
 }
 
 func (cp *InMemoryCheckpointer) RestoreLatestState(ctx context.Context, clnt arbbridge.ChainTimeGetter, restoreFunc func([]byte, ckptcontext.RestoreContext, *common.BlockId) error) error {
 	for height := cp.maxHeight; height >= cp.minHeight; height-- {
-		checkpoints := cp.checkpoints[height]
-		if len(checkpoints) > 0 {
+		checkpoints, found := cp.checkpoints[height]
+		if found && len(checkpoints) > 0 {
 			blockId, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocksInt(int64(height)))
 			if err != nil {
+				if err == ethereum.NotFound {
+					continue
+				}
 				return err
 			}
 			for _, c := range checkpoints {
@@ -66,6 +70,10 @@ func (cp *InMemoryCheckpointer) RestoreLatestState(ctx context.Context, clnt arb
 					return nil
 				}
 			}
+		}
+		// Don't let height go negative
+		if height == 0 {
+			break
 		}
 	}
 	return errNoMatchingCheckpoint
@@ -83,14 +91,20 @@ func (cp *InMemoryCheckpointer) AsyncSaveCheckpoint(
 	errChan := make(chan error, 1)
 	height := blockId.Height.AsInt().Uint64()
 	cp.checkpoints[height] = append(cp.checkpoints[height], memoryCheckpointData{
-		contents: contents,
+		blockHash: blockId.HeaderHash,
+		contents:  contents,
 	})
 	for machHash, mach := range checkpointContext.Machines() {
-		cp.store.machines[machHash] = mach
+		cp.store.machines[machHash] = mach.Clone()
 	}
 	for valHash, val := range checkpointContext.Values() {
-		cp.store.values[valHash] = val
+		cp.store.values[valHash] = val.Clone()
 	}
+	if len(cp.checkpoints) == 1 {
+		cp.minHeight = blockId.Height.AsInt().Uint64()
+	}
+	cp.maxHeight = blockId.Height.AsInt().Uint64()
+	errChan <- nil
 	return errChan
 }
 
@@ -123,5 +137,5 @@ func (ms *InMemoryStore) GetMachine(hash common.Hash) (machine.Machine, error) {
 	if !ok {
 		return nil, errors.New("machine not found in db")
 	}
-	return mach, nil
+	return mach.Clone(), nil
 }
