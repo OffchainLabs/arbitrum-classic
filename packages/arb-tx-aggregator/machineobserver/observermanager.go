@@ -61,14 +61,15 @@ func ensureInitialized(
 	inboxWatcher arbbridge.GlobalInboxWatcher,
 ) error {
 	logger.Info().Msg("Loading database")
-	if err := db.Load(ctx); err != nil {
+	freshStart, err := db.Load(ctx)
+	if err != nil {
 		return err
 	}
 
 	logger.Info().Msg("Database loaded")
 
 	// If we're already initialized, do nothing
-	if db.LatestBlockId() != nil {
+	if !freshStart {
 		return nil
 	}
 
@@ -197,7 +198,7 @@ func ExecuteObserverAdvanced(
 	logger.Info().Msg("Initializing database")
 	// Make first call to ensureInitialized outside of thread to avoid race conditions
 	if err := ensureInitialized(ctx, db, inboxWatcher); err != nil {
-		logger.Fatal().Stack().Err(err).Send()
+		return err
 	}
 
 	go observerRunThread(ctx, clnt, db, inboxWatcher, maxReorgHeight)

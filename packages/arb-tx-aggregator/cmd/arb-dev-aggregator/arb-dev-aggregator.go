@@ -135,7 +135,7 @@ func main() {
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
-	if err := db.Load(ctx); err != nil {
+	if _, err := db.Load(ctx); err != nil {
 		logger.Fatal().Err(err).Send()
 	}
 
@@ -301,7 +301,7 @@ func (b *Backend) Reorg(ctx context.Context, height uint64) error {
 	if b.l1Emulator.Latest() != height {
 		panic("wrong height")
 	}
-	if err := b.db.Load(ctx); err != nil {
+	if _, err := b.db.Load(ctx); err != nil {
 		return err
 	}
 	if b.db.LatestBlock().Height.AsInt().Uint64() != height {
