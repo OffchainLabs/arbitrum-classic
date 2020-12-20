@@ -540,6 +540,7 @@ func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.T
 		Uint64("gasused", res.GasUsed.Uint64()).
 		Hex("returndata", res.ReturnData).
 		Int("resultcode", int(res.ResultCode)).
+		Str("dest", msg.DestAddress.Hex()).
 		Msg("executed call")
 
 	if res.ResultCode != evm.ReturnCode && res.ResultCode != evm.RevertCode {
