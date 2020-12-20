@@ -480,7 +480,7 @@ func makeTransactionResult(processedTx *evm.ProcessedTx, blockHash *common.Hash)
 	}
 }
 
-func buildCallMsg(args CallTxArgs) (arbcommon.Address, message.Call) {
+func buildCallMsg(args CallTxArgs) (arbcommon.Address, message.ContractTransaction) {
 	var from arbcommon.Address
 	if args.From != nil {
 		from = arbcommon.NewAddressFromEth(*args.From)
@@ -506,7 +506,7 @@ func buildCallMsg(args CallTxArgs) (arbcommon.Address, message.Call) {
 	if args.To != nil {
 		dest = arbcommon.NewAddressFromEth(*args.To)
 	}
-	return from, message.Call{
+	return from, message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      new(big.Int).SetUint64(gas),
 			GasPriceBid: gasPrice,
@@ -540,6 +540,7 @@ func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.T
 		Uint64("gasused", res.GasUsed.Uint64()).
 		Hex("returndata", res.ReturnData).
 		Int("resultcode", int(res.ResultCode)).
+		Str("dest", msg.DestAddress.Hex()).
 		Msg("executed call")
 
 	if res.ResultCode != evm.ReturnCode && res.ResultCode != evm.RevertCode {

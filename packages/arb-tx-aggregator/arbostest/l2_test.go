@@ -18,9 +18,11 @@ package arbostest
 
 import (
 	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
+	"strings"
 	"testing"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -149,7 +151,7 @@ func TestCallTx(t *testing.T) {
 	// After call to contract, balance should still be 0
 	checkBalance(t, snap, tx2.DestAddress, big.NewInt(0))
 
-	callRes, err := snap.Call(message.Call{
+	callRes, err := snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -163,7 +165,7 @@ func TestCallTx(t *testing.T) {
 		t.Errorf("Storage was updated %X", callRes.ReturnData)
 	}
 
-	call2Res, err := snap.Call(message.Call{
+	call2Res, err := snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -210,7 +212,7 @@ func TestContractTx(t *testing.T) {
 	checkBalance(t, snap, tx.DestAddress, tx.Payment)
 	checkBalance(t, snap, tx2.DestAddress, tx2.Payment)
 
-	callRes, err := snap.Call(message.Call{
+	callRes, err := snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -224,7 +226,7 @@ func TestContractTx(t *testing.T) {
 		t.Errorf("Storage wasn't updated %X", callRes.ReturnData)
 	}
 
-	callRes2, err := snap.Call(message.Call{
+	callRes2, err := snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -518,4 +520,29 @@ func TestCompressedECDSATx(t *testing.T) {
 
 	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(txes), 0)
 	verifyTxLogs(t, signer, txes, logs)
+}
+
+func TestCall(t *testing.T) {
+	tx1 := makeSimpleConstructorTx(hexutil.MustDecode(arbostestcontracts.SimpleBin), big.NewInt(0))
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
+	failIfError(t, err)
+
+	tx2 := message.Call{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(10000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: connAddress1,
+			Payment:     big.NewInt(0),
+			Data:        makeFuncData(t, simpleABI.Methods["exists"]),
+		},
+	}
+
+	messages := []message.Message{
+		message.NewSafeL2Message(tx1),
+		message.NewSafeL2Message(tx2),
+	}
+	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
+	results := processTxResults(t, logs)
+	allResultsSucceeded(t, results)
+	checkConstructorResult(t, results[0], connAddress1)
 }
