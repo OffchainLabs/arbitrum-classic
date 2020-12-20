@@ -18,6 +18,7 @@ package txdb
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core"
@@ -533,6 +534,19 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 				Hex("hash", res.Result.IncomingRequest.MessageID.Bytes()).
 				Int("resulttype", int(res.Result.ResultCode)).
 				Msg("got tx result")
+
+			if res.Result.ResultCode == evm.RevertCode {
+				logger := logger.Warn().
+					Hex("hash", res.Result.IncomingRequest.MessageID.Bytes()).
+					Hex("result", res.Result.ReturnData).
+					Uint64("gas_used", res.Result.GasUsed.Uint64()).
+					Uint64("gas_limit", res.Tx.Gas())
+				revertReason, unpackError := abi.UnpackRevert(res.Result.ReturnData)
+				if unpackError == nil {
+					logger = logger.Str("result_message", revertReason)
+				}
+				logger.Msg("tx reverted")
+			}
 		}
 
 		id, err := db.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(info.BlockNum))
