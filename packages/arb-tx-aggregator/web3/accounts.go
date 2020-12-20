@@ -3,6 +3,7 @@ package web3
 import (
 	"context"
 	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -114,4 +115,17 @@ func (s *Accounts) SendTransaction(ctx context.Context, args *SendTransactionArg
 		return [32]byte{}, err
 	}
 	return signedTx.Hash(), nil
+}
+
+func (s *Accounts) Sign(account common.Address, data hexutil.Bytes) (hexutil.Bytes, error) {
+	privKey, ok := s.privateKeys[account]
+	if !ok {
+		return nil, errors.New("signer does not have unlocked wallet")
+	}
+	sig, err := crypto.Sign(accounts.TextHash(data), privKey)
+	if err != nil {
+		return nil, err
+	}
+	sig[64] += 27
+	return sig, nil
 }
