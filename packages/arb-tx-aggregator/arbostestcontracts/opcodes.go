@@ -27,15 +27,19 @@ var (
 )
 
 // OpCodesABI is the input ABI used to generate the binding from.
-const OpCodesABI = "[{\"constant\":false,\"inputs\":[],\"name\":\"getBlockHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const OpCodesABI = "[{\"constant\":false,\"inputs\":[],\"name\":\"getBlockHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"conn\",\"type\":\"address\"}],\"name\":\"getNestedOrigin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"conn\",\"type\":\"address\"}],\"name\":\"getNestedSend\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"getOrigin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"getSender\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // OpCodesFuncSigs maps the 4-byte function signature to its string representation.
 var OpCodesFuncSigs = map[string]string{
 	"9663f88f": "getBlockHash()",
+	"03dd3df4": "getNestedOrigin(address)",
+	"84e58c86": "getNestedSend(address)",
+	"df1f29ee": "getOrigin()",
+	"5e01eb5a": "getSender()",
 }
 
 // OpCodesBin is the compiled bytecode used for deploying new contracts.
-var OpCodesBin = "0x6080604052348015600f57600080fd5b5060838061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c80639663f88f14602d575b600080fd5b60336045565b60408051918252519081900360200190f35b6000194301409056fea265627a7a72315820952191b154eace34fe5bfbd690876b3f24ed56087d2eb0ba15f539744e6b2dd264736f6c63430005110032"
+var OpCodesBin = "0x608060405234801561001057600080fd5b506101e0806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c806303dd3df41461005c5780635e01eb5a1461009e57806384e58c86146100a65780639663f88f146100cc578063df1f29ee146100e6575b600080fd5b6100826004803603602081101561007257600080fd5b50356001600160a01b03166100ee565b604080516001600160a01b039092168252519081900360200190f35b61008261015d565b610082600480360360208110156100bc57600080fd5b50356001600160a01b0316610161565b6100d461019e565b60408051918252519081900360200190f35b6100826101a7565b6000816001600160a01b031663df1f29ee6040518163ffffffff1660e01b8152600401602060405180830381600087803b15801561012b57600080fd5b505af115801561013f573d6000803e3d6000fd5b505050506040513d602081101561015557600080fd5b505192915050565b3390565b6000816001600160a01b0316635e01eb5a6040518163ffffffff1660e01b8152600401602060405180830381600087803b15801561012b57600080fd5b60001943014090565b329056fea265627a7a72315820547a66ab4d05de751481a05fc301be33a4cf63de022cc91ffd8066428c1cee6264736f6c63430005110032"
 
 // DeployOpCodes deploys a new Ethereum contract, binding an instance of OpCodes to it.
 func DeployOpCodes(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *OpCodes, error) {
@@ -212,4 +216,88 @@ func (_OpCodes *OpCodesSession) GetBlockHash() (*types.Transaction, error) {
 // Solidity: function getBlockHash() returns(bytes32)
 func (_OpCodes *OpCodesTransactorSession) GetBlockHash() (*types.Transaction, error) {
 	return _OpCodes.Contract.GetBlockHash(&_OpCodes.TransactOpts)
+}
+
+// GetNestedOrigin is a paid mutator transaction binding the contract method 0x03dd3df4.
+//
+// Solidity: function getNestedOrigin(address conn) returns(address)
+func (_OpCodes *OpCodesTransactor) GetNestedOrigin(opts *bind.TransactOpts, conn common.Address) (*types.Transaction, error) {
+	return _OpCodes.contract.Transact(opts, "getNestedOrigin", conn)
+}
+
+// GetNestedOrigin is a paid mutator transaction binding the contract method 0x03dd3df4.
+//
+// Solidity: function getNestedOrigin(address conn) returns(address)
+func (_OpCodes *OpCodesSession) GetNestedOrigin(conn common.Address) (*types.Transaction, error) {
+	return _OpCodes.Contract.GetNestedOrigin(&_OpCodes.TransactOpts, conn)
+}
+
+// GetNestedOrigin is a paid mutator transaction binding the contract method 0x03dd3df4.
+//
+// Solidity: function getNestedOrigin(address conn) returns(address)
+func (_OpCodes *OpCodesTransactorSession) GetNestedOrigin(conn common.Address) (*types.Transaction, error) {
+	return _OpCodes.Contract.GetNestedOrigin(&_OpCodes.TransactOpts, conn)
+}
+
+// GetNestedSend is a paid mutator transaction binding the contract method 0x84e58c86.
+//
+// Solidity: function getNestedSend(address conn) returns(address)
+func (_OpCodes *OpCodesTransactor) GetNestedSend(opts *bind.TransactOpts, conn common.Address) (*types.Transaction, error) {
+	return _OpCodes.contract.Transact(opts, "getNestedSend", conn)
+}
+
+// GetNestedSend is a paid mutator transaction binding the contract method 0x84e58c86.
+//
+// Solidity: function getNestedSend(address conn) returns(address)
+func (_OpCodes *OpCodesSession) GetNestedSend(conn common.Address) (*types.Transaction, error) {
+	return _OpCodes.Contract.GetNestedSend(&_OpCodes.TransactOpts, conn)
+}
+
+// GetNestedSend is a paid mutator transaction binding the contract method 0x84e58c86.
+//
+// Solidity: function getNestedSend(address conn) returns(address)
+func (_OpCodes *OpCodesTransactorSession) GetNestedSend(conn common.Address) (*types.Transaction, error) {
+	return _OpCodes.Contract.GetNestedSend(&_OpCodes.TransactOpts, conn)
+}
+
+// GetOrigin is a paid mutator transaction binding the contract method 0xdf1f29ee.
+//
+// Solidity: function getOrigin() returns(address)
+func (_OpCodes *OpCodesTransactor) GetOrigin(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _OpCodes.contract.Transact(opts, "getOrigin")
+}
+
+// GetOrigin is a paid mutator transaction binding the contract method 0xdf1f29ee.
+//
+// Solidity: function getOrigin() returns(address)
+func (_OpCodes *OpCodesSession) GetOrigin() (*types.Transaction, error) {
+	return _OpCodes.Contract.GetOrigin(&_OpCodes.TransactOpts)
+}
+
+// GetOrigin is a paid mutator transaction binding the contract method 0xdf1f29ee.
+//
+// Solidity: function getOrigin() returns(address)
+func (_OpCodes *OpCodesTransactorSession) GetOrigin() (*types.Transaction, error) {
+	return _OpCodes.Contract.GetOrigin(&_OpCodes.TransactOpts)
+}
+
+// GetSender is a paid mutator transaction binding the contract method 0x5e01eb5a.
+//
+// Solidity: function getSender() returns(address)
+func (_OpCodes *OpCodesTransactor) GetSender(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _OpCodes.contract.Transact(opts, "getSender")
+}
+
+// GetSender is a paid mutator transaction binding the contract method 0x5e01eb5a.
+//
+// Solidity: function getSender() returns(address)
+func (_OpCodes *OpCodesSession) GetSender() (*types.Transaction, error) {
+	return _OpCodes.Contract.GetSender(&_OpCodes.TransactOpts)
+}
+
+// GetSender is a paid mutator transaction binding the contract method 0x5e01eb5a.
+//
+// Solidity: function getSender() returns(address)
+func (_OpCodes *OpCodesTransactorSession) GetSender() (*types.Transaction, error) {
+	return _OpCodes.Contract.GetSender(&_OpCodes.TransactOpts)
 }
