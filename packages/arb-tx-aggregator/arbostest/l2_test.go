@@ -151,7 +151,7 @@ func TestCallTx(t *testing.T) {
 	// After call to contract, balance should still be 0
 	checkBalance(t, snap, tx2.DestAddress, big.NewInt(0))
 
-	callRes, err := snap.Call(message.Call{
+	callRes, err := snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -165,7 +165,7 @@ func TestCallTx(t *testing.T) {
 		t.Errorf("Storage was updated %X", callRes.ReturnData)
 	}
 
-	call2Res, err := snap.Call(message.Call{
+	call2Res, err := snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -212,7 +212,7 @@ func TestContractTx(t *testing.T) {
 	checkBalance(t, snap, tx.DestAddress, tx.Payment)
 	checkBalance(t, snap, tx2.DestAddress, tx2.Payment)
 
-	callRes, err := snap.Call(message.Call{
+	callRes, err := snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -226,7 +226,7 @@ func TestContractTx(t *testing.T) {
 		t.Errorf("Storage wasn't updated %X", callRes.ReturnData)
 	}
 
-	callRes2, err := snap.Call(message.Call{
+	callRes2, err := snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
