@@ -29,25 +29,7 @@ Assertion CheckpointedMachine::run(uint64_t stepCount,
     Assertion assertion =
         mach->run(stepCount, std::move(inbox_messages), wallLimit);
 
-    auto tx = Transaction::makeTransaction(storage);
-
-    auto result = saveMachine(*tx, *mach);
-    if (!result.status.ok()) {
-        throw std::runtime_error("error saving machine:" +
-                                 result.status.ToString());
-    }
-
-    for (const auto& log : assertion.logs) {
-        std::vector<unsigned char> logData;
-        marshal_value(log, logData);
-        AggregatorStore::saveLog(*tx->transaction, logData);
-    }
-
-    for (const auto& msg : assertion.outMessages) {
-        std::vector<unsigned char> msgData;
-        marshal_value(msg, msgData);
-        AggregatorStore::saveMessage(*tx->transaction, msgData);
-    }
+    storage.saveAssertion(assertion);
 
     return assertion;
 }

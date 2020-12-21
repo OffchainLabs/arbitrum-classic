@@ -87,8 +87,8 @@ std::unique_ptr<Transaction> ArbStorage::makeTransaction() {
 
 std::unique_ptr<const Transaction> ArbStorage::makeConstTransaction() const {
     rocksdb::WriteOptions writeOptions;
-    auto transaction = std::unique_ptr<rocksdb::Transaction>(
-        datastorage->txn_db->BeginTransaction(writeOptions));
+    auto transaction =
+        std::unique_ptr<rocksdb::Transaction>(datastorage->beginTransaction());
     return std::make_unique<Transaction>(datastorage, std::move(transaction));
 }
 

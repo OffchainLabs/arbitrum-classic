@@ -57,7 +57,8 @@ DataStorage::DataStorage(const std::string& db_path) {
     default_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[0]);
     blocks_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[1]);
     node_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[2]);
-    checkpoint_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[3]);
+    checkpoint_column =
+        std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[3]);
 }
 
 rocksdb::Status DataStorage::closeDb() {

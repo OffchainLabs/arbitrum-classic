@@ -19,6 +19,7 @@ package checkpointing
 import (
 	"context"
 	"github.com/ethereum/go-ethereum"
+	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"math/big"
 	"os"
