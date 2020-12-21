@@ -19,11 +19,6 @@
 #include <data_storage/storageresult.hpp>
 #include <string>
 
-#include <rocksdb/options.h>
-
-#include <rocksdb/utilities/transaction.h>
-#include <rocksdb/utilities/transaction_db.h>
-
 #include <iostream>
 
 DataStorage::DataStorage(const std::string& db_path) {

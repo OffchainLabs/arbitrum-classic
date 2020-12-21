@@ -22,7 +22,6 @@
 #include <data_storage/storageresult.hpp>
 
 #include <rocksdb/status.h>
-#include <rocksdb/utilities/transaction_db.h>
 
 #include <boost/endian/conversion.hpp>
 

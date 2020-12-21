@@ -21,9 +21,6 @@
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 
-#include <rocksdb/status.h>
-#include <rocksdb/utilities/transaction_db.h>
-
 constexpr auto message_number_size = 32;
 
 namespace {
@@ -57,16 +54,22 @@ void CheckpointStore::saveCheckpoint(const Checkpoint& checkpoint,
                                      Machine& machine) {
     auto tx = Transaction::makeTransaction(data_storage);
 
-    auto result = saveMachine(*tx, machine);
-    if (!result.status.ok()) {
+    auto machine_result = saveMachine(*tx, machine);
+    if (!machine_result.status.ok()) {
         throw std::runtime_error("error saving machine:" +
-                                 result.status.ToString());
+                                 machine_result.status.ToString());
     }
 
-    result = putCheckpoint(*tx, checkpoint);
-    if (!result.status.ok()) {
-        throw std::runtime_error("error saving machine:" +
-                                 result.status.ToString());
+    auto checkpoint_result = putCheckpoint(*tx, checkpoint);
+    if (!checkpoint_result.ok()) {
+        throw std::runtime_error("error saving machine: " +
+                                 checkpoint_result.ToString());
+    }
+
+    auto status = tx->commit();
+    if (!status.ok()) {
+        throw std::runtime_error("error saving assertion: " +
+                                 status.ToString());
     }
 }
 
@@ -83,6 +86,12 @@ void CheckpointStore::saveAssertion(const Assertion& assertion) {
         std::vector<unsigned char> msgData;
         marshal_value(msg, msgData);
         AggregatorStore::saveMessage(*tx->transaction, msgData);
+    }
+
+    auto status = tx->commit();
+    if (!status.ok()) {
+        throw std::runtime_error("error saving assertion: " +
+                                 status.ToString());
     }
 }
 
