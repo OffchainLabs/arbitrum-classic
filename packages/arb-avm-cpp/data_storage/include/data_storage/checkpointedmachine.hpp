@@ -18,21 +18,26 @@
 #define data_storage_checkpointedmachine_hpp
 
 #include "avm/machine.hpp"
+
+#include <utility>
 #include "avm_values/bigint.hpp"
 #include "data_storage/aggregator.hpp"
 #include "data_storage/datastorage.hpp"
 
+#include "checkpointstore.hpp"
 #include "nonstd/optional.hpp"
 #include "rocksdb/utilities/transaction.h"
 
 class CheckpointedMachine {
     std::unique_ptr<Machine> mach;
-    std::shared_ptr<DataStorage> storage;
+    CheckpointStore storage;
 
    public:
     CheckpointedMachine(std::unique_ptr<Machine> mach,
                         std::shared_ptr<DataStorage> storage)
         : mach(std::move(mach)), storage(std::move(storage)) {}
+
+    void saveCheckpoint();
 
     Assertion run(uint64_t stepCount,
                   std::vector<Tuple> inbox_messages,

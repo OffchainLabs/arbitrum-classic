@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-#include <data_storage/blockstore.hpp>
+#include <data_storage/aggregator.hpp>
+#include <data_storage/checkpoint.hpp>
+#include <data_storage/checkpointstore.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/value/machine.hpp>
 
 #include <rocksdb/status.h>
 #include <rocksdb/utilities/transaction_db.h>
@@ -25,7 +28,7 @@ constexpr auto message_number_size = 32;
 
 namespace {
 std::array<char, 64> toKey(const uint256_t& height, const uint256_t& hash) {
-    std::array<char, 64> key;
+    std::array<char, 64> key{};
     auto it = key.begin();
     it = to_big_endian(height, it);
     to_big_endian(hash, it);
@@ -33,7 +36,7 @@ std::array<char, 64> toKey(const uint256_t& height, const uint256_t& hash) {
 }
 
 std::array<char, message_number_size> toKeyPrefix(const uint256_t& height) {
-    std::array<char, message_number_size> key;
+    std::array<char, message_number_size> key{};
     to_big_endian(height, key.begin());
     return key;
 }
@@ -50,27 +53,49 @@ uint256_t keyToHash(const rocksdb::Slice& key) {
 }
 }  // namespace
 
-rocksdb::Status BlockStore::putBlock(const uint256_t& height,
-                                     const uint256_t& hash,
-                                     const std::vector<char>& value) {
-    auto key = toKey(height, hash);
-    rocksdb::Slice key_slice(key.begin(), key.size());
-    rocksdb::Slice value_slice(value.data(), value.size());
-    return data_storage->txn_db->DB::Put(rocksdb::WriteOptions(),
-                                         data_storage->blocks_column.get(),
-                                         key_slice, value_slice);
+void CheckpointStore::saveCheckpoint(const Checkpoint& checkpoint,
+                                     Machine& machine) {
+    auto tx = Transaction::makeTransaction(data_storage);
+
+    auto result = saveMachine(*tx, machine);
+    if (!result.status.ok()) {
+        throw std::runtime_error("error saving machine:" +
+                                 result.status.ToString());
+    }
+
+    result = putCheckpoint(*tx, checkpoint);
+    if (!result.status.ok()) {
+        throw std::runtime_error("error saving machine:" +
+                                 result.status.ToString());
+    }
 }
 
-rocksdb::Status BlockStore::deleteBlock(const uint256_t& height,
-                                        const uint256_t& hash) {
+void CheckpointStore::saveAssertion(const Assertion& assertion) {
+    auto tx = Transaction::makeTransaction(data_storage);
+
+    for (const auto& log : assertion.logs) {
+        std::vector<unsigned char> logData;
+        marshal_value(log, logData);
+        AggregatorStore::saveLog(*tx->transaction, logData);
+    }
+
+    for (const auto& msg : assertion.outMessages) {
+        std::vector<unsigned char> msgData;
+        marshal_value(msg, msgData);
+        AggregatorStore::saveMessage(*tx->transaction, msgData);
+    }
+}
+
+rocksdb::Status CheckpointStore::deleteCheckpoint(const uint256_t& height,
+                                                  const uint256_t& hash) {
     auto key = toKey(height, hash);
     rocksdb::Slice key_slice(key.begin(), key.size());
     return data_storage->txn_db->DB::Delete(
         rocksdb::WriteOptions(), data_storage->blocks_column.get(), key_slice);
 }
 
-DataResults BlockStore::getBlock(const uint256_t& height,
-                                 const uint256_t& hash) const {
+DataResults CheckpointStore::getCheckpoint(const uint256_t& height,
+                                           const uint256_t& hash) const {
     auto key = toKey(height, hash);
     rocksdb::Slice key_slice(key.begin(), key.size());
     std::string value;
@@ -80,7 +105,7 @@ DataResults BlockStore::getBlock(const uint256_t& height,
     return {status, {value.begin(), value.end()}};
 }
 
-std::vector<uint256_t> BlockStore::blockHashesAtHeight(
+std::vector<uint256_t> CheckpointStore::blockHashesAtHeight(
     const uint256_t& height) const {
     std::vector<uint256_t> hashes;
 
@@ -98,7 +123,7 @@ std::vector<uint256_t> BlockStore::blockHashesAtHeight(
     return hashes;
 }
 
-uint256_t BlockStore::maxHeight() const {
+uint256_t CheckpointStore::maxHeight() const {
     auto it =
         std::unique_ptr<rocksdb::Iterator>(data_storage->txn_db->NewIterator(
             rocksdb::ReadOptions(), data_storage->blocks_column.get()));
@@ -110,7 +135,7 @@ uint256_t BlockStore::maxHeight() const {
     }
 }
 
-uint256_t BlockStore::minHeight() const {
+uint256_t CheckpointStore::minHeight() const {
     auto it =
         std::unique_ptr<rocksdb::Iterator>(data_storage->txn_db->NewIterator(
             rocksdb::ReadOptions(), data_storage->blocks_column.get()));
@@ -122,7 +147,7 @@ uint256_t BlockStore::minHeight() const {
     }
 }
 
-bool BlockStore::isEmpty() const {
+bool CheckpointStore::isEmpty() const {
     auto it =
         std::unique_ptr<rocksdb::Iterator>(data_storage->txn_db->NewIterator(
             rocksdb::ReadOptions(), data_storage->blocks_column.get()));

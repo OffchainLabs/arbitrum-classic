@@ -22,7 +22,9 @@ project (data_storage LANGUAGES CXX)
 set(LIB_HEADERS
   include/data_storage/aggregator.hpp
   include/data_storage/blockstore.hpp
+  include/data_storage/checkpoint.hpp
   include/data_storage/checkpointedmachine.hpp
+  include/data_storage/checkpointstore.hpp
   include/data_storage/arbstorage.hpp
   include/data_storage/datastorage.hpp
   include/data_storage/keyvaluestore.hpp
@@ -42,7 +44,9 @@ set(LIB_PRIVATE_HEADERS
 set(LIB_SOURCES
   src/aggregator.cpp
   src/blockstore.cpp
+  src/checkpoint.cpp
   src/checkpointedmachine.cpp
+  src/checkpointstore.cpp
   src/arbstorage.cpp
   src/datastorage.cpp
   src/keyvaluestore.cpp

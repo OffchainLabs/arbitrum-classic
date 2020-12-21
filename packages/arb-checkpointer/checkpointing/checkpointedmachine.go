@@ -157,16 +157,6 @@ func (cp *CheckpointedMachine) RestoreLatestState(ctx context.Context, clnt arbb
 	return restoreLatestState(ctx, cp.cm, clnt, unmarshalFunc)
 }
 
-func restoreLatestState(
-	ctx context.Context,
-	cm *cmachine.CheckpointedMachine,
-	clnt arbbridge.ChainTimeGetter,
-	unmarshalFunc func([]byte, ckptcontext.RestoreContext, *common.BlockId) error,
-) error {
-	// TODO
-	return errNoMatchingCheckpoint
-}
-
 func (cp *CheckpointedMachine) writeDaemon() {
 	ticker := time.NewTicker(common.NewTimeBlocksInt(2).Duration())
 	defer ticker.Stop()
@@ -188,12 +178,6 @@ func (cp *CheckpointedMachine) writeDaemon() {
 }
 
 func deleteCheckpointForKey(bs machine.BlockStore, db machine.ArbStorage, id *common.BlockId) error {
-
-	// TODO
-
-	return nil
-}
-
 	val, err := bs.GetBlock(id)
 	if err != nil {
 		return err
