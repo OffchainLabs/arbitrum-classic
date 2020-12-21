@@ -190,7 +190,7 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
     if (!datastack_results.status.ok() || !auxstack_results.status.ok() ||
         !register_val_results.status.ok() ||
         !staged_message_results.status.ok()) {
-        return SaveResults{0, rocksdb::Status().Aborted()};
+        return SaveResults{0, rocksdb::Status::Aborted()};
     }
 
     ++segment_counts[machinestate.pc.segment];

@@ -21,8 +21,6 @@
 #include <data_storage/arbstorage.hpp>
 #include <data_storage/value/machine.hpp>
 
-#include <sys/stat.h>
-#include <fstream>
 #include <iostream>
 
 typedef struct {

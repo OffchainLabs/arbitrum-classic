@@ -19,18 +19,11 @@
 #include "value/referencecount.hpp"
 #include "value/utils.hpp"
 
-#include <avm/machine.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
-#include <data_storage/value/code.hpp>
 #include <data_storage/value/value.hpp>
 
 #include <boost/endian/conversion.hpp>
-
-#include <rocksdb/status.h>
-#include <rocksdb/utilities/transaction_db.h>
-
-#include <iostream>
 
 constexpr auto message_number_size = 32;
 
@@ -106,17 +99,16 @@ std::vector<unsigned char> serializeCheckpoint(const Checkpoint& state_data) {
 }
 }  // namespace
 
-SaveResults putCheckpoint(Transaction& transaction,
-                          const Checkpoint& checkpoint) {
+rocksdb::Status putCheckpoint(Transaction& transaction,
+                              const Checkpoint& checkpoint) {
     auto key = toKey(checkpoint.messages_output);
     rocksdb::Slice key_slice(key.begin(), key.size());
     auto serialized_checkpoint = serializeCheckpoint(checkpoint);
-    /*
-    return transaction.datastorage->txn_db->DB::Put(rocksdb::WriteOptions(),
-                                         transaction.datastorage->checkpoint_column.get(),
-                                         key_slice, serialized_checkpoint);
-    */
-    return {};
+    std::string value_str(serialized_checkpoint.begin(),
+                          serialized_checkpoint.end());
+    return transaction.datastorage->txn_db->DB::Put(
+        rocksdb::WriteOptions(),
+        transaction.datastorage->checkpoint_column.get(), key_slice, value_str);
 }
 
 rocksdb::Status deleteCheckpoint(Transaction& transaction,

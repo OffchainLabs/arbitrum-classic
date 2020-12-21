@@ -18,9 +18,6 @@
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
 
-#include <rocksdb/status.h>
-#include <rocksdb/utilities/transaction_db.h>
-
 constexpr auto message_number_size = 32;
 
 namespace {

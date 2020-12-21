@@ -25,14 +25,14 @@
 
 struct Checkpoint {
    public:
-    uint64_t step_count;
+    uint64_t step_count{};
     uint256_t machine_hash;
-    uint64_t messages_read_count;
+    uint64_t messages_read_count{};
     uint256_t inbox_accumulator_hash;
     uint256_t block_hash;
-    uint64_t block_height;
-    uint64_t logs_output;
-    uint64_t messages_output;
+    uint64_t block_height{};
+    uint64_t logs_output{};
+    uint64_t messages_output{};
     uint256_t arb_gas_used;
 
     Checkpoint() = default;
@@ -58,8 +58,8 @@ struct Checkpoint {
 
 DbResult<Checkpoint> getCheckpoint(Transaction& transaction,
                                    const uint64_t& message_number);
-SaveResults putCheckpoint(Transaction& transaction,
-                          const Checkpoint& checkpoint);
+rocksdb::Status putCheckpoint(Transaction& transaction,
+                              const Checkpoint& checkpoint);
 DeleteResults deleteCheckpoint(Transaction& transaction,
                                uint64_t message_count);
 rocksdb::Status deleteCheckpoint(Transaction& transaction,
