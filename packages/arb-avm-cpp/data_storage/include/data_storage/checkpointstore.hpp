@@ -36,22 +36,19 @@ class ColumnFamilyHandle;
 class CheckpointStore {
    private:
     std::shared_ptr<DataStorage> data_storage;
+    Checkpoint pending_checkpoint;
 
    public:
     CheckpointStore() = default;
     explicit CheckpointStore(std::shared_ptr<DataStorage> data_storage_)
         : data_storage(std::move(data_storage_)) {}
-    void saveCheckpoint(const Checkpoint& checkpoint, Machine& machine);
+    void saveCheckpoint(Machine& machine);
     void saveAssertion(const Assertion& assertion);
-    rocksdb::Status deleteCheckpoint(const uint256_t& height,
-                                     const uint256_t& hash);
-    DataResults getCheckpoint(const uint256_t& height,
-                              const uint256_t& hash) const;
+    rocksdb::Status deleteCheckpoint(const uint64_t& message_number);
+    DbResult<Checkpoint> getCheckpoint(const uint64_t& message_number) const;
 
-    std::vector<uint256_t> blockHashesAtHeight(const uint256_t& height) const;
     bool isEmpty() const;
-    uint256_t maxHeight() const;
-    uint256_t minHeight() const;
+    uint64_t maxMessageNumber() const;
 };
 
 #endif /* checkpointstore_hpp */

@@ -54,17 +54,18 @@ struct Checkpoint {
           logs_output(logs_output),
           messages_output(messages_output),
           arb_gas_used(arb_gas_used) {}
+    static DbResult<Checkpoint> getCheckpoint(Transaction& transaction,
+                                              const uint64_t& message_number);
+    static DbResult<Checkpoint> getKeyCheckpoint(Transaction& transaction,
+                                                 rocksdb::Slice key_slice);
+    static rocksdb::Status putCheckpoint(Transaction& transaction,
+                                         const Checkpoint& checkpoint);
+    static rocksdb::Status deleteCheckpoint(Transaction& transaction,
+                                            const uint64_t& message_count);
+    static DbResult<Checkpoint> atMessageOrPrevious(Transaction& transaction,
+                                                    uint64_t message_number);
+    static bool isEmpty(Transaction& transaction);
+    static uint64_t maxCheckpointMessageNumber(Transaction& transaction);
 };
-
-DbResult<Checkpoint> getCheckpoint(Transaction& transaction,
-                                   const uint64_t& message_number);
-rocksdb::Status putCheckpoint(Transaction& transaction,
-                              const Checkpoint& checkpoint);
-DeleteResults deleteCheckpoint(Transaction& transaction,
-                               uint64_t message_count);
-rocksdb::Status deleteCheckpoint(Transaction& transaction,
-                                 const uint64_t& message_count);
-DbResult<Checkpoint> checkpointAtMessageOrPrevious(Transaction& transaction,
-                                                   uint64_t message_number);
 
 #endif /* data_storage_value_checkpoint_hpp */
