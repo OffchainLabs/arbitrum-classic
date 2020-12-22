@@ -18,7 +18,7 @@ package txdb
 
 import (
 	"context"
-	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core"
@@ -37,19 +37,24 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"log"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"sync"
 )
+
+var logger = log.With().Caller().Str("component", "txdb").Logger()
 
 var snapshotCacheSize = 100
 
 type TxDB struct {
 	View
-	mach         machine.Machine
-	checkpointer checkpointing.RollupCheckpointer
-	timeGetter   arbbridge.ChainTimeGetter
-	chain        common.Address
+	mach              machine.Machine
+	checkpointer      checkpointing.RollupCheckpointer
+	timeGetter        arbbridge.ChainTimeGetter
+	chain             common.Address
+	EventCreated      arbbridge.ChainInfo
+	CreationTimestamp *big.Int
 
 	rmLogsFeed      event.Feed
 	chainFeed       event.Feed
@@ -68,48 +73,59 @@ type TxDB struct {
 func New(
 	clnt arbbridge.ChainTimeGetter,
 	checkpointer checkpointing.RollupCheckpointer,
-	as *cmachine.AggregatorStore,
+	as machine.AggregatorStore,
 	chain common.Address,
-) *TxDB {
-	return &TxDB{
-		View:         View{as: as},
-		checkpointer: checkpointer,
-		timeGetter:   clnt,
-		chain:        chain,
-		snapCache:    newSnapshotCache(snapshotCacheSize),
+	eventCreated arbbridge.ChainInfo,
+	creationTimestamp *big.Int,
+) (*TxDB, error) {
+	if eventCreated.BlockId.Height.AsInt().Cmp(big.NewInt(0)) == 0 {
+		return nil, errors.New("chain can't be created in 0 block")
 	}
+
+	return &TxDB{
+		View:              View{as: as},
+		checkpointer:      checkpointer,
+		timeGetter:        clnt,
+		chain:             chain,
+		snapCache:         newSnapshotCache(snapshotCacheSize),
+		EventCreated:      eventCreated,
+		CreationTimestamp: creationTimestamp,
+	}, nil
 }
 
-func (db *TxDB) Load(ctx context.Context) error {
+func (db *TxDB) Load(ctx context.Context) (bool, error) {
 	if db.checkpointer.HasCheckpointedState() {
 		err := db.restoreFromCheckpoint(ctx)
 		if err == nil {
-			return nil
+			return false, nil
 		}
-		log.Println("Error restoring from checkpoint:", err)
-		log.Println("Failed to restore from checkpoint, falling back to fresh start")
+		logger.Error().Stack().Err(err).Msg("Failed to restore from checkpoint, falling back to fresh start")
 	}
 	// We failed to restore from a checkpoint
+	logger.Info().Msg("Starting database from scratch")
+
+	if err := db.as.Reorg(0, 0, 0); err != nil {
+		return false, err
+	}
+
 	valueCache, err := cmachine.NewValueCache()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	mach, err := db.checkpointer.GetInitialMachine(valueCache)
 	if err != nil {
-		return err
+		return false, err
 	}
+
+	initialHeight := new(big.Int).Sub(db.EventCreated.BlockId.Height.AsInt(), big.NewInt(1))
 
 	db.mach = mach
 	db.callMut.Lock()
 	defer db.callMut.Unlock()
 	db.lastBlockProcessed = nil
 	db.lastInboxSeq = big.NewInt(0)
-	return nil
-}
-
-func (db *TxDB) AddInitialBlock(ctx context.Context, initialBlockHeight *big.Int) error {
-	return db.saveEmptyBlock(ctx, ethcommon.Hash{}, initialBlockHeight)
+	return true, db.saveEmptyBlock(ctx, ethcommon.Hash{}, initialHeight)
 }
 
 // addSnap must be called with callMut locked or during construction
@@ -141,6 +157,12 @@ func (db *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 		return err
 	}
 
+	logger.Debug().
+		Uint64("height", blockId.Height.AsInt().Uint64()).
+		Hex("machine", mach.Hash().Bytes()).
+		Uint64("lastInboxSeq", lastInboxSeq.Uint64()).
+		Msg("loaded checkpoint")
+
 	restoreHeight := blockId.Height.AsInt().Uint64()
 	// Find the previous block checkout that included an AVM log to find the max
 	// avm log and avm send index at restore point
@@ -151,7 +173,7 @@ func (db *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 			return err
 		}
 		if blockInfo == nil {
-			return fmt.Errorf("no block saved at height %v", restoreHeight)
+			return errors.Errorf("no block saved at height %v", restoreHeight)
 		}
 		blockLog = blockInfo.BlockLog
 		restoreHeight--
@@ -215,7 +237,7 @@ func (db *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 	return nil
 }
 
-func (db *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliveredEvent, finishedBlock *common.BlockId) error {
+func (db *TxDB) AddMessages(ctx context.Context, msgs []inbox.InboxMessage, finishedBlock *common.BlockId) error {
 	timestamp, err := db.timeGetter.TimestampForBlockHash(ctx, finishedBlock.HeaderHash)
 	db.blockProcFeed.Send(true)
 	defer db.blockProcFeed.Send(false)
@@ -229,9 +251,9 @@ func (db *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliver
 		// TODO: Give ExecuteAssertion the ability to run unbounded until it blocks
 		// The max steps here is a hack since it should just run until it blocks
 		// Last value returned is not an error type
-		assertion, _ := db.mach.ExecuteAssertion(1000000000000, []inbox.InboxMessage{msg.Message}, 0)
+		assertion, _ := db.mach.ExecuteAssertion(1000000000000, []inbox.InboxMessage{msg}, 0)
 		db.callMut.Lock()
-		db.lastInboxSeq = msg.Message.InboxSeqNum
+		db.lastInboxSeq = msg.InboxSeqNum
 		db.callMut.Unlock()
 		processedAssertion, err := db.processAssertion(assertion)
 		if err != nil {
@@ -290,6 +312,11 @@ func (db *TxDB) AddMessages(ctx context.Context, msgs []arbbridge.MessageDeliver
 		cpData := make([]byte, 64)
 		copy(cpData[:], machHash[:])
 		copy(cpData[32:], math.U256Bytes(lastInboxSeq))
+		logger.Debug().
+			Uint64("height", finishedBlock.Height.AsInt().Uint64()).
+			Hex("machine", machHash.Bytes()).
+			Uint64("lastInboxSeq", lastInboxSeq.Uint64()).
+			Msg("saving checkpoint")
 		db.checkpointer.AsyncSaveCheckpoint(finishedBlock, cpData, ctx)
 	}
 	return nil
@@ -302,18 +329,33 @@ type processedAssertion struct {
 }
 
 func (db *TxDB) processAssertion(assertion *protocol.ExecutionAssertion) (processedAssertion, error) {
+	startLogCount, err := db.as.LogCount()
+	if err != nil {
+		return processedAssertion{}, err
+	}
 	blocks := make([]*evm.BlockInfo, 0)
 	avmLogs := assertion.ParseLogs()
-	for _, avmLog := range avmLogs {
+	for i, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
 		if err != nil {
-			log.Println("Error parsing log result", err)
+			logger.Error().Stack().Err(err).Msg("Error parsing log result")
 			continue
 		}
 
 		blockInfo, ok := res.(*evm.BlockInfo)
 		if !ok {
 			continue
+		}
+
+		logger.Debug().
+			Uint64("number", blockInfo.BlockNum.Uint64()).
+			Uint64("block_logcount", blockInfo.ChainStats.AVMLogCount.Uint64()).
+			Uint64("block_messagecount", blockInfo.ChainStats.AVMSendCount.Uint64()).
+			Msg("produced l2 block")
+
+		lastLogIndex := blockInfo.ChainStats.AVMLogCount.Uint64() - 1
+		if lastLogIndex != startLogCount+uint64(i) {
+			return processedAssertion{}, errors.New("unexpected block count")
 		}
 
 		blocks = append(blocks, blockInfo)
@@ -349,7 +391,11 @@ func (db *TxDB) saveEmptyBlock(ctx context.Context, prev ethcommon.Hash, number 
 		return err
 	}
 
-	return db.as.SaveBlockHash(common.NewHashFromEth(block.Hash()), block.NumberU64())
+	if err := db.as.SaveBlockHash(common.NewHashFromEth(block.Hash()), block.NumberU64()); err != nil {
+		return err
+	}
+	db.lastBlockProcessed = blockId
+	return nil
 }
 
 func (db *TxDB) fillEmptyBlocks(ctx context.Context, max *big.Int) error {
@@ -365,7 +411,7 @@ func (db *TxDB) fillEmptyBlocks(ctx context.Context, max *big.Int) error {
 			return err
 		}
 		if prev == nil {
-			return fmt.Errorf("trying to add block %v, but prev header was not found", next)
+			return errors.Errorf("trying to add block %v, but prev header was not found", next)
 		}
 		if err := db.saveEmptyBlock(ctx, prev.Header.Hash(), next); err != nil {
 			return err
@@ -447,10 +493,20 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 		}
 	}
 
+	logCount, err := db.as.LogCount()
+	if err != nil {
+		return err
+	}
+
 	for _, avmMessage := range processed.assertion.ParseOutMessages() {
 		if err := db.as.SaveMessage(avmMessage); err != nil {
 			return err
 		}
+	}
+
+	messageCount, err := db.as.MessageCount()
+	if err != nil {
+		return err
 	}
 
 	finalBlockIndex := len(processed.blocks) - 1
@@ -460,6 +516,7 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 		}
 
 		startLog := info.FirstAVMLog().Uint64()
+		// Instead of pulling from DB everytime, should use what we already have
 		txResults, err := db.GetBlockResults(info)
 		if err != nil {
 			return err
@@ -472,6 +529,24 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 		for _, res := range processedResults {
 			ethTxes = append(ethTxes, res.Tx)
 			ethReceipts = append(ethReceipts, res.Result.ToEthReceipt(common.Hash{}))
+
+			logger.Debug().
+				Hex("hash", res.Result.IncomingRequest.MessageID.Bytes()).
+				Int("resulttype", int(res.Result.ResultCode)).
+				Msg("got tx result")
+
+			if res.Result.ResultCode == evm.RevertCode {
+				logger := logger.Warn().
+					Hex("hash", res.Result.IncomingRequest.MessageID.Bytes()).
+					Hex("result", res.Result.ReturnData).
+					Uint64("gas_used", res.Result.GasUsed.Uint64()).
+					Uint64("gas_limit", res.Tx.Gas())
+				revertReason, unpackError := abi.UnpackRevert(res.Result.ReturnData)
+				if unpackError == nil {
+					logger = logger.Str("result_message", revertReason)
+				}
+				logger.Msg("tx reverted")
+			}
 		}
 
 		id, err := db.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(info.BlockNum))
@@ -483,7 +558,7 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 			return err
 		}
 		if prev == nil {
-			return fmt.Errorf("trying to add block %v, but prev header was not found", info.BlockNum.Uint64())
+			return errors.Errorf("trying to add block %v, but prev header was not found", info.BlockNum.Uint64())
 		}
 		header := &types.Header{
 			ParentHash: prev.Header.Hash(),
@@ -497,6 +572,13 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 
 		block := types.NewBlock(header, ethTxes, nil, ethReceipts, new(trie.Trie))
 		avmLogIndex := info.ChainStats.AVMLogCount.Uint64() - 1
+		logger.Debug().
+			Uint64("number", block.Header().Number.Uint64()).
+			Uint64("block_logcount", info.ChainStats.AVMLogCount.Uint64()).
+			Uint64("block_messagecount", info.ChainStats.AVMSendCount.Uint64()).
+			Uint64("logsize", logCount).
+			Uint64("messagesize", messageCount).
+			Msg("saved l2 block")
 		if err := db.as.SaveBlock(block.Header(), avmLogIndex); err != nil {
 			return err
 		}
@@ -504,13 +586,6 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 		ethLogs := make([]*types.Log, 0)
 		for _, res := range processedResults {
 			ethLogs = append(ethLogs, res.Result.EthLogs(common.NewHashFromEth(block.Hash()))...)
-		}
-		db.chainFeed.Send(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: ethLogs})
-		if finalBlockIndex == blockIndex {
-			db.chainHeadFeed.Send(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: ethLogs})
-		}
-		if len(ethLogs) > 0 {
-			db.logsFeed.Send(ethLogs)
 		}
 
 		for i, txRes := range txResults {
@@ -528,6 +603,14 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 
 		if err := db.as.SaveBlockHash(common.NewHashFromEth(block.Hash()), block.Number().Uint64()); err != nil {
 			return err
+		}
+
+		db.chainFeed.Send(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: ethLogs})
+		if finalBlockIndex == blockIndex {
+			db.chainHeadFeed.Send(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: ethLogs})
+		}
+		if len(ethLogs) > 0 {
+			db.logsFeed.Send(ethLogs)
 		}
 	}
 	return nil

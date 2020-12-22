@@ -17,11 +17,11 @@
 package nodegraph
 
 import (
-	"errors"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"log"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"strconv"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -29,6 +29,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
+
+var logger = log.With().Caller().Str("component", "ethbridgemachine").Logger()
 
 //go:generate protoc -I. -I ../.. --go_out=paths=source_relative:. nodegraph.proto
 
@@ -127,7 +129,7 @@ func (x *NodeGraphBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (
 		if nd.HasAncestor() {
 			prev, ok := chain.nodeFromHash[nd.PrevHash()]
 			if !ok {
-				return nil, fmt.Errorf("Prev node %v not found for node %v while unmarshalling graph\n", nd.PrevHash(), nd.Hash())
+				return nil, errors.Errorf("Prev node %v not found for node %v while unmarshalling graph\n", nd.PrevHash(), nd.Hash())
 			}
 			if err := structures.Link(nd, prev); err != nil {
 				// This can only fail if prev is not actually the prev of nd
@@ -181,6 +183,56 @@ func (ng *NodeGraph) DebugStringForNodeRecursive(node *structures.Node, stakers 
 		}
 	}
 	return ret
+}
+
+type NodeDisplay struct {
+	LinkType   valprotocol.ChildType
+	Hash       common.Hash
+	Leaf       bool
+	labels     []string
+	stakers    []string
+	successors []NodeDisplay
+}
+
+func (nd NodeDisplay) MarshalZerologObject(e *zerolog.Event) {
+	successors := zerolog.Arr()
+	for _, succ := range nd.successors {
+		successors = successors.Object(succ)
+	}
+	e.Int("linktype", int(nd.LinkType)).
+		Hex("hash", nd.Hash.Bytes()).
+		Bool("leaf", nd.Leaf).
+		Strs("labels", nd.labels).
+		Strs("stakers", nd.stakers).Array("successors", successors)
+}
+
+func (ng *NodeGraph) DisplayData(stakers *StakerSet) NodeDisplay {
+	return ng.DisplayDataRecursive(ng.oldestNode, stakers)
+}
+
+func (ng *NodeGraph) DisplayDataRecursive(node *structures.Node, stakers *StakerSet) NodeDisplay {
+	var stakerList []string
+	stakers.forall(func(s *Staker) {
+		if s.location.Equals(node) {
+			stakerList = append(stakerList, s.address.Hex())
+		}
+	})
+
+	nj := NodeDisplay{
+		LinkType: node.LinkType(),
+		Hash:     node.Hash(),
+		Leaf:     ng.leaves.IsLeaf(node),
+		stakers:  stakerList,
+	}
+
+	for i := valprotocol.MinChildType; i <= valprotocol.MaxChildType; i++ {
+		succi := node.SuccessorHashes()[i]
+		if !succi.Equals(common.Hash{}) {
+			child := ng.DisplayDataRecursive(ng.nodeFromHash[succi], stakers)
+			nj.successors = append(nj.successors, child)
+		}
+	}
+	return nj
 }
 
 func (ng *NodeGraph) Equals(ng2 *NodeGraph) bool {
@@ -252,10 +304,10 @@ func (ng *NodeGraph) CreateNodesOnAssert(
 	newNodes := make([]*structures.Node, 0, 3)
 	_, ok := ng.nodeFromHash[prevNode.Hash()]
 	if !ok {
-		log.Fatal("can't assert on non-existent node")
+		logger.Fatal().Msg("can't assert on non-existent node")
 	}
 	if !ng.leaves.IsLeaf(prevNode) {
-		log.Fatal("can't assert on non-leaf node")
+		logger.Fatal().Msg("can't assert on non-leaf node")
 	}
 	ng.leaves.delete(prevNode)
 

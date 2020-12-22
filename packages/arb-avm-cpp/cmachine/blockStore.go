@@ -25,7 +25,7 @@ package cmachine
 */
 import "C"
 import (
-	"errors"
+	"github.com/pkg/errors"
 	"runtime"
 	"unsafe"
 

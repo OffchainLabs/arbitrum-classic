@@ -19,12 +19,14 @@ package ethbridgemachine
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 	"strconv"
 
 	"encoding/json"
-	"errors"
+	"github.com/pkg/errors"
 	"io/ioutil"
 
 	"path/filepath"
@@ -38,6 +40,8 @@ import (
 
 func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts.OneStepProof) {
 	t.Log("proof test contact: ", contract)
+
+	ctx := context.Background()
 
 	proofs, err := generateProofCases(contract)
 	if err != nil {
@@ -72,7 +76,7 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts
 
 			if proof.Message != nil {
 				machineData, err = osp.ExecuteStepWithMessage(
-					&bind.CallOpts{Context: context.Background()},
+					&bind.CallOpts{Context: ctx},
 					proof.Assertion.AfterInboxHash,
 					proof.Assertion.FirstMessageHash,
 					proof.Assertion.FirstLogHash,
@@ -86,7 +90,7 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts
 				)
 			} else {
 				machineData, err = osp.ExecuteStep(
-					&bind.CallOpts{Context: context.Background()},
+					&bind.CallOpts{Context: ctx},
 					proof.Assertion.AfterInboxHash,
 					proof.Assertion.FirstMessageHash,
 					proof.Assertion.FirstLogHash,
@@ -120,11 +124,22 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts
 }
 
 func TestValidateProof(t *testing.T) {
+	ctx := context.Background()
 	testMachines := gotest.OpCodeTestFiles()
-	clnt, pks := test.SimulatedBackend()
-	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
+	backend, pks := test.SimulatedBackend()
+	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth := bind.NewKeyedTransactor(pks[0])
-	_, tx, osp, err := ethbridgecontracts.DeployOneStepProof(auth, client)
+	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ospAddr, tx, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgecontracts.DeployOneStepProof(auth, client)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	osp, err := ethbridgecontracts.NewOneStepProof(ospAddr, backend)
 	if err != nil {
 		t.Fatal(err)
 	}

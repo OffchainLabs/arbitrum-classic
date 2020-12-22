@@ -25,34 +25,28 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"log"
+	"github.com/pkg/errors"
 )
 
 type statefulBatch struct {
 	*statelessBatch
-	db       *txdb.TxDB
 	snap     *snapshot.Snapshot
 	txCounts map[common.Address]uint64
-	signer   types.Signer
 }
 
 func newStatefulBatch(db *txdb.TxDB, maxSize common.StorageSize, signer types.Signer) *statefulBatch {
 	return &statefulBatch{
-		statelessBatch: newStatelessBatch(maxSize),
-		db:             db,
+		statelessBatch: newStatelessBatch(db, maxSize, signer),
 		snap:           db.LatestSnapshot(),
 		txCounts:       make(map[common.Address]uint64),
-		signer:         signer,
 	}
 }
 
 func (p *statefulBatch) newFromExisting() batch {
 	return &statefulBatch{
 		statelessBatch: p.statelessBatch.newFromExisting().(*statelessBatch),
-		db:             p.db,
 		snap:           p.snap,
 		txCounts:       p.txCounts,
-		signer:         p.signer,
 	}
 }
 
@@ -69,19 +63,35 @@ func (p *statefulBatch) getTxCount(account common.Address) uint64 {
 	return count
 }
 
-func (p *statefulBatch) validateTx(tx *types.Transaction) txResponse {
+func (p *statefulBatch) validateTx(tx *types.Transaction) (txResponse, error) {
 	sender, err := types.Sender(p.signer, tx)
 	if err != nil {
-		return REMOVE
+		return REMOVE, errors.New("invalid signature")
 	}
 	nextValidNonce := p.getTxCount(sender)
 	if tx.Nonce() > nextValidNonce {
-		return SKIP
+		return SKIP, errors.WithStack(core.ErrNonceTooHigh)
 	}
 	if tx.Nonce() < nextValidNonce {
 		// Just discard this tx since it is old
-		return REMOVE
+		return REMOVE, errors.WithStack(core.ErrNonceTooLow)
 	}
+
+	amount, err := p.snap.GetBalance(arbcommon.NewAddressFromEth(sender))
+	if err != nil {
+		return REMOVE, err
+	}
+
+	if tx.Cost().Cmp(amount) > 0 {
+		logger.Warn().
+			Str("value", tx.Value().String()).
+			Str("gasPrice", tx.GasPrice().String()).
+			Uint64("Gas", tx.Gas()).
+			Str("amount", amount.String()).
+			Msg("tx rejected for insufficient funds")
+		return REMOVE, errors.WithStack(core.ErrInsufficientFunds)
+	}
+
 	return p.statelessBatch.validateTx(tx)
 }
 
@@ -122,33 +132,6 @@ func (p *statefulBatch) addIncludedTx(tx *types.Transaction) error {
 
 	p.snap = newSnap
 	p.txCounts[sender] = tx.Nonce() + 1
-	return nil
-}
-
-func (p *statefulBatch) checkValidForQueue(tx *types.Transaction) error {
-	ethSender, err := types.Sender(p.signer, tx)
-	if err != nil {
-		return err
-	}
-	sender := arbcommon.NewAddressFromEth(ethSender)
-	txCount, err := p.snap.GetTransactionCount(sender)
-	if err != nil {
-		return err
-	}
-
-	if tx.Nonce() < txCount.Uint64() {
-		return core.ErrNonceTooLow
-	}
-
-	amount, err := p.snap.GetBalance(sender)
-	if err != nil {
-		return err
-	}
-
-	if tx.Cost().Cmp(amount) > 0 {
-		log.Println("tx rejected for insufficient funds:", tx.Value(), tx.GasPrice(), tx.Gas(), amount)
-		return core.ErrInsufficientFunds
-	}
 	return nil
 }
 

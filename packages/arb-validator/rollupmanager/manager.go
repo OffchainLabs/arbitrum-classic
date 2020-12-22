@@ -18,8 +18,8 @@ package rollupmanager
 
 import (
 	"context"
-	errors2 "github.com/pkg/errors"
-	"log"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"sync"
 	"time"
@@ -32,6 +32,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainlistener"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/chainobserver"
 )
+
+var logger = log.With().Caller().Str("component", "rollupmanager").Logger()
 
 type Manager struct {
 	// The mutex should be held whenever listeres or reorgCache are accessed or
@@ -119,17 +121,17 @@ func CreateManagerAdvanced(
 
 			rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
 			if err != nil {
-				log.Fatal(err)
+				logger.Fatal().Stack().Err(err).Msg("NewRollupWatcher")
 			}
 
 			inboxAddr, err := rollupWatcher.InboxAddress(runCtx)
 			if err != nil {
-				log.Fatal(err)
+				logger.Fatal().Stack().Err(err).Msg("InboxAddress")
 			}
 
 			inboxWatcher, err := clnt.NewGlobalInboxWatcher(inboxAddr, rollupAddr)
 			if err != nil {
-				log.Fatal(err)
+				logger.Fatal().Stack().Err(err).Msg("NewGlobalInboxWatcher")
 			}
 
 			chain, err := chainobserver.NewChainObserver(
@@ -142,7 +144,7 @@ func CreateManagerAdvanced(
 				assumedValidThreshold,
 			)
 			if err != nil {
-				log.Fatal(err)
+				logger.Fatal().Stack().Err(err).Msg("NewChainObserver")
 			}
 
 			man.Lock()
@@ -155,7 +157,9 @@ func CreateManagerAdvanced(
 
 			time.Sleep(time.Second) // give time for things to settle, post-reorg, before restarting stuff
 
-			log.Println("Starting validator from", man.activeChain.CurrentEventId().BlockId)
+			logger.Info().
+				Object("blockId", man.activeChain.CurrentEventId().BlockId).
+				Msg("Starting validator")
 
 			man.activeChain.RestartFromLatestValid(runCtx)
 
@@ -179,16 +183,19 @@ func CreateManagerAdvanced(
 
 					fetchEnd, err := observer.CalculateCatchupFetch(runCtx, startHeight, clnt, maxReorg)
 					if err != nil {
-						return errors2.Wrap(err, "error calculating fast catchup")
+						return errors.Wrap(err, "error calculating fast catchup")
 					}
 					if fetchEnd == nil {
 						break
 					}
 
-					log.Println("Getting events between", startHeight, "and", fetchEnd)
+					logger.Info().
+						Str("start", startHeight.String()).
+						Str("end", fetchEnd.String()).
+						Msg("Getting events")
 					inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, startHeight, fetchEnd)
 					if err != nil {
-						return errors2.Wrap(err, "Manager hit error doing fast catchup")
+						return errors.Wrap(err, "Manager hit error doing fast catchup")
 					}
 					inboxEvents := make([]arbbridge.Event, 0, len(inboxDeliveredEvents))
 					for _, ev := range inboxDeliveredEvents {
@@ -196,7 +203,7 @@ func CreateManagerAdvanced(
 					}
 					events, err := rollupWatcher.GetAllEvents(runCtx, startHeight, fetchEnd)
 					if err != nil {
-						return errors2.Wrap(err, "Manager hit error doing fast catchup")
+						return errors.Wrap(err, "Manager hit error doing fast catchup")
 					}
 					allEvents := arbbridge.MergeEventsUnsafe(inboxEvents, events)
 					for _, ev := range allEvents {
@@ -211,7 +218,7 @@ func CreateManagerAdvanced(
 						}
 						err := man.activeChain.HandleNotification(runCtx, ev)
 						if err != nil {
-							return errors2.Wrap(err, "Manager hit error processing event during fast catchup")
+							return errors.Wrap(err, "Manager hit error processing event during fast catchup")
 						}
 					}
 					endBlockId, err := clnt.BlockIdForHeight(runCtx, common.NewTimeBlocks(fetchEnd))
@@ -232,13 +239,15 @@ func CreateManagerAdvanced(
 				startEventId := man.activeChain.CurrentEventId()
 				headersChan, err := clnt.SubscribeBlockHeaders(runCtx, startEventId.BlockId)
 				if err != nil {
-					return errors2.Wrap(err, "Error subscribing to block headers")
+					return errors.Wrap(err, "Error subscribing to block headers")
 				}
+
+				log.Info().Msg("Beginning regular block monitoring")
 
 				lastDebugPrint := time.Now()
 				for maybeBlockId := range headersChan {
 					if maybeBlockId.Err != nil {
-						return errors2.Wrap(maybeBlockId.Err, "Error getting new header")
+						return errors.Wrap(maybeBlockId.Err, "Error getting new header")
 					}
 
 					if err := man.activeChain.UpdateAssumedValidBlock(runCtx, clnt, assumedValidThreshold); err != nil {
@@ -253,23 +262,31 @@ func CreateManagerAdvanced(
 						return err
 					}
 
+					logger := logger.With().Object("l2block", maybeBlockId.BlockId).Logger()
+
+					logger.Info().
+						Object("l1block", currentOnChain).
+						Msg("processing block")
+
 					if !caughtUpToL1 && blockId.Height.Cmp(currentOnChain.Height) >= 0 {
 						caughtUpToL1 = true
 						man.activeChain.NowAtHead()
-						log.Println("Now at head")
+						logger.Info().Msg("Now at head")
 					}
 
 					man.activeChain.NotifyNewBlock(blockId.Clone())
 
-					if caughtUpToL1 || time.Since(lastDebugPrint).Seconds() > 5 {
-						log.Print(man.activeChain.DebugString("== "))
+					if caughtUpToL1 || time.Since(lastDebugPrint).Seconds() > 10 {
+						logger.Info().Object("chain", man.activeChain).Msg("current graph")
 						lastDebugPrint = time.Now()
 					}
 
 					inboxEvents, err := inboxWatcher.GetEvents(runCtx, blockId, timestamp)
 					if err != nil {
-						return errors2.Wrapf(err, "Manager hit error getting inbox events with block %v", blockId)
+						return errors.Wrapf(err, "Manager hit error getting inbox events with block %v", blockId)
 					}
+
+					logger.Info().Msg("got inbox events")
 					// It's safe to process inbox events out of order with rollup events as long
 					// as the inbox events are ahead of the rollup ones
 					for _, ev := range inboxEvents {
@@ -279,14 +296,18 @@ func CreateManagerAdvanced(
 						}
 						err := man.activeChain.HandleNotification(runCtx, ev)
 						if err != nil {
-							return errors2.Wrap(err, "Manager hit error processing event")
+							return errors.Wrap(err, "Manager hit error processing event")
 						}
 					}
 
+					logger.Info().Msg("processed inbox events")
+
 					events, err := rollupWatcher.GetEvents(runCtx, blockId, timestamp)
 					if err != nil {
-						return errors2.Wrapf(err, "Manager hit error getting rollup events with block %v", blockId)
+						return errors.Wrapf(err, "Manager hit error getting rollup events with block %v", blockId)
 					}
+
+					logger.Info().Msg("got rollup events")
 
 					for _, ev := range events {
 						if ev.GetChainInfo().Cmp(startEventId) < 0 {
@@ -295,15 +316,17 @@ func CreateManagerAdvanced(
 						}
 						err := man.activeChain.HandleNotification(runCtx, ev)
 						if err != nil {
-							return errors2.Wrap(err, "Manager hit error processing event")
+							return errors.Wrap(err, "Manager hit error processing event")
 						}
 					}
+
+					logger.Info().Msg("processed rollup events")
 				}
 				return nil
 			}()
 
 			if err != nil {
-				log.Println(err)
+				logger.Error().Stack().Err(err).Send()
 			}
 
 			man.Lock()

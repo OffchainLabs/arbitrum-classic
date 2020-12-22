@@ -18,10 +18,13 @@ package arbbridge
 
 import (
 	"context"
+	"github.com/rs/zerolog/log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
+
+var logger = log.With().Caller().Str("component", "arbbridge").Logger()
 
 type MaybeBlockId struct {
 	BlockId   *common.BlockId
@@ -34,10 +37,14 @@ type ChainTimeGetter interface {
 	TimestampForBlockHash(ctx context.Context, hash common.Hash) (*big.Int, error)
 }
 
-type ArbClient interface {
+type ChainInfoGetter interface {
 	ChainTimeGetter
 	SubscribeBlockHeaders(ctx context.Context, startBlockId *common.BlockId) (<-chan MaybeBlockId, error)
 	SubscribeBlockHeadersAfter(ctx context.Context, prevBlockId *common.BlockId) (<-chan MaybeBlockId, error)
+}
+
+type ArbClient interface {
+	ChainInfoGetter
 
 	NewArbFactoryWatcher(address common.Address) (ArbFactoryWatcher, error)
 	NewRollupWatcher(address common.Address) (ArbRollupWatcher, error)

@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/rs/zerolog"
 	"strconv"
 )
 
@@ -28,6 +29,14 @@ type Staker struct {
 	location     *structures.Node
 	creationTime common.TimeTicks
 	challenge    common.Address
+}
+
+func (staker *Staker) MarshalZerologObject(e *zerolog.Event) {
+	e.Hex("address", staker.address.Bytes()).
+		Hex("location", staker.location.Hash().Bytes()).
+		Uint64("depth", staker.location.Depth()).
+		Str("created", staker.creationTime.Val.String()).
+		Hex("challenge", staker.challenge.Bytes())
 }
 
 func (staker *Staker) Challenge() common.Address {

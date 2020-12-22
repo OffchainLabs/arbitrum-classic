@@ -19,7 +19,7 @@ package ethbridgetest
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"math/big"
 	"os"

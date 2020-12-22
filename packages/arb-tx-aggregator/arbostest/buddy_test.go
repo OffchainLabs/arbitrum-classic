@@ -17,18 +17,13 @@
 package arbostest
 
 import (
-	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
-	"log"
 	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
@@ -64,60 +59,23 @@ func TestBuddyContract(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(l2Tx), common.RandAddress(), big.NewInt(2), chainTime),
 	}
 
-	mach, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	logs, sends, _ := runAssertion(t, messages, 2, 1)
+	results := processTxResults(t, logs)
 
-	// Last parameter returned is number of steps executed
-	assertion, _ := mach.ExecuteAssertion(1000000000, messages, 0)
-	//data, err := inbox.TestVectorJSON(messages, assertion.ParseLogs(), assertion.ParseOutMessages())
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//t.Log(string(data))
+	allResultsSucceeded(t, results)
 
-	logs := assertion.ParseLogs()
-	if len(logs) != 2 {
-		t.Fatal("unexpected log count", len(logs))
-	}
+	checkConstructorResult(t, results[0], l1contract)
 
-	sends := assertion.ParseOutMessages()
-	if len(sends) != 1 {
-		t.Fatal("unexpected send count", len(sends))
-	}
-
-	for i, logVal := range assertion.ParseLogs() {
-		res, err := evm.NewTxResultFromValue(logVal)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if res.ResultCode != evm.ReturnCode {
-			t.Error("tx", i, "failed", res.ResultCode)
-		}
-
-		if i == 0 {
-			if len(res.ReturnData) != 32 {
-				log.Fatal("unexpected return data length")
-			}
-			if !bytes.Equal(res.ReturnData[12:], l1contract[:]) {
-				t.Log("Returned address", hexutil.Encode(res.ReturnData))
-				t.Log("l1 address", l1contract)
-				t.Error("constructor returned incorrect address")
-			}
-		} else {
-			t.Log("ReturnData", hexutil.Encode(res.ReturnData))
-			if len(res.ReturnData) == 0 {
-				t.Error("expected return data")
-			}
+	for _, res := range results[1:] {
+		t.Log("ReturnData", hexutil.Encode(res.ReturnData))
+		if len(res.ReturnData) == 0 {
+			t.Error("expected return data")
 		}
 	}
 
-	for _, sendVal := range assertion.ParseOutMessages() {
+	for _, sendVal := range sends {
 		msg, err := message.NewOutMessageFromValue(sendVal)
-		if err != nil {
-			t.Fatal(err)
-		}
+		failIfError(t, err)
 		if msg.Sender != l1contract {
 			t.Error("Buddy contract created at wrong address")
 		}

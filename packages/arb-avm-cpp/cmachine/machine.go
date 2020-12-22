@@ -28,8 +28,8 @@ import "C"
 
 import (
 	"bytes"
-	"fmt"
-	"log"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"runtime"
 	"time"
 	"unsafe"
@@ -41,6 +41,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
+var logger = log.With().Caller().Str("component", "cmachine").Logger()
+
 type Machine struct {
 	c unsafe.Pointer
 }
@@ -49,7 +51,7 @@ func New(codeFile string) (*Machine, error) {
 	cFilename := C.CString(codeFile)
 	cMachine := C.machineCreate(cFilename)
 	if cMachine == nil {
-		return nil, fmt.Errorf("error creating machine from file %s", codeFile)
+		return nil, errors.Errorf("error creating machine from file %s", codeFile)
 	}
 	ret := &Machine{cMachine}
 	runtime.SetFinalizer(ret, cdestroyVM)
@@ -123,9 +125,9 @@ func makeExecutionAssertion(
 	logsRaw := toByteSlice(assertion.logs)
 	debugPrints := protocol.BytesArrayToVals(toByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
 	if len(debugPrints) > 0 {
-		log.Println("Produced assertion containing debug prints")
+		logger.Debug().Msg("Produced assertion containing debug prints")
 		for _, d := range debugPrints {
-			log.Println("DebugPrint:", d)
+			logger.Debug().Str("DebugPrint", d.String()).Send()
 		}
 	}
 	return protocol.NewExecutionAssertion(

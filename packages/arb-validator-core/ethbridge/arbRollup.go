@@ -20,6 +20,7 @@ import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
+	"github.com/pkg/errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -47,24 +48,23 @@ func newRollup(address ethcommon.Address, client ethutils.EthClient, auth *Trans
 func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof1 []common.Hash, proof2 []common.Hash) ([]arbbridge.Event, error) {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
-	call := &bind.TransactOpts{
-		From:    vm.auth.auth.From,
-		Signer:  vm.auth.auth.Signer,
-		Context: ctx,
-	}
+
 	blankAddress := ethcommon.Address{}
 	st, err := vm.ArbRollup.GetStakeToken(&bind.CallOpts{Context: ctx})
 	if err != nil {
 		return nil, err
 	}
-	if st == blankAddress {
-		call.Value = stakeAmount
-	}
-	tx, err := vm.ArbRollup.PlaceStake(
-		call,
-		common.HashSliceToRaw(proof1),
-		common.HashSliceToRaw(proof2),
-	)
+
+	tx, err := vm.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		if st == blankAddress {
+			auth.Value = stakeAmount
+		}
+		return vm.ArbRollup.PlaceStake(
+			auth,
+			common.HashSliceToRaw(proof1),
+			common.HashSliceToRaw(proof2),
+		)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -74,10 +74,12 @@ func (vm *arbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof
 func (vm *arbRollup) RecoverStakeConfirmed(ctx context.Context, proof []common.Hash) ([]arbbridge.Event, error) {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
-	tx, err := vm.ArbRollup.RecoverStakeConfirmed(
-		vm.auth.getAuth(ctx),
-		common.HashSliceToRaw(proof),
-	)
+	tx, err := vm.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return vm.ArbRollup.RecoverStakeConfirmed(
+			auth,
+			common.HashSliceToRaw(proof),
+		)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -87,11 +89,13 @@ func (vm *arbRollup) RecoverStakeConfirmed(ctx context.Context, proof []common.H
 func (vm *arbRollup) RecoverStakeOld(ctx context.Context, staker common.Address, proof []common.Hash) ([]arbbridge.Event, error) {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
-	tx, err := vm.ArbRollup.RecoverStakeOld(
-		vm.auth.getAuth(ctx),
-		staker.ToEthAddress(),
-		common.HashSliceToRaw(proof),
-	)
+	tx, err := vm.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return vm.ArbRollup.RecoverStakeOld(
+			auth,
+			staker.ToEthAddress(),
+			common.HashSliceToRaw(proof),
+		)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -101,13 +105,15 @@ func (vm *arbRollup) RecoverStakeOld(ctx context.Context, staker common.Address,
 func (vm *arbRollup) RecoverStakeMooted(ctx context.Context, nodeHash common.Hash, staker common.Address, latestConfirmedProof []common.Hash, stakerProof []common.Hash) ([]arbbridge.Event, error) {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
-	tx, err := vm.ArbRollup.RecoverStakeMooted(
-		vm.auth.getAuth(ctx),
-		staker.ToEthAddress(),
-		nodeHash,
-		common.HashSliceToRaw(latestConfirmedProof),
-		common.HashSliceToRaw(stakerProof),
-	)
+	tx, err := vm.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return vm.ArbRollup.RecoverStakeMooted(
+			auth,
+			staker.ToEthAddress(),
+			nodeHash,
+			common.HashSliceToRaw(latestConfirmedProof),
+			common.HashSliceToRaw(stakerProof),
+		)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -117,15 +123,17 @@ func (vm *arbRollup) RecoverStakeMooted(ctx context.Context, nodeHash common.Has
 func (vm *arbRollup) RecoverStakePassedDeadline(ctx context.Context, stakerAddress common.Address, deadlineTicks *big.Int, disputableNodeHashVal common.Hash, childType uint64, vmProtoStateHash common.Hash, proof []common.Hash) ([]arbbridge.Event, error) {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
-	tx, err := vm.ArbRollup.RecoverStakePassedDeadline(
-		vm.auth.getAuth(ctx),
-		stakerAddress.ToEthAddress(),
-		deadlineTicks,
-		disputableNodeHashVal,
-		new(big.Int).SetUint64(childType),
-		vmProtoStateHash,
-		common.HashSliceToRaw(proof),
-	)
+	tx, err := vm.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return vm.ArbRollup.RecoverStakePassedDeadline(
+			auth,
+			stakerAddress.ToEthAddress(),
+			deadlineTicks,
+			disputableNodeHashVal,
+			new(big.Int).SetUint64(childType),
+			vmProtoStateHash,
+			common.HashSliceToRaw(proof),
+		)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -135,11 +143,13 @@ func (vm *arbRollup) RecoverStakePassedDeadline(ctx context.Context, stakerAddre
 func (vm *arbRollup) MoveStake(ctx context.Context, proof1 []common.Hash, proof2 []common.Hash) ([]arbbridge.Event, error) {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
-	tx, err := vm.ArbRollup.MoveStake(
-		vm.auth.getAuth(ctx),
-		common.HashSliceToRaw(proof1),
-		common.HashSliceToRaw(proof2),
-	)
+	tx, err := vm.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return vm.ArbRollup.MoveStake(
+			auth,
+			common.HashSliceToRaw(proof1),
+			common.HashSliceToRaw(proof2),
+		)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -163,14 +173,16 @@ func (vm *arbRollup) PruneLeaves(ctx context.Context, opps []valprotocol.PrunePa
 		confProofLengths = append(confProofLengths, big.NewInt(int64(len(opp.AncProof))))
 	}
 
-	tx, err := vm.ArbRollup.PruneLeaves(
-		vm.auth.getAuth(ctx),
-		common.HashSliceToRaw(fromNodes),
-		common.HashSliceToRaw(leafProofs),
-		leafProofLengths,
-		common.HashSliceToRaw(confProofs),
-		confProofLengths,
-	)
+	tx, err := vm.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return vm.ArbRollup.PruneLeaves(
+			auth,
+			common.HashSliceToRaw(fromNodes),
+			common.HashSliceToRaw(leafProofs),
+			leafProofLengths,
+			common.HashSliceToRaw(confProofs),
+			confProofLengths,
+		)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -208,19 +220,21 @@ func (vm *arbRollup) MakeAssertion(
 		beforeState.MessageCount,
 		beforeState.LogCount,
 	}
-	tx, err := vm.ArbRollup.MakeAssertion(
-		vm.auth.getAuth(ctx),
-		fields,
-		fields2,
-		validBlock.HeaderHash,
-		validBlock.Height.AsInt(),
-		assertion.MessageCount,
-		assertion.LogCount,
-		uint32(prevChildType),
-		assertionParams.NumSteps,
-		assertion.NumGas,
-		common.HashSliceToRaw(stakerProof),
-	)
+	tx, err := vm.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return vm.ArbRollup.MakeAssertion(
+			auth,
+			fields,
+			fields2,
+			validBlock.HeaderHash,
+			validBlock.Height.AsInt(),
+			assertion.MessageCount,
+			assertion.LogCount,
+			uint32(prevChildType),
+			assertionParams.NumSteps,
+			assertion.NumGas,
+			common.HashSliceToRaw(stakerProof),
+		)
+	})
 	if err != nil {
 		callErr := vm.ArbRollup.MakeAssertionCall(
 			ctx,
@@ -238,7 +252,7 @@ func (vm *arbRollup) MakeAssertion(
 			assertion.NumGas,
 			common.HashSliceToRaw(stakerProof),
 		)
-		return nil, callErr
+		return nil, errors.WithStack(callErr)
 	}
 	return vm.waitForReceipt(ctx, tx, "MakeAssertion")
 }
@@ -248,21 +262,23 @@ func (vm *arbRollup) Confirm(ctx context.Context, opp *valprotocol.ConfirmOpport
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
 
-	tx, err := vm.ArbRollup.Confirm(
-		vm.auth.getAuth(ctx),
-		proof.InitalProtoStateHash,
-		proof.BeforeSendCount,
-		proof.BranchesNums,
-		proof.DeadlineTicks,
-		proof.ChallengeNodeData,
-		proof.LogsAcc,
-		proof.VMProtoStateHashes,
-		proof.MessageCounts,
-		proof.Messages,
-		addressSliceToRaw(opp.StakerAddresses),
-		proof.CombinedProofs,
-		proof.StakerProofOffsets,
-	)
+	tx, err := vm.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return vm.ArbRollup.Confirm(
+			auth,
+			proof.InitalProtoStateHash,
+			proof.BeforeSendCount,
+			proof.BranchesNums,
+			proof.DeadlineTicks,
+			proof.ChallengeNodeData,
+			proof.LogsAcc,
+			proof.VMProtoStateHashes,
+			proof.MessageCounts,
+			proof.Messages,
+			addressSliceToRaw(opp.StakerAddresses),
+			proof.CombinedProofs,
+			proof.StakerProofOffsets,
+		)
+	})
 	if err != nil {
 		return nil, vm.ArbRollup.ConfirmCall(
 			ctx,
@@ -304,26 +320,28 @@ func (vm *arbRollup) StartChallenge(
 ) ([]arbbridge.Event, error) {
 	vm.auth.Lock()
 	defer vm.auth.Unlock()
-	tx, err := vm.ArbRollup.StartChallenge(
-		vm.auth.getAuth(ctx),
-		asserterAddress.ToEthAddress(),
-		challengerAddress.ToEthAddress(),
-		prevNode,
-		disputableDeadline,
-		[2]*big.Int{
-			new(big.Int).SetUint64(uint64(asserterPosition)),
-			new(big.Int).SetUint64(uint64(challengerPosition)),
-		},
-		[2][32]byte{
-			asserterVMProtoHash,
-			challengerVMProtoHash,
-		},
-		common.HashSliceToRaw(asserterProof),
-		common.HashSliceToRaw(challengerProof),
-		asserterNodeHash,
-		challengerDataHash,
-		challengerPeriodTicks.Val,
-	)
+	tx, err := vm.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return vm.ArbRollup.StartChallenge(
+			auth,
+			asserterAddress.ToEthAddress(),
+			challengerAddress.ToEthAddress(),
+			prevNode,
+			disputableDeadline,
+			[2]*big.Int{
+				new(big.Int).SetUint64(uint64(asserterPosition)),
+				new(big.Int).SetUint64(uint64(challengerPosition)),
+			},
+			[2][32]byte{
+				asserterVMProtoHash,
+				challengerVMProtoHash,
+			},
+			common.HashSliceToRaw(asserterProof),
+			common.HashSliceToRaw(challengerProof),
+			asserterNodeHash,
+			challengerDataHash,
+			challengerPeriodTicks.Val,
+		)
+	})
 	if err != nil {
 		return nil, err
 	}

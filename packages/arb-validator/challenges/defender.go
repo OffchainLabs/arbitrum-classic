@@ -17,10 +17,7 @@
 package challenges
 
 import (
-	"errors"
-	"log"
-
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -65,7 +62,7 @@ func (ad AssertionDefender) MoveDefender(bisectionEvent arbbridge.ExecutionBisec
 	// Update mach, precondition, deadline
 	messages, err := ad.inbox.GetAssertionMessages(ad.assertion.BeforeInboxHash, ad.assertion.AfterInboxHash)
 	if err != nil {
-		return nil, errors2.Wrapf(err, "assertion defender must have valid messages: %s %s", ad.assertion.BeforeInboxHash, ad.assertion.AfterInboxHash)
+		return nil, errors.Wrapf(err, "assertion defender must have valid messages: %s %s", ad.assertion.BeforeInboxHash, ad.assertion.AfterInboxHash)
 	}
 
 	// Last value returned is not an error type
@@ -113,7 +110,10 @@ func (ad AssertionDefender) NBisect(slices uint64) []AssertionDefender {
 
 		inboxMessages, err := ad.inbox.GetAssertionMessages(beforeInboxHash, ad.assertion.AfterInboxHash)
 		if err != nil {
-			log.Fatal("inbox messages must exist for assertion that you're defending ", beforeInboxHash, ad.assertion.AfterInboxHash)
+			logger.Fatal().
+				Hex("beforeInbox", beforeInboxHash.Bytes()).
+				Hex("afterInbox", ad.assertion.AfterInboxHash.Bytes()).
+				Msg("inbox messages must exist for assertion that you're defending")
 		}
 
 		// Last value returned is not an error type

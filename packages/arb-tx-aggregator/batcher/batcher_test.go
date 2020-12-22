@@ -19,13 +19,13 @@ package batcher
 import (
 	"context"
 	"crypto/ecdsa"
-	"errors"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
+	"github.com/pkg/errors"
 	"math/big"
 	"math/rand"
 	"sync"
@@ -111,6 +111,10 @@ func (m *mock) DepositERC721Message(context.Context, common.Address, common.Addr
 	panic("not used")
 }
 
+func (m *mock) SendInitializationMessage(context.Context, []byte) error {
+	panic("not used")
+}
+
 func generateTxes(t *testing.T, chain common.Address) ([]*types.Transaction, map[ethcommon.Address]uint64) {
 	rand.Seed(4537345)
 	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
@@ -144,8 +148,10 @@ func TestStatelessBatcher(t *testing.T) {
 	txes, txCounts := generateTxes(t, chain)
 	seenTxesChan := make(chan message.CompressedECDSATransaction, 1000)
 	mock := newMock(t, seenTxesChan, txes)
+	ctx := context.Background()
 	batcher := NewStatelessBatcher(
-		context.Background(),
+		ctx,
+		nil,
 		chain,
 		mock,
 		mock,
@@ -153,7 +159,7 @@ func TestStatelessBatcher(t *testing.T) {
 	)
 
 	for _, tx := range txes {
-		if err := batcher.SendTransaction(context.Background(), tx); err != nil {
+		if err := batcher.SendTransaction(ctx, tx); err != nil {
 			t.Fatal(err)
 		}
 		<-time.After(time.Millisecond * 20)

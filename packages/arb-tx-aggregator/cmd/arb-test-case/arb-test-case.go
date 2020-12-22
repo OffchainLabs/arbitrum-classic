@@ -18,8 +18,11 @@ package main
 
 import (
 	"context"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
 	"io/ioutil"
-	"log"
+	golog "log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
@@ -29,16 +32,24 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
+var logger zerolog.Logger
+
 func main() {
 	// Enable line numbers in logging
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
+
+	// Print stack trace when `.Error().Stack().Err(err).` is added to zerolog call
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+
+	// Print line number that log was created on
+	logger = log.With().Caller().Str("component", "arb-test-case").Logger()
 
 	if err := generateTestCase(
 		"http://localhost:7545",
 		common.HexToAddress("0xc68DCee7b8cA57F41D1A417103CB65836E99e013"),
 		arbos.Path(),
 	); err != nil {
-		panic(err)
+		logger.Fatal().Stack().Err(err).Msg("error generating test")
 	}
 }
 

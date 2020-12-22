@@ -17,10 +17,10 @@
 package ckptcontext
 
 import (
-	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/pkg/errors"
 )
 
 type RestoreContext interface {
@@ -42,6 +42,10 @@ func NewCheckpointContext() *CheckpointContext {
 
 func (ctx *CheckpointContext) AddValue(val value.Value) {
 	ctx.values[val.Hash()] = val
+}
+
+func (ctx *CheckpointContext) AddValueWithHash(val value.Value, valueHash common.Hash) {
+	ctx.values[valueHash] = val
 }
 
 func (ctx *CheckpointContext) AddMachine(mach machine.Machine) {

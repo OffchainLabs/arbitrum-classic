@@ -18,8 +18,8 @@ package checkpointing
 
 import (
 	"context"
-	"errors"
-	"log"
+	"github.com/ethereum/go-ethereum"
+	"github.com/pkg/errors"
 	"math/big"
 	"os"
 	"sync"
@@ -176,11 +176,20 @@ func restoreLatestState(
 	startHeight := bs.MaxBlockStoreHeight()
 	lowestHeight := bs.MinBlockStoreHeight()
 
+	logger.Info().
+		Str("max", bs.MaxBlockStoreHeight().String()).
+		Str("min", bs.MinBlockStoreHeight().String()).
+		Msg("Restoring latest state")
 	for height := startHeight; height.Cmp(lowestHeight) >= 0; height = common.NewTimeBlocks(new(big.Int).Sub(height.AsInt(), big.NewInt(1))) {
+		logger := logger.With().Str("height", height.String()).Logger()
 		onchainId, err := clnt.BlockIdForHeight(ctx, height)
 		if err != nil {
+			if err == ethereum.NotFound {
+				continue
+			}
 			return err
 		}
+
 		blockData, err := bs.GetBlock(onchainId)
 		if err != nil {
 			// If no record was found, try the next block
@@ -189,18 +198,20 @@ func restoreLatestState(
 		ckpWithMan := &CheckpointWithManifest{}
 		if err := proto.Unmarshal(blockData, ckpWithMan); err != nil {
 			// If something went wrong, try the next block
+			logger.Warn().Err(err).Msg("Invalid block found when restoring state")
 			continue
 		}
 
 		rcl, err := newRestoreContextLocked(db, ckpWithMan.Manifest)
 		if err != nil {
-			log.Println("Failed load manifest data at height", height, "with error", err)
+			logger.Error().Stack().Err(err).Msg("Failed load manifest data")
 			continue
 		}
 		if err := unmarshalFunc(ckpWithMan.Contents, rcl, onchainId); err != nil {
-			log.Println("Failed load checkpoint at height", height, "with error", err)
+			logger.Error().Stack().Err(err).Msg("Failed load checkpoint")
 			continue
 		}
+		logger.Info().Msg("Restored state")
 		return nil
 	}
 	return errNoMatchingCheckpoint
@@ -218,7 +229,7 @@ func (cp *IndexedCheckpointer) writeDaemon() {
 		if checkpoint != nil {
 			err := writeCheckpoint(cp.bs, cp.db, checkpoint)
 			if err != nil {
-				log.Println("Error writing checkpoint: {}", err)
+				logger.Error().Stack().Err(err).Msg("Error writing checkpoint")
 			}
 			checkpoint.errChan <- err
 			close(checkpoint.errChan)
@@ -270,7 +281,7 @@ func cleanup(bs machine.BlockStore, db machine.CheckpointStorage, maxReorgHeight
 				err := deleteCheckpointForKey(bs, db, id)
 				if err != nil {
 					// Can still continue if error
-					log.Printf("Nonfatal error deleting checkpoint for key %s: %s", id.String(), err.Error())
+					logger.Warn().Stack().Err(err).Object("id", id).Msg("Error deleting checkpoint")
 				}
 			}
 			prevIds = blockIds

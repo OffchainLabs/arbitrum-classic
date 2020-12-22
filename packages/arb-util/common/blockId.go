@@ -18,11 +18,17 @@ package common
 
 import (
 	"fmt"
+	"github.com/rs/zerolog"
 )
 
 type BlockId struct {
 	Height     *TimeBlocks
 	HeaderHash Hash
+}
+
+func (id *BlockId) MarshalZerologObject(e *zerolog.Event) {
+	e.Str("height", id.Height.String()).
+		Hex("header", id.HeaderHash.Bytes())
 }
 
 func (id *BlockId) Clone() *BlockId {

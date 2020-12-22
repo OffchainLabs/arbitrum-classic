@@ -18,11 +18,12 @@ package structures
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"log"
+	"github.com/pkg/errors"
 	"math/big"
 	"testing"
 
@@ -36,30 +37,33 @@ import (
 var tester *ethbridgetestcontracts.RollupTester
 
 func TestMainSetup(m *testing.T) {
-	clnt, pks := test.SimulatedBackend()
-	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
+	backend, pks := test.SimulatedBackend()
+	ctx := context.Background()
+	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth := bind.NewKeyedTransactor(pks[0])
-
-	_, machineTx, deployedArbRollup, err := ethbridgetestcontracts.DeployRollupTester(
-		auth,
-		client,
-	)
+	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
 	if err != nil {
-		log.Fatal(err)
+		m.Fatal(err)
 	}
+
+	rollupAddr, machineTx, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgetestcontracts.DeployRollupTester(auth, client)
+	})
+
 	client.Commit()
+
 	_, err = ethbridge.WaitForReceiptWithResults(
-		context.Background(),
+		ctx,
 		client,
 		auth.From,
 		machineTx,
 		"deployedMachineTester",
 	)
 	if err != nil {
-		log.Fatal(err)
+		m.Fatal(err)
 	}
 
-	tester = deployedArbRollup
+	tester, err = ethbridgetestcontracts.NewRollupTester(rollupAddr, client)
 }
 
 func TestGenerateLastMessageHash(t *testing.T) {

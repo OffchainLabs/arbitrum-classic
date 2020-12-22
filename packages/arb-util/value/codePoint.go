@@ -18,8 +18,8 @@ package value
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"

@@ -19,7 +19,7 @@ package nodegraph
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"log"
+	"github.com/rs/zerolog"
 	"sort"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
@@ -105,6 +105,12 @@ func (sng *StakedNodeGraph) DebugString(prefix string, labels map[*structures.No
 	return "\n" + prefix + "nodes:\n" + sng.NodeGraph.DebugString(sng.stakers, subPrefix, labels) + sng.stakers.DebugString(prefix)
 }
 
+func (sng *StakedNodeGraph) MarshalZerologObject(e *zerolog.Event) {
+	e.Hex("latest_confirmed", sng.latestConfirmed.Hash().Bytes())
+	e.Hex("oldest", sng.oldestNode.Hash().Bytes())
+	e.Object("nodes", sng.NodeGraph.DisplayData(sng.stakers))
+}
+
 func (sng *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
 	return sng.NodeGraph.Equals(s2.NodeGraph) &&
 		sng.stakers.Equals(s2.stakers) &&
@@ -114,8 +120,9 @@ func (sng *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
 func (sng *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent) {
 	nd, ok := sng.nodeFromHash[ev.NodeHash]
 	if !ok {
-		log.Println("Bad location", ev.NodeHash)
-		panic("Tried to create stake on bad node")
+		logger.Fatal().
+			Hex("node", ev.NodeHash.Bytes()).
+			Msg("Tried to create stake on bad node")
 	}
 	sng.stakers.Add(&Staker{
 		ev.Staker,
@@ -128,13 +135,23 @@ func (sng *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent) {
 func (sng *StakedNodeGraph) MoveStake(stakerAddr common.Address, nodeHash common.Hash) {
 	staker := sng.stakers.Get(stakerAddr)
 	if staker == nil {
-		log.Fatalf("Moved nonexistant staker %v to node %v", stakerAddr, nodeHash)
+		logger.Fatal().
+			Hex("staker", stakerAddr.Bytes()).
+			Hex("node", nodeHash.Bytes()).
+			Msg("Moved nonexistant staker")
+
+		panic("Will not be reached")
 	}
 	staker.location.RemoveStaker()
 	// no need to consider pruning staker.location, because a successor of it is getting a stake
 	newLocation, ok := sng.nodeFromHash[nodeHash]
 	if !ok {
-		log.Fatalf("Moved staker %v to nonexistant node %v", stakerAddr, nodeHash)
+		logger.Fatal().
+			Hex("staker", stakerAddr.Bytes()).
+			Hex("node", nodeHash.Bytes()).
+			Msg("Moved staker to nonexistant node")
+
+		panic("Will not be reached")
 	}
 	staker.location = newLocation
 	staker.location.AddStaker()

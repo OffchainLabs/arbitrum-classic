@@ -18,50 +18,64 @@ package chainlistener
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"log"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/rs/zerolog"
 )
 
 type AnnouncerListener struct {
-	Prefix string
+	logger zerolog.Logger
+}
+
+func NewAnnouncerListener(address common.Address) *AnnouncerListener {
+	return &AnnouncerListener{logger: logger.With().Hex("validator", address.Bytes()).Logger()}
 }
 
 func (al *AnnouncerListener) AddedToChain(context.Context, []*structures.Node) {
-	log.Println("AddedToChain")
+	al.logger.Info().Msg("AddedToChain")
 }
 
 func (al *AnnouncerListener) RestartingFromLatestValid(context.Context, *structures.Node) {
-	log.Println("RestartingFromLatestValid")
+	al.logger.Info().Msg("RestartingFromLatestValid")
 }
 
 func (al *AnnouncerListener) StakeCreated(ctx context.Context, ng *nodegraph.StakedNodeGraph, ev arbbridge.StakeCreatedEvent) {
-	log.Printf("%v Staker %v created at %v\n", al.Prefix, ev.Staker, ev.NodeHash)
+	al.logger.Info().
+		Hex("staker", ev.Staker.Bytes()).
+		Hex("node", ev.NodeHash.Bytes()).
+		Msg("StakeCreated")
 }
 
 func (al *AnnouncerListener) StakeRemoved(ctx context.Context, ev arbbridge.StakeRefundedEvent) {
-	log.Printf("%v Staker %v removed\n", al.Prefix, ev.Staker)
+	al.logger.Info().
+		Hex("staker", ev.Staker.Bytes()).
+		Msg("StakeRemoved")
 }
 
 func (al *AnnouncerListener) StakeMoved(ctx context.Context, ng *nodegraph.StakedNodeGraph, ev arbbridge.StakeMovedEvent) {
-	log.Printf("%v Staker %v moved to location: %v\n", al.Prefix, ev.Staker, ev.Location)
+	al.logger.Info().
+		Hex("staker", ev.Staker.Bytes()).
+		Hex("location", ev.Location.Bytes()).
+		Msg("StakeMoved")
 }
 
 func (al *AnnouncerListener) StartedChallenge(
 	context.Context,
 	*structures.MessageStack,
 	*nodegraph.Challenge) {
-	log.Println(al.Prefix, "StartedChallenge")
+	al.logger.Info().
+		Msg("StartedChallenge")
 }
 
 func (al *AnnouncerListener) ResumedChallenge(
 	context.Context,
 	*structures.MessageStack,
 	*nodegraph.Challenge) {
-	log.Println(al.Prefix, "ResumedChallenge")
+	al.logger.Info().
+		Msg("ResumedChallenge")
 }
 
 func (al *AnnouncerListener) CompletedChallenge(
@@ -69,24 +83,35 @@ func (al *AnnouncerListener) CompletedChallenge(
 	ng *nodegraph.StakedNodeGraph,
 	event arbbridge.ChallengeCompletedEvent,
 ) {
-	log.Println(al.Prefix, "CompletedChallenge")
+	al.logger.Info().
+		Msg("CompletedChallenge")
 }
 
 func (al *AnnouncerListener) SawAssertion(ctx context.Context, ev arbbridge.AssertedEvent) {
-	log.Println(al.Prefix, "SawAssertion on leaf", ev.PrevLeafHash)
-	log.Println(al.Prefix, "Params:", ev.AssertionParams)
+	al.logger.Info().
+		Hex("leaf", ev.PrevLeafHash.Bytes()).
+		Str("leaf", ev.AssertionParams.String()).
+		Msg("SawAssertion")
 }
 
 func (al *AnnouncerListener) ConfirmedNode(ctx context.Context, ev arbbridge.ConfirmedEvent) {
-	log.Println(al.Prefix, "ConfirmedNode", ev.NodeHash)
+	al.logger.Info().
+		Hex("node", ev.NodeHash.Bytes()).
+		Msg("ConfirmedNode")
 }
 
 func (al *AnnouncerListener) PrunedLeaf(ctx context.Context, ev arbbridge.PrunedEvent) {
-	log.Println(al.Prefix, "PrunedLeaf", ev.Leaf)
+	al.logger.Info().
+		Hex("leaf", ev.Leaf.Bytes()).
+		Msg("PrunedLeaf")
 }
 
 func (al *AnnouncerListener) MessageDelivered(_ context.Context, ev arbbridge.MessageDeliveredEvent) {
-	//log.Println(al.Prefix, "MessageDelivered", ev.Message)
+	/*
+		al.logger.Info().
+			Str("message", ev.Message.String()).
+			Msg("MessageDelivered")
+	*/
 }
 
 func (al *AnnouncerListener) AssertionPrepared(
@@ -96,21 +121,27 @@ func (al *AnnouncerListener) AssertionPrepared(
 	*structures.Node,
 	*PreparedAssertion,
 ) {
-	log.Println(al.Prefix, "AssertionPrepared")
+	al.logger.Info().
+		Msg("AssertionPrepared")
 }
 func (al *AnnouncerListener) ConfirmableNodes(context.Context, *valprotocol.ConfirmOpportunity) {
-	log.Println(al.Prefix, "ConfirmableNodes")
+	al.logger.Info().
+		Msg("ConfirmableNodes")
 }
 func (al *AnnouncerListener) PrunableLeafs(context.Context, []valprotocol.PruneParams) {
-	log.Println(al.Prefix, "PrunableLeafs")
+	al.logger.Info().
+		Msg("PrunableLeafs")
 }
 func (al *AnnouncerListener) MootableStakes(context.Context, []nodegraph.RecoverStakeMootedParams) {
-	log.Println(al.Prefix, "MootableStakes")
+	al.logger.Info().
+		Msg("MootableStakes")
 }
 func (al *AnnouncerListener) OldStakes(context.Context, []nodegraph.RecoverStakeOldParams) {
-	log.Println(al.Prefix, "OldStakes")
+	al.logger.Info().
+		Msg("OldStakes")
 }
 
 func (al *AnnouncerListener) AdvancedKnownNode(context.Context, *nodegraph.StakedNodeGraph, *structures.Node) {
-	log.Println(al.Prefix, "AdvancedKnownNode")
+	al.logger.Info().
+		Msg("AdvancedKnownNode")
 }

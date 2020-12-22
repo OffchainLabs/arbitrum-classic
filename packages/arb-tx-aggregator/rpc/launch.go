@@ -18,7 +18,10 @@ package rpc
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -90,14 +93,20 @@ func LaunchAggregator(
 		}
 		batch = batcher.NewForwarder(forwardClient)
 	case StatelessBatcherMode:
-		authClient := ethbridge.NewEthAuthClient(client, batcherMode.Auth)
+		authClient, err := ethbridge.NewEthAuthClient(ctx, client, batcherMode.Auth)
+		if err != nil {
+			return err
+		}
 		globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
 		if err != nil {
 			return err
 		}
-		batch = batcher.NewStatelessBatcher(ctx, rollupAddress, client, globalInbox, maxBatchTime)
+		batch = batcher.NewStatelessBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
 	case StatefulBatcherMode:
-		authClient := ethbridge.NewEthAuthClient(client, batcherMode.Auth)
+		authClient, err := ethbridge.NewEthAuthClient(ctx, client, batcherMode.Auth)
+		if err != nil {
+			return err
+		}
 		globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
 		if err != nil {
 			return err
@@ -105,10 +114,41 @@ func LaunchAggregator(
 		batch = batcher.NewStatefulBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
 	}
 
-	srv := aggregator.NewServer(batch, rollupAddress, db)
+	_, eventCreated, _, _, err := rollupContract.GetCreationInfo(ctx)
+	if err != nil {
+		return err
+	}
+
+	return LaunchAggregatorAdvanced(
+		eventCreated.BlockId.Height.AsInt(),
+		db,
+		rollupAddress,
+		web3RPCPort,
+		web3WSPort,
+		flags,
+		batch,
+		nil,
+		false,
+		make(map[string]interface{}),
+	)
+}
+
+func LaunchAggregatorAdvanced(
+	initialHeight *big.Int,
+	db *txdb.TxDB,
+	rollupAddress common.Address,
+	web3RPCPort string,
+	web3WSPort string,
+	flags utils2.RPCFlags,
+	batch batcher.TransactionBatcher,
+	privateKeys []*ecdsa.PrivateKey,
+	ganacheMode bool,
+	plugins map[string]interface{},
+) error {
+	srv := aggregator.NewServer(batch, rollupAddress, db, initialHeight)
 	errChan := make(chan error, 1)
 
-	web3Server, err := web3.GenerateWeb3Server(srv)
+	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, ganacheMode, plugins)
 	if err != nil {
 		return err
 	}

@@ -2,10 +2,12 @@ package web3
 
 import (
 	"context"
-	"errors"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -20,14 +22,18 @@ import (
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
+var logger = log.With().Caller().Str("component", "web3").Logger()
+
 type Server struct {
-	srv *aggregator.Server
+	srv         *aggregator.Server
+	ganacheMode bool
 }
 
 func NewServer(
 	srv *aggregator.Server,
+	ganacheMode bool,
 ) *Server {
-	return &Server{srv: srv}
+	return &Server{srv: srv, ganacheMode: ganacheMode}
 }
 
 func (s *Server) ChainId() hexutil.Uint64 {
@@ -36,8 +42,8 @@ func (s *Server) ChainId() hexutil.Uint64 {
 	).Uint64())
 }
 
-func (s *Server) GasPrice() hexutil.Uint64 {
-	return 0
+func (s *Server) GasPrice() *hexutil.Big {
+	return (*hexutil.Big)(big.NewInt(0))
 }
 
 func (s *Server) Accounts() []common.Address {
@@ -55,7 +61,7 @@ func (s *Server) GetBalance(address *common.Address, blockNum *rpc.BlockNumber) 
 	}
 	balance, err := snap.GetBalance(arbcommon.NewAddressFromEth(*address))
 	if err != nil {
-		return nil, errors2.Wrap(err, "error getting balance")
+		return nil, errors.Wrap(err, "error getting balance")
 	}
 	return (*hexutil.Big)(balance), nil
 }
@@ -67,28 +73,33 @@ func (s *Server) GetStorageAt(address *common.Address, index *hexutil.Big, block
 	}
 	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*address), (*big.Int)(index))
 	if err != nil {
-		return nil, errors2.Wrap(err, "error getting storage")
+		return nil, errors.Wrap(err, "error getting storage")
 	}
 	return (*hexutil.Big)(storageVal), nil
 }
 
 func (s *Server) GetTransactionCount(ctx context.Context, address *common.Address, blockNum *rpc.BlockNumber) (hexutil.Uint64, error) {
 	account := arbcommon.NewAddressFromEth(*address)
-	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
-		count := s.srv.PendingTransactionCount(ctx, account)
-		if count != nil {
-			return hexutil.Uint64(*count), nil
-		}
-	}
 	snap, err := s.getSnapshot(blockNum)
 	if err != nil {
 		return 0, err
 	}
 	txCount, err := snap.GetTransactionCount(account)
 	if err != nil {
-		return 0, errors2.Wrap(err, "error getting transaction count")
+		return 0, errors.Wrap(err, "error getting transaction count")
 	}
-	return hexutil.Uint64(txCount.Uint64()), nil
+
+	count := txCount.Uint64()
+	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
+		pending := s.srv.PendingTransactionCount(ctx, account)
+		if pending != nil {
+			if *pending > count {
+				count = *pending
+			}
+		}
+	}
+
+	return hexutil.Uint64(count), nil
 }
 
 func (s *Server) GetBlockTransactionCountByHash(blockHash common.Hash) (*hexutil.Big, error) {
@@ -118,7 +129,7 @@ func (s *Server) GetCode(address *common.Address, blockNum *rpc.BlockNumber) (he
 	}
 	code, err := snap.GetCode(arbcommon.NewAddressFromEth(*address))
 	if err != nil {
-		return nil, errors2.Wrap(err, "error getting code")
+		return nil, errors.Wrap(err, "error getting code")
 	}
 	return code, nil
 }
@@ -135,10 +146,68 @@ func (s *Server) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (he
 	return tx.Hash().Bytes(), nil
 }
 
+type revertError struct {
+	error
+	reason interface{}
+}
+
+// ErrorCode returns the JSON error code for a revertal.
+// See: https://github.com/ethereum/wiki/wiki/JSON-RPC-Error-Codes-Improvement-Proposal
+func (e revertError) ErrorCode() int {
+	return 3
+}
+
+// ErrorData returns the hex encoded revert reason.
+func (e revertError) ErrorData() interface{} {
+	return e.reason
+}
+
+type ganacheErrorData struct {
+	Error  string `json:"error"`
+	Return string `json:"return"`
+	Reason string `json:"reason"`
+}
+
+func handleCallError(res *evm.TxResult, ganacheMode bool) error {
+	if len(res.ReturnData) > 0 {
+		err := vm.ErrExecutionReverted
+		reason := ""
+		revertReason, unpackError := abi.UnpackRevert(res.ReturnData)
+		if unpackError == nil {
+			err = errors.Errorf("execution reverted: %v", revertReason)
+			reason = revertReason
+		}
+
+		var errorReason interface{}
+		if ganacheMode {
+			errMap := make(map[string]ganacheErrorData)
+			errMap[res.IncomingRequest.MessageID.String()] = ganacheErrorData{
+				Error:  err.Error(),
+				Return: hexutil.Encode(res.ReturnData),
+				Reason: reason,
+			}
+			errorReason = errMap
+		} else {
+			errorReason = hexutil.Encode(res.ReturnData)
+		}
+
+		return revertError{
+			error:  err,
+			reason: errorReason,
+		}
+	} else {
+		return vm.ErrExecutionReverted
+	}
+}
+
 func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
 	res, err := s.executeCall(callArgs, blockNum)
 	if err != nil {
 		return nil, err
+	}
+
+	if res.ResultCode == evm.RevertCode {
+		return nil, handleCallError(res, s.ganacheMode)
 	}
 	return res.ReturnData, nil
 }
@@ -147,7 +216,11 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	blockNum := rpc.PendingBlockNumber
 	res, err := s.executeCall(args, &blockNum)
 	if err != nil {
+		logger.Warn().Err(err).Msg("error estimating gas")
 		return 0, err
+	}
+	if res.ResultCode == evm.RevertCode {
+		return 0, handleCallError(res, s.ganacheMode)
 	}
 	return hexutil.Uint64(res.GasUsed.Uint64() + 1000000), nil
 }
@@ -451,31 +524,63 @@ func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.T
 	}
 	from, msg := buildCallMsg(args)
 	msg = s.srv.AdjustGas(msg)
-	return snap.Call(msg, from)
+	res, err := snap.Call(msg, from)
+	if err != nil {
+		logMsg := logger.Warn().Err(err)
+		if blockNum != nil {
+			logMsg = logMsg.Int64("height", blockNum.Int64())
+		} else {
+			logMsg = logMsg.Str("height", "nil")
+		}
+		logMsg.Msg("error executing call")
+		return nil, err
+	}
+	log.Debug().
+		Uint64("gaslimit", msg.MaxGas.Uint64()).
+		Uint64("gasused", res.GasUsed.Uint64()).
+		Hex("returndata", res.ReturnData).
+		Int("resultcode", int(res.ResultCode)).
+		Msg("executed call")
+
+	if res.ResultCode != evm.ReturnCode && res.ResultCode != evm.RevertCode {
+		return nil, errors.Errorf("failed to execute call with revert code %v", res.ResultCode)
+	}
+	return res, err
 }
 
 func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {
 	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
-		return s.srv.PendingSnapshot(), nil
+		pending := s.srv.PendingSnapshot()
+		if pending != nil {
+			return pending, nil
+		}
+		// If pending isn't available, we can fall back to latest
+		latest := rpc.LatestBlockNumber
+		blockNum = &latest
 	}
 
 	if *blockNum == rpc.LatestBlockNumber {
-		return s.srv.LatestSnapshot(), nil
+		snap := s.srv.LatestSnapshot()
+		if snap == nil {
+			return nil, errors.New("couldn't fetch latest snapshot")
+		}
+		return snap, nil
 	}
 
 	snap, err := s.srv.GetSnapshot(uint64(*blockNum))
 	if err != nil {
 		return nil, err
 	}
-	if snap != nil {
-		return snap, nil
+	if snap == nil {
+		return nil, errors.New("unsupported block number")
 	}
-
-	return nil, errors.New("unsupported block number")
+	return snap, nil
 }
 
 func (s *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
-	if *block == rpc.LatestBlockNumber {
+	if *block == rpc.EarliestBlockNumber {
+		return s.srv.InitialBlockHeight().Uint64(), nil
+	} else if *block == rpc.LatestBlockNumber {
 		return s.srv.GetBlockCount(), nil
 	} else if *block >= 0 {
 		return uint64(*block), nil

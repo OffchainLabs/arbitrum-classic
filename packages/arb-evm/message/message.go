@@ -17,14 +17,17 @@
 package message
 
 import (
-	"errors"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
+
+var logger = log.With().Caller().Str("component", "message").Logger()
 
 const (
 	EthType inbox.Type = iota
