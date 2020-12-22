@@ -629,3 +629,18 @@ func (t TransactionBatch) AsDataSafe() []byte {
 	}
 	return ret
 }
+
+type HeartbeatMessage struct {
+}
+
+func (t HeartbeatMessage) L2Type() L2SubType {
+	return HeartbeatType
+}
+
+func (t HeartbeatMessage) AsData() ([]byte, error) {
+	return t.AsDataSafe(), nil
+}
+
+func (t HeartbeatMessage) AsDataSafe() []byte {
+	return nil
+}
