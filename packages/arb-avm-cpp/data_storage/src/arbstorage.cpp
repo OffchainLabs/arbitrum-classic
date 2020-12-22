@@ -209,12 +209,14 @@ Assertion ArbStorage::runSideloaded(uint64_t stepCount,
                                     std::vector<Tuple> inbox_messages,
                                     std::chrono::seconds wallLimit,
                                     Tuple sideload) {
-    return Assertion();
+    return cmach->runSideloaded(stepCount, std::move(inbox_messages), wallLimit,
+                                std::move(sideload));
 }
 
 Assertion ArbStorage::runCallServer(uint64_t stepCount,
                                     std::vector<Tuple> inbox_messages,
                                     std::chrono::seconds wallLimit,
                                     value fake_inbox_peek_value) {
-    return Assertion();
+    return cmach->runCallServer(stepCount, std::move(inbox_messages), wallLimit,
+                                std::move(fake_inbox_peek_value));
 }
