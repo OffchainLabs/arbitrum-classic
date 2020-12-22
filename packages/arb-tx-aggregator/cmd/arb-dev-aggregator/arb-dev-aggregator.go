@@ -142,7 +142,7 @@ func main() {
 	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
 	backend := NewBackend(db, l1, signer)
 
-	if err := backend.AddInboxMessage(ctx, initMsg, rollupAddress); err != nil {
+	if err := backend.AddInboxMessage(ctx, initMsg, rollupAddress, backend.l1Emulator.GenerateBlock()); err != nil {
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
@@ -167,7 +167,7 @@ func main() {
 			Dest:  common.NewAddressFromEth(account.Address),
 			Value: depositSize,
 		}
-		if err := backend.AddInboxMessage(ctx, deposit, rollupAddress); err != nil {
+		if err := backend.AddInboxMessage(ctx, deposit, rollupAddress, backend.l1Emulator.GenerateBlock()); err != nil {
 			logger.Fatal().Stack().Err(err).Send()
 		}
 		accounts = append(accounts, account)
@@ -253,13 +253,14 @@ func (s *EVM) Snapshot() (hexutil.Uint64, error) {
 	if err != nil {
 		return 0, err
 	}
+	latestHeight := s.backend.l1Emulator.Latest().blockId.Height.AsInt().Uint64()
 	logger.
 		Info().
-		Uint64("latest", s.backend.l1Emulator.Latest()).
+		Uint64("latest", latestHeight).
 		Uint64("logcount", logCount).
 		Uint64("messagecount", messageCount).
 		Msg("created snapshot")
-	return hexutil.Uint64(s.backend.l1Emulator.Latest()), nil
+	return hexutil.Uint64(latestHeight), nil
 }
 
 func (s *EVM) Revert(ctx context.Context, snapId hexutil.Uint64) error {
@@ -271,9 +272,20 @@ func (s *EVM) Revert(ctx context.Context, snapId hexutil.Uint64) error {
 	return err
 }
 
-type L1BlockInfo struct {
-	blockId   *common.BlockId
-	timestamp *big.Int
+func (s *EVM) Mine(ctx context.Context, timestamp *hexutil.Big) error {
+	var block L1BlockInfo
+	if timestamp != nil {
+		block = s.backend.l1Emulator.GenerateBlockAtTime((*big.Int)(timestamp))
+	} else {
+		block = s.backend.l1Emulator.GenerateBlock()
+	}
+	return s.backend.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block)
+}
+
+func (s *EVM) IncreaseTime(ctx context.Context, amount hexutil.Uint64) (hexutil.Uint64, error) {
+	block := s.backend.l1Emulator.GenerateBlockWithTimeIncrease(new(big.Int).SetUint64(uint64(amount)))
+	err := s.backend.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block)
+	return amount, err
 }
 
 type Backend struct {
@@ -298,7 +310,8 @@ func NewBackend(db *txdb.TxDB, l1 *L1Emulator, signer types.Signer) *Backend {
 func (b *Backend) Reorg(ctx context.Context, height uint64) error {
 	startHeight := b.db.LatestBlock()
 	b.l1Emulator.Reorg(height)
-	if b.l1Emulator.Latest() != height {
+	latestHeight := b.l1Emulator.Latest().blockId.Height.AsInt().Uint64()
+	if latestHeight != height {
 		panic("wrong height")
 	}
 	if _, err := b.db.Load(ctx); err != nil {
@@ -344,19 +357,17 @@ func (b *Backend) SendTransaction(ctx context.Context, tx *types.Transaction) er
 		Uint64("nonce", tx.Nonce()).
 		Str("from", sender.Hex()).
 		Msg("sent transaction")
-
-	return b.addInboxMessage(ctx, arbMsg, common.NewAddressFromEth(sender))
+	block := b.l1Emulator.GenerateBlock()
+	return b.addInboxMessage(ctx, arbMsg, common.NewAddressFromEth(sender), block)
 }
 
-func (b *Backend) AddInboxMessage(ctx context.Context, msg message.Message, sender common.Address) error {
+func (b *Backend) AddInboxMessage(ctx context.Context, msg message.Message, sender common.Address, block L1BlockInfo) error {
 	b.Lock()
 	defer b.Unlock()
-	return b.addInboxMessage(ctx, msg, sender)
+	return b.addInboxMessage(ctx, msg, sender, block)
 }
 
-func (b *Backend) addInboxMessage(ctx context.Context, msg message.Message, sender common.Address) error {
-	block := b.l1Emulator.GenerateBlock()
-
+func (b *Backend) addInboxMessage(ctx context.Context, msg message.Message, sender common.Address, block L1BlockInfo) error {
 	chainTime := inbox.ChainTime{
 		BlockNum:  block.blockId.Height,
 		Timestamp: block.timestamp,
@@ -385,6 +396,11 @@ func (b *Backend) PendingSnapshot() *snapshot.Snapshot {
 	return nil
 }
 
+type L1BlockInfo struct {
+	blockId   *common.BlockId
+	timestamp *big.Int
+}
+
 type L1Emulator struct {
 	sync.Mutex
 	l1Blocks       []L1BlockInfo
@@ -395,12 +411,12 @@ func NewL1Emulator() *L1Emulator {
 	b := &L1Emulator{
 		l1BlocksByHash: make(map[common.Hash]L1BlockInfo),
 	}
-	b.addBlock()
+	b.addBlockAtTime(big.NewInt(time.Now().Unix()))
 	return b
 }
 
-func (b *L1Emulator) Latest() uint64 {
-	return uint64(len(b.l1Blocks)) - 1
+func (b *L1Emulator) Latest() L1BlockInfo {
+	return b.l1Blocks[uint64(len(b.l1Blocks))-1]
 }
 
 func (b *L1Emulator) Reorg(height uint64) {
@@ -432,21 +448,37 @@ func (b *L1Emulator) TimestampForBlockHash(_ context.Context, hash common.Hash) 
 	return info.timestamp, nil
 }
 
-func (b *L1Emulator) addBlock() L1BlockInfo {
+func (b *L1Emulator) addBlockAtTime(timestamp *big.Int) L1BlockInfo {
 	info := L1BlockInfo{
 		blockId: &common.BlockId{
 			Height:     common.NewTimeBlocksInt(int64(len(b.l1Blocks))),
 			HeaderHash: common.RandHash(),
 		},
-		timestamp: big.NewInt(time.Now().Unix()),
+		timestamp: timestamp,
 	}
 	b.l1Blocks = append(b.l1Blocks, info)
 	b.l1BlocksByHash[info.blockId.HeaderHash] = info
 	return info
 }
 
+func (b *L1Emulator) addBlockWithTimeIncrease(amount *big.Int) L1BlockInfo {
+	return b.addBlockAtTime(new(big.Int).Add(b.Latest().timestamp, amount))
+}
+
 func (b *L1Emulator) GenerateBlock() L1BlockInfo {
 	b.Lock()
 	defer b.Unlock()
-	return b.addBlock()
+	return b.addBlockWithTimeIncrease(new(big.Int).SetUint64(uint64((time.Second * 15).Seconds())))
+}
+
+func (b *L1Emulator) GenerateBlockWithTimeIncrease(timestamp *big.Int) L1BlockInfo {
+	b.Lock()
+	defer b.Unlock()
+	return b.addBlockWithTimeIncrease(timestamp)
+}
+
+func (b *L1Emulator) GenerateBlockAtTime(timestamp *big.Int) L1BlockInfo {
+	b.Lock()
+	defer b.Unlock()
+	return b.addBlockAtTime(timestamp)
 }
