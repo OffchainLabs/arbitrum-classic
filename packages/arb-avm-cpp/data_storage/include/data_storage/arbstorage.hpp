@@ -62,10 +62,10 @@ class ArbStorage {
                   std::vector<Tuple> inbox_messages,
                   std::chrono::seconds wallLimit);
 
-    static Assertion runSideloaded(uint64_t stepCount,
-                                   std::vector<Tuple> inbox_messages,
-                                   std::chrono::seconds wallLimit,
-                                   Tuple sideload);
+    Assertion runSideloaded(uint64_t stepCount,
+                            std::vector<Tuple> inbox_messages,
+                            std::chrono::seconds wallLimit,
+                            Tuple sideload);
 
     Assertion runCallServer(uint64_t stepCount,
                             std::vector<Tuple> inbox_messages,

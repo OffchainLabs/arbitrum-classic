@@ -23,11 +23,14 @@
 #include <iostream>
 #include <utility>
 
+void CheckpointedMachine::saveCheckpoint() {
+    storage.saveCheckpoint(*mach);
+}
+
 Assertion CheckpointedMachine::run(uint64_t stepCount,
                                    std::vector<Tuple> inbox_messages,
                                    std::chrono::seconds wallLimit) {
-    Assertion assertion =
-        mach->run(stepCount, std::move(inbox_messages), wallLimit);
+    auto assertion = mach->run(stepCount, std::move(inbox_messages), wallLimit);
 
     storage.saveAssertion(assertion);
 
@@ -38,14 +41,23 @@ Assertion CheckpointedMachine::runCallServer(uint64_t stepCount,
                                              std::vector<Tuple> inbox_messages,
                                              std::chrono::seconds wallLimit,
                                              value fake_inbox_peek_value) {
-    return mach->runCallServer(stepCount, std::move(inbox_messages), wallLimit,
-                               std::move(fake_inbox_peek_value));
+    auto assertion =
+        mach->runCallServer(stepCount, std::move(inbox_messages), wallLimit,
+                            std::move(fake_inbox_peek_value));
+
+    storage.saveAssertion(assertion);
+
+    return assertion;
 }
 
 Assertion CheckpointedMachine::runSideloaded(uint64_t stepCount,
                                              std::vector<Tuple> inbox_messages,
                                              std::chrono::seconds wallLimit,
                                              Tuple sideload_value) {
-    return mach->runSideloaded(stepCount, std::move(inbox_messages), wallLimit,
-                               std::move(sideload_value));
+    auto assertion = mach->runSideloaded(stepCount, std::move(inbox_messages),
+                                         wallLimit, std::move(sideload_value));
+
+    storage.saveAssertion(assertion);
+
+    return assertion;
 }
