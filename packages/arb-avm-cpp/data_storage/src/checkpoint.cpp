@@ -99,8 +99,8 @@ std::vector<unsigned char> serializeCheckpoint(const Checkpoint& state_data) {
 }
 }  // namespace
 
-rocksdb::Status putCheckpoint(Transaction& transaction,
-                              const Checkpoint& checkpoint) {
+rocksdb::Status Checkpoint::putCheckpoint(Transaction& transaction,
+                                          const Checkpoint& checkpoint) {
     auto key = toKey(checkpoint.messages_output);
     rocksdb::Slice key_slice(key.begin(), key.size());
     auto serialized_checkpoint = serializeCheckpoint(checkpoint);
@@ -111,8 +111,8 @@ rocksdb::Status putCheckpoint(Transaction& transaction,
         transaction.datastorage->checkpoint_column.get(), key_slice, value_str);
 }
 
-rocksdb::Status deleteCheckpoint(Transaction& transaction,
-                                 const uint64_t& message_count) {
+rocksdb::Status Checkpoint::deleteCheckpoint(Transaction& transaction,
+                                             const uint64_t& message_count) {
     auto key = toKey(message_count);
     rocksdb::Slice key_slice(key.begin(), key.size());
     return transaction.datastorage->txn_db->DB::Delete(
@@ -120,8 +120,8 @@ rocksdb::Status deleteCheckpoint(Transaction& transaction,
         transaction.datastorage->checkpoint_column.get(), key_slice);
 }
 
-DbResult<Checkpoint> getKeyCheckpoint(Transaction& transaction,
-                                      rocksdb::Slice key_slice) {
+DbResult<Checkpoint> Checkpoint::getKeyCheckpoint(Transaction& transaction,
+                                                  rocksdb::Slice key_slice) {
     std::string returned_value;
     auto status = transaction.datastorage->txn_db->DB::Get(
         rocksdb::ReadOptions(),
@@ -135,14 +135,14 @@ DbResult<Checkpoint> getKeyCheckpoint(Transaction& transaction,
     return DbResult<Checkpoint>{status, 1, parsed_state};
 }
 
-DbResult<Checkpoint> getCheckpoint(Transaction& transaction,
-                                   const uint64_t& message_number) {
+DbResult<Checkpoint> Checkpoint::getCheckpoint(Transaction& transaction,
+                                               const uint64_t& message_number) {
     auto key = toKey(message_number);
     rocksdb::Slice key_slice(key.begin(), key.size());
     return getKeyCheckpoint(transaction, key_slice);
 }
 
-uint64_t maxCheckpointMessageNumber(Transaction& transaction) {
+uint64_t Checkpoint::maxCheckpointMessageNumber(Transaction& transaction) {
     auto it = std::unique_ptr<rocksdb::Iterator>(
         transaction.datastorage->txn_db->NewIterator(
             rocksdb::ReadOptions(),
@@ -155,8 +155,8 @@ uint64_t maxCheckpointMessageNumber(Transaction& transaction) {
     }
 }
 
-DbResult<Checkpoint> checkpointAtMessageOrPrevious(Transaction& transaction,
-                                                   uint64_t message_number) {
+DbResult<Checkpoint> Checkpoint::atMessageOrPrevious(Transaction& transaction,
+                                                     uint64_t message_number) {
     auto it = std::unique_ptr<rocksdb::Iterator>(
         transaction.datastorage->txn_db->NewIterator(
             rocksdb::ReadOptions(),
@@ -171,7 +171,7 @@ DbResult<Checkpoint> checkpointAtMessageOrPrevious(Transaction& transaction,
     }
 }
 
-bool isEmpty(Transaction& transaction) {
+bool Checkpoint::isEmpty(Transaction& transaction) {
     auto it = std::unique_ptr<rocksdb::Iterator>(
         transaction.datastorage->txn_db->NewIterator(
             rocksdb::ReadOptions(),

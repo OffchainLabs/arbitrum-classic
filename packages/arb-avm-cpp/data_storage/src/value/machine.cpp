@@ -169,7 +169,7 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
 
     auto currentResult = getRefCountedData(*transaction.transaction, key);
     if (currentResult.status.ok()) {
-        // Already saved so just increment refence count
+        // Already saved so just increment reference count
         return saveRefCountedData(*transaction.transaction, key,
                                   currentResult.stored_value);
     }

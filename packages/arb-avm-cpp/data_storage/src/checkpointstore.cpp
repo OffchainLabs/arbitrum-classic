@@ -21,37 +21,7 @@
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 
-constexpr auto message_number_size = 32;
-
-namespace {
-std::array<char, 64> toKey(const uint256_t& height, const uint256_t& hash) {
-    std::array<char, 64> key{};
-    auto it = key.begin();
-    it = to_big_endian(height, it);
-    to_big_endian(hash, it);
-    return key;
-}
-
-std::array<char, message_number_size> toKeyPrefix(const uint256_t& height) {
-    std::array<char, message_number_size> key{};
-    to_big_endian(height, key.begin());
-    return key;
-}
-
-uint256_t keyToHeight(const rocksdb::Slice& key) {
-    return intx::be::unsafe::load<uint256_t>(
-        reinterpret_cast<const unsigned char*>(key.data()));
-}
-
-uint256_t keyToHash(const rocksdb::Slice& key) {
-    return intx::be::unsafe::load<uint256_t>(
-        reinterpret_cast<const unsigned char*>(key.data() +
-                                               message_number_size));
-}
-}  // namespace
-
-void CheckpointStore::saveCheckpoint(const Checkpoint& checkpoint,
-                                     Machine& machine) {
+void CheckpointStore::saveCheckpoint(Machine& machine) {
     auto tx = Transaction::makeTransaction(data_storage);
 
     auto machine_result = saveMachine(*tx, machine);
@@ -60,7 +30,13 @@ void CheckpointStore::saveCheckpoint(const Checkpoint& checkpoint,
                                  machine_result.status.ToString());
     }
 
-    auto checkpoint_result = putCheckpoint(*tx, checkpoint);
+    // TODO Still need to populate the following:
+    // inbox_accumulator_hash
+    // block_hash
+    // block_height
+    pending_checkpoint.machine_hash = machine.hash();
+
+    auto checkpoint_result = Checkpoint::putCheckpoint(*tx, pending_checkpoint);
     if (!checkpoint_result.ok()) {
         throw std::runtime_error("error saving machine: " +
                                  checkpoint_result.ToString());
@@ -93,73 +69,41 @@ void CheckpointStore::saveAssertion(const Assertion& assertion) {
         throw std::runtime_error("error saving assertion: " +
                                  status.ToString());
     }
+
+    pending_checkpoint.step_count = assertion.stepCount;
+    pending_checkpoint.messages_read_count += assertion.inbox_messages_consumed;
+    pending_checkpoint.logs_output += assertion.logs.size();
+    pending_checkpoint.messages_output += assertion.outMessages.size();
+    pending_checkpoint.arb_gas_used += assertion.gasCount;
 }
 
-rocksdb::Status CheckpointStore::deleteCheckpoint(const uint256_t& height,
-                                                  const uint256_t& hash) {
-    auto key = toKey(height, hash);
-    rocksdb::Slice key_slice(key.begin(), key.size());
-    return data_storage->txn_db->DB::Delete(
-        rocksdb::WriteOptions(), data_storage->blocks_column.get(), key_slice);
-}
+rocksdb::Status CheckpointStore::deleteCheckpoint(
+    const uint64_t& message_number) {
+    auto tx = Transaction::makeTransaction(data_storage);
 
-DataResults CheckpointStore::getCheckpoint(const uint256_t& height,
-                                           const uint256_t& hash) const {
-    auto key = toKey(height, hash);
-    rocksdb::Slice key_slice(key.begin(), key.size());
-    std::string value;
-    auto status = data_storage->txn_db->DB::Get(
-        rocksdb::ReadOptions(), data_storage->blocks_column.get(), key_slice,
-        &value);
-    return {status, {value.begin(), value.end()}};
-}
+    auto delete_status = Checkpoint::deleteCheckpoint(*tx, message_number);
 
-std::vector<uint256_t> CheckpointStore::blockHashesAtHeight(
-    const uint256_t& height) const {
-    std::vector<uint256_t> hashes;
-
-    auto prefix = toKeyPrefix(height);
-    rocksdb::Slice prefix_slice(prefix.begin(), prefix.size());
-
-    auto it =
-        std::unique_ptr<rocksdb::Iterator>(data_storage->txn_db->NewIterator(
-            rocksdb::ReadOptions(), data_storage->blocks_column.get()));
-
-    for (it->Seek(prefix_slice);
-         it->key().starts_with(prefix_slice) && it->Valid(); it->Next()) {
-        hashes.push_back(keyToHash(it->key()));
+    auto commit_status = tx->commit();
+    if (!commit_status.ok()) {
+        throw std::runtime_error("error saving assertion: " +
+                                 commit_status.ToString());
     }
-    return hashes;
+
+    return delete_status;
 }
 
-uint256_t CheckpointStore::maxHeight() const {
-    auto it =
-        std::unique_ptr<rocksdb::Iterator>(data_storage->txn_db->NewIterator(
-            rocksdb::ReadOptions(), data_storage->blocks_column.get()));
-    it->SeekToLast();
-    if (it->Valid()) {
-        return keyToHeight(it->key());
-    } else {
-        return 0;
-    }
+DbResult<Checkpoint> CheckpointStore::getCheckpoint(
+    const uint64_t& message_number) const {
+    auto tx = Transaction::makeTransaction(data_storage);
+    return Checkpoint::getCheckpoint(*tx, message_number);
 }
 
-uint256_t CheckpointStore::minHeight() const {
-    auto it =
-        std::unique_ptr<rocksdb::Iterator>(data_storage->txn_db->NewIterator(
-            rocksdb::ReadOptions(), data_storage->blocks_column.get()));
-    it->SeekToFirst();
-    if (it->Valid()) {
-        return keyToHeight(it->key());
-    } else {
-        return 0;
-    }
+uint64_t CheckpointStore::maxMessageNumber() const {
+    auto tx = Transaction::makeTransaction(data_storage);
+    return Checkpoint::maxCheckpointMessageNumber(*tx);
 }
 
 bool CheckpointStore::isEmpty() const {
-    auto it =
-        std::unique_ptr<rocksdb::Iterator>(data_storage->txn_db->NewIterator(
-            rocksdb::ReadOptions(), data_storage->blocks_column.get()));
-    it->SeekToLast();
-    return !it->Valid();
+    auto tx = Transaction::makeTransaction(data_storage);
+    return Checkpoint::isEmpty(*tx);
 }
