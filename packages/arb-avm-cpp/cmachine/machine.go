@@ -124,12 +124,6 @@ func makeExecutionAssertion(
 	outMessagesRaw := toByteSlice(assertion.outMessages)
 	logsRaw := toByteSlice(assertion.logs)
 	debugPrints := protocol.BytesArrayToVals(toByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
-	if len(debugPrints) > 0 {
-		logger.Debug().Msg("Produced assertion containing debug prints")
-		for _, d := range debugPrints {
-			logger.Debug().Str("DebugPrint", d.String()).Send()
-		}
-	}
 	return protocol.NewExecutionAssertion(
 		beforeMachineHash,
 		afterMachineHash,

@@ -30,6 +30,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbosmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -120,7 +121,7 @@ func (db *TxDB) Load(ctx context.Context) (bool, error) {
 
 	initialHeight := new(big.Int).Sub(db.EventCreated.BlockId.Height.AsInt(), big.NewInt(1))
 
-	db.mach = mach
+	db.mach = arbosmachine.New(mach)
 	db.callMut.Lock()
 	defer db.callMut.Unlock()
 	db.lastBlockProcessed = nil
@@ -146,11 +147,11 @@ func (db *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 		var machineHash common.Hash
 		copy(machineHash[:], chainObserverBytes)
 		lastInboxSeq = new(big.Int).SetBytes(chainObserverBytes[32:])
-		var err error
-		mach, err = restoreCtx.GetMachine(machineHash)
+		rawMach, err := restoreCtx.GetMachine(machineHash)
 		if err != nil {
 			return err
 		}
+		mach = arbosmachine.New(rawMach)
 		blockId = restoreBlockId
 		return nil
 	}); err != nil {
