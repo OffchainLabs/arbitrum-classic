@@ -3,15 +3,15 @@ module github.com/offchainlabs/arbitrum/packages/arb-validator
 go 1.13
 
 require (
-	github.com/ethereum/go-ethereum v1.9.24
+	github.com/ethereum/go-ethereum v1.9.25
 	github.com/golang/protobuf v1.4.3
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c // indirect
-	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.3
-	github.com/offchainlabs/arbitrum/packages/arb-checkpointer v0.7.3
+	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.3 // indirect
+	github.com/offchainlabs/arbitrum/packages/arb-checkpointer v0.7.3 // indirect
 	github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator v0.7.3 // indirect
-	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.3
-	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.7.3
+	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.3 // indirect
+	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.7.3 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.20.0
 	google.golang.org/protobuf v1.25.0
