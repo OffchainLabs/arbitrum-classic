@@ -251,7 +251,7 @@ func (db *TxDB) AddMessages(ctx context.Context, msgs []inbox.InboxMessage, fini
 		// TODO: Give ExecuteAssertion the ability to run unbounded until it blocks
 		// The max steps here is a hack since it should just run until it blocks
 		// Last value returned is not an error type
-		assertion, _ := db.mach.ExecuteAssertion(1000000000000, []inbox.InboxMessage{msg}, 0)
+		assertion, _, _ := db.mach.ExecuteAssertion(1000000000000, []inbox.InboxMessage{msg}, 0)
 		db.callMut.Lock()
 		db.lastInboxSeq = msg.InboxSeqNum
 		db.callMut.Unlock()
@@ -275,7 +275,7 @@ func (db *TxDB) AddMessages(ctx context.Context, msgs []inbox.InboxMessage, fini
 	// TODO: Give ExecuteCallServerAssertion the ability to run unbounded until it blocks
 	// The max steps here is a hack since it should just run until it blocks
 	// Last value returned is not an error type
-	assertion, _ := db.mach.ExecuteCallServerAssertion(1000000000000, nil, value.NewIntValue(nextBlockHeight), 0)
+	assertion, _, _ := db.mach.ExecuteCallServerAssertion(1000000000000, nil, value.NewIntValue(nextBlockHeight), 0)
 	processedAssertion, err := db.processAssertion(assertion)
 	if err != nil {
 		return err

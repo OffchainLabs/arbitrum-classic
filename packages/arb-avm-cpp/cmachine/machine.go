@@ -120,7 +120,7 @@ func makeExecutionAssertion(
 	assertion C.RawAssertion,
 	beforeMachineHash common.Hash,
 	afterMachineHash common.Hash,
-) (*protocol.ExecutionAssertion, uint64) {
+) (*protocol.ExecutionAssertion, []value.Value, uint64) {
 	outMessagesRaw := toByteSlice(assertion.outMessages)
 	logsRaw := toByteSlice(assertion.logs)
 	debugPrints := protocol.BytesArrayToVals(toByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
@@ -139,7 +139,7 @@ func makeExecutionAssertion(
 		uint64(assertion.outMessageCount),
 		logsRaw,
 		uint64(assertion.logCount),
-	), uint64(assertion.numSteps)
+	), debugPrints, uint64(assertion.numSteps)
 }
 
 func encodeInboxMessages(inboxMessages []inbox.InboxMessage) []byte {
@@ -161,10 +161,10 @@ func encodeValue(val value.Value) []byte {
 
 func (m *Machine) ExecuteAssertion(
 	maxSteps uint64,
-	inboxMessages []inbox.InboxMessage,
+	messages []inbox.InboxMessage,
 	maxWallTime time.Duration,
-) (*protocol.ExecutionAssertion, uint64) {
-	msgDataC := C.CBytes(encodeInboxMessages(inboxMessages))
+) (*protocol.ExecutionAssertion, []value.Value, uint64) {
+	msgDataC := C.CBytes(encodeInboxMessages(messages))
 	defer C.free(msgDataC)
 
 	beforeHash := m.Hash()
@@ -172,7 +172,7 @@ func (m *Machine) ExecuteAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
 		msgDataC,
-		C.uint64_t(len(inboxMessages)),
+		C.uint64_t(len(messages)),
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
 
@@ -184,7 +184,7 @@ func (m *Machine) ExecuteCallServerAssertion(
 	inboxMessages []inbox.InboxMessage,
 	fakeInboxPeekValue value.Value,
 	maxWallTime time.Duration,
-) (*protocol.ExecutionAssertion, uint64) {
+) (*protocol.ExecutionAssertion, []value.Value, uint64) {
 	msgDataC := C.CBytes(encodeInboxMessages(inboxMessages))
 	defer C.free(msgDataC)
 
@@ -198,31 +198,6 @@ func (m *Machine) ExecuteCallServerAssertion(
 		msgDataC,
 		C.uint64_t(len(inboxMessages)),
 		inboxPeekDataC,
-		C.uint64_t(uint64(maxWallTime.Seconds())),
-	)
-
-	return makeExecutionAssertion(assertion, beforeHash, m.Hash())
-}
-
-func (m *Machine) ExecuteSideloadedAssertion(
-	maxSteps uint64,
-	inboxMessages []inbox.InboxMessage,
-	sideloadValue *value.TupleValue,
-	maxWallTime time.Duration,
-) (*protocol.ExecutionAssertion, uint64) {
-	msgDataC := C.CBytes(encodeInboxMessages(inboxMessages))
-	defer C.free(msgDataC)
-
-	sideloadDataC := C.CBytes(encodeValue(sideloadValue))
-	defer C.free(sideloadDataC)
-
-	beforeHash := m.Hash()
-	assertion := C.executeSideloadedAssertion(
-		m.c,
-		C.uint64_t(maxSteps),
-		msgDataC,
-		C.uint64_t(len(inboxMessages)),
-		sideloadDataC,
 		C.uint64_t(uint64(maxWallTime.Seconds())),
 	)
 
