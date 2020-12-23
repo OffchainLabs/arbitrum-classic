@@ -41,15 +41,13 @@ type Machine interface {
 	CurrentStatus() Status
 	IsBlocked(newMessages bool) BlockReason
 
-	ExecuteAssertion(maxSteps uint64, messages []inbox.InboxMessage, maxWallTime time.Duration) (*protocol.ExecutionAssertion, uint64)
+	ExecuteAssertion(maxSteps uint64, messages []inbox.InboxMessage, maxWallTime time.Duration) (*protocol.ExecutionAssertion, []value.Value, uint64)
 
 	// Supply a value that the inbox peek opcode will return if the inbox
 	// runs out of messages. For ArbOS, this can be used to simulate a message
 	// from the next block arriving in order to trigger end-of-block processes
 	// without waiting for the next block
-	ExecuteCallServerAssertion(maxSteps uint64, inboxMessages []inbox.InboxMessage, fakeInboxPeekValue value.Value, maxWallTime time.Duration) (*protocol.ExecutionAssertion, uint64)
-
-	ExecuteSideloadedAssertion(maxSteps uint64, messages []inbox.InboxMessage, sideloadValue *value.TupleValue, maxWallTime time.Duration) (*protocol.ExecutionAssertion, uint64)
+	ExecuteCallServerAssertion(maxSteps uint64, inboxMessages []inbox.InboxMessage, fakeInboxPeekValue value.Value, maxWallTime time.Duration) (*protocol.ExecutionAssertion, []value.Value, uint64)
 
 	MarshalForProof() ([]byte, error)
 
