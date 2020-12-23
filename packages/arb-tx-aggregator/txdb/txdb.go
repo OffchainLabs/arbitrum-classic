@@ -30,6 +30,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbosmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -120,7 +121,7 @@ func (db *TxDB) Load(ctx context.Context) (bool, error) {
 
 	initialHeight := new(big.Int).Sub(db.EventCreated.BlockId.Height.AsInt(), big.NewInt(1))
 
-	db.mach = mach
+	db.mach = arbosmachine.New(mach)
 	db.callMut.Lock()
 	defer db.callMut.Unlock()
 	db.lastBlockProcessed = nil
@@ -146,11 +147,11 @@ func (db *TxDB) restoreFromCheckpoint(ctx context.Context) error {
 		var machineHash common.Hash
 		copy(machineHash[:], chainObserverBytes)
 		lastInboxSeq = new(big.Int).SetBytes(chainObserverBytes[32:])
-		var err error
-		mach, err = restoreCtx.GetMachine(machineHash)
+		rawMach, err := restoreCtx.GetMachine(machineHash)
 		if err != nil {
 			return err
 		}
+		mach = arbosmachine.New(rawMach)
 		blockId = restoreBlockId
 		return nil
 	}); err != nil {
@@ -251,7 +252,7 @@ func (db *TxDB) AddMessages(ctx context.Context, msgs []inbox.InboxMessage, fini
 		// TODO: Give ExecuteAssertion the ability to run unbounded until it blocks
 		// The max steps here is a hack since it should just run until it blocks
 		// Last value returned is not an error type
-		assertion, _ := db.mach.ExecuteAssertion(1000000000000, []inbox.InboxMessage{msg}, 0)
+		assertion, _, _ := db.mach.ExecuteAssertion(1000000000000, []inbox.InboxMessage{msg}, 0)
 		db.callMut.Lock()
 		db.lastInboxSeq = msg.InboxSeqNum
 		db.callMut.Unlock()
@@ -275,7 +276,7 @@ func (db *TxDB) AddMessages(ctx context.Context, msgs []inbox.InboxMessage, fini
 	// TODO: Give ExecuteCallServerAssertion the ability to run unbounded until it blocks
 	// The max steps here is a hack since it should just run until it blocks
 	// Last value returned is not an error type
-	assertion, _ := db.mach.ExecuteCallServerAssertion(1000000000000, nil, value.NewIntValue(nextBlockHeight), 0)
+	assertion, _, _ := db.mach.ExecuteCallServerAssertion(1000000000000, nil, value.NewIntValue(nextBlockHeight), 0)
 	processedAssertion, err := db.processAssertion(assertion)
 	if err != nil {
 		return err

@@ -144,7 +144,7 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 func doAnAssertion(chain *ChainObserver, baseNode *structures.Node) error {
 	theMachine := baseNode.Machine()
 	var messages []inbox.InboxMessage
-	execAssertion, numSteps := theMachine.ExecuteAssertion(1, messages, time.Hour)
+	execAssertion, _, numSteps := theMachine.ExecuteAssertion(1, messages, time.Hour)
 
 	assertionParams := &valprotocol.AssertionParams{
 		NumSteps:             numSteps,

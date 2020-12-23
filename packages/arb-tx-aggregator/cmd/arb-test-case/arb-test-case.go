@@ -98,7 +98,7 @@ func generateTestCase(ethURL string, rollupAddress common.Address, contract stri
 	}
 
 	// Last value returned is not an error type
-	assertion, _ := mach.ExecuteAssertion(
+	assertion, _, _ := mach.ExecuteAssertion(
 		1000000000000,
 		messages,
 		0,

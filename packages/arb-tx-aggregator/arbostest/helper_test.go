@@ -159,7 +159,7 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int
 	t.Helper()
 	mach, err := cmachine.New(arbos.Path())
 	failIfError(t, err)
-	assertion, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
+	assertion, _, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
 	logs := assertion.ParseLogs()
 	sends := assertion.ParseOutMessages()
 	testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)

@@ -76,7 +76,7 @@ func TestCheckpointMachine(t *testing.T) {
 
 	t.Log("Initial machine hash", mach.Hash())
 
-	_, numSteps := mach.ExecuteAssertion(
+	_, _, numSteps := mach.ExecuteAssertion(
 		1000,
 		nil,
 		time.Hour,
