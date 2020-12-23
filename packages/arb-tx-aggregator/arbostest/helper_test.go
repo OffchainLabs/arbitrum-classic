@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbosmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -157,8 +158,9 @@ func failIfError(t *testing.T, err error) {
 
 func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, []value.Value, machine.Machine, *protocol.ExecutionAssertion) {
 	t.Helper()
-	mach, err := cmachine.New(arbos.Path())
+	cmach, err := cmachine.New(arbos.Path())
 	failIfError(t, err)
+	mach := arbosmachine.New(cmach)
 	assertion, _, _ := mach.ExecuteAssertion(10000000000, inboxMessages, 0)
 	logs := assertion.ParseLogs()
 	sends := assertion.ParseOutMessages()
