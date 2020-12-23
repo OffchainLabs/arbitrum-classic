@@ -52,25 +52,12 @@ class ArbStorage {
     std::unique_ptr<KeyValueStore> makeKeyValueStore();
     std::unique_ptr<BlockStore> getBlockStore() const;
     std::unique_ptr<AggregatorStore> getAggregatorStore() const;
+    std::shared_ptr<CheckpointedMachine> getCheckpointedMachine();
 
     Machine getInitialMachine(ValueCache& value_cache) const;
     Machine getMachine(uint256_t machineHash, ValueCache& value_cache) const;
     DbResult<value> getValue(uint256_t value_hash,
                              ValueCache& value_cache) const;
-
-    Assertion run(uint64_t stepCount,
-                  std::vector<Tuple> inbox_messages,
-                  std::chrono::seconds wallLimit);
-
-    Assertion runSideloaded(uint64_t stepCount,
-                            std::vector<Tuple> inbox_messages,
-                            std::chrono::seconds wallLimit,
-                            Tuple sideload);
-
-    Assertion runCallServer(uint64_t stepCount,
-                            std::vector<Tuple> inbox_messages,
-                            std::chrono::seconds wallLimit,
-                            value fake_inbox_peek_value);
 };
 
 #endif /* arbstorage_hpp */

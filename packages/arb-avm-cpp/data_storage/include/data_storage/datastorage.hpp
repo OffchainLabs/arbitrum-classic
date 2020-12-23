@@ -57,9 +57,9 @@ class Transaction {
         : datastorage(std::move(datastorage_)),
           transaction(std::move(transaction_)) {}
 
-    rocksdb::Status commit() const { return transaction->Commit(); }
+    rocksdb::Status commit() { return transaction->Commit(); }
 
-    rocksdb::Status rollback() const { return transaction->Rollback(); }
+    rocksdb::Status rollback() { return transaction->Rollback(); }
 
     static std::unique_ptr<Transaction> makeTransaction(
         std::shared_ptr<DataStorage> store);
