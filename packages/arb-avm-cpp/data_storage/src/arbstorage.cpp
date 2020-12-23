@@ -104,6 +104,10 @@ std::unique_ptr<AggregatorStore> ArbStorage::getAggregatorStore() const {
     return std::make_unique<AggregatorStore>(datastorage);
 }
 
+std::shared_ptr<CheckpointedMachine> ArbStorage::getCheckpointedMachine() {
+    return cmach;
+}
+
 Machine ArbStorage::getInitialMachine(ValueCache& value_cache) const {
     auto tx = makeConstTransaction();
     std::string initial_raw;
@@ -123,7 +127,7 @@ Machine ArbStorage::getMachine(uint256_t machineHash,
                                ValueCache& value_cache) const {
     std::set<uint64_t> segment_ids;
     auto transaction = makeConstTransaction();
-    auto results = getMachineState(*transaction, machineHash);
+    auto results = getMachineStateKeys(*transaction, machineHash);
     if (!results.status.ok()) {
         throw std::runtime_error("failed to load machine state");
     }
@@ -198,25 +202,4 @@ DbResult<value> ArbStorage::getValue(uint256_t value_hash,
                                      ValueCache& value_cache) const {
     auto tx = makeConstTransaction();
     return ::getValue(*tx, value_hash, value_cache);
-}
-Assertion ArbStorage::run(uint64_t stepCount,
-                          std::vector<Tuple> inbox_messages,
-                          std::chrono::seconds wallLimit) {
-    return cmach->run(stepCount, std::move(inbox_messages), wallLimit);
-}
-
-Assertion ArbStorage::runSideloaded(uint64_t stepCount,
-                                    std::vector<Tuple> inbox_messages,
-                                    std::chrono::seconds wallLimit,
-                                    Tuple sideload) {
-    return cmach->runSideloaded(stepCount, std::move(inbox_messages), wallLimit,
-                                std::move(sideload));
-}
-
-Assertion ArbStorage::runCallServer(uint64_t stepCount,
-                                    std::vector<Tuple> inbox_messages,
-                                    std::chrono::seconds wallLimit,
-                                    value fake_inbox_peek_value) {
-    return cmach->runCallServer(stepCount, std::move(inbox_messages), wallLimit,
-                                std::move(fake_inbox_peek_value));
 }

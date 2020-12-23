@@ -48,7 +48,11 @@ class CheckpointStore {
     DbResult<Checkpoint> getCheckpoint(const uint64_t& message_number) const;
 
     bool isEmpty() const;
-    uint64_t maxMessageNumber() const;
+    uint64_t maxMessageNumber();
+    DbResult<Checkpoint> atMessageOrPrevious(const uint64_t& message_number);
 };
+
+DbResult<Checkpoint> getCheckpointWithKey(Transaction& transaction,
+                                          rocksdb::Slice key_slice);
 
 #endif /* checkpointstore_hpp */

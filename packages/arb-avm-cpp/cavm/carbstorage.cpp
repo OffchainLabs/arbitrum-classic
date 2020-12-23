@@ -200,7 +200,7 @@ int deleteData(CArbStorage* storage_ptr, const void* key, int key_length) {
     return keyvalue_store->deleteData(key_slice).ok();
 }
 
-RawAssertion ArbExecuteAssertion(CArbStorage* storage_ptr,
+RawAssertion arbExecuteAssertion(CArbStorage* storage_ptr,
                                  uint64_t maxSteps,
                                  void* inbox_messages,
                                  uint64_t message_count,
@@ -209,8 +209,8 @@ RawAssertion ArbExecuteAssertion(CArbStorage* storage_ptr,
     auto messages = getInboxMessages(inbox_messages, message_count);
 
     try {
-        auto assertion = storage->run(maxSteps, std::move(messages),
-                                      std::chrono::seconds{wallLimit});
+        auto assertion = storage->getCheckpointedMachine()->run(
+            maxSteps, std::move(messages), std::chrono::seconds{wallLimit});
 
         return makeRawAssertion(assertion);
     } catch (const std::exception& e) {

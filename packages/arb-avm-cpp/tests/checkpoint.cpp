@@ -330,7 +330,7 @@ void saveState(Transaction& transaction,
 void checkSavedState(const Transaction& transaction,
                      const Machine& expected_machine,
                      uint32_t expected_ref_count) {
-    auto results = getMachineState(transaction, expected_machine.hash());
+    auto results = getMachineStateKeys(transaction, expected_machine.hash());
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == expected_ref_count);
 
@@ -355,7 +355,7 @@ void checkSavedState(const Transaction& transaction,
 
 void checkDeletedCheckpoint(Transaction& transaction,
                             const Machine& deleted_machine) {
-    auto results = getMachineState(transaction, deleted_machine.hash());
+    auto results = getMachineStateKeys(transaction, deleted_machine.hash());
     REQUIRE(!results.status.ok());
 
     auto datastack_tup =

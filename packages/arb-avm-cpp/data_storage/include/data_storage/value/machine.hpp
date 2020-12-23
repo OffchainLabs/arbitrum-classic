@@ -19,6 +19,7 @@
 
 #include <avm/machinestate/status.hpp>
 
+#include <rocksdb/status.h>
 #include <avm_values/bigint.hpp>
 #include <avm_values/codepointstub.hpp>
 
@@ -43,7 +44,7 @@ struct MachineStateKeys {
     uint256_t staged_message_hash;
     Status status;
 
-    MachineStateKeys() : pc(0, 0), err_pc({0, 0}, 0) {}
+    MachineStateKeys() : pc(0, 0), err_pc({0, 0}, 0), status() {}
     MachineStateKeys(uint256_t static_hash_,
                      uint256_t register_hash_,
                      uint256_t datastack_hash_,
@@ -64,9 +65,18 @@ struct MachineStateKeys {
           status(status_) {}
 };
 
-DbResult<MachineStateKeys> getMachineState(const Transaction& transaction,
-                                           uint256_t machineHash);
+DbResult<MachineStateKeys> getMachineStateKeys(const Transaction& transaction,
+                                               uint256_t machineHash);
+MachineStateKeys extractMachineStateKeys(
+    std::vector<unsigned char>::const_iterator& iter);
+void serializeMachineStateKeys(const MachineStateKeys& state_data,
+                               std::vector<unsigned char>& state_data_vector);
+rocksdb::Status saveMachineState(Transaction& transaction,
+                                 const Machine& machine,
+                                 MachineStateKeys& machine_state_keys);
 SaveResults saveMachine(Transaction& transaction, const Machine& machine);
+void deleteMachineState(Transaction& transaction,
+                        MachineStateKeys& parsed_state);
 DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash);
 
 #endif /* checkpoint_machine_hpp */
