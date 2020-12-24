@@ -395,6 +395,8 @@ func (db *TxDB) saveEmptyBlock(ctx context.Context, prev ethcommon.Hash, number 
 	if err := db.as.SaveBlockHash(common.NewHashFromEth(block.Hash()), block.NumberU64()); err != nil {
 		return err
 	}
+	db.callMut.Lock()
+	defer db.callMut.Unlock()
 	db.lastBlockProcessed = blockId
 	return nil
 }
