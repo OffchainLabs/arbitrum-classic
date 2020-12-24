@@ -30,11 +30,13 @@ import (
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -142,7 +144,7 @@ func main() {
 	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
 	backend := NewBackend(db, l1, signer)
 
-	if err := backend.AddInboxMessage(ctx, initMsg, rollupAddress, backend.l1Emulator.GenerateBlock()); err != nil {
+	if _, err := backend.AddInboxMessage(ctx, initMsg, rollupAddress, backend.l1Emulator.GenerateBlock()); err != nil {
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
@@ -167,7 +169,7 @@ func main() {
 			Dest:  common.NewAddressFromEth(account.Address),
 			Value: depositSize,
 		}
-		if err := backend.AddInboxMessage(ctx, deposit, rollupAddress, backend.l1Emulator.GenerateBlock()); err != nil {
+		if _, err := backend.AddInboxMessage(ctx, deposit, rollupAddress, backend.l1Emulator.GenerateBlock()); err != nil {
 			logger.Fatal().Stack().Err(err).Send()
 		}
 		accounts = append(accounts, account)
@@ -279,12 +281,13 @@ func (s *EVM) Mine(ctx context.Context, timestamp *hexutil.Big) error {
 	} else {
 		block = s.backend.l1Emulator.GenerateBlock()
 	}
-	return s.backend.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block)
+	_, err := s.backend.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block)
+	return err
 }
 
 func (s *EVM) IncreaseTime(ctx context.Context, amount hexutil.Uint64) (hexutil.Uint64, error) {
 	block := s.backend.l1Emulator.GenerateBlockWithTimeIncrease(new(big.Int).SetUint64(uint64(amount)))
-	err := s.backend.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block)
+	_, err := s.backend.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block)
 	return amount, err
 }
 
@@ -358,16 +361,31 @@ func (b *Backend) SendTransaction(ctx context.Context, tx *types.Transaction) er
 		Str("from", sender.Hex()).
 		Msg("sent transaction")
 	block := b.l1Emulator.GenerateBlock()
-	return b.addInboxMessage(ctx, arbMsg, common.NewAddressFromEth(sender), block)
+	results, err := b.addInboxMessage(ctx, arbMsg, common.NewAddressFromEth(sender), block)
+	if err != nil {
+		return err
+	}
+	txHash := common.NewHashFromEth(tx.Hash())
+	for _, res := range results {
+		// Found matching receipt
+		if res.IncomingRequest.MessageID == txHash {
+			if res.ResultCode == evm.RevertCode {
+				return web3.HandleCallError(res, true)
+			} else {
+				return nil
+			}
+		}
+	}
+	return nil
 }
 
-func (b *Backend) AddInboxMessage(ctx context.Context, msg message.Message, sender common.Address, block L1BlockInfo) error {
+func (b *Backend) AddInboxMessage(ctx context.Context, msg message.Message, sender common.Address, block L1BlockInfo) ([]*evm.TxResult, error) {
 	b.Lock()
 	defer b.Unlock()
 	return b.addInboxMessage(ctx, msg, sender, block)
 }
 
-func (b *Backend) addInboxMessage(ctx context.Context, msg message.Message, sender common.Address, block L1BlockInfo) error {
+func (b *Backend) addInboxMessage(ctx context.Context, msg message.Message, sender common.Address, block L1BlockInfo) ([]*evm.TxResult, error) {
 	chainTime := inbox.ChainTime{
 		BlockNum:  block.blockId.Height,
 		Timestamp: block.timestamp,
@@ -375,12 +393,13 @@ func (b *Backend) addInboxMessage(ctx context.Context, msg message.Message, send
 
 	inboxMessage := message.NewInboxMessage(msg, sender, big.NewInt(int64(len(b.messages))), chainTime)
 
-	if err := b.db.AddMessages(ctx, []inbox.InboxMessage{inboxMessage}, block.blockId); err != nil {
-		return err
+	results, err := b.db.AddMessages(ctx, []inbox.InboxMessage{inboxMessage}, block.blockId)
+	if err != nil {
+		return nil, err
 	}
 
 	b.messages = append(b.messages, inboxMessage)
-	return nil
+	return results, nil
 }
 
 func (b *Backend) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
