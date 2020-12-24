@@ -84,10 +84,10 @@ CMachine* getInitialMachine(const CArbStorage* storage_ptr,
     try {
         if (value_cache == nullptr) {
             ValueCache cache;
-            return new Machine(storage->getInitialMachine(cache));
+            return new Machine(*storage->getInitialMachine(cache).release());
         }
 
-        return new Machine(storage->getInitialMachine(*value_cache));
+        return new Machine(*storage->getInitialMachine(*value_cache).release());
     } catch (const std::exception&) {
         return nullptr;
     }
@@ -102,10 +102,10 @@ CMachine* getMachine(const CArbStorage* storage_ptr,
     try {
         if (value_cache == nullptr) {
             ValueCache cache;
-            return new Machine(storage->getMachine(hash, cache));
+            return new Machine(*storage->getMachine(hash, cache).release());
         }
 
-        return new Machine(storage->getMachine(hash, *value_cache));
+        return new Machine(*storage->getMachine(hash, *value_cache).release());
     } catch (const std::exception&) {
         return nullptr;
     }

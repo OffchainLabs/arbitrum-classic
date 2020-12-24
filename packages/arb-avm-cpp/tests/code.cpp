@@ -85,7 +85,7 @@ TEST_CASE("Code serialization") {
         saveMachine(*tx, mach);
         REQUIRE(tx->commit().ok());
         auto mach2 = storage.getMachine(mach.hash(), value_cache);
-        checkRun(mach2);
+        checkRun(*mach2);
     }
 
     SECTION("Save different and load") {
@@ -98,14 +98,14 @@ TEST_CASE("Code serialization") {
             deleteMachine(*tx, mach.hash());
             REQUIRE(tx->commit().ok());
             auto mach3 = storage.getMachine(mach2.hash(), value_cache);
-            checkRun(mach3, 4);
+            checkRun(*mach3, 4);
         }
 
         SECTION("Delete second") {
             deleteMachine(*tx, mach2.hash());
             REQUIRE(tx->commit().ok());
             auto mach3 = storage.getMachine(mach.hash(), value_cache);
-            checkRun(mach3);
+            checkRun(*mach3);
         }
     }
 
@@ -115,6 +115,6 @@ TEST_CASE("Code serialization") {
         deleteMachine(*tx, mach.hash());
         REQUIRE(tx->commit().ok());
         auto mach2 = storage.getMachine(mach.hash(), value_cache);
-        checkRun(mach2);
+        checkRun(*mach2);
     }
 }
