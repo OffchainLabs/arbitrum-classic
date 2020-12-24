@@ -275,21 +275,20 @@ func (s *EVM) Revert(ctx context.Context, snapId hexutil.Uint64) error {
 	return err
 }
 
-func (s *EVM) Mine(ctx context.Context, timestamp *hexutil.Big) error {
-	var block L1BlockInfo
+func (s *EVM) Mine(ctx context.Context, timestamp *hexutil.Uint64) error {
 	if timestamp != nil {
-		block = s.backend.l1Emulator.GenerateBlockAtTime((*big.Int)(timestamp))
-	} else {
-		block = s.backend.l1Emulator.GenerateBlock()
+		s.backend.l1Emulator.SetTime(int64(*timestamp))
 	}
+	block := s.backend.l1Emulator.GenerateBlock()
 	_, err := s.backend.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block)
 	return err
 }
 
-func (s *EVM) IncreaseTime(ctx context.Context, amount uint64) (string, error) {
-	block := s.backend.l1Emulator.GenerateBlockWithTimeIncrease(new(big.Int).SetUint64(amount))
+func (s *EVM) IncreaseTime(ctx context.Context, amount int64) (string, error) {
+	s.backend.l1Emulator.IncreaseTime(amount)
+	block := s.backend.l1Emulator.GenerateBlock()
 	_, err := s.backend.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block)
-	return strconv.FormatUint(amount, 10), err
+	return strconv.FormatInt(amount, 10), err
 }
 
 type Backend struct {
@@ -425,13 +424,14 @@ type L1Emulator struct {
 	sync.Mutex
 	l1Blocks       []L1BlockInfo
 	l1BlocksByHash map[common.Hash]L1BlockInfo
+	timeIncrease   int64
 }
 
 func NewL1Emulator() *L1Emulator {
 	b := &L1Emulator{
 		l1BlocksByHash: make(map[common.Hash]L1BlockInfo),
 	}
-	b.addBlockAtTime(big.NewInt(time.Now().Unix()))
+	b.addBlock()
 	return b
 }
 
@@ -468,37 +468,36 @@ func (b *L1Emulator) TimestampForBlockHash(_ context.Context, hash common.Hash) 
 	return info.timestamp, nil
 }
 
-func (b *L1Emulator) addBlockAtTime(timestamp *big.Int) L1BlockInfo {
+func (b *L1Emulator) addBlock() L1BlockInfo {
 	info := L1BlockInfo{
 		blockId: &common.BlockId{
 			Height:     common.NewTimeBlocksInt(int64(len(b.l1Blocks))),
 			HeaderHash: common.RandHash(),
 		},
-		timestamp: timestamp,
+		timestamp: big.NewInt(time.Now().Unix() + b.timeIncrease),
 	}
 	b.l1Blocks = append(b.l1Blocks, info)
 	b.l1BlocksByHash[info.blockId.HeaderHash] = info
 	return info
 }
 
-func (b *L1Emulator) addBlockWithTimeIncrease(amount *big.Int) L1BlockInfo {
-	return b.addBlockAtTime(new(big.Int).Add(b.Latest().timestamp, amount))
-}
-
 func (b *L1Emulator) GenerateBlock() L1BlockInfo {
 	b.Lock()
 	defer b.Unlock()
-	return b.addBlockWithTimeIncrease(new(big.Int).SetUint64(uint64((time.Second * 15).Seconds())))
+	return b.addBlock()
 }
 
-func (b *L1Emulator) GenerateBlockWithTimeIncrease(timestamp *big.Int) L1BlockInfo {
+func (b *L1Emulator) SetTime(timestamp int64) {
 	b.Lock()
 	defer b.Unlock()
-	return b.addBlockWithTimeIncrease(timestamp)
+	b.timeIncrease = timestamp - time.Now().Unix()
 }
 
-func (b *L1Emulator) GenerateBlockAtTime(timestamp *big.Int) L1BlockInfo {
+func (b *L1Emulator) IncreaseTime(amount int64) {
 	b.Lock()
 	defer b.Unlock()
-	return b.addBlockAtTime(timestamp)
+	if amount < 0 {
+		amount = 0
+	}
+	b.timeIncrease += amount
 }
