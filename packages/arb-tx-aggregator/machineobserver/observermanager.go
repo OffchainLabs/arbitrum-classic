@@ -94,7 +94,7 @@ func ensureInitialized(
 		}
 	}
 
-	if err := db.AddMessages(ctx, extractMessages(events), db.EventCreated.BlockId); err != nil {
+	if _, err := db.AddMessages(ctx, extractMessages(events), db.EventCreated.BlockId); err != nil {
 		return err
 	}
 
@@ -298,7 +298,7 @@ func fastCatchupEvents(
 		if err != nil {
 			return errors.Wrap(err, "error getting end block in fast catchup")
 		}
-		if err := db.AddMessages(ctx, extractMessages(inboxDeliveredEvents), endBlock); err != nil {
+		if _, err := db.AddMessages(ctx, extractMessages(inboxDeliveredEvents), endBlock); err != nil {
 			return errors.Wrap(err, "error adding messages to db")
 		}
 	}
@@ -329,7 +329,7 @@ func watchEvents(
 			return errors.Wrapf(err, "manager hit error getting inbox events with block %v", blockId)
 		}
 
-		if err := db.AddMessages(ctx, extractMessages(inboxEvents), blockId); err != nil {
+		if _, err := db.AddMessages(ctx, extractMessages(inboxEvents), blockId); err != nil {
 			return errors.Wrap(err, "error adding messages to db")
 		}
 	}

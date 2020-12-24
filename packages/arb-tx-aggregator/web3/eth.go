@@ -168,7 +168,7 @@ type ganacheErrorData struct {
 	Reason string `json:"reason"`
 }
 
-func handleCallError(res *evm.TxResult, ganacheMode bool) error {
+func HandleCallError(res *evm.TxResult, ganacheMode bool) error {
 	if len(res.ReturnData) > 0 {
 		err := vm.ErrExecutionReverted
 		reason := ""
@@ -207,7 +207,7 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.B
 	}
 
 	if res.ResultCode == evm.RevertCode {
-		return nil, handleCallError(res, s.ganacheMode)
+		return nil, HandleCallError(res, s.ganacheMode)
 	}
 	return res.ReturnData, nil
 }
@@ -220,7 +220,7 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 		return 0, err
 	}
 	if res.ResultCode == evm.RevertCode {
-		return 0, handleCallError(res, s.ganacheMode)
+		return 0, HandleCallError(res, s.ganacheMode)
 	}
 	return hexutil.Uint64(res.GasUsed.Uint64() + 1000000), nil
 }
