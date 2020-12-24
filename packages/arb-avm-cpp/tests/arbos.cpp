@@ -17,7 +17,6 @@
 #include "config.hpp"
 #include "helper.hpp"
 
-#include <avm/machine.hpp>
 #include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
@@ -49,22 +48,21 @@ TEST_CASE("ARBOS test vectors") {
             std::vector<Tuple> messages;
             for (auto& json_message : j.at("inbox")) {
                 messages.push_back(
-                    simple_value_from_json(std::move(json_message))
-                        .get<Tuple>());
+                    simple_value_from_json(json_message).get<Tuple>());
             }
 
             auto logs_json = j.at("logs");
             std::vector<value> logs;
             for (auto& log_json : logs_json) {
-                logs.push_back(simple_value_from_json(std::move(log_json)));
+                logs.push_back(simple_value_from_json(log_json));
             }
 
             ArbStorage storage(dbpath);
             storage.initialize(arb_os_path);
             auto mach = storage.getInitialMachine(value_cache);
-            mach.machine_state.stack.push(uint256_t{0});
+            mach->machine_state.stack.push(uint256_t{0});
             auto assertion =
-                mach.run(1000000000, messages, std::chrono::seconds{0});
+                mach->run(1000000000, messages, std::chrono::seconds{0});
             INFO("Machine ran for " << assertion.stepCount << " steps");
             REQUIRE(assertion.logs.size() == logs.size());
             auto log = logs[0].get<Tuple>();
@@ -73,17 +71,17 @@ TEST_CASE("ARBOS test vectors") {
             }
             {
                 auto tx = storage.makeTransaction();
-                saveMachine(*tx, mach);
+                saveMachine(*tx, *mach);
                 tx->commit();
             }
-            auto mach_hash = mach.hash();
+            auto mach_hash = mach->hash();
             auto mach2 = storage.getMachine(mach_hash, value_cache);
-            REQUIRE(mach_hash == mach2.hash());
+            REQUIRE(mach_hash == mach2->hash());
             storage.closeArbStorage();
 
             ArbStorage storage2(dbpath);
             auto mach3 = storage2.getMachine(mach_hash, value_cache);
-            REQUIRE(mach_hash == mach3.hash());
+            REQUIRE(mach_hash == mach3->hash());
 
             {
                 auto tx = storage2.makeTransaction();

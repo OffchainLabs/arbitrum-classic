@@ -37,7 +37,6 @@ class TransactionDB;
 
 class ArbStorage {
     std::shared_ptr<DataStorage> datastorage;
-    std::shared_ptr<Code> code;
     std::shared_ptr<CheckpointedMachine> cmach;
 
    public:
@@ -54,8 +53,9 @@ class ArbStorage {
     std::unique_ptr<AggregatorStore> getAggregatorStore() const;
     std::shared_ptr<CheckpointedMachine> getCheckpointedMachine();
 
-    Machine getInitialMachine(ValueCache& value_cache) const;
-    Machine getMachine(uint256_t machineHash, ValueCache& value_cache) const;
+    std::unique_ptr<Machine> getInitialMachine(ValueCache& value_cache) const;
+    std::unique_ptr<Machine> getMachine(uint256_t machineHash,
+                                        ValueCache& value_cache) const;
     DbResult<value> getValue(uint256_t value_hash,
                              ValueCache& value_cache) const;
 };

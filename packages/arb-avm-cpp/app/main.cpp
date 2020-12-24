@@ -102,20 +102,20 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    auto assertion = mach.run(10000000000000, std::move(inbox_messages),
-                              std::chrono::seconds(0));
+    auto assertion = mach->run(10000000000000, std::move(inbox_messages),
+                               std::chrono::seconds(0));
 
     std::cout << "Produced " << assertion.logs.size() << " logs\n";
 
     std::cout << "Ran " << assertion.stepCount << " steps in "
               << assertion.gasCount << " gas ending in state "
-              << static_cast<int>(mach.currentStatus()) << "\n";
+              << static_cast<int>(mach->currentStatus()) << "\n";
 
     auto tx = storage.makeTransaction();
-    saveMachine(*tx, mach);
+    saveMachine(*tx, *mach);
     tx->commit();
 
-    auto mach2 = storage.getMachine(mach.hash(), value_cache);
-    mach2.run(0, {}, std::chrono::seconds(0));
+    auto mach2 = storage.getMachine(mach->hash(), value_cache);
+    mach2->run(0, {}, std::chrono::seconds(0));
     return 0;
 }

@@ -14,44 +14,76 @@
  * limitations under the License.
  */
 
-#ifndef data_storage_checkpointedmachine_hpp
-#define data_storage_checkpointedmachine_hpp
+#ifndef checkpointstore_hpp
+#define checkpointstore_hpp
 
-#include "avm/machine.hpp"
+#include <avm/machine.hpp>
+#include <avm_values/bigint.hpp>
+#include <data_storage/checkpoint.hpp>
+#include <data_storage/datastorage.hpp>
+#include <data_storage/storageresultfwd.hpp>
+#include <data_storage/value/code.hpp>
+#include <data_storage/value/valuecache.hpp>
 
-#include <utility>
-#include "avm_values/bigint.hpp"
-#include "data_storage/aggregator.hpp"
-#include "data_storage/datastorage.hpp"
+#include <memory>
+#include <vector>
 
-#include "checkpointstore.hpp"
-#include "nonstd/optional.hpp"
-#include "rocksdb/utilities/transaction.h"
+namespace rocksdb {
+class TransactionDB;
+class Status;
+struct Slice;
+class ColumnFamilyHandle;
+}  // namespace rocksdb
 
 class CheckpointedMachine {
-    std::unique_ptr<Machine> mach;
-    CheckpointStore storage;
+   private:
+    std::shared_ptr<DataStorage> data_storage;
+    std::shared_ptr<Code> code;
+
+    mutable std::mutex mutex;
+    std::unique_ptr<Machine> machine;
+    Checkpoint pending_checkpoint;
 
    public:
-    CheckpointedMachine(std::unique_ptr<Machine> mach,
-                        std::shared_ptr<DataStorage> storage)
-        : mach(std::move(mach)), storage(std::move(storage)) {}
-
+    CheckpointedMachine() = default;
+    explicit CheckpointedMachine(std::shared_ptr<DataStorage> data_storage_)
+        : data_storage(std::move(data_storage_)),
+          code(std::make_shared<Code>(
+              getNextSegmentID(*makeConstTransaction()))) {}
     void saveCheckpoint();
+    void saveAssertion(const Assertion& assertion);
+    rocksdb::Status deleteCheckpoint(const uint64_t& message_number);
+    DbResult<Checkpoint> getCheckpoint(const uint64_t& message_number) const;
 
+    bool isEmpty() const;
+    uint64_t maxMessageNumber();
+    DbResult<Checkpoint> atMessageOrPrevious(const uint64_t& message_number);
+    uint64_t reorgToMessageOrBefore(const uint64_t& message_number);
+    std::unique_ptr<Transaction> makeTransaction();
+    std::unique_ptr<const Transaction> makeConstTransaction() const;
+    void initialize(LoadedExecutable executable);
+    bool initialized() const;
+    std::unique_ptr<Machine> getInitialMachine(ValueCache& value_cache);
+    std::unique_ptr<Machine> getMachine(uint256_t machineHash,
+                                        ValueCache& value_cache);
+    std::unique_ptr<Machine> getMachineUsingStateKeys(
+        Transaction& transaction,
+        MachineStateKeys state_data,
+        ValueCache& value_cache);
     Assertion run(uint64_t stepCount,
                   std::vector<Tuple> inbox_messages,
                   std::chrono::seconds wallLimit);
-
-    Assertion runSideloaded(uint64_t stepCount,
-                            std::vector<Tuple> inbox_messages,
-                            std::chrono::seconds wallLimit,
-                            Tuple sideload);
-
     Assertion runCallServer(uint64_t stepCount,
                             std::vector<Tuple> inbox_messages,
                             std::chrono::seconds wallLimit,
                             value fake_inbox_peek_value);
+    Assertion runSideloaded(uint64_t stepCount,
+                            std::vector<Tuple> inbox_messages,
+                            std::chrono::seconds wallLimit,
+                            Tuple sideload_value);
 };
 
-#endif /* data_storage_checkpointedmachine_hpp */
+DbResult<Checkpoint> getCheckpointWithKey(Transaction& transaction,
+                                          rocksdb::Slice key_slice);
+
+#endif /* checkpointstore_hpp */

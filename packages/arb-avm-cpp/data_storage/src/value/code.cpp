@@ -69,6 +69,7 @@ std::vector<RawCodePoint> extractRawCodeSegment(
     auto ptr = reinterpret_cast<const char*>(&*iter);
     auto cp_count = deserialize_uint64_t(ptr);
     std::vector<RawCodePoint> cps;
+    cps.reserve(cp_count);
     for (uint64_t i = 0; i < cp_count; i++) {
         cps.push_back(extractRawCodePoint(ptr));
     }
@@ -215,7 +216,6 @@ std::unordered_map<uint64_t, uint64_t> breadthFirstSearch(
 void deleteCode(Transaction& transaction,
                 std::map<uint64_t, uint64_t>& segment_counts) {
     std::unordered_map<uint64_t, GetResults> current_values{};
-    auto current_segment_counts = segment_counts;
 
     auto total_deleted_segment_references = breadthFirstSearch(
         segment_counts, [&](uint64_t segment_id, uint64_t total_reference_count,

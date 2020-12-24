@@ -23,7 +23,6 @@
 #include <data_storage/value/value.hpp>
 
 #include <avm/machine.hpp>
-#include <avm/machinestate/ecops.hpp>
 
 #define CATCH_CONFIG_ENABLE_BENCHMARKING 1
 #include <catch2/catch.hpp>
@@ -64,7 +63,7 @@ void restoreCheckpoint(ArbStorage& storage,
                        Machine& expected_machine,
                        ValueCache& value_cache) {
     auto mach = storage.getMachine(expected_machine.hash(), value_cache);
-    REQUIRE(mach.hash() == expected_machine.hash());
+    REQUIRE(mach->hash() == expected_machine.hash());
 }
 
 TEST_CASE("Checkpoint State") {
@@ -74,18 +73,18 @@ TEST_CASE("Checkpoint State") {
     ValueCache value_cache{};
 
     auto machine = storage.getInitialMachine(value_cache);
-    machine.run(1, {}, std::chrono::seconds{0});
+    machine->run(1, {}, std::chrono::seconds{0});
 
-    SECTION("default") { checkpointState(storage, machine); }
-    SECTION("save twice") { checkpointStateTwice(storage, machine); }
+    SECTION("default") { checkpointState(storage, *machine); }
+    SECTION("save twice") { checkpointStateTwice(storage, *machine); }
     SECTION("assert machine hash") {
-        auto hash1 = machine.hash();
+        auto hash1 = machine->hash();
         auto transaction = storage.makeTransaction();
-        auto results = saveMachine(*transaction, machine);
+        auto results = saveMachine(*transaction, *machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
         auto machine2 = storage.getMachine(hash1, value_cache);
-        auto hash2 = machine2.hash();
+        auto hash2 = machine2->hash();
         REQUIRE(hash2 == hash1);
     }
 }
@@ -98,12 +97,12 @@ TEST_CASE("Delete machine checkpoint") {
 
     SECTION("default") {
         auto machine = storage.getInitialMachine(value_cache);
-        machine.run(1, {}, std::chrono::seconds{0});
+        machine->run(1, {}, std::chrono::seconds{0});
         auto transaction = storage.makeTransaction();
-        saveMachine(*transaction, machine);
-        machine.run(100, {}, std::chrono::seconds{0});
-        saveMachine(*transaction, machine);
-        deleteCheckpoint(*transaction, machine);
+        saveMachine(*transaction, *machine);
+        machine->run(100, {}, std::chrono::seconds{0});
+        saveMachine(*transaction, *machine);
+        deleteCheckpoint(*transaction, *machine);
         REQUIRE(transaction->commit().ok());
     }
 }
@@ -117,10 +116,10 @@ TEST_CASE("Restore checkpoint") {
     SECTION("default") {
         auto machine = storage.getInitialMachine(value_cache);
         auto transaction = storage.makeTransaction();
-        auto results = saveMachine(*transaction, machine);
+        auto results = saveMachine(*transaction, *machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
-        restoreCheckpoint(storage, machine, value_cache);
+        restoreCheckpoint(storage, *machine, value_cache);
     }
 }
 
