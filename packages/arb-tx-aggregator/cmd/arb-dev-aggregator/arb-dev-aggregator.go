@@ -53,6 +53,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -285,10 +286,10 @@ func (s *EVM) Mine(ctx context.Context, timestamp *hexutil.Big) error {
 	return err
 }
 
-func (s *EVM) IncreaseTime(ctx context.Context, amount hexutil.Uint64) (hexutil.Uint64, error) {
-	block := s.backend.l1Emulator.GenerateBlockWithTimeIncrease(new(big.Int).SetUint64(uint64(amount)))
+func (s *EVM) IncreaseTime(ctx context.Context, amount uint64) (string, error) {
+	block := s.backend.l1Emulator.GenerateBlockWithTimeIncrease(new(big.Int).SetUint64(amount))
 	_, err := s.backend.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block)
-	return amount, err
+	return strconv.FormatUint(amount, 10), err
 }
 
 type Backend struct {
