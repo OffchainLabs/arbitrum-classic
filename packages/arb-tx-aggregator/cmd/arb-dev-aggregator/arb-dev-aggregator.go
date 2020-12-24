@@ -88,6 +88,7 @@ func main() {
 
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
 	saveMessages := fs.String("save", "", "save messages")
+	walletcount := fs.Int("walletcount", 10, "number of wallets to fund")
 	mnemonic := fs.String(
 		"mnemonic",
 		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
@@ -160,7 +161,7 @@ func main() {
 	}
 
 	accounts := make([]accounts2.Account, 0)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < *walletcount; i++ {
 		path := hdwallet.MustParseDerivationPath(fmt.Sprintf("m/44'/60'/0'/0/%v", i))
 		account, err := wallet.Derive(path, false)
 		if err != nil {
@@ -393,12 +394,12 @@ func (b *Backend) addInboxMessage(ctx context.Context, msg message.Message, send
 
 	inboxMessage := message.NewInboxMessage(msg, sender, big.NewInt(int64(len(b.messages))), chainTime)
 
+	b.messages = append(b.messages, inboxMessage)
 	results, err := b.db.AddMessages(ctx, []inbox.InboxMessage{inboxMessage}, block.blockId)
 	if err != nil {
 		return nil, err
 	}
 
-	b.messages = append(b.messages, inboxMessage)
 	return results, nil
 }
 
