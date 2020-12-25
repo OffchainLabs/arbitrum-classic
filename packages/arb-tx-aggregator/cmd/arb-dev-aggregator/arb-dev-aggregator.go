@@ -89,6 +89,7 @@ func main() {
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
 	saveMessages := fs.String("save", "", "save messages")
 	walletcount := fs.Int("walletcount", 10, "number of wallets to fund")
+	walletbalance := fs.Int64("walletbalance", 100, "amount of funds in each wallet (Eth)")
 	mnemonic := fs.String(
 		"mnemonic",
 		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
@@ -155,10 +156,11 @@ func main() {
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
-	depositSize, ok := new(big.Int).SetString("100000000000000000000", 10)
+	depositSize, ok := new(big.Int).SetString("1000000000000000000", 10)
 	if !ok {
 		logger.Fatal().Stack().Send()
 	}
+	depositSize = depositSize.Mul(depositSize, big.NewInt(*walletbalance))
 
 	accounts := make([]accounts2.Account, 0)
 	for i := 0; i < *walletcount; i++ {
