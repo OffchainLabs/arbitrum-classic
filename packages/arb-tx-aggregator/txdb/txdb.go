@@ -123,9 +123,9 @@ func (db *TxDB) Load(ctx context.Context) (bool, error) {
 
 	db.mach = arbosmachine.New(mach)
 	db.callMut.Lock()
-	defer db.callMut.Unlock()
 	db.lastBlockProcessed = nil
 	db.lastInboxSeq = big.NewInt(0)
+	db.callMut.Unlock()
 	return true, db.saveEmptyBlock(ctx, ethcommon.Hash{}, initialHeight)
 }
 
