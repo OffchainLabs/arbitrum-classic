@@ -314,6 +314,12 @@ func NewBackend(db *txdb.TxDB, l1 *L1Emulator, signer types.Signer) *Backend {
 }
 
 func (b *Backend) Reorg(ctx context.Context, height uint64) error {
+	b.Lock()
+	defer b.Unlock()
+	return b.reorg(ctx, height)
+}
+
+func (b *Backend) reorg(ctx context.Context, height uint64) error {
 	startHeight := b.db.LatestBlock()
 	b.l1Emulator.Reorg(height)
 	latestHeight := b.l1Emulator.Latest().blockId.Height.AsInt().Uint64()
@@ -337,10 +343,21 @@ func (b *Backend) Reorg(ctx context.Context, height uint64) error {
 }
 
 // Return nil if no pending transaction count is available
-func (b *Backend) PendingTransactionCount(context.Context, common.Address) *uint64 {
+func (b *Backend) PendingTransactionCount(_ context.Context, account common.Address) *uint64 {
 	b.Lock()
 	defer b.Unlock()
-	return nil
+	latest := b.l1Emulator.Latest()
+	snap := b.db.GetSnapshot(inbox.ChainTime{
+		BlockNum:  latest.blockId.Height,
+		Timestamp: latest.timestamp,
+	})
+	nonce, err := snap.GetTransactionCount(account)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error getting transaction count")
+		return nil
+	}
+	nonceInt := nonce.Uint64()
+	return &nonceInt
 }
 
 func (b *Backend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
@@ -373,6 +390,10 @@ func (b *Backend) SendTransaction(ctx context.Context, tx *types.Transaction) er
 		// Found matching receipt
 		if res.IncomingRequest.MessageID == txHash {
 			if res.ResultCode == evm.RevertCode {
+				// If transaction failed, rollback the block
+				if err := b.reorg(ctx, block.blockId.Height.AsInt().Uint64()-1); err != nil {
+					return err
+				}
 				return web3.HandleCallError(res, true)
 			} else {
 				return nil
