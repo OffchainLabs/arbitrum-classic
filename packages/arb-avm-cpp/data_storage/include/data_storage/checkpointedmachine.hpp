@@ -57,7 +57,8 @@ class CheckpointedMachine {
 
     bool isEmpty() const;
     uint64_t maxMessageNumber();
-    DbResult<Checkpoint> atMessageOrPrevious(const uint64_t& message_number);
+    DbResult<Checkpoint> getCheckpointAtOrBeforeMessage(
+        const uint64_t& message_number);
     uint64_t reorgToMessageOrBefore(const uint64_t& message_number);
     std::unique_ptr<Transaction> makeTransaction();
     std::unique_ptr<const Transaction> makeConstTransaction() const;
@@ -83,7 +84,7 @@ class CheckpointedMachine {
                             Tuple sideload_value);
 };
 
-DbResult<Checkpoint> getCheckpointWithKey(Transaction& transaction,
-                                          rocksdb::Slice key_slice);
+DbResult<Checkpoint> getCheckpointUsingKey(Transaction& transaction,
+                                           rocksdb::Slice key_slice);
 
 #endif /* checkpointstore_hpp */

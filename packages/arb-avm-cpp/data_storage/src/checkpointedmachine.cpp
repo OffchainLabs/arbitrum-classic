@@ -62,13 +62,14 @@ std::unique_ptr<const Transaction> CheckpointedMachine::makeConstTransaction()
 void CheckpointedMachine::initialize(LoadedExecutable executable) {
     auto tx = makeTransaction();
     code->addSegment(std::move(executable.code));
-    Machine mach{MachineState{code, std::move(executable.static_val)}};
-    auto res = saveMachine(*tx, mach);
+    machine = std::make_unique<Machine>(
+        MachineState{code, std::move(executable.static_val)});
+    auto res = saveMachine(*tx, *machine);
     if (!res.status.ok()) {
         throw std::runtime_error("failed to save initial machine");
     }
     std::vector<unsigned char> value_data;
-    marshal_uint256_t(mach.hash(), value_data);
+    marshal_uint256_t(machine->hash(), value_data);
     rocksdb::Slice value_slice{reinterpret_cast<const char*>(value_data.data()),
                                value_data.size()};
     auto s =
@@ -188,7 +189,7 @@ uint64_t CheckpointedMachine::reorgToMessageOrBefore(
     auto tx = Transaction::makeTransaction(data_storage);
     const std::lock_guard<std::mutex> lock(mutex);
 
-    auto result = atMessageOrPrevious(message_number);
+    auto result = getCheckpointAtOrBeforeMessage(message_number);
     if (!result.status.ok()) {
         throw std::runtime_error("error getting checkpoint for reorg: " +
                                  result.status.ToString());
@@ -213,7 +214,7 @@ rocksdb::Status CheckpointedMachine::deleteCheckpoint(
 
     auto key = toKey(message_number);
     rocksdb::Slice key_slice(key.begin(), key.size());
-    auto checkpoint_result = getCheckpointWithKey(*tx, key_slice);
+    auto checkpoint_result = getCheckpointUsingKey(*tx, key_slice);
     if (!checkpoint_result.status.ok()) {
         throw std::runtime_error("error getting checkpoint to delete: " +
                                  checkpoint_result.status.ToString());
@@ -240,7 +241,7 @@ DbResult<Checkpoint> CheckpointedMachine::getCheckpoint(
     auto key = toKey(message_number);
 
     rocksdb::Slice key_slice(key.begin(), key.size());
-    return getCheckpointWithKey(*tx, key_slice);
+    return getCheckpointUsingKey(*tx, key_slice);
 }
 
 bool CheckpointedMachine::isEmpty() const {
@@ -265,7 +266,7 @@ uint64_t CheckpointedMachine::maxMessageNumber() {
     }
 }
 
-DbResult<Checkpoint> CheckpointedMachine::atMessageOrPrevious(
+DbResult<Checkpoint> CheckpointedMachine::getCheckpointAtOrBeforeMessage(
     const uint64_t& message_number) {
     auto tx = Transaction::makeTransaction(data_storage);
     auto it =
@@ -284,8 +285,8 @@ DbResult<Checkpoint> CheckpointedMachine::atMessageOrPrevious(
     }
 }
 
-DbResult<Checkpoint> getCheckpointWithKey(Transaction& transaction,
-                                          rocksdb::Slice key_slice) {
+DbResult<Checkpoint> getCheckpointUsingKey(Transaction& transaction,
+                                           rocksdb::Slice key_slice) {
     std::string returned_value;
 
     auto status = transaction.datastorage->txn_db->DB::Get(
