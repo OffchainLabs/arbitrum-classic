@@ -507,6 +507,7 @@ func (_ExecutionChallenge *ExecutionChallengeFilterer) ParseAsserterTimedOut(log
 	if err := _ExecutionChallenge.contract.UnpackLog(event, "AsserterTimedOut", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -641,6 +642,7 @@ func (_ExecutionChallenge *ExecutionChallengeFilterer) ParseBisectedAssertion(lo
 	if err := _ExecutionChallenge.contract.UnpackLog(event, "BisectedAssertion", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -773,6 +775,7 @@ func (_ExecutionChallenge *ExecutionChallengeFilterer) ParseChallengerTimedOut(l
 	if err := _ExecutionChallenge.contract.UnpackLog(event, "ChallengerTimedOut", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -907,6 +910,7 @@ func (_ExecutionChallenge *ExecutionChallengeFilterer) ParseContinued(log types.
 	if err := _ExecutionChallenge.contract.UnpackLog(event, "Continued", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1040,6 +1044,7 @@ func (_ExecutionChallenge *ExecutionChallengeFilterer) ParseInitiatedChallenge(l
 	if err := _ExecutionChallenge.contract.UnpackLog(event, "InitiatedChallenge", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1172,5 +1177,6 @@ func (_ExecutionChallenge *ExecutionChallengeFilterer) ParseOneStepProofComplete
 	if err := _ExecutionChallenge.contract.UnpackLog(event, "OneStepProofCompleted", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }

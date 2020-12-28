@@ -440,5 +440,6 @@ func (_ArbFactory *ArbFactoryFilterer) ParseRollupCreated(log types.Log) (*ArbFa
 	if err := _ArbFactory.contract.UnpackLog(event, "RollupCreated", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }

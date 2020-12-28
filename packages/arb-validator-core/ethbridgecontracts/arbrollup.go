@@ -998,6 +998,7 @@ func (_ArbRollup *ArbRollupFilterer) ParseConfirmedAssertion(log types.Log) (*Ar
 	if err := _ArbRollup.contract.UnpackLog(event, "ConfirmedAssertion", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1141,6 +1142,7 @@ func (_ArbRollup *ArbRollupFilterer) ParseConfirmedValidAssertion(log types.Log)
 	if err := _ArbRollup.contract.UnpackLog(event, "ConfirmedValidAssertion", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1282,6 +1284,7 @@ func (_ArbRollup *ArbRollupFilterer) ParseRollupAsserted(log types.Log) (*ArbRol
 	if err := _ArbRollup.contract.UnpackLog(event, "RollupAsserted", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1417,6 +1420,7 @@ func (_ArbRollup *ArbRollupFilterer) ParseRollupChallengeCompleted(log types.Log
 	if err := _ArbRollup.contract.UnpackLog(event, "RollupChallengeCompleted", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1553,6 +1557,7 @@ func (_ArbRollup *ArbRollupFilterer) ParseRollupChallengeStarted(log types.Log) 
 	if err := _ArbRollup.contract.UnpackLog(event, "RollupChallengeStarted", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1686,6 +1691,7 @@ func (_ArbRollup *ArbRollupFilterer) ParseRollupConfirmed(log types.Log) (*ArbRo
 	if err := _ArbRollup.contract.UnpackLog(event, "RollupConfirmed", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1825,6 +1831,7 @@ func (_ArbRollup *ArbRollupFilterer) ParseRollupCreated(log types.Log) (*ArbRoll
 	if err := _ArbRollup.contract.UnpackLog(event, "RollupCreated", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1958,6 +1965,7 @@ func (_ArbRollup *ArbRollupFilterer) ParseRollupPruned(log types.Log) (*ArbRollu
 	if err := _ArbRollup.contract.UnpackLog(event, "RollupPruned", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -2092,6 +2100,7 @@ func (_ArbRollup *ArbRollupFilterer) ParseRollupStakeCreated(log types.Log) (*Ar
 	if err := _ArbRollup.contract.UnpackLog(event, "RollupStakeCreated", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -2226,6 +2235,7 @@ func (_ArbRollup *ArbRollupFilterer) ParseRollupStakeMoved(log types.Log) (*ArbR
 	if err := _ArbRollup.contract.UnpackLog(event, "RollupStakeMoved", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -2359,6 +2369,7 @@ func (_ArbRollup *ArbRollupFilterer) ParseRollupStakeRefunded(log types.Log) (*A
 	if err := _ArbRollup.contract.UnpackLog(event, "RollupStakeRefunded", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -2823,6 +2834,7 @@ func (_IERC20 *IERC20Filterer) ParseApproval(log types.Log) (*IERC20Approval, er
 	if err := _IERC20.contract.UnpackLog(event, "Approval", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -2976,6 +2988,7 @@ func (_IERC20 *IERC20Filterer) ParseTransfer(log types.Log) (*IERC20Transfer, er
 	if err := _IERC20.contract.UnpackLog(event, "Transfer", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -3417,6 +3430,7 @@ func (_NodeGraph *NodeGraphFilterer) ParseRollupAsserted(log types.Log) (*NodeGr
 	if err := _NodeGraph.contract.UnpackLog(event, "RollupAsserted", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -3550,6 +3564,7 @@ func (_NodeGraph *NodeGraphFilterer) ParseRollupConfirmed(log types.Log) (*NodeG
 	if err := _NodeGraph.contract.UnpackLog(event, "RollupConfirmed", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -3683,6 +3698,7 @@ func (_NodeGraph *NodeGraphFilterer) ParseRollupPruned(log types.Log) (*NodeGrap
 	if err := _NodeGraph.contract.UnpackLog(event, "RollupPruned", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -4664,6 +4680,7 @@ func (_Staking *StakingFilterer) ParseRollupChallengeCompleted(log types.Log) (*
 	if err := _Staking.contract.UnpackLog(event, "RollupChallengeCompleted", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -4800,6 +4817,7 @@ func (_Staking *StakingFilterer) ParseRollupChallengeStarted(log types.Log) (*St
 	if err := _Staking.contract.UnpackLog(event, "RollupChallengeStarted", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -4934,6 +4952,7 @@ func (_Staking *StakingFilterer) ParseRollupStakeCreated(log types.Log) (*Stakin
 	if err := _Staking.contract.UnpackLog(event, "RollupStakeCreated", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -5068,6 +5087,7 @@ func (_Staking *StakingFilterer) ParseRollupStakeMoved(log types.Log) (*StakingR
 	if err := _Staking.contract.UnpackLog(event, "RollupStakeMoved", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -5201,6 +5221,7 @@ func (_Staking *StakingFilterer) ParseRollupStakeRefunded(log types.Log) (*Staki
 	if err := _Staking.contract.UnpackLog(event, "RollupStakeRefunded", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 

@@ -487,6 +487,7 @@ func (_ArbSys *ArbSysFilterer) ParseERC20Withdrawal(log types.Log) (*ArbSysERC20
 	if err := _ArbSys.contract.UnpackLog(event, "ERC20Withdrawal", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -648,6 +649,7 @@ func (_ArbSys *ArbSysFilterer) ParseERC721Withdrawal(log types.Log) (*ArbSysERC7
 	if err := _ArbSys.contract.UnpackLog(event, "ERC721Withdrawal", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -792,5 +794,6 @@ func (_ArbSys *ArbSysFilterer) ParseEthWithdrawal(log types.Log) (*ArbSysEthWith
 	if err := _ArbSys.contract.UnpackLog(event, "EthWithdrawal", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
