@@ -6,6 +6,14 @@ interface ArbOwner {
 
     function giveOwnership(address newOwnerAddr) external;
 
+    // Change the sequencer or its parameters
+    // if sequencerAddr is zero, operate without a sequencer
+    function changeSequencer(
+        address sequencerAddr,
+        uint256 maxDelayBlocks,
+        uint256 maxDelaySeconds
+    ) external;
+
     // To upgrade ArbOS, the ower calls startArbosUpgrade, then calls continueArbosUpgrade one or more times to upload
     // the code to be installed as the upgrade, then calls finishArbosUpgrade to complete the upgrade and start executing the new code.
     function startArbosUpgrade() external;
