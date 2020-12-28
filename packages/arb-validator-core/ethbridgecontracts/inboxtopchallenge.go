@@ -419,6 +419,7 @@ func (_BisectionChallenge *BisectionChallengeFilterer) ParseAsserterTimedOut(log
 	if err := _BisectionChallenge.contract.UnpackLog(event, "AsserterTimedOut", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -551,6 +552,7 @@ func (_BisectionChallenge *BisectionChallengeFilterer) ParseChallengerTimedOut(l
 	if err := _BisectionChallenge.contract.UnpackLog(event, "ChallengerTimedOut", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -685,6 +687,7 @@ func (_BisectionChallenge *BisectionChallengeFilterer) ParseContinued(log types.
 	if err := _BisectionChallenge.contract.UnpackLog(event, "Continued", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -818,6 +821,7 @@ func (_BisectionChallenge *BisectionChallengeFilterer) ParseInitiatedChallenge(l
 	if err := _BisectionChallenge.contract.UnpackLog(event, "InitiatedChallenge", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1170,6 +1174,7 @@ func (_Challenge *ChallengeFilterer) ParseAsserterTimedOut(log types.Log) (*Chal
 	if err := _Challenge.contract.UnpackLog(event, "AsserterTimedOut", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1302,6 +1307,7 @@ func (_Challenge *ChallengeFilterer) ParseChallengerTimedOut(log types.Log) (*Ch
 	if err := _Challenge.contract.UnpackLog(event, "ChallengerTimedOut", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1435,6 +1441,7 @@ func (_Challenge *ChallengeFilterer) ParseInitiatedChallenge(log types.Log) (*Ch
 	if err := _Challenge.contract.UnpackLog(event, "InitiatedChallenge", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1875,6 +1882,7 @@ func (_InboxTopChallenge *InboxTopChallengeFilterer) ParseAsserterTimedOut(log t
 	if err := _InboxTopChallenge.contract.UnpackLog(event, "AsserterTimedOut", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -2010,6 +2018,7 @@ func (_InboxTopChallenge *InboxTopChallengeFilterer) ParseBisected(log types.Log
 	if err := _InboxTopChallenge.contract.UnpackLog(event, "Bisected", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -2142,6 +2151,7 @@ func (_InboxTopChallenge *InboxTopChallengeFilterer) ParseChallengerTimedOut(log
 	if err := _InboxTopChallenge.contract.UnpackLog(event, "ChallengerTimedOut", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -2276,6 +2286,7 @@ func (_InboxTopChallenge *InboxTopChallengeFilterer) ParseContinued(log types.Lo
 	if err := _InboxTopChallenge.contract.UnpackLog(event, "Continued", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -2409,6 +2420,7 @@ func (_InboxTopChallenge *InboxTopChallengeFilterer) ParseInitiatedChallenge(log
 	if err := _InboxTopChallenge.contract.UnpackLog(event, "InitiatedChallenge", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -2541,5 +2553,6 @@ func (_InboxTopChallenge *InboxTopChallengeFilterer) ParseOneStepProofCompleted(
 	if err := _InboxTopChallenge.contract.UnpackLog(event, "OneStepProofCompleted", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
