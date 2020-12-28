@@ -30,11 +30,13 @@ import (
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -51,6 +53,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -85,6 +88,8 @@ func main() {
 
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
 	saveMessages := fs.String("save", "", "save messages")
+	walletcount := fs.Int("walletcount", 10, "number of wallets to fund")
+	walletbalance := fs.Int64("walletbalance", 100, "amount of funds in each wallet (Eth)")
 	mnemonic := fs.String(
 		"mnemonic",
 		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
@@ -142,7 +147,7 @@ func main() {
 	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
 	backend := NewBackend(db, l1, signer)
 
-	if err := backend.AddInboxMessage(ctx, initMsg, rollupAddress, backend.l1Emulator.GenerateBlock()); err != nil {
+	if _, err := backend.AddInboxMessage(ctx, initMsg, rollupAddress, backend.l1Emulator.GenerateBlock()); err != nil {
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
@@ -151,13 +156,14 @@ func main() {
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
-	depositSize, ok := new(big.Int).SetString("100000000000000000000", 10)
+	depositSize, ok := new(big.Int).SetString("1000000000000000000", 10)
 	if !ok {
 		logger.Fatal().Stack().Send()
 	}
+	depositSize = depositSize.Mul(depositSize, big.NewInt(*walletbalance))
 
 	accounts := make([]accounts2.Account, 0)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < *walletcount; i++ {
 		path := hdwallet.MustParseDerivationPath(fmt.Sprintf("m/44'/60'/0'/0/%v", i))
 		account, err := wallet.Derive(path, false)
 		if err != nil {
@@ -167,7 +173,7 @@ func main() {
 			Dest:  common.NewAddressFromEth(account.Address),
 			Value: depositSize,
 		}
-		if err := backend.AddInboxMessage(ctx, deposit, rollupAddress, backend.l1Emulator.GenerateBlock()); err != nil {
+		if _, err := backend.AddInboxMessage(ctx, deposit, rollupAddress, backend.l1Emulator.GenerateBlock()); err != nil {
 			logger.Fatal().Stack().Err(err).Send()
 		}
 		accounts = append(accounts, account)
@@ -272,20 +278,20 @@ func (s *EVM) Revert(ctx context.Context, snapId hexutil.Uint64) error {
 	return err
 }
 
-func (s *EVM) Mine(ctx context.Context, timestamp *hexutil.Big) error {
-	var block L1BlockInfo
+func (s *EVM) Mine(ctx context.Context, timestamp *hexutil.Uint64) error {
 	if timestamp != nil {
-		block = s.backend.l1Emulator.GenerateBlockAtTime((*big.Int)(timestamp))
-	} else {
-		block = s.backend.l1Emulator.GenerateBlock()
+		s.backend.l1Emulator.SetTime(int64(*timestamp))
 	}
-	return s.backend.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block)
+	block := s.backend.l1Emulator.GenerateBlock()
+	_, err := s.backend.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block)
+	return err
 }
 
-func (s *EVM) IncreaseTime(ctx context.Context, amount hexutil.Uint64) (hexutil.Uint64, error) {
-	block := s.backend.l1Emulator.GenerateBlockWithTimeIncrease(new(big.Int).SetUint64(uint64(amount)))
-	err := s.backend.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block)
-	return amount, err
+func (s *EVM) IncreaseTime(ctx context.Context, amount int64) (string, error) {
+	s.backend.l1Emulator.IncreaseTime(amount)
+	block := s.backend.l1Emulator.GenerateBlock()
+	_, err := s.backend.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block)
+	return strconv.FormatInt(amount, 10), err
 }
 
 type Backend struct {
@@ -358,16 +364,31 @@ func (b *Backend) SendTransaction(ctx context.Context, tx *types.Transaction) er
 		Str("from", sender.Hex()).
 		Msg("sent transaction")
 	block := b.l1Emulator.GenerateBlock()
-	return b.addInboxMessage(ctx, arbMsg, common.NewAddressFromEth(sender), block)
+	results, err := b.addInboxMessage(ctx, arbMsg, common.NewAddressFromEth(sender), block)
+	if err != nil {
+		return err
+	}
+	txHash := common.NewHashFromEth(tx.Hash())
+	for _, res := range results {
+		// Found matching receipt
+		if res.IncomingRequest.MessageID == txHash {
+			if res.ResultCode == evm.RevertCode {
+				return web3.HandleCallError(res, true)
+			} else {
+				return nil
+			}
+		}
+	}
+	return nil
 }
 
-func (b *Backend) AddInboxMessage(ctx context.Context, msg message.Message, sender common.Address, block L1BlockInfo) error {
+func (b *Backend) AddInboxMessage(ctx context.Context, msg message.Message, sender common.Address, block L1BlockInfo) ([]*evm.TxResult, error) {
 	b.Lock()
 	defer b.Unlock()
 	return b.addInboxMessage(ctx, msg, sender, block)
 }
 
-func (b *Backend) addInboxMessage(ctx context.Context, msg message.Message, sender common.Address, block L1BlockInfo) error {
+func (b *Backend) addInboxMessage(ctx context.Context, msg message.Message, sender common.Address, block L1BlockInfo) ([]*evm.TxResult, error) {
 	chainTime := inbox.ChainTime{
 		BlockNum:  block.blockId.Height,
 		Timestamp: block.timestamp,
@@ -375,12 +396,13 @@ func (b *Backend) addInboxMessage(ctx context.Context, msg message.Message, send
 
 	inboxMessage := message.NewInboxMessage(msg, sender, big.NewInt(int64(len(b.messages))), chainTime)
 
-	if err := b.db.AddMessages(ctx, []inbox.InboxMessage{inboxMessage}, block.blockId); err != nil {
-		return err
+	b.messages = append(b.messages, inboxMessage)
+	results, err := b.db.AddMessages(ctx, []inbox.InboxMessage{inboxMessage}, block.blockId)
+	if err != nil {
+		return nil, err
 	}
 
-	b.messages = append(b.messages, inboxMessage)
-	return nil
+	return results, nil
 }
 
 func (b *Backend) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
@@ -405,13 +427,14 @@ type L1Emulator struct {
 	sync.Mutex
 	l1Blocks       []L1BlockInfo
 	l1BlocksByHash map[common.Hash]L1BlockInfo
+	timeIncrease   int64
 }
 
 func NewL1Emulator() *L1Emulator {
 	b := &L1Emulator{
 		l1BlocksByHash: make(map[common.Hash]L1BlockInfo),
 	}
-	b.addBlockAtTime(big.NewInt(time.Now().Unix()))
+	b.addBlock()
 	return b
 }
 
@@ -448,37 +471,36 @@ func (b *L1Emulator) TimestampForBlockHash(_ context.Context, hash common.Hash) 
 	return info.timestamp, nil
 }
 
-func (b *L1Emulator) addBlockAtTime(timestamp *big.Int) L1BlockInfo {
+func (b *L1Emulator) addBlock() L1BlockInfo {
 	info := L1BlockInfo{
 		blockId: &common.BlockId{
 			Height:     common.NewTimeBlocksInt(int64(len(b.l1Blocks))),
 			HeaderHash: common.RandHash(),
 		},
-		timestamp: timestamp,
+		timestamp: big.NewInt(time.Now().Unix() + b.timeIncrease),
 	}
 	b.l1Blocks = append(b.l1Blocks, info)
 	b.l1BlocksByHash[info.blockId.HeaderHash] = info
 	return info
 }
 
-func (b *L1Emulator) addBlockWithTimeIncrease(amount *big.Int) L1BlockInfo {
-	return b.addBlockAtTime(new(big.Int).Add(b.Latest().timestamp, amount))
-}
-
 func (b *L1Emulator) GenerateBlock() L1BlockInfo {
 	b.Lock()
 	defer b.Unlock()
-	return b.addBlockWithTimeIncrease(new(big.Int).SetUint64(uint64((time.Second * 15).Seconds())))
+	return b.addBlock()
 }
 
-func (b *L1Emulator) GenerateBlockWithTimeIncrease(timestamp *big.Int) L1BlockInfo {
+func (b *L1Emulator) SetTime(timestamp int64) {
 	b.Lock()
 	defer b.Unlock()
-	return b.addBlockWithTimeIncrease(timestamp)
+	b.timeIncrease = timestamp - time.Now().Unix()
 }
 
-func (b *L1Emulator) GenerateBlockAtTime(timestamp *big.Int) L1BlockInfo {
+func (b *L1Emulator) IncreaseTime(amount int64) {
 	b.Lock()
 	defer b.Unlock()
-	return b.addBlockAtTime(timestamp)
+	if amount < 0 {
+		amount = 0
+	}
+	b.timeIncrease += amount
 }
