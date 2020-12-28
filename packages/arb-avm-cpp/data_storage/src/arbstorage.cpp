@@ -20,7 +20,6 @@
 #include <data_storage/blockstore.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/code.hpp>
-#include <data_storage/value/machine.hpp>
 
 #include <avm/machine.hpp>
 
@@ -28,11 +27,9 @@
 #include <avm_values/vmValueParser.hpp>
 #include <utility>
 
-#include <rocksdb/options.h>
-#include <rocksdb/utilities/transaction.h>
-
 ArbStorage::ArbStorage(const std::string& db_path)
-    : datastorage(std::make_shared<DataStorage>(db_path)) {}
+    : datastorage(std::make_shared<DataStorage>(db_path)),
+      cmach(std::make_shared<CheckpointedMachine>(datastorage)) {}
 
 void ArbStorage::initialize(const std::string& executable_path) {
     auto executable = loadExecutable(executable_path);

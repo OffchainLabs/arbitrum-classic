@@ -45,7 +45,7 @@ class CheckpointedMachine {
     Checkpoint pending_checkpoint;
 
    public:
-    CheckpointedMachine() = default;
+    CheckpointedMachine() = delete;
     explicit CheckpointedMachine(std::shared_ptr<DataStorage> data_storage_)
         : data_storage(std::move(data_storage_)),
           code(std::make_shared<Code>(
