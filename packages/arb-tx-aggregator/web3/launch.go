@@ -42,6 +42,10 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 		return nil, err
 	}
 
+	if err := s.RegisterName("personal", NewPersonalAccounts(privateKeys)); err != nil {
+		return nil, err
+	}
+
 	net := &Net{chainId: message.ChainAddressToID(common.NewAddressFromEth(server.GetChainAddress())).Uint64()}
 	if err := s.RegisterName("net", net); err != nil {
 		return nil, err

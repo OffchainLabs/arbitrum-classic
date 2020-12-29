@@ -129,3 +129,32 @@ func (s *Accounts) Sign(account common.Address, data hexutil.Bytes) (hexutil.Byt
 	sig[64] += 27
 	return sig, nil
 }
+
+type PersonalAccounts struct {
+	privateKeys map[common.Address]*ecdsa.PrivateKey
+}
+
+func NewPersonalAccounts(privateKeys []*ecdsa.PrivateKey) *PersonalAccounts {
+	keys := make(map[common.Address]*ecdsa.PrivateKey)
+	for _, privKey := range privateKeys {
+		addr := crypto.PubkeyToAddress(privKey.PublicKey)
+		keys[addr] = privKey
+	}
+	return &PersonalAccounts{
+		privateKeys: keys,
+	}
+}
+
+func (s *PersonalAccounts) Sign(data hexutil.Bytes, account common.Address, _ *hexutil.Bytes) (hexutil.Bytes, error) {
+	// Password ignored
+	privKey, ok := s.privateKeys[account]
+	if !ok {
+		return nil, errors.New("signer does not have unlocked wallet")
+	}
+	sig, err := crypto.Sign(accounts.TextHash(data), privKey)
+	if err != nil {
+		return nil, err
+	}
+	sig[64] += 27
+	return sig, nil
+}
