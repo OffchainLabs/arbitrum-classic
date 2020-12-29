@@ -27,18 +27,19 @@ var (
 )
 
 // SimpleABI is the input ABI used to generate the binding from.
-const SimpleABI = "[{\"constant\":false,\"inputs\":[],\"name\":\"acceptPayment\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"exists\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"rejectPayment\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"reverts\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const SimpleABI = "[{\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"constant\":false,\"inputs\":[],\"name\":\"acceptPayment\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"exists\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"nestedCall\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"rejectPayment\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"reverts\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // SimpleFuncSigs maps the 4-byte function signature to its string representation.
 var SimpleFuncSigs = map[string]string{
 	"ae0aba8c": "acceptPayment()",
 	"267c4ae4": "exists()",
+	"9b7c9da3": "nestedCall(uint256)",
 	"9436bc1f": "rejectPayment()",
 	"3bccbbc9": "reverts()",
 }
 
 // SimpleBin is the compiled bytecode used for deploying new contracts.
-var SimpleBin = "0x608060405234801561001057600080fd5b50610109806100206000396000f3fe608060405260043610603a5760003560e01c8063267c4ae414603f5780633bccbbc91460635780639436bc1f146077578063ae0aba8c146089575b600080fd5b348015604a57600080fd5b506051608f565b60408051918252519081900360200190f35b348015606e57600080fd5b5060756094565b005b348015608257600080fd5b50607560d2565b607560d2565b600a90565b6040805162461bcd60e51b815260206004820152600e60248201526d1d1a1a5cc81a5cc818481d195cdd60921b604482015290519081900360640190fd5b56fea265627a7a723158200ac69f78729ce918ccf02cd319b7a7178d700d4eac67f305ea4071b40b71a40b64736f6c63430005110032"
+var SimpleBin = "0x608060405234801561001057600080fd5b506101cf806100206000396000f3fe60806040526004361061004a5760003560e01c8063267c4ae4146100875780633bccbbc9146100ae5780639436bc1f146100c35780639b7c9da3146100d8578063ae0aba8c14610102575b6040805162461bcd60e51b815260206004820152600b60248201526a6e6f206465706f7369747360a81b604482015290519081900360640190fd5b005b34801561009357600080fd5b5061009c61010a565b60408051918252519081900360200190f35b3480156100ba57600080fd5b5061008561010f565b3480156100cf57600080fd5b5061008561014d565b3480156100e457600080fd5b50610085600480360360208110156100fb57600080fd5b503561014f565b61008561014d565b600a90565b6040805162461bcd60e51b815260206004820152600e60248201526d1d1a1a5cc81a5cc818481d195cdd60921b604482015290519081900360640190fd5b565b60405130908290600081818185875af1925050503d806000811461018f576040519150601f19603f3d011682016040523d82523d6000602084013e610194565b606091505b5050505056fea265627a7a7231582027ea72df9c04bcf537d095f21a669aba2c6df70f9a0a63c115e2b810816e0aed64736f6c63430005110032"
 
 // DeploySimple deploys a new Ethereum contract, binding an instance of Simple to it.
 func DeploySimple(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Simple, error) {
@@ -238,6 +239,27 @@ func (_Simple *SimpleTransactorSession) Exists() (*types.Transaction, error) {
 	return _Simple.Contract.Exists(&_Simple.TransactOpts)
 }
 
+// NestedCall is a paid mutator transaction binding the contract method 0x9b7c9da3.
+//
+// Solidity: function nestedCall(uint256 value) returns()
+func (_Simple *SimpleTransactor) NestedCall(opts *bind.TransactOpts, value *big.Int) (*types.Transaction, error) {
+	return _Simple.contract.Transact(opts, "nestedCall", value)
+}
+
+// NestedCall is a paid mutator transaction binding the contract method 0x9b7c9da3.
+//
+// Solidity: function nestedCall(uint256 value) returns()
+func (_Simple *SimpleSession) NestedCall(value *big.Int) (*types.Transaction, error) {
+	return _Simple.Contract.NestedCall(&_Simple.TransactOpts, value)
+}
+
+// NestedCall is a paid mutator transaction binding the contract method 0x9b7c9da3.
+//
+// Solidity: function nestedCall(uint256 value) returns()
+func (_Simple *SimpleTransactorSession) NestedCall(value *big.Int) (*types.Transaction, error) {
+	return _Simple.Contract.NestedCall(&_Simple.TransactOpts, value)
+}
+
 // RejectPayment is a paid mutator transaction binding the contract method 0x9436bc1f.
 //
 // Solidity: function rejectPayment() returns()
@@ -278,4 +300,25 @@ func (_Simple *SimpleSession) Reverts() (*types.Transaction, error) {
 // Solidity: function reverts() returns()
 func (_Simple *SimpleTransactorSession) Reverts() (*types.Transaction, error) {
 	return _Simple.Contract.Reverts(&_Simple.TransactOpts)
+}
+
+// Fallback is a paid mutator transaction binding the contract fallback function.
+//
+// Solidity: fallback() payable returns()
+func (_Simple *SimpleTransactor) Fallback(opts *bind.TransactOpts, calldata []byte) (*types.Transaction, error) {
+	return _Simple.contract.RawTransact(opts, calldata)
+}
+
+// Fallback is a paid mutator transaction binding the contract fallback function.
+//
+// Solidity: fallback() payable returns()
+func (_Simple *SimpleSession) Fallback(calldata []byte) (*types.Transaction, error) {
+	return _Simple.Contract.Fallback(&_Simple.TransactOpts, calldata)
+}
+
+// Fallback is a paid mutator transaction binding the contract fallback function.
+//
+// Solidity: fallback() payable returns()
+func (_Simple *SimpleTransactorSession) Fallback(calldata []byte) (*types.Transaction, error) {
+	return _Simple.Contract.Fallback(&_Simple.TransactOpts, calldata)
 }
