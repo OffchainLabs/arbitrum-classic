@@ -19,6 +19,10 @@
 pragma solidity ^0.5.17;
 
 contract Simple {
+    function() external payable {
+        require(false, "no deposits");
+    }
+
     function exists() external returns (uint256) {
         return 10;
     }
@@ -30,4 +34,8 @@ contract Simple {
     function acceptPayment() external payable {}
 
     function rejectPayment() external {}
+
+    function nestedCall(uint256 value) external {
+        address(this).call.value(value)("");
+    }
 }

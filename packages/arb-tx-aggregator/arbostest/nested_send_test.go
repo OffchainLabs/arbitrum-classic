@@ -61,3 +61,36 @@ func TestFailedNestedSend(t *testing.T) {
 	checkConstructorResult(t, results[0], connAddress1)
 	revertedTxCheck(t, results[1])
 }
+
+func TestRevertedNestedCall(t *testing.T) {
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
+	failIfError(t, err)
+
+	tx1 := makeSimpleConstructorTx(hexutil.MustDecode(arbostestcontracts.SimpleBin), big.NewInt(0))
+	tx2 := message.Transaction{
+		MaxGas:      big.NewInt(10000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(1),
+		DestAddress: connAddress1,
+		Payment:     big.NewInt(0),
+		Data:        makeFuncData(t, simpleABI.Methods["nestedCall"], big.NewInt(0)),
+	}
+	tx3 := message.Transaction{
+		MaxGas:      big.NewInt(10000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(2),
+		DestAddress: connAddress1,
+		Payment:     big.NewInt(0),
+		Data:        makeFuncData(t, simpleABI.Methods["nestedCall"], big.NewInt(10)),
+	}
+	messages := []message.Message{
+		message.NewSafeL2Message(tx1),
+		message.NewSafeL2Message(tx2),
+		message.NewSafeL2Message(tx3),
+	}
+	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
+	results := processTxResults(t, logs)
+	checkConstructorResult(t, results[0], connAddress1)
+	succeededTxCheck(t, results[1])
+	succeededTxCheck(t, results[2])
+}
