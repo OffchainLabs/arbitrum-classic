@@ -18,6 +18,8 @@ package arbostest
 
 import (
 	"bytes"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"strings"
@@ -136,6 +138,16 @@ func TestTransactionCount(t *testing.T) {
 		Data:        generateFib(t, big.NewInt(20)),
 	}
 
+	// Transaction to contract with insufficient balance
+	tx8 := message.Transaction{
+		MaxGas:      big.NewInt(1000000000),
+		GasPriceBid: big.NewInt(1000),
+		SequenceNum: big.NewInt(3),
+		DestAddress: connAddress1,
+		Payment:     big.NewInt(0),
+		Data:        generateFib(t, big.NewInt(20)),
+	}
+
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
@@ -160,6 +172,8 @@ func TestTransactionCount(t *testing.T) {
 		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(15), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(tx7), sender, big.NewInt(16), chainTime),
 		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(17), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx8), sender, big.NewInt(18), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(19), chainTime),
 	}
 
 	logs, _, _ := runAssertion(t, messages, len(messages)-2, 0)
@@ -197,6 +211,12 @@ func TestTransactionCount(t *testing.T) {
 	// Tx call with insufficient balance doesn't affect the count
 	txResultCheck(t, results[14], evm.InsufficientTxFundsCode)
 	checkTxCountResult(t, results[15], big.NewInt(3))
+
+	// Tx call with insufficient gas funds doesn't affect the count
+	txResultCheck(t, results[16], evm.InsufficientGasFundsCode)
+	checkTxCountResult(t, results[17], big.NewInt(3))
+
+	t.Log(crypto.CreateAddress(ethcommon.HexToAddress("0x3fab184622dc19b6109349b94811493bf2a45362"), 0).Hex())
 }
 
 func makeArbSysTx(data []byte, seq *big.Int) message.Message {
