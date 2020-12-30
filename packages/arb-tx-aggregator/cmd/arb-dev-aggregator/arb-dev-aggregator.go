@@ -329,9 +329,6 @@ func (b *Backend) reorg(ctx context.Context, height uint64) error {
 	if _, err := b.db.Load(ctx); err != nil {
 		return err
 	}
-	if b.db.LatestBlock().Height.AsInt().Uint64() != height {
-		panic("wrong height")
-	}
 	logger.
 		Info().
 		Uint64("start", startHeight.Height.AsInt().Uint64()).
@@ -346,18 +343,7 @@ func (b *Backend) reorg(ctx context.Context, height uint64) error {
 func (b *Backend) PendingTransactionCount(_ context.Context, account common.Address) *uint64 {
 	b.Lock()
 	defer b.Unlock()
-	latest := b.l1Emulator.Latest()
-	snap := b.db.GetSnapshot(inbox.ChainTime{
-		BlockNum:  latest.blockId.Height,
-		Timestamp: latest.timestamp,
-	})
-	nonce, err := snap.GetTransactionCount(account)
-	if err != nil {
-		logger.Warn().Err(err).Msg("error getting transaction count")
-		return nil
-	}
-	nonceInt := nonce.Uint64()
-	return &nonceInt
+	return nil
 }
 
 func (b *Backend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
@@ -379,7 +365,9 @@ func (b *Backend) SendTransaction(ctx context.Context, tx *types.Transaction) er
 		Str("gasPrice", tx.GasPrice().String()).
 		Uint64("nonce", tx.Nonce()).
 		Str("from", sender.Hex()).
+		Str("value", tx.Value().String()).
 		Msg("sent transaction")
+	startHeight := b.l1Emulator.Latest().blockId.Height.AsInt().Uint64()
 	block := b.l1Emulator.GenerateBlock()
 	results, err := b.addInboxMessage(ctx, arbMsg, common.NewAddressFromEth(sender), block)
 	if err != nil {
@@ -391,9 +379,16 @@ func (b *Backend) SendTransaction(ctx context.Context, tx *types.Transaction) er
 		if res.IncomingRequest.MessageID == txHash {
 			if res.ResultCode == evm.RevertCode {
 				// If transaction failed, rollback the block
-				if err := b.reorg(ctx, block.blockId.Height.AsInt().Uint64()-1); err != nil {
+				if err := b.reorg(ctx, startHeight); err != nil {
 					return err
 				}
+
+				// Insert an empty block instead
+				block := b.l1Emulator.GenerateBlock()
+				if _, err := b.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block); err != nil {
+					return err
+				}
+
 				return web3.HandleCallError(res, true)
 			} else {
 				return nil
