@@ -599,8 +599,8 @@ func (db *TxDB) saveAssertion(ctx context.Context, processed processedAssertion)
 		}
 
 		for i, txRes := range txResults {
-			if txRes.ResultCode == evm.BadSequenceCode {
-				// If this log failed with incorrect sequence number, only save the request if it hasn't been saved before
+			if txRes.ResultCode != evm.ReturnCode && txRes.ResultCode != evm.RevertCode {
+				// If this log was for an invalid transaction, only save the request if it hasn't been saved before
 				if db.as.GetPossibleRequestInfo(txRes.IncomingRequest.MessageID) != nil {
 					continue
 				}
