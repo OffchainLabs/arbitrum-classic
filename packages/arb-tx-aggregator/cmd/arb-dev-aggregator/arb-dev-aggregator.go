@@ -385,7 +385,7 @@ func (b *Backend) SendTransaction(ctx context.Context, tx *types.Transaction) er
 
 				// Insert an empty block instead
 				block := b.l1Emulator.GenerateBlock()
-				if _, err := b.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block); err != nil {
+				if _, err := b.addInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block); err != nil {
 					return err
 				}
 
