@@ -101,6 +101,7 @@ contract Rollup {
 
         emit SentLogs(logAcc);
 
+        latestConfirmed = firstUnresolvedNode;
         discardUnresolvedNode();
         node.destroy();
     }
@@ -326,6 +327,9 @@ contract Rollup {
     function currentRequiredStake() public view returns (uint256) {
         uint256 MAX_INT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
+        if (block.number < nodes[latestConfirmed].deadlineBlock()) {
+            return baseStake;
+        }
         uint256 latestConfirmedAge = block.number - nodes[latestConfirmed].deadlineBlock();
         uint256 challengePeriodsPassed = latestConfirmedAge / challengePeriod;
         if (challengePeriodsPassed > 255) {
