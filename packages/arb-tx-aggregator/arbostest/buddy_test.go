@@ -49,23 +49,33 @@ func TestBuddyContract(t *testing.T) {
 
 	fibCode := hexutil.MustDecode(arbostestcontracts.FibonacciBin)
 	contractCreation := makeSimpleConstructorTx(fibCode, big.NewInt(0))
+	noOpTx := message.Transaction{
+		MaxGas:      big.NewInt(100000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(0),
+		DestAddress: common.RandAddress(),
+		Payment:     big.NewInt(0),
+		Data:        nil,
+	}
 	contractCreation2 := makeSimpleConstructorTx(fibCode, big.NewInt(1))
 
 	messages := []inbox.InboxMessage{
 		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
 		message.NewInboxMessage(buddyConstructor, connAddress1, big.NewInt(1), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(contractCreation), sender, big.NewInt(2), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(contractCreation2), sender, big.NewInt(3), chainTime),
-		message.NewInboxMessage(buddyConstructor, connAddress2, big.NewInt(4), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(noOpTx), sender, big.NewInt(3), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(contractCreation2), sender, big.NewInt(4), chainTime),
+		message.NewInboxMessage(buddyConstructor, connAddress2, big.NewInt(5), chainTime),
 	}
 
-	logs, sends, mach, _ := runAssertion(t, messages, 4, 1)
+	logs, sends, mach, _ := runAssertion(t, messages, 5, 1)
 	results := processTxResults(t, logs)
 
 	checkConstructorResult(t, results[0], connAddress1)
 	txResultCheck(t, results[1], evm.ContractAlreadyExists)
-	checkConstructorResult(t, results[2], connAddress2)
-	txResultCheck(t, results[3], evm.ContractAlreadyExists)
+	succeededTxCheck(t, results[2])
+	checkConstructorResult(t, results[3], connAddress2)
+	txResultCheck(t, results[4], evm.ContractAlreadyExists)
 
 	msg, err := message.NewOutMessageFromValue(sends[0])
 	failIfError(t, err)
