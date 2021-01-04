@@ -2,7 +2,6 @@
 pragma solidity ^0.5.17;
 
 import "./Node.sol";
-import "./Assertion.sol";
 import "./RollupLib.sol";
 
 import "../inbox/IGlobalInbox.sol";
@@ -36,6 +35,7 @@ contract Rollup {
 
     constructor(bytes32 machineHash) public {
         bytes32 state = RollupLib.nodeStateHash(
+            0,
             machineHash,
             0, // inbox top
             0, // inbox count
@@ -138,63 +138,20 @@ contract Rollup {
         staker.latestStakedNode = nodeNum;
     }
 
-    struct AssertionData {
-        bytes32 beforeMachineHash;
-        bytes32 beforeInboxHash;
-        uint256 beforeInboxCount;
-        uint256 beforeSendCount;
-        uint256 beforeLogCount;
-        uint256 stepsExecuted;
-        bytes32 inboxDelta;
-        uint256 inboxMessagesRead;
-        uint256 gasUsed;
-        bytes32 sendAcc;
-        uint256 sendCount;
-        bytes32 logAcc;
-        uint256 logCount;
-        bytes32 afterInboxHash;
-        bytes32 afterMachineHash;
-    }
-
-    function decodeAssertionData(bytes32[7] memory bytes32Fields, uint256[8] memory intFields)
-        private
-        pure
-        returns (AssertionData memory)
-    {
-        return
-            AssertionData(
-                bytes32Fields[0],
-                bytes32Fields[1],
-                intFields[0],
-                intFields[1],
-                intFields[2],
-                intFields[3],
-                bytes32Fields[2],
-                intFields[4],
-                intFields[5],
-                bytes32Fields[3],
-                intFields[6],
-                bytes32Fields[4],
-                intFields[7],
-                bytes32Fields[5],
-                bytes32Fields[6]
-            );
-    }
-
     function newStakeOnNewNode(
         bytes32 blockHash,
         uint256 blockNumber,
         uint256 nodeNum,
         uint256 prev,
         bytes32[7] calldata bytes32Fields,
-        uint256[8] calldata intFields
+        uint256[9] calldata intFields
     ) external {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         verifyCanStake();
         require(nodeNum == latestNodeCreated + 1);
         require(prev == latestConfirmed);
 
-        AssertionData memory assertion = decodeAssertionData(bytes32Fields, intFields);
+        RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(bytes32Fields, intFields);
 
         Node node = createNewNode(assertion, prev);
 
@@ -208,14 +165,14 @@ contract Rollup {
         uint256 blockNumber,
         uint256 nodeNum,
         bytes32[7] calldata bytes32Fields,
-        uint256[8] calldata intFields
+        uint256[9] calldata intFields
     ) external {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         require(nodeNum == latestNodeCreated + 1);
         Staker storage staker = stakers[msg.sender];
         require(!staker.isZombie);
 
-        AssertionData memory assertion = decodeAssertionData(bytes32Fields, intFields);
+        RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(bytes32Fields, intFields);
 
         Node node = createNewNode(assertion, staker.latestStakedNode);
 
@@ -225,75 +182,25 @@ contract Rollup {
         latestNodeCreated++;
     }
 
-    function createNewNode(AssertionData memory assertion, uint256 prev) private returns (Node) {
+    function createNewNode(RollupLib.Assertion memory assertion, uint256 prev)
+        private
+        returns (Node)
+    {
         // Make sure the previous state is correct against the node being built on
-        require(
-            RollupLib.nodeStateHash(
-                assertion.beforeMachineHash,
-                assertion.beforeInboxHash,
-                assertion.beforeInboxCount,
-                assertion.beforeSendCount,
-                assertion.beforeLogCount
-            ) == nodes[prev].stateHash()
-        );
+        require(RollupLib.beforeNodeStateHash(assertion) == nodes[prev].stateHash());
 
         (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(address(this));
 
         // inboxCount must be greater than beforeInboxCount since we can't have read past the end of the inbox
         require(assertion.inboxMessagesRead <= inboxCount - assertion.beforeInboxCount);
 
-        bytes32 executionHash = ChallengeLib.bisectionChunkHash(
-            assertion.stepsExecuted,
-            ChallengeLib.assertionHash(
-                assertion.inboxDelta,
-                0,
-                ChallengeLib.outputAccHash(0, 0, 0, 0),
-                assertion.beforeMachineHash
-            ),
-            ChallengeLib.assertionHash(
-                0,
-                assertion.gasUsed,
-                ChallengeLib.outputAccHash(
-                    assertion.sendAcc,
-                    assertion.sendCount,
-                    assertion.logAcc,
-                    assertion.logCount
-                ),
-                assertion.afterMachineHash
-            )
-        );
-
-        bytes32 inboxConsistencyHash = ChallengeLib.bisectionChunkHash(
-            inboxCount - assertion.beforeInboxCount - assertion.inboxMessagesRead,
-            inboxValue,
-            assertion.afterInboxHash
-        );
-
-        bytes32 inboxDeltaHash = ChallengeLib.bisectionChunkHash(
-            assertion.inboxMessagesRead,
-            ChallengeLib.inboxDeltaHash(assertion.afterInboxHash, 0),
-            ChallengeLib.inboxDeltaHash(assertion.beforeInboxHash, assertion.inboxDelta)
-        );
-
-        bytes32 challengeRoot = keccak256(
-            abi.encodePacked(inboxConsistencyHash, inboxDeltaHash, executionHash)
-        );
-
         // TODO: Verify that assertion meets the minimum size requirement
         // TODO: Verify that assertion meets the minimum Delta time requirement
 
-        bytes32 nodeStateHash = RollupLib.nodeStateHash(
-            assertion.afterMachineHash,
-            assertion.afterInboxHash,
-            assertion.beforeInboxCount + assertion.inboxMessagesRead,
-            assertion.beforeSendCount + assertion.sendCount,
-            assertion.beforeLogCount + assertion.logCount
-        );
-
         return
             new Node(
-                nodeStateHash,
-                challengeRoot,
+                RollupLib.afterNodeStateHash(assertion),
+                RollupLib.challengeRoot(assertion, inboxCount, inboxValue),
                 prev,
                 block.number,
                 0, // TODO: deadline block
