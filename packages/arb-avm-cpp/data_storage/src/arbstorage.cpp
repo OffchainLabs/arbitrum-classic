@@ -61,6 +61,10 @@ std::unique_ptr<AggregatorStore> ArbStorage::getAggregatorStore() const {
     return std::make_unique<AggregatorStore>(datastorage);
 }
 
+std::unique_ptr<MessageStore> ArbStorage::getMessageStore() const {
+    return std::make_unique<MessageStore>(datastorage);
+}
+
 std::shared_ptr<CheckpointedMachine> ArbStorage::getCheckpointedMachine() {
     return cmach;
 }

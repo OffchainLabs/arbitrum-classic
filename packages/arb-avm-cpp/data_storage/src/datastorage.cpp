@@ -35,6 +35,8 @@ DataStorage::DataStorage(const std::string& db_path) {
     column_families.emplace_back("blocks", rocksdb::ColumnFamilyOptions());
     column_families.emplace_back("nodes", rocksdb::ColumnFamilyOptions());
     column_families.emplace_back("checkpoints", rocksdb::ColumnFamilyOptions());
+    column_families.emplace_back("messageentries",
+                                 rocksdb::ColumnFamilyOptions());
 
     rocksdb::TransactionDB* db = nullptr;
     std::vector<rocksdb::ColumnFamilyHandle*> handles;
@@ -54,6 +56,8 @@ DataStorage::DataStorage(const std::string& db_path) {
     node_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[2]);
     checkpoint_column =
         std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[3]);
+    messageentry_column =
+        std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[4]);
 }
 
 rocksdb::Status DataStorage::closeDb() {
@@ -61,6 +65,7 @@ rocksdb::Status DataStorage::closeDb() {
     default_column.reset();
     node_column.reset();
     checkpoint_column.reset();
+    messageentry_column.reset();
     auto s = txn_db->Close();
     txn_db.reset();
     return s;
