@@ -2,8 +2,8 @@
 pragma solidity ^0.5.17;
 
 contract Node {
-    bytes32 public inboxNodeHash;
-    bytes32 public executionNodeHash;
+    bytes32 public stateHash;
+    bytes32 public challengeHash;
     uint256 public prev;
     uint256 public proposedBlock;
     uint256 public deadlineBlock;
@@ -18,15 +18,15 @@ contract Node {
     }
 
     constructor(
-        bytes32 _inboxNodeHash,
-        bytes32 _executionNodeHash,
+        bytes32 _stateHash,
+        bytes32 _challengeHash,
         uint256 _prev,
         uint256 _proposedBlock,
         uint256 _deadlineBlock,
         uint256 _stakerCount
     ) public {
-        inboxNodeHash = _inboxNodeHash;
-        executionNodeHash = _executionNodeHash;
+        stateHash = _stateHash;
+        challengeHash = _challengeHash;
         prev = _prev;
         proposedBlock = _proposedBlock;
         deadlineBlock = _deadlineBlock;

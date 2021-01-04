@@ -3,9 +3,11 @@ pragma solidity ^0.5.17;
 
 import "./Node.sol";
 import "./Assertion.sol";
+import "./RollupLib.sol";
 
 import "../inbox/IGlobalInbox.sol";
 import "../rollup/RollupUtils.sol";
+import "../new_challenge/ChallengeLib.sol";
 
 contract Rollup {
     event SentLogs(bytes32 logsAccHash);
@@ -33,15 +35,16 @@ contract Rollup {
     IGlobalInbox public globalInbox;
 
     constructor(bytes32 machineHash) public {
-        bytes32 assertionHash = Assertion.hashAssertion(machineHash, 0, 0, 0, 0, 0, 0, 0);
-
-        bytes32 inboxNodeHash = Assertion.hashInboxNode(0, 0, 0);
-
-        bytes32 executionNodeHash = Assertion.hashExecutionNode(assertionHash, assertionHash, 0);
-
+        bytes32 state = RollupLib.nodeStateHash(
+            machineHash,
+            0, // inbox top
+            0, // inbox count
+            0, // send count
+            0 // log count
+        );
         Node node = new Node(
-            inboxNodeHash,
-            executionNodeHash,
+            state,
+            0, // challenge hash (not challengeable)
             latestConfirmed,
             block.number,
             0, // TODO: deadline block
@@ -120,77 +123,6 @@ contract Rollup {
         addStaker(nodeNum, node);
     }
 
-    /*
-
-    // Precondition Data
-    bytes32 beforeInboxAcc;
-    uint256 beforeInboxCount;
-
-    bytes32 topInboxAcc;
-    uint256 topInboxCount;
-
-    bytes32 beforeStateHash;
-
-    // Postcondition Data
-
-    bytes32 afterInboxAcc;
-    uint256 afterInboxCount;
-
-    bytes32 afterStateHash
-
-    uint256 totalSteps;
-    */
-
-    function newStakeOnNewNode(
-        bytes32 blockHash,
-        uint256 blockNumber,
-        uint256 nodeNum,
-        uint256 prev,
-        bytes32 beforeInboxHash,
-        uint256 beforeInboxCount,
-        bytes32 beforeStateHash,
-        bytes32 afterInboxHash,
-        uint256 afterInboxCount,
-        bytes32 afterStateHash,
-        uint256 numSteps
-    ) external payable {
-        require(blockhash(blockNumber) == blockHash, "invalid known block");
-        verifyCanStake();
-        require(nodeNum == latestNodeCreated + 1);
-        require(prev == latestConfirmed);
-        require(afterInboxCount >= beforeInboxCount);
-
-        (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(address(this));
-
-        require(afterInboxCount <= inboxCount);
-
-        bytes32 inboxNodeHash = Assertion.hashInboxNode(
-            afterInboxHash,
-            inboxValue,
-            inboxCount - afterInboxCount
-        );
-
-        bytes32 executionNodeHash = Assertion.hashExecutionNode(
-            Assertion.hashAssertion(beforeStateHash, beforeInboxCount, beforeInboxHash),
-            Assertion.hashAssertion(afterStateHash, afterInboxCount, afterInboxHash),
-            numSteps
-        );
-
-        // TODO: Verify that assertion meets the minimum size requirement
-        // TODO: Verify that assertion meets the minimum Delta time requirement
-        Node node = new Node(
-            inboxNodeHash,
-            executionNodeHash,
-            latestConfirmed,
-            block.number,
-            0, // TODO: deadline block
-            0
-        );
-        addStaker(nodeNum, node);
-        nodes[nodeNum] = node;
-        latestNodeCreated++;
-    }
-
     function addStakeOnExistingNode(
         bytes32 blockHash,
         uint256 blockNumber,
@@ -206,32 +138,167 @@ contract Rollup {
         staker.latestStakedNode = nodeNum;
     }
 
+    struct AssertionData {
+        bytes32 beforeMachineHash;
+        bytes32 beforeInboxHash;
+        uint256 beforeInboxCount;
+        uint256 beforeSendCount;
+        uint256 beforeLogCount;
+        uint256 stepsExecuted;
+        bytes32 inboxDelta;
+        uint256 inboxMessagesRead;
+        uint256 gasUsed;
+        bytes32 sendAcc;
+        uint256 sendCount;
+        bytes32 logAcc;
+        uint256 logCount;
+        bytes32 afterInboxHash;
+        bytes32 afterMachineHash;
+    }
+
+    function decodeAssertionData(bytes32[7] memory bytes32Fields, uint256[8] memory intFields)
+        private
+        pure
+        returns (AssertionData memory)
+    {
+        return
+            AssertionData(
+                bytes32Fields[0],
+                bytes32Fields[1],
+                intFields[0],
+                intFields[1],
+                intFields[2],
+                intFields[3],
+                bytes32Fields[2],
+                intFields[4],
+                intFields[5],
+                bytes32Fields[3],
+                intFields[6],
+                bytes32Fields[4],
+                intFields[7],
+                bytes32Fields[5],
+                bytes32Fields[6]
+            );
+    }
+
+    function newStakeOnNewNode(
+        bytes32 blockHash,
+        uint256 blockNumber,
+        uint256 nodeNum,
+        uint256 prev,
+        bytes32[7] calldata bytes32Fields,
+        uint256[8] calldata intFields
+    ) external {
+        require(blockhash(blockNumber) == blockHash, "invalid known block");
+        verifyCanStake();
+        require(nodeNum == latestNodeCreated + 1);
+        require(prev == latestConfirmed);
+
+        AssertionData memory assertion = decodeAssertionData(bytes32Fields, intFields);
+
+        Node node = createNewNode(assertion, prev);
+
+        addStaker(nodeNum, node);
+        nodes[nodeNum] = node;
+        latestNodeCreated++;
+    }
+
     function addStakeOnNewNode(
         bytes32 blockHash,
         uint256 blockNumber,
-        uint256 nodeNum
+        uint256 nodeNum,
+        bytes32[7] calldata bytes32Fields,
+        uint256[8] calldata intFields
     ) external {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         require(nodeNum == latestNodeCreated + 1);
         Staker storage staker = stakers[msg.sender];
         require(!staker.isZombie);
 
-        // TODO: Verify that the preconditions of assertion are consistent with the postconditions of prev
-        // TODO: Verify that assertion meets the minimum size requirement
-        // TODO: Verify that assertion meets the minimum Delta time requirement
+        AssertionData memory assertion = decodeAssertionData(bytes32Fields, intFields);
 
-        Node node = new Node(
-            0,
-            0, // TODO: assertion hash
-            staker.latestStakedNode,
-            block.number,
-            0, // TODO: deadline block
-            0
-        );
+        Node node = createNewNode(assertion, staker.latestStakedNode);
+
         node.addStaker(msg.sender);
         nodes[nodeNum] = node;
         staker.latestStakedNode = nodeNum;
         latestNodeCreated++;
+    }
+
+    function createNewNode(AssertionData memory assertion, uint256 prev) private returns (Node) {
+        // Make sure the previous state is correct against the node being built on
+        require(
+            RollupLib.nodeStateHash(
+                assertion.beforeMachineHash,
+                assertion.beforeInboxHash,
+                assertion.beforeInboxCount,
+                assertion.beforeSendCount,
+                assertion.beforeLogCount
+            ) == nodes[prev].stateHash()
+        );
+
+        (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(address(this));
+
+        // inboxCount must be greater than beforeInboxCount since we can't have read past the end of the inbox
+        require(assertion.inboxMessagesRead <= inboxCount - assertion.beforeInboxCount);
+
+        bytes32 executionHash = ChallengeLib.bisectionChunkHash(
+            assertion.stepsExecuted,
+            ChallengeLib.assertionHash(
+                assertion.inboxDelta,
+                0,
+                ChallengeLib.outputAccHash(0, 0, 0, 0),
+                assertion.beforeMachineHash
+            ),
+            ChallengeLib.assertionHash(
+                0,
+                assertion.gasUsed,
+                ChallengeLib.outputAccHash(
+                    assertion.sendAcc,
+                    assertion.sendCount,
+                    assertion.logAcc,
+                    assertion.logCount
+                ),
+                assertion.afterMachineHash
+            )
+        );
+
+        bytes32 inboxConsistencyHash = ChallengeLib.bisectionChunkHash(
+            inboxCount - assertion.beforeInboxCount - assertion.inboxMessagesRead,
+            inboxValue,
+            assertion.afterInboxHash
+        );
+
+        bytes32 inboxDeltaHash = ChallengeLib.bisectionChunkHash(
+            assertion.inboxMessagesRead,
+            ChallengeLib.inboxDeltaHash(assertion.afterInboxHash, 0),
+            ChallengeLib.inboxDeltaHash(assertion.beforeInboxHash, assertion.inboxDelta)
+        );
+
+        bytes32 challengeRoot = keccak256(
+            abi.encodePacked(inboxConsistencyHash, inboxDeltaHash, executionHash)
+        );
+
+        // TODO: Verify that assertion meets the minimum size requirement
+        // TODO: Verify that assertion meets the minimum Delta time requirement
+
+        bytes32 nodeStateHash = RollupLib.nodeStateHash(
+            assertion.afterMachineHash,
+            assertion.afterInboxHash,
+            assertion.beforeInboxCount + assertion.inboxMessagesRead,
+            assertion.beforeSendCount + assertion.sendCount,
+            assertion.beforeLogCount + assertion.logCount
+        );
+
+        return
+            new Node(
+                nodeStateHash,
+                challengeRoot,
+                prev,
+                block.number,
+                0, // TODO: deadline block
+                0
+            );
     }
 
     function returnOldDeposit(address payable stakerAddress) external {

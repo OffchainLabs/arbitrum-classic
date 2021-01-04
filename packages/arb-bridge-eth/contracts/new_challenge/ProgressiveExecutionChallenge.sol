@@ -156,7 +156,7 @@ contract ProgressiveExecutionChallenge is IExecutionChallenge, BisectionChalleng
             initialLogCount
         );
 
-        requireMatchesPrevState(keccak256(abi.encodePacked(a1Hash, a2Hash, uint64(1))));
+        requireMatchesPrevState(ChallengeLib.bisectionChunkHash(1, a1Hash, a2Hash));
 
         emit OneStepProofCompleted();
         _asserterWin();

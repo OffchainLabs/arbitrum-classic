@@ -19,7 +19,6 @@
 pragma solidity ^0.5.11;
 
 import "./BisectionChallenge.sol";
-import "../challenge/ChallengeUtils.sol";
 
 import "../inbox/Messages.sol";
 
@@ -45,10 +44,10 @@ contract InboxTopChallenge is BisectionChallenge {
         bytes32 _lowerHash,
         bytes32 _value
     ) external onlyOnTurn {
-        bytes32 prevHash = ChallengeUtils.inboxTopHash(
+        bytes32 prevHash = ChallengeLib.bisectionChunkHash(
+            1,
             _lowerHash,
-            Messages.addMessageToInbox(_lowerHash, _value),
-            1
+            Messages.addMessageToInbox(_lowerHash, _value)
         );
         require(
             MerkleLib.verifyProof(_proof, challengeState, prevHash, _segmentToChallenge + 1),

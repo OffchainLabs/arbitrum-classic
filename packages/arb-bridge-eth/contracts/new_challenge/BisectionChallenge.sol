@@ -18,11 +18,11 @@
 
 pragma solidity ^0.5.11;
 
-import "../challenge/ChallengeUtils.sol";
 import "../libraries/Cloneable.sol";
 import "../libraries/MerkleLib.sol";
 import "../libraries/RollupTime.sol";
 import "../rollup/IStaking.sol";
+import "./ChallengeLib.sol";
 
 contract BisectionChallenge is Cloneable {
     enum State { NoChallenge, AsserterTurn, ChallengerTurn }
@@ -39,29 +39,18 @@ contract BisectionChallenge is Cloneable {
 
     // Can online initialize once
     string private constant CHAL_INIT_STATE = "CHAL_INIT_STATE";
-    // Can only continue challenge in response to bisection
-
-    string private constant CON_STATE = "CON_STATE";
-    // deadline expired
-    string private constant CON_DEADLINE = "CON_DEADLINE";
-    // Only original challenger can continue challenge
-    string private constant CON_SENDER = "CON_SENDER";
-
     // Can only bisect assertion in response to a challenge
     string private constant BIS_STATE = "BIS_STATE";
     // deadline expired
     string private constant BIS_DEADLINE = "BIS_DEADLINE";
     // Only original asserter can continue bisect
     string private constant BIS_SENDER = "BIS_SENDER";
-
     // Incorrect previous state
     string private constant BIS_PREV = "BIS_PREV";
-
-    // Incorrect previous state
-    string private constant CON_PREV = "CON_PREV";
     // Invalid assertion selected
     string private constant CON_PROOF = "CON_PROOF";
-    // Incorrect previous state
+    // Can't timeout before deadline
+    string private constant TIMEOUT_DEADLINE = "TIMEOUT_DEADLINE";
 
     address internal rollupAddress;
     address payable internal asserter;
@@ -75,16 +64,17 @@ contract BisectionChallenge is Cloneable {
 
     State private state;
 
-    // After bisection this is an array of all sub-assertions
-    // After a challenge, the first assertion is the main assertion
+    // This is the root of a merkle tree with nodes like (prev, next, steps)
     bytes32 internal challengeState;
 
     modifier onlyOnTurn {
-        require(
-            (State.AsserterTurn == state && msg.sender == asserter) ||
-                (State.ChallengerTurn == state && msg.sender == challenger),
-            BIS_STATE
-        );
+        if (state == State.AsserterTurn) {
+            require(msg.sender == asserter, BIS_SENDER);
+        } else if (state == State.ChallengerTurn) {
+            require(msg.sender == challenger, BIS_SENDER);
+        } else {
+            require(false, BIS_STATE);
+        }
         require(RollupTime.blocksToTicks(block.number) <= deadlineTicks, BIS_DEADLINE);
         _;
     }
@@ -110,7 +100,7 @@ contract BisectionChallenge is Cloneable {
     }
 
     function timeoutChallenge() public {
-        require(RollupTime.blocksToTicks(block.number) > deadlineTicks, "Deadline hasn't expired");
+        require(RollupTime.blocksToTicks(block.number) > deadlineTicks, TIMEOUT_DEADLINE);
 
         if (state == State.AsserterTurn) {
             emit AsserterTimedOut();
@@ -133,10 +123,10 @@ contract BisectionChallenge is Cloneable {
         require(_chainHashes[bisectionCount] != _oldEndHash);
         require(_chainLength > 1, "bisection too short");
 
-        bytes32 bisectionHash = ChallengeUtils.inboxTopHash(
+        bytes32 bisectionHash = ChallengeLib.bisectionChunkHash(
+            _chainLength,
             _chainHashes[0],
-            _oldEndHash,
-            _chainLength
+            _oldEndHash
         );
 
         require(
@@ -145,16 +135,16 @@ contract BisectionChallenge is Cloneable {
         );
 
         bytes32[] memory hashes = new bytes32[](bisectionCount);
-        hashes[0] = ChallengeUtils.inboxTopHash(
+        hashes[0] = ChallengeLib.bisectionChunkHash(
+            ChallengeLib.firstSegmentSize(_chainLength, bisectionCount),
             _chainHashes[0],
-            _chainHashes[1],
-            ChallengeUtils.firstSegmentSize(_chainLength, bisectionCount)
+            _chainHashes[1]
         );
         for (uint256 i = 1; i < bisectionCount; i++) {
-            hashes[i] = ChallengeUtils.inboxTopHash(
+            hashes[i] = ChallengeLib.bisectionChunkHash(
+                ChallengeLib.otherSegmentSize(_chainLength, bisectionCount),
                 _chainHashes[i],
-                _chainHashes[i + 1],
-                ChallengeUtils.otherSegmentSize(_chainLength, bisectionCount)
+                _chainHashes[i + 1]
             );
         }
         challengeState = MerkleLib.generateRoot(hashes);
@@ -191,21 +181,5 @@ contract BisectionChallenge is Cloneable {
 
     function requireMatchesPrevState(bytes32 _challengeState) internal view {
         require(_challengeState == challengeState, BIS_PREV);
-    }
-
-    function firstSegmentSize(uint256 totalCount, uint256 bisectionCount)
-        internal
-        pure
-        returns (uint256)
-    {
-        return totalCount / bisectionCount + (totalCount % bisectionCount);
-    }
-
-    function otherSegmentSize(uint256 totalCount, uint256 bisectionCount)
-        internal
-        pure
-        returns (uint256)
-    {
-        return totalCount / bisectionCount;
     }
 }
