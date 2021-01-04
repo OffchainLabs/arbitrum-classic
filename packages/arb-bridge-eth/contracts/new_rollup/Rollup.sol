@@ -120,7 +120,7 @@ contract Rollup {
         checkValidNodeNumForStake(nodeNum);
         Node node = nodes[nodeNum];
         require(node.prev() == latestConfirmed);
-        addStaker(nodeNum, node);
+        addNewStaker(nodeNum, node);
     }
 
     function addStakeOnExistingNode(
@@ -143,19 +143,22 @@ contract Rollup {
         uint256 blockNumber,
         uint256 nodeNum,
         uint256 prev,
-        bytes32[7] calldata bytes32Fields,
-        uint256[9] calldata intFields
-    ) external {
+        bytes32[7] calldata assertionBytes32Fields,
+        uint256[9] calldata assertionIntFields
+    ) external payable {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         verifyCanStake();
         require(nodeNum == latestNodeCreated + 1);
         require(prev == latestConfirmed);
 
-        RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(bytes32Fields, intFields);
+        RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(
+            assertionBytes32Fields,
+            assertionIntFields
+        );
 
         Node node = createNewNode(assertion, prev);
 
-        addStaker(nodeNum, node);
+        addNewStaker(nodeNum, node);
         nodes[nodeNum] = node;
         latestNodeCreated++;
     }
@@ -164,15 +167,18 @@ contract Rollup {
         bytes32 blockHash,
         uint256 blockNumber,
         uint256 nodeNum,
-        bytes32[7] calldata bytes32Fields,
-        uint256[9] calldata intFields
+        bytes32[7] calldata assertionBytes32Fields,
+        uint256[9] calldata assertionIntFields
     ) external {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         require(nodeNum == latestNodeCreated + 1);
         Staker storage staker = stakers[msg.sender];
         require(!staker.isZombie);
 
-        RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(bytes32Fields, intFields);
+        RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(
+            assertionBytes32Fields,
+            assertionIntFields
+        );
 
         Node node = createNewNode(assertion, staker.latestStakedNode);
 
@@ -333,7 +339,7 @@ contract Rollup {
         require(msg.value >= currentRequiredStake());
     }
 
-    function addStaker(uint256 nodeNum, Node node) private {
+    function addNewStaker(uint256 nodeNum, Node node) private {
         require(!stakers[msg.sender].isStaked, "ALREADY_STAKED");
         stakers[msg.sender] = Staker(nodeNum, msg.value, address(0), false, true);
         node.addStaker(msg.sender);
