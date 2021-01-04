@@ -70,11 +70,12 @@ typedef struct {
 
 typedef struct HashResultStruct HashResult;
 
-typedef void CMachine;
-typedef void CArbStorage;
-typedef void CCheckpointedMachine;
-typedef void CBlockStore;
 typedef void CAggregatorStore;
+typedef void CArbStorage;
+typedef void CBlockStore;
+typedef void CCheckpointedMachine;
+typedef void CMachine;
+typedef void CMessageStore;
 typedef void CValueCache;
 
 #ifdef __cplusplus

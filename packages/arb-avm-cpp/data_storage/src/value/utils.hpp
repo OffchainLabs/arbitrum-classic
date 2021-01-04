@@ -14,17 +14,32 @@
  * limitations under the License.
  */
 
-#ifndef checkpointutils_hpp
-#define checkpointutils_hpp
-
-#include <avm_values/codepointstub.hpp>
-#include <avm_values/tuple.hpp>
+#ifndef data_storage_value_utils_hpp
+#define data_storage_value_utils_hpp
 
 #include <rocksdb/slice.h>
+#include <avm_values/bigint.hpp>
+#include <avm_values/tuple.hpp>
+
+template <typename Iterator>
+uint64_t extractUint64(Iterator& iter) {
+    auto ptr = reinterpret_cast<const char*>(&*iter);
+    auto int_val = deserialize_uint64_t(ptr);
+    iter += sizeof(int_val);
+    return int_val;
+}
+
+template <typename Iterator>
+uint256_t extractUint256(Iterator& iter) {
+    auto ptr = reinterpret_cast<const char*>(&*iter);
+    auto int_val = deserializeUint256t(ptr);
+    iter += 32;
+    return int_val;
+}
 
 template <typename T>
 inline rocksdb::Slice vecToSlice(const T& vec) {
     return {reinterpret_cast<const char*>(vec.data()), vec.size()};
 }
 
-#endif /* checkpointutils_hpp */
+#endif /* data_storage_value_utils_hpp */

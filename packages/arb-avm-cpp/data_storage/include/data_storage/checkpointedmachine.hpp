@@ -38,10 +38,8 @@ class ColumnFamilyHandle;
 class CheckpointedMachine {
    private:
     std::shared_ptr<DataStorage> data_storage;
-    std::shared_ptr<Code> code;
-
-    mutable std::mutex mutex;
     std::unique_ptr<Machine> machine;
+    std::shared_ptr<Code> code;
     Checkpoint pending_checkpoint;
 
    public:
@@ -83,8 +81,5 @@ class CheckpointedMachine {
                             std::chrono::seconds wallLimit,
                             Tuple sideload_value);
 };
-
-DbResult<Checkpoint> getCheckpointUsingKey(Transaction& transaction,
-                                           rocksdb::Slice key_slice);
 
 #endif /* checkpointstore_hpp */

@@ -31,13 +31,6 @@
 namespace {
 using iterator = std::vector<unsigned char>::const_iterator;
 
-uint256_t extractUint256(iterator& iter) {
-    auto ptr = reinterpret_cast<const char*>(&*iter);
-    auto int_val = deserializeUint256t(ptr);
-    iter += 32;
-    return int_val;
-}
-
 CodePointRef extractCodePointRef(iterator& iter) {
     auto ptr = reinterpret_cast<const char*>(&*iter);
     auto segment_val = deserialize_uint64_t(ptr);

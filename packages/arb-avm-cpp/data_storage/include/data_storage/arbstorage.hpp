@@ -21,6 +21,7 @@
 #include "data_storage/checkpointedmachine.hpp"
 #include "data_storage/datastorage.hpp"
 #include "data_storage/value/value.hpp"
+#include "messagestore.hpp"
 
 #include <memory>
 #include <string>
@@ -51,6 +52,7 @@ class ArbStorage {
     std::unique_ptr<KeyValueStore> makeKeyValueStore();
     std::unique_ptr<BlockStore> getBlockStore() const;
     std::unique_ptr<AggregatorStore> getAggregatorStore() const;
+    std::unique_ptr<MessageStore> getMessageStore() const;
     std::shared_ptr<CheckpointedMachine> getCheckpointedMachine();
 
     std::unique_ptr<Machine> getInitialMachine(ValueCache& value_cache) const;

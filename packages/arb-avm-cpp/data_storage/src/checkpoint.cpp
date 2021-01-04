@@ -23,25 +23,6 @@
 
 #include <boost/endian/conversion.hpp>
 
-namespace {
-using iterator = std::vector<unsigned char>::const_iterator;
-
-uint256_t extractUint256(iterator& iter) {
-    auto ptr = reinterpret_cast<const char*>(&*iter);
-    auto int_val = deserializeUint256t(ptr);
-    iter += 32;
-    return int_val;
-}
-
-uint64_t extractUint64(iterator& it) {
-    uint64_t big_height;
-    auto big_height_ptr = reinterpret_cast<char*>(&big_height);
-    std::copy(it, it + sizeof(big_height), big_height_ptr);
-    it += sizeof(uint64_t);
-    return boost::endian::big_to_native(big_height);
-}
-}  // namespace
-
 Checkpoint extractCheckpoint(const std::vector<unsigned char>& stored_state) {
     auto current_iter = stored_state.begin();
 

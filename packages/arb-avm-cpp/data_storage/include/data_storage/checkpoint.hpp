@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef data_storage_value_checkpoint_hpp
-#define data_storage_value_checkpoint_hpp
+#ifndef data_storage_checkpoint_hpp
+#define data_storage_checkpoint_hpp
 
 #include <avm/machine.hpp>
 #include <avm/machinestate/status.hpp>
@@ -43,7 +43,7 @@ struct Checkpoint {
                uint64_t messages_read_count,
                uint256_t inbox_accumulator_hash,
                uint256_t block_hash,
-               uint256_t block_height,
+               uint64_t block_height,
                uint64_t logs_output,
                uint64_t messages_output,
                uint256_t arb_gas_used,
@@ -63,4 +63,4 @@ Checkpoint extractCheckpoint(const std::vector<unsigned char>& stored_state);
 
 std::vector<unsigned char> serializeCheckpoint(const Checkpoint& state_data);
 
-#endif /* data_storage_value_checkpoint_hpp */
+#endif /* data_storage_checkpoint_hpp */

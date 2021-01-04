@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
+#include <data_storage/checkpointedmachine.hpp>
+
 #include <boost/endian/conversion.hpp>
 #include <data_storage/aggregator.hpp>
 #include <data_storage/checkpoint.hpp>
-#include <data_storage/checkpointedmachine.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
@@ -46,6 +47,23 @@ uint64_t keyToMessageNumber(const rocksdb::Slice& key) {
 
     return intx::narrow_cast<uint64_t>(big_message_number);
 }
+
+DbResult<Checkpoint> getCheckpointUsingKey(Transaction& transaction,
+                                           rocksdb::Slice key_slice) {
+    std::string returned_value;
+
+    auto status = transaction.datastorage->txn_db->DB::Get(
+        rocksdb::ReadOptions(),
+        transaction.datastorage->checkpoint_column.get(), key_slice,
+        &returned_value);
+
+    std::vector<unsigned char> saved_value(returned_value.begin(),
+                                           returned_value.end());
+    auto parsed_state = extractCheckpoint(saved_value);
+
+    return DbResult<Checkpoint>{status, 1, parsed_state};
+}
+
 }  // namespace
 
 std::unique_ptr<Transaction> CheckpointedMachine::makeTransaction() {
@@ -122,7 +140,6 @@ std::unique_ptr<Machine> CheckpointedMachine::getMachine(
 
 void CheckpointedMachine::saveCheckpoint() {
     auto tx = Transaction::makeTransaction(data_storage);
-    const std::lock_guard<std::mutex> lock(mutex);
 
     auto status =
         saveMachineState(*tx, *machine, pending_checkpoint.machine_state_keys);
@@ -157,7 +174,6 @@ void CheckpointedMachine::saveCheckpoint() {
 
 void CheckpointedMachine::saveAssertion(const Assertion& assertion) {
     auto tx = Transaction::makeTransaction(data_storage);
-    const std::lock_guard<std::mutex> lock(mutex);
 
     for (const auto& log : assertion.logs) {
         std::vector<unsigned char> logData;
@@ -177,7 +193,7 @@ void CheckpointedMachine::saveAssertion(const Assertion& assertion) {
                                  status.ToString());
     }
 
-    pending_checkpoint.step_count = +assertion.stepCount;
+    pending_checkpoint.step_count += +assertion.stepCount;
     pending_checkpoint.messages_read_count += assertion.inbox_messages_consumed;
     pending_checkpoint.logs_output += assertion.logs.size();
     pending_checkpoint.messages_output += assertion.outMessages.size();
@@ -187,7 +203,6 @@ void CheckpointedMachine::saveAssertion(const Assertion& assertion) {
 uint64_t CheckpointedMachine::reorgToMessageOrBefore(
     const uint64_t& message_number) {
     auto tx = Transaction::makeTransaction(data_storage);
-    const std::lock_guard<std::mutex> lock(mutex);
 
     auto result = getCheckpointAtOrBeforeMessage(message_number);
     if (!result.status.ok()) {
@@ -204,6 +219,8 @@ uint64_t CheckpointedMachine::reorgToMessageOrBefore(
 
     machine = getMachineUsingStateKeys(
         *tx, pending_checkpoint.machine_state_keys, value_cache);
+
+    // TODO truncate messages and logs
 
     return pending_checkpoint.messages_read_count;
 }
@@ -283,22 +300,6 @@ DbResult<Checkpoint> CheckpointedMachine::getCheckpointAtOrBeforeMessage(
     } else {
         return DbResult<Checkpoint>{rocksdb::Status::NotFound(), 0, {}};
     }
-}
-
-DbResult<Checkpoint> getCheckpointUsingKey(Transaction& transaction,
-                                           rocksdb::Slice key_slice) {
-    std::string returned_value;
-
-    auto status = transaction.datastorage->txn_db->DB::Get(
-        rocksdb::ReadOptions(),
-        transaction.datastorage->checkpoint_column.get(), key_slice,
-        &returned_value);
-
-    std::vector<unsigned char> saved_value(returned_value.begin(),
-                                           returned_value.end());
-    auto parsed_state = extractCheckpoint(saved_value);
-
-    return DbResult<Checkpoint>{status, 1, parsed_state};
 }
 
 std::unique_ptr<Machine> CheckpointedMachine::getMachineUsingStateKeys(

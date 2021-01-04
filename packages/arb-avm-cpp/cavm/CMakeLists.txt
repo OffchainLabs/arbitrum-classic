@@ -35,7 +35,7 @@ set(LIB_SOURCES
   carbstorage.cpp
   cmachine.cpp
   cvaluecache.cpp
-)
+  cmessagestore.cpp)
 
 add_library(cavm STATIC ${LIB_HEADERS} ${LIB_SOURCES})
 
