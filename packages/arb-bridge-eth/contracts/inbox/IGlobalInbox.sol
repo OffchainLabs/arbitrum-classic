@@ -49,6 +49,8 @@ interface IGlobalInbox {
 
     function sendL2Message(address chain, bytes calldata messageData) external;
 
+    function depositEthMessage(address chain, address to) external payable;
+
     function deployL2ContractPair(
         address chain,
         uint256 maxGas,
