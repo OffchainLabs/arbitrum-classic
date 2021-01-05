@@ -79,7 +79,7 @@ contract BisectionChallenge is Cloneable {
         _;
     }
 
-    function initializeBisection(
+    function initializeChallenge(
         address _rollupAddress,
         address payable _asserter,
         address payable _challenger,

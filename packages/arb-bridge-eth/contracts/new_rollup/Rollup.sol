@@ -31,6 +31,8 @@ contract Rollup {
     uint256 baseStake;
     uint256 challengePeriod;
 
+    uint256 arbGasSpeedLimitPerBlock;
+
     IGlobalInbox public globalInbox;
 
     constructor(bytes32 machineHash) public {
@@ -47,8 +49,8 @@ contract Rollup {
             0, // challenge hash (not challengeable)
             latestConfirmed,
             block.number,
-            0, // TODO: deadline block
-            0
+            0, // deadline block (not challengeable)
+            0 // prev inbox max
         );
         nodes[0] = node;
     }
@@ -188,32 +190,6 @@ contract Rollup {
         latestNodeCreated++;
     }
 
-    function createNewNode(RollupLib.Assertion memory assertion, uint256 prev)
-        private
-        returns (Node)
-    {
-        // Make sure the previous state is correct against the node being built on
-        require(RollupLib.beforeNodeStateHash(assertion) == nodes[prev].stateHash());
-
-        (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(address(this));
-
-        // inboxCount must be greater than beforeInboxCount since we can't have read past the end of the inbox
-        require(assertion.inboxMessagesRead <= inboxCount - assertion.beforeInboxCount);
-
-        // TODO: Verify that assertion meets the minimum size requirement
-        // TODO: Verify that assertion meets the minimum Delta time requirement
-
-        return
-            new Node(
-                RollupLib.afterNodeStateHash(assertion),
-                RollupLib.challengeRoot(assertion, inboxCount, inboxValue),
-                prev,
-                block.number,
-                0, // TODO: deadline block
-                0
-            );
-    }
-
     function returnOldDeposit(address payable stakerAddress) external {
         Staker storage staker = stakers[stakerAddress];
         checkUnchallengedStaker(staker);
@@ -325,6 +301,58 @@ contract Rollup {
         }
 
         return baseStake * multiplier;
+    }
+
+    function createNewNode(RollupLib.Assertion memory assertion, uint256 prev)
+        private
+        returns (Node)
+    {
+        Node prevNode = nodes[prev];
+        // Make sure the previous state is correct against the node being built on
+        require(RollupLib.beforeNodeStateHash(assertion) == prevNode.stateHash());
+
+        (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(address(this));
+
+        // inboxCount must be greater than beforeInboxCount since we can't have read past the end of the inbox
+        require(assertion.inboxMessagesRead <= inboxCount - assertion.beforeInboxCount);
+
+        // TODO: Verify that assertion meets the minimum size requirement
+        uint256 prevInboxMax = prevNode.totalInboxCount();
+        uint256 prevProposedBlock = prevNode.proposedBlock();
+        uint256 prevDeadlineBlock = prevNode.deadlineBlock();
+
+        // Verify that assertion meets the minimum Delta time requirement
+        require(block.number - prevProposedBlock > challengePeriod / 10);
+
+        // Minimum size requirements: each assertion must satisfy either
+        require(
+            // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
+            assertion.inboxMessagesRead >= prevInboxMax - assertion.beforeInboxCount ||
+                // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
+                assertion.gasUsed >= (block.number - prevProposedBlock) * arbGasSpeedLimitPerBlock
+        );
+
+        uint256 deadlineBlock = block.number + challengePeriod;
+        if (deadlineBlock < prevDeadlineBlock) {
+            deadlineBlock = prevDeadlineBlock;
+        }
+        uint256 executionCheckTimeBlocks = assertion.gasUsed / arbGasSpeedLimitPerBlock;
+        deadlineBlock += executionCheckTimeBlocks;
+
+        return
+            new Node(
+                RollupLib.afterNodeStateHash(assertion),
+                RollupLib.challengeRoot(
+                    assertion,
+                    inboxCount,
+                    inboxValue,
+                    executionCheckTimeBlocks
+                ),
+                prev,
+                block.number,
+                deadlineBlock,
+                inboxCount
+            );
     }
 
     function discardUnresolvedNode() private {

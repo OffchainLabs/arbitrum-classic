@@ -64,4 +64,16 @@ library ChallengeLib {
     ) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(_sendAcc, _sendCount, _logAcc, _logCount));
     }
+
+    function challengeRootHash(
+        bytes32 inboxConsistency,
+        bytes32 inboxDelta,
+        bytes32 execution,
+        uint256 executionCheckTime
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(inboxConsistency, inboxDelta, execution, executionCheckTime)
+            );
+    }
 }
