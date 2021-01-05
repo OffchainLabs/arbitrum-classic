@@ -120,7 +120,6 @@ class RawBuffer {
             return RawBuffer(buf);
         } else {
             if (needed_height(offset) > calc_height(level)) {
-            // if (offset >= calc_len(level)) {
                 std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
                 vec->push_back(RawBuffer(node, level));
                 for (uint64_t i = 1; i < NODE_SIZE; i++) {
@@ -168,7 +167,6 @@ class RawBuffer {
         } else {
             uint64_t cell_len = calc_len(level-1);
             if (needed_height(pos) > calc_height(level) || !node) {
-            // if (pos >= calc_len(level) || !node) {
                 return std::vector<uint8_t>(len, 0);
             }
             auto next = (*node)[pos / cell_len];
