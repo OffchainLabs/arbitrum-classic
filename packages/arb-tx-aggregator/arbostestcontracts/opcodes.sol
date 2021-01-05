@@ -22,4 +22,20 @@ contract OpCodes {
     function getBlockHash() external returns (bytes32) {
         return blockhash(block.number - 1);
     }
+
+    function getNestedOrigin(address conn) external returns (address) {
+        return OpCodes(conn).getOrigin();
+    }
+
+    function getNestedSend(address conn) external returns (address) {
+        return OpCodes(conn).getSender();
+    }
+
+    function getSender() external returns (address) {
+        return msg.sender;
+    }
+
+    function getOrigin() external returns (address) {
+        return tx.origin;
+    }
 }

@@ -21,6 +21,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"sync"
 )
 
 type BlockInfo struct {
@@ -35,6 +37,8 @@ type AggregatorStore interface {
 	GetPossibleBlock(blockHash common.Hash) *uint64
 	GetBlock(height uint64) (*BlockInfo, error)
 	LatestBlock() (*common.BlockId, error)
+	LogCount() (uint64, error)
+	MessageCount() (uint64, error)
 
 	SaveLog(val value.Value) error
 	SaveMessage(val value.Value) error
@@ -51,21 +55,26 @@ type BlockEntry struct {
 }
 
 type InMemoryAggregatorStore struct {
+	sync.Mutex
 	messages     []value.Value
 	logs         []value.Value
-	blocks       []*BlockEntry
+	blocks       map[uint64]*BlockEntry
+	latestBlock  uint64
 	requestIndex map[common.Hash]uint64
 	blockIndex   map[common.Hash]uint64
 }
 
 func NewInMemoryAggregatorStore() *InMemoryAggregatorStore {
 	return &InMemoryAggregatorStore{
+		blocks:       make(map[uint64]*BlockEntry),
 		requestIndex: make(map[common.Hash]uint64),
 		blockIndex:   make(map[common.Hash]uint64),
 	}
 }
 
 func (as *InMemoryAggregatorStore) GetMessage(index uint64) (value.Value, error) {
+	as.Lock()
+	defer as.Unlock()
 	if index >= uint64(len(as.messages)) {
 		return nil, errors.New("failed to get l2message")
 	}
@@ -73,6 +82,8 @@ func (as *InMemoryAggregatorStore) GetMessage(index uint64) (value.Value, error)
 }
 
 func (as *InMemoryAggregatorStore) GetLog(index uint64) (value.Value, error) {
+	as.Lock()
+	defer as.Unlock()
 	if index >= uint64(len(as.logs)) {
 		return nil, errors.New("failed to get log")
 	}
@@ -80,6 +91,8 @@ func (as *InMemoryAggregatorStore) GetLog(index uint64) (value.Value, error) {
 }
 
 func (as *InMemoryAggregatorStore) GetPossibleRequestInfo(requestId common.Hash) *uint64 {
+	as.Lock()
+	defer as.Unlock()
 	request, ok := as.requestIndex[requestId]
 	if !ok {
 		return nil
@@ -88,6 +101,8 @@ func (as *InMemoryAggregatorStore) GetPossibleRequestInfo(requestId common.Hash)
 }
 
 func (as *InMemoryAggregatorStore) GetPossibleBlock(blockHash common.Hash) *uint64 {
+	as.Lock()
+	defer as.Unlock()
 	block, ok := as.blockIndex[blockHash]
 	if !ok {
 		return nil
@@ -96,12 +111,17 @@ func (as *InMemoryAggregatorStore) GetPossibleBlock(blockHash common.Hash) *uint
 }
 
 func (as *InMemoryAggregatorStore) GetBlock(height uint64) (*BlockInfo, error) {
-	if height > uint64(len(as.blocks)) {
+	as.Lock()
+	defer as.Unlock()
+	rawBlock, ok := as.blocks[height]
+	if !ok {
 		return nil, nil
 	}
 	var blockLog value.Value
-	rawBlock := as.blocks[height]
 	if rawBlock.logIndex != nil {
+		if *rawBlock.logIndex >= uint64(len(as.logs)) {
+			panic("out of bounds")
+		}
 		blockLog = as.logs[*rawBlock.logIndex]
 	}
 	return &BlockInfo{
@@ -111,54 +131,109 @@ func (as *InMemoryAggregatorStore) GetBlock(height uint64) (*BlockInfo, error) {
 }
 
 func (as *InMemoryAggregatorStore) LatestBlock() (*common.BlockId, error) {
+	as.Lock()
+	defer as.Unlock()
 	if len(as.blocks) == 0 {
 		return nil, errors.New("No blocks")
 	}
-	block := as.blocks[len(as.blocks)-1]
+	block := as.blocks[as.latestBlock]
 	return &common.BlockId{
-		Height:     common.NewTimeBlocksInt(int64(len(as.blocks)) - 1),
+		Height:     common.NewTimeBlocksInt(int64(as.latestBlock)),
 		HeaderHash: common.NewHashFromEth(block.header.Hash()),
 	}, nil
 }
 
 func (as *InMemoryAggregatorStore) SaveLog(val value.Value) error {
+	as.Lock()
+	defer as.Unlock()
 	as.logs = append(as.logs, val)
 	return nil
 }
 
 func (as *InMemoryAggregatorStore) SaveMessage(val value.Value) error {
+	as.Lock()
+	defer as.Unlock()
 	as.messages = append(as.messages, val)
 	return nil
 }
 
 func (as *InMemoryAggregatorStore) SaveBlock(header *types.Header, logIndex uint64) error {
-	as.blocks = append(as.blocks, &BlockEntry{
+	as.Lock()
+	defer as.Unlock()
+	if logIndex >= uint64(len(as.logs)) {
+		return errors.New("bad log index")
+	}
+	as.blocks[header.Number.Uint64()] = &BlockEntry{
 		header:   header,
 		logIndex: &logIndex,
-	})
+	}
+	as.latestBlock = header.Number.Uint64()
 	return nil
 }
 
 func (as *InMemoryAggregatorStore) SaveEmptyBlock(header *types.Header) error {
-	as.blocks = append(as.blocks, &BlockEntry{
+	as.Lock()
+	defer as.Unlock()
+	as.blocks[header.Number.Uint64()] = &BlockEntry{
 		header: header,
-	})
+	}
+	as.latestBlock = header.Number.Uint64()
 	return nil
 }
 
 func (as *InMemoryAggregatorStore) SaveBlockHash(blockHash common.Hash, blockHeight uint64) error {
+	as.Lock()
+	defer as.Unlock()
 	as.blockIndex[blockHash] = blockHeight
 	return nil
 }
 
 func (as *InMemoryAggregatorStore) SaveRequest(requestId common.Hash, logIndex uint64) error {
+	as.Lock()
+	defer as.Unlock()
 	as.requestIndex[requestId] = logIndex
 	return nil
 }
 
 func (as *InMemoryAggregatorStore) Reorg(height uint64, messageCount uint64, logCount uint64) error {
+	as.Lock()
+	defer as.Unlock()
+	log.Info().
+		Uint64("height", height).
+		Uint64("messageCount", messageCount).
+		Uint64("logCount", logCount).
+		Msg("aggregator triggered reorg")
 	as.messages = as.messages[:messageCount]
 	as.logs = as.logs[:logCount]
-	as.blocks = as.blocks[:height]
+	for i := as.latestBlock; i > height; i-- {
+		delete(as.blocks, i)
+		if i == 0 {
+			break
+		}
+	}
+	as.latestBlock = height
+	for blockHeight, block := range as.blocks {
+		if blockHeight > height {
+			panic("bad height")
+		}
+		if block.logIndex != nil {
+			i := *block.logIndex
+			if i >= uint64(len(as.logs)) {
+				panic("bad block")
+			}
+		}
+	}
 	return nil
+}
+
+func (as *InMemoryAggregatorStore) LogCount() (uint64, error) {
+	as.Lock()
+	defer as.Unlock()
+	return uint64(len(as.logs)), nil
+}
+
+func (as *InMemoryAggregatorStore) MessageCount() (uint64, error) {
+	as.Lock()
+	defer as.Unlock()
+	return uint64(len(as.messages)), nil
 }

@@ -376,5 +376,6 @@ func (_Fibonacci *FibonacciFilterer) ParseTestEvent(log types.Log) (*FibonacciTe
 	if err := _Fibonacci.contract.UnpackLog(event, "TestEvent", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }

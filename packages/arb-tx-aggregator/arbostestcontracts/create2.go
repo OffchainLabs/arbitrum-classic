@@ -344,5 +344,6 @@ func (_CloneFactory *CloneFactoryFilterer) ParseCreatedClone(log types.Log) (*Cl
 	if err := _CloneFactory.contract.UnpackLog(event, "CreatedClone", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }

@@ -18,13 +18,16 @@ package arbostest
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/rand"
+	"github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	gethcrypto "github.com/ethereum/go-ethereum/crypto"
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 	"math/big"
 	"testing"
 
@@ -32,11 +35,13 @@ import (
 )
 
 func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byte) {
+	precompileAddress := ethcommon.BytesToAddress([]byte{precompileNum})
+
 	tx := message.Transaction{
 		MaxGas:      big.NewInt(100000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
-		DestAddress: common.NewAddressFromEth(ethcommon.BytesToAddress([]byte{precompileNum})),
+		DestAddress: common.NewAddressFromEth(precompileAddress),
 		Payment:     big.NewInt(0),
 		Data:        data,
 	}
@@ -60,7 +65,31 @@ func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byt
 		t.Error("calculated result incorrectly")
 	}
 
-	t.Logf("Used %v gas", res.GasUsed)
+	ctx := context.Background()
+	backend, _ := test.SimulatedBackend()
+
+	ethCall := ethereum.CallMsg{
+		From:     ethcommon.Address{},
+		To:       &precompileAddress,
+		Gas:      1000000,
+		GasPrice: big.NewInt(0),
+		Value:    big.NewInt(0),
+		Data:     data,
+	}
+	ethRes, err := backend.CallContract(ctx, ethCall, nil)
+	failIfError(t, err)
+
+	if !bytes.Equal(ethRes, correct) {
+		t.Logf("Got result 0x%x", res.ReturnData)
+		t.Logf("Wanted result 0x%x", correct)
+		t.Error("calculated result incorrectly")
+	}
+
+	ethGas, err := backend.EstimateGas(ctx, ethCall)
+	failIfError(t, err)
+
+	t.Logf("Arb gas = %v", res.GasUsed)
+	t.Logf("Eth gas = %v", ethGas)
 }
 
 func TestECRecover(t *testing.T) {
@@ -96,6 +125,26 @@ func TestSha256(t *testing.T) {
 func TestIdentityPrecompile(t *testing.T) {
 	data := common.RandBytes(100)
 	testPrecompile(t, 4, data, data)
+}
+
+func TestModExp(t *testing.T) {
+	x := common.RandBigInt()
+	y := common.RandBigInt()
+	m := common.RandBigInt()
+	correct := new(big.Int).Exp(x, y, m)
+
+	xLen := new(big.Int).SetInt64(int64(len(x.Bytes())))
+	yLen := new(big.Int).SetInt64(int64(len(y.Bytes())))
+	mLen := new(big.Int).SetInt64(int64(len(m.Bytes())))
+
+	var data []byte
+	data = append(data, math.U256Bytes(xLen)...)
+	data = append(data, math.U256Bytes(yLen)...)
+	data = append(data, math.U256Bytes(mLen)...)
+	data = append(data, x.Bytes()...)
+	data = append(data, y.Bytes()...)
+	data = append(data, m.Bytes()...)
+	testPrecompile(t, 5, data, correct.Bytes())
 }
 
 func TestECAdd(t *testing.T) {

@@ -1454,6 +1454,7 @@ func (_GlobalInbox *GlobalInboxFilterer) ParseBuddyContractDeployed(log types.Lo
 	if err := _GlobalInbox.contract.UnpackLog(event, "BuddyContractDeployed", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1598,6 +1599,7 @@ func (_GlobalInbox *GlobalInboxFilterer) ParseBuddyContractPair(log types.Log) (
 	if err := _GlobalInbox.contract.UnpackLog(event, "BuddyContractPair", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1761,6 +1763,7 @@ func (_GlobalInbox *GlobalInboxFilterer) ParseMessageDelivered(log types.Log) (*
 	if err := _GlobalInbox.contract.UnpackLog(event, "MessageDelivered", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1923,6 +1926,7 @@ func (_GlobalInbox *GlobalInboxFilterer) ParseMessageDeliveredFromOrigin(log typ
 	if err := _GlobalInbox.contract.UnpackLog(event, "MessageDeliveredFromOrigin", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -2059,6 +2063,7 @@ func (_GlobalInbox *GlobalInboxFilterer) ParsePaymentTransfer(log types.Log) (*G
 	if err := _GlobalInbox.contract.UnpackLog(event, "PaymentTransfer", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -3072,6 +3077,7 @@ func (_IERC721 *IERC721Filterer) ParseApproval(log types.Log) (*IERC721Approval,
 	if err := _IERC721.contract.UnpackLog(event, "Approval", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -3225,6 +3231,7 @@ func (_IERC721 *IERC721Filterer) ParseApprovalForAll(log types.Log) (*IERC721App
 	if err := _IERC721.contract.UnpackLog(event, "ApprovalForAll", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -3386,6 +3393,7 @@ func (_IERC721 *IERC721Filterer) ParseTransfer(log types.Log) (*IERC721Transfer,
 	if err := _IERC721.contract.UnpackLog(event, "Transfer", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -3967,5 +3975,6 @@ func (_PaymentRecords *PaymentRecordsFilterer) ParsePaymentTransfer(log types.Lo
 	if err := _PaymentRecords.contract.UnpackLog(event, "PaymentTransfer", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }

@@ -27,10 +27,11 @@ var (
 )
 
 // ArbOwnerABI is the input ABI used to generate the binding from.
-const ArbOwnerABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"marshalledCode\",\"type\":\"bytes\"}],\"name\":\"continueArbosUpgrade\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"finishArbosUpgrade\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwnerAddr\",\"type\":\"address\"}],\"name\":\"giveOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"startArbosUpgrade\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ArbOwnerABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"sequencerAddr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"maxDelayBlocks\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxDelaySeconds\",\"type\":\"uint256\"}],\"name\":\"changeSequencer\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"marshalledCode\",\"type\":\"bytes\"}],\"name\":\"continueArbosUpgrade\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"finishArbosUpgrade\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwnerAddr\",\"type\":\"address\"}],\"name\":\"giveOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"startArbosUpgrade\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ArbOwnerFuncSigs maps the 4-byte function signature to its string representation.
 var ArbOwnerFuncSigs = map[string]string{
+	"ea180a38": "changeSequencer(address,uint256,uint256)",
 	"0b766fec": "continueArbosUpgrade(bytes)",
 	"e380002e": "finishArbosUpgrade()",
 	"e3a0a148": "giveOwnership(address)",
@@ -177,6 +178,27 @@ func (_ArbOwner *ArbOwnerTransactorRaw) Transfer(opts *bind.TransactOpts) (*type
 // Transact invokes the (paid) contract method with params as input values.
 func (_ArbOwner *ArbOwnerTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _ArbOwner.Contract.contract.Transact(opts, method, params...)
+}
+
+// ChangeSequencer is a paid mutator transaction binding the contract method 0xea180a38.
+//
+// Solidity: function changeSequencer(address sequencerAddr, uint256 maxDelayBlocks, uint256 maxDelaySeconds) returns()
+func (_ArbOwner *ArbOwnerTransactor) ChangeSequencer(opts *bind.TransactOpts, sequencerAddr common.Address, maxDelayBlocks *big.Int, maxDelaySeconds *big.Int) (*types.Transaction, error) {
+	return _ArbOwner.contract.Transact(opts, "changeSequencer", sequencerAddr, maxDelayBlocks, maxDelaySeconds)
+}
+
+// ChangeSequencer is a paid mutator transaction binding the contract method 0xea180a38.
+//
+// Solidity: function changeSequencer(address sequencerAddr, uint256 maxDelayBlocks, uint256 maxDelaySeconds) returns()
+func (_ArbOwner *ArbOwnerSession) ChangeSequencer(sequencerAddr common.Address, maxDelayBlocks *big.Int, maxDelaySeconds *big.Int) (*types.Transaction, error) {
+	return _ArbOwner.Contract.ChangeSequencer(&_ArbOwner.TransactOpts, sequencerAddr, maxDelayBlocks, maxDelaySeconds)
+}
+
+// ChangeSequencer is a paid mutator transaction binding the contract method 0xea180a38.
+//
+// Solidity: function changeSequencer(address sequencerAddr, uint256 maxDelayBlocks, uint256 maxDelaySeconds) returns()
+func (_ArbOwner *ArbOwnerTransactorSession) ChangeSequencer(sequencerAddr common.Address, maxDelayBlocks *big.Int, maxDelaySeconds *big.Int) (*types.Transaction, error) {
+	return _ArbOwner.Contract.ChangeSequencer(&_ArbOwner.TransactOpts, sequencerAddr, maxDelayBlocks, maxDelaySeconds)
 }
 
 // ContinueArbosUpgrade is a paid mutator transaction binding the contract method 0x0b766fec.
