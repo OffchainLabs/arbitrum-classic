@@ -68,7 +68,7 @@ func NewServer(
 		batch:              batch,
 		db:                 db,
 		maxCallTime:        0,
-		maxCallGas:         big.NewInt(100000000),
+		maxCallGas:         big.NewInt(1000000000),
 		initialBlockHeight: new(big.Int).Sub(createdHeight, big.NewInt(1)),
 	}
 }
@@ -167,7 +167,7 @@ func (m *Server) GetTxInBlockAtIndexResults(res *evm.BlockInfo, index uint64) (*
 	return evm.NewTxResultFromValue(avmLog)
 }
 
-func (m *Server) AdjustGas(msg message.Call) message.Call {
+func (m *Server) AdjustGas(msg message.ContractTransaction) message.ContractTransaction {
 	if msg.MaxGas.Cmp(big.NewInt(0)) == 0 || msg.MaxGas.Cmp(m.maxCallGas) > 0 {
 		msg.MaxGas = m.maxCallGas
 	}
@@ -176,14 +176,14 @@ func (m *Server) AdjustGas(msg message.Call) message.Call {
 
 // Call takes a request from a Client to process in a temporary context
 // and return the result
-func (m *Server) Call(msg message.Call, sender ethcommon.Address) (*evm.TxResult, error) {
+func (m *Server) Call(msg message.ContractTransaction, sender ethcommon.Address) (*evm.TxResult, error) {
 	msg = m.AdjustGas(msg)
 	return m.db.LatestSnapshot().Call(msg, common.NewAddressFromEth(sender))
 }
 
 // PendingCall takes a request from a Client to process in a temporary context
 // and return the result
-func (m *Server) PendingCall(msg message.Call, sender ethcommon.Address) (*evm.TxResult, error) {
+func (m *Server) PendingCall(msg message.ContractTransaction, sender ethcommon.Address) (*evm.TxResult, error) {
 	return m.Call(msg, sender)
 }
 

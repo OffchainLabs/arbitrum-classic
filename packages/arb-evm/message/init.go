@@ -60,6 +60,7 @@ func (m Init) AsData() []byte {
 	data = append(data, math.U256Bytes(new(big.Int).SetUint64(m.ArbGasSpeedLimitPerTick))...)
 	data = append(data, math.U256Bytes(new(big.Int).SetUint64(m.MaxExecutionSteps))...)
 	data = append(data, math.U256Bytes(m.StakeRequirement)...)
+	data = append(data, addressData(m.StakeToken)...)
 	data = append(data, addressData(m.Owner)...)
 	data = append(data, m.ExtraConfig...)
 	return data

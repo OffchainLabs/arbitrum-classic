@@ -169,6 +169,26 @@ func (con *globalInbox) DepositERC721Message(
 	return con.waitForReceipt(ctx, tx, "DepositERC721Message")
 }
 
+func (con *globalInbox) SendInitializationMessage(
+	ctx context.Context,
+	data []byte,
+) error {
+	con.auth.Lock()
+	defer con.auth.Unlock()
+	tx, err := con.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return con.GlobalInbox.SendInitializationMessage(
+			auth,
+			data,
+		)
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return con.waitForReceipt(ctx, tx, "SendInitializationMessage")
+}
+
 func (con *globalInbox) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
 	return waitForReceipt(ctx, con.client, con.auth.auth.From, tx, methodName)
 }

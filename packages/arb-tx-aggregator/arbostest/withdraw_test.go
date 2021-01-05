@@ -127,11 +127,9 @@ func TestWithdrawERC20(t *testing.T) {
 
 	results, sends := testWithdrawal(t, depositMsg, tx, token, 2)
 
-	if len(results) != 2 {
-		t.Fatal("unexpected log count", len(results))
-	}
+	depositRes := results[0]
+	t.Log("Deposit gas cost", depositRes.GasUsed)
 
-	//depositRes := logs[0]
 	withdrawRes := results[1]
 
 	if len(withdrawRes.EVMLogs) != 1 {
@@ -194,7 +192,9 @@ func TestWithdrawERC721(t *testing.T) {
 		t.Fatal("unexpected log count", len(results))
 	}
 
-	//depositRes := logs[0]
+	depositRes := results[0]
+	t.Log("Deposit gas cost", depositRes.GasUsed)
+
 	withdrawRes := results[1]
 
 	if len(withdrawRes.EVMLogs) != 1 {

@@ -19,7 +19,6 @@ package txdb
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -28,7 +27,7 @@ import (
 )
 
 type View struct {
-	as *cmachine.AggregatorStore
+	as machine.AggregatorStore
 }
 
 func (txdb *View) GetMessage(index uint64) (value.Value, error) {
@@ -42,6 +41,13 @@ func (txdb *View) GetLog(index uint64) (value.Value, error) {
 func (txdb *View) GetRequest(requestId common.Hash) (value.Value, error) {
 	requestCandidate := txdb.as.GetPossibleRequestInfo(requestId)
 	if requestCandidate == nil {
+		return nil, nil
+	}
+	totalLogCount, err := txdb.as.LogCount()
+	if err != nil {
+		return nil, err
+	}
+	if *requestCandidate >= totalLogCount {
 		return nil, nil
 	}
 	logVal, err := txdb.as.GetLog(*requestCandidate)

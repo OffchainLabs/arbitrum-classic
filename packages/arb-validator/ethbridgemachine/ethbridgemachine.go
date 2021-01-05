@@ -55,7 +55,7 @@ func generateProofCases(contract string) ([]*proofData, error) {
 		if err != nil {
 			return nil, err
 		}
-		a, ranSteps := mach.ExecuteAssertion(1, messages, 0)
+		a, _, ranSteps := mach.ExecuteAssertion(1, messages, 0)
 		if ranSteps == 0 {
 			break
 		}

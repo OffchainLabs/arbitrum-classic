@@ -18,12 +18,13 @@ package machineobserver
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"math/big"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/checkpointing"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -35,55 +36,45 @@ var logger = log.With().Caller().Str("component", "machineobserver").Logger()
 
 const defaultMaxReorgDepth = 100
 
+func verifyRollupInstance(
+	ctx context.Context,
+	initialMachineHash common.Hash,
+	rollupWatcher arbbridge.ArbRollupWatcher,
+) (arbbridge.ChainInfo, *big.Int, error) {
+	if err := rollupWatcher.VerifyArbChain(ctx, initialMachineHash); err != nil {
+		return arbbridge.ChainInfo{}, nil, err
+	}
+
+	logger.Info().Msg("L2 chain verified")
+
+	_, eventCreated, _, creationTimestamp, err := rollupWatcher.GetCreationInfo(ctx)
+	if err != nil {
+		return arbbridge.ChainInfo{}, nil, err
+	}
+	logger.Info().Msg("Creation info retrieved")
+	return eventCreated, creationTimestamp, nil
+}
+
 func ensureInitialized(
 	ctx context.Context,
-	cp *checkpointing.IndexedCheckpointer,
 	db *txdb.TxDB,
-	rollupWatcher arbbridge.ArbRollupWatcher,
 	inboxWatcher arbbridge.GlobalInboxWatcher,
 ) error {
 	logger.Info().Msg("Loading database")
-	if err := db.Load(ctx); err != nil {
+	freshStart, err := db.Load(ctx)
+	if err != nil {
 		return err
 	}
 
 	logger.Info().Msg("Database loaded")
 
 	// If we're already initialized, do nothing
-	if db.LatestBlockId() != nil {
+	if !freshStart {
 		return nil
 	}
 
-	// Verify contract version
-	valueCache, err := cmachine.NewValueCache()
-	if err != nil {
-		return err
-	}
-
-	initialMachine, err := cp.GetInitialMachine(valueCache)
-	if err != nil {
-		return err
-	}
-
-	if err := rollupWatcher.VerifyArbChain(ctx, initialMachine.Hash()); err != nil {
-		return err
-	}
-
-	logger.Info().Msg("L2 chain verified")
-
 	// We're starting from scratch.  Process the messages from initial block
-	_, eventCreated, _, creationTimestamp, err := rollupWatcher.GetCreationInfo(ctx)
-	if err != nil {
-		return err
-	}
-
-	logger.Info().Msg("Creation info retrieved")
-
-	if err := db.AddInitialBlock(ctx, new(big.Int).Sub(eventCreated.BlockId.Height.AsInt(), big.NewInt(1))); err != nil {
-		return err
-	}
-
-	events, err := inboxWatcher.GetDeliveredEventsInBlock(ctx, eventCreated.BlockId, creationTimestamp)
+	events, err := inboxWatcher.GetDeliveredEventsInBlock(ctx, db.EventCreated.BlockId, db.CreationTimestamp)
 	if err != nil {
 		return err
 	}
@@ -92,7 +83,7 @@ func ensureInitialized(
 	if len(events) > 0 {
 		startIndex := -1
 		for i, ev := range events {
-			if ev.ChainInfo.Cmp(eventCreated) > 0 {
+			if ev.ChainInfo.Cmp(db.EventCreated) > 0 {
 				startIndex = i
 			}
 		}
@@ -103,7 +94,7 @@ func ensureInitialized(
 		}
 	}
 
-	if err := db.AddMessages(ctx, events, eventCreated.BlockId); err != nil {
+	if _, err := db.AddMessages(ctx, extractMessages(events), db.EventCreated.BlockId); err != nil {
 		return err
 	}
 
@@ -112,14 +103,11 @@ func ensureInitialized(
 	return nil
 }
 
-func RunObserver(
-	ctx context.Context,
+func initializeCheckpointDB(
 	rollupAddr common.Address,
-	clnt arbbridge.ArbClient,
 	executablePath string,
 	dbPath string,
-) (*txdb.TxDB, error) {
-	logger.Info().Msg("Creating indexed checkpointer")
+) (*checkpointing.IndexedCheckpointer, error) {
 	cp, err := checkpointing.NewIndexedCheckpointer(
 		rollupAddr,
 		dbPath,
@@ -135,8 +123,44 @@ func RunObserver(
 			return nil, err
 		}
 	}
+	return cp, nil
+}
+
+func RunObserver(
+	ctx context.Context,
+	rollupAddr common.Address,
+	clnt arbbridge.ArbClient,
+	executablePath string,
+	dbPath string,
+) (*txdb.TxDB, error) {
+	logger.Info().Msg("Creating indexed checkpointer")
+	cp, err := initializeCheckpointDB(rollupAddr, executablePath, dbPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify contract version
+	valueCache, err := cmachine.NewValueCache()
+	if err != nil {
+		return nil, err
+	}
+
+	initialMachine, err := cp.GetInitialMachine(valueCache)
+	if err != nil {
+		return nil, err
+	}
 
 	rollupWatcher, err := clnt.NewRollupWatcher(rollupAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	eventCreated, creationTimestamp, err := verifyRollupInstance(ctx, initialMachine.Hash(), rollupWatcher)
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := txdb.New(clnt, cp, cp.GetAggregatorStore(), rollupAddr, eventCreated, creationTimestamp)
 	if err != nil {
 		return nil, err
 	}
@@ -151,112 +175,171 @@ func RunObserver(
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
-	db := txdb.New(clnt, cp, cp.GetAggregatorStore(), rollupAddr)
-
-	logger.Info().Msg("Initializing database")
-	// Make first call to ensureInitialized outside of thread to avoid race conditions
-	if err := ensureInitialized(ctx, cp, db, rollupWatcher, inboxWatcher); err != nil {
-		logger.Fatal().Stack().Err(err).Send()
+	if err := ExecuteObserverAdvanced(
+		ctx,
+		clnt,
+		cp.MaxReorgHeight(),
+		db,
+		inboxWatcher,
+	); err != nil {
+		return nil, err
 	}
 
+	return db, nil
+}
+
+func ExecuteObserverAdvanced(
+	ctx context.Context,
+	clnt arbbridge.ChainInfoGetter,
+	maxReorgHeight *big.Int,
+	db *txdb.TxDB,
+	inboxWatcher arbbridge.GlobalInboxWatcher,
+) error {
+	logger.Info().Msg("Initializing database")
+	// Make first call to ensureInitialized outside of thread to avoid race conditions
+	if err := ensureInitialized(ctx, db, inboxWatcher); err != nil {
+		return err
+	}
+
+	go observerRunThread(ctx, clnt, db, inboxWatcher, maxReorgHeight)
+	return nil
+}
+
+func observerRunThread(
+	ctx context.Context,
+	clnt arbbridge.ChainInfoGetter,
+	db *txdb.TxDB,
+	inboxWatcher arbbridge.GlobalInboxWatcher,
+	maxReorgHeight *big.Int,
+) {
 	firstLoop := true
-	go func() {
-		for {
-			runCtx, cancelFunc := context.WithCancel(ctx)
+	for {
+		runCtx, cancelFunc := context.WithCancel(ctx)
 
-			logger.Info().Msg("Observer thread")
+		logger.Info().Msg("Observer thread")
 
+		err := func() error {
 			if firstLoop {
 				firstLoop = false
 			} else {
-				if err := ensureInitialized(ctx, cp, db, rollupWatcher, inboxWatcher); err != nil {
+				if err := ensureInitialized(ctx, db, inboxWatcher); err != nil {
 					logger.Fatal().Stack().Err(err).Send()
 				}
 			}
 
-			err = func() error {
-				logger.Info().
-					Object("blockId", db.LatestBlockId()).
-					Msg("Starting observer")
+			logger.Info().
+				Object("blockId", db.LatestBlockId()).
+				Msg("Starting observer")
 
-				// If the local chain is significantly behind the L1, catch up
-				// more efficiently. We process `MaxReorgHeight` blocks at a
-				// time up to `MaxReorgHeight` blocks before the current head
-				// and and assume that no reorg will occur affecting the blocks
-				// we are processing
-				maxReorg := cp.MaxReorgHeight()
-				for {
-					start := new(big.Int).Add(db.LatestBlockId().Height.AsInt(), big.NewInt(1))
-					fetchEnd, err := observer.CalculateCatchupFetch(runCtx, start, clnt, maxReorg)
-					if err != nil {
-						return errors.Wrap(err, "error calculating fast catchup")
-					}
-					if fetchEnd == nil {
-						break
-					}
-					currentOnChain, err := clnt.BlockIdForHeight(ctx, nil)
-					if err != nil {
-						return err
-					}
-					logger.Info().
-						Str("startEvent", start.String()).
-						Str("endEvent", fetchEnd.String()).
-						Str("blocksRemaining", new(big.Int).Sub(currentOnChain.Height.AsInt(), start).String()).
-						Msg("Getting events")
-					inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(runCtx, start, fetchEnd)
-					if err != nil {
-						return errors.Wrap(err, "Manager hit error doing fast catchup")
-					}
-
-					endBlock, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(fetchEnd))
-					if err != nil {
-						return errors.Wrap(err, "error getting end block in fast catchup")
-					}
-					if err := db.AddMessages(runCtx, inboxDeliveredEvents, endBlock); err != nil {
-						return errors.Wrap(err, "error adding messages to db")
-					}
-				}
-
-				latest := db.LatestBlockId()
-				headersChan, err := clnt.SubscribeBlockHeadersAfter(runCtx, latest)
-				if err != nil {
-					return errors.Wrap(err, "can't restart header subscription")
-				}
-				for maybeBlockId := range headersChan {
-					if maybeBlockId.Err != nil {
-						return errors.Wrap(maybeBlockId.Err, "error getting new header")
-					}
-
-					blockId := maybeBlockId.BlockId
-					timestamp := maybeBlockId.Timestamp
-
-					inboxEvents, err := inboxWatcher.GetDeliveredEventsInBlock(runCtx, blockId, timestamp)
-					if err != nil {
-						return errors.Wrapf(err, "manager hit error getting inbox events with block %v", blockId)
-					}
-
-					if err := db.AddMessages(runCtx, inboxEvents, blockId); err != nil {
-						return errors.Wrap(err, "error adding messages to db")
-					}
-				}
-				return nil
-			}()
-
-			if err != nil {
-				logger.Error().Stack().Err(err).Msg("Error in observer manager")
+			if err := fastCatchupEvents(runCtx, clnt, db, inboxWatcher, maxReorgHeight); err != nil {
+				return err
 			}
 
-			cancelFunc()
-
-			select {
-			case <-ctx.Done():
-				return
-			default:
-
+			if err := watchEvents(runCtx, clnt, db, inboxWatcher); err != nil {
+				return err
 			}
-			// Wait for things to settle
-			time.Sleep(time.Second)
+
+			return nil
+		}()
+
+		if err != nil {
+			logger.Error().Stack().Err(err).Msg("Error in observer manager")
 		}
-	}()
-	return db, nil
+
+		cancelFunc()
+
+		select {
+		case <-ctx.Done():
+			return
+		default:
+
+		}
+		// Wait for things to settle
+		time.Sleep(time.Second)
+	}
+}
+
+func fastCatchupEvents(
+	ctx context.Context,
+	clnt arbbridge.ChainInfoGetter,
+	db *txdb.TxDB,
+	inboxWatcher arbbridge.GlobalInboxWatcher,
+	maxReorgHeight *big.Int,
+) error {
+	// If the local chain is significantly behind the L1, catch up
+	// more efficiently. We process `MaxReorgHeight` blocks at a
+	// time up to `MaxReorgHeight` blocks before the current head
+	// and and assume that no reorg will occur affecting the blocks
+	// we are processing
+	for {
+		start := new(big.Int).Add(db.LatestBlockId().Height.AsInt(), big.NewInt(1))
+		fetchEnd, err := observer.CalculateCatchupFetch(ctx, start, clnt, maxReorgHeight)
+		if err != nil {
+			return errors.Wrap(err, "error calculating fast catchup")
+		}
+		if fetchEnd == nil {
+			break
+		}
+		currentOnChain, err := clnt.BlockIdForHeight(ctx, nil)
+		if err != nil {
+			return err
+		}
+		logger.Info().
+			Str("startEvent", start.String()).
+			Str("endEvent", fetchEnd.String()).
+			Str("blocksRemaining", new(big.Int).Sub(currentOnChain.Height.AsInt(), start).String()).
+			Msg("Getting events")
+		inboxDeliveredEvents, err := inboxWatcher.GetDeliveredEvents(ctx, start, fetchEnd)
+		if err != nil {
+			return errors.Wrap(err, "Manager hit error doing fast catchup")
+		}
+
+		endBlock, err := clnt.BlockIdForHeight(ctx, common.NewTimeBlocks(fetchEnd))
+		if err != nil {
+			return errors.Wrap(err, "error getting end block in fast catchup")
+		}
+		if _, err := db.AddMessages(ctx, extractMessages(inboxDeliveredEvents), endBlock); err != nil {
+			return errors.Wrap(err, "error adding messages to db")
+		}
+	}
+	return nil
+}
+
+func watchEvents(
+	ctx context.Context,
+	clnt arbbridge.ChainInfoGetter,
+	db *txdb.TxDB,
+	inboxWatcher arbbridge.GlobalInboxWatcher,
+) error {
+	latest := db.LatestBlockId()
+	headersChan, err := clnt.SubscribeBlockHeadersAfter(ctx, latest)
+	if err != nil {
+		return errors.Wrap(err, "can't restart header subscription")
+	}
+	for maybeBlockId := range headersChan {
+		if maybeBlockId.Err != nil {
+			return errors.Wrap(maybeBlockId.Err, "error getting new header")
+		}
+
+		blockId := maybeBlockId.BlockId
+		timestamp := maybeBlockId.Timestamp
+
+		inboxEvents, err := inboxWatcher.GetDeliveredEventsInBlock(ctx, blockId, timestamp)
+		if err != nil {
+			return errors.Wrapf(err, "manager hit error getting inbox events with block %v", blockId)
+		}
+
+		if _, err := db.AddMessages(ctx, extractMessages(inboxEvents), blockId); err != nil {
+			return errors.Wrap(err, "error adding messages to db")
+		}
+	}
+	return nil
+}
+
+func extractMessages(inboxEvents []arbbridge.MessageDeliveredEvent) []inbox.InboxMessage {
+	inboxMessages := make([]inbox.InboxMessage, 0, len(inboxEvents))
+	for _, ev := range inboxEvents {
+		inboxMessages = append(inboxMessages, ev.Message)
+	}
+	return inboxMessages
 }

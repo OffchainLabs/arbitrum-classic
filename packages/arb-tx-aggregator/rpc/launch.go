@@ -18,7 +18,10 @@ package rpc
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/txdb"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -116,10 +119,36 @@ func LaunchAggregator(
 		return err
 	}
 
-	srv := aggregator.NewServer(batch, rollupAddress, db, eventCreated.BlockId.Height.AsInt())
+	return LaunchAggregatorAdvanced(
+		eventCreated.BlockId.Height.AsInt(),
+		db,
+		rollupAddress,
+		web3RPCPort,
+		web3WSPort,
+		flags,
+		batch,
+		nil,
+		false,
+		make(map[string]interface{}),
+	)
+}
+
+func LaunchAggregatorAdvanced(
+	initialHeight *big.Int,
+	db *txdb.TxDB,
+	rollupAddress common.Address,
+	web3RPCPort string,
+	web3WSPort string,
+	flags utils2.RPCFlags,
+	batch batcher.TransactionBatcher,
+	privateKeys []*ecdsa.PrivateKey,
+	ganacheMode bool,
+	plugins map[string]interface{},
+) error {
+	srv := aggregator.NewServer(batch, rollupAddress, db, initialHeight)
 	errChan := make(chan error, 1)
 
-	web3Server, err := web3.GenerateWeb3Server(srv)
+	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, ganacheMode, plugins)
 	if err != nil {
 		return err
 	}

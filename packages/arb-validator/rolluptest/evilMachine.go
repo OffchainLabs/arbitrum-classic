@@ -61,19 +61,8 @@ func (e EvilMachine) ExecuteAssertion(
 	maxSteps uint64,
 	inboxMessages []inbox.InboxMessage,
 	maxWallTime time.Duration,
-) (*protocol.ExecutionAssertion, uint64) {
-	assn, numSteps := e.Machine.ExecuteAssertion(maxSteps, inboxMessages, maxWallTime)
+) (*protocol.ExecutionAssertion, []value.Value, uint64) {
+	assn, debugMessages, numSteps := e.Machine.ExecuteAssertion(maxSteps, inboxMessages, maxWallTime)
 	assn.AfterMachineHash = _tweakHash(assn.AfterMachineHash.Unmarshal()).MarshalToBuf()
-	return assn, numSteps
-}
-
-func (e EvilMachine) ExecuteSideloadedAssertion(
-	maxSteps uint64,
-	inboxMessages []inbox.InboxMessage,
-	sideloadValue *value.TupleValue,
-	maxWallTime time.Duration,
-) (*protocol.ExecutionAssertion, uint64) {
-	assn, numSteps := e.Machine.ExecuteSideloadedAssertion(maxSteps, inboxMessages, sideloadValue, maxWallTime)
-	assn.AfterMachineHash = _tweakHash(assn.AfterMachineHash.Unmarshal()).MarshalToBuf()
-	return assn, numSteps
+	return assn, debugMessages, numSteps
 }

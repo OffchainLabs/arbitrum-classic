@@ -48,7 +48,7 @@ func newApp(data []byte) (*App, error) {
 	}
 
 	// Last parameter returned is number of steps executed
-	assertion, _ := mach.ExecuteAssertion(100000000000, inboxMessages, 0)
+	assertion, _, _ := mach.ExecuteAssertion(100000000000, inboxMessages, 0)
 
 	chainId := message.ChainAddressToID(inboxMessages[0].Sender)
 
