@@ -65,6 +65,8 @@ library Hashing {
             return preImage.hash();
         } else if (val.typeCode == Value.hashOnlyTypeCode()) {
             return bytes32(val.intVal);
+        } else if (val.typeCode == Value.bufferTypeCode()) {
+            return keccak256(abi.encodePacked(uint256(123), val.bufferHash));
         } else {
             require(false, "Invalid type code");
         }

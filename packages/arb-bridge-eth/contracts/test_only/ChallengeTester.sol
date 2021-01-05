@@ -28,6 +28,7 @@ contract ChallengeTester is IStaking {
         challengeFactory = IChallengeFactory(challengeFactory_);
     }
 
+    /* solhint-disable-next-line no-unused-vars */
     function resolveChallenge(address payable, address) external {
         return;
     }

@@ -26,10 +26,14 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 
 contract BaseDetails is ERC20Detailed {
+    /* solhint-disable-next-line no-empty-blocks */
     constructor() public ERC20Detailed("Token Buddy", "TB", 18) {}
 }
 
-contract ArbBuddyERC20 is ArbERC20, BaseDetails {}
+/* solhint-disable-next-line no-empty-blocks */
+contract ArbBuddyERC20 is ArbERC20, BaseDetails {
+
+}
 
 contract EthBuddyERC20 is IPairedErc20, Ownable, ERC20, BaseDetails {
     address public inbox;

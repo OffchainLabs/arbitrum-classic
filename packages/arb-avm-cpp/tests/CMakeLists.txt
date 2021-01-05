@@ -28,7 +28,7 @@ configure_file (
     "${CMAKE_CURRENT_SOURCE_DIR}/config.hpp"
 )
 
-add_executable(avm_tests aggregator.cpp arbos.cpp code.cpp main.cpp opcodes.cpp value.cpp checkpoint.cpp datastack.cpp machine.cpp keyvaluestore.cpp blockstore.cpp ecops.cpp ecops.hpp)
+add_executable(avm_tests aggregator.cpp arbos.cpp code.cpp main.cpp opcodes.cpp value.cpp checkpoint.cpp datastack.cpp machine.cpp keyvaluestore.cpp blockstore.cpp ecops.cpp ecops.hpp buffer.cpp)
 
 target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic)
 # target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)

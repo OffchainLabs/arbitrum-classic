@@ -19,5 +19,5 @@
 pragma solidity ^0.5.11;
 
 interface IExecutionChallenge {
-    function connectOneStepProof(address oneStepProof) external;
+    function connectOneStepProof(address oneStepProof, address oneStepProof2) external;
 }

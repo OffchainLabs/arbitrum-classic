@@ -18,11 +18,12 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"math/big"
 
 	"github.com/pkg/errors"
 
@@ -65,9 +66,14 @@ func DeployChallengeFactory(ctx context.Context, authClient *EthArbAuthClient, c
 	if err != nil {
 		return ethcommon.Address{}, nil, err
 	}
-
+	ospAddr2, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		return ethbridgecontracts.DeployOneStepProof2(auth, client)
+	})
+	if err != nil {
+		return ethcommon.Address{}, nil, err
+	}
 	factoryAddr, tx, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
-		return ethbridgecontracts.DeployChallengeFactory(auth, client, inboxTopAddr, executionAddr, ospAddr)
+		return ethbridgecontracts.DeployChallengeFactory(auth, client, inboxTopAddr, executionAddr, ospAddr, ospAddr2)
 	})
 	return factoryAddr, tx, err
 }

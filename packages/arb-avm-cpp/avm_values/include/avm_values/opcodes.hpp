@@ -109,6 +109,14 @@ enum class OpCode : uint8_t {
     ECPAIRING,
 
     DEBUG_PRINT = 0x90,
+
+    NEW_BUFFER = 0xa0,
+    GET_BUFFER8,
+    GET_BUFFER64,
+    GET_BUFFER256,
+    SET_BUFFER8,
+    SET_BUFFER64,
+    SET_BUFFER256,
 };
 
 const std::unordered_map<OpCode, std::string> InstructionNames = {
@@ -187,6 +195,14 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::PUSH_INSN, "pushinsn"},
     {OpCode::PUSH_INSN_IMM, "pushinsnimm"},
     {OpCode::SIDELOAD, "sideload"},
+
+    {OpCode::NEW_BUFFER, "newbuffer"},
+    {OpCode::GET_BUFFER8, "getbuffer8"},
+    {OpCode::GET_BUFFER64, "getbuffer64"},
+    {OpCode::GET_BUFFER256, "getbuffer256"},
+    {OpCode::SET_BUFFER8, "setbuffer8"},
+    {OpCode::SET_BUFFER64, "setbuffer64"},
+    {OpCode::SET_BUFFER256, "setbuffer256"},
 
     {OpCode::ECRECOVER, "ecrecover"},
     {OpCode::ECADD, "ecadd"},
@@ -282,6 +298,14 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::SIDELOAD, {}},
         {OpCode::DEBUG_PRINT, {}},
 
+        {OpCode::NEW_BUFFER, {}},
+        {OpCode::GET_BUFFER8, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::GET_BUFFER64, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::GET_BUFFER256, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::SET_BUFFER8, {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::SET_BUFFER64, {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::SET_BUFFER256, {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+
         {OpCode::ECRECOVER,
          {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE,
           MarshalLevel::SINGLE}},
@@ -370,6 +394,13 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
                                {OpCode::SIDELOAD, {}},
                                {OpCode::DEBUG_PRINT, {}},
 
+                               {OpCode::NEW_BUFFER, {}},
+                               {OpCode::GET_BUFFER8, {}},
+                               {OpCode::GET_BUFFER64, {}},
+                               {OpCode::GET_BUFFER256, {}},
+                               {OpCode::SET_BUFFER8, {}},
+                               {OpCode::SET_BUFFER64, {}},
+                               {OpCode::SET_BUFFER256, {}},
                                {OpCode::ECRECOVER, {}},
                                {OpCode::ECADD, {}},
                                {OpCode::ECMUL, {}},
@@ -451,6 +482,14 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::PUSH_INSN_IMM, 25},
     {OpCode::SIDELOAD, 10},
     {OpCode::DEBUG_PRINT, 1},
+
+    {OpCode::NEW_BUFFER, 1},
+    {OpCode::GET_BUFFER8, 10},
+    {OpCode::GET_BUFFER64, 10},
+    {OpCode::GET_BUFFER256, 10},
+    {OpCode::SET_BUFFER8, 100},
+    {OpCode::SET_BUFFER64, 100},
+    {OpCode::SET_BUFFER256, 100},
 
     {OpCode::ECRECOVER, 20000},
     {OpCode::ECADD, 3500},

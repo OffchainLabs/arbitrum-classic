@@ -191,7 +191,7 @@ func runExecutionOneStepProof(
 ) (ChallengeState, error) {
 	timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 	if timedOut {
-		proof, msg, err := defender.SolidityOneStepProof()
+		proof, bproof, msg, err := defender.SolidityOneStepProof()
 		if err != nil {
 			return 0, err
 		}
@@ -202,12 +202,19 @@ func runExecutionOneStepProof(
 				proof,
 				*msg,
 			)
+		} else if bproof != nil {
+			err = contract.OneStepProofBuffer(
+					ctx,
+					defender.AssertionStub(),
+					proof,
+					bproof,
+				)
 		} else {
-			err = contract.OneStepProof(
-				ctx,
-				defender.AssertionStub(),
-				proof,
-			)
+				err = contract.OneStepProof(
+					ctx,
+					defender.AssertionStub(),
+					proof,
+				)
 		}
 		if err != nil {
 			return 0, err

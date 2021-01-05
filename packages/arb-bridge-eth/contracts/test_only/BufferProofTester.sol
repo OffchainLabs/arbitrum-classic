@@ -18,26 +18,47 @@
 
 pragma solidity ^0.5.11;
 
-import "../arch/OneStepProof.sol";
+import "../arch/OneStepProof2.sol";
 
-contract OneStepProofTester is OneStepProof {
-    event OneStepProofTestEvent();
+contract BufferProofTester is OneStepProof2 {
+    event BufferProofTestEvent();
+
+    function testGet(
+        bytes32 buf,
+        uint256 loc,
+        bytes32[] memory proof
+    ) public pure returns (bytes32) {
+        return get(buf, loc, proof);
+    }
+
+    function testSet(
+        bytes32 buf,
+        uint256 loc,
+        bytes32 v,
+        bytes32[] memory proof,
+        uint256 nh,
+        bytes32 normal1,
+        bytes32 normal2
+    ) public pure returns (bytes32) {
+        return set(buf, loc, v, proof, nh, normal1, normal2);
+    }
 
     function executeStepTest(
         bytes32 inboxAcc,
         bytes32 messagesAcc,
         bytes32 logsAcc,
-        bytes calldata proof
+        bytes calldata proof,
+        bytes calldata bproof
     ) external {
         AssertionContext memory context = initializeExecutionContext(
             inboxAcc,
             messagesAcc,
             logsAcc,
             proof,
-            new bytes(0)
+            bproof
         );
 
         executeOp(context);
-        emit OneStepProofTestEvent();
+        emit BufferProofTestEvent();
     }
 }
