@@ -70,6 +70,7 @@ contract Challenge is Cloneable, IChallenge {
     address payable internal asserter;
     address payable internal challenger;
     uint256 private challengePeriodBlocks;
+    uint256 private executionCheckTimeBlocks;
 
     Kind kind;
 
@@ -118,6 +119,7 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _inboxConsistencyHash,
         bytes32 _inboxDeltaHash,
         bytes32 _executionHash,
+        uint256 _executionCheckTimeBlocks,
         address payable _asserter,
         address payable _challenger,
         uint256 _challengePeriodBlocks
@@ -135,11 +137,11 @@ contract Challenge is Cloneable, IChallenge {
         asserter = _asserter;
         challenger = _challenger;
         challengePeriodBlocks = _challengePeriodBlocks;
+        executionCheckTimeBlocks = _executionCheckTimeBlocks;
 
         kind = Kind.Uninitialized;
 
-        // This sets up deadlineBlock
-        updateDeadline();
+        deadlineBlock = block.number + _challengePeriodBlocks + _executionCheckTimeBlocks;
         state = State.ChallengerTurn;
 
         challengeState = 0;
@@ -168,7 +170,7 @@ contract Challenge is Cloneable, IChallenge {
 
         challengeState = calculateBisectionRoot(_chainHashes, _chainLength);
 
-        responded();
+        responded(1);
         emit Bisected(_segmentToChallenge, _chainHashes, _chainLength, deadlineBlock);
     }
 
@@ -216,7 +218,7 @@ contract Challenge is Cloneable, IChallenge {
 
         challengeState = calculateBisectionRoot(_chainHashes, _chainLength);
 
-        responded();
+        responded(1);
         emit Bisected(_segmentToChallenge, _chainHashes, _chainLength, deadlineBlock);
     }
 
@@ -276,7 +278,7 @@ contract Challenge is Cloneable, IChallenge {
 
         challengeState = calculateBisectionRoot(_chainHashes, _chainLength);
 
-        responded();
+        responded(executionCheckTimeBlocks);
         emit Bisected(_segmentToChallenge, _chainHashes, _chainLength, deadlineBlock);
     }
 
@@ -349,7 +351,7 @@ contract Challenge is Cloneable, IChallenge {
 
         // Reuse the executionHash variable to store last assertion
         executionHash = _chainHashes[_chainHashes.length - 1];
-        responded();
+        responded(executionCheckTimeBlocks);
     }
 
     function oneStepProveStoppedShortCanRun(
@@ -408,17 +410,13 @@ contract Challenge is Cloneable, IChallenge {
         executionHash = 0;
     }
 
-    function updateDeadline() private {
-        deadlineBlock = block.number + challengePeriodBlocks;
-    }
-
-    function responded() private {
+    function responded(uint256 additionalTimeBlocks) private {
         if (state == State.ChallengerTurn) {
             state = State.AsserterTurn;
         } else {
             state = State.ChallengerTurn;
         }
-        updateDeadline();
+        deadlineBlock = block.number + challengePeriodBlocks + additionalTimeBlocks;
     }
 
     function _currentWin() private {

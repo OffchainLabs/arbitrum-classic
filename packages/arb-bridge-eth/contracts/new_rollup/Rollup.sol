@@ -7,6 +7,7 @@ import "./RollupLib.sol";
 import "../inbox/IGlobalInbox.sol";
 import "../rollup/RollupUtils.sol";
 import "../new_challenge/ChallengeLib.sol";
+import "../new_challenge/IChallengeFactory.sol";
 
 contract Rollup {
     event SentLogs(bytes32 logsAccHash);
@@ -18,6 +19,13 @@ contract Rollup {
         address currentChallenge;
         bool isZombie;
         bool isStaked;
+    }
+
+    struct ChallengeState {
+        bytes32 inboxConsistencyHash;
+        bytes32 inboxDeltaHash;
+        bytes32 executionHash;
+        uint256 executionCheckTime;
     }
 
     uint256 latestConfirmed;
@@ -34,6 +42,7 @@ contract Rollup {
     uint256 arbGasSpeedLimitPerBlock;
 
     IGlobalInbox public globalInbox;
+    IChallengeFactory public challengeFactory;
 
     constructor(bytes32 machineHash) public {
         bytes32 state = RollupLib.nodeStateHash(
@@ -225,34 +234,22 @@ contract Rollup {
     }
 
     function createChallenge(
-        address staker1Address,
+        address payable staker1Address,
         uint256 nodeNum1,
-        address staker2Address,
-        uint256 nodeNum2
+        address payable staker2Address,
+        uint256 nodeNum2,
+        bytes32 inboxConsistencyHash,
+        bytes32 inboxDeltaHash,
+        bytes32 executionHash,
+        uint256 executionCheckTime
     ) external {
-        Staker storage staker1 = stakers[staker1Address];
-        Staker storage staker2 = stakers[staker2Address];
-        Node node1 = nodes[nodeNum1];
-        Node node2 = nodes[nodeNum2];
-
-        checkUnchallengedStaker(staker1);
-        require(node1.stakers(staker1Address));
-
-        checkUnchallengedStaker(staker2);
-        require(node2.stakers(staker2Address));
-
-        require(node1.prev() == node2.prev());
-        require(latestConfirmed < nodeNum1);
-        require(nodeNum1 < nodeNum2);
-        require(nodeNum2 <= latestNodeCreated);
-
-        // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
-        // TODO: How to we want to handle the two challenge types
-
-        // TODO: Actually launch challenge
-        address challengeAddress = address(0);
-        staker1.currentChallenge = challengeAddress;
-        staker2.currentChallenge = challengeAddress;
+        createChallenge(
+            staker1Address,
+            nodeNum1,
+            staker2Address,
+            nodeNum2,
+            ChallengeState(inboxConsistencyHash, inboxDeltaHash, executionHash, executionCheckTime)
+        );
     }
 
     function completeChallenge(address winningStaker, address payable losingStaker) external {
@@ -353,6 +350,54 @@ contract Rollup {
                 deadlineBlock,
                 inboxCount
             );
+    }
+
+    function createChallenge(
+        address payable staker1Address,
+        uint256 nodeNum1,
+        address payable staker2Address,
+        uint256 nodeNum2,
+        ChallengeState memory state
+    ) private {
+        Staker storage staker1 = stakers[staker1Address];
+        Staker storage staker2 = stakers[staker2Address];
+        Node node1 = nodes[nodeNum1];
+        Node node2 = nodes[nodeNum2];
+
+        checkUnchallengedStaker(staker1);
+        require(node1.stakers(staker1Address));
+
+        checkUnchallengedStaker(staker2);
+        require(node2.stakers(staker2Address));
+
+        require(node1.prev() == node2.prev());
+        require(latestConfirmed < nodeNum1);
+        require(nodeNum1 < nodeNum2);
+        require(nodeNum2 <= latestNodeCreated);
+
+        require(
+            node1.challengeHash() ==
+                ChallengeLib.challengeRootHash(
+                    state.inboxConsistencyHash,
+                    state.inboxDeltaHash,
+                    state.executionHash,
+                    state.executionCheckTime
+                )
+        );
+
+        // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
+        address challengeAddress = challengeFactory.createChallenge(
+            state.inboxConsistencyHash,
+            state.inboxDeltaHash,
+            state.executionHash,
+            state.executionCheckTime,
+            staker1Address,
+            staker2Address,
+            challengePeriod
+        );
+
+        staker1.currentChallenge = challengeAddress;
+        staker2.currentChallenge = challengeAddress;
     }
 
     function discardUnresolvedNode() private {

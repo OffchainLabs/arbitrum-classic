@@ -25,6 +25,7 @@ interface IChallenge {
         bytes32 _inboxConsistencyHash,
         bytes32 _inboxDeltaHash,
         bytes32 _executionHash,
+        uint256 _executionCheckTimeBlocks,
         address payable _asserter,
         address payable _challenger,
         uint256 _challengePeriodBlocks
