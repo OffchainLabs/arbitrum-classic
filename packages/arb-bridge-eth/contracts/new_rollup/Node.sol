@@ -8,7 +8,6 @@ contract Node {
     uint256 public proposedBlock;
     uint256 public deadlineBlock;
     uint256 public stakerCount;
-    uint256 public totalInboxCount;
     mapping(address => bool) public stakers;
 
     address rollup;
@@ -23,15 +22,13 @@ contract Node {
         bytes32 _challengeHash,
         uint256 _prev,
         uint256 _proposedBlock,
-        uint256 _deadlineBlock,
-        uint256 _totalInboxCount
+        uint256 _deadlineBlock
     ) public {
         stateHash = _stateHash;
         challengeHash = _challengeHash;
         prev = _prev;
         proposedBlock = _proposedBlock;
         deadlineBlock = _deadlineBlock;
-        totalInboxCount = _totalInboxCount;
     }
 
     function confirmValid(uint256 totalStakerCount, uint256 latestConfirmed)

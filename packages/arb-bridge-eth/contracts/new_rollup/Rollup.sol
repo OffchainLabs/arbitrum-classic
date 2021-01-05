@@ -3,13 +3,15 @@ pragma solidity ^0.5.17;
 
 import "./Node.sol";
 import "./RollupLib.sol";
+import "./Inbox.sol";
+import "./Outbox.sol";
 
 import "../inbox/IGlobalInbox.sol";
 import "../rollup/RollupUtils.sol";
 import "../new_challenge/ChallengeLib.sol";
 import "../new_challenge/IChallengeFactory.sol";
 
-contract Rollup {
+contract Rollup is Inbox, Outbox {
     event SentLogs(bytes32 logsAccHash);
 
     struct Staker {
@@ -51,15 +53,15 @@ contract Rollup {
             0, // inbox top
             0, // inbox count
             0, // send count
-            0 // log count
+            0, // log count
+            0 // inbox max couny
         );
         Node node = new Node(
             state,
             0, // challenge hash (not challengeable)
             latestConfirmed,
             block.number,
-            0, // deadline block (not challengeable)
-            0 // prev inbox max
+            0 // deadline block (not challengeable)
         );
         nodes[0] = node;
     }
@@ -155,7 +157,7 @@ contract Rollup {
         uint256 nodeNum,
         uint256 prev,
         bytes32[7] calldata assertionBytes32Fields,
-        uint256[9] calldata assertionIntFields
+        uint256[10] calldata assertionIntFields
     ) external payable {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         verifyCanStake();
@@ -179,7 +181,7 @@ contract Rollup {
         uint256 blockNumber,
         uint256 nodeNum,
         bytes32[7] calldata assertionBytes32Fields,
-        uint256[9] calldata assertionIntFields
+        uint256[10] calldata assertionIntFields
     ) external {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         require(nodeNum == latestNodeCreated + 1);
@@ -308,13 +310,11 @@ contract Rollup {
         // Make sure the previous state is correct against the node being built on
         require(RollupLib.beforeNodeStateHash(assertion) == prevNode.stateHash());
 
-        (bytes32 inboxValue, uint256 inboxCount) = globalInbox.getInbox(address(this));
+        (bytes32 inboxValue, uint256 inboxMaxCount) = globalInbox.getInbox(address(this));
 
-        // inboxCount must be greater than beforeInboxCount since we can't have read past the end of the inbox
-        require(assertion.inboxMessagesRead <= inboxCount - assertion.beforeInboxCount);
+        // inboxMaxCount must be greater than beforeInboxCount since we can't have read past the end of the inbox
+        require(assertion.inboxMessagesRead <= inboxMaxCount - assertion.beforeInboxCount);
 
-        // TODO: Verify that assertion meets the minimum size requirement
-        uint256 prevInboxMax = prevNode.totalInboxCount();
         uint256 prevProposedBlock = prevNode.proposedBlock();
         uint256 prevDeadlineBlock = prevNode.deadlineBlock();
 
@@ -326,7 +326,8 @@ contract Rollup {
         // Minimum size requirements: each assertion must satisfy either
         require(
             // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
-            assertion.inboxMessagesRead >= prevInboxMax - assertion.beforeInboxCount ||
+            assertion.inboxMessagesRead >=
+                assertion.beforeInboxMaxCount - assertion.beforeInboxCount ||
                 // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
                 assertion.gasUsed >= timeSinceLastNode * arbGasSpeedLimitPerBlock
         );
@@ -343,17 +344,16 @@ contract Rollup {
 
         return
             new Node(
-                RollupLib.afterNodeStateHash(assertion),
+                RollupLib.afterNodeStateHash(assertion, inboxMaxCount),
                 RollupLib.challengeRoot(
                     assertion,
-                    inboxCount,
+                    inboxMaxCount,
                     inboxValue,
                     executionCheckTimeBlocks
                 ),
                 prev,
                 block.number,
-                deadlineBlock,
-                inboxCount
+                deadlineBlock
             );
     }
 
