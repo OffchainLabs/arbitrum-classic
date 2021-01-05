@@ -70,26 +70,22 @@ class RawBuffer {
     int level;
 
     RawBuffer(std::shared_ptr<std::vector<RawBuffer> > node_, int level_) : leaf(nullptr), node(node_) {
-        // std::cerr << "creating buffer " << level_ << std::endl;
         level = level_;
         saved = false;
     }
 
     RawBuffer(std::shared_ptr<std::vector<uint8_t> > leaf_) : leaf(leaf_), node(nullptr) {
-        // std::cerr << "creating buffer 0" << std::endl;
         level = 0;
         saved = false;
     }
 
     RawBuffer(int level_, bool) : leaf(nullptr), node(nullptr) {
-        // std::cerr << "creating buffer " << level_ << std::endl;
         level = level_;
         saved = true;
         savedHash = zero_packed(calc_height(level));
     }
 
     RawBuffer() : leaf(nullptr), node(nullptr) {
-        // std::cerr << "creating buffer\n";
         level = 0;
         saved = true;
         savedHash = zero_packed(LEAF_SIZE2);
@@ -103,7 +99,6 @@ class RawBuffer {
 
     // Note: pos and len must be aligned so that the data to be written is in one leaf
     RawBuffer set_many(uint64_t offset, std::vector<uint8_t> &arr) {
-        // std::cerr << "setting buffer " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
         if (level == 0) {
             if (offset >= LEAF_SIZE) {
                 std::shared_ptr<std::vector<uint8_t> > empty = std::make_shared<std::vector<uint8_t>>();
@@ -117,17 +112,15 @@ class RawBuffer {
             }
             auto buf = leaf ? std::make_shared<std::vector<uint8_t> >(*leaf) : std::make_shared<std::vector<uint8_t> >();
             if (buf->size() < LEAF_SIZE) {
-                // std::cerr << "resize buf" << std::endl;
                 buf->resize(LEAF_SIZE, 0);
             }
             for (unsigned int i = 0; i < arr.size(); i++) {
                 (*buf)[offset+i] = arr[i];
             }
-            // std::cerr << "updated leaf " << level << " at " << offset << " to " << std::hex << int(v) << std::endl;
             return RawBuffer(buf);
         } else {
-            // if (needed_height(offset) > calc_height(level)) {
-            if (offset >= calc_len(level)) {
+            if (needed_height(offset) > calc_height(level)) {
+            // if (offset >= calc_len(level)) {
                 std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>();
                 vec->push_back(RawBuffer(node, level));
                 for (uint64_t i = 1; i < NODE_SIZE; i++) {
@@ -173,11 +166,9 @@ class RawBuffer {
             }
             return res;
         } else {
-            uint64_t ln = calc_len(level);
-            // uint64_t ln = calc_height(level);
             uint64_t cell_len = calc_len(level-1);
-            // if (needed_height(pos) > ln || !node) {
-            if (pos >= ln || !node) {
+            if (needed_height(pos) > calc_height(level) || !node) {
+            // if (pos >= calc_len(level) || !node) {
                 return std::vector<uint8_t>(len, 0);
             }
             auto next = (*node)[pos / cell_len];
@@ -186,7 +177,6 @@ class RawBuffer {
     }
 
     uint256_t hash();
-    // uint256_t hash_with_level();
     Packed hash_aux();
 
     std::vector<RawBuffer> serialize(std::vector<unsigned char>& value_vector);
@@ -247,7 +237,6 @@ class Buffer {
 
     std::vector<unsigned char> makeProof(uint64_t loc) {
         RawBuffer nbuf = buf->normalize();
-        // std::cerr << "normalized" << std::endl;
         return nbuf.makeProof(loc);
     }
 

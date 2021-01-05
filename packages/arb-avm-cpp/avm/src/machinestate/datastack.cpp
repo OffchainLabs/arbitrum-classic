@@ -96,9 +96,7 @@ void Datastack::addHash() const {
 
     auto newVal = values[hashes.size()];
     auto tup = Tuple(newVal, prev);
-    auto res = tup.getHashPreImage();
-    // std::cerr << "adding hash " << res << std::endl;
-    hashes.emplace_back(res);
+    hashes.emplace_back(tup.getHashPreImage());
 }
 
 void Datastack::calculateAllHashes() const {

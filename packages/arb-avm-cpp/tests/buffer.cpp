@@ -51,14 +51,11 @@ TEST_CASE("Buffer") {
     SECTION("empty buffer") {
         Buffer buf;
         assert(buf.hash() == hash(0));
-        std::cerr << intx::to_string(buf.hash(), 16) << std::endl;
-        std::cerr << intx::to_string(hash(0), 16) << std::endl;
     }
 
     SECTION("setting") {
         Buffer buf;
         buf = buf.set(1000, 123);
-        // std::cerr << int(buf.get(1000)) << std::endl;
         assert(buf.get(1000) == 123);
     }
 
@@ -68,8 +65,6 @@ TEST_CASE("Buffer") {
         for (int i = 0; i < SIZE; i++) {
             arr[i] = rand() % 256;
         }
-        // std::cerr << intx::to_string(hash_buffer(arr, 0, SIZE, true), 16) << std::endl;
-        // std::cerr << intx::to_string(hash_acc(arr, SIZE), 16) << std::endl;
         assert(hash_buffer(arr, 0, SIZE, true) == hash_acc(arr, SIZE));
     }
 
@@ -80,45 +75,7 @@ TEST_CASE("Buffer") {
         for (int i = 0; i < SIZE; i++) {
             arr[i] = i < FILL ? rand() % 256 : 0;
         }
-        // std::cerr << intx::to_string(hash_buffer(arr, 0, 131072, true), 16) << std::endl;
-        // std::cerr << intx::to_string(hash_acc(arr, SIZE), 16) << std::endl;
         assert(hash_buffer(arr, 0, 131072, true) == hash_acc(arr, SIZE));
     }
-/*
-    SECTION("serialize") {
-        Buffer buf1;
-        Buffer buf2;
-        buf2 = buf2.set(100000, 123);
-        buf2 = buf2.set(100000, 0);
-        std::vector<unsigned char> vec1;
-        buf1.serialize(vec1);
-        std::vector<unsigned char> vec2;
-        buf2.serialize(vec2);
-        // std::cerr << vec1.size() << std::endl;
-        // std::cerr << vec2.size() << std::endl;
-        assert(vec1 == vec2);
-    }
-
-    SECTION("serialize sparse") {
-        Buffer buf;
-        buf = buf.set(10000000000, 123);
-        std::vector<unsigned char> vec;
-        buf.serialize(vec);
-        assert(vec.size() < 1000000);
-        // std::cerr << vec.size() << std::endl;
-    }
-
-    SECTION("deserialize sparse") {
-        Buffer buf;
-        buf = buf.set(10000000000, 123);
-        std::vector<unsigned char> vec;
-        buf.serialize(vec);
-        int num;
-        Buffer buf2 = Buffer::deserialize((char*)(vec.data()), num);
-        // std::cerr << intx::to_string(buf.hash(), 16) << std::endl;
-        // std::cerr << intx::to_string(buf2.hash(), 16) << std::endl;
-        assert(buf.hash() == buf2.hash());
-    }
-    */
 }
 

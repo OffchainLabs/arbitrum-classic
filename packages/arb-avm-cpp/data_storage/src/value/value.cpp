@@ -52,8 +52,6 @@ struct ValueBeingParsed {
     value val;
     uint32_t reference_count;
     std::vector<ParsedTupVal> raw_vals;
-    // ParsedBuffer buf_vals;
-    // RawBuffer buf;
 
     ValueBeingParsed(value&& v, uint32_t count)
         : val{std::move(v)}, reference_count{count}, raw_vals{} {}
@@ -72,13 +70,11 @@ template<class T> T parseBuffer(const char* buf, int &len) {
     len++;
     // Empty
     if (buf[1] == 0) {
-        // std::cerr << "Empty " << std::endl;
         len++;
         return Buffer(RawBuffer(level, true));
     }
     len++;
     if (level == 0) {
-        // std::cerr << "Deserializing leaf " << std::endl;
         auto res = std::make_shared<std::vector<uint8_t> >();
         res->resize(LEAF_SIZE, 0);
         for (uint64_t i = 0; i < LEAF_SIZE; i++) {
@@ -87,12 +83,10 @@ template<class T> T parseBuffer(const char* buf, int &len) {
         len += LEAF_SIZE;
         return Buffer(RawBuffer(res));
     }
-    // std::cerr << "Deserializing node " << int(level) << std::endl;
     buf += 2;
     auto res = std::vector<uint256_t>();
     for (uint64_t i = 0; i < NODE_SIZE; i++) {
         uint256_t hash = deserializeUint256t(buf);
-        // std::cerr << "foudn hash " << (void*)buf << " : "<< len << " " << static_cast<uint64_t>(hash) << std::endl;
         res.push_back(hash);
         len += 32;
     }
@@ -116,7 +110,6 @@ std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
             case BUFFER: {
                 int len = 0;
                 auto res = parseBuffer<ParsedTupVal>(buf, len);
-                // std::cerr << "parsed buffer " << len << std::endl;
 
                 return_vector.push_back(res);
                 iter += len + 1;
@@ -167,7 +160,6 @@ ParsedSerializedVal parseRecord(const std::vector<unsigned char>& data) {
         case BUFFER: {
             int len = 0;
             auto res = parseBuffer<ParsedSerializedVal>(buf, len);
-            // std::cerr << "Deserializing " << res.size() << " hash " << res.hash() << std::endl;
             return res;
         }
         default: {
@@ -229,24 +221,15 @@ std::vector<value> serializeValue(const Buffer&b,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(BUFFER);
-    // std::cerr << "Serializing " << b.size() << " hash " << b.hash() << std::endl;
     int l1 = value_vector.size();
     std::vector<RawBuffer> res = b.serialize(value_vector);
     int l2 = value_vector.size();
-    // std::cerr << "Serializzed size " << (l2 - l1) << std::endl;
     int len = 0;
     parseBuffer<ParsedBufVal>((char*)value_vector.data() + l1, len);
     std::vector<value> ret{};
     for (int i = 0; i < res.size(); i++) {
         ret.push_back(Buffer(res[i]));
     }
-    /*
-    std::vector<unsigned char> buf;
-    b.serialize(buf);
-    int len = 0;
-    Buffer res = Buffer::deserialize((char*)(buf.data()), len);
-    std::cerr << "Deserializing " << res.size() << " hash " << res.hash() << " Ser size " << buf.size() << " Deser size " << len << std::endl;
-    */
     return ret;
 }
 
@@ -388,9 +371,6 @@ Buffer processBuffer(const Transaction& transaction,
         auto val_hash = ValueHash{val.nodes[i]};
         if (auto cached_val = val_cache.loadIfExists(val_hash.hash)) {
             RawBuffer buf = *(*cached_val).get<Buffer>().buf;
-            if (buf.level != val.level-1) {
-                // std::cerr << "changing level " << static_cast<uint64_t>(buf.hash()) << "\n";
-            }
             buf.level = val.level-1;
             (*vec)[i] = buf;
             continue;
@@ -403,11 +383,7 @@ Buffer processBuffer(const Transaction& transaction,
             return Buffer();
         }
 
-        // std::cerr << "Found record " << static_cast<uint64_t>(val_hash.hash) << " len " << results.stored_value.size() << std::endl;
-
         auto record = parseRecord(results.stored_value);
-
-        // std::cerr << "parsed record\n";
 
         if (nonstd::holds_alternative<Buffer>(record)) {
             Buffer buf = record.get<Buffer>();

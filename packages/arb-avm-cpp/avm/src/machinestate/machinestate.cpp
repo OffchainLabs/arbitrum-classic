@@ -187,41 +187,27 @@ std::vector<unsigned char> MachineState::marshalState() const {
 }
 
 std::vector<unsigned char> makeProof(Buffer &buf, uint64_t loc) {
-    // auto arr = bufferToVec(buf);
-    // auto res = makeProof(arr.data(), 0, arr.size(), ((loc/32) % (arr.size()/32))*32);
     auto res2 = buf.makeProof(loc);
-    // std::cerr << "Making " << arr.size() << " -- " << res.size()/32 << " " << hexStr(res) << std::endl;
-    // std::cerr << "Making 2 " << arr.size() << " -- " << res.size()/32 << " " << hexStr(res2) << std::endl;
     return res2;
 }
 
 
 std::vector<unsigned char> makeNormalizationProof(Buffer &buf) {
-    // auto arr = bufferToVec(buf);
-    // std::cerr << "Making normal " << arr.size() << std::endl;
-    // auto res = makeNormalizationProof(arr.data(), arr.size());
     auto res2 = buf.makeNormalizationProof();
-    // std::cerr << "Making " << arr.size() << " -- " << res.size()/32 << " " << hexStr(res) << std::endl;
-    // std::cerr << "Making 2 " << arr.size() << " -- " << res.size()/32 << " " << hexStr(res2) << std::endl;
     return res2;
 }
 
 void insertSizes(std::vector<unsigned char> &buf, int sz1, int sz2, int sz3, int sz4) {
     int acc = 1;
     buf.push_back(static_cast<uint8_t>(acc));
-    // std::cerr << "Setting sizes " << acc << std::endl;
     acc += sz1/32;
     buf.push_back(static_cast<uint8_t>(acc));
-    // std::cerr << "Setting sizes " << acc << std::endl;
     acc += sz2/32;
     buf.push_back(static_cast<uint8_t>(acc));
-    // std::cerr << "Setting sizes " << acc << std::endl;
     acc += sz3/32;
     buf.push_back(static_cast<uint8_t>(acc));
-    // std::cerr << "Setting sizes " << acc << std::endl;
     acc += sz4/32;
     buf.push_back(static_cast<uint8_t>(acc));
-    // std::cerr << "Setting sizes " << acc << std::endl;
     for (int i = 5; i < 32; i++) {
         buf.push_back(0);
     }
@@ -233,11 +219,9 @@ void makeSetBufferProof(std::vector<unsigned char> &buf, uint64_t loc, Buffer bu
     bool aligned = true;
     for (int i = 0; i < wordSize; i++) {
         if ((loc + i) % 32 == 0 && i > 0) {
-            // std::cerr << "Unaligned " << std::endl;
             nbuffer1 = nbuffer;
             aligned = false;
         }
-        // std::cerr << "Setting to " << (loc+i) << " " << int(static_cast<uint8_t>((v >> ((wordSize-1-i)*8)) & 0xff)) << " size " << nbuffer.size() << std::endl;
         nbuffer = nbuffer.set(loc + i, static_cast<uint8_t>((v >> ((wordSize-1-i)*8)) & 0xff));
     }
     auto proof1 = makeProof(buffer, loc);
@@ -249,9 +233,7 @@ void makeSetBufferProof(std::vector<unsigned char> &buf, uint64_t loc, Buffer bu
         buf.insert(buf.end(), nproof1.begin(), nproof1.end());
     } else {
         auto proof2 = makeProof(nbuffer1, loc + (wordSize-1));
-        // std::cerr << "Loc 1" << std::endl;
         auto nproof2 = makeNormalizationProof(nbuffer);
-        // std::cerr << "Loc 2" << std::endl;
         insertSizes(buf, proof1.size(), nproof1.size(), proof2.size(), nproof2.size());
         buf.insert(buf.end(), proof1.begin(), proof1.end());
         buf.insert(buf.end(), nproof1.begin(), nproof1.end());
@@ -319,12 +301,8 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
         }
         auto loc = static_cast<uint64_t>(*offset);
         if (opcode == OpCode::SET_BUFFER8) {
-            // std::cerr << "Here " << intx::to_string(buffer->hash(), 16) << std::endl;
             Buffer nbuffer = buffer->set(loc, static_cast<uint8_t>(*val));
-            // std::cerr << "Making proof" << std::endl;
             auto proof1 = makeProof(*buffer, loc);
-            // std::cerr << "Proof: " << int(proof1[0]) << " -- " << int(proof1[31]) << std::endl;
-            // std::cerr << "Normalize" << std::endl;
             auto nproof1 = makeNormalizationProof(nbuffer);
             insertSizes(buf, proof1.size(), nproof1.size(), 0, 0);
             buf.insert(buf.end(), proof1.begin(), proof1.end());
@@ -505,8 +483,6 @@ BlockReason MachineState::runOne() {
 }
 
 BlockReason MachineState::runOp(OpCode opcode) {
-    // std::cerr << "Running opcode <" << InstructionNames.at(opcode) << ">" << std::hex << static_cast<int>(opcode) << std::endl;
-
     switch (opcode) {
             /**************************/
             /*  Arithmetic Operations */

@@ -1025,30 +1025,15 @@ void getbuffer256(MachineState& m) {
     Buffer& md = assumeBuffer(m.stack[1]);
     if (offset + 31 < offset) throw int_out_of_bounds{};
     uint256_t res = 0;
-    // std::cerr << "hmm getting " << offset << std::endl;
     std::vector<uint8_t> data(32);
     if ((offset + 31) % ALIGN < offset % ALIGN) {
         data = md.get_many(offset, ALIGN-(offset%ALIGN));
         auto data2 = md.get_many(offset + ALIGN-(offset%ALIGN), 32-(ALIGN-(offset%ALIGN)));
-        /*
-        std::cerr << "unaligned read "
-            << offset
-            << " len1 " << (1024-(offset%1024))
-            << " pos2 " << (offset + 1024-(offset%1024))
-            << " len2 " << (32-(1024-(offset%1024)))
-            << " data2 len " << data2.size()
-            << std::endl;
-        */
         data.insert(data.end(), data2.begin(), data2.end());
     } else {
         data = md.get_many(offset, 32);
     }
     for (int i = 0; i < 32; i++) {
-        /*
-        uint8_t check = md.get(offset+i);
-        if (data[i] != check) {
-            std::cerr << "something is broken " << offset << " " << i << " " << int(data[i]) << " != " << int(check) << std::endl;
-        }*/
         res = res << 8;
         res = res | data[i];
     }
@@ -1068,8 +1053,6 @@ void setbuffer8(MachineState& m) {
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();
-    // std::cerr << "hmm setting " << offset << std::endl;
-    // md.set(offset, val);
     m.stack.push(res);
     ++m.pc;
 }
@@ -1102,7 +1085,6 @@ void setbuffer256(MachineState& m) {
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();
-    // std::cerr << "hmm SETTING " << offset << std::endl;
     auto buf = std::vector<uint8_t>(32);
     for (int i = 0; i < 32; i++) {
         buf[31-i] = static_cast<uint8_t>(val&0xff);
@@ -1114,23 +1096,9 @@ void setbuffer256(MachineState& m) {
         auto data2 = std::vector<uint8_t>(buf.begin() + (ALIGN-(offset%ALIGN)), buf.end());
         res = res.set_many(offset, data1);
         res = res.set_many(offset + ALIGN-(offset%ALIGN), data2);
-        /*
-        std::cerr << "unaligned set "
-            << offset
-            << " len1 " << (1024-(offset%1024))
-            << " pos2 " << (offset + 1024-(offset%1024))
-            << " len2 " << (32-(1024-(offset%1024)))
-            << " data2 len " << data2.size()
-            << std::endl;
-        */
     } else {
         res = res.set_many(offset, buf);
     }
-    /*
-    for (int i = 0; i < 32; i++) {
-        // res = res.set(offset+31-i, static_cast<uint8_t>(val&0xff));
-        val = val >> 8;
-    }*/
     m.stack.push(res);
     ++m.pc;
 }
