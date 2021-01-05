@@ -25,19 +25,6 @@
 
 #include <iostream>
 
-#include <sstream>
-#include <iomanip>
-
-std::string hexStr(std::vector<unsigned char> vec) {
-     std::stringstream ss;
-     ss << std::hex;
-
-     for( int i(0) ; i < vec.size(); ++i )
-         ss << std::setw(2) << std::setfill('0') << (int)vec[i];
-
-     return ss.str();
-}
-
 namespace {
 uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
 }  // namespace

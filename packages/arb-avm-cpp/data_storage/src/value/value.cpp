@@ -602,19 +602,15 @@ SaveResults saveValueImpl(Transaction& transaction,
     while (!items_to_save.empty()) {
         auto next_item = std::move(items_to_save.back());
         items_to_save.pop_back();
-        auto hash_ = hash_value(next_item);
+        auto hash = hash_value(next_item);
         std::vector<unsigned char> hash_key;
-        marshal_uint256_t(hash_, hash_key);
+        marshal_uint256_t(hash, hash_key);
         auto key = vecToSlice(hash_key);
         auto results = getRefCountedData(*transaction.transaction, key);
         SaveResults save_ret;
         if (results.status.ok() && results.reference_count > 0) {
             save_ret = incrementReference(*transaction.transaction, key);
         } else {
-            /*
-            if (nonstd::holds_alternative<Buffer>(next_item)) {
-                std::cerr << "processinf " << static_cast<uint64_t>(hash_value(next_item)) << std::endl;
-            }*/
             std::vector<unsigned char> value_vector{};
             auto new_items_to_save =
                 serializeValue(next_item, value_vector, segment_counts);
