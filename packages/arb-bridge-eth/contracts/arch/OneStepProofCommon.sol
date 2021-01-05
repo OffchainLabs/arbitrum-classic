@@ -59,7 +59,7 @@ contract OneStepProofCommon {
             [
                 Machine.hash(context.startMachine),
                 Machine.hash(context.afterMachine),
-                context.inboxAcc,
+                context.inboxDelta,
                 context.messageAcc,
                 context.logAcc
             ]
@@ -85,12 +85,10 @@ contract OneStepProofCommon {
     struct AssertionContext {
         Machine.Data startMachine;
         Machine.Data afterMachine;
-        bytes32 inboxAcc;
+        bytes32 inboxDelta;
         bytes32 messageAcc;
         bytes32 logAcc;
         uint64 gas;
-        Value.Data inboxMessage;
-        bytes32 inboxMessageHash;
         ValueStack stack;
         ValueStack auxstack;
         bool hadImmediate;
@@ -133,7 +131,7 @@ contract OneStepProofCommon {
     }
 
     function initializeExecutionContext(
-        bytes32 inboxAcc,
+        bytes32 inboxDelta,
         bytes32 messagesAcc,
         bytes32 logsAcc,
         bytes memory proof,
@@ -158,11 +156,9 @@ contract OneStepProofCommon {
         AssertionContext memory context = AssertionContext(
             mach,
             mach.clone(),
-            inboxAcc,
+            inboxDelta,
             messagesAcc,
             logsAcc,
-            0,
-            Value.newEmptyTuple(),
             0,
             ValueStack(stackCount, stackVals),
             ValueStack(auxstackCount, auxstackVals),

@@ -23,24 +23,11 @@ interface IOneStepProof {
         external
         view
         returns (uint64 gas, bytes32[5] memory fields);
-
-    function executeStepWithMessage(
-        bytes32[3] calldata _machineFields,
-        bytes calldata proof,
-        uint8 _kind,
-        uint256 _blockNumber,
-        uint256 _timestamp,
-        address _sender,
-        uint256 _inboxSeqNum,
-        bytes calldata _msgData
-    ) external view returns (uint64 gas, bytes32[5] memory fields);
 }
 
 interface IOneStepProof2 {
     function executeStep(
-        bytes32 inboxAcc,
-        bytes32 messagesAcc,
-        bytes32 logsAcc,
+        bytes32[3] calldata _machineFields,
         bytes calldata proof,
         bytes calldata bproof
     ) external view returns (uint64 gas, bytes32[5] memory fields);

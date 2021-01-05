@@ -55,16 +55,14 @@ import "../libraries/Precompiles.sol";
 
 contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
     function executeStep(
-        bytes32 inboxAcc,
-        bytes32 messagesAcc,
-        bytes32 logsAcc,
+        bytes32[3] calldata _machineFields,
         bytes calldata proof,
         bytes calldata bproof
     ) external view returns (uint64 gas, bytes32[5] memory fields) {
         AssertionContext memory context = initializeExecutionContext(
-            inboxAcc,
-            messagesAcc,
-            logsAcc,
+            _machineFields[0],
+            _machineFields[1],
+            _machineFields[2],
             proof,
             bproof
         );

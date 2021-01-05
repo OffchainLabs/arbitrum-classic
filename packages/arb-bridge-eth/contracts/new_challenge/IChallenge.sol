@@ -21,6 +21,7 @@ pragma solidity ^0.5.11;
 interface IChallenge {
     function initializeChallenge(
         address _executionOneStepProofCon,
+        address _executionOneStepProof2Con,
         address _rollupAddress,
         bytes32 _inboxConsistencyHash,
         bytes32 _inboxDeltaHash,

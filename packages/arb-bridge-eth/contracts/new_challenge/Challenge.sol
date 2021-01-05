@@ -60,6 +60,7 @@ contract Challenge is Cloneable, IChallenge {
     uint256 private constant BISECTION_DEGREE = 20;
 
     IOneStepProof private executor;
+    IOneStepProof2 private executor2;
 
     address internal rollupAddress;
 
@@ -115,6 +116,7 @@ contract Challenge is Cloneable, IChallenge {
 
     function initializeChallenge(
         address _executionOneStepProofCon,
+        address _executionOneStepProof2Con,
         address _rollupAddress,
         bytes32 _inboxConsistencyHash,
         bytes32 _inboxDeltaHash,
@@ -127,6 +129,7 @@ contract Challenge is Cloneable, IChallenge {
         require(state == State.NoChallenge, CHAL_INIT_STATE);
 
         executor = IOneStepProof(_executionOneStepProofCon);
+        executor2 = IOneStepProof2(_executionOneStepProof2Con);
 
         rollupAddress = _rollupAddress;
 
@@ -288,17 +291,25 @@ contract Challenge is Cloneable, IChallenge {
     //  initialLog
     function oneStepProveExecution(
         uint256 _segmentToChallenge,
-        bytes calldata _proof,
-        bytes32[3] calldata _machineFields,
+        bytes memory _proof,
+        bytes32[3] memory _machineFields,
         uint64 _initialGasUsed,
         uint256 _initialMessageCount,
         uint256 _initialLogCount,
-        bytes calldata _executionProof
-    ) external executionChallenge onlyOnTurn {
-        (uint64 gasUsed, bytes32[5] memory proofFields) = executor.executeStep(
-            _machineFields,
-            _executionProof
-        );
+        bytes memory _executionProof,
+        bytes memory _bufferProof
+    ) public executionChallenge onlyOnTurn {
+        uint64 gasUsed;
+        bytes32[5] memory proofFields;
+        if (_bufferProof.length == 0) {
+            (gasUsed, proofFields) = executor.executeStep(_machineFields, _executionProof);
+        } else {
+            (gasUsed, proofFields) = executor2.executeStep(
+                _machineFields,
+                _executionProof,
+                _bufferProof
+            );
+        }
 
         bytes32 rootHash = ChallengeLib.bisectionChunkHash(
             1,

@@ -26,10 +26,16 @@ import "./IChallenge.sol";
 contract ChallengeFactory is CloneFactory, IChallengeFactory {
     ICloneable public challengeTemplate;
     address public oneStepProofAddress;
+    address public oneStepProof2Address;
 
-    constructor(address _challengeTemplate, address _oneStepProofAddress) public {
+    constructor(
+        address _challengeTemplate,
+        address _oneStepProofAddress,
+        address _oneStepProof2Address
+    ) public {
         challengeTemplate = ICloneable(_challengeTemplate);
         oneStepProofAddress = _oneStepProofAddress;
+        oneStepProof2Address = _oneStepProof2Address;
     }
 
     function createChallenge(
@@ -44,6 +50,7 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         address clone = createClone(challengeTemplate);
         IChallenge(clone).initializeChallenge(
             oneStepProofAddress,
+            oneStepProof2Address,
             msg.sender,
             _inboxConsistencyHash,
             _inboxDeltaHash,
