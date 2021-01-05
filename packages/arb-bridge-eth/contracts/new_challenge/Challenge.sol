@@ -345,9 +345,10 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _newStepsExecuted
     ) external onlyOnTurn {
         require(kind == Kind.Uninitialized);
-        // Unlike the other bisections, it's safe for the number of steps executed to be 1
-        // TODO: What if steps is 0?
+        // Unlike the other bisections, it's safe for the number of steps executed to be 0 or 1
         require(_chainHashes.length == bisectionDegree(_newStepsExecuted));
+        require(_newStepsExecuted < _prevStepsExecuted);
+
         require(
             ChallengeLib.bisectionChunkHash(
                 _prevStepsExecuted,
@@ -356,12 +357,20 @@ contract Challenge is Cloneable, IChallenge {
             ) == executionHash
         );
 
-        require(_newStepsExecuted < _prevStepsExecuted);
+        bytes32 bisectionRoot;
+        bytes32 endAssertion;
+        if (_newStepsExecuted > 0) {
+            bisectionRoot = calculateBisectionRoot(_chainHashes, _newStepsExecuted);
+            endAssertion = _chainHashes[_chainHashes.length - 1];
+        } else {
+            bisectionRoot = 0;
+            endAssertion = _startAssertionHash;
+        }
 
-        initializeKind(Kind.StoppedShort, calculateBisectionRoot(_chainHashes, _newStepsExecuted));
+        initializeKind(Kind.StoppedShort, bisectionRoot);
 
         // Reuse the executionHash variable to store last assertion
-        executionHash = _chainHashes[_chainHashes.length - 1];
+        executionHash = endAssertion;
         responded(executionCheckTimeBlocks);
     }
 

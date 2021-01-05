@@ -319,15 +319,20 @@ contract Rollup {
         uint256 prevDeadlineBlock = prevNode.deadlineBlock();
 
         // Verify that assertion meets the minimum Delta time requirement
-        require(block.number - prevProposedBlock > challengePeriod / 10);
+        uint256 minimumAssertionPeriod = challengePeriod / 10;
+        uint256 timeSinceLastNode = block.number - prevProposedBlock;
+        require(timeSinceLastNode > minimumAssertionPeriod);
 
         // Minimum size requirements: each assertion must satisfy either
         require(
             // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
             assertion.inboxMessagesRead >= prevInboxMax - assertion.beforeInboxCount ||
                 // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
-                assertion.gasUsed >= (block.number - prevProposedBlock) * arbGasSpeedLimitPerBlock
+                assertion.gasUsed >= timeSinceLastNode * arbGasSpeedLimitPerBlock
         );
+
+        // Don't allow an assertion to use above a maximum amount of gas representing 4 assertion periods worth of computation
+        require(assertion.gasUsed <= minimumAssertionPeriod * 4 * arbGasSpeedLimitPerBlock);
 
         uint256 deadlineBlock = block.number + challengePeriod;
         if (deadlineBlock < prevDeadlineBlock) {
