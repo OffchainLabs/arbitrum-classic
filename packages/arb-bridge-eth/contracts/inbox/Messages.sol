@@ -25,6 +25,26 @@ import "../libraries/BytesLib.sol";
 library Messages {
     using BytesLib for bytes;
 
+    struct Message {
+        uint8 kind;
+        uint256 blockNumber;
+        uint256 timestamp;
+        address sender;
+        uint256 inboxSeqNum;
+        bytes msgData;
+    }
+
+    function makeMessage(
+        uint8 kind,
+        uint256 blockNumber,
+        uint256 timestamp,
+        address sender,
+        uint256 inboxSeqNum,
+        bytes memory msgData
+    ) internal pure returns (Message memory) {
+        return Message(kind, blockNumber, timestamp, sender, inboxSeqNum, msgData);
+    }
+
     function messageHash(
         uint8 kind,
         address sender,

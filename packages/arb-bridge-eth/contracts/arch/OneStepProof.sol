@@ -65,48 +65,6 @@ contract OneStepProof is IOneStepProof {
         return returnContext(context);
     }
 
-    // machineFields
-    //  initialInbox
-    //  initialMessage
-    //  initialLog
-    function executeStepWithMessage(
-        bytes32[3] calldata _machineFields,
-        bytes calldata proof,
-        uint8 _kind,
-        uint256 _blockNumber,
-        uint256 _timestamp,
-        address _sender,
-        uint256 _inboxSeqNum,
-        bytes calldata _msgData
-    ) external view returns (uint64 gas, bytes32[5] memory fields) {
-        AssertionContext memory context = initializeExecutionContext(
-            _machineFields[0],
-            _machineFields[1],
-            _machineFields[2],
-            proof
-        );
-
-        context.inboxMessageHash = Messages.messageHash(
-            _kind,
-            _sender,
-            _blockNumber,
-            _timestamp,
-            _inboxSeqNum,
-            keccak256(_msgData)
-        );
-
-        context.inboxMessage = Messages.messageValue(
-            _kind,
-            _blockNumber,
-            _timestamp,
-            _sender,
-            _inboxSeqNum,
-            _msgData
-        );
-        executeOp(context);
-        return returnContext(context);
-    }
-
     // fields
     // startMachineHash,
     // endMachineHash,
@@ -124,7 +82,7 @@ contract OneStepProof is IOneStepProof {
             [
                 Machine.hash(context.startMachine),
                 Machine.hash(context.afterMachine),
-                context.inboxAcc,
+                context.inboxDelta,
                 context.messageAcc,
                 context.logAcc
             ]
@@ -150,12 +108,11 @@ contract OneStepProof is IOneStepProof {
     struct AssertionContext {
         Machine.Data startMachine;
         Machine.Data afterMachine;
-        bytes32 inboxAcc;
+        bytes32 inboxDelta;
         bytes32 messageAcc;
         bytes32 logAcc;
         uint64 gas;
         Value.Data inboxMessage;
-        bytes32 inboxMessageHash;
         ValueStack stack;
         ValueStack auxstack;
         bool hadImmediate;
@@ -192,7 +149,7 @@ contract OneStepProof is IOneStepProof {
     }
 
     function initializeExecutionContext(
-        bytes32 inboxAcc,
+        bytes32 inboxDelta,
         bytes32 messagesAcc,
         bytes32 logsAcc,
         bytes memory proof
@@ -219,12 +176,11 @@ contract OneStepProof is IOneStepProof {
         AssertionContext memory context = AssertionContext(
             mach,
             mach.clone(),
-            inboxAcc,
+            inboxDelta,
             messagesAcc,
             logsAcc,
             0,
             Value.newEmptyTuple(),
-            0,
             ValueStack(stackCount, stackVals),
             ValueStack(auxstackCount, auxstackVals),
             immediate == 1,
@@ -764,11 +720,16 @@ contract OneStepProof is IOneStepProof {
     function incrementInbox(AssertionContext memory context)
         private
         pure
-        returns (Value.Data memory)
+        returns (Value.Data memory message)
     {
-        require(context.inboxMessageHash != 0, INBOX_VAL);
-        context.inboxAcc = Messages.addMessageToInbox(context.inboxAcc, context.inboxMessageHash);
-        return context.inboxMessage;
+        uint256 newInboxDelta;
+        (context.offset, message) = Marshaling.deserialize(context.proof, context.offset);
+        (context.offset, newInboxDelta) = Marshaling.deserializeInt(context.proof, context.offset);
+        require(
+            context.inboxDelta == Messages.addMessageToInbox(bytes32(newInboxDelta), message.hash())
+        );
+        context.inboxDelta = bytes32(newInboxDelta);
+        return message;
     }
 
     function executeInboxPeekInsn(AssertionContext memory context) internal pure {

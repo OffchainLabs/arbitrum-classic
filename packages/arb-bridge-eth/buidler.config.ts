@@ -5,14 +5,14 @@ usePlugin('buidler-deploy')
 if (!process.env.DOCKER) {
   usePlugin('@nomiclabs/buidler-waffle')
   usePlugin('buidler-typechain')
-  usePlugin('solidity-coverage')
-  usePlugin('buidler-spdx-license-identifier')
-  usePlugin('buidler-gas-reporter')
-  usePlugin('@nomiclabs/buidler-etherscan')
+  // usePlugin('solidity-coverage')
+  // usePlugin('buidler-spdx-license-identifier')
+  // usePlugin('buidler-gas-reporter')
+  // usePlugin('@nomiclabs/buidler-etherscan')
 
-  const verifyTask = require('./scripts/verifyTask') // eslint-disable-line @typescript-eslint/no-var-requires
-  const setupVerifyTask = verifyTask.default
-  setupVerifyTask()
+  // const verifyTask = require('./scripts/verifyTask') // eslint-disable-line @typescript-eslint/no-var-requires
+  // const setupVerifyTask = verifyTask.default
+  // setupVerifyTask()
 }
 
 task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
