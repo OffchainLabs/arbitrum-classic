@@ -138,6 +138,13 @@ ByteSlice machineMarshallForProof(CMachine* m) {
     return returnCharVector(mach->marshalForProof());
 }
 
+ByteSlice machineMarshallBufferProof(CMachine* m) {
+    assert(m);
+    Machine* mach = static_cast<Machine*>(m);
+    std::vector<unsigned char> buffer;
+    return returnCharVector(mach->marshalBufferProof());
+}
+
 ByteSlice machineMarshallState(CMachine* m) {
     assert(m);
     auto mach = static_cast<Machine*>(m);

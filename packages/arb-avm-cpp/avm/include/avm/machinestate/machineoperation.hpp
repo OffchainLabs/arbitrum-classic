@@ -98,6 +98,14 @@ void pushinsn(MachineState& m);
 void pushinsnimm(MachineState& m);
 BlockReason sideload(MachineState& m);
 
+void newbuffer(MachineState& m);
+void getbuffer8(MachineState& m);
+void getbuffer64(MachineState& m);
+void getbuffer256(MachineState& m);
+void setbuffer8(MachineState& m);
+void setbuffer64(MachineState& m);
+void setbuffer256(MachineState& m);
+
 namespace internal {
 void encodeKeccakState(const Tuple& tup, uint64_t* state);
 Tuple decodeKeccakState(const uint64_t* state);

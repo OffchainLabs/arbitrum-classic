@@ -23,8 +23,9 @@ library Value {
     uint8 internal constant CODE_POINT_TYPECODE = 1;
     uint8 internal constant HASH_PRE_IMAGE_TYPECODE = 2;
     uint8 internal constant TUPLE_TYPECODE = 3;
+    uint8 internal constant BUFFER_TYPECODE = TUPLE_TYPECODE + 9;
     // All values received from clients will have type codes less than the VALUE_TYPE_COUNT
-    uint8 internal constant VALUE_TYPE_COUNT = TUPLE_TYPECODE + 9;
+    uint8 internal constant VALUE_TYPE_COUNT = TUPLE_TYPECODE + 10;
 
     // The following types do not show up in the marshalled format and is
     // only used for internal tracking purposes
@@ -40,6 +41,7 @@ library Value {
         uint256 intVal;
         CodePoint cpVal;
         Data[] tupleVal;
+        bytes32 bufferHash;
         uint8 typeCode;
         uint256 size;
     }
@@ -54,6 +56,10 @@ library Value {
 
     function intTypeCode() internal pure returns (uint8) {
         return INT_TYPECODE;
+    }
+
+    function bufferTypeCode() internal pure returns (uint8) {
+        return BUFFER_TYPECODE;
     }
 
     function codePointTypeCode() internal pure returns (uint8) {
@@ -73,7 +79,7 @@ library Value {
     }
 
     function typeCodeVal(Data memory val) internal pure returns (Data memory) {
-        require(val.typeCode != 2, "invalid type code");
+        require(val.typeCode != 2, "invalid type code ???");
         return newInt(val.typeCode);
     }
 
@@ -89,12 +95,20 @@ library Value {
         return val.typeCode == INT_TYPECODE;
     }
 
+    function isInt64(Data memory val) internal pure returns (bool) {
+        return val.typeCode == INT_TYPECODE && val.intVal < (1 << 64);
+    }
+
     function isCodePoint(Data memory val) internal pure returns (bool) {
         return val.typeCode == CODE_POINT_TYPECODE;
     }
 
     function isTuple(Data memory val) internal pure returns (bool) {
         return val.typeCode == TUPLE_TYPECODE;
+    }
+
+    function isBuffer(Data memory val) internal pure returns (bool) {
+        return val.typeCode == BUFFER_TYPECODE;
     }
 
     function isValidTypeForSend(Data memory val) internal pure returns (bool) {
@@ -132,7 +146,8 @@ library Value {
     }
 
     function newInt(uint256 _val) internal pure returns (Data memory) {
-        return Data(_val, CodePoint(0, 0, new Data[](0)), new Data[](0), INT_TYPECODE, uint256(1));
+        return
+            Data(_val, CodePoint(0, 0, new Data[](0)), new Data[](0), 0, INT_TYPECODE, uint256(1));
     }
 
     function newHashedValue(bytes32 valueHash, uint256 valueSize)
@@ -145,6 +160,7 @@ library Value {
                 uint256(valueHash),
                 CodePoint(0, 0, new Data[](0)),
                 new Data[](0),
+                0,
                 HASH_ONLY,
                 valueSize
             );
@@ -158,7 +174,7 @@ library Value {
             size += _val[i].size;
         }
 
-        return Data(0, CodePoint(0, 0, new Data[](0)), _val, TUPLE_TYPECODE, size);
+        return Data(0, CodePoint(0, 0, new Data[](0)), _val, 0, TUPLE_TYPECODE, size);
     }
 
     function newTuplePreImage(bytes32 preImageHash, uint256 size)
@@ -171,6 +187,7 @@ library Value {
                 uint256(preImageHash),
                 CodePoint(0, 0, new Data[](0)),
                 new Data[](0),
+                0,
                 HASH_PRE_IMAGE_TYPECODE,
                 size
             );
@@ -191,6 +208,18 @@ library Value {
     }
 
     function newCodePoint(CodePoint memory _val) private pure returns (Data memory) {
-        return Data(0, _val, new Data[](0), CODE_POINT_TYPECODE, uint256(1));
+        return Data(0, _val, new Data[](0), 0, CODE_POINT_TYPECODE, uint256(1));
+    }
+
+    function newBuffer(bytes32 bufHash) internal pure returns (Data memory) {
+        return
+            Data(
+                uint256(0),
+                CodePoint(0, 0, new Data[](0)),
+                new Data[](0),
+                bufHash,
+                BUFFER_TYPECODE,
+                uint256(1)
+            );
     }
 }

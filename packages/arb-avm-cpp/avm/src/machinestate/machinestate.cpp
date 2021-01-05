@@ -173,6 +173,137 @@ std::vector<unsigned char> MachineState::marshalState() const {
     return buf;
 }
 
+std::vector<unsigned char> makeProof(Buffer &buf, uint64_t loc) {
+    auto res2 = buf.makeProof(loc);
+    return res2;
+}
+
+
+std::vector<unsigned char> makeNormalizationProof(Buffer &buf) {
+    auto res2 = buf.makeNormalizationProof();
+    return res2;
+}
+
+void insertSizes(std::vector<unsigned char> &buf, int sz1, int sz2, int sz3, int sz4) {
+    int acc = 1;
+    buf.push_back(static_cast<uint8_t>(acc));
+    acc += sz1/32;
+    buf.push_back(static_cast<uint8_t>(acc));
+    acc += sz2/32;
+    buf.push_back(static_cast<uint8_t>(acc));
+    acc += sz3/32;
+    buf.push_back(static_cast<uint8_t>(acc));
+    acc += sz4/32;
+    buf.push_back(static_cast<uint8_t>(acc));
+    for (int i = 5; i < 32; i++) {
+        buf.push_back(0);
+    }
+}
+
+void makeSetBufferProof(std::vector<unsigned char> &buf, uint64_t loc, Buffer buffer, uint256_t v, int wordSize) {
+    Buffer nbuffer = buffer;
+    Buffer nbuffer1 = nbuffer;
+    bool aligned = true;
+    for (int i = 0; i < wordSize; i++) {
+        if ((loc + i) % 32 == 0 && i > 0) {
+            nbuffer1 = nbuffer;
+            aligned = false;
+        }
+        nbuffer = nbuffer.set(loc + i, static_cast<uint8_t>((v >> ((wordSize-1-i)*8)) & 0xff));
+    }
+    auto proof1 = makeProof(buffer, loc);
+    auto nproof1 = makeNormalizationProof(nbuffer1);
+
+    if (aligned) {
+        insertSizes(buf, proof1.size(), nproof1.size(), 0, 0);
+        buf.insert(buf.end(), proof1.begin(), proof1.end());
+        buf.insert(buf.end(), nproof1.begin(), nproof1.end());
+    } else {
+        auto proof2 = makeProof(nbuffer1, loc + (wordSize-1));
+        auto nproof2 = makeNormalizationProof(nbuffer);
+        insertSizes(buf, proof1.size(), nproof1.size(), proof2.size(), nproof2.size());
+        buf.insert(buf.end(), proof1.begin(), proof1.end());
+        buf.insert(buf.end(), nproof1.begin(), nproof1.end());
+        buf.insert(buf.end(), proof2.begin(), proof2.end());
+        buf.insert(buf.end(), nproof2.begin(), nproof2.end());
+    }
+}
+
+std::vector<unsigned char> MachineState::marshalBufferProof() {
+    std::vector<unsigned char> buf;
+    auto op = loadCurrentInstruction().op;
+    auto opcode = op.opcode;
+    if (opcode < OpCode::GET_BUFFER8 || opcode > OpCode::SET_BUFFER256) {
+        return buf;
+    }
+    if (opcode == OpCode::GET_BUFFER8 || opcode == OpCode::GET_BUFFER64 ||
+        opcode == OpCode::GET_BUFFER256) {
+        // Find the buffer
+        auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0]) : nonstd::get_if<Buffer>(&stack[1]);
+        if (!buffer) {
+            return buf;
+        }
+        // Also need the offset
+        auto offset = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate) : nonstd::get_if<uint256_t>(&stack[0]);
+        if (!offset) {
+            return buf;
+        }
+        if (*offset > std::numeric_limits<uint64_t>::max()) {
+            return buf;
+        }
+        auto loc = static_cast<uint64_t>(*offset);
+        if (opcode == OpCode::GET_BUFFER8) {
+            auto proof = makeProof(*buffer, loc);
+            insertSizes(buf, proof.size(), 0, 0, 0);
+            buf.insert(buf.end(), proof.begin(), proof.end());
+        } else if (opcode == OpCode::GET_BUFFER64) {
+            auto proof1 = makeProof(*buffer, loc);
+            auto proof2 = makeProof(*buffer, loc + 7);
+            insertSizes(buf, proof1.size(), 0, proof2.size(), 0);
+            buf.insert(buf.end(), proof1.begin(), proof1.end());
+            buf.insert(buf.end(), proof2.begin(), proof2.end());
+        } else if (opcode == OpCode::GET_BUFFER256) {
+            auto proof1 = makeProof(*buffer, loc);
+            auto proof2 = makeProof(*buffer, loc + 31);
+            insertSizes(buf, proof1.size(), 0, proof2.size(), 0);
+            buf.insert(buf.end(), proof1.begin(), proof1.end());
+            buf.insert(buf.end(), proof2.begin(), proof2.end());
+        }
+    } else {
+        auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[1]) : nonstd::get_if<Buffer>(&stack[2]);
+        if (!buffer) {
+            return buf;
+        }
+        // Also need the offset
+        auto offset = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate) : nonstd::get_if<uint256_t>(&stack[0]);
+        if (!offset) {
+            return buf;
+        }
+        if (*offset > std::numeric_limits<uint64_t>::max()) {
+            return buf;
+        }
+        auto val = op.immediate ? nonstd::get_if<uint256_t>(&stack[0]) : nonstd::get_if<uint256_t>(&stack[1]);
+        if (!val) {
+          return buf;
+        }
+        auto loc = static_cast<uint64_t>(*offset);
+        if (opcode == OpCode::SET_BUFFER8) {
+            Buffer nbuffer = buffer->set(loc, static_cast<uint8_t>(*val));
+            auto proof1 = makeProof(*buffer, loc);
+            auto nproof1 = makeNormalizationProof(nbuffer);
+            insertSizes(buf, proof1.size(), nproof1.size(), 0, 0);
+            buf.insert(buf.end(), proof1.begin(), proof1.end());
+            buf.insert(buf.end(), nproof1.begin(), nproof1.end());
+        } else if (opcode == OpCode::SET_BUFFER64) {
+            makeSetBufferProof(buf, loc, *buffer, *val, 8);
+        } else if (opcode == OpCode::SET_BUFFER256) {
+            makeSetBufferProof(buf, loc, *buffer, *val, 32);
+        }
+    }
+
+    return buf;
+}
+
 std::vector<unsigned char> MachineState::marshalForProof() const {
     auto currentInstruction = loadCurrentInstruction();
     auto& current_op = currentInstruction.op;
@@ -573,9 +704,30 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::SIDELOAD:
             machineoperation::sideload(*this);
             break;
-            /*****************/
-            /*  Precompiles  */
-            /*****************/
+        case OpCode::NEW_BUFFER:
+            machineoperation::newbuffer(*this);
+            break;
+        case OpCode::GET_BUFFER8:
+            machineoperation::getbuffer8(*this);
+            break;
+        case OpCode::GET_BUFFER64:
+            machineoperation::getbuffer64(*this);
+            break;
+        case OpCode::GET_BUFFER256:
+            machineoperation::getbuffer256(*this);
+            break;
+        case OpCode::SET_BUFFER8:
+            machineoperation::setbuffer8(*this);
+            break;
+        case OpCode::SET_BUFFER64:
+            machineoperation::setbuffer64(*this);
+            break;
+        case OpCode::SET_BUFFER256:
+            machineoperation::setbuffer256(*this);
+            break;
+        /*****************/
+        /*  Precompiles  */
+        /*****************/
         case OpCode::ECRECOVER:
             machineoperation::ec_recover(*this);
             break;
@@ -598,6 +750,7 @@ BlockReason MachineState::runOp(OpCode opcode) {
 }
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
+    os << "hash " << intx::to_string(val.hash(), 16) << "\n";
     os << "status " << static_cast<int>(val.state) << "\n";
     os << "pc " << val.pc << "\n";
     os << "data stack: " << val.stack << "\n";

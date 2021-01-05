@@ -84,7 +84,7 @@ contract Staking {
     mapping(address => Staker) private stakers;
     uint256 private stakerCount;
     mapping(address => bool) private challenges;
-    mapping(address => uint256) withdrawnStakes;
+    mapping(address => uint256) public withdrawnStakes;
 
     event RollupStakeCreated(address staker, bytes32 nodeHash);
 

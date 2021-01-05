@@ -72,6 +72,14 @@ uint64_t assumeInt64(uint256_t& val) {
     return static_cast<uint64_t>(val);
 }
 
+const Tuple& assumeTuple(const value& val) {
+    auto tup = nonstd::get_if<Tuple>(&val);
+    if (!tup) {
+        throw bad_pop_type{};
+    }
+    return *tup;
+}
+
 Tuple& assumeTuple(value& val) {
     auto tup = nonstd::get_if<Tuple>(&val);
     if (!tup) {
@@ -80,12 +88,12 @@ Tuple& assumeTuple(value& val) {
     return *tup;
 }
 
-const Tuple& assumeTuple(const value& val) {
-    auto tup = nonstd::get_if<Tuple>(&val);
-    if (!tup) {
+Buffer& assumeBuffer(value& val) {
+    auto buf = nonstd::get_if<Buffer>(&val);
+    if (!buf) {
         throw bad_pop_type{};
     }
-    return *tup;
+    return *buf;
 }
 
 void add(MachineState& m) {
@@ -976,6 +984,123 @@ BlockReason sideload(MachineState& m) {
     }
     ++m.pc;
     return NotBlocked{};
+}
+
+void newbuffer(MachineState& m) {
+    m.stack.prepForMod(0);
+    m.stack.push(Buffer{});
+    ++m.pc;
+}
+
+void getbuffer8(MachineState& m) {
+    m.stack.prepForMod(2);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    Buffer& md = assumeBuffer(m.stack[1]);
+    auto res = uint256_t(md.get(offset));
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.push(res);
+    ++m.pc;
+}
+
+void getbuffer64(MachineState& m) {
+    m.stack.prepForMod(2);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    Buffer& md = assumeBuffer(m.stack[1]);
+    if (offset + 7 < offset) throw int_out_of_bounds{};
+    uint64_t res = 0;
+    for (int i = 0; i < 8; i++) {
+        res = res << 8;
+        res = res | md.get(offset+i);
+    }
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.push(uint256_t(res));
+    ++m.pc;
+}
+
+void getbuffer256(MachineState& m) {
+    m.stack.prepForMod(2);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    Buffer& md = assumeBuffer(m.stack[1]);
+    if (offset + 31 < offset) throw int_out_of_bounds{};
+    uint256_t res = 0;
+    std::vector<uint8_t> data(32);
+    if ((offset + 31) % ALIGN < offset % ALIGN) {
+        data = md.get_many(offset, ALIGN-(offset%ALIGN));
+        auto data2 = md.get_many(offset + ALIGN-(offset%ALIGN), 32-(ALIGN-(offset%ALIGN)));
+        data.insert(data.end(), data2.begin(), data2.end());
+    } else {
+        data = md.get_many(offset, 32);
+    }
+    for (int i = 0; i < 32; i++) {
+        res = res << 8;
+        res = res | data[i];
+    }
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.push(res);
+    ++m.pc;
+}
+
+void setbuffer8(MachineState& m) {
+    m.stack.prepForMod(3);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    auto val_int = assumeInt(m.stack[1]);
+    auto val = static_cast<uint8_t>(val_int);
+    Buffer& md = assumeBuffer(m.stack[2]);
+    auto res = md.set(offset, val);
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.push(res);
+    ++m.pc;
+}
+
+void setbuffer64(MachineState& m) {
+    m.stack.prepForMod(3);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    auto val = assumeInt64(assumeInt(m.stack[1]));
+    if (offset + 7 < offset) throw int_out_of_bounds{};
+    // The initial value is copied here, there might be a way to optimize that away
+    Buffer res = assumeBuffer(m.stack[2]);
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.popClear();
+    for (int i = 0; i < 8; i++) {
+        res = res.set(offset+7-i, val&0xff);
+        val = val >> 8;
+    }
+    m.stack.push(res);
+    ++m.pc;
+}
+
+void setbuffer256(MachineState& m) {
+    m.stack.prepForMod(3);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    if (offset + 31 < offset) throw int_out_of_bounds{};
+    auto val = assumeInt(m.stack[1]);
+    // The initial value is copied here, there might be a way to optimize that away
+    Buffer res = assumeBuffer(m.stack[2]);
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.popClear();
+    auto buf = std::vector<uint8_t>(32);
+    for (int i = 0; i < 32; i++) {
+        buf[31-i] = static_cast<uint8_t>(val&0xff);
+        val = val >> 8;
+    }
+
+    if ((offset + 31) % ALIGN < offset % ALIGN) {
+        auto data1 = std::vector<uint8_t>(buf.begin(), buf.begin() + (ALIGN-(offset%ALIGN)));
+        auto data2 = std::vector<uint8_t>(buf.begin() + (ALIGN-(offset%ALIGN)), buf.end());
+        res = res.set_many(offset, data1);
+        res = res.set_many(offset + ALIGN-(offset%ALIGN), data2);
+    } else {
+        res = res.set_many(offset, buf);
+    }
+    m.stack.push(res);
+    ++m.pc;
 }
 
 }  // namespace machineoperation

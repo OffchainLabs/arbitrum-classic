@@ -30,7 +30,7 @@ struct AssertionContext {
     std::vector<Tuple> inbox_messages;
     uint64_t inbox_messages_consumed;
     Tuple sideload_value;
-    uint32_t numSteps;
+    uint64_t numSteps;
     uint64_t numGas;
     bool blockingSideload;
     nonstd::optional<value> fake_inbox_peek_value;
@@ -87,6 +87,8 @@ struct MachineState {
                  CodePointStub errpc_,
                  Tuple staged_message_);
 
+    uint256_t getMachineSize();
+    std::vector<unsigned char> marshalBufferProof();
     uint256_t getMachineSize() const;
     std::vector<unsigned char> marshalForProof() const;
     std::vector<unsigned char> marshalState() const;

@@ -21,6 +21,7 @@ import { utils } from 'ethers'
 import { use, expect } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { OneStepProofTester } from '../build/types/OneStepProofTester'
+import { BufferProofTester } from '../build/types/BufferProofTester'
 import * as fs from 'fs'
 
 use(chaiAsPromised)
@@ -40,17 +41,60 @@ interface Assertion {
 interface Proof {
   Assertion: Assertion
   Proof: string
+  BufferProof: string
 }
 
 let ospTester: OneStepProofTester
+let ospTester2: BufferProofTester
+
+async function executeStep(proof: Proof) {
+  const proofData = Buffer.from(proof.Proof, 'base64')
+  const bufferProofData = Buffer.from(proof.BufferProof || '', 'base64')
+  return bufferProofData.length == 0
+    ? await ospTester.executeStep(
+        proof.Assertion.AfterInboxHash,
+        proof.Assertion.FirstMessageHash,
+        proof.Assertion.FirstLogHash,
+        proofData
+      )
+    : await ospTester2.executeStep(
+        proof.Assertion.AfterInboxHash,
+        proof.Assertion.FirstMessageHash,
+        proof.Assertion.FirstLogHash,
+        proofData,
+        bufferProofData
+      )
+}
+
+async function executeTestStep(proof: Proof) {
+  const proofData = Buffer.from(proof.Proof, 'base64')
+  const bufferProofData = Buffer.from(proof.BufferProof || '', 'base64')
+  return bufferProofData.length == 0
+    ? await ospTester.executeStepTest(
+        proof.Assertion.AfterInboxHash,
+        proof.Assertion.FirstMessageHash,
+        proof.Assertion.FirstLogHash,
+        proofData
+      )
+    : await ospTester2.executeStepTest(
+        proof.Assertion.AfterInboxHash,
+        proof.Assertion.FirstMessageHash,
+        proof.Assertion.FirstLogHash,
+        proofData,
+        bufferProofData
+      )
+}
 
 describe('OneStepProof', function () {
   before(async () => {
     const OneStepProof = await ethers.getContractFactory('OneStepProofTester')
     ospTester = (await OneStepProof.deploy()) as OneStepProofTester
     await ospTester.deployed()
-  })
 
+    const BufferProof = await ethers.getContractFactory('BufferProofTester')
+    ospTester2 = (await BufferProof.deploy()) as BufferProofTester
+    await ospTester2.deployed()
+  })
   const files = fs.readdirSync('./test/proofs')
   for (const filename of files) {
     const file = fs.readFileSync('./test/proofs/' + filename)
@@ -58,19 +102,15 @@ describe('OneStepProof', function () {
     it(`should handle proofs from ${filename}`, async function () {
       this.timeout(60000)
 
-      for (const proof of data.slice(0, 25)) {
+      for (const proof of data.slice(0, 50)) {
         const proofData = Buffer.from(proof.Proof, 'base64')
         const opcode = proofData[proofData.length - 1]
         if (opcode == 131) {
           // Skip too expensive opcode
           continue
         }
-        const { fields, gas } = await ospTester.executeStep(
-          proof.Assertion.AfterInboxHash,
-          proof.Assertion.FirstMessageHash,
-          proof.Assertion.FirstLogHash,
-          proofData
-        )
+        const { fields, gas } = await executeStep(proof)
+        // console.log("opcode", opcode, fields)
         expect(fields[0]).to.equal(
           utils.hexlify(proof.Assertion.BeforeMachineHash)
         )
@@ -94,18 +134,13 @@ describe('OneStepProof', function () {
       for (const proof of data.slice(0, 25)) {
         const proofData = Buffer.from(proof.Proof, 'base64')
         const opcode = proofData[proofData.length - 1]
-        const tx = await ospTester.executeStepTest(
-          proof.Assertion.AfterInboxHash,
-          proof.Assertion.FirstMessageHash,
-          proof.Assertion.FirstLogHash,
-          proofData
-        )
+        const tx = await executeTestStep(proof)
         const receipt = await tx.wait()
         const gas = receipt.gasUsed!.toNumber()
         if (gas > 1000000) {
           console.log(`opcode ${opcode} used ${gas} gas`)
         }
-        expect(gas).to.be.lessThan(2500000)
+        expect(gas).to.be.lessThan(5000000)
       }
     })
   }

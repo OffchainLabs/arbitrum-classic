@@ -1274,3 +1274,100 @@ TEST_CASE("OPCODE: Stack underflow") {
         m.runOne();
     }
 }
+
+TEST_CASE("OPCODE: Newbuffer opcode") {
+    SECTION("Creates new buffer") {
+        MachineState mach;
+        mach.runOp(OpCode::NEW_BUFFER);
+        REQUIRE(mach.stack[0] == value{Buffer()});
+    }
+}
+
+TEST_CASE("OPCODE: getbuffer8 opcode") {
+    SECTION("Reads from buffer") {
+        MachineState mach;
+        Buffer buf;
+        buf = buf.set(123, 7);
+        mach.stack.push(buf);
+        mach.stack.push(uint256_t{123});
+        mach.runOp(OpCode::GET_BUFFER8);
+        REQUIRE(mach.stack[0] == value{uint256_t{7}});
+    }
+}
+
+TEST_CASE("OPCODE: getbuffer64 opcode") {
+    SECTION("Reads from buffer") {
+        MachineState mach;
+        Buffer buf;
+        buf = buf.set(123, 7);
+        mach.stack.push(buf);
+        mach.stack.push(uint256_t{123});
+        mach.runOp(OpCode::GET_BUFFER64);
+        REQUIRE(mach.stack[0] == value{uint256_t{7L << 56L}});
+    }
+}
+
+TEST_CASE("OPCODE: getbuffer256 opcode") {
+    SECTION("Reads from buffer") {
+        MachineState mach;
+        Buffer buf;
+        buf = buf.set(123, 7);
+        mach.stack.push(buf);
+        mach.stack.push(uint256_t{123});
+        mach.runOp(OpCode::GET_BUFFER256);
+        REQUIRE(mach.stack[0] == value{uint256_t{7L} << 248});
+    }
+}
+
+TEST_CASE("OPCODE: setbuffer8 opcode") {
+    SECTION("Writes to buffer") {
+        MachineState mach;
+        Buffer buf;
+        buf = buf.set(123, 7);
+        mach.stack.push(Buffer());
+        mach.stack.push(uint256_t{7});
+        mach.stack.push(uint256_t{123});
+        mach.runOp(OpCode::SET_BUFFER8);
+        REQUIRE(mach.stack[0] == value{buf});
+    }
+}
+
+TEST_CASE("OPCODE: setbuffer64 opcode") {
+    SECTION("Writes to buffer") {
+        MachineState mach;
+        Buffer buf;
+        buf = buf.set(123, 9);
+        buf = buf.set(123+1, 8);
+        buf = buf.set(123+7, 7);
+        mach.stack.push(Buffer());
+        mach.stack.push(uint256_t{0x0908000000000007L});
+        mach.stack.push(uint256_t{123});
+        mach.runOp(OpCode::SET_BUFFER64);
+        REQUIRE(mach.stack[0] == value{buf});
+    }
+}
+
+TEST_CASE("OPCODE: setbuffer256 opcode") {
+    SECTION("Writes to buffer") {
+        MachineState mach;
+        Buffer buf;
+        buf = buf.set(123, 9);
+        buf = buf.set(123+1, 8);
+        buf = buf.set(123+7, 7);
+        buf = buf.set(123+8, 9);
+        buf = buf.set(123+1+8, 8);
+        buf = buf.set(123+7+8, 7);
+        buf = buf.set(123+16, 9);
+        buf = buf.set(123+1+16, 8);
+        buf = buf.set(123+7+16, 7);
+        buf = buf.set(123+24, 9);
+        buf = buf.set(123+1+24, 8);
+        buf = buf.set(123+7+24, 7);
+        mach.stack.push(Buffer());
+        mach.stack.push(hexToInt("0908000000000007090800000000000709080000000000070908000000000007"));
+        mach.stack.push(uint256_t{123});
+        mach.runOp(OpCode::SET_BUFFER256);
+        REQUIRE(mach.stack[0] == value{buf});
+    }
+}
+

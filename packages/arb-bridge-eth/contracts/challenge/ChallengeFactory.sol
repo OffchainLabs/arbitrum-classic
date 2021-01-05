@@ -32,15 +32,18 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
     ICloneable public inboxTopChallengeTemplate;
     ICloneable public executionChallengeTemplate;
     address public oneStepProofAddress;
+    address public oneStepProofAddress2;
 
     constructor(
         address _inboxTopChallengeTemplate,
         address _executionChallengeTemplate,
-        address _oneStepProofAddress
+        address _oneStepProofAddress,
+        address _oneStepProofAddress2
     ) public {
         inboxTopChallengeTemplate = ICloneable(_inboxTopChallengeTemplate);
         executionChallengeTemplate = ICloneable(_executionChallengeTemplate);
         oneStepProofAddress = _oneStepProofAddress;
+        oneStepProofAddress2 = _oneStepProofAddress2;
     }
 
     function generateCloneAddress(
@@ -83,7 +86,10 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         );
 
         if (challengeType == ChallengeUtils.getInvalidExType()) {
-            IExecutionChallenge(clone).connectOneStepProof(oneStepProofAddress);
+            IExecutionChallenge(clone).connectOneStepProof(
+                oneStepProofAddress,
+                oneStepProofAddress2
+            );
         }
         return address(clone);
     }

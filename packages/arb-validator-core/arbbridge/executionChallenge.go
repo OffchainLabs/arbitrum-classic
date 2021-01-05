@@ -39,6 +39,13 @@ type ExecutionChallenge interface {
 		proof []byte,
 	) error
 
+	OneStepProofBuffer(
+		ctx context.Context,
+		assertion *valprotocol.ExecutionAssertionStub,
+		proof []byte,
+		bproof []byte,
+	) error
+
 	OneStepProofWithMessage(
 		ctx context.Context,
 		assertion *valprotocol.ExecutionAssertionStub,

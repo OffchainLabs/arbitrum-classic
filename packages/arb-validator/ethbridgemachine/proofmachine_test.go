@@ -18,12 +18,13 @@ package ethbridgemachine
 
 import (
 	"context"
+	"strconv"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"strconv"
 
 	"encoding/json"
 	"github.com/pkg/errors"
@@ -38,7 +39,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
 )
 
-func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts.OneStepProof) {
+func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts.OneStepProof, osp2 *ethbridgecontracts.OneStepProof2) {
 	t.Log("proof test contact: ", contract)
 
 	ctx := context.Background()
@@ -87,6 +88,21 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgecontracts
 					proof.Message.Sender.ToEthAddress(),
 					proof.Message.InboxSeqNum,
 					proof.Message.Data,
+				)
+			} else if len(proof.BufferProof) > 0 {
+				t.Log("Proof len", len(proof.BufferProof), len(proof.Proof))
+				t.Log("Data", proof.Assertion.AfterInboxHash,
+					proof.Assertion.FirstMessageHash,
+					proof.Assertion.FirstLogHash,
+					proof.Proof,
+					proof.BufferProof)
+				machineData, err = osp2.ExecuteStep(
+					&bind.CallOpts{Context: context.Background()},
+					proof.Assertion.AfterInboxHash,
+					proof.Assertion.FirstMessageHash,
+					proof.Assertion.FirstLogHash,
+					proof.Proof,
+					proof.BufferProof,
 				)
 			} else {
 				machineData, err = osp.ExecuteStep(
@@ -154,11 +170,26 @@ func TestValidateProof(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	_, tx2, osp2, err := ethbridgecontracts.DeployOneStepProof2(auth, client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.Commit()
+	if _, err := ethbridge.WaitForReceiptWithResults(
+		context.Background(),
+		client,
+		auth.From,
+		tx2,
+		"DeployOneStepProof2",
+	); err != nil {
+		t.Fatal(err)
+	}
+
 	for _, machName := range testMachines {
 		machName := machName // capture range variable
 		t.Run(machName, func(t *testing.T) {
 			//t.Parallel()
-			runTestValidateProof(t, machName, osp)
+			runTestValidateProof(t, machName, osp, osp2)
 		})
 	}
 }
