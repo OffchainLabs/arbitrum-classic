@@ -72,6 +72,14 @@ library Hashing {
         }
     }
 
+    function bytesToBufferHash(
+        bytes memory,
+        uint256,
+        uint256
+    ) internal pure returns (bytes32) {
+        return 0;
+    }
+
     function getTuplePreImage(Value.Data[] memory vals) internal pure returns (Value.Data memory) {
         require(vals.length <= 8, "Invalid tuple length");
         bytes32[] memory hashes = new bytes32[](vals.length);

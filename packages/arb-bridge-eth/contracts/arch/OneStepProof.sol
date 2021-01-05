@@ -502,11 +502,26 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
 
     function executeSendInsn(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
-        if (val1.size > SEND_SIZE_LIMIT || !val1.isValidTypeForSend()) {
+        // TODO: This size check doesn't work with the buffer type
+        if (!val1.isBuffer() || val1.size > SEND_SIZE_LIMIT) {
             handleOpcodeError(context);
             return;
         }
-        context.messageAcc = keccak256(abi.encodePacked(context.messageAcc, val1.hash()));
+        uint256 sendDataLength;
+        (context.offset, sendDataLength) = Marshaling.deserializeInt(context.proof, context.offset);
+
+        require(
+            val1.hash() == Hashing.bytesToBufferHash(context.proof, context.offset, sendDataLength)
+        );
+
+        uint256 dataStart = 32 + context.offset;
+        bytes32 dataHash;
+        bytes memory proof = context.proof;
+        assembly {
+            dataHash := keccak256(add(proof, dataStart), sendDataLength)
+        }
+
+        context.messageAcc = keccak256(abi.encodePacked(context.messageAcc, dataHash));
     }
 
     function incrementInbox(AssertionContext memory context)
