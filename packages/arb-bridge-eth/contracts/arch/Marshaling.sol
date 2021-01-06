@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,26 +62,6 @@ library Marshaling {
     {
         require(data.length >= startOffset && data.length - startOffset >= 32, "too short");
         return (startOffset + 32, data.toBytes32(startOffset));
-    }
-
-    function deserializeCheckedInt(bytes memory data, uint256 startOffset)
-        internal
-        pure
-        returns (
-            bool, // valid
-            uint256, // offset
-            uint256 // val
-        )
-    {
-        uint256 totalLength = data.length;
-        if (
-            totalLength < startOffset ||
-            totalLength - startOffset < 33 ||
-            uint8(data[startOffset]) != Value.intTypeCode()
-        ) {
-            return (false, startOffset, 0);
-        }
-        return (true, startOffset + 33, data.toUint(startOffset + 1));
     }
 
     function deserializeCodePoint(bytes memory data, uint256 startOffset)
@@ -201,90 +181,6 @@ library Marshaling {
         vals[1] = stack;
 
         return Hashing.getTuplePreImage(vals);
-    }
-
-    /**
-     * @notice If the data passed to this function is a valid bytestack object, return the convertion of it to raw bytes form. Otherwise return that it was invalid.
-     * @dev The bytestack format is described in the documentation of bytesToBytestack
-     * @param data Data object containing the potential serialized bytestack value
-     * @param startOffset Offset in data where the bytestack is claimed to begin
-     */
-    function bytestackToBytes(bytes memory data, uint256 startOffset)
-        internal
-        pure
-        returns (
-            bool valid,
-            uint256 offset,
-            bytes memory byteData
-        )
-    {
-        // Bytestack should start with the size in bytes of the contained data
-        uint256 byteCount;
-        (valid, offset, byteCount) = parseBytestackChunk(data, startOffset);
-        if (!valid) {
-            return (false, offset, byteData);
-        }
-
-        // If byteCount % 32 != 0, the last chunk will have byteCount % 32 bytes of data in it and the rest should be ignored
-        uint256 fullChunkCount = byteCount / 32;
-        uint256 partialChunkSize = byteCount % 32;
-        uint256 totalChunkCount = fullChunkCount + (partialChunkSize > 0 ? 1 : 0);
-
-        bytes32[] memory fullChunks = new bytes32[](fullChunkCount);
-        bytes memory partialChunk = new bytes(partialChunkSize);
-
-        uint256 fullChunkIndex = 0;
-
-        for (uint256 i = 0; i < totalChunkCount; i++) {
-            uint256 nextChunk;
-            (valid, offset, nextChunk) = parseBytestackChunk(data, offset);
-            if (!valid) {
-                return (false, offset, byteData);
-            }
-
-            // The chunks appear backwards in the serialization so we reverse their order there
-            // Therefore the first chunk is the one which may be partial
-            if (i == 0 && partialChunkSize > 0) {
-                // Copy only partialChunkSize bytes over into partialChunk
-                bytes32 chunkBytes = bytes32(nextChunk);
-                for (uint256 j = 0; j < partialChunkSize; j++) {
-                    partialChunk[j] = chunkBytes[j];
-                }
-            } else {
-                // Put the chunks into fullChunks in reverse order
-                // We use a separate index fullChunkIndex since we may or may not have included a partial chunk
-                fullChunks[fullChunkCount - 1 - fullChunkIndex] = bytes32(nextChunk);
-                fullChunkIndex++;
-            }
-        }
-        // The bytestack should end with an empty tuple
-        uint8 valType;
-        (offset, valType) = extractUint8(data, offset);
-        if (valType != Value.tupleTypeCode()) {
-            return (false, offset, byteData);
-        }
-        return (true, offset, abi.encodePacked(fullChunks, partialChunk));
-    }
-
-    function parseBytestackChunk(bytes memory data, uint256 startOffset)
-        private
-        pure
-        returns (
-            bool valid,
-            uint256 offset,
-            uint256 nextChunk
-        )
-    {
-        uint8 valType;
-        (offset, valType) = extractUint8(data, startOffset);
-        if (valType != Value.tupleTypeCode() + 2) {
-            return (false, offset, nextChunk);
-        }
-        (valid, offset, nextChunk) = deserializeCheckedInt(data, offset);
-        if (!valid) {
-            return (false, offset, nextChunk);
-        }
-        return (true, offset, nextChunk);
     }
 
     function extractUint8(bytes memory data, uint256 startOffset)

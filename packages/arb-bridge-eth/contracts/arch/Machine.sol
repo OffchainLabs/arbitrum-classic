@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,10 +78,6 @@ library Machine {
             );
     }
 
-    function setExtensive(Data memory machine) internal pure {
-        machine.status = MACHINE_EXTENSIVE;
-    }
-
     function setErrorStop(Data memory machine) internal pure {
         machine.status = MACHINE_ERRORSTOP;
     }
@@ -100,32 +96,6 @@ library Machine {
 
     function addDataStackInt(Data memory machine, uint256 val) internal pure {
         machine.dataStack = addStackVal(machine.dataStack, Value.newInt(val));
-    }
-
-    function machineHash(
-        bytes32 instructionStackHash,
-        Value.Data memory dataStack,
-        Value.Data memory auxStack,
-        Value.Data memory registerVal,
-        Value.Data memory staticVal,
-        uint256 arbGasRemaining,
-        bytes32 errHandlerHash,
-        Value.Data memory pendingMessage
-    ) internal pure returns (bytes32) {
-        return
-            hash(
-                Data(
-                    instructionStackHash,
-                    dataStack,
-                    auxStack,
-                    registerVal,
-                    staticVal,
-                    arbGasRemaining,
-                    errHandlerHash,
-                    pendingMessage,
-                    MACHINE_EXTENSIVE
-                )
-            );
     }
 
     function hash(Data memory machine) internal pure returns (bytes32) {

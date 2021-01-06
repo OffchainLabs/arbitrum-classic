@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,28 +109,6 @@ library Value {
 
     function isBuffer(Data memory val) internal pure returns (bool) {
         return val.typeCode == BUFFER_TYPECODE;
-    }
-
-    function isValidTypeForSend(Data memory val) internal pure returns (bool) {
-        if (val.typeCode == INT_TYPECODE) {
-            return true;
-        } else if (val.typeCode == CODE_POINT_TYPECODE) {
-            return false;
-        } else if (val.typeCode == HASH_PRE_IMAGE_TYPECODE) {
-            require(false, "must have full value");
-        } else if (val.typeCode == TUPLE_TYPECODE) {
-            uint256 valueCount = val.tupleVal.length;
-            for (uint256 i = 0; i < valueCount; i++) {
-                if (!isValidTypeForSend(val.tupleVal[i])) {
-                    return false;
-                }
-            }
-            return true;
-        } else if (val.typeCode == HASH_ONLY) {
-            return false;
-        } else {
-            require(false, "Invalid type code");
-        }
     }
 
     function newEmptyTuple() internal pure returns (Data memory) {
