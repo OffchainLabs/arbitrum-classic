@@ -75,6 +75,8 @@ contract Challenge is Cloneable, IChallenge {
     uint256 private challengePeriodBlocks;
     uint256 private executionCheckTimeBlocks;
 
+    uint256 private gasBefore;
+
     Kind kind;
 
     // The current deadline at which the challenge timeouts and a winner is
