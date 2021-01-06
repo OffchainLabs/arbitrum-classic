@@ -414,7 +414,7 @@ contract Challenge is Cloneable, IChallenge {
         _currentWin();
     }
 
-    function timeoutChallenge() external {
+    function timeout() external {
         require(block.number > deadlineBlock, TIMEOUT_DEADLINE);
 
         if (state == State.AsserterTurn) {
