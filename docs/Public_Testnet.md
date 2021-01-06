@@ -62,6 +62,8 @@ To deploy the validator and aggregator, run
 yarn deploy:validators  0xC34Fd04E698dB75f8381BFA7298e8Ae379bFDA71 --password=[password]
 ```
 
+Upon deploying a validator, you'll be asked to deposit the staking requirement, 1 Kovan ETH.
+
 The password argument is used to secure the validator keystore. On the first deployment you set the password to any value, and on later deployments you must resubmit the same password.
 
 ## Kovan Deployment
