@@ -5,6 +5,7 @@ import "../new_challenge/ChallengeLib.sol";
 
 library RollupLib {
     function nodeStateHash(
+        uint256 proposedBlock,
         uint256 stepsRun,
         bytes32 machineHash,
         bytes32 inboxTop,
@@ -16,6 +17,7 @@ library RollupLib {
         return
             keccak256(
                 abi.encodePacked(
+                    proposedBlock,
                     stepsRun,
                     machineHash,
                     inboxTop,
@@ -28,6 +30,7 @@ library RollupLib {
     }
 
     struct Assertion {
+        uint256 beforeProposedBlock;
         uint256 beforeStepsRun;
         bytes32 beforeMachineHash;
         bytes32 beforeInboxHash;
@@ -47,7 +50,7 @@ library RollupLib {
         bytes32 afterMachineHash;
     }
 
-    function decodeAssertion(bytes32[7] memory bytes32Fields, uint256[10] memory intFields)
+    function decodeAssertion(bytes32[7] memory bytes32Fields, uint256[11] memory intFields)
         internal
         pure
         returns (Assertion memory)
@@ -55,20 +58,21 @@ library RollupLib {
         return
             Assertion(
                 intFields[0],
+                intFields[1],
                 bytes32Fields[0],
                 bytes32Fields[1],
-                intFields[1],
                 intFields[2],
                 intFields[3],
                 intFields[4],
                 intFields[5],
-                bytes32Fields[2],
                 intFields[6],
+                bytes32Fields[2],
                 intFields[7],
-                bytes32Fields[3],
                 intFields[8],
-                bytes32Fields[4],
+                bytes32Fields[3],
                 intFields[9],
+                bytes32Fields[4],
+                intFields[10],
                 bytes32Fields[5],
                 bytes32Fields[6]
             );
@@ -77,6 +81,7 @@ library RollupLib {
     function beforeNodeStateHash(Assertion memory assertion) internal pure returns (bytes32) {
         return
             nodeStateHash(
+                assertion.beforeProposedBlock,
                 assertion.beforeStepsRun,
                 assertion.beforeMachineHash,
                 assertion.beforeInboxHash,
@@ -87,13 +92,14 @@ library RollupLib {
             );
     }
 
-    function afterNodeStateHash(Assertion memory assertion, uint256 inboxMaxCount)
+    function nodeStateHash(Assertion memory assertion, uint256 inboxMaxCount)
         internal
-        pure
+        view
         returns (bytes32)
     {
         return
             nodeStateHash(
+                block.number,
                 assertion.beforeStepsRun + assertion.stepsExecuted,
                 assertion.afterMachineHash,
                 assertion.afterInboxHash,

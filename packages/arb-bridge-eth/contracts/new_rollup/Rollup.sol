@@ -48,6 +48,7 @@ contract Rollup is Inbox, Outbox {
 
     constructor(bytes32 machineHash) public {
         bytes32 state = RollupLib.nodeStateHash(
+            block.number, // block proposed
             0,
             machineHash,
             0, // inbox top
@@ -60,7 +61,6 @@ contract Rollup is Inbox, Outbox {
             state,
             0, // challenge hash (not challengeable)
             latestConfirmed,
-            block.number,
             0 // deadline block (not challengeable)
         );
         nodes[0] = node;
@@ -157,7 +157,7 @@ contract Rollup is Inbox, Outbox {
         uint256 nodeNum,
         uint256 prev,
         bytes32[7] calldata assertionBytes32Fields,
-        uint256[10] calldata assertionIntFields
+        uint256[11] calldata assertionIntFields
     ) external payable {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         verifyCanStake();
@@ -181,7 +181,7 @@ contract Rollup is Inbox, Outbox {
         uint256 blockNumber,
         uint256 nodeNum,
         bytes32[7] calldata assertionBytes32Fields,
-        uint256[10] calldata assertionIntFields
+        uint256[11] calldata assertionIntFields
     ) external {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         require(nodeNum == latestNodeCreated + 1);
@@ -315,12 +315,11 @@ contract Rollup is Inbox, Outbox {
         // inboxMaxCount must be greater than beforeInboxCount since we can't have read past the end of the inbox
         require(assertion.inboxMessagesRead <= inboxMaxCount - assertion.beforeInboxCount);
 
-        uint256 prevProposedBlock = prevNode.proposedBlock();
         uint256 prevDeadlineBlock = prevNode.deadlineBlock();
 
         // Verify that assertion meets the minimum Delta time requirement
         uint256 minimumAssertionPeriod = challengePeriod / 10;
-        uint256 timeSinceLastNode = block.number - prevProposedBlock;
+        uint256 timeSinceLastNode = block.number - assertion.beforeProposedBlock;
         require(timeSinceLastNode > minimumAssertionPeriod);
 
         // Minimum size requirements: each assertion must satisfy either
@@ -344,7 +343,7 @@ contract Rollup is Inbox, Outbox {
 
         return
             new Node(
-                RollupLib.afterNodeStateHash(assertion, inboxMaxCount),
+                RollupLib.nodeStateHash(assertion, inboxMaxCount),
                 RollupLib.challengeRoot(
                     assertion,
                     inboxMaxCount,
@@ -352,7 +351,6 @@ contract Rollup is Inbox, Outbox {
                     executionCheckTimeBlocks
                 ),
                 prev,
-                block.number,
                 deadlineBlock
             );
     }

@@ -5,7 +5,6 @@ contract Node {
     bytes32 public stateHash;
     bytes32 public challengeHash;
     uint256 public prev;
-    uint256 public proposedBlock;
     uint256 public deadlineBlock;
     uint256 public stakerCount;
     mapping(address => bool) public stakers;
@@ -21,13 +20,11 @@ contract Node {
         bytes32 _stateHash,
         bytes32 _challengeHash,
         uint256 _prev,
-        uint256 _proposedBlock,
         uint256 _deadlineBlock
     ) public {
         stateHash = _stateHash;
         challengeHash = _challengeHash;
         prev = _prev;
-        proposedBlock = _proposedBlock;
         deadlineBlock = _deadlineBlock;
     }
 
