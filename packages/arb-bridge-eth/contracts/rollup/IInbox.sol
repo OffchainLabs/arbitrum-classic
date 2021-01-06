@@ -34,8 +34,6 @@ interface IInbox {
 
     event BuddyContractPair(address indexed sender);
 
-    function sendInitializationMessage(bytes calldata messageData) external;
-
     function sendL2Message(bytes calldata messageData) external;
 
     function depositEthMessage(address to) external payable;

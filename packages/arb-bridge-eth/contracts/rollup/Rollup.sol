@@ -36,14 +36,24 @@ contract Rollup is Inbox, Outbox {
     uint256 stakerCount;
     mapping(address => Staker) stakers;
 
-    uint256 baseStake;
-    uint256 challengePeriod;
-
+    // Rollup Config
+    uint256 challengePeriodBlocks;
     uint256 arbGasSpeedLimitPerBlock;
+    uint256 baseStake;
+    address stakeToken;
 
     IChallengeFactory public challengeFactory;
 
-    constructor(bytes32 _machineHash, address _challengeFactory) public {
+    constructor(
+        bytes32 _machineHash,
+        uint256 _challengePeriodBlocks,
+        uint256 _arbGasSpeedLimitPerBlock,
+        uint256 _baseStake,
+        address _stakeToken,
+        address _owner,
+        address _challengeFactory,
+        bytes memory _extraConfig
+    ) public {
         challengeFactory = IChallengeFactory(_challengeFactory);
         bytes32 state = RollupLib.nodeStateHash(
             block.number, // block proposed
@@ -63,11 +73,27 @@ contract Rollup is Inbox, Outbox {
             0 // deadline block (not challengeable)
         );
         nodes[0] = node;
+
+        challengePeriodBlocks = _challengePeriodBlocks;
+        arbGasSpeedLimitPerBlock = _arbGasSpeedLimitPerBlock;
+        baseStake = _baseStake;
+        stakeToken = _stakeToken;
+
+        sendInitializationMessage(
+            abi.encodePacked(
+                uint256(_challengePeriodBlocks),
+                uint256(_arbGasSpeedLimitPerBlock),
+                uint256(_baseStake),
+                bytes32(bytes20(_stakeToken)),
+                bytes32(bytes20(_owner)),
+                _extraConfig
+            )
+        );
     }
 
     function rejectNextNode(uint256 successorWithStake, address stakerAddress) external {
         // No stake has been placed during the last challengePeriod blocks
-        require(block.number - lastStakeBlock >= challengePeriod);
+        require(block.number - lastStakeBlock >= challengePeriodBlocks);
 
         require(!stakers[stakerAddress].isZombie);
 
@@ -98,7 +124,7 @@ contract Rollup is Inbox, Outbox {
         uint256[] calldata messageLengths
     ) external {
         // No stake has been placed during the last challengePeriod blocks
-        require(block.number - lastStakeBlock >= challengePeriod);
+        require(block.number - lastStakeBlock >= challengePeriodBlocks);
         Node node = nodes[firstUnresolvedNode];
         node.checkConfirmValid(stakerCount, latestConfirmed);
 
@@ -278,7 +304,7 @@ contract Rollup is Inbox, Outbox {
             return baseStake;
         }
         uint256 latestConfirmedAge = block.number - nodes[latestConfirmed].deadlineBlock();
-        uint256 challengePeriodsPassed = latestConfirmedAge / challengePeriod;
+        uint256 challengePeriodsPassed = latestConfirmedAge / challengePeriodBlocks;
         if (challengePeriodsPassed > 255) {
             challengePeriodsPassed = 255;
         }
@@ -308,7 +334,7 @@ contract Rollup is Inbox, Outbox {
         uint256 prevDeadlineBlock = prevNode.deadlineBlock();
 
         // Verify that assertion meets the minimum Delta time requirement
-        uint256 minimumAssertionPeriod = challengePeriod / 10;
+        uint256 minimumAssertionPeriod = challengePeriodBlocks / 10;
         uint256 timeSinceLastNode = block.number - assertion.beforeProposedBlock;
         require(timeSinceLastNode > minimumAssertionPeriod);
 
@@ -324,7 +350,7 @@ contract Rollup is Inbox, Outbox {
         // Don't allow an assertion to use above a maximum amount of gas representing 4 assertion periods worth of computation
         require(assertion.gasUsed <= minimumAssertionPeriod * 4 * arbGasSpeedLimitPerBlock);
 
-        uint256 deadlineBlock = block.number + challengePeriod;
+        uint256 deadlineBlock = block.number + challengePeriodBlocks;
         if (deadlineBlock < prevDeadlineBlock) {
             deadlineBlock = prevDeadlineBlock;
         }
@@ -387,7 +413,7 @@ contract Rollup is Inbox, Outbox {
             state.executionCheckTime,
             staker1Address,
             staker2Address,
-            challengePeriod
+            challengePeriodBlocks
         );
 
         staker1.currentChallenge = challengeAddress;

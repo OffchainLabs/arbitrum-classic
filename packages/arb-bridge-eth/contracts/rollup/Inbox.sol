@@ -81,12 +81,7 @@ contract Inbox is IInbox {
         emit BuddyContractPair(msg.sender);
     }
 
-    /**
-     * @notice Send a generic L2 message to the chain
-     * @dev This method can be used to send any type of message that doesn't require L1 validation
-     * @param messageData Data of the message being sent
-     */
-    function sendInitializationMessage(bytes calldata messageData) external {
+    function sendInitializationMessage(bytes memory messageData) internal {
         _deliverMessage(INITIALIZATION_MSG, address(this), messageData);
     }
 
