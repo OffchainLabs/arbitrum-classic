@@ -267,11 +267,20 @@ contract Challenge is Cloneable, IChallenge {
         bytes calldata _proof,
         bytes32 _oldEndHash,
         bytes32[] calldata _chainHashes,
-        uint256 _chainLength
+        uint256 _chainLength,
+        uint256[4] segmentPreFields,
     ) external executionChallenge onlyOnTurn {
         require(_chainLength > 1, "bisection too short");
         require(_chainHashes.length == bisectionDegree(_chainLength));
         require(_chainHashes[_chainHashes.length - 1] != _oldEndHash);
+
+        require(_chainHashes[0] == ChallengeLib.assertionHash(
+            segmentPreFields[0],
+            segmentPreFields[1],
+            segmentPreFields[2],
+            segmentPreFields[3]
+        ), "segment pre-fields");
+        uint256 segmentStartGas = segmentPreFields[1];
 
         bytes32 bisectionHash = ChallengeLib.bisectionChunkHash(
             _chainLength,
@@ -281,7 +290,9 @@ contract Challenge is Cloneable, IChallenge {
 
         verifySegmentProof(_proof, bisectionHash, _segmentToChallenge);
 
-        challengeState = calculateBisectionRoot(_chainHashes, _chainLength);
+        require(_chainLength + gasBefore > segmentStartGas, "invalid segment length");
+        challengeState = calculateBisectionRoot(_chainHashes, _chainLength + gasBefore - segmentStartGas);
+        gasBefore = segmentStartGas;
 
         responded(executionCheckTimeBlocks);
         emit Bisected(_segmentToChallenge, _chainHashes, _chainLength, deadlineBlock);
