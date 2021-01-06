@@ -401,21 +401,23 @@ contract Rollup is Inbox, Outbox, IRollup {
         uint256 nodeNum2,
         ChallengeState memory state
     ) private {
-        Staker storage staker1 = stakers[staker1Address];
-        Staker storage staker2 = stakers[staker2Address];
+        require(nodeNum1 < nodeNum2, "WRONG_ORDER");
+        require(nodeNum2 <= latestNodeCreated, "NOT_PROPOSED");
+        require(latestConfirmed < nodeNum1, "ALREADY_CONFIRMED");
+
         Node node1 = nodes[nodeNum1];
         Node node2 = nodes[nodeNum2];
 
+        require(node1.prev() == node2.prev(), "DIFF_PREV");
+
+        Staker storage staker1 = stakers[staker1Address];
+        Staker storage staker2 = stakers[staker2Address];
+
         checkUnchallengedStaker(staker1);
-        require(node1.stakers(staker1Address));
-
         checkUnchallengedStaker(staker2);
-        require(node2.stakers(staker2Address));
 
-        require(node1.prev() == node2.prev());
-        require(latestConfirmed < nodeNum1);
-        require(nodeNum1 < nodeNum2);
-        require(nodeNum2 <= latestNodeCreated);
+        require(node1.stakers(staker1Address), "STAKER1_NOT_STAKED");
+        require(node2.stakers(staker2Address), "STAKER2_NOT_STAKED");
 
         require(
             node1.challengeHash() ==
@@ -424,7 +426,8 @@ contract Rollup is Inbox, Outbox, IRollup {
                     state.inboxDeltaHash,
                     state.executionHash,
                     state.executionCheckTime
-                )
+                ),
+            "CHAL_HASH"
         );
 
         // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
@@ -465,7 +468,7 @@ contract Rollup is Inbox, Outbox, IRollup {
     }
 
     function checkUnchallengedStaker(Staker storage staker) private view {
-        require(!staker.isZombie);
-        require(staker.currentChallenge == address(0));
+        require(!staker.isZombie, "ZOMBIE");
+        require(staker.currentChallenge == address(0), "IN_CHAL");
     }
 }

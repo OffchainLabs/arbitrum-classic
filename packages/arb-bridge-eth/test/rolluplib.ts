@@ -272,7 +272,7 @@ export class RollupContract {
     assertion: Assertion,
     newNodeNum: BigNumberish,
     prevNum: BigNumberish,
-    overrides?: TransactionOverrides
+    overrides: TransactionOverrides = {}
   ): Promise<ContractTransaction> {
     return this.rollup.newStakeOnNewNode(
       block.hash,
@@ -288,7 +288,7 @@ export class RollupContract {
   newStakeOnExistingNode(
     block: providers.Block,
     nodeNum: BigNumberish,
-    overrides?: TransactionOverrides
+    overrides: TransactionOverrides = {}
   ) {
     return this.rollup.newStakeOnExistingNode(
       block.hash,
@@ -346,5 +346,9 @@ export class RollupContract {
 
   inboxMaxValue(): Promise<string> {
     return this.rollup.inboxMaxValue()
+  }
+
+  currentRequiredStake(): Promise<BigNumber> {
+    return this.rollup.currentRequiredStake()
   }
 }

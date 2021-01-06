@@ -275,11 +275,44 @@ describe('ArbRollup', () => {
   it('should make a new node', async function () {
     await tryAdvanceChain(challengePeriodBlocks / 10)
     const block = await ethers.provider.getBlock('latest')
+    challengedAssertion = makeSimpleAssertion(
+      validNodeState,
+      (block.number - validNodeState.proposedBlock + 1) *
+        arbGasSpeedLimitPerBlock
+    )
+    await rollup.addStakeOnNewNode(block, challengedAssertion, 5)
+  })
+
+  it('new staker should make a conflicting node', async function () {
+    await tryAdvanceChain(challengePeriodBlocks / 10)
+    const block = await ethers.provider.getBlock('latest')
     const assertion = makeSimpleAssertion(
       validNodeState,
       (block.number - validNodeState.proposedBlock + 1) *
         arbGasSpeedLimitPerBlock
     )
-    await rollup.addStakeOnNewNode(block, assertion, 5)
+    const stake = await rollup.currentRequiredStake()
+    await rollup
+      .connect(accounts[2])
+      .newStakeOnNewNode(block, assertion, 6, 3, { value: stake })
+  })
+
+  it('should initiate another challenge', async function () {
+    const tx = rollup.createChallenge(
+      await accounts[0].getAddress(),
+      5,
+      await accounts[2].getAddress(),
+      6,
+      challengedAssertion,
+      await rollup.inboxMaxValue(),
+      1
+    )
+    expect(tx).to.emit(rollup, 'RollupChallengeStarted')
+    const receipt = await (await tx).wait()
+    const ev = rollup.rollup.interface.parseLog(
+      receipt.logs![receipt.logs!.length - 1]
+    )
+    const Challenge = await ethers.getContractFactory('Challenge')
+    challenge = Challenge.attach(ev.values.challengeContract) as Challenge
   })
 })
