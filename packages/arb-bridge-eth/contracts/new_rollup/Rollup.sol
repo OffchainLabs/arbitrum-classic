@@ -7,7 +7,6 @@ import "./Inbox.sol";
 import "./Outbox.sol";
 
 import "../inbox/IGlobalInbox.sol";
-import "../rollup/RollupUtils.sol";
 import "../new_challenge/ChallengeLib.sol";
 import "../new_challenge/IChallengeFactory.sol";
 
@@ -60,6 +59,7 @@ contract Rollup is Inbox, Outbox {
         Node node = new Node(
             state,
             0, // challenge hash (not challengeable)
+            0, // confirm data
             latestConfirmed,
             0 // deadline block (not challengeable)
         );
@@ -80,7 +80,7 @@ contract Rollup is Inbox, Outbox {
         require(stakedSiblingNode.stakers(stakerAddress));
 
         Node node = nodes[firstUnresolvedNode];
-        node.confirmInvalid();
+        node.checkConfirmInvalid();
         discardUnresolvedNode();
         node.destroy();
     }
@@ -88,32 +88,25 @@ contract Rollup is Inbox, Outbox {
     // If the node previous to this one is not the latest confirmed, we can reject immediately
     function rejectNextNodeOutOfOrder() external {
         Node node = nodes[firstUnresolvedNode];
-        node.confirmOutOfOrder(latestConfirmed);
+        node.checkConfirmOutOfOrder(latestConfirmed);
         discardUnresolvedNode();
         node.destroy();
     }
 
     function confirmNextNode(
         bytes32 logAcc,
-        bytes calldata messages,
-        uint256 beforeSendCount,
-        uint256 sendCount
+        bytes calldata messageData,
+        uint256[] calldata messageLengths
     ) external {
         // No stake has been placed during the last challengePeriod blocks
         require(block.number - lastStakeBlock >= challengePeriod);
         Node node = nodes[firstUnresolvedNode];
-        node.confirmValid(stakerCount, latestConfirmed);
+        node.checkConfirmValid(stakerCount, latestConfirmed);
 
-        (bytes32 lastMsgHash, ) = RollupUtils.generateLastMessageHash(messages, 0, sendCount);
+        bytes32 sendAcc = RollupLib.generateLastMessageHash(messageData, messageLengths);
+        require(node.confirmData() == RollupLib.confirmHash(sendAcc, logAcc));
 
-        bytes32 confirmData = keccak256(
-            abi.encodePacked(lastMsgHash, logAcc, beforeSendCount, sendCount)
-        );
-
-        // TODO: check that confirmData matches up with node
-
-        // Send all messages is a single batch
-        globalInbox.sendMessages(messages, beforeSendCount, beforeSendCount + sendCount);
+        processOutgoingMessages(messageData, messageLengths);
 
         emit SentLogs(logAcc);
 
@@ -310,8 +303,6 @@ contract Rollup is Inbox, Outbox {
         // Make sure the previous state is correct against the node being built on
         require(RollupLib.beforeNodeStateHash(assertion) == prevNode.stateHash());
 
-        (bytes32 inboxValue, uint256 inboxMaxCount) = globalInbox.getInbox(address(this));
-
         // inboxMaxCount must be greater than beforeInboxCount since we can't have read past the end of the inbox
         require(assertion.inboxMessagesRead <= inboxMaxCount - assertion.beforeInboxCount);
 
@@ -347,9 +338,10 @@ contract Rollup is Inbox, Outbox {
                 RollupLib.challengeRoot(
                     assertion,
                     inboxMaxCount,
-                    inboxValue,
+                    inboxMaxValue,
                     executionCheckTimeBlocks
                 ),
+                RollupLib.confirmHash(assertion),
                 prev,
                 deadlineBlock
             );

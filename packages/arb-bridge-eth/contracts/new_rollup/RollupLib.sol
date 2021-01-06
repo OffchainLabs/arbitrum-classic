@@ -157,4 +157,35 @@ library RollupLib {
                 executionCheckTime
             );
     }
+
+    function confirmHash(Assertion memory assertion) internal pure returns (bytes32) {
+        return confirmHash(assertion.sendAcc, assertion.logAcc);
+    }
+
+    function confirmHash(bytes32 sendAcc, bytes32 logAcc) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(sendAcc, logAcc));
+    }
+
+    function generateLastMessageHash(bytes memory messageData, uint256[] memory messageLengths)
+        internal
+        pure
+        returns (bytes32)
+    {
+        uint256 offset = 0;
+        uint256 messageCount = messageLengths.length;
+        uint256 dataLength = messageData.length;
+        bytes32 messageAcc = 0;
+        for (uint256 i = 0; i < messageCount; i++) {
+            uint256 messageLength = messageLengths[i];
+            require(offset + messageLength <= dataLength);
+            bytes32 messageHash;
+            assembly {
+                messageHash := keccak256(add(messageData, add(offset, 32)), messageLength)
+            }
+            messageAcc = keccak256(abi.encodePacked(messageAcc, messageHash));
+            offset += messageLength;
+        }
+        require(offset == dataLength);
+        return messageAcc;
+    }
 }

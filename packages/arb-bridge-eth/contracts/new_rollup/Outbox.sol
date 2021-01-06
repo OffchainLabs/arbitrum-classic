@@ -20,11 +20,30 @@ pragma solidity ^0.5.11;
 
 import "./Messages.sol";
 import "../libraries/MerkleLib.sol";
+import "../libraries/BytesLib.sol";
 
 contract Outbox {
+    using BytesLib for bytes;
+
+    uint8 internal constant MSG_ROOT = 0;
+
     OutboxEntry[] outboxes;
 
-    function addOutbox() internal {}
+    function processOutgoingMessages(bytes memory messageData, uint256[] memory messageLengths)
+        internal
+    {
+        // If we've reached here, we've already confirmed that sum(messageLengths) == messageData.length
+        uint256 messageCount = messageLengths.length;
+        uint256 offset = 0;
+        for (uint256 i = 0; i < messageCount; i++) {
+            // Otherwise we have an unsupported message type and we skip the message
+            if (uint8(messageData[offset]) == MSG_ROOT) {
+                bytes32 outputRoot = messageData.toBytes32(offset + 1);
+                outboxes.push(new OutboxEntry(outputRoot));
+            }
+            offset += messageLengths[i];
+        }
+    }
 
     function executeTransaction(
         uint256 outboxIndex,
@@ -38,10 +57,22 @@ contract Outbox {
             abi.encodePacked(uint256(uint160(bytes20(destAddr))), amount, calldataForL1)
         );
 
-        outboxes[outboxIndex].spendOutput(_proof, _index, userTx);
+        spendOutput(outboxIndex, _proof, _index, userTx);
 
         (bool success, ) = destAddr.call.value(amount)(calldataForL1);
         require(success);
+    }
+
+    function spendOutput(
+        uint256 outboxIndex,
+        bytes memory proof,
+        uint256 index,
+        bytes32 item
+    ) private {
+        // Flip the first bit to prove this is a leaf
+        item = item ^ bytes32(uint256(1));
+        (bytes32 calcRoot, ) = MerkleLib.verifyMerkleProof(proof, item, index + 1);
+        outboxes[outboxIndex].spendOutput(calcRoot, index);
     }
 }
 
@@ -53,14 +84,8 @@ contract OutboxEntry {
         outputRoot = root;
     }
 
-    function spendOutput(
-        bytes calldata proof,
-        uint256 index,
-        bytes32 item
-    ) external {
-        // TODO: Verify that this is actually a leaf and not an intermediate node
-        // One way to do this would be to include the tree depth in the original output message
-        (bytes32 calcRoot, ) = MerkleLib.verifyMerkleProof(proof, item, index + 1);
+    function spendOutput(bytes32 calcRoot, uint256 index) external {
+        require(!spentOutput[index]);
         require(calcRoot == outputRoot);
         spentOutput[index] = true;
     }

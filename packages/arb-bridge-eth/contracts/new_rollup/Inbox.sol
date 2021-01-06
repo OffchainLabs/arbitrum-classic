@@ -41,8 +41,8 @@ contract Inbox {
     uint8 internal constant INITIALIZATION_MSG = 4;
     uint8 internal constant L2_CONTRACT_PAIR = 5;
 
-    bytes32 value;
-    uint256 count;
+    bytes32 inboxMaxValue;
+    uint256 inboxMaxCount;
 
     /**
      * @notice Send a generic L2 message to the chain
@@ -116,7 +116,7 @@ contract Inbox {
         address _sender,
         bytes32 _messageDataHash
     ) private returns (uint256) {
-        uint256 updatedCount = count + 1;
+        uint256 updatedCount = inboxMaxCount + 1;
         bytes32 messageHash = Messages.messageHash(
             _kind,
             _sender,
@@ -125,8 +125,8 @@ contract Inbox {
             updatedCount,
             _messageDataHash
         );
-        value = Messages.addMessageToInbox(value, messageHash);
-        count = updatedCount;
+        inboxMaxValue = Messages.addMessageToInbox(inboxMaxValue, messageHash);
+        inboxMaxCount = updatedCount;
         return updatedCount;
     }
 
