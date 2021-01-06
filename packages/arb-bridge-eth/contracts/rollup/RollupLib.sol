@@ -177,7 +177,7 @@ library RollupLib {
         bytes32 messageAcc = 0;
         for (uint256 i = 0; i < messageCount; i++) {
             uint256 messageLength = messageLengths[i];
-            require(offset + messageLength <= dataLength);
+            require(offset + messageLength <= dataLength, "DATA_OVERRUN");
             bytes32 messageHash;
             assembly {
                 messageHash := keccak256(add(messageData, add(offset, 32)), messageLength)
@@ -185,7 +185,7 @@ library RollupLib {
             messageAcc = keccak256(abi.encodePacked(messageAcc, messageHash));
             offset += messageLength;
         }
-        require(offset == dataLength);
+        require(offset == dataLength, "DATA_LENGTH");
         return messageAcc;
     }
 }

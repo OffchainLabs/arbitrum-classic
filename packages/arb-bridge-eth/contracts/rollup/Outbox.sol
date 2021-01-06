@@ -78,14 +78,17 @@ contract Outbox {
 }
 
 contract OutboxEntry {
+    address rollup;
     bytes32 outputRoot;
     mapping(uint256 => bool) spentOutput;
 
     constructor(bytes32 root) public {
+        rollup = msg.sender;
         outputRoot = root;
     }
 
     function spendOutput(bytes32 calcRoot, uint256 index) external {
+        require(msg.sender == rollup);
         require(!spentOutput[index]);
         require(calcRoot == outputRoot);
         spentOutput[index] = true;

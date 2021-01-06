@@ -24,41 +24,12 @@ contract Node {
         uint256 _prev,
         uint256 _deadlineBlock
     ) public {
+        rollup = msg.sender;
         stateHash = _stateHash;
         challengeHash = _challengeHash;
         confirmData = _confirmData;
         prev = _prev;
         deadlineBlock = _deadlineBlock;
-    }
-
-    function checkConfirmValid(uint256 totalStakerCount, uint256 latestConfirmed)
-        external
-        view
-        onlyRollup
-    {
-        // Verify the block's deadline has passed
-        require(deadlineBlock <= block.number);
-
-        // Check that prev is latest confirmed
-        require(prev == latestConfirmed);
-
-        // All non-zombie stakers are staked on this node, and no zombie stakers are staked here
-        require(stakerCount == totalStakerCount);
-
-        // There is at least one non-zombie staker
-        require(totalStakerCount > 0);
-    }
-
-    function checkConfirmInvalid() external view onlyRollup {
-        // Verify the block's deadline has passed
-        require(deadlineBlock <= block.number);
-
-        // Verify that no staker is staked on this node
-        require(stakerCount == 0);
-    }
-
-    function checkConfirmOutOfOrder(uint256 latestConfirmed) external view onlyRollup {
-        require(prev != latestConfirmed);
     }
 
     function destroy() external onlyRollup {
@@ -75,5 +46,31 @@ contract Node {
         require(stakers[staker], "NOT_STAKED");
         stakers[staker] = false;
         stakerCount--;
+    }
+
+    function checkConfirmValid(uint256 totalStakerCount, uint256 latestConfirmed) external view {
+        // Verify the block's deadline has passed
+        require(deadlineBlock < block.number, "BEFORE_DEADLINE");
+
+        // Check that prev is latest confirmed
+        require(prev == latestConfirmed, "INVALID_PREV");
+
+        // All non-zombie stakers are staked on this node, and no zombie stakers are staked here
+        require(stakerCount == totalStakerCount, "NOT_ALL_STAKED");
+
+        // There is at least one non-zombie staker
+        require(totalStakerCount > 0, "NO_STAKERS");
+    }
+
+    function checkConfirmInvalid() external view {
+        // Verify the block's deadline has passed
+        require(deadlineBlock <= block.number);
+
+        // Verify that no staker is staked on this node
+        require(stakerCount == 0);
+    }
+
+    function checkConfirmOutOfOrder(uint256 latestConfirmed) external view {
+        require(prev != latestConfirmed);
     }
 }

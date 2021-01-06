@@ -28,10 +28,10 @@ contract Rollup is Inbox, Outbox {
         uint256 executionCheckTime;
     }
 
-    uint256 latestConfirmed;
+    uint256 public latestConfirmed;
     uint256 firstUnresolvedNode;
     uint256 latestNodeCreated;
-    Node[] nodes;
+    mapping(uint256 => Node) public nodes;
     uint256 lastStakeBlock;
     uint256 stakerCount;
     mapping(address => Staker) stakers;
@@ -43,6 +43,14 @@ contract Rollup is Inbox, Outbox {
     address stakeToken;
 
     IChallengeFactory public challengeFactory;
+
+    modifier onlyIfUnresolved {
+        require(
+            firstUnresolvedNode > latestConfirmed && firstUnresolvedNode <= latestNodeCreated,
+            "NO_UNRESOLVED"
+        );
+        _;
+    }
 
     constructor(
         bytes32 _machineHash,
@@ -69,7 +77,7 @@ contract Rollup is Inbox, Outbox {
             state,
             0, // challenge hash (not challengeable)
             0, // confirm data
-            latestConfirmed,
+            0, // prev node
             0 // deadline block (not challengeable)
         );
         nodes[0] = node;
@@ -89,9 +97,14 @@ contract Rollup is Inbox, Outbox {
                 _extraConfig
             )
         );
+
+        firstUnresolvedNode = 1;
     }
 
-    function rejectNextNode(uint256 successorWithStake, address stakerAddress) external {
+    function rejectNextNode(uint256 successorWithStake, address stakerAddress)
+        external
+        onlyIfUnresolved
+    {
         // No stake has been placed during the last challengePeriod blocks
         require(block.number - lastStakeBlock >= challengePeriodBlocks);
 
@@ -111,7 +124,7 @@ contract Rollup is Inbox, Outbox {
     }
 
     // If the node previous to this one is not the latest confirmed, we can reject immediately
-    function rejectNextNodeOutOfOrder() external {
+    function rejectNextNodeOutOfOrder() external onlyIfUnresolved {
         Node node = nodes[firstUnresolvedNode];
         node.checkConfirmOutOfOrder(latestConfirmed);
         discardUnresolvedNode();
@@ -122,22 +135,22 @@ contract Rollup is Inbox, Outbox {
         bytes32 logAcc,
         bytes calldata messageData,
         uint256[] calldata messageLengths
-    ) external {
+    ) external onlyIfUnresolved {
         // No stake has been placed during the last challengePeriod blocks
-        require(block.number - lastStakeBlock >= challengePeriodBlocks);
+        require(block.number - lastStakeBlock >= challengePeriodBlocks, "RECENT_STAKE");
         Node node = nodes[firstUnresolvedNode];
         node.checkConfirmValid(stakerCount, latestConfirmed);
 
         bytes32 sendAcc = RollupLib.generateLastMessageHash(messageData, messageLengths);
-        require(node.confirmData() == RollupLib.confirmHash(sendAcc, logAcc));
+        require(node.confirmData() == RollupLib.confirmHash(sendAcc, logAcc), "CONFIRM_DATA");
 
         processOutgoingMessages(messageData, messageLengths);
-
-        emit SentLogs(logAcc);
 
         latestConfirmed = firstUnresolvedNode;
         discardUnresolvedNode();
         node.destroy();
+
+        emit SentLogs(logAcc);
     }
 
     function newStakeOnExistingNode(
@@ -146,7 +159,6 @@ contract Rollup is Inbox, Outbox {
         uint256 nodeNum
     ) external payable {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
-        verifyCanStake();
         // Must stake on valid node
         checkValidNodeNumForStake(nodeNum);
         Node node = nodes[nodeNum];
@@ -178,9 +190,8 @@ contract Rollup is Inbox, Outbox {
         uint256[11] calldata assertionIntFields
     ) external payable {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
-        verifyCanStake();
-        require(nodeNum == latestNodeCreated + 1);
-        require(prev == latestConfirmed);
+        require(nodeNum == latestNodeCreated + 1, "NODE_NUM");
+        require(prev == latestConfirmed, "PREV");
 
         RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(
             assertionBytes32Fields,
@@ -326,17 +337,23 @@ contract Rollup is Inbox, Outbox {
     {
         Node prevNode = nodes[prev];
         // Make sure the previous state is correct against the node being built on
-        require(RollupLib.beforeNodeStateHash(assertion) == prevNode.stateHash());
+        require(
+            RollupLib.beforeNodeStateHash(assertion) == prevNode.stateHash(),
+            "PREV_STATE_HASH"
+        );
 
         // inboxMaxCount must be greater than beforeInboxCount since we can't have read past the end of the inbox
-        require(assertion.inboxMessagesRead <= inboxMaxCount - assertion.beforeInboxCount);
+        require(
+            assertion.inboxMessagesRead <= inboxMaxCount - assertion.beforeInboxCount,
+            "INBOX_PAST_END"
+        );
 
         uint256 prevDeadlineBlock = prevNode.deadlineBlock();
 
         // Verify that assertion meets the minimum Delta time requirement
         uint256 minimumAssertionPeriod = challengePeriodBlocks / 10;
         uint256 timeSinceLastNode = block.number - assertion.beforeProposedBlock;
-        require(timeSinceLastNode > minimumAssertionPeriod);
+        require(timeSinceLastNode >= minimumAssertionPeriod, "TIME_DELTA");
 
         // Minimum size requirements: each assertion must satisfy either
         require(
@@ -344,11 +361,15 @@ contract Rollup is Inbox, Outbox {
             assertion.inboxMessagesRead >=
                 assertion.beforeInboxMaxCount - assertion.beforeInboxCount ||
                 // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
-                assertion.gasUsed >= timeSinceLastNode * arbGasSpeedLimitPerBlock
+                assertion.gasUsed >= timeSinceLastNode * arbGasSpeedLimitPerBlock,
+            "TOO_SMALL"
         );
 
         // Don't allow an assertion to use above a maximum amount of gas representing 4 assertion periods worth of computation
-        require(assertion.gasUsed <= minimumAssertionPeriod * 4 * arbGasSpeedLimitPerBlock);
+        require(
+            assertion.gasUsed <= minimumAssertionPeriod * 4 * arbGasSpeedLimitPerBlock,
+            "TOO_LARGE"
+        );
 
         uint256 deadlineBlock = block.number + challengePeriodBlocks;
         if (deadlineBlock < prevDeadlineBlock) {
@@ -426,15 +447,14 @@ contract Rollup is Inbox, Outbox {
         firstUnresolvedNode++;
     }
 
-    function verifyCanStake() private {
-        // Verify that sender is not already a staker
-        require(!stakers[msg.sender].isStaked);
-        require(msg.value >= currentRequiredStake());
-    }
-
     function addNewStaker(uint256 nodeNum, Node node) private {
+        // Verify that sender is not already a staker
         require(!stakers[msg.sender].isStaked, "ALREADY_STAKED");
+        require(msg.value >= currentRequiredStake(), "NOT_ENOUGH_STAKE");
+
         stakers[msg.sender] = Staker(nodeNum, msg.value, address(0), false, true);
+        stakerCount++;
+        lastStakeBlock = block.number;
         node.addStaker(msg.sender);
     }
 
