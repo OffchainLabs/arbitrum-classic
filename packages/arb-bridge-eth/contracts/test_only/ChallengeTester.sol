@@ -19,9 +19,9 @@
 pragma solidity ^0.5.11;
 
 import "../challenge/IChallengeFactory.sol";
-import "../rollup/IStaking.sol";
+import "../rollup/IRollup.sol";
 
-contract ChallengeTester is IStaking {
+contract ChallengeTester is IRollup {
     IChallengeFactory private challengeFactory;
 
     constructor(address challengeFactory_) public {
@@ -29,23 +29,27 @@ contract ChallengeTester is IStaking {
     }
 
     /* solhint-disable-next-line no-unused-vars */
-    function resolveChallenge(address payable, address) external {
+    function completeChallenge(address, address payable) external {
         return;
     }
 
     function startChallenge(
-        address payable asserterAddress,
-        address payable challengerAddress,
-        uint128 challengerPeriodTicks,
-        bytes32 challengerDataHash,
-        uint256 challengeType
+        bytes32 inboxConsistencyHash,
+        bytes32 inboxDeltaHash,
+        bytes32 executionHash,
+        uint256 executionCheckTimeBlocks,
+        address payable asserter,
+        address payable challenger,
+        uint256 challengePeriodBlocks
     ) public {
         challengeFactory.createChallenge(
-            asserterAddress,
-            challengerAddress,
-            challengerPeriodTicks,
-            challengerDataHash,
-            challengeType
+            inboxConsistencyHash,
+            inboxDeltaHash,
+            executionHash,
+            executionCheckTimeBlocks,
+            asserter,
+            challenger,
+            challengePeriodBlocks
         );
     }
 }

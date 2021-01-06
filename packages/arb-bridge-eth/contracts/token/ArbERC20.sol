@@ -19,7 +19,7 @@
 pragma solidity ^0.5.11;
 
 import "arbos-contracts/contracts/ArbSys.sol";
-import "../inbox/IGlobalInbox.sol";
+import "../rollup/IInbox.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
@@ -51,8 +51,7 @@ contract EthERC20Escrow is Ownable {
     address public wrappedToken;
     mapping(address => bool) pairedRollups;
 
-    constructor(address _globalInbox, address _wrappedToken) public {
-        inbox = _globalInbox;
+    constructor(address _wrappedToken) public {
         wrappedToken = _wrappedToken;
     }
 
@@ -63,9 +62,8 @@ contract EthERC20Escrow is Ownable {
     ) external payable onlyOwner {
         ERC20Detailed t = ERC20Detailed(wrappedToken);
         // Pay for gas
-        IGlobalInbox(inbox).depositEthMessage.value(msg.value)(rollupChain, address(this));
-        IGlobalInbox(inbox).deployL2ContractPair(
-            rollupChain,
+        IInbox(rollupChain).depositEthMessage.value(msg.value)(address(this));
+        IInbox(rollupChain).deployL2ContractPair(
             maxGas, // max gas
             gasPriceBid, // gas price
             0, // payment
@@ -86,9 +84,8 @@ contract EthERC20Escrow is Ownable {
         require(pairedRollups[rollupChain]);
         require(IERC20(wrappedToken).transferFrom(msg.sender, address(this), amount));
         // Pay for gas
-        IGlobalInbox(inbox).depositEthMessage.value(msg.value)(rollupChain, address(this));
-        IGlobalInbox(inbox).sendL2Message(
-            rollupChain,
+        IInbox(rollupChain).depositEthMessage.value(msg.value)(address(this));
+        IInbox(rollupChain).sendL2Message(
             abi.encodePacked(
                 maxGas,
                 gasPriceBid,

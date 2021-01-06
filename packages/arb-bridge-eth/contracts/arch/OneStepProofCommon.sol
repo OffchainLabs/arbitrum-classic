@@ -21,8 +21,6 @@ pragma solidity ^0.5.11;
 import "./IOneStepProof.sol";
 import "./Value.sol";
 import "./Machine.sol";
-import "../inbox/Messages.sol";
-import "../libraries/Precompiles.sol";
 
 contract OneStepProofCommon {
     using Machine for Machine.Data;

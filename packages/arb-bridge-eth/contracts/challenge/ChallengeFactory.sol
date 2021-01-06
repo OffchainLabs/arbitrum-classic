@@ -18,93 +18,48 @@
 
 pragma solidity ^0.5.11;
 
+import "./IChallengeFactory.sol";
+import "./IChallenge.sol";
+
 import "../libraries/CloneFactory.sol";
 
-import "./IChallengeFactory.sol";
-import "./IBisectionChallenge.sol";
-import "./IExecutionChallenge.sol";
-import "./ChallengeUtils.sol";
-
 contract ChallengeFactory is CloneFactory, IChallengeFactory {
-    // Invalid challenge type
-    string public constant INVALID_TYPE_STR = "INVALID_TYPE";
-
-    ICloneable public inboxTopChallengeTemplate;
-    ICloneable public executionChallengeTemplate;
+    ICloneable public challengeTemplate;
     address public oneStepProofAddress;
-    address public oneStepProofAddress2;
+    address public oneStepProof2Address;
 
     constructor(
-        address _inboxTopChallengeTemplate,
-        address _executionChallengeTemplate,
+        address _challengeTemplate,
         address _oneStepProofAddress,
-        address _oneStepProofAddress2
+        address _oneStepProof2Address
     ) public {
-        inboxTopChallengeTemplate = ICloneable(_inboxTopChallengeTemplate);
-        executionChallengeTemplate = ICloneable(_executionChallengeTemplate);
+        challengeTemplate = ICloneable(_challengeTemplate);
         oneStepProofAddress = _oneStepProofAddress;
-        oneStepProofAddress2 = _oneStepProofAddress2;
-    }
-
-    function generateCloneAddress(
-        address asserter,
-        address challenger,
-        uint256 challengeType
-    ) public view returns (address) {
-        return
-            address(
-                uint160(
-                    uint256(
-                        keccak256(
-                            abi.encodePacked(
-                                bytes1(0xff),
-                                address(this),
-                                generateNonce(asserter, challenger),
-                                cloneCodeHash(getChallengeTemplate(challengeType))
-                            )
-                        )
-                    )
-                )
-            );
+        oneStepProof2Address = _oneStepProof2Address;
     }
 
     function createChallenge(
+        bytes32 _inboxConsistencyHash,
+        bytes32 _inboxDeltaHash,
+        bytes32 _executionHash,
+        uint256 _executionCheckTimeBlocks,
         address payable _asserter,
         address payable _challenger,
-        uint256 _challengePeriodTicks,
-        bytes32 _challengeHash,
-        uint256 challengeType
+        uint256 _challengePeriodBlocks
     ) external returns (address) {
-        ICloneable challengeTemplate = getChallengeTemplate(challengeType);
         address clone = createClone(challengeTemplate);
-        IBisectionChallenge(clone).initializeBisection(
+        IChallenge(clone).initializeChallenge(
+            oneStepProofAddress,
+            oneStepProof2Address,
             msg.sender,
+            _inboxConsistencyHash,
+            _inboxDeltaHash,
+            _executionHash,
+            _executionCheckTimeBlocks,
             _asserter,
             _challenger,
-            _challengePeriodTicks,
-            _challengeHash
+            _challengePeriodBlocks
         );
-
-        if (challengeType == ChallengeUtils.getInvalidExType()) {
-            IExecutionChallenge(clone).connectOneStepProof(
-                oneStepProofAddress,
-                oneStepProofAddress2
-            );
-        }
         return address(clone);
-    }
-
-    function generateNonce(address asserter, address challenger) private view returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(asserter, challenger, msg.sender)));
-    }
-
-    function getChallengeTemplate(uint256 challengeType) private view returns (ICloneable) {
-        if (challengeType == ChallengeUtils.getInvalidInboxType()) {
-            return inboxTopChallengeTemplate;
-        } else if (challengeType == ChallengeUtils.getInvalidExType()) {
-            return executionChallengeTemplate;
-        } else {
-            require(false, INVALID_TYPE_STR);
-        }
     }
 }

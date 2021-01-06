@@ -18,9 +18,10 @@
 
 pragma solidity ^0.5.11;
 
+import "./IInbox.sol";
 import "./Messages.sol";
 
-contract Inbox {
+contract Inbox is IInbox {
     event MessageDelivered(
         uint8 indexed kind,
         address indexed sender,

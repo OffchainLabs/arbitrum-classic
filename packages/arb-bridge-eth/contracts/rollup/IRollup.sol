@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,6 @@
 
 pragma solidity ^0.5.11;
 
-interface IArbRollup {
-    function init(
-        bytes32 _vmState,
-        uint128 _gracePeriodTicks,
-        uint128 _arbGasSpeedLimitPerTick,
-        uint64 _maxExecutionSteps,
-        uint128 _stakeRequirement,
-        address _stakeToken,
-        address payable _owner,
-        address _challengeFactoryAddress,
-        address _globalInboxAddress,
-        bytes calldata _extraConfig
-    ) external;
+interface IRollup {
+    function completeChallenge(address winningStaker, address payable losingStaker) external;
 }

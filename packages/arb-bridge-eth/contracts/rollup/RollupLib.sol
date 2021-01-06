@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.5.17;
 
-import "../new_challenge/ChallengeLib.sol";
+import "../challenge/ChallengeLib.sol";
 
 library RollupLib {
     function nodeStateHash(

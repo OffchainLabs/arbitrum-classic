@@ -18,43 +18,40 @@
 
 pragma solidity ^0.5.11;
 
-import "arbos-contracts/contracts/ArbERC20.sol";
-import "../inbox/IGlobalInbox.sol";
-import "../interfaces/IPairedErc20.sol";
-import "@openzeppelin/contracts/ownership/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
+// import "arbos-contracts/contracts/ArbERC20.sol";
+// import "../rollup/IInbox.sol";
+// import "../interfaces/IPairedErc20.sol";
+// import "@openzeppelin/contracts/ownership/Ownable.sol";
+// import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+// import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 
-contract BaseDetails is ERC20Detailed {
-    /* solhint-disable-next-line no-empty-blocks */
-    constructor() public ERC20Detailed("Token Buddy", "TB", 18) {}
-}
+// contract BaseDetails is ERC20Detailed {
+//     /* solhint-disable-next-line no-empty-blocks */
+//     constructor() public ERC20Detailed("Token Buddy", "TB", 18) {}
+// }
 
-/* solhint-disable-next-line no-empty-blocks */
-contract ArbBuddyERC20 is ArbERC20, BaseDetails {
+// /* solhint-disable-next-line no-empty-blocks */
+// contract ArbBuddyERC20 is ArbERC20, BaseDetails {
 
-}
+// }
 
-contract EthBuddyERC20 is IPairedErc20, Ownable, ERC20, BaseDetails {
-    address public inbox;
+// contract EthBuddyERC20 is IPairedErc20, Ownable, ERC20, BaseDetails {
+//     constructor() public {
+//         _mint(msg.sender, 1000000000000);
+//     }
 
-    constructor(address _globalInbox) public {
-        inbox = _globalInbox;
-        _mint(msg.sender, 1000000000000);
-    }
+//     function connectToChain(address _chain) public onlyOwner {
+//         IInbox inboxCon = IInbox(_chain);
+//         inboxCon.deployL2ContractPair(10000000000, 0, 0, type(ArbERC20).creationCode);
+//     }
 
-    function connectToChain(address _chain) public onlyOwner {
-        IGlobalInbox inboxCon = IGlobalInbox(inbox);
-        inboxCon.deployL2ContractPair(_chain, 10000000000, 0, 0, type(ArbERC20).creationCode);
-    }
+//     function mint(address account, uint256 amount) public {
+//         require(inbox == msg.sender, "only callable by global inbox");
+//         _mint(account, amount);
+//     }
 
-    function mint(address account, uint256 amount) public {
-        require(inbox == msg.sender, "only callable by global inbox");
-        _mint(account, amount);
-    }
-
-    function burn(address account, uint256 amount) public {
-        require(inbox == msg.sender, "only callable by global inbox");
-        _burn(account, amount);
-    }
-}
+//     function burn(address account, uint256 amount) public {
+//         require(inbox == msg.sender, "only callable by global inbox");
+//         _burn(account, amount);
+//     }
+// }

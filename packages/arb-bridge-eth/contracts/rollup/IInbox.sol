@@ -18,9 +18,8 @@
 
 pragma solidity ^0.5.11;
 
-interface IGlobalInbox {
+interface IInbox {
     event MessageDelivered(
-        address indexed chain,
         uint8 indexed kind,
         address indexed sender,
         uint256 inboxSeqNum,
@@ -28,31 +27,20 @@ interface IGlobalInbox {
     );
 
     event MessageDeliveredFromOrigin(
-        address indexed chain,
         uint8 indexed kind,
         address indexed sender,
         uint256 inboxSeqNum
     );
 
-    event BuddyContractDeployed(address indexed sender, bytes data);
-    event BuddyContractPair(address indexed sender, address data);
-
-    function getInbox(address account) external view returns (bytes32, uint256);
-
-    function sendMessages(
-        bytes calldata _messages,
-        uint256 initialMaxSendCount,
-        uint256 finalMaxSendCount
-    ) external;
+    event BuddyContractPair(address indexed sender);
 
     function sendInitializationMessage(bytes calldata messageData) external;
 
-    function sendL2Message(address chain, bytes calldata messageData) external;
+    function sendL2Message(bytes calldata messageData) external;
 
-    function depositEthMessage(address chain, address to) external payable;
+    function depositEthMessage(address to) external payable;
 
     function deployL2ContractPair(
-        address chain,
         uint256 maxGas,
         uint256 gasPriceBid,
         uint256 payment,

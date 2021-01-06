@@ -6,9 +6,8 @@ import "./RollupLib.sol";
 import "./Inbox.sol";
 import "./Outbox.sol";
 
-import "../inbox/IGlobalInbox.sol";
-import "../new_challenge/ChallengeLib.sol";
-import "../new_challenge/IChallengeFactory.sol";
+import "../challenge/ChallengeLib.sol";
+import "../challenge/IChallengeFactory.sol";
 
 contract Rollup is Inbox, Outbox {
     event SentLogs(bytes32 logsAccHash);
@@ -42,14 +41,14 @@ contract Rollup is Inbox, Outbox {
 
     uint256 arbGasSpeedLimitPerBlock;
 
-    IGlobalInbox public globalInbox;
     IChallengeFactory public challengeFactory;
 
-    constructor(bytes32 machineHash) public {
+    constructor(bytes32 _machineHash, address _challengeFactory) public {
+        challengeFactory = IChallengeFactory(_challengeFactory);
         bytes32 state = RollupLib.nodeStateHash(
             block.number, // block proposed
             0,
-            machineHash,
+            _machineHash,
             0, // inbox top
             0, // inbox count
             0, // send count

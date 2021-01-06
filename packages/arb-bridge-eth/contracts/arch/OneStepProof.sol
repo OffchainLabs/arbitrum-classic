@@ -21,6 +21,10 @@ pragma solidity ^0.5.11;
 import "./IOneStepProof.sol";
 import "./OneStepProofCommon.sol";
 
+import "../rollup/Messages.sol";
+
+import "../libraries/Precompiles.sol";
+
 // Originally forked from https://github.com/leapdao/solEVM-enforcer/tree/master
 
 contract OneStepProof is IOneStepProof, OneStepProofCommon {
