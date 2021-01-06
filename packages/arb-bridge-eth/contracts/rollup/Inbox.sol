@@ -42,8 +42,8 @@ contract Inbox is IInbox {
     uint8 internal constant INITIALIZATION_MSG = 4;
     uint8 internal constant L2_CONTRACT_PAIR = 5;
 
-    bytes32 inboxMaxValue;
-    uint256 inboxMaxCount;
+    bytes32 public inboxMaxValue;
+    uint256 public inboxMaxCount;
 
     /**
      * @notice Send a generic L2 message to the chain

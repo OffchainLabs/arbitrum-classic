@@ -19,5 +19,7 @@
 pragma solidity ^0.5.11;
 
 interface IRollup {
+    event RollupChallengeStarted(address asserter, address challenger, address challengeContract);
+
     function completeChallenge(address winningStaker, address payable losingStaker) external;
 }

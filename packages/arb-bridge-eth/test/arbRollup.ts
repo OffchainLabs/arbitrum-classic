@@ -28,6 +28,8 @@ import { ArbValue } from 'arb-provider-ethers'
 import deploy_contracts from '../scripts/deploy'
 import { initializeAccounts } from './utils'
 
+import { NodeState, Assertion, RollupContract } from './rolluplib'
+
 chai.use(chaiAsPromised)
 
 const { ethers } = bre
@@ -43,11 +45,10 @@ const challengePeriodBlocks = 100
 const arbGasSpeedLimitPerBlock = 1000000
 
 let rollupCreator: RollupCreator
-let rollup: Rollup
+let rollup: RollupContract
 let challenge: Challenge
 // let rollupTester: RollupTester
 // let assertionInfo: Assertion
-let originalNode: string
 let accounts: Signer[]
 
 async function createRollup(): Promise<{
@@ -101,111 +102,14 @@ async function tryAdvanceChain(blocks: number): Promise<void> {
   }
 }
 
-class NodeState {
-  constructor(
-    public proposedBlock: utils.BigNumberish,
-    public stepsRun: utils.BigNumberish,
-    public machineHash: string,
-    public inboxTop: string,
-    public inboxCount: utils.BigNumberish,
-    public sendCount: utils.BigNumberish,
-    public logCount: utils.BigNumberish,
-    public inboxMaxCount: utils.BigNumberish
-  ) {}
-
-  hash(): string {
-    return ethers.utils.solidityKeccak256(
-      [
-        'uint256',
-        'uint256',
-        'bytes32',
-        'bytes32',
-        'uint256',
-        'uint256',
-        'uint256',
-        'uint256',
-      ],
-      [
-        this.proposedBlock,
-        this.stepsRun,
-        this.machineHash,
-        this.inboxTop,
-        this.inboxCount,
-        this.sendCount,
-        this.logCount,
-        this.inboxMaxCount,
-      ]
-    )
-  }
+function makeSimpleAssertion(
+  prevNodeState: NodeState,
+  numGas: utils.BigNumberish
+): Assertion {
+  return new Assertion(prevNodeState, 100, numGas, zerobytes32, [], [], [])
 }
 
-function buildAccumulator(base: string, hashes: string[]): string {
-  let acc = base
-  for (const h of hashes) {
-    acc = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [acc, h])
-  }
-  return acc
-}
-
-class Assertion {
-  public inboxDelta: string
-  public inboxMessagesRead: utils.BigNumberish
-  public sendAcc: string
-  public sendCount: utils.BigNumberish
-  public logAcc: string
-  public logCount: utils.BigNumberish
-  public afterInboxHash: string
-
-  constructor(
-    public prevNodeState: NodeState,
-    public stepsExecuted: utils.BigNumberish,
-    public gasUsed: utils.BigNumberish,
-    public afterMachineHash: string,
-    messages: string[],
-    sends: string[],
-    logs: string[]
-  ) {
-    this.inboxDelta = buildAccumulator(zerobytes32, messages.reverse())
-    this.inboxMessagesRead = messages.length
-    this.afterInboxHash = buildAccumulator(prevNodeState.inboxTop, messages)
-
-    this.sendAcc = buildAccumulator(zerobytes32, sends)
-    this.sendCount = sends.length
-
-    this.logAcc = buildAccumulator(zerobytes32, logs)
-    this.logCount = logs.length
-  }
-
-  bytes32Fields(): string[] {
-    return [
-      this.prevNodeState.machineHash,
-      this.prevNodeState.inboxTop,
-      this.inboxDelta,
-      this.sendAcc,
-      this.logAcc,
-      this.afterInboxHash,
-      this.afterMachineHash,
-    ]
-  }
-
-  intFields(): utils.BigNumberish[] {
-    return [
-      this.prevNodeState.proposedBlock,
-      this.prevNodeState.stepsRun,
-      this.prevNodeState.inboxCount,
-      this.prevNodeState.sendCount,
-      this.prevNodeState.logCount,
-      this.prevNodeState.inboxMaxCount,
-      this.stepsExecuted,
-      this.inboxMessagesRead,
-      this.gasUsed,
-      this.sendCount,
-      this.logCount,
-    ]
-  }
-}
-
-let initialNodeState: NodeState
+let prevNodeState: NodeState
 
 describe('ArbRollup', () => {
   it('should deploy contracts', async function () {
@@ -218,46 +122,16 @@ describe('ArbRollup', () => {
     // await rollupTester.deployed()
   })
 
-  // it('should not be able to shut down the template', async () => {
-  //   const template = await arbFactory.rollupTemplate()
-  //   const ArbRollup = await ethers.getContractFactory('ArbRollup')
-  //   const templateRollup = ArbRollup.attach(template) as ArbRollup
-  //   await templateRollup.init(
-  //     initialVmState, // vmState
-  //     gracePeriodTicks, // gracePeriodTicks
-  //     1000000, // arbGasSpeedLimitPerTick
-  //     maxExecutionSteps, // maxExecutionSteps
-  //     stakeRequirement, // stakeRequirement
-  //     stakeToken,
-  //     await accounts[0].getAddress(), // owner
-  //     await arbFactory.challengeFactoryAddress(),
-  //     await arbFactory.globalInboxAddress(),
-  //     '0x'
-  //   )
-  //   await expect(templateRollup.owner()).to.eventually.equal(
-  //     await accounts[0].getAddress()
-  //   )
-  //   await expect(templateRollup.ownerShutdown()).to.be.revertedWith('NOT_CLONE')
-  // })
-
-  // it('should be able to shut down a clone', async () => {
-  //   const rollup = await createRollup()
-  //   await expect(rollup.owner()).to.eventually.equal(
-  //     await accounts[0].getAddress()
-  //   )
-  //   await rollup.ownerShutdown()
-  // })
-
   it('should initialize', async function () {
     const { rollupCon, blockCreated } = await createRollup()
-    rollup = rollupCon
-    originalNode = await rollup.latestConfirmed()
+    rollup = new RollupContract(rollupCon)
+    const originalNode = await rollup.latestConfirmed()
     const nodeAddress = await rollup.nodes(originalNode)
 
     const Node = await ethers.getContractFactory('Node')
     const node = Node.attach(nodeAddress) as Node
 
-    initialNodeState = new NodeState(
+    prevNodeState = new NodeState(
       blockCreated,
       0,
       initialVmState,
@@ -270,350 +144,142 @@ describe('ArbRollup', () => {
 
     assert.equal(
       await node.stateHash(),
-      initialNodeState.hash(),
+      prevNodeState.hash(),
       'initial confirmed node should have set initial state'
     )
   })
 
-  it('it should place stake on new node', async function () {
+  it('should place stake on new node', async function () {
     const block = await ethers.provider.getBlock('latest')
     await tryAdvanceChain(challengePeriodBlocks / 10)
-    const assertion = new Assertion(
-      initialNodeState,
-      100,
-      100,
-      zerobytes32,
-      [],
-      [],
-      []
-    )
-    await rollup.newStakeOnNewNode(
-      block.hash,
-      block.number,
-      1, // new node num
-      0, // prev node num
-      assertion.bytes32Fields(),
-      assertion.intFields(),
-      { value: 10 }
-    )
+    const assertion = makeSimpleAssertion(prevNodeState, 100)
+    const tx = await rollup.newStakeOnNewNode(block, assertion, 1, 0, {
+      value: 10,
+    })
+
+    const receipt = await tx.wait()
+    prevNodeState = assertion.createdNodeState(receipt.blockNumber!, 1)
   })
 
-  it('it should confirm node', async function () {
+  it('should let a new staker place on existing node', async function () {
+    const block = await ethers.provider.getBlock('latest')
+    await rollup
+      .connect(accounts[1])
+      .newStakeOnExistingNode(block, 1, { value: 10 })
+  })
+
+  it('should move stake to a new node', async function () {
+    await tryAdvanceChain(challengePeriodBlocks / 10)
+    const block = await ethers.provider.getBlock('latest')
+    const assertion = makeSimpleAssertion(
+      prevNodeState,
+      (block.number - prevNodeState.proposedBlock + 1) *
+        arbGasSpeedLimitPerBlock
+    )
+    const tx = await rollup.addStakeOnNewNode(block, assertion, 2)
+    const receipt = await tx.wait()
+    prevNodeState = assertion.createdNodeState(receipt.blockNumber!, 1)
+  })
+
+  it('should let the second staker place on the new node', async function () {
+    const block = await ethers.provider.getBlock('latest')
+    await rollup.connect(accounts[1]).addStakeOnExistingNode(block, 2)
+  })
+
+  it('should confirm node', async function () {
     await tryAdvanceChain(challengePeriodBlocks)
-    await rollup.confirmNextNode(zerobytes32, '0x', [])
+    await rollup.confirmNextNode(zerobytes32, [])
   })
 
-  // it('should fail to assert on invalid leaf', async () => {
-  //   await expect(
-  //     makeEmptyAssertion(
-  //       arbRollup,
-  //       '0x3400000000000000000000000000000000000000000000000000000000000000',
-  //       0,
-  //       0
-  //     )
-  //   ).to.be.revertedWith('MAKE_LEAF')
-  // })
+  it('should confirm next node', async function () {
+    await tryAdvanceChain(challengePeriodBlocks / 10)
+    await rollup.confirmNextNode(zerobytes32, [])
+  })
 
-  // it("should fail to assert on halted vm", async () => {
-  //   truffleAssert.reverts(makeEmptyAssertion("0x00", 0, 0), "MAKE_RUN");
-  // })
+  let challengedAssertion: Assertion
+  let validNodeState: NodeState
+  it('should let the first staker make another node', async function () {
+    await tryAdvanceChain(challengePeriodBlocks / 10)
+    const block = await ethers.provider.getBlock('latest')
+    challengedAssertion = makeSimpleAssertion(
+      prevNodeState,
+      (block.number - prevNodeState.proposedBlock + 1) *
+        arbGasSpeedLimitPerBlock
+    )
+    const tx = await rollup.addStakeOnNewNode(block, challengedAssertion, 3)
+    const receipt = await tx.wait()
+    validNodeState = challengedAssertion.createdNodeState(
+      receipt.blockNumber!,
+      1
+    )
+  })
 
-  // it('should fail to assert over step limit', async () => {
-  //   await expect(
-  //     makeEmptyAssertion(arbRollup, initialVmState, maxExecutionSteps + 1, 0)
-  //   ).to.be.revertedWith('MAKE_STEP')
-  // })
+  it('should let the second staker make a conflicting node', async function () {
+    await tryAdvanceChain(challengePeriodBlocks / 10)
+    const block = await ethers.provider.getBlock('latest')
+    const assertion = makeSimpleAssertion(
+      prevNodeState,
+      (block.number - prevNodeState.proposedBlock + 1) *
+        arbGasSpeedLimitPerBlock
+    )
+    await rollup.connect(accounts[1]).addStakeOnNewNode(block, assertion, 4)
+  })
 
-  // it('should fail to assert without stake', async () => {
-  //   await expect(
-  //     makeEmptyAssertion(arbRollup, initialVmState, 0, 0)
-  //   ).to.be.revertedWith('INV_STAKER')
-  // })
+  it('should fail to confirm first staker node', async function () {
+    await tryAdvanceChain(
+      challengePeriodBlocks +
+        challengedAssertion.checkTime(arbGasSpeedLimitPerBlock)
+    )
+    await expect(rollup.confirmNextNode(zerobytes32, [])).to.be.revertedWith(
+      'NOT_ALL_STAKED'
+    )
+  })
 
-  // it('should fail if reading past lastest inbox message', async () => {
-  //   await expect(
-  //     makeEmptyAssertion(arbRollup, initialVmState, 0, 10)
-  //   ).to.be.revertedWith('MAKE_MESSAGE_CNT')
-  // })
+  let challenge: Challenge
+  it('should initiate a challenge', async function () {
+    const tx = rollup.createChallenge(
+      await accounts[0].getAddress(),
+      3,
+      await accounts[1].getAddress(),
+      4,
+      challengedAssertion,
+      await rollup.inboxMaxValue(),
+      1
+    )
+    expect(tx).to.emit(rollup, 'RollupChallengeStarted')
+    const receipt = await (await tx).wait()
+    const ev = rollup.rollup.interface.parseLog(
+      receipt.logs![receipt.logs!.length - 1]
+    )
+    const Challenge = await ethers.getContractFactory('Challenge')
+    challenge = Challenge.attach(ev.values.challengeContract) as Challenge
+  })
 
-  // it('should create a stake', async () => {
-  //   await expect(arbRollup.isStaked(await accounts[0].getAddress())).to
-  //     .eventually.be.false
-  //   await expect(
-  //     arbRollup.connect(accounts[0]).placeStake([], [], {
-  //       value: stakeRequirement,
-  //     })
-  //   ).to.emit(arbRollup, 'RollupStakeCreated')
-  //   await expect(arbRollup.isStaked(await accounts[0].getAddress())).to
-  //     .eventually.be.true
-  // })
+  it('should win via timeout', async function () {
+    await tryAdvanceChain(
+      challengePeriodBlocks +
+        challengedAssertion.checkTime(arbGasSpeedLimitPerBlock) +
+        1
+    )
+    await challenge.timeout()
+  })
 
-  // it('should create a second stake', async () => {
-  //   await expect(
-  //     arbRollup.connect(accounts[1]).placeStake([], [], {
-  //       value: stakeRequirement,
-  //     })
-  //   ).to.emit(arbRollup, 'RollupStakeCreated')
-  // })
+  it('confirm first staker node', async function () {
+    await rollup.confirmNextNode(zerobytes32, [])
+  })
 
-  // it('should make an assertion', async () => {
-  //   assert.isTrue(
-  //     await arbRollup.isValidLeaf(originalNode),
-  //     'latest confirmed should be leaf before asserting'
-  //   )
-  //   const prevProtoData = new VMProtoData(initialVmState, zerobytes32, 0, 0, 0)
-  //   const params = new AssertionParams(0, ethers.utils.bigNumberify(0))
-  //   const execAssertion = new ExecutionAssertion(
-  //     '0x8500000000000000000000000000000000000000000000000000000000000000',
-  //     zerobytes32,
-  //     0,
-  //     [],
-  //     []
-  //   )
-  //   const block = await ethers.provider.getBlock('latest')
-  //   const info = await makeAssertion(
-  //     arbRollup,
-  //     zerobytes32,
-  //     prevProtoData,
-  //     0,
-  //     zerobytes32,
-  //     0,
-  //     params,
-  //     execAssertion,
-  //     [],
-  //     block.hash,
-  //     block.number
-  //   )
+  it('should reject out of order second node', async function () {
+    await rollup.rejectNextNodeOutOfOrder()
+  })
 
-  //   assertionInfo = info.assertion
-
-  //   assert.isFalse(
-  //     await arbRollup.isValidLeaf(assertionInfo.prevNodeHash()),
-  //     'originalNode confirmed should be removed as leaf'
-  //   )
-  //   assert.isTrue(
-  //     await arbRollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
-  //     'invalid inbox top should be leaf'
-  //   )
-  //   // TODO: Check whether invalid execution is leaf
-  //   assert.isTrue(
-  //     await arbRollup.isValidLeaf(assertionInfo.validHash()),
-  //     'valid child should be leaf'
-  //   )
-  // })
-
-  // it('should allow the second staker to move to conflicting node', async () => {
-  //   await expect(
-  //     arbRollup
-  //       .connect(accounts[1])
-  //       .moveStake([assertionInfo.invalidInboxTopHashInner()], [])
-  //   )
-  //     .to.emit(arbRollup, 'RollupStakeMoved')
-  //     .withArgs(
-  //       await accounts[1].getAddress(),
-  //       assertionInfo.invalidInboxTopHash()
-  //     )
-  // })
-
-  // it('should allow the creation of a challenge', async () => {
-  //   const txPromise = arbRollup.startChallenge(
-  //     await accounts[0].getAddress(),
-  //     await accounts[1].getAddress(),
-  //     assertionInfo.prevNodeHash(),
-  //     assertionInfo.deadline(),
-  //     [2, 0],
-  //     [
-  //       assertionInfo.updatedProtoData().hash(),
-  //       assertionInfo.prevProtoData.hash(),
-  //     ],
-  //     [],
-  //     [],
-  //     assertionInfo.validDataHash(),
-  //     assertionInfo.invalidInboxTopDataHash(),
-  //     assertionInfo.challengePeriod()
-  //   )
-  //   const receipt = await (await txPromise).wait()
-  //   if (receipt.logs === undefined) {
-  //     throw Error('logs must be defined')
-  //   }
-  //   expect(receipt.logs).to.have.lengthOf(2)
-  //   const logs = receipt.logs.map((log: providers.Log) =>
-  //     arbRollup.interface.parseLog(log)
-  //   )
-  //   const ev = logs[1]
-  //   expect(ev.name).equals('RollupChallengeStarted')
-  //   const challengeContract = ev.values.challengeContract
-
-  //   const InboxTopChallenge = await ethers.getContractFactory(
-  //     'InboxTopChallenge'
-  //   )
-  //   challenge = InboxTopChallenge.attach(challengeContract) as InboxTopChallenge
-  // })
-
-  // it('should timeout the challenge', async () => {
-  //   await tryAdvanceChain(3)
-  //   await challenge.timeoutChallenge()
-  // })
-
-  // it('should confirm invalid inbox top node', async () => {
-  //   await tryAdvanceChain(3)
-  //   await expect(
-  //     arbRollup.confirm(
-  //       assertionInfo.prevProtoData.hash(),
-  //       assertionInfo.prevProtoData.messageCount,
-  //       [0],
-  //       [assertionInfo.deadline()],
-  //       [assertionInfo.invalidInboxTopChallengeHash()],
-  //       [],
-  //       [],
-  //       [],
-  //       '0x',
-  //       [await accounts[1].getAddress()].sort(),
-  //       [],
-  //       [0, 0]
-  //     )
-  //   ).to.emit(arbRollup, 'RollupConfirmed')
-
-  //   assert.equal(
-  //     await arbRollup.latestConfirmed(),
-  //     assertionInfo.invalidInboxTopHash(),
-  //     'latest confirmed should now be invalid inbox child'
-  //   )
-
-  //   assert.isTrue(
-  //     await arbRollup.isValidLeaf(assertionInfo.invalidInboxTopHash()),
-  //     'invalid inbox top should be leaf'
-  //   )
-  // })
-
-  // it('should prune a leaf', async () => {
-  //   assert.isTrue(
-  //     await arbRollup.isValidLeaf(assertionInfo.validHash()),
-  //     'valid node should be leaf'
-  //   )
-  //   await expect(
-  //     arbRollup.pruneLeaves(
-  //       [originalNode],
-  //       [assertionInfo.validHashInner()],
-  //       [1],
-  //       [assertionInfo.invalidInboxTopHashInner()],
-  //       [1]
-  //     )
-  //   ).to.emit(arbRollup, 'RollupPruned')
-
-  //   assert.isFalse(
-  //     await arbRollup.isValidLeaf(assertionInfo.validHashInner()),
-  //     'valid node should no longer be leaf'
-  //   )
-  // })
-
-  // it('should assert again', async () => {
-  //   const params = new AssertionParams(0, ethers.utils.bigNumberify(0))
-  //   const execAssertion = new ExecutionAssertion(
-  //     zerobytes32,
-  //     zerobytes32,
-  //     0,
-  //     [new ArbValue.TupleValue([new ArbValue.IntValue(10)])],
-  //     []
-  //   )
-
-  //   const { prevLeaf, vmProtoHashBefore } = await computePrevLeaf(
-  //     rollupTester,
-  //     assertionInfo.prevNodeHash(),
-  //     assertionInfo.prevProtoData,
-  //     assertionInfo.deadline(),
-  //     assertionInfo.invalidInboxTopChallengeHash(),
-  //     0,
-  //     params,
-  //     execAssertion
-  //   )
-
-  //   expect(vmProtoHashBefore, 'wrong vmProtoHashBefore').to.equal(
-  //     assertionInfo.prevProtoData.hash()
-  //   )
-  //   expect(prevLeaf, 'wrong prevLeaf').to.equal(
-  //     assertionInfo.invalidInboxTopHash()
-  //   )
-
-  //   assert.isTrue(
-  //     await arbRollup.isValidLeaf(prevLeaf),
-  //     'invalid inbox node should be leaf'
-  //   )
-
-  //   const block = await ethers.provider.getBlock('latest')
-  //   assertionInfo = (
-  //     await makeAssertion(
-  //       arbRollup.connect(accounts[1]),
-  //       assertionInfo.prevNodeHash(),
-  //       assertionInfo.prevProtoData,
-  //       assertionInfo.deadline(),
-  //       assertionInfo.invalidInboxTopChallengeHash(),
-  //       0,
-  //       params,
-  //       execAssertion,
-  //       [],
-  //       block.hash,
-  //       block.number
-  //     )
-  //   ).assertion
-  // })
-
-  // it('should confirm valid node', async () => {
-  //   await tryAdvanceChain(3)
-  //   const { validNodeHashes, lastNodeHash } = await rollupTester.confirm(
-  //     await arbRollup.latestConfirmed(),
-  //     assertionInfo.prevProtoData.hash(),
-  //     assertionInfo.prevProtoData.messageCount,
-  //     [2],
-  //     [assertionInfo.deadline()],
-  //     [],
-  //     [assertionInfo.assertion.outLogsAcc()],
-  //     [assertionInfo.updatedProtoData().hash()],
-  //     [assertionInfo.assertion.outMessages.length],
-  //     assertionInfo.assertion.outMessagesData()
-  //   )
-
-  //   expect(validNodeHashes.length).to.equal(1)
-  //   expect(validNodeHashes[0]).to.equal(assertionInfo.validHash())
-
-  //   assert.equal(
-  //     lastNodeHash,
-  //     assertionInfo.validHash(),
-  //     'calculated last node should be the valid node'
-  //   )
-
-  //   await expect(
-  //     arbRollup.confirm(
-  //       assertionInfo.prevProtoData.hash(),
-  //       assertionInfo.prevProtoData.messageCount,
-  //       [2],
-  //       [assertionInfo.deadline()],
-  //       [],
-  //       [assertionInfo.assertion.outLogsAcc()],
-  //       [assertionInfo.updatedProtoData().hash()],
-  //       [assertionInfo.assertion.outMessages.length],
-  //       assertionInfo.assertion.outMessagesData(),
-  //       [await accounts[1].getAddress()].sort(),
-  //       [],
-  //       [0, 0]
-  //     )
-  //   ).to.emit(arbRollup, 'RollupConfirmed')
-
-  //   assert.equal(
-  //     await arbRollup.latestConfirmed(),
-  //     assertionInfo.validHash(),
-  //     'latest confirmed should now be valid child'
-  //   )
-
-  //   assert.isTrue(
-  //     await arbRollup.isValidLeaf(assertionInfo.validHash()),
-  //     'valid child should be leaf'
-  //   )
-  // })
-
-  // it('should allow second staker to withdraw', async () => {
-  //   await expect(arbRollup.connect(accounts[1]).recoverStakeConfirmed([]))
-  //     .to.emit(arbRollup, 'RollupStakeRefunded')
-  //     .withArgs(await accounts[1].getAddress())
-  // })
+  it('should make a new node', async function () {
+    await tryAdvanceChain(challengePeriodBlocks / 10)
+    const block = await ethers.provider.getBlock('latest')
+    const assertion = makeSimpleAssertion(
+      validNodeState,
+      (block.number - validNodeState.proposedBlock + 1) *
+        arbGasSpeedLimitPerBlock
+    )
+    await rollup.addStakeOnNewNode(block, assertion, 5)
+  })
 })
