@@ -264,16 +264,14 @@ contract Challenge is Cloneable, IChallenge {
         bytes calldata _proof,
         bytes32 _oldEndHash,
         bytes32[] calldata _chainHashes,
-        uint256 _chainLength
+        uint256 _chainLength,
+        bytes32 _bisectionHash,
     ) external executionChallenge onlyOnTurn {
         require(_chainLength > 1, "TOO_SHORT");
         require(_chainHashes.length == bisectionDegree(_chainLength), "BISECT_DEGREE");
         require(_chainHashes[_chainHashes.length - 1] != _oldEndHash, "SAME_END");
 
-        bytes32 bisectionHash =
-            ChallengeLib.bisectionChunkHash(_chainLength, _chainHashes[0], _oldEndHash);
-
-        verifySegmentProof(_proof, bisectionHash, _segmentToChallenge);
+        verifySegmentProof(_proof, _bisectionHash, _segmentToChallenge);
     }
 
     function bisectExecution(
@@ -284,15 +282,19 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _chainLength,
         uint256[4] segmentPreFields,
     ) external executionChallenge onlyOnTurn {
-        _verifyBisection(_segmentToChallenge, _proof, _oldEndHash, _chainHashes, _chainLength);
         require(_chainLength > 1, "TOO SHORT");
 
         require(_chainHashes[0] == ChallengeLib.assertionHash(
-            segmentPreFields[0],
-            segmentPreFields[1],
-            segmentPreFields[2],
-            segmentPreFields[3]
+            _segmentPreFields[0],
+            _segmentPreFields[1],
+            _segmentPreFields[2],
+            _segmentPreFields[3]
         ), "segment pre-fields");
+
+        bytes32 bisectionHash =
+            ChallengeLib.bisectionChunkHash(_chainLength, _chainHashes[0], _oldEndHash);
+        _verifyBisection(_segmentToChallenge, _proof, _oldEndHash, _chainHashes, _chainLength, bisectionHash);
+
         uint256 segmentStartGas = segmentPreFields[1];
 
         require(_chainLength + gasBefore > segmentStartGas, "invalid segment length");
@@ -301,6 +303,34 @@ contract Challenge is Cloneable, IChallenge {
 
         responded(executionCheckTimeBlocks);
         emit Bisected(_segmentToChallenge, _chainHashes, _chainLength, deadlineBlock);
+    }
+
+    function constraintWinExecution(
+        uint256 _segmentToChallenge,
+        bytes calldata _proof,
+        bytes32 _oldEndHash,
+        bytes32 _beforeChainHash,
+        bytes32 _afterChainHash,
+        uint256[4] _beforeFields,
+        uint256 _chainLength,
+    ) external executionChallenge onlyOnTurn {
+        require(_chainLength > 1, "TOO SHORT");
+
+        require(_beforeChainHash == ChallengeLib.assertionHash(
+            _beforeFields[0],
+            _beforeFields[1],
+            _beforeFields[2],
+            _beforeFields[3]
+        ), "segment pre-fields");
+
+        bytes32 bisectionHash =
+            ChallengeLib.bisectionChunkHash(_chainLength, _beforeChainHash, _afterChainHash);
+        verifySegmentProof(_proof, bisectionHash, _segmentToChallenge);
+
+        require(_beforeFields[1] >= gasBefore + _chainLength);
+        require(_beforeChainHash != _afterChainHash);
+        emit ConstraintWin();
+        _currentWin();
     }
 
     // machineFields
@@ -319,6 +349,7 @@ contract Challenge is Cloneable, IChallenge {
     ) public executionChallenge onlyOnTurn {
         uint64 gasUsed;
         bytes32[5] memory proofFields;
+
         if (_bufferProof.length == 0) {
             (gasUsed, proofFields) = executor.executeStep(_machineFields, _executionProof);
         } else {
@@ -331,7 +362,7 @@ contract Challenge is Cloneable, IChallenge {
 
         bytes32 rootHash =
             ChallengeLib.bisectionChunkHash(
-                1,
+                gasUsed,
                 oneStepProofExecutionBefore(
                     _machineFields,
                     _initialGasUsed,
@@ -349,7 +380,7 @@ contract Challenge is Cloneable, IChallenge {
                 )
             );
 
-        verifySegmentProof(_proof, rootHash, _segmentToChallenge);
+        _verifyBisection(_segmentToChallenge, _proof, _oldEndHash, _chainHashes, _chainLength, rootHash);
 
         emit OneStepProofCompleted();
         _currentWin();
