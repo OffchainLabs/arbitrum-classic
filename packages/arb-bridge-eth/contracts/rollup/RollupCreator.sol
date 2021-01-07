@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "./Rollup.sol";
 
@@ -24,9 +24,11 @@ contract RollupCreator {
     event RollupCreated(address rollupAddress);
 
     address challengeFactory;
+    address nodeFactory;
 
-    constructor(address _challengeFactory) public {
+    constructor(address _challengeFactory, address _nodeFactory) public {
         challengeFactory = _challengeFactory;
+        nodeFactory = _nodeFactory;
     }
 
     function createRollup(
@@ -38,16 +40,18 @@ contract RollupCreator {
         address _owner,
         bytes calldata _extraConfig
     ) external returns (Rollup) {
-        Rollup rollup = new Rollup(
-            _machineHash,
-            _challengePeriodBlocks,
-            _arbGasSpeedLimitPerBlock,
-            _baseStake,
-            _stakeToken,
-            _owner,
-            challengeFactory,
-            _extraConfig
-        );
+        Rollup rollup =
+            new Rollup(
+                _machineHash,
+                _challengePeriodBlocks,
+                _arbGasSpeedLimitPerBlock,
+                _baseStake,
+                _stakeToken,
+                _owner,
+                challengeFactory,
+                nodeFactory,
+                _extraConfig
+            );
         emit RollupCreated(address(rollup));
         return rollup;
     }

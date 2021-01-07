@@ -1,11 +1,29 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.5.17;
+
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+pragma solidity ^0.6.11;
 
 import "./IRollup.sol";
 import "./Node.sol";
 import "./RollupLib.sol";
 import "./Inbox.sol";
 import "./Outbox.sol";
+import "./INodeFactory.sol";
 
 import "../challenge/ChallengeLib.sol";
 import "../challenge/IChallengeFactory.sol";
@@ -14,6 +32,7 @@ contract Rollup is Inbox, Outbox, IRollup {
     event SentLogs(bytes32 logsAccHash);
 
     struct Staker {
+        uint256 index;
         uint256 latestStakedNode;
         uint256 amountStaked;
         // currentChallenge is 0 if staker is not in a challenge
@@ -31,11 +50,13 @@ contract Rollup is Inbox, Outbox, IRollup {
 
     uint256 public latestConfirmed;
     uint256 firstUnresolvedNode;
-    uint256 latestNodeCreated;
+    uint256 public latestNodeCreated;
     mapping(uint256 => Node) public nodes;
     uint256 lastStakeBlock;
     uint256 stakerCount;
-    mapping(address => Staker) stakers;
+
+    address payable[] stakerList;
+    mapping(address => Staker) stakerMap;
 
     // Rollup Config
     uint256 challengePeriodBlocks;
@@ -44,6 +65,7 @@ contract Rollup is Inbox, Outbox, IRollup {
     address stakeToken;
 
     IChallengeFactory public challengeFactory;
+    INodeFactory public nodeFactory;
 
     modifier onlyIfUnresolved {
         require(
@@ -61,26 +83,33 @@ contract Rollup is Inbox, Outbox, IRollup {
         address _stakeToken,
         address _owner,
         address _challengeFactory,
+        address _nodeFactory,
         bytes memory _extraConfig
     ) public {
         challengeFactory = IChallengeFactory(_challengeFactory);
-        bytes32 state = RollupLib.nodeStateHash(
-            block.number, // block proposed
-            0,
-            _machineHash,
-            0, // inbox top
-            0, // inbox count
-            0, // send count
-            0, // log count
-            0 // inbox max couny
-        );
-        Node node = new Node(
-            state,
-            0, // challenge hash (not challengeable)
-            0, // confirm data
-            0, // prev node
-            0 // deadline block (not challengeable)
-        );
+        nodeFactory = INodeFactory(_nodeFactory);
+
+        bytes32 state =
+            RollupLib.nodeStateHash(
+                block.number, // block proposed
+                0,
+                _machineHash,
+                0, // inbox top
+                0, // inbox count
+                0, // send count
+                0, // log count
+                0 // inbox max couny
+            );
+        Node node =
+            Node(
+                nodeFactory.createNode(
+                    state,
+                    0, // challenge hash (not challengeable)
+                    0, // confirm data
+                    0, // prev node
+                    0 // deadline block (not challengeable)
+                )
+            );
         nodes[0] = node;
 
         challengePeriodBlocks = _challengePeriodBlocks;
@@ -106,17 +135,19 @@ contract Rollup is Inbox, Outbox, IRollup {
         external
         onlyIfUnresolved
     {
+        require(successorWithStake > firstUnresolvedNode, "SUCCESSOR_TO_LOW");
+        require(successorWithStake <= latestNodeCreated, "SUCCESSOR_TO_HIGH");
         // No stake has been placed during the last challengePeriod blocks
-        require(block.number - lastStakeBlock >= challengePeriodBlocks);
+        require(block.number - lastStakeBlock >= challengePeriodBlocks, "RECENT_STAKE");
 
-        require(!stakers[stakerAddress].isZombie);
+        require(!stakerMap[stakerAddress].isZombie, "ZOMBIE");
 
         // Confirm that someone is staked on some sibling node
         Node stakedSiblingNode = nodes[successorWithStake];
         // stakedSiblingNode is a child of latestConfirmed
-        require(stakedSiblingNode.prev() == latestConfirmed);
+        require(stakedSiblingNode.prev() == latestConfirmed, "BAD_SUCCESSOR");
         // staker is actually staked on stakedSiblingNode
-        require(stakedSiblingNode.stakers(stakerAddress));
+        require(stakedSiblingNode.stakers(stakerAddress), "BAD_STAKER");
 
         Node node = nodes[firstUnresolvedNode];
         node.checkConfirmInvalid();
@@ -175,7 +206,7 @@ contract Rollup is Inbox, Outbox, IRollup {
     ) external {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         checkValidNodeNumForStake(nodeNum);
-        Staker storage staker = stakers[msg.sender];
+        Staker storage staker = stakerMap[msg.sender];
         require(!staker.isZombie, "ZOMBIE");
         Node node = nodes[nodeNum];
         require(staker.latestStakedNode == node.prev(), "NOT_STAKED_PREV");
@@ -195,10 +226,8 @@ contract Rollup is Inbox, Outbox, IRollup {
         require(nodeNum == latestNodeCreated + 1, "NODE_NUM");
         require(prev == latestConfirmed, "PREV");
 
-        RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(
-            assertionBytes32Fields,
-            assertionIntFields
-        );
+        RollupLib.Assertion memory assertion =
+            RollupLib.decodeAssertion(assertionBytes32Fields, assertionIntFields);
 
         Node node = createNewNode(assertion, prev);
 
@@ -216,13 +245,11 @@ contract Rollup is Inbox, Outbox, IRollup {
     ) external {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         require(nodeNum == latestNodeCreated + 1, "NODE_NUM");
-        Staker storage staker = stakers[msg.sender];
+        Staker storage staker = stakerMap[msg.sender];
         require(!staker.isZombie, "ZOMBIE");
 
-        RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(
-            assertionBytes32Fields,
-            assertionIntFields
-        );
+        RollupLib.Assertion memory assertion =
+            RollupLib.decodeAssertion(assertionBytes32Fields, assertionIntFields);
 
         Node node = createNewNode(assertion, staker.latestStakedNode);
 
@@ -233,23 +260,27 @@ contract Rollup is Inbox, Outbox, IRollup {
     }
 
     function returnOldDeposit(address payable stakerAddress) external {
-        Staker storage staker = stakers[stakerAddress];
+        Staker storage staker = stakerMap[stakerAddress];
         checkUnchallengedStaker(staker);
-        require(staker.latestStakedNode <= latestConfirmed);
-
-        delete stakers[stakerAddress];
+        require(staker.latestStakedNode <= latestConfirmed, "TOO_RECENT");
+        uint256 stakerIndex = staker.index;
+        stakerList[stakerIndex] = stakerList[stakerList.length - 1];
+        stakerMap[stakerList[stakerIndex]].index = stakerIndex;
+        stakerList.pop();
+        uint256 amountStaked = staker.amountStaked;
+        delete stakerMap[stakerAddress];
         // TODO: Staker could force transfer to revert. We may want to allow funds to be withdrawn separately
-        stakerAddress.transfer(staker.amountStaked);
+        stakerAddress.transfer(amountStaked);
     }
 
     function addToDeposit() external payable {
-        Staker storage staker = stakers[msg.sender];
+        Staker storage staker = stakerMap[msg.sender];
         checkUnchallengedStaker(staker);
         staker.amountStaked += msg.value;
     }
 
     function reduceDeposit(uint256 maxReduction) external {
-        Staker storage staker = stakers[msg.sender];
+        Staker storage staker = stakerMap[msg.sender];
         checkUnchallengedStaker(staker);
         uint256 currentRequired = currentRequiredStake();
         require(staker.amountStaked > currentRequired);
@@ -262,7 +293,7 @@ contract Rollup is Inbox, Outbox, IRollup {
     }
 
     function removeZombieStaker(uint256 nodeNum, address stakerAddress) external {
-        require(stakers[stakerAddress].isZombie);
+        require(stakerMap[stakerAddress].isZombie);
         nodes[nodeNum].removeStaker(stakerAddress);
     }
 
@@ -285,9 +316,12 @@ contract Rollup is Inbox, Outbox, IRollup {
         );
     }
 
-    function completeChallenge(address winningStaker, address payable losingStaker) external {
-        Staker storage winner = stakers[winningStaker];
-        Staker storage loser = stakers[losingStaker];
+    function completeChallenge(address winningStaker, address payable losingStaker)
+        external
+        override
+    {
+        Staker storage winner = stakerMap[winningStaker];
+        Staker storage loser = stakerMap[losingStaker];
 
         // Only the challenge contract can declare winners and losers
         require(winner.currentChallenge == msg.sender);
@@ -335,6 +369,10 @@ contract Rollup is Inbox, Outbox, IRollup {
         return baseStake * multiplier;
     }
 
+    function isZombie(address staker) external view returns (bool) {
+        return stakerMap[staker].isZombie;
+    }
+
     function createNewNode(RollupLib.Assertion memory assertion, uint256 prev)
         private
         returns (Node)
@@ -380,17 +418,19 @@ contract Rollup is Inbox, Outbox, IRollup {
         deadlineBlock += executionCheckTimeBlocks;
 
         return
-            new Node(
-                RollupLib.nodeStateHash(assertion, inboxMaxCount),
-                RollupLib.challengeRoot(
-                    assertion,
-                    inboxMaxCount,
-                    inboxMaxValue,
-                    executionCheckTimeBlocks
-                ),
-                RollupLib.confirmHash(assertion),
-                prev,
-                deadlineBlock
+            Node(
+                nodeFactory.createNode(
+                    RollupLib.nodeStateHash(assertion, inboxMaxCount),
+                    RollupLib.challengeRoot(
+                        assertion,
+                        inboxMaxCount,
+                        inboxMaxValue,
+                        executionCheckTimeBlocks
+                    ),
+                    RollupLib.confirmHash(assertion),
+                    prev,
+                    deadlineBlock
+                )
             );
     }
 
@@ -410,8 +450,8 @@ contract Rollup is Inbox, Outbox, IRollup {
 
         require(node1.prev() == node2.prev(), "DIFF_PREV");
 
-        Staker storage staker1 = stakers[staker1Address];
-        Staker storage staker2 = stakers[staker2Address];
+        Staker storage staker1 = stakerMap[staker1Address];
+        Staker storage staker2 = stakerMap[staker2Address];
 
         checkUnchallengedStaker(staker1);
         checkUnchallengedStaker(staker2);
@@ -431,15 +471,16 @@ contract Rollup is Inbox, Outbox, IRollup {
         );
 
         // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
-        address challengeAddress = challengeFactory.createChallenge(
-            state.inboxConsistencyHash,
-            state.inboxDeltaHash,
-            state.executionHash,
-            state.executionCheckTime,
-            staker1Address,
-            staker2Address,
-            challengePeriodBlocks
-        );
+        address challengeAddress =
+            challengeFactory.createChallenge(
+                state.inboxConsistencyHash,
+                state.inboxDeltaHash,
+                state.executionHash,
+                state.executionCheckTime,
+                staker1Address,
+                staker2Address,
+                challengePeriodBlocks
+            );
 
         staker1.currentChallenge = challengeAddress;
         staker2.currentChallenge = challengeAddress;
@@ -454,10 +495,12 @@ contract Rollup is Inbox, Outbox, IRollup {
 
     function addNewStaker(uint256 nodeNum, Node node) private {
         // Verify that sender is not already a staker
-        require(!stakers[msg.sender].isStaked, "ALREADY_STAKED");
+        require(!stakerMap[msg.sender].isStaked, "ALREADY_STAKED");
         require(msg.value >= currentRequiredStake(), "NOT_ENOUGH_STAKE");
 
-        stakers[msg.sender] = Staker(nodeNum, msg.value, address(0), false, true);
+        uint256 stakerIndex = stakerList.length;
+        stakerList.push(msg.sender);
+        stakerMap[msg.sender] = Staker(stakerIndex, nodeNum, msg.value, address(0), false, true);
         stakerCount++;
         lastStakeBlock = block.number;
         node.addStaker(msg.sender);

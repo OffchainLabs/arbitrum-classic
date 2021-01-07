@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "../arch/OneStepProof2.sol";
 
 contract BufferProofTester is OneStepProof2 {
-    event BufferProofTestEvent();
+    event OneStepProofResult(uint64 gas, bytes32[5] fields);
 
     function testGet(
         bytes32 buf,
@@ -44,21 +44,12 @@ contract BufferProofTester is OneStepProof2 {
     }
 
     function executeStepTest(
-        bytes32 inboxAcc,
-        bytes32 messagesAcc,
-        bytes32 logsAcc,
+        bytes32[3] calldata machineFields,
         bytes calldata proof,
         bytes calldata bproof
     ) external {
-        AssertionContext memory context = initializeExecutionContext(
-            inboxAcc,
-            messagesAcc,
-            logsAcc,
-            proof,
-            bproof
-        );
-
-        executeOp(context);
-        emit BufferProofTestEvent();
+        (uint64 gas, bytes32[5] memory fields) =
+            OneStepProof2(address(this)).executeStep(machineFields, proof, bproof);
+        emit OneStepProofResult(gas, fields);
     }
 }

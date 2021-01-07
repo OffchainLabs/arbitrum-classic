@@ -16,28 +16,16 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "../arch/OneStepProof.sol";
 
 contract OneStepProofTester is OneStepProof {
-    event OneStepProofTestEvent();
+    event OneStepProofResult(uint64 gas, bytes32[5] fields);
 
-    function executeStepTest(
-        bytes32 inboxAcc,
-        bytes32 messagesAcc,
-        bytes32 logsAcc,
-        bytes calldata proof
-    ) external {
-        AssertionContext memory context = initializeExecutionContext(
-            inboxAcc,
-            messagesAcc,
-            logsAcc,
-            proof,
-            new bytes(0)
-        );
-
-        executeOp(context);
-        emit OneStepProofTestEvent();
+    function executeStepTest(bytes32[3] calldata machineFields, bytes calldata proof) external {
+        (uint64 gas, bytes32[5] memory fields) =
+            OneStepProof(address(this)).executeStep(machineFields, proof);
+        emit OneStepProofResult(gas, fields);
     }
 }

@@ -1,4 +1,4 @@
-import { ethers } from '@nomiclabs/buidler'
+import { ethers } from 'hardhat'
 import { Signer } from 'ethers'
 
 export async function initializeAccounts(): Promise<Signer[]> {

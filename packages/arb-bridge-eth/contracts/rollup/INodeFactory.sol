@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,12 @@
 
 pragma solidity ^0.6.11;
 
-interface ICloneable {
-    function isMaster() external view returns (bool);
+interface INodeFactory {
+    function createNode(
+        bytes32 _stateHash,
+        bytes32 _challengeHash,
+        bytes32 _confirmData,
+        uint256 _prev,
+        uint256 _deadlineBlock
+    ) external returns (address);
 }

@@ -1,19 +1,18 @@
-import { task, usePlugin } from '@nomiclabs/buidler/config'
+import { task } from 'hardhat/config'
 import 'dotenv/config'
 
-usePlugin('buidler-deploy')
-if (!process.env.DOCKER) {
-  usePlugin('@nomiclabs/buidler-waffle')
-  usePlugin('buidler-typechain')
-  // usePlugin('solidity-coverage')
-  // usePlugin('buidler-spdx-license-identifier')
-  // usePlugin('buidler-gas-reporter')
-  // usePlugin('@nomiclabs/buidler-etherscan')
+import 'hardhat-deploy'
 
-  // const verifyTask = require('./scripts/verifyTask') // eslint-disable-line @typescript-eslint/no-var-requires
-  // const setupVerifyTask = verifyTask.default
-  // setupVerifyTask()
-}
+import '@nomiclabs/hardhat-waffle'
+import 'hardhat-typechain'
+import 'solidity-coverage'
+import 'hardhat-spdx-license-identifier'
+import 'hardhat-gas-reporter'
+import '@nomiclabs/hardhat-etherscan'
+
+const verifyTask = require('./scripts/verifyTask') // eslint-disable-line @typescript-eslint/no-var-requires
+const setupVerifyTask = verifyTask.default
+setupVerifyTask()
 
 task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
   const accounts = await bre.ethers.getSigners()
@@ -42,7 +41,7 @@ task('deposit', 'Deposit coins into ethbridge')
   })
 
 module.exports = {
-  defaultNetwork: 'buidlerevm',
+  defaultNetwork: 'hardhat',
   paths: {
     artifacts: 'build/contracts',
   },
@@ -55,7 +54,7 @@ module.exports = {
   },
   typechain: {
     outDir: 'build/types',
-    target: 'ethers-v4',
+    target: 'ethers-v5',
   },
   spdxLicenseIdentifier: {
     overwrite: false,
@@ -72,7 +71,7 @@ module.exports = {
     },
   },
   networks: {
-    buidlerevm: {},
+    hardhat: {},
     parity: {
       url: 'http://127.0.0.1:7545',
     },
@@ -97,5 +96,14 @@ module.exports = {
   },
   etherscan: {
     apiKey: process.env['ETHERSCAN_API_KEY'],
+  },
+  solidity: {
+    version: '0.6.11',
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 1000000,
+      },
+    },
   },
 }

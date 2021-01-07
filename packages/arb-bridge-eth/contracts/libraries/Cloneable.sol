@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "./ICloneable.sol";
 
@@ -29,7 +29,7 @@ contract Cloneable is ICloneable {
         isMasterCopy = true;
     }
 
-    function isMaster() external view returns (bool) {
+    function isMaster() external view override returns (bool) {
         return isMasterCopy;
     }
 

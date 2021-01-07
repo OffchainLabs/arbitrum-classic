@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "./IChallengeFactory.sol";
 import "./IChallenge.sol";
@@ -46,7 +46,7 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         address payable _asserter,
         address payable _challenger,
         uint256 _challengePeriodBlocks
-    ) external returns (address) {
+    ) external override returns (address) {
         address clone = createClone(challengeTemplate);
         IChallenge(clone).initializeChallenge(
             oneStepProofAddress,

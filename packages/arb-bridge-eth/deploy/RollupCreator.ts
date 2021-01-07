@@ -6,11 +6,15 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
 
-  await deploy('OneStepProof', {
+  const challengeFactory = await deployments.get('ChallengeFactory')
+  const nodeFactory = await deployments.get('NodeFactory')
+
+  await deploy('RollupCreator', {
     from: deployer,
-    args: [],
+    args: [challengeFactory.address, nodeFactory.address],
   })
 }
 
 module.exports = func
-module.exports.tags = ['OneStepProof']
+module.exports.tags = ['RollupCreator']
+module.exports.dependencies = ['ChallengeFactory', 'NodeFactory']

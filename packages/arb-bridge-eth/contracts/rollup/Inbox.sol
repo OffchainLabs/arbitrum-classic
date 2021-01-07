@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "./IInbox.sol";
 import "./Messages.sol";
@@ -62,7 +62,7 @@ contract Inbox is IInbox {
      * @dev This method can be used to send any type of message that doesn't require L1 validation
      * @param messageData Data of the message being sent
      */
-    function sendL2Message(bytes calldata messageData) external {
+    function sendL2Message(bytes calldata messageData) external override {
         _deliverMessage(L2_MSG, msg.sender, messageData);
     }
 
@@ -71,7 +71,7 @@ contract Inbox is IInbox {
         uint256 gasPriceBid,
         uint256 payment,
         bytes calldata contractData
-    ) external {
+    ) external override {
         require(isContract(msg.sender), "must be called by contract");
         _deliverMessage(
             L2_CONTRACT_PAIR,
@@ -90,7 +90,7 @@ contract Inbox is IInbox {
      * @dev This method is payable and will deposit all value it is called with
      * @param to Address on the chain that will receive the ETH
      */
-    function depositEthMessage(address to) external payable {
+    function depositEthMessage(address to) external payable override {
         _deliverMessage(
             ETH_TRANSFER,
             msg.sender,
@@ -113,14 +113,15 @@ contract Inbox is IInbox {
         bytes32 _messageDataHash
     ) private returns (uint256) {
         uint256 updatedCount = inboxMaxCount + 1;
-        bytes32 messageHash = Messages.messageHash(
-            _kind,
-            _sender,
-            block.number,
-            block.timestamp, // solhint-disable-line not-rely-on-time
-            updatedCount,
-            _messageDataHash
-        );
+        bytes32 messageHash =
+            Messages.messageHash(
+                _kind,
+                _sender,
+                block.number,
+                block.timestamp, // solhint-disable-line not-rely-on-time
+                updatedCount,
+                _messageDataHash
+            );
         inboxMaxValue = Messages.addMessageToInbox(inboxMaxValue, messageHash);
         inboxMaxCount = updatedCount;
         return updatedCount;

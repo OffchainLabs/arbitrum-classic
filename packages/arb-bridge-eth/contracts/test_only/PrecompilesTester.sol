@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "../libraries/Precompiles.sol";
 
@@ -25,11 +25,17 @@ library PrecompilesTester {
         return Precompiles.keccakF(input);
     }
 
-    function sha256Block(uint256[2] memory inputChunk, uint256 hashState)
+    function sha256Block(bytes32[2] memory inputChunk, bytes32 hashState)
         public
         pure
-        returns (uint256)
+        returns (bytes32)
     {
-        return Precompiles.sha256Block(inputChunk, hashState);
+        return
+            bytes32(
+                Precompiles.sha256Block(
+                    [uint256(inputChunk[0]), uint256(inputChunk[1])],
+                    uint256(hashState)
+                )
+            );
     }
 }

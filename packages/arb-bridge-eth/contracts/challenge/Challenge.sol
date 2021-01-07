@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "./IChallenge.sol";
 import "./ChallengeLib.sol";
@@ -114,7 +114,7 @@ contract Challenge is Cloneable, IChallenge {
             kind = Kind.Execution;
             executionHash = 0;
         }
-        verifyAndSetup(Kind.Execution, inboxConsistencyHash);
+        verifyAndSetup(Kind.Execution, executionHash);
         _;
     }
 
@@ -129,7 +129,7 @@ contract Challenge is Cloneable, IChallenge {
         address payable _asserter,
         address payable _challenger,
         uint256 _challengePeriodBlocks
-    ) external {
+    ) external override {
         require(state == State.NoChallenge, CHAL_INIT_STATE);
 
         executor = IOneStepProof(_executionOneStepProofCon);
@@ -167,11 +167,8 @@ contract Challenge is Cloneable, IChallenge {
         require(_chainHashes.length == bisectionDegree(_chainLength));
         require(_chainHashes[_chainHashes.length - 1] != _oldEndHash);
 
-        bytes32 bisectionHash = ChallengeLib.bisectionChunkHash(
-            _chainLength,
-            _chainHashes[0],
-            _oldEndHash
-        );
+        bytes32 bisectionHash =
+            ChallengeLib.bisectionChunkHash(_chainLength, _chainHashes[0], _oldEndHash);
 
         verifySegmentProof(_proof, bisectionHash, _segmentToChallenge);
 
@@ -187,11 +184,12 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _lowerHash,
         bytes32 _value
     ) external inboxConsistencyChallenge onlyOnTurn {
-        bytes32 prevHash = ChallengeLib.bisectionChunkHash(
-            1,
-            _lowerHash,
-            Messages.addMessageToInbox(_lowerHash, _value)
-        );
+        bytes32 prevHash =
+            ChallengeLib.bisectionChunkHash(
+                1,
+                _lowerHash,
+                Messages.addMessageToInbox(_lowerHash, _value)
+            );
 
         verifySegmentProof(_proof, prevHash, _segmentToChallenge);
 
@@ -215,11 +213,8 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 newInboxDeltaHash = ChallengeLib.inboxDeltaHash(_oldInboxAcc, _newInboxDelta);
         require(_chainHashes[_chainHashes.length - 1] == newInboxDeltaHash);
 
-        bytes32 bisectionHash = ChallengeLib.bisectionChunkHash(
-            _chainLength,
-            _chainHashes[0],
-            oldInboxDeltaHash
-        );
+        bytes32 bisectionHash =
+            ChallengeLib.bisectionChunkHash(_chainLength, _chainHashes[0], oldInboxDeltaHash);
 
         verifySegmentProof(_proof, bisectionHash, _segmentToChallenge);
 
@@ -267,18 +262,16 @@ contract Challenge is Cloneable, IChallenge {
     function _verifyBisection(
         uint256 _segmentToChallenge,
         bytes calldata _proof,
-        bytes32 _oldEndHash;
-        bytes32[] calldata _chainHashes;
-        uint256 _chainLength,
-    ) internal {
-        require(_chainHashes.length == bisectionDegree(_chainLength));
-        require(_chainHashes[_chainHashes.length - 1] != _oldEndHash);
+        bytes32 _oldEndHash,
+        bytes32[] calldata _chainHashes,
+        uint256 _chainLength
+    ) external executionChallenge onlyOnTurn {
+        require(_chainLength > 1, "TOO_SHORT");
+        require(_chainHashes.length == bisectionDegree(_chainLength), "BISECT_DEGREE");
+        require(_chainHashes[_chainHashes.length - 1] != _oldEndHash, "SAME_END");
 
-        bytes32 bisectionHash = ChallengeLib.bisectionChunkHash(
-            _chainLength,
-            _chainHashes[0],
-            _oldEndHash
-        );
+        bytes32 bisectionHash =
+            ChallengeLib.bisectionChunkHash(_chainLength, _chainHashes[0], _oldEndHash);
 
         verifySegmentProof(_proof, bisectionHash, _segmentToChallenge);
     }
@@ -292,7 +285,7 @@ contract Challenge is Cloneable, IChallenge {
         uint256[4] segmentPreFields,
     ) external executionChallenge onlyOnTurn {
         _verifyBisection(_segmentToChallenge, _proof, _oldEndHash, _chainHashes, _chainLength);
-        require(_chainLength > 1, "bisection too short");
+        require(_chainLength > 1, "TOO SHORT");
 
         require(_chainHashes[0] == ChallengeLib.assertionHash(
             segmentPreFields[0],
@@ -336,24 +329,25 @@ contract Challenge is Cloneable, IChallenge {
             );
         }
 
-        bytes32 rootHash = ChallengeLib.bisectionChunkHash(
-            1,
-            oneStepProofExecutionBefore(
-                _machineFields,
-                _initialGasUsed,
-                _initialMessageCount,
-                _initialLogCount,
-                proofFields
-            ),
-            oneStepProofExecutionAfter(
-                _machineFields,
-                _initialGasUsed,
-                _initialMessageCount,
-                _initialLogCount,
-                gasUsed,
-                proofFields
-            )
-        );
+        bytes32 rootHash =
+            ChallengeLib.bisectionChunkHash(
+                1,
+                oneStepProofExecutionBefore(
+                    _machineFields,
+                    _initialGasUsed,
+                    _initialMessageCount,
+                    _initialLogCount,
+                    proofFields
+                ),
+                oneStepProofExecutionAfter(
+                    _machineFields,
+                    _initialGasUsed,
+                    _initialMessageCount,
+                    _initialLogCount,
+                    gasUsed,
+                    proofFields
+                )
+            );
 
         verifySegmentProof(_proof, rootHash, _segmentToChallenge);
 
@@ -487,12 +481,8 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 item,
         uint256 _segmentToChallenge
     ) private view {
-        (bytes32 calcRoot, uint256 depth) = MerkleLib.verifyMerkleProof(
-            _proof,
-            item,
-            _segmentToChallenge + 1
-        );
-        require(challengeState == keccak256(abi.encodePacked(calcRoot, depth)), BIS_PREV);
+        (bytes32 calcRoot, ) = MerkleLib.verifyMerkleProof(_proof, item, _segmentToChallenge + 1);
+        require(challengeState == calcRoot, BIS_PREV);
     }
 
     function bisectionDegree(uint256 _chainLength) private pure returns (uint256) {
@@ -523,8 +513,8 @@ contract Challenge is Cloneable, IChallenge {
             );
         }
 
-        (bytes32 root, uint256 height) = MerkleLib.generateMerkleRoot(hashes);
-        return keccak256(abi.encodePacked(root, height));
+        (bytes32 root, ) = MerkleLib.generateMerkleRoot(hashes);
+        return root;
     }
 
     function oneStepProofInboxDeltaAfter(
@@ -583,12 +573,13 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _initialLogCount,
         bytes32[5] memory proofFields
     ) private pure returns (bytes32) {
-        bytes32 a1OutputAccHash = ChallengeLib.outputAccHash(
-            _machineFields[1],
-            _initialMessageCount,
-            _machineFields[2],
-            _initialLogCount
-        );
+        bytes32 a1OutputAccHash =
+            ChallengeLib.outputAccHash(
+                _machineFields[1],
+                _initialMessageCount,
+                _machineFields[2],
+                _initialLogCount
+            );
         return
             ChallengeLib.assertionHash(
                 _machineFields[0],
@@ -610,12 +601,13 @@ contract Challenge is Cloneable, IChallenge {
         // are either one or 0 messages apart and the same is true for logs. Therefore
         // we can infer the message count and log count based on whether the fields
         // are equal or not
-        bytes32 a2OutputAccHash = ChallengeLib.outputAccHash(
-            proofFields[3],
-            _initialMessageCount + (_machineFields[1] == proofFields[3] ? 0 : 1),
-            proofFields[4],
-            _initialLogCount + (_machineFields[2] == proofFields[4] ? 0 : 1)
-        );
+        bytes32 a2OutputAccHash =
+            ChallengeLib.outputAccHash(
+                proofFields[3],
+                _initialMessageCount + (_machineFields[1] == proofFields[3] ? 0 : 1),
+                proofFields[4],
+                _initialLogCount + (_machineFields[2] == proofFields[4] ? 0 : 1)
+            );
         return
             ChallengeLib.assertionHash(
                 proofFields[2],

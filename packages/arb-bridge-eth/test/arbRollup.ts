@@ -15,25 +15,19 @@
  */
 
 /* eslint-env node, mocha */
-import bre from '@nomiclabs/buidler'
-import { Signer, ContractTransaction, providers, utils } from 'ethers'
-import * as chai from 'chai'
-import chaiAsPromised from 'chai-as-promised'
+import { ethers } from 'hardhat'
+import { Signer, BigNumberish } from 'ethers'
+import { ContractTransaction } from '@ethersproject/contracts'
+import { assert, expect } from 'chai'
 import { Rollup } from '../build/types/Rollup'
 import { Node } from '../build/types/Node'
 import { RollupCreator } from '../build/types/RollupCreator'
 import { Challenge } from '../build/types/Challenge'
 // import { RollupTester } from '../build/types/RollupTester'
-import { ArbValue } from 'arb-provider-ethers'
 import deploy_contracts from '../scripts/deploy'
 import { initializeAccounts } from './utils'
 
 import { NodeState, Assertion, RollupContract } from './rolluplib'
-
-chai.use(chaiAsPromised)
-
-const { ethers } = bre
-const { assert, expect } = chai
 
 const initialVmState =
   '0x9900000000000000000000000000000000000000000000000000000000000000'
@@ -64,22 +58,20 @@ async function createRollup(): Promise<{
     await accounts[0].getAddress(), // owner
     '0x'
   )
-  await expect(tx).to.emit(rollupCreator, 'RollupCreated')
 
   const receipt = await (await tx).wait()
   if (receipt.logs == undefined) {
     throw Error('expected receipt to have logs')
   }
 
-  const logs = receipt.logs.map((log: providers.Log) =>
-    rollupCreator.interface.parseLog(log)
+  const ev = rollupCreator.interface.parseLog(
+    receipt.logs[receipt.logs.length - 1]
   )
-  const ev = logs[logs.length - 1]
   expect(ev.name).to.equal('RollupCreated')
-  const chainAddress = ev.values.rollupAddress
+  const parsedEv = (ev as any) as { args: { rollupAddress: string } }
   const Rollup = await ethers.getContractFactory('Rollup')
   return {
-    rollupCon: Rollup.attach(chainAddress) as Rollup,
+    rollupCon: Rollup.attach(parsedEv.args.rollupAddress) as Rollup,
     blockCreated: receipt.blockNumber!,
   }
 }
@@ -104,7 +96,7 @@ async function tryAdvanceChain(blocks: number): Promise<void> {
 
 function makeSimpleAssertion(
   prevNodeState: NodeState,
-  numGas: utils.BigNumberish
+  numGas: BigNumberish
 ): Assertion {
   return new Assertion(prevNodeState, 100, numGas, zerobytes32, [], [], [])
 }
@@ -114,7 +106,7 @@ let prevNodeState: NodeState
 describe('ArbRollup', () => {
   it('should deploy contracts', async function () {
     accounts = await initializeAccounts()
-    const { RollupCreator } = await deploy_contracts(bre)
+    const { RollupCreator } = await deploy_contracts()
     rollupCreator = RollupCreator as RollupCreator
 
     // const RollupTester = await ethers.getContractFactory('RollupTester')
@@ -153,8 +145,9 @@ describe('ArbRollup', () => {
     const block = await ethers.provider.getBlock('latest')
     await tryAdvanceChain(challengePeriodBlocks / 10)
     const assertion = makeSimpleAssertion(prevNodeState, 100)
+    const stake = await rollup.currentRequiredStake()
     const tx = await rollup.newStakeOnNewNode(block, assertion, 1, 0, {
-      value: 10,
+      value: stake,
     })
 
     const receipt = await tx.wait()
@@ -246,16 +239,17 @@ describe('ArbRollup', () => {
       await rollup.inboxMaxValue(),
       1
     )
-    expect(tx).to.emit(rollup, 'RollupChallengeStarted')
     const receipt = await (await tx).wait()
     const ev = rollup.rollup.interface.parseLog(
       receipt.logs![receipt.logs!.length - 1]
     )
+    expect(ev.name).to.equal('RollupChallengeStarted')
+    const parsedEv = (ev as any) as { args: { challengeContract: string } }
     const Challenge = await ethers.getContractFactory('Challenge')
-    challenge = Challenge.attach(ev.values.challengeContract) as Challenge
+    challenge = Challenge.attach(parsedEv.args.challengeContract) as Challenge
   })
 
-  it('should win via timeout', async function () {
+  it('asserter should win via timeout', async function () {
     await tryAdvanceChain(
       challengePeriodBlocks +
         challengedAssertion.checkTime(arbGasSpeedLimitPerBlock) +
@@ -307,12 +301,62 @@ describe('ArbRollup', () => {
       await rollup.inboxMaxValue(),
       1
     )
-    expect(tx).to.emit(rollup, 'RollupChallengeStarted')
     const receipt = await (await tx).wait()
     const ev = rollup.rollup.interface.parseLog(
       receipt.logs![receipt.logs!.length - 1]
     )
+    expect(ev.name).to.equal('RollupChallengeStarted')
+    const parsedEv = (ev as any) as { args: { challengeContract: string } }
     const Challenge = await ethers.getContractFactory('Challenge')
-    challenge = Challenge.attach(ev.values.challengeContract) as Challenge
+    challenge = Challenge.attach(parsedEv.args.challengeContract) as Challenge
+  })
+
+  it('challenger should reply in challenge', async function () {
+    const chunks = Array(20).fill(zerobytes32)
+    chunks[0] = challengedAssertion.startAssertionHash()
+
+    await challenge
+      .connect(accounts[2])
+      .bisectExecution(
+        0,
+        '0x',
+        challengedAssertion.endAssertionHash(),
+        chunks,
+        challengedAssertion.stepsExecuted
+      )
+  })
+
+  it('challenger should win via timeout', async function () {
+    await tryAdvanceChain(
+      challengePeriodBlocks +
+        challengedAssertion.checkTime(arbGasSpeedLimitPerBlock) +
+        1
+    )
+    await challenge.timeout()
+  })
+
+  it('should remove zombie staker from node', async function () {
+    await rollup.removeZombieStaker(5, await accounts[0].getAddress())
+  })
+
+  it('should reject out of order second node', async function () {
+    await rollup.rejectNextNode(6, await accounts[2].getAddress())
+  })
+
+  it('confirm next node', async function () {
+    await tryAdvanceChain(challengePeriodBlocks)
+    await rollup.confirmNextNode(zerobytes32, [])
+  })
+
+  it('can add stake', async function () {
+    await rollup.connect(accounts[2]).addToDeposit({ value: 5 })
+  })
+
+  it('can reduce stake', async function () {
+    await rollup.connect(accounts[2]).reduceDeposit(5)
+  })
+
+  it('returns stake to staker', async function () {
+    await rollup.returnOldDeposit(await accounts[2].getAddress())
   })
 })

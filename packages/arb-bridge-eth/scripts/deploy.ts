@@ -1,8 +1,9 @@
-import { BuidlerRuntimeEnvironment } from '@nomiclabs/buidler/types'
 import { Contract } from 'ethers'
+import { ethers } from 'hardhat'
 
 type ContractName =
   | 'RollupCreator'
+  | 'NodeFactory'
   | 'ChallengeFactory'
   | 'Challenge'
   | 'OneStepProof'
@@ -14,15 +15,14 @@ const logDeploy = (contractName: string, contract: Contract) => {
   )
 }
 
-export default async function deploy_contracts(
-  bre: BuidlerRuntimeEnvironment
-): Promise<Record<ContractName, Contract>> {
-  const ethers = bre.ethers
-
+export default async function deploy_contracts(): Promise<
+  Record<ContractName, Contract>
+> {
   const Challenge = await ethers.getContractFactory('Challenge')
   const OneStepProof = await ethers.getContractFactory('OneStepProof')
   const OneStepProof2 = await ethers.getContractFactory('OneStepProof2')
   const ChallengeFactory = await ethers.getContractFactory('ChallengeFactory')
+  const NodeFactory = await ethers.getContractFactory('NodeFactory')
   const RollupCreator = await ethers.getContractFactory('RollupCreator')
 
   const oneStepProof = await OneStepProof.deploy()
@@ -39,7 +39,13 @@ export default async function deploy_contracts(
   )
   logDeploy('ChallengeFactory', challengeFactory)
 
-  const rollupCreator = await RollupCreator.deploy(challengeFactory.address)
+  const nodeFactory = await NodeFactory.deploy()
+  logDeploy('NodeFactory', nodeFactory)
+
+  const rollupCreator = await RollupCreator.deploy(
+    challengeFactory.address,
+    nodeFactory.address
+  )
   logDeploy('RollupCreator', rollupCreator)
 
   await Promise.all([
@@ -55,6 +61,9 @@ export default async function deploy_contracts(
     challengeFactory.deployed().then(() => {
       console.log('ChallengeFactory deployed')
     }),
+    nodeFactory.deployed().then(() => {
+      console.log('NodeFactory deployed')
+    }),
     rollupCreator.deployed().then(() => {
       console.log('RollupCreator deployed')
     }),
@@ -62,6 +71,7 @@ export default async function deploy_contracts(
 
   const contracts: Record<ContractName, Contract> = {
     RollupCreator: rollupCreator,
+    NodeFactory: nodeFactory,
     ChallengeFactory: challengeFactory,
     Challenge: challenge,
     OneStepProof: oneStepProof,

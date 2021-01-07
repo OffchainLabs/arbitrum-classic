@@ -42,7 +42,7 @@ Structure of normalization proof:
 
 */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "./IOneStepProof.sol";
 import "./OneStepProofCommon.sol";
@@ -58,14 +58,15 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         bytes32[3] calldata _machineFields,
         bytes calldata proof,
         bytes calldata bproof
-    ) external view returns (uint64 gas, bytes32[5] memory fields) {
-        AssertionContext memory context = initializeExecutionContext(
-            _machineFields[0],
-            _machineFields[1],
-            _machineFields[2],
-            proof,
-            bproof
-        );
+    ) external view override returns (uint64 gas, bytes32[5] memory fields) {
+        AssertionContext memory context =
+            initializeExecutionContext(
+                _machineFields[0],
+                _machineFields[1],
+                _machineFields[2],
+                proof,
+                bproof
+            );
 
         executeOp(context);
 
@@ -441,12 +442,8 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             return;
         }
         require(val2.intVal < (1 << 64), "buffer index must be 64-bit");
-        bytes32 res = setBuffer8(
-            val1.bufferHash,
-            val2.intVal,
-            val3.intVal,
-            decodeProof(context.bufProof)
-        );
+        bytes32 res =
+            setBuffer8(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
         pushVal(context.stack, Value.newBuffer(res));
     }
 
@@ -459,12 +456,8 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             return;
         }
         require(val2.intVal + 7 < (1 << 64), "buffer index must be 64-bit");
-        bytes32 res = setBuffer64(
-            val1.bufferHash,
-            val2.intVal,
-            val3.intVal,
-            decodeProof(context.bufProof)
-        );
+        bytes32 res =
+            setBuffer64(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
         pushVal(context.stack, Value.newBuffer(res));
     }
 
@@ -477,18 +470,15 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             return;
         }
         require(val2.intVal + 31 < (1 << 64), "buffer index must be 64-bit");
-        bytes32 res = setBuffer256(
-            val1.bufferHash,
-            val2.intVal,
-            val3.intVal,
-            decodeProof(context.bufProof)
-        );
+        bytes32 res =
+            setBuffer256(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
         pushVal(context.stack, Value.newBuffer(res));
     }
 
     function opInfo(uint256 opCode)
         internal
         pure
+        override
         returns (
             uint256, // stack pops
             uint256, // auxstack pops

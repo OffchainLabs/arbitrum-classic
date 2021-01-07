@@ -1,4 +1,4 @@
-import { task } from '@nomiclabs/buidler/config'
+import { task } from 'hardhat/config'
 
 export default function setupVerifyTask(): void {
   task(

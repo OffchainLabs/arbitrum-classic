@@ -16,15 +16,17 @@
 
 /* eslint-env node, mocha */
 
-import { ethers } from '@nomiclabs/buidler'
-import { utils } from 'ethers'
+import { ethers } from 'hardhat'
+import { BigNumber } from 'ethers'
+import { ContractTransaction } from '@ethersproject/contracts'
+import { TransactionReceipt } from '@ethersproject/providers'
+import { BytesLike } from '@ethersproject/bytes'
 import { use, expect } from 'chai'
-import chaiAsPromised from 'chai-as-promised'
 import { OneStepProofTester } from '../build/types/OneStepProofTester'
 import { BufferProofTester } from '../build/types/BufferProofTester'
 import * as fs from 'fs'
 
-use(chaiAsPromised)
+const { utils } = ethers
 
 interface Assertion {
   NumGas: number
@@ -47,39 +49,24 @@ interface Proof {
 let ospTester: OneStepProofTester
 let ospTester2: BufferProofTester
 
-async function executeStep(proof: Proof) {
-  const proofData = Buffer.from(proof.Proof, 'base64')
-  const bufferProofData = Buffer.from(proof.BufferProof || '', 'base64')
-  return bufferProofData.length == 0
-    ? await ospTester.executeStep(
-        proof.Assertion.AfterInboxHash,
-        proof.Assertion.FirstMessageHash,
-        proof.Assertion.FirstLogHash,
-        proofData
-      )
-    : await ospTester2.executeStep(
-        proof.Assertion.AfterInboxHash,
-        proof.Assertion.FirstMessageHash,
-        proof.Assertion.FirstLogHash,
-        proofData,
-        bufferProofData
-      )
-}
-
-async function executeTestStep(proof: Proof) {
+async function executeStep(proof: Proof): Promise<ContractTransaction> {
   const proofData = Buffer.from(proof.Proof, 'base64')
   const bufferProofData = Buffer.from(proof.BufferProof || '', 'base64')
   return bufferProofData.length == 0
     ? await ospTester.executeStepTest(
-        proof.Assertion.AfterInboxHash,
-        proof.Assertion.FirstMessageHash,
-        proof.Assertion.FirstLogHash,
+        [
+          proof.Assertion.AfterInboxHash,
+          proof.Assertion.FirstMessageHash,
+          proof.Assertion.FirstLogHash,
+        ],
         proofData
       )
     : await ospTester2.executeStepTest(
-        proof.Assertion.AfterInboxHash,
-        proof.Assertion.FirstMessageHash,
-        proof.Assertion.FirstLogHash,
+        [
+          proof.Assertion.AfterInboxHash,
+          proof.Assertion.FirstMessageHash,
+          proof.Assertion.FirstLogHash,
+        ],
         proofData,
         bufferProofData
       )
@@ -99,49 +86,69 @@ describe('OneStepProof', function () {
   for (const filename of files) {
     const file = fs.readFileSync('./test/proofs/' + filename)
     const data = JSON.parse(file.toString()) as Proof[]
-    it(`should handle proofs from ${filename}`, async function () {
-      this.timeout(60000)
-
-      for (const proof of data.slice(0, 50)) {
-        const proofData = Buffer.from(proof.Proof, 'base64')
-        const opcode = proofData[proofData.length - 1]
-        if (opcode == 131) {
-          // Skip too expensive opcode
-          continue
+    describe(`proofs from ${filename}`, function () {
+      const receipts: TransactionReceipt[] = []
+      const opcodes: number[] = []
+      before(async () => {
+        for (const proof of data.slice(0, 50)) {
+          const proofData = Buffer.from(proof.Proof, 'base64')
+          const opcode = proofData[proofData.length - 1]
+          if (opcode == 131) {
+            // Skip too expensive opcode
+            continue
+          }
+          const tx = await executeStep(proof)
+          opcodes.push(opcode)
+          receipts.push(await tx.wait())
         }
-        const { fields, gas } = await executeStep(proof)
-        // console.log("opcode", opcode, fields)
-        expect(fields[0]).to.equal(
-          utils.hexlify(proof.Assertion.BeforeMachineHash)
-        )
-        expect(fields[1]).to.equal(
-          utils.hexlify(proof.Assertion.AfterMachineHash)
-        )
-        expect(fields[2]).to.equal(
-          utils.hexlify(proof.Assertion.AfterInboxHash)
-        )
-        expect(fields[3]).to.equal(utils.hexlify(proof.Assertion.LastLogHash))
-        expect(fields[4]).to.equal(
-          utils.hexlify(proof.Assertion.LastMessageHash)
-        )
-        expect(gas).to.equal(proof.Assertion.NumGas)
-      }
-    })
+      })
 
-    it(`efficiently run proofs from ${filename} [ @skip-on-coverage ]`, async function () {
-      this.timeout(60000)
-
-      for (const proof of data.slice(0, 25)) {
-        const proofData = Buffer.from(proof.Proof, 'base64')
-        const opcode = proofData[proofData.length - 1]
-        const tx = await executeTestStep(proof)
-        const receipt = await tx.wait()
-        const gas = receipt.gasUsed!.toNumber()
-        if (gas > 1000000) {
-          console.log(`opcode ${opcode} used ${gas} gas`)
+      it(`should have correct proof`, async function () {
+        for (let i = 0; i < receipts.length; i++) {
+          const receipt = receipts[i]
+          const opcode = opcodes[i]
+          const proof = data[i]
+          const message = `Opcode ${opcode}`
+          const ev = ospTester.interface.parseLog(
+            receipt.logs[receipt.logs.length - 1]
+          )
+          expect(ev.name, message).to.equal('OneStepProofResult')
+          const parsedEv = (ev as any) as {
+            args: {
+              gas: BigNumber
+              fields: [BytesLike, BytesLike, BytesLike, BytesLike, BytesLike]
+            }
+          }
+          // console.log("opcode", opcode, fields)
+          expect(parsedEv.args.fields[0], message).to.equal(
+            utils.hexlify(proof.Assertion.BeforeMachineHash)
+          )
+          expect(parsedEv.args.fields[1], message).to.equal(
+            utils.hexlify(proof.Assertion.AfterMachineHash)
+          )
+          expect(parsedEv.args.fields[2], message).to.equal(
+            utils.hexlify(proof.Assertion.AfterInboxHash)
+          )
+          expect(parsedEv.args.fields[3], message).to.equal(
+            utils.hexlify(proof.Assertion.LastLogHash)
+          )
+          expect(parsedEv.args.fields[4], message).to.equal(
+            utils.hexlify(proof.Assertion.LastMessageHash)
+          )
+          expect(parsedEv.args.gas, message).to.equal(proof.Assertion.NumGas)
         }
-        expect(gas).to.be.lessThan(5000000)
-      }
+      })
+
+      it(`should have efficient proof [ @skip-on-coverage ]`, async function () {
+        for (let i = 0; i < receipts.length; i++) {
+          const receipt = receipts[i]
+          const opcode = opcodes[i]
+          if (receipt.gasUsed.toNumber() > 1000000) {
+            console.log(`opcode ${opcode} used ${receipt.gasUsed} gas`)
+          }
+          expect(receipt.gasUsed.toNumber()).to.be.lessThan(5000000)
+        }
+      })
     })
   }
 })
