@@ -1,5 +1,5 @@
-import { BuidlerRuntimeEnvironment } from '@nomiclabs/buidler/types'
 import { Contract } from 'ethers'
+import { ethers } from 'hardhat'
 
 type ContractName =
   | 'RollupCreator'
@@ -14,11 +14,9 @@ const logDeploy = (contractName: string, contract: Contract) => {
   )
 }
 
-export default async function deploy_contracts(
-  bre: BuidlerRuntimeEnvironment
-): Promise<Record<ContractName, Contract>> {
-  const ethers = bre.ethers
-
+export default async function deploy_contracts(): Promise<
+  Record<ContractName, Contract>
+> {
   const Challenge = await ethers.getContractFactory('Challenge')
   const OneStepProof = await ethers.getContractFactory('OneStepProof')
   const OneStepProof2 = await ethers.getContractFactory('OneStepProof2')

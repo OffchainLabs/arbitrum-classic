@@ -15,10 +15,16 @@
  */
 
 /* eslint-env node, mocha */
-import bre from '@nomiclabs/buidler'
-import { Signer, ContractTransaction, providers, utils } from 'ethers'
+import { ethers } from 'hardhat'
+import {
+  Signer,
+  ContractTransaction,
+  BigNumberish,
+  providers,
+  utils,
+} from 'ethers'
 import * as chai from 'chai'
-import chaiAsPromised from 'chai-as-promised'
+import * as chaiAsPromised from 'chai-as-promised'
 import { Rollup } from '../build/types/Rollup'
 import { Node } from '../build/types/Node'
 import { RollupCreator } from '../build/types/RollupCreator'
@@ -32,7 +38,6 @@ import { NodeState, Assertion, RollupContract } from './rolluplib'
 
 chai.use(chaiAsPromised)
 
-const { ethers } = bre
 const { assert, expect } = chai
 
 const initialVmState =
@@ -71,15 +76,14 @@ async function createRollup(): Promise<{
     throw Error('expected receipt to have logs')
   }
 
-  const logs = receipt.logs.map((log: providers.Log) =>
-    rollupCreator.interface.parseLog(log)
+  const ev = rollupCreator.interface.parseLog(
+    receipt.logs[receipt.logs.length - 1]
   )
-  const ev = logs[logs.length - 1]
   expect(ev.name).to.equal('RollupCreated')
-  const chainAddress = ev.values.rollupAddress
+  const parsedEv = (ev as any) as { args: { rollupAddress: string } }
   const Rollup = await ethers.getContractFactory('Rollup')
   return {
-    rollupCon: Rollup.attach(chainAddress) as Rollup,
+    rollupCon: Rollup.attach(parsedEv.args.rollupAddress) as Rollup,
     blockCreated: receipt.blockNumber!,
   }
 }
@@ -104,7 +108,7 @@ async function tryAdvanceChain(blocks: number): Promise<void> {
 
 function makeSimpleAssertion(
   prevNodeState: NodeState,
-  numGas: utils.BigNumberish
+  numGas: BigNumberish
 ): Assertion {
   return new Assertion(prevNodeState, 100, numGas, zerobytes32, [], [], [])
 }
@@ -114,7 +118,7 @@ let prevNodeState: NodeState
 describe('ArbRollup', () => {
   it('should deploy contracts', async function () {
     accounts = await initializeAccounts()
-    const { RollupCreator } = await deploy_contracts(bre)
+    const { RollupCreator } = await deploy_contracts()
     rollupCreator = RollupCreator as RollupCreator
 
     // const RollupTester = await ethers.getContractFactory('RollupTester')
@@ -251,8 +255,10 @@ describe('ArbRollup', () => {
     const ev = rollup.rollup.interface.parseLog(
       receipt.logs![receipt.logs!.length - 1]
     )
+    expect(ev.name).to.equal('RollupChallengeStarted')
+    const parsedEv = (ev as any) as { args: { challengeContract: string } }
     const Challenge = await ethers.getContractFactory('Challenge')
-    challenge = Challenge.attach(ev.values.challengeContract) as Challenge
+    challenge = Challenge.attach(parsedEv.args.challengeContract) as Challenge
   })
 
   it('should win via timeout', async function () {
@@ -312,7 +318,9 @@ describe('ArbRollup', () => {
     const ev = rollup.rollup.interface.parseLog(
       receipt.logs![receipt.logs!.length - 1]
     )
+    expect(ev.name).to.equal('RollupChallengeStarted')
+    const parsedEv = (ev as any) as { args: { challengeContract: string } }
     const Challenge = await ethers.getContractFactory('Challenge')
-    challenge = Challenge.attach(ev.values.challengeContract) as Challenge
+    challenge = Challenge.attach(parsedEv.args.challengeContract) as Challenge
   })
 })

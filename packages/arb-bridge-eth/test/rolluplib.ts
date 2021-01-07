@@ -1,9 +1,12 @@
-import { ethers } from '@nomiclabs/buidler'
-import { Provider } from 'ethers/providers'
-import { Signer, ContractTransaction, providers, utils } from 'ethers'
-import { Arrayish, BigNumber, BigNumberish } from 'ethers/utils'
-
-import { TransactionOverrides } from '../build/types'
+import { ethers } from 'hardhat'
+import { Provider, Block } from '@ethersproject/providers'
+import { Signer, BigNumber, BigNumberish } from 'ethers'
+import {
+  Contract,
+  ContractTransaction,
+  PayableOverrides,
+} from '@ethersproject/contracts'
+import { BytesLike } from '@ethersproject/bytes'
 
 import { Rollup } from '../build/types/Rollup'
 
@@ -12,9 +15,9 @@ const zerobytes32 =
 
 function bisectionChunkHash(
   length: BigNumberish,
-  startHash: string,
-  endHash: string
-): string {
+  startHash: BytesLike,
+  endHash: BytesLike
+): BytesLike {
   return ethers.utils.solidityKeccak256(
     ['uint256', 'bytes32', 'bytes32'],
     [length, startHash, endHash]
@@ -22,11 +25,11 @@ function bisectionChunkHash(
 }
 
 function assertionHash(
-  inboxDelta: string,
+  inboxDelta: BytesLike,
   arbGasUsed: BigNumberish,
-  outputAcc: string,
-  machineState: string
-): string {
+  outputAcc: BytesLike,
+  machineState: BytesLike
+): BytesLike {
   return ethers.utils.solidityKeccak256(
     ['bytes32', 'uint256', 'bytes32', 'bytes32'],
     [inboxDelta, arbGasUsed, outputAcc, machineState]
@@ -34,18 +37,18 @@ function assertionHash(
 }
 
 function outputAccHash(
-  sendAcc: string,
+  sendAcc: BytesLike,
   sendCount: BigNumberish,
-  logAcc: string,
+  logAcc: BytesLike,
   logCount: BigNumberish
-): string {
+): BytesLike {
   return ethers.utils.solidityKeccak256(
     ['bytes32', 'uint256', 'bytes32', 'uint256'],
     [sendAcc, sendCount, logAcc, logCount]
   )
 }
 
-function inboxDeltaHash(inboxAcc: string, deltaAcc: string): string {
+function inboxDeltaHash(inboxAcc: BytesLike, deltaAcc: BytesLike): BytesLike {
   return ethers.utils.solidityKeccak256(
     ['bytes32', 'bytes32'],
     [inboxAcc, deltaAcc]
@@ -53,11 +56,11 @@ function inboxDeltaHash(inboxAcc: string, deltaAcc: string): string {
 }
 
 function challengeRootHash(
-  inboxConsistency: string,
-  inboxDelta: string,
-  execution: string,
+  inboxConsistency: BytesLike,
+  inboxDelta: BytesLike,
+  execution: BytesLike,
   executionCheckTime: BigNumberish
-): string {
+): BytesLike {
   return ethers.utils.solidityKeccak256(
     ['bytes32', 'bytes32', 'bytes32', 'uint256'],
     [inboxConsistency, inboxConsistency, execution, executionCheckTime]
@@ -68,15 +71,15 @@ export class NodeState {
   constructor(
     public proposedBlock: number,
     public stepsRun: BigNumberish,
-    public machineHash: string,
-    public inboxTop: string,
+    public machineHash: BytesLike,
+    public inboxTop: BytesLike,
     public inboxCount: BigNumberish,
     public sendCount: BigNumberish,
     public logCount: BigNumberish,
     public inboxMaxCount: BigNumberish
   ) {}
 
-  hash(): string {
+  hash(): BytesLike {
     return ethers.utils.solidityKeccak256(
       [
         'uint256',
@@ -102,7 +105,7 @@ export class NodeState {
   }
 }
 
-function buildAccumulator(base: string, hashes: string[]): string {
+function buildAccumulator(base: BytesLike, hashes: BytesLike[]): BytesLike {
   let acc = base
   for (const h of hashes) {
     acc = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [acc, h])
@@ -111,22 +114,22 @@ function buildAccumulator(base: string, hashes: string[]): string {
 }
 
 export class Assertion {
-  public inboxDelta: string
+  public inboxDelta: BytesLike
   public inboxMessagesRead: BigNumberish
-  public sendAcc: string
+  public sendAcc: BytesLike
   public sendCount: BigNumberish
-  public logAcc: string
+  public logAcc: BytesLike
   public logCount: BigNumberish
-  public afterInboxHash: string
+  public afterInboxHash: BytesLike
 
   constructor(
     public prevNodeState: NodeState,
     public stepsExecuted: BigNumberish,
     public gasUsed: BigNumberish,
-    public afterMachineHash: string,
-    messages: string[],
-    sends: string[],
-    logs: string[]
+    public afterMachineHash: BytesLike,
+    messages: BytesLike[],
+    sends: BytesLike[],
+    logs: BytesLike[]
   ) {
     this.inboxDelta = buildAccumulator(zerobytes32, messages.reverse())
     this.inboxMessagesRead = messages.length
@@ -145,25 +148,26 @@ export class Assertion {
   ): NodeState {
     return new NodeState(
       proposedBlock,
-      utils.bigNumberify(this.prevNodeState.stepsRun).add(this.stepsExecuted),
+      ethers.BigNumber.from(this.prevNodeState.stepsRun).add(
+        this.stepsExecuted
+      ),
       this.afterMachineHash,
       this.afterInboxHash,
-      utils
-        .bigNumberify(this.prevNodeState.inboxCount)
-        .add(this.inboxMessagesRead),
-      utils.bigNumberify(this.prevNodeState.sendCount).add(this.sendCount),
-      utils.bigNumberify(this.prevNodeState.logCount).add(this.logCount),
+      ethers.BigNumber.from(this.prevNodeState.inboxCount).add(
+        this.inboxMessagesRead
+      ),
+      ethers.BigNumber.from(this.prevNodeState.sendCount).add(this.sendCount),
+      ethers.BigNumber.from(this.prevNodeState.logCount).add(this.logCount),
       inboxMaxCount
     )
   }
 
   inboxConsistencyHash(
-    inboxMaxHash: string,
+    inboxMaxHash: BytesLike,
     inboxMaxCount: BigNumberish
-  ): string {
+  ): BytesLike {
     return bisectionChunkHash(
-      ethers.utils
-        .bigNumberify(inboxMaxCount)
+      ethers.BigNumber.from(inboxMaxCount)
         .sub(this.prevNodeState.inboxCount)
         .sub(this.inboxMessagesRead),
       inboxMaxHash,
@@ -171,7 +175,7 @@ export class Assertion {
     )
   }
 
-  inboxDeltaHash(): string {
+  inboxDeltaHash(): BytesLike {
     return bisectionChunkHash(
       this.inboxMessagesRead,
       inboxDeltaHash(this.afterInboxHash, zerobytes32),
@@ -179,7 +183,7 @@ export class Assertion {
     )
   }
 
-  executionHash(): string {
+  executionHash(): BytesLike {
     return bisectionChunkHash(
       this.stepsExecuted,
       assertionHash(
@@ -198,17 +202,16 @@ export class Assertion {
   }
 
   checkTime(arbGasSpeedLimitPerBlock: BigNumberish): number {
-    return ethers.utils
-      .bigNumberify(this.gasUsed)
+    return ethers.BigNumber.from(this.gasUsed)
       .div(arbGasSpeedLimitPerBlock)
       .toNumber()
   }
 
   challengeRoot(
-    inboxMaxHash: string,
+    inboxMaxHash: BytesLike,
     inboxMaxCount: BigNumberish,
     arbGasSpeedLimitPerBlock: BigNumberish
-  ): string {
+  ): BytesLike {
     return challengeRootHash(
       this.inboxConsistencyHash(inboxMaxHash, inboxMaxCount),
       this.inboxDeltaHash(),
@@ -217,7 +220,15 @@ export class Assertion {
     )
   }
 
-  bytes32Fields(): string[] {
+  bytes32Fields(): [
+    BytesLike,
+    BytesLike,
+    BytesLike,
+    BytesLike,
+    BytesLike,
+    BytesLike,
+    BytesLike
+  ] {
     return [
       this.prevNodeState.machineHash,
       this.prevNodeState.inboxTop,
@@ -229,7 +240,19 @@ export class Assertion {
     ]
   }
 
-  intFields(): BigNumberish[] {
+  intFields(): [
+    BigNumberish,
+    BigNumberish,
+    BigNumberish,
+    BigNumberish,
+    BigNumberish,
+    BigNumberish,
+    BigNumberish,
+    BigNumberish,
+    BigNumberish,
+    BigNumberish,
+    BigNumberish
+  ] {
     return [
       this.prevNodeState.proposedBlock,
       this.prevNodeState.stepsRun,
@@ -254,7 +277,7 @@ export class RollupContract {
   }
 
   addStakeOnNewNode(
-    block: providers.Block,
+    block: Block,
     assertion: Assertion,
     newNodeNum: BigNumberish
   ): Promise<ContractTransaction> {
@@ -268,11 +291,11 @@ export class RollupContract {
   }
 
   newStakeOnNewNode(
-    block: providers.Block,
+    block: Block,
     assertion: Assertion,
     newNodeNum: BigNumberish,
     prevNum: BigNumberish,
-    overrides: TransactionOverrides = {}
+    overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
     return this.rollup.newStakeOnNewNode(
       block.hash,
@@ -286,9 +309,9 @@ export class RollupContract {
   }
 
   newStakeOnExistingNode(
-    block: providers.Block,
+    block: Block,
     nodeNum: BigNumberish,
-    overrides: TransactionOverrides = {}
+    overrides: PayableOverrides = {}
   ) {
     return this.rollup.newStakeOnExistingNode(
       block.hash,
@@ -298,15 +321,15 @@ export class RollupContract {
     )
   }
 
-  addStakeOnExistingNode(block: providers.Block, nodeNum: BigNumberish) {
+  addStakeOnExistingNode(block: Block, nodeNum: BigNumberish) {
     return this.rollup.addStakeOnExistingNode(block.hash, block.number, nodeNum)
   }
 
   confirmNextNode(
-    logAcc: Arrayish,
-    messages: Arrayish[]
+    logAcc: BytesLike,
+    messages: BytesLike[]
   ): Promise<ContractTransaction> {
-    const messageData = utils.concat(messages)
+    const messageData = ethers.utils.concat(messages)
     const messageLengths = messages.map(msg => msg.length)
     return this.rollup.confirmNextNode(logAcc, messageData, messageLengths)
   }
@@ -321,7 +344,7 @@ export class RollupContract {
     staker2Address: string,
     nodeNum2: BigNumberish,
     assertion: Assertion,
-    inboxMaxHash: string,
+    inboxMaxHash: BytesLike,
     inboxMaxCount: BigNumberish
   ): Promise<ContractTransaction> {
     return this.rollup.createChallenge(
@@ -344,7 +367,7 @@ export class RollupContract {
     return this.rollup.nodes(index)
   }
 
-  inboxMaxValue(): Promise<string> {
+  inboxMaxValue(): Promise<BytesLike> {
     return this.rollup.inboxMaxValue()
   }
 
