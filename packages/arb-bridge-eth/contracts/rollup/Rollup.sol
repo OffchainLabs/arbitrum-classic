@@ -49,7 +49,7 @@ contract Rollup is Inbox, Outbox, IRollup {
 
     uint256 public latestConfirmed;
     uint256 firstUnresolvedNode;
-    uint256 latestNodeCreated;
+    uint256 public latestNodeCreated;
     mapping(uint256 => Node) public nodes;
     uint256 lastStakeBlock;
     uint256 stakerCount;
@@ -360,6 +360,10 @@ contract Rollup is Inbox, Outbox, IRollup {
         }
 
         return baseStake * multiplier;
+    }
+
+    function isZombie(address staker) external view returns (bool) {
+        return stakers[staker].isZombie;
     }
 
     function createNewNode(RollupLib.Assertion memory assertion, uint256 prev)
