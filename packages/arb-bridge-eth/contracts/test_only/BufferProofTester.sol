@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "../arch/OneStepProof2.sol";
 
@@ -50,13 +50,8 @@ contract BufferProofTester is OneStepProof2 {
         bytes calldata proof,
         bytes calldata bproof
     ) external {
-        AssertionContext memory context = initializeExecutionContext(
-            inboxAcc,
-            messagesAcc,
-            logsAcc,
-            proof,
-            bproof
-        );
+        AssertionContext memory context =
+            initializeExecutionContext(inboxAcc, messagesAcc, logsAcc, proof, bproof);
 
         executeOp(context);
         emit BufferProofTestEvent();

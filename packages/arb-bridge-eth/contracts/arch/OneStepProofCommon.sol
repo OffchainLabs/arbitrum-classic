@@ -16,21 +16,18 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "./IOneStepProof.sol";
 import "./Value.sol";
 import "./Machine.sol";
 
-contract OneStepProofCommon {
+abstract contract OneStepProofCommon {
     using Machine for Machine.Data;
     using Hashing for Value.Data;
     using Value for Value.Data;
 
-    uint256 internal constant SEND_SIZE_LIMIT = 10000;
-
     uint256 internal constant MAX_UINT256 = ((1 << 128) + 1) * ((1 << 128) - 1);
-    uint256 internal constant MAX_PAIRING_COUNT = 30;
 
     string internal constant BAD_IMM_TYP = "BAD_IMM_TYP";
     string internal constant NO_IMM = "NO_IMM";
@@ -39,6 +36,110 @@ contract OneStepProofCommon {
     string internal constant STACK_MANY = "STACK_MANY";
     string internal constant AUX_MANY = "AUX_MANY";
     string internal constant INBOX_VAL = "INBOX_VAL";
+
+    // Stop and arithmetic ops
+    uint8 internal constant OP_ADD = 0x01;
+    uint8 internal constant OP_MUL = 0x02;
+    uint8 internal constant OP_SUB = 0x03;
+    uint8 internal constant OP_DIV = 0x04;
+    uint8 internal constant OP_SDIV = 0x05;
+    uint8 internal constant OP_MOD = 0x06;
+    uint8 internal constant OP_SMOD = 0x07;
+    uint8 internal constant OP_ADDMOD = 0x08;
+    uint8 internal constant OP_MULMOD = 0x09;
+    uint8 internal constant OP_EXP = 0x0a;
+    uint8 internal constant OP_SIGNEXTEND = 0x0b;
+
+    // Comparison & bitwise logic
+    uint8 internal constant OP_LT = 0x10;
+    uint8 internal constant OP_GT = 0x11;
+    uint8 internal constant OP_SLT = 0x12;
+    uint8 internal constant OP_SGT = 0x13;
+    uint8 internal constant OP_EQ = 0x14;
+    uint8 internal constant OP_ISZERO = 0x15;
+    uint8 internal constant OP_AND = 0x16;
+    uint8 internal constant OP_OR = 0x17;
+    uint8 internal constant OP_XOR = 0x18;
+    uint8 internal constant OP_NOT = 0x19;
+    uint8 internal constant OP_BYTE = 0x1a;
+    uint8 internal constant OP_SHL = 0x1b;
+    uint8 internal constant OP_SHR = 0x1c;
+    uint8 internal constant OP_SAR = 0x1d;
+
+    // SHA3
+    uint8 internal constant OP_HASH = 0x20;
+    uint8 internal constant OP_TYPE = 0x21;
+    uint8 internal constant OP_ETHHASH2 = 0x22;
+    uint8 internal constant OP_KECCAK_F = 0x23;
+    uint8 internal constant OP_SHA256_F = 0x24;
+
+    // Stack, Memory, Storage and Flow Operations
+    uint8 internal constant OP_POP = 0x30;
+    uint8 internal constant OP_SPUSH = 0x31;
+    uint8 internal constant OP_RPUSH = 0x32;
+    uint8 internal constant OP_RSET = 0x33;
+    uint8 internal constant OP_JUMP = 0x34;
+    uint8 internal constant OP_CJUMP = 0x35;
+    uint8 internal constant OP_STACKEMPTY = 0x36;
+    uint8 internal constant OP_PCPUSH = 0x37;
+    uint8 internal constant OP_AUXPUSH = 0x38;
+    uint8 internal constant OP_AUXPOP = 0x39;
+    uint8 internal constant OP_AUXSTACKEMPTY = 0x3a;
+    uint8 internal constant OP_NOP = 0x3b;
+    uint8 internal constant OP_ERRPUSH = 0x3c;
+    uint8 internal constant OP_ERRSET = 0x3d;
+
+    // Duplication and Exchange operations
+    uint8 internal constant OP_DUP0 = 0x40;
+    uint8 internal constant OP_DUP1 = 0x41;
+    uint8 internal constant OP_DUP2 = 0x42;
+    uint8 internal constant OP_SWAP1 = 0x43;
+    uint8 internal constant OP_SWAP2 = 0x44;
+
+    // Tuple operations
+    uint8 internal constant OP_TGET = 0x50;
+    uint8 internal constant OP_TSET = 0x51;
+    uint8 internal constant OP_TLEN = 0x52;
+    uint8 internal constant OP_XGET = 0x53;
+    uint8 internal constant OP_XSET = 0x54;
+
+    // Logging operations
+    uint8 internal constant OP_BREAKPOINT = 0x60;
+    uint8 internal constant OP_LOG = 0x61;
+
+    // System operations
+    uint8 internal constant OP_SEND = 0x70;
+    uint8 internal constant OP_INBOX_PEEK = 0x71;
+    uint8 internal constant OP_INBOX = 0x72;
+    uint8 internal constant OP_ERROR = 0x73;
+    uint8 internal constant OP_STOP = 0x74;
+    uint8 internal constant OP_SETGAS = 0x75;
+    uint8 internal constant OP_PUSHGAS = 0x76;
+    uint8 internal constant OP_ERR_CODE_POINT = 0x77;
+    uint8 internal constant OP_PUSH_INSN = 0x78;
+    uint8 internal constant OP_PUSH_INSN_IMM = 0x79;
+    // uint8 private constant OP_OPEN_INSN = 0x7a;
+    uint8 internal constant OP_SIDELOAD = 0x7b;
+
+    uint8 internal constant OP_ECRECOVER = 0x80;
+    uint8 internal constant OP_ECADD = 0x81;
+    uint8 internal constant OP_ECMUL = 0x82;
+    uint8 internal constant OP_ECPAIRING = 0x83;
+
+    // Buffer operations
+    uint8 internal constant OP_NEWBUFFER = 0xa0;
+    uint8 internal constant OP_GETBUFFER8 = 0xa1;
+    uint8 internal constant OP_GETBUFFER64 = 0xa2;
+    uint8 internal constant OP_GETBUFFER256 = 0xa3;
+    uint8 internal constant OP_SETBUFFER8 = 0xa4;
+    uint8 internal constant OP_SETBUFFER64 = 0xa5;
+    uint8 internal constant OP_SETBUFFER256 = 0xa6;
+
+    uint64 internal constant EC_PAIRING_POINT_GAS_COST = 500000;
+
+    uint8 internal constant CODE_POINT_TYPECODE = 1;
+    bytes32 internal constant CODE_POINT_ERROR =
+        keccak256(abi.encodePacked(CODE_POINT_TYPECODE, uint8(0), bytes32(0)));
 
     // fields
     // startMachineHash,
@@ -151,21 +252,22 @@ contract OneStepProofCommon {
         Machine.Data memory mach;
         (offset, mach) = Machine.deserializeMachine(proof, offset);
 
-        AssertionContext memory context = AssertionContext(
-            mach,
-            mach.clone(),
-            inboxDelta,
-            messagesAcc,
-            logsAcc,
-            0,
-            ValueStack(stackCount, stackVals),
-            ValueStack(auxstackCount, auxstackVals),
-            uint8(proof[offset]) == 1,
-            uint8(proof[offset + 1]),
-            proof,
-            offset + 2,
-            bproof
-        );
+        AssertionContext memory context =
+            AssertionContext(
+                mach,
+                mach.clone(),
+                inboxDelta,
+                messagesAcc,
+                logsAcc,
+                0,
+                ValueStack(stackCount, stackVals),
+                ValueStack(auxstackCount, auxstackVals),
+                uint8(proof[offset]) == 1,
+                uint8(proof[offset + 1]),
+                proof,
+                offset + 2,
+                bproof
+            );
 
         uint8 immediate = uint8(proof[offset]);
         uint8 opCode = uint8(proof[offset + 1]);
@@ -255,114 +357,10 @@ contract OneStepProofCommon {
         }
     }
 
-    // Stop and arithmetic ops
-    uint8 internal constant OP_ADD = 0x01;
-    uint8 internal constant OP_MUL = 0x02;
-    uint8 internal constant OP_SUB = 0x03;
-    uint8 internal constant OP_DIV = 0x04;
-    uint8 internal constant OP_SDIV = 0x05;
-    uint8 internal constant OP_MOD = 0x06;
-    uint8 internal constant OP_SMOD = 0x07;
-    uint8 internal constant OP_ADDMOD = 0x08;
-    uint8 internal constant OP_MULMOD = 0x09;
-    uint8 internal constant OP_EXP = 0x0a;
-    uint8 internal constant OP_SIGNEXTEND = 0x0b;
-
-    // Comparison & bitwise logic
-    uint8 internal constant OP_LT = 0x10;
-    uint8 internal constant OP_GT = 0x11;
-    uint8 internal constant OP_SLT = 0x12;
-    uint8 internal constant OP_SGT = 0x13;
-    uint8 internal constant OP_EQ = 0x14;
-    uint8 internal constant OP_ISZERO = 0x15;
-    uint8 internal constant OP_AND = 0x16;
-    uint8 internal constant OP_OR = 0x17;
-    uint8 internal constant OP_XOR = 0x18;
-    uint8 internal constant OP_NOT = 0x19;
-    uint8 internal constant OP_BYTE = 0x1a;
-    uint8 internal constant OP_SHL = 0x1b;
-    uint8 internal constant OP_SHR = 0x1c;
-    uint8 internal constant OP_SAR = 0x1d;
-
-    // SHA3
-    uint8 internal constant OP_HASH = 0x20;
-    uint8 internal constant OP_TYPE = 0x21;
-    uint8 internal constant OP_ETHHASH2 = 0x22;
-    uint8 internal constant OP_KECCAK_F = 0x23;
-    uint8 internal constant OP_SHA256_F = 0x24;
-
-    // Stack, Memory, Storage and Flow Operations
-    uint8 internal constant OP_POP = 0x30;
-    uint8 internal constant OP_SPUSH = 0x31;
-    uint8 internal constant OP_RPUSH = 0x32;
-    uint8 internal constant OP_RSET = 0x33;
-    uint8 internal constant OP_JUMP = 0x34;
-    uint8 internal constant OP_CJUMP = 0x35;
-    uint8 internal constant OP_STACKEMPTY = 0x36;
-    uint8 internal constant OP_PCPUSH = 0x37;
-    uint8 internal constant OP_AUXPUSH = 0x38;
-    uint8 internal constant OP_AUXPOP = 0x39;
-    uint8 internal constant OP_AUXSTACKEMPTY = 0x3a;
-    uint8 internal constant OP_NOP = 0x3b;
-    uint8 internal constant OP_ERRPUSH = 0x3c;
-    uint8 internal constant OP_ERRSET = 0x3d;
-
-    // Duplication and Exchange operations
-    uint8 internal constant OP_DUP0 = 0x40;
-    uint8 internal constant OP_DUP1 = 0x41;
-    uint8 internal constant OP_DUP2 = 0x42;
-    uint8 internal constant OP_SWAP1 = 0x43;
-    uint8 internal constant OP_SWAP2 = 0x44;
-
-    // Tuple operations
-    uint8 internal constant OP_TGET = 0x50;
-    uint8 internal constant OP_TSET = 0x51;
-    uint8 internal constant OP_TLEN = 0x52;
-    uint8 internal constant OP_XGET = 0x53;
-    uint8 internal constant OP_XSET = 0x54;
-
-    // Logging operations
-    uint8 internal constant OP_BREAKPOINT = 0x60;
-    uint8 internal constant OP_LOG = 0x61;
-
-    // System operations
-    uint8 internal constant OP_SEND = 0x70;
-    uint8 internal constant OP_INBOX_PEEK = 0x71;
-    uint8 internal constant OP_INBOX = 0x72;
-    uint8 internal constant OP_ERROR = 0x73;
-    uint8 internal constant OP_STOP = 0x74;
-    uint8 internal constant OP_SETGAS = 0x75;
-    uint8 internal constant OP_PUSHGAS = 0x76;
-    uint8 internal constant OP_ERR_CODE_POINT = 0x77;
-    uint8 internal constant OP_PUSH_INSN = 0x78;
-    uint8 internal constant OP_PUSH_INSN_IMM = 0x79;
-    // uint8 internal constant OP_OPEN_INSN = 0x7a;
-    uint8 internal constant OP_SIDELOAD = 0x7b;
-
-    uint8 internal constant OP_ECRECOVER = 0x80;
-    uint8 internal constant OP_ECADD = 0x81;
-    uint8 internal constant OP_ECMUL = 0x82;
-    uint8 internal constant OP_ECPAIRING = 0x83;
-
-    // Buffer operations
-    uint8 internal constant OP_NEWBUFFER = 0xa0;
-    uint8 internal constant OP_GETBUFFER8 = 0xa1;
-    uint8 internal constant OP_GETBUFFER64 = 0xa2;
-    uint8 internal constant OP_GETBUFFER256 = 0xa3;
-    uint8 internal constant OP_SETBUFFER8 = 0xa4;
-    uint8 internal constant OP_SETBUFFER64 = 0xa5;
-    uint8 internal constant OP_SETBUFFER256 = 0xa6;
-
-    uint64 internal constant EC_PAIRING_POINT_GAS_COST = 500000;
-
-    uint8 internal constant CODE_POINT_TYPECODE = 1;
-    bytes32 internal constant CODE_POINT_ERROR = keccak256(
-        abi.encodePacked(CODE_POINT_TYPECODE, uint8(0), bytes32(0))
-    );
-
     function opInfo(uint256 opCode)
         internal
         pure
+        virtual
         returns (
             uint256, // stack pops
             uint256, // auxstack pops

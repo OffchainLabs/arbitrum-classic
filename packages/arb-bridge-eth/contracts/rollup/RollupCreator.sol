@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "./Rollup.sol";
 
@@ -38,16 +38,17 @@ contract RollupCreator {
         address _owner,
         bytes calldata _extraConfig
     ) external returns (Rollup) {
-        Rollup rollup = new Rollup(
-            _machineHash,
-            _challengePeriodBlocks,
-            _arbGasSpeedLimitPerBlock,
-            _baseStake,
-            _stakeToken,
-            _owner,
-            challengeFactory,
-            _extraConfig
-        );
+        Rollup rollup =
+            new Rollup(
+                _machineHash,
+                _challengePeriodBlocks,
+                _arbGasSpeedLimitPerBlock,
+                _baseStake,
+                _stakeToken,
+                _owner,
+                challengeFactory,
+                _extraConfig
+            );
         emit RollupCreated(address(rollup));
         return rollup;
     }

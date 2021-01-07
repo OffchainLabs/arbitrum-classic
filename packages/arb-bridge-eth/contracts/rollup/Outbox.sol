@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "./Messages.sol";
 
@@ -54,13 +54,12 @@ contract Outbox {
         uint256 amount,
         bytes calldata calldataForL1
     ) external {
-        bytes32 userTx = keccak256(
-            abi.encodePacked(uint256(uint160(bytes20(destAddr))), amount, calldataForL1)
-        );
+        bytes32 userTx =
+            keccak256(abi.encodePacked(uint256(uint160(bytes20(destAddr))), amount, calldataForL1));
 
         spendOutput(outboxIndex, _proof, _index, userTx);
 
-        (bool success, ) = destAddr.call.value(amount)(calldataForL1);
+        (bool success, ) = destAddr.call{ value: amount }(calldataForL1);
         require(success);
     }
 

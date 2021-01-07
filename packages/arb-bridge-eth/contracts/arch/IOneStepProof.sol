@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 interface IOneStepProof {
     function executeStep(bytes32[3] calldata _machineFields, bytes calldata proof)

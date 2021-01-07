@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 library DebugPrint {
     function char(bytes1 b) private pure returns (bytes1 c) {

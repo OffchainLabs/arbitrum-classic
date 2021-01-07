@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "../challenge/IChallengeFactory.sol";
 import "../rollup/IRollup.sol";
@@ -29,7 +29,7 @@ contract ChallengeTester is IRollup {
     }
 
     /* solhint-disable-next-line no-unused-vars */
-    function completeChallenge(address, address payable) external {
+    function completeChallenge(address, address payable) external override {
         return;
     }
 

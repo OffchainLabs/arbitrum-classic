@@ -1,5 +1,22 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.5.17;
+
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+pragma solidity ^0.6.11;
 
 import "./IRollup.sol";
 import "./Node.sol";
@@ -64,23 +81,25 @@ contract Rollup is Inbox, Outbox, IRollup {
         bytes memory _extraConfig
     ) public {
         challengeFactory = IChallengeFactory(_challengeFactory);
-        bytes32 state = RollupLib.nodeStateHash(
-            block.number, // block proposed
-            0,
-            _machineHash,
-            0, // inbox top
-            0, // inbox count
-            0, // send count
-            0, // log count
-            0 // inbox max couny
-        );
-        Node node = new Node(
-            state,
-            0, // challenge hash (not challengeable)
-            0, // confirm data
-            0, // prev node
-            0 // deadline block (not challengeable)
-        );
+        bytes32 state =
+            RollupLib.nodeStateHash(
+                block.number, // block proposed
+                0,
+                _machineHash,
+                0, // inbox top
+                0, // inbox count
+                0, // send count
+                0, // log count
+                0 // inbox max couny
+            );
+        Node node =
+            new Node(
+                state,
+                0, // challenge hash (not challengeable)
+                0, // confirm data
+                0, // prev node
+                0 // deadline block (not challengeable)
+            );
         nodes[0] = node;
 
         challengePeriodBlocks = _challengePeriodBlocks;
@@ -195,10 +214,8 @@ contract Rollup is Inbox, Outbox, IRollup {
         require(nodeNum == latestNodeCreated + 1, "NODE_NUM");
         require(prev == latestConfirmed, "PREV");
 
-        RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(
-            assertionBytes32Fields,
-            assertionIntFields
-        );
+        RollupLib.Assertion memory assertion =
+            RollupLib.decodeAssertion(assertionBytes32Fields, assertionIntFields);
 
         Node node = createNewNode(assertion, prev);
 
@@ -219,10 +236,8 @@ contract Rollup is Inbox, Outbox, IRollup {
         Staker storage staker = stakers[msg.sender];
         require(!staker.isZombie, "ZOMBIE");
 
-        RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(
-            assertionBytes32Fields,
-            assertionIntFields
-        );
+        RollupLib.Assertion memory assertion =
+            RollupLib.decodeAssertion(assertionBytes32Fields, assertionIntFields);
 
         Node node = createNewNode(assertion, staker.latestStakedNode);
 
@@ -285,7 +300,10 @@ contract Rollup is Inbox, Outbox, IRollup {
         );
     }
 
-    function completeChallenge(address winningStaker, address payable losingStaker) external {
+    function completeChallenge(address winningStaker, address payable losingStaker)
+        external
+        override
+    {
         Staker storage winner = stakers[winningStaker];
         Staker storage loser = stakers[losingStaker];
 
@@ -431,15 +449,16 @@ contract Rollup is Inbox, Outbox, IRollup {
         );
 
         // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
-        address challengeAddress = challengeFactory.createChallenge(
-            state.inboxConsistencyHash,
-            state.inboxDeltaHash,
-            state.executionHash,
-            state.executionCheckTime,
-            staker1Address,
-            staker2Address,
-            challengePeriodBlocks
-        );
+        address challengeAddress =
+            challengeFactory.createChallenge(
+                state.inboxConsistencyHash,
+                state.inboxDeltaHash,
+                state.executionHash,
+                state.executionCheckTime,
+                staker1Address,
+                staker2Address,
+                challengePeriodBlocks
+            );
 
         staker1.currentChallenge = challengeAddress;
         staker2.currentChallenge = challengeAddress;

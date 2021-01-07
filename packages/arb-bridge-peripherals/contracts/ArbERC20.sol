@@ -16,20 +16,21 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "arbos-contracts/contracts/ArbSys.sol";
-import "../rollup/IInbox.sol";
-import "@openzeppelin/contracts/ownership/Ownable.sol";
+import "arb-bridge-eth/contracts/rollup/IInbox.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 
-contract ArbERC20 is ERC20, ERC20Detailed {
+contract ArbERC20 is ERC20 {
     constructor(
         string memory name,
         string memory symbol,
         uint8 decimals
-    ) public ERC20Detailed(name, symbol, decimals) {}
+    ) public ERC20(name, symbol) {
+        _setupDecimals(decimals);
+    }
 
     function mintFromL1(address account, uint256 amount) public {
         // This ensures that this method can only be called from the L1 pair of this contract
@@ -60,9 +61,9 @@ contract EthERC20Escrow is Ownable {
         uint256 maxGas,
         uint256 gasPriceBid
     ) external payable onlyOwner {
-        ERC20Detailed t = ERC20Detailed(wrappedToken);
+        ERC20 t = ERC20(wrappedToken);
         // Pay for gas
-        IInbox(rollupChain).depositEthMessage.value(msg.value)(address(this));
+        IInbox(rollupChain).depositEthMessage{ value: msg.value }(address(this));
         IInbox(rollupChain).deployL2ContractPair(
             maxGas, // max gas
             gasPriceBid, // gas price
@@ -84,7 +85,7 @@ contract EthERC20Escrow is Ownable {
         require(pairedRollups[rollupChain]);
         require(IERC20(wrappedToken).transferFrom(msg.sender, address(this), amount));
         // Pay for gas
-        IInbox(rollupChain).depositEthMessage.value(msg.value)(address(this));
+        IInbox(rollupChain).depositEthMessage{ value: msg.value }(address(this));
         IInbox(rollupChain).sendL2Message(
             abi.encodePacked(
                 maxGas,

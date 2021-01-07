@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 interface IPairedErc20 {
     function mint(address account, uint256 amount) external;

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 // SafeMath comes from @openzeppelin under the MIT License
 

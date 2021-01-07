@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@nomiclabs/buidler": "^1.4.7",
-    "@openzeppelin/contracts": "^2.5.0",
+    "@openzeppelin/contracts": "^3.3.0",
     "@typechain/ethers-v4": "^1.0.0",
     "@typechain/truffle-v4": "^2.0.3",
     "@typechain/truffle-v5": "^2.0.2",
