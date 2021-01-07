@@ -247,6 +247,13 @@ func (chain *ChainObserver) prepareAssertion(maxValidBlock *common.BlockId) (*ch
 
 	assertion, _, stepsRun := mach.ExecuteAssertion(maxSteps, messages, 0)
 
+	sendsEmitted := assertion.OutMsgsCount
+	for sendsEmitted > 100 {
+		assertion, _, stepsRun = mach.ExecuteAssertion(maxSteps, messages, 0)
+		sendsEmitted = assertion.OutMsgsCount
+		maxSteps /= 2
+	}
+
 	afterHash := mach.Hash()
 
 	blockReason := mach.IsBlocked(false)
