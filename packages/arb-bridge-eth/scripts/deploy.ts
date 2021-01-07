@@ -3,6 +3,7 @@ import { ethers } from 'hardhat'
 
 type ContractName =
   | 'RollupCreator'
+  | 'NodeFactory'
   | 'ChallengeFactory'
   | 'Challenge'
   | 'OneStepProof'
@@ -21,6 +22,7 @@ export default async function deploy_contracts(): Promise<
   const OneStepProof = await ethers.getContractFactory('OneStepProof')
   const OneStepProof2 = await ethers.getContractFactory('OneStepProof2')
   const ChallengeFactory = await ethers.getContractFactory('ChallengeFactory')
+  const NodeFactory = await ethers.getContractFactory('NodeFactory')
   const RollupCreator = await ethers.getContractFactory('RollupCreator')
 
   const oneStepProof = await OneStepProof.deploy()
@@ -37,7 +39,13 @@ export default async function deploy_contracts(): Promise<
   )
   logDeploy('ChallengeFactory', challengeFactory)
 
-  const rollupCreator = await RollupCreator.deploy(challengeFactory.address)
+  const nodeFactory = await NodeFactory.deploy()
+  logDeploy('NodeFactory', nodeFactory)
+
+  const rollupCreator = await RollupCreator.deploy(
+    challengeFactory.address,
+    nodeFactory.address
+  )
   logDeploy('RollupCreator', rollupCreator)
 
   await Promise.all([
@@ -53,6 +61,9 @@ export default async function deploy_contracts(): Promise<
     challengeFactory.deployed().then(() => {
       console.log('ChallengeFactory deployed')
     }),
+    nodeFactory.deployed().then(() => {
+      console.log('NodeFactory deployed')
+    }),
     rollupCreator.deployed().then(() => {
       console.log('RollupCreator deployed')
     }),
@@ -60,6 +71,7 @@ export default async function deploy_contracts(): Promise<
 
   const contracts: Record<ContractName, Contract> = {
     RollupCreator: rollupCreator,
+    NodeFactory: nodeFactory,
     ChallengeFactory: challengeFactory,
     Challenge: challenge,
     OneStepProof: oneStepProof,

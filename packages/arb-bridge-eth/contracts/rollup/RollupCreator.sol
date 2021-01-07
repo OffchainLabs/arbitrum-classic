@@ -24,9 +24,11 @@ contract RollupCreator {
     event RollupCreated(address rollupAddress);
 
     address challengeFactory;
+    address nodeFactory;
 
-    constructor(address _challengeFactory) public {
+    constructor(address _challengeFactory, address _nodeFactory) public {
         challengeFactory = _challengeFactory;
+        nodeFactory = _nodeFactory;
     }
 
     function createRollup(
@@ -47,6 +49,7 @@ contract RollupCreator {
                 _stakeToken,
                 _owner,
                 challengeFactory,
+                nodeFactory,
                 _extraConfig
             );
         emit RollupCreated(address(rollup));

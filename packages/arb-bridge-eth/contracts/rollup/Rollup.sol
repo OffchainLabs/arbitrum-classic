@@ -23,6 +23,7 @@ import "./Node.sol";
 import "./RollupLib.sol";
 import "./Inbox.sol";
 import "./Outbox.sol";
+import "./INodeFactory.sol";
 
 import "../challenge/ChallengeLib.sol";
 import "../challenge/IChallengeFactory.sol";
@@ -61,6 +62,7 @@ contract Rollup is Inbox, Outbox, IRollup {
     address stakeToken;
 
     IChallengeFactory public challengeFactory;
+    INodeFactory public nodeFactory;
 
     modifier onlyIfUnresolved {
         require(
@@ -78,9 +80,12 @@ contract Rollup is Inbox, Outbox, IRollup {
         address _stakeToken,
         address _owner,
         address _challengeFactory,
+        address _nodeFactory,
         bytes memory _extraConfig
     ) public {
         challengeFactory = IChallengeFactory(_challengeFactory);
+        nodeFactory = INodeFactory(_nodeFactory);
+
         bytes32 state =
             RollupLib.nodeStateHash(
                 block.number, // block proposed
@@ -93,12 +98,14 @@ contract Rollup is Inbox, Outbox, IRollup {
                 0 // inbox max couny
             );
         Node node =
-            new Node(
-                state,
-                0, // challenge hash (not challengeable)
-                0, // confirm data
-                0, // prev node
-                0 // deadline block (not challengeable)
+            Node(
+                nodeFactory.createNode(
+                    state,
+                    0, // challenge hash (not challengeable)
+                    0, // confirm data
+                    0, // prev node
+                    0 // deadline block (not challengeable)
+                )
             );
         nodes[0] = node;
 
@@ -400,17 +407,19 @@ contract Rollup is Inbox, Outbox, IRollup {
         deadlineBlock += executionCheckTimeBlocks;
 
         return
-            new Node(
-                RollupLib.nodeStateHash(assertion, inboxMaxCount),
-                RollupLib.challengeRoot(
-                    assertion,
-                    inboxMaxCount,
-                    inboxMaxValue,
-                    executionCheckTimeBlocks
-                ),
-                RollupLib.confirmHash(assertion),
-                prev,
-                deadlineBlock
+            Node(
+                nodeFactory.createNode(
+                    RollupLib.nodeStateHash(assertion, inboxMaxCount),
+                    RollupLib.challengeRoot(
+                        assertion,
+                        inboxMaxCount,
+                        inboxMaxValue,
+                        executionCheckTimeBlocks
+                    ),
+                    RollupLib.confirmHash(assertion),
+                    prev,
+                    deadlineBlock
+                )
             );
     }
 

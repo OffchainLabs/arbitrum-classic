@@ -18,7 +18,9 @@
 
 pragma solidity ^0.6.11;
 
-contract Node {
+import "../libraries/Cloneable.sol";
+
+contract Node is Cloneable {
     bytes32 public stateHash;
     bytes32 public challengeHash;
     bytes32 public confirmData;
@@ -34,14 +36,15 @@ contract Node {
         _;
     }
 
-    constructor(
+    function initialize(
+        address _rollup,
         bytes32 _stateHash,
         bytes32 _challengeHash,
         bytes32 _confirmData,
         uint256 _prev,
         uint256 _deadlineBlock
-    ) public {
-        rollup = msg.sender;
+    ) external {
+        rollup = _rollup;
         stateHash = _stateHash;
         challengeHash = _challengeHash;
         confirmData = _confirmData;

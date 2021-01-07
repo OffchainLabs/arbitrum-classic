@@ -145,8 +145,9 @@ describe('ArbRollup', () => {
     const block = await ethers.provider.getBlock('latest')
     await tryAdvanceChain(challengePeriodBlocks / 10)
     const assertion = makeSimpleAssertion(prevNodeState, 100)
+    const stake = await rollup.currentRequiredStake()
     const tx = await rollup.newStakeOnNewNode(block, assertion, 1, 0, {
-      value: 10,
+      value: stake,
     })
 
     const receipt = await tx.wait()
