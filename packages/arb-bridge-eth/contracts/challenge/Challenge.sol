@@ -43,6 +43,7 @@ contract Challenge is Cloneable, IChallenge {
     event AsserterTimedOut();
     event ChallengerTimedOut();
     event OneStepProofCompleted();
+    event ConstraintWin();
 
     // Can online initialize once
     string private constant CHAL_INIT_STATE = "CHAL_INIT_STATE";
@@ -265,8 +266,8 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _oldEndHash,
         bytes32[] calldata _chainHashes,
         uint256 _chainLength,
-        bytes32 _bisectionHash,
-    ) external executionChallenge onlyOnTurn {
+        bytes32 _bisectionHash
+    ) internal executionChallenge onlyOnTurn {
         require(_chainLength > 1, "TOO_SHORT");
         require(_chainHashes.length == bisectionDegree(_chainLength), "BISECT_DEGREE");
         require(_chainHashes[_chainHashes.length - 1] != _oldEndHash, "SAME_END");
@@ -280,13 +281,13 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _oldEndHash,
         bytes32[] calldata _chainHashes,
         uint256 _chainLength,
-        uint256[4] segmentPreFields,
+        bytes32[4] calldata _segmentPreFields
     ) external executionChallenge onlyOnTurn {
         require(_chainLength > 1, "TOO SHORT");
 
         require(_chainHashes[0] == ChallengeLib.assertionHash(
             _segmentPreFields[0],
-            _segmentPreFields[1],
+            uint256(_segmentPreFields[1]),
             _segmentPreFields[2],
             _segmentPreFields[3]
         ), "segment pre-fields");
@@ -295,7 +296,7 @@ contract Challenge is Cloneable, IChallenge {
             ChallengeLib.bisectionChunkHash(_chainLength, _chainHashes[0], _oldEndHash);
         _verifyBisection(_segmentToChallenge, _proof, _oldEndHash, _chainHashes, _chainLength, bisectionHash);
 
-        uint256 segmentStartGas = segmentPreFields[1];
+        uint256 segmentStartGas = uint256(_segmentPreFields[1]);
 
         require(_chainLength + gasBefore > segmentStartGas, "invalid segment length");
         challengeState = calculateBisectionRoot(_chainHashes, _chainLength + gasBefore - segmentStartGas);
@@ -308,17 +309,16 @@ contract Challenge is Cloneable, IChallenge {
     function constraintWinExecution(
         uint256 _segmentToChallenge,
         bytes calldata _proof,
-        bytes32 _oldEndHash,
         bytes32 _beforeChainHash,
         bytes32 _afterChainHash,
-        uint256[4] _beforeFields,
-        uint256 _chainLength,
+        bytes32[4] calldata _beforeFields,
+        uint256 _chainLength
     ) external executionChallenge onlyOnTurn {
         require(_chainLength > 1, "TOO SHORT");
 
         require(_beforeChainHash == ChallengeLib.assertionHash(
             _beforeFields[0],
-            _beforeFields[1],
+            uint256(_beforeFields[1]),
             _beforeFields[2],
             _beforeFields[3]
         ), "segment pre-fields");
@@ -327,7 +327,7 @@ contract Challenge is Cloneable, IChallenge {
             ChallengeLib.bisectionChunkHash(_chainLength, _beforeChainHash, _afterChainHash);
         verifySegmentProof(_proof, bisectionHash, _segmentToChallenge);
 
-        require(_beforeFields[1] >= gasBefore + _chainLength);
+        require(uint256(_beforeFields[1]) >= gasBefore + _chainLength);
         require(_beforeChainHash != _afterChainHash);
         emit ConstraintWin();
         _currentWin();
@@ -380,7 +380,7 @@ contract Challenge is Cloneable, IChallenge {
                 )
             );
 
-        _verifyBisection(_segmentToChallenge, _proof, _oldEndHash, _chainHashes, _chainLength, rootHash);
+        verifySegmentProof(_proof, rootHash, _segmentToChallenge);
 
         emit OneStepProofCompleted();
         _currentWin();
