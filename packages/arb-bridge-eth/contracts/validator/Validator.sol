@@ -22,22 +22,6 @@ import "../rollup/Rollup.sol";
 import "../rollup/Node.sol";
 
 contract Validator {
-    uint256[] public items;
-
-    function removeZombies(
-        Rollup rollup,
-        uint256 nodeNum,
-        address[] calldata zombies
-    ) external {
-        uint256 zombieCount = 0;
-        for (uint256 i = 0; i < zombieCount; i++) {
-            address zombie = zombies[i];
-            if (rollup.isZombie(zombie)) {
-                rollup.removeZombieStaker(nodeNum, zombie);
-            }
-        }
-    }
-
     function successorNodes(Rollup rollup, uint256 nodeNum)
         external
         view

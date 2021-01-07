@@ -37,8 +37,12 @@ contract Rollup is Inbox, Outbox, IRollup {
         uint256 amountStaked;
         // currentChallenge is 0 if staker is not in a challenge
         address currentChallenge;
-        bool isZombie;
         bool isStaked;
+    }
+
+    struct Zombie {
+        address stakerAddress;
+        uint256 latestStakedNode;
     }
 
     struct ChallengeState {
@@ -53,10 +57,11 @@ contract Rollup is Inbox, Outbox, IRollup {
     uint256 public latestNodeCreated;
     mapping(uint256 => Node) public nodes;
     uint256 lastStakeBlock;
-    uint256 stakerCount;
 
     address payable[] stakerList;
     mapping(address => Staker) stakerMap;
+
+    Zombie[] zombies;
 
     // Rollup Config
     uint256 challengePeriodBlocks;
@@ -140,7 +145,7 @@ contract Rollup is Inbox, Outbox, IRollup {
         // No stake has been placed during the last challengePeriod blocks
         require(block.number - lastStakeBlock >= challengePeriodBlocks, "RECENT_STAKE");
 
-        require(!stakerMap[stakerAddress].isZombie, "ZOMBIE");
+        require(stakerMap[stakerAddress].isStaked, "NOT_STAKED");
 
         // Confirm that someone is staked on some sibling node
         Node stakedSiblingNode = nodes[successorWithStake];
@@ -171,7 +176,19 @@ contract Rollup is Inbox, Outbox, IRollup {
         // No stake has been placed during the last challengePeriod blocks
         require(block.number - lastStakeBlock >= challengePeriodBlocks, "RECENT_STAKE");
         Node node = nodes[firstUnresolvedNode];
-        node.checkConfirmValid(stakerCount, latestConfirmed);
+
+        removeOldZombies(0);
+
+        uint256 zombieCount = zombies.length;
+        uint256 stakersRequired = stakerList.length;
+        for (uint256 i = 0; i < zombieCount; i++) {
+            Zombie storage zombie = zombies[i];
+            if (node.stakers(zombie.stakerAddress)) {
+                stakersRequired++;
+            }
+        }
+        // Make sure that the number of stakes on the node is that sum of the number of real stakers and the number of zombies staked there
+        node.checkConfirmValid(stakersRequired, latestConfirmed);
 
         bytes32 sendAcc = RollupLib.generateLastMessageHash(messageData, messageLengths);
         require(node.confirmData() == RollupLib.confirmHash(sendAcc, logAcc), "CONFIRM_DATA");
@@ -207,7 +224,7 @@ contract Rollup is Inbox, Outbox, IRollup {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         checkValidNodeNumForStake(nodeNum);
         Staker storage staker = stakerMap[msg.sender];
-        require(!staker.isZombie, "ZOMBIE");
+        require(staker.isStaked, "NOT_STAKED");
         Node node = nodes[nodeNum];
         require(staker.latestStakedNode == node.prev(), "NOT_STAKED_PREV");
         node.addStaker(msg.sender);
@@ -246,7 +263,7 @@ contract Rollup is Inbox, Outbox, IRollup {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         require(nodeNum == latestNodeCreated + 1, "NODE_NUM");
         Staker storage staker = stakerMap[msg.sender];
-        require(!staker.isZombie, "ZOMBIE");
+        require(staker.isStaked, "NOT_STAKED");
 
         RollupLib.Assertion memory assertion =
             RollupLib.decodeAssertion(assertionBytes32Fields, assertionIntFields);
@@ -263,12 +280,8 @@ contract Rollup is Inbox, Outbox, IRollup {
         Staker storage staker = stakerMap[stakerAddress];
         checkUnchallengedStaker(staker);
         require(staker.latestStakedNode <= latestConfirmed, "TOO_RECENT");
-        uint256 stakerIndex = staker.index;
-        stakerList[stakerIndex] = stakerList[stakerList.length - 1];
-        stakerMap[stakerList[stakerIndex]].index = stakerIndex;
-        stakerList.pop();
         uint256 amountStaked = staker.amountStaked;
-        delete stakerMap[stakerAddress];
+        deleteStaker(staker);
         // TODO: Staker could force transfer to revert. We may want to allow funds to be withdrawn separately
         stakerAddress.transfer(amountStaked);
     }
@@ -290,11 +303,6 @@ contract Rollup is Inbox, Outbox, IRollup {
             withdrawAmount = maxReduction;
         }
         msg.sender.transfer(withdrawAmount);
-    }
-
-    function removeZombieStaker(uint256 nodeNum, address stakerAddress) external {
-        require(stakerMap[stakerAddress].isZombie);
-        nodes[nodeNum].removeStaker(stakerAddress);
     }
 
     function createChallenge(
@@ -335,15 +343,44 @@ contract Rollup is Inbox, Outbox, IRollup {
         }
 
         winner.amountStaked += loser.amountStaked / 2;
+        winner.currentChallenge = address(0);
 
         // TODO: deposit extra loser stake into ArbOS
 
-        loser.amountStaked = 0;
-        loser.isZombie = true;
-        winner.currentChallenge = address(0);
-        loser.currentChallenge = address(0);
+        zombies.push(Zombie(losingStaker, loser.latestStakedNode));
+        deleteStaker(loser);
+    }
 
-        stakerCount--;
+    function removeZombie(uint256 zombieNum, uint256 maxNodes) external {
+        require(zombieNum <= zombies.length, "NO_SUCH_ZOMBIE");
+        Zombie storage zombie = zombies[zombieNum];
+        uint256 latestStakedNode = zombie.latestStakedNode;
+        uint256 nodesRemoved = 0;
+        while (latestStakedNode > firstUnresolvedNode && nodesRemoved < maxNodes) {
+            Node node = nodes[latestStakedNode];
+            node.removeStaker(zombie.stakerAddress);
+            latestStakedNode = node.prev();
+            nodesRemoved++;
+        }
+        if (latestStakedNode < firstUnresolvedNode) {
+            zombies[zombieNum] = zombies[zombies.length - 1];
+            zombies.pop();
+        } else {
+            zombie.latestStakedNode = latestStakedNode;
+        }
+    }
+
+    function removeOldZombies(uint256 startIndex) public {
+        uint256 zombieCount = zombies.length;
+        for (uint256 i = startIndex; i < zombieCount; i++) {
+            Zombie storage zombie = zombies[i];
+            while (zombie.latestStakedNode < firstUnresolvedNode && zombieCount > 0) {
+                zombies[i] = zombies[zombieCount - 1];
+                zombies.pop();
+                zombie = zombies[i];
+                zombieCount--;
+            }
+        }
     }
 
     function currentRequiredStake() public view returns (uint256) {
@@ -367,10 +404,6 @@ contract Rollup is Inbox, Outbox, IRollup {
         }
 
         return baseStake * multiplier;
-    }
-
-    function isZombie(address staker) external view returns (bool) {
-        return stakerMap[staker].isZombie;
     }
 
     function createNewNode(RollupLib.Assertion memory assertion, uint256 prev)
@@ -493,6 +526,15 @@ contract Rollup is Inbox, Outbox, IRollup {
         nodes[nodeNum] = Node(0);
     }
 
+    function deleteStaker(Staker storage staker) private {
+        uint256 stakerIndex = staker.index;
+        address stakerAddress = stakerList[stakerIndex];
+        stakerList[stakerIndex] = stakerList[stakerList.length - 1];
+        stakerMap[stakerList[stakerIndex]].index = stakerIndex;
+        stakerList.pop();
+        delete stakerMap[stakerAddress];
+    }
+
     function addNewStaker(uint256 nodeNum, Node node) private {
         // Verify that sender is not already a staker
         require(!stakerMap[msg.sender].isStaked, "ALREADY_STAKED");
@@ -500,8 +542,7 @@ contract Rollup is Inbox, Outbox, IRollup {
 
         uint256 stakerIndex = stakerList.length;
         stakerList.push(msg.sender);
-        stakerMap[msg.sender] = Staker(stakerIndex, nodeNum, msg.value, address(0), false, true);
-        stakerCount++;
+        stakerMap[msg.sender] = Staker(stakerIndex, nodeNum, msg.value, address(0), true);
         lastStakeBlock = block.number;
         node.addStaker(msg.sender);
     }
@@ -511,7 +552,7 @@ contract Rollup is Inbox, Outbox, IRollup {
     }
 
     function checkUnchallengedStaker(Staker storage staker) private view {
-        require(!staker.isZombie, "ZOMBIE");
+        require(staker.isStaked, "NOT_STAKED");
         require(staker.currentChallenge == address(0), "IN_CHAL");
     }
 }
