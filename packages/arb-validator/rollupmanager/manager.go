@@ -276,6 +276,8 @@ func CreateManagerAdvanced(
 
 					man.activeChain.NotifyNewBlock(blockId.Clone())
 
+					man.activeChain.NotifyNextEvent(blockId.Clone())
+
 					if caughtUpToL1 || time.Since(lastDebugPrint).Seconds() > 10 {
 						logger.Info().Object("chain", man.activeChain).Msg("current graph")
 						lastDebugPrint = time.Now()
