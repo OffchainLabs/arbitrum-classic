@@ -18,10 +18,10 @@
   },
   "scripts": {
     "build": "hardhat compile",
-    "test": "rm -rf deployments/hardhat && hardhat typechain && hardhat test",
-    "test:gas": "rm -rf deployments/hardhat && hardhat typechain && REPORT_GAS=true hardhat test --network localhost",
+    "test": "hardhat typechain && hardhat test",
+    "test:gas": "hardhat typechain && REPORT_GAS=true hardhat test --network localhost",
     "test:gas:ci": "CI=true yarn test:gas && mv gasReporterOutput.json ../..",
-    "test:coverage": "rm -rf deployments/hardhat && hardhat typechain && hardhat coverage",
+    "test:coverage": "hardhat typechain && hardhat coverage",
     "lint:js": "eslint .",
     "lint:solidity": "solhint 'contracts/**/*.sol'",
     "lint": "yarn lint:solidity && yarn lint:js",

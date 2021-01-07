@@ -16,7 +16,7 @@
 
 /* eslint-env node, mocha */
 
-import { ethers } from '@nomiclabs/buidler'
+import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import { ValueTester } from '../build/types/ValueTester'
 import { ArbValue } from 'arb-provider-ethers'
@@ -73,18 +73,5 @@ describe('Value', () => {
         assert.equal(ethVal, jsVal)
       }
     )
-  })
-
-  it('should properly convert bytestack to bytes', async () => {
-    const bytestack = ArbValue.hexToBytestack(testVal.slice(0, 40))
-    const marshalled = ArbValue.marshal(bytestack)
-    const bytestackData = ethers.utils.hexlify(marshalled)
-    const { 0: valid, 1: offset, 2: data } = await valueTester.bytestackToBytes(
-      bytestackData,
-      0
-    )
-    assert.isTrue(valid)
-    expect(offset).to.equal(marshalled.length)
-    assert.equal(data, testVal.slice(0, 40))
   })
 })

@@ -16,29 +16,18 @@
 
 /* eslint-env node, mocha */
 import { ethers } from 'hardhat'
-import {
-  Signer,
-  ContractTransaction,
-  BigNumberish,
-  providers,
-  utils,
-} from 'ethers'
-import * as chai from 'chai'
-import * as chaiAsPromised from 'chai-as-promised'
+import { Signer, BigNumberish } from 'ethers'
+import { ContractTransaction } from '@ethersproject/contracts'
+import { assert, expect } from 'chai'
 import { Rollup } from '../build/types/Rollup'
 import { Node } from '../build/types/Node'
 import { RollupCreator } from '../build/types/RollupCreator'
 import { Challenge } from '../build/types/Challenge'
 // import { RollupTester } from '../build/types/RollupTester'
-import { ArbValue } from 'arb-provider-ethers'
 import deploy_contracts from '../scripts/deploy'
 import { initializeAccounts } from './utils'
 
 import { NodeState, Assertion, RollupContract } from './rolluplib'
-
-chai.use(chaiAsPromised)
-
-const { assert, expect } = chai
 
 const initialVmState =
   '0x9900000000000000000000000000000000000000000000000000000000000000'
@@ -69,7 +58,6 @@ async function createRollup(): Promise<{
     await accounts[0].getAddress(), // owner
     '0x'
   )
-  await expect(tx).to.emit(rollupCreator, 'RollupCreated')
 
   const receipt = await (await tx).wait()
   if (receipt.logs == undefined) {
@@ -250,7 +238,6 @@ describe('ArbRollup', () => {
       await rollup.inboxMaxValue(),
       1
     )
-    expect(tx).to.emit(rollup, 'RollupChallengeStarted')
     const receipt = await (await tx).wait()
     const ev = rollup.rollup.interface.parseLog(
       receipt.logs![receipt.logs!.length - 1]
@@ -313,7 +300,6 @@ describe('ArbRollup', () => {
       await rollup.inboxMaxValue(),
       1
     )
-    expect(tx).to.emit(rollup, 'RollupChallengeStarted')
     const receipt = await (await tx).wait()
     const ev = rollup.rollup.interface.parseLog(
       receipt.logs![receipt.logs!.length - 1]

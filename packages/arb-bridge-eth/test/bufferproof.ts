@@ -16,13 +16,11 @@
 
 /* eslint-env node, mocha */
 
-import { ethers } from '@nomiclabs/buidler'
-import { utils } from 'ethers'
+import { ethers } from 'hardhat'
 import { use, expect } from 'chai'
-import chaiAsPromised from 'chai-as-promised'
 import { BufferProofTester } from '../build/types/BufferProofTester'
 
-use(chaiAsPromised)
+const { utils } = ethers
 
 let ospTester: BufferProofTester
 

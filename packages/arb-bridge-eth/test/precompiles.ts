@@ -16,14 +16,10 @@
 
 /* eslint-env node, mocha */
 
-import { ethers } from '@nomiclabs/buidler'
-import * as chai from 'chai'
-import chaiAsPromised from 'chai-as-promised'
+import { ethers } from 'hardhat'
+import { BytesLike } from '@ethersproject/bytes'
+import { expect } from 'chai'
 import { PrecompilesTester } from '../build/types/PrecompilesTester'
-
-chai.use(chaiAsPromised)
-
-const { expect } = chai
 
 let precompilesTester: PrecompilesTester
 
@@ -37,39 +33,39 @@ describe('Precompiles', () => {
   })
 
   it('calculates sha256 compression function correctly', async () => {
-    // const msg = new Message.EthMessage(dest, value)
-    // const inMsg = new Message.IncomingMessage(msg, 1000, 5345346, sender, 65465)
-
     // test vectors from https://homes.esat.kuleuven.be/~nsmart/MPC/sha-256-test.txt
 
     const initialHashState =
       '0x6a09e667bb67ae853c6ef372a54ff53a510e527f9b05688c1f83d9ab5be0cd19'
 
-    const input1 = ['0x0', '0x0']
-
-    const input2 = [
-      '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF',
-      '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF',
+    const input1: [BytesLike, BytesLike] = [
+      ethers.constants.HashZero,
+      ethers.constants.HashZero,
     ]
 
-    const input3 = [
-      '0x243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89',
-      '0x452821E638D01377BE5466CF34E90C6CC0AC29B7C97C50DD3f84D5B5b5470917',
-    ]
-
-    const input4 = [
+    const input2: [BytesLike, BytesLike] = [
       '0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
       '0x202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f',
     ]
 
+    const input3: [BytesLike, BytesLike] = [
+      '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF',
+      '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF',
+    ]
+
+    const input4: [BytesLike, BytesLike] = [
+      '0x243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89',
+      '0x452821E638D01377BE5466CF34E90C6CC0AC29B7C97C50DD3f84D5B5b5470917',
+    ]
+
     const output1 =
-      '98757204029056169846550522095972853119225293520952391190693233024408770554328'
+      '0xda5698be17b9b46962335799779fbeca8ce5d491c0d26243bafef9ea1837a9d8'
     const output2 =
-      '108124777405892723987183679135752579682699194348193935577055847415223704392402'
+      '0xfc99a2df88f42a7a7bb9d18033cdc6a20256755f9d5b9a5044a9cc315abe84a7'
     const output3 =
-      '93648008072072659063844430594620143031399579590857428012818982161960985627086'
+      '0xef0c748df4da50a8d6c43c013edc3ce76c9d9fa9a1458ade56eb86c0a64492d2'
     const output4 =
-      '114254289553293425223588562168656701874573032962834543531534328118719287297191'
+      '0xcf0ae4eb67d38ffeb94068984b22abde4e92bc548d14585e48dca8882d7b09ce'
     expect(
       await precompilesTester.sha256Block(input1, initialHashState)
     ).to.equal(output1)
