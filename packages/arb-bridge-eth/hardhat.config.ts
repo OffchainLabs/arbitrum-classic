@@ -40,7 +40,7 @@ task('deposit', 'Deposit coins into ethbridge')
     await inbox.depositEthMessage(chain, dest, { value: amount })
   })
 
-module.exports = {
+const config = {
   defaultNetwork: 'hardhat',
   paths: {
     artifacts: 'build/contracts',
@@ -75,24 +75,6 @@ module.exports = {
     parity: {
       url: 'http://127.0.0.1:7545',
     },
-    rinkeby: {
-      url: process.env['RINKEBY_URL'] || '',
-      accounts: [process.env['RINKEBY_MNEMONIC'] || ''],
-      network_id: 4,
-      confirmations: 1,
-    },
-    ropsten: {
-      url: process.env['ROPSTEN_URL'] || '',
-      accounts: [process.env['ROPSTEN_MNEMONIC'] || ''],
-      network_id: 3,
-      confirmations: 1,
-    },
-    kovan: {
-      url: process.env['KOVAN_URL'] || '',
-      accounts: [process.env['KOVAN_MNEMONIC'] || ''],
-      network_id: 42,
-      confirmations: 4,
-    },
   },
   etherscan: {
     apiKey: process.env['ETHERSCAN_API_KEY'],
@@ -107,3 +89,32 @@ module.exports = {
     },
   },
 }
+
+if (process.env['RINKEBY_URL'] && process.env['RINKEBY_MNEMONIC']) {
+  ;(config.networks as any)['rinkeby'] = {
+    url: process.env['RINKEBY_URL'] || '',
+    accounts: [process.env['RINKEBY_MNEMONIC'] || ''],
+    network_id: 4,
+    confirmations: 1,
+  }
+}
+
+if (process.env['ROPSTEN_URL'] && process.env['ROPSTEN_MNEMONIC']) {
+  ;(config.networks as any)['ropsten'] = {
+    url: process.env['ROPSTEN_URL'] || '',
+    accounts: [process.env['ROPSTEN_MNEMONIC'] || ''],
+    network_id: 3,
+    confirmations: 1,
+  }
+}
+
+if (process.env['KOVAN_URL'] && process.env['KOVAN_MNEMONIC']) {
+  ;(config.networks as any)['ropsten'] = {
+    url: process.env['KOVAN_URL'] || '',
+    accounts: [process.env['KOVAN_MNEMONIC'] || ''],
+    network_id: 42,
+    confirmations: 4,
+  }
+}
+
+module.exports = config
