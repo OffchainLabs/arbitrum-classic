@@ -112,7 +112,7 @@ contract Challenge is Cloneable, IChallenge {
             kind = Kind.Execution;
             executionHash = 0;
         }
-        verifyAndSetup(Kind.Execution, inboxConsistencyHash);
+        verifyAndSetup(Kind.Execution, executionHash);
         _;
     }
 
@@ -264,9 +264,9 @@ contract Challenge is Cloneable, IChallenge {
         bytes32[] calldata _chainHashes,
         uint256 _chainLength
     ) external executionChallenge onlyOnTurn {
-        require(_chainLength > 1, "bisection too short");
-        require(_chainHashes.length == bisectionDegree(_chainLength));
-        require(_chainHashes[_chainHashes.length - 1] != _oldEndHash);
+        require(_chainLength > 1, "TOO_SHORT");
+        require(_chainHashes.length == bisectionDegree(_chainLength), "BISECT_DEGREE");
+        require(_chainHashes[_chainHashes.length - 1] != _oldEndHash, "SAME_END");
 
         bytes32 bisectionHash =
             ChallengeLib.bisectionChunkHash(_chainLength, _chainHashes[0], _oldEndHash);
@@ -457,9 +457,8 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 item,
         uint256 _segmentToChallenge
     ) private view {
-        (bytes32 calcRoot, uint256 depth) =
-            MerkleLib.verifyMerkleProof(_proof, item, _segmentToChallenge + 1);
-        require(challengeState == keccak256(abi.encodePacked(calcRoot, depth)), BIS_PREV);
+        (bytes32 calcRoot, ) = MerkleLib.verifyMerkleProof(_proof, item, _segmentToChallenge + 1);
+        require(challengeState == calcRoot, BIS_PREV);
     }
 
     function bisectionDegree(uint256 _chainLength) private pure returns (uint256) {
@@ -490,8 +489,8 @@ contract Challenge is Cloneable, IChallenge {
             );
         }
 
-        (bytes32 root, uint256 height) = MerkleLib.generateMerkleRoot(hashes);
-        return keccak256(abi.encodePacked(root, height));
+        (bytes32 root, ) = MerkleLib.generateMerkleRoot(hashes);
+        return root;
     }
 
     function oneStepProofInboxDeltaAfter(

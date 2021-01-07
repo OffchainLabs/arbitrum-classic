@@ -183,21 +183,29 @@ export class Assertion {
     )
   }
 
+  startAssertionHash(): BytesLike {
+    return assertionHash(
+      this.inboxDelta,
+      0,
+      outputAccHash(zerobytes32, 0, zerobytes32, 0),
+      this.prevNodeState.machineHash
+    )
+  }
+
+  endAssertionHash(): BytesLike {
+    return assertionHash(
+      zerobytes32,
+      this.gasUsed,
+      outputAccHash(this.sendAcc, this.sendCount, this.logAcc, this.logCount),
+      this.afterMachineHash
+    )
+  }
+
   executionHash(): BytesLike {
     return bisectionChunkHash(
       this.stepsExecuted,
-      assertionHash(
-        this.inboxDelta,
-        0,
-        outputAccHash(zerobytes32, 0, zerobytes32, 0),
-        this.prevNodeState.machineHash
-      ),
-      assertionHash(
-        zerobytes32,
-        this.gasUsed,
-        outputAccHash(this.sendAcc, this.sendCount, this.logAcc, this.logCount),
-        this.afterMachineHash
-      )
+      this.startAssertionHash(),
+      this.endAssertionHash()
     )
   }
 
@@ -338,6 +346,13 @@ export class RollupContract {
     return this.rollup.rejectNextNodeOutOfOrder()
   }
 
+  rejectNextNode(
+    successorWithStake: BigNumberish,
+    stakerAddress: string
+  ): Promise<ContractTransaction> {
+    return this.rollup.rejectNextNode(successorWithStake, stakerAddress)
+  }
+
   async createChallenge(
     staker1Address: string,
     nodeNum1: BigNumberish,
@@ -357,6 +372,25 @@ export class RollupContract {
       assertion.executionHash(),
       assertion.checkTime(await this.rollup.arbGasSpeedLimitPerBlock())
     )
+  }
+
+  addToDeposit(overrides: PayableOverrides = {}): Promise<ContractTransaction> {
+    return this.rollup.addToDeposit(overrides)
+  }
+
+  reduceDeposit(amount: BigNumberish): Promise<ContractTransaction> {
+    return this.rollup.reduceDeposit(amount)
+  }
+
+  returnOldDeposit(stakerAddress: string): Promise<ContractTransaction> {
+    return this.rollup.returnOldDeposit(stakerAddress)
+  }
+
+  removeZombieStaker(
+    nodeNum: BigNumberish,
+    stakerAddress: string
+  ): Promise<ContractTransaction> {
+    return this.rollup.removeZombieStaker(nodeNum, stakerAddress)
   }
 
   latestConfirmed(): Promise<BigNumber> {

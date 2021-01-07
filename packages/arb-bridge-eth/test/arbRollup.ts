@@ -248,7 +248,7 @@ describe('ArbRollup', () => {
     challenge = Challenge.attach(parsedEv.args.challengeContract) as Challenge
   })
 
-  it('should win via timeout', async function () {
+  it('asserter should win via timeout', async function () {
     await tryAdvanceChain(
       challengePeriodBlocks +
         challengedAssertion.checkTime(arbGasSpeedLimitPerBlock) +
@@ -308,5 +308,54 @@ describe('ArbRollup', () => {
     const parsedEv = (ev as any) as { args: { challengeContract: string } }
     const Challenge = await ethers.getContractFactory('Challenge')
     challenge = Challenge.attach(parsedEv.args.challengeContract) as Challenge
+  })
+
+  it('challenger should reply in challenge', async function () {
+    const chunks = Array(20).fill(zerobytes32)
+    chunks[0] = challengedAssertion.startAssertionHash()
+
+    await challenge
+      .connect(accounts[2])
+      .bisectExecution(
+        0,
+        '0x',
+        challengedAssertion.endAssertionHash(),
+        chunks,
+        challengedAssertion.stepsExecuted
+      )
+  })
+
+  it('challenger should win via timeout', async function () {
+    await tryAdvanceChain(
+      challengePeriodBlocks +
+        challengedAssertion.checkTime(arbGasSpeedLimitPerBlock) +
+        1
+    )
+    await challenge.timeout()
+  })
+
+  it('should remove zombie staker from node', async function () {
+    await rollup.removeZombieStaker(5, await accounts[0].getAddress())
+  })
+
+  it('should reject out of order second node', async function () {
+    await rollup.rejectNextNode(6, await accounts[2].getAddress())
+  })
+
+  it('confirm next node', async function () {
+    await tryAdvanceChain(challengePeriodBlocks)
+    await rollup.confirmNextNode(zerobytes32, [])
+  })
+
+  it('can add stake', async function () {
+    await rollup.connect(accounts[2]).addToDeposit({ value: 5 })
+  })
+
+  it('can reduce stake', async function () {
+    await rollup.connect(accounts[2]).reduceDeposit(5)
+  })
+
+  it('returns stake to staker', async function () {
+    await rollup.returnOldDeposit(await accounts[2].getAddress())
   })
 })

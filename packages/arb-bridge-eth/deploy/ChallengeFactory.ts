@@ -1,40 +1,21 @@
-import {
-  BuidlerRuntimeEnvironment,
-  DeployFunction,
-} from '@nomiclabs/buidler/types'
+import { HardhatRuntimeEnvironment } from 'hardhat/types'
+import { DeployFunction } from 'hardhat-deploy/types'
 
-const func: DeployFunction = async (bre: BuidlerRuntimeEnvironment) => {
-  const { deployments, getNamedAccounts } = bre
-  const { deploy, log } = deployments
+const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+  const { deployments, getNamedAccounts } = hre
+  const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
 
-  const oneStepProof = await deployments.get('OneStepProof')
-  const inboxTopChallenge = await deployments.get('InboxTopChallenge')
-  const executionChallenge = await deployments.get('ExecutionChallenge')
+  const challenge = await deployments.get('Challenge')
+  const osp1 = await deployments.get('OneStepProof')
+  const osp2 = await deployments.get('OneStepProof2')
 
-  let contract = await deployments.getOrNull('ChallengeFactory')
-  if (!contract) {
-    const deployResult = await deploy('ChallengeFactory', {
-      from: deployer,
-      args: [
-        inboxTopChallenge.address,
-        executionChallenge.address,
-        oneStepProof.address,
-      ],
-    })
-    contract = await deployments.get('ChallengeFactory')
-    if (deployResult.newlyDeployed && deployResult.receipt) {
-      log(
-        `ChallengeFactory deployed at ${contract.address} for ${deployResult.receipt.gasUsed}`
-      )
-    }
-  }
+  await deploy('ChallengeFactory', {
+    from: deployer,
+    args: [challenge.address, osp1.address, osp2.address],
+  })
 }
 
 module.exports = func
 module.exports.tags = ['ChallengeFactory']
-module.exports.dependencies = [
-  'InboxTopChallenge',
-  'ExecutionChallenge',
-  'OneStepProof',
-]
+module.exports.dependencies = ['Challenge', 'OneStepProof', 'OneStepProof2']

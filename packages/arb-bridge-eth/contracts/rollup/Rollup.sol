@@ -125,17 +125,19 @@ contract Rollup is Inbox, Outbox, IRollup {
         external
         onlyIfUnresolved
     {
+        require(successorWithStake > firstUnresolvedNode, "SUCCESSOR_TO_LOW");
+        require(successorWithStake <= latestNodeCreated, "SUCCESSOR_TO_HIGH");
         // No stake has been placed during the last challengePeriod blocks
-        require(block.number - lastStakeBlock >= challengePeriodBlocks);
+        require(block.number - lastStakeBlock >= challengePeriodBlocks, "RECENT_STAKE");
 
-        require(!stakers[stakerAddress].isZombie);
+        require(!stakers[stakerAddress].isZombie, "ZOMBIE");
 
         // Confirm that someone is staked on some sibling node
         Node stakedSiblingNode = nodes[successorWithStake];
         // stakedSiblingNode is a child of latestConfirmed
-        require(stakedSiblingNode.prev() == latestConfirmed);
+        require(stakedSiblingNode.prev() == latestConfirmed, "BAD_SUCCESSOR");
         // staker is actually staked on stakedSiblingNode
-        require(stakedSiblingNode.stakers(stakerAddress));
+        require(stakedSiblingNode.stakers(stakerAddress), "BAD_STAKER");
 
         Node node = nodes[firstUnresolvedNode];
         node.checkConfirmInvalid();
@@ -250,7 +252,7 @@ contract Rollup is Inbox, Outbox, IRollup {
     function returnOldDeposit(address payable stakerAddress) external {
         Staker storage staker = stakers[stakerAddress];
         checkUnchallengedStaker(staker);
-        require(staker.latestStakedNode <= latestConfirmed);
+        require(staker.latestStakedNode <= latestConfirmed, "TOO_RECENT");
 
         delete stakers[stakerAddress];
         // TODO: Staker could force transfer to revert. We may want to allow funds to be withdrawn separately

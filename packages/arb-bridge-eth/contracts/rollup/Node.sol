@@ -81,10 +81,10 @@ contract Node {
 
     function checkConfirmInvalid() external view {
         // Verify the block's deadline has passed
-        require(deadlineBlock <= block.number);
+        require(deadlineBlock <= block.number, "BEFORE_DEADLINE");
 
         // Verify that no staker is staked on this node
-        require(stakerCount == 0);
+        require(stakerCount == 0, "HAS_STAKERS");
     }
 
     function checkConfirmOutOfOrder(uint256 latestConfirmed) external view {
