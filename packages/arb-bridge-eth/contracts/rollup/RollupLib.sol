@@ -135,7 +135,7 @@ library RollupLib {
     ) internal pure returns (bytes32) {
         bytes32 executionHash =
             ChallengeLib.bisectionChunkHash(
-                assertion.stepsExecuted,
+                assertion.gasUsed,
                 ChallengeLib.assertionHash(
                     assertion.inboxDelta,
                     0,
