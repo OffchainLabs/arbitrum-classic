@@ -41,6 +41,13 @@ contract Validator {
         return stakers;
     }
 
+    function refundStakers(Rollup rollup, address payable[] calldata stakers) external {
+        uint256 stakerCount = stakers.length;
+        for (uint256 i = 0; i < stakerCount; i++) {
+            try rollup.returnOldDeposit(stakers[i]) {} catch {}
+        }
+    }
+
     function successorNodes(Rollup rollup, uint256 nodeNum)
         external
         view
