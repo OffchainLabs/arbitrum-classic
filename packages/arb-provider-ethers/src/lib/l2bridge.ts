@@ -17,7 +17,6 @@
 'use strict'
 
 import { ArbSysFactory } from './abi/ArbSysFactory'
-import { ArbSys } from './abi/ArbSys'
 
 import { ArbAddressTable } from './abi/ArbAddressTable'
 import { ArbAddressTableFactory } from './abi/ArbAddressTableFactory'
@@ -56,14 +55,19 @@ export const getAddressIndex = (() => {
     if (addressToIndexMemo[address]) {
       return addressToIndexMemo[address]
     }
-    arbAddressTable = arbAddressTable || ArbAddressTableFactory.connect(ARB_ADDRESS_TABLE_ADDRESS, signerOrProvider)
+    arbAddressTable =
+      arbAddressTable ||
+      ArbAddressTableFactory.connect(
+        ARB_ADDRESS_TABLE_ADDRESS,
+        signerOrProvider
+      )
     const isRegistered = await arbAddressTable.addressExists(address)
     if (isRegistered) {
       const index = (await arbAddressTable.lookup(address)).toNumber()
       addressToIndexMemo[address] = index
       return index
-    } else {  
-      return -1 
+    } else {
+      return -1
     }
   }
 })()
