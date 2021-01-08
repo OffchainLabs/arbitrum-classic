@@ -34,7 +34,7 @@ If you're using metamask, add a custom RPC network to connect to the Arbitrum te
 
 - Network Name: Arbitrum Testnet V3
 - New RPC URL: https://kovan3.arbitrum.io/rpc
-- ChainID (Optional): 0x29f1463d6514
+- ChainID (Optional): 46116242285844
 - Symbol: ETH
 - Block Explorer URL: https://explorer.offchainlabs.com/#/
 
