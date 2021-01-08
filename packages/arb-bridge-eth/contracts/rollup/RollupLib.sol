@@ -127,14 +127,10 @@ library RollupLib {
             );
     }
 
-    function challengeRoot(
-        Assertion memory assertion,
-        uint256 inboxTopCount,
-        bytes32 inboxTopHash,
-        uint256 executionCheckTime
-    ) internal pure returns (bytes32) {
-        bytes32 executionHash =
+    function executionHash(Assertion memory assertion) private pure returns (bytes32) {
+        return
             ChallengeLib.bisectionChunkHash(
+                assertion.gasUsed,
                 assertion.gasUsed,
                 ChallengeLib.assertionHash(
                     assertion.inboxDelta,
@@ -154,9 +150,17 @@ library RollupLib {
                     assertion.afterMachineHash
                 )
             );
+    }
 
+    function challengeRoot(
+        Assertion memory assertion,
+        uint256 inboxTopCount,
+        bytes32 inboxTopHash,
+        uint256 executionCheckTime
+    ) internal pure returns (bytes32) {
         bytes32 inboxConsistencyHash =
             ChallengeLib.bisectionChunkHash(
+                inboxTopCount - assertion.beforeInboxCount - assertion.inboxMessagesRead,
                 inboxTopCount - assertion.beforeInboxCount - assertion.inboxMessagesRead,
                 inboxTopHash,
                 assertion.afterInboxHash
@@ -164,6 +168,7 @@ library RollupLib {
 
         bytes32 inboxDeltaHash =
             ChallengeLib.bisectionChunkHash(
+                assertion.inboxMessagesRead,
                 assertion.inboxMessagesRead,
                 ChallengeLib.inboxDeltaHash(assertion.afterInboxHash, 0),
                 ChallengeLib.inboxDeltaHash(assertion.beforeInboxHash, assertion.inboxDelta)
@@ -173,7 +178,7 @@ library RollupLib {
             ChallengeLib.challengeRootHash(
                 inboxConsistencyHash,
                 inboxDeltaHash,
-                executionHash,
+                executionHash(assertion),
                 executionCheckTime
             );
     }

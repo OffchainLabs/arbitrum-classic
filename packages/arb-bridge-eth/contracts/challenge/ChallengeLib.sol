@@ -37,10 +37,11 @@ library ChallengeLib {
 
     function bisectionChunkHash(
         uint256 _length,
+        uint256 _segmentEnd,
         bytes32 _startHash,
         bytes32 _endHash
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_length, _startHash, _endHash));
+        return keccak256(abi.encodePacked(_length, _segmentEnd, _startHash, _endHash));
     }
 
     function inboxDeltaHash(bytes32 _inboxAcc, bytes32 _deltaAcc) internal pure returns (bytes32) {
