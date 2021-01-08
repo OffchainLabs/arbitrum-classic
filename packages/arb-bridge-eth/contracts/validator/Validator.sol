@@ -22,6 +22,25 @@ import "../rollup/Rollup.sol";
 import "../rollup/Node.sol";
 
 contract Validator {
+    function refundableStakers(Rollup rollup) external view returns (address[] memory) {
+        uint256 stakerCount = rollup.stakerCount();
+        address[] memory stakers = new address[](stakerCount);
+        uint256 latestConfirmed = rollup.latestConfirmed();
+        uint256 index = 0;
+        for (uint256 i = 0; i < stakerCount; i++) {
+            address staker = rollup.stakerList(i);
+            (, uint256 latestStakedNode, , , ) = rollup.stakerMap(staker);
+            if (latestStakedNode <= latestConfirmed) {
+                stakers[index] = staker;
+                index++;
+            }
+        }
+        assembly {
+            mstore(stakers, index)
+        }
+        return stakers;
+    }
+
     function successorNodes(Rollup rollup, uint256 nodeNum)
         external
         view

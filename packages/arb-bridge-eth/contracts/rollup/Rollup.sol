@@ -58,8 +58,8 @@ contract Rollup is Inbox, Outbox, IRollup {
     mapping(uint256 => Node) public nodes;
     uint256 lastStakeBlock;
 
-    address payable[] stakerList;
-    mapping(address => Staker) stakerMap;
+    address payable[] public stakerList;
+    mapping(address => Staker) public stakerMap;
 
     Zombie[] zombies;
 
@@ -368,6 +368,10 @@ contract Rollup is Inbox, Outbox, IRollup {
         } else {
             zombie.latestStakedNode = latestStakedNode;
         }
+    }
+
+    function stakerCount() external view returns (uint256) {
+        return stakerList.length;
     }
 
     function removeOldZombies(uint256 startIndex) public {
