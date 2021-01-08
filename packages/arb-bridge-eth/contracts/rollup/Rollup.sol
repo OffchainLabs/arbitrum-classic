@@ -214,7 +214,7 @@ contract Rollup is Inbox, Outbox, IRollup {
         Node node = nodes[nodeNum];
         require(node.prev() == latestConfirmed);
 
-        Staker storage staker = addNewStaker(nodeNum, node);
+        Staker storage staker = addNewStaker();
 
         node.addStaker(msg.sender);
         staker.latestStakedNode = nodeNum;
@@ -252,7 +252,7 @@ contract Rollup is Inbox, Outbox, IRollup {
             RollupLib.decodeAssertion(assertionBytes32Fields, assertionIntFields);
         Node node = createNewNode(assertion, prev);
 
-        Staker storage staker = addNewStaker(nodeNum, node);
+        Staker storage staker = addNewStaker();
 
         node.addStaker(msg.sender);
         staker.latestStakedNode = nodeNum;
@@ -286,8 +286,8 @@ contract Rollup is Inbox, Outbox, IRollup {
     }
 
     function returnOldDeposit(address payable stakerAddress) external {
-        require(staker.latestStakedNode <= latestConfirmed, "TOO_RECENT");
         Staker storage staker = stakerMap[stakerAddress];
+        require(staker.latestStakedNode <= latestConfirmed, "TOO_RECENT");
         checkUnchallengedStaker(staker);
         uint256 amountStaked = staker.amountStaked;
         deleteStaker(staker);
@@ -295,8 +295,8 @@ contract Rollup is Inbox, Outbox, IRollup {
         stakerAddress.transfer(amountStaked);
     }
 
-    function addToDeposit() external payable {
-        Staker storage staker = stakerMap[msg.sender];
+    function addToDeposit(address stakerAddress) external payable {
+        Staker storage staker = stakerMap[stakerAddress];
         checkUnchallengedStaker(staker);
         staker.amountStaked += msg.value;
     }
