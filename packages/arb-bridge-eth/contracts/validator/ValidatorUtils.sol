@@ -22,6 +22,13 @@ import "../rollup/Rollup.sol";
 import "../rollup/Node.sol";
 
 contract ValidatorUtils {
+    function refundStakers(Rollup rollup, address payable[] calldata stakers) external {
+        uint256 stakerCount = stakers.length;
+        for (uint256 i = 0; i < stakerCount; i++) {
+            try rollup.returnOldDeposit(stakers[i]) {} catch {}
+        }
+    }
+
     function refundableStakers(Rollup rollup) external view returns (address[] memory) {
         uint256 stakerCount = rollup.stakerCount();
         address[] memory stakers = new address[](stakerCount);
@@ -39,13 +46,6 @@ contract ValidatorUtils {
             mstore(stakers, index)
         }
         return stakers;
-    }
-
-    function refundStakers(Rollup rollup, address payable[] calldata stakers) external {
-        uint256 stakerCount = stakers.length;
-        for (uint256 i = 0; i < stakerCount; i++) {
-            try rollup.returnOldDeposit(stakers[i]) {} catch {}
-        }
     }
 
     function successorNodes(Rollup rollup, uint256 nodeNum)
