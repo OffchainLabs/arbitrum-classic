@@ -10,7 +10,7 @@ type PrimativeOrPrimativeArray = PrimativeType | PrimativeType[]
 type BytesNumber = 1 | 4 | 8 | 16 | 32
 
 // to use:
-// const mySerializeParamsFunction = argSerializerConstructor("aggreator")
+// const mySerializeParamsFunction = argSerializerConstructor("rpcurl")
 export const argSerializerConstructor = (arbProvider: JsonRpcProvider) => {
   return async (params: PrimativeOrPrimativeArray[]) => {
     return await serializeParams(params, async (address: string) => {
