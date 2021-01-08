@@ -21,7 +21,7 @@ pragma solidity ^0.6.11;
 import "../rollup/Rollup.sol";
 import "../rollup/Node.sol";
 
-contract Validator {
+contract ValidatorUtils {
     function refundableStakers(Rollup rollup) external view returns (address[] memory) {
         uint256 stakerCount = rollup.stakerCount();
         address[] memory stakers = new address[](stakerCount);

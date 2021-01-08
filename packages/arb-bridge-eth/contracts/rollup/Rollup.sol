@@ -213,7 +213,11 @@ contract Rollup is Inbox, Outbox, IRollup {
         checkValidNodeNumForStake(nodeNum);
         Node node = nodes[nodeNum];
         require(node.prev() == latestConfirmed);
-        addNewStaker(nodeNum, node);
+
+        Staker storage staker = addNewStaker(nodeNum, node);
+
+        node.addStaker(msg.sender);
+        staker.latestStakedNode = nodeNum;
     }
 
     function addStakeOnExistingNode(
@@ -227,6 +231,7 @@ contract Rollup is Inbox, Outbox, IRollup {
         require(staker.isStaked, "NOT_STAKED");
         Node node = nodes[nodeNum];
         require(staker.latestStakedNode == node.prev(), "NOT_STAKED_PREV");
+
         node.addStaker(msg.sender);
         staker.latestStakedNode = nodeNum;
     }
@@ -245,10 +250,13 @@ contract Rollup is Inbox, Outbox, IRollup {
 
         RollupLib.Assertion memory assertion =
             RollupLib.decodeAssertion(assertionBytes32Fields, assertionIntFields);
-
         Node node = createNewNode(assertion, prev);
 
-        addNewStaker(nodeNum, node);
+        Staker storage staker = addNewStaker(nodeNum, node);
+
+        node.addStaker(msg.sender);
+        staker.latestStakedNode = nodeNum;
+
         nodes[nodeNum] = node;
         latestNodeCreated++;
     }
@@ -271,15 +279,16 @@ contract Rollup is Inbox, Outbox, IRollup {
         Node node = createNewNode(assertion, staker.latestStakedNode);
 
         node.addStaker(msg.sender);
-        nodes[nodeNum] = node;
         staker.latestStakedNode = nodeNum;
+
+        nodes[nodeNum] = node;
         latestNodeCreated++;
     }
 
     function returnOldDeposit(address payable stakerAddress) external {
+        require(staker.latestStakedNode <= latestConfirmed, "TOO_RECENT");
         Staker storage staker = stakerMap[stakerAddress];
         checkUnchallengedStaker(staker);
-        require(staker.latestStakedNode <= latestConfirmed, "TOO_RECENT");
         uint256 amountStaked = staker.amountStaked;
         deleteStaker(staker);
         // TODO: Staker could force transfer to revert. We may want to allow funds to be withdrawn separately
@@ -539,16 +548,16 @@ contract Rollup is Inbox, Outbox, IRollup {
         delete stakerMap[stakerAddress];
     }
 
-    function addNewStaker(uint256 nodeNum, Node node) private {
+    function addNewStaker() private returns (Staker storage) {
         // Verify that sender is not already a staker
         require(!stakerMap[msg.sender].isStaked, "ALREADY_STAKED");
         require(msg.value >= currentRequiredStake(), "NOT_ENOUGH_STAKE");
 
         uint256 stakerIndex = stakerList.length;
         stakerList.push(msg.sender);
-        stakerMap[msg.sender] = Staker(stakerIndex, nodeNum, msg.value, address(0), true);
+        stakerMap[msg.sender] = Staker(stakerIndex, latestConfirmed, msg.value, address(0), true);
         lastStakeBlock = block.number;
-        node.addStaker(msg.sender);
+        return stakerMap[msg.sender];
     }
 
     function checkValidNodeNumForStake(uint256 nodeNum) private view {
