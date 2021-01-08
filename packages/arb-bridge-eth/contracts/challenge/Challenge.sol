@@ -182,16 +182,14 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _segmentToChallenge,
         bytes calldata _proof,
         uint256 _chainEnd,
+        bytes32 _oldEndHash,
+        bytes32 _upperHash,
         bytes32 _lowerHash,
         bytes32 _value
     ) external inboxConsistencyChallenge onlyOnTurn {
-        bytes32 prevHash =
-            ChallengeLib.bisectionChunkHash(
-                1,
-                _chainEnd,
-                _lowerHash,
-                Messages.addMessageToInbox(_lowerHash, _value)
-            );
+        require(_upperHash == Messages.addMessageToInbox(_lowerHash, _value));
+        require(_lowerHash != _oldEndHash);
+        bytes32 prevHash = ChallengeLib.bisectionChunkHash(1, _chainEnd, _upperHash, _lowerHash);
 
         verifySegmentProof(_proof, prevHash, _segmentToChallenge);
 
@@ -234,26 +232,25 @@ contract Challenge is Cloneable, IChallenge {
 
     function oneStepProveInboxDelta(
         uint256 _segmentToChallenge,
-        bytes calldata _proof,
+        bytes memory _proof,
         uint256 _chainEnd,
+        bytes32 _oldEndHash,
         bytes32 _prevInboxAcc,
         bytes32 _prevInboxDelta,
+        bytes32 _nextInboxAcc,
         uint8 _kind,
         uint256 _blockNumber,
         uint256 _timestamp,
         address _sender,
         uint256 _inboxSeqNum,
-        bytes calldata _msgData
-    ) external inboxDeltaChallenge onlyOnTurn {
-        verifySegmentProof(
-            _proof,
-            ChallengeLib.bisectionChunkHash(
-                1,
-                _chainEnd,
-                ChallengeLib.inboxDeltaHash(_prevInboxAcc, _prevInboxDelta),
+        bytes memory _msgData
+    ) public inboxDeltaChallenge onlyOnTurn {
+        require(
+            _oldEndHash !=
                 oneStepProofInboxDeltaAfter(
                     _prevInboxAcc,
                     _prevInboxDelta,
+                    _nextInboxAcc,
                     _kind,
                     _blockNumber,
                     _timestamp,
@@ -261,6 +258,15 @@ contract Challenge is Cloneable, IChallenge {
                     _inboxSeqNum,
                     _msgData
                 )
+        );
+
+        verifySegmentProof(
+            _proof,
+            ChallengeLib.bisectionChunkHash(
+                1,
+                _chainEnd,
+                ChallengeLib.inboxDeltaHash(_prevInboxAcc, _prevInboxDelta),
+                _oldEndHash
             ),
             _segmentToChallenge
         );
@@ -343,6 +349,7 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _segmentToChallenge,
         bytes memory _proof,
         uint256 _chainEnd,
+        bytes32 _oldEndHash,
         bytes32[3] memory _machineFields,
         uint64 _initialGasUsed,
         uint256 _initialMessageCount,
@@ -363,6 +370,18 @@ contract Challenge is Cloneable, IChallenge {
             );
         }
 
+        require(
+            _oldEndHash !=
+                oneStepProofExecutionAfter(
+                    _machineFields,
+                    _initialGasUsed,
+                    _initialMessageCount,
+                    _initialLogCount,
+                    gasUsed,
+                    proofFields
+                )
+        );
+
         bytes32 rootHash =
             ChallengeLib.bisectionChunkHash(
                 gasUsed,
@@ -374,14 +393,7 @@ contract Challenge is Cloneable, IChallenge {
                     _initialLogCount,
                     proofFields
                 ),
-                oneStepProofExecutionAfter(
-                    _machineFields,
-                    _initialGasUsed,
-                    _initialMessageCount,
-                    _initialLogCount,
-                    gasUsed,
-                    proofFields
-                )
+                _oldEndHash
             );
 
         verifySegmentProof(_proof, rootHash, _segmentToChallenge);
@@ -557,6 +569,7 @@ contract Challenge is Cloneable, IChallenge {
     function oneStepProofInboxDeltaAfter(
         bytes32 _prevInboxAcc,
         bytes32 _prevInboxDelta,
+        bytes32 _nextInboxAcc,
         uint8 _kind,
         uint256 _blockNumber,
         uint256 _timestamp,
@@ -564,21 +577,10 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _inboxSeqNum,
         bytes memory _msgData
     ) private pure returns (bytes32) {
-        return
-            ChallengeLib.inboxDeltaHash(
+        require(
+            _prevInboxAcc ==
                 Messages.addMessageToInbox(
-                    _prevInboxAcc,
-                    Messages.messageHash(
-                        _kind,
-                        _sender,
-                        _blockNumber,
-                        _timestamp,
-                        _inboxSeqNum,
-                        keccak256(_msgData)
-                    )
-                ),
-                Messages.addMessageToInbox(
-                    _prevInboxDelta,
+                    _nextInboxAcc,
                     Hashing.hash(
                         Messages.messageValue(
                             _kind,
@@ -588,6 +590,22 @@ contract Challenge is Cloneable, IChallenge {
                             _inboxSeqNum,
                             _msgData
                         )
+                    )
+                )
+        );
+
+        return
+            ChallengeLib.inboxDeltaHash(
+                _nextInboxAcc,
+                Messages.addMessageToInbox(
+                    _prevInboxDelta,
+                    Messages.messageHash(
+                        _kind,
+                        _sender,
+                        _blockNumber,
+                        _timestamp,
+                        _inboxSeqNum,
+                        keccak256(_msgData)
                     )
                 )
             );
