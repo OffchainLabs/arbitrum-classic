@@ -29,6 +29,22 @@ contract ValidatorUtils {
         }
     }
 
+    function getConfig(Rollup rollup)
+        external
+        view
+        returns (
+            uint256 challengePeriodBlocks,
+            uint256 arbGasSpeedLimitPerBlock,
+            uint256 baseStake,
+            address stakeToken
+        )
+    {
+        challengePeriodBlocks = rollup.challengePeriodBlocks();
+        arbGasSpeedLimitPerBlock = rollup.arbGasSpeedLimitPerBlock();
+        baseStake = rollup.baseStake();
+        stakeToken = rollup.stakeToken();
+    }
+
     function refundableStakers(Rollup rollup) external view returns (address[] memory) {
         uint256 stakerCount = rollup.stakerCount();
         address[] memory stakers = new address[](stakerCount);

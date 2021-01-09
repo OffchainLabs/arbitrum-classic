@@ -43,9 +43,8 @@ func (a *Assertion) CheckTime(arbGasSpeedLimitPerBlock *big.Int) *big.Int {
 type NodeID *big.Int
 
 type RollupWatcher struct {
-	con *ethbridgecontracts.Rollup
-
-	arbGasSpeedLimitPerBlock *big.Int
+	con    *ethbridgecontracts.Rollup
+	client ethutils.EthClient
 }
 
 func NewRollupWatcher(address ethcommon.Address, client ethutils.EthClient) (*RollupWatcher, error) {
@@ -53,14 +52,10 @@ func NewRollupWatcher(address ethcommon.Address, client ethutils.EthClient) (*Ro
 	if err != nil {
 		return nil, err
 	}
-	arbGasSpeedLimitPerBlock, err := con.ArbGasSpeedLimitPerBlock(&bind.CallOpts{})
-	if err != nil {
-		return nil, err
-	}
 
 	return &RollupWatcher{
-		con:                      con,
-		arbGasSpeedLimitPerBlock: arbGasSpeedLimitPerBlock,
+		con:    con,
+		client: client,
 	}, nil
 }
 
@@ -70,6 +65,26 @@ func (r *RollupWatcher) StakerCount(ctx context.Context) (*big.Int, error) {
 
 func (r *RollupWatcher) CurrentRequiredStake(ctx context.Context) (*big.Int, error) {
 	return r.con.CurrentRequiredStake(&bind.CallOpts{Context: ctx})
+}
+
+func (r *Rollup) LatestConfirmedNode(ctx context.Context) (*big.Int, error) {
+	return r.con.LatestConfirmed(&bind.CallOpts{Context: ctx})
+}
+
+func (r *Rollup) FirstUnresolvedNode(ctx context.Context) (*big.Int, error) {
+	return r.con.FirstUnresolvedNode(&bind.CallOpts{Context: ctx})
+}
+
+func (r *Rollup) ChallengePeriodBlocks(ctx context.Context) (*big.Int, error) {
+	return r.con.ChallengePeriodBlocks(&bind.CallOpts{Context: ctx})
+}
+
+func (r *RollupWatcher) GetNode(ctx context.Context, node NodeID) (*NodeWatcher, error) {
+	nodeAddress, err := r.con.Nodes(&bind.CallOpts{Context: ctx}, node)
+	if err != nil {
+		return nil, err
+	}
+	return NewNodeWatcher(nodeAddress, r.client)
 }
 
 type Rollup struct {
@@ -212,6 +227,7 @@ func (r *Rollup) CreateChallenge(
 	assertion *Assertion,
 	inboxMaxHash common.Hash,
 	inboxMaxCount *big.Int,
+	arbGasSpeedLimitPerBlock *big.Int,
 ) (*types.Transaction, error) {
 	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return r.con.CreateChallenge(
@@ -223,7 +239,7 @@ func (r *Rollup) CreateChallenge(
 			assertion.InboxConsistencyHash(inboxMaxHash, inboxMaxCount),
 			assertion.InboxDeltaHash(),
 			assertion.ExecutionHash(),
-			assertion.CheckTime(r.arbGasSpeedLimitPerBlock),
+			assertion.CheckTime(arbGasSpeedLimitPerBlock),
 		)
 	})
 }

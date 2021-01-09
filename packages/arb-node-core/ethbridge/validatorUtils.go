@@ -36,6 +36,26 @@ func (v *ValidatorUtilsWatcher) RefundableStakers(ctx context.Context) ([]common
 	return common.AddressArrayFromEth(addresses), nil
 }
 
+type RollupConfig struct {
+	ChallengePeriodBlocks    *big.Int
+	ArbGasSpeedLimitPerBlock *big.Int
+	BaseStake                *big.Int
+	StakeToken               common.Address
+}
+
+func (v *ValidatorUtilsWatcher) GetConfig(ctx context.Context) (*RollupConfig, error) {
+	config, err := v.con.GetConfig(&bind.CallOpts{Context: ctx}, v.rollupAddress)
+	if err != nil {
+		return nil, err
+	}
+	return &RollupConfig{
+		ChallengePeriodBlocks:    config.ChallengePeriodBlocks,
+		ArbGasSpeedLimitPerBlock: config.ArbGasSpeedLimitPerBlock,
+		BaseStake:                config.BaseStake,
+		StakeToken:               common.NewAddressFromEth(config.StakeToken),
+	}, nil
+}
+
 func (v *ValidatorUtilsWatcher) SuccessorNodes(ctx context.Context, node NodeID) ([]*big.Int, error) {
 	return v.con.SuccessorNodes(&bind.CallOpts{Context: ctx}, v.rollupAddress, node)
 }
@@ -60,7 +80,7 @@ func NewValidatorUtils(address, rollupAddress ethcommon.Address, client ethutils
 	}, nil
 }
 
-func (v *ValidatorUtils) RejectNextNode(ctx context.Context, stakers []common.Address) (*types.Transaction, error) {
+func (v *ValidatorUtils) RefundStakers(ctx context.Context, stakers []common.Address) (*types.Transaction, error) {
 	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return v.con.RefundStakers(auth, v.rollupAddress, common.AddressArrayToEth(stakers))
 	})

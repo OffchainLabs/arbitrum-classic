@@ -70,7 +70,7 @@ contract Node is Cloneable {
 
     function checkConfirmValid(uint256 totalStakerCount, uint256 latestConfirmed) external view {
         // Verify the block's deadline has passed
-        require(deadlineBlock < block.number, "BEFORE_DEADLINE");
+        require(block.number >= deadlineBlock, "BEFORE_DEADLINE");
 
         // Check that prev is latest confirmed
         require(prev == latestConfirmed, "INVALID_PREV");
@@ -82,9 +82,9 @@ contract Node is Cloneable {
         require(totalStakerCount > 0, "NO_STAKERS");
     }
 
-    function checkConfirmInvalid() external view {
+    function checkConfirmInvalid(uint256 zombieStakerCount) external view {
         // Verify the block's deadline has passed
-        require(deadlineBlock <= block.number, "BEFORE_DEADLINE");
+        require(block.number >= deadlineBlock, "BEFORE_DEADLINE");
 
         // Verify that no staker is staked on this node
         require(stakerCount == 0, "HAS_STAKERS");

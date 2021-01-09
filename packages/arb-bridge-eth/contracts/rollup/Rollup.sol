@@ -53,7 +53,7 @@ contract Rollup is Inbox, Outbox, IRollup {
     }
 
     uint256 public latestConfirmed;
-    uint256 firstUnresolvedNode;
+    uint256 public firstUnresolvedNode;
     uint256 public latestNodeCreated;
     mapping(uint256 => Node) public nodes;
     uint256 lastStakeBlock;
@@ -64,10 +64,10 @@ contract Rollup is Inbox, Outbox, IRollup {
     Zombie[] zombies;
 
     // Rollup Config
-    uint256 challengePeriodBlocks;
+    uint256 public challengePeriodBlocks;
     uint256 public arbGasSpeedLimitPerBlock;
-    uint256 baseStake;
-    address stakeToken;
+    uint256 public baseStake;
+    address public stakeToken;
 
     IChallengeFactory public challengeFactory;
     INodeFactory public nodeFactory;
@@ -154,8 +154,10 @@ contract Rollup is Inbox, Outbox, IRollup {
         // staker is actually staked on stakedSiblingNode
         require(stakedSiblingNode.stakers(stakerAddress), "BAD_STAKER");
 
+        removeOldZombies(0);
+
         Node node = nodes[firstUnresolvedNode];
-        node.checkConfirmInvalid();
+        node.checkConfirmInvalid(countStakedZombies(node));
         destroyNode(firstUnresolvedNode);
         firstUnresolvedNode++;
     }
@@ -179,16 +181,8 @@ contract Rollup is Inbox, Outbox, IRollup {
 
         removeOldZombies(0);
 
-        uint256 zombieCount = zombies.length;
-        uint256 stakersRequired = stakerList.length;
-        for (uint256 i = 0; i < zombieCount; i++) {
-            Zombie storage zombie = zombies[i];
-            if (node.stakers(zombie.stakerAddress)) {
-                stakersRequired++;
-            }
-        }
         // Make sure that the number of stakes on the node is that sum of the number of real stakers and the number of zombies staked there
-        node.checkConfirmValid(stakersRequired, latestConfirmed);
+        node.checkConfirmValid(stakerList.length + countStakedZombies(node), latestConfirmed);
 
         bytes32 sendAcc = RollupLib.generateLastMessageHash(messageData, messageLengths);
         require(node.confirmData() == RollupLib.confirmHash(sendAcc, logAcc), "CONFIRM_DATA");
@@ -558,6 +552,18 @@ contract Rollup is Inbox, Outbox, IRollup {
         stakerMap[msg.sender] = Staker(stakerIndex, latestConfirmed, msg.value, address(0), true);
         lastStakeBlock = block.number;
         return stakerMap[msg.sender];
+    }
+
+    function countStakedZombies(Node node) private view returns (uint256) {
+        uint256 zombieCount = zombies.length;
+        uint256 stakedZombieCount = 0;
+        for (uint256 i = 0; i < zombieCount; i++) {
+            Zombie storage zombie = zombies[i];
+            if (node.stakers(zombie.stakerAddress)) {
+                stakedZombieCount++;
+            }
+        }
+        return stakedZombieCount;
     }
 
     function checkValidNodeNumForStake(uint256 nodeNum) private view {
