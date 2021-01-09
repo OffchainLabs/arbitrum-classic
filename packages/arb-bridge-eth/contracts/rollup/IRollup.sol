@@ -19,6 +19,14 @@
 pragma solidity ^0.6.11;
 
 interface IRollup {
+    event NodeCreated(
+        uint256 indexed nodeNum,
+        uint256 startLogIndex,
+        uint256 logCount,
+        uint256 startSendIndex,
+        uint256 sendCount
+    );
+
     event RollupChallengeStarted(address asserter, address challenger, address challengeContract);
 
     function completeChallenge(address winningStaker, address payable losingStaker) external;

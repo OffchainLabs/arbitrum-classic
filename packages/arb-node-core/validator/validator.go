@@ -9,16 +9,24 @@ import (
 	"math/big"
 )
 
+type ValidatorLookup interface {
+	GenerateLogAccumulator(startIndex *big.Int, count *big.Int) (common.Hash, error)
+}
+
 type Validator struct {
 	rollup         *ethbridge.Rollup
 	validatorUtils *ethbridge.ValidatorUtils
 	client         ethutils.EthClient
+	lookup         ValidatorLookup
 }
 
 func (v *Validator) removeOldStakers(ctx context.Context) (*types.Transaction, error) {
 	stakersToEliminate, err := v.validatorUtils.RefundableStakers(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if len(stakersToEliminate) == 0 {
+		return nil, nil
 	}
 	return v.validatorUtils.RefundStakers(ctx, stakersToEliminate)
 }
@@ -34,6 +42,7 @@ func (v *Validator) resolveNextNode(ctx context.Context) (*types.Transaction, er
 	case ethbridge.CONFIRM_TYPE_INVALID:
 		return v.rollup.RejectNextNode(ctx, successorWithStake, stakerAddress)
 	case ethbridge.CONFIRM_TYPE_VALID:
+		//logAcc, err := v.lookup.GenerateLogAccumulator()
 		var logAcc common.Hash
 		var messages [][]byte
 		return v.rollup.ConfirmNextNode(ctx, logAcc, messages)

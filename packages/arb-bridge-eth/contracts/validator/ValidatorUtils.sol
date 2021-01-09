@@ -80,9 +80,7 @@ contract ValidatorUtils {
         {
             return (ConfirmType.VALID, 0, address(0));
         } catch {}
-        try
-            currentUnresolved.checkConfirmInvalid(rollup.countStakedZombies(currentUnresolved))
-        {} catch {
+        try currentUnresolved.checkConfirmInvalid(zombieCount) {} catch {
             return (ConfirmType.NONE, 0, address(0));
         }
         // Node might be invalid
