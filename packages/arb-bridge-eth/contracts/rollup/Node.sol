@@ -87,7 +87,7 @@ contract Node is Cloneable {
         require(block.number >= deadlineBlock, "BEFORE_DEADLINE");
 
         // Verify that no staker is staked on this node
-        require(stakerCount == 0, "HAS_STAKERS");
+        require(stakerCount == zombieStakerCount, "HAS_STAKERS");
     }
 
     function checkConfirmOutOfOrder(uint256 latestConfirmed) external view {

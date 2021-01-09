@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/big"
 )
 
@@ -22,51 +23,21 @@ func (v *Validator) removeOldStakers(ctx context.Context) (*types.Transaction, e
 	return v.validatorUtils.RefundStakers(ctx, stakersToEliminate)
 }
 
-func (v *Validator) resolveNextNode(ctx context.Context) error {
-	config, err := v.validatorUtils.GetConfig(ctx)
+func (v *Validator) resolveNextNode(ctx context.Context) (*types.Transaction, error) {
+	confirmType, successorWithStake, stakerAddress, err := v.validatorUtils.CheckDecidableNextNode(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	latestConfirmedIndex, err := v.rollup.LatestConfirmedNode(ctx)
-	if err != nil {
-		return err
+	switch confirmType {
+	case ethbridge.CONFIRM_TYPE_OUT_OF_ORDER:
+		return v.rollup.RejectNextNodeOutOfOrder(ctx)
+	case ethbridge.CONFIRM_TYPE_INVALID:
+		return v.rollup.RejectNextNode(ctx, successorWithStake, stakerAddress)
+	case ethbridge.CONFIRM_TYPE_VALID:
+		var logAcc common.Hash
+		var messages [][]byte
+		return v.rollup.ConfirmNextNode(ctx, logAcc, messages)
+	default:
+		return nil, nil
 	}
-
-	firstUnresolvedIndex, err := v.rollup.FirstUnresolvedNode(ctx)
-	if err != nil {
-		return err
-	}
-
-	firstUnresolved, err := v.rollup.GetNode(ctx, firstUnresolvedIndex)
-	if err != nil {
-		return err
-	}
-
-	firstUnresolvedPrev, err := firstUnresolved.Prev(ctx)
-	if err != nil {
-		return err
-	}
-
-	if firstUnresolvedPrev.Cmp(latestConfirmedIndex) != 0 {
-		v.rollup.RejectNextNodeOutOfOrder(ctx)
-		return nil
-	}
-
-	currentBlock, err := v.client.BlockInfoByNumber(ctx, nil)
-	if err != nil {
-		return err
-	}
-	height := (*big.Int)(currentBlock.Number)
-
-	deadline, err := firstUnresolved.DeadlineBlock(ctx)
-	if err != nil {
-		return err
-	}
-
-	if height.Cmp(deadline) < 0 {
-		// We're not past the deadline so there's nothing to do
-		return nil
-	}
-
-	return nil
 }

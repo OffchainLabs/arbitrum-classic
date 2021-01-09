@@ -72,14 +72,6 @@ contract Rollup is Inbox, Outbox, IRollup {
     IChallengeFactory public challengeFactory;
     INodeFactory public nodeFactory;
 
-    modifier onlyIfUnresolved {
-        require(
-            firstUnresolvedNode > latestConfirmed && firstUnresolvedNode <= latestNodeCreated,
-            "NO_UNRESOLVED"
-        );
-        _;
-    }
-
     constructor(
         bytes32 _machineHash,
         uint256 _challengePeriodBlocks,
@@ -136,15 +128,12 @@ contract Rollup is Inbox, Outbox, IRollup {
         firstUnresolvedNode = 1;
     }
 
-    function rejectNextNode(uint256 successorWithStake, address stakerAddress)
-        external
-        onlyIfUnresolved
-    {
+    function rejectNextNode(uint256 successorWithStake, address stakerAddress) external {
+        checkUnresolved();
+        checkNoRecentStake();
+
         require(successorWithStake > firstUnresolvedNode, "SUCCESSOR_TO_LOW");
         require(successorWithStake <= latestNodeCreated, "SUCCESSOR_TO_HIGH");
-        // No stake has been placed during the last challengePeriod blocks
-        require(block.number - lastStakeBlock >= challengePeriodBlocks, "RECENT_STAKE");
-
         require(stakerMap[stakerAddress].isStaked, "NOT_STAKED");
 
         // Confirm that someone is staked on some sibling node
@@ -163,7 +152,8 @@ contract Rollup is Inbox, Outbox, IRollup {
     }
 
     // If the node previous to this one is not the latest confirmed, we can reject immediately
-    function rejectNextNodeOutOfOrder() external onlyIfUnresolved {
+    function rejectNextNodeOutOfOrder() external {
+        checkUnresolved();
         Node node = nodes[firstUnresolvedNode];
         node.checkConfirmOutOfOrder(latestConfirmed);
         destroyNode(firstUnresolvedNode);
@@ -174,9 +164,10 @@ contract Rollup is Inbox, Outbox, IRollup {
         bytes32 logAcc,
         bytes calldata messageData,
         uint256[] calldata messageLengths
-    ) external onlyIfUnresolved {
-        // No stake has been placed during the last challengePeriod blocks
-        require(block.number - lastStakeBlock >= challengePeriodBlocks, "RECENT_STAKE");
+    ) external {
+        checkUnresolved();
+        checkNoRecentStake();
+
         Node node = nodes[firstUnresolvedNode];
 
         removeOldZombies(0);
@@ -377,6 +368,19 @@ contract Rollup is Inbox, Outbox, IRollup {
         return stakerList.length;
     }
 
+    function getStakers(uint256 startIndex, uint256 max) external view returns (address[] memory) {
+        uint256 maxStakers = stakerList.length;
+        if (startIndex + max < maxStakers) {
+            maxStakers = startIndex + max;
+        }
+
+        address[] memory stakers = new address[](maxStakers);
+        for (uint256 i = 0; i < maxStakers; i++) {
+            stakers[i] = stakerList[startIndex + i];
+        }
+        return stakers;
+    }
+
     function removeOldZombies(uint256 startIndex) public {
         uint256 zombieCount = zombies.length;
         for (uint256 i = startIndex; i < zombieCount; i++) {
@@ -411,6 +415,30 @@ contract Rollup is Inbox, Outbox, IRollup {
         }
 
         return baseStake * multiplier;
+    }
+
+    function countStakedZombies(Node node) public view returns (uint256) {
+        uint256 zombieCount = zombies.length;
+        uint256 stakedZombieCount = 0;
+        for (uint256 i = 0; i < zombieCount; i++) {
+            Zombie storage zombie = zombies[i];
+            if (node.stakers(zombie.stakerAddress)) {
+                stakedZombieCount++;
+            }
+        }
+        return stakedZombieCount;
+    }
+
+    function checkNoRecentStake() public view {
+        // No stake has been placed during the last challengePeriod blocks
+        require(block.number - lastStakeBlock >= challengePeriodBlocks, "RECENT_STAKE");
+    }
+
+    function checkUnresolved() public view {
+        require(
+            firstUnresolvedNode > latestConfirmed && firstUnresolvedNode <= latestNodeCreated,
+            "NO_UNRESOLVED"
+        );
     }
 
     function createNewNode(RollupLib.Assertion memory assertion, uint256 prev)
@@ -552,18 +580,6 @@ contract Rollup is Inbox, Outbox, IRollup {
         stakerMap[msg.sender] = Staker(stakerIndex, latestConfirmed, msg.value, address(0), true);
         lastStakeBlock = block.number;
         return stakerMap[msg.sender];
-    }
-
-    function countStakedZombies(Node node) private view returns (uint256) {
-        uint256 zombieCount = zombies.length;
-        uint256 stakedZombieCount = 0;
-        for (uint256 i = 0; i < zombieCount; i++) {
-            Zombie storage zombie = zombies[i];
-            if (node.stakers(zombie.stakerAddress)) {
-                stakedZombieCount++;
-            }
-        }
-        return stakedZombieCount;
     }
 
     function checkValidNodeNumForStake(uint256 nodeNum) private view {
