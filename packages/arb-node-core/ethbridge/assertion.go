@@ -1,6 +1,7 @@
 package ethbridge
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"math/big"
@@ -17,37 +18,9 @@ type NodeState struct {
 	InboxMaxCount  *big.Int
 }
 
-type ExecutionInfo struct {
-	BeforeMachineHash common.Hash
-	InboxMessagesRead *big.Int
-	GasUsed           *big.Int
-	SendAcc           common.Hash
-	SendCount         *big.Int
-	LogAcc            common.Hash
-	LogCount          *big.Int
-	AfterMachineHash  common.Hash
-}
-
-func (e *ExecutionInfo) Equals(o *ExecutionInfo) bool {
-	return e.BeforeMachineHash == o.BeforeMachineHash &&
-		e.InboxMessagesRead.Cmp(o.InboxMessagesRead) == 0 &&
-		e.GasUsed.Cmp(o.GasUsed) == 0 &&
-		e.SendAcc == o.SendAcc &&
-		e.SendCount.Cmp(o.SendCount) == 0 &&
-		e.LogAcc == o.LogAcc &&
-		e.LogCount.Cmp(o.LogCount) == 0 &&
-		e.AfterMachineHash == o.AfterMachineHash
-}
-
 type Assertion struct {
 	PrevState *NodeState
-	*AssertionInfo
-}
-
-type AssertionInfo struct {
-	InboxDelta     common.Hash
-	ExecInfo       *ExecutionInfo
-	AfterInboxHash common.Hash
+	*core.AssertionInfo
 }
 
 func NewAssertionFromFields(a [7][32]byte, b [10]*big.Int) *Assertion {
@@ -63,9 +36,9 @@ func NewAssertionFromFields(a [7][32]byte, b [10]*big.Int) *Assertion {
 	}
 	return &Assertion{
 		PrevState: prevState,
-		AssertionInfo: &AssertionInfo{
+		AssertionInfo: &core.AssertionInfo{
 			InboxDelta: a[2],
-			ExecInfo: &ExecutionInfo{
+			ExecInfo: &core.ExecutionInfo{
 				BeforeMachineHash: prevState.MachineHash,
 				InboxMessagesRead: b[6],
 				GasUsed:           b[7],
@@ -123,15 +96,15 @@ func (a *Assertion) AfterTotalLogCount() *big.Int {
 	return new(big.Int).Add(a.PrevState.TotalLogCount, a.ExecInfo.LogCount)
 }
 
-func bisectionChunkHash(
-	length *big.Int,
-	segmentEnd *big.Int,
+func BisectionChunkHash(
+	segmentStart *big.Int,
+	segmentLength *big.Int,
 	startHash common.Hash,
 	endHash common.Hash,
 ) common.Hash {
 	return hashing.SoliditySHA3(
-		hashing.Uint256(length),
-		hashing.Uint256(segmentEnd),
+		hashing.Uint256(segmentStart),
+		hashing.Uint256(segmentLength),
 		hashing.Bytes32(startHash),
 		hashing.Bytes32(endHash),
 	)
@@ -172,11 +145,11 @@ func assertionRestHash(
 func (a *Assertion) InboxConsistencyHash(inboxTopHash common.Hash, inboxTopCount *big.Int) common.Hash {
 	messagesAfterCount := new(big.Int).Sub(inboxTopCount, a.PrevState.InboxCount)
 	messagesAfterCount = messagesAfterCount.Sub(messagesAfterCount, a.ExecInfo.InboxMessagesRead)
-	return bisectionChunkHash(messagesAfterCount, messagesAfterCount, inboxTopHash, a.AfterInboxHash)
+	return BisectionChunkHash(messagesAfterCount, messagesAfterCount, inboxTopHash, a.AfterInboxHash)
 }
 
 func (a *Assertion) InboxDeltaHash() common.Hash {
-	return bisectionChunkHash(
+	return BisectionChunkHash(
 		a.ExecInfo.InboxMessagesRead,
 		a.ExecInfo.InboxMessagesRead,
 		inboxDeltaHash(a.AfterInboxHash, common.Hash{}),
@@ -201,7 +174,7 @@ func (a *Assertion) ExecutionHash() common.Hash {
 		a.ExecInfo.LogAcc,
 		a.ExecInfo.LogCount,
 	)
-	return bisectionChunkHash(
+	return BisectionChunkHash(
 		a.ExecInfo.GasUsed,
 		a.ExecInfo.GasUsed,
 		assertionHash(big.NewInt(0), restBefore),

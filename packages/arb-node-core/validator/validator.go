@@ -2,33 +2,25 @@ package validator
 
 import (
 	"context"
+	"github.com/pkg/errors"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/core/types"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/pkg/errors"
-	"math/big"
 )
-
-type ValidatorLookup interface {
-	GenerateLogAccumulator(startIndex *big.Int, count *big.Int) (common.Hash, error)
-	GetSends(startIndex *big.Int, count *big.Int) ([][]byte, error)
-	GetInboxAcc(index *big.Int) (common.Hash, error)
-	GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.InboxMessage, error)
-
-	GetMachine(totalGasUsed *big.Int) (machine.Machine, error)
-	GetExecutionInfo(startMachine machine.Machine, gas *big.Int, maxMessages *big.Int) (*ethbridge.ExecutionInfo, error)
-	GetExecutionInfoInRange(startMachine machine.Machine, minGas, maxGas *big.Int) (*ethbridge.AssertionInfo, error)
-}
 
 type Validator struct {
 	rollup         *ethbridge.Rollup
 	validatorUtils *ethbridge.ValidatorUtils
 	client         ethutils.EthClient
-	lookup         ValidatorLookup
+	lookup         core.ValidatorLookup
 }
 
 func (v *Validator) removeOldStakers(ctx context.Context) (*types.Transaction, error) {
@@ -297,84 +289,6 @@ func (s *Staker) Act(ctx context.Context) error {
 	return nil
 }
 
-func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo) (*types.Transaction, error) {
-	if info.CurrentChallenge == nil {
-		return nil, nil
-	}
-	challenge, err := ethbridge.NewChallengeWatcher(info.CurrentChallenge.ToEthAddress(), s.client)
-	if err != nil {
-		return nil, err
-	}
-	responder, err := challenge.CurrentResponder(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if responder != s.address {
-		// Not our turn
-		return nil, nil
-	}
-	kind, err := challenge.Kind(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	challengedNodeNum, err := challenge.ChallengedNodeNum(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	nodeInfo, err := s.lookupNode(ctx, challengedNodeNum)
-	if err != nil {
-		return nil, err
-	}
-
-	switch kind {
-	case ethbridge.UNINITIALIZED:
-		judgment, err := s.judgeNode(nodeInfo, nil)
-		if err != nil {
-			return nil, err
-		}
-		switch judgment {
-		case ethbridge.INBOX_CONSISTENCY:
-			return s.handleInboxConsistencyChallenge()
-		case ethbridge.INBOX_DELTA:
-			return s.handleInboxDeltaChallenge()
-		case ethbridge.EXECUTION:
-			return s.handleExecutionChallenge()
-		case ethbridge.STOPPED_SHORT:
-			return s.handleStoppedShortChallenge()
-		default:
-			return nil, errors.New("can't handle challenge")
-		}
-	case ethbridge.INBOX_CONSISTENCY:
-		return s.handleInboxConsistencyChallenge()
-	case ethbridge.INBOX_DELTA:
-		return s.handleInboxDeltaChallenge()
-	case ethbridge.EXECUTION:
-		return s.handleExecutionChallenge()
-	case ethbridge.STOPPED_SHORT:
-		return s.handleStoppedShortChallenge()
-	default:
-		return nil, errors.New("can't handle challenge")
-	}
-}
-
-func (s *Staker) handleInboxConsistencyChallenge() (*types.Transaction, error) {
-	return nil, nil
-}
-
-func (s *Staker) handleInboxDeltaChallenge() (*types.Transaction, error) {
-	return nil, nil
-}
-
-func (s *Staker) handleExecutionChallenge() (*types.Transaction, error) {
-	return nil, nil
-}
-
-func (s *Staker) handleStoppedShortChallenge() (*types.Transaction, error) {
-	return nil, nil
-}
-
 func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (*types.Transaction, error) {
 	info, err := s.rollup.StakerInfo(ctx, s.address)
 	if err != nil {
@@ -454,7 +368,7 @@ func (s *Staker) createConflict(ctx context.Context) (*types.Transaction, error)
 		staker2 := staker
 		if node2.Cmp(node1) < 0 {
 			staker1, staker2 = staker2, staker1
-			node1, node2 = node1, node1
+			node1, node2 = node2, node1
 		}
 
 		nodeInfo, err := s.lookupNode(ctx, node1)

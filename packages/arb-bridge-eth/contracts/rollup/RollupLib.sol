@@ -163,7 +163,7 @@ library RollupLib {
     ) internal pure returns (bytes32) {
         bytes32 inboxConsistencyHash =
             ChallengeLib.bisectionChunkHash(
-                0,
+                assertion.beforeInboxCount,
                 inboxTopCount - assertion.beforeInboxCount - assertion.inboxMessagesRead,
                 inboxTopHash,
                 assertion.afterInboxHash

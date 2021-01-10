@@ -35,10 +35,10 @@ contract Challenge is Cloneable, IChallenge {
 
     event InitiatedChallenge();
     event Bisected(
-        uint256 segmentToChallenge,
-        bytes32[] chainHashes,
+        bytes32 indexed challengeRoot,
         uint256 segmentStart,
-        uint256 segmentLength
+        uint256 segmentLength,
+        bytes32[] chainHashes
     );
     event AsserterTimedOut();
     event ChallengerTimedOut();
@@ -179,7 +179,7 @@ contract Challenge is Cloneable, IChallenge {
         updateBisectionRoot(_chainHashes, _segmentStart, _segmentLength);
 
         responded(1);
-        emit Bisected(_segmentToChallenge, _chainHashes, _segmentStart, _segmentLength);
+        emit Bisected(challengeState, _segmentStart, _segmentLength, _chainHashes);
     }
 
     function oneStepProveInboxConsistency(
@@ -187,14 +187,12 @@ contract Challenge is Cloneable, IChallenge {
         bytes calldata _proof,
         uint256 _segmentStart,
         bytes32 _oldEndHash,
-        bytes32 _upperHash,
         bytes32 _lowerHash,
         bytes32 _value
     ) external inboxConsistencyChallenge onlyOnTurn {
-        require(_upperHash == Messages.addMessageToInbox(_lowerHash, _value));
         require(_lowerHash != _oldEndHash);
-        bytes32 prevHash =
-            ChallengeLib.bisectionChunkHash(_segmentStart, 1, _upperHash, _lowerHash);
+        bytes32 upperHash = Messages.addMessageToInbox(_lowerHash, _value);
+        bytes32 prevHash = ChallengeLib.bisectionChunkHash(_segmentStart, 1, upperHash, _lowerHash);
 
         verifySegmentProof(_proof, prevHash, _segmentToChallenge);
 
@@ -232,7 +230,7 @@ contract Challenge is Cloneable, IChallenge {
         updateBisectionRoot(_chainHashes, _segmentStart, _segmentLength);
 
         responded(1);
-        emit Bisected(_segmentToChallenge, _chainHashes, _segmentStart, _segmentLength);
+        emit Bisected(challengeState, _segmentStart, _segmentLength, _chainHashes);
     }
 
     function oneStepProveInboxDelta(
@@ -317,7 +315,7 @@ contract Challenge is Cloneable, IChallenge {
         );
 
         responded(executionCheckTimeBlocks);
-        emit Bisected(_segmentToChallenge, _chainHashes, _segmentStart, _segmentLength);
+        emit Bisected(challengeState, _segmentStart, _segmentLength, _chainHashes);
     }
 
     function constraintWinExecution(
@@ -442,6 +440,8 @@ contract Challenge is Cloneable, IChallenge {
         executionHash = 0;
 
         responded(executionCheckTimeBlocks);
+
+        emit Bisected(challengeState, 0, _segmentLength, _chainHashes);
     }
 
     function oneStepProveStoppedShortCanRun(
