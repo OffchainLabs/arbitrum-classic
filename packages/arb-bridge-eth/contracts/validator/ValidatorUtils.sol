@@ -24,6 +24,8 @@ import "../rollup/Node.sol";
 contract ValidatorUtils {
     enum ConfirmType { NONE, VALID, OUT_OF_ORDER, INVALID }
 
+    enum NodeConflict { NONE, FOUND, INDETERMINATE, INCOMPLETE }
+
     function refundStakers(Rollup rollup, address payable[] calldata stakers) external {
         uint256 stakerCount = stakers.length;
         for (uint256 i = 0; i < stakerCount; i++) {
@@ -45,6 +47,25 @@ contract ValidatorUtils {
         arbGasSpeedLimitPerBlock = rollup.arbGasSpeedLimitPerBlock();
         baseStake = rollup.baseStake();
         stakeToken = rollup.stakeToken();
+    }
+
+    function findStakerConflict(
+        Rollup rollup,
+        address staker1,
+        address staker2,
+        uint256 maxDepth
+    )
+        external
+        view
+        returns (
+            NodeConflict,
+            uint256,
+            uint256
+        )
+    {
+        (, uint256 staker1NodeNum, , , ) = rollup.stakerMap(staker1);
+        (, uint256 staker2NodeNum, , , ) = rollup.stakerMap(staker2);
+        return findNodeConflict(rollup, staker1NodeNum, staker2NodeNum, maxDepth);
     }
 
     function checkDecidableNextNode(
@@ -196,6 +217,45 @@ contract ValidatorUtils {
             mstore(nodes, index)
         }
         return nodes;
+    }
+
+    function findNodeConflict(
+        Rollup rollup,
+        uint256 node1,
+        uint256 node2,
+        uint256 maxDepth
+    )
+        public
+        view
+        returns (
+            NodeConflict,
+            uint256,
+            uint256
+        )
+    {
+        uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
+        uint256 node1Prev = rollup.nodes(node1).prev();
+        uint256 node2Prev = rollup.nodes(node2).prev();
+
+        for (uint256 i = 0; i < maxDepth; i++) {
+            if (node1 == node2) {
+                return (NodeConflict.NONE, node1, node2);
+            }
+            if (node1Prev == node2Prev) {
+                return (NodeConflict.FOUND, node1, node2);
+            }
+            if (node1Prev < firstUnresolvedNode || node2Prev < firstUnresolvedNode) {
+                return (NodeConflict.INDETERMINATE, 0, 0);
+            }
+            if (node1 < node2) {
+                node2 = node2Prev;
+                node2Prev = rollup.nodes(node2).prev();
+            } else {
+                node1 = node1Prev;
+                node1Prev = rollup.nodes(node1).prev();
+            }
+        }
+        return (NodeConflict.INCOMPLETE, node1, node2);
     }
 
     function findRejectableExample(
