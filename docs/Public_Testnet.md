@@ -12,9 +12,9 @@ For a convenient landing page for all your testnet needs, see our [website](http
 
 ## Connection Information
 
-Hosted Aggregator Node (JSON-RPC Endpoint): [https://kovan2.arbitrum.io/rpc](https://kovan2.arbitrum.io/rpc)
+Hosted Aggregator Node (JSON-RPC Endpoint): [https://kovan3.arbitrum.io/rpc](https://kovan3.arbitrum.io/rpc)
 
-Rollup Chain ID: 152709604825713
+Rollup Chain ID: 46116242285844
 
 Testnet Version: v3
 
@@ -22,7 +22,7 @@ Chain Launched on January 8, 2021
 
 ## Deploying your contracts
 
-Deploying your contracts onto the Arbitrum testnet is as easy as changing your RPC endpoint to https://kovan2.arbitrum.io/rpc
+Deploying your contracts onto the Arbitrum testnet is as easy as changing your RPC endpoint to https://kovan3.arbitrum.io/rpc
 
 For a deeper dive into deploying with truffle see [here](Contract_Deployment.md).
 
@@ -36,11 +36,11 @@ If you're using metamask, add a custom RPC network to connect to the Arbitrum te
 - New RPC URL: https://kovan3.arbitrum.io/rpc
 - ChainID (Optional): 46116242285844
 - Symbol: ETH
-- Block Explorer URL: https://explorer.offchainlabs.com/#/
+- Block Explorer URL: https://explorer.arbitrum.io/#/
 
 ## Observing transactions
 
-If you'd like to see your transactions in action, check out our [block explorer](https://explorer.offchainlabs.com/#/chain/kovan-alpha)!
+If you'd like to see your transactions in action, check out our [block explorer](https://explorer.arbitrum.io/#/)!
 
 There you'll be able to see all the transactions being executed in Arbitrum and also see exactly how much Ethereum Gas each transaction uses.
 
