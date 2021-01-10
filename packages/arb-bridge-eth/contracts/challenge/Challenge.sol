@@ -157,10 +157,10 @@ contract Challenge is Cloneable, IChallenge {
     function bisectInboxConsistency(
         uint256 _segmentToChallenge,
         bytes calldata _proof,
-        bytes32 _oldEndHash,
         bytes32[] calldata _chainHashes,
         uint256 _segmentStart,
-        uint256 _segmentLength
+        uint256 _segmentLength,
+        bytes32 _oldEndHash
     ) external inboxConsistencyChallenge onlyOnTurn {
         require(_segmentLength > 1, "bisection too short");
         require(_chainHashes.length == bisectionDegree(_segmentLength));
@@ -205,12 +205,12 @@ contract Challenge is Cloneable, IChallenge {
     function bisectInboxDelta(
         uint256 _segmentToChallenge,
         bytes calldata _proof,
-        bytes32 _oldInboxAcc,
-        bytes32 _oldInboxDelta,
-        bytes32 _newInboxDelta,
         bytes32[] calldata _chainHashes,
         uint256 _segmentStart,
-        uint256 _segmentLength
+        uint256 _segmentLength,
+        bytes32 _oldInboxAcc,
+        bytes32 _oldInboxDelta,
+        bytes32 _newInboxDelta
     ) external inboxDeltaChallenge onlyOnTurn {
         require(_segmentLength > 1, "bisection too short");
         require(_chainHashes.length == bisectionDegree(_segmentLength));
@@ -283,25 +283,19 @@ contract Challenge is Cloneable, IChallenge {
     function bisectExecution(
         uint256 _segmentToChallenge,
         bytes calldata _proof,
-        bytes32 _oldEndHash,
-        uint256 _gasUsedBefore,
         bytes32[] calldata _chainHashes,
         uint256 _segmentStart,
         uint256 _segmentLength,
-        bytes32[3] calldata _segmentPreFields
+        bytes32 _oldEndHash,
+        uint256 _gasUsedBefore,
+        bytes32 _assertionRest
     ) external executionChallenge onlyOnTurn {
         require(_segmentLength > 1, "TOO_SHORT");
         require(_chainHashes.length == bisectionDegree(_segmentLength), "BISECT_DEGREE");
         require(_chainHashes[_chainHashes.length - 1] != _oldEndHash, "SAME_END");
 
         require(
-            _chainHashes[0] ==
-                ChallengeLib.assertionHash(
-                    _segmentPreFields[0],
-                    _gasUsedBefore,
-                    _segmentPreFields[1],
-                    _segmentPreFields[2]
-                ),
+            _chainHashes[0] == ChallengeLib.assertionHash(_gasUsedBefore, _assertionRest),
             "segment pre-fields"
         );
 
@@ -329,21 +323,15 @@ contract Challenge is Cloneable, IChallenge {
     function constraintWinExecution(
         uint256 _segmentToChallenge,
         bytes calldata _proof,
+        uint256 _segmentStart,
+        uint256 _segmentLength,
         bytes32 _oldEndHash,
         uint256 _gasUsedBefore,
-        bytes32[3] calldata _beforeFields,
-        uint256 _segmentStart,
-        uint256 _segmentLength
+        bytes32 _assertionRest
     ) external executionChallenge onlyOnTurn {
         require(_segmentLength > 1, "TOO SHORT");
 
-        bytes32 beforeChainHash =
-            ChallengeLib.assertionHash(
-                _beforeFields[0],
-                _gasUsedBefore,
-                _beforeFields[1],
-                _beforeFields[2]
-            );
+        bytes32 beforeChainHash = ChallengeLib.assertionHash(_gasUsedBefore, _assertionRest);
 
         bytes32 bisectionHash =
             ChallengeLib.bisectionChunkHash(
@@ -423,29 +411,25 @@ contract Challenge is Cloneable, IChallenge {
 
     // Can only do a stopped short bisection as a first move
     function bisectExecutionStoppedShort(
-        uint256 _prevStepsExecuted,
-        bytes32 _startAssertionHash,
-        bytes32 _prevEndAssertionHash,
         bytes32[] calldata _chainHashes,
-        uint256 _newStepsExecuted
+        uint256 _segmentLength,
+        bytes32 _oldEndHash,
+        uint256 _newSegmentLength,
+        bytes32 _startAssertionHash
     ) external onlyOnTurn {
         require(kind == Kind.Uninitialized);
         // Unlike the other bisections, it's safe for the number of steps executed to be 0 or 1
-        require(_chainHashes.length == bisectionDegree(_newStepsExecuted));
-        require(_newStepsExecuted < _prevStepsExecuted);
+        require(_chainHashes.length == bisectionDegree(_newSegmentLength));
+        require(_newSegmentLength < _segmentLength);
 
         require(
-            ChallengeLib.bisectionChunkHash(
-                0,
-                _prevStepsExecuted,
-                _startAssertionHash,
-                _prevEndAssertionHash
-            ) == executionHash
+            ChallengeLib.bisectionChunkHash(0, _segmentLength, _startAssertionHash, _oldEndHash) ==
+                executionHash
         );
 
         // Reuse the executionHash variable to store last assertion
-        if (_newStepsExecuted > 0) {
-            updateBisectionRoot(_chainHashes, 0, _newStepsExecuted);
+        if (_newSegmentLength > 0) {
+            updateBisectionRoot(_chainHashes, 0, _newSegmentLength);
             executionHash = _chainHashes[_chainHashes.length - 1];
         } else {
             executionHash = _startAssertionHash;
@@ -658,19 +642,17 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _initialLogCount,
         bytes32[5] memory proofFields
     ) private pure returns (bytes32) {
-        bytes32 a1OutputAccHash =
-            ChallengeLib.outputAccHash(
-                _machineFields[1],
-                _initialMessageCount,
-                _machineFields[2],
-                _initialLogCount
-            );
         return
             ChallengeLib.assertionHash(
-                _machineFields[0],
                 _initialGasUsed,
-                a1OutputAccHash,
-                proofFields[0]
+                ChallengeLib.assertionRestHash(
+                    _machineFields[0],
+                    proofFields[0],
+                    _machineFields[1],
+                    _initialMessageCount,
+                    _machineFields[2],
+                    _initialLogCount
+                )
             );
     }
 
@@ -686,19 +668,17 @@ contract Challenge is Cloneable, IChallenge {
         // are either one or 0 messages apart and the same is true for logs. Therefore
         // we can infer the message count and log count based on whether the fields
         // are equal or not
-        bytes32 a2OutputAccHash =
-            ChallengeLib.outputAccHash(
-                proofFields[3],
-                _initialMessageCount + (_machineFields[1] == proofFields[3] ? 0 : 1),
-                proofFields[4],
-                _initialLogCount + (_machineFields[2] == proofFields[4] ? 0 : 1)
-            );
         return
             ChallengeLib.assertionHash(
-                proofFields[2],
                 _initialGasUsed + gasUsed,
-                a2OutputAccHash,
-                proofFields[1]
+                ChallengeLib.assertionRestHash(
+                    proofFields[2],
+                    proofFields[1],
+                    proofFields[3],
+                    _initialMessageCount + (_machineFields[1] == proofFields[3] ? 0 : 1),
+                    proofFields[4],
+                    _initialLogCount + (_machineFields[2] == proofFields[4] ? 0 : 1)
+                )
             );
     }
 }

@@ -131,21 +131,26 @@ library RollupLib {
                 0,
                 assertion.gasUsed,
                 ChallengeLib.assertionHash(
-                    assertion.inboxDelta,
                     0,
-                    ChallengeLib.outputAccHash(0, 0, 0, 0),
-                    assertion.beforeMachineHash
+                    ChallengeLib.assertionRestHash(
+                        assertion.inboxDelta,
+                        assertion.beforeMachineHash,
+                        0,
+                        0,
+                        0,
+                        0
+                    )
                 ),
                 ChallengeLib.assertionHash(
-                    0,
                     assertion.gasUsed,
-                    ChallengeLib.outputAccHash(
+                    ChallengeLib.assertionRestHash(
+                        0,
+                        assertion.afterMachineHash,
                         assertion.sendAcc,
                         assertion.sendCount,
                         assertion.logAcc,
                         assertion.logCount
-                    ),
-                    assertion.afterMachineHash
+                    )
                 )
             );
     }

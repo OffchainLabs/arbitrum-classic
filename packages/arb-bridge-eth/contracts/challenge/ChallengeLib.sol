@@ -48,22 +48,29 @@ library ChallengeLib {
         return keccak256(abi.encodePacked(_inboxAcc, _deltaAcc));
     }
 
-    function assertionHash(
-        bytes32 _inboxDelta,
-        uint256 _arbGasUsed,
-        bytes32 _outputAcc,
-        bytes32 _machineState
-    ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_inboxDelta, _arbGasUsed, _outputAcc, _machineState));
+    function assertionHash(uint256 _arbGasUsed, bytes32 _restHash) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_arbGasUsed, _restHash));
     }
 
-    function outputAccHash(
+    function assertionRestHash(
+        bytes32 _inboxDelta,
+        bytes32 _machineState,
         bytes32 _sendAcc,
         uint256 _sendCount,
         bytes32 _logAcc,
         uint256 _logCount
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_sendAcc, _sendCount, _logAcc, _logCount));
+        return
+            keccak256(
+                abi.encodePacked(
+                    _inboxDelta,
+                    _machineState,
+                    _sendAcc,
+                    _sendCount,
+                    _logAcc,
+                    _logCount
+                )
+            );
     }
 
     function challengeRootHash(

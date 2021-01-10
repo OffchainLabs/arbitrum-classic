@@ -142,26 +142,26 @@ func inboxDeltaHash(inboxAcc, deltaAcc common.Hash) common.Hash {
 }
 
 func assertionHash(
-	inboxDelta common.Hash,
 	gasUsed *big.Int,
-	outputAcc common.Hash,
-	machineState common.Hash,
+	assertionRest common.Hash,
 ) common.Hash {
 	return hashing.SoliditySHA3(
-		hashing.Bytes32(inboxDelta),
 		hashing.Uint256(gasUsed),
-		hashing.Bytes32(outputAcc),
-		hashing.Bytes32(machineState),
+		hashing.Bytes32(assertionRest),
 	)
 }
 
-func outputAccHash(
+func assertionRestHash(
+	inboxDelta common.Hash,
+	machineState common.Hash,
 	sendAcc common.Hash,
 	sendCount *big.Int,
 	logAcc common.Hash,
 	logCount *big.Int,
 ) common.Hash {
 	return hashing.SoliditySHA3(
+		hashing.Bytes32(inboxDelta),
+		hashing.Bytes32(machineState),
 		hashing.Bytes32(sendAcc),
 		hashing.Uint256(sendCount),
 		hashing.Bytes32(logAcc),
@@ -185,26 +185,27 @@ func (a *Assertion) InboxDeltaHash() common.Hash {
 }
 
 func (a *Assertion) ExecutionHash() common.Hash {
+	restBefore := assertionRestHash(
+		a.InboxDelta,
+		a.PrevState.MachineHash,
+		common.Hash{},
+		big.NewInt(0),
+		common.Hash{},
+		big.NewInt(0),
+	)
+	restAfter := assertionRestHash(
+		common.Hash{},
+		a.ExecInfo.AfterMachineHash,
+		a.ExecInfo.SendAcc,
+		a.ExecInfo.SendCount,
+		a.ExecInfo.LogAcc,
+		a.ExecInfo.LogCount,
+	)
 	return bisectionChunkHash(
 		a.ExecInfo.GasUsed,
 		a.ExecInfo.GasUsed,
-		assertionHash(
-			a.InboxDelta,
-			big.NewInt(0),
-			outputAccHash(common.Hash{}, big.NewInt(0), common.Hash{}, big.NewInt(0)),
-			a.PrevState.MachineHash,
-		),
-		assertionHash(
-			common.Hash{},
-			a.ExecInfo.GasUsed,
-			outputAccHash(
-				a.ExecInfo.SendAcc,
-				a.ExecInfo.SendCount,
-				a.ExecInfo.LogAcc,
-				a.ExecInfo.LogCount,
-			),
-			a.ExecInfo.AfterMachineHash,
-		),
+		assertionHash(big.NewInt(0), restBefore),
+		assertionHash(a.ExecInfo.GasUsed, restAfter),
 	)
 }
 
