@@ -26,7 +26,12 @@ interface IRollup {
         uint256 inboxMaxCount
     );
 
-    event RollupChallengeStarted(address asserter, address challenger, address challengeContract);
+    event RollupChallengeStarted(
+        address indexed challengeContract,
+        address asserter,
+        address challenger,
+        uint256 challengedNode
+    );
 
     function completeChallenge(address winningStaker, address payable losingStaker) external;
 }

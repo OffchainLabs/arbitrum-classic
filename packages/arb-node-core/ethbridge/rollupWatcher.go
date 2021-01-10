@@ -21,6 +21,7 @@ import (
 )
 
 var nodeCreatedID ethcommon.Hash
+var challengeCreatedID ethcommon.Hash
 var messageDeliveredID ethcommon.Hash
 var messageDeliveredFromOriginID ethcommon.Hash
 var l2MessageFromOriginCallABI abi.Method
@@ -31,6 +32,7 @@ func init() {
 		panic(err)
 	}
 	nodeCreatedID = parsedRollup.Events["NodeCreated"].ID
+	challengeCreatedID = parsedRollup.Events["RollupChallengeStarted"].ID
 	messageDeliveredID = parsedRollup.Events["MessageDelivered"].ID
 	messageDeliveredFromOriginID = parsedRollup.Events["MessageDeliveredFromOrigin"].ID
 	l2MessageFromOriginCallABI = parsedRollup.Methods["sendL2MessageFromOrigin"]
@@ -228,6 +230,38 @@ func (r *RollupWatcher) parseMessage(ctx context.Context, ethLog types.Log, time
 	} else {
 		return nil, errors.New("unexpected log type")
 	}
+}
+
+func (r *RollupWatcher) LookupChallengedNode(ctx context.Context, address common.Address) (*big.Int, error) {
+	addressQuery := ethcommon.Hash{}
+	copy(addressQuery[12:], address.Bytes())
+
+	query := ethereum.FilterQuery{
+		BlockHash: nil,
+		FromBlock: nil,
+		ToBlock:   nil,
+		Addresses: []ethcommon.Address{r.address},
+		Topics:    [][]ethcommon.Hash{{challengeCreatedID}, {addressQuery}},
+	}
+	logs, err := r.client.FilterLogs(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(logs) == 0 {
+		return nil, errors.New("no matching challenge")
+	}
+
+	if len(logs) > 1 {
+		return nil, errors.New("too many matching challenges")
+	}
+
+	challenge, err := r.con.ParseRollupChallengeStarted(logs[0])
+	if err != nil {
+		return nil, err
+	}
+
+	return challenge.ChallengedNode, nil
 }
 
 func (r *RollupWatcher) StakerInfo(ctx context.Context, staker common.Address) (*StakerInfo, error) {

@@ -20,6 +20,7 @@ type Validator struct {
 	rollup         *ethbridge.Rollup
 	validatorUtils *ethbridge.ValidatorUtils
 	client         ethutils.EthClient
+	auth           *ethbridge.TransactAuth
 	lookup         core.ValidatorLookup
 }
 
@@ -218,7 +219,7 @@ func (v *Validator) selectValidChild(ctx context.Context, node ethbridge.NodeID)
 	}
 
 	for _, nd := range nodes {
-		chalType, err := v.judgeNode(nd, mach)
+		chalType, err := judgeNode(v.lookup, nd, mach)
 		if err != nil {
 			return nil, err
 		}
@@ -229,8 +230,8 @@ func (v *Validator) selectValidChild(ctx context.Context, node ethbridge.NodeID)
 	return nil, nil
 }
 
-func (v *Validator) judgeNode(nd *ethbridge.NodeInfo, mach machine.Machine) (ethbridge.ChallengeKind, error) {
-	afterInboxHash, err := v.lookup.GetInboxAcc(nd.Assertion.AfterInboxCount())
+func judgeNode(lookup core.ValidatorLookup, nd *ethbridge.NodeInfo, mach machine.Machine) (ethbridge.ChallengeKind, error) {
+	afterInboxHash, err := lookup.GetInboxAcc(nd.Assertion.AfterInboxCount())
 	if err != nil {
 		return 0, err
 	}
@@ -238,7 +239,7 @@ func (v *Validator) judgeNode(nd *ethbridge.NodeInfo, mach machine.Machine) (eth
 		// Failed inbox consistency
 		return ethbridge.INBOX_CONSISTENCY, nil
 	}
-	messages, err := v.lookup.GetMessages(nd.Assertion.PrevState.InboxCount, nd.Assertion.ExecInfo.InboxMessagesRead)
+	messages, err := lookup.GetMessages(nd.Assertion.PrevState.InboxCount, nd.Assertion.ExecInfo.InboxMessagesRead)
 	if err != nil {
 		return 0, err
 	}
@@ -247,12 +248,12 @@ func (v *Validator) judgeNode(nd *ethbridge.NodeInfo, mach machine.Machine) (eth
 		return ethbridge.INBOX_DELTA, nil
 	}
 	if mach == nil {
-		mach, err = v.lookup.GetMachine(nd.Assertion.PrevState.TotalGasUsed)
+		mach, err = lookup.GetMachine(nd.Assertion.PrevState.TotalGasUsed)
 		if err != nil {
 			return 0, err
 		}
 	}
-	localExecutionInfo, err := v.lookup.GetExecutionInfoWithMaxMessages(mach, nd.Assertion.ExecInfo.GasUsed, nd.Assertion.ExecInfo.InboxMessagesRead)
+	localExecutionInfo, err := lookup.GetExecutionInfoWithMaxMessages(mach, nd.Assertion.ExecInfo.GasUsed, nd.Assertion.ExecInfo.InboxMessagesRead)
 	if err != nil {
 		return 0, err
 	}
@@ -294,6 +295,28 @@ func (s *Staker) Act(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo) (*Challenger, error) {
+	if info.CurrentChallenge == nil {
+		return nil, nil
+	}
+	challenge, err := ethbridge.NewChallenge(info.CurrentChallenge.ToEthAddress(), s.client, s.auth)
+	if err != nil {
+		return nil, err
+	}
+
+	challengedNode, err := s.rollup.LookupChallengedNode(ctx, *info.CurrentChallenge)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeInfo, err := s.lookupNode(ctx, challengedNode)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewChallenger(challenge, s.lookup, nodeInfo), nil
 }
 
 func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (*types.Transaction, error) {

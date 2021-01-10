@@ -67,8 +67,6 @@ contract Challenge is Cloneable, IChallenge {
 
     address internal rollupAddress;
 
-    uint256 public challengedNodeNum;
-
     bytes32 inboxConsistencyHash;
     bytes32 inboxDeltaHash;
     bytes32 executionHash;
@@ -85,7 +83,7 @@ contract Challenge is Cloneable, IChallenge {
     uint256 public deadlineBlock;
     Turn public turn;
     // This is the root of a merkle tree with nodes like (prev, next, steps)
-    bytes32 internal challengeState;
+    bytes32 public challengeState;
 
     modifier onlyOnTurn {
         require(msg.sender == currentResponder(), BIS_SENDER);
@@ -117,7 +115,6 @@ contract Challenge is Cloneable, IChallenge {
         address _executionOneStepProofCon,
         address _executionOneStepProof2Con,
         address _rollupAddress,
-        uint256 _challengedNode,
         bytes32 _inboxConsistencyHash,
         bytes32 _inboxDeltaHash,
         bytes32 _executionHash,
@@ -132,8 +129,6 @@ contract Challenge is Cloneable, IChallenge {
         executor2 = IOneStepProof2(_executionOneStepProof2Con);
 
         rollupAddress = _rollupAddress;
-
-        challengedNodeNum = _challengedNode;
 
         inboxConsistencyHash = _inboxConsistencyHash;
         inboxDeltaHash = _inboxDeltaHash;

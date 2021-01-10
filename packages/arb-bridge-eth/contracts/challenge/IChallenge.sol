@@ -23,7 +23,6 @@ interface IChallenge {
         address _executionOneStepProofCon,
         address _executionOneStepProof2Con,
         address _rollupAddress,
-        uint256 _challengedNode,
         bytes32 _inboxConsistencyHash,
         bytes32 _inboxDeltaHash,
         bytes32 _executionHash,

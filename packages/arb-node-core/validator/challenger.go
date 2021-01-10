@@ -3,109 +3,113 @@ package validator
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/pkg/errors"
 	"math/big"
 )
 
-func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo) (*types.Transaction, error) {
-	if info.CurrentChallenge == nil {
-		return nil, nil
+type Challenger struct {
+	challenge      *ethbridge.Challenge
+	lookup         core.ValidatorLookup
+	challengedNode *ethbridge.NodeInfo
+}
+
+func NewChallenger(challenge *ethbridge.Challenge, lookup core.ValidatorLookup, challengedNode *ethbridge.NodeInfo) *Challenger {
+	return &Challenger{
+		challenge:      challenge,
+		lookup:         lookup,
+		challengedNode: challengedNode,
 	}
-	challenge, err := ethbridge.NewChallengeWatcher(info.CurrentChallenge.ToEthAddress(), s.client)
+}
+
+func (c *Challenger) handleConflict(ctx context.Context) (*types.Transaction, error) {
+	responder, err := c.challenge.CurrentResponder(ctx)
 	if err != nil {
 		return nil, err
 	}
-	responder, err := challenge.CurrentResponder(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if responder != s.address {
+	if responder != c.challenge.Transactor() {
 		// Not our turn
 		return nil, nil
 	}
-	kind, err := challenge.Kind(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	challengedNodeNum, err := challenge.ChallengedNodeNum(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	nodeInfo, err := s.lookupNode(ctx, challengedNodeNum)
+	kind, err := c.challenge.Kind(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	switch kind {
 	case ethbridge.UNINITIALIZED:
-		judgment, err := s.judgeNode(nodeInfo, nil)
+		judgment, err := judgeNode(c.lookup, c.challengedNode, nil)
 		if err != nil {
 			return nil, err
 		}
 		switch judgment {
 		case ethbridge.INBOX_CONSISTENCY:
-			return s.handleInboxConsistencyChallenge()
+			return c.handleInboxConsistencyChallenge(ctx)
 		case ethbridge.INBOX_DELTA:
-			return s.handleInboxDeltaChallenge()
+			return c.handleInboxDeltaChallenge()
 		case ethbridge.EXECUTION:
-			return s.handleExecutionChallenge()
+			return c.handleExecutionChallenge()
 		case ethbridge.STOPPED_SHORT:
-			return s.handleStoppedShortChallenge()
+			return c.handleStoppedShortChallenge()
 		default:
 			return nil, errors.New("can't handle challenge")
 		}
 	case ethbridge.INBOX_CONSISTENCY:
-		return s.handleInboxConsistencyChallenge()
+		return c.handleInboxConsistencyChallenge(ctx)
 	case ethbridge.INBOX_DELTA:
-		return s.handleInboxDeltaChallenge()
+		return c.handleInboxDeltaChallenge()
 	case ethbridge.EXECUTION:
-		return s.handleExecutionChallenge()
+		return c.handleExecutionChallenge()
 	case ethbridge.STOPPED_SHORT:
-		return s.handleStoppedShortChallenge()
+		return c.handleStoppedShortChallenge()
 	default:
 		return nil, errors.New("can't handle challenge")
 	}
+
 }
 
-func (s *Staker) handleInboxConsistencyChallenge(ctx context.Context, challenge *ethbridge.Challenge, info *ethbridgecontracts.ChallengeBisected) (*types.Transaction, error) {
-	prevSegment := &ethbridge.ChallengeSegment{
-		Start:  info.SegmentStart,
-		Length: info.SegmentLength,
+func (c *Challenger) handleInboxConsistencyChallenge(ctx context.Context) (*types.Transaction, error) {
+	challengeState, err := c.challenge.ChallengeState(ctx)
+	if err != nil {
+		return nil, err
 	}
-	inconsistentSegment, segmentToChallenge, err := s.findInboxInconsistency(prevSegment, info.ChainHashes)
+
+	bisection, err := c.challenge.LookupBisection(ctx, challengeState)
+	if err != nil {
+		return nil, err
+	}
+
+	inconsistentSegment, segmentToChallenge, err := c.findInboxInconsistency(bisection.PrevSegment, bisection.ChainHashes)
 	if err != nil {
 		return nil, err
 	}
 
 	if inconsistentSegment.Length.Cmp(big.NewInt(1)) == 0 {
-		beforeInboxAcc, err := s.lookup.GetInboxAcc(inconsistentSegment.Start)
+		beforeInboxAcc, err := c.lookup.GetInboxAcc(inconsistentSegment.Start)
 		if err != nil {
 			return nil, err
 		}
-		msgs, err := s.lookup.GetMessages(inconsistentSegment.Start, big.NewInt(1))
+		msgs, err := c.lookup.GetMessages(inconsistentSegment.Start, big.NewInt(1))
 		if err != nil {
 			return nil, err
 		}
-		return challenge.OneStepProveInboxConsistency(ctx, prevSegment, info.ChainHashes, segmentToChallenge, beforeInboxAcc, msgs[0].CommitmentHash())
+		return c.challenge.OneStepProveInboxConsistency(ctx, bisection.PrevSegment, bisection.ChainHashes, segmentToChallenge, beforeInboxAcc, msgs[0].CommitmentHash())
 	} else {
-		subSegments, err := s.generateInboxBisection(inconsistentSegment)
+		subSegments, err := c.generateInboxBisection(inconsistentSegment)
 		if err != nil {
 			return nil, err
 		}
-		return challenge.BisectInboxConsistency(ctx, prevSegment, info.ChainHashes, segmentToChallenge, subSegments)
+		return c.challenge.BisectInboxConsistency(ctx, bisection.PrevSegment, bisection.ChainHashes, segmentToChallenge, subSegments)
 	}
 }
 
-func (s *Staker) findInboxInconsistency(segment *ethbridge.ChallengeSegment, chunkHashes [][32]byte) (*ethbridge.ChallengeSegment, int, error) {
+func (c *Challenger) findInboxInconsistency(segment *ethbridge.ChallengeSegment, chunkHashes [][32]byte) (*ethbridge.ChallengeSegment, int, error) {
 	inboxOffset := segment.Start
 	for i, chunkHash := range chunkHashes {
 		segmentLength := calculateBisectionChunkCount(i, len(chunkHashes), segment.Length)
 		newInboxOffset := new(big.Int).Add(inboxOffset, segmentLength)
-		inboxAcc, err := s.lookup.GetInboxAcc(newInboxOffset)
+		inboxAcc, err := c.lookup.GetInboxAcc(newInboxOffset)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -123,12 +127,12 @@ func (s *Staker) findInboxInconsistency(segment *ethbridge.ChallengeSegment, chu
 	return nil, 0, nil
 }
 
-func (s *Staker) generateInboxBisection(segment *ethbridge.ChallengeSegment) ([][32]byte, error) {
+func (c *Challenger) generateInboxBisection(segment *ethbridge.ChallengeSegment) ([][32]byte, error) {
 	segmentCount := calculateBisectionSegmentCount(segment.Length)
 	segments := make([][32]byte, 0, segmentCount+1)
 
 	offset := new(big.Int).Set(segment.Start)
-	inboxAcc, err := s.lookup.GetInboxAcc(offset)
+	inboxAcc, err := c.lookup.GetInboxAcc(offset)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +140,7 @@ func (s *Staker) generateInboxBisection(segment *ethbridge.ChallengeSegment) ([]
 	for i := 0; i < segmentCount; i++ {
 		subSegmentLength := calculateBisectionChunkCount(i, segmentCount, segment.Length)
 		offset = offset.Add(offset, subSegmentLength)
-		inboxAcc, err := s.lookup.GetInboxAcc(offset)
+		inboxAcc, err := c.lookup.GetInboxAcc(offset)
 		if err != nil {
 			return nil, err
 		}
@@ -145,15 +149,15 @@ func (s *Staker) generateInboxBisection(segment *ethbridge.ChallengeSegment) ([]
 	return segments, nil
 }
 
-func (s *Staker) handleInboxDeltaChallenge() (*types.Transaction, error) {
+func (c *Challenger) handleInboxDeltaChallenge() (*types.Transaction, error) {
 	return nil, nil
 }
 
-func (s *Staker) handleExecutionChallenge() (*types.Transaction, error) {
+func (c *Challenger) handleExecutionChallenge() (*types.Transaction, error) {
 	return nil, nil
 }
 
-func (s *Staker) handleStoppedShortChallenge() (*types.Transaction, error) {
+func (c *Challenger) handleStoppedShortChallenge() (*types.Transaction, error) {
 	return nil, nil
 }
 

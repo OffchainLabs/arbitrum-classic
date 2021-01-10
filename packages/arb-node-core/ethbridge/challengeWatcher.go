@@ -6,11 +6,10 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"math/big"
+	"github.com/pkg/errors"
 	"strings"
 )
 
@@ -62,10 +61,6 @@ func NewChallengeWatcher(address ethcommon.Address, client ethutils.EthClient) (
 	}, nil
 }
 
-func (c *ChallengeWatcher) ChallengedNodeNum(ctx context.Context) (NodeID, error) {
-	return c.con.ChallengedNodeNum(&bind.CallOpts{Context: ctx})
-}
-
 func (c *ChallengeWatcher) Kind(ctx context.Context) (ChallengeKind, error) {
 	rawKind, err := c.con.Kind(&bind.CallOpts{Context: ctx})
 	if err != nil {
@@ -106,35 +101,46 @@ func (c *ChallengeWatcher) CurrentResponder(ctx context.Context) (common.Address
 	return common.NewAddressFromEth(responder), nil
 }
 
-func (c *ChallengeWatcher) LookupNodes(ctx context.Context, challengeRoots []common.Hash) ([]*NodeInfo, error) {
+func (c *ChallengeWatcher) ChallengeState(ctx context.Context) (common.Hash, error) {
+	challengeState, err := c.con.ChallengeState(&bind.CallOpts{Context: ctx})
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return common.NewHashFromEth(challengeState), nil
+}
+
+type Bisection struct {
+	PrevSegment *ChallengeSegment
+	ChainHashes [][32]byte
+}
+
+func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState common.Hash) (*Bisection, error) {
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
 		FromBlock: nil,
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{c.address},
-		Topics:    [][]ethcommon.Hash{{bisectedID}, common.NewEthHashesFromHashes(challengeRoots)},
+		Topics:    [][]ethcommon.Hash{{bisectedID}, {challengeState.ToEthHash()}},
 	}
 	logs, err := c.client.FilterLogs(ctx, query)
 	if err != nil {
 		return nil, err
 	}
-	infos := make([]*NodeInfo, 0, len(logs))
-	for _, ethLog := range logs {
-		parsedLog, err := c.con.ParseBisected(ethLog)
-		if err != nil {
-			return nil, err
-		}
-		proposed := &common.BlockId{
-			Height:     common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
-			HeaderHash: common.NewHashFromEth(ethLog.BlockHash),
-		}
-		pa
-		infos = append(infos, &NodeInfo{
-			NodeNum:       parsedLog.NodeNum,
-			BlockProposed: proposed,
-			Assertion:     NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
-			InboxMaxCount: parsedLog.InboxMaxCount,
-		})
+	if len(logs) == 0 {
+		return nil, errors.New("no matching bisection")
 	}
-	return infos, nil
+	if len(logs) > 1 {
+		return nil, errors.New("too many matching  bisections")
+	}
+	parsedLog, err := c.con.ParseBisected(logs[0])
+	if err != nil {
+		return nil, err
+	}
+	return &Bisection{
+		PrevSegment: &ChallengeSegment{
+			Start:  parsedLog.SegmentStart,
+			Length: parsedLog.SegmentLength,
+		},
+		ChainHashes: parsedLog.ChainHashes,
+	}, nil
 }

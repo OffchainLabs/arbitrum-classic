@@ -571,7 +571,6 @@ contract Rollup is Inbox, Outbox, IRollup {
 
         // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
         frame.challengeAddress = challengeFactory.createChallenge(
-            nodeNum1,
             state.inboxConsistencyHash,
             state.inboxDeltaHash,
             state.executionHash,
@@ -584,7 +583,12 @@ contract Rollup is Inbox, Outbox, IRollup {
         staker1.currentChallenge = frame.challengeAddress;
         staker2.currentChallenge = frame.challengeAddress;
 
-        emit RollupChallengeStarted(staker1Address, staker2Address, frame.challengeAddress);
+        emit RollupChallengeStarted(
+            frame.challengeAddress,
+            staker1Address,
+            staker2Address,
+            nodeNum1
+        );
     }
 
     function destroyNode(uint256 nodeNum) private {
