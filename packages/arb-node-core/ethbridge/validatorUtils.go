@@ -21,6 +21,15 @@ const (
 	CONFIRM_TYPE_INVALID
 )
 
+type ConflictType uint8
+
+const (
+	CONFLICT_TYPE_NONE ConflictType = iota
+	CONFLICT_TYPE_FOUND
+	CONFLICT_TYPE_INDETERMINATE
+	CONFLICT_TYPE_INCOMPLETE
+)
+
 type ValidatorUtilsWatcher struct {
 	con           *ethbridgecontracts.ValidatorUtils
 	rollupAddress ethcommon.Address
@@ -87,6 +96,32 @@ func (v *ValidatorUtilsWatcher) CheckDecidableNextNode(ctx context.Context) (Con
 		return CONFIRM_TYPE_NONE, nil, common.Address{}, err
 	}
 	return ConfirmType(confirmType), successorWithStake, common.NewAddressFromEth(stakerAddress), nil
+}
+
+func (v *ValidatorUtilsWatcher) FindStakerConflict(ctx context.Context, staker1, staker2 common.Address) (ConflictType, *big.Int, *big.Int, error) {
+	conflictType, staker1Node, staker2Node, err := v.con.FindStakerConflict(
+		&bind.CallOpts{Context: ctx},
+		v.rollupAddress,
+		staker1.ToEthAddress(),
+		staker2.ToEthAddress(),
+		math.MaxBig256,
+	)
+	if err != nil {
+		return CONFLICT_TYPE_NONE, nil, nil, err
+	}
+	for ConflictType(conflictType) == CONFLICT_TYPE_INCOMPLETE {
+		conflictType, staker1Node, staker2Node, err = v.con.FindNodeConflict(
+			&bind.CallOpts{Context: ctx},
+			v.rollupAddress,
+			staker1Node,
+			staker2Node,
+			math.MaxBig256,
+		)
+		if err != nil {
+			return CONFLICT_TYPE_NONE, nil, nil, err
+		}
+	}
+	return ConflictType(conflictType), staker1Node, staker2Node, nil
 }
 
 type ValidatorUtils struct {

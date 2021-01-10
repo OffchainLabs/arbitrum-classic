@@ -151,8 +151,11 @@ func (r *Rollup) CreateChallenge(
 	assertion *Assertion,
 	inboxMaxHash common.Hash,
 	inboxMaxCount *big.Int,
-	arbGasSpeedLimitPerBlock *big.Int,
 ) (*types.Transaction, error) {
+	speedLimit, err := r.ArbGasSpeedLimitPerBlock(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return r.con.CreateChallenge(
 			auth,
@@ -163,7 +166,7 @@ func (r *Rollup) CreateChallenge(
 			assertion.InboxConsistencyHash(inboxMaxHash, inboxMaxCount),
 			assertion.InboxDeltaHash(),
 			assertion.ExecutionHash(),
-			assertion.CheckTime(arbGasSpeedLimitPerBlock),
+			assertion.CheckTime(speedLimit),
 		)
 	})
 }

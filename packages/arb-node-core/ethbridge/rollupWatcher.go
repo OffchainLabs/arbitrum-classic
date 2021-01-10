@@ -255,6 +255,14 @@ func (r *RollupWatcher) MinimumAssertionPeriod(ctx context.Context) (*big.Int, e
 	return r.con.MinimumAssertionPeriod(&bind.CallOpts{Context: ctx})
 }
 
+func (r *RollupWatcher) GetStakers(ctx context.Context) ([]common.Address, error) {
+	addresses, err := r.con.GetStakers(&bind.CallOpts{Context: ctx}, big.NewInt(0), math.MaxBig256)
+	if err != nil {
+		return nil, err
+	}
+	return common.AddressArrayFromEth(addresses), nil
+}
+
 func (r *RollupWatcher) StakerCount(ctx context.Context) (*big.Int, error) {
 	return r.con.StakerCount(&bind.CallOpts{Context: ctx})
 }
