@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -64,11 +63,11 @@ func (v *Validator) resolveNextNode(ctx context.Context) (*types.Transaction, er
 			return nil, errors.New("bad node query")
 		}
 		nodeInfo := nodesInfo[0]
-		logAcc, err := v.lookup.GenerateLogAccumulator(nodeInfo.Assertion.BeforeLogCount, nodeInfo.Assertion.LogCount)
+		logAcc, err := v.lookup.GenerateLogAccumulator(nodeInfo.Assertion.BeforeTotalLogCount, nodeInfo.Assertion.LogCount)
 		if err != nil {
 			return nil, err
 		}
-		sends, err := v.lookup.GetSends(nodeInfo.Assertion.BeforeSendCount, nodeInfo.Assertion.SendCount)
+		sends, err := v.lookup.GetSends(nodeInfo.Assertion.BeforeTotalSendCount, nodeInfo.Assertion.SendCount)
 		if err != nil {
 			return nil, err
 		}
@@ -121,10 +120,6 @@ func (s *Staker) act(ctx context.Context) error {
 
 		}
 	}
-	return nil
-}
-
-func (s *Staker) validateNode(ctx context.Context, info *ethbridgecontracts.RollupNodeCreated) error {
 	return nil
 }
 

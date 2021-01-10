@@ -22,7 +22,7 @@ interface IRollup {
     event NodeCreated(
         uint256 indexed nodeNum,
         bytes32[7] assertionBytes32Fields,
-        uint256[11] assertionIntFields
+        uint256[10] assertionIntFields
     );
 
     event RollupChallengeStarted(address asserter, address challenger, address challengeContract);

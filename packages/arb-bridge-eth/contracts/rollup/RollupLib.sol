@@ -23,24 +23,24 @@ import "../challenge/ChallengeLib.sol";
 library RollupLib {
     function nodeStateHash(
         uint256 proposedBlock,
-        uint256 stepsRun,
+        uint256 totalGasUsed,
         bytes32 machineHash,
         bytes32 inboxTop,
         uint256 inboxCount,
-        uint256 messageCount,
-        uint256 logCount,
+        uint256 totalMessageCount,
+        uint256 totalLogCount,
         uint256 inboxMaxCount
     ) internal pure returns (bytes32) {
         return
             keccak256(
                 abi.encodePacked(
                     proposedBlock,
-                    stepsRun,
+                    totalGasUsed,
                     machineHash,
                     inboxTop,
                     inboxCount,
-                    messageCount,
-                    logCount,
+                    totalMessageCount,
+                    totalLogCount,
                     inboxMaxCount
                 )
             );
@@ -48,14 +48,13 @@ library RollupLib {
 
     struct Assertion {
         uint256 beforeProposedBlock;
-        uint256 beforeStepsRun;
+        uint256 beforeTotalGasUsed;
         bytes32 beforeMachineHash;
         bytes32 beforeInboxHash;
         uint256 beforeInboxCount;
-        uint256 beforeSendCount;
-        uint256 beforeLogCount;
+        uint256 beforeTotalSendCount;
+        uint256 beforeTotalLogCount;
         uint256 beforeInboxMaxCount;
-        uint256 stepsExecuted;
         bytes32 inboxDelta;
         uint256 inboxMessagesRead;
         uint256 gasUsed;
@@ -67,7 +66,7 @@ library RollupLib {
         bytes32 afterMachineHash;
     }
 
-    function decodeAssertion(bytes32[7] memory bytes32Fields, uint256[11] memory intFields)
+    function decodeAssertion(bytes32[7] memory bytes32Fields, uint256[10] memory intFields)
         internal
         pure
         returns (Assertion memory)
@@ -82,14 +81,13 @@ library RollupLib {
                 intFields[3],
                 intFields[4],
                 intFields[5],
-                intFields[6],
                 bytes32Fields[2],
+                intFields[6],
                 intFields[7],
-                intFields[8],
                 bytes32Fields[3],
-                intFields[9],
+                intFields[8],
                 bytes32Fields[4],
-                intFields[10],
+                intFields[9],
                 bytes32Fields[5],
                 bytes32Fields[6]
             );
@@ -99,12 +97,12 @@ library RollupLib {
         return
             nodeStateHash(
                 assertion.beforeProposedBlock,
-                assertion.beforeStepsRun,
+                assertion.beforeTotalGasUsed,
                 assertion.beforeMachineHash,
                 assertion.beforeInboxHash,
                 assertion.beforeInboxCount,
-                assertion.beforeSendCount,
-                assertion.beforeLogCount,
+                assertion.beforeTotalSendCount,
+                assertion.beforeTotalLogCount,
                 assertion.beforeInboxMaxCount
             );
     }
@@ -117,12 +115,12 @@ library RollupLib {
         return
             nodeStateHash(
                 block.number,
-                assertion.beforeStepsRun + assertion.stepsExecuted,
+                assertion.beforeTotalGasUsed + assertion.gasUsed,
                 assertion.afterMachineHash,
                 assertion.afterInboxHash,
                 assertion.beforeInboxCount + assertion.inboxMessagesRead,
-                assertion.beforeSendCount + assertion.sendCount,
-                assertion.beforeLogCount + assertion.logCount,
+                assertion.beforeTotalSendCount + assertion.sendCount,
+                assertion.beforeTotalLogCount + assertion.logCount,
                 inboxMaxCount
             );
     }

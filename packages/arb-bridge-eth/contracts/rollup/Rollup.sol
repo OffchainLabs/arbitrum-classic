@@ -204,7 +204,7 @@ contract Rollup is Inbox, Outbox, IRollup {
         uint256 nodeNum,
         uint256 prev,
         bytes32[7] calldata assertionBytes32Fields,
-        uint256[11] calldata assertionIntFields
+        uint256[10] calldata assertionIntFields
     ) external payable {
         Staker storage staker = addNewStaker();
         require(prev == latestConfirmed, "PREV");
@@ -233,7 +233,7 @@ contract Rollup is Inbox, Outbox, IRollup {
         uint256 blockNumber,
         uint256 nodeNum,
         bytes32[7] calldata assertionBytes32Fields,
-        uint256[11] calldata assertionIntFields
+        uint256[10] calldata assertionIntFields
     ) external {
         Staker storage staker = stakerMap[msg.sender];
         require(staker.isStaked, "NOT_STAKED");
@@ -438,7 +438,7 @@ contract Rollup is Inbox, Outbox, IRollup {
         uint256 nodeNum,
         Staker storage staker,
         bytes32[7] memory assertionBytes32Fields,
-        uint256[11] memory assertionIntFields
+        uint256[10] memory assertionIntFields
     ) private {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         require(nodeNum == latestNodeCreated + 1, "NODE_NUM");

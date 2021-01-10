@@ -7,46 +7,44 @@ import (
 )
 
 type Assertion struct {
-	BeforeProposedBlock *big.Int
-	BeforeStepsRun      *big.Int
-	BeforeMachineHash   common.Hash
-	BeforeInboxHash     common.Hash
-	BeforeInboxCount    *big.Int
-	BeforeSendCount     *big.Int
-	BeforeLogCount      *big.Int
-	BeforeInboxMaxCount *big.Int
-	StepsExecuted       *big.Int
-	InboxDelta          common.Hash
-	InboxMessagesRead   *big.Int
-	GasUsed             *big.Int
-	SendAcc             common.Hash
-	SendCount           *big.Int
-	LogAcc              common.Hash
-	LogCount            *big.Int
-	AfterInboxHash      common.Hash
-	AfterMachineHash    common.Hash
+	BeforeProposedBlock  *big.Int
+	BeforeTotalGasUsed   *big.Int
+	BeforeMachineHash    common.Hash
+	BeforeInboxHash      common.Hash
+	BeforeInboxCount     *big.Int
+	BeforeTotalSendCount *big.Int
+	BeforeTotalLogCount  *big.Int
+	BeforeInboxMaxCount  *big.Int
+	InboxDelta           common.Hash
+	InboxMessagesRead    *big.Int
+	GasUsed              *big.Int
+	SendAcc              common.Hash
+	SendCount            *big.Int
+	LogAcc               common.Hash
+	LogCount             *big.Int
+	AfterInboxHash       common.Hash
+	AfterMachineHash     common.Hash
 }
 
-func NewAssertionFromFields(a [7][32]byte, b [11]*big.Int) *Assertion {
+func NewAssertionFromFields(a [7][32]byte, b [10]*big.Int) *Assertion {
 	return &Assertion{
-		BeforeProposedBlock: b[0],
-		BeforeStepsRun:      b[1],
-		BeforeMachineHash:   a[0],
-		BeforeInboxHash:     a[1],
-		BeforeInboxCount:    b[2],
-		BeforeSendCount:     b[3],
-		BeforeLogCount:      b[4],
-		BeforeInboxMaxCount: b[5],
-		StepsExecuted:       b[6],
-		InboxDelta:          a[2],
-		InboxMessagesRead:   b[7],
-		GasUsed:             b[8],
-		SendAcc:             a[3],
-		SendCount:           b[9],
-		LogAcc:              a[4],
-		LogCount:            b[10],
-		AfterInboxHash:      a[5],
-		AfterMachineHash:    a[6],
+		BeforeProposedBlock:  b[0],
+		BeforeTotalGasUsed:   b[1],
+		BeforeMachineHash:    a[0],
+		BeforeInboxHash:      a[1],
+		BeforeInboxCount:     b[2],
+		BeforeTotalSendCount: b[3],
+		BeforeTotalLogCount:  b[4],
+		BeforeInboxMaxCount:  b[5],
+		InboxDelta:           a[2],
+		InboxMessagesRead:    b[6],
+		GasUsed:              b[7],
+		SendAcc:              a[3],
+		SendCount:            b[8],
+		LogAcc:               a[4],
+		LogCount:             b[9],
+		AfterInboxHash:       a[5],
+		AfterMachineHash:     a[6],
 	}
 }
 
@@ -62,15 +60,14 @@ func (a *Assertion) BytesFields() [7][32]byte {
 	}
 }
 
-func (a *Assertion) IntFields() [11]*big.Int {
-	return [11]*big.Int{
+func (a *Assertion) IntFields() [10]*big.Int {
+	return [10]*big.Int{
 		a.BeforeProposedBlock,
-		a.BeforeStepsRun,
+		a.BeforeTotalGasUsed,
 		a.BeforeInboxCount,
-		a.BeforeSendCount,
-		a.BeforeLogCount,
+		a.BeforeTotalSendCount,
+		a.BeforeTotalLogCount,
 		a.BeforeInboxMaxCount,
-		a.StepsExecuted,
 		a.InboxMessagesRead,
 		a.GasUsed,
 		a.SendCount,
