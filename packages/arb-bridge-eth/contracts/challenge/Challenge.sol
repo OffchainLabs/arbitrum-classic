@@ -165,7 +165,7 @@ contract Challenge is Cloneable, IChallenge {
         bytes32[] calldata _chainHashes
     ) external inboxConsistencyChallenge onlyOnTurn {
         require(_challengedSegmentLength > 1, "bisection too short");
-        require(_chainHashes.length == bisectionDegree(_challengedSegmentLength));
+        require(_chainHashes.length == bisectionDegree(_challengedSegmentLength) + 1);
         require(_chainHashes[_chainHashes.length - 1] != _oldEndHash);
 
         bytes32 bisectionHash =
@@ -221,7 +221,7 @@ contract Challenge is Cloneable, IChallenge {
 
         uint256 newSegmentCount = _inboxAccHashes.length;
         require(_inboxDeltaHashes.length == newSegmentCount, "WRONG_COUNT");
-        require(newSegmentCount == bisectionDegree(_challengedSegmentLength));
+        require(newSegmentCount == bisectionDegree(_challengedSegmentLength) + 1);
         require(_inboxDeltaHashes[newSegmentCount - 1] != _oldInboxDelta);
 
         bytes32[] memory chainHashes = new bytes32[](newSegmentCount);
@@ -251,9 +251,9 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function oneStepProveInboxDelta(
-        uint256 _challengedSegmentStart,
         uint256 _challengedSegmentIndex,
         bytes memory _proof,
+        uint256 _challengedSegmentStart,
         bytes32 _oldEndHash,
         bytes32 _prevInboxDelta,
         bytes32 _nextInboxAcc,
@@ -319,7 +319,10 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _assertionRest
     ) external executionChallenge onlyOnTurn {
         require(_challengedSegmentLength > 1, "TOO_SHORT");
-        require(_chainHashes.length == bisectionDegree(_challengedSegmentLength), "BISECT_DEGREE");
+        require(
+            _chainHashes.length == bisectionDegree(_challengedSegmentLength) + 1,
+            "BISECT_DEGREE"
+        );
         require(_chainHashes[_chainHashes.length - 1] != _oldEndHash, "SAME_END");
 
         require(
@@ -454,8 +457,9 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _startAssertionHash
     ) external onlyOnTurn {
         require(kind == Kind.Uninitialized);
-        // Unlike the other bisections, it's safe for the number of steps executed to be 0 or 1
-        require(_chainHashes.length == bisectionDegree(_newSegmentLength));
+        // Unlike the other bisections, it's safe for the number of steps executed to be 1
+        require(_newSegmentLength > 0);
+        require(_chainHashes.length == bisectionDegree(_newSegmentLength) + 1);
         require(_newSegmentLength < _challengedSegmentLength);
 
         require(
@@ -468,12 +472,8 @@ contract Challenge is Cloneable, IChallenge {
         );
 
         // Reuse the executionHash variable to store last assertion
-        if (_newSegmentLength > 0) {
-            updateBisectionRoot(_chainHashes, 0, _newSegmentLength);
-            executionHash = _chainHashes[_chainHashes.length - 1];
-        } else {
-            executionHash = _startAssertionHash;
-        }
+        updateBisectionRoot(_chainHashes, 0, _newSegmentLength);
+        executionHash = _chainHashes[_chainHashes.length - 1];
 
         kind = Kind.StoppedShort;
         // Free no longer needed storage
@@ -486,7 +486,33 @@ contract Challenge is Cloneable, IChallenge {
         emit Bisected(challengeState, 0, _challengedSegmentLength, _chainHashes);
     }
 
-    function oneStepProveStoppedShortCanRun(
+    // Can only do a stopped short bisection as a first move
+    function executionCantRun(
+        uint256 _challengedSegmentLength,
+        bytes32 _oldEndHash,
+        bytes32 _startAssertionHash
+    ) external onlyOnTurn {
+        require(kind == Kind.Uninitialized);
+
+        require(
+            ChallengeLib.bisectionChunkHash(
+                0,
+                _challengedSegmentLength,
+                _startAssertionHash,
+                _oldEndHash
+            ) == executionHash
+        );
+        executionHash = _startAssertionHash;
+        kind = Kind.StoppedShort;
+        // Free no longer needed storage
+        inboxConsistencyHash = 0;
+        inboxDeltaHash = 0;
+        executionHash = 0;
+
+        responded(executionCheckTimeBlocks);
+    }
+
+    function oneStepProveStoppedShort(
         bytes32[3] calldata _machineFields,
         uint64 _initialGasUsed,
         uint256 _initialMessageCount,
