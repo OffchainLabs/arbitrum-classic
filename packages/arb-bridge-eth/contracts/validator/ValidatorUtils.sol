@@ -141,6 +141,63 @@ contract ValidatorUtils {
         return (successorWithStake, stakerAddress);
     }
 
+    function refundableStakers(Rollup rollup) external view returns (address[] memory) {
+        uint256 stakerCount = rollup.stakerCount();
+        address[] memory stakers = new address[](stakerCount);
+        uint256 latestConfirmed = rollup.latestConfirmed();
+        uint256 index = 0;
+        for (uint256 i = 0; i < stakerCount; i++) {
+            address staker = rollup.stakerList(i);
+            (, uint256 latestStakedNode, , , ) = rollup.stakerMap(staker);
+            if (latestStakedNode <= latestConfirmed) {
+                stakers[index] = staker;
+                index++;
+            }
+        }
+        assembly {
+            mstore(stakers, index)
+        }
+        return stakers;
+    }
+
+    function successorNodes(Rollup rollup, uint256 nodeNum)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        uint256[] memory nodes = new uint256[](100000);
+        uint256 index = 0;
+        for (uint256 i = nodeNum + 1; i <= rollup.latestNodeCreated(); i++) {
+            Node node = rollup.nodes(i);
+            if (node.prev() == nodeNum) {
+                nodes[index] = i;
+                index++;
+            }
+        }
+        // Shrink array down to real size
+        assembly {
+            mstore(nodes, index)
+        }
+        return nodes;
+    }
+
+    function stakedNodes(Rollup rollup, address staker) external view returns (uint256[] memory) {
+        uint256[] memory nodes = new uint256[](100000);
+        uint256 index = 0;
+        for (uint256 i = rollup.latestConfirmed(); i <= rollup.latestNodeCreated(); i++) {
+            Node node = rollup.nodes(i);
+            if (node.stakers(staker)) {
+                nodes[index] = i;
+                index++;
+            }
+        }
+        // Shrink array down to real size
+        assembly {
+            mstore(nodes, index)
+        }
+        return nodes;
+    }
+
     function findRejectableExample(
         Rollup rollup,
         uint256 startNodeOffset,
@@ -201,62 +258,5 @@ contract ValidatorUtils {
         }
 
         return (false, 0, address(0));
-    }
-
-    function refundableStakers(Rollup rollup) external view returns (address[] memory) {
-        uint256 stakerCount = rollup.stakerCount();
-        address[] memory stakers = new address[](stakerCount);
-        uint256 latestConfirmed = rollup.latestConfirmed();
-        uint256 index = 0;
-        for (uint256 i = 0; i < stakerCount; i++) {
-            address staker = rollup.stakerList(i);
-            (, uint256 latestStakedNode, , , ) = rollup.stakerMap(staker);
-            if (latestStakedNode <= latestConfirmed) {
-                stakers[index] = staker;
-                index++;
-            }
-        }
-        assembly {
-            mstore(stakers, index)
-        }
-        return stakers;
-    }
-
-    function successorNodes(Rollup rollup, uint256 nodeNum)
-        external
-        view
-        returns (uint256[] memory)
-    {
-        uint256[] memory nodes = new uint256[](100000);
-        uint256 index = 0;
-        for (uint256 i = nodeNum + 1; i <= rollup.latestNodeCreated(); i++) {
-            Node node = rollup.nodes(i);
-            if (node.prev() == nodeNum) {
-                nodes[index] = i;
-                index++;
-            }
-        }
-        // Shrink array down to real size
-        assembly {
-            mstore(nodes, index)
-        }
-        return nodes;
-    }
-
-    function stakedNodes(Rollup rollup, address staker) external view returns (uint256[] memory) {
-        uint256[] memory nodes = new uint256[](100000);
-        uint256 index = 0;
-        for (uint256 i = rollup.latestConfirmed(); i <= rollup.latestNodeCreated(); i++) {
-            Node node = rollup.nodes(i);
-            if (node.stakers(staker)) {
-                nodes[index] = i;
-                index++;
-            }
-        }
-        // Shrink array down to real size
-        assembly {
-            mstore(nodes, index)
-        }
-        return nodes;
     }
 }

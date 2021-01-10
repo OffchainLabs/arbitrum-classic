@@ -373,11 +373,11 @@ contract Rollup is Inbox, Outbox, IRollup {
 
     function currentRequiredStake() public view returns (uint256) {
         uint256 MAX_INT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
-
-        if (block.number < nodes[latestConfirmed].deadlineBlock()) {
+        uint256 latestConfirmedDeadline = nodes[latestConfirmed].deadlineBlock();
+        if (block.number < latestConfirmedDeadline) {
             return baseStake;
         }
-        uint256 latestConfirmedAge = block.number - nodes[latestConfirmed].deadlineBlock();
+        uint256 latestConfirmedAge = block.number - latestConfirmedDeadline;
         uint256 challengePeriodsPassed = latestConfirmedAge / challengePeriodBlocks;
         if (challengePeriodsPassed > 255) {
             challengePeriodsPassed = 255;
@@ -392,6 +392,10 @@ contract Rollup is Inbox, Outbox, IRollup {
         }
 
         return baseStake * multiplier;
+    }
+
+    function minimumAssertionPeriod() public view returns (uint256) {
+        return challengePeriodBlocks / 10;
     }
 
     function countStakedZombies(Node node) public view returns (uint256) {
@@ -448,7 +452,12 @@ contract Rollup is Inbox, Outbox, IRollup {
         node.addStaker(msg.sender);
         staker.latestStakedNode = latestNodeCreated;
 
-        emit NodeCreated(latestNodeCreated, assertionBytes32Fields, assertionIntFields);
+        emit NodeCreated(
+            latestNodeCreated,
+            assertionBytes32Fields,
+            assertionIntFields,
+            inboxMaxCount
+        );
     }
 
     function createNewNode(RollupLib.Assertion memory assertion, uint256 prev)
@@ -470,10 +479,10 @@ contract Rollup is Inbox, Outbox, IRollup {
 
         uint256 prevDeadlineBlock = prevNode.deadlineBlock();
         uint256 timeSinceLastNode = block.number - assertion.beforeProposedBlock;
-        uint256 minimumAssertionPeriod = challengePeriodBlocks / 10;
+        uint256 minAssertionPeriod = minimumAssertionPeriod();
         uint256 minGasUsed = timeSinceLastNode * arbGasSpeedLimitPerBlock;
         // Verify that assertion meets the minimum Delta time requirement
-        require(timeSinceLastNode >= minimumAssertionPeriod, "TIME_DELTA");
+        require(timeSinceLastNode >= minAssertionPeriod, "TIME_DELTA");
 
         // Minimum size requirements: each assertion must satisfy either
         require(
