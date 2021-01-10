@@ -249,11 +249,35 @@ func (v *Validator) selectValidChild(ctx context.Context, node ethbridge.NodeID)
 }
 
 type Staker struct {
-	address common.Address
 	*Validator
+	address      common.Address
+	makeNewNodes bool
 }
 
-func (s *Staker) advanceStake(ctx context.Context) (*types.Transaction, error) {
+func (s *Staker) Act(ctx context.Context) error {
+	_, err := s.resolveNextNode(ctx)
+	if err != nil {
+		return err
+	}
+	info, err := s.rollup.StakerInfo(ctx, s.address)
+	if err != nil {
+		return err
+	}
+	if info != nil {
+		_, err := s.advanceStake(ctx, info)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err := s.placeStake(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (*types.Transaction, error) {
 	info, err := s.rollup.StakerInfo(ctx, s.address)
 	if err != nil {
 		return nil, err
@@ -269,6 +293,9 @@ func (s *Staker) advanceStake(ctx context.Context) (*types.Transaction, error) {
 
 	switch action := action.(type) {
 	case nodeCreationInfo:
+		if !s.makeNewNodes {
+			return nil, nil
+		}
 		return s.rollup.AddStakeOnNewNode(ctx, action.block, action.newNodeID, action.assertion)
 	case nodeMovementInfo:
 		return s.rollup.AddStakeOnExistingNode(ctx, action.block, action.nodeNum)
@@ -278,14 +305,6 @@ func (s *Staker) advanceStake(ctx context.Context) (*types.Transaction, error) {
 }
 
 func (s *Staker) placeStake(ctx context.Context) (*types.Transaction, error) {
-	info, err := s.rollup.StakerInfo(ctx, s.address)
-	if err != nil {
-		return nil, err
-	}
-	if info != nil {
-		return nil, errors.New("stake already placed")
-	}
-
 	latestConfirmedNode, err := s.rollup.LatestConfirmedNode(ctx)
 	if err != nil {
 		return nil, err
@@ -298,6 +317,9 @@ func (s *Staker) placeStake(ctx context.Context) (*types.Transaction, error) {
 
 	switch action := action.(type) {
 	case nodeCreationInfo:
+		if !s.makeNewNodes {
+			return nil, nil
+		}
 		return s.rollup.NewStakeOnNewNode(ctx, action.block, action.newNodeID, latestConfirmedNode, action.assertion)
 	case nodeMovementInfo:
 		return s.rollup.NewStakeOnExistingNode(ctx, action.block, action.nodeNum)

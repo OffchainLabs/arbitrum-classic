@@ -104,11 +104,12 @@ contract ValidatorUtils {
         try currentUnresolved.checkConfirmInvalid(zombieCount) {} catch {
             return (ConfirmType.NONE, 0, address(0));
         }
+
         // Node might be invalid
         (bool found, uint256 successorWithStake, address stakerAddress) =
             findRejectableExample(
                 rollup,
-                startNodeOffset,
+                firstUnresolvedNode + 1 + startNodeOffset,
                 maxNodeCount,
                 startStakerIndex,
                 maxStakerCount
@@ -153,7 +154,7 @@ contract ValidatorUtils {
         (bool found, uint256 successorWithStake, address stakerAddress) =
             findRejectableExample(
                 rollup,
-                startNodeOffset,
+                firstUnresolvedNode + 1 + startNodeOffset,
                 maxNodeCount,
                 startStakerIndex,
                 maxStakerCount
@@ -273,23 +274,30 @@ contract ValidatorUtils {
             address stakerAddress
         )
     {
-        uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
-        address[] memory stakers = rollup.getStakers(startStakerIndex, maxStakerCount);
         uint256 latestNodeCreated = rollup.latestNodeCreated();
-        if (firstUnresolvedNode + 1 + startNodeOffset > latestNodeCreated) {
+        if (startNodeOffset > latestNodeCreated) {
             return (false, 0, address(0));
         }
-        uint256 max = latestNodeCreated - (firstUnresolvedNode + startNodeOffset);
+        uint256 max = latestNodeCreated - startNodeOffset;
         if (max > maxNodeCount) {
             max = maxNodeCount;
         }
-        return findRejectableExampleImpl(rollup, max, startNodeOffset, stakers);
+
+        return
+            findRejectableExampleImpl(
+                rollup,
+                startNodeOffset,
+                rollup.latestConfirmed(),
+                max,
+                rollup.getStakers(startStakerIndex, maxStakerCount)
+            );
     }
 
     function findRejectableExampleImpl(
         Rollup rollup,
+        uint256 firstNodeToCheck,
+        uint256 prev,
         uint256 max,
-        uint256 startNodeOffset,
         address[] memory stakers
     )
         private
@@ -300,14 +308,11 @@ contract ValidatorUtils {
             address
         )
     {
-        uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
-        uint256 latestConfirmed = rollup.latestConfirmed();
         uint256 stakerCount = stakers.length;
-
         for (uint256 i = 0; i <= max; i++) {
-            uint256 nodeIndex = firstUnresolvedNode + 1 + startNodeOffset + i;
+            uint256 nodeIndex = firstNodeToCheck + i;
             Node node = rollup.nodes(nodeIndex);
-            if (node.prev() != latestConfirmed) {
+            if (node.prev() != prev) {
                 continue;
             }
             for (uint256 j = 0; j < stakerCount; j++) {
@@ -316,7 +321,6 @@ contract ValidatorUtils {
                 }
             }
         }
-
         return (false, 0, address(0));
     }
 }
