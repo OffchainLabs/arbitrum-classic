@@ -13,9 +13,17 @@ type ValidatorLookup interface {
 	GetInboxAcc(index *big.Int) (common.Hash, error)
 	GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.InboxMessage, error)
 
+	// GetMachine returns the image of the machine after executing totalGasUsed
+	// from the original machine
 	GetMachine(totalGasUsed *big.Int) (machine.Machine, error)
-	GetExecutionInfo(startMachine machine.Machine, gas *big.Int, maxMessages *big.Int) (*ExecutionInfo, error)
-	GetExecutionInfoInRange(startMachine machine.Machine, minGas, maxGas *big.Int) (*AssertionInfo, error)
+
+	// GetExecutionInfo tries to execute targetGas steps, but only reads up to
+	// maxMessages messages and stops short if it runs out of messages and needs
+	// more to continue
+	GetExecutionInfoWithMaxMessages(startMachine machine.Machine, targetGas *big.Int, maxMessages *big.Int) (*ExecutionInfo, error)
+
+	// GetExecutionInfo executes as much as it can not over maxGas
+	GetExecutionInfo(startMachine machine.Machine, maxGas *big.Int) (*AssertionInfo, error)
 }
 
 type ExecutionInfo struct {

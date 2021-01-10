@@ -138,11 +138,18 @@ func (v *Validator) generateNodeAction(ctx context.Context, base ethbridge.NodeI
 	}
 
 	minimumGasToConsume := new(big.Int).Mul(timeSinceProposed, arbGasSpeedLimitPerBlock)
+	minMessages := new(big.Int).Sub(currentNode.InboxMaxCount, currentNode.Assertion.AfterInboxCount())
+
 	maximumGasToConsume := new(big.Int).Mul(minimumGasToConsume, big.NewInt(4))
 
-	assertionInfo, err := v.lookup.GetExecutionInfoInRange(mach, minimumGasToConsume, maximumGasToConsume)
+	assertionInfo, err := v.lookup.GetExecutionInfo(mach, maximumGasToConsume)
 	if err != nil {
 		return nil, err
+	}
+
+	if assertionInfo.ExecInfo.GasUsed.Cmp(minimumGasToConsume) < 0 && assertionInfo.ExecInfo.InboxMessagesRead.Cmp(minMessages) < 0 {
+		// Couldn't execute far enough
+		return nil, nil
 	}
 
 	assertion := &ethbridge.Assertion{
@@ -245,7 +252,7 @@ func (v *Validator) judgeNode(nd *ethbridge.NodeInfo, mach machine.Machine) (eth
 			return 0, err
 		}
 	}
-	localExecutionInfo, err := v.lookup.GetExecutionInfo(mach, nd.Assertion.ExecInfo.GasUsed, nd.Assertion.ExecInfo.InboxMessagesRead)
+	localExecutionInfo, err := v.lookup.GetExecutionInfoWithMaxMessages(mach, nd.Assertion.ExecInfo.GasUsed, nd.Assertion.ExecInfo.InboxMessagesRead)
 	if err != nil {
 		return 0, err
 	}
@@ -301,6 +308,11 @@ func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (
 	action, err := s.generateNodeAction(ctx, info.LatestStakedNode)
 	if err != nil {
 		return nil, err
+	}
+
+	if action == nil {
+		// Nothing to do
+		return nil, nil
 	}
 
 	switch action := action.(type) {
