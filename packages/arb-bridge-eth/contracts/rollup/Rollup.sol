@@ -525,6 +525,12 @@ contract Rollup is Inbox, Outbox, IRollup {
         return node;
     }
 
+    struct CreateChallengeFrame {
+        Node node1;
+        Node node2;
+        address challengeAddress;
+    }
+
     function createChallenge(
         address payable staker1Address,
         uint256 nodeNum1,
@@ -536,10 +542,12 @@ contract Rollup is Inbox, Outbox, IRollup {
         require(nodeNum2 <= latestNodeCreated, "NOT_PROPOSED");
         require(latestConfirmed < nodeNum1, "ALREADY_CONFIRMED");
 
-        Node node1 = nodes[nodeNum1];
-        Node node2 = nodes[nodeNum2];
+        CreateChallengeFrame memory frame;
 
-        require(node1.prev() == node2.prev(), "DIFF_PREV");
+        frame.node1 = nodes[nodeNum1];
+        frame.node2 = nodes[nodeNum2];
+
+        require(frame.node1.prev() == frame.node2.prev(), "DIFF_PREV");
 
         Staker storage staker1 = stakerMap[staker1Address];
         Staker storage staker2 = stakerMap[staker2Address];
@@ -547,11 +555,11 @@ contract Rollup is Inbox, Outbox, IRollup {
         checkUnchallengedStaker(staker1);
         checkUnchallengedStaker(staker2);
 
-        require(node1.stakers(staker1Address), "STAKER1_NOT_STAKED");
-        require(node2.stakers(staker2Address), "STAKER2_NOT_STAKED");
+        require(frame.node1.stakers(staker1Address), "STAKER1_NOT_STAKED");
+        require(frame.node2.stakers(staker2Address), "STAKER2_NOT_STAKED");
 
         require(
-            node1.challengeHash() ==
+            frame.node1.challengeHash() ==
                 ChallengeLib.challengeRootHash(
                     state.inboxConsistencyHash,
                     state.inboxDeltaHash,
@@ -562,21 +570,21 @@ contract Rollup is Inbox, Outbox, IRollup {
         );
 
         // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
-        address challengeAddress =
-            challengeFactory.createChallenge(
-                state.inboxConsistencyHash,
-                state.inboxDeltaHash,
-                state.executionHash,
-                state.executionCheckTime,
-                staker1Address,
-                staker2Address,
-                challengePeriodBlocks
-            );
+        frame.challengeAddress = challengeFactory.createChallenge(
+            nodeNum1,
+            state.inboxConsistencyHash,
+            state.inboxDeltaHash,
+            state.executionHash,
+            state.executionCheckTime,
+            staker1Address,
+            staker2Address,
+            challengePeriodBlocks
+        );
 
-        staker1.currentChallenge = challengeAddress;
-        staker2.currentChallenge = challengeAddress;
+        staker1.currentChallenge = frame.challengeAddress;
+        staker2.currentChallenge = frame.challengeAddress;
 
-        emit RollupChallengeStarted(staker1Address, staker2Address, challengeAddress);
+        emit RollupChallengeStarted(staker1Address, staker2Address, frame.challengeAddress);
     }
 
     function destroyNode(uint256 nodeNum) private {

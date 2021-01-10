@@ -31,5 +31,4 @@ ROLLUP_LIBS=$INBOX,$OUTBOX,$ROLLUP_CREATOR,$ROLLUP,$ROLLUP_LIB,$MESSAGES,$NODE,$
 IGNORED_MORE=$IGNORED,$ROLLUP_LIBS
 abigen --sol=$PREFIX/rollup/RollupCreator.sol --pkg=$PACKAGE --out=rollupcreator.go --exc=$IGNORED
 abigen --sol=$PREFIX/validator/ValidatorUtils.sol --pkg=$PACKAGE --out=validatorutils.go --exc=$IGNORED_MORE
-#abigen --sol=$PREFIX/challenge/ChallengeFactory.sol --pkg=$PACKAGE --out=challengefactory.go --exc=$IGNORED
-#abigen --sol=$PREFIX/challenge/Challenge.sol --pkg=$PACKAGE --out=inboxtopchallenge.go --exc=$IGNORED
+abigen --sol=$PREFIX/challenge/Challenge.sol --pkg=$PACKAGE --out=challenge.go --exc=$IGNORED_MORE

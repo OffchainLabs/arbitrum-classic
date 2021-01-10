@@ -34,6 +34,7 @@ contract ChallengeTester is IRollup {
     }
 
     function startChallenge(
+        uint256 challengedNode,
         bytes32 inboxConsistencyHash,
         bytes32 inboxDeltaHash,
         bytes32 executionHash,
@@ -43,6 +44,7 @@ contract ChallengeTester is IRollup {
         uint256 challengePeriodBlocks
     ) public {
         challengeFactory.createChallenge(
+            challengedNode,
             inboxConsistencyHash,
             inboxDeltaHash,
             executionHash,

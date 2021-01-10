@@ -31,7 +31,7 @@ import "../libraries/MerkleLib.sol";
 contract Challenge is Cloneable, IChallenge {
     enum Kind { Uninitialized, InboxConsistency, InboxDelta, Execution, StoppedShort }
 
-    enum State { NoChallenge, AsserterTurn, ChallengerTurn }
+    enum Turn { NoChallenge, Asserter, Challenger }
 
     event InitiatedChallenge(uint256 deadlineBlock);
     event Bisected(
@@ -67,32 +67,28 @@ contract Challenge is Cloneable, IChallenge {
 
     address internal rollupAddress;
 
+    uint256 public challengedNodeNum;
+
     bytes32 inboxConsistencyHash;
     bytes32 inboxDeltaHash;
     bytes32 executionHash;
 
-    address payable internal asserter;
-    address payable internal challenger;
+    address payable public asserter;
+    address payable public challenger;
     uint256 private challengePeriodBlocks;
     uint256 private executionCheckTimeBlocks;
 
-    Kind kind;
+    Kind public kind;
 
     // The current deadline at which the challenge timeouts and a winner is
     // declared. This deadline resets at each step in the challenge
     uint256 internal deadlineBlock;
-    State private state;
+    Turn public turn;
     // This is the root of a merkle tree with nodes like (prev, next, steps)
     bytes32 internal challengeState;
 
     modifier onlyOnTurn {
-        if (state == State.AsserterTurn) {
-            require(msg.sender == asserter, BIS_SENDER);
-        } else if (state == State.ChallengerTurn) {
-            require(msg.sender == challenger, BIS_SENDER);
-        } else {
-            require(false, BIS_STATE);
-        }
+        require(msg.sender == currentResponder(), BIS_SENDER);
         require(block.number <= deadlineBlock, BIS_DEADLINE);
         _;
     }
@@ -121,6 +117,7 @@ contract Challenge is Cloneable, IChallenge {
         address _executionOneStepProofCon,
         address _executionOneStepProof2Con,
         address _rollupAddress,
+        uint256 _challengedNode,
         bytes32 _inboxConsistencyHash,
         bytes32 _inboxDeltaHash,
         bytes32 _executionHash,
@@ -129,12 +126,14 @@ contract Challenge is Cloneable, IChallenge {
         address payable _challenger,
         uint256 _challengePeriodBlocks
     ) external override {
-        require(state == State.NoChallenge, CHAL_INIT_STATE);
+        require(turn == Turn.NoChallenge, CHAL_INIT_STATE);
 
         executor = IOneStepProof(_executionOneStepProofCon);
         executor2 = IOneStepProof2(_executionOneStepProof2Con);
 
         rollupAddress = _rollupAddress;
+
+        challengedNodeNum = _challengedNode;
 
         inboxConsistencyHash = _inboxConsistencyHash;
         inboxDeltaHash = _inboxDeltaHash;
@@ -148,7 +147,7 @@ contract Challenge is Cloneable, IChallenge {
         kind = Kind.Uninitialized;
 
         deadlineBlock = block.number + _challengePeriodBlocks + _executionCheckTimeBlocks;
-        state = State.ChallengerTurn;
+        turn = Turn.Challenger;
 
         challengeState = 0;
 
@@ -471,12 +470,22 @@ contract Challenge is Cloneable, IChallenge {
     function timeout() external {
         require(block.number > deadlineBlock, TIMEOUT_DEADLINE);
 
-        if (state == State.AsserterTurn) {
+        if (turn == Turn.Asserter) {
             emit AsserterTimedOut();
             _challengerWin();
         } else {
             emit ChallengerTimedOut();
             _asserterWin();
+        }
+    }
+
+    function currentResponder() public view returns (address) {
+        if (turn == Turn.Asserter) {
+            return asserter;
+        } else if (turn == Turn.Challenger) {
+            return challenger;
+        } else {
+            require(false, "NO_TURN");
         }
     }
 
@@ -523,16 +532,16 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function responded(uint256 additionalTimeBlocks) private {
-        if (state == State.ChallengerTurn) {
-            state = State.AsserterTurn;
+        if (turn == Turn.Challenger) {
+            turn = Turn.Asserter;
         } else {
-            state = State.ChallengerTurn;
+            turn = Turn.Challenger;
         }
         deadlineBlock = block.number + challengePeriodBlocks + additionalTimeBlocks;
     }
 
     function _currentWin() private {
-        if (state == State.AsserterTurn) {
+        if (turn == Turn.Asserter) {
             _asserterWin();
         } else {
             _challengerWin();

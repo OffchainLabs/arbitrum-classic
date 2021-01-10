@@ -19,6 +19,7 @@ type NodeState struct {
 
 type ExecutionInfo struct {
 	BeforeMachineHash common.Hash
+	InboxMessagesRead *big.Int
 	GasUsed           *big.Int
 	SendAcc           common.Hash
 	SendCount         *big.Int
@@ -29,6 +30,7 @@ type ExecutionInfo struct {
 
 func (e *ExecutionInfo) Equals(o *ExecutionInfo) bool {
 	return e.BeforeMachineHash == o.BeforeMachineHash &&
+		e.InboxMessagesRead.Cmp(o.InboxMessagesRead) == 0 &&
 		e.GasUsed.Cmp(o.GasUsed) == 0 &&
 		e.SendAcc == o.SendAcc &&
 		e.SendCount.Cmp(o.SendCount) == 0 &&
@@ -43,10 +45,9 @@ type Assertion struct {
 }
 
 type AssertionInfo struct {
-	InboxDelta        common.Hash
-	InboxMessagesRead *big.Int
-	ExecInfo          *ExecutionInfo
-	AfterInboxHash    common.Hash
+	InboxDelta     common.Hash
+	ExecInfo       *ExecutionInfo
+	AfterInboxHash common.Hash
 }
 
 func NewAssertionFromFields(a [7][32]byte, b [10]*big.Int) *Assertion {
@@ -63,10 +64,10 @@ func NewAssertionFromFields(a [7][32]byte, b [10]*big.Int) *Assertion {
 	return &Assertion{
 		PrevState: prevState,
 		AssertionInfo: &AssertionInfo{
-			InboxDelta:        a[2],
-			InboxMessagesRead: b[6],
+			InboxDelta: a[2],
 			ExecInfo: &ExecutionInfo{
 				BeforeMachineHash: prevState.MachineHash,
+				InboxMessagesRead: b[6],
 				GasUsed:           b[7],
 				SendAcc:           a[4],
 				SendCount:         b[8],
@@ -99,7 +100,7 @@ func (a *Assertion) IntFields() [10]*big.Int {
 		a.PrevState.TotalSendCount,
 		a.PrevState.TotalLogCount,
 		a.PrevState.InboxMaxCount,
-		a.InboxMessagesRead,
+		a.ExecInfo.InboxMessagesRead,
 		a.ExecInfo.GasUsed,
 		a.ExecInfo.SendCount,
 		a.ExecInfo.LogCount,
@@ -107,7 +108,7 @@ func (a *Assertion) IntFields() [10]*big.Int {
 }
 
 func (a *Assertion) AfterInboxCount() *big.Int {
-	return new(big.Int).Add(a.PrevState.InboxCount, a.InboxMessagesRead)
+	return new(big.Int).Add(a.PrevState.InboxCount, a.ExecInfo.InboxMessagesRead)
 }
 
 func (a *Assertion) AfterTotalGasUsed() *big.Int {
@@ -170,14 +171,14 @@ func outputAccHash(
 
 func (a *Assertion) InboxConsistencyHash(inboxTopHash common.Hash, inboxTopCount *big.Int) common.Hash {
 	messagesAfterCount := new(big.Int).Sub(inboxTopCount, a.PrevState.InboxCount)
-	messagesAfterCount = messagesAfterCount.Sub(messagesAfterCount, a.InboxMessagesRead)
+	messagesAfterCount = messagesAfterCount.Sub(messagesAfterCount, a.ExecInfo.InboxMessagesRead)
 	return bisectionChunkHash(messagesAfterCount, messagesAfterCount, inboxTopHash, a.AfterInboxHash)
 }
 
 func (a *Assertion) InboxDeltaHash() common.Hash {
 	return bisectionChunkHash(
-		a.InboxMessagesRead,
-		a.InboxMessagesRead,
+		a.ExecInfo.InboxMessagesRead,
+		a.ExecInfo.InboxMessagesRead,
 		inboxDeltaHash(a.AfterInboxHash, common.Hash{}),
 		inboxDeltaHash(a.PrevState.InboxHash, a.InboxDelta),
 	)

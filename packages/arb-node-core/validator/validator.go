@@ -20,7 +20,7 @@ type ValidatorLookup interface {
 	GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.InboxMessage, error)
 
 	GetMachine(totalGasUsed *big.Int) (machine.Machine, error)
-	GetExecutionInfo(startMachine machine.Machine, gas *big.Int) (*ethbridge.ExecutionInfo, error)
+	GetExecutionInfo(startMachine machine.Machine, gas *big.Int, maxMessages *big.Int) (*ethbridge.ExecutionInfo, error)
 	GetExecutionInfoInRange(startMachine machine.Machine, minGas, maxGas *big.Int) (*ethbridge.AssertionInfo, error)
 }
 
@@ -219,33 +219,53 @@ func (v *Validator) selectValidChild(ctx context.Context, node ethbridge.NodeID)
 	}
 
 	for _, nd := range nodes {
-		afterInboxHash, err := v.lookup.GetInboxAcc(nd.Assertion.AfterInboxCount())
+		chalType, err := v.judgeNode(nd, mach)
 		if err != nil {
 			return nil, err
 		}
-		if nd.Assertion.AfterInboxHash != afterInboxHash {
-			// Failed inbox consistency
-			continue
+		if chalType == ethbridge.NO_CHALLENGE {
+			return nd, nil
 		}
-		messages, err := v.lookup.GetMessages(nd.Assertion.PrevState.InboxCount, nd.Assertion.InboxMessagesRead)
-		if err != nil {
-			return nil, err
-		}
-		if nd.Assertion.InboxDelta != calculateInboxDeltaAcc(messages) {
-			// Failed inbox delta
-			continue
-		}
-		localExecutionInfo, err := v.lookup.GetExecutionInfo(mach, nd.Assertion.ExecInfo.GasUsed)
-		if err != nil {
-			return nil, err
-		}
-		if !nd.Assertion.ExecInfo.Equals(localExecutionInfo) {
-			// Failed execution
-			continue
-		}
-		return nd, nil
 	}
 	return nil, nil
+}
+
+func (v *Validator) judgeNode(nd *ethbridge.NodeInfo, mach machine.Machine) (ethbridge.ChallengeKind, error) {
+	afterInboxHash, err := v.lookup.GetInboxAcc(nd.Assertion.AfterInboxCount())
+	if err != nil {
+		return 0, err
+	}
+	if nd.Assertion.AfterInboxHash != afterInboxHash {
+		// Failed inbox consistency
+		return ethbridge.INBOX_CONSISTENCY, nil
+	}
+	messages, err := v.lookup.GetMessages(nd.Assertion.PrevState.InboxCount, nd.Assertion.ExecInfo.InboxMessagesRead)
+	if err != nil {
+		return 0, err
+	}
+	if nd.Assertion.InboxDelta != calculateInboxDeltaAcc(messages) {
+		// Failed inbox delta
+		return ethbridge.INBOX_DELTA, nil
+	}
+	if mach == nil {
+		mach, err = v.lookup.GetMachine(nd.Assertion.PrevState.TotalGasUsed)
+		if err != nil {
+			return 0, err
+		}
+	}
+	localExecutionInfo, err := v.lookup.GetExecutionInfo(mach, nd.Assertion.ExecInfo.GasUsed, nd.Assertion.ExecInfo.InboxMessagesRead)
+	if err != nil {
+		return 0, err
+	}
+
+	if localExecutionInfo.GasUsed.Cmp(nd.Assertion.ExecInfo.GasUsed) < 0 {
+		return ethbridge.STOPPED_SHORT, nil
+	}
+
+	if !nd.Assertion.ExecInfo.Equals(localExecutionInfo) {
+		return ethbridge.EXECUTION, nil
+	}
+	return ethbridge.NO_CHALLENGE, nil
 }
 
 type Staker struct {
@@ -275,6 +295,84 @@ func (s *Staker) Act(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo) (*types.Transaction, error) {
+	if info.CurrentChallenge == nil {
+		return nil, nil
+	}
+	challenge, err := ethbridge.NewChallengeWatcher(info.CurrentChallenge.ToEthAddress(), s.client)
+	if err != nil {
+		return nil, err
+	}
+	responder, err := challenge.CurrentResponder(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if responder != s.address {
+		// Not our turn
+		return nil, nil
+	}
+	kind, err := challenge.Kind(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	challengedNodeNum, err := challenge.ChallengedNodeNum(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeInfo, err := s.lookupNode(ctx, challengedNodeNum)
+	if err != nil {
+		return nil, err
+	}
+
+	switch kind {
+	case ethbridge.UNINITIALIZED:
+		judgment, err := s.judgeNode(nodeInfo, nil)
+		if err != nil {
+			return nil, err
+		}
+		switch judgment {
+		case ethbridge.INBOX_CONSISTENCY:
+			return s.handleInboxConsistencyChallenge()
+		case ethbridge.INBOX_DELTA:
+			return s.handleInboxDeltaChallenge()
+		case ethbridge.EXECUTION:
+			return s.handleExecutionChallenge()
+		case ethbridge.STOPPED_SHORT:
+			return s.handleStoppedShortChallenge()
+		default:
+			return nil, errors.New("can't handle challenge")
+		}
+	case ethbridge.INBOX_CONSISTENCY:
+		return s.handleInboxConsistencyChallenge()
+	case ethbridge.INBOX_DELTA:
+		return s.handleInboxDeltaChallenge()
+	case ethbridge.EXECUTION:
+		return s.handleExecutionChallenge()
+	case ethbridge.STOPPED_SHORT:
+		return s.handleStoppedShortChallenge()
+	default:
+		return nil, errors.New("can't handle challenge")
+	}
+}
+
+func (s *Staker) handleInboxConsistencyChallenge() (*types.Transaction, error) {
+	return nil, nil
+}
+
+func (s *Staker) handleInboxDeltaChallenge() (*types.Transaction, error) {
+	return nil, nil
+}
+
+func (s *Staker) handleExecutionChallenge() (*types.Transaction, error) {
+	return nil, nil
+}
+
+func (s *Staker) handleStoppedShortChallenge() (*types.Transaction, error) {
+	return nil, nil
 }
 
 func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (*types.Transaction, error) {
