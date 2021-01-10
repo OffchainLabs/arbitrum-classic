@@ -138,8 +138,8 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 	}
 	return &Bisection{
 		PrevSegment: &ChallengeSegment{
-			Start:  parsedLog.SegmentStart,
-			Length: parsedLog.SegmentLength,
+			Start:  parsedLog.ChallengedSegmentStart,
+			Length: parsedLog.ChallengedSegmentLength,
 		},
 		ChainHashes: parsedLog.ChainHashes,
 	}, nil

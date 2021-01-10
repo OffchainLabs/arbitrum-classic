@@ -94,13 +94,13 @@ func (c *Challenger) handleInboxConsistencyChallenge(ctx context.Context) (*type
 		if err != nil {
 			return nil, err
 		}
-		return c.challenge.OneStepProveInboxConsistency(ctx, bisection.PrevSegment, bisection.ChainHashes, segmentToChallenge, beforeInboxAcc, msgs[0].CommitmentHash())
+		return c.challenge.OneStepProveInboxConsistency(ctx, bisection.ChainHashes, segmentToChallenge, bisection.PrevSegment, beforeInboxAcc, msgs[0].CommitmentHash())
 	} else {
 		subSegments, err := c.generateInboxBisection(inconsistentSegment)
 		if err != nil {
 			return nil, err
 		}
-		return c.challenge.BisectInboxConsistency(ctx, bisection.PrevSegment, bisection.ChainHashes, segmentToChallenge, subSegments)
+		return c.challenge.BisectInboxConsistency(ctx, bisection.ChainHashes, segmentToChallenge, bisection.PrevSegment, subSegments)
 	}
 }
 

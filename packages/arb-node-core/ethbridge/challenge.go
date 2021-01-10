@@ -57,9 +57,9 @@ func (c *Challenge) Transactor() common.Address {
 
 func (c *Challenge) BisectInboxConsistency(
 	ctx context.Context,
-	prevSegment *ChallengeSegment,
 	prevChainHashes [][32]byte,
 	segmentToChallenge int,
+	prevSegment *ChallengeSegment,
 	subSegments [][32]byte,
 ) (*types.Transaction, error) {
 	prevTree := NewMerkleTree(calculateBisectionLeaves(prevSegment, prevChainHashes))
@@ -68,19 +68,19 @@ func (c *Challenge) BisectInboxConsistency(
 			auth,
 			big.NewInt(int64(segmentToChallenge)),
 			prevTree.GetProofFlat(segmentToChallenge),
-			subSegments,
 			prevSegment.Start,
 			prevSegment.Length,
 			prevChainHashes[segmentToChallenge+1],
+			subSegments,
 		)
 	})
 }
 
 func (c *Challenge) OneStepProveInboxConsistency(
 	ctx context.Context,
-	prevSegment *ChallengeSegment,
 	prevChainHashes [][32]byte,
 	segmentToChallenge int,
+	prevSegment *ChallengeSegment,
 	lowerHash [32]byte,
 	value [32]byte,
 ) (*types.Transaction, error) {
@@ -97,3 +97,24 @@ func (c *Challenge) OneStepProveInboxConsistency(
 		)
 	})
 }
+
+//func (c *Challenge) BisectInboxConsistency(
+//	ctx context.Context,
+//	prevSegment *ChallengeSegment,
+//	prevChainHashes [][32]byte,
+//	segmentToChallenge int,
+//	subSegments [][32]byte,
+//) (*types.Transaction, error) {
+//	prevTree := NewMerkleTree(calculateBisectionLeaves(prevSegment, prevChainHashes))
+//	return c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+//		return c.con.BisectInboxDelta(
+//			auth,
+//			big.NewInt(int64(segmentToChallenge)),
+//			prevTree.GetProofFlat(segmentToChallenge),
+//			subSegments,
+//			prevSegment.Start,
+//			prevSegment.Length,
+//			prevChainHashes[segmentToChallenge+1],
+//		)
+//	})
+//}
