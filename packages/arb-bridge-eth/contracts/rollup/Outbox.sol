@@ -30,19 +30,19 @@ contract Outbox {
 
     OutboxEntry[] outboxes;
 
-    function processOutgoingMessages(bytes memory messageData, uint256[] memory messageLengths)
+    function processOutgoingMessages(bytes memory sendsData, uint256[] memory sendLengths)
         internal
     {
-        // If we've reached here, we've already confirmed that sum(messageLengths) == messageData.length
-        uint256 messageCount = messageLengths.length;
+        // If we've reached here, we've already confirmed that sum(sendLengths) == sendsData.length
+        uint256 messageCount = sendLengths.length;
         uint256 offset = 0;
         for (uint256 i = 0; i < messageCount; i++) {
             // Otherwise we have an unsupported message type and we skip the message
-            if (uint8(messageData[offset]) == MSG_ROOT) {
-                bytes32 outputRoot = messageData.toBytes32(offset + 1);
+            if (uint8(sendsData[offset]) == MSG_ROOT) {
+                bytes32 outputRoot = sendsData.toBytes32(offset + 1);
                 outboxes.push(new OutboxEntry(outputRoot));
             }
-            offset += messageLengths[i];
+            offset += sendLengths[i];
         }
     }
 

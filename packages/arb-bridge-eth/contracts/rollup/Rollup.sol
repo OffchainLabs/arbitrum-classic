@@ -162,8 +162,8 @@ contract Rollup is Inbox, Outbox, IRollup {
 
     function confirmNextNode(
         bytes32 logAcc,
-        bytes calldata messageData,
-        uint256[] calldata messageLengths
+        bytes calldata sendsData,
+        uint256[] calldata sendLengths
     ) external {
         checkUnresolved();
         checkNoRecentStake();
@@ -175,10 +175,10 @@ contract Rollup is Inbox, Outbox, IRollup {
         // Make sure that the number of stakes on the node is that sum of the number of real stakers and the number of zombies staked there
         node.checkConfirmValid(stakerList.length + countStakedZombies(node), latestConfirmed);
 
-        bytes32 sendAcc = RollupLib.generateLastMessageHash(messageData, messageLengths);
+        bytes32 sendAcc = RollupLib.generateLastMessageHash(sendsData, sendLengths);
         require(node.confirmData() == RollupLib.confirmHash(sendAcc, logAcc), "CONFIRM_DATA");
 
-        processOutgoingMessages(messageData, messageLengths);
+        processOutgoingMessages(sendsData, sendLengths);
 
         destroyNode(latestConfirmed);
 
@@ -447,6 +447,8 @@ contract Rollup is Inbox, Outbox, IRollup {
         Node node = createNewNode(assertion, staker.latestStakedNode);
         node.addStaker(msg.sender);
         staker.latestStakedNode = latestNodeCreated;
+
+        emit NodeCreated(latestNodeCreated, assertionBytes32Fields, assertionIntFields);
     }
 
     function createNewNode(RollupLib.Assertion memory assertion, uint256 prev)
@@ -509,10 +511,8 @@ contract Rollup is Inbox, Outbox, IRollup {
                 )
             );
 
-        nodes[latestNodeCreated] = node;
         latestNodeCreated++;
-
-        // emit NodeCreated()
+        nodes[latestNodeCreated] = node;
         return node;
     }
 
