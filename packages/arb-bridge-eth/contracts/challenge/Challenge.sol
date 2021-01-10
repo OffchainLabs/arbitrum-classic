@@ -40,6 +40,13 @@ contract Challenge is Cloneable, IChallenge {
         uint256 segmentLength,
         bytes32[] chainHashes
     );
+    event BisectedInboxDelta(
+        bytes32 indexed challengeRoot,
+        uint256 segmentStart,
+        uint256 segmentLength,
+        bytes32[] inboxAccHashes,
+        bytes32[] inboxDeltaHashes
+    );
     event AsserterTimedOut();
     event ChallengerTimedOut();
     event OneStepProofCompleted();
@@ -198,34 +205,43 @@ contract Challenge is Cloneable, IChallenge {
     function bisectInboxDelta(
         uint256 _segmentToChallenge,
         bytes calldata _proof,
-        bytes32[] calldata _chainHashes,
+        bytes32[] calldata _inboxAccHashes,
+        bytes32[] calldata _inboxDeltaHashes,
         uint256 _segmentStart,
         uint256 _segmentLength,
-        bytes32 _oldInboxAcc,
-        bytes32 _oldInboxDelta,
-        bytes32 _newInboxDelta
+        bytes32 _oldInboxDelta
     ) external inboxDeltaChallenge onlyOnTurn {
         require(_segmentLength > 1, "bisection too short");
-        require(_chainHashes.length == bisectionDegree(_segmentLength));
-        require(_newInboxDelta != _oldInboxDelta);
-        bytes32 oldInboxDeltaHash = ChallengeLib.inboxDeltaHash(_oldInboxAcc, _oldInboxDelta);
-        bytes32 newInboxDeltaHash = ChallengeLib.inboxDeltaHash(_oldInboxAcc, _newInboxDelta);
-        require(_chainHashes[_chainHashes.length - 1] == newInboxDeltaHash);
 
+        uint256 newSegmentCount = _inboxAccHashes.length;
+        require(_inboxDeltaHashes.length == newSegmentCount, "WRONG_COUNT");
+        require(newSegmentCount == bisectionDegree(_segmentLength));
+        require(_inboxDeltaHashes[newSegmentCount - 1] != _oldInboxDelta);
+
+        bytes32[] memory chainHashes = new bytes32[](newSegmentCount);
+        for (uint256 i = 0; i < newSegmentCount; i++) {
+            chainHashes[i] = ChallengeLib.inboxDeltaHash(_inboxAccHashes[i], _inboxDeltaHashes[i]);
+        }
         bytes32 bisectionHash =
             ChallengeLib.bisectionChunkHash(
                 _segmentStart,
                 _segmentLength,
-                _chainHashes[0],
-                oldInboxDeltaHash
+                chainHashes[0],
+                ChallengeLib.inboxDeltaHash(_inboxAccHashes[newSegmentCount - 1], _oldInboxDelta)
             );
 
         verifySegmentProof(_proof, bisectionHash, _segmentToChallenge);
 
-        updateBisectionRoot(_chainHashes, _segmentStart, _segmentLength);
+        updateBisectionRoot(chainHashes, _segmentStart, _segmentLength);
 
         responded(1);
-        emit Bisected(challengeState, _segmentStart, _segmentLength, _chainHashes);
+        emit BisectedInboxDelta(
+            challengeState,
+            _segmentStart,
+            _segmentLength,
+            _inboxAccHashes,
+            _inboxDeltaHashes
+        );
     }
 
     function oneStepProveInboxDelta(
@@ -233,7 +249,6 @@ contract Challenge is Cloneable, IChallenge {
         bytes memory _proof,
         uint256 _segmentStart,
         bytes32 _oldEndHash,
-        bytes32 _prevInboxAcc,
         bytes32 _prevInboxDelta,
         bytes32 _nextInboxAcc,
         uint8 _kind,
@@ -246,7 +261,6 @@ contract Challenge is Cloneable, IChallenge {
         require(
             _oldEndHash !=
                 oneStepProofInboxDeltaAfter(
-                    _prevInboxAcc,
                     _prevInboxDelta,
                     _nextInboxAcc,
                     _kind,
@@ -258,12 +272,27 @@ contract Challenge is Cloneable, IChallenge {
                 )
         );
 
+        bytes32 prevInboxAcc =
+            Messages.addMessageToInbox(
+                _nextInboxAcc,
+                Hashing.hash(
+                    Messages.messageValue(
+                        _kind,
+                        _blockNumber,
+                        _timestamp,
+                        _sender,
+                        _inboxSeqNum,
+                        _msgData
+                    )
+                )
+            );
+
         verifySegmentProof(
             _proof,
             ChallengeLib.bisectionChunkHash(
                 _segmentStart,
                 1,
-                ChallengeLib.inboxDeltaHash(_prevInboxAcc, _prevInboxDelta),
+                ChallengeLib.inboxDeltaHash(prevInboxAcc, _prevInboxDelta),
                 _oldEndHash
             ),
             _segmentToChallenge
@@ -576,7 +605,6 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function oneStepProofInboxDeltaAfter(
-        bytes32 _prevInboxAcc,
         bytes32 _prevInboxDelta,
         bytes32 _nextInboxAcc,
         uint8 _kind,
@@ -586,23 +614,6 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _inboxSeqNum,
         bytes memory _msgData
     ) private pure returns (bytes32) {
-        require(
-            _prevInboxAcc ==
-                Messages.addMessageToInbox(
-                    _nextInboxAcc,
-                    Hashing.hash(
-                        Messages.messageValue(
-                            _kind,
-                            _blockNumber,
-                            _timestamp,
-                            _sender,
-                            _inboxSeqNum,
-                            _msgData
-                        )
-                    )
-                )
-        );
-
         return
             ChallengeLib.inboxDeltaHash(
                 _nextInboxAcc,
