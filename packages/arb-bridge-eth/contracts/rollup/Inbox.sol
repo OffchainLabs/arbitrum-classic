@@ -22,21 +22,6 @@ import "./IInbox.sol";
 import "./Messages.sol";
 
 contract Inbox is IInbox {
-    event MessageDelivered(
-        uint8 indexed kind,
-        address indexed sender,
-        uint256 inboxSeqNum,
-        bytes data
-    );
-
-    event MessageDeliveredFromOrigin(
-        uint8 indexed kind,
-        address indexed sender,
-        uint256 inboxSeqNum
-    );
-
-    event BuddyContractPair(address indexed sender);
-
     uint8 internal constant ETH_TRANSFER = 0;
     uint8 internal constant L2_MSG = 3;
     uint8 internal constant INITIALIZATION_MSG = 4;
@@ -53,8 +38,9 @@ contract Inbox is IInbox {
     function sendL2MessageFromOrigin(bytes calldata messageData) external {
         // solhint-disable-next-line avoid-tx-origin
         require(msg.sender == tx.origin, "origin only");
-        uint256 inboxSeqNum = _deliverMessageImpl(L2_MSG, msg.sender, keccak256(messageData));
-        emit MessageDeliveredFromOrigin(L2_MSG, msg.sender, inboxSeqNum);
+        (uint256 msgNum, bytes32 beforeInboxAcc) =
+            _deliverMessageImpl(L2_MSG, msg.sender, keccak256(messageData));
+        emit MessageDeliveredFromOrigin(msgNum, beforeInboxAcc, L2_MSG, msg.sender);
     }
 
     /**
@@ -103,28 +89,30 @@ contract Inbox is IInbox {
         address _sender,
         bytes memory _messageData
     ) private {
-        uint256 inboxSeqNum = _deliverMessageImpl(_kind, _sender, keccak256(_messageData));
-        emit MessageDelivered(_kind, _sender, inboxSeqNum, _messageData);
+        (uint256 msgNum, bytes32 beforeInboxAcc) =
+            _deliverMessageImpl(_kind, _sender, keccak256(_messageData));
+        emit MessageDelivered(msgNum, beforeInboxAcc, _kind, _sender, _messageData);
     }
 
     function _deliverMessageImpl(
         uint8 _kind,
         address _sender,
         bytes32 _messageDataHash
-    ) private returns (uint256) {
-        uint256 updatedCount = inboxMaxCount + 1;
+    ) private returns (uint256, bytes32) {
+        uint256 count = inboxMaxCount;
+        bytes32 inboxAcc = inboxMaxValue;
         bytes32 messageHash =
             Messages.messageHash(
                 _kind,
                 _sender,
                 block.number,
                 block.timestamp, // solhint-disable-line not-rely-on-time
-                updatedCount,
+                count,
                 _messageDataHash
             );
-        inboxMaxValue = Messages.addMessageToInbox(inboxMaxValue, messageHash);
-        inboxMaxCount = updatedCount;
-        return updatedCount;
+        inboxMaxValue = Messages.addMessageToInbox(inboxAcc, messageHash);
+        inboxMaxCount = count + 1;
+        return (count, inboxAcc);
     }
 
     // Implementation taken from OpenZeppelin (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.1.0/contracts/utils/Address.sol)

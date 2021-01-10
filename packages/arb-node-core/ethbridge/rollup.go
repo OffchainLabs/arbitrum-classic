@@ -2,23 +2,28 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/pkg/errors"
 	"math/big"
 	"strings"
 
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 var nodeCreatedID ethcommon.Hash
+var messageDeliveredID ethcommon.Hash
+var messageDeliveredFromOriginID ethcommon.Hash
+var l2MessageFromOriginCallABI abi.Method
 
 func init() {
 	parsedRollup, err := abi.JSON(strings.NewReader(ethbridgecontracts.RollupABI))
@@ -26,6 +31,9 @@ func init() {
 		panic(err)
 	}
 	nodeCreatedID = parsedRollup.Events["NodeCreated"].ID
+	messageDeliveredID = parsedRollup.Events["MessageDelivered"].ID
+	messageDeliveredFromOriginID = parsedRollup.Events["MessageDeliveredFromOrigin"].ID
+	l2MessageFromOriginCallABI = parsedRollup.Methods["sendL2MessageFromOrigin"]
 }
 
 type StakerInfo struct {
@@ -40,165 +48,16 @@ type NodeInfo struct {
 	Assertion *Assertion
 }
 
-type Assertion struct {
-	BeforeProposedBlock *big.Int
-	BeforeStepsRun      *big.Int
-	BeforeMachineHash   common.Hash
-	BeforeInboxHash     common.Hash
-	BeforeInboxCount    *big.Int
-	BeforeSendCount     *big.Int
-	BeforeLogCount      *big.Int
-	BeforeInboxMaxCount *big.Int
-	StepsExecuted       *big.Int
-	InboxDelta          common.Hash
-	InboxMessagesRead   *big.Int
-	GasUsed             *big.Int
-	SendAcc             common.Hash
-	SendCount           *big.Int
-	LogAcc              common.Hash
-	LogCount            *big.Int
-	AfterInboxHash      common.Hash
-	AfterMachineHash    common.Hash
+type DeliveredInboxMessage struct {
+	BeforeInboxAcc common.Hash
+	Message        inbox.InboxMessage
 }
 
-func NewAssertionFromFields(a [7][32]byte, b [11]*big.Int) *Assertion {
-	return &Assertion{
-		BeforeProposedBlock: b[0],
-		BeforeStepsRun:      b[1],
-		BeforeMachineHash:   a[0],
-		BeforeInboxHash:     a[1],
-		BeforeInboxCount:    b[2],
-		BeforeSendCount:     b[3],
-		BeforeLogCount:      b[4],
-		BeforeInboxMaxCount: b[5],
-		StepsExecuted:       b[6],
-		InboxDelta:          a[2],
-		InboxMessagesRead:   b[7],
-		GasUsed:             b[8],
-		SendAcc:             a[3],
-		SendCount:           b[9],
-		LogAcc:              a[4],
-		LogCount:            b[10],
-		AfterInboxHash:      a[5],
-		AfterMachineHash:    a[6],
-	}
-}
-
-func (a *Assertion) BytesFields() [7][32]byte {
-	return [7][32]byte{
-		a.BeforeMachineHash,
-		a.BeforeInboxHash,
-		a.InboxDelta,
-		a.SendAcc,
-		a.LogAcc,
-		a.AfterInboxHash,
-		a.AfterMachineHash,
-	}
-}
-
-func (a *Assertion) IntFields() [11]*big.Int {
-	return [11]*big.Int{
-		a.BeforeProposedBlock,
-		a.BeforeStepsRun,
-		a.BeforeInboxCount,
-		a.BeforeSendCount,
-		a.BeforeLogCount,
-		a.BeforeInboxMaxCount,
-		a.StepsExecuted,
-		a.InboxMessagesRead,
-		a.GasUsed,
-		a.SendCount,
-		a.LogCount,
-	}
-}
-
-func bisectionChunkHash(
-	length *big.Int,
-	segmentEnd *big.Int,
-	startHash common.Hash,
-	endHash common.Hash,
-) common.Hash {
+func (d *DeliveredInboxMessage) AfterInboxAcc() common.Hash {
 	return hashing.SoliditySHA3(
-		hashing.Uint256(length),
-		hashing.Uint256(segmentEnd),
-		hashing.Bytes32(startHash),
-		hashing.Bytes32(endHash),
+		hashing.Bytes32(d.BeforeInboxAcc),
+		hashing.Bytes32(d.Message.CommitmentHash()),
 	)
-}
-
-func inboxDeltaHash(inboxAcc, deltaAcc common.Hash) common.Hash {
-	return hashing.SoliditySHA3(hashing.Bytes32(inboxAcc), hashing.Bytes32(deltaAcc))
-}
-
-func assertionHash(
-	inboxDelta common.Hash,
-	gasUsed *big.Int,
-	outputAcc common.Hash,
-	machineState common.Hash,
-) common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Bytes32(inboxDelta),
-		hashing.Uint256(gasUsed),
-		hashing.Bytes32(outputAcc),
-		hashing.Bytes32(machineState),
-	)
-}
-
-func outputAccHash(
-	sendAcc common.Hash,
-	sendCount *big.Int,
-	logAcc common.Hash,
-	logCount *big.Int,
-) common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Bytes32(sendAcc),
-		hashing.Uint256(sendCount),
-		hashing.Bytes32(logAcc),
-		hashing.Uint256(logCount),
-	)
-}
-
-func (a *Assertion) InboxConsistencyHash(inboxTopHash common.Hash, inboxTopCount *big.Int) common.Hash {
-	messagesAfterCount := new(big.Int).Sub(inboxTopCount, a.BeforeInboxCount)
-	messagesAfterCount = messagesAfterCount.Sub(messagesAfterCount, a.InboxMessagesRead)
-	return bisectionChunkHash(messagesAfterCount, messagesAfterCount, inboxTopHash, a.AfterInboxHash)
-}
-
-func (a *Assertion) InboxDeltaHash() common.Hash {
-	return bisectionChunkHash(
-		a.InboxMessagesRead,
-		a.InboxMessagesRead,
-		inboxDeltaHash(a.AfterInboxHash, common.Hash{}),
-		inboxDeltaHash(a.BeforeInboxHash, a.InboxDelta),
-	)
-}
-
-func (a *Assertion) ExecutionHash() common.Hash {
-	return bisectionChunkHash(
-		a.GasUsed,
-		a.GasUsed,
-		assertionHash(
-			a.InboxDelta,
-			big.NewInt(0),
-			outputAccHash(common.Hash{}, big.NewInt(0), common.Hash{}, big.NewInt(0)),
-			a.BeforeMachineHash,
-		),
-		assertionHash(
-			common.Hash{},
-			a.GasUsed,
-			outputAccHash(
-				a.SendAcc,
-				a.SendCount,
-				a.LogAcc,
-				a.LogCount,
-			),
-			a.AfterMachineHash,
-		),
-	)
-}
-
-func (a *Assertion) CheckTime(arbGasSpeedLimitPerBlock *big.Int) *big.Int {
-	return new(big.Int).Div(a.GasUsed, arbGasSpeedLimitPerBlock)
 }
 
 type NodeID *big.Int
@@ -252,6 +111,93 @@ func (r *RollupWatcher) LookupNodes(ctx context.Context, nodes []*big.Int) ([]*N
 		})
 	}
 	return infos, nil
+}
+
+func (r *RollupWatcher) LookupMessagesByNum(ctx context.Context, messageNums []*big.Int) ([]*DeliveredInboxMessage, error) {
+	msgQuery := make([]ethcommon.Hash, 0, len(messageNums))
+	for _, messageNum := range messageNums {
+		var msgNumBytes ethcommon.Hash
+		copy(msgNumBytes[:], math.U256Bytes(messageNum))
+		msgQuery = append(msgQuery, msgNumBytes)
+	}
+
+	query := ethereum.FilterQuery{
+		BlockHash: nil,
+		FromBlock: nil,
+		ToBlock:   nil,
+		Addresses: []ethcommon.Address{r.address},
+		Topics:    [][]ethcommon.Hash{{messageDeliveredID, messageDeliveredFromOriginID}, msgQuery},
+	}
+	logs, err := r.client.FilterLogs(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	messages := make([]*DeliveredInboxMessage, 0, len(logs))
+	for _, ethLog := range logs {
+		header, err := r.client.HeaderByHash(ctx, ethLog.BlockHash)
+		if err != nil {
+			return nil, err
+		}
+		msg, err := r.parseMessage(ctx, ethLog, new(big.Int).SetUint64(header.Time))
+		if err != nil {
+			return nil, err
+		}
+		messages = append(messages, msg)
+	}
+	return messages, nil
+}
+
+func (r *RollupWatcher) parseMessage(ctx context.Context, ethLog types.Log, timestamp *big.Int) (*DeliveredInboxMessage, error) {
+	chainTime := inbox.ChainTime{
+		BlockNum: common.NewTimeBlocks(
+			new(big.Int).SetUint64(ethLog.BlockNumber),
+		),
+		Timestamp: timestamp,
+	}
+	if ethLog.Topics[0] == messageDeliveredID {
+		parsedLog, err := r.con.ParseMessageDelivered(ethLog)
+		if err != nil {
+			return nil, err
+		}
+		msg := inbox.InboxMessage{
+			Kind:        parsedLog.Kind,
+			Sender:      common.NewAddressFromEth(parsedLog.Sender),
+			InboxSeqNum: parsedLog.MessageNum,
+			Data:        parsedLog.Data,
+			ChainTime:   chainTime,
+		}
+		return &DeliveredInboxMessage{
+			BeforeInboxAcc: parsedLog.BeforeInboxAcc,
+			Message:        msg,
+		}, nil
+	} else if ethLog.Topics[0] == messageDeliveredFromOriginID {
+		tx, _, err := r.client.TransactionByHash(ctx, ethLog.TxHash)
+		if err != nil {
+			return nil, err
+		}
+		args := make(map[string]interface{})
+		err = l2MessageFromOriginCallABI.Inputs.UnpackIntoMap(args, tx.Data()[4:])
+		if err != nil {
+			return nil, err
+		}
+		parsedLog, err := r.con.ParseMessageDeliveredFromOrigin(ethLog)
+		if err != nil {
+			return nil, err
+		}
+		msg := inbox.InboxMessage{
+			Kind:        parsedLog.Kind,
+			Sender:      common.NewAddressFromEth(parsedLog.Sender),
+			InboxSeqNum: parsedLog.MessageNum,
+			Data:        args["messageData"].([]byte),
+			ChainTime:   chainTime,
+		}
+		return &DeliveredInboxMessage{
+			BeforeInboxAcc: parsedLog.BeforeInboxAcc,
+			Message:        msg,
+		}, nil
+	} else {
+		return nil, errors.New("unexpected log type")
+	}
 }
 
 func (r *RollupWatcher) StakerInfo(ctx context.Context, staker common.Address) (*StakerInfo, error) {

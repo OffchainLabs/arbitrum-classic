@@ -7,6 +7,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/pkg/errors"
 	"math/big"
 )
@@ -14,6 +17,10 @@ import (
 type ValidatorLookup interface {
 	GenerateLogAccumulator(startIndex *big.Int, count *big.Int) (common.Hash, error)
 	GetSends(startIndex *big.Int, count *big.Int) ([][]byte, error)
+	GetInboxAcc(index *big.Int) (common.Hash, error)
+	GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.InboxMessage, error)
+
+	GetMachine(gasUsed *big.Int) (machine.Machine, error)
 }
 
 type Validator struct {
@@ -89,9 +96,29 @@ func (s *Staker) act(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		_, err = s.rollup.LookupNodes(ctx, successors)
+		nodes, err := s.rollup.LookupNodes(ctx, successors)
 		if err != nil {
 			return err
+		}
+
+		for _, nd := range nodes {
+			afterInboxHash, err := s.lookup.GetInboxAcc(nd.Assertion.AfterInboxCount())
+			if err != nil {
+				return err
+			}
+			if nd.Assertion.AfterInboxHash != afterInboxHash {
+				// Failed inbox consistency
+				continue
+			}
+			messages, err := s.lookup.GetMessages(nd.Assertion.BeforeInboxCount, nd.Assertion.InboxMessagesRead)
+			if err != nil {
+				return err
+			}
+			if nd.Assertion.InboxDelta != calculateInboxDeltaAcc(messages) {
+				// Failed inbox delta
+				continue
+			}
+
 		}
 	}
 	return nil
@@ -99,4 +126,13 @@ func (s *Staker) act(ctx context.Context) error {
 
 func (s *Staker) validateNode(ctx context.Context, info *ethbridgecontracts.RollupNodeCreated) error {
 	return nil
+}
+
+func calculateInboxDeltaAcc(messages []inbox.InboxMessage) common.Hash {
+	acc := common.Hash{}
+	for i := range messages {
+		valHash := messages[len(messages)-1-i].AsValue().Hash()
+		acc = hashing.SoliditySHA3(hashing.Bytes32(acc), hashing.Bytes32(valHash))
+	}
+	return acc
 }
