@@ -128,7 +128,7 @@ library RollupLib {
     function executionHash(Assertion memory assertion) private pure returns (bytes32) {
         return
             ChallengeLib.bisectionChunkHash(
-                assertion.gasUsed,
+                0,
                 assertion.gasUsed,
                 ChallengeLib.assertionHash(
                     assertion.inboxDelta,
@@ -158,7 +158,7 @@ library RollupLib {
     ) internal pure returns (bytes32) {
         bytes32 inboxConsistencyHash =
             ChallengeLib.bisectionChunkHash(
-                inboxTopCount - assertion.beforeInboxCount - assertion.inboxMessagesRead,
+                0,
                 inboxTopCount - assertion.beforeInboxCount - assertion.inboxMessagesRead,
                 inboxTopHash,
                 assertion.afterInboxHash
@@ -166,7 +166,7 @@ library RollupLib {
 
         bytes32 inboxDeltaHash =
             ChallengeLib.bisectionChunkHash(
-                assertion.inboxMessagesRead,
+                0,
                 assertion.inboxMessagesRead,
                 ChallengeLib.inboxDeltaHash(assertion.afterInboxHash, 0),
                 ChallengeLib.inboxDeltaHash(assertion.beforeInboxHash, assertion.inboxDelta)

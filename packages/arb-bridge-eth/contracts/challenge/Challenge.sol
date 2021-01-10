@@ -33,12 +33,12 @@ contract Challenge is Cloneable, IChallenge {
 
     enum Turn { NoChallenge, Asserter, Challenger }
 
-    event InitiatedChallenge(uint256 deadlineBlock);
+    event InitiatedChallenge();
     event Bisected(
-        uint256 segmentIndex,
+        uint256 segmentToChallenge,
         bytes32[] chainHashes,
-        uint256 totalLength,
-        uint256 deadlineBlock
+        uint256 segmentStart,
+        uint256 segmentLength
     );
     event AsserterTimedOut();
     event ChallengerTimedOut();
@@ -82,7 +82,7 @@ contract Challenge is Cloneable, IChallenge {
 
     // The current deadline at which the challenge timeouts and a winner is
     // declared. This deadline resets at each step in the challenge
-    uint256 internal deadlineBlock;
+    uint256 public deadlineBlock;
     Turn public turn;
     // This is the root of a merkle tree with nodes like (prev, next, steps)
     bytes32 internal challengeState;
@@ -151,7 +151,7 @@ contract Challenge is Cloneable, IChallenge {
 
         challengeState = 0;
 
-        emit InitiatedChallenge(deadlineBlock);
+        emit InitiatedChallenge();
     }
 
     function bisectInboxConsistency(
@@ -159,28 +159,33 @@ contract Challenge is Cloneable, IChallenge {
         bytes calldata _proof,
         bytes32 _oldEndHash,
         bytes32[] calldata _chainHashes,
-        uint256 _chainLength,
-        uint256 _chainEnd
+        uint256 _segmentStart,
+        uint256 _segmentLength
     ) external inboxConsistencyChallenge onlyOnTurn {
-        require(_chainLength > 1, "bisection too short");
-        require(_chainHashes.length == bisectionDegree(_chainLength));
+        require(_segmentLength > 1, "bisection too short");
+        require(_chainHashes.length == bisectionDegree(_segmentLength));
         require(_chainHashes[_chainHashes.length - 1] != _oldEndHash);
 
         bytes32 bisectionHash =
-            ChallengeLib.bisectionChunkHash(_chainLength, _chainEnd, _chainHashes[0], _oldEndHash);
+            ChallengeLib.bisectionChunkHash(
+                _segmentStart,
+                _segmentLength,
+                _chainHashes[0],
+                _oldEndHash
+            );
 
         verifySegmentProof(_proof, bisectionHash, _segmentToChallenge);
 
-        updateBisectionRoot(_chainHashes, _chainLength);
+        updateBisectionRoot(_chainHashes, _segmentStart, _segmentLength);
 
         responded(1);
-        emit Bisected(_segmentToChallenge, _chainHashes, _chainLength, deadlineBlock);
+        emit Bisected(_segmentToChallenge, _chainHashes, _segmentStart, _segmentLength);
     }
 
     function oneStepProveInboxConsistency(
         uint256 _segmentToChallenge,
         bytes calldata _proof,
-        uint256 _chainEnd,
+        uint256 _segmentStart,
         bytes32 _oldEndHash,
         bytes32 _upperHash,
         bytes32 _lowerHash,
@@ -188,7 +193,8 @@ contract Challenge is Cloneable, IChallenge {
     ) external inboxConsistencyChallenge onlyOnTurn {
         require(_upperHash == Messages.addMessageToInbox(_lowerHash, _value));
         require(_lowerHash != _oldEndHash);
-        bytes32 prevHash = ChallengeLib.bisectionChunkHash(1, _chainEnd, _upperHash, _lowerHash);
+        bytes32 prevHash =
+            ChallengeLib.bisectionChunkHash(_segmentStart, 1, _upperHash, _lowerHash);
 
         verifySegmentProof(_proof, prevHash, _segmentToChallenge);
 
@@ -203,11 +209,11 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _oldInboxDelta,
         bytes32 _newInboxDelta,
         bytes32[] calldata _chainHashes,
-        uint256 _chainLength,
-        uint256 _chainEnd
+        uint256 _segmentStart,
+        uint256 _segmentLength
     ) external inboxDeltaChallenge onlyOnTurn {
-        require(_chainLength > 1, "bisection too short");
-        require(_chainHashes.length == bisectionDegree(_chainLength));
+        require(_segmentLength > 1, "bisection too short");
+        require(_chainHashes.length == bisectionDegree(_segmentLength));
         require(_newInboxDelta != _oldInboxDelta);
         bytes32 oldInboxDeltaHash = ChallengeLib.inboxDeltaHash(_oldInboxAcc, _oldInboxDelta);
         bytes32 newInboxDeltaHash = ChallengeLib.inboxDeltaHash(_oldInboxAcc, _newInboxDelta);
@@ -215,24 +221,24 @@ contract Challenge is Cloneable, IChallenge {
 
         bytes32 bisectionHash =
             ChallengeLib.bisectionChunkHash(
-                _chainLength,
-                _chainEnd,
+                _segmentStart,
+                _segmentLength,
                 _chainHashes[0],
                 oldInboxDeltaHash
             );
 
         verifySegmentProof(_proof, bisectionHash, _segmentToChallenge);
 
-        updateBisectionRoot(_chainHashes, _chainLength);
+        updateBisectionRoot(_chainHashes, _segmentStart, _segmentLength);
 
         responded(1);
-        emit Bisected(_segmentToChallenge, _chainHashes, _chainLength, deadlineBlock);
+        emit Bisected(_segmentToChallenge, _chainHashes, _segmentStart, _segmentLength);
     }
 
     function oneStepProveInboxDelta(
         uint256 _segmentToChallenge,
         bytes memory _proof,
-        uint256 _chainEnd,
+        uint256 _segmentStart,
         bytes32 _oldEndHash,
         bytes32 _prevInboxAcc,
         bytes32 _prevInboxDelta,
@@ -262,8 +268,8 @@ contract Challenge is Cloneable, IChallenge {
         verifySegmentProof(
             _proof,
             ChallengeLib.bisectionChunkHash(
+                _segmentStart,
                 1,
-                _chainEnd,
                 ChallengeLib.inboxDeltaHash(_prevInboxAcc, _prevInboxDelta),
                 _oldEndHash
             ),
@@ -280,12 +286,12 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _oldEndHash,
         uint256 _gasUsedBefore,
         bytes32[] calldata _chainHashes,
-        uint256 _chainLength,
-        uint256 _chainEnd,
+        uint256 _segmentStart,
+        uint256 _segmentLength,
         bytes32[3] calldata _segmentPreFields
     ) external executionChallenge onlyOnTurn {
-        require(_chainLength > 1, "TOO_SHORT");
-        require(_chainHashes.length == bisectionDegree(_chainLength), "BISECT_DEGREE");
+        require(_segmentLength > 1, "TOO_SHORT");
+        require(_chainHashes.length == bisectionDegree(_segmentLength), "BISECT_DEGREE");
         require(_chainHashes[_chainHashes.length - 1] != _oldEndHash, "SAME_END");
 
         require(
@@ -299,16 +305,25 @@ contract Challenge is Cloneable, IChallenge {
             "segment pre-fields"
         );
 
-        require(_gasUsedBefore < _chainEnd, "invalid segment length");
+        require(_gasUsedBefore < _segmentStart + _segmentLength, "invalid segment length");
 
         bytes32 bisectionHash =
-            ChallengeLib.bisectionChunkHash(_chainLength, _chainEnd, _chainHashes[0], _oldEndHash);
+            ChallengeLib.bisectionChunkHash(
+                _segmentStart,
+                _segmentLength,
+                _chainHashes[0],
+                _oldEndHash
+            );
         verifySegmentProof(_proof, bisectionHash, _segmentToChallenge);
 
-        updateBisectionRoot(_chainHashes, _chainEnd - _gasUsedBefore);
+        updateBisectionRoot(
+            _chainHashes,
+            _segmentStart,
+            _segmentStart + _segmentLength - _gasUsedBefore
+        );
 
         responded(executionCheckTimeBlocks);
-        emit Bisected(_segmentToChallenge, _chainHashes, _chainLength, deadlineBlock);
+        emit Bisected(_segmentToChallenge, _chainHashes, _segmentStart, _segmentLength);
     }
 
     function constraintWinExecution(
@@ -317,10 +332,10 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _oldEndHash,
         uint256 _gasUsedBefore,
         bytes32[3] calldata _beforeFields,
-        uint256 _chainLength,
-        uint256 _chainEnd
+        uint256 _segmentStart,
+        uint256 _segmentLength
     ) external executionChallenge onlyOnTurn {
-        require(_chainLength > 1, "TOO SHORT");
+        require(_segmentLength > 1, "TOO SHORT");
 
         bytes32 beforeChainHash =
             ChallengeLib.assertionHash(
@@ -331,10 +346,15 @@ contract Challenge is Cloneable, IChallenge {
             );
 
         bytes32 bisectionHash =
-            ChallengeLib.bisectionChunkHash(_chainLength, _chainEnd, beforeChainHash, _oldEndHash);
+            ChallengeLib.bisectionChunkHash(
+                _segmentStart,
+                _segmentLength,
+                beforeChainHash,
+                _oldEndHash
+            );
         verifySegmentProof(_proof, bisectionHash, _segmentToChallenge);
 
-        require(_gasUsedBefore >= _chainEnd);
+        require(_gasUsedBefore >= _segmentStart + _segmentLength);
         require(beforeChainHash != _oldEndHash);
         emit ConstraintWin();
         _currentWin();
@@ -347,7 +367,7 @@ contract Challenge is Cloneable, IChallenge {
     function oneStepProveExecution(
         uint256 _segmentToChallenge,
         bytes memory _proof,
-        uint256 _chainEnd,
+        uint256 _segmentStart,
         bytes32 _oldEndHash,
         bytes32[3] memory _machineFields,
         uint64 _initialGasUsed,
@@ -383,8 +403,8 @@ contract Challenge is Cloneable, IChallenge {
 
         bytes32 rootHash =
             ChallengeLib.bisectionChunkHash(
+                _segmentStart,
                 gasUsed,
-                _chainEnd,
                 oneStepProofExecutionBefore(
                     _machineFields,
                     _initialGasUsed,
@@ -416,7 +436,7 @@ contract Challenge is Cloneable, IChallenge {
 
         require(
             ChallengeLib.bisectionChunkHash(
-                _prevStepsExecuted,
+                0,
                 _prevStepsExecuted,
                 _startAssertionHash,
                 _prevEndAssertionHash
@@ -425,7 +445,7 @@ contract Challenge is Cloneable, IChallenge {
 
         // Reuse the executionHash variable to store last assertion
         if (_newStepsExecuted > 0) {
-            updateBisectionRoot(_chainHashes, _newStepsExecuted);
+            updateBisectionRoot(_chainHashes, 0, _newStepsExecuted);
             executionHash = _chainHashes[_chainHashes.length - 1];
         } else {
             executionHash = _startAssertionHash;
@@ -489,31 +509,32 @@ contract Challenge is Cloneable, IChallenge {
         }
     }
 
-    function updateBisectionRoot(bytes32[] memory _chainHashes, uint256 _chainLength)
-        private
-        returns (bytes32)
-    {
+    function updateBisectionRoot(
+        bytes32[] memory _chainHashes,
+        uint256 _segmentStart,
+        uint256 _segmentLength
+    ) private returns (bytes32) {
         uint256 bisectionCount = _chainHashes.length - 1;
         bytes32[] memory hashes = new bytes32[](bisectionCount);
-        uint256 chunkSize = ChallengeLib.firstSegmentSize(_chainLength, bisectionCount);
-        uint256 endPoint = chunkSize;
+        uint256 chunkSize = ChallengeLib.firstSegmentSize(_segmentLength, bisectionCount);
+        uint256 segmentStart = _segmentStart;
         hashes[0] = ChallengeLib.bisectionChunkHash(
+            segmentStart,
             chunkSize,
-            endPoint,
             _chainHashes[0],
             _chainHashes[1]
         );
-        chunkSize = ChallengeLib.otherSegmentSize(_chainLength, bisectionCount);
+        segmentStart += chunkSize;
+        chunkSize = ChallengeLib.otherSegmentSize(_segmentLength, bisectionCount);
         for (uint256 i = 1; i < bisectionCount; i++) {
-            endPoint += chunkSize;
             hashes[i] = ChallengeLib.bisectionChunkHash(
+                segmentStart,
                 chunkSize,
-                endPoint,
                 _chainHashes[i],
                 _chainHashes[i + 1]
             );
+            segmentStart += chunkSize;
         }
-
         (bytes32 root, ) = MerkleLib.generateMerkleRoot(hashes);
         challengeState = root;
     }
