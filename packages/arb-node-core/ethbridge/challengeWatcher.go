@@ -36,15 +36,47 @@ func init() {
 	bisectedInboxDeltaID = parsedChallenge.Events["BisectedInboxDelta"].ID
 }
 
-type Bisection struct {
-	ChallengedSegment *ChallengeSegment
-	ChainHashes       [][32]byte
+type Cut interface {
+	Equals(other Cut) bool
+	Hash() [32]byte
 }
 
-type InboxDeltaBisection struct {
+type InboxConsistencyCut struct {
+	InboxAccHash [32]byte
+}
+
+func (c InboxConsistencyCut) Equals(other Cut) bool {
+	o, ok := other.(InboxConsistencyCut)
+	if !ok {
+		return false
+	}
+	return c.InboxAccHash == o.InboxAccHash
+}
+
+func (c InboxConsistencyCut) Hash() [32]byte {
+	return c.InboxAccHash
+}
+
+type InboxDeltaCut struct {
+	InboxAccHash   [32]byte
+	InboxDeltaHash [32]byte
+}
+
+func (c InboxDeltaCut) Equals(other Cut) bool {
+	o, ok := other.(InboxDeltaCut)
+	if !ok {
+		return false
+	}
+	return c.InboxAccHash == o.InboxAccHash && c.InboxDeltaHash == o.InboxDeltaHash
+}
+
+func (c InboxDeltaCut) Hash() [32]byte {
+	return inboxDeltaHash(c.InboxAccHash, c.InboxDeltaHash)
+}
+
+type Bisection struct {
 	ChallengedSegment *ChallengeSegment
-	InboxAccHashes    [][32]byte
-	InboxDeltaHashes  [][32]byte
+	Cuts              []Cut
 }
 
 type ChallengeTurn uint8
@@ -128,7 +160,7 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 		FromBlock: nil,
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{c.address},
-		Topics:    [][]ethcommon.Hash{{bisectedID}, {challengeState.ToEthHash()}},
+		Topics:    [][]ethcommon.Hash{{bisectedID, bisectedInboxDeltaID}, {challengeState.ToEthHash()}},
 	}
 	logs, err := c.client.FilterLogs(ctx, query)
 	if err != nil {
@@ -140,47 +172,43 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 	if len(logs) > 1 {
 		return nil, errors.New("too many matching  bisections")
 	}
-	parsedLog, err := c.con.ParseBisected(logs[0])
-	if err != nil {
-		return nil, err
-	}
-	return &Bisection{
-		ChallengedSegment: &ChallengeSegment{
+	var cuts []Cut
+	var challengeSegment *ChallengeSegment
+	if logs[0].Topics[0] == bisectedID {
+		parsedLog, err := c.con.ParseBisected(logs[0])
+		if err != nil {
+			return nil, err
+		}
+		cuts = make([]Cut, 0, len(parsedLog.ChainHashes))
+		for _, ch := range parsedLog.ChainHashes {
+			cuts = append(cuts, InboxConsistencyCut{InboxAccHash: ch})
+		}
+		challengeSegment = &ChallengeSegment{
 			Start:  parsedLog.ChallengedSegmentStart,
 			Length: parsedLog.ChallengedSegmentLength,
-		},
-		ChainHashes: parsedLog.ChainHashes,
-	}, nil
-}
+		}
+	} else if logs[0].Topics[0] == bisectedInboxDeltaID {
+		parsedLog, err := c.con.ParseBisectedInboxDelta(logs[0])
+		if err != nil {
+			return nil, err
+		}
+		cuts = make([]Cut, 0, len(parsedLog.InboxAccHashes))
+		for i, inboxAccHash := range parsedLog.InboxAccHashes {
+			cuts = append(cuts, InboxDeltaCut{
+				InboxAccHash:   inboxAccHash,
+				InboxDeltaHash: parsedLog.InboxDeltaHashes[i],
+			})
+		}
+		challengeSegment = &ChallengeSegment{
+			Start:  parsedLog.ChallengedSegmentStart,
+			Length: parsedLog.ChallengedSegmentLength,
+		}
+	} else {
+		return nil, errors.New("unexpected event type")
+	}
 
-func (c *ChallengeWatcher) LookupInboxDeltaBisection(ctx context.Context, challengeState common.Hash) (*InboxDeltaBisection, error) {
-	var query = ethereum.FilterQuery{
-		BlockHash: nil,
-		FromBlock: nil,
-		ToBlock:   nil,
-		Addresses: []ethcommon.Address{c.address},
-		Topics:    [][]ethcommon.Hash{{bisectedInboxDeltaID}, {challengeState.ToEthHash()}},
-	}
-	logs, err := c.client.FilterLogs(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	if len(logs) == 0 {
-		return nil, errors.New("no matching bisection")
-	}
-	if len(logs) > 1 {
-		return nil, errors.New("too many matching  bisections")
-	}
-	parsedLog, err := c.con.ParseBisectedInboxDelta(logs[0])
-	if err != nil {
-		return nil, err
-	}
-	return &InboxDeltaBisection{
-		ChallengedSegment: &ChallengeSegment{
-			Start:  parsedLog.ChallengedSegmentStart,
-			Length: parsedLog.ChallengedSegmentLength,
-		},
-		InboxAccHashes:   parsedLog.InboxAccHashes,
-		InboxDeltaHashes: parsedLog.InboxDeltaHashes,
+	return &Bisection{
+		ChallengedSegment: challengeSegment,
+		Cuts:              cuts,
 	}, nil
 }

@@ -105,101 +105,24 @@ func (c *Challenger) handleConflict(ctx context.Context) (*types.Transaction, er
 }
 
 func (c *Challenger) handleInboxConsistencyChallenge(ctx context.Context) (*types.Transaction, error) {
-	challengeState, err := c.challenge.ChallengeState(ctx)
-	if err != nil {
-		return nil, err
+	challengeImpl := &InboxConsistencyImpl{
+		lookup: c.lookup,
 	}
 
-	bisection, err := c.challenge.LookupBisection(ctx, challengeState)
-	if err != nil {
-		return nil, err
-	}
-
-	inconsistentSegment, segmentToChallenge, err := c.findInboxInconsistency(bisection)
-	if err != nil {
-		return nil, err
-	}
-
-	if inconsistentSegment.Length.Cmp(big.NewInt(1)) == 0 {
-		beforeInboxAcc, err := c.lookup.GetInboxAcc(inconsistentSegment.Start)
-		if err != nil {
-			return nil, err
-		}
-		msgs, err := c.lookup.GetMessages(inconsistentSegment.Start, big.NewInt(1))
-		if err != nil {
-			return nil, err
-		}
-		return c.challenge.OneStepProveInboxConsistency(
-			ctx,
-			bisection.ChainHashes,
-			segmentToChallenge,
-			bisection.ChallengedSegment,
-			beforeInboxAcc,
-			msgs[0].CommitmentHash(),
-		)
-	} else {
-		subSegments, err := c.generateInboxConsistencyBisection(inconsistentSegment)
-		if err != nil {
-			return nil, err
-		}
-		return c.challenge.BisectInboxConsistency(
-			ctx,
-			bisection.ChainHashes,
-			segmentToChallenge,
-			bisection.ChallengedSegment,
-			subSegments,
-		)
-	}
+	return handleChallenge(ctx, c.challenge, challengeImpl)
 }
 
 func (c *Challenger) handleInboxDeltaChallenge(ctx context.Context) (*types.Transaction, error) {
-	challengeState, err := c.challenge.ChallengeState(ctx)
+	inboxDeltaData, err := c.InboxDelta()
 	if err != nil {
 		return nil, err
 	}
-
-	bisection, err := c.challenge.LookupInboxDeltaBisection(ctx, challengeState)
-	if err != nil {
-		return nil, err
+	challengeImpl := &InboxDeltaImpl{
+		lookup:              c.lookup,
+		nodeAfterInboxCount: c.challengedNode.Assertion.AfterInboxCount(),
+		inboxDelta:          inboxDeltaData,
 	}
-
-	inconsistentSegment, segmentToChallenge, err := c.findInboxDelta(bisection)
-	if err != nil {
-		return nil, err
-	}
-
-	if inconsistentSegment.Length.Cmp(big.NewInt(1)) == 0 {
-		msgIndex := new(big.Int).Add(
-			c.challengedNode.Assertion.PrevState.InboxCount,
-			inconsistentSegment.Start,
-		)
-		msgs, err := c.lookup.GetMessages(msgIndex, big.NewInt(1))
-		if err != nil {
-			return nil, err
-		}
-		return c.challenge.OneStepProveInboxDelta(
-			ctx,
-			bisection.InboxAccHashes,
-			bisection.InboxDeltaHashes,
-			segmentToChallenge,
-			bisection.ChallengedSegment,
-			msgs[0],
-		)
-	} else {
-		inboxAccHashes, inboxDeltaHashes, err := c.generateInboxDeltaBisection(inconsistentSegment)
-		if err != nil {
-			return nil, err
-		}
-		return c.challenge.BisectInboxDelta(
-			ctx,
-			bisection.InboxAccHashes,
-			bisection.InboxDeltaHashes,
-			segmentToChallenge,
-			bisection.ChallengedSegment,
-			inboxAccHashes,
-			inboxDeltaHashes,
-		)
-	}
+	return handleChallenge(ctx, c.challenge, challengeImpl)
 }
 
 func (c *Challenger) handleExecutionChallenge() (*types.Transaction, error) {
@@ -210,67 +133,207 @@ func (c *Challenger) handleStoppedShortChallenge() (*types.Transaction, error) {
 	return nil, nil
 }
 
-func (c *Challenger) findInboxInconsistency(prevBisection *ethbridge.Bisection) (*ethbridge.ChallengeSegment, int, error) {
-	inboxOffset := prevBisection.ChallengedSegment.Start
-	for i, chunkHash := range prevBisection.ChainHashes {
-		segmentLength := calculateBisectionChunkCount(i, len(prevBisection.ChainHashes), prevBisection.ChallengedSegment.Length)
+type ChallengerImpl interface {
+	GetCut(offset *big.Int) (ethbridge.Cut, error)
 
-		inboxAcc, err := c.lookup.GetInboxAcc(inboxOffset)
-		if err != nil {
-			return nil, 0, err
-		}
-		if inboxAcc != chunkHash {
-			if i == 0 {
-				return nil, 0, errors.New("first segment was already wrong")
-			}
-			return &ethbridge.ChallengeSegment{
-				Start:  inboxOffset,
-				Length: segmentLength,
-			}, i, nil
-		}
-		inboxOffset = new(big.Int).Add(inboxOffset, segmentLength)
-	}
-	return nil, 0, nil
+	Bisect(
+		ctx context.Context,
+		challenge *ethbridge.Challenge,
+		prevBisection *ethbridge.Bisection,
+		segmentToChallenge int,
+		subCuts []ethbridge.Cut,
+	) (*types.Transaction, error)
+
+	OneStepProof(
+		ctx context.Context,
+		challenge *ethbridge.Challenge,
+		prevBisection *ethbridge.Bisection,
+		segmentToChallenge int,
+		challengedSegment *ethbridge.ChallengeSegment,
+	) (*types.Transaction, error)
 }
 
-func (c *Challenger) generateInboxConsistencyBisection(segment *ethbridge.ChallengeSegment) ([][32]byte, error) {
-	segmentCount := calculateBisectionSegmentCount(segment.Length)
-	segments := make([][32]byte, 0, segmentCount+1)
+type InboxConsistencyImpl struct {
+	lookup core.ValidatorLookup
+}
 
-	offset := new(big.Int).Set(segment.Start)
-	for i := 0; i < segmentCount+1; i++ {
-		inboxAcc, err := c.lookup.GetInboxAcc(offset)
+func (i *InboxConsistencyImpl) GetCut(offset *big.Int) (ethbridge.Cut, error) {
+	inboxAcc, err := i.lookup.GetInboxAcc(offset)
+	if err != nil {
+		return nil, err
+	}
+	return ethbridge.InboxConsistencyCut{InboxAccHash: inboxAcc}, nil
+}
+
+func (i *InboxConsistencyImpl) Bisect(
+	ctx context.Context,
+	challenge *ethbridge.Challenge,
+	prevBisection *ethbridge.Bisection,
+	segmentToChallenge int,
+	subCuts []ethbridge.Cut,
+) (*types.Transaction, error) {
+	return challenge.BisectInboxDelta(
+		ctx,
+		prevBisection.Cuts,
+		segmentToChallenge,
+		prevBisection.ChallengedSegment,
+		subCuts,
+	)
+}
+
+func (i *InboxConsistencyImpl) OneStepProof(
+	ctx context.Context,
+	challenge *ethbridge.Challenge,
+	prevBisection *ethbridge.Bisection,
+	segmentToChallenge int,
+	challengedSegment *ethbridge.ChallengeSegment,
+) (*types.Transaction, error) {
+	beforeInboxAcc, err := i.lookup.GetInboxAcc(challengedSegment.Start)
+	if err != nil {
+		return nil, err
+	}
+	msgs, err := i.lookup.GetMessages(challengedSegment.Start, big.NewInt(1))
+	if err != nil {
+		return nil, err
+	}
+	return challenge.OneStepProveInboxConsistency(
+		ctx,
+		prevBisection.Cuts,
+		segmentToChallenge,
+		prevBisection.ChallengedSegment,
+		beforeInboxAcc,
+		msgs[0].CommitmentHash(),
+	)
+}
+
+type InboxDeltaImpl struct {
+	lookup              core.ValidatorLookup
+	nodeAfterInboxCount *big.Int
+	inboxDelta          *inboxDelta
+}
+
+func (i *InboxDeltaImpl) GetCut(offset *big.Int) (ethbridge.Cut, error) {
+	inboxOffset := new(big.Int).Add(i.nodeAfterInboxCount, offset)
+	inboxAcc, err := i.lookup.GetInboxAcc(inboxOffset)
+	if err != nil {
+		return nil, err
+	}
+	return ethbridge.InboxDeltaCut{
+		InboxAccHash:   inboxAcc,
+		InboxDeltaHash: i.inboxDelta.inboxDeltaAccs[offset.Uint64()],
+	}, nil
+}
+
+func (i *InboxDeltaImpl) Bisect(
+	ctx context.Context,
+	challenge *ethbridge.Challenge,
+	prevBisection *ethbridge.Bisection,
+	segmentToChallenge int,
+	subCuts []ethbridge.Cut,
+) (*types.Transaction, error) {
+	return challenge.BisectInboxDelta(
+		ctx,
+		prevBisection.Cuts,
+		segmentToChallenge,
+		prevBisection.ChallengedSegment,
+		subCuts,
+	)
+}
+
+func (i *InboxDeltaImpl) OneStepProof(
+	ctx context.Context,
+	challenge *ethbridge.Challenge,
+	prevBisection *ethbridge.Bisection,
+	segmentToChallenge int,
+	challengedSegment *ethbridge.ChallengeSegment,
+) (*types.Transaction, error) {
+	msgIndex := new(big.Int).Add(i.nodeAfterInboxCount, challengedSegment.Start)
+	msgs, err := i.lookup.GetMessages(msgIndex, big.NewInt(1))
+	if err != nil {
+		return nil, err
+	}
+	return challenge.OneStepProveInboxDelta(
+		ctx,
+		prevBisection.Cuts,
+		segmentToChallenge,
+		prevBisection.ChallengedSegment,
+		msgs[0],
+	)
+}
+
+func handleChallenge(ctx context.Context, challenge *ethbridge.Challenge, challengeImpl ChallengerImpl) (*types.Transaction, error) {
+	challengeState, err := challenge.ChallengeState(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	prevBisection, err := challenge.LookupBisection(ctx, challengeState)
+	if err != nil {
+		return nil, err
+	}
+
+	inconsistentSegment, segmentToChallenge, err := findIncorrectSegment(prevBisection, challengeImpl)
+	if err != nil {
+		return nil, err
+	}
+
+	if inconsistentSegment.Length.Cmp(big.NewInt(1)) == 0 {
+		return challengeImpl.OneStepProof(
+			ctx,
+			challenge,
+			prevBisection,
+			segmentToChallenge,
+			inconsistentSegment,
+		)
+	} else {
+		subCuts, err := generateBisection(inconsistentSegment, challengeImpl)
 		if err != nil {
 			return nil, err
 		}
-		segments = append(segments, inboxAcc)
+		return challengeImpl.Bisect(
+			ctx,
+			challenge,
+			prevBisection,
+			segmentToChallenge,
+			subCuts,
+		)
+	}
+}
+
+func generateBisection(segment *ethbridge.ChallengeSegment, impl ChallengerImpl) ([]ethbridge.Cut, error) {
+	segmentCount := 20
+	if segment.Length.Cmp(big.NewInt(int64(segmentCount))) < 0 {
+		// Safe since this is less than 20
+		segmentCount = int(segment.Length.Int64())
+	}
+	cuts := make([]ethbridge.Cut, 0, segmentCount+1)
+	offset := new(big.Int).Set(segment.Start)
+	for i := 0; i < segmentCount+1; i++ {
+		cut, err := impl.GetCut(offset)
+		if err != nil {
+			return nil, err
+		}
+		cuts = append(cuts, cut)
 		subSegmentLength := calculateBisectionChunkCount(i, segmentCount, segment.Length)
 		offset = offset.Add(offset, subSegmentLength)
 	}
-	return segments, nil
+	return cuts, nil
 }
 
-func (c *Challenger) findInboxDelta(prevBisection *ethbridge.InboxDeltaBisection) (*ethbridge.ChallengeSegment, int, error) {
-	correctInboxDelta, err := c.InboxDelta()
-	if err != nil {
-		return nil, 0, err
-	}
+func findIncorrectSegment(prevBisection *ethbridge.Bisection, impl ChallengerImpl) (*ethbridge.ChallengeSegment, int, error) {
 	offset := prevBisection.ChallengedSegment.Start
-	for i, inboxAccHash := range prevBisection.InboxAccHashes {
-		inboxDeltaHash := prevBisection.InboxDeltaHashes[i]
-		segmentLength := calculateBisectionChunkCount(i, len(prevBisection.InboxAccHashes), prevBisection.ChallengedSegment.Length)
-
-		inboxOffset := new(big.Int).Add(c.challengedNode.Assertion.AfterInboxCount(), offset)
-		inboxAcc, err := c.lookup.GetInboxAcc(inboxOffset)
+	for i, cut := range prevBisection.Cuts {
+		correctCut, err := impl.GetCut(offset)
 		if err != nil {
 			return nil, 0, err
 		}
-		if inboxAcc != inboxAccHash || correctInboxDelta.inboxDeltaAccs[offset.Uint64()] != inboxDeltaHash {
+		segmentLength := calculateBisectionChunkCount(i, len(prevBisection.Cuts), prevBisection.ChallengedSegment.Length)
+		if !correctCut.Equals(cut) {
 			if i == 0 {
 				return nil, 0, errors.New("first segment was already wrong")
 			}
 			return &ethbridge.ChallengeSegment{
-				Start:  inboxOffset,
+				Start:  offset,
 				Length: segmentLength,
 			}, i, nil
 		}
@@ -279,48 +342,10 @@ func (c *Challenger) findInboxDelta(prevBisection *ethbridge.InboxDeltaBisection
 	return nil, 0, nil
 }
 
-func (c *Challenger) generateInboxDeltaBisection(segment *ethbridge.ChallengeSegment) ([][32]byte, [][32]byte, error) {
-	correctInboxDelta, err := c.InboxDelta()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	segmentCount := calculateBisectionSegmentCount(segment.Length)
-	inboxAccHashes := make([][32]byte, 0, segmentCount+1)
-	inboxDeltaHashes := make([][32]byte, 0, segmentCount+1)
-
-	offset := new(big.Int).Set(segment.Start)
-	for i := 0; i < segmentCount+1; i++ {
-		inboxOffset := new(big.Int).Add(
-			c.challengedNode.Assertion.PrevState.InboxCount,
-			segment.Start,
-		)
-		inboxAcc, err := c.lookup.GetInboxAcc(inboxOffset)
-		if err != nil {
-			return nil, nil, err
-		}
-		inboxAccHashes = append(inboxAccHashes, inboxAcc)
-		inboxDeltaHashes = append(inboxDeltaHashes, correctInboxDelta.inboxDeltaAccs[offset.Uint64()])
-		subSegmentLength := calculateBisectionChunkCount(i, segmentCount, segment.Length)
-		offset = offset.Add(offset, subSegmentLength)
-	}
-	return inboxAccHashes, inboxDeltaHashes, nil
-}
-
 func calculateBisectionChunkCount(segmentIndex, segmentCount int, totalLength *big.Int) *big.Int {
 	size := new(big.Int).Div(totalLength, big.NewInt(int64(segmentCount)))
 	if segmentIndex == 0 {
 		size = size.Add(size, new(big.Int).Mod(totalLength, big.NewInt(int64(segmentCount))))
 	}
 	return size
-}
-
-func calculateBisectionSegmentCount(totalLength *big.Int) int {
-	maxSegmentCount := 20
-	if totalLength.Cmp(big.NewInt(int64(maxSegmentCount))) < 0 {
-		// Safe since this is less than 20
-		return int(totalLength.Int64())
-	} else {
-		return maxSegmentCount
-	}
 }
