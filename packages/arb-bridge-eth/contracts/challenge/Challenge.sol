@@ -104,7 +104,7 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     modifier inboxDeltaChallenge {
-        verifyAndSetup(Kind.InboxConsistency, inboxDeltaHash);
+        verifyAndSetup(Kind.InboxDelta, inboxDeltaHash);
         _;
     }
 

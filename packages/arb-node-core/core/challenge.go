@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"math/big"
@@ -19,6 +20,10 @@ func NewSimpleCut(hash [32]byte) SimpleCut {
 	return SimpleCut{hash: hash}
 }
 
+func (c SimpleCut) String() string {
+	return fmt.Sprintf("SimpleCut(0x%x)", c.hash)
+}
+
 func (c SimpleCut) Equals(other Cut) bool {
 	o, ok := other.(SimpleCut)
 	if !ok {
@@ -34,6 +39,10 @@ func (c SimpleCut) Hash() [32]byte {
 type InboxDeltaCut struct {
 	InboxAccHash   [32]byte
 	InboxDeltaHash [32]byte
+}
+
+func (c InboxDeltaCut) String() string {
+	return fmt.Sprintf("InboxDeltaCut(0x%x, 0x%x)", c.InboxAccHash, c.InboxDeltaHash)
 }
 
 func (c InboxDeltaCut) Equals(other Cut) bool {

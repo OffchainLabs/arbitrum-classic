@@ -2,9 +2,11 @@ package challenge
 
 import (
 	"context"
+	"fmt"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/big"
 )
 
@@ -22,11 +24,14 @@ func (i *InboxDeltaImpl) FindFirstDivergence(lookup core.ValidatorLookup, offset
 }
 
 func (i *InboxDeltaImpl) GetCut(lookup core.ValidatorLookup, offset *big.Int) (core.Cut, error) {
-	inboxOffset := new(big.Int).Add(i.nodeAfterInboxCount, offset)
+	inboxOffset := new(big.Int).Sub(i.nodeAfterInboxCount, offset)
+	//inboxOffset = inboxOffset.Add(inboxOffset, big.NewInt(1))
 	inboxAcc, err := lookup.GetInboxAcc(inboxOffset)
 	if err != nil {
+		fmt.Println("GetCut failed", offset, inboxOffset)
 		return nil, err
 	}
+	fmt.Println("GetCut", offset, inboxOffset, inboxAcc, common.Hash(i.inboxDelta.inboxDeltaAccs[offset.Uint64()]))
 	return core.InboxDeltaCut{
 		InboxAccHash:   inboxAcc,
 		InboxDeltaHash: i.inboxDelta.inboxDeltaAccs[offset.Uint64()],
@@ -58,8 +63,9 @@ func (i *InboxDeltaImpl) OneStepProof(
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
 ) (*types.Transaction, error) {
-	msgIndex := new(big.Int).Add(i.nodeAfterInboxCount, challengedSegment.Start)
-	msgs, err := lookup.GetMessages(msgIndex, big.NewInt(1))
+	inboxOffset := new(big.Int).Sub(i.nodeAfterInboxCount, challengedSegment.Start)
+	inboxOffset = inboxOffset.Sub(inboxOffset, big.NewInt(1))
+	msgs, err := lookup.GetMessages(inboxOffset, big.NewInt(1))
 	if err != nil {
 		return nil, err
 	}
@@ -67,6 +73,7 @@ func (i *InboxDeltaImpl) OneStepProof(
 		ctx,
 		prevBisection,
 		segmentToChallenge,
+		challengedSegment,
 		msgs[0],
 	)
 }

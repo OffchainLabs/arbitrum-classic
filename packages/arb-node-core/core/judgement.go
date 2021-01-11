@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"math/big"
 
@@ -58,21 +59,23 @@ func (n *NodeInfo) InitialInboxConsistencyBisection() *Bisection {
 }
 
 func (n *NodeInfo) InitialInboxDeltaBisection() *Bisection {
+	beforeCut := InboxDeltaCut{
+		InboxAccHash:   n.Assertion.AfterInboxHash,
+		InboxDeltaHash: [32]byte{},
+	}
+	afterCut := InboxDeltaCut{
+		InboxAccHash:   n.Assertion.PrevState.InboxHash,
+		InboxDeltaHash: n.Assertion.InboxDelta,
+	}
+	fmt.Println("InitialInboxDeltaBisection", 0, n.Assertion.ExecInfo.InboxMessagesRead, common.Hash(beforeCut.Hash()), common.Hash(afterCut.Hash()))
+	fmt.Println("InitialInboxDeltaBisection before", n.Assertion.AfterInboxHash, common.Hash{})
+	fmt.Println("InitialInboxDeltaBisection after", n.Assertion.PrevState.InboxHash, n.Assertion.InboxDelta)
 	return &Bisection{
 		ChallengedSegment: &ChallengeSegment{
 			Start:  big.NewInt(0),
 			Length: n.Assertion.ExecInfo.InboxMessagesRead,
 		},
-		Cuts: []Cut{
-			InboxDeltaCut{
-				InboxAccHash:   n.Assertion.AfterInboxHash,
-				InboxDeltaHash: [32]byte{},
-			},
-			InboxDeltaCut{
-				InboxAccHash:   n.Assertion.PrevState.InboxHash,
-				InboxDeltaHash: n.Assertion.InboxDelta,
-			},
-		},
+		Cuts: []Cut{beforeCut, afterCut},
 	}
 }
 

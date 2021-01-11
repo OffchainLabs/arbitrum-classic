@@ -2,6 +2,7 @@ package challenge
 
 import (
 	"context"
+	"fmt"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
@@ -26,7 +27,7 @@ type Challenger struct {
 }
 
 func (c *Challenger) InboxDelta() (*inboxDelta, error) {
-	if c.inboxDelta != nil {
+	if c.inboxDelta == nil {
 		messages, err := c.lookup.GetMessages(
 			c.challengedNode.Assertion.PrevState.InboxCount,
 			c.challengedNode.Assertion.ExecInfo.InboxMessagesRead,
@@ -39,7 +40,7 @@ func (c *Challenger) InboxDelta() (*inboxDelta, error) {
 		inboxDeltaAccs = append(inboxDeltaAccs, inboxDeltaAcc)
 		for i := range messages {
 			msg := messages[len(messages)-1-i]
-			inboxDeltaAcc = hashing.SoliditySHA3(hashing.Bytes32(inboxDeltaAcc), msg.AsValue().Hash())
+			inboxDeltaAcc = hashing.SoliditySHA3(hashing.Bytes32(inboxDeltaAcc), hashing.Bytes32(msg.AsValue().Hash()))
 			inboxDeltaAccs = append(inboxDeltaAccs, inboxDeltaAcc)
 		}
 		c.inboxDelta = &inboxDelta{
@@ -179,6 +180,7 @@ func handleChallenge(
 	prevBisection *core.Bisection,
 ) (*types.Transaction, error) {
 	prevCutOffsets := generateBisectionCutOffsets(prevBisection.ChallengedSegment, len(prevBisection.Cuts)-1)
+	fmt.Println("Prev cut offsets", prevCutOffsets)
 	cutToChallenge, err := challengeImpl.FindFirstDivergence(lookup, prevCutOffsets, prevBisection.Cuts)
 	if err != nil {
 		return nil, err
@@ -227,7 +229,8 @@ func findFirstDivergenceSimple(impl SimpleChallengerImpl, lookup core.ValidatorL
 		}
 		if !correctCut.Equals(cuts[i]) {
 			if i == 0 {
-				return 0, errors.New("first segment was already wrong")
+				fmt.Println("findFirstDivergenceSimple", correctCut, cuts[i])
+				return 0, errors.New("first cut was already wrong")
 			}
 			return i, nil
 		}

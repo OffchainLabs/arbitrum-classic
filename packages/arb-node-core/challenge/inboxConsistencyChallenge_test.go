@@ -2,22 +2,21 @@ package challenge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"testing"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 func TestInboxConsistencyChallenge(t *testing.T) {
@@ -78,6 +77,7 @@ func executeChallenge(
 	turn := ethbridge.CHALLENGER_TURN
 	rounds := 0
 	for {
+		checkTurn(t, challengerChallenge.ChallengeWatcher, turn)
 		if turn == ethbridge.CHALLENGER_TURN {
 			_, err := challenger.handleConflict(ctx)
 			test.FailIfError(t, err)
@@ -160,7 +160,7 @@ func initializeChallengeData(
 	test.FailIfError(t, err)
 	afterInboxCount := new(big.Int).Add(prevState.InboxCount, inboxMessagesRead)
 
-	inboxAcc, err := lookup.GetInboxAcc(new(big.Int).Add(afterInboxCount, big.NewInt(1)))
+	inboxAcc, err := lookup.GetInboxAcc(afterInboxCount)
 	test.FailIfError(t, err)
 	assertionInfo := &core.AssertionInfo{
 		InboxDelta: core.CalculateInboxDeltaAcc(messages),
