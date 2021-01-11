@@ -18,9 +18,9 @@ type inboxDelta struct {
 }
 
 type Challenger struct {
-	challenge           *ethbridge.Challenge
-	lookup              core.ValidatorLookup
-	challengedAssertion *core.Assertion
+	challenge      *ethbridge.Challenge
+	lookup         core.ValidatorLookup
+	challengedNode *core.NodeInfo
 
 	inboxDelta *inboxDelta
 }
@@ -28,8 +28,8 @@ type Challenger struct {
 func (c *Challenger) InboxDelta() (*inboxDelta, error) {
 	if c.inboxDelta != nil {
 		messages, err := c.lookup.GetMessages(
-			c.challengedAssertion.PrevState.InboxCount,
-			c.challengedAssertion.ExecInfo.InboxMessagesRead,
+			c.challengedNode.Assertion.PrevState.InboxCount,
+			c.challengedNode.Assertion.ExecInfo.InboxMessagesRead,
 		)
 		if err != nil {
 			return nil, err
@@ -50,11 +50,11 @@ func (c *Challenger) InboxDelta() (*inboxDelta, error) {
 	return c.inboxDelta, nil
 }
 
-func NewChallenger(challenge *ethbridge.Challenge, lookup core.ValidatorLookup, challengedAssertion *core.Assertion) *Challenger {
+func NewChallenger(challenge *ethbridge.Challenge, lookup core.ValidatorLookup, challengedNode *core.NodeInfo) *Challenger {
 	return &Challenger{
-		challenge:           challenge,
-		lookup:              lookup,
-		challengedAssertion: challengedAssertion,
+		challenge:      challenge,
+		lookup:         lookup,
+		challengedNode: challengedNode,
 	}
 }
 
@@ -72,56 +72,69 @@ func (c *Challenger) handleConflict(ctx context.Context) (*types.Transaction, er
 		return nil, err
 	}
 
-	switch kind {
-	case core.UNINITIALIZED:
-		judgment, err := core.JudgeAssertion(c.lookup, c.challengedAssertion, nil)
+	var prevBisection *core.Bisection
+	if kind == core.UNINITIALIZED {
+		kind, err = core.JudgeAssertion(c.lookup, c.challengedNode.Assertion, nil)
 		if err != nil {
 			return nil, err
 		}
-		switch judgment {
-		case core.INBOX_CONSISTENCY:
-			return c.handleInboxConsistencyChallenge(ctx)
-		case core.INBOX_DELTA:
-			return c.handleInboxDeltaChallenge(ctx)
-		case core.EXECUTION:
-			return c.handleExecutionChallenge()
-		case core.STOPPED_SHORT:
-			return c.handleStoppedShortChallenge()
-		default:
-			return nil, errors.New("can't handle challenge")
+		if kind == core.STOPPED_SHORT {
+			panic("Not yet handled")
+			return nil, nil
 		}
+	} else {
+		challengeState, err := c.challenge.ChallengeState(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		prevBisection, err = c.challenge.LookupBisection(ctx, challengeState)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	switch kind {
 	case core.INBOX_CONSISTENCY:
-		return c.handleInboxConsistencyChallenge(ctx)
+		return c.handleInboxConsistencyChallenge(ctx, prevBisection)
 	case core.INBOX_DELTA:
-		return c.handleInboxDeltaChallenge(ctx)
+		return c.handleInboxDeltaChallenge(ctx, prevBisection)
 	case core.EXECUTION:
-		return c.handleExecutionChallenge()
+		return c.handleExecutionChallenge(ctx, prevBisection)
 	case core.STOPPED_SHORT:
 		return c.handleStoppedShortChallenge()
 	default:
 		return nil, errors.New("can't handle challenge")
 	}
-
 }
 
-func (c *Challenger) handleInboxConsistencyChallenge(ctx context.Context) (*types.Transaction, error) {
+func (c *Challenger) handleInboxConsistencyChallenge(ctx context.Context, prevBisection *core.Bisection) (*types.Transaction, error) {
 	challengeImpl := &InboxConsistencyImpl{}
-	return handleChallenge(ctx, c.challenge, c.lookup, challengeImpl)
+	if prevBisection == nil {
+		prevBisection = c.challengedNode.InitialInboxConsistencyBisection()
+	}
+	return handleChallenge(ctx, c.challenge, c.lookup, challengeImpl, prevBisection)
 }
 
-func (c *Challenger) handleInboxDeltaChallenge(ctx context.Context) (*types.Transaction, error) {
+func (c *Challenger) handleInboxDeltaChallenge(ctx context.Context, prevBisection *core.Bisection) (*types.Transaction, error) {
 	inboxDeltaData, err := c.InboxDelta()
 	if err != nil {
 		return nil, err
 	}
 	challengeImpl := &InboxDeltaImpl{
-		nodeAfterInboxCount: c.challengedAssertion.AfterInboxCount(),
+		nodeAfterInboxCount: c.challengedNode.Assertion.AfterInboxCount(),
 		inboxDelta:          inboxDeltaData,
 	}
-	return handleChallenge(ctx, c.challenge, c.lookup, challengeImpl)
+	if prevBisection == nil {
+		prevBisection = c.challengedNode.InitialInboxDeltaBisection()
+	}
+	return handleChallenge(ctx, c.challenge, c.lookup, challengeImpl, prevBisection)
 }
 
-func (c *Challenger) handleExecutionChallenge() (*types.Transaction, error) {
+func (c *Challenger) handleExecutionChallenge(ctx context.Context, prevBisection *core.Bisection) (*types.Transaction, error) {
+	if prevBisection == nil {
+		prevBisection = c.challengedNode.InitialExecutionBisection()
+	}
 	return nil, nil
 }
 
@@ -155,17 +168,13 @@ type ChallengerImpl interface {
 	) (*types.Transaction, error)
 }
 
-func handleChallenge(ctx context.Context, challenge *ethbridge.Challenge, lookup core.ValidatorLookup, challengeImpl ChallengerImpl) (*types.Transaction, error) {
-	challengeState, err := challenge.ChallengeState(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	prevBisection, err := challenge.LookupBisection(ctx, challengeState)
-	if err != nil {
-		return nil, err
-	}
-
+func handleChallenge(
+	ctx context.Context,
+	challenge *ethbridge.Challenge,
+	lookup core.ValidatorLookup,
+	challengeImpl ChallengerImpl,
+	prevBisection *core.Bisection,
+) (*types.Transaction, error) {
 	prevCutOffsets := generateBisectionCutOffsets(prevBisection.ChallengedSegment)
 	cutToChallenge, err := challengeImpl.FindFirstDivergence(lookup, prevCutOffsets, prevBisection.Cuts)
 	if err != nil {

@@ -157,7 +157,7 @@ func (a *Assertion) InboxDeltaHash() common.Hash {
 	)
 }
 
-func (a *Assertion) ExecutionHash() common.Hash {
+func (a *Assertion) BeforeExecutionHash() common.Hash {
 	restBefore := assertionRestHash(
 		a.InboxDelta,
 		a.PrevState.MachineHash,
@@ -166,6 +166,10 @@ func (a *Assertion) ExecutionHash() common.Hash {
 		common.Hash{},
 		big.NewInt(0),
 	)
+	return assertionHash(big.NewInt(0), restBefore)
+}
+
+func (a *Assertion) AfterExecutionHash() common.Hash {
 	restAfter := assertionRestHash(
 		common.Hash{},
 		a.ExecInfo.AfterMachineHash,
@@ -174,11 +178,15 @@ func (a *Assertion) ExecutionHash() common.Hash {
 		a.ExecInfo.LogAcc,
 		a.ExecInfo.LogCount,
 	)
+	return assertionHash(a.ExecInfo.GasUsed, restAfter)
+}
+
+func (a *Assertion) ExecutionHash() common.Hash {
 	return BisectionChunkHash(
 		a.ExecInfo.GasUsed,
 		a.ExecInfo.GasUsed,
-		assertionHash(big.NewInt(0), restBefore),
-		assertionHash(a.ExecInfo.GasUsed, restAfter),
+		a.BeforeExecutionHash(),
+		a.AfterExecutionHash(),
 	)
 }
 

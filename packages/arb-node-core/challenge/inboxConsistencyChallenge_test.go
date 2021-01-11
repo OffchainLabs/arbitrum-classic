@@ -2,6 +2,7 @@ package challenge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"testing"
 
@@ -22,10 +23,23 @@ import (
 func TestInboxConsistencyChallenge(t *testing.T) {
 	ctx := context.Background()
 
+	mach, err := cmachine.New(arbos.Path())
+	test.FailIfError(t, err)
+
+	msg1 := inbox.NewRandomInboxMessage()
+	msg2 := inbox.NewRandomInboxMessage()
+
+	asserterLookup := core.NewValidatorLookupMock(mach)
+	asserterLookup.AddMessage(msg1)
+	asserterLookup.AddMessage(msg2)
+	challengerLookup := core.NewValidatorLookupMock(mach)
+	challengerLookup.AddMessage(inbox.NewRandomInboxMessage())
+	challengerLookup.AddMessage(msg2)
+
 	prevState := &core.NodeState{
 		ProposedBlock:  big.NewInt(0),
 		TotalGasUsed:   big.NewInt(0),
-		MachineHash:    common.Hash{},
+		MachineHash:    mach.Hash(),
 		InboxHash:      common.Hash{},
 		InboxCount:     big.NewInt(0),
 		TotalSendCount: big.NewInt(0),
@@ -33,11 +47,14 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 		InboxMaxCount:  big.NewInt(0),
 	}
 
+	inboxAcc, err := asserterLookup.GetInboxAcc(big.NewInt(1))
+	test.FailIfError(t, err)
+
 	assertionInfo := &core.AssertionInfo{
-		InboxDelta: common.Hash{},
+		InboxDelta: core.CalculateInboxDeltaAcc([]inbox.InboxMessage{msg1}),
 		ExecInfo: &core.ExecutionInfo{
 			BeforeMachineHash: common.Hash{},
-			InboxMessagesRead: big.NewInt(0),
+			InboxMessagesRead: big.NewInt(1),
 			GasUsed:           big.NewInt(0),
 			SendAcc:           common.Hash{},
 			SendCount:         big.NewInt(0),
@@ -45,7 +62,7 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 			LogCount:          big.NewInt(0),
 			AfterMachineHash:  common.Hash{},
 		},
-		AfterInboxHash: common.Hash{},
+		AfterInboxHash: inboxAcc,
 	}
 
 	assertion := &core.Assertion{
@@ -53,6 +70,8 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 		AssertionInfo: assertionInfo,
 	}
 
+	inboxTopAcc, err := challengerLookup.GetInboxAcc(big.NewInt(2))
+	test.FailIfError(t, err)
 	challengedNode := &core.NodeInfo{
 		NodeNum: big.NewInt(1),
 		BlockProposed: &common.BlockId{
@@ -60,8 +79,8 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 			HeaderHash: common.RandHash(),
 		},
 		Assertion:     assertion,
-		InboxMaxCount: big.NewInt(0),
-		InboxMaxHash:  common.Hash{},
+		InboxMaxCount: big.NewInt(2),
+		InboxMaxHash:  inboxTopAcc,
 	}
 
 	arbGasSpeedLimitPerBlock := big.NewInt(100000)
@@ -82,10 +101,7 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 		t.Fatal("kind doesn't match")
 	}
 
-	mach, err := cmachine.New(arbos.Path())
-	lookup := core.NewValidatorLookupMock(mach)
-
-	challenger := NewChallenger(challengerChallenge, lookup, assertion)
+	challenger := NewChallenger(challengerChallenge, challengerLookup, challengedNode)
 	//asserter := NewChallenger(challengerChallenge, lookup, assertion)
 
 	_, err = challenger.handleConflict(ctx)

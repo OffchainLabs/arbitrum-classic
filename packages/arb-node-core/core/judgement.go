@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/pkg/errors"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -43,6 +44,51 @@ func (n *NodeInfo) AfterState() *NodeState {
 	}
 }
 
+func (n *NodeInfo) InitialInboxConsistencyBisection() *Bisection {
+	return &Bisection{
+		ChallengedSegment: &ChallengeSegment{
+			Start:  n.Assertion.PrevState.InboxCount,
+			Length: new(big.Int).Sub(n.InboxMaxCount, n.Assertion.AfterInboxCount()),
+		},
+		Cuts: []Cut{
+			NewSimpleCut(n.InboxMaxHash),
+			NewSimpleCut(n.Assertion.AfterInboxHash),
+		},
+	}
+}
+
+func (n *NodeInfo) InitialInboxDeltaBisection() *Bisection {
+	return &Bisection{
+		ChallengedSegment: &ChallengeSegment{
+			Start:  big.NewInt(0),
+			Length: n.Assertion.ExecInfo.InboxMessagesRead,
+		},
+		Cuts: []Cut{
+			InboxDeltaCut{
+				InboxAccHash:   n.Assertion.AfterInboxHash,
+				InboxDeltaHash: [32]byte{},
+			},
+			InboxDeltaCut{
+				InboxAccHash:   n.Assertion.PrevState.InboxHash,
+				InboxDeltaHash: n.Assertion.InboxDelta,
+			},
+		},
+	}
+}
+
+func (n *NodeInfo) InitialExecutionBisection() *Bisection {
+	return &Bisection{
+		ChallengedSegment: &ChallengeSegment{
+			Start:  big.NewInt(0),
+			Length: n.Assertion.ExecInfo.GasUsed,
+		},
+		Cuts: []Cut{
+			NewSimpleCut(n.Assertion.BeforeExecutionHash()),
+			NewSimpleCut(n.Assertion.AfterExecutionHash()),
+		},
+	}
+}
+
 func JudgeAssertion(lookup ValidatorLookup, assertion *Assertion, mach machine.Machine) (ChallengeKind, error) {
 	afterInboxHash, err := lookup.GetInboxAcc(assertion.AfterInboxCount())
 	if err != nil {
@@ -56,7 +102,7 @@ func JudgeAssertion(lookup ValidatorLookup, assertion *Assertion, mach machine.M
 	if err != nil {
 		return 0, err
 	}
-	if assertion.InboxDelta != calculateInboxDeltaAcc(messages) {
+	if assertion.InboxDelta != CalculateInboxDeltaAcc(messages) {
 		// Failed inbox delta
 		return INBOX_DELTA, nil
 	}
@@ -65,6 +111,9 @@ func JudgeAssertion(lookup ValidatorLookup, assertion *Assertion, mach machine.M
 		if err != nil {
 			return 0, err
 		}
+	}
+	if mach.Hash() != assertion.PrevState.MachineHash {
+		return 0, errors.New("before machine state inconsistent with local db")
 	}
 	localExecutionInfo, err := lookup.GetExecutionInfoWithMaxMessages(mach, assertion.ExecInfo.GasUsed, assertion.ExecInfo.InboxMessagesRead)
 	if err != nil {
@@ -81,7 +130,7 @@ func JudgeAssertion(lookup ValidatorLookup, assertion *Assertion, mach machine.M
 	return NO_CHALLENGE, nil
 }
 
-func calculateInboxDeltaAcc(messages []inbox.InboxMessage) common.Hash {
+func CalculateInboxDeltaAcc(messages []inbox.InboxMessage) common.Hash {
 	acc := common.Hash{}
 	for i := range messages {
 		valHash := messages[len(messages)-1-i].AsValue().Hash()

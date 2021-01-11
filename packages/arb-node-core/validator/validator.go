@@ -276,7 +276,7 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 		return nil, err
 	}
 
-	return challenge.NewChallenger(challengeCon, s.lookup, nodeInfo.Assertion), nil
+	return challenge.NewChallenger(challengeCon, s.lookup, nodeInfo), nil
 }
 
 func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (*types.Transaction, error) {
