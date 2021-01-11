@@ -427,7 +427,7 @@ func (x *NodeBuf) UnmarshalFromCheckpoint(ctx ckptcontext.RestoreContext) (*Node
 
 func GeneratePathProof(from, to *Node) []common.Hash {
 	// returns nil if no proof exists
-	if to == nil {
+	if to == nil || from == nil {
 		return nil
 	}
 	if from.Hash() == to.Hash() {
