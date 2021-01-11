@@ -13,21 +13,21 @@ type InboxDeltaImpl struct {
 	inboxDelta          *inboxDelta
 }
 
-func (i *InboxDeltaImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]ethbridge.Cut, error) {
+func (i *InboxDeltaImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]Cut, error) {
 	return getCutsSimple(i, lookup, offsets)
 }
 
-func (i *InboxDeltaImpl) FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []ethbridge.Cut) (int, error) {
+func (i *InboxDeltaImpl) FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []Cut) (int, error) {
 	return findFirstDivergenceSimple(i, lookup, offsets, cuts)
 }
 
-func (i *InboxDeltaImpl) GetCut(lookup core.ValidatorLookup, offset *big.Int) (ethbridge.Cut, error) {
+func (i *InboxDeltaImpl) GetCut(lookup core.ValidatorLookup, offset *big.Int) (Cut, error) {
 	inboxOffset := new(big.Int).Add(i.nodeAfterInboxCount, offset)
 	inboxAcc, err := lookup.GetInboxAcc(inboxOffset)
 	if err != nil {
 		return nil, err
 	}
-	return ethbridge.InboxDeltaCut{
+	return InboxDeltaCut{
 		InboxAccHash:   inboxAcc,
 		InboxDeltaHash: i.inboxDelta.inboxDeltaAccs[offset.Uint64()],
 	}, nil
@@ -36,9 +36,9 @@ func (i *InboxDeltaImpl) GetCut(lookup core.ValidatorLookup, offset *big.Int) (e
 func (i *InboxDeltaImpl) Bisect(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
-	prevBisection *ethbridge.Bisection,
+	prevBisection *Bisection,
 	segmentToChallenge int,
-	subCuts []ethbridge.Cut,
+	subCuts []Cut,
 ) (*types.Transaction, error) {
 	return challenge.BisectInboxDelta(
 		ctx,
@@ -52,7 +52,7 @@ func (i *InboxDeltaImpl) OneStepProof(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
 	lookup core.ValidatorLookup,
-	prevBisection *ethbridge.Bisection,
+	prevBisection *Bisection,
 	segmentToChallenge int,
 	challengedSegment *ethbridge.ChallengeSegment,
 ) (*types.Transaction, error) {

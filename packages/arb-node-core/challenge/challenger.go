@@ -130,26 +130,26 @@ func (c *Challenger) handleStoppedShortChallenge() (*types.Transaction, error) {
 }
 
 type SimpleChallengerImpl interface {
-	GetCut(lookup core.ValidatorLookup, offsets *big.Int) (ethbridge.Cut, error)
+	GetCut(lookup core.ValidatorLookup, offsets *big.Int) (Cut, error)
 }
 
 type ChallengerImpl interface {
-	GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]ethbridge.Cut, error)
-	FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []ethbridge.Cut) (int, error)
+	GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]Cut, error)
+	FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []Cut) (int, error)
 
 	Bisect(
 		ctx context.Context,
 		challenge *ethbridge.Challenge,
-		prevBisection *ethbridge.Bisection,
+		prevBisection *Bisection,
 		segmentToChallenge int,
-		subCuts []ethbridge.Cut,
+		subCuts []Cut,
 	) (*types.Transaction, error)
 
 	OneStepProof(
 		ctx context.Context,
 		challenge *ethbridge.Challenge,
 		lookup core.ValidatorLookup,
-		prevBisection *ethbridge.Bisection,
+		prevBisection *Bisection,
 		segmentToChallenge int,
 		challengedSegment *ethbridge.ChallengeSegment,
 	) (*types.Transaction, error)
@@ -201,7 +201,7 @@ func handleChallenge(ctx context.Context, challenge *ethbridge.Challenge, lookup
 	}
 }
 
-func findFirstDivergenceSimple(impl SimpleChallengerImpl, lookup core.ValidatorLookup, cutOffsets []*big.Int, cuts []ethbridge.Cut) (int, error) {
+func findFirstDivergenceSimple(impl SimpleChallengerImpl, lookup core.ValidatorLookup, cutOffsets []*big.Int, cuts []Cut) (int, error) {
 	for i, cutOffset := range cutOffsets {
 		correctCut, err := impl.GetCut(lookup, cutOffset)
 		if err != nil {
@@ -217,8 +217,8 @@ func findFirstDivergenceSimple(impl SimpleChallengerImpl, lookup core.ValidatorL
 	return 0, errors.New("all cuts correct")
 }
 
-func getCutsSimple(impl SimpleChallengerImpl, lookup core.ValidatorLookup, offsets []*big.Int) ([]ethbridge.Cut, error) {
-	cuts := make([]ethbridge.Cut, 0, len(offsets))
+func getCutsSimple(impl SimpleChallengerImpl, lookup core.ValidatorLookup, offsets []*big.Int) ([]Cut, error) {
+	cuts := make([]Cut, 0, len(offsets))
 	for _, cutOffset := range offsets {
 		cut, err := impl.GetCut(lookup, cutOffset)
 		if err != nil {

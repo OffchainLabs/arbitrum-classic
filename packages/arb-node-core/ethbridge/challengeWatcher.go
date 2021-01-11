@@ -6,13 +6,12 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/pkg/errors"
-	"math/big"
 	"strings"
 )
 
@@ -26,70 +25,6 @@ func init() {
 	}
 	bisectedID = parsedChallenge.Events["Bisected"].ID
 	bisectedInboxDeltaID = parsedChallenge.Events["BisectedInboxDelta"].ID
-}
-
-type Cut interface {
-	Equals(other Cut) bool
-	Hash() [32]byte
-}
-
-type SimpleCut struct {
-	hash [32]byte
-}
-
-func NewSimpleCut(hash [32]byte) SimpleCut {
-	return SimpleCut{hash: hash}
-}
-
-func (c SimpleCut) Equals(other Cut) bool {
-	o, ok := other.(SimpleCut)
-	if !ok {
-		return false
-	}
-	return c.hash == o.hash
-}
-
-func (c SimpleCut) Hash() [32]byte {
-	return c.hash
-}
-
-type InboxDeltaCut struct {
-	InboxAccHash   [32]byte
-	InboxDeltaHash [32]byte
-}
-
-func (c InboxDeltaCut) Equals(other Cut) bool {
-	o, ok := other.(InboxDeltaCut)
-	if !ok {
-		return false
-	}
-	return c.InboxAccHash == o.InboxAccHash && c.InboxDeltaHash == o.InboxDeltaHash
-}
-
-func (c InboxDeltaCut) Hash() [32]byte {
-	return core.InboxDeltaHash(c.InboxAccHash, c.InboxDeltaHash)
-}
-
-type ExpandedExecutionCut struct {
-	GasUsed *big.Int
-	Rest    common.Hash
-}
-
-func (c ExpandedExecutionCut) Equals(other Cut) bool {
-	o, ok := other.(ExpandedExecutionCut)
-	if !ok {
-		return false
-	}
-	return c.GasUsed.Cmp(o.GasUsed) == 0 && c.Rest == o.Rest
-}
-
-func (c ExpandedExecutionCut) Hash() [32]byte {
-	return hashing.SoliditySHA3(hashing.Uint256(c.GasUsed), hashing.Bytes32(c.Rest))
-}
-
-type Bisection struct {
-	ChallengedSegment *ChallengeSegment
-	Cuts              []Cut
 }
 
 type ChallengeTurn uint8
@@ -167,7 +102,7 @@ func (c *ChallengeWatcher) ChallengeState(ctx context.Context) (common.Hash, err
 	return common.NewHashFromEth(challengeState), nil
 }
 
-func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState common.Hash) (*Bisection, error) {
+func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState common.Hash) (*challenge.Bisection, error) {
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
 		FromBlock: nil,
@@ -185,16 +120,16 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 	if len(logs) > 1 {
 		return nil, errors.New("too many matching  bisections")
 	}
-	var cuts []Cut
+	var cuts []challenge.Cut
 	var challengeSegment *ChallengeSegment
 	if logs[0].Topics[0] == bisectedID {
 		parsedLog, err := c.con.ParseBisected(logs[0])
 		if err != nil {
 			return nil, err
 		}
-		cuts = make([]Cut, 0, len(parsedLog.ChainHashes))
+		cuts = make([]challenge.Cut, 0, len(parsedLog.ChainHashes))
 		for _, ch := range parsedLog.ChainHashes {
-			cuts = append(cuts, SimpleCut{hash: ch})
+			cuts = append(cuts, challenge.NewSimpleCut(ch))
 		}
 		challengeSegment = &ChallengeSegment{
 			Start:  parsedLog.ChallengedSegmentStart,
@@ -205,9 +140,9 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 		if err != nil {
 			return nil, err
 		}
-		cuts = make([]Cut, 0, len(parsedLog.InboxAccHashes))
+		cuts = make([]challenge.Cut, 0, len(parsedLog.InboxAccHashes))
 		for i, inboxAccHash := range parsedLog.InboxAccHashes {
-			cuts = append(cuts, InboxDeltaCut{
+			cuts = append(cuts, challenge.InboxDeltaCut{
 				InboxAccHash:   inboxAccHash,
 				InboxDeltaHash: parsedLog.InboxDeltaHashes[i],
 			})
@@ -220,7 +155,7 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 		return nil, errors.New("unexpected event type")
 	}
 
-	return &Bisection{
+	return &challenge.Bisection{
 		ChallengedSegment: challengeSegment,
 		Cuts:              cuts,
 	}, nil
