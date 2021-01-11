@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/pkg/errors"
 	"math/big"
 
@@ -11,9 +12,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
 type Validator struct {
@@ -73,20 +71,20 @@ func (v *Validator) resolveNextNode(ctx context.Context) (*types.Transaction, er
 }
 
 type nodeCreationInfo struct {
-	assertion *ethbridge.Assertion
+	assertion *core.Assertion
 	block     *common.BlockId
-	newNodeID ethbridge.NodeID
+	newNodeID core.NodeID
 }
 
 type nodeMovementInfo struct {
 	block   *common.BlockId
-	nodeNum ethbridge.NodeID
+	nodeNum core.NodeID
 }
 
 type nodeActionInfo interface {
 }
 
-func (v *Validator) generateNodeAction(ctx context.Context, base ethbridge.NodeID) (nodeActionInfo, error) {
+func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID) (nodeActionInfo, error) {
 	lastNodeCreated, err := v.rollup.LatestNodeCreated(ctx)
 	if err != nil {
 		return nil, err
@@ -153,7 +151,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, base ethbridge.NodeI
 		return nil, nil
 	}
 
-	assertion := &ethbridge.Assertion{
+	assertion := &core.Assertion{
 		PrevState:     currentNode.AfterState(),
 		AssertionInfo: assertionInfo,
 	}
@@ -169,7 +167,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, base ethbridge.NodeI
 	}, nil
 }
 
-func (v *Validator) lookupNode(ctx context.Context, node ethbridge.NodeID) (*ethbridge.NodeInfo, error) {
+func (v *Validator) lookupNode(ctx context.Context, node core.NodeID) (*core.NodeInfo, error) {
 	currentNodes, err := v.rollup.LookupNodes(ctx, []*big.Int{node})
 	if err != nil {
 		return nil, err
@@ -197,7 +195,7 @@ func (v *Validator) lookupMessageByNum(ctx context.Context, messageNum *big.Int)
 	return messages[0], nil
 }
 
-func (v *Validator) selectValidChild(ctx context.Context, node ethbridge.NodeID) (*ethbridge.NodeInfo, error) {
+func (v *Validator) selectValidChild(ctx context.Context, node core.NodeID) (*core.NodeInfo, error) {
 	successors, err := v.validatorUtils.SuccessorNodes(ctx, node)
 	if err != nil {
 		return nil, err
@@ -219,53 +217,15 @@ func (v *Validator) selectValidChild(ctx context.Context, node ethbridge.NodeID)
 	}
 
 	for _, nd := range nodes {
-		chalType, err := judgeNode(v.lookup, nd, mach)
+		chalType, err := core.JudgeNode(v.lookup, nd, mach)
 		if err != nil {
 			return nil, err
 		}
-		if chalType == ethbridge.NO_CHALLENGE {
+		if chalType == core.NO_CHALLENGE {
 			return nd, nil
 		}
 	}
 	return nil, nil
-}
-
-func judgeNode(lookup core.ValidatorLookup, nd *ethbridge.NodeInfo, mach machine.Machine) (ethbridge.ChallengeKind, error) {
-	afterInboxHash, err := lookup.GetInboxAcc(nd.Assertion.AfterInboxCount())
-	if err != nil {
-		return 0, err
-	}
-	if nd.Assertion.AfterInboxHash != afterInboxHash {
-		// Failed inbox consistency
-		return ethbridge.INBOX_CONSISTENCY, nil
-	}
-	messages, err := lookup.GetMessages(nd.Assertion.PrevState.InboxCount, nd.Assertion.ExecInfo.InboxMessagesRead)
-	if err != nil {
-		return 0, err
-	}
-	if nd.Assertion.InboxDelta != calculateInboxDeltaAcc(messages) {
-		// Failed inbox delta
-		return ethbridge.INBOX_DELTA, nil
-	}
-	if mach == nil {
-		mach, err = lookup.GetMachine(nd.Assertion.PrevState.TotalGasUsed)
-		if err != nil {
-			return 0, err
-		}
-	}
-	localExecutionInfo, err := lookup.GetExecutionInfoWithMaxMessages(mach, nd.Assertion.ExecInfo.GasUsed, nd.Assertion.ExecInfo.InboxMessagesRead)
-	if err != nil {
-		return 0, err
-	}
-
-	if localExecutionInfo.GasUsed.Cmp(nd.Assertion.ExecInfo.GasUsed) < 0 {
-		return ethbridge.STOPPED_SHORT, nil
-	}
-
-	if !nd.Assertion.ExecInfo.Equals(localExecutionInfo) {
-		return ethbridge.EXECUTION, nil
-	}
-	return ethbridge.NO_CHALLENGE, nil
 }
 
 type Staker struct {
@@ -297,11 +257,11 @@ func (s *Staker) Act(ctx context.Context) error {
 	return nil
 }
 
-func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo) (*Challenger, error) {
+func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo) (*challenge.Challenger, error) {
 	if info.CurrentChallenge == nil {
 		return nil, nil
 	}
-	challenge, err := ethbridge.NewChallenge(info.CurrentChallenge.ToEthAddress(), s.client, s.auth)
+	challengeCon, err := ethbridge.NewChallenge(info.CurrentChallenge.ToEthAddress(), s.client, s.auth)
 	if err != nil {
 		return nil, err
 	}
@@ -316,7 +276,7 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 		return nil, err
 	}
 
-	return NewChallenger(challenge, s.lookup, nodeInfo), nil
+	return challenge.NewChallenger(challengeCon, s.lookup, nodeInfo), nil
 }
 
 func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (*types.Transaction, error) {
@@ -427,15 +387,6 @@ func (s *Staker) createConflict(ctx context.Context) (*types.Transaction, error)
 	}
 	// No conflicts exist
 	return nil, nil
-}
-
-func calculateInboxDeltaAcc(messages []inbox.InboxMessage) common.Hash {
-	acc := common.Hash{}
-	for i := range messages {
-		valHash := messages[len(messages)-1-i].AsValue().Hash()
-		acc = hashing.SoliditySHA3(hashing.Bytes32(acc), hashing.Bytes32(valHash))
-	}
-	return acc
 }
 
 func GetBlockID(ctx context.Context, client ethutils.EthClient, number *big.Int) (*common.BlockId, error) {

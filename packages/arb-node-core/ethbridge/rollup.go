@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
@@ -27,7 +28,7 @@ func NewRollup(address ethcommon.Address, client ethutils.EthClient, auth *Trans
 	}, nil
 }
 
-func (r *Rollup) RejectNextNode(ctx context.Context, node NodeID, staker common.Address) (*types.Transaction, error) {
+func (r *Rollup) RejectNextNode(ctx context.Context, node core.NodeID, staker common.Address) (*types.Transaction, error) {
 	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return r.con.RejectNextNode(auth, node, staker.ToEthAddress())
 	})
@@ -58,7 +59,7 @@ func (r *Rollup) ConfirmNextNode(
 func (r *Rollup) NewStakeOnExistingNode(
 	ctx context.Context,
 	block *common.BlockId,
-	node NodeID,
+	node core.NodeID,
 ) (*types.Transaction, error) {
 	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return r.con.NewStakeOnExistingNode(
@@ -73,7 +74,7 @@ func (r *Rollup) NewStakeOnExistingNode(
 func (r *Rollup) AddStakeOnExistingNode(
 	ctx context.Context,
 	block *common.BlockId,
-	node NodeID,
+	node core.NodeID,
 ) (*types.Transaction, error) {
 	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return r.con.AddStakeOnExistingNode(
@@ -88,9 +89,9 @@ func (r *Rollup) AddStakeOnExistingNode(
 func (r *Rollup) NewStakeOnNewNode(
 	ctx context.Context,
 	block *common.BlockId,
-	node NodeID,
-	prev NodeID,
-	assertion *Assertion,
+	node core.NodeID,
+	prev core.NodeID,
+	assertion *core.Assertion,
 ) (*types.Transaction, error) {
 	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return r.con.NewStakeOnNewNode(
@@ -108,8 +109,8 @@ func (r *Rollup) NewStakeOnNewNode(
 func (r *Rollup) AddStakeOnNewNode(
 	ctx context.Context,
 	block *common.BlockId,
-	node NodeID,
-	assertion *Assertion,
+	node core.NodeID,
+	assertion *core.Assertion,
 ) (*types.Transaction, error) {
 	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return r.con.AddStakeOnNewNode(
@@ -145,10 +146,10 @@ func (r *Rollup) ReduceDeposit(ctx context.Context, amount *big.Int) (*types.Tra
 func (r *Rollup) CreateChallenge(
 	ctx context.Context,
 	staker1 common.Address,
-	node1 NodeID,
+	node1 core.NodeID,
 	staker2 common.Address,
-	node2 NodeID,
-	assertion *Assertion,
+	node2 core.NodeID,
+	assertion *core.Assertion,
 	inboxMaxHash common.Hash,
 	inboxMaxCount *big.Int,
 ) (*types.Transaction, error) {

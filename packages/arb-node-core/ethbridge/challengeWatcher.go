@@ -6,22 +6,14 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/pkg/errors"
+	"math/big"
 	"strings"
-)
-
-type ChallengeKind uint8
-
-const (
-	UNINITIALIZED ChallengeKind = iota
-	INBOX_CONSISTENCY
-	INBOX_DELTA
-	EXECUTION
-	STOPPED_SHORT
-	NO_CHALLENGE
 )
 
 var bisectedID ethcommon.Hash
@@ -41,20 +33,24 @@ type Cut interface {
 	Hash() [32]byte
 }
 
-type InboxConsistencyCut struct {
-	InboxAccHash [32]byte
+type SimpleCut struct {
+	hash [32]byte
 }
 
-func (c InboxConsistencyCut) Equals(other Cut) bool {
-	o, ok := other.(InboxConsistencyCut)
+func NewSimpleCut(hash [32]byte) SimpleCut {
+	return SimpleCut{hash: hash}
+}
+
+func (c SimpleCut) Equals(other Cut) bool {
+	o, ok := other.(SimpleCut)
 	if !ok {
 		return false
 	}
-	return c.InboxAccHash == o.InboxAccHash
+	return c.hash == o.hash
 }
 
-func (c InboxConsistencyCut) Hash() [32]byte {
-	return c.InboxAccHash
+func (c SimpleCut) Hash() [32]byte {
+	return c.hash
 }
 
 type InboxDeltaCut struct {
@@ -71,7 +67,24 @@ func (c InboxDeltaCut) Equals(other Cut) bool {
 }
 
 func (c InboxDeltaCut) Hash() [32]byte {
-	return inboxDeltaHash(c.InboxAccHash, c.InboxDeltaHash)
+	return core.InboxDeltaHash(c.InboxAccHash, c.InboxDeltaHash)
+}
+
+type ExpandedExecutionCut struct {
+	GasUsed *big.Int
+	Rest    common.Hash
+}
+
+func (c ExpandedExecutionCut) Equals(other Cut) bool {
+	o, ok := other.(ExpandedExecutionCut)
+	if !ok {
+		return false
+	}
+	return c.GasUsed.Cmp(o.GasUsed) == 0 && c.Rest == o.Rest
+}
+
+func (c ExpandedExecutionCut) Hash() [32]byte {
+	return hashing.SoliditySHA3(hashing.Uint256(c.GasUsed), hashing.Bytes32(c.Rest))
 }
 
 type Bisection struct {
@@ -106,12 +119,12 @@ func NewChallengeWatcher(address ethcommon.Address, client ethutils.EthClient) (
 	}, nil
 }
 
-func (c *ChallengeWatcher) Kind(ctx context.Context) (ChallengeKind, error) {
+func (c *ChallengeWatcher) Kind(ctx context.Context) (core.ChallengeKind, error) {
 	rawKind, err := c.con.Kind(&bind.CallOpts{Context: ctx})
 	if err != nil {
 		return 0, err
 	}
-	return ChallengeKind(rawKind), nil
+	return core.ChallengeKind(rawKind), nil
 }
 
 func (c *ChallengeWatcher) Turn(ctx context.Context) (ChallengeTurn, error) {
@@ -181,7 +194,7 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 		}
 		cuts = make([]Cut, 0, len(parsedLog.ChainHashes))
 		for _, ch := range parsedLog.ChainHashes {
-			cuts = append(cuts, InboxConsistencyCut{InboxAccHash: ch})
+			cuts = append(cuts, SimpleCut{hash: ch})
 		}
 		challengeSegment = &ChallengeSegment{
 			Start:  parsedLog.ChallengedSegmentStart,

@@ -3,6 +3,7 @@ package ethbridge
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/pkg/errors"
 	"math/big"
@@ -45,26 +46,6 @@ type StakerInfo struct {
 	CurrentChallenge *common.Address
 }
 
-type NodeInfo struct {
-	NodeNum       NodeID
-	BlockProposed *common.BlockId
-	Assertion     *Assertion
-	InboxMaxCount *big.Int
-}
-
-func (n *NodeInfo) AfterState() *NodeState {
-	return &NodeState{
-		ProposedBlock:  n.BlockProposed.Height.AsInt(),
-		TotalGasUsed:   n.Assertion.AfterTotalGasUsed(),
-		MachineHash:    n.Assertion.ExecInfo.AfterMachineHash,
-		InboxHash:      n.Assertion.AfterInboxHash,
-		InboxCount:     n.Assertion.AfterInboxCount(),
-		TotalSendCount: n.Assertion.AfterTotalSendCount(),
-		TotalLogCount:  n.Assertion.AfterTotalLogCount(),
-		InboxMaxCount:  n.InboxMaxCount,
-	}
-}
-
 type DeliveredInboxMessage struct {
 	BlockHash      common.Hash
 	BeforeInboxAcc common.Hash
@@ -85,8 +66,6 @@ func (d *DeliveredInboxMessage) Block() *common.BlockId {
 	}
 }
 
-type NodeID *big.Int
-
 type RollupWatcher struct {
 	con     *ethbridgecontracts.Rollup
 	address ethcommon.Address
@@ -106,7 +85,7 @@ func NewRollupWatcher(address ethcommon.Address, client ethutils.EthClient) (*Ro
 	}, nil
 }
 
-func (r *RollupWatcher) LookupNodes(ctx context.Context, nodes []*big.Int) ([]*NodeInfo, error) {
+func (r *RollupWatcher) LookupNodes(ctx context.Context, nodes []*big.Int) ([]*core.NodeInfo, error) {
 	var nodeQuery []ethcommon.Hash
 	for _, node := range nodes {
 		var nd ethcommon.Hash
@@ -124,7 +103,7 @@ func (r *RollupWatcher) LookupNodes(ctx context.Context, nodes []*big.Int) ([]*N
 	if err != nil {
 		return nil, err
 	}
-	infos := make([]*NodeInfo, 0, len(logs))
+	infos := make([]*core.NodeInfo, 0, len(logs))
 	for _, ethLog := range logs {
 		parsedLog, err := r.con.ParseNodeCreated(ethLog)
 		if err != nil {
@@ -134,10 +113,10 @@ func (r *RollupWatcher) LookupNodes(ctx context.Context, nodes []*big.Int) ([]*N
 			Height:     common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
 			HeaderHash: common.NewHashFromEth(ethLog.BlockHash),
 		}
-		infos = append(infos, &NodeInfo{
+		infos = append(infos, &core.NodeInfo{
 			NodeNum:       parsedLog.NodeNum,
 			BlockProposed: proposed,
-			Assertion:     NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
+			Assertion:     core.NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
 			InboxMaxCount: parsedLog.InboxMaxCount,
 		})
 	}
@@ -191,7 +170,7 @@ func (r *RollupWatcher) parseMessage(ctx context.Context, ethLog types.Log, time
 			return nil, err
 		}
 		msg := inbox.InboxMessage{
-			Kind:        parsedLog.Kind,
+			Kind:        inbox.Type(parsedLog.Kind),
 			Sender:      common.NewAddressFromEth(parsedLog.Sender),
 			InboxSeqNum: parsedLog.MessageNum,
 			Data:        parsedLog.Data,
@@ -216,7 +195,7 @@ func (r *RollupWatcher) parseMessage(ctx context.Context, ethLog types.Log, time
 			return nil, err
 		}
 		msg := inbox.InboxMessage{
-			Kind:        parsedLog.Kind,
+			Kind:        inbox.Type(parsedLog.Kind),
 			Sender:      common.NewAddressFromEth(parsedLog.Sender),
 			InboxSeqNum: parsedLog.MessageNum,
 			Data:        args["messageData"].([]byte),
@@ -325,7 +304,7 @@ func (r *RollupWatcher) ChallengePeriodBlocks(ctx context.Context) (*big.Int, er
 	return r.con.ChallengePeriodBlocks(&bind.CallOpts{Context: ctx})
 }
 
-func (r *RollupWatcher) GetNode(ctx context.Context, node NodeID) (*NodeWatcher, error) {
+func (r *RollupWatcher) GetNode(ctx context.Context, node core.NodeID) (*NodeWatcher, error) {
 	nodeAddress, err := r.con.Nodes(&bind.CallOpts{Context: ctx}, node)
 	if err != nil {
 		return nil, err

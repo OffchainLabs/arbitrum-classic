@@ -1,4 +1,4 @@
-package validator
+package challenge
 
 import (
 	"context"
@@ -23,7 +23,7 @@ func (i *InboxConsistencyImpl) GetCut(lookup core.ValidatorLookup, offset *big.I
 	if err != nil {
 		return nil, err
 	}
-	return ethbridge.InboxConsistencyCut{InboxAccHash: inboxAcc}, nil
+	return ethbridge.NewSimpleCut(inboxAcc), nil
 }
 
 func (i *InboxConsistencyImpl) Bisect(
@@ -35,9 +35,8 @@ func (i *InboxConsistencyImpl) Bisect(
 ) (*types.Transaction, error) {
 	return challenge.BisectInboxDelta(
 		ctx,
-		prevBisection.Cuts,
+		prevBisection,
 		segmentToChallenge,
-		prevBisection.ChallengedSegment,
 		subCuts,
 	)
 }
@@ -60,9 +59,8 @@ func (i *InboxConsistencyImpl) OneStepProof(
 	}
 	return challenge.OneStepProveInboxConsistency(
 		ctx,
-		prevBisection.Cuts,
+		prevBisection,
 		segmentToChallenge,
-		prevBisection.ChallengedSegment,
 		beforeInboxAcc,
 		msgs[0].CommitmentHash(),
 	)

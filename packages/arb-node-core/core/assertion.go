@@ -1,10 +1,10 @@
-package ethbridge
+package core
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
+	"math/big"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"math/big"
 )
 
 type NodeState struct {
@@ -20,7 +20,7 @@ type NodeState struct {
 
 type Assertion struct {
 	PrevState *NodeState
-	*core.AssertionInfo
+	*AssertionInfo
 }
 
 func NewAssertionFromFields(a [7][32]byte, b [10]*big.Int) *Assertion {
@@ -36,9 +36,9 @@ func NewAssertionFromFields(a [7][32]byte, b [10]*big.Int) *Assertion {
 	}
 	return &Assertion{
 		PrevState: prevState,
-		AssertionInfo: &core.AssertionInfo{
+		AssertionInfo: &AssertionInfo{
 			InboxDelta: a[2],
-			ExecInfo: &core.ExecutionInfo{
+			ExecInfo: &ExecutionInfo{
 				BeforeMachineHash: prevState.MachineHash,
 				InboxMessagesRead: b[6],
 				GasUsed:           b[7],
@@ -110,7 +110,7 @@ func BisectionChunkHash(
 	)
 }
 
-func inboxDeltaHash(inboxAcc, deltaAcc common.Hash) common.Hash {
+func InboxDeltaHash(inboxAcc, deltaAcc common.Hash) common.Hash {
 	return hashing.SoliditySHA3(hashing.Bytes32(inboxAcc), hashing.Bytes32(deltaAcc))
 }
 
@@ -152,8 +152,8 @@ func (a *Assertion) InboxDeltaHash() common.Hash {
 	return BisectionChunkHash(
 		a.ExecInfo.InboxMessagesRead,
 		a.ExecInfo.InboxMessagesRead,
-		inboxDeltaHash(a.AfterInboxHash, common.Hash{}),
-		inboxDeltaHash(a.PrevState.InboxHash, a.InboxDelta),
+		InboxDeltaHash(a.AfterInboxHash, common.Hash{}),
+		InboxDeltaHash(a.PrevState.InboxHash, a.InboxDelta),
 	)
 }
 

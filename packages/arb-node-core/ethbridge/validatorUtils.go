@@ -6,6 +6,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -75,7 +76,7 @@ func (v *ValidatorUtilsWatcher) GetConfig(ctx context.Context) (*RollupConfig, e
 	}, nil
 }
 
-func (v *ValidatorUtilsWatcher) SuccessorNodes(ctx context.Context, node NodeID) ([]*big.Int, error) {
+func (v *ValidatorUtilsWatcher) SuccessorNodes(ctx context.Context, node core.NodeID) ([]*big.Int, error) {
 	return v.con.SuccessorNodes(&bind.CallOpts{Context: ctx}, v.rollupAddress, node)
 }
 
@@ -83,7 +84,7 @@ func (v *ValidatorUtilsWatcher) StakedNodes(ctx context.Context, staker common.A
 	return v.con.StakedNodes(&bind.CallOpts{Context: ctx}, v.rollupAddress, staker.ToEthAddress())
 }
 
-func (v *ValidatorUtilsWatcher) CheckDecidableNextNode(ctx context.Context) (ConfirmType, NodeID, common.Address, error) {
+func (v *ValidatorUtilsWatcher) CheckDecidableNextNode(ctx context.Context) (ConfirmType, core.NodeID, common.Address, error) {
 	confirmType, successorWithStake, stakerAddress, err := v.con.CheckDecidableNextNode(
 		&bind.CallOpts{Context: ctx},
 		v.rollupAddress,

@@ -1,4 +1,4 @@
-package validator
+package challenge
 
 import (
 	"context"
@@ -20,7 +20,7 @@ type inboxDelta struct {
 type Challenger struct {
 	challenge      *ethbridge.Challenge
 	lookup         core.ValidatorLookup
-	challengedNode *ethbridge.NodeInfo
+	challengedNode *core.NodeInfo
 
 	inboxDelta *inboxDelta
 }
@@ -50,7 +50,7 @@ func (c *Challenger) InboxDelta() (*inboxDelta, error) {
 	return c.inboxDelta, nil
 }
 
-func NewChallenger(challenge *ethbridge.Challenge, lookup core.ValidatorLookup, challengedNode *ethbridge.NodeInfo) *Challenger {
+func NewChallenger(challenge *ethbridge.Challenge, lookup core.ValidatorLookup, challengedNode *core.NodeInfo) *Challenger {
 	return &Challenger{
 		challenge:      challenge,
 		lookup:         lookup,
@@ -73,30 +73,30 @@ func (c *Challenger) handleConflict(ctx context.Context) (*types.Transaction, er
 	}
 
 	switch kind {
-	case ethbridge.UNINITIALIZED:
-		judgment, err := judgeNode(c.lookup, c.challengedNode, nil)
+	case core.UNINITIALIZED:
+		judgment, err := core.JudgeNode(c.lookup, c.challengedNode, nil)
 		if err != nil {
 			return nil, err
 		}
 		switch judgment {
-		case ethbridge.INBOX_CONSISTENCY:
+		case core.INBOX_CONSISTENCY:
 			return c.handleInboxConsistencyChallenge(ctx)
-		case ethbridge.INBOX_DELTA:
+		case core.INBOX_DELTA:
 			return c.handleInboxDeltaChallenge(ctx)
-		case ethbridge.EXECUTION:
+		case core.EXECUTION:
 			return c.handleExecutionChallenge()
-		case ethbridge.STOPPED_SHORT:
+		case core.STOPPED_SHORT:
 			return c.handleStoppedShortChallenge()
 		default:
 			return nil, errors.New("can't handle challenge")
 		}
-	case ethbridge.INBOX_CONSISTENCY:
+	case core.INBOX_CONSISTENCY:
 		return c.handleInboxConsistencyChallenge(ctx)
-	case ethbridge.INBOX_DELTA:
+	case core.INBOX_DELTA:
 		return c.handleInboxDeltaChallenge(ctx)
-	case ethbridge.EXECUTION:
+	case core.EXECUTION:
 		return c.handleExecutionChallenge()
-	case ethbridge.STOPPED_SHORT:
+	case core.STOPPED_SHORT:
 		return c.handleStoppedShortChallenge()
 	default:
 		return nil, errors.New("can't handle challenge")

@@ -309,10 +309,10 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function bisectExecution(
-        uint256 _challengedSegmentStart,
-        uint256 _challengedSegmentLength,
         uint256 _challengedSegmentIndex,
         bytes calldata _proof,
+        uint256 _challengedSegmentStart,
+        uint256 _challengedSegmentLength,
         bytes32 _oldEndHash,
         bytes32[] calldata _chainHashes,
         uint256 _gasUsedBefore,
@@ -360,10 +360,10 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function constraintWinExecution(
-        uint256 _challengedSegmentStart,
-        uint256 _challengedSegmentLength,
         uint256 _challengedSegmentIndex,
         bytes calldata _proof,
+        uint256 _challengedSegmentStart,
+        uint256 _challengedSegmentLength,
         bytes32 _oldEndHash,
         uint256 _gasUsedBefore,
         bytes32 _assertionRest
@@ -392,9 +392,9 @@ contract Challenge is Cloneable, IChallenge {
     //  initialMessage
     //  initialLog
     function oneStepProveExecution(
-        uint256 _challengedSegmentStart,
         uint256 _challengedSegmentIndex,
         bytes memory _proof,
+        uint256 _challengedSegmentStart,
         bytes32 _oldEndHash,
         bytes32[3] memory _machineFields,
         uint64 _initialGasUsed,

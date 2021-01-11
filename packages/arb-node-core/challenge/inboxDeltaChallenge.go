@@ -1,4 +1,4 @@
-package validator
+package challenge
 
 import (
 	"context"
@@ -42,9 +42,8 @@ func (i *InboxDeltaImpl) Bisect(
 ) (*types.Transaction, error) {
 	return challenge.BisectInboxDelta(
 		ctx,
-		prevBisection.Cuts,
+		prevBisection,
 		segmentToChallenge,
-		prevBisection.ChallengedSegment,
 		subCuts,
 	)
 }
@@ -64,9 +63,8 @@ func (i *InboxDeltaImpl) OneStepProof(
 	}
 	return challenge.OneStepProveInboxDelta(
 		ctx,
-		prevBisection.Cuts,
+		prevBisection,
 		segmentToChallenge,
-		prevBisection.ChallengedSegment,
 		msgs[0],
 	)
 }
