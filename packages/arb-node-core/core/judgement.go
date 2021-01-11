@@ -27,6 +27,7 @@ type NodeInfo struct {
 	BlockProposed *common.BlockId
 	Assertion     *Assertion
 	InboxMaxCount *big.Int
+	InboxMaxHash  common.Hash
 }
 
 func (n *NodeInfo) AfterState() *NodeState {
@@ -42,39 +43,39 @@ func (n *NodeInfo) AfterState() *NodeState {
 	}
 }
 
-func JudgeNode(lookup ValidatorLookup, nd *NodeInfo, mach machine.Machine) (ChallengeKind, error) {
-	afterInboxHash, err := lookup.GetInboxAcc(nd.Assertion.AfterInboxCount())
+func JudgeAssertion(lookup ValidatorLookup, assertion *Assertion, mach machine.Machine) (ChallengeKind, error) {
+	afterInboxHash, err := lookup.GetInboxAcc(assertion.AfterInboxCount())
 	if err != nil {
 		return 0, err
 	}
-	if nd.Assertion.AfterInboxHash != afterInboxHash {
+	if assertion.AfterInboxHash != afterInboxHash {
 		// Failed inbox consistency
 		return INBOX_CONSISTENCY, nil
 	}
-	messages, err := lookup.GetMessages(nd.Assertion.PrevState.InboxCount, nd.Assertion.ExecInfo.InboxMessagesRead)
+	messages, err := lookup.GetMessages(assertion.PrevState.InboxCount, assertion.ExecInfo.InboxMessagesRead)
 	if err != nil {
 		return 0, err
 	}
-	if nd.Assertion.InboxDelta != calculateInboxDeltaAcc(messages) {
+	if assertion.InboxDelta != calculateInboxDeltaAcc(messages) {
 		// Failed inbox delta
 		return INBOX_DELTA, nil
 	}
 	if mach == nil {
-		mach, err = lookup.GetMachine(nd.Assertion.PrevState.TotalGasUsed)
+		mach, err = lookup.GetMachine(assertion.PrevState.TotalGasUsed)
 		if err != nil {
 			return 0, err
 		}
 	}
-	localExecutionInfo, err := lookup.GetExecutionInfoWithMaxMessages(mach, nd.Assertion.ExecInfo.GasUsed, nd.Assertion.ExecInfo.InboxMessagesRead)
+	localExecutionInfo, err := lookup.GetExecutionInfoWithMaxMessages(mach, assertion.ExecInfo.GasUsed, assertion.ExecInfo.InboxMessagesRead)
 	if err != nil {
 		return 0, err
 	}
 
-	if localExecutionInfo.GasUsed.Cmp(nd.Assertion.ExecInfo.GasUsed) < 0 {
+	if localExecutionInfo.GasUsed.Cmp(assertion.ExecInfo.GasUsed) < 0 {
 		return STOPPED_SHORT, nil
 	}
 
-	if !nd.Assertion.ExecInfo.Equals(localExecutionInfo) {
+	if !assertion.ExecInfo.Equals(localExecutionInfo) {
 		return EXECUTION, nil
 	}
 	return NO_CHALLENGE, nil

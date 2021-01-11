@@ -217,7 +217,7 @@ func (v *Validator) selectValidChild(ctx context.Context, node core.NodeID) (*co
 	}
 
 	for _, nd := range nodes {
-		chalType, err := core.JudgeNode(v.lookup, nd, mach)
+		chalType, err := core.JudgeAssertion(v.lookup, nd.Assertion, mach)
 		if err != nil {
 			return nil, err
 		}
@@ -276,7 +276,7 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 		return nil, err
 	}
 
-	return challenge.NewChallenger(challengeCon, s.lookup, nodeInfo), nil
+	return challenge.NewChallenger(challengeCon, s.lookup, nodeInfo.Assertion), nil
 }
 
 func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (*types.Transaction, error) {

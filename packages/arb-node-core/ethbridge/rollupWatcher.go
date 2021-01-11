@@ -118,6 +118,7 @@ func (r *RollupWatcher) LookupNodes(ctx context.Context, nodes []*big.Int) ([]*c
 			BlockProposed: proposed,
 			Assertion:     core.NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
 			InboxMaxCount: parsedLog.InboxMaxCount,
+			InboxMaxHash:  parsedLog.InboxMaxHash,
 		})
 	}
 	return infos, nil

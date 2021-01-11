@@ -2,9 +2,14 @@ package challenge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"math/big"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -16,18 +21,57 @@ import (
 
 func TestInboxConsistencyChallenge(t *testing.T) {
 	ctx := context.Background()
-	client, asserter, challenger, challengeAddress := initializeChallengeTest(
-		t,
-		[32]byte{},
-		[32]byte{},
-		[32]byte{},
-		big.NewInt(0),
-		big.NewInt(0),
-	)
 
-	challengerChallenge, err := ethbridge.NewChallenge(challengeAddress, client, ethbridge.NewTransactAuth(challenger))
+	prevState := &core.NodeState{
+		ProposedBlock:  big.NewInt(0),
+		TotalGasUsed:   big.NewInt(0),
+		MachineHash:    common.Hash{},
+		InboxHash:      common.Hash{},
+		InboxCount:     big.NewInt(0),
+		TotalSendCount: big.NewInt(0),
+		TotalLogCount:  big.NewInt(0),
+		InboxMaxCount:  big.NewInt(0),
+	}
+
+	assertionInfo := &core.AssertionInfo{
+		InboxDelta: common.Hash{},
+		ExecInfo: &core.ExecutionInfo{
+			BeforeMachineHash: common.Hash{},
+			InboxMessagesRead: big.NewInt(0),
+			GasUsed:           big.NewInt(0),
+			SendAcc:           common.Hash{},
+			SendCount:         big.NewInt(0),
+			LogAcc:            common.Hash{},
+			LogCount:          big.NewInt(0),
+			AfterMachineHash:  common.Hash{},
+		},
+		AfterInboxHash: common.Hash{},
+	}
+
+	assertion := &core.Assertion{
+		PrevState:     prevState,
+		AssertionInfo: assertionInfo,
+	}
+
+	challengedNode := &core.NodeInfo{
+		NodeNum: big.NewInt(1),
+		BlockProposed: &common.BlockId{
+			Height:     common.NewTimeBlocks(common.RandBigInt()),
+			HeaderHash: common.RandHash(),
+		},
+		Assertion:     assertion,
+		InboxMaxCount: big.NewInt(0),
+		InboxMaxHash:  common.Hash{},
+	}
+
+	arbGasSpeedLimitPerBlock := big.NewInt(100000)
+	challengePeriodBlocks := big.NewInt(100)
+
+	client, asserterAuth, challengerAuth, challengeAddress := initializeChallengeTest(t, challengedNode, arbGasSpeedLimitPerBlock, challengePeriodBlocks)
+
+	challengerChallenge, err := ethbridge.NewChallenge(challengeAddress, client, ethbridge.NewTransactAuth(challengerAuth))
 	test.FailIfError(t, err)
-	asserterChallenge, err := ethbridge.NewChallenge(challengeAddress, client, ethbridge.NewTransactAuth(asserter))
+	asserterChallenge, err := ethbridge.NewChallenge(challengeAddress, client, ethbridge.NewTransactAuth(asserterAuth))
 	test.FailIfError(t, err)
 
 	kind1, err := challengerChallenge.Kind(ctx)
@@ -37,14 +81,21 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 	if kind1 != kind2 {
 		t.Fatal("kind doesn't match")
 	}
+
+	mach, err := cmachine.New(arbos.Path())
+	lookup := core.NewValidatorLookupMock(mach)
+
+	challenger := NewChallenger(challengerChallenge, lookup, assertion)
+	//asserter := NewChallenger(challengerChallenge, lookup, assertion)
+
+	_, err = challenger.handleConflict(ctx)
+	test.FailIfError(t, err)
 }
 
 func initializeChallengeTest(
 	t *testing.T,
-	inboxConsistencyHash [32]byte,
-	inboxDeltaHash [32]byte,
-	executionHash [32]byte,
-	executionCheckTimeBlocks *big.Int,
+	nd *core.NodeInfo,
+	arbGasLimitPerBlock *big.Int,
 	challengePeriodBlocks *big.Int,
 ) (*ethutils.SimulatedEthClient, *bind.TransactOpts, *bind.TransactOpts, ethcommon.Address) {
 	clnt, pks := test.SimulatedBackend()
@@ -60,10 +111,10 @@ func initializeChallengeTest(
 	test.FailIfError(t, err)
 	_, err = tester.StartChallenge(
 		deployer,
-		inboxConsistencyHash,
-		inboxDeltaHash,
-		executionHash,
-		executionCheckTimeBlocks,
+		nd.Assertion.InboxConsistencyHash(nd.InboxMaxHash, nd.InboxMaxCount),
+		nd.Assertion.InboxDeltaHash(),
+		nd.Assertion.ExecutionHash(),
+		nd.Assertion.CheckTime(arbGasLimitPerBlock),
 		asserter.From,
 		challenger.From,
 		challengePeriodBlocks,

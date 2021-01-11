@@ -23,7 +23,8 @@ interface IRollup {
         uint256 indexed nodeNum,
         bytes32[7] assertionBytes32Fields,
         uint256[10] assertionIntFields,
-        uint256 inboxMaxCount
+        uint256 inboxMaxCount,
+        bytes32 inboxMaxHash
     );
 
     event RollupChallengeStarted(

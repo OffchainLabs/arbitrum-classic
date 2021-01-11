@@ -459,7 +459,8 @@ contract Rollup is Inbox, Outbox, IRollup {
             latestNodeCreated,
             assertionBytes32Fields,
             assertionIntFields,
-            inboxMaxCount
+            inboxMaxCount,
+            inboxMaxValue
         );
     }
 

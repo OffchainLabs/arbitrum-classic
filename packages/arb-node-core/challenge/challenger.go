@@ -18,9 +18,9 @@ type inboxDelta struct {
 }
 
 type Challenger struct {
-	challenge      *ethbridge.Challenge
-	lookup         core.ValidatorLookup
-	challengedNode *core.NodeInfo
+	challenge           *ethbridge.Challenge
+	lookup              core.ValidatorLookup
+	challengedAssertion *core.Assertion
 
 	inboxDelta *inboxDelta
 }
@@ -28,8 +28,8 @@ type Challenger struct {
 func (c *Challenger) InboxDelta() (*inboxDelta, error) {
 	if c.inboxDelta != nil {
 		messages, err := c.lookup.GetMessages(
-			c.challengedNode.Assertion.PrevState.InboxCount,
-			c.challengedNode.Assertion.ExecInfo.InboxMessagesRead,
+			c.challengedAssertion.PrevState.InboxCount,
+			c.challengedAssertion.ExecInfo.InboxMessagesRead,
 		)
 		if err != nil {
 			return nil, err
@@ -50,11 +50,11 @@ func (c *Challenger) InboxDelta() (*inboxDelta, error) {
 	return c.inboxDelta, nil
 }
 
-func NewChallenger(challenge *ethbridge.Challenge, lookup core.ValidatorLookup, challengedNode *core.NodeInfo) *Challenger {
+func NewChallenger(challenge *ethbridge.Challenge, lookup core.ValidatorLookup, challengedAssertion *core.Assertion) *Challenger {
 	return &Challenger{
-		challenge:      challenge,
-		lookup:         lookup,
-		challengedNode: challengedNode,
+		challenge:           challenge,
+		lookup:              lookup,
+		challengedAssertion: challengedAssertion,
 	}
 }
 
@@ -74,7 +74,7 @@ func (c *Challenger) handleConflict(ctx context.Context) (*types.Transaction, er
 
 	switch kind {
 	case core.UNINITIALIZED:
-		judgment, err := core.JudgeNode(c.lookup, c.challengedNode, nil)
+		judgment, err := core.JudgeAssertion(c.lookup, c.challengedAssertion, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +115,7 @@ func (c *Challenger) handleInboxDeltaChallenge(ctx context.Context) (*types.Tran
 		return nil, err
 	}
 	challengeImpl := &InboxDeltaImpl{
-		nodeAfterInboxCount: c.challengedNode.Assertion.AfterInboxCount(),
+		nodeAfterInboxCount: c.challengedAssertion.AfterInboxCount(),
 		inboxDelta:          inboxDeltaData,
 	}
 	return handleChallenge(ctx, c.challenge, c.lookup, challengeImpl)
