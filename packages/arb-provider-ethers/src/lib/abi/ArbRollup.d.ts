@@ -14,7 +14,11 @@ interface ArbRollupInterface extends Interface {
   functions: {
     VERSION: TypedFunctionDescription<{ encode([]: []): string }>
 
+    allowedStakers: TypedFunctionDescription<{ encode([]: [string]): string }>
+
     challengeFactory: TypedFunctionDescription<{ encode([]: []): string }>
+
+    challenges: TypedFunctionDescription<{ encode([]: [string]): string }>
 
     confirm: TypedFunctionDescription<{
       encode([
@@ -45,6 +49,8 @@ interface ArbRollupInterface extends Interface {
         BigNumberish[]
       ]): string
     }>
+
+    enableStakerAllowList: TypedFunctionDescription<{ encode([]: []): string }>
 
     getStakeRequired: TypedFunctionDescription<{ encode([]: []): string }>
 
@@ -94,6 +100,10 @@ interface ArbRollupInterface extends Interface {
 
     latestConfirmed: TypedFunctionDescription<{ encode([]: []): string }>
 
+    latestConfirmedPriv: TypedFunctionDescription<{ encode([]: []): string }>
+
+    leaves: TypedFunctionDescription<{ encode([]: [Arrayish]): string }>
+
     makeAssertion: TypedFunctionDescription<{
       encode([
         fields,
@@ -126,7 +136,39 @@ interface ArbRollupInterface extends Interface {
 
     owner: TypedFunctionDescription<{ encode([]: []): string }>
 
+    ownerAddAllowedStaker: TypedFunctionDescription<{
+      encode([staker]: [string]): string
+    }>
+
+    ownerConfirm: TypedFunctionDescription<{
+      encode([logsAcc, validNodeHashes, finalNodeHash]: [
+        Arrayish[],
+        Arrayish[],
+        Arrayish
+      ]): string
+    }>
+
+    ownerRefundStaker: TypedFunctionDescription<{
+      encode([staker]: [string]): string
+    }>
+
+    ownerRemoveAllowedStaker: TypedFunctionDescription<{
+      encode([staker]: [string]): string
+    }>
+
+    ownerSendMessages: TypedFunctionDescription<{
+      encode([messages, initialMaxSendCount, finalMaxSendCount]: [
+        Arrayish,
+        BigNumberish,
+        BigNumberish
+      ]): string
+    }>
+
     ownerShutdown: TypedFunctionDescription<{ encode([]: []): string }>
+
+    ownerToggleStakerAllowListed: TypedFunctionDescription<{
+      encode([shouldRequire]: [boolean]): string
+    }>
 
     placeStake: TypedFunctionDescription<{
       encode([proof1, proof2]: [Arrayish[], Arrayish[]]): string
@@ -187,6 +229,14 @@ interface ArbRollupInterface extends Interface {
       encode([winner, loser]: [string, string]): string
     }>
 
+    stakeRequirement: TypedFunctionDescription<{ encode([]: []): string }>
+
+    stakeToken: TypedFunctionDescription<{ encode([]: []): string }>
+
+    stakerCount: TypedFunctionDescription<{ encode([]: []): string }>
+
+    stakers: TypedFunctionDescription<{ encode([]: [string]): string }>
+
     startChallenge: TypedFunctionDescription<{
       encode([
         asserterAddress,
@@ -216,6 +266,8 @@ interface ArbRollupInterface extends Interface {
     }>
 
     vmParams: TypedFunctionDescription<{ encode([]: []): string }>
+
+    withdrawnStakes: TypedFunctionDescription<{ encode([]: [string]): string }>
   }
 
   events: {
@@ -310,9 +362,26 @@ export class ArbRollup extends Contract {
 
     'VERSION()'(overrides?: TransactionOverrides): Promise<string>
 
+    allowedStakers(
+      arg0: string,
+      overrides?: TransactionOverrides
+    ): Promise<boolean>
+
+    'allowedStakers(address)'(
+      arg0: string,
+      overrides?: TransactionOverrides
+    ): Promise<boolean>
+
     challengeFactory(overrides?: TransactionOverrides): Promise<string>
 
     'challengeFactory()'(overrides?: TransactionOverrides): Promise<string>
+
+    challenges(arg0: string, overrides?: TransactionOverrides): Promise<boolean>
+
+    'challenges(address)'(
+      arg0: string,
+      overrides?: TransactionOverrides
+    ): Promise<boolean>
 
     confirm(
       initalProtoStateHash: Arrayish,
@@ -345,6 +414,12 @@ export class ArbRollup extends Contract {
       stakerProofOffsets: BigNumberish[],
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
+
+    enableStakerAllowList(overrides?: TransactionOverrides): Promise<boolean>
+
+    'enableStakerAllowList()'(
+      overrides?: TransactionOverrides
+    ): Promise<boolean>
 
     getStakeRequired(overrides?: TransactionOverrides): Promise<BigNumber>
 
@@ -424,6 +499,17 @@ export class ArbRollup extends Contract {
 
     'latestConfirmed()'(overrides?: TransactionOverrides): Promise<string>
 
+    latestConfirmedPriv(overrides?: TransactionOverrides): Promise<string>
+
+    'latestConfirmedPriv()'(overrides?: TransactionOverrides): Promise<string>
+
+    leaves(arg0: Arrayish, overrides?: TransactionOverrides): Promise<boolean>
+
+    'leaves(bytes32)'(
+      arg0: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<boolean>
+
     makeAssertion(
       fields: Arrayish[],
       fields2: BigNumberish[],
@@ -468,11 +554,79 @@ export class ArbRollup extends Contract {
 
     'owner()'(overrides?: TransactionOverrides): Promise<string>
 
+    ownerAddAllowedStaker(
+      staker: string,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'ownerAddAllowedStaker(address)'(
+      staker: string,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    ownerConfirm(
+      logsAcc: Arrayish[],
+      validNodeHashes: Arrayish[],
+      finalNodeHash: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'ownerConfirm(bytes32[],bytes32[],bytes32)'(
+      logsAcc: Arrayish[],
+      validNodeHashes: Arrayish[],
+      finalNodeHash: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    ownerRefundStaker(
+      staker: string,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'ownerRefundStaker(address)'(
+      staker: string,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    ownerRemoveAllowedStaker(
+      staker: string,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'ownerRemoveAllowedStaker(address)'(
+      staker: string,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    ownerSendMessages(
+      messages: Arrayish,
+      initialMaxSendCount: BigNumberish,
+      finalMaxSendCount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'ownerSendMessages(bytes,uint256,uint256)'(
+      messages: Arrayish,
+      initialMaxSendCount: BigNumberish,
+      finalMaxSendCount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
     ownerShutdown(
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
     'ownerShutdown()'(
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    ownerToggleStakerAllowListed(
+      shouldRequire: boolean,
+      overrides?: TransactionOverrides
+    ): Promise<ContractTransaction>
+
+    'ownerToggleStakerAllowListed(bool)'(
+      shouldRequire: boolean,
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
@@ -576,6 +730,42 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<ContractTransaction>
 
+    stakeRequirement(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'stakeRequirement()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    stakeToken(overrides?: TransactionOverrides): Promise<string>
+
+    'stakeToken()'(overrides?: TransactionOverrides): Promise<string>
+
+    stakerCount(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'stakerCount()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    stakers(
+      arg0: string,
+      overrides?: TransactionOverrides
+    ): Promise<{
+      location: string
+      creationTimeBlocks: BigNumber
+      inChallenge: boolean
+      0: string
+      1: BigNumber
+      2: boolean
+    }>
+
+    'stakers(address)'(
+      arg0: string,
+      overrides?: TransactionOverrides
+    ): Promise<{
+      location: string
+      creationTimeBlocks: BigNumber
+      inChallenge: boolean
+      0: string
+      1: BigNumber
+      2: boolean
+    }>
+
     startChallenge(
       asserterAddress: string,
       challengerAddress: string,
@@ -627,15 +817,42 @@ export class ArbRollup extends Contract {
       1: BigNumber
       2: BigNumber
     }>
+
+    withdrawnStakes(
+      arg0: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'withdrawnStakes(address)'(
+      arg0: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
   }
 
   VERSION(overrides?: TransactionOverrides): Promise<string>
 
   'VERSION()'(overrides?: TransactionOverrides): Promise<string>
 
+  allowedStakers(
+    arg0: string,
+    overrides?: TransactionOverrides
+  ): Promise<boolean>
+
+  'allowedStakers(address)'(
+    arg0: string,
+    overrides?: TransactionOverrides
+  ): Promise<boolean>
+
   challengeFactory(overrides?: TransactionOverrides): Promise<string>
 
   'challengeFactory()'(overrides?: TransactionOverrides): Promise<string>
+
+  challenges(arg0: string, overrides?: TransactionOverrides): Promise<boolean>
+
+  'challenges(address)'(
+    arg0: string,
+    overrides?: TransactionOverrides
+  ): Promise<boolean>
 
   confirm(
     initalProtoStateHash: Arrayish,
@@ -668,6 +885,10 @@ export class ArbRollup extends Contract {
     stakerProofOffsets: BigNumberish[],
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
+
+  enableStakerAllowList(overrides?: TransactionOverrides): Promise<boolean>
+
+  'enableStakerAllowList()'(overrides?: TransactionOverrides): Promise<boolean>
 
   getStakeRequired(overrides?: TransactionOverrides): Promise<BigNumber>
 
@@ -747,6 +968,17 @@ export class ArbRollup extends Contract {
 
   'latestConfirmed()'(overrides?: TransactionOverrides): Promise<string>
 
+  latestConfirmedPriv(overrides?: TransactionOverrides): Promise<string>
+
+  'latestConfirmedPriv()'(overrides?: TransactionOverrides): Promise<string>
+
+  leaves(arg0: Arrayish, overrides?: TransactionOverrides): Promise<boolean>
+
+  'leaves(bytes32)'(
+    arg0: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<boolean>
+
   makeAssertion(
     fields: Arrayish[],
     fields2: BigNumberish[],
@@ -791,9 +1023,77 @@ export class ArbRollup extends Contract {
 
   'owner()'(overrides?: TransactionOverrides): Promise<string>
 
+  ownerAddAllowedStaker(
+    staker: string,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'ownerAddAllowedStaker(address)'(
+    staker: string,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  ownerConfirm(
+    logsAcc: Arrayish[],
+    validNodeHashes: Arrayish[],
+    finalNodeHash: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'ownerConfirm(bytes32[],bytes32[],bytes32)'(
+    logsAcc: Arrayish[],
+    validNodeHashes: Arrayish[],
+    finalNodeHash: Arrayish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  ownerRefundStaker(
+    staker: string,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'ownerRefundStaker(address)'(
+    staker: string,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  ownerRemoveAllowedStaker(
+    staker: string,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'ownerRemoveAllowedStaker(address)'(
+    staker: string,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  ownerSendMessages(
+    messages: Arrayish,
+    initialMaxSendCount: BigNumberish,
+    finalMaxSendCount: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'ownerSendMessages(bytes,uint256,uint256)'(
+    messages: Arrayish,
+    initialMaxSendCount: BigNumberish,
+    finalMaxSendCount: BigNumberish,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
   ownerShutdown(overrides?: TransactionOverrides): Promise<ContractTransaction>
 
   'ownerShutdown()'(
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  ownerToggleStakerAllowListed(
+    shouldRequire: boolean,
+    overrides?: TransactionOverrides
+  ): Promise<ContractTransaction>
+
+  'ownerToggleStakerAllowListed(bool)'(
+    shouldRequire: boolean,
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
@@ -897,6 +1197,42 @@ export class ArbRollup extends Contract {
     overrides?: TransactionOverrides
   ): Promise<ContractTransaction>
 
+  stakeRequirement(overrides?: TransactionOverrides): Promise<BigNumber>
+
+  'stakeRequirement()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+  stakeToken(overrides?: TransactionOverrides): Promise<string>
+
+  'stakeToken()'(overrides?: TransactionOverrides): Promise<string>
+
+  stakerCount(overrides?: TransactionOverrides): Promise<BigNumber>
+
+  'stakerCount()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+  stakers(
+    arg0: string,
+    overrides?: TransactionOverrides
+  ): Promise<{
+    location: string
+    creationTimeBlocks: BigNumber
+    inChallenge: boolean
+    0: string
+    1: BigNumber
+    2: boolean
+  }>
+
+  'stakers(address)'(
+    arg0: string,
+    overrides?: TransactionOverrides
+  ): Promise<{
+    location: string
+    creationTimeBlocks: BigNumber
+    inChallenge: boolean
+    0: string
+    1: BigNumber
+    2: boolean
+  }>
+
   startChallenge(
     asserterAddress: string,
     challengerAddress: string,
@@ -948,6 +1284,16 @@ export class ArbRollup extends Contract {
     1: BigNumber
     2: BigNumber
   }>
+
+  withdrawnStakes(
+    arg0: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
+
+  'withdrawnStakes(address)'(
+    arg0: string,
+    overrides?: TransactionOverrides
+  ): Promise<BigNumber>
 
   filters: {
     ConfirmedAssertion(logsAccHash: null): EventFilter
@@ -1005,9 +1351,29 @@ export class ArbRollup extends Contract {
 
     'VERSION()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
+    allowedStakers(
+      arg0: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'allowedStakers(address)'(
+      arg0: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
     challengeFactory(overrides?: TransactionOverrides): Promise<BigNumber>
 
     'challengeFactory()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    challenges(
+      arg0: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'challenges(address)'(
+      arg0: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
     confirm(
       initalProtoStateHash: Arrayish,
@@ -1038,6 +1404,12 @@ export class ArbRollup extends Contract {
       stakerAddresses: string[],
       stakerProofs: Arrayish[],
       stakerProofOffsets: BigNumberish[],
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    enableStakerAllowList(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'enableStakerAllowList()'(
       overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
@@ -1119,6 +1491,19 @@ export class ArbRollup extends Contract {
 
     'latestConfirmed()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
+    latestConfirmedPriv(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'latestConfirmedPriv()'(
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    leaves(arg0: Arrayish, overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'leaves(bytes32)'(
+      arg0: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
     makeAssertion(
       fields: Arrayish[],
       fields2: BigNumberish[],
@@ -1163,9 +1548,77 @@ export class ArbRollup extends Contract {
 
     'owner()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
+    ownerAddAllowedStaker(
+      staker: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'ownerAddAllowedStaker(address)'(
+      staker: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    ownerConfirm(
+      logsAcc: Arrayish[],
+      validNodeHashes: Arrayish[],
+      finalNodeHash: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'ownerConfirm(bytes32[],bytes32[],bytes32)'(
+      logsAcc: Arrayish[],
+      validNodeHashes: Arrayish[],
+      finalNodeHash: Arrayish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    ownerRefundStaker(
+      staker: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'ownerRefundStaker(address)'(
+      staker: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    ownerRemoveAllowedStaker(
+      staker: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'ownerRemoveAllowedStaker(address)'(
+      staker: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    ownerSendMessages(
+      messages: Arrayish,
+      initialMaxSendCount: BigNumberish,
+      finalMaxSendCount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'ownerSendMessages(bytes,uint256,uint256)'(
+      messages: Arrayish,
+      initialMaxSendCount: BigNumberish,
+      finalMaxSendCount: BigNumberish,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
     ownerShutdown(overrides?: TransactionOverrides): Promise<BigNumber>
 
     'ownerShutdown()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    ownerToggleStakerAllowListed(
+      shouldRequire: boolean,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'ownerToggleStakerAllowListed(bool)'(
+      shouldRequire: boolean,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
 
     placeStake(
       proof1: Arrayish[],
@@ -1267,6 +1720,25 @@ export class ArbRollup extends Contract {
       overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
+    stakeRequirement(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'stakeRequirement()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    stakeToken(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'stakeToken()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    stakerCount(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'stakerCount()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    stakers(arg0: string, overrides?: TransactionOverrides): Promise<BigNumber>
+
+    'stakers(address)'(
+      arg0: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
     startChallenge(
       asserterAddress: string,
       challengerAddress: string,
@@ -1300,5 +1772,15 @@ export class ArbRollup extends Contract {
     vmParams(overrides?: TransactionOverrides): Promise<BigNumber>
 
     'vmParams()'(overrides?: TransactionOverrides): Promise<BigNumber>
+
+    withdrawnStakes(
+      arg0: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
+
+    'withdrawnStakes(address)'(
+      arg0: string,
+      overrides?: TransactionOverrides
+    ): Promise<BigNumber>
   }
 }
