@@ -20,12 +20,13 @@ func calculateBisectionChunkCount(segmentIndex, segmentCount int, totalLength *b
 	return size
 }
 
-func calculateBisectionLeaves(segment *core.ChallengeSegment, segmentHashes [][32]byte) [][32]byte {
-	chunks := make([][32]byte, 0, len(segmentHashes))
+func calculateBisectionLeaves(segment *core.ChallengeSegment, cutHashes [][32]byte) [][32]byte {
+	segmentCount := len(cutHashes) - 1
+	chunks := make([][32]byte, 0, segmentCount)
 	segmentStart := new(big.Int).Set(segment.Start)
-	for i := 0; i < len(segmentHashes)-1; i++ {
-		segmentLength := calculateBisectionChunkCount(i, len(segmentHashes), segment.Length)
-		chunkHash := core.BisectionChunkHash(segmentStart, segmentLength, segmentHashes[i], segmentHashes[i+1])
+	for i := 0; i < segmentCount; i++ {
+		segmentLength := calculateBisectionChunkCount(i, segmentCount, segment.Length)
+		chunkHash := core.BisectionChunkHash(segmentStart, segmentLength, cutHashes[i], cutHashes[i+1])
 		chunks = append(chunks, chunkHash)
 		segmentStart = segmentStart.Add(segmentStart, segmentLength)
 	}
@@ -60,7 +61,8 @@ func (c *Challenge) BisectInboxConsistency(
 ) (*types.Transaction, error) {
 	prevCutHashes := cutsToHashes(prevBisection.Cuts)
 	subCutHashes := cutsToHashes(subCuts)
-	prevTree := NewMerkleTree(calculateBisectionLeaves(prevBisection.ChallengedSegment, prevCutHashes))
+	bisectionLeaves := calculateBisectionLeaves(prevBisection.ChallengedSegment, prevCutHashes)
+	prevTree := NewMerkleTree(bisectionLeaves)
 	return c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return c.con.BisectInboxConsistency(
 			auth,

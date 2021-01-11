@@ -20,6 +20,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 )
 
+func logInboxAccs(t *testing.T, lookupMock *core.ValidatorLookupMock) {
+	for _, inboxAccHash := range lookupMock.InboxAccs {
+		t.Log(inboxAccHash)
+	}
+}
+
 func TestInboxConsistencyChallenge(t *testing.T) {
 	ctx := context.Background()
 
@@ -30,11 +36,15 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 	msg2 := inbox.NewRandomInboxMessage()
 
 	asserterLookup := core.NewValidatorLookupMock(mach)
-	asserterLookup.AddMessage(msg1)
+	asserterLookup.AddMessage(inbox.NewRandomInboxMessage())
 	asserterLookup.AddMessage(msg2)
+	asserterLookup.AddMessage(inbox.NewRandomInboxMessage())
 	challengerLookup := core.NewValidatorLookupMock(mach)
-	challengerLookup.AddMessage(inbox.NewRandomInboxMessage())
+	challengerLookup.AddMessage(msg1)
 	challengerLookup.AddMessage(msg2)
+	challengerLookup.AddMessage(inbox.NewRandomInboxMessage())
+
+	logInboxAccs(t, challengerLookup)
 
 	prevState := &core.NodeState{
 		ProposedBlock:  big.NewInt(0),
@@ -70,7 +80,8 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 		AssertionInfo: assertionInfo,
 	}
 
-	inboxTopAcc, err := challengerLookup.GetInboxAcc(big.NewInt(2))
+	inboxMaxCount := big.NewInt(3)
+	inboxTopAcc, err := challengerLookup.GetInboxAcc(inboxMaxCount)
 	test.FailIfError(t, err)
 	challengedNode := &core.NodeInfo{
 		NodeNum: big.NewInt(1),
@@ -79,7 +90,7 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 			HeaderHash: common.RandHash(),
 		},
 		Assertion:     assertion,
-		InboxMaxCount: big.NewInt(2),
+		InboxMaxCount: inboxMaxCount,
 		InboxMaxHash:  inboxTopAcc,
 	}
 

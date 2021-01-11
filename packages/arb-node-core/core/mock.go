@@ -10,24 +10,34 @@ import (
 )
 
 type ValidatorLookupMock struct {
-	messages  []inbox.InboxMessage
-	inboxAccs []common.Hash
+	Messages  []inbox.InboxMessage
+	InboxAccs []common.Hash
 
 	startMachine machine.Machine
 }
 
 func NewValidatorLookupMock(mach machine.Machine) *ValidatorLookupMock {
 	return &ValidatorLookupMock{
-		inboxAccs:    []common.Hash{{}},
+		InboxAccs:    []common.Hash{{}},
 		startMachine: mach.Clone(),
 	}
 }
 
+//func (v *ValidatorLookupMock) Clone() *ValidatorLookupMock {
+//	messages := make([]inbox.InboxMessage, 0, len(v.Messages))
+//
+//	return &ValidatorLookupMock{
+//		Messages:     nil,
+//		InboxAccs:    nil,
+//		startMachine: nil,
+//	}
+//}
+
 func (v *ValidatorLookupMock) AddMessage(msg inbox.InboxMessage) {
-	prevInboxAcc := v.inboxAccs[len(v.inboxAccs)-1]
+	prevInboxAcc := v.InboxAccs[len(v.InboxAccs)-1]
 	newInboxAcc := hashing.SoliditySHA3(hashing.Bytes32(prevInboxAcc), hashing.Bytes32(msg.CommitmentHash()))
-	v.messages = append(v.messages, msg)
-	v.inboxAccs = append(v.inboxAccs, newInboxAcc)
+	v.Messages = append(v.Messages, msg)
+	v.InboxAccs = append(v.InboxAccs, newInboxAcc)
 }
 
 func (v *ValidatorLookupMock) GenerateLogAccumulator(startIndex *big.Int, count *big.Int) (common.Hash, error) {
@@ -40,10 +50,10 @@ func (v *ValidatorLookupMock) GetSends(startIndex *big.Int, count *big.Int) ([][
 
 func (v *ValidatorLookupMock) GetInboxAcc(index *big.Int) (common.Hash, error) {
 	i := index.Uint64()
-	if i >= uint64(len(v.inboxAccs)) {
-		return common.Hash{}, errors.New("inbox index out of bounds")
+	if i >= uint64(len(v.InboxAccs)) {
+		return common.Hash{}, errors.New("GetInboxAcc: inbox index out of bounds")
 	}
-	return v.inboxAccs[i], nil
+	return v.InboxAccs[i], nil
 }
 
 func (v *ValidatorLookupMock) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.InboxMessage, error) {
@@ -52,10 +62,10 @@ func (v *ValidatorLookupMock) GetMessages(startIndex *big.Int, count *big.Int) (
 	}
 	start := startIndex.Uint64()
 	c := count.Uint64()
-	if start+c >= uint64(len(v.messages)) {
-		return nil, errors.New("inbox index out of bounds")
+	if start+c >= uint64(len(v.Messages)) {
+		return nil, errors.Errorf("GetMessages: inbox index out of bounds (%v, %v)", startIndex, count)
 	}
-	return v.messages[start : start+c], nil
+	return v.Messages[start : start+c], nil
 }
 
 func (v *ValidatorLookupMock) GetMachine(totalGasUsed *big.Int) (machine.Machine, error) {

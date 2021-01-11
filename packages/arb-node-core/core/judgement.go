@@ -47,7 +47,7 @@ func (n *NodeInfo) AfterState() *NodeState {
 func (n *NodeInfo) InitialInboxConsistencyBisection() *Bisection {
 	return &Bisection{
 		ChallengedSegment: &ChallengeSegment{
-			Start:  n.Assertion.PrevState.InboxCount,
+			Start:  big.NewInt(0),
 			Length: new(big.Int).Sub(n.InboxMaxCount, n.Assertion.AfterInboxCount()),
 		},
 		Cuts: []Cut{

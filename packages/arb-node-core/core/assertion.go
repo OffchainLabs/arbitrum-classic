@@ -145,12 +145,12 @@ func assertionRestHash(
 func (a *Assertion) InboxConsistencyHash(inboxTopHash common.Hash, inboxTopCount *big.Int) common.Hash {
 	messagesAfterCount := new(big.Int).Sub(inboxTopCount, a.PrevState.InboxCount)
 	messagesAfterCount = messagesAfterCount.Sub(messagesAfterCount, a.ExecInfo.InboxMessagesRead)
-	return BisectionChunkHash(messagesAfterCount, messagesAfterCount, inboxTopHash, a.AfterInboxHash)
+	return BisectionChunkHash(big.NewInt(0), messagesAfterCount, inboxTopHash, a.AfterInboxHash)
 }
 
 func (a *Assertion) InboxDeltaHash() common.Hash {
 	return BisectionChunkHash(
-		a.ExecInfo.InboxMessagesRead,
+		big.NewInt(0),
 		a.ExecInfo.InboxMessagesRead,
 		InboxDeltaHash(a.AfterInboxHash, common.Hash{}),
 		InboxDeltaHash(a.PrevState.InboxHash, a.InboxDelta),
@@ -183,7 +183,7 @@ func (a *Assertion) AfterExecutionHash() common.Hash {
 
 func (a *Assertion) ExecutionHash() common.Hash {
 	return BisectionChunkHash(
-		a.ExecInfo.GasUsed,
+		big.NewInt(0),
 		a.ExecInfo.GasUsed,
 		a.BeforeExecutionHash(),
 		a.AfterExecutionHash(),

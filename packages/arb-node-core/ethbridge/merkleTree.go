@@ -56,6 +56,9 @@ func (m *MerkleTree) GetNode(index int) common.Hash {
 }
 
 func (m *MerkleTree) GetProof(index int) []common.Hash {
+	if index == 0 && len(m.layers) == 1 {
+		return nil
+	}
 	proof := make([]common.Hash, 0)
 	for _, layer := range m.layers {
 		var pairIndex int

@@ -636,9 +636,10 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 item,
         uint256 _challengedSegmentIndex
     ) private view {
-        (bytes32 calcRoot, ) =
-            MerkleLib.verifyMerkleProof(_proof, item, _challengedSegmentIndex + 1);
-        require(challengeState == calcRoot, BIS_PREV);
+        require(
+            MerkleLib.verifyProof(_proof, challengeState, item, _challengedSegmentIndex + 1),
+            BIS_PREV
+        );
     }
 
     function bisectionDegree(uint256 _chainLength) private pure returns (uint256) {

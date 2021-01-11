@@ -109,7 +109,9 @@ func (c *Challenger) handleConflict(ctx context.Context) (*types.Transaction, er
 }
 
 func (c *Challenger) handleInboxConsistencyChallenge(ctx context.Context, prevBisection *core.Bisection) (*types.Transaction, error) {
-	challengeImpl := &InboxConsistencyImpl{}
+	challengeImpl := &InboxConsistencyImpl{
+		inboxMaxCount: c.challengedNode.InboxMaxCount,
+	}
 	if prevBisection == nil {
 		prevBisection = c.challengedNode.InitialInboxConsistencyBisection()
 	}
@@ -175,7 +177,7 @@ func handleChallenge(
 	challengeImpl ChallengerImpl,
 	prevBisection *core.Bisection,
 ) (*types.Transaction, error) {
-	prevCutOffsets := generateBisectionCutOffsets(prevBisection.ChallengedSegment)
+	prevCutOffsets := generateBisectionCutOffsets(prevBisection.ChallengedSegment, len(prevBisection.Cuts)-1)
 	cutToChallenge, err := challengeImpl.FindFirstDivergence(lookup, prevCutOffsets, prevBisection.Cuts)
 	if err != nil {
 		return nil, err
@@ -191,11 +193,16 @@ func handleChallenge(
 			challenge,
 			lookup,
 			prevBisection,
-			cutToChallenge+1,
+			cutToChallenge-1,
 			inconsistentSegment,
 		)
 	} else {
-		subCutOffsets := generateBisectionCutOffsets(inconsistentSegment)
+		segmentCount := 20
+		if inconsistentSegment.Length.Cmp(big.NewInt(int64(segmentCount))) < 0 {
+			// Safe since this is less than 20
+			segmentCount = int(inconsistentSegment.Length.Int64())
+		}
+		subCutOffsets := generateBisectionCutOffsets(inconsistentSegment, segmentCount)
 		subCuts, err := challengeImpl.GetCuts(lookup, subCutOffsets)
 		if err != nil {
 			return nil, err
@@ -204,7 +211,7 @@ func handleChallenge(
 			ctx,
 			challenge,
 			prevBisection,
-			cutToChallenge+1,
+			cutToChallenge-1,
 			subCuts,
 		)
 	}
@@ -238,22 +245,17 @@ func getCutsSimple(impl SimpleChallengerImpl, lookup core.ValidatorLookup, offse
 	return cuts, nil
 }
 
-func generateBisectionCutOffsets(segment *core.ChallengeSegment) []*big.Int {
-	segmentCount := 20
-	if segment.Length.Cmp(big.NewInt(int64(segmentCount))) < 0 {
-		// Safe since this is less than 20
-		segmentCount = int(segment.Length.Int64())
-	}
+func generateBisectionCutOffsets(segment *core.ChallengeSegment, subSegmentCount int) []*big.Int {
+	cutCount := subSegmentCount + 1
 	offset := new(big.Int).Set(segment.Start)
-	cutOffsets := make([]*big.Int, 0, segmentCount+1)
-	cutOffsets = append(cutOffsets, offset)
-	for i := 0; i < segmentCount; i++ {
-		subSegmentLength := new(big.Int).Div(segment.Length, big.NewInt(int64(segmentCount)))
+	cutOffsets := make([]*big.Int, 0, cutCount)
+	for i := 0; i < cutCount; i++ {
+		cutOffsets = append(cutOffsets, new(big.Int).Set(offset))
+		subSegmentLength := new(big.Int).Div(segment.Length, big.NewInt(int64(subSegmentCount)))
 		if i == 0 {
-			subSegmentLength = subSegmentLength.Add(subSegmentLength, new(big.Int).Mod(segment.Length, big.NewInt(int64(segmentCount))))
+			subSegmentLength = subSegmentLength.Add(subSegmentLength, new(big.Int).Mod(segment.Length, big.NewInt(int64(subSegmentCount))))
 		}
 		offset = offset.Add(offset, subSegmentLength)
-		cutOffsets = append(cutOffsets, offset)
 	}
 	return cutOffsets
 }
