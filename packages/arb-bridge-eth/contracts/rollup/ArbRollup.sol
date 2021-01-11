@@ -61,6 +61,9 @@ contract ArbRollup is IArbRollup, Cloneable, NodeGraph, Staking {
 
     IGlobalInbox public globalInbox;
 
+    bool public enableStakerAllowList;
+    mapping(address => bool) public allowedStakers;
+
     event RollupCreated(
         bytes32 initVMHash,
         uint128 gracePeriodTicks,
@@ -121,6 +124,7 @@ contract ArbRollup is IArbRollup, Cloneable, NodeGraph, Staking {
      * @param proof2 Node graph proof that the stake location is an ancestor of a current leaf
      */
     function placeStake(bytes32[] calldata proof1, bytes32[] calldata proof2) external payable {
+        require(!enableStakerAllowList || allowedStakers[msg.sender], "NOT_ALLOWED_TO_STAKE");
         bytes32 location = RollupUtils.calculateLeafFromPath(latestConfirmed(), proof1);
         bytes32 leaf = RollupUtils.calculateLeafFromPath(location, proof2);
         require(isValidLeaf(leaf), PLACE_LEAF);
@@ -203,7 +207,7 @@ contract ArbRollup is IArbRollup, Cloneable, NodeGraph, Staking {
         );
         bytes32 leaf = RollupUtils.calculateLeafFromPath(nextNode, proof);
         require(isValidLeaf(leaf), RECOV_DEADLINE_LEAF);
-        require(block.number >= RollupTime.blocksToTicks(deadlineTicks), RECOV_DEADLINE_TIME);
+        require(block.number >= RollupTime.ticksToBlocks(deadlineTicks), RECOV_DEADLINE_TIME);
 
         refundStaker(stakerAddress);
     }
@@ -281,6 +285,46 @@ contract ArbRollup is IArbRollup, Cloneable, NodeGraph, Staking {
 
     function ownerShutdown() external onlyOwner {
         safeSelfDestruct(msg.sender);
+    }
+
+    function ownerToggleStakerAllowListed(bool shouldRequire) external onlyOwner {
+        enableStakerAllowList = shouldRequire;
+    }
+
+    function ownerAddAllowedStaker(address staker) external onlyOwner {
+        allowedStakers[staker] = true;
+    }
+
+    function ownerRemoveAllowedStaker(address staker) external onlyOwner {
+        allowedStakers[staker] = false;
+    }
+
+    function ownerRefundStaker(address payable staker) external onlyOwner {
+        refundStaker(staker);
+    }
+
+    function ownerSendMessages(
+        bytes calldata messages,
+        uint256 initialMaxSendCount,
+        uint256 finalMaxSendCount
+    ) external onlyOwner {
+        globalInbox.sendMessages(messages, initialMaxSendCount, finalMaxSendCount);
+    }
+
+    function ownerConfirm(
+        bytes32[] calldata logsAcc,
+        bytes32[] calldata validNodeHashes,
+        bytes32 finalNodeHash
+    ) external onlyOwner {
+        uint256 validNodeCount = validNodeHashes.length;
+        for (uint256 i = 0; i < validNodeCount; i++) {
+            emit ConfirmedValidAssertion(validNodeHashes[i]);
+        }
+        confirmNode(finalNodeHash);
+
+        if (validNodeCount > 0) {
+            emit ConfirmedAssertion(logsAcc);
+        }
     }
 
     function _recoverStakeConfirmed(address payable stakerAddress, bytes32[] memory proof) private {
