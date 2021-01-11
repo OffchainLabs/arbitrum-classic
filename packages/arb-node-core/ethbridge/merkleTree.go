@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"math/big"
 )
 
 type MerkleTree struct {
@@ -29,17 +30,20 @@ func NewMerkleTree(elements [][32]byte) *MerkleTree {
 	layers := make([][][32]byte, 0)
 	layers = append(layers, elements)
 	for len(layers[len(layers)-1]) > 1 {
-		prevLayerSize := len(layers[len(layers)-1])
-		nextLayer := make([][32]byte, 0, (prevLayerSize+1)/2)
-		for i := 0; i < (prevLayerSize+1)/2; i++ {
-			if 2*i+1 < prevLayerSize {
+		elements := layers[len(layers)-1]
+		var nextLayer [][32]byte
+		for i := 0; i < len(elements); i++ {
+			if i%2 == 1 {
+				continue
+			}
+			if i+1 >= len(elements) {
+				nextLayer = append(nextLayer, elements[i])
+			} else {
 				data := hashing.SoliditySHA3(
-					hashing.Bytes32(layers[len(layers)-1][2*i]),
-					hashing.Bytes32(layers[len(layers)-1][2*i+1]),
+					hashing.Bytes32(elements[i]),
+					hashing.Bytes32(elements[i+1]),
 				)
 				nextLayer = append(nextLayer, data)
-			} else {
-				nextLayer = append(nextLayer, layers[len(layers)-1][2*i])
 			}
 		}
 		layers = append(layers, nextLayer)
@@ -55,11 +59,12 @@ func (m *MerkleTree) GetNode(index int) common.Hash {
 	return m.layers[0][index]
 }
 
-func (m *MerkleTree) GetProof(index int) []common.Hash {
+func (m *MerkleTree) GetProof(index int) ([][32]byte, *big.Int) {
 	if index == 0 && len(m.layers) == 1 {
-		return nil
+		return nil, big.NewInt(0)
 	}
-	proof := make([]common.Hash, 0)
+	proof := make([][32]byte, 0)
+	var path []bool
 	for _, layer := range m.layers {
 		var pairIndex int
 		if index%2 == 0 {
@@ -68,18 +73,17 @@ func (m *MerkleTree) GetProof(index int) []common.Hash {
 			pairIndex = index - 1
 		}
 		if pairIndex < len(layer) {
+			path = append(path, index%2 == 0)
 			proof = append(proof, layer[pairIndex])
 		}
 		index /= 2
 	}
-	return proof
-}
-
-func (m *MerkleTree) GetProofFlat(index int) []byte {
-	proofList := m.GetProof(index)
-	proofFlat := make([]byte, 0, 32*len(proofList))
-	for _, item := range proofList {
-		proofFlat = append(proofFlat, item.Bytes()...)
+	route := big.NewInt(0)
+	for i := range path {
+		route = route.Mul(route, big.NewInt(2))
+		if path[len(path)-1-i] {
+			route = route.Add(route, big.NewInt(1))
+		}
 	}
-	return proofFlat
+	return proof, route
 }

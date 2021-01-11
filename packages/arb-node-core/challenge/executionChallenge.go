@@ -25,12 +25,14 @@ func (e ExecutionImpl) Bisect(
 	challenge *ethbridge.Challenge,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
+	inconsistentSegment *core.ChallengeSegment,
 	subCuts []core.Cut,
 ) (*types.Transaction, error) {
 	return challenge.BisectExecution(
 		ctx,
 		prevBisection,
 		segmentToChallenge,
+		inconsistentSegment,
 		subCuts,
 	)
 }

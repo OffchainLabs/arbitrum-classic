@@ -32,19 +32,19 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
 	test.FailIfError(t, err)
 
-	msg1 := inbox.NewRandomInboxMessage()
-	msg2 := inbox.NewRandomInboxMessage()
+	correctLookup := core.NewValidatorLookupMock(mach)
+	for i := 0; i < 500; i++ {
+		correctLookup.AddMessage(inbox.NewRandomInboxMessage())
+	}
+	otherLookup := core.NewValidatorLookupMock(mach)
+	for i := 0; i < 500; i++ {
+		otherLookup.AddMessage(inbox.NewRandomInboxMessage())
+	}
 
-	asserterLookup := core.NewValidatorLookupMock(mach)
-	asserterLookup.AddMessage(inbox.NewRandomInboxMessage())
-	asserterLookup.AddMessage(msg2)
-	asserterLookup.AddMessage(inbox.NewRandomInboxMessage())
-	challengerLookup := core.NewValidatorLookupMock(mach)
-	challengerLookup.AddMessage(msg1)
-	challengerLookup.AddMessage(msg2)
-	challengerLookup.AddMessage(inbox.NewRandomInboxMessage())
-
-	logInboxAccs(t, challengerLookup)
+	falseLookup := correctLookup.Clone()
+	for i := 2; i < 6; i++ {
+		falseLookup.InboxAccs[i] = otherLookup.InboxAccs[i]
+	}
 
 	prevState := &core.NodeState{
 		ProposedBlock:  big.NewInt(0),
@@ -57,14 +57,17 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 		InboxMaxCount:  big.NewInt(0),
 	}
 
-	inboxAcc, err := asserterLookup.GetInboxAcc(big.NewInt(1))
+	inboxMessagesRead := big.NewInt(4)
+	messages, err := correctLookup.GetMessages(big.NewInt(0), inboxMessagesRead)
 	test.FailIfError(t, err)
-
+	afterInboxCount := new(big.Int).Add(prevState.InboxCount, inboxMessagesRead)
+	inboxAcc, err := falseLookup.GetInboxAcc(new(big.Int).Add(afterInboxCount, big.NewInt(1)))
+	test.FailIfError(t, err)
 	assertionInfo := &core.AssertionInfo{
-		InboxDelta: core.CalculateInboxDeltaAcc([]inbox.InboxMessage{msg1}),
+		InboxDelta: core.CalculateInboxDeltaAcc(messages),
 		ExecInfo: &core.ExecutionInfo{
 			BeforeMachineHash: common.Hash{},
-			InboxMessagesRead: big.NewInt(1),
+			InboxMessagesRead: inboxMessagesRead,
 			GasUsed:           big.NewInt(0),
 			SendAcc:           common.Hash{},
 			SendCount:         big.NewInt(0),
@@ -80,8 +83,8 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 		AssertionInfo: assertionInfo,
 	}
 
-	inboxMaxCount := big.NewInt(3)
-	inboxTopAcc, err := challengerLookup.GetInboxAcc(inboxMaxCount)
+	inboxMaxCount := big.NewInt(int64(len(correctLookup.InboxAccs)) - 1)
+	inboxTopAcc, err := correctLookup.GetInboxAcc(inboxMaxCount)
 	test.FailIfError(t, err)
 	challengedNode := &core.NodeInfo{
 		NodeNum: big.NewInt(1),
@@ -97,7 +100,7 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 	arbGasSpeedLimitPerBlock := big.NewInt(100000)
 	challengePeriodBlocks := big.NewInt(100)
 
-	client, asserterAuth, challengerAuth, challengeAddress := initializeChallengeTest(t, challengedNode, arbGasSpeedLimitPerBlock, challengePeriodBlocks)
+	client, tester, asserterAuth, challengerAuth, challengeAddress := initializeChallengeTest(t, challengedNode, arbGasSpeedLimitPerBlock, challengePeriodBlocks)
 
 	challengerChallenge, err := ethbridge.NewChallenge(challengeAddress, client, ethbridge.NewTransactAuth(challengerAuth))
 	test.FailIfError(t, err)
@@ -112,11 +115,68 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 		t.Fatal("kind doesn't match")
 	}
 
-	challenger := NewChallenger(challengerChallenge, challengerLookup, challengedNode)
-	//asserter := NewChallenger(challengerChallenge, lookup, assertion)
+	challenger := NewChallenger(challengerChallenge, correctLookup, challengedNode)
+	asserter := NewChallenger(asserterChallenge, falseLookup, challengedNode)
+
+	currentTurn, err := challengerChallenge.Turn(ctx)
+	test.FailIfError(t, err)
+	if currentTurn != ethbridge.CHALLENGER_TURN {
+		t.Fatal("should be challenger turn")
+	}
+	_, err = challenger.handleConflict(ctx)
+	test.FailIfError(t, err)
+
+	client.Commit()
+
+	currentTurn, err = challengerChallenge.Turn(ctx)
+	test.FailIfError(t, err)
+	if currentTurn != ethbridge.ASSERTER_TURN {
+		t.Fatal("should be asserter turn")
+	}
+
+	_, err = asserter.handleConflict(ctx)
+	test.FailIfError(t, err)
+
+	client.Commit()
+
+	currentTurn, err = challengerChallenge.Turn(ctx)
+	test.FailIfError(t, err)
+	if currentTurn != ethbridge.CHALLENGER_TURN {
+		t.Fatal("should be asserter turn")
+	}
+
+	completed, err := tester.ChallengeCompleted(&bind.CallOpts{Context: ctx})
+	test.FailIfError(t, err)
+
+	if completed {
+		t.Fatal("shouldn't be completed yet")
+	}
 
 	_, err = challenger.handleConflict(ctx)
 	test.FailIfError(t, err)
+
+	client.Commit()
+
+	completed, err = tester.ChallengeCompleted(&bind.CallOpts{Context: ctx})
+	test.FailIfError(t, err)
+
+	if !completed {
+		t.Fatal("should be completed")
+	}
+
+	winner, err := tester.Winner(&bind.CallOpts{Context: ctx})
+	test.FailIfError(t, err)
+
+	if winner != challengerAuth.From {
+		t.Fatal("winner should be challenger")
+	}
+
+	loser, err := tester.Loser(&bind.CallOpts{Context: ctx})
+	test.FailIfError(t, err)
+
+	if loser != asserterAuth.From {
+		t.Fatal("loser should be challenger")
+	}
 }
 
 func initializeChallengeTest(
@@ -124,7 +184,7 @@ func initializeChallengeTest(
 	nd *core.NodeInfo,
 	arbGasLimitPerBlock *big.Int,
 	challengePeriodBlocks *big.Int,
-) (*ethutils.SimulatedEthClient, *bind.TransactOpts, *bind.TransactOpts, ethcommon.Address) {
+) (*ethutils.SimulatedEthClient, *ethbridgetestcontracts.ChallengeTester, *bind.TransactOpts, *bind.TransactOpts, ethcommon.Address) {
 	clnt, pks := test.SimulatedBackend()
 	deployer := bind.NewKeyedTransactor(pks[0])
 	asserter := bind.NewKeyedTransactor(pks[1])
@@ -150,5 +210,5 @@ func initializeChallengeTest(
 	client.Commit()
 	challengeAddress, err := tester.Challenge(&bind.CallOpts{})
 	test.FailIfError(t, err)
-	return client, asserter, challenger, challengeAddress
+	return client, tester, asserter, challenger, challengeAddress
 }

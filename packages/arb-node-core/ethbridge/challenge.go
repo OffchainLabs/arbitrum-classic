@@ -20,17 +20,18 @@ func calculateBisectionChunkCount(segmentIndex, segmentCount int, totalLength *b
 	return size
 }
 
-func calculateBisectionLeaves(segment *core.ChallengeSegment, cutHashes [][32]byte) [][32]byte {
+func calculateBisectionTree(bisection *core.Bisection) ([][32]byte, *MerkleTree) {
+	cutHashes := cutsToHashes(bisection.Cuts)
 	segmentCount := len(cutHashes) - 1
 	chunks := make([][32]byte, 0, segmentCount)
-	segmentStart := new(big.Int).Set(segment.Start)
+	segmentStart := new(big.Int).Set(bisection.ChallengedSegment.Start)
 	for i := 0; i < segmentCount; i++ {
-		segmentLength := calculateBisectionChunkCount(i, segmentCount, segment.Length)
+		segmentLength := calculateBisectionChunkCount(i, segmentCount, bisection.ChallengedSegment.Length)
 		chunkHash := core.BisectionChunkHash(segmentStart, segmentLength, cutHashes[i], cutHashes[i+1])
 		chunks = append(chunks, chunkHash)
 		segmentStart = segmentStart.Add(segmentStart, segmentLength)
 	}
-	return chunks
+	return cutHashes, NewMerkleTree(chunks)
 }
 
 type Challenge struct {
@@ -57,19 +58,19 @@ func (c *Challenge) BisectInboxConsistency(
 	ctx context.Context,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
+	challengedSegment *core.ChallengeSegment,
 	subCuts []core.Cut,
 ) (*types.Transaction, error) {
-	prevCutHashes := cutsToHashes(prevBisection.Cuts)
 	subCutHashes := cutsToHashes(subCuts)
-	bisectionLeaves := calculateBisectionLeaves(prevBisection.ChallengedSegment, prevCutHashes)
-	prevTree := NewMerkleTree(bisectionLeaves)
+	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
+	nodes, path := prevTree.GetProof(segmentToChallenge)
 	return c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return c.con.BisectInboxConsistency(
 			auth,
-			big.NewInt(int64(segmentToChallenge)),
-			prevTree.GetProofFlat(segmentToChallenge),
-			prevBisection.ChallengedSegment.Start,
-			prevBisection.ChallengedSegment.Length,
+			nodes,
+			path,
+			challengedSegment.Start,
+			challengedSegment.Length,
 			prevCutHashes[segmentToChallenge+1],
 			subCutHashes,
 		)
@@ -80,17 +81,18 @@ func (c *Challenge) OneStepProveInboxConsistency(
 	ctx context.Context,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
+	challengedSegment *core.ChallengeSegment,
 	lowerHash [32]byte,
 	value [32]byte,
 ) (*types.Transaction, error) {
-	prevCutHashes := cutsToHashes(prevBisection.Cuts)
-	prevTree := NewMerkleTree(calculateBisectionLeaves(prevBisection.ChallengedSegment, prevCutHashes))
+	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
+	nodes, path := prevTree.GetProof(segmentToChallenge)
 	return c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return c.con.OneStepProveInboxConsistency(
 			auth,
-			big.NewInt(int64(segmentToChallenge)),
-			prevTree.GetProofFlat(segmentToChallenge),
-			prevBisection.ChallengedSegment.Start,
+			nodes,
+			path,
+			challengedSegment.Start,
 			prevCutHashes[segmentToChallenge+1],
 			lowerHash,
 			value,
@@ -102,6 +104,7 @@ func (c *Challenge) BisectInboxDelta(
 	ctx context.Context,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
+	challengedSegment *core.ChallengeSegment,
 	subCuts []core.Cut,
 ) (*types.Transaction, error) {
 	subInboxAccHashes := make([][32]byte, 0, len(subCuts))
@@ -110,15 +113,15 @@ func (c *Challenge) BisectInboxDelta(
 		subInboxAccHashes = append(subInboxAccHashes, cut.(core.InboxDeltaCut).InboxAccHash)
 		subInboxDeltaHashes = append(subInboxDeltaHashes, cut.(core.InboxDeltaCut).InboxDeltaHash)
 	}
-	prevCutHashes := cutsToHashes(prevBisection.Cuts)
-	prevTree := NewMerkleTree(calculateBisectionLeaves(prevBisection.ChallengedSegment, prevCutHashes))
+	_, prevTree := calculateBisectionTree(prevBisection)
+	nodes, path := prevTree.GetProof(segmentToChallenge)
 	return c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return c.con.BisectInboxDelta(
 			auth,
-			big.NewInt(int64(segmentToChallenge)),
-			prevTree.GetProofFlat(segmentToChallenge),
-			prevBisection.ChallengedSegment.Start,
-			prevBisection.ChallengedSegment.Length,
+			nodes,
+			path,
+			challengedSegment.Start,
+			challengedSegment.Length,
 			prevBisection.Cuts[segmentToChallenge+1].(core.InboxDeltaCut).InboxDeltaHash,
 			subInboxAccHashes,
 			subInboxDeltaHashes,
@@ -132,13 +135,13 @@ func (c *Challenge) OneStepProveInboxDelta(
 	segmentToChallenge int,
 	msg inbox.InboxMessage,
 ) (*types.Transaction, error) {
-	prevCutHashes := cutsToHashes(prevBisection.Cuts)
-	prevTree := NewMerkleTree(calculateBisectionLeaves(prevBisection.ChallengedSegment, prevCutHashes))
+	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
+	nodes, path := prevTree.GetProof(segmentToChallenge)
 	return c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return c.con.OneStepProveInboxDelta(
 			auth,
-			big.NewInt(int64(segmentToChallenge)),
-			prevTree.GetProofFlat(segmentToChallenge),
+			nodes,
+			path,
 			prevBisection.ChallengedSegment.Start,
 			prevCutHashes[segmentToChallenge+1],
 			prevBisection.Cuts[segmentToChallenge].(core.InboxDeltaCut).InboxDeltaHash,
@@ -157,18 +160,19 @@ func (c *Challenge) BisectExecution(
 	ctx context.Context,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
+	challengedSegment *core.ChallengeSegment,
 	subCuts []core.Cut,
 ) (*types.Transaction, error) {
-	prevCutHashes := cutsToHashes(prevBisection.Cuts)
 	subCutHashes := cutsToHashes(subCuts)
-	prevTree := NewMerkleTree(calculateBisectionLeaves(prevBisection.ChallengedSegment, prevCutHashes))
+	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
+	nodes, path := prevTree.GetProof(segmentToChallenge)
 	return c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return c.con.BisectExecution(
 			auth,
-			big.NewInt(int64(segmentToChallenge)),
-			prevTree.GetProofFlat(segmentToChallenge),
-			prevBisection.ChallengedSegment.Start,
-			prevBisection.ChallengedSegment.Length,
+			nodes,
+			path,
+			challengedSegment.Start,
+			challengedSegment.Length,
 			prevCutHashes[segmentToChallenge+1],
 			subCutHashes,
 			subCuts[0].(core.ExpandedExecutionCut).GasUsed,
@@ -185,13 +189,13 @@ func (c *Challenge) OneStepProveExecution(
 	executionProof []byte,
 	bufferProof []byte,
 ) (*types.Transaction, error) {
-	prevCutHashes := cutsToHashes(prevBisection.Cuts)
-	prevTree := NewMerkleTree(calculateBisectionLeaves(prevBisection.ChallengedSegment, prevCutHashes))
+	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
+	nodes, path := prevTree.GetProof(segmentToChallenge)
 	return c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return c.con.OneStepProveExecution(
 			auth,
-			big.NewInt(int64(segmentToChallenge)),
-			prevTree.GetProofFlat(segmentToChallenge),
+			nodes,
+			path,
 			prevBisection.ChallengedSegment.Start,
 			prevCutHashes[segmentToChallenge+1],
 			[3][32]byte{

@@ -30,8 +30,8 @@ type ChallengeTurn uint8
 
 const (
 	NONE ChallengeTurn = iota
-	ASSERTER
-	CHALLENGER
+	ASSERTER_TURN
+	CHALLENGER_TURN
 )
 
 type ChallengeWatcher struct {

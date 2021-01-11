@@ -37,46 +37,23 @@ library MerkleLib {
         return prevLayer[0];
     }
 
-    // from StorJ -- https://github.com/nginnever/storj-audit-verifier/blob/master/contracts/MerkleVerifyv3.sol
-    function verifyProof(
-        bytes memory proof,
-        bytes32 root,
-        bytes32 hash,
-        uint256 index
-    ) internal pure returns (bool) {
-        // use the index to determine the node ordering
-        // index ranges 1 to n
-
-        bytes32 el;
-        bytes32 h = hash;
-        uint256 remaining;
-
-        for (uint256 j = 32; j <= proof.length; j += 32) {
-            // solhint-disable-next-line no-inline-assembly
-            assembly {
-                el := mload(add(proof, j))
-            }
-
-            // calculate remaining elements in proof
-            remaining = (proof.length - j + 32) / 32;
-
-            // we don't assume that the tree is padded to a power of 2
-            // if the index is odd then the proof will start with a hash at a higher
-            // layer, so we have to adjust the index to be the index at that layer
-            while (remaining > 0 && index % 2 == 1 && index > 2**remaining) {
-                index = uint256(index) / 2 + 1;
-            }
-
-            if (index % 2 == 0) {
-                h = keccak256(abi.encodePacked(el, h));
-                index = index / 2;
+    function calculateRoot(
+        bytes32[] memory nodes,
+        uint256 route,
+        bytes32 item
+    ) internal pure returns (bytes32) {
+        uint256 proofItems = nodes.length;
+        require(proofItems <= 256);
+        bytes32 h = item;
+        for (uint256 i = 0; i < proofItems; i++) {
+            if (route % 2 == 0) {
+                h = keccak256(abi.encodePacked(nodes[i], h));
             } else {
-                h = keccak256(abi.encodePacked(h, el));
-                index = uint256(index) / 2 + 1;
+                h = keccak256(abi.encodePacked(h, nodes[i]));
             }
+            route /= 2;
         }
-
-        return h == root;
+        return h;
     }
 
     function generateMerkleRoot(bytes32[] memory _hashes)

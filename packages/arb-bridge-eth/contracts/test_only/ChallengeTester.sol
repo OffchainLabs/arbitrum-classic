@@ -24,14 +24,19 @@ import "../rollup/IRollup.sol";
 contract ChallengeTester is IRollup {
     ChallengeFactory private challengeFactory;
     address public challenge;
+    bool public challengeCompleted;
+    address public winner;
+    address public loser;
 
     constructor(address _oneStepProofAddress, address _oneStepProof2Address) public {
         challengeFactory = new ChallengeFactory(_oneStepProofAddress, _oneStepProof2Address);
     }
 
     /* solhint-disable-next-line no-unused-vars */
-    function completeChallenge(address, address payable) external override {
-        return;
+    function completeChallenge(address _winner, address payable _loser) external override {
+        winner = _winner;
+        loser = _loser;
+        challengeCompleted = true;
     }
 
     function startChallenge(

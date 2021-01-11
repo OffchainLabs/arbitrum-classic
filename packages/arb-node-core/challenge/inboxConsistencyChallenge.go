@@ -38,12 +38,14 @@ func (i *InboxConsistencyImpl) Bisect(
 	challenge *ethbridge.Challenge,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
+	challengedSegment *core.ChallengeSegment,
 	subCuts []core.Cut,
 ) (*types.Transaction, error) {
 	return challenge.BisectInboxConsistency(
 		ctx,
 		prevBisection,
 		segmentToChallenge,
+		challengedSegment,
 		subCuts,
 	)
 }
@@ -56,12 +58,12 @@ func (i *InboxConsistencyImpl) OneStepProof(
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
 ) (*types.Transaction, error) {
-	inboxOffset := i.inboxOffset(challengedSegment.Start)
+	inboxOffset := new(big.Int).Sub(i.inboxOffset(challengedSegment.Start), big.NewInt(1))
 	beforeInboxAcc, err := lookup.GetInboxAcc(inboxOffset)
 	if err != nil {
 		return nil, err
 	}
-	msgs, err := lookup.GetMessages(new(big.Int).Sub(inboxOffset, big.NewInt(2)), big.NewInt(1))
+	msgs, err := lookup.GetMessages(inboxOffset, big.NewInt(1))
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +71,7 @@ func (i *InboxConsistencyImpl) OneStepProof(
 		ctx,
 		prevBisection,
 		segmentToChallenge,
+		challengedSegment,
 		beforeInboxAcc,
 		msgs[0].CommitmentHash(),
 	)

@@ -157,8 +157,8 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function bisectInboxConsistency(
-        uint256 _challengedSegmentIndex,
-        bytes calldata _proof,
+        bytes32[] calldata _merkleNodes,
+        uint256 _merkleRoute,
         uint256 _challengedSegmentStart,
         uint256 _challengedSegmentLength,
         bytes32 _oldEndHash,
@@ -176,7 +176,7 @@ contract Challenge is Cloneable, IChallenge {
                 _oldEndHash
             );
 
-        verifySegmentProof(_proof, bisectionHash, _challengedSegmentIndex);
+        verifySegmentProof(bisectionHash, _merkleNodes, _merkleRoute);
 
         updateBisectionRoot(_chainHashes, _challengedSegmentStart, _challengedSegmentLength);
 
@@ -190,8 +190,8 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function oneStepProveInboxConsistency(
-        uint256 _challengedSegmentIndex,
-        bytes calldata _proof,
+        bytes32[] calldata _merkleNodes,
+        uint256 _merkleRoute,
         uint256 _challengedSegmentStart,
         bytes32 _oldEndHash,
         bytes32 _lowerHash,
@@ -200,17 +200,17 @@ contract Challenge is Cloneable, IChallenge {
         require(_lowerHash != _oldEndHash);
         bytes32 upperHash = Messages.addMessageToInbox(_lowerHash, _value);
         bytes32 prevHash =
-            ChallengeLib.bisectionChunkHash(_challengedSegmentStart, 1, upperHash, _lowerHash);
+            ChallengeLib.bisectionChunkHash(_challengedSegmentStart, 1, upperHash, _oldEndHash);
 
-        verifySegmentProof(_proof, prevHash, _challengedSegmentIndex);
+        verifySegmentProof(prevHash, _merkleNodes, _merkleRoute);
 
         emit OneStepProofCompleted();
         _currentWin();
     }
 
     function bisectInboxDelta(
-        uint256 _challengedSegmentIndex,
-        bytes calldata _proof,
+        bytes32[] calldata _merkleNodes,
+        uint256 _merkleRoute,
         uint256 _challengedSegmentStart,
         uint256 _challengedSegmentLength,
         bytes32 _oldInboxDelta,
@@ -236,7 +236,7 @@ contract Challenge is Cloneable, IChallenge {
                 ChallengeLib.inboxDeltaHash(_inboxAccHashes[newSegmentCount - 1], _oldInboxDelta)
             );
 
-        verifySegmentProof(_proof, bisectionHash, _challengedSegmentIndex);
+        verifySegmentProof(bisectionHash, _merkleNodes, _merkleRoute);
 
         updateBisectionRoot(chainHashes, _challengedSegmentStart, _challengedSegmentLength);
 
@@ -251,8 +251,8 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function oneStepProveInboxDelta(
-        uint256 _challengedSegmentIndex,
-        bytes memory _proof,
+        bytes32[] calldata _merkleNodes,
+        uint256 _merkleRoute,
         uint256 _challengedSegmentStart,
         bytes32 _oldEndHash,
         bytes32 _prevInboxDelta,
@@ -294,14 +294,14 @@ contract Challenge is Cloneable, IChallenge {
             );
 
         verifySegmentProof(
-            _proof,
             ChallengeLib.bisectionChunkHash(
                 _challengedSegmentStart,
                 1,
                 ChallengeLib.inboxDeltaHash(prevInboxAcc, _prevInboxDelta),
                 _oldEndHash
             ),
-            _challengedSegmentIndex
+            _merkleNodes,
+            _merkleRoute
         );
 
         emit OneStepProofCompleted();
@@ -309,8 +309,8 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function bisectExecution(
-        uint256 _challengedSegmentIndex,
-        bytes calldata _proof,
+        bytes32[] calldata _merkleNodes,
+        uint256 _merkleRoute,
         uint256 _challengedSegmentStart,
         uint256 _challengedSegmentLength,
         bytes32 _oldEndHash,
@@ -342,7 +342,7 @@ contract Challenge is Cloneable, IChallenge {
                 _chainHashes[0],
                 _oldEndHash
             );
-        verifySegmentProof(_proof, bisectionHash, _challengedSegmentIndex);
+        verifySegmentProof(bisectionHash, _merkleNodes, _merkleRoute);
 
         updateBisectionRoot(
             _chainHashes,
@@ -360,8 +360,8 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function constraintWinExecution(
-        uint256 _challengedSegmentIndex,
-        bytes calldata _proof,
+        bytes32[] calldata _merkleNodes,
+        uint256 _merkleRoute,
         uint256 _challengedSegmentStart,
         uint256 _challengedSegmentLength,
         bytes32 _oldEndHash,
@@ -379,7 +379,7 @@ contract Challenge is Cloneable, IChallenge {
                 beforeChainHash,
                 _oldEndHash
             );
-        verifySegmentProof(_proof, bisectionHash, _challengedSegmentIndex);
+        verifySegmentProof(bisectionHash, _merkleNodes, _merkleRoute);
 
         require(_gasUsedBefore >= _challengedSegmentStart + _challengedSegmentLength);
         require(beforeChainHash != _oldEndHash);
@@ -392,8 +392,8 @@ contract Challenge is Cloneable, IChallenge {
     //  initialMessage
     //  initialLog
     function oneStepProveExecution(
-        uint256 _challengedSegmentIndex,
-        bytes memory _proof,
+        bytes32[] calldata _merkleNodes,
+        uint256 _merkleRoute,
         uint256 _challengedSegmentStart,
         bytes32 _oldEndHash,
         bytes32[3] memory _machineFields,
@@ -442,7 +442,7 @@ contract Challenge is Cloneable, IChallenge {
                 _oldEndHash
             );
 
-        verifySegmentProof(_proof, rootHash, _challengedSegmentIndex);
+        verifySegmentProof(rootHash, _merkleNodes, _merkleRoute);
 
         emit OneStepProofCompleted();
         _currentWin();
@@ -632,12 +632,12 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function verifySegmentProof(
-        bytes memory _proof,
         bytes32 item,
-        uint256 _challengedSegmentIndex
+        bytes32[] calldata _merkleNodes,
+        uint256 _merkleRoute
     ) private view {
         require(
-            MerkleLib.verifyProof(_proof, challengeState, item, _challengedSegmentIndex + 1),
+            challengeState == MerkleLib.calculateRoot(_merkleNodes, _merkleRoute, item),
             BIS_PREV
         );
     }

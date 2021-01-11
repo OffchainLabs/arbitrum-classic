@@ -23,15 +23,21 @@ func NewValidatorLookupMock(mach machine.Machine) *ValidatorLookupMock {
 	}
 }
 
-//func (v *ValidatorLookupMock) Clone() *ValidatorLookupMock {
-//	messages := make([]inbox.InboxMessage, 0, len(v.Messages))
-//
-//	return &ValidatorLookupMock{
-//		Messages:     nil,
-//		InboxAccs:    nil,
-//		startMachine: nil,
-//	}
-//}
+func (v *ValidatorLookupMock) Clone() *ValidatorLookupMock {
+	messages := make([]inbox.InboxMessage, 0, len(v.Messages))
+	for _, msg := range v.Messages {
+		messages = append(messages, msg)
+	}
+	inboxAccs := make([]common.Hash, 0, len(v.InboxAccs))
+	for _, inboxAcc := range v.InboxAccs {
+		inboxAccs = append(inboxAccs, inboxAcc)
+	}
+	return &ValidatorLookupMock{
+		Messages:     messages,
+		InboxAccs:    inboxAccs,
+		startMachine: v.startMachine.Clone(),
+	}
+}
 
 func (v *ValidatorLookupMock) AddMessage(msg inbox.InboxMessage) {
 	prevInboxAcc := v.InboxAccs[len(v.InboxAccs)-1]

@@ -157,6 +157,7 @@ type ChallengerImpl interface {
 		challenge *ethbridge.Challenge,
 		prevBisection *core.Bisection,
 		segmentToChallenge int,
+		inconsistentSegment *core.ChallengeSegment,
 		subCuts []core.Cut,
 	) (*types.Transaction, error)
 
@@ -212,6 +213,7 @@ func handleChallenge(
 			challenge,
 			prevBisection,
 			cutToChallenge-1,
+			inconsistentSegment,
 			subCuts,
 		)
 	}
