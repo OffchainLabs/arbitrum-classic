@@ -177,3 +177,12 @@ func (opp *ConfirmOpportunity) PrepareProof() ConfirmProof {
 		StakerProofOffsets:   stakerProofOffsets,
 	}
 }
+
+type RecoverStakePassedDeadlineOpportunity struct {
+	StakerAddress      common.Address
+	DeadlineTicks      common.TimeTicks
+	DisputableNodeHash common.Hash
+	ChildType          ChildType
+	VMProtoStateHash   common.Hash
+	Proof              []common.Hash
+}

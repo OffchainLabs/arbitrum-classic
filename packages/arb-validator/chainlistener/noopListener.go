@@ -78,5 +78,8 @@ func (NoopListener) MootableStakes(context.Context, []nodegraph.RecoverStakeMoot
 func (NoopListener) OldStakes(context.Context, []nodegraph.RecoverStakeOldParams) {
 }
 
+func (NoopListener) StakesPassedDeadline(context.Context, []*valprotocol.RecoverStakePassedDeadlineOpportunity) {
+}
+
 func (NoopListener) AdvancedKnownNode(context.Context, *nodegraph.StakedNodeGraph, *structures.Node) {
 }

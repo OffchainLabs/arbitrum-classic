@@ -135,7 +135,19 @@ func (vm *arbRollup) RecoverStakePassedDeadline(ctx context.Context, stakerAddre
 		)
 	})
 	if err != nil {
-		return nil, err
+		callErr := vm.ArbRollup.RecoverStakePassedDeadlineCall(
+			ctx,
+			vm.client,
+			vm.auth.auth.From,
+			vm.rollupAddress,
+			stakerAddress.ToEthAddress(),
+			deadlineTicks,
+			disputableNodeHashVal,
+			new(big.Int).SetUint64(childType),
+			vmProtoStateHash,
+			common.HashSliceToRaw(proof),
+		)
+		return nil, errors.WithStack(callErr)
 	}
 	return vm.waitForReceipt(ctx, tx, "RecoverStakePassedDeadline")
 }

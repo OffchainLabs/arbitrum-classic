@@ -18,7 +18,6 @@ package chainlistener
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
@@ -30,8 +29,8 @@ type AnnouncerListener struct {
 	logger zerolog.Logger
 }
 
-func NewAnnouncerListener(address common.Address) *AnnouncerListener {
-	return &AnnouncerListener{logger: logger.With().Hex("validator", address.Bytes()).Logger()}
+func NewAnnouncerListener(label string) *AnnouncerListener {
+	return &AnnouncerListener{logger: logger.With().Str("label", label).Logger()}
 }
 
 func (al *AnnouncerListener) AddedToChain(context.Context, []*structures.Node) {
@@ -139,6 +138,10 @@ func (al *AnnouncerListener) MootableStakes(context.Context, []nodegraph.Recover
 func (al *AnnouncerListener) OldStakes(context.Context, []nodegraph.RecoverStakeOldParams) {
 	al.logger.Info().
 		Msg("OldStakes")
+}
+
+func (al *AnnouncerListener) StakesPassedDeadline(_ context.Context, opps []*valprotocol.RecoverStakePassedDeadlineOpportunity) {
+	al.logger.Info().Int("count", len(opps)).Msg("StakesPassedDeadline")
 }
 
 func (al *AnnouncerListener) AdvancedKnownNode(context.Context, *nodegraph.StakedNodeGraph, *structures.Node) {
