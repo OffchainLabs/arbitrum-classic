@@ -279,7 +279,7 @@ func CreateManagerAdvanced(
 
 					man.activeChain.NotifyNextEvent(blockId.Clone())
 
-					if caughtUpToL1 || time.Since(lastDebugPrint).Seconds() > 120 {
+					if time.Since(lastDebugPrint).Seconds() > 120 {
 						logger.Info().Object("chain", man.activeChain).Msg("current graph")
 						lastDebugPrint = time.Now()
 					}
