@@ -69,8 +69,8 @@ contract NodeGraph {
     event RollupPruned(bytes32 leaf);
 
     VM.Params public vmParams;
-    mapping(bytes32 => bool) public leaves;
-    bytes32 public latestConfirmedPriv;
+    mapping(bytes32 => bool) private leaves;
+    bytes32 private latestConfirmedPriv;
 
     /**
      * @notice Prune an arbitrary number of leaves from the node graph
