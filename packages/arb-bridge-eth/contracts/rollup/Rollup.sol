@@ -362,11 +362,14 @@ contract Rollup is Inbox, Outbox, IRollup {
         uint256 zombieCount = zombies.length;
         for (uint256 i = startIndex; i < zombieCount; i++) {
             Zombie storage zombie = zombies[i];
-            while (zombie.latestStakedNode < firstUnresolvedNode && zombieCount > 0) {
+            while (zombie.latestStakedNode < firstUnresolvedNode) {
                 zombies[i] = zombies[zombieCount - 1];
                 zombies.pop();
-                zombie = zombies[i];
                 zombieCount--;
+                if (i >= zombieCount) {
+                    return;
+                }
+                zombie = zombies[i];
             }
         }
     }

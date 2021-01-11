@@ -18,14 +18,14 @@
 
 pragma solidity ^0.6.11;
 
-import "../challenge/IChallengeFactory.sol";
+import "../challenge/ChallengeFactory.sol";
 import "../rollup/IRollup.sol";
 
 contract ChallengeTester is IRollup {
-    IChallengeFactory private challengeFactory;
+    ChallengeFactory private challengeFactory;
 
-    constructor(address challengeFactory_) public {
-        challengeFactory = IChallengeFactory(challengeFactory_);
+    constructor(address _oneStepProofAddress, address _oneStepProof2Address) public {
+        challengeFactory = new ChallengeFactory(_oneStepProofAddress, _oneStepProof2Address);
     }
 
     /* solhint-disable-next-line no-unused-vars */

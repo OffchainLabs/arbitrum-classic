@@ -5,7 +5,6 @@ type ContractName =
   | 'RollupCreator'
   | 'NodeFactory'
   | 'ChallengeFactory'
-  | 'Challenge'
   | 'OneStepProof'
   | 'OneStepProof2'
 
@@ -18,7 +17,6 @@ const logDeploy = (contractName: string, contract: Contract) => {
 export default async function deploy_contracts(): Promise<
   Record<ContractName, Contract>
 > {
-  const Challenge = await ethers.getContractFactory('Challenge')
   const OneStepProof = await ethers.getContractFactory('OneStepProof')
   const OneStepProof2 = await ethers.getContractFactory('OneStepProof2')
   const ChallengeFactory = await ethers.getContractFactory('ChallengeFactory')
@@ -29,11 +27,8 @@ export default async function deploy_contracts(): Promise<
   logDeploy('OneStepProof', oneStepProof)
   const oneStepProof2 = await OneStepProof2.deploy()
   logDeploy('OneStepProof2', oneStepProof2)
-  const challenge = await Challenge.deploy()
-  logDeploy('Challenge', challenge)
 
   const challengeFactory = await ChallengeFactory.deploy(
-    challenge.address,
     oneStepProof.address,
     oneStepProof2.address
   )
@@ -55,9 +50,6 @@ export default async function deploy_contracts(): Promise<
     oneStepProof2.deployed().then(() => {
       console.log('OneStepProof2 deployed')
     }),
-    challenge.deployed().then(() => {
-      console.log('Challenge deployed')
-    }),
     challengeFactory.deployed().then(() => {
       console.log('ChallengeFactory deployed')
     }),
@@ -73,7 +65,6 @@ export default async function deploy_contracts(): Promise<
     RollupCreator: rollupCreator,
     NodeFactory: nodeFactory,
     ChallengeFactory: challengeFactory,
-    Challenge: challenge,
     OneStepProof: oneStepProof,
     OneStepProof2: oneStepProof2,
   }

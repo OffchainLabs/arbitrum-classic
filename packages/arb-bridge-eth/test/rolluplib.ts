@@ -14,37 +14,38 @@ const zerobytes32 =
   '0x0000000000000000000000000000000000000000000000000000000000000000'
 
 function bisectionChunkHash(
+  start: BigNumberish,
   length: BigNumberish,
   startHash: BytesLike,
   endHash: BytesLike
 ): BytesLike {
   return ethers.utils.solidityKeccak256(
-    ['uint256', 'bytes32', 'bytes32'],
-    [length, startHash, endHash]
+    ['uint256', 'uint256', 'bytes32', 'bytes32'],
+    [start, length, startHash, endHash]
   )
 }
 
 function assertionHash(
-  inboxDelta: BytesLike,
   arbGasUsed: BigNumberish,
-  outputAcc: BytesLike,
-  machineState: BytesLike
+  assertionRest: BytesLike
 ): BytesLike {
   return ethers.utils.solidityKeccak256(
-    ['bytes32', 'uint256', 'bytes32', 'bytes32'],
-    [inboxDelta, arbGasUsed, outputAcc, machineState]
+    ['uint256', 'bytes32'],
+    [arbGasUsed, assertionRest]
   )
 }
 
-function outputAccHash(
+function assertionRestHash(
+  inboxDelta: BytesLike,
+  machineState: BytesLike,
   sendAcc: BytesLike,
   sendCount: BigNumberish,
   logAcc: BytesLike,
   logCount: BigNumberish
 ): BytesLike {
   return ethers.utils.solidityKeccak256(
-    ['bytes32', 'uint256', 'bytes32', 'uint256'],
-    [sendAcc, sendCount, logAcc, logCount]
+    ['bytes32', 'bytes32', 'bytes32', 'uint256', 'bytes32', 'uint256'],
+    [inboxDelta, machineState, sendAcc, sendCount, logAcc, logCount]
   )
 }
 
@@ -70,12 +71,12 @@ function challengeRootHash(
 export class NodeState {
   constructor(
     public proposedBlock: number,
-    public stepsRun: BigNumberish,
+    public totalGasUsed: BigNumberish,
     public machineHash: BytesLike,
     public inboxTop: BytesLike,
     public inboxCount: BigNumberish,
-    public sendCount: BigNumberish,
-    public logCount: BigNumberish,
+    public totalSendCount: BigNumberish,
+    public totalLogCount: BigNumberish,
     public inboxMaxCount: BigNumberish
   ) {}
 
@@ -93,12 +94,12 @@ export class NodeState {
       ],
       [
         this.proposedBlock,
-        this.stepsRun,
+        this.totalGasUsed,
         this.machineHash,
         this.inboxTop,
         this.inboxCount,
-        this.sendCount,
-        this.logCount,
+        this.totalSendCount,
+        this.totalLogCount,
         this.inboxMaxCount,
       ]
     )
@@ -124,7 +125,6 @@ export class Assertion {
 
   constructor(
     public prevNodeState: NodeState,
-    public stepsExecuted: BigNumberish,
     public gasUsed: BigNumberish,
     public afterMachineHash: BytesLike,
     messages: BytesLike[],
@@ -148,16 +148,18 @@ export class Assertion {
   ): NodeState {
     return new NodeState(
       proposedBlock,
-      ethers.BigNumber.from(this.prevNodeState.stepsRun).add(
-        this.stepsExecuted
-      ),
+      ethers.BigNumber.from(this.prevNodeState.totalGasUsed).add(this.gasUsed),
       this.afterMachineHash,
       this.afterInboxHash,
       ethers.BigNumber.from(this.prevNodeState.inboxCount).add(
         this.inboxMessagesRead
       ),
-      ethers.BigNumber.from(this.prevNodeState.sendCount).add(this.sendCount),
-      ethers.BigNumber.from(this.prevNodeState.logCount).add(this.logCount),
+      ethers.BigNumber.from(this.prevNodeState.totalSendCount).add(
+        this.sendCount
+      ),
+      ethers.BigNumber.from(this.prevNodeState.totalLogCount).add(
+        this.logCount
+      ),
       inboxMaxCount
     )
   }
@@ -166,10 +168,12 @@ export class Assertion {
     inboxMaxHash: BytesLike,
     inboxMaxCount: BigNumberish
   ): BytesLike {
+    const afterMessageCount = ethers.BigNumber.from(
+      this.prevNodeState.inboxCount
+    ).add(this.inboxMessagesRead)
     return bisectionChunkHash(
-      ethers.BigNumber.from(inboxMaxCount)
-        .sub(this.prevNodeState.inboxCount)
-        .sub(this.inboxMessagesRead),
+      afterMessageCount,
+      ethers.BigNumber.from(inboxMaxCount).sub(afterMessageCount),
       inboxMaxHash,
       this.afterInboxHash
     )
@@ -177,33 +181,47 @@ export class Assertion {
 
   inboxDeltaHash(): BytesLike {
     return bisectionChunkHash(
+      0,
       this.inboxMessagesRead,
       inboxDeltaHash(this.afterInboxHash, zerobytes32),
       inboxDeltaHash(this.prevNodeState.inboxTop, this.inboxDelta)
     )
   }
 
-  startAssertionHash(): BytesLike {
-    return assertionHash(
+  startAssertionRestHash(): BytesLike {
+    return assertionRestHash(
       this.inboxDelta,
+      this.prevNodeState.machineHash,
+      zerobytes32,
       0,
-      outputAccHash(zerobytes32, 0, zerobytes32, 0),
-      this.prevNodeState.machineHash
+      zerobytes32,
+      0
+    )
+  }
+
+  startAssertionHash(): BytesLike {
+    return assertionHash(0, this.startAssertionRestHash())
+  }
+
+  endAssertionRestHash(): BytesLike {
+    return assertionRestHash(
+      zerobytes32,
+      this.afterMachineHash,
+      this.sendAcc,
+      this.sendCount,
+      this.logAcc,
+      this.logCount
     )
   }
 
   endAssertionHash(): BytesLike {
-    return assertionHash(
-      zerobytes32,
-      this.gasUsed,
-      outputAccHash(this.sendAcc, this.sendCount, this.logAcc, this.logCount),
-      this.afterMachineHash
-    )
+    return assertionHash(this.gasUsed, this.endAssertionRestHash())
   }
 
   executionHash(): BytesLike {
     return bisectionChunkHash(
-      this.stepsExecuted,
+      0,
+      this.gasUsed,
       this.startAssertionHash(),
       this.endAssertionHash()
     )
@@ -258,17 +276,15 @@ export class Assertion {
     BigNumberish,
     BigNumberish,
     BigNumberish,
-    BigNumberish,
     BigNumberish
   ] {
     return [
       this.prevNodeState.proposedBlock,
-      this.prevNodeState.stepsRun,
+      this.prevNodeState.totalGasUsed,
       this.prevNodeState.inboxCount,
-      this.prevNodeState.sendCount,
-      this.prevNodeState.logCount,
+      this.prevNodeState.totalSendCount,
+      this.prevNodeState.totalLogCount,
       this.prevNodeState.inboxMaxCount,
-      this.stepsExecuted,
       this.inboxMessagesRead,
       this.gasUsed,
       this.sendCount,
@@ -374,8 +390,11 @@ export class RollupContract {
     )
   }
 
-  addToDeposit(overrides: PayableOverrides = {}): Promise<ContractTransaction> {
-    return this.rollup.addToDeposit(overrides)
+  addToDeposit(
+    staker: string,
+    overrides: PayableOverrides = {}
+  ): Promise<ContractTransaction> {
+    return this.rollup.addToDeposit(staker, overrides)
   }
 
   reduceDeposit(amount: BigNumberish): Promise<ContractTransaction> {

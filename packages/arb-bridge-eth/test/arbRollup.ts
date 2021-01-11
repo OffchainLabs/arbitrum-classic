@@ -96,9 +96,9 @@ async function tryAdvanceChain(blocks: number): Promise<void> {
 
 function makeSimpleAssertion(
   prevNodeState: NodeState,
-  numGas: BigNumberish
+  gasUsed: BigNumberish
 ): Assertion {
-  return new Assertion(prevNodeState, 100, numGas, zerobytes32, [], [], [])
+  return new Assertion(prevNodeState, gasUsed, zerobytes32, [], [], [])
 }
 
 let prevNodeState: NodeState
@@ -312,7 +312,7 @@ describe('ArbRollup', () => {
   })
 
   it('challenger should reply in challenge', async function () {
-    const chunks = Array(20).fill(zerobytes32)
+    const chunks = Array(21).fill(zerobytes32)
     chunks[0] = challengedAssertion.startAssertionHash()
 
     await challenge
@@ -320,9 +320,12 @@ describe('ArbRollup', () => {
       .bisectExecution(
         0,
         '0x',
+        0,
+        challengedAssertion.gasUsed,
         challengedAssertion.endAssertionHash(),
         chunks,
-        challengedAssertion.stepsExecuted
+        0,
+        challengedAssertion.startAssertionRestHash()
       )
   })
 
@@ -335,10 +338,6 @@ describe('ArbRollup', () => {
     await challenge.timeout()
   })
 
-  it('should remove zombie staker from node', async function () {
-    await rollup.removeZombieStaker(5, await accounts[0].getAddress())
-  })
-
   it('should reject out of order second node', async function () {
     await rollup.rejectNextNode(6, await accounts[2].getAddress())
   })
@@ -349,7 +348,9 @@ describe('ArbRollup', () => {
   })
 
   it('can add stake', async function () {
-    await rollup.connect(accounts[2]).addToDeposit({ value: 5 })
+    await rollup
+      .connect(accounts[2])
+      .addToDeposit(await accounts[2].getAddress(), { value: 5 })
   })
 
   it('can reduce stake', async function () {

@@ -18,9 +18,8 @@
 
 pragma solidity ^0.6.11;
 
+import "./Challenge.sol";
 import "./IChallengeFactory.sol";
-import "./IChallenge.sol";
-
 import "../libraries/CloneFactory.sol";
 
 contract ChallengeFactory is CloneFactory, IChallengeFactory {
@@ -28,12 +27,8 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
     address public oneStepProofAddress;
     address public oneStepProof2Address;
 
-    constructor(
-        address _challengeTemplate,
-        address _oneStepProofAddress,
-        address _oneStepProof2Address
-    ) public {
-        challengeTemplate = ICloneable(_challengeTemplate);
+    constructor(address _oneStepProofAddress, address _oneStepProof2Address) public {
+        challengeTemplate = ICloneable(new Challenge());
         oneStepProofAddress = _oneStepProofAddress;
         oneStepProof2Address = _oneStepProof2Address;
     }
