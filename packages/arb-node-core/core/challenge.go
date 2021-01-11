@@ -1,8 +1,6 @@
-package challenge
+package core
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"math/big"
@@ -47,7 +45,7 @@ func (c InboxDeltaCut) Equals(other Cut) bool {
 }
 
 func (c InboxDeltaCut) Hash() [32]byte {
-	return core.InboxDeltaHash(c.InboxAccHash, c.InboxDeltaHash)
+	return InboxDeltaHash(c.InboxAccHash, c.InboxDeltaHash)
 }
 
 type ExpandedExecutionCut struct {
@@ -68,6 +66,11 @@ func (c ExpandedExecutionCut) Hash() [32]byte {
 }
 
 type Bisection struct {
-	ChallengedSegment *ethbridge.ChallengeSegment
+	ChallengedSegment *ChallengeSegment
 	Cuts              []Cut
+}
+
+type ChallengeSegment struct {
+	Start  *big.Int
+	Length *big.Int
 }

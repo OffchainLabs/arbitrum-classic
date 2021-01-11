@@ -13,21 +13,21 @@ type InboxDeltaImpl struct {
 	inboxDelta          *inboxDelta
 }
 
-func (i *InboxDeltaImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]Cut, error) {
+func (i *InboxDeltaImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]core.Cut, error) {
 	return getCutsSimple(i, lookup, offsets)
 }
 
-func (i *InboxDeltaImpl) FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []Cut) (int, error) {
+func (i *InboxDeltaImpl) FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []core.Cut) (int, error) {
 	return findFirstDivergenceSimple(i, lookup, offsets, cuts)
 }
 
-func (i *InboxDeltaImpl) GetCut(lookup core.ValidatorLookup, offset *big.Int) (Cut, error) {
+func (i *InboxDeltaImpl) GetCut(lookup core.ValidatorLookup, offset *big.Int) (core.Cut, error) {
 	inboxOffset := new(big.Int).Add(i.nodeAfterInboxCount, offset)
 	inboxAcc, err := lookup.GetInboxAcc(inboxOffset)
 	if err != nil {
 		return nil, err
 	}
-	return InboxDeltaCut{
+	return core.InboxDeltaCut{
 		InboxAccHash:   inboxAcc,
 		InboxDeltaHash: i.inboxDelta.inboxDeltaAccs[offset.Uint64()],
 	}, nil
@@ -36,9 +36,9 @@ func (i *InboxDeltaImpl) GetCut(lookup core.ValidatorLookup, offset *big.Int) (C
 func (i *InboxDeltaImpl) Bisect(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
-	prevBisection *Bisection,
+	prevBisection *core.Bisection,
 	segmentToChallenge int,
-	subCuts []Cut,
+	subCuts []core.Cut,
 ) (*types.Transaction, error) {
 	return challenge.BisectInboxDelta(
 		ctx,
@@ -52,9 +52,9 @@ func (i *InboxDeltaImpl) OneStepProof(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
 	lookup core.ValidatorLookup,
-	prevBisection *Bisection,
+	prevBisection *core.Bisection,
 	segmentToChallenge int,
-	challengedSegment *ethbridge.ChallengeSegment,
+	challengedSegment *core.ChallengeSegment,
 ) (*types.Transaction, error) {
 	msgIndex := new(big.Int).Add(i.nodeAfterInboxCount, challengedSegment.Start)
 	msgs, err := lookup.GetMessages(msgIndex, big.NewInt(1))

@@ -12,20 +12,20 @@ type ExecutionImpl struct {
 	initialGasUsed *big.Int
 }
 
-func (e ExecutionImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]Cut, error) {
+func (e ExecutionImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]core.Cut, error) {
 	panic("implement me")
 }
 
-func (e ExecutionImpl) FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []Cut) (int, error) {
+func (e ExecutionImpl) FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []core.Cut) (int, error) {
 	panic("implement me")
 }
 
 func (e ExecutionImpl) Bisect(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
-	prevBisection *Bisection,
+	prevBisection *core.Bisection,
 	segmentToChallenge int,
-	subCuts []Cut,
+	subCuts []core.Cut,
 ) (*types.Transaction, error) {
 	return challenge.BisectExecution(
 		ctx,
@@ -39,9 +39,9 @@ func (e ExecutionImpl) OneStepProof(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
 	lookup core.ValidatorLookup,
-	prevBisection *Bisection,
+	prevBisection *core.Bisection,
 	segmentToChallenge int,
-	challengedSegment *ethbridge.ChallengeSegment,
+	challengedSegment *core.ChallengeSegment,
 ) (*types.Transaction, error) {
 	startMachine, err := lookup.GetMachine(e.initialGasUsed)
 	if err != nil {

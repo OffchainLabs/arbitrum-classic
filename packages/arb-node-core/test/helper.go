@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog/log"
 	"math/big"
+	"testing"
 )
 
 var logger = log.With().Caller().Str("component", "test").Logger()
@@ -47,4 +48,11 @@ func SimulatedBackend() (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
 	blockGasLimit := uint64(1000000000)
 	client := backends.NewSimulatedBackend(genesisAlloc, blockGasLimit)
 	return client, pks
+}
+
+func FailIfError(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatal(err)
+	}
 }

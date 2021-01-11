@@ -130,28 +130,28 @@ func (c *Challenger) handleStoppedShortChallenge() (*types.Transaction, error) {
 }
 
 type SimpleChallengerImpl interface {
-	GetCut(lookup core.ValidatorLookup, offsets *big.Int) (Cut, error)
+	GetCut(lookup core.ValidatorLookup, offsets *big.Int) (core.Cut, error)
 }
 
 type ChallengerImpl interface {
-	GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]Cut, error)
-	FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []Cut) (int, error)
+	GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]core.Cut, error)
+	FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []core.Cut) (int, error)
 
 	Bisect(
 		ctx context.Context,
 		challenge *ethbridge.Challenge,
-		prevBisection *Bisection,
+		prevBisection *core.Bisection,
 		segmentToChallenge int,
-		subCuts []Cut,
+		subCuts []core.Cut,
 	) (*types.Transaction, error)
 
 	OneStepProof(
 		ctx context.Context,
 		challenge *ethbridge.Challenge,
 		lookup core.ValidatorLookup,
-		prevBisection *Bisection,
+		prevBisection *core.Bisection,
 		segmentToChallenge int,
-		challengedSegment *ethbridge.ChallengeSegment,
+		challengedSegment *core.ChallengeSegment,
 	) (*types.Transaction, error)
 }
 
@@ -171,7 +171,7 @@ func handleChallenge(ctx context.Context, challenge *ethbridge.Challenge, lookup
 	if err != nil {
 		return nil, err
 	}
-	inconsistentSegment := &ethbridge.ChallengeSegment{
+	inconsistentSegment := &core.ChallengeSegment{
 		Start:  prevCutOffsets[cutToChallenge-1],
 		Length: new(big.Int).Sub(prevCutOffsets[cutToChallenge], prevCutOffsets[cutToChallenge-1]),
 	}
@@ -201,7 +201,7 @@ func handleChallenge(ctx context.Context, challenge *ethbridge.Challenge, lookup
 	}
 }
 
-func findFirstDivergenceSimple(impl SimpleChallengerImpl, lookup core.ValidatorLookup, cutOffsets []*big.Int, cuts []Cut) (int, error) {
+func findFirstDivergenceSimple(impl SimpleChallengerImpl, lookup core.ValidatorLookup, cutOffsets []*big.Int, cuts []core.Cut) (int, error) {
 	for i, cutOffset := range cutOffsets {
 		correctCut, err := impl.GetCut(lookup, cutOffset)
 		if err != nil {
@@ -217,8 +217,8 @@ func findFirstDivergenceSimple(impl SimpleChallengerImpl, lookup core.ValidatorL
 	return 0, errors.New("all cuts correct")
 }
 
-func getCutsSimple(impl SimpleChallengerImpl, lookup core.ValidatorLookup, offsets []*big.Int) ([]Cut, error) {
-	cuts := make([]Cut, 0, len(offsets))
+func getCutsSimple(impl SimpleChallengerImpl, lookup core.ValidatorLookup, offsets []*big.Int) ([]core.Cut, error) {
+	cuts := make([]core.Cut, 0, len(offsets))
 	for _, cutOffset := range offsets {
 		cut, err := impl.GetCut(lookup, cutOffset)
 		if err != nil {
@@ -229,7 +229,7 @@ func getCutsSimple(impl SimpleChallengerImpl, lookup core.ValidatorLookup, offse
 	return cuts, nil
 }
 
-func generateBisectionCutOffsets(segment *ethbridge.ChallengeSegment) []*big.Int {
+func generateBisectionCutOffsets(segment *core.ChallengeSegment) []*big.Int {
 	segmentCount := 20
 	if segment.Length.Cmp(big.NewInt(int64(segmentCount))) < 0 {
 		// Safe since this is less than 20

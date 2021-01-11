@@ -23,6 +23,12 @@ type TransactAuth struct {
 	auth *bind.TransactOpts
 }
 
+func NewTransactAuth(auth *bind.TransactOpts) *TransactAuth {
+	return &TransactAuth{
+		auth: auth,
+	}
+}
+
 func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error)) (ethcommon.Address, *types.Transaction, error) {
 	auth := t.getAuth(ctx)
 

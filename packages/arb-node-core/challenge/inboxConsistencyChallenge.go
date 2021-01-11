@@ -10,28 +10,28 @@ import (
 
 type InboxConsistencyImpl struct{}
 
-func (i *InboxConsistencyImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]Cut, error) {
+func (i *InboxConsistencyImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]core.Cut, error) {
 	return getCutsSimple(i, lookup, offsets)
 }
 
-func (i *InboxConsistencyImpl) FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []Cut) (int, error) {
+func (i *InboxConsistencyImpl) FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []core.Cut) (int, error) {
 	return findFirstDivergenceSimple(i, lookup, offsets, cuts)
 }
 
-func (i *InboxConsistencyImpl) GetCut(lookup core.ValidatorLookup, offset *big.Int) (Cut, error) {
+func (i *InboxConsistencyImpl) GetCut(lookup core.ValidatorLookup, offset *big.Int) (core.Cut, error) {
 	inboxAcc, err := lookup.GetInboxAcc(offset)
 	if err != nil {
 		return nil, err
 	}
-	return NewSimpleCut(inboxAcc), nil
+	return core.NewSimpleCut(inboxAcc), nil
 }
 
 func (i *InboxConsistencyImpl) Bisect(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
-	prevBisection *Bisection,
+	prevBisection *core.Bisection,
 	segmentToChallenge int,
-	subCuts []Cut,
+	subCuts []core.Cut,
 ) (*types.Transaction, error) {
 	return challenge.BisectInboxDelta(
 		ctx,
@@ -45,9 +45,9 @@ func (i *InboxConsistencyImpl) OneStepProof(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
 	lookup core.ValidatorLookup,
-	prevBisection *Bisection,
+	prevBisection *core.Bisection,
 	segmentToChallenge int,
-	challengedSegment *ethbridge.ChallengeSegment,
+	challengedSegment *core.ChallengeSegment,
 ) (*types.Transaction, error) {
 	beforeInboxAcc, err := lookup.GetInboxAcc(challengedSegment.Start)
 	if err != nil {

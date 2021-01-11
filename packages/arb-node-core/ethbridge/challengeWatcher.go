@@ -6,7 +6,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
@@ -102,7 +101,7 @@ func (c *ChallengeWatcher) ChallengeState(ctx context.Context) (common.Hash, err
 	return common.NewHashFromEth(challengeState), nil
 }
 
-func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState common.Hash) (*challenge.Bisection, error) {
+func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState common.Hash) (*core.Bisection, error) {
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
 		FromBlock: nil,
@@ -120,18 +119,18 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 	if len(logs) > 1 {
 		return nil, errors.New("too many matching  bisections")
 	}
-	var cuts []challenge.Cut
-	var challengeSegment *ChallengeSegment
+	var cuts []core.Cut
+	var challengeSegment *core.ChallengeSegment
 	if logs[0].Topics[0] == bisectedID {
 		parsedLog, err := c.con.ParseBisected(logs[0])
 		if err != nil {
 			return nil, err
 		}
-		cuts = make([]challenge.Cut, 0, len(parsedLog.ChainHashes))
+		cuts = make([]core.Cut, 0, len(parsedLog.ChainHashes))
 		for _, ch := range parsedLog.ChainHashes {
-			cuts = append(cuts, challenge.NewSimpleCut(ch))
+			cuts = append(cuts, core.NewSimpleCut(ch))
 		}
-		challengeSegment = &ChallengeSegment{
+		challengeSegment = &core.ChallengeSegment{
 			Start:  parsedLog.ChallengedSegmentStart,
 			Length: parsedLog.ChallengedSegmentLength,
 		}
@@ -140,14 +139,14 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 		if err != nil {
 			return nil, err
 		}
-		cuts = make([]challenge.Cut, 0, len(parsedLog.InboxAccHashes))
+		cuts = make([]core.Cut, 0, len(parsedLog.InboxAccHashes))
 		for i, inboxAccHash := range parsedLog.InboxAccHashes {
-			cuts = append(cuts, challenge.InboxDeltaCut{
+			cuts = append(cuts, core.InboxDeltaCut{
 				InboxAccHash:   inboxAccHash,
 				InboxDeltaHash: parsedLog.InboxDeltaHashes[i],
 			})
 		}
-		challengeSegment = &ChallengeSegment{
+		challengeSegment = &core.ChallengeSegment{
 			Start:  parsedLog.ChallengedSegmentStart,
 			Length: parsedLog.ChallengedSegmentLength,
 		}
@@ -155,7 +154,7 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 		return nil, errors.New("unexpected event type")
 	}
 
-	return &challenge.Bisection{
+	return &core.Bisection{
 		ChallengedSegment: challengeSegment,
 		Cuts:              cuts,
 	}, nil

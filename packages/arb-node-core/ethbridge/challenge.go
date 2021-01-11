@@ -5,18 +5,12 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 )
-
-type ChallengeSegment struct {
-	Start  *big.Int
-	Length *big.Int
-}
 
 func calculateBisectionChunkCount(segmentIndex, segmentCount int, totalLength *big.Int) *big.Int {
 	size := new(big.Int).Div(totalLength, big.NewInt(int64(segmentCount)))
@@ -26,7 +20,7 @@ func calculateBisectionChunkCount(segmentIndex, segmentCount int, totalLength *b
 	return size
 }
 
-func calculateBisectionLeaves(segment *ChallengeSegment, segmentHashes [][32]byte) [][32]byte {
+func calculateBisectionLeaves(segment *core.ChallengeSegment, segmentHashes [][32]byte) [][32]byte {
 	chunks := make([][32]byte, 0, len(segmentHashes))
 	segmentStart := new(big.Int).Set(segment.Start)
 	for i := 0; i < len(segmentHashes)-1; i++ {
@@ -60,9 +54,9 @@ func (c *Challenge) Transactor() common.Address {
 
 func (c *Challenge) BisectInboxConsistency(
 	ctx context.Context,
-	prevBisection *challenge.Bisection,
+	prevBisection *core.Bisection,
 	segmentToChallenge int,
-	subCuts []challenge.Cut,
+	subCuts []core.Cut,
 ) (*types.Transaction, error) {
 	prevCutHashes := cutsToHashes(prevBisection.Cuts)
 	subCutHashes := cutsToHashes(subCuts)
@@ -82,7 +76,7 @@ func (c *Challenge) BisectInboxConsistency(
 
 func (c *Challenge) OneStepProveInboxConsistency(
 	ctx context.Context,
-	prevBisection *challenge.Bisection,
+	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	lowerHash [32]byte,
 	value [32]byte,
@@ -104,15 +98,15 @@ func (c *Challenge) OneStepProveInboxConsistency(
 
 func (c *Challenge) BisectInboxDelta(
 	ctx context.Context,
-	prevBisection *challenge.Bisection,
+	prevBisection *core.Bisection,
 	segmentToChallenge int,
-	subCuts []challenge.Cut,
+	subCuts []core.Cut,
 ) (*types.Transaction, error) {
 	subInboxAccHashes := make([][32]byte, 0, len(subCuts))
 	subInboxDeltaHashes := make([][32]byte, 0, len(subCuts))
 	for _, cut := range subCuts {
-		subInboxAccHashes = append(subInboxAccHashes, cut.(challenge.InboxDeltaCut).InboxAccHash)
-		subInboxDeltaHashes = append(subInboxDeltaHashes, cut.(challenge.InboxDeltaCut).InboxDeltaHash)
+		subInboxAccHashes = append(subInboxAccHashes, cut.(core.InboxDeltaCut).InboxAccHash)
+		subInboxDeltaHashes = append(subInboxDeltaHashes, cut.(core.InboxDeltaCut).InboxDeltaHash)
 	}
 	prevCutHashes := cutsToHashes(prevBisection.Cuts)
 	prevTree := NewMerkleTree(calculateBisectionLeaves(prevBisection.ChallengedSegment, prevCutHashes))
@@ -123,7 +117,7 @@ func (c *Challenge) BisectInboxDelta(
 			prevTree.GetProofFlat(segmentToChallenge),
 			prevBisection.ChallengedSegment.Start,
 			prevBisection.ChallengedSegment.Length,
-			prevBisection.Cuts[segmentToChallenge+1].(challenge.InboxDeltaCut).InboxDeltaHash,
+			prevBisection.Cuts[segmentToChallenge+1].(core.InboxDeltaCut).InboxDeltaHash,
 			subInboxAccHashes,
 			subInboxDeltaHashes,
 		)
@@ -132,7 +126,7 @@ func (c *Challenge) BisectInboxDelta(
 
 func (c *Challenge) OneStepProveInboxDelta(
 	ctx context.Context,
-	prevBisection *challenge.Bisection,
+	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	msg inbox.InboxMessage,
 ) (*types.Transaction, error) {
@@ -145,8 +139,8 @@ func (c *Challenge) OneStepProveInboxDelta(
 			prevTree.GetProofFlat(segmentToChallenge),
 			prevBisection.ChallengedSegment.Start,
 			prevCutHashes[segmentToChallenge+1],
-			prevBisection.Cuts[segmentToChallenge].(challenge.InboxDeltaCut).InboxDeltaHash,
-			prevBisection.Cuts[segmentToChallenge+1].(challenge.InboxDeltaCut).InboxAccHash,
+			prevBisection.Cuts[segmentToChallenge].(core.InboxDeltaCut).InboxDeltaHash,
+			prevBisection.Cuts[segmentToChallenge+1].(core.InboxDeltaCut).InboxAccHash,
 			uint8(msg.Kind),
 			msg.ChainTime.BlockNum.AsInt(),
 			msg.ChainTime.Timestamp,
@@ -159,9 +153,9 @@ func (c *Challenge) OneStepProveInboxDelta(
 
 func (c *Challenge) BisectExecution(
 	ctx context.Context,
-	prevBisection *challenge.Bisection,
+	prevBisection *core.Bisection,
 	segmentToChallenge int,
-	subCuts []challenge.Cut,
+	subCuts []core.Cut,
 ) (*types.Transaction, error) {
 	prevCutHashes := cutsToHashes(prevBisection.Cuts)
 	subCutHashes := cutsToHashes(subCuts)
@@ -175,15 +169,15 @@ func (c *Challenge) BisectExecution(
 			prevBisection.ChallengedSegment.Length,
 			prevCutHashes[segmentToChallenge+1],
 			subCutHashes,
-			subCuts[0].(challenge.ExpandedExecutionCut).GasUsed,
-			subCuts[0].(challenge.ExpandedExecutionCut).Rest,
+			subCuts[0].(core.ExpandedExecutionCut).GasUsed,
+			subCuts[0].(core.ExpandedExecutionCut).Rest,
 		)
 	})
 }
 
 func (c *Challenge) OneStepProveExecution(
 	ctx context.Context,
-	prevBisection *challenge.Bisection,
+	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	beforeAssertion *core.AssertionInfo,
 	executionProof []byte,
@@ -212,7 +206,7 @@ func (c *Challenge) OneStepProveExecution(
 	})
 }
 
-func cutsToHashes(cuts []challenge.Cut) [][32]byte {
+func cutsToHashes(cuts []core.Cut) [][32]byte {
 	cutHashes := make([][32]byte, 0, len(cuts))
 	for _, cut := range cuts {
 		cutHashes = append(cutHashes, cut.Hash())

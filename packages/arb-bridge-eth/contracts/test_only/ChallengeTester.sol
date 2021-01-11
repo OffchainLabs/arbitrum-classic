@@ -23,6 +23,7 @@ import "../rollup/IRollup.sol";
 
 contract ChallengeTester is IRollup {
     ChallengeFactory private challengeFactory;
+    address public challenge;
 
     constructor(address _oneStepProofAddress, address _oneStepProof2Address) public {
         challengeFactory = new ChallengeFactory(_oneStepProofAddress, _oneStepProof2Address);
@@ -42,7 +43,7 @@ contract ChallengeTester is IRollup {
         address payable challenger,
         uint256 challengePeriodBlocks
     ) public {
-        challengeFactory.createChallenge(
+        challenge = challengeFactory.createChallenge(
             inboxConsistencyHash,
             inboxDeltaHash,
             executionHash,
