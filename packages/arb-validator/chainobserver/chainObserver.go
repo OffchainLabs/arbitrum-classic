@@ -154,6 +154,13 @@ func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
 					break
 				}
 
+				removeOp := chain.NodeGraph.RemoveStakersOnLatestConfirmed(chain.currentEventId.BlockId.Height)
+				if len(removeOp) != 0 {
+					for _, listener := range chain.listeners {
+						listener.StakesPassedDeadline(ctx, removeOp)
+					}
+				}
+
 				confOpp, _ := chain.NodeGraph.GenerateNextConfProof(common.TicksFromBlockNum(chain.currentEventId.BlockId.Height))
 				if confOpp != nil {
 					for _, listener := range chain.listeners {

@@ -430,8 +430,11 @@ func GeneratePathProof(from, to *Node) []common.Hash {
 	if to == nil {
 		return nil
 	}
-	if from == to {
+	if from.Hash() == to.Hash() {
 		return []common.Hash{}
+	}
+	if to.depth <= from.depth {
+		return nil
 	}
 	sub := GeneratePathProof(from, to.prev)
 	if sub == nil {

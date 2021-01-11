@@ -65,6 +65,7 @@ type ChainListener interface {
 	PrunableLeafs(context.Context, []valprotocol.PruneParams)
 	MootableStakes(context.Context, []nodegraph.RecoverStakeMootedParams)
 	OldStakes(context.Context, []nodegraph.RecoverStakeOldParams)
+	StakesPassedDeadline(context.Context, []*valprotocol.RecoverStakePassedDeadlineOpportunity)
 
 	AdvancedKnownNode(context.Context, *nodegraph.StakedNodeGraph, *structures.Node)
 }

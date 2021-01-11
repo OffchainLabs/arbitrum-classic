@@ -197,6 +197,34 @@ func (sng *StakedNodeGraph) GenerateNodePruneInfo() []valprotocol.PruneParams {
 	return prunesToDo
 }
 
+func (sng *StakedNodeGraph) RemoveStakersOnLatestConfirmed(currentBlock *common.TimeBlocks) []*valprotocol.RecoverStakePassedDeadlineOpportunity {
+	var opps []*valprotocol.RecoverStakePassedDeadlineOpportunity
+	sng.stakers.forall(func(st *Staker) {
+		if st.location.Depth() != sng.latestConfirmed.Depth() {
+			return
+		}
+		nextNodeHash := st.location.SuccessorHashes()[0]
+		nextNode := sng.nodeFromHash[nextNodeHash]
+		if nextNode == nil {
+			return
+		}
+
+		if common.TicksFromBlockNum(currentBlock).Cmp(nextNode.Deadline()) < 0 {
+			return
+		}
+		opp := &valprotocol.RecoverStakePassedDeadlineOpportunity{
+			StakerAddress:      st.address,
+			DeadlineTicks:      nextNode.Deadline(),
+			DisputableNodeHash: nextNode.NodeDataHash(),
+			ChildType:          nextNode.LinkType(),
+			VMProtoStateHash:   nextNode.VMProtoData().Hash(),
+			Proof:              structures.GeneratePathProof(nextNode, sng.GetLeaf(nextNode)),
+		}
+		opps = append(opps, opp)
+	})
+	return opps
+}
+
 func (sng *StakedNodeGraph) GenerateNextConfProof(currentTime common.TimeTicks) (*valprotocol.ConfirmOpportunity, []*structures.Node) {
 	stakerAddrs := make([]common.Address, 0)
 	sng.stakers.forall(func(st *Staker) {

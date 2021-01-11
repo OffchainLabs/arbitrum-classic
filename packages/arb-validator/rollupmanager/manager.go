@@ -266,6 +266,7 @@ func CreateManagerAdvanced(
 
 					logger.Info().
 						Object("l1block", currentOnChain).
+						Object("local", blockId).
 						Msg("processing block")
 
 					if !caughtUpToL1 && blockId.Height.Cmp(currentOnChain.Height) >= 0 {
@@ -278,7 +279,7 @@ func CreateManagerAdvanced(
 
 					man.activeChain.NotifyNextEvent(blockId.Clone())
 
-					if caughtUpToL1 || time.Since(lastDebugPrint).Seconds() > 10 {
+					if caughtUpToL1 || time.Since(lastDebugPrint).Seconds() > 120 {
 						logger.Info().Object("chain", man.activeChain).Msg("current graph")
 						lastDebugPrint = time.Now()
 					}

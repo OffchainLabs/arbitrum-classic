@@ -150,7 +150,7 @@ func ValidateRollupChain(
 	if err != nil {
 		return err
 	}
-	manager.AddListener(ctx, &chainlistener.AnnouncerListener{})
+	manager.AddListener(ctx, chainlistener.NewAnnouncerListener(auth.From.Hex()))
 	manager.AddListener(ctx, validatorListener)
 
 	wait := make(chan bool)
@@ -215,7 +215,7 @@ func ObserveRollupChain(
 		return err
 	}
 	if !*quietFlag {
-		manager.AddListener(ctx, &chainlistener.AnnouncerListener{})
+		manager.AddListener(ctx, chainlistener.NewAnnouncerListener("observingvalidator"))
 	}
 
 	wait := make(chan bool)

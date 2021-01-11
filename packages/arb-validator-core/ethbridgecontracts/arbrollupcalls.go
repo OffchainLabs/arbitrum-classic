@@ -36,6 +36,10 @@ func (_ArbRollup *ArbRollupTransactor) MakeAssertionCall(ctx context.Context, cl
 	return callCheckRollup(ctx, client, from, contractAddress, "makeAssertion", fields, fields2, validBlockHashPrecondition, validBlockHeightPrecondition, messageCount, logCount, prevChildType, numSteps, numArbGas, stakerProof)
 }
 
+func (_ArbRollup *ArbRollupTransactor) RecoverStakePassedDeadlineCall(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, stakerAddress common.Address, deadlineTicks *big.Int, disputableNodeHashVal [32]byte, childType *big.Int, vmProtoStateHash [32]byte, proof [][32]byte) error {
+	return callCheckRollup(ctx, client, from, contractAddress, "recoverStakePassedDeadline", stakerAddress, deadlineTicks, disputableNodeHashVal, childType, vmProtoStateHash, proof)
+}
+
 func callCheckRollup(ctx context.Context, client ethutils.EthClient, from common.Address, contractAddress common.Address, method string, params ...interface{}) error {
 	contractABI, err := abi.JSON(bytes.NewReader([]byte(ArbRollupABI)))
 	if err != nil {

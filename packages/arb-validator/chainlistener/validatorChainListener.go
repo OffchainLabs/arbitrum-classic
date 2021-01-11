@@ -590,6 +590,31 @@ func (lis *ValidatorChainListener) OldStakes(ctx context.Context, params []nodeg
 	}
 }
 
+func (lis *ValidatorChainListener) StakesPassedDeadline(ctx context.Context, opps []*valprotocol.RecoverStakePassedDeadlineOpportunity) {
+	// Anyone can remove a stake past its deadline
+	for _, opp := range opps {
+		oppCopy := *opp
+		go func() {
+			_, err := lis.actor.RecoverStakePassedDeadline(
+				ctx,
+				oppCopy.StakerAddress,
+				oppCopy.DeadlineTicks.Val,
+				oppCopy.DisputableNodeHash,
+				uint64(oppCopy.ChildType),
+				oppCopy.VMProtoStateHash,
+				oppCopy.Proof,
+			)
+			if err != nil {
+				logger.Warn().
+					Stack().
+					Err(err).
+					Hex("address", oppCopy.StakerAddress.Bytes()).
+					Msg("Unable to recover stake that has passed its deadline")
+			}
+		}()
+	}
+}
+
 func (lis *ValidatorChainListener) AdvancedKnownNode(
 	ctx context.Context,
 	nodeGraph *nodegraph.StakedNodeGraph,
