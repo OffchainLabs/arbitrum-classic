@@ -538,15 +538,6 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
 
     // System operations
 
-    function executeSendInsn(AssertionContext memory context) internal pure {
-        Value.Data memory val1 = popVal(context.stack);
-        if (val1.size > SEND_SIZE_LIMIT || !val1.isValidTypeForSend()) {
-            handleOpcodeError(context);
-            return;
-        }
-        context.messageAcc = keccak256(abi.encodePacked(context.messageAcc, val1.hash()));
-    }
-
     function incrementInbox(AssertionContext memory context)
         private
         pure
@@ -786,104 +777,6 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
         pushVal(context.stack, Value.newBuffer(keccak256(abi.encodePacked(bytes32(0)))));
     }
 
-    // Stop and arithmetic ops
-    uint8 private constant OP_ADD = 0x01;
-    uint8 private constant OP_MUL = 0x02;
-    uint8 private constant OP_SUB = 0x03;
-    uint8 private constant OP_DIV = 0x04;
-    uint8 private constant OP_SDIV = 0x05;
-    uint8 private constant OP_MOD = 0x06;
-    uint8 private constant OP_SMOD = 0x07;
-    uint8 private constant OP_ADDMOD = 0x08;
-    uint8 private constant OP_MULMOD = 0x09;
-    uint8 private constant OP_EXP = 0x0a;
-    uint8 private constant OP_SIGNEXTEND = 0x0b;
-
-    // Comparison & bitwise logic
-    uint8 private constant OP_LT = 0x10;
-    uint8 private constant OP_GT = 0x11;
-    uint8 private constant OP_SLT = 0x12;
-    uint8 private constant OP_SGT = 0x13;
-    uint8 private constant OP_EQ = 0x14;
-    uint8 private constant OP_ISZERO = 0x15;
-    uint8 private constant OP_AND = 0x16;
-    uint8 private constant OP_OR = 0x17;
-    uint8 private constant OP_XOR = 0x18;
-    uint8 private constant OP_NOT = 0x19;
-    uint8 private constant OP_BYTE = 0x1a;
-    uint8 private constant OP_SHL = 0x1b;
-    uint8 private constant OP_SHR = 0x1c;
-    uint8 private constant OP_SAR = 0x1d;
-
-    // SHA3
-    uint8 private constant OP_HASH = 0x20;
-    uint8 private constant OP_TYPE = 0x21;
-    uint8 private constant OP_ETHHASH2 = 0x22;
-    uint8 private constant OP_KECCAK_F = 0x23;
-    uint8 private constant OP_SHA256_F = 0x24;
-
-    // Stack, Memory, Storage and Flow Operations
-    uint8 private constant OP_POP = 0x30;
-    uint8 private constant OP_SPUSH = 0x31;
-    uint8 private constant OP_RPUSH = 0x32;
-    uint8 private constant OP_RSET = 0x33;
-    uint8 private constant OP_JUMP = 0x34;
-    uint8 private constant OP_CJUMP = 0x35;
-    uint8 private constant OP_STACKEMPTY = 0x36;
-    uint8 private constant OP_PCPUSH = 0x37;
-    uint8 private constant OP_AUXPUSH = 0x38;
-    uint8 private constant OP_AUXPOP = 0x39;
-    uint8 private constant OP_AUXSTACKEMPTY = 0x3a;
-    uint8 private constant OP_NOP = 0x3b;
-    uint8 private constant OP_ERRPUSH = 0x3c;
-    uint8 private constant OP_ERRSET = 0x3d;
-
-    // Duplication and Exchange operations
-    uint8 private constant OP_DUP0 = 0x40;
-    uint8 private constant OP_DUP1 = 0x41;
-    uint8 private constant OP_DUP2 = 0x42;
-    uint8 private constant OP_SWAP1 = 0x43;
-    uint8 private constant OP_SWAP2 = 0x44;
-
-    // Tuple operations
-    uint8 private constant OP_TGET = 0x50;
-    uint8 private constant OP_TSET = 0x51;
-    uint8 private constant OP_TLEN = 0x52;
-    uint8 private constant OP_XGET = 0x53;
-    uint8 private constant OP_XSET = 0x54;
-
-    // Logging operations
-    uint8 private constant OP_BREAKPOINT = 0x60;
-    uint8 private constant OP_LOG = 0x61;
-
-    // System operations
-    uint8 private constant OP_SEND = 0x70;
-    uint8 private constant OP_INBOX_PEEK = 0x71;
-    uint8 private constant OP_INBOX = 0x72;
-    uint8 private constant OP_ERROR = 0x73;
-    uint8 private constant OP_STOP = 0x74;
-    uint8 private constant OP_SETGAS = 0x75;
-    uint8 private constant OP_PUSHGAS = 0x76;
-    uint8 private constant OP_ERR_CODE_POINT = 0x77;
-    uint8 private constant OP_PUSH_INSN = 0x78;
-    uint8 private constant OP_PUSH_INSN_IMM = 0x79;
-    // uint8 private constant OP_OPEN_INSN = 0x7a;
-    uint8 private constant OP_SIDELOAD = 0x7b;
-
-    uint8 private constant OP_ECRECOVER = 0x80;
-    uint8 private constant OP_ECADD = 0x81;
-    uint8 private constant OP_ECMUL = 0x82;
-    uint8 private constant OP_ECPAIRING = 0x83;
-
-    // Buffer operations
-    uint8 private constant OP_NEWBUFFER = 0xa0;
-    uint8 private constant OP_GETBUFFER8 = 0xa1;
-    uint8 private constant OP_GETBUFFER64 = 0xa2;
-    uint8 private constant OP_GETBUFFER256 = 0xa3;
-    uint8 private constant OP_SETBUFFER8 = 0xa4;
-    uint8 private constant OP_SETBUFFER64 = 0xa5;
-    uint8 private constant OP_SETBUFFER256 = 0xa6;
-
     uint64 private constant EC_PAIRING_POINT_GAS_COST = 500000;
 
     uint8 private constant CODE_POINT_TYPECODE = 1;
@@ -993,8 +886,6 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
             return (0, 0, 100, executeNopInsn);
         } else if (opCode == OP_LOG) {
             return (1, 0, 100, executeLogInsn);
-        } else if (opCode == OP_SEND) {
-            return (1, 0, 100, executeSendInsn);
         } else if (opCode == OP_INBOX_PEEK) {
             return (1, 0, 40, executeInboxPeekInsn);
         } else if (opCode == OP_INBOX) {

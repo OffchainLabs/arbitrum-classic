@@ -27,12 +27,13 @@ import "C"
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/pkg/errors"
 	"math/big"
 	"runtime"
 	"unsafe"
+
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -91,15 +92,10 @@ func (as *AggregatorStore) MessageCount() (uint64, error) {
 	return uint64(result.value), nil
 }
 
-func (as *AggregatorStore) SaveMessage(val value.Value) error {
-	var buf bytes.Buffer
-	if err := value.MarshalValue(val, &buf); err != nil {
-		return err
-	}
-
-	cData := C.CBytes(buf.Bytes())
+func (as *AggregatorStore) SaveMessage(buf []byte) error {
+	cData := C.CBytes(buf)
 	defer C.free(cData)
-	if C.aggregatorSaveMessage(as.c, cData, C.uint64_t(buf.Len())) == 0 {
+	if C.aggregatorSaveMessage(as.c, cData, C.uint64_t(len(buf))) == 0 {
 		return errors.New("failed to save l2message")
 	}
 

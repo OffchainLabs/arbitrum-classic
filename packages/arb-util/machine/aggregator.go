@@ -17,12 +17,13 @@
 package machine
 
 import (
+	"sync"
+
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"sync"
 )
 
 type BlockInfo struct {
@@ -41,7 +42,7 @@ type AggregatorStore interface {
 	MessageCount() (uint64, error)
 
 	SaveLog(val value.Value) error
-	SaveMessage(val value.Value) error
+	SaveMessage(val []byte) error
 	SaveBlock(header *types.Header, logIndex uint64) error
 	SaveEmptyBlock(header *types.Header) error
 	SaveBlockHash(blockHash common.Hash, blockHeight uint64) error

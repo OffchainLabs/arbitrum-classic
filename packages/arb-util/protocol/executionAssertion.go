@@ -18,6 +18,8 @@ package protocol
 
 import (
 	"bytes"
+	"encoding/binary"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -84,8 +86,22 @@ func (x *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {
 		bytes.Equal(x.LogsData, b.LogsData)
 }
 
-func (x *ExecutionAssertion) ParseOutMessages() []value.Value {
-	return BytesArrayToVals(x.OutMsgsData, x.OutMsgsCount)
+func (x *ExecutionAssertion) ParseOutMessages() [][]byte {
+	vals := make([][]byte, 0, x.OutMsgsCount)
+	rd := bytes.NewReader(x.OutMsgsData)
+	for i := uint64(0); i < x.OutMsgsCount; i++ {
+		var size uint64
+		if err := binary.Read(rd, binary.BigEndian, &size); err != nil {
+			panic(err)
+		}
+		arr := make([]byte, size)
+		_, err := rd.Read(arr)
+		if err != nil {
+			panic(err)
+		}
+		vals = append(vals, arr)
+	}
+	return vals
 }
 
 func (x *ExecutionAssertion) ParseLogs() []value.Value {

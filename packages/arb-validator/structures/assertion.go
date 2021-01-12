@@ -52,7 +52,7 @@ func NewExecutionAssertionStubFromAssertion(
 		AfterInboxHash:    afterInboxHash,
 		NumGas:            a.NumGas,
 		FirstMessageHash:  common.Hash{},
-		LastMessageHash:   valprotocol.BytesArrayAccumHash(beforeLogsHash, a.OutMsgsData, a.OutMsgsCount),
+		LastMessageHash:   valprotocol.BufferAccumHash(beforeLogsHash, a.ParseOutMessages()),
 		MessageCount:      a.OutMsgsCount,
 		FirstLogHash:      common.Hash{},
 		LastLogHash:       valprotocol.BytesArrayAccumHash(beforeMessagesHash, a.LogsData, a.LogsCount),
