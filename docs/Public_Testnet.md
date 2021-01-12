@@ -14,11 +14,11 @@ For a convenient landing page for all your testnet needs, see our [website](http
 
 Hosted Aggregator Node (JSON-RPC Endpoint): [https://kovan3.arbitrum.io/rpc](https://kovan3.arbitrum.io/rpc)
 
-Rollup Chain ID: 46116242285844
+Rollup Chain ID: 79377087078960
 
 Testnet Version: v3
 
-Chain Launched on January 8, 2021
+Chain Launched on January 11, 2021
 
 ## Deploying your contracts
 
@@ -34,7 +34,7 @@ If you're using metamask, add a custom RPC network to connect to the Arbitrum te
 
 - Network Name: Arbitrum Testnet V3
 - New RPC URL: https://kovan3.arbitrum.io/rpc
-- ChainID (Optional): 46116242285844
+- ChainID (Optional): 79377087078960
 - Symbol: ETH
 - Block Explorer URL: https://explorer.arbitrum.io/#/
 
@@ -44,6 +44,7 @@ If you'd like to see your transactions in action, check out our [block explorer]
 
 There you'll be able to see all the transactions being executed in Arbitrum and also see exactly how much Ethereum Gas each transaction uses.
 
+<!--
 ## Running your own node
 
 We're running an aggregator and validator for our testnet, so you don't have to run any of your own infrastructure. However Arbitrum Rollup is totally decentralized, so if you'd like to run your own infrastructure you can avoid our servers entirely.
@@ -51,7 +52,7 @@ We're running an aggregator and validator for our testnet, so you don't have to 
 The very first step to start building with Arbitrum is [installing](Installation.md). After that you can initialize your local setup by running:
 
 ```bash
-yarn prod:initialize  0x3B493fD1731528531471Cd18ea2f29f1463D6514 https://kovan.infura.io/v3/YOUR_INFURA_API_ID
+yarn prod:initialize  0x2e8aF9f74046D3E55202Fcfb893348316B142230 https://kovan.infura.io/v3/YOUR_INFURA_API_ID
 ```
 
 Running the `prod:initialize` command will create a `arbitrum/rollups/ 0x3B493fD1731528531471Cd18ea2f29f1463D6514` folder with two subfolders, one configured for an aggregator, and the other a validator.
@@ -59,27 +60,27 @@ Running the `prod:initialize` command will create a `arbitrum/rollups/ 0x3B493fD
 To deploy the validator and aggregator, run
 
 ```bash
-yarn deploy:validators  0x3B493fD1731528531471Cd18ea2f29f1463D6514 --password=[password]
+yarn deploy:validators  0x2e8aF9f74046D3E55202Fcfb893348316B142230 --password=[password]
 ```
 
 Upon deploying a validator, you'll be asked to deposit the staking requirement, 1 Kovan ETH.
 
 The password argument is used to secure the validator keystore. On the first deployment you set the password to any value, and on later deployments you must resubmit the same password.
-
+--->
 ## Kovan Deployment
 
 All contracts are deployed from https://github.com/OffchainLabs/arbitrum/tree/v0.7.2/packages/arb-bridge-eth/contracts
 
 #### Important Addresses
 
-- Main L1 Rollup Contract: [0x3B493fD1731528531471Cd18ea2f29f1463D6514](https://kovan.etherscan.io/address/0x3B493fD1731528531471Cd18ea2f29f1463D6514)
+- Main L1 Rollup Contract: [0x2e8aF9f74046D3E55202Fcfb893348316B142230](https://kovan.etherscan.io/address/0x2e8aF9f74046D3E55202Fcfb893348316B142230)
 - Our Hosted Aggregator Address: [0xa300a724d86564615763c58f579248e0d7d08d36](https://kovan.etherscan.io/address/0xa300a724d86564615763c58f579248e0d7d08d36)
 - Our Hosted Validator Address: [0xa300bb7096beb6ca8142bdc7dfa7123726131ef8](https://kovan.etherscan.io/address/0xa300bb7096beb6ca8142bdc7dfa7123726131ef8)
 
 #### Rollup Contracts
 
-- [ArbFactory](https://github.com/OffchainLabs/arbitrum/blob/v0.7.2/packages/arb-bridge-eth/contracts/rollup/ArbFactory.sol) - [0xee1250962014364aCf506061E66e78e65b8bCEEC](https://kovan.etherscan.io/address/0xee1250962014364aCf506061E66e78e65b8bCEEC)
-- [ArbRollup](https://github.com/OffchainLabs/arbitrum/blob/v0.7.2/packages/arb-bridge-eth/contracts/rollup/ArbRollup.sol) - [0x5c1351258f436dA83f37D6A46424225A08914bd5](https://kovan.etherscan.io/address/0x5c1351258f436dA83f37D6A46424225A08914bd5) (Template contract)
+- [ArbFactory](https://github.com/OffchainLabs/arbitrum/blob/v0.7.2/packages/arb-bridge-eth/contracts/rollup/ArbFactory.sol) - [0x1818CA53Ed3dCf11c5992865388BC37E1e9DD312](https://kovan.etherscan.io/address/0x1818CA53Ed3dCf11c5992865388BC37E1e9DD312)
+- [ArbRollup](https://github.com/OffchainLabs/arbitrum/blob/v0.7.2/packages/arb-bridge-eth/contracts/rollup/ArbRollup.sol) - [0x731E9FA93b3b9Fa26f1308544c7651a9D5813Fbc](https://kovan.etherscan.io/address/0x731E9FA93b3b9Fa26f1308544c7651a9D5813Fbc) (Template contract)
 
 #### Inbox Contract
 
