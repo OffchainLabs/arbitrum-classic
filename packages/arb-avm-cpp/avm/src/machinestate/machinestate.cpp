@@ -243,11 +243,10 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
         if (!size) {
             return buf;
         }
-        if (buffer->lastIndex() >= *size) {
-            auto proof = makeProof(*buffer, buffer->lastIndex());
-            insertSizes(buf, proof.size(), 0, 0, 0);
-            buf.insert(buf.end(), proof.begin(), proof.end());
-        }
+        auto loc = static_cast<uint64_t>(*size);
+        auto proof = makeProof(*buffer, loc);
+        insertSizes(buf, proof.size(), 0, 0, 0);
+        buf.insert(buf.end(), proof.begin(), proof.end());
         return buf;
     }
     if (opcode < OpCode::GET_BUFFER8 || opcode > OpCode::SET_BUFFER256) {
