@@ -98,28 +98,7 @@ library Messages {
         )
     {
         offset = startOffset;
-        uint8 valType = uint8(data[offset]);
-        offset++;
-
-        if (valType != Value.tupleTypeCode() + 3) {
-            return (false, startOffset, message);
-        }
-
-        uint256 rawKind;
-        (valid, offset, rawKind) = Marshaling.deserializeCheckedInt(data, offset);
-        if (!valid) {
-            return (false, startOffset, message);
-        }
-        message.kind = uint8(rawKind);
-
-        uint256 senderRaw;
-        (valid, offset, senderRaw) = Marshaling.deserializeCheckedInt(data, offset);
-        if (!valid) {
-            return (false, startOffset, message);
-        }
-
-        message.sender = address(uint160((senderRaw)));
-        (valid, offset, message.data) = Marshaling.bytestackToBytes(data, offset);
+        (valid, offset, message.sender, message.kind, message.data) = Marshaling.deserializeMessage(data, offset);
         if (!valid) {
             return (false, startOffset, message);
         }

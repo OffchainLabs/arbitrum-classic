@@ -22,6 +22,7 @@ import "../arch/Marshaling.sol";
 import "../libraries/RollupTime.sol";
 
 import "../challenge/ChallengeUtils.sol";
+import "../inbox/Messages.sol";
 
 library RollupUtils {
     using Hashing for Value.Data;
@@ -153,11 +154,13 @@ library RollupUtils {
         uint256 count
     ) internal pure returns (bytes32, uint256) {
         bytes32 hashVal = 0x00;
-        Value.Data memory messageVal;
+        bytes memory message;
         uint256 offset = startOffset;
+        bool valid;
         for (uint256 i = 0; i < count; i++) {
-            (offset, messageVal) = Marshaling.deserialize(messages, offset);
-            hashVal = keccak256(abi.encodePacked(hashVal, messageVal.hash()));
+            (valid, offset, message) = Marshaling.deserializeRawMessage(messages, offset);
+            require(valid);
+            hashVal = keccak256(abi.encodePacked(hashVal, Hashing.hashMessage(message)));
         }
         return (hashVal, offset);
     }
