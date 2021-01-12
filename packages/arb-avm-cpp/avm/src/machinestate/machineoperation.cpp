@@ -868,15 +868,22 @@ void debug(MachineState& m) {
 }
 
 bool send(MachineState& m) {
-    m.stack.prepForMod(1);
+    m.stack.prepForMod(2);
 
-    auto val_size = getSize(m.stack[0]);
+    auto msg_size = assumeInt64(assumeInt(m.stack[0]));
+    Buffer& buf = assumeBuffer(m.stack[1]);
+
     bool success;
 
-    if (val_size > send_size_limit) {
+    if (msg_size > send_size_limit || buf.lastIndex() >= msg_size) {
         success = false;
     } else {
-        m.context.outMessage.push_back(std::move(m.stack[0]));
+        auto vec = std::vector<uint8_t>();
+        for (uint64_t i = 0; i <= buf.lastIndex(); i++) {
+            vec[i] = buf.get(i);
+        }
+        m.context.outMessage.push_back(vec);
+        m.stack.popClear();
         m.stack.popClear();
         ++m.pc;
 

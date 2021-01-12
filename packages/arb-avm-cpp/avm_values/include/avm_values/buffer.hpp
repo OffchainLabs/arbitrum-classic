@@ -54,6 +54,7 @@ struct Packed {
     uint256_t hash;
     uint64_t size; // total height
     int packed; // packed levels
+    uint64_t lastIndex;
 };
 
 Packed zero_packed(uint64_t sz);
@@ -174,8 +175,14 @@ class RawBuffer {
         }
     }
 
-    uint256_t hash();
     Packed hash_aux();
+    uint256_t hash() {
+        return hash_aux().hash;
+    }
+
+    uint64_t lastIndex() {
+        return hash_aux().lastIndex;
+    }
 
     std::vector<RawBuffer> serialize(std::vector<unsigned char>& value_vector);
 
@@ -227,6 +234,10 @@ class Buffer {
 
     uint64_t size() const {
         return buf->size();
+    }
+
+    uint64_t lastIndex() const {
+        return buf->lastIndex();
     }
 
     uint256_t hash() const {

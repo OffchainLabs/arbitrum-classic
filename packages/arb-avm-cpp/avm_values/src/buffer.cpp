@@ -31,12 +31,12 @@ uint256_t hash2(uint256_t a, uint256_t b) {
     return hash(a, b);
 }
 
-Packed normal(uint256_t hash, uint64_t sz) {
-    return Packed{hash, sz, 0};
+Packed normal(uint256_t hash, uint64_t sz, uint64_t lastIndex) {
+    return Packed{hash, sz, 0, lastIndex};
 }
 
 Packed pack(const Packed& packed) {
-    return Packed{packed.hash, packed.size, packed.packed+1};
+    return Packed{packed.hash, packed.size, packed.packed+1, packed.lastIndex};
 }
 
 bool is_zero_hash(const Packed& packed) {
@@ -55,7 +55,7 @@ uint256_t unpack(const Packed &packed) {
 
 Packed zero_packed(uint64_t sz) {
     if (sz == 5) {
-        return normal(zero_hash(5), 5);
+        return normal(hash(0), 5, 0);
     }
     return pack(zero_packed(sz-1));
 }
@@ -64,14 +64,16 @@ Packed hash_buf(uint8_t *buf, uint64_t offset, uint64_t sz) {
     if (sz == 5) {
         auto hash_val = ethash::keccak256(buf+offset, 32);
         uint256_t res = intx::be::load<uint256_t>(hash_val);
-        return normal(res, 5);
+        uint64_t lastIndex = 31;
+        while (buf[offset+lastIndex] == 0) lastIndex--;
+        return normal(res, 5, lastIndex);
     }
     auto h1 = hash_buf(buf, offset, sz-1);
     auto h2 = hash_buf(buf, offset + (1 << (sz-1)), sz-1);
     if (is_zero_hash(h2)) {
         return pack(h1);
     }
-    return normal(hash(unpack(h1), unpack(h2)), sz);
+    return normal(hash(unpack(h1), unpack(h2)), sz, h2.lastIndex + (1 << (sz-1)));
 }
 
 Packed hash_node(RawBuffer *buf, uint64_t offset, uint64_t len, uint64_t sz) {
@@ -84,12 +86,7 @@ Packed hash_node(RawBuffer *buf, uint64_t offset, uint64_t len, uint64_t sz) {
     if (is_zero_hash(h2)) {
         return pack(h1);
     }
-    return normal(hash(unpack(h1), unpack(h2)), sz);
-}
-
-uint256_t RawBuffer::hash() {
-    uint256_t res = hash_aux().hash;
-    return res;
+    return normal(hash(unpack(h1), unpack(h2)), sz, h2.lastIndex + (1 << (sz-1)));
 }
 
 Packed RawBuffer::hash_aux() {

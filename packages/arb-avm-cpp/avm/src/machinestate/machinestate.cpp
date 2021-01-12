@@ -233,6 +233,23 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
     std::vector<unsigned char> buf;
     auto op = loadCurrentInstruction().op;
     auto opcode = op.opcode;
+    if (opcode == OpCode::SEND) {
+        auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0]) : nonstd::get_if<Buffer>(&stack[1]);
+        if (!buffer) {
+            return buf;
+        }
+        // Also need the offset
+        auto size = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate) : nonstd::get_if<uint256_t>(&stack[0]);
+        if (!size) {
+            return buf;
+        }
+        if (buffer->lastIndex() >= *size) {
+            auto proof = makeProof(*buffer, buffer->lastIndex());
+            insertSizes(buf, proof.size(), 0, 0, 0);
+            buf.insert(buf.end(), proof.begin(), proof.end());
+        }
+        return buf;
+    }
     if (opcode < OpCode::GET_BUFFER8 || opcode > OpCode::SET_BUFFER256) {
         return buf;
     }
