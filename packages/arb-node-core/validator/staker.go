@@ -1,0 +1,178 @@
+package validator
+
+import (
+	"context"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/pkg/errors"
+)
+
+type Staker struct {
+	*Validator
+	address      common.Address
+	makeNewNodes bool
+}
+
+func (s *Staker) Act(ctx context.Context) error {
+	info, err := s.rollup.StakerInfo(ctx, s.address)
+	if err != nil {
+		return err
+	}
+	_, err = s.handleConflict(ctx, info)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.resolveNextNode(ctx)
+	if err != nil {
+		return err
+	}
+
+	if info != nil {
+		_, err := s.advanceStake(ctx, info)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err := s.placeStake(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo) (*types.Transaction, error) {
+	if info.CurrentChallenge == nil {
+		return nil, nil
+	}
+	challengeCon, err := ethbridge.NewChallenge(info.CurrentChallenge.ToEthAddress(), s.client, s.auth)
+	if err != nil {
+		return nil, err
+	}
+
+	challengedNode, err := s.rollup.LookupChallengedNode(ctx, *info.CurrentChallenge)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeInfo, err := lookupNode(ctx, s.rollup.RollupWatcher, challengedNode)
+	if err != nil {
+		return nil, err
+	}
+
+	challenger := challenge.NewChallenger(challengeCon, s.lookup, nodeInfo)
+	return challenger.HandleConflict(ctx)
+}
+
+func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (*types.Transaction, error) {
+	info, err := s.rollup.StakerInfo(ctx, s.address)
+	if err != nil {
+		return nil, err
+	}
+	if info == nil {
+		return nil, errors.New("no stake placed")
+	}
+
+	action, err := s.generateNodeAction(ctx, info.LatestStakedNode)
+	if err != nil {
+		return nil, err
+	}
+
+	if action == nil {
+		// Nothing to do
+		return nil, nil
+	}
+
+	switch action := action.(type) {
+	case nodeCreationInfo:
+		if !s.makeNewNodes {
+			return nil, nil
+		}
+		return s.rollup.AddStakeOnNewNode(ctx, action.block, action.newNodeID, action.assertion)
+	case nodeMovementInfo:
+		return s.rollup.AddStakeOnExistingNode(ctx, action.block, action.nodeNum)
+	default:
+		panic("invalid type")
+	}
+}
+
+func (s *Staker) placeStake(ctx context.Context) (*types.Transaction, error) {
+	latestConfirmedNode, err := s.rollup.LatestConfirmedNode(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	action, err := s.generateNodeAction(ctx, latestConfirmedNode)
+	if err != nil {
+		return nil, err
+	}
+
+	switch action := action.(type) {
+	case nodeCreationInfo:
+		if !s.makeNewNodes {
+			return nil, nil
+		}
+		return s.rollup.NewStakeOnNewNode(ctx, action.block, action.newNodeID, latestConfirmedNode, action.assertion)
+	case nodeMovementInfo:
+		return s.rollup.NewStakeOnExistingNode(ctx, action.block, action.nodeNum)
+	default:
+		panic("invalid type")
+	}
+}
+
+func (s *Staker) createConflict(ctx context.Context) (*types.Transaction, error) {
+	info, err := s.rollup.StakerInfo(ctx, s.address)
+	if err != nil {
+		return nil, err
+	}
+	if info == nil {
+		return nil, errors.New("not staked")
+	}
+	if info.CurrentChallenge != nil {
+		return nil, nil
+	}
+
+	stakers, err := s.rollup.GetStakers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, staker := range stakers {
+		conflictType, node1, node2, err := s.validatorUtils.FindStakerConflict(ctx, s.address, staker)
+		if err != nil {
+			return nil, err
+		}
+		if conflictType != ethbridge.CONFLICT_TYPE_FOUND {
+			continue
+		}
+		staker1 := s.address
+		staker2 := staker
+		if node2.Cmp(node1) < 0 {
+			staker1, staker2 = staker2, staker1
+			node1, node2 = node2, node1
+		}
+
+		nodeInfo, err := lookupNode(ctx, s.rollup.RollupWatcher, node1)
+		if err != nil {
+			return nil, err
+		}
+		maxInboxHash, err := s.lookup.GetInboxAcc(nodeInfo.InboxMaxCount)
+		if err != nil {
+			return nil, err
+		}
+		return s.rollup.CreateChallenge(
+			ctx,
+			staker1,
+			node1,
+			staker2,
+			node2,
+			nodeInfo.Assertion,
+			maxInboxHash,
+			nodeInfo.InboxMaxCount,
+		)
+	}
+	// No conflicts exist
+	return nil, nil
+}

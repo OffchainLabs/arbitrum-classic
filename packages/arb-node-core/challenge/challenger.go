@@ -58,7 +58,7 @@ func NewChallenger(challenge *ethbridge.Challenge, lookup core.ValidatorLookup, 
 	}
 }
 
-func (c *Challenger) handleConflict(ctx context.Context) (*types.Transaction, error) {
+func (c *Challenger) HandleConflict(ctx context.Context) (*types.Transaction, error) {
 	responder, err := c.challenge.CurrentResponder(ctx)
 	if err != nil {
 		return nil, err
