@@ -29,7 +29,7 @@ func (c *Challenger) InboxDelta() (*inboxDelta, error) {
 	if c.inboxDelta == nil {
 		messages, err := c.lookup.GetMessages(
 			c.challengedNode.Assertion.PrevState.InboxCount,
-			c.challengedNode.Assertion.ExecInfo.InboxMessagesRead,
+			c.challengedNode.Assertion.InboxMessagesRead,
 		)
 		if err != nil {
 			return nil, err

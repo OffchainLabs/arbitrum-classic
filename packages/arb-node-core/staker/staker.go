@@ -35,7 +35,7 @@ func NewStaker(
 		Validator:    val,
 		address:      common.NewAddressFromEth(auth.From),
 		auth:         txAuth,
-		makeNewNodes: false,
+		makeNewNodes: true,
 	}, nil
 }
 
@@ -101,22 +101,17 @@ func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (
 	}
 
 	action, err := s.generateNodeAction(ctx, info.LatestStakedNode)
-	if err != nil {
+	if err != nil || action == nil {
 		return nil, err
 	}
 
-	if action == nil {
-		// Nothing to do
-		return nil, nil
-	}
-
 	switch action := action.(type) {
-	case nodeCreationInfo:
+	case *nodeCreationInfo:
 		if !s.makeNewNodes {
 			return nil, nil
 		}
 		return s.rollup.AddStakeOnNewNode(ctx, action.block, action.newNodeID, action.assertion)
-	case nodeMovementInfo:
+	case *nodeMovementInfo:
 		return s.rollup.AddStakeOnExistingNode(ctx, action.block, action.nodeNum)
 	default:
 		panic("invalid type")
@@ -130,17 +125,17 @@ func (s *Staker) placeStake(ctx context.Context) (*types.Transaction, error) {
 	}
 
 	action, err := s.generateNodeAction(ctx, latestConfirmedNode)
-	if err != nil {
+	if err != nil || action == nil {
 		return nil, err
 	}
 
 	switch action := action.(type) {
-	case nodeCreationInfo:
+	case *nodeCreationInfo:
 		if !s.makeNewNodes {
 			return nil, nil
 		}
 		return s.rollup.NewStakeOnNewNode(ctx, action.block, action.newNodeID, latestConfirmedNode, action.assertion)
-	case nodeMovementInfo:
+	case *nodeMovementInfo:
 		return s.rollup.NewStakeOnExistingNode(ctx, action.block, action.nodeNum)
 	default:
 		panic("invalid type")

@@ -86,16 +86,27 @@ contract Rollup is Inbox, Outbox, IRollup {
         challengeFactory = IChallengeFactory(_challengeFactory);
         nodeFactory = INodeFactory(_nodeFactory);
 
+        sendInitializationMessage(
+            abi.encodePacked(
+                uint256(_challengePeriodBlocks),
+                uint256(_arbGasSpeedLimitPerBlock),
+                uint256(_baseStake),
+                bytes32(bytes20(_stakeToken)),
+                bytes32(bytes20(_owner)),
+                _extraConfig
+            )
+        );
+
         bytes32 state =
             RollupLib.nodeStateHash(
                 block.number, // block proposed
-                0,
+                0, // total gas used
                 _machineHash,
                 0, // inbox top
                 0, // inbox count
                 0, // send count
                 0, // log count
-                0 // inbox max couny
+                inboxMaxCount // inbox max count
             );
         Node node =
             Node(
@@ -114,18 +125,9 @@ contract Rollup is Inbox, Outbox, IRollup {
         baseStake = _baseStake;
         stakeToken = _stakeToken;
 
-        sendInitializationMessage(
-            abi.encodePacked(
-                uint256(_challengePeriodBlocks),
-                uint256(_arbGasSpeedLimitPerBlock),
-                uint256(_baseStake),
-                bytes32(bytes20(_stakeToken)),
-                bytes32(bytes20(_owner)),
-                _extraConfig
-            )
-        );
-
         firstUnresolvedNode = 1;
+
+        emit RollupCreated(_machineHash);
     }
 
     function rejectNextNode(uint256 successorWithStake, address stakerAddress) external {
@@ -460,7 +462,7 @@ contract Rollup is Inbox, Outbox, IRollup {
             assertionBytes32Fields,
             assertionIntFields,
             inboxMaxCount,
-            inboxMaxValue
+            inboxMaxAcc
         );
     }
 
@@ -515,7 +517,7 @@ contract Rollup is Inbox, Outbox, IRollup {
                     RollupLib.challengeRoot(
                         assertion,
                         inboxMaxCount,
-                        inboxMaxValue,
+                        inboxMaxAcc,
                         executionCheckTimeBlocks
                     ),
                     RollupLib.confirmHash(assertion),

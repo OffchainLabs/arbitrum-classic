@@ -125,18 +125,16 @@ func initializeChallengeData(
 	inboxAcc, err := lookup.GetInboxAcc(afterInboxCount)
 	test.FailIfError(t, err)
 	assertionInfo := &core.AssertionInfo{
-		InboxDelta: core.CalculateInboxDeltaAcc(messages),
-		ExecInfo: &core.ExecutionInfo{
-			BeforeMachineHash: common.Hash{},
-			InboxMessagesRead: inboxMessagesRead,
-			GasUsed:           big.NewInt(0),
-			SendAcc:           common.Hash{},
-			SendCount:         big.NewInt(0),
-			LogAcc:            common.Hash{},
-			LogCount:          big.NewInt(0),
-			AfterMachineHash:  common.Hash{},
-		},
-		AfterInboxHash: inboxAcc,
+		BeforeMachineHash: common.Hash{},
+		InboxMessagesRead: inboxMessagesRead,
+		GasUsed:           big.NewInt(0),
+		SendAcc:           common.Hash{},
+		SendCount:         big.NewInt(0),
+		LogAcc:            common.Hash{},
+		LogCount:          big.NewInt(0),
+		AfterMachineHash:  common.Hash{},
+		InboxDelta:        core.CalculateInboxDeltaAcc(messages),
+		AfterInboxHash:    inboxAcc,
 	}
 
 	assertion := &core.Assertion{

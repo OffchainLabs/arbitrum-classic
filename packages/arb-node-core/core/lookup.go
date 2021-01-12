@@ -20,13 +20,13 @@ type ValidatorLookup interface {
 	// GetExecutionInfo tries to execute targetGas steps, but only reads up to
 	// maxMessages messages and stops short if it runs out of messages and needs
 	// more to continue
-	GetExecutionInfoWithMaxMessages(startMachine machine.Machine, targetGas *big.Int, maxMessages *big.Int) (*ExecutionInfo, error)
+	GetExecutionInfoWithMaxMessages(startMachine machine.Machine, targetGas *big.Int, maxMessages *big.Int) (*AssertionInfo, error)
 
 	// GetExecutionInfo executes as much as it can not over maxGas
 	GetExecutionInfo(startMachine machine.Machine, maxGas *big.Int) (*AssertionInfo, error)
 }
 
-type ExecutionInfo struct {
+type AssertionInfo struct {
 	BeforeMachineHash common.Hash
 	InboxMessagesRead *big.Int
 	GasUsed           *big.Int
@@ -35,9 +35,11 @@ type ExecutionInfo struct {
 	LogAcc            common.Hash
 	LogCount          *big.Int
 	AfterMachineHash  common.Hash
+	InboxDelta        common.Hash
+	AfterInboxHash    common.Hash
 }
 
-func (e *ExecutionInfo) Equals(o *ExecutionInfo) bool {
+func (e *AssertionInfo) Equals(o *AssertionInfo) bool {
 	return e.BeforeMachineHash == o.BeforeMachineHash &&
 		e.InboxMessagesRead.Cmp(o.InboxMessagesRead) == 0 &&
 		e.GasUsed.Cmp(o.GasUsed) == 0 &&
@@ -45,11 +47,7 @@ func (e *ExecutionInfo) Equals(o *ExecutionInfo) bool {
 		e.SendCount.Cmp(o.SendCount) == 0 &&
 		e.LogAcc == o.LogAcc &&
 		e.LogCount.Cmp(o.LogCount) == 0 &&
-		e.AfterMachineHash == o.AfterMachineHash
-}
-
-type AssertionInfo struct {
-	InboxDelta     common.Hash
-	ExecInfo       *ExecutionInfo
-	AfterInboxHash common.Hash
+		e.AfterMachineHash == o.AfterMachineHash &&
+		e.InboxDelta == o.InboxDelta &&
+		e.AfterInboxHash == o.AfterInboxHash
 }

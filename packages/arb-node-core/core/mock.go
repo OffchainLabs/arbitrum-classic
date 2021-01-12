@@ -81,9 +81,9 @@ func (v *ValidatorLookupMock) GetMachine(totalGasUsed *big.Int) (machine.Machine
 	return nil, errors.New("GetMachine not yet supported")
 }
 
-func (v *ValidatorLookupMock) GetExecutionInfoWithMaxMessages(startMachine machine.Machine, targetGas *big.Int, maxMessages *big.Int) (*ExecutionInfo, error) {
+func (v *ValidatorLookupMock) GetExecutionInfoWithMaxMessages(startMachine machine.Machine, targetGas *big.Int, maxMessages *big.Int) (*AssertionInfo, error) {
 	if targetGas.Cmp(big.NewInt(0)) == 0 {
-		return &ExecutionInfo{
+		return &AssertionInfo{
 			BeforeMachineHash: startMachine.Hash(),
 			InboxMessagesRead: big.NewInt(0),
 			GasUsed:           big.NewInt(0),
@@ -92,6 +92,8 @@ func (v *ValidatorLookupMock) GetExecutionInfoWithMaxMessages(startMachine machi
 			LogAcc:            common.Hash{},
 			LogCount:          big.NewInt(0),
 			AfterMachineHash:  startMachine.Hash(),
+			InboxDelta:        common.Hash{},
+			AfterInboxHash:    common.Hash{},
 		}, nil
 	}
 	return nil, errors.New("GetExecutionInfoWithMaxMessages not yet supported")

@@ -83,11 +83,11 @@ func (v *Validator) resolveNextNode(ctx context.Context) (*types.Transaction, er
 			return nil, errors.New("bad node query")
 		}
 		nodeInfo := nodesInfo[0]
-		logAcc, err := v.lookup.GenerateLogAccumulator(nodeInfo.Assertion.PrevState.TotalLogCount, nodeInfo.Assertion.ExecInfo.LogCount)
+		logAcc, err := v.lookup.GenerateLogAccumulator(nodeInfo.Assertion.PrevState.TotalLogCount, nodeInfo.Assertion.LogCount)
 		if err != nil {
 			return nil, err
 		}
-		sends, err := v.lookup.GetSends(nodeInfo.Assertion.PrevState.TotalSendCount, nodeInfo.Assertion.ExecInfo.SendCount)
+		sends, err := v.lookup.GetSends(nodeInfo.Assertion.PrevState.TotalSendCount, nodeInfo.Assertion.SendCount)
 		if err != nil {
 			return nil, err
 		}
@@ -112,15 +112,15 @@ type nodeActionInfo interface {
 }
 
 func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID) (nodeActionInfo, error) {
-	currentNode, err := lookupNode(ctx, v.rollup.RollupWatcher, base)
+	startState, err := lookupNodeStartState(ctx, v.rollup.RollupWatcher, base)
 	if err != nil {
 		return nil, err
 	}
-	mach, err := v.lookup.GetMachine(currentNode.Assertion.AfterTotalGasUsed())
+	mach, err := v.lookup.GetMachine(startState.TotalGasUsed)
 	if err != nil {
 		return nil, err
 	}
-	if mach.Hash() != currentNode.Assertion.ExecInfo.AfterMachineHash {
+	if mach.Hash() != startState.MachineHash {
 		return nil, errors.New("local machine doesn't match chain")
 	}
 
@@ -161,8 +161,15 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID) (n
 		return nil, err
 	}
 
-	assertion, err := createAssertion(v.lookup, currentNode, currentBlockId.Height.AsInt(), minAssertionPeriod, arbGasSpeedLimitPerBlock)
-	if err != nil {
+	assertion, err := createAssertion(
+		v.lookup,
+		startState,
+		mach,
+		currentBlockId.Height.AsInt(),
+		minAssertionPeriod,
+		arbGasSpeedLimitPerBlock,
+	)
+	if err != nil || assertion == nil {
 		return nil, err
 	}
 
@@ -196,38 +203,37 @@ func selectValidNode(lookup core.ValidatorLookup, nodes []*core.NodeInfo, startM
 	return nil, nil
 }
 
-func createAssertion(lookup core.ValidatorLookup, prevNode *core.NodeInfo, currentBlock, minAssertionPeriod, arbGasSpeedLimitPerBlock *big.Int) (*core.Assertion, error) {
-	timeSinceProposed := new(big.Int).Sub(currentBlock, prevNode.BlockProposed.Height.AsInt())
+func createAssertion(
+	lookup core.ValidatorLookup,
+	startState *core.NodeState,
+	startMachine machine.Machine,
+	currentBlock,
+	minAssertionPeriod,
+	arbGasSpeedLimitPerBlock *big.Int,
+) (*core.Assertion, error) {
+	timeSinceProposed := new(big.Int).Sub(currentBlock, startState.ProposedBlock)
 	if timeSinceProposed.Cmp(minAssertionPeriod) < 0 {
 		// Too soon to assert
 		return nil, nil
 	}
 
-	mach, err := lookup.GetMachine(prevNode.Assertion.AfterTotalGasUsed())
-	if err != nil {
-		return nil, err
-	}
-	if mach.Hash() != prevNode.Assertion.ExecInfo.AfterMachineHash {
-		return nil, errors.New("local machine doesn't match chain")
-	}
-
 	minimumGasToConsume := new(big.Int).Mul(timeSinceProposed, arbGasSpeedLimitPerBlock)
-	minMessages := new(big.Int).Sub(prevNode.InboxMaxCount, prevNode.Assertion.AfterInboxCount())
+	minMessages := new(big.Int).Sub(startState.InboxMaxCount, startState.InboxCount)
 
 	maximumGasToConsume := new(big.Int).Mul(minimumGasToConsume, big.NewInt(4))
 
-	assertionInfo, err := lookup.GetExecutionInfo(mach, maximumGasToConsume)
+	assertionInfo, err := lookup.GetExecutionInfo(startMachine, maximumGasToConsume)
 	if err != nil {
 		return nil, err
 	}
 
-	if assertionInfo.ExecInfo.GasUsed.Cmp(minimumGasToConsume) < 0 && assertionInfo.ExecInfo.InboxMessagesRead.Cmp(minMessages) < 0 {
+	if assertionInfo.GasUsed.Cmp(minimumGasToConsume) < 0 && assertionInfo.InboxMessagesRead.Cmp(minMessages) < 0 {
 		// Couldn't execute far enough
 		return nil, nil
 	}
 
 	return &core.Assertion{
-		PrevState:     prevNode.AfterState(),
+		PrevState:     startState,
 		AssertionInfo: assertionInfo,
 	}, nil
 }
@@ -255,6 +261,30 @@ func lookupNode(ctx context.Context, rollup *ethbridge.RollupWatcher, node core.
 		return nil, errors.New("too many matching nodes")
 	}
 	return currentNodes[0], nil
+}
+
+func lookupNodeStartState(ctx context.Context, rollup *ethbridge.RollupWatcher, nodeNum *big.Int) (*core.NodeState, error) {
+	if nodeNum.Cmp(big.NewInt(0)) == 0 {
+		creationEvent, err := rollup.LookupCreation(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return &core.NodeState{
+			ProposedBlock:  new(big.Int).SetUint64(creationEvent.Raw.BlockNumber),
+			TotalGasUsed:   big.NewInt(0),
+			MachineHash:    creationEvent.MachineHash,
+			InboxHash:      common.Hash{},
+			InboxCount:     big.NewInt(1),
+			TotalSendCount: big.NewInt(0),
+			TotalLogCount:  big.NewInt(0),
+			InboxMaxCount:  big.NewInt(1),
+		}, nil
+	}
+	node, err := lookupNode(ctx, rollup, nodeNum)
+	if err != nil {
+		return nil, err
+	}
+	return node.AfterState(), nil
 }
 
 func lookupMessageByNum(ctx context.Context, rollup *ethbridge.RollupWatcher, messageNum *big.Int) (*ethbridge.DeliveredInboxMessage, error) {

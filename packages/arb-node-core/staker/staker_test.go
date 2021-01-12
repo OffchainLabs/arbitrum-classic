@@ -93,10 +93,16 @@ func TestStaker(t *testing.T) {
 	staker, err := NewStaker(lookup, client, auth, common.NewAddressFromEth(rollupAddr), common.NewAddressFromEth(validatorUtilsAddr))
 	test.FailIfError(t, err)
 
-	client.Commit()
+	for i := 0; i < 100; i++ {
+		client.Commit()
+	}
 
-	_, err = staker.placeStake(ctx)
+	tx, err := staker.placeStake(ctx)
 	test.FailIfError(t, err)
+
+	if tx == nil {
+		t.Fatal("didn't place stake")
+	}
 
 	client.Commit()
 }

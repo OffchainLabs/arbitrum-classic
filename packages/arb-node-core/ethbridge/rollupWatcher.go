@@ -21,6 +21,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
+var rollupCreatedID ethcommon.Hash
 var nodeCreatedID ethcommon.Hash
 var challengeCreatedID ethcommon.Hash
 var messageDeliveredID ethcommon.Hash
@@ -32,6 +33,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	rollupCreatedID = parsedRollup.Events["RollupCreated"].ID
 	nodeCreatedID = parsedRollup.Events["NodeCreated"].ID
 	challengeCreatedID = parsedRollup.Events["RollupChallengeStarted"].ID
 	messageDeliveredID = parsedRollup.Events["MessageDelivered"].ID
@@ -83,6 +85,27 @@ func NewRollupWatcher(address ethcommon.Address, client ethutils.EthClient) (*Ro
 		address: address,
 		client:  client,
 	}, nil
+}
+
+func (r *RollupWatcher) LookupCreation(ctx context.Context) (*ethbridgecontracts.RollupRollupCreated, error) {
+	var query = ethereum.FilterQuery{
+		BlockHash: nil,
+		FromBlock: nil,
+		ToBlock:   nil,
+		Addresses: []ethcommon.Address{r.address},
+		Topics:    [][]ethcommon.Hash{{rollupCreatedID}},
+	}
+	logs, err := r.client.FilterLogs(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	if len(logs) == 0 {
+		return nil, errors.New("rollup not created")
+	}
+	if len(logs) > 1 {
+		return nil, errors.New("rollup created multiple times")
+	}
+	return r.con.ParseRollupCreated(logs[0])
 }
 
 func (r *RollupWatcher) LookupNodes(ctx context.Context, nodes []*big.Int) ([]*core.NodeInfo, error) {

@@ -37,18 +37,16 @@ func NewAssertionFromFields(a [7][32]byte, b [10]*big.Int) *Assertion {
 	return &Assertion{
 		PrevState: prevState,
 		AssertionInfo: &AssertionInfo{
-			InboxDelta: a[2],
-			ExecInfo: &ExecutionInfo{
-				BeforeMachineHash: prevState.MachineHash,
-				InboxMessagesRead: b[6],
-				GasUsed:           b[7],
-				SendAcc:           a[4],
-				SendCount:         b[8],
-				LogAcc:            a[5],
-				LogCount:          b[9],
-				AfterMachineHash:  a[6],
-			},
-			AfterInboxHash: a[3],
+			BeforeMachineHash: prevState.MachineHash,
+			InboxMessagesRead: b[6],
+			GasUsed:           b[7],
+			SendAcc:           a[4],
+			SendCount:         b[8],
+			LogAcc:            a[5],
+			LogCount:          b[9],
+			AfterMachineHash:  a[6],
+			InboxDelta:        a[2],
+			AfterInboxHash:    a[3],
 		},
 	}
 }
@@ -58,10 +56,10 @@ func (a *Assertion) BytesFields() [7][32]byte {
 		a.PrevState.MachineHash,
 		a.PrevState.InboxHash,
 		a.InboxDelta,
-		a.ExecInfo.SendAcc,
-		a.ExecInfo.LogAcc,
+		a.SendAcc,
+		a.LogAcc,
 		a.AfterInboxHash,
-		a.ExecInfo.AfterMachineHash,
+		a.AfterMachineHash,
 	}
 }
 
@@ -73,27 +71,27 @@ func (a *Assertion) IntFields() [10]*big.Int {
 		a.PrevState.TotalSendCount,
 		a.PrevState.TotalLogCount,
 		a.PrevState.InboxMaxCount,
-		a.ExecInfo.InboxMessagesRead,
-		a.ExecInfo.GasUsed,
-		a.ExecInfo.SendCount,
-		a.ExecInfo.LogCount,
+		a.InboxMessagesRead,
+		a.GasUsed,
+		a.SendCount,
+		a.LogCount,
 	}
 }
 
 func (a *Assertion) AfterInboxCount() *big.Int {
-	return new(big.Int).Add(a.PrevState.InboxCount, a.ExecInfo.InboxMessagesRead)
+	return new(big.Int).Add(a.PrevState.InboxCount, a.InboxMessagesRead)
 }
 
 func (a *Assertion) AfterTotalGasUsed() *big.Int {
-	return new(big.Int).Add(a.PrevState.TotalGasUsed, a.ExecInfo.GasUsed)
+	return new(big.Int).Add(a.PrevState.TotalGasUsed, a.GasUsed)
 }
 
 func (a *Assertion) AfterTotalSendCount() *big.Int {
-	return new(big.Int).Add(a.PrevState.TotalSendCount, a.ExecInfo.SendCount)
+	return new(big.Int).Add(a.PrevState.TotalSendCount, a.SendCount)
 }
 
 func (a *Assertion) AfterTotalLogCount() *big.Int {
-	return new(big.Int).Add(a.PrevState.TotalLogCount, a.ExecInfo.LogCount)
+	return new(big.Int).Add(a.PrevState.TotalLogCount, a.LogCount)
 }
 
 func BisectionChunkHash(
@@ -144,14 +142,14 @@ func assertionRestHash(
 
 func (a *Assertion) InboxConsistencyHash(inboxTopHash common.Hash, inboxTopCount *big.Int) common.Hash {
 	messagesAfterCount := new(big.Int).Sub(inboxTopCount, a.PrevState.InboxCount)
-	messagesAfterCount = messagesAfterCount.Sub(messagesAfterCount, a.ExecInfo.InboxMessagesRead)
+	messagesAfterCount = messagesAfterCount.Sub(messagesAfterCount, a.InboxMessagesRead)
 	return BisectionChunkHash(big.NewInt(0), messagesAfterCount, inboxTopHash, a.AfterInboxHash)
 }
 
 func (a *Assertion) InboxDeltaHash() common.Hash {
 	return BisectionChunkHash(
 		big.NewInt(0),
-		a.ExecInfo.InboxMessagesRead,
+		a.InboxMessagesRead,
 		InboxDeltaHash(a.AfterInboxHash, common.Hash{}),
 		InboxDeltaHash(a.PrevState.InboxHash, a.InboxDelta),
 	)
@@ -172,24 +170,24 @@ func (a *Assertion) BeforeExecutionHash() common.Hash {
 func (a *Assertion) AfterExecutionHash() common.Hash {
 	restAfter := assertionRestHash(
 		common.Hash{},
-		a.ExecInfo.AfterMachineHash,
-		a.ExecInfo.SendAcc,
-		a.ExecInfo.SendCount,
-		a.ExecInfo.LogAcc,
-		a.ExecInfo.LogCount,
+		a.AfterMachineHash,
+		a.SendAcc,
+		a.SendCount,
+		a.LogAcc,
+		a.LogCount,
 	)
-	return assertionHash(a.ExecInfo.GasUsed, restAfter)
+	return assertionHash(a.GasUsed, restAfter)
 }
 
 func (a *Assertion) ExecutionHash() common.Hash {
 	return BisectionChunkHash(
 		big.NewInt(0),
-		a.ExecInfo.GasUsed,
+		a.GasUsed,
 		a.BeforeExecutionHash(),
 		a.AfterExecutionHash(),
 	)
 }
 
 func (a *Assertion) CheckTime(arbGasSpeedLimitPerBlock *big.Int) *big.Int {
-	return new(big.Int).Div(a.ExecInfo.GasUsed, arbGasSpeedLimitPerBlock)
+	return new(big.Int).Div(a.GasUsed, arbGasSpeedLimitPerBlock)
 }

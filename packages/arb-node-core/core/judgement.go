@@ -36,7 +36,7 @@ func (n *NodeInfo) AfterState() *NodeState {
 	return &NodeState{
 		ProposedBlock:  n.BlockProposed.Height.AsInt(),
 		TotalGasUsed:   n.Assertion.AfterTotalGasUsed(),
-		MachineHash:    n.Assertion.ExecInfo.AfterMachineHash,
+		MachineHash:    n.Assertion.AfterMachineHash,
 		InboxHash:      n.Assertion.AfterInboxHash,
 		InboxCount:     n.Assertion.AfterInboxCount(),
 		TotalSendCount: n.Assertion.AfterTotalSendCount(),
@@ -67,13 +67,13 @@ func (n *NodeInfo) InitialInboxDeltaBisection() *Bisection {
 		InboxAccHash:   n.Assertion.PrevState.InboxHash,
 		InboxDeltaHash: n.Assertion.InboxDelta,
 	}
-	fmt.Println("InitialInboxDeltaBisection", 0, n.Assertion.ExecInfo.InboxMessagesRead, common.Hash(beforeCut.Hash()), common.Hash(afterCut.Hash()))
+	fmt.Println("InitialInboxDeltaBisection", 0, n.Assertion.InboxMessagesRead, common.Hash(beforeCut.Hash()), common.Hash(afterCut.Hash()))
 	fmt.Println("InitialInboxDeltaBisection before", n.Assertion.AfterInboxHash, common.Hash{})
 	fmt.Println("InitialInboxDeltaBisection after", n.Assertion.PrevState.InboxHash, n.Assertion.InboxDelta)
 	return &Bisection{
 		ChallengedSegment: &ChallengeSegment{
 			Start:  big.NewInt(0),
-			Length: n.Assertion.ExecInfo.InboxMessagesRead,
+			Length: n.Assertion.InboxMessagesRead,
 		},
 		Cuts: []Cut{beforeCut, afterCut},
 	}
@@ -83,7 +83,7 @@ func (n *NodeInfo) InitialExecutionBisection() *Bisection {
 	return &Bisection{
 		ChallengedSegment: &ChallengeSegment{
 			Start:  big.NewInt(0),
-			Length: n.Assertion.ExecInfo.GasUsed,
+			Length: n.Assertion.GasUsed,
 		},
 		Cuts: []Cut{
 			NewSimpleCut(n.Assertion.BeforeExecutionHash()),
@@ -101,7 +101,7 @@ func JudgeAssertion(lookup ValidatorLookup, assertion *Assertion, mach machine.M
 		// Failed inbox consistency
 		return INBOX_CONSISTENCY, nil
 	}
-	messages, err := lookup.GetMessages(assertion.PrevState.InboxCount, assertion.ExecInfo.InboxMessagesRead)
+	messages, err := lookup.GetMessages(assertion.PrevState.InboxCount, assertion.InboxMessagesRead)
 	if err != nil {
 		return 0, err
 	}
@@ -118,16 +118,16 @@ func JudgeAssertion(lookup ValidatorLookup, assertion *Assertion, mach machine.M
 	if mach.Hash() != assertion.PrevState.MachineHash {
 		return 0, errors.New("before machine state inconsistent with local db")
 	}
-	localExecutionInfo, err := lookup.GetExecutionInfoWithMaxMessages(mach, assertion.ExecInfo.GasUsed, assertion.ExecInfo.InboxMessagesRead)
+	localExecutionInfo, err := lookup.GetExecutionInfoWithMaxMessages(mach, assertion.GasUsed, assertion.InboxMessagesRead)
 	if err != nil {
 		return 0, err
 	}
 
-	if localExecutionInfo.GasUsed.Cmp(assertion.ExecInfo.GasUsed) < 0 {
+	if localExecutionInfo.GasUsed.Cmp(assertion.GasUsed) < 0 {
 		return STOPPED_SHORT, nil
 	}
 
-	if !assertion.ExecInfo.Equals(localExecutionInfo) {
+	if !assertion.Equals(localExecutionInfo) {
 		return EXECUTION, nil
 	}
 	return NO_CHALLENGE, nil

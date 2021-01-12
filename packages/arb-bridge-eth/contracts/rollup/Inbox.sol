@@ -27,7 +27,7 @@ contract Inbox is IInbox {
     uint8 internal constant INITIALIZATION_MSG = 4;
     uint8 internal constant L2_CONTRACT_PAIR = 5;
 
-    bytes32 public inboxMaxValue;
+    bytes32 public inboxMaxAcc;
     uint256 public inboxMaxCount;
 
     /**
@@ -100,7 +100,7 @@ contract Inbox is IInbox {
         bytes32 _messageDataHash
     ) private returns (uint256, bytes32) {
         uint256 count = inboxMaxCount;
-        bytes32 inboxAcc = inboxMaxValue;
+        bytes32 inboxAcc = inboxMaxAcc;
         bytes32 messageHash =
             Messages.messageHash(
                 _kind,
@@ -110,7 +110,7 @@ contract Inbox is IInbox {
                 count,
                 _messageDataHash
             );
-        inboxMaxValue = Messages.addMessageToInbox(inboxAcc, messageHash);
+        inboxMaxAcc = Messages.addMessageToInbox(inboxAcc, messageHash);
         inboxMaxCount = count + 1;
         return (count, inboxAcc);
     }

@@ -19,6 +19,8 @@
 pragma solidity ^0.6.11;
 
 interface IRollup {
+    event RollupCreated(bytes32 machineHash);
+
     event NodeCreated(
         uint256 indexed nodeNum,
         bytes32[7] assertionBytes32Fields,

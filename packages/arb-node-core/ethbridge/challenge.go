@@ -203,12 +203,12 @@ func (c *Challenge) OneStepProveExecution(
 			prevCutHashes[segmentToChallenge+1],
 			[3][32]byte{
 				beforeAssertion.InboxDelta,
-				beforeAssertion.ExecInfo.SendAcc,
-				beforeAssertion.ExecInfo.LogAcc,
+				beforeAssertion.SendAcc,
+				beforeAssertion.LogAcc,
 			},
-			beforeAssertion.ExecInfo.GasUsed.Uint64(),
-			beforeAssertion.ExecInfo.SendCount,
-			beforeAssertion.ExecInfo.LogCount,
+			beforeAssertion.GasUsed.Uint64(),
+			beforeAssertion.SendCount,
+			beforeAssertion.LogCount,
 			executionProof,
 			bufferProof,
 		)
