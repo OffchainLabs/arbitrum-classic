@@ -449,7 +449,8 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             return;
         }
         checkBufferSize(val1.bufferHash, val2.intVal, decodeProof(context.bufProof));
-        context.messageAcc = keccak256(abi.encodePacked(context.messageAcc, val1.hash()));
+        bytes32 msgHash = keccak2(bytes32(val2.intVal), val1.hash());
+        context.messageAcc = keccak256(abi.encodePacked(context.messageAcc, msgHash));
     }
 
     function executeGetBuffer8(AssertionContext memory context) internal pure {

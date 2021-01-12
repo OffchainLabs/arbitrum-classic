@@ -80,9 +80,12 @@ func BytesArrayAccumHash(initialHash common.Hash, data []byte, valCount uint64) 
 func BufferAccumHash(initialHash common.Hash, data [][]byte) common.Hash {
 	lastMsgHash := initialHash
 	for msg := range data {
-		msgHash := hashing.SoliditySHA3(
+		bufHash := hashing.SoliditySHA3(
 			hashing.Bytes32(tagHash),
 			hashing.Bytes32(hashBuffer(data[msg], true)))
+		msgHash := hashing.SoliditySHA3(
+			hashing.Uint256(big.NewInt(int64(len(data[msg])))),
+			hashing.Bytes32(bufHash))
 		lastMsgHash = hashing.SoliditySHA3(
 			hashing.Bytes32(lastMsgHash),
 			hashing.Bytes32(msgHash))
