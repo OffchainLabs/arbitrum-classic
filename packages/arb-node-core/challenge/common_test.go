@@ -41,11 +41,11 @@ func executeChallenge(
 	for {
 		checkTurn(t, challengerChallenge.ChallengeWatcher, turn)
 		if turn == ethbridge.CHALLENGER_TURN {
-			_, err := challenger.handleConflict(ctx)
+			_, err := challenger.HandleConflict(ctx)
 			test.FailIfError(t, err)
 			turn = ethbridge.ASSERTER_TURN
 		} else {
-			_, err := asserter.handleConflict(ctx)
+			_, err := asserter.HandleConflict(ctx)
 			test.FailIfError(t, err)
 			turn = ethbridge.CHALLENGER_TURN
 		}

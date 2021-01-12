@@ -1,4 +1,4 @@
-package validator
+package staker
 
 import (
 	"context"
@@ -18,8 +18,35 @@ type Validator struct {
 	rollup         *ethbridge.Rollup
 	validatorUtils *ethbridge.ValidatorUtils
 	client         ethutils.EthClient
-	auth           *ethbridge.TransactAuth
 	lookup         core.ValidatorLookup
+}
+
+func NewValidator(
+	lookup core.ValidatorLookup,
+	client ethutils.EthClient,
+	auth *ethbridge.TransactAuth,
+	rollupAddress,
+	validatorUtilsAddress common.Address,
+) (*Validator, error) {
+	rollup, err := ethbridge.NewRollup(rollupAddress.ToEthAddress(), client, auth)
+	if err != nil {
+		return nil, err
+	}
+	validatorUtils, err := ethbridge.NewValidatorUtils(
+		validatorUtilsAddress.ToEthAddress(),
+		rollupAddress.ToEthAddress(),
+		client,
+		auth,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &Validator{
+		rollup:         rollup,
+		validatorUtils: validatorUtils,
+		client:         client,
+		lookup:         lookup,
+	}, nil
 }
 
 func (v *Validator) removeOldStakers(ctx context.Context) (*types.Transaction, error) {

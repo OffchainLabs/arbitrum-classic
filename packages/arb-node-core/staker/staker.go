@@ -1,10 +1,13 @@
-package validator
+package staker
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/pkg/errors"
 )
@@ -12,7 +15,28 @@ import (
 type Staker struct {
 	*Validator
 	address      common.Address
+	auth         *ethbridge.TransactAuth
 	makeNewNodes bool
+}
+
+func NewStaker(
+	lookup core.ValidatorLookup,
+	client ethutils.EthClient,
+	auth *bind.TransactOpts,
+	rollupAddress,
+	validatorUtilsAddress common.Address,
+) (*Staker, error) {
+	txAuth := ethbridge.NewTransactAuth(auth)
+	val, err := NewValidator(lookup, client, txAuth, rollupAddress, validatorUtilsAddress)
+	if err != nil {
+		return nil, err
+	}
+	return &Staker{
+		Validator:    val,
+		address:      common.NewAddressFromEth(auth.From),
+		auth:         txAuth,
+		makeNewNodes: false,
+	}, nil
 }
 
 func (s *Staker) Act(ctx context.Context) error {
