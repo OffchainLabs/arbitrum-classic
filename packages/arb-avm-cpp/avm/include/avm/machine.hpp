@@ -28,7 +28,7 @@ struct Assertion {
     uint64_t stepCount;
     uint64_t gasCount;
     uint64_t inbox_messages_consumed;
-    std::vector<value> outMessages;
+    std::vector<std::vector<uint8_t>> outMessages;
     std::vector<value> logs;
     std::vector<value> debugPrints;
 };

@@ -284,7 +284,7 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::BREAKPOINT, {}},
         {OpCode::LOG, {MarshalLevel::STUB}},
 
-        {OpCode::SEND, {MarshalLevel::FULL}},
+        {OpCode::SEND, {MarshalLevel::FULL, MarshalLevel::FULL}},
         {OpCode::INBOX_PEEK, {MarshalLevel::SINGLE}},
         {OpCode::INBOX, {}},
         {OpCode::ERROR, {}},
