@@ -136,17 +136,19 @@ func (c *Challenge) OneStepProveInboxDelta(
 	challengedSegment *core.ChallengeSegment,
 	msg inbox.InboxMessage,
 ) (*types.Transaction, error) {
-	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
+	_, prevTree := calculateBisectionTree(prevBisection)
 	nodes, path := prevTree.GetProof(segmentToChallenge)
+	oldBefore := prevBisection.Cuts[segmentToChallenge].(core.InboxDeltaCut)
+	oldAfter := prevBisection.Cuts[segmentToChallenge+1].(core.InboxDeltaCut)
 	return c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return c.con.OneStepProveInboxDelta(
 			auth,
 			nodes,
 			path,
 			challengedSegment.Start,
-			prevCutHashes[segmentToChallenge+1],
-			prevBisection.Cuts[segmentToChallenge+1].Hash(),
-			prevBisection.Cuts[segmentToChallenge].(core.InboxDeltaCut).InboxDeltaHash,
+			oldAfter.InboxDeltaHash,
+			oldBefore.InboxDeltaHash,
+			oldAfter.InboxAccHash,
 			uint8(msg.Kind),
 			msg.ChainTime.BlockNum.AsInt(),
 			msg.ChainTime.Timestamp,

@@ -2,11 +2,9 @@ package challenge
 
 import (
 	"context"
-	"fmt"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/big"
 )
 
@@ -25,13 +23,10 @@ func (i *InboxDeltaImpl) FindFirstDivergence(lookup core.ValidatorLookup, offset
 
 func (i *InboxDeltaImpl) GetCut(lookup core.ValidatorLookup, offset *big.Int) (core.Cut, error) {
 	inboxOffset := new(big.Int).Sub(i.nodeAfterInboxCount, offset)
-	//inboxOffset = inboxOffset.Add(inboxOffset, big.NewInt(1))
 	inboxAcc, err := lookup.GetInboxAcc(inboxOffset)
 	if err != nil {
-		fmt.Println("GetCut failed", offset, inboxOffset)
 		return nil, err
 	}
-	fmt.Println("GetCut", offset, inboxOffset, inboxAcc, common.Hash(i.inboxDelta.inboxDeltaAccs[offset.Uint64()]))
 	return core.InboxDeltaCut{
 		InboxAccHash:   inboxAcc,
 		InboxDeltaHash: i.inboxDelta.inboxDeltaAccs[offset.Uint64()],
