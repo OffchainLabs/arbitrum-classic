@@ -124,11 +124,11 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         bytes32 buf,
         uint256 loc,
         bytes32[] memory proof
-    ) internal pure {
+    ) internal pure returns (bool) {
         // empty tree is full of zeros
         if (proof.length == 0) {
             require(buf == keccak1(bytes32(0)), "expected empty buffer");
-            return;
+            return true;
         }
         bytes32 acc = keccak1(proof[0]);
         bool check = true;
@@ -143,8 +143,8 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         }
         require(acc == buf, "expected correct root");
         // maybe it is a zero outside the actual tree
-        if (loc > 0) return;
-        require(check, "Found nonzero right subtree");
+        if (loc > 0) return true;
+        return check;
     }
 
     function calcHeight(uint256 loc) internal pure returns (uint256) {
@@ -292,12 +292,12 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         bytes32 buf,
         uint256 offset,
         BufferProof memory proof
-    ) internal pure returns (uint256) {
+    ) internal pure returns (bool) {
         bytes32 w = get(buf, offset / 32, proof.proof1);
         for (uint256 i = offset%32; i < 32; i++) {
-            require(getByte(w, i) == 0, "Extra leaf bytes");
+            if (getByte(w, i) != 0) return false;
         }
-        checkSize(buf, offset / 32, proof.proof1);
+        return checkSize(buf, offset / 32, proof.proof1);
     }
 
     function getBuffer64(
@@ -448,7 +448,10 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        checkBufferSize(val1.bufferHash, val2.intVal, decodeProof(context.bufProof));
+        if (!checkBufferSize(val1.bufferHash, val2.intVal, decodeProof(context.bufProof))) {
+            handleOpcodeError(context);
+            return;
+        }
         bytes32 msgHash = keccak2(bytes32(val2.intVal), val1.hash());
         context.messageAcc = keccak256(abi.encodePacked(context.messageAcc, msgHash));
     }
