@@ -126,7 +126,10 @@ func initializeChallengeData(
 
 	inboxAcc, err := lookup.GetInboxAcc(afterInboxCount)
 	test.FailIfError(t, err)
-	assertionInfo := &core.AssertionInfo{
+
+	assertion := &core.Assertion{
+		PrevProposedBlock: prevState.ProposedBlock,
+		PrevInboxMaxCount: prevState.InboxMaxCount,
 		ExecutionInfo: &core.ExecutionInfo{
 			Before: prevState.ExecutionState,
 			After: &core.ExecutionState{
@@ -141,12 +144,6 @@ func initializeChallengeData(
 			LogAcc:  common.Hash{},
 		},
 		InboxDelta: core.CalculateInboxDeltaAcc(messages),
-	}
-
-	assertion := &core.Assertion{
-		PrevProposedBlock: prevState.ProposedBlock,
-		PrevInboxMaxCount: prevState.InboxMaxCount,
-		AssertionInfo:     assertionInfo,
 	}
 
 	inboxMaxCount := big.NewInt(int64(len(lookup.InboxAccs)) - 1)

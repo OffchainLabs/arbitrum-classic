@@ -95,11 +95,6 @@ func (e *ExecutionImpl) OneStepProof(
 		return nil, err
 	}
 
-	beforeAssertion := &core.AssertionInfo{
-		ExecutionInfo: execInfo,
-		InboxDelta:    e.inboxDelta.inboxDeltaAccs[execInfo.InboxMessagesRead().Uint64()],
-	}
-
 	beforeMachine, err := tracker.GetMachine(challengedSegment.Start)
 	if err != nil {
 		return nil, err
@@ -119,7 +114,8 @@ func (e *ExecutionImpl) OneStepProof(
 		ctx,
 		prevBisection,
 		segmentToChallenge,
-		beforeAssertion,
+		execInfo,
+		e.inboxDelta.inboxDeltaAccs[execInfo.InboxMessagesRead().Uint64()],
 		proofData,
 		bufferProofData,
 	)

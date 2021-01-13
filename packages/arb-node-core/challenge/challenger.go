@@ -84,7 +84,7 @@ func (c *Challenger) HandleConflict(ctx context.Context) (*types.Transaction, er
 			false,
 			[]*big.Int{c.challengedNode.Assertion.GasUsed()},
 		)
-		kind, err = core.JudgeAssertion(c.lookup, c.challengedNode.Assertion.AssertionInfo, execTracker)
+		kind, err = core.JudgeAssertion(c.lookup, c.challengedNode.Assertion, execTracker)
 		if err != nil {
 			return nil, err
 		}
