@@ -19,7 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "./IRollup.sol";
-import "./Node.sol";
+import "./INode.sol";
 import "./RollupLib.sol";
 import "./Inbox.sol";
 import "./Outbox.sol";
@@ -30,15 +30,6 @@ import "../challenge/IChallengeFactory.sol";
 
 contract Rollup is Inbox, Outbox, IRollup {
     event SentLogs(bytes32 logsAccHash);
-
-    struct Staker {
-        uint256 index;
-        uint256 latestStakedNode;
-        uint256 amountStaked;
-        // currentChallenge is 0 if staker is not in a challenge
-        address currentChallenge;
-        bool isStaked;
-    }
 
     struct Zombie {
         address stakerAddress;
@@ -52,13 +43,13 @@ contract Rollup is Inbox, Outbox, IRollup {
         uint256 executionCheckTime;
     }
 
-    uint256 public latestConfirmed;
-    uint256 public firstUnresolvedNode;
-    uint256 public latestNodeCreated;
-    mapping(uint256 => Node) public nodes;
-    uint256 lastStakeBlock;
+    uint256 public override latestConfirmed;
+    uint256 public override firstUnresolvedNode;
+    uint256 public override latestNodeCreated;
+    mapping(uint256 => INode) public override nodes;
+    uint256 public override lastStakeBlock;
 
-    address payable[] public stakerList;
+    address payable[] public override stakerList;
     mapping(address => Staker) public stakerMap;
 
     Zombie[] zombies;
@@ -108,8 +99,8 @@ contract Rollup is Inbox, Outbox, IRollup {
                 0, // log count
                 inboxMaxCount // inbox max count
             );
-        Node node =
-            Node(
+        INode node =
+            INode(
                 nodeFactory.createNode(
                     state,
                     0, // challenge hash (not challengeable)
@@ -139,7 +130,7 @@ contract Rollup is Inbox, Outbox, IRollup {
         require(stakerMap[stakerAddress].isStaked, "NOT_STAKED");
 
         // Confirm that someone is staked on some sibling node
-        Node stakedSiblingNode = nodes[successorWithStake];
+        INode stakedSiblingNode = nodes[successorWithStake];
         // stakedSiblingNode is a child of latestConfirmed
         require(stakedSiblingNode.prev() == latestConfirmed, "BAD_SUCCESSOR");
         // staker is actually staked on stakedSiblingNode
@@ -147,7 +138,7 @@ contract Rollup is Inbox, Outbox, IRollup {
 
         removeOldZombies(0);
 
-        Node node = nodes[firstUnresolvedNode];
+        INode node = nodes[firstUnresolvedNode];
         node.checkConfirmInvalid(countStakedZombies(node));
         destroyNode(firstUnresolvedNode);
         firstUnresolvedNode++;
@@ -156,7 +147,7 @@ contract Rollup is Inbox, Outbox, IRollup {
     // If the node previous to this one is not the latest confirmed, we can reject immediately
     function rejectNextNodeOutOfOrder() external {
         checkUnresolved();
-        Node node = nodes[firstUnresolvedNode];
+        INode node = nodes[firstUnresolvedNode];
         node.checkConfirmOutOfOrder(latestConfirmed);
         destroyNode(firstUnresolvedNode);
         firstUnresolvedNode++;
@@ -170,7 +161,7 @@ contract Rollup is Inbox, Outbox, IRollup {
         checkUnresolved();
         checkNoRecentStake();
 
-        Node node = nodes[firstUnresolvedNode];
+        INode node = nodes[firstUnresolvedNode];
 
         removeOldZombies(0);
 
@@ -330,7 +321,7 @@ contract Rollup is Inbox, Outbox, IRollup {
         uint256 latestStakedNode = zombie.latestStakedNode;
         uint256 nodesRemoved = 0;
         while (latestStakedNode > firstUnresolvedNode && nodesRemoved < maxNodes) {
-            Node node = nodes[latestStakedNode];
+            INode node = nodes[latestStakedNode];
             node.removeStaker(zombie.stakerAddress);
             latestStakedNode = node.prev();
             nodesRemoved++;
@@ -403,7 +394,7 @@ contract Rollup is Inbox, Outbox, IRollup {
         return challengePeriodBlocks / 10;
     }
 
-    function countStakedZombies(Node node) public view returns (uint256) {
+    function countStakedZombies(INode node) public view returns (uint256) {
         uint256 zombieCount = zombies.length;
         uint256 stakedZombieCount = 0;
         for (uint256 i = 0; i < zombieCount; i++) {
@@ -435,7 +426,7 @@ contract Rollup is Inbox, Outbox, IRollup {
     ) private {
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         checkValidNodeNumForStake(nodeNum);
-        Node node = nodes[nodeNum];
+        INode node = nodes[nodeNum];
         require(staker.latestStakedNode == node.prev(), "NOT_STAKED_PREV");
         node.addStaker(msg.sender);
         staker.latestStakedNode = nodeNum;
@@ -453,7 +444,7 @@ contract Rollup is Inbox, Outbox, IRollup {
         require(nodeNum == latestNodeCreated + 1, "NODE_NUM");
         RollupLib.Assertion memory assertion =
             RollupLib.decodeAssertion(assertionBytes32Fields, assertionIntFields);
-        Node node = createNewNode(assertion, staker.latestStakedNode);
+        INode node = createNewNode(assertion, staker.latestStakedNode);
         node.addStaker(msg.sender);
         staker.latestStakedNode = latestNodeCreated;
 
@@ -468,9 +459,9 @@ contract Rollup is Inbox, Outbox, IRollup {
 
     function createNewNode(RollupLib.Assertion memory assertion, uint256 prev)
         private
-        returns (Node)
+        returns (INode)
     {
-        Node prevNode = nodes[prev];
+        INode prevNode = nodes[prev];
         // Make sure the previous state is correct against the node being built on
         require(
             RollupLib.beforeNodeStateHash(assertion) == prevNode.stateHash(),
@@ -510,8 +501,8 @@ contract Rollup is Inbox, Outbox, IRollup {
         uint256 executionCheckTimeBlocks = assertion.gasUsed / arbGasSpeedLimitPerBlock;
         deadlineBlock += executionCheckTimeBlocks;
 
-        Node node =
-            Node(
+        INode node =
+            INode(
                 nodeFactory.createNode(
                     RollupLib.nodeStateHash(assertion, inboxMaxCount),
                     RollupLib.challengeRoot(
@@ -532,8 +523,8 @@ contract Rollup is Inbox, Outbox, IRollup {
     }
 
     struct CreateChallengeFrame {
-        Node node1;
-        Node node2;
+        INode node1;
+        INode node2;
         address challengeAddress;
     }
 
@@ -599,7 +590,7 @@ contract Rollup is Inbox, Outbox, IRollup {
 
     function destroyNode(uint256 nodeNum) private {
         nodes[nodeNum].destroy();
-        nodes[nodeNum] = Node(0);
+        nodes[nodeNum] = INode(0);
     }
 
     function deleteStaker(Staker storage staker) private {

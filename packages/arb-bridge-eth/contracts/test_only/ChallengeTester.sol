@@ -19,9 +19,8 @@
 pragma solidity ^0.6.11;
 
 import "../challenge/ChallengeFactory.sol";
-import "../rollup/IRollup.sol";
 
-contract ChallengeTester is IRollup {
+contract ChallengeTester {
     ChallengeFactory private challengeFactory;
     address public challenge;
     bool public challengeCompleted;
@@ -33,7 +32,7 @@ contract ChallengeTester is IRollup {
     }
 
     /* solhint-disable-next-line no-unused-vars */
-    function completeChallenge(address _winner, address payable _loser) external override {
+    function completeChallenge(address _winner, address payable _loser) external {
         winner = _winner;
         loser = _loser;
         challengeCompleted = true;

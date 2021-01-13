@@ -18,6 +18,8 @@
 
 pragma solidity ^0.6.11;
 
+import "./INode.sol";
+
 interface IRollup {
     event RollupCreated(bytes32 machineHash);
 
@@ -35,6 +37,40 @@ interface IRollup {
         address challenger,
         uint256 challengedNode
     );
+
+    struct Staker {
+        uint256 index;
+        uint256 latestStakedNode;
+        uint256 amountStaked;
+        // currentChallenge is 0 if staker is not in a challenge
+        address currentChallenge;
+        bool isStaked;
+    }
+
+    function latestConfirmed() external view returns (uint256);
+
+    function firstUnresolvedNode() external view returns (uint256);
+
+    function latestNodeCreated() external view returns (uint256);
+
+    function nodes(uint256 index) external view returns (INode);
+
+    function lastStakeBlock() external view returns (uint256);
+
+    function stakerList(uint256 index) external view returns (address payable);
+
+    // function stakerMap(address staker) external view returns(Staker memory);
+
+    // Zombie[] zombies;
+
+    // // Rollup Config
+    // uint256 public challengePeriodBlocks;
+    // uint256 public arbGasSpeedLimitPerBlock;
+    // uint256 public baseStake;
+    // address public stakeToken;
+
+    // IChallengeFactory public challengeFactory;
+    // INodeFactory public nodeFactory;
 
     function completeChallenge(address winningStaker, address payable losingStaker) external;
 }

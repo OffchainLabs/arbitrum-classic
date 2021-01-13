@@ -19,7 +19,6 @@
 pragma solidity ^0.6.11;
 
 import "../rollup/Rollup.sol";
-import "../rollup/Node.sol";
 
 contract ValidatorUtils {
     enum ConfirmType { NONE, VALID, OUT_OF_ORDER, INVALID }
@@ -88,7 +87,7 @@ contract ValidatorUtils {
         }
         uint256 latestConfirmed = rollup.latestConfirmed();
         uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
-        Node currentUnresolved = rollup.nodes(firstUnresolvedNode);
+        INode currentUnresolved = rollup.nodes(firstUnresolvedNode);
         try currentUnresolved.checkConfirmOutOfOrder(latestConfirmed) {
             return (ConfirmType.OUT_OF_ORDER, 0, address(0));
         } catch {}
@@ -126,7 +125,7 @@ contract ValidatorUtils {
         uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
         uint256 latestConfirmed = rollup.latestConfirmed();
         uint256 stakerCount = rollup.stakerCount();
-        Node currentUnresolved = rollup.nodes(firstUnresolvedNode);
+        INode currentUnresolved = rollup.nodes(firstUnresolvedNode);
         uint256 zombieCount = rollup.countStakedZombies(currentUnresolved);
         currentUnresolved.checkConfirmValid(stakerCount + zombieCount, latestConfirmed);
     }
@@ -135,7 +134,7 @@ contract ValidatorUtils {
         rollup.checkUnresolved();
         uint256 latestConfirmed = rollup.latestConfirmed();
         uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
-        Node currentUnresolved = rollup.nodes(firstUnresolvedNode);
+        INode currentUnresolved = rollup.nodes(firstUnresolvedNode);
         currentUnresolved.checkConfirmOutOfOrder(latestConfirmed);
     }
 
@@ -149,7 +148,7 @@ contract ValidatorUtils {
         rollup.checkUnresolved();
         rollup.checkNoRecentStake();
         uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
-        Node currentUnresolved = rollup.nodes(firstUnresolvedNode);
+        INode currentUnresolved = rollup.nodes(firstUnresolvedNode);
         currentUnresolved.checkConfirmInvalid(rollup.countStakedZombies(currentUnresolved));
         (bool found, uint256 successorWithStake, address stakerAddress) =
             findRejectableExample(
@@ -190,7 +189,7 @@ contract ValidatorUtils {
         uint256[] memory nodes = new uint256[](100000);
         uint256 index = 0;
         for (uint256 i = nodeNum + 1; i <= rollup.latestNodeCreated(); i++) {
-            Node node = rollup.nodes(i);
+            INode node = rollup.nodes(i);
             if (node.prev() == nodeNum) {
                 nodes[index] = i;
                 index++;
@@ -207,7 +206,7 @@ contract ValidatorUtils {
         uint256[] memory nodes = new uint256[](100000);
         uint256 index = 0;
         for (uint256 i = rollup.latestConfirmed(); i <= rollup.latestNodeCreated(); i++) {
-            Node node = rollup.nodes(i);
+            INode node = rollup.nodes(i);
             if (node.stakers(staker)) {
                 nodes[index] = i;
                 index++;
@@ -311,7 +310,7 @@ contract ValidatorUtils {
         uint256 stakerCount = stakers.length;
         for (uint256 i = 0; i <= max; i++) {
             uint256 nodeIndex = firstNodeToCheck + i;
-            Node node = rollup.nodes(nodeIndex);
+            INode node = rollup.nodes(nodeIndex);
             if (node.prev() != prev) {
                 continue;
             }

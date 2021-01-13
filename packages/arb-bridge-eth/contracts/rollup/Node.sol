@@ -18,16 +18,17 @@
 
 pragma solidity ^0.6.11;
 
+import "./INode.sol";
 import "../libraries/Cloneable.sol";
 
-contract Node is Cloneable {
-    bytes32 public stateHash;
-    bytes32 public challengeHash;
-    bytes32 public confirmData;
-    uint256 public prev;
-    uint256 public deadlineBlock;
-    uint256 public stakerCount;
-    mapping(address => bool) public stakers;
+contract Node is Cloneable, INode {
+    bytes32 public override stateHash;
+    bytes32 public override challengeHash;
+    bytes32 public override confirmData;
+    uint256 public override prev;
+    uint256 public override deadlineBlock;
+    uint256 public override stakerCount;
+    mapping(address => bool) public override stakers;
 
     address rollup;
 
@@ -43,7 +44,7 @@ contract Node is Cloneable {
         bytes32 _confirmData,
         uint256 _prev,
         uint256 _deadlineBlock
-    ) external {
+    ) external override {
         rollup = _rollup;
         stateHash = _stateHash;
         challengeHash = _challengeHash;
@@ -52,23 +53,27 @@ contract Node is Cloneable {
         deadlineBlock = _deadlineBlock;
     }
 
-    function destroy() external onlyRollup {
+    function destroy() external override onlyRollup {
         selfdestruct(msg.sender);
     }
 
-    function addStaker(address staker) external onlyRollup {
+    function addStaker(address staker) external override onlyRollup {
         require(!stakers[staker], "ALREADY_STAKED");
         stakers[staker] = true;
         stakerCount++;
     }
 
-    function removeStaker(address staker) external onlyRollup {
+    function removeStaker(address staker) external override onlyRollup {
         require(stakers[staker], "NOT_STAKED");
         stakers[staker] = false;
         stakerCount--;
     }
 
-    function checkConfirmValid(uint256 totalStakerCount, uint256 latestConfirmed) external view {
+    function checkConfirmValid(uint256 totalStakerCount, uint256 latestConfirmed)
+        external
+        view
+        override
+    {
         // Verify the block's deadline has passed
         require(block.number >= deadlineBlock, "BEFORE_DEADLINE");
 
@@ -82,7 +87,7 @@ contract Node is Cloneable {
         require(totalStakerCount > 0, "NO_STAKERS");
     }
 
-    function checkConfirmInvalid(uint256 zombieStakerCount) external view {
+    function checkConfirmInvalid(uint256 zombieStakerCount) external view override {
         // Verify the block's deadline has passed
         require(block.number >= deadlineBlock, "BEFORE_DEADLINE");
 
@@ -90,7 +95,7 @@ contract Node is Cloneable {
         require(stakerCount == zombieStakerCount, "HAS_STAKERS");
     }
 
-    function checkConfirmOutOfOrder(uint256 latestConfirmed) external view {
+    function checkConfirmOutOfOrder(uint256 latestConfirmed) external view override {
         require(prev != latestConfirmed);
     }
 }
