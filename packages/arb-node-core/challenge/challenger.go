@@ -74,7 +74,17 @@ func (c *Challenger) HandleConflict(ctx context.Context) (*types.Transaction, er
 
 	var prevBisection *core.Bisection
 	if kind == core.UNINITIALIZED {
-		kind, err = core.JudgeAssertion(c.lookup, c.challengedNode.Assertion, nil)
+		startCursor, err := c.lookup.GetCursor(c.challengedNode.Assertion.Before.TotalGasConsumed)
+		if err != nil {
+			return nil, err
+		}
+		execTracker := core.NewExecutionTracker(
+			c.lookup,
+			startCursor,
+			false,
+			[]*big.Int{c.challengedNode.Assertion.GasUsed()},
+		)
+		kind, err = core.JudgeAssertion(c.lookup, c.challengedNode.Assertion.AssertionInfo, execTracker)
 		if err != nil {
 			return nil, err
 		}
@@ -136,7 +146,16 @@ func (c *Challenger) handleExecutionChallenge(ctx context.Context, prevBisection
 	if prevBisection == nil {
 		prevBisection = c.challengedNode.InitialExecutionBisection()
 	}
-	return nil, nil
+	inboxDeltaData, err := c.InboxDelta()
+	initialCursor, err := c.lookup.GetCursor(c.challengedNode.Assertion.Before.TotalGasConsumed)
+	if err != nil {
+		return nil, err
+	}
+	challengeImpl := &ExecutionImpl{
+		initialCursor: initialCursor,
+		inboxDelta:    inboxDeltaData,
+	}
+	return handleChallenge(ctx, c.challenge, c.lookup, challengeImpl, prevBisection)
 }
 
 func (c *Challenger) handleStoppedShortChallenge() (*types.Transaction, error) {

@@ -5,24 +5,66 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/pkg/errors"
 	"math/big"
 )
 
 type ExecutionImpl struct {
-	initialGasUsed *big.Int
-	finalGasUsed   *big.Int
+	initialCursor core.ExecutionCursor
+	inboxDelta    *inboxDelta
 }
 
-func (e ExecutionImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]core.Cut, error) {
+func (e *ExecutionImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]core.Cut, error) {
+	execTracker := core.NewExecutionTracker(lookup, e.initialCursor, true, offsets)
+	cuts := make([]core.Cut, 0, len(offsets))
+	for _, offset := range offsets {
+		executionInfo, err := execTracker.GetExecutionInfo(offset)
+		if err != nil {
+			return nil, err
+		}
+
+		cuts = append(cuts, core.ExecutionCut{
+			GasUsed:      executionInfo.GasUsed(),
+			InboxDelta:   e.inboxDelta.inboxDeltaAccs[executionInfo.InboxMessagesRead().Uint64()],
+			MachineState: executionInfo.After.MachineHash,
+			SendAcc:      executionInfo.SendAcc,
+			SendCount:    executionInfo.SendCount(),
+			LogAcc:       executionInfo.LogAcc,
+			LogCount:     executionInfo.LogCount(),
+		})
+	}
+	return cuts, nil
+}
+
+func (e *ExecutionImpl) FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []core.Cut) (int, error) {
+	execTracker := core.NewExecutionTracker(lookup, e.initialCursor, true, offsets)
+	for i, offset := range offsets {
+		executionInfo, err := execTracker.GetExecutionInfo(offset)
+		if err != nil {
+			return 0, err
+		}
+		cut := core.ExecutionCut{
+			GasUsed:      executionInfo.GasUsed(),
+			InboxDelta:   e.inboxDelta.inboxDeltaAccs[executionInfo.InboxMessagesRead().Uint64()],
+			MachineState: executionInfo.After.MachineHash,
+			SendAcc:      executionInfo.SendAcc,
+			SendCount:    executionInfo.SendCount(),
+			LogAcc:       executionInfo.LogAcc,
+			LogCount:     executionInfo.LogCount(),
+		}
+		if cut.CutHash() != cuts[i].CutHash() {
+			if i == 0 {
+				return 0, errors.New("first cut was already wrong")
+			}
+			return i, nil
+		}
+
+		cuts = append(cuts)
+	}
 	panic("implement me")
 }
 
-func (e ExecutionImpl) FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []core.Cut) (int, error) {
-	panic("implement me")
-}
-
-func (e ExecutionImpl) Bisect(
+func (e *ExecutionImpl) Bisect(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
 	prevBisection *core.Bisection,
@@ -39,7 +81,7 @@ func (e ExecutionImpl) Bisect(
 	)
 }
 
-func (e ExecutionImpl) OneStepProof(
+func (e *ExecutionImpl) OneStepProof(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
 	lookup core.ValidatorLookup,
@@ -47,48 +89,18 @@ func (e ExecutionImpl) OneStepProof(
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
 ) (*types.Transaction, error) {
-	initalCursor, err := lookup.GetCursor(e.initialGasUsed)
+	tracker := core.NewExecutionTracker(lookup, e.initialCursor, true, []*big.Int{challengedSegment.Start})
+	execInfo, err := tracker.GetExecutionInfo(challengedSegment.Start)
 	if err != nil {
 		return nil, err
 	}
-
-	beforeCursor, err := lookup.MoveExecutionCursor(initalCursor, challengedSegment.Start, false)
-	if err != nil {
-		return nil, err
-	}
-
-	finalCursor, err := lookup.GetCursor(e.finalGasUsed)
-	if err != nil {
-		return nil, err
-	}
-
-	sendCount := new(big.Int).Sub(initalCursor.TotalSendCount(), beforeCursor.TotalSendCount())
-	sendAcc, err := lookup.GetSendAcc(common.Hash{}, initalCursor.TotalSendCount(), sendCount)
-	if err != nil {
-		return nil, err
-	}
-	logCount := new(big.Int).Sub(beforeCursor.TotalLogCount(), beforeCursor.TotalLogCount())
-	logAcc, err := lookup.GetLogAcc(common.Hash{}, initalCursor.TotalLogCount(), logCount)
-	if err != nil {
-		return nil, err
-	}
-
-	inboxRemaining := new(big.Int).Sub(finalCursor.NextInboxMessageIndex(), beforeCursor.NextInboxMessageIndex())
-	inboxDelta, err := lookup.GetInboxDelta(beforeCursor.NextInboxMessageIndex(), inboxRemaining)
 
 	beforeAssertion := &core.AssertionInfo{
-		ExecutionInfo: &core.ExecutionInfo{
-			SimpleExecutionInfo: &core.SimpleExecutionInfo{
-				Before: core.NewExecutionState(initalCursor),
-				After:  core.NewExecutionState(beforeCursor),
-			},
-			SendAcc: sendAcc,
-			LogAcc:  logAcc,
-		},
-		InboxDelta: inboxDelta,
+		ExecutionInfo: execInfo,
+		InboxDelta:    e.inboxDelta.inboxDeltaAccs[execInfo.InboxMessagesRead().Uint64()],
 	}
 
-	beforeMachine, err := lookup.GetMachine(beforeCursor)
+	beforeMachine, err := tracker.GetMachine(challengedSegment.Start)
 	if err != nil {
 		return nil, err
 	}

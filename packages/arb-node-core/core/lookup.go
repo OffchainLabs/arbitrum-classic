@@ -10,6 +10,7 @@ import (
 )
 
 type ExecutionCursor interface {
+	Clone() ExecutionCursor
 	MachineHash() common.Hash
 	NextInboxMessageIndex() *big.Int
 	InboxHash() common.Hash
@@ -65,7 +66,7 @@ type ValidatorLookup interface {
 		start ExecutionCursor,
 		maxGas *big.Int,
 		goOverGas bool,
-	) (ExecutionCursor, error)
+	) error
 
 	GetMachine(cursor ExecutionCursor) (machine.Machine, error)
 }
@@ -167,22 +168,22 @@ func NewExecutionTracker(lookup ValidatorLookup, cursor ExecutionCursor, goOverG
 	}
 }
 
-func (e *ExecutionTracker) fillInCursorSnapshots(max int) error {
+func (e *ExecutionTracker) fillInCursors(max int) error {
 	for i := len(e.cursors) - 1; i < max; i++ {
-		cursor := e.cursors[len(e.cursors)-1]
+		nextCursor := e.cursors[len(e.cursors)-1].Clone()
 		nextStopPoint := e.sortedStopPoints[i]
-		gasToExecute := new(big.Int).Sub(nextStopPoint, cursor.TotalGasConsumed())
-		newCursor, err := e.lookup.MoveExecutionCursor(cursor, gasToExecute, e.goOverGas)
+		gasToExecute := new(big.Int).Sub(nextStopPoint, nextCursor.TotalGasConsumed())
+		err := e.lookup.MoveExecutionCursor(nextCursor, gasToExecute, e.goOverGas)
 		if err != nil {
 			return err
 		}
-		e.cursors = append(e.cursors, newCursor)
+		e.cursors = append(e.cursors, nextCursor)
 	}
 	return nil
 }
 
 func (e *ExecutionTracker) fillInAccs(max int) error {
-	if err := e.fillInCursorSnapshots(max); err != nil {
+	if err := e.fillInCursors(max); err != nil {
 		return err
 	}
 	for i := len(e.logAccs) - 1; i < max; i++ {
@@ -206,7 +207,7 @@ func (e *ExecutionTracker) fillInAccs(max int) error {
 	return nil
 }
 
-func (e *ExecutionTracker) GenerateExecutionInfo(gasUsed *big.Int) (*ExecutionInfo, error) {
+func (e *ExecutionTracker) GetExecutionInfo(gasUsed *big.Int) (*ExecutionInfo, error) {
 	index, ok := e.stopPointIndex[string(gasUsed.Bytes())]
 	if !ok {
 		return nil, errors.New("invalid gas used")
@@ -225,7 +226,18 @@ func (e *ExecutionTracker) GenerateExecutionInfo(gasUsed *big.Int) (*ExecutionIn
 	}, nil
 }
 
-func JudgeAssertion(lookup ValidatorLookup, assertion *Assertion, execTracker *ExecutionTracker) (ChallengeKind, error) {
+func (e *ExecutionTracker) GetMachine(gasUsed *big.Int) (machine.Machine, error) {
+	index, ok := e.stopPointIndex[string(gasUsed.Bytes())]
+	if !ok {
+		return nil, errors.New("invalid gas used")
+	}
+	if err := e.fillInCursors(index); err != nil {
+		return nil, err
+	}
+	return e.lookup.GetMachine(e.cursors[index])
+}
+
+func JudgeAssertion(lookup ValidatorLookup, assertion *AssertionInfo, execTracker *ExecutionTracker) (ChallengeKind, error) {
 	afterInboxHash, err := lookup.GetInboxAcc(assertion.After.InboxIndex)
 	if err != nil {
 		return 0, err
@@ -243,7 +255,7 @@ func JudgeAssertion(lookup ValidatorLookup, assertion *Assertion, execTracker *E
 		return INBOX_DELTA, nil
 	}
 
-	localExecutionInfo, err := execTracker.GenerateExecutionInfo(assertion.GasUsed())
+	localExecutionInfo, err := execTracker.GetExecutionInfo(assertion.GasUsed())
 	if err != nil {
 		return 0, err
 	}

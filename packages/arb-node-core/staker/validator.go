@@ -170,7 +170,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, ma
 	execTracker := core.NewExecutionTracker(v.lookup, cursor, false, gasesUsed)
 
 	for _, nd := range successorsNodes {
-		chalType, err := core.JudgeAssertion(v.lookup, nd.Assertion, execTracker)
+		chalType, err := core.JudgeAssertion(v.lookup, nd.Assertion.AssertionInfo, execTracker)
 		if err != nil {
 			return nil, err
 		}
@@ -191,7 +191,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, ma
 		return nil, nil
 	}
 
-	execInfo, err := execTracker.GenerateExecutionInfo(gasesUsed[len(gasesUsed)-1])
+	execInfo, err := execTracker.GetExecutionInfo(gasesUsed[len(gasesUsed)-1])
 	if err != nil {
 		return nil, err
 	}

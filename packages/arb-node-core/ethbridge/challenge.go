@@ -178,8 +178,8 @@ func (c *Challenge) BisectExecution(
 			challengedSegment.Length,
 			prevCutHashes[segmentToChallenge+1],
 			subCutHashes,
-			subCuts[0].(core.ExpandedExecutionCut).GasUsed,
-			subCuts[0].(core.ExpandedExecutionCut).Rest,
+			subCuts[0].(core.ExecutionCut).GasUsed,
+			subCuts[0].(core.ExecutionCut).RestHash(),
 		)
 	})
 }
@@ -218,7 +218,7 @@ func (c *Challenge) OneStepProveExecution(
 func cutsToHashes(cuts []core.Cut) [][32]byte {
 	cutHashes := make([][32]byte, 0, len(cuts))
 	for _, cut := range cuts {
-		cutHashes = append(cutHashes, cut.Hash())
+		cutHashes = append(cutHashes, cut.CutHash())
 	}
 	return cutHashes
 }

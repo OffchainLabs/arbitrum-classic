@@ -86,7 +86,7 @@ func (v *ValidatorLookupMock) GetCursor(totalGasUsed *big.Int) (ExecutionCursor,
 	panic("implement me")
 }
 
-func (v *ValidatorLookupMock) MoveExecutionCursor(start ExecutionCursor, maxGas *big.Int, goOverGas bool) (ExecutionCursor, error) {
+func (v *ValidatorLookupMock) MoveExecutionCursor(start ExecutionCursor, maxGas *big.Int, goOverGas bool) error {
 	panic("implement me")
 }
 

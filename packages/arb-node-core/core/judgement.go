@@ -75,8 +75,24 @@ func (n *NodeInfo) InitialExecutionBisection() *Bisection {
 			Length: n.Assertion.GasUsed(),
 		},
 		Cuts: []Cut{
-			NewSimpleCut(n.Assertion.BeforeExecutionHash()),
-			NewSimpleCut(n.Assertion.AfterExecutionHash()),
+			ExecutionCut{
+				GasUsed:      big.NewInt(0),
+				InboxDelta:   n.Assertion.InboxDelta,
+				MachineState: n.Assertion.Before.MachineHash,
+				SendAcc:      common.Hash{},
+				SendCount:    big.NewInt(0),
+				LogAcc:       common.Hash{},
+				LogCount:     big.NewInt(0),
+			},
+			ExecutionCut{
+				GasUsed:      n.Assertion.GasUsed(),
+				InboxDelta:   common.Hash{},
+				MachineState: n.Assertion.After.MachineHash,
+				SendAcc:      n.Assertion.SendAcc,
+				SendCount:    n.Assertion.SendCount(),
+				LogAcc:       n.Assertion.LogAcc,
+				LogCount:     n.Assertion.LogCount(),
+			},
 		},
 	}
 }
