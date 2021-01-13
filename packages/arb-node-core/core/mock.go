@@ -9,6 +9,46 @@ import (
 	"math/big"
 )
 
+type ExecutionCursorMock struct {
+	mach machine.Machine
+}
+
+func (e *ExecutionCursorMock) Clone() ExecutionCursor {
+	return &ExecutionCursorMock{}
+}
+
+func (e *ExecutionCursorMock) MachineHash() common.Hash {
+	return e.mach.Hash()
+}
+
+func (e *ExecutionCursorMock) NextInboxMessageIndex() *big.Int {
+	return big.NewInt(0)
+}
+
+func (e *ExecutionCursorMock) InboxHash() common.Hash {
+	return common.Hash{}
+}
+
+func (e *ExecutionCursorMock) TotalGasConsumed() *big.Int {
+	return big.NewInt(0)
+}
+
+func (e *ExecutionCursorMock) TotalSendCount() *big.Int {
+	return big.NewInt(0)
+}
+
+func (e *ExecutionCursorMock) TotalLogCount() *big.Int {
+	return big.NewInt(0)
+}
+
+//Clone() ExecutionCursor
+//MachineHash() common.Hash
+//NextInboxMessageIndex() *big.Int
+//InboxHash() common.Hash
+//TotalGasConsumed() *big.Int
+//TotalSendCount() *big.Int
+//TotalLogCount() *big.Int
+
 type ValidatorLookupMock struct {
 	Messages  []inbox.InboxMessage
 	InboxAccs []common.Hash
@@ -63,7 +103,11 @@ func (v *ValidatorLookupMock) GetMessages(startIndex *big.Int, count *big.Int) (
 }
 
 func (v *ValidatorLookupMock) GetInboxDelta(startIndex *big.Int, count *big.Int) (common.Hash, error) {
-	panic("implement me")
+	messages, err := v.GetMessages(startIndex, count)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return CalculateInboxDeltaAcc(messages), nil
 }
 
 func (v *ValidatorLookupMock) GetInboxAcc(index *big.Int) (common.Hash, error) {
@@ -83,6 +127,9 @@ func (v *ValidatorLookupMock) GetLogAcc(startAcc common.Hash, startIndex *big.In
 }
 
 func (v *ValidatorLookupMock) GetCursor(totalGasUsed *big.Int) (ExecutionCursor, error) {
+	if totalGasUsed.Cmp(big.NewInt(0)) == 0 {
+		return &ExecutionCursorMock{mach: v.startMachine}, nil
+	}
 	panic("implement me")
 }
 
@@ -91,5 +138,5 @@ func (v *ValidatorLookupMock) MoveExecutionCursor(start ExecutionCursor, maxGas 
 }
 
 func (v *ValidatorLookupMock) GetMachine(cursor ExecutionCursor) (machine.Machine, error) {
-	panic("implement me")
+	return cursor.(*ExecutionCursorMock).mach, nil
 }

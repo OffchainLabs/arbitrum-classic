@@ -27,7 +27,7 @@ func NewValidator(
 	rollupAddress,
 	validatorUtilsAddress common.Address,
 ) (*Validator, error) {
-	rollup, err := ethbridge.NewRollup(rollupAddress.ToEthAddress(), client, auth)
+	rollup, err := ethbridge.NewRollup(rollupAddress.ToEthAddress(), client)
 	if err != nil {
 		return nil, err
 	}
@@ -59,29 +59,23 @@ func (v *Validator) removeOldStakers(ctx context.Context) (*types.Transaction, e
 	return v.validatorUtils.RefundStakers(ctx, stakersToEliminate)
 }
 
-func (v *Validator) resolveNextNode(ctx context.Context) (*types.Transaction, error) {
+func (v *Validator) resolveNextNode(ctx context.Context) (*ethbridge.RawTransaction, error) {
 	confirmType, successorWithStake, stakerAddress, err := v.validatorUtils.CheckDecidableNextNode(ctx)
 	if err != nil {
 		return nil, err
 	}
 	switch confirmType {
-	case ethbridge.CONFIRM_TYPE_OUT_OF_ORDER:
-		return v.rollup.RejectNextNodeOutOfOrder(ctx)
 	case ethbridge.CONFIRM_TYPE_INVALID:
-		return v.rollup.RejectNextNode(ctx, successorWithStake, stakerAddress)
+		return v.rollup.RejectNextNode(successorWithStake, stakerAddress)
 	case ethbridge.CONFIRM_TYPE_VALID:
 		unresolvedNodeIndex, err := v.rollup.FirstUnresolvedNode(ctx)
 		if err != nil {
 			return nil, err
 		}
-		nodesInfo, err := v.rollup.LookupNodes(ctx, []*big.Int{unresolvedNodeIndex})
+		nodeInfo, err := lookupNode(ctx, v.rollup.RollupWatcher, unresolvedNodeIndex)
 		if err != nil {
 			return nil, err
 		}
-		if len(nodesInfo) != 1 {
-			return nil, errors.New("bad node query")
-		}
-		nodeInfo := nodesInfo[0]
 		logAcc, err := v.lookup.GetLogAcc(common.Hash{}, nodeInfo.Assertion.Before.TotalLogCount, nodeInfo.Assertion.LogCount())
 		if err != nil {
 			return nil, err
@@ -90,7 +84,7 @@ func (v *Validator) resolveNextNode(ctx context.Context) (*types.Transaction, er
 		if err != nil {
 			return nil, err
 		}
-		return v.rollup.ConfirmNextNode(ctx, logAcc, sends)
+		return v.rollup.ConfirmNextNode(logAcc, sends)
 	default:
 		return nil, nil
 	}

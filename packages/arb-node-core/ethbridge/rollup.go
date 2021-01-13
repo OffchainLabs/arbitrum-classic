@@ -2,9 +2,7 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"math/big"
 
@@ -12,135 +10,93 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-type Rollup struct {
-	*RollupWatcher
-	auth *TransactAuth
+type RawTransaction struct {
+	Data   []byte
+	Dest   ethcommon.Address
+	Amount *big.Int
 }
 
-func NewRollup(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*Rollup, error) {
+type Rollup struct {
+	*RollupWatcher
+}
+
+func NewRollup(address ethcommon.Address, client ethutils.EthClient) (*Rollup, error) {
 	watcher, err := NewRollupWatcher(address, client)
 	if err != nil {
 		return nil, err
 	}
 	return &Rollup{
 		RollupWatcher: watcher,
-		auth:          auth,
 	}, nil
 }
 
-func (r *Rollup) RejectNextNode(ctx context.Context, node core.NodeID, staker common.Address) (*types.Transaction, error) {
-	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return r.con.RejectNextNode(auth, node, staker.ToEthAddress())
-	})
+func (r *Rollup) buildTx(data []byte, amount *big.Int) *RawTransaction {
+	return &RawTransaction{
+		Data:   data,
+		Dest:   r.address,
+		Amount: amount,
+	}
 }
 
-func (r *Rollup) RejectNextNodeOutOfOrder(ctx context.Context) (*types.Transaction, error) {
-	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return r.con.RejectNextNodeOutOfOrder(auth)
-	})
+func (r *Rollup) buildSimpleTx(data []byte) *RawTransaction {
+	return r.buildTx(data, big.NewInt(0))
 }
 
-func (r *Rollup) ConfirmNextNode(
-	ctx context.Context,
-	logAcc common.Hash,
-	sends [][]byte,
-) (*types.Transaction, error) {
+func (r *Rollup) RejectNextNode(node *big.Int, staker common.Address) (*RawTransaction, error) {
+	data, err := rollupABI.Pack("rejectNextNode", node, staker.ToEthAddress())
+	return r.buildSimpleTx(data), err
+}
+
+func (r *Rollup) ConfirmNextNode(logAcc common.Hash, sends [][]byte) (*RawTransaction, error) {
 	var sendsData []byte
 	sendLengths := make([]*big.Int, 0, len(sends))
 	for _, msg := range sends {
 		sendsData = append(sendsData, msg...)
 		sendLengths = append(sendLengths, new(big.Int).SetInt64(int64(len(msg))))
 	}
-	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return r.con.ConfirmNextNode(auth, logAcc, sendsData, sendLengths)
-	})
+	data, err := rollupABI.Pack("confirmNextNode", logAcc, sendsData, sendLengths)
+	return r.buildSimpleTx(data), err
 }
 
-func (r *Rollup) NewStakeOnExistingNode(
-	ctx context.Context,
-	block *common.BlockId,
-	node core.NodeID,
-) (*types.Transaction, error) {
-	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return r.con.NewStakeOnExistingNode(
-			auth,
-			block.HeaderHash.ToEthHash(),
-			block.Height.AsInt(),
-			node,
-		)
-	})
+func (r *Rollup) NewStake(amount *big.Int) (*RawTransaction, error) {
+	data, err := rollupABI.Pack("newStake")
+	return r.buildTx(data, amount), err
 }
 
-func (r *Rollup) AddStakeOnExistingNode(
-	ctx context.Context,
-	block *common.BlockId,
-	node core.NodeID,
-) (*types.Transaction, error) {
-	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return r.con.AddStakeOnExistingNode(
-			auth,
-			block.HeaderHash.ToEthHash(),
-			block.Height.AsInt(),
-			node,
-		)
-	})
+func (r *Rollup) StakeOnExistingNode(block *common.BlockId, node core.NodeID) (*RawTransaction, error) {
+	data, err := rollupABI.Pack("stakeOnExistingNode", block.HeaderHash.ToEthHash(), block.Height.AsInt(), node)
+	return r.buildSimpleTx(data), err
 }
 
-func (r *Rollup) NewStakeOnNewNode(
-	ctx context.Context,
-	block *common.BlockId,
-	node core.NodeID,
-	prev core.NodeID,
-	assertion *core.Assertion,
-) (*types.Transaction, error) {
-	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return r.con.NewStakeOnNewNode(
-			auth,
-			block.HeaderHash.ToEthHash(),
-			block.Height.AsInt(),
-			node,
-			prev,
-			assertion.BytesFields(),
-			assertion.IntFields(),
-		)
-	})
-}
-
-func (r *Rollup) AddStakeOnNewNode(
-	ctx context.Context,
+func (r *Rollup) StakeOnNewNode(
 	block *common.BlockId,
 	node core.NodeID,
 	assertion *core.Assertion,
-) (*types.Transaction, error) {
-	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return r.con.AddStakeOnNewNode(
-			auth,
-			block.HeaderHash.ToEthHash(),
-			block.Height.AsInt(),
-			node,
-			assertion.BytesFields(),
-			assertion.IntFields(),
-		)
-	})
+) (*RawTransaction, error) {
+	data, err := rollupABI.Pack(
+		"stakeOnNewNode",
+		block.HeaderHash.ToEthHash(),
+		block.Height.AsInt(),
+		node,
+		assertion.BytesFields(),
+		assertion.IntFields(),
+	)
+	return r.buildSimpleTx(data), err
 }
 
-func (r *Rollup) ReturnOldDeposit(ctx context.Context, staker common.Address) (*types.Transaction, error) {
-	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return r.con.ReturnOldDeposit(auth, staker.ToEthAddress())
-	})
+func (r *Rollup) ReturnOldDeposit(staker common.Address) (*RawTransaction, error) {
+	data, err := rollupABI.Pack("returnOldDeposit", staker.ToEthAddress())
+	return r.buildSimpleTx(data), err
 }
 
-func (r *Rollup) AddToDeposit(ctx context.Context, address common.Address, amount *big.Int) (*types.Transaction, error) {
-	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		auth.Value = amount
-		return r.con.AddToDeposit(auth, address.ToEthAddress())
-	})
+func (r *Rollup) AddToDeposit(address common.Address, amount *big.Int) (*RawTransaction, error) {
+	data, err := rollupABI.Pack("addToDeposit", address.ToEthAddress())
+	return r.buildTx(data, amount), err
 }
 
-func (r *Rollup) ReduceDeposit(ctx context.Context, amount *big.Int) (*types.Transaction, error) {
-	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return r.con.ReduceDeposit(auth, amount)
-	})
+func (r *Rollup) ReduceDeposit(amount *big.Int) (*RawTransaction, error) {
+	data, err := rollupABI.Pack("reduceDeposit", amount)
+	return r.buildSimpleTx(data), err
 }
 
 func (r *Rollup) CreateChallenge(
@@ -152,34 +108,31 @@ func (r *Rollup) CreateChallenge(
 	assertion *core.Assertion,
 	inboxMaxHash common.Hash,
 	inboxMaxCount *big.Int,
-) (*types.Transaction, error) {
+) (*RawTransaction, error) {
 	speedLimit, err := r.ArbGasSpeedLimitPerBlock(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return r.con.CreateChallenge(
-			auth,
-			staker1.ToEthAddress(),
-			node1,
-			staker2.ToEthAddress(),
-			node2,
+	data, err := rollupABI.Pack(
+		"createChallenge",
+		[2]ethcommon.Address{staker1.ToEthAddress(), staker2.ToEthAddress()},
+		[2]*big.Int{node1, node2},
+		[3][32]byte{
 			assertion.InboxConsistencyHash(inboxMaxHash, inboxMaxCount),
 			assertion.InboxDeltaHash(),
 			assertion.ExecutionHash(),
-			assertion.CheckTime(speedLimit),
-		)
-	})
+		},
+		assertion.CheckTime(speedLimit),
+	)
+	return r.buildSimpleTx(data), err
 }
 
-func (r *Rollup) RemoveZombie(ctx context.Context, zombieNum *big.Int, maxNodes *big.Int) (*types.Transaction, error) {
-	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return r.con.RemoveZombie(auth, zombieNum, maxNodes)
-	})
+func (r *Rollup) RemoveZombie(zombieNum *big.Int, maxNodes *big.Int) (*RawTransaction, error) {
+	data, err := rollupABI.Pack("removeOldZombies", zombieNum, maxNodes)
+	return r.buildSimpleTx(data), err
 }
 
-func (r *Rollup) RemoveOldZombies(ctx context.Context, startIndex *big.Int) (*types.Transaction, error) {
-	return r.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return r.con.RemoveOldZombies(auth, startIndex)
-	})
+func (r *Rollup) RemoveOldZombies(startIndex *big.Int) (*RawTransaction, error) {
+	data, err := rollupABI.Pack("removeOldZombies", startIndex)
+	return r.buildSimpleTx(data), err
 }

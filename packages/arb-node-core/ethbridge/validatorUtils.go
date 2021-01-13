@@ -18,7 +18,6 @@ type ConfirmType uint8
 const (
 	CONFIRM_TYPE_NONE ConfirmType = iota
 	CONFIRM_TYPE_VALID
-	CONFIRM_TYPE_OUT_OF_ORDER
 	CONFIRM_TYPE_INVALID
 )
 

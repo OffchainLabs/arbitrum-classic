@@ -6,6 +6,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
@@ -52,6 +53,7 @@ func deployRollup(
 		extraConfig,
 	)
 	test.FailIfError(t, err)
+
 	return rollupAddr
 }
 
@@ -97,12 +99,33 @@ func TestStaker(t *testing.T) {
 		client.Commit()
 	}
 
-	tx, err := staker.placeStake(ctx)
+	rawTx, err := staker.newStake(ctx)
 	test.FailIfError(t, err)
 
-	if tx == nil {
+	if rawTx == nil {
 		t.Fatal("didn't place stake")
 	}
 
+	validatorAddress, _, _, err := ethbridgecontracts.DeployValidator(auth, client)
+	test.FailIfError(t, err)
+
 	client.Commit()
+
+	val, err := ethbridge.NewValidator(validatorAddress, client, ethbridge.NewTransactAuth(auth))
+	test.FailIfError(t, err)
+
+	_, err = val.ExecuteTransactions(ctx, []*ethbridge.RawTransaction{rawTx})
+	test.FailIfError(t, err)
+
+	client.Commit()
+
+	stakerInfo, err := staker.rollup.StakerInfo(ctx, common.NewAddressFromEth(validatorAddress))
+	test.FailIfError(t, err)
+
+	if stakerInfo.CurrentChallenge != nil {
+		t.Fatal("shouldn't be in challenge")
+	}
+	if stakerInfo.LatestStakedNode.Cmp(big.NewInt(0)) != 0 {
+		t.Fatal("staked on wrong node")
+	}
 }

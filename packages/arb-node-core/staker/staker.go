@@ -59,11 +59,6 @@ func (s *Staker) Act(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-	} else {
-		_, err := s.placeStake(ctx)
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -91,7 +86,22 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 	return challenger.HandleConflict(ctx)
 }
 
-func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (*types.Transaction, error) {
+func (s *Staker) newStake(ctx context.Context) (*ethbridge.RawTransaction, error) {
+	info, err := s.rollup.StakerInfo(ctx, s.address)
+	if err != nil {
+		return nil, err
+	}
+	if info != nil {
+		return nil, nil
+	}
+	stakeAmount, err := s.rollup.CurrentRequiredStake(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.rollup.NewStake(stakeAmount)
+}
+
+func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (*ethbridge.RawTransaction, error) {
 	info, err := s.rollup.StakerInfo(ctx, s.address)
 	if err != nil {
 		return nil, err
@@ -110,39 +120,15 @@ func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (
 		if !s.makeNewNodes {
 			return nil, nil
 		}
-		return s.rollup.AddStakeOnNewNode(ctx, action.block, action.newNodeID, action.assertion)
+		return s.rollup.StakeOnNewNode(action.block, action.newNodeID, action.assertion)
 	case *nodeMovementInfo:
-		return s.rollup.AddStakeOnExistingNode(ctx, action.block, action.nodeNum)
+		return s.rollup.StakeOnExistingNode(action.block, action.nodeNum)
 	default:
 		panic("invalid type")
 	}
 }
 
-func (s *Staker) placeStake(ctx context.Context) (*types.Transaction, error) {
-	latestConfirmedNode, err := s.rollup.LatestConfirmedNode(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	action, err := s.generateNodeAction(ctx, latestConfirmedNode, true)
-	if err != nil || action == nil {
-		return nil, err
-	}
-
-	switch action := action.(type) {
-	case *nodeCreationInfo:
-		if !s.makeNewNodes {
-			return nil, nil
-		}
-		return s.rollup.NewStakeOnNewNode(ctx, action.block, action.newNodeID, latestConfirmedNode, action.assertion)
-	case *nodeMovementInfo:
-		return s.rollup.NewStakeOnExistingNode(ctx, action.block, action.nodeNum)
-	default:
-		panic("invalid type")
-	}
-}
-
-func (s *Staker) createConflict(ctx context.Context) (*types.Transaction, error) {
+func (s *Staker) createConflict(ctx context.Context) (*ethbridge.RawTransaction, error) {
 	info, err := s.rollup.StakerInfo(ctx, s.address)
 	if err != nil {
 		return nil, err

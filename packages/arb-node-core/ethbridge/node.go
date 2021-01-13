@@ -10,11 +10,11 @@ import (
 )
 
 type NodeWatcher struct {
-	con *ethbridgecontracts.Node
+	con *ethbridgecontracts.INode
 }
 
 func NewNodeWatcher(address ethcommon.Address, client ethutils.EthClient) (*NodeWatcher, error) {
-	con, err := ethbridgecontracts.NewNode(address, client)
+	con, err := ethbridgecontracts.NewINode(address, client)
 	if err != nil {
 		return nil, err
 	}

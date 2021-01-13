@@ -25,10 +25,11 @@ ROLLUP_CREATOR=$PREFIX/rollup/RollupCreator.sol:RollupCreator
 OUTBOX=$PREFIX/rollup/Outbox.sol:Outbox
 INBOX=$PREFIX/rollup/Inbox.sol:Inbox
 MESSAGES=$PREFIX/rollup/Messages.sol:Messages
-NODE=$PREFIX/rollup/Node.sol:Node
+INODE=$PREFIX/rollup/INode.sol:INode
 OUTBOX_ENTRY=$PREFIX/rollup/Outbox.sol:OutboxEntry
-ROLLUP_LIBS=$INBOX,$OUTBOX,$ROLLUP_CREATOR,$ROLLUP,$ROLLUP_LIB,$MESSAGES,$NODE,$OUTBOX_ENTRY
+ROLLUP_LIBS=$INBOX,$OUTBOX,$ROLLUP_CREATOR,$ROLLUP,$ROLLUP_LIB,$MESSAGES,$INODE,$OUTBOX_ENTRY
 IGNORED_MORE=$IGNORED,$ROLLUP_LIBS
 abigen --sol=$PREFIX/rollup/RollupCreator.sol --pkg=$PACKAGE --out=rollupcreator.go --exc=$IGNORED
 abigen --sol=$PREFIX/validator/ValidatorUtils.sol --pkg=$PACKAGE --out=validatorutils.go --exc=$IGNORED_MORE
 abigen --sol=$PREFIX/challenge/Challenge.sol --pkg=$PACKAGE --out=challenge.go --exc=$IGNORED_MORE
+abigen --sol=$PREFIX/validator/Validator.sol --pkg=$PACKAGE --out=validator.go --exc=$IGNORED_MORE

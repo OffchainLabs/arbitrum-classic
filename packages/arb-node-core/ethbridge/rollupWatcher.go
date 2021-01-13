@@ -21,6 +21,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
+var rollupABI abi.ABI
 var rollupCreatedID ethcommon.Hash
 var nodeCreatedID ethcommon.Hash
 var challengeCreatedID ethcommon.Hash
@@ -39,6 +40,7 @@ func init() {
 	messageDeliveredID = parsedRollup.Events["MessageDelivered"].ID
 	messageDeliveredFromOriginID = parsedRollup.Events["MessageDeliveredFromOrigin"].ID
 	l2MessageFromOriginCallABI = parsedRollup.Methods["sendL2MessageFromOrigin"]
+	rollupABI = parsedRollup
 }
 
 type StakerInfo struct {
