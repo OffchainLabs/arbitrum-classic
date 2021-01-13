@@ -31,6 +31,18 @@ contract BufferProofTester is OneStepProof2 {
         return get(buf, loc, proof);
     }
 
+    function testCheckSize(
+        bytes32 buf,
+        uint256 offset,
+        bytes32[] memory proof
+    ) public pure returns (bool) {
+        bytes32 w = get(buf, offset / 32, proof);
+        for (uint256 i = offset%32; i < 32; i++) {
+            if (getByte(w, i) != 0) return false;
+        }
+        return checkSize(buf, offset / 32, proof);
+    }
+
     function testSet(
         bytes32 buf,
         uint256 loc,
