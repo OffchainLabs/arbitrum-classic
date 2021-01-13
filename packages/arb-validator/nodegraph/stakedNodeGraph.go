@@ -44,7 +44,7 @@ type RecoverStakeMootedParams struct {
 }
 
 const (
-	MaxAssertionSize = 120
+	MaxConfirmationSize = 400
 )
 
 type StakedNodeGraph struct {
@@ -415,6 +415,8 @@ func (sng *StakedNodeGraph) makeConfirmOpp(nodeOps []valprotocol.ConfirmNodeOppo
 		return nil, nil
 	}
 
+	logger.Info().Int("count", len(confNodes)).Msg("raw confirmable nodes")
+
 	var proofs [][]common.Hash
 	for {
 		totalSize := 0
@@ -429,7 +431,7 @@ func (sng *StakedNodeGraph) makeConfirmOpp(nodeOps []valprotocol.ConfirmNodeOppo
 		for _, proof := range proofs {
 			totalSize += len(proof)
 		}
-		if totalSize < MaxAssertionSize || nodeLimit == 1 {
+		if totalSize < MaxConfirmationSize || nodeLimit == 1 {
 			break
 		}
 		nodeLimit--

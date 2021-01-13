@@ -123,13 +123,11 @@ func (al *AnnouncerListener) AssertionPrepared(
 	al.logger.Info().
 		Msg("AssertionPrepared")
 }
-func (al *AnnouncerListener) ConfirmableNodes(context.Context, *valprotocol.ConfirmOpportunity) {
-	al.logger.Info().
-		Msg("ConfirmableNodes")
+func (al *AnnouncerListener) ConfirmableNodes(_ context.Context, param *valprotocol.ConfirmOpportunity) {
+	al.logger.Info().Int("count", len(param.Nodes)).Msg("ConfirmableNodes")
 }
-func (al *AnnouncerListener) PrunableLeafs(context.Context, []valprotocol.PruneParams) {
-	al.logger.Info().
-		Msg("PrunableLeafs")
+func (al *AnnouncerListener) PrunableLeafs(_ context.Context, params []valprotocol.PruneParams) {
+	al.logger.Info().Int("count", len(params)).Msg("PrunableLeafs")
 }
 func (al *AnnouncerListener) MootableStakes(context.Context, []nodegraph.RecoverStakeMootedParams) {
 	al.logger.Info().
