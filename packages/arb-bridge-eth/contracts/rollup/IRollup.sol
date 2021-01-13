@@ -19,6 +19,8 @@
 pragma solidity ^0.6.11;
 
 import "./INode.sol";
+import "./INodeFactory.sol";
+import "../challenge/IChallengeFactory.sol";
 
 interface IRollup {
     event RollupCreated(bytes32 machineHash);
@@ -38,14 +40,90 @@ interface IRollup {
         uint256 challengedNode
     );
 
-    struct Staker {
-        uint256 index;
-        uint256 latestStakedNode;
-        uint256 amountStaked;
-        // currentChallenge is 0 if staker is not in a challenge
-        address currentChallenge;
-        bool isStaked;
-    }
+    function rejectNextNode(uint256 successorWithStake, address stakerAddress) external;
+
+    function rejectNextNodeOutOfOrder() external;
+
+    function confirmNextNode(
+        bytes32 logAcc,
+        bytes calldata sendsData,
+        uint256[] calldata sendLengths
+    ) external;
+
+    function newStakeOnExistingNode(
+        bytes32 blockHash,
+        uint256 blockNumber,
+        uint256 nodeNum
+    ) external payable;
+
+    function newStakeOnNewNode(
+        bytes32 blockHash,
+        uint256 blockNumber,
+        uint256 nodeNum,
+        uint256 prev,
+        bytes32[7] calldata assertionBytes32Fields,
+        uint256[10] calldata assertionIntFields
+    ) external payable;
+
+    function addStakeOnExistingNode(
+        bytes32 blockHash,
+        uint256 blockNumber,
+        uint256 nodeNum
+    ) external;
+
+    function addStakeOnNewNode(
+        bytes32 blockHash,
+        uint256 blockNumber,
+        uint256 nodeNum,
+        bytes32[7] calldata assertionBytes32Fields,
+        uint256[10] calldata assertionIntFields
+    ) external;
+
+    function returnOldDeposit(address payable stakerAddress) external;
+
+    function addToDeposit(address stakerAddress) external payable;
+
+    function reduceDeposit(uint256 maxReduction) external;
+
+    function createChallenge(
+        address payable staker1Address,
+        uint256 nodeNum1,
+        address payable staker2Address,
+        uint256 nodeNum2,
+        bytes32 inboxConsistencyHash,
+        bytes32 inboxDeltaHash,
+        bytes32 executionHash,
+        uint256 executionCheckTime
+    ) external;
+
+    function completeChallenge(address winningStaker, address payable losingStaker) external;
+
+    function removeZombie(uint256 zombieNum, uint256 maxNodes) external;
+
+    function removeOldZombies(uint256 startIndex) external;
+
+    // Non mutating calls
+
+    function zombieInfo(uint256 index)
+        external
+        view
+        returns (address stakerAddress, uint256 latestStakedNode);
+
+    function zombieCount() external view returns (uint256);
+
+    function stakerInfo(address staker)
+        external
+        view
+        returns (
+            bool isStaked,
+            uint256 latestStakedNode,
+            uint256 amountStaked,
+            address currentChallenge
+        );
+
+    function stakerCount() external view returns (uint256);
+
+    function getStakers(uint256 startIndex, uint256 max) external view returns (address[] memory);
 
     function latestConfirmed() external view returns (uint256);
 
@@ -59,18 +137,25 @@ interface IRollup {
 
     function stakerList(uint256 index) external view returns (address payable);
 
-    // function stakerMap(address staker) external view returns(Staker memory);
+    function challengePeriodBlocks() external view returns (uint256);
 
-    // Zombie[] zombies;
+    function arbGasSpeedLimitPerBlock() external view returns (uint256);
 
-    // // Rollup Config
-    // uint256 public challengePeriodBlocks;
-    // uint256 public arbGasSpeedLimitPerBlock;
-    // uint256 public baseStake;
-    // address public stakeToken;
+    function baseStake() external view returns (uint256);
 
-    // IChallengeFactory public challengeFactory;
-    // INodeFactory public nodeFactory;
+    function stakeToken() external view returns (address);
 
-    function completeChallenge(address winningStaker, address payable losingStaker) external;
+    function challengeFactory() external view returns (IChallengeFactory);
+
+    function nodeFactory() external view returns (INodeFactory);
+
+    function currentRequiredStake() external view returns (uint256);
+
+    function minimumAssertionPeriod() external view returns (uint256);
+
+    function countStakedZombies(INode node) external view returns (uint256);
+
+    function checkNoRecentStake() external view;
+
+    function checkUnresolved() external view;
 }

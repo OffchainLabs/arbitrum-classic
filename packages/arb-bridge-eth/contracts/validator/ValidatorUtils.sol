@@ -18,21 +18,21 @@
 
 pragma solidity ^0.6.11;
 
-import "../rollup/Rollup.sol";
+import "../rollup/IRollup.sol";
 
 contract ValidatorUtils {
     enum ConfirmType { NONE, VALID, OUT_OF_ORDER, INVALID }
 
     enum NodeConflict { NONE, FOUND, INDETERMINATE, INCOMPLETE }
 
-    function refundStakers(Rollup rollup, address payable[] calldata stakers) external {
+    function refundStakers(IRollup rollup, address payable[] calldata stakers) external {
         uint256 stakerCount = stakers.length;
         for (uint256 i = 0; i < stakerCount; i++) {
             try rollup.returnOldDeposit(stakers[i]) {} catch {}
         }
     }
 
-    function getConfig(Rollup rollup)
+    function getConfig(IRollup rollup)
         external
         view
         returns (
@@ -49,7 +49,7 @@ contract ValidatorUtils {
     }
 
     function findStakerConflict(
-        Rollup rollup,
+        IRollup rollup,
         address staker1,
         address staker2,
         uint256 maxDepth
@@ -62,13 +62,13 @@ contract ValidatorUtils {
             uint256
         )
     {
-        (, uint256 staker1NodeNum, , , ) = rollup.stakerMap(staker1);
-        (, uint256 staker2NodeNum, , , ) = rollup.stakerMap(staker2);
+        (, uint256 staker1NodeNum, , ) = rollup.stakerInfo(staker1);
+        (, uint256 staker2NodeNum, , ) = rollup.stakerInfo(staker2);
         return findNodeConflict(rollup, staker1NodeNum, staker2NodeNum, maxDepth);
     }
 
     function checkDecidableNextNode(
-        Rollup rollup,
+        IRollup rollup,
         uint256 startNodeOffset,
         uint256 maxNodeCount,
         uint256 startStakerIndex,
@@ -119,7 +119,7 @@ contract ValidatorUtils {
         return (ConfirmType.INVALID, successorWithStake, stakerAddress);
     }
 
-    function checkConfirmableNextNode(Rollup rollup) external view {
+    function checkConfirmableNextNode(IRollup rollup) external view {
         rollup.checkUnresolved();
         rollup.checkNoRecentStake();
         uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
@@ -130,7 +130,7 @@ contract ValidatorUtils {
         currentUnresolved.checkConfirmValid(stakerCount + zombieCount, latestConfirmed);
     }
 
-    function checkRejectableOutOfOrder(Rollup rollup) external view {
+    function checkRejectableOutOfOrder(IRollup rollup) external view {
         rollup.checkUnresolved();
         uint256 latestConfirmed = rollup.latestConfirmed();
         uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
@@ -139,7 +139,7 @@ contract ValidatorUtils {
     }
 
     function checkRejectableNextNode(
-        Rollup rollup,
+        IRollup rollup,
         uint256 startNodeOffset,
         uint256 maxNodeCount,
         uint256 startStakerIndex,
@@ -162,14 +162,14 @@ contract ValidatorUtils {
         return (successorWithStake, stakerAddress);
     }
 
-    function refundableStakers(Rollup rollup) external view returns (address[] memory) {
+    function refundableStakers(IRollup rollup) external view returns (address[] memory) {
         uint256 stakerCount = rollup.stakerCount();
         address[] memory stakers = new address[](stakerCount);
         uint256 latestConfirmed = rollup.latestConfirmed();
         uint256 index = 0;
         for (uint256 i = 0; i < stakerCount; i++) {
             address staker = rollup.stakerList(i);
-            (, uint256 latestStakedNode, , , ) = rollup.stakerMap(staker);
+            (, uint256 latestStakedNode, , ) = rollup.stakerInfo(staker);
             if (latestStakedNode <= latestConfirmed) {
                 stakers[index] = staker;
                 index++;
@@ -181,7 +181,7 @@ contract ValidatorUtils {
         return stakers;
     }
 
-    function successorNodes(Rollup rollup, uint256 nodeNum)
+    function successorNodes(IRollup rollup, uint256 nodeNum)
         external
         view
         returns (uint256[] memory)
@@ -202,7 +202,7 @@ contract ValidatorUtils {
         return nodes;
     }
 
-    function stakedNodes(Rollup rollup, address staker) external view returns (uint256[] memory) {
+    function stakedNodes(IRollup rollup, address staker) external view returns (uint256[] memory) {
         uint256[] memory nodes = new uint256[](100000);
         uint256 index = 0;
         for (uint256 i = rollup.latestConfirmed(); i <= rollup.latestNodeCreated(); i++) {
@@ -220,7 +220,7 @@ contract ValidatorUtils {
     }
 
     function findNodeConflict(
-        Rollup rollup,
+        IRollup rollup,
         uint256 node1,
         uint256 node2,
         uint256 maxDepth
@@ -259,7 +259,7 @@ contract ValidatorUtils {
     }
 
     function findRejectableExample(
-        Rollup rollup,
+        IRollup rollup,
         uint256 startNodeOffset,
         uint256 maxNodeCount,
         uint256 startStakerIndex,
@@ -293,7 +293,7 @@ contract ValidatorUtils {
     }
 
     function findRejectableExampleImpl(
-        Rollup rollup,
+        IRollup rollup,
         uint256 firstNodeToCheck,
         uint256 prev,
         uint256 max,
