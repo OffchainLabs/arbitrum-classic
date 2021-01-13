@@ -2,8 +2,8 @@ package staker
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
@@ -14,80 +14,91 @@ import (
 
 type Staker struct {
 	*Validator
-	address      common.Address
-	auth         *ethbridge.TransactAuth
 	makeNewNodes bool
+
+	activeChallenge *challenge.Challenger
 }
 
 func NewStaker(
 	lookup core.ValidatorLookup,
 	client ethutils.EthClient,
-	auth *bind.TransactOpts,
-	rollupAddress,
+	wallet *ethbridge.Validator,
 	validatorUtilsAddress common.Address,
 ) (*Staker, error) {
-	txAuth := ethbridge.NewTransactAuth(auth)
-	val, err := NewValidator(lookup, client, txAuth, rollupAddress, validatorUtilsAddress)
+	val, err := NewValidator(lookup, client, wallet, validatorUtilsAddress)
 	if err != nil {
 		return nil, err
 	}
 	return &Staker{
 		Validator:    val,
-		address:      common.NewAddressFromEth(auth.From),
-		auth:         txAuth,
 		makeNewNodes: true,
 	}, nil
 }
 
-func (s *Staker) Act(ctx context.Context) error {
-	info, err := s.rollup.StakerInfo(ctx, s.address)
+func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
+	txes := make([]*ethbridge.RawTransaction, 0)
+	info, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
 	if err != nil {
-		return err
+		return nil, err
 	}
-	_, err = s.handleConflict(ctx, info)
+	rawTx, err := s.handleConflict(ctx, info)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	if rawTx != nil {
+		txes = append(txes, rawTx)
 	}
 
-	_, err = s.resolveNextNode(ctx)
+	rawTx, err = s.resolveNextNode(ctx)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	if rawTx != nil {
+		txes = append(txes, rawTx)
 	}
 
 	if info != nil {
-		_, err := s.advanceStake(ctx, info)
+		rawTx, err := s.advanceStake(ctx, info)
 		if err != nil {
-			return err
+			return nil, err
+		}
+		if rawTx != nil {
+			txes = append(txes, rawTx)
 		}
 	}
-	return nil
+	return s.wallet.ExecuteTransactions(ctx, txes)
 }
 
-func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo) (*types.Transaction, error) {
+func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo) (*ethbridge.RawTransaction, error) {
 	if info.CurrentChallenge == nil {
+		s.activeChallenge = nil
 		return nil, nil
 	}
-	challengeCon, err := ethbridge.NewChallenge(info.CurrentChallenge.ToEthAddress(), s.client, s.auth)
-	if err != nil {
-		return nil, err
+
+	if s.activeChallenge != nil || s.activeChallenge.ChallengeAddress() != *info.CurrentChallenge {
+		challengeCon, err := ethbridge.NewChallenge(info.CurrentChallenge.ToEthAddress(), s.client)
+		if err != nil {
+			return nil, err
+		}
+
+		challengedNode, err := s.rollup.LookupChallengedNode(ctx, *info.CurrentChallenge)
+		if err != nil {
+			return nil, err
+		}
+
+		nodeInfo, err := lookupNode(ctx, s.rollup.RollupWatcher, challengedNode)
+		if err != nil {
+			return nil, err
+		}
+
+		s.activeChallenge = challenge.NewChallenger(challengeCon, s.lookup, nodeInfo, s.wallet.Address())
 	}
 
-	challengedNode, err := s.rollup.LookupChallengedNode(ctx, *info.CurrentChallenge)
-	if err != nil {
-		return nil, err
-	}
-
-	nodeInfo, err := lookupNode(ctx, s.rollup.RollupWatcher, challengedNode)
-	if err != nil {
-		return nil, err
-	}
-
-	challenger := challenge.NewChallenger(challengeCon, s.lookup, nodeInfo)
-	return challenger.HandleConflict(ctx)
+	return s.activeChallenge.HandleConflict(ctx)
 }
 
 func (s *Staker) newStake(ctx context.Context) (*ethbridge.RawTransaction, error) {
-	info, err := s.rollup.StakerInfo(ctx, s.address)
+	info, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +113,7 @@ func (s *Staker) newStake(ctx context.Context) (*ethbridge.RawTransaction, error
 }
 
 func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (*ethbridge.RawTransaction, error) {
-	info, err := s.rollup.StakerInfo(ctx, s.address)
+	info, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +140,7 @@ func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (
 }
 
 func (s *Staker) createConflict(ctx context.Context) (*ethbridge.RawTransaction, error) {
-	info, err := s.rollup.StakerInfo(ctx, s.address)
+	info, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
 	if err != nil {
 		return nil, err
 	}
@@ -145,14 +156,14 @@ func (s *Staker) createConflict(ctx context.Context) (*ethbridge.RawTransaction,
 		return nil, err
 	}
 	for _, staker := range stakers {
-		conflictType, node1, node2, err := s.validatorUtils.FindStakerConflict(ctx, s.address, staker)
+		conflictType, node1, node2, err := s.validatorUtils.FindStakerConflict(ctx, s.wallet.Address(), staker)
 		if err != nil {
 			return nil, err
 		}
 		if conflictType != ethbridge.CONFLICT_TYPE_FOUND {
 			continue
 		}
-		staker1 := s.address
+		staker1 := s.wallet.Address()
 		staker2 := staker
 		if node2.Cmp(node1) < 0 {
 			staker1, staker2 = staker2, staker1

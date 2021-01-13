@@ -20,6 +20,8 @@ pragma solidity ^0.6.11;
 
 pragma experimental ABIEncoderV2;
 
+import "../rollup/IRollup.sol";
+
 contract Validator {
     address owner;
 
@@ -32,6 +34,7 @@ contract Validator {
         address[] calldata destination,
         uint256[] calldata amount
     ) external payable {
+        require(msg.sender == owner, "ONLY_OWNER");
         uint256 numTxes = data.length;
         for (uint256 i = 0; i < numTxes; i++) {
             (bool success, ) = address(destination[i]).call{ value: amount[i] }(data[i]);
@@ -44,7 +47,15 @@ contract Validator {
         address destination,
         uint256 amount
     ) external payable {
+        require(msg.sender == owner, "ONLY_OWNER");
         (bool success, ) = destination.call{ value: amount }(data);
         require(success, "TX_FAILED");
+    }
+
+    function returnOldDeposits(IRollup rollup, address payable[] calldata stakers) external {
+        uint256 stakerCount = stakers.length;
+        for (uint256 i = 0; i < stakerCount; i++) {
+            try rollup.returnOldDeposit(stakers[i]) {} catch {}
+        }
     }
 }

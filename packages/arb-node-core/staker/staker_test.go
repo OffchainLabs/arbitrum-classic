@@ -90,9 +90,17 @@ func TestStaker(t *testing.T) {
 	validatorUtilsAddr, _, _, err := ethbridgecontracts.DeployValidatorUtils(auth, client)
 	test.FailIfError(t, err)
 
+	validatorAddress, _, _, err := ethbridgecontracts.DeployValidator(auth, client)
+	test.FailIfError(t, err)
+
+	client.Commit()
+
+	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, ethbridge.NewTransactAuth(auth))
+	test.FailIfError(t, err)
+
 	lookup := core.NewValidatorLookupMock(mach)
 
-	staker, err := NewStaker(lookup, client, auth, common.NewAddressFromEth(rollupAddr), common.NewAddressFromEth(validatorUtilsAddr))
+	staker, err := NewStaker(lookup, client, val, common.NewAddressFromEth(validatorUtilsAddr))
 	test.FailIfError(t, err)
 
 	for i := 0; i < 100; i++ {
@@ -105,14 +113,6 @@ func TestStaker(t *testing.T) {
 	if rawTx == nil {
 		t.Fatal("didn't place stake")
 	}
-
-	validatorAddress, _, _, err := ethbridgecontracts.DeployValidator(auth, client)
-	test.FailIfError(t, err)
-
-	client.Commit()
-
-	val, err := ethbridge.NewValidator(validatorAddress, client, ethbridge.NewTransactAuth(auth))
-	test.FailIfError(t, err)
 
 	_, err = val.ExecuteTransactions(ctx, []*ethbridge.RawTransaction{rawTx})
 	test.FailIfError(t, err)

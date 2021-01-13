@@ -27,13 +27,6 @@ contract ValidatorUtils {
 
     enum NodeConflict { NONE, FOUND, INDETERMINATE, INCOMPLETE }
 
-    function refundStakers(IRollup rollup, address payable[] calldata stakers) external {
-        uint256 stakerCount = stakers.length;
-        for (uint256 i = 0; i < stakerCount; i++) {
-            try rollup.returnOldDeposit(stakers[i]) {} catch {}
-        }
-    }
-
     function getConfig(IRollup rollup)
         external
         view

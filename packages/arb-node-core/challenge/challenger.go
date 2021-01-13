@@ -25,7 +25,20 @@ type Challenger struct {
 	inboxDelta *inboxDelta
 }
 
-func (c *Challenger) InboxDelta() (*inboxDelta, error) {
+func (c *Challenger) ChallengeAddress() common.Address {
+	return c.challenge.Address()
+}
+
+func NewChallenger(challenge *ethbridge.Challenge, lookup core.ValidatorLookup, challengedNode *core.NodeInfo, stakerAddress common.Address) *Challenger {
+	return &Challenger{
+		challenge:      challenge,
+		lookup:         lookup,
+		challengedNode: challengedNode,
+		stakerAddress:  stakerAddress,
+	}
+}
+
+func (c *Challenger) getInboxDelta() (*inboxDelta, error) {
 	if c.inboxDelta == nil {
 		messages, err := c.lookup.GetMessages(
 			c.challengedNode.Assertion.Before.InboxIndex,
@@ -48,15 +61,6 @@ func (c *Challenger) InboxDelta() (*inboxDelta, error) {
 		}
 	}
 	return c.inboxDelta, nil
-}
-
-func NewChallenger(challenge *ethbridge.Challenge, lookup core.ValidatorLookup, challengedNode *core.NodeInfo, stakerAddress common.Address) *Challenger {
-	return &Challenger{
-		challenge:      challenge,
-		lookup:         lookup,
-		challengedNode: challengedNode,
-		stakerAddress:  stakerAddress,
-	}
 }
 
 func (c *Challenger) HandleConflict(ctx context.Context) (*ethbridge.RawTransaction, error) {
@@ -129,7 +133,7 @@ func (c *Challenger) handleInboxConsistencyChallenge(prevBisection *core.Bisecti
 }
 
 func (c *Challenger) handleInboxDeltaChallenge(prevBisection *core.Bisection) (*ethbridge.RawTransaction, error) {
-	inboxDeltaData, err := c.InboxDelta()
+	inboxDeltaData, err := c.getInboxDelta()
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +151,7 @@ func (c *Challenger) handleExecutionChallenge(prevBisection *core.Bisection) (*e
 	if prevBisection == nil {
 		prevBisection = c.challengedNode.InitialExecutionBisection()
 	}
-	inboxDeltaData, err := c.InboxDelta()
+	inboxDeltaData, err := c.getInboxDelta()
 	initialCursor, err := c.lookup.GetCursor(c.challengedNode.Assertion.Before.TotalGasConsumed)
 	if err != nil {
 		return nil, err

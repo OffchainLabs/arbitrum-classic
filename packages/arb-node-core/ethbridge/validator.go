@@ -12,27 +12,33 @@ import (
 )
 
 type Validator struct {
-	con     *ethbridgecontracts.Validator
-	address ethcommon.Address
-	client  ethutils.EthClient
-	auth    *TransactAuth
+	con           *ethbridgecontracts.Validator
+	address       ethcommon.Address
+	client        ethutils.EthClient
+	auth          *TransactAuth
+	rollupAddress ethcommon.Address
 }
 
-func NewValidator(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*Validator, error) {
+func NewValidator(address, rollupAddress ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*Validator, error) {
 	con, err := ethbridgecontracts.NewValidator(address, client)
 	if err != nil {
 		return nil, err
 	}
 	return &Validator{
-		con:     con,
-		address: address,
-		client:  client,
-		auth:    auth,
+		con:           con,
+		address:       address,
+		client:        client,
+		auth:          auth,
+		rollupAddress: rollupAddress,
 	}, nil
 }
 
 func (v *Validator) Address() common.Address {
 	return common.NewAddressFromEth(v.address)
+}
+
+func (v *Validator) RollupAddress() common.Address {
+	return common.NewAddressFromEth(v.rollupAddress)
 }
 
 func (v *Validator) ExecuteTransaction(ctx context.Context, tx *RawTransaction) (*types.Transaction, error) {
@@ -66,5 +72,11 @@ func (v *Validator) ExecuteTransactions(ctx context.Context, txes []*RawTransact
 	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		auth.Value = totalAmount
 		return v.con.ExecuteTransactions(auth, data, dest, amount)
+	})
+}
+
+func (v *Validator) ReturnOldDeposits(ctx context.Context, stakers []common.Address) (*types.Transaction, error) {
+	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return v.con.ReturnOldDeposits(auth, v.rollupAddress, common.AddressArrayToEth(stakers))
 	})
 }

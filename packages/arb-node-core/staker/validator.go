@@ -18,24 +18,23 @@ type Validator struct {
 	validatorUtils *ethbridge.ValidatorUtils
 	client         ethutils.EthClient
 	lookup         core.ValidatorLookup
+	wallet         *ethbridge.Validator
 }
 
 func NewValidator(
 	lookup core.ValidatorLookup,
 	client ethutils.EthClient,
-	auth *ethbridge.TransactAuth,
-	rollupAddress,
+	wallet *ethbridge.Validator,
 	validatorUtilsAddress common.Address,
 ) (*Validator, error) {
-	rollup, err := ethbridge.NewRollup(rollupAddress.ToEthAddress(), client)
+	rollup, err := ethbridge.NewRollup(wallet.RollupAddress().ToEthAddress(), client)
 	if err != nil {
 		return nil, err
 	}
 	validatorUtils, err := ethbridge.NewValidatorUtils(
 		validatorUtilsAddress.ToEthAddress(),
-		rollupAddress.ToEthAddress(),
+		wallet.RollupAddress().ToEthAddress(),
 		client,
-		auth,
 	)
 	if err != nil {
 		return nil, err
@@ -45,6 +44,7 @@ func NewValidator(
 		validatorUtils: validatorUtils,
 		client:         client,
 		lookup:         lookup,
+		wallet:         wallet,
 	}, nil
 }
 
@@ -56,7 +56,7 @@ func (v *Validator) removeOldStakers(ctx context.Context) (*types.Transaction, e
 	if len(stakersToEliminate) == 0 {
 		return nil, nil
 	}
-	return v.validatorUtils.RefundStakers(ctx, stakersToEliminate)
+	return v.wallet.ReturnOldDeposits(ctx, stakersToEliminate)
 }
 
 func (v *Validator) resolveNextNode(ctx context.Context) (*ethbridge.RawTransaction, error) {

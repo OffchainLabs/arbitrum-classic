@@ -193,10 +193,10 @@ func initializeChallengeTest(
 	challengerWalletAddress, _, _, err := ethbridgecontracts.DeployValidator(challenger, client)
 	test.FailIfError(t, err)
 
-	asserterWallet, err := ethbridge.NewValidator(asserterWalletAddress, client, ethbridge.NewTransactAuth(asserter))
+	asserterWallet, err := ethbridge.NewValidator(asserterWalletAddress, ethcommon.Address{}, client, ethbridge.NewTransactAuth(asserter))
 	test.FailIfError(t, err)
 
-	challengerWallet, err := ethbridge.NewValidator(challengerWalletAddress, client, ethbridge.NewTransactAuth(challenger))
+	challengerWallet, err := ethbridge.NewValidator(challengerWalletAddress, ethcommon.Address{}, client, ethbridge.NewTransactAuth(challenger))
 	test.FailIfError(t, err)
 
 	_, err = tester.StartChallenge(

@@ -55,6 +55,10 @@ func NewChallengeWatcher(address ethcommon.Address, client ethutils.EthClient) (
 	}, nil
 }
 
+func (c *ChallengeWatcher) Address() common.Address {
+	return common.NewAddressFromEth(c.address)
+}
+
 func (c *ChallengeWatcher) Kind(ctx context.Context) (core.ChallengeKind, error) {
 	rawKind, err := c.con.Kind(&bind.CallOpts{Context: ctx})
 	if err != nil {
