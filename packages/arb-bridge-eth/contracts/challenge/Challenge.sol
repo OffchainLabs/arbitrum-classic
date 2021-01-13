@@ -24,6 +24,7 @@ import "./ChallengeLib.sol";
 import "../rollup/Messages.sol";
 import "../rollup/IRollup.sol";
 import "../arch/IOneStepProof.sol";
+import "../arch/Marshaling.sol";
 
 import "../libraries/Cloneable.sol";
 import "../libraries/MerkleLib.sol";
@@ -278,16 +279,7 @@ contract Challenge is Cloneable, IChallenge {
                     _inboxSeqNum,
                     keccak256(_msgData)
                 ),
-                Hashing.hash(
-                    Messages.messageValue(
-                        _kind,
-                        _blockNumber,
-                        _timestamp,
-                        _sender,
-                        _inboxSeqNum,
-                        _msgData
-                    )
-                )
+                messageValueHash(_kind, _blockNumber, _timestamp, _sender, _inboxSeqNum, _msgData)
             );
 
         verifySegmentProof(chunkHash, _merkleNodes, _merkleRoute);
@@ -714,5 +706,23 @@ contract Challenge is Cloneable, IChallenge {
                     _initialLogCount + (_machineFields[2] == proofFields[4] ? 0 : 1)
                 )
             );
+    }
+
+    function messageValueHash(
+        uint8 _kind,
+        uint256 _blockNumber,
+        uint256 _timestamp,
+        address _sender,
+        uint256 _inboxSeqNum,
+        bytes memory _messageData
+    ) internal pure returns (bytes32) {
+        Value.Data[] memory tupData = new Value.Data[](6);
+        tupData[0] = Value.newInt(uint256(_kind));
+        tupData[1] = Value.newInt(_blockNumber);
+        tupData[2] = Value.newInt(_timestamp);
+        tupData[3] = Value.newInt(uint256(_sender));
+        tupData[4] = Value.newInt(_inboxSeqNum);
+        tupData[5] = Marshaling.bytesToBytestack(_messageData, 0, _messageData.length);
+        return Hashing.hash(Value.newTuple(tupData));
     }
 }
