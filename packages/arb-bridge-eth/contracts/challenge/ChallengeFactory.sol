@@ -38,8 +38,8 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         bytes32 _inboxDeltaHash,
         bytes32 _executionHash,
         uint256 _executionCheckTimeBlocks,
-        address payable _asserter,
-        address payable _challenger,
+        address _asserter,
+        address _challenger,
         uint256 _challengePeriodBlocks
     ) external override returns (address) {
         address clone = createClone(challengeTemplate);

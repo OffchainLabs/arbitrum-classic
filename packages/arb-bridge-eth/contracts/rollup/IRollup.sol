@@ -42,6 +42,8 @@ interface IRollup {
 
     event SentLogs(bytes32 logsAccHash);
 
+    // Section: Node decisions
+
     function rejectNextNode(uint256 successorWithStake, address stakerAddress) external;
 
     function confirmNextNode(
@@ -50,7 +52,19 @@ interface IRollup {
         uint256[] calldata sendLengths
     ) external;
 
-    function newStake() external payable;
+    // Section: Staking amount changing
+
+    function newStake(uint256 tokenAmount) external payable;
+
+    function withdrawStakerFunds(address payable destination) external returns (uint256);
+
+    function reduceDeposit(uint256 maxReduction) external;
+
+    function returnOldDeposit(address stakerAddress) external;
+
+    function addToDeposit(address stakerAddress, uint256 tokenAmount) external payable;
+
+    // Section: Stake movement
 
     function stakeOnExistingNode(
         bytes32 blockHash,
@@ -66,11 +80,7 @@ interface IRollup {
         uint256[10] calldata assertionIntFields
     ) external;
 
-    function returnOldDeposit(address payable stakerAddress) external;
-
-    function addToDeposit(address stakerAddress) external payable;
-
-    function reduceDeposit(uint256 maxReduction) external;
+    // Section: Challenges
 
     // nodeFields
     //  inboxConsistencyHash
@@ -83,7 +93,9 @@ interface IRollup {
         uint256 executionCheckTime
     ) external;
 
-    function completeChallenge(address winningStaker, address payable losingStaker) external;
+    function completeChallenge(address winningStaker, address losingStaker) external;
+
+    // Section: Zombie cleanup
 
     function removeZombie(uint256 zombieNum, uint256 maxNodes) external;
 
@@ -111,6 +123,8 @@ interface IRollup {
     function stakerCount() external view returns (uint256);
 
     function getStakers(uint256 startIndex, uint256 max) external view returns (address[] memory);
+
+    function withdrawableFunds(address owner) external view returns (uint256);
 
     function latestConfirmed() external view returns (uint256);
 

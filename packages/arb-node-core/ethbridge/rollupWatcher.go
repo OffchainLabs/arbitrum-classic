@@ -302,6 +302,11 @@ func (r *RollupWatcher) GetStakers(ctx context.Context) ([]common.Address, error
 	return common.AddressArrayFromEth(addresses), nil
 }
 
+func (r *RollupWatcher) StakeToken(ctx context.Context) (common.Address, error) {
+	addr, err := r.con.StakeToken(&bind.CallOpts{Context: ctx})
+	return common.NewAddressFromEth(addr), err
+}
+
 func (r *RollupWatcher) StakerCount(ctx context.Context) (*big.Int, error) {
 	return r.con.StakerCount(&bind.CallOpts{Context: ctx})
 }

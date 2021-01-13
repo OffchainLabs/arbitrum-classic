@@ -79,8 +79,8 @@ contract Challenge is Cloneable, IChallenge {
     bytes32 inboxDeltaHash;
     bytes32 executionHash;
 
-    address payable public asserter;
-    address payable public challenger;
+    address public asserter;
+    address public challenger;
     uint256 private challengePeriodBlocks;
     uint256 private executionCheckTimeBlocks;
 
@@ -127,8 +127,8 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _inboxDeltaHash,
         bytes32 _executionHash,
         uint256 _executionCheckTimeBlocks,
-        address payable _asserter,
-        address payable _challenger,
+        address _asserter,
+        address _challenger,
         uint256 _challengePeriodBlocks
     ) external override {
         require(turn == Turn.NoChallenge, CHAL_INIT_STATE);

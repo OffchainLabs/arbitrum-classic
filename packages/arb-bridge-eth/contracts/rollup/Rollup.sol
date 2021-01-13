@@ -24,6 +24,8 @@ import "./RollupLib.sol";
 import "./Inbox.sol";
 import "./Outbox.sol";
 
+import "../interfaces/IERC20.sol";
+
 import "../challenge/ChallengeLib.sol";
 
 contract Rollup is Inbox, Outbox, IRollup {
@@ -67,6 +69,8 @@ contract Rollup is Inbox, Outbox, IRollup {
 
     IChallengeFactory public override challengeFactory;
     INodeFactory public override nodeFactory;
+
+    mapping(address => uint256) public override withdrawableFunds;
 
     constructor(
         bytes32 _machineHash,
@@ -183,15 +187,31 @@ contract Rollup is Inbox, Outbox, IRollup {
         emit SentLogs(logAcc);
     }
 
-    function newStake() external payable override {
+    function newStake(uint256 tokenAmount) external payable override {
         // Verify that sender is not already a staker
         require(!stakerMap[msg.sender].isStaked, "ALREADY_STAKED");
-        require(msg.value >= currentRequiredStake(), "NOT_ENOUGH_STAKE");
+
+        uint256 depositAmount = receiveStakerFunds(tokenAmount);
+        require(depositAmount >= currentRequiredStake(), "NOT_ENOUGH_STAKE");
 
         uint256 stakerIndex = stakerList.length;
         stakerList.push(msg.sender);
-        stakerMap[msg.sender] = Staker(stakerIndex, latestConfirmed, msg.value, address(0), true);
+        stakerMap[msg.sender] = Staker(
+            stakerIndex,
+            latestConfirmed,
+            depositAmount,
+            address(0),
+            true
+        );
         lastStakeBlock = block.number;
+    }
+
+    function withdrawStakerFunds(address payable destination) external override returns (uint256) {
+        uint256 amount = withdrawableFunds[destination];
+        // Note: This is an unsafe external call and could be used for reentrency
+        // This is safe because it occurs after all checks and effects
+        sendStakerFunds(destination, amount);
+        return amount;
     }
 
     function stakeOnExistingNode(
@@ -295,20 +315,19 @@ contract Rollup is Inbox, Outbox, IRollup {
         );
     }
 
-    function returnOldDeposit(address payable stakerAddress) external override {
+    function returnOldDeposit(address stakerAddress) external override {
         Staker storage staker = stakerMap[stakerAddress];
         require(staker.latestStakedNode <= latestConfirmed, "TOO_RECENT");
         checkUnchallengedStaker(staker);
         uint256 amountStaked = staker.amountStaked;
         deleteStaker(staker);
-        // TODO: Staker could force transfer to revert. We may want to allow funds to be withdrawn separately
-        stakerAddress.transfer(amountStaked);
+        withdrawableFunds[stakerAddress] += amountStaked;
     }
 
-    function addToDeposit(address stakerAddress) external payable override {
+    function addToDeposit(address stakerAddress, uint256 tokenAmount) external payable override {
         Staker storage staker = stakerMap[stakerAddress];
         checkUnchallengedStaker(staker);
-        staker.amountStaked += msg.value;
+        staker.amountStaked += receiveStakerFunds(tokenAmount);
     }
 
     function reduceDeposit(uint256 maxReduction) external override {
@@ -321,7 +340,8 @@ contract Rollup is Inbox, Outbox, IRollup {
         if (withdrawAmount > maxReduction) {
             withdrawAmount = maxReduction;
         }
-        msg.sender.transfer(withdrawAmount);
+        staker.amountStaked -= withdrawAmount;
+        withdrawableFunds[msg.sender] += withdrawAmount;
     }
 
     // nodeFields
@@ -381,10 +401,7 @@ contract Rollup is Inbox, Outbox, IRollup {
         emit RollupChallengeStarted(challengeAddress, stakers[0], stakers[1], nodeNums[0]);
     }
 
-    function completeChallenge(address winningStaker, address payable losingStaker)
-        external
-        override
-    {
+    function completeChallenge(address winningStaker, address losingStaker) external override {
         Staker storage winner = stakerMap[winningStaker];
         Staker storage loser = stakerMap[losingStaker];
 
@@ -392,17 +409,20 @@ contract Rollup is Inbox, Outbox, IRollup {
         require(winner.currentChallenge == msg.sender);
         require(loser.currentChallenge == msg.sender);
 
-        if (loser.amountStaked > winner.amountStaked) {
-            uint256 extraLoserStake = loser.amountStaked - winner.amountStaked;
-            // TODO: unsafe to transfer to the loser directly
-            losingStaker.transfer(extraLoserStake);
-            loser.amountStaked -= extraLoserStake;
+        uint256 loserStake = loser.amountStaked;
+
+        if (loserStake > winner.amountStaked) {
+            uint256 extraLoserStake = loserStake - winner.amountStaked;
+            withdrawableFunds[losingStaker] += extraLoserStake;
+            loserStake -= extraLoserStake;
         }
 
-        winner.amountStaked += loser.amountStaked / 2;
+        uint256 amountWon = loserStake / 2;
+        winner.amountStaked += amountWon;
+        loserStake -= amountWon;
         winner.currentChallenge = address(0);
 
-        // TODO: deposit extra loser stake into ArbOS
+        // TODO: deposit extra loserStake into ArbOS
 
         zombies.push(Zombie(losingStaker, loser.latestStakedNode));
         deleteStaker(loser);
@@ -548,6 +568,31 @@ contract Rollup is Inbox, Outbox, IRollup {
             firstUnresolvedNode > latestConfirmed && firstUnresolvedNode <= latestNodeCreated,
             "NO_UNRESOLVED"
         );
+    }
+
+    function receiveStakerFunds(uint256 tokenAmount) private returns (uint256) {
+        if (stakeToken == address(0)) {
+            require(tokenAmount == 0, "BAD_STK_TYPE");
+            return msg.value;
+        } else {
+            require(msg.value == 0, "BAD_STK_TYPE");
+            require(
+                IERC20(stakeToken).transferFrom(msg.sender, address(this), tokenAmount),
+                "TRANSFER_FAILED"
+            );
+            return tokenAmount;
+        }
+    }
+
+    function sendStakerFunds(address payable destination, uint256 amount) private {
+        if (amount == 0) {
+            return;
+        }
+        if (stakeToken == address(0)) {
+            destination.transfer(amount);
+        } else {
+            require(IERC20(stakeToken).transfer(destination, amount), "TRANSFER_FAILED");
+        }
     }
 
     function destroyNode(uint256 nodeNum) private {

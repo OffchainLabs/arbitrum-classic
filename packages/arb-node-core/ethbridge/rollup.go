@@ -57,8 +57,17 @@ func (r *Rollup) ConfirmNextNode(logAcc common.Hash, sends [][]byte) (*RawTransa
 	return r.buildSimpleTx("confirmNextNode", logAcc, sendsData, sendLengths)
 }
 
-func (r *Rollup) NewStake(amount *big.Int) (*RawTransaction, error) {
-	return r.buildTx("newStake", amount)
+func (r *Rollup) NewStake(ctx context.Context, amount *big.Int) (*RawTransaction, error) {
+	tokenType, err := r.StakeToken(ctx)
+	if err != nil {
+		return nil, err
+	}
+	emptyAddress := common.Address{}
+	if tokenType != emptyAddress {
+		return r.buildSimpleTx("newStake", amount)
+	} else {
+		return r.buildTx("newStake", amount, big.NewInt(0))
+	}
 }
 
 func (r *Rollup) StakeOnExistingNode(block *common.BlockId, node core.NodeID) (*RawTransaction, error) {
@@ -84,12 +93,21 @@ func (r *Rollup) ReturnOldDeposit(staker common.Address) (*RawTransaction, error
 	return r.buildSimpleTx("returnOldDeposit", staker.ToEthAddress())
 }
 
-func (r *Rollup) AddToDeposit(address common.Address, amount *big.Int) (*RawTransaction, error) {
-	return r.buildTx("addToDeposit", amount, address.ToEthAddress())
+func (r *Rollup) AddToDeposit(ctx context.Context, address common.Address, amount *big.Int) (*RawTransaction, error) {
+	tokenType, err := r.StakeToken(ctx)
+	if err != nil {
+		return nil, err
+	}
+	emptyAddress := common.Address{}
+	if tokenType != emptyAddress {
+		return r.buildTx("addToDeposit", big.NewInt(0), address, amount)
+	} else {
+		return r.buildTx("addToDeposit", amount, address, big.NewInt(0))
+	}
 }
 
-func (r *Rollup) ReduceDeposit(amount *big.Int) (*RawTransaction, error) {
-	return r.buildSimpleTx("reduceDeposit", amount)
+func (r *Rollup) ReduceDeposit(amount *big.Int, destination common.Address) (*RawTransaction, error) {
+	return r.buildSimpleTx("reduceDeposit", amount, destination.ToEthAddress())
 }
 
 func (r *Rollup) CreateChallenge(

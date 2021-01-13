@@ -109,7 +109,7 @@ func (s *Staker) newStake(ctx context.Context) (*ethbridge.RawTransaction, error
 	if err != nil {
 		return nil, err
 	}
-	return s.rollup.NewStake(stakeAmount)
+	return s.rollup.NewStake(ctx, stakeAmount)
 }
 
 func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (*ethbridge.RawTransaction, error) {
