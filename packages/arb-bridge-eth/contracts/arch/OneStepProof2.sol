@@ -137,7 +137,7 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             if (loc & 1 == 1) acc = keccak2(proof[i], acc);
             else {
                 acc = keccak2(acc, proof[i]);
-                check = check && proof[i] == zeros[i];
+                check = check && proof[i] == zeros[i-1];
             }
             loc = loc >> 1;
         }
