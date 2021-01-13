@@ -128,32 +128,29 @@ contract Rollup is Inbox, Outbox, IRollup {
 
     function rejectNextNode(uint256 successorWithStake, address stakerAddress) external override {
         checkUnresolved();
-        checkNoRecentStake();
-
-        require(successorWithStake > firstUnresolvedNode, "SUCCESSOR_TO_LOW");
-        require(successorWithStake <= latestNodeCreated, "SUCCESSOR_TO_HIGH");
-        require(stakerMap[stakerAddress].isStaked, "NOT_STAKED");
-
-        // Confirm that someone is staked on some sibling node
-        INode stakedSiblingNode = nodes[successorWithStake];
-        // stakedSiblingNode is a child of latestConfirmed
-        require(stakedSiblingNode.prev() == latestConfirmed, "BAD_SUCCESSOR");
-        // staker is actually staked on stakedSiblingNode
-        require(stakedSiblingNode.stakers(stakerAddress), "BAD_STAKER");
-
-        removeOldZombies(0);
 
         INode node = nodes[firstUnresolvedNode];
-        node.checkConfirmInvalid(countStakedZombies(node));
-        destroyNode(firstUnresolvedNode);
-        firstUnresolvedNode++;
-    }
+        if (node.prev() == latestConfirmed) {
+            checkNoRecentStake();
+            require(successorWithStake > firstUnresolvedNode, "SUCCESSOR_TO_LOW");
+            require(successorWithStake <= latestNodeCreated, "SUCCESSOR_TO_HIGH");
+            require(stakerMap[stakerAddress].isStaked, "NOT_STAKED");
 
-    // If the node previous to this one is not the latest confirmed, we can reject immediately
-    function rejectNextNodeOutOfOrder() external override {
-        checkUnresolved();
-        INode node = nodes[firstUnresolvedNode];
-        node.checkConfirmOutOfOrder(latestConfirmed);
+            // Confirm that someone is staked on some sibling node
+            INode stakedSiblingNode = nodes[successorWithStake];
+            // stakedSiblingNode is a child of latestConfirmed
+            require(stakedSiblingNode.prev() == latestConfirmed, "BAD_SUCCESSOR");
+            // staker is actually staked on stakedSiblingNode
+            require(stakedSiblingNode.stakers(stakerAddress), "BAD_STAKER");
+
+            removeOldZombies(0);
+
+            // Verify the block's deadline has passed
+            require(block.number >= node.deadlineBlock(), "BEFORE_DEADLINE");
+
+            // Verify that no staker is staked on this node
+            require(node.stakerCount() == countStakedZombies(node), "HAS_STAKERS");
+        }
         destroyNode(firstUnresolvedNode);
         firstUnresolvedNode++;
     }
@@ -226,7 +223,66 @@ contract Rollup is Inbox, Outbox, IRollup {
         require(nodeNum == latestNodeCreated + 1, "NODE_NUM");
         RollupLib.Assertion memory assertion =
             RollupLib.decodeAssertion(assertionBytes32Fields, assertionIntFields);
-        INode node = createNewNode(assertion, staker.latestStakedNode);
+        uint256 prev = staker.latestStakedNode;
+        INode prevNode = nodes[prev];
+        // Make sure the previous state is correct against the node being built on
+        require(
+            RollupLib.beforeNodeStateHash(assertion) == prevNode.stateHash(),
+            "PREV_STATE_HASH"
+        );
+
+        // inboxMaxCount must be greater than beforeInboxCount since we can't have read past the end of the inbox
+        require(
+            assertion.inboxMessagesRead <= inboxMaxCount - assertion.beforeInboxCount,
+            "INBOX_PAST_END"
+        );
+
+        uint256 prevDeadlineBlock = prevNode.deadlineBlock();
+        uint256 timeSinceLastNode = block.number - assertion.beforeProposedBlock;
+        uint256 minAssertionPeriod = minimumAssertionPeriod();
+        uint256 minGasUsed = timeSinceLastNode * arbGasSpeedLimitPerBlock;
+        // Verify that assertion meets the minimum Delta time requirement
+        require(timeSinceLastNode >= minAssertionPeriod, "TIME_DELTA");
+
+        // Minimum size requirements: each assertion must satisfy either
+        require(
+            // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
+            assertion.inboxMessagesRead >=
+                assertion.beforeInboxMaxCount - assertion.beforeInboxCount ||
+                // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
+                assertion.gasUsed >= minGasUsed,
+            "TOO_SMALL"
+        );
+
+        // Don't allow an assertion to use above a maximum amount of gas
+        require(assertion.gasUsed <= minGasUsed * 4, "TOO_LARGE");
+
+        uint256 deadlineBlock = block.number + challengePeriodBlocks;
+        if (deadlineBlock < prevDeadlineBlock) {
+            deadlineBlock = prevDeadlineBlock;
+        }
+        uint256 executionCheckTimeBlocks = assertion.gasUsed / arbGasSpeedLimitPerBlock;
+        deadlineBlock += executionCheckTimeBlocks;
+
+        INode node =
+            INode(
+                nodeFactory.createNode(
+                    RollupLib.nodeStateHash(assertion, inboxMaxCount),
+                    RollupLib.challengeRoot(
+                        assertion,
+                        inboxMaxCount,
+                        inboxMaxAcc,
+                        executionCheckTimeBlocks
+                    ),
+                    RollupLib.confirmHash(assertion),
+                    prev,
+                    deadlineBlock
+                )
+            );
+
+        latestNodeCreated++;
+        nodes[latestNodeCreated] = node;
+
         node.addStaker(msg.sender);
         staker.latestStakedNode = latestNodeCreated;
 
@@ -268,23 +324,61 @@ contract Rollup is Inbox, Outbox, IRollup {
         msg.sender.transfer(withdrawAmount);
     }
 
+    // nodeFields
+    //  inboxConsistencyHash
+    //  inboxDeltaHash
+    //  executionHash
     function createChallenge(
-        address payable staker1Address,
-        uint256 nodeNum1,
-        address payable staker2Address,
-        uint256 nodeNum2,
-        bytes32 inboxConsistencyHash,
-        bytes32 inboxDeltaHash,
-        bytes32 executionHash,
+        address payable[2] calldata stakers,
+        uint256[2] calldata nodeNums,
+        bytes32[3] calldata nodeFields,
         uint256 executionCheckTime
     ) external override {
-        createChallenge(
-            staker1Address,
-            nodeNum1,
-            staker2Address,
-            nodeNum2,
-            ChallengeState(inboxConsistencyHash, inboxDeltaHash, executionHash, executionCheckTime)
+        require(nodeNums[0] < nodeNums[1], "WRONG_ORDER");
+        require(nodeNums[1] <= latestNodeCreated, "NOT_PROPOSED");
+        require(latestConfirmed < nodeNums[0], "ALREADY_CONFIRMED");
+
+        INode node1 = nodes[nodeNums[0]];
+        INode node2 = nodes[nodeNums[1]];
+
+        require(node1.prev() == node2.prev(), "DIFF_PREV");
+
+        Staker storage staker1 = stakerMap[stakers[0]];
+        Staker storage staker2 = stakerMap[stakers[1]];
+
+        checkUnchallengedStaker(staker1);
+        checkUnchallengedStaker(staker2);
+
+        require(node1.stakers(stakers[0]), "STAKER1_NOT_STAKED");
+        require(node2.stakers(stakers[1]), "STAKER2_NOT_STAKED");
+
+        require(
+            node1.challengeHash() ==
+                ChallengeLib.challengeRootHash(
+                    nodeFields[0],
+                    nodeFields[1],
+                    nodeFields[2],
+                    executionCheckTime
+                ),
+            "CHAL_HASH"
         );
+
+        // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
+        address challengeAddress =
+            challengeFactory.createChallenge(
+                nodeFields[0],
+                nodeFields[1],
+                nodeFields[2],
+                executionCheckTime,
+                stakers[0],
+                stakers[1],
+                challengePeriodBlocks
+            );
+
+        staker1.currentChallenge = challengeAddress;
+        staker2.currentChallenge = challengeAddress;
+
+        emit RollupChallengeStarted(challengeAddress, stakers[0], stakers[1], nodeNums[0]);
     }
 
     function completeChallenge(address winningStaker, address payable losingStaker)
@@ -453,137 +547,6 @@ contract Rollup is Inbox, Outbox, IRollup {
         require(
             firstUnresolvedNode > latestConfirmed && firstUnresolvedNode <= latestNodeCreated,
             "NO_UNRESOLVED"
-        );
-    }
-
-    function createNewNode(RollupLib.Assertion memory assertion, uint256 prev)
-        private
-        returns (INode)
-    {
-        INode prevNode = nodes[prev];
-        // Make sure the previous state is correct against the node being built on
-        require(
-            RollupLib.beforeNodeStateHash(assertion) == prevNode.stateHash(),
-            "PREV_STATE_HASH"
-        );
-
-        // inboxMaxCount must be greater than beforeInboxCount since we can't have read past the end of the inbox
-        require(
-            assertion.inboxMessagesRead <= inboxMaxCount - assertion.beforeInboxCount,
-            "INBOX_PAST_END"
-        );
-
-        uint256 prevDeadlineBlock = prevNode.deadlineBlock();
-        uint256 timeSinceLastNode = block.number - assertion.beforeProposedBlock;
-        uint256 minAssertionPeriod = minimumAssertionPeriod();
-        uint256 minGasUsed = timeSinceLastNode * arbGasSpeedLimitPerBlock;
-        // Verify that assertion meets the minimum Delta time requirement
-        require(timeSinceLastNode >= minAssertionPeriod, "TIME_DELTA");
-
-        // Minimum size requirements: each assertion must satisfy either
-        require(
-            // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
-            assertion.inboxMessagesRead >=
-                assertion.beforeInboxMaxCount - assertion.beforeInboxCount ||
-                // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
-                assertion.gasUsed >= minGasUsed,
-            "TOO_SMALL"
-        );
-
-        // Don't allow an assertion to use above a maximum amount of gas
-        require(assertion.gasUsed <= minGasUsed * 4, "TOO_LARGE");
-
-        uint256 deadlineBlock = block.number + challengePeriodBlocks;
-        if (deadlineBlock < prevDeadlineBlock) {
-            deadlineBlock = prevDeadlineBlock;
-        }
-        uint256 executionCheckTimeBlocks = assertion.gasUsed / arbGasSpeedLimitPerBlock;
-        deadlineBlock += executionCheckTimeBlocks;
-
-        INode node =
-            INode(
-                nodeFactory.createNode(
-                    RollupLib.nodeStateHash(assertion, inboxMaxCount),
-                    RollupLib.challengeRoot(
-                        assertion,
-                        inboxMaxCount,
-                        inboxMaxAcc,
-                        executionCheckTimeBlocks
-                    ),
-                    RollupLib.confirmHash(assertion),
-                    prev,
-                    deadlineBlock
-                )
-            );
-
-        latestNodeCreated++;
-        nodes[latestNodeCreated] = node;
-        return node;
-    }
-
-    struct CreateChallengeFrame {
-        INode node1;
-        INode node2;
-        address challengeAddress;
-    }
-
-    function createChallenge(
-        address payable staker1Address,
-        uint256 nodeNum1,
-        address payable staker2Address,
-        uint256 nodeNum2,
-        ChallengeState memory state
-    ) private {
-        require(nodeNum1 < nodeNum2, "WRONG_ORDER");
-        require(nodeNum2 <= latestNodeCreated, "NOT_PROPOSED");
-        require(latestConfirmed < nodeNum1, "ALREADY_CONFIRMED");
-
-        CreateChallengeFrame memory frame;
-
-        frame.node1 = nodes[nodeNum1];
-        frame.node2 = nodes[nodeNum2];
-
-        require(frame.node1.prev() == frame.node2.prev(), "DIFF_PREV");
-
-        Staker storage staker1 = stakerMap[staker1Address];
-        Staker storage staker2 = stakerMap[staker2Address];
-
-        checkUnchallengedStaker(staker1);
-        checkUnchallengedStaker(staker2);
-
-        require(frame.node1.stakers(staker1Address), "STAKER1_NOT_STAKED");
-        require(frame.node2.stakers(staker2Address), "STAKER2_NOT_STAKED");
-
-        require(
-            frame.node1.challengeHash() ==
-                ChallengeLib.challengeRootHash(
-                    state.inboxConsistencyHash,
-                    state.inboxDeltaHash,
-                    state.executionHash,
-                    state.executionCheckTime
-                ),
-            "CHAL_HASH"
-        );
-
-        // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
-        frame.challengeAddress = challengeFactory.createChallenge(
-            state.inboxConsistencyHash,
-            state.inboxDeltaHash,
-            state.executionHash,
-            state.executionCheckTime,
-            staker1Address,
-            staker2Address,
-            challengePeriodBlocks
-        );
-
-        staker1.currentChallenge = frame.challengeAddress;
-        staker2.currentChallenge = frame.challengeAddress;
-
-        emit RollupChallengeStarted(
-            frame.challengeAddress,
-            staker1Address,
-            staker2Address,
-            nodeNum1
         );
     }
 

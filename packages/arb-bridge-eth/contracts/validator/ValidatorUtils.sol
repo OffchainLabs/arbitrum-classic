@@ -23,7 +23,7 @@ pragma experimental ABIEncoderV2;
 import "../rollup/IRollup.sol";
 
 contract ValidatorUtils {
-    enum ConfirmType { NONE, VALID, OUT_OF_ORDER, INVALID }
+    enum ConfirmType { NONE, VALID, INVALID }
 
     enum NodeConflict { NONE, FOUND, INDETERMINATE, INCOMPLETE }
 
@@ -91,7 +91,7 @@ contract ValidatorUtils {
         uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
         INode currentUnresolved = rollup.nodes(firstUnresolvedNode);
         try currentUnresolved.checkConfirmOutOfOrder(latestConfirmed) {
-            return (ConfirmType.OUT_OF_ORDER, 0, address(0));
+            return (ConfirmType.INVALID, 0, address(0));
         } catch {}
         try rollup.checkNoRecentStake() {} catch {
             return (ConfirmType.NONE, 0, address(0));

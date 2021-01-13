@@ -44,8 +44,6 @@ interface IRollup {
 
     function rejectNextNode(uint256 successorWithStake, address stakerAddress) external;
 
-    function rejectNextNodeOutOfOrder() external;
-
     function confirmNextNode(
         bytes32 logAcc,
         bytes calldata sendsData,
@@ -74,14 +72,14 @@ interface IRollup {
 
     function reduceDeposit(uint256 maxReduction) external;
 
+    // nodeFields
+    //  inboxConsistencyHash
+    //  inboxDeltaHash
+    //  executionHash
     function createChallenge(
-        address payable staker1Address,
-        uint256 nodeNum1,
-        address payable staker2Address,
-        uint256 nodeNum2,
-        bytes32 inboxConsistencyHash,
-        bytes32 inboxDeltaHash,
-        bytes32 executionHash,
+        address payable[2] calldata stakers,
+        uint256[2] calldata nodeNums,
+        bytes32[3] calldata nodeFields,
         uint256 executionCheckTime
     ) external;
 
