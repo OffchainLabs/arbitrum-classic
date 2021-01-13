@@ -50,13 +50,13 @@ uint256_t hash_acc(uint8_t *buf, int sz) {
 TEST_CASE("Buffer") {
     SECTION("empty buffer") {
         Buffer buf;
-        assert(buf.hash() == hash(0));
+        REQUIRE(buf.hash() == hash(0));
     }
 
     SECTION("setting") {
         Buffer buf;
         buf = buf.set(1000, 123);
-        assert(buf.get(1000) == 123);
+        REQUIRE(buf.get(1000) == 123);
     }
 
     SECTION("hashing") {
@@ -65,7 +65,7 @@ TEST_CASE("Buffer") {
         for (int i = 0; i < SIZE; i++) {
             arr[i] = rand() % 256;
         }
-        assert(hash_buffer(arr, 0, SIZE, true) == hash_acc(arr, SIZE));
+        REQUIRE(hash_buffer(arr, 0, SIZE, true) == hash_acc(arr, SIZE));
     }
 
     SECTION("hashing with zeroes") {
@@ -75,7 +75,28 @@ TEST_CASE("Buffer") {
         for (int i = 0; i < SIZE; i++) {
             arr[i] = i < FILL ? rand() % 256 : 0;
         }
-        assert(hash_buffer(arr, 0, 131072, true) == hash_acc(arr, SIZE));
+        REQUIRE(hash_buffer(arr, 0, 131072, true) == hash_acc(arr, SIZE));
+    }
+
+    SECTION("last index") {
+        Buffer buf;
+        REQUIRE(buf.lastIndex() == 0);
+        buf = buf.set(0, 123);
+        REQUIRE(buf.lastIndex() == 0);
+        buf = buf.set(1, 123);
+        REQUIRE(buf.lastIndex() == 1);
+        buf = buf.set(10, 123);
+        REQUIRE(buf.lastIndex() == 10);
+        buf = buf.set(31, 123);
+        REQUIRE(buf.lastIndex() == 31);
+        buf = buf.set(1000, 123);
+        REQUIRE(buf.lastIndex() == 1000);
+        buf = buf.set(2000, 123);
+        REQUIRE(buf.lastIndex() == 2000);
+        buf = buf.set(20000, 123);
+        REQUIRE(buf.lastIndex() == 20000);
+        buf = buf.set(300000, 123);
+        REQUIRE(buf.lastIndex() == 300000);
     }
 }
 
