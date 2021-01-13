@@ -1,8 +1,6 @@
 package challenge
 
 import (
-	"context"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"math/big"
@@ -34,15 +32,13 @@ func (i *InboxConsistencyImpl) GetCut(lookup core.ValidatorLookup, offset *big.I
 }
 
 func (i *InboxConsistencyImpl) Bisect(
-	ctx context.Context,
 	challenge *ethbridge.Challenge,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
 	subCuts []core.Cut,
-) (*types.Transaction, error) {
+) (*ethbridge.RawTransaction, error) {
 	return challenge.BisectInboxConsistency(
-		ctx,
 		prevBisection,
 		segmentToChallenge,
 		challengedSegment,
@@ -51,13 +47,12 @@ func (i *InboxConsistencyImpl) Bisect(
 }
 
 func (i *InboxConsistencyImpl) OneStepProof(
-	ctx context.Context,
 	challenge *ethbridge.Challenge,
 	lookup core.ValidatorLookup,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
-) (*types.Transaction, error) {
+) (*ethbridge.RawTransaction, error) {
 	inboxOffset := new(big.Int).Sub(i.inboxOffset(challengedSegment.Start), big.NewInt(1))
 	beforeInboxAcc, err := lookup.GetInboxAcc(inboxOffset)
 	if err != nil {
@@ -68,7 +63,6 @@ func (i *InboxConsistencyImpl) OneStepProof(
 		return nil, err
 	}
 	return challenge.OneStepProveInboxConsistency(
-		ctx,
 		prevBisection,
 		segmentToChallenge,
 		challengedSegment,

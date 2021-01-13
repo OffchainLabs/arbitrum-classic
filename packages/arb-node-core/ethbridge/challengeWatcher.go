@@ -14,6 +14,7 @@ import (
 	"strings"
 )
 
+var challengeABI abi.ABI
 var bisectedID ethcommon.Hash
 var bisectedInboxDeltaID ethcommon.Hash
 
@@ -24,6 +25,7 @@ func init() {
 	}
 	bisectedID = parsedChallenge.Events["Bisected"].ID
 	bisectedInboxDeltaID = parsedChallenge.Events["BisectedInboxDelta"].ID
+	challengeABI = parsedChallenge
 }
 
 type ChallengeTurn uint8

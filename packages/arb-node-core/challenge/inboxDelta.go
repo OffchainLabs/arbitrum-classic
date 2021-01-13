@@ -1,8 +1,6 @@
 package challenge
 
 import (
-	"context"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"math/big"
@@ -34,15 +32,13 @@ func (i *InboxDeltaImpl) GetCut(lookup core.ValidatorLookup, offset *big.Int) (c
 }
 
 func (i *InboxDeltaImpl) Bisect(
-	ctx context.Context,
 	challenge *ethbridge.Challenge,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	inconsistentSegment *core.ChallengeSegment,
 	subCuts []core.Cut,
-) (*types.Transaction, error) {
+) (*ethbridge.RawTransaction, error) {
 	return challenge.BisectInboxDelta(
-		ctx,
 		prevBisection,
 		segmentToChallenge,
 		inconsistentSegment,
@@ -51,13 +47,12 @@ func (i *InboxDeltaImpl) Bisect(
 }
 
 func (i *InboxDeltaImpl) OneStepProof(
-	ctx context.Context,
 	challenge *ethbridge.Challenge,
 	lookup core.ValidatorLookup,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
-) (*types.Transaction, error) {
+) (*ethbridge.RawTransaction, error) {
 	inboxOffset := new(big.Int).Sub(i.nodeAfterInboxCount, challengedSegment.Start)
 	inboxOffset = inboxOffset.Sub(inboxOffset, big.NewInt(1))
 	msgs, err := lookup.GetMessages(inboxOffset, big.NewInt(1))
@@ -65,7 +60,6 @@ func (i *InboxDeltaImpl) OneStepProof(
 		return nil, err
 	}
 	return challenge.OneStepProveInboxDelta(
-		ctx,
 		prevBisection,
 		segmentToChallenge,
 		challengedSegment,

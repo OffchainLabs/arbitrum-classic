@@ -1,8 +1,6 @@
 package challenge
 
 import (
-	"context"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/pkg/errors"
@@ -65,15 +63,13 @@ func (e *ExecutionImpl) FindFirstDivergence(lookup core.ValidatorLookup, offsets
 }
 
 func (e *ExecutionImpl) Bisect(
-	ctx context.Context,
 	challenge *ethbridge.Challenge,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	inconsistentSegment *core.ChallengeSegment,
 	subCuts []core.Cut,
-) (*types.Transaction, error) {
+) (*ethbridge.RawTransaction, error) {
 	return challenge.BisectExecution(
-		ctx,
 		prevBisection,
 		segmentToChallenge,
 		inconsistentSegment,
@@ -82,13 +78,13 @@ func (e *ExecutionImpl) Bisect(
 }
 
 func (e *ExecutionImpl) OneStepProof(
-	ctx context.Context,
 	challenge *ethbridge.Challenge,
 	lookup core.ValidatorLookup,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
-) (*types.Transaction, error) {
+) (*ethbridge.RawTransaction, error) {
+
 	tracker := core.NewExecutionTracker(lookup, e.initialCursor, true, []*big.Int{challengedSegment.Start})
 	execInfo, err := tracker.GetExecutionInfo(challengedSegment.Start)
 	if err != nil {
@@ -111,7 +107,6 @@ func (e *ExecutionImpl) OneStepProof(
 	}
 
 	return challenge.OneStepProveExecution(
-		ctx,
 		prevBisection,
 		segmentToChallenge,
 		execInfo,

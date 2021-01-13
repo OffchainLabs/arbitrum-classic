@@ -2,7 +2,6 @@ package challenge
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -21,6 +20,7 @@ type Challenger struct {
 	challenge      *ethbridge.Challenge
 	lookup         core.ValidatorLookup
 	challengedNode *core.NodeInfo
+	stakerAddress  common.Address
 
 	inboxDelta *inboxDelta
 }
@@ -50,20 +50,21 @@ func (c *Challenger) InboxDelta() (*inboxDelta, error) {
 	return c.inboxDelta, nil
 }
 
-func NewChallenger(challenge *ethbridge.Challenge, lookup core.ValidatorLookup, challengedNode *core.NodeInfo) *Challenger {
+func NewChallenger(challenge *ethbridge.Challenge, lookup core.ValidatorLookup, challengedNode *core.NodeInfo, stakerAddress common.Address) *Challenger {
 	return &Challenger{
 		challenge:      challenge,
 		lookup:         lookup,
 		challengedNode: challengedNode,
+		stakerAddress:  stakerAddress,
 	}
 }
 
-func (c *Challenger) HandleConflict(ctx context.Context) (*types.Transaction, error) {
+func (c *Challenger) HandleConflict(ctx context.Context) (*ethbridge.RawTransaction, error) {
 	responder, err := c.challenge.CurrentResponder(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if responder != c.challenge.Transactor() {
+	if responder != c.stakerAddress {
 		// Not our turn
 		return nil, nil
 	}
@@ -105,11 +106,11 @@ func (c *Challenger) HandleConflict(ctx context.Context) (*types.Transaction, er
 
 	switch kind {
 	case core.INBOX_CONSISTENCY:
-		return c.handleInboxConsistencyChallenge(ctx, prevBisection)
+		return c.handleInboxConsistencyChallenge(prevBisection)
 	case core.INBOX_DELTA:
-		return c.handleInboxDeltaChallenge(ctx, prevBisection)
+		return c.handleInboxDeltaChallenge(prevBisection)
 	case core.EXECUTION:
-		return c.handleExecutionChallenge(ctx, prevBisection)
+		return c.handleExecutionChallenge(prevBisection)
 	case core.STOPPED_SHORT:
 		return c.handleStoppedShortChallenge()
 	default:
@@ -117,17 +118,17 @@ func (c *Challenger) HandleConflict(ctx context.Context) (*types.Transaction, er
 	}
 }
 
-func (c *Challenger) handleInboxConsistencyChallenge(ctx context.Context, prevBisection *core.Bisection) (*types.Transaction, error) {
+func (c *Challenger) handleInboxConsistencyChallenge(prevBisection *core.Bisection) (*ethbridge.RawTransaction, error) {
 	challengeImpl := &InboxConsistencyImpl{
 		inboxMaxCount: c.challengedNode.InboxMaxCount,
 	}
 	if prevBisection == nil {
 		prevBisection = c.challengedNode.InitialInboxConsistencyBisection()
 	}
-	return handleChallenge(ctx, c.challenge, c.lookup, challengeImpl, prevBisection)
+	return handleChallenge(c.challenge, c.lookup, challengeImpl, prevBisection)
 }
 
-func (c *Challenger) handleInboxDeltaChallenge(ctx context.Context, prevBisection *core.Bisection) (*types.Transaction, error) {
+func (c *Challenger) handleInboxDeltaChallenge(prevBisection *core.Bisection) (*ethbridge.RawTransaction, error) {
 	inboxDeltaData, err := c.InboxDelta()
 	if err != nil {
 		return nil, err
@@ -139,10 +140,10 @@ func (c *Challenger) handleInboxDeltaChallenge(ctx context.Context, prevBisectio
 	if prevBisection == nil {
 		prevBisection = c.challengedNode.InitialInboxDeltaBisection()
 	}
-	return handleChallenge(ctx, c.challenge, c.lookup, challengeImpl, prevBisection)
+	return handleChallenge(c.challenge, c.lookup, challengeImpl, prevBisection)
 }
 
-func (c *Challenger) handleExecutionChallenge(ctx context.Context, prevBisection *core.Bisection) (*types.Transaction, error) {
+func (c *Challenger) handleExecutionChallenge(prevBisection *core.Bisection) (*ethbridge.RawTransaction, error) {
 	if prevBisection == nil {
 		prevBisection = c.challengedNode.InitialExecutionBisection()
 	}
@@ -155,11 +156,11 @@ func (c *Challenger) handleExecutionChallenge(ctx context.Context, prevBisection
 		initialCursor: initialCursor,
 		inboxDelta:    inboxDeltaData,
 	}
-	return handleChallenge(ctx, c.challenge, c.lookup, challengeImpl, prevBisection)
+	return handleChallenge(c.challenge, c.lookup, challengeImpl, prevBisection)
 }
 
-func (c *Challenger) handleStoppedShortChallenge() (*types.Transaction, error) {
-	return nil, nil
+func (c *Challenger) handleStoppedShortChallenge() (*ethbridge.RawTransaction, error) {
+	panic("Unimplemented")
 }
 
 type SimpleChallengerImpl interface {
@@ -171,31 +172,28 @@ type ChallengerImpl interface {
 	FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []core.Cut) (int, error)
 
 	Bisect(
-		ctx context.Context,
 		challenge *ethbridge.Challenge,
 		prevBisection *core.Bisection,
 		segmentToChallenge int,
 		inconsistentSegment *core.ChallengeSegment,
 		subCuts []core.Cut,
-	) (*types.Transaction, error)
+	) (*ethbridge.RawTransaction, error)
 
 	OneStepProof(
-		ctx context.Context,
 		challenge *ethbridge.Challenge,
 		lookup core.ValidatorLookup,
 		prevBisection *core.Bisection,
 		segmentToChallenge int,
 		challengedSegment *core.ChallengeSegment,
-	) (*types.Transaction, error)
+	) (*ethbridge.RawTransaction, error)
 }
 
 func handleChallenge(
-	ctx context.Context,
 	challenge *ethbridge.Challenge,
 	lookup core.ValidatorLookup,
 	challengeImpl ChallengerImpl,
 	prevBisection *core.Bisection,
-) (*types.Transaction, error) {
+) (*ethbridge.RawTransaction, error) {
 	prevCutOffsets := generateBisectionCutOffsets(prevBisection.ChallengedSegment, len(prevBisection.Cuts)-1)
 	cutToChallenge, err := challengeImpl.FindFirstDivergence(lookup, prevCutOffsets, prevBisection.Cuts)
 	if err != nil {
@@ -208,7 +206,6 @@ func handleChallenge(
 
 	if inconsistentSegment.Length.Cmp(big.NewInt(1)) == 0 {
 		return challengeImpl.OneStepProof(
-			ctx,
 			challenge,
 			lookup,
 			prevBisection,
@@ -227,7 +224,6 @@ func handleChallenge(
 			return nil, err
 		}
 		return challengeImpl.Bisect(
-			ctx,
 			challenge,
 			prevBisection,
 			cutToChallenge-1,

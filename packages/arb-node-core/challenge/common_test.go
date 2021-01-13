@@ -2,6 +2,7 @@ package challenge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"math/big"
 	"testing"
 
@@ -26,26 +27,34 @@ func executeChallenge(
 ) int {
 	ctx := context.Background()
 
-	client, tester, asserterAuth, challengerAuth, challengeAddress := initializeChallengeTest(t, challengedNode, arbGasSpeedLimitPerBlock, challengePeriodBlocks)
+	client, tester, asserterWallet, challengerWallet, challengeAddress := initializeChallengeTest(t, challengedNode, arbGasSpeedLimitPerBlock, challengePeriodBlocks)
 
-	challengerChallenge, err := ethbridge.NewChallenge(challengeAddress, client, ethbridge.NewTransactAuth(challengerAuth))
-	test.FailIfError(t, err)
-	asserterChallenge, err := ethbridge.NewChallenge(challengeAddress, client, ethbridge.NewTransactAuth(asserterAuth))
+	challengeCon, err := ethbridge.NewChallenge(challengeAddress, client)
 	test.FailIfError(t, err)
 
-	challenger := NewChallenger(challengerChallenge, correctLookup, challengedNode)
-	asserter := NewChallenger(asserterChallenge, falseLookup, challengedNode)
+	challenger := NewChallenger(challengeCon, correctLookup, challengedNode, challengerWallet.Address())
+	asserter := NewChallenger(challengeCon, falseLookup, challengedNode, asserterWallet.Address())
 
 	turn := ethbridge.CHALLENGER_TURN
 	rounds := 0
 	for {
-		checkTurn(t, challengerChallenge.ChallengeWatcher, turn)
+		checkTurn(t, challengeCon.ChallengeWatcher, turn)
 		if turn == ethbridge.CHALLENGER_TURN {
-			_, err := challenger.HandleConflict(ctx)
+			rawTx, err := challenger.HandleConflict(ctx)
+			test.FailIfError(t, err)
+			if rawTx == nil {
+				t.Fatal("should be able to transact")
+			}
+			_, err = challengerWallet.ExecuteTransaction(ctx, rawTx)
 			test.FailIfError(t, err)
 			turn = ethbridge.ASSERTER_TURN
 		} else {
-			_, err := asserter.HandleConflict(ctx)
+			rawTx, err := asserter.HandleConflict(ctx)
+			test.FailIfError(t, err)
+			if rawTx == nil {
+				t.Fatal("should be able to transact")
+			}
+			_, err = asserterWallet.ExecuteTransaction(ctx, rawTx)
 			test.FailIfError(t, err)
 			turn = ethbridge.CHALLENGER_TURN
 		}
@@ -59,10 +68,10 @@ func executeChallenge(
 			break
 		}
 
-		checkTurn(t, challengerChallenge.ChallengeWatcher, turn)
+		checkTurn(t, challengeCon.ChallengeWatcher, turn)
 	}
 
-	checkChallengeCompleted(t, tester, challengerAuth.From, asserterAuth.From)
+	checkChallengeCompleted(t, tester, challengerWallet.Address().ToEthAddress(), asserterWallet.Address().ToEthAddress())
 	return rounds
 }
 
@@ -166,7 +175,7 @@ func initializeChallengeTest(
 	nd *core.NodeInfo,
 	arbGasLimitPerBlock *big.Int,
 	challengePeriodBlocks *big.Int,
-) (*ethutils.SimulatedEthClient, *ethbridgetestcontracts.ChallengeTester, *bind.TransactOpts, *bind.TransactOpts, ethcommon.Address) {
+) (*ethutils.SimulatedEthClient, *ethbridgetestcontracts.ChallengeTester, *ethbridge.Validator, *ethbridge.Validator, ethcommon.Address) {
 	clnt, pks := test.SimulatedBackend()
 	deployer := bind.NewKeyedTransactor(pks[0])
 	asserter := bind.NewKeyedTransactor(pks[1])
@@ -178,19 +187,32 @@ func initializeChallengeTest(
 	test.FailIfError(t, err)
 	_, _, tester, err := ethbridgetestcontracts.DeployChallengeTester(deployer, client, osp1Addr, osp2Addr)
 	test.FailIfError(t, err)
+
+	asserterWalletAddress, _, _, err := ethbridgecontracts.DeployValidator(asserter, client)
+	test.FailIfError(t, err)
+	challengerWalletAddress, _, _, err := ethbridgecontracts.DeployValidator(challenger, client)
+	test.FailIfError(t, err)
+
+	asserterWallet, err := ethbridge.NewValidator(asserterWalletAddress, client, ethbridge.NewTransactAuth(asserter))
+	test.FailIfError(t, err)
+
+	challengerWallet, err := ethbridge.NewValidator(challengerWalletAddress, client, ethbridge.NewTransactAuth(challenger))
+	test.FailIfError(t, err)
+
 	_, err = tester.StartChallenge(
 		deployer,
 		nd.Assertion.InboxConsistencyHash(nd.InboxMaxHash, nd.InboxMaxCount),
 		nd.Assertion.InboxDeltaHash(),
 		nd.Assertion.ExecutionHash(),
 		nd.Assertion.CheckTime(arbGasLimitPerBlock),
-		asserter.From,
-		challenger.From,
+		asserterWallet.Address().ToEthAddress(),
+		challengerWallet.Address().ToEthAddress(),
 		challengePeriodBlocks,
 	)
 	test.FailIfError(t, err)
 	client.Commit()
 	challengeAddress, err := tester.Challenge(&bind.CallOpts{})
 	test.FailIfError(t, err)
-	return client, tester, asserter, challenger, challengeAddress
+
+	return client, tester, asserterWallet, challengerWallet, challengeAddress
 }

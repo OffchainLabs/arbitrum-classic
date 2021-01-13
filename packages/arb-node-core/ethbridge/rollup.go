@@ -30,21 +30,21 @@ func NewRollup(address ethcommon.Address, client ethutils.EthClient) (*Rollup, e
 	}, nil
 }
 
-func (r *Rollup) buildTx(data []byte, amount *big.Int) *RawTransaction {
+func (r *Rollup) buildTx(name string, amount *big.Int, args ...interface{}) (*RawTransaction, error) {
+	data, err := rollupABI.Pack(name, args...)
 	return &RawTransaction{
 		Data:   data,
 		Dest:   r.address,
 		Amount: amount,
-	}
+	}, err
 }
 
-func (r *Rollup) buildSimpleTx(data []byte) *RawTransaction {
-	return r.buildTx(data, big.NewInt(0))
+func (r *Rollup) buildSimpleTx(name string, args ...interface{}) (*RawTransaction, error) {
+	return r.buildTx(name, big.NewInt(0), args...)
 }
 
 func (r *Rollup) RejectNextNode(node *big.Int, staker common.Address) (*RawTransaction, error) {
-	data, err := rollupABI.Pack("rejectNextNode", node, staker.ToEthAddress())
-	return r.buildSimpleTx(data), err
+	return r.buildSimpleTx("rejectNextNode", node, staker.ToEthAddress())
 }
 
 func (r *Rollup) ConfirmNextNode(logAcc common.Hash, sends [][]byte) (*RawTransaction, error) {
@@ -54,18 +54,15 @@ func (r *Rollup) ConfirmNextNode(logAcc common.Hash, sends [][]byte) (*RawTransa
 		sendsData = append(sendsData, msg...)
 		sendLengths = append(sendLengths, new(big.Int).SetInt64(int64(len(msg))))
 	}
-	data, err := rollupABI.Pack("confirmNextNode", logAcc, sendsData, sendLengths)
-	return r.buildSimpleTx(data), err
+	return r.buildSimpleTx("confirmNextNode", logAcc, sendsData, sendLengths)
 }
 
 func (r *Rollup) NewStake(amount *big.Int) (*RawTransaction, error) {
-	data, err := rollupABI.Pack("newStake")
-	return r.buildTx(data, amount), err
+	return r.buildTx("newStake", amount)
 }
 
 func (r *Rollup) StakeOnExistingNode(block *common.BlockId, node core.NodeID) (*RawTransaction, error) {
-	data, err := rollupABI.Pack("stakeOnExistingNode", block.HeaderHash.ToEthHash(), block.Height.AsInt(), node)
-	return r.buildSimpleTx(data), err
+	return r.buildSimpleTx("stakeOnExistingNode", block.HeaderHash.ToEthHash(), block.Height.AsInt(), node)
 }
 
 func (r *Rollup) StakeOnNewNode(
@@ -73,7 +70,7 @@ func (r *Rollup) StakeOnNewNode(
 	node core.NodeID,
 	assertion *core.Assertion,
 ) (*RawTransaction, error) {
-	data, err := rollupABI.Pack(
+	return r.buildSimpleTx(
 		"stakeOnNewNode",
 		block.HeaderHash.ToEthHash(),
 		block.Height.AsInt(),
@@ -81,22 +78,18 @@ func (r *Rollup) StakeOnNewNode(
 		assertion.BytesFields(),
 		assertion.IntFields(),
 	)
-	return r.buildSimpleTx(data), err
 }
 
 func (r *Rollup) ReturnOldDeposit(staker common.Address) (*RawTransaction, error) {
-	data, err := rollupABI.Pack("returnOldDeposit", staker.ToEthAddress())
-	return r.buildSimpleTx(data), err
+	return r.buildSimpleTx("returnOldDeposit", staker.ToEthAddress())
 }
 
 func (r *Rollup) AddToDeposit(address common.Address, amount *big.Int) (*RawTransaction, error) {
-	data, err := rollupABI.Pack("addToDeposit", address.ToEthAddress())
-	return r.buildTx(data, amount), err
+	return r.buildTx("addToDeposit", amount, address.ToEthAddress())
 }
 
 func (r *Rollup) ReduceDeposit(amount *big.Int) (*RawTransaction, error) {
-	data, err := rollupABI.Pack("reduceDeposit", amount)
-	return r.buildSimpleTx(data), err
+	return r.buildSimpleTx("reduceDeposit", amount)
 }
 
 func (r *Rollup) CreateChallenge(
@@ -113,7 +106,7 @@ func (r *Rollup) CreateChallenge(
 	if err != nil {
 		return nil, err
 	}
-	data, err := rollupABI.Pack(
+	return r.buildSimpleTx(
 		"createChallenge",
 		[2]ethcommon.Address{staker1.ToEthAddress(), staker2.ToEthAddress()},
 		[2]*big.Int{node1, node2},
@@ -124,15 +117,12 @@ func (r *Rollup) CreateChallenge(
 		},
 		assertion.CheckTime(speedLimit),
 	)
-	return r.buildSimpleTx(data), err
 }
 
 func (r *Rollup) RemoveZombie(zombieNum *big.Int, maxNodes *big.Int) (*RawTransaction, error) {
-	data, err := rollupABI.Pack("removeOldZombies", zombieNum, maxNodes)
-	return r.buildSimpleTx(data), err
+	return r.buildSimpleTx("removeZombie", zombieNum, maxNodes)
 }
 
 func (r *Rollup) RemoveOldZombies(startIndex *big.Int) (*RawTransaction, error) {
-	data, err := rollupABI.Pack("removeOldZombies", startIndex)
-	return r.buildSimpleTx(data), err
+	return r.buildSimpleTx("removeOldZombies", startIndex)
 }

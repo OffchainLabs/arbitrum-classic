@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/big"
 )
 
@@ -30,17 +31,24 @@ func NewValidator(address ethcommon.Address, client ethutils.EthClient, auth *Tr
 	}, nil
 }
 
+func (v *Validator) Address() common.Address {
+	return common.NewAddressFromEth(v.address)
+}
+
+func (v *Validator) ExecuteTransaction(ctx context.Context, tx *RawTransaction) (*types.Transaction, error) {
+	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		auth.Value = tx.Amount
+		return v.con.ExecuteTransaction(auth, tx.Data, tx.Dest, tx.Amount)
+	})
+}
+
 func (v *Validator) ExecuteTransactions(ctx context.Context, txes []*RawTransaction) (*types.Transaction, error) {
 	if len(txes) == 0 {
 		return nil, nil
 	}
 
 	if len(txes) == 1 {
-		tx := txes[0]
-		return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-			auth.Value = tx.Amount
-			return v.con.ExecuteTransaction(auth, tx.Data, tx.Dest, tx.Amount)
-		})
+		return v.ExecuteTransaction(ctx, txes[0])
 	}
 
 	totalAmount := big.NewInt(0)
