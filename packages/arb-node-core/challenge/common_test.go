@@ -105,41 +105,50 @@ func initializeChallengeData(
 	lookup *core.ValidatorLookupMock,
 	inboxMessagesRead *big.Int,
 ) *core.NodeInfo {
-	initialMach, err := lookup.GetMachine(big.NewInt(0))
+	initialMach, err := lookup.GetCursor(big.NewInt(0))
 	test.FailIfError(t, err)
 	prevState := &core.NodeState{
-		ProposedBlock:  big.NewInt(0),
-		TotalGasUsed:   big.NewInt(0),
-		MachineHash:    initialMach.Hash(),
-		InboxHash:      common.Hash{},
-		InboxCount:     big.NewInt(0),
-		TotalSendCount: big.NewInt(0),
-		TotalLogCount:  big.NewInt(0),
-		InboxMaxCount:  big.NewInt(0),
+		ProposedBlock: big.NewInt(0),
+		InboxMaxCount: big.NewInt(0),
+		ExecutionState: &core.ExecutionState{
+			TotalGasConsumed: big.NewInt(0),
+			MachineHash:      initialMach.MachineHash(),
+			InboxHash:        common.Hash{},
+			InboxIndex:       big.NewInt(0),
+			TotalSendCount:   big.NewInt(0),
+			TotalLogCount:    big.NewInt(0),
+		},
 	}
 
 	messages, err := lookup.GetMessages(big.NewInt(0), inboxMessagesRead)
 	test.FailIfError(t, err)
-	afterInboxCount := new(big.Int).Add(prevState.InboxCount, inboxMessagesRead)
+	afterInboxCount := new(big.Int).Add(prevState.InboxIndex, inboxMessagesRead)
 
 	inboxAcc, err := lookup.GetInboxAcc(afterInboxCount)
 	test.FailIfError(t, err)
 	assertionInfo := &core.AssertionInfo{
-		BeforeMachineHash: common.Hash{},
-		InboxMessagesRead: inboxMessagesRead,
-		GasUsed:           big.NewInt(0),
-		SendAcc:           common.Hash{},
-		SendCount:         big.NewInt(0),
-		LogAcc:            common.Hash{},
-		LogCount:          big.NewInt(0),
-		AfterMachineHash:  common.Hash{},
-		InboxDelta:        core.CalculateInboxDeltaAcc(messages),
-		AfterInboxHash:    inboxAcc,
+		ExecutionInfo: &core.ExecutionInfo{
+			SimpleExecutionInfo: &core.SimpleExecutionInfo{
+				Before: prevState.ExecutionState,
+				After: &core.ExecutionState{
+					MachineHash:      common.Hash{},
+					InboxIndex:       inboxMessagesRead,
+					InboxHash:        inboxAcc,
+					TotalGasConsumed: big.NewInt(0),
+					TotalSendCount:   big.NewInt(0),
+					TotalLogCount:    big.NewInt(0),
+				},
+			},
+			SendAcc: common.Hash{},
+			LogAcc:  common.Hash{},
+		},
+		InboxDelta: core.CalculateInboxDeltaAcc(messages),
 	}
 
 	assertion := &core.Assertion{
-		PrevState:     prevState,
-		AssertionInfo: assertionInfo,
+		PrevProposedBlock: prevState.ProposedBlock,
+		PrevInboxMaxCount: prevState.InboxMaxCount,
+		AssertionInfo:     assertionInfo,
 	}
 
 	inboxMaxCount := big.NewInt(int64(len(lookup.InboxAccs)) - 1)

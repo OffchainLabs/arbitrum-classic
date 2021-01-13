@@ -28,8 +28,8 @@ type Challenger struct {
 func (c *Challenger) InboxDelta() (*inboxDelta, error) {
 	if c.inboxDelta == nil {
 		messages, err := c.lookup.GetMessages(
-			c.challengedNode.Assertion.PrevState.InboxCount,
-			c.challengedNode.Assertion.InboxMessagesRead,
+			c.challengedNode.Assertion.Before.InboxIndex,
+			c.challengedNode.Assertion.InboxMessagesRead(),
 		)
 		if err != nil {
 			return nil, err
@@ -80,7 +80,6 @@ func (c *Challenger) HandleConflict(ctx context.Context) (*types.Transaction, er
 		}
 		if kind == core.STOPPED_SHORT {
 			panic("Not yet handled")
-			return nil, nil
 		}
 	} else {
 		challengeState, err := c.challenge.ChallengeState(ctx)
@@ -124,7 +123,7 @@ func (c *Challenger) handleInboxDeltaChallenge(ctx context.Context, prevBisectio
 		return nil, err
 	}
 	challengeImpl := &InboxDeltaImpl{
-		nodeAfterInboxCount: c.challengedNode.Assertion.AfterInboxCount(),
+		nodeAfterInboxCount: c.challengedNode.Assertion.After.InboxIndex,
 		inboxDelta:          inboxDeltaData,
 	}
 	if prevBisection == nil {

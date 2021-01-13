@@ -2,7 +2,6 @@ package staker
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/pkg/errors"
 	"math/big"
 
@@ -83,11 +82,11 @@ func (v *Validator) resolveNextNode(ctx context.Context) (*types.Transaction, er
 			return nil, errors.New("bad node query")
 		}
 		nodeInfo := nodesInfo[0]
-		logAcc, err := v.lookup.GenerateLogAccumulator(nodeInfo.Assertion.PrevState.TotalLogCount, nodeInfo.Assertion.LogCount)
+		logAcc, err := v.lookup.GetLogAcc(common.Hash{}, nodeInfo.Assertion.Before.TotalLogCount, nodeInfo.Assertion.LogCount())
 		if err != nil {
 			return nil, err
 		}
-		sends, err := v.lookup.GetSends(nodeInfo.Assertion.PrevState.TotalSendCount, nodeInfo.Assertion.SendCount)
+		sends, err := v.lookup.GetSends(nodeInfo.Assertion.Before.TotalSendCount, nodeInfo.Assertion.SendCount())
 		if err != nil {
 			return nil, err
 		}
@@ -111,16 +110,17 @@ type nodeMovementInfo struct {
 type nodeActionInfo interface {
 }
 
-func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID) (nodeActionInfo, error) {
+func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, maybeMakeNode bool) (nodeActionInfo, error) {
 	startState, err := lookupNodeStartState(ctx, v.rollup.RollupWatcher, base)
 	if err != nil {
 		return nil, err
 	}
-	mach, err := v.lookup.GetMachine(startState.TotalGasUsed)
+
+	cursor, err := v.lookup.GetCursor(startState.TotalGasConsumed)
 	if err != nil {
 		return nil, err
 	}
-	if mach.Hash() != startState.MachineHash {
+	if cursor.MachineHash() != startState.MachineHash {
 		return nil, errors.New("local machine doesn't match chain")
 	}
 
@@ -132,28 +132,10 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID) (n
 	if err != nil {
 		return nil, err
 	}
-	validChild, err := selectValidNode(v.lookup, successorsNodes, mach)
-	if err != nil {
-		return nil, err
-	}
-	if validChild != nil {
-		blockId, err := getBlockID(ctx, v.client, validChild.Assertion.PrevState.ProposedBlock)
-		if err != nil {
-			return nil, err
-		}
-		return &nodeMovementInfo{
-			block:   blockId,
-			nodeNum: validChild.NodeNum,
-		}, nil
-	}
 
-	minAssertionPeriod, err := v.rollup.MinimumAssertionPeriod(ctx)
-	if err != nil {
-		return nil, err
-	}
-	arbGasSpeedLimitPerBlock, err := v.rollup.ArbGasSpeedLimitPerBlock(ctx)
-	if err != nil {
-		return nil, err
+	gasesUsed := make([]*big.Int, 0, len(successorsNodes))
+	for _, nd := range successorsNodes {
+		gasesUsed = append(gasesUsed, nd.Assertion.GasUsed())
 	}
 
 	currentBlockId, err := getBlockID(ctx, v.client, nil)
@@ -161,80 +143,89 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID) (n
 		return nil, err
 	}
 
-	assertion, err := createAssertion(
-		v.lookup,
-		startState,
-		mach,
-		currentBlockId.Height.AsInt(),
-		minAssertionPeriod,
-		arbGasSpeedLimitPerBlock,
-	)
-	if err != nil || assertion == nil {
-		return nil, err
-	}
-
-	lastNodeCreated, err := v.rollup.LatestNodeCreated(ctx)
+	minAssertionPeriod, err := v.rollup.MinimumAssertionPeriod(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	msg, err := lookupMessageByNum(ctx, v.rollup.RollupWatcher, assertion.AfterInboxCount())
+	timeSinceProposed := new(big.Int).Sub(currentBlockId.Height.AsInt(), startState.ProposedBlock)
+	if timeSinceProposed.Cmp(minAssertionPeriod) < 0 {
+		// Too soon to assert
+		return nil, nil
+	}
+
+	arbGasSpeedLimitPerBlock, err := v.rollup.ArbGasSpeedLimitPerBlock(ctx)
 	if err != nil {
 		return nil, err
 	}
-	newNodeID := new(big.Int).Add(lastNodeCreated, big.NewInt(1))
-	return &nodeCreationInfo{
-		assertion: assertion,
-		block:     msg.Block(),
-		newNodeID: newNodeID,
-	}, nil
-}
 
-func selectValidNode(lookup core.ValidatorLookup, nodes []*core.NodeInfo, startMach machine.Machine) (*core.NodeInfo, error) {
-	for _, nd := range nodes {
-		chalType, err := core.JudgeAssertion(lookup, nd.Assertion, startMach)
+	minMessages := new(big.Int).Sub(startState.InboxMaxCount, startState.InboxIndex)
+	minimumGasToConsume := new(big.Int).Mul(timeSinceProposed, arbGasSpeedLimitPerBlock)
+	maximumGasToConsume := new(big.Int).Mul(minimumGasToConsume, big.NewInt(4))
+
+	if maybeMakeNode {
+		gasesUsed = append(gasesUsed, maximumGasToConsume)
+	}
+
+	execTracker := core.NewExecutionTracker(v.lookup, cursor, false, gasesUsed)
+
+	for _, nd := range successorsNodes {
+		chalType, err := core.JudgeAssertion(v.lookup, nd.Assertion, execTracker)
 		if err != nil {
 			return nil, err
 		}
 		if chalType == core.NO_CHALLENGE {
 			return nd, nil
 		}
+		blockId, err := getBlockID(ctx, v.client, nd.Assertion.PrevProposedBlock)
+		if err != nil {
+			return nil, err
+		}
+		return &nodeMovementInfo{
+			block:   blockId,
+			nodeNum: nd.NodeNum,
+		}, nil
 	}
-	return nil, nil
-}
 
-func createAssertion(
-	lookup core.ValidatorLookup,
-	startState *core.NodeState,
-	startMachine machine.Machine,
-	currentBlock,
-	minAssertionPeriod,
-	arbGasSpeedLimitPerBlock *big.Int,
-) (*core.Assertion, error) {
-	timeSinceProposed := new(big.Int).Sub(currentBlock, startState.ProposedBlock)
-	if timeSinceProposed.Cmp(minAssertionPeriod) < 0 {
-		// Too soon to assert
+	if !maybeMakeNode {
 		return nil, nil
 	}
 
-	minimumGasToConsume := new(big.Int).Mul(timeSinceProposed, arbGasSpeedLimitPerBlock)
-	minMessages := new(big.Int).Sub(startState.InboxMaxCount, startState.InboxCount)
-
-	maximumGasToConsume := new(big.Int).Mul(minimumGasToConsume, big.NewInt(4))
-
-	assertionInfo, err := lookup.GetExecutionInfo(startMachine, maximumGasToConsume)
+	execInfo, err := execTracker.GenerateExecutionInfo(gasesUsed[len(gasesUsed)-1])
 	if err != nil {
 		return nil, err
 	}
 
-	if assertionInfo.GasUsed.Cmp(minimumGasToConsume) < 0 && assertionInfo.InboxMessagesRead.Cmp(minMessages) < 0 {
+	if execInfo.GasUsed().Cmp(minimumGasToConsume) < 0 && execInfo.InboxMessagesRead().Cmp(minMessages) < 0 {
 		// Couldn't execute far enough
 		return nil, nil
 	}
 
-	return &core.Assertion{
-		PrevState:     startState,
-		AssertionInfo: assertionInfo,
+	inboxDelta, err := v.lookup.GetInboxDelta(execInfo.Before.InboxIndex, execInfo.InboxMessagesRead())
+	if err != nil {
+		return nil, err
+	}
+	lastNodeCreated, err := v.rollup.LatestNodeCreated(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	msg, err := lookupMessageByNum(ctx, v.rollup.RollupWatcher, execInfo.After.InboxIndex)
+	if err != nil {
+		return nil, err
+	}
+	newNodeID := new(big.Int).Add(lastNodeCreated, big.NewInt(1))
+	return &nodeCreationInfo{
+		assertion: &core.Assertion{
+			PrevProposedBlock: startState.ProposedBlock,
+			PrevInboxMaxCount: startState.InboxMaxCount,
+			AssertionInfo: &core.AssertionInfo{
+				ExecutionInfo: execInfo,
+				InboxDelta:    inboxDelta,
+			},
+		},
+		block:     msg.Block(),
+		newNodeID: newNodeID,
 	}, nil
 }
 
@@ -270,14 +261,16 @@ func lookupNodeStartState(ctx context.Context, rollup *ethbridge.RollupWatcher, 
 			return nil, err
 		}
 		return &core.NodeState{
-			ProposedBlock:  new(big.Int).SetUint64(creationEvent.Raw.BlockNumber),
-			TotalGasUsed:   big.NewInt(0),
-			MachineHash:    creationEvent.MachineHash,
-			InboxHash:      common.Hash{},
-			InboxCount:     big.NewInt(1),
-			TotalSendCount: big.NewInt(0),
-			TotalLogCount:  big.NewInt(0),
-			InboxMaxCount:  big.NewInt(1),
+			ProposedBlock: new(big.Int).SetUint64(creationEvent.Raw.BlockNumber),
+			InboxMaxCount: big.NewInt(1),
+			ExecutionState: &core.ExecutionState{
+				TotalGasConsumed: big.NewInt(0),
+				MachineHash:      creationEvent.MachineHash,
+				InboxHash:        common.Hash{},
+				InboxIndex:       big.NewInt(1),
+				TotalSendCount:   big.NewInt(0),
+				TotalLogCount:    big.NewInt(0),
+			},
 		}, nil
 	}
 	node, err := lookupNode(ctx, rollup, nodeNum)

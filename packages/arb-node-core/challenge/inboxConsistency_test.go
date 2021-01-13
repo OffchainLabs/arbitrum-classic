@@ -33,9 +33,9 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 
 	challengedNode := initializeChallengeData(t, correctLookup, inboxMessagesRead)
 
-	inboxAcc, err := falseLookup.GetInboxAcc(new(big.Int).Add(challengedNode.Assertion.AfterInboxCount(), big.NewInt(1)))
+	inboxAcc, err := falseLookup.GetInboxAcc(new(big.Int).Add(challengedNode.Assertion.After.InboxIndex, big.NewInt(1)))
 	test.FailIfError(t, err)
-	challengedNode.Assertion.AfterInboxHash = inboxAcc
+	challengedNode.Assertion.After.InboxHash = inboxAcc
 
 	arbGasSpeedLimitPerBlock := big.NewInt(100000)
 	challengePeriodBlocks := big.NewInt(100)

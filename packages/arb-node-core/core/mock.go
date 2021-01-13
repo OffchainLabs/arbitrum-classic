@@ -46,20 +46,8 @@ func (v *ValidatorLookupMock) AddMessage(msg inbox.InboxMessage) {
 	v.InboxAccs = append(v.InboxAccs, newInboxAcc)
 }
 
-func (v *ValidatorLookupMock) GenerateLogAccumulator(startIndex *big.Int, count *big.Int) (common.Hash, error) {
-	panic("implement me")
-}
-
 func (v *ValidatorLookupMock) GetSends(startIndex *big.Int, count *big.Int) ([][]byte, error) {
 	panic("implement me")
-}
-
-func (v *ValidatorLookupMock) GetInboxAcc(index *big.Int) (common.Hash, error) {
-	i := index.Uint64()
-	if i >= uint64(len(v.InboxAccs)) {
-		return common.Hash{}, errors.New("GetInboxAcc: inbox index out of bounds")
-	}
-	return v.InboxAccs[i], nil
 }
 
 func (v *ValidatorLookupMock) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.InboxMessage, error) {
@@ -74,31 +62,34 @@ func (v *ValidatorLookupMock) GetMessages(startIndex *big.Int, count *big.Int) (
 	return v.Messages[start : start+c], nil
 }
 
-func (v *ValidatorLookupMock) GetMachine(totalGasUsed *big.Int) (machine.Machine, error) {
-	if totalGasUsed.Cmp(big.NewInt(0)) == 0 {
-		return v.startMachine, nil
-	}
-	return nil, errors.New("GetMachine not yet supported")
+func (v *ValidatorLookupMock) GetInboxDelta(startIndex *big.Int, count *big.Int) (common.Hash, error) {
+	panic("implement me")
 }
 
-func (v *ValidatorLookupMock) GetExecutionInfoWithMaxMessages(startMachine machine.Machine, targetGas *big.Int, maxMessages *big.Int) (*AssertionInfo, error) {
-	if targetGas.Cmp(big.NewInt(0)) == 0 {
-		return &AssertionInfo{
-			BeforeMachineHash: startMachine.Hash(),
-			InboxMessagesRead: big.NewInt(0),
-			GasUsed:           big.NewInt(0),
-			SendAcc:           common.Hash{},
-			SendCount:         big.NewInt(0),
-			LogAcc:            common.Hash{},
-			LogCount:          big.NewInt(0),
-			AfterMachineHash:  startMachine.Hash(),
-			InboxDelta:        common.Hash{},
-			AfterInboxHash:    common.Hash{},
-		}, nil
+func (v *ValidatorLookupMock) GetInboxAcc(index *big.Int) (common.Hash, error) {
+	i := index.Uint64()
+	if i >= uint64(len(v.InboxAccs)) {
+		return common.Hash{}, errors.New("GetInboxAcc: inbox index out of bounds")
 	}
-	return nil, errors.New("GetExecutionInfoWithMaxMessages not yet supported")
+	return v.InboxAccs[i], nil
 }
 
-func (v *ValidatorLookupMock) GetExecutionInfo(startMachine machine.Machine, maxGas *big.Int) (*AssertionInfo, error) {
+func (v *ValidatorLookupMock) GetSendAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (common.Hash, error) {
+	panic("implement me")
+}
+
+func (v *ValidatorLookupMock) GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (common.Hash, error) {
+	panic("implement me")
+}
+
+func (v *ValidatorLookupMock) GetCursor(totalGasUsed *big.Int) (ExecutionCursor, error) {
+	panic("implement me")
+}
+
+func (v *ValidatorLookupMock) MoveExecutionCursor(start ExecutionCursor, maxGas *big.Int, goOverGas bool) (ExecutionCursor, error) {
+	panic("implement me")
+}
+
+func (v *ValidatorLookupMock) GetMachine(cursor ExecutionCursor) (machine.Machine, error) {
 	panic("implement me")
 }

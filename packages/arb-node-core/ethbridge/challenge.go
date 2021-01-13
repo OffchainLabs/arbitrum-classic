@@ -206,9 +206,9 @@ func (c *Challenge) OneStepProveExecution(
 				beforeAssertion.SendAcc,
 				beforeAssertion.LogAcc,
 			},
-			beforeAssertion.GasUsed.Uint64(),
-			beforeAssertion.SendCount,
-			beforeAssertion.LogCount,
+			beforeAssertion.GasUsed().Uint64(),
+			beforeAssertion.SendCount(),
+			beforeAssertion.LogCount(),
 			executionProof,
 			bufferProof,
 		)

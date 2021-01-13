@@ -8,90 +8,76 @@ import (
 )
 
 type NodeState struct {
-	ProposedBlock  *big.Int
-	TotalGasUsed   *big.Int
-	MachineHash    common.Hash
-	InboxHash      common.Hash
-	InboxCount     *big.Int
-	TotalSendCount *big.Int
-	TotalLogCount  *big.Int
-	InboxMaxCount  *big.Int
+	ProposedBlock *big.Int
+	InboxMaxCount *big.Int
+	*ExecutionState
 }
 
 type Assertion struct {
-	PrevState *NodeState
+	PrevProposedBlock *big.Int
+	PrevInboxMaxCount *big.Int
 	*AssertionInfo
 }
 
 func NewAssertionFromFields(a [7][32]byte, b [10]*big.Int) *Assertion {
-	prevState := &NodeState{
-		ProposedBlock:  b[0],
-		TotalGasUsed:   b[1],
-		MachineHash:    a[0],
-		InboxHash:      a[1],
-		InboxCount:     b[2],
-		TotalSendCount: b[3],
-		TotalLogCount:  b[4],
-		InboxMaxCount:  b[5],
+	beforeState := &ExecutionState{
+		MachineHash:      a[0],
+		InboxIndex:       b[2],
+		InboxHash:        a[1],
+		TotalGasConsumed: b[1],
+		TotalSendCount:   b[3],
+		TotalLogCount:    b[4],
 	}
+
 	return &Assertion{
-		PrevState: prevState,
+		PrevProposedBlock: b[0],
+		PrevInboxMaxCount: b[5],
 		AssertionInfo: &AssertionInfo{
-			BeforeMachineHash: prevState.MachineHash,
-			InboxMessagesRead: b[6],
-			GasUsed:           b[7],
-			SendAcc:           a[4],
-			SendCount:         b[8],
-			LogAcc:            a[5],
-			LogCount:          b[9],
-			AfterMachineHash:  a[6],
-			InboxDelta:        a[2],
-			AfterInboxHash:    a[3],
+			ExecutionInfo: &ExecutionInfo{
+				SimpleExecutionInfo: &SimpleExecutionInfo{
+					Before: beforeState,
+					After: &ExecutionState{
+						MachineHash:      a[6],
+						InboxIndex:       new(big.Int).Add(beforeState.InboxIndex, b[6]),
+						InboxHash:        a[3],
+						TotalGasConsumed: new(big.Int).Add(beforeState.TotalGasConsumed, b[7]),
+						TotalSendCount:   new(big.Int).Add(beforeState.TotalSendCount, b[8]),
+						TotalLogCount:    new(big.Int).Add(beforeState.TotalLogCount, b[9]),
+					},
+				},
+				SendAcc: a[4],
+				LogAcc:  a[5],
+			},
+			InboxDelta: a[2],
 		},
 	}
 }
 
 func (a *Assertion) BytesFields() [7][32]byte {
 	return [7][32]byte{
-		a.PrevState.MachineHash,
-		a.PrevState.InboxHash,
+		a.Before.MachineHash,
+		a.Before.InboxHash,
 		a.InboxDelta,
 		a.SendAcc,
 		a.LogAcc,
-		a.AfterInboxHash,
-		a.AfterMachineHash,
+		a.After.InboxHash,
+		a.After.MachineHash,
 	}
 }
 
 func (a *Assertion) IntFields() [10]*big.Int {
 	return [10]*big.Int{
-		a.PrevState.ProposedBlock,
-		a.PrevState.TotalGasUsed,
-		a.PrevState.InboxCount,
-		a.PrevState.TotalSendCount,
-		a.PrevState.TotalLogCount,
-		a.PrevState.InboxMaxCount,
-		a.InboxMessagesRead,
-		a.GasUsed,
-		a.SendCount,
-		a.LogCount,
+		a.PrevProposedBlock,
+		a.Before.TotalGasConsumed,
+		a.Before.InboxIndex,
+		a.Before.TotalSendCount,
+		a.Before.TotalLogCount,
+		a.PrevInboxMaxCount,
+		a.InboxMessagesRead(),
+		a.GasUsed(),
+		a.SendCount(),
+		a.LogCount(),
 	}
-}
-
-func (a *Assertion) AfterInboxCount() *big.Int {
-	return new(big.Int).Add(a.PrevState.InboxCount, a.InboxMessagesRead)
-}
-
-func (a *Assertion) AfterTotalGasUsed() *big.Int {
-	return new(big.Int).Add(a.PrevState.TotalGasUsed, a.GasUsed)
-}
-
-func (a *Assertion) AfterTotalSendCount() *big.Int {
-	return new(big.Int).Add(a.PrevState.TotalSendCount, a.SendCount)
-}
-
-func (a *Assertion) AfterTotalLogCount() *big.Int {
-	return new(big.Int).Add(a.PrevState.TotalLogCount, a.LogCount)
 }
 
 func BisectionChunkHash(
@@ -141,24 +127,23 @@ func assertionRestHash(
 }
 
 func (a *Assertion) InboxConsistencyHash(inboxTopHash common.Hash, inboxTopCount *big.Int) common.Hash {
-	messagesAfterCount := new(big.Int).Sub(inboxTopCount, a.PrevState.InboxCount)
-	messagesAfterCount = messagesAfterCount.Sub(messagesAfterCount, a.InboxMessagesRead)
-	return BisectionChunkHash(big.NewInt(0), messagesAfterCount, inboxTopHash, a.AfterInboxHash)
+	messagesAfterCount := new(big.Int).Sub(inboxTopCount, a.After.InboxIndex)
+	return BisectionChunkHash(big.NewInt(0), messagesAfterCount, inboxTopHash, a.After.InboxHash)
 }
 
-func (a *Assertion) InboxDeltaHash() common.Hash {
+func (a *AssertionInfo) InboxDeltaHash() common.Hash {
 	return BisectionChunkHash(
 		big.NewInt(0),
-		a.InboxMessagesRead,
-		InboxDeltaHash(a.AfterInboxHash, common.Hash{}),
-		InboxDeltaHash(a.PrevState.InboxHash, a.InboxDelta),
+		a.InboxMessagesRead(),
+		InboxDeltaHash(a.After.InboxHash, common.Hash{}),
+		InboxDeltaHash(a.Before.InboxHash, a.InboxDelta),
 	)
 }
 
 func (a *Assertion) BeforeExecutionHash() common.Hash {
 	restBefore := assertionRestHash(
 		a.InboxDelta,
-		a.PrevState.MachineHash,
+		a.Before.MachineHash,
 		common.Hash{},
 		big.NewInt(0),
 		common.Hash{},
@@ -170,24 +155,24 @@ func (a *Assertion) BeforeExecutionHash() common.Hash {
 func (a *Assertion) AfterExecutionHash() common.Hash {
 	restAfter := assertionRestHash(
 		common.Hash{},
-		a.AfterMachineHash,
+		a.After.MachineHash,
 		a.SendAcc,
-		a.SendCount,
+		a.SendCount(),
 		a.LogAcc,
-		a.LogCount,
+		a.LogCount(),
 	)
-	return assertionHash(a.GasUsed, restAfter)
+	return assertionHash(a.GasUsed(), restAfter)
 }
 
 func (a *Assertion) ExecutionHash() common.Hash {
 	return BisectionChunkHash(
 		big.NewInt(0),
-		a.GasUsed,
+		a.GasUsed(),
 		a.BeforeExecutionHash(),
 		a.AfterExecutionHash(),
 	)
 }
 
 func (a *Assertion) CheckTime(arbGasSpeedLimitPerBlock *big.Int) *big.Int {
-	return new(big.Int).Div(a.GasUsed, arbGasSpeedLimitPerBlock)
+	return new(big.Int).Div(a.GasUsed(), arbGasSpeedLimitPerBlock)
 }

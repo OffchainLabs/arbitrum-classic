@@ -1,14 +1,11 @@
 package core
 
 import (
-	"fmt"
-	"github.com/pkg/errors"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
 type ChallengeKind uint8
@@ -35,13 +32,8 @@ type NodeInfo struct {
 func (n *NodeInfo) AfterState() *NodeState {
 	return &NodeState{
 		ProposedBlock:  n.BlockProposed.Height.AsInt(),
-		TotalGasUsed:   n.Assertion.AfterTotalGasUsed(),
-		MachineHash:    n.Assertion.AfterMachineHash,
-		InboxHash:      n.Assertion.AfterInboxHash,
-		InboxCount:     n.Assertion.AfterInboxCount(),
-		TotalSendCount: n.Assertion.AfterTotalSendCount(),
-		TotalLogCount:  n.Assertion.AfterTotalLogCount(),
 		InboxMaxCount:  n.InboxMaxCount,
+		ExecutionState: n.Assertion.After,
 	}
 }
 
@@ -49,31 +41,28 @@ func (n *NodeInfo) InitialInboxConsistencyBisection() *Bisection {
 	return &Bisection{
 		ChallengedSegment: &ChallengeSegment{
 			Start:  big.NewInt(0),
-			Length: new(big.Int).Sub(n.InboxMaxCount, n.Assertion.AfterInboxCount()),
+			Length: new(big.Int).Sub(n.InboxMaxCount, n.Assertion.After.InboxIndex),
 		},
 		Cuts: []Cut{
 			NewSimpleCut(n.InboxMaxHash),
-			NewSimpleCut(n.Assertion.AfterInboxHash),
+			NewSimpleCut(n.Assertion.After.InboxHash),
 		},
 	}
 }
 
 func (n *NodeInfo) InitialInboxDeltaBisection() *Bisection {
 	beforeCut := InboxDeltaCut{
-		InboxAccHash:   n.Assertion.AfterInboxHash,
+		InboxAccHash:   n.Assertion.After.InboxHash,
 		InboxDeltaHash: [32]byte{},
 	}
 	afterCut := InboxDeltaCut{
-		InboxAccHash:   n.Assertion.PrevState.InboxHash,
+		InboxAccHash:   n.Assertion.Before.InboxHash,
 		InboxDeltaHash: n.Assertion.InboxDelta,
 	}
-	fmt.Println("InitialInboxDeltaBisection", 0, n.Assertion.InboxMessagesRead, common.Hash(beforeCut.Hash()), common.Hash(afterCut.Hash()))
-	fmt.Println("InitialInboxDeltaBisection before", n.Assertion.AfterInboxHash, common.Hash{})
-	fmt.Println("InitialInboxDeltaBisection after", n.Assertion.PrevState.InboxHash, n.Assertion.InboxDelta)
 	return &Bisection{
 		ChallengedSegment: &ChallengeSegment{
 			Start:  big.NewInt(0),
-			Length: n.Assertion.InboxMessagesRead,
+			Length: n.Assertion.InboxMessagesRead(),
 		},
 		Cuts: []Cut{beforeCut, afterCut},
 	}
@@ -83,54 +72,13 @@ func (n *NodeInfo) InitialExecutionBisection() *Bisection {
 	return &Bisection{
 		ChallengedSegment: &ChallengeSegment{
 			Start:  big.NewInt(0),
-			Length: n.Assertion.GasUsed,
+			Length: n.Assertion.GasUsed(),
 		},
 		Cuts: []Cut{
 			NewSimpleCut(n.Assertion.BeforeExecutionHash()),
 			NewSimpleCut(n.Assertion.AfterExecutionHash()),
 		},
 	}
-}
-
-func JudgeAssertion(lookup ValidatorLookup, assertion *Assertion, mach machine.Machine) (ChallengeKind, error) {
-	afterInboxHash, err := lookup.GetInboxAcc(assertion.AfterInboxCount())
-	if err != nil {
-		return 0, err
-	}
-	if assertion.AfterInboxHash != afterInboxHash {
-		// Failed inbox consistency
-		return INBOX_CONSISTENCY, nil
-	}
-	messages, err := lookup.GetMessages(assertion.PrevState.InboxCount, assertion.InboxMessagesRead)
-	if err != nil {
-		return 0, err
-	}
-	if assertion.InboxDelta != CalculateInboxDeltaAcc(messages) {
-		// Failed inbox delta
-		return INBOX_DELTA, nil
-	}
-	if mach == nil {
-		mach, err = lookup.GetMachine(assertion.PrevState.TotalGasUsed)
-		if err != nil {
-			return 0, err
-		}
-	}
-	if mach.Hash() != assertion.PrevState.MachineHash {
-		return 0, errors.New("before machine state inconsistent with local db")
-	}
-	localExecutionInfo, err := lookup.GetExecutionInfoWithMaxMessages(mach, assertion.GasUsed, assertion.InboxMessagesRead)
-	if err != nil {
-		return 0, err
-	}
-
-	if localExecutionInfo.GasUsed.Cmp(assertion.GasUsed) < 0 {
-		return STOPPED_SHORT, nil
-	}
-
-	if !assertion.Equals(localExecutionInfo) {
-		return EXECUTION, nil
-	}
-	return NO_CHALLENGE, nil
 }
 
 func CalculateInboxDeltaAcc(messages []inbox.InboxMessage) common.Hash {

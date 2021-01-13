@@ -5,11 +5,13 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/big"
 )
 
 type ExecutionImpl struct {
 	initialGasUsed *big.Int
+	finalGasUsed   *big.Int
 }
 
 func (e ExecutionImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]core.Cut, error) {
@@ -45,16 +47,48 @@ func (e ExecutionImpl) OneStepProof(
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
 ) (*types.Transaction, error) {
-	startMachine, err := lookup.GetMachine(e.initialGasUsed)
-	if err != nil {
-		return nil, err
-	}
-	beforeAssertion, err := lookup.GetExecutionInfo(startMachine, challengedSegment.Start)
+	initalCursor, err := lookup.GetCursor(e.initialGasUsed)
 	if err != nil {
 		return nil, err
 	}
 
-	beforeMachine, err := lookup.GetMachine(new(big.Int).Add(e.initialGasUsed, challengedSegment.Start))
+	beforeCursor, err := lookup.MoveExecutionCursor(initalCursor, challengedSegment.Start, false)
+	if err != nil {
+		return nil, err
+	}
+
+	finalCursor, err := lookup.GetCursor(e.finalGasUsed)
+	if err != nil {
+		return nil, err
+	}
+
+	sendCount := new(big.Int).Sub(initalCursor.TotalSendCount(), beforeCursor.TotalSendCount())
+	sendAcc, err := lookup.GetSendAcc(common.Hash{}, initalCursor.TotalSendCount(), sendCount)
+	if err != nil {
+		return nil, err
+	}
+	logCount := new(big.Int).Sub(beforeCursor.TotalLogCount(), beforeCursor.TotalLogCount())
+	logAcc, err := lookup.GetLogAcc(common.Hash{}, initalCursor.TotalLogCount(), logCount)
+	if err != nil {
+		return nil, err
+	}
+
+	inboxRemaining := new(big.Int).Sub(finalCursor.NextInboxMessageIndex(), beforeCursor.NextInboxMessageIndex())
+	inboxDelta, err := lookup.GetInboxDelta(beforeCursor.NextInboxMessageIndex(), inboxRemaining)
+
+	beforeAssertion := &core.AssertionInfo{
+		ExecutionInfo: &core.ExecutionInfo{
+			SimpleExecutionInfo: &core.SimpleExecutionInfo{
+				Before: core.NewExecutionState(initalCursor),
+				After:  core.NewExecutionState(beforeCursor),
+			},
+			SendAcc: sendAcc,
+			LogAcc:  logAcc,
+		},
+		InboxDelta: inboxDelta,
+	}
+
+	beforeMachine, err := lookup.GetMachine(beforeCursor)
 	if err != nil {
 		return nil, err
 	}

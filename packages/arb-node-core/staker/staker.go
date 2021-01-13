@@ -100,7 +100,7 @@ func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) (
 		return nil, errors.New("no stake placed")
 	}
 
-	action, err := s.generateNodeAction(ctx, info.LatestStakedNode)
+	action, err := s.generateNodeAction(ctx, info.LatestStakedNode, true)
 	if err != nil || action == nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (s *Staker) placeStake(ctx context.Context) (*types.Transaction, error) {
 		return nil, err
 	}
 
-	action, err := s.generateNodeAction(ctx, latestConfirmedNode)
+	action, err := s.generateNodeAction(ctx, latestConfirmedNode, true)
 	if err != nil || action == nil {
 		return nil, err
 	}
