@@ -119,15 +119,14 @@ func (a *AssertionInfo) Equals(o *AssertionInfo) bool {
 
 type ExecutionTracker struct {
 	lookup    ValidatorLookup
-	cursor    ExecutionCursor
 	goOverGas bool
 
 	sortedStopPoints []*big.Int
 	stopPointIndex   map[string]int
 
-	sendAccs        []common.Hash
-	logAccs         []common.Hash
-	cursorSnapshots []*ExecutionState
+	cursors  []ExecutionCursor
+	sendAccs []common.Hash
+	logAccs  []common.Hash
 }
 
 type BigIntList []*big.Int
@@ -146,8 +145,8 @@ func (l BigIntList) Swap(i, j int) {
 
 func NewExecutionTracker(lookup ValidatorLookup, cursor ExecutionCursor, goOverGas bool, stopPoints []*big.Int) *ExecutionTracker {
 	sort.Sort(BigIntList(stopPoints))
-	cursorSnapshots := make([]*ExecutionState, 0, len(stopPoints)+1)
-	cursorSnapshots = append(cursorSnapshots, NewExecutionState(cursor))
+	cursors := make([]ExecutionCursor, 0, len(stopPoints)+1)
+	cursors = append(cursors, cursor)
 	sendAccs := make([]common.Hash, 0, len(stopPoints)+1)
 	sendAccs = append(sendAccs, common.Hash{})
 	logAccs := make([]common.Hash, 0, len(stopPoints)+1)
@@ -159,25 +158,25 @@ func NewExecutionTracker(lookup ValidatorLookup, cursor ExecutionCursor, goOverG
 	}
 	return &ExecutionTracker{
 		lookup:           lookup,
-		cursor:           cursor,
 		goOverGas:        goOverGas,
 		sortedStopPoints: stopPoints,
 		stopPointIndex:   stopPointIndex,
 		sendAccs:         sendAccs,
 		logAccs:          logAccs,
-		cursorSnapshots:  cursorSnapshots,
+		cursors:          cursors,
 	}
 }
 
 func (e *ExecutionTracker) fillInCursorSnapshots(max int) error {
-	for i := len(e.cursorSnapshots) - 1; i < max; i++ {
+	for i := len(e.cursors) - 1; i < max; i++ {
+		cursor := e.cursors[len(e.cursors)-1]
 		nextStopPoint := e.sortedStopPoints[i]
-		gasToExecute := new(big.Int).Sub(nextStopPoint, e.cursor.TotalGasConsumed())
-		newCursor, err := e.lookup.MoveExecutionCursor(e.cursor, gasToExecute, e.goOverGas)
+		gasToExecute := new(big.Int).Sub(nextStopPoint, cursor.TotalGasConsumed())
+		newCursor, err := e.lookup.MoveExecutionCursor(cursor, gasToExecute, e.goOverGas)
 		if err != nil {
 			return err
 		}
-		e.cursorSnapshots = append(e.cursorSnapshots, NewExecutionState(newCursor))
+		e.cursors = append(e.cursors, newCursor)
 	}
 	return nil
 }
@@ -187,17 +186,17 @@ func (e *ExecutionTracker) fillInAccs(max int) error {
 		return err
 	}
 	for i := len(e.logAccs) - 1; i < max; i++ {
-		prevCursor := e.cursorSnapshots[i-1]
-		cursor := e.cursorSnapshots[i]
+		prevCursor := e.cursors[i-1]
+		cursor := e.cursors[i]
 		prevSendAcc := e.sendAccs[i-1]
 		prevLogAcc := e.logAccs[i-1]
-		sendCount := new(big.Int).Sub(prevCursor.TotalSendCount, cursor.TotalSendCount)
-		sendAcc, err := e.lookup.GetSendAcc(prevSendAcc, cursor.TotalSendCount, sendCount)
+		sendCount := new(big.Int).Sub(prevCursor.TotalSendCount(), cursor.TotalSendCount())
+		sendAcc, err := e.lookup.GetSendAcc(prevSendAcc, cursor.TotalSendCount(), sendCount)
 		if err != nil {
 			return err
 		}
-		logCount := new(big.Int).Sub(prevCursor.TotalLogCount, cursor.TotalLogCount)
-		logAcc, err := e.lookup.GetLogAcc(prevLogAcc, cursor.TotalLogCount, logCount)
+		logCount := new(big.Int).Sub(prevCursor.TotalLogCount(), cursor.TotalLogCount())
+		logAcc, err := e.lookup.GetLogAcc(prevLogAcc, cursor.TotalLogCount(), logCount)
 		if err != nil {
 			return err
 		}
@@ -218,8 +217,8 @@ func (e *ExecutionTracker) GenerateExecutionInfo(gasUsed *big.Int) (*ExecutionIn
 
 	return &ExecutionInfo{
 		SimpleExecutionInfo: &SimpleExecutionInfo{
-			Before: e.cursorSnapshots[0],
-			After:  e.cursorSnapshots[index],
+			Before: NewExecutionState(e.cursors[0]),
+			After:  NewExecutionState(e.cursors[index]),
 		},
 		SendAcc: e.sendAccs[index],
 		LogAcc:  e.logAccs[index],
