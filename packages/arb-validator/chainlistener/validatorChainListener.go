@@ -63,7 +63,7 @@ func NewValidatorChainListener(
 	}
 	ret.resetBroadcastCache()
 	go func() {
-		ticker := time.NewTicker(common.NewTimeBlocksInt(30).Duration())
+		ticker := time.NewTicker(common.NewTimeBlocksInt(15).Duration())
 		defer ticker.Stop()
 		for {
 			select {
@@ -498,8 +498,10 @@ func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, conf *v
 	_, alreadySent := lis.broadcastConfirmations[conf.CurrentLatestConfirmed]
 	if alreadySent {
 		lis.Unlock()
+		logger.Info().Hex("node", conf.CurrentLatestConfirmed.Bytes()).Msg("ignoring already sent confirm tx")
 		return
 	}
+	logger.Info().Hex("node", conf.CurrentLatestConfirmed.Bytes()).Int("count", len(conf.Nodes)).Msg("broadcasting confirmation transaction")
 	lis.broadcastConfirmations[conf.CurrentLatestConfirmed] = true
 	lis.Unlock()
 	confClone := conf.Clone()
@@ -507,10 +509,12 @@ func (lis *ValidatorChainListener) ConfirmableNodes(ctx context.Context, conf *v
 	go func() {
 		_, err := lis.actor.Confirm(ctx, confClone)
 		if err != nil {
-			logger.Warn().Stack().Err(err).Msg("Failed to confirm valid node")
+			logger.Warn().Hex("node", conf.CurrentLatestConfirmed.Bytes()).Err(err).Msg("Failed to confirm valid node")
 			lis.Lock()
 			delete(lis.broadcastConfirmations, confClone.CurrentLatestConfirmed)
 			lis.Unlock()
+		} else {
+			logger.Info().Hex("node", conf.CurrentLatestConfirmed.Bytes()).Msg("successfully made confirmation transaction")
 		}
 	}()
 }
