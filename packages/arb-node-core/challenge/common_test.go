@@ -128,16 +128,14 @@ func initializeChallengeData(
 	test.FailIfError(t, err)
 	assertionInfo := &core.AssertionInfo{
 		ExecutionInfo: &core.ExecutionInfo{
-			SimpleExecutionInfo: &core.SimpleExecutionInfo{
-				Before: prevState.ExecutionState,
-				After: &core.ExecutionState{
-					MachineHash:      common.Hash{},
-					InboxIndex:       inboxMessagesRead,
-					InboxHash:        inboxAcc,
-					TotalGasConsumed: big.NewInt(0),
-					TotalSendCount:   big.NewInt(0),
-					TotalLogCount:    big.NewInt(0),
-				},
+			Before: prevState.ExecutionState,
+			After: &core.ExecutionState{
+				MachineHash:      common.Hash{},
+				InboxIndex:       inboxMessagesRead,
+				InboxHash:        inboxAcc,
+				TotalGasConsumed: big.NewInt(0),
+				TotalSendCount:   big.NewInt(0),
+				TotalLogCount:    big.NewInt(0),
 			},
 			SendAcc: common.Hash{},
 			LogAcc:  common.Hash{},

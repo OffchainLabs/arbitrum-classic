@@ -34,16 +34,14 @@ func NewAssertionFromFields(a [7][32]byte, b [10]*big.Int) *Assertion {
 		PrevInboxMaxCount: b[5],
 		AssertionInfo: &AssertionInfo{
 			ExecutionInfo: &ExecutionInfo{
-				SimpleExecutionInfo: &SimpleExecutionInfo{
-					Before: beforeState,
-					After: &ExecutionState{
-						MachineHash:      a[6],
-						InboxIndex:       new(big.Int).Add(beforeState.InboxIndex, b[6]),
-						InboxHash:        a[3],
-						TotalGasConsumed: new(big.Int).Add(beforeState.TotalGasConsumed, b[7]),
-						TotalSendCount:   new(big.Int).Add(beforeState.TotalSendCount, b[8]),
-						TotalLogCount:    new(big.Int).Add(beforeState.TotalLogCount, b[9]),
-					},
+				Before: beforeState,
+				After: &ExecutionState{
+					MachineHash:      a[6],
+					InboxIndex:       new(big.Int).Add(beforeState.InboxIndex, b[6]),
+					InboxHash:        a[3],
+					TotalGasConsumed: new(big.Int).Add(beforeState.TotalGasConsumed, b[7]),
+					TotalSendCount:   new(big.Int).Add(beforeState.TotalSendCount, b[8]),
+					TotalLogCount:    new(big.Int).Add(beforeState.TotalLogCount, b[9]),
 				},
 				SendAcc: a[4],
 				LogAcc:  a[5],

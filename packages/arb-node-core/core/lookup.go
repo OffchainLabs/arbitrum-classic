@@ -19,6 +19,29 @@ type ExecutionCursor interface {
 	TotalLogCount() *big.Int
 }
 
+type ValidatorLookup interface {
+	GetSends(startIndex *big.Int, count *big.Int) ([][]byte, error)
+	GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.InboxMessage, error)
+	GetInboxDelta(startIndex *big.Int, count *big.Int) (common.Hash, error)
+
+	GetInboxAcc(index *big.Int) (common.Hash, error)
+	GetSendAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (common.Hash, error)
+	GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (common.Hash, error)
+
+	// GetMachine returns the image of the machine after executing totalGasUsed
+	// from the original machine
+	GetCursor(totalGasUsed *big.Int) (ExecutionCursor, error)
+
+	// GetExecutionInfo executes as much as it can not over maxGas
+	MoveExecutionCursor(
+		start ExecutionCursor,
+		maxGas *big.Int,
+		goOverGas bool,
+	) error
+
+	GetMachine(cursor ExecutionCursor) (machine.Machine, error)
+}
+
 type ExecutionState struct {
 	MachineHash      common.Hash
 	InboxIndex       *big.Int
@@ -48,64 +71,34 @@ func (e *ExecutionState) Equals(o *ExecutionState) bool {
 		e.TotalLogCount.Cmp(o.TotalLogCount) == 0
 }
 
-type ValidatorLookup interface {
-	GetSends(startIndex *big.Int, count *big.Int) ([][]byte, error)
-	GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.InboxMessage, error)
-	GetInboxDelta(startIndex *big.Int, count *big.Int) (common.Hash, error)
-
-	GetInboxAcc(index *big.Int) (common.Hash, error)
-	GetSendAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (common.Hash, error)
-	GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (common.Hash, error)
-
-	// GetMachine returns the image of the machine after executing totalGasUsed
-	// from the original machine
-	GetCursor(totalGasUsed *big.Int) (ExecutionCursor, error)
-
-	// GetExecutionInfo executes as much as it can not over maxGas
-	MoveExecutionCursor(
-		start ExecutionCursor,
-		maxGas *big.Int,
-		goOverGas bool,
-	) error
-
-	GetMachine(cursor ExecutionCursor) (machine.Machine, error)
-}
-
-type SimpleExecutionInfo struct {
-	Before *ExecutionState
-	After  *ExecutionState
-}
-
-func (e *SimpleExecutionInfo) Equals(o *SimpleExecutionInfo) bool {
-	return e.Before.Equals(o.Before) && e.After.Equals(o.After)
-}
-
-func (e *SimpleExecutionInfo) GasUsed() *big.Int {
-	return new(big.Int).Sub(e.After.TotalGasConsumed, e.Before.TotalGasConsumed)
-}
-
-func (e *SimpleExecutionInfo) SendCount() *big.Int {
-	return new(big.Int).Sub(e.After.TotalSendCount, e.Before.TotalSendCount)
-}
-
-func (e *SimpleExecutionInfo) LogCount() *big.Int {
-	return new(big.Int).Sub(e.After.TotalLogCount, e.Before.TotalLogCount)
-}
-
-func (e *SimpleExecutionInfo) InboxMessagesRead() *big.Int {
-	return new(big.Int).Sub(e.After.InboxIndex, e.Before.InboxIndex)
-}
-
 type ExecutionInfo struct {
-	*SimpleExecutionInfo
+	Before  *ExecutionState
+	After   *ExecutionState
 	SendAcc common.Hash
 	LogAcc  common.Hash
 }
 
 func (e *ExecutionInfo) Equals(o *ExecutionInfo) bool {
-	return e.SimpleExecutionInfo.Equals(o.SimpleExecutionInfo) &&
+	return e.Before.Equals(o.Before) &&
+		e.After.Equals(o.After) &&
 		e.SendAcc == o.SendAcc &&
 		e.LogAcc == o.SendAcc
+}
+
+func (e *ExecutionInfo) GasUsed() *big.Int {
+	return new(big.Int).Sub(e.After.TotalGasConsumed, e.Before.TotalGasConsumed)
+}
+
+func (e *ExecutionInfo) SendCount() *big.Int {
+	return new(big.Int).Sub(e.After.TotalSendCount, e.Before.TotalSendCount)
+}
+
+func (e *ExecutionInfo) LogCount() *big.Int {
+	return new(big.Int).Sub(e.After.TotalLogCount, e.Before.TotalLogCount)
+}
+
+func (e *ExecutionInfo) InboxMessagesRead() *big.Int {
+	return new(big.Int).Sub(e.After.InboxIndex, e.Before.InboxIndex)
 }
 
 type AssertionInfo struct {
@@ -217,10 +210,8 @@ func (e *ExecutionTracker) GetExecutionInfo(gasUsed *big.Int) (*ExecutionInfo, e
 	}
 
 	return &ExecutionInfo{
-		SimpleExecutionInfo: &SimpleExecutionInfo{
-			Before: NewExecutionState(e.cursors[0]),
-			After:  NewExecutionState(e.cursors[index]),
-		},
+		Before:  NewExecutionState(e.cursors[0]),
+		After:   NewExecutionState(e.cursors[index]),
 		SendAcc: e.sendAccs[index],
 		LogAcc:  e.logAccs[index],
 	}, nil
