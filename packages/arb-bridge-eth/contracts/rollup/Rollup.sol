@@ -27,8 +27,6 @@ import "./Outbox.sol";
 import "../challenge/ChallengeLib.sol";
 
 contract Rollup is Inbox, Outbox, IRollup {
-    event SentLogs(bytes32 logsAccHash);
-
     struct Zombie {
         address stakerAddress;
         uint256 latestStakedNode;
@@ -59,7 +57,7 @@ contract Rollup is Inbox, Outbox, IRollup {
     address payable[] public override stakerList;
     mapping(address => Staker) public stakerMap;
 
-    Zombie[] zombies;
+    Zombie[] private zombies;
 
     // Rollup Config
     uint256 public override challengePeriodBlocks;
@@ -188,47 +186,34 @@ contract Rollup is Inbox, Outbox, IRollup {
         emit SentLogs(logAcc);
     }
 
-    function newStakeOnExistingNode(
-        bytes32 blockHash,
-        uint256 blockNumber,
-        uint256 nodeNum
-    ) external payable override {
-        Staker storage staker = addNewStaker();
-        require(nodes[nodeNum].prev() == latestConfirmed);
-        stakeOnExistingNode(blockHash, blockNumber, nodeNum, staker);
+    function newStake() external payable override {
+        // Verify that sender is not already a staker
+        require(!stakerMap[msg.sender].isStaked, "ALREADY_STAKED");
+        require(msg.value >= currentRequiredStake(), "NOT_ENOUGH_STAKE");
+
+        uint256 stakerIndex = stakerList.length;
+        stakerList.push(msg.sender);
+        stakerMap[msg.sender] = Staker(stakerIndex, latestConfirmed, msg.value, address(0), true);
+        lastStakeBlock = block.number;
     }
 
-    function newStakeOnNewNode(
-        bytes32 blockHash,
-        uint256 blockNumber,
-        uint256 nodeNum,
-        uint256 prev,
-        bytes32[7] calldata assertionBytes32Fields,
-        uint256[10] calldata assertionIntFields
-    ) external payable override {
-        Staker storage staker = addNewStaker();
-        require(prev == latestConfirmed, "PREV");
-        stakeOnNewNode(
-            blockHash,
-            blockNumber,
-            nodeNum,
-            staker,
-            assertionBytes32Fields,
-            assertionIntFields
-        );
-    }
-
-    function addStakeOnExistingNode(
+    function stakeOnExistingNode(
         bytes32 blockHash,
         uint256 blockNumber,
         uint256 nodeNum
     ) external override {
         Staker storage staker = stakerMap[msg.sender];
         require(staker.isStaked, "NOT_STAKED");
-        stakeOnExistingNode(blockHash, blockNumber, nodeNum, staker);
+
+        require(blockhash(blockNumber) == blockHash, "invalid known block");
+        require(nodeNum >= firstUnresolvedNode && nodeNum <= latestNodeCreated);
+        INode node = nodes[nodeNum];
+        require(staker.latestStakedNode == node.prev(), "NOT_STAKED_PREV");
+        node.addStaker(msg.sender);
+        staker.latestStakedNode = nodeNum;
     }
 
-    function addStakeOnNewNode(
+    function stakeOnNewNode(
         bytes32 blockHash,
         uint256 blockNumber,
         uint256 nodeNum,
@@ -237,13 +222,20 @@ contract Rollup is Inbox, Outbox, IRollup {
     ) external override {
         Staker storage staker = stakerMap[msg.sender];
         require(staker.isStaked, "NOT_STAKED");
-        stakeOnNewNode(
-            blockHash,
-            blockNumber,
-            nodeNum,
-            staker,
+        require(blockhash(blockNumber) == blockHash, "invalid known block");
+        require(nodeNum == latestNodeCreated + 1, "NODE_NUM");
+        RollupLib.Assertion memory assertion =
+            RollupLib.decodeAssertion(assertionBytes32Fields, assertionIntFields);
+        INode node = createNewNode(assertion, staker.latestStakedNode);
+        node.addStaker(msg.sender);
+        staker.latestStakedNode = latestNodeCreated;
+
+        emit NodeCreated(
+            latestNodeCreated,
             assertionBytes32Fields,
-            assertionIntFields
+            assertionIntFields,
+            inboxMaxCount,
+            inboxMaxAcc
         );
     }
 
@@ -398,14 +390,14 @@ contract Rollup is Inbox, Outbox, IRollup {
     }
 
     function removeOldZombies(uint256 startIndex) public override {
-        uint256 zombieCount = zombies.length;
-        for (uint256 i = startIndex; i < zombieCount; i++) {
+        uint256 numZombies = zombies.length;
+        for (uint256 i = startIndex; i < numZombies; i++) {
             Zombie storage zombie = zombies[i];
             while (zombie.latestStakedNode < firstUnresolvedNode) {
-                zombies[i] = zombies[zombieCount - 1];
+                zombies[i] = zombies[numZombies - 1];
                 zombies.pop();
-                zombieCount--;
-                if (i >= zombieCount) {
+                numZombies--;
+                if (i >= numZombies) {
                     return;
                 }
                 zombie = zombies[i];
@@ -441,9 +433,9 @@ contract Rollup is Inbox, Outbox, IRollup {
     }
 
     function countStakedZombies(INode node) public view override returns (uint256) {
-        uint256 zombieCount = zombies.length;
+        uint256 numZombies = zombies.length;
         uint256 stakedZombieCount = 0;
-        for (uint256 i = 0; i < zombieCount; i++) {
+        for (uint256 i = 0; i < numZombies; i++) {
             Zombie storage zombie = zombies[i];
             if (node.stakers(zombie.stakerAddress)) {
                 stakedZombieCount++;
@@ -461,45 +453,6 @@ contract Rollup is Inbox, Outbox, IRollup {
         require(
             firstUnresolvedNode > latestConfirmed && firstUnresolvedNode <= latestNodeCreated,
             "NO_UNRESOLVED"
-        );
-    }
-
-    function stakeOnExistingNode(
-        bytes32 blockHash,
-        uint256 blockNumber,
-        uint256 nodeNum,
-        Staker storage staker
-    ) private {
-        require(blockhash(blockNumber) == blockHash, "invalid known block");
-        checkValidNodeNumForStake(nodeNum);
-        INode node = nodes[nodeNum];
-        require(staker.latestStakedNode == node.prev(), "NOT_STAKED_PREV");
-        node.addStaker(msg.sender);
-        staker.latestStakedNode = nodeNum;
-    }
-
-    function stakeOnNewNode(
-        bytes32 blockHash,
-        uint256 blockNumber,
-        uint256 nodeNum,
-        Staker storage staker,
-        bytes32[7] memory assertionBytes32Fields,
-        uint256[10] memory assertionIntFields
-    ) private {
-        require(blockhash(blockNumber) == blockHash, "invalid known block");
-        require(nodeNum == latestNodeCreated + 1, "NODE_NUM");
-        RollupLib.Assertion memory assertion =
-            RollupLib.decodeAssertion(assertionBytes32Fields, assertionIntFields);
-        INode node = createNewNode(assertion, staker.latestStakedNode);
-        node.addStaker(msg.sender);
-        staker.latestStakedNode = latestNodeCreated;
-
-        emit NodeCreated(
-            latestNodeCreated,
-            assertionBytes32Fields,
-            assertionIntFields,
-            inboxMaxCount,
-            inboxMaxAcc
         );
     }
 
@@ -646,22 +599,6 @@ contract Rollup is Inbox, Outbox, IRollup {
         stakerMap[stakerList[stakerIndex]].index = stakerIndex;
         stakerList.pop();
         delete stakerMap[stakerAddress];
-    }
-
-    function addNewStaker() private returns (Staker storage) {
-        // Verify that sender is not already a staker
-        require(!stakerMap[msg.sender].isStaked, "ALREADY_STAKED");
-        require(msg.value >= currentRequiredStake(), "NOT_ENOUGH_STAKE");
-
-        uint256 stakerIndex = stakerList.length;
-        stakerList.push(msg.sender);
-        stakerMap[msg.sender] = Staker(stakerIndex, latestConfirmed, msg.value, address(0), true);
-        lastStakeBlock = block.number;
-        return stakerMap[msg.sender];
-    }
-
-    function checkValidNodeNumForStake(uint256 nodeNum) private view {
-        require(nodeNum >= firstUnresolvedNode && nodeNum <= latestNodeCreated);
     }
 
     function checkUnchallengedStaker(Staker storage staker) private view {

@@ -18,6 +18,8 @@
 
 pragma solidity ^0.6.11;
 
+pragma experimental ABIEncoderV2;
+
 import "../rollup/IRollup.sol";
 
 contract ValidatorUtils {

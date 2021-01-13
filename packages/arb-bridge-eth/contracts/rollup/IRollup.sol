@@ -40,6 +40,8 @@ interface IRollup {
         uint256 challengedNode
     );
 
+    event SentLogs(bytes32 logsAccHash);
+
     function rejectNextNode(uint256 successorWithStake, address stakerAddress) external;
 
     function rejectNextNodeOutOfOrder() external;
@@ -50,28 +52,15 @@ interface IRollup {
         uint256[] calldata sendLengths
     ) external;
 
-    function newStakeOnExistingNode(
-        bytes32 blockHash,
-        uint256 blockNumber,
-        uint256 nodeNum
-    ) external payable;
+    function newStake() external payable;
 
-    function newStakeOnNewNode(
-        bytes32 blockHash,
-        uint256 blockNumber,
-        uint256 nodeNum,
-        uint256 prev,
-        bytes32[7] calldata assertionBytes32Fields,
-        uint256[10] calldata assertionIntFields
-    ) external payable;
-
-    function addStakeOnExistingNode(
+    function stakeOnExistingNode(
         bytes32 blockHash,
         uint256 blockNumber,
         uint256 nodeNum
     ) external;
 
-    function addStakeOnNewNode(
+    function stakeOnNewNode(
         bytes32 blockHash,
         uint256 blockNumber,
         uint256 nodeNum,
