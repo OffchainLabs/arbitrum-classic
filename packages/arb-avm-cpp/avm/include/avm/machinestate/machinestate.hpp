@@ -28,8 +28,8 @@
 
 struct AssertionContext {
     std::vector<Tuple> inbox_messages;
+    nonstd::optional<uint256_t> next_block_height;
     uint64_t inbox_messages_consumed;
-    Tuple sideload_value;
     uint64_t numSteps;
     uint64_t numGas;
     bool blockingSideload;
@@ -41,9 +41,7 @@ struct AssertionContext {
     AssertionContext() : inbox_messages_consumed(0), numSteps(0), numGas(0) {}
 
     AssertionContext(std::vector<Tuple> inbox_messages,
-                     Tuple sideload,
-                     bool blockingSideload_,
-                     nonstd::optional<value> fake_inbox_peek_value_);
+                     nonstd::optional<uint256_t> final_block);
 
     // popInbox assumes that the number of messages already consumed is less
     // than the number of messages in the inbox

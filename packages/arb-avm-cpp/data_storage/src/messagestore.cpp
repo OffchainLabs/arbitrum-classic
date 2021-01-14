@@ -31,7 +31,7 @@
 nonstd::optional<rocksdb::Status> MessageStore::addMessages(
     const uint256_t first_sequence_number,
     const uint64_t block_height,
-    const std::vector<Tuple>& messages,
+    const std::vector<rocksdb::Slice>& messages,
     const std::vector<uint256_t>& inbox_hashes,
     const uint256_t& previous_inbox_hash) {
     if (first_sequence_number == 0) {
@@ -57,8 +57,8 @@ nonstd::optional<rocksdb::Status> MessageStore::addMessages(
     auto previous_entry =
         extractMessageEntry(previous_key_slice, rocksdb::Slice(previous_value));
     if (previous_entry.inbox_hash != previous_inbox_hash) {
-        // Previous inbox doesn't match, caller needs to try again
-        // with messages from earlier block
+        // Previous inbox doesn't match so reorg happened and
+        // caller needs to try again with messages from earlier block
         return nonstd::nullopt;
     }
 
@@ -75,25 +75,16 @@ rocksdb::Status addMessagesWithoutCheck(
     Transaction& tx,
     const uint256_t first_sequence_number,
     const uint64_t block_height,
-    const std::vector<Tuple>& messages,
+    const std::vector<rocksdb::Slice>& messages,
     const std::vector<uint256_t>& inbox_hashes) {
     if (messages.size() != inbox_hashes.size()) {
         throw std::runtime_error(
             "Message and hash vector size mismatch in addMessagesWithoutCheck");
     }
 
-    // Save new tuples before deleting old in case tuples reused.
-    for (const auto& message : messages) {
-        // Save tuple in database
-        auto tuple_status = saveValue(tx, message);
-        if (!tuple_status.status.ok()) {
-            return tuple_status.status;
-        }
-    }
-
     // If reorg occurred need to delete any obsolete messages
     auto delete_status = deleteMessagesStartingAt(tx, first_sequence_number);
-    if (delete_status) {
+    if (delete_status.has_value()) {
         if (!delete_status->ok()) {
             return *delete_status;
         }
@@ -112,8 +103,8 @@ rocksdb::Status addMessagesWithoutCheck(
 
         // Encode message entry
         auto messageEntry = MessageEntry{
-            current_sequence_number, hash(messages[i]), inbox_hashes[i],
-            block_height, current_sequence_number == final_sequence_number};
+            current_sequence_number, inbox_hashes[i], block_height,
+            current_sequence_number == final_sequence_number, (messages[i])};
         auto serialized_messageentry = serializeMessageEntry(messageEntry);
 
         // Save message entry into database
@@ -152,11 +143,6 @@ nonstd::optional<rocksdb::Status> deleteMessagesStartingAt(
     }
 
     while (it->Valid()) {
-        auto entry = extractMessageEntry(it->key(), it->value());
-
-        // Delete message tuple
-        deleteValue(tx, entry.message_hash);
-
         // Delete message entry
         tx.transaction->Delete(tx.datastorage->messageentry_column.get(),
                                it->key());
@@ -221,9 +207,6 @@ bool MessageStore::deleteMessage(const MessageEntry& entry) {
         // Entry changed, reorg probably occurred
         return false;
     }
-
-    // Delete message tuple
-    deleteValue(*tx, entry.message_hash);
 
     // Delete message entry
     auto delete_status = tx->transaction->Delete(

@@ -37,33 +37,44 @@ MessageEntry deserializeMessageEntry(
     std::vector<const unsigned char> entry_vector) {
     auto current_iter = entry_vector.begin();
 
-    auto message_hash = extractUint256(current_iter);
     auto inbox_hash = extractUint256(current_iter);
     auto block_height = extractUint64(current_iter);
     auto last_message_in_block = current_iter[0] == 1;
+    auto message_size = extractUint64(current_iter);
+    uint64_t remaining_size = entry_vector.end() - current_iter;
+    if (remaining_size < message_size) {
+        message_size = remaining_size;
+    }
+    auto message = rocksdb::Slice{reinterpret_cast<const char*>(*current_iter),
+                                  message_size};
 
-    return MessageEntry{sequence_number, message_hash, inbox_hash, block_height,
-                        last_message_in_block};
+    return MessageEntry{sequence_number, inbox_hash, block_height,
+                        last_message_in_block, message};
 }
 
 std::vector<unsigned char> serializeMessageEntry(
     const MessageEntry& state_data) {
     std::vector<unsigned char> state_data_vector;
 
-    marshal_uint256_t(state_data.message_hash, state_data_vector);
     marshal_uint256_t(state_data.inbox_hash, state_data_vector);
     marshal_uint64_t(state_data.block_height, state_data_vector);
     state_data_vector.push_back(state_data.last_message_in_block ? 1 : 0);
+    marshal_uint64_t(state_data.message.size(), state_data_vector);
+    state_data_vector.insert(
+        state_data_vector.end(), state_data.message.data(),
+        state_data.message.data() + state_data.message.size());
 
     return state_data_vector;
 }
 
 bool operator==(const MessageEntry& lhs, const MessageEntry& rhs) {
     return lhs.sequence_number == rhs.sequence_number &&
-           lhs.message_hash == rhs.message_hash &&
            lhs.inbox_hash == rhs.inbox_hash &&
            lhs.block_height == rhs.block_height &&
-           lhs.last_message_in_block == rhs.last_message_in_block;
+           lhs.last_message_in_block == rhs.last_message_in_block &&
+           lhs.message.size() == rhs.message.size() &&
+           memcmp(lhs.message.data(), rhs.message.data(), lhs.message.size()) ==
+               0;
 }
 
 bool operator!=(const MessageEntry& lhs, const MessageEntry& rhs) {

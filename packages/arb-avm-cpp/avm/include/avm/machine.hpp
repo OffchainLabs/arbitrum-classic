@@ -20,6 +20,7 @@
 #include <avm/machinestate/machinestate.hpp>
 #include <avm_values/value.hpp>
 
+#include <rocksdb/slice.h>
 #include <chrono>
 #include <memory>
 #include <vector>
@@ -36,13 +37,6 @@ struct Assertion {
 class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
 
-    Assertion executeMachine(uint64_t stepCount,
-                             std::chrono::seconds wallLimit,
-                             std::vector<Tuple> inbox_messages,
-                             Tuple sideload,
-                             bool blockingSideload_,
-                             nonstd::optional<value> fake_inbox_peek_value_);
-
    public:
     MachineState machine_state;
 
@@ -56,19 +50,14 @@ class Machine {
         return {MachineState::loadFromFile(executable_filename)};
     }
 
-    Assertion runSideloaded(uint64_t stepCount,
-                            std::vector<Tuple> inbox_messages,
-                            std::chrono::seconds wallLimit,
-                            Tuple sideload);
-
-    Assertion run(uint64_t stepCount,
-                  std::vector<Tuple> inbox_messages,
-                  std::chrono::seconds wallLimit);
-
-    Assertion runCallServer(uint64_t stepCount,
-                            std::vector<Tuple> inbox_messages,
-                            std::chrono::seconds wallLimit,
-                            value fake_inbox_peek_value);
+    Assertion run(uint64_t gas_limit,
+                  bool hard_gas_limit,
+                  const std::vector<rocksdb::Slice>& inbox_messages,
+                  const nonstd::optional<uint256_t>& final_block);
+    Assertion run(uint64_t gas_limit,
+                  bool hard_gas_limit,
+                  const std::vector<Tuple>& inbox_messages,
+                  const nonstd::optional<uint256_t>& final_block);
 
     Status currentStatus() const { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }

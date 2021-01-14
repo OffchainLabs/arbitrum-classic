@@ -213,17 +213,17 @@ std::vector<char> AggregatorStore::getLog(uint64_t index) const {
     return {value.begin(), value.end()};
 }
 
-uint64_t AggregatorStore::messageCount() const {
+uint64_t AggregatorStore::sendCount() const {
     auto tx = data_storage->beginTransaction();
     return MessageSaver{}.count(*tx);
 }
 
-void AggregatorStore::saveMessage(rocksdb::Transaction& tx,
-                                  const std::vector<unsigned char>& output) {
+void AggregatorStore::saveSend(rocksdb::Transaction& tx,
+                               const std::vector<unsigned char>& output) {
     MessageSaver{}.saveNext(tx, output);
 }
 
-std::vector<char> AggregatorStore::getMessage(uint64_t index) const {
+std::vector<char> AggregatorStore::getSend(uint64_t index) const {
     auto tx = data_storage->beginTransaction();
     auto value = MessageSaver{}.load(*tx, index);
     return {value.begin(), value.end()};

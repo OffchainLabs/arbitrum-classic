@@ -27,6 +27,7 @@ set(LIB_HEADERS
   include/data_storage/checkpointedmachine.hpp
   include/data_storage/datastorage.hpp
   include/data_storage/keyvaluestore.hpp
+  include/data_storage/inboxmessage.hpp
   include/data_storage/messageentry.hpp
   include/data_storage/messagestore.hpp
   include/data_storage/storageresult.hpp
@@ -50,6 +51,7 @@ set(LIB_SOURCES
   src/checkpointedmachine.cpp
   src/datastorage.cpp
   src/keyvaluestore.cpp
+  src/inboxmessage.cpp
   src/messageentry.cpp
   src/messagestore.cpp
   src/value/code.cpp

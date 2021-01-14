@@ -16,7 +16,8 @@
 
 #include <data_storage/checkpointedmachine.hpp>
 
-#include <boost/endian/conversion.hpp>
+#include "value/utils.hpp"
+
 #include <data_storage/aggregator.hpp>
 #include <data_storage/checkpoint.hpp>
 #include <data_storage/datastorage.hpp>
@@ -28,27 +29,9 @@
 
 namespace {
 constexpr auto initial_slice_label = "initial";
-constexpr auto message_number_size = 32;
-
-std::array<char, message_number_size> toKey(const uint64_t& message_number) {
-    // TODO need to fix
-    std::array<char, message_number_size> key{};
-
-    auto big_message_number = boost::endian::native_to_big(message_number);
-    to_big_endian(big_message_number, key.begin());
-
-    return key;
-}
-
-uint64_t keyToMessageNumber(const rocksdb::Slice& key) {
-    // TODO need to fix
-    auto big_message_number = intx::be::unsafe::load<uint256_t>(
-        reinterpret_cast<const unsigned char*>(key.data()));
-
-    return intx::narrow_cast<uint64_t>(big_message_number);
-}
 
 DbResult<Checkpoint> getCheckpointUsingKey(Transaction& transaction,
+                                           uint256_t message_sequence_number,
                                            rocksdb::Slice key_slice) {
     std::string returned_value;
 
@@ -59,7 +42,7 @@ DbResult<Checkpoint> getCheckpointUsingKey(Transaction& transaction,
 
     std::vector<unsigned char> saved_value(returned_value.begin(),
                                            returned_value.end());
-    auto parsed_state = extractCheckpoint(saved_value);
+    auto parsed_state = extractCheckpoint(message_sequence_number, saved_value);
 
     return DbResult<Checkpoint>{status, 1, parsed_state};
 }
@@ -93,11 +76,12 @@ void CheckpointedMachine::initialize(LoadedExecutable executable) {
     auto s =
         tx->transaction->Put(rocksdb::Slice(initial_slice_label), value_slice);
     if (!s.ok()) {
-        throw std::runtime_error("failed to save initial values into db");
+        throw std::runtime_error(
+            "failed to save initial machine values into db");
     }
     s = tx->commit();
     if (!s.ok()) {
-        throw std::runtime_error("failed to commit values into db");
+        throw std::runtime_error("failed to commit initial machine into db");
     }
 }
 
@@ -148,12 +132,14 @@ void CheckpointedMachine::saveCheckpoint() {
     }
 
     // TODO Still need to populate the following:
-    // inbox_accumulator_hash
-    // block_hash
-    // block_height
+    // processed_message_accumulator_hash
+    // reorg_index
 
-    auto key = toKey(pending_checkpoint.messages_output);
-    rocksdb::Slice key_slice(key.begin(), key.size());
+    std::vector<unsigned char> key;
+    marshal_uint256_t(pending_checkpoint.message_sequence_number_processed,
+                      key);
+    rocksdb::Slice key_slice(reinterpret_cast<const char*>(key.data()),
+                             key.size());
     auto serialized_checkpoint = serializeCheckpoint(pending_checkpoint);
     std::string value_str(serialized_checkpoint.begin(),
                           serialized_checkpoint.end());
@@ -165,14 +151,15 @@ void CheckpointedMachine::saveCheckpoint() {
                                  put_status.ToString());
     }
 
-    auto commit_status = tx->commit();
+    rocksdb::Status commit_status = tx->commit();
     if (!commit_status.ok()) {
-        throw std::runtime_error("error saving assertion: " +
+        throw std::runtime_error("error saving checkpoint: " +
                                  commit_status.ToString());
     }
 }
 
-void CheckpointedMachine::saveAssertion(const Assertion& assertion) {
+void CheckpointedMachine::saveAssertion(uint256_t first_message_sequence_number,
+                                        const Assertion& assertion) {
     auto tx = Transaction::makeTransaction(data_storage);
 
     for (const auto& log : assertion.logs) {
@@ -181,10 +168,10 @@ void CheckpointedMachine::saveAssertion(const Assertion& assertion) {
         AggregatorStore::saveLog(*tx->transaction, logData);
     }
 
-    for (const auto& msg : assertion.outMessages) {
-        std::vector<unsigned char> msgData;
-        marshal_value(msg, msgData);
-        AggregatorStore::saveMessage(*tx->transaction, msgData);
+    for (const auto& send : assertion.sends) {
+        std::vector<unsigned char> sendData;
+        marshal_value(send, sendData);
+        AggregatorStore::saveSend(*tx->transaction, sendData);
     }
 
     auto status = tx->commit();
@@ -193,72 +180,45 @@ void CheckpointedMachine::saveAssertion(const Assertion& assertion) {
                                  status.ToString());
     }
 
-    pending_checkpoint.step_count += +assertion.stepCount;
-    pending_checkpoint.messages_read_count += assertion.inbox_messages_consumed;
-    pending_checkpoint.logs_output += assertion.logs.size();
-    pending_checkpoint.messages_output += assertion.outMessages.size();
     pending_checkpoint.arb_gas_used += assertion.gasCount;
+    pending_checkpoint.message_sequence_number_processed =
+        first_message_sequence_number + assertion.inbox_messages_consumed - 1;
+    pending_checkpoint.step_count += assertion.stepCount;
+    pending_checkpoint.send_count += assertion.sends.size();
+    pending_checkpoint.log_count += assertion.logs.size();
 }
 
-uint64_t CheckpointedMachine::reorgToMessageOrBefore(
-    const uint64_t& message_number) {
+uint256_t CheckpointedMachine::reorgToMessageOrBefore(
+    const uint256_t& message_sequence_number) {
     auto tx = Transaction::makeTransaction(data_storage);
 
-    auto result = getCheckpointAtOrBeforeMessage(message_number);
+    auto result = getCheckpointAtOrBeforeMessage(message_sequence_number);
     if (!result.status.ok()) {
         throw std::runtime_error("error getting checkpoint for reorg: " +
                                  result.status.ToString());
     }
 
-    ValueCache value_cache{};
+    // Truncate sends and logs
     pending_checkpoint = result.data;
     static_cast<AggregatorStore>(data_storage)
-        .reorg(pending_checkpoint.block_height,
-               pending_checkpoint.messages_read_count,
-               pending_checkpoint.logs_output);
+        .reorg(pending_checkpoint.block_height, pending_checkpoint.send_count,
+               pending_checkpoint.log_count);
 
+    ValueCache value_cache{};
     machine = getMachineUsingStateKeys(
         *tx, pending_checkpoint.machine_state_keys, value_cache);
 
-    // TODO truncate messages and logs
-
-    return pending_checkpoint.messages_read_count;
-}
-
-rocksdb::Status CheckpointedMachine::deleteCheckpoint(
-    const uint64_t& message_number) {
-    auto tx = Transaction::makeTransaction(data_storage);
-
-    auto key = toKey(message_number);
-    rocksdb::Slice key_slice(key.begin(), key.size());
-    auto checkpoint_result = getCheckpointUsingKey(*tx, key_slice);
-    if (!checkpoint_result.status.ok()) {
-        throw std::runtime_error("error getting checkpoint to delete: " +
-                                 checkpoint_result.status.ToString());
-    }
-
-    deleteMachineState(*tx, checkpoint_result.data.machine_state_keys);
-
-    auto delete_status = tx->datastorage->txn_db->DB::Delete(
-        rocksdb::WriteOptions(), tx->datastorage->checkpoint_column.get(),
-        key_slice);
-
-    auto commit_status = tx->commit();
-    if (!commit_status.ok()) {
-        throw std::runtime_error("error committing checkpoint delete: " +
-                                 commit_status.ToString());
-    }
-
-    return delete_status;
+    return pending_checkpoint.message_sequence_number_processed;
 }
 
 DbResult<Checkpoint> CheckpointedMachine::getCheckpoint(
-    const uint64_t& message_number) const {
+    const uint256_t& message_sequence_number) const {
     auto tx = Transaction::makeTransaction(data_storage);
-    auto key = toKey(message_number);
 
-    rocksdb::Slice key_slice(key.begin(), key.size());
-    return getCheckpointUsingKey(*tx, key_slice);
+    std::vector<unsigned char> key;
+    marshal_uint256_t(message_sequence_number, key);
+
+    return getCheckpointUsingKey(*tx, uint256_t(), vecToSlice(key));
 }
 
 bool CheckpointedMachine::isEmpty() const {
@@ -270,32 +230,35 @@ bool CheckpointedMachine::isEmpty() const {
     return !it->Valid();
 }
 
-uint64_t CheckpointedMachine::maxMessageNumber() {
+uint256_t CheckpointedMachine::maxMessageSequenceNumber() {
     auto tx = Transaction::makeTransaction(data_storage);
     auto it =
         std::unique_ptr<rocksdb::Iterator>(tx->datastorage->txn_db->NewIterator(
             rocksdb::ReadOptions(), tx->datastorage->checkpoint_column.get()));
     it->SeekToLast();
     if (it->Valid()) {
-        return keyToMessageNumber(it->key());
+        auto keyBuf = it->key().data();
+        return deserializeUint256t(keyBuf);
     } else {
         return 0;
     }
 }
 
 DbResult<Checkpoint> CheckpointedMachine::getCheckpointAtOrBeforeMessage(
-    const uint64_t& message_number) {
+    const uint256_t& message_sequence_number) {
     auto tx = Transaction::makeTransaction(data_storage);
     auto it =
         std::unique_ptr<rocksdb::Iterator>(tx->datastorage->txn_db->NewIterator(
             rocksdb::ReadOptions(), tx->datastorage->checkpoint_column.get()));
-    auto key = toKey(message_number);
-    rocksdb::Slice key_slice(key.begin(), key.size());
+    std::vector<unsigned char> key;
+    marshal_uint256_t(message_sequence_number, key);
+    auto key_slice = vecToSlice(key);
     it->SeekForPrev(key_slice);
     if (it->Valid()) {
         std::vector<unsigned char> saved_value(
             it->value().data(), it->value().data() + it->value().size());
-        auto parsed_state = extractCheckpoint(saved_value);
+        auto parsed_state =
+            extractCheckpoint(message_sequence_number, saved_value);
         return DbResult<Checkpoint>{rocksdb::Status::OK(), 1, parsed_state};
     } else {
         return DbResult<Checkpoint>{rocksdb::Status::NotFound(), 0, {}};
@@ -375,39 +338,20 @@ std::unique_ptr<Machine> CheckpointedMachine::getMachineUsingStateKeys(
     return std::make_unique<Machine>(state);
 }
 
-Assertion CheckpointedMachine::run(uint64_t stepCount,
-                                   std::vector<Tuple> inbox_messages,
-                                   std::chrono::seconds wallLimit) {
+Assertion CheckpointedMachine::run(
+    uint64_t gas_limit,
+    bool hard_gas_limit,
+    uint256_t first_message_sequence_number,
+    const std::vector<rocksdb::Slice>& inbox_messages,
+    nonstd::optional<uint256_t> final_block) {
     auto assertion =
-        machine->run(stepCount, std::move(inbox_messages), wallLimit);
+        machine->run(gas_limit, hard_gas_limit, inbox_messages, final_block);
 
-    saveAssertion(assertion);
+    if (assertion.inbox_messages_consumed != inbox_messages.size()) {
+        throw std::runtime_error("Not all inbox messages were consumed");
+    }
 
-    return assertion;
-}
-
-Assertion CheckpointedMachine::runCallServer(uint64_t stepCount,
-                                             std::vector<Tuple> inbox_messages,
-                                             std::chrono::seconds wallLimit,
-                                             value fake_inbox_peek_value) {
-    auto assertion =
-        machine->runCallServer(stepCount, std::move(inbox_messages), wallLimit,
-                               std::move(fake_inbox_peek_value));
-
-    saveAssertion(assertion);
-
-    return assertion;
-}
-
-Assertion CheckpointedMachine::runSideloaded(uint64_t stepCount,
-                                             std::vector<Tuple> inbox_messages,
-                                             std::chrono::seconds wallLimit,
-                                             Tuple sideload_value) {
-    auto assertion =
-        machine->runSideloaded(stepCount, std::move(inbox_messages), wallLimit,
-                               std::move(sideload_value));
-
-    saveAssertion(assertion);
+    saveAssertion(first_message_sequence_number, assertion);
 
     return assertion;
 }

@@ -206,16 +206,26 @@ int deleteData(CArbStorage* storage_ptr, const void* key, int key_length) {
 }
 
 RawAssertion arbExecuteAssertion(CArbStorage* storage_ptr,
-                                 uint64_t maxSteps,
+                                 uint64_t gas_limit,
+                                 int hard_gas_limit,
                                  void* inbox_messages,
-                                 uint64_t message_count,
-                                 uint64_t wallLimit) {
+                                 void* first_message_sequence_number_ptr,
+                                 void* final_block) {
     auto storage = static_cast<ArbStorage*>(storage_ptr);
-    auto messages = getInboxMessages(inbox_messages, message_count);
+    auto messages = getInboxMessages(inbox_messages);
+    auto first_message_sequence_number =
+        receiveUint256(first_message_sequence_number_ptr);
+    nonstd::optional<uint256_t> final_block;
+    if (final_block == nullptr) {
+        final_block = nonstd::nullopt;
+    } else {
+        final_block = receiveUint256(final_block);
+    }
 
     try {
         auto assertion = storage->getCheckpointedMachine()->run(
-            maxSteps, std::move(messages), std::chrono::seconds{wallLimit});
+            gas_limit, hard_gas_limit, first_message_sequence_number, messages,
+            final_block);
 
         return makeRawAssertion(assertion);
     } catch (const std::exception& e) {

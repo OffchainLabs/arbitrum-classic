@@ -43,17 +43,17 @@ TEST_CASE("Aggregator tests") {
     }
 
     SECTION("messages") {
-        REQUIRE(store->messageCount() == 0);
-        CHECK_THROWS(store->getMessage(0));
+        REQUIRE(store->sendCount() == 0);
+        CHECK_THROWS(store->getSend(0));
         std::vector<unsigned char> sample_message{1, 2, 3, 4};
         std::vector<char> sample_message_signed{1, 2, 3, 4};
         auto tx = storage->beginTransaction();
         /* TODO
-        store->saveMessage(*tx, sample_message);
+        store->saveSend(*tx, sample_message);
         tx = nullptr;
-        REQUIRE(store->messageCount() == 1);
+        REQUIRE(store->sendCount() == 1);
         REQUIRE(store->getMessage(0) == sample_message_signed);
-        CHECK_THROWS(store->getMessage(1));
+        CHECK_THROWS(store->getSend(1));
         */
     }
 
@@ -72,9 +72,9 @@ TEST_CASE("Aggregator tests") {
         auto tx = storage->beginTransaction();
         store->saveLog(*tx, data);
         store->saveLog(*tx, data);
-        store->saveMessage(*tx, data);
-        store->saveMessage(*tx, data);
-        store->saveMessage(*tx, data);
+        store->saveSend(*tx, data);
+        store->saveSend(*tx, data);
+        store->saveSend(*tx, data);
         tx = nullptr;
         std::vector<char> block_data{1, 2, 3, 4};
         store->saveBlock(50, block_data);
@@ -87,7 +87,7 @@ TEST_CASE("Aggregator tests") {
         tx = storage->beginTransaction();
         store->saveLog(*tx, data);
         store->saveLog(*tx, data);
-        store->saveMessage(*tx, data);
+        store->saveSend(*tx, data);
         tx = nullptr;
         std::vector<char> block_data2{1, 2, 3, 5};
         store->saveBlock(52, block_data2);

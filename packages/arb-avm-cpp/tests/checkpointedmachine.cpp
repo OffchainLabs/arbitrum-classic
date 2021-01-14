@@ -31,10 +31,10 @@ TEST_CASE("CheckpointedMachine tests") {
     SECTION("CheckpointedMachine basic") {
         REQUIRE(store->initialized());
         REQUIRE(store->isEmpty());
-        REQUIRE(store->maxMessageNumber() == 0);
+        REQUIRE(store->maxMessageSequenceNumber() == 0);
 
         store->saveCheckpoint();
         REQUIRE(!store->isEmpty());
-        REQUIRE(store->maxMessageNumber() == 0);
+        REQUIRE(store->maxMessageSequenceNumber() == 0);
     }
 }

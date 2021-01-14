@@ -24,7 +24,7 @@ class MessageStore {
     nonstd::optional<rocksdb::Status> addMessages(
         const uint256_t first_sequence_number,
         const uint64_t block_height,
-        const std::vector<Tuple>& messages,
+        const std::vector<rocksdb::Slice>& messages,
         const std::vector<uint256_t>& inbox_hashes,
         const uint256_t& previous_inbox_hash);
     nonstd::optional<MessageEntry> getNextMessage();
@@ -40,7 +40,7 @@ rocksdb::Status addMessagesWithoutCheck(
     Transaction& tx,
     const uint256_t first_sequence_number,
     const uint64_t block_height,
-    const std::vector<Tuple>& messages,
+    const std::vector<rocksdb::Slice>& messages,
     const std::vector<uint256_t>& inbox_hashes);
 
 #endif  // data_storage_messagestore_hpp

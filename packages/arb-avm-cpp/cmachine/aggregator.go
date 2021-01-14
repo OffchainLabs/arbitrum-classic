@@ -43,6 +43,14 @@ type AggregatorStore struct {
 	c unsafe.Pointer
 }
 
+func (as *AggregatorStore) SaveLog(val value.Value) error {
+	panic("implement me")
+}
+
+func (as *AggregatorStore) SaveMessage(val value.Value) error {
+	panic("implement me")
+}
+
 func deleteAggregatorStore(bs *AggregatorStore) {
 	C.deleteAggregatorStore(bs.c)
 }
@@ -188,11 +196,11 @@ func (as *AggregatorStore) GetBlock(height uint64) (*machine.BlockInfo, error) {
 	return info, nil
 }
 
-func (as *AggregatorStore) Reorg(height uint64, messageCount uint64, logCount uint64) error {
+func (as *AggregatorStore) Reorg(height uint64, sendCount uint64, logCount uint64) error {
 	if C.aggregatorReorg(
 		as.c,
 		C.uint64_t(height),
-		C.uint64_t(messageCount),
+		C.uint64_t(sendCount),
 		C.uint64_t(logCount),
 	) == 0 {
 		return errors.New("failed to restore block")

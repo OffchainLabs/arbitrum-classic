@@ -23,37 +23,43 @@
 
 #include <boost/endian/conversion.hpp>
 
-Checkpoint extractCheckpoint(const std::vector<unsigned char>& stored_state) {
+Checkpoint extractCheckpoint(const uint256_t arb_gas_used,
+                             const std::vector<unsigned char>& stored_state) {
     auto current_iter = stored_state.begin();
 
-    auto step_count = extractUint64(current_iter);
-    auto messages_read_count = extractUint64(current_iter);
-    auto inbox_accumulator_hash = extractUint256(current_iter);
-    auto block_hash = extractUint256(current_iter);
+    auto message_sequence_number_processed = extractUint256(current_iter);
+    auto processed_message_accumulator_hash = extractUint256(current_iter);
+    auto reorg_index = extractUint64(current_iter);
     auto block_height = extractUint64(current_iter);
-    auto logs_output = extractUint64(current_iter);
-    auto messages_output = extractUint64(current_iter);
-    auto arb_gas_used = extractUint256(current_iter);
+    auto step_count = extractUint64(current_iter);
+    auto send_count = extractUint64(current_iter);
+    auto log_count = extractUint64(current_iter);
 
     auto machineStateKeys = extractMachineStateKeys(current_iter);
 
-    return Checkpoint{
-        step_count,      messages_read_count, inbox_accumulator_hash,
-        block_hash,      block_height,        logs_output,
-        messages_output, arb_gas_used,        machineStateKeys};
+    return Checkpoint{arb_gas_used,
+                      message_sequence_number_processed,
+                      processed_message_accumulator_hash,
+                      reorg_index,
+                      block_height,
+                      step_count,
+                      send_count,
+                      log_count,
+                      machineStateKeys};
 }
 
 std::vector<unsigned char> serializeCheckpoint(const Checkpoint& state_data) {
     std::vector<unsigned char> state_data_vector;
 
-    marshal_uint64_t(state_data.step_count, state_data_vector);
-    marshal_uint64_t(state_data.messages_read_count, state_data_vector);
-    marshal_uint256_t(state_data.inbox_accumulator_hash, state_data_vector);
-    marshal_uint256_t(state_data.block_hash, state_data_vector);
+    marshal_uint256_t(state_data.message_sequence_number_processed,
+                      state_data_vector);
+    marshal_uint256_t(state_data.processed_message_accumulator_hash,
+                      state_data_vector);
+    marshal_uint64_t(state_data.reorg_index, state_data_vector);
     marshal_uint64_t(state_data.block_height, state_data_vector);
-    marshal_uint64_t(state_data.logs_output, state_data_vector);
-    marshal_uint64_t(state_data.messages_output, state_data_vector);
-    marshal_uint256_t(state_data.arb_gas_used, state_data_vector);
+    marshal_uint64_t(state_data.step_count, state_data_vector);
+    marshal_uint64_t(state_data.send_count, state_data_vector);
+    marshal_uint64_t(state_data.log_count, state_data_vector);
 
     serializeMachineStateKeys(state_data.machine_state_keys, state_data_vector);
 

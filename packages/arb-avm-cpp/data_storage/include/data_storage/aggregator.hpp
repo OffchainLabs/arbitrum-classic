@@ -39,7 +39,7 @@ class AggregatorStore {
     std::shared_ptr<DataStorage> data_storage;
 
    public:
-    AggregatorStore(std::shared_ptr<DataStorage> data_storage_)
+    explicit AggregatorStore(std::shared_ptr<DataStorage> data_storage_)
         : data_storage(std::move(data_storage_)) {}
 
     uint64_t logCount() const;
@@ -47,11 +47,10 @@ class AggregatorStore {
                         const std::vector<unsigned char>& log);
     std::vector<char> getLog(uint64_t index) const;
 
-    uint64_t messageCount() const;
-    static void saveMessage(rocksdb::Transaction& tx,
-                            const std::vector<unsigned char>& output);
-    std::vector<char> getMessage(uint64_t index) const;
-
+    uint64_t sendCount() const;
+    static void saveSend(rocksdb::Transaction& tx,
+                         const std::vector<unsigned char>& output);
+    std::vector<char> getSend(uint64_t index) const;
     std::pair<uint64_t, std::vector<char>> latestBlock() const;
     void saveBlock(uint64_t height, const std::vector<char>& data);
     std::vector<char> getBlock(uint64_t height) const;
@@ -59,14 +58,11 @@ class AggregatorStore {
     nonstd::optional<uint64_t> getPossibleRequestInfo(
         const uint256_t& request_id) const;
     void saveRequest(const uint256_t& request_id, uint64_t log_index);
-
     nonstd::optional<uint64_t> getPossibleBlock(
         const uint256_t& block_hash) const;
     void saveBlockHash(const uint256_t& block_hash, uint64_t block_height);
 
-    void reorg(uint64_t block_height,
-               uint64_t message_count,
-               uint64_t log_count);
+    void reorg(uint64_t block_height, uint64_t send_count, uint64_t log_count);
 };
 
 #endif /* aggregator_hpp */
