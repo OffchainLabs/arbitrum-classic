@@ -20,25 +20,30 @@ pragma solidity ^0.6.11;
 
 import "arbos-contracts/contracts/ArbSys.sol";
 import "arb-bridge-eth/contracts/rollup/IInbox.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "arb-bridge-eth/contracts/rollup/IOutbox.sol";
+import "arb-bridge-eth/contracts/rollup/IOutbox.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract ArbERC20 is ERC20 {
+    address public l1Address;
+
     constructor(
-        string memory name,
-        string memory symbol,
-        uint8 decimals
-    ) public ERC20(name, symbol) {
-        _setupDecimals(decimals);
+        address _l1Address,
+        string memory _name,
+        string memory _symbol,
+        uint8 _decimals
+    ) public ERC20(_name, _symbol) {
+        _setupDecimals(_decimals);
+        l1Address = _l1Address;
     }
 
-    function mintFromL1(address account, uint256 amount) public {
+    function mintFromL1(address account, uint256 amount) external {
         // This ensures that this method can only be called from the L1 pair of this contract
         require(tx.origin == address(this));
         _mint(account, amount);
     }
 
-    function withdraw(address destination, uint256 amount) public {
+    function withdraw(address destination, uint256 amount) external {
         _burn(msg.sender, amount);
         ArbSys(100).sendTxToL1(
             address(this),
@@ -47,21 +52,34 @@ contract ArbERC20 is ERC20 {
     }
 }
 
-contract EthERC20Escrow is Ownable {
-    address public inbox;
+contract EthERC20Escrow {
     address public wrappedToken;
-    mapping(address => bool) pairedRollups;
+    string name;
+    string symbol;
+    uint8 decimals = 18;
+    mapping(address => uint256) balances;
 
     constructor(address _wrappedToken) public {
         wrappedToken = _wrappedToken;
+
+        try ERC20(_wrappedToken).name() returns (string memory _name) {
+            name = _name;
+        } catch {}
+
+        try ERC20(_wrappedToken).symbol() returns (string memory _symbol) {
+            symbol = _symbol;
+        } catch {}
+
+        try ERC20(_wrappedToken).decimals() returns (uint8 _decimals) {
+            decimals = _decimals;
+        } catch {}
     }
 
     function connectToChain(
         address rollupChain,
         uint256 maxGas,
         uint256 gasPriceBid
-    ) external payable onlyOwner {
-        ERC20 t = ERC20(wrappedToken);
+    ) external payable {
         // Pay for gas
         IInbox(rollupChain).depositEthMessage{ value: msg.value }(address(this));
         IInbox(rollupChain).deployL2ContractPair(
@@ -70,7 +88,7 @@ contract EthERC20Escrow is Ownable {
             0, // payment
             abi.encodePacked(
                 type(ArbERC20).creationCode,
-                abi.encode(t.name(), t.symbol(), t.decimals())
+                abi.encode(wrappedToken, name, symbol, decimals)
             )
         );
     }
@@ -82,8 +100,8 @@ contract EthERC20Escrow is Ownable {
         uint256 maxGas,
         uint256 gasPriceBid
     ) external payable {
-        require(pairedRollups[rollupChain]);
         require(IERC20(wrappedToken).transferFrom(msg.sender, address(this), amount));
+        balances[msg.sender] += amount;
         // Pay for gas
         IInbox(rollupChain).depositEthMessage{ value: msg.value }(address(this));
         IInbox(rollupChain).sendL2Message(
@@ -98,7 +116,12 @@ contract EthERC20Escrow is Ownable {
     }
 
     function withdrawFromL2(address destination, uint256 amount) external {
-        require(pairedRollups[msg.sender]);
+        require(balances[msg.sender] >= amount, "LOW_BALANCE");
+        require(IOutbox(msg.sender).l2ToL1Sender() == address(this), "L2_SENDER");
+
+        balances[msg.sender] -= amount;
+
+        // Unsafe external call must occur below checks and effects
         require(IERC20(wrappedToken).transfer(destination, amount));
     }
 }
