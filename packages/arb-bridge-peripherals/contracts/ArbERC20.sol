@@ -81,7 +81,9 @@ contract EthERC20Escrow {
         uint256 gasPriceBid
     ) external payable {
         // Pay for gas
-        IInbox(rollupChain).depositEthMessage{ value: msg.value }(address(this));
+        if (msg.value > 0) {
+            IInbox(rollupChain).depositEthMessage{ value: msg.value }(address(this));
+        }
         IInbox(rollupChain).deployL2ContractPair(
             maxGas, // max gas
             gasPriceBid, // gas price
@@ -101,9 +103,11 @@ contract EthERC20Escrow {
         uint256 gasPriceBid
     ) external payable {
         require(IERC20(wrappedToken).transferFrom(msg.sender, address(this), amount));
-        balances[msg.sender] += amount;
+        balances[rollupChain] += amount;
         // Pay for gas
-        IInbox(rollupChain).depositEthMessage{ value: msg.value }(address(this));
+        if (msg.value > 0) {
+            IInbox(rollupChain).depositEthMessage{ value: msg.value }(address(this));
+        }
         IInbox(rollupChain).sendL2Message(
             abi.encodePacked(
                 maxGas,
