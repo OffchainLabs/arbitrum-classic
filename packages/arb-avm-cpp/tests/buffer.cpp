@@ -16,7 +16,6 @@
 
 #include "helper.hpp"
 
-#include <data_storage/checkpointstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/value.hpp>
 
@@ -26,20 +25,20 @@
 
 #include <ethash/keccak.hpp>
 
-uint256_t hash_buffer(uint8_t *buf, int offset, int sz, bool pack) {
+uint256_t hash_buffer(uint8_t* buf, int offset, int sz, bool pack) {
     if (sz == 32) {
-        auto hash_val = ethash::keccak256(buf+offset, 32);
+        auto hash_val = ethash::keccak256(buf + offset, 32);
         return intx::be::load<uint256_t>(hash_val);
     }
-    auto h2 = hash_buffer(buf, offset+sz/2, sz/2, false);
+    auto h2 = hash_buffer(buf, offset + sz / 2, sz / 2, false);
     if (pack && hash(0) == h2) {
-        return hash_buffer(buf, offset, sz/2, true);
+        return hash_buffer(buf, offset, sz / 2, true);
     }
-    auto h1 = hash_buffer(buf, offset, sz/2, false);
+    auto h1 = hash_buffer(buf, offset, sz / 2, false);
     return hash(h1, h2);
 }
 
-uint256_t hash_acc(uint8_t *buf, int sz) {
+uint256_t hash_acc(uint8_t* buf, int sz) {
     Buffer acc;
     for (int i = 0; i < sz; i++) {
         acc = acc.set(i, buf[i]);
@@ -99,4 +98,3 @@ TEST_CASE("Buffer") {
         REQUIRE(buf.lastIndex() == 300000);
     }
 }
-

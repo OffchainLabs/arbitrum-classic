@@ -210,16 +210,16 @@ RawAssertion arbExecuteAssertion(CArbStorage* storage_ptr,
                                  int hard_gas_limit,
                                  void* inbox_messages,
                                  void* first_message_sequence_number_ptr,
-                                 void* final_block) {
+                                 void* final_block_ptr) {
     auto storage = static_cast<ArbStorage*>(storage_ptr);
     auto messages = getInboxMessages(inbox_messages);
     auto first_message_sequence_number =
         receiveUint256(first_message_sequence_number_ptr);
     nonstd::optional<uint256_t> final_block;
-    if (final_block == nullptr) {
+    if (final_block_ptr == nullptr) {
         final_block = nonstd::nullopt;
     } else {
-        final_block = receiveUint256(final_block);
+        final_block = receiveUint256(final_block_ptr);
     }
 
     try {
