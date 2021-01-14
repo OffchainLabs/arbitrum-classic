@@ -18,17 +18,22 @@
 
 pragma solidity ^0.6.11;
 
+import "./IOutbox.sol";
 import "./Messages.sol";
 
 import "../libraries/MerkleLib.sol";
 import "../libraries/BytesLib.sol";
 
-contract Outbox {
+contract Outbox is IOutbox {
     using BytesLib for bytes;
 
     uint8 internal constant MSG_ROOT = 0;
 
     OutboxEntry[] outboxes;
+
+    address public override l2ToL1Sender;
+    uint128 public override l2ToL1Block;
+    uint128 public override l2ToL1Timestamp;
 
     function processOutgoingMessages(bytes memory sendsData, uint256[] memory sendLengths)
         internal
@@ -48,19 +53,39 @@ contract Outbox {
 
     function executeTransaction(
         uint256 outboxIndex,
-        bytes calldata _proof,
-        uint256 _index,
+        bytes calldata proof,
+        uint256 index,
+        address l2Sender,
         address destAddr,
+        uint256 l2Block,
+        uint256 l2Timestamp,
         uint256 amount,
         bytes calldata calldataForL1
-    ) external {
+    ) external override {
         bytes32 userTx =
-            keccak256(abi.encodePacked(uint256(uint160(bytes20(destAddr))), amount, calldataForL1));
+            keccak256(
+                abi.encodePacked(
+                    uint256(uint160(bytes20(l2Sender))),
+                    uint256(uint160(bytes20(destAddr))),
+                    l2Block,
+                    l2Timestamp,
+                    amount,
+                    calldataForL1
+                )
+            );
 
-        spendOutput(outboxIndex, _proof, _index, userTx);
+        spendOutput(outboxIndex, proof, index, userTx);
+
+        l2ToL1Sender = l2Sender;
+        l2ToL1Block = uint128(l2Block);
+        l2ToL1Timestamp = uint128(l2Timestamp);
 
         (bool success, ) = destAddr.call{ value: amount }(calldataForL1);
         require(success);
+
+        l2ToL1Sender = address(0);
+        l2ToL1Block = 0;
+        l2ToL1Timestamp = 0;
     }
 
     function spendOutput(
