@@ -28,38 +28,43 @@
 
 struct Checkpoint {
    public:
-    uint64_t step_count{};
-    uint64_t messages_read_count{};
-    uint256_t inbox_accumulator_hash;
-    uint256_t block_hash;
-    uint64_t block_height{};
-    uint64_t logs_output{};
-    uint64_t messages_output{};
+    // arb_gas_used not serialized/deserialized because it is part of index
     uint256_t arb_gas_used;
+
+    uint256_t message_sequence_number_processed;
+    uint256_t processed_message_accumulator_hash;
+    uint64_t reorg_index;
+
+    uint64_t block_height;
+    uint64_t step_count;
+    uint64_t send_count;
+    uint64_t log_count;
     MachineStateKeys machine_state_keys{};
 
     Checkpoint() = default;
-    Checkpoint(uint64_t step_count,
-               uint64_t messages_read_count,
-               uint256_t inbox_accumulator_hash,
-               uint256_t block_hash,
+    Checkpoint(uint256_t arb_gas_used,
+               uint256_t message_sequence_number_processed,
+               uint256_t processed_message_accumulator_hash,
+               uint64_t reorg_index,
                uint64_t block_height,
-               uint64_t logs_output,
-               uint64_t messages_output,
-               uint256_t arb_gas_used,
+               uint64_t step_count,
+               uint64_t send_count,
+               uint64_t log_count,
                MachineStateKeys machine_state_keys)
-        : step_count(step_count),
-          messages_read_count(messages_read_count),
-          inbox_accumulator_hash(inbox_accumulator_hash),
-          block_hash(block_hash),
+        : arb_gas_used(arb_gas_used),
+          message_sequence_number_processed(message_sequence_number_processed),
+          processed_message_accumulator_hash(
+              processed_message_accumulator_hash),
+          reorg_index(reorg_index),
           block_height(block_height),
-          logs_output(logs_output),
-          messages_output(messages_output),
-          arb_gas_used(arb_gas_used),
+          step_count(step_count),
+          send_count(send_count),
+          log_count(log_count),
           machine_state_keys(machine_state_keys) {}
 };
 
-Checkpoint extractCheckpoint(const std::vector<unsigned char>& stored_state);
+Checkpoint extractCheckpoint(uint256_t arb_gas_used,
+                             const std::vector<unsigned char>& stored_state);
 
 std::vector<unsigned char> serializeCheckpoint(const Checkpoint& state_data);
 

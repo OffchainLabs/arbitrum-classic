@@ -62,6 +62,20 @@ inline uint256_t receiveUint256(const void* data) {
     return deserializeUint256t(data_ptr);
 }
 
+inline std::vector<uint256_t> receiveUint256Vector(const void* data,
+                                                   size_t size) {
+    auto ptr = static_cast<const char*>(data);
+    std::vector<uint256_t> vec;
+    vec.reserve(size);
+    for (size_t i = 0; i < size; i++) {
+        auto int_val = receiveUint256(ptr);
+        vec.push_back(int_val);
+        ptr += sizeof(uint256_t);
+    }
+
+    return vec;
+}
+
 inline void* returnUint256(const uint256_t& val) {
     std::vector<unsigned char> serializedVal;
     marshal_uint256_t(val, serializedVal);
@@ -99,7 +113,7 @@ inline ByteSlice returnValueResult(const DbResult<value>& res) {
 
 inline RawAssertion makeRawAssertion(Assertion& assertion) {
     std::vector<unsigned char> outMsgData;
-    for (const auto& outMsg : assertion.outMessages) {
+    for (const auto& outMsg : assertion.sends) {
         marshal_value(outMsg, outMsgData);
     }
     std::vector<unsigned char> logData;
@@ -114,7 +128,7 @@ inline RawAssertion makeRawAssertion(Assertion& assertion) {
 
     return {assertion.inbox_messages_consumed,
             returnCharVector(outMsgData),
-            static_cast<int>(assertion.outMessages.size()),
+            static_cast<int>(assertion.sends.size()),
             returnCharVector(logData),
             static_cast<int>(assertion.logs.size()),
             returnCharVector(debugPrintData),
@@ -136,12 +150,14 @@ inline Tuple getTuple(void* data) {
     return nonstd::get<Tuple>(deserialize_value(charData));
 }
 
-inline std::vector<Tuple> getInboxMessages(void* data, uint64_t message_count) {
-    auto charData = reinterpret_cast<const char*>(data);
-    std::vector<Tuple> messages;
-    messages.reserve(message_count);
-    for (uint64_t i = 0; i < message_count; ++i) {
-        messages.push_back(deserialize_value(charData).get<Tuple>());
+inline std::vector<rocksdb::Slice> getInboxMessages(void* data) {
+    auto charData = reinterpret_cast<ByteSliceArray*>(data);
+    std::vector<rocksdb::Slice> messages;
+    messages.reserve(charData->count);
+    for (int i = 0; i < charData->count; ++i) {
+        messages.emplace_back(
+            static_cast<const char*>(charData->slices[i].data),
+            charData->slices[i].length);
     }
     return messages;
 }

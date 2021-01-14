@@ -16,6 +16,7 @@
 
 package arbosmachine
 
+import "C"
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -252,7 +253,7 @@ func handleDebugPrints(debugPrints []value.Value) {
 
 func (m *Machine) ExecuteAssertion(
 	maxSteps uint64,
-	messages []inbox.InboxMessage,
+	messages C.ByteSliceArray,
 	maxWallTime time.Duration,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64) {
 	assertion, debugPrints, numSteps := m.Machine.ExecuteAssertion(maxSteps, messages, maxWallTime)

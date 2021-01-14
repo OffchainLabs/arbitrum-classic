@@ -46,7 +46,7 @@ ByteSliceResult aggregatorGetLog(const CAggregatorStore* agg, uint64_t index) {
 
 Uint64Result aggregatorMessageCount(const CAggregatorStore* agg) {
     try {
-        return {static_cast<const AggregatorStore*>(agg)->messageCount(), true};
+        return {static_cast<const AggregatorStore*>(agg)->sendCount(), true};
     } catch (const std::exception&) {
         return {0, false};
     }
@@ -56,7 +56,7 @@ ByteSliceResult aggregatorGetMessage(const CAggregatorStore* agg,
                                      uint64_t index) {
     try {
         auto data = returnCharVector(
-            static_cast<const AggregatorStore*>(agg)->getMessage(index));
+            static_cast<const AggregatorStore*>(agg)->getSend(index));
         return {data, true};
     } catch (const std::exception&) {
         return {{nullptr, 0}, false};

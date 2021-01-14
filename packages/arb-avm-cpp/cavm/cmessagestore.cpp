@@ -22,22 +22,30 @@ void deleteMessageStore(CMessageStore* m) {
     delete static_cast<MessageStore*>(m);
 }
 
-/*
-Uint64Result putMessages(CMessageStore* storage_ptr,
-                const uint64_t first_message_id,
-                const uint64_t block_id,
+int putMessages(CMessageStore* storage_ptr,
+                const uint64_t first_message_sequence_number,
+                const uint64_t block_height,
                 void* inbox_messages,
-                void* inbox_hashes,
-                const uint64_t message_count,
-                const uint
-                         ) {
+                void* inbox_hashes_ptr,
+                void* previous_inbox_hash_ptr,
+                const uint) {
     auto message_store = static_cast<MessageStore*>(storage_ptr);
-    auto messages = getInboxMessages(inbox_messages, message_count);
+    auto messages = getInboxMessages(inbox_messages);
+    auto inbox_hashes = receiveUint256Vector(inbox_hashes_ptr, messages.size());
+    auto previous_inbox_hash = receiveUint256(previous_inbox_hash_ptr);
 
     try {
-        return {
-            message_store->addMessages(first_message_id, block_id, messages),
-true}; } catch (const std::exception& e) { return {0, false};
+        auto status = message_store->addMessages(
+            first_message_sequence_number, block_height, messages, inbox_hashes,
+            previous_inbox_hash);
+        if (status) {
+            return status->ok();
+        }
+
+        // Caller needs to send messages from earlier block
+        return false;
+    } catch (const std::exception& e) {
+        // TODO: Return error message
+        return false;
     }
 }
-*/

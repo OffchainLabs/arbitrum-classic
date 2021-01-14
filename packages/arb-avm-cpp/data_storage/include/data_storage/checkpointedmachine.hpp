@@ -49,15 +49,16 @@ class CheckpointedMachine {
           code(std::make_shared<Code>(
               getNextSegmentID(*makeConstTransaction()))) {}
     void saveCheckpoint();
-    void saveAssertion(const Assertion& assertion);
-    rocksdb::Status deleteCheckpoint(const uint64_t& message_number);
-    DbResult<Checkpoint> getCheckpoint(const uint64_t& message_number) const;
+    void saveAssertion(uint256_t first_message_sequence_number,
+                       const Assertion& assertion);
+    DbResult<Checkpoint> getCheckpoint(
+        const uint256_t& message_sequence_number) const;
 
     bool isEmpty() const;
-    uint64_t maxMessageNumber();
+    uint256_t maxMessageSequenceNumber();
     DbResult<Checkpoint> getCheckpointAtOrBeforeMessage(
-        const uint64_t& message_number);
-    uint64_t reorgToMessageOrBefore(const uint64_t& message_number);
+        const uint256_t& message_sequence_number);
+    uint256_t reorgToMessageOrBefore(const uint256_t& message_sequence_number);
     std::unique_ptr<Transaction> makeTransaction();
     std::unique_ptr<const Transaction> makeConstTransaction() const;
     void initialize(LoadedExecutable executable);
@@ -69,17 +70,11 @@ class CheckpointedMachine {
         Transaction& transaction,
         MachineStateKeys state_data,
         ValueCache& value_cache);
-    Assertion run(uint64_t stepCount,
-                  std::vector<Tuple> inbox_messages,
-                  std::chrono::seconds wallLimit);
-    Assertion runCallServer(uint64_t stepCount,
-                            std::vector<Tuple> inbox_messages,
-                            std::chrono::seconds wallLimit,
-                            value fake_inbox_peek_value);
-    Assertion runSideloaded(uint64_t stepCount,
-                            std::vector<Tuple> inbox_messages,
-                            std::chrono::seconds wallLimit,
-                            Tuple sideload_value);
+    Assertion run(uint64_t gas_limit,
+                  bool hard_gas_limit,
+                  uint256_t first_message_sequence_number,
+                  const std::vector<rocksdb::Slice>& inbox_messages,
+                  nonstd::optional<uint256_t> final_block);
 };
 
 #endif /* checkpointstore_hpp */

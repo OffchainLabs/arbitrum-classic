@@ -122,7 +122,7 @@ func makeExecutionAssertion(
 	beforeMachineHash common.Hash,
 	afterMachineHash common.Hash,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64) {
-	outMessagesRaw := toByteSlice(assertion.outMessages)
+	sendsRaw := toByteSlice(assertion.sends)
 	logsRaw := toByteSlice(assertion.logs)
 	debugPrints := protocol.BytesArrayToVals(toByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
 	return protocol.NewExecutionAssertion(
@@ -130,7 +130,7 @@ func makeExecutionAssertion(
 		afterMachineHash,
 		uint64(assertion.numGas),
 		uint64(assertion.inbox_messages_consumed),
-		outMessagesRaw,
+		sendsRaw,
 		uint64(assertion.outMessageCount),
 		logsRaw,
 		uint64(assertion.logCount),

@@ -30,22 +30,22 @@ struct MessageEntry {
     // sequence_number not serialized/deserialized because it is part of index
     uint256_t sequence_number{};
 
-    uint256_t message_hash;
     uint256_t inbox_hash;
     uint64_t block_height;
     bool last_message_in_block{};
+    rocksdb::Slice message;
 
     MessageEntry() = delete;
     MessageEntry(uint256_t sequence_number,
-                 uint256_t message_hash,
                  uint256_t inbox_hash,
                  uint64_t block_height,
-                 bool last_message_in_block)
+                 bool last_message_in_block,
+                 rocksdb::Slice message)
         : sequence_number(sequence_number),
-          message_hash(message_hash),
           inbox_hash(inbox_hash),
           block_height(block_height),
-          last_message_in_block(last_message_in_block) {}
+          last_message_in_block(last_message_in_block),
+          message(message) {}
 };
 
 MessageEntry extractMessageEntry(rocksdb::Slice key, rocksdb::Slice value);

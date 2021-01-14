@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include <sys/stat.h>
-#include <fstream>
 #include <iostream>
 
 #include <avm/machine.hpp>
@@ -40,34 +38,42 @@ bool validMessages(const std::vector<Tuple>& messages) {
 }
 }  // namespace
 
-Assertion Machine::executeMachine(
-    uint64_t stepCount,
-    std::chrono::seconds wallLimit,
-    std::vector<Tuple> inbox_messages,
-    Tuple sideload,
-    bool blockingSideload,
-    nonstd::optional<value> fake_inbox_peek_value) {
+Assertion Machine::run(uint64_t gas_limit,
+                       bool hard_gas_limit,
+                       const std::vector<rocksdb::Slice>& inbox_messages,
+                       const nonstd::optional<uint256_t>& final_block) {
+    // TODO
+}
+
+Assertion Machine::run(uint64_t gas_limit,
+                       bool hard_gas_limit,
+                       const std::vector<Tuple>& inbox_messages,
+                       const nonstd::optional<uint256_t>& final_block) {
     if (!validMessages(inbox_messages)) {
         throw std::runtime_error("invalid message format");
     }
 
-    machine_state.context =
-        AssertionContext{std::move(inbox_messages), std::move(sideload),
-                         blockingSideload, std::move(fake_inbox_peek_value)};
+    machine_state.context = AssertionContext{inbox_messages, final_block};
 
-    bool has_time_limit = wallLimit.count() != 0;
+    bool has_gas_limit = gas_limit != 0;
     auto start_time = std::chrono::system_clock::now();
-    while (machine_state.context.numSteps < stepCount) {
+    while (true) {
+        if (has_gas_limit) {
+            if (hard_gas_limit) {
+                if (machine_state.nextGasCost() + machine_state.context.numGas >
+                    gas_limit) {
+                    // Next step would go over gas limit
+                    break;
+                }
+            } else if (machine_state.nextGasCost() >= gas_limit) {
+                // Last step reached or went over gas limit
+                break;
+            }
+        }
+
         auto blockReason = machine_state.runOne();
         if (!nonstd::get_if<NotBlocked>(&blockReason)) {
             break;
-        }
-        if (has_time_limit && machine_state.context.numSteps % 10000 == 0) {
-            auto end_time = std::chrono::system_clock::now();
-            auto run_time = end_time - start_time;
-            if (run_time >= wallLimit) {
-                break;
-            }
         }
     }
     return {machine_state.context.numSteps,
@@ -76,28 +82,4 @@ Assertion Machine::executeMachine(
             std::move(machine_state.context.outMessage),
             std::move(machine_state.context.logs),
             std::move(machine_state.context.debug_prints)};
-}
-
-Assertion Machine::run(uint64_t stepCount,
-                       std::vector<Tuple> inbox_messages,
-                       std::chrono::seconds wallLimit) {
-    return executeMachine(stepCount, wallLimit, std::move(inbox_messages),
-                          Tuple(), false, nonstd::nullopt);
-}
-
-Assertion Machine::runCallServer(uint64_t stepCount,
-                                 std::vector<Tuple> inbox_messages,
-                                 std::chrono::seconds wallLimit,
-                                 value fake_inbox_peek_value) {
-    return executeMachine(
-        stepCount, wallLimit, std::move(inbox_messages), Tuple(), false,
-        nonstd::make_optional(std::move(fake_inbox_peek_value)));
-}
-
-Assertion Machine::runSideloaded(uint64_t stepCount,
-                                 std::vector<Tuple> inbox_messages,
-                                 std::chrono::seconds wallLimit,
-                                 Tuple sideload_value) {
-    return executeMachine(stepCount, wallLimit, std::move(inbox_messages),
-                          std::move(sideload_value), true, nonstd::nullopt);
 }

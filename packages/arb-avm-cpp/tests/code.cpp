@@ -61,9 +61,10 @@ Machine generateTestMachine() {
     return mach;
 }
 
-void checkRun(Machine& mach, uint64_t step_count_target = 6) {
-    auto assertion = mach.run(10000, {}, std::chrono::seconds{0});
-    REQUIRE(assertion.stepCount == step_count_target);
+void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
+    auto assertion = mach.run(gas_count_target, false,
+                              std::vector<rocksdb::Slice>{}, nonstd::nullopt);
+    REQUIRE(assertion.gasCount <= gas_count_target);
     auto val = mach.machine_state.stack.pop();
     REQUIRE(val == value{uint256_t{4}});
     REQUIRE(mach.machine_state.stack.stacksize() == 0);
@@ -90,7 +91,7 @@ TEST_CASE("Code serialization") {
 
     SECTION("Save different and load") {
         auto mach2 = mach;
-        mach2.run(2, {}, std::chrono::seconds{0});
+        mach2.run(7, false, std::vector<rocksdb::Slice>{}, nonstd::nullopt);
         saveMachine(*tx, mach);
         saveMachine(*tx, mach2);
 
@@ -98,7 +99,7 @@ TEST_CASE("Code serialization") {
             deleteMachine(*tx, mach.hash());
             REQUIRE(tx->commit().ok());
             auto mach3 = storage.getMachine(mach2.hash(), value_cache);
-            checkRun(*mach3, 4);
+            checkRun(*mach3, 14);
         }
 
         SECTION("Delete second") {

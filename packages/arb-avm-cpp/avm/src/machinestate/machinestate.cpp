@@ -29,18 +29,13 @@ namespace {
 uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
 }  // namespace
 
-AssertionContext::AssertionContext(
-    std::vector<Tuple> inbox_messages,
-    Tuple sideload,
-    bool blockingSideload_,
-    nonstd::optional<value> fake_inbox_peek_value_)
+AssertionContext::AssertionContext(std::vector<Tuple> inbox_messages,
+                                   nonstd::optional<uint256_t> final_block)
     : inbox_messages(std::move(inbox_messages)),
+      next_block_height(final_block),
       inbox_messages_consumed(0),
-      sideload_value(std::move(sideload)),
       numSteps{0},
-      numGas{0},
-      blockingSideload(blockingSideload_),
-      fake_inbox_peek_value(std::move(fake_inbox_peek_value_)) {}
+      numGas{0} {}
 
 MachineState::MachineState()
     : arb_gas_remaining(max_arb_gas_remaining),
@@ -738,9 +733,6 @@ BlockReason MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::PUSH_INSN_IMM:
             machineoperation::pushinsnimm(*this);
-            break;
-        case OpCode::SIDELOAD:
-            machineoperation::sideload(*this);
             break;
         case OpCode::NEW_BUFFER:
             machineoperation::newbuffer(*this);
