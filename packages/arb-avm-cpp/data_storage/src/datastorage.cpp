@@ -53,7 +53,7 @@ DataStorage::DataStorage(const std::string& db_path) {
     assert(status.ok());
     txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
     default_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[0]);
-    index_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[1]);
+    core_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[1]);
     blocks_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[2]);
     node_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[3]);
     checkpoint_column =
@@ -64,7 +64,7 @@ DataStorage::DataStorage(const std::string& db_path) {
 
 rocksdb::Status DataStorage::closeDb() {
     default_column.reset();
-    index_column.reset();
+    core_column.reset();
     blocks_column.reset();
     node_column.reset();
     checkpoint_column.reset();

@@ -62,8 +62,8 @@ Machine generateTestMachine() {
 }
 
 void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
-    auto assertion = mach.run(gas_count_target, false,
-                              std::vector<rocksdb::Slice>{}, nonstd::nullopt);
+    auto assertion = mach.run(gas_count_target, false, std::vector<Tuple>{},
+                              nonstd::nullopt);
     REQUIRE(assertion.gasCount <= gas_count_target);
     auto val = mach.machine_state.stack.pop();
     REQUIRE(val == value{uint256_t{4}});
@@ -91,7 +91,7 @@ TEST_CASE("Code serialization") {
 
     SECTION("Save different and load") {
         auto mach2 = mach;
-        mach2.run(7, false, std::vector<rocksdb::Slice>{}, nonstd::nullopt);
+        mach2.run(7, false, std::vector<Tuple>{}, nonstd::nullopt);
         saveMachine(*tx, mach);
         saveMachine(*tx, mach2);
 

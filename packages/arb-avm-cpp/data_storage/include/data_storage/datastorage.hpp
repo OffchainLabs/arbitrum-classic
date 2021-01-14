@@ -34,7 +34,7 @@ class DataStorage {
     std::string txn_db_path;
     std::unique_ptr<rocksdb::TransactionDB> txn_db;
     std::unique_ptr<rocksdb::ColumnFamilyHandle> default_column;
-    std::unique_ptr<rocksdb::ColumnFamilyHandle> index_column;
+    std::unique_ptr<rocksdb::ColumnFamilyHandle> core_column;
     std::unique_ptr<rocksdb::ColumnFamilyHandle> blocks_column;
     std::unique_ptr<rocksdb::ColumnFamilyHandle> node_column;
     std::unique_ptr<rocksdb::ColumnFamilyHandle> checkpoint_column;

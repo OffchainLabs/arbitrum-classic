@@ -58,7 +58,7 @@ RawAssertion arbExecuteAssertion(CArbStorage* storage_ptr,
                                  int hard_gas_limit,
                                  void* inbox_messages,
                                  void* first_message_sequence_number_ptr,
-                                 void* final_block);
+                                 void* final_block_ptr);
 
 #ifdef __cplusplus
 }
