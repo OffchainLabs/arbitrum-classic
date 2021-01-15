@@ -37,18 +37,40 @@ class ColumnFamilyHandle;
 }  // namespace rocksdb
 
 class ArbCore {
+   public:
+    typedef enum {
+        MESSAGES_EMPTY,
+        MESSAGES_READY,
+        MESSAGES_NEED_OLDER,
+        MESSAGES_SUCCESS
+    } message_status_enum;
+
+    typedef enum {
+        MACHINE_NONE,
+        MACHINE_REQUEST_STOP,
+        MACHINE_FINISHED
+    } machine_status_enum;
+
    private:
     std::shared_ptr<DataStorage> data_storage;
     std::unique_ptr<Machine> machine;
     std::shared_ptr<Code> code;
     Checkpoint pending_checkpoint;
+    std::unique_ptr<std::thread> core_thread;
+
+    // Thread communication
+    std::atomic<message_status_enum> message_status;
+    std::vector<MessageEntry> messages;
 
    public:
     ArbCore() = delete;
     explicit ArbCore(std::shared_ptr<DataStorage> data_storage_)
         : data_storage(std::move(data_storage_)),
           code(std::make_shared<Code>(
-              getNextSegmentID(*makeConstTransaction()))) {}
+              getNextSegmentID(*makeConstTransaction()))),
+          message_status(MESSAGES_EMPTY) {}
+    void operator()();
+    void stopThreads();
     void saveCheckpoint();
     void saveAssertion(uint256_t first_message_sequence_number,
                        const Assertion& assertion);

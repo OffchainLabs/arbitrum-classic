@@ -51,7 +51,6 @@ class ArbStorage {
     std::unique_ptr<KeyValueStore> makeKeyValueStore();
     std::unique_ptr<BlockStore> getBlockStore() const;
     std::unique_ptr<AggregatorStore> getAggregatorStore() const;
-    std::unique_ptr<MessageStore> getMessageStore() const;
     std::shared_ptr<ArbCore> getArbCore();
 
     std::unique_ptr<Machine> getInitialMachine(ValueCache& value_cache) const;
