@@ -57,8 +57,9 @@ contract ValidatorUtils {
             uint256
         )
     {
-        (, uint256 staker1NodeNum, , ) = rollup.stakerInfo(staker1);
-        (, uint256 staker2NodeNum, , ) = rollup.stakerInfo(staker2);
+        IStakerSet stakerSet = rollup.stakerSet();
+        (, uint256 staker1NodeNum, , ) = stakerSet.stakerInfo(staker1);
+        (, uint256 staker2NodeNum, , ) = stakerSet.stakerInfo(staker2);
         return findNodeConflict(rollup, staker1NodeNum, staker2NodeNum, maxDepth);
     }
 
@@ -123,13 +124,15 @@ contract ValidatorUtils {
     }
 
     function refundableStakers(IRollup rollup) external view returns (address[] memory) {
-        uint256 stakerCount = rollup.stakerCount();
+        IStakerSet stakerSet = rollup.stakerSet();
+        uint256 stakerCount = stakerSet.count();
         address[] memory stakers = new address[](stakerCount);
         uint256 latestConfirmed = rollup.latestConfirmed();
         uint256 index = 0;
+
         for (uint256 i = 0; i < stakerCount; i++) {
-            address staker = rollup.stakerList(i);
-            (, uint256 latestStakedNode, , ) = rollup.stakerInfo(staker);
+            address staker = stakerSet.stakerList(i);
+            (, uint256 latestStakedNode, , ) = stakerSet.stakerInfo(staker);
             if (latestStakedNode <= latestConfirmed) {
                 stakers[index] = staker;
                 index++;
@@ -241,6 +244,7 @@ contract ValidatorUtils {
         if (max > maxNodeCount) {
             max = maxNodeCount;
         }
+        IStakerSet stakerSet = rollup.stakerSet();
 
         return
             findRejectableExampleImpl(
@@ -248,7 +252,7 @@ contract ValidatorUtils {
                 startNodeOffset,
                 rollup.latestConfirmed(),
                 max,
-                rollup.getStakers(startStakerIndex, maxStakerCount)
+                stakerSet.getStakers(startStakerIndex, maxStakerCount)
             );
     }
 
