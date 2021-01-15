@@ -17,14 +17,14 @@
 #include "config.hpp"
 #include "helper.hpp"
 
-#include <data_storage/checkpointedmachine.hpp>
+#include <data_storage/arbcore.hpp>
 
 #include <catch2/catch.hpp>
 
 TEST_CASE("CheckpointedMachine tests") {
     DBDeleter deleter;
     auto storage = std::make_shared<DataStorage>(dbpath);
-    auto store = std::make_unique<CheckpointedMachine>(storage);
+    auto store = std::make_unique<ArbCore>(storage);
     auto executable = loadExecutable(test_contract_path);
     store->initialize(executable);
 

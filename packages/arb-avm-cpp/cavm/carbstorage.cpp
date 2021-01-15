@@ -223,7 +223,7 @@ RawAssertion arbExecuteAssertion(CArbStorage* storage_ptr,
     }
 
     try {
-        auto assertion = storage->getCheckpointedMachine()->run(
+        auto assertion = storage->getArbCore()->run(
             gas_limit, hard_gas_limit, first_message_sequence_number, messages,
             final_block);
 

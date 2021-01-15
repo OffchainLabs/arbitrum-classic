@@ -16,20 +16,19 @@
 
 #include "utils.hpp"
 
-#include <data_storage/messagestore.hpp>
+#include <data_storage/arbcore.hpp>
 
-void deleteMessageStore(CMessageStore* m) {
-    delete static_cast<MessageStore*>(m);
+void deleteArbCore(CArbCore* m) {
+    delete static_cast<ArbCore*>(m);
 }
 
-int putMessages(CMessageStore* storage_ptr,
+int putMessages(CArbCore* storage_ptr,
                 const uint64_t first_message_sequence_number,
                 const uint64_t block_height,
                 void* inbox_messages,
                 void* inbox_hashes_ptr,
-                void* previous_inbox_hash_ptr,
-                const uint) {
-    auto message_store = static_cast<MessageStore*>(storage_ptr);
+                void* previous_inbox_hash_ptr) {
+    auto message_store = static_cast<ArbCore*>(storage_ptr);
     auto messages = getInboxMessages(inbox_messages);
     auto inbox_hashes = receiveUint256Vector(inbox_hashes_ptr, messages.size());
     auto previous_inbox_hash = receiveUint256(previous_inbox_hash_ptr);

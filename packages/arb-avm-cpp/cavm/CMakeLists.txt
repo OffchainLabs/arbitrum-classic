@@ -21,8 +21,9 @@ project (cavm LANGUAGES CXX)
 
 set(LIB_HEADERS
   caggregator.h
-  cblockstore.h
+  carbcore.h
   carbstorage.h
+  cblockstore.h
   cmachine.h
   ctypes.h
   cvaluecache.h
@@ -31,11 +32,12 @@ set(LIB_HEADERS
 
 set(LIB_SOURCES
   caggregator.cpp
-  cblockstore.cpp
+  carbcore.cpp
   carbstorage.cpp
+  cblockstore.cpp
   cmachine.cpp
   cvaluecache.cpp
-  cmessagestore.cpp)
+)
 
 add_library(cavm STATIC ${LIB_HEADERS} ${LIB_SOURCES})
 

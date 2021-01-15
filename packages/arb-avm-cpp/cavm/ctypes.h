@@ -71,11 +71,11 @@ typedef struct {
 typedef struct HashResultStruct HashResult;
 
 typedef void CAggregatorStore;
+typedef void CArbCore;
 typedef void CArbStorage;
 typedef void CBlockStore;
 typedef void CCheckpointedMachine;
 typedef void CMachine;
-typedef void CMessageStore;
 typedef void CValueCache;
 
 #ifdef __cplusplus

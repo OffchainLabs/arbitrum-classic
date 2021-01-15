@@ -18,10 +18,9 @@
 #define arbstorage_hpp
 
 #include "avm_values/vmValueParser.hpp"
-#include "data_storage/checkpointedmachine.hpp"
+#include "data_storage/arbcore.hpp"
 #include "data_storage/datastorage.hpp"
 #include "data_storage/value/value.hpp"
-#include "messagestore.hpp"
 
 #include <memory>
 #include <string>
@@ -38,7 +37,7 @@ class TransactionDB;
 
 class ArbStorage {
     std::shared_ptr<DataStorage> datastorage;
-    std::shared_ptr<CheckpointedMachine> cmach;
+    std::shared_ptr<ArbCore> cmach;
 
    public:
     explicit ArbStorage(const std::string& db_path);
@@ -53,7 +52,7 @@ class ArbStorage {
     std::unique_ptr<BlockStore> getBlockStore() const;
     std::unique_ptr<AggregatorStore> getAggregatorStore() const;
     std::unique_ptr<MessageStore> getMessageStore() const;
-    std::shared_ptr<CheckpointedMachine> getCheckpointedMachine();
+    std::shared_ptr<ArbCore> getArbCore();
 
     std::unique_ptr<Machine> getInitialMachine(ValueCache& value_cache) const;
     std::unique_ptr<Machine> getMachine(uint256_t machineHash,

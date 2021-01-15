@@ -33,9 +33,10 @@ add_executable(
 		avm_tests
 
 		aggregator.cpp
+		arbcore.cpp
 		arbos.cpp
 		blockstore.cpp
-        buffer.cpp
+		buffer.cpp
 		checkpoint.cpp
 		checkpointedmachine.cpp
 		code.cpp
@@ -45,7 +46,6 @@ add_executable(
 		keyvaluestore.cpp
 		machine.cpp
 		main.cpp
-		messagestore.cpp
 		opcodes.cpp
 		value.cpp
 )

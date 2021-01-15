@@ -34,7 +34,7 @@ MessageEntry extractMessageEntry(const rocksdb::Slice key,
 
 MessageEntry deserializeMessageEntry(
     const uint256_t sequence_number,
-    std::vector<const unsigned char> entry_vector) {
+    const std::vector<const unsigned char>& entry_vector) {
     auto current_iter = entry_vector.begin();
 
     auto inbox_hash = extractUint256(current_iter);

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef checkpointstore_hpp
-#define checkpointstore_hpp
+#ifndef arbcore_hpp
+#define arbcore_hpp
 
 #include <avm/machine.hpp>
 #include <avm_values/bigint.hpp>
@@ -27,6 +27,7 @@
 
 #include <memory>
 #include <vector>
+#include "messageentry.hpp"
 
 namespace rocksdb {
 class TransactionDB;
@@ -35,7 +36,7 @@ struct Slice;
 class ColumnFamilyHandle;
 }  // namespace rocksdb
 
-class CheckpointedMachine {
+class ArbCore {
    private:
     std::shared_ptr<DataStorage> data_storage;
     std::unique_ptr<Machine> machine;
@@ -43,8 +44,8 @@ class CheckpointedMachine {
     Checkpoint pending_checkpoint;
 
    public:
-    CheckpointedMachine() = delete;
-    explicit CheckpointedMachine(std::shared_ptr<DataStorage> data_storage_)
+    ArbCore() = delete;
+    explicit ArbCore(std::shared_ptr<DataStorage> data_storage_)
         : data_storage(std::move(data_storage_)),
           code(std::make_shared<Code>(
               getNextSegmentID(*makeConstTransaction()))) {}
@@ -75,6 +76,27 @@ class CheckpointedMachine {
                   uint256_t first_message_sequence_number,
                   const std::vector<rocksdb::Slice>& inbox_messages,
                   nonstd::optional<uint256_t> final_block);
+
+    nonstd::optional<rocksdb::Status> addMessages(
+        const uint256_t first_sequence_number,
+        const uint64_t block_height,
+        const std::vector<rocksdb::Slice>& messages,
+        const std::vector<uint256_t>& inbox_hashes,
+        const uint256_t& previous_inbox_hash);
+    nonstd::optional<MessageEntry> getNextMessage();
+    nonstd::optional<MessageEntry> getLastMessage();
+    bool deleteMessage(const MessageEntry& entry);
 };
 
-#endif /* checkpointstore_hpp */
+nonstd::optional<rocksdb::Status> deleteMessagesStartingAt(
+    Transaction& tx,
+    uint256_t sequence_number);
+
+rocksdb::Status addMessagesWithoutCheck(
+    Transaction& tx,
+    const uint256_t first_sequence_number,
+    const uint64_t block_height,
+    const std::vector<rocksdb::Slice>& messages,
+    const std::vector<uint256_t>& inbox_hashes);
+
+#endif /* arbcore_hpp */
