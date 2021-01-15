@@ -554,3 +554,41 @@ bool ArbCore::deleteMessage(const MessageEntry& entry) {
 
     return true;
 }
+
+void ArbCore::operator()() {
+    std::unique_ptr<std::thread> machine_thread;
+    std::atomic<ArbCore::machine_status_enum> machine_status{
+        ArbCore::MACHINE_NONE};
+
+    if (message_status == ArbCore::MESSAGES_READY) {
+        // Add messages
+
+        // Discard reorged checkpoints
+
+        // Set ArbCore::MESSAGES_NEED_OLDER if needed
+
+        message_status = ArbCore::MESSAGES_EMPTY;
+    }
+
+    // Check machine thread
+    if (machine_status == MACHINE_FINISHED) {
+        // Don't do anything if machine consumed reorged messages
+
+        // Save logs and sends
+
+        // Maybe save checkpoint
+
+        machine_status = MACHINE_NONE;
+    }
+
+    if (machine_status == MACHINE_NONE &&
+        false /* messages ready to be processed */) {
+        // Start execution of machine with next block of messages
+    }
+}
+
+void machineThread(std::mutex mutex, std::atomic<bool>&) {}
+
+void ArbCore::stopThreads() {}
+
+void checkMessages() {}
