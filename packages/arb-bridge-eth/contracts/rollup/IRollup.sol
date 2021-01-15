@@ -94,7 +94,11 @@ interface IRollup {
         uint256 executionCheckTime
     ) external;
 
-    function completeChallenge(address winningStaker, address losingStaker) external;
+    function completeChallenge(
+        address challengeContract,
+        address winningStaker,
+        address losingStaker
+    ) external;
 
     // Section: Zombie cleanup
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,21 @@
 
 pragma solidity ^0.6.11;
 
-interface IPairedErc20 {
-    function mint(address account, uint256 amount) external;
+import "./IChallengeResultReceiver.sol";
+import "./IRollup.sol";
 
-    function burn(address account, uint256 amount) external;
+contract ChallengeResultReceiver is IChallengeResultReceiver {
+    address public rollup;
 
-    function balanceOf(address account) external view returns (uint256);
+    constructor() public {
+        rollup = msg.sender;
+    }
+
+    function changeOwner(address _rollup) external {
+        rollup = _rollup;
+    }
+
+    function completeChallenge(address winningStaker, address losingStaker) external override {
+        IRollup(rollup).completeChallenge(msg.sender, winningStaker, losingStaker);
+    }
 }

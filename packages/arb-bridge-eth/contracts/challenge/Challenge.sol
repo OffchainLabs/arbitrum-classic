@@ -19,6 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "./IChallenge.sol";
+import "../rollup/IChallengeResultReceiver.sol";
 import "./ChallengeLib.sol";
 
 import "../bridge/Messages.sol";
@@ -73,7 +74,7 @@ contract Challenge is Cloneable, IChallenge {
     IOneStepProof private executor;
     IOneStepProof2 private executor2;
 
-    address internal rollupAddress;
+    IChallengeResultReceiver internal resultReceiver;
 
     bytes32 inboxConsistencyHash;
     bytes32 inboxDeltaHash;
@@ -122,7 +123,7 @@ contract Challenge is Cloneable, IChallenge {
     function initializeChallenge(
         address _executionOneStepProofCon,
         address _executionOneStepProof2Con,
-        address _rollupAddress,
+        address _resultReceiver,
         bytes32 _inboxConsistencyHash,
         bytes32 _inboxDeltaHash,
         bytes32 _executionHash,
@@ -136,7 +137,7 @@ contract Challenge is Cloneable, IChallenge {
         executor = IOneStepProof(_executionOneStepProofCon);
         executor2 = IOneStepProof2(_executionOneStepProof2Con);
 
-        rollupAddress = _rollupAddress;
+        resultReceiver = IChallengeResultReceiver(_resultReceiver);
 
         inboxConsistencyHash = _inboxConsistencyHash;
         inboxDeltaHash = _inboxDeltaHash;
@@ -602,12 +603,12 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function _asserterWin() private {
-        IRollup(rollupAddress).completeChallenge(asserter, challenger);
+        resultReceiver.completeChallenge(asserter, challenger);
         safeSelfDestruct(msg.sender);
     }
 
     function _challengerWin() private {
-        IRollup(rollupAddress).completeChallenge(challenger, asserter);
+        resultReceiver.completeChallenge(challenger, asserter);
         safeSelfDestruct(msg.sender);
     }
 

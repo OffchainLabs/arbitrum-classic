@@ -48,6 +48,7 @@ contract ChallengeTester {
         uint256 challengePeriodBlocks
     ) public {
         challenge = challengeFactory.createChallenge(
+            address(this),
             inboxConsistencyHash,
             inboxDeltaHash,
             executionHash,

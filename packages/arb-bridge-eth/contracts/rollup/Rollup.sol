@@ -18,6 +18,8 @@
 
 pragma solidity ^0.6.11;
 
+import "./ChallengeResultReceiver.sol";
+
 import "./IRollup.sol";
 import "./INode.sol";
 import "./RollupLib.sol";
@@ -63,6 +65,7 @@ contract Rollup is IRollup {
     IBridge public override bridge;
     IChallengeFactory public override challengeFactory;
     INodeFactory public override nodeFactory;
+    ChallengeResultReceiver challengeResultReceiver;
 
     mapping(address => uint256) public override withdrawableFunds;
 
@@ -92,6 +95,7 @@ contract Rollup is IRollup {
 
         challengeFactory = IChallengeFactory(_challengeFactory);
         nodeFactory = INodeFactory(_nodeFactory);
+        challengeResultReceiver = new ChallengeResultReceiver();
 
         bytes32 state =
             RollupLib.nodeStateHash(
@@ -398,11 +402,8 @@ contract Rollup is IRollup {
 
         require(node1.prev() == node2.prev(), "DIFF_PREV");
 
-        Staker storage staker1 = stakerMap[stakers[0]];
-        Staker storage staker2 = stakerMap[stakers[1]];
-
-        checkUnchallengedStaker(staker1);
-        checkUnchallengedStaker(staker2);
+        checkUnchallengedStaker(stakerMap[stakers[0]]);
+        checkUnchallengedStaker(stakerMap[stakers[1]]);
 
         require(node1.stakers(stakers[0]), "STAKER1_NOT_STAKED");
         require(node2.stakers(stakers[1]), "STAKER2_NOT_STAKED");
@@ -421,6 +422,7 @@ contract Rollup is IRollup {
         // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
         address challengeAddress =
             challengeFactory.createChallenge(
+                address(challengeResultReceiver),
                 nodeFields[0],
                 nodeFields[1],
                 nodeFields[2],
@@ -430,19 +432,24 @@ contract Rollup is IRollup {
                 challengePeriodBlocks
             );
 
-        staker1.currentChallenge = challengeAddress;
-        staker2.currentChallenge = challengeAddress;
+        stakerMap[stakers[0]].currentChallenge = challengeAddress;
+        stakerMap[stakers[1]].currentChallenge = challengeAddress;
 
         emit RollupChallengeStarted(challengeAddress, stakers[0], stakers[1], nodeNums[0]);
     }
 
-    function completeChallenge(address winningStaker, address losingStaker) external override {
+    function completeChallenge(
+        address challengeContract,
+        address winningStaker,
+        address losingStaker
+    ) external override {
+        require(msg.sender == address(challengeResultReceiver), "WRONG_SENDER");
         Staker storage winner = stakerMap[winningStaker];
         Staker storage loser = stakerMap[losingStaker];
 
         // Only the challenge contract can declare winners and losers
-        require(winner.currentChallenge == msg.sender);
-        require(loser.currentChallenge == msg.sender);
+        require(winner.currentChallenge == challengeContract);
+        require(loser.currentChallenge == challengeContract);
 
         uint256 loserStake = loser.amountStaked;
 

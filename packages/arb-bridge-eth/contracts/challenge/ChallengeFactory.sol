@@ -34,6 +34,7 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
     }
 
     function createChallenge(
+        address _resultReceiver,
         bytes32 _inboxConsistencyHash,
         bytes32 _inboxDeltaHash,
         bytes32 _executionHash,
@@ -46,7 +47,7 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         IChallenge(clone).initializeChallenge(
             oneStepProofAddress,
             oneStepProof2Address,
-            msg.sender,
+            _resultReceiver,
             _inboxConsistencyHash,
             _inboxDeltaHash,
             _executionHash,

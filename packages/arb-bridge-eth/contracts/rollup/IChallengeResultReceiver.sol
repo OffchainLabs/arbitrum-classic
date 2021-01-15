@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,6 @@
 
 pragma solidity ^0.6.11;
 
-interface IChallengeFactory {
-    function createChallenge(
-        address _resultReceiver,
-        bytes32 _inboxConsistencyHash,
-        bytes32 _inboxDeltaHash,
-        bytes32 _executionHash,
-        uint256 _executionCheckTimeBlocks,
-        address _asserter,
-        address _challenger,
-        uint256 _challengePeriodBlocks
-    ) external returns (address);
+interface IChallengeResultReceiver {
+    function completeChallenge(address winningStaker, address losingStaker) external;
 }
