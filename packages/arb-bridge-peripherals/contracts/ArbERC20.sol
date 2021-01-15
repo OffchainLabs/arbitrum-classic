@@ -19,9 +19,8 @@
 pragma solidity ^0.6.11;
 
 import "arbos-contracts/contracts/ArbSys.sol";
-import "arb-bridge-eth/contracts/rollup/IInbox.sol";
-import "arb-bridge-eth/contracts/rollup/IOutbox.sol";
-import "arb-bridge-eth/contracts/rollup/IOutbox.sol";
+import "arb-bridge-eth/contracts/bridge/IInbox.sol";
+import "arb-bridge-eth/contracts/bridge/IOutbox.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract ArbERC20 is ERC20 {

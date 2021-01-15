@@ -67,7 +67,7 @@ contract Rollup is IRollup {
     address public override stakeToken;
 
     // Bridge is an IInbox and IOutbox
-    IBridge bridge;
+    IBridge public override bridge;
     IChallengeFactory public override challengeFactory;
     INodeFactory public override nodeFactory;
 

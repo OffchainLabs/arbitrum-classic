@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "./INode.sol";
 import "./INodeFactory.sol";
+import "../bridge/IBridge.sol";
 import "../challenge/IChallengeFactory.sol";
 
 interface IRollup {
@@ -145,6 +146,8 @@ interface IRollup {
     function baseStake() external view returns (uint256);
 
     function stakeToken() external view returns (address);
+
+    function bridge() external view returns (IBridge);
 
     function challengeFactory() external view returns (IChallengeFactory);
 
