@@ -213,8 +213,6 @@ RawAssertion executeAssertion(CMachine* m,
     nonstd::optional<uint256_t> final_block;
     if (final_block_ptr != nullptr) {
         final_block = receiveUint256(final_block_ptr);
-    } else {
-        final_block = nonstd::nullopt;
     }
 
     try {

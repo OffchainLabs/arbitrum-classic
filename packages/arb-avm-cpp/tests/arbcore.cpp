@@ -17,7 +17,7 @@
 #include "config.hpp"
 #include "helper.hpp"
 
-#include <data_storage/messagestore.hpp>
+#include <data_storage/arbcore.hpp>
 
 #include <catch2/catch.hpp>
 // TODO: Redo tests with bytearray instead of tuples.

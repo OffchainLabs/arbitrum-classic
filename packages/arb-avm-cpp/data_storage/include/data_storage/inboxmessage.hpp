@@ -54,7 +54,7 @@ struct InboxMessage {
 InboxMessage extractInboxMessage(
     const std::vector<unsigned char>& stored_state);
 std::vector<InboxMessage> extractInboxMessages(
-    const std::vector<rocksdb::Slice> slices);
+    std::vector<rocksdb::Slice> slices);
 
 std::vector<unsigned char> serializeInboxMessage(
     const InboxMessage& state_data);

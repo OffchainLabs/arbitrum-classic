@@ -29,7 +29,7 @@
 
 ArbStorage::ArbStorage(const std::string& db_path)
     : datastorage(std::make_shared<DataStorage>(db_path)),
-      cmach(std::make_shared<CheckpointedMachine>(datastorage)) {}
+      cmach(std::make_shared<ArbCore>(datastorage)) {}
 
 void ArbStorage::initialize(const std::string& executable_path) {
     auto executable = loadExecutable(executable_path);
@@ -65,7 +65,7 @@ std::unique_ptr<MessageStore> ArbStorage::getMessageStore() const {
     return std::make_unique<MessageStore>(datastorage);
 }
 
-std::shared_ptr<CheckpointedMachine> ArbStorage::getCheckpointedMachine() {
+std::shared_ptr<ArbCore> ArbStorage::getArbCore() {
     return cmach;
 }
 

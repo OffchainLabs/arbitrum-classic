@@ -897,8 +897,8 @@ BlockReason inboxPeekOp(MachineState& m) {
             return InboxBlocked();
         }
 
-        // When fake_inbox_peek_value is set we're in callserver mode. Use
-        // that value as the message value
+        // When next_block_height is set use that value as the message value
+        // so that machine knows to post any pending results
         m.stack[0] = m.stack[0] == value(*m.context.next_block_height) ? 1 : 0;
         ++m.pc;
         return NotBlocked{};

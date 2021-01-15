@@ -52,7 +52,7 @@ MessageEntry extractMessageEntry(rocksdb::Slice key, rocksdb::Slice value);
 
 MessageEntry deserializeMessageEntry(
     uint256_t sequence_number,
-    std::vector<const unsigned char> entry_vector);
+    const std::vector<const unsigned char>& entry_vector);
 std::vector<unsigned char> serializeMessageEntry(
     const MessageEntry& state_data);
 
