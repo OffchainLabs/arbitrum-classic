@@ -21,14 +21,13 @@ pragma solidity ^0.6.11;
 import "./IRollup.sol";
 import "./INode.sol";
 import "./RollupLib.sol";
-import "./Inbox.sol";
-import "./Outbox.sol";
 
+import "../bridge/IBridge.sol";
 import "../interfaces/IERC20.sol";
 
 import "../challenge/ChallengeLib.sol";
 
-contract Rollup is Inbox, Outbox, IRollup {
+contract Rollup is IRollup {
     struct Zombie {
         address stakerAddress;
         uint256 latestStakedNode;
@@ -67,6 +66,8 @@ contract Rollup is Inbox, Outbox, IRollup {
     uint256 public override baseStake;
     address public override stakeToken;
 
+    // Bridge is an IInbox and IOutbox
+    IBridge bridge;
     IChallengeFactory public override challengeFactory;
     INodeFactory public override nodeFactory;
 
@@ -79,14 +80,13 @@ contract Rollup is Inbox, Outbox, IRollup {
         uint256 _baseStake,
         address _stakeToken,
         address _owner,
+        address _bridge,
         address _challengeFactory,
         address _nodeFactory,
         bytes memory _extraConfig
     ) public {
-        challengeFactory = IChallengeFactory(_challengeFactory);
-        nodeFactory = INodeFactory(_nodeFactory);
-
-        sendInitializationMessage(
+        bridge = IBridge(_bridge);
+        bridge.initialize(
             abi.encodePacked(
                 uint256(_challengePeriodBlocks),
                 uint256(_arbGasSpeedLimitPerBlock),
@@ -97,6 +97,9 @@ contract Rollup is Inbox, Outbox, IRollup {
             )
         );
 
+        challengeFactory = IChallengeFactory(_challengeFactory);
+        nodeFactory = INodeFactory(_nodeFactory);
+
         bytes32 state =
             RollupLib.nodeStateHash(
                 block.number, // block proposed
@@ -106,7 +109,7 @@ contract Rollup is Inbox, Outbox, IRollup {
                 0, // inbox count
                 0, // send count
                 0, // log count
-                inboxMaxCount // inbox max count
+                1 // inbox max count includes the initialization message
             );
         INode node =
             INode(
@@ -177,7 +180,7 @@ contract Rollup is Inbox, Outbox, IRollup {
         bytes32 sendAcc = RollupLib.generateLastMessageHash(sendsData, sendLengths);
         require(node.confirmData() == RollupLib.confirmHash(sendAcc, logAcc), "CONFIRM_DATA");
 
-        processOutgoingMessages(sendsData, sendLengths);
+        bridge.processOutgoingMessages(sendsData, sendLengths);
 
         destroyNode(latestConfirmed);
 
@@ -252,6 +255,7 @@ contract Rollup is Inbox, Outbox, IRollup {
         );
 
         // inboxMaxCount must be greater than beforeInboxCount since we can't have read past the end of the inbox
+        (uint256 inboxMaxCount, bytes32 inboxMaxAcc) = bridge.inboxInfo();
         require(
             assertion.inboxMessagesRead <= inboxMaxCount - assertion.beforeInboxCount,
             "INBOX_PAST_END"
@@ -259,10 +263,9 @@ contract Rollup is Inbox, Outbox, IRollup {
 
         uint256 prevDeadlineBlock = prevNode.deadlineBlock();
         uint256 timeSinceLastNode = block.number - assertion.beforeProposedBlock;
-        uint256 minAssertionPeriod = minimumAssertionPeriod();
         uint256 minGasUsed = timeSinceLastNode * arbGasSpeedLimitPerBlock;
         // Verify that assertion meets the minimum Delta time requirement
-        require(timeSinceLastNode >= minAssertionPeriod, "TIME_DELTA");
+        require(timeSinceLastNode >= minimumAssertionPeriod(), "TIME_DELTA");
 
         // Minimum size requirements: each assertion must satisfy either
         require(

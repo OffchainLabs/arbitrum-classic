@@ -18,7 +18,7 @@
 
 pragma solidity ^0.6.11;
 
-import "../rollup/Messages.sol";
+import "../bridge/Messages.sol";
 
 contract MessageTester {
     function messageHash(

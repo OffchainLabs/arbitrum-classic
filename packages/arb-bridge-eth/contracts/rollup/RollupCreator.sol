@@ -19,14 +19,21 @@
 pragma solidity ^0.6.11;
 
 import "./Rollup.sol";
+import "../bridge/IBridgeFactory.sol";
 
 contract RollupCreator {
     event RollupCreated(address rollupAddress);
 
+    IBridgeFactory bridgeFactory;
     address challengeFactory;
     address nodeFactory;
 
-    constructor(address _challengeFactory, address _nodeFactory) public {
+    constructor(
+        address _bridgeFactory,
+        address _challengeFactory,
+        address _nodeFactory
+    ) public {
+        bridgeFactory = IBridgeFactory(_bridgeFactory);
         challengeFactory = _challengeFactory;
         nodeFactory = _nodeFactory;
     }
@@ -48,6 +55,7 @@ contract RollupCreator {
                 _baseStake,
                 _stakeToken,
                 _owner,
+                bridgeFactory.newBridge(),
                 challengeFactory,
                 nodeFactory,
                 _extraConfig

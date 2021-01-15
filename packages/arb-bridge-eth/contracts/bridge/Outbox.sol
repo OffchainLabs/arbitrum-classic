@@ -19,8 +19,8 @@
 pragma solidity ^0.6.11;
 
 import "./IOutbox.sol";
-import "./Messages.sol";
 
+import "./Messages.sol";
 import "../libraries/MerkleLib.sol";
 import "../libraries/BytesLib.sol";
 
@@ -35,7 +35,7 @@ contract Outbox is IOutbox {
     uint128 public override l2ToL1Block;
     uint128 public override l2ToL1Timestamp;
 
-    function processOutgoingMessages(bytes memory sendsData, uint256[] memory sendLengths)
+    function _processOutgoingMessages(bytes memory sendsData, uint256[] calldata sendLengths)
         internal
     {
         // If we've reached here, we've already confirmed that sum(sendLengths) == sendsData.length

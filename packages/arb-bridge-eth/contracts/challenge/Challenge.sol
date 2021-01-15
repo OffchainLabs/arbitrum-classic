@@ -21,7 +21,7 @@ pragma solidity ^0.6.11;
 import "./IChallenge.sol";
 import "./ChallengeLib.sol";
 
-import "../rollup/Messages.sol";
+import "../bridge/Messages.sol";
 import "../rollup/IRollup.sol";
 import "../arch/IOneStepProof.sol";
 import "../arch/Marshaling.sol";

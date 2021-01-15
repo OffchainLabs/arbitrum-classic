@@ -21,7 +21,7 @@ pragma solidity ^0.6.11;
 import "./IOneStepProof.sol";
 import "./OneStepProofCommon.sol";
 
-import "../rollup/Messages.sol";
+import "../bridge/Messages.sol";
 
 import "../libraries/Precompiles.sol";
 
