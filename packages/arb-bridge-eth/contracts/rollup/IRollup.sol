@@ -20,7 +20,6 @@ pragma solidity ^0.6.11;
 
 import "./INode.sol";
 import "./INodeFactory.sol";
-import "./IStakerSet.sol";
 import "../bridge/IBridge.sol";
 import "../challenge/IChallengeFactory.sol";
 
@@ -116,6 +115,20 @@ interface IRollup {
 
     function zombieCount() external view returns (uint256);
 
+    function stakerInfo(address staker)
+        external
+        view
+        returns (
+            bool isStaked,
+            uint256 latestStakedNode,
+            uint256 amountStaked,
+            address currentChallenge
+        );
+
+    function stakerCount() external view returns (uint256);
+
+    function getStakers(uint256 startIndex, uint256 max) external view returns (address[] memory);
+
     function withdrawableFunds(address owner) external view returns (uint256);
 
     function checkMaybeRejectable() external view returns (bool);
@@ -132,6 +145,8 @@ interface IRollup {
 
     function lastStakeBlock() external view returns (uint256);
 
+    function stakerList(uint256 index) external view returns (address payable);
+
     function challengePeriodBlocks() external view returns (uint256);
 
     function arbGasSpeedLimitPerBlock() external view returns (uint256);
@@ -145,8 +160,6 @@ interface IRollup {
     function challengeFactory() external view returns (IChallengeFactory);
 
     function nodeFactory() external view returns (INodeFactory);
-
-    function stakerSet() external view returns (IStakerSet);
 
     function currentRequiredStake() external view returns (uint256);
 
