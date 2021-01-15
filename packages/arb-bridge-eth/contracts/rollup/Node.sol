@@ -68,34 +68,4 @@ contract Node is Cloneable, INode {
         stakers[staker] = false;
         stakerCount--;
     }
-
-    function checkConfirmValid(uint256 totalStakerCount, uint256 latestConfirmed)
-        external
-        view
-        override
-    {
-        // Verify the block's deadline has passed
-        require(block.number >= deadlineBlock, "BEFORE_DEADLINE");
-
-        // Check that prev is latest confirmed
-        require(prev == latestConfirmed, "INVALID_PREV");
-
-        // All non-zombie stakers are staked on this node, and no zombie stakers are staked here
-        require(stakerCount == totalStakerCount, "NOT_ALL_STAKED");
-
-        // There is at least one non-zombie staker
-        require(totalStakerCount > 0, "NO_STAKERS");
-    }
-
-    function checkConfirmInvalid(uint256 zombieStakerCount) external view override {
-        // Verify the block's deadline has passed
-        require(block.number >= deadlineBlock, "BEFORE_DEADLINE");
-
-        // Verify that no staker is staked on this node
-        require(stakerCount == zombieStakerCount, "HAS_STAKERS");
-    }
-
-    function checkConfirmOutOfOrder(uint256 latestConfirmed) external view override {
-        require(prev != latestConfirmed);
-    }
 }

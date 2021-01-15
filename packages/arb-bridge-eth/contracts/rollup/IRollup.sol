@@ -127,6 +127,10 @@ interface IRollup {
 
     function withdrawableFunds(address owner) external view returns (uint256);
 
+    function checkMaybeRejectable() external view returns (bool);
+
+    function checkConfirmValid() external view;
+
     function latestConfirmed() external view returns (uint256);
 
     function firstUnresolvedNode() external view returns (uint256);

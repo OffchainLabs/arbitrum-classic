@@ -77,60 +77,23 @@ contract ValidatorUtils {
             address
         )
     {
-        try rollup.checkUnresolved() {} catch {
-            return (ConfirmType.NONE, 0, address(0));
-        }
-        uint256 latestConfirmed = rollup.latestConfirmed();
-        uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
-        INode currentUnresolved = rollup.nodes(firstUnresolvedNode);
-        try currentUnresolved.checkConfirmOutOfOrder(latestConfirmed) {
-            return (ConfirmType.INVALID, 0, address(0));
-        } catch {}
-        try rollup.checkNoRecentStake() {} catch {
-            return (ConfirmType.NONE, 0, address(0));
-        }
-        uint256 zombieCount = rollup.countStakedZombies(currentUnresolved);
-        try
-            currentUnresolved.checkConfirmValid(rollup.stakerCount() + zombieCount, latestConfirmed)
-        {
+        try rollup.checkConfirmValid() {
             return (ConfirmType.VALID, 0, address(0));
         } catch {}
-        try currentUnresolved.checkConfirmInvalid(zombieCount) {} catch {
-            return (ConfirmType.NONE, 0, address(0));
-        }
 
-        // Node might be invalid
-        (bool found, uint256 successorWithStake, address stakerAddress) =
-            findRejectableExample(
+        try
+            ValidatorUtils(address(this)).checkRejectableNextNode(
                 rollup,
-                firstUnresolvedNode + 1 + startNodeOffset,
+                startNodeOffset,
                 maxNodeCount,
                 startStakerIndex,
                 maxStakerCount
-            );
-        if (!found) {
+            )
+        returns (uint256 successorWithStake, address stakerAddress) {
+            return (ConfirmType.INVALID, successorWithStake, stakerAddress);
+        } catch {
             return (ConfirmType.NONE, 0, address(0));
         }
-        return (ConfirmType.INVALID, successorWithStake, stakerAddress);
-    }
-
-    function checkConfirmableNextNode(IRollup rollup) external view {
-        rollup.checkUnresolved();
-        rollup.checkNoRecentStake();
-        uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
-        uint256 latestConfirmed = rollup.latestConfirmed();
-        uint256 stakerCount = rollup.stakerCount();
-        INode currentUnresolved = rollup.nodes(firstUnresolvedNode);
-        uint256 zombieCount = rollup.countStakedZombies(currentUnresolved);
-        currentUnresolved.checkConfirmValid(stakerCount + zombieCount, latestConfirmed);
-    }
-
-    function checkRejectableOutOfOrder(IRollup rollup) external view {
-        rollup.checkUnresolved();
-        uint256 latestConfirmed = rollup.latestConfirmed();
-        uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
-        INode currentUnresolved = rollup.nodes(firstUnresolvedNode);
-        currentUnresolved.checkConfirmOutOfOrder(latestConfirmed);
     }
 
     function checkRejectableNextNode(
@@ -143,8 +106,10 @@ contract ValidatorUtils {
         rollup.checkUnresolved();
         rollup.checkNoRecentStake();
         uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
-        INode currentUnresolved = rollup.nodes(firstUnresolvedNode);
-        currentUnresolved.checkConfirmInvalid(rollup.countStakedZombies(currentUnresolved));
+        bool outOfOrder = rollup.checkMaybeRejectable();
+        if (outOfOrder) {
+            return (0, address(0));
+        }
         (bool found, uint256 successorWithStake, address stakerAddress) =
             findRejectableExample(
                 rollup,

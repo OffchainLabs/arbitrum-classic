@@ -47,10 +47,4 @@ interface INode {
     function addStaker(address staker) external;
 
     function removeStaker(address staker) external;
-
-    function checkConfirmValid(uint256 totalStakerCount, uint256 latestConfirmed) external view;
-
-    function checkConfirmInvalid(uint256 zombieStakerCount) external view;
-
-    function checkConfirmOutOfOrder(uint256 latestConfirmed) external view;
 }

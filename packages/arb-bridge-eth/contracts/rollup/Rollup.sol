@@ -42,13 +42,6 @@ contract Rollup is IRollup {
         bool isStaked;
     }
 
-    struct ChallengeState {
-        bytes32 inboxConsistencyHash;
-        bytes32 inboxDeltaHash;
-        bytes32 executionHash;
-        uint256 executionCheckTime;
-    }
-
     uint256 public override latestConfirmed;
     uint256 public override firstUnresolvedNode;
     uint256 public override latestNodeCreated;
@@ -133,6 +126,25 @@ contract Rollup is IRollup {
         emit RollupCreated(_machineHash);
     }
 
+    function checkMaybeRejectable() external view override returns (bool) {
+        checkUnresolved();
+        INode node = nodes[firstUnresolvedNode];
+        bool outOfOrder = node.prev() == latestConfirmed;
+        if (outOfOrder) {
+            checkNoRecentStake();
+            // Verify the block's deadline has passed
+            require(block.number >= node.deadlineBlock(), "BEFORE_DEADLINE");
+            // Verify that no staker is staked on this node
+            require(node.stakerCount() == countStakedZombies(node), "HAS_STAKERS");
+        }
+        return outOfOrder;
+    }
+
+    function checkConfirmValid() external view override {
+        INode node = checkConfirmValidBefore();
+        checkConfirmValidAfter(node);
+    }
+
     function rejectNextNode(uint256 successorWithStake, address stakerAddress) external override {
         checkUnresolved();
 
@@ -150,10 +162,10 @@ contract Rollup is IRollup {
             // staker is actually staked on stakedSiblingNode
             require(stakedSiblingNode.stakers(stakerAddress), "BAD_STAKER");
 
-            removeOldZombies(0);
-
             // Verify the block's deadline has passed
             require(block.number >= node.deadlineBlock(), "BEFORE_DEADLINE");
+
+            removeOldZombies(0);
 
             // Verify that no staker is staked on this node
             require(node.stakerCount() == countStakedZombies(node), "HAS_STAKERS");
@@ -167,15 +179,9 @@ contract Rollup is IRollup {
         bytes calldata sendsData,
         uint256[] calldata sendLengths
     ) external override {
-        checkUnresolved();
-        checkNoRecentStake();
-
-        INode node = nodes[firstUnresolvedNode];
-
+        INode node = checkConfirmValidBefore();
         removeOldZombies(0);
-
-        // Make sure that the number of stakes on the node is that sum of the number of real stakers and the number of zombies staked there
-        node.checkConfirmValid(stakerList.length + countStakedZombies(node), latestConfirmed);
+        checkConfirmValidAfter(node);
 
         bytes32 sendAcc = RollupLib.generateLastMessageHash(sendsData, sendLengths);
         require(node.confirmData() == RollupLib.confirmHash(sendAcc, logAcc), "CONFIRM_DATA");
@@ -188,6 +194,32 @@ contract Rollup is IRollup {
         firstUnresolvedNode++;
 
         emit SentLogs(logAcc);
+    }
+
+    function checkConfirmValidBefore() private view returns (INode) {
+        checkUnresolved();
+        checkNoRecentStake();
+
+        // There is at least one non-zombie staker
+        require(stakerList.length > 0, "NO_STAKERS");
+
+        INode node = nodes[firstUnresolvedNode];
+
+        // Verify the block's deadline has passed
+        require(node.deadlineBlock() <= block.number, "BEFORE_DEADLINE");
+
+        // Check that prev is latest confirmed
+        require(node.prev() == latestConfirmed, "INVALID_PREV");
+
+        return node;
+    }
+
+    function checkConfirmValidAfter(INode node) private view {
+        // All non-zombie stakers are staked on this node
+        require(
+            node.stakerCount() == stakerList.length + countStakedZombies(node),
+            "NOT_ALL_STAKED"
+        );
     }
 
     function newStake(uint256 tokenAmount) external payable override {
