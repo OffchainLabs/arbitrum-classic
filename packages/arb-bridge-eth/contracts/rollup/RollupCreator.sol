@@ -52,6 +52,10 @@ contract RollupCreator is Ownable {
         TransparentUpgradeableProxy rollup;
     }
 
+    // After this setup:
+    // Rollup should be the owner of bridge
+    // Rollup should be the owner of it's upgrade admin
+    // Bridge should have a single inbox and outbox
     function createRollup(
         bytes32 _machineHash,
         uint256 _challengePeriodBlocks,
@@ -74,6 +78,7 @@ contract RollupCreator is Ownable {
         frame.bridge.transferOwnership(address(frame.rollup));
         frame.admin.transferOwnership(address(frame.rollup));
         IRollup(address(frame.rollup)).initialize(
+            IOutbox(frame.outbox),
             _machineHash,
             _challengePeriodBlocks,
             _arbGasSpeedLimitPerBlock,

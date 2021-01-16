@@ -9,6 +9,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 
 import { Rollup } from '../build/types/Rollup'
+import { Bridge } from '../build/types/Bridge'
 
 const zerobytes32 =
   '0x0000000000000000000000000000000000000000000000000000000000000000'
@@ -300,12 +301,19 @@ export class RollupContract {
     return new RollupContract(this.rollup.connect(signerOrProvider))
   }
 
-  addStakeOnNewNode(
+  newStake(
+    tokenAmount: BigNumberish,
+    overrides: PayableOverrides = {}
+  ): Promise<ContractTransaction> {
+    return this.rollup.newStake(tokenAmount, overrides)
+  }
+
+  stakeOnNewNode(
     block: Block,
     assertion: Assertion,
     newNodeNum: BigNumberish
   ): Promise<ContractTransaction> {
-    return this.rollup.addStakeOnNewNode(
+    return this.rollup.stakeOnNewNode(
       block.hash,
       block.number,
       newNodeNum,
@@ -314,39 +322,8 @@ export class RollupContract {
     )
   }
 
-  newStakeOnNewNode(
-    block: Block,
-    assertion: Assertion,
-    newNodeNum: BigNumberish,
-    prevNum: BigNumberish,
-    overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
-    return this.rollup.newStakeOnNewNode(
-      block.hash,
-      block.number,
-      newNodeNum,
-      prevNum,
-      assertion.bytes32Fields(),
-      assertion.intFields(),
-      overrides
-    )
-  }
-
-  newStakeOnExistingNode(
-    block: Block,
-    nodeNum: BigNumberish,
-    overrides: PayableOverrides = {}
-  ) {
-    return this.rollup.newStakeOnExistingNode(
-      block.hash,
-      block.number,
-      nodeNum,
-      overrides
-    )
-  }
-
-  addStakeOnExistingNode(block: Block, nodeNum: BigNumberish) {
-    return this.rollup.addStakeOnExistingNode(block.hash, block.number, nodeNum)
+  stakeOnExistingNode(block: Block, nodeNum: BigNumberish) {
+    return this.rollup.stakeOnExistingNode(block.hash, block.number, nodeNum)
   }
 
   confirmNextNode(
@@ -356,10 +333,6 @@ export class RollupContract {
     const messageData = ethers.utils.concat(messages)
     const messageLengths = messages.map(msg => msg.length)
     return this.rollup.confirmNextNode(logAcc, messageData, messageLengths)
-  }
-
-  rejectNextNodeOutOfOrder(): Promise<ContractTransaction> {
-    return this.rollup.rejectNextNodeOutOfOrder()
   }
 
   rejectNextNode(
@@ -379,22 +352,23 @@ export class RollupContract {
     inboxMaxCount: BigNumberish
   ): Promise<ContractTransaction> {
     return this.rollup.createChallenge(
-      staker1Address,
-      nodeNum1,
-      staker2Address,
-      nodeNum2,
-      assertion.inboxConsistencyHash(inboxMaxHash, inboxMaxCount),
-      assertion.inboxDeltaHash(),
-      assertion.executionHash(),
+      [staker1Address, staker2Address],
+      [nodeNum1, nodeNum2],
+      [
+        assertion.inboxConsistencyHash(inboxMaxHash, inboxMaxCount),
+        assertion.inboxDeltaHash(),
+        assertion.executionHash(),
+      ],
       assertion.checkTime(await this.rollup.arbGasSpeedLimitPerBlock())
     )
   }
 
   addToDeposit(
     staker: string,
+    tokenAmount: BigNumberish,
     overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
-    return this.rollup.addToDeposit(staker, overrides)
+    return this.rollup.addToDeposit(staker, tokenAmount, overrides)
   }
 
   reduceDeposit(amount: BigNumberish): Promise<ContractTransaction> {
@@ -420,8 +394,12 @@ export class RollupContract {
     return this.rollup.nodes(index)
   }
 
-  inboxMaxValue(): Promise<BytesLike> {
-    return this.rollup.inboxMaxValue()
+  async inboxMaxValue(): Promise<BytesLike> {
+    const bridgeAddress = await this.rollup.bridge()
+    const Bridge = await ethers.getContractFactory('Bridge')
+    const bridge = Bridge.attach(bridgeAddress) as Bridge
+    const inboxInfo = await bridge.inboxInfo()
+    return inboxInfo[1]
   }
 
   currentRequiredStake(): Promise<BigNumber> {

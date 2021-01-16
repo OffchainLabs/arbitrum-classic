@@ -45,6 +45,7 @@ interface IRollup {
     event SentLogs(bytes32 logsAccHash);
 
     function initialize(
+        IOutbox _outbox,
         bytes32 _machineHash,
         uint256 _challengePeriodBlocks,
         uint256 _arbGasSpeedLimitPerBlock,

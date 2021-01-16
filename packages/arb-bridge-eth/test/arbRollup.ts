@@ -131,7 +131,7 @@ describe('ArbRollup', () => {
       0,
       0,
       0,
-      0
+      1
     )
 
     assert.equal(
@@ -141,14 +141,20 @@ describe('ArbRollup', () => {
     )
   })
 
+  it('should place stake', async function () {
+    const stake = await rollup.currentRequiredStake()
+    await rollup.newStake(0, { value: stake })
+  })
+
   it('should place stake on new node', async function () {
     const block = await ethers.provider.getBlock('latest')
     await tryAdvanceChain(challengePeriodBlocks / 10)
-    const assertion = makeSimpleAssertion(prevNodeState, 100)
-    const stake = await rollup.currentRequiredStake()
-    const tx = await rollup.newStakeOnNewNode(block, assertion, 1, 0, {
-      value: stake,
-    })
+    const assertion = makeSimpleAssertion(
+      prevNodeState,
+      arbGasSpeedLimitPerBlock * 20
+    )
+
+    const tx = await rollup.stakeOnNewNode(block, assertion, 1)
 
     const receipt = await tx.wait()
     prevNodeState = assertion.createdNodeState(receipt.blockNumber!, 1)
@@ -156,9 +162,9 @@ describe('ArbRollup', () => {
 
   it('should let a new staker place on existing node', async function () {
     const block = await ethers.provider.getBlock('latest')
-    await rollup
-      .connect(accounts[1])
-      .newStakeOnExistingNode(block, 1, { value: 10 })
+    await rollup.connect(accounts[1]).newStake(0, { value: 10 })
+
+    await rollup.connect(accounts[1]).stakeOnExistingNode(block, 1)
   })
 
   it('should move stake to a new node', async function () {
@@ -169,18 +175,18 @@ describe('ArbRollup', () => {
       (block.number - prevNodeState.proposedBlock + 1) *
         arbGasSpeedLimitPerBlock
     )
-    const tx = await rollup.addStakeOnNewNode(block, assertion, 2)
+    const tx = await rollup.stakeOnNewNode(block, assertion, 2)
     const receipt = await tx.wait()
     prevNodeState = assertion.createdNodeState(receipt.blockNumber!, 1)
   })
 
   it('should let the second staker place on the new node', async function () {
     const block = await ethers.provider.getBlock('latest')
-    await rollup.connect(accounts[1]).addStakeOnExistingNode(block, 2)
+    await rollup.connect(accounts[1]).stakeOnExistingNode(block, 2)
   })
 
   it('should confirm node', async function () {
-    await tryAdvanceChain(challengePeriodBlocks)
+    await tryAdvanceChain(challengePeriodBlocks * 2)
     await rollup.confirmNextNode(zerobytes32, [])
   })
 
@@ -199,7 +205,7 @@ describe('ArbRollup', () => {
       (block.number - prevNodeState.proposedBlock + 1) *
         arbGasSpeedLimitPerBlock
     )
-    const tx = await rollup.addStakeOnNewNode(block, challengedAssertion, 3)
+    const tx = await rollup.stakeOnNewNode(block, challengedAssertion, 3)
     const receipt = await tx.wait()
     validNodeState = challengedAssertion.createdNodeState(
       receipt.blockNumber!,
@@ -215,7 +221,7 @@ describe('ArbRollup', () => {
       (block.number - prevNodeState.proposedBlock + 1) *
         arbGasSpeedLimitPerBlock
     )
-    await rollup.connect(accounts[1]).addStakeOnNewNode(block, assertion, 4)
+    await rollup.connect(accounts[1]).stakeOnNewNode(block, assertion, 4)
   })
 
   it('should fail to confirm first staker node', async function () {
@@ -263,7 +269,7 @@ describe('ArbRollup', () => {
   })
 
   it('should reject out of order second node', async function () {
-    await rollup.rejectNextNodeOutOfOrder()
+    await rollup.rejectNextNode(0, stakeToken)
   })
 
   it('should make a new node', async function () {
@@ -274,7 +280,7 @@ describe('ArbRollup', () => {
       (block.number - validNodeState.proposedBlock + 1) *
         arbGasSpeedLimitPerBlock
     )
-    await rollup.addStakeOnNewNode(block, challengedAssertion, 5)
+    await rollup.stakeOnNewNode(block, challengedAssertion, 5)
   })
 
   it('new staker should make a conflicting node', async function () {
@@ -282,13 +288,13 @@ describe('ArbRollup', () => {
     const block = await ethers.provider.getBlock('latest')
     const assertion = makeSimpleAssertion(
       validNodeState,
-      (block.number - validNodeState.proposedBlock + 1) *
+      (block.number - validNodeState.proposedBlock + 10) *
         arbGasSpeedLimitPerBlock
     )
     const stake = await rollup.currentRequiredStake()
-    await rollup
-      .connect(accounts[2])
-      .newStakeOnNewNode(block, assertion, 6, 3, { value: stake })
+    await rollup.connect(accounts[2]).newStake(0, { value: stake })
+
+    await rollup.connect(accounts[2]).stakeOnNewNode(block, assertion, 6)
   })
 
   it('should initiate another challenge', async function () {
@@ -318,8 +324,8 @@ describe('ArbRollup', () => {
     await challenge
       .connect(accounts[2])
       .bisectExecution(
+        [],
         0,
-        '0x',
         0,
         challengedAssertion.gasUsed,
         challengedAssertion.endAssertionHash(),
@@ -350,7 +356,7 @@ describe('ArbRollup', () => {
   it('can add stake', async function () {
     await rollup
       .connect(accounts[2])
-      .addToDeposit(await accounts[2].getAddress(), { value: 5 })
+      .addToDeposit(await accounts[2].getAddress(), 0, { value: 5 })
   })
 
   it('can reduce stake', async function () {

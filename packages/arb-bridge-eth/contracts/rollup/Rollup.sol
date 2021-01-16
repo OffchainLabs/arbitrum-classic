@@ -18,7 +18,6 @@
 
 pragma solidity ^0.6.11;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 
@@ -33,7 +32,7 @@ import "../bridge/Messages.sol";
 import "./RollupLib.sol";
 import "../challenge/ChallengeLib.sol";
 
-contract Rollup is Pausable, Ownable, IRollup {
+contract Rollup is Pausable, IRollup {
     struct Zombie {
         address stakerAddress;
         uint256 latestStakedNode;
@@ -72,11 +71,18 @@ contract Rollup is Pausable, Ownable, IRollup {
     IOutbox public override outbox;
     IChallengeFactory public override challengeFactory;
     INodeFactory public override nodeFactory;
+    address public owner;
     ProxyAdmin admin;
 
     mapping(address => uint256) public override withdrawableFunds;
 
+    modifier onlyOwner {
+        require(msg.sender == owner, "ONLY_OWNER");
+        _;
+    }
+
     function initialize(
+        IOutbox _outbox,
         bytes32 _machineHash,
         uint256 _challengePeriodBlocks,
         uint256 _arbGasSpeedLimitPerBlock,
@@ -91,6 +97,7 @@ contract Rollup is Pausable, Ownable, IRollup {
     ) external override {
         bridge = _bridge;
         bridge.setInbox(address(this), true);
+        outbox = _outbox;
         bytes32 initMsgHash =
             keccak256(
                 abi.encodePacked(
@@ -143,8 +150,7 @@ contract Rollup is Pausable, Ownable, IRollup {
         arbGasSpeedLimitPerBlock = _arbGasSpeedLimitPerBlock;
         baseStake = _baseStake;
         stakeToken = _stakeToken;
-
-        transferOwnership(_owner);
+        owner = _owner;
         admin = ProxyAdmin(_admin);
 
         firstUnresolvedNode = 1;
@@ -164,6 +170,18 @@ contract Rollup is Pausable, Ownable, IRollup {
     function upgradeImplementation(address _newRollup) external onlyOwner {
         address currentAddress = address(this);
         admin.upgrade(TransparentUpgradeableProxy(payable(currentAddress)), _newRollup);
+    }
+
+    function upgradeImplementationAndCall(address _newRollup, bytes calldata data)
+        external
+        onlyOwner
+    {
+        address currentAddress = address(this);
+        admin.upgradeAndCall(
+            TransparentUpgradeableProxy(payable(currentAddress)),
+            _newRollup,
+            data
+        );
     }
 
     function ownerPause() external onlyOwner {

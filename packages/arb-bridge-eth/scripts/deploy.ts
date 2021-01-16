@@ -21,6 +21,7 @@ export default async function deploy_contracts(): Promise<
   const OneStepProof2 = await ethers.getContractFactory('OneStepProof2')
   const ChallengeFactory = await ethers.getContractFactory('ChallengeFactory')
   const NodeFactory = await ethers.getContractFactory('NodeFactory')
+  const Rollup = await ethers.getContractFactory('Rollup')
   const RollupCreator = await ethers.getContractFactory('RollupCreator')
 
   const oneStepProof = await OneStepProof.deploy()
@@ -37,10 +38,10 @@ export default async function deploy_contracts(): Promise<
   const nodeFactory = await NodeFactory.deploy()
   logDeploy('NodeFactory', nodeFactory)
 
-  const rollupCreator = await RollupCreator.deploy(
-    challengeFactory.address,
-    nodeFactory.address
-  )
+  const rollupTemplate = await Rollup.deploy()
+  logDeploy('Rollup', rollupTemplate)
+
+  const rollupCreator = await RollupCreator.deploy()
   logDeploy('RollupCreator', rollupCreator)
 
   await Promise.all([
@@ -56,10 +57,19 @@ export default async function deploy_contracts(): Promise<
     nodeFactory.deployed().then(() => {
       console.log('NodeFactory deployed')
     }),
+    rollupTemplate.deployed().then(() => {
+      console.log('Rollup deployed')
+    }),
     rollupCreator.deployed().then(() => {
       console.log('RollupCreator deployed')
     }),
   ])
+
+  await rollupCreator.setTemplates(
+    rollupTemplate.address,
+    challengeFactory.address,
+    nodeFactory.address
+  )
 
   const contracts: Record<ContractName, Contract> = {
     RollupCreator: rollupCreator,
