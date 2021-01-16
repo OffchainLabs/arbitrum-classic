@@ -37,7 +37,7 @@ class TransactionDB;
 
 class ArbStorage {
     std::shared_ptr<DataStorage> datastorage;
-    std::shared_ptr<ArbCore> cmach;
+    std::shared_ptr<ArbCore> arb_core;
 
    public:
     explicit ArbStorage(const std::string& db_path);
@@ -51,6 +51,7 @@ class ArbStorage {
     std::unique_ptr<KeyValueStore> makeKeyValueStore();
     std::unique_ptr<BlockStore> getBlockStore() const;
     std::unique_ptr<AggregatorStore> getAggregatorStore() const;
+    std::unique_ptr<MessageStore> getMessageStore() const;
     std::shared_ptr<ArbCore> getArbCore();
 
     std::unique_ptr<Machine> getInitialMachine(ValueCache& value_cache) const;

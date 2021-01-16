@@ -26,12 +26,12 @@ extern "C" {
 
 void deleteArbCore(CArbCore* m);
 
-int putMessages(CArbCore* storage_ptr,
-                const uint64_t first_message_sequence_number,
-                const uint64_t block_height,
-                void* inbox_messages,
-                void* inbox_hashes_ptr,
-                void* previous_inbox_hash_ptr);
+int deliverMessages(CArbCore* storage_ptr,
+                    const uint64_t first_message_sequence_number,
+                    const uint64_t block_height,
+                    void* inbox_messages,
+                    void* inbox_hashes_ptr,
+                    void* previous_inbox_hash_ptr);
 
 #ifdef __cplusplus
 }

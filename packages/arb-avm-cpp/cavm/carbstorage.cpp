@@ -77,11 +77,6 @@ CAggregatorStore* createAggregatorStore(CArbStorage* storage_ptr) {
     return storage->getAggregatorStore().release();
 }
 
-CMessageStore* createMessageStore(CArbStorage* storage_ptr) {
-    auto storage = static_cast<ArbStorage*>(storage_ptr);
-    return storage->getMessageStore().release();
-}
-
 CMachine* getInitialMachine(const CArbStorage* storage_ptr,
                             CValueCache* value_cache_ptr) {
     auto storage = static_cast<const ArbStorage*>(storage_ptr);

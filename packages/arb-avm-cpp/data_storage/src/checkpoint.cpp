@@ -31,7 +31,6 @@ Checkpoint extractCheckpoint(const uint256_t arb_gas_used,
     auto processed_message_accumulator_hash = extractUint256(current_iter);
     auto reorg_index = extractUint64(current_iter);
     auto block_height = extractUint64(current_iter);
-    auto step_count = extractUint64(current_iter);
     auto send_count = extractUint64(current_iter);
     auto log_count = extractUint64(current_iter);
 
@@ -42,7 +41,6 @@ Checkpoint extractCheckpoint(const uint256_t arb_gas_used,
                       processed_message_accumulator_hash,
                       reorg_index,
                       block_height,
-                      step_count,
                       send_count,
                       log_count,
                       machineStateKeys};
@@ -57,7 +55,6 @@ std::vector<unsigned char> serializeCheckpoint(const Checkpoint& state_data) {
                       state_data_vector);
     marshal_uint64_t(state_data.reorg_index, state_data_vector);
     marshal_uint64_t(state_data.block_height, state_data_vector);
-    marshal_uint64_t(state_data.step_count, state_data_vector);
     marshal_uint64_t(state_data.send_count, state_data_vector);
     marshal_uint64_t(state_data.log_count, state_data_vector);
 

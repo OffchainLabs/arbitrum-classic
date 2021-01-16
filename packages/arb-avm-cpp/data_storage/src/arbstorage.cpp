@@ -29,7 +29,7 @@
 
 ArbStorage::ArbStorage(const std::string& db_path)
     : datastorage(std::make_shared<DataStorage>(db_path)),
-      cmach(std::make_shared<ArbCore>(datastorage)) {}
+      arb_core(std::make_shared<ArbCore>(datastorage)) {}
 
 void ArbStorage::initialize(const std::string& executable_path) {
     auto executable = loadExecutable(executable_path);
@@ -37,11 +37,11 @@ void ArbStorage::initialize(const std::string& executable_path) {
 }
 
 void ArbStorage::initialize(LoadedExecutable executable) {
-    cmach->initialize(std::move(executable));
+    arb_core->initialize(std::move(executable));
 }
 
 bool ArbStorage::initialized() const {
-    return cmach->initialized();
+    return arb_core->initialized();
 }
 
 bool ArbStorage::closeArbStorage() {
@@ -66,29 +66,29 @@ std::unique_ptr<MessageStore> ArbStorage::getMessageStore() const {
 }
 
 std::shared_ptr<ArbCore> ArbStorage::getArbCore() {
-    return cmach;
+    return arb_core;
 }
 
 std::unique_ptr<Machine> ArbStorage::getInitialMachine(
     ValueCache& value_cache) const {
-    return cmach->getInitialMachine(value_cache);
+    return arb_core->getInitialMachine(value_cache);
 }
 
 std::unique_ptr<Machine> ArbStorage::getMachine(uint256_t machineHash,
                                                 ValueCache& value_cache) const {
-    return cmach->getMachine(machineHash, value_cache);
+    return arb_core->getMachine(machineHash, value_cache);
 }
 
 DbResult<value> ArbStorage::getValue(uint256_t value_hash,
                                      ValueCache& value_cache) const {
-    auto tx = cmach->makeConstTransaction();
+    auto tx = arb_core->makeConstTransaction();
     return ::getValue(*tx, value_hash, value_cache);
 }
 
 std::unique_ptr<Transaction> ArbStorage::makeTransaction() {
-    return cmach->makeTransaction();
+    return arb_core->makeTransaction();
 }
 
 std::unique_ptr<const Transaction> ArbStorage::makeConstTransaction() const {
-    return cmach->makeConstTransaction();
+    return arb_core->makeConstTransaction();
 }

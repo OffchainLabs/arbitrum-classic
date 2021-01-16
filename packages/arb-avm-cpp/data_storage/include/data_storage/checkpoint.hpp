@@ -33,12 +33,11 @@ struct Checkpoint {
 
     uint256_t message_sequence_number_processed;
     uint256_t processed_message_accumulator_hash;
-    uint64_t reorg_index;
+    uint64_t reorg_index{};
 
-    uint64_t block_height;
-    uint64_t step_count;
-    uint64_t send_count;
-    uint64_t log_count;
+    uint64_t block_height{};
+    uint64_t send_count{};
+    uint64_t log_count{};
     MachineStateKeys machine_state_keys{};
 
     Checkpoint() = default;
@@ -47,7 +46,6 @@ struct Checkpoint {
                uint256_t processed_message_accumulator_hash,
                uint64_t reorg_index,
                uint64_t block_height,
-               uint64_t step_count,
                uint64_t send_count,
                uint64_t log_count,
                MachineStateKeys machine_state_keys)
@@ -57,7 +55,6 @@ struct Checkpoint {
               processed_message_accumulator_hash),
           reorg_index(reorg_index),
           block_height(block_height),
-          step_count(step_count),
           send_count(send_count),
           log_count(log_count),
           machine_state_keys(machine_state_keys) {}

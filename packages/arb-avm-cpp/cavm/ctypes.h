@@ -58,8 +58,8 @@ struct HashResultStruct {
 
 typedef struct {
     uint64_t inbox_messages_consumed;
-    ByteSlice outMessages;
-    int outMessageCount;
+    ByteSlice sends;
+    int sendCount;
     ByteSlice logs;
     int logCount;
     ByteSlice debugPrints;
