@@ -18,17 +18,15 @@
 
 pragma solidity ^0.6.11;
 
+import "./InboxCore.sol";
 import "./IInbox.sol";
 import "./Messages.sol";
 
-contract Inbox is IInbox {
+contract Inbox is InboxCore, IInbox {
     uint8 internal constant ETH_TRANSFER = 0;
     uint8 internal constant L2_MSG = 3;
     uint8 internal constant INITIALIZATION_MSG = 4;
     uint8 internal constant L2_CONTRACT_PAIR = 5;
-
-    bytes32 public inboxMaxAcc;
-    uint256 public inboxMaxCount;
 
     /**
      * @notice Send a generic L2 message to the chain
@@ -39,7 +37,16 @@ contract Inbox is IInbox {
         // solhint-disable-next-line avoid-tx-origin
         require(msg.sender == tx.origin, "origin only");
         (uint256 msgNum, bytes32 beforeInboxAcc) =
-            _deliverMessageImpl(L2_MSG, msg.sender, keccak256(messageData));
+            deliverMessageToInbox(
+                Messages.messageHash(
+                    L2_MSG,
+                    msg.sender,
+                    block.number,
+                    block.timestamp, // solhint-disable-line not-rely-on-time
+                    inboxMaxCount,
+                    keccak256(messageData)
+                )
+            );
         emit MessageDeliveredFromOrigin(msgNum, beforeInboxAcc, L2_MSG, msg.sender);
     }
 
@@ -90,29 +97,17 @@ contract Inbox is IInbox {
         bytes memory _messageData
     ) private {
         (uint256 msgNum, bytes32 beforeInboxAcc) =
-            _deliverMessageImpl(_kind, _sender, keccak256(_messageData));
-        emit MessageDelivered(msgNum, beforeInboxAcc, _kind, _sender, _messageData);
-    }
-
-    function _deliverMessageImpl(
-        uint8 _kind,
-        address _sender,
-        bytes32 _messageDataHash
-    ) private returns (uint256, bytes32) {
-        uint256 count = inboxMaxCount;
-        bytes32 inboxAcc = inboxMaxAcc;
-        bytes32 messageHash =
-            Messages.messageHash(
-                _kind,
-                _sender,
-                block.number,
-                block.timestamp, // solhint-disable-line not-rely-on-time
-                count,
-                _messageDataHash
+            deliverMessageToInbox(
+                Messages.messageHash(
+                    _kind,
+                    _sender,
+                    block.number,
+                    block.timestamp, // solhint-disable-line not-rely-on-time
+                    inboxMaxCount,
+                    keccak256(_messageData)
+                )
             );
-        inboxMaxAcc = Messages.addMessageToInbox(inboxAcc, messageHash);
-        inboxMaxCount = count + 1;
-        return (count, inboxAcc);
+        emit MessageDelivered(msgNum, beforeInboxAcc, _kind, _sender, _messageData);
     }
 
     // Implementation taken from OpenZeppelin (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.1.0/contracts/utils/Address.sol)

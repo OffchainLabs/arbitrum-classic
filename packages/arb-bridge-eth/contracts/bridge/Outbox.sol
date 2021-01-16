@@ -18,22 +18,36 @@
 
 pragma solidity ^0.6.11;
 
+import "./OutboxCore.sol";
+import "./OutboxEntry.sol";
+
 import "./IOutbox.sol";
 
 import "./Messages.sol";
 import "../libraries/MerkleLib.sol";
 import "../libraries/BytesLib.sol";
 
-contract Outbox is IOutbox {
+contract Outbox is OutboxCore, IOutbox {
     using BytesLib for bytes;
 
     uint8 internal constant MSG_ROOT = 0;
 
-    OutboxEntry[] outboxes;
+    // Note, this variables are set and then wiped during a single transaction. Therefore their values don't need to be maintained, and their slots will be empty outside of transactions
+    address private _l2ToL1Sender;
+    uint128 private _l2ToL1Block;
+    uint128 private _l2ToL1Timestamp;
 
-    address public override l2ToL1Sender;
-    uint128 public override l2ToL1Block;
-    uint128 public override l2ToL1Timestamp;
+    function l2ToL1Sender() external view override returns (address) {
+        return _l2ToL1Sender;
+    }
+
+    function l2ToL1Block() external view override returns (uint256) {
+        return uint256(_l2ToL1Sender);
+    }
+
+    function l2ToL1Timestamp() external view override returns (uint256) {
+        return uint256(_l2ToL1Sender);
+    }
 
     function _processOutgoingMessages(bytes memory sendsData, uint256[] calldata sendLengths)
         internal
@@ -76,45 +90,27 @@ contract Outbox is IOutbox {
 
         spendOutput(outboxIndex, proof, index, userTx);
 
-        l2ToL1Sender = l2Sender;
-        l2ToL1Block = uint128(l2Block);
-        l2ToL1Timestamp = uint128(l2Timestamp);
+        _l2ToL1Sender = l2Sender;
+        _l2ToL1Block = uint128(l2Block);
+        _l2ToL1Timestamp = uint128(l2Timestamp);
 
         (bool success, ) = destAddr.call{ value: amount }(calldataForL1);
         require(success);
 
-        l2ToL1Sender = address(0);
-        l2ToL1Block = 0;
-        l2ToL1Timestamp = 0;
+        _l2ToL1Sender = address(0);
+        _l2ToL1Block = 0;
+        _l2ToL1Timestamp = 0;
     }
 
     function spendOutput(
         uint256 outboxIndex,
         bytes memory proof,
-        uint256 index,
+        uint256 path,
         bytes32 item
     ) private {
-        // Flip the first bit to prove this is a leaf
-        item = item ^ bytes32(uint256(1));
-        (bytes32 calcRoot, ) = MerkleLib.verifyMerkleProof(proof, item, index + 1);
-        outboxes[outboxIndex].spendOutput(calcRoot, index);
-    }
-}
-
-contract OutboxEntry {
-    address rollup;
-    bytes32 outputRoot;
-    mapping(uint256 => bool) spentOutput;
-
-    constructor(bytes32 root) public {
-        rollup = msg.sender;
-        outputRoot = root;
-    }
-
-    function spendOutput(bytes32 calcRoot, uint256 index) external {
-        require(msg.sender == rollup);
-        require(!spentOutput[index]);
-        require(calcRoot == outputRoot);
-        spentOutput[index] = true;
+        // Hash the leaf an extra time to prove it's a leaf
+        (bytes32 calcRoot, ) =
+            MerkleLib.verifyMerkleProof(proof, keccak256(abi.encodePacked(item)), path);
+        outboxes[outboxIndex].spendOutput(calcRoot, path);
     }
 }

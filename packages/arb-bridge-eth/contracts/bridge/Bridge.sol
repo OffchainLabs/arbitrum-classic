@@ -23,7 +23,7 @@ import "./Outbox.sol";
 
 import "./IBridge.sol";
 
-contract Bridge is Inbox, Outbox, IBridge {
+contract BridgeProxy is Inbox, Outbox, IBridge {
     address public rollup;
 
     function initialize(bytes calldata initializationMessage) external override {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2021, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,17 @@
 
 pragma solidity ^0.6.11;
 
-import "./Bridge.sol";
+import "./Messages.sol";
 
-contract BridgeFactory {
-    function newBridge() external returns (address) {
-        return address(new Bridge());
+contract InboxCore {
+    bytes32 public inboxMaxAcc;
+    uint256 public inboxMaxCount;
+
+    function deliverMessageToInbox(bytes32 messageHash) internal returns (uint256, bytes32) {
+        uint256 count = inboxMaxCount;
+        bytes32 inboxAcc = inboxMaxAcc;
+        inboxMaxAcc = Messages.addMessageToInbox(inboxAcc, messageHash);
+        inboxMaxCount = count + 1;
+        return (count, inboxAcc);
     }
 }

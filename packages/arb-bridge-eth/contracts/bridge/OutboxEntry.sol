@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
+// SPDX-License-Identifier: Apache-2.0
+
 /*
- * Copyright 2021, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,22 +20,19 @@
 
 pragma solidity ^0.6.11;
 
-interface IOutbox {
-    function l2ToL1Sender() external view returns (address);
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-    function l2ToL1Block() external view returns (uint256);
+contract OutboxEntry is Ownable {
+    bytes32 outputRoot;
+    mapping(uint256 => bool) spentOutput;
 
-    function l2ToL1Timestamp() external view returns (uint256);
+    constructor(bytes32 root) public {
+        outputRoot = root;
+    }
 
-    function executeTransaction(
-        uint256 outboxIndex,
-        bytes calldata proof,
-        uint256 index,
-        address l2Sender,
-        address destAddr,
-        uint256 l2Block,
-        uint256 l2Timestamp,
-        uint256 amount,
-        bytes calldata calldataForL1
-    ) external;
+    function spendOutput(bytes32 calcRoot, uint256 path) external onlyOwner {
+        require(!spentOutput[path], "ALREADY_SPENT");
+        require(calcRoot == outputRoot, "BAD_PROOF");
+        spentOutput[path] = true;
+    }
 }
