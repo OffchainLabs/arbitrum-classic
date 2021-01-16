@@ -77,8 +77,10 @@ contract ValidatorUtils {
             address
         )
     {
-        try rollup.checkConfirmValid() {
-            return (ConfirmType.VALID, 0, address(0));
+        try rollup.checkConfirmValidBefore() returns (INode node) {
+            try rollup.checkConfirmValidAfter(node) {
+                return (ConfirmType.VALID, 0, address(0));
+            } catch {}
         } catch {}
 
         try
@@ -106,7 +108,7 @@ contract ValidatorUtils {
         rollup.checkUnresolved();
         rollup.checkNoRecentStake();
         uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
-        bool outOfOrder = rollup.checkMaybeRejectable();
+        bool outOfOrder = checkMaybeRejectable(rollup);
         if (outOfOrder) {
             return (0, address(0));
         }
@@ -120,6 +122,20 @@ contract ValidatorUtils {
             );
         require(found, "NO_EXAMPLE");
         return (successorWithStake, stakerAddress);
+    }
+
+    function checkMaybeRejectable(IRollup rollup) private view returns (bool) {
+        rollup.checkUnresolved();
+        INode node = rollup.nodes(rollup.firstUnresolvedNode());
+        bool outOfOrder = node.prev() == rollup.latestConfirmed();
+        if (outOfOrder) {
+            rollup.checkNoRecentStake();
+            // Verify the block's deadline has passed
+            require(block.number >= node.deadlineBlock(), "BEFORE_DEADLINE");
+            // Verify that no staker is staked on this node
+            require(node.stakerCount() == rollup.countStakedZombies(node), "HAS_STAKERS");
+        }
+        return outOfOrder;
     }
 
     function refundableStakers(IRollup rollup) external view returns (address[] memory) {

@@ -25,6 +25,9 @@ interface IOutbox {
 
     function l2ToL1Timestamp() external view returns (uint256);
 
+    function processOutgoingMessages(bytes calldata sendsData, uint256[] calldata sendLengths)
+        external;
+
     function executeTransaction(
         uint256 outboxIndex,
         bytes calldata proof,

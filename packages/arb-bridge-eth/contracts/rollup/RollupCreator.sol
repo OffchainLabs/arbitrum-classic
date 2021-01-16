@@ -19,23 +19,33 @@
 pragma solidity ^0.6.11;
 
 import "./Rollup.sol";
-import "../bridge/interfaces/IBridgeFactory.sol";
+import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
+import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
+import "../bridge/Bridge.sol";
 
-contract RollupCreator {
+import "../bridge/interfaces/IBridge.sol";
+
+contract RollupCreator is Ownable {
     event RollupCreated(address rollupAddress);
 
-    IBridgeFactory bridgeFactory;
+    address rollupTemplate;
     address challengeFactory;
     address nodeFactory;
 
-    constructor(
-        address _bridgeFactory,
+    function setTemplates(
+        address _rollupTemplate,
         address _challengeFactory,
         address _nodeFactory
-    ) public {
-        bridgeFactory = IBridgeFactory(_bridgeFactory);
+    ) external onlyOwner {
+        rollupTemplate = _rollupTemplate;
         challengeFactory = _challengeFactory;
         nodeFactory = _nodeFactory;
+    }
+
+    struct CreateRollupFrame {
+        ProxyAdmin admin;
+        Bridge bridge;
+        TransparentUpgradeableProxy rollup;
     }
 
     function createRollup(
@@ -45,22 +55,28 @@ contract RollupCreator {
         uint256 _baseStake,
         address _stakeToken,
         address _owner,
-        bytes calldata _extraConfig
-    ) external returns (Rollup) {
-        Rollup rollup =
-            new Rollup(
-                _machineHash,
-                _challengePeriodBlocks,
-                _arbGasSpeedLimitPerBlock,
-                _baseStake,
-                _stakeToken,
-                _owner,
-                bridgeFactory.newBridge(),
-                challengeFactory,
-                nodeFactory,
-                _extraConfig
-            );
-        emit RollupCreated(address(rollup));
-        return rollup;
+        bytes memory _extraConfig
+    ) public returns (IRollup) {
+        CreateRollupFrame memory frame;
+        frame.admin = new ProxyAdmin();
+        frame.bridge = new Bridge();
+        frame.rollup = new TransparentUpgradeableProxy(rollupTemplate, address(frame.admin), "");
+        frame.bridge.transferOwnership(address(frame.rollup));
+        frame.admin.transferOwnership(address(frame.rollup));
+        IRollup(address(frame.rollup)).initialize(
+            _machineHash,
+            _challengePeriodBlocks,
+            _arbGasSpeedLimitPerBlock,
+            _baseStake,
+            _stakeToken,
+            _owner,
+            IBridge(frame.bridge),
+            challengeFactory,
+            nodeFactory,
+            _extraConfig,
+            address(frame.admin)
+        );
+        emit RollupCreated(address(frame.rollup));
+        return IRollup(address(frame.rollup));
     }
 }

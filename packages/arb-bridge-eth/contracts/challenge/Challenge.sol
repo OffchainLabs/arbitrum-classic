@@ -19,7 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "./IChallenge.sol";
-import "../rollup/IChallengeResultReceiver.sol";
+import "../rollup/IRollup.sol";
 import "./ChallengeLib.sol";
 
 import "../bridge/Messages.sol";
@@ -74,7 +74,7 @@ contract Challenge is Cloneable, IChallenge {
     IOneStepProof private executor;
     IOneStepProof2 private executor2;
 
-    IChallengeResultReceiver internal resultReceiver;
+    IRollup internal resultReceiver;
 
     bytes32 inboxConsistencyHash;
     bytes32 inboxDeltaHash;
@@ -137,7 +137,7 @@ contract Challenge is Cloneable, IChallenge {
         executor = IOneStepProof(_executionOneStepProofCon);
         executor2 = IOneStepProof2(_executionOneStepProof2Con);
 
-        resultReceiver = IChallengeResultReceiver(_resultReceiver);
+        resultReceiver = IRollup(_resultReceiver);
 
         inboxConsistencyHash = _inboxConsistencyHash;
         inboxDeltaHash = _inboxDeltaHash;

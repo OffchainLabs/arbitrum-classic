@@ -18,19 +18,22 @@
 
 pragma solidity ^0.6.11;
 
-import "./ChallengeResultReceiver.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 
 import "./IRollup.sol";
 import "./INode.sol";
-import "./RollupLib.sol";
-
+import "../bridge/interfaces/IBridge.sol";
+import "../bridge/interfaces/IOutbox.sol";
 import "../bridge/interfaces/IBridge.sol";
 import "../interfaces/IERC20.sol";
 
+import "../bridge/Messages.sol";
+import "./RollupLib.sol";
 import "../challenge/ChallengeLib.sol";
 
-contract Rollup is Pausable, IRollup {
+contract Rollup is Pausable, Ownable, IRollup {
     struct Zombie {
         address stakerAddress;
         uint256 latestStakedNode;
@@ -44,6 +47,8 @@ contract Rollup is Pausable, IRollup {
         address currentChallenge;
         bool isStaked;
     }
+
+    uint8 internal constant INITIALIZATION_MSG_TYPE = 4;
 
     uint256 public override latestConfirmed;
     uint256 public override firstUnresolvedNode;
@@ -61,48 +66,55 @@ contract Rollup is Pausable, IRollup {
     uint256 public override arbGasSpeedLimitPerBlock;
     uint256 public override baseStake;
     address public override stakeToken;
-    address public owner;
 
     // Bridge is an IInbox and IOutbox
     IBridge public override bridge;
+    IOutbox public override outbox;
     IChallengeFactory public override challengeFactory;
     INodeFactory public override nodeFactory;
-    ChallengeResultReceiver challengeResultReceiver;
+    ProxyAdmin admin;
 
     mapping(address => uint256) public override withdrawableFunds;
 
-    modifier onlyOwner {
-        require(msg.sender == owner, "ONLY_OWNER");
-        _;
-    }
-
-    constructor(
+    function initialize(
         bytes32 _machineHash,
         uint256 _challengePeriodBlocks,
         uint256 _arbGasSpeedLimitPerBlock,
         uint256 _baseStake,
         address _stakeToken,
         address _owner,
-        address _bridge,
+        IBridge _bridge,
         address _challengeFactory,
         address _nodeFactory,
-        bytes memory _extraConfig
-    ) public {
-        bridge = IBridge(_bridge);
-        bridge.initialize(
-            abi.encodePacked(
-                uint256(_challengePeriodBlocks),
-                uint256(_arbGasSpeedLimitPerBlock),
-                uint256(_baseStake),
-                bytes32(bytes20(_stakeToken)),
-                bytes32(bytes20(_owner)),
-                _extraConfig
+        bytes memory _extraConfig,
+        address _admin
+    ) external override {
+        bridge = _bridge;
+        bridge.setInbox(address(this), true);
+        bytes32 initMsgHash =
+            keccak256(
+                abi.encodePacked(
+                    uint256(_challengePeriodBlocks),
+                    uint256(_arbGasSpeedLimitPerBlock),
+                    uint256(_baseStake),
+                    bytes32(bytes20(_stakeToken)),
+                    bytes32(bytes20(_owner)),
+                    _extraConfig
+                )
+            );
+        bridge.deliverMessageToInbox(
+            Messages.messageHash(
+                INITIALIZATION_MSG_TYPE,
+                address(this),
+                block.number,
+                block.timestamp, // solhint-disable-line not-rely-on-time
+                0,
+                initMsgHash
             )
         );
 
         challengeFactory = IChallengeFactory(_challengeFactory);
         nodeFactory = INodeFactory(_nodeFactory);
-        challengeResultReceiver = new ChallengeResultReceiver();
 
         bytes32 state =
             RollupLib.nodeStateHash(
@@ -131,11 +143,27 @@ contract Rollup is Pausable, IRollup {
         arbGasSpeedLimitPerBlock = _arbGasSpeedLimitPerBlock;
         baseStake = _baseStake;
         stakeToken = _stakeToken;
-        owner = _owner;
+
+        transferOwnership(_owner);
+        admin = ProxyAdmin(_admin);
 
         firstUnresolvedNode = 1;
 
         emit RollupCreated(_machineHash);
+    }
+
+    function addOutbox(IOutbox _outbox) external onlyOwner {
+        outbox = _outbox;
+        bridge.setOutbox(address(_outbox), true);
+    }
+
+    function addInbox(address _inbox) external onlyOwner {
+        bridge.setInbox(address(_inbox), true);
+    }
+
+    function upgradeImplementation(address _newRollup) external onlyOwner {
+        address currentAddress = address(this);
+        admin.upgrade(TransparentUpgradeableProxy(payable(currentAddress)), _newRollup);
     }
 
     function ownerPause() external onlyOwner {
@@ -191,7 +219,7 @@ contract Rollup is Pausable, IRollup {
         bytes32 sendAcc = RollupLib.generateLastMessageHash(sendsData, sendLengths);
         require(node.confirmData() == RollupLib.confirmHash(sendAcc, logAcc), "CONFIRM_DATA");
 
-        bridge.processOutgoingMessages(sendsData, sendLengths);
+        outbox.processOutgoingMessages(sendsData, sendLengths);
 
         destroyNode(latestConfirmed);
 
@@ -407,7 +435,7 @@ contract Rollup is Pausable, IRollup {
         // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
         address challengeAddress =
             challengeFactory.createChallenge(
-                address(challengeResultReceiver),
+                address(this),
                 nodeFields[0],
                 nodeFields[1],
                 nodeFields[2],
@@ -425,18 +453,12 @@ contract Rollup is Pausable, IRollup {
 
     // completeChallenge isn't pausable since in flight challenges should be allowed to complete or else they
     // could be forced to timeout
-    function completeChallenge(
-        address challengeContract,
-        address winningStaker,
-        address losingStaker
-    ) external override {
-        require(msg.sender == address(challengeResultReceiver), "WRONG_SENDER");
+    function completeChallenge(address winningStaker, address losingStaker) external override {
         Staker storage winner = stakerMap[winningStaker];
         Staker storage loser = stakerMap[losingStaker];
-
+        require(winner.currentChallenge == loser.currentChallenge, "SAME_CHAL");
         // Only the challenge contract can declare winners and losers
-        require(winner.currentChallenge == challengeContract);
-        require(loser.currentChallenge == challengeContract);
+        require(msg.sender == address(winner.currentChallenge), "WRONG_SENDER");
 
         uint256 loserStake = loser.amountStaked;
 
@@ -488,25 +510,6 @@ contract Rollup is Pausable, IRollup {
 
     function zombieCount() external view override returns (uint256) {
         return zombies.length;
-    }
-
-    function checkMaybeRejectable() external view override returns (bool) {
-        checkUnresolved();
-        INode node = nodes[firstUnresolvedNode];
-        bool outOfOrder = node.prev() == latestConfirmed;
-        if (outOfOrder) {
-            checkNoRecentStake();
-            // Verify the block's deadline has passed
-            require(block.number >= node.deadlineBlock(), "BEFORE_DEADLINE");
-            // Verify that no staker is staked on this node
-            require(node.stakerCount() == countStakedZombies(node), "HAS_STAKERS");
-        }
-        return outOfOrder;
-    }
-
-    function checkConfirmValid() external view override {
-        INode node = checkConfirmValidBefore();
-        checkConfirmValidAfter(node);
     }
 
     function stakerInfo(address stakerAddress)
@@ -662,7 +665,7 @@ contract Rollup is Pausable, IRollup {
         require(staker.currentChallenge == address(0), "IN_CHAL");
     }
 
-    function checkConfirmValidBefore() private view returns (INode) {
+    function checkConfirmValidBefore() public view override returns (INode) {
         checkUnresolved();
         checkNoRecentStake();
 
@@ -680,7 +683,7 @@ contract Rollup is Pausable, IRollup {
         return node;
     }
 
-    function checkConfirmValidAfter(INode node) private view {
+    function checkConfirmValidAfter(INode node) public view override {
         // All non-zombie stakers are staked on this node
         require(
             node.stakerCount() == stakerList.length + countStakedZombies(node),

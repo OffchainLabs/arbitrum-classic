@@ -24,17 +24,18 @@ import "../libraries/Cloneable.sol";
 import "./interfaces/IOutboxEntry.sol";
 
 contract OutboxEntry is Ownable, Cloneable, IOutboxEntry {
-    bytes32 outputRoot;
-    mapping(uint256 => bool) spentOutput;
+    bytes32 public root;
+    mapping(uint256 => bool) public spentOutput;
 
-    function initialize(bytes32 root) external override {
-        require(outputRoot != 0, "ALREADY_INIT");
-        outputRoot = root;
+    function initialize(address _owner, bytes32 _root) external override {
+        require(root != 0, "ALREADY_INIT");
+        transferOwnership(_owner);
+        root = _root;
     }
 
-    function spendOutput(bytes32 calcRoot, uint256 path) external override onlyOwner {
-        require(!spentOutput[path], "ALREADY_SPENT");
-        require(calcRoot == outputRoot, "BAD_PROOF");
-        spentOutput[path] = true;
+    function spendOutput(bytes32 _root, uint256 _id) external override onlyOwner {
+        require(!spentOutput[_id], "ALREADY_SPENT");
+        require(_root == root, "BAD_ROOT");
+        spentOutput[_id] = true;
     }
 }

@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 import "./INode.sol";
 import "./INodeFactory.sol";
 import "../bridge/interfaces/IBridge.sol";
+import "../bridge/interfaces/IOutbox.sol";
 import "../challenge/IChallengeFactory.sol";
 
 interface IRollup {
@@ -42,6 +43,20 @@ interface IRollup {
     );
 
     event SentLogs(bytes32 logsAccHash);
+
+    function initialize(
+        bytes32 _machineHash,
+        uint256 _challengePeriodBlocks,
+        uint256 _arbGasSpeedLimitPerBlock,
+        uint256 _baseStake,
+        address _stakeToken,
+        address _owner,
+        IBridge _bridge,
+        address _challengeFactory,
+        address _nodeFactory,
+        bytes memory _extraConfig,
+        address _admin
+    ) external;
 
     // Section: Node decisions
 
@@ -94,11 +109,7 @@ interface IRollup {
         uint256 executionCheckTime
     ) external;
 
-    function completeChallenge(
-        address challengeContract,
-        address winningStaker,
-        address losingStaker
-    ) external;
+    function completeChallenge(address winningStaker, address losingStaker) external;
 
     // Section: Zombie cleanup
 
@@ -131,9 +142,9 @@ interface IRollup {
 
     function withdrawableFunds(address owner) external view returns (uint256);
 
-    function checkMaybeRejectable() external view returns (bool);
+    function checkConfirmValidBefore() external view returns (INode);
 
-    function checkConfirmValid() external view;
+    function checkConfirmValidAfter(INode node) external view;
 
     function latestConfirmed() external view returns (uint256);
 
@@ -154,6 +165,8 @@ interface IRollup {
     function baseStake() external view returns (uint256);
 
     function stakeToken() external view returns (address);
+
+    function outbox() external view returns (IOutbox);
 
     function bridge() external view returns (IBridge);
 

@@ -18,22 +18,26 @@
 
 pragma solidity ^0.6.11;
 
-import "./OutboxCore.sol";
+import "../libraries/CloneFactory.sol";
 import "./OutboxEntry.sol";
-import "./OutboxEntryFactory.sol";
 
 import "./interfaces/IOutbox.sol";
+import "./interfaces/IBridge.sol";
 
 import "./Messages.sol";
 import "../libraries/MerkleLib.sol";
 import "../libraries/BytesLib.sol";
 
-contract Outbox is OutboxCore, IOutbox {
+contract Outbox is CloneFactory, IOutbox {
     using BytesLib for bytes;
 
-    uint8 internal constant MSG_ROOT = 0;
+    bytes1 internal constant MSG_ROOT = 0;
 
-    OutboxEntryFactory outboxEntryFactory;
+    address rollup;
+    IBridge bridge;
+
+    ICloneable outboxEntryTemplate;
+    OutboxEntry[] outboxes;
 
     // Note, these variables are set and then wiped during a single transaction.
     // Therefore their values don't need to be maintained, and their slots will
@@ -43,7 +47,7 @@ contract Outbox is OutboxCore, IOutbox {
     uint128 private _l2ToL1Timestamp;
 
     constructor() public {
-        outboxEntryFactory = new OutboxEntryFactory();
+        outboxEntryTemplate = ICloneable(new OutboxEntry());
     }
 
     function l2ToL1Sender() external view override returns (address) {
@@ -58,19 +62,27 @@ contract Outbox is OutboxCore, IOutbox {
         return uint256(_l2ToL1Sender);
     }
 
-    function _processOutgoingMessages(bytes memory sendsData, uint256[] calldata sendLengths)
-        internal
+    function processOutgoingMessages(bytes calldata sendsData, uint256[] calldata sendLengths)
+        external
+        override
     {
+        require(msg.sender == rollup, "ONLY_ROLLUP");
         // If we've reached here, we've already confirmed that sum(sendLengths) == sendsData.length
         uint256 messageCount = sendLengths.length;
         uint256 offset = 0;
         for (uint256 i = 0; i < messageCount; i++) {
-            // Otherwise we have an unsupported message type and we skip the message
-            if (uint8(sendsData[offset]) == MSG_ROOT) {
-                bytes32 outputRoot = sendsData.toBytes32(offset + 1);
-                outboxes.push(outboxEntryFactory.create(outputRoot));
-            }
+            handleOutgoingMessage(bytes(sendsData[offset:sendLengths[i]]));
             offset += sendLengths[i];
+        }
+    }
+
+    function handleOutgoingMessage(bytes memory data) private {
+        // Otherwise we have an unsupported message type and we skip the message
+        if (data[0] == MSG_ROOT) {
+            bytes32 outputRoot = data.toBytes32(1);
+            address clone = createClone(outboxEntryTemplate);
+            OutboxEntry(clone).initialize(address(bridge), outputRoot);
+            outboxes.push(OutboxEntry(clone));
         }
     }
 
@@ -103,8 +115,8 @@ contract Outbox is OutboxCore, IOutbox {
         _l2ToL1Block = uint128(l2Block);
         _l2ToL1Timestamp = uint128(l2Timestamp);
 
-        (bool success, ) = destAddr.call{ value: amount }(calldataForL1);
-        require(success);
+        (bool success, ) = bridge.executeCall(destAddr, amount, calldataForL1);
+        require(success, "CALL_FAILED");
 
         _l2ToL1Sender = address(0);
         _l2ToL1Block = 0;
@@ -120,6 +132,12 @@ contract Outbox is OutboxCore, IOutbox {
         // Hash the leaf an extra time to prove it's a leaf
         (bytes32 calcRoot, ) =
             MerkleLib.verifyMerkleProof(proof, keccak256(abi.encodePacked(item)), path);
-        outboxes[outboxIndex].spendOutput(calcRoot, path);
+        (bool success, ) =
+            bridge.executeCall(
+                address(outboxes[outboxIndex]),
+                0,
+                abi.encodeWithSignature("spendOutput(bytes32,uint256)", calcRoot, path)
+            );
+        require(success, "CANT_SPEND");
     }
 }

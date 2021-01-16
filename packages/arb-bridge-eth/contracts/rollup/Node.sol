@@ -68,4 +68,17 @@ contract Node is Cloneable, INode {
         stakers[staker] = false;
         stakerCount--;
     }
+
+    function checkPastDeadline() external view override {
+        require(block.number >= deadlineBlock, "BEFORE_DEADLINE");
+    }
+
+    function checkRejectExample(uint256 latestConfirmed, address stakerAddress)
+        external
+        view
+        override
+    {
+        require(prev == latestConfirmed, "BAD_SUCCESSOR");
+        require(stakers[stakerAddress], "BAD_STAKER");
+    }
 }

@@ -18,17 +18,21 @@
 
 pragma solidity ^0.6.11;
 
-import "./InboxCore.sol";
-
 import "./interfaces/IInbox.sol";
+import "./interfaces/IBridge.sol";
 
 import "./Messages.sol";
 
-contract Inbox is InboxCore, IInbox {
+contract Inbox is IInbox {
     uint8 internal constant ETH_TRANSFER = 0;
     uint8 internal constant L2_MSG = 3;
-    uint8 internal constant INITIALIZATION_MSG = 4;
     uint8 internal constant L2_CONTRACT_PAIR = 5;
+
+    IBridge bridge;
+
+    constructor(IBridge _bridge) public {
+        bridge = _bridge;
+    }
 
     /**
      * @notice Send a generic L2 message to the chain
@@ -38,18 +42,18 @@ contract Inbox is InboxCore, IInbox {
     function sendL2MessageFromOrigin(bytes calldata messageData) external {
         // solhint-disable-next-line avoid-tx-origin
         require(msg.sender == tx.origin, "origin only");
-        (uint256 msgNum, bytes32 beforeInboxAcc) =
-            deliverMessageToInbox(
-                Messages.messageHash(
-                    L2_MSG,
-                    msg.sender,
-                    block.number,
-                    block.timestamp, // solhint-disable-line not-rely-on-time
-                    inboxMaxCount,
-                    keccak256(messageData)
-                )
-            );
-        emit MessageDeliveredFromOrigin(msgNum, beforeInboxAcc, L2_MSG, msg.sender);
+        (uint256 msgNum, ) = bridge.inboxInfo();
+        deliverToBridge(
+            Messages.messageHash(
+                L2_MSG,
+                msg.sender,
+                block.number,
+                block.timestamp, // solhint-disable-line not-rely-on-time
+                msgNum,
+                keccak256(messageData)
+            )
+        );
+        emit InboxMessageDeliveredFromOrigin(msgNum, L2_MSG, msg.sender);
     }
 
     /**
@@ -76,10 +80,6 @@ contract Inbox is InboxCore, IInbox {
         emit BuddyContractPair(msg.sender);
     }
 
-    function sendInitializationMessage(bytes memory messageData) internal {
-        _deliverMessage(INITIALIZATION_MSG, address(this), messageData);
-    }
-
     /**
      * @notice Deposits ETH into the chain
      * @dev This method is payable and will deposit all value it is called with
@@ -98,18 +98,22 @@ contract Inbox is InboxCore, IInbox {
         address _sender,
         bytes memory _messageData
     ) private {
-        (uint256 msgNum, bytes32 beforeInboxAcc) =
-            deliverMessageToInbox(
-                Messages.messageHash(
-                    _kind,
-                    _sender,
-                    block.number,
-                    block.timestamp, // solhint-disable-line not-rely-on-time
-                    inboxMaxCount,
-                    keccak256(_messageData)
-                )
-            );
-        emit MessageDelivered(msgNum, beforeInboxAcc, _kind, _sender, _messageData);
+        (uint256 msgNum, ) = bridge.inboxInfo();
+        deliverToBridge(
+            Messages.messageHash(
+                _kind,
+                _sender,
+                block.number,
+                block.timestamp, // solhint-disable-line not-rely-on-time
+                msgNum,
+                keccak256(_messageData)
+            )
+        );
+        emit InboxMessageDelivered(msgNum, _kind, _sender, _messageData);
+    }
+
+    function deliverToBridge(bytes32 messageHash) private {
+        bridge.deliverMessageToInbox{ value: msg.value }(messageHash);
     }
 
     // Implementation taken from OpenZeppelin (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.1.0/contracts/utils/Address.sol)

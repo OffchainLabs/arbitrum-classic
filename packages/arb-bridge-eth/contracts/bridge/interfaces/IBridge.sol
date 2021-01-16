@@ -19,10 +19,28 @@
 pragma solidity ^0.6.11;
 
 interface IBridge {
-    function initialize(bytes calldata initializationMessage) external;
+    event MessageDelivered(address inbox, uint256 messageIndex, bytes32 beforeInboxAcc);
 
-    function processOutgoingMessages(bytes calldata sendsData, uint256[] calldata sendLengths)
-        external;
+    function deliverMessageToInbox(bytes32 messageHash) external payable;
+
+    function executeCall(
+        address destAddr,
+        uint256 amount,
+        bytes calldata data
+    ) external returns (bool success, bytes memory returnData);
+
+    // These are only callable by the admin
+    function setInbox(address inbox, bool enabled) external;
+
+    function setOutbox(address inbox, bool enabled) external;
+
+    // View functions
 
     function inboxInfo() external view returns (uint256, bytes32);
+
+    function activeOutbox() external view returns (address);
+
+    function allowedInboxes(address inbox) external view returns (bool);
+
+    function allowedOutboxes(address outbox) external view returns (bool);
 }

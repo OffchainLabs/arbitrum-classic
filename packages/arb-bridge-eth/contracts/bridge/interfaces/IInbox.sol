@@ -19,20 +19,9 @@
 pragma solidity ^0.6.11;
 
 interface IInbox {
-    event MessageDelivered(
-        uint256 indexed messageNum,
-        bytes32 indexed beforeInboxAcc,
-        uint8 kind,
-        address sender,
-        bytes data
-    );
+    event InboxMessageDelivered(uint256 indexed messageNum, uint8 kind, address sender, bytes data);
 
-    event MessageDeliveredFromOrigin(
-        uint256 indexed messageNum,
-        bytes32 indexed beforeInboxAcc,
-        uint8 kind,
-        address sender
-    );
+    event InboxMessageDeliveredFromOrigin(uint256 indexed messageNum, uint8 kind, address sender);
 
     event BuddyContractPair(address indexed sender);
 

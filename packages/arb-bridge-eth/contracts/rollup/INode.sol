@@ -19,20 +19,6 @@
 pragma solidity ^0.6.11;
 
 interface INode {
-    function stateHash() external view returns (bytes32);
-
-    function challengeHash() external view returns (bytes32);
-
-    function confirmData() external view returns (bytes32);
-
-    function prev() external view returns (uint256);
-
-    function deadlineBlock() external view returns (uint256);
-
-    function stakerCount() external view returns (uint256);
-
-    function stakers(address staker) external view returns (bool);
-
     function initialize(
         address _rollup,
         bytes32 _stateHash,
@@ -47,4 +33,22 @@ interface INode {
     function addStaker(address staker) external;
 
     function removeStaker(address staker) external;
+
+    function stateHash() external view returns (bytes32);
+
+    function challengeHash() external view returns (bytes32);
+
+    function confirmData() external view returns (bytes32);
+
+    function prev() external view returns (uint256);
+
+    function deadlineBlock() external view returns (uint256);
+
+    function stakerCount() external view returns (uint256);
+
+    function stakers(address staker) external view returns (bool);
+
+    function checkPastDeadline() external view;
+
+    function checkRejectExample(uint256 latestConfirmed, address stakerAddress) external view;
 }

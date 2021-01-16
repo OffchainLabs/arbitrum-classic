@@ -23,22 +23,41 @@ import "./Outbox.sol";
 
 import "./interfaces/IBridge.sol";
 
-contract BridgeProxy is Inbox, Outbox, IBridge {
-    address public rollup;
+contract Bridge is Ownable, IBridge {
+    mapping(address => bool) public override allowedInboxes;
+    mapping(address => bool) public override allowedOutboxes;
 
-    function initialize(bytes calldata initializationMessage) external override {
-        require(rollup == address(0), "ALREADY_INITIALIZED");
-        rollup = msg.sender;
+    address public override activeOutbox;
 
-        sendInitializationMessage(initializationMessage);
+    bytes32 private inboxMaxAcc;
+    uint256 private inboxMaxCount;
+
+    function deliverMessageToInbox(bytes32 messageHash) external payable override {
+        require(allowedInboxes[msg.sender], "NOT_FROM_INBOX");
+        uint256 count = inboxMaxCount;
+        bytes32 inboxAcc = inboxMaxAcc;
+        inboxMaxAcc = Messages.addMessageToInbox(inboxAcc, messageHash);
+        inboxMaxCount = count + 1;
+        emit MessageDelivered(msg.sender, count, inboxAcc);
     }
 
-    function processOutgoingMessages(bytes calldata sendsData, uint256[] calldata sendLengths)
-        external
-        override
-    {
-        require(msg.sender == rollup, "ONLY_ROLLUP");
-        _processOutgoingMessages(sendsData, sendLengths);
+    function executeCall(
+        address destAddr,
+        uint256 amount,
+        bytes calldata data
+    ) external override returns (bool success, bytes memory returnData) {
+        require(allowedOutboxes[msg.sender], "NOT_FROM_OUTBOX");
+        activeOutbox = msg.sender;
+        (success, returnData) = destAddr.call{ value: amount }(data);
+        activeOutbox = address(0);
+    }
+
+    function setInbox(address inbox, bool enabled) external override onlyOwner {
+        allowedInboxes[inbox] = enabled;
+    }
+
+    function setOutbox(address inbox, bool enabled) external override onlyOwner {
+        allowedOutboxes[inbox] = enabled;
     }
 
     function inboxInfo() external view override returns (uint256, bytes32) {
