@@ -20,7 +20,7 @@ pragma solidity ^0.6.11;
 
 import "./INode.sol";
 import "./INodeFactory.sol";
-import "../bridge/IBridge.sol";
+import "../bridge/interfaces/IBridge.sol";
 import "../challenge/IChallengeFactory.sol";
 
 interface IRollup {

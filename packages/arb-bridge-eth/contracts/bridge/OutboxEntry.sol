@@ -21,7 +21,7 @@ pragma solidity ^0.6.11;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../libraries/Cloneable.sol";
 
-import "./IOutboxEntry.sol";
+import "./interfaces/IOutboxEntry.sol";
 
 contract OutboxEntry is Ownable, Cloneable, IOutboxEntry {
     bytes32 outputRoot;

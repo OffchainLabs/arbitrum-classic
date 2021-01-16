@@ -22,7 +22,7 @@ import "./OutboxCore.sol";
 import "./OutboxEntry.sol";
 import "./OutboxEntryFactory.sol";
 
-import "./IOutbox.sol";
+import "./interfaces/IOutbox.sol";
 
 import "./Messages.sol";
 import "../libraries/MerkleLib.sol";

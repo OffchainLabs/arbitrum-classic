@@ -19,7 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "./Rollup.sol";
-import "../bridge/IBridgeFactory.sol";
+import "../bridge/interfaces/IBridgeFactory.sol";
 
 contract RollupCreator {
     event RollupCreated(address rollupAddress);

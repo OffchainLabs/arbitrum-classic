@@ -19,7 +19,9 @@
 pragma solidity ^0.6.11;
 
 import "./InboxCore.sol";
-import "./IInbox.sol";
+
+import "./interfaces/IInbox.sol";
+
 import "./Messages.sol";
 
 contract Inbox is InboxCore, IInbox {

@@ -18,7 +18,7 @@
 
 pragma solidity ^0.6.11;
 
-import "../libraries/ICloneable.sol";
+import "../../libraries/ICloneable.sol";
 
 interface IOutboxEntry is ICloneable {
     function initialize(bytes32 root) external;

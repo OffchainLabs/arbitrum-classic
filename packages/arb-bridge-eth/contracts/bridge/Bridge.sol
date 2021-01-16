@@ -21,7 +21,7 @@ pragma solidity ^0.6.11;
 import "./Inbox.sol";
 import "./Outbox.sol";
 
-import "./IBridge.sol";
+import "./interfaces/IBridge.sol";
 
 contract BridgeProxy is Inbox, Outbox, IBridge {
     address public rollup;

@@ -25,7 +25,7 @@ import "./IRollup.sol";
 import "./INode.sol";
 import "./RollupLib.sol";
 
-import "../bridge/IBridge.sol";
+import "../bridge/interfaces/IBridge.sol";
 import "../interfaces/IERC20.sol";
 
 import "../challenge/ChallengeLib.sol";

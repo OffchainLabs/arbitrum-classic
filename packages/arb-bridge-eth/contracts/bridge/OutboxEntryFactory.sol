@@ -21,7 +21,7 @@ pragma solidity ^0.6.11;
 import "../libraries/CloneFactory.sol";
 import "./OutboxEntry.sol";
 
-import "./IOutboxEntry.sol";
+import "./interfaces/IOutboxEntry.sol";
 
 contract OutboxEntryFactory is CloneFactory {
     IOutboxEntry public outboxTemplate;
