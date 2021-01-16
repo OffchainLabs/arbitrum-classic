@@ -70,6 +70,7 @@ contract RollupCreator is Ownable {
         frame.bridge.setInbox(address(frame.inbox), true);
         frame.outbox = new Outbox(address(frame.rollup), IBridge(frame.bridge));
         frame.bridge.setOutbox(address(frame.outbox), true);
+
         frame.bridge.transferOwnership(address(frame.rollup));
         frame.admin.transferOwnership(address(frame.rollup));
         IRollup(address(frame.rollup)).initialize(

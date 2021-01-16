@@ -19,8 +19,9 @@
 pragma solidity ^0.6.11;
 
 import "arbos-contracts/contracts/ArbSys.sol";
-import "arb-bridge-eth/contracts/bridge/IInbox.sol";
-import "arb-bridge-eth/contracts/bridge/IOutbox.sol";
+import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
+import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
+import "arb-bridge-eth/contracts/bridge/interfaces/IBridge.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract ArbERC20 is ERC20 {
@@ -120,7 +121,10 @@ contract EthERC20Escrow {
 
     function withdrawFromL2(address destination, uint256 amount) external {
         require(balances[msg.sender] >= amount, "LOW_BALANCE");
-        require(IOutbox(msg.sender).l2ToL1Sender() == address(this), "L2_SENDER");
+        require(
+            IOutbox(IBridge(msg.sender).activeOutbox()).l2ToL1Sender() == address(this),
+            "L2_SENDER"
+        );
 
         balances[msg.sender] -= amount;
 
