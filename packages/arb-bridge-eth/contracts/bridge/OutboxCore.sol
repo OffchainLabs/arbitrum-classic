@@ -18,8 +18,8 @@
 
 pragma solidity ^0.6.11;
 
-import "./OutboxEntry.sol";
+import "./IOutboxEntry.sol";
 
 contract OutboxCore {
-    OutboxEntry[] outboxes;
+    IOutboxEntry[] outboxes;
 }

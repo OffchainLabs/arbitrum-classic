@@ -18,22 +18,10 @@
 
 pragma solidity ^0.6.11;
 
-library Messages {
-    function messageHash(
-        uint8 kind,
-        address sender,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 inboxSeqNum,
-        bytes32 messageDataHash
-    ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(kind, sender, blockNumber, timestamp, inboxSeqNum, messageDataHash)
-            );
-    }
+import "../libraries/ICloneable.sol";
 
-    function addMessageToInbox(bytes32 inbox, bytes32 message) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(inbox, message));
-    }
+interface IOutboxEntry is ICloneable {
+    function initialize(bytes32 root) external;
+
+    function spendOutput(bytes32 calcRoot, uint256 path) external;
 }

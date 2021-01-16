@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019-2021, Offchain Labs, Inc.
+ * Copyright 2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,22 +18,8 @@
 
 pragma solidity ^0.6.11;
 
-library Messages {
-    function messageHash(
-        uint8 kind,
-        address sender,
-        uint256 blockNumber,
-        uint256 timestamp,
-        uint256 inboxSeqNum,
-        bytes32 messageDataHash
-    ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(kind, sender, blockNumber, timestamp, inboxSeqNum, messageDataHash)
-            );
-    }
+import "./IOutboxEntry.sol";
 
-    function addMessageToInbox(bytes32 inbox, bytes32 message) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(inbox, message));
-    }
+interface IOutboxEntryFactory {
+    function create(bytes32 root) external returns (IOutboxEntry);
 }

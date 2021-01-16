@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// SPDX-License-Identifier: Apache-2.0
-
 /*
  * Copyright 2019-2021, Offchain Labs, Inc.
  *
@@ -21,16 +19,20 @@
 pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "../libraries/Cloneable.sol";
 
-contract OutboxEntry is Ownable {
+import "./IOutboxEntry.sol";
+
+contract OutboxEntry is Ownable, Cloneable, IOutboxEntry {
     bytes32 outputRoot;
     mapping(uint256 => bool) spentOutput;
 
-    constructor(bytes32 root) public {
+    function initialize(bytes32 root) external override {
+        require(outputRoot != 0, "ALREADY_INIT");
         outputRoot = root;
     }
 
-    function spendOutput(bytes32 calcRoot, uint256 path) external onlyOwner {
+    function spendOutput(bytes32 calcRoot, uint256 path) external override onlyOwner {
         require(!spentOutput[path], "ALREADY_SPENT");
         require(calcRoot == outputRoot, "BAD_PROOF");
         spentOutput[path] = true;

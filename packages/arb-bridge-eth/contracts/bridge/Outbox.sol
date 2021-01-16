@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "./OutboxCore.sol";
 import "./OutboxEntry.sol";
+import "./OutboxEntryFactory.sol";
 
 import "./IOutbox.sol";
 
@@ -32,10 +33,18 @@ contract Outbox is OutboxCore, IOutbox {
 
     uint8 internal constant MSG_ROOT = 0;
 
-    // Note, this variables are set and then wiped during a single transaction. Therefore their values don't need to be maintained, and their slots will be empty outside of transactions
+    OutboxEntryFactory outboxEntryFactory;
+
+    // Note, these variables are set and then wiped during a single transaction.
+    // Therefore their values don't need to be maintained, and their slots will
+    // be empty outside of transactions
     address private _l2ToL1Sender;
     uint128 private _l2ToL1Block;
     uint128 private _l2ToL1Timestamp;
+
+    constructor() public {
+        outboxEntryFactory = new OutboxEntryFactory();
+    }
 
     function l2ToL1Sender() external view override returns (address) {
         return _l2ToL1Sender;
@@ -59,7 +68,7 @@ contract Outbox is OutboxCore, IOutbox {
             // Otherwise we have an unsupported message type and we skip the message
             if (uint8(sendsData[offset]) == MSG_ROOT) {
                 bytes32 outputRoot = sendsData.toBytes32(offset + 1);
-                outboxes.push(new OutboxEntry(outputRoot));
+                outboxes.push(outboxEntryFactory.create(outputRoot));
             }
             offset += sendLengths[i];
         }
