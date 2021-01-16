@@ -19,6 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "./ChallengeResultReceiver.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 import "./IRollup.sol";
 import "./INode.sol";
@@ -29,7 +30,7 @@ import "../interfaces/IERC20.sol";
 
 import "../challenge/ChallengeLib.sol";
 
-contract Rollup is IRollup {
+contract Rollup is Pausable, IRollup {
     struct Zombie {
         address stakerAddress;
         uint256 latestStakedNode;
@@ -60,6 +61,7 @@ contract Rollup is IRollup {
     uint256 public override arbGasSpeedLimitPerBlock;
     uint256 public override baseStake;
     address public override stakeToken;
+    address public owner;
 
     // Bridge is an IInbox and IOutbox
     IBridge public override bridge;
@@ -68,6 +70,11 @@ contract Rollup is IRollup {
     ChallengeResultReceiver challengeResultReceiver;
 
     mapping(address => uint256) public override withdrawableFunds;
+
+    modifier onlyOwner {
+        require(msg.sender == owner, "ONLY_OWNER");
+        _;
+    }
 
     constructor(
         bytes32 _machineHash,
@@ -124,32 +131,26 @@ contract Rollup is IRollup {
         arbGasSpeedLimitPerBlock = _arbGasSpeedLimitPerBlock;
         baseStake = _baseStake;
         stakeToken = _stakeToken;
+        owner = _owner;
 
         firstUnresolvedNode = 1;
 
         emit RollupCreated(_machineHash);
     }
 
-    function checkMaybeRejectable() external view override returns (bool) {
-        checkUnresolved();
-        INode node = nodes[firstUnresolvedNode];
-        bool outOfOrder = node.prev() == latestConfirmed;
-        if (outOfOrder) {
-            checkNoRecentStake();
-            // Verify the block's deadline has passed
-            require(block.number >= node.deadlineBlock(), "BEFORE_DEADLINE");
-            // Verify that no staker is staked on this node
-            require(node.stakerCount() == countStakedZombies(node), "HAS_STAKERS");
-        }
-        return outOfOrder;
+    function ownerPause() external onlyOwner {
+        _pause();
     }
 
-    function checkConfirmValid() external view override {
-        INode node = checkConfirmValidBefore();
-        checkConfirmValidAfter(node);
+    function ownerResume() external onlyOwner {
+        _unpause();
     }
 
-    function rejectNextNode(uint256 successorWithStake, address stakerAddress) external override {
+    function rejectNextNode(uint256 successorWithStake, address stakerAddress)
+        external
+        override
+        whenNotPaused
+    {
         checkUnresolved();
 
         INode node = nodes[firstUnresolvedNode];
@@ -182,7 +183,7 @@ contract Rollup is IRollup {
         bytes32 logAcc,
         bytes calldata sendsData,
         uint256[] calldata sendLengths
-    ) external override {
+    ) external override whenNotPaused {
         INode node = checkConfirmValidBefore();
         removeOldZombies(0);
         checkConfirmValidAfter(node);
@@ -200,33 +201,7 @@ contract Rollup is IRollup {
         emit SentLogs(logAcc);
     }
 
-    function checkConfirmValidBefore() private view returns (INode) {
-        checkUnresolved();
-        checkNoRecentStake();
-
-        // There is at least one non-zombie staker
-        require(stakerList.length > 0, "NO_STAKERS");
-
-        INode node = nodes[firstUnresolvedNode];
-
-        // Verify the block's deadline has passed
-        require(node.deadlineBlock() <= block.number, "BEFORE_DEADLINE");
-
-        // Check that prev is latest confirmed
-        require(node.prev() == latestConfirmed, "INVALID_PREV");
-
-        return node;
-    }
-
-    function checkConfirmValidAfter(INode node) private view {
-        // All non-zombie stakers are staked on this node
-        require(
-            node.stakerCount() == stakerList.length + countStakedZombies(node),
-            "NOT_ALL_STAKED"
-        );
-    }
-
-    function newStake(uint256 tokenAmount) external payable override {
+    function newStake(uint256 tokenAmount) external payable override whenNotPaused {
         // Verify that sender is not already a staker
         require(!stakerMap[msg.sender].isStaked, "ALREADY_STAKED");
 
@@ -245,7 +220,12 @@ contract Rollup is IRollup {
         lastStakeBlock = block.number;
     }
 
-    function withdrawStakerFunds(address payable destination) external override returns (uint256) {
+    function withdrawStakerFunds(address payable destination)
+        external
+        override
+        whenNotPaused
+        returns (uint256)
+    {
         uint256 amount = withdrawableFunds[destination];
         // Note: This is an unsafe external call and could be used for reentrency
         // This is safe because it occurs after all checks and effects
@@ -257,7 +237,7 @@ contract Rollup is IRollup {
         bytes32 blockHash,
         uint256 blockNumber,
         uint256 nodeNum
-    ) external override {
+    ) external override whenNotPaused {
         Staker storage staker = stakerMap[msg.sender];
         require(staker.isStaked, "NOT_STAKED");
 
@@ -275,7 +255,7 @@ contract Rollup is IRollup {
         uint256 nodeNum,
         bytes32[7] calldata assertionBytes32Fields,
         uint256[10] calldata assertionIntFields
-    ) external override {
+    ) external override whenNotPaused {
         Staker storage staker = stakerMap[msg.sender];
         require(staker.isStaked, "NOT_STAKED");
         require(blockhash(blockNumber) == blockHash, "invalid known block");
@@ -354,7 +334,7 @@ contract Rollup is IRollup {
         );
     }
 
-    function returnOldDeposit(address stakerAddress) external override {
+    function returnOldDeposit(address stakerAddress) external override whenNotPaused {
         Staker storage staker = stakerMap[stakerAddress];
         require(staker.latestStakedNode <= latestConfirmed, "TOO_RECENT");
         checkUnchallengedStaker(staker);
@@ -363,13 +343,18 @@ contract Rollup is IRollup {
         withdrawableFunds[stakerAddress] += amountStaked;
     }
 
-    function addToDeposit(address stakerAddress, uint256 tokenAmount) external payable override {
+    function addToDeposit(address stakerAddress, uint256 tokenAmount)
+        external
+        payable
+        override
+        whenNotPaused
+    {
         Staker storage staker = stakerMap[stakerAddress];
         checkUnchallengedStaker(staker);
         staker.amountStaked += receiveStakerFunds(tokenAmount);
     }
 
-    function reduceDeposit(uint256 maxReduction) external override {
+    function reduceDeposit(uint256 maxReduction) external override whenNotPaused {
         Staker storage staker = stakerMap[msg.sender];
         checkUnchallengedStaker(staker);
         uint256 currentRequired = currentRequiredStake();
@@ -392,7 +377,7 @@ contract Rollup is IRollup {
         uint256[2] calldata nodeNums,
         bytes32[3] calldata nodeFields,
         uint256 executionCheckTime
-    ) external override {
+    ) external override whenNotPaused {
         require(nodeNums[0] < nodeNums[1], "WRONG_ORDER");
         require(nodeNums[1] <= latestNodeCreated, "NOT_PROPOSED");
         require(latestConfirmed < nodeNums[0], "ALREADY_CONFIRMED");
@@ -438,6 +423,8 @@ contract Rollup is IRollup {
         emit RollupChallengeStarted(challengeAddress, stakers[0], stakers[1], nodeNums[0]);
     }
 
+    // completeChallenge isn't pausable since in flight challenges should be allowed to complete or else they
+    // could be forced to timeout
     function completeChallenge(
         address challengeContract,
         address winningStaker,
@@ -470,7 +457,7 @@ contract Rollup is IRollup {
         deleteStaker(loser);
     }
 
-    function removeZombie(uint256 zombieNum, uint256 maxNodes) external override {
+    function removeZombie(uint256 zombieNum, uint256 maxNodes) external override whenNotPaused {
         require(zombieNum <= zombies.length, "NO_SUCH_ZOMBIE");
         Zombie storage zombie = zombies[zombieNum];
         uint256 latestStakedNode = zombie.latestStakedNode;
@@ -501,6 +488,25 @@ contract Rollup is IRollup {
 
     function zombieCount() external view override returns (uint256) {
         return zombies.length;
+    }
+
+    function checkMaybeRejectable() external view override returns (bool) {
+        checkUnresolved();
+        INode node = nodes[firstUnresolvedNode];
+        bool outOfOrder = node.prev() == latestConfirmed;
+        if (outOfOrder) {
+            checkNoRecentStake();
+            // Verify the block's deadline has passed
+            require(block.number >= node.deadlineBlock(), "BEFORE_DEADLINE");
+            // Verify that no staker is staked on this node
+            require(node.stakerCount() == countStakedZombies(node), "HAS_STAKERS");
+        }
+        return outOfOrder;
+    }
+
+    function checkConfirmValid() external view override {
+        INode node = checkConfirmValidBefore();
+        checkConfirmValidAfter(node);
     }
 
     function stakerInfo(address stakerAddress)
@@ -654,5 +660,31 @@ contract Rollup is IRollup {
     function checkUnchallengedStaker(Staker storage staker) private view {
         require(staker.isStaked, "NOT_STAKED");
         require(staker.currentChallenge == address(0), "IN_CHAL");
+    }
+
+    function checkConfirmValidBefore() private view returns (INode) {
+        checkUnresolved();
+        checkNoRecentStake();
+
+        // There is at least one non-zombie staker
+        require(stakerList.length > 0, "NO_STAKERS");
+
+        INode node = nodes[firstUnresolvedNode];
+
+        // Verify the block's deadline has passed
+        require(node.deadlineBlock() <= block.number, "BEFORE_DEADLINE");
+
+        // Check that prev is latest confirmed
+        require(node.prev() == latestConfirmed, "INVALID_PREV");
+
+        return node;
+    }
+
+    function checkConfirmValidAfter(INode node) private view {
+        // All non-zombie stakers are staked on this node
+        require(
+            node.stakerCount() == stakerList.length + countStakedZombies(node),
+            "NOT_ALL_STAKED"
+        );
     }
 }
