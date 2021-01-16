@@ -189,14 +189,10 @@ contract Rollup is Pausable, Ownable, IRollup {
             require(stakerMap[stakerAddress].isStaked, "NOT_STAKED");
 
             // Confirm that someone is staked on some sibling node
-            INode stakedSiblingNode = nodes[successorWithStake];
-            // stakedSiblingNode is a child of latestConfirmed
-            require(stakedSiblingNode.prev() == latestConfirmed, "BAD_SUCCESSOR");
-            // staker is actually staked on stakedSiblingNode
-            require(stakedSiblingNode.stakers(stakerAddress), "BAD_STAKER");
+            nodes[successorWithStake].checkRejectExample(latestConfirmed, stakerAddress);
 
             // Verify the block's deadline has passed
-            require(block.number >= node.deadlineBlock(), "BEFORE_DEADLINE");
+            node.checkPastDeadline();
 
             removeOldZombies(0);
 
@@ -675,7 +671,7 @@ contract Rollup is Pausable, Ownable, IRollup {
         INode node = nodes[firstUnresolvedNode];
 
         // Verify the block's deadline has passed
-        require(node.deadlineBlock() <= block.number, "BEFORE_DEADLINE");
+        node.checkPastDeadline();
 
         // Check that prev is latest confirmed
         require(node.prev() == latestConfirmed, "INVALID_PREV");
