@@ -46,7 +46,9 @@ contract Outbox is CloneFactory, IOutbox {
     uint128 private _l2ToL1Block;
     uint128 private _l2ToL1Timestamp;
 
-    constructor() public {
+    constructor(address _rollup, IBridge _bridge) public {
+        rollup = _rollup;
+        bridge = _bridge;
         outboxEntryTemplate = ICloneable(new OutboxEntry());
     }
 

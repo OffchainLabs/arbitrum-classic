@@ -22,6 +22,8 @@ import "./Rollup.sol";
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
 import "../bridge/Bridge.sol";
+import "../bridge/Inbox.sol";
+import "../bridge/Outbox.sol";
 
 import "../bridge/interfaces/IBridge.sol";
 
@@ -45,6 +47,8 @@ contract RollupCreator is Ownable {
     struct CreateRollupFrame {
         ProxyAdmin admin;
         Bridge bridge;
+        Inbox inbox;
+        Outbox outbox;
         TransparentUpgradeableProxy rollup;
     }
 
@@ -59,8 +63,13 @@ contract RollupCreator is Ownable {
     ) public returns (IRollup) {
         CreateRollupFrame memory frame;
         frame.admin = new ProxyAdmin();
-        frame.bridge = new Bridge();
         frame.rollup = new TransparentUpgradeableProxy(rollupTemplate, address(frame.admin), "");
+
+        frame.bridge = new Bridge();
+        frame.inbox = new Inbox(IBridge(frame.bridge));
+        frame.bridge.setInbox(address(frame.inbox), true);
+        frame.outbox = new Outbox(address(frame.rollup), IBridge(frame.bridge));
+        frame.bridge.setOutbox(address(frame.outbox), true);
         frame.bridge.transferOwnership(address(frame.rollup));
         frame.admin.transferOwnership(address(frame.rollup));
         IRollup(address(frame.rollup)).initialize(
