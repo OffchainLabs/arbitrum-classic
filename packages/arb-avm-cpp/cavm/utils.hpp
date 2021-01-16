@@ -150,14 +150,13 @@ inline Tuple getTuple(void* data) {
     return nonstd::get<Tuple>(deserialize_value(charData));
 }
 
-inline std::vector<rocksdb::Slice> getInboxMessages(void* data) {
+inline std::vector<std::vector<unsigned char>> getInboxMessages(void* data) {
     auto charData = reinterpret_cast<ByteSliceArray*>(data);
-    std::vector<rocksdb::Slice> messages;
+    std::vector<std::vector<unsigned char>> messages;
     messages.reserve(charData->count);
     for (int i = 0; i < charData->count; ++i) {
-        messages.emplace_back(
-            static_cast<const char*>(charData->slices[i].data),
-            charData->slices[i].length);
+        auto data_ptr = static_cast<unsigned char*>(charData->slices[i].data);
+        messages.emplace_back(data_ptr, data_ptr + charData->slices[i].length);
     }
     return messages;
 }

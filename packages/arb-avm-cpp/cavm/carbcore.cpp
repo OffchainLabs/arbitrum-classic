@@ -22,29 +22,24 @@ void deleteArbCore(CArbCore* m) {
     delete static_cast<ArbCore*>(m);
 }
 
-int putMessages(CArbCore* storage_ptr,
-                const uint64_t first_message_sequence_number,
-                const uint64_t block_height,
-                void* inbox_messages,
-                void* inbox_hashes_ptr,
-                void* previous_inbox_hash_ptr) {
-    auto message_store = static_cast<ArbCore*>(storage_ptr);
+int deliverMessages(CArbCore* arb_core_ptr,
+                    const uint64_t first_message_sequence_number,
+                    const uint64_t block_height,
+                    void* inbox_messages,
+                    void* inbox_hashes_ptr,
+                    void* previous_inbox_hash_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arb_core_ptr);
     auto messages = getInboxMessages(inbox_messages);
     auto inbox_hashes = receiveUint256Vector(inbox_hashes_ptr, messages.size());
     auto previous_inbox_hash = receiveUint256(previous_inbox_hash_ptr);
 
     try {
-        auto status = message_store->addMessages(
-            first_message_sequence_number, block_height, messages, inbox_hashes,
-            previous_inbox_hash);
-        if (status) {
-            return status->ok();
-        }
-
-        // Caller needs to send messages from earlier block
-        return false;
+        arb_core->deliverMessages(first_message_sequence_number, block_height,
+                                  messages, inbox_hashes, previous_inbox_hash);
     } catch (const std::exception& e) {
         // TODO: Return error message
         return false;
     }
+
+    return true;
 }

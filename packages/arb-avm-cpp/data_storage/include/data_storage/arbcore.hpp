@@ -21,13 +21,15 @@
 #include <avm_values/bigint.hpp>
 #include <data_storage/checkpoint.hpp>
 #include <data_storage/datastorage.hpp>
+#include <data_storage/messageentry.hpp>
+#include <data_storage/messagestore.hpp>
 #include <data_storage/storageresultfwd.hpp>
 #include <data_storage/value/code.hpp>
 #include <data_storage/value/valuecache.hpp>
 
 #include <memory>
+#include <thread>
 #include <vector>
-#include "messageentry.hpp"
 
 namespace rocksdb {
 class TransactionDB;
@@ -54,23 +56,35 @@ class ArbCore {
    private:
     std::shared_ptr<DataStorage> data_storage;
     std::unique_ptr<Machine> machine;
+    std::unique_ptr<MessageStore> message_store;
     std::shared_ptr<Code> code;
     Checkpoint pending_checkpoint;
-    std::unique_ptr<std::thread> core_thread;
 
     // Thread communication
     std::atomic<message_status_enum> message_status;
-    std::vector<MessageEntry> messages;
+    uint256_t first_sequence_number;
+    uint64_t block_height;
+    std::vector<std::vector<unsigned char>> messages;
+    std::vector<uint256_t> inbox_hashes;
+    uint256_t previous_inbox_hash;
 
    public:
     ArbCore() = delete;
     explicit ArbCore(std::shared_ptr<DataStorage> data_storage_)
         : data_storage(std::move(data_storage_)),
+          message_store(std::make_unique<MessageStore>(data_storage)),
           code(std::make_shared<Code>(
               getNextSegmentID(*makeConstTransaction()))),
-          message_status(MESSAGES_EMPTY) {}
+          message_status(MESSAGES_EMPTY),
+          block_height(0) {}
     void operator()();
     void stopThreads();
+    void deliverMessages(
+        const uint256_t& first_sequence_number,
+        uint64_t block_height,
+        const std::vector<std::vector<unsigned char>>& messages,
+        const std::vector<uint256_t>& inbox_hashes,
+        const uint256_t& previous_inbox_hash);
     void saveCheckpoint();
     void saveAssertion(uint256_t first_message_sequence_number,
                        const Assertion& assertion);
@@ -96,29 +110,8 @@ class ArbCore {
     Assertion run(uint64_t gas_limit,
                   bool hard_gas_limit,
                   uint256_t first_message_sequence_number,
-                  const std::vector<rocksdb::Slice>& inbox_messages,
-                  nonstd::optional<uint256_t> final_block);
-
-    nonstd::optional<rocksdb::Status> addMessages(
-        const uint256_t first_sequence_number,
-        const uint64_t block_height,
-        const std::vector<rocksdb::Slice>& messages,
-        const std::vector<uint256_t>& inbox_hashes,
-        const uint256_t& previous_inbox_hash);
-    nonstd::optional<MessageEntry> getNextMessage();
-    nonstd::optional<MessageEntry> getLastMessage();
-    bool deleteMessage(const MessageEntry& entry);
+                  const std::vector<std::vector<unsigned char>>& inbox_messages,
+                  const nonstd::optional<uint256_t>& final_block);
 };
-
-nonstd::optional<rocksdb::Status> deleteMessagesStartingAt(
-    Transaction& tx,
-    uint256_t sequence_number);
-
-rocksdb::Status addMessagesWithoutCheck(
-    Transaction& tx,
-    const uint256_t first_sequence_number,
-    const uint64_t block_height,
-    const std::vector<rocksdb::Slice>& messages,
-    const std::vector<uint256_t>& inbox_hashes);
 
 #endif /* arbcore_hpp */

@@ -131,7 +131,7 @@ func makeExecutionAssertion(
 		uint64(assertion.numGas),
 		uint64(assertion.inbox_messages_consumed),
 		sendsRaw,
-		uint64(assertion.outMessageCount),
+		uint64(assertion.sendCount),
 		logsRaw,
 		uint64(assertion.logCount),
 	), debugPrints, uint64(assertion.numSteps)

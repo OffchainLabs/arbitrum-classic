@@ -38,10 +38,11 @@ bool validMessages(const std::vector<Tuple>& messages) {
 }
 }  // namespace
 
-Assertion Machine::run(uint64_t gas_limit,
-                       bool hard_gas_limit,
-                       const std::vector<rocksdb::Slice>& inbox_messages,
-                       const nonstd::optional<uint256_t>& final_block) {
+Assertion Machine::run(
+    uint64_t gas_limit,
+    bool hard_gas_limit,
+    const std::vector<std::vector<unsigned char>>& inbox_messages,
+    const nonstd::optional<uint256_t>& final_block) {
     // TODO
 }
 

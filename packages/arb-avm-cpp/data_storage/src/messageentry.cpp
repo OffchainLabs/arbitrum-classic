@@ -26,27 +26,24 @@ MessageEntry extractMessageEntry(const rocksdb::Slice key,
     auto sequence_number = deserializeUint256t(keyptr);
 
     // Extract message entry
-    auto entry_vector = std::vector<const unsigned char>{
-        value.data(), value.data() + value.size()};
+    auto entry_vector =
+        std::vector<unsigned char>{value.data(), value.data() + value.size()};
 
     return deserializeMessageEntry(sequence_number, entry_vector);
 }
 
 MessageEntry deserializeMessageEntry(
     const uint256_t sequence_number,
-    const std::vector<const unsigned char>& entry_vector) {
+    const std::vector<unsigned char>& entry_vector) {
     auto current_iter = entry_vector.begin();
 
     auto inbox_hash = extractUint256(current_iter);
     auto block_height = extractUint64(current_iter);
     auto last_message_in_block = current_iter[0] == 1;
-    auto message_size = extractUint64(current_iter);
+    current_iter++;
     uint64_t remaining_size = entry_vector.end() - current_iter;
-    if (remaining_size < message_size) {
-        message_size = remaining_size;
-    }
-    auto message = rocksdb::Slice{reinterpret_cast<const char*>(*current_iter),
-                                  message_size};
+    auto message =
+        std::vector<unsigned char>(current_iter, current_iter + remaining_size);
 
     return MessageEntry{sequence_number, inbox_hash, block_height,
                         last_message_in_block, message};
@@ -59,7 +56,6 @@ std::vector<unsigned char> serializeMessageEntry(
     marshal_uint256_t(state_data.inbox_hash, state_data_vector);
     marshal_uint64_t(state_data.block_height, state_data_vector);
     state_data_vector.push_back(state_data.last_message_in_block ? 1 : 0);
-    marshal_uint64_t(state_data.message.size(), state_data_vector);
     state_data_vector.insert(
         state_data_vector.end(), state_data.message.data(),
         state_data.message.data() + state_data.message.size());
