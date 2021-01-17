@@ -32,7 +32,6 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
     using Hashing for Value.Data;
     using Value for Value.Data;
 
-    uint256 private constant SEND_SIZE_LIMIT = 10000;
     uint256 private constant MAX_PAIRING_COUNT = 30;
 
     // machineFields

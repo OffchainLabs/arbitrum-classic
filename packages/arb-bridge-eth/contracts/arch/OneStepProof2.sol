@@ -453,14 +453,15 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         }
 
         require(
-            val1.hash() == Hashing.bytesToBufferHash(context.proof, context.offset, sendDataLength)
+            val1.hash() == Hashing.bytesToBufferHash(context.proof, context.offset, val2.intVal)
         );
 
         uint256 dataStart = 32 + context.offset;
         bytes32 dataHash;
+        uint256 dataLength = val2.intVal;
         bytes memory proof = context.proof;
         assembly {
-            dataHash := keccak256(add(proof, dataStart), sendDataLength)
+            dataHash := keccak256(add(proof, dataStart), dataLength)
         }
 
         //  bytes32 msgHash = keccak2(bytes32(val2.intVal), val1.hash());

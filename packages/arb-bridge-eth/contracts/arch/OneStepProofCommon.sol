@@ -141,6 +141,8 @@ abstract contract OneStepProofCommon {
     bytes32 internal constant CODE_POINT_ERROR =
         keccak256(abi.encodePacked(CODE_POINT_TYPECODE, uint8(0), bytes32(0)));
 
+    uint256 internal constant SEND_SIZE_LIMIT = 10000;
+
     // fields
     // startMachineHash,
     // endMachineHash,
