@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 import "./RollupCore.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
+import "./RollupEventInbox.sol";
 
 import "./IRollup.sol";
 import "./INode.sol";
@@ -35,7 +36,6 @@ import "./RollupLib.sol";
 
 contract Rollup is RollupCore, Pausable, IRollup {
     uint8 internal constant INITIALIZATION_MSG_TYPE = 4;
-    uint8 internal constant ROLLUP_PROTOCOL_EVENT_TYPE = 8;
 
     // Rollup Config
     uint256 public challengePeriodBlocks;
@@ -46,6 +46,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
     // Bridge is an IInbox and IOutbox
     IBridge public bridge;
     IOutbox public outbox;
+    RollupEventInbox public rollupEventInbox;
     IChallengeFactory public challengeFactory;
     INodeFactory public nodeFactory;
     address public owner;
@@ -236,6 +237,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
             require(node.stakerCount() == countStakedZombies(node), "HAS_STAKERS");
         }
         rejectNextNode();
+        rollupEventInbox.nodeRejected(firstUnresolved);
     }
 
     /**
@@ -276,6 +278,8 @@ contract Rollup is RollupCore, Pausable, IRollup {
 
         confirmNextNode();
 
+        rollupEventInbox.nodeConfirmed(firstUnresolved);
+
         emit SentLogs(logAcc);
     }
 
@@ -291,6 +295,8 @@ contract Rollup is RollupCore, Pausable, IRollup {
         require(depositAmount >= currentRequiredStake(), "NOT_ENOUGH_STAKE");
 
         createNewStake(msg.sender, depositAmount);
+
+        rollupEventInbox.stakeCreated(msg.sender, latestConfirmed());
     }
 
     /**
@@ -399,6 +405,13 @@ contract Rollup is RollupCore, Pausable, IRollup {
 
         nodeCreated(node);
         stakeOnNode(msg.sender, nodeNum);
+
+        rollupEventInbox.nodeCreated(
+            nodeNum,
+            latestStakedNode(msg.sender),
+            deadlineBlock,
+            msg.sender
+        );
 
         emit NodeCreated(
             nodeNum,
