@@ -167,9 +167,9 @@ func (c *Challenge) BisectExecution(
 		challengedSegment.Start,
 		challengedSegment.Length,
 		prevCutHashes[segmentToChallenge+1],
-		subCutHashes,
 		subCuts[0].(core.ExecutionCut).GasUsed,
 		subCuts[0].(core.ExecutionCut).RestHash(),
+		subCutHashes,
 	)
 }
 

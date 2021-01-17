@@ -157,6 +157,15 @@ contract Challenge is Cloneable, IChallenge {
         emit InitiatedChallenge();
     }
 
+    /**
+     * @notice Mark the given staker as staked on this node
+     * @param _merkleNodes List of hashes of stubs in the merkle root of segments left by the previous round
+     * @param _merkleRoute Bitmap marking whether the path went left or right at each height
+     * @param _challengedSegmentStart Offset of the challenged segment into the original challenged segment
+     * @param _challengedSegmentLength Number of messages in the challenged segment
+     * @param _oldEndHash End of the challenged segment. This must be different than the new end since the challenger is disagreeing
+     * @param _chainHashes Array of intermediate hashes of the challenged segment
+     */
     function bisectInboxConsistency(
         bytes32[] calldata _merkleNodes,
         uint256 _merkleRoute,
@@ -190,6 +199,15 @@ contract Challenge is Cloneable, IChallenge {
         );
     }
 
+    /**
+     * @notice Mark the given staker as staked on this node
+     * @param _merkleNodes List of hashes of stubs in the merkle root of segments left by the previous round
+     * @param _merkleRoute Bitmap marking whether the path went left or right at each height
+     * @param _challengedSegmentStart Offset of the challenged segment into the original challenged segment
+     * @param _oldEndHash End of the challenged segment. This must be different than the new end since the challenger is disagreeing
+     * @param _lowerHash Correct inbox hash after removing the value from the start point of the segment
+     * @param _value Hash of the inbox value at in the segment
+     */
     function oneStepProveInboxConsistency(
         bytes32[] calldata _merkleNodes,
         uint256 _merkleRoute,
@@ -209,12 +227,23 @@ contract Challenge is Cloneable, IChallenge {
         _currentWin();
     }
 
+    /**
+     * @notice Mark the given staker as staked on this node
+     * @param _merkleNodes List of hashes of stubs in the merkle root of segments left by the previous round
+     * @param _merkleRoute Bitmap marking whether the path went left or right at each height
+     * @param _challengedSegmentStart Offset of the challenged segment into the original challenged segment
+     * @param _challengedSegmentLength Number of messages in the challenged segment
+     * @param _oldEndInboxDelta Inbox delta hash of the end of the challenged segment.
+     * This must be different than the new inbox delta end since the challenger is disagreeing
+     * @param _inboxAccHashes Array of intermediate inbox accumulator hashes of the challenged segment
+     * @param _inboxDeltaHashes Array of intermediate inbox delta hashes of the challenged segment
+     */
     function bisectInboxDelta(
         bytes32[] calldata _merkleNodes,
         uint256 _merkleRoute,
         uint256 _challengedSegmentStart,
         uint256 _challengedSegmentLength,
-        bytes32 _oldInboxDelta,
+        bytes32 _oldEndInboxDelta,
         bytes32[] calldata _inboxAccHashes,
         bytes32[] calldata _inboxDeltaHashes
     ) external inboxDeltaChallenge onlyOnTurn {
@@ -223,7 +252,7 @@ contract Challenge is Cloneable, IChallenge {
         uint256 newSegmentCount = _inboxAccHashes.length;
         require(_inboxDeltaHashes.length == newSegmentCount, "WRONG_COUNT");
         require(newSegmentCount == bisectionDegree(_challengedSegmentLength) + 1);
-        require(_inboxDeltaHashes[newSegmentCount - 1] != _oldInboxDelta);
+        require(_inboxDeltaHashes[newSegmentCount - 1] != _oldEndInboxDelta);
 
         bytes32[] memory chainHashes = new bytes32[](newSegmentCount);
         for (uint256 i = 0; i < newSegmentCount; i++) {
@@ -234,7 +263,7 @@ contract Challenge is Cloneable, IChallenge {
                 _challengedSegmentStart,
                 _challengedSegmentLength,
                 chainHashes[0],
-                ChallengeLib.inboxDeltaHash(_inboxAccHashes[newSegmentCount - 1], _oldInboxDelta)
+                ChallengeLib.inboxDeltaHash(_inboxAccHashes[newSegmentCount - 1], _oldEndInboxDelta)
             );
 
         verifySegmentProof(bisectionHash, _merkleNodes, _merkleRoute);
@@ -251,6 +280,22 @@ contract Challenge is Cloneable, IChallenge {
         );
     }
 
+    /**
+     * @notice Mark the given staker as staked on this node
+     * @param _merkleNodes List of hashes of stubs in the merkle root of segments left by the previous round
+     * @param _merkleRoute Bitmap marking whether the path went left or right at each height
+     * @param _challengedSegmentStart Offset of the challenged segment into the original challenged segment
+     * @param _oldEndInboxDelta Inbox delta hash of the end of the challenged segment.
+     * This must be different than the new inbox delta end since the challenger is disagreeing
+     * @param _prevInboxDelta Inbox delta of the beginning of the segment
+     * @param _nextInboxAcc Inbox accumulator of the end of the segment
+     * @param _kind Message kind of the message in the segment
+     * @param _blockNumber Block number of the message in the segment
+     * @param _timestamp Timestamp of the message in the segment
+     * @param _sender Sender of the message in the segment
+     * @param _inboxSeqNum Sequence number of the message in the segment
+     * @param _msgData Data of the message in the segment
+     */
     function oneStepProveInboxDelta(
         bytes32[] calldata _merkleNodes,
         uint256 _merkleRoute,
@@ -288,15 +333,26 @@ contract Challenge is Cloneable, IChallenge {
         _currentWin();
     }
 
+    /**
+     * @notice Mark the given staker as staked on this node
+     * @param _merkleNodes List of hashes of stubs in the merkle root of segments left by the previous round
+     * @param _merkleRoute Bitmap marking whether the path went left or right at each height
+     * @param _challengedSegmentStart Offset of the challenged segment into the original challenged segment
+     * @param _challengedSegmentLength Number of messages in the challenged segment
+     * @param _oldEndHash Hash of the end of the challenged segment. This must be different than the new end since the challenger is disagreeing
+     * @param _gasUsedBefore Amount of gas used at the beginning of the challenged segment
+     * @param _assertionRest Hash of the rest of the assertion at the beginning of the challenged segment
+     * @param _chainHashes Array of intermediate hashes of the challenged segment
+     */
     function bisectExecution(
         bytes32[] calldata _merkleNodes,
         uint256 _merkleRoute,
         uint256 _challengedSegmentStart,
         uint256 _challengedSegmentLength,
         bytes32 _oldEndHash,
-        bytes32[] calldata _chainHashes,
         uint256 _gasUsedBefore,
-        bytes32 _assertionRest
+        bytes32 _assertionRest,
+        bytes32[] calldata _chainHashes
     ) external executionChallenge onlyOnTurn {
         require(_challengedSegmentLength > 1, "TOO_SHORT");
         require(
@@ -428,7 +484,15 @@ contract Challenge is Cloneable, IChallenge {
         _currentWin();
     }
 
-    // Can only do a stopped short bisection as a first move
+    /**
+     * @notice Mark the given staker as staked on this node
+     * @dev Can only do a stopped short bisection as a first move
+     * @param _challengedSegmentLength Number of messages in the challenged segment
+     * @param _oldEndHash Hash of the end of the challenged segment
+     * @param _chainHashes Array of intermediate hashes of the challenged segment
+     * @param _newSegmentLength New segment length that's shorter than the challenged segment
+     * @param _startAssertionHash Hash of the assertion at the beginning of the challenged segment
+     */
     function bisectExecutionStoppedShort(
         uint256 _challengedSegmentLength,
         bytes32 _oldEndHash,
