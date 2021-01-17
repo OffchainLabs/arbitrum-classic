@@ -121,7 +121,7 @@ contract ValidatorUtils {
         uint256 startStakerIndex,
         uint256 maxStakerCount
     ) external view returns (uint256, address) {
-        rollup.checkUnresolved();
+        rollup.checkUnresolvedExists();
         rollup.checkNoRecentStake();
         uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
         bool outOfOrder = checkMaybeRejectable(rollup);
@@ -141,7 +141,7 @@ contract ValidatorUtils {
     }
 
     function checkMaybeRejectable(Rollup rollup) private view returns (bool) {
-        rollup.checkUnresolved();
+        rollup.checkUnresolvedExists();
         INode node = rollup.getNode(rollup.firstUnresolvedNode());
         bool outOfOrder = node.prev() == rollup.latestConfirmed();
         if (outOfOrder) {
@@ -155,7 +155,7 @@ contract ValidatorUtils {
     }
 
     function checkConfirmable(Rollup rollup) external view {
-        rollup.checkUnresolved();
+        rollup.checkUnresolvedExists();
         rollup.checkNoRecentStake();
 
         uint256 stakerCount = rollup.stakerCount();

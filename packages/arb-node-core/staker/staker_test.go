@@ -38,49 +38,36 @@ func deployRollup(
 	nodeFactoryAddr, _, _, err := ethbridgetestcontracts.DeployNodeFactory(auth, client)
 	test.FailIfError(t, err)
 
-	bridgeAddr, _, bridge, err := ethbridgecontracts.DeployBridge(auth, client)
+	rollupAddr, _, _, err := ethbridgecontracts.DeployRollup(auth, client)
 	test.FailIfError(t, err)
 
-	inboxAddr, _, _, err := ethbridgecontracts.DeployInbox(auth, client, bridgeAddr)
+	_, _, rollupCreator, err := ethbridgecontracts.DeployRollupCreator(auth, client)
 	test.FailIfError(t, err)
-
-	rollupAddr, _, rollup, err := ethbridgecontracts.DeployRollup(auth, client)
-	test.FailIfError(t, err)
-
-	outboxAddr, _, _, err := ethbridgecontracts.DeployOutbox(auth, client, bridgeAddr, rollupAddr)
-	test.FailIfError(t, err)
-
 	client.Commit()
 
-	_, err = bridge.SetInbox(auth, inboxAddr, true)
-	_, err = bridge.SetOutbox(auth, outboxAddr, true)
-
+	_, err = rollupCreator.SetTemplates(auth, rollupAddr, challengeFactoryAddr, nodeFactoryAddr)
+	test.FailIfError(t, err)
 	client.Commit()
 
-	proxyAdminAddr, _, _, err := ethbridgecontracts.DeployProxyAdmin(auth, client)
-	test.FailIfError(t, err)
-
-	_, err = bridge.TransferOwnership(auth, rollupAddr)
-	test.FailIfError(t, err)
-
-	_, err = rollup.Initialize(
+	tx, err := rollupCreator.CreateRollup(
 		auth,
-		outboxAddr,
 		machineHash,
 		challengePeriodBlocks,
 		arbGasSpeedLimitPerBlock,
 		baseStake,
 		stakeToken.ToEthAddress(),
 		owner.ToEthAddress(),
-		bridgeAddr,
-		challengeFactoryAddr,
-		nodeFactoryAddr,
 		extraConfig,
-		proxyAdminAddr,
 	)
 	test.FailIfError(t, err)
+	client.Commit()
 
-	return rollupAddr
+	receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+	test.FailIfError(t, err)
+	createEv, err := rollupCreator.ParseRollupCreated(*receipt.Logs[len(receipt.Logs)-1])
+	test.FailIfError(t, err)
+
+	return createEv.RollupAddress
 }
 
 func TestStaker(t *testing.T) {

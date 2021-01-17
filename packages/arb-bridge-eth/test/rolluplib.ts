@@ -61,11 +61,11 @@ function challengeRootHash(
   inboxConsistency: BytesLike,
   inboxDelta: BytesLike,
   execution: BytesLike,
-  executionCheckTime: BigNumberish
+  gasUsed: BigNumberish
 ): BytesLike {
   return ethers.utils.solidityKeccak256(
     ['bytes32', 'bytes32', 'bytes32', 'uint256'],
-    [inboxConsistency, inboxConsistency, execution, executionCheckTime]
+    [inboxConsistency, inboxConsistency, execution, gasUsed]
   )
 }
 
@@ -236,14 +236,13 @@ export class Assertion {
 
   challengeRoot(
     inboxMaxHash: BytesLike,
-    inboxMaxCount: BigNumberish,
-    arbGasSpeedLimitPerBlock: BigNumberish
+    inboxMaxCount: BigNumberish
   ): BytesLike {
     return challengeRootHash(
       this.inboxConsistencyHash(inboxMaxHash, inboxMaxCount),
       this.inboxDeltaHash(),
       this.executionHash(),
-      this.checkTime(arbGasSpeedLimitPerBlock)
+      this.gasUsed
     )
   }
 
@@ -294,6 +293,22 @@ export class Assertion {
   }
 }
 
+export class Node {
+  constructor(
+    public assertion: Assertion,
+    public blockCreated: number,
+    public inboxMaxHash: BytesLike,
+    public inboxMaxCount: BigNumberish
+  ) {}
+
+  afterNodeState(): NodeState {
+    return this.assertion.createdNodeState(
+      this.blockCreated,
+      this.inboxMaxCount
+    )
+  }
+}
+
 export class RollupContract {
   constructor(public rollup: Rollup) {}
 
@@ -308,18 +323,39 @@ export class RollupContract {
     return this.rollup.newStake(tokenAmount, overrides)
   }
 
-  stakeOnNewNode(
+  async stakeOnNewNode(
     block: Block,
     assertion: Assertion,
     newNodeNum: BigNumberish
-  ): Promise<ContractTransaction> {
-    return this.rollup.stakeOnNewNode(
+  ): Promise<{ tx: ContractTransaction; node: Node }> {
+    const tx = await this.rollup.stakeOnNewNode(
       block.hash,
       block.number,
       newNodeNum,
       assertion.bytes32Fields(),
       assertion.intFields()
     )
+    const receipt = await tx.wait()
+    if (receipt.logs == undefined) {
+      throw Error('expected receipt to have logs')
+    }
+
+    const ev = this.rollup.interface.parseLog(
+      receipt.logs[receipt.logs.length - 1]
+    )
+    if (ev.name != 'NodeCreated') {
+      throw 'wrong event type'
+    }
+    const parsedEv = (ev as any) as {
+      args: { inboxMaxCount: BigNumberish; inboxMaxHash: BytesLike }
+    }
+    const node = new Node(
+      assertion,
+      receipt.blockNumber!,
+      parsedEv.args.inboxMaxHash,
+      parsedEv.args.inboxMaxCount
+    )
+    return { tx, node }
   }
 
   stakeOnExistingNode(block: Block, nodeNum: BigNumberish) {
@@ -347,19 +383,20 @@ export class RollupContract {
     nodeNum1: BigNumberish,
     staker2Address: string,
     nodeNum2: BigNumberish,
-    assertion: Assertion,
-    inboxMaxHash: BytesLike,
-    inboxMaxCount: BigNumberish
+    node: Node
   ): Promise<ContractTransaction> {
     return this.rollup.createChallenge(
       [staker1Address, staker2Address],
       [nodeNum1, nodeNum2],
       [
-        assertion.inboxConsistencyHash(inboxMaxHash, inboxMaxCount),
-        assertion.inboxDeltaHash(),
-        assertion.executionHash(),
+        node.assertion.inboxConsistencyHash(
+          node.inboxMaxHash,
+          node.inboxMaxCount
+        ),
+        node.assertion.inboxDeltaHash(),
+        node.assertion.executionHash(),
       ],
-      assertion.checkTime(await this.rollup.arbGasSpeedLimitPerBlock())
+      node.assertion.gasUsed
     )
   }
 

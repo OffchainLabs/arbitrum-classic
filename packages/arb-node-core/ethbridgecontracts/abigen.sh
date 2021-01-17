@@ -23,13 +23,12 @@ BRIDGE_LIBS=$PREFIX/bridge/interfaces/IBridge.sol:IBridge,$PREFIX/bridge/interfa
 
 ROLLUP_LIB=$PREFIX/rollup/RollupLib.sol:RollupLib
 ROLLUP=$PREFIX/rollup/Rollup.sol:Rollup
-ROLLUP_CREATOR=$PREFIX/rollup/RollupCreator.sol:RollupCreator
 OUTBOX=$PREFIX/rollup/Outbox.sol:Outbox
 INBOX=$PREFIX/rollup/Inbox.sol:Inbox
 
 INODE=$PREFIX/rollup/INode.sol:INode
 OUTBOX_ENTRY=$PREFIX/rollup/Outbox.sol:OutboxEntry
-ROLLUP_LIBS=$INBOX,$OUTBOX,$ROLLUP_CREATOR,$ROLLUP,$ROLLUP_LIB,$INODE,$OUTBOX_ENTRY,$PREFIX/rollup/RollupCore.sol:RollupCore
+ROLLUP_LIBS=$INBOX,$OUTBOX,$ROLLUP,$ROLLUP_LIB,$INODE,$OUTBOX_ENTRY,$PREFIX/rollup/RollupCore.sol:RollupCore,$PREFIX/rollup/RollupEventInbox.sol:RollupEventInbox
 
 IGNORED_INTERFACES=$PREFIX/interfaces/IERC20.sol:IERC20
 

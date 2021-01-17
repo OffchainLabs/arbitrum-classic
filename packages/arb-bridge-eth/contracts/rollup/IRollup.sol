@@ -40,6 +40,7 @@ interface IRollup {
 
     function initialize(
         address _outbox,
+        address _rollupEventInbox,
         bytes32 _machineHash,
         uint256 _challengePeriodBlocks,
         uint256 _arbGasSpeedLimitPerBlock,

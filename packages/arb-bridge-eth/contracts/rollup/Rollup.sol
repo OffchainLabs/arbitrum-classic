@@ -48,7 +48,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
     IChallengeFactory public challengeFactory;
     INodeFactory public nodeFactory;
     address public owner;
-    ProxyAdmin admin;
+    ProxyAdmin public admin;
 
     modifier onlyOwner {
         require(msg.sender == owner, "ONLY_OWNER");
@@ -57,6 +57,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
 
     function initialize(
         address _outbox,
+        address _rollupEventInbox,
         bytes32 _machineHash,
         uint256 _challengePeriodBlocks,
         uint256 _arbGasSpeedLimitPerBlock,
@@ -70,8 +71,10 @@ contract Rollup is RollupCore, Pausable, IRollup {
         address _admin
     ) external override {
         bridge = IBridge(_bridge);
-        bridge.setInbox(address(this), true);
+        rollupEventInbox = RollupEventInbox(_rollupEventInbox);
         outbox = IOutbox(_outbox);
+        bridge.setOutbox(_outbox, true);
+        bridge.setInbox(_rollupEventInbox, true);
 
         rollupEventInbox.rollupInitialized(
             _challengePeriodBlocks,
@@ -210,14 +213,13 @@ contract Rollup is RollupCore, Pausable, IRollup {
         external
         whenNotPaused
     {
-        checkUnresolved();
+        checkUnresolvedExists();
         uint256 latest = latestConfirmed();
         uint256 firstUnresolved = firstUnresolvedNode();
         INode node = getNode(firstUnresolved);
         if (node.prev() == latest) {
             checkNoRecentStake();
-            require(successorWithStake > firstUnresolved, "SUCCESSOR_TO_LOW");
-            require(successorWithStake <= latestNodeCreated(), "SUCCESSOR_TO_HIGH");
+            checkUnresolved(successorWithStake);
             require(isStaked(stakerAddress), "NOT_STAKED");
 
             // Confirm that someone is staked on some sibling node
@@ -246,7 +248,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
         bytes calldata sendsData,
         uint256[] calldata sendLengths
     ) external whenNotPaused {
-        checkUnresolved();
+        checkUnresolvedExists();
         checkNoRecentStake();
 
         // There is at least one non-zombie staker
@@ -356,13 +358,6 @@ contract Rollup is RollupCore, Pausable, IRollup {
             "PREV_STATE_HASH"
         );
 
-        // inboxMaxCount must be greater than beforeInboxCount since we can't have read past the end of the inbox
-        (uint256 inboxMaxCount, bytes32 inboxMaxAcc) = bridge.inboxInfo();
-        require(
-            assertion.inboxMessagesRead <= inboxMaxCount - assertion.beforeInboxCount,
-            "INBOX_PAST_END"
-        );
-
         uint256 timeSinceLastNode = block.number - assertion.beforeProposedBlock;
         // Verify that assertion meets the minimum Delta time requirement
         require(timeSinceLastNode >= minimumAssertionPeriod(), "TIME_DELTA");
@@ -387,6 +382,20 @@ contract Rollup is RollupCore, Pausable, IRollup {
         }
         deadlineBlock += assertion.gasUsed / arbGasSpeedLimitPerBlock;
 
+        rollupEventInbox.nodeCreated(
+            nodeNum,
+            latestStakedNode(msg.sender),
+            deadlineBlock,
+            msg.sender
+        );
+
+        // inboxMaxCount must be greater than beforeInboxCount since we can't have read past the end of the inbox
+        (uint256 inboxMaxCount, bytes32 inboxMaxAcc) = bridge.inboxInfo();
+        require(
+            assertion.inboxMessagesRead <= inboxMaxCount - assertion.beforeInboxCount,
+            "INBOX_PAST_END"
+        );
+
         INode node =
             INode(
                 nodeFactory.createNode(
@@ -400,13 +409,6 @@ contract Rollup is RollupCore, Pausable, IRollup {
 
         nodeCreated(node);
         stakeOnNode(msg.sender, nodeNum);
-
-        rollupEventInbox.nodeCreated(
-            nodeNum,
-            latestStakedNode(msg.sender),
-            deadlineBlock,
-            msg.sender
-        );
 
         emit NodeCreated(
             nodeNum,
@@ -640,12 +642,17 @@ contract Rollup is RollupCore, Pausable, IRollup {
     /**
      * @notice Verify that there are some number of nodes still unresolved
      */
-    function checkUnresolved() public view {
+    function checkUnresolvedExists() public view {
         uint256 firstUnresolved = firstUnresolvedNode();
         require(
             firstUnresolved > latestConfirmed() && firstUnresolved <= latestNodeCreated(),
             "NO_UNRESOLVED"
         );
+    }
+
+    function checkUnresolved(uint256 nodeNum) public view {
+        require(nodeNum >= firstUnresolvedNode(), "ALREADY_DECIDED");
+        require(nodeNum <= latestNodeCreated(), "DOESNT_EXIST");
     }
 
     /**
