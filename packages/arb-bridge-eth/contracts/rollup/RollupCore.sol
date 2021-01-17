@@ -120,7 +120,7 @@ contract RollupCore {
         return _zombies[zombieNum].latestStakedNode;
     }
 
-    // @return Current number of un-removed zombies
+    /// @return Current number of un-removed zombies
     function zombieCount() public view returns (uint256) {
         return _zombies.length;
     }
@@ -142,22 +142,22 @@ contract RollupCore {
         return _firstUnresolvedNode;
     }
 
-    // @return Index of the latest confirmed node
+    /// @return Index of the latest confirmed node
     function latestConfirmed() public view returns (uint256) {
         return _latestConfirmed;
     }
 
-    // @return Index of the latest rollup node created
+    /// @return Index of the latest rollup node created
     function latestNodeCreated() public view returns (uint256) {
         return _latestNodeCreated;
     }
 
-    // @return Ethereum block that the most recent stake was created
+    /// @return Ethereum block that the most recent stake was created
     function lastStakeBlock() public view returns (uint256) {
         return _lastStakeBlock;
     }
 
-    // @return Number of active stakers currently staked
+    /// @return Number of active stakers currently staked
     function stakerCount() public view returns (uint256) {
         return _stakerList.length;
     }
@@ -188,13 +188,13 @@ contract RollupCore {
         _latestNodeCreated = newLatestNodeCreated;
     }
 
-    // @notice Reject the next unresolved node
+    /// @notice Reject the next unresolved node
     function rejectNextNode() internal {
         destroyNode(_firstUnresolvedNode);
         _firstUnresolvedNode++;
     }
 
-    // @notice Confirm the next unresolved node
+    /// @notice Confirm the next unresolved node
     function confirmNextNode() internal {
         destroyNode(_latestConfirmed);
         _latestConfirmed = _firstUnresolvedNode;
