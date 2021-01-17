@@ -118,7 +118,7 @@ describe('ArbRollup', () => {
     const { rollupCon, blockCreated } = await createRollup()
     rollup = new RollupContract(rollupCon)
     const originalNode = await rollup.latestConfirmed()
-    const nodeAddress = await rollup.nodes(originalNode)
+    const nodeAddress = await rollup.getNode(originalNode)
 
     const Node = await ethers.getContractFactory('Node')
     const node = Node.attach(nodeAddress) as Node

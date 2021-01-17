@@ -390,8 +390,8 @@ export class RollupContract {
     return this.rollup.latestConfirmed()
   }
 
-  nodes(index: BigNumberish): Promise<string> {
-    return this.rollup.nodes(index)
+  getNode(index: BigNumberish): Promise<string> {
+    return this.rollup.getNode(index)
   }
 
   async inboxMaxValue(): Promise<BytesLike> {
