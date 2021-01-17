@@ -769,13 +769,16 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _inboxSeqNum,
         bytes memory _messageData
     ) internal pure returns (bytes32) {
-        Value.Data[] memory tupData = new Value.Data[](6);
+        bytes32 messageBufHash = Hashing.bytesToBufferHash(_messageData, 0, _messageData.length);
+        Value.Data[] memory tupData = new Value.Data[](7);
         tupData[0] = Value.newInt(uint256(_kind));
         tupData[1] = Value.newInt(_blockNumber);
         tupData[2] = Value.newInt(_timestamp);
         tupData[3] = Value.newInt(uint256(_sender));
         tupData[4] = Value.newInt(_inboxSeqNum);
-        tupData[5] = Marshaling.bytesToBytestack(_messageData, 0, _messageData.length);
+        tupData[4] = Value.newInt(_messageData.length);
+        tupData[6] = Value.newHashedValue(messageBufHash, 1);
+
         return Hashing.hash(Value.newTuple(tupData));
     }
 }
