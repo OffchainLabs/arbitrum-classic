@@ -38,7 +38,7 @@ func init() {
 }
 
 type InboxMessageGetter interface {
-	fillMessageDetails(ctx context.Context, messageNums []*big.Int, messages map[string]inbox.InboxMessage) error
+	fillMessageDetails(ctx context.Context, messageNums []*big.Int, messages map[string][]byte) error
 }
 
 type BridgeWatcher struct {
@@ -110,26 +110,23 @@ func (r *BridgeWatcher) LookupMessagesByNum(ctx context.Context, messageNums []*
 		return nil, err
 	}
 	messagesByInbox := make(map[ethcommon.Address][]*big.Int)
-	rawMessages := make(map[string]*DeliveredInboxMessage)
+	rawMessages := make(map[string]*ethbridgecontracts.BridgeMessageDelivered)
 	for _, ethLog := range logs {
 		parsedLog, err := r.con.ParseMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
 		}
 		messagesByInbox[parsedLog.Inbox] = append(messagesByInbox[parsedLog.Inbox], parsedLog.MessageIndex)
-		rawMessages[string(parsedLog.MessageIndex.Bytes())] = &DeliveredInboxMessage{
-			BlockHash:      common.NewHashFromEth(ethLog.BlockHash),
-			BeforeInboxAcc: parsedLog.BeforeInboxAcc,
-		}
+		rawMessages[string(parsedLog.MessageIndex.Bytes())] = parsedLog
 	}
 
-	inboxMessages := make(map[string]inbox.InboxMessage)
+	messageData := make(map[string][]byte)
 	for con, indexes := range messagesByInbox {
 		inboxGetter, err := r.getInboxGetter(con)
 		if err != nil {
 			return nil, err
 		}
-		if err := inboxGetter.fillMessageDetails(ctx, indexes, inboxMessages); err != nil {
+		if err := inboxGetter.fillMessageDetails(ctx, indexes, messageData); err != nil {
 			return nil, err
 		}
 	}
@@ -141,13 +138,33 @@ func (r *BridgeWatcher) LookupMessagesByNum(ctx context.Context, messageNums []*
 			return nil, errors.New("message not found")
 		}
 
-		inboxMsg, ok := inboxMessages[string(msgNum.Bytes())]
+		data, ok := messageData[string(msgNum.Bytes())]
 		if !ok {
 			return nil, errors.New("message not found")
 		}
 
-		rawMsg.Message = inboxMsg
-		messages = append(messages, rawMsg)
+		header, err := r.client.HeaderByHash(ctx, rawMsg.Raw.BlockHash)
+		if err != nil {
+			return nil, err
+		}
+
+		msg := &DeliveredInboxMessage{
+			BlockHash:      common.NewHashFromEth(rawMsg.Raw.BlockHash),
+			BeforeInboxAcc: rawMsg.BeforeInboxAcc,
+			Message: inbox.InboxMessage{
+				Kind:        0,
+				Sender:      common.Address{},
+				InboxSeqNum: nil,
+				Data:        data,
+				ChainTime: inbox.ChainTime{
+					BlockNum: common.NewTimeBlocks(
+						new(big.Int).SetUint64(rawMsg.Raw.BlockNumber),
+					),
+					Timestamp: new(big.Int).SetUint64(header.Time),
+				},
+			},
+		}
+		messages = append(messages, msg)
 	}
 	return messages, nil
 }
@@ -167,7 +184,7 @@ type StandardInboxMessageGetter struct {
 	client  ethutils.EthClient
 }
 
-func (r *StandardInboxMessageGetter) fillMessageDetails(ctx context.Context, messageNums []*big.Int, messages map[string]inbox.InboxMessage) error {
+func (r *StandardInboxMessageGetter) fillMessageDetails(ctx context.Context, messageNums []*big.Int, messages map[string][]byte) error {
 	msgQuery := make([]ethcommon.Hash, 0, len(messageNums))
 	for _, messageNum := range messageNums {
 		var msgNumBytes ethcommon.Hash
@@ -187,60 +204,38 @@ func (r *StandardInboxMessageGetter) fillMessageDetails(ctx context.Context, mes
 		return err
 	}
 	for _, ethLog := range logs {
-		header, err := r.client.HeaderByHash(ctx, ethLog.BlockHash)
+		msgNum, msg, err := r.parseMessage(ctx, ethLog)
 		if err != nil {
 			return err
 		}
-		msg, err := r.parseMessage(ctx, ethLog, new(big.Int).SetUint64(header.Time))
-		if err != nil {
-			return err
-		}
-		messages[string(msg.InboxSeqNum.Bytes())] = msg
+		messages[string(msgNum.Bytes())] = msg
 	}
 	return nil
 }
 
-func (r *StandardInboxMessageGetter) parseMessage(ctx context.Context, ethLog types.Log, timestamp *big.Int) (inbox.InboxMessage, error) {
-	chainTime := inbox.ChainTime{
-		BlockNum: common.NewTimeBlocks(
-			new(big.Int).SetUint64(ethLog.BlockNumber),
-		),
-		Timestamp: timestamp,
-	}
+func (r *StandardInboxMessageGetter) parseMessage(ctx context.Context, ethLog types.Log) (*big.Int, []byte, error) {
 	if ethLog.Topics[0] == inboxMessageDeliveredID {
 		parsedLog, err := r.con.ParseInboxMessageDelivered(ethLog)
 		if err != nil {
-			return inbox.InboxMessage{}, err
+			return nil, nil, err
 		}
-		return inbox.InboxMessage{
-			Kind:        inbox.Type(parsedLog.Kind),
-			Sender:      common.NewAddressFromEth(parsedLog.Sender),
-			InboxSeqNum: parsedLog.MessageNum,
-			Data:        parsedLog.Data,
-			ChainTime:   chainTime,
-		}, nil
+		return parsedLog.MessageNum, parsedLog.Data, nil
 	} else if ethLog.Topics[0] == inboxMessageFromOriginID {
 		tx, _, err := r.client.TransactionByHash(ctx, ethLog.TxHash)
 		if err != nil {
-			return inbox.InboxMessage{}, err
+			return nil, nil, err
 		}
 		args := make(map[string]interface{})
 		err = l2MessageFromOriginCallABI.Inputs.UnpackIntoMap(args, tx.Data()[4:])
 		if err != nil {
-			return inbox.InboxMessage{}, err
+			return nil, nil, err
 		}
 		parsedLog, err := r.con.ParseInboxMessageDeliveredFromOrigin(ethLog)
 		if err != nil {
-			return inbox.InboxMessage{}, err
+			return nil, nil, err
 		}
-		return inbox.InboxMessage{
-			Kind:        inbox.Type(parsedLog.Kind),
-			Sender:      common.NewAddressFromEth(parsedLog.Sender),
-			InboxSeqNum: parsedLog.MessageNum,
-			Data:        args["messageData"].([]byte),
-			ChainTime:   chainTime,
-		}, nil
+		return parsedLog.MessageNum, args["messageData"].([]byte), nil
 	} else {
-		return inbox.InboxMessage{}, errors.New("unexpected log type")
+		return nil, nil, errors.New("unexpected log type")
 	}
 }

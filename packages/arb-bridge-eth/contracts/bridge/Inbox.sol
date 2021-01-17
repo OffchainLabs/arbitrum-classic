@@ -42,18 +42,8 @@ contract Inbox is IInbox {
     function sendL2MessageFromOrigin(bytes calldata messageData) external {
         // solhint-disable-next-line avoid-tx-origin
         require(msg.sender == tx.origin, "origin only");
-        (uint256 msgNum, ) = bridge.inboxInfo();
-        deliverToBridge(
-            Messages.messageHash(
-                L2_MSG,
-                msg.sender,
-                block.number,
-                block.timestamp, // solhint-disable-line not-rely-on-time
-                msgNum,
-                keccak256(messageData)
-            )
-        );
-        emit InboxMessageDeliveredFromOrigin(msgNum, L2_MSG, msg.sender);
+        uint256 msgNum = deliverToBridge(L2_MSG, msg.sender, keccak256(messageData));
+        emit InboxMessageDeliveredFromOrigin(msgNum);
     }
 
     /**
@@ -62,7 +52,8 @@ contract Inbox is IInbox {
      * @param messageData Data of the message being sent
      */
     function sendL2Message(bytes calldata messageData) external override {
-        _deliverMessage(L2_MSG, msg.sender, messageData);
+        uint256 msgNum = deliverToBridge(L2_MSG, msg.sender, keccak256(messageData));
+        emit InboxMessageDelivered(msgNum, messageData);
     }
 
     function deployL2ContractPair(
@@ -77,7 +68,6 @@ contract Inbox is IInbox {
             msg.sender,
             abi.encodePacked(maxGas, gasPriceBid, payment, contractData)
         );
-        emit BuddyContractPair(msg.sender);
     }
 
     /**
@@ -98,22 +88,16 @@ contract Inbox is IInbox {
         address _sender,
         bytes memory _messageData
     ) private {
-        (uint256 msgNum, ) = bridge.inboxInfo();
-        deliverToBridge(
-            Messages.messageHash(
-                _kind,
-                _sender,
-                block.number,
-                block.timestamp, // solhint-disable-line not-rely-on-time
-                msgNum,
-                keccak256(_messageData)
-            )
-        );
-        emit InboxMessageDelivered(msgNum, _kind, _sender, _messageData);
+        uint256 msgNum = deliverToBridge(_kind, _sender, keccak256(_messageData));
+        emit InboxMessageDelivered(msgNum, _messageData);
     }
 
-    function deliverToBridge(bytes32 messageHash) private {
-        bridge.deliverMessageToInbox{ value: msg.value }(messageHash);
+    function deliverToBridge(
+        uint8 kind,
+        address sender,
+        bytes32 messageDataHash
+    ) private returns (uint256) {
+        return bridge.deliverMessageToInbox{ value: msg.value }(kind, sender, messageDataHash);
     }
 
     // Implementation taken from OpenZeppelin (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.1.0/contracts/utils/Address.sol)

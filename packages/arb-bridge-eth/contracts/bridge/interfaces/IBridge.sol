@@ -22,10 +22,17 @@ interface IBridge {
     event MessageDelivered(
         uint256 indexed messageIndex,
         bytes32 indexed beforeInboxAcc,
-        address inbox
+        address inbox,
+        uint8 kind,
+        address sender,
+        bytes32 messageDataHash
     );
 
-    function deliverMessageToInbox(bytes32 messageHash) external payable;
+    function deliverMessageToInbox(
+        uint8 kind,
+        address sender,
+        bytes32 messageDataHash
+    ) external payable returns (uint256);
 
     function executeCall(
         address destAddr,

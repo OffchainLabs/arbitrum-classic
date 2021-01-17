@@ -32,13 +32,27 @@ contract Bridge is Ownable, IBridge {
     bytes32 private inboxMaxAcc;
     uint256 private inboxMaxCount;
 
-    function deliverMessageToInbox(bytes32 messageHash) external payable override {
+    function deliverMessageToInbox(
+        uint8 kind,
+        address sender,
+        bytes32 messageDataHash
+    ) external payable override returns (uint256) {
         require(allowedInboxes[msg.sender], "NOT_FROM_INBOX");
         uint256 count = inboxMaxCount;
         bytes32 inboxAcc = inboxMaxAcc;
+        bytes32 messageHash =
+            Messages.messageHash(
+                kind,
+                sender,
+                block.number,
+                block.timestamp, // solhint-disable-line not-rely-on-time
+                count,
+                messageDataHash
+            );
         inboxMaxAcc = Messages.addMessageToInbox(inboxAcc, messageHash);
         inboxMaxCount = count + 1;
-        emit MessageDelivered(count, inboxAcc, msg.sender);
+        emit MessageDelivered(count, inboxAcc, msg.sender, kind, sender, messageDataHash);
+        return count;
     }
 
     function executeCall(

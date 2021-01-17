@@ -35,6 +35,7 @@ import "./RollupLib.sol";
 
 contract Rollup is RollupCore, Pausable, IRollup {
     uint8 internal constant INITIALIZATION_MSG_TYPE = 4;
+    uint8 internal constant ROLLUP_PROTOCOL_EVENT_TYPE = 8;
 
     // Rollup Config
     uint256 public challengePeriodBlocks;
@@ -83,16 +84,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
                     _extraConfig
                 )
             );
-        bridge.deliverMessageToInbox(
-            Messages.messageHash(
-                INITIALIZATION_MSG_TYPE,
-                address(this),
-                block.number,
-                block.timestamp, // solhint-disable-line not-rely-on-time
-                0,
-                initMsgHash
-            )
-        );
+        bridge.deliverMessageToInbox(INITIALIZATION_MSG_TYPE, address(this), initMsgHash);
 
         challengeFactory = IChallengeFactory(_challengeFactory);
         nodeFactory = INodeFactory(_nodeFactory);
