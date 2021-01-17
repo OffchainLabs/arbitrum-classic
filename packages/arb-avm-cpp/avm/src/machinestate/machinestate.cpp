@@ -233,7 +233,25 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
     std::vector<unsigned char> buf;
     auto op = loadCurrentInstruction().op;
     auto opcode = op.opcode;
-    if (opcode < OpCode::GET_BUFFER8 || opcode > OpCode::SET_BUFFER256) {
+    if ((opcode < OpCode::GET_BUFFER8 || opcode > OpCode::SET_BUFFER256) && opcode != OpCode::SEND) {
+        return buf;
+    }
+    if (opcode == OpCode::SEND) {
+        auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0]) : nonstd::get_if<Buffer>(&stack[1]);
+        if (!buffer) {
+            insertSizes(buf, 0, 0, 0, 0);
+            return buf;
+        }
+        // Also need the offset
+        auto size = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate) : nonstd::get_if<uint256_t>(&stack[0]);
+        if (!size) {
+            insertSizes(buf, 0, 0, 0, 0);
+            return buf;
+        }
+        auto loc = static_cast<uint64_t>(*size);
+        auto proof = makeProof(*buffer, loc);
+        insertSizes(buf, proof.size(), 0, 0, 0);
+        buf.insert(buf.end(), proof.begin(), proof.end());
         return buf;
     }
     if (opcode == OpCode::GET_BUFFER8 || opcode == OpCode::GET_BUFFER64 ||
@@ -241,14 +259,17 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
         // Find the buffer
         auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0]) : nonstd::get_if<Buffer>(&stack[1]);
         if (!buffer) {
+            insertSizes(buf, 0, 0, 0, 0);
             return buf;
         }
         // Also need the offset
         auto offset = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate) : nonstd::get_if<uint256_t>(&stack[0]);
         if (!offset) {
+            insertSizes(buf, 0, 0, 0, 0);
             return buf;
         }
         if (*offset > std::numeric_limits<uint64_t>::max()) {
+            insertSizes(buf, 0, 0, 0, 0);
             return buf;
         }
         auto loc = static_cast<uint64_t>(*offset);
@@ -272,19 +293,23 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
     } else {
         auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[1]) : nonstd::get_if<Buffer>(&stack[2]);
         if (!buffer) {
+            insertSizes(buf, 0, 0, 0, 0);
             return buf;
         }
         // Also need the offset
         auto offset = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate) : nonstd::get_if<uint256_t>(&stack[0]);
         if (!offset) {
+            insertSizes(buf, 0, 0, 0, 0);
             return buf;
         }
         if (*offset > std::numeric_limits<uint64_t>::max()) {
+            insertSizes(buf, 0, 0, 0, 0);
             return buf;
         }
         auto val = op.immediate ? nonstd::get_if<uint256_t>(&stack[0]) : nonstd::get_if<uint256_t>(&stack[1]);
         if (!val) {
-          return buf;
+            insertSizes(buf, 0, 0, 0, 0);
+            return buf;
         }
         auto loc = static_cast<uint64_t>(*offset);
         if (opcode == OpCode::SET_BUFFER8) {

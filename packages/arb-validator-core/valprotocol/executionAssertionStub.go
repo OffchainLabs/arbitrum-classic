@@ -19,8 +19,9 @@ package valprotocol
 import (
 	"bytes"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -40,6 +41,27 @@ type ExecutionAssertionStub struct {
 	LogCount          uint64
 }
 
+var zeroBufferHash = hashing.SoliditySHA3(hashing.Uint256(big.NewInt(0)))
+var tagHash = hashing.SoliditySHA3(hashing.Uint256(big.NewInt(123)))
+
+func hashBuffer(buf []byte, pack bool) common.Hash {
+	if len(buf) == 0 {
+		return zeroBufferHash
+	}
+	if len(buf) == 32 {
+		var arr [32]byte
+		copy(arr[:], buf)
+		return hashing.SoliditySHA3(hashing.Bytes32(arr))
+	}
+	len := len(buf)
+	h2 := hashBuffer(buf[len/2:len], false)
+	if h2 == zeroBufferHash && pack {
+		return hashBuffer(buf[0:len/2], true)
+	}
+	h1 := hashBuffer(buf[0:len/2], false)
+	return hashing.SoliditySHA3(hashing.Bytes32(h1), hashing.Bytes32(h2))
+}
+
 func BytesArrayAccumHash(initialHash common.Hash, data []byte, valCount uint64) common.Hash {
 	lastMsgHash := initialHash
 	rd := bytes.NewReader(data)
@@ -51,6 +73,22 @@ func BytesArrayAccumHash(initialHash common.Hash, data []byte, valCount uint64) 
 		lastMsgHash = hashing.SoliditySHA3(
 			hashing.Bytes32(lastMsgHash),
 			hashing.Bytes32(val.Hash()))
+	}
+	return lastMsgHash
+}
+
+func BufferAccumHash(initialHash common.Hash, data [][]byte) common.Hash {
+	lastMsgHash := initialHash
+	for msg := range data {
+		bufHash := hashing.SoliditySHA3(
+			hashing.Bytes32(tagHash),
+			hashing.Bytes32(hashBuffer(data[msg], true)))
+		msgHash := hashing.SoliditySHA3(
+			hashing.Uint256(big.NewInt(int64(len(data[msg])))),
+			hashing.Bytes32(bufHash))
+		lastMsgHash = hashing.SoliditySHA3(
+			hashing.Bytes32(lastMsgHash),
+			hashing.Bytes32(msgHash))
 	}
 	return lastMsgHash
 }

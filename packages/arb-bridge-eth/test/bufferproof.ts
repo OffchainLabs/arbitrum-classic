@@ -54,10 +54,12 @@ function makeProof(
     return [arr[loc]]
   } else if (loc < offset + sz / 2) {
     const proof = makeProof(arr, offset, sz / 2, loc)
-    return proof.concat([merkleHash(arr, offset + sz / 2, sz / 2)])
+    const hash = merkleHash(arr, offset + sz / 2, sz / 2)
+    return proof.concat([hash])
   } else {
     const proof = makeProof(arr, offset + sz / 2, sz / 2, loc)
-    return proof.concat([merkleHash(arr, offset, sz / 2)])
+    const hash = merkleHash(arr, offset, sz / 2)
+    return proof.concat([hash])
   }
 }
 
@@ -97,6 +99,35 @@ export function fromBytes(buf: Buffer): bytes32[] {
     res.push('0x' + str.substr(i * 64, 64))
   }
   return res
+}
+
+function testArray1() {
+  const arr: bytes32[] = []
+  for (let i = 0; i < 31; i++) {
+    arr.push(elem(i))
+  }
+  arr.push(elem(0))
+  return arr
+}
+
+function testArray2() {
+  const arr: bytes32[] = []
+  for (let i = 0; i < 31; i++) {
+    arr.push(elem(i))
+  }
+  arr.push('0xffffffff00000000000000000000000000000000000000000000000000000000')
+  return arr
+}
+
+function testArray3() {
+  const arr: bytes32[] = []
+  for (let i = 0; i < 17; i++) {
+    arr.push(elem(i))
+  }
+  for (let i = 17; i < 32; i++) {
+    arr.push(elem(0))
+  }
+  return arr
 }
 
 describe('BufferProof', function () {
@@ -222,6 +253,54 @@ describe('BufferProof', function () {
         nproof.right
       )
       expect(res).to.equal(merkleHash(narr, 0, 1))
+    })
+  })
+
+  describe('#checkSize', function () {
+    it('should work when actual size is larger', async () => {
+      const arr = testArray1()
+      const buf = merkleHash(arr, 0, 32)
+      const proof = makeProof(arr, 0, 32, 23)
+      const res = await ospTester.testCheckSize(buf, 23 * 32 + 12, proof)
+      expect(res).to.equal(false)
+    })
+    it('should work when proof length is too small', async () => {
+      const arr = testArray1()
+      const buf = merkleHash(arr, 0, 32)
+      const proof = makeProof(arr, 0, 32, 230 % 32)
+      const res = await ospTester.testCheckSize(buf, 230 * 32 + 12, proof)
+      expect(res).to.equal(true)
+    })
+    it('should work with the exact size', async () => {
+      const arr = testArray1()
+      const buf = merkleHash(arr, 0, 32)
+      const proof = makeProof(arr, 0, 32, 31)
+      const res = await ospTester.testCheckSize(buf, 31 * 32, proof)
+      expect(res).to.equal(true)
+    })
+    it('should work inside words', async () => {
+      const arr = testArray2()
+      const buf = merkleHash(arr, 0, 32)
+      const proof = makeProof(arr, 0, 32, 31)
+      const res = await ospTester.testCheckSize(buf, 31 * 32, proof)
+      expect(res).to.equal(false)
+      const res2 = await ospTester.testCheckSize(buf, 31 * 32 + 4, proof)
+      expect(res2).to.equal(true)
+    })
+    it('should work with empty right subtrees', async () => {
+      const arr = testArray3()
+      const buf = merkleHash(arr, 0, 32)
+      const proof = makeProof(arr, 0, 32, 17)
+      const res = await ospTester.testCheckSize(buf, 17 * 32, proof)
+      expect(res).to.equal(true)
+    })
+    it('should not work with non-empty right subtrees', async () => {
+      const arr = testArray3()
+      arr[31] = elem(123)
+      const buf = merkleHash(arr, 0, 32)
+      const proof = makeProof(arr, 0, 32, 17)
+      const res = await ospTester.testCheckSize(buf, 17 * 32, proof)
+      expect(res).to.equal(false)
     })
   })
 })

@@ -34,7 +34,7 @@ struct AssertionContext {
     uint64_t numGas;
     bool blockingSideload;
     nonstd::optional<value> fake_inbox_peek_value;
-    std::vector<value> outMessage;
+    std::vector<std::vector<uint8_t>> outMessage;
     std::vector<value> logs;
     std::vector<value> debug_prints;
 

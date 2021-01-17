@@ -27,12 +27,61 @@ library Marshaling {
     using BytesLib for bytes;
     using Value for Value.Data;
 
+    // This depends on how it's implemented in arb-os
+    function deserializeMessage(bytes memory data, uint256 startOffset)
+        internal
+        pure
+        returns (
+            bool,
+            uint256,
+            address,
+            uint8,
+            bytes memory
+        )
+    {
+        require(data.length >= startOffset && data.length - startOffset >= 8, "too short");
+        uint256 size = 0;
+        for (uint256 i = 0; i < 8; i++) {
+            size *= 256;
+            size += uint8(data[startOffset + 7 - i]);
+        }
+        (, uint256 sender) = deserializeInt(data, startOffset + 8);
+        (, uint256 kind) = deserializeInt(data, startOffset + 8 + 32);
+        bytes memory res = new bytes(size - 64);
+        for (uint256 i = 0; i < size - 64; i++) {
+            res[i] = data[startOffset + 8 + 64 + i];
+        }
+        return (true, startOffset + 8 + size, address(uint160(sender)), uint8(kind), res);
+    }
+
+    function deserializeRawMessage(bytes memory data, uint256 startOffset)
+        internal
+        pure
+        returns (
+            bool,
+            uint256,
+            bytes memory
+        )
+    {
+        require(data.length >= startOffset && data.length - startOffset >= 8, "too short");
+        uint256 size = 0;
+        for (uint256 i = 0; i < 8; i++) {
+            size *= 256;
+            size += uint8(data[startOffset + 7 - i]);
+        }
+        bytes memory res = new bytes(size);
+        for (uint256 i = 0; i < size; i++) {
+            res[i] = data[startOffset + 8 + i];
+        }
+        return (true, startOffset + 8 + size, res);
+    }
+
     function deserializeHashPreImage(bytes memory data, uint256 startOffset)
         internal
         pure
         returns (uint256 offset, Value.Data memory value)
     {
-        require(data.length >= startOffset && data.length - startOffset >= 64, "to short");
+        require(data.length >= startOffset && data.length - startOffset >= 64, "too short");
         bytes32 hashData;
         uint256 size;
         (offset, hashData) = extractBytes32(data, startOffset);

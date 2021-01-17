@@ -155,7 +155,11 @@ ByteSlice machineMarshallState(CMachine* m) {
 RawAssertion makeRawAssertion(Assertion& assertion) {
     std::vector<unsigned char> outMsgData;
     for (const auto& outMsg : assertion.outMessages) {
-        marshal_value(outMsg, outMsgData);
+        // marshal_value(outMsg, outMsgData);
+        marshal_uint64_t(outMsg.size(), outMsgData);
+        for (uint64_t i = 0; i < outMsg.size(); i++) {
+            outMsgData.push_back(outMsg[i]);
+        }
     }
     std::vector<unsigned char> logData;
     for (const auto& log : assertion.logs) {

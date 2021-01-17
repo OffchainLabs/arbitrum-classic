@@ -119,6 +119,33 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         return proof[0];
     }
 
+    function checkSize(
+        bytes32 buf,
+        uint256 loc,
+        bytes32[] memory proof
+    ) internal pure returns (bool) {
+        // empty tree is full of zeros
+        if (proof.length == 0) {
+            require(buf == keccak1(bytes32(0)), "expected empty buffer");
+            return true;
+        }
+        bytes32 acc = keccak1(proof[0]);
+        bool check = true;
+        bytes32[] memory zeros = makeZeros();
+        for (uint256 i = 1; i < proof.length; i++) {
+            if (loc & 1 == 1) acc = keccak2(proof[i], acc);
+            else {
+                acc = keccak2(acc, proof[i]);
+                check = check && proof[i] == zeros[i - 1];
+            }
+            loc = loc >> 1;
+        }
+        require(acc == buf, "expected correct root");
+        // maybe it is a zero outside the actual tree
+        if (loc > 0) return true;
+        return check;
+    }
+
     function calcHeight(uint256 loc) internal pure returns (uint256) {
         if (loc == 0) return 1;
         else return 1 + calcHeight(loc >> 1);
@@ -260,6 +287,18 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         return getByte(get(buf, offset / 32, proof.proof1), offset % 32);
     }
 
+    function checkBufferSize(
+        bytes32 buf,
+        uint256 offset,
+        BufferProof memory proof
+    ) internal pure returns (bool) {
+        bytes32 w = get(buf, offset / 32, proof.proof1);
+        for (uint256 i = offset % 32; i < 32; i++) {
+            if (getByte(w, i) != 0) return false;
+        }
+        return checkSize(buf, offset / 32, proof.proof1);
+    }
+
     function getBuffer64(
         bytes32 buf,
         uint256 offset,
@@ -397,6 +436,38 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         return buf;
     }
 
+    function executeSendInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val1 = popVal(context.stack);
+        if (!val2.isInt64() || !val1.isBuffer()) {
+            handleOpcodeError(context);
+            return;
+        }
+        if (val2.intVal > SEND_SIZE_LIMIT) {
+            handleOpcodeError(context);
+            return;
+        }
+        if (!checkBufferSize(val1.bufferHash, val2.intVal, decodeProof(context.bufProof))) {
+            handleOpcodeError(context);
+            return;
+        }
+
+        require(
+            val1.hash() == Hashing.bytesToBufferHash(context.proof, context.offset, sendDataLength)
+        );
+
+        uint256 dataStart = 32 + context.offset;
+        bytes32 dataHash;
+        bytes memory proof = context.proof;
+        assembly {
+            dataHash := keccak256(add(proof, dataStart), sendDataLength)
+        }
+
+        //  bytes32 msgHash = keccak2(bytes32(val2.intVal), val1.hash());
+
+        context.messageAcc = keccak256(abi.encodePacked(context.messageAcc, dataHash));
+    }
+
     function executeGetBuffer8(AssertionContext memory context) internal pure {
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val1 = popVal(context.stack);
@@ -498,6 +569,8 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             return (3, 0, 100, executeSetBuffer64);
         } else if (opCode == OP_SETBUFFER256) {
             return (3, 0, 100, executeSetBuffer256);
+        } else if (opCode == OP_SEND) {
+            return (2, 0, 100, executeSendInsn);
         } else {
             revert("use another contract to handle other opcodes");
         }
