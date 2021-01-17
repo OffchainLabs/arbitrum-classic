@@ -17,10 +17,8 @@
 package message
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/pkg/errors"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -38,39 +36,41 @@ func NewOutMessage(msg Message, sender common.Address) OutMessage {
 	}
 }
 
-func NewOutMessageFromValue(val value.Value) (OutMessage, error) {
-	failRet := OutMessage{}
-	tup, ok := val.(*value.TupleValue)
-	if !ok {
-		return failRet, errors.New("val must be a tuple")
-	}
-	if tup.Len() != 3 {
-		return failRet, errors.Errorf("expected tuple of length 3, but recieved %v", tup)
-	}
-
-	// Tuple size already verified above, so error can be ignored
-	kind, _ := tup.GetByInt64(0)
-	sender, _ := tup.GetByInt64(1)
-	messageData, _ := tup.GetByInt64(2)
-
-	kindInt, ok := kind.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("outgoing message kind must be an int")
-	}
-	senderInt, ok := sender.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("sender must be an int")
-	}
-	data, err := inbox.ByteStackToHex(messageData)
-	if err != nil {
-		return failRet, err
-	}
-
-	return OutMessage{
-		Kind:   inbox.Type(kindInt.BigInt().Uint64()),
-		Sender: inbox.NewAddressFromInt(senderInt),
-		Data:   data,
-	}, nil
+// TODO: Implement this
+func NewOutMessageFromValue(val []byte) (OutMessage, error) {
+	panic("UNSUPPORTED")
+	//failRet := OutMessage{}
+	//tup, ok := val.(*value.TupleValue)
+	//if !ok {
+	//	return failRet, errors.New("val must be a tuple")
+	//}
+	//if tup.Len() != 3 {
+	//	return failRet, errors.Errorf("expected tuple of length 3, but recieved %v", tup)
+	//}
+	//
+	//// Tuple size already verified above, so error can be ignored
+	//kind, _ := tup.GetByInt64(0)
+	//sender, _ := tup.GetByInt64(1)
+	//messageData, _ := tup.GetByInt64(2)
+	//
+	//kindInt, ok := kind.(value.IntValue)
+	//if !ok {
+	//	return failRet, errors.New("outgoing message kind must be an int")
+	//}
+	//senderInt, ok := sender.(value.IntValue)
+	//if !ok {
+	//	return failRet, errors.New("sender must be an int")
+	//}
+	//data, err := inbox.ByteStackToHex(messageData)
+	//if err != nil {
+	//	return failRet, err
+	//}
+	//
+	//return OutMessage{
+	//	Kind:   inbox.Type(kindInt.BigInt().Uint64()),
+	//	Sender: inbox.NewAddressFromInt(senderInt),
+	//	Data:   data,
+	//}, nil
 }
 
 func NewRandomOutMessage(msg Message) OutMessage {

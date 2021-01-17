@@ -30,7 +30,7 @@ interface IOutbox {
 
     function executeTransaction(
         uint256 outboxIndex,
-        bytes calldata proof,
+        bytes32[] calldata proof,
         uint256 index,
         address l2Sender,
         address destAddr,

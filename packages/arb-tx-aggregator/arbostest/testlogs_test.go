@@ -17,6 +17,7 @@
 package arbostest
 
 import (
+	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -67,7 +68,7 @@ func TestArbOSCases(t *testing.T) {
 			}
 
 			for i, calcSend := range calcSends {
-				if !value.Eq(calcSend, avmSends[i]) {
+				if !bytes.Equal(calcSend, avmSends[i]) {
 					t.Error("wrong send")
 				}
 			}

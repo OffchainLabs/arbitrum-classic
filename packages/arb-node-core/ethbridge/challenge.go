@@ -6,8 +6,15 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/pkg/errors"
 	"math/big"
 )
+
+// TODO: Fill this in
+var opcodeProver map[uint8]uint8
+
+func init() {
+}
 
 func calculateBisectionChunkCount(segmentIndex, segmentCount int, totalLength *big.Int) *big.Int {
 	size := new(big.Int).Div(totalLength, big.NewInt(int64(segmentCount)))
@@ -180,9 +187,14 @@ func (c *Challenge) OneStepProveExecution(
 	beforeInboxDelta common.Hash,
 	executionProof []byte,
 	bufferProof []byte,
+	opcode uint8,
 ) (*RawTransaction, error) {
 	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
 	nodes, path := prevTree.GetProof(segmentToChallenge)
+	prover, ok := opcodeProver[opcode]
+	if !ok {
+		return nil, errors.New("no prover for opcode")
+	}
 	return c.buildSimpleTx(
 		"oneStepProveExecution",
 		nodes,
@@ -194,11 +206,14 @@ func (c *Challenge) OneStepProveExecution(
 			beforeExecInfo.SendAcc,
 			beforeExecInfo.LogAcc,
 		},
-		beforeExecInfo.GasUsed().Uint64(),
-		beforeExecInfo.SendCount(),
-		beforeExecInfo.LogCount(),
+		[]*big.Int{
+			beforeExecInfo.GasUsed(),
+			beforeExecInfo.SendCount(),
+			beforeExecInfo.LogCount(),
+		},
 		executionProof,
 		bufferProof,
+		prover,
 	)
 }
 

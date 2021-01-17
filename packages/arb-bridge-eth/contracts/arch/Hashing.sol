@@ -62,11 +62,15 @@ library Hashing {
         return keccak2(h1, h2);
     }
 
-    function hashMessage(bytes memory buf) internal pure returns (bytes32) {
+    function bytesToBufferHash(
+        bytes memory buf,
+        uint256 startOffset,
+        uint256 length
+    ) internal pure returns (bytes32) {
         return
             keccak2(
                 bytes32(buf.length),
-                keccak2(bytes32(uint256(123)), merkleRoot(buf, 0, buf.length, true))
+                keccak2(bytes32(uint256(123)), merkleRoot(buf, startOffset, length, true))
             );
     }
 
@@ -116,14 +120,6 @@ library Hashing {
         } else {
             require(false, "Invalid type code");
         }
-    }
-
-    function bytesToBufferHash(
-        bytes memory,
-        uint256,
-        uint256
-    ) internal pure returns (bytes32) {
-        return 0;
     }
 
     function getTuplePreImage(Value.Data[] memory vals) internal pure returns (Value.Data memory) {

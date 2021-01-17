@@ -447,26 +447,27 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        if (!checkBufferSize(val1.bufferHash, val2.intVal, decodeProof(context.bufProof))) {
-            handleOpcodeError(context);
-            return;
-        }
+        if (context.offset < context.proof.length) {
+            // We've passed more data in the proof which is the data of the send because it isn't too long
+            uint256 dataStart = context.offset;
+            uint256 dataLength = val2.intVal;
+            bytes memory proof = context.proof;
+            bytes32 bufferHash = Hashing.bytesToBufferHash(proof, dataStart, dataLength);
+            require(val1.hash() == bufferHash, "WRONG_SEND");
 
+            bytes32 dataHash;
+            assembly {
+                dataHash := keccak256(add(add(proof, 32), dataStart), dataLength)
+            }
+
+            context.messageAcc = keccak256(abi.encodePacked(context.messageAcc, dataHash));
+        }
+        // If we didn't pass the message data, the buffer must have been longer than the length param passed
         require(
-            val1.hash() == Hashing.bytesToBufferHash(context.proof, context.offset, val2.intVal)
+            !checkBufferSize(val1.bufferHash, val2.intVal, decodeProof(context.bufProof)),
+            "BUF_LENGTH"
         );
-
-        uint256 dataStart = 32 + context.offset;
-        bytes32 dataHash;
-        uint256 dataLength = val2.intVal;
-        bytes memory proof = context.proof;
-        assembly {
-            dataHash := keccak256(add(proof, dataStart), dataLength)
-        }
-
-        //  bytes32 msgHash = keccak2(bytes32(val2.intVal), val1.hash());
-
-        context.messageAcc = keccak256(abi.encodePacked(context.messageAcc, dataHash));
+        handleOpcodeError(context);
     }
 
     function executeGetBuffer8(AssertionContext memory context) internal pure {

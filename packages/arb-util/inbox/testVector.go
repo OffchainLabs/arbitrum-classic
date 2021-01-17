@@ -2,6 +2,7 @@ package inbox
 
 import (
 	"encoding/json"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/pkg/errors"
 	"math/big"
@@ -16,10 +17,10 @@ type TestVector struct {
 	Version int         `json:"format_version"`
 	Inbox   []JSONValue `json:"inbox"`
 	Logs    []JSONValue `json:"logs"`
-	Sends   []JSONValue `json:"sends"`
+	Sends   []string    `json:"sends"`
 }
 
-func TestVectorJSON(inbox []InboxMessage, logs []value.Value, sends []value.Value) ([]byte, error) {
+func TestVectorJSON(inbox []InboxMessage, logs []value.Value, sends [][]byte) ([]byte, error) {
 	jsonInbox := make([]JSONValue, 0, len(inbox))
 	for _, msg := range inbox {
 		val, err := valueToJSON(msg.AsValue())
@@ -36,24 +37,20 @@ func TestVectorJSON(inbox []InboxMessage, logs []value.Value, sends []value.Valu
 		}
 		jsonLogs = append(jsonLogs, val)
 	}
-	jsonSends := make([]JSONValue, 0, len(sends))
+	hexSends := make([]string, 0, len(sends))
 	for _, avmSend := range sends {
-		val, err := valueToJSON(avmSend)
-		if err != nil {
-			return nil, err
-		}
-		jsonSends = append(jsonSends, val)
+		hexSends = append(hexSends, hexutil.Encode(avmSend))
 	}
 	vector := TestVector{
 		Version: 1,
 		Inbox:   jsonInbox,
 		Logs:    jsonLogs,
-		Sends:   jsonSends,
+		Sends:   hexSends,
 	}
 	return json.Marshal(vector)
 }
 
-func LoadTestVector(data []byte) ([]InboxMessage, []value.Value, []value.Value, error) {
+func LoadTestVector(data []byte) ([]InboxMessage, []value.Value, [][]byte, error) {
 	testVector := new(TestVector)
 	if err := json.Unmarshal(data, testVector); err != nil {
 		return nil, nil, nil, err
@@ -78,9 +75,9 @@ func LoadTestVector(data []byte) ([]InboxMessage, []value.Value, []value.Value, 
 		}
 		avmLogs = append(avmLogs, val)
 	}
-	avmSends := make([]value.Value, 0, len(testVector.Sends))
+	avmSends := make([][]byte, 0, len(testVector.Sends))
 	for _, avmSend := range testVector.Sends {
-		val, err := jsonToValue(avmSend)
+		val, err := hexutil.Decode(avmSend)
 		if err != nil {
 			return nil, nil, nil, err
 		}

@@ -90,7 +90,7 @@ contract Outbox is CloneFactory, IOutbox {
 
     function executeTransaction(
         uint256 outboxIndex,
-        bytes calldata proof,
+        bytes32[] calldata proof,
         uint256 index,
         address l2Sender,
         address destAddr,
@@ -127,13 +127,12 @@ contract Outbox is CloneFactory, IOutbox {
 
     function spendOutput(
         uint256 outboxIndex,
-        bytes memory proof,
+        bytes32[] memory proof,
         uint256 path,
         bytes32 item
     ) private {
         // Hash the leaf an extra time to prove it's a leaf
-        (bytes32 calcRoot, ) =
-            MerkleLib.verifyMerkleProof(proof, keccak256(abi.encodePacked(item)), path);
+        bytes32 calcRoot = MerkleLib.calculateRoot(proof, path, keccak256(abi.encodePacked(item)));
         (bool success, ) =
             bridge.executeCall(
                 address(outboxes[outboxIndex]),

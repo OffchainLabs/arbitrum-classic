@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -30,7 +31,7 @@ var logger zerolog.Logger
 type App struct {
 	inboxMessages []inbox.InboxMessage
 	avmLogs       []value.Value
-	avmSends      []value.Value
+	avmSends      [][]byte
 
 	snap      *snapshot.Snapshot
 	assertion *protocol.ExecutionAssertion
@@ -101,7 +102,7 @@ func (a *App) verify() error {
 	}
 
 	for i := 0; i < commonSendCount; i++ {
-		if !value.Eq(calcSends[i], a.avmSends[i]) {
+		if !bytes.Equal(calcSends[i], a.avmSends[i]) {
 			return errors.New("wrong send")
 		}
 	}

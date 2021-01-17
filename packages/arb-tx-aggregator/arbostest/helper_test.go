@@ -156,7 +156,7 @@ func failIfError(t *testing.T, err error) {
 	}
 }
 
-func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, []value.Value, machine.Machine, *protocol.ExecutionAssertion) {
+func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, [][]byte, machine.Machine, *protocol.ExecutionAssertion) {
 	t.Helper()
 	cmach, err := cmachine.New(arbos.Path())
 	failIfError(t, err)

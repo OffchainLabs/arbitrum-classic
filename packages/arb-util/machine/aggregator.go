@@ -57,7 +57,7 @@ type BlockEntry struct {
 
 type InMemoryAggregatorStore struct {
 	sync.Mutex
-	messages     []value.Value
+	messages     [][]byte
 	logs         []value.Value
 	blocks       map[uint64]*BlockEntry
 	latestBlock  uint64
@@ -79,7 +79,8 @@ func (as *InMemoryAggregatorStore) GetMessage(index uint64) (value.Value, error)
 	if index >= uint64(len(as.messages)) {
 		return nil, errors.New("failed to get l2message")
 	}
-	return as.messages[index], nil
+	panic("UNSUPPORTED")
+	//return as.messages[index], nil
 }
 
 func (as *InMemoryAggregatorStore) GetLog(index uint64) (value.Value, error) {
@@ -151,7 +152,7 @@ func (as *InMemoryAggregatorStore) SaveLog(val value.Value) error {
 	return nil
 }
 
-func (as *InMemoryAggregatorStore) SaveMessage(val value.Value) error {
+func (as *InMemoryAggregatorStore) SaveMessage(val []byte) error {
 	as.Lock()
 	defer as.Unlock()
 	as.messages = append(as.messages, val)

@@ -106,6 +106,9 @@ func (e *ExecutionImpl) OneStepProof(
 		return nil, err
 	}
 
+	// TODO: Get this from proofData
+	opcode := uint8(0)
+
 	return challenge.OneStepProveExecution(
 		prevBisection,
 		segmentToChallenge,
@@ -113,5 +116,6 @@ func (e *ExecutionImpl) OneStepProof(
 		e.inboxDelta.inboxDeltaAccs[execInfo.InboxMessagesRead().Uint64()],
 		proofData,
 		bufferProofData,
+		opcode,
 	)
 }

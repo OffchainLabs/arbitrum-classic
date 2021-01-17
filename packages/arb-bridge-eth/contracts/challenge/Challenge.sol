@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -425,56 +425,36 @@ contract Challenge is Cloneable, IChallenge {
 
     // machineFields
     //  initialInbox
-    //  initialMessage
-    //  initialLog
+    //  initialMessageAcc
+    //  initialLogAcc
+    // initialState
+    //  _initialGasUsed
+    //  _initialMessageCount
+    //  _initialLogCount
     function oneStepProveExecution(
         bytes32[] calldata _merkleNodes,
         uint256 _merkleRoute,
         uint256 _challengedSegmentStart,
         bytes32 _oldEndHash,
         bytes32[3] memory _machineFields,
-        uint64 _initialGasUsed,
-        uint256 _initialMessageCount,
-        uint256 _initialLogCount,
+        uint256[3] memory _initialState,
         bytes memory _executionProof,
-        bytes memory _bufferProof
+        bytes memory _bufferProof,
+        uint8 prover
     ) public executionChallenge onlyOnTurn {
-        uint64 gasUsed;
-        bytes32[5] memory proofFields;
-
-        if (_bufferProof.length == 0) {
-            (gasUsed, proofFields) = executor.executeStep(_machineFields, _executionProof);
-        } else {
-            (gasUsed, proofFields) = executor2.executeStep(
-                _machineFields,
-                _executionProof,
-                _bufferProof
-            );
-        }
+        (uint64 gasUsed, bytes32[5] memory proofFields) =
+            executeMachineStep(prover, _machineFields, _executionProof, _bufferProof);
 
         require(
             _oldEndHash !=
-                oneStepProofExecutionAfter(
-                    _machineFields,
-                    _initialGasUsed,
-                    _initialMessageCount,
-                    _initialLogCount,
-                    gasUsed,
-                    proofFields
-                )
+                oneStepProofExecutionAfter(_machineFields, _initialState, gasUsed, proofFields)
         );
 
         bytes32 rootHash =
             ChallengeLib.bisectionChunkHash(
                 _challengedSegmentStart,
                 gasUsed,
-                oneStepProofExecutionBefore(
-                    _machineFields,
-                    _initialGasUsed,
-                    _initialMessageCount,
-                    _initialLogCount,
-                    proofFields
-                ),
+                oneStepProofExecutionBefore(_machineFields, _initialState, proofFields),
                 _oldEndHash
             );
 
@@ -556,27 +536,26 @@ contract Challenge is Cloneable, IChallenge {
         responded(executionCheckTimeBlocks);
     }
 
+    // initialState
+    //  _initialGasUsed
+    //  _initialMessageCount
+    //  _initialLogCount
     function oneStepProveStoppedShort(
         bytes32[3] calldata _machineFields,
-        uint64 _initialGasUsed,
-        uint256 _initialMessageCount,
-        uint256 _initialLogCount,
-        bytes calldata _executionProof
+        uint256[3] calldata _initialState,
+        bytes calldata _executionProof,
+        bytes memory _bufferProof,
+        uint8 prover
     ) external onlyOnTurn {
         require(kind == Kind.StoppedShort);
 
         // If this doesn't revert, we were able to successfully execute the machine
-        (, bytes32[5] memory proofFields) = executor.executeStep(_machineFields, _executionProof);
+        (, bytes32[5] memory proofFields) =
+            executeMachineStep(prover, _machineFields, _executionProof, _bufferProof);
 
         // Check that the before state is the end of the stopped short bisection which was stored in executionHash
         require(
-            oneStepProofExecutionBefore(
-                _machineFields,
-                _initialGasUsed,
-                _initialMessageCount,
-                _initialLogCount,
-                proofFields
-            ) == executionHash
+            oneStepProofExecutionBefore(_machineFields, _initialState, proofFields) == executionHash
         );
 
         emit OneStepProofCompleted();
@@ -631,8 +610,7 @@ contract Challenge is Cloneable, IChallenge {
             );
             segmentStart += chunkSize;
         }
-        (bytes32 root, ) = MerkleLib.generateMerkleRoot(hashes);
-        challengeState = root;
+        challengeState = MerkleLib.generateRoot(hashes);
     }
 
     function verifyAndSetup(Kind _kind, bytes32 initialState) private {
@@ -715,6 +693,21 @@ contract Challenge is Cloneable, IChallenge {
             );
     }
 
+    function executeMachineStep(
+        uint8 prover,
+        bytes32[3] memory _machineFields,
+        bytes memory _executionProof,
+        bytes memory _bufferProof
+    ) private view returns (uint64 gas, bytes32[5] memory fields) {
+        if (prover == 0) {
+            return executor.executeStep(_machineFields, _executionProof);
+        } else if (prover == 1) {
+            return executor2.executeStep(_machineFields, _executionProof, _bufferProof);
+        } else {
+            require(false, "INVALID_PROVER");
+        }
+    }
+
     // machineFields
     //  initialInbox
     //  initialMessage
@@ -727,30 +720,26 @@ contract Challenge is Cloneable, IChallenge {
     //  afterLogsHash
     function oneStepProofExecutionBefore(
         bytes32[3] memory _machineFields,
-        uint64 _initialGasUsed,
-        uint256 _initialMessageCount,
-        uint256 _initialLogCount,
+        uint256[3] memory _initialState,
         bytes32[5] memory proofFields
     ) private pure returns (bytes32) {
         return
             ChallengeLib.assertionHash(
-                _initialGasUsed,
+                _initialState[0],
                 ChallengeLib.assertionRestHash(
                     _machineFields[0],
                     proofFields[0],
                     _machineFields[1],
-                    _initialMessageCount,
+                    _initialState[1],
                     _machineFields[2],
-                    _initialLogCount
+                    _initialState[2]
                 )
             );
     }
 
     function oneStepProofExecutionAfter(
         bytes32[3] memory _machineFields,
-        uint64 _initialGasUsed,
-        uint256 _initialMessageCount,
-        uint256 _initialLogCount,
+        uint256[3] memory _initialState,
         uint64 gasUsed,
         bytes32[5] memory proofFields
     ) private pure returns (bytes32) {
@@ -760,14 +749,14 @@ contract Challenge is Cloneable, IChallenge {
         // are equal or not
         return
             ChallengeLib.assertionHash(
-                _initialGasUsed + gasUsed,
+                _initialState[0] + gasUsed,
                 ChallengeLib.assertionRestHash(
                     proofFields[2],
                     proofFields[1],
                     proofFields[3],
-                    _initialMessageCount + (_machineFields[1] == proofFields[3] ? 0 : 1),
+                    _initialState[1] + (_machineFields[1] == proofFields[3] ? 0 : 1),
                     proofFields[4],
-                    _initialLogCount + (_machineFields[2] == proofFields[4] ? 0 : 1)
+                    _initialState[2] + (_machineFields[2] == proofFields[4] ? 0 : 1)
                 )
             );
     }
