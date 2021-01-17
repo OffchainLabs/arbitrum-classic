@@ -18,6 +18,7 @@
 
 pragma solidity ^0.6.11;
 
+import "./RollupCore.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 
@@ -32,33 +33,8 @@ import "../bridge/Messages.sol";
 import "./RollupLib.sol";
 import "../challenge/ChallengeLib.sol";
 
-contract Rollup is Pausable, IRollup {
-    struct Zombie {
-        address stakerAddress;
-        uint256 latestStakedNode;
-    }
-
-    struct Staker {
-        uint256 index;
-        uint256 latestStakedNode;
-        uint256 amountStaked;
-        // currentChallenge is 0 if staker is not in a challenge
-        address currentChallenge;
-        bool isStaked;
-    }
-
+contract Rollup is RollupCore, Pausable, IRollup {
     uint8 internal constant INITIALIZATION_MSG_TYPE = 4;
-
-    uint256 public override latestConfirmed;
-    uint256 public override firstUnresolvedNode;
-    uint256 public override latestNodeCreated;
-    mapping(uint256 => INode) public override nodes;
-    uint256 public override lastStakeBlock;
-
-    address payable[] public override stakerList;
-    mapping(address => Staker) public stakerMap;
-
-    Zombie[] private zombies;
 
     // Rollup Config
     uint256 public override challengePeriodBlocks;
@@ -73,8 +49,6 @@ contract Rollup is Pausable, IRollup {
     INodeFactory public override nodeFactory;
     address public owner;
     ProxyAdmin admin;
-
-    mapping(address => uint256) public override withdrawableFunds;
 
     modifier onlyOwner {
         require(msg.sender == owner, "ONLY_OWNER");
@@ -144,7 +118,7 @@ contract Rollup is Pausable, IRollup {
                     0 // deadline block (not challengeable)
                 )
             );
-        nodes[0] = node;
+        initializeCore(node);
 
         challengePeriodBlocks = _challengePeriodBlocks;
         arbGasSpeedLimitPerBlock = _arbGasSpeedLimitPerBlock;
@@ -152,8 +126,6 @@ contract Rollup is Pausable, IRollup {
         stakeToken = _stakeToken;
         owner = _owner;
         admin = ProxyAdmin(_admin);
-
-        firstUnresolvedNode = 1;
 
         emit RollupCreated(_machineHash);
     }
@@ -193,15 +165,15 @@ contract Rollup is Pausable, IRollup {
     }
 
     function truncateNodes(uint256 _latestNodeCreated) external onlyOwner {
-        uint256 oldLatestNodeCreated = latestNodeCreated;
-        require(_latestNodeCreated < latestNodeCreated, "TOO_NEW");
-        require(_latestNodeCreated >= firstUnresolvedNode - 1, "TOO_OLD");
+        uint256 oldLatestNodeCreated = latestNodeCreated();
+        require(_latestNodeCreated < oldLatestNodeCreated, "TOO_NEW");
+        require(_latestNodeCreated >= firstUnresolvedNode() - 1, "TOO_OLD");
 
         for (uint256 i = oldLatestNodeCreated; i >= _latestNodeCreated; i--) {
-            INode node = nodes[i];
+            INode node = getNode(i);
             node.destroy();
         }
-        latestNodeCreated = _latestNodeCreated;
+        updateLatestNodeCreated(_latestNodeCreated);
     }
 
     function rejectNextNode(uint256 successorWithStake, address stakerAddress)
@@ -210,16 +182,17 @@ contract Rollup is Pausable, IRollup {
         whenNotPaused
     {
         checkUnresolved();
-
-        INode node = nodes[firstUnresolvedNode];
-        if (node.prev() == latestConfirmed) {
+        uint256 latest = latestConfirmed();
+        uint256 firstUnresolved = firstUnresolvedNode();
+        INode node = getNode(firstUnresolved);
+        if (node.prev() == latest) {
             checkNoRecentStake();
-            require(successorWithStake > firstUnresolvedNode, "SUCCESSOR_TO_LOW");
-            require(successorWithStake <= latestNodeCreated, "SUCCESSOR_TO_HIGH");
-            require(stakerMap[stakerAddress].isStaked, "NOT_STAKED");
+            require(successorWithStake > firstUnresolved, "SUCCESSOR_TO_LOW");
+            require(successorWithStake <= latestNodeCreated(), "SUCCESSOR_TO_HIGH");
+            require(isStaked(stakerAddress), "NOT_STAKED");
 
             // Confirm that someone is staked on some sibling node
-            nodes[successorWithStake].checkRejectExample(latestConfirmed, stakerAddress);
+            getNode(successorWithStake).checkRejectExample(latest, stakerAddress);
 
             // Verify the block's deadline has passed
             node.checkPastDeadline();
@@ -229,8 +202,7 @@ contract Rollup is Pausable, IRollup {
             // Verify that no staker is staked on this node
             require(node.stakerCount() == countStakedZombies(node), "HAS_STAKERS");
         }
-        destroyNode(firstUnresolvedNode);
-        firstUnresolvedNode++;
+        rejectNextNode();
     }
 
     function confirmNextNode(
@@ -247,31 +219,19 @@ contract Rollup is Pausable, IRollup {
 
         outbox.processOutgoingMessages(sendsData, sendLengths);
 
-        destroyNode(latestConfirmed);
-
-        latestConfirmed = firstUnresolvedNode;
-        firstUnresolvedNode++;
+        confirmNextNode();
 
         emit SentLogs(logAcc);
     }
 
     function newStake(uint256 tokenAmount) external payable override whenNotPaused {
         // Verify that sender is not already a staker
-        require(!stakerMap[msg.sender].isStaked, "ALREADY_STAKED");
+        require(!isStaked(msg.sender), "ALREADY_STAKED");
 
         uint256 depositAmount = receiveStakerFunds(tokenAmount);
         require(depositAmount >= currentRequiredStake(), "NOT_ENOUGH_STAKE");
 
-        uint256 stakerIndex = stakerList.length;
-        stakerList.push(msg.sender);
-        stakerMap[msg.sender] = Staker(
-            stakerIndex,
-            latestConfirmed,
-            depositAmount,
-            address(0),
-            true
-        );
-        lastStakeBlock = block.number;
+        createNewStake(msg.sender, depositAmount);
     }
 
     function withdrawStakerFunds(address payable destination)
@@ -280,7 +240,7 @@ contract Rollup is Pausable, IRollup {
         whenNotPaused
         returns (uint256)
     {
-        uint256 amount = withdrawableFunds[destination];
+        uint256 amount = withdrawFunds(msg.sender);
         // Note: This is an unsafe external call and could be used for reentrency
         // This is safe because it occurs after all checks and effects
         sendStakerFunds(destination, amount);
@@ -292,15 +252,13 @@ contract Rollup is Pausable, IRollup {
         uint256 blockNumber,
         uint256 nodeNum
     ) external override whenNotPaused {
-        Staker storage staker = stakerMap[msg.sender];
-        require(staker.isStaked, "NOT_STAKED");
+        require(isStaked(msg.sender), "NOT_STAKED");
 
         require(blockhash(blockNumber) == blockHash, "invalid known block");
-        require(nodeNum >= firstUnresolvedNode && nodeNum <= latestNodeCreated);
-        INode node = nodes[nodeNum];
-        require(staker.latestStakedNode == node.prev(), "NOT_STAKED_PREV");
-        node.addStaker(msg.sender);
-        staker.latestStakedNode = nodeNum;
+        require(nodeNum >= firstUnresolvedNode() && nodeNum <= latestNodeCreated());
+        INode node = getNode(nodeNum);
+        require(latestStakedNode(msg.sender) == node.prev(), "NOT_STAKED_PREV");
+        stakeOnNode(msg.sender, nodeNum);
     }
 
     function stakeOnNewNode(
@@ -310,14 +268,12 @@ contract Rollup is Pausable, IRollup {
         bytes32[7] calldata assertionBytes32Fields,
         uint256[10] calldata assertionIntFields
     ) external override whenNotPaused {
-        Staker storage staker = stakerMap[msg.sender];
-        require(staker.isStaked, "NOT_STAKED");
+        require(isStaked(msg.sender), "NOT_STAKED");
         require(blockhash(blockNumber) == blockHash, "invalid known block");
-        require(nodeNum == latestNodeCreated + 1, "NODE_NUM");
+        require(nodeNum == latestNodeCreated() + 1, "NODE_NUM");
         RollupLib.Assertion memory assertion =
             RollupLib.decodeAssertion(assertionBytes32Fields, assertionIntFields);
-        uint256 prev = staker.latestStakedNode;
-        INode prevNode = nodes[prev];
+        INode prevNode = getNode(latestStakedNode(msg.sender));
         // Make sure the previous state is correct against the node being built on
         require(
             RollupLib.beforeNodeStateHash(assertion) == prevNode.stateHash(),
@@ -331,9 +287,7 @@ contract Rollup is Pausable, IRollup {
             "INBOX_PAST_END"
         );
 
-        uint256 prevDeadlineBlock = prevNode.deadlineBlock();
         uint256 timeSinceLastNode = block.number - assertion.beforeProposedBlock;
-        uint256 minGasUsed = timeSinceLastNode * arbGasSpeedLimitPerBlock;
         // Verify that assertion meets the minimum Delta time requirement
         require(timeSinceLastNode >= minimumAssertionPeriod(), "TIME_DELTA");
 
@@ -343,19 +297,19 @@ contract Rollup is Pausable, IRollup {
             assertion.inboxMessagesRead >=
                 assertion.beforeInboxMaxCount - assertion.beforeInboxCount ||
                 // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
-                assertion.gasUsed >= minGasUsed,
+                assertion.gasUsed >= timeSinceLastNode * arbGasSpeedLimitPerBlock,
             "TOO_SMALL"
         );
 
         // Don't allow an assertion to use above a maximum amount of gas
-        require(assertion.gasUsed <= minGasUsed * 4, "TOO_LARGE");
+        require(assertion.gasUsed <= timeSinceLastNode * arbGasSpeedLimitPerBlock * 4, "TOO_LARGE");
 
         uint256 deadlineBlock = block.number + challengePeriodBlocks;
+        uint256 prevDeadlineBlock = prevNode.deadlineBlock();
         if (deadlineBlock < prevDeadlineBlock) {
             deadlineBlock = prevDeadlineBlock;
         }
-        uint256 executionCheckTimeBlocks = assertion.gasUsed / arbGasSpeedLimitPerBlock;
-        deadlineBlock += executionCheckTimeBlocks;
+        deadlineBlock += assertion.gasUsed / arbGasSpeedLimitPerBlock;
 
         INode node =
             INode(
@@ -365,22 +319,19 @@ contract Rollup is Pausable, IRollup {
                         assertion,
                         inboxMaxCount,
                         inboxMaxAcc,
-                        executionCheckTimeBlocks
+                        assertion.gasUsed / arbGasSpeedLimitPerBlock
                     ),
                     RollupLib.confirmHash(assertion),
-                    prev,
+                    latestStakedNode(msg.sender),
                     deadlineBlock
                 )
             );
 
-        latestNodeCreated++;
-        nodes[latestNodeCreated] = node;
-
-        node.addStaker(msg.sender);
-        staker.latestStakedNode = latestNodeCreated;
+        nodeCreated(node);
+        stakeOnNode(msg.sender, nodeNum);
 
         emit NodeCreated(
-            latestNodeCreated,
+            nodeNum,
             assertionBytes32Fields,
             assertionIntFields,
             inboxMaxCount,
@@ -389,12 +340,9 @@ contract Rollup is Pausable, IRollup {
     }
 
     function returnOldDeposit(address stakerAddress) external override whenNotPaused {
-        Staker storage staker = stakerMap[stakerAddress];
-        require(staker.latestStakedNode <= latestConfirmed, "TOO_RECENT");
-        checkUnchallengedStaker(staker);
-        uint256 amountStaked = staker.amountStaked;
-        deleteStaker(staker);
-        withdrawableFunds[stakerAddress] += amountStaked;
+        require(latestStakedNode(stakerAddress) <= latestConfirmed(), "TOO_RECENT");
+        checkUnchallengedStaker(stakerAddress);
+        withdrawStaker(stakerAddress);
     }
 
     function addToDeposit(address stakerAddress, uint256 tokenAmount)
@@ -403,23 +351,17 @@ contract Rollup is Pausable, IRollup {
         override
         whenNotPaused
     {
-        Staker storage staker = stakerMap[stakerAddress];
-        checkUnchallengedStaker(staker);
-        staker.amountStaked += receiveStakerFunds(tokenAmount);
+        checkUnchallengedStaker(stakerAddress);
+        increaseStakeBy(stakerAddress, receiveStakerFunds(tokenAmount));
     }
 
-    function reduceDeposit(uint256 maxReduction) external override whenNotPaused {
-        Staker storage staker = stakerMap[msg.sender];
-        checkUnchallengedStaker(staker);
+    function reduceDeposit(uint256 target) external override whenNotPaused {
+        checkUnchallengedStaker(msg.sender);
         uint256 currentRequired = currentRequiredStake();
-        require(staker.amountStaked > currentRequired);
-        uint256 withdrawAmount = staker.amountStaked - currentRequired;
-        // Cap withdrawAmount at maxReduction
-        if (withdrawAmount > maxReduction) {
-            withdrawAmount = maxReduction;
+        if (target > currentRequired) {
+            target = currentRequired;
         }
-        staker.amountStaked -= withdrawAmount;
-        withdrawableFunds[msg.sender] += withdrawAmount;
+        reduceStakeTo(msg.sender, target);
     }
 
     // nodeFields
@@ -433,16 +375,16 @@ contract Rollup is Pausable, IRollup {
         uint256 executionCheckTime
     ) external override whenNotPaused {
         require(nodeNums[0] < nodeNums[1], "WRONG_ORDER");
-        require(nodeNums[1] <= latestNodeCreated, "NOT_PROPOSED");
-        require(latestConfirmed < nodeNums[0], "ALREADY_CONFIRMED");
+        require(nodeNums[1] <= latestNodeCreated(), "NOT_PROPOSED");
+        require(latestConfirmed() < nodeNums[0], "ALREADY_CONFIRMED");
 
-        INode node1 = nodes[nodeNums[0]];
-        INode node2 = nodes[nodeNums[1]];
+        INode node1 = getNode(nodeNums[0]);
+        INode node2 = getNode(nodeNums[1]);
 
         require(node1.prev() == node2.prev(), "DIFF_PREV");
 
-        checkUnchallengedStaker(stakerMap[stakers[0]]);
-        checkUnchallengedStaker(stakerMap[stakers[1]]);
+        checkUnchallengedStaker(stakers[0]);
+        checkUnchallengedStaker(stakers[1]);
 
         require(node1.stakers(stakers[0]), "STAKER1_NOT_STAKED");
         require(node2.stakers(stakers[1]), "STAKER2_NOT_STAKED");
@@ -471,8 +413,7 @@ contract Rollup is Pausable, IRollup {
                 challengePeriodBlocks
             );
 
-        stakerMap[stakers[0]].currentChallenge = challengeAddress;
-        stakerMap[stakers[1]].currentChallenge = challengeAddress;
+        challengeStarted(stakers[0], stakers[1], challengeAddress);
 
         emit RollupChallengeStarted(challengeAddress, stakers[0], stakers[1], nodeNums[0]);
     }
@@ -480,125 +421,60 @@ contract Rollup is Pausable, IRollup {
     // completeChallenge isn't pausable since in flight challenges should be allowed to complete or else they
     // could be forced to timeout
     function completeChallenge(address winningStaker, address losingStaker) external override {
-        Staker storage winner = stakerMap[winningStaker];
-        Staker storage loser = stakerMap[losingStaker];
-        require(winner.currentChallenge == loser.currentChallenge, "SAME_CHAL");
         // Only the challenge contract can declare winners and losers
-        require(msg.sender == address(winner.currentChallenge), "WRONG_SENDER");
+        require(msg.sender == inChallenge(winningStaker, losingStaker), "WRONG_SENDER");
 
-        uint256 loserStake = loser.amountStaked;
-
-        if (loserStake > winner.amountStaked) {
-            uint256 extraLoserStake = loserStake - winner.amountStaked;
-            withdrawableFunds[losingStaker] += extraLoserStake;
-            loserStake -= extraLoserStake;
+        uint256 loserStake = amountStaked(losingStaker);
+        uint256 winnerStake = amountStaked(winningStaker);
+        if (loserStake > winnerStake) {
+            loserStake -= reduceStakeTo(losingStaker, winnerStake);
         }
 
         uint256 amountWon = loserStake / 2;
-        winner.amountStaked += amountWon;
+        increaseStakeBy(winningStaker, amountWon);
         loserStake -= amountWon;
-        winner.currentChallenge = address(0);
+        clearChallenge(winningStaker);
 
         // TODO: deposit extra loserStake into ArbOS
-
-        zombies.push(Zombie(losingStaker, loser.latestStakedNode));
-        deleteStaker(loser);
+        turnIntoZombie(losingStaker);
     }
 
     function removeZombie(uint256 zombieNum, uint256 maxNodes) external override whenNotPaused {
-        require(zombieNum <= zombies.length, "NO_SUCH_ZOMBIE");
-        Zombie storage zombie = zombies[zombieNum];
-        uint256 latestStakedNode = zombie.latestStakedNode;
+        require(zombieNum <= zombieCount(), "NO_SUCH_ZOMBIE");
+        address zombieStakerAddress = zombieAddress(zombieNum);
+        uint256 latestStakedNode = zombieLatestStakedNode(zombieNum);
         uint256 nodesRemoved = 0;
-        while (latestStakedNode > firstUnresolvedNode && nodesRemoved < maxNodes) {
-            INode node = nodes[latestStakedNode];
-            node.removeStaker(zombie.stakerAddress);
+        uint256 firstUnresolved = firstUnresolvedNode();
+        while (latestStakedNode > firstUnresolved && nodesRemoved < maxNodes) {
+            INode node = getNode(latestStakedNode);
+            node.removeStaker(zombieStakerAddress);
             latestStakedNode = node.prev();
             nodesRemoved++;
         }
-        if (latestStakedNode < firstUnresolvedNode) {
-            zombies[zombieNum] = zombies[zombies.length - 1];
-            zombies.pop();
+        if (latestStakedNode < firstUnresolved) {
+            removeZombie(zombieNum);
         } else {
-            zombie.latestStakedNode = latestStakedNode;
+            zombieUpdateLatestStakedNode(zombieNum, latestStakedNode);
         }
-    }
-
-    function zombieInfo(uint256 index)
-        external
-        view
-        override
-        returns (address stakerAddress, uint256 latestStakedNode)
-    {
-        Zombie storage zombie = zombies[index];
-        return (zombie.stakerAddress, zombie.latestStakedNode);
-    }
-
-    function zombieCount() external view override returns (uint256) {
-        return zombies.length;
-    }
-
-    function stakerInfo(address stakerAddress)
-        external
-        view
-        override
-        returns (
-            bool isStaked,
-            uint256 latestStakedNode,
-            uint256 amountStaked,
-            address currentChallenge
-        )
-    {
-        Staker storage staker = stakerMap[stakerAddress];
-        return (
-            staker.isStaked,
-            staker.latestStakedNode,
-            staker.amountStaked,
-            staker.currentChallenge
-        );
-    }
-
-    function stakerCount() external view override returns (uint256) {
-        return stakerList.length;
-    }
-
-    function getStakers(uint256 startIndex, uint256 max)
-        external
-        view
-        override
-        returns (address[] memory)
-    {
-        uint256 maxStakers = stakerList.length;
-        if (startIndex + max < maxStakers) {
-            maxStakers = startIndex + max;
-        }
-
-        address[] memory stakers = new address[](maxStakers);
-        for (uint256 i = 0; i < maxStakers; i++) {
-            stakers[i] = stakerList[startIndex + i];
-        }
-        return stakers;
     }
 
     function removeOldZombies(uint256 startIndex) public override {
-        uint256 numZombies = zombies.length;
-        for (uint256 i = startIndex; i < numZombies; i++) {
-            Zombie storage zombie = zombies[i];
-            while (zombie.latestStakedNode < firstUnresolvedNode) {
-                zombies[i] = zombies[numZombies - 1];
-                zombies.pop();
-                numZombies--;
-                if (i >= numZombies) {
+        uint256 currentZombieCount = zombieCount();
+        uint256 firstUnresolved = firstUnresolvedNode();
+        for (uint256 i = startIndex; i < currentZombieCount; i++) {
+            while (zombieLatestStakedNode(i) < firstUnresolved) {
+                removeZombie(i);
+                currentZombieCount--;
+                if (i >= currentZombieCount) {
                     return;
                 }
-                zombie = zombies[i];
             }
         }
     }
 
     function currentRequiredStake() public view override returns (uint256) {
         uint256 MAX_INT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
-        uint256 latestConfirmedDeadline = nodes[latestConfirmed].deadlineBlock();
+        uint256 latestConfirmedDeadline = getNode(latestConfirmed()).deadlineBlock();
         if (block.number < latestConfirmedDeadline) {
             return baseStake;
         }
@@ -624,11 +500,10 @@ contract Rollup is Pausable, IRollup {
     }
 
     function countStakedZombies(INode node) public view override returns (uint256) {
-        uint256 numZombies = zombies.length;
+        uint256 currentZombieCount = zombieCount();
         uint256 stakedZombieCount = 0;
-        for (uint256 i = 0; i < numZombies; i++) {
-            Zombie storage zombie = zombies[i];
-            if (node.stakers(zombie.stakerAddress)) {
+        for (uint256 i = 0; i < currentZombieCount; i++) {
+            if (node.stakers(zombieAddress(i))) {
                 stakedZombieCount++;
             }
         }
@@ -637,12 +512,13 @@ contract Rollup is Pausable, IRollup {
 
     function checkNoRecentStake() public view override {
         // No stake has been placed during the last challengePeriod blocks
-        require(block.number - lastStakeBlock >= challengePeriodBlocks, "RECENT_STAKE");
+        require(block.number - lastStakeBlock() >= challengePeriodBlocks, "RECENT_STAKE");
     }
 
     function checkUnresolved() public view override {
+        uint256 firstUnresolved = firstUnresolvedNode();
         require(
-            firstUnresolvedNode > latestConfirmed && firstUnresolvedNode <= latestNodeCreated,
+            firstUnresolved > latestConfirmed() && firstUnresolved <= latestNodeCreated(),
             "NO_UNRESOLVED"
         );
     }
@@ -672,23 +548,9 @@ contract Rollup is Pausable, IRollup {
         }
     }
 
-    function destroyNode(uint256 nodeNum) private {
-        nodes[nodeNum].destroy();
-        nodes[nodeNum] = INode(0);
-    }
-
-    function deleteStaker(Staker storage staker) private {
-        uint256 stakerIndex = staker.index;
-        address stakerAddress = stakerList[stakerIndex];
-        stakerList[stakerIndex] = stakerList[stakerList.length - 1];
-        stakerMap[stakerList[stakerIndex]].index = stakerIndex;
-        stakerList.pop();
-        delete stakerMap[stakerAddress];
-    }
-
-    function checkUnchallengedStaker(Staker storage staker) private view {
-        require(staker.isStaked, "NOT_STAKED");
-        require(staker.currentChallenge == address(0), "IN_CHAL");
+    function checkUnchallengedStaker(address stakerAddress) private view {
+        require(isStaked(stakerAddress), "NOT_STAKED");
+        require(currentChallenge(stakerAddress) == address(0), "IN_CHAL");
     }
 
     function checkConfirmValidBefore() public view override returns (INode) {
@@ -696,24 +558,22 @@ contract Rollup is Pausable, IRollup {
         checkNoRecentStake();
 
         // There is at least one non-zombie staker
-        require(stakerList.length > 0, "NO_STAKERS");
+        require(stakerCount() > 0, "NO_STAKERS");
 
-        INode node = nodes[firstUnresolvedNode];
+        uint256 firstUnresolved = firstUnresolvedNode();
+        INode node = getNode(firstUnresolved);
 
         // Verify the block's deadline has passed
         node.checkPastDeadline();
 
         // Check that prev is latest confirmed
-        require(node.prev() == latestConfirmed, "INVALID_PREV");
+        require(node.prev() == latestConfirmed(), "INVALID_PREV");
 
         return node;
     }
 
     function checkConfirmValidAfter(INode node) public view override {
         // All non-zombie stakers are staked on this node
-        require(
-            node.stakerCount() == stakerList.length + countStakedZombies(node),
-            "NOT_ALL_STAKED"
-        );
+        require(node.stakerCount() == stakerCount() + countStakedZombies(node), "NOT_ALL_STAKED");
     }
 }

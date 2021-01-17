@@ -120,44 +120,44 @@ interface IRollup {
 
     // Non mutating calls
 
-    function zombieInfo(uint256 index)
-        external
-        view
-        returns (address stakerAddress, uint256 latestStakedNode);
+    // function zombieInfo(uint256 index)
+    //     external
+    //     view
+    //     returns (address stakerAddress, uint256 latestStakedNode);
 
-    function zombieCount() external view returns (uint256);
+    // function zombieCount() external view returns (uint256);
 
-    function stakerInfo(address staker)
-        external
-        view
-        returns (
-            bool isStaked,
-            uint256 latestStakedNode,
-            uint256 amountStaked,
-            address currentChallenge
-        );
+    // function stakerInfo(address staker)
+    //     external
+    //     view
+    //     returns (
+    //         bool isStaked,
+    //         uint256 latestStakedNode,
+    //         uint256 amountStaked,
+    //         address currentChallenge
+    //     );
 
-    function stakerCount() external view returns (uint256);
+    // function stakerCount() external view returns (uint256);
 
-    function getStakers(uint256 startIndex, uint256 max) external view returns (address[] memory);
-
-    function withdrawableFunds(address owner) external view returns (uint256);
+    // function getStakers(uint256 startIndex, uint256 max) external view returns (address[] memory);
 
     function checkConfirmValidBefore() external view returns (INode);
 
     function checkConfirmValidAfter(INode node) external view;
 
-    function latestConfirmed() external view returns (uint256);
+    // function latestConfirmed() external view returns (uint256);
 
-    function firstUnresolvedNode() external view returns (uint256);
+    // function firstUnresolvedNode() external view returns (uint256);
 
-    function latestNodeCreated() external view returns (uint256);
+    // function latestNodeCreated() external view returns (uint256);
 
-    function nodes(uint256 index) external view returns (INode);
+    // function nodes(uint256 index) external view returns (INode);
 
-    function lastStakeBlock() external view returns (uint256);
+    // function lastStakeBlock() external view returns (uint256);
 
-    function stakerList(uint256 index) external view returns (address payable);
+    // function stakerList(uint256 index) external view returns (address payable);
+
+    // function withdrawableFunds(address owner) external view returns (uint256);
 
     function challengePeriodBlocks() external view returns (uint256);
 
