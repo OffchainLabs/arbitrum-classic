@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <avm_values/value.hpp>
 #include <data_storage/blockstore.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
@@ -32,12 +33,14 @@ DataStorage::DataStorage(const std::string& db_path) {
     std::vector<rocksdb::ColumnFamilyDescriptor> column_families;
     column_families.emplace_back(rocksdb::kDefaultColumnFamilyName,
                                  rocksdb::ColumnFamilyOptions());
-    column_families.emplace_back("indexes", rocksdb::ColumnFamilyOptions());
+    column_families.emplace_back("states", rocksdb::ColumnFamilyOptions());
     column_families.emplace_back("blocks", rocksdb::ColumnFamilyOptions());
     column_families.emplace_back("nodes", rocksdb::ColumnFamilyOptions());
     column_families.emplace_back("checkpoints", rocksdb::ColumnFamilyOptions());
     column_families.emplace_back("messageentries",
                                  rocksdb::ColumnFamilyOptions());
+    column_families.emplace_back("logs", rocksdb::ColumnFamilyOptions());
+    column_families.emplace_back("sends", rocksdb::ColumnFamilyOptions());
 
     rocksdb::TransactionDB* db = nullptr;
     std::vector<rocksdb::ColumnFamilyHandle*> handles;
@@ -45,30 +48,31 @@ DataStorage::DataStorage(const std::string& db_path) {
         options, txn_options, txn_db_path, column_families, &handles, &db);
 
     if (!status.ok()) {
-        std::cerr << "rocksdb construction status: " << status.ToString()
-                  << std::endl;
-
-        throw std::exception();
+        throw std::runtime_error(status.ToString());
     }
     assert(status.ok());
     txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
     default_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[0]);
-    core_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[1]);
+    state_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[1]);
     blocks_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[2]);
     node_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[3]);
     checkpoint_column =
         std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[4]);
     messageentry_column =
         std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[5]);
+    log_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[3]);
+    send_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[3]);
 }
 
 rocksdb::Status DataStorage::closeDb() {
     default_column.reset();
-    core_column.reset();
+    state_column.reset();
     blocks_column.reset();
     node_column.reset();
     checkpoint_column.reset();
     messageentry_column.reset();
+    log_column.reset();
+    send_column.reset();
     auto s = txn_db->Close();
     txn_db.reset();
     return s;
@@ -78,4 +82,35 @@ std::unique_ptr<Transaction> Transaction::makeTransaction(
     std::shared_ptr<DataStorage> store) {
     auto tx = store->beginTransaction();
     return std::make_unique<Transaction>(std::move(store), std::move(tx));
+}
+
+ValueResult<std::vector<unsigned char>> getVectorUsingFamilyAndKey(
+    rocksdb::Transaction& tx,
+    rocksdb::ColumnFamilyHandle* family,
+    rocksdb::Slice key_slice) {
+    std::string returned_value;
+
+    auto status =
+        tx.Get(rocksdb::ReadOptions(), family, key_slice, &returned_value);
+    if (!status.ok()) {
+        return {status, {}};
+    }
+
+    std::vector<unsigned char> saved_value(returned_value.begin(),
+                                           returned_value.end());
+
+    return {status, saved_value};
+}
+
+ValueResult<uint256_t> getUint256UsingFamilyAndKey(
+    rocksdb::Transaction& tx,
+    rocksdb::ColumnFamilyHandle* family,
+    rocksdb::Slice key_slice) {
+    auto result = getVectorUsingFamilyAndKey(tx, family, key_slice);
+    if (!result.status.ok()) {
+        return {result.status, {}};
+    }
+
+    auto data = reinterpret_cast<const char*>(result.data.data());
+    return {result.status, deserializeUint256t(data)};
 }

@@ -85,20 +85,22 @@ class ArbCore {
         const std::vector<std::vector<unsigned char>>& messages,
         const std::vector<uint256_t>& inbox_hashes,
         const uint256_t& previous_inbox_hash);
-    void saveCheckpoint();
+
     void saveAssertion(uint256_t first_message_sequence_number,
                        const Assertion& assertion);
-    DbResult<Checkpoint> getCheckpoint(
-        const uint256_t& message_sequence_number) const;
 
-    bool isEmpty() const;
+    void saveCheckpoint();
+    ValueResult<Checkpoint> getCheckpoint(
+        const uint256_t& message_sequence_number) const;
+    bool isCheckpointsEmpty() const;
     uint256_t maxMessageSequenceNumber();
     DbResult<Checkpoint> getCheckpointAtOrBeforeMessage(
         const uint256_t& message_sequence_number);
     uint256_t reorgToMessageOrBefore(const uint256_t& message_sequence_number);
+
     std::unique_ptr<Transaction> makeTransaction();
     std::unique_ptr<const Transaction> makeConstTransaction() const;
-    void initialize(LoadedExecutable executable);
+    void initialize(const LoadedExecutable& executable);
     bool initialized() const;
     std::unique_ptr<Machine> getInitialMachine(ValueCache& value_cache);
     std::unique_ptr<Machine> getMachine(uint256_t machineHash,
@@ -112,6 +114,37 @@ class ArbCore {
                   uint256_t first_message_sequence_number,
                   const std::vector<std::vector<unsigned char>>& inbox_messages,
                   const nonstd::optional<uint256_t>& final_block);
+
+    ValueResult<uint256_t> lastLogInserted(rocksdb::Transaction& transaction);
+    ValueResult<uint256_t> lastLogProcessed(rocksdb::Transaction& transaction);
+    ValueResult<uint256_t> lastSendInserted(rocksdb::Transaction& transaction);
+    ValueResult<uint256_t> lastSendProcessed(rocksdb::Transaction& transaction);
+    ValueResult<uint256_t> lastMessageEntryInserted(
+        rocksdb::Transaction& transaction);
+    ValueResult<uint256_t> lastMessageEntryProcessed(
+        rocksdb::Transaction& transaction);
+    rocksdb::Status updateLastLogInserted(rocksdb::Transaction& transaction,
+                                          rocksdb::Slice value_slice);
+    rocksdb::Status updateLastLogProcessed(rocksdb::Transaction& transaction,
+                                           rocksdb::Slice value_slice);
+    rocksdb::Status updateLastSendInserted(rocksdb::Transaction& transaction,
+                                           rocksdb::Slice value_slice);
+    rocksdb::Status updateLastSendProcessed(rocksdb::Transaction& transaction,
+                                            rocksdb::Slice value_slice);
+    rocksdb::Status updateLastMessageEntryInserted(
+        rocksdb::Transaction& transaction,
+        rocksdb::Slice value_slice);
+    rocksdb::Status updateLastMessageEntryProcessed(
+        rocksdb::Transaction& transaction,
+        rocksdb::Slice value_slice);
+    rocksdb::Status saveLog(Transaction& tx, const value& val);
+    DbResult<value> getLog(uint256_t index, ValueCache& valueCache) const;
+    ValueResult<std::vector<unsigned char>> getSend(uint256_t index) const;
+    rocksdb::Status saveSend(Transaction& tx,
+                             const std::vector<unsigned char>& send);
+    rocksdb::Status saveMessage(Transaction& tx,
+                                const std::vector<unsigned char>& message);
+    ValueResult<std::vector<unsigned char>> getMessage(uint256_t index) const;
 };
 
 #endif /* arbcore_hpp */

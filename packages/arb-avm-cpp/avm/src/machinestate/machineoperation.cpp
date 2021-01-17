@@ -882,7 +882,7 @@ void send(MachineState& m) {
         for (uint64_t i = 0; i < msg_size; i++) {
             vec[i] = buf.get(i);
         }
-        m.context.outMessage.push_back(vec);
+        m.context.sends.push_back(vec);
         m.stack.popClear();
         m.stack.popClear();
         ++m.pc;

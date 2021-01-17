@@ -25,16 +25,6 @@
 
 class DataStorage;
 
-struct BlockData {
-    uint64_t start_log;
-    uint64_t log_count;
-
-    uint64_t start_message;
-    uint64_t message_count;
-
-    std::vector<char> data;
-};
-
 class AggregatorStore {
     std::shared_ptr<DataStorage> data_storage;
 
@@ -42,15 +32,6 @@ class AggregatorStore {
     explicit AggregatorStore(std::shared_ptr<DataStorage> data_storage_)
         : data_storage(std::move(data_storage_)) {}
 
-    uint64_t logCount() const;
-    static void saveLog(rocksdb::Transaction& tx,
-                        const std::vector<unsigned char>& log);
-    std::vector<char> getLog(uint64_t index) const;
-
-    uint64_t sendCount() const;
-    static void saveSend(rocksdb::Transaction& tx,
-                         const std::vector<unsigned char>& output);
-    std::vector<char> getSend(uint64_t index) const;
     std::pair<uint64_t, std::vector<char>> latestBlock() const;
     void saveBlock(uint64_t height, const std::vector<char>& data);
     std::vector<char> getBlock(uint64_t height) const;
@@ -62,7 +43,7 @@ class AggregatorStore {
         const uint256_t& block_hash) const;
     void saveBlockHash(const uint256_t& block_hash, uint64_t block_height);
 
-    void reorg(uint64_t block_height, uint64_t send_count, uint64_t log_count);
+    void reorg(uint64_t block_height);
 };
 
 #endif /* aggregator_hpp */
