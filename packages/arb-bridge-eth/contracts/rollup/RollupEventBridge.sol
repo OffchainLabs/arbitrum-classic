@@ -23,7 +23,7 @@ import "./Rollup.sol";
 import "../bridge/interfaces/IBridge.sol";
 import "./INode.sol";
 
-contract RollupEventInbox {
+contract RollupEventBridge {
     uint8 internal constant INITIALIZATION_MSG_TYPE = 4;
     uint8 internal constant ROLLUP_PROTOCOL_EVENT_TYPE = 8;
 

@@ -21,7 +21,7 @@ pragma solidity ^0.6.11;
 import "./RollupCore.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
-import "./RollupEventInbox.sol";
+import "./RollupEventBridge.sol";
 
 import "./IRollup.sol";
 import "./INode.sol";
@@ -46,7 +46,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
     // Bridge is an IInbox and IOutbox
     IBridge public bridge;
     IOutbox public outbox;
-    RollupEventInbox public rollupEventInbox;
+    RollupEventBridge public rollupEventBridge;
     IChallengeFactory public challengeFactory;
     INodeFactory public nodeFactory;
     address public owner;
@@ -59,7 +59,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
 
     function initialize(
         address _outbox,
-        address _rollupEventInbox,
+        address _rollupEventBridge,
         bytes32 _machineHash,
         uint256 _challengePeriodBlocks,
         uint256 _arbGasSpeedLimitPerBlock,
@@ -73,12 +73,12 @@ contract Rollup is RollupCore, Pausable, IRollup {
         address _admin
     ) external override {
         bridge = IBridge(_bridge);
-        rollupEventInbox = RollupEventInbox(_rollupEventInbox);
+        rollupEventBridge = RollupEventBridge(_rollupEventBridge);
         outbox = IOutbox(_outbox);
         bridge.setOutbox(_outbox, true);
-        bridge.setInbox(_rollupEventInbox, true);
+        bridge.setInbox(_rollupEventBridge, true);
 
-        rollupEventInbox.rollupInitialized(
+        rollupEventBridge.rollupInitialized(
             _challengePeriodBlocks,
             _arbGasSpeedLimitPerBlock,
             _baseStake,
@@ -236,7 +236,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
             require(node.stakerCount() == countStakedZombies(node), "HAS_STAKERS");
         }
         rejectNextNode();
-        rollupEventInbox.nodeRejected(firstUnresolved);
+        rollupEventBridge.nodeRejected(firstUnresolved);
     }
 
     /**
@@ -277,7 +277,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
 
         confirmNextNode();
 
-        rollupEventInbox.nodeConfirmed(firstUnresolved);
+        rollupEventBridge.nodeConfirmed(firstUnresolved);
 
         emit SentLogs(logAcc);
     }
@@ -295,7 +295,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
 
         createNewStake(msg.sender, depositAmount);
 
-        rollupEventInbox.stakeCreated(msg.sender, latestConfirmed());
+        rollupEventBridge.stakeCreated(msg.sender, latestConfirmed());
     }
 
     /**
@@ -385,7 +385,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
         }
         deadlineBlock += assertion.gasUsed / arbGasSpeedLimitPerBlock;
 
-        rollupEventInbox.nodeCreated(
+        rollupEventBridge.nodeCreated(
             nodeNum,
             latestStakedNode(msg.sender),
             deadlineBlock,
@@ -527,18 +527,18 @@ contract Rollup is RollupCore, Pausable, IRollup {
         // Only the challenge contract can declare winners and losers
         require(msg.sender == inChallenge(winningStaker, losingStaker), "WRONG_SENDER");
 
-        uint256 loserStake = amountStaked(losingStaker);
+        uint256 remainingLoserStake = amountStaked(losingStaker);
         uint256 winnerStake = amountStaked(winningStaker);
-        if (loserStake > winnerStake) {
-            loserStake -= reduceStakeTo(losingStaker, winnerStake);
+        if (remainingLoserStake > winnerStake) {
+            remainingLoserStake -= reduceStakeTo(losingStaker, winnerStake);
         }
 
-        uint256 amountWon = loserStake / 2;
+        uint256 amountWon = remainingLoserStake / 2;
         increaseStakeBy(winningStaker, amountWon);
-        loserStake -= amountWon;
+        remainingLoserStake -= amountWon;
         clearChallenge(winningStaker);
 
-        // TODO: deposit extra loserStake into ArbOS
+        increaseStakeBy(owner, remainingLoserStake);
         turnIntoZombie(losingStaker);
     }
 

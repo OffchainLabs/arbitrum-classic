@@ -21,19 +21,17 @@ pragma solidity ^0.6.11;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../libraries/Cloneable.sol";
 
-import "./interfaces/IOutboxEntry.sol";
-
-contract OutboxEntry is Ownable, Cloneable, IOutboxEntry {
+contract OutboxEntry is Ownable, Cloneable {
     bytes32 public root;
     mapping(uint256 => bool) public spentOutput;
 
-    function initialize(address _owner, bytes32 _root) external override {
+    function initialize(address _owner, bytes32 _root) external {
         require(root != 0, "ALREADY_INIT");
         transferOwnership(_owner);
         root = _root;
     }
 
-    function spendOutput(bytes32 _root, uint256 _id) external override onlyOwner {
+    function spendOutput(bytes32 _root, uint256 _id) external onlyOwner {
         require(!spentOutput[_id], "ALREADY_SPENT");
         require(_root == root, "BAD_ROOT");
         spentOutput[_id] = true;
