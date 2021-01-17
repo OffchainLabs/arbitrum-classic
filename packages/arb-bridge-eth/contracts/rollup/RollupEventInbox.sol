@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 import "../bridge/interfaces/IBridge.sol";
 
 contract RollupEventInbox {
+    uint8 internal constant INITIALIZATION_MSG_TYPE = 4;
     uint8 internal constant ROLLUP_PROTOCOL_EVENT_TYPE = 8;
 
     uint8 internal constant CREATE_NODE_EVENT = 0;
@@ -29,6 +30,28 @@ contract RollupEventInbox {
     uint8 internal constant STAKE_CREATED_EVENT = 0;
 
     IBridge bridge;
+
+    function rollupInitialized(
+        uint256 challengePeriodBlocks,
+        uint256 arbGasSpeedLimitPerBlock,
+        uint256 baseStake,
+        address stakeToken,
+        address owner,
+        bytes calldata extraConfig
+    ) public {
+        bytes32 initMsgHash =
+            keccak256(
+                abi.encodePacked(
+                    challengePeriodBlocks,
+                    arbGasSpeedLimitPerBlock,
+                    baseStake,
+                    uint256(uint160(bytes20(stakeToken))),
+                    uint256(uint160(bytes20(owner))),
+                    extraConfig
+                )
+            );
+        bridge.deliverMessageToInbox(INITIALIZATION_MSG_TYPE, msg.sender, initMsgHash);
+    }
 
     function nodeCreated(
         uint256 nodeNum,

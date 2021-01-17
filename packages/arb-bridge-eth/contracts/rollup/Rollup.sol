@@ -35,8 +35,6 @@ import "../bridge/Messages.sol";
 import "./RollupLib.sol";
 
 contract Rollup is RollupCore, Pausable, IRollup {
-    uint8 internal constant INITIALIZATION_MSG_TYPE = 4;
-
     // Rollup Config
     uint256 public challengePeriodBlocks;
     uint256 public arbGasSpeedLimitPerBlock;
@@ -74,18 +72,15 @@ contract Rollup is RollupCore, Pausable, IRollup {
         bridge = IBridge(_bridge);
         bridge.setInbox(address(this), true);
         outbox = IOutbox(_outbox);
-        bytes32 initMsgHash =
-            keccak256(
-                abi.encodePacked(
-                    uint256(_challengePeriodBlocks),
-                    uint256(_arbGasSpeedLimitPerBlock),
-                    uint256(_baseStake),
-                    bytes32(bytes20(_stakeToken)),
-                    bytes32(bytes20(_owner)),
-                    _extraConfig
-                )
-            );
-        bridge.deliverMessageToInbox(INITIALIZATION_MSG_TYPE, address(this), initMsgHash);
+
+        rollupEventInbox.rollupInitialized(
+            _challengePeriodBlocks,
+            _arbGasSpeedLimitPerBlock,
+            _baseStake,
+            _stakeToken,
+            _owner,
+            _extraConfig
+        );
 
         challengeFactory = IChallengeFactory(_challengeFactory);
         nodeFactory = INodeFactory(_nodeFactory);
