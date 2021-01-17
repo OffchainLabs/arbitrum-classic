@@ -20,12 +20,13 @@ type Staker struct {
 }
 
 func NewStaker(
+	ctx context.Context,
 	lookup core.ValidatorLookup,
 	client ethutils.EthClient,
 	wallet *ethbridge.Validator,
 	validatorUtilsAddress common.Address,
 ) (*Staker, error) {
-	val, err := NewValidator(lookup, client, wallet, validatorUtilsAddress)
+	val, err := NewValidator(ctx, lookup, client, wallet, validatorUtilsAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +152,7 @@ func (s *Staker) createConflict(ctx context.Context) (*ethbridge.RawTransaction,
 		return nil, nil
 	}
 
-	stakers, err := s.rollup.GetStakers(ctx)
+	stakers, err := s.validatorUtils.GetStakers(ctx)
 	if err != nil {
 		return nil, err
 	}

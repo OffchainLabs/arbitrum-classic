@@ -15,6 +15,7 @@ import (
 
 type Validator struct {
 	rollup         *ethbridge.Rollup
+	bridge         *ethbridge.BridgeWatcher
 	validatorUtils *ethbridge.ValidatorUtils
 	client         ethutils.EthClient
 	lookup         core.ValidatorLookup
@@ -22,12 +23,21 @@ type Validator struct {
 }
 
 func NewValidator(
+	ctx context.Context,
 	lookup core.ValidatorLookup,
 	client ethutils.EthClient,
 	wallet *ethbridge.Validator,
 	validatorUtilsAddress common.Address,
 ) (*Validator, error) {
 	rollup, err := ethbridge.NewRollup(wallet.RollupAddress().ToEthAddress(), client)
+	if err != nil {
+		return nil, err
+	}
+	bridgeAddress, err := rollup.Bridge(ctx)
+	if err != nil {
+		return nil, err
+	}
+	bridge, err := ethbridge.NewBridgeWatcher(bridgeAddress.ToEthAddress(), client)
 	if err != nil {
 		return nil, err
 	}
@@ -41,6 +51,7 @@ func NewValidator(
 	}
 	return &Validator{
 		rollup:         rollup,
+		bridge:         bridge,
 		validatorUtils: validatorUtils,
 		client:         client,
 		lookup:         lookup,
@@ -204,7 +215,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, ma
 		return nil, err
 	}
 
-	msg, err := lookupMessageByNum(ctx, v.rollup.RollupWatcher, execInfo.After.InboxIndex)
+	msgBlock, err := v.bridge.LookupMessageBlock(ctx, execInfo.After.InboxIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +227,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, ma
 			ExecutionInfo:     execInfo,
 			InboxDelta:        inboxDelta,
 		},
-		block:     msg.Block(),
+		block:     msgBlock,
 		newNodeID: newNodeID,
 	}, nil
 }
@@ -270,18 +281,4 @@ func lookupNodeStartState(ctx context.Context, rollup *ethbridge.RollupWatcher, 
 		return nil, err
 	}
 	return node.AfterState(), nil
-}
-
-func lookupMessageByNum(ctx context.Context, rollup *ethbridge.RollupWatcher, messageNum *big.Int) (*ethbridge.DeliveredInboxMessage, error) {
-	messages, err := rollup.LookupMessagesByNum(ctx, []*big.Int{messageNum})
-	if err != nil {
-		return nil, err
-	}
-	if len(messages) == 0 {
-		return nil, errors.New("no matching message")
-	}
-	if len(messages) > 1 {
-		return nil, errors.New("too many matching messages")
-	}
-	return messages[0], nil
 }

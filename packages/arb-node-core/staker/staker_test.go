@@ -20,7 +20,7 @@ import (
 func deployRollup(
 	t *testing.T,
 	auth *bind.TransactOpts,
-	client bind.ContractBackend,
+	client *ethutils.SimulatedEthClient,
 	machineHash [32]byte,
 	challengePeriodBlocks *big.Int,
 	arbGasSpeedLimitPerBlock *big.Int,
@@ -29,7 +29,6 @@ func deployRollup(
 	owner common.Address,
 	extraConfig []byte,
 ) ethcommon.Address {
-
 	osp1Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof(auth, client)
 	test.FailIfError(t, err)
 	osp2Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof2(auth, client)
@@ -39,18 +38,45 @@ func deployRollup(
 	nodeFactoryAddr, _, _, err := ethbridgetestcontracts.DeployNodeFactory(auth, client)
 	test.FailIfError(t, err)
 
-	rollupAddr, _, _, err := ethbridgecontracts.DeployRollup(
+	bridgeAddr, _, bridge, err := ethbridgecontracts.DeployBridge(auth, client)
+	test.FailIfError(t, err)
+
+	inboxAddr, _, _, err := ethbridgecontracts.DeployInbox(auth, client, bridgeAddr)
+	test.FailIfError(t, err)
+
+	rollupAddr, _, rollup, err := ethbridgecontracts.DeployRollup(auth, client)
+	test.FailIfError(t, err)
+
+	outboxAddr, _, _, err := ethbridgecontracts.DeployOutbox(auth, client, bridgeAddr, rollupAddr)
+	test.FailIfError(t, err)
+
+	client.Commit()
+
+	_, err = bridge.SetInbox(auth, inboxAddr, true)
+	_, err = bridge.SetOutbox(auth, outboxAddr, true)
+
+	client.Commit()
+
+	proxyAdminAddr, _, _, err := ethbridgecontracts.DeployProxyAdmin(auth, client)
+	test.FailIfError(t, err)
+
+	_, err = bridge.TransferOwnership(auth, rollupAddr)
+	test.FailIfError(t, err)
+
+	_, err = rollup.Initialize(
 		auth,
-		client,
+		outboxAddr,
 		machineHash,
 		challengePeriodBlocks,
 		arbGasSpeedLimitPerBlock,
 		baseStake,
 		stakeToken.ToEthAddress(),
 		owner.ToEthAddress(),
+		bridgeAddr,
 		challengeFactoryAddr,
 		nodeFactoryAddr,
 		extraConfig,
+		proxyAdminAddr,
 	)
 	test.FailIfError(t, err)
 
@@ -100,7 +126,7 @@ func TestStaker(t *testing.T) {
 
 	lookup := core.NewValidatorLookupMock(mach)
 
-	staker, err := NewStaker(lookup, client, val, common.NewAddressFromEth(validatorUtilsAddr))
+	staker, err := NewStaker(ctx, lookup, client, val, common.NewAddressFromEth(validatorUtilsAddr))
 	test.FailIfError(t, err)
 
 	for i := 0; i < 100; i++ {

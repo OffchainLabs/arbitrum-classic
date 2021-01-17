@@ -13,8 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core/types"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -25,8 +23,6 @@ var rollupABI abi.ABI
 var rollupCreatedID ethcommon.Hash
 var nodeCreatedID ethcommon.Hash
 var challengeCreatedID ethcommon.Hash
-var messageDeliveredID ethcommon.Hash
-var messageDeliveredFromOriginID ethcommon.Hash
 var l2MessageFromOriginCallABI abi.Method
 
 func init() {
@@ -38,7 +34,6 @@ func init() {
 	nodeCreatedID = parsedRollup.Events["NodeCreated"].ID
 	challengeCreatedID = parsedRollup.Events["RollupChallengeStarted"].ID
 	messageDeliveredID = parsedRollup.Events["MessageDelivered"].ID
-	messageDeliveredFromOriginID = parsedRollup.Events["MessageDeliveredFromOrigin"].ID
 	l2MessageFromOriginCallABI = parsedRollup.Methods["sendL2MessageFromOrigin"]
 	rollupABI = parsedRollup
 }
@@ -149,94 +144,6 @@ func (r *RollupWatcher) LookupNodes(ctx context.Context, nodes []*big.Int) ([]*c
 	return infos, nil
 }
 
-func (r *RollupWatcher) LookupMessagesByNum(ctx context.Context, messageNums []*big.Int) ([]*DeliveredInboxMessage, error) {
-	msgQuery := make([]ethcommon.Hash, 0, len(messageNums))
-	for _, messageNum := range messageNums {
-		var msgNumBytes ethcommon.Hash
-		copy(msgNumBytes[:], math.U256Bytes(messageNum))
-		msgQuery = append(msgQuery, msgNumBytes)
-	}
-
-	query := ethereum.FilterQuery{
-		BlockHash: nil,
-		FromBlock: nil,
-		ToBlock:   nil,
-		Addresses: []ethcommon.Address{r.address},
-		Topics:    [][]ethcommon.Hash{{messageDeliveredID, messageDeliveredFromOriginID}, msgQuery},
-	}
-	logs, err := r.client.FilterLogs(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	messages := make([]*DeliveredInboxMessage, 0, len(logs))
-	for _, ethLog := range logs {
-		header, err := r.client.HeaderByHash(ctx, ethLog.BlockHash)
-		if err != nil {
-			return nil, err
-		}
-		msg, err := r.parseMessage(ctx, ethLog, new(big.Int).SetUint64(header.Time))
-		if err != nil {
-			return nil, err
-		}
-		messages = append(messages, msg)
-	}
-	return messages, nil
-}
-
-func (r *RollupWatcher) parseMessage(ctx context.Context, ethLog types.Log, timestamp *big.Int) (*DeliveredInboxMessage, error) {
-	chainTime := inbox.ChainTime{
-		BlockNum: common.NewTimeBlocks(
-			new(big.Int).SetUint64(ethLog.BlockNumber),
-		),
-		Timestamp: timestamp,
-	}
-	if ethLog.Topics[0] == messageDeliveredID {
-		parsedLog, err := r.con.ParseMessageDelivered(ethLog)
-		if err != nil {
-			return nil, err
-		}
-		msg := inbox.InboxMessage{
-			Kind:        inbox.Type(parsedLog.Kind),
-			Sender:      common.NewAddressFromEth(parsedLog.Sender),
-			InboxSeqNum: parsedLog.MessageNum,
-			Data:        parsedLog.Data,
-			ChainTime:   chainTime,
-		}
-		return &DeliveredInboxMessage{
-			BeforeInboxAcc: parsedLog.BeforeInboxAcc,
-			Message:        msg,
-		}, nil
-	} else if ethLog.Topics[0] == messageDeliveredFromOriginID {
-		tx, _, err := r.client.TransactionByHash(ctx, ethLog.TxHash)
-		if err != nil {
-			return nil, err
-		}
-		args := make(map[string]interface{})
-		err = l2MessageFromOriginCallABI.Inputs.UnpackIntoMap(args, tx.Data()[4:])
-		if err != nil {
-			return nil, err
-		}
-		parsedLog, err := r.con.ParseMessageDeliveredFromOrigin(ethLog)
-		if err != nil {
-			return nil, err
-		}
-		msg := inbox.InboxMessage{
-			Kind:        inbox.Type(parsedLog.Kind),
-			Sender:      common.NewAddressFromEth(parsedLog.Sender),
-			InboxSeqNum: parsedLog.MessageNum,
-			Data:        args["messageData"].([]byte),
-			ChainTime:   chainTime,
-		}
-		return &DeliveredInboxMessage{
-			BlockHash:      common.NewHashFromEth(ethLog.BlockHash),
-			BeforeInboxAcc: parsedLog.BeforeInboxAcc,
-			Message:        msg,
-		}, nil
-	} else {
-		return nil, errors.New("unexpected log type")
-	}
-}
-
 func (r *RollupWatcher) LookupChallengedNode(ctx context.Context, address common.Address) (*big.Int, error) {
 	addressQuery := ethcommon.Hash{}
 	copy(addressQuery[12:], address.Bytes())
@@ -294,12 +201,9 @@ func (r *RollupWatcher) MinimumAssertionPeriod(ctx context.Context) (*big.Int, e
 	return r.con.MinimumAssertionPeriod(&bind.CallOpts{Context: ctx})
 }
 
-func (r *RollupWatcher) GetStakers(ctx context.Context) ([]common.Address, error) {
-	addresses, err := r.con.GetStakers(&bind.CallOpts{Context: ctx}, big.NewInt(0), math.MaxBig256)
-	if err != nil {
-		return nil, err
-	}
-	return common.AddressArrayFromEth(addresses), nil
+func (r *RollupWatcher) Bridge(ctx context.Context) (common.Address, error) {
+	addr, err := r.con.Bridge(&bind.CallOpts{Context: ctx})
+	return common.NewAddressFromEth(addr), err
 }
 
 func (r *RollupWatcher) StakeToken(ctx context.Context) (common.Address, error) {
@@ -336,7 +240,7 @@ func (r *RollupWatcher) ChallengePeriodBlocks(ctx context.Context) (*big.Int, er
 }
 
 func (r *RollupWatcher) GetNode(ctx context.Context, node core.NodeID) (*NodeWatcher, error) {
-	nodeAddress, err := r.con.Nodes(&bind.CallOpts{Context: ctx}, node)
+	nodeAddress, err := r.con.GetNode(&bind.CallOpts{Context: ctx}, node)
 	if err != nil {
 		return nil, err
 	}

@@ -38,7 +38,7 @@ contract Bridge is Ownable, IBridge {
         bytes32 inboxAcc = inboxMaxAcc;
         inboxMaxAcc = Messages.addMessageToInbox(inboxAcc, messageHash);
         inboxMaxCount = count + 1;
-        emit MessageDelivered(msg.sender, count, inboxAcc);
+        emit MessageDelivered(count, inboxAcc, msg.sender);
     }
 
     function executeCall(

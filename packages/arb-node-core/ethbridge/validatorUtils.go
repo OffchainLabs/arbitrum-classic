@@ -74,6 +74,14 @@ func (v *ValidatorUtils) GetConfig(ctx context.Context) (*RollupConfig, error) {
 	}, nil
 }
 
+func (v *ValidatorUtils) GetStakers(ctx context.Context) ([]common.Address, error) {
+	addresses, err := v.con.GetStakers(&bind.CallOpts{Context: ctx}, v.rollupAddress, big.NewInt(0), math.MaxBig256)
+	if err != nil {
+		return nil, err
+	}
+	return common.AddressArrayFromEth(addresses), nil
+}
+
 func (v *ValidatorUtils) SuccessorNodes(ctx context.Context, node core.NodeID) ([]*big.Int, error) {
 	return v.con.SuccessorNodes(&bind.CallOpts{Context: ctx}, v.rollupAddress, node)
 }

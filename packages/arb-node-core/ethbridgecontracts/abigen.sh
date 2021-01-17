@@ -18,18 +18,42 @@ IGNORED_CHALLENGE=$CHAL_PREFIX/ChallengeLib.sol:ChallengeLib,$CHAL_PREFIX/IChall
 IGNORED_ROLLUP=$PREFIX/rollup/IInbox.sol:IInbox,$PREFIX/rollup/INodeFactory.sol:INodeFactory,$PREFIX/rollup/IRollup.sol:IRollup
 #IGNORED=$IGNORED_LIB,$IGNORED_ARCH,$IGNORED_CHALLENGE,$IGNORED_INBOX,$IGNORED_ROLLUP
 #IGNORED_WITH_CHALLENGES=$IGNORED,$CHAL_PREFIX/Challenge.sol:Challenge,$CHAL_PREFIX/BisectionChallenge.sol:BisectionChallenge
-IGNORED=$IGNORED_LIB,$IGNORED_CHALLENGE,$IGNORED_ROLLUP,$IGNORED_ARCH
+MESSAGES=$PREFIX/bridge/Messages.sol:Messages
+BRIDGE_LIBS=$PREFIX/bridge/interfaces/IBridge.sol:IBridge,$PREFIX/bridge/interfaces/IOutbox.sol:IOutbox,$MESSAGES
+
 ROLLUP_LIB=$PREFIX/rollup/RollupLib.sol:RollupLib
 ROLLUP=$PREFIX/rollup/Rollup.sol:Rollup
 ROLLUP_CREATOR=$PREFIX/rollup/RollupCreator.sol:RollupCreator
 OUTBOX=$PREFIX/rollup/Outbox.sol:Outbox
 INBOX=$PREFIX/rollup/Inbox.sol:Inbox
-MESSAGES=$PREFIX/rollup/Messages.sol:Messages
+
 INODE=$PREFIX/rollup/INode.sol:INode
 OUTBOX_ENTRY=$PREFIX/rollup/Outbox.sol:OutboxEntry
-ROLLUP_LIBS=$INBOX,$OUTBOX,$ROLLUP_CREATOR,$ROLLUP,$ROLLUP_LIB,$MESSAGES,$INODE,$OUTBOX_ENTRY
-IGNORED_MORE=$IGNORED,$ROLLUP_LIBS
-abigen --sol=$PREFIX/rollup/RollupCreator.sol --pkg=$PACKAGE --out=rollupcreator.go --exc=$IGNORED
-abigen --sol=$PREFIX/validator/ValidatorUtils.sol --pkg=$PACKAGE --out=validatorutils.go --exc=$IGNORED_MORE
+ROLLUP_LIBS=$INBOX,$OUTBOX,$ROLLUP_CREATOR,$ROLLUP,$ROLLUP_LIB,$INODE,$OUTBOX_ENTRY,$PREFIX/rollup/RollupCore.sol:RollupCore
+
+IGNORED_INTERFACES=$PREFIX/interfaces/IERC20.sol:IERC20
+
+NM=$(realpath ./../../../node_modules)
+OZ=$NM/@openzeppelin
+BASE=$(realpath ./../../arb-bridge-eth/contracts)
+
+OZUTILS=$OZ/contracts/utils
+OZ_PROXY=$OZ/contracts/proxy/Proxy.sol:Proxy,$OZ/contracts/proxy/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy,$OZ/contracts/proxy/UpgradeableProxy.sol:UpgradeableProxy
+OZ_LIBS=$OZUTILS/Address.sol:Address,$OZUTILS/Pausable.sol:Pausable,$OZ/contracts/GSN/Context.sol:Context,$OZ/contracts/access/Ownable.sol:Ownable,$OZ_PROXY
+#OZCONN=$OZ/contracts
+IGNORED=$IGNORED_LIB,$IGNORED_CHALLENGE,$IGNORED_ROLLUP,$IGNORED_ARCH,$BRIDGE_LIBS,$OZ_LIBS,$IGNORED_INTERFACES
+IGNORED_MORE=$IGNORED,$ROLLUP_LIBS,$OZ/contracts/proxy/ProxyAdmin.sol:ProxyAdmin
+
+solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/validator/ValidatorUtils.sol --overwrite -o .
+abigen --pkg=$PACKAGE --out=validatorutils.go --combined-json combined.json --exc=$IGNORED
+
+solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/rollup/RollupCreator.sol --overwrite -o .
+abigen --pkg=$PACKAGE --out=rollupcreator.go --combined-json combined.json --exc=$IGNORED_MORE
+
+rm combined.json
+
+
+#abigen --sol=$PREFIX/rollup/RollupCreator.sol --pkg=$PACKAGE --out=rollupcreator.go --exc=$IGNORED
+#abigen --sol=$PREFIX/validator/ValidatorUtils.sol --pkg=$PACKAGE --out=validatorutils.go --exc=$IGNORED_MORE
 abigen --sol=$PREFIX/challenge/Challenge.sol --pkg=$PACKAGE --out=challenge.go --exc=$IGNORED_MORE
 abigen --sol=$PREFIX/validator/Validator.sol --pkg=$PACKAGE --out=validator.go --exc=$IGNORED_MORE

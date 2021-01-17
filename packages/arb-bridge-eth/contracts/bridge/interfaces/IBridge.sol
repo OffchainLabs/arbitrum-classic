@@ -19,7 +19,11 @@
 pragma solidity ^0.6.11;
 
 interface IBridge {
-    event MessageDelivered(address inbox, uint256 messageIndex, bytes32 beforeInboxAcc);
+    event MessageDelivered(
+        uint256 indexed messageIndex,
+        bytes32 indexed beforeInboxAcc,
+        address inbox
+    );
 
     function deliverMessageToInbox(bytes32 messageHash) external payable;
 
