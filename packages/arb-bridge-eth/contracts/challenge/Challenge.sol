@@ -18,16 +18,15 @@
 
 pragma solidity ^0.6.11;
 
+import "../libraries/Cloneable.sol";
+
 import "./IChallenge.sol";
 import "../rollup/IRollup.sol";
-import "./ChallengeLib.sol";
-
-import "../bridge/Messages.sol";
-import "../rollup/IRollup.sol";
 import "../arch/IOneStepProof.sol";
-import "../arch/Marshaling.sol";
 
-import "../libraries/Cloneable.sol";
+import "./ChallengeLib.sol";
+import "../bridge/Messages.sol";
+import "../arch/Marshaling.sol";
 import "../libraries/MerkleLib.sol";
 
 contract Challenge is Cloneable, IChallenge {

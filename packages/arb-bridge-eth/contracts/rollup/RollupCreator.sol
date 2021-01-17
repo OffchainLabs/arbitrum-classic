@@ -18,13 +18,13 @@
 
 pragma solidity ^0.6.11;
 
-import "./Rollup.sol";
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
 import "../bridge/Bridge.sol";
 import "../bridge/Inbox.sol";
 import "../bridge/Outbox.sol";
 
+import "./IRollup.sol";
 import "../bridge/interfaces/IBridge.sol";
 
 contract RollupCreator is Ownable {
@@ -78,14 +78,14 @@ contract RollupCreator is Ownable {
         frame.bridge.transferOwnership(address(frame.rollup));
         frame.admin.transferOwnership(address(frame.rollup));
         IRollup(address(frame.rollup)).initialize(
-            IOutbox(frame.outbox),
+            address(frame.outbox),
             _machineHash,
             _challengePeriodBlocks,
             _arbGasSpeedLimitPerBlock,
             _baseStake,
             _stakeToken,
             _owner,
-            IBridge(frame.bridge),
+            address(frame.bridge),
             challengeFactory,
             nodeFactory,
             _extraConfig,

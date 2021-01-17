@@ -24,9 +24,10 @@ import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 
 import "./IRollup.sol";
 import "./INode.sol";
+import "./INodeFactory.sol";
+import "../challenge/IChallengeFactory.sol";
 import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/IOutbox.sol";
-import "../bridge/interfaces/IBridge.sol";
 import "../interfaces/IERC20.sol";
 
 import "../bridge/Messages.sol";
@@ -37,16 +38,16 @@ contract Rollup is RollupCore, Pausable, IRollup {
     uint8 internal constant INITIALIZATION_MSG_TYPE = 4;
 
     // Rollup Config
-    uint256 public override challengePeriodBlocks;
-    uint256 public override arbGasSpeedLimitPerBlock;
-    uint256 public override baseStake;
-    address public override stakeToken;
+    uint256 public challengePeriodBlocks;
+    uint256 public arbGasSpeedLimitPerBlock;
+    uint256 public baseStake;
+    address public stakeToken;
 
     // Bridge is an IInbox and IOutbox
-    IBridge public override bridge;
-    IOutbox public override outbox;
-    IChallengeFactory public override challengeFactory;
-    INodeFactory public override nodeFactory;
+    IBridge public bridge;
+    IOutbox public outbox;
+    IChallengeFactory public challengeFactory;
+    INodeFactory public nodeFactory;
     address public owner;
     ProxyAdmin admin;
 
@@ -56,22 +57,22 @@ contract Rollup is RollupCore, Pausable, IRollup {
     }
 
     function initialize(
-        IOutbox _outbox,
+        address _outbox,
         bytes32 _machineHash,
         uint256 _challengePeriodBlocks,
         uint256 _arbGasSpeedLimitPerBlock,
         uint256 _baseStake,
         address _stakeToken,
         address _owner,
-        IBridge _bridge,
+        address _bridge,
         address _challengeFactory,
         address _nodeFactory,
         bytes memory _extraConfig,
         address _admin
     ) external override {
-        bridge = _bridge;
+        bridge = IBridge(_bridge);
         bridge.setInbox(address(this), true);
-        outbox = _outbox;
+        outbox = IOutbox(_outbox);
         bytes32 initMsgHash =
             keccak256(
                 abi.encodePacked(
@@ -130,21 +131,48 @@ contract Rollup is RollupCore, Pausable, IRollup {
         emit RollupCreated(_machineHash);
     }
 
-    function addOutbox(IOutbox _outbox) external onlyOwner {
+    /**
+     * @notice Add a contract authorized to put messages into this rollup's inbox
+     * @param _outbox Outbox contract to add
+     */
+    function setOutbox(IOutbox _outbox) external onlyOwner {
         outbox = _outbox;
         bridge.setOutbox(address(_outbox), true);
     }
 
-    function addInbox(address _inbox) external onlyOwner {
-        bridge.setInbox(address(_inbox), true);
+    /**
+     * @notice Disable an old outbox from interacting with the bridge
+     * @param _outbox Outbox contract to remove
+     */
+    function removeOldOutbox(address _outbox) external onlyOwner {
+        require(_outbox != address(outbox), "CUR_OUTBOX");
+        bridge.setOutbox(_outbox, false);
     }
 
+    /**
+     * @notice Enable or disable an inbox contract
+     * @param _inbox Inbox contract to add or remove
+     * @param _enabled New status of inbox
+     */
+    function setInbox(address _inbox, bool _enabled) external onlyOwner {
+        bridge.setInbox(address(_inbox), _enabled);
+    }
+
+    /**
+     * @notice Switch over to a new implementation of the rollup
+     * @param _newRollup New implementation contract
+     */
     function upgradeImplementation(address _newRollup) external onlyOwner {
         address currentAddress = address(this);
         admin.upgrade(TransparentUpgradeableProxy(payable(currentAddress)), _newRollup);
     }
 
-    function upgradeImplementationAndCall(address _newRollup, bytes calldata data)
+    /**
+     * @notice Switch over to a new implementation of the rollup
+     * @param _newRollup New implementation contract
+     * @param _data Data to call the new rollup implementation with
+     */
+    function upgradeImplementationAndCall(address _newRollup, bytes calldata _data)
         external
         onlyOwner
     {
@@ -152,18 +180,28 @@ contract Rollup is RollupCore, Pausable, IRollup {
         admin.upgradeAndCall(
             TransparentUpgradeableProxy(payable(currentAddress)),
             _newRollup,
-            data
+            _data
         );
     }
 
+    /**
+     * @notice Pause interaction with the rollup contract
+     */
     function pause() external onlyOwner {
         _pause();
     }
 
+    /**
+     * @notice Resume interaction with the rollup contract
+     */
     function resume() external onlyOwner {
         _unpause();
     }
 
+    /**
+     * @notice Truncate the pending nodes done to the given index
+     * @param _latestNodeCreated New latest node after the truncation
+     */
     function truncateNodes(uint256 _latestNodeCreated) external onlyOwner {
         uint256 oldLatestNodeCreated = latestNodeCreated();
         require(_latestNodeCreated < oldLatestNodeCreated, "TOO_NEW");
@@ -176,9 +214,13 @@ contract Rollup is RollupCore, Pausable, IRollup {
         updateLatestNodeCreated(_latestNodeCreated);
     }
 
+    /**
+     * @notice Reject the next unresolved node
+     * @param successorWithStake Example sibling node
+     * @param stakerAddress Example staker staked on sibling
+     */
     function rejectNextNode(uint256 successorWithStake, address stakerAddress)
         external
-        override
         whenNotPaused
     {
         checkUnresolved();
@@ -205,14 +247,36 @@ contract Rollup is RollupCore, Pausable, IRollup {
         rejectNextNode();
     }
 
+    /**
+     * @notice Confirm the next unresolved node
+     * @param logAcc Accumulator of the AVM logs in the confirmed node
+     * @param sendsData Concatenated data of the sends included in the confirmed node
+     * @param sendLengths Lengths of the included sends
+     */
     function confirmNextNode(
         bytes32 logAcc,
         bytes calldata sendsData,
         uint256[] calldata sendLengths
-    ) external override whenNotPaused {
-        INode node = checkConfirmValidBefore();
+    ) external whenNotPaused {
+        checkUnresolved();
+        checkNoRecentStake();
+
+        // There is at least one non-zombie staker
+        require(stakerCount() > 0, "NO_STAKERS");
+
+        uint256 firstUnresolved = firstUnresolvedNode();
+        INode node = getNode(firstUnresolved);
+
+        // Verify the block's deadline has passed
+        node.checkPastDeadline();
+
+        // Check that prev is latest confirmed
+        require(node.prev() == latestConfirmed(), "INVALID_PREV");
+
         removeOldZombies(0);
-        checkConfirmValidAfter(node);
+
+        // All non-zombie stakers are staked on this node
+        require(node.stakerCount() == stakerCount() + countStakedZombies(node), "NOT_ALL_STAKED");
 
         bytes32 sendAcc = RollupLib.generateLastMessageHash(sendsData, sendLengths);
         require(node.confirmData() == RollupLib.confirmHash(sendAcc, logAcc), "CONFIRM_DATA");
@@ -224,7 +288,11 @@ contract Rollup is RollupCore, Pausable, IRollup {
         emit SentLogs(logAcc);
     }
 
-    function newStake(uint256 tokenAmount) external payable override whenNotPaused {
+    /**
+     * @notice Create a new stake
+     * @param tokenAmount If staking in something other than eth, this is the amount of tokens staked, otherwise 0
+     */
+    function newStake(uint256 tokenAmount) external payable whenNotPaused {
         // Verify that sender is not already a staker
         require(!isStaked(msg.sender), "ALREADY_STAKED");
 
@@ -234,9 +302,12 @@ contract Rollup is RollupCore, Pausable, IRollup {
         createNewStake(msg.sender, depositAmount);
     }
 
+    /**
+     * @notice Withdraw uncomitted funds owned by sender from the rollup chain
+     * @param destination Address to transfer the withdrawn funds to
+     */
     function withdrawStakerFunds(address payable destination)
         external
-        override
         whenNotPaused
         returns (uint256)
     {
@@ -247,11 +318,17 @@ contract Rollup is RollupCore, Pausable, IRollup {
         return amount;
     }
 
+    /**
+     * @notice Move stake onto an existing node
+     * @param blockHash Hash of a recent block to protect against reorgs
+     * @param blockNumber Block number with the given hash
+     * @param nodeNum Inbox of the node to move stake to. This must by a child of the node the staker is currently staked on
+     */
     function stakeOnExistingNode(
         bytes32 blockHash,
         uint256 blockNumber,
         uint256 nodeNum
-    ) external override whenNotPaused {
+    ) external whenNotPaused {
         require(isStaked(msg.sender), "NOT_STAKED");
 
         require(blockhash(blockNumber) == blockHash, "invalid known block");
@@ -261,13 +338,20 @@ contract Rollup is RollupCore, Pausable, IRollup {
         stakeOnNode(msg.sender, nodeNum);
     }
 
+    /**
+     * @notice Move stake onto a new node
+     * @param blockHash Hash of a recent block to protect against reorgs
+     * @param blockNumber Block number with the given hash
+     * @param assertionBytes32Fields Assertion data for creating
+     * @param assertionIntFields Assertion data for creating
+     */
     function stakeOnNewNode(
         bytes32 blockHash,
         uint256 blockNumber,
         uint256 nodeNum,
         bytes32[7] calldata assertionBytes32Fields,
         uint256[10] calldata assertionIntFields
-    ) external override whenNotPaused {
+    ) external whenNotPaused {
         require(isStaked(msg.sender), "NOT_STAKED");
         require(blockhash(blockNumber) == blockHash, "invalid known block");
         require(nodeNum == latestNodeCreated() + 1, "NODE_NUM");
@@ -339,23 +423,35 @@ contract Rollup is RollupCore, Pausable, IRollup {
         );
     }
 
+    /**
+     * @notice Refund a staker that is currently staked on or before the latest confirmed node
+     * @param stakerAddress Address of the staker whose stake is refunded
+     */
     function returnOldDeposit(address stakerAddress) external override whenNotPaused {
         require(latestStakedNode(stakerAddress) <= latestConfirmed(), "TOO_RECENT");
         checkUnchallengedStaker(stakerAddress);
         withdrawStaker(stakerAddress);
     }
 
+    /**
+     * @notice Increase the amount staked for the given staker
+     * @param stakerAddress Address of the staker whose stake is increased
+     * @param tokenAmount If staking in something other than eth, this is the amount of tokens staked, otherwise 0
+     */
     function addToDeposit(address stakerAddress, uint256 tokenAmount)
         external
         payable
-        override
         whenNotPaused
     {
         checkUnchallengedStaker(stakerAddress);
         increaseStakeBy(stakerAddress, receiveStakerFunds(tokenAmount));
     }
 
-    function reduceDeposit(uint256 target) external override whenNotPaused {
+    /**
+     * @notice Reduce the amount staked for the sender
+     * @param target Target amount of stake for the staker. If this is below the current minimum, it will be set to minimum instead
+     */
+    function reduceDeposit(uint256 target) external whenNotPaused {
         checkUnchallengedStaker(msg.sender);
         uint256 currentRequired = currentRequiredStake();
         if (target > currentRequired) {
@@ -364,16 +460,19 @@ contract Rollup is RollupCore, Pausable, IRollup {
         reduceStakeTo(msg.sender, target);
     }
 
-    // nodeFields
-    //  inboxConsistencyHash
-    //  inboxDeltaHash
-    //  executionHash
+    /**
+     * @notice Reduce the amount staked for the sender
+     * @param stakers Stakers engaged in the challenge. The first staker should be staked on the first node
+     * @param nodeNums Nodes of the stakers engaged in the challenge. The first node should be the earliest and is the one challenged
+     * @param nodeFields Challenge related data [inboxConsistencyHash, inboxDeltaHash, executionHash]
+     * @param executionCheckTime Amount of time to check the assertion's execution
+     */
     function createChallenge(
         address payable[2] calldata stakers,
         uint256[2] calldata nodeNums,
         bytes32[3] calldata nodeFields,
         uint256 executionCheckTime
-    ) external override whenNotPaused {
+    ) external whenNotPaused {
         require(nodeNums[0] < nodeNums[1], "WRONG_ORDER");
         require(nodeNums[1] <= latestNodeCreated(), "NOT_PROPOSED");
         require(latestConfirmed() < nodeNums[0], "ALREADY_CONFIRMED");
@@ -418,8 +517,12 @@ contract Rollup is RollupCore, Pausable, IRollup {
         emit RollupChallengeStarted(challengeAddress, stakers[0], stakers[1], nodeNums[0]);
     }
 
-    // completeChallenge isn't pausable since in flight challenges should be allowed to complete or else they
-    // could be forced to timeout
+    /**
+     * @notice Inform the rollup that the challenge between the given stakers is completed
+     * @dev completeChallenge isn't pausable since in flight challenges should be allowed to complete or else they could be forced to timeout
+     * @param winningStaker Address of the winning staker
+     * @param losingStaker Address of the losing staker
+     */
     function completeChallenge(address winningStaker, address losingStaker) external override {
         // Only the challenge contract can declare winners and losers
         require(msg.sender == inChallenge(winningStaker, losingStaker), "WRONG_SENDER");
@@ -439,7 +542,12 @@ contract Rollup is RollupCore, Pausable, IRollup {
         turnIntoZombie(losingStaker);
     }
 
-    function removeZombie(uint256 zombieNum, uint256 maxNodes) external override whenNotPaused {
+    /**
+     * @notice Remove the given zombie from nodes it is staked on, moving backwords from the latest node it is staked on
+     * @param zombieNum Index of the zombie to remove
+     * @param maxNodes Maximum number of nodes to remove the zombie from (to limit the cost of this transaction)
+     */
+    function removeZombie(uint256 zombieNum, uint256 maxNodes) external whenNotPaused {
         require(zombieNum <= zombieCount(), "NO_SUCH_ZOMBIE");
         address zombieStakerAddress = zombieAddress(zombieNum);
         uint256 latestStakedNode = zombieLatestStakedNode(zombieNum);
@@ -458,7 +566,11 @@ contract Rollup is RollupCore, Pausable, IRollup {
         }
     }
 
-    function removeOldZombies(uint256 startIndex) public override {
+    /**
+     * @notice Remove any zombies whose latest stake is earlier than the first unresolved node
+     * @param startIndex Index in the zombie list to start removing zombies from (to limit the cost of this transaction)
+     */
+    function removeOldZombies(uint256 startIndex) public {
         uint256 currentZombieCount = zombieCount();
         uint256 firstUnresolved = firstUnresolvedNode();
         for (uint256 i = startIndex; i < currentZombieCount; i++) {
@@ -472,7 +584,11 @@ contract Rollup is RollupCore, Pausable, IRollup {
         }
     }
 
-    function currentRequiredStake() public view override returns (uint256) {
+    /**
+     * @notice Calculate the current amount of funds required to place a new stake in the rollup
+     * @return The current minimum stake requirement
+     */
+    function currentRequiredStake() public view returns (uint256) {
         uint256 MAX_INT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
         uint256 latestConfirmedDeadline = getNode(latestConfirmed()).deadlineBlock();
         if (block.number < latestConfirmedDeadline) {
@@ -495,11 +611,20 @@ contract Rollup is RollupCore, Pausable, IRollup {
         return baseStake * multiplier;
     }
 
-    function minimumAssertionPeriod() public view override returns (uint256) {
+    /**
+     * @notice Calculate the minimum time between assertions
+     * @return The minimum time between assertions in blocks
+     */
+    function minimumAssertionPeriod() public view returns (uint256) {
         return challengePeriodBlocks / 10;
     }
 
-    function countStakedZombies(INode node) public view override returns (uint256) {
+    /**
+     * @notice Calculate the number of zombies staked on the given node
+     * @param node The node on which to count staked zombies
+     * @return The number of zombies staked on the node
+     */
+    function countStakedZombies(INode node) public view returns (uint256) {
         uint256 currentZombieCount = zombieCount();
         uint256 stakedZombieCount = 0;
         for (uint256 i = 0; i < currentZombieCount; i++) {
@@ -510,12 +635,17 @@ contract Rollup is RollupCore, Pausable, IRollup {
         return stakedZombieCount;
     }
 
-    function checkNoRecentStake() public view override {
-        // No stake has been placed during the last challengePeriod blocks
+    /**
+     * @notice Verify that no stake has been placed within the last challenge period
+     */
+    function checkNoRecentStake() public view {
         require(block.number - lastStakeBlock() >= challengePeriodBlocks, "RECENT_STAKE");
     }
 
-    function checkUnresolved() public view override {
+    /**
+     * @notice Verify that there are some number of nodes still unresolved
+     */
+    function checkUnresolved() public view {
         uint256 firstUnresolved = firstUnresolvedNode();
         require(
             firstUnresolved > latestConfirmed() && firstUnresolved <= latestNodeCreated(),
@@ -523,6 +653,11 @@ contract Rollup is RollupCore, Pausable, IRollup {
         );
     }
 
+    /**
+     * @notice Ensure that funds are properly received
+     * @param tokenAmount If staking in something other than eth, this is the amount of tokens to transfer, otherwise 0
+     * @return Amount of funds that have been received by the rollup
+     */
     function receiveStakerFunds(uint256 tokenAmount) private returns (uint256) {
         if (stakeToken == address(0)) {
             require(tokenAmount == 0, "BAD_STK_TYPE");
@@ -537,6 +672,11 @@ contract Rollup is RollupCore, Pausable, IRollup {
         }
     }
 
+    /**
+     * @notice Send funds to funds to the given address, if staking is eth, transfer eth, otherwise transfer tokens
+     * @param destination Address to tranfer funds to
+     * @param amount Amount of funds to transfer
+     */
     function sendStakerFunds(address payable destination, uint256 amount) private {
         if (amount == 0) {
             return;
@@ -548,32 +688,12 @@ contract Rollup is RollupCore, Pausable, IRollup {
         }
     }
 
+    /**
+     * @notice Verify that the given address is staked and not actively in a challenge
+     * @param stakerAddress Address to check
+     */
     function checkUnchallengedStaker(address stakerAddress) private view {
         require(isStaked(stakerAddress), "NOT_STAKED");
         require(currentChallenge(stakerAddress) == address(0), "IN_CHAL");
-    }
-
-    function checkConfirmValidBefore() public view override returns (INode) {
-        checkUnresolved();
-        checkNoRecentStake();
-
-        // There is at least one non-zombie staker
-        require(stakerCount() > 0, "NO_STAKERS");
-
-        uint256 firstUnresolved = firstUnresolvedNode();
-        INode node = getNode(firstUnresolved);
-
-        // Verify the block's deadline has passed
-        node.checkPastDeadline();
-
-        // Check that prev is latest confirmed
-        require(node.prev() == latestConfirmed(), "INVALID_PREV");
-
-        return node;
-    }
-
-    function checkConfirmValidAfter(INode node) public view override {
-        // All non-zombie stakers are staked on this node
-        require(node.stakerCount() == stakerCount() + countStakedZombies(node), "NOT_ALL_STAKED");
     }
 }
