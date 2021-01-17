@@ -48,7 +48,7 @@ interface INode {
 
     function stakers(address staker) external view returns (bool);
 
-    function checkPastDeadline() external view;
+    function requirePastDeadline() external view;
 
-    function checkRejectExample(uint256 latestConfirmed, address stakerAddress) external view;
+    function requireRejectExample(uint256 latestConfirmed, address stakerAddress) external view;
 }

@@ -95,12 +95,12 @@ contract ValidatorUtils {
             address
         )
     {
-        try ValidatorUtils(address(this)).checkConfirmable(rollup) {
+        try ValidatorUtils(address(this)).requireConfirmable(rollup) {
             return (ConfirmType.VALID, 0, address(0));
         } catch {}
 
         try
-            ValidatorUtils(address(this)).checkRejectableNextNode(
+            ValidatorUtils(address(this)).requireRejectableNextNode(
                 rollup,
                 startNodeOffset,
                 maxNodeCount,
@@ -114,17 +114,17 @@ contract ValidatorUtils {
         }
     }
 
-    function checkRejectableNextNode(
+    function requireRejectableNextNode(
         Rollup rollup,
         uint256 startNodeOffset,
         uint256 maxNodeCount,
         uint256 startStakerIndex,
         uint256 maxStakerCount
     ) external view returns (uint256, address) {
-        rollup.checkUnresolvedExists();
-        rollup.checkNoRecentStake();
+        rollup.requireUnresolvedExists();
+        rollup.requireNoRecentStake();
         uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
-        bool outOfOrder = checkMaybeRejectable(rollup);
+        bool outOfOrder = requireMaybeRejectable(rollup);
         if (outOfOrder) {
             return (0, address(0));
         }
@@ -140,12 +140,12 @@ contract ValidatorUtils {
         return (successorWithStake, stakerAddress);
     }
 
-    function checkMaybeRejectable(Rollup rollup) private view returns (bool) {
-        rollup.checkUnresolvedExists();
+    function requireMaybeRejectable(Rollup rollup) private view returns (bool) {
+        rollup.requireUnresolvedExists();
         INode node = rollup.getNode(rollup.firstUnresolvedNode());
         bool outOfOrder = node.prev() == rollup.latestConfirmed();
         if (outOfOrder) {
-            rollup.checkNoRecentStake();
+            rollup.requireNoRecentStake();
             // Verify the block's deadline has passed
             require(block.number >= node.deadlineBlock(), "BEFORE_DEADLINE");
             // Verify that no staker is staked on this node
@@ -154,9 +154,9 @@ contract ValidatorUtils {
         return outOfOrder;
     }
 
-    function checkConfirmable(Rollup rollup) external view {
-        rollup.checkUnresolvedExists();
-        rollup.checkNoRecentStake();
+    function requireConfirmable(Rollup rollup) external view {
+        rollup.requireUnresolvedExists();
+        rollup.requireNoRecentStake();
 
         uint256 stakerCount = rollup.stakerCount();
         // There is at least one non-zombie staker
@@ -166,7 +166,7 @@ contract ValidatorUtils {
         INode node = rollup.getNode(firstUnresolved);
 
         // Verify the block's deadline has passed
-        node.checkPastDeadline();
+        node.requirePastDeadline();
 
         // Check that prev is latest confirmed
         require(node.prev() == rollup.latestConfirmed(), "INVALID_PREV");

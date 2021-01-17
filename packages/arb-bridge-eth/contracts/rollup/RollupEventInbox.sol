@@ -115,7 +115,7 @@ contract RollupEventInbox {
         Rollup r = Rollup(rollup);
         INode node = r.getNode(nodeNum);
         require(node.stakers(staker), "NOT_STAKED");
-        r.checkUnresolved(nodeNum);
+        r.requireUnresolved(nodeNum);
 
         bytes32 messageHash =
             keccak256(

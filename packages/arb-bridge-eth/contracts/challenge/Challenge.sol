@@ -53,7 +53,7 @@ contract Challenge is Cloneable, IChallenge {
     event OneStepProofCompleted();
     event ConstraintWin();
 
-    // Can online initialize once
+    // Can only initialize once
     string private constant CHAL_INIT_STATE = "CHAL_INIT_STATE";
     // Can only bisect assertion in response to a challenge
     string private constant BIS_STATE = "BIS_STATE";
@@ -159,7 +159,10 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     /**
-     * @notice Mark the given staker as staked on this node
+     * @notice Initiate the next round in the bisection by objecting to inbox consistency with a bisection
+     * of an inbox acculator segment with the same length but a different endpoint.  This is either the
+     * initial move or follows another inbox consistency objection
+     *
      * @param _merkleNodes List of hashes of stubs in the merkle root of segments left by the previous round
      * @param _merkleRoute Bitmap marking whether the path went left or right at each height
      * @param _challengedSegmentStart Offset of the challenged segment into the original challenged segment
@@ -201,7 +204,10 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     /**
-     * @notice Mark the given staker as staked on this node
+     * @notice Prove the correctness of a single inbox consistency step by proving that you know a preimage
+     * for the start of the length 1 segment that leads to a different after inbox accumulator value.
+     * This is either the initial move or follows another inbox consistency objection
+     *
      * @param _merkleNodes List of hashes of stubs in the merkle root of segments left by the previous round
      * @param _merkleRoute Bitmap marking whether the path went left or right at each height
      * @param _challengedSegmentStart Offset of the challenged segment into the original challenged segment
@@ -229,7 +235,10 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     /**
-     * @notice Mark the given staker as staked on this node
+     * @notice Initiate the next round in the bisection by objecting to inbox delta correctness with a bisection
+     * of an inbox delta segment with the same length but a different endpoint. This is either the initial move
+     * or follows another inbox delta objection
+     *
      * @param _merkleNodes List of hashes of stubs in the merkle root of segments left by the previous round
      * @param _merkleRoute Bitmap marking whether the path went left or right at each height
      * @param _challengedSegmentStart Offset of the challenged segment into the original challenged segment
@@ -282,7 +291,10 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     /**
-     * @notice Mark the given staker as staked on this node
+     * @notice Prove the correctness of a single inbox delta step by proving that you know a preimage
+     * for the inbox acc at the start of the length 1 segment that leads to a different inbox delta at the end.
+     * This is either the initial move or follows another inbox delta objection
+     *
      * @param _merkleNodes List of hashes of stubs in the merkle root of segments left by the previous round
      * @param _merkleRoute Bitmap marking whether the path went left or right at each height
      * @param _challengedSegmentStart Offset of the challenged segment into the original challenged segment
@@ -335,7 +347,10 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     /**
-     * @notice Mark the given staker as staked on this node
+     * @notice Initiate the next round in the bisection by objecting to execution correctness with a bisection
+     * of an execution segment with the same length but a different endpoint. This is either the initial move
+     * or follows another execution objection
+     *
      * @param _merkleNodes List of hashes of stubs in the merkle root of segments left by the previous round
      * @param _merkleRoute Bitmap marking whether the path went left or right at each height
      * @param _challengedSegmentStart Offset of the challenged segment into the original challenged segment
@@ -465,7 +480,9 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     /**
-     * @notice Mark the given staker as staked on this node
+     * @notice Object that the machine should have blocked after less gas used than was claimed and provide
+     * bisection of that smaller chunk. This can only occur as the first move in a challenge
+     *
      * @dev Can only do a stopped short bisection as a first move
      * @param _challengedSegmentLength Number of messages in the challenged segment
      * @param _oldEndHash Hash of the end of the challenged segment
@@ -503,7 +520,6 @@ contract Challenge is Cloneable, IChallenge {
         // Free no longer needed storage
         inboxConsistencyHash = 0;
         inboxDeltaHash = 0;
-        executionHash = 0;
 
         respondedExecution(_newSegmentLength);
         emit Bisected(challengeState, 0, _challengedSegmentLength, _chainHashes);

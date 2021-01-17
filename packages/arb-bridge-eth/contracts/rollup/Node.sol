@@ -106,7 +106,7 @@ contract Node is Cloneable, INode {
     /**
      * @notice Check whether the current block number has met or passed the node's deadline
      */
-    function checkPastDeadline() external view override {
+    function requirePastDeadline() external view override {
         require(block.number >= deadlineBlock, "BEFORE_DEADLINE");
     }
 
@@ -115,7 +115,7 @@ contract Node is Cloneable, INode {
      * @param latestConfirmed Address of the node that should be this node's prev
      * @param stakerAddress Address on the staker that should be staked on this node
      */
-    function checkRejectExample(uint256 latestConfirmed, address stakerAddress)
+    function requireRejectExample(uint256 latestConfirmed, address stakerAddress)
         external
         view
         override

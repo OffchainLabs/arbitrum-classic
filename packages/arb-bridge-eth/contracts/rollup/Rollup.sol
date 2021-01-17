@@ -35,6 +35,8 @@ import "../bridge/Messages.sol";
 import "./RollupLib.sol";
 
 contract Rollup is RollupCore, Pausable, IRollup {
+    // TODO: Configure this value based on the cost of sends
+    uint8 internal constant MAX_SEND_COUNT = 100;
     // Rollup Config
     uint256 public challengePeriodBlocks;
     uint256 public arbGasSpeedLimitPerBlock;
@@ -213,20 +215,20 @@ contract Rollup is RollupCore, Pausable, IRollup {
         external
         whenNotPaused
     {
-        checkUnresolvedExists();
+        requireUnresolvedExists();
         uint256 latest = latestConfirmed();
         uint256 firstUnresolved = firstUnresolvedNode();
         INode node = getNode(firstUnresolved);
         if (node.prev() == latest) {
-            checkNoRecentStake();
-            checkUnresolved(successorWithStake);
+            requireNoRecentStake();
+            requireUnresolved(successorWithStake);
             require(isStaked(stakerAddress), "NOT_STAKED");
 
             // Confirm that someone is staked on some sibling node
-            getNode(successorWithStake).checkRejectExample(latest, stakerAddress);
+            getNode(successorWithStake).requireRejectExample(latest, stakerAddress);
 
             // Verify the block's deadline has passed
-            node.checkPastDeadline();
+            node.requirePastDeadline();
 
             removeOldZombies(0);
 
@@ -248,8 +250,8 @@ contract Rollup is RollupCore, Pausable, IRollup {
         bytes calldata sendsData,
         uint256[] calldata sendLengths
     ) external whenNotPaused {
-        checkUnresolvedExists();
-        checkNoRecentStake();
+        requireUnresolvedExists();
+        requireNoRecentStake();
 
         // There is at least one non-zombie staker
         require(stakerCount() > 0, "NO_STAKERS");
@@ -258,7 +260,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
         INode node = getNode(firstUnresolved);
 
         // Verify the block's deadline has passed
-        node.checkPastDeadline();
+        node.requirePastDeadline();
 
         // Check that prev is latest confirmed
         require(node.prev() == latestConfirmed(), "INVALID_PREV");
@@ -368,7 +370,8 @@ contract Rollup is RollupCore, Pausable, IRollup {
             assertion.inboxMessagesRead >=
                 assertion.beforeInboxMaxCount - assertion.beforeInboxCount ||
                 // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
-                assertion.gasUsed >= timeSinceLastNode * arbGasSpeedLimitPerBlock,
+                assertion.gasUsed >= timeSinceLastNode * arbGasSpeedLimitPerBlock ||
+                assertion.sendCount == MAX_SEND_COUNT,
             "TOO_SMALL"
         );
 
@@ -425,7 +428,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
      */
     function returnOldDeposit(address stakerAddress) external override whenNotPaused {
         require(latestStakedNode(stakerAddress) <= latestConfirmed(), "TOO_RECENT");
-        checkUnchallengedStaker(stakerAddress);
+        requireUnchallengedStaker(stakerAddress);
         withdrawStaker(stakerAddress);
     }
 
@@ -439,7 +442,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
         payable
         whenNotPaused
     {
-        checkUnchallengedStaker(stakerAddress);
+        requireUnchallengedStaker(stakerAddress);
         increaseStakeBy(stakerAddress, receiveStakerFunds(tokenAmount));
     }
 
@@ -448,16 +451,16 @@ contract Rollup is RollupCore, Pausable, IRollup {
      * @param target Target amount of stake for the staker. If this is below the current minimum, it will be set to minimum instead
      */
     function reduceDeposit(uint256 target) external whenNotPaused {
-        checkUnchallengedStaker(msg.sender);
+        requireUnchallengedStaker(msg.sender);
         uint256 currentRequired = currentRequiredStake();
-        if (target > currentRequired) {
+        if (target < currentRequired) {
             target = currentRequired;
         }
         reduceStakeTo(msg.sender, target);
     }
 
     /**
-     * @notice Reduce the amount staked for the sender
+     * @notice Start a challenge between the given stakers over the node created by the first staker assuming that the two are staked on conflicting nodes
      * @param stakers Stakers engaged in the challenge. The first staker should be staked on the first node
      * @param nodeNums Nodes of the stakers engaged in the challenge. The first node should be the earliest and is the one challenged
      * @param nodeFields Challenge related data [inboxConsistencyHash, inboxDeltaHash, executionHash]
@@ -478,8 +481,8 @@ contract Rollup is RollupCore, Pausable, IRollup {
 
         require(node1.prev() == node2.prev(), "DIFF_PREV");
 
-        checkUnchallengedStaker(stakers[0]);
-        checkUnchallengedStaker(stakers[1]);
+        requireUnchallengedStaker(stakers[0]);
+        requireUnchallengedStaker(stakers[1]);
 
         require(node1.stakers(stakers[0]), "STAKER1_NOT_STAKED");
         require(node2.stakers(stakers[1]), "STAKER2_NOT_STAKED");
@@ -550,7 +553,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
         uint256 latestStakedNode = zombieLatestStakedNode(zombieNum);
         uint256 nodesRemoved = 0;
         uint256 firstUnresolved = firstUnresolvedNode();
-        while (latestStakedNode > firstUnresolved && nodesRemoved < maxNodes) {
+        while (latestStakedNode >= firstUnresolved && nodesRemoved < maxNodes) {
             INode node = getNode(latestStakedNode);
             node.removeStaker(zombieStakerAddress);
             latestStakedNode = node.prev();
@@ -586,13 +589,20 @@ contract Rollup is RollupCore, Pausable, IRollup {
      * @return The current minimum stake requirement
      */
     function currentRequiredStake() public view returns (uint256) {
-        uint256 MAX_INT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
-        uint256 latestConfirmedDeadline = getNode(latestConfirmed()).deadlineBlock();
-        if (block.number < latestConfirmedDeadline) {
+        // If there are no unresolved nodes, then you can use the base stake
+        uint256 firstUnresolvedNodeNum = firstUnresolvedNode();
+        if (firstUnresolvedNodeNum - 1 == latestNodeCreated()) {
             return baseStake;
         }
-        uint256 latestConfirmedAge = block.number - latestConfirmedDeadline;
-        uint256 challengePeriodsPassed = latestConfirmedAge / challengePeriodBlocks;
+        INode firstUnresolved = getNode(firstUnresolvedNodeNum);
+
+        uint256 MAX_INT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+        uint256 firstUnresolvedDeadline = firstUnresolved.deadlineBlock();
+        if (block.number < firstUnresolvedDeadline) {
+            return baseStake;
+        }
+        uint256 firstUnresolvedAge = block.number - firstUnresolvedDeadline;
+        uint256 challengePeriodsPassed = firstUnresolvedAge / challengePeriodBlocks;
         if (challengePeriodsPassed > 255) {
             challengePeriodsPassed = 255;
         }
@@ -618,6 +628,11 @@ contract Rollup is RollupCore, Pausable, IRollup {
 
     /**
      * @notice Calculate the number of zombies staked on the given node
+     *
+     * @dev This function could be uncallable if there are too many zombies. However,
+     * removeZombie and removeOldZombies can be used to remove any zombies that exist
+     * so that this will then be callable
+     *
      * @param node The node on which to count staked zombies
      * @return The number of zombies staked on the node
      */
@@ -635,14 +650,14 @@ contract Rollup is RollupCore, Pausable, IRollup {
     /**
      * @notice Verify that no stake has been placed within the last challenge period
      */
-    function checkNoRecentStake() public view {
+    function requireNoRecentStake() public view {
         require(block.number - lastStakeBlock() >= challengePeriodBlocks, "RECENT_STAKE");
     }
 
     /**
      * @notice Verify that there are some number of nodes still unresolved
      */
-    function checkUnresolvedExists() public view {
+    function requireUnresolvedExists() public view {
         uint256 firstUnresolved = firstUnresolvedNode();
         require(
             firstUnresolved > latestConfirmed() && firstUnresolved <= latestNodeCreated(),
@@ -650,7 +665,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
         );
     }
 
-    function checkUnresolved(uint256 nodeNum) public view {
+    function requireUnresolved(uint256 nodeNum) public view {
         require(nodeNum >= firstUnresolvedNode(), "ALREADY_DECIDED");
         require(nodeNum <= latestNodeCreated(), "DOESNT_EXIST");
     }
@@ -675,7 +690,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
     }
 
     /**
-     * @notice Send funds to funds to the given address, if staking is eth, transfer eth, otherwise transfer tokens
+     * @notice Send funds to the given address, if staking is eth, transfer eth, otherwise transfer tokens
      * @param destination Address to tranfer funds to
      * @param amount Amount of funds to transfer
      */
@@ -694,7 +709,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
      * @notice Verify that the given address is staked and not actively in a challenge
      * @param stakerAddress Address to check
      */
-    function checkUnchallengedStaker(address stakerAddress) private view {
+    function requireUnchallengedStaker(address stakerAddress) private view {
         require(isStaked(stakerAddress), "NOT_STAKED");
         require(currentChallenge(stakerAddress) == address(0), "IN_CHAL");
     }
