@@ -184,12 +184,24 @@ contract Rollup is Pausable, IRollup {
         );
     }
 
-    function ownerPause() external onlyOwner {
+    function pause() external onlyOwner {
         _pause();
     }
 
-    function ownerResume() external onlyOwner {
+    function resume() external onlyOwner {
         _unpause();
+    }
+
+    function truncateNodes(uint256 _latestNodeCreated) external onlyOwner {
+        uint256 oldLatestNodeCreated = latestNodeCreated;
+        require(_latestNodeCreated < latestNodeCreated, "TOO_NEW");
+        require(_latestNodeCreated >= firstUnresolvedNode - 1, "TOO_OLD");
+
+        for (uint256 i = oldLatestNodeCreated; i >= _latestNodeCreated; i--) {
+            INode node = nodes[i];
+            node.destroy();
+        }
+        latestNodeCreated = _latestNodeCreated;
     }
 
     function rejectNextNode(uint256 successorWithStake, address stakerAddress)
