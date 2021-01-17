@@ -82,7 +82,7 @@ contract Challenge is Cloneable, IChallenge {
     address public asserter;
     address public challenger;
     uint256 private challengePeriodBlocks;
-    uint256 private executionCheckTimeBlocks;
+    uint256 private arbGasLimitPerBlock;
 
     Kind public kind;
 
@@ -126,7 +126,8 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _inboxConsistencyHash,
         bytes32 _inboxDeltaHash,
         bytes32 _executionHash,
-        uint256 _executionCheckTimeBlocks,
+        uint256 _gasClaimed,
+        uint256 _arbGasLimitPerBlock,
         address _asserter,
         address _challenger,
         uint256 _challengePeriodBlocks
@@ -141,15 +142,15 @@ contract Challenge is Cloneable, IChallenge {
         inboxConsistencyHash = _inboxConsistencyHash;
         inboxDeltaHash = _inboxDeltaHash;
         executionHash = _executionHash;
+        arbGasLimitPerBlock = _arbGasLimitPerBlock;
 
         asserter = _asserter;
         challenger = _challenger;
         challengePeriodBlocks = _challengePeriodBlocks;
-        executionCheckTimeBlocks = _executionCheckTimeBlocks;
 
         kind = Kind.Uninitialized;
 
-        deadlineBlock = block.number + _challengePeriodBlocks + _executionCheckTimeBlocks;
+        setExecutionDeadline(_gasClaimed);
         turn = Turn.Challenger;
 
         challengeState = 0;
@@ -190,7 +191,7 @@ contract Challenge is Cloneable, IChallenge {
 
         updateBisectionRoot(_chainHashes, _challengedSegmentStart, _challengedSegmentLength);
 
-        responded(1);
+        respondedNonExecution();
         emit Bisected(
             challengeState,
             _challengedSegmentStart,
@@ -270,7 +271,7 @@ contract Challenge is Cloneable, IChallenge {
 
         updateBisectionRoot(chainHashes, _challengedSegmentStart, _challengedSegmentLength);
 
-        responded(1);
+        respondedNonExecution();
         emit BisectedInboxDelta(
             challengeState,
             _challengedSegmentStart,
@@ -385,8 +386,7 @@ contract Challenge is Cloneable, IChallenge {
             _challengedSegmentStart,
             _challengedSegmentStart + _challengedSegmentLength - _gasUsedBefore
         );
-
-        responded(executionCheckTimeBlocks);
+        respondedExecution(_challengedSegmentLength);
         emit Bisected(
             challengeState,
             _challengedSegmentStart,
@@ -505,8 +505,7 @@ contract Challenge is Cloneable, IChallenge {
         inboxDeltaHash = 0;
         executionHash = 0;
 
-        responded(executionCheckTimeBlocks);
-
+        respondedExecution(_newSegmentLength);
         emit Bisected(challengeState, 0, _challengedSegmentLength, _chainHashes);
     }
 
@@ -533,7 +532,7 @@ contract Challenge is Cloneable, IChallenge {
         inboxDeltaHash = 0;
         executionHash = 0;
 
-        responded(executionCheckTimeBlocks);
+        respondedNonExecution();
     }
 
     // initialState
@@ -626,13 +625,27 @@ contract Challenge is Cloneable, IChallenge {
         }
     }
 
-    function responded(uint256 additionalTimeBlocks) private {
+    function respondedNonExecution() private {
+        responded();
+        deadlineBlock = block.number + challengePeriodBlocks + 1;
+    }
+
+    function respondedExecution(uint256 gas) private {
+        responded();
+        setExecutionDeadline(gas);
+    }
+
+    function responded() private {
         if (turn == Turn.Challenger) {
             turn = Turn.Asserter;
         } else {
             turn = Turn.Challenger;
         }
-        deadlineBlock = block.number + challengePeriodBlocks + additionalTimeBlocks;
+    }
+
+    function setExecutionDeadline(uint256 gas) private {
+        uint256 timeToCheck = (gas + arbGasLimitPerBlock - 1) / arbGasLimitPerBlock;
+        deadlineBlock = block.number + challengePeriodBlocks + timeToCheck;
     }
 
     function _currentWin() private {

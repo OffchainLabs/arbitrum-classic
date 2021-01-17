@@ -38,7 +38,8 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         bytes32 _inboxConsistencyHash,
         bytes32 _inboxDeltaHash,
         bytes32 _executionHash,
-        uint256 _executionCheckTimeBlocks,
+        uint256 _gasClaimed,
+        uint256 _arbGasLimitPerBlock,
         address _asserter,
         address _challenger,
         uint256 _challengePeriodBlocks
@@ -51,7 +52,8 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
             _inboxConsistencyHash,
             _inboxDeltaHash,
             _executionHash,
-            _executionCheckTimeBlocks,
+            _gasClaimed,
+            _arbGasLimitPerBlock,
             _asserter,
             _challenger,
             _challengePeriodBlocks

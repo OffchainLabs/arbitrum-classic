@@ -32,7 +32,6 @@ import "../interfaces/IERC20.sol";
 
 import "../bridge/Messages.sol";
 import "./RollupLib.sol";
-import "../challenge/ChallengeLib.sol";
 
 contract Rollup is RollupCore, Pausable, IRollup {
     uint8 internal constant INITIALIZATION_MSG_TYPE = 4;
@@ -399,12 +398,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
             INode(
                 nodeFactory.createNode(
                     RollupLib.nodeStateHash(assertion, inboxMaxCount),
-                    RollupLib.challengeRoot(
-                        assertion,
-                        inboxMaxCount,
-                        inboxMaxAcc,
-                        assertion.gasUsed / arbGasSpeedLimitPerBlock
-                    ),
+                    RollupLib.challengeRoot(assertion, inboxMaxCount, inboxMaxAcc),
                     RollupLib.confirmHash(assertion),
                     latestStakedNode(msg.sender),
                     deadlineBlock
@@ -465,13 +459,13 @@ contract Rollup is RollupCore, Pausable, IRollup {
      * @param stakers Stakers engaged in the challenge. The first staker should be staked on the first node
      * @param nodeNums Nodes of the stakers engaged in the challenge. The first node should be the earliest and is the one challenged
      * @param nodeFields Challenge related data [inboxConsistencyHash, inboxDeltaHash, executionHash]
-     * @param executionCheckTime Amount of time to check the assertion's execution
+     * @param gasClaimed Amount of gas the assertion claims to use
      */
     function createChallenge(
         address payable[2] calldata stakers,
         uint256[2] calldata nodeNums,
         bytes32[3] calldata nodeFields,
-        uint256 executionCheckTime
+        uint256 gasClaimed
     ) external whenNotPaused {
         require(nodeNums[0] < nodeNums[1], "WRONG_ORDER");
         require(nodeNums[1] <= latestNodeCreated(), "NOT_PROPOSED");
@@ -490,11 +484,11 @@ contract Rollup is RollupCore, Pausable, IRollup {
 
         require(
             node1.challengeHash() ==
-                ChallengeLib.challengeRootHash(
+                RollupLib.challengeRootHash(
                     nodeFields[0],
                     nodeFields[1],
                     nodeFields[2],
-                    executionCheckTime
+                    gasClaimed
                 ),
             "CHAL_HASH"
         );
@@ -506,7 +500,8 @@ contract Rollup is RollupCore, Pausable, IRollup {
                 nodeFields[0],
                 nodeFields[1],
                 nodeFields[2],
-                executionCheckTime,
+                gasClaimed,
+                arbGasSpeedLimitPerBlock,
                 stakers[0],
                 stakers[1],
                 challengePeriodBlocks

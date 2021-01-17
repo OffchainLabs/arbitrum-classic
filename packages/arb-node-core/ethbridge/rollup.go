@@ -111,7 +111,6 @@ func (r *Rollup) ReduceDeposit(amount *big.Int, destination common.Address) (*Ra
 }
 
 func (r *Rollup) CreateChallenge(
-	ctx context.Context,
 	staker1 common.Address,
 	node1 core.NodeID,
 	staker2 common.Address,
@@ -120,10 +119,6 @@ func (r *Rollup) CreateChallenge(
 	inboxMaxHash common.Hash,
 	inboxMaxCount *big.Int,
 ) (*RawTransaction, error) {
-	speedLimit, err := r.ArbGasSpeedLimitPerBlock(ctx)
-	if err != nil {
-		return nil, err
-	}
 	return r.buildSimpleTx(
 		"createChallenge",
 		[2]ethcommon.Address{staker1.ToEthAddress(), staker2.ToEthAddress()},
@@ -133,7 +128,7 @@ func (r *Rollup) CreateChallenge(
 			assertion.InboxDeltaHash(),
 			assertion.ExecutionHash(),
 		},
-		assertion.CheckTime(speedLimit),
+		assertion.GasUsed(),
 	)
 }
 

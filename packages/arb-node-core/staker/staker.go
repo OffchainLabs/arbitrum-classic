@@ -180,7 +180,6 @@ func (s *Staker) createConflict(ctx context.Context) (*ethbridge.RawTransaction,
 			return nil, err
 		}
 		return s.rollup.CreateChallenge(
-			ctx,
 			staker1,
 			node1,
 			staker2,

@@ -42,7 +42,8 @@ contract ChallengeTester {
         bytes32 inboxConsistencyHash,
         bytes32 inboxDeltaHash,
         bytes32 executionHash,
-        uint256 executionCheckTimeBlocks,
+        uint256 gasClaimed,
+        uint256 arbGasLimitPerBlock,
         address payable asserter,
         address payable challenger,
         uint256 challengePeriodBlocks
@@ -52,7 +53,8 @@ contract ChallengeTester {
             inboxConsistencyHash,
             inboxDeltaHash,
             executionHash,
-            executionCheckTimeBlocks,
+            gasClaimed,
+            arbGasLimitPerBlock,
             asserter,
             challenger,
             challengePeriodBlocks
