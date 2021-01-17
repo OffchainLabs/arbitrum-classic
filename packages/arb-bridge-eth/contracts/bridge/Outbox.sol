@@ -33,6 +33,8 @@ contract Outbox is CloneFactory, IOutbox {
 
     bytes1 internal constant MSG_ROOT = 0;
 
+    uint256 internal constant SendType_sendTxToL1 = 0;
+
     address rollup;
     IBridge bridge;
 
@@ -81,10 +83,15 @@ contract Outbox is CloneFactory, IOutbox {
     function handleOutgoingMessage(bytes memory data) private {
         // Otherwise we have an unsupported message type and we skip the message
         if (data[0] == MSG_ROOT) {
-            bytes32 outputRoot = data.toBytes32(1);
+            uint256 batchNum = data.toUint(1);
+            uint256 numInBatch = data.toUint(33);
+            bytes32 outputRoot = data.toBytes32(65);
+
             address clone = createClone(outboxEntryTemplate);
-            OutboxEntry(clone).initialize(address(bridge), outputRoot);
+            OutboxEntry(clone).initialize(address(bridge), outputRoot, numInBatch);
+            uint256 outboxIndex = outboxes.length;
             outboxes.push(OutboxEntry(clone));
+            emit OutboxEntryCreated(batchNum, outboxIndex, outputRoot, numInBatch);
         }
     }
 
@@ -102,6 +109,7 @@ contract Outbox is CloneFactory, IOutbox {
         bytes32 userTx =
             keccak256(
                 abi.encodePacked(
+                    SendType_sendTxToL1,
                     uint256(uint160(bytes20(l2Sender))),
                     uint256(uint160(bytes20(destAddr))),
                     l2Block,

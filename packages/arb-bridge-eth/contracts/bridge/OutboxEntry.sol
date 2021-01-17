@@ -23,17 +23,27 @@ import "../libraries/Cloneable.sol";
 
 contract OutboxEntry is Ownable, Cloneable {
     bytes32 public root;
+    uint256 public numRemaining;
     mapping(uint256 => bool) public spentOutput;
 
-    function initialize(address _owner, bytes32 _root) external {
+    function initialize(
+        address _owner,
+        bytes32 _root,
+        uint256 _numInBatch
+    ) external {
         require(root != 0, "ALREADY_INIT");
         transferOwnership(_owner);
         root = _root;
+        numRemaining = _numInBatch;
     }
 
     function spendOutput(bytes32 _root, uint256 _id) external onlyOwner {
         require(!spentOutput[_id], "ALREADY_SPENT");
         require(_root == root, "BAD_ROOT");
         spentOutput[_id] = true;
+        numRemaining--;
+        if (numRemaining == 0) {
+            safeSelfDestruct(msg.sender);
+        }
     }
 }
