@@ -150,49 +150,6 @@ ByteSlice machineMarshallState(CMachine* m) {
     return returnCharVector(mach->marshalState());
 }
 
-RawAssertion makeRawAssertion(Assertion& assertion) {
-    std::vector<unsigned char> outMsgData;
-    for (const auto& outMsg : assertion.outMessages) {
-        // marshal_value(outMsg, outMsgData);
-        marshal_uint64_t(outMsg.size(), outMsgData);
-        for (uint64_t i = 0; i < outMsg.size(); i++) {
-            outMsgData.push_back(outMsg[i]);
-        }
-    }
-    std::vector<unsigned char> logData;
-    for (const auto& log : assertion.logs) {
-        marshal_value(log, logData);
-    }
-
-    std::vector<unsigned char> debugPrintData;
-    for (const auto& debugPrint : assertion.debugPrints) {
-        marshal_value(debugPrint, debugPrintData);
-    }
-
-    return {assertion.inbox_messages_consumed,
-            returnCharVector(outMsgData),
-            static_cast<int>(assertion.outMessages.size()),
-            returnCharVector(logData),
-            static_cast<int>(assertion.logs.size()),
-            returnCharVector(debugPrintData),
-            static_cast<int>(assertion.debugPrints.size()),
-            assertion.stepCount,
-            assertion.gasCount};
-}
-
-RawAssertion makeEmptyAssertion() {
-    return {0, returnCharVector(std::vector<char>{}),
-            0, returnCharVector(std::vector<char>{}),
-            0, returnCharVector(std::vector<char>{}),
-            0, 0,
-            0};
-}
-
-Tuple getTuple(void* data) {
-    auto charData = reinterpret_cast<const char*>(data);
-    return nonstd::get<Tuple>(deserialize_value(charData));
-}
-
 std::vector<Tuple> getInboxMessages(void* data, uint64_t message_count) {
     auto charData = reinterpret_cast<const char*>(data);
     std::vector<Tuple> messages;

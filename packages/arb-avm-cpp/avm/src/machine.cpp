@@ -80,7 +80,7 @@ Assertion Machine::run(uint64_t gas_limit,
     return {machine_state.context.numSteps,
             machine_state.context.numGas,
             machine_state.context.inbox_messages_consumed,
-            std::move(machine_state.context.outMessage),
+            std::move(machine_state.context.sends),
             std::move(machine_state.context.logs),
             std::move(machine_state.context.debug_prints)};
 }

@@ -112,9 +112,9 @@ inline ByteSlice returnValueResult(const DbResult<value>& res) {
 }
 
 inline RawAssertion makeRawAssertion(Assertion& assertion) {
-    std::vector<unsigned char> outMsgData;
-    for (const auto& outMsg : assertion.sends) {
-        marshal_value(outMsg, outMsgData);
+    std::vector<unsigned char> sendData;
+    for (const auto& send : assertion.sends) {
+        sendData.insert(sendData.end(), send.begin(), send.end());
     }
     std::vector<unsigned char> logData;
     for (const auto& log : assertion.logs) {
@@ -127,7 +127,7 @@ inline RawAssertion makeRawAssertion(Assertion& assertion) {
     }
 
     return {assertion.inbox_messages_consumed,
-            returnCharVector(outMsgData),
+            returnCharVector(sendData),
             static_cast<int>(assertion.sends.size()),
             returnCharVector(logData),
             static_cast<int>(assertion.logs.size()),

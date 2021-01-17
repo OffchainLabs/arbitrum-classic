@@ -26,43 +26,6 @@ void deleteAggregatorStore(CAggregatorStore* agg) {
     delete static_cast<AggregatorStore*>(agg);
 }
 
-Uint64Result aggregatorLogCount(const CAggregatorStore* agg) {
-    try {
-        return {static_cast<const AggregatorStore*>(agg)->logCount(), true};
-    } catch (const std::exception&) {
-        return {0, false};
-    }
-}
-
-ByteSliceResult aggregatorGetLog(const CAggregatorStore* agg, uint64_t index) {
-    try {
-        auto data = returnCharVector(
-            static_cast<const AggregatorStore*>(agg)->getLog(index));
-        return {data, true};
-    } catch (const std::exception&) {
-        return {{nullptr, 0}, false};
-    }
-}
-
-Uint64Result aggregatorMessageCount(const CAggregatorStore* agg) {
-    try {
-        return {static_cast<const AggregatorStore*>(agg)->sendCount(), true};
-    } catch (const std::exception&) {
-        return {0, false};
-    }
-}
-
-ByteSliceResult aggregatorGetMessage(const CAggregatorStore* agg,
-                                     uint64_t index) {
-    try {
-        auto data = returnCharVector(
-            static_cast<const AggregatorStore*>(agg)->getSend(index));
-        return {data, true};
-    } catch (const std::exception&) {
-        return {{nullptr, 0}, false};
-    }
-}
-
 CBlockData aggregatorLatestBlock(const CAggregatorStore* agg) {
     try {
         auto latest = static_cast<const AggregatorStore*>(agg)->latestBlock();
@@ -96,13 +59,9 @@ CBlockData aggregatorGetBlock(const CAggregatorStore* agg, uint64_t height) {
     }
 }
 
-int aggregatorReorg(CAggregatorStore* agg,
-                    uint64_t block_height,
-                    uint64_t message_count,
-                    uint64_t log_count) {
+int aggregatorReorg(CAggregatorStore* agg, uint64_t block_height) {
     try {
-        static_cast<AggregatorStore*>(agg)->reorg(block_height, message_count,
-                                                  log_count);
+        static_cast<AggregatorStore*>(agg)->reorg(block_height);
         return true;
     } catch (const std::exception& e) {
         std::cerr << "aggregatorRestoreBlock error: " << e.what() << std::endl;
