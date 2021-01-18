@@ -5,6 +5,8 @@
 
 This folder contains the contracts implemtnation the Arbitrum Optimistic Rollup. The core purpose of the Rollup is to advance the execution of the machine in order to eventually confirm assertions which will lead to withdrawals being processed.
 
+Each Rollup chain has an associated `Bridge` which provides an interface for input and output between the Rollup chain and the L1.
+
 The `RollupCreator` contract coordinates the deployment of an Arbitrum rollup chain including the setup of a proxy to enable upgradability by the owner of the chain. The owner is also able to perform a number of administrative functions without fully upgrading the chain like modifying the list of allowed inboxes and outboxes as well as rolling back the state of the chain.
 
 ## Bridge:
