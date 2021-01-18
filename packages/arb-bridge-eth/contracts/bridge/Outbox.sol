@@ -34,6 +34,7 @@ contract Outbox is CloneFactory, IOutbox {
     bytes1 internal constant MSG_ROOT = 0;
 
     uint256 internal constant SendType_sendTxToL1 = 0;
+    uint256 internal constant SendType_buddyContractResult = 5;
 
     address rollup;
     IBridge bridge;
@@ -54,6 +55,8 @@ contract Outbox is CloneFactory, IOutbox {
         outboxEntryTemplate = ICloneable(new OutboxEntry());
     }
 
+    /// @notice When l2ToL1Sender returns a nonzero address, the message was originated by an L2 account
+    /// When the return value is zero, that means this is a system message
     function l2ToL1Sender() external view override returns (address) {
         return _l2ToL1Sender;
     }
@@ -105,7 +108,7 @@ contract Outbox is CloneFactory, IOutbox {
         uint256 l2Timestamp,
         uint256 amount,
         bytes calldata calldataForL1
-    ) external override {
+    ) external {
         bytes32 userTx =
             keccak256(
                 abi.encodePacked(
@@ -121,6 +124,10 @@ contract Outbox is CloneFactory, IOutbox {
 
         spendOutput(outboxIndex, proof, index, userTx);
 
+        address currentL2Sender = _l2ToL1Sender;
+        uint128 currentL2Block = _l2ToL1Block;
+        uint128 currentL2Timestamp = _l2ToL1Timestamp;
+
         _l2ToL1Sender = l2Sender;
         _l2ToL1Block = uint128(l2Block);
         _l2ToL1Timestamp = uint128(l2Timestamp);
@@ -128,9 +135,45 @@ contract Outbox is CloneFactory, IOutbox {
         (bool success, ) = bridge.executeCall(destAddr, amount, calldataForL1);
         require(success, "CALL_FAILED");
 
+        _l2ToL1Sender = currentL2Sender;
+        _l2ToL1Block = currentL2Block;
+        _l2ToL1Timestamp = currentL2Timestamp;
+    }
+
+    function executeBuddyContractReceipt(
+        uint256 outboxIndex,
+        bytes32[] calldata proof,
+        uint256 index,
+        address l2Contract,
+        bool createdSuccessfully
+    ) external {
+        bytes32 userTx =
+            keccak256(
+                abi.encodePacked(
+                    SendType_buddyContractResult,
+                    uint256(uint160(bytes20(l2Contract))),
+                    createdSuccessfully
+                )
+            );
+
+        spendOutput(outboxIndex, proof, index, userTx);
+
+        address currentL2Sender = _l2ToL1Sender;
         _l2ToL1Sender = address(0);
-        _l2ToL1Block = 0;
-        _l2ToL1Timestamp = 0;
+
+        (bool success, ) =
+            bridge.executeCall(
+                l2Contract,
+                0,
+                abi.encodeWithSignature(
+                    "buddyCreated(address,uint256)",
+                    l2Contract,
+                    createdSuccessfully
+                )
+            );
+        require(success, "CALL_FAILED");
+
+        _l2ToL1Sender = currentL2Sender;
     }
 
     function spendOutput(
