@@ -49,7 +49,7 @@ func ArbOSTestFiles() []string {
 		err := errors.New("failed to get filename")
 		panic(err)
 	}
-	testCaseDir := filepath.Join(filepath.Dir(filename), "../tests/arbos-cases")
+	testCaseDir := filepath.Join(filepath.Dir(filename), "../../arb-os/replayTests")
 	files, err := ioutil.ReadDir(testCaseDir)
 	if err != nil {
 		log.Fatal(err)

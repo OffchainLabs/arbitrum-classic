@@ -24,6 +24,10 @@
 const std::string INT_VAL_LABEL = "Int";
 const std::string TUP_VAL_LABEL = "Tuple";
 const std::string CP_VAL_LABEL = "CodePoint";
+const std::string BUF_LABEL = "Buffer";
+const std::string BUF_ELEM_LABEL = "elem";
+const std::string BUF_LEAF_LABEL = "Leaf";
+const std::string BUF_NODE_LABEL = "Node";
 const std::string CP_INTERNAL_LABEL = "Internal";
 const std::string OPCODE_LABEL = "opcode";
 const std::string OPCODE_SUB_LABEL = "AVMOpcode";
@@ -36,6 +40,41 @@ namespace {
 uint256_t int_value_from_json(const nlohmann::json& value_json) {
     return intx::from_string<uint256_t>(
         "0x" + value_json[INT_VAL_LABEL].get<std::string>());
+}
+
+RawBuffer buffer_value_from_json(const nlohmann::json& buffer_json) {
+    if (!buffer_json.contains(BUF_ELEM_LABEL)) {
+        throw std::runtime_error("buffer must contain elem");
+    }
+    auto elem_json = buffer_json[BUF_ELEM_LABEL];
+    if (elem_json.contains(BUF_LEAF_LABEL)) {
+        auto& leaf_data = elem_json[BUF_LEAF_LABEL];
+        if (!leaf_data.is_array()) {
+            throw std::runtime_error("leaf data must be array");
+        }
+        auto data = std::make_shared<std::vector<uint8_t>>();
+        for (auto& item : leaf_data) {
+            data->push_back(item.get<uint8_t>());
+        }
+        return {std::move(data)};
+    } else if (elem_json.contains(BUF_NODE_LABEL)) {
+        auto& node_data = elem_json[BUF_NODE_LABEL];
+        if (!node_data.is_array()) {
+            throw std::runtime_error("node data must be array");
+        }
+        auto nested_elems = node_data[0];
+        if (!nested_elems.is_array()) {
+            throw std::runtime_error("node data must be array");
+        }
+        auto level = node_data[1].get<int>();
+        auto data = std::make_shared<std::vector<RawBuffer>>();
+        for (auto& item : nested_elems) {
+            data->push_back(buffer_value_from_json(item));
+        }
+        return {std::move(data), level};
+    } else {
+        throw std::runtime_error("unhandled buffer member type");
+    }
 }
 
 value value_from_json(nlohmann::json full_value_json,
@@ -72,6 +111,9 @@ value value_from_json(nlohmann::json full_value_json,
             }
             values.push_back(
                 value{CodePointStub({code.segmentID(), pc}, code[pc])});
+        } else if (value_json.get().contains(BUF_LABEL)) {
+            values.emplace_back(
+                Buffer{buffer_value_from_json(value_json.get()[BUF_LABEL])});
         } else {
             throw std::runtime_error("invalid value type");
         }
@@ -119,6 +161,9 @@ value simple_value_from_json(const nlohmann::json& full_value_json) {
             for (auto it = json_tup.rbegin(); it != json_tup.rend(); ++it) {
                 json_values.push_back(*it);
             }
+        } else if (value_json.get().contains(BUF_LABEL)) {
+            values.emplace_back(
+                Buffer{buffer_value_from_json(value_json.get()[BUF_LABEL])});
         } else {
             throw std::runtime_error("invalid value type");
         }

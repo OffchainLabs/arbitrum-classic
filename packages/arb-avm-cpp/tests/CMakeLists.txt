@@ -19,8 +19,9 @@ project (avm_tests)
 
 set(TEST_CASES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/test_cases.json)
 set(TEST_CONTRACT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/contract.mexe)
-set(ARB_OS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../arbos.mexe)
-set(ARB_OS_TEST_CASES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/arbos-cases)
+set(ARB_OS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../arb-os)
+set(ARB_OS_PATH ${ARB_OS_DIR}/arb_os/arbos.mexe)
+set(ARB_OS_TEST_CASES_PATH ${ARB_OS_DIR}/replayTests)
 set(MACHINE_TEST_CASES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/machine-cases)
 
 configure_file (

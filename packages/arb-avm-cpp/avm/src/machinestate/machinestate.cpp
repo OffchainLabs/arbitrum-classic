@@ -173,34 +173,41 @@ std::vector<unsigned char> MachineState::marshalState() const {
     return buf;
 }
 
-std::vector<unsigned char> makeProof(Buffer &buf, uint64_t loc) {
+std::vector<unsigned char> makeProof(Buffer& buf, uint64_t loc) {
     auto res2 = buf.makeProof(loc);
     return res2;
 }
 
-
-std::vector<unsigned char> makeNormalizationProof(Buffer &buf) {
+std::vector<unsigned char> makeNormalizationProof(Buffer& buf) {
     auto res2 = buf.makeNormalizationProof();
     return res2;
 }
 
-void insertSizes(std::vector<unsigned char> &buf, int sz1, int sz2, int sz3, int sz4) {
+void insertSizes(std::vector<unsigned char>& buf,
+                 int sz1,
+                 int sz2,
+                 int sz3,
+                 int sz4) {
     int acc = 1;
     buf.push_back(static_cast<uint8_t>(acc));
-    acc += sz1/32;
+    acc += sz1 / 32;
     buf.push_back(static_cast<uint8_t>(acc));
-    acc += sz2/32;
+    acc += sz2 / 32;
     buf.push_back(static_cast<uint8_t>(acc));
-    acc += sz3/32;
+    acc += sz3 / 32;
     buf.push_back(static_cast<uint8_t>(acc));
-    acc += sz4/32;
+    acc += sz4 / 32;
     buf.push_back(static_cast<uint8_t>(acc));
     for (int i = 5; i < 32; i++) {
         buf.push_back(0);
     }
 }
 
-void makeSetBufferProof(std::vector<unsigned char> &buf, uint64_t loc, Buffer buffer, uint256_t v, int wordSize) {
+void makeSetBufferProof(std::vector<unsigned char>& buf,
+                        uint64_t loc,
+                        Buffer buffer,
+                        uint256_t v,
+                        int wordSize) {
     Buffer nbuffer = buffer;
     Buffer nbuffer1 = nbuffer;
     bool aligned = true;
@@ -209,7 +216,9 @@ void makeSetBufferProof(std::vector<unsigned char> &buf, uint64_t loc, Buffer bu
             nbuffer1 = nbuffer;
             aligned = false;
         }
-        nbuffer = nbuffer.set(loc + i, static_cast<uint8_t>((v >> ((wordSize-1-i)*8)) & 0xff));
+        nbuffer = nbuffer.set(
+            loc + i,
+            static_cast<uint8_t>((v >> ((wordSize - 1 - i) * 8)) & 0xff));
     }
     auto proof1 = makeProof(buffer, loc);
     auto nproof1 = makeNormalizationProof(nbuffer1);
@@ -219,9 +228,10 @@ void makeSetBufferProof(std::vector<unsigned char> &buf, uint64_t loc, Buffer bu
         buf.insert(buf.end(), proof1.begin(), proof1.end());
         buf.insert(buf.end(), nproof1.begin(), nproof1.end());
     } else {
-        auto proof2 = makeProof(nbuffer1, loc + (wordSize-1));
+        auto proof2 = makeProof(nbuffer1, loc + (wordSize - 1));
         auto nproof2 = makeNormalizationProof(nbuffer);
-        insertSizes(buf, proof1.size(), nproof1.size(), proof2.size(), nproof2.size());
+        insertSizes(buf, proof1.size(), nproof1.size(), proof2.size(),
+                    nproof2.size());
         buf.insert(buf.end(), proof1.begin(), proof1.end());
         buf.insert(buf.end(), nproof1.begin(), nproof1.end());
         buf.insert(buf.end(), proof2.begin(), proof2.end());
@@ -233,17 +243,20 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
     std::vector<unsigned char> buf;
     auto op = loadCurrentInstruction().op;
     auto opcode = op.opcode;
-    if ((opcode < OpCode::GET_BUFFER8 || opcode > OpCode::SET_BUFFER256) && opcode != OpCode::SEND) {
+    if ((opcode < OpCode::GET_BUFFER8 || opcode > OpCode::SET_BUFFER256) &&
+        opcode != OpCode::SEND) {
         return buf;
     }
     if (opcode == OpCode::SEND) {
-        auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0]) : nonstd::get_if<Buffer>(&stack[1]);
+        auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0])
+                                   : nonstd::get_if<Buffer>(&stack[1]);
         if (!buffer) {
             insertSizes(buf, 0, 0, 0, 0);
             return buf;
         }
         // Also need the offset
-        auto size = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate) : nonstd::get_if<uint256_t>(&stack[0]);
+        auto size = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate)
+                                 : nonstd::get_if<uint256_t>(&stack[0]);
         if (!size) {
             insertSizes(buf, 0, 0, 0, 0);
             return buf;
@@ -257,13 +270,15 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
     if (opcode == OpCode::GET_BUFFER8 || opcode == OpCode::GET_BUFFER64 ||
         opcode == OpCode::GET_BUFFER256) {
         // Find the buffer
-        auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0]) : nonstd::get_if<Buffer>(&stack[1]);
+        auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0])
+                                   : nonstd::get_if<Buffer>(&stack[1]);
         if (!buffer) {
             insertSizes(buf, 0, 0, 0, 0);
             return buf;
         }
         // Also need the offset
-        auto offset = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate) : nonstd::get_if<uint256_t>(&stack[0]);
+        auto offset = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate)
+                                   : nonstd::get_if<uint256_t>(&stack[0]);
         if (!offset) {
             insertSizes(buf, 0, 0, 0, 0);
             return buf;
@@ -291,13 +306,15 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
             buf.insert(buf.end(), proof2.begin(), proof2.end());
         }
     } else {
-        auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[1]) : nonstd::get_if<Buffer>(&stack[2]);
+        auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[1])
+                                   : nonstd::get_if<Buffer>(&stack[2]);
         if (!buffer) {
             insertSizes(buf, 0, 0, 0, 0);
             return buf;
         }
         // Also need the offset
-        auto offset = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate) : nonstd::get_if<uint256_t>(&stack[0]);
+        auto offset = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate)
+                                   : nonstd::get_if<uint256_t>(&stack[0]);
         if (!offset) {
             insertSizes(buf, 0, 0, 0, 0);
             return buf;
@@ -306,7 +323,8 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
             insertSizes(buf, 0, 0, 0, 0);
             return buf;
         }
-        auto val = op.immediate ? nonstd::get_if<uint256_t>(&stack[0]) : nonstd::get_if<uint256_t>(&stack[1]);
+        auto val = op.immediate ? nonstd::get_if<uint256_t>(&stack[0])
+                                : nonstd::get_if<uint256_t>(&stack[1]);
         if (!val) {
             insertSizes(buf, 0, 0, 0, 0);
             return buf;
@@ -693,12 +711,7 @@ BlockReason MachineState::runOp(OpCode opcode) {
             /*  System Operations */
             /**********************/
         case OpCode::SEND: {
-            auto send_results = machineoperation::send(*this);
-
-            if (send_results == false) {
-                std::cerr << "Send failure: over size limit" << std::endl;
-            }
-
+            machineoperation::send(*this);
             break;
         }
         case OpCode::INBOX_PEEK:

@@ -22,5 +22,5 @@ func Path() string {
 		logger.Fatal().Msg("Failed to get arbos path")
 	}
 
-	return filepath.Join(filepath.Dir(filename), "../../../arbos.mexe")
+	return filepath.Join(filepath.Dir(filename), "../../arb-os/arb_os/arbos.mexe")
 }
