@@ -468,7 +468,7 @@ void ArbCore::operator()() {
             delivering_message_status = MESSAGES_ERROR;
         }
 
-        delivering_message_status = ArbCore::MESSAGES_EMPTY;
+        delivering_message_status = ArbCore::MESSAGES_SUCCESS;
     }
 
     // Check machine thread
@@ -696,6 +696,11 @@ nonstd::optional<rocksdb::Status> ArbCore::addMessages(
     size_t current_message_index = 0;
     auto current_sequence_number = first_sequence_number;
     auto final_sequence_number = first_sequence_number + messages.size() - 1;
+
+    if (messages.empty()) {
+        // Truncating obsolete messages
+        current_sequence_number = first_sequence_number - 1;
+    }
 
     // Skip any valid messages that we already have in database
     while ((current_sequence_number <= last_inserted_sequence_number) &&
