@@ -66,7 +66,7 @@ yarn deploy:validators  0x2e8aF9f74046D3E55202Fcfb893348316B142230 --password=[p
 Upon deploying a validator, you'll be asked to deposit the staking requirement, 1 Kovan ETH.
 
 The password argument is used to secure the validator keystore. On the first deployment you set the password to any value, and on later deployments you must resubmit the same password.
---->
+-->
 ## Kovan Deployment
 
 All contracts are deployed from https://github.com/OffchainLabs/arbitrum/tree/v0.7.2/packages/arb-bridge-eth/contracts
