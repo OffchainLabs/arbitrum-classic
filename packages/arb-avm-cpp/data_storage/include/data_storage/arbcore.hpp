@@ -22,13 +22,13 @@
 #include <data_storage/checkpoint.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/messageentry.hpp>
-#include <data_storage/messagestore.hpp>
 #include <data_storage/storageresultfwd.hpp>
 #include <data_storage/value/code.hpp>
 #include <data_storage/value/valuecache.hpp>
 
 #include <memory>
 #include <thread>
+#include <utility>
 #include <vector>
 
 namespace rocksdb {
@@ -44,39 +44,41 @@ class ArbCore {
         MESSAGES_EMPTY,
         MESSAGES_READY,
         MESSAGES_NEED_OLDER,
-        MESSAGES_SUCCESS
+        MESSAGES_SUCCESS,
+        MESSAGES_ERROR
     } message_status_enum;
 
     typedef enum {
         MACHINE_NONE,
-        MACHINE_REQUEST_STOP,
-        MACHINE_FINISHED
+        MACHINE_ABORTED,
+        MACHINE_FINISHED,
+        MACHINE_ERROR
     } machine_status_enum;
 
    private:
     std::shared_ptr<DataStorage> data_storage;
-    std::unique_ptr<Machine> machine;
-    std::unique_ptr<MessageStore> message_store;
-    std::shared_ptr<Code> code;
+    std::unique_ptr<Machine> machine{};
+    std::shared_ptr<Code> code{};
     Checkpoint pending_checkpoint;
 
-    // Thread communication
-    std::atomic<message_status_enum> message_status;
-    uint256_t first_sequence_number;
-    uint64_t block_height;
-    std::vector<std::vector<unsigned char>> messages;
-    std::vector<uint256_t> inbox_hashes;
-    uint256_t previous_inbox_hash;
+    // Core thread communication
+    std::atomic<message_status_enum> delivering_message_status{MESSAGES_EMPTY};
+    uint256_t delivering_first_sequence_number;
+    uint64_t delivering_block_height{0};
+    std::vector<std::vector<unsigned char>> delivering_messages;
+    std::vector<uint256_t> delivering_inbox_hashes;
+    uint256_t delivering_previous_inbox_hash;
+    std::string delivering_error_string;
+
+    // Machine thread communication
+    std::atomic<ArbCore::machine_status_enum> machine_status{MACHINE_NONE};
+    std::atomic<bool> machine_abort{false};
+    uint256_t machine_last_sequence_number;
 
    public:
     ArbCore() = delete;
     explicit ArbCore(std::shared_ptr<DataStorage> data_storage_)
-        : data_storage(std::move(data_storage_)),
-          message_store(std::make_unique<MessageStore>(data_storage)),
-          code(std::make_shared<Code>(
-              getNextSegmentID(*makeConstTransaction()))),
-          message_status(MESSAGES_EMPTY),
-          block_height(0) {}
+        : data_storage(std::move(data_storage_)) {}
     void operator()();
     void stopThreads();
     void deliverMessages(
@@ -93,10 +95,12 @@ class ArbCore {
     ValueResult<Checkpoint> getCheckpoint(
         const uint256_t& message_sequence_number) const;
     bool isCheckpointsEmpty() const;
-    uint256_t maxMessageSequenceNumber();
-    DbResult<Checkpoint> getCheckpointAtOrBeforeMessage(
+    uint256_t maxCheckpointGas();
+    DbResult<Checkpoint> getCheckpointAtOrBeforeGas(
         const uint256_t& message_sequence_number);
-    uint256_t reorgToMessageOrBefore(const uint256_t& message_sequence_number);
+    rocksdb::Status reorgToMessageOrBefore(
+        Transaction& tx,
+        const uint256_t& message_sequence_number);
 
     std::unique_ptr<Transaction> makeTransaction();
     std::unique_ptr<const Transaction> makeConstTransaction() const;
@@ -142,9 +146,20 @@ class ArbCore {
     ValueResult<std::vector<unsigned char>> getSend(uint256_t index) const;
     rocksdb::Status saveSend(Transaction& tx,
                              const std::vector<unsigned char>& send);
-    rocksdb::Status saveMessage(Transaction& tx,
-                                const std::vector<unsigned char>& message);
-    ValueResult<std::vector<unsigned char>> getMessage(uint256_t index) const;
+    bool messagesEmpty();
+
+   private:
+    nonstd::optional<rocksdb::Status> addMessages(
+        uint256_t first_sequence_number,
+        uint64_t block_height,
+        const std::vector<std::vector<unsigned char>>& messages,
+        const std::vector<uint256_t>& inbox_hashes,
+        const uint256_t& previous_inbox_hash);
+    nonstd::optional<MessageEntry> getNextMessage();
+    bool deleteMessage(const MessageEntry& entry);
 };
+
+nonstd::optional<rocksdb::Status> deleteLogsStartingAt(Transaction& tx,
+                                                       uint256_t log_index);
 
 #endif /* arbcore_hpp */

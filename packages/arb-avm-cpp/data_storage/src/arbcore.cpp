@@ -25,16 +25,18 @@
 #include <data_storage/value/machine.hpp>
 #include <data_storage/value/value.hpp>
 #include <data_storage/value/valuecache.hpp>
+
 #include <set>
+#include <vector>
 
 namespace {
-constexpr auto initial_slice_label = "initial";
-constexpr auto log_inserted = std::array<char, 1>{-60};
-constexpr auto log_processed = std::array<char, 1>{-61};
-constexpr auto send_inserted = std::array<char, 1>{-62};
-constexpr auto send_processed = std::array<char, 1>{-63};
-constexpr auto message_entry_inserted = std::array<char, 1>{-64};
-constexpr auto message_entry_processed = std::array<char, 1>{-65};
+constexpr auto initial_slice_key = std::array<char, 1>{-10};
+constexpr auto log_inserted_key = std::array<char, 1>{-60};
+constexpr auto log_processed_key = std::array<char, 1>{-61};
+constexpr auto send_inserted_key = std::array<char, 1>{-62};
+constexpr auto send_processed_key = std::array<char, 1>{-63};
+constexpr auto message_entry_inserted_key = std::array<char, 1>{-64};
+constexpr auto message_entry_processed_key = std::array<char, 1>{-65};
 
 ValueResult<Checkpoint> getCheckpointUsingKey(Transaction& tx,
                                               uint256_t message_sequence_number,
@@ -50,25 +52,53 @@ ValueResult<Checkpoint> getCheckpointUsingKey(Transaction& tx,
     return {result.status, parsed_state};
 }
 
+ValueResult<MessageEntry> getMessageEntryUsingKey(
+    Transaction& tx,
+    uint256_t message_sequence_number,
+    rocksdb::Slice key_slice) {
+    auto result = getVectorUsingFamilyAndKey(
+        *tx.transaction, tx.datastorage->messageentry_column.get(), key_slice);
+    if (!result.status.ok()) {
+        return {result.status, {}};
+    }
+
+    auto parsed_state =
+        extractMessageEntry(message_sequence_number, vecToSlice(result.data));
+
+    return {result.status, parsed_state};
+}
+
+ValueResult<MessageEntry> getMessageEntry(Transaction& tx,
+                                          uint256_t message_sequence_number) {
+    std::vector<unsigned char> previous_key;
+    marshal_uint256_t(message_sequence_number, previous_key);
+    return getMessageEntryUsingKey(tx, message_sequence_number,
+                                   vecToSlice(previous_key));
+}
+
 }  // namespace
 
+bool ArbCore::messagesEmpty() {
+    return delivering_message_status == MESSAGES_EMPTY;
+}
+
 // deliverMessages sends messages to core thread.  Caller needs to verify that
-// getMessageStatus return MESSAGES_NONE before calling this function.
+// messagesEmpty() returns true before calling this function.
 void ArbCore::deliverMessages(
-    const uint256_t& first_sequence_number_,
-    const uint64_t block_height_,
-    const std::vector<std::vector<unsigned char>>& messages_,
-    const std::vector<uint256_t>& inbox_hashes_,
-    const uint256_t& previous_inbox_hash_) {
-    if (message_status != MESSAGES_EMPTY) {
+    const uint256_t& first_sequence_number,
+    const uint64_t block_height,
+    const std::vector<std::vector<unsigned char>>& messages,
+    const std::vector<uint256_t>& inbox_hashes,
+    const uint256_t& previous_inbox_hash) {
+    if (delivering_message_status != MESSAGES_EMPTY) {
         throw std::runtime_error("message_status != MESSAGES_EMPTY");
     }
 
-    first_sequence_number = first_sequence_number_;
-    block_height = block_height_;
-    messages = messages_;
-    inbox_hashes = inbox_hashes_;
-    previous_inbox_hash = previous_inbox_hash_;
+    delivering_first_sequence_number = first_sequence_number;
+    delivering_block_height = block_height;
+    delivering_messages = messages;
+    delivering_inbox_hashes = inbox_hashes;
+    delivering_previous_inbox_hash = previous_inbox_hash;
 }
 
 std::unique_ptr<Transaction> ArbCore::makeTransaction() {
@@ -83,9 +113,9 @@ std::unique_ptr<const Transaction> ArbCore::makeConstTransaction() const {
 
 void ArbCore::initialize(const LoadedExecutable& executable) {
     auto tx = makeTransaction();
-    code->addSegment(std::move(executable.code));
-    machine = std::make_unique<Machine>(
-        MachineState{code, std::move(executable.static_val)});
+    code->addSegment(executable.code);
+    machine =
+        std::make_unique<Machine>(MachineState{code, executable.static_val});
     auto res = saveMachine(*tx, *machine);
     if (!res.status.ok()) {
         throw std::runtime_error("failed to save initial machine");
@@ -94,8 +124,9 @@ void ArbCore::initialize(const LoadedExecutable& executable) {
     marshal_uint256_t(machine->hash(), value_data);
     rocksdb::Slice value_slice{reinterpret_cast<const char*>(value_data.data()),
                                value_data.size()};
-    auto s =
-        tx->transaction->Put(rocksdb::Slice(initial_slice_label), value_slice);
+    auto s = tx->transaction->Put(data_storage->state_column.get(),
+                                  vecToSlice(message_entry_processed_key),
+                                  value_slice);
     if (!s.ok()) {
         throw std::runtime_error(
             "failed to save initial machine values into db");
@@ -109,18 +140,18 @@ void ArbCore::initialize(const LoadedExecutable& executable) {
 bool ArbCore::initialized() const {
     auto tx = makeConstTransaction();
     std::string initial_raw;
-    auto s = tx->transaction->GetForUpdate(rocksdb::ReadOptions(),
-                                           rocksdb::Slice(initial_slice_label),
-                                           &initial_raw);
+    auto s = tx->transaction->GetForUpdate(
+        rocksdb::ReadOptions(), data_storage->state_column.get(),
+        vecToSlice(message_entry_processed_key), &initial_raw);
     return s.ok();
 }
 
 std::unique_ptr<Machine> ArbCore::getInitialMachine(ValueCache& value_cache) {
     auto tx = makeConstTransaction();
     std::string initial_raw;
-    auto s = tx->transaction->GetForUpdate(rocksdb::ReadOptions(),
-                                           rocksdb::Slice(initial_slice_label),
-                                           &initial_raw);
+    auto s = tx->transaction->GetForUpdate(
+        rocksdb::ReadOptions(), data_storage->state_column.get(),
+        vecToSlice(message_entry_processed_key), &initial_raw);
     if (!s.ok()) {
         throw std::runtime_error("failed to load initial val");
     }
@@ -152,7 +183,6 @@ void ArbCore::saveCheckpoint() {
 
     // TODO Still need to populate the following:
     // processed_message_accumulator_hash
-    // reorg_index
 
     std::vector<unsigned char> key;
     marshal_uint256_t(pending_checkpoint.arb_gas_used, key);
@@ -160,9 +190,8 @@ void ArbCore::saveCheckpoint() {
     auto serialized_checkpoint = serializeCheckpoint(pending_checkpoint);
     std::string value_str(serialized_checkpoint.begin(),
                           serialized_checkpoint.end());
-    auto put_status = tx->datastorage->txn_db->DB::Put(
-        rocksdb::WriteOptions(), tx->datastorage->checkpoint_column.get(),
-        key_slice, value_str);
+    auto put_status = tx->transaction->Put(
+        tx->datastorage->checkpoint_column.get(), key_slice, value_str);
     if (!put_status.ok()) {
         throw std::runtime_error("error saving machine: " +
                                  put_status.ToString());
@@ -200,28 +229,79 @@ void ArbCore::saveAssertion(uint256_t first_message_sequence_number,
     pending_checkpoint.log_count += assertion.logs.size();
 }
 
-uint256_t ArbCore::reorgToMessageOrBefore(
+rocksdb::Status ArbCore::reorgToMessageOrBefore(
+    Transaction& tx,
     const uint256_t& message_sequence_number) {
-    auto tx = Transaction::makeTransaction(data_storage);
+    // Delete each checkpoint until at or below message_sequence_number
+    auto it = std::unique_ptr<rocksdb::Iterator>(tx.transaction->GetIterator(
+        rocksdb::ReadOptions(), tx.datastorage->checkpoint_column.get()));
 
-    auto result = getCheckpointAtOrBeforeMessage(message_sequence_number);
-    if (!result.status.ok()) {
-        throw std::runtime_error("error getting checkpoint for reorg: " +
-                                 result.status.ToString());
+    // Find first message to delete
+    it->SeekToLast();
+    if (!it->status().ok()) {
+        return it->status();
     }
 
-    // TODO: truncate sends
-    // TODO: cleanup checkpoints and logs to decrement references
+    bool good_checkpoint_found = false;
+    Checkpoint last_deleted_checkpoint;
+    while (it->Valid()) {
+        auto keyBuf = it->key().data();
+        auto gas_key = deserializeUint256t(keyBuf);
 
-    pending_checkpoint = result.data;
-    static_cast<AggregatorStore>(data_storage)
-        .reorg(pending_checkpoint.block_height);
+        std::vector<unsigned char> checkpoint_vector(
+            it->value().data(), it->value().data() + it->value().size());
+        auto checkpoint = extractCheckpoint(gas_key, checkpoint_vector);
 
-    ValueCache value_cache{};
-    machine = getMachineUsingStateKeys(
-        *tx, pending_checkpoint.machine_state_keys, value_cache);
+        if (checkpoint.message_sequence_number_processed >
+            message_sequence_number) {
+            // Obsolete checkpoint, need to delete referenced machine
+            last_deleted_checkpoint = checkpoint;
+            deleteMachineState(tx, checkpoint.machine_state_keys);
 
-    return pending_checkpoint.message_sequence_number_processed;
+            // Delete checkpoint to make sure it isn't used later
+            tx.transaction->Delete(tx.datastorage->log_column.get(), it->key());
+        } else {
+            // Good checkpoint
+            pending_checkpoint = checkpoint;
+            good_checkpoint_found = true;
+            break;
+        }
+
+        it->Next();
+    }
+    it = nullptr;
+
+    if (!good_checkpoint_found) {
+        // Nothing found, start database from scratch.
+        // TODO
+    }
+
+    // Delete logs individually to handle reference counts
+    auto optional_status =
+        deleteLogsStartingAt(tx, pending_checkpoint.log_count + 1);
+    if (optional_status && !optional_status->ok()) {
+        return *optional_status;
+    }
+    std::vector<unsigned char> key;
+    marshal_uint256_t(pending_checkpoint.log_count, key);
+    auto status = updateLastLogInserted(*tx.transaction, vecToSlice(key));
+    if (!status.ok()) {
+        return status;
+    }
+    marshal_uint256_t(pending_checkpoint.send_count, key);
+    status = updateLastSendInserted(*tx.transaction, vecToSlice(key));
+    if (!status.ok()) {
+        return status;
+    }
+
+    marshal_uint256_t(pending_checkpoint.message_sequence_number_processed,
+                      key);
+    status = updateLastMessageEntryProcessed(*tx.transaction, vecToSlice(key));
+    if (!status.ok()) {
+        return status;
+    }
+
+    return rocksdb::Status::OK();
 }
 
 ValueResult<Checkpoint> ArbCore::getCheckpoint(
@@ -236,18 +316,16 @@ ValueResult<Checkpoint> ArbCore::getCheckpoint(
 
 bool ArbCore::isCheckpointsEmpty() const {
     auto tx = Transaction::makeTransaction(data_storage);
-    auto it =
-        std::unique_ptr<rocksdb::Iterator>(tx->datastorage->txn_db->NewIterator(
-            rocksdb::ReadOptions(), tx->datastorage->checkpoint_column.get()));
+    auto it = std::unique_ptr<rocksdb::Iterator>(tx->transaction->GetIterator(
+        rocksdb::ReadOptions(), tx->datastorage->checkpoint_column.get()));
     it->SeekToLast();
     return !it->Valid();
 }
 
-uint256_t ArbCore::maxMessageSequenceNumber() {
+uint256_t ArbCore::maxCheckpointGas() {
     auto tx = Transaction::makeTransaction(data_storage);
-    auto it =
-        std::unique_ptr<rocksdb::Iterator>(tx->datastorage->txn_db->NewIterator(
-            rocksdb::ReadOptions(), tx->datastorage->checkpoint_column.get()));
+    auto it = std::unique_ptr<rocksdb::Iterator>(tx->transaction->GetIterator(
+        rocksdb::ReadOptions(), tx->datastorage->checkpoint_column.get()));
     it->SeekToLast();
     if (it->Valid()) {
         auto keyBuf = it->key().data();
@@ -257,12 +335,11 @@ uint256_t ArbCore::maxMessageSequenceNumber() {
     }
 }
 
-DbResult<Checkpoint> ArbCore::getCheckpointAtOrBeforeMessage(
+DbResult<Checkpoint> ArbCore::getCheckpointAtOrBeforeGas(
     const uint256_t& message_sequence_number) {
     auto tx = Transaction::makeTransaction(data_storage);
-    auto it =
-        std::unique_ptr<rocksdb::Iterator>(tx->datastorage->txn_db->NewIterator(
-            rocksdb::ReadOptions(), tx->datastorage->checkpoint_column.get()));
+    auto it = std::unique_ptr<rocksdb::Iterator>(tx->transaction->GetIterator(
+        rocksdb::ReadOptions(), tx->datastorage->checkpoint_column.get()));
     std::vector<unsigned char> key;
     marshal_uint256_t(message_sequence_number, key);
     auto key_slice = vecToSlice(key);
@@ -375,16 +452,23 @@ Assertion ArbCore::run(
 
 void ArbCore::operator()() {
     std::unique_ptr<std::thread> machine_thread;
-    std::atomic<ArbCore::machine_status_enum> machine_status{MACHINE_NONE};
 
-    if (message_status == MESSAGES_READY) {
+    if (delivering_message_status == MESSAGES_READY) {
         // Add messages
+        auto add_status = addMessages(
+            delivering_first_sequence_number, delivering_block_height,
+            delivering_messages, delivering_inbox_hashes,
+            delivering_previous_inbox_hash);
+        if (!add_status) {
+            // Messages from previous block invalid because of reorg so request
+            // older messages
+            delivering_message_status = MESSAGES_NEED_OLDER;
+        } else if (!add_status->ok()) {
+            delivering_error_string = add_status->ToString();
+            delivering_message_status = MESSAGES_ERROR;
+        }
 
-        // Discard reorged checkpoints
-
-        // Set ArbCore::MESSAGES_NEED_OLDER if needed
-
-        message_status = ArbCore::MESSAGES_EMPTY;
+        delivering_message_status = ArbCore::MESSAGES_EMPTY;
     }
 
     // Check machine thread
@@ -403,8 +487,6 @@ void ArbCore::operator()() {
         // Start execution of machine with next block of messages
     }
 }
-
-void machineThread(std::mutex mutex, std::atomic<bool>&) {}
 
 void ArbCore::stopThreads() {}
 
@@ -492,76 +574,280 @@ ValueResult<uint256_t> ArbCore::lastLogInserted(
     rocksdb::Transaction& transaction) {
     return getUint256UsingFamilyAndKey(transaction,
                                        data_storage->state_column.get(),
-                                       vecToSlice(log_inserted));
+                                       vecToSlice(log_inserted_key));
 }
 rocksdb::Status ArbCore::updateLastLogInserted(
     rocksdb::Transaction& transaction,
     rocksdb::Slice value_slice) {
     return transaction.Put(data_storage->state_column.get(),
-                           vecToSlice(log_inserted), value_slice);
+                           vecToSlice(log_inserted_key), value_slice);
 }
 
 ValueResult<uint256_t> ArbCore::lastLogProcessed(
     rocksdb::Transaction& transaction) {
     return getUint256UsingFamilyAndKey(transaction,
                                        data_storage->state_column.get(),
-                                       vecToSlice(log_processed));
+                                       vecToSlice(log_processed_key));
 }
 rocksdb::Status ArbCore::updateLastLogProcessed(
     rocksdb::Transaction& transaction,
     rocksdb::Slice value_slice) {
     return transaction.Put(data_storage->state_column.get(),
-                           vecToSlice(log_processed), value_slice);
+                           vecToSlice(log_processed_key), value_slice);
 }
 
 ValueResult<uint256_t> ArbCore::lastSendInserted(
     rocksdb::Transaction& transaction) {
     return getUint256UsingFamilyAndKey(transaction,
                                        data_storage->state_column.get(),
-                                       vecToSlice(send_inserted));
+                                       vecToSlice(send_inserted_key));
 }
 rocksdb::Status ArbCore::updateLastSendInserted(
     rocksdb::Transaction& transaction,
     rocksdb::Slice value_slice) {
     return transaction.Put(data_storage->state_column.get(),
-                           vecToSlice(send_inserted), value_slice);
+                           vecToSlice(send_inserted_key), value_slice);
 }
 
 ValueResult<uint256_t> ArbCore::lastSendProcessed(
     rocksdb::Transaction& transaction) {
     return getUint256UsingFamilyAndKey(transaction,
                                        data_storage->state_column.get(),
-                                       vecToSlice(send_processed));
+                                       vecToSlice(send_processed_key));
 }
 rocksdb::Status ArbCore::updateLastSendProcessed(
     rocksdb::Transaction& transaction,
     rocksdb::Slice value_slice) {
     return transaction.Put(data_storage->state_column.get(),
-                           vecToSlice(send_processed), value_slice);
+                           vecToSlice(send_processed_key), value_slice);
 }
 
 ValueResult<uint256_t> ArbCore::lastMessageEntryInserted(
     rocksdb::Transaction& transaction) {
     return getUint256UsingFamilyAndKey(transaction,
                                        data_storage->state_column.get(),
-                                       vecToSlice(message_entry_inserted));
+                                       vecToSlice(message_entry_inserted_key));
 }
 rocksdb::Status ArbCore::updateLastMessageEntryInserted(
     rocksdb::Transaction& transaction,
     rocksdb::Slice value_slice) {
     return transaction.Put(data_storage->state_column.get(),
-                           vecToSlice(message_entry_inserted), value_slice);
+                           vecToSlice(message_entry_inserted_key), value_slice);
 }
 
 ValueResult<uint256_t> ArbCore::lastMessageEntryProcessed(
     rocksdb::Transaction& transaction) {
     return getUint256UsingFamilyAndKey(transaction,
                                        data_storage->state_column.get(),
-                                       vecToSlice(message_entry_processed));
+                                       vecToSlice(message_entry_processed_key));
 }
 rocksdb::Status ArbCore::updateLastMessageEntryProcessed(
     rocksdb::Transaction& transaction,
     rocksdb::Slice value_slice) {
     return transaction.Put(data_storage->state_column.get(),
-                           vecToSlice(message_entry_processed), value_slice);
+                           vecToSlice(message_entry_processed_key),
+                           value_slice);
+}
+
+// addMessages stores all messages from given block into database.
+// The last message in the list is flagged as the last message in the block.
+// Returns nonstd::nullopt when caller needs to provide messages from earlier
+// block.
+nonstd::optional<rocksdb::Status> ArbCore::addMessages(
+    const uint256_t first_sequence_number,
+    const uint64_t block_height,
+    const std::vector<std::vector<unsigned char>>& messages,
+    const std::vector<uint256_t>& inbox_hashes,
+    const uint256_t& previous_inbox_hash) {
+    if (messages.size() != inbox_hashes.size()) {
+        throw std::runtime_error(
+            "Message and hash vector size mismatch in addMessages");
+    }
+
+    auto tx = Transaction::makeTransaction(data_storage);
+
+    // Get the last message sequence number that was added to database
+    auto last_result = lastMessageEntryInserted(*tx->transaction);
+    if (last_result.status.ok()) {
+        return last_result.status;
+    }
+    auto last_inserted_sequence_number = last_result.data;
+
+    if (first_sequence_number > 0) {
+        if (first_sequence_number > last_inserted_sequence_number + 1) {
+            // Not allowed to skip message sequence numbers
+            return nonstd::nullopt;
+        }
+
+        // Check that previous_inbox_hash matches hash from previous message
+        auto previous_sequence_number = first_sequence_number - 1;
+        auto previous_result = getMessageEntry(*tx, previous_sequence_number);
+        if (!previous_result.status.ok()) {
+            return previous_result.status;
+        }
+
+        if (previous_result.data.inbox_hash != previous_inbox_hash) {
+            // Previous inbox doesn't match so reorg happened and
+            // caller needs to try again with messages from earlier block
+            return nonstd::nullopt;
+        }
+    }
+
+    size_t current_message_index = 0;
+    auto current_sequence_number = first_sequence_number;
+    auto final_sequence_number = first_sequence_number + messages.size() - 1;
+
+    // Skip any valid messages that we already have in database
+    while ((current_sequence_number <= last_inserted_sequence_number) &&
+           (current_message_index < messages.size())) {
+        auto existing_message_entry =
+            getMessageEntry(*tx, current_sequence_number);
+        if (!existing_message_entry.status.ok()) {
+            return existing_message_entry.status;
+        }
+        if (existing_message_entry.data.inbox_hash !=
+            inbox_hashes[current_message_index]) {
+            // Entry doesn't match because of reorg
+            break;
+        }
+
+        current_message_index++;
+        current_sequence_number = first_sequence_number + current_message_index;
+    }
+
+    if (current_sequence_number <= last_inserted_sequence_number) {
+        // Reorg occurred
+
+        if (machine_last_sequence_number >= current_sequence_number) {
+            // Machine may be running with out of date messages
+            machine_abort = true;
+        }
+
+        auto last_valid_sequence_number = current_sequence_number - 1;
+        std::vector<unsigned char> last_valid_key;
+        marshal_uint256_t(last_valid_sequence_number, last_valid_key);
+
+        // Truncate MessageEntries to last valid message
+        updateLastMessageEntryInserted(*tx->transaction,
+                                       vecToSlice(last_valid_key));
+
+        // Reorg checkpoint and everything else
+        auto reorg_status =
+            reorgToMessageOrBefore(*tx, last_valid_sequence_number);
+    }
+
+    while (current_message_index < messages.size()) {
+        // Encode key
+        std::vector<unsigned char> key;
+        marshal_uint256_t(current_sequence_number, key);
+
+        // Encode message entry
+        auto messageEntry = MessageEntry{
+            current_sequence_number, inbox_hashes[current_message_index],
+            block_height, current_sequence_number == final_sequence_number,
+            (messages[current_message_index])};
+        auto serialized_messageentry = serializeMessageEntry(messageEntry);
+
+        // Save message entry into database
+        auto put_status = tx->transaction->Put(
+            tx->datastorage->messageentry_column.get(), vecToSlice(key),
+            vecToSlice(serialized_messageentry));
+        if (!put_status.ok()) {
+            return put_status;
+        }
+
+        current_message_index++;
+        current_sequence_number =
+            first_sequence_number + current_sequence_number;
+    }
+
+    return tx->commit();
+}
+
+// deleteLogsStartingAt deletes the given index along with any
+// newer logs. Returns nonstd::nullopt if nothing deleted.
+nonstd::optional<rocksdb::Status> deleteLogsStartingAt(Transaction& tx,
+                                                       uint256_t log_index) {
+    auto it = std::unique_ptr<rocksdb::Iterator>(tx.transaction->GetIterator(
+        rocksdb::ReadOptions(), tx.datastorage->log_column.get()));
+
+    // Find first message to delete
+    std::vector<unsigned char> key;
+    marshal_uint256_t(log_index, key);
+    it->Seek(vecToSlice(key));
+    if (it->status().IsNotFound()) {
+        // Nothing to delete
+        return nonstd::nullopt;
+    }
+    if (!it->status().ok()) {
+        return it->status();
+    }
+
+    while (it->Valid()) {
+        // Remove reference to value
+        auto value_hash_ptr = reinterpret_cast<const char*>(it->value().data());
+        deleteValue(tx, deserializeUint256t(value_hash_ptr));
+
+        it->Next();
+    }
+
+    return rocksdb::Status::OK();
+}
+
+// getNextMessage returns the next message to handle.
+nonstd::optional<MessageEntry> ArbCore::getNextMessage() {
+    auto tx = Transaction::makeTransaction(data_storage);
+    auto it = std::unique_ptr<rocksdb::Iterator>(tx->transaction->GetIterator(
+        rocksdb::ReadOptions(), tx->datastorage->messageentry_column.get()));
+
+    it->SeekToFirst();
+    if (!it->Valid()) {
+        return nonstd::nullopt;
+    }
+
+    auto key = reinterpret_cast<const char*>(it->key().data());
+    return extractMessageEntry(deserializeUint256t(key), it->value());
+}
+
+// deleteMessage deletes the provided message only if it has not changed in DB
+bool ArbCore::deleteMessage(const MessageEntry& entry) {
+    auto tx = Transaction::makeTransaction(data_storage);
+
+    std::vector<unsigned char> key;
+    marshal_uint256_t(entry.sequence_number, key);
+    auto key_slice = vecToSlice(key);
+    std::string value;
+    auto get_status = tx->transaction->GetForUpdate(
+        rocksdb::ReadOptions(), tx->datastorage->messageentry_column.get(),
+        key_slice, &value);
+    if (!get_status.ok()) {
+        std::cerr << "In deleteMessage get: " << get_status.ToString()
+                  << std::endl;
+        return false;
+    }
+
+    auto db_entry =
+        extractMessageEntry(entry.sequence_number, rocksdb::Slice(value));
+    if (entry != db_entry) {
+        // Entry changed, reorg probably occurred
+        return false;
+    }
+
+    // Delete message entry
+    auto delete_status = tx->transaction->Delete(
+        tx->datastorage->messageentry_column.get(), key_slice);
+    if (!delete_status.ok()) {
+        std::cerr << "In deleteMessage delete: " << delete_status.ToString()
+                  << std::endl;
+        return false;
+    }
+
+    auto commit_status = tx->commit();
+    if (!commit_status.ok()) {
+        std::cerr << "In deleteMessage commit: " << commit_status.ToString()
+                  << std::endl;
+        return false;
+    }
+
+    return true;
 }
