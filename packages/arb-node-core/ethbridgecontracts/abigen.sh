@@ -28,7 +28,7 @@ INBOX=$PREFIX/rollup/Inbox.sol:Inbox
 
 INODE=$PREFIX/rollup/INode.sol:INode
 OUTBOX_ENTRY=$PREFIX/rollup/Outbox.sol:OutboxEntry
-ROLLUP_LIBS=$INBOX,$OUTBOX,$ROLLUP,$ROLLUP_LIB,$INODE,$OUTBOX_ENTRY,$PREFIX/rollup/RollupCore.sol:RollupCore,$PREFIX/rollup/RollupEventInbox.sol:RollupEventInbox
+ROLLUP_LIBS=$INBOX,$OUTBOX,$ROLLUP,$ROLLUP_LIB,$INODE,$OUTBOX_ENTRY,$PREFIX/rollup/RollupCore.sol:RollupCore,$PREFIX/rollup/RollupEventBridge.sol:RollupEventBridge
 
 IGNORED_INTERFACES=$PREFIX/interfaces/IERC20.sol:IERC20
 
