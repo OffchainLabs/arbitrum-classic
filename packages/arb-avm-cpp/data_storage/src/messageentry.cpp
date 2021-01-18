@@ -19,12 +19,8 @@
 #include "value/referencecount.hpp"
 #include "value/utils.hpp"
 
-MessageEntry extractMessageEntry(const rocksdb::Slice key,
+MessageEntry extractMessageEntry(uint256_t sequence_number,
                                  const rocksdb::Slice value) {
-    // Extract key
-    const char* keyptr = key.data();
-    auto sequence_number = deserializeUint256t(keyptr);
-
     // Extract message entry
     auto entry_vector =
         std::vector<unsigned char>{value.data(), value.data() + value.size()};

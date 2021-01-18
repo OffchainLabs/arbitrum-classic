@@ -29,7 +29,6 @@ set(LIB_HEADERS
   include/data_storage/inboxmessage.hpp
   include/data_storage/keyvaluestore.hpp
   include/data_storage/messageentry.hpp
-  include/data_storage/messagestore.hpp
   include/data_storage/storageresult.hpp
   include/data_storage/storageresultfwd.hpp
   include/data_storage/value/code.hpp
@@ -53,7 +52,6 @@ set(LIB_SOURCES
   src/inboxmessage.cpp
   src/keyvaluestore.cpp
   src/messageentry.cpp
-  src/messagestore.cpp
   src/value/code.cpp
   src/value/machine.cpp
   src/value/referencecount.cpp
