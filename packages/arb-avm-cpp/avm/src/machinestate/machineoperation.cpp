@@ -867,16 +867,16 @@ void debug(MachineState& m) {
     ++m.pc;
 }
 
-bool send(MachineState& m) {
+void send(MachineState& m) {
     m.stack.prepForMod(2);
 
     auto msg_size = assumeInt64(assumeInt(m.stack[0]));
     Buffer& buf = assumeBuffer(m.stack[1]);
 
-    bool success;
-
     if (msg_size > send_size_limit || buf.lastIndex() >= msg_size) {
-        success = false;
+        m.state = Status::Error;
+        std::cerr << "Send failure: over size limit" << std::endl;
+        return;
     } else {
         auto vec = std::vector<uint8_t>();
         for (uint64_t i = 0; i <= buf.lastIndex(); i++) {
@@ -886,11 +886,7 @@ bool send(MachineState& m) {
         m.stack.popClear();
         m.stack.popClear();
         ++m.pc;
-
-        success = true;
     }
-
-    return success;
 }
 
 BlockReason inboxPeekOp(MachineState& m) {
@@ -1014,11 +1010,12 @@ void getbuffer64(MachineState& m) {
     m.stack.prepForMod(2);
     auto offset = assumeInt64(assumeInt(m.stack[0]));
     Buffer& md = assumeBuffer(m.stack[1]);
-    if (offset + 7 < offset) throw int_out_of_bounds{};
+    if (offset + 7 < offset)
+        throw int_out_of_bounds{};
     uint64_t res = 0;
     for (int i = 0; i < 8; i++) {
         res = res << 8;
-        res = res | md.get(offset+i);
+        res = res | md.get(offset + i);
     }
     m.stack.popClear();
     m.stack.popClear();
@@ -1030,12 +1027,14 @@ void getbuffer256(MachineState& m) {
     m.stack.prepForMod(2);
     auto offset = assumeInt64(assumeInt(m.stack[0]));
     Buffer& md = assumeBuffer(m.stack[1]);
-    if (offset + 31 < offset) throw int_out_of_bounds{};
+    if (offset + 31 < offset)
+        throw int_out_of_bounds{};
     uint256_t res = 0;
     std::vector<uint8_t> data(32);
     if ((offset + 31) % ALIGN < offset % ALIGN) {
-        data = md.get_many(offset, ALIGN-(offset%ALIGN));
-        auto data2 = md.get_many(offset + ALIGN-(offset%ALIGN), 32-(ALIGN-(offset%ALIGN)));
+        data = md.get_many(offset, ALIGN - (offset % ALIGN));
+        auto data2 = md.get_many(offset + ALIGN - (offset % ALIGN),
+                                 32 - (ALIGN - (offset % ALIGN)));
         data.insert(data.end(), data2.begin(), data2.end());
     } else {
         data = md.get_many(offset, 32);
@@ -1068,14 +1067,16 @@ void setbuffer64(MachineState& m) {
     m.stack.prepForMod(3);
     auto offset = assumeInt64(assumeInt(m.stack[0]));
     auto val = assumeInt64(assumeInt(m.stack[1]));
-    if (offset + 7 < offset) throw int_out_of_bounds{};
-    // The initial value is copied here, there might be a way to optimize that away
+    if (offset + 7 < offset)
+        throw int_out_of_bounds{};
+    // The initial value is copied here, there might be a way to optimize that
+    // away
     Buffer res = assumeBuffer(m.stack[2]);
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();
     for (int i = 0; i < 8; i++) {
-        res = res.set(offset+7-i, val&0xff);
+        res = res.set(offset + 7 - i, val & 0xff);
         val = val >> 8;
     }
     m.stack.push(res);
@@ -1085,24 +1086,28 @@ void setbuffer64(MachineState& m) {
 void setbuffer256(MachineState& m) {
     m.stack.prepForMod(3);
     auto offset = assumeInt64(assumeInt(m.stack[0]));
-    if (offset + 31 < offset) throw int_out_of_bounds{};
+    if (offset + 31 < offset)
+        throw int_out_of_bounds{};
     auto val = assumeInt(m.stack[1]);
-    // The initial value is copied here, there might be a way to optimize that away
+    // The initial value is copied here, there might be a way to optimize that
+    // away
     Buffer res = assumeBuffer(m.stack[2]);
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();
     auto buf = std::vector<uint8_t>(32);
     for (int i = 0; i < 32; i++) {
-        buf[31-i] = static_cast<uint8_t>(val&0xff);
+        buf[31 - i] = static_cast<uint8_t>(val & 0xff);
         val = val >> 8;
     }
 
     if ((offset + 31) % ALIGN < offset % ALIGN) {
-        auto data1 = std::vector<uint8_t>(buf.begin(), buf.begin() + (ALIGN-(offset%ALIGN)));
-        auto data2 = std::vector<uint8_t>(buf.begin() + (ALIGN-(offset%ALIGN)), buf.end());
+        auto data1 = std::vector<uint8_t>(
+            buf.begin(), buf.begin() + (ALIGN - (offset % ALIGN)));
+        auto data2 = std::vector<uint8_t>(
+            buf.begin() + (ALIGN - (offset % ALIGN)), buf.end());
         res = res.set_many(offset, data1);
-        res = res.set_many(offset + ALIGN-(offset%ALIGN), data2);
+        res = res.set_many(offset + ALIGN - (offset % ALIGN), data2);
     } else {
         res = res.set_many(offset, buf);
     }

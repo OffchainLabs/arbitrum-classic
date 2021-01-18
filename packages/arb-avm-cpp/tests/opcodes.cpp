@@ -898,8 +898,10 @@ TEST_CASE("OPCODE: SEND opcode is correct") {
     SECTION("send") {
         // TODO: fill in send test
         MachineState m;
-        m.stack.push(
-            Tuple{uint256_t{1}, uint256_t{2345}, uint256_t{1}, uint256_t{4}});
+        Buffer buf{};
+        buf.set(0, 200);
+        m.stack.push(std::move(buf));
+        m.stack.push(uint256_t{1});
 
         m.runOp(OpCode::SEND);
         REQUIRE(m.stack.stacksize() == 0);
@@ -1337,8 +1339,8 @@ TEST_CASE("OPCODE: setbuffer64 opcode") {
         MachineState mach;
         Buffer buf;
         buf = buf.set(123, 9);
-        buf = buf.set(123+1, 8);
-        buf = buf.set(123+7, 7);
+        buf = buf.set(123 + 1, 8);
+        buf = buf.set(123 + 7, 7);
         mach.stack.push(Buffer());
         mach.stack.push(uint256_t{0x0908000000000007L});
         mach.stack.push(uint256_t{123});
@@ -1352,22 +1354,23 @@ TEST_CASE("OPCODE: setbuffer256 opcode") {
         MachineState mach;
         Buffer buf;
         buf = buf.set(123, 9);
-        buf = buf.set(123+1, 8);
-        buf = buf.set(123+7, 7);
-        buf = buf.set(123+8, 9);
-        buf = buf.set(123+1+8, 8);
-        buf = buf.set(123+7+8, 7);
-        buf = buf.set(123+16, 9);
-        buf = buf.set(123+1+16, 8);
-        buf = buf.set(123+7+16, 7);
-        buf = buf.set(123+24, 9);
-        buf = buf.set(123+1+24, 8);
-        buf = buf.set(123+7+24, 7);
+        buf = buf.set(123 + 1, 8);
+        buf = buf.set(123 + 7, 7);
+        buf = buf.set(123 + 8, 9);
+        buf = buf.set(123 + 1 + 8, 8);
+        buf = buf.set(123 + 7 + 8, 7);
+        buf = buf.set(123 + 16, 9);
+        buf = buf.set(123 + 1 + 16, 8);
+        buf = buf.set(123 + 7 + 16, 7);
+        buf = buf.set(123 + 24, 9);
+        buf = buf.set(123 + 1 + 24, 8);
+        buf = buf.set(123 + 7 + 24, 7);
         mach.stack.push(Buffer());
-        mach.stack.push(hexToInt("0908000000000007090800000000000709080000000000070908000000000007"));
+        mach.stack.push(
+            hexToInt("090800000000000709080000000000070908000000000007090800000"
+                     "0000007"));
         mach.stack.push(uint256_t{123});
         mach.runOp(OpCode::SET_BUFFER256);
         REQUIRE(mach.stack[0] == value{buf});
     }
 }
-
