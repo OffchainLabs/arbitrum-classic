@@ -19,6 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "../libraries/Cloneable.sol";
+import "../libraries/SafeMath.sol";
 
 import "./IChallenge.sol";
 import "../rollup/IRollup.sol";
@@ -30,6 +31,8 @@ import "../arch/Marshaling.sol";
 import "../libraries/MerkleLib.sol";
 
 contract Challenge is Cloneable, IChallenge {
+    using SafeMath for uint256;
+
     enum Kind { Uninitialized, InboxConsistency, InboxDelta, Execution, StoppedShort }
 
     enum Turn { NoChallenge, Asserter, Challenger }
@@ -383,7 +386,7 @@ contract Challenge is Cloneable, IChallenge {
         );
 
         require(
-            _gasUsedBefore < _challengedSegmentStart + _challengedSegmentLength,
+            _gasUsedBefore < _challengedSegmentStart.add(_challengedSegmentLength),
             "invalid segment length"
         );
 
@@ -399,7 +402,7 @@ contract Challenge is Cloneable, IChallenge {
         updateBisectionRoot(
             _chainHashes,
             _challengedSegmentStart,
-            _challengedSegmentStart + _challengedSegmentLength - _gasUsedBefore
+            _challengedSegmentStart.add(_challengedSegmentLength).sub(_gasUsedBefore)
         );
         respondedExecution(_challengedSegmentLength);
         emit Bisected(
@@ -432,7 +435,7 @@ contract Challenge is Cloneable, IChallenge {
             );
         verifySegmentProof(bisectionHash, _merkleNodes, _merkleRoute);
 
-        require(_gasUsedBefore >= _challengedSegmentStart + _challengedSegmentLength);
+        require(_gasUsedBefore >= _challengedSegmentStart.add(_challengedSegmentLength));
         require(beforeChainHash != _oldEndHash);
         emit ConstraintWin();
         _currentWin();
@@ -614,7 +617,7 @@ contract Challenge is Cloneable, IChallenge {
             _chainHashes[0],
             _chainHashes[1]
         );
-        segmentStart += chunkSize;
+        segmentStart = segmentStart.add(chunkSize);
         chunkSize = ChallengeLib.otherSegmentSize(_challengedSegmentLength, bisectionCount);
         for (uint256 i = 1; i < bisectionCount; i++) {
             hashes[i] = ChallengeLib.bisectionChunkHash(
@@ -623,7 +626,7 @@ contract Challenge is Cloneable, IChallenge {
                 _chainHashes[i],
                 _chainHashes[i + 1]
             );
-            segmentStart += chunkSize;
+            segmentStart = segmentStart.add(chunkSize);
         }
         challengeState = MerkleLib.generateRoot(hashes);
     }
@@ -643,7 +646,7 @@ contract Challenge is Cloneable, IChallenge {
 
     function respondedNonExecution() private {
         responded();
-        deadlineBlock = block.number + challengePeriodBlocks + 1;
+        deadlineBlock = block.number.add(challengePeriodBlocks).add(1);
     }
 
     function respondedExecution(uint256 gas) private {
@@ -660,8 +663,8 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function setExecutionDeadline(uint256 gas) private {
-        uint256 timeToCheck = (gas + arbGasLimitPerBlock - 1) / arbGasLimitPerBlock;
-        deadlineBlock = block.number + challengePeriodBlocks + timeToCheck;
+        uint256 timeToCheck = gas.add(arbGasLimitPerBlock).sub(1).div(arbGasLimitPerBlock);
+        deadlineBlock = block.number.add(challengePeriodBlocks).add(timeToCheck);
     }
 
     function _currentWin() private {
@@ -778,14 +781,14 @@ contract Challenge is Cloneable, IChallenge {
         // are equal or not
         return
             ChallengeLib.assertionHash(
-                _initialState[0] + gasUsed,
+                _initialState[0].add(gasUsed),
                 ChallengeLib.assertionRestHash(
                     proofFields[2],
                     proofFields[1],
                     proofFields[3],
-                    _initialState[1] + (_machineFields[1] == proofFields[3] ? 0 : 1),
+                    _initialState[1].add((_machineFields[1] == proofFields[3] ? 0 : 1)),
                     proofFields[4],
-                    _initialState[2] + (_machineFields[2] == proofFields[4] ? 0 : 1)
+                    _initialState[2].add((_machineFields[2] == proofFields[4] ? 0 : 1))
                 )
             );
     }

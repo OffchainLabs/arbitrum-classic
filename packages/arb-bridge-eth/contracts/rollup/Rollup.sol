@@ -319,7 +319,10 @@ contract Rollup is RollupCore, Pausable, IRollup {
         removeOldZombies(0);
 
         // All non-zombie stakers are staked on this node
-        require(node.stakerCount() == stakerCount() + countStakedZombies(node), "NOT_ALL_STAKED");
+        require(
+            node.stakerCount() == stakerCount().add(countStakedZombies(node)),
+            "NOT_ALL_STAKED"
+        );
 
         bytes32 sendAcc = RollupLib.generateLastMessageHash(sendsData, sendLengths);
         require(node.confirmData() == RollupLib.confirmHash(sendAcc, logAcc), "CONFIRM_DATA");
@@ -411,7 +414,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
             "PREV_STATE_HASH"
         );
 
-        uint256 timeSinceLastNode = block.number - assertion.beforeProposedBlock;
+        uint256 timeSinceLastNode = block.number.sub(assertion.beforeProposedBlock);
         // Verify that assertion meets the minimum Delta time requirement
         require(timeSinceLastNode >= minimumAssertionPeriod(), "TIME_DELTA");
 
@@ -419,22 +422,25 @@ contract Rollup is RollupCore, Pausable, IRollup {
         require(
             // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
             assertion.inboxMessagesRead >=
-                assertion.beforeInboxMaxCount - assertion.beforeInboxCount ||
+                assertion.beforeInboxMaxCount.sub(assertion.beforeInboxCount) ||
                 // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
-                assertion.gasUsed >= timeSinceLastNode * arbGasSpeedLimitPerBlock ||
+                assertion.gasUsed >= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock) ||
                 assertion.sendCount == MAX_SEND_COUNT,
             "TOO_SMALL"
         );
 
         // Don't allow an assertion to use above a maximum amount of gas
-        require(assertion.gasUsed <= timeSinceLastNode * arbGasSpeedLimitPerBlock * 4, "TOO_LARGE");
+        require(
+            assertion.gasUsed <= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock).mul(4),
+            "TOO_LARGE"
+        );
 
-        uint256 deadlineBlock = block.number + challengePeriodBlocks;
+        uint256 deadlineBlock = block.number.add(challengePeriodBlocks);
         uint256 prevDeadlineBlock = prevNode.deadlineBlock();
         if (deadlineBlock < prevDeadlineBlock) {
             deadlineBlock = prevDeadlineBlock;
         }
-        deadlineBlock += assertion.gasUsed / arbGasSpeedLimitPerBlock;
+        deadlineBlock = deadlineBlock.add(assertion.gasUsed.div(arbGasSpeedLimitPerBlock));
 
         rollupEventBridge.nodeCreated(
             nodeNum,
@@ -446,7 +452,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
         // inboxMaxCount must be greater than beforeInboxCount since we can't have read past the end of the inbox
         (uint256 inboxMaxCount, bytes32 inboxMaxAcc) = bridge.inboxInfo();
         require(
-            assertion.inboxMessagesRead <= inboxMaxCount - assertion.beforeInboxCount,
+            assertion.inboxMessagesRead <= inboxMaxCount.sub(assertion.beforeInboxCount),
             "INBOX_PAST_END"
         );
 
@@ -581,12 +587,12 @@ contract Rollup is RollupCore, Pausable, IRollup {
         uint256 remainingLoserStake = amountStaked(losingStaker);
         uint256 winnerStake = amountStaked(winningStaker);
         if (remainingLoserStake > winnerStake) {
-            remainingLoserStake -= reduceStakeTo(losingStaker, winnerStake);
+            remainingLoserStake = remainingLoserStake.sub(reduceStakeTo(losingStaker, winnerStake));
         }
 
         uint256 amountWon = remainingLoserStake / 2;
         increaseStakeBy(winningStaker, amountWon);
-        remainingLoserStake -= amountWon;
+        remainingLoserStake = remainingLoserStake.sub(amountWon);
         clearChallenge(winningStaker);
 
         increaseStakeBy(owner, remainingLoserStake);
@@ -647,13 +653,12 @@ contract Rollup is RollupCore, Pausable, IRollup {
         }
         INode firstUnresolved = getNode(firstUnresolvedNodeNum);
 
-        uint256 MAX_INT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
         uint256 firstUnresolvedDeadline = firstUnresolved.deadlineBlock();
         if (block.number < firstUnresolvedDeadline) {
             return baseStake;
         }
-        uint256 firstUnresolvedAge = block.number - firstUnresolvedDeadline;
-        uint256 challengePeriodsPassed = firstUnresolvedAge / challengePeriodBlocks;
+        uint256 firstUnresolvedAge = block.number.sub(firstUnresolvedDeadline);
+        uint256 challengePeriodsPassed = firstUnresolvedAge.div(challengePeriodBlocks);
         if (challengePeriodsPassed > 255) {
             challengePeriodsPassed = 255;
         }
@@ -662,8 +667,8 @@ contract Rollup is RollupCore, Pausable, IRollup {
             multiplier = 1;
         }
 
-        if (multiplier > MAX_INT / baseStake) {
-            return MAX_INT;
+        if (multiplier > type(uint256).max.div(baseStake)) {
+            return type(uint256).max;
         }
 
         return baseStake * multiplier;
@@ -702,7 +707,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
      * @notice Verify that no stake has been placed within the last challenge period
      */
     function requireNoRecentStake() public view {
-        require(block.number - lastStakeBlock() >= challengePeriodBlocks, "RECENT_STAKE");
+        require(block.number.sub(lastStakeBlock()) >= challengePeriodBlocks, "RECENT_STAKE");
     }
 
     /**

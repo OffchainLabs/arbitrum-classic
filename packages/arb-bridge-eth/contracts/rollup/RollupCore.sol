@@ -20,7 +20,11 @@ pragma solidity ^0.6.11;
 
 import "./INode.sol";
 
+import "../libraries/SafeMath.sol";
+
 contract RollupCore {
+    using SafeMath for uint256;
+
     struct Zombie {
         address stakerAddress;
         uint256 latestStakedNode;
@@ -269,7 +273,7 @@ contract RollupCore {
      */
     function increaseStakeBy(address stakerAddress, uint256 amountAdded) internal {
         Staker storage staker = _stakerMap[stakerAddress];
-        staker.amountStaked += amountAdded;
+        staker.amountStaked = staker.amountStaked.add(amountAdded);
     }
 
     /**
@@ -282,9 +286,9 @@ contract RollupCore {
         Staker storage staker = _stakerMap[stakerAddress];
         uint256 current = staker.amountStaked;
         require(target <= current, "TOO_LITTLE_STAKE");
-        uint256 amountWithdrawn = current - target;
+        uint256 amountWithdrawn = current.sub(target);
         staker.amountStaked = target;
-        _withdrawableFunds[stakerAddress] += amountWithdrawn;
+        _withdrawableFunds[stakerAddress] = _withdrawableFunds[stakerAddress].add(amountWithdrawn);
         return amountWithdrawn;
     }
 
@@ -322,7 +326,9 @@ contract RollupCore {
      */
     function withdrawStaker(address stakerAddress) internal {
         Staker storage staker = _stakerMap[stakerAddress];
-        _withdrawableFunds[stakerAddress] += staker.amountStaked;
+        _withdrawableFunds[stakerAddress] = _withdrawableFunds[stakerAddress].add(
+            staker.amountStaked
+        );
         deleteStaker(stakerAddress);
     }
 
