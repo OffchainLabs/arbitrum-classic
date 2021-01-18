@@ -197,7 +197,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
 
     /**
      * @notice Begin the process of trunacting the chain back to the given node
-     * @dev maxItems is used to make sure this doesn't excide the max gas cost
+     * @dev maxItems is used to make sure this doesn't exceed the max gas cost
      * @param latestNodeCreated Index that we want to be the latest unresolved node
      * @param maxItems Maximum number of items to eliminate to eliminate
      */
@@ -216,7 +216,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
 
     /**
      * @notice Continue the process of trunacting the chain back to the given node
-     * @dev maxItems is used to make sure this doesn't excide the max gas cost
+     * @dev maxItems is used to make sure this doesn't exceed the max gas cost
      * @param maxItems Maximum number of items to eliminate to eliminate
      */
     function continueTruncatingNodes(uint256 maxItems) public onlyOwner whenPaused {
