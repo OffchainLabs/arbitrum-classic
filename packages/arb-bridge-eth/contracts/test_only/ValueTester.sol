@@ -36,14 +36,6 @@ contract ValueTester {
         return (offset, value.hash());
     }
 
-    function bytesToBytestackHash(
-        bytes memory data,
-        uint256 startOffset,
-        uint256 dataLength
-    ) public pure returns (bytes32) {
-        return Marshaling.bytesToBytestack(data, startOffset, dataLength).hash();
-    }
-
     function hashTuplePreImage(bytes32 innerHash, uint256 valueSize) public pure returns (bytes32) {
         return Hashing.hashTuplePreImage(innerHash, valueSize);
     }

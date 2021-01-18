@@ -190,48 +190,6 @@ library Marshaling {
         require(false, "invalid typecode");
     }
 
-    /**
-     * @notice Convert data[startOffset:startOffset + dataLength] into an Arbitrum bytestack value
-     * @dev The bytestack object is a series of nested 2 tuples terminating in an empty tuple, ex. (size, (data1, (data2, (data3, ()))))
-     * @param data Data object containing a superset of the data we want to serialize
-     * @param startOffset Offset in data where the data we want to convert beings
-     * @param dataLength Number of bytes that we want to include in the bytestack result
-     */
-    function bytesToBytestack(
-        bytes memory data,
-        uint256 startOffset,
-        uint256 dataLength
-    ) internal pure returns (Value.Data memory) {
-        uint256 wholeChunkCount = dataLength / 32;
-
-        // tuple code + size + (for each chunk tuple code + chunk val) + empty tuple code
-        Value.Data memory stack = Value.newEmptyTuple();
-        Value.Data[] memory vals = new Value.Data[](2);
-
-        // Break each full chunk of the data into 32 byte ints an interatively construct nested tuples including the data
-        for (uint256 i = 0; i < wholeChunkCount; i++) {
-            vals[0] = Value.newInt(data.toUint(startOffset + i * 32));
-            vals[1] = stack;
-            stack = Hashing.getTuplePreImage(vals);
-        }
-
-        // If the data didn't evenly divide into chunks. We take the remaining data and add it to the bytestack
-        if (dataLength % 32 != 0) {
-            // Grab the last 32 byte of the data and then shift it over to get only the relevent value. This way we avoid reading beyond the end of the data
-            uint256 lastVal = data.toUint(startOffset + dataLength - 32);
-            lastVal <<= (32 - (dataLength % 32)) * 8;
-            vals[0] = Value.newInt(lastVal);
-            vals[1] = stack;
-            stack = Hashing.getTuplePreImage(vals);
-        }
-
-        // Include the length of the included data at the top level of the tuple stack
-        vals[0] = Value.newInt(dataLength);
-        vals[1] = stack;
-
-        return Hashing.getTuplePreImage(vals);
-    }
-
     function extractUint8(bytes memory data, uint256 startOffset)
         private
         pure
