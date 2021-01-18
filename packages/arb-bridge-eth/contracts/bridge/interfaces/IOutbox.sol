@@ -34,16 +34,4 @@ interface IOutbox {
 
     function processOutgoingMessages(bytes calldata sendsData, uint256[] calldata sendLengths)
         external;
-
-    function executeTransaction(
-        uint256 outboxIndex,
-        bytes32[] calldata proof,
-        uint256 index,
-        address l2Sender,
-        address destAddr,
-        uint256 l2Block,
-        uint256 l2Timestamp,
-        uint256 amount,
-        bytes calldata calldataForL1
-    ) external;
 }
