@@ -33,7 +33,6 @@ struct Checkpoint {
 
     uint256_t message_sequence_number_processed;
     uint256_t processed_message_accumulator_hash;
-    uint64_t reorg_index{};
 
     uint64_t block_height{};
     uint64_t send_count{};
@@ -44,7 +43,6 @@ struct Checkpoint {
     Checkpoint(uint256_t arb_gas_used,
                uint256_t message_sequence_number_processed,
                uint256_t processed_message_accumulator_hash,
-               uint64_t reorg_index,
                uint64_t block_height,
                uint64_t send_count,
                uint64_t log_count,
@@ -53,7 +51,6 @@ struct Checkpoint {
           message_sequence_number_processed(message_sequence_number_processed),
           processed_message_accumulator_hash(
               processed_message_accumulator_hash),
-          reorg_index(reorg_index),
           block_height(block_height),
           send_count(send_count),
           log_count(log_count),
