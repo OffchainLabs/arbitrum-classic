@@ -573,6 +573,11 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
     }
 
     function executeSideloadInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        if (!val1.isInt()) {
+            handleOpcodeError(context);
+            return;
+        }
         Value.Data[] memory values = new Value.Data[](0);
         pushVal(context.stack, Value.newTuple(values));
     }
@@ -853,7 +858,7 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
         } else if (opCode == OP_STOP) {
             return (0, 0, 10, executeStopInsn);
         } else if (opCode == OP_SETGAS) {
-            return (1, 0, 0, executeSetGasInsn);
+            return (1, 0, 1, executeSetGasInsn);
         } else if (opCode == OP_PUSHGAS) {
             return (0, 0, 1, executePushGasInsn);
         } else if (opCode == OP_ERR_CODE_POINT) {
