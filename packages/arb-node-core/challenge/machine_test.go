@@ -14,23 +14,19 @@
  * limitations under the License.
  */
 
-package ethbridgemachine
+package challenge
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/pkg/errors"
 	"math/big"
 	"testing"
@@ -38,45 +34,17 @@ import (
 
 func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
 	backend, pks := test.SimulatedBackend()
-	ctx := context.Background()
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth := bind.NewKeyedTransactor(pks[0])
-	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	machineTesterAddr, machineTx, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
-		return ethbridgetestcontracts.DeployMachineTester(auth, client)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	_, _, machineTester, err := ethbridgetestcontracts.DeployMachineTester(auth, client)
+	test.FailIfError(t, err)
 	client.Commit()
-
-	_, err = ethbridge.WaitForReceiptWithResults(
-		ctx,
-		client,
-		auth.From,
-		machineTx,
-		"deployedMachineTester",
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	deployedMachineTester, err := ethbridgetestcontracts.NewMachineTester(machineTesterAddr, client)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return deployedMachineTester
+	return machineTester
 }
 
 func TestDeserializeMachine(t *testing.T) {
 	machineTester := getTester(t)
-	machine, err := loader.LoadMachineFromFile(arbos.Path(), true, "cpp")
+	machine, err := cmachine.New(arbos.Path())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -460,7 +460,7 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
                 dataHash := keccak256(add(add(proof, 32), dataStart), dataLength)
             }
 
-            context.messageAcc = keccak256(abi.encodePacked(context.messageAcc, dataHash));
+            context.sendAcc = keccak256(abi.encodePacked(context.sendAcc, dataHash));
         }
         // If we didn't pass the message data, the buffer must have been longer than the length param passed
         require(

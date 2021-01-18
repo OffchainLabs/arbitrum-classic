@@ -21,12 +21,13 @@ ROLLUP=$PREFIX/rollup/Rollup.sol:Rollup
 ROLLUP_CREATOR=$PREFIX/rollup/RollupCreator.sol:RollupCreator
 OUTBOX=$PREFIX/rollup/Outbox.sol:Outbox
 INBOX=$PREFIX/rollup/Inbox.sol:Inbox
-MESSAGES=$PREFIX/rollup/Messages.sol:Messages
+MESSAGES=$PREFIX/bridge/Messages.sol:Messages
 NODE=$PREFIX/rollup/Node.sol:Node
 OUTBOX_ENTRY=$PREFIX/rollup/Outbox.sol:OutboxEntry
 ROLLUP_LIBS=$INBOX,$OUTBOX,$ROLLUP_CREATOR,$ROLLUP,$ROLLUP_LIB,$MESSAGES,$NODE,$OUTBOX_ENTRY
 IGNORED_MORE=$IGNORED,$ROLLUP_LIBS
 abigen --sol=$PREFIX/test_only/ChallengeTester.sol --pkg=$PACKAGE --out=challengeTester.go --exc=$IGNORED_MORE
+abigen --sol=$PREFIX/test_only/MachineTester.sol --pkg=$PACKAGE --out=machineTester.go --exc=$IGNORED_MORE
 abigen --sol=$PREFIX/arch/OneStepProof.sol --pkg=$PACKAGE --out=onestepproof.go --exc=$IGNORED_MORE
 abigen --sol=$PREFIX/arch/OneStepProof2.sol --pkg=$PACKAGE --out=onestepproof2.go --exc=$IGNORED_MORE
 abigen --sol=$PREFIX/rollup/NodeFactory.sol --pkg=$PACKAGE --out=nodefactory.go --exc=$IGNORED_MORE

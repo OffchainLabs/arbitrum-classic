@@ -54,6 +54,7 @@ func New(codeFile string) (*Machine, error) {
 		return nil, errors.Errorf("error creating machine from file %s", codeFile)
 	}
 	ret := &Machine{cMachine}
+
 	runtime.SetFinalizer(ret, cdestroyVM)
 	C.free(unsafe.Pointer(cFilename))
 	return ret, nil

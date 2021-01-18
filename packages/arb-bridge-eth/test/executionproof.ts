@@ -28,20 +28,19 @@ import * as fs from 'fs'
 
 const { utils } = ethers
 
-interface Assertion {
-  NumGas: number
-  BeforeMachineHash: number[]
-  AfterMachineHash: number[]
-  BeforeInboxHash: number[]
-  AfterInboxHash: number[]
-  FirstMessageHash: number[]
-  LastMessageHash: number[]
-  FirstLogHash: number[]
-  LastLogHash: number[]
+interface ExecutionCut {
+  GasUsed: number
+  InboxDelta: BytesLike
+  MachineState: BytesLike
+  SendAcc: BytesLike
+  SendCount: BytesLike
+  LogAcc: BytesLike
+  LogCount: BytesLike
 }
 
 interface Proof {
-  Assertion: Assertion
+  BeforeCut: ExecutionCut
+  AfterCut: ExecutionCut
   Proof: string
   BufferProof: string
 }
@@ -52,21 +51,15 @@ let ospTester2: BufferProofTester
 async function executeStep(proof: Proof): Promise<ContractTransaction> {
   const proofData = Buffer.from(proof.Proof, 'base64')
   const bufferProofData = Buffer.from(proof.BufferProof || '', 'base64')
+  const machineFields: [BytesLike, BytesLike, BytesLike] = [
+    proof.BeforeCut.InboxDelta,
+    proof.BeforeCut.SendAcc,
+    proof.BeforeCut.LogAcc,
+  ]
   return bufferProofData.length == 0
-    ? await ospTester.executeStepTest(
-        [
-          proof.Assertion.AfterInboxHash,
-          proof.Assertion.FirstMessageHash,
-          proof.Assertion.FirstLogHash,
-        ],
-        proofData
-      )
+    ? await ospTester.executeStepTest(machineFields, proofData)
     : await ospTester2.executeStepTest(
-        [
-          proof.Assertion.AfterInboxHash,
-          proof.Assertion.FirstMessageHash,
-          proof.Assertion.FirstLogHash,
-        ],
+        machineFields,
         proofData,
         bufferProofData
       )
@@ -84,8 +77,18 @@ describe('OneStepProof', function () {
   })
   const files = fs.readdirSync('./test/proofs')
   for (const filename of files) {
+    if (!filename.endsWith('json')) {
+      continue
+    }
     const file = fs.readFileSync('./test/proofs/' + filename)
-    const data = JSON.parse(file.toString()) as Proof[]
+    let data: Proof[]
+    try {
+      data = JSON.parse(file.toString()) as Proof[]
+    } catch (e) {
+      console.log(`Failed to load ${file}`)
+      throw e
+    }
+
     describe(`proofs from ${filename}`, function () {
       const receipts: TransactionReceipt[] = []
       const opcodes: number[] = []
@@ -108,7 +111,13 @@ describe('OneStepProof', function () {
           const receipt = receipts[i]
           const opcode = opcodes[i]
           const proof = data[i]
-          const message = `Opcode ${opcode}`
+
+          let message = `Opcode ${opcode}`
+          if (i > 0) {
+            message = `Opcode ${opcode.toString(16)}, Prev Opcode ${opcodes[
+              i - 1
+            ].toString(16)}`
+          }
           const ev = ospTester.interface.parseLog(
             receipt.logs[receipt.logs.length - 1]
           )
@@ -121,21 +130,23 @@ describe('OneStepProof', function () {
           }
           // console.log("opcode", opcode, fields)
           expect(parsedEv.args.fields[0], message).to.equal(
-            utils.hexlify(proof.Assertion.BeforeMachineHash)
+            utils.hexlify(proof.BeforeCut.MachineState)
           )
           expect(parsedEv.args.fields[1], message).to.equal(
-            utils.hexlify(proof.Assertion.AfterMachineHash)
+            utils.hexlify(proof.AfterCut.MachineState)
           )
           expect(parsedEv.args.fields[2], message).to.equal(
-            utils.hexlify(proof.Assertion.AfterInboxHash)
+            utils.hexlify(proof.AfterCut.InboxDelta)
           )
           expect(parsedEv.args.fields[3], message).to.equal(
-            utils.hexlify(proof.Assertion.LastLogHash)
+            utils.hexlify(proof.AfterCut.SendAcc)
           )
           expect(parsedEv.args.fields[4], message).to.equal(
-            utils.hexlify(proof.Assertion.LastMessageHash)
+            utils.hexlify(proof.AfterCut.LogAcc)
           )
-          expect(parsedEv.args.gas, message).to.equal(proof.Assertion.NumGas)
+          expect(parsedEv.args.gas, message).to.equal(
+            proof.AfterCut.GasUsed - proof.BeforeCut.GasUsed
+          )
         }
       })
 

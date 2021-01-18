@@ -161,7 +161,7 @@ abstract contract OneStepProofCommon {
                 Machine.hash(context.startMachine),
                 Machine.hash(context.afterMachine),
                 context.inboxDelta,
-                context.messageAcc,
+                context.sendAcc,
                 context.logAcc
             ]
         );
@@ -187,7 +187,7 @@ abstract contract OneStepProofCommon {
         Machine.Data startMachine;
         Machine.Data afterMachine;
         bytes32 inboxDelta;
-        bytes32 messageAcc;
+        bytes32 sendAcc;
         bytes32 logAcc;
         uint64 gas;
         ValueStack stack;
