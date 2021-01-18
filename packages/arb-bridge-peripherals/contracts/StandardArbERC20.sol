@@ -1,0 +1,63 @@
+// SPDX-License-Identifier: Apache-2.0
+
+/*
+ * Copyright 2020, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+pragma solidity ^0.6.11;
+
+import "./ArbERC20Bridge.sol";
+import "./OZERC20.sol";
+import "arb-bridge-eth/contracts/libraries/Cloneable.sol";
+
+import "arbos-contracts/contracts/ArbSys.sol";
+
+contract StandardArbERC20 is ERC20, Cloneable {
+    ArbERC20Bridge public bridge;
+    address public l1Address;
+
+    modifier onlyBridge {
+        require(msg.sender == address(bridge), "ONLY_BRIDGE");
+        _;
+    }
+
+    function initialize(ArbERC20Bridge _bridge, address _l1Address) external {
+        require(address(bridge) != address(0), "ALREADY_INIT");
+        bridge = _bridge;
+        l1Address = _l1Address;
+        _decimals = 18;
+    }
+
+    function updateName(string calldata newName) external onlyBridge {
+        _name = newName;
+    }
+
+    function updateSymbol(string calldata newSymbol) external onlyBridge {
+        _symbol = newSymbol;
+    }
+
+    function updateDecimals(uint8 newDecimals) external onlyBridge {
+        _decimals = newDecimals;
+    }
+
+    function mint(address account, uint256 amount) external onlyBridge {
+        _mint(account, amount);
+    }
+
+    function withdraw(address destination, uint256 amount) external {
+        _burn(msg.sender, amount);
+        bridge.withdraw(destination, amount);
+    }
+}

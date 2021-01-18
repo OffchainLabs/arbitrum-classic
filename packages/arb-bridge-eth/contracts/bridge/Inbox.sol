@@ -26,9 +26,13 @@ import "./Messages.sol";
 contract Inbox is IInbox {
     uint8 internal constant ETH_TRANSFER = 0;
     uint8 internal constant L2_MSG = 3;
-    uint8 internal constant L2_CONTRACT_PAIR = 5;
+    uint8 internal constant L1MessageType_buddyDeploy = 5;
+    uint8 internal constant L1MessageType_L2FundedByL1 = 8;
 
-    IBridge bridge;
+    uint8 internal constant L2MessageType_unsignedEOATx = 0;
+    uint8 internal constant L2MessageType_unsignedContractTx = 1;
+
+    IBridge public override bridge;
 
     constructor(IBridge _bridge) public {
         bridge = _bridge;
@@ -64,9 +68,65 @@ contract Inbox is IInbox {
     ) external override {
         require(isContract(msg.sender), "must be called by contract");
         _deliverMessage(
-            L2_CONTRACT_PAIR,
+            L1MessageType_buddyDeploy,
             msg.sender,
             abi.encodePacked(maxGas, gasPriceBid, payment, contractData)
+        );
+    }
+
+    function sendL1FundedTransaction(
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        uint256 sequenceNumber,
+        address destAddr,
+        bytes calldata data
+    ) external payable {
+        _deliverMessage(
+            L1MessageType_L2FundedByL1,
+            msg.sender,
+            abi.encodePacked(
+                L2MessageType_unsignedEOATx,
+                maxGas,
+                gasPriceBid,
+                sequenceNumber,
+                uint256(uint160(bytes20(destAddr))),
+                msg.value,
+                data
+            )
+        );
+    }
+
+    function sendL1FundedContractTransaction(
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        address destAddr,
+        bytes calldata data
+    ) external payable override {
+        _deliverMessage(
+            L1MessageType_L2FundedByL1,
+            msg.sender,
+            abi.encodePacked(
+                L2MessageType_unsignedContractTx,
+                maxGas,
+                gasPriceBid,
+                uint256(uint160(bytes20(destAddr))),
+                msg.value,
+                data
+            )
+        );
+    }
+
+    function depositEth(address destAddr) external payable {
+        _deliverMessage(
+            L1MessageType_L2FundedByL1,
+            msg.sender,
+            abi.encodePacked(
+                L2MessageType_unsignedContractTx,
+                uint256(0),
+                uint256(0),
+                uint256(uint160(bytes20(destAddr))),
+                msg.value
+            )
         );
     }
 
