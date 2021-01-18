@@ -35,4 +35,13 @@ interface IInbox {
         uint256 payment,
         bytes calldata contractData
     ) external;
+
+    function sendL1FundedContractTransaction(
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        address destAddr,
+        bytes calldata data
+    ) external payable;
+
+    function bridge() external view returns (address);
 }

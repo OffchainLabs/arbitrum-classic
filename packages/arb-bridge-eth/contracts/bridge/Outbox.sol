@@ -165,11 +165,7 @@ contract Outbox is CloneFactory, IOutbox {
             bridge.executeCall(
                 l2Contract,
                 0,
-                abi.encodeWithSignature(
-                    "buddyCreated(address,uint256)",
-                    l2Contract,
-                    createdSuccessfully
-                )
+                abi.encodeWithSignature("buddyContractResult(bool)", createdSuccessfully)
             );
         require(success, "CALL_FAILED");
 
