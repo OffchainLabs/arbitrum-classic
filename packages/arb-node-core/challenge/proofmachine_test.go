@@ -57,8 +57,8 @@ type ExecutionCutJSON struct {
 type proofData struct {
 	BeforeCut   ExecutionCutJSON
 	AfterCut    ExecutionCutJSON
-	Proof       []byte
-	BufferProof []byte
+	Proof       hexutil.Bytes
+	BufferProof hexutil.Bytes
 }
 
 func generateProofCases(contract string) ([]*proofData, error) {
@@ -89,7 +89,7 @@ func generateProofCases(contract string) ([]*proofData, error) {
 		if err != nil {
 			return nil, err
 		}
-		mach.PrintState()
+		//mach.PrintState()
 		bproof, err := mach.MarshalBufferProof()
 		fmt.Printf("Got buffer proof %v\n", len(bproof))
 		if err != nil {

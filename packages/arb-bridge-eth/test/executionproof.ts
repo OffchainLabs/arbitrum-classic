@@ -49,19 +49,17 @@ let ospTester: OneStepProofTester
 let ospTester2: BufferProofTester
 
 async function executeStep(proof: Proof): Promise<ContractTransaction> {
-  const proofData = Buffer.from(proof.Proof, 'base64')
-  const bufferProofData = Buffer.from(proof.BufferProof || '', 'base64')
   const machineFields: [BytesLike, BytesLike, BytesLike] = [
     proof.BeforeCut.InboxDelta,
     proof.BeforeCut.SendAcc,
     proof.BeforeCut.LogAcc,
   ]
-  return bufferProofData.length == 0
-    ? await ospTester.executeStepTest(machineFields, proofData)
+  return proof.BufferProof == '0x'
+    ? await ospTester.executeStepTest(machineFields, proof.Proof)
     : await ospTester2.executeStepTest(
         machineFields,
-        proofData,
-        bufferProofData
+        proof.Proof,
+        proof.BufferProof
       )
 }
 
