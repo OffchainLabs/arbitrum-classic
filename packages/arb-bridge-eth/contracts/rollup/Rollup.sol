@@ -52,6 +52,10 @@ contract Rollup is RollupCore, Pausable, IRollup {
     address public owner;
     ProxyAdmin public admin;
 
+    uint256 latestNodeToTruncateTo;
+    uint256 nextStakerToTruncate;
+    bool truncating;
+
     modifier onlyOwner {
         require(msg.sender == owner, "ONLY_OWNER");
         _;
@@ -187,23 +191,70 @@ contract Rollup is RollupCore, Pausable, IRollup {
      * @notice Resume interaction with the rollup contract
      */
     function resume() external onlyOwner {
+        require(!truncating, "STILL_TRUNCATING");
         _unpause();
     }
 
     /**
-     * @notice Truncate the pending nodes done to the given index
-     * @param _latestNodeCreated New latest node after the truncation
+     * @notice Begin the process of trunacting the chain back to the given node
+     * @dev maxItems is used to make sure this doesn't excide the max gas cost
+     * @param latestNodeCreated Index that we want to be the latest unresolved node
+     * @param maxItems Maximum number of items to eliminate to eliminate
      */
-    function truncateNodes(uint256 _latestNodeCreated) external onlyOwner {
-        uint256 oldLatestNodeCreated = latestNodeCreated();
-        require(_latestNodeCreated < oldLatestNodeCreated, "TOO_NEW");
-        require(_latestNodeCreated >= firstUnresolvedNode() - 1, "TOO_OLD");
+    function beginTruncatingNodes(uint256 latestNodeCreated, uint256 maxItems)
+        external
+        onlyOwner
+        whenPaused
+    {
+        require(!truncating, "ALREADY_TRUNCATING");
+        require(latestNodeCreated < latestNodeCreated(), "TOO_NEW");
+        require(latestNodeCreated >= firstUnresolvedNode() - 1, "TOO_OLD");
+        latestNodeToTruncateTo = latestNodeCreated;
+        truncating = true;
+        continueTruncatingNodes(maxItems);
+    }
 
-        for (uint256 i = oldLatestNodeCreated; i >= _latestNodeCreated; i--) {
-            INode node = getNode(i);
-            node.destroy();
+    /**
+     * @notice Continue the process of trunacting the chain back to the given node
+     * @dev maxItems is used to make sure this doesn't excide the max gas cost
+     * @param maxItems Maximum number of items to eliminate to eliminate
+     */
+    function continueTruncatingNodes(uint256 maxItems) public onlyOwner whenPaused {
+        require(truncating, "NOT_TRUNCATING");
+        uint256 target = latestNodeToTruncateTo;
+
+        uint256 stakerIndex = nextStakerToTruncate;
+        uint256 stakers = stakerCount();
+        while (maxItems > 0 && stakerIndex < stakers) {
+            address stakerAddress = getStakerAddress(stakerIndex);
+            uint256 latestStakedNode = latestStakedNode(stakerAddress);
+            while (maxItems > 0 && latestStakedNode > target) {
+                INode node = getNode(latestStakedNode);
+                latestStakedNode = node.prev();
+                maxItems--;
+            }
+            stakerUpdateLatestStakedNode(stakerAddress, latestStakedNode);
+
+            if (latestStakedNode > target) {
+                nextStakerToTruncate = stakerIndex;
+                return;
+            }
+            stakerIndex++;
         }
-        updateLatestNodeCreated(_latestNodeCreated);
+        nextStakerToTruncate = stakerIndex;
+
+        uint256 latest;
+        for (latest = latestNodeCreated(); maxItems > 0 && latest > target; latest--) {
+            INode node = getNode(latest);
+            node.destroy();
+            maxItems--;
+        }
+        updateLatestNodeCreated(latest);
+        if (latest == target) {
+            latestNodeToTruncateTo = 0;
+            nextStakerToTruncate = 0;
+            truncating = false;
+        }
     }
 
     /**

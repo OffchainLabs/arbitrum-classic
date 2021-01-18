@@ -327,6 +327,16 @@ contract RollupCore {
     }
 
     /**
+     * @notice Update the latest staked node of the staker at the given addresss
+     * @param stakerAddress Address of the staker to move
+     * @param latest New latest node the staker is staked on
+     */
+    function stakerUpdateLatestStakedNode(address stakerAddress, uint256 latest) internal {
+        Staker storage staker = _stakerMap[stakerAddress];
+        staker.latestStakedNode = latest;
+    }
+
+    /**
      * @notice Advance the given staker to the given node
      * @param stakerAddress Address of the staker adding their stake
      * @param nodeNum Index of the node to stake on
