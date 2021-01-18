@@ -198,18 +198,18 @@ contract Rollup is RollupCore, Pausable, IRollup {
     /**
      * @notice Begin the process of trunacting the chain back to the given node
      * @dev maxItems is used to make sure this doesn't exceed the max gas cost
-     * @param latestNodeCreated Index that we want to be the latest unresolved node
+     * @param newLatestNodeCreated Index that we want to be the latest unresolved node
      * @param maxItems Maximum number of items to eliminate to eliminate
      */
-    function beginTruncatingNodes(uint256 latestNodeCreated, uint256 maxItems)
+    function beginTruncatingNodes(uint256 newLatestNodeCreated, uint256 maxItems)
         external
         onlyOwner
         whenPaused
     {
         require(!truncating, "ALREADY_TRUNCATING");
-        require(latestNodeCreated < latestNodeCreated(), "TOO_NEW");
-        require(latestNodeCreated >= firstUnresolvedNode() - 1, "TOO_OLD");
-        latestNodeToTruncateTo = latestNodeCreated;
+        require(newLatestNodeCreated < latestNodeCreated(), "TOO_NEW");
+        require(newLatestNodeCreated >= firstUnresolvedNode() - 1, "TOO_OLD");
+        latestNodeToTruncateTo = newLatestNodeCreated;
         truncating = true;
         continueTruncatingNodes(maxItems);
     }
