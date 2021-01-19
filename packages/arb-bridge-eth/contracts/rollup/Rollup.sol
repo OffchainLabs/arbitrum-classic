@@ -38,7 +38,8 @@ contract Rollup is RollupCore, Pausable, IRollup {
     // TODO: Configure this value based on the cost of sends
     uint8 internal constant MAX_SEND_COUNT = 100;
     // Rollup Config
-    uint256 public challengePeriodBlocks;
+    uint256 public confirmPeriodBlocks;
+    uint256 public extraChallengeTimeBlocks;
     uint256 public arbGasSpeedLimitPerBlock;
     uint256 public baseStake;
     address public stakeToken;
@@ -61,29 +62,27 @@ contract Rollup is RollupCore, Pausable, IRollup {
         _;
     }
 
+    // connectedContracts = [admin, bridge, outbox, rollupEventBridge, challengeFactory, nodeFactory]
     function initialize(
-        address _outbox,
-        address _rollupEventBridge,
         bytes32 _machineHash,
-        uint256 _challengePeriodBlocks,
+        uint256 _confirmPeriodBlocks,
+        uint256 _extraChallengeTimeBlocks,
         uint256 _arbGasSpeedLimitPerBlock,
         uint256 _baseStake,
         address _stakeToken,
         address _owner,
-        address _bridge,
-        address _challengeFactory,
-        address _nodeFactory,
-        bytes memory _extraConfig,
-        address _admin
+        bytes calldata _extraConfig,
+        address[6] calldata connectedContracts
     ) external override {
-        bridge = IBridge(_bridge);
-        rollupEventBridge = RollupEventBridge(_rollupEventBridge);
-        outbox = IOutbox(_outbox);
-        bridge.setOutbox(_outbox, true);
-        bridge.setInbox(_rollupEventBridge, true);
+        bridge = IBridge(connectedContracts[1]);
+        outbox = IOutbox(connectedContracts[2]);
+        bridge.setOutbox(connectedContracts[2], true);
+        rollupEventBridge = RollupEventBridge(connectedContracts[3]);
+        bridge.setInbox(connectedContracts[3], true);
 
         rollupEventBridge.rollupInitialized(
-            _challengePeriodBlocks,
+            _confirmPeriodBlocks,
+            _extraChallengeTimeBlocks,
             _arbGasSpeedLimitPerBlock,
             _baseStake,
             _stakeToken,
@@ -91,9 +90,24 @@ contract Rollup is RollupCore, Pausable, IRollup {
             _extraConfig
         );
 
-        challengeFactory = IChallengeFactory(_challengeFactory);
-        nodeFactory = INodeFactory(_nodeFactory);
+        challengeFactory = IChallengeFactory(connectedContracts[4]);
+        nodeFactory = INodeFactory(connectedContracts[5]);
 
+        INode node = createInitialNode(_machineHash);
+        initializeCore(node);
+
+        confirmPeriodBlocks = _confirmPeriodBlocks;
+        extraChallengeTimeBlocks = _extraChallengeTimeBlocks;
+        arbGasSpeedLimitPerBlock = _arbGasSpeedLimitPerBlock;
+        baseStake = _baseStake;
+        stakeToken = _stakeToken;
+        owner = _owner;
+        admin = ProxyAdmin(connectedContracts[0]);
+
+        emit RollupCreated(_machineHash);
+    }
+
+    function createInitialNode(bytes32 _machineHash) private returns (INode) {
         bytes32 state =
             RollupLib.nodeStateHash(
                 block.number, // block proposed
@@ -105,7 +119,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
                 0, // log count
                 1 // inbox max count includes the initialization message
             );
-        INode node =
+        return
             INode(
                 nodeFactory.createNode(
                     state,
@@ -115,16 +129,6 @@ contract Rollup is RollupCore, Pausable, IRollup {
                     0 // deadline block (not challengeable)
                 )
             );
-        initializeCore(node);
-
-        challengePeriodBlocks = _challengePeriodBlocks;
-        arbGasSpeedLimitPerBlock = _arbGasSpeedLimitPerBlock;
-        baseStake = _baseStake;
-        stakeToken = _stakeToken;
-        owner = _owner;
-        admin = ProxyAdmin(_admin);
-
-        emit RollupCreated(_machineHash);
     }
 
     /**
@@ -442,15 +446,13 @@ contract Rollup is RollupCore, Pausable, IRollup {
             "TOO_LARGE"
         );
 
-        uint256 deadlineBlock = block.number.add(challengePeriodBlocks);
-        uint256 prevDeadlineBlock = prevNode.deadlineBlock();
-        if (deadlineBlock < prevDeadlineBlock) {
-            deadlineBlock = prevDeadlineBlock;
-        }
-        // Set dealine rounding up to the nearest block
-        deadlineBlock = deadlineBlock.add(
-            assertion.gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock)
-        );
+        // Set deadline rounding up to the nearest block
+        uint256 checkTime =
+            assertion.gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock);
+        uint256 deadlineBlock =
+            SafeMath.max(block.number.add(confirmPeriodBlocks), prevNode.deadlineBlock()).add(
+                checkTime
+            );
 
         rollupEventBridge.nodeCreated(
             nodeNum,
@@ -577,9 +579,10 @@ contract Rollup is RollupCore, Pausable, IRollup {
             "CHAL_HASH"
         );
 
-        INode prev = getNode(node1.prev());
-
-        uint256 baseTime = node1.deadlineBlock().sub(proposedTimes[0]);
+        uint256 commonEndTime =
+            node1.deadlineBlock().sub(proposedTimes[0]).add(extraChallengeTimeBlocks).add(
+                getNode(node1.prev()).firstChildBlock()
+            );
         // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
         // We must ensure that the challenge time left never underflows by restricting when nodes can be created
         address challengeAddress =
@@ -590,8 +593,8 @@ contract Rollup is RollupCore, Pausable, IRollup {
                 nodeFields[2],
                 stakers[0],
                 stakers[1],
-                baseTime.add(prev.firstChildBlock()).sub(proposedTimes[0]),
-                baseTime.add(prev.firstChildBlock()).sub(proposedTimes[1])
+                commonEndTime.sub(proposedTimes[0]),
+                commonEndTime.sub(proposedTimes[1])
             );
 
         challengeStarted(stakers[0], stakers[1], challengeAddress);
@@ -683,7 +686,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
             return baseStake;
         }
         uint256 firstUnresolvedAge = block.number.sub(firstUnresolvedDeadline);
-        uint256 challengePeriodsPassed = firstUnresolvedAge.div(challengePeriodBlocks);
+        uint256 challengePeriodsPassed = firstUnresolvedAge.div(confirmPeriodBlocks);
         if (challengePeriodsPassed > 255) {
             challengePeriodsPassed = 255;
         }
@@ -704,7 +707,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
      * @return The minimum time between assertions in blocks
      */
     function minimumAssertionPeriod() public view returns (uint256) {
-        return challengePeriodBlocks / 10;
+        return confirmPeriodBlocks / 10;
     }
 
     /**
@@ -732,7 +735,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
      * @notice Verify that no stake has been placed within the last challenge period
      */
     function requireNoRecentStake() public view {
-        require(block.number.sub(lastStakeBlock()) >= challengePeriodBlocks, "RECENT_STAKE");
+        require(block.number.sub(lastStakeBlock()) >= confirmPeriodBlocks, "RECENT_STAKE");
     }
 
     /**

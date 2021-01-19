@@ -47,7 +47,8 @@ contract RollupEventBridge {
     }
 
     function rollupInitialized(
-        uint256 challengePeriodBlocks,
+        uint256 confirmPeriodBlocks,
+        uint256 extraChallengeTimeBlocks,
         uint256 arbGasSpeedLimitPerBlock,
         uint256 baseStake,
         address stakeToken,
@@ -57,7 +58,8 @@ contract RollupEventBridge {
         bytes32 initMsgHash =
             keccak256(
                 abi.encodePacked(
-                    challengePeriodBlocks,
+                    confirmPeriodBlocks,
+                    extraChallengeTimeBlocks,
                     arbGasSpeedLimitPerBlock,
                     baseStake,
                     uint256(uint160(bytes20(stakeToken))),
