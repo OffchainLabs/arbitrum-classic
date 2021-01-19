@@ -899,7 +899,7 @@ TEST_CASE("OPCODE: SEND opcode is correct") {
         // TODO: fill in send test
         MachineState m;
         Buffer buf{};
-        buf.set(0, 200);
+        buf = buf.set(0, 200);
         m.stack.push(std::move(buf));
         m.stack.push(uint256_t{1});
 
