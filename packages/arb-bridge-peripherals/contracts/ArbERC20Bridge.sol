@@ -46,19 +46,14 @@ contract ArbERC20Bridge is CloneFactory {
         token.mint(account, amount);
     }
 
-    function updateTokenName(address erc20, string calldata name) external payable {
+    function updateTokenInfo(
+        address erc20,
+        string calldata name,
+        string calldata symbol,
+        uint8 decimals
+    ) external payable {
         StandardArbERC20 token = ensureTokenExists(erc20);
-        token.updateName(name);
-    }
-
-    function updateTokenSymbol(address erc20, string calldata symbol) external payable {
-        StandardArbERC20 token = ensureTokenExists(erc20);
-        token.updateSymbol(symbol);
-    }
-
-    function updateTokenDecimals(address erc20, uint8 decimals) external payable {
-        StandardArbERC20 token = ensureTokenExists(erc20);
-        token.updateDecimals(decimals);
+        token.updateInfo(name, symbol, decimals);
     }
 
     function withdraw(address destination, uint256 amount) external {

@@ -40,16 +40,20 @@ contract StandardArbERC20 is ERC20, Cloneable {
         _decimals = 18;
     }
 
-    function updateName(string calldata newName) external onlyBridge {
-        _name = newName;
-    }
-
-    function updateSymbol(string calldata newSymbol) external onlyBridge {
-        _symbol = newSymbol;
-    }
-
-    function updateDecimals(uint8 newDecimals) external onlyBridge {
-        _decimals = newDecimals;
+    function updateInfo(
+        string memory newName,
+        string memory newSymbol,
+        uint8 newDecimals
+    ) public onlyBridge {
+        if (bytes(newName).length != 0) {
+            _name = newName;
+        }
+        if (bytes(newSymbol).length != 0) {
+            _symbol = newSymbol;
+        }
+        if (newDecimals == 0) {
+            _decimals = newDecimals;
+        }
     }
 
     function mint(address account, uint256 amount) external onlyBridge {
