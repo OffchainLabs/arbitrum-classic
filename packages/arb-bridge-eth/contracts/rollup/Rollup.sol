@@ -408,6 +408,13 @@ contract Rollup is RollupCore, Pausable, IRollup {
         RollupLib.Assertion memory assertion =
             RollupLib.decodeAssertion(assertionBytes32Fields, assertionIntFields);
         INode prevNode = getNode(latestStakedNode(msg.sender));
+
+        uint256 baseTime = prevNode.deadlineBlock().sub(assertion.beforeProposedBlock);
+        require(
+            prevNode.firstChildBlock() == 0 ||
+                block.number < baseTime.add(prevNode.firstChildBlock()),
+            "NO_NEW_CHILDREN"
+        );
         // Make sure the previous state is correct against the node being built on
         require(
             RollupLib.beforeNodeStateHash(assertion) == prevNode.stateHash(),
