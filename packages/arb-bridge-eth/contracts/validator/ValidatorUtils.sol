@@ -31,13 +31,15 @@ contract ValidatorUtils {
         external
         view
         returns (
-            uint256 challengePeriodBlocks,
+            uint256 confirmPeriodBlocks,
+            uint256 extraChallengeTimeBlocks,
             uint256 arbGasSpeedLimitPerBlock,
             uint256 baseStake,
             address stakeToken
         )
     {
-        challengePeriodBlocks = rollup.challengePeriodBlocks();
+        confirmPeriodBlocks = rollup.confirmPeriodBlocks();
+        extraChallengeTimeBlocks = rollup.extraChallengeTimeBlocks();
         arbGasSpeedLimitPerBlock = rollup.arbGasSpeedLimitPerBlock();
         baseStake = rollup.baseStake();
         stakeToken = rollup.stakeToken();

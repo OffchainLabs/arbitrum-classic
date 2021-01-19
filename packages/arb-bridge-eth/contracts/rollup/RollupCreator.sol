@@ -29,6 +29,8 @@ import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
 import "./IRollup.sol";
 import "../bridge/interfaces/IBridge.sol";
 
+import "./RollupLib.sol";
+
 contract RollupCreator is Ownable {
     event RollupCreated(address rollupAddress);
 
@@ -55,19 +57,36 @@ contract RollupCreator is Ownable {
         TransparentUpgradeableProxy rollup;
     }
 
-    // After this setup:
-    // Rollup should be the owner of bridge
-    // Rollup should be the owner of it's upgrade admin
-    // Bridge should have a single inbox and outbox
     function createRollup(
         bytes32 _machineHash,
-        uint256 _challengePeriodBlocks,
+        uint256 _confirmPeriodBlocks,
+        uint256 _extraChallengeTimeBlocks,
         uint256 _arbGasSpeedLimitPerBlock,
         uint256 _baseStake,
         address _stakeToken,
         address _owner,
-        bytes memory _extraConfig
-    ) public returns (IRollup) {
+        bytes calldata _extraConfig
+    ) external returns (IRollup) {
+        return
+            createRollup(
+                RollupLib.Config(
+                    _machineHash,
+                    _confirmPeriodBlocks,
+                    _extraChallengeTimeBlocks,
+                    _arbGasSpeedLimitPerBlock,
+                    _baseStake,
+                    _stakeToken,
+                    _owner,
+                    _extraConfig
+                )
+            );
+    }
+
+    // After this setup:
+    // Rollup should be the owner of bridge
+    // Rollup should be the owner of it's upgrade admin
+    // Bridge should have a single inbox and outbox
+    function createRollup(RollupLib.Config memory config) private returns (IRollup) {
         CreateRollupFrame memory frame;
         frame.admin = new ProxyAdmin();
         frame.rollup = new TransparentUpgradeableProxy(rollupTemplate, address(frame.admin), "");
@@ -84,19 +103,22 @@ contract RollupCreator is Ownable {
         frame.bridge.transferOwnership(address(frame.rollup));
         frame.admin.transferOwnership(address(frame.rollup));
         IRollup(address(frame.rollup)).initialize(
-            address(frame.outbox),
-            address(frame.rollupEventBridge),
-            _machineHash,
-            _challengePeriodBlocks,
-            _arbGasSpeedLimitPerBlock,
-            _baseStake,
-            _stakeToken,
-            _owner,
-            address(frame.bridge),
-            challengeFactory,
-            nodeFactory,
-            _extraConfig,
-            address(frame.admin)
+            config.machineHash,
+            config.confirmPeriodBlocks,
+            config.extraChallengeTimeBlocks,
+            config.arbGasSpeedLimitPerBlock,
+            config.baseStake,
+            config.stakeToken,
+            config.owner,
+            config.extraConfig,
+            [
+                address(frame.admin),
+                address(frame.bridge),
+                address(frame.outbox),
+                address(frame.rollupEventBridge),
+                challengeFactory,
+                nodeFactory
+            ]
         );
         emit RollupCreated(address(frame.rollup));
         return IRollup(address(frame.rollup));

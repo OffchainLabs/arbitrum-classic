@@ -39,19 +39,15 @@ interface IRollup {
     event SentLogs(bytes32 logsAccHash);
 
     function initialize(
-        address _outbox,
-        address _rollupEventInbox,
         bytes32 _machineHash,
-        uint256 _challengePeriodBlocks,
+        uint256 _confirmPeriodBlocks,
+        uint256 _extraChallengeTimeBlocks,
         uint256 _arbGasSpeedLimitPerBlock,
         uint256 _baseStake,
         address _stakeToken,
         address _owner,
-        address _bridge,
-        address _challengeFactory,
-        address _nodeFactory,
-        bytes memory _extraConfig,
-        address _admin
+        bytes calldata _extraConfig,
+        address[6] calldata connectedContracts
     ) external;
 
     function completeChallenge(address winningStaker, address losingStaker) external;

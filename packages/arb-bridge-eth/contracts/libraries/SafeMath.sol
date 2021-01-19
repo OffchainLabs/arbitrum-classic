@@ -163,4 +163,8 @@ library SafeMath {
         require(b != 0, errorMessage);
         return a % b;
     }
+
+    function max(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a > b ? a : b;
+    }
 }
