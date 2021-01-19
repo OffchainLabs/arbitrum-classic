@@ -73,8 +73,8 @@ contract Challenge is Cloneable, IChallenge {
 
     uint256 private constant BISECTION_DEGREE = 20;
 
-    IOneStepProof private executor;
-    IOneStepProof2 private executor2;
+    IOneStepProof public executor;
+    IOneStepProof2 public executor2;
 
     IRollup internal resultReceiver;
 
@@ -84,22 +84,31 @@ contract Challenge is Cloneable, IChallenge {
 
     address public asserter;
     address public challenger;
-    uint256 private challengePeriodBlocks;
-    uint256 private arbGasLimitPerBlock;
+
+    uint256 public lastMoveBlock;
+    uint256 public asserterTimeLeft;
+    uint256 public challengerTimeLeft;
 
     Kind public kind;
-
-    // The current deadline at which the challenge timeouts and a winner is
-    // declared. This deadline resets at each step in the challenge
-    uint256 public deadlineBlock;
     Turn public turn;
+
     // This is the root of a merkle tree with nodes like (prev, next, steps)
     bytes32 public challengeState;
 
     modifier onlyOnTurn {
         require(msg.sender == currentResponder(), BIS_SENDER);
-        require(block.number <= deadlineBlock, BIS_DEADLINE);
+        require(block.number.sub(lastMoveBlock) <= currentResponderTimeLeft(), BIS_DEADLINE);
+
         _;
+
+        if (turn == Turn.Challenger) {
+            challengerTimeLeft = challengerTimeLeft.sub(block.number.sub(lastMoveBlock));
+            turn = Turn.Asserter;
+        } else {
+            challengerTimeLeft = asserterTimeLeft.sub(block.number.sub(lastMoveBlock));
+            turn = Turn.Challenger;
+        }
+        lastMoveBlock = block.number;
     }
 
     modifier inboxConsistencyChallenge {
@@ -129,11 +138,10 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _inboxConsistencyHash,
         bytes32 _inboxDeltaHash,
         bytes32 _executionHash,
-        uint256 _gasClaimed,
-        uint256 _arbGasLimitPerBlock,
         address _asserter,
         address _challenger,
-        uint256 _challengePeriodBlocks
+        uint256 _asserterTimeLeft,
+        uint256 _challengerTimeLeft
     ) external override {
         require(turn == Turn.NoChallenge, CHAL_INIT_STATE);
 
@@ -145,15 +153,13 @@ contract Challenge is Cloneable, IChallenge {
         inboxConsistencyHash = _inboxConsistencyHash;
         inboxDeltaHash = _inboxDeltaHash;
         executionHash = _executionHash;
-        arbGasLimitPerBlock = _arbGasLimitPerBlock;
 
         asserter = _asserter;
         challenger = _challenger;
-        challengePeriodBlocks = _challengePeriodBlocks;
+        asserterTimeLeft = _asserterTimeLeft;
+        challengerTimeLeft = _challengerTimeLeft;
 
         kind = Kind.Uninitialized;
-
-        setExecutionDeadline(_gasClaimed);
         turn = Turn.Challenger;
 
         challengeState = 0;
@@ -197,7 +203,6 @@ contract Challenge is Cloneable, IChallenge {
 
         updateBisectionRoot(_chainHashes, _challengedSegmentStart, _challengedSegmentLength);
 
-        respondedNonExecution();
         emit Bisected(
             challengeState,
             _challengedSegmentStart,
@@ -283,7 +288,6 @@ contract Challenge is Cloneable, IChallenge {
 
         updateBisectionRoot(chainHashes, _challengedSegmentStart, _challengedSegmentLength);
 
-        respondedNonExecution();
         emit BisectedInboxDelta(
             challengeState,
             _challengedSegmentStart,
@@ -404,7 +408,7 @@ contract Challenge is Cloneable, IChallenge {
             _challengedSegmentStart,
             _challengedSegmentStart.add(_challengedSegmentLength).sub(_gasUsedBefore)
         );
-        respondedExecution(_challengedSegmentLength);
+
         emit Bisected(
             challengeState,
             _challengedSegmentStart,
@@ -524,7 +528,6 @@ contract Challenge is Cloneable, IChallenge {
         inboxConsistencyHash = 0;
         inboxDeltaHash = 0;
 
-        respondedExecution(_newSegmentLength);
         emit Bisected(challengeState, 0, _challengedSegmentLength, _chainHashes);
     }
 
@@ -550,8 +553,6 @@ contract Challenge is Cloneable, IChallenge {
         inboxConsistencyHash = 0;
         inboxDeltaHash = 0;
         executionHash = 0;
-
-        respondedNonExecution();
     }
 
     // initialState
@@ -581,7 +582,8 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function timeout() external {
-        require(block.number > deadlineBlock, TIMEOUT_DEADLINE);
+        uint256 timeSinceLastMove = block.number.sub(lastMoveBlock);
+        require(timeSinceLastMove > currentResponderTimeLeft(), TIMEOUT_DEADLINE);
 
         if (turn == Turn.Asserter) {
             emit AsserterTimedOut();
@@ -597,6 +599,16 @@ contract Challenge is Cloneable, IChallenge {
             return asserter;
         } else if (turn == Turn.Challenger) {
             return challenger;
+        } else {
+            require(false, "NO_TURN");
+        }
+    }
+
+    function currentResponderTimeLeft() public view returns (uint256) {
+        if (turn == Turn.Asserter) {
+            return asserterTimeLeft;
+        } else if (turn == Turn.Challenger) {
+            return challengerTimeLeft;
         } else {
             require(false, "NO_TURN");
         }
@@ -642,29 +654,6 @@ contract Challenge is Cloneable, IChallenge {
         } else {
             require(kind == _kind);
         }
-    }
-
-    function respondedNonExecution() private {
-        responded();
-        deadlineBlock = block.number.add(challengePeriodBlocks).add(1);
-    }
-
-    function respondedExecution(uint256 gas) private {
-        responded();
-        setExecutionDeadline(gas);
-    }
-
-    function responded() private {
-        if (turn == Turn.Challenger) {
-            turn = Turn.Asserter;
-        } else {
-            turn = Turn.Challenger;
-        }
-    }
-
-    function setExecutionDeadline(uint256 gas) private {
-        uint256 timeToCheck = gas.add(arbGasLimitPerBlock).sub(1).div(arbGasLimitPerBlock);
-        deadlineBlock = block.number.add(challengePeriodBlocks).add(timeToCheck);
     }
 
     function _currentWin() private {
