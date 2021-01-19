@@ -808,7 +808,7 @@ contract Challenge is Cloneable, IChallenge {
         tupData[2] = Value.newInt(_timestamp);
         tupData[3] = Value.newInt(uint256(_sender));
         tupData[4] = Value.newInt(_inboxSeqNum);
-        tupData[4] = Value.newInt(_messageData.length);
+        tupData[5] = Value.newInt(_messageData.length);
         tupData[6] = Value.newHashedValue(messageBufHash, 1);
 
         return Hashing.hash(Value.newTuple(tupData));
