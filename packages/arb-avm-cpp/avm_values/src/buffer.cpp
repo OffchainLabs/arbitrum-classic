@@ -142,7 +142,7 @@ std::vector<RawBuffer> RawBuffer::serialize(std::vector<unsigned char>& value_ve
     if (level == 0) {
         value_vector.push_back(1);
         for (uint64_t i = 0; i < LEAF_SIZE; i++) {
-            if (leaf->size() < i) value_vector.push_back(0);
+            if (leaf->size() <= i) value_vector.push_back(0);
             else value_vector.push_back((*leaf)[i]);
         }
     }
