@@ -27,7 +27,7 @@ contract Inbox is IInbox {
     uint8 internal constant ETH_TRANSFER = 0;
     uint8 internal constant L2_MSG = 3;
     uint8 internal constant L1MessageType_buddyDeploy = 5;
-    uint8 internal constant L1MessageType_L2FundedByL1 = 8;
+    uint8 internal constant L1MessageType_L2FundedByL1 = 7;
 
     uint8 internal constant L2MessageType_unsignedEOATx = 0;
     uint8 internal constant L2MessageType_unsignedContractTx = 1;
@@ -74,13 +74,13 @@ contract Inbox is IInbox {
         );
     }
 
-    function sendL1FundedTransaction(
+    function sendL1FundedUnsignedTransaction(
         uint256 maxGas,
         uint256 gasPriceBid,
-        uint256 sequenceNumber,
+        uint256 nonce,
         address destAddr,
         bytes calldata data
-    ) external payable {
+    ) external payable override {
         _deliverMessage(
             L1MessageType_L2FundedByL1,
             msg.sender,
@@ -88,7 +88,7 @@ contract Inbox is IInbox {
                 L2MessageType_unsignedEOATx,
                 maxGas,
                 gasPriceBid,
-                sequenceNumber,
+                nonce,
                 uint256(uint160(bytes20(destAddr))),
                 msg.value,
                 data
@@ -116,10 +116,54 @@ contract Inbox is IInbox {
         );
     }
 
-    function depositEth(address destAddr) external payable {
+    function sendUnsignedTransaction(
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        uint256 nonce,
+        address destAddr,
+        uint256 amount,
+        bytes calldata data
+    ) external override {
+        _deliverMessage(
+            L2_MSG,
+            msg.sender,
+            abi.encodePacked(
+                L2MessageType_unsignedEOATx,
+                maxGas,
+                gasPriceBid,
+                nonce,
+                uint256(uint160(bytes20(destAddr))),
+                amount,
+                data
+            )
+        );
+    }
+
+    function sendContractTransaction(
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        address destAddr,
+        uint256 amount,
+        bytes calldata data
+    ) external override {
+        _deliverMessage(
+            L2_MSG,
+            msg.sender,
+            abi.encodePacked(
+                L2MessageType_unsignedContractTx,
+                maxGas,
+                gasPriceBid,
+                uint256(uint160(bytes20(destAddr))),
+                amount,
+                data
+            )
+        );
+    }
+
+    function depositEth(address destAddr) external payable override {
         _deliverMessage(
             L1MessageType_L2FundedByL1,
-            msg.sender,
+            destAddr,
             abi.encodePacked(
                 L2MessageType_unsignedContractTx,
                 uint256(0),
@@ -127,19 +171,6 @@ contract Inbox is IInbox {
                 uint256(uint160(bytes20(destAddr))),
                 msg.value
             )
-        );
-    }
-
-    /**
-     * @notice Deposits ETH into the chain
-     * @dev This method is payable and will deposit all value it is called with
-     * @param to Address on the chain that will receive the ETH
-     */
-    function depositEthMessage(address to) external payable override {
-        _deliverMessage(
-            ETH_TRANSFER,
-            msg.sender,
-            abi.encodePacked(uint256(uint160(bytes20(to))), msg.value)
         );
     }
 
