@@ -24,20 +24,36 @@ import "./Outbox.sol";
 import "./interfaces/IBridge.sol";
 
 contract Bridge is Ownable, IBridge {
-    mapping(address => bool) public override allowedInboxes;
-    mapping(address => bool) public override allowedOutboxes;
+    struct InOutInfo {
+        uint256 index;
+        bool allowed;
+    }
+
+    mapping(address => InOutInfo) private allowedInboxesMap;
+    mapping(address => InOutInfo) private allowedOutboxesMap;
+
+    address[] allowedInboxList;
+    address[] allowedOutboxList;
 
     address public override activeOutbox;
 
     bytes32 private inboxMaxAcc;
     uint256 private inboxMaxCount;
 
+    function allowedInboxes(address inbox) external view override returns (bool) {
+        return allowedInboxesMap[inbox].allowed;
+    }
+
+    function allowedOutboxes(address outbox) external view override returns (bool) {
+        return allowedOutboxesMap[outbox].allowed;
+    }
+
     function deliverMessageToInbox(
         uint8 kind,
         address sender,
         bytes32 messageDataHash
     ) external payable override returns (uint256) {
-        require(allowedInboxes[msg.sender], "NOT_FROM_INBOX");
+        require(allowedInboxesMap[msg.sender].allowed, "NOT_FROM_INBOX");
         uint256 count = inboxMaxCount;
         bytes32 inboxAcc = inboxMaxAcc;
         bytes32 messageHash =
@@ -60,18 +76,45 @@ contract Bridge is Ownable, IBridge {
         uint256 amount,
         bytes calldata data
     ) external override returns (bool success, bytes memory returnData) {
-        require(allowedOutboxes[msg.sender], "NOT_FROM_OUTBOX");
+        require(allowedOutboxesMap[msg.sender].allowed, "NOT_FROM_OUTBOX");
+        address currentOutbox = activeOutbox;
         activeOutbox = msg.sender;
         (success, returnData) = destAddr.call{ value: amount }(data);
-        activeOutbox = address(0);
+        activeOutbox = currentOutbox;
     }
 
     function setInbox(address inbox, bool enabled) external override onlyOwner {
-        allowedInboxes[inbox] = enabled;
+        InOutInfo storage info = allowedInboxesMap[inbox];
+        bool alreadyEnabled = info.allowed;
+        if ((alreadyEnabled && enabled) || (!alreadyEnabled && !enabled)) {
+            return;
+        }
+        if (enabled) {
+            allowedInboxesMap[inbox] = InOutInfo(allowedInboxList.length, true);
+            allowedInboxList.push(inbox);
+        } else {
+            allowedInboxList[info.index] = allowedInboxList[allowedInboxList.length - 1];
+            allowedInboxesMap[allowedInboxList[info.index]].index = info.index;
+            allowedInboxList.pop();
+            delete allowedInboxesMap[inbox];
+        }
     }
 
-    function setOutbox(address inbox, bool enabled) external override onlyOwner {
-        allowedOutboxes[inbox] = enabled;
+    function setOutbox(address outbox, bool enabled) external override onlyOwner {
+        InOutInfo storage info = allowedOutboxesMap[outbox];
+        bool alreadyEnabled = info.allowed;
+        if ((alreadyEnabled && enabled) || (!alreadyEnabled && !enabled)) {
+            return;
+        }
+        if (enabled) {
+            allowedOutboxesMap[outbox] = InOutInfo(allowedOutboxList.length, true);
+            allowedOutboxList.push(outbox);
+        } else {
+            allowedOutboxList[info.index] = allowedOutboxList[allowedOutboxList.length - 1];
+            allowedOutboxesMap[allowedOutboxList[info.index]].index = info.index;
+            allowedOutboxList.pop();
+            delete allowedOutboxesMap[outbox];
+        }
     }
 
     function inboxInfo() external view override returns (uint256, bytes32) {
