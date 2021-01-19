@@ -440,7 +440,10 @@ contract Rollup is RollupCore, Pausable, IRollup {
         if (deadlineBlock < prevDeadlineBlock) {
             deadlineBlock = prevDeadlineBlock;
         }
-        deadlineBlock = deadlineBlock.add(assertion.gasUsed.div(arbGasSpeedLimitPerBlock));
+        // Set dealine rounding up to the nearest block
+        deadlineBlock = deadlineBlock.add(
+            assertion.gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock)
+        );
 
         rollupEventBridge.nodeCreated(
             nodeNum,
