@@ -21,6 +21,17 @@ pragma solidity ^0.6.11;
 import "../challenge/ChallengeLib.sol";
 
 library RollupLib {
+    struct Config {
+        bytes32 machineHash;
+        uint256 confirmPeriodBlocks;
+        uint256 extraChallengeTimeBlocks;
+        uint256 arbGasSpeedLimitPerBlock;
+        uint256 baseStake;
+        address stakeToken;
+        address owner;
+        bytes extraConfig;
+    }
+
     function nodeStateHash(
         uint256 proposedBlock,
         uint256 totalGasUsed,
