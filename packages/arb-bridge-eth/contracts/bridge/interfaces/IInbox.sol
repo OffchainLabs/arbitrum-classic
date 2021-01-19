@@ -18,16 +18,12 @@
 
 pragma solidity ^0.6.11;
 
+import "./IBridge.sol";
+
 interface IInbox {
     event InboxMessageDelivered(uint256 indexed messageNum, bytes data);
 
     event InboxMessageDeliveredFromOrigin(uint256 indexed messageNum);
-
-    event BuddyContractPair(address indexed sender);
-
-    function sendL2Message(bytes calldata messageData) external;
-
-    function depositEthMessage(address to) external payable;
 
     function deployL2ContractPair(
         uint256 maxGas,
@@ -36,6 +32,33 @@ interface IInbox {
         bytes calldata contractData
     ) external;
 
+    function sendL2Message(bytes calldata messageData) external;
+
+    function sendUnsignedTransaction(
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        uint256 nonce,
+        address destAddr,
+        uint256 amount,
+        bytes calldata data
+    ) external;
+
+    function sendContractTransaction(
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        address destAddr,
+        uint256 amount,
+        bytes calldata data
+    ) external;
+
+    function sendL1FundedUnsignedTransaction(
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        uint256 nonce,
+        address destAddr,
+        bytes calldata data
+    ) external payable;
+
     function sendL1FundedContractTransaction(
         uint256 maxGas,
         uint256 gasPriceBid,
@@ -43,5 +66,7 @@ interface IInbox {
         bytes calldata data
     ) external payable;
 
-    function bridge() external view returns (address);
+    function depositEth(address destAddr) external payable;
+
+    function bridge() external view returns (IBridge);
 }
