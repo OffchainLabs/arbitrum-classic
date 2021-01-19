@@ -75,7 +75,7 @@ class ArbCore {
     explicit ArbCore(std::shared_ptr<DataStorage> data_storage_)
         : data_storage(std::move(data_storage_)) {}
     void operator()();
-    void stopThreads();
+    void abortThread();
     void deliverMessages(
         const uint256_t& first_sequence_number,
         uint64_t block_height,
@@ -102,10 +102,12 @@ class ArbCore {
     std::unique_ptr<const Transaction> makeConstTransaction() const;
     void initialize(const LoadedExecutable& executable);
     bool initialized() const;
-    std::unique_ptr<Machine> getInitialMachine(ValueCache& value_cache);
-    std::unique_ptr<Machine> getMachine(uint256_t machineHash,
-                                        ValueCache& value_cache);
 
+    template <class T>
+    std::unique_ptr<T> getInitialMachine(ValueCache& value_cache);
+    template <class T>
+    std::unique_ptr<T> getMachine(uint256_t machineHash,
+                                  ValueCache& value_cache);
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(Transaction& transaction,
                                                 MachineStateKeys state_data,
@@ -117,28 +119,24 @@ class ArbCore {
                   const std::vector<std::vector<unsigned char>>& inbox_messages,
                   const nonstd::optional<uint256_t>& final_block);
 
-    ValueResult<uint256_t> lastLogInserted(rocksdb::Transaction& transaction);
-    ValueResult<uint256_t> lastLogProcessed(rocksdb::Transaction& transaction);
-    ValueResult<uint256_t> lastSendInserted(rocksdb::Transaction& transaction);
-    ValueResult<uint256_t> lastSendProcessed(rocksdb::Transaction& transaction);
-    ValueResult<uint256_t> lastMessageEntryInserted(
-        rocksdb::Transaction& transaction);
-    ValueResult<uint256_t> lastMessageEntryProcessed(
-        rocksdb::Transaction& transaction);
-    rocksdb::Status updateLastLogInserted(rocksdb::Transaction& transaction,
+    ValueResult<uint256_t> lastLogInserted(Transaction& tx);
+    ValueResult<uint256_t> lastLogProcessed(Transaction& tx);
+    ValueResult<uint256_t> lastSendInserted(Transaction& tx);
+    ValueResult<uint256_t> lastSendProcessed(Transaction& tx);
+    ValueResult<uint256_t> lastMessageEntryInserted(Transaction& tx);
+    ValueResult<uint256_t> lastMessageEntryProcessed(Transaction& tx);
+    rocksdb::Status updateLastLogInserted(Transaction& tx,
                                           rocksdb::Slice value_slice);
-    rocksdb::Status updateLastLogProcessed(rocksdb::Transaction& transaction,
+    rocksdb::Status updateLastLogProcessed(Transaction& tx,
                                            rocksdb::Slice value_slice);
-    rocksdb::Status updateLastSendInserted(rocksdb::Transaction& transaction,
+    rocksdb::Status updateLastSendInserted(Transaction& tx,
                                            rocksdb::Slice value_slice);
-    rocksdb::Status updateLastSendProcessed(rocksdb::Transaction& transaction,
+    rocksdb::Status updateLastSendProcessed(Transaction& tx,
                                             rocksdb::Slice value_slice);
-    rocksdb::Status updateLastMessageEntryInserted(
-        rocksdb::Transaction& transaction,
-        rocksdb::Slice value_slice);
-    rocksdb::Status updateLastMessageEntryProcessed(
-        rocksdb::Transaction& transaction,
-        rocksdb::Slice value_slice);
+    rocksdb::Status updateLastMessageEntryInserted(Transaction& tx,
+                                                   rocksdb::Slice value_slice);
+    rocksdb::Status updateLastMessageEntryProcessed(Transaction& tx,
+                                                    rocksdb::Slice value_slice);
     rocksdb::Status saveLogs(Transaction& tx, const std::vector<value>& val);
     DbResult<value> getLog(uint256_t index, ValueCache& valueCache) const;
     ValueResult<std::vector<unsigned char>> getSend(uint256_t index) const;

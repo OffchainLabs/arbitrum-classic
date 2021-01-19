@@ -26,8 +26,19 @@ void MachineThread::setStatus(machine_status_enum status) {
     machine_status = status;
 }
 
-void MachineThread::abort(bool abort) {
-    machine_abort = abort;
+void MachineThread::abortThread() {
+    machine_abort = true;
+}
+
+bool MachineThread::setRunning() {
+    if (machine_status == MACHINE_RUNNING) {
+        return false;
+    }
+
+    machine_abort = false;
+    machine_status = MACHINE_RUNNING;
+
+    return true;
 }
 
 Assertion MachineThread::getAssertion() {
