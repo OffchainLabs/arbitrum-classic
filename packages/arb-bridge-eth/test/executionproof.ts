@@ -88,6 +88,7 @@ describe('OneStepProof', function () {
     }
 
     describe(`proofs from ${filename}`, function () {
+      this.timeout(100000)
       const receipts: TransactionReceipt[] = []
       const opcodes: number[] = []
       before(async () => {
