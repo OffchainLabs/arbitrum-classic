@@ -76,45 +76,34 @@ contract EthERC20Bridge {
         require(IERC20(erc20).transfer(destination, amount));
     }
 
-    function updateTokenName(
+    function updateTokenInfo(
         address erc20,
         uint256 maxGas,
         uint256 gasPriceBid
     ) external payable onlyIfConnected {
-        string memory name = ERC20(erc20).name();
+        string memory name;
+        string memory symbol;
+        uint8 decimals;
+        try ERC20(erc20).name() returns (string memory _name) {
+            name = _name;
+        } catch {}
+        try ERC20(erc20).symbol() returns (string memory _symbol) {
+            symbol = _symbol;
+        } catch {}
+        try ERC20(erc20).decimals() returns (uint8 _decimals) {
+            decimals = _decimals;
+        } catch {}
         inbox.sendL1FundedContractTransaction{ value: msg.value }(
             maxGas,
             gasPriceBid,
             address(this),
-            abi.encodeWithSignature("updateTokenName(address,string)", erc20, name)
-        );
-    }
-
-    function updateTokenSymbol(
-        address erc20,
-        uint256 maxGas,
-        uint256 gasPriceBid
-    ) external payable onlyIfConnected {
-        string memory symbol = ERC20(erc20).symbol();
-        inbox.sendL1FundedContractTransaction{ value: msg.value }(
-            maxGas,
-            gasPriceBid,
-            address(this),
-            abi.encodeWithSignature("updateTokenSymbol(address,string)", erc20, symbol)
-        );
-    }
-
-    function updateTokenDecimals(
-        address erc20,
-        uint256 maxGas,
-        uint256 gasPriceBid
-    ) external payable onlyIfConnected {
-        uint8 decimals = ERC20(erc20).decimals();
-        inbox.sendL1FundedContractTransaction{ value: msg.value }(
-            maxGas,
-            gasPriceBid,
-            address(this),
-            abi.encodeWithSignature("updateTokenDecimals(address,uint8)", erc20, decimals)
+            abi.encodeWithSignature(
+                "updateTokenInfo(address,string,string,uint8)",
+                erc20,
+                name,
+                symbol,
+                decimals
+            )
         );
     }
 
