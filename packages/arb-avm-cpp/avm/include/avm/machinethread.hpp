@@ -29,6 +29,7 @@ class MachineThread : public Machine {
    public:
     typedef enum {
         MACHINE_NONE,
+        MACHINE_RUNNING,
         MACHINE_ABORTED,
         MACHINE_FINISHED,
         MACHINE_ERROR
@@ -48,7 +49,8 @@ class MachineThread : public Machine {
     MachineThread(std::shared_ptr<Code> code, value static_val)
         : Machine(std::move(code), std::move(static_val)) {}
 
-    void abort(bool abort);
+    void abortThread();
+    bool setRunning();
     machine_status_enum status();
     void setStatus(machine_status_enum status);
     std::string get_error_string();

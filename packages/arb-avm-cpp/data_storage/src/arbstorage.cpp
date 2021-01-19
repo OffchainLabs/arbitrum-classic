@@ -67,12 +67,12 @@ std::shared_ptr<ArbCore> ArbStorage::getArbCore() {
 
 std::unique_ptr<Machine> ArbStorage::getInitialMachine(
     ValueCache& value_cache) const {
-    return arb_core->getInitialMachine(value_cache);
+    return arb_core->getInitialMachine<Machine>(value_cache);
 }
 
 std::unique_ptr<Machine> ArbStorage::getMachine(uint256_t machineHash,
                                                 ValueCache& value_cache) const {
-    return arb_core->getMachine(machineHash, value_cache);
+    return arb_core->getMachine<Machine>(machineHash, value_cache);
 }
 
 DbResult<value> ArbStorage::getValue(uint256_t value_hash,
