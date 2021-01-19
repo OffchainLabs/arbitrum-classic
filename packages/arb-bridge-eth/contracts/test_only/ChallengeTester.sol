@@ -42,22 +42,20 @@ contract ChallengeTester {
         bytes32 inboxConsistencyHash,
         bytes32 inboxDeltaHash,
         bytes32 executionHash,
-        uint256 gasClaimed,
-        uint256 arbGasLimitPerBlock,
         address payable asserter,
         address payable challenger,
-        uint256 challengePeriodBlocks
+        uint256 asserterTimeLeft,
+        uint256 challegnerTimeLeft
     ) public {
         challenge = challengeFactory.createChallenge(
             address(this),
             inboxConsistencyHash,
             inboxDeltaHash,
             executionHash,
-            gasClaimed,
-            arbGasLimitPerBlock,
             asserter,
             challenger,
-            challengePeriodBlocks
+            asserterTimeLeft,
+            challegnerTimeLeft
         );
     }
 }
