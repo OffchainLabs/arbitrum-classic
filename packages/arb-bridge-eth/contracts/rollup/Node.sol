@@ -46,6 +46,9 @@ contract Node is Cloneable, INode {
     /// @notice Address of the rollup contract to which this node belongs
     address public rollup;
 
+    /// @notice This value starts at zero and is set to a value when the first child is created. After that it is constant until the node is destroyed
+    uint256 public override firstChildBlock;
+
     modifier onlyRollup {
         require(msg.sender == rollup, "ROLLUP_ONLY");
         _;
@@ -101,6 +104,12 @@ contract Node is Cloneable, INode {
         require(stakers[staker], "NOT_STAKED");
         stakers[staker] = false;
         stakerCount--;
+    }
+
+    function childCreated() external override onlyRollup {
+        if (firstChildBlock == 0) {
+            firstChildBlock = block.number;
+        }
     }
 
     /**

@@ -105,7 +105,7 @@ contract Challenge is Cloneable, IChallenge {
             challengerTimeLeft = challengerTimeLeft.sub(block.number.sub(lastMoveBlock));
             turn = Turn.Asserter;
         } else {
-            challengerTimeLeft = asserterTimeLeft.sub(block.number.sub(lastMoveBlock));
+            asserterTimeLeft = asserterTimeLeft.sub(block.number.sub(lastMoveBlock));
             turn = Turn.Challenger;
         }
         lastMoveBlock = block.number;
