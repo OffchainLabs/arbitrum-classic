@@ -46,15 +46,17 @@ Assertion Machine::run(
     // TODO
 }
 
-Assertion Machine::run(uint64_t gas_limit,
-                       bool hard_gas_limit,
-                       const std::vector<Tuple>& inbox_messages,
-                       const nonstd::optional<uint256_t>& final_block) {
+Assertion Machine::run(
+    uint64_t gas_limit,
+    bool hard_gas_limit,
+    const std::vector<Tuple>& inbox_messages,
+    const nonstd::optional<uint256_t>& min_next_block_height) {
     if (!validMessages(inbox_messages)) {
         throw std::runtime_error("invalid message format");
     }
 
-    machine_state.context = AssertionContext{inbox_messages, final_block};
+    machine_state.context =
+        AssertionContext{inbox_messages, min_next_block_height};
 
     bool has_gas_limit = gas_limit != 0;
     auto start_time = std::chrono::system_clock::now();

@@ -27,6 +27,7 @@ set(LIB_HEADERS
   include/avm/machinestate/machineoperation.hpp
   include/avm/machinestate/machinestate.hpp
   include/avm/machinestate/status.hpp
+  include/avm/machinethread.hpp
 )
 
 set(LIB_SOURCES
@@ -36,6 +37,7 @@ set(LIB_SOURCES
   src/machinestate/ecops.cpp
   src/machinestate/machineoperation.cpp
   src/machinestate/machinestate.cpp
+  src/machinethread.cpp
 )
 
 add_library(avm STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES} )

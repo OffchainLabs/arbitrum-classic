@@ -26,6 +26,7 @@
 #include <data_storage/value/code.hpp>
 #include <data_storage/value/valuecache.hpp>
 
+#include <avm/machinethread.hpp>
 #include <memory>
 #include <thread>
 #include <utility>
@@ -41,39 +42,33 @@ class ColumnFamilyHandle;
 class ArbCore {
    public:
     typedef enum {
-        MESSAGES_EMPTY,
-        MESSAGES_READY,
-        MESSAGES_NEED_OLDER,
-        MESSAGES_SUCCESS,
-        MESSAGES_ERROR
-    } message_status_enum;
-
-    typedef enum {
-        MACHINE_NONE,
-        MACHINE_ABORTED,
-        MACHINE_FINISHED,
-        MACHINE_ERROR
-    } machine_status_enum;
+        ARBCORE_EMPTY,
+        ARBCORE_MESSAGES_READY,
+        ARBCORE_NEED_OLDER,
+        ARBCORE_SUCCESS,
+        ARBCORE_ERROR
+    } arbcore_status_enum;
 
    private:
     std::shared_ptr<DataStorage> data_storage;
-    std::unique_ptr<Machine> machine{};
+    std::unique_ptr<MachineThread> machine;
     std::shared_ptr<Code> code{};
     Checkpoint pending_checkpoint;
 
-    // Core thread communication
-    std::atomic<message_status_enum> delivering_message_status{MESSAGES_EMPTY};
+    // Core thread communication input/output
+    // Core thread will update if and only if set to ARBCORE_MESSAGES_READY
+    std::atomic<arbcore_status_enum> delivering_status{ARBCORE_EMPTY};
+
+    // Core thread communication input
+    std::atomic<bool> arbcore_abort{false};
     uint256_t delivering_first_sequence_number;
     uint64_t delivering_block_height{0};
     std::vector<std::vector<unsigned char>> delivering_messages;
     std::vector<uint256_t> delivering_inbox_hashes;
     uint256_t delivering_previous_inbox_hash;
-    std::string delivering_error_string;
 
-    // Machine thread communication
-    std::atomic<ArbCore::machine_status_enum> machine_status{MACHINE_NONE};
-    std::atomic<bool> machine_abort{false};
-    uint256_t machine_last_sequence_number;
+    // Core thread communication output
+    std::string delivering_error_string;
 
    public:
     ArbCore() = delete;
@@ -88,10 +83,11 @@ class ArbCore {
         const std::vector<uint256_t>& inbox_hashes,
         const uint256_t& previous_inbox_hash);
 
-    void saveAssertion(uint256_t first_message_sequence_number,
-                       const Assertion& assertion);
+    rocksdb::Status saveAssertion(Transaction& tx,
+                                  uint256_t first_message_sequence_number,
+                                  const Assertion& assertion);
 
-    void saveCheckpoint();
+    rocksdb::Status saveCheckpoint();
     ValueResult<Checkpoint> getCheckpoint(
         const uint256_t& message_sequence_number) const;
     bool isCheckpointsEmpty() const;
@@ -109,10 +105,12 @@ class ArbCore {
     std::unique_ptr<Machine> getInitialMachine(ValueCache& value_cache);
     std::unique_ptr<Machine> getMachine(uint256_t machineHash,
                                         ValueCache& value_cache);
-    std::unique_ptr<Machine> getMachineUsingStateKeys(
-        Transaction& transaction,
-        MachineStateKeys state_data,
-        ValueCache& value_cache);
+
+    template <class T>
+    std::unique_ptr<T> getMachineUsingStateKeys(Transaction& transaction,
+                                                MachineStateKeys state_data,
+                                                ValueCache& value_cache);
+
     Assertion run(uint64_t gas_limit,
                   bool hard_gas_limit,
                   uint256_t first_message_sequence_number,
@@ -141,11 +139,12 @@ class ArbCore {
     rocksdb::Status updateLastMessageEntryProcessed(
         rocksdb::Transaction& transaction,
         rocksdb::Slice value_slice);
-    rocksdb::Status saveLog(Transaction& tx, const value& val);
+    rocksdb::Status saveLogs(Transaction& tx, const std::vector<value>& val);
     DbResult<value> getLog(uint256_t index, ValueCache& valueCache) const;
     ValueResult<std::vector<unsigned char>> getSend(uint256_t index) const;
-    rocksdb::Status saveSend(Transaction& tx,
-                             const std::vector<unsigned char>& send);
+    rocksdb::Status saveSends(
+        Transaction& tx,
+        const std::vector<std::vector<unsigned char>>& send);
     bool messagesEmpty();
 
    private:
@@ -154,7 +153,8 @@ class ArbCore {
         uint64_t block_height,
         const std::vector<std::vector<unsigned char>>& messages,
         const std::vector<uint256_t>& inbox_hashes,
-        const uint256_t& previous_inbox_hash);
+        const uint256_t& previous_inbox_hash,
+        const uint256_t& final_machine_sequence_number);
     nonstd::optional<MessageEntry> getNextMessage();
     bool deleteMessage(const MessageEntry& entry);
 };
