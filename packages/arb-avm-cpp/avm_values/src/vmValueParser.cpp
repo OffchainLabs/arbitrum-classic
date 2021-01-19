@@ -56,6 +56,14 @@ RawBuffer buffer_value_from_json(const nlohmann::json& buffer_json) {
         for (auto& item : leaf_data) {
             data->push_back(item.get<uint8_t>());
         }
+        if (data->size() > LEAF_SIZE) {
+            auto res = RawBuffer();
+            for (uint64_t i = 0; i < data->size(); i++) {
+                res = res.set(i, (*data)[i]);
+            }
+            return res;
+        }
+        data->resize(LEAF_SIZE, 0);
         return {std::move(data)};
     } else if (elem_json.contains(BUF_NODE_LABEL)) {
         auto& node_data = elem_json[BUF_NODE_LABEL];
