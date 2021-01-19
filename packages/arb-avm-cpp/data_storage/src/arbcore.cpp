@@ -31,7 +31,7 @@
 #include <vector>
 
 namespace {
-constexpr auto initial_slice_key = std::array<char, 1>{-10};
+constexpr auto initial_machine_hash_key = std::array<char, 1>{-10};
 constexpr auto log_inserted_key = std::array<char, 1>{-60};
 constexpr auto log_processed_key = std::array<char, 1>{-61};
 constexpr auto send_inserted_key = std::array<char, 1>{-62};
@@ -125,11 +125,8 @@ void ArbCore::initialize(const LoadedExecutable& executable) {
     }
     std::vector<unsigned char> value_data;
     marshal_uint256_t(machine->hash(), value_data);
-    rocksdb::Slice value_slice{reinterpret_cast<const char*>(value_data.data()),
-                               value_data.size()};
-    auto s = tx->transaction->Put(data_storage->state_column.get(),
-                                  vecToSlice(message_entry_processed_key),
-                                  value_slice);
+    auto s = tx->transaction->Put(vecToSlice(initial_machine_hash_key),
+                                  vecToSlice(value_data));
     if (!s.ok()) {
         throw std::runtime_error(
             "failed to save initial machine values into db");
@@ -145,7 +142,7 @@ bool ArbCore::initialized() const {
     std::string initial_raw;
     auto s = tx->transaction->GetForUpdate(
         rocksdb::ReadOptions(), data_storage->state_column.get(),
-        vecToSlice(message_entry_processed_key), &initial_raw);
+        vecToSlice(initial_machine_hash_key), &initial_raw);
     return s.ok();
 }
 
@@ -154,7 +151,7 @@ std::unique_ptr<Machine> ArbCore::getInitialMachine(ValueCache& value_cache) {
     std::string initial_raw;
     auto s = tx->transaction->GetForUpdate(
         rocksdb::ReadOptions(), data_storage->state_column.get(),
-        vecToSlice(message_entry_processed_key), &initial_raw);
+        vecToSlice(initial_machine_hash_key), &initial_raw);
     if (!s.ok()) {
         throw std::runtime_error("failed to load initial val");
     }
@@ -185,8 +182,11 @@ rocksdb::Status ArbCore::saveCheckpoint() {
         return status;
     }
 
-    // TODO Still need to populate the following:
-    // processed_message_accumulator_hash
+    // Pull inbox hash from database
+    auto existing_message_entry = getMessageEntry(
+        *tx, pending_checkpoint.message_sequence_number_processed);
+    pending_checkpoint.processed_message_accumulator_hash =
+        existing_message_entry.data.inbox_hash;
 
     std::vector<unsigned char> key;
     marshal_uint256_t(pending_checkpoint.arb_gas_used, key);
@@ -803,7 +803,8 @@ nonstd::optional<rocksdb::Status> ArbCore::addMessages(
 
     if (first_sequence_number > 0) {
         if (first_sequence_number > last_inserted_sequence_number + 1) {
-            // Not allowed to skip message sequence numbers
+            // Not allowed to skip message sequence numbers, ask for older
+            // messages
             return nonstd::nullopt;
         }
 
@@ -815,7 +816,7 @@ nonstd::optional<rocksdb::Status> ArbCore::addMessages(
         }
 
         if (previous_result.data.inbox_hash != previous_inbox_hash) {
-            // Previous inbox doesn't match so reorg happened and
+            // Previous inbox doesn't match which means reorg happened and
             // caller needs to try again with messages from earlier block
             return nonstd::nullopt;
         }
@@ -826,7 +827,7 @@ nonstd::optional<rocksdb::Status> ArbCore::addMessages(
     auto final_sequence_number = first_sequence_number + messages.size() - 1;
 
     if (messages.empty()) {
-        // Truncating obsolete messages
+        // No new messages, just need to truncating obsolete messages
         current_sequence_number = first_sequence_number - 1;
     }
 
