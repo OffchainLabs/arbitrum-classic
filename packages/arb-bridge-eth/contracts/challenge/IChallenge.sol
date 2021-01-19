@@ -22,14 +22,13 @@ interface IChallenge {
     function initializeChallenge(
         address _executionOneStepProofCon,
         address _executionOneStepProof2Con,
-        address _rollupAddress,
+        address _resultReceiver,
         bytes32 _inboxConsistencyHash,
         bytes32 _inboxDeltaHash,
         bytes32 _executionHash,
-        uint256 _gasClaimed,
-        uint256 _arbGasLimitPerBlock,
         address _asserter,
         address _challenger,
-        uint256 _challengePeriodBlocks
+        uint256 _asserterTimeLeft,
+        uint256 _challengerTimeLeft
     ) external;
 }

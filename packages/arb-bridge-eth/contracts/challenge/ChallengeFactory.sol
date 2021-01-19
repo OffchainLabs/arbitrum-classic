@@ -38,11 +38,10 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         bytes32 _inboxConsistencyHash,
         bytes32 _inboxDeltaHash,
         bytes32 _executionHash,
-        uint256 _gasClaimed,
-        uint256 _arbGasLimitPerBlock,
         address _asserter,
         address _challenger,
-        uint256 _challengePeriodBlocks
+        uint256 _asserterTimeLeft,
+        uint256 _challengerTimeLeft
     ) external override returns (address) {
         address clone = createClone(challengeTemplate);
         IChallenge(clone).initializeChallenge(
@@ -52,11 +51,10 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
             _inboxConsistencyHash,
             _inboxDeltaHash,
             _executionHash,
-            _gasClaimed,
-            _arbGasLimitPerBlock,
             _asserter,
             _challenger,
-            _challengePeriodBlocks
+            _asserterTimeLeft,
+            _challengerTimeLeft
         );
         return address(clone);
     }

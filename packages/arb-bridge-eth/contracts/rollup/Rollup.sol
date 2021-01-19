@@ -460,7 +460,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
             INode(
                 nodeFactory.createNode(
                     RollupLib.nodeStateHash(assertion, inboxMaxCount),
-                    RollupLib.challengeRoot(assertion, inboxMaxCount, inboxMaxAcc),
+                    RollupLib.challengeRoot(assertion, inboxMaxCount, inboxMaxAcc, block.number),
                     RollupLib.confirmHash(assertion),
                     latestStakedNode(msg.sender),
                     deadlineBlock
@@ -520,14 +520,14 @@ contract Rollup is RollupCore, Pausable, IRollup {
      * @notice Start a challenge between the given stakers over the node created by the first staker assuming that the two are staked on conflicting nodes
      * @param stakers Stakers engaged in the challenge. The first staker should be staked on the first node
      * @param nodeNums Nodes of the stakers engaged in the challenge. The first node should be the earliest and is the one challenged
-     * @param nodeFields Challenge related data [inboxConsistencyHash, inboxDeltaHash, executionHash]
-     * @param gasClaimed Amount of gas the assertion claims to use
+     * @param nodeFields Challenge related data for the two nodes [inboxConsistencyHash, inboxDeltaHash, executionHash]
+     * @param proposedTimes Times that the two nodes were proposed
      */
     function createChallenge(
         address payable[2] calldata stakers,
         uint256[2] calldata nodeNums,
-        bytes32[3] calldata nodeFields,
-        uint256 gasClaimed
+        bytes32[6] calldata nodeFields,
+        uint256[2] calldata proposedTimes
     ) external whenNotPaused {
         require(nodeNums[0] < nodeNums[1], "WRONG_ORDER");
         require(nodeNums[1] <= latestNodeCreated(), "NOT_PROPOSED");
@@ -550,10 +550,25 @@ contract Rollup is RollupCore, Pausable, IRollup {
                     nodeFields[0],
                     nodeFields[1],
                     nodeFields[2],
-                    gasClaimed
+                    proposedTimes[0]
                 ),
             "CHAL_HASH"
         );
+
+        require(
+            node2.challengeHash() ==
+                RollupLib.challengeRootHash(
+                    nodeFields[3],
+                    nodeFields[4],
+                    nodeFields[5],
+                    proposedTimes[1]
+                ),
+            "CHAL_HASH"
+        );
+
+        uint256 challengePeriod = node1.deadlineBlock().sub(proposedTimes[0]);
+
+        uint256 challengeTimeUsed = proposedTimes[1].sub(proposedTimes[0]);
 
         // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
         address challengeAddress =
@@ -562,11 +577,10 @@ contract Rollup is RollupCore, Pausable, IRollup {
                 nodeFields[0],
                 nodeFields[1],
                 nodeFields[2],
-                gasClaimed,
-                arbGasSpeedLimitPerBlock,
                 stakers[0],
                 stakers[1],
-                challengePeriodBlocks
+                challengePeriod,
+                challengePeriod.sub(challengeTimeUsed)
             );
 
         challengeStarted(stakers[0], stakers[1], challengeAddress);

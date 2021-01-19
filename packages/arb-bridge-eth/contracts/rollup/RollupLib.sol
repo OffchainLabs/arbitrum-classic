@@ -158,7 +158,8 @@ library RollupLib {
     function challengeRoot(
         Assertion memory assertion,
         uint256 inboxTopCount,
-        bytes32 inboxTopHash
+        bytes32 inboxTopHash,
+        uint256 blockProposed
     ) internal pure returns (bytes32) {
         bytes32 inboxConsistencyHash =
             ChallengeLib.bisectionChunkHash(
@@ -181,7 +182,7 @@ library RollupLib {
                 inboxConsistencyHash,
                 inboxDeltaHash,
                 executionHash(assertion),
-                assertion.gasUsed
+                blockProposed
             );
     }
 
@@ -189,9 +190,9 @@ library RollupLib {
         bytes32 inboxConsistency,
         bytes32 inboxDelta,
         bytes32 execution,
-        uint256 gasUsed
+        uint256 proposedTime
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(inboxConsistency, inboxDelta, execution, gasUsed));
+        return keccak256(abi.encodePacked(inboxConsistency, inboxDelta, execution, proposedTime));
     }
 
     function confirmHash(Assertion memory assertion) internal pure returns (bytes32) {
