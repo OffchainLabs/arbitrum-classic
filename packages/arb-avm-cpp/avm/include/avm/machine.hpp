@@ -57,7 +57,7 @@ class Machine {
     Assertion run(uint64_t gas_limit,
                   bool hard_gas_limit,
                   const std::vector<Tuple>& inbox_messages,
-                  const nonstd::optional<uint256_t>& final_block);
+                  const nonstd::optional<uint256_t>& min_next_block_height);
 
     Status currentStatus() const { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }
