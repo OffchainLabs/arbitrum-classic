@@ -51,27 +51,4 @@ describe('Value', () => {
       assert.equal('0x' + expectedHash, res['1'], 'value hashes incorrectly')
     })
   }
-
-  const cases = [
-    testVal.slice(0, 34),
-    testVal.slice(0, 40),
-    testVal,
-    testVal + testVal.slice(2),
-  ]
-
-  cases.forEach(data => {
-    const dataLength = ethers.utils.hexDataLength(data)
-    it(
-      'should properly calculate bytestack hash of length ' + dataLength,
-      async () => {
-        const ethVal = await valueTester.bytesToBytestackHash(
-          data,
-          0,
-          dataLength
-        )
-        const jsVal = ArbValue.hexToBytestack(data).hash()
-        assert.equal(ethVal, jsVal)
-      }
-    )
-  })
 })
