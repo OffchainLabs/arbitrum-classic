@@ -34,6 +34,8 @@ interface INode {
 
     function removeStaker(address staker) external;
 
+    function childCreated() external;
+
     function stateHash() external view returns (bytes32);
 
     function challengeHash() external view returns (bytes32);
@@ -47,6 +49,8 @@ interface INode {
     function stakerCount() external view returns (uint256);
 
     function stakers(address staker) external view returns (bool);
+
+    function firstChildBlock() external view returns (uint256);
 
     function requirePastDeadline() external view;
 

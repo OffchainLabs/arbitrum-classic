@@ -470,6 +470,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
                 )
             );
 
+        prevNode.childCreated();
         nodeCreated(node);
         stakeOnNode(msg.sender, nodeNum);
 
@@ -569,11 +570,11 @@ contract Rollup is RollupCore, Pausable, IRollup {
             "CHAL_HASH"
         );
 
-        uint256 challengePeriod = node1.deadlineBlock().sub(proposedTimes[0]);
+        INode prev = getNode(node1.prev());
 
-        uint256 challengeTimeUsed = proposedTimes[1].sub(proposedTimes[0]);
-
+        uint256 baseTime = node1.deadlineBlock().sub(proposedTimes[0]);
         // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
+        // We must ensure that the challenge time left never underflows by restricting when nodes can be created
         address challengeAddress =
             challengeFactory.createChallenge(
                 address(this),
@@ -582,8 +583,8 @@ contract Rollup is RollupCore, Pausable, IRollup {
                 nodeFields[2],
                 stakers[0],
                 stakers[1],
-                challengePeriod,
-                challengePeriod.sub(challengeTimeUsed)
+                baseTime.add(prev.firstChildBlock()).sub(proposedTimes[0]),
+                baseTime.add(prev.firstChildBlock()).sub(proposedTimes[1])
             );
 
         challengeStarted(stakers[0], stakers[1], challengeAddress);
