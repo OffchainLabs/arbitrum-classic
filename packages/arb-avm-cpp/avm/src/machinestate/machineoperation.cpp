@@ -878,8 +878,8 @@ void send(MachineState& m) {
         std::cerr << "Send failure: over size limit" << std::endl;
         return;
     } else {
-        auto vec = std::vector<uint8_t>();
-        for (uint64_t i = 0; i <= buf.lastIndex(); i++) {
+        auto vec = std::vector<uint8_t>(msg_size);
+        for (uint64_t i = 0; i < msg_size; i++) {
             vec[i] = buf.get(i);
         }
         m.context.outMessage.push_back(vec);
