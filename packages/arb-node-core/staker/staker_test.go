@@ -22,7 +22,8 @@ func deployRollup(
 	auth *bind.TransactOpts,
 	client *ethutils.SimulatedEthClient,
 	machineHash [32]byte,
-	challengePeriodBlocks *big.Int,
+	confirmPeriodBlocks *big.Int,
+	extraChallengeTimeBlocks *big.Int,
 	arbGasSpeedLimitPerBlock *big.Int,
 	baseStake *big.Int,
 	stakeToken common.Address,
@@ -52,7 +53,8 @@ func deployRollup(
 	tx, err := rollupCreator.CreateRollup(
 		auth,
 		machineHash,
-		challengePeriodBlocks,
+		confirmPeriodBlocks,
+		extraChallengeTimeBlocks,
 		arbGasSpeedLimitPerBlock,
 		baseStake,
 		stakeToken.ToEthAddress(),
@@ -76,7 +78,8 @@ func TestStaker(t *testing.T) {
 	mach, err := cmachine.New(arbos.Path())
 	test.FailIfError(t, err)
 
-	challengePeriodBlocks := big.NewInt(100)
+	confirmPeriodBlocks := big.NewInt(100)
+	extraChallengeTimeBlocks := big.NewInt(0)
 	arbGasSpeedLimitPerBlock := big.NewInt(1000000000)
 	baseStake := big.NewInt(100)
 	var stakeToken common.Address
@@ -92,7 +95,8 @@ func TestStaker(t *testing.T) {
 		auth,
 		client,
 		mach.Hash(),
-		challengePeriodBlocks,
+		confirmPeriodBlocks,
+		extraChallengeTimeBlocks,
 		arbGasSpeedLimitPerBlock,
 		baseStake,
 		stakeToken,

@@ -112,23 +112,26 @@ func (r *Rollup) ReduceDeposit(amount *big.Int, destination common.Address) (*Ra
 
 func (r *Rollup) CreateChallenge(
 	staker1 common.Address,
-	node1 core.NodeID,
+	node1 *core.NodeInfo,
 	staker2 common.Address,
-	node2 core.NodeID,
-	assertion *core.Assertion,
-	inboxMaxHash common.Hash,
-	inboxMaxCount *big.Int,
+	node2 *core.NodeInfo,
 ) (*RawTransaction, error) {
 	return r.buildSimpleTx(
 		"createChallenge",
 		[2]ethcommon.Address{staker1.ToEthAddress(), staker2.ToEthAddress()},
-		[2]*big.Int{node1, node2},
-		[3][32]byte{
-			assertion.InboxConsistencyHash(inboxMaxHash, inboxMaxCount),
-			assertion.InboxDeltaHash(),
-			assertion.ExecutionHash(),
+		[2]*big.Int{node1.NodeNum, node2.NodeNum},
+		[6][32]byte{
+			node1.InboxConsistencyHash(),
+			node1.Assertion.InboxDeltaHash(),
+			node1.Assertion.ExecutionHash(),
+			node2.InboxConsistencyHash(),
+			node2.Assertion.InboxDeltaHash(),
+			node2.Assertion.ExecutionHash(),
 		},
-		assertion.GasUsed(),
+		[2]*big.Int{
+			node1.BlockProposed.Height.AsInt(),
+			node2.BlockProposed.Height.AsInt(),
+		},
 	)
 }
 
