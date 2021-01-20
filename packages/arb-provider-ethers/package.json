@@ -32,7 +32,8 @@
   "dependencies": {
     "@types/promise-poller": "^1.7.0",
     "jayson": "^3.2.0",
-    "promise-poller": "^1.9.1"
+    "promise-poller": "^1.9.1",
+    "rlp": "^2.2.6"
   },
   "peerDependencies": {
     "ethers": "~4.0.47"

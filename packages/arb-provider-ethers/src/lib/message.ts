@@ -18,6 +18,7 @@
 
 import * as ArbValue from './value'
 import * as ethers from 'ethers'
+import { decode as RLPDecode, Input as RLPInput, Decoded as RLPDecoded, encode as RLPEncode } from 'rlp'
 
 function hex32(val: ethers.utils.BigNumber): Uint8Array {
   return ethers.utils.padZeros(ethers.utils.arrayify(val), 32)
@@ -167,14 +168,14 @@ export class L2Batch {
   }
 
   static fromData(data: ethers.utils.Arrayish): L2Batch {
-    const bytes = ethers.utils.arrayify(data)
-    let offset = 0
+    let bytes = Buffer.from(ethers.utils.arrayify(data))
     const messages: L2Message[] = []
-    while (offset < data.length) {
-      const lengthData = bytes.slice(offset, offset + 8)
-      offset += 8
-      const length = ethers.utils.bigNumberify(lengthData).toNumber()
-      messages.push(L2Message.fromData(bytes.slice(offset, offset + length)))
+    while (bytes.length > 0) {
+      const decoded = RLPDecode(bytes as RLPInput, true) as RLPDecoded
+      const lengthData = ethers.utils.bigNumberify(decoded.data as Buffer).toNumber()
+      bytes = decoded.remainder
+      messages.push(L2Message.fromData(bytes.slice(0, lengthData)))
+      bytes = bytes.slice(lengthData)
     }
     return new L2Batch(messages)
   }
@@ -183,9 +184,8 @@ export class L2Batch {
     return ethers.utils.concat(
       this.messages.map(msg => {
         const data = msg.asData()
-        const lengthHex = ethers.utils.bigNumberify(data).toHexString()
         return ethers.utils.concat([
-          ethers.utils.hexZeroPad(lengthHex, 8),
+          RLPEncode(data.length),
           data,
         ])
       })

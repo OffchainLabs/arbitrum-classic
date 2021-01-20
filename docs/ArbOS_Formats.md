@@ -143,7 +143,7 @@ An L2 message consists of:
 
 **Subtype 3: L2 message batch** has subtype-specific data consisting of a sequence of one or more items, where each item consists of:
 
-- L2 message length (64-bit uint)
+- L2 message length (RLP-encoded uint)
 - L2 message (byte array)
 
 The L2 messages in a batch will be separated, and treated as if each had arrived separately, in the order in which they appear in the batch.
