@@ -33,8 +33,9 @@ import "../interfaces/IERC20.sol";
 
 import "../bridge/Messages.sol";
 import "./RollupLib.sol";
+import "../libraries/Cloneable.sol";
 
-contract Rollup is RollupCore, Pausable, IRollup {
+contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     // TODO: Configure this value based on the cost of sends
     uint8 internal constant MAX_SEND_COUNT = 100;
     // Rollup Config
@@ -126,7 +127,7 @@ contract Rollup is RollupCore, Pausable, IRollup {
                     0, // challenge hash (not challengeable)
                     0, // confirm data
                     0, // prev node
-                    0 // deadline block (not challengeable)
+                    block.number // deadline block (not challengeable)
                 )
             );
     }
@@ -413,16 +414,17 @@ contract Rollup is RollupCore, Pausable, IRollup {
             RollupLib.decodeAssertion(assertionBytes32Fields, assertionIntFields);
         INode prevNode = getNode(latestStakedNode(msg.sender));
 
+        // Make sure the previous state is correct against the node being built on
+        require(
+            RollupLib.beforeNodeStateHash(assertion) == prevNode.stateHash(),
+            "PREV_STATE_HASH"
+        );
+
         uint256 baseTime = prevNode.deadlineBlock().sub(assertion.beforeProposedBlock);
         require(
             prevNode.firstChildBlock() == 0 ||
                 block.number < baseTime.add(prevNode.firstChildBlock()),
             "NO_NEW_CHILDREN"
-        );
-        // Make sure the previous state is correct against the node being built on
-        require(
-            RollupLib.beforeNodeStateHash(assertion) == prevNode.stateHash(),
-            "PREV_STATE_HASH"
         );
 
         uint256 timeSinceLastNode = block.number.sub(assertion.beforeProposedBlock);
