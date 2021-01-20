@@ -12,6 +12,10 @@ type ExecutionImpl struct {
 	inboxDelta    *inboxDelta
 }
 
+func (i *ExecutionImpl) SegmentTarget() int {
+	return 400
+}
+
 func (e *ExecutionImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]core.Cut, error) {
 	execTracker := core.NewExecutionTracker(lookup, e.initialCursor, true, offsets)
 	cuts := make([]core.Cut, 0, len(offsets))

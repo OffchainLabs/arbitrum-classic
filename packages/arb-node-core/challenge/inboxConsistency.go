@@ -10,6 +10,10 @@ type InboxConsistencyImpl struct {
 	inboxMaxCount *big.Int
 }
 
+func (i *InboxConsistencyImpl) SegmentTarget() int {
+	return 400
+}
+
 func (i *InboxConsistencyImpl) inboxOffset(offset *big.Int) *big.Int {
 	return new(big.Int).Sub(i.inboxMaxCount, offset)
 }

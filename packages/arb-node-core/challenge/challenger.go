@@ -172,6 +172,8 @@ type SimpleChallengerImpl interface {
 }
 
 type ChallengerImpl interface {
+	SegmentTarget() int
+
 	GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]core.Cut, error)
 	FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []core.Cut) (int, error)
 
@@ -217,9 +219,9 @@ func handleChallenge(
 			inconsistentSegment,
 		)
 	} else {
-		segmentCount := 20
+		segmentCount := challengeImpl.SegmentTarget()
 		if inconsistentSegment.Length.Cmp(big.NewInt(int64(segmentCount))) < 0 {
-			// Safe since this is less than 20
+			// Safe since this is less than 400
 			segmentCount = int(inconsistentSegment.Length.Int64())
 		}
 		subCutOffsets := generateBisectionCutOffsets(inconsistentSegment, segmentCount)

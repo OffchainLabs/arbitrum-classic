@@ -45,7 +45,7 @@ contract ChallengeTester {
         address payable asserter,
         address payable challenger,
         uint256 asserterTimeLeft,
-        uint256 challegnerTimeLeft
+        uint256 challengerTimeLeft
     ) public {
         challenge = challengeFactory.createChallenge(
             address(this),
@@ -55,7 +55,7 @@ contract ChallengeTester {
             asserter,
             challenger,
             asserterTimeLeft,
-            challegnerTimeLeft
+            challengerTimeLeft
         );
     }
 }

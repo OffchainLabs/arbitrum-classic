@@ -16,20 +16,20 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 	test.FailIfError(t, err)
 
 	correctLookup := core.NewValidatorLookupMock(mach)
-	for i := 0; i < 500; i++ {
+	for i := 0; i < 10000; i++ {
 		correctLookup.AddMessage(inbox.NewRandomInboxMessage())
 	}
 	otherLookup := core.NewValidatorLookupMock(mach)
-	for i := 0; i < 500; i++ {
+	for i := 0; i < 10000; i++ {
 		otherLookup.AddMessage(inbox.NewRandomInboxMessage())
 	}
 
 	falseLookup := correctLookup.Clone()
-	for i := 2; i < 6; i++ {
+	for i := 200; i < 206; i++ {
 		falseLookup.InboxAccs[i] = otherLookup.InboxAccs[i]
 	}
 
-	inboxMessagesRead := big.NewInt(4)
+	inboxMessagesRead := big.NewInt(203)
 
 	challengedNode := initializeChallengeData(t, correctLookup, inboxMessagesRead)
 
@@ -37,10 +37,10 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 	test.FailIfError(t, err)
 	challengedNode.Assertion.After.InboxHash = inboxAcc
 
-	arbGasSpeedLimitPerBlock := big.NewInt(100000)
-	challengePeriodBlocks := big.NewInt(100)
+	asserterTime := big.NewInt(100000)
+	challengerTime := big.NewInt(100000)
 
-	rounds := executeChallenge(t, challengedNode, arbGasSpeedLimitPerBlock, challengePeriodBlocks, correctLookup, falseLookup)
+	rounds := executeChallenge(t, challengedNode, asserterTime, challengerTime, correctLookup, falseLookup)
 	if rounds != 3 {
 		t.Fatal("wrong round count", rounds)
 	}

@@ -17,3 +17,24 @@ export async function initializeAccounts(): Promise<Signer[]> {
   }
   return accounts
 }
+
+export async function tryAdvanceChain(
+  account: Signer,
+  blocks: number
+): Promise<void> {
+  try {
+    for (let i = 0; i < blocks; i++) {
+      await ethers.provider.send('evm_mine', [])
+    }
+  } catch (e) {
+    // EVM mine failed. Try advancing the chain by sending txes if the node
+    // is in dev mode and mints blocks when txes are sent
+    for (let i = 0; i < blocks; i++) {
+      const tx = await account.sendTransaction({
+        value: 0,
+        to: await account.getAddress(),
+      })
+      await tx.wait()
+    }
+  }
+}

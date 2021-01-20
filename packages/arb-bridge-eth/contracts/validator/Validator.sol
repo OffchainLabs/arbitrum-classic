@@ -38,7 +38,14 @@ contract Validator {
         uint256 numTxes = data.length;
         for (uint256 i = 0; i < numTxes; i++) {
             (bool success, ) = address(destination[i]).call{ value: amount[i] }(data[i]);
-            require(success, "TX_FAILED");
+            if (!success) {
+                assembly {
+                    let ptr := mload(0x40)
+                    let size := returndatasize()
+                    returndatacopy(ptr, 0, size)
+                    revert(ptr, size)
+                }
+            }
         }
     }
 
@@ -49,7 +56,14 @@ contract Validator {
     ) external payable {
         require(msg.sender == owner, "ONLY_OWNER");
         (bool success, ) = destination.call{ value: amount }(data);
-        require(success, "TX_FAILED");
+        if (!success) {
+            assembly {
+                let ptr := mload(0x40)
+                let size := returndatasize()
+                returndatacopy(ptr, 0, size)
+                revert(ptr, size)
+            }
+        }
     }
 
     function returnOldDeposits(IRollup rollup, address payable[] calldata stakers) external {
