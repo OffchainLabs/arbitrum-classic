@@ -138,7 +138,13 @@ class ArbCore {
     rocksdb::Status updateLastMessageEntryProcessed(Transaction& tx,
                                                     rocksdb::Slice value_slice);
     rocksdb::Status saveLogs(Transaction& tx, const std::vector<value>& val);
+    ValueResult<std::vector<value>> getLogs(uint256_t index,
+                                            uint256_t count,
+                                            ValueCache& valueCache) const;
     DbResult<value> getLog(uint256_t index, ValueCache& valueCache) const;
+    ValueResult<std::vector<std::vector<unsigned char>>> getSends(
+        uint256_t index,
+        uint256_t count) const;
     ValueResult<std::vector<unsigned char>> getSend(uint256_t index) const;
     rocksdb::Status saveSends(
         Transaction& tx,

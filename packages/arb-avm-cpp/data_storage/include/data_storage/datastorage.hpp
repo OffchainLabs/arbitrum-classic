@@ -70,10 +70,22 @@ class Transaction {
         std::shared_ptr<DataStorage> store);
 };
 
+ValueResult<std::vector<std::vector<unsigned char>>>
+getVectorVectorUsingFamilyAndKey(rocksdb::Transaction& tx,
+                                 rocksdb::ColumnFamilyHandle* family,
+                                 rocksdb::Slice first_key_slice,
+                                 size_t count);
+
 ValueResult<std::vector<unsigned char>> getVectorUsingFamilyAndKey(
     rocksdb::Transaction& tx,
     rocksdb::ColumnFamilyHandle* family,
     rocksdb::Slice key_slice);
+
+ValueResult<std::vector<uint256_t>> getUint256VectorUsingFamilyAndKey(
+    rocksdb::Transaction& tx,
+    rocksdb::ColumnFamilyHandle* family,
+    rocksdb::Slice first_key_slice,
+    size_t count);
 
 ValueResult<uint256_t> getUint256UsingFamilyAndKey(
     rocksdb::Transaction& transaction,

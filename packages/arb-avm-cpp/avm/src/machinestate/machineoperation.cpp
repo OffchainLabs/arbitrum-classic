@@ -897,8 +897,8 @@ BlockReason inboxPeekOp(MachineState& m) {
             return InboxBlocked();
         }
 
-        // When next_block_height is set use that value as the message value
-        // so that machine knows to post any pending results
+        // When next_block_height is set, we know the result of the inbox peek
+        // opcode before we know the next message
         m.stack[0] = m.stack[0] == value(*m.context.next_block_height) ? 1 : 0;
         ++m.pc;
         return NotBlocked{};
