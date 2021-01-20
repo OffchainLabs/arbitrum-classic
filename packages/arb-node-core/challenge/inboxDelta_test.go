@@ -36,10 +36,10 @@ func TestInboxDeltaChallenge(t *testing.T) {
 	test.FailIfError(t, err)
 	challengedNode.Assertion.InboxDelta = core.CalculateInboxDeltaAcc(messages)
 
-	arbGasSpeedLimitPerBlock := big.NewInt(100000)
-	challengePeriodBlocks := big.NewInt(100)
+	asserterTime := big.NewInt(100000)
+	challengerTime := big.NewInt(100000)
 
-	rounds := executeChallenge(t, challengedNode, arbGasSpeedLimitPerBlock, challengePeriodBlocks, correctLookup, falseLookup)
+	rounds := executeChallenge(t, challengedNode, asserterTime, challengerTime, correctLookup, falseLookup)
 	if rounds != 3 {
 		t.Fatal("wrong round count", rounds)
 	}

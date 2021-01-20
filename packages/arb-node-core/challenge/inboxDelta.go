@@ -11,6 +11,10 @@ type InboxDeltaImpl struct {
 	inboxDelta          *inboxDelta
 }
 
+func (i *InboxDeltaImpl) SegmentTarget() int {
+	return 250
+}
+
 func (i *InboxDeltaImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]core.Cut, error) {
 	return getCutsSimple(i, lookup, offsets)
 }

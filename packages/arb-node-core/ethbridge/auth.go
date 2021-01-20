@@ -48,7 +48,7 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 		}
 
 		logger.Info().RawJSON("tx", txJSON).Str("nonce", "nil").Hex("sender", t.auth.From.Bytes()).Send()
-		return addr, nil, err
+		return addr, tx, err
 	}
 
 	for i := 0; i < smallNonceRepeatCount && err != nil && strings.Contains(err.Error(), smallNonceError); i++ {

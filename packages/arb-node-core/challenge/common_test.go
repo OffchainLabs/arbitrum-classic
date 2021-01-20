@@ -20,14 +20,14 @@ import (
 func executeChallenge(
 	t *testing.T,
 	challengedNode *core.NodeInfo,
-	arbGasSpeedLimitPerBlock *big.Int,
-	challengePeriodBlocks *big.Int,
+	asserterTime *big.Int,
+	challengerTime *big.Int,
 	correctLookup *core.ValidatorLookupMock,
 	falseLookup *core.ValidatorLookupMock,
 ) int {
 	ctx := context.Background()
 
-	client, tester, asserterWallet, challengerWallet, challengeAddress := initializeChallengeTest(t, challengedNode, arbGasSpeedLimitPerBlock, challengePeriodBlocks)
+	client, tester, asserterWallet, challengerWallet, challengeAddress := initializeChallengeTest(t, challengedNode, asserterTime, challengerTime)
 
 	challengeCon, err := ethbridge.NewChallenge(challengeAddress, client)
 	test.FailIfError(t, err)
@@ -45,8 +45,12 @@ func executeChallenge(
 			if rawTx == nil {
 				t.Fatal("should be able to transact")
 			}
-			_, err = challengerWallet.ExecuteTransaction(ctx, rawTx)
+			tx, err := challengerWallet.ExecuteTransaction(ctx, rawTx)
 			test.FailIfError(t, err)
+			client.Commit()
+			receipt, err := client.TransactionReceipt(ctx, tx.Hash())
+			test.FailIfError(t, err)
+			t.Log("Challenger Used", receipt.GasUsed, "gas")
 			turn = ethbridge.ASSERTER_TURN
 		} else {
 			rawTx, err := asserter.HandleConflict(ctx)
@@ -54,13 +58,15 @@ func executeChallenge(
 			if rawTx == nil {
 				t.Fatal("should be able to transact")
 			}
-			_, err = asserterWallet.ExecuteTransaction(ctx, rawTx)
+			tx, err := asserterWallet.ExecuteTransaction(ctx, rawTx)
 			test.FailIfError(t, err)
+			client.Commit()
+			receipt, err := client.TransactionReceipt(ctx, tx.Hash())
+			test.FailIfError(t, err)
+			t.Log("Asserter Used", receipt.GasUsed, "gas")
 			turn = ethbridge.CHALLENGER_TURN
 		}
 		rounds++
-
-		client.Commit()
 
 		completed, err := tester.ChallengeCompleted(&bind.CallOpts{Context: ctx})
 		test.FailIfError(t, err)
@@ -173,8 +179,8 @@ func initializeChallengeData(
 func initializeChallengeTest(
 	t *testing.T,
 	nd *core.NodeInfo,
-	arbGasLimitPerBlock *big.Int,
-	challengePeriodBlocks *big.Int,
+	asserterTime *big.Int,
+	challengerTime *big.Int,
 ) (*ethutils.SimulatedEthClient, *ethbridgetestcontracts.ChallengeTester, *ethbridge.Validator, *ethbridge.Validator, ethcommon.Address) {
 	clnt, pks := test.SimulatedBackend()
 	deployer := bind.NewKeyedTransactor(pks[0])
@@ -204,11 +210,10 @@ func initializeChallengeTest(
 		nd.Assertion.InboxConsistencyHash(nd.InboxMaxHash, nd.InboxMaxCount),
 		nd.Assertion.InboxDeltaHash(),
 		nd.Assertion.ExecutionHash(),
-		nd.Assertion.GasUsed(),
-		arbGasLimitPerBlock,
 		asserterWallet.Address().ToEthAddress(),
 		challengerWallet.Address().ToEthAddress(),
-		challengePeriodBlocks,
+		asserterTime,
+		challengerTime,
 	)
 	test.FailIfError(t, err)
 	client.Commit()
