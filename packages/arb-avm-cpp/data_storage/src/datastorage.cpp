@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
+#include <data_storage/datastorage.hpp>
+
+#include "value/utils.hpp"
+
 #include <avm_values/value.hpp>
 #include <data_storage/blockstore.hpp>
-#include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
-#include <string>
 
-#include <iostream>
+#include <string>
 
 DataStorage::DataStorage(const std::string& db_path) {
     rocksdb::TransactionDBOptions txn_options;
@@ -84,6 +86,35 @@ std::unique_ptr<Transaction> Transaction::makeTransaction(
     return std::make_unique<Transaction>(std::move(store), std::move(tx));
 }
 
+ValueResult<std::vector<std::vector<unsigned char>>>
+getVectorVectorUsingFamilyAndKey(rocksdb::Transaction& tx,
+                                 rocksdb::ColumnFamilyHandle* family,
+                                 rocksdb::Slice first_key_slice,
+                                 size_t count) {
+    auto it = std::unique_ptr<rocksdb::Iterator>(
+        tx.GetIterator(rocksdb::ReadOptions(), family));
+
+    // Find first message
+    it->Seek(vecToSlice(first_key_slice));
+    if (!it->status().ok()) {
+        return {it->status(), {}};
+    }
+
+    std::vector<std::vector<unsigned char>> vectors;
+    for (size_t i = 0; i < count; i++) {
+        if (!it->Valid()) {
+            if (!it->status().ok()) {
+                return {it->status(), {}};
+            }
+            return {rocksdb::Status::NotFound(), {}};
+        }
+        vectors.emplace_back(it->value().data(),
+                             it->value().data() + it->value().size());
+    }
+
+    return {rocksdb::Status::OK(), vectors};
+}
+
 ValueResult<std::vector<unsigned char>> getVectorUsingFamilyAndKey(
     rocksdb::Transaction& tx,
     rocksdb::ColumnFamilyHandle* family,
@@ -100,6 +131,36 @@ ValueResult<std::vector<unsigned char>> getVectorUsingFamilyAndKey(
                                            returned_value.end());
 
     return {status, saved_value};
+}
+
+ValueResult<std::vector<uint256_t>> getUint256VectorUsingFamilyAndKey(
+    rocksdb::Transaction& tx,
+    rocksdb::ColumnFamilyHandle* family,
+    rocksdb::Slice first_key_slice,
+    size_t count) {
+    auto it = std::unique_ptr<rocksdb::Iterator>(
+        tx.GetIterator(rocksdb::ReadOptions(), family));
+
+    // Find first message
+    it->Seek(vecToSlice(first_key_slice));
+    if (!it->status().ok()) {
+        return {it->status(), {}};
+    }
+
+    std::vector<uint256_t> vectors;
+    for (size_t i = 0; i < count; i++) {
+        if (!it->Valid()) {
+            if (!it->status().ok()) {
+                return {it->status(), {}};
+            }
+            return {rocksdb::Status::NotFound(), {}};
+        }
+
+        auto data = reinterpret_cast<const char*>(it->value().data());
+        vectors.push_back(deserializeUint256t(data));
+    }
+
+    return {rocksdb::Status::OK(), vectors};
 }
 
 ValueResult<uint256_t> getUint256UsingFamilyAndKey(

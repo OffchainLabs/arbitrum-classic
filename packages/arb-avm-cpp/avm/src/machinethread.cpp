@@ -54,8 +54,8 @@ void MachineThread::clear_error_string() {
 }
 
 void MachineThread::operator()(
-    uint64_t gas_limit,
-    bool hard_gas_limit,
+    const uint64_t gas_limit,
+    const bool hard_gas_limit,
     const std::vector<std::vector<unsigned char>>& inbox_messages,
     const nonstd::optional<uint256_t>& final_block) {
     if (machine_status != MACHINE_NONE) {

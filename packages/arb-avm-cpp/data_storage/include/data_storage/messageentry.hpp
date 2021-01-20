@@ -31,9 +31,9 @@ struct MessageEntry {
     uint256_t sequence_number{};
 
     uint256_t inbox_hash;
-    uint64_t block_height;
+    uint64_t block_height{};
     bool last_message_in_block{};
-    std::vector<unsigned char> message;
+    std::vector<unsigned char> data;
 
     MessageEntry() = default;
     MessageEntry(uint256_t sequence_number,
@@ -45,11 +45,13 @@ struct MessageEntry {
           inbox_hash(inbox_hash),
           block_height(block_height),
           last_message_in_block(last_message_in_block),
-          message(std::move(message)) {}
+          data(std::move(message)) {}
 };
 
 MessageEntry extractMessageEntry(uint256_t sequence_number,
-                                 const rocksdb::Slice value);
+                                 rocksdb::Slice value);
+
+Tuple messageDataToTuple(const std::vector<unsigned char>& data);
 
 MessageEntry deserializeMessageEntry(
     uint256_t sequence_number,

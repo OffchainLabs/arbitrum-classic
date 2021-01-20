@@ -19,6 +19,8 @@
 #include <avm/machine.hpp>
 #include <avm_values/opcodes.hpp>
 
+#include <data_storage/messageentry.hpp>
+
 std::ostream& operator<<(std::ostream& os, const Machine& val) {
     os << val.machine_state;
     return os;
@@ -41,9 +43,15 @@ bool validMessages(const std::vector<Tuple>& messages) {
 Assertion Machine::run(
     uint64_t gas_limit,
     bool hard_gas_limit,
-    const std::vector<std::vector<unsigned char>>& inbox_messages,
+    const std::vector<std::vector<unsigned char>>& inbox_data,
     const nonstd::optional<uint256_t>& final_block) {
-    // TODO
+    std::vector<Tuple> inbox_messages;
+    inbox_messages.reserve(inbox_data.size());
+    for (const auto& data : inbox_data) {
+        inbox_messages.emplace_back(messageDataToTuple(data));
+    }
+
+    return run(gas_limit, hard_gas_limit, inbox_messages, final_block);
 }
 
 Assertion Machine::run(

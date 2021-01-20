@@ -28,6 +28,45 @@ MessageEntry extractMessageEntry(uint256_t sequence_number,
     return deserializeMessageEntry(sequence_number, entry_vector);
 }
 
+Tuple messageDataToTuple(const std::vector<unsigned char>& data) {
+    auto ptr = data.data();
+
+    if (data.size() < sizeof(char) + sizeof(uint256_t) * 5) {
+        return {};
+    }
+
+    uint256_t kind = ptr[0];
+    ptr++;
+    auto block_number = intx::be::unsafe::load<uint256_t>(ptr);
+    ptr += sizeof(uint256_t);
+
+    auto timestamp = intx::be::unsafe::load<uint256_t>(ptr);
+    ptr += sizeof(uint256_t);
+
+    auto sender = intx::be::unsafe::load<uint256_t>(ptr);
+    ptr += sizeof(uint256_t);
+
+    auto sequence_num = intx::be::unsafe::load<uint256_t>(ptr);
+    ptr += sizeof(uint256_t);
+
+    auto buf_size = intx::be::unsafe::load<uint256_t>(ptr);
+    ptr += sizeof(uint256_t);
+
+    auto remaining_length = ptr - data.data() + buf_size;
+    if (remaining_length > data.size()) {
+        buf_size = remaining_length;
+    }
+
+    Buffer buf;
+    buf = buf.set_many(0, std::vector<uint8_t>(
+                              ptr, ptr + intx::narrow_cast<size_t>(buf_size)));
+
+    Tuple message(kind, block_number, timestamp, sender, sequence_num, buf_size,
+                  std::move(buf));
+
+    return message;
+}
+
 MessageEntry deserializeMessageEntry(
     const uint256_t sequence_number,
     const std::vector<unsigned char>& entry_vector) {
@@ -52,9 +91,8 @@ std::vector<unsigned char> serializeMessageEntry(
     marshal_uint256_t(state_data.inbox_hash, state_data_vector);
     marshal_uint64_t(state_data.block_height, state_data_vector);
     state_data_vector.push_back(state_data.last_message_in_block ? 1 : 0);
-    state_data_vector.insert(
-        state_data_vector.end(), state_data.message.data(),
-        state_data.message.data() + state_data.message.size());
+    state_data_vector.insert(state_data_vector.end(), state_data.data.data(),
+                             state_data.data.data() + state_data.data.size());
 
     return state_data_vector;
 }
@@ -64,9 +102,8 @@ bool operator==(const MessageEntry& lhs, const MessageEntry& rhs) {
            lhs.inbox_hash == rhs.inbox_hash &&
            lhs.block_height == rhs.block_height &&
            lhs.last_message_in_block == rhs.last_message_in_block &&
-           lhs.message.size() == rhs.message.size() &&
-           memcmp(lhs.message.data(), rhs.message.data(), lhs.message.size()) ==
-               0;
+           lhs.data.size() == rhs.data.size() &&
+           memcmp(lhs.data.data(), rhs.data.data(), lhs.data.size()) == 0;
 }
 
 bool operator!=(const MessageEntry& lhs, const MessageEntry& rhs) {
