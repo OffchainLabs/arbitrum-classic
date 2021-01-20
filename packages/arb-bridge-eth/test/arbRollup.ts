@@ -49,7 +49,7 @@ async function createRollup(): Promise<{
   rollupCon: Rollup
   blockCreated: number
 }> {
-  const tx = rollupCreator.createRollup(
+  const tx = rollupCreator.createRollupNoProxy(
     initialVmState,
     confirmationPeriodBlocks,
     0,
@@ -208,6 +208,7 @@ describe('ArbRollup', () => {
     validNodeState = node.afterNodeState()
   })
 
+  let challengerNode: Node
   it('should let the second staker make a conflicting node', async function () {
     await tryAdvanceChain(confirmationPeriodBlocks / 10)
     const block = await ethers.provider.getBlock('latest')
@@ -216,7 +217,10 @@ describe('ArbRollup', () => {
       (block.number - prevNodeState.proposedBlock + 1) *
         arbGasSpeedLimitPerBlock
     )
-    await rollup.connect(accounts[1]).stakeOnNewNode(block, assertion, 4)
+    const { node } = await rollup
+      .connect(accounts[1])
+      .stakeOnNewNode(block, assertion, 4)
+    challengerNode = node
   })
 
   it('should fail to confirm first staker node', async function () {
@@ -236,7 +240,8 @@ describe('ArbRollup', () => {
       3,
       await accounts[1].getAddress(),
       4,
-      challengedNode
+      challengedNode,
+      challengerNode
     )
     const receipt = await (await tx).wait()
     const ev = rollup.rollup.interface.parseLog(
@@ -246,6 +251,35 @@ describe('ArbRollup', () => {
     const parsedEv = (ev as any) as { args: { challengeContract: string } }
     const Challenge = await ethers.getContractFactory('Challenge')
     challenge = Challenge.attach(parsedEv.args.challengeContract) as Challenge
+  })
+
+  it('should make a new node', async function () {
+    const block = await ethers.provider.getBlock('latest')
+    const challengedAssertion = makeSimpleAssertion(
+      validNodeState,
+      (block.number - validNodeState.proposedBlock + 1) *
+        arbGasSpeedLimitPerBlock
+    )
+    const { node } = await rollup.stakeOnNewNode(block, challengedAssertion, 5)
+    challengedNode = node
+  })
+
+  it('new staker should make a conflicting node', async function () {
+    const block = await ethers.provider.getBlock('latest')
+    const assertion = makeSimpleAssertion(
+      validNodeState,
+      (block.number - validNodeState.proposedBlock + 10) *
+        arbGasSpeedLimitPerBlock
+    )
+    const stake = await rollup.currentRequiredStake()
+    await rollup.connect(accounts[2]).newStake(0, { value: stake })
+
+    await rollup.connect(accounts[2]).stakeOnExistingNode(block, 3)
+
+    const { node } = await rollup
+      .connect(accounts[2])
+      .stakeOnNewNode(block, assertion, 6)
+    challengerNode = node
   })
 
   it('asserter should win via timeout', async function () {
@@ -265,39 +299,14 @@ describe('ArbRollup', () => {
     await rollup.rejectNextNode(0, stakeToken)
   })
 
-  it('should make a new node', async function () {
-    await tryAdvanceChain(confirmationPeriodBlocks / 10)
-    const block = await ethers.provider.getBlock('latest')
-    const challengedAssertion = makeSimpleAssertion(
-      validNodeState,
-      (block.number - validNodeState.proposedBlock + 1) *
-        arbGasSpeedLimitPerBlock
-    )
-    const { node } = await rollup.stakeOnNewNode(block, challengedAssertion, 5)
-    challengedNode = node
-  })
-
-  it('new staker should make a conflicting node', async function () {
-    await tryAdvanceChain(confirmationPeriodBlocks / 10)
-    const block = await ethers.provider.getBlock('latest')
-    const assertion = makeSimpleAssertion(
-      validNodeState,
-      (block.number - validNodeState.proposedBlock + 10) *
-        arbGasSpeedLimitPerBlock
-    )
-    const stake = await rollup.currentRequiredStake()
-    await rollup.connect(accounts[2]).newStake(0, { value: stake })
-
-    await rollup.connect(accounts[2]).stakeOnNewNode(block, assertion, 6)
-  })
-
   it('should initiate another challenge', async function () {
     const tx = rollup.createChallenge(
       await accounts[0].getAddress(),
       5,
       await accounts[2].getAddress(),
       6,
-      challengedNode
+      challengedNode,
+      challengerNode
     )
     const receipt = await (await tx).wait()
     const ev = rollup.rollup.interface.parseLog(

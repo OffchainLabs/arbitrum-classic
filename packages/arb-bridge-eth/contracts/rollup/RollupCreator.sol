@@ -30,31 +30,24 @@ import "./IRollup.sol";
 import "../bridge/interfaces/IBridge.sol";
 
 import "./RollupLib.sol";
+import "../libraries/CloneFactory.sol";
+import "../libraries/ICloneable.sol";
 
-contract RollupCreator is Ownable {
+contract RollupCreator is Ownable, CloneFactory {
     event RollupCreated(address rollupAddress);
 
-    address rollupTemplate;
+    ICloneable rollupTemplate;
     address challengeFactory;
     address nodeFactory;
 
     function setTemplates(
-        address _rollupTemplate,
+        ICloneable _rollupTemplate,
         address _challengeFactory,
         address _nodeFactory
     ) external onlyOwner {
         rollupTemplate = _rollupTemplate;
         challengeFactory = _challengeFactory;
         nodeFactory = _nodeFactory;
-    }
-
-    struct CreateRollupFrame {
-        ProxyAdmin admin;
-        Bridge bridge;
-        Inbox inbox;
-        RollupEventBridge rollupEventBridge;
-        Outbox outbox;
-        TransparentUpgradeableProxy rollup;
     }
 
     function createRollup(
@@ -82,6 +75,40 @@ contract RollupCreator is Ownable {
             );
     }
 
+    function createRollupNoProxy(
+        bytes32 _machineHash,
+        uint256 _confirmPeriodBlocks,
+        uint256 _extraChallengeTimeBlocks,
+        uint256 _arbGasSpeedLimitPerBlock,
+        uint256 _baseStake,
+        address _stakeToken,
+        address _owner,
+        bytes calldata _extraConfig
+    ) external returns (IRollup) {
+        return
+            createRollupNoProxy(
+                RollupLib.Config(
+                    _machineHash,
+                    _confirmPeriodBlocks,
+                    _extraChallengeTimeBlocks,
+                    _arbGasSpeedLimitPerBlock,
+                    _baseStake,
+                    _stakeToken,
+                    _owner,
+                    _extraConfig
+                )
+            );
+    }
+
+    struct CreateRollupFrame {
+        ProxyAdmin admin;
+        Bridge bridge;
+        Inbox inbox;
+        RollupEventBridge rollupEventBridge;
+        Outbox outbox;
+        address rollup;
+    }
+
     // After this setup:
     // Rollup should be the owner of bridge
     // Rollup should be the owner of it's upgrade admin
@@ -89,20 +116,19 @@ contract RollupCreator is Ownable {
     function createRollup(RollupLib.Config memory config) private returns (IRollup) {
         CreateRollupFrame memory frame;
         frame.admin = new ProxyAdmin();
-        frame.rollup = new TransparentUpgradeableProxy(rollupTemplate, address(frame.admin), "");
+        frame.rollup = address(
+            new TransparentUpgradeableProxy(address(rollupTemplate), address(frame.admin), "")
+        );
 
         frame.bridge = new Bridge();
         frame.inbox = new Inbox(IBridge(frame.bridge));
-        frame.rollupEventBridge = new RollupEventBridge(
-            address(frame.bridge),
-            address(frame.rollup)
-        );
+        frame.rollupEventBridge = new RollupEventBridge(address(frame.bridge), frame.rollup);
         frame.bridge.setInbox(address(frame.inbox), true);
-        frame.outbox = new Outbox(address(frame.rollup), IBridge(frame.bridge));
+        frame.outbox = new Outbox(frame.rollup, IBridge(frame.bridge));
 
-        frame.bridge.transferOwnership(address(frame.rollup));
-        frame.admin.transferOwnership(address(frame.rollup));
-        IRollup(address(frame.rollup)).initialize(
+        frame.bridge.transferOwnership(frame.rollup);
+        frame.admin.transferOwnership(frame.rollup);
+        IRollup(frame.rollup).initialize(
             config.machineHash,
             config.confirmPeriodBlocks,
             config.extraChallengeTimeBlocks,
@@ -120,7 +146,40 @@ contract RollupCreator is Ownable {
                 nodeFactory
             ]
         );
-        emit RollupCreated(address(frame.rollup));
-        return IRollup(address(frame.rollup));
+        emit RollupCreated(frame.rollup);
+        return IRollup(frame.rollup);
+    }
+
+    function createRollupNoProxy(RollupLib.Config memory config) private returns (IRollup) {
+        CreateRollupFrame memory frame;
+        frame.rollup = createClone(rollupTemplate);
+
+        frame.bridge = new Bridge();
+        frame.inbox = new Inbox(IBridge(frame.bridge));
+        frame.rollupEventBridge = new RollupEventBridge(address(frame.bridge), frame.rollup);
+        frame.bridge.setInbox(address(frame.inbox), true);
+        frame.outbox = new Outbox(frame.rollup, IBridge(frame.bridge));
+
+        frame.bridge.transferOwnership(frame.rollup);
+        IRollup(frame.rollup).initialize(
+            config.machineHash,
+            config.confirmPeriodBlocks,
+            config.extraChallengeTimeBlocks,
+            config.arbGasSpeedLimitPerBlock,
+            config.baseStake,
+            config.stakeToken,
+            config.owner,
+            config.extraConfig,
+            [
+                address(0),
+                address(frame.bridge),
+                address(frame.outbox),
+                address(frame.rollupEventBridge),
+                challengeFactory,
+                nodeFactory
+            ]
+        );
+        emit RollupCreated(frame.rollup);
+        return IRollup(frame.rollup);
     }
 }

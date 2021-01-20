@@ -307,6 +307,17 @@ export class Node {
       this.inboxMaxCount
     )
   }
+
+  challengeFields(): [BytesLike, BytesLike, BytesLike] {
+    return [
+      this.assertion.inboxConsistencyHash(
+        this.inboxMaxHash,
+        this.inboxMaxCount
+      ),
+      this.assertion.inboxDeltaHash(),
+      this.assertion.executionHash(),
+    ]
+  }
 }
 
 export class RollupContract {
@@ -383,20 +394,16 @@ export class RollupContract {
     nodeNum1: BigNumberish,
     staker2Address: string,
     nodeNum2: BigNumberish,
-    node: Node
+    node1: Node,
+    node2: Node
   ): Promise<ContractTransaction> {
+    const fields1 = node1.challengeFields()
+    const fields2 = node2.challengeFields()
     return this.rollup.createChallenge(
       [staker1Address, staker2Address],
       [nodeNum1, nodeNum2],
-      [
-        node.assertion.inboxConsistencyHash(
-          node.inboxMaxHash,
-          node.inboxMaxCount
-        ),
-        node.assertion.inboxDeltaHash(),
-        node.assertion.executionHash(),
-      ],
-      node.assertion.gasUsed
+      [fields1[0], fields1[1], fields1[2], fields2[0], fields2[1], fields2[2]],
+      [node1.blockCreated, node2.blockCreated]
     )
   }
 

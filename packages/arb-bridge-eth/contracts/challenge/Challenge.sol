@@ -164,6 +164,8 @@ contract Challenge is Cloneable, IChallenge {
 
         challengeState = 0;
 
+        lastMoveBlock = block.number;
+
         emit InitiatedChallenge();
     }
 
