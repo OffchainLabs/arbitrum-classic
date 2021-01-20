@@ -171,22 +171,19 @@ func (s *Staker) createConflict(ctx context.Context) (*ethbridge.RawTransaction,
 			node1, node2 = node2, node1
 		}
 
-		nodeInfo, err := lookupNode(ctx, s.rollup.RollupWatcher, node1)
+		node1Info, err := lookupNode(ctx, s.rollup.RollupWatcher, node1)
 		if err != nil {
 			return nil, err
 		}
-		maxInboxHash, err := s.lookup.GetInboxAcc(nodeInfo.InboxMaxCount)
+		node2Info, err := lookupNode(ctx, s.rollup.RollupWatcher, node2)
 		if err != nil {
 			return nil, err
 		}
 		return s.rollup.CreateChallenge(
 			staker1,
-			node1,
+			node1Info,
 			staker2,
-			node2,
-			nodeInfo.Assertion,
-			maxInboxHash,
-			nodeInfo.InboxMaxCount,
+			node2Info,
 		)
 	}
 	// No conflicts exist

@@ -37,6 +37,11 @@ func (n *NodeInfo) AfterState() *NodeState {
 	}
 }
 
+func (n *NodeInfo) InboxConsistencyHash() common.Hash {
+	messagesAfterCount := new(big.Int).Sub(n.InboxMaxCount, n.Assertion.After.InboxIndex)
+	return BisectionChunkHash(big.NewInt(0), messagesAfterCount, n.InboxMaxHash, n.Assertion.After.InboxHash)
+}
+
 func (n *NodeInfo) InitialInboxConsistencyBisection() *Bisection {
 	return &Bisection{
 		ChallengedSegment: &ChallengeSegment{

@@ -55,7 +55,8 @@ func (v *ValidatorUtils) RefundableStakers(ctx context.Context) ([]common.Addres
 }
 
 type RollupConfig struct {
-	ChallengePeriodBlocks    *big.Int
+	ConfirmPeriodBlocks      *big.Int
+	ExtraChallengeTimeBlocks *big.Int
 	ArbGasSpeedLimitPerBlock *big.Int
 	BaseStake                *big.Int
 	StakeToken               common.Address
@@ -67,7 +68,8 @@ func (v *ValidatorUtils) GetConfig(ctx context.Context) (*RollupConfig, error) {
 		return nil, err
 	}
 	return &RollupConfig{
-		ChallengePeriodBlocks:    config.ChallengePeriodBlocks,
+		ConfirmPeriodBlocks:      config.ConfirmPeriodBlocks,
+		ExtraChallengeTimeBlocks: config.ExtraChallengeTimeBlocks,
 		ArbGasSpeedLimitPerBlock: config.ArbGasSpeedLimitPerBlock,
 		BaseStake:                config.BaseStake,
 		StakeToken:               common.NewAddressFromEth(config.StakeToken),

@@ -235,8 +235,8 @@ func (r *RollupWatcher) LatestNodeCreated(ctx context.Context) (*big.Int, error)
 	return r.con.LatestNodeCreated(&bind.CallOpts{Context: ctx})
 }
 
-func (r *RollupWatcher) ChallengePeriodBlocks(ctx context.Context) (*big.Int, error) {
-	return r.con.ChallengePeriodBlocks(&bind.CallOpts{Context: ctx})
+func (r *RollupWatcher) ConfirmPeriodBlocks(ctx context.Context) (*big.Int, error) {
+	return r.con.ConfirmPeriodBlocks(&bind.CallOpts{Context: ctx})
 }
 
 func (r *RollupWatcher) GetNode(ctx context.Context, node core.NodeID) (*NodeWatcher, error) {
