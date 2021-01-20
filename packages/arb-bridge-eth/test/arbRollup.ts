@@ -35,7 +35,7 @@ const zerobytes32 =
   '0x0000000000000000000000000000000000000000000000000000000000000000'
 const stakeRequirement = 10
 const stakeToken = '0x0000000000000000000000000000000000000000'
-const challengePeriodBlocks = 100
+const confirmationPeriodBlocks = 100
 const arbGasSpeedLimitPerBlock = 1000000
 
 let rollupCreator: RollupCreator
@@ -51,7 +51,8 @@ async function createRollup(): Promise<{
 }> {
   const tx = rollupCreator.createRollup(
     initialVmState,
-    challengePeriodBlocks,
+    confirmationPeriodBlocks,
+    0,
     arbGasSpeedLimitPerBlock,
     stakeRequirement,
     stakeToken,
@@ -148,7 +149,7 @@ describe('ArbRollup', () => {
 
   it('should place stake on new node', async function () {
     const block = await ethers.provider.getBlock('latest')
-    await tryAdvanceChain(challengePeriodBlocks / 10)
+    await tryAdvanceChain(confirmationPeriodBlocks / 10)
     const assertion = makeSimpleAssertion(
       prevNodeState,
       arbGasSpeedLimitPerBlock * 20
@@ -166,7 +167,7 @@ describe('ArbRollup', () => {
   })
 
   it('should move stake to a new node', async function () {
-    await tryAdvanceChain(challengePeriodBlocks / 10)
+    await tryAdvanceChain(confirmationPeriodBlocks / 10)
     const block = await ethers.provider.getBlock('latest')
     const assertion = makeSimpleAssertion(
       prevNodeState,
@@ -183,19 +184,19 @@ describe('ArbRollup', () => {
   })
 
   it('should confirm node', async function () {
-    await tryAdvanceChain(challengePeriodBlocks * 2)
+    await tryAdvanceChain(confirmationPeriodBlocks * 2)
     await rollup.confirmNextNode(zerobytes32, [])
   })
 
   it('should confirm next node', async function () {
-    await tryAdvanceChain(challengePeriodBlocks / 10)
+    await tryAdvanceChain(confirmationPeriodBlocks / 10)
     await rollup.confirmNextNode(zerobytes32, [])
   })
 
   let challengedNode: Node
   let validNodeState: NodeState
   it('should let the first staker make another node', async function () {
-    await tryAdvanceChain(challengePeriodBlocks / 10)
+    await tryAdvanceChain(confirmationPeriodBlocks / 10)
     const block = await ethers.provider.getBlock('latest')
     const challengedAssertion = makeSimpleAssertion(
       prevNodeState,
@@ -208,7 +209,7 @@ describe('ArbRollup', () => {
   })
 
   it('should let the second staker make a conflicting node', async function () {
-    await tryAdvanceChain(challengePeriodBlocks / 10)
+    await tryAdvanceChain(confirmationPeriodBlocks / 10)
     const block = await ethers.provider.getBlock('latest')
     const assertion = makeSimpleAssertion(
       prevNodeState,
@@ -220,7 +221,7 @@ describe('ArbRollup', () => {
 
   it('should fail to confirm first staker node', async function () {
     await tryAdvanceChain(
-      challengePeriodBlocks +
+      confirmationPeriodBlocks +
         challengedNode.assertion.checkTime(arbGasSpeedLimitPerBlock)
     )
     await expect(rollup.confirmNextNode(zerobytes32, [])).to.be.revertedWith(
@@ -249,7 +250,7 @@ describe('ArbRollup', () => {
 
   it('asserter should win via timeout', async function () {
     await tryAdvanceChain(
-      challengePeriodBlocks +
+      confirmationPeriodBlocks +
         challengedNode.assertion.checkTime(arbGasSpeedLimitPerBlock) +
         1
     )
@@ -265,7 +266,7 @@ describe('ArbRollup', () => {
   })
 
   it('should make a new node', async function () {
-    await tryAdvanceChain(challengePeriodBlocks / 10)
+    await tryAdvanceChain(confirmationPeriodBlocks / 10)
     const block = await ethers.provider.getBlock('latest')
     const challengedAssertion = makeSimpleAssertion(
       validNodeState,
@@ -277,7 +278,7 @@ describe('ArbRollup', () => {
   })
 
   it('new staker should make a conflicting node', async function () {
-    await tryAdvanceChain(challengePeriodBlocks / 10)
+    await tryAdvanceChain(confirmationPeriodBlocks / 10)
     const block = await ethers.provider.getBlock('latest')
     const assertion = makeSimpleAssertion(
       validNodeState,
@@ -328,7 +329,7 @@ describe('ArbRollup', () => {
 
   it('challenger should win via timeout', async function () {
     await tryAdvanceChain(
-      challengePeriodBlocks +
+      confirmationPeriodBlocks +
         challengedNode.assertion.checkTime(arbGasSpeedLimitPerBlock) +
         1
     )
@@ -340,7 +341,7 @@ describe('ArbRollup', () => {
   })
 
   it('confirm next node', async function () {
-    await tryAdvanceChain(challengePeriodBlocks)
+    await tryAdvanceChain(confirmationPeriodBlocks)
     await rollup.confirmNextNode(zerobytes32, [])
   })
 
