@@ -276,7 +276,6 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         uint256 firstUnresolved = firstUnresolvedNode();
         INode node = getNode(firstUnresolved);
         if (node.prev() == latest) {
-            requireNoRecentStake();
             requireUnresolved(successorWithStake);
             require(isStaked(stakerAddress), "NOT_STAKED");
 
@@ -285,6 +284,8 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
             // Verify the block's deadline has passed
             node.requirePastDeadline();
+
+            getNode(latest).requirePastChildConfirmDeadline();
 
             removeOldZombies(0);
 
@@ -307,7 +308,6 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         uint256[] calldata sendLengths
     ) external whenNotPaused {
         requireUnresolvedExists();
-        requireNoRecentStake();
 
         // There is at least one non-zombie staker
         require(stakerCount() > 0, "NO_STAKERS");
@@ -320,6 +320,8 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
         // Check that prev is latest confirmed
         require(node.prev() == latestConfirmed(), "INVALID_PREV");
+
+        getNode(latestConfirmed()).requirePastChildConfirmDeadline();
 
         removeOldZombies(0);
 
@@ -390,7 +392,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         require(nodeNum >= firstUnresolvedNode() && nodeNum <= latestNodeCreated());
         INode node = getNode(nodeNum);
         require(latestStakedNode(msg.sender) == node.prev(), "NOT_STAKED_PREV");
-        stakeOnNode(msg.sender, nodeNum);
+        stakeOnNode(msg.sender, nodeNum, confirmPeriodBlocks);
     }
 
     /**
@@ -483,7 +485,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
         prevNode.childCreated();
         nodeCreated(node);
-        stakeOnNode(msg.sender, nodeNum);
+        stakeOnNode(msg.sender, nodeNum, confirmPeriodBlocks);
 
         emit NodeCreated(
             nodeNum,
@@ -731,13 +733,6 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             }
         }
         return stakedZombieCount;
-    }
-
-    /**
-     * @notice Verify that no stake has been placed within the last challenge period
-     */
-    function requireNoRecentStake() public view {
-        require(block.number.sub(lastStakeBlock()) >= confirmPeriodBlocks, "RECENT_STAKE");
     }
 
     /**
