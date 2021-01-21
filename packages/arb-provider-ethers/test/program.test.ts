@@ -21,7 +21,7 @@ import * as fs from 'fs'
 
 describe('Contract Parsing', function () {
   it('should have no backward references', async () => {
-    const data = fs.readFileSync('../../arb-os/arb_os/arbos.mexe', 'utf8')
+    const data = fs.readFileSync('../arb-os/arb_os/arbos.mexe', 'utf8')
     const prog = JSON.parse(data) as program.Program
 
     let i = 0
@@ -38,7 +38,7 @@ describe('Contract Parsing', function () {
   })
 
   it.skip("should load ArbOS and calulculate it's hash", function () {
-    const data = fs.readFileSync('../../arb-os/arb_os/arbos.mexe', 'utf8')
+    const data = fs.readFileSync('../arb-os/arb_os/arbos.mexe', 'utf8')
     const machineHash = program.programMachineHash(data)
     console.log(machineHash)
   }).timeout(5000)
