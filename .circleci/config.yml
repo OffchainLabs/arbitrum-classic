@@ -90,7 +90,6 @@ jobs:
   ethbridge:
     docker:
       - image: offchainlabs/ethbridge-base:0.2.1
-      - image: offchainlabs/geth-dev:0.1.0
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -103,16 +102,11 @@ jobs:
             yarn install --cache-folder ~/.cache/yarn
             yarn build
           working_directory: /home/user/project
-      - run: while ! nc -z localhost 8545; do sleep 2; done
       - run:
-          name: test arb-bridge-eth gas usage
+          name: test arb-bridge-eth
           command: |
-            yarn test:gas:ci
+            yarn test:ci
           working_directory: /home/user/project/packages/arb-bridge-eth
-      - run:
-          name: codechecks
-          command: npx codechecks
-          working_directory: /home/user/project
       - store_test_results:
           path: *test-path
 

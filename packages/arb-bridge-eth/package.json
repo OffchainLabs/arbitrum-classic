@@ -18,7 +18,8 @@
   },
   "scripts": {
     "build": "hardhat compile",
-    "test": "hardhat typechain && hardhat test",
+    "test": "hardhat test",
+    "test:ci": "CI=true hardhat test",
     "test:gas": "hardhat typechain && REPORT_GAS=true hardhat test --network localhost",
     "test:gas:ci": "CI=true yarn test:gas && mv gasReporterOutput.json ../..",
     "test:coverage": "hardhat typechain && hardhat coverage",
