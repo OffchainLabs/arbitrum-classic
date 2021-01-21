@@ -356,7 +356,7 @@ contract RollupCore {
         INode node = _nodes[nodeNum];
         uint256 newStakerCount = node.addStaker(stakerAddress);
         staker.latestStakedNode = nodeNum;
-        if (newStakerCount == 0) {
+        if (newStakerCount == 1) {
             INode parent = _nodes[node.prev()];
             parent.newChildConfirmDeadline(block.number.add(confirmPeriodBlocks));
         }
