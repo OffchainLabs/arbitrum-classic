@@ -18,36 +18,28 @@
 
 pragma solidity ^0.6.11;
 
-import "./ArbERC20Bridge.sol";
-import "arbos-contracts/contracts/ArbSys.sol";
+import "./ConfirmRoots.sol";
+import "./ExitLiquidityProvider.sol";
+import "./L1Buddy.sol";
+import "../arbitrum/ArbERC20Bridge.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
-import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
-import "arb-bridge-eth/contracts/bridge/interfaces/IBridge.sol";
+import "arb-bridge-eth/contracts/libraries/MerkleLib.sol";
 
-contract EthERC20Bridge {
-    IInbox inbox;
-    IBridge bridge;
-    bool connectedToChain;
+contract EthERC20Bridge is L1Buddy {
+    uint256 internal constant SendType_sendTxToL1 = 0;
 
-    modifier onlyIfConnected {
-        require(connectedToChain, "NOT_CONNECTED");
-        _;
-    }
+    ConfirmRoots confirmRoots;
+    // exitNum => exitDataHash => LP
+    mapping(bytes32 => address) redirectedExits;
 
-    modifier onlyL2 {
-        require(msg.sender == address(bridge), "ONLY_BRIDGE");
-        _;
-    }
-
-    constructor(IInbox _inbox) public {
-        inbox = _inbox;
-        bridge = IBridge(_inbox.bridge());
+    constructor(IInbox _inbox, address _confirmRoots) public L1Buddy(_inbox) {
+        confirmRoots = ConfirmRoots(_confirmRoots);
     }
 
     function connectToChain(uint256 maxGas, uint256 gasPriceBid) external payable {
         // Pay for gas
         if (msg.value > 0) {
-            inbox.depositEthMessage{ value: msg.value }(address(this));
+            inbox.depositEth{ value: msg.value }(address(this));
         }
         inbox.deployL2ContractPair(
             maxGas, // max gas
@@ -57,23 +49,68 @@ contract EthERC20Bridge {
         );
     }
 
-    function buddyCreated(bool successful) external onlyL2 {
-        // This method must be called by the l2 system rather than a contract
-        require(l2Sender() == address(0), "ONLY_SYSTEM");
-        if (successful) {
-            connectedToChain = true;
-        }
+    function fastWithdrawalFromL2(
+        address liquidityProvider,
+        uint256 nodeNum,
+        bytes32[] calldata proof,
+        uint256 merklePath,
+        uint256 l2Block,
+        uint256 l2Timestamp,
+        address erc20,
+        uint256 amount,
+        uint256 exitNum
+    ) external {
+        bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, msg.sender, erc20, amount));
+        require(redirectedExits[withdrawData] == address(0), "ALREADY_EXITED");
+        redirectedExits[withdrawData] = liquidityProvider;
+        bytes memory data =
+            abi.encodeWithSignature(
+                "withdrawFromL2(uint256,address,address,uint256)",
+                exitNum,
+                msg.sender,
+                erc20,
+                amount
+            );
+        bytes32 userTx =
+            keccak256(
+                abi.encodePacked(
+                    SendType_sendTxToL1,
+                    uint256(uint160(bytes20(address(this)))),
+                    uint256(uint160(bytes20(address(this)))),
+                    l2Block,
+                    l2Timestamp,
+                    uint256(0),
+                    data
+                )
+            );
+        bytes32 calcRoot =
+            MerkleLib.calculateRoot(proof, merklePath, keccak256(abi.encodePacked(userTx)));
+        require(confirmRoots.confirmRoots(calcRoot, nodeNum), "INVALID_ROOT");
+
+        ExitLiquidityProvider(liquidityProvider).provideLiquidity(
+            nodeNum,
+            msg.sender,
+            erc20,
+            amount
+        );
     }
 
     function withdrawFromL2(
+        uint256 exitNum,
         address erc20,
         address destination,
         uint256 amount
     ) external onlyIfConnected onlyL2 {
         // This method is only callable by this contract's buddy contract on L2
         require(l2Sender() == address(this), "L2_SENDER");
-        // Unsafe external call must occur below checks and effects
-        require(IERC20(erc20).transfer(destination, amount));
+        bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, destination, erc20, amount));
+        address exitAddress = redirectedExits[withdrawData];
+        // Unsafe external calls must occur below checks and effects
+        if (exitAddress != address(0)) {
+            require(IERC20(erc20).transfer(exitAddress, amount));
+        } else {
+            require(IERC20(erc20).transfer(destination, amount));
+        }
     }
 
     function updateTokenInfo(
@@ -127,9 +164,5 @@ contract EthERC20Bridge {
                 amount
             )
         );
-    }
-
-    function l2Sender() private view returns (address) {
-        return IOutbox(bridge.activeOutbox()).l2ToL1Sender();
     }
 }

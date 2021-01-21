@@ -4,5 +4,13 @@ require('@nomiclabs/hardhat-waffle')
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
-  solidity: '0.6.11',
+  solidity: {
+    version: '0.6.11',
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 100,
+      },
+    },
+  },
 }

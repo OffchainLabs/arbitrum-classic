@@ -29,6 +29,8 @@ contract ArbERC20Bridge is CloneFactory {
     /// @notice This mapping is from L1 address to L2 address
     mapping(address => address) public l2ToL1;
 
+    uint256 exitNum;
+
     ICloneable templateERC20;
 
     constructor() public {
@@ -52,6 +54,7 @@ contract ArbERC20Bridge is CloneFactory {
         string calldata symbol,
         uint8 decimals
     ) external payable {
+        require(tx.origin == address(this));
         StandardArbERC20 token = ensureTokenExists(erc20);
         token.updateInfo(name, symbol, decimals);
     }
@@ -62,12 +65,14 @@ contract ArbERC20Bridge is CloneFactory {
         ArbSys(100).sendTxToL1(
             address(this),
             abi.encodeWithSignature(
-                "withdrawFromL2(address,address,uint256)",
+                "withdrawFromL2(uint256,address,address,uint256)",
+                exitNum,
                 l1Contract,
                 destination,
                 amount
             )
         );
+        exitNum++;
     }
 
     function ensureTokenExists(address l1ERC20) private returns (StandardArbERC20) {

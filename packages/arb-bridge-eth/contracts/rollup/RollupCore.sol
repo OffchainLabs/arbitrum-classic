@@ -20,7 +20,7 @@ pragma solidity ^0.6.11;
 
 import "./INode.sol";
 
-import "../libraries/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract RollupCore {
     using SafeMath for uint256;
@@ -393,5 +393,9 @@ contract RollupCore {
     function destroyNode(uint256 nodeNum) private {
         _nodes[nodeNum].destroy();
         _nodes[nodeNum] = INode(0);
+    }
+
+    function max(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a > b ? a : b;
     }
 }

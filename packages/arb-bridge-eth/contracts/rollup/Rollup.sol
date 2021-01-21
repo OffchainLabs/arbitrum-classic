@@ -29,7 +29,7 @@ import "./INodeFactory.sol";
 import "../challenge/IChallengeFactory.sol";
 import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/IOutbox.sol";
-import "../interfaces/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../bridge/Messages.sol";
 import "./RollupLib.sol";
@@ -454,9 +454,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         uint256 checkTime =
             assertion.gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock);
         uint256 deadlineBlock =
-            SafeMath.max(block.number.add(confirmPeriodBlocks), prevNode.deadlineBlock()).add(
-                checkTime
-            );
+            max(block.number.add(confirmPeriodBlocks), prevNode.deadlineBlock()).add(checkTime);
 
         rollupEventBridge.nodeCreated(
             nodeNum,
