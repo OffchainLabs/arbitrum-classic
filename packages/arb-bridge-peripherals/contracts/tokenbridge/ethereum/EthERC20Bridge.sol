@@ -22,11 +22,9 @@ import "./IExitLiquidityProvider.sol";
 import "./L1Buddy.sol";
 import "../arbitrum/ArbERC20Bridge.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
-import "arb-bridge-eth/contracts/libraries/MerkleLib.sol";
 
 contract EthERC20Bridge is L1Buddy {
     address internal constant USED_ADDRESS = address(0x01);
-    uint256 internal constant SendType_sendTxToL1 = 0;
 
     // exitNum => exitDataHash => LP
     mapping(bytes32 => address) redirectedExits;
@@ -49,50 +47,21 @@ contract EthERC20Bridge is L1Buddy {
     function fastWithdrawalFromL2(
         address liquidityProvider,
         bytes memory liquidityProof,
-        bytes32[] memory withdrawProof,
-        uint256 merklePath,
-        uint256 l2Block,
-        uint256 l2Timestamp,
         address erc20,
         uint256 amount,
         uint256 exitNum
     ) public {
-        markFastWithdrawal(
-            liquidityProvider,
-            keccak256(abi.encodePacked(exitNum, msg.sender, erc20, amount))
-        );
-
-        bytes32 userTx =
-            keccak256(
-                abi.encodePacked(
-                    SendType_sendTxToL1,
-                    uint256(uint160(bytes20(address(this)))),
-                    uint256(uint160(bytes20(address(this)))),
-                    l2Block,
-                    l2Timestamp,
-                    uint256(0),
-                    abi.encodeWithSignature(
-                        "withdrawFromL2(uint256,address,address,uint256)",
-                        exitNum,
-                        msg.sender,
-                        erc20,
-                        amount
-                    )
-                )
-            );
+        bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, msg.sender, erc20, amount));
+        require(redirectedExits[withdrawData] == address(0), "ALREADY_EXITED");
+        redirectedExits[withdrawData] = liquidityProvider;
 
         IExitLiquidityProvider(liquidityProvider).requestLiquidity(
-            MerkleLib.calculateRoot(withdrawProof, merklePath, keccak256(abi.encodePacked(userTx))),
             msg.sender,
             erc20,
             amount,
+            exitNum,
             liquidityProof
         );
-    }
-
-    function markFastWithdrawal(address liquidityProvider, bytes32 withdrawData) private {
-        require(redirectedExits[withdrawData] == address(0), "ALREADY_EXITED");
-        redirectedExits[withdrawData] = liquidityProvider;
     }
 
     function withdrawFromL2(

@@ -22,10 +22,17 @@ import "arb-bridge-eth/contracts/rollup/Rollup.sol";
 import "./ConfirmRoots.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ExitLiquidityProvider is Ownable {
+import "./IExitLiquidityProvider.sol";
+
+import "arb-bridge-eth/contracts/libraries/MerkleLib.sol";
+
+contract ExitLiquidityProvider is Ownable, IExitLiquidityProvider {
+    uint256 internal constant SendType_sendTxToL1 = 0;
+    uint256 public constant fee_div = 100;
+
     ConfirmRoots confirmRoots;
     Rollup rollup;
-    uint256 public constant fee_div = 100;
+
     address trustedStaker;
 
     constructor(address _confirmRoots) public {
@@ -41,16 +48,56 @@ contract ExitLiquidityProvider is Ownable {
     }
 
     function requestLiquidity(
-        bytes32 confirmRoot,
         address dest,
         address erc20,
         uint256 amount,
+        uint256 exitNum,
         bytes calldata liquidityProof
-    ) external {
-        uint256 nodeNum = abi.decode(liquidityProof, (uint256));
+    ) external override {
+        (
+            uint256 nodeNum,
+            bytes32[] memory withdrawProof,
+            uint256 merklePath,
+            uint256 l2Block,
+            uint256 l2Timestamp
+        ) = abi.decode(liquidityProof, (uint256, bytes32[], uint256, uint256, uint256));
+
+        bytes32 userTx = userTxHash(exitNum, dest, erc20, amount, l2Block, l2Timestamp);
+        bytes32 confirmRoot =
+            MerkleLib.calculateRoot(withdrawProof, merklePath, keccak256(abi.encodePacked(userTx)));
         require(confirmRoots.confirmRoots(confirmRoot, nodeNum), "INVALID_ROOT");
         require(rollup.getNode(nodeNum).stakers(trustedStaker), "NOT_TRUSTED");
         uint256 fee = amount / fee_div;
         require(IERC20(erc20).transfer(dest, amount - fee), "INSUFFICIENT_LIQUIDITIY");
+    }
+
+    function userTxHash(
+        uint256 exitNum,
+        address dest,
+        address erc20,
+        uint256 amount,
+        uint256 l2Block,
+        uint256 l2Timestamp
+    ) private view returns (bytes32) {
+        bytes memory data =
+            abi.encodeWithSignature(
+                "withdrawFromL2(uint256,address,address,uint256)",
+                exitNum,
+                dest,
+                erc20,
+                amount
+            );
+        return
+            keccak256(
+                abi.encodePacked(
+                    SendType_sendTxToL1,
+                    uint256(uint160(bytes20(msg.sender))),
+                    uint256(uint160(bytes20(msg.sender))),
+                    l2Block,
+                    l2Timestamp,
+                    uint256(0),
+                    data
+                )
+            );
     }
 }
