@@ -23,11 +23,10 @@
 extern "C" {
 #endif
 
-struct ByteSliceStruct {
+typedef struct ByteSliceStruct {
     void* data;
     int length;
-};
-typedef struct ByteSliceStruct ByteSlice;
+} ByteSlice;
 
 typedef struct {
     ByteSlice slice;
@@ -40,21 +39,24 @@ typedef struct {
 } HashList;
 
 typedef struct {
-    ByteSlice* slices;
+    void* slices;
     int count;
 } ByteSliceArray;
 
-struct Uint64ResultStruct {
+typedef struct {
+    ByteSliceArray slice;
+    int found;
+} ByteSliceArrayResult;
+
+typedef struct Uint64ResultStruct {
     uint64_t value;
     int found;
-};
+} Uint64Result;
 
-typedef struct Uint64ResultStruct Uint64Result;
-
-struct HashResultStruct {
+typedef struct HashResultStruct {
     void* value;
     int found;
-};
+} Uint256Result;
 
 typedef struct {
     uint64_t inbox_messages_consumed;
@@ -67,8 +69,6 @@ typedef struct {
     uint64_t numSteps;
     uint64_t numGas;
 } RawAssertion;
-
-typedef struct HashResultStruct HashResult;
 
 typedef void CAggregatorStore;
 typedef void CArbCore;

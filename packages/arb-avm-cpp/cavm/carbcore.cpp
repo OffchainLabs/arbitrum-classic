@@ -37,9 +37,95 @@ int deliverMessages(CArbCore* arb_core_ptr,
         arb_core->deliverMessages(first_message_sequence_number, block_height,
                                   messages, inbox_hashes, previous_inbox_hash);
     } catch (const std::exception& e) {
-        // TODO: Return error message
         return false;
     }
 
     return true;
+}
+
+ByteSliceArrayResult arbCoreGetSends(CArbCore* arb_core_ptr,
+                                     const void* start_index_ptr,
+                                     const void* count_ptr) {
+    try {
+        auto sends = static_cast<const ArbCore*>(arb_core_ptr)
+                         ->getSends(receiveUint256(start_index_ptr),
+                                    receiveUint256(count_ptr));
+        if (!sends.status.ok()) {
+            return {{}, false};
+        }
+
+        return {returnCharVectorVector(sends.data), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
+ByteSliceArrayResult arbCoreGetMessages(CArbCore* arb_core_ptr,
+                                        const void* start_index_ptr,
+                                        const void* count_ptr) {
+    try {
+        auto sends = static_cast<const ArbCore*>(arb_core_ptr)
+                         ->getMessages(receiveUint256(start_index_ptr),
+                                       receiveUint256(count_ptr));
+        if (!sends.status.ok()) {
+            return {{}, false};
+        }
+
+        return {returnCharVectorVector(sends.data), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
+Uint256Result arbCoreInboxDelta(CArbCore* arb_core_ptr,
+                                const void* start_index_ptr,
+                                const void* count_ptr) {
+    try {
+        auto index_result = static_cast<ArbCore*>(arb_core_ptr)
+                                ->inboxDelta(receiveUint256(start_index_ptr),
+                                             receiveUint256(count_ptr));
+        return returnUint256Result(index_result);
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
+Uint256Result arbCoreInboxAcc(CArbCore* arb_core_ptr, const void* index) {
+    try {
+        auto hash = static_cast<ArbCore*>(arb_core_ptr)
+                        ->inboxAcc(receiveUint256(index));
+        return returnUint256Result(hash);
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
+Uint256Result arbCoreSendAcc(CArbCore* arb_core_ptr,
+                             const void* start_acc_hash,
+                             const void* start_index_ptr,
+                             const void* count_ptr) {
+    try {
+        auto index_result = static_cast<ArbCore*>(arb_core_ptr)
+                                ->sendAcc(receiveUint256(start_acc_hash),
+                                          receiveUint256(start_index_ptr),
+                                          receiveUint256(count_ptr));
+        return returnUint256Result(index_result);
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
+Uint256Result arbCoreLogAcc(CArbCore* arb_core_ptr,
+                            const void* start_acc_hash,
+                            const void* start_index_ptr,
+                            const void* count_ptr) {
+    try {
+        auto index_result = static_cast<ArbCore*>(arb_core_ptr)
+                                ->logAcc(receiveUint256(start_acc_hash),
+                                         receiveUint256(start_index_ptr),
+                                         receiveUint256(count_ptr));
+        return returnUint256Result(index_result);
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
 }

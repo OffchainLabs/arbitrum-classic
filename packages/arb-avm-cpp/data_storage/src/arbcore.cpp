@@ -765,6 +765,33 @@ rocksdb::Status ArbCore::saveSends(
     return updateLastSendInserted(tx, vecToSlice(key));
 }
 
+ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
+    uint256_t index,
+    uint256_t count) const {
+    auto tx = Transaction::makeTransaction(data_storage);
+
+    std::vector<unsigned char> key;
+    marshal_uint256_t(index, key);
+    auto key_slice = vecToSlice(key);
+
+    auto results = getVectorVectorUsingFamilyAndKey(
+        *tx->transaction, data_storage->send_column.get(), key_slice,
+        intx::narrow_cast<size_t>(count));
+    if (!results.status.ok()) {
+        return {results.status, {}};
+    }
+
+    std::vector<std::vector<unsigned char>> messages;
+    messages.reserve(results.data.size());
+    for (const auto& data : results.data) {
+        auto message_entry = extractMessageEntry(0, vecToSlice(data));
+
+        messages.push_back(message_entry.data);
+    }
+
+    return {rocksdb::Status::OK(), messages};
+}
+
 ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
     uint256_t index,
     uint256_t count) const {
@@ -789,6 +816,31 @@ ValueResult<std::vector<unsigned char>> ArbCore::getSend(
 
     return getVectorUsingFamilyAndKey(
         *tx->transaction, data_storage->send_column.get(), key_slice);
+}
+
+ValueResult<uint256_t> ArbCore::inboxDelta(uint256_t start_index,
+                                           uint256_t count) {
+    // TODO
+    return {rocksdb::Status::OK(), 0};
+}
+
+ValueResult<uint256_t> ArbCore::inboxAcc(uint256_t index) {
+    // TODO
+    return {rocksdb::Status::OK(), 0};
+}
+
+ValueResult<uint256_t> ArbCore::sendAcc(uint256_t start_acc_hash,
+                                        uint256_t start_index,
+                                        uint256_t count) {
+    // TODO
+    return {rocksdb::Status::OK(), 0};
+}
+
+ValueResult<uint256_t> ArbCore::logAcc(uint256_t start_acc_hash,
+                                       uint256_t start_index,
+                                       uint256_t count) {
+    // TODO
+    return {rocksdb::Status::OK(), 0};
 }
 
 void checkMessages() {}

@@ -65,6 +65,6 @@ void MachineThread::operator()(
         return;
     }
     last_assertion =
-        run(gas_limit, hard_gas_limit, inbox_messages, final_block);
+        run(gas_limit, hard_gas_limit, inbox_messages, 0, final_block);
     machine_status = MACHINE_FINISHED;
 }

@@ -29,19 +29,20 @@
 struct AssertionContext {
     std::vector<Tuple> inbox_messages;
     nonstd::optional<uint256_t> next_block_height;
-    uint64_t inbox_messages_consumed;
-    uint64_t numSteps;
-    uint64_t numGas;
-    bool blockingSideload;
+    size_t inbox_messages_consumed{0};
+    uint256_t numSteps{0};
+    uint256_t numGas{0};
+    bool blockingSideload{false};
     nonstd::optional<value> fake_inbox_peek_value;
     std::vector<std::vector<uint8_t>> sends;
     std::vector<value> logs;
     std::vector<value> debug_prints;
 
-    AssertionContext() : inbox_messages_consumed(0), numSteps(0), numGas(0) {}
+    AssertionContext() = default;
 
     AssertionContext(std::vector<Tuple> inbox_messages,
-                     nonstd::optional<uint256_t> final_block);
+                     const nonstd::optional<uint256_t>& min_next_block_height,
+                     uint256_t messages_to_skip);
 
     // popInbox assumes that the number of messages already consumed is less
     // than the number of messages in the inbox
@@ -85,7 +86,6 @@ struct MachineState {
                  CodePointStub errpc_,
                  Tuple staged_message_);
 
-    uint256_t getMachineSize();
     std::vector<unsigned char> marshalBufferProof();
     uint256_t getMachineSize() const;
     std::vector<unsigned char> marshalForProof() const;
@@ -96,7 +96,7 @@ struct MachineState {
     BlockReason isBlocked(bool newMessages) const;
 
     const CodePoint& loadCurrentInstruction() const;
-    uint64_t nextGasCost() const;
+    uint256_t nextGasCost() const;
 };
 
 #endif /* machinestate_hpp */

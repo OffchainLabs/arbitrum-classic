@@ -57,6 +57,21 @@ inline ByteSliceResult returnDataResult(const DataResults& results) {
     return {returnCharVector(results.data), true};
 }
 
+inline ByteSlice* returnCharVectorVectorRaw(
+    const std::vector<std::vector<unsigned char>>& data_vec) {
+    auto cData = reinterpret_cast<ByteSlice*>(
+        malloc(data_vec.size() * sizeof(ByteSlice)));
+    for (size_t i = 0; i < data_vec.size(); i++) {
+        cData[i] = returnCharVector(data_vec[i]);
+    }
+    return cData;
+}
+
+inline ByteSliceArray returnCharVectorVector(
+    const std::vector<std::vector<unsigned char>>& data) {
+    return {returnCharVectorVectorRaw(data), static_cast<int>(data.size())};
+}
+
 inline uint256_t receiveUint256(const void* data) {
     auto data_ptr = reinterpret_cast<const char*>(data);
     return deserializeUint256t(data_ptr);
@@ -82,7 +97,7 @@ inline void* returnUint256(const uint256_t& val) {
     return returnCharVectorRaw(serializedVal);
 }
 
-inline HashResult returnUint256Result(const ValueResult<uint256_t>& val) {
+inline Uint256Result returnUint256Result(const ValueResult<uint256_t>& val) {
     if (!val.status.ok()) {
         return {{}, false};
     }
@@ -126,15 +141,16 @@ inline RawAssertion makeRawAssertion(Assertion& assertion) {
         marshal_value(debugPrint, debugPrintData);
     }
 
-    return {assertion.inbox_messages_consumed,
+    // TODO extend usage of uint256
+    return {intx::narrow_cast<uint64_t>(assertion.inbox_messages_consumed),
             returnCharVector(sendData),
             static_cast<int>(assertion.sends.size()),
             returnCharVector(logData),
             static_cast<int>(assertion.logs.size()),
             returnCharVector(debugPrintData),
             static_cast<int>(assertion.debugPrints.size()),
-            assertion.stepCount,
-            assertion.gasCount};
+            intx::narrow_cast<uint64_t>(assertion.stepCount),
+            intx::narrow_cast<uint64_t>(assertion.gasCount)};
 }
 
 inline RawAssertion makeEmptyAssertion() {
@@ -151,12 +167,13 @@ inline Tuple getTuple(void* data) {
 }
 
 inline std::vector<std::vector<unsigned char>> getInboxMessages(void* data) {
-    auto charData = reinterpret_cast<ByteSliceArray*>(data);
+    auto charData = static_cast<ByteSliceArray*>(data);
+    auto slices = static_cast<ByteSlice*>(charData->slices);
     std::vector<std::vector<unsigned char>> messages;
     messages.reserve(charData->count);
     for (int i = 0; i < charData->count; ++i) {
-        auto data_ptr = static_cast<unsigned char*>(charData->slices[i].data);
-        messages.emplace_back(data_ptr, data_ptr + charData->slices[i].length);
+        auto data_ptr = static_cast<unsigned char*>(slices[i].data);
+        messages.emplace_back(data_ptr, data_ptr + slices[i].length);
     }
     return messages;
 }

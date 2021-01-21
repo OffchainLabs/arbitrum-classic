@@ -41,22 +41,24 @@ class Machine {
     MachineState machine_state;
 
     Machine() = default;
-    Machine(MachineState machine_state_)
+    explicit Machine(MachineState machine_state_)
         : machine_state(std::move(machine_state_)) {}
     Machine(std::shared_ptr<Code> code, value static_val)
         : machine_state(std::move(code), std::move(static_val)) {}
 
     static Machine loadFromFile(const std::string& executable_filename) {
-        return {MachineState::loadFromFile(executable_filename)};
+        return Machine{MachineState::loadFromFile(executable_filename)};
     }
 
-    Assertion run(uint64_t gas_limit,
-                  bool hard_gas_limit,
-                  const std::vector<std::vector<unsigned char>>& inbox_messages,
-                  const nonstd::optional<uint256_t>& final_block);
-    Assertion run(uint64_t gas_limit,
-                  bool hard_gas_limit,
+    Assertion run(uint256_t max_gas,
+                  bool go_over_gas,
+                  const std::vector<std::vector<unsigned char>>& inbox_data,
+                  uint256_t messages_to_skip,
+                  const nonstd::optional<uint256_t>& min_next_block_height);
+    Assertion run(uint256_t max_gas,
+                  bool go_over_gas,
                   const std::vector<Tuple>& inbox_messages,
+                  uint256_t messages_to_skip,
                   const nonstd::optional<uint256_t>& min_next_block_height);
 
     Status currentStatus() const { return machine_state.state; }
@@ -64,7 +66,7 @@ class Machine {
     BlockReason isBlocked(bool newMessages) const {
         return machine_state.isBlocked(newMessages);
     }
-    std::vector<unsigned char> marshalForProof() {
+    std::vector<unsigned char> marshalForProof() const {
         return machine_state.marshalForProof();
     }
     std::vector<unsigned char> marshalBufferProof() {

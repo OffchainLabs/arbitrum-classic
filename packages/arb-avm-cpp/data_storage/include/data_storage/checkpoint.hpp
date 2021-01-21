@@ -28,7 +28,8 @@
 
 struct Checkpoint {
    public:
-    // arb_gas_used not serialized/deserialized because it is part of index
+    // arb_gas_used not serialized/deserialized for database storage because it
+    // is part of index
     uint256_t arb_gas_used;
 
     uint256_t message_sequence_number_processed;

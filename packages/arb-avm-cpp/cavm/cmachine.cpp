@@ -174,7 +174,7 @@ RawAssertion executeAssertion(CMachine* m,
 
     try {
         Assertion assertion =
-            mach->run(gas_limit, hard_gas_limit, messages, final_block);
+            mach->run(gas_limit, hard_gas_limit, messages, 0, final_block);
         return makeRawAssertion(assertion);
     } catch (const std::exception& e) {
         std::cerr << "Failed to make assertion " << e.what() << "\n";

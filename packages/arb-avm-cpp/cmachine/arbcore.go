@@ -19,7 +19,7 @@ package cmachine
 /*
 #cgo CFLAGS: -I.
 #cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -ldl
-#include "../cavm/caggregator.h"
+#include "../cavm/arbcore.h"
 #include <stdio.h>
 #include <stdlib.h>
 */
@@ -27,6 +27,7 @@ import "C"
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"runtime"
 	"unsafe"
@@ -39,26 +40,61 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type AggregatorStore struct {
+type ArbCore struct {
 	c unsafe.Pointer
 }
 
-func (as *AggregatorStore) SaveLog(val value.Value) error {
-	panic("implement me")
+func deleteArbCore(ac *ArbCore) {
+	C.deleteArbCore(ac.c)
 }
 
-func (as *AggregatorStore) SaveMessage(val value.Value) error {
-	panic("implement me")
-}
-
-func deleteAggregatorStore(bs *AggregatorStore) {
-	C.deleteAggregatorStore(bs.c)
-}
-
-func NewAggregatorStore(c unsafe.Pointer) *AggregatorStore {
-	as := &AggregatorStore{c: c}
-	runtime.SetFinalizer(as, deleteAggregatorStore)
+func NewArbCore(c unsafe.Pointer) *ArbCore {
+	as := &ArbCore{c: c}
+	runtime.SetFinalizer(as, deleteArbCore)
 	return as
+}
+
+func (ac *ArbCore) GetSends(startIndex *big.Int, count *big.Int) ([][]byte, error) {
+	result := C.arbCoreGetSends(ac.c, intToData(startIndex), intToData(count))
+	if result.found == 0 {
+		return nil, errors.New("failed to get log")
+	}
+	return toByteSliceArray(result.slice), nil
+}
+
+func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.InboxMessage, error) {
+	result := C.arbCoreGetMessages(ac.c, intToData(startIndex), intToData(count))
+	if result.found == 0 {
+		return nil, errors.New("failed to get log")
+	}
+	return toByteInboxArray(result.slice), nil
+}
+
+func (as *AggregatorStore) MessageCount() (uint64, error) {
+	result := C.aggregatorMessageCount(as.c)
+	if result.found == 0 {
+		return 0, errors.New("failed to load l2message count")
+	}
+	return uint64(result.value), nil
+}
+
+func (as *AggregatorStore) SaveMessage(buf []byte) error {
+	cData := C.CBytes(buf)
+	defer C.free(cData)
+	if C.aggregatorSaveMessage(as.c, cData, C.uint64_t(len(buf))) == 0 {
+		return errors.New("failed to save l2message")
+	}
+
+	return nil
+}
+
+func (as *AggregatorStore) GetMessage(index uint64) (value.Value, error) {
+	result := C.aggregatorGetMessage(as.c, C.uint64_t(index))
+	if result.found == 0 {
+		return nil, errors.New("failed to get l2message")
+	}
+	logBytes := toByteSlice(result.slice)
+	return value.UnmarshalValue(bytes.NewBuffer(logBytes))
 }
 
 func parseBlockData(data []byte) (*types.Header, *uint64, error) {
