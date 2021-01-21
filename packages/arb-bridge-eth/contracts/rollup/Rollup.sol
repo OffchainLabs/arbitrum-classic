@@ -675,6 +675,8 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
     /**
      * @notice Calculate the current amount of funds required to place a new stake in the rollup
+     * @dev If the stake requirement get's too high, this function may stop reverting due to overflow, but
+     * that only blocks operations that should be blocked anyway
      * @return The current minimum stake requirement
      */
     function currentRequiredStake() public view returns (uint256) {
@@ -689,21 +691,32 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         if (block.number < firstUnresolvedDeadline) {
             return baseStake;
         }
+        uint24[10] memory numerators =
+            [1, 122971, 128977, 80017, 207329, 114243, 314252, 129988, 224562, 162163];
+        uint24[10] memory denominators =
+            [1, 114736, 112281, 64994, 157126, 80782, 207329, 80017, 128977, 86901];
         uint256 firstUnresolvedAge = block.number.sub(firstUnresolvedDeadline);
-        uint256 challengePeriodsPassed = firstUnresolvedAge.div(confirmPeriodBlocks);
-        if (challengePeriodsPassed > 255) {
-            challengePeriodsPassed = 255;
+        uint256 periodsPassed = firstUnresolvedAge.mul(10).div(confirmPeriodBlocks);
+        // Overflow check
+        if (periodsPassed.div(10) >= 255) {
+            return type(uint256).max;
         }
-        uint256 multiplier = 2**challengePeriodsPassed - 1;
+        uint256 baseMultiplier = 2**periodsPassed.div(10);
+        uint256 withNumerator = baseMultiplier * numerators[periodsPassed % 10];
+        // Overflow check
+        if (withNumerator / baseMultiplier != numerators[periodsPassed % 10]) {
+            return type(uint256).max;
+        }
+        uint256 multiplier = withNumerator.div(denominators[periodsPassed % 10]);
         if (multiplier == 0) {
             multiplier = 1;
         }
-
-        if (multiplier > type(uint256).max.div(baseStake)) {
+        uint256 fullStake = baseStake * multiplier;
+        // Overflow check
+        if (fullStake / baseStake != multiplier) {
             return type(uint256).max;
         }
-
-        return baseStake * multiplier;
+        return fullStake;
     }
 
     /**
