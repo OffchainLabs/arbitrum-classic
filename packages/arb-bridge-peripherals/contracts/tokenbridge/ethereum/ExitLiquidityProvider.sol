@@ -19,18 +19,38 @@
 pragma solidity ^0.6.11;
 
 import "arb-bridge-eth/contracts/rollup/Rollup.sol";
+import "./ConfirmRoots.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ExitLiquidityProvider {
+contract ExitLiquidityProvider is Ownable {
+    ConfirmRoots confirmRoots;
     Rollup rollup;
+    uint256 public constant fee_div = 100;
     address trustedStaker;
 
-    function provideLiquidity(
-        uint256 nodeNum,
+    constructor(address _confirmRoots) public {
+        confirmRoots = ConfirmRoots(_confirmRoots);
+    }
+
+    function withdrawLiquidity(
         address dest,
         address erc20,
         uint256 amount
-    ) external {
-        require(rollup.getNode(nodeNum).stakers(trustedStaker), "NOT_TRUSTED");
+    ) external onlyOwner {
         require(IERC20(erc20).transfer(dest, amount), "INSUFFICIENT_LIQUIDITIY");
+    }
+
+    function requestLiquidity(
+        bytes32 confirmRoot,
+        address dest,
+        address erc20,
+        uint256 amount,
+        bytes calldata liquidityProof
+    ) external {
+        uint256 nodeNum = abi.decode(liquidityProof, (uint256));
+        require(confirmRoots.confirmRoots(confirmRoot, nodeNum), "INVALID_ROOT");
+        require(rollup.getNode(nodeNum).stakers(trustedStaker), "NOT_TRUSTED");
+        uint256 fee = amount / fee_div;
+        require(IERC20(erc20).transfer(dest, amount - fee), "INSUFFICIENT_LIQUIDITIY");
     }
 }

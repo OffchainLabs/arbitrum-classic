@@ -18,23 +18,20 @@
 
 pragma solidity ^0.6.11;
 
-import "./ConfirmRoots.sol";
-import "./ExitLiquidityProvider.sol";
+import "./IExitLiquidityProvider.sol";
 import "./L1Buddy.sol";
 import "../arbitrum/ArbERC20Bridge.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "arb-bridge-eth/contracts/libraries/MerkleLib.sol";
 
 contract EthERC20Bridge is L1Buddy {
+    address internal constant USED_ADDRESS = address(0x01);
     uint256 internal constant SendType_sendTxToL1 = 0;
 
-    ConfirmRoots confirmRoots;
     // exitNum => exitDataHash => LP
     mapping(bytes32 => address) redirectedExits;
 
-    constructor(IInbox _inbox, address _confirmRoots) public L1Buddy(_inbox) {
-        confirmRoots = ConfirmRoots(_confirmRoots);
-    }
+    constructor(IInbox _inbox) public L1Buddy(_inbox) {}
 
     function connectToChain(uint256 maxGas, uint256 gasPriceBid) external payable {
         // Pay for gas
@@ -51,26 +48,20 @@ contract EthERC20Bridge is L1Buddy {
 
     function fastWithdrawalFromL2(
         address liquidityProvider,
-        uint256 nodeNum,
-        bytes32[] calldata proof,
+        bytes memory liquidityProof,
+        bytes32[] memory withdrawProof,
         uint256 merklePath,
         uint256 l2Block,
         uint256 l2Timestamp,
         address erc20,
         uint256 amount,
         uint256 exitNum
-    ) external {
-        bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, msg.sender, erc20, amount));
-        require(redirectedExits[withdrawData] == address(0), "ALREADY_EXITED");
-        redirectedExits[withdrawData] = liquidityProvider;
-        bytes memory data =
-            abi.encodeWithSignature(
-                "withdrawFromL2(uint256,address,address,uint256)",
-                exitNum,
-                msg.sender,
-                erc20,
-                amount
-            );
+    ) public {
+        markFastWithdrawal(
+            liquidityProvider,
+            keccak256(abi.encodePacked(exitNum, msg.sender, erc20, amount))
+        );
+
         bytes32 userTx =
             keccak256(
                 abi.encodePacked(
@@ -80,19 +71,28 @@ contract EthERC20Bridge is L1Buddy {
                     l2Block,
                     l2Timestamp,
                     uint256(0),
-                    data
+                    abi.encodeWithSignature(
+                        "withdrawFromL2(uint256,address,address,uint256)",
+                        exitNum,
+                        msg.sender,
+                        erc20,
+                        amount
+                    )
                 )
             );
-        bytes32 calcRoot =
-            MerkleLib.calculateRoot(proof, merklePath, keccak256(abi.encodePacked(userTx)));
-        require(confirmRoots.confirmRoots(calcRoot, nodeNum), "INVALID_ROOT");
 
-        ExitLiquidityProvider(liquidityProvider).provideLiquidity(
-            nodeNum,
+        IExitLiquidityProvider(liquidityProvider).requestLiquidity(
+            MerkleLib.calculateRoot(withdrawProof, merklePath, keccak256(abi.encodePacked(userTx))),
             msg.sender,
             erc20,
-            amount
+            amount,
+            liquidityProof
         );
+    }
+
+    function markFastWithdrawal(address liquidityProvider, bytes32 withdrawData) private {
+        require(redirectedExits[withdrawData] == address(0), "ALREADY_EXITED");
+        redirectedExits[withdrawData] = liquidityProvider;
     }
 
     function withdrawFromL2(
@@ -105,6 +105,7 @@ contract EthERC20Bridge is L1Buddy {
         require(l2Sender() == address(this), "L2_SENDER");
         bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, destination, erc20, amount));
         address exitAddress = redirectedExits[withdrawData];
+        redirectedExits[withdrawData] = USED_ADDRESS;
         // Unsafe external calls must occur below checks and effects
         if (exitAddress != address(0)) {
             require(IERC20(erc20).transfer(exitAddress, amount));
