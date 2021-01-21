@@ -347,11 +347,19 @@ contract RollupCore {
      * @param stakerAddress Address of the staker adding their stake
      * @param nodeNum Index of the node to stake on
      */
-    function stakeOnNode(address stakerAddress, uint256 nodeNum) internal {
+    function stakeOnNode(
+        address stakerAddress,
+        uint256 nodeNum,
+        uint256 confirmPeriodBlocks
+    ) internal returns (uint256) {
         Staker storage staker = _stakerMap[stakerAddress];
         INode node = _nodes[nodeNum];
-        node.addStaker(stakerAddress);
+        uint256 newStakerCount = node.addStaker(stakerAddress);
         staker.latestStakedNode = nodeNum;
+        if (newStakerCount == 0) {
+            INode parent = _nodes[node.prev()];
+            parent.newChildConfirmDeadline(block.number.add(confirmPeriodBlocks));
+        }
     }
 
     /**

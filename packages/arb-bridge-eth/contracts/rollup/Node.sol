@@ -20,8 +20,11 @@ pragma solidity ^0.6.11;
 
 import "./INode.sol";
 import "../libraries/Cloneable.sol";
+import "../libraries/SafeMath.sol";
 
 contract Node is Cloneable, INode {
+    using SafeMath for uint256;
+
     /// @notice Hash of the state of the chain as of this node
     bytes32 public override stateHash;
 
@@ -36,6 +39,9 @@ contract Node is Cloneable, INode {
 
     /// @notice Deadline at which this node can be confirmed
     uint256 public override deadlineBlock;
+
+    /// @notice Deadline at which a child of this node can be confirmed
+    uint256 public override noChildConfirmedBeforeBlock;
 
     /// @notice Number of stakers staked on this node. This includes real stakers and zombies
     uint256 public override stakerCount;
@@ -77,6 +83,7 @@ contract Node is Cloneable, INode {
         confirmData = _confirmData;
         prev = _prev;
         deadlineBlock = _deadlineBlock;
+        noChildConfirmedBeforeBlock = _deadlineBlock;
     }
 
     /**
@@ -89,11 +96,13 @@ contract Node is Cloneable, INode {
     /**
      * @notice Mark the given staker as staked on this node
      * @param staker Address of the staker to mark
+     * @return The number of stakers after adding this one
      */
-    function addStaker(address staker) external override onlyRollup {
+    function addStaker(address staker) external override onlyRollup returns (uint256) {
         require(!stakers[staker], "ALREADY_STAKED");
         stakers[staker] = true;
         stakerCount++;
+        return stakerCount;
     }
 
     /**
@@ -112,11 +121,22 @@ contract Node is Cloneable, INode {
         }
     }
 
+    function newChildConfirmDeadline(uint256 deadline) external override onlyRollup {
+        noChildConfirmedBeforeBlock = deadline;
+    }
+
     /**
      * @notice Check whether the current block number has met or passed the node's deadline
      */
     function requirePastDeadline() external view override {
         require(block.number >= deadlineBlock, "BEFORE_DEADLINE");
+    }
+
+    /**
+     * @notice Check whether the current block number has met or passed deadline for children of this node to be confirmed
+     */
+    function requirePastChildConfirmDeadline() external view override {
+        require(block.number >= noChildConfirmedBeforeBlock, "CHILD_TOO_RECENT");
     }
 
     /**

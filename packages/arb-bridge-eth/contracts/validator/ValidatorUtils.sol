@@ -123,13 +123,11 @@ contract ValidatorUtils {
         uint256 startStakerIndex,
         uint256 maxStakerCount
     ) external view returns (uint256, address) {
-        rollup.requireUnresolvedExists();
-        rollup.requireNoRecentStake();
-        uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
         bool outOfOrder = requireMaybeRejectable(rollup);
         if (outOfOrder) {
             return (0, address(0));
         }
+        uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
         (bool found, uint256 successorWithStake, address stakerAddress) =
             findRejectableExample(
                 rollup,
@@ -147,9 +145,10 @@ contract ValidatorUtils {
         INode node = rollup.getNode(rollup.firstUnresolvedNode());
         bool outOfOrder = node.prev() == rollup.latestConfirmed();
         if (outOfOrder) {
-            rollup.requireNoRecentStake();
             // Verify the block's deadline has passed
             require(block.number >= node.deadlineBlock(), "BEFORE_DEADLINE");
+            rollup.getNode(node.prev()).requirePastChildConfirmDeadline();
+
             // Verify that no staker is staked on this node
             require(node.stakerCount() == rollup.countStakedZombies(node), "HAS_STAKERS");
         }
@@ -158,7 +157,6 @@ contract ValidatorUtils {
 
     function requireConfirmable(Rollup rollup) external view {
         rollup.requireUnresolvedExists();
-        rollup.requireNoRecentStake();
 
         uint256 stakerCount = rollup.stakerCount();
         // There is at least one non-zombie staker
@@ -169,6 +167,7 @@ contract ValidatorUtils {
 
         // Verify the block's deadline has passed
         node.requirePastDeadline();
+        rollup.getNode(node.prev()).requirePastChildConfirmDeadline();
 
         // Check that prev is latest confirmed
         require(node.prev() == rollup.latestConfirmed(), "INVALID_PREV");
