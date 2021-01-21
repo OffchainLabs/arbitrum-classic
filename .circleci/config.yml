@@ -66,6 +66,10 @@ jobs:
       TEST_RESULTS: *test-path
     steps:
       - checkout
+      - run:
+          name: 'Pull Submodules'
+          command: |
+            git submodule update --init --recursive
       - run: mkdir -p $TEST_RESULTS
       - restore_cache: *restore_yarn_cache
       - run: yarn install --cache-folder ~/.cache/yarn
