@@ -319,7 +319,7 @@ describe('ArbRollup', () => {
   })
 
   it('challenger should reply in challenge', async function () {
-    const chunks = Array(21).fill(zerobytes32)
+    const chunks = Array(401).fill(zerobytes32)
     chunks[0] = challengedNode.assertion.startAssertionHash()
 
     await challenge
