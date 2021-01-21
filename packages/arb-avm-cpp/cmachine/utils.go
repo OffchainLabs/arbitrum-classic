@@ -59,3 +59,21 @@ func toByteSlice(slice C.ByteSlice) []byte {
 	defer C.free(unsafe.Pointer(slice.data))
 	return C.GoBytes(unsafe.Pointer(slice.data), slice.length)
 }
+
+func toByteSliceArray(sliceArray C.ByteSliceArray) [][]byte {
+	defer C.free(unsafe.Pointer(sliceArray.data))
+	slices := make([][]byte, sliceArray.length)
+	for i := range slices {
+		slices[i] = toByteSlice(sliceArray[i])
+	}
+	return slices
+}
+
+func toByteInboxArray(sliceArray C.ByteSliceArray) [][]byte {
+	defer C.free(unsafe.Pointer(sliceArray.data))
+	slices := make([][]byte, sliceArray.length)
+	for i := range slices {
+		slices[i] = toByteSlice(sliceArray[i])
+	}
+	return slices
+}

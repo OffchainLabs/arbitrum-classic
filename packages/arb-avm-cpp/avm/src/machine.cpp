@@ -41,42 +41,45 @@ bool validMessages(const std::vector<Tuple>& messages) {
 }  // namespace
 
 Assertion Machine::run(
-    uint64_t gas_limit,
-    bool hard_gas_limit,
+    uint256_t max_gas,
+    bool go_over_gas,
     const std::vector<std::vector<unsigned char>>& inbox_data,
-    const nonstd::optional<uint256_t>& final_block) {
+    uint256_t messages_to_skip,
+    const nonstd::optional<uint256_t>& min_next_block_height) {
     std::vector<Tuple> inbox_messages;
-    inbox_messages.reserve(inbox_data.size());
+    inbox_messages.reserve(inbox_messages.size());
     for (const auto& data : inbox_data) {
         inbox_messages.emplace_back(messageDataToTuple(data));
     }
 
-    return run(gas_limit, hard_gas_limit, inbox_messages, final_block);
+    return run(max_gas, go_over_gas, inbox_messages, messages_to_skip,
+               min_next_block_height);
 }
 
 Assertion Machine::run(
-    uint64_t gas_limit,
-    bool hard_gas_limit,
+    uint256_t max_gas,
+    bool go_over_gas,
     const std::vector<Tuple>& inbox_messages,
+    uint256_t messages_to_skip,
     const nonstd::optional<uint256_t>& min_next_block_height) {
     if (!validMessages(inbox_messages)) {
         throw std::runtime_error("invalid message format");
     }
 
-    machine_state.context =
-        AssertionContext{inbox_messages, min_next_block_height};
+    machine_state.context = AssertionContext{
+        inbox_messages, min_next_block_height, messages_to_skip};
 
-    bool has_gas_limit = gas_limit != 0;
+    bool has_gas_limit = max_gas != 0;
     auto start_time = std::chrono::system_clock::now();
     while (true) {
         if (has_gas_limit) {
-            if (hard_gas_limit) {
+            if (!go_over_gas) {
                 if (machine_state.nextGasCost() + machine_state.context.numGas >
-                    gas_limit) {
+                    max_gas) {
                     // Next step would go over gas limit
                     break;
                 }
-            } else if (machine_state.nextGasCost() >= gas_limit) {
+            } else if (machine_state.nextGasCost() >= max_gas) {
                 // Last step reached or went over gas limit
                 break;
             }
@@ -87,8 +90,8 @@ Assertion Machine::run(
             break;
         }
     }
-    return {machine_state.context.numSteps,
-            machine_state.context.numGas,
+    return {intx::narrow_cast<uint64_t>(machine_state.context.numSteps),
+            intx::narrow_cast<uint64_t>(machine_state.context.numGas),
             machine_state.context.inbox_messages_consumed,
             std::move(machine_state.context.sends),
             std::move(machine_state.context.logs),

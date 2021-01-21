@@ -33,6 +33,21 @@ int deliverMessages(CArbCore* storage_ptr,
                     void* inbox_hashes_ptr,
                     void* previous_inbox_hash_ptr);
 
+ByteSliceResult arbCoreLastSendInserted(CArbCore* arb_core_ptr);
+ByteSliceResult arbCoreLastLogInserted(CArbCore* arb_core_ptr);
+ByteSliceResult arbCoreInboxMessagesRead(CArbCore* arb_core_ptr);
+
+ByteSliceArrayResult arbCoreGetSends(CArbCore* arb_core_ptr,
+                                     const void* startIndex_ptr,
+                                     const void* count_ptr);
+
+ByteSliceArrayResult arbCoreGetMessages(CArbCore* arb_core_ptr,
+                                        const void* startIndex_ptr,
+                                        const void* count_ptr);
+
+ByteSliceArrayResult arbCoreInboxDelta(CArbCore* arb_core_ptr,
+                                       const void* startIndex_ptr,
+                                       const void* count_ptr);
 #ifdef __cplusplus
 }
 #endif

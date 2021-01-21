@@ -145,11 +145,22 @@ class ArbCore {
     ValueResult<std::vector<std::vector<unsigned char>>> getSends(
         uint256_t index,
         uint256_t count) const;
+    ValueResult<std::vector<std::vector<unsigned char>>> getMessages(
+        uint256_t index,
+        uint256_t count) const;
     ValueResult<std::vector<unsigned char>> getSend(uint256_t index) const;
     rocksdb::Status saveSends(
         Transaction& tx,
         const std::vector<std::vector<unsigned char>>& send);
     bool messagesEmpty();
+    ValueResult<uint256_t> inboxDelta(uint256_t start_index, uint256_t count);
+    ValueResult<uint256_t> inboxAcc(uint256_t index);
+    ValueResult<uint256_t> sendAcc(uint256_t start_acc_hash,
+                                   uint256_t start_index,
+                                   uint256_t count);
+    ValueResult<uint256_t> logAcc(uint256_t start_acc_hash,
+                                  uint256_t start_index,
+                                  uint256_t count);
 
    private:
     nonstd::optional<rocksdb::Status> addMessages(
