@@ -18,7 +18,12 @@
 
 import * as ArbValue from './value'
 import * as ethers from 'ethers'
-import { decode as RLPDecode, Input as RLPInput, Decoded as RLPDecoded, encode as RLPEncode } from 'rlp'
+import {
+  decode as RLPDecode,
+  Input as RLPInput,
+  Decoded as RLPDecoded,
+  encode as RLPEncode,
+} from 'rlp'
 
 function hex32(val: ethers.utils.BigNumber): Uint8Array {
   return ethers.utils.padZeros(ethers.utils.arrayify(val), 32)
@@ -172,7 +177,9 @@ export class L2Batch {
     const messages: L2Message[] = []
     while (bytes.length > 0) {
       const decoded = RLPDecode(bytes as RLPInput, true) as RLPDecoded
-      const lengthData = ethers.utils.bigNumberify(decoded.data as Buffer).toNumber()
+      const lengthData = ethers.utils
+        .bigNumberify(decoded.data as Buffer)
+        .toNumber()
       bytes = decoded.remainder
       messages.push(L2Message.fromData(bytes.slice(0, lengthData)))
       bytes = bytes.slice(lengthData)
