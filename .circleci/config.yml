@@ -185,6 +185,10 @@ jobs:
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
       - checkout
+      - run:
+          name: 'Pull Submodules'
+          command: |
+            git submodule update --init --recursive
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
           at: /home/user/workspace
