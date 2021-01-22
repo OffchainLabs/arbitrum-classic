@@ -18,6 +18,42 @@
 
 #include "value/utils.hpp"
 
+#include <ethash/keccak.hpp>
+
+uint256_t InboxMessage::inbox_hash(const uint256_t& previous_inbox_hash) const {
+    std::vector<unsigned char> inbox_vector;
+
+    inbox_vector.push_back(kind);
+    marshal_uint256_t(sender, inbox_vector);
+    marshal_uint256_t(block_number, inbox_vector);
+    marshal_uint256_t(timestamp, inbox_vector);
+    marshal_uint256_t(inbox_sequence_number, inbox_vector);
+    auto data_hash = hash(data);
+    marshal_uint256_t(data_hash, inbox_vector);
+
+    auto message_hash = hash(inbox_vector);
+
+    return hash(previous_inbox_hash, message_hash);
+}
+
+uint256_t hash_inbox(const uint256_t& previous_inbox_hash,
+                     const std::vector<unsigned char>& stored_state) {
+    constexpr auto message_fixed_size = 124;
+
+    // Calculate hash of variable length data
+    std::vector<unsigned char> variable_data{
+        stored_state.begin() + message_fixed_size + 1, stored_state.end()};
+    auto variable_hash = hash(variable_data);
+
+    std::vector<unsigned char> fixed_data{
+        stored_state.begin(), stored_state.begin() + message_fixed_size};
+    marshal_uint256_t(variable_hash, fixed_data);
+
+    auto message_hash = hash(fixed_data);
+
+    return hash(previous_inbox_hash, message_hash);
+}
+
 InboxMessage extractInboxMessage(
     const std::vector<unsigned char>& stored_state) {
     auto current_iter = stored_state.begin();
@@ -37,7 +73,7 @@ InboxMessage extractInboxMessage(
 }
 
 std::vector<InboxMessage> extractInboxMessages(
-    const std::vector<rocksdb::Slice> slices) {
+    const std::vector<rocksdb::Slice>& slices) {
     std::vector<InboxMessage> messages;
 
     for (const auto& slice : slices) {

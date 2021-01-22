@@ -19,6 +19,7 @@
 #include "ctypes.h"
 
 #include <stdint.h>
+#include <data_storage/value/valuecache.hpp>
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,11 +27,10 @@ extern "C" {
 
 void deleteArbCore(CArbCore* m);
 
-int deliverMessages(CArbCore* storage_ptr,
+int deliverMessages(CArbCore* arb_core_ptr,
                     const uint64_t first_message_sequence_number,
                     const uint64_t block_height,
                     void* inbox_messages,
-                    void* inbox_hashes_ptr,
                     void* previous_inbox_hash_ptr);
 
 ByteSliceResult arbCoreLastSendInserted(CArbCore* arb_core_ptr);
@@ -58,7 +58,8 @@ Uint256Result arbCoreGetSendAcc(CExecutionCursor* arb_core_ptr,
 Uint256Result arbCoreGetLogAcc(CExecutionCursor* arb_core_ptr,
                                const void* start_acc_hash,
                                const void* start_index_ptr,
-                               const void* count_ptr);
+                               const void* count_ptr,
+                               ValueCache& cache);
 
 CExecutionCursor arbCoreGetCursor(CArbCore* arb_core_ptr,
                                   const void* total_gas_used_ptr);

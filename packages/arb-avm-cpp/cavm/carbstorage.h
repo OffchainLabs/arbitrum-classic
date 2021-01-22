@@ -53,13 +53,6 @@ int deleteData(CArbStorage* storage_ptr, const void* key, int key_length);
 CBlockStore* createBlockStore(CArbStorage* storage_ptr);
 CAggregatorStore* createAggregatorStore(CArbStorage* storage_ptr);
 
-RawAssertion arbExecuteAssertion(CArbStorage* storage_ptr,
-                                 uint64_t gas_limit,
-                                 int hard_gas_limit,
-                                 void* inbox_messages,
-                                 void* first_message_sequence_number_ptr,
-                                 void* final_block_ptr);
-
 #ifdef __cplusplus
 }
 #endif
