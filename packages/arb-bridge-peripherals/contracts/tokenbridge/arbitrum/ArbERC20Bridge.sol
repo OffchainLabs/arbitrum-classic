@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 import "./StandardArbERC20.sol";
 import "arb-bridge-eth/contracts/libraries/CloneFactory.sol";
 import "arb-bridge-eth/contracts/libraries/ICloneable.sol";
+import "arbos-contracts/contracts/ArbSys.sol";
 
 contract ArbERC20Bridge is CloneFactory {
     /// @notice This mapping is from L1 address to L2 address

@@ -18,10 +18,12 @@
 
 pragma solidity ^0.6.11;
 
-import "./IExitLiquidityProvider.sol";
 import "./L1Buddy.sol";
 import "../arbitrum/ArbERC20Bridge.sol";
+
+import "./IExitLiquidityProvider.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract EthERC20Bridge is L1Buddy {
     address internal constant USED_ADDRESS = address(0x01);
@@ -50,7 +52,7 @@ contract EthERC20Bridge is L1Buddy {
         address erc20,
         uint256 amount,
         uint256 exitNum
-    ) public {
+    ) public onlyIfConnected {
         bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, msg.sender, erc20, amount));
         require(redirectedExits[withdrawData] == address(0), "ALREADY_EXITED");
         redirectedExits[withdrawData] = liquidityProvider;
