@@ -78,7 +78,7 @@ contract Outbox is CloneFactory, IOutbox {
         uint256 messageCount = sendLengths.length;
         uint256 offset = 0;
         for (uint256 i = 0; i < messageCount; i++) {
-            handleOutgoingMessage(bytes(sendsData[offset:sendLengths[i]]));
+            handleOutgoingMessage(bytes(sendsData[offset:offset + sendLengths[i]]));
             offset += sendLengths[i];
         }
     }
