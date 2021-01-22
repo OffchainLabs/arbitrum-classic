@@ -77,6 +77,8 @@ contract Node is Cloneable, INode {
         uint256 _prev,
         uint256 _deadlineBlock
     ) external override {
+        require(rollup == address(0), "ALREADY_INIT");
+        require(_rollup != address(0), "ROLLUP_ADDR");
         rollup = _rollup;
         stateHash = _stateHash;
         challengeHash = _challengeHash;
