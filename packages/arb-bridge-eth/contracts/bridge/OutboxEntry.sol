@@ -31,7 +31,8 @@ contract OutboxEntry is Ownable, Cloneable {
         bytes32 _root,
         uint256 _numInBatch
     ) external {
-        require(root != 0, "ALREADY_INIT");
+        require(root == 0, "ALREADY_INIT");
+        require(_root != 0, "BAD_ROOT");
         transferOwnership(_owner);
         root = _root;
         numRemaining = _numInBatch;
