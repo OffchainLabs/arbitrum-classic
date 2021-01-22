@@ -42,9 +42,7 @@ contract OutboxEntry is Cloneable {
     }
 
     function spendOutput(bytes32 _root, uint256 _id) external {
-        require(msg.sender == address(bridge), "ONLY_BRIDGE");
-        // Make sure this call was generated as a system call from the bridge rather than an L2 call
-        require(IOutbox(bridge.activeOutbox()).l2ToL1Sender() == address(0), "ONLY_SYSTEM");
+        requireBridgeSystemCall();
         require(!spentOutput[_id], "ALREADY_SPENT");
         require(_root == root, "BAD_ROOT");
         spentOutput[_id] = true;
@@ -52,5 +50,16 @@ contract OutboxEntry is Cloneable {
         if (numRemaining == 0) {
             safeSelfDestruct(msg.sender);
         }
+    }
+
+    function destroy() external {
+        requireBridgeSystemCall();
+        safeSelfDestruct(msg.sender);
+    }
+
+    function requireBridgeSystemCall() private view {
+        require(msg.sender == address(bridge), "ONLY_BRIDGE");
+        // Make sure this call was generated as a system call from the bridge rather than an L2 call
+        require(IOutbox(bridge.activeOutbox()).l2ToL1Sender() == address(0), "ONLY_SYSTEM");
     }
 }
