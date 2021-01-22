@@ -173,7 +173,7 @@ contract Outbox is CloneFactory, IOutbox {
         // Hash the leaf an extra time to prove it's a leaf
         bytes32 calcRoot = MerkleLib.calculateRoot(proof, path, keccak256(abi.encodePacked(item)));
         OutboxEntry outbox = outboxes[outboxIndex];
-        require(address(outbox) == address(0), "NO_OUTBOX");
+        require(address(outbox) != address(0), "NO_OUTBOX");
         executeBridgeSystemCall(
             address(outbox),
             0,
