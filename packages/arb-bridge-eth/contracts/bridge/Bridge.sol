@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "./Inbox.sol";
 import "./Outbox.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./interfaces/IBridge.sol";
 
