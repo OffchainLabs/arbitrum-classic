@@ -30,12 +30,18 @@ contract StakedLiquidityProvider is Ownable, IExitLiquidityProvider {
     uint256 internal constant SendType_sendTxToL1 = 0;
     uint256 public constant fee_div = 100;
 
+    address tokenBridge;
     ConfirmRoots confirmRoots;
     Rollup rollup;
 
     address trustedStaker;
 
-    constructor(address _confirmRoots, address _trustedStaker) public {
+    constructor(
+        address _tokenBridge,
+        address _confirmRoots,
+        address _trustedStaker
+    ) public {
+        tokenBridge = _tokenBridge;
         confirmRoots = ConfirmRoots(_confirmRoots);
         rollup = confirmRoots.rollup();
         trustedStaker = _trustedStaker;
@@ -56,6 +62,7 @@ contract StakedLiquidityProvider is Ownable, IExitLiquidityProvider {
         uint256 exitNum,
         bytes calldata liquidityProof
     ) external override {
+        require(msg.sender == tokenBridge, "NOT_BRIDGE");
         (
             uint256 nodeNum,
             bytes32[] memory withdrawProof,
