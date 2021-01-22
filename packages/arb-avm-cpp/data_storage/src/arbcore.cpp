@@ -362,24 +362,36 @@ uint256_t ArbCore::maxCheckpointGas() {
     }
 }
 
-DbResult<Checkpoint> ArbCore::getCheckpointAtOrBeforeGas(
-    const uint256_t& message_sequence_number) {
-    auto tx = Transaction::makeTransaction(data_storage);
-    auto it = std::unique_ptr<rocksdb::Iterator>(tx->transaction->GetIterator(
-        rocksdb::ReadOptions(), tx->datastorage->checkpoint_column.get()));
+// getCheckpointUsingGase returns the checkpoint at or before the specified gas
+// if `after_gas` is false. If `after_gas` is true, checkpoint after specified
+// gas is returned.
+ValueResult<Checkpoint> ArbCore::getCheckpointUsingGas(
+    Transaction& tx,
+    const uint256_t& total_gas,
+    bool after_gas) {
+    auto it = std::unique_ptr<rocksdb::Iterator>(tx.transaction->GetIterator(
+        rocksdb::ReadOptions(), tx.datastorage->checkpoint_column.get()));
     std::vector<unsigned char> key;
-    marshal_uint256_t(message_sequence_number, key);
+    marshal_uint256_t(total_gas, key);
     auto key_slice = vecToSlice(key);
     it->SeekForPrev(key_slice);
-    if (it->Valid()) {
-        std::vector<unsigned char> saved_value(
-            it->value().data(), it->value().data() + it->value().size());
-        auto parsed_state =
-            extractCheckpoint(message_sequence_number, saved_value);
-        return DbResult<Checkpoint>{rocksdb::Status::OK(), 1, parsed_state};
-    } else {
-        return DbResult<Checkpoint>{rocksdb::Status::NotFound(), 0, {}};
+    if (!it->Valid()) {
+        return {rocksdb::Status::NotFound(), {}};
     }
+    if (after_gas) {
+        it->Next();
+        if (!it->Valid()) {
+            return {rocksdb::Status::NotFound(), {}};
+        }
+    }
+    if (!it->status().ok()) {
+        return {it->status(), {}};
+    }
+
+    std::vector<unsigned char> saved_value(
+        it->value().data(), it->value().data() + it->value().size());
+    auto parsed_state = extractCheckpoint(total_gas, saved_value);
+    return {rocksdb::Status::OK(), parsed_state};
 }
 
 template <class T>
@@ -839,8 +851,77 @@ ValueResult<uint256_t> ArbCore::getLogAcc(uint256_t start_acc_hash,
 }
 
 ValueResult<ExecutionCursor*> ArbCore::getExecutionCursor(
-    uint256_t totalGasUsed) {
+    uint256_t totalGasUsed,
+    ValueCache& cache) {
     // TODO
+    auto tx = Transaction::makeTransaction(data_storage);
+    auto first_checkpoint_result =
+        getCheckpointUsingGas(*tx, totalGasUsed, false);
+    if (!first_checkpoint_result.status.ok()) {
+        return {first_checkpoint_result.status, {}};
+    }
+    auto first_message_sequence_number =
+        first_checkpoint_result.data.message_sequence_number_processed;
+
+    uint256_t last_message_sequence_number;
+    auto second_checkpoint_result =
+        getCheckpointUsingGas(*tx, totalGasUsed, true);
+    if (second_checkpoint_result.status.IsNotFound()) {
+        // No checkpoint after requested gas so get messages up to current
+        // machine state.
+        last_message_sequence_number =
+            pending_checkpoint.message_sequence_number_processed;
+    } else if (!second_checkpoint_result.status.ok()) {
+        return {second_checkpoint_result.status, {}};
+    } else {
+        last_message_sequence_number =
+            second_checkpoint_result.data.message_sequence_number_processed;
+    }
+
+    std::vector<unsigned char> message_key;
+    marshal_uint256_t(first_message_sequence_number, message_key);
+    auto message_key_slice = vecToSlice(message_key);
+
+    auto results = getVectorVectorUsingFamilyAndKey(
+        *tx->transaction, data_storage->send_column.get(), message_key_slice,
+        intx::narrow_cast<size_t>(last_message_sequence_number -
+                                  first_message_sequence_number));
+    if (!results.status.ok()) {
+        return {results.status, {}};
+    }
+
+    std::vector<Tuple> messages;
+    std::vector<uint256_t> inbox_hashes;
+    nonstd::optional<uint256_t> min_next_block_height;
+    auto total_size = results.data.size();
+    messages.reserve(total_size);
+    inbox_hashes.reserve(total_size);
+    for (const auto& data : results.data) {
+        auto message_entry = extractMessageEntry(0, vecToSlice(data));
+
+        messages.push_back(messageDataToTuple(message_entry.data));
+        inbox_hashes.push_back(message_entry.inbox_hash);
+        if (messages.size() == total_size &&
+            message_entry.last_message_in_block) {
+            min_next_block_height = message_entry.block_height + 1;
+        }
+    }
+
+    auto cursor_machine = getMachineUsingStateKeys<Machine>(
+        *tx, first_checkpoint_result.data.machine_state_keys, cache);
+
+    auto cursor =
+        new ExecutionCursor{first_checkpoint_result.data, cursor_machine,
+                            messages, inbox_hashes, min_next_block_height};
+
+    // Run machine until specified gas is reached
+    auto remaining_gas =
+        totalGasUsed - first_checkpoint_result.data.arb_gas_used;
+    if (remaining_gas > 0) {
+        cursor->Advance(remaining_gas, false);
+    }
+
+    return {rocksdb::Status::OK(), cursor};
 }
 
 void checkMessages() {}
