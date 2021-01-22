@@ -94,8 +94,9 @@ class ArbCore {
         const uint256_t& message_sequence_number) const;
     bool isCheckpointsEmpty() const;
     uint256_t maxCheckpointGas();
-    DbResult<Checkpoint> getCheckpointAtOrBeforeGas(
-        const uint256_t& message_sequence_number);
+    ValueResult<Checkpoint> getCheckpointUsingGas(Transaction& tx,
+                                                  const uint256_t& total_gas,
+                                                  bool after_gas);
     rocksdb::Status reorgToMessageOrBefore(
         Transaction& tx,
         const uint256_t& message_sequence_number);
@@ -164,7 +165,8 @@ class ArbCore {
     ValueResult<uint256_t> getLogAcc(uint256_t start_acc_hash,
                                      uint256_t start_index,
                                      uint256_t count);
-    ValueResult<ExecutionCursor*> getExecutionCursor(uint256_t totalGasUsed);
+    ValueResult<ExecutionCursor*> getExecutionCursor(uint256_t totalGasUsed,
+                                                     ValueCache& cache);
 
    private:
     nonstd::optional<rocksdb::Status> addMessages(
