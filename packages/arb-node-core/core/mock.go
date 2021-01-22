@@ -41,6 +41,14 @@ func (e *ExecutionCursorMock) TotalLogCount() *big.Int {
 	return big.NewInt(0)
 }
 
+func (e *ExecutionCursorMock) Advance(maxGas *big.Int, goOverGas bool) error {
+	panic("implement me")
+}
+
+func (e *ExecutionCursorMock) TakeMachine() (machine.Machine, error) {
+	return e.mach, nil
+}
+
 //Clone() ExecutionCursor
 //MachineHash() common.Hash
 //NextInboxMessageIndex() *big.Int
@@ -131,12 +139,4 @@ func (v *ValidatorLookupMock) GetCursor(totalGasUsed *big.Int) (ExecutionCursor,
 		return &ExecutionCursorMock{mach: v.startMachine}, nil
 	}
 	panic("implement me")
-}
-
-func (v *ValidatorLookupMock) MoveExecutionCursor(start ExecutionCursor, maxGas *big.Int, goOverGas bool) error {
-	panic("implement me")
-}
-
-func (v *ValidatorLookupMock) GetMachine(cursor ExecutionCursor) (machine.Machine, error) {
-	return cursor.(*ExecutionCursorMock).mach, nil
 }

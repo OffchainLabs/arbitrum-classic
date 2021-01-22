@@ -33,7 +33,7 @@ struct Checkpoint {
     uint256_t arb_gas_used;
 
     uint256_t message_sequence_number_processed;
-    uint256_t processed_message_accumulator_hash;
+    uint256_t inbox_hash;
 
     uint64_t block_height{};
     uint64_t send_count{};
@@ -43,19 +43,21 @@ struct Checkpoint {
     Checkpoint() = default;
     Checkpoint(uint256_t arb_gas_used,
                uint256_t message_sequence_number_processed,
-               uint256_t processed_message_accumulator_hash,
+               uint256_t inbox_hash,
                uint64_t block_height,
                uint64_t send_count,
                uint64_t log_count,
                MachineStateKeys machine_state_keys)
         : arb_gas_used(arb_gas_used),
           message_sequence_number_processed(message_sequence_number_processed),
-          processed_message_accumulator_hash(
-              processed_message_accumulator_hash),
+          inbox_hash(inbox_hash),
           block_height(block_height),
           send_count(send_count),
           log_count(log_count),
           machine_state_keys(machine_state_keys) {}
+
+    void applyAssertion(const uint256_t& first_message_sequence_number,
+                        const Assertion& assertion);
 };
 
 Checkpoint extractCheckpoint(uint256_t arb_gas_used,

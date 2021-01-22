@@ -23,6 +23,17 @@
 
 #include <boost/endian/conversion.hpp>
 
+// applyAssertion does not update processed_message_accumulator_hash so it will
+// have to be updated by caller.
+void Checkpoint::applyAssertion(const uint256_t& first_message_sequence_number,
+                                const Assertion& assertion) {
+    arb_gas_used += assertion.gasCount;
+    message_sequence_number_processed =
+        first_message_sequence_number + assertion.inbox_messages_consumed - 1;
+    send_count += assertion.sends.size();
+    log_count += assertion.logs.size();
+}
+
 Checkpoint extractCheckpoint(const uint256_t arb_gas_used,
                              const std::vector<unsigned char>& stored_state) {
     auto current_iter = stored_state.begin();
@@ -49,8 +60,7 @@ std::vector<unsigned char> serializeCheckpoint(const Checkpoint& state_data) {
 
     marshal_uint256_t(state_data.message_sequence_number_processed,
                       state_data_vector);
-    marshal_uint256_t(state_data.processed_message_accumulator_hash,
-                      state_data_vector);
+    marshal_uint256_t(state_data.inbox_hash, state_data_vector);
     marshal_uint64_t(state_data.block_height, state_data_vector);
     marshal_uint64_t(state_data.send_count, state_data_vector);
     marshal_uint64_t(state_data.log_count, state_data_vector);

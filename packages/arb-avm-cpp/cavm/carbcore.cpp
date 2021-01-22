@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "carbcore.h"
+
 #include "utils.hpp"
 
 #include <data_storage/arbcore.hpp>
@@ -77,12 +79,37 @@ ByteSliceArrayResult arbCoreGetMessages(CArbCore* arb_core_ptr,
     }
 }
 
-Uint256Result arbCoreInboxDelta(CArbCore* arb_core_ptr,
+Uint256Result arbCoreGetInboxDelta(CArbCore* arb_core_ptr,
+                                   const void* start_index_ptr,
+                                   const void* count_ptr) {
+    try {
+        auto index_result = static_cast<ArbCore*>(arb_core_ptr)
+                                ->getInboxDelta(receiveUint256(start_index_ptr),
+                                                receiveUint256(count_ptr));
+        return returnUint256Result(index_result);
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
+Uint256Result arbCoreGetInboxAcc(CArbCore* arb_core_ptr, const void* index) {
+    try {
+        auto hash = static_cast<ArbCore*>(arb_core_ptr)
+                        ->getInboxAcc(receiveUint256(index));
+        return returnUint256Result(hash);
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
+Uint256Result arbCoreGetSendAcc(CArbCore* arb_core_ptr,
+                                const void* start_acc_hash,
                                 const void* start_index_ptr,
                                 const void* count_ptr) {
     try {
         auto index_result = static_cast<ArbCore*>(arb_core_ptr)
-                                ->inboxDelta(receiveUint256(start_index_ptr),
+                                ->getSendAcc(receiveUint256(start_acc_hash),
+                                             receiveUint256(start_index_ptr),
                                              receiveUint256(count_ptr));
         return returnUint256Result(index_result);
     } catch (const std::exception& e) {
@@ -90,40 +117,15 @@ Uint256Result arbCoreInboxDelta(CArbCore* arb_core_ptr,
     }
 }
 
-Uint256Result arbCoreInboxAcc(CArbCore* arb_core_ptr, const void* index) {
-    try {
-        auto hash = static_cast<ArbCore*>(arb_core_ptr)
-                        ->inboxAcc(receiveUint256(index));
-        return returnUint256Result(hash);
-    } catch (const std::exception& e) {
-        return {{}, false};
-    }
-}
-
-Uint256Result arbCoreSendAcc(CArbCore* arb_core_ptr,
-                             const void* start_acc_hash,
-                             const void* start_index_ptr,
-                             const void* count_ptr) {
+Uint256Result arbCoreGetLogAcc(CArbCore* arb_core_ptr,
+                               const void* start_acc_hash,
+                               const void* start_index_ptr,
+                               const void* count_ptr) {
     try {
         auto index_result = static_cast<ArbCore*>(arb_core_ptr)
-                                ->sendAcc(receiveUint256(start_acc_hash),
-                                          receiveUint256(start_index_ptr),
-                                          receiveUint256(count_ptr));
-        return returnUint256Result(index_result);
-    } catch (const std::exception& e) {
-        return {{}, false};
-    }
-}
-
-Uint256Result arbCoreLogAcc(CArbCore* arb_core_ptr,
-                            const void* start_acc_hash,
-                            const void* start_index_ptr,
-                            const void* count_ptr) {
-    try {
-        auto index_result = static_cast<ArbCore*>(arb_core_ptr)
-                                ->logAcc(receiveUint256(start_acc_hash),
-                                         receiveUint256(start_index_ptr),
-                                         receiveUint256(count_ptr));
+                                ->getLogAcc(receiveUint256(start_acc_hash),
+                                            receiveUint256(start_index_ptr),
+                                            receiveUint256(count_ptr));
         return returnUint256Result(index_result);
     } catch (const std::exception& e) {
         return {{}, false};
