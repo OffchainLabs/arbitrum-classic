@@ -66,7 +66,6 @@ class ArbCore {
     uint256_t delivering_first_sequence_number;
     uint64_t delivering_block_height{0};
     std::vector<std::vector<unsigned char>> delivering_messages;
-    std::vector<uint256_t> delivering_inbox_hashes;
     uint256_t delivering_previous_inbox_hash;
 
     // Core thread communication output
@@ -82,7 +81,6 @@ class ArbCore {
         const uint256_t& first_sequence_number,
         uint64_t block_height,
         const std::vector<std::vector<unsigned char>>& messages,
-        const std::vector<uint256_t>& inbox_hashes,
         const uint256_t& previous_inbox_hash);
 
     rocksdb::Status saveAssertion(Transaction& tx,
@@ -116,12 +114,6 @@ class ArbCore {
                                                 MachineStateKeys state_data,
                                                 ValueCache& value_cache);
 
-    Assertion run(uint64_t gas_limit,
-                  bool hard_gas_limit,
-                  uint256_t first_message_sequence_number,
-                  const std::vector<std::vector<unsigned char>>& inbox_messages,
-                  const nonstd::optional<uint256_t>& final_block);
-
     ValueResult<uint256_t> lastLogInserted(Transaction& tx);
     ValueResult<uint256_t> lastLogProcessed(Transaction& tx);
     ValueResult<uint256_t> lastSendInserted(Transaction& tx);
@@ -148,6 +140,8 @@ class ArbCore {
     ValueResult<std::vector<std::vector<unsigned char>>> getSends(
         uint256_t index,
         uint256_t count) const;
+    ValueResult<std::vector<uint256_t>> getInboxHashes(uint256_t index,
+                                                       uint256_t count) const;
     ValueResult<std::vector<std::vector<unsigned char>>> getMessages(
         uint256_t index,
         uint256_t count) const;
@@ -164,7 +158,8 @@ class ArbCore {
                                       uint256_t count);
     ValueResult<uint256_t> getLogAcc(uint256_t start_acc_hash,
                                      uint256_t start_index,
-                                     uint256_t count);
+                                     uint256_t count,
+                                     ValueCache& cache);
     ValueResult<ExecutionCursor*> getExecutionCursor(uint256_t totalGasUsed,
                                                      ValueCache& cache);
 
@@ -173,7 +168,6 @@ class ArbCore {
         uint256_t first_sequence_number,
         uint64_t block_height,
         const std::vector<std::vector<unsigned char>>& messages,
-        const std::vector<uint256_t>& inbox_hashes,
         const uint256_t& previous_inbox_hash,
         const uint256_t& final_machine_sequence_number);
     nonstd::optional<MessageEntry> getNextMessage();

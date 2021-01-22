@@ -28,16 +28,14 @@ int deliverMessages(CArbCore* arb_core_ptr,
                     const uint64_t first_message_sequence_number,
                     const uint64_t block_height,
                     void* inbox_messages,
-                    void* inbox_hashes_ptr,
                     void* previous_inbox_hash_ptr) {
     auto arb_core = static_cast<ArbCore*>(arb_core_ptr);
     auto messages = getInboxMessages(inbox_messages);
-    auto inbox_hashes = receiveUint256Vector(inbox_hashes_ptr, messages.size());
     auto previous_inbox_hash = receiveUint256(previous_inbox_hash_ptr);
 
     try {
         arb_core->deliverMessages(first_message_sequence_number, block_height,
-                                  messages, inbox_hashes, previous_inbox_hash);
+                                  messages, previous_inbox_hash);
     } catch (const std::exception& e) {
         return false;
     }
@@ -120,12 +118,13 @@ Uint256Result arbCoreGetSendAcc(CArbCore* arb_core_ptr,
 Uint256Result arbCoreGetLogAcc(CArbCore* arb_core_ptr,
                                const void* start_acc_hash,
                                const void* start_index_ptr,
-                               const void* count_ptr) {
+                               const void* count_ptr,
+                               ValueCache& cache) {
     try {
         auto index_result = static_cast<ArbCore*>(arb_core_ptr)
                                 ->getLogAcc(receiveUint256(start_acc_hash),
                                             receiveUint256(start_index_ptr),
-                                            receiveUint256(count_ptr));
+                                            receiveUint256(count_ptr), cache);
         return returnUint256Result(index_result);
     } catch (const std::exception& e) {
         return {{}, false};

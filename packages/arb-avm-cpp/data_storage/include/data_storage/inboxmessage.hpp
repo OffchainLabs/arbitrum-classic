@@ -49,12 +49,16 @@ struct InboxMessage {
           timestamp(timestamp),
           inbox_sequence_number(inbox_sequence_number),
           data(std::move(data)) {}
+
+    uint256_t inbox_hash(const uint256_t& previous_inbox_hash) const;
 };
 
+uint256_t hash_inbox(const uint256_t& previous_inbox_hash,
+                     const std::vector<unsigned char>& stored_state);
 InboxMessage extractInboxMessage(
     const std::vector<unsigned char>& stored_state);
 std::vector<InboxMessage> extractInboxMessages(
-    std::vector<rocksdb::Slice> slices);
+    const std::vector<rocksdb::Slice>& slices);
 
 std::vector<unsigned char> serializeInboxMessage(
     const InboxMessage& state_data);

@@ -199,33 +199,3 @@ int deleteData(CArbStorage* storage_ptr, const void* key, int key_length) {
 
     return keyvalue_store->deleteData(key_slice).ok();
 }
-
-RawAssertion arbExecuteAssertion(CArbStorage* storage_ptr,
-                                 uint64_t gas_limit,
-                                 int hard_gas_limit,
-                                 void* inbox_messages,
-                                 void* first_message_sequence_number_ptr,
-                                 void* final_block_ptr) {
-    auto storage = static_cast<ArbStorage*>(storage_ptr);
-    auto messages = getInboxMessages(inbox_messages);
-    auto first_message_sequence_number =
-        receiveUint256(first_message_sequence_number_ptr);
-    nonstd::optional<uint256_t> final_block;
-    if (final_block_ptr == nullptr) {
-        final_block = nonstd::nullopt;
-    } else {
-        final_block = receiveUint256(final_block_ptr);
-    }
-
-    try {
-        auto assertion = storage->getArbCore()->run(
-            gas_limit, hard_gas_limit, first_message_sequence_number, messages,
-            final_block);
-
-        return makeRawAssertion(assertion);
-    } catch (const std::exception& e) {
-        std::cerr << "Failed to make assertion, exception:" << e.what()
-                  << std::endl;
-        return makeEmptyAssertion();
-    }
-}
