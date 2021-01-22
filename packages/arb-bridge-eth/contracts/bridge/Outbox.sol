@@ -91,7 +91,7 @@ contract Outbox is CloneFactory, IOutbox {
             bytes32 outputRoot = data.toBytes32(65);
 
             address clone = createClone(outboxEntryTemplate);
-            OutboxEntry(clone).initialize(address(bridge), outputRoot, numInBatch);
+            OutboxEntry(clone).initialize(bridge, outputRoot, numInBatch);
             uint256 outboxIndex = outboxes.length;
             outboxes.push(OutboxEntry(clone));
             emit OutboxEntryCreated(batchNum, outboxIndex, outputRoot, numInBatch);
@@ -180,12 +180,15 @@ contract Outbox is CloneFactory, IOutbox {
     ) private {
         // Hash the leaf an extra time to prove it's a leaf
         bytes32 calcRoot = MerkleLib.calculateRoot(proof, path, keccak256(abi.encodePacked(item)));
+        address currentL2Sender = _l2ToL1Sender;
+        _l2ToL1Sender = address(0);
         (bool success, ) =
             bridge.executeCall(
                 address(outboxes[outboxIndex]),
                 0,
                 abi.encodeWithSignature("spendOutput(bytes32,uint256)", calcRoot, path)
             );
+        _l2ToL1Sender = currentL2Sender;
         require(success, "CANT_SPEND");
     }
 }
