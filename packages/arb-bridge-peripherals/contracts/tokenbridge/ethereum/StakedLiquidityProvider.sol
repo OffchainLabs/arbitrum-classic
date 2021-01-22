@@ -26,7 +26,7 @@ import "./IExitLiquidityProvider.sol";
 
 import "arb-bridge-eth/contracts/libraries/MerkleLib.sol";
 
-contract ExitLiquidityProvider is Ownable, IExitLiquidityProvider {
+contract StakedLiquidityProvider is Ownable, IExitLiquidityProvider {
     uint256 internal constant SendType_sendTxToL1 = 0;
     uint256 public constant fee_div = 100;
 
@@ -35,8 +35,10 @@ contract ExitLiquidityProvider is Ownable, IExitLiquidityProvider {
 
     address trustedStaker;
 
-    constructor(address _confirmRoots) public {
+    constructor(address _confirmRoots, address _trustedStaker) public {
         confirmRoots = ConfirmRoots(_confirmRoots);
+        rollup = confirmRoots.rollup();
+        trustedStaker = _trustedStaker;
     }
 
     function withdrawLiquidity(
