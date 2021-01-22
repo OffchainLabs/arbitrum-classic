@@ -25,7 +25,6 @@ package cmachine
 */
 import "C"
 import (
-	"bytes"
 	"encoding/binary"
 	"math/big"
 	"runtime"
@@ -142,6 +141,8 @@ func (as *AggregatorStore) GetBlock(height uint64) (*machine.BlockInfo, error) {
 	info := &machine.BlockInfo{
 		Header: header,
 	}
+	_ = logIndex
+	/* TODO
 	if logIndex != nil {
 		avmLog, err := as.GetLog(*logIndex)
 		if err != nil {
@@ -149,6 +150,7 @@ func (as *AggregatorStore) GetBlock(height uint64) (*machine.BlockInfo, error) {
 		}
 		info.BlockLog = avmLog
 	}
+	*/
 	return info, nil
 }
 

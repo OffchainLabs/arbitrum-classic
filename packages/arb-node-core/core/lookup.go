@@ -15,6 +15,17 @@ type ExecutionCursor interface {
 	TotalGasConsumed() *big.Int
 	TotalSendCount() *big.Int
 	TotalLogCount() *big.Int
+
+	// Advance executes as much as it can without going over maxGas or
+	// optionally until it goes over maxGas
+	Advance(
+		maxGas *big.Int,
+		goOverGas bool,
+	) error
+
+	// TakeMachine takes ownership of machine such that ExecutionCursor will
+	// no longer be able to advance.
+	TakeMachine() (machine.Machine, error)
 }
 
 type ValidatorLookup interface {
@@ -26,18 +37,9 @@ type ValidatorLookup interface {
 	GetSendAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (common.Hash, error)
 	GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (common.Hash, error)
 
-	// GetMachine returns the image of the machine after executing totalGasUsed
+	// GetCursor returns a cursor containing the machine after executing totalGasUsed
 	// from the original machine
 	GetCursor(totalGasUsed *big.Int) (ExecutionCursor, error)
-
-	// GetExecutionInfo executes as much as it can not over maxGas
-	MoveExecutionCursor(
-		start ExecutionCursor,
-		maxGas *big.Int,
-		goOverGas bool,
-	) error
-
-	GetMachine(cursor ExecutionCursor) (machine.Machine, error)
 }
 
 type ExecutionState struct {

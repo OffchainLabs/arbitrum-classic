@@ -24,6 +24,7 @@ set(LIB_HEADERS
   carbcore.h
   carbstorage.h
   cblockstore.h
+  cexecutioncursor.h
   cmachine.h
   ctypes.h
   cvaluecache.h
@@ -35,6 +36,7 @@ set(LIB_SOURCES
   carbcore.cpp
   carbstorage.cpp
   cblockstore.cpp
+  cexecutioncursor.cpp
   cmachine.cpp
   cvaluecache.cpp
 )

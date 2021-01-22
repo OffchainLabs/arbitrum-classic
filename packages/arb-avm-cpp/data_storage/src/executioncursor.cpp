@@ -24,9 +24,13 @@
 std::unique_ptr<Machine> ExecutionCursor::TakeMachine() {
     return std::move(machine);
 }
+ExecutionCursor* ExecutionCursor::clone() {}
 
-bool ExecutionCursor::AdvanceExecutionCursor(uint256_t max_gas,
-                                             bool go_over_gas) {
+uint256_t ExecutionCursor::machineHash() {
+    // TODO
+}
+
+bool ExecutionCursor::Advance(uint256_t max_gas, bool go_over_gas) {
     if (!machine) {
         return false;
     }
@@ -34,5 +38,9 @@ bool ExecutionCursor::AdvanceExecutionCursor(uint256_t max_gas,
     auto assertion = machine->run(max_gas, go_over_gas, messages,
                                   messages_to_skip, min_next_block_height);
 
-    // TODO update checkpoint fields
+    messages_to_skip += assertion.inbox_messages_consumed;
+    if (messages_to_skip > 0) {
+        inbox_hash = inbox_hashes[messages_to_skip - 1];
+    }
+    applyAssertion(first_message_sequence_number + messages_to_skip, assertion);
 }

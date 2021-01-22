@@ -174,8 +174,7 @@ rocksdb::Status ArbCore::saveCheckpoint() {
     // Pull inbox hash from database
     auto existing_message_entry = getMessageEntry(
         *tx, pending_checkpoint.message_sequence_number_processed);
-    pending_checkpoint.processed_message_accumulator_hash =
-        existing_message_entry.data.inbox_hash;
+    pending_checkpoint.inbox_hash = existing_message_entry.data.inbox_hash;
 
     std::vector<unsigned char> key;
     marshal_uint256_t(pending_checkpoint.arb_gas_used, key);
@@ -210,11 +209,7 @@ rocksdb::Status ArbCore::saveAssertion(Transaction& tx,
         return status;
     }
 
-    pending_checkpoint.arb_gas_used += assertion.gasCount;
-    pending_checkpoint.message_sequence_number_processed =
-        first_message_sequence_number + assertion.inbox_messages_consumed - 1;
-    pending_checkpoint.send_count += assertion.sends.size();
-    pending_checkpoint.log_count += assertion.logs.size();
+    pending_checkpoint.applyAssertion(first_message_sequence_number, assertion);
 
     std::vector<unsigned char> processed_key;
     marshal_uint256_t(pending_checkpoint.message_sequence_number_processed,
@@ -818,29 +813,34 @@ ValueResult<std::vector<unsigned char>> ArbCore::getSend(
         *tx->transaction, data_storage->send_column.get(), key_slice);
 }
 
-ValueResult<uint256_t> ArbCore::inboxDelta(uint256_t start_index,
+ValueResult<uint256_t> ArbCore::getInboxDelta(uint256_t start_index,
+                                              uint256_t count) {
+    // TODO
+    return {rocksdb::Status::OK(), 0};
+}
+
+ValueResult<uint256_t> ArbCore::getInboxAcc(uint256_t index) {
+    // TODO
+    return {rocksdb::Status::OK(), 0};
+}
+
+ValueResult<uint256_t> ArbCore::getSendAcc(uint256_t start_acc_hash,
+                                           uint256_t start_index,
                                            uint256_t count) {
     // TODO
     return {rocksdb::Status::OK(), 0};
 }
 
-ValueResult<uint256_t> ArbCore::inboxAcc(uint256_t index) {
+ValueResult<uint256_t> ArbCore::getLogAcc(uint256_t start_acc_hash,
+                                          uint256_t start_index,
+                                          uint256_t count) {
     // TODO
     return {rocksdb::Status::OK(), 0};
 }
 
-ValueResult<uint256_t> ArbCore::sendAcc(uint256_t start_acc_hash,
-                                        uint256_t start_index,
-                                        uint256_t count) {
+ValueResult<ExecutionCursor*> ArbCore::getExecutionCursor(
+    uint256_t totalGasUsed) {
     // TODO
-    return {rocksdb::Status::OK(), 0};
-}
-
-ValueResult<uint256_t> ArbCore::logAcc(uint256_t start_acc_hash,
-                                       uint256_t start_index,
-                                       uint256_t count) {
-    // TODO
-    return {rocksdb::Status::OK(), 0};
 }
 
 void checkMessages() {}

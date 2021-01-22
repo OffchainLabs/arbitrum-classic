@@ -31,6 +31,7 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#include "executioncursor.hpp"
 
 namespace rocksdb {
 class TransactionDB;
@@ -54,6 +55,7 @@ class ArbCore {
     std::unique_ptr<MachineThread> machine;
     std::shared_ptr<Code> code{};
     Checkpoint pending_checkpoint;
+    std::mutex core_mutex;
 
     // Core thread communication input/output
     // Core thread will update if and only if set to ARBCORE_MESSAGES_READY
@@ -153,14 +155,16 @@ class ArbCore {
         Transaction& tx,
         const std::vector<std::vector<unsigned char>>& send);
     bool messagesEmpty();
-    ValueResult<uint256_t> inboxDelta(uint256_t start_index, uint256_t count);
-    ValueResult<uint256_t> inboxAcc(uint256_t index);
-    ValueResult<uint256_t> sendAcc(uint256_t start_acc_hash,
-                                   uint256_t start_index,
-                                   uint256_t count);
-    ValueResult<uint256_t> logAcc(uint256_t start_acc_hash,
-                                  uint256_t start_index,
-                                  uint256_t count);
+    ValueResult<uint256_t> getInboxDelta(uint256_t start_index,
+                                         uint256_t count);
+    ValueResult<uint256_t> getInboxAcc(uint256_t index);
+    ValueResult<uint256_t> getSendAcc(uint256_t start_acc_hash,
+                                      uint256_t start_index,
+                                      uint256_t count);
+    ValueResult<uint256_t> getLogAcc(uint256_t start_acc_hash,
+                                     uint256_t start_index,
+                                     uint256_t count);
+    ValueResult<ExecutionCursor*> getExecutionCursor(uint256_t totalGasUsed);
 
    private:
     nonstd::optional<rocksdb::Status> addMessages(
