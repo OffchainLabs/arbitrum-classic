@@ -44,8 +44,7 @@ Uint256Result executionCursorNextInboxMessageIndex(
     CExecutionCursor* execution_cursor_ptr) {
     try {
         auto index_result = static_cast<ExecutionCursor*>(execution_cursor_ptr)
-                                ->message_sequence_number_processed +
-                            1;
+                                ->total_messages_read;
         return {returnUint256(index_result), true};
     } catch (const std::exception& e) {
         return {{}, false};

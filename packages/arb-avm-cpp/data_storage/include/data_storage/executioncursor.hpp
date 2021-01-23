@@ -44,11 +44,10 @@ class ExecutionCursor : public Checkpoint {
                     nonstd::optional<uint256_t>& min_next_block_height)
         : Checkpoint(checkpoint),
           machine(std::move(machine)),
+          first_message_sequence_number(checkpoint.total_messages_read),
           messages(std::move(messages)),
           inbox_hashes(std::move(inbox_hashes)),
-          min_next_block_height(std::move(min_next_block_height)) {
-        first_message_sequence_number = message_sequence_number_processed + 1;
-    }
+          min_next_block_height(std::move(min_next_block_height)) {}
     ~ExecutionCursor() = default;
     ExecutionCursor(const ExecutionCursor& rhs) : Checkpoint(rhs) {
         machine = std::make_unique<Machine>(*rhs.machine);

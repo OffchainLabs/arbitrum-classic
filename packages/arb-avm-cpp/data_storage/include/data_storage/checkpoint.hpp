@@ -32,7 +32,7 @@ struct Checkpoint {
     // is part of index
     uint256_t arb_gas_used;
 
-    uint256_t message_sequence_number_processed;
+    uint256_t total_messages_read;
     uint256_t inbox_hash;
 
     uint64_t block_height{};
@@ -42,14 +42,14 @@ struct Checkpoint {
 
     Checkpoint() = default;
     Checkpoint(uint256_t arb_gas_used,
-               uint256_t message_sequence_number_processed,
+               uint256_t total_messages_read,
                uint256_t inbox_hash,
                uint64_t block_height,
                uint64_t send_count,
                uint64_t log_count,
                MachineStateKeys machine_state_keys)
         : arb_gas_used(arb_gas_used),
-          message_sequence_number_processed(message_sequence_number_processed),
+          total_messages_read(total_messages_read),
           inbox_hash(inbox_hash),
           block_height(block_height),
           send_count(send_count),
