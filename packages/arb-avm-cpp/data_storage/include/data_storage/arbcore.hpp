@@ -51,11 +51,16 @@ class ArbCore {
     } arbcore_status_enum;
 
    private:
+    // Mutex should be used for all database access.
+    // Core thread holds mutex only during reorg.
+    // Routines accessing database for log entries will need to acquire mutex.
+    // No mutex required to access Sends or Messages.
+    std::mutex core_mutex;
     std::shared_ptr<DataStorage> data_storage;
+
     std::unique_ptr<MachineThread> machine;
     std::shared_ptr<Code> code{};
     Checkpoint pending_checkpoint;
-    std::mutex core_mutex;
 
     // Core thread communication input/output
     // Core thread will update if and only if set to ARBCORE_MESSAGES_READY
@@ -95,7 +100,6 @@ class ArbCore {
     ValueResult<Checkpoint> getCheckpointUsingGas(Transaction& tx,
                                                   const uint256_t& total_gas,
                                                   bool after_gas);
-    rocksdb::Status reset(Transaction& tx);
     rocksdb::Status reorgToMessageOrBefore(
         Transaction& tx,
         const uint256_t& message_sequence_number);
@@ -138,7 +142,7 @@ class ArbCore {
     rocksdb::Status saveLogs(Transaction& tx, const std::vector<value>& val);
     ValueResult<std::vector<value>> getLogs(uint256_t index,
                                             uint256_t count,
-                                            ValueCache& valueCache) const;
+                                            ValueCache& valueCache);
     ValueResult<std::vector<std::vector<unsigned char>>> getSends(
         uint256_t index,
         uint256_t count) const;
@@ -173,6 +177,9 @@ class ArbCore {
         const uint256_t& final_machine_sequence_number);
     nonstd::optional<MessageEntry> getNextMessage();
     bool deleteMessage(const MessageEntry& entry);
+    ValueResult<std::vector<value>> getLogsNoLock(uint256_t index,
+                                                  uint256_t count,
+                                                  ValueCache& valueCache);
 };
 
 nonstd::optional<rocksdb::Status> deleteLogsStartingAt(Transaction& tx,
