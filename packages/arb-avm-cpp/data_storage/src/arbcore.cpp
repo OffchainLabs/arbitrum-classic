@@ -517,9 +517,8 @@ void ArbCore::operator()() {
                 first_sequence_number_in_machine +
                 last_assertion.inbox_messages_consumed;
 
-            if (last_sequence_number_consumed + 1 > messages_processed.data) {
+            if (last_sequence_number_consumed >= messages_processed.data) {
                 // Machine consumed obsolete message, restore from checkpoint
-
                 machine = getMachineUsingStateKeys<MachineThread>(
                     *tx, pending_checkpoint.machine_state_keys, cache);
                 machine_status = MachineThread::MACHINE_NONE;
@@ -535,6 +534,10 @@ void ArbCore::operator()() {
                 // Maybe save checkpoint
                 // TODO Decide how often to create checkpoint
                 status = saveCheckpoint();
+
+                // TODO Decide how often to clear ValueCache
+                // (only when machine thread stopped)
+                cache.clear();
 
                 machine->setStatus(MachineThread::MACHINE_NONE);
             }
@@ -569,10 +572,10 @@ void ArbCore::operator()() {
                 break;
             }
 
-            if (messages_count.data > pending_checkpoint.total_messages_read) {
+            first_sequence_number_in_machine =
+                pending_checkpoint.total_messages_read;
+            if (messages_count.data > first_sequence_number_in_machine) {
                 // New messages to process
-                first_sequence_number_in_machine =
-                    pending_checkpoint.total_messages_read;
                 last_sequence_number_in_machine =
                     first_sequence_number_in_machine;
                 auto next_message_result =
@@ -659,8 +662,22 @@ rocksdb::Status ArbCore::saveLogs(Transaction& tx,
 
 ValueResult<std::vector<value>> ArbCore::getLogs(uint256_t index,
                                                  uint256_t count,
-                                                 ValueCache& valueCache) const {
+                                                 ValueCache& valueCache) {
     auto tx = Transaction::makeTransaction(data_storage);
+
+    // Acquire mutex to make sure no reorg happening
+    std::lock_guard<std::mutex> lock(core_mutex);
+
+    return getLogsNoLock(index, count, valueCache);
+}
+
+ValueResult<std::vector<value>> ArbCore::getLogsNoLock(uint256_t index,
+                                                       uint256_t count,
+                                                       ValueCache& valueCache) {
+    auto tx = Transaction::makeTransaction(data_storage);
+
+    // Acquire mutex to make sure no reorg happening
+    std::lock_guard<std::mutex> lock(core_mutex);
 
     // Check if attempting to get entries past current valid logs
     auto log_count = logInsertedCount(*tx);
@@ -1106,6 +1123,7 @@ nonstd::optional<rocksdb::Status> ArbCore::addMessages(
 
     if (current_sequence_number <= last_inserted_sequence_number) {
         // Reorg occurred
+        const std::lock_guard<std::mutex> lock(core_mutex);
 
         if (final_machine_sequence_number >= current_sequence_number) {
             // Machine is running with obsolete messages
@@ -1151,9 +1169,12 @@ nonstd::optional<rocksdb::Status> ArbCore::addMessages(
 
         current_message_index++;
         current_previous_inbox_hash = current_inbox_hash;
-        current_sequence_number =
-            first_sequence_number + current_sequence_number;
+        current_sequence_number += 1
     }
+
+    std::vector<unsigned char> count_key;
+    marshal_uint256_t(current_sequence_number, count_key);
+    updateMessageEntryInsertedCount(*tx, vecToSlice(count_key));
 
     return tx->commit();
 }
