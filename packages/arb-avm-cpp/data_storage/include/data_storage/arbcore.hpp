@@ -95,6 +95,7 @@ class ArbCore {
     ValueResult<Checkpoint> getCheckpointUsingGas(Transaction& tx,
                                                   const uint256_t& total_gas,
                                                   bool after_gas);
+    rocksdb::Status reset(Transaction& tx);
     rocksdb::Status reorgToMessageOrBefore(
         Transaction& tx,
         const uint256_t& message_sequence_number);
@@ -114,29 +115,30 @@ class ArbCore {
                                                 MachineStateKeys state_data,
                                                 ValueCache& value_cache);
 
-    ValueResult<uint256_t> lastLogInserted(Transaction& tx);
-    ValueResult<uint256_t> lastLogProcessed(Transaction& tx);
-    ValueResult<uint256_t> lastSendInserted(Transaction& tx);
-    ValueResult<uint256_t> lastSendProcessed(Transaction& tx);
-    ValueResult<uint256_t> lastMessageEntryInserted(Transaction& tx);
-    ValueResult<uint256_t> lastMessageEntryProcessed(Transaction& tx);
-    rocksdb::Status updateLastLogInserted(Transaction& tx,
-                                          rocksdb::Slice value_slice);
-    rocksdb::Status updateLastLogProcessed(Transaction& tx,
+    ValueResult<uint256_t> logInsertedCount(Transaction& tx) const;
+    rocksdb::Status updateLogInsertedCount(Transaction& tx,
                                            rocksdb::Slice value_slice);
-    rocksdb::Status updateLastSendInserted(Transaction& tx,
-                                           rocksdb::Slice value_slice);
-    rocksdb::Status updateLastSendProcessed(Transaction& tx,
+    ValueResult<uint256_t> logProcessedCount(Transaction& tx) const;
+    rocksdb::Status updateLogProcessedCount(Transaction& tx,
                                             rocksdb::Slice value_slice);
-    rocksdb::Status updateLastMessageEntryInserted(Transaction& tx,
-                                                   rocksdb::Slice value_slice);
-    rocksdb::Status updateLastMessageEntryProcessed(Transaction& tx,
+    ValueResult<uint256_t> sendInsertedCount(Transaction& tx) const;
+    rocksdb::Status updateSendInsertedCount(Transaction& tx,
+                                            rocksdb::Slice value_slice);
+    ValueResult<uint256_t> sendProcessedCount(Transaction& tx) const;
+    rocksdb::Status updateSendProcessedCount(Transaction& tx,
+                                             rocksdb::Slice value_slice);
+    ValueResult<uint256_t> messageEntryInsertedCount(Transaction& tx) const;
+    rocksdb::Status updateMessageEntryInsertedCount(Transaction& tx,
                                                     rocksdb::Slice value_slice);
+    ValueResult<uint256_t> messageEntryProcessedCount(Transaction& tx) const;
+    rocksdb::Status updateMessageEntryProcessedCount(
+        Transaction& tx,
+        rocksdb::Slice value_slice);
+
     rocksdb::Status saveLogs(Transaction& tx, const std::vector<value>& val);
     ValueResult<std::vector<value>> getLogs(uint256_t index,
                                             uint256_t count,
                                             ValueCache& valueCache) const;
-    DbResult<value> getLog(uint256_t index, ValueCache& valueCache) const;
     ValueResult<std::vector<std::vector<unsigned char>>> getSends(
         uint256_t index,
         uint256_t count) const;
@@ -145,7 +147,6 @@ class ArbCore {
     ValueResult<std::vector<std::vector<unsigned char>>> getMessages(
         uint256_t index,
         uint256_t count) const;
-    ValueResult<std::vector<unsigned char>> getSend(uint256_t index) const;
     rocksdb::Status saveSends(
         Transaction& tx,
         const std::vector<std::vector<unsigned char>>& send);
