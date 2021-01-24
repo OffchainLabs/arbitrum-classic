@@ -145,4 +145,29 @@ contract Insurance {
         delayedActions[hashedAction] = false;
         account.transfer(num);
     }
+
+    function recommendNodeIntervalBlocks(uint challengePeriod, uint nodeGasCostEstimate) external returns(uint) {
+        if (challengePeriod < 80) {
+            return 40;
+        }
+        if (totalShares < 16 * nodeGasCostEstimate + 1) {  // add 1 so this is true if totalShares==0
+            return challengePeriod / 2;
+        }
+        uint ratio = 4 * challengePeriod * challengePeriod * nodeGasCostEstimate / totalShares;
+        if (ratio <= 1600) {
+            return 40;
+        } else {
+            return approxSqrt(ratio, challengePeriod/4);
+        }
+    }
+
+    function approxSqrt(uint x, uint startPoint) internal pure returns(uint) {
+        // approximate sqrt(x), using Newton's method
+        // should be very close to true answer, assuming startPoint / 2**15 < trueAnswer < startPoint * 2**15
+        uint ret = startPoint;
+        for (uint i=0; i<20; i++) {
+            ret = (ret + x/ret) / 2;
+        }
+        return ret;
+    }
 }
