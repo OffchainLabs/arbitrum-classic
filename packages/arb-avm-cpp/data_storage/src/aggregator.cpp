@@ -22,14 +22,11 @@
 #include <data_storage/storageresult.hpp>
 
 #include <rocksdb/status.h>
-#include <rocksdb/utilities/transaction_db.h>
 
 #include <boost/endian/conversion.hpp>
 
 #include <sstream>
 
-constexpr auto log_key = std::array<char, 1>{-50};
-constexpr auto message_key = std::array<char, 1>{-51};
 constexpr auto block_key = std::array<char, 1>{-52};
 
 constexpr auto request_key_prefix = std::array<char, 1>{-54};
@@ -54,17 +51,8 @@ auto addUint64ToKey(uint64_t height, Iterator it) {
     return std::copy(big_height_ptr, big_height_ptr + sizeof(big_height), it);
 }
 
-template <typename Iterator>
-uint64_t extractUint64(Iterator& it) {
-    uint64_t big_height;
-    auto big_height_ptr = reinterpret_cast<char*>(&big_height);
-    std::copy(it, it + sizeof(big_height), big_height_ptr);
-    it += sizeof(uint64_t);
-    return boost::endian::big_to_native(big_height);
-}
-
 std::array<char, request_key_size> requestKey(const uint256_t& request_id) {
-    std::array<char, request_key_size> key;
+    std::array<char, request_key_size> key{};
     auto it = std::copy(request_key_prefix.begin(), request_key_prefix.end(),
                         key.begin());
     to_big_endian(request_id, it);
@@ -72,7 +60,7 @@ std::array<char, request_key_size> requestKey(const uint256_t& request_id) {
 }
 
 std::array<char, sizeof(uint64_t)> uint64Value(uint64_t height) {
-    std::array<char, sizeof(uint64_t)> key;
+    std::array<char, sizeof(uint64_t)> key{};
     addUint64ToKey(height, key.begin());
     return key;
 }
@@ -82,7 +70,7 @@ std::array<char, sizeof(uint64_t)> requestValue(uint64_t log_index) {
 }
 
 std::array<char, request_key_size> blockHashKey(const uint256_t& block_hash) {
-    std::array<char, block_hash_key_size> key;
+    std::array<char, block_hash_key_size> key{};
     auto it = std::copy(block_hash_key_prefix.begin(),
                         block_hash_key_prefix.end(), key.begin());
     to_big_endian(block_hash, it);
@@ -97,7 +85,7 @@ std::array<char, sizeof(uint64_t)> blockHashValue(uint64_t block_height) {
 template <size_t N, const std::array<char, N>& key>
 struct EntrySaver {
     std::array<char, N + sizeof(uint64_t)> entryKey(uint64_t index) {
-        std::array<char, N + sizeof(uint64_t)> full_key;
+        std::array<char, N + sizeof(uint64_t)> full_key{};
         auto it = std::copy(key.begin(), key.end(), full_key.begin());
         addUint64ToKey(index, it);
         return full_key;
@@ -203,43 +191,7 @@ struct HeightSaver : public EntrySaver<N, key> {
     }
 };
 
-using LogSaver = FlatSaver<log_key.size(), log_key>;
-using MessageSaver = FlatSaver<message_key.size(), message_key>;
 using BlockSaver = HeightSaver<block_key.size(), block_key>;
-
-uint64_t AggregatorStore::logCount() const {
-    auto tx = data_storage->beginTransaction();
-    return LogSaver{}.count(*tx);
-}
-
-void AggregatorStore::saveLog(const std::vector<char>& log) {
-    auto tx = data_storage->beginTransaction();
-    LogSaver{}.saveNext(*tx, log);
-    commitTx(*tx);
-}
-
-std::vector<char> AggregatorStore::getLog(uint64_t index) const {
-    auto tx = data_storage->beginTransaction();
-    auto value = LogSaver{}.load(*tx, index);
-    return {value.begin(), value.end()};
-}
-
-uint64_t AggregatorStore::messageCount() const {
-    auto tx = data_storage->beginTransaction();
-    return MessageSaver{}.count(*tx);
-}
-
-void AggregatorStore::saveMessage(const std::vector<char>& output) {
-    auto tx = data_storage->beginTransaction();
-    MessageSaver{}.saveNext(*tx, output);
-    commitTx(*tx);
-}
-
-std::vector<char> AggregatorStore::getMessage(uint64_t index) const {
-    auto tx = data_storage->beginTransaction();
-    auto value = MessageSaver{}.load(*tx, index);
-    return {value.begin(), value.end()};
-}
 
 void AggregatorStore::saveRequest(const uint256_t& request_id,
                                   uint64_t log_index) {
@@ -311,12 +263,8 @@ std::vector<char> AggregatorStore::getBlock(uint64_t height) const {
     return {block_value.begin(), block_value.end()};
 }
 
-void AggregatorStore::reorg(uint64_t block_height,
-                            uint64_t message_count,
-                            uint64_t log_count) {
+void AggregatorStore::reorg(uint64_t block_height) {
     auto tx = data_storage->beginTransaction();
-    MessageSaver{}.saveCount(*tx, message_count);
-    LogSaver{}.saveCount(*tx, log_count);
     BlockSaver{}.saveMax(*tx, block_height);
     commitTx(*tx);
 }

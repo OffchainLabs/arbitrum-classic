@@ -25,7 +25,6 @@ package cmachine
 */
 import "C"
 import (
-	"bytes"
 	"encoding/binary"
 	"math/big"
 	"runtime"
@@ -43,6 +42,14 @@ type AggregatorStore struct {
 	c unsafe.Pointer
 }
 
+func (as *AggregatorStore) SaveLog(val value.Value) error {
+	panic("implement me")
+}
+
+func (as *AggregatorStore) SaveMessage(val value.Value) error {
+	panic("implement me")
+}
+
 func deleteAggregatorStore(bs *AggregatorStore) {
 	C.deleteAggregatorStore(bs.c)
 }
@@ -51,64 +58,6 @@ func NewAggregatorStore(c unsafe.Pointer) *AggregatorStore {
 	as := &AggregatorStore{c: c}
 	runtime.SetFinalizer(as, deleteAggregatorStore)
 	return as
-}
-
-func (as *AggregatorStore) LogCount() (uint64, error) {
-	result := C.aggregatorLogCount(as.c)
-	if result.found == 0 {
-		return 0, errors.New("failed to load log count")
-	}
-	return uint64(result.value), nil
-}
-
-func (as *AggregatorStore) SaveLog(val value.Value) error {
-	var buf bytes.Buffer
-	if err := value.MarshalValue(val, &buf); err != nil {
-		return err
-	}
-
-	cData := C.CBytes(buf.Bytes())
-	defer C.free(cData)
-	if C.aggregatorSaveLog(as.c, cData, C.uint64_t(buf.Len())) == 0 {
-		return errors.New("failed to save log")
-	}
-	return nil
-}
-
-func (as *AggregatorStore) GetLog(index uint64) (value.Value, error) {
-	result := C.aggregatorGetLog(as.c, C.uint64_t(index))
-	if result.found == 0 {
-		return nil, errors.New("failed to get log")
-	}
-	logBytes := toByteSlice(result.slice)
-	return value.UnmarshalValue(bytes.NewBuffer(logBytes))
-}
-
-func (as *AggregatorStore) MessageCount() (uint64, error) {
-	result := C.aggregatorMessageCount(as.c)
-	if result.found == 0 {
-		return 0, errors.New("failed to load l2message count")
-	}
-	return uint64(result.value), nil
-}
-
-func (as *AggregatorStore) SaveMessage(buf []byte) error {
-	cData := C.CBytes(buf)
-	defer C.free(cData)
-	if C.aggregatorSaveMessage(as.c, cData, C.uint64_t(len(buf))) == 0 {
-		return errors.New("failed to save l2message")
-	}
-
-	return nil
-}
-
-func (as *AggregatorStore) GetMessage(index uint64) (value.Value, error) {
-	result := C.aggregatorGetMessage(as.c, C.uint64_t(index))
-	if result.found == 0 {
-		return nil, errors.New("failed to get l2message")
-	}
-	logBytes := toByteSlice(result.slice)
-	return value.UnmarshalValue(bytes.NewBuffer(logBytes))
 }
 
 func parseBlockData(data []byte) (*types.Header, *uint64, error) {
@@ -192,6 +141,8 @@ func (as *AggregatorStore) GetBlock(height uint64) (*machine.BlockInfo, error) {
 	info := &machine.BlockInfo{
 		Header: header,
 	}
+	_ = logIndex
+	/* TODO
 	if logIndex != nil {
 		avmLog, err := as.GetLog(*logIndex)
 		if err != nil {
@@ -199,18 +150,11 @@ func (as *AggregatorStore) GetBlock(height uint64) (*machine.BlockInfo, error) {
 		}
 		info.BlockLog = avmLog
 	}
+	*/
 	return info, nil
 }
 
-func (as *AggregatorStore) Reorg(height uint64, messageCount uint64, logCount uint64) error {
-	if C.aggregatorReorg(
-		as.c,
-		C.uint64_t(height),
-		C.uint64_t(messageCount),
-		C.uint64_t(logCount),
-	) == 0 {
-		return errors.New("failed to restore block")
-	}
+func (as *AggregatorStore) Reorg(height uint64, sendCount uint64, logCount uint64) error {
 	return nil
 }
 

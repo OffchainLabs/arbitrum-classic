@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include <sys/stat.h>
-#include <fstream>
 #include <iostream>
 
 #include <avm/machine.hpp>
 #include <avm_values/opcodes.hpp>
+
+#include <data_storage/messageentry.hpp>
 
 std::ostream& operator<<(std::ostream& os, const Machine& val) {
     os << val.machine_state;
@@ -40,64 +40,60 @@ bool validMessages(const std::vector<Tuple>& messages) {
 }
 }  // namespace
 
-Assertion Machine::executeMachine(
-    uint64_t stepCount,
-    std::chrono::seconds wallLimit,
-    std::vector<Tuple> inbox_messages,
-    Tuple sideload,
-    bool blockingSideload,
-    nonstd::optional<value> fake_inbox_peek_value) {
+Assertion Machine::run(
+    uint256_t max_gas,
+    bool go_over_gas,
+    const std::vector<std::vector<unsigned char>>& inbox_data,
+    uint256_t messages_to_skip,
+    const nonstd::optional<uint256_t>& min_next_block_height) {
+    std::vector<Tuple> inbox_messages;
+    inbox_messages.reserve(inbox_messages.size());
+    for (const auto& data : inbox_data) {
+        inbox_messages.emplace_back(messageDataToTuple(data));
+    }
+
+    return run(max_gas, go_over_gas, inbox_messages, messages_to_skip,
+               min_next_block_height);
+}
+
+Assertion Machine::run(
+    uint256_t max_gas,
+    bool go_over_gas,
+    const std::vector<Tuple>& inbox_messages,
+    uint256_t messages_to_skip,
+    const nonstd::optional<uint256_t>& min_next_block_height) {
     if (!validMessages(inbox_messages)) {
         throw std::runtime_error("invalid message format");
     }
 
-    machine_state.context =
-        AssertionContext{std::move(inbox_messages), std::move(sideload),
-                         blockingSideload, std::move(fake_inbox_peek_value)};
+    machine_state.context = AssertionContext{
+        inbox_messages, min_next_block_height, messages_to_skip};
 
-    bool has_time_limit = wallLimit.count() != 0;
+    bool has_gas_limit = max_gas != 0;
     auto start_time = std::chrono::system_clock::now();
-    while (machine_state.context.numSteps < stepCount) {
+    while (true) {
+        if (has_gas_limit) {
+            if (!go_over_gas) {
+                if (machine_state.nextGasCost() + machine_state.context.numGas >
+                    max_gas) {
+                    // Next step would go over gas limit
+                    break;
+                }
+            } else if (machine_state.nextGasCost() >= max_gas) {
+                // Last step reached or went over gas limit
+                break;
+            }
+        }
+
         auto blockReason = machine_state.runOne();
         if (!nonstd::get_if<NotBlocked>(&blockReason)) {
             break;
         }
-        if (has_time_limit && machine_state.context.numSteps % 10000 == 0) {
-            auto end_time = std::chrono::system_clock::now();
-            auto run_time = end_time - start_time;
-            if (run_time >= wallLimit) {
-                break;
-            }
-        }
     }
-    return {machine_state.context.numSteps,
-            machine_state.context.numGas,
+    return {intx::narrow_cast<uint64_t>(machine_state.context.numSteps),
+            intx::narrow_cast<uint64_t>(machine_state.context.numGas),
             machine_state.context.inbox_messages_consumed,
-            std::move(machine_state.context.outMessage),
+            std::move(machine_state.context.sends),
             std::move(machine_state.context.logs),
             std::move(machine_state.context.debug_prints)};
-}
-
-Assertion Machine::run(uint64_t stepCount,
-                       std::vector<Tuple> inbox_messages,
-                       std::chrono::seconds wallLimit) {
-    return executeMachine(stepCount, wallLimit, std::move(inbox_messages),
-                          Tuple(), false, nonstd::nullopt);
-}
-
-Assertion Machine::runCallServer(uint64_t stepCount,
-                                 std::vector<Tuple> inbox_messages,
-                                 std::chrono::seconds wallLimit,
-                                 value fake_inbox_peek_value) {
-    return executeMachine(
-        stepCount, wallLimit, std::move(inbox_messages), Tuple(), false,
-        nonstd::make_optional(std::move(fake_inbox_peek_value)));
-}
-
-Assertion Machine::runSideloaded(uint64_t stepCount,
-                                 std::vector<Tuple> inbox_messages,
-                                 std::chrono::seconds wallLimit,
-                                 Tuple sideload_value) {
-    return executeMachine(stepCount, wallLimit, std::move(inbox_messages),
-                          std::move(sideload_value), true, nonstd::nullopt);
 }

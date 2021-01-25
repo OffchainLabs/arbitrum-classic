@@ -64,7 +64,7 @@ func (e *ExecutionTracker) fillInCursors(max int) error {
 		nextCursor := e.cursors[len(e.cursors)-1].Clone()
 		nextStopPoint := e.sortedStopPoints[i]
 		gasToExecute := new(big.Int).Sub(nextStopPoint, nextCursor.TotalGasConsumed())
-		err := e.lookup.MoveExecutionCursor(nextCursor, gasToExecute, e.goOverGas)
+		err := nextCursor.Advance(gasToExecute, e.goOverGas)
 		if err != nil {
 			return err
 		}
@@ -123,7 +123,7 @@ func (e *ExecutionTracker) GetMachine(gasUsed *big.Int) (machine.Machine, error)
 	if err := e.fillInCursors(index); err != nil {
 		return nil, err
 	}
-	return e.lookup.GetMachine(e.cursors[index])
+	return e.cursors[index].Clone().TakeMachine()
 }
 
 func JudgeAssertion(lookup ValidatorLookup, assertion *Assertion, execTracker *ExecutionTracker) (ChallengeKind, error) {

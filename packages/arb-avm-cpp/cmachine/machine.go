@@ -20,7 +20,7 @@ package cmachine
 #cgo CFLAGS: -I.
 #cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lsecp256k1 -lff -lgmp -lkeccak -ldl
 #include "../cavm/cmachine.h"
-#include "../cavm/ccheckpointstorage.h"
+#include "../cavm/carbstorage.h"
 #include <stdio.h>
 #include <stdlib.h>
 */
@@ -122,7 +122,7 @@ func makeExecutionAssertion(
 	beforeMachineHash common.Hash,
 	afterMachineHash common.Hash,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64) {
-	outMessagesRaw := toByteSlice(assertion.outMessages)
+	sendsRaw := toByteSlice(assertion.sends)
 	logsRaw := toByteSlice(assertion.logs)
 	debugPrints := protocol.BytesArrayToVals(toByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
 	return protocol.NewExecutionAssertion(
@@ -130,8 +130,8 @@ func makeExecutionAssertion(
 		afterMachineHash,
 		uint64(assertion.numGas),
 		uint64(assertion.inbox_messages_consumed),
-		outMessagesRaw,
-		uint64(assertion.outMessageCount),
+		sendsRaw,
+		uint64(assertion.sendCount),
 		logsRaw,
 		uint64(assertion.logCount),
 	), debugPrints, uint64(assertion.numSteps)
@@ -174,31 +174,6 @@ func (m *Machine) ExecuteAssertion(
 	return makeExecutionAssertion(assertion, beforeHash, m.Hash())
 }
 
-func (m *Machine) ExecuteCallServerAssertion(
-	maxSteps uint64,
-	inboxMessages []inbox.InboxMessage,
-	fakeInboxPeekValue value.Value,
-	maxWallTime time.Duration,
-) (*protocol.ExecutionAssertion, []value.Value, uint64) {
-	msgDataC := C.CBytes(encodeInboxMessages(inboxMessages))
-	defer C.free(msgDataC)
-
-	inboxPeekDataC := C.CBytes(encodeValue(fakeInboxPeekValue))
-	defer C.free(inboxPeekDataC)
-
-	beforeHash := m.Hash()
-	assertion := C.executeCallServerAssertion(
-		m.c,
-		C.uint64_t(maxSteps),
-		msgDataC,
-		C.uint64_t(len(inboxMessages)),
-		inboxPeekDataC,
-		C.uint64_t(uint64(maxWallTime.Seconds())),
-	)
-
-	return makeExecutionAssertion(assertion, beforeHash, m.Hash())
-}
-
 func (m *Machine) MarshalForProof() ([]byte, error) {
 	rawProof := C.machineMarshallForProof(m.c)
 	return C.GoBytes(unsafe.Pointer(rawProof.data), rawProof.length), nil
@@ -214,9 +189,9 @@ func (m *Machine) MarshalState() ([]byte, error) {
 	return C.GoBytes(unsafe.Pointer(stateData.data), stateData.length), nil
 }
 
-func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
-	cCheckpointStorage := storage.(*CheckpointStorage)
-	success := C.checkpointMachine(m.c, cCheckpointStorage.c)
+func (m *Machine) Checkpoint(storage machine.ArbStorage) bool {
+	cArbStorage := storage.(*ArbStorage)
+	success := C.checkpointMachine(m.c, cArbStorage.c)
 
 	return success == 1
 }

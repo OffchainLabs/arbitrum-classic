@@ -41,12 +41,16 @@ struct ParsedBuffer {
     std::vector<uint256_t> nodes;
 };
 
-using ParsedTupVal = nonstd::variant<uint256_t, CodePointStub, Buffer, ValueHash, ParsedBuffer >;
+using ParsedTupVal =
+    nonstd::variant<uint256_t, CodePointStub, Buffer, ValueHash, ParsedBuffer>;
 
-using ParsedBufVal = nonstd::variant<Buffer, ParsedBuffer >;
+using ParsedBufVal = nonstd::variant<Buffer, ParsedBuffer>;
 
-using ParsedSerializedVal =
-    nonstd::variant<uint256_t, CodePointStub, Buffer, std::vector<ParsedTupVal>, ParsedBuffer >;
+using ParsedSerializedVal = nonstd::variant<uint256_t,
+                                            CodePointStub,
+                                            Buffer,
+                                            std::vector<ParsedTupVal>,
+                                            ParsedBuffer>;
 
 struct ValueBeingParsed {
     value val;
@@ -65,7 +69,8 @@ struct ValueBeingParsed {
 
 namespace {
 
-template<class T> T parseBuffer(const char* buf, int &len) {
+template <class T>
+T parseBuffer(const char* buf, int& len) {
     uint8_t level = buf[0];
     len++;
     // Empty
@@ -75,10 +80,10 @@ template<class T> T parseBuffer(const char* buf, int &len) {
     }
     len++;
     if (level == 0) {
-        auto res = std::make_shared<std::vector<uint8_t> >();
+        auto res = std::make_shared<std::vector<uint8_t>>();
         res->resize(LEAF_SIZE, 0);
         for (uint64_t i = 0; i < LEAF_SIZE; i++) {
-            (*res)[i] = buf[i+2];
+            (*res)[i] = buf[i + 2];
         }
         len += LEAF_SIZE;
         return Buffer(RawBuffer(res));
@@ -91,7 +96,6 @@ template<class T> T parseBuffer(const char* buf, int &len) {
         len += 32;
     }
     return ParsedBuffer{level, res};
-
 }
 
 std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
@@ -217,7 +221,7 @@ std::vector<value> serializeValue(const HashPreImage&,
                                   std::map<uint64_t, uint64_t>&) {
     throw std::runtime_error("Can't serialize hash preimage in db");
 }
-std::vector<value> serializeValue(const Buffer&b,
+std::vector<value> serializeValue(const Buffer& b,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(BUFFER);
@@ -252,7 +256,7 @@ void deleteParsedValue(const Buffer&,
                        std::vector<uint256_t>&,
                        std::map<uint64_t, uint64_t>&) {}
 void deleteParsedValue(const ParsedBuffer& parsed,
-                       std::vector<uint256_t>&vals_to_delete,
+                       std::vector<uint256_t>& vals_to_delete,
                        std::map<uint64_t, uint64_t>&) {
     for (const auto& val : parsed.nodes) {
         vals_to_delete.push_back(val);
@@ -363,15 +367,15 @@ GetResults processFirstVal(const Transaction&,
 }
 
 Buffer processBuffer(const Transaction& transaction,
-                           const ParsedBuffer& val,
-                           ValueCache& val_cache) {
-    
-    std::shared_ptr<std::vector<RawBuffer> > vec = std::make_shared<std::vector<RawBuffer>>(NODE_SIZE);
+                     const ParsedBuffer& val,
+                     ValueCache& val_cache) {
+    std::shared_ptr<std::vector<RawBuffer>> vec =
+        std::make_shared<std::vector<RawBuffer>>(NODE_SIZE);
     for (uint64_t i = 0; i < NODE_SIZE; i++) {
         auto val_hash = ValueHash{val.nodes[i]};
         if (auto cached_val = val_cache.loadIfExists(val_hash.hash)) {
             RawBuffer buf = *(*cached_val).get<Buffer>().buf;
-            buf.level = val.level-1;
+            buf.level = val.level - 1;
             (*vec)[i] = buf;
             continue;
         }
@@ -379,7 +383,8 @@ Buffer processBuffer(const Transaction& transaction,
         // Value not in cache, so need to load from database
         auto results = getStoredValue(transaction, val_hash);
         if (!results.status.ok()) {
-            std::cerr << "Error loading buffer record " << static_cast<uint64_t>(val_hash.hash) << std::endl;
+            std::cerr << "Error loading buffer record "
+                      << static_cast<uint64_t>(val_hash.hash) << std::endl;
             return Buffer();
         }
 
@@ -390,7 +395,8 @@ Buffer processBuffer(const Transaction& transaction,
             val_cache.maybeSave(buf);
             (*vec)[i] = *buf.buf;
         } else if (nonstd::holds_alternative<ParsedBuffer>(record)) {
-            Buffer buf = processBuffer(transaction, record.get<ParsedBuffer>(), val_cache);
+            Buffer buf = processBuffer(transaction, record.get<ParsedBuffer>(),
+                                       val_cache);
             val_cache.maybeSave(buf);
             (*vec)[i] = *buf.buf;
         } else {
@@ -407,17 +413,18 @@ GetResults processVal(const Transaction& transaction,
                       std::set<uint64_t>&,
                       uint32_t reference_count,
                       ValueCache& val_cache) {
-    return applyValue(processBuffer(transaction, val, val_cache), reference_count, val_stack);
+    return applyValue(processBuffer(transaction, val, val_cache),
+                      reference_count, val_stack);
 }
 
 GetResults processFirstVal(const Transaction& transaction,
                            const ParsedBuffer& val,
                            std::vector<ValueBeingParsed>& val_stack,
-                           std::set<uint64_t>&segs,
+                           std::set<uint64_t>& segs,
                            uint32_t reference_count,
                            ValueCache& val_cache) {
-    
-    return applyValue(processBuffer(transaction, val, val_cache), reference_count, val_stack);
+    return applyValue(processBuffer(transaction, val, val_cache),
+                      reference_count, val_stack);
 }
 
 GetResults processVal(const Transaction&,
@@ -618,6 +625,9 @@ SaveResults saveValueImpl(Transaction& transaction,
                                  new_items_to_save.end());
             save_ret =
                 saveRefCountedData(*transaction.transaction, key, value_vector);
+        }
+        if (!save_ret.status.ok()) {
+            return save_ret;
         }
         if (first) {
             ret = save_ret;

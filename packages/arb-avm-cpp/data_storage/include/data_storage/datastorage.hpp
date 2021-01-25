@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include <avm_values/bigint.hpp>
 #include <data_storage/keyvaluestore.hpp>
 #include <data_storage/storageresultfwd.hpp>
 
@@ -34,13 +35,18 @@ class DataStorage {
     std::string txn_db_path;
     std::unique_ptr<rocksdb::TransactionDB> txn_db;
     std::unique_ptr<rocksdb::ColumnFamilyHandle> default_column;
+    std::unique_ptr<rocksdb::ColumnFamilyHandle> state_column;
     std::unique_ptr<rocksdb::ColumnFamilyHandle> blocks_column;
     std::unique_ptr<rocksdb::ColumnFamilyHandle> node_column;
+    std::unique_ptr<rocksdb::ColumnFamilyHandle> checkpoint_column;
+    std::unique_ptr<rocksdb::ColumnFamilyHandle> messageentry_column;
+    std::unique_ptr<rocksdb::ColumnFamilyHandle> log_column;
+    std::unique_ptr<rocksdb::ColumnFamilyHandle> send_column;
 
-    DataStorage(const std::string& db_path);
+    explicit DataStorage(const std::string& db_path);
     rocksdb::Status closeDb();
 
-    std::unique_ptr<rocksdb::Transaction> beginTransaction() {
+    std::unique_ptr<rocksdb::Transaction> beginTransaction() const {
         return std::unique_ptr<rocksdb::Transaction>{
             txn_db->BeginTransaction(rocksdb::WriteOptions())};
     }
@@ -59,6 +65,31 @@ class Transaction {
     rocksdb::Status commit() { return transaction->Commit(); }
 
     rocksdb::Status rollback() { return transaction->Rollback(); }
+
+    static std::unique_ptr<Transaction> makeTransaction(
+        std::shared_ptr<DataStorage> store);
 };
+
+ValueResult<std::vector<std::vector<unsigned char>>>
+getVectorVectorUsingFamilyAndKey(rocksdb::Transaction& tx,
+                                 rocksdb::ColumnFamilyHandle* family,
+                                 rocksdb::Slice first_key_slice,
+                                 size_t count);
+
+ValueResult<std::vector<unsigned char>> getVectorUsingFamilyAndKey(
+    rocksdb::Transaction& tx,
+    rocksdb::ColumnFamilyHandle* family,
+    rocksdb::Slice key_slice);
+
+ValueResult<std::vector<uint256_t>> getUint256VectorUsingFamilyAndKey(
+    rocksdb::Transaction& tx,
+    rocksdb::ColumnFamilyHandle* family,
+    rocksdb::Slice first_key_slice,
+    size_t count);
+
+ValueResult<uint256_t> getUint256UsingFamilyAndKey(
+    rocksdb::Transaction& transaction,
+    rocksdb::ColumnFamilyHandle* family,
+    rocksdb::Slice key_slice);
 
 #endif /* datastorage_hpp */

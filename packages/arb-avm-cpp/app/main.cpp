@@ -15,7 +15,7 @@
  */
 
 #include <avm/machine.hpp>
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 
@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
     std::string filename = argv[2];
 
     DBDeleter deleter;
-    CheckpointStorage storage{temp_db_path};
+    ArbStorage storage{temp_db_path};
 
     if (mode == "--hexops") {
         std::ifstream file(filename, std::ios::binary);
@@ -102,20 +102,19 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    auto assertion = mach.run(10000000000000, std::move(inbox_messages),
-                              std::chrono::seconds(0));
+    auto assertion = mach->run(0, false, inbox_messages, 0, nonstd::nullopt);
 
     std::cout << "Produced " << assertion.logs.size() << " logs\n";
 
     std::cout << "Ran " << assertion.stepCount << " steps in "
               << assertion.gasCount << " gas ending in state "
-              << static_cast<int>(mach.currentStatus()) << "\n";
+              << static_cast<int>(mach->currentStatus()) << "\n";
 
     auto tx = storage.makeTransaction();
-    saveMachine(*tx, mach);
+    saveMachine(*tx, *mach);
     tx->commit();
 
-    auto mach2 = storage.getMachine(mach.hash(), value_cache);
-    mach2.run(0, {}, std::chrono::seconds(0));
+    auto mach2 = storage.getMachine(mach->hash(), value_cache);
+    mach2->run(0, false, std::vector<Tuple>{}, 0, nonstd::nullopt);
     return 0;
 }

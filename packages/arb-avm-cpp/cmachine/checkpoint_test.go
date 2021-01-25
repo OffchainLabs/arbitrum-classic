@@ -29,16 +29,16 @@ var codeFile = arbos.Path()
 func TestCheckpoint(t *testing.T) {
 	dePath := "dbPath"
 
-	checkpointStorage, err := NewCheckpoint(dePath)
+	arbStorage, err := NewCheckpoint(dePath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := checkpointStorage.Initialize(codeFile); err != nil {
+	if err := arbStorage.Initialize(codeFile); err != nil {
 		t.Fatal(err)
 	}
-	defer checkpointStorage.CloseCheckpointStorage()
+	defer arbStorage.CloseArbStorage()
 
-	val, err := checkpointStorage.GetData([]byte("key"))
+	val, err := arbStorage.GetData([]byte("key"))
 	if err == nil {
 		t.Error("should have failed")
 	}
@@ -60,16 +60,16 @@ func TestCheckpointMachine(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	checkpointStorage, err := NewCheckpoint(dePath)
+	arbStorage, err := NewCheckpoint(dePath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := checkpointStorage.Initialize(codeFile); err != nil {
+	if err := arbStorage.Initialize(codeFile); err != nil {
 		t.Fatal(err)
 	}
-	defer checkpointStorage.CloseCheckpointStorage()
+	defer arbStorage.CloseArbStorage()
 
-	mach, err := checkpointStorage.GetInitialMachine(valueCache)
+	mach, err := arbStorage.GetInitialMachine(valueCache)
 	if err != nil {
 		t.Error(err)
 	}
@@ -84,11 +84,11 @@ func TestCheckpointMachine(t *testing.T) {
 
 	t.Log("Ran machine for", numSteps, "steps")
 
-	if !mach.Checkpoint(checkpointStorage) {
+	if !mach.Checkpoint(arbStorage) {
 		t.Error("Failed to checkpoint machine")
 	}
 
-	loadedMach, err := checkpointStorage.GetMachine(mach.Hash(), valueCache)
+	loadedMach, err := arbStorage.GetMachine(mach.Hash(), valueCache)
 	if err != nil {
 		t.Error(err)
 	}

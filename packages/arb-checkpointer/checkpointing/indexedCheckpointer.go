@@ -19,28 +19,23 @@ package checkpointing
 import (
 	"context"
 	"github.com/ethereum/go-ethereum"
+	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"math/big"
 	"os"
 	"sync"
 	"time"
 
-	"google.golang.org/protobuf/proto"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 )
 
-var errNoCheckpoint = errors.New("cannot restore because no checkpoint exists")
-var errNoMatchingCheckpoint = errors.New("cannot restore because no matching checkpoint exists")
-
 type IndexedCheckpointer struct {
 	*sync.Mutex
-	db                    *cmachine.CheckpointStorage
+	db                    *cmachine.ArbStorage
 	bs                    machine.BlockStore
 	nextCheckpointToWrite *writableCheckpoint
 	maxReorgHeight        *big.Int
@@ -63,7 +58,6 @@ func NewIndexedCheckpointer(
 		return nil, err
 	}
 
-	go ret.writeDaemon()
 	go cleanupDaemon(ret.bs, ret.db, maxReorgHeight)
 	return ret, nil
 }
@@ -119,7 +113,7 @@ func (cp *IndexedCheckpointer) GetAggregatorStore() *cmachine.AggregatorStore {
 // HasCheckpointedState checks whether the block store is empty, which is the table
 // which contains the checkpoints recorded by the IndexedCheckpointer
 func (cp *IndexedCheckpointer) HasCheckpointedState() bool {
-	return !cp.bs.IsBlockStoreEmpty()
+	return false
 }
 
 func (cp *IndexedCheckpointer) GetInitialMachine(vc machine.ValueCache) (machine.Machine, error) {
@@ -165,7 +159,7 @@ func (cp *IndexedCheckpointer) RestoreLatestState(ctx context.Context, clnt arbb
 func restoreLatestState(
 	ctx context.Context,
 	bs machine.BlockStore,
-	db machine.CheckpointStorage,
+	db machine.ArbStorage,
 	clnt arbbridge.ChainTimeGetter,
 	unmarshalFunc func([]byte, ckptcontext.RestoreContext, *common.BlockId) error,
 ) error {
@@ -237,7 +231,7 @@ func (cp *IndexedCheckpointer) writeDaemon() {
 	}
 }
 
-func writeCheckpoint(bs machine.BlockStore, db machine.CheckpointStorage, wc *writableCheckpoint) error {
+func writeCheckpoint(bs machine.BlockStore, db machine.ArbStorage, wc *writableCheckpoint) error {
 	// save values and machines
 	if err := ckptcontext.SaveCheckpointContext(db, wc.ckpCtx); err != nil {
 		return err
@@ -259,7 +253,7 @@ func writeCheckpoint(bs machine.BlockStore, db machine.CheckpointStorage, wc *wr
 	return nil
 }
 
-func cleanupDaemon(bs machine.BlockStore, db machine.CheckpointStorage, maxReorgHeight *big.Int) {
+func cleanupDaemon(bs machine.BlockStore, db machine.ArbStorage, maxReorgHeight *big.Int) {
 	ticker := time.NewTicker(common.NewTimeBlocksInt(25).Duration())
 	defer ticker.Stop()
 	for {
@@ -268,7 +262,7 @@ func cleanupDaemon(bs machine.BlockStore, db machine.CheckpointStorage, maxReorg
 	}
 }
 
-func cleanup(bs machine.BlockStore, db machine.CheckpointStorage, maxReorgHeight *big.Int) {
+func cleanup(bs machine.BlockStore, db machine.ArbStorage, maxReorgHeight *big.Int) {
 	currentMin := bs.MinBlockStoreHeight()
 	currentMax := bs.MaxBlockStoreHeight()
 	height := common.NewTimeBlocks(new(big.Int).Sub(currentMin.AsInt(), big.NewInt(1)))
@@ -288,81 +282,4 @@ func cleanup(bs machine.BlockStore, db machine.CheckpointStorage, maxReorgHeight
 		}
 		height = common.NewTimeBlocks(new(big.Int).Add(height.AsInt(), big.NewInt(1)))
 	}
-}
-
-func deleteCheckpointForKey(bs machine.BlockStore, db machine.CheckpointStorage, id *common.BlockId) error {
-	val, err := bs.GetBlock(id)
-	if err != nil {
-		return err
-	}
-	ckp := &CheckpointWithManifest{}
-	if err := proto.Unmarshal(val, ckp); err != nil {
-		return err
-	}
-	_ = bs.DeleteBlock(id) // ignore error
-	if ckp.Manifest != nil {
-		for _, hbuf := range ckp.Manifest.Values {
-			h := hbuf.Unmarshal()
-			_ = db.DeleteValue(h) // ignore error
-		}
-		for _, hbuf := range ckp.Manifest.Machines {
-			h := hbuf.Unmarshal()
-			_ = db.DeleteCheckpoint(h) // ignore error
-		}
-	}
-	return nil
-}
-
-type restoreContextLocked struct {
-	db         machine.CheckpointStorage
-	values     map[common.Hash]value.Value
-	machines   map[common.Hash]machine.Machine
-	valueCache machine.ValueCache
-}
-
-func newRestoreContextLocked(db machine.CheckpointStorage, manifest *ckptcontext.CheckpointManifest) (*restoreContextLocked, error) {
-	valueCache, err := cmachine.NewValueCache()
-	if err != nil {
-		return nil, err
-	}
-
-	rcl := restoreContextLocked{db, map[common.Hash]value.Value{}, map[common.Hash]machine.Machine{}, valueCache}
-
-	for _, valHash := range manifest.GetValues() {
-		hash := valHash.Unmarshal()
-		val, err := rcl.db.GetValue(hash, rcl.valueCache)
-		if err != nil {
-			return nil, err
-		}
-
-		rcl.values[hash] = val
-	}
-
-	for _, machHash := range manifest.GetMachines() {
-		hash := machHash.Unmarshal()
-		mach, err := rcl.db.GetMachine(hash, valueCache)
-		if err != nil {
-			return nil, err
-		}
-
-		rcl.machines[hash] = mach
-	}
-
-	return &rcl, nil
-}
-
-func (rcl *restoreContextLocked) GetValue(h common.Hash) (value.Value, error) {
-	if val, ok := rcl.values[h]; ok {
-		return val, nil
-	}
-
-	return rcl.db.GetValue(h, rcl.valueCache)
-}
-
-func (rcl *restoreContextLocked) GetMachine(h common.Hash) (machine.Machine, error) {
-	if mach, ok := rcl.machines[h]; ok {
-		return mach, nil
-	}
-
-	return rcl.db.GetMachine(h, rcl.valueCache)
 }

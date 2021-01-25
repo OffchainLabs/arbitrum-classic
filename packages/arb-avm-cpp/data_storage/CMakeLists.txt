@@ -21,10 +21,15 @@ project (data_storage LANGUAGES CXX)
 
 set(LIB_HEADERS
   include/data_storage/aggregator.hpp
+  include/data_storage/arbcore.hpp
+  include/data_storage/arbstorage.hpp
   include/data_storage/blockstore.hpp
-  include/data_storage/checkpointstorage.hpp
+  include/data_storage/checkpoint.hpp
   include/data_storage/datastorage.hpp
+  include/data_storage/executioncursor.hpp
+  include/data_storage/inboxmessage.hpp
   include/data_storage/keyvaluestore.hpp
+  include/data_storage/messageentry.hpp
   include/data_storage/storageresult.hpp
   include/data_storage/storageresultfwd.hpp
   include/data_storage/value/code.hpp
@@ -40,10 +45,15 @@ set(LIB_PRIVATE_HEADERS
 
 set(LIB_SOURCES
   src/aggregator.cpp
+  src/arbcore.cpp
+  src/arbstorage.cpp
   src/blockstore.cpp
+  src/checkpoint.cpp
   src/datastorage.cpp
-  src/checkpointstorage.cpp
+  src/executioncursor.cpp
+  src/inboxmessage.cpp
   src/keyvaluestore.cpp
+  src/messageentry.cpp
   src/value/code.cpp
   src/value/machine.cpp
   src/value/referencecount.cpp
@@ -73,7 +83,7 @@ target_include_directories(data_storage PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(data_storage PUBLIC avm avm_values Threads::Threads)
+target_link_libraries(data_storage PUBLIC avm avm_values cavm Threads::Threads)
 
 target_code_coverage(data_storage AUTO ALL)
 

@@ -21,19 +21,23 @@ project (cavm LANGUAGES CXX)
 
 set(LIB_HEADERS
   caggregator.h
+  carbcore.h
+  carbstorage.h
   cblockstore.h
+  cexecutioncursor.h
   cmachine.h
-  ccheckpointstorage.h
+  ctypes.h
   cvaluecache.h
   utils.hpp
-  ctypes.h
 )
 
 set(LIB_SOURCES
   caggregator.cpp
+  carbcore.cpp
+  carbstorage.cpp
   cblockstore.cpp
+  cexecutioncursor.cpp
   cmachine.cpp
-  ccheckpointstorage.cpp
   cvaluecache.cpp
 )
 

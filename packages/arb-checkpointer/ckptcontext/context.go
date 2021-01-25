@@ -90,7 +90,7 @@ func (ctx *CheckpointContext) GetMachine(h common.Hash) (machine.Machine, error)
 	return nil, &machine.MachineNotFoundError{HashValue: h}
 }
 
-func SaveCheckpointContext(db machine.CheckpointStorage, ckpCtx *CheckpointContext) error {
+func SaveCheckpointContext(db machine.ArbStorage, ckpCtx *CheckpointContext) error {
 	for _, val := range ckpCtx.Values() {
 		if ok := db.SaveValue(val); !ok {
 			return errors.New("failed to write value to checkpoint db")

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,9 @@
 #include "utils.hpp"
 
 #include <avm/machine.hpp>
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/value/machine.hpp>
 
-#include <sys/stat.h>
-#include <fstream>
 #include <iostream>
 
 typedef struct {
@@ -52,9 +50,9 @@ void machineDestroy(CMachine* m) {
     delete static_cast<Machine*>(m);
 }
 
-int checkpointMachine(CMachine* m, CCheckpointStorage* s) {
+int checkpointMachine(CMachine* m, CArbStorage* s) {
     auto machine = static_cast<Machine*>(m);
-    auto storage = static_cast<CheckpointStorage*>(s);
+    auto storage = static_cast<ArbStorage*>(s);
     auto transaction = storage->makeTransaction();
     auto result = saveMachine(*transaction, *machine);
     if (!result.status.ok()) {
@@ -140,7 +138,7 @@ ByteSlice machineMarshallForProof(CMachine* m) {
 
 ByteSlice machineMarshallBufferProof(CMachine* m) {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
+    auto mach = static_cast<Machine*>(m);
     std::vector<unsigned char> buffer;
     return returnCharVector(mach->marshalBufferProof());
 }
@@ -150,49 +148,6 @@ ByteSlice machineMarshallState(CMachine* m) {
     auto mach = static_cast<Machine*>(m);
     std::vector<unsigned char> buffer;
     return returnCharVector(mach->marshalState());
-}
-
-RawAssertion makeRawAssertion(Assertion& assertion) {
-    std::vector<unsigned char> outMsgData;
-    for (const auto& outMsg : assertion.outMessages) {
-        // marshal_value(outMsg, outMsgData);
-        marshal_uint64_t(outMsg.size(), outMsgData);
-        for (uint64_t i = 0; i < outMsg.size(); i++) {
-            outMsgData.push_back(outMsg[i]);
-        }
-    }
-    std::vector<unsigned char> logData;
-    for (const auto& log : assertion.logs) {
-        marshal_value(log, logData);
-    }
-
-    std::vector<unsigned char> debugPrintData;
-    for (const auto& debugPrint : assertion.debugPrints) {
-        marshal_value(debugPrint, debugPrintData);
-    }
-
-    return {assertion.inbox_messages_consumed,
-            returnCharVector(outMsgData),
-            static_cast<int>(assertion.outMessages.size()),
-            returnCharVector(logData),
-            static_cast<int>(assertion.logs.size()),
-            returnCharVector(debugPrintData),
-            static_cast<int>(assertion.debugPrints.size()),
-            assertion.stepCount,
-            assertion.gasCount};
-}
-
-RawAssertion makeEmptyAssertion() {
-    return {0, returnCharVector(std::vector<char>{}),
-            0, returnCharVector(std::vector<char>{}),
-            0, returnCharVector(std::vector<char>{}),
-            0, 0,
-            0};
-}
-
-Tuple getTuple(void* data) {
-    auto charData = reinterpret_cast<const char*>(data);
-    return nonstd::get<Tuple>(deserialize_value(charData));
 }
 
 std::vector<Tuple> getInboxMessages(void* data, uint64_t message_count) {
@@ -205,65 +160,21 @@ std::vector<Tuple> getInboxMessages(void* data, uint64_t message_count) {
 }
 
 RawAssertion executeAssertion(CMachine* m,
-                              uint64_t maxSteps,
+                              uint64_t gas_limit,
+                              int hard_gas_limit,
                               void* inbox_messages,
-                              uint64_t message_count,
-                              uint64_t wallLimit) {
+                              void* final_block_ptr) {
     assert(m);
     auto mach = static_cast<Machine*>(m);
-    auto messages = getInboxMessages(inbox_messages, message_count);
-
-    try {
-        Assertion assertion = mach->run(maxSteps, std::move(messages),
-                                        std::chrono::seconds{wallLimit});
-        return makeRawAssertion(assertion);
-    } catch (const std::exception& e) {
-        std::cerr << "Failed to make assertion " << e.what() << "\n";
-        return makeEmptyAssertion();
+    auto messages = getInboxMessages(inbox_messages);
+    nonstd::optional<uint256_t> final_block;
+    if (final_block_ptr != nullptr) {
+        final_block = receiveUint256(final_block_ptr);
     }
-}
-
-RawAssertion executeCallServerAssertion(CMachine* m,
-                                        uint64_t maxSteps,
-                                        void* inbox_messages,
-                                        uint64_t message_count,
-                                        void* fake_inbox_peek_value,
-                                        uint64_t wallLimit) {
-    assert(m);
-    auto mach = static_cast<Machine*>(m);
-
-    auto messages = getInboxMessages(inbox_messages, message_count);
-    auto fake_inbox_peek_value_data =
-        reinterpret_cast<const char*>(fake_inbox_peek_value);
-    auto fake_inbox_peek = deserialize_value(fake_inbox_peek_value_data);
 
     try {
-        Assertion assertion = mach->runCallServer(
-            maxSteps, std::move(messages), std::chrono::seconds{wallLimit},
-            std::move(fake_inbox_peek));
-        return makeRawAssertion(assertion);
-    } catch (const std::exception& e) {
-        std::cerr << "Failed to make assertion " << e.what() << "\n";
-        return makeEmptyAssertion();
-    }
-}
-
-RawAssertion executeSideloadedAssertion(CMachine* m,
-                                        uint64_t maxSteps,
-                                        void* inbox_messages,
-                                        uint64_t message_count,
-                                        void* sideload,
-                                        uint64_t wallLimit) {
-    assert(m);
-    auto mach = static_cast<Machine*>(m);
-
-    auto messages = getInboxMessages(inbox_messages, message_count);
-    auto sideload_value = getTuple(sideload);
-
-    try {
-        Assertion assertion = mach->runSideloaded(
-            maxSteps, std::move(messages), std::chrono::seconds{wallLimit},
-            std::move(sideload_value));
+        Assertion assertion =
+            mach->run(gas_limit, hard_gas_limit, messages, 0, final_block);
         return makeRawAssertion(assertion);
     } catch (const std::exception& e) {
         std::cerr << "Failed to make assertion " << e.what() << "\n";

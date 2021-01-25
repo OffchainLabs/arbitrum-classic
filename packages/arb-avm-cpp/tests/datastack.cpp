@@ -16,7 +16,7 @@
 
 #include "helper.hpp"
 
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/value.hpp>
 
@@ -47,7 +47,7 @@ void initializeDatastack(const Transaction& transaction,
 }
 
 void saveDataStack(const Datastack& data_stack) {
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     std::vector<CodePoint> code;
     auto transaction = storage.makeTransaction();
 
@@ -60,7 +60,7 @@ void saveDataStack(const Datastack& data_stack) {
 }
 
 void saveDataStackTwice(const Datastack& data_stack) {
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     std::vector<CodePoint> code;
     auto transaction = storage.makeTransaction();
 
@@ -111,7 +111,7 @@ void saveTwiceAndGetDataStack(Transaction& transaction,
 
 TEST_CASE("Initialize datastack") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
     Datastack data_stack;
 
@@ -189,7 +189,7 @@ TEST_CASE("Save datastack") {
 
 TEST_CASE("Save and get datastack") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     Datastack datastack;
 
     SECTION("save datastack and get") {

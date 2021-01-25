@@ -23,11 +23,10 @@
 extern "C" {
 #endif
 
-struct ByteSliceStruct {
+typedef struct ByteSliceStruct {
     void* data;
     int length;
-};
-typedef struct ByteSliceStruct ByteSlice;
+} ByteSlice;
 
 typedef struct {
     ByteSlice slice;
@@ -40,28 +39,44 @@ typedef struct {
 } HashList;
 
 typedef struct {
-    ByteSlice* slices;
+    void* slices;
     int count;
 } ByteSliceArray;
 
-struct Uint64ResultStruct {
+typedef struct {
+    ByteSliceArray slice;
+    int found;
+} ByteSliceArrayResult;
+
+typedef struct Uint64ResultStruct {
     uint64_t value;
     int found;
-};
+} Uint64Result;
 
-typedef struct Uint64ResultStruct Uint64Result;
-
-struct HashResultStruct {
+typedef struct HashResultStruct {
     void* value;
     int found;
-};
+} Uint256Result;
 
-typedef struct HashResultStruct HashResult;
+typedef struct {
+    uint64_t inbox_messages_consumed;
+    ByteSlice sends;
+    int sendCount;
+    ByteSlice logs;
+    int logCount;
+    ByteSlice debugPrints;
+    int debugPrintCount;
+    uint64_t numSteps;
+    uint64_t numGas;
+} RawAssertion;
 
-typedef void CMachine;
-typedef void CCheckpointStorage;
-typedef void CBlockStore;
 typedef void CAggregatorStore;
+typedef void CArbCore;
+typedef void CArbStorage;
+typedef void CBlockStore;
+typedef void CCheckpointedMachine;
+typedef void CExecutionCursor;
+typedef void CMachine;
 typedef void CValueCache;
 
 #ifdef __cplusplus

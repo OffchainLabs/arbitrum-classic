@@ -31,16 +31,11 @@ uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
 
 AssertionContext::AssertionContext(
     std::vector<Tuple> inbox_messages,
-    Tuple sideload,
-    bool blockingSideload_,
-    nonstd::optional<value> fake_inbox_peek_value_)
+    const nonstd::optional<uint256_t>& min_next_block_height,
+    uint256_t messages_to_skip)
     : inbox_messages(std::move(inbox_messages)),
-      inbox_messages_consumed(0),
-      sideload_value(std::move(sideload)),
-      numSteps{0},
-      numGas{0},
-      blockingSideload(blockingSideload_),
-      fake_inbox_peek_value(std::move(fake_inbox_peek_value_)) {}
+      next_block_height(min_next_block_height),
+      inbox_messages_consumed(messages_to_skip) {}
 
 MachineState::MachineState()
     : arb_gas_remaining(max_arb_gas_remaining),
@@ -416,7 +411,7 @@ const CodePoint& MachineState::loadCurrentInstruction() const {
     return (*loaded_segment->segment)[pc.pc];
 }
 
-uint64_t MachineState::nextGasCost() const {
+uint256_t MachineState::nextGasCost() const {
     auto& instruction = loadCurrentInstruction();
     auto base_gas =
         instructionGasCosts()[static_cast<size_t>(instruction.op.opcode)];
@@ -453,7 +448,7 @@ BlockReason MachineState::runOne() {
             return NotBlocked();
         }
 
-        uint64_t gas_cost = nextGasCost();
+        auto gas_cost = nextGasCost();
         if (arb_gas_remaining < gas_cost) {
             // If there's insufficient gas remaining, execute by transitioning
             // to the error state with remaining gas set to max
@@ -500,7 +495,7 @@ BlockReason MachineState::runOne() {
     }();
 
     if (nonstd::holds_alternative<NotBlocked>(blockReason)) {
-        context.numSteps++;
+        context.numSteps += 1;
     }
 
     // If we're in the error state, jump to the error handler if one is set
@@ -738,9 +733,6 @@ BlockReason MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::PUSH_INSN_IMM:
             machineoperation::pushinsnimm(*this);
-            break;
-        case OpCode::SIDELOAD:
-            machineoperation::sideload(*this);
             break;
         case OpCode::NEW_BUFFER:
             machineoperation::newbuffer(*this);

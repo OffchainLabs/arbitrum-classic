@@ -17,7 +17,7 @@
 #include "config.hpp"
 #include "helper.hpp"
 
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 
@@ -61,9 +61,10 @@ Machine generateTestMachine() {
     return mach;
 }
 
-void checkRun(Machine& mach, uint64_t step_count_target = 6) {
-    auto assertion = mach.run(10000, {}, std::chrono::seconds{0});
-    REQUIRE(assertion.stepCount == step_count_target);
+void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
+    auto assertion = mach.run(gas_count_target, false, std::vector<Tuple>{}, 0,
+                              nonstd::nullopt);
+    REQUIRE(assertion.gasCount <= gas_count_target);
     auto val = mach.machine_state.stack.pop();
     REQUIRE(val == value{uint256_t{4}});
     REQUIRE(mach.machine_state.stack.stacksize() == 0);
@@ -76,7 +77,7 @@ TEST_CASE("Code works correctly") {
 
 TEST_CASE("Code serialization") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     auto mach = generateTestMachine();
     auto tx = storage.makeTransaction();
     ValueCache value_cache{};
@@ -85,12 +86,12 @@ TEST_CASE("Code serialization") {
         saveMachine(*tx, mach);
         REQUIRE(tx->commit().ok());
         auto mach2 = storage.getMachine(mach.hash(), value_cache);
-        checkRun(mach2);
+        checkRun(*mach2);
     }
 
     SECTION("Save different and load") {
         auto mach2 = mach;
-        mach2.run(2, {}, std::chrono::seconds{0});
+        mach2.run(7, false, std::vector<Tuple>{}, 0, nonstd::nullopt);
         saveMachine(*tx, mach);
         saveMachine(*tx, mach2);
 
@@ -98,14 +99,14 @@ TEST_CASE("Code serialization") {
             deleteMachine(*tx, mach.hash());
             REQUIRE(tx->commit().ok());
             auto mach3 = storage.getMachine(mach2.hash(), value_cache);
-            checkRun(mach3, 4);
+            checkRun(*mach3, 14);
         }
 
         SECTION("Delete second") {
             deleteMachine(*tx, mach2.hash());
             REQUIRE(tx->commit().ok());
             auto mach3 = storage.getMachine(mach.hash(), value_cache);
-            checkRun(mach3);
+            checkRun(*mach3);
         }
     }
 
@@ -115,6 +116,6 @@ TEST_CASE("Code serialization") {
         deleteMachine(*tx, mach.hash());
         REQUIRE(tx->commit().ok());
         auto mach2 = storage.getMachine(mach.hash(), value_cache);
-        checkRun(mach2);
+        checkRun(*mach2);
     }
 }

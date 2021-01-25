@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-#ifndef checkpointstorage_hpp
-#define checkpointstorage_hpp
+#ifndef arbstorage_hpp
+#define arbstorage_hpp
 
-#include <avm_values/vmValueParser.hpp>
-#include <data_storage/datastorage.hpp>
-#include <data_storage/value/value.hpp>
+#include "avm_values/vmValueParser.hpp"
+#include "data_storage/arbcore.hpp"
+#include "data_storage/datastorage.hpp"
+#include "data_storage/value/value.hpp"
 
 #include <memory>
 #include <string>
@@ -34,13 +35,13 @@ namespace rocksdb {
 class TransactionDB;
 }
 
-class CheckpointStorage {
+class ArbStorage {
     std::shared_ptr<DataStorage> datastorage;
-    std::shared_ptr<Code> code;
+    std::shared_ptr<ArbCore> arb_core;
 
    public:
-    explicit CheckpointStorage(const std::string& db_path);
-    bool closeCheckpointStorage();
+    explicit ArbStorage(const std::string& db_path);
+    bool closeArbStorage();
     void initialize(LoadedExecutable executable);
     void initialize(const std::string& executable_path);
     bool initialized() const;
@@ -50,11 +51,13 @@ class CheckpointStorage {
     std::unique_ptr<KeyValueStore> makeKeyValueStore();
     std::unique_ptr<BlockStore> getBlockStore() const;
     std::unique_ptr<AggregatorStore> getAggregatorStore() const;
+    std::shared_ptr<ArbCore> getArbCore();
 
-    Machine getInitialMachine(ValueCache& value_cache) const;
-    Machine getMachine(uint256_t machineHash, ValueCache& value_cache) const;
+    std::unique_ptr<Machine> getInitialMachine(ValueCache& value_cache) const;
+    std::unique_ptr<Machine> getMachine(uint256_t machineHash,
+                                        ValueCache& value_cache) const;
     DbResult<value> getValue(uint256_t value_hash,
                              ValueCache& value_cache) const;
 };
 
-#endif /* checkpointstorage_hpp */
+#endif /* arbstorage_hpp */

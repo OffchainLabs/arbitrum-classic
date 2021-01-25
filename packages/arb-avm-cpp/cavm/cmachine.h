@@ -18,7 +18,7 @@
 #define cmachine_h
 
 #include <stdint.h>
-#include "ccheckpointstorage.h"
+#include "carbstorage.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,18 +48,6 @@ typedef struct {
     ByteSlice val;
 } CBlockReason;
 
-typedef struct {
-    uint64_t inbox_messages_consumed;
-    ByteSlice outMessages;
-    int outMessageCount;
-    ByteSlice logs;
-    int logCount;
-    ByteSlice debugPrints;
-    int debugPrintCount;
-    uint64_t numSteps;
-    uint64_t numGas;
-} RawAssertion;
-
 CMachine* machineCreate(const char* filename);
 void machineDestroy(CMachine* m);
 
@@ -72,24 +60,10 @@ CStatus machineCurrentStatus(CMachine* m);
 CBlockReason machineIsBlocked(CMachine* m, int newMessages);
 
 RawAssertion executeAssertion(CMachine* m,
-                              uint64_t maxSteps,
+                              uint64_t gas_limit,
+                              int hard_gas_limit,
                               void* inbox_messages,
-                              uint64_t message_count,
-                              uint64_t wallLimit);
-
-RawAssertion executeCallServerAssertion(CMachine* m,
-                                        uint64_t maxSteps,
-                                        void* inbox_messages,
-                                        uint64_t message_count,
-                                        void* fake_inbox_peek_value,
-                                        uint64_t wallLimit);
-
-RawAssertion executeSideloadedAssertion(CMachine* m,
-                                        uint64_t maxSteps,
-                                        void* inbox_messages,
-                                        uint64_t message_count,
-                                        void* sideload,
-                                        uint64_t wallLimit);
+                              void* final_block_ptr);
 
 ByteSlice machineMarshallForProof(CMachine* m);
 ByteSlice machineMarshallBufferProof(CMachine* m);
@@ -98,7 +72,7 @@ ByteSlice machineMarshallState(CMachine* m);
 
 void machinePrint(CMachine* m);
 
-int checkpointMachine(CMachine* m, CCheckpointStorage* storage);
+int checkpointMachine(CMachine* m, CArbStorage* storage);
 
 #ifdef __cplusplus
 }

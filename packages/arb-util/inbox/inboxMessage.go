@@ -51,6 +51,12 @@ type InboxMessage struct {
 	ChainTime   ChainTime
 }
 
+func NewInboxMessageFromData(data []byte) (InboxMessage, error) {
+	// TODO Parse message
+
+	return NewRandomInboxMessage(), nil
+}
+
 func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 	failRet := InboxMessage{}
 	tup, ok := val.(*value.TupleValue)
