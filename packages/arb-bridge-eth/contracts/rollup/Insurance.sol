@@ -18,142 +18,149 @@
 
 pragma solidity ^0.6.11;
 
+import "./IRollup.sol";
+
 contract Insurance {
     uint private constant ActionDelayInBlocks = 4*60*24*14;  // two weeks
+    uint private constant ENDMARKER = 1<<255;
 
-    uint private totalShares;
-    uint private numPayments;
-    mapping(address => uint) private numShares;
-    mapping(address => uint) private numCollected;
+    IRollup private rollup;
 
-    uint private delayedActionNonce;
-    mapping(bytes32 => bool) private delayedActions;
+    // information about nodes (pending nodes, latestConfirmed, and older nodes that had challenges on their children)
+    uint private lastNodeCreated;
+    uint private lastNodeConfirmed;
+    uint private lastChallengeNodeAsOfLatestResolved;
+    uint private lastChallengeNodeAsOfLatestConfirmed;
+    int private changeInAmount;
+    mapping(uint => uint) numSharesAtNode;
+    mapping(uint => uint) numChallengesOnNode;
+    mapping(uint => uint) nextNodeWithChallenge;
 
-    enum DelayedActionType { Add, Remove }
+    // information about insurance depositors
+    mapping(address => uint) lastNodeCollected;
+    mapping(address => uint) firstNodeEligible;
+    mapping(address => uint) lastNodeEligible;
+    mapping(address => uint) amountDeposited;
 
-    event AddedShares(address account, uint numShares);
-    event RemovedShares(address account, uint numShares);
-    event PaidOut(address account, uint amount);
-    event InsuredEvent();
-
-    function getTotalShares() external view returns(uint) {
-        return totalShares;
+    modifier onlyRollup {
+        require(msg.sender == address(rollup), "ROLLUP_ONLY");
+        _;
     }
 
-    function getNumEvents() external view returns(uint) {
-        return numPayments;
+    constructor(IRollup rollup_) public {
+        rollup = rollup_;
+        lastNodeCreated = 1;
+        lastNodeConfirmed = 0;
+        lastChallengeNodeAsOfLatestResolved = 0;
+        lastChallengeNodeAsOfLatestConfirmed = 0;
+        changeInAmount = 0;
+        nextNodeWithChallenge[0] = ENDMARKER;
     }
 
-    function getAccountState(address account) external view returns(uint, uint) {
-        return (numShares[account], numPayments-numCollected[account]);
+    function notifyNewNode(
+        uint challengePeriod,
+        uint nodeCostGasEstimate
+    ) external onlyRollup returns(uint) {
+        uint numShares = uint(int(numSharesAtNode[lastNodeCreated]) + changeInAmount);
+        changeInAmount = 0;
+        lastNodeCreated++;
+        numSharesAtNode[lastNodeCreated] = numShares;
+        return recommendNodeIntervalBlocks(challengePeriod, numShares, nodeCostGasEstimate);
     }
 
-    function updateAndPayOut(address payable account) public {
-        uint numToPay = numShares[account] * (numPayments - numCollected[account]);
-        numCollected[account] = numPayments;
-        if (numToPay > 0) {
-            account.transfer(numToPay);
-            emit PaidOut(account, numToPay);
+    function notifyNodeResolved(uint nodeNum, bool confirmed) external onlyRollup {
+        if (confirmed) {
+            lastNodeConfirmed = nodeNum;
+            if (numChallengesOnNode[nodeNum] > 0) {
+                nextNodeWithChallenge[lastChallengeNodeAsOfLatestResolved] = nodeNum;
+                lastChallengeNodeAsOfLatestResolved = nodeNum;
+            }
+            lastChallengeNodeAsOfLatestConfirmed = lastChallengeNodeAsOfLatestResolved;
+            numSharesAtNode[lastNodeConfirmed] = 0;   // zero unneeded storage
+        } else {
+            if (numChallengesOnNode[nodeNum] > 0) {
+                nextNodeWithChallenge[lastChallengeNodeAsOfLatestResolved] = nodeNum;
+                lastChallengeNodeAsOfLatestResolved = nodeNum;
+            }
+            numSharesAtNode[nodeNum] = 0;    // zero unneeded storage
         }
     }
 
-    function addShares(address payable account, uint value) internal {
-        require(msg.value > 0);
-        updateAndPayOut(account);
-        numShares[account] = numShares[account] + value;
-        totalShares = totalShares + value;
-        emit AddedShares(account, value);
-    }
-
-    function removeShares(address payable account, uint numToRemove) internal {
-        require((numToRemove > 0) && (numToRemove <= numShares[account]));
-        updateAndPayOut(account);
-        numShares[account] = numShares[account] - numToRemove;
-        if (numShares[account] == 0) {
-            numCollected[account] = 0;  // this isn't needed, so zero it to reduce storage
+    function notifyChallenge(uint parentNodeNum) external onlyRollup {
+        require( (parentNodeNum >= lastNodeConfirmed) || (parentNodeNum <= lastNodeCreated), "bad node number");
+        numChallengesOnNode[parentNodeNum]++;
+        if (parentNodeNum == lastNodeConfirmed) {
+            nextNodeWithChallenge[lastChallengeNodeAsOfLatestConfirmed] = parentNodeNum;
         }
-        totalShares = totalShares - numToRemove;
-        account.transfer(numToRemove);
-        emit RemovedShares(account, numToRemove);
     }
 
-    function fundInsuredEvent() external payable {  // no reason to restrict who can call this
-        require(msg.value == totalShares);
-        numPayments = numPayments + 1;
-        emit InsuredEvent();
+    function addStake() external payable {
+        require(amountDeposited[msg.sender] == 0, "already a depositor");
+        lastNodeCollected[msg.sender] = lastChallengeNodeAsOfLatestResolved;
+        firstNodeEligible[msg.sender] = lastNodeCreated + 1;
+        lastNodeEligible[msg.sender] = ENDMARKER;
+        amountDeposited[msg.sender] = msg.value;
+        changeInAmount = changeInAmount + int(msg.value);
     }
 
-    function prepareDelayedAdd(address account) external payable returns(bytes32, uint, uint) {
-        uint daNonce = delayedActionNonce++;
-        uint readyBlock = block.number + ActionDelayInBlocks;
-        bytes32 hashedAction = keccak256(
-            abi.encodePacked(
-                DelayedActionType.Add,
-                account,
-                msg.value,
-                daNonce,
-                readyBlock
-            )
-        );
-        delayedActions[hashedAction] = true;
-        return (hashedAction, daNonce, readyBlock);
+    function scheduleStakeRemoval() external {
+        require(amountDeposited[msg.sender] > 0, "not a depositor");
+        require(lastNodeEligible[msg.sender] < ENDMARKER, "already scheduled");
+        lastNodeEligible[msg.sender] = lastNodeCreated;
+        changeInAmount = changeInAmount - int(amountDeposited[msg.sender]);
     }
 
-    function redeemDelayedAdd(address payable account, uint value, uint nonce, uint blockNum) external {
-        bytes32 hashedAction = keccak256(
-            abi.encodePacked(
-                DelayedActionType.Add,
-                account,
-                value,
-                nonce,
-                blockNum
-            )
-        );
-        require(delayedActions[hashedAction]);
-        delayedActions[hashedAction] = false;
-        addShares(account, value);
+    function recoverStake(uint maxNodesToPay) external {
+        require(amountDeposited[msg.sender] > 0, "not a depositor");
+        require(lastNodeEligible[msg.sender] < lastNodeConfirmed);
+
+        require(payOut(msg.sender, maxNodesToPay));   // if this fails, sender should call payOut, then try again
+
+        lastNodeCollected[msg.sender] = 0;
+        firstNodeEligible[msg.sender] = 0;
+        lastNodeEligible[msg.sender] = 0;
+        uint amount = amountDeposited[msg.sender];
+        amountDeposited[msg.sender] = 0;
+        msg.sender.transfer(amount);
     }
 
-    function prepareDelayedRemove(address payable account, uint num) external returns(bytes32, uint, uint) {
-        removeShares(account, num);
-        uint daNonce = delayedActionNonce++;
-        uint readyBlock = block.number + ActionDelayInBlocks;
-        bytes32 hashedAction = keccak256(
-            abi.encodePacked(
-                DelayedActionType.Remove,
-                account,
-                num,
-                daNonce,
-                readyBlock
-            )
-        );
-        delayedActions[hashedAction] = true;
-        return (hashedAction, daNonce, readyBlock);
+    function payOut(address payable account, uint maxNumNodes) public returns(bool) {  // returns true iff done paying for now
+        require(amountDeposited[account] > 0, "not a depositor");
+        uint numOwed = 0;
+        uint nodeNum = lastNodeCollected[account];
+        while(nodeNum < lastNodeConfirmed) {
+            uint next = nextNodeWithChallenge[nodeNum];
+            if (next < lastNodeConfirmed) {
+                if (nodeNum >= firstNodeEligible[account]) {  // make sure node is after account made its deposit
+                    numOwed = numOwed++;
+                }
+                nodeNum = next;
+                if (maxNumNodes > 1) {
+                    maxNumNodes--;
+                } else {
+                    lastNodeCollected[account] = nodeNum;
+                    account.transfer(numOwed * amountDeposited[account]);
+                    return false;
+                }
+            }
+        }
+        lastNodeCollected[account] = nodeNum;
+        account.transfer(numOwed * amountDeposited[account]);
+        return true;
     }
 
-    function redeemDelayedRemove(address payable account, uint num, uint nonce, uint blockNum) external {
-        bytes32 hashedAction = keccak256(
-            abi.encodePacked(
-                DelayedActionType.Remove,
-                account,
-                num,
-                nonce,
-                blockNum
-            )
-        );
-        require(delayedActions[hashedAction]);
-        delayedActions[hashedAction] = false;
-        account.transfer(num);
-    }
-
-    function recommendNodeIntervalBlocks(uint challengePeriod, uint nodeGasCostEstimate) external returns(uint) {
+    function recommendNodeIntervalBlocks(
+        uint challengePeriod,
+        uint totalDeposited,
+        uint nodeGasCostEstimate
+    ) internal pure returns(uint) {
         if (challengePeriod < 80) {
             return 40;
         }
-        if (totalShares < 16 * nodeGasCostEstimate + 1) {  // add 1 so this is true if totalShares==0
+        if (totalDeposited < 16 * nodeGasCostEstimate + 1) {  // add 1 so this is true if totalDeposited==0
             return challengePeriod / 2;
         }
-        uint ratio = 4 * challengePeriod * challengePeriod * nodeGasCostEstimate / totalShares;
+        uint ratio = 4 * challengePeriod * challengePeriod * nodeGasCostEstimate / totalDeposited;
         if (ratio <= 1600) {
             return 40;
         } else {
