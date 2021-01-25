@@ -24,11 +24,11 @@ void deleteArbCore(CArbCore* m) {
     delete static_cast<ArbCore*>(m);
 }
 
-int deliverMessages(CArbCore* arb_core_ptr,
-                    const uint64_t first_message_sequence_number,
-                    const uint64_t block_height,
-                    void* inbox_messages,
-                    void* previous_inbox_hash_ptr) {
+int arbCoreDeliverMessages(CArbCore* arb_core_ptr,
+                           const uint64_t first_message_sequence_number,
+                           const uint64_t block_height,
+                           void* inbox_messages,
+                           void* previous_inbox_hash_ptr) {
     auto arb_core = static_cast<ArbCore*>(arb_core_ptr);
     auto messages = getInboxMessages(inbox_messages);
     auto previous_inbox_hash = receiveUint256(previous_inbox_hash_ptr);
@@ -119,12 +119,13 @@ Uint256Result arbCoreGetLogAcc(CArbCore* arb_core_ptr,
                                const void* start_acc_hash,
                                const void* start_index_ptr,
                                const void* count_ptr,
-                               ValueCache& cache) {
+                               CValueCache* cache_ptr) {
     try {
-        auto index_result = static_cast<ArbCore*>(arb_core_ptr)
-                                ->getLogAcc(receiveUint256(start_acc_hash),
-                                            receiveUint256(start_index_ptr),
-                                            receiveUint256(count_ptr), cache);
+        auto arbcore = static_cast<ArbCore*>(arb_core_ptr);
+        auto cache = static_cast<ValueCache*>(cache_ptr);
+        auto index_result = arbcore->getLogAcc(
+            receiveUint256(start_acc_hash), receiveUint256(start_index_ptr),
+            receiveUint256(count_ptr), *cache);
         return returnUint256Result(index_result);
     } catch (const std::exception& e) {
         return {{}, false};

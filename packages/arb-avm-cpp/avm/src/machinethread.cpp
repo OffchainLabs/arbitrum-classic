@@ -14,31 +14,45 @@
  * limitations under the License.
  */
 
-#include <iostream>
-
 #include <avm/machinethread.hpp>
+
+#include <iostream>
+#include <thread>
 
 MachineThread::machine_status_enum MachineThread::status() {
     return machine_status;
 }
 
-void MachineThread::setStatus(machine_status_enum status) {
-    machine_status = status;
+void MachineThread::clearStatus() {
+    abortThread();
+    machine_status = MACHINE_NONE;
+    machine_error_string.clear();
+}
+
+bool MachineThread::startThread(
+    uint256_t max_gas,
+    bool go_over_gas,
+    const std::vector<std::vector<unsigned char>>& inbox_messages,
+    uint256_t messages_to_skip,
+    const nonstd::optional<uint256_t>& min_next_block_height) {
+    abortThread();
+    machine_status = MACHINE_RUNNING;
+
+    machine_thread = std::make_unique<std::thread>(
+        (std::reference_wrapper<MachineThread>(*this)), max_gas, go_over_gas,
+        std::move(inbox_messages), messages_to_skip,
+        std::move(min_next_block_height));
+
+    return true;
 }
 
 void MachineThread::abortThread() {
-    machine_abort = true;
-}
-
-bool MachineThread::setRunning() {
-    if (machine_status == MACHINE_RUNNING) {
-        return false;
+    if (machine_thread) {
+        machine_abort = true;
+        machine_thread->join();
+        machine_thread = nullptr;
     }
-
     machine_abort = false;
-    machine_status = MACHINE_RUNNING;
-
-    return true;
 }
 
 Assertion MachineThread::getAssertion() {
@@ -54,17 +68,18 @@ void MachineThread::clear_error_string() {
 }
 
 void MachineThread::operator()(
-    const uint64_t gas_limit,
-    const bool hard_gas_limit,
+    const uint256_t max_gas,
+    const bool go_over_gas,
     const std::vector<std::vector<unsigned char>>& inbox_messages,
-    const nonstd::optional<uint256_t>& final_block) {
+    const uint256_t messages_to_skip,
+    const nonstd::optional<uint256_t>& min_next_block_height) {
     if (machine_status != MACHINE_NONE) {
         machine_error_string =
             "Unexpected machine_status when trying to run machine";
         machine_status = MACHINE_ERROR;
         return;
     }
-    last_assertion =
-        run(gas_limit, hard_gas_limit, inbox_messages, 0, final_block);
+    last_assertion = run(max_gas, go_over_gas, inbox_messages, messages_to_skip,
+                         min_next_block_height);
     machine_status = MACHINE_FINISHED;
 }

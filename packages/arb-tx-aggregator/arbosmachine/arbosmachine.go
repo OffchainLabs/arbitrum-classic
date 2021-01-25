@@ -260,14 +260,3 @@ func (m *Machine) ExecuteAssertion(
 	handleDebugPrints(debugPrints)
 	return assertion, debugPrints, numSteps
 }
-
-func (m *Machine) ExecuteCallServerAssertion(
-	maxSteps uint64,
-	inboxMessages []inbox.InboxMessage,
-	fakeInboxPeekValue value.Value,
-	maxWallTime time.Duration,
-) (*protocol.ExecutionAssertion, []value.Value, uint64) {
-	assertion, debugPrints, numSteps := m.Machine.ExecuteCallServerAssertion(maxSteps, inboxMessages, fakeInboxPeekValue, maxWallTime)
-	handleDebugPrints(debugPrints)
-	return assertion, debugPrints, numSteps
-}

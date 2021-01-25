@@ -174,31 +174,6 @@ func (m *Machine) ExecuteAssertion(
 	return makeExecutionAssertion(assertion, beforeHash, m.Hash())
 }
 
-func (m *Machine) ExecuteCallServerAssertion(
-	maxSteps uint64,
-	inboxMessages []inbox.InboxMessage,
-	fakeInboxPeekValue value.Value,
-	maxWallTime time.Duration,
-) (*protocol.ExecutionAssertion, []value.Value, uint64) {
-	msgDataC := C.CBytes(encodeInboxMessages(inboxMessages))
-	defer C.free(msgDataC)
-
-	inboxPeekDataC := C.CBytes(encodeValue(fakeInboxPeekValue))
-	defer C.free(inboxPeekDataC)
-
-	beforeHash := m.Hash()
-	assertion := C.executeCallServerAssertion(
-		m.c,
-		C.uint64_t(maxSteps),
-		msgDataC,
-		C.uint64_t(len(inboxMessages)),
-		inboxPeekDataC,
-		C.uint64_t(uint64(maxWallTime.Seconds())),
-	)
-
-	return makeExecutionAssertion(assertion, beforeHash, m.Hash())
-}
-
 func (m *Machine) MarshalForProof() ([]byte, error) {
 	rawProof := C.machineMarshallForProof(m.c)
 	return C.GoBytes(unsafe.Pointer(rawProof.data), rawProof.length), nil

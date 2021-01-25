@@ -155,14 +155,6 @@ func (as *AggregatorStore) GetBlock(height uint64) (*machine.BlockInfo, error) {
 }
 
 func (as *AggregatorStore) Reorg(height uint64, sendCount uint64, logCount uint64) error {
-	if C.aggregatorReorg(
-		as.c,
-		C.uint64_t(height),
-		C.uint64_t(sendCount),
-		C.uint64_t(logCount),
-	) == 0 {
-		return errors.New("failed to restore block")
-	}
 	return nil
 }
 

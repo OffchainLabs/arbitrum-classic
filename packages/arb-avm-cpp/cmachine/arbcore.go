@@ -20,6 +20,7 @@ package cmachine
 #cgo CFLAGS: -I.
 #cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -ldl
 #include "../cavm/carbcore.h"
+#include "../cavm/cvaluecache.h"
 #include <stdio.h>
 #include <stdlib.h>
 */
@@ -63,24 +64,24 @@ func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.Inb
 	return toByteInboxArray(result.slice)
 }
 
-func (ac *ArbCore) GetInboxDelta() (*big.Int, error) {
-	result := C.arbCoreGetInboxDelta(ac.c)
+func (ac *ArbCore) GetInboxDelta(startIndex *big.Int, count *big.Int) (*big.Int, error) {
+	result := C.arbCoreGetInboxDelta(ac.c, intToData(startIndex), intToData(count))
 	if result.found == 0 {
 		return nil, errors.New("failed to get inbox delta")
 	}
 	return dataToInt(result.value), nil
 }
 
-func (ac *ArbCore) GetSendAcc() (*big.Int, error) {
-	result := C.arbCoreGetSendAcc(ac.c)
+func (ac *ArbCore) GetSendAcc(startHash *big.Int, startIndex *big.Int, count *big.Int) (*big.Int, error) {
+	result := C.arbCoreGetSendAcc(ac.c, intToData(startHash), intToData(startIndex), intToData(count))
 	if result.found == 0 {
 		return nil, errors.New("failed to get inbox delta")
 	}
 	return dataToInt(result.value), nil
 }
 
-func (ac *ArbCore) GetLogAcc() (*big.Int, error) {
-	result := C.arbCoreGetLogAcc(ac.c)
+func (ac *ArbCore) GetLogAcc(startHash *big.Int, startIndex *big.Int, count *big.Int, valueCache ValueCache) (*big.Int, error) {
+	result := C.arbCoreGetLogAcc(ac.c, intToData(startHash), intToData(startIndex), intToData(count), valueCache.c)
 	if result.found == 0 {
 		return nil, errors.New("failed to get inbox delta")
 	}

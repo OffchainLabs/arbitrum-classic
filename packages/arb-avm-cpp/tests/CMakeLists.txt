@@ -34,6 +34,7 @@ add_executable(
 
 		aggregator.cpp
 		arbos.cpp
+		arbcore.cpp
 		blockstore.cpp
 		buffer.cpp
 		checkpoint.cpp

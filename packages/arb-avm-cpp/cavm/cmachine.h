@@ -65,12 +65,6 @@ RawAssertion executeAssertion(CMachine* m,
                               void* inbox_messages,
                               void* final_block_ptr);
 
-RawAssertion executeCallServerAssertion(CMachine* m,
-                                        uint64_t gasLimit,
-                                        void* inbox_messages,
-                                        void* fake_inbox_peek_value,
-                                        uint64_t wallLimit);
-
 ByteSlice machineMarshallForProof(CMachine* m);
 ByteSlice machineMarshallBufferProof(CMachine* m);
 
