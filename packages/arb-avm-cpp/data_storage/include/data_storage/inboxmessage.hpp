@@ -50,7 +50,7 @@ struct InboxMessage {
           inbox_sequence_number(inbox_sequence_number),
           data(std::move(data)) {}
 
-    uint256_t inbox_hash(const uint256_t& previous_inbox_hash) const;
+    uint256_t hash(const uint256_t& previous_inbox_hash) const;
 };
 
 uint256_t hash_inbox(const uint256_t& previous_inbox_hash,

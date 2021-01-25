@@ -23,6 +23,7 @@
 #include <rocksdb/slice.h>
 #include <chrono>
 #include <memory>
+#include <thread>
 #include <vector>
 
 class MachineThread : public Machine {
@@ -36,6 +37,8 @@ class MachineThread : public Machine {
     } machine_status_enum;
 
    private:
+    std::unique_ptr<std::thread> machine_thread;
+
     // Machine thread communication
     std::atomic<bool> machine_abort{false};
     std::atomic<machine_status_enum> machine_status{MACHINE_NONE};
@@ -44,23 +47,29 @@ class MachineThread : public Machine {
 
    public:
     MachineThread() = default;
-    MachineThread(MachineState machine_state_)
+    explicit MachineThread(MachineState machine_state_)
         : Machine(std::move(machine_state_)) {}
     MachineThread(std::shared_ptr<Code> code, value static_val)
         : Machine(std::move(code), std::move(static_val)) {}
 
+    bool startThread(
+        uint256_t max_gas,
+        bool go_over_gas,
+        const std::vector<std::vector<unsigned char>>& inbox_messages,
+        uint256_t messages_to_skip,
+        const nonstd::optional<uint256_t>& min_next_block_height);
     void abortThread();
-    bool setRunning();
     machine_status_enum status();
-    void setStatus(machine_status_enum status);
+    void clearStatus();
     std::string get_error_string();
     void clear_error_string();
     Assertion getAssertion();
     void operator()(
-        const uint64_t gas_limit,
-        const bool hard_gas_limit,
+        uint256_t max_gas,
+        bool go_over_gas,
         const std::vector<std::vector<unsigned char>>& inbox_messages,
-        const nonstd::optional<uint256_t>& final_block);
+        uint256_t messages_to_skip,
+        const nonstd::optional<uint256_t>& min_next_block_height);
 };
 
 #endif /* machine_hpp */

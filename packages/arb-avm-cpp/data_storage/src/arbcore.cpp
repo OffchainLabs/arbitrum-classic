@@ -65,6 +65,24 @@ bool ArbCore::messagesEmpty() {
     return delivering_status == ARBCORE_EMPTY;
 }
 
+bool ArbCore::startThread() {
+    abortThread();
+
+    core_thread =
+        std::make_unique<std::thread>((std::reference_wrapper<ArbCore>(*this)));
+
+    return true;
+}
+
+void ArbCore::abortThread() {
+    if (core_thread) {
+        arbcore_abort = true;
+        core_thread->join();
+        core_thread = nullptr;
+    }
+    arbcore_abort = false;
+}
+
 // deliverMessages sends messages to core thread.  Caller needs to verify that
 // messagesEmpty() returns true before calling this function.
 void ArbCore::deliverMessages(
@@ -453,9 +471,13 @@ ArbCore::getMachineUsingStateKeys(Transaction&, MachineStateKeys, ValueCache&);
 template std::unique_ptr<MachineThread>
 ArbCore::getMachineUsingStateKeys(Transaction&, MachineStateKeys, ValueCache&);
 
+// operator() runs the main thread for ArbCore.  It is responsible for adding
+// messages to the queue, starting machine thread when needed and colleting
+// results of machine thread.
+// This thread will update `delivering_messages` if and only if
+// `delivering_messages` is set to ARBCORE_MESSAGES_READY
 void ArbCore::operator()() {
     ValueCache cache;
-    std::unique_ptr<std::thread> machine_thread;
     uint256_t first_sequence_number_in_machine;
     uint256_t last_sequence_number_in_machine;
 
@@ -482,29 +504,20 @@ void ArbCore::operator()() {
         }
 
         // Check machine thread
-        auto machine_status = machine->status();
-        if (machine_status == MachineThread::MACHINE_ERROR) {
-            machine_thread->join();
-            machine_thread = nullptr;
-
+        if (machine->status() == MachineThread::MACHINE_ERROR) {
             delivering_error_string = machine->get_error_string();
             break;
         }
 
-        if (machine_status == MachineThread::MACHINE_ABORTED) {
-            // Reload machine from checkpoint
-            machine_thread->join();
-            machine_thread = nullptr;
-
+        if (machine->status() == MachineThread::MACHINE_ABORTED) {
+            // Machine was executing obsolete messages so restore machine
+            // from last checkpoint
             auto tx = Transaction::makeTransaction(data_storage);
 
             machine = getMachineUsingStateKeys<MachineThread>(
                 *tx, pending_checkpoint.machine_state_keys, cache);
-            machine_status = MachineThread::MACHINE_NONE;
-        } else if (machine_status == MachineThread::MACHINE_FINISHED) {
-            machine_thread->join();
-            machine_thread = nullptr;
-
+            machine->clearStatus();
+        } else if (machine->status() == MachineThread::MACHINE_FINISHED) {
             auto tx = Transaction::makeTransaction(data_storage);
 
             auto last_assertion = machine->getAssertion();
@@ -521,7 +534,6 @@ void ArbCore::operator()() {
                 // Machine consumed obsolete message, restore from checkpoint
                 machine = getMachineUsingStateKeys<MachineThread>(
                     *tx, pending_checkpoint.machine_state_keys, cache);
-                machine_status = MachineThread::MACHINE_NONE;
             } else {
                 // Save logs and sends
                 auto status = saveAssertion(
@@ -536,11 +548,11 @@ void ArbCore::operator()() {
                 status = saveCheckpoint();
 
                 // TODO Decide how often to clear ValueCache
-                // (only when machine thread stopped)
+                // (only clear cache when machine thread stopped)
                 cache.clear();
-
-                machine->setStatus(MachineThread::MACHINE_NONE);
             }
+
+            machine->clearStatus();
 
             auto status = tx->commit();
             if (!status.ok()) {
@@ -551,10 +563,6 @@ void ArbCore::operator()() {
         }
 
         if (machine->status() == MachineThread::MACHINE_NONE) {
-            if (machine_thread) {
-                machine_thread->join();
-                machine_thread = nullptr;
-            }
             // Start execution of machine if new message available
             auto tx = Transaction::makeTransaction(data_storage);
             auto messages_count = messageEntryInsertedCount(*tx);
@@ -602,25 +610,14 @@ void ArbCore::operator()() {
                         next_message_result.data.block_height + 1;
                 }
 
-                if (!machine->setRunning()) {
-                    // Machine is already running, should never happen
-                    delivering_error_string = "Machine already running";
-                    break;
-                }
-                machine_thread = std::make_unique<std::thread>(
-                    (std::reference_wrapper<MachineThread>(*machine)), 0, false,
-                    std::move(messages), std::move(min_next_block_height));
+                machine->startThread(0, false, std::move(messages), 0,
+                                     std::move(min_next_block_height));
             }
         }
     }
 
     // Error occurred, make sure machine stops cleanly
     machine->abortThread();
-    machine_thread->join();
-}
-
-void ArbCore::abortThread() {
-    arbcore_abort = true;
 }
 
 rocksdb::Status ArbCore::saveLogs(Transaction& tx,
@@ -962,9 +959,9 @@ ValueResult<ExecutionCursor*> ArbCore::getExecutionCursor(
     auto cursor_machine = getMachineUsingStateKeys<Machine>(
         *tx, first_checkpoint_result.data.machine_state_keys, cache);
 
-    auto cursor =
-        new ExecutionCursor{first_checkpoint_result.data, cursor_machine,
-                            messages, inbox_hashes, min_next_block_height};
+    auto cursor = new ExecutionCursor{
+        first_checkpoint_result.data, cursor_machine, messages, inbox_hashes, 0,
+        min_next_block_height};
 
     // Run machine until specified gas is reached
     auto remaining_gas =
@@ -1169,7 +1166,7 @@ nonstd::optional<rocksdb::Status> ArbCore::addMessages(
 
         current_message_index++;
         current_previous_inbox_hash = current_inbox_hash;
-        current_sequence_number += 1
+        current_sequence_number += 1;
     }
 
     std::vector<unsigned char> count_key;

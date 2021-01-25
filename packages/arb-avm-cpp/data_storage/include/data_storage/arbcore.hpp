@@ -51,10 +51,14 @@ class ArbCore {
     } arbcore_status_enum;
 
    private:
-    // Mutex should be used for all database access.
+    std::unique_ptr<std::thread> core_thread;
+
     // Core thread holds mutex only during reorg.
-    // Routines accessing database for log entries will need to acquire mutex.
-    // No mutex required to access Sends or Messages.
+    // Routines accessing database for log entries will need to acquire mutex
+    // because obsolete log entries have `Value` references removed causing
+    // reference counts to be decremented and possibly deleted.
+    // No mutex required to access Sends or Messages because obsolete entries
+    // are not deleted.
     std::mutex core_mutex;
     std::shared_ptr<DataStorage> data_storage;
 
@@ -81,6 +85,7 @@ class ArbCore {
     explicit ArbCore(std::shared_ptr<DataStorage> data_storage_)
         : data_storage(std::move(data_storage_)) {}
     void operator()();
+    bool startThread();
     void abortThread();
     void deliverMessages(
         const uint256_t& first_sequence_number,
@@ -111,6 +116,7 @@ class ArbCore {
 
     template <class T>
     std::unique_ptr<T> getInitialMachine(ValueCache& value_cache);
+
     template <class T>
     std::unique_ptr<T> getMachine(uint256_t machineHash,
                                   ValueCache& value_cache);

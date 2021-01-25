@@ -20,7 +20,7 @@
 
 #include <catch2/catch.hpp>
 
-TEST_CASE("ArbCore tests") {
+TEST_CASE("MessageStore tests") {
     /* TODO
     DBDeleter deleter;
     auto storage = std::make_shared<DataStorage>(dbpath);

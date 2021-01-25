@@ -275,28 +275,6 @@ func (db *TxDB) AddMessages(ctx context.Context, msgs []inbox.InboxMessage, fini
 		}
 	}
 
-	nextBlockHeight := new(big.Int).Add(finishedBlock.Height.AsInt(), big.NewInt(1))
-	// TODO: Give ExecuteCallServerAssertion the ability to run unbounded until it blocks
-	// The max steps here is a hack since it should just run until it blocks
-	// Last value returned is not an error type
-	assertion, _, _ := db.mach.ExecuteCallServerAssertion(1000000000000, nil, value.NewIntValue(nextBlockHeight), 0)
-	processedAssertion, err := db.processAssertion(assertion)
-	if err != nil {
-		return nil, err
-	}
-	txResults, err := db.saveAssertion(ctx, processedAssertion)
-	if err != nil {
-		return nil, err
-	}
-	results = append(results, txResults...)
-	if len(processedAssertion.blocks) > 0 {
-		block := processedAssertion.blocks[len(processedAssertion.blocks)-1]
-		db.callMut.Lock()
-		db.addSnap(db.mach.Clone(), block.BlockNum, block.Timestamp)
-		db.callMut.Unlock()
-		lastBlock = block
-	}
-
 	db.callMut.Lock()
 	db.lastBlockProcessed = finishedBlock
 	lastInboxSeq := new(big.Int).Set(db.lastInboxSeq)

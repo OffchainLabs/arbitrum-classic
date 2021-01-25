@@ -41,12 +41,14 @@ class ExecutionCursor : public Checkpoint {
                     std::unique_ptr<Machine>& machine,
                     std::vector<Tuple>& messages,
                     std::vector<uint256_t>& inbox_hashes,
+                    size_t messages_to_skip,
                     nonstd::optional<uint256_t>& min_next_block_height)
         : Checkpoint(checkpoint),
           machine(std::move(machine)),
           first_message_sequence_number(checkpoint.total_messages_read),
           messages(std::move(messages)),
           inbox_hashes(std::move(inbox_hashes)),
+          messages_to_skip(messages_to_skip),
           min_next_block_height(std::move(min_next_block_height)) {}
     ~ExecutionCursor() = default;
     ExecutionCursor(const ExecutionCursor& rhs) : Checkpoint(rhs) {
