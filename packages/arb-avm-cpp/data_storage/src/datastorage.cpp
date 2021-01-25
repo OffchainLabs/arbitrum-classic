@@ -62,8 +62,8 @@ DataStorage::DataStorage(const std::string& db_path) {
         std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[4]);
     messageentry_column =
         std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[5]);
-    log_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[3]);
-    send_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[3]);
+    log_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[6]);
+    send_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[7]);
 }
 
 rocksdb::Status DataStorage::closeDb() {
