@@ -123,7 +123,8 @@ void ArbCore::initialize(const LoadedExecutable& executable) {
     }
     std::vector<unsigned char> value_data;
     marshal_uint256_t(machine->hash(), value_data);
-    auto s = tx->transaction->Put(vecToSlice(initial_machine_hash_key),
+    auto s = tx->transaction->Put(data_storage->state_column.get(),
+                                  vecToSlice(initial_machine_hash_key),
                                   vecToSlice(value_data));
     if (!s.ok()) {
         throw std::runtime_error(
@@ -153,7 +154,7 @@ std::unique_ptr<T> ArbCore::getInitialMachine(ValueCache& value_cache) {
         rocksdb::ReadOptions(), data_storage->state_column.get(),
         vecToSlice(initial_machine_hash_key), &initial_raw);
     if (!s.ok()) {
-        throw std::runtime_error("failed to load initial val");
+        throw std::runtime_error("failed to load initial machine");
     }
 
     auto machine_hash = intx::be::unsafe::load<uint256_t>(

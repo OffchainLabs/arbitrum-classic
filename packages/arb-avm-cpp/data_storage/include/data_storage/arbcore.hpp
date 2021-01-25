@@ -83,7 +83,9 @@ class ArbCore {
    public:
     ArbCore() = delete;
     explicit ArbCore(std::shared_ptr<DataStorage> data_storage_)
-        : data_storage(std::move(data_storage_)) {}
+        : data_storage(std::move(data_storage_)),
+          code(std::make_shared<Code>(
+              getNextSegmentID(*makeConstTransaction()))) {}
     void operator()();
     bool startThread();
     void abortThread();
