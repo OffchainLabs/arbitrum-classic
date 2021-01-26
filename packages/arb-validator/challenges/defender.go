@@ -68,8 +68,9 @@ func (ad AssertionDefender) MoveDefender(bisectionEvent arbbridge.ExecutionBisec
 	// Last value returned is not an error type
 	skippedAssertion, _, _ := ad.initState.ExecuteAssertion(
 		stepsToSkip,
+		true,
 		messages,
-		0,
+		true,
 	)
 	skippedAssertionStub := structures.NewExecutionAssertionStubFromAssertion(
 		skippedAssertion,
@@ -80,7 +81,7 @@ func (ad AssertionDefender) MoveDefender(bisectionEvent arbbridge.ExecutionBisec
 	)
 
 	// Last value returned is not an error type
-	assertion, _, _ := ad.initState.Clone().ExecuteAssertion(steps, messages[skippedAssertion.InboxMessagesConsumed:], 0)
+	assertion, _, _ := ad.initState.Clone().ExecuteAssertion(steps, true, messages[skippedAssertion.InboxMessagesConsumed:], true)
 	assertionStub := structures.NewExecutionAssertionStubFromAssertion(
 		assertion,
 		skippedAssertionStub.AfterInboxHash,
@@ -119,8 +120,9 @@ func (ad AssertionDefender) NBisect(slices uint64) []AssertionDefender {
 		// Last value returned is not an error type
 		assertion, _, numSteps := m.ExecuteAssertion(
 			steps,
+			true,
 			inboxMessages,
-			0,
+			true,
 		)
 		stub := structures.NewExecutionAssertionStubFromAssertion(assertion, beforeInboxHash, firstLogHash, firstMessageHash, ad.inbox)
 		defenders = append(defenders, NewAssertionDefender(

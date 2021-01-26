@@ -34,14 +34,13 @@ bool MachineThread::startThread(
     bool go_over_gas,
     const std::vector<std::vector<unsigned char>>& inbox_messages,
     uint256_t messages_to_skip,
-    const nonstd::optional<uint256_t>& min_next_block_height) {
+    const bool final_message_of_block) {
     abortThread();
     machine_status = MACHINE_RUNNING;
 
     machine_thread = std::make_unique<std::thread>(
         (std::reference_wrapper<MachineThread>(*this)), max_gas, go_over_gas,
-        std::move(inbox_messages), messages_to_skip,
-        std::move(min_next_block_height));
+        inbox_messages, messages_to_skip, final_message_of_block);
 
     return true;
 }
@@ -72,7 +71,7 @@ void MachineThread::operator()(
     const bool go_over_gas,
     const std::vector<std::vector<unsigned char>>& inbox_messages,
     const uint256_t messages_to_skip,
-    const nonstd::optional<uint256_t>& min_next_block_height) {
+    const bool final_message_of_block) {
     if (machine_status != MACHINE_NONE) {
         machine_error_string =
             "Unexpected machine_status when trying to run machine";
@@ -80,6 +79,6 @@ void MachineThread::operator()(
         return;
     }
     last_assertion = run(max_gas, go_over_gas, inbox_messages, messages_to_skip,
-                         min_next_block_height);
+                         final_message_of_block);
     machine_status = MACHINE_FINISHED;
 }

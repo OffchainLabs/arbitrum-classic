@@ -34,7 +34,7 @@ class ExecutionCursor : public Checkpoint {
     std::vector<Tuple> messages;
     std::vector<uint256_t> inbox_hashes;
     size_t messages_to_skip{0};
-    nonstd::optional<uint256_t> min_next_block_height;
+    bool final_message_of_block;
 
    public:
     ExecutionCursor(Checkpoint& checkpoint,
@@ -42,14 +42,14 @@ class ExecutionCursor : public Checkpoint {
                     std::vector<Tuple>& messages,
                     std::vector<uint256_t>& inbox_hashes,
                     size_t messages_to_skip,
-                    nonstd::optional<uint256_t>& min_next_block_height)
+                    bool final_message_of_block)
         : Checkpoint(checkpoint),
           machine(std::move(machine)),
           first_message_sequence_number(checkpoint.total_messages_read),
           messages(std::move(messages)),
           inbox_hashes(std::move(inbox_hashes)),
           messages_to_skip(messages_to_skip),
-          min_next_block_height(std::move(min_next_block_height)) {}
+          final_message_of_block(final_message_of_block) {}
     ~ExecutionCursor() = default;
     ExecutionCursor(const ExecutionCursor& rhs) : Checkpoint(rhs) {
         machine = std::make_unique<Machine>(*rhs.machine);
@@ -57,7 +57,7 @@ class ExecutionCursor : public Checkpoint {
         messages = rhs.messages;
         inbox_hashes = rhs.inbox_hashes;
         messages_to_skip = rhs.messages_to_skip;
-        min_next_block_height = rhs.min_next_block_height;
+        final_message_of_block = rhs.final_message_of_block;
     }
     ExecutionCursor& operator=(const ExecutionCursor& rhs) {
         Checkpoint::operator=(rhs);
@@ -66,7 +66,7 @@ class ExecutionCursor : public Checkpoint {
         messages = rhs.messages;
         inbox_hashes = rhs.inbox_hashes;
         messages_to_skip = rhs.messages_to_skip;
-        min_next_block_height = rhs.min_next_block_height;
+        final_message_of_block = rhs.final_message_of_block;
 
         return *this;
     }

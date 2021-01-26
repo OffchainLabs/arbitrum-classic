@@ -54,12 +54,12 @@ class Machine {
                   bool go_over_gas,
                   const std::vector<std::vector<unsigned char>>& inbox_data,
                   uint256_t messages_to_skip,
-                  const nonstd::optional<uint256_t>& min_next_block_height);
+                  bool final_message_of_block);
     Assertion run(uint256_t max_gas,
                   bool go_over_gas,
                   const std::vector<Tuple>& inbox_messages,
                   uint256_t messages_to_skip,
-                  const nonstd::optional<uint256_t>& min_next_block_height);
+                  bool final_message_of_block);
 
     Status currentStatus() const { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }

@@ -17,14 +17,12 @@
 package speedtest
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/rs/zerolog/log"
 	"io/ioutil"
 	"strconv"
 	"strings"
 	"testing"
-	"time"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 )
 
 var logger = log.With().Caller().Str("component", "speedtest").Logger()
@@ -77,8 +75,8 @@ func runExecutableFile(b *testing.B, filePath string) {
 	}
 
 	b.ResetTimer()
-	// Last parameter is number of steps executed
-	_, _, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, nil, time.Hour)
+	// Last parameter returned is number of steps executed
+	_, _, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, true, nil, true)
 }
 
 func nameFromFn(fn string) string {

@@ -18,17 +18,15 @@ package chainobserver
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"math/big"
-	"testing"
-	"time"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-checkpointer/ckptcontext"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/nodegraph"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"math/big"
+	"testing"
 )
 
 var dummyRollupAddress1 = common.Address{1}
@@ -144,7 +142,7 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 func doAnAssertion(chain *ChainObserver, baseNode *structures.Node) error {
 	theMachine := baseNode.Machine()
 	var messages []inbox.InboxMessage
-	execAssertion, _, numSteps := theMachine.ExecuteAssertion(1, messages, time.Hour)
+	execAssertion, _, numSteps := theMachine.ExecuteAssertion(1, true, messages, true)
 
 	assertionParams := &valprotocol.AssertionParams{
 		NumSteps:             numSteps,

@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/pkg/errors"
 	"math/big"
 	"math/rand"
@@ -52,9 +53,32 @@ type InboxMessage struct {
 }
 
 func NewInboxMessageFromData(data []byte) (InboxMessage, error) {
-	// TODO Parse message
+	if len(data) < 129 {
+		return InboxMessage{}, errors.New("Not enough data for inbox message")
+	}
+	kind := Type(data[0])
+	data = data[1:]
 
-	return NewRandomInboxMessage(), nil
+	data = data[12:] // Skip first 12 bytes of 32 byte address data
+	var sender common.Address
+	copy(sender[:], data[:])
+	data = data[20:]
+
+	blockNumber := common.NewTimeBlocks(new(big.Int).SetBytes(data[:32]))
+	data = data[32:]
+
+	timestamp := new(big.Int).SetBytes(data[:32])
+	data = data[32:]
+
+	inboxSeqNum := new(big.Int).SetBytes(data[:32])
+	data = data[32:]
+
+	return InboxMessage{
+		Kind:        kind,
+		Sender:      sender,
+		ChainTime:   ChainTime{BlockNum: blockNumber, Timestamp: timestamp},
+		InboxSeqNum: inboxSeqNum,
+	}, nil
 }
 
 func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
@@ -184,4 +208,15 @@ func NewAddressFromInt(val value.IntValue) common.Address {
 	valBytes := val.ToBytes()
 	copy(address[:], valBytes[12:])
 	return address
+}
+
+func (im InboxMessage) Bytes() []byte {
+	var data []byte
+	data = append(data, uint8(im.Kind))
+	data = append(data, im.Sender[:]...)
+	data = append(data, math.U256Bytes(im.ChainTime.BlockNum.AsInt())...)
+	data = append(data, math.U256Bytes(im.ChainTime.Timestamp)...)
+	data = append(data, math.U256Bytes(im.InboxSeqNum)...)
+	data = append(data, im.Data...)
+	return data
 }

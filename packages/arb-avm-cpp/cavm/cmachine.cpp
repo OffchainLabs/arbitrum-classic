@@ -150,31 +150,18 @@ ByteSlice machineMarshallState(CMachine* m) {
     return returnCharVector(mach->marshalState());
 }
 
-std::vector<Tuple> getInboxMessages(void* data, uint64_t message_count) {
-    auto charData = reinterpret_cast<const char*>(data);
-    std::vector<Tuple> messages;
-    for (uint64_t i = 0; i < message_count; ++i) {
-        messages.push_back(deserialize_value(charData).get<Tuple>());
-    }
-    return messages;
-}
-
 RawAssertion executeAssertion(CMachine* m,
-                              uint64_t gas_limit,
-                              int hard_gas_limit,
+                              uint64_t max_gas,
+                              uint8_t go_over_gas,
                               void* inbox_messages,
-                              void* final_block_ptr) {
+                              uint8_t final_message_of_block) {
     assert(m);
     auto mach = static_cast<Machine*>(m);
     auto messages = getInboxMessages(inbox_messages);
-    nonstd::optional<uint256_t> final_block;
-    if (final_block_ptr != nullptr) {
-        final_block = receiveUint256(final_block_ptr);
-    }
 
     try {
-        Assertion assertion =
-            mach->run(gas_limit, hard_gas_limit, messages, 0, final_block);
+        Assertion assertion = mach->run(max_gas, go_over_gas, messages, 0,
+                                        final_message_of_block);
         return makeRawAssertion(assertion);
     } catch (const std::exception& e) {
         std::cerr << "Failed to make assertion " << e.what() << "\n";

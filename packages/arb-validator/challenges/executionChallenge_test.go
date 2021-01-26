@@ -103,7 +103,7 @@ func testExecutionChallenge(t *testing.T, ctx context.Context, client ethutils.E
 func getExecutionChallengeData(mach machine.Machine) (common.Hash, *valprotocol.ExecutionAssertionStub, *structures.MessageStack, uint64) {
 	ms := structures.NewRandomMessageStack(1000)
 	afterMachine := mach.Clone()
-	assertion, _, numSteps := afterMachine.ExecuteAssertion(1000, ms.GetAllMessages(), 0)
+	assertion, _, numSteps := afterMachine.ExecuteAssertion(1000, true, ms.GetAllMessages(), true)
 	stub := structures.NewExecutionAssertionStubFromWholeAssertion(assertion, common.Hash{}, ms)
 	challengeHash := valprotocol.ExecutionDataHash(numSteps, stub)
 	return challengeHash, stub, ms, numSteps

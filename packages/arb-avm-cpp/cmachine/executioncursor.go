@@ -25,6 +25,7 @@ package cmachine
 */
 import "C"
 import (
+	"math/big"
 	"runtime"
 	"unsafe"
 
@@ -45,10 +46,10 @@ func NewExecutionCursor(c unsafe.Pointer) *ExecutionCursor {
 	return ec
 }
 
-func (ec *ExecutionCursor) MessageCount() (uint64, error) {
+func (ec *ExecutionCursor) MessageCount() (*big.Int, error) {
 	result := C.executionCursorMachineHash(ec.c)
 	if result.found == 0 {
-		return 0, errors.New("failed to load l2message count")
+		return big.NewInt(0), errors.New("failed to load l2message count")
 	}
-	return uint64(result.value), nil
+	return dataToInt(result.value), nil
 }

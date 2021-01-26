@@ -17,11 +17,9 @@
 package rolluptest
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"time"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -58,11 +56,12 @@ func _tweakHash(h common.Hash) common.Hash {
 }
 
 func (e EvilMachine) ExecuteAssertion(
-	maxSteps uint64,
+	maxGas uint64,
+	goOverGas bool,
 	inboxMessages []inbox.InboxMessage,
-	maxWallTime time.Duration,
+	finalMessageOfBlock bool,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64) {
-	assn, debugMessages, numSteps := e.Machine.ExecuteAssertion(maxSteps, inboxMessages, maxWallTime)
+	assn, debugMessages, numSteps := e.Machine.ExecuteAssertion(maxGas, goOverGas, inboxMessages, finalMessageOfBlock)
 	assn.AfterMachineHash = _tweakHash(assn.AfterMachineHash.Unmarshal()).MarshalToBuf()
 	return assn, debugMessages, numSteps
 }

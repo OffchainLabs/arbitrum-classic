@@ -57,7 +57,7 @@ class MachineThread : public Machine {
         bool go_over_gas,
         const std::vector<std::vector<unsigned char>>& inbox_messages,
         uint256_t messages_to_skip,
-        const nonstd::optional<uint256_t>& min_next_block_height);
+        bool final_message_of_block);
     void abortThread();
     machine_status_enum status();
     void clearStatus();
@@ -69,7 +69,7 @@ class MachineThread : public Machine {
         bool go_over_gas,
         const std::vector<std::vector<unsigned char>>& inbox_messages,
         uint256_t messages_to_skip,
-        const nonstd::optional<uint256_t>& min_next_block_height);
+        const bool final_message_of_block);
 };
 
 #endif /* machine_hpp */

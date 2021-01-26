@@ -17,7 +17,6 @@
 #include <data_storage/executioncursor.hpp>
 
 #include "value/referencecount.hpp"
-#include "value/utils.hpp"
 
 #include <data_storage/value/machine.hpp>
 
@@ -39,7 +38,7 @@ bool ExecutionCursor::Advance(uint256_t max_gas, bool go_over_gas) {
     }
 
     auto assertion = machine->run(max_gas, go_over_gas, messages,
-                                  messages_to_skip, min_next_block_height);
+                                  messages_to_skip, final_message_of_block);
 
     messages_to_skip += assertion.inbox_messages_consumed;
     if (messages_to_skip > 0) {

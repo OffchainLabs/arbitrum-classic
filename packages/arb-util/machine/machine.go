@@ -17,10 +17,8 @@
 package machine
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"time"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -41,7 +39,7 @@ type Machine interface {
 	CurrentStatus() Status
 	IsBlocked(newMessages bool) BlockReason
 
-	ExecuteAssertion(maxSteps uint64, messages []inbox.InboxMessage, maxWallTime time.Duration) (*protocol.ExecutionAssertion, []value.Value, uint64)
+	ExecuteAssertion(maxGas uint64, goOverGas bool, messages []inbox.InboxMessage, finalMessageOfBlock bool) (*protocol.ExecutionAssertion, []value.Value, uint64)
 
 	MarshalForProof() ([]byte, error)
 

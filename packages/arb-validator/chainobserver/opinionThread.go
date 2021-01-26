@@ -245,7 +245,7 @@ func (chain *ChainObserver) prepareAssertion(maxValidBlock *common.BlockId) (*ch
 
 	beforeHash := mach.Hash()
 
-	assertion, _, stepsRun := mach.ExecuteAssertion(maxSteps, messages, 0)
+	assertion, _, stepsRun := mach.ExecuteAssertion(maxSteps, true, messages, true)
 
 	afterHash := mach.Hash()
 
@@ -298,8 +298,9 @@ func (chain *ChainObserver) getNodeOpinion(
 
 	assertion, _, stepsRun := mach.ExecuteAssertion(
 		params.NumSteps,
+		true,
 		messages,
-		0,
+		true,
 	)
 	chain.RLock()
 	defer chain.RUnlock()

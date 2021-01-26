@@ -61,7 +61,18 @@ func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.Inb
 	if result.found == 0 {
 		return nil, errors.New("failed to get log")
 	}
-	return toByteInboxArray(result.slice)
+
+	data := toByteSliceArray(result.slice)
+	messages := make([]inbox.InboxMessage, len(data))
+	for i, slice := range data {
+		var err error
+		messages[i], err = inbox.NewInboxMessageFromData(slice)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return messages, nil
 }
 
 func (ac *ArbCore) GetInboxDelta(startIndex *big.Int, count *big.Int) (*big.Int, error) {
@@ -86,18 +97,4 @@ func (ac *ArbCore) GetLogAcc(startHash *big.Int, startIndex *big.Int, count *big
 		return nil, errors.New("failed to get inbox delta")
 	}
 	return dataToInt(result.value), nil
-}
-
-func toByteInboxArray(sliceArray C.ByteSliceArray) ([]inbox.InboxMessage, error) {
-	defer C.free(unsafe.Pointer(sliceArray.data))
-	dataSlices := (*[1 << 30]C.struct_ByteSliceStruct)(unsafe.Pointer(sliceArray.data))[:sliceArray.length:sliceArray.length]
-	messages := make([]inbox.InboxMessage, sliceArray.length)
-	for i := range dataSlices {
-		var err error
-		messages[i], err = inbox.NewInboxMessageFromData(dataSlices[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return messages, nil
 }

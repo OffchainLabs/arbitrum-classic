@@ -250,10 +250,7 @@ func (db *TxDB) AddMessages(ctx context.Context, msgs []inbox.InboxMessage, fini
 
 	var lastBlock *evm.BlockInfo
 	for _, msg := range msgs {
-		// TODO: Give ExecuteAssertion the ability to run unbounded until it blocks
-		// The max steps here is a hack since it should just run until it blocks
-		// Last value returned is not an error type
-		assertion, _, _ := db.mach.ExecuteAssertion(1000000000000, []inbox.InboxMessage{msg}, 0)
+		assertion, _, _ := db.mach.ExecuteAssertion(1000000000000, true, []inbox.InboxMessage{msg}, true)
 		db.callMut.Lock()
 		db.lastInboxSeq = msg.InboxSeqNum
 		db.callMut.Unlock()

@@ -100,8 +100,9 @@ func generateTestCase(ethURL string, rollupAddress common.Address, contract stri
 	// Last value returned is not an error type
 	assertion, _, _ := mach.ExecuteAssertion(
 		1000000000000,
+		true,
 		messages,
-		0,
+		true,
 	)
 
 	data, err := inbox.TestVectorJSON(messages, assertion.ParseLogs(), assertion.ParseOutMessages())

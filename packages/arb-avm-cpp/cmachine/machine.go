@@ -31,7 +31,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"runtime"
-	"time"
 	"unsafe"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -155,20 +154,31 @@ func encodeValue(val value.Value) []byte {
 }
 
 func (m *Machine) ExecuteAssertion(
-	maxSteps uint64,
+	maxGas uint64,
+	goOverGasInput bool,
 	messages []inbox.InboxMessage,
-	maxWallTime time.Duration,
+	finalMessageOfBlockInput bool,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64) {
 	msgDataC := C.CBytes(encodeInboxMessages(messages))
 	defer C.free(msgDataC)
 
+	goOverGas := C.uchar(0)
+	if goOverGasInput {
+		goOverGas = 1
+	}
+
+	finalMessageOfBlock := C.uchar(0)
+	if finalMessageOfBlockInput {
+		finalMessageOfBlock = 1
+	}
+
 	beforeHash := m.Hash()
 	assertion := C.executeAssertion(
 		m.c,
-		C.uint64_t(maxSteps),
+		C.uint64_t(maxGas),
+		goOverGas,
 		msgDataC,
-		C.uint64_t(len(messages)),
-		C.uint64_t(uint64(maxWallTime.Seconds())),
+		finalMessageOfBlock,
 	)
 
 	return makeExecutionAssertion(assertion, beforeHash, m.Hash())

@@ -17,11 +17,9 @@
 package cmachine
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"os"
 	"testing"
-	"time"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 )
 
 var codeFile = arbos.Path()
@@ -78,8 +76,9 @@ func TestCheckpointMachine(t *testing.T) {
 
 	_, _, numSteps := mach.ExecuteAssertion(
 		1000,
+		true,
 		nil,
-		time.Hour,
+		false,
 	)
 
 	t.Log("Ran machine for", numSteps, "steps")

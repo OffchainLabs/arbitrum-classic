@@ -605,14 +605,9 @@ void ArbCore::operator()() {
                 std::vector<std::vector<unsigned char>> messages;
                 messages.push_back(next_message_result.data.data);
 
-                nonstd::optional<uint256_t> min_next_block_height;
-                if (next_message_result.data.last_message_in_block) {
-                    min_next_block_height =
-                        next_message_result.data.block_height + 1;
-                }
-
-                machine->startThread(0, false, std::move(messages), 0,
-                                     std::move(min_next_block_height));
+                machine->startThread(
+                    0, false, messages, 0,
+                    next_message_result.data.last_message_in_block);
             }
         }
     }
@@ -946,6 +941,7 @@ ValueResult<ExecutionCursor*> ArbCore::getExecutionCursor(
     auto total_size = results.data.size();
     messages.reserve(total_size);
     inbox_hashes.reserve(total_size);
+    bool final_message_of_block = false;
     for (const auto& data : results.data) {
         auto message_entry = extractMessageEntry(0, vecToSlice(data));
 
@@ -953,7 +949,8 @@ ValueResult<ExecutionCursor*> ArbCore::getExecutionCursor(
         inbox_hashes.push_back(message_entry.inbox_hash);
         if (messages.size() == total_size &&
             message_entry.last_message_in_block) {
-            min_next_block_height = message_entry.block_height + 1;
+            // Last message is final message in block
+            final_message_of_block = true;
         }
     }
 
@@ -962,7 +959,7 @@ ValueResult<ExecutionCursor*> ArbCore::getExecutionCursor(
 
     auto cursor = new ExecutionCursor{
         first_checkpoint_result.data, cursor_machine, messages, inbox_hashes, 0,
-        min_next_block_height};
+        final_message_of_block};
 
     // Run machine until specified gas is reached
     auto remaining_gas =

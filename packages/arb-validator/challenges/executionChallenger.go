@@ -59,7 +59,7 @@ func ChallengeExecutionClaim(
 	}
 
 	// Last value returned is not an error type
-	assertion, _, _ := startMachine.Clone().ExecuteAssertion(numSteps, messages, 0)
+	assertion, _, _ := startMachine.Clone().ExecuteAssertion(numSteps, true, messages, true)
 	stub := structures.NewExecutionAssertionStubFromWholeAssertion(assertion, beforeInboxHash, inboxStack)
 
 	return challengeExecution(

@@ -25,7 +25,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"time"
 )
 
 var logger = log.With().Str("component", "arbosmachine").Logger()
@@ -252,11 +251,12 @@ func handleDebugPrints(debugPrints []value.Value) {
 }
 
 func (m *Machine) ExecuteAssertion(
-	maxSteps uint64,
-	messages C.ByteSliceArray,
-	maxWallTime time.Duration,
+	maxGas uint64,
+	goOverGas bool,
+	messages []inbox.InboxMessage,
+	finalMessageOfBlock bool,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64) {
-	assertion, debugPrints, numSteps := m.Machine.ExecuteAssertion(maxSteps, messages, maxWallTime)
+	assertion, debugPrints, numSteps := m.Machine.ExecuteAssertion(maxGas, goOverGas, messages, finalMessageOfBlock)
 	handleDebugPrints(debugPrints)
 	return assertion, debugPrints, numSteps
 }

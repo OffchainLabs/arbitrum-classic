@@ -26,7 +26,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"math/big"
 	"testing"
-	"time"
 )
 
 var contractPath = arbos.Path()
@@ -398,7 +397,7 @@ func createNodesOnAssert(
 
 func getDisputableNode(baseNode *structures.Node) (*valprotocol.DisputableNode, *protocol.ExecutionAssertion) {
 	theMachine := baseNode.Machine()
-	execAssertion, _, numSteps := theMachine.ExecuteAssertion(1, nil, time.Hour)
+	execAssertion, _, numSteps := theMachine.ExecuteAssertion(1, true, nil, true)
 
 	assertionParams := &valprotocol.AssertionParams{
 		NumSteps:             numSteps,

@@ -61,11 +61,39 @@ func toByteSlice(slice C.ByteSlice) []byte {
 }
 
 func toByteSliceArray(sliceArray C.ByteSliceArray) [][]byte {
-	defer C.free(unsafe.Pointer(sliceArray.data))
-	dataSlices := (*[1 << 30]C.struct_ByteSliceStruct)(unsafe.Pointer(sliceArray.data))[:sliceArray.length:sliceArray.length]
-	slices := make([][]byte, sliceArray.length)
+	defer C.free(unsafe.Pointer(sliceArray.slices))
+	dataSlices := (*[1 << 30]C.struct_ByteSliceStruct)(unsafe.Pointer(sliceArray.slices))[:sliceArray.count:sliceArray.count]
+	slices := make([][]byte, sliceArray.count)
 	for i := range dataSlices {
 		slices[i] = toByteSlice(dataSlices[i])
 	}
 	return slices
+}
+
+func encodeByteSliceArray(goSlices [][]byte) C.ByteSliceArray {
+	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(goSlices)))
+	sliceArray := (*[1 << 30]C.struct_ByteSliceStruct)(sliceArrayData)[:len(goSlices):len(goSlices)]
+
+	for i := range goSlices {
+		sliceData := C.malloc(C.size_t(len(goSlices[i])))
+		slice := (*[1 << 30]byte)(sliceData)[:len(goSlices[i]):len(goSlices[i])]
+		copy(goSlices[i], slice)
+		sliceArray[i].length = C.int(len(slice))
+		sliceArray[i].data = C.CBytes(slice)
+	}
+
+	return C.ByteSliceArray{
+		count:  C.int(len(goSlices)),
+		slices: sliceArrayData,
+	}
+}
+
+func freeEncodedByteSliceArray(byteSliceArray C.ByteSliceArray) {
+	sliceArray := (*[1 << 30]C.struct_ByteSliceStruct)(byteSliceArray.slices)[:byteSliceArray.count:byteSliceArray.count]
+
+	for _, slice := range sliceArray {
+		C.free(slice.data)
+	}
+
+	C.free(byteSliceArray.slices)
 }

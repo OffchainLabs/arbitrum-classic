@@ -38,7 +38,7 @@ typedef struct {
     int count;
 } HashList;
 
-typedef struct {
+typedef struct ByteSliceArrayStruct {
     void* slices;
     int count;
 } ByteSliceArray;
