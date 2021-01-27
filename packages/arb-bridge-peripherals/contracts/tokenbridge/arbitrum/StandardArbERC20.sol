@@ -22,9 +22,9 @@ import "./ArbERC20Bridge.sol";
 import "./OZERC20.sol";
 import "arb-bridge-eth/contracts/libraries/Cloneable.sol";
 
-import "arbos-contracts/contracts/ArbSys.sol";
+import "./IArbERC20.sol";
 
-contract StandardArbERC20 is ERC20, Cloneable {
+contract StandardArbERC20 is ERC20, Cloneable, IArbERC20 {
     ArbERC20Bridge public bridge;
     address public l1Address;
 
@@ -44,7 +44,7 @@ contract StandardArbERC20 is ERC20, Cloneable {
         string memory newName,
         string memory newSymbol,
         uint8 newDecimals
-    ) public onlyBridge {
+    ) public override onlyBridge {
         if (bytes(newName).length != 0) {
             _name = newName;
         }
@@ -56,12 +56,18 @@ contract StandardArbERC20 is ERC20, Cloneable {
         }
     }
 
-    function mint(address account, uint256 amount) external onlyBridge {
+    function bridgeMint(address account, uint256 amount) external override onlyBridge {
         _mint(account, amount);
     }
 
     function withdraw(address destination, uint256 amount) external {
         _burn(msg.sender, amount);
         bridge.withdraw(destination, amount);
+    }
+
+    function migrate() external {
+        uint256 balance = balanceOf(msg.sender);
+        _burn(msg.sender, balance);
+        bridge.migrate(msg.sender, balance);
     }
 }

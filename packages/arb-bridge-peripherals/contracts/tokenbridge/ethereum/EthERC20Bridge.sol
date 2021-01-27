@@ -31,6 +31,8 @@ contract EthERC20Bridge is L1Buddy {
     // exitNum => exitDataHash => LP
     mapping(bytes32 => address) redirectedExits;
 
+    mapping(address => address) customL2Tokens;
+
     constructor(IInbox _inbox) public L1Buddy(_inbox) {}
 
     function connectToChain(uint256 maxGas, uint256 gasPriceBid) external payable {
@@ -44,6 +46,29 @@ contract EthERC20Bridge is L1Buddy {
             0, // payment
             type(ArbERC20Bridge).creationCode
         );
+    }
+
+    /**
+     * @notice Notify the L2 side of the bridge that a given token has opted into a custom implementation
+     * @dev Anyone can call this method repeatedly in case the L2 call fails for some reason. There's no harm in
+     * allowing this to be called multiple times
+     */
+    function notifyCustomToken(
+        address l1Address,
+        uint256 maxGas,
+        uint256 gasPriceBid
+    ) external payable {
+        address l2Address = customL2Tokens[l1Address];
+        require(l2Address != address(0), "NOT_REGISTERED");
+        sendPairedContractTransaction(
+            maxGas,
+            gasPriceBid,
+            abi.encodeWithSignature("customTokenRegistered(address,address)", l1Address, l2Address)
+        );
+    }
+
+    function registerCustomL2Token(address l2Address) external {
+        customL2Tokens[msg.sender] = l2Address;
     }
 
     function fastWithdrawalFromL2(
@@ -102,10 +127,9 @@ contract EthERC20Bridge is L1Buddy {
         try ERC20(erc20).decimals() returns (uint8 _decimals) {
             decimals = _decimals;
         } catch {}
-        inbox.sendL1FundedContractTransaction{ value: msg.value }(
+        sendPairedContractTransaction(
             maxGas,
             gasPriceBid,
-            address(this),
             abi.encodeWithSignature(
                 "updateTokenInfo(address,string,string,uint8)",
                 erc20,
@@ -125,10 +149,9 @@ contract EthERC20Bridge is L1Buddy {
     ) external payable onlyIfConnected {
         require(IERC20(erc20).transferFrom(msg.sender, address(this), amount));
         // This transfers along any ETH sent for to pay for gas in L2
-        inbox.sendL1FundedContractTransaction{ value: msg.value }(
+        sendPairedContractTransaction(
             maxGas,
             gasPriceBid,
-            address(this),
             abi.encodeWithSignature(
                 "mintFromL1(address,address,uint256)",
                 erc20,
@@ -136,5 +159,14 @@ contract EthERC20Bridge is L1Buddy {
                 amount
             )
         );
+    }
+
+    function sendPairedContractTransaction(
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        bytes memory data
+    ) private {
+        inbox.depositEth{ value: msg.value }(address(this));
+        inbox.sendContractTransaction(maxGas, gasPriceBid, address(this), 0, data);
     }
 }

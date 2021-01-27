@@ -20,6 +20,8 @@ pragma solidity ^0.6.11;
 
 import "./StandardArbERC20.sol";
 import "arb-bridge-eth/contracts/libraries/CloneFactory.sol";
+
+import "./IArbERC20.sol";
 import "arb-bridge-eth/contracts/libraries/ICloneable.sol";
 import "arbos-contracts/contracts/ArbSys.sol";
 
@@ -30,9 +32,17 @@ contract ArbERC20Bridge is CloneFactory {
     /// @notice This mapping is from L1 address to L2 address
     mapping(address => address) public l2ToL1;
 
+    mapping(address => address) public deprecatedTokens;
+
     uint256 exitNum;
 
     ICloneable templateERC20;
+
+    modifier onlyEthPair {
+        // This ensures that this method can only be called from the L1 pair of this contract
+        require(tx.origin == address(this), "ONLY_ETH_PAIR");
+        _;
+    }
 
     constructor() public {
         templateERC20 = new StandardArbERC20();
@@ -42,11 +52,9 @@ contract ArbERC20Bridge is CloneFactory {
         address erc20,
         address account,
         uint256 amount
-    ) external {
-        // This ensures that this method can only be called from the L1 pair of this contract
-        require(tx.origin == address(this));
-        StandardArbERC20 token = ensureTokenExists(erc20);
-        token.mint(account, amount);
+    ) external onlyEthPair {
+        IArbERC20 token = ensureTokenExists(erc20);
+        token.bridgeMint(account, amount);
     }
 
     function updateTokenInfo(
@@ -54,10 +62,14 @@ contract ArbERC20Bridge is CloneFactory {
         string calldata name,
         string calldata symbol,
         uint8 decimals
-    ) external payable {
-        require(tx.origin == address(this));
-        StandardArbERC20 token = ensureTokenExists(erc20);
+    ) external onlyEthPair {
+        IArbERC20 token = ensureTokenExists(erc20);
         token.updateInfo(name, symbol, decimals);
+    }
+
+    function customTokenRegistered(address l1Address, address l2Address) external onlyEthPair {
+        l1ToL2[l1Address] = l2Address;
+        l2ToL1[l2Address] = l1Address;
     }
 
     function withdraw(address destination, uint256 amount) external {
@@ -76,7 +88,16 @@ contract ArbERC20Bridge is CloneFactory {
         exitNum++;
     }
 
-    function ensureTokenExists(address l1ERC20) private returns (StandardArbERC20) {
+    function migrate(address account, uint256 amount) external {
+        address l1Contract = l2ToL1[msg.sender];
+        require(l1Contract != address(0), "NOT_FROM_TOKEN");
+        address canonicalL2Contract = l1ToL2[l1Contract];
+        require(msg.sender != canonicalL2Contract, "ALREADY_CANON");
+        IArbERC20 token = ensureTokenExists(canonicalL2Contract);
+        token.bridgeMint(account, amount);
+    }
+
+    function ensureTokenExists(address l1ERC20) private returns (IArbERC20) {
         address l2Contract = l1ToL2[l1ERC20];
         if (l2Contract == address(0)) {
             l2Contract = createClone(templateERC20);
@@ -84,6 +105,6 @@ contract ArbERC20Bridge is CloneFactory {
             l2ToL1[l2Contract] = l1ERC20;
             StandardArbERC20(l2Contract).initialize(this, l1ERC20);
         }
-        return StandardArbERC20(l2Contract);
+        return IArbERC20(l2Contract);
     }
 }
