@@ -1409,18 +1409,6 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(Transaction& tx,
     return rocksdb::Status::OK();
 }
 
-std::string ArbCore::logsCursorClearError() {
-    if (logs_cursor.status == DataCursor::ERROR) {
-        return "";
-    }
-
-    logs_cursor.status = DataCursor::EMPTY;
-    auto str = logs_cursor.error_string;
-    logs_cursor.error_string.clear();
-
-    return str;
-}
-
 bool ArbCore::logsCursorRequest(uint256_t count) {
     if (logs_cursor.status != DataCursor::EMPTY) {
         return false;
@@ -1432,7 +1420,23 @@ bool ArbCore::logsCursorRequest(uint256_t count) {
     return true;
 }
 
-bool ArbCore::logsCursorConfirmedCount(uint256_t count) {
+bool ArbCore::logsCursorCheckError() const {
+    return logs_cursor.status == DataCursor::ERROR;
+}
+
+std::string ArbCore::logsCursorClearError() {
+    if (logs_cursor.status != DataCursor::ERROR) {
+        return "";
+    }
+
+    logs_cursor.status = DataCursor::EMPTY;
+    auto str = logs_cursor.error_string;
+    logs_cursor.error_string.clear();
+
+    return str;
+}
+
+bool ArbCore::logsCursorConfirmCount(uint256_t count) {
     if (logs_cursor.status != DataCursor::EMPTY) {
         return false;
     }

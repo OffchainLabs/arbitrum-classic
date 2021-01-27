@@ -61,6 +61,13 @@ Uint256Result arbCoreGetLogAcc(CExecutionCursor* arb_core_ptr,
 CExecutionCursor arbCoreGetCursor(CArbCore* arb_core_ptr,
                                   const void* total_gas_used_ptr);
 
+uint8_t arbCoreLogsCursorRequest(CArbCore* arb_core_ptr, const void* count);
+ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arb_core_ptr);
+uint8_t arbCoreLogsCursorConfirmCount(CArbCore* arb_core_ptr,
+                                      const void* count);
+uint8_t arbCoreLogsCursorCheckError(CArbCore* arb_core_ptr);
+char* arbCoreLogsCursorClearError(CArbCore* arb_core_ptr);
+
 #ifdef __cplusplus
 }
 #endif

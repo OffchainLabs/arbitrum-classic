@@ -41,7 +41,7 @@ inline ByteSlice returnCharVector(const std::vector<unsigned char>& data) {
 }
 
 inline char* returnCharVectorRaw(const std::vector<char>& data) {
-    char* cData = reinterpret_cast<char*>(malloc(data.size()));
+    char* cData = static_cast<char*>(malloc(data.size()));
     std::copy(data.begin(), data.end(), cData);
     return cData;
 }
@@ -59,8 +59,8 @@ inline ByteSliceResult returnDataResult(const DataResults& results) {
 
 inline ByteSlice* returnCharVectorVectorRaw(
     const std::vector<std::vector<unsigned char>>& data_vec) {
-    auto cData = reinterpret_cast<ByteSlice*>(
-        malloc(data_vec.size() * sizeof(ByteSlice)));
+    auto cData =
+        static_cast<ByteSlice*>(malloc(data_vec.size() * sizeof(ByteSlice)));
     for (size_t i = 0; i < data_vec.size(); i++) {
         cData[i] = returnCharVector(data_vec[i]);
     }
@@ -70,6 +70,15 @@ inline ByteSlice* returnCharVectorVectorRaw(
 inline ByteSliceArray returnCharVectorVector(
     const std::vector<std::vector<unsigned char>>& data) {
     return {returnCharVectorVectorRaw(data), static_cast<int>(data.size())};
+}
+
+inline void freeByteSliceArray(ByteSliceArray slice_array) {
+    auto cData = static_cast<ByteSlice*>(slice_array.slices);
+    for (int i = 0; i < slice_array.count; i++) {
+        free(cData[i].data);
+    }
+
+    free(slice_array.slices);
 }
 
 inline uint256_t receiveUint256(const void* data) {

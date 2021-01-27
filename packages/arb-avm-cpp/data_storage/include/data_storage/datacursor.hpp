@@ -32,7 +32,7 @@ class DataCursor {
     typedef enum {
         EMPTY,      // Out: Ready to receive request for data
         REQUESTED,  // In: Data requested
-        READY,      // Out: Data are ready to be picked up
+        READY,      // In: Data are ready to be picked up
         CONFIRMED,  // In: Data count to confirm as received
         ERROR       // Out: Error getting data
     } status_enum;

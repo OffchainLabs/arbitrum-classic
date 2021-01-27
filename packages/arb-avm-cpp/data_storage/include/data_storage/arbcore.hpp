@@ -46,11 +46,11 @@ class ColumnFamilyHandle;
 class ArbCore {
    public:
     typedef enum {
-        MESSAGES_EMPTY,       // Ready to receive messages
-        MESSAGES_READY,       // Messages in vector
-        MESSAGES_NEED_OLDER,  // Last message invalid, need older messages
-        MESSAGES_SUCCESS,     // Messages processed successfully
-        MESSAGES_ERROR        // Error processing messages
+        MESSAGES_EMPTY,       // Out: Ready to receive messages
+        MESSAGES_READY,       // In:  Messages in vector
+        MESSAGES_SUCCESS,     // In:  Messages processed successfully
+        MESSAGES_NEED_OLDER,  // Out: Last message invalid, need older messages
+        MESSAGES_ERROR        // Out: Error processing messages
     } messages_status_enum;
 
    private:
@@ -69,8 +69,8 @@ class ArbCore {
     std::shared_ptr<Code> code{};
     Checkpoint pending_checkpoint;
 
-    // Core thread inbox input/output
-    // Core thread will update if and only if set to ARBCORE_MESSAGES_READY
+    // Core thread inbox input/output. Core thread will update if and only if
+    // set to MESSAGES_READY or MESSAGES_SUCCESS
     std::atomic<messages_status_enum> delivering_inbox_status{MESSAGES_EMPTY};
 
     // Core thread inbox input
@@ -184,6 +184,12 @@ class ArbCore {
     ValueResult<ExecutionCursor*> getExecutionCursor(uint256_t totalGasUsed,
                                                      ValueCache& cache);
 
+    bool logsCursorRequest(uint256_t count);
+    nonstd::optional<std::vector<value>> logsCursorGetLogs();
+    bool logsCursorConfirmCount(uint256_t count);
+    bool logsCursorCheckError() const;
+    std::string logsCursorClearError();
+
    private:
     nonstd::optional<rocksdb::Status> addMessages(
         uint256_t first_sequence_number,
@@ -204,10 +210,6 @@ class ArbCore {
     rocksdb::Status handleLogsCursorReorg(Transaction& tx,
                                           uint256_t log_count,
                                           ValueCache& cache);
-    bool logsCursorRequest(uint256_t count);
-    bool logsCursorConfirmedCount(uint256_t count);
-    std::string logsCursorClearError();
-    nonstd::optional<std::vector<value>> logsCursorGetLogs();
 };
 
 nonstd::optional<rocksdb::Status> deleteLogsStartingAt(Transaction& tx,

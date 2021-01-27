@@ -120,14 +120,90 @@ Uint256Result arbCoreGetLogAcc(CArbCore* arb_core_ptr,
                                const void* start_index_ptr,
                                const void* count_ptr,
                                CValueCache* cache_ptr) {
+    auto arbcore = static_cast<ArbCore*>(arb_core_ptr);
+    auto cache = static_cast<ValueCache*>(cache_ptr);
+
     try {
-        auto arbcore = static_cast<ArbCore*>(arb_core_ptr);
-        auto cache = static_cast<ValueCache*>(cache_ptr);
         auto index_result = arbcore->getLogAcc(
             receiveUint256(start_acc_hash), receiveUint256(start_index_ptr),
             receiveUint256(count_ptr), *cache);
         return returnUint256Result(index_result);
     } catch (const std::exception& e) {
         return {{}, false};
+    }
+}
+
+uint8_t arbCoreLogsCursorRequest(CArbCore* arb_core_ptr,
+                                 const void* count_ptr) {
+    auto arbcore = static_cast<ArbCore*>(arb_core_ptr);
+    auto count = receiveUint256(count_ptr);
+
+    try {
+        auto status = arbcore->logsCursorRequest(count);
+
+        return status;
+    } catch (const std::exception& e) {
+        return false;
+    }
+}
+
+ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arb_core_ptr) {
+    auto arbcore = static_cast<ArbCore*>(arb_core_ptr);
+
+    try {
+        auto result = arbcore->logsCursorGetLogs();
+        if (!result) {
+            // Cursor not in the right state, may have deleted logs to process
+            return {{}, false};
+        }
+
+        std::vector<std::vector<unsigned char>> data;
+        for (const auto& val : *result) {
+            std::vector<unsigned char> marshalled_value;
+            marshal_value(val, marshalled_value);
+            data.push_back(move(marshalled_value));
+        }
+        return {returnCharVectorVector(data), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
+uint8_t arbCoreLogsCursorConfirmCount(CArbCore* arb_core_ptr,
+                                      const void* count_ptr) {
+    auto arbcore = static_cast<ArbCore*>(arb_core_ptr);
+    auto count = receiveUint256(count_ptr);
+
+    try {
+        auto status = arbcore->logsCursorConfirmCount(count);
+
+        return status;
+    } catch (const std::exception& e) {
+        return false;
+    }
+}
+
+// Returned string must be freed
+uint8_t arbCoreLogsCursorCheckError(CArbCore* arb_core_ptr) {
+    auto arbcore = static_cast<ArbCore*>(arb_core_ptr);
+
+    try {
+        auto status = arbcore->logsCursorCheckError();
+
+        return status;
+    } catch (const std::exception& e) {
+        return false;
+    }
+}
+
+char* arbCoreLogsCursorClearError(CArbCore* arb_core_ptr) {
+    auto arbcore = static_cast<ArbCore*>(arb_core_ptr);
+
+    try {
+        auto status = arbcore->logsCursorClearError();
+
+        return strdup(status.c_str());
+    } catch (const std::exception& e) {
+        return strdup("exception occurred in logsCursorCheckError");
     }
 }
