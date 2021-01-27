@@ -26,6 +26,7 @@ set(LIB_HEADERS
   include/data_storage/blockstore.hpp
   include/data_storage/checkpoint.hpp
   include/data_storage/datastorage.hpp
+  include/data_storage/datacursor.hpp
   include/data_storage/executioncursor.hpp
   include/data_storage/inboxmessage.hpp
   include/data_storage/keyvaluestore.hpp
@@ -50,6 +51,7 @@ set(LIB_SOURCES
   src/blockstore.cpp
   src/checkpoint.cpp
   src/datastorage.cpp
+  src/datacursor.cpp
   src/executioncursor.cpp
   src/inboxmessage.cpp
   src/keyvaluestore.cpp

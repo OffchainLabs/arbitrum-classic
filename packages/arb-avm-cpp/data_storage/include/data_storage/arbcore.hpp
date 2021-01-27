@@ -25,12 +25,15 @@
 #include <data_storage/storageresultfwd.hpp>
 #include <data_storage/value/code.hpp>
 #include <data_storage/value/valuecache.hpp>
+#include <utility>
 
 #include <avm/machinethread.hpp>
 #include <memory>
+#include <queue>
 #include <thread>
 #include <utility>
 #include <vector>
+#include "datacursor.hpp"
 #include "executioncursor.hpp"
 
 namespace rocksdb {
@@ -43,12 +46,12 @@ class ColumnFamilyHandle;
 class ArbCore {
    public:
     typedef enum {
-        ARBCORE_EMPTY,
-        ARBCORE_MESSAGES_READY,
-        ARBCORE_NEED_OLDER,
-        ARBCORE_SUCCESS,
-        ARBCORE_ERROR
-    } arbcore_status_enum;
+        MESSAGES_EMPTY,       // Ready to receive messages
+        MESSAGES_READY,       // Messages in vector
+        MESSAGES_NEED_OLDER,  // Last message invalid, need older messages
+        MESSAGES_SUCCESS,     // Messages processed successfully
+        MESSAGES_ERROR        // Error processing messages
+    } messages_status_enum;
 
    private:
     std::unique_ptr<std::thread> core_thread;
@@ -59,26 +62,29 @@ class ArbCore {
     // reference counts to be decremented and possibly deleted.
     // No mutex required to access Sends or Messages because obsolete entries
     // are not deleted.
-    std::mutex core_mutex;
+    std::mutex core_reorg_mutex;
     std::shared_ptr<DataStorage> data_storage;
 
     std::unique_ptr<MachineThread> machine;
     std::shared_ptr<Code> code{};
     Checkpoint pending_checkpoint;
 
-    // Core thread communication input/output
+    // Core thread inbox input/output
     // Core thread will update if and only if set to ARBCORE_MESSAGES_READY
-    std::atomic<arbcore_status_enum> delivering_status{ARBCORE_EMPTY};
+    std::atomic<messages_status_enum> delivering_inbox_status{MESSAGES_EMPTY};
 
-    // Core thread communication input
+    // Core thread inbox input
     std::atomic<bool> arbcore_abort{false};
     uint256_t delivering_first_sequence_number;
     uint64_t delivering_block_height{0};
-    std::vector<std::vector<unsigned char>> delivering_messages;
+    std::vector<std::vector<unsigned char>> delivering_inbox_messages;
     uint256_t delivering_previous_inbox_hash;
 
-    // Core thread communication output
-    std::string delivering_error_string;
+    // Core thread inbox output
+    std::string delivering_inbox_error_string;
+
+    // Core thread logs output
+    DataCursor logs_cursor;
 
    public:
     ArbCore() = delete;
@@ -109,7 +115,8 @@ class ArbCore {
                                                   bool after_gas);
     rocksdb::Status reorgToMessageOrBefore(
         Transaction& tx,
-        const uint256_t& message_sequence_number);
+        const uint256_t& message_sequence_number,
+        ValueCache& cache);
 
     std::unique_ptr<Transaction> makeTransaction();
     std::unique_ptr<const Transaction> makeConstTransaction() const;
@@ -147,6 +154,7 @@ class ArbCore {
         Transaction& tx,
         rocksdb::Slice value_slice);
 
+    void sendLog(uint256_t index, const value& val);
     rocksdb::Status saveLogs(Transaction& tx, const std::vector<value>& val);
     ValueResult<std::vector<value>> getLogs(uint256_t index,
                                             uint256_t count,
@@ -182,12 +190,24 @@ class ArbCore {
         uint64_t block_height,
         const std::vector<std::vector<unsigned char>>& messages,
         const uint256_t& previous_inbox_hash,
-        const uint256_t& final_machine_sequence_number);
+        const uint256_t& final_machine_sequence_number,
+        ValueCache& cache);
     nonstd::optional<MessageEntry> getNextMessage();
     bool deleteMessage(const MessageEntry& entry);
-    ValueResult<std::vector<value>> getLogsNoLock(uint256_t index,
+    ValueResult<std::vector<value>> getLogsNoLock(Transaction& tx,
+                                                  uint256_t index,
                                                   uint256_t count,
                                                   ValueCache& valueCache);
+
+    void handleLogsCursorRequested(Transaction& tx, ValueCache& cache);
+    void handleLogsCursorProcessed(Transaction& tx);
+    rocksdb::Status handleLogsCursorReorg(Transaction& tx,
+                                          uint256_t log_count,
+                                          ValueCache& cache);
+    bool logsCursorRequest(uint256_t count);
+    bool logsCursorConfirmedCount(uint256_t count);
+    std::string logsCursorClearError();
+    nonstd::optional<std::vector<value>> logsCursorGetLogs();
 };
 
 nonstd::optional<rocksdb::Status> deleteLogsStartingAt(Transaction& tx,
