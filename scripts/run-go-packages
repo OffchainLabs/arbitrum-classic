@@ -7,9 +7,7 @@ packages=(
     arb-util
     arb-avm-cpp
     arb-validator-core
-    arb-validator
     arb-evm
-    arb-checkpointer
     arb-tx-aggregator
 )
 

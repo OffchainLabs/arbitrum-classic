@@ -43,9 +43,7 @@ FROM offchainlabs/backend-base:0.2.8 as arb-validator-builder
 # Build dependencies
 COPY --chown=user arb-avm-cpp/go.* /home/user/arb-avm-cpp/
 COPY --chown=user arb-util/go.* /home/user/arb-util/
-COPY --chown=user arb-validator/go.* /home/user/arb-validator/
 COPY --chown=user arb-validator-core/go.* /home/user/arb-validator-core/
-COPY --chown=user arb-checkpointer/go.* /home/user/arb-checkpointer/
 COPY --chown=user arb-evm/go.* /home/user/arb-evm/
 COPY --chown=user arb-tx-aggregator/go.* /home/user/arb-tx-aggregator/
 RUN cd arb-validator && go mod download && cd ../arb-tx-aggregator && go mod download
@@ -62,7 +60,6 @@ RUN cd arb-evm && go build -v ./...
 
 
 COPY --chown=user arb-avm-cpp/ /home/user/arb-avm-cpp/
-COPY --chown=user arb-checkpointer/ /home/user/arb-checkpointer/
 COPY --chown=user arb-validator/ /home/user/arb-validator/
 COPY --chown=user arb-tx-aggregator/ /home/user/arb-tx-aggregator/
 

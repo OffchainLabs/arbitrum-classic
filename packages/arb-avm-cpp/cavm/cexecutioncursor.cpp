@@ -29,14 +29,32 @@ CExecutionCursor* executionCursorClone(CExecutionCursor* execution_cursor_ptr) {
         *static_cast<ExecutionCursor*>(execution_cursor_ptr)));
 }
 
-Uint256Result executionCursorMachineHash(
-    CExecutionCursor* execution_cursor_ptr) {
+int executionCursorMachineHash(CExecutionCursor* execution_cursor_ptr,
+                               void* ret) {
+    auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
     try {
-        auto index_result =
-            static_cast<ExecutionCursor*>(execution_cursor_ptr)->machineHash();
-        return {returnUint256(index_result), true};
+        auto index_result = executionCursor->machineHash();
+        std::array<unsigned char, 32> val{};
+        to_big_endian(index_result, val.begin());
+        std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
+
+        return true;
     } catch (const std::exception& e) {
-        return {{}, false};
+        return false;
+    }
+}
+
+int executionCursorInboxHash(CExecutionCursor* execution_cursor_ptr,
+                             void* ret) {
+    auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
+    try {
+        std::array<unsigned char, 32> val{};
+        to_big_endian(executionCursor->inbox_hash, val.begin());
+        std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
+
+        return true;
+    } catch (const std::exception& e) {
+        return false;
     }
 }
 
@@ -45,16 +63,6 @@ Uint256Result executionCursorNextInboxMessageIndex(
     try {
         auto index_result = static_cast<ExecutionCursor*>(execution_cursor_ptr)
                                 ->total_messages_read;
-        return {returnUint256(index_result), true};
-    } catch (const std::exception& e) {
-        return {{}, false};
-    }
-}
-
-Uint256Result executionCursorInboxHash(CExecutionCursor* execution_cursor_ptr) {
-    try {
-        auto index_result =
-            static_cast<ExecutionCursor*>(execution_cursor_ptr)->inbox_hash;
         return {returnUint256(index_result), true};
     } catch (const std::exception& e) {
         return {{}, false};
@@ -70,4 +78,43 @@ Uint256Result executionCursorTotalGasConsumed(
     } catch (const std::exception& e) {
         return {{}, false};
     }
+}
+
+Uint256Result executionCursorTotalSendCount(
+    CExecutionCursor* execution_cursor_ptr) {
+    try {
+        auto index_result =
+            static_cast<ExecutionCursor*>(execution_cursor_ptr)->send_count;
+        return {returnUint256(index_result), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
+Uint256Result executionCursorTotalLogCount(
+    CExecutionCursor* execution_cursor_ptr) {
+    try {
+        auto index_result =
+            static_cast<ExecutionCursor*>(execution_cursor_ptr)->log_count;
+        return {returnUint256(index_result), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
+int executionCursorAdvance(CExecutionCursor* execution_cursor_ptr,
+                           const void* max_gas_ptr,
+                           int go_over_gas) {
+    auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
+    try {
+        auto max_gas = receiveUint256(max_gas_ptr);
+        return executionCursor->Advance(max_gas, go_over_gas);
+    } catch (const std::exception& e) {
+        return false;
+    }
+}
+
+CMachine* executionCursorTakeMachine(CExecutionCursor* execution_cursor_ptr) {
+    auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
+    return static_cast<void*>(executionCursor->TakeMachine().release());
 }

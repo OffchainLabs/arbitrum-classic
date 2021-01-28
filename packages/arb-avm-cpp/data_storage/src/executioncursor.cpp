@@ -34,6 +34,7 @@ uint256_t ExecutionCursor::machineHash() {
 
 bool ExecutionCursor::Advance(uint256_t max_gas, bool go_over_gas) {
     if (!machine) {
+        // Machine was taken, no longer able to advance
         return false;
     }
 

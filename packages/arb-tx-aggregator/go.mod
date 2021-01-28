@@ -12,7 +12,6 @@ require (
 	github.com/mattn/go-tty v0.0.3 // indirect
 	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.3
-	github.com/offchainlabs/arbitrum/packages/arb-checkpointer v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-evm v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.7.3

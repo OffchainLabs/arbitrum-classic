@@ -77,6 +77,7 @@ class ExecutionCursor : public Checkpoint {
     std::unique_ptr<Machine> TakeMachine();
 
     bool Advance(uint256_t max_gas, bool go_over_gas);
+    void* executionCursorTakeMachine();
 };
 
 #endif /* data_storage_executioncursor_hpp */

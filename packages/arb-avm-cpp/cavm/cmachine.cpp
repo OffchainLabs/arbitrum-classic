@@ -152,9 +152,9 @@ ByteSlice machineMarshallState(CMachine* m) {
 
 RawAssertion executeAssertion(CMachine* m,
                               uint64_t max_gas,
-                              uint8_t go_over_gas,
+                              int go_over_gas,
                               void* inbox_messages,
-                              uint8_t final_message_of_block) {
+                              int final_message_of_block) {
     assert(m);
     auto mach = static_cast<Machine*>(m);
     auto messages = getInboxMessages(inbox_messages);

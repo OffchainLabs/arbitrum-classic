@@ -44,7 +44,7 @@ typedef struct ByteSliceArrayStruct {
 } ByteSliceArray;
 
 typedef struct {
-    ByteSliceArray slice;
+    ByteSliceArray array;
     int found;
 } ByteSliceArrayResult;
 

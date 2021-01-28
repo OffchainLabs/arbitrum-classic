@@ -8,7 +8,7 @@ import (
 )
 
 type ExecutionCursor interface {
-	Clone() ExecutionCursor
+	Clone() (ExecutionCursor, error)
 	MachineHash() common.Hash
 	NextInboxMessageIndex() *big.Int
 	InboxHash() common.Hash
@@ -36,7 +36,7 @@ type ValidatorLookup interface {
 
 	// GetCursor returns a cursor containing the machine after executing totalGasUsed
 	// from the original machine
-	GetCursor(totalGasUsed *big.Int) (ExecutionCursor, error)
+	GetExecutionCursor(totalGasUsed *big.Int, valueCache machine.ValueCache) (ExecutionCursor, error)
 }
 
 type ExecutionState struct {

@@ -30,10 +30,6 @@ int arbCoreDeliverMessages(CArbCore* arb_core_ptr,
                            void* inbox_messages,
                            void* previous_inbox_hash_ptr);
 
-ByteSliceResult arbCoreLastSendInserted(CArbCore* arb_core_ptr);
-ByteSliceResult arbCoreLastLogInserted(CArbCore* arb_core_ptr);
-ByteSliceResult arbCoreInboxMessagesRead(CArbCore* arb_core_ptr);
-
 ByteSliceArrayResult arbCoreGetSends(CArbCore* arb_core_ptr,
                                      const void* start_index_ptr,
                                      const void* count_ptr);
@@ -42,31 +38,35 @@ ByteSliceArrayResult arbCoreGetMessages(CArbCore* arb_core_ptr,
                                         const void* start_index_ptr,
                                         const void* count_ptr);
 
-Uint256Result arbCoreGetInboxDelta(CArbCore* arb_core_ptr,
-                                   const void* start_index_ptr,
-                                   const void* count_ptr);
+int arbCoreGetInboxDelta(CArbCore* arb_core_ptr,
+                         const void* start_index_ptr,
+                         const void* count_ptr,
+                         void* ret);
 
-Uint256Result arbCoreGetInboxAcc(CExecutionCursor* arb_core_ptr,
-                                 const void* index);
-Uint256Result arbCoreGetSendAcc(CExecutionCursor* arb_core_ptr,
-                                const void* start_acc_hash,
-                                const void* start_index_ptr,
-                                const void* count_ptr);
-Uint256Result arbCoreGetLogAcc(CExecutionCursor* arb_core_ptr,
-                               const void* start_acc_hash,
-                               const void* start_index_ptr,
-                               const void* count_ptr,
-                               CValueCache* cache);
+int arbCoreGetInboxAcc(CArbCore* arb_core_ptr,
+                       const void* index_ptr,
+                       void* ret);
+int arbCoreGetSendAcc(CArbCore* arb_core_ptr,
+                      const void* start_acc_hash,
+                      const void* start_index_ptr,
+                      const void* count_ptr,
+                      void* ret);
+int arbCoreGetLogAcc(CArbCore* arb_core_ptr,
+                     const void* start_acc_hash,
+                     const void* start_index_ptr,
+                     const void* count_ptr,
+                     void* ret,
+                     CValueCache* cache_ptr);
 
-CExecutionCursor arbCoreGetCursor(CArbCore* arb_core_ptr,
-                                  const void* total_gas_used_ptr);
-
-uint8_t arbCoreLogsCursorRequest(CArbCore* arb_core_ptr, const void* count);
+int arbCoreLogsCursorRequest(CArbCore* arb_core_ptr, const void* count);
 ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arb_core_ptr);
-uint8_t arbCoreLogsCursorConfirmCount(CArbCore* arb_core_ptr,
-                                      const void* count);
-uint8_t arbCoreLogsCursorCheckError(CArbCore* arb_core_ptr);
+int arbCoreLogsCursorSetNextIndex(CArbCore* arb_core_ptr, const void* count);
+int arbCoreLogsCursorCheckError(CArbCore* arb_core_ptr);
 char* arbCoreLogsCursorClearError(CArbCore* arb_core_ptr);
+
+CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arb_core_ptr,
+                                            const void* total_gas_used_ptr,
+                                            CValueCache* cache_ptr);
 
 #ifdef __cplusplus
 }

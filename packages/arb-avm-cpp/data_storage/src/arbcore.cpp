@@ -1313,7 +1313,7 @@ void ArbCore::handleLogsCursorRequested(Transaction& tx, ValueCache& cache) {
         log_inserted_count.data) {
         // Too many entries requested
         logs_cursor.requested_count =
-            log_inserted_count.data - logs_cursor.confirmed_received_count;
+            log_inserted_count.data - logs_cursor.confirmed_next_index;
     }
     if (logs_cursor.requested_count == 0) {
         logs_cursor.status = DataCursor::READY;
@@ -1345,14 +1345,14 @@ void ArbCore::handleLogsCursorProcessed(Transaction& tx) {
         return;
     }
 
-    if (logs_cursor.confirmed_received_count > log_inserted_count.data) {
+    if (logs_cursor.confirmed_next_index > log_inserted_count.data) {
         // Invalid value probably because of reorg, just ignore
         logs_cursor.status = DataCursor::EMPTY;
         return;
     }
 
     std::vector<unsigned char> processed_key;
-    marshal_uint256_t(logs_cursor.confirmed_received_count, processed_key);
+    marshal_uint256_t(logs_cursor.confirmed_next_index, processed_key);
     auto status = updateLogProcessedCount(tx, vecToSlice(processed_key));
 
     logs_cursor.status = DataCursor::EMPTY;
@@ -1360,7 +1360,7 @@ void ArbCore::handleLogsCursorProcessed(Transaction& tx) {
 
 // handleLogsCursorReorg must be called before logs are deleted
 // Note that this function should not update logs_cursor.status because
-// it reorg is happening out of line
+// it is happening out of line
 rocksdb::Status ArbCore::handleLogsCursorReorg(Transaction& tx,
                                                uint256_t log_count,
                                                ValueCache& cache) {
@@ -1426,7 +1426,7 @@ bool ArbCore::logsCursorCheckError() const {
 
 std::string ArbCore::logsCursorClearError() {
     if (logs_cursor.status != DataCursor::ERROR) {
-        return "";
+        return nullptr;
     }
 
     logs_cursor.status = DataCursor::EMPTY;
@@ -1436,12 +1436,12 @@ std::string ArbCore::logsCursorClearError() {
     return str;
 }
 
-bool ArbCore::logsCursorConfirmCount(uint256_t count) {
+bool ArbCore::logsCursorSetNextIndex(uint256_t next_index) {
     if (logs_cursor.status != DataCursor::EMPTY) {
         return false;
     }
 
-    logs_cursor.confirmed_received_count = count;
+    logs_cursor.confirmed_next_index = next_index;
     logs_cursor.status = DataCursor::CONFIRMED;
 
     return true;

@@ -186,7 +186,7 @@ class ArbCore {
 
     bool logsCursorRequest(uint256_t count);
     nonstd::optional<std::vector<value>> logsCursorGetLogs();
-    bool logsCursorConfirmCount(uint256_t count);
+    bool logsCursorSetNextIndex(uint256_t next_index);
     bool logsCursorCheckError() const;
     std::string logsCursorClearError();
 

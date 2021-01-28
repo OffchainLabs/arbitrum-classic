@@ -25,31 +25,135 @@ package cmachine
 */
 import "C"
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/pkg/errors"
 	"math/big"
 	"runtime"
 	"unsafe"
-
-	"github.com/pkg/errors"
 )
 
 type ExecutionCursor struct {
-	c unsafe.Pointer
+	c                     unsafe.Pointer
+	machineHash           common.Hash
+	nextInboxMessageIndex big.Int
+	inboxHash             common.Hash
+	totalGasConsumed      big.Int
+	totalSendCount        big.Int
+	totalLogCount         big.Int
 }
 
 func deleteExecutionCursor(ac *ExecutionCursor) {
 	C.deleteExecutionCursor(ac.c)
 }
 
-func NewExecutionCursor(c unsafe.Pointer) *ExecutionCursor {
+func NewExecutionCursor(c unsafe.Pointer) (*ExecutionCursor, error) {
 	ec := &ExecutionCursor{c: c}
 	runtime.SetFinalizer(ec, deleteExecutionCursor)
-	return ec
+
+	err := ec.updateValues()
+	if err != nil {
+		return nil, err
+	}
+
+	return ec, nil
 }
 
-func (ec *ExecutionCursor) MessageCount() (*big.Int, error) {
-	result := C.executionCursorMachineHash(ec.c)
-	if result.found == 0 {
-		return big.NewInt(0), errors.New("failed to load l2message count")
+func (ec *ExecutionCursor) Clone() ExecutionCursor {
+	return ExecutionCursor{
+		c:                     C.executionCursorClone(ec.c),
+		machineHash:           ec.machineHash,
+		nextInboxMessageIndex: ec.nextInboxMessageIndex,
+		inboxHash:             ec.inboxHash,
+		totalGasConsumed:      ec.totalGasConsumed,
+		totalSendCount:        ec.totalSendCount,
+		totalLogCount:         ec.totalLogCount,
 	}
-	return dataToInt(result.value), nil
+}
+
+func (ec *ExecutionCursor) Advance(maxGas *big.Int, goOverGas bool) error {
+	cMaxGas := intToData(maxGas)
+	defer C.free(cMaxGas)
+
+	goOverGasInt := 0
+	if goOverGas {
+		goOverGasInt = 1
+	}
+
+	status := C.executionCursorAdvance(ec.c, cMaxGas, C.int(goOverGasInt))
+	if status == 0 {
+		return errors.New("failed to advance")
+	}
+
+	return ec.updateValues()
+}
+
+func (ec *ExecutionCursor) TakeMachine() (machine.Machine, error) {
+	cMachine := C.executionCursorTakeMachine(ec.c)
+	if cMachine == nil {
+		return nil, errors.Errorf("error taking machine from execution cursor")
+	}
+	ret := &Machine{cMachine}
+
+	runtime.SetFinalizer(ret, cdestroyVM)
+	return ret, nil
+}
+
+func (ec *ExecutionCursor) updateValues() error {
+	status := C.executionCursorMachineHash(ec.c, unsafe.Pointer(&ec.machineHash[0]))
+	if status == 0 {
+		return errors.New("failed to load machine hash")
+	}
+
+	status = C.executionCursorInboxHash(ec.c, unsafe.Pointer(&ec.inboxHash[0]))
+	if status == 0 {
+		return errors.New("failed to load inbox hash")
+	}
+
+	result := C.executionCursorTotalGasConsumed(ec.c)
+	if result.found == 0 {
+		return errors.New("failed to get TotalGasConsumed")
+	}
+	ec.totalGasConsumed = *dataToInt(result.value)
+	C.free(result.value)
+
+	result = C.executionCursorNextInboxMessageIndex(ec.c)
+	if result.found == 0 {
+		return errors.New("failed to get NextInboxMessageIndex")
+	}
+	ec.totalSendCount = *dataToInt(result.value)
+	C.free(result.value)
+
+	result = C.executionCursorTotalLogCount(ec.c)
+	if result.found == 0 {
+		return errors.New("failed to get NextInboxMessageIndex")
+	}
+	ec.totalLogCount = *dataToInt(result.value)
+	C.free(result.value)
+
+	return nil
+}
+
+func (ec *ExecutionCursor) MachineHash() common.Hash {
+	return ec.machineHash
+}
+
+func (ec *ExecutionCursor) InboxHash() common.Hash {
+	return ec.inboxHash
+}
+
+func (ec *ExecutionCursor) NextInboxMessageIndex() *big.Int {
+	return &ec.nextInboxMessageIndex
+}
+
+func (ec *ExecutionCursor) TotalGasConsumed() *big.Int {
+	return &ec.totalGasConsumed
+}
+
+func (ec *ExecutionCursor) TotalSendCount() *big.Int {
+	return &ec.totalSendCount
+}
+
+func (ec *ExecutionCursor) TotalLogCount() *big.Int {
+	return &ec.totalLogCount
 }

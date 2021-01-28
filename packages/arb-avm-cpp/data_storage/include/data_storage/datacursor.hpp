@@ -51,7 +51,7 @@ class DataCursor {
 
     // Input value
     uint256_t requested_count;
-    uint256_t confirmed_received_count;
+    uint256_t confirmed_next_index;
 
    public:
 };

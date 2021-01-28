@@ -61,9 +61,9 @@ CBlockReason machineIsBlocked(CMachine* m, int newMessages);
 
 RawAssertion executeAssertion(CMachine* m,
                               uint64_t max_gas,
-                              uint8_t go_over_gas,
+                              int go_over_gas,
                               void* inbox_messages,
-                              uint8_t final_message_of_block);
+                              int final_message_of_block);
 
 ByteSlice machineMarshallForProof(CMachine* m);
 ByteSlice machineMarshallBufferProof(CMachine* m);

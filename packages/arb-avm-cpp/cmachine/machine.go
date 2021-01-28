@@ -48,6 +48,7 @@ type Machine struct {
 
 func New(codeFile string) (*Machine, error) {
 	cFilename := C.CString(codeFile)
+	defer C.free(unsafe.Pointer(cFilename))
 	cMachine := C.machineCreate(cFilename)
 	if cMachine == nil {
 		return nil, errors.Errorf("error creating machine from file %s", codeFile)
@@ -55,7 +56,6 @@ func New(codeFile string) (*Machine, error) {
 	ret := &Machine{cMachine}
 
 	runtime.SetFinalizer(ret, cdestroyVM)
-	C.free(unsafe.Pointer(cFilename))
 	return ret, nil
 }
 
@@ -155,30 +155,30 @@ func encodeValue(val value.Value) []byte {
 
 func (m *Machine) ExecuteAssertion(
 	maxGas uint64,
-	goOverGasInput bool,
+	goOverGas bool,
 	messages []inbox.InboxMessage,
-	finalMessageOfBlockInput bool,
+	finalMessageOfBlock bool,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64) {
 	msgDataC := C.CBytes(encodeInboxMessages(messages))
 	defer C.free(msgDataC)
 
-	goOverGas := C.uchar(0)
-	if goOverGasInput {
-		goOverGas = 1
+	goOverGasInt := C.uchar(0)
+	if goOverGas {
+		goOverGasInt = 1
 	}
 
-	finalMessageOfBlock := C.uchar(0)
-	if finalMessageOfBlockInput {
-		finalMessageOfBlock = 1
+	finalMessageOfBlockInt := C.uchar(0)
+	if finalMessageOfBlock {
+		finalMessageOfBlockInt = 1
 	}
 
 	beforeHash := m.Hash()
 	assertion := C.executeAssertion(
 		m.c,
 		C.uint64_t(maxGas),
-		goOverGas,
+		C.int(goOverGasInt),
 		msgDataC,
-		finalMessageOfBlock,
+		C.int(finalMessageOfBlockInt),
 	)
 
 	return makeExecutionAssertion(assertion, beforeHash, m.Hash())
