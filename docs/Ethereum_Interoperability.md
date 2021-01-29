@@ -24,15 +24,15 @@ In order to programmatically trigger transfers, call one of the following method
 function depositEthMessage(address chain, address to) external payable;
 function depositERC20Message(
         address chain,
-        address to,
         address erc20,
+        address to,
         uint256 value
     )
         external;
 function depositERC721Message(
         address chain,
-        address to,
         address erc721,
+        address to,
         uint256 id
     )
         external;
