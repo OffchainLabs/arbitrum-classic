@@ -105,8 +105,9 @@ class ArbCore {
                                   uint256_t first_message_sequence_number,
                                   const Assertion& assertion);
 
-    rocksdb::Status saveCheckpoint();
+    rocksdb::Status saveCheckpoint(Transaction& tx);
     ValueResult<Checkpoint> getCheckpoint(
+        Transaction& tx,
         const uint256_t& message_sequence_number) const;
     bool isCheckpointsEmpty() const;
     uint256_t maxCheckpointGas();

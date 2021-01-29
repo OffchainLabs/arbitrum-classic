@@ -17,61 +17,77 @@
 #include "config.hpp"
 #include "helper.hpp"
 
-#include <data_storage/aggregator.hpp>
-#include <data_storage/datastorage.hpp>
+#include <data_storage/arbstorage.hpp>
+#include <data_storage/storageresult.hpp>
+#include <data_storage/value/machine.hpp>
+
+#include <avm_values/vmValueParser.hpp>
 
 #include <catch2/catch.hpp>
+#include <nlohmann/json.hpp>
 
 TEST_CASE("ArbCore tests") {
     DBDeleter deleter;
-    auto storage = std::make_shared<DataStorage>(dbpath);
-    auto store = std::make_unique<AggregatorStore>(storage);
+    ValueCache value_cache{};
 
-    /* TODO
-    SECTION("requests") {
-        REQUIRE(!store->getPossibleRequestInfo(10).has_value());
-        store->saveRequest(10, 5);
-        auto requestIndex = store->getPossibleRequestInfo(10);
-        REQUIRE(requestIndex.has_value());
-        REQUIRE(*requestIndex == 5);
-        REQUIRE(!store->getPossibleRequestInfo(8).has_value());
+    std::vector<std::string> files = {
+        "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
+        "evm_test_arbsys", "evm_xcontract_call_with_constructors"};
+
+    for (const auto& filename : files) {
+        DYNAMIC_SECTION(filename) {
+            auto test_file = std::string{arb_os_test_cases_path} + "/" +
+                             filename + ".aoslog";
+
+            std::ifstream i(test_file);
+            nlohmann::json j;
+            i >> j;
+
+            std::vector<Tuple> messages;
+            for (auto& json_message : j.at("inbox")) {
+                messages.push_back(
+                    simple_value_from_json(json_message).get<Tuple>());
+            }
+
+            auto logs_json = j.at("logs");
+            std::vector<value> logs;
+            for (auto& log_json : logs_json) {
+                logs.push_back(simple_value_from_json(log_json));
+            }
+
+            ArbStorage storage(dbpath);
+            storage.initialize(arb_os_path);
+            auto arbCore = storage.getArbCore();
+            auto cursor = arbCore->getExecutionCursor(0, value_cache);
+            REQUIRE(cursor.status.ok());
+            auto mach = cursor.data->TakeMachine();
+            mach->machine_state.stack.push(uint256_t{0});
+            auto assertion = mach->run(0, false, messages, 0, false);
+            INFO("Machine ran for " << assertion.stepCount << " steps");
+            REQUIRE(assertion.logs.size() == logs.size());
+            auto log = logs[0].get<Tuple>();
+            for (size_t k = 0; k < assertion.logs.size(); ++k) {
+                REQUIRE(assertion.logs[k] == logs[k]);
+            }
+            {
+                auto tx = storage.makeTransaction();
+                saveMachine(*tx, *mach);
+                tx->commit();
+            }
+            auto mach_hash = mach->hash();
+            auto mach2 = storage.getMachine(mach_hash, value_cache);
+            REQUIRE(mach_hash == mach2->hash());
+            storage.closeArbStorage();
+
+            ArbStorage storage2(dbpath);
+            auto mach3 = storage2.getMachine(mach_hash, value_cache);
+            REQUIRE(mach_hash == mach3->hash());
+
+            {
+                auto tx = storage2.makeTransaction();
+                deleteMachine(*tx, mach_hash);
+                tx->commit();
+            }
+        }
     }
-
-    SECTION("blocks") {
-        CHECK_THROWS(store->latestBlock());
-        std::vector<unsigned char> data{1, 2, 3, 4};
-        auto tx = storage->beginTransaction();
-        store->saveLog(*tx, data);
-        store->saveLog(*tx, data);
-        store->saveSend(*tx, data);
-        store->saveSend(*tx, data);
-        store->saveSend(*tx, data);
-        tx = nullptr;
-        std::vector<char> block_data{1, 2, 3, 4};
-        store->saveBlock(50, block_data);
-        {
-            auto latest = store->latestBlock();
-            REQUIRE(latest.first == 50);
-            REQUIRE(latest.second == block_data);
-        }
-
-        tx = storage->beginTransaction();
-        store->saveLog(*tx, data);
-        store->saveLog(*tx, data);
-        store->saveSend(*tx, data);
-        tx = nullptr;
-        std::vector<char> block_data2{1, 2, 3, 5};
-        store->saveBlock(52, block_data2);
-        {
-            auto block = store->getBlock(52);
-            REQUIRE(block == block_data2);
-        }
-
-        {
-            // Latest is now updated
-            auto latest = store->latestBlock();
-            REQUIRE(latest.first == 52);
-        }
-    }
-    */
 }

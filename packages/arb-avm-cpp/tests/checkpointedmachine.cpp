@@ -29,11 +29,12 @@ TEST_CASE("CheckpointedMachine tests") {
     store->initialize(executable);
 
     SECTION("CheckpointedMachine basic") {
+        auto tx = store->makeTransaction();
         REQUIRE(store->initialized());
         REQUIRE(store->isCheckpointsEmpty());
         REQUIRE(store->maxCheckpointGas() == 0);
 
-        store->saveCheckpoint();
+        store->saveCheckpoint(*tx);
         REQUIRE(!store->isCheckpointsEmpty());
         REQUIRE(store->maxCheckpointGas() == 0);
     }

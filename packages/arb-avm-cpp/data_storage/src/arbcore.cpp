@@ -114,13 +114,17 @@ std::unique_ptr<const Transaction> ArbCore::makeConstTransaction() const {
 
 void ArbCore::initialize(const LoadedExecutable& executable) {
     auto tx = makeTransaction();
+    code = std::make_shared<Code>(0);
     code->addSegment(executable.code);
     machine = std::make_unique<MachineThread>(
         MachineState{code, executable.static_val});
-    auto res = saveMachine(*tx, *machine);
-    if (!res.status.ok()) {
-        throw std::runtime_error("failed to save initial machine");
+
+    // Save initial checkpoint
+    auto status = saveCheckpoint(*tx);
+    if (!status.ok()) {
+        throw std::runtime_error("failed to save initial checkpoint");
     }
+
     std::vector<unsigned char> value_data;
     marshal_uint256_t(machine->hash(), value_data);
     auto s = tx->transaction->Put(data_storage->state_column.get(),
@@ -181,18 +185,16 @@ template std::unique_ptr<Machine> ArbCore::getMachine(uint256_t, ValueCache&);
 template std::unique_ptr<MachineThread> ArbCore::getMachine(uint256_t,
                                                             ValueCache&);
 
-rocksdb::Status ArbCore::saveCheckpoint() {
-    auto tx = Transaction::makeTransaction(data_storage);
-
+rocksdb::Status ArbCore::saveCheckpoint(Transaction& tx) {
     auto status =
-        saveMachineState(*tx, *machine, pending_checkpoint.machine_state_keys);
+        saveMachineState(tx, *machine, pending_checkpoint.machine_state_keys);
     if (!status.ok()) {
         return status;
     }
 
     // Pull inbox hash from database
     auto existing_message_entry =
-        getMessageEntry(*tx, pending_checkpoint.total_messages_read - 1);
+        getMessageEntry(tx, pending_checkpoint.total_messages_read - 1);
     pending_checkpoint.inbox_hash = existing_message_entry.data.inbox_hash;
 
     std::vector<unsigned char> key;
@@ -201,15 +203,10 @@ rocksdb::Status ArbCore::saveCheckpoint() {
     auto serialized_checkpoint = serializeCheckpoint(pending_checkpoint);
     std::string value_str(serialized_checkpoint.begin(),
                           serialized_checkpoint.end());
-    auto put_status = tx->transaction->Put(
-        tx->datastorage->checkpoint_column.get(), key_slice, value_str);
+    auto put_status = tx.transaction->Put(
+        tx.datastorage->checkpoint_column.get(), key_slice, value_str);
     if (!put_status.ok()) {
         return put_status;
-    }
-
-    auto commit_status = tx->commit();
-    if (!commit_status.ok()) {
-        return commit_status;
     }
 
     return rocksdb::Status::OK();
@@ -326,14 +323,13 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
 }
 
 ValueResult<Checkpoint> ArbCore::getCheckpoint(
+    Transaction& tx,
     const uint256_t& arb_gas_used) const {
-    auto tx = Transaction::makeTransaction(data_storage);
-
     std::vector<unsigned char> key;
     marshal_uint256_t(arb_gas_used, key);
 
     auto result = getVectorUsingFamilyAndKey(
-        *tx->transaction, tx->datastorage->checkpoint_column.get(),
+        *tx.transaction, tx.datastorage->checkpoint_column.get(),
         vecToSlice(key));
     if (!result.status.ok()) {
         return {result.status, {}};
@@ -556,7 +552,7 @@ void ArbCore::operator()() {
 
                 // Maybe save checkpoint
                 // TODO Decide how often to create checkpoint
-                status = saveCheckpoint();
+                status = saveCheckpoint(*tx);
 
                 // TODO Decide how often to clear ValueCache
                 // (only clear cache when machine thread stopped)
@@ -925,11 +921,10 @@ ValueResult<ExecutionCursor*> ArbCore::getExecutionCursor(
     auto tx = Transaction::makeTransaction(data_storage);
     auto first_checkpoint_result =
         getCheckpointUsingGas(*tx, totalGasUsed, false);
+    auto first_checkpoint = first_checkpoint_result.data;
     if (!first_checkpoint_result.status.ok()) {
         return {first_checkpoint_result.status, {}};
     }
-    auto first_message_sequence_number =
-        first_checkpoint_result.data.total_messages_read - 1;
 
     uint256_t last_message_sequence_number;
     auto second_checkpoint_result =
@@ -937,13 +932,26 @@ ValueResult<ExecutionCursor*> ArbCore::getExecutionCursor(
     if (second_checkpoint_result.status.IsNotFound()) {
         // No checkpoint after requested gas so get messages up to current
         // machine state.
-        last_message_sequence_number =
-            pending_checkpoint.total_messages_read - 1;
+        if (pending_checkpoint.total_messages_read == 0) {
+            last_message_sequence_number = 0;
+        } else {
+            last_message_sequence_number =
+                pending_checkpoint.total_messages_read - 1;
+        }
     } else if (!second_checkpoint_result.status.ok()) {
         return {second_checkpoint_result.status, {}};
     } else {
         last_message_sequence_number =
             second_checkpoint_result.data.total_messages_read - 1;
+    }
+
+    uint256_t first_message_sequence_number;
+    if (first_checkpoint.total_messages_read == 0) {
+        // Initial state
+        first_message_sequence_number = 0;
+    } else {
+        first_message_sequence_number =
+            first_checkpoint.total_messages_read - 1;
     }
 
     std::vector<unsigned char> message_key;

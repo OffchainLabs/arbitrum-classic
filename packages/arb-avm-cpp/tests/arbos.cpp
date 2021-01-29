@@ -26,8 +26,6 @@
 #include <catch2/catch.hpp>
 #include <nlohmann/json.hpp>
 
-#include <fstream>
-
 TEST_CASE("ARBOS test vectors") {
     DBDeleter deleter;
     ValueCache value_cache{};

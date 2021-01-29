@@ -17,8 +17,11 @@
 #ifndef checkpoint_code_hpp
 #define checkpoint_code_hpp
 
-#include <cstdint>
 #include <data_storage/value/value.hpp>
+
+#include <rocksdb/status.h>
+
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <set>
@@ -33,10 +36,10 @@ std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
                                             uint64_t segment_id,
                                             std::set<uint64_t>& segment_ids,
                                             ValueCache& value_cache);
-void saveCode(Transaction& transaction,
-              const Code& code,
-              std::map<uint64_t, uint64_t>& segment_counts);
-void deleteCode(Transaction& transaction,
-                std::map<uint64_t, uint64_t>& segment_counts);
+rocksdb::Status saveCode(Transaction& transaction,
+                         const Code& code,
+                         std::map<uint64_t, uint64_t>& segment_counts);
+rocksdb::Status deleteCode(Transaction& transaction,
+                           std::map<uint64_t, uint64_t>& segment_counts);
 
 #endif /* checkpoint_code_hpp */

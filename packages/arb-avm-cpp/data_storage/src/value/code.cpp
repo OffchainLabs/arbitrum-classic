@@ -123,7 +123,11 @@ std::vector<unsigned char> prepareToSaveCodeSegment(
     for (uint64_t i = existing_cp_count; i < snapshot.op_count; ++i) {
         const auto& cp = (*snapshot.segment)[i];
         if (cp.op.immediate) {
-            saveValueImpl(transaction, *cp.op.immediate, segment_counts);
+            auto result =
+                saveValueImpl(transaction, *cp.op.immediate, segment_counts);
+            if (!result.status.ok()) {
+                throw std::runtime_error("failed to save immediate value");
+            }
         }
     }
 
@@ -213,8 +217,8 @@ std::unordered_map<uint64_t, uint64_t> breadthFirstSearch(
     return total_segment_counts;
 }
 
-void deleteCode(Transaction& transaction,
-                std::map<uint64_t, uint64_t>& segment_counts) {
+rocksdb::Status deleteCode(Transaction& transaction,
+                           std::map<uint64_t, uint64_t>& segment_counts) {
     std::unordered_map<uint64_t, GetResults> current_values{};
 
     auto total_deleted_segment_references = breadthFirstSearch(
@@ -253,13 +257,19 @@ void deleteCode(Transaction& transaction,
     for (const auto& item : total_deleted_segment_references) {
         auto key_vec = segment_key(item.first);
         auto key = vecToSlice(key_vec);
-        deleteRefCountedData(*transaction.transaction, key, item.second);
+        auto result =
+            deleteRefCountedData(*transaction.transaction, key, item.second);
+        if (!result.status.ok()) {
+            return result.status;
+        }
     }
+
+    return rocksdb::Status::OK();
 }
 
-void saveCode(Transaction& transaction,
-              const Code& code,
-              std::map<uint64_t, uint64_t>& segment_counts) {
+rocksdb::Status saveCode(Transaction& transaction,
+                         const Code& code,
+                         std::map<uint64_t, uint64_t>& segment_counts) {
     auto snapshots = code.snapshot();
     saveNextSegmentID(transaction, snapshots.op_count);
 
@@ -290,7 +300,13 @@ void saveCode(Transaction& transaction,
     // Now that we've handled all references, save all the serialized segments
     for (const auto& item : code_segments_to_save) {
         auto key_vec = segment_key(item.first);
-        saveRefCountedData(*transaction.transaction, vecToSlice(key_vec),
-                           item.second, total_segment_counts[item.first], true);
+        auto results = saveRefCountedData(
+            *transaction.transaction, vecToSlice(key_vec), item.second,
+            total_segment_counts[item.first], true);
+        if (!results.status.ok()) {
+            return results.status;
+        }
     }
+
+    return rocksdb::Status::OK();
 }

@@ -167,26 +167,44 @@ rocksdb::Status saveMachineState(Transaction& transaction,
     auto& machinestate = machine.machine_state;
     auto static_val_results =
         saveValueImpl(transaction, machinestate.static_val, segment_counts);
+    if (!static_val_results.status.ok()) {
+        return static_val_results.status;
+    }
+
     auto register_val_results =
         saveValueImpl(transaction, machinestate.registerVal, segment_counts);
+    if (!register_val_results.status.ok()) {
+        return register_val_results.status;
+    }
+
     auto datastack_tup = machinestate.stack.getTupleRepresentation();
     auto datastack_results =
         saveValueImpl(transaction, datastack_tup, segment_counts);
+    if (!datastack_results.status.ok()) {
+        return datastack_results.status;
+    }
+
     auto auxstack_tup = machinestate.auxstack.getTupleRepresentation();
     auto auxstack_results =
         saveValueImpl(transaction, auxstack_tup, segment_counts);
+    if (!auxstack_results.status.ok()) {
+        return auxstack_results.status;
+    }
+
     auto staged_message_results =
         saveValueImpl(transaction, machinestate.staged_message, segment_counts);
-    if (!datastack_results.status.ok() || !auxstack_results.status.ok() ||
-        !register_val_results.status.ok() ||
-        !staged_message_results.status.ok()) {
-        return rocksdb::Status::Aborted();
+    if (!staged_message_results.status.ok()) {
+        return staged_message_results.status;
     }
 
     ++segment_counts[machinestate.pc.segment];
     ++segment_counts[machinestate.errpc.pc.segment];
 
-    saveCode(transaction, *machinestate.code, segment_counts);
+    auto code_status =
+        saveCode(transaction, *machinestate.code, segment_counts);
+    if (!code_status.ok()) {
+        return code_status;
+    }
 
     machine_state_keys.static_hash = hash_value(machinestate.static_val);
     machine_state_keys.register_hash = hash_value(machinestate.registerVal);
