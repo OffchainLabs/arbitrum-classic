@@ -8,7 +8,6 @@ packages=(
     arb-avm-cpp
     arb-validator-core
     arb-evm
-    arb-tx-aggregator
 )
 
 cd packages

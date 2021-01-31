@@ -79,7 +79,7 @@ func (c *Challenger) HandleConflict(ctx context.Context) (*ethbridge.RawTransact
 
 	var prevBisection *core.Bisection
 	if kind == core.UNINITIALIZED {
-		startCursor, err := c.lookup.GetCursor(c.challengedNode.Assertion.Before.TotalGasConsumed)
+		startCursor, err := c.lookup.GetExecutionCursor(c.challengedNode.Assertion.Before.TotalGasConsumed)
 		if err != nil {
 			return nil, err
 		}
@@ -152,7 +152,7 @@ func (c *Challenger) handleExecutionChallenge(prevBisection *core.Bisection) (*e
 		prevBisection = c.challengedNode.InitialExecutionBisection()
 	}
 	inboxDeltaData, err := c.getInboxDelta()
-	initialCursor, err := c.lookup.GetCursor(c.challengedNode.Assertion.Before.TotalGasConsumed)
+	initialCursor, err := c.lookup.GetExecutionCursor(c.challengedNode.Assertion.Before.TotalGasConsumed)
 	if err != nil {
 		return nil, err
 	}

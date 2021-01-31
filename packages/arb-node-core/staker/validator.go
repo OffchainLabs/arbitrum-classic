@@ -121,7 +121,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, ma
 		return nil, err
 	}
 
-	cursor, err := v.lookup.GetCursor(startState.TotalGasConsumed)
+	cursor, err := v.lookup.GetExecutionCursor(startState.TotalGasConsumed)
 	if err != nil {
 		return nil, err
 	}

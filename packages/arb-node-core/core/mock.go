@@ -5,6 +5,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/pkg/errors"
 	"math/big"
 )
@@ -13,8 +14,8 @@ type ExecutionCursorMock struct {
 	mach machine.Machine
 }
 
-func (e *ExecutionCursorMock) Clone() ExecutionCursor {
-	return &ExecutionCursorMock{}
+func (e *ExecutionCursorMock) Clone() (ExecutionCursor, error) {
+	return &ExecutionCursorMock{}, nil
 }
 
 func (e *ExecutionCursorMock) MachineHash() common.Hash {
@@ -48,14 +49,6 @@ func (e *ExecutionCursorMock) Advance(maxGas *big.Int, goOverGas bool) error {
 func (e *ExecutionCursorMock) TakeMachine() (machine.Machine, error) {
 	return e.mach, nil
 }
-
-//Clone() ExecutionCursor
-//MachineHash() common.Hash
-//NextInboxMessageIndex() *big.Int
-//InboxHash() common.Hash
-//TotalGasConsumed() *big.Int
-//TotalSendCount() *big.Int
-//TotalLogCount() *big.Int
 
 type ValidatorLookupMock struct {
 	Messages  []inbox.InboxMessage
@@ -94,7 +87,11 @@ func (v *ValidatorLookupMock) AddMessage(msg inbox.InboxMessage) {
 	v.InboxAccs = append(v.InboxAccs, newInboxAcc)
 }
 
-func (v *ValidatorLookupMock) GetSends(startIndex *big.Int, count *big.Int) ([][]byte, error) {
+func (v *ValidatorLookupMock) GetSends(startIndex, count *big.Int) ([][]byte, error) {
+	panic("implement me")
+}
+
+func (v *ValidatorLookupMock) GetLogs(startIndex, count *big.Int) ([]value.Value, error) {
 	panic("implement me")
 }
 
@@ -134,7 +131,7 @@ func (v *ValidatorLookupMock) GetLogAcc(startAcc common.Hash, startIndex *big.In
 	panic("implement me")
 }
 
-func (v *ValidatorLookupMock) GetCursor(totalGasUsed *big.Int) (ExecutionCursor, error) {
+func (v *ValidatorLookupMock) GetExecutionCursor(totalGasUsed *big.Int) (ExecutionCursor, error) {
 	if totalGasUsed.Cmp(big.NewInt(0)) == 0 {
 		return &ExecutionCursorMock{mach: v.startMachine}, nil
 	}

@@ -4,6 +4,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/pkg/errors"
 	"math/big"
 )
 
@@ -26,17 +28,46 @@ type ExecutionCursor interface {
 }
 
 type ValidatorLookup interface {
-	GetSends(startIndex *big.Int, count *big.Int) ([][]byte, error)
-	GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.InboxMessage, error)
-	GetInboxDelta(startIndex *big.Int, count *big.Int) (common.Hash, error)
+	GetLogs(startIndex, count *big.Int) ([]value.Value, error)
+	GetSends(startIndex, count *big.Int) ([][]byte, error)
+	GetMessages(startIndex, count *big.Int) ([]inbox.InboxMessage, error)
+	GetInboxDelta(startIndex, count *big.Int) (common.Hash, error)
 
 	GetInboxAcc(index *big.Int) (common.Hash, error)
-	GetSendAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (common.Hash, error)
-	GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (common.Hash, error)
+	GetSendAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
+	GetLogAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
 
-	// GetCursor returns a cursor containing the machine after executing totalGasUsed
+	// GetExecutionCursor returns a cursor containing the machine after executing totalGasUsed
 	// from the original machine
-	GetExecutionCursor(totalGasUsed *big.Int, valueCache machine.ValueCache) (ExecutionCursor, error)
+	GetExecutionCursor(totalGasUsed *big.Int) (ExecutionCursor, error)
+}
+
+func GetSingleSend(lookup ValidatorLookup, index *big.Int) ([]byte, error) {
+	sends, err := lookup.GetSends(index, big.NewInt(1))
+	if err != nil {
+		return nil, err
+	}
+	if len(sends) == 0 {
+		return nil, errors.New("no send found")
+	}
+	if len(sends) > 1 {
+		return nil, errors.New("too many sends")
+	}
+	return sends[0], nil
+}
+
+func GetSingleLog(lookup ValidatorLookup, index *big.Int) (value.Value, error) {
+	logs, err := lookup.GetLogs(index, big.NewInt(1))
+	if err != nil {
+		return nil, err
+	}
+	if len(logs) == 0 {
+		return nil, errors.New("no log found")
+	}
+	if len(logs) > 1 {
+		return nil, errors.New("too many logs")
+	}
+	return logs[0], nil
 }
 
 type ExecutionState struct {

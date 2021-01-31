@@ -22,6 +22,4 @@ replace github.com/offchainlabs/arbitrum/packages/arb-evm => ../../packages/arb-
 
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../../packages/arb-util
 
-replace github.com/offchainlabs/arbitrum/packages/arb-checkpointer => ../../packages/arb-checkpointer
-
 replace github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator => ../../packages/arb-tx-aggregator

@@ -120,7 +120,7 @@ func initializeChallengeData(
 	lookup *core.ValidatorLookupMock,
 	inboxMessagesRead *big.Int,
 ) *core.NodeInfo {
-	initialMach, err := lookup.GetCursor(big.NewInt(0))
+	initialMach, err := lookup.GetExecutionCursor(big.NewInt(0))
 	test.FailIfError(t, err)
 	prevState := &core.NodeState{
 		ProposedBlock: big.NewInt(0),

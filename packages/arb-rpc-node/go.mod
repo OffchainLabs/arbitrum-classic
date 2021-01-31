@@ -1,18 +1,19 @@
-module github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator
+module github.com/offchainlabs/arbitrum/packages/arb-rpc-node
 
 go 1.13
 
 require (
-	github.com/c-bata/go-prompt v0.2.4-0.20200903090133-56c224c88aba
+	github.com/c-bata/go-prompt v0.2.4-0.20200903090133-56c224c88aba // indirect
 	github.com/emirpasic/gods v1.12.0
 	github.com/ethereum/go-ethereum v1.9.24
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.4
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mattn/go-tty v0.0.3 // indirect
-	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c
+	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c // indirect
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-evm v0.7.3
+	github.com/offchainlabs/arbitrum/packages/arb-node-core v0.0.0-00010101000000-000000000000
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.7.3
 	github.com/pkg/errors v0.9.1
@@ -22,6 +23,8 @@ require (
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../arb-util
+
+replace github.com/offchainlabs/arbitrum/packages/arb-node-core => ../arb-node-core
 
 replace github.com/offchainlabs/arbitrum/packages/arb-evm => ../arb-evm
 
