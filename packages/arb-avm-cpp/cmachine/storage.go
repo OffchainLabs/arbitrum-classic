@@ -27,6 +27,7 @@ package cmachine
 import "C"
 import (
 	"bytes"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/pkg/errors"
 	"runtime"
 	"unsafe"
@@ -184,10 +185,10 @@ func (s *ArbStorage) DeleteData(key []byte) bool {
 	return success == 1
 }
 
-//func (s *ArbStorage) GetArbCore() core.ArbCoreLookup {
-//	ac := C.createArbCore(s.c)
-//	return NewArbCore(ac)
-//}
+func (s *ArbStorage) GetArbCore() core.ArbCoreLookup {
+	ac := C.createArbCore(s.c)
+	return NewArbCore(ac)
+}
 
 func (s *ArbStorage) GetBlockStore() machine.BlockStore {
 	bs := C.createBlockStore(s.c)

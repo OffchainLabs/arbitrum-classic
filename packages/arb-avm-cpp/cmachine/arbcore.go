@@ -83,6 +83,30 @@ func (ac *ArbCore) GetSends(startIndex *big.Int, count *big.Int) ([][]byte, erro
 	return toByteSliceArray(result.array), nil
 }
 
+func (ac *ArbCore) GetLogs(startIndex *big.Int, count *big.Int) ([]value.Value, error) {
+	cStartIndex := intToData(startIndex)
+	defer C.free(cStartIndex)
+	cCount := intToData(count)
+	defer C.free(cCount)
+
+	result := C.arbCoreGetSends(ac.c, cStartIndex, cCount)
+	if result.found == 0 {
+		return nil, errors.New("failed to get log")
+	}
+	defer freeEncodedByteSliceArray(result.array)
+
+	marshaledValues := toByteSliceArray(result.array)
+	logVals := make([]value.Value, 0, len(marshaledValues))
+	for _, marshaledValue := range marshaledValues {
+		val, err := value.UnmarshalValue(bytes.NewReader(marshaledValue))
+		if err != nil {
+			return nil, err
+		}
+		logVals = append(logVals, val)
+	}
+	return logVals, nil
+}
+
 func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.InboxMessage, error) {
 	cStartIndex := intToData(startIndex)
 	defer C.free(cStartIndex)
