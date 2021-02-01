@@ -189,16 +189,19 @@ func (m *Machine) ExecuteAssertion(
 
 func (m *Machine) MarshalForProof() ([]byte, error) {
 	rawProof := C.machineMarshallForProof(m.c)
+	defer C.free(rawProof.data)
 	return C.GoBytes(unsafe.Pointer(rawProof.data), rawProof.length), nil
 }
 
 func (m *Machine) MarshalBufferProof() ([]byte, error) {
 	rawProof := C.machineMarshallBufferProof(m.c)
+	defer C.free(rawProof.data)
 	return C.GoBytes(unsafe.Pointer(rawProof.data), rawProof.length), nil
 }
 
 func (m *Machine) MarshalState() ([]byte, error) {
 	stateData := C.machineMarshallState(m.c)
+	defer C.free(stateData.data)
 	return C.GoBytes(unsafe.Pointer(stateData.data), stateData.length), nil
 }
 
