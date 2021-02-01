@@ -38,6 +38,10 @@ import "../libraries/Cloneable.sol";
 contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     // TODO: Configure this value based on the cost of sends
     uint8 internal constant MAX_SEND_COUNT = 100;
+
+    // A little over 15 minutes
+    uint256 public constant minimumAssertionPeriod = 75;
+
     // Rollup Config
     uint256 public confirmPeriodBlocks;
     uint256 public extraChallengeTimeBlocks;
@@ -434,7 +438,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
         uint256 timeSinceLastNode = block.number.sub(assertion.beforeProposedBlock);
         // Verify that assertion meets the minimum Delta time requirement
-        require(timeSinceLastNode >= minimumAssertionPeriod(), "TIME_DELTA");
+        require(timeSinceLastNode >= minimumAssertionPeriod, "TIME_DELTA");
 
         // Minimum size requirements: each assertion must satisfy either
         require(
@@ -718,14 +722,6 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             return type(uint256).max;
         }
         return fullStake;
-    }
-
-    /**
-     * @notice Calculate the minimum time between assertions
-     * @return The minimum time between assertions in blocks
-     */
-    function minimumAssertionPeriod() public view returns (uint256) {
-        return confirmPeriodBlocks / 10;
     }
 
     /**
