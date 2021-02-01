@@ -171,6 +171,8 @@ class ArbCore {
     ValueResult<std::vector<std::vector<unsigned char>>> getMessages(
         uint256_t index,
         uint256_t count) const;
+    ValueResult<std::vector<uint256_t>> getMessageHashes(uint256_t index,
+                                                         uint256_t count) const;
     rocksdb::Status saveSends(
         Transaction& tx,
         const std::vector<std::vector<unsigned char>>& send);

@@ -108,6 +108,29 @@ func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.Inb
 	return messages, nil
 }
 
+func (ac *ArbCore) GetMessageHashes(startIndex *big.Int, count *big.Int) ([]common.Hash, error) {
+	cStartIndex := intToData(startIndex)
+	defer C.free(cStartIndex)
+	cCount := intToData(count)
+	defer C.free(cCount)
+
+	cHashList := C.arbCoreGetMessageHashes(ac.c, cStartIndex, cCount)
+	if cHashList.count == 0 {
+		return nil, nil
+	}
+	defer C.free(cHashList.data)
+
+	data := (*[1 << 30]byte)(unsafe.Pointer(cHashList.data))[:cHashList.count:cHashList.count]
+	ret := make([]common.Hash, 0, int(cHashList.count))
+	for i := 0; i < int(cHashList.count); i++ {
+		var hashVal common.Hash
+		copy(hashVal[:], data[i*32:])
+		ret = append(ret, hashVal)
+	}
+
+	return ret, nil
+}
+
 func (ac *ArbCore) GetInboxDelta(startIndex *big.Int, count *big.Int) (ret common.Hash, err error) {
 	cStartIndex := intToData(startIndex)
 	defer C.free(cStartIndex)

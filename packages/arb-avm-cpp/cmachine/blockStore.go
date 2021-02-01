@@ -110,6 +110,7 @@ func (bs *BlockStore) BlocksAtHeight(height *common.TimeBlocks) []*common.BlockI
 	defer C.free(cHeight)
 
 	cHashList := C.blockHashesAtHeight(bs.c, cHeight)
+	defer C.free(cHashList.data)
 
 	if cHashList.count == 0 {
 		return nil

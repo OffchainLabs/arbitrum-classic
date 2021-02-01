@@ -96,14 +96,38 @@ ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
                                         const void* start_index_ptr,
                                         const void* count_ptr) {
     try {
-        auto sends = static_cast<const ArbCore*>(arbcore_ptr)
-                         ->getMessages(receiveUint256(start_index_ptr),
-                                       receiveUint256(count_ptr));
-        if (!sends.status.ok()) {
+        auto messages = static_cast<const ArbCore*>(arbcore_ptr)
+                            ->getMessages(receiveUint256(start_index_ptr),
+                                          receiveUint256(count_ptr));
+        if (!messages.status.ok()) {
             return {{}, false};
         }
 
-        return {returnCharVectorVector(sends.data), true};
+        return {returnCharVectorVector(messages.data), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
+HashList arbCoreGetMessageHashes(CArbCore* arbcore_ptr,
+                                 const void* start_index_ptr,
+                                 const void* count_ptr) {
+    try {
+        auto hashes = static_cast<const ArbCore*>(arbcore_ptr)
+                          ->getMessageHashes(receiveUint256(start_index_ptr),
+                                             receiveUint256(count_ptr));
+        if (!hashes.status.ok()) {
+            return {{}, false};
+        }
+
+        std::vector<unsigned char> serializedHashes;
+        for (const auto& hash : hashes.data) {
+            marshal_uint256_t(hash, serializedHashes);
+        }
+        auto hashesData =
+            reinterpret_cast<unsigned char*>(malloc(serializedHashes.size()));
+        std::copy(serializedHashes.begin(), serializedHashes.end(), hashesData);
+        return {hashesData, static_cast<int>(hashes.data.size())};
     } catch (const std::exception& e) {
         return {{}, false};
     }

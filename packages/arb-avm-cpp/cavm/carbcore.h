@@ -41,6 +41,10 @@ ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
                                         const void* start_index_ptr,
                                         const void* count_ptr);
 
+HashList arbCoreGetMessageHashes(CArbCore* arbcore_ptr,
+                                 const void* start_index_ptr,
+                                 const void* count_ptr);
+
 int arbCoreGetInboxDelta(CArbCore* arbcore_ptr,
                          const void* start_index_ptr,
                          const void* count_ptr,

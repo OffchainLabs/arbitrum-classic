@@ -855,6 +855,25 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     return {rocksdb::Status::OK(), messages};
 }
 
+ValueResult<std::vector<uint256_t>> ArbCore::getMessageHashes(
+    uint256_t index,
+    uint256_t count) const {
+    auto messages = getMessages(index, count);
+    if (!messages.status.ok()) {
+        return {messages.status, {}};
+    }
+
+    std::vector<uint256_t> hashes;
+    hashes.reserve(messages.data.size());
+    for (const auto& message : messages.data) {
+        auto data = reinterpret_cast<const char*>(message.data());
+        auto hash = hash_value(deserialize_value(data));
+        hashes.push_back(hash);
+    }
+
+    return {rocksdb::Status::OK(), hashes};
+}
+
 ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
     uint256_t index,
     uint256_t count) const {
