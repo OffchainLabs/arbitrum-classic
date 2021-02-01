@@ -20,8 +20,17 @@
 
 #include <data_storage/value/machine.hpp>
 
-std::unique_ptr<Machine> ExecutionCursor::TakeMachine() {
-    return std::move(machine);
+void ExecutionCursor::resetExecutionCursor() {
+    Checkpoint::resetCheckpoint();
+    machine = nullptr;
+    first_message_sequence_number = 0;
+    messages.clear();
+    inbox_hashes.clear();
+    messages_to_skip = 0;
+}
+
+void ExecutionCursor::setCheckpoint(Checkpoint& checkpoint) {
+    Checkpoint::operator=(checkpoint);
 }
 
 ExecutionCursor* ExecutionCursor::clone() {
@@ -31,21 +40,6 @@ ExecutionCursor* ExecutionCursor::clone() {
 uint256_t ExecutionCursor::machineHash() {
     return machine->hash();
 }
-
-bool ExecutionCursor::Advance(uint256_t max_gas, bool go_over_gas) {
-    if (!machine) {
-        // Machine was taken, no longer able to advance
-        return false;
-    }
-
-    auto assertion = machine->run(max_gas, go_over_gas, messages,
-                                  messages_to_skip, final_message_of_block);
-
-    messages_to_skip += assertion.inbox_messages_consumed;
-    if (messages_to_skip > 0) {
-        inbox_hash = inbox_hashes[messages_to_skip - 1];
-    }
-    applyAssertion(first_message_sequence_number + messages_to_skip, assertion);
-
-    return true;
+std::unique_ptr<Machine> ExecutionCursor::takeMachine() {
+    return std::move(machine);
 }

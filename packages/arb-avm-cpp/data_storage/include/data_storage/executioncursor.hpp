@@ -28,28 +28,26 @@
 #include <utility>
 
 class ExecutionCursor : public Checkpoint {
-   private:
+   public:
     std::unique_ptr<Machine> machine;
     uint256_t first_message_sequence_number;
     std::vector<Tuple> messages;
     std::vector<uint256_t> inbox_hashes;
     size_t messages_to_skip{0};
-    bool final_message_of_block;
 
    public:
+    ExecutionCursor() = default;
     ExecutionCursor(Checkpoint& checkpoint,
                     std::unique_ptr<Machine>& machine,
                     std::vector<Tuple>& messages,
                     std::vector<uint256_t>& inbox_hashes,
-                    size_t messages_to_skip,
-                    bool final_message_of_block)
+                    size_t messages_to_skip)
         : Checkpoint(checkpoint),
           machine(std::move(machine)),
           first_message_sequence_number(checkpoint.total_messages_read),
           messages(std::move(messages)),
           inbox_hashes(std::move(inbox_hashes)),
-          messages_to_skip(messages_to_skip),
-          final_message_of_block(final_message_of_block) {}
+          messages_to_skip(messages_to_skip) {}
     ~ExecutionCursor() = default;
     ExecutionCursor(const ExecutionCursor& rhs) : Checkpoint(rhs) {
         machine = std::make_unique<Machine>(*rhs.machine);
@@ -57,7 +55,6 @@ class ExecutionCursor : public Checkpoint {
         messages = rhs.messages;
         inbox_hashes = rhs.inbox_hashes;
         messages_to_skip = rhs.messages_to_skip;
-        final_message_of_block = rhs.final_message_of_block;
     }
     ExecutionCursor& operator=(const ExecutionCursor& rhs) {
         Checkpoint::operator=(rhs);
@@ -66,18 +63,16 @@ class ExecutionCursor : public Checkpoint {
         messages = rhs.messages;
         inbox_hashes = rhs.inbox_hashes;
         messages_to_skip = rhs.messages_to_skip;
-        final_message_of_block = rhs.final_message_of_block;
 
         return *this;
     }
 
+    void resetExecutionCursor();
+    void setCheckpoint(Checkpoint& checkpoint);
     ExecutionCursor* clone();
     uint256_t machineHash();
 
-    std::unique_ptr<Machine> TakeMachine();
-
-    bool Advance(uint256_t max_gas, bool go_over_gas);
-    void* executionCursorTakeMachine();
+    std::unique_ptr<Machine> takeMachine();
 };
 
 #endif /* data_storage_executioncursor_hpp */

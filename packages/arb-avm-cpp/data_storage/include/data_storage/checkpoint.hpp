@@ -56,8 +56,9 @@ struct Checkpoint {
           log_count(log_count),
           machine_state_keys(machine_state_keys) {}
 
-    void applyAssertion(const uint256_t& first_message_sequence_number,
-                        const Assertion& assertion);
+    void resetCheckpoint();
+
+    void applyAssertion(const Assertion& assertion);
 };
 
 Checkpoint extractCheckpoint(uint256_t arb_gas_used,

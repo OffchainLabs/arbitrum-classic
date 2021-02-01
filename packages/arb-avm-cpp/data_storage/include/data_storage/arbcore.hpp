@@ -101,9 +101,7 @@ class ArbCore {
         const std::vector<std::vector<unsigned char>>& messages,
         const uint256_t& previous_inbox_hash);
 
-    rocksdb::Status saveAssertion(Transaction& tx,
-                                  uint256_t first_message_sequence_number,
-                                  const Assertion& assertion);
+    rocksdb::Status saveAssertion(Transaction& tx, const Assertion& assertion);
 
     rocksdb::Status saveCheckpoint(Transaction& tx);
     ValueResult<Checkpoint> getCheckpoint(
@@ -124,12 +122,22 @@ class ArbCore {
     void initialize(const LoadedExecutable& executable);
     bool initialized() const;
 
+    uint256_t getInitialMachineHash(Transaction& tx);
+
     template <class T>
     std::unique_ptr<T> getInitialMachine(ValueCache& value_cache);
 
     template <class T>
+    std::unique_ptr<T> getInitialMachineImpl(Transaction& tx,
+                                             ValueCache& value_cache);
+
+    template <class T>
     std::unique_ptr<T> getMachine(uint256_t machineHash,
                                   ValueCache& value_cache);
+    template <class T>
+    std::unique_ptr<T> getMachineImpl(Transaction& tx,
+                                      uint256_t machineHash,
+                                      ValueCache& value_cache);
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(Transaction& transaction,
                                                 MachineStateKeys state_data,
@@ -182,8 +190,19 @@ class ArbCore {
                                      uint256_t start_index,
                                      uint256_t count,
                                      ValueCache& cache);
-    ValueResult<ExecutionCursor*> getExecutionCursor(uint256_t totalGasUsed,
-                                                     ValueCache& cache);
+    ValueResult<std::unique_ptr<ExecutionCursor>> getExecutionCursor(
+        uint256_t total_gas_used,
+        ValueCache& cache);
+    rocksdb::Status Advance(ExecutionCursor& execution_cursor,
+                            uint256_t max_gas,
+                            bool go_over_gas,
+                            ValueCache& cache);
+    rocksdb::Status getExecutionCursorImpl(Transaction& tx,
+                                           ExecutionCursor& execution_cursor,
+                                           uint256_t total_gas_used,
+                                           bool go_over_gas,
+                                           uint256_t message_group_size,
+                                           ValueCache& cache);
 
     bool logsCursorRequest(uint256_t count);
     nonstd::optional<std::vector<value>> logsCursorGetLogs();
@@ -211,6 +230,14 @@ class ArbCore {
     rocksdb::Status handleLogsCursorReorg(Transaction& tx,
                                           uint256_t log_count,
                                           ValueCache& cache);
+    ValueResult<bool> executionCursorAddMessages(
+        Transaction& tx,
+        ExecutionCursor& execution_cursor,
+        const uint256_t& orig_message_group_size);
+    rocksdb::Status executionCursorSetup(Transaction& tx,
+                                         ExecutionCursor& execution_cursor,
+                                         const uint256_t& total_gas_used,
+                                         ValueCache& cache);
 };
 
 nonstd::optional<rocksdb::Status> deleteLogsStartingAt(Transaction& tx,

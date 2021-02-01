@@ -176,6 +176,9 @@ inline Tuple getTuple(void* data) {
 }
 
 inline std::vector<std::vector<unsigned char>> getInboxMessages(void* data) {
+    if (data == nullptr) {
+        return {};
+    }
     auto charData = static_cast<ByteSliceArray*>(data);
     auto slices = static_cast<ByteSlice*>(charData->slices);
     std::vector<std::vector<unsigned char>> messages;

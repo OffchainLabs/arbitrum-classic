@@ -24,49 +24,51 @@ extern "C" {
 
 void deleteArbCore(CArbCore* m);
 
-int arbCoreDeliverMessages(CArbCore* arb_core_ptr,
+int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            uint64_t first_message_sequence_number,
                            uint64_t block_height,
                            void* inbox_messages,
                            void* previous_inbox_hash_ptr);
 
-ByteSliceArrayResult arbCoreGetSends(CArbCore* arb_core_ptr,
+ByteSliceArrayResult arbCoreGetSends(CArbCore* arbcore_ptr,
                                      const void* start_index_ptr,
                                      const void* count_ptr);
 
-ByteSliceArrayResult arbCoreGetMessages(CArbCore* arb_core_ptr,
+ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
                                         const void* start_index_ptr,
                                         const void* count_ptr);
 
-int arbCoreGetInboxDelta(CArbCore* arb_core_ptr,
+int arbCoreGetInboxDelta(CArbCore* arbcore_ptr,
                          const void* start_index_ptr,
                          const void* count_ptr,
                          void* ret);
 
-int arbCoreGetInboxAcc(CArbCore* arb_core_ptr,
-                       const void* index_ptr,
-                       void* ret);
-int arbCoreGetSendAcc(CArbCore* arb_core_ptr,
+int arbCoreGetInboxAcc(CArbCore* arbcore_ptr, const void* index_ptr, void* ret);
+int arbCoreGetSendAcc(CArbCore* arbcore_ptr,
                       const void* start_acc_hash,
                       const void* start_index_ptr,
                       const void* count_ptr,
                       void* ret);
-int arbCoreGetLogAcc(CArbCore* arb_core_ptr,
+int arbCoreGetLogAcc(CArbCore* arbcore_ptr,
                      const void* start_acc_hash,
                      const void* start_index_ptr,
                      const void* count_ptr,
                      void* ret,
                      CValueCache* cache_ptr);
 
-int arbCoreLogsCursorRequest(CArbCore* arb_core_ptr, const void* count);
-ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arb_core_ptr);
-int arbCoreLogsCursorSetNextIndex(CArbCore* arb_core_ptr, const void* count);
-int arbCoreLogsCursorCheckError(CArbCore* arb_core_ptr);
-char* arbCoreLogsCursorClearError(CArbCore* arb_core_ptr);
+int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr, const void* count);
+ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr);
+int arbCoreLogsCursorSetNextIndex(CArbCore* arbcore_ptr, const void* count);
+int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr);
+char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr);
 
-CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arb_core_ptr,
+CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
                                             const void* total_gas_used_ptr,
                                             CValueCache* cache_ptr);
+int arbCoreAdvance(CArbCore* arbcore_ptr,
+                   CExecutionCursor* execution_cursor_ptr,
+                   const void* max_gas_ptr,
+                   int go_over_gas);
 
 #ifdef __cplusplus
 }

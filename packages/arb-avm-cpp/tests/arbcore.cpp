@@ -60,7 +60,7 @@ TEST_CASE("ArbCore tests") {
             auto arbCore = storage.getArbCore();
             auto cursor = arbCore->getExecutionCursor(0, value_cache);
             REQUIRE(cursor.status.ok());
-            auto mach = cursor.data->TakeMachine();
+            auto mach = cursor.data->takeMachine();
             mach->machine_state.stack.push(uint256_t{0});
             auto assertion = mach->run(0, false, messages, 0, false);
             INFO("Machine ran for " << assertion.stepCount << " steps");

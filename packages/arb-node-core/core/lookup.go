@@ -18,10 +18,6 @@ type ExecutionCursor interface {
 	TotalSendCount() *big.Int
 	TotalLogCount() *big.Int
 
-	// Advance executes as much as it can without going over maxGas or
-	// optionally until it reaches or goes over maxGas
-	Advance(maxGas *big.Int, goOverGas bool) error
-
 	// TakeMachine takes ownership of machine such that ExecutionCursor will
 	// no longer be able to advance.
 	TakeMachine() (machine.Machine, error)
@@ -40,6 +36,10 @@ type ValidatorLookup interface {
 	// GetExecutionCursor returns a cursor containing the machine after executing totalGasUsed
 	// from the original machine
 	GetExecutionCursor(totalGasUsed *big.Int) (ExecutionCursor, error)
+
+	// Advance executes as much as it can without going over maxGas or
+	// optionally until it reaches or goes over maxGas
+	Advance(executionCursor *ExecutionCursor, maxGas *big.Int, goOverGas bool) error
 }
 
 func GetSingleSend(lookup ValidatorLookup, index *big.Int) ([]byte, error) {

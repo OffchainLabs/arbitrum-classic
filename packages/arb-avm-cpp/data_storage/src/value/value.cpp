@@ -209,7 +209,7 @@ std::vector<value> serializeValue(
             ret.push_back(nested);
         } else {
             auto res = serializeValue(nested, value_vector, segment_counts);
-            for (int i = 0; i < res.size(); i++) {
+            for (size_t i = 0; i < res.size(); i++) {
                 ret.push_back(res[i]);
             }
         }
@@ -227,12 +227,11 @@ std::vector<value> serializeValue(const Buffer& b,
     value_vector.push_back(BUFFER);
     int l1 = value_vector.size();
     std::vector<RawBuffer> res = b.serialize(value_vector);
-    int l2 = value_vector.size();
     int len = 0;
     parseBuffer<ParsedBufVal>((char*)value_vector.data() + l1, len);
     std::vector<value> ret{};
-    for (int i = 0; i < res.size(); i++) {
-        ret.push_back(Buffer(res[i]));
+    for (size_t i = 0; i < res.size(); i++) {
+        ret.emplace_back(Buffer(res[i]));
     }
     return ret;
 }

@@ -23,10 +23,18 @@
 
 #include <boost/endian/conversion.hpp>
 
+void Checkpoint::resetCheckpoint() {
+    total_messages_read = 0;
+    inbox_hash = 0;
+    block_height = 0;
+    send_count = 0;
+    log_count = 0;
+    machine_state_keys = MachineStateKeys{};
+}
+
 // applyAssertion does not update processed_message_accumulator_hash so it will
 // have to be updated by caller.
-void Checkpoint::applyAssertion(const uint256_t& first_message_sequence_number,
-                                const Assertion& assertion) {
+void Checkpoint::applyAssertion(const Assertion& assertion) {
     arb_gas_used += assertion.gasCount;
     total_messages_read += assertion.inbox_messages_consumed;
     send_count += assertion.sends.size();

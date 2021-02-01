@@ -159,8 +159,11 @@ func (m *Machine) ExecuteAssertion(
 	messages []inbox.InboxMessage,
 	finalMessageOfBlock bool,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64) {
-	msgDataC := C.CBytes(encodeInboxMessages(messages))
-	defer C.free(msgDataC)
+	var msgDataC unsafe.Pointer
+	if messages != nil {
+		msgDataC := C.CBytes(encodeInboxMessages(messages))
+		defer C.free(msgDataC)
+	}
 
 	goOverGasInt := C.uchar(0)
 	if goOverGas {

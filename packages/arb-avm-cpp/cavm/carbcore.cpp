@@ -24,12 +24,12 @@ void deleteArbCore(CArbCore* m) {
     delete static_cast<ArbCore*>(m);
 }
 
-int arbCoreDeliverMessages(CArbCore* arb_core_ptr,
+int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            const uint64_t first_message_sequence_number,
                            const uint64_t block_height,
                            void* inbox_messages,
                            void* previous_inbox_hash_ptr) {
-    auto arb_core = static_cast<ArbCore*>(arb_core_ptr);
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     auto messages = getInboxMessages(inbox_messages);
     auto previous_inbox_hash = receiveUint256(previous_inbox_hash_ptr);
 
@@ -43,11 +43,11 @@ int arbCoreDeliverMessages(CArbCore* arb_core_ptr,
     return true;
 }
 
-ByteSliceArrayResult arbCoreGetSends(CArbCore* arb_core_ptr,
+ByteSliceArrayResult arbCoreGetSends(CArbCore* arbcore_ptr,
                                      const void* start_index_ptr,
                                      const void* count_ptr) {
     try {
-        auto sends = static_cast<const ArbCore*>(arb_core_ptr)
+        auto sends = static_cast<const ArbCore*>(arbcore_ptr)
                          ->getSends(receiveUint256(start_index_ptr),
                                     receiveUint256(count_ptr));
         if (!sends.status.ok()) {
@@ -60,11 +60,11 @@ ByteSliceArrayResult arbCoreGetSends(CArbCore* arb_core_ptr,
     }
 }
 
-ByteSliceArrayResult arbCoreGetMessages(CArbCore* arb_core_ptr,
+ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
                                         const void* start_index_ptr,
                                         const void* count_ptr) {
     try {
-        auto sends = static_cast<const ArbCore*>(arb_core_ptr)
+        auto sends = static_cast<const ArbCore*>(arbcore_ptr)
                          ->getMessages(receiveUint256(start_index_ptr),
                                        receiveUint256(count_ptr));
         if (!sends.status.ok()) {
@@ -77,11 +77,11 @@ ByteSliceArrayResult arbCoreGetMessages(CArbCore* arb_core_ptr,
     }
 }
 
-int arbCoreGetInboxDelta(CArbCore* arb_core_ptr,
+int arbCoreGetInboxDelta(CArbCore* arbcore_ptr,
                          const void* start_index_ptr,
                          const void* count_ptr,
                          void* ret) {
-    auto arb_core = static_cast<ArbCore*>(arb_core_ptr);
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     try {
         auto index_result = arb_core->getInboxDelta(
             receiveUint256(start_index_ptr), receiveUint256(count_ptr));
@@ -94,10 +94,10 @@ int arbCoreGetInboxDelta(CArbCore* arb_core_ptr,
     }
 }
 
-int arbCoreGetInboxAcc(CArbCore* arb_core_ptr,
+int arbCoreGetInboxAcc(CArbCore* arbcore_ptr,
                        const void* index_ptr,
                        void* ret) {
-    auto arb_core = static_cast<ArbCore*>(arb_core_ptr);
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     try {
         auto index_result = arb_core->getInboxAcc(receiveUint256(index_ptr));
         std::array<unsigned char, 32> val{};
@@ -109,12 +109,12 @@ int arbCoreGetInboxAcc(CArbCore* arb_core_ptr,
     }
 }
 
-int arbCoreGetSendAcc(CArbCore* arb_core_ptr,
+int arbCoreGetSendAcc(CArbCore* arbcore_ptr,
                       const void* start_acc_hash,
                       const void* start_index_ptr,
                       const void* count_ptr,
                       void* ret) {
-    auto arb_core = static_cast<ArbCore*>(arb_core_ptr);
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     try {
         auto index_result = arb_core->getSendAcc(
             receiveUint256(start_acc_hash), receiveUint256(start_index_ptr),
@@ -128,13 +128,13 @@ int arbCoreGetSendAcc(CArbCore* arb_core_ptr,
     }
 }
 
-int arbCoreGetLogAcc(CArbCore* arb_core_ptr,
+int arbCoreGetLogAcc(CArbCore* arbcore_ptr,
                      const void* start_acc_hash,
                      const void* start_index_ptr,
                      const void* count_ptr,
                      void* ret,
                      CValueCache* cache_ptr) {
-    auto arbcore = static_cast<ArbCore*>(arb_core_ptr);
+    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
     auto cache = static_cast<ValueCache*>(cache_ptr);
 
     try {
@@ -150,8 +150,8 @@ int arbCoreGetLogAcc(CArbCore* arb_core_ptr,
     }
 }
 
-int arbCoreLogsCursorRequest(CArbCore* arb_core_ptr, const void* count_ptr) {
-    auto arbcore = static_cast<ArbCore*>(arb_core_ptr);
+int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr, const void* count_ptr) {
+    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
     auto count = receiveUint256(count_ptr);
 
     try {
@@ -163,8 +163,8 @@ int arbCoreLogsCursorRequest(CArbCore* arb_core_ptr, const void* count_ptr) {
     }
 }
 
-ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arb_core_ptr) {
-    auto arbcore = static_cast<ArbCore*>(arb_core_ptr);
+ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr) {
+    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
 
     try {
         auto result = arbcore->logsCursorGetLogs();
@@ -185,9 +185,9 @@ ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arb_core_ptr) {
     }
 }
 
-int arbCoreLogsCursorSetNextIndex(CArbCore* arb_core_ptr,
+int arbCoreLogsCursorSetNextIndex(CArbCore* arbcore_ptr,
                                   const void* count_ptr) {
-    auto arbcore = static_cast<ArbCore*>(arb_core_ptr);
+    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
     auto count = receiveUint256(count_ptr);
 
     try {
@@ -199,8 +199,8 @@ int arbCoreLogsCursorSetNextIndex(CArbCore* arb_core_ptr,
     }
 }
 
-int arbCoreLogsCursorCheckError(CArbCore* arb_core_ptr) {
-    auto arbcore = static_cast<ArbCore*>(arb_core_ptr);
+int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr) {
+    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
 
     try {
         return arbcore->logsCursorCheckError();
@@ -210,8 +210,8 @@ int arbCoreLogsCursorCheckError(CArbCore* arb_core_ptr) {
 }
 
 // Returned string must be freed
-char* arbCoreLogsCursorClearError(CArbCore* arb_core_ptr) {
-    auto arbcore = static_cast<ArbCore*>(arb_core_ptr);
+char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr) {
+    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
 
     try {
         auto str = arbcore->logsCursorClearError();
@@ -226,10 +226,10 @@ char* arbCoreLogsCursorClearError(CArbCore* arb_core_ptr) {
     }
 }
 
-CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arb_core_ptr,
+CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
                                             const void* total_gas_used_ptr,
                                             CValueCache* cache_ptr) {
-    auto arbcore = static_cast<ArbCore*>(arb_core_ptr);
+    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
     auto cache = static_cast<ValueCache*>(cache_ptr);
     auto total_gas_used = receiveUint256(total_gas_used_ptr);
 
@@ -239,8 +239,29 @@ CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arb_core_ptr,
         if (!executionCursor.status.ok()) {
             return nullptr;
         }
-        return static_cast<void*>(executionCursor.data);
+        return static_cast<void*>(executionCursor.data.release());
     } catch (const std::exception& e) {
         return nullptr;
+    }
+}
+
+int arbCoreAdvance(CArbCore* arbcore_ptr,
+                   CExecutionCursor* execution_cursor_ptr,
+                   const void* max_gas_ptr,
+                   int go_over_gas) {
+    auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
+    auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
+    auto max_gas = receiveUint256(max_gas_ptr);
+    try {
+        ValueCache cache;
+        auto status =
+            arbCore->Advance(*executionCursor, max_gas, go_over_gas, cache);
+        if (!status.ok()) {
+            return false;
+        }
+
+        return true;
+    } catch (const std::exception& e) {
+        return false;
     }
 }

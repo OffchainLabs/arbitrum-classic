@@ -102,19 +102,7 @@ Uint256Result executionCursorTotalLogCount(
     }
 }
 
-int executionCursorAdvance(CExecutionCursor* execution_cursor_ptr,
-                           const void* max_gas_ptr,
-                           int go_over_gas) {
-    auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
-    try {
-        auto max_gas = receiveUint256(max_gas_ptr);
-        return executionCursor->Advance(max_gas, go_over_gas);
-    } catch (const std::exception& e) {
-        return false;
-    }
-}
-
 CMachine* executionCursorTakeMachine(CExecutionCursor* execution_cursor_ptr) {
     auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
-    return static_cast<void*>(executionCursor->TakeMachine().release());
+    return static_cast<void*>(executionCursor->takeMachine().release());
 }
