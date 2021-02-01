@@ -37,6 +37,7 @@ const stakeRequirement = 10
 const stakeToken = '0x0000000000000000000000000000000000000000'
 const confirmationPeriodBlocks = 100
 const arbGasSpeedLimitPerBlock = 1000000
+const minimumAssertionPeriod = 75
 
 let rollupCreator: RollupCreator
 let rollup: RollupContract
@@ -148,11 +149,12 @@ describe('ArbRollup', () => {
   })
 
   it('should place stake on new node', async function () {
+    await tryAdvanceChain(minimumAssertionPeriod)
     const block = await ethers.provider.getBlock('latest')
-    await tryAdvanceChain(confirmationPeriodBlocks / 10)
     const assertion = makeSimpleAssertion(
       prevNodeState,
-      arbGasSpeedLimitPerBlock * 20
+      (block.number - prevNodeState.proposedBlock + 1) *
+        arbGasSpeedLimitPerBlock
     )
 
     const { node } = await rollup.stakeOnNewNode(block, assertion, 1)
@@ -167,7 +169,7 @@ describe('ArbRollup', () => {
   })
 
   it('should move stake to a new node', async function () {
-    await tryAdvanceChain(confirmationPeriodBlocks / 10)
+    await tryAdvanceChain(minimumAssertionPeriod)
     const block = await ethers.provider.getBlock('latest')
     const assertion = makeSimpleAssertion(
       prevNodeState,
@@ -189,14 +191,14 @@ describe('ArbRollup', () => {
   })
 
   it('should confirm next node', async function () {
-    await tryAdvanceChain(confirmationPeriodBlocks / 10)
+    await tryAdvanceChain(minimumAssertionPeriod)
     await rollup.confirmNextNode(zerobytes32, [])
   })
 
   let challengedNode: Node
   let validNodeState: NodeState
   it('should let the first staker make another node', async function () {
-    await tryAdvanceChain(confirmationPeriodBlocks / 10)
+    await tryAdvanceChain(minimumAssertionPeriod)
     const block = await ethers.provider.getBlock('latest')
     const challengedAssertion = makeSimpleAssertion(
       prevNodeState,
@@ -210,7 +212,7 @@ describe('ArbRollup', () => {
 
   let challengerNode: Node
   it('should let the second staker make a conflicting node', async function () {
-    await tryAdvanceChain(confirmationPeriodBlocks / 10)
+    await tryAdvanceChain(minimumAssertionPeriod)
     const block = await ethers.provider.getBlock('latest')
     const assertion = makeSimpleAssertion(
       prevNodeState,
