@@ -39,7 +39,7 @@ type ValidatorLookup interface {
 
 	// Advance executes as much as it can without going over maxGas or
 	// optionally until it reaches or goes over maxGas
-	Advance(executionCursor *ExecutionCursor, maxGas *big.Int, goOverGas bool) error
+	Advance(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool) error
 }
 
 func GetSingleSend(lookup ValidatorLookup, index *big.Int) ([]byte, error) {

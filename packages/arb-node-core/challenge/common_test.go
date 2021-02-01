@@ -29,23 +29,34 @@ func executeChallenge(
 
 	client, tester, asserterWallet, challengerWallet, challengeAddress := initializeChallengeTest(t, challengedNode, asserterTime, challengerTime)
 
-	challengeCon, err := ethbridge.NewChallenge(challengeAddress, client)
+	asserterBackend, err := ethbridge.NewBuilderBackend(asserterWallet)
+	test.FailIfError(t, err)
+	challengerBackend, err := ethbridge.NewBuilderBackend(challengerWallet)
 	test.FailIfError(t, err)
 
-	challenger := NewChallenger(challengeCon, correctLookup, challengedNode, challengerWallet.Address())
-	asserter := NewChallenger(challengeCon, falseLookup, challengedNode, asserterWallet.Address())
+	asserterChallengeCon, err := ethbridge.NewChallenge(challengeAddress, client, asserterBackend)
+	test.FailIfError(t, err)
+	challengerChallengeCon, err := ethbridge.NewChallenge(challengeAddress, client, challengerBackend)
+	test.FailIfError(t, err)
+
+	challenge, err := ethbridge.NewChallengeWatcher(challengeAddress, client)
+	test.FailIfError(t, err)
+
+	challenger := NewChallenger(challengerChallengeCon, correctLookup, challengedNode, challengerWallet.Address())
+	asserter := NewChallenger(asserterChallengeCon, falseLookup, challengedNode, asserterWallet.Address())
 
 	turn := ethbridge.CHALLENGER_TURN
 	rounds := 0
 	for {
-		checkTurn(t, challengeCon.ChallengeWatcher, turn)
+		checkTurn(t, challenge, turn)
 		if turn == ethbridge.CHALLENGER_TURN {
-			rawTx, err := challenger.HandleConflict(ctx)
+			err := challenger.HandleConflict(ctx)
 			test.FailIfError(t, err)
-			if rawTx == nil {
+
+			if challengerBackend.TransactionCount() == 0 {
 				t.Fatal("should be able to transact")
 			}
-			tx, err := challengerWallet.ExecuteTransaction(ctx, rawTx)
+			tx, err := challengerWallet.ExecuteTransactions(ctx, challengerBackend)
 			test.FailIfError(t, err)
 			client.Commit()
 			receipt, err := client.TransactionReceipt(ctx, tx.Hash())
@@ -53,12 +64,12 @@ func executeChallenge(
 			t.Log("Challenger Used", receipt.GasUsed, "gas")
 			turn = ethbridge.ASSERTER_TURN
 		} else {
-			rawTx, err := asserter.HandleConflict(ctx)
+			err := asserter.HandleConflict(ctx)
 			test.FailIfError(t, err)
-			if rawTx == nil {
+			if asserterBackend.TransactionCount() == 0 {
 				t.Fatal("should be able to transact")
 			}
-			tx, err := asserterWallet.ExecuteTransaction(ctx, rawTx)
+			tx, err := asserterWallet.ExecuteTransactions(ctx, asserterBackend)
 			test.FailIfError(t, err)
 			client.Commit()
 			receipt, err := client.TransactionReceipt(ctx, tx.Hash())
@@ -74,7 +85,7 @@ func executeChallenge(
 			break
 		}
 
-		checkTurn(t, challengeCon.ChallengeWatcher, turn)
+		checkTurn(t, challenge, turn)
 	}
 
 	checkChallengeCompleted(t, tester, challengerWallet.Address().ToEthAddress(), asserterWallet.Address().ToEthAddress())
@@ -181,7 +192,7 @@ func initializeChallengeTest(
 	nd *core.NodeInfo,
 	asserterTime *big.Int,
 	challengerTime *big.Int,
-) (*ethutils.SimulatedEthClient, *ethbridgetestcontracts.ChallengeTester, *ethbridge.Validator, *ethbridge.Validator, ethcommon.Address) {
+) (*ethutils.SimulatedEthClient, *ethbridgetestcontracts.ChallengeTester, *ethbridge.ValidatorWallet, *ethbridge.ValidatorWallet, ethcommon.Address) {
 	clnt, pks := test.SimulatedBackend()
 	deployer := bind.NewKeyedTransactor(pks[0])
 	asserter := bind.NewKeyedTransactor(pks[1])

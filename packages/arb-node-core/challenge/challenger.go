@@ -63,25 +63,25 @@ func (c *Challenger) getInboxDelta() (*inboxDelta, error) {
 	return c.inboxDelta, nil
 }
 
-func (c *Challenger) HandleConflict(ctx context.Context) (*ethbridge.RawTransaction, error) {
+func (c *Challenger) HandleConflict(ctx context.Context) error {
 	responder, err := c.challenge.CurrentResponder(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if responder != c.stakerAddress {
 		// Not our turn
-		return nil, nil
+		return nil
 	}
 	kind, err := c.challenge.Kind(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var prevBisection *core.Bisection
 	if kind == core.UNINITIALIZED {
 		startCursor, err := c.lookup.GetExecutionCursor(c.challengedNode.Assertion.Before.TotalGasConsumed)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		execTracker := core.NewExecutionTracker(
 			c.lookup,
@@ -91,7 +91,7 @@ func (c *Challenger) HandleConflict(ctx context.Context) (*ethbridge.RawTransact
 		)
 		kind, err = core.JudgeAssertion(c.lookup, c.challengedNode.Assertion, execTracker)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if kind == core.STOPPED_SHORT {
 			panic("Not yet handled")
@@ -99,43 +99,43 @@ func (c *Challenger) HandleConflict(ctx context.Context) (*ethbridge.RawTransact
 	} else {
 		challengeState, err := c.challenge.ChallengeState(ctx)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		prevBisection, err = c.challenge.LookupBisection(ctx, challengeState)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	switch kind {
 	case core.INBOX_CONSISTENCY:
-		return c.handleInboxConsistencyChallenge(prevBisection)
+		return c.handleInboxConsistencyChallenge(ctx, prevBisection)
 	case core.INBOX_DELTA:
-		return c.handleInboxDeltaChallenge(prevBisection)
+		return c.handleInboxDeltaChallenge(ctx, prevBisection)
 	case core.EXECUTION:
-		return c.handleExecutionChallenge(prevBisection)
+		return c.handleExecutionChallenge(ctx, prevBisection)
 	case core.STOPPED_SHORT:
 		return c.handleStoppedShortChallenge()
 	default:
-		return nil, errors.New("can't handle challenge")
+		return errors.New("can't handle challenge")
 	}
 }
 
-func (c *Challenger) handleInboxConsistencyChallenge(prevBisection *core.Bisection) (*ethbridge.RawTransaction, error) {
+func (c *Challenger) handleInboxConsistencyChallenge(ctx context.Context, prevBisection *core.Bisection) error {
 	challengeImpl := &InboxConsistencyImpl{
 		inboxMaxCount: c.challengedNode.InboxMaxCount,
 	}
 	if prevBisection == nil {
 		prevBisection = c.challengedNode.InitialInboxConsistencyBisection()
 	}
-	return handleChallenge(c.challenge, c.lookup, challengeImpl, prevBisection)
+	return handleChallenge(ctx, c.challenge, c.lookup, challengeImpl, prevBisection)
 }
 
-func (c *Challenger) handleInboxDeltaChallenge(prevBisection *core.Bisection) (*ethbridge.RawTransaction, error) {
+func (c *Challenger) handleInboxDeltaChallenge(ctx context.Context, prevBisection *core.Bisection) error {
 	inboxDeltaData, err := c.getInboxDelta()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	challengeImpl := &InboxDeltaImpl{
 		nodeAfterInboxCount: c.challengedNode.Assertion.After.InboxIndex,
@@ -144,26 +144,26 @@ func (c *Challenger) handleInboxDeltaChallenge(prevBisection *core.Bisection) (*
 	if prevBisection == nil {
 		prevBisection = c.challengedNode.InitialInboxDeltaBisection()
 	}
-	return handleChallenge(c.challenge, c.lookup, challengeImpl, prevBisection)
+	return handleChallenge(ctx, c.challenge, c.lookup, challengeImpl, prevBisection)
 }
 
-func (c *Challenger) handleExecutionChallenge(prevBisection *core.Bisection) (*ethbridge.RawTransaction, error) {
+func (c *Challenger) handleExecutionChallenge(ctx context.Context, prevBisection *core.Bisection) error {
 	if prevBisection == nil {
 		prevBisection = c.challengedNode.InitialExecutionBisection()
 	}
 	inboxDeltaData, err := c.getInboxDelta()
 	initialCursor, err := c.lookup.GetExecutionCursor(c.challengedNode.Assertion.Before.TotalGasConsumed)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	challengeImpl := &ExecutionImpl{
 		initialCursor: initialCursor,
 		inboxDelta:    inboxDeltaData,
 	}
-	return handleChallenge(c.challenge, c.lookup, challengeImpl, prevBisection)
+	return handleChallenge(ctx, c.challenge, c.lookup, challengeImpl, prevBisection)
 }
 
-func (c *Challenger) handleStoppedShortChallenge() (*ethbridge.RawTransaction, error) {
+func (c *Challenger) handleStoppedShortChallenge() error {
 	panic("Unimplemented")
 }
 
@@ -178,32 +178,35 @@ type ChallengerImpl interface {
 	FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []core.Cut) (int, error)
 
 	Bisect(
+		ctx context.Context,
 		challenge *ethbridge.Challenge,
 		prevBisection *core.Bisection,
 		segmentToChallenge int,
 		inconsistentSegment *core.ChallengeSegment,
 		subCuts []core.Cut,
-	) (*ethbridge.RawTransaction, error)
+	) error
 
 	OneStepProof(
+		ctx context.Context,
 		challenge *ethbridge.Challenge,
 		lookup core.ValidatorLookup,
 		prevBisection *core.Bisection,
 		segmentToChallenge int,
 		challengedSegment *core.ChallengeSegment,
-	) (*ethbridge.RawTransaction, error)
+	) error
 }
 
 func handleChallenge(
+	ctx context.Context,
 	challenge *ethbridge.Challenge,
 	lookup core.ValidatorLookup,
 	challengeImpl ChallengerImpl,
 	prevBisection *core.Bisection,
-) (*ethbridge.RawTransaction, error) {
+) error {
 	prevCutOffsets := generateBisectionCutOffsets(prevBisection.ChallengedSegment, len(prevBisection.Cuts)-1)
 	cutToChallenge, err := challengeImpl.FindFirstDivergence(lookup, prevCutOffsets, prevBisection.Cuts)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	inconsistentSegment := &core.ChallengeSegment{
 		Start:  prevCutOffsets[cutToChallenge-1],
@@ -212,6 +215,7 @@ func handleChallenge(
 
 	if inconsistentSegment.Length.Cmp(big.NewInt(1)) == 0 {
 		return challengeImpl.OneStepProof(
+			ctx,
 			challenge,
 			lookup,
 			prevBisection,
@@ -227,9 +231,10 @@ func handleChallenge(
 		subCutOffsets := generateBisectionCutOffsets(inconsistentSegment, segmentCount)
 		subCuts, err := challengeImpl.GetCuts(lookup, subCutOffsets)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		return challengeImpl.Bisect(
+			ctx,
 			challenge,
 			prevBisection,
 			cutToChallenge-1,

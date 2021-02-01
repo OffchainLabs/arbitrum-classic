@@ -1,8 +1,10 @@
 package ethbridge
 
 import (
+	"context"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -12,9 +14,6 @@ import (
 
 // TODO: Fill this in
 var opcodeProver map[uint8]uint8
-
-func init() {
-}
 
 func calculateBisectionChunkCount(segmentIndex, segmentCount int, totalLength *big.Int) *big.Int {
 	size := new(big.Int).Div(totalLength, big.NewInt(int64(segmentCount)))
@@ -40,42 +39,38 @@ func calculateBisectionTree(bisection *core.Bisection) ([][32]byte, *MerkleTree)
 
 type Challenge struct {
 	*ChallengeWatcher
+	*BuilderBackend
+	builderCon *ethbridgecontracts.Challenge
 }
 
-func NewChallenge(address ethcommon.Address, client ethutils.EthClient) (*Challenge, error) {
+func NewChallenge(address ethcommon.Address, client ethutils.EthClient, builder *BuilderBackend) (*Challenge, error) {
+	builderCon, err := ethbridgecontracts.NewChallenge(address, builder)
+	if err != nil {
+		return nil, err
+	}
 	watcher, err := NewChallengeWatcher(address, client)
 	if err != nil {
 		return nil, err
 	}
 	return &Challenge{
 		ChallengeWatcher: watcher,
+		BuilderBackend:   builder,
+		builderCon:       builderCon,
 	}, nil
 }
 
-func (c *Challenge) buildTx(name string, amount *big.Int, args ...interface{}) (*RawTransaction, error) {
-	data, err := challengeABI.Pack(name, args...)
-	return &RawTransaction{
-		Data:   data,
-		Dest:   c.address,
-		Amount: amount,
-	}, err
-}
-
-func (c *Challenge) buildSimpleTx(name string, args ...interface{}) (*RawTransaction, error) {
-	return c.buildTx(name, big.NewInt(0), args...)
-}
-
 func (c *Challenge) BisectInboxConsistency(
+	ctx context.Context,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
 	subCuts []core.Cut,
-) (*RawTransaction, error) {
+) error {
 	subCutHashes := cutsToHashes(subCuts)
 	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
 	nodes, path := prevTree.GetProof(segmentToChallenge)
-	return c.buildSimpleTx(
-		"bisectInboxConsistency",
+	_, err := c.builderCon.BisectInboxConsistency(
+		authWithContext(ctx, c.builderAuth),
 		nodes,
 		path,
 		challengedSegment.Start,
@@ -83,19 +78,21 @@ func (c *Challenge) BisectInboxConsistency(
 		prevCutHashes[segmentToChallenge+1],
 		subCutHashes,
 	)
+	return err
 }
 
 func (c *Challenge) OneStepProveInboxConsistency(
+	ctx context.Context,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
 	lowerHash [32]byte,
 	value [32]byte,
-) (*RawTransaction, error) {
+) error {
 	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
 	nodes, path := prevTree.GetProof(segmentToChallenge)
-	return c.buildSimpleTx(
-		"oneStepProveInboxConsistency",
+	_, err := c.builderCon.OneStepProveInboxConsistency(
+		authWithContext(ctx, c.builderAuth),
 		nodes,
 		path,
 		challengedSegment.Start,
@@ -103,14 +100,16 @@ func (c *Challenge) OneStepProveInboxConsistency(
 		lowerHash,
 		value,
 	)
+	return err
 }
 
 func (c *Challenge) BisectInboxDelta(
+	ctx context.Context,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
 	subCuts []core.Cut,
-) (*RawTransaction, error) {
+) error {
 	subInboxAccHashes := make([][32]byte, 0, len(subCuts))
 	subInboxDeltaHashes := make([][32]byte, 0, len(subCuts))
 	for _, cut := range subCuts {
@@ -119,8 +118,8 @@ func (c *Challenge) BisectInboxDelta(
 	}
 	_, prevTree := calculateBisectionTree(prevBisection)
 	nodes, path := prevTree.GetProof(segmentToChallenge)
-	return c.buildSimpleTx(
-		"bisectInboxDelta",
+	_, err := c.builderCon.BisectInboxDelta(
+		authWithContext(ctx, c.builderAuth),
 		nodes,
 		path,
 		challengedSegment.Start,
@@ -129,20 +128,22 @@ func (c *Challenge) BisectInboxDelta(
 		subInboxAccHashes,
 		subInboxDeltaHashes,
 	)
+	return err
 }
 
 func (c *Challenge) OneStepProveInboxDelta(
+	ctx context.Context,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
 	msg inbox.InboxMessage,
-) (*RawTransaction, error) {
+) error {
 	_, prevTree := calculateBisectionTree(prevBisection)
 	nodes, path := prevTree.GetProof(segmentToChallenge)
 	oldBefore := prevBisection.Cuts[segmentToChallenge].(core.InboxDeltaCut)
 	oldAfter := prevBisection.Cuts[segmentToChallenge+1].(core.InboxDeltaCut)
-	return c.buildSimpleTx(
-		"oneStepProveInboxDelta",
+	_, err := c.builderCon.OneStepProveInboxDelta(
+		authWithContext(ctx, c.builderAuth),
 		nodes,
 		path,
 		challengedSegment.Start,
@@ -156,19 +157,21 @@ func (c *Challenge) OneStepProveInboxDelta(
 		msg.InboxSeqNum,
 		msg.Data,
 	)
+	return err
 }
 
 func (c *Challenge) BisectExecution(
+	ctx context.Context,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
 	subCuts []core.Cut,
-) (*RawTransaction, error) {
+) error {
 	subCutHashes := cutsToHashes(subCuts)
 	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
 	nodes, path := prevTree.GetProof(segmentToChallenge)
-	return c.buildSimpleTx(
-		"bisectExecution",
+	_, err := c.builderCon.BisectExecution(
+		authWithContext(ctx, c.builderAuth),
 		nodes,
 		path,
 		challengedSegment.Start,
@@ -178,9 +181,11 @@ func (c *Challenge) BisectExecution(
 		subCuts[0].(core.ExecutionCut).RestHash(),
 		subCutHashes,
 	)
+	return err
 }
 
 func (c *Challenge) OneStepProveExecution(
+	ctx context.Context,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	beforeExecInfo *core.ExecutionInfo,
@@ -188,15 +193,15 @@ func (c *Challenge) OneStepProveExecution(
 	executionProof []byte,
 	bufferProof []byte,
 	opcode uint8,
-) (*RawTransaction, error) {
+) error {
 	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
 	nodes, path := prevTree.GetProof(segmentToChallenge)
 	prover, ok := opcodeProver[opcode]
 	if !ok {
-		return nil, errors.New("no prover for opcode")
+		return errors.New("no prover for opcode")
 	}
-	return c.buildSimpleTx(
-		"oneStepProveExecution",
+	_, err := c.builderCon.OneStepProveExecution(
+		authWithContext(ctx, c.builderAuth),
 		nodes,
 		path,
 		prevBisection.ChallengedSegment.Start,
@@ -206,7 +211,7 @@ func (c *Challenge) OneStepProveExecution(
 			beforeExecInfo.SendAcc,
 			beforeExecInfo.LogAcc,
 		},
-		[]*big.Int{
+		[3]*big.Int{
 			beforeExecInfo.GasUsed(),
 			beforeExecInfo.SendCount(),
 			beforeExecInfo.LogCount(),
@@ -215,6 +220,7 @@ func (c *Challenge) OneStepProveExecution(
 		bufferProof,
 		prover,
 	)
+	return err
 }
 
 func cutsToHashes(cuts []core.Cut) [][32]byte {

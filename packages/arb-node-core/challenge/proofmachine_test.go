@@ -91,17 +91,18 @@ func generateProofCases(contract string) ([]*proofData, error) {
 		}
 		//mach.PrintState()
 		bproof, err := mach.MarshalBufferProof()
-		fmt.Printf("Got buffer proof %v\n", len(bproof))
 		if err != nil {
 			fmt.Printf("Got error %v\n", err)
 			return nil, err
 		}
+		fmt.Printf("Got buffer proof %v\n", len(bproof))
 
 		messages, err := db.GetMessages(big.NewInt(0), big.NewInt(1))
 		if err != nil {
 			return nil, err
 		}
-		a, _, ranSteps := mach.ExecuteAssertion(100, true, messages, true)
+		a, _, ranSteps := mach.ExecuteAssertion(1, true, messages, true)
+		fmt.Println("Ran", ranSteps)
 		if ranSteps == 0 {
 			break
 		}

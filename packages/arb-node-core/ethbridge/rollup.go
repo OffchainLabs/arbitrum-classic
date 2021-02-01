@@ -4,6 +4,7 @@ import (
 	"context"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
@@ -18,106 +19,126 @@ type RawTransaction struct {
 
 type Rollup struct {
 	*RollupWatcher
+	*BuilderBackend
+	builderCon *ethbridgecontracts.Rollup
 }
 
-func NewRollup(address ethcommon.Address, client ethutils.EthClient) (*Rollup, error) {
+func NewRollup(address ethcommon.Address, client ethutils.EthClient, builder *BuilderBackend) (*Rollup, error) {
+	builderCon, err := ethbridgecontracts.NewRollup(address, builder)
+	if err != nil {
+		return nil, err
+	}
 	watcher, err := NewRollupWatcher(address, client)
 	if err != nil {
 		return nil, err
 	}
 	return &Rollup{
-		RollupWatcher: watcher,
+		RollupWatcher:  watcher,
+		BuilderBackend: builder,
+		builderCon:     builderCon,
 	}, nil
 }
 
-func (r *Rollup) buildTx(name string, amount *big.Int, args ...interface{}) (*RawTransaction, error) {
-	data, err := rollupABI.Pack(name, args...)
-	return &RawTransaction{
-		Data:   data,
-		Dest:   r.address,
-		Amount: amount,
-	}, err
+func (r *Rollup) RejectNextNode(ctx context.Context, node *big.Int, staker common.Address) error {
+	_, err := r.builderCon.RejectNextNode(authWithContext(ctx, r.builderAuth), node, staker.ToEthAddress())
+	return err
 }
 
-func (r *Rollup) buildSimpleTx(name string, args ...interface{}) (*RawTransaction, error) {
-	return r.buildTx(name, big.NewInt(0), args...)
-}
-
-func (r *Rollup) RejectNextNode(node *big.Int, staker common.Address) (*RawTransaction, error) {
-	return r.buildSimpleTx("rejectNextNode", node, staker.ToEthAddress())
-}
-
-func (r *Rollup) ConfirmNextNode(logAcc common.Hash, sends [][]byte) (*RawTransaction, error) {
+func (r *Rollup) ConfirmNextNode(ctx context.Context, logAcc common.Hash, sends [][]byte) error {
 	var sendsData []byte
 	sendLengths := make([]*big.Int, 0, len(sends))
 	for _, msg := range sends {
 		sendsData = append(sendsData, msg...)
 		sendLengths = append(sendLengths, new(big.Int).SetInt64(int64(len(msg))))
 	}
-	return r.buildSimpleTx("confirmNextNode", logAcc, sendsData, sendLengths)
+	_, err := r.builderCon.ConfirmNextNode(authWithContext(ctx, r.builderAuth), logAcc, sendsData, sendLengths)
+	return err
 }
 
-func (r *Rollup) NewStake(ctx context.Context, amount *big.Int) (*RawTransaction, error) {
+func (r *Rollup) NewStake(ctx context.Context, amount *big.Int) error {
 	tokenType, err := r.StakeToken(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	emptyAddress := common.Address{}
 	if tokenType != emptyAddress {
-		return r.buildSimpleTx("newStake", amount)
+		_, err := r.builderCon.NewStake(authWithContext(ctx, r.builderAuth), amount)
+		return err
 	} else {
-		return r.buildTx("newStake", amount, big.NewInt(0))
+		_, err := r.builderCon.NewStake(authWithContextAndAmount(ctx, r.builderAuth, amount), big.NewInt(0))
+		return err
 	}
 }
 
-func (r *Rollup) StakeOnExistingNode(block *common.BlockId, node core.NodeID) (*RawTransaction, error) {
-	return r.buildSimpleTx("stakeOnExistingNode", block.HeaderHash.ToEthHash(), block.Height.AsInt(), node)
+func (r *Rollup) StakeOnExistingNode(ctx context.Context, block *common.BlockId, node core.NodeID) error {
+	_, err := r.builderCon.StakeOnExistingNode(
+		authWithContext(ctx, r.builderAuth),
+		block.HeaderHash.ToEthHash(),
+		block.Height.AsInt(),
+		node,
+	)
+	return err
 }
 
 func (r *Rollup) StakeOnNewNode(
+	ctx context.Context,
 	block *common.BlockId,
 	node core.NodeID,
 	assertion *core.Assertion,
-) (*RawTransaction, error) {
-	return r.buildSimpleTx(
-		"stakeOnNewNode",
+) error {
+	_, err := r.builderCon.StakeOnNewNode(
+		authWithContext(ctx, r.builderAuth),
 		block.HeaderHash.ToEthHash(),
 		block.Height.AsInt(),
 		node,
 		assertion.BytesFields(),
 		assertion.IntFields(),
 	)
+	return err
 }
 
-func (r *Rollup) ReturnOldDeposit(staker common.Address) (*RawTransaction, error) {
-	return r.buildSimpleTx("returnOldDeposit", staker.ToEthAddress())
+func (r *Rollup) ReturnOldDeposit(ctx context.Context, staker common.Address) error {
+	_, err := r.builderCon.ReturnOldDeposit(authWithContext(ctx, r.builderAuth), staker.ToEthAddress())
+	return err
 }
 
-func (r *Rollup) AddToDeposit(ctx context.Context, address common.Address, amount *big.Int) (*RawTransaction, error) {
+func (r *Rollup) AddToDeposit(ctx context.Context, address common.Address, amount *big.Int) error {
 	tokenType, err := r.StakeToken(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	emptyAddress := common.Address{}
 	if tokenType != emptyAddress {
-		return r.buildTx("addToDeposit", big.NewInt(0), address, amount)
+		_, err := r.builderCon.AddToDeposit(
+			authWithContext(ctx, r.builderAuth),
+			address.ToEthAddress(),
+			amount,
+		)
+		return err
 	} else {
-		return r.buildTx("addToDeposit", amount, address, big.NewInt(0))
+		_, err := r.builderCon.AddToDeposit(
+			authWithContextAndAmount(ctx, r.builderAuth, amount),
+			address.ToEthAddress(),
+			big.NewInt(0),
+		)
+		return err
 	}
 }
 
-func (r *Rollup) ReduceDeposit(amount *big.Int, destination common.Address) (*RawTransaction, error) {
-	return r.buildSimpleTx("reduceDeposit", amount, destination.ToEthAddress())
+func (r *Rollup) ReduceDeposit(ctx context.Context, amount *big.Int) error {
+	_, err := r.builderCon.ReduceDeposit(authWithContext(ctx, r.builderAuth), amount)
+	return err
 }
 
 func (r *Rollup) CreateChallenge(
+	ctx context.Context,
 	staker1 common.Address,
 	node1 *core.NodeInfo,
 	staker2 common.Address,
 	node2 *core.NodeInfo,
-) (*RawTransaction, error) {
-	return r.buildSimpleTx(
-		"createChallenge",
+) error {
+	_, err := r.builderCon.CreateChallenge(
+		authWithContext(ctx, r.builderAuth),
 		[2]ethcommon.Address{staker1.ToEthAddress(), staker2.ToEthAddress()},
 		[2]*big.Int{node1.NodeNum, node2.NodeNum},
 		[6][32]byte{
@@ -133,12 +154,15 @@ func (r *Rollup) CreateChallenge(
 			node2.BlockProposed.Height.AsInt(),
 		},
 	)
+	return err
 }
 
-func (r *Rollup) RemoveZombie(zombieNum *big.Int, maxNodes *big.Int) (*RawTransaction, error) {
-	return r.buildSimpleTx("removeZombie", zombieNum, maxNodes)
+func (r *Rollup) RemoveZombie(ctx context.Context, zombieNum *big.Int, maxNodes *big.Int) error {
+	_, err := r.builderCon.RemoveZombie(authWithContext(ctx, r.builderAuth), zombieNum, maxNodes)
+	return err
 }
 
-func (r *Rollup) RemoveOldZombies(startIndex *big.Int) (*RawTransaction, error) {
-	return r.buildSimpleTx("removeOldZombies", startIndex)
+func (r *Rollup) RemoveOldZombies(ctx context.Context, startIndex *big.Int) error {
+	_, err := r.builderCon.RemoveOldZombies(authWithContext(ctx, r.builderAuth), startIndex)
+	return err
 }

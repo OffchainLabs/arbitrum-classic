@@ -42,10 +42,6 @@ func (e *ExecutionCursorMock) TotalLogCount() *big.Int {
 	return big.NewInt(0)
 }
 
-func (e *ExecutionCursorMock) Advance(maxGas *big.Int, goOverGas bool) error {
-	panic("implement me")
-}
-
 func (e *ExecutionCursorMock) TakeMachine() (machine.Machine, error) {
 	return e.mach, nil
 }
@@ -78,6 +74,10 @@ func (v *ValidatorLookupMock) Clone() *ValidatorLookupMock {
 		InboxAccs:    inboxAccs,
 		startMachine: v.startMachine.Clone(),
 	}
+}
+
+func (v *ValidatorLookupMock) Advance(cursor ExecutionCursor, maxGas *big.Int, goOverGas bool) error {
+	panic("implement me")
 }
 
 func (v *ValidatorLookupMock) AddMessage(msg inbox.InboxMessage) {

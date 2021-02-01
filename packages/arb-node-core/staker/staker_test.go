@@ -124,14 +124,14 @@ func TestStaker(t *testing.T) {
 		client.Commit()
 	}
 
-	rawTx, err := staker.newStake(ctx)
+	err = staker.newStake(ctx)
 	test.FailIfError(t, err)
 
-	if rawTx == nil {
+	if staker.builder.TransactionCount() == 0 {
 		t.Fatal("didn't place stake")
 	}
 
-	_, err = val.ExecuteTransactions(ctx, []*ethbridge.RawTransaction{rawTx})
+	_, err = val.ExecuteTransactions(ctx, staker.builder)
 	test.FailIfError(t, err)
 
 	client.Commit()

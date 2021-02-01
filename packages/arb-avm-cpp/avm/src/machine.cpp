@@ -91,7 +91,7 @@ Assertion Machine::run(uint256_t max_gas,
                     // Next step would go over gas limit
                     break;
                 }
-            } else if (machine_state.nextGasCost() >= max_gas) {
+            } else if (machine_state.context.numGas >= max_gas) {
                 // Last step reached or went over gas limit
                 break;
             }

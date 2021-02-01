@@ -2,6 +2,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -9,9 +10,20 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/big"
+	"strings"
 )
 
-type Validator struct {
+var validatorABI abi.ABI
+
+func init() {
+	parsedValidator, err := abi.JSON(strings.NewReader(ethbridgecontracts.ValidatorABI))
+	if err != nil {
+		panic(err)
+	}
+	validatorABI = parsedValidator
+}
+
+type ValidatorWallet struct {
 	con           *ethbridgecontracts.Validator
 	address       ethcommon.Address
 	client        ethutils.EthClient
@@ -19,12 +31,12 @@ type Validator struct {
 	rollupAddress ethcommon.Address
 }
 
-func NewValidator(address, rollupAddress ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*Validator, error) {
+func NewValidator(address, rollupAddress ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*ValidatorWallet, error) {
 	con, err := ethbridgecontracts.NewValidator(address, client)
 	if err != nil {
 		return nil, err
 	}
-	return &Validator{
+	return &ValidatorWallet{
 		con:           con,
 		address:       address,
 		client:        client,
@@ -33,28 +45,53 @@ func NewValidator(address, rollupAddress ethcommon.Address, client ethutils.EthC
 	}, nil
 }
 
-func (v *Validator) Address() common.Address {
+func (v *ValidatorWallet) Address() common.Address {
 	return common.NewAddressFromEth(v.address)
 }
 
-func (v *Validator) RollupAddress() common.Address {
+func (v *ValidatorWallet) From() common.Address {
+	return common.NewAddressFromEth(v.auth.auth.From)
+}
+
+func (v *ValidatorWallet) RollupAddress() common.Address {
 	return common.NewAddressFromEth(v.rollupAddress)
 }
 
-func (v *Validator) ExecuteTransaction(ctx context.Context, tx *RawTransaction) (*types.Transaction, error) {
+func (v *ValidatorWallet) executeTransaction(ctx context.Context, tx *types.Transaction) (*types.Transaction, error) {
 	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		auth.Value = tx.Amount
-		return v.con.ExecuteTransaction(auth, tx.Data, tx.Dest, tx.Amount)
+		auth.Value = tx.Value()
+		return v.con.ExecuteTransaction(auth, tx.Data(), *tx.To(), tx.Value())
 	})
 }
 
-func (v *Validator) ExecuteTransactions(ctx context.Context, txes []*RawTransaction) (*types.Transaction, error) {
+func combineTxes(txes []*types.Transaction) ([][]byte, []ethcommon.Address, []*big.Int, *big.Int) {
+	totalAmount := big.NewInt(0)
+	data := make([][]byte, 0, len(txes))
+	dest := make([]ethcommon.Address, 0, len(txes))
+	amount := make([]*big.Int, 0, len(txes))
+
+	for _, tx := range txes {
+		data = append(data, tx.Data())
+		dest = append(dest, *tx.To())
+		amount = append(amount, tx.Value())
+		totalAmount = totalAmount.Add(totalAmount, tx.Value())
+	}
+	return data, dest, amount, totalAmount
+}
+
+func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *BuilderBackend) (*types.Transaction, error) {
+	txes := builder.transactions
 	if len(txes) == 0 {
 		return nil, nil
 	}
 
 	if len(txes) == 1 {
-		return v.ExecuteTransaction(ctx, txes[0])
+		tx, err := v.executeTransaction(ctx, txes[0])
+		if err != nil {
+			return nil, err
+		}
+		builder.transactions = nil
+		return tx, nil
 	}
 
 	totalAmount := big.NewInt(0)
@@ -63,19 +100,24 @@ func (v *Validator) ExecuteTransactions(ctx context.Context, txes []*RawTransact
 	amount := make([]*big.Int, 0, len(txes))
 
 	for _, tx := range txes {
-		data = append(data, tx.Data)
-		dest = append(dest, tx.Dest)
-		amount = append(amount, tx.Amount)
-		totalAmount = totalAmount.Add(totalAmount, tx.Amount)
+		data = append(data, tx.Data())
+		dest = append(dest, *tx.To())
+		amount = append(amount, tx.Value())
+		totalAmount = totalAmount.Add(totalAmount, tx.Value())
 	}
 
-	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+	tx, err := v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		auth.Value = totalAmount
 		return v.con.ExecuteTransactions(auth, data, dest, amount)
 	})
+	if err != nil {
+		return nil, err
+	}
+	builder.transactions = nil
+	return tx, nil
 }
 
-func (v *Validator) ReturnOldDeposits(ctx context.Context, stakers []common.Address) (*types.Transaction, error) {
+func (v *ValidatorWallet) ReturnOldDeposits(ctx context.Context, stakers []common.Address) (*types.Transaction, error) {
 	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return v.con.ReturnOldDeposits(auth, v.rollupAddress, common.AddressArrayToEth(stakers))
 	})

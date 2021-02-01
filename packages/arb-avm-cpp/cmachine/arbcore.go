@@ -173,7 +173,6 @@ func (ac *ArbCore) GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *b
 }
 
 func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int, valueCache machine.ValueCache) (*ExecutionCursor, error) {
-
 	cTotalGasUsed := intToData(totalGasUsed)
 	defer C.free(cTotalGasUsed)
 

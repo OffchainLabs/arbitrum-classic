@@ -19,17 +19,22 @@ type Validator struct {
 	validatorUtils *ethbridge.ValidatorUtils
 	client         ethutils.EthClient
 	lookup         core.ValidatorLookup
-	wallet         *ethbridge.Validator
+	builder        *ethbridge.BuilderBackend
+	wallet         *ethbridge.ValidatorWallet
 }
 
 func NewValidator(
 	ctx context.Context,
 	lookup core.ValidatorLookup,
 	client ethutils.EthClient,
-	wallet *ethbridge.Validator,
+	wallet *ethbridge.ValidatorWallet,
 	validatorUtilsAddress common.Address,
 ) (*Validator, error) {
-	rollup, err := ethbridge.NewRollup(wallet.RollupAddress().ToEthAddress(), client)
+	builder, err := ethbridge.NewBuilderBackend(wallet)
+	if err != nil {
+		return nil, err
+	}
+	rollup, err := ethbridge.NewRollup(wallet.RollupAddress().ToEthAddress(), client, builder)
 	if err != nil {
 		return nil, err
 	}
@@ -55,6 +60,7 @@ func NewValidator(
 		validatorUtils: validatorUtils,
 		client:         client,
 		lookup:         lookup,
+		builder:        builder,
 		wallet:         wallet,
 	}, nil
 }
@@ -70,34 +76,34 @@ func (v *Validator) removeOldStakers(ctx context.Context) (*types.Transaction, e
 	return v.wallet.ReturnOldDeposits(ctx, stakersToEliminate)
 }
 
-func (v *Validator) resolveNextNode(ctx context.Context) (*ethbridge.RawTransaction, error) {
+func (v *Validator) resolveNextNode(ctx context.Context) error {
 	confirmType, successorWithStake, stakerAddress, err := v.validatorUtils.CheckDecidableNextNode(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	switch confirmType {
 	case ethbridge.CONFIRM_TYPE_INVALID:
-		return v.rollup.RejectNextNode(successorWithStake, stakerAddress)
+		return v.rollup.RejectNextNode(ctx, successorWithStake, stakerAddress)
 	case ethbridge.CONFIRM_TYPE_VALID:
 		unresolvedNodeIndex, err := v.rollup.FirstUnresolvedNode(ctx)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		nodeInfo, err := lookupNode(ctx, v.rollup.RollupWatcher, unresolvedNodeIndex)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		logAcc, err := v.lookup.GetLogAcc(common.Hash{}, nodeInfo.Assertion.Before.TotalLogCount, nodeInfo.Assertion.LogCount())
 		if err != nil {
-			return nil, err
+			return err
 		}
 		sends, err := v.lookup.GetSends(nodeInfo.Assertion.Before.TotalSendCount, nodeInfo.Assertion.SendCount())
 		if err != nil {
-			return nil, err
+			return err
 		}
-		return v.rollup.ConfirmNextNode(logAcc, sends)
+		return v.rollup.ConfirmNextNode(ctx, logAcc, sends)
 	default:
-		return nil, nil
+		return nil
 	}
 }
 
