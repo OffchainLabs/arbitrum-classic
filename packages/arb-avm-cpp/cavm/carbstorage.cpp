@@ -67,9 +67,9 @@ void destroyArbStorage(CArbStorage* storage) {
     delete static_cast<ArbStorage*>(storage);
 }
 
-CBlockStore* createArbCore(CArbStorage* storage_ptr) {
+CArbCore* createArbCore(CArbStorage* storage_ptr) {
     auto storage = static_cast<ArbStorage*>(storage_ptr);
-    return storage->getArbCore().release();
+    return storage->getArbCore().get();
 }
 
 CBlockStore* createBlockStore(CArbStorage* storage_ptr) {
@@ -82,35 +82,22 @@ CAggregatorStore* createAggregatorStore(CArbStorage* storage_ptr) {
     return storage->getAggregatorStore().release();
 }
 
-CMachine* getInitialMachine(const CArbStorage* storage_ptr,
-                            CValueCache* value_cache_ptr) {
+CMachine* getInitialMachine(const CArbStorage* storage_ptr) {
     auto storage = static_cast<const ArbStorage*>(storage_ptr);
-    auto value_cache = static_cast<ValueCache*>(value_cache_ptr);
+    ValueCache value_cache;
     try {
-        if (value_cache == nullptr) {
-            ValueCache cache;
-            return new Machine(*storage->getInitialMachine(cache).release());
-        }
-
-        return new Machine(*storage->getInitialMachine(*value_cache).release());
+        return new Machine(*storage->getInitialMachine(value_cache).release());
     } catch (const std::exception&) {
         return nullptr;
     }
 }
 
-CMachine* getMachine(const CArbStorage* storage_ptr,
-                     const void* machine_hash,
-                     CValueCache* value_cache_ptr) {
+CMachine* getMachine(const CArbStorage* storage_ptr, const void* machine_hash) {
     auto storage = static_cast<const ArbStorage*>(storage_ptr);
     auto hash = receiveUint256(machine_hash);
-    auto value_cache = static_cast<ValueCache*>(value_cache_ptr);
+    ValueCache value_cache;
     try {
-        if (value_cache == nullptr) {
-            ValueCache cache;
-            return new Machine(*storage->getMachine(hash, cache).release());
-        }
-
-        return new Machine(*storage->getMachine(hash, *value_cache).release());
+        return new Machine(*storage->getMachine(hash, value_cache).release());
     } catch (const std::exception&) {
         return nullptr;
     }
@@ -142,14 +129,12 @@ int saveValue(CArbStorage* storage_ptr, const void* value_data) {
     return transaction->commit().ok();
 }
 
-ByteSlice getValue(const CArbStorage* storage_ptr,
-                   const void* hash_key,
-                   CValueCache* value_cache_ptr) {
+ByteSlice getValue(const CArbStorage* storage_ptr, const void* hash_key) {
     auto storage = static_cast<const ArbStorage*>(storage_ptr);
     auto hash = receiveUint256(hash_key);
-    auto value_cache = static_cast<ValueCache*>(value_cache_ptr);
+    ValueCache value_cache;
 
-    return returnValueResult(storage->getValue(hash, *value_cache));
+    return returnValueResult(storage->getValue(hash, value_cache));
 }
 
 int deleteValue(CArbStorage* storage_ptr, const void* hash_key) {

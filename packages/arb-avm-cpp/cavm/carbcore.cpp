@@ -20,10 +20,6 @@
 
 #include <data_storage/arbcore.hpp>
 
-void deleteArbCore(CArbCore* arbcore_ptr) {
-    delete static_cast<ArbCore*>(arbcore_ptr);
-}
-
 int arbCoreStartThread(CArbCore* arbcore_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     auto status = arb_core->startThread();
@@ -53,6 +49,30 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
     }
 
     return true;
+}
+
+ByteSliceArrayResult arbCoreGetLogs(CArbCore* arbcore_ptr,
+                                    const void* start_index_ptr,
+                                    const void* count_ptr) {
+    try {
+        ValueCache cache;
+        auto logs = static_cast<ArbCore*>(arbcore_ptr)
+                        ->getLogs(receiveUint256(start_index_ptr),
+                                  receiveUint256(count_ptr), cache);
+        if (!logs.status.ok()) {
+            return {{}, false};
+        }
+
+        std::vector<std::vector<unsigned char>> data;
+        for (const auto& val : logs.data) {
+            std::vector<unsigned char> marshalled_value;
+            marshal_value(val, marshalled_value);
+            data.push_back(move(marshalled_value));
+        }
+        return {returnCharVectorVector(data), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
 }
 
 ByteSliceArrayResult arbCoreGetSends(CArbCore* arbcore_ptr,
@@ -144,15 +164,14 @@ int arbCoreGetLogAcc(CArbCore* arbcore_ptr,
                      const void* start_acc_hash,
                      const void* start_index_ptr,
                      const void* count_ptr,
-                     void* ret,
-                     CValueCache* cache_ptr) {
+                     void* ret) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
-    auto cache = static_cast<ValueCache*>(cache_ptr);
+    ValueCache cache;
 
     try {
         auto index_result = arbcore->getLogAcc(
             receiveUint256(start_acc_hash), receiveUint256(start_index_ptr),
-            receiveUint256(count_ptr), *cache);
+            receiveUint256(count_ptr), cache);
         std::array<unsigned char, 32> val{};
         to_big_endian(index_result.data, val.begin());
         std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
@@ -239,15 +258,14 @@ char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr) {
 }
 
 CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
-                                            const void* total_gas_used_ptr,
-                                            CValueCache* cache_ptr) {
+                                            const void* total_gas_used_ptr) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
-    auto cache = static_cast<ValueCache*>(cache_ptr);
+    ValueCache cache;
     auto total_gas_used = receiveUint256(total_gas_used_ptr);
 
     try {
         auto executionCursor =
-            arbcore->getExecutionCursor(total_gas_used, *cache);
+            arbcore->getExecutionCursor(total_gas_used, cache);
         if (!executionCursor.status.ok()) {
             return nullptr;
         }

@@ -22,14 +22,16 @@
 extern "C" {
 #endif
 
-void deleteArbCore(CArbCore* m);
-
 int arbCoreStartThread(CArbCore* arbcore_ptr);
 void arbCoreAbortThread(CArbCore* arbcore_ptr);
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            void* inbox_messages,
                            void* previous_inbox_hash_ptr);
+
+ByteSliceArrayResult arbCoreGetLogs(CArbCore* arbcore_ptr,
+                                    const void* start_index_ptr,
+                                    const void* count_ptr);
 
 ByteSliceArrayResult arbCoreGetSends(CArbCore* arbcore_ptr,
                                      const void* start_index_ptr,
@@ -54,8 +56,7 @@ int arbCoreGetLogAcc(CArbCore* arbcore_ptr,
                      const void* start_acc_hash,
                      const void* start_index_ptr,
                      const void* count_ptr,
-                     void* ret,
-                     CValueCache* cache_ptr);
+                     void* ret);
 
 int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr, const void* count);
 ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr);
@@ -64,8 +65,7 @@ int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr);
 char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr);
 
 CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
-                                            const void* total_gas_used_ptr,
-                                            CValueCache* cache_ptr);
+                                            const void* total_gas_used_ptr);
 int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
                                   CExecutionCursor* execution_cursor_ptr,
                                   const void* max_gas_ptr,

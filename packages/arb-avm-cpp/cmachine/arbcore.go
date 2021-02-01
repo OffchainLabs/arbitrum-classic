@@ -30,7 +30,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 	"runtime"
@@ -43,14 +42,9 @@ type ArbCore struct {
 	c unsafe.Pointer
 }
 
-func deleteArbCore(ac *ArbCore) {
-	C.deleteArbCore(ac.c)
-}
-
 func NewArbCore(c unsafe.Pointer) *ArbCore {
-	ac := &ArbCore{c: c}
-	runtime.SetFinalizer(ac, deleteArbCore)
-	return ac
+	// ArbCore has same lifetime as ArbStorage, no need to have finalizer
+	return &ArbCore{c: c}
 }
 
 func (ac *ArbCore) StartThread() bool {
@@ -157,7 +151,7 @@ func (ac *ArbCore) GetSendAcc(startAcc common.Hash, startIndex *big.Int, count *
 	return
 }
 
-func (ac *ArbCore) GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int, valueCache machine.ValueCache) (ret common.Hash, err error) {
+func (ac *ArbCore) GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (ret common.Hash, err error) {
 	cStartAcc := hashToData(startAcc)
 	defer C.free(cStartAcc)
 	cStartIndex := intToData(startIndex)
@@ -165,7 +159,7 @@ func (ac *ArbCore) GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *b
 	cCount := intToData(count)
 	defer C.free(cCount)
 
-	status := C.arbCoreGetLogAcc(ac.c, cStartAcc, cStartIndex, cCount, unsafe.Pointer(&ret[0]), valueCache.(*ValueCache).c)
+	status := C.arbCoreGetLogAcc(ac.c, cStartAcc, cStartIndex, cCount, unsafe.Pointer(&ret[0]))
 	if status == 0 {
 		err = errors.New("failed to get inbox delta")
 	}
@@ -173,11 +167,11 @@ func (ac *ArbCore) GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *b
 	return
 }
 
-func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int, valueCache machine.ValueCache) (*ExecutionCursor, error) {
+func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int) (*ExecutionCursor, error) {
 	cTotalGasUsed := intToData(totalGasUsed)
 	defer C.free(cTotalGasUsed)
 
-	cExecutionCursor := C.arbCoreGetExecutionCursor(ac.c, cTotalGasUsed, valueCache.(*ValueCache).c)
+	cExecutionCursor := C.arbCoreGetExecutionCursor(ac.c, cTotalGasUsed)
 
 	if cExecutionCursor == nil {
 		return nil, errors.Errorf("error creating execution cursor")

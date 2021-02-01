@@ -159,7 +159,6 @@ class ArbCore {
         Transaction& tx,
         rocksdb::Slice value_slice);
 
-    void sendLog(uint256_t index, const value& val);
     rocksdb::Status saveLogs(Transaction& tx, const std::vector<value>& val);
     ValueResult<std::vector<value>> getLogs(uint256_t index,
                                             uint256_t count,

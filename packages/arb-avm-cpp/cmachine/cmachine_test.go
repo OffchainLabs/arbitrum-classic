@@ -29,12 +29,6 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	valueCache, err := NewValueCache()
-	if err != nil {
-		logger.Error().Stack().Err(err).Send()
-		t.Fatal(err)
-	}
-
 	mach1, err := New(codeFile)
 	if err != nil {
 		logger.Error().Stack().Err(err).Send()
@@ -51,7 +45,7 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer arbStorage.CloseArbStorage()
-	mach2, err := arbStorage.GetInitialMachine(valueCache)
+	mach2, err := arbStorage.GetInitialMachine()
 	if err != nil {
 		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)

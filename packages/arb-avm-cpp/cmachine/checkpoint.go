@@ -79,8 +79,8 @@ func cDestroyArbStorage(cArbStorage *ArbStorage) {
 	C.destroyArbStorage(cArbStorage.c)
 }
 
-func (checkpoint *ArbStorage) GetInitialMachine(valueCache machine.ValueCache) (machine.Machine, error) {
-	cMachine := C.getInitialMachine(checkpoint.c, valueCache.(*ValueCache).c)
+func (checkpoint *ArbStorage) GetInitialMachine() (machine.Machine, error) {
+	cMachine := C.getInitialMachine(checkpoint.c)
 
 	if cMachine == nil {
 		return nil, errors.Errorf("error getting initial machine from arbstorage")
@@ -91,8 +91,8 @@ func (checkpoint *ArbStorage) GetInitialMachine(valueCache machine.ValueCache) (
 	return ret, nil
 }
 
-func (storage *ArbStorage) GetMachine(machineHash common.Hash, valueCache machine.ValueCache) (machine.Machine, error) {
-	cMachine := C.getMachine(storage.c, unsafe.Pointer(&machineHash[0]), valueCache.(*ValueCache).c)
+func (storage *ArbStorage) GetMachine(machineHash common.Hash) (machine.Machine, error) {
+	cMachine := C.getMachine(storage.c, unsafe.Pointer(&machineHash[0]))
 
 	if cMachine == nil {
 		return nil, &machine.MachineNotFoundError{HashValue: machineHash}
@@ -123,8 +123,8 @@ func (storage *ArbStorage) SaveValue(val value.Value) bool {
 	return success == 1
 }
 
-func (storage *ArbStorage) GetValue(hashValue common.Hash, valueCache machine.ValueCache) (value.Value, error) {
-	cData := C.getValue(storage.c, unsafe.Pointer(&hashValue[0]), valueCache.(*ValueCache).c)
+func (storage *ArbStorage) GetValue(hashValue common.Hash) (value.Value, error) {
+	cData := C.getValue(storage.c, unsafe.Pointer(&hashValue[0]))
 	if cData.data == nil {
 		return nil, &machine.ValueNotFoundError{HashValue: hashValue}
 	}
