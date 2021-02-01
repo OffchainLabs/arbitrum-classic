@@ -27,7 +27,7 @@ contract OutboxEntry is Cloneable {
     IBridge bridge;
     bytes32 public root;
     uint256 public numRemaining;
-    mapping(uint256 => bool) public spentOutput;
+    mapping(bytes32 => bool) public spentOutput;
 
     function initialize(
         IBridge _bridge,
@@ -41,7 +41,7 @@ contract OutboxEntry is Cloneable {
         numRemaining = _numInBatch;
     }
 
-    function spendOutput(bytes32 _root, uint256 _id) external {
+    function spendOutput(bytes32 _root, bytes32 _id) external {
         requireBridgeSystemCall();
         require(!spentOutput[_id], "ALREADY_SPENT");
         require(_root == root, "BAD_ROOT");
