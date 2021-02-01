@@ -75,6 +75,9 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         bytes calldata _extraConfig,
         address[6] calldata connectedContracts
     ) external override {
+        require(confirmPeriodBlocks == 0, "ALREADY_INIT");
+        require(_confirmPeriodBlocks != 0, "BAD_CONF_PERIOD");
+
         bridge = IBridge(connectedContracts[1]);
         outbox = IOutbox(connectedContracts[2]);
         bridge.setOutbox(connectedContracts[2], true);

@@ -78,7 +78,7 @@ contract Outbox is CloneFactory, IOutbox {
         uint256 messageCount = sendLengths.length;
         uint256 offset = 0;
         for (uint256 i = 0; i < messageCount; i++) {
-            handleOutgoingMessage(bytes(sendsData[offset:sendLengths[i]]));
+            handleOutgoingMessage(bytes(sendsData[offset:offset + sendLengths[i]]));
             offset += sendLengths[i];
         }
     }
@@ -91,7 +91,7 @@ contract Outbox is CloneFactory, IOutbox {
             bytes32 outputRoot = data.toBytes32(65);
 
             address clone = createClone(outboxEntryTemplate);
-            OutboxEntry(clone).initialize(address(bridge), outputRoot, numInBatch);
+            OutboxEntry(clone).initialize(bridge, outputRoot, numInBatch);
             uint256 outboxIndex = outboxes.length;
             outboxes.push(OutboxEntry(clone));
             emit OutboxEntryCreated(batchNum, outboxIndex, outputRoot, numInBatch);
@@ -132,8 +132,7 @@ contract Outbox is CloneFactory, IOutbox {
         _l2ToL1Block = uint128(l2Block);
         _l2ToL1Timestamp = uint128(l2Timestamp);
 
-        (bool success, ) = bridge.executeCall(destAddr, amount, calldataForL1);
-        require(success, "CALL_FAILED");
+        executeBridgeCall(destAddr, amount, calldataForL1);
 
         _l2ToL1Sender = currentL2Sender;
         _l2ToL1Block = currentL2Block;
@@ -158,18 +157,11 @@ contract Outbox is CloneFactory, IOutbox {
 
         spendOutput(outboxIndex, proof, index, userTx);
 
-        address currentL2Sender = _l2ToL1Sender;
-        _l2ToL1Sender = address(0);
-
-        (bool success, ) =
-            bridge.executeCall(
-                l2Contract,
-                0,
-                abi.encodeWithSignature("buddyContractResult(bool)", createdSuccessfully)
-            );
-        require(success, "CALL_FAILED");
-
-        _l2ToL1Sender = currentL2Sender;
+        executeBridgeSystemCall(
+            l2Contract,
+            0,
+            abi.encodeWithSignature("buddyContractResult(bool)", createdSuccessfully)
+        );
     }
 
     function spendOutput(
@@ -180,12 +172,47 @@ contract Outbox is CloneFactory, IOutbox {
     ) private {
         // Hash the leaf an extra time to prove it's a leaf
         bytes32 calcRoot = MerkleLib.calculateRoot(proof, path, keccak256(abi.encodePacked(item)));
-        (bool success, ) =
-            bridge.executeCall(
-                address(outboxes[outboxIndex]),
-                0,
-                abi.encodeWithSignature("spendOutput(bytes32,uint256)", calcRoot, path)
-            );
-        require(success, "CANT_SPEND");
+        OutboxEntry outbox = outboxes[outboxIndex];
+        require(address(outbox) != address(0), "NO_OUTBOX");
+        executeBridgeSystemCall(
+            address(outbox),
+            0,
+            abi.encodeWithSignature("spendOutput(bytes32,uint256)", calcRoot, path)
+        );
+
+        if (outbox.numRemaining() == 0) {
+            executeBridgeSystemCall(address(outbox), 0, abi.encodeWithSignature("destroy()"));
+            outboxes[outboxIndex] = OutboxEntry(address(0));
+        }
+    }
+
+    function executeBridgeSystemCall(
+        address destAddr,
+        uint256 amount,
+        bytes memory data
+    ) private {
+        address currentL2Sender = _l2ToL1Sender;
+        _l2ToL1Sender = address(0);
+        executeBridgeCall(destAddr, amount, data);
+        _l2ToL1Sender = currentL2Sender;
+    }
+
+    function executeBridgeCall(
+        address destAddr,
+        uint256 amount,
+        bytes memory data
+    ) private {
+        (bool success, bytes memory returndata) = bridge.executeCall(destAddr, amount, data);
+        if (!success) {
+            if (returndata.length > 0) {
+                // solhint-disable-next-line no-inline-assembly
+                assembly {
+                    let returndata_size := mload(returndata)
+                    revert(add(32, returndata), returndata_size)
+                }
+            } else {
+                revert("BRIDGE_CALL_FAILED");
+            }
+        }
     }
 }
