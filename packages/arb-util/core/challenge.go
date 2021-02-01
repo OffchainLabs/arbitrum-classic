@@ -2,8 +2,9 @@ package core
 
 import (
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type Cut interface {

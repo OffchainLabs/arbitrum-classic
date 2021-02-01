@@ -3,8 +3,8 @@ package ethbridge
 import (
 	"context"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"

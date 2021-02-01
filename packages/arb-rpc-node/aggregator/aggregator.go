@@ -18,10 +18,10 @@ package aggregator
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"

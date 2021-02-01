@@ -3,7 +3,7 @@ package ethbridge
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/pkg/errors"
 	"math/big"

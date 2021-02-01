@@ -2,8 +2,8 @@ package challenge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"math/big"
 )
 
