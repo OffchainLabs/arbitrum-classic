@@ -170,14 +170,23 @@ contract Outbox is CloneFactory, IOutbox {
         uint256 path,
         bytes32 item
     ) private {
+        require(proof.length <= 256, "PROOF_TOO_LONG");
+        require(path < 2**proof.length, "PATH_NOT_MINIMAL");
+
         // Hash the leaf an extra time to prove it's a leaf
         bytes32 calcRoot = MerkleLib.calculateRoot(proof, path, keccak256(abi.encodePacked(item)));
         OutboxEntry outbox = outboxes[outboxIndex];
         require(address(outbox) != address(0), "NO_OUTBOX");
+
+        // With a minimal path, the pair of path and proof length should always identify
+        // a unique leaf. The path itself is not enough since the path length to different
+        // leaves could potentially be different
+        bytes32 uniqueKey = keccak256(abi.encodePacked(path, proof.length));
+
         executeBridgeSystemCall(
             address(outbox),
             0,
-            abi.encodeWithSignature("spendOutput(bytes32,uint256)", calcRoot, path)
+            abi.encodeWithSignature("spendOutput(bytes32,uint256)", calcRoot, uniqueKey)
         );
 
         if (outbox.numRemaining() == 0) {
