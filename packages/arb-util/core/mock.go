@@ -77,7 +77,7 @@ func (v *ValidatorLookupMock) Clone() *ValidatorLookupMock {
 	}
 }
 
-func (v *ValidatorLookupMock) Advance(cursor ExecutionCursor, maxGas *big.Int, goOverGas bool) error {
+func (v *ValidatorLookupMock) AdvanceExecutionCursor(cursor ExecutionCursor, maxGas *big.Int, goOverGas bool) error {
 	panic("implement me")
 }
 
@@ -108,12 +108,33 @@ func (v *ValidatorLookupMock) GetMessages(startIndex *big.Int, count *big.Int) (
 	return v.Messages[start : start+c], nil
 }
 
+func (v *ValidatorLookupMock) GetMessageHashes(startIndex *big.Int, count *big.Int) ([]common.Hash, error) {
+	if count.Cmp(big.NewInt(0)) == 0 {
+		return nil, nil
+	}
+	start := startIndex.Uint64()
+	c := count.Uint64()
+	if start+c >= uint64(len(v.Messages)) {
+		return nil, errors.Errorf("GetMessages: inbox index out of bounds (%v, %v)", startIndex, count)
+	}
+	msgHashes := make([]common.Hash, 0, c)
+	for _, msg := range v.Messages[start : start+c] {
+		msgHashes = append(msgHashes, msg.AsValue().Hash())
+	}
+	return msgHashes, nil
+}
+
 func (v *ValidatorLookupMock) GetInboxDelta(startIndex *big.Int, count *big.Int) (common.Hash, error) {
-	messages, err := v.GetMessages(startIndex, count)
+	messageHashes, err := v.GetMessageHashes(startIndex, count)
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return CalculateInboxDeltaAcc(messages), nil
+	acc := common.Hash{}
+	for i := range messageHashes {
+		messageHash := messageHashes[len(messageHashes)-1-i]
+		acc = hashing.SoliditySHA3(hashing.Bytes32(acc), hashing.Bytes32(messageHash))
+	}
+	return acc, nil
 }
 
 func (v *ValidatorLookupMock) GetInboxAcc(index *big.Int) (common.Hash, error) {

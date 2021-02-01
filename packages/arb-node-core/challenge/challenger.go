@@ -6,14 +6,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/pkg/errors"
 	"math/big"
 )
 
 type inboxDelta struct {
 	inboxDeltaAccs [][32]byte
-	inboxMessages  []inbox.InboxMessage
 }
 
 type Challenger struct {
@@ -40,24 +38,23 @@ func NewChallenger(challenge *ethbridge.Challenge, lookup core.ArbCoreLookup, ch
 
 func (c *Challenger) getInboxDelta() (*inboxDelta, error) {
 	if c.inboxDelta == nil {
-		messages, err := c.lookup.GetMessages(
+		messagesHashes, err := c.lookup.GetMessageHashes(
 			c.challengedNode.Assertion.Before.InboxIndex,
 			c.challengedNode.Assertion.InboxMessagesRead(),
 		)
 		if err != nil {
 			return nil, err
 		}
-		inboxDeltaAccs := make([][32]byte, 0, len(messages)+1)
+		inboxDeltaAccs := make([][32]byte, 0, len(messagesHashes)+1)
 		inboxDeltaAcc := common.Hash{}
 		inboxDeltaAccs = append(inboxDeltaAccs, inboxDeltaAcc)
-		for i := range messages {
-			msg := messages[len(messages)-1-i]
-			inboxDeltaAcc = hashing.SoliditySHA3(hashing.Bytes32(inboxDeltaAcc), hashing.Bytes32(msg.AsValue().Hash()))
+		for i := range messagesHashes {
+			msgHash := messagesHashes[len(messagesHashes)-1-i]
+			inboxDeltaAcc = hashing.SoliditySHA3(hashing.Bytes32(inboxDeltaAcc), hashing.Bytes32(msgHash))
 			inboxDeltaAccs = append(inboxDeltaAccs, inboxDeltaAcc)
 		}
 		c.inboxDelta = &inboxDelta{
 			inboxDeltaAccs: inboxDeltaAccs,
-			inboxMessages:  messages,
 		}
 	}
 	return c.inboxDelta, nil

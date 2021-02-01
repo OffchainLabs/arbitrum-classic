@@ -4,8 +4,6 @@ import (
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 type ChallengeKind uint8
@@ -100,13 +98,4 @@ func (n *NodeInfo) InitialExecutionBisection() *Bisection {
 			},
 		},
 	}
-}
-
-func CalculateInboxDeltaAcc(messages []inbox.InboxMessage) common.Hash {
-	acc := common.Hash{}
-	for i := range messages {
-		valHash := messages[len(messages)-1-i].AsValue().Hash()
-		acc = hashing.SoliditySHA3(hashing.Bytes32(acc), hashing.Bytes32(valHash))
-	}
-	return acc
 }

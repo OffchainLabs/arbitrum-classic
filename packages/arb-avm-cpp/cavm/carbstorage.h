@@ -45,6 +45,7 @@ ByteSliceResult getData(CArbStorage* storage_ptr,
                         int key_length);
 int deleteData(CArbStorage* storage_ptr, const void* key, int key_length);
 
+CArbCore* createArbCore(CArbStorage* storage_ptr);
 CBlockStore* createBlockStore(CArbStorage* storage_ptr);
 CAggregatorStore* createAggregatorStore(CArbStorage* storage_ptr);
 

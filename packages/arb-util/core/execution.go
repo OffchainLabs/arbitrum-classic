@@ -64,7 +64,7 @@ func (e *ExecutionTracker) fillInCursors(max int) error {
 		nextCursor := e.cursors[len(e.cursors)-1].Clone()
 		nextStopPoint := e.sortedStopPoints[i]
 		gasToExecute := new(big.Int).Sub(nextStopPoint, nextCursor.TotalGasConsumed())
-		err := e.lookup.Advance(nextCursor, gasToExecute, e.goOverGas)
+		err := e.lookup.AdvanceExecutionCursor(nextCursor, gasToExecute, e.goOverGas)
 		if err != nil {
 			return err
 		}

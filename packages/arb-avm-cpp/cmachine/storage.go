@@ -56,10 +56,10 @@ func NewCheckpoint(dbPath string) (*ArbStorage, error) {
 	return returnVal, nil
 }
 
-func (checkpoint *ArbStorage) Initialize(contractPath string) error {
+func (s *ArbStorage) Initialize(contractPath string) error {
 	cContractPath := C.CString(contractPath)
 	defer C.free(unsafe.Pointer(cContractPath))
-	success := C.initializeArbStorage(checkpoint.c, cContractPath)
+	success := C.initializeArbStorage(s.c, cContractPath)
 
 	if success == 0 {
 		return errors.New("failed to initialize storage")
@@ -67,21 +67,20 @@ func (checkpoint *ArbStorage) Initialize(contractPath string) error {
 	return nil
 }
 
-func (checkpoint *ArbStorage) Initialized() bool {
-	return C.arbStorageInitialized(checkpoint.c) == 1
+func (s *ArbStorage) Initialized() bool {
+	return C.arbStorageInitialized(s.c) == 1
 }
 
-func (checkpoint *ArbStorage) CloseArbStorage() bool {
-	return C.closeArbStorage(checkpoint.c) == 1
+func (s *ArbStorage) CloseArbStorage() bool {
+	return C.closeArbStorage(s.c) == 1
 }
 
 func cDestroyArbStorage(cArbStorage *ArbStorage) {
 	C.destroyArbStorage(cArbStorage.c)
 }
 
-func (checkpoint *ArbStorage) GetInitialMachine() (machine.Machine, error) {
-	cMachine := C.getInitialMachine(checkpoint.c)
-
+func (s *ArbStorage) GetInitialMachine() (machine.Machine, error) {
+	cMachine := C.getInitialMachine(s.c)
 	if cMachine == nil {
 		return nil, errors.Errorf("error getting initial machine from arbstorage")
 	}
@@ -91,8 +90,8 @@ func (checkpoint *ArbStorage) GetInitialMachine() (machine.Machine, error) {
 	return ret, nil
 }
 
-func (storage *ArbStorage) GetMachine(machineHash common.Hash) (machine.Machine, error) {
-	cMachine := C.getMachine(storage.c, unsafe.Pointer(&machineHash[0]))
+func (s *ArbStorage) GetMachine(machineHash common.Hash) (machine.Machine, error) {
+	cMachine := C.getMachine(s.c, unsafe.Pointer(&machineHash[0]))
 
 	if cMachine == nil {
 		return nil, &machine.MachineNotFoundError{HashValue: machineHash}
@@ -103,13 +102,13 @@ func (storage *ArbStorage) GetMachine(machineHash common.Hash) (machine.Machine,
 	return ret, nil
 }
 
-func (storage *ArbStorage) DeleteCheckpoint(machineHash common.Hash) bool {
-	success := C.deleteCheckpoint(storage.c, unsafe.Pointer(&machineHash[0]))
+func (s *ArbStorage) DeleteCheckpoint(machineHash common.Hash) bool {
+	success := C.deleteCheckpoint(s.c, unsafe.Pointer(&machineHash[0]))
 
 	return success == 1
 }
 
-func (storage *ArbStorage) SaveValue(val value.Value) bool {
+func (s *ArbStorage) SaveValue(val value.Value) bool {
 	var buf bytes.Buffer
 
 	err := value.MarshalValue(val, &buf)
@@ -118,13 +117,13 @@ func (storage *ArbStorage) SaveValue(val value.Value) bool {
 	}
 
 	valData := buf.Bytes()
-	success := C.saveValue(storage.c, unsafe.Pointer(&valData[0]))
+	success := C.saveValue(s.c, unsafe.Pointer(&valData[0]))
 
 	return success == 1
 }
 
-func (storage *ArbStorage) GetValue(hashValue common.Hash) (value.Value, error) {
-	cData := C.getValue(storage.c, unsafe.Pointer(&hashValue[0]))
+func (s *ArbStorage) GetValue(hashValue common.Hash) (value.Value, error) {
+	cData := C.getValue(s.c, unsafe.Pointer(&hashValue[0]))
 	if cData.data == nil {
 		return nil, &machine.ValueNotFoundError{HashValue: hashValue}
 	}
@@ -139,19 +138,19 @@ func (storage *ArbStorage) GetValue(hashValue common.Hash) (value.Value, error) 
 	return val, nil
 }
 
-func (storage *ArbStorage) DeleteValue(hashValue common.Hash) bool {
-	success := C.deleteValue(storage.c, unsafe.Pointer(&hashValue[0]))
+func (s *ArbStorage) DeleteValue(hashValue common.Hash) bool {
+	success := C.deleteValue(s.c, unsafe.Pointer(&hashValue[0]))
 
 	return success == 1
 }
 
-func (storage *ArbStorage) SaveData(key []byte, data []byte) bool {
+func (s *ArbStorage) SaveData(key []byte, data []byte) bool {
 	if len(key) == 0 {
 		return false
 	}
 
 	if len(data) == 0 {
-		success := C.saveData(storage.c,
+		success := C.saveData(s.c,
 			unsafe.Pointer(&key[0]),
 			C.int(len(key)),
 			unsafe.Pointer(nil),
@@ -160,7 +159,7 @@ func (storage *ArbStorage) SaveData(key []byte, data []byte) bool {
 		return success == 1
 	}
 
-	success := C.saveData(storage.c,
+	success := C.saveData(s.c,
 		unsafe.Pointer(&key[0]),
 		C.int(len(key)),
 		unsafe.Pointer(&data[0]),
@@ -169,8 +168,8 @@ func (storage *ArbStorage) SaveData(key []byte, data []byte) bool {
 	return success == 1
 }
 
-func (storage *ArbStorage) GetData(key []byte) ([]byte, error) {
-	cData := C.getData(storage.c, unsafe.Pointer(&key[0]), C.int(len(key)))
+func (s *ArbStorage) GetData(key []byte) ([]byte, error) {
+	cData := C.getData(s.c, unsafe.Pointer(&key[0]), C.int(len(key)))
 
 	if cData.found == 0 {
 		return nil, &machine.DataNotFoundError{Key: key}
@@ -179,20 +178,23 @@ func (storage *ArbStorage) GetData(key []byte) ([]byte, error) {
 	return toByteSlice(cData.slice), nil
 }
 
-func (storage *ArbStorage) DeleteData(key []byte) bool {
-	success := C.deleteData(storage.c, unsafe.Pointer(&key[0]), C.int(len(key)))
+func (s *ArbStorage) DeleteData(key []byte) bool {
+	success := C.deleteData(s.c, unsafe.Pointer(&key[0]), C.int(len(key)))
 
 	return success == 1
 }
 
-func (storage *ArbStorage) GetBlockStore() machine.BlockStore {
-	bs := C.createBlockStore(storage.c)
+//func (s *ArbStorage) GetArbCore() core.ArbCoreLookup {
+//	ac := C.createArbCore(s.c)
+//	return NewArbCore(ac)
+//}
 
+func (s *ArbStorage) GetBlockStore() machine.BlockStore {
+	bs := C.createBlockStore(s.c)
 	return NewBlockStore(bs)
 }
 
-func (storage *ArbStorage) GetAggregatorStore() *AggregatorStore {
-	as := C.createAggregatorStore(storage.c)
-
+func (s *ArbStorage) GetAggregatorStore() *AggregatorStore {
+	as := C.createAggregatorStore(s.c)
 	return NewAggregatorStore(as)
 }

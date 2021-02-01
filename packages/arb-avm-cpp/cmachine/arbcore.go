@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -167,7 +167,7 @@ func (ac *ArbCore) GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *b
 	return
 }
 
-func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int) (*ExecutionCursor, error) {
+func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int) (core.ExecutionCursor, error) {
 	cTotalGasUsed := intToData(totalGasUsed)
 	defer C.free(cTotalGasUsed)
 

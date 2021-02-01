@@ -37,9 +37,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
@@ -118,10 +116,12 @@ func generateProofCases(contract string) ([]*proofData, error) {
 				return nil, errors.New("machine stopped in error state")
 			*/
 		}
-		var msg *inbox.InboxMessage
 		if a.InboxMessagesConsumed > 0 {
-			msg = &messages[0]
-			beforeCut.InboxDelta = hashing.SoliditySHA3(hashing.Bytes32(common.Hash{}), hashing.Bytes32(msg.AsValue().Hash())).ToEthHash()
+			inboxDeltaHash, err := db.GetInboxDelta(big.NewInt(0), big.NewInt(1))
+			if err != nil {
+				return nil, err
+			}
+			beforeCut.InboxDelta = inboxDeltaHash.ToEthHash()
 		}
 
 		afterCut := ExecutionCutJSON{

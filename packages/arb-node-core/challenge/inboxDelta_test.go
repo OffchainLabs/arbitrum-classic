@@ -32,9 +32,9 @@ func TestInboxDeltaChallenge(t *testing.T) {
 
 	challengedNode := initializeChallengeData(t, correctLookup, inboxMessagesRead)
 
-	messages, err := falseLookup.GetMessages(big.NewInt(0), inboxMessagesRead)
+	inboxDeltaHash, err := falseLookup.GetInboxDelta(big.NewInt(0), inboxMessagesRead)
 	test.FailIfError(t, err)
-	challengedNode.Assertion.InboxDelta = core.CalculateInboxDeltaAcc(messages)
+	challengedNode.Assertion.InboxDelta = inboxDeltaHash
 
 	asserterTime := big.NewInt(100000)
 	challengerTime := big.NewInt(100000)

@@ -146,7 +146,7 @@ func initializeChallengeData(
 		},
 	}
 
-	messages, err := lookup.GetMessages(big.NewInt(0), inboxMessagesRead)
+	inboxDeltaHash, err := lookup.GetInboxDelta(big.NewInt(0), inboxMessagesRead)
 	test.FailIfError(t, err)
 	afterInboxCount := new(big.Int).Add(prevState.InboxIndex, inboxMessagesRead)
 
@@ -169,7 +169,7 @@ func initializeChallengeData(
 			SendAcc: common.Hash{},
 			LogAcc:  common.Hash{},
 		},
-		InboxDelta: core.CalculateInboxDeltaAcc(messages),
+		InboxDelta: inboxDeltaHash,
 	}
 
 	inboxMaxCount := big.NewInt(int64(len(lookup.InboxAccs)) - 1)
