@@ -67,6 +67,11 @@ void destroyArbStorage(CArbStorage* storage) {
     delete static_cast<ArbStorage*>(storage);
 }
 
+CBlockStore* createArbCore(CArbStorage* storage_ptr) {
+    auto storage = static_cast<ArbStorage*>(storage_ptr);
+    return storage->getArbCore().release();
+}
+
 CBlockStore* createBlockStore(CArbStorage* storage_ptr) {
     auto storage = static_cast<ArbStorage*>(storage_ptr);
     return storage->getBlockStore().release();
