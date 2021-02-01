@@ -15,8 +15,8 @@ type ExecutionCursorMock struct {
 	mach machine.Machine
 }
 
-func (e *ExecutionCursorMock) Clone() (ExecutionCursor, error) {
-	return &ExecutionCursorMock{}, nil
+func (e *ExecutionCursorMock) Clone() ExecutionCursor {
+	return &ExecutionCursorMock{}
 }
 
 func (e *ExecutionCursorMock) MachineHash() common.Hash {

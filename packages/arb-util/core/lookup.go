@@ -11,7 +11,7 @@ import (
 )
 
 type ExecutionCursor interface {
-	Clone() (ExecutionCursor, error)
+	Clone() ExecutionCursor
 	MachineHash() common.Hash
 	NextInboxMessageIndex() *big.Int
 	InboxHash() common.Hash

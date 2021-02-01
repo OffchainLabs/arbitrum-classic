@@ -28,6 +28,7 @@ import "C"
 import (
 	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -189,7 +190,11 @@ func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int, valueCache machine.
 	return ret, nil
 }
 
-func (ac *ArbCore) AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool) error {
+func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool) error {
+	cursor, ok := executionCursor.(*ExecutionCursor)
+	if !ok {
+		return errors.New("unsupported execution cursor type")
+	}
 	cMaxGas := intToData(maxGas)
 	defer C.free(cMaxGas)
 
@@ -198,12 +203,12 @@ func (ac *ArbCore) AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGa
 		goOverGasInt = 1
 	}
 
-	status := C.arbCoreAdvanceExecutionCursor(ac.c, executionCursor.c, cMaxGas, C.int(goOverGasInt))
+	status := C.arbCoreAdvanceExecutionCursor(ac.c, cursor.c, cMaxGas, C.int(goOverGasInt))
 	if status == 0 {
 		return errors.New("failed to advance")
 	}
 
-	return executionCursor.updateValues()
+	return cursor.updateValues()
 }
 
 func (ac *ArbCore) LogsCursorRequest(count *big.Int) error {

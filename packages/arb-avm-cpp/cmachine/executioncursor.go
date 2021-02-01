@@ -26,6 +26,7 @@ package cmachine
 import "C"
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/pkg/errors"
 	"math/big"
@@ -59,8 +60,8 @@ func NewExecutionCursor(c unsafe.Pointer) (*ExecutionCursor, error) {
 	return ec, nil
 }
 
-func (ec *ExecutionCursor) Clone() ExecutionCursor {
-	return ExecutionCursor{
+func (ec *ExecutionCursor) Clone() core.ExecutionCursor {
+	return &ExecutionCursor{
 		c:                     C.executionCursorClone(ec.c),
 		machineHash:           ec.machineHash,
 		nextInboxMessageIndex: ec.nextInboxMessageIndex,
