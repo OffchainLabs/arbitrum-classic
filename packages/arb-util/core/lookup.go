@@ -24,7 +24,7 @@ type ExecutionCursor interface {
 	TakeMachine() (machine.Machine, error)
 }
 
-type ValidatorLookup interface {
+type ArbCoreLookup interface {
 	GetLogs(startIndex, count *big.Int) ([]value.Value, error)
 	GetSends(startIndex, count *big.Int) ([][]byte, error)
 	GetMessages(startIndex, count *big.Int) ([]inbox.InboxMessage, error)
@@ -43,7 +43,7 @@ type ValidatorLookup interface {
 	Advance(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool) error
 }
 
-func GetSingleSend(lookup ValidatorLookup, index *big.Int) ([]byte, error) {
+func GetSingleSend(lookup ArbCoreLookup, index *big.Int) ([]byte, error) {
 	sends, err := lookup.GetSends(index, big.NewInt(1))
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func GetSingleSend(lookup ValidatorLookup, index *big.Int) ([]byte, error) {
 	return sends[0], nil
 }
 
-func GetSingleLog(lookup ValidatorLookup, index *big.Int) (value.Value, error) {
+func GetSingleLog(lookup ArbCoreLookup, index *big.Int) (value.Value, error) {
 	logs, err := lookup.GetLogs(index, big.NewInt(1))
 	if err != nil {
 		return nil, err

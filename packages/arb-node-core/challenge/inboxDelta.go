@@ -16,15 +16,15 @@ func (i *InboxDeltaImpl) SegmentTarget() int {
 	return 250
 }
 
-func (i *InboxDeltaImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]core.Cut, error) {
+func (i *InboxDeltaImpl) GetCuts(lookup core.ArbCoreLookup, offsets []*big.Int) ([]core.Cut, error) {
 	return getCutsSimple(i, lookup, offsets)
 }
 
-func (i *InboxDeltaImpl) FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []core.Cut) (int, error) {
+func (i *InboxDeltaImpl) FindFirstDivergence(lookup core.ArbCoreLookup, offsets []*big.Int, cuts []core.Cut) (int, error) {
 	return findFirstDivergenceSimple(i, lookup, offsets, cuts)
 }
 
-func (i *InboxDeltaImpl) GetCut(lookup core.ValidatorLookup, offset *big.Int) (core.Cut, error) {
+func (i *InboxDeltaImpl) GetCut(lookup core.ArbCoreLookup, offset *big.Int) (core.Cut, error) {
 	inboxOffset := new(big.Int).Sub(i.nodeAfterInboxCount, offset)
 	inboxAcc, err := lookup.GetInboxAcc(inboxOffset)
 	if err != nil {
@@ -56,7 +56,7 @@ func (i *InboxDeltaImpl) Bisect(
 func (i *InboxDeltaImpl) OneStepProof(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
-	lookup core.ValidatorLookup,
+	lookup core.ArbCoreLookup,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,

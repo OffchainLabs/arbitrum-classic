@@ -54,7 +54,7 @@ type AggregatorStore interface {
 }
 
 type TxDB struct {
-	lookup     core.ValidatorLookup
+	lookup     core.ArbCoreLookup
 	as         AggregatorStore
 	timeGetter arbbridge.ChainTimeGetter
 

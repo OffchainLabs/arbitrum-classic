@@ -24,7 +24,7 @@ func (l BigIntList) Swap(i, j int) {
 }
 
 type ExecutionTracker struct {
-	lookup    ValidatorLookup
+	lookup    ArbCoreLookup
 	goOverGas bool
 
 	sortedStopPoints []*big.Int
@@ -35,7 +35,7 @@ type ExecutionTracker struct {
 	logAccs  []common.Hash
 }
 
-func NewExecutionTracker(lookup ValidatorLookup, cursor ExecutionCursor, goOverGas bool, stopPoints []*big.Int) *ExecutionTracker {
+func NewExecutionTracker(lookup ArbCoreLookup, cursor ExecutionCursor, goOverGas bool, stopPoints []*big.Int) *ExecutionTracker {
 	sort.Sort(BigIntList(stopPoints))
 	cursors := make([]ExecutionCursor, 0, len(stopPoints)+1)
 	cursors = append(cursors, cursor)
@@ -126,7 +126,7 @@ func (e *ExecutionTracker) GetMachine(gasUsed *big.Int) (machine.Machine, error)
 	return e.cursors[index].Clone().TakeMachine()
 }
 
-func JudgeAssertion(lookup ValidatorLookup, assertion *Assertion, execTracker *ExecutionTracker) (ChallengeKind, error) {
+func JudgeAssertion(lookup ArbCoreLookup, assertion *Assertion, execTracker *ExecutionTracker) (ChallengeKind, error) {
 	afterInboxHash, err := lookup.GetInboxAcc(assertion.After.InboxIndex)
 	if err != nil {
 		return 0, err

@@ -20,7 +20,7 @@ type Staker struct {
 
 func NewStaker(
 	ctx context.Context,
-	lookup core.ValidatorLookup,
+	lookup core.ArbCoreLookup,
 	client ethutils.EthClient,
 	wallet *ethbridge.ValidatorWallet,
 	validatorUtilsAddress common.Address,

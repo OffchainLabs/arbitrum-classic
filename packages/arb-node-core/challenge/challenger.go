@@ -18,7 +18,7 @@ type inboxDelta struct {
 
 type Challenger struct {
 	challenge      *ethbridge.Challenge
-	lookup         core.ValidatorLookup
+	lookup         core.ArbCoreLookup
 	challengedNode *core.NodeInfo
 	stakerAddress  common.Address
 
@@ -29,7 +29,7 @@ func (c *Challenger) ChallengeAddress() common.Address {
 	return c.challenge.Address()
 }
 
-func NewChallenger(challenge *ethbridge.Challenge, lookup core.ValidatorLookup, challengedNode *core.NodeInfo, stakerAddress common.Address) *Challenger {
+func NewChallenger(challenge *ethbridge.Challenge, lookup core.ArbCoreLookup, challengedNode *core.NodeInfo, stakerAddress common.Address) *Challenger {
 	return &Challenger{
 		challenge:      challenge,
 		lookup:         lookup,
@@ -168,14 +168,14 @@ func (c *Challenger) handleStoppedShortChallenge() error {
 }
 
 type SimpleChallengerImpl interface {
-	GetCut(lookup core.ValidatorLookup, offsets *big.Int) (core.Cut, error)
+	GetCut(lookup core.ArbCoreLookup, offsets *big.Int) (core.Cut, error)
 }
 
 type ChallengerImpl interface {
 	SegmentTarget() int
 
-	GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]core.Cut, error)
-	FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []core.Cut) (int, error)
+	GetCuts(lookup core.ArbCoreLookup, offsets []*big.Int) ([]core.Cut, error)
+	FindFirstDivergence(lookup core.ArbCoreLookup, offsets []*big.Int, cuts []core.Cut) (int, error)
 
 	Bisect(
 		ctx context.Context,
@@ -189,7 +189,7 @@ type ChallengerImpl interface {
 	OneStepProof(
 		ctx context.Context,
 		challenge *ethbridge.Challenge,
-		lookup core.ValidatorLookup,
+		lookup core.ArbCoreLookup,
 		prevBisection *core.Bisection,
 		segmentToChallenge int,
 		challengedSegment *core.ChallengeSegment,
@@ -199,7 +199,7 @@ type ChallengerImpl interface {
 func handleChallenge(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
-	lookup core.ValidatorLookup,
+	lookup core.ArbCoreLookup,
 	challengeImpl ChallengerImpl,
 	prevBisection *core.Bisection,
 ) error {
@@ -244,7 +244,7 @@ func handleChallenge(
 	}
 }
 
-func findFirstDivergenceSimple(impl SimpleChallengerImpl, lookup core.ValidatorLookup, cutOffsets []*big.Int, cuts []core.Cut) (int, error) {
+func findFirstDivergenceSimple(impl SimpleChallengerImpl, lookup core.ArbCoreLookup, cutOffsets []*big.Int, cuts []core.Cut) (int, error) {
 	for i, cutOffset := range cutOffsets {
 		correctCut, err := impl.GetCut(lookup, cutOffset)
 		if err != nil {
@@ -260,7 +260,7 @@ func findFirstDivergenceSimple(impl SimpleChallengerImpl, lookup core.ValidatorL
 	return 0, errors.New("all cuts correct")
 }
 
-func getCutsSimple(impl SimpleChallengerImpl, lookup core.ValidatorLookup, offsets []*big.Int) ([]core.Cut, error) {
+func getCutsSimple(impl SimpleChallengerImpl, lookup core.ArbCoreLookup, offsets []*big.Int) ([]core.Cut, error) {
 	cuts := make([]core.Cut, 0, len(offsets))
 	for _, cutOffset := range offsets {
 		cut, err := impl.GetCut(lookup, cutOffset)

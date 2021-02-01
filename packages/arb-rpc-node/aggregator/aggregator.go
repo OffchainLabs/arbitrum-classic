@@ -50,7 +50,7 @@ type Server struct {
 	chain              common.Address
 	batch              batcher.TransactionBatcher
 	db                 *txdb.TxDB
-	lookup             core.ValidatorLookup
+	lookup             core.ArbCoreLookup
 	maxCallTime        time.Duration
 	maxCallGas         *big.Int
 	initialBlockHeight *big.Int

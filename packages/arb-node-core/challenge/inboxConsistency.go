@@ -19,15 +19,15 @@ func (i *InboxConsistencyImpl) inboxOffset(offset *big.Int) *big.Int {
 	return new(big.Int).Sub(i.inboxMaxCount, offset)
 }
 
-func (i *InboxConsistencyImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]core.Cut, error) {
+func (i *InboxConsistencyImpl) GetCuts(lookup core.ArbCoreLookup, offsets []*big.Int) ([]core.Cut, error) {
 	return getCutsSimple(i, lookup, offsets)
 }
 
-func (i *InboxConsistencyImpl) FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []core.Cut) (int, error) {
+func (i *InboxConsistencyImpl) FindFirstDivergence(lookup core.ArbCoreLookup, offsets []*big.Int, cuts []core.Cut) (int, error) {
 	return findFirstDivergenceSimple(i, lookup, offsets, cuts)
 }
 
-func (i *InboxConsistencyImpl) GetCut(lookup core.ValidatorLookup, offset *big.Int) (core.Cut, error) {
+func (i *InboxConsistencyImpl) GetCut(lookup core.ArbCoreLookup, offset *big.Int) (core.Cut, error) {
 	inboxOffset := i.inboxOffset(offset)
 	inboxAcc, err := lookup.GetInboxAcc(inboxOffset)
 	if err != nil {
@@ -56,7 +56,7 @@ func (i *InboxConsistencyImpl) Bisect(
 func (i *InboxConsistencyImpl) OneStepProof(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
-	lookup core.ValidatorLookup,
+	lookup core.ArbCoreLookup,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,

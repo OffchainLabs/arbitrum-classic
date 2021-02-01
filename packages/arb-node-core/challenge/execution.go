@@ -17,7 +17,7 @@ func (i *ExecutionImpl) SegmentTarget() int {
 	return 400
 }
 
-func (e *ExecutionImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int) ([]core.Cut, error) {
+func (e *ExecutionImpl) GetCuts(lookup core.ArbCoreLookup, offsets []*big.Int) ([]core.Cut, error) {
 	execTracker := core.NewExecutionTracker(lookup, e.initialCursor, true, offsets)
 	cuts := make([]core.Cut, 0, len(offsets))
 	for _, offset := range offsets {
@@ -39,7 +39,7 @@ func (e *ExecutionImpl) GetCuts(lookup core.ValidatorLookup, offsets []*big.Int)
 	return cuts, nil
 }
 
-func (e *ExecutionImpl) FindFirstDivergence(lookup core.ValidatorLookup, offsets []*big.Int, cuts []core.Cut) (int, error) {
+func (e *ExecutionImpl) FindFirstDivergence(lookup core.ArbCoreLookup, offsets []*big.Int, cuts []core.Cut) (int, error) {
 	execTracker := core.NewExecutionTracker(lookup, e.initialCursor, true, offsets)
 	for i, offset := range offsets {
 		executionInfo, err := execTracker.GetExecutionInfo(offset)
@@ -87,7 +87,7 @@ func (e *ExecutionImpl) Bisect(
 func (e *ExecutionImpl) OneStepProof(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
-	lookup core.ValidatorLookup,
+	lookup core.ArbCoreLookup,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,

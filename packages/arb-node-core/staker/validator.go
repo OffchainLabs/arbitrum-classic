@@ -18,14 +18,14 @@ type Validator struct {
 	bridge         *ethbridge.BridgeWatcher
 	validatorUtils *ethbridge.ValidatorUtils
 	client         ethutils.EthClient
-	lookup         core.ValidatorLookup
+	lookup         core.ArbCoreLookup
 	builder        *ethbridge.BuilderBackend
 	wallet         *ethbridge.ValidatorWallet
 }
 
 func NewValidator(
 	ctx context.Context,
-	lookup core.ValidatorLookup,
+	lookup core.ArbCoreLookup,
 	client ethutils.EthClient,
 	wallet *ethbridge.ValidatorWallet,
 	validatorUtilsAddress common.Address,
