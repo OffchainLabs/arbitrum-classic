@@ -89,7 +89,7 @@ func (ac *ArbCore) GetLogs(startIndex *big.Int, count *big.Int) ([]value.Value, 
 	cCount := intToData(count)
 	defer C.free(cCount)
 
-	result := C.arbCoreGetSends(ac.c, cStartIndex, cCount)
+	result := C.arbCoreGetLogs(ac.c, cStartIndex, cCount)
 	if result.found == 0 {
 		return nil, errors.New("failed to get log")
 	}
