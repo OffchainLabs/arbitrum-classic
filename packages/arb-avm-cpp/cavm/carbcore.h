@@ -24,9 +24,10 @@ extern "C" {
 
 void deleteArbCore(CArbCore* m);
 
+int arbCoreStartThread(CArbCore* arbcore_ptr);
+void arbCoreAbortThread(CArbCore* arbcore_ptr);
+
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
-                           uint64_t first_message_sequence_number,
-                           uint64_t block_height,
                            void* inbox_messages,
                            void* previous_inbox_hash_ptr);
 
@@ -65,10 +66,10 @@ char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr);
 CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
                                             const void* total_gas_used_ptr,
                                             CValueCache* cache_ptr);
-int arbCoreAdvance(CArbCore* arbcore_ptr,
-                   CExecutionCursor* execution_cursor_ptr,
-                   const void* max_gas_ptr,
-                   int go_over_gas);
+int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
+                                  CExecutionCursor* execution_cursor_ptr,
+                                  const void* max_gas_ptr,
+                                  int go_over_gas);
 
 #ifdef __cplusplus
 }

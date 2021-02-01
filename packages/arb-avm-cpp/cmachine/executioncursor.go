@@ -71,23 +71,6 @@ func (ec *ExecutionCursor) Clone() ExecutionCursor {
 	}
 }
 
-func (ec *ExecutionCursor) Advance(maxGas *big.Int, goOverGas bool) error {
-	cMaxGas := intToData(maxGas)
-	defer C.free(cMaxGas)
-
-	goOverGasInt := 0
-	if goOverGas {
-		goOverGasInt = 1
-	}
-
-	status := C.executionCursorAdvance(ec.c, cMaxGas, C.int(goOverGasInt))
-	if status == 0 {
-		return errors.New("failed to advance")
-	}
-
-	return ec.updateValues()
-}
-
 func (ec *ExecutionCursor) TakeMachine() (machine.Machine, error) {
 	cMachine := C.executionCursorTakeMachine(ec.c)
 	if cMachine == nil {

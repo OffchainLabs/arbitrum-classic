@@ -20,13 +20,26 @@
 
 #include <data_storage/arbcore.hpp>
 
-void deleteArbCore(CArbCore* m) {
-    delete static_cast<ArbCore*>(m);
+void deleteArbCore(CArbCore* arbcore_ptr) {
+    delete static_cast<ArbCore*>(arbcore_ptr);
+}
+
+int arbCoreStartThread(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    auto status = arb_core->startThread();
+    if (!status) {
+        return 0;
+    }
+
+    return 1;
+}
+
+void arbCoreAbortThread(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    arb_core->abortThread();
 }
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
-                           const uint64_t first_message_sequence_number,
-                           const uint64_t block_height,
                            void* inbox_messages,
                            void* previous_inbox_hash_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
@@ -34,8 +47,7 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
     auto previous_inbox_hash = receiveUint256(previous_inbox_hash_ptr);
 
     try {
-        arb_core->deliverMessages(first_message_sequence_number, block_height,
-                                  messages, previous_inbox_hash);
+        arb_core->deliverMessages(messages, previous_inbox_hash);
     } catch (const std::exception& e) {
         return false;
     }
@@ -245,10 +257,10 @@ CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
     }
 }
 
-int arbCoreAdvance(CArbCore* arbcore_ptr,
-                   CExecutionCursor* execution_cursor_ptr,
-                   const void* max_gas_ptr,
-                   int go_over_gas) {
+int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
+                                  CExecutionCursor* execution_cursor_ptr,
+                                  const void* max_gas_ptr,
+                                  int go_over_gas) {
     auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
     auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
     auto max_gas = receiveUint256(max_gas_ptr);

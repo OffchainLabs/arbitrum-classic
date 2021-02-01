@@ -52,6 +52,27 @@ func NewArbCore(c unsafe.Pointer) *ArbCore {
 	return ac
 }
 
+func (ac *ArbCore) StartThread() bool {
+	status := C.arbCoreStartThread(ac.c)
+	if status == 0 {
+		return false
+	}
+	return true
+}
+
+func (ac *ArbCore) StopThread() {
+	C.arbCoreAbortThread(ac.c)
+}
+
+func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash *big.Int) {
+	cPreviousInboxHash := intToData(previousInboxHash)
+	defer C.free(cPreviousInboxHash)
+
+	msgDataC := C.CBytes(encodeInboxMessages(messages))
+
+	C.arbCoreDeliverMessages(ac.c, msgDataC, cPreviousInboxHash)
+}
+
 func (ac *ArbCore) GetSends(startIndex *big.Int, count *big.Int) ([][]byte, error) {
 	cStartIndex := intToData(startIndex)
 	defer C.free(cStartIndex)
@@ -167,6 +188,23 @@ func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int, valueCache machine.
 	}
 	runtime.SetFinalizer(ret, deleteExecutionCursor)
 	return ret, nil
+}
+
+func (ac *ArbCore) AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool) error {
+	cMaxGas := intToData(maxGas)
+	defer C.free(cMaxGas)
+
+	goOverGasInt := 0
+	if goOverGas {
+		goOverGasInt = 1
+	}
+
+	status := C.arbCoreAdvanceExecutionCursor(ac.c, executionCursor.c, cMaxGas, C.int(goOverGasInt))
+	if status == 0 {
+		return errors.New("failed to advance")
+	}
+
+	return executionCursor.updateValues()
 }
 
 func (ac *ArbCore) LogsCursorRequest(count *big.Int) error {

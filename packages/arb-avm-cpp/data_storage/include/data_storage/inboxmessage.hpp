@@ -36,7 +36,7 @@ struct InboxMessage {
     uint256_t inbox_sequence_number;
     std::vector<unsigned char> data;
 
-    InboxMessage() = delete;
+    InboxMessage() = default;
     InboxMessage(uint8_t kind,
                  uint256_t sender,
                  uint256_t block_number,

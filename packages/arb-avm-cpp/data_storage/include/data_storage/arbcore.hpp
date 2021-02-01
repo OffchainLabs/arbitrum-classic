@@ -75,8 +75,6 @@ class ArbCore {
 
     // Core thread inbox input
     std::atomic<bool> arbcore_abort{false};
-    uint256_t delivering_first_sequence_number;
-    uint64_t delivering_block_height{0};
     std::vector<std::vector<unsigned char>> delivering_inbox_messages;
     uint256_t delivering_previous_inbox_hash;
 
@@ -96,8 +94,6 @@ class ArbCore {
     bool startThread();
     void abortThread();
     void deliverMessages(
-        const uint256_t& first_sequence_number,
-        uint64_t block_height,
         const std::vector<std::vector<unsigned char>>& messages,
         const uint256_t& previous_inbox_hash);
 
@@ -212,8 +208,6 @@ class ArbCore {
 
    private:
     nonstd::optional<rocksdb::Status> addMessages(
-        uint256_t first_sequence_number,
-        uint64_t block_height,
         const std::vector<std::vector<unsigned char>>& messages,
         const uint256_t& previous_inbox_hash,
         const uint256_t& final_machine_sequence_number,

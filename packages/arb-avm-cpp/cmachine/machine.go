@@ -161,7 +161,7 @@ func (m *Machine) ExecuteAssertion(
 ) (*protocol.ExecutionAssertion, []value.Value, uint64) {
 	var msgDataC unsafe.Pointer
 	if messages != nil {
-		msgDataC := C.CBytes(encodeInboxMessages(messages))
+		msgDataC = C.CBytes(encodeInboxMessages(messages))
 		defer C.free(msgDataC)
 	}
 
