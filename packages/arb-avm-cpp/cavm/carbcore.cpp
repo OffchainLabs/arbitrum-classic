@@ -35,6 +35,11 @@ void arbCoreAbortThread(CArbCore* arbcore_ptr) {
     arb_core->abortThread();
 }
 
+int arbCoreMachineIdle(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    return arb_core->machineIdle();
+}
+
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            ByteSliceArray inbox_messages,
                            void* previous_inbox_hash_ptr) {

@@ -72,6 +72,7 @@ class ArbCore {
     // Core thread inbox input/output. Core thread will update if and only if
     // set to MESSAGES_READY or MESSAGES_SUCCESS
     std::atomic<messages_status_enum> delivering_inbox_status{MESSAGES_EMPTY};
+    std::atomic<bool> delivering_machine_idle{false};
 
     // Core thread inbox input
     std::atomic<bool> arbcore_abort{false};
@@ -179,6 +180,7 @@ class ArbCore {
     rocksdb::Status saveSends(
         Transaction& tx,
         const std::vector<std::vector<unsigned char>>& send);
+    bool machineIdle();
     bool messagesEmpty();
     ValueResult<uint256_t> getInboxDelta(uint256_t start_index,
                                          uint256_t count);

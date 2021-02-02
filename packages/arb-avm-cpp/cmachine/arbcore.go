@@ -50,14 +50,16 @@ func NewArbCore(c unsafe.Pointer) *ArbCore {
 
 func (ac *ArbCore) StartThread() bool {
 	status := C.arbCoreStartThread(ac.c)
-	if status == 0 {
-		return false
-	}
-	return true
+	return status == 1
 }
 
 func (ac *ArbCore) StopThread() {
 	C.arbCoreAbortThread(ac.c)
+}
+
+func (ac *ArbCore) MachineIdle() bool {
+	status := C.arbCoreMachineIdle(ac.c)
+	return status == 1
 }
 
 func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash) {

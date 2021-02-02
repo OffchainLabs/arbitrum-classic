@@ -61,6 +61,10 @@ ValueResult<MessageEntry> getMessageEntry(Transaction& tx,
 
 }  // namespace
 
+bool ArbCore::machineIdle() {
+    return delivering_machine_idle;
+}
+
 bool ArbCore::messagesEmpty() {
     return delivering_inbox_status == MESSAGES_EMPTY;
 }
@@ -527,6 +531,7 @@ void ArbCore::operator()() {
                 delivering_inbox_status = MESSAGES_ERROR;
                 break;
             } else {
+                delivering_machine_idle = false;
                 delivering_inbox_status = MESSAGES_SUCCESS;
             }
         }
@@ -636,6 +641,9 @@ void ArbCore::operator()() {
                 machine->startThread(
                     0, false, messages, 0,
                     next_message_result.data.last_message_in_block);
+            } else {
+                // Machine all caught up, no messages to process
+                delivering_machine_idle = true;
             }
         }
 

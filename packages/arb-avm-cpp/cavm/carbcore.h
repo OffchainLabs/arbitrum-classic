@@ -24,6 +24,7 @@ extern "C" {
 
 int arbCoreStartThread(CArbCore* arbcore_ptr);
 void arbCoreAbortThread(CArbCore* arbcore_ptr);
+int arbCoreMachineIdle(CArbCore* arbcore_ptr);
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            ByteSliceArray inbox_messages,
