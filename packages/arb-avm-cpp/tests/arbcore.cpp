@@ -28,15 +28,14 @@
 #include <nlohmann/json.hpp>
 
 TEST_CASE("ArbCore tests") {
-    DBDeleter deleter;
-    ValueCache value_cache{};
-
     std::vector<std::string> files = {
         "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
         "evm_test_arbsys", "evm_xcontract_call_with_constructors"};
 
     for (const auto& filename : files) {
         DYNAMIC_SECTION(filename) {
+            DBDeleter deleter;
+            ValueCache value_cache{};
             auto test_file = std::string{arb_os_test_cases_path} + "/" +
                              filename + ".aoslog";
 
