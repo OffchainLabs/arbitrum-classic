@@ -718,20 +718,17 @@ ValueResult<std::vector<value>> ArbCore::getLogsNoLock(Transaction& tx,
                                                        uint256_t index,
                                                        uint256_t count,
                                                        ValueCache& valueCache) {
-    // Acquire mutex to make sure no reorg happening
-    std::lock_guard<std::mutex> lock(core_reorg_mutex);
-
     // Check if attempting to get entries past current valid logs
     auto log_count = logInsertedCountImpl(tx);
     if (!log_count.status.ok()) {
         return {log_count.status, {}};
     }
-    auto max_log_index = log_count.data - 1;
-    if (index > max_log_index) {
+    auto max_log_count = log_count.data;
+    if (index > max_log_count - 1) {
         return {rocksdb::Status::OK(), {}};
     }
-    if (index + count > max_log_index) {
-        count = max_log_index - index;
+    if (index + count > max_log_count) {
+        count = max_log_count - index;
     }
 
     std::vector<unsigned char> key;

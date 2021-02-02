@@ -85,6 +85,7 @@ TEST_CASE("ArbCore tests") {
             auto logsRes =
                 arbCore->getLogs(0, producedLogCountRes.data, value_cache);
             REQUIRE(logsRes.status.ok());
+            REQUIRE(logsRes.data.size() == logs.size());
             for (size_t k = 0; k < logs.size(); ++k) {
                 REQUIRE(logsRes.data[k] == logs[k]);
             }

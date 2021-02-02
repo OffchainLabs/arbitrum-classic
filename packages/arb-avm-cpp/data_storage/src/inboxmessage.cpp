@@ -98,16 +98,8 @@ std::vector<unsigned char> InboxMessage::serialize() {
 }
 
 Tuple InboxMessage::toTuple() {
-    Buffer buf;
-    for (uint64_t i = 0; i < data.size(); i++) {
-        buf = buf.set(i, data[i]);
-    }
-
-    Tuple message(uint256_t{kind}, block_number, timestamp, sender,
-                  inbox_sequence_number, uint256_t{data.size()},
-                  std::move(buf));
-
-    return message;
+    return {uint256_t{kind},       block_number,           timestamp,   sender,
+            inbox_sequence_number, uint256_t{data.size()}, Buffer{data}};
 }
 
 InboxMessage InboxMessage::fromTuple(const Tuple& tup) {
