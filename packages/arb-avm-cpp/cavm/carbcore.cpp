@@ -36,10 +36,10 @@ void arbCoreAbortThread(CArbCore* arbcore_ptr) {
 }
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
-                           void* inbox_messages,
+                           ByteSliceArray inbox_messages,
                            void* previous_inbox_hash_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
-    auto messages = getInboxMessages(inbox_messages);
+    auto messages = receiveByteSliceArray(inbox_messages);
     auto previous_inbox_hash = receiveUint256(previous_inbox_hash_ptr);
 
     try {

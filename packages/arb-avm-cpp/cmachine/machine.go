@@ -121,9 +121,9 @@ func makeExecutionAssertion(
 	beforeMachineHash common.Hash,
 	afterMachineHash common.Hash,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64) {
-	sendsRaw := toByteSlice(assertion.sends)
-	logsRaw := toByteSlice(assertion.logs)
-	debugPrints := protocol.BytesArrayToVals(toByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
+	sendsRaw := receiveByteSlice(assertion.sends)
+	logsRaw := receiveByteSlice(assertion.logs)
+	debugPrints := protocol.BytesArrayToVals(receiveByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
 	return protocol.NewExecutionAssertion(
 		beforeMachineHash,
 		afterMachineHash,
@@ -134,15 +134,6 @@ func makeExecutionAssertion(
 		logsRaw,
 		uint64(assertion.logCount),
 	), debugPrints, uint64(assertion.numSteps)
-}
-
-func encodeInboxMessages(inboxMessages []inbox.InboxMessage) []byte {
-	var buf bytes.Buffer
-	for _, msg := range inboxMessages {
-		// Error just occurs on write, and bytes.Buffer is safe
-		_ = value.MarshalValue(msg.AsValue(), &buf)
-	}
-	return buf.Bytes()
 }
 
 func encodeValue(val value.Value) []byte {
@@ -159,12 +150,6 @@ func (m *Machine) ExecuteAssertion(
 	messages []inbox.InboxMessage,
 	finalMessageOfBlock bool,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64) {
-	var msgDataC unsafe.Pointer
-	if messages != nil {
-		msgDataC = C.CBytes(encodeInboxMessages(messages))
-		defer C.free(msgDataC)
-	}
-
 	goOverGasInt := C.uchar(0)
 	if goOverGas {
 		goOverGasInt = 1
@@ -176,11 +161,21 @@ func (m *Machine) ExecuteAssertion(
 	}
 
 	beforeHash := m.Hash()
+	rawInboxData := encodeInboxMessages(messages)
+	byteSlices := encodeByteSliceList(rawInboxData)
+	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
+	sliceArray := (*[1 << 30]C.struct_ByteSliceStruct)(sliceArrayData)[:len(byteSlices):len(byteSlices)]
+	for i, data := range byteSlices {
+		sliceArray[i] = data
+	}
+	defer C.free(sliceArrayData)
+	msgData := C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
+
 	assertion := C.executeAssertion(
 		m.c,
 		C.uint64_t(maxGas),
 		C.int(goOverGasInt),
-		msgDataC,
+		msgData,
 		C.int(finalMessageOfBlockInt),
 	)
 
@@ -189,20 +184,17 @@ func (m *Machine) ExecuteAssertion(
 
 func (m *Machine) MarshalForProof() ([]byte, error) {
 	rawProof := C.machineMarshallForProof(m.c)
-	defer C.free(rawProof.data)
-	return C.GoBytes(unsafe.Pointer(rawProof.data), rawProof.length), nil
+	return receiveByteSlice(rawProof), nil
 }
 
 func (m *Machine) MarshalBufferProof() ([]byte, error) {
 	rawProof := C.machineMarshallBufferProof(m.c)
-	defer C.free(rawProof.data)
-	return C.GoBytes(unsafe.Pointer(rawProof.data), rawProof.length), nil
+	return receiveByteSlice(rawProof), nil
 }
 
 func (m *Machine) MarshalState() ([]byte, error) {
 	stateData := C.machineMarshallState(m.c)
-	defer C.free(stateData.data)
-	return C.GoBytes(unsafe.Pointer(stateData.data), stateData.length), nil
+	return receiveByteSlice(stateData), nil
 }
 
 func (m *Machine) Checkpoint(storage machine.ArbStorage) bool {

@@ -129,7 +129,7 @@ func (s *ArbStorage) GetValue(hashValue common.Hash) (value.Value, error) {
 		return nil, &machine.ValueNotFoundError{HashValue: hashValue}
 	}
 
-	dataBuff := toByteSlice(cData)
+	dataBuff := receiveByteSlice(cData)
 
 	val, err := value.UnmarshalValue(bytes.NewReader(dataBuff[:]))
 	if err != nil {
@@ -176,7 +176,7 @@ func (s *ArbStorage) GetData(key []byte) ([]byte, error) {
 		return nil, &machine.DataNotFoundError{Key: key}
 	}
 
-	return toByteSlice(cData.slice), nil
+	return receiveByteSlice(cData.slice), nil
 }
 
 func (s *ArbStorage) DeleteData(key []byte) bool {
@@ -188,11 +188,6 @@ func (s *ArbStorage) DeleteData(key []byte) bool {
 func (s *ArbStorage) GetArbCore() core.ArbCoreLookup {
 	ac := C.createArbCore(s.c)
 	return NewArbCore(ac)
-}
-
-func (s *ArbStorage) GetBlockStore() machine.BlockStore {
-	bs := C.createBlockStore(s.c)
-	return NewBlockStore(bs)
 }
 
 func (s *ArbStorage) GetAggregatorStore() *AggregatorStore {

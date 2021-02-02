@@ -44,6 +44,15 @@ type ArbCoreLookup interface {
 	AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool) error
 }
 
+type ArbCore interface {
+	ArbCoreLookup
+
+	StartThread() bool
+	StopThread()
+
+	DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash)
+}
+
 func GetSingleSend(lookup ArbCoreLookup, index *big.Int) ([]byte, error) {
 	sends, err := lookup.GetSends(index, big.NewInt(1))
 	if err != nil {

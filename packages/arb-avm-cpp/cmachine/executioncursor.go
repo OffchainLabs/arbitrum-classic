@@ -37,11 +37,11 @@ import (
 type ExecutionCursor struct {
 	c                     unsafe.Pointer
 	machineHash           common.Hash
-	nextInboxMessageIndex big.Int
+	nextInboxMessageIndex *big.Int
 	inboxHash             common.Hash
-	totalGasConsumed      big.Int
-	totalSendCount        big.Int
-	totalLogCount         big.Int
+	totalGasConsumed      *big.Int
+	totalSendCount        *big.Int
+	totalLogCount         *big.Int
 }
 
 func deleteExecutionCursor(ac *ExecutionCursor) {
@@ -98,22 +98,19 @@ func (ec *ExecutionCursor) updateValues() error {
 	if result.found == 0 {
 		return errors.New("failed to get TotalGasConsumed")
 	}
-	ec.totalGasConsumed = *dataToInt(result.value)
-	C.free(result.value)
+	ec.totalGasConsumed = receiveBigInt(result.value)
 
 	result = C.executionCursorNextInboxMessageIndex(ec.c)
 	if result.found == 0 {
 		return errors.New("failed to get NextInboxMessageIndex")
 	}
-	ec.totalSendCount = *dataToInt(result.value)
-	C.free(result.value)
+	ec.totalSendCount = receiveBigInt(result.value)
 
 	result = C.executionCursorTotalLogCount(ec.c)
 	if result.found == 0 {
 		return errors.New("failed to get NextInboxMessageIndex")
 	}
-	ec.totalLogCount = *dataToInt(result.value)
-	C.free(result.value)
+	ec.totalLogCount = receiveBigInt(result.value)
 
 	return nil
 }
@@ -127,17 +124,17 @@ func (ec *ExecutionCursor) InboxHash() common.Hash {
 }
 
 func (ec *ExecutionCursor) NextInboxMessageIndex() *big.Int {
-	return &ec.nextInboxMessageIndex
+	return ec.nextInboxMessageIndex
 }
 
 func (ec *ExecutionCursor) TotalGasConsumed() *big.Int {
-	return &ec.totalGasConsumed
+	return ec.totalGasConsumed
 }
 
 func (ec *ExecutionCursor) TotalSendCount() *big.Int {
-	return &ec.totalSendCount
+	return ec.totalSendCount
 }
 
 func (ec *ExecutionCursor) TotalLogCount() *big.Int {
-	return &ec.totalLogCount
+	return ec.totalLogCount
 }

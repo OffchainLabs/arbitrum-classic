@@ -72,32 +72,27 @@ inline ByteSliceArray returnCharVectorVector(
     return {returnCharVectorVectorRaw(data), static_cast<int>(data.size())};
 }
 
-inline void freeByteSliceArray(ByteSliceArray slice_array) {
-    auto cData = static_cast<ByteSlice*>(slice_array.slices);
-    for (int i = 0; i < slice_array.count; i++) {
-        free(cData[i].data);
-    }
-
-    free(slice_array.slices);
-}
-
 inline uint256_t receiveUint256(const void* data) {
     auto data_ptr = reinterpret_cast<const char*>(data);
     return deserializeUint256t(data_ptr);
 }
 
-inline std::vector<uint256_t> receiveUint256Vector(const void* data,
-                                                   size_t size) {
-    auto ptr = static_cast<const char*>(data);
-    std::vector<uint256_t> vec;
-    vec.reserve(size);
-    for (size_t i = 0; i < size; i++) {
-        auto int_val = receiveUint256(ptr);
-        vec.push_back(int_val);
-        ptr += sizeof(uint256_t);
-    }
+inline std::vector<unsigned char> receiveByteSlice(const ByteSlice& bs) {
+    std::vector<unsigned char> data;
+    data.resize(bs.length);
+    auto ptr = reinterpret_cast<unsigned char*>(bs.data);
+    std::copy(ptr, ptr + bs.length, data.data());
+    return data;
+}
 
-    return vec;
+inline std::vector<std::vector<unsigned char>> receiveByteSliceArray(
+    const ByteSliceArray& bsa) {
+    std::vector<std::vector<unsigned char>> data;
+    auto slices = reinterpret_cast<ByteSlice*>(bsa.slices);
+    for (int i = 0; i < bsa.count; ++i) {
+        data.emplace_back(receiveByteSlice(slices[i]));
+    }
+    return data;
 }
 
 inline void* returnUint256(const uint256_t& val) {

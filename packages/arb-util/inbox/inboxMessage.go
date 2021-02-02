@@ -78,6 +78,7 @@ func NewInboxMessageFromData(data []byte) (InboxMessage, error) {
 		Sender:      sender,
 		ChainTime:   ChainTime{BlockNum: blockNumber, Timestamp: timestamp},
 		InboxSeqNum: inboxSeqNum,
+		Data:        data,
 	}, nil
 }
 
@@ -210,7 +211,7 @@ func NewAddressFromInt(val value.IntValue) common.Address {
 	return address
 }
 
-func (im InboxMessage) Bytes() []byte {
+func (im InboxMessage) ToBytes() []byte {
 	var data []byte
 	data = append(data, uint8(im.Kind))
 	data = append(data, im.Sender[:]...)

@@ -26,7 +26,7 @@ int arbCoreStartThread(CArbCore* arbcore_ptr);
 void arbCoreAbortThread(CArbCore* arbcore_ptr);
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
-                           void* inbox_messages,
+                           ByteSliceArray inbox_messages,
                            void* previous_inbox_hash_ptr);
 
 ByteSliceArrayResult arbCoreGetLogs(CArbCore* arbcore_ptr,

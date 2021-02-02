@@ -27,6 +27,7 @@ package cmachine
 import "C"
 import (
 	"bytes"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -59,43 +60,41 @@ func (ac *ArbCore) StopThread() {
 	C.arbCoreAbortThread(ac.c)
 }
 
-func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash *big.Int) {
-	cPreviousInboxHash := intToData(previousInboxHash)
-	defer C.free(cPreviousInboxHash)
+func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash) {
+	rawInboxData := encodeInboxMessages(messages)
+	byteSlices := encodeByteSliceList(rawInboxData)
 
-	msgDataC := C.CBytes(encodeInboxMessages(messages))
+	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
+	sliceArray := (*[1 << 30]C.struct_ByteSliceStruct)(sliceArrayData)[:len(byteSlices):len(byteSlices)]
+	for i, data := range byteSlices {
+		sliceArray[i] = data
+	}
+	defer C.free(sliceArrayData)
+	msgData := C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
 
-	C.arbCoreDeliverMessages(ac.c, msgDataC, cPreviousInboxHash)
+	C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxHash.Bytes()))
 }
 
 func (ac *ArbCore) GetSends(startIndex *big.Int, count *big.Int) ([][]byte, error) {
-	cStartIndex := intToData(startIndex)
-	defer C.free(cStartIndex)
-	cCount := intToData(count)
-	defer C.free(cCount)
-
-	result := C.arbCoreGetSends(ac.c, cStartIndex, cCount)
+	startIndexData := math.U256Bytes(startIndex)
+	countData := math.U256Bytes(count)
+	result := C.arbCoreGetSends(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
 	if result.found == 0 {
 		return nil, errors.New("failed to get log")
 	}
-	defer freeEncodedByteSliceArray(result.array)
 
-	return toByteSliceArray(result.array), nil
+	return receiveByteSliceArray(result.array), nil
 }
 
 func (ac *ArbCore) GetLogs(startIndex *big.Int, count *big.Int) ([]value.Value, error) {
-	cStartIndex := intToData(startIndex)
-	defer C.free(cStartIndex)
-	cCount := intToData(count)
-	defer C.free(cCount)
-
-	result := C.arbCoreGetLogs(ac.c, cStartIndex, cCount)
+	startIndexData := math.U256Bytes(startIndex)
+	countData := math.U256Bytes(count)
+	result := C.arbCoreGetLogs(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
 	if result.found == 0 {
 		return nil, errors.New("failed to get log")
 	}
-	defer freeEncodedByteSliceArray(result.array)
 
-	marshaledValues := toByteSliceArray(result.array)
+	marshaledValues := receiveByteSliceArray(result.array)
 	logVals := make([]value.Value, 0, len(marshaledValues))
 	for _, marshaledValue := range marshaledValues {
 		val, err := value.UnmarshalValue(bytes.NewReader(marshaledValue))
@@ -108,18 +107,15 @@ func (ac *ArbCore) GetLogs(startIndex *big.Int, count *big.Int) ([]value.Value, 
 }
 
 func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.InboxMessage, error) {
-	cStartIndex := intToData(startIndex)
-	defer C.free(cStartIndex)
-	cCount := intToData(count)
-	defer C.free(cCount)
+	startIndexData := math.U256Bytes(startIndex)
+	countData := math.U256Bytes(count)
 
-	result := C.arbCoreGetMessages(ac.c, cStartIndex, cCount)
+	result := C.arbCoreGetMessages(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
 	if result.found == 0 {
 		return nil, errors.New("failed to get log")
 	}
-	defer freeEncodedByteSliceArray(result.array)
 
-	data := toByteSliceArray(result.array)
+	data := receiveByteSliceArray(result.array)
 	messages := make([]inbox.InboxMessage, len(data))
 	for i, slice := range data {
 		var err error
@@ -133,12 +129,10 @@ func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.Inb
 }
 
 func (ac *ArbCore) GetMessageHashes(startIndex *big.Int, count *big.Int) ([]common.Hash, error) {
-	cStartIndex := intToData(startIndex)
-	defer C.free(cStartIndex)
-	cCount := intToData(count)
-	defer C.free(cCount)
+	startIndexData := math.U256Bytes(startIndex)
+	countData := math.U256Bytes(count)
 
-	cHashList := C.arbCoreGetMessageHashes(ac.c, cStartIndex, cCount)
+	cHashList := C.arbCoreGetMessageHashes(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
 	if cHashList.count == 0 {
 		return nil, nil
 	}
@@ -156,12 +150,10 @@ func (ac *ArbCore) GetMessageHashes(startIndex *big.Int, count *big.Int) ([]comm
 }
 
 func (ac *ArbCore) GetInboxDelta(startIndex *big.Int, count *big.Int) (ret common.Hash, err error) {
-	cStartIndex := intToData(startIndex)
-	defer C.free(cStartIndex)
-	cCount := intToData(count)
-	defer C.free(cCount)
+	startIndexData := math.U256Bytes(startIndex)
+	countData := math.U256Bytes(count)
 
-	status := C.arbCoreGetInboxDelta(ac.c, cStartIndex, cCount, unsafe.Pointer(&ret[0]))
+	status := C.arbCoreGetInboxDelta(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData), unsafe.Pointer(&ret[0]))
 	if status == 0 {
 		err = errors.New("failed to get inbox delta")
 		return
@@ -171,26 +163,25 @@ func (ac *ArbCore) GetInboxDelta(startIndex *big.Int, count *big.Int) (ret commo
 }
 
 func (ac *ArbCore) GetInboxAcc(index *big.Int) (ret common.Hash, err error) {
-	cIndex := intToData(index)
-	defer C.free(cIndex)
-
-	status := C.arbCoreGetInboxAcc(ac.c, cIndex, unsafe.Pointer(&ret[0]))
+	indexData := math.U256Bytes(index)
+	status := C.arbCoreGetInboxAcc(ac.c, unsafeDataPointer(indexData), unsafe.Pointer(&ret[0]))
 	if status == 0 {
 		err = errors.New("failed to get inbox delta")
 	}
-
 	return
 }
 
 func (ac *ArbCore) GetSendAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (ret common.Hash, err error) {
-	cStartAcc := hashToData(startAcc)
-	defer C.free(cStartAcc)
-	cStartIndex := intToData(startIndex)
-	defer C.free(cStartIndex)
-	cCount := intToData(count)
-	defer C.free(cCount)
+	startIndexData := math.U256Bytes(startIndex)
+	countData := math.U256Bytes(count)
 
-	status := C.arbCoreGetSendAcc(ac.c, cStartAcc, cStartIndex, cCount, unsafe.Pointer(&ret[0]))
+	status := C.arbCoreGetSendAcc(
+		ac.c,
+		unsafeDataPointer(startAcc.Bytes()),
+		unsafeDataPointer(startIndexData),
+		unsafeDataPointer(countData),
+		unsafe.Pointer(&ret[0]),
+	)
 	if status == 0 {
 		err = errors.New("failed to get inbox delta")
 	}
@@ -199,14 +190,16 @@ func (ac *ArbCore) GetSendAcc(startAcc common.Hash, startIndex *big.Int, count *
 }
 
 func (ac *ArbCore) GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (ret common.Hash, err error) {
-	cStartAcc := hashToData(startAcc)
-	defer C.free(cStartAcc)
-	cStartIndex := intToData(startIndex)
-	defer C.free(cStartIndex)
-	cCount := intToData(count)
-	defer C.free(cCount)
+	startIndexData := math.U256Bytes(startIndex)
+	countData := math.U256Bytes(count)
 
-	status := C.arbCoreGetLogAcc(ac.c, cStartAcc, cStartIndex, cCount, unsafe.Pointer(&ret[0]))
+	status := C.arbCoreGetLogAcc(
+		ac.c,
+		unsafeDataPointer(startAcc.Bytes()),
+		unsafeDataPointer(startIndexData),
+		unsafeDataPointer(countData),
+		unsafe.Pointer(&ret[0]),
+	)
 	if status == 0 {
 		err = errors.New("failed to get inbox delta")
 	}
@@ -215,10 +208,9 @@ func (ac *ArbCore) GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *b
 }
 
 func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int) (core.ExecutionCursor, error) {
-	cTotalGasUsed := intToData(totalGasUsed)
-	defer C.free(cTotalGasUsed)
+	totalGasUsedData := math.U256Bytes(totalGasUsed)
 
-	cExecutionCursor := C.arbCoreGetExecutionCursor(ac.c, cTotalGasUsed)
+	cExecutionCursor := C.arbCoreGetExecutionCursor(ac.c, unsafeDataPointer(totalGasUsedData))
 
 	if cExecutionCursor == nil {
 		return nil, errors.Errorf("error creating execution cursor")
@@ -236,15 +228,14 @@ func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, 
 	if !ok {
 		return errors.New("unsupported execution cursor type")
 	}
-	cMaxGas := intToData(maxGas)
-	defer C.free(cMaxGas)
+	maxGasData := math.U256Bytes(maxGas)
 
 	goOverGasInt := 0
 	if goOverGas {
 		goOverGasInt = 1
 	}
 
-	status := C.arbCoreAdvanceExecutionCursor(ac.c, cursor.c, cMaxGas, C.int(goOverGasInt))
+	status := C.arbCoreAdvanceExecutionCursor(ac.c, cursor.c, unsafeDataPointer(maxGasData), C.int(goOverGasInt))
 	if status == 0 {
 		return errors.New("failed to advance")
 	}
@@ -253,10 +244,9 @@ func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, 
 }
 
 func (ac *ArbCore) LogsCursorRequest(count *big.Int) error {
-	cCount := intToData(count)
-	defer C.free(cCount)
+	countData := math.U256Bytes(count)
 
-	status := C.arbCoreLogsCursorRequest(ac.c, cCount)
+	status := C.arbCoreLogsCursorRequest(ac.c, unsafeDataPointer(countData))
 	if status == 0 {
 		return errors.New("failed to send logs cursor request")
 	}
@@ -270,9 +260,8 @@ func (ac *ArbCore) LogsCursorGetLogs() ([]value.Value, error) {
 		// Nothing found, try again later
 		return nil, nil
 	}
-	defer freeEncodedByteSliceArray(result.array)
 
-	data := toByteSliceArray(result.array)
+	data := receiveByteSliceArray(result.array)
 	logs := make([]value.Value, len(data))
 	for i, slice := range data {
 		var err error
@@ -285,10 +274,8 @@ func (ac *ArbCore) LogsCursorGetLogs() ([]value.Value, error) {
 }
 
 func (ac *ArbCore) LogsCursorSetNextIndex(count *big.Int) error {
-	cCount := intToData(count)
-	defer C.free(cCount)
-
-	status := C.arbCoreLogsCursorSetNextIndex(ac.c, cCount)
+	countData := math.U256Bytes(count)
+	status := C.arbCoreLogsCursorSetNextIndex(ac.c, unsafeDataPointer(countData))
 	if status == 0 {
 		return errors.New("failed to send logs cursor set next index")
 	}
