@@ -51,6 +51,19 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
     return true;
 }
 
+Uint256Result arbCoreGetLogCount(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    try {
+        auto count_result = arb_core->logInsertedCount();
+        if (!count_result.status.ok()) {
+            return {{}, false};
+        }
+        return {returnUint256(count_result.data), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
 ByteSliceArrayResult arbCoreGetLogs(CArbCore* arbcore_ptr,
                                     const void* start_index_ptr,
                                     const void* count_ptr) {
@@ -75,6 +88,19 @@ ByteSliceArrayResult arbCoreGetLogs(CArbCore* arbcore_ptr,
     }
 }
 
+Uint256Result arbCoreGetSendCount(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    try {
+        auto count_result = arb_core->sendInsertedCount();
+        if (!count_result.status.ok()) {
+            return {{}, false};
+        }
+        return {returnUint256(count_result.data), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
 ByteSliceArrayResult arbCoreGetSends(CArbCore* arbcore_ptr,
                                      const void* start_index_ptr,
                                      const void* count_ptr) {
@@ -87,6 +113,19 @@ ByteSliceArrayResult arbCoreGetSends(CArbCore* arbcore_ptr,
         }
 
         return {returnCharVectorVector(sends.data), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
+Uint256Result arbCoreGetMessageCount(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    try {
+        auto count_result = arb_core->messageEntryInsertedCount();
+        if (!count_result.status.ok()) {
+            return {{}, false};
+        }
+        return {returnUint256(count_result.data), true};
     } catch (const std::exception& e) {
         return {{}, false};
     }

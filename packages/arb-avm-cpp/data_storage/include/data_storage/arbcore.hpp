@@ -139,19 +139,22 @@ class ArbCore {
                                                 MachineStateKeys state_data,
                                                 ValueCache& value_cache);
 
-    ValueResult<uint256_t> logInsertedCount(Transaction& tx) const;
+    ValueResult<uint256_t> logInsertedCount() const;
+    ValueResult<uint256_t> logInsertedCountImpl(Transaction& tx) const;
     rocksdb::Status updateLogInsertedCount(Transaction& tx,
                                            rocksdb::Slice value_slice);
     ValueResult<uint256_t> logProcessedCount(Transaction& tx) const;
     rocksdb::Status updateLogProcessedCount(Transaction& tx,
                                             rocksdb::Slice value_slice);
-    ValueResult<uint256_t> sendInsertedCount(Transaction& tx) const;
+    ValueResult<uint256_t> sendInsertedCount() const;
+    ValueResult<uint256_t> sendInsertedCountImpl(Transaction& tx) const;
     rocksdb::Status updateSendInsertedCount(Transaction& tx,
                                             rocksdb::Slice value_slice);
     ValueResult<uint256_t> sendProcessedCount(Transaction& tx) const;
     rocksdb::Status updateSendProcessedCount(Transaction& tx,
                                              rocksdb::Slice value_slice);
-    ValueResult<uint256_t> messageEntryInsertedCount(Transaction& tx) const;
+    ValueResult<uint256_t> messageEntryInsertedCount() const;
+    ValueResult<uint256_t> messageEntryInsertedCountImpl(Transaction& tx) const;
     rocksdb::Status updateMessageEntryInsertedCount(Transaction& tx,
                                                     rocksdb::Slice value_slice);
     ValueResult<uint256_t> messageEntryProcessedCount(Transaction& tx) const;

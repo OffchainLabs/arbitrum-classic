@@ -75,6 +75,33 @@ func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxH
 	C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxHash.Bytes()))
 }
 
+func (ac *ArbCore) GetSendCount() (*big.Int, error) {
+	result := C.arbCoreGetSendCount(ac.c)
+	if result.found == 0 {
+		return nil, errors.New("failed to load send count")
+	}
+
+	return receiveBigInt(result.value), nil
+}
+
+func (ac *ArbCore) GetLogCount() (*big.Int, error) {
+	result := C.arbCoreGetLogCount(ac.c)
+	if result.found == 0 {
+		return nil, errors.New("failed to load log count")
+	}
+
+	return receiveBigInt(result.value), nil
+}
+
+func (ac *ArbCore) GetMessageCount() (*big.Int, error) {
+	result := C.arbCoreGetMessageCount(ac.c)
+	if result.found == 0 {
+		return nil, errors.New("failed to load send count")
+	}
+
+	return receiveBigInt(result.value), nil
+}
+
 func (ac *ArbCore) GetSends(startIndex *big.Int, count *big.Int) ([][]byte, error) {
 	startIndexData := math.U256Bytes(startIndex)
 	countData := math.U256Bytes(count)

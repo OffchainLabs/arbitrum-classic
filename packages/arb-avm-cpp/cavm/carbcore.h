@@ -29,13 +29,19 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            ByteSliceArray inbox_messages,
                            void* previous_inbox_hash_ptr);
 
+Uint256Result arbCoreGetLogCount(CArbCore* arbcore_ptr);
+
 ByteSliceArrayResult arbCoreGetLogs(CArbCore* arbcore_ptr,
                                     const void* start_index_ptr,
                                     const void* count_ptr);
 
+Uint256Result arbCoreGetSendCount(CArbCore* arbcore_ptr);
+
 ByteSliceArrayResult arbCoreGetSends(CArbCore* arbcore_ptr,
                                      const void* start_index_ptr,
                                      const void* count_ptr);
+
+Uint256Result arbCoreGetMessageCount(CArbCore* arbcore_ptr);
 
 ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
                                         const void* start_index_ptr,

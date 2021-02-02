@@ -593,7 +593,7 @@ void ArbCore::operator()() {
         if (machine->status() == MachineThread::MACHINE_NONE) {
             // Start execution of machine if new message available
             auto tx = Transaction::makeTransaction(data_storage);
-            auto messages_count = messageEntryInsertedCount(*tx);
+            auto messages_count = messageEntryInsertedCountImpl(*tx);
             if (!messages_count.status.ok()) {
                 delivering_inbox_error_string =
                     messages_count.status.ToString();
@@ -659,7 +659,7 @@ void ArbCore::operator()() {
 
 rocksdb::Status ArbCore::saveLogs(Transaction& tx,
                                   const std::vector<value>& vals) {
-    auto log_result = logInsertedCount(tx);
+    auto log_result = logInsertedCountImpl(tx);
     if (!log_result.status.ok()) {
         return log_result.status;
     }
@@ -713,7 +713,7 @@ ValueResult<std::vector<value>> ArbCore::getLogsNoLock(Transaction& tx,
     std::lock_guard<std::mutex> lock(core_reorg_mutex);
 
     // Check if attempting to get entries past current valid logs
-    auto log_count = logInsertedCount(tx);
+    auto log_count = logInsertedCountImpl(tx);
     if (!log_count.status.ok()) {
         return {log_count.status, {}};
     }
@@ -750,7 +750,7 @@ ValueResult<std::vector<value>> ArbCore::getLogsNoLock(Transaction& tx,
 rocksdb::Status ArbCore::saveSends(
     Transaction& tx,
     const std::vector<std::vector<unsigned char>>& sends) {
-    auto send_result = sendInsertedCount(tx);
+    auto send_result = sendInsertedCountImpl(tx);
     if (!send_result.status.ok()) {
         return send_result.status;
     }
@@ -780,7 +780,7 @@ ValueResult<std::vector<uint256_t>> ArbCore::getInboxHashes(
     auto tx = Transaction::makeTransaction(data_storage);
 
     // Check if attempting to get entries past current valid logs
-    auto message_count_result = messageEntryInsertedCount(*tx);
+    auto message_count_result = messageEntryInsertedCountImpl(*tx);
     if (!message_count_result.status.ok()) {
         return {message_count_result.status, {}};
     }
@@ -820,7 +820,7 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     auto tx = Transaction::makeTransaction(data_storage);
 
     // Check if attempting to get entries past current valid logs
-    auto message_count = messageEntryInsertedCount(*tx);
+    auto message_count = messageEntryInsertedCountImpl(*tx);
     if (!message_count.status.ok()) {
         return {message_count.status, {}};
     }
@@ -879,7 +879,7 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
     auto tx = Transaction::makeTransaction(data_storage);
 
     // Check if attempting to get entries past current valid logs
-    auto send_count = sendInsertedCount(*tx);
+    auto send_count = sendInsertedCountImpl(*tx);
     if (!send_count.status.ok()) {
         return {send_count.status, {}};
     }
@@ -1180,7 +1180,13 @@ ValueResult<bool> ArbCore::executionCursorAddMessages(
     return {rocksdb::Status::OK(), true};
 }
 
-ValueResult<uint256_t> ArbCore::logInsertedCount(Transaction& tx) const {
+ValueResult<uint256_t> ArbCore::logInsertedCount() const {
+    auto tx = Transaction::makeTransaction(data_storage);
+
+    return logInsertedCountImpl(*tx);
+}
+
+ValueResult<uint256_t> ArbCore::logInsertedCountImpl(Transaction& tx) const {
     return getUint256UsingFamilyAndKey(*tx.transaction,
                                        tx.datastorage->state_column.get(),
                                        vecToSlice(log_inserted_key));
@@ -1202,7 +1208,13 @@ rocksdb::Status ArbCore::updateLogProcessedCount(Transaction& tx,
                                vecToSlice(log_processed_key), value_slice);
 }
 
-ValueResult<uint256_t> ArbCore::sendInsertedCount(Transaction& tx) const {
+ValueResult<uint256_t> ArbCore::sendInsertedCount() const {
+    auto tx = Transaction::makeTransaction(data_storage);
+
+    return sendInsertedCountImpl(*tx);
+}
+
+ValueResult<uint256_t> ArbCore::sendInsertedCountImpl(Transaction& tx) const {
     return getUint256UsingFamilyAndKey(*tx.transaction,
                                        tx.datastorage->state_column.get(),
                                        vecToSlice(send_inserted_key));
@@ -1224,7 +1236,13 @@ rocksdb::Status ArbCore::updateSendProcessedCount(Transaction& tx,
                                vecToSlice(send_processed_key), value_slice);
 }
 
-ValueResult<uint256_t> ArbCore::messageEntryInsertedCount(
+ValueResult<uint256_t> ArbCore::messageEntryInsertedCount() const {
+    auto tx = Transaction::makeTransaction(data_storage);
+
+    return messageEntryInsertedCountImpl(*tx);
+}
+
+ValueResult<uint256_t> ArbCore::messageEntryInsertedCountImpl(
     Transaction& tx) const {
     return getUint256UsingFamilyAndKey(*tx.transaction,
                                        tx.datastorage->state_column.get(),
@@ -1264,7 +1282,7 @@ nonstd::optional<rocksdb::Status> ArbCore::addMessages(
     auto tx = Transaction::makeTransaction(data_storage);
 
     // Get the last message sequence number that was added to database
-    auto message_count_result = messageEntryInsertedCount(*tx);
+    auto message_count_result = messageEntryInsertedCountImpl(*tx);
     if (message_count_result.status.ok()) {
         return message_count_result.status;
     }
@@ -1499,7 +1517,7 @@ bool ArbCore::deleteMessage(const MessageEntry& entry) {
 void ArbCore::handleLogsCursorRequested(Transaction& tx, ValueCache& cache) {
     // Provide requested logs
     logs_cursor.data.clear();
-    auto log_inserted_count = logInsertedCount(tx);
+    auto log_inserted_count = logInsertedCountImpl(tx);
     if (!log_inserted_count.status.ok()) {
         logs_cursor.error_string = log_inserted_count.status.ToString();
         logs_cursor.status = DataCursor::ERROR;
@@ -1539,7 +1557,7 @@ void ArbCore::handleLogsCursorRequested(Transaction& tx, ValueCache& cache) {
 }
 
 void ArbCore::handleLogsCursorProcessed(Transaction& tx) {
-    auto log_inserted_count = logInsertedCount(tx);
+    auto log_inserted_count = logInsertedCountImpl(tx);
     if (!log_inserted_count.status.ok()) {
         logs_cursor.error_string = log_inserted_count.status.ToString();
         logs_cursor.status = DataCursor::ERROR;
@@ -1571,7 +1589,7 @@ void ArbCore::handleLogsCursorProcessed(Transaction& tx) {
 rocksdb::Status ArbCore::handleLogsCursorReorg(Transaction& tx,
                                                uint256_t log_count,
                                                ValueCache& cache) {
-    auto log_inserted_count = logInsertedCount(tx);
+    auto log_inserted_count = logInsertedCountImpl(tx);
     if (!log_inserted_count.status.ok()) {
         return log_inserted_count.status;
     }
