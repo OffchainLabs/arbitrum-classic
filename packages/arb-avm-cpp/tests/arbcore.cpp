@@ -61,7 +61,7 @@ TEST_CASE("ArbCore tests") {
             auto arbCore = storage.getArbCore();
             REQUIRE(arbCore->startThread());
 
-            arbCore->deliverMessages(messages, 0);
+            arbCore->deliverMessages(messages, 0, false);
 
             int tries = 0;
             while (true) {

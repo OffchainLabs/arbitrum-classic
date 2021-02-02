@@ -91,13 +91,15 @@ void ArbCore::abortThread() {
 // messagesEmpty() returns true before calling this function.
 void ArbCore::deliverMessages(
     const std::vector<std::vector<unsigned char>>& messages,
-    const uint256_t& previous_inbox_hash) {
+    const uint256_t& previous_inbox_hash,
+    const bool last_block_complete) {
     if (delivering_inbox_status != MESSAGES_EMPTY) {
         throw std::runtime_error("message_status != ARBCORE_EMPTY");
     }
 
     delivering_inbox_messages = messages;
     delivering_previous_inbox_hash = previous_inbox_hash;
+    delivering_last_block_complete = last_block_complete;
 
     delivering_inbox_status = MESSAGES_READY;
 }
@@ -363,7 +365,6 @@ ValueResult<Checkpoint> ArbCore::getCheckpoint(
         return {result.status, {}};
     }
 
-    auto checkpoint = extractCheckpoint(result.data);
     return {rocksdb::Status::OK(), extractCheckpoint(result.data)};
 }
 
@@ -522,7 +523,8 @@ void ArbCore::operator()() {
             // Add messages, reorg might occur
             auto add_status = addMessages(
                 delivering_inbox_messages, delivering_previous_inbox_hash,
-                last_sequence_number_in_machine, cache);
+                last_sequence_number_in_machine, delivering_last_block_complete,
+                cache);
             if (!add_status) {
                 // Messages from previous block invalid because of reorg so
                 // request older messages
@@ -1324,6 +1326,7 @@ nonstd::optional<rocksdb::Status> ArbCore::addMessages(
     const std::vector<std::vector<unsigned char>>& messages,
     const uint256_t& previous_inbox_hash,
     const uint256_t& final_machine_sequence_number,
+    const bool last_block_complete,
     ValueCache& cache) {
     auto tx = Transaction::makeTransaction(data_storage);
 
@@ -1435,9 +1438,10 @@ nonstd::optional<rocksdb::Status> ArbCore::addMessages(
         }
 
         bool last_message_in_block;
-        if ((current_message_index == messages_count - 1) ||
-            current_inbox_message.block_number !=
-                next_inbox_message.block_number) {
+        if (last_block_complete &&
+            ((current_message_index == messages_count - 1) ||
+             current_inbox_message.block_number !=
+                 next_inbox_message.block_number)) {
             last_message_in_block = true;
         } else {
             last_message_in_block = false;

@@ -28,7 +28,8 @@ int arbCoreMachineIdle(CArbCore* arbcore_ptr);
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            ByteSliceArray inbox_messages,
-                           void* previous_inbox_hash_ptr);
+                           void* previous_inbox_hash_ptr,
+                           const int last_block_complete);
 
 Uint256Result arbCoreGetLogCount(CArbCore* arbcore_ptr);
 

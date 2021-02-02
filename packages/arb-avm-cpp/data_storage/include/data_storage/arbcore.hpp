@@ -78,6 +78,7 @@ class ArbCore {
     std::atomic<bool> arbcore_abort{false};
     std::vector<std::vector<unsigned char>> delivering_inbox_messages;
     uint256_t delivering_previous_inbox_hash;
+    bool delivering_last_block_complete;
 
     // Core thread inbox output
     std::string delivering_inbox_error_string;
@@ -96,7 +97,8 @@ class ArbCore {
     void abortThread();
     void deliverMessages(
         const std::vector<std::vector<unsigned char>>& messages,
-        const uint256_t& previous_inbox_hash);
+        const uint256_t& previous_inbox_hash,
+        const bool last_block_complete);
 
     rocksdb::Status saveAssertion(Transaction& tx, const Assertion& assertion);
 
@@ -215,6 +217,7 @@ class ArbCore {
         const std::vector<std::vector<unsigned char>>& messages,
         const uint256_t& previous_inbox_hash,
         const uint256_t& final_machine_sequence_number,
+        const bool last_block_complete,
         ValueCache& cache);
     nonstd::optional<MessageEntry> getNextMessage();
     bool deleteMessage(const MessageEntry& entry);

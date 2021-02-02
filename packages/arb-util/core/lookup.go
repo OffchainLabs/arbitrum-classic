@@ -50,7 +50,7 @@ type ArbCore interface {
 	StartThread() bool
 	StopThread()
 
-	DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash)
+	DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool)
 }
 
 func GetSingleSend(lookup ArbCoreLookup, index *big.Int) ([]byte, error) {

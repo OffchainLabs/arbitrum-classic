@@ -42,13 +42,15 @@ int arbCoreMachineIdle(CArbCore* arbcore_ptr) {
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            ByteSliceArray inbox_messages,
-                           void* previous_inbox_hash_ptr) {
+                           void* previous_inbox_hash_ptr,
+                           const int last_block_complete) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     auto messages = receiveByteSliceArray(inbox_messages);
     auto previous_inbox_hash = receiveUint256(previous_inbox_hash_ptr);
 
     try {
-        arb_core->deliverMessages(messages, previous_inbox_hash);
+        arb_core->deliverMessages(messages, previous_inbox_hash,
+                                  last_block_complete);
     } catch (const std::exception& e) {
         return false;
     }

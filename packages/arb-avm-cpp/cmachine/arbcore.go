@@ -62,7 +62,7 @@ func (ac *ArbCore) MachineIdle() bool {
 	return status == 1
 }
 
-func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash) {
+func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) {
 	rawInboxData := encodeInboxMessages(messages)
 	byteSlices := encodeByteSliceList(rawInboxData)
 
@@ -74,7 +74,12 @@ func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxH
 	defer C.free(sliceArrayData)
 	msgData := C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
 
-	C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxHash.Bytes()))
+	cLastBlockComplete := 0
+	if lastBlockComplete {
+		cLastBlockComplete = 1
+	}
+
+	C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxHash.Bytes()), C.int(cLastBlockComplete))
 }
 
 func (ac *ArbCore) GetSendCount() (*big.Int, error) {
