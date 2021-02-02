@@ -92,6 +92,9 @@ class ArbCore {
         : data_storage(std::move(data_storage_)),
           code(std::make_shared<Code>(
               getNextSegmentID(*makeConstTransaction()))) {}
+
+    ~ArbCore() { abortThread(); }
+
     void operator()();
     bool startThread();
     void abortThread();
