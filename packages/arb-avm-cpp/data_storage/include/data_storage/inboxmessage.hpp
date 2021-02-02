@@ -55,7 +55,7 @@ struct InboxMessage {
     uint256_t hash(const uint256_t& previous_inbox_hash) const;
 
     Tuple toTuple();
-    std::vector<unsigned char> serialize();
+    std::vector<unsigned char> serialize() const;
 };
 
 uint256_t hash_inbox(const uint256_t& previous_inbox_hash,

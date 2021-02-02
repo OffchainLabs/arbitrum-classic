@@ -86,7 +86,7 @@ std::vector<InboxMessage> extractInboxMessages(
     return messages;
 }
 
-std::vector<unsigned char> InboxMessage::serialize() {
+std::vector<unsigned char> InboxMessage::serialize() const {
     std::vector<unsigned char> state_data_vector;
     state_data_vector.push_back(kind);
     marshal_uint256_t(sender, state_data_vector);

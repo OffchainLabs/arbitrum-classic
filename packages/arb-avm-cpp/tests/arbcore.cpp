@@ -44,10 +44,26 @@ TEST_CASE("ArbCore tests") {
             nlohmann::json j;
             i >> j;
 
-            std::vector<std::vector<unsigned char>> messages;
+            std::vector<Tuple> inbox_message_tuples;
             for (auto& json_message : j.at("inbox")) {
                 auto tup = simple_value_from_json(json_message).get<Tuple>();
-                messages.push_back(InboxMessage::fromTuple(tup).serialize());
+                inbox_message_tuples.push_back(std::move(tup));
+            }
+
+            std::vector<InboxMessage> inbox_messages;
+            for (const auto& msg : inbox_message_tuples) {
+                inbox_messages.push_back(InboxMessage::fromTuple(msg));
+            }
+
+            std::vector<std::vector<unsigned char>> raw_messages;
+            for (const auto& msg : inbox_messages) {
+                raw_messages.push_back(msg.serialize());
+            }
+
+            for (size_t i = 0; i < raw_messages.size(); ++i) {
+                auto msg = extractInboxMessage(raw_messages[i]);
+                auto msg_tup = msg.toTuple();
+                REQUIRE(hash(msg_tup) == hash(inbox_message_tuples[i]));
             }
 
             auto logs_json = j.at("logs");
@@ -61,13 +77,13 @@ TEST_CASE("ArbCore tests") {
             auto arbCore = storage.getArbCore();
             REQUIRE(arbCore->startThread());
 
-            arbCore->deliverMessages(messages, 0, false);
+            arbCore->deliverMessages(raw_messages, 0, false);
 
             int tries = 0;
             while (true) {
                 auto countRes = arbCore->messageEntryInsertedCount();
                 REQUIRE(countRes.status.ok());
-                if (countRes.data == messages.size()) {
+                if (countRes.data == raw_messages.size()) {
                     break;
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(1000));
