@@ -36,7 +36,7 @@ bool MachineThread::startThread(
     uint256_t messages_to_skip,
     const bool final_message_of_block) {
     abortThread();
-    machine_status = MACHINE_RUNNING;
+    machine_status = MACHINE_NONE;
 
     machine_thread = std::make_unique<std::thread>(
         (std::reference_wrapper<MachineThread>(*this)), max_gas, go_over_gas,

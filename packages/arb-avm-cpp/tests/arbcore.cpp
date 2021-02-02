@@ -65,7 +65,7 @@ TEST_CASE("ArbCore tests") {
 
             int tries = 0;
             while (true) {
-                auto countRes = arbCore->messageEntryProcessedCount();
+                auto countRes = arbCore->messageEntryInsertedCount();
                 REQUIRE(countRes.status.ok());
                 if (countRes.data == messages.size()) {
                     break;
