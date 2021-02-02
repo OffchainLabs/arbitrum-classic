@@ -363,10 +363,9 @@ ValueResult<Checkpoint> ArbCore::getCheckpoint(
             extractCheckpoint(arb_gas_used, result.data)};
 }
 
-bool ArbCore::isCheckpointsEmpty() const {
-    auto tx = Transaction::makeTransaction(data_storage);
-    auto it = std::unique_ptr<rocksdb::Iterator>(tx->transaction->GetIterator(
-        rocksdb::ReadOptions(), tx->datastorage->checkpoint_column.get()));
+bool ArbCore::isCheckpointsEmpty(Transaction& tx) const {
+    auto it = std::unique_ptr<rocksdb::Iterator>(tx.transaction->GetIterator(
+        rocksdb::ReadOptions(), tx.datastorage->checkpoint_column.get()));
     it->SeekToLast();
     return !it->Valid();
 }

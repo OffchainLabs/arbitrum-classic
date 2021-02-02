@@ -24,18 +24,18 @@
 TEST_CASE("CheckpointedMachine tests") {
     DBDeleter deleter;
     auto storage = std::make_shared<DataStorage>(dbpath);
-    auto store = std::make_unique<ArbCore>(storage);
+    auto arbcore = std::make_unique<ArbCore>(storage);
     auto executable = loadExecutable(test_contract_path);
-    store->initialize(executable);
+    arbcore->initialize(executable);
 
     SECTION("CheckpointedMachine basic") {
-        auto tx = store->makeTransaction();
-        REQUIRE(store->initialized());
-        REQUIRE(store->isCheckpointsEmpty());
-        REQUIRE(store->maxCheckpointGas() == 0);
+        auto tx = arbcore->makeTransaction();
+        REQUIRE(arbcore->initialized());
+        REQUIRE(arbcore->isCheckpointsEmpty(*tx));
+        REQUIRE(arbcore->maxCheckpointGas() == 0);
 
-        store->saveCheckpoint(*tx);
-        REQUIRE(!store->isCheckpointsEmpty());
-        REQUIRE(store->maxCheckpointGas() == 0);
+        arbcore->saveCheckpoint(*tx);
+        REQUIRE(!arbcore->isCheckpointsEmpty(*tx));
+        REQUIRE(arbcore->maxCheckpointGas() == 0);
     }
 }

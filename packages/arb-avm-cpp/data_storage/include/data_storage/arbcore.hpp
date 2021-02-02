@@ -103,7 +103,7 @@ class ArbCore {
     ValueResult<Checkpoint> getCheckpoint(
         Transaction& tx,
         const uint256_t& message_sequence_number) const;
-    bool isCheckpointsEmpty() const;
+    bool isCheckpointsEmpty(Transaction& tx) const;
     uint256_t maxCheckpointGas();
     ValueResult<Checkpoint> getCheckpointUsingGas(Transaction& tx,
                                                   const uint256_t& total_gas,
