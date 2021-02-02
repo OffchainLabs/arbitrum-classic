@@ -60,7 +60,8 @@ MachineState::MachineState(std::shared_ptr<Code> code_,
                            Status state_,
                            CodePointRef pc_,
                            CodePointStub errpc_,
-                           Tuple staged_message_)
+                           uint256_t total_messages_consumed_,
+                           value staged_message_)
     : code(std::move(code_)),
       registerVal(std::move(register_val_)),
       static_val(std::move(static_val_)),
@@ -70,6 +71,7 @@ MachineState::MachineState(std::shared_ptr<Code> code_,
       state(state_),
       pc(pc_),
       errpc(errpc_),
+      total_messages_consumed(total_messages_consumed_),
       staged_message(std::move(staged_message_)) {}
 
 MachineState MachineState::loadFromFile(
@@ -114,6 +116,10 @@ uint256_t MachineState::hash() const {
         oit = to_big_endian(val, oit);
     }
     {
+        if (nonstd::holds_alternative<uint256_t>(staged_message)) {
+            throw std::runtime_error(
+                "Can't get hash of machine with incomplete staged_message");
+        }
         auto val = ::hash_value(staged_message);
         to_big_endian(val, oit);
     }
@@ -143,7 +149,12 @@ void marshalState(std::vector<unsigned char>& buf,
                   const value& staticVal,
                   uint256_t arb_gas_remaining,
                   CodePointStub errpc,
-                  const Tuple& staged_message) {
+                  const value& staged_message) {
+    if (nonstd::holds_alternative<uint256_t>(staged_message)) {
+        throw std::runtime_error(
+            "Can't marshal machine with incomplete staged_message");
+    }
+
     marshal_uint256_t(next_codepoint_hash, buf);
 
     stackPreImage.marshal(buf);
@@ -158,6 +169,10 @@ void marshalState(std::vector<unsigned char>& buf,
 }  // namespace
 
 std::vector<unsigned char> MachineState::marshalState() const {
+    if (nonstd::holds_alternative<uint256_t>(staged_message)) {
+        throw std::runtime_error(
+            "Can't marshal machine with incomplete staged_message");
+    }
     auto stackPreImage = stack.getHashPreImage();
     auto auxStackPreImage = auxstack.getHashPreImage();
     std::vector<unsigned char> buf;
@@ -343,6 +358,10 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
 }
 
 std::vector<unsigned char> MachineState::marshalForProof() const {
+    if (nonstd::holds_alternative<uint256_t>(staged_message)) {
+        throw std::runtime_error(
+            "Can't marshal machine with incomplete staged_message");
+    }
     auto currentInstruction = loadCurrentInstruction();
     auto& current_op = currentInstruction.op;
     auto opcode = current_op.opcode;

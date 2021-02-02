@@ -28,10 +28,7 @@
 
 struct Checkpoint {
    public:
-    // arb_gas_used not serialized/deserialized for database storage because it
-    // is part of index
     uint256_t arb_gas_used;
-
     uint256_t total_messages_read;
     uint256_t inbox_hash;
 
@@ -61,8 +58,7 @@ struct Checkpoint {
     void applyAssertion(const Assertion& assertion);
 };
 
-Checkpoint extractCheckpoint(uint256_t arb_gas_used,
-                             const std::vector<unsigned char>& stored_state);
+Checkpoint extractCheckpoint(const std::vector<unsigned char>& stored_state);
 
 std::vector<unsigned char> serializeCheckpoint(const Checkpoint& state_data);
 

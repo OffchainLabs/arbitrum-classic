@@ -39,12 +39,13 @@ struct MachineStateKeys {
     uint256_t datastack_hash;
     uint256_t auxstack_hash;
     uint256_t arb_gas_remaining;
-    CodePointRef pc;
-    CodePointStub err_pc;
+    CodePointRef pc{0, 0};
+    CodePointStub err_pc{{0, 0}, 0};
     uint256_t staged_message_hash;
-    Status status;
+    uint256_t total_messages_consumed;
+    Status status{};
 
-    MachineStateKeys() : pc(0, 0), err_pc({0, 0}, 0), status() {}
+    MachineStateKeys() = default;
     MachineStateKeys(uint256_t static_hash_,
                      uint256_t register_hash_,
                      uint256_t datastack_hash_,
@@ -53,6 +54,7 @@ struct MachineStateKeys {
                      CodePointRef pc_,
                      CodePointStub err_pc_,
                      uint256_t staged_message_hash_,
+                     uint256_t total_messages_consumed_,
                      Status status_)
         : static_hash(static_hash_),
           register_hash(register_hash_),
@@ -62,6 +64,7 @@ struct MachineStateKeys {
           pc(pc_),
           err_pc(err_pc_),
           staged_message_hash(staged_message_hash_),
+          total_messages_consumed(total_messages_consumed_),
           status(status_) {}
 };
 

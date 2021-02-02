@@ -63,10 +63,11 @@ struct MachineState {
     Datastack stack;
     Datastack auxstack;
     uint256_t arb_gas_remaining;
-    Status state = Status::Extensive;
+    Status state{Status::Extensive};
     CodePointRef pc;
     CodePointStub errpc;
-    Tuple staged_message;
+    uint256_t total_messages_consumed;
+    value staged_message{};
     AssertionContext context;
 
     static MachineState loadFromFile(const std::string& executable_filename);
@@ -84,7 +85,8 @@ struct MachineState {
                  Status state_,
                  CodePointRef pc_,
                  CodePointStub errpc_,
-                 Tuple staged_message_);
+                 uint256_t total_messages_consumed_,
+                 value staged_message_);
 
     std::vector<unsigned char> marshalBufferProof();
     uint256_t getMachineSize() const;

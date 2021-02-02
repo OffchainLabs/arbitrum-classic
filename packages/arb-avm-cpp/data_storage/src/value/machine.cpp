@@ -57,6 +57,7 @@ void serializeMachineStateKeys(const MachineStateKeys& state_data,
     state_data.pc.marshal(state_data_vector);
     state_data.err_pc.marshal(state_data_vector);
     marshal_uint256_t(state_data.staged_message_hash, state_data_vector);
+    marshal_uint256_t(state_data.total_messages_consumed, state_data_vector);
 }
 
 MachineStateKeys extractMachineStateKeys(
@@ -71,10 +72,13 @@ MachineStateKeys extractMachineStateKeys(
     auto pc = extractCodePointRef(iter);
     auto err_pc = extractCodePointStub(iter);
     auto staged_message_hash = extractUint256(iter);
+    auto total_messages_consumed = extractUint256(iter);
 
-    return MachineStateKeys{static_hash,   register_hash,       datastack_hash,
-                            auxstack_hash, arb_gas_remaining,   pc,
-                            err_pc,        staged_message_hash, status};
+    return MachineStateKeys{
+        static_hash,   register_hash,       datastack_hash,
+        auxstack_hash, arb_gas_remaining,   pc,
+        err_pc,        staged_message_hash, total_messages_consumed,
+        status};
 }
 
 void deleteMachineState(Transaction& transaction,
@@ -215,6 +219,8 @@ rocksdb::Status saveMachineState(Transaction& transaction,
     machine_state_keys.err_pc = machinestate.errpc;
     machine_state_keys.staged_message_hash =
         hash_value(machinestate.staged_message);
+    machine_state_keys.total_messages_consumed =
+        machinestate.total_messages_consumed;
     machine_state_keys.status = machinestate.state;
 
     return rocksdb::Status::OK();

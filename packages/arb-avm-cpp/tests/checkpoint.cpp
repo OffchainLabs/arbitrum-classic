@@ -402,13 +402,14 @@ Machine getComplexMachine() {
     CodePointRef pc{0, 0};
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
+    uint256_t total_messages_consumed = 42;
 
     Tuple staged_message(uint256_t{100}, uint256_t{200});
 
-    return Machine(MachineState(std::move(code), register_val,
-                                std::move(static_val), data_stack, aux_stack,
-                                arb_gas_remaining, state, pc, err_pc,
-                                std::move(staged_message)));
+    return Machine(MachineState(
+        std::move(code), register_val, std::move(static_val), data_stack,
+        aux_stack, arb_gas_remaining, state, pc, err_pc,
+        total_messages_consumed, std::move(staged_message)));
 }
 
 Machine getDefaultMachine() {
@@ -422,10 +423,12 @@ Machine getDefaultMachine() {
     CodePointRef pc(0, 0);
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
-    Tuple staged_message;
-    return Machine(MachineState(
-        std::move(code), register_val, std::move(static_val), data_stack,
-        aux_stack, arb_gas_remaining, state, pc, err_pc, staged_message));
+    uint256_t total_messages_consumed = 42;
+    Tuple staged_message{Tuple()};
+    return Machine(MachineState(std::move(code), register_val,
+                                std::move(static_val), data_stack, aux_stack,
+                                arb_gas_remaining, state, pc, err_pc,
+                                total_messages_consumed, staged_message));
 }
 
 TEST_CASE("Save Machinestatedata") {

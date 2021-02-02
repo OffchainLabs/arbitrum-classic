@@ -41,10 +41,10 @@ void Checkpoint::applyAssertion(const Assertion& assertion) {
     log_count += assertion.logs.size();
 }
 
-Checkpoint extractCheckpoint(const uint256_t arb_gas_used,
-                             const std::vector<unsigned char>& stored_state) {
+Checkpoint extractCheckpoint(const std::vector<unsigned char>& stored_state) {
     auto current_iter = stored_state.begin();
 
+    auto arb_gas_used = extractUint256(current_iter);
     auto total_messages_read = extractUint256(current_iter);
     auto processed_message_accumulator_hash = extractUint256(current_iter);
     auto block_height = extractUint64(current_iter);
@@ -65,6 +65,7 @@ Checkpoint extractCheckpoint(const uint256_t arb_gas_used,
 std::vector<unsigned char> serializeCheckpoint(const Checkpoint& state_data) {
     std::vector<unsigned char> state_data_vector;
 
+    marshal_uint256_t(state_data.arb_gas_used, state_data_vector);
     marshal_uint256_t(state_data.total_messages_read, state_data_vector);
     marshal_uint256_t(state_data.inbox_hash, state_data_vector);
     marshal_uint64_t(state_data.block_height, state_data_vector);

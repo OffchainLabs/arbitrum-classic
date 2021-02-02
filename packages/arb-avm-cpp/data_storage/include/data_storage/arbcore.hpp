@@ -101,9 +101,11 @@ class ArbCore {
     rocksdb::Status saveAssertion(Transaction& tx, const Assertion& assertion);
 
     rocksdb::Status saveCheckpoint(Transaction& tx);
-    ValueResult<Checkpoint> getCheckpoint(
-        Transaction& tx,
-        const uint256_t& message_sequence_number) const;
+    ValueResult<Checkpoint> getCheckpoint(Transaction& tx,
+                                          const uint256_t& arb_gas_used) const;
+    rocksdb::Status resolveStagedMessage(Transaction& tx,
+                                         value& message,
+                                         ValueCache& cache) const;
     bool isCheckpointsEmpty(Transaction& tx) const;
     uint256_t maxCheckpointGas();
     ValueResult<Checkpoint> getCheckpointUsingGas(Transaction& tx,

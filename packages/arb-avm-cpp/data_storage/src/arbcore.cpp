@@ -286,12 +286,9 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
     bool good_checkpoint_found = false;
     Checkpoint last_deleted_checkpoint;
     while (it->Valid()) {
-        auto keyBuf = it->key().data();
-        auto gas_key = deserializeUint256t(keyBuf);
-
         std::vector<unsigned char> checkpoint_vector(
             it->value().data(), it->value().data() + it->value().size());
-        auto checkpoint = extractCheckpoint(gas_key, checkpoint_vector);
+        auto checkpoint = extractCheckpoint(checkpoint_vector);
 
         if (checkpoint.total_messages_read - 1 > message_sequence_number) {
             // Obsolete checkpoint, need to delete referenced machine
@@ -366,8 +363,8 @@ ValueResult<Checkpoint> ArbCore::getCheckpoint(
         return {result.status, {}};
     }
 
-    return {rocksdb::Status::OK(),
-            extractCheckpoint(arb_gas_used, result.data)};
+    auto checkpoint = extractCheckpoint(result.data);
+    return {rocksdb::Status::OK(), extractCheckpoint(result.data)};
 }
 
 bool ArbCore::isCheckpointsEmpty(Transaction& tx) const {
@@ -424,7 +421,7 @@ ValueResult<Checkpoint> ArbCore::getCheckpointUsingGas(
 
     std::vector<unsigned char> saved_value(
         it->value().data(), it->value().data() + it->value().size());
-    auto parsed_state = extractCheckpoint(total_gas, saved_value);
+    auto parsed_state = extractCheckpoint(saved_value);
     return {rocksdb::Status::OK(), parsed_state};
 }
 
@@ -497,7 +494,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
                      state_data.status,
                      state_data.pc,
                      state_data.err_pc,
-                     std::move(staged_message_results.data.get<Tuple>())};
+                     state_data.total_messages_consumed,
+                     std::move(staged_message_results.data)};
 
     return std::make_unique<T>(state);
 }
@@ -1043,6 +1041,27 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
 
     return rocksdb::Status::OK();
 }
+
+rocksdb::Status ArbCore::resolveStagedMessage(Transaction& tx,
+                                              value& message,
+                                              ValueCache& cache) const {
+    if (nonstd::holds_alternative<uint256_t>(message)) {
+        auto sequence_number = nonstd::variants::get<uint256_t>(message);
+        if (sequence_number >= pending_checkpoint.total_messages_read - 1) {
+            // Staged message obsolete
+            return rocksdb::Status::NotFound();
+        }
+
+        auto message_lookup = getValue(tx, sequence_number, cache);
+        if (!message_lookup.status.ok()) {
+            // Unable to resolve cursor, no valid message found
+            return message_lookup.status;
+        }
+    }
+
+    return rocksdb::Status::OK();
+}
+
 rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
                                               ExecutionCursor& execution_cursor,
                                               const uint256_t& total_gas_used,
@@ -1089,14 +1108,10 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
         return staged_message.status;
     }
 
-    if (nonstd::variants::holds_alternative<uint256_t>(staged_message.data)) {
-        auto message_lookup = getValue(
-            tx, nonstd::variants::get<uint256_t>(staged_message.data), cache);
-        if (!message_lookup.status.ok()) {
-            return message_lookup.status;
-        }
-
-        // Message exists, so can use checkpoint
+    auto resolve_status = resolveStagedMessage(tx, staged_message.data, cache);
+    if (!resolve_status.ok()) {
+        // Unable to resolve staged_message, so can't use checkpoint
+        return resolve_status;
     }
 
     // Update execution_cursor with checkpoint
@@ -1104,6 +1119,11 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
     execution_cursor.setCheckpoint(checkpoint_result.data);
     execution_cursor.machine = getMachineUsingStateKeys<Machine>(
         tx, execution_cursor.machine_state_keys, cache);
+
+    // Replace staged_message with resolved value
+    execution_cursor.machine->machine_state.staged_message =
+        staged_message.data;
+
     return rocksdb::Status::OK();
 }
 

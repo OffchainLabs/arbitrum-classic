@@ -36,6 +36,15 @@ template <typename T>
 static T shrink(uint256_t i) {
     return static_cast<T>(i & std::numeric_limits<T>::max());
 }
+
+bool hasStagedMessage(value& staged_message) {
+    if (nonstd::holds_alternative<Tuple>(staged_message) &&
+        nonstd::get<Tuple>(staged_message) != Tuple()) {
+        return true;
+    }
+
+    return false;
+}
 }  // namespace
 
 namespace machineoperation {
@@ -416,7 +425,7 @@ void ethhash2Op(MachineState& m) {
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
 
-    std::array<unsigned char, 64> inData;
+    std::array<unsigned char, 64> inData{};
     auto it = to_big_endian(aNum, inData.begin());
     to_big_endian(bNum, it);
 
@@ -500,7 +509,7 @@ void sha256F(MachineState& m) {
     auto& input_first_int = assumeInt(m.stack[1]);
     auto& input_second_int = assumeInt(m.stack[2]);
 
-    std::array<uint8_t, 64> input_data;
+    std::array<uint8_t, 64> input_data{};
     intx::be::unsafe::store(input_data.data(), input_first_int);
     intx::be::unsafe::store(input_data.data() + 32, input_second_int);
 
@@ -695,7 +704,7 @@ uint256_t parseSignature(MachineState& m) {
     if (recovery_int != 0 && recovery_int != 1) {
         return 0;
     }
-    std::array<unsigned char, 64> sig_raw;
+    std::array<unsigned char, 64> sig_raw{};
     auto it = to_big_endian(assumeInt(m.stack[0]), sig_raw.begin());
     to_big_endian(assumeInt(m.stack[1]), it);
 
@@ -716,7 +725,7 @@ uint256_t parseSignature(MachineState& m) {
         return 0;
     }
 
-    std::array<unsigned char, 65> pubkey_raw;
+    std::array<unsigned char, 65> pubkey_raw{};
     size_t output_length = pubkey_raw.size();
     int serialized_pubkey = secp256k1_ec_pubkey_serialize(
         context, pubkey_raw.data(), &output_length, &pubkey,
@@ -809,7 +818,7 @@ void ec_pairing(MachineState& m) {
                    assumeInt(next.get_element_unsafe(3)),
                    assumeInt(next.get_element_unsafe(4)),
                    assumeInt(next.get_element_unsafe(5))};
-        points.push_back({g1, g2});
+        points.emplace_back(g1, g2);
     }
     if (val->tuple_size() != 0) {
         throw bad_pop_type{};
@@ -891,11 +900,21 @@ void send(MachineState& m) {
 
 BlockReason inboxPeekOp(MachineState& m) {
     m.stack.prepForMod(1);
-    bool has_staged_message = m.staged_message != Tuple{};
+    bool has_staged_message = hasStagedMessage(m.staged_message);
     if (!has_staged_message && m.context.inboxEmpty()) {
         if (!m.context.next_block_height) {
+            // Don't have information needed to continue
             return InboxBlocked();
         }
+
+        // The inboxPeekOp should always leave a message Tuple in
+        // staged_message so that hashes always come out consistently.  When
+        // a message is not available, the uint256_t sequence number of the next
+        // message is put into staged_messages.  This way, any function that
+        // uses staged_message can throw an error when staged_message is
+        // something other than a non-empty Tuple, and the uint256_t can be
+        // replaced by valid message Tuple when it becomes available.
+        m.staged_message = m.total_messages_consumed;
 
         // When next_block_height is set, we know the result of the inbox peek
         // opcode before we know the next message
@@ -905,22 +924,26 @@ BlockReason inboxPeekOp(MachineState& m) {
     }
     if (!has_staged_message) {
         m.staged_message = m.context.popInbox();
+        m.total_messages_consumed += 1;
     }
-    m.stack[0] = m.stack[0] == m.staged_message.get_element(1) ? 1 : 0;
+    m.stack[0] =
+        m.stack[0] == nonstd::get<Tuple>(m.staged_message).get_element(1) ? 1
+                                                                          : 0;
     ++m.pc;
     return NotBlocked{};
 }
 
 BlockReason inboxOp(MachineState& m) {
-    bool has_staged_message = m.staged_message != Tuple{};
+    bool has_staged_message = hasStagedMessage(m.staged_message);
     if (!has_staged_message && m.context.inboxEmpty()) {
         return InboxBlocked();
     }
     if (has_staged_message) {
-        m.stack.push(m.staged_message);
+        m.stack.push(Tuple(nonstd::get<Tuple>(m.staged_message)));
         m.staged_message = Tuple();
     } else {
         m.stack.push(m.context.popInbox());
+        m.total_messages_consumed += 1;
     }
     ++m.pc;
     return NotBlocked{};
@@ -1000,7 +1023,7 @@ void getbuffer64(MachineState& m) {
         throw int_out_of_bounds{};
     uint64_t res = 0;
     for (int i = 0; i < 8; i++) {
-        res = res << 8;
+        res = res << 8U;
         res = res | md.get(offset + i);
     }
     m.stack.popClear();
@@ -1062,8 +1085,8 @@ void setbuffer64(MachineState& m) {
     m.stack.popClear();
     m.stack.popClear();
     for (int i = 0; i < 8; i++) {
-        res = res.set(offset + 7 - i, val & 0xff);
-        val = val >> 8;
+        res = res.set(offset + 7 - i, val & 0xffU);
+        val = val >> 8U;
     }
     m.stack.push(res);
     ++m.pc;
