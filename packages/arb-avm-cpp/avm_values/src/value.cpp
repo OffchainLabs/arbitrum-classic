@@ -237,8 +237,8 @@ uint256_t getSize(const value& val) {
 struct ValuePrinter {
     std::ostream& os;
 
-    std::ostream* operator()(const Buffer&) const {
-        os << "Buffer";
+    std::ostream* operator()(const Buffer& b) const {
+        os << "Buffer(" << hash(b) << ")";
         return &os;
     }
 
