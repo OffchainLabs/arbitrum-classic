@@ -641,9 +641,15 @@ void ArbCore::operator()() {
                 std::vector<std::vector<unsigned char>> messages;
                 messages.push_back(next_message_result.data.data);
 
-                machine->startThread(
+                auto status = machine->startThread(
                     0, false, std::move(messages), 0,
                     next_message_result.data.last_message_in_block);
+                if (!status) {
+                    delivering_inbox_error_string =
+                        "Error starting machine thread";
+                    delivering_inbox_status = MESSAGES_ERROR;
+                    break;
+                }
             } else {
                 // Machine all caught up, no messages to process
                 delivering_machine_idle = true;
