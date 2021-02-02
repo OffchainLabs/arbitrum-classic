@@ -121,6 +121,6 @@ InboxMessage InboxMessage::fromTuple(const Tuple& tup) {
     for (uint64_t i = 0; i < data_size; i++) {
         data.push_back(data_buf.get(i));
     }
-    return InboxMessage{kind,   block_number,          timestamp,
-                        sender, inbox_sequence_number, data};
+    return InboxMessage{
+        kind, sender, block_number, timestamp, inbox_sequence_number, data};
 }
