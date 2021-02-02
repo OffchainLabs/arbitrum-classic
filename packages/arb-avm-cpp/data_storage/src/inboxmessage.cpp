@@ -99,7 +99,9 @@ std::vector<unsigned char> InboxMessage::serialize() {
 
 Tuple InboxMessage::toTuple() {
     Buffer buf;
-    buf = buf.set_many(0, data);
+    for (uint64_t i = 0; i < data.size(); i++) {
+        buf = buf.set(i, data[i]);
+    }
 
     Tuple message(uint256_t{kind}, block_number, timestamp, sender,
                   inbox_sequence_number, uint256_t{data.size()},
