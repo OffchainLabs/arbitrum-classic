@@ -52,24 +52,22 @@ class MachineThread : public Machine {
     MachineThread(std::shared_ptr<Code> code, value static_val)
         : Machine(std::move(code), std::move(static_val)) {}
 
-    bool startThread(
-        uint256_t max_gas,
-        bool go_over_gas,
-        const std::vector<std::vector<unsigned char>>& inbox_messages,
-        uint256_t messages_to_skip,
-        bool final_message_of_block);
+    bool startThread(uint256_t max_gas,
+                     bool go_over_gas,
+                     std::vector<std::vector<unsigned char>> inbox_messages,
+                     uint256_t messages_to_skip,
+                     bool final_message_of_block);
     void abortThread();
     machine_status_enum status();
     void clearStatus();
     std::string get_error_string();
     void clear_error_string();
     Assertion getAssertion();
-    void operator()(
-        uint256_t max_gas,
-        bool go_over_gas,
-        const std::vector<std::vector<unsigned char>>& inbox_messages,
-        uint256_t messages_to_skip,
-        const bool final_message_of_block);
+    void operator()(uint256_t max_gas,
+                    bool go_over_gas,
+                    std::vector<std::vector<unsigned char>> inbox_messages,
+                    uint256_t messages_to_skip,
+                    const bool final_message_of_block);
 };
 
 #endif /* machine_hpp */

@@ -75,6 +75,10 @@ TEST_CASE("ArbCore tests") {
                 REQUIRE(tries < 5);
             }
 
+            while (!arbCore->machineIdle()) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            }
+
             auto producedLogCountRes = arbCore->logInsertedCount();
             REQUIRE(producedLogCountRes.status.ok());
             REQUIRE(producedLogCountRes.data == logs.size());

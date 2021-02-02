@@ -555,17 +555,17 @@ void ArbCore::operator()() {
             auto tx = Transaction::makeTransaction(data_storage);
 
             auto last_assertion = machine->getAssertion();
-            auto messages_processed = messageEntryProcessedCountImpl(*tx);
-            if (!messages_processed.status.ok()) {
+            auto messages_inserted = messageEntryInsertedCountImpl(*tx);
+            if (!messages_inserted.status.ok()) {
                 delivering_inbox_error_string =
-                    messages_processed.status.ToString();
+                    messages_inserted.status.ToString();
                 break;
             }
             auto last_sequence_number_consumed =
                 first_sequence_number_in_machine +
                 last_assertion.inbox_messages_consumed;
 
-            if (last_sequence_number_consumed >= messages_processed.data) {
+            if (last_sequence_number_consumed > messages_inserted.data) {
                 // Machine consumed obsolete message, restore from checkpoint
                 machine = getMachineUsingStateKeys<MachineThread>(
                     *tx, pending_checkpoint.machine_state_keys, cache);
@@ -640,7 +640,7 @@ void ArbCore::operator()() {
                 messages.push_back(next_message_result.data.data);
 
                 machine->startThread(
-                    0, false, messages, 0,
+                    0, false, std::move(messages), 0,
                     next_message_result.data.last_message_in_block);
             } else {
                 // Machine all caught up, no messages to process
