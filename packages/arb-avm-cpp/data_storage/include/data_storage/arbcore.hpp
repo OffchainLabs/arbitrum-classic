@@ -142,26 +142,22 @@ class ArbCore {
 
     ValueResult<uint256_t> logInsertedCount() const;
     ValueResult<uint256_t> logInsertedCountImpl(Transaction& tx) const;
-    rocksdb::Status updateLogInsertedCount(Transaction& tx,
-                                           rocksdb::Slice value_slice);
+
     ValueResult<uint256_t> logProcessedCount(Transaction& tx) const;
     rocksdb::Status updateLogProcessedCount(Transaction& tx,
                                             rocksdb::Slice value_slice);
     ValueResult<uint256_t> sendInsertedCount() const;
     ValueResult<uint256_t> sendInsertedCountImpl(Transaction& tx) const;
-    rocksdb::Status updateSendInsertedCount(Transaction& tx,
-                                            rocksdb::Slice value_slice);
+
     ValueResult<uint256_t> sendProcessedCount(Transaction& tx) const;
     rocksdb::Status updateSendProcessedCount(Transaction& tx,
                                              rocksdb::Slice value_slice);
     ValueResult<uint256_t> messageEntryInsertedCount() const;
     ValueResult<uint256_t> messageEntryInsertedCountImpl(Transaction& tx) const;
-    rocksdb::Status updateMessageEntryInsertedCount(Transaction& tx,
-                                                    rocksdb::Slice value_slice);
-    ValueResult<uint256_t> messageEntryProcessedCount(Transaction& tx) const;
-    rocksdb::Status updateMessageEntryProcessedCount(
-        Transaction& tx,
-        rocksdb::Slice value_slice);
+
+    ValueResult<uint256_t> messageEntryProcessedCount() const;
+    ValueResult<uint256_t> messageEntryProcessedCountImpl(
+        Transaction& tx) const;
 
     rocksdb::Status saveLogs(Transaction& tx, const std::vector<value>& val);
     ValueResult<std::vector<value>> getLogs(uint256_t index,
@@ -238,6 +234,17 @@ class ArbCore {
                                          ExecutionCursor& execution_cursor,
                                          const uint256_t& total_gas_used,
                                          ValueCache& cache);
+
+    rocksdb::Status updateLogInsertedCount(Transaction& tx,
+                                           const uint256_t& log_index);
+    rocksdb::Status updateSendInsertedCount(Transaction& tx,
+                                            const uint256_t& send_index);
+    rocksdb::Status updateMessageEntryProcessedCount(
+        Transaction& tx,
+        const uint256_t& message_index);
+    rocksdb::Status updateMessageEntryInsertedCount(
+        Transaction& tx,
+        const uint256_t& message_index);
 };
 
 nonstd::optional<rocksdb::Status> deleteLogsStartingAt(Transaction& tx,

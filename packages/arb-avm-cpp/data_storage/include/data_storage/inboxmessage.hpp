@@ -50,7 +50,12 @@ struct InboxMessage {
           inbox_sequence_number(inbox_sequence_number),
           data(std::move(data)) {}
 
+    static InboxMessage fromTuple(const Tuple& tup);
+
     uint256_t hash(const uint256_t& previous_inbox_hash) const;
+
+    Tuple toTuple();
+    std::vector<unsigned char> serialize();
 };
 
 uint256_t hash_inbox(const uint256_t& previous_inbox_hash,
@@ -62,5 +67,7 @@ std::vector<InboxMessage> extractInboxMessages(
 
 std::vector<unsigned char> serializeInboxMessage(
     const InboxMessage& state_data);
+
+Tuple messageDataToTuple(const std::vector<unsigned char>& data);
 
 #endif /* data_storage_inboxmessage_hpp */

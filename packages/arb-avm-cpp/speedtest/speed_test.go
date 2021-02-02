@@ -58,7 +58,7 @@ func runExecutableFile(b *testing.B, filePath string) {
 		b.Fatal(err)
 	}
 
-	ckp, err := cmachine.NewCheckpoint(ckpDir)
+	ckp, err := cmachine.NewArbStorage(ckpDir)
 	if err != nil {
 		b.Fatal(err)
 	}

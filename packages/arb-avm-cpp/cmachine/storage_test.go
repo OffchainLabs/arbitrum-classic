@@ -27,7 +27,7 @@ var codeFile = arbos.Path()
 func TestCheckpoint(t *testing.T) {
 	dePath := "dbPath"
 
-	arbStorage, err := NewCheckpoint(dePath)
+	arbStorage, err := NewArbStorage(dePath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func TestCheckpoint(t *testing.T) {
 func TestCheckpointMachine(t *testing.T) {
 	dePath := "dbPath2"
 
-	arbStorage, err := NewCheckpoint(dePath)
+	arbStorage, err := NewArbStorage(dePath)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -41,7 +41,7 @@ type ArbStorage struct {
 	c unsafe.Pointer
 }
 
-func NewCheckpoint(dbPath string) (*ArbStorage, error) {
+func NewArbStorage(dbPath string) (*ArbStorage, error) {
 	cDbPath := C.CString(dbPath)
 	defer C.free(unsafe.Pointer(cDbPath))
 
@@ -185,7 +185,7 @@ func (s *ArbStorage) DeleteData(key []byte) bool {
 	return success == 1
 }
 
-func (s *ArbStorage) GetArbCore() core.ArbCoreLookup {
+func (s *ArbStorage) GetArbCore() core.ArbCore {
 	ac := C.createArbCore(s.c)
 	return NewArbCore(ac)
 }

@@ -86,18 +86,47 @@ std::vector<InboxMessage> extractInboxMessages(
     return messages;
 }
 
-std::vector<unsigned char> serializeInboxMessage(
-    const InboxMessage& state_data) {
+std::vector<unsigned char> InboxMessage::serialize() {
     std::vector<unsigned char> state_data_vector;
-
-    state_data_vector.push_back(state_data.kind);
-    marshal_uint256_t(state_data.sender, state_data_vector);
-    marshal_uint256_t(state_data.block_number, state_data_vector);
-    marshal_uint256_t(state_data.timestamp, state_data_vector);
-    marshal_uint256_t(state_data.inbox_sequence_number, state_data_vector);
-
-    state_data_vector.insert(state_data_vector.end(), state_data.data.begin(),
-                             state_data.data.end());
-
+    state_data_vector.push_back(kind);
+    marshal_uint256_t(sender, state_data_vector);
+    marshal_uint256_t(block_number, state_data_vector);
+    marshal_uint256_t(timestamp, state_data_vector);
+    marshal_uint256_t(inbox_sequence_number, state_data_vector);
+    state_data_vector.insert(state_data_vector.end(), data.begin(), data.end());
     return state_data_vector;
+}
+
+Tuple InboxMessage::toTuple() {
+    Buffer buf;
+    buf = buf.set_many(0, data);
+
+    Tuple message(uint256_t{kind}, block_number, timestamp, sender,
+                  inbox_sequence_number, uint256_t{data.size()},
+                  std::move(buf));
+
+    return message;
+}
+
+InboxMessage InboxMessage::fromTuple(const Tuple& tup) {
+    if (tup.tuple_size() != 7) {
+        throw std::runtime_error("wrong tup size");
+    }
+    auto kind =
+        intx::narrow_cast<uint8_t>(tup.get_element_unsafe(0).get<uint256_t>());
+    auto block_number = tup.get_element_unsafe(1).get<uint256_t>();
+    auto timestamp = tup.get_element_unsafe(2).get<uint256_t>();
+    auto sender = tup.get_element_unsafe(3).get<uint256_t>();
+    auto inbox_sequence_number = tup.get_element_unsafe(4).get<uint256_t>();
+    auto data_size =
+        intx::narrow_cast<uint64_t>(tup.get_element_unsafe(5).get<uint256_t>());
+    auto data_buf = tup.get_element_unsafe(6).get<Buffer>();
+
+    std::vector<unsigned char> data;
+    data.reserve(data_size);
+    for (uint64_t i = 0; i < data_size; i++) {
+        data.push_back(data_buf.get(i));
+    }
+    return InboxMessage{kind,   block_number,          timestamp,
+                        sender, inbox_sequence_number, data};
 }

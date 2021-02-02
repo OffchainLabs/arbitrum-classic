@@ -19,7 +19,7 @@
 #include <avm/machine.hpp>
 #include <avm_values/opcodes.hpp>
 
-#include <data_storage/messageentry.hpp>
+#include <data_storage/inboxmessage.hpp>
 
 std::ostream& operator<<(std::ostream& os, const Machine& val) {
     os << val.machine_state;
@@ -49,7 +49,8 @@ Assertion Machine::run(
     std::vector<Tuple> inbox_messages;
     inbox_messages.reserve(inbox_messages.size());
     for (const auto& data : inbox_data) {
-        inbox_messages.emplace_back(messageDataToTuple(data));
+        auto inbox_message = extractInboxMessage(data);
+        inbox_messages.emplace_back(inbox_message.toTuple());
     }
 
     return run(max_gas, go_over_gas, inbox_messages, messages_to_skip,

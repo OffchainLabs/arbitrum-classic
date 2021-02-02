@@ -35,7 +35,7 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	arbStorage, err := NewCheckpoint("dbPath")
+	arbStorage, err := NewArbStorage("dbPath")
 	if err != nil {
 		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)

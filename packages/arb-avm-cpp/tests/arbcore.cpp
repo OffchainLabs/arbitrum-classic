@@ -18,6 +18,7 @@
 #include "helper.hpp"
 
 #include <data_storage/arbstorage.hpp>
+#include <data_storage/inboxmessage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 
@@ -43,10 +44,10 @@ TEST_CASE("ArbCore tests") {
             nlohmann::json j;
             i >> j;
 
-            std::vector<Tuple> messages;
+            std::vector<std::vector<unsigned char>> messages;
             for (auto& json_message : j.at("inbox")) {
-                messages.push_back(
-                    simple_value_from_json(json_message).get<Tuple>());
+                auto tup = simple_value_from_json(json_message).get<Tuple>();
+                messages.push_back(InboxMessage::fromTuple(tup).serialize());
             }
 
             auto logs_json = j.at("logs");
@@ -58,35 +59,30 @@ TEST_CASE("ArbCore tests") {
             ArbStorage storage(dbpath);
             storage.initialize(arb_os_path);
             auto arbCore = storage.getArbCore();
-            auto cursor = arbCore->getExecutionCursor(0, value_cache);
-            REQUIRE(cursor.status.ok());
-            auto mach = cursor.data->takeMachine();
-            mach->machine_state.stack.push(uint256_t{0});
-            auto assertion = mach->run(0, false, messages, 0, false);
-            INFO("Machine ran for " << assertion.stepCount << " steps");
-            REQUIRE(assertion.logs.size() == logs.size());
-            auto log = logs[0].get<Tuple>();
-            for (size_t k = 0; k < assertion.logs.size(); ++k) {
-                REQUIRE(assertion.logs[k] == logs[k]);
-            }
-            {
-                auto tx = storage.makeTransaction();
-                saveMachine(*tx, *mach);
-                tx->commit();
-            }
-            auto mach_hash = mach->hash();
-            auto mach2 = storage.getMachine(mach_hash, value_cache);
-            REQUIRE(mach_hash == mach2->hash());
-            storage.closeArbStorage();
+            REQUIRE(arbCore->startThread());
 
-            ArbStorage storage2(dbpath);
-            auto mach3 = storage2.getMachine(mach_hash, value_cache);
-            REQUIRE(mach_hash == mach3->hash());
+            arbCore->deliverMessages(messages, 0);
 
-            {
-                auto tx = storage2.makeTransaction();
-                deleteMachine(*tx, mach_hash);
-                tx->commit();
+            int tries = 0;
+            while (true) {
+                auto countRes = arbCore->messageEntryProcessedCount();
+                REQUIRE(countRes.status.ok());
+                if (countRes.data == messages.size()) {
+                    break;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                tries++;
+                REQUIRE(tries < 5);
+            }
+
+            auto producedLogCountRes = arbCore->logInsertedCount();
+            REQUIRE(producedLogCountRes.status.ok());
+            REQUIRE(producedLogCountRes.data == logs.size());
+            auto logsRes =
+                arbCore->getLogs(0, producedLogCountRes.data, value_cache);
+            REQUIRE(logsRes.status.ok());
+            for (size_t k = 0; k < logs.size(); ++k) {
+                REQUIRE(logsRes.data[k] == logs[k]);
             }
         }
     }

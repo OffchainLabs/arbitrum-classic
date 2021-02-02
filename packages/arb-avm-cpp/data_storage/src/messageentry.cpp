@@ -28,45 +28,6 @@ MessageEntry extractMessageEntry(uint256_t sequence_number,
     return deserializeMessageEntry(sequence_number, entry_vector);
 }
 
-Tuple messageDataToTuple(const std::vector<unsigned char>& data) {
-    auto ptr = data.data();
-
-    if (data.size() < sizeof(char) + sizeof(uint256_t) * 5) {
-        return {};
-    }
-
-    uint256_t kind = ptr[0];
-    ptr++;
-    auto block_number = intx::be::unsafe::load<uint256_t>(ptr);
-    ptr += sizeof(uint256_t);
-
-    auto timestamp = intx::be::unsafe::load<uint256_t>(ptr);
-    ptr += sizeof(uint256_t);
-
-    auto sender = intx::be::unsafe::load<uint256_t>(ptr);
-    ptr += sizeof(uint256_t);
-
-    auto sequence_num = intx::be::unsafe::load<uint256_t>(ptr);
-    ptr += sizeof(uint256_t);
-
-    auto buf_size = intx::be::unsafe::load<uint256_t>(ptr);
-    ptr += sizeof(uint256_t);
-
-    auto remaining_length = ptr - data.data() + buf_size;
-    if (remaining_length > data.size()) {
-        buf_size = remaining_length;
-    }
-
-    Buffer buf;
-    buf = buf.set_many(0, std::vector<uint8_t>(
-                              ptr, ptr + intx::narrow_cast<size_t>(buf_size)));
-
-    Tuple message(kind, block_number, timestamp, sender, sequence_num, buf_size,
-                  std::move(buf));
-
-    return message;
-}
-
 MessageEntry deserializeMessageEntry(
     const uint256_t sequence_number,
     const std::vector<unsigned char>& entry_vector) {

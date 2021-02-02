@@ -66,7 +66,7 @@ Packed hash_buf(uint8_t* buf, uint64_t offset, uint64_t sz) {
         auto hash_val = ethash::keccak256(buf + offset, 32);
         uint256_t res = intx::be::load<uint256_t>(hash_val);
         uint64_t lastIndex = 31;
-        while (buf[offset + lastIndex] == 0)
+        while (buf[offset + lastIndex] == 0 && lastIndex > 0)
             lastIndex--;
         return normal(res, 5, lastIndex);
     }

@@ -51,8 +51,6 @@ struct MessageEntry {
 MessageEntry extractMessageEntry(uint256_t sequence_number,
                                  rocksdb::Slice value);
 
-Tuple messageDataToTuple(const std::vector<unsigned char>& data);
-
 MessageEntry deserializeMessageEntry(
     uint256_t sequence_number,
     const std::vector<unsigned char>& entry_vector);
