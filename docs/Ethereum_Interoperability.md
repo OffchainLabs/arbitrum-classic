@@ -40,7 +40,7 @@ function depositERC721Message(
 
 ### Withdrawing funds from Arbitrum to Ethereum
 
-- Eth: The ArbSys library can be used to withdraw Eth, `ArbSys(100).withdrawEth(destAddress, amount)`
+- Eth: The ArbSys library can be used to withdraw Eth, `ArbSys(100).withdrawEth(destAddress)`
 - ERC-20 and ERC-721: The system generated token contracts in Arbitrum contain a withdraw method:
   ```solidity
   function withdrawERC20(address dest, uint256 amount) external;
