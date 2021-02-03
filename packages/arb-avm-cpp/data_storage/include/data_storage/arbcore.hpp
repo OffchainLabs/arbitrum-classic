@@ -185,6 +185,8 @@ class ArbCore {
         const std::vector<std::vector<unsigned char>>& send);
     bool machineIdle();
     bool messagesEmpty();
+    messages_status_enum messagesStatus();
+    std::string messagesClearError();
     ValueResult<uint256_t> getInboxDelta(uint256_t start_index,
                                          uint256_t count);
     ValueResult<uint256_t> getInboxAcc(uint256_t index);

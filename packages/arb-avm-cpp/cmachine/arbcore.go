@@ -62,6 +62,33 @@ func (ac *ArbCore) MachineIdle() bool {
 	return status == 1
 }
 
+func (ac *ArbCore) MessagesEmpty() bool {
+	status := C.arbCoreMessagesEmpty(ac.c)
+	return status == 1
+}
+
+func (ac *ArbCore) MessagesNeedOlder() (bool, error) {
+	status := C.arbCoreMessagesStatus(ac.c)
+	if status.found == 1 {
+		// Messages delivered successfully
+		return false, nil
+	}
+
+	if status.value == 1 {
+		// Need older messages
+		return true, nil
+	}
+
+	errorStatus := C.arbCoreMessagesError(ac.c)
+	if errorStatus == 1 {
+		cStr := C.arbCoreMessagesClearError(ac.c)
+		defer C.free(unsafe.Pointer(cStr))
+		return false, errors.New(C.GoString(cStr))
+	}
+
+	return false, errors.New("Unknown error occurred")
+}
+
 func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) {
 	rawInboxData := encodeInboxMessages(messages)
 	byteSlices := encodeByteSliceList(rawInboxData)

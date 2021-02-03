@@ -35,6 +35,33 @@ void arbCoreAbortThread(CArbCore* arbcore_ptr) {
     arb_core->abortThread();
 }
 
+// If result.status == 1, messages delivered successfully
+// If result.status == 0 and result.value == 1, need older messages
+// If result.status == 0 and result.value == 0, call checkError() for more info
+Uint64Result arbCoreMessagesStatus(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    auto status = arb_core->messagesStatus();
+    return {status == ArbCore::MESSAGES_NEED_OLDER,
+            status == ArbCore::MESSAGES_SUCCESS};
+}
+
+int arbCoreMessagesError(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    auto status = arb_core->messagesStatus();
+    return status == ArbCore::MESSAGES_ERROR;
+}
+
+char* arbCoreMessagesClearError(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    auto str = arb_core->messagesClearError();
+    return strdup(str.c_str());
+}
+
+int arbCoreMessagesEmpty(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    return arb_core->messagesEmpty();
+}
+
 int arbCoreMachineIdle(CArbCore* arbcore_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     return arb_core->machineIdle();

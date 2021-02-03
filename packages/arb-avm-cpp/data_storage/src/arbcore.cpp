@@ -69,6 +69,22 @@ bool ArbCore::messagesEmpty() {
     return delivering_inbox_status == MESSAGES_EMPTY;
 }
 
+ArbCore::messages_status_enum ArbCore::messagesStatus() {
+    return delivering_inbox_status;
+}
+
+std::string ArbCore::messagesClearError() {
+    if (delivering_inbox_status != ArbCore::MESSAGES_ERROR) {
+        return nullptr;
+    }
+
+    logs_cursor.status = DataCursor::EMPTY;
+    auto str = logs_cursor.error_string;
+    logs_cursor.error_string.clear();
+
+    return str;
+}
+
 bool ArbCore::startThread() {
     abortThread();
 
