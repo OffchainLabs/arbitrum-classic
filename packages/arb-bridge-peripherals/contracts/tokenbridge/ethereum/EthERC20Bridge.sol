@@ -23,9 +23,12 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import "../arbitrum/ArbTokenBridge.sol";
 
-import "./IExitLiquidityProvider.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "../libraries/SafeERC20Namer.sol";
+import "../libraries/TransferHelper.sol";
+import "./IExitLiquidityProvider.sol";
+import "./L1Buddy.sol";
+import "./TicketFactory.sol";
 
 import "../../buddybridge/ethereum/L1Buddy.sol";
 
@@ -34,14 +37,13 @@ enum StandardTokenType { ERC20, ERC777 }
 contract EthERC20Bridge is L1Buddy {
     address internal constant USED_ADDRESS = address(0x01);
 
-    // exitNum => exitDataHash => LP
-    mapping(bytes32 => address) redirectedExits;
+    TicketFactory public immutable ticketFactory;
 
     mapping(address => address) public customL2Tokens;
 
+
     address private immutable l2TemplateERC777;
     address private immutable l2TemplateERC20;
-
 
     event DepositERC20(
         address indexed destination,
@@ -69,15 +71,16 @@ contract EthERC20Bridge is L1Buddy {
 
     );
 
-
     constructor(
         address _inbox,
         address _l2Deployer,
         uint256 _maxGas,
         uint256 _gasPrice,
         address _l2TemplateERC777,
-        address _l2TemplateERC20
+        address _l2TemplateERC20,
+        TicketFactory _ticketFactory
     ) public payable L1Buddy(_inbox, _l2Deployer) {
+        ticketFactory = _ticketFactory;
         
         l2TemplateERC777 = _l2TemplateERC777;
         l2TemplateERC20 = _l2TemplateERC20;
@@ -134,10 +137,8 @@ contract EthERC20Bridge is L1Buddy {
     ) public onlyIfConnected {
         IOutbox outbox = IOutbox(L1Buddy.inbox.bridge().activeOutbox());
         address msgSender = outbox.l2ToL1Sender();
-
-        bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, msgSender, erc20, amount));
-        require(redirectedExits[withdrawData] == address(0), "ALREADY_EXITED");
-        redirectedExits[withdrawData] = liquidityProvider;
+        
+        ticketFactory.mint(erc20, msg.sender, exitNum, liquidityProvider);
 
         IExitLiquidityProvider(liquidityProvider).requestLiquidity(
             msgSender,
@@ -154,15 +155,16 @@ contract EthERC20Bridge is L1Buddy {
         address destination,
         uint256 amount
     ) external onlyIfConnected onlyL2Buddy {
-        bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, destination, erc20, amount));
         address exitAddress = redirectedExits[withdrawData];
-        redirectedExits[withdrawData] = USED_ADDRESS;
+
         // Unsafe external calls must occur below checks and effects
-        if (exitAddress != address(0)) {
-            require(IERC20(erc20).transfer(exitAddress, amount));
+        address recipient;
+        if (ticketFactory.exists(address(this), erc20, destination, exitNum)) {
+            recipient = ticketFactory.burn(erc20, destination, exitNum);
         } else {
-            require(IERC20(erc20).transfer(destination, amount));
+            recipient = destination;
         }
+        TransferHelper.safeTransfer(erc20, recipient, amount);
     }
 
     function updateTokenInfo(
