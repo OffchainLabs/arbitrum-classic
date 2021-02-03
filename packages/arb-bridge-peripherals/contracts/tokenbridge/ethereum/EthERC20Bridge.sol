@@ -18,23 +18,26 @@
 
 pragma solidity ^0.6.11;
 
-import "./L1Buddy.sol";
-import "../arbitrum/ArbTokenBridge.sol";
 
-import "./IExitLiquidityProvider.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "../arbitrum/ArbTokenBridge.sol";
 import "../libraries/SafeERC20Namer.sol";
+import "../libraries/TransferHelper.sol";
+import "./IExitLiquidityProvider.sol";
+import "./L1Buddy.sol";
+import "./TicketFactory.sol";
 
 contract EthERC20Bridge is L1Buddy {
     address internal constant USED_ADDRESS = address(0x01);
 
-    // exitNum => exitDataHash => LP
-    mapping(bytes32 => address) redirectedExits;
+    TicketFactory public immutable ticketFactory;
 
     mapping(address => address) customL2Tokens;
 
-    constructor(IInbox _inbox) public L1Buddy(_inbox) {}
+    constructor(IInbox _inbox, TicketFactory _ticketFactory) public L1Buddy(_inbox) {
+        ticketFactory = _ticketFactory;
+    }
 
     function connectToChain(uint256 maxGas, uint256 gasPriceBid) external payable {
         // Pay for gas
@@ -79,9 +82,7 @@ contract EthERC20Bridge is L1Buddy {
         uint256 amount,
         uint256 exitNum
     ) public onlyIfConnected {
-        bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, msg.sender, erc20, amount));
-        require(redirectedExits[withdrawData] == address(0), "ALREADY_EXITED");
-        redirectedExits[withdrawData] = liquidityProvider;
+        ticketFactory.mint(erc20, msg.sender, exitNum, liquidityProvider);
 
         IExitLiquidityProvider(liquidityProvider).requestLiquidity(
             msg.sender,
@@ -100,15 +101,15 @@ contract EthERC20Bridge is L1Buddy {
     ) external onlyIfConnected onlyL2 {
         // This method is only callable by this contract's buddy contract on L2
         require(l2Sender() == address(this), "L2_SENDER");
-        bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, destination, erc20, amount));
-        address exitAddress = redirectedExits[withdrawData];
-        redirectedExits[withdrawData] = USED_ADDRESS;
+
         // Unsafe external calls must occur below checks and effects
-        if (exitAddress != address(0)) {
-            require(IERC20(erc20).transfer(exitAddress, amount));
+        address recipient;
+        if (ticketFactory.exists(address(this), erc20, destination, exitNum)) {
+            recipient = ticketFactory.burn(erc20, destination, exitNum);
         } else {
-            require(IERC20(erc20).transfer(destination, amount));
+            recipient = destination;
         }
+        TransferHelper.safeTransfer(erc20, recipient, amount);
     }
 
     function updateTokenInfo(
