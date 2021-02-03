@@ -56,7 +56,7 @@ ValueResult<MessageEntry> getMessageEntry(Transaction& tx,
     auto parsed_state =
         extractMessageEntry(message_sequence_number, vecToSlice(result.data));
 
-    return {result.status, parsed_state};
+    return {result.status, std::move(parsed_state)};
 }
 
 }  // namespace
@@ -756,7 +756,7 @@ ValueResult<std::vector<value>> ArbCore::getLogsNoLock(Transaction& tx,
         logs.push_back(std::move(val_result.data));
     }
 
-    return {rocksdb::Status::OK(), logs};
+    return {rocksdb::Status::OK(), std::move(logs)};
 }
 
 rocksdb::Status ArbCore::saveSends(
@@ -821,7 +821,7 @@ ValueResult<std::vector<uint256_t>> ArbCore::getInboxHashes(
         messages.push_back(message_entry.inbox_hash);
     }
 
-    return {rocksdb::Status::OK(), messages};
+    return {rocksdb::Status::OK(), std::move(messages)};
 }
 
 ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
@@ -861,7 +861,7 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
         messages.push_back(message_entry.data);
     }
 
-    return {rocksdb::Status::OK(), messages};
+    return {rocksdb::Status::OK(), std::move(messages)};
 }
 
 ValueResult<std::vector<uint256_t>> ArbCore::getMessageHashes(
@@ -880,7 +880,7 @@ ValueResult<std::vector<uint256_t>> ArbCore::getMessageHashes(
         hashes.push_back(hash);
     }
 
-    return {rocksdb::Status::OK(), hashes};
+    return {rocksdb::Status::OK(), std::move(hashes)};
 }
 
 ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
@@ -946,7 +946,7 @@ ValueResult<uint256_t> ArbCore::getSendAcc(uint256_t start_acc_hash,
     for (const auto& send : sends_result.data) {
         combined_hash = hash(combined_hash, hash(send));
     }
-    return {rocksdb::Status::OK(), 0};
+    return {rocksdb::Status::OK(), combined_hash};
 }
 
 ValueResult<uint256_t> ArbCore::getLogAcc(uint256_t start_acc_hash,
@@ -962,7 +962,7 @@ ValueResult<uint256_t> ArbCore::getLogAcc(uint256_t start_acc_hash,
     for (const auto& send : sends_result.data) {
         combined_hash = hash(combined_hash, hash_value(send));
     }
-    return {rocksdb::Status::OK(), 0};
+    return {rocksdb::Status::OK(), combined_hash};
 }
 
 ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(

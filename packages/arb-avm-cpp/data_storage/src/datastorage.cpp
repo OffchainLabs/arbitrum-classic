@@ -110,9 +110,11 @@ getVectorVectorUsingFamilyAndKey(rocksdb::Transaction& tx,
         }
         vectors.emplace_back(it->value().data(),
                              it->value().data() + it->value().size());
+
+        it->Next();
     }
 
-    return {rocksdb::Status::OK(), vectors};
+    return {rocksdb::Status::OK(), std::move(vectors)};
 }
 
 ValueResult<std::vector<unsigned char>> getVectorUsingFamilyAndKey(
@@ -130,7 +132,7 @@ ValueResult<std::vector<unsigned char>> getVectorUsingFamilyAndKey(
     std::vector<unsigned char> saved_value(returned_value.begin(),
                                            returned_value.end());
 
-    return {status, saved_value};
+    return {status, std::move(saved_value)};
 }
 
 ValueResult<std::vector<uint256_t>> getUint256VectorUsingFamilyAndKey(
@@ -158,9 +160,11 @@ ValueResult<std::vector<uint256_t>> getUint256VectorUsingFamilyAndKey(
 
         auto data = reinterpret_cast<const char*>(it->value().data());
         vectors.push_back(deserializeUint256t(data));
+
+        it->Next();
     }
 
-    return {rocksdb::Status::OK(), vectors};
+    return {rocksdb::Status::OK(), std::move(vectors)};
 }
 
 ValueResult<uint256_t> getUint256UsingFamilyAndKey(
