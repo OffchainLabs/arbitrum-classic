@@ -19,11 +19,12 @@
 pragma solidity ^0.6.11;
 
 import "./L1Buddy.sol";
-import "../arbitrum/ArbERC20Bridge.sol";
+import "../arbitrum/ArbTokenBridge.sol";
 
 import "./IExitLiquidityProvider.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "../libraries/SafeERC20Namer.sol";
 
 contract EthERC20Bridge is L1Buddy {
     address internal constant USED_ADDRESS = address(0x01);
@@ -44,7 +45,7 @@ contract EthERC20Bridge is L1Buddy {
             maxGas, // max gas
             gasPriceBid, // gas price
             0, // payment
-            type(ArbERC20Bridge).creationCode
+            type(ArbTokenBridge).creationCode
         );
     }
 
@@ -113,34 +114,25 @@ contract EthERC20Bridge is L1Buddy {
     function updateTokenInfo(
         address erc20,
         uint256 maxGas,
-        uint256 gasPriceBid
+        uint256 gasPriceBid,
+        bool isERC20
     ) external payable onlyIfConnected {
-        string memory name;
-        string memory symbol;
-        uint8 decimals;
-        try ERC20(erc20).name() returns (string memory _name) {
-            name = _name;
-        } catch {}
-        try ERC20(erc20).symbol() returns (string memory _symbol) {
-            symbol = _symbol;
-        } catch {}
-        try ERC20(erc20).decimals() returns (uint8 _decimals) {
-            decimals = _decimals;
-        } catch {}
+        string memory name = SafeERC20Namer.tokenName(erc20);
+        string memory symbol = SafeERC20Namer.tokenSymbol(erc20);
+        uint8 decimals = ERC20(erc20).decimals();
+
+        bytes4 _selector = isERC20
+            ? ArbTokenBridge.updateERC777TokenInfo.selector
+            : ArbTokenBridge.updateERC20TokenInfo.selector;
+
         sendPairedContractTransaction(
             maxGas,
             gasPriceBid,
-            abi.encodeWithSignature(
-                "updateTokenInfo(address,string,string,uint8)",
-                erc20,
-                name,
-                symbol,
-                decimals
-            )
+            abi.encodeWithSelector(_selector, erc20, name, symbol, decimals)
         );
     }
 
-    function deposit(
+    function depositAsERC777(
         address erc20,
         address destination,
         uint256 amount,
@@ -148,15 +140,40 @@ contract EthERC20Bridge is L1Buddy {
         uint256 gasPriceBid
     ) external payable onlyIfConnected {
         require(IERC20(erc20).transferFrom(msg.sender, address(this), amount));
+        uint8 decimals = ERC20(erc20).decimals();
         // This transfers along any ETH sent for to pay for gas in L2
         sendPairedContractTransaction(
             maxGas,
             gasPriceBid,
-            abi.encodeWithSignature(
-                "mintFromL1(address,address,uint256)",
+            abi.encodeWithSelector(
+                ArbTokenBridge.mintERC777FromL1.selector,
                 erc20,
                 destination,
-                amount
+                amount,
+                decimals
+            )
+        );
+    }
+
+    function depositAsERC20(
+        address erc20,
+        address destination,
+        uint256 amount,
+        uint256 maxGas,
+        uint256 gasPriceBid
+    ) external payable onlyIfConnected {
+        require(IERC20(erc20).transferFrom(msg.sender, address(this), amount));
+        uint8 decimals = ERC20(erc20).decimals();
+        // This transfers along any ETH sent for to pay for gas in L2
+        sendPairedContractTransaction(
+            maxGas,
+            gasPriceBid,
+            abi.encodeWithSelector(
+                ArbTokenBridge.mintERC20FromL1.selector,
+                erc20,
+                destination,
+                amount,
+                decimals
             )
         );
     }
