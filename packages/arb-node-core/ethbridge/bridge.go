@@ -13,6 +13,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/pkg/errors"
 	"math/big"
+	"sort"
 	"strings"
 )
 
@@ -62,6 +63,29 @@ func NewBridgeWatcher(address ethcommon.Address, client ethutils.EthClient) (*Br
 	}, nil
 }
 
+func (r *BridgeWatcher) CurrentBlockHeight(ctx context.Context) (*big.Int, error) {
+	latestHeader, err := r.client.HeaderByNumber(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	return latestHeader.Number, nil
+}
+
+func (r *BridgeWatcher) LookupMessagesInRange(ctx context.Context, from, to *big.Int) ([]*DeliveredInboxMessage, error) {
+	query := ethereum.FilterQuery{
+		BlockHash: nil,
+		FromBlock: from,
+		ToBlock:   to,
+		Addresses: []ethcommon.Address{r.address},
+		Topics:    [][]ethcommon.Hash{{messageDeliveredID}},
+	}
+	logs, err := r.client.FilterLogs(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	return r.logsToDeliveredMessages(ctx, logs)
+}
+
 func (r *BridgeWatcher) LookupMessageBlock(ctx context.Context, messageNum *big.Int) (*common.BlockId, error) {
 	var msgNumBytes ethcommon.Hash
 	copy(msgNumBytes[:], math.U256Bytes(messageNum))
@@ -109,6 +133,24 @@ func (r *BridgeWatcher) LookupMessagesByNum(ctx context.Context, messageNums []*
 	if err != nil {
 		return nil, err
 	}
+	return r.logsToDeliveredMessages(ctx, logs)
+}
+
+type DeliveredInboxMessageList []*DeliveredInboxMessage
+
+func (d DeliveredInboxMessageList) Len() int {
+	return len(d)
+}
+
+func (d DeliveredInboxMessageList) Swap(i, j int) {
+	d[i], d[j] = d[j], d[i]
+}
+
+func (d DeliveredInboxMessageList) Less(i, j int) bool {
+	return d[i].Message.InboxSeqNum.Cmp(d[j].Message.InboxSeqNum) < 0
+}
+
+func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []types.Log) ([]*DeliveredInboxMessage, error) {
 	messagesByInbox := make(map[ethcommon.Address][]*big.Int)
 	rawMessages := make(map[string]*ethbridgecontracts.BridgeMessageDelivered)
 	for _, ethLog := range logs {
@@ -131,14 +173,9 @@ func (r *BridgeWatcher) LookupMessagesByNum(ctx context.Context, messageNums []*
 		}
 	}
 
-	messages := make([]*DeliveredInboxMessage, 0, len(messageNums))
-	for _, msgNum := range messageNums {
-		rawMsg, ok := rawMessages[string(msgNum.Bytes())]
-		if !ok {
-			return nil, errors.New("message not found")
-		}
-
-		data, ok := messageData[string(msgNum.Bytes())]
+	messages := make([]*DeliveredInboxMessage, 0, len(logs))
+	for msgNum, rawMsg := range rawMessages {
+		data, ok := messageData[msgNum]
 		if !ok {
 			return nil, errors.New("message not found")
 		}
@@ -166,6 +203,9 @@ func (r *BridgeWatcher) LookupMessagesByNum(ctx context.Context, messageNums []*
 		}
 		messages = append(messages, msg)
 	}
+
+	sort.Sort(DeliveredInboxMessageList(messages))
+
 	return messages, nil
 }
 

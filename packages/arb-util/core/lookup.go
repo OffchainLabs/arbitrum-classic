@@ -25,10 +25,16 @@ type ExecutionCursor interface {
 }
 
 type ArbCoreLookup interface {
+	GetLogCount() (*big.Int, error)
 	GetLogs(startIndex, count *big.Int) ([]value.Value, error)
+
+	GetSendCount() (*big.Int, error)
 	GetSends(startIndex, count *big.Int) ([][]byte, error)
+
+	GetMessageCount() (*big.Int, error)
 	GetMessages(startIndex, count *big.Int) ([]inbox.InboxMessage, error)
 	GetMessageHashes(startIndex, count *big.Int) ([]common.Hash, error)
+
 	GetInboxDelta(startIndex, count *big.Int) (common.Hash, error)
 
 	GetInboxAcc(index *big.Int) (common.Hash, error)
@@ -44,13 +50,32 @@ type ArbCoreLookup interface {
 	AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool) error
 }
 
+type ArbCoreInbox interface {
+	DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool)
+	MessagesEmpty() bool
+	MessagesResponseReady() bool
+	MessagesNeedOlder() (bool, error)
+}
+
 type ArbCore interface {
 	ArbCoreLookup
-
+	ArbCoreInbox
 	StartThread() bool
 	StopThread()
+}
 
-	DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool)
+func GetSingleMessage(lookup ArbCoreLookup, index *big.Int) (inbox.InboxMessage, error) {
+	messages, err := lookup.GetMessages(index, big.NewInt(1))
+	if err != nil {
+		return inbox.InboxMessage{}, err
+	}
+	if len(messages) == 0 {
+		return inbox.InboxMessage{}, errors.New("no send found")
+	}
+	if len(messages) > 1 {
+		return inbox.InboxMessage{}, errors.New("too many sends")
+	}
+	return messages[0], nil
 }
 
 func GetSingleSend(lookup ArbCoreLookup, index *big.Int) ([]byte, error) {

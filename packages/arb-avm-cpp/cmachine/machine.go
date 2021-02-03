@@ -27,7 +27,6 @@ package cmachine
 import "C"
 
 import (
-	"bytes"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"runtime"
@@ -134,14 +133,6 @@ func makeExecutionAssertion(
 		logsRaw,
 		uint64(assertion.logCount),
 	), debugPrints, uint64(assertion.numSteps)
-}
-
-func encodeValue(val value.Value) []byte {
-	var buf bytes.Buffer
-
-	// Error just occurs on write, and bytes.Buffer is safe
-	_ = value.MarshalValue(val, &buf)
-	return buf.Bytes()
 }
 
 func (m *Machine) ExecuteAssertion(
