@@ -163,7 +163,7 @@ func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash)
 		return nil, errors.Errorf("can't produce solution since machine is blocked %v", br)
 	}
 
-	avmLogs := assertion.ParseLogs()
+	avmLogs := assertion.Logs
 	if len(avmLogs) == 0 {
 		return nil, errors.New("no logs produced by tx")
 	}

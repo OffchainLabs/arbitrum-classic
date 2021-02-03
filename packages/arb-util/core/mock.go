@@ -50,8 +50,46 @@ func (e *ExecutionCursorMock) TakeMachine() (machine.Machine, error) {
 type ValidatorLookupMock struct {
 	Messages  []inbox.InboxMessage
 	InboxAccs []common.Hash
+	logs      []value.Value
+	sends     [][]byte
 
 	startMachine machine.Machine
+}
+
+func (v *ValidatorLookupMock) GetLogCount() (*big.Int, error) {
+	return big.NewInt(int64(len(v.logs))), nil
+}
+
+func (v *ValidatorLookupMock) GetSendCount() (*big.Int, error) {
+	return big.NewInt(int64(len(v.sends))), nil
+}
+
+func (v *ValidatorLookupMock) GetMessageCount() (*big.Int, error) {
+	return big.NewInt(int64(len(v.Messages))), nil
+}
+
+func (v *ValidatorLookupMock) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) {
+	panic("implement me")
+}
+
+func (v *ValidatorLookupMock) MessagesEmpty() bool {
+	panic("implement me")
+}
+
+func (v *ValidatorLookupMock) MessagesResponseReady() bool {
+	panic("implement me")
+}
+
+func (v *ValidatorLookupMock) MessagesNeedOlder() (bool, error) {
+	panic("implement me")
+}
+
+func (v *ValidatorLookupMock) StartThread() bool {
+	panic("implement me")
+}
+
+func (v *ValidatorLookupMock) StopThread() {
+	panic("implement me")
 }
 
 func NewValidatorLookupMock(mach machine.Machine) *ValidatorLookupMock {
@@ -109,19 +147,20 @@ func (v *ValidatorLookupMock) GetMessages(startIndex *big.Int, count *big.Int) (
 }
 
 func (v *ValidatorLookupMock) GetMessageHashes(startIndex *big.Int, count *big.Int) ([]common.Hash, error) {
-	if count.Cmp(big.NewInt(0)) == 0 {
-		return nil, nil
-	}
-	start := startIndex.Uint64()
-	c := count.Uint64()
-	if start+c >= uint64(len(v.Messages)) {
-		return nil, errors.Errorf("GetMessages: inbox index out of bounds (%v, %v)", startIndex, count)
-	}
-	msgHashes := make([]common.Hash, 0, c)
-	for _, msg := range v.Messages[start : start+c] {
-		msgHashes = append(msgHashes, msg.AsValue().Hash())
-	}
-	return msgHashes, nil
+	panic("unimplemented method")
+	//if count.Cmp(big.NewInt(0)) == 0 {
+	//	return nil, nil
+	//}
+	//start := startIndex.Uint64()
+	//c := count.Uint64()
+	//if start+c >= uint64(len(v.Messages)) {
+	//	return nil, errors.Errorf("GetMessages: inbox index out of bounds (%v, %v)", startIndex, count)
+	//}
+	//msgHashes := make([]common.Hash, 0, c)
+	//for _, msg := range v.Messages[start : start+c] {
+	//	msgHashes = append(msgHashes, msg.AsValue().Hash())
+	//}
+	//return msgHashes, nil
 }
 
 func (v *ValidatorLookupMock) GetInboxDelta(startIndex *big.Int, count *big.Int) (common.Hash, error) {

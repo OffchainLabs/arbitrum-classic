@@ -11,9 +11,14 @@ import (
 )
 
 type InboxReader struct {
+	// Only in run thread
 	bridge            ethbridge.BridgeWatcher
 	db                core.ArbCore
 	firstMessageBlock *big.Int
+
+	// Only in main thread
+	running    bool
+	cancelFunc context.CancelFunc
 }
 
 func NewInboxReader(ctx context.Context, bridge ethbridge.BridgeWatcher, db core.ArbCore) (*InboxReader, error) {
@@ -28,13 +33,25 @@ func NewInboxReader(ctx context.Context, bridge ethbridge.BridgeWatcher, db core
 	}, nil
 }
 
-func (ir *InboxReader) StartReadingMessages(ctx context.Context) <-chan error {
+func (ir *InboxReader) Start(parentCtx context.Context) <-chan error {
 	errChan := make(chan error, 1)
+	ctx, cancelFunc := context.WithCancel(parentCtx)
 	go func() {
 		defer close(errChan)
 		errChan <- ir.getMessages(ctx)
 	}()
+	ir.cancelFunc = cancelFunc
+	ir.running = true
 	return errChan
+}
+
+func (ir *InboxReader) Stop() {
+	ir.cancelFunc()
+	ir.running = false
+}
+
+func (ir *InboxReader) IsRunning() bool {
+	return ir.running
 }
 
 func (ir *InboxReader) getMessages(ctx context.Context) error {

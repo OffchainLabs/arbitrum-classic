@@ -19,19 +19,21 @@ package arbostest
 import (
 	"bytes"
 	"context"
+	"math/big"
+	"strings"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
-	"math/big"
-	"strings"
-	"testing"
 )
 
 var constructorData = hexutil.MustDecode(arbostestcontracts.FibonacciBin)

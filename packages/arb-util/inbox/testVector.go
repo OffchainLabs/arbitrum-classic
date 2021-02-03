@@ -9,8 +9,9 @@ import (
 )
 
 type JSONValue struct {
-	Tuple *[]JSONValue `json:"Tuple,omitempty"`
-	Int   *string      `json:"Int,omitempty"`
+	Tuple  *[]JSONValue `json:"Tuple,omitempty"`
+	Int    *string      `json:"Int,omitempty"`
+	Buffer *string      `json:"Buffer,omitempty"`
 }
 
 type TestVector struct {
@@ -101,6 +102,9 @@ func valueToJSON(val value.Value) (JSONValue, error) {
 			vals = append(vals, jsonSubVal)
 		}
 		return JSONValue{Tuple: &vals}, nil
+	case *value.Buffer:
+		encoded := hexutil.Encode(val.Data())
+		return JSONValue{Buffer: &encoded}, nil
 	default:
 		return JSONValue{}, errors.New("unsupported type")
 	}

@@ -19,9 +19,7 @@ package value
 import (
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"io"
-	"math/big"
 )
 
 type HashPreImage struct {
@@ -66,26 +64,13 @@ func (hp HashPreImage) Clone() Value {
 }
 
 func (hp HashPreImage) Equal(val Value) bool {
-	return hp.Hash() == val.Hash()
+	o, ok := val.(HashPreImage)
+	if !ok {
+		return false
+	}
+	return hp.hashImage == o.hashImage && hp.size == o.size
 }
 
 func (hp HashPreImage) Size() int64 {
 	return hp.size
-}
-
-func (hp HashPreImage) Marshal(wr io.Writer) error {
-	_, err := wr.Write(hp.hashImage[:])
-	if err != nil {
-		return err
-	}
-	sizeVal := NewInt64Value(hp.Size())
-	return sizeVal.Marshal(wr)
-}
-
-func (hp HashPreImage) Hash() common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Uint8(TypeCodeTuple),
-		hashing.Bytes32(hp.hashImage),
-		hashing.Uint256(big.NewInt(hp.size)),
-	)
 }

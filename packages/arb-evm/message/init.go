@@ -20,12 +20,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"math/big"
 )
 
 type Init struct {
-	valprotocol.ChainParams
+	protocol.ChainParams
 	Owner       common.Address
 	ExtraConfig []byte
 }
@@ -38,7 +38,7 @@ func NewInitFromData(data []byte) Init {
 	stakeToken, data := extractAddress(data)
 	owner, data := extractAddress(data)
 	return Init{
-		ChainParams: valprotocol.ChainParams{
+		ChainParams: protocol.ChainParams{
 			StakeRequirement:        stakeRequirement,
 			StakeToken:              stakeToken,
 			GracePeriod:             common.TimeTicks{Val: gracePeriod},

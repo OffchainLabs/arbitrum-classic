@@ -6,7 +6,8 @@ set -e
 packages=(
     arb-util
     arb-avm-cpp
-    arb-validator-core
+    arb-node-core
+    arb-rpc-node
     arb-evm
 )
 

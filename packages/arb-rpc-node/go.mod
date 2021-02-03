@@ -13,9 +13,8 @@ require (
 	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c // indirect
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-evm v0.7.3
-	github.com/offchainlabs/arbitrum/packages/arb-node-core v0.0.0-00010101000000-000000000000
+	github.com/offchainlabs/arbitrum/packages/arb-node-core v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.3
-	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.7.3
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v0.0.0-20200520122047-c3ffed290a03 // indirect
 	github.com/rs/zerolog v1.20.0
@@ -29,5 +28,3 @@ replace github.com/offchainlabs/arbitrum/packages/arb-node-core => ../arb-node-c
 replace github.com/offchainlabs/arbitrum/packages/arb-evm => ../arb-evm
 
 replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp
-
-replace github.com/offchainlabs/arbitrum/packages/arb-validator-core => ../arb-validator-core

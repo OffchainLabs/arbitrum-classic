@@ -26,7 +26,6 @@ package cmachine
 */
 import "C"
 import (
-	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/pkg/errors"
 	"runtime"
@@ -34,7 +33,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type ArbStorage struct {
@@ -105,82 +103,6 @@ func (s *ArbStorage) GetMachine(machineHash common.Hash) (machine.Machine, error
 
 func (s *ArbStorage) DeleteCheckpoint(machineHash common.Hash) bool {
 	success := C.deleteCheckpoint(s.c, unsafe.Pointer(&machineHash[0]))
-
-	return success == 1
-}
-
-func (s *ArbStorage) SaveValue(val value.Value) bool {
-	var buf bytes.Buffer
-
-	err := value.MarshalValue(val, &buf)
-	if err != nil {
-		panic(err)
-	}
-
-	valData := buf.Bytes()
-	success := C.saveValue(s.c, unsafe.Pointer(&valData[0]))
-
-	return success == 1
-}
-
-func (s *ArbStorage) GetValue(hashValue common.Hash) (value.Value, error) {
-	cData := C.getValue(s.c, unsafe.Pointer(&hashValue[0]))
-	if cData.data == nil {
-		return nil, &machine.ValueNotFoundError{HashValue: hashValue}
-	}
-
-	dataBuff := receiveByteSlice(cData)
-
-	val, err := value.UnmarshalValue(bytes.NewReader(dataBuff[:]))
-	if err != nil {
-		return nil, err
-	}
-
-	return val, nil
-}
-
-func (s *ArbStorage) DeleteValue(hashValue common.Hash) bool {
-	success := C.deleteValue(s.c, unsafe.Pointer(&hashValue[0]))
-
-	return success == 1
-}
-
-func (s *ArbStorage) SaveData(key []byte, data []byte) bool {
-	if len(key) == 0 {
-		return false
-	}
-
-	if len(data) == 0 {
-		success := C.saveData(s.c,
-			unsafe.Pointer(&key[0]),
-			C.int(len(key)),
-			unsafe.Pointer(nil),
-			C.int(0),
-		)
-		return success == 1
-	}
-
-	success := C.saveData(s.c,
-		unsafe.Pointer(&key[0]),
-		C.int(len(key)),
-		unsafe.Pointer(&data[0]),
-		C.int(len(data)))
-
-	return success == 1
-}
-
-func (s *ArbStorage) GetData(key []byte) ([]byte, error) {
-	cData := C.getData(s.c, unsafe.Pointer(&key[0]), C.int(len(key)))
-
-	if cData.found == 0 {
-		return nil, &machine.DataNotFoundError{Key: key}
-	}
-
-	return receiveByteSlice(cData.slice), nil
-}
-
-func (s *ArbStorage) DeleteData(key []byte) bool {
-	success := C.deleteData(s.c, unsafe.Pointer(&key[0]), C.int(len(key)))
 
 	return success == 1
 }

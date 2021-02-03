@@ -18,12 +18,18 @@ package txdb
 
 import (
 	"context"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"math/big"
+	"sync"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/trie"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -31,11 +37,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-	"math/big"
-	"sync"
 )
 
 var logger = log.With().Caller().Str("component", "txdb").Logger()
@@ -44,6 +45,7 @@ type AggregatorStore interface {
 	GetPossibleRequestInfo(requestId common.Hash) *uint64
 	GetPossibleBlock(blockHash common.Hash) *uint64
 	GetBlockHeader(height uint64) (*machine.BlockInfo, error)
+	EarliestBlock() (*common.BlockId, error)
 	LatestBlock() (*common.BlockId, error)
 
 	SaveBlock(header *types.Header, logIndex uint64) error
@@ -53,10 +55,15 @@ type AggregatorStore interface {
 	Reorg(height uint64) error
 }
 
+type ChainTimeGetter interface {
+	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
+	TimestampForBlockHash(ctx context.Context, hash common.Hash) (*big.Int, error)
+}
+
 type TxDB struct {
 	lookup     core.ArbCoreLookup
 	as         AggregatorStore
-	timeGetter arbbridge.ChainTimeGetter
+	timeGetter ChainTimeGetter
 
 	rmLogsFeed      event.Feed
 	chainFeed       event.Feed
@@ -232,6 +239,10 @@ func (db *TxDB) saveEmptyBlock(ctx context.Context, prev ethcommon.Hash, number 
 	return nil
 }
 
+func (db *TxDB) AddInitialBlock(ctx context.Context, initialBlockHeight *big.Int) error {
+	return db.saveEmptyBlock(ctx, ethcommon.Hash{}, initialBlockHeight)
+}
+
 func (db *TxDB) fillEmptyBlocks(ctx context.Context, max *big.Int) error {
 	latest, err := db.as.LatestBlock()
 	if err != nil {
@@ -315,6 +326,10 @@ func (db *TxDB) GetBlock(height uint64) (*machine.BlockInfo, error) {
 		return nil, nil
 	}
 	return db.as.GetBlockHeader(height)
+}
+
+func (db *TxDB) EarliestBlock() (*common.BlockId, error) {
+	return db.as.EarliestBlock()
 }
 
 func (db *TxDB) LatestBlock() (*common.BlockId, error) {

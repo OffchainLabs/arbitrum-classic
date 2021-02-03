@@ -36,15 +36,6 @@ func TestCheckpoint(t *testing.T) {
 	}
 	defer arbStorage.CloseArbStorage()
 
-	val, err := arbStorage.GetData([]byte("key"))
-	if err == nil {
-		t.Error("should have failed")
-	}
-
-	if len(val) != 0 {
-		t.Error("should have empty value")
-	}
-
 	if err := os.RemoveAll(dePath); err != nil {
 		t.Fatal(err)
 	}

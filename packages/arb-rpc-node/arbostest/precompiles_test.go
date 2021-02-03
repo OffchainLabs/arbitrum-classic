@@ -27,7 +27,7 @@ import (
 	gethcrypto "github.com/ethereum/go-ethereum/crypto"
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"math/big"
 	"testing"
 

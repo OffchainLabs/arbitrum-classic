@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/pkg/errors"
 	"math/big"
 	"math/rand"
@@ -48,7 +47,7 @@ func newMock(t *testing.T, seenTxesChan chan<- message.CompressedECDSATransactio
 	}
 }
 
-func (m *mock) SendL2MessageNoWait(_ context.Context, data []byte) (common.Hash, error) {
+func (m *mock) SendL2MessageFromOrigin(_ context.Context, data []byte) (common.Hash, error) {
 	m.Lock()
 	defer m.Unlock()
 	l1Hash := common.RandHash()
@@ -95,29 +94,9 @@ func (m *mock) TransactionReceipt(_ context.Context, txHash ethcommon.Hash) (*ty
 	}, nil
 }
 
-func (m *mock) SendL2Message(context.Context, []byte) (arbbridge.MessageDeliveredEvent, error) {
-	panic("not used")
-}
-
-func (m *mock) DepositEthMessage(context.Context, common.Address, *big.Int) error {
-	panic("not used")
-}
-
-func (m *mock) DepositERC20Message(context.Context, common.Address, common.Address, *big.Int) error {
-	panic("not used")
-}
-
-func (m *mock) DepositERC721Message(context.Context, common.Address, common.Address, *big.Int) error {
-	panic("not used")
-}
-
-func (m *mock) SendInitializationMessage(context.Context, []byte) error {
-	panic("not used")
-}
-
-func generateTxes(t *testing.T, chain common.Address) ([]*types.Transaction, map[ethcommon.Address]uint64) {
+func generateTxes(t *testing.T, chainId *big.Int) ([]*types.Transaction, map[ethcommon.Address]uint64) {
 	rand.Seed(4537345)
-	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
+	signer := types.NewEIP155Signer(chainId)
 	randomKeys := make([]*ecdsa.PrivateKey, 0, 10)
 	for i := 0; i < 10; i++ {
 		pk, err := crypto.GenerateKey()
@@ -143,16 +122,16 @@ func generateTxes(t *testing.T, chain common.Address) ([]*types.Transaction, map
 }
 
 func TestStatelessBatcher(t *testing.T) {
-	chain := common.RandAddress()
-	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
-	txes, txCounts := generateTxes(t, chain)
+	chainId := common.RandBigInt()
+	signer := types.NewEIP155Signer(chainId)
+	txes, txCounts := generateTxes(t, chainId)
 	seenTxesChan := make(chan message.CompressedECDSATransaction, 1000)
 	mock := newMock(t, seenTxesChan, txes)
 	ctx := context.Background()
 	batcher := NewStatelessBatcher(
 		ctx,
 		nil,
-		chain,
+		chainId,
 		mock,
 		mock,
 		time.Millisecond*200,
@@ -176,7 +155,7 @@ txFetchLoop:
 	for {
 		select {
 		case tx := <-seenTxesChan:
-			ethTx, err := tx.AsEthTx(message.ChainAddressToID(chain))
+			ethTx, err := tx.AsEthTx(chainId)
 			if err != nil {
 				t.Fatal(err)
 			}

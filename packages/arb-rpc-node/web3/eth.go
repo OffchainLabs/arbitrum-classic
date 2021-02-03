@@ -584,7 +584,11 @@ func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, err
 
 func (s *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
 	if *block == rpc.EarliestBlockNumber {
-		return s.srv.InitialBlockHeight().Uint64(), nil
+		height, err := s.srv.InitialBlockHeight()
+		if err != nil {
+			return 0, err
+		}
+		return height.Uint64(), err
 	} else if *block == rpc.LatestBlockNumber {
 		return s.srv.GetBlockCount()
 	} else if *block >= 0 {

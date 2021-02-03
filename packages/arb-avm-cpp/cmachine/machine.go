@@ -115,17 +115,11 @@ func (m *Machine) PrintState() {
 	C.machinePrint(m.c)
 }
 
-func makeExecutionAssertion(
-	assertion C.RawAssertion,
-	beforeMachineHash common.Hash,
-	afterMachineHash common.Hash,
-) (*protocol.ExecutionAssertion, []value.Value, uint64) {
+func makeExecutionAssertion(assertion C.RawAssertion) (*protocol.ExecutionAssertion, []value.Value, uint64) {
 	sendsRaw := receiveByteSlice(assertion.sends)
 	logsRaw := receiveByteSlice(assertion.logs)
 	debugPrints := protocol.BytesArrayToVals(receiveByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
 	return protocol.NewExecutionAssertion(
-		beforeMachineHash,
-		afterMachineHash,
 		uint64(assertion.numGas),
 		uint64(assertion.inbox_messages_consumed),
 		sendsRaw,
@@ -151,7 +145,6 @@ func (m *Machine) ExecuteAssertion(
 		finalMessageOfBlockInt = 1
 	}
 
-	beforeHash := m.Hash()
 	rawInboxData := encodeInboxMessages(messages)
 	byteSlices := encodeByteSliceList(rawInboxData)
 	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
@@ -170,7 +163,7 @@ func (m *Machine) ExecuteAssertion(
 		C.int(finalMessageOfBlockInt),
 	)
 
-	return makeExecutionAssertion(assertion, beforeHash, m.Hash())
+	return makeExecutionAssertion(assertion)
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {

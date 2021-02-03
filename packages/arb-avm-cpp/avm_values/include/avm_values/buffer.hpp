@@ -259,6 +259,19 @@ class Buffer {
         value_vector.push_back(static_cast<uint8_t>(nbuf.level));
         return nbuf.serialize(value_vector);
     }
+
+    std::vector<uint8_t> toFlatVector() const {
+        std::vector<uint8_t> data;
+        uint64_t last_index = lastIndex();
+        uint64_t i = 0;
+        while (true) {
+            data.push_back(get(i));
+            if (i == last_index) {
+                return data;
+            }
+            i++;
+        }
+    }
 };
 
 inline uint256_t hash(const Buffer& b) {

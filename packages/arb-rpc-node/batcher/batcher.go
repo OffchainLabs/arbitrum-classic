@@ -20,6 +20,7 @@ import (
 	"container/list"
 	"context"
 	"github.com/pkg/errors"
+	"math/big"
 	"sync"
 	"time"
 
@@ -31,12 +32,11 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
 var logger = log.With().Caller().Str("component", "batcher").Logger()
@@ -51,6 +51,10 @@ const (
 	REMOVE
 	FULL
 )
+
+type l2TxSender interface {
+	SendL2MessageFromOrigin(ctx context.Context, data []byte) (common.Hash, error)
+}
 
 type batch interface {
 	newFromExisting() batch
@@ -93,15 +97,15 @@ type Batcher struct {
 func NewStatefulBatcher(
 	ctx context.Context,
 	db *txdb.TxDB,
-	rollupAddress common.Address,
+	chainId *big.Int,
 	receiptFetcher ethutils.ReceiptFetcher,
-	globalInbox arbbridge.GlobalInbox,
+	globalInbox l2TxSender,
 	maxBatchTime time.Duration,
 ) *Batcher {
-	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
+	signer := types.NewEIP155Signer(chainId)
 	return newBatcher(
 		ctx,
-		rollupAddress,
+		chainId,
 		receiptFetcher,
 		globalInbox,
 		maxBatchTime,
@@ -112,15 +116,15 @@ func NewStatefulBatcher(
 func NewStatelessBatcher(
 	ctx context.Context,
 	db *txdb.TxDB,
-	rollupAddress common.Address,
+	chainId *big.Int,
 	receiptFetcher ethutils.ReceiptFetcher,
-	globalInbox arbbridge.GlobalInboxSender,
+	globalInbox l2TxSender,
 	maxBatchTime time.Duration,
 ) *Batcher {
-	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
+	signer := types.NewEIP155Signer(chainId)
 	return newBatcher(
 		ctx,
-		rollupAddress,
+		chainId,
 		receiptFetcher,
 		globalInbox,
 		maxBatchTime,
@@ -130,14 +134,14 @@ func NewStatelessBatcher(
 
 func newBatcher(
 	ctx context.Context,
-	rollupAddress common.Address,
+	chainId *big.Int,
 	receiptFetcher ethutils.ReceiptFetcher,
-	globalInbox arbbridge.GlobalInboxSender,
+	globalInbox l2TxSender,
 	maxBatchTime time.Duration,
 	pendingBatch batch,
 ) *Batcher {
 	server := &Batcher{
-		signer:             types.NewEIP155Signer(message.ChainAddressToID(rollupAddress)),
+		signer:             types.NewEIP155Signer(chainId),
 		queuedTxes:         newTxQueues(),
 		pendingBatch:       pendingBatch,
 		pendingSentBatches: list.New(),
@@ -221,7 +225,7 @@ func newBatcher(
 	return server
 }
 
-func (m *Batcher) sendBatch(ctx context.Context, inbox arbbridge.GlobalInboxSender) {
+func (m *Batcher) sendBatch(ctx context.Context, inbox l2TxSender) {
 	txes := m.pendingBatch.getAppliedTxes()
 	if len(txes) == 0 {
 		return
@@ -235,7 +239,7 @@ func (m *Batcher) sendBatch(ctx context.Context, inbox arbbridge.GlobalInboxSend
 		logger.Fatal().Stack().Err(err).Msg("transaction aggregator failed")
 	}
 	logger.Info().Int("txcount", len(batchTxes)).Msg("Submitting batch")
-	txHash, err := inbox.SendL2MessageNoWait(
+	txHash, err := inbox.SendL2MessageFromOrigin(
 		ctx,
 		message.NewSafeL2Message(batchTx).AsData(),
 	)

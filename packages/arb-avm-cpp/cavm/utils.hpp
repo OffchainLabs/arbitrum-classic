@@ -25,6 +25,8 @@
 #include <avm_values/value.hpp>
 #include <data_storage/storageresult.hpp>
 
+#include <boost/endian/conversion.hpp>
+
 #include <vector>
 
 #include <cstdlib>
@@ -133,6 +135,11 @@ inline ByteSlice returnValueResult(const DbResult<value>& res) {
 inline RawAssertion makeRawAssertion(Assertion& assertion) {
     std::vector<unsigned char> sendData;
     for (const auto& send : assertion.sends) {
+        auto big_size =
+            boost::endian::native_to_big(static_cast<uint64_t>(send.size()));
+        auto big_size_ptr = reinterpret_cast<const char*>(&big_size);
+        sendData.insert(sendData.end(), big_size_ptr,
+                        big_size_ptr + sizeof(big_size));
         sendData.insert(sendData.end(), send.begin(), send.end());
     }
     std::vector<unsigned char> logData;

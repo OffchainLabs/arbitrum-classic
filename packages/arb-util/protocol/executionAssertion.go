@@ -19,77 +19,50 @@ package protocol
 import (
 	"bytes"
 	"encoding/binary"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
+type ExecutionAssertion struct {
+	NumGas                uint64
+	InboxMessagesConsumed uint64
+	Sends                 [][]byte
+	Logs                  []value.Value
+}
+
 func NewExecutionAssertion(
-	beforeMachineHash common.Hash,
-	afterMachineHash common.Hash,
 	numGas uint64,
 	inboxMessagesConsumed uint64,
-	outMsgsData []byte,
-	outMsgsCount uint64,
+	sendsData []byte,
+	sendsCount uint64,
 	logsData []byte,
 	logsCount uint64,
 ) *ExecutionAssertion {
 	return &ExecutionAssertion{
 		NumGas:                numGas,
-		BeforeMachineHash:     beforeMachineHash.MarshalToBuf(),
-		AfterMachineHash:      afterMachineHash.MarshalToBuf(),
 		InboxMessagesConsumed: inboxMessagesConsumed,
-		OutMsgsData:           outMsgsData,
-		OutMsgsCount:          outMsgsCount,
-		LogsData:              logsData,
-		LogsCount:             logsCount,
+		Sends:                 parseSends(sendsData, sendsCount),
+		Logs:                  BytesArrayToVals(logsData, logsCount),
 	}
-}
-
-func valuesToRaw(values []value.Value) []byte {
-	var buf bytes.Buffer
-	for _, val := range values {
-		// Error can only occur with writes and bytes.Buffer is safe
-		_ = value.MarshalValue(val, &buf)
-	}
-	return buf.Bytes()
 }
 
 func NewExecutionAssertionFromValues(
-	beforeMachineHash common.Hash,
-	afterMachineHash common.Hash,
 	numGas uint64,
 	inboxMessagesConsumed uint64,
-	outMsgs []value.Value,
+	sends [][]byte,
 	logs []value.Value,
 ) *ExecutionAssertion {
 	return &ExecutionAssertion{
-		BeforeMachineHash:     beforeMachineHash.MarshalToBuf(),
-		AfterMachineHash:      afterMachineHash.MarshalToBuf(),
 		NumGas:                numGas,
 		InboxMessagesConsumed: inboxMessagesConsumed,
-		OutMsgsData:           valuesToRaw(outMsgs),
-		OutMsgsCount:          uint64(len(outMsgs)),
-		LogsData:              valuesToRaw(logs),
-		LogsCount:             uint64(len(logs)),
+		Sends:                 sends,
+		Logs:                  logs,
 	}
 }
 
-func (x *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {
-	return bytes.Equal(x.BeforeMachineHash.Value, b.BeforeMachineHash.Value) &&
-		bytes.Equal(x.AfterMachineHash.Value, b.AfterMachineHash.Value) &&
-		x.NumGas == b.NumGas &&
-		x.InboxMessagesConsumed == b.InboxMessagesConsumed &&
-		x.OutMsgsCount == b.OutMsgsCount &&
-		bytes.Equal(x.OutMsgsData, b.OutMsgsData) &&
-		x.LogsCount == b.LogsCount &&
-		bytes.Equal(x.LogsData, b.LogsData)
-}
-
-func (x *ExecutionAssertion) ParseOutMessages() [][]byte {
-	vals := make([][]byte, 0, x.OutMsgsCount)
-	rd := bytes.NewReader(x.OutMsgsData)
-	for i := uint64(0); i < x.OutMsgsCount; i++ {
+func parseSends(sendData []byte, sendCount uint64) [][]byte {
+	vals := make([][]byte, 0, sendCount)
+	rd := bytes.NewReader(sendData)
+	for i := uint64(0); i < sendCount; i++ {
 		var size uint64
 		if err := binary.Read(rd, binary.BigEndian, &size); err != nil {
 			panic(err)
@@ -102,10 +75,6 @@ func (x *ExecutionAssertion) ParseOutMessages() [][]byte {
 		vals = append(vals, arr)
 	}
 	return vals
-}
-
-func (x *ExecutionAssertion) ParseLogs() []value.Value {
-	return BytesArrayToVals(x.LogsData, x.LogsCount)
 }
 
 func BytesArrayToVals(data []byte, valCount uint64) []value.Value {

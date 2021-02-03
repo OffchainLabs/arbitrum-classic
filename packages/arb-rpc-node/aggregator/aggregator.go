@@ -47,14 +47,13 @@ import (
 var logger = log.With().Caller().Str("component", "aggregator").Logger()
 
 type Server struct {
-	chain              common.Address
-	batch              batcher.TransactionBatcher
-	db                 *txdb.TxDB
-	lookup             core.ArbCoreLookup
-	maxCallTime        time.Duration
-	maxCallGas         *big.Int
-	initialBlockHeight *big.Int
-	scope              event.SubscriptionScope
+	chain       common.Address
+	batch       batcher.TransactionBatcher
+	db          *txdb.TxDB
+	lookup      core.ArbCoreLookup
+	maxCallTime time.Duration
+	maxCallGas  *big.Int
+	scope       event.SubscriptionScope
 }
 
 // NewServer returns a new instance of the Server class
@@ -62,15 +61,13 @@ func NewServer(
 	batch batcher.TransactionBatcher,
 	rollupAddress common.Address,
 	db *txdb.TxDB,
-	createdHeight *big.Int,
 ) *Server {
 	return &Server{
-		chain:              rollupAddress,
-		batch:              batch,
-		db:                 db,
-		maxCallTime:        0,
-		maxCallGas:         big.NewInt(1000000000),
-		initialBlockHeight: new(big.Int).Sub(createdHeight, big.NewInt(1)),
+		chain:       rollupAddress,
+		batch:       batch,
+		db:          db,
+		maxCallTime: 0,
+		maxCallGas:  big.NewInt(1000000000),
 	}
 }
 
@@ -89,8 +86,12 @@ func (m *Server) GetBlockCount() (uint64, error) {
 	return id.Height.AsInt().Uint64(), nil
 }
 
-func (m *Server) InitialBlockHeight() *big.Int {
-	return m.initialBlockHeight
+func (m *Server) InitialBlockHeight() (*big.Int, error) {
+	earliest, err := m.db.EarliestBlock()
+	if err != nil {
+		return nil, err
+	}
+	return earliest.Height.AsInt(), nil
 }
 
 func (m *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {

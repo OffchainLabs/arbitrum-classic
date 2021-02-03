@@ -114,29 +114,51 @@ void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
     buf.insert(buf.end(), data, data + sizeof(big_endian_val));
 }
 
+namespace {
+struct Marshaller {
+    std::vector<value>& values;
+    std::vector<unsigned char>& buf;
+
+    void operator()(const HashPreImage& val) const {
+        buf.push_back(HASH_PRE_IMAGE);
+        val.marshal(buf);
+    }
+
+    void operator()(const Tuple& tup) const {
+        auto size = tup.tuple_size();
+        buf.push_back(TUPLE + size);
+        // queue elements in reverse order for serialization
+        for (uint64_t i = 0; i < size; i++) {
+            values.push_back(tup.get_element(size - 1 - i));
+        }
+    }
+
+    void operator()(const Buffer& val) const {
+        buf.push_back(BUFFER);
+        auto data = val.toFlatVector();
+        marshal_uint64_t(static_cast<uint64_t>(data.size()), buf);
+        buf.insert(buf.end(), data.begin(), data.end());
+    }
+
+    void operator()(const uint256_t& val) const {
+        buf.push_back(NUM);
+        marshal_uint256_t(val, buf);
+    }
+
+    void operator()(const CodePointStub& val) const {
+        buf.push_back(CODE_POINT_STUB);
+        val.marshal(buf);
+    }
+};
+}  // namespace
+
 void marshal_value(const value& full_val, std::vector<unsigned char>& buf) {
     std::vector<value> values{full_val};
+    Marshaller marshaller{values, buf};
     while (!values.empty()) {
         const auto val = std::move(values.back());
         values.pop_back();
-        if (nonstd::holds_alternative<Tuple>(val)) {
-            const auto& tup = val.get<Tuple>();
-            auto size = tup.tuple_size();
-            buf.push_back(TUPLE + size);
-            // queue elements in reverse order for serialization
-            for (uint64_t i = 0; i < size; i++) {
-                values.push_back(tup.get_element(size - 1 - i));
-            }
-        } else if (nonstd::holds_alternative<uint256_t>(val)) {
-            buf.push_back(NUM);
-            marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
-        } else if (nonstd::holds_alternative<CodePointStub>(val)) {
-            buf.push_back(CODE_POINT_STUB);
-            nonstd::get<CodePointStub>(val).marshal(buf);
-        } else if (nonstd::holds_alternative<HashPreImage>(val)) {
-            buf.push_back(HASH_PRE_IMAGE);
-            nonstd::get<HashPreImage>(val).marshal(buf);
-        }
+        nonstd::visit(marshaller, val);
     }
 }
 

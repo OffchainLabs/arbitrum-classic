@@ -17,8 +17,6 @@
 package challenge
 
 import (
-	"bytes"
-	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -26,7 +24,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/pkg/errors"
 	"math/big"
 	"testing"
@@ -72,41 +69,41 @@ func TestDeserializeMachine(t *testing.T) {
 	}
 }
 
-func TestAddValueToStack(t *testing.T) {
-	machineTester := getTester(t)
-
-	stack := value.NewEmptyTuple()
-	intval := value.NewInt64Value(1)
-
-	stack2 := value.NewTuple2(intval, stack)
-	expectedHash := stack2.Hash().ToEthHash()
-
-	buf1 := new(bytes.Buffer)
-	err := value.MarshalValue(stack, buf1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	data1 := buf1.Bytes()
-
-	buf2 := new(bytes.Buffer)
-	err = value.MarshalValue(intval, buf2)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	data2 := buf2.Bytes()
-
-	bridgeHash, err := machineTester.AddStackVal(nil, data1, data2)
-	if err != nil {
-		fmt.Println(buf1.Bytes())
-		fmt.Println(buf2.Bytes())
-		t.Fatal(err)
-	}
-
-	if expectedHash != bridgeHash {
-		t.Error(errors.New("calculated wrong state hash"))
-		fmt.Println(expectedHash)
-		fmt.Println(bridgeHash)
-	}
-
-}
+//func TestAddValueToStack(t *testing.T) {
+//	machineTester := getTester(t)
+//
+//	stack := value.NewEmptyTuple()
+//	intval := value.NewInt64Value(1)
+//
+//	stack2 := value.NewTuple2(intval, stack)
+//	expectedHash := stack2.Hash().ToEthHash()
+//
+//	buf1 := new(bytes.Buffer)
+//	err := value.MarshalValue(stack, buf1)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//	data1 := buf1.Bytes()
+//
+//	buf2 := new(bytes.Buffer)
+//	err = value.MarshalValue(intval, buf2)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	data2 := buf2.Bytes()
+//
+//	bridgeHash, err := machineTester.AddStackVal(nil, data1, data2)
+//	if err != nil {
+//		fmt.Println(buf1.Bytes())
+//		fmt.Println(buf2.Bytes())
+//		t.Fatal(err)
+//	}
+//
+//	if expectedHash != bridgeHash {
+//		t.Error(errors.New("calculated wrong state hash"))
+//		fmt.Println(expectedHash)
+//		fmt.Println(bridgeHash)
+//	}
+//
+//}

@@ -18,47 +18,37 @@ package arbostest
 
 import (
 	"context"
+	"math/big"
+	"strings"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
-	"math/big"
-	"strings"
-	"testing"
 )
 
 func TestCreate2(t *testing.T) {
-	ctx := context.Background()
 	backend, pks := test.SimulatedBackend()
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
-	authClient, err := ethbridge.NewEthAuthClient(ctx, client, bind.NewKeyedTransactor(pks[0]))
+	auth := bind.NewKeyedTransactor(pks[0])
+
+	factoryConnAddress, _, cf, err := arbostestcontracts.DeployCloneFactory(auth, client)
 	failIfError(t, err)
 
-	factoryConnAddress, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
-		return arbostestcontracts.DeployCloneFactory(auth, client)
-	})
+	simpleConnAddress, _, _, err := arbostestcontracts.DeploySimple(auth, client)
 	failIfError(t, err)
 
-	cf, err := arbostestcontracts.NewCloneFactory(factoryConnAddress, backend)
-	failIfError(t, err)
-	simpleConnAddress, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
-		return arbostestcontracts.DeploySimple(auth, client)
-	})
-	failIfError(t, err)
 	backend.Commit()
 
-	tx, err := authClient.MakeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return cf.Create2Clone(auth, simpleConnAddress, big.NewInt(0))
-	})
+	tx, err := cf.Create2Clone(auth, simpleConnAddress, big.NewInt(0))
 	failIfError(t, err)
 	backend.Commit()
 
@@ -101,7 +91,7 @@ func TestCreate2(t *testing.T) {
 		Data:        existsABI.ID,
 	}
 
-	sender := authClient.Address()
+	sender := common.NewAddressFromEth(auth.From)
 	inboxMessages := []inbox.InboxMessage{
 		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(factoryConstructorTx), sender, big.NewInt(1), chainTime),

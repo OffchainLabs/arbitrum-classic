@@ -17,28 +17,28 @@
 package arbostest
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbosmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/valprotocol"
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbosmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 func initMsg() message.Init {
 	return message.Init{
-		ChainParams: valprotocol.ChainParams{
+		ChainParams: protocol.ChainParams{
 			StakeRequirement:        big.NewInt(0),
 			StakeToken:              common.Address{},
 			GracePeriod:             common.TimeTicks{Val: big.NewInt(0)},
@@ -161,22 +161,20 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int
 	cmach, err := cmachine.New(arbos.Path())
 	failIfError(t, err)
 	mach := arbosmachine.New(cmach)
-	assertion, _, _ := mach.ExecuteAssertion(10000000000, false, inboxMessages, true)
-	logs := assertion.ParseLogs()
-	sends := assertion.ParseOutMessages()
-	testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
+	assertion, _, _ := mach.ExecuteAssertion(10000000000, false, inboxMessages, false)
+	testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.Logs, assertion.Sends)
 	failIfError(t, err)
 	t.Log(string(testCase))
 
-	if len(logs) != logCount {
-		t.Fatal("unexpected log count ", len(logs))
+	if len(assertion.Logs) != logCount {
+		t.Fatal("unexpected log count ", len(assertion.Logs))
 	}
 
-	if len(sends) != sendCount {
-		t.Fatal("unxpected send count ", len(sends))
+	if len(assertion.Sends) != sendCount {
+		t.Fatal("unxpected send count ", len(assertion.Sends))
 	}
 
-	return logs, sends, mach, assertion
+	return assertion.Logs, assertion.Sends, mach, assertion
 }
 
 func makeSimpleInbox(messages []message.Message) []inbox.InboxMessage {

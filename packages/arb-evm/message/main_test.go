@@ -16,45 +16,46 @@
 
 package message
 
-import (
-	"context"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridgetestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/test"
-	"os"
-	"testing"
-)
+//
+//import (
+//	"context"
+//	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+//	ethcommon "github.com/ethereum/go-ethereum/common"
+//	"github.com/ethereum/go-ethereum/core/types"
+//	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+//	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
+//	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+//	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
+//	"os"
+//	"testing"
+//)
 
-var tester *ethbridgetestcontracts.MessageTester
+//var tester *ethbridgetestcontracts.MessageTester
 
-func TestMain(m *testing.M) {
-	ctx := context.Background()
-	backend, pks := test.SimulatedBackend()
-	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
-	auth := bind.NewKeyedTransactor(pks[0])
-	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
-	if err != nil {
-		logger.Fatal().Stack().Err(err).Send()
-	}
-
-	messageTesterAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
-		return ethbridgetestcontracts.DeployMessageTester(auth, client)
-	})
-	if err != nil {
-		logger.Fatal().Stack().Err(err).Send()
-	}
-
-	client.Commit()
-
-	tester, err = ethbridgetestcontracts.NewMessageTester(messageTesterAddr, client)
-	if err != nil {
-		logger.Fatal().Stack().Err(err).Send()
-	}
-
-	code := m.Run()
-	os.Exit(code)
-}
+//func TestMain(m *testing.M) {
+//	ctx := context.Background()
+//	backend, pks := test.SimulatedBackend()
+//	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
+//	auth := bind.NewKeyedTransactor(pks[0])
+//	authClient, err := ethbridge.NewEthAuthClient(ctx, client, auth)
+//	if err != nil {
+//		logger.Fatal().Stack().Err(err).Send()
+//	}
+//
+//	messageTesterAddr, _, err := authClient.MakeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+//		return ethbridgetestcontracts.DeployMessageTester(auth, client)
+//	})
+//	if err != nil {
+//		logger.Fatal().Stack().Err(err).Send()
+//	}
+//
+//	client.Commit()
+//
+//	tester, err = ethbridgetestcontracts.NewMessageTester(messageTesterAddr, client)
+//	if err != nil {
+//		logger.Fatal().Stack().Err(err).Send()
+//	}
+//
+//	code := m.Run()
+//	os.Exit(code)
+//}

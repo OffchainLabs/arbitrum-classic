@@ -129,9 +129,9 @@ func generateProofCases(contract string) ([]*proofData, error) {
 			InboxDelta:   ethcommon.Hash{},
 			MachineState: mach.Hash().ToEthHash(),
 			SendAcc:      ethcommon.Hash{},
-			SendCount:    (*hexutil.Big)(new(big.Int).Add(beforeCut.SendCount.ToInt(), new(big.Int).SetUint64(a.OutMsgsCount))),
+			SendCount:    (*hexutil.Big)(new(big.Int).Add(beforeCut.SendCount.ToInt(), big.NewInt(int64(len(a.Sends))))),
 			LogAcc:       ethcommon.Hash{},
-			LogCount:     (*hexutil.Big)(new(big.Int).Add(beforeCut.LogCount.ToInt(), new(big.Int).SetUint64(a.LogsCount))),
+			LogCount:     (*hexutil.Big)(new(big.Int).Add(beforeCut.LogCount.ToInt(), big.NewInt(int64(len(a.Logs))))),
 		}
 
 		proofs = append(proofs, &proofData{

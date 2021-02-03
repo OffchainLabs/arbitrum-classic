@@ -19,45 +19,27 @@ package value
 import (
 	"bytes"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/pkg/errors"
 	"io"
 )
 
 const MaxTupleSize = 8
 
-var zeroHash HashPreImage
-
-func init() {
-	zeroHash = getZeroHash()
-}
-
-func getZeroHash() HashPreImage {
-	noneFirst := hashing.SoliditySHA3(
-		hashing.Uint8(0))
-	preImage := HashPreImage{noneFirst, 1}
-	return preImage
-}
-
 type TupleValue struct {
-	contentsArr     [MaxTupleSize]Value
-	itemCount       int8
-	cachedHash      common.Hash
-	cachedPreImage  HashPreImage
-	size            int64
-	deferredHashing bool
+	contentsArr [MaxTupleSize]Value
+	itemCount   int8
+	size        int64
 }
 
 func NewEmptyTuple() *TupleValue {
-	return &TupleValue{[MaxTupleSize]Value{}, 0, zeroHash.Hash(), zeroHash, 1, false}
+	return &TupleValue{[MaxTupleSize]Value{}, 0, 1}
 }
 
 func NewTupleOfSizeWithContents(contents [MaxTupleSize]Value, size int8) (*TupleValue, error) {
 	if !IsValidTupleSizeI64(int64(size)) {
 		return nil, errors.New("requested empty tuple size is too big")
 	}
-	ret := &TupleValue{contents, size, common.Hash{}, HashPreImage{}, 0, true}
+	ret := &TupleValue{contents, size, 0}
 	ret.size = ret.internalSize()
 	return ret, nil
 }
@@ -74,7 +56,7 @@ func NewTupleFromSlice(slice []Value) (*TupleValue, error) {
 }
 
 func NewTuple2(value1 Value, value2 Value) *TupleValue {
-	ret := &TupleValue{[MaxTupleSize]Value{value1, value2}, 2, common.Hash{}, HashPreImage{}, 0, true}
+	ret := &TupleValue{[MaxTupleSize]Value{value1, value2}, 2, 0}
 	ret.size = ret.internalSize()
 	return ret
 }
@@ -90,15 +72,6 @@ func NewSizedTupleFromReader(rd io.Reader, size byte) (*TupleValue, error) {
 		contentsArr[i] = boxedVal
 	}
 	return NewTupleOfSizeWithContents(contentsArr, sz)
-}
-
-func (tv *TupleValue) Marshal(wr io.Writer) error {
-	for _, v := range tv.Contents() {
-		if err := MarshalValue(v, wr); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func IsValidTupleSizeI64(size int64) bool {
@@ -124,18 +97,7 @@ func (tv *TupleValue) TypeCode() uint8 {
 	return TypeCodeTuple + byte(tv.itemCount)
 }
 
-func (tv *TupleValue) Clone() Value {
-	var newContents [MaxTupleSize]Value
-	for i, b := range tv.Contents() {
-		newContents[i] = b.Clone()
-	}
-	return &TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.cachedPreImage, tv.size, tv.deferredHashing}
-}
-
 func (tv *TupleValue) Equal(val Value) bool {
-	if preImage, ok := val.(HashPreImage); ok {
-		return tv.Hash() == preImage.Hash()
-	}
 	tup, ok := val.(*TupleValue)
 	if !ok {
 		return false
@@ -143,7 +105,12 @@ func (tv *TupleValue) Equal(val Value) bool {
 	if tup.Len() != tv.Len() {
 		return false
 	}
-	return tv.Hash() == tup.Hash()
+	for i, val := range tv.Contents() {
+		if !Eq(val, tup.contentsArr[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 func (tv *TupleValue) internalSize() int64 {
@@ -169,61 +136,4 @@ func (tv *TupleValue) String() string {
 	}
 	buf.WriteString(")")
 	return buf.String()
-}
-
-func (tv *TupleValue) cacheHashImpl() {
-	if !tv.deferredHashing {
-		return
-	}
-	hashes := make([]common.Hash, 0, tv.itemCount)
-	for _, v := range tv.Contents() {
-		hashes = append(hashes, v.Hash())
-	}
-
-	firstHash := hashing.SoliditySHA3(
-		hashing.Uint8(byte(tv.itemCount)),
-		hashing.Bytes32ArrayEncoded(hashes),
-	)
-
-	tv.cachedPreImage = HashPreImage{firstHash, tv.Size()}
-	tv.cachedHash = tv.cachedPreImage.Hash()
-	tv.deferredHashing = false
-}
-
-func (tv *TupleValue) cacheHash() {
-	unhashed := []*TupleValue{tv}
-	for len(unhashed) > 0 {
-		tup := unhashed[len(unhashed)-1]
-		if !tup.deferredHashing {
-			// Remove from the list if the tup is hashed
-			unhashed = unhashed[:len(unhashed)-1]
-			continue
-		}
-		unhashedMember := false
-		for _, v := range tup.Contents() {
-			nestedTup, ok := v.(*TupleValue)
-			if !ok {
-				continue
-			}
-			if nestedTup.deferredHashing {
-				unhashedMember = true
-				unhashed = append(unhashed, nestedTup)
-			}
-		}
-		if !unhashedMember {
-			tup.cacheHashImpl()
-			// Remove from the list if the tup is hashed
-			unhashed = unhashed[:len(unhashed)-1]
-		}
-	}
-}
-
-func (tv *TupleValue) GetPreImage() HashPreImage {
-	tv.cacheHash()
-	return tv.cachedPreImage
-}
-
-func (tv *TupleValue) Hash() common.Hash {
-	tv.cacheHash()
-	return tv.cachedHash
 }

@@ -19,20 +19,20 @@ package rpc
 import (
 	"context"
 	"crypto/ecdsa"
-	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/ethutils"
 )
 
 type BatcherMode interface {
@@ -61,6 +61,7 @@ func LaunchAggregator(
 	ctx context.Context,
 	client ethutils.EthClient,
 	rollupAddress common.Address,
+	inboxAddress common.Address,
 	db *txdb.TxDB,
 	web3RPCPort string,
 	web3WSPort string,
@@ -68,15 +69,7 @@ func LaunchAggregator(
 	maxBatchTime time.Duration,
 	batcherMode BatcherMode,
 ) error {
-	arbClient := ethbridge.NewEthClient(client)
-	rollupContract, err := arbClient.NewRollupWatcher(rollupAddress)
-	if err != nil {
-		return err
-	}
-	inboxAddress, err := rollupContract.InboxAddress(ctx)
-	if err != nil {
-		return err
-	}
+	l2ChainID := message.ChainAddressToID(rollupAddress)
 
 	var batch batcher.TransactionBatcher
 	switch batcherMode := batcherMode.(type) {
@@ -87,34 +80,22 @@ func LaunchAggregator(
 		}
 		batch = batcher.NewForwarder(forwardClient)
 	case StatelessBatcherMode:
-		authClient, err := ethbridge.NewEthAuthClient(ctx, client, batcherMode.Auth)
+		auth := ethbridge.NewTransactAuth(batcherMode.Auth)
+		inbox, err := ethbridge.NewStandardInbox(inboxAddress.ToEthAddress(), client, auth)
 		if err != nil {
 			return err
 		}
-		globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
-		if err != nil {
-			return err
-		}
-		batch = batcher.NewStatelessBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
+		batch = batcher.NewStatelessBatcher(ctx, db, l2ChainID, client, inbox, maxBatchTime)
 	case StatefulBatcherMode:
-		authClient, err := ethbridge.NewEthAuthClient(ctx, client, batcherMode.Auth)
+		auth := ethbridge.NewTransactAuth(batcherMode.Auth)
+		inbox, err := ethbridge.NewStandardInbox(inboxAddress.ToEthAddress(), client, auth)
 		if err != nil {
 			return err
 		}
-		globalInbox, err := authClient.NewGlobalInbox(inboxAddress, rollupAddress)
-		if err != nil {
-			return err
-		}
-		batch = batcher.NewStatefulBatcher(ctx, db, rollupAddress, client, globalInbox, maxBatchTime)
-	}
-
-	_, eventCreated, _, _, err := rollupContract.GetCreationInfo(ctx)
-	if err != nil {
-		return err
+		batch = batcher.NewStatefulBatcher(ctx, db, l2ChainID, client, inbox, maxBatchTime)
 	}
 
 	return LaunchAggregatorAdvanced(
-		eventCreated.BlockId.Height.AsInt(),
 		db,
 		rollupAddress,
 		web3RPCPort,
@@ -128,7 +109,6 @@ func LaunchAggregator(
 }
 
 func LaunchAggregatorAdvanced(
-	initialHeight *big.Int,
 	db *txdb.TxDB,
 	rollupAddress common.Address,
 	web3RPCPort string,
@@ -139,7 +119,7 @@ func LaunchAggregatorAdvanced(
 	ganacheMode bool,
 	plugins map[string]interface{},
 ) error {
-	srv := aggregator.NewServer(batch, rollupAddress, db, initialHeight)
+	srv := aggregator.NewServer(batch, rollupAddress, db)
 	errChan := make(chan error, 1)
 
 	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, ganacheMode, plugins)
