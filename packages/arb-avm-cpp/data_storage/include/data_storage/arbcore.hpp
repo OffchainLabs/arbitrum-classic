@@ -72,8 +72,6 @@ class ArbCore {
     // Core thread inbox input/output. Core thread will update if and only if
     // set to MESSAGES_READY
     std::atomic<messages_status_enum> delivering_inbox_status{MESSAGES_EMPTY};
-    std::atomic<bool> delivering_machine_idle{false};
-    std::atomic<bool> delivering_machine_error{false};
 
     // Core thread inbox input
     std::atomic<bool> arbcore_abort{false};
@@ -86,6 +84,11 @@ class ArbCore {
 
     // Core thread logs output
     DataCursor logs_cursor;
+
+    // Core thread machine state output
+    std::atomic<bool> delivering_machine_idle{false};
+    std::atomic<bool> delivering_machine_error{false};
+    std::string delivering_machine_error_string;
 
    public:
     ArbCore() = delete;
@@ -188,6 +191,7 @@ class ArbCore {
     bool messagesEmpty();
     messages_status_enum messagesStatus();
     std::string messagesClearError();
+    std::string machineClearError();
     ValueResult<uint256_t> getInboxDelta(uint256_t start_index,
                                          uint256_t count);
     ValueResult<uint256_t> getInboxAcc(uint256_t index);

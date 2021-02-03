@@ -71,6 +71,10 @@ bool ArbCore::messagesEmpty() {
 
 ArbCore::messages_status_enum ArbCore::messagesStatus() {
     return delivering_inbox_status;
+
+    if (delivering_inbox_status != MESSAGES_ERROR) {
+        delivering_inbox_status = MESSAGES_EMPTY;
+    }
 }
 
 std::string ArbCore::messagesClearError() {
@@ -78,9 +82,21 @@ std::string ArbCore::messagesClearError() {
         return nullptr;
     }
 
-    logs_cursor.status = DataCursor::EMPTY;
-    auto str = logs_cursor.error_string;
-    logs_cursor.error_string.clear();
+    delivering_inbox_status = MESSAGES_EMPTY;
+    auto str = delivering_inbox_error_string;
+    delivering_inbox_error_string.clear();
+
+    return str;
+}
+
+std::string ArbCore::machineClearError() {
+    if (!delivering_machine_error) {
+        return nullptr;
+    }
+
+    delivering_machine_error = false;
+    auto str = delivering_machine_error_string;
+    delivering_machine_error_string.clear();
 
     return str;
 }
@@ -609,7 +625,7 @@ void ArbCore::operator()() {
             auto status = tx->commit();
             if (!status.ok()) {
                 delivering_inbox_error_string = status.ToString();
-                delivering_inbox_status = MESSAGES_ERROR;
+                delivering_machine_error = true;
                 break;
             }
         }
@@ -621,7 +637,7 @@ void ArbCore::operator()() {
             if (!messages_count.status.ok()) {
                 delivering_inbox_error_string =
                     messages_count.status.ToString();
-                delivering_inbox_status = MESSAGES_ERROR;
+                delivering_machine_error = true;
                 break;
             }
 
@@ -629,7 +645,7 @@ void ArbCore::operator()() {
                 // Should never happen, means reorg wasn't done properly
                 delivering_inbox_error_string =
                     "messages_inserted < pending_checkpoint";
-                delivering_inbox_status = MESSAGES_ERROR;
+                delivering_machine_error = true;
                 break;
             }
 
@@ -644,14 +660,14 @@ void ArbCore::operator()() {
                 if (!next_message_result.status.ok()) {
                     delivering_inbox_error_string =
                         next_message_result.status.ToString();
-                    delivering_inbox_status = MESSAGES_ERROR;
+                    delivering_machine_error = true;
                     break;
                 }
                 if (next_message_result.data.sequence_number !=
                     first_sequence_number_in_machine) {
                     delivering_inbox_error_string =
                         "sequence number in message different than expected";
-                    delivering_inbox_status = MESSAGES_ERROR;
+                    delivering_machine_error = true;
                     break;
                 }
                 std::vector<std::vector<unsigned char>> messages;
@@ -663,7 +679,7 @@ void ArbCore::operator()() {
                 if (!status) {
                     delivering_inbox_error_string =
                         "Error starting machine thread";
-                    delivering_inbox_status = MESSAGES_ERROR;
+                    delivering_machine_error = true;
                     break;
                 }
             } else {
