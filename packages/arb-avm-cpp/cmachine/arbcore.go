@@ -67,6 +67,11 @@ func (ac *ArbCore) MessagesEmpty() bool {
 	return status == 1
 }
 
+func (ac *ArbCore) MessagesResponseReady() bool {
+	status := C.arbCoreMessagesResponseReady(ac.c)
+	return status == 1
+}
+
 func (ac *ArbCore) MessagesNeedOlder() (bool, error) {
 	status := C.arbCoreMessagesStatus(ac.c)
 	if status.found == 1 {

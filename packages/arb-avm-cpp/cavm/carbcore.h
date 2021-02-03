@@ -24,6 +24,7 @@ extern "C" {
 
 int arbCoreStartThread(CArbCore* arbcore_ptr);
 void arbCoreAbortThread(CArbCore* arbcore_ptr);
+int arbCoreMessagesResponseReady(CArbCore* arbcore_ptr);
 int arbCoreMessagesEmpty(CArbCore* arbcore_ptr);
 int arbCoreMachineIdle(CArbCore* arbcore_ptr);
 Uint64Result arbCoreMessagesStatus(CArbCore* arbcore_ptr);

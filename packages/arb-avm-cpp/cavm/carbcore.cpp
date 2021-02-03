@@ -35,6 +35,12 @@ void arbCoreAbortThread(CArbCore* arbcore_ptr) {
     arb_core->abortThread();
 }
 
+int arbCoreMessagesResponseReady(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    auto status = arb_core->messagesStatus();
+    return status != ArbCore::MESSAGES_READY;
+}
+
 // If result.status == 1, messages delivered successfully
 // If result.status == 0 and result.value == 1, need older messages
 // If result.status == 0 and result.value == 0, call checkError() for more info

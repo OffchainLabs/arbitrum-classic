@@ -48,7 +48,7 @@ class ArbCore {
     typedef enum {
         MESSAGES_EMPTY,       // Out: Ready to receive messages
         MESSAGES_READY,       // In:  Messages in vector
-        MESSAGES_SUCCESS,     // In:  Messages processed successfully
+        MESSAGES_SUCCESS,     // Out:  Messages processed successfully
         MESSAGES_NEED_OLDER,  // Out: Last message invalid, need older messages
         MESSAGES_ERROR        // Out: Error processing messages
     } messages_status_enum;
@@ -70,9 +70,10 @@ class ArbCore {
     Checkpoint pending_checkpoint;
 
     // Core thread inbox input/output. Core thread will update if and only if
-    // set to MESSAGES_READY or MESSAGES_SUCCESS
+    // set to MESSAGES_READY
     std::atomic<messages_status_enum> delivering_inbox_status{MESSAGES_EMPTY};
     std::atomic<bool> delivering_machine_idle{false};
+    std::atomic<bool> delivering_machine_error{false};
 
     // Core thread inbox input
     std::atomic<bool> arbcore_abort{false};
