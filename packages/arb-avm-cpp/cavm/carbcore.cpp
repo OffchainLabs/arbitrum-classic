@@ -35,37 +35,15 @@ void arbCoreAbortThread(CArbCore* arbcore_ptr) {
     arb_core->abortThread();
 }
 
-int arbCoreMessagesResponseReady(CArbCore* arbcore_ptr) {
+int arbCoreMessagesStatus(CArbCore* arbcore_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
-    auto status = arb_core->messagesStatus();
-    return status != ArbCore::MESSAGES_READY;
-}
-
-// If result.status == 1, messages delivered successfully
-// If result.status == 0 and result.value == 1, need older messages
-// If result.status == 0 and result.value == 0, call checkError() for more info
-Uint64Result arbCoreMessagesStatus(CArbCore* arbcore_ptr) {
-    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
-    auto status = arb_core->messagesStatus();
-    return {status == ArbCore::MESSAGES_NEED_OLDER,
-            status == ArbCore::MESSAGES_SUCCESS};
-}
-
-int arbCoreMessagesError(CArbCore* arbcore_ptr) {
-    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
-    auto status = arb_core->messagesStatus();
-    return status == ArbCore::MESSAGES_ERROR;
+    return arb_core->messagesStatus();
 }
 
 char* arbCoreMessagesClearError(CArbCore* arbcore_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     auto str = arb_core->messagesClearError();
     return strdup(str.c_str());
-}
-
-int arbCoreMessagesEmpty(CArbCore* arbcore_ptr) {
-    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
-    return arb_core->messagesEmpty();
 }
 
 int arbCoreMachineIdle(CArbCore* arbcore_ptr) {
@@ -369,10 +347,14 @@ CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
         auto executionCursor =
             arbcore->getExecutionCursor(total_gas_used, cache);
         if (!executionCursor.status.ok()) {
+            std::cerr << "Failed to load execution cursor "
+                      << executionCursor.status.ToString() << std::endl;
             return nullptr;
         }
         return static_cast<void*>(executionCursor.data.release());
     } catch (const std::exception& e) {
+        std::cerr << "Exception while loading execution cursor " << e.what()
+                  << std::endl;
         return nullptr;
     }
 }

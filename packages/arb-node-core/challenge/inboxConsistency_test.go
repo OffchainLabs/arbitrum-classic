@@ -1,7 +1,11 @@
 package challenge
 
 import (
+	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/big"
+	"math/rand"
+	"os"
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -11,27 +15,58 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
+var tmpDir = "./tmp"
+
+type InvalidArbCore struct {
+	core.ArbCore
+}
+
 func TestInboxConsistencyChallenge(t *testing.T) {
-	mach, err := cmachine.New(arbos.Path())
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			panic(err)
+		}
+	}()
+	storage, err := cmachine.NewArbStorage(tmpDir)
+	test.FailIfError(t, err)
+	defer storage.CloseArbStorage()
+
+	err = storage.Initialize(arbos.Path())
 	test.FailIfError(t, err)
 
-	correctLookup := core.NewValidatorLookupMock(mach)
-	for i := 0; i < 10000; i++ {
-		correctLookup.AddMessage(inbox.NewRandomInboxMessage())
+	correctLookup := storage.GetArbCore()
+	started := correctLookup.StartThread()
+	if !started {
+		t.Fatal("failed to start thread")
 	}
-	otherLookup := core.NewValidatorLookupMock(mach)
+	messages := make([]inbox.InboxMessage, 0)
 	for i := 0; i < 10000; i++ {
-		otherLookup.AddMessage(inbox.NewRandomInboxMessage())
+		msg := inbox.InboxMessage{
+			Kind:        inbox.Type(rand.Uint32()),
+			Sender:      common.RandAddress(),
+			InboxSeqNum: big.NewInt(int64(i)),
+			Data:        common.RandBytes(200),
+			ChainTime: inbox.ChainTime{
+				BlockNum:  common.NewTimeBlocksInt(int64(i)),
+				Timestamp: big.NewInt(int64(i)),
+			},
+		}
+		messages = append(messages, msg)
 	}
+	_, err = core.DeliverMessagesAndWait(correctLookup, messages, common.Hash{}, false)
+	test.FailIfError(t, err)
 
-	falseLookup := correctLookup.Clone()
-	for i := 200; i < 206; i++ {
-		falseLookup.InboxAccs[i] = otherLookup.InboxAccs[i]
-	}
+	fmt.Println("Got messages")
+
+	falseLookup := InvalidArbCore{ArbCore: correctLookup}
 
 	inboxMessagesRead := big.NewInt(203)
 
+	fmt.Println("test0")
+
 	challengedNode := initializeChallengeData(t, correctLookup, inboxMessagesRead)
+
+	fmt.Println("test1")
 
 	inboxAcc, err := falseLookup.GetInboxAcc(new(big.Int).Add(challengedNode.Assertion.After.InboxIndex, big.NewInt(1)))
 	test.FailIfError(t, err)
@@ -40,8 +75,12 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 	asserterTime := big.NewInt(100000)
 	challengerTime := big.NewInt(100000)
 
+	fmt.Println("test2")
+
 	rounds := executeChallenge(t, challengedNode, asserterTime, challengerTime, correctLookup, falseLookup)
 	if rounds != 3 {
 		t.Fatal("wrong round count", rounds)
 	}
+
+	fmt.Println("test3")
 }

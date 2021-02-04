@@ -65,16 +65,12 @@ bool ArbCore::machineIdle() {
     return machine_idle;
 }
 
-bool ArbCore::messagesEmpty() {
-    return message_data_status == MESSAGES_EMPTY;
-}
-
 ArbCore::message_status_enum ArbCore::messagesStatus() {
-    return message_data_status;
-
-    if (message_data_status != MESSAGES_ERROR) {
+    auto current_status = message_data_status.load();
+    if (current_status != MESSAGES_ERROR && current_status != MESSAGES_READY) {
         message_data_status = MESSAGES_EMPTY;
     }
+    return current_status;
 }
 
 std::string ArbCore::messagesClearError() {
@@ -120,8 +116,7 @@ void ArbCore::abortThread() {
     arbcore_abort = false;
 }
 
-// deliverMessages sends messages to core thread.  Caller needs to verify that
-// messagesEmpty() returns true before calling this function.
+// deliverMessages sends messages to core thread
 bool ArbCore::deliverMessages(std::vector<std::vector<unsigned char>>& messages,
                               const uint256_t& previous_inbox_hash,
                               const bool last_block_complete) {
@@ -564,6 +559,8 @@ void ArbCore::operator()() {
             } else if (!add_status->ok()) {
                 core_error_string = add_status->ToString();
                 message_data_status = MESSAGES_ERROR;
+                std::cerr << "ArbCore inbox processed stopped with error: "
+                          << core_error_string << "\n";
                 break;
             } else {
                 machine_idle = false;
@@ -574,6 +571,8 @@ void ArbCore::operator()() {
         // Check machine thread
         if (machine->status() == MachineThread::MACHINE_ERROR) {
             core_error_string = machine->getErrorString();
+            std::cerr << "AVM machine stopped with error: " << core_error_string
+                      << "\n";
             break;
         }
 
@@ -591,6 +590,8 @@ void ArbCore::operator()() {
             auto messages_inserted = messageEntryInsertedCountImpl(*tx);
             if (!messages_inserted.status.ok()) {
                 core_error_string = messages_inserted.status.ToString();
+                std::cerr << "ArbCore message insertion failed: "
+                          << core_error_string << "\n";
                 break;
             }
             auto last_sequence_number_consumed =
@@ -606,6 +607,8 @@ void ArbCore::operator()() {
                 auto status = saveAssertion(*tx, last_assertion);
                 if (!status.ok()) {
                     core_error_string = status.ToString();
+                    std::cerr << "ArbCore assertion saving failed: "
+                              << core_error_string << "\n";
                     break;
                 }
 
@@ -622,6 +625,8 @@ void ArbCore::operator()() {
             if (!status.ok()) {
                 core_error_string = status.ToString();
                 machine_error = true;
+                std::cerr << "ArbCore database update failed: "
+                          << core_error_string << "\n";
                 break;
             }
         }
@@ -633,6 +638,8 @@ void ArbCore::operator()() {
             if (!messages_count.status.ok()) {
                 core_error_string = messages_count.status.ToString();
                 machine_error = true;
+                std::cerr << "ArbCore message count fetching failed: "
+                          << core_error_string << "\n";
                 break;
             }
 
@@ -640,6 +647,8 @@ void ArbCore::operator()() {
                 // Should never happen, means reorg wasn't done properly
                 core_error_string = "messages_inserted < pending_checkpoint";
                 machine_error = true;
+                std::cerr << "ArbCore reorg error: " << core_error_string
+                          << "\n";
                 break;
             }
 
@@ -654,6 +663,8 @@ void ArbCore::operator()() {
                 if (!next_message_result.status.ok()) {
                     core_error_string = next_message_result.status.ToString();
                     machine_error = true;
+                    std::cerr << "ArbCore failed getting message entry: "
+                              << core_error_string << "\n";
                     break;
                 }
                 if (next_message_result.data.sequence_number !=
@@ -661,6 +672,7 @@ void ArbCore::operator()() {
                     core_error_string =
                         "sequence number in message different than expected";
                     machine_error = true;
+                    std::cerr << "ArbCore error: " << core_error_string << "\n";
                     break;
                 }
                 std::vector<std::vector<unsigned char>> messages;
@@ -672,6 +684,7 @@ void ArbCore::operator()() {
                 if (!status) {
                     core_error_string = "Error starting machine thread";
                     machine_error = true;
+                    std::cerr << "ArbCore error: " << core_error_string << "\n";
                     break;
                 }
             } else {

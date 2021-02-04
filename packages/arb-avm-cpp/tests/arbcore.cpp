@@ -76,13 +76,24 @@ TEST_CASE("ArbCore tests") {
             auto arbCore = storage.getArbCore();
             REQUIRE(arbCore->startThread());
 
-            arbCore->deliverMessages(raw_messages, 0, false);
+            REQUIRE(arbCore->deliverMessages(raw_messages, 0, false));
+
+            ArbCore::message_status_enum status;
+            while (true) {
+                status = arbCore->messagesStatus();
+                if (status != ArbCore::MESSAGES_EMPTY &&
+                    status != ArbCore::MESSAGES_READY) {
+                    break;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            REQUIRE(status == ArbCore::MESSAGES_SUCCESS);
 
             int tries = 0;
             while (true) {
                 auto countRes = arbCore->messageEntryInsertedCount();
                 REQUIRE(countRes.status.ok());
-                if (countRes.data == raw_messages.size()) {
+                if (countRes.data == inbox_messages.size()) {
                     break;
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -104,6 +115,10 @@ TEST_CASE("ArbCore tests") {
             for (size_t k = 0; k < logs.size(); ++k) {
                 REQUIRE(logsRes.data[k] == logs[k]);
             }
+
+            auto cursor = arbCore->getExecutionCursor(0, value_cache);
+            REQUIRE(cursor.status.ok());
+            REQUIRE(cursor.data->arb_gas_used == 0);
         }
     }
 }

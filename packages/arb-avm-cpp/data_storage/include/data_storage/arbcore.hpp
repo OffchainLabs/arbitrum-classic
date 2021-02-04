@@ -166,7 +166,6 @@ class ArbCore {
     bool deliverMessages(std::vector<std::vector<unsigned char>>& messages,
                          const uint256_t& previous_inbox_hash,
                          bool last_block_complete);
-    bool messagesEmpty();
     message_status_enum messagesStatus();
     std::string messagesClearError();
 

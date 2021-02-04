@@ -2,6 +2,7 @@ package challenge
 
 import (
 	"context"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"math/big"
 	"testing"
@@ -22,8 +23,8 @@ func executeChallenge(
 	challengedNode *core.NodeInfo,
 	asserterTime *big.Int,
 	challengerTime *big.Int,
-	correctLookup *core.ValidatorLookupMock,
-	falseLookup *core.ValidatorLookupMock,
+	correctLookup core.ArbCore,
+	falseLookup core.ArbCore,
 ) int {
 	ctx := context.Background()
 
@@ -128,10 +129,12 @@ func checkChallengeCompleted(t *testing.T, tester *ethbridgetestcontracts.Challe
 
 func initializeChallengeData(
 	t *testing.T,
-	lookup *core.ValidatorLookupMock,
+	lookup core.ArbCore,
 	inboxMessagesRead *big.Int,
 ) *core.NodeInfo {
+	fmt.Println("testA")
 	initialMach, err := lookup.GetExecutionCursor(big.NewInt(0))
+	fmt.Println("testB", err)
 	test.FailIfError(t, err)
 	prevState := &core.NodeState{
 		ProposedBlock: big.NewInt(0),
@@ -145,12 +148,14 @@ func initializeChallengeData(
 			TotalLogCount:    big.NewInt(0),
 		},
 	}
-
+	fmt.Println("testC")
 	inboxDeltaHash, err := lookup.GetInboxDelta(big.NewInt(0), inboxMessagesRead)
+	fmt.Println("testD")
 	test.FailIfError(t, err)
 	afterInboxCount := new(big.Int).Add(prevState.InboxIndex, inboxMessagesRead)
 
 	inboxAcc, err := lookup.GetInboxAcc(afterInboxCount)
+	fmt.Println("testE")
 	test.FailIfError(t, err)
 
 	assertion := &core.Assertion{
@@ -172,7 +177,8 @@ func initializeChallengeData(
 		InboxDelta: inboxDeltaHash,
 	}
 
-	inboxMaxCount := big.NewInt(int64(len(lookup.InboxAccs)) - 1)
+	inboxMaxCount, err := lookup.GetMessageCount()
+	test.FailIfError(t, err)
 	inboxTopAcc, err := lookup.GetInboxAcc(inboxMaxCount)
 	test.FailIfError(t, err)
 	return &core.NodeInfo{

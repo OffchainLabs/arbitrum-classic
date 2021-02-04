@@ -3,11 +3,22 @@ package core
 import (
 	"github.com/pkg/errors"
 	"math/big"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+)
+
+type MessageStatus uint8
+
+const (
+	MessagesEmpty MessageStatus = iota
+	MessagesReady
+	MessagesSuccess
+	MessagesNeedOlder
+	MessagesError
 )
 
 type ExecutionCursor interface {
@@ -52,9 +63,41 @@ type ArbCoreLookup interface {
 
 type ArbCoreInbox interface {
 	DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) bool
-	MessagesEmpty() bool
-	MessagesResponseReady() bool
-	MessagesNeedOlder() (bool, error)
+	MessagesStatus() (MessageStatus, error)
+}
+
+func DeliverMessagesAndWait(db ArbCoreInbox, messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) (bool, error) {
+	if !db.DeliverMessages(messages, previousInboxHash, lastBlockComplete) {
+		return false, errors.New("unable to deliver messages")
+	}
+
+	start := time.Now()
+	var status MessageStatus
+	var err error
+	for {
+		status, err = db.MessagesStatus()
+		if err != nil {
+			return false, err
+		}
+
+		if status == MessagesEmpty {
+			return false, errors.New("should have messages")
+		}
+		if status != MessagesReady {
+			break
+		}
+		if time.Since(start) > time.Second*30 {
+			return false, errors.New("timed out adding messages")
+		}
+		<-time.After(time.Millisecond * 200)
+	}
+	if status == MessagesSuccess {
+		return true, nil
+	}
+	if status == MessagesNeedOlder {
+		return false, nil
+	}
+	return false, errors.New("Unexpected status")
 }
 
 type ArbCore interface {

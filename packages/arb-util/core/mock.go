@@ -68,20 +68,12 @@ func (v *ValidatorLookupMock) GetMessageCount() (*big.Int, error) {
 	return big.NewInt(int64(len(v.Messages))), nil
 }
 
-func (v *ValidatorLookupMock) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) {
+func (v *ValidatorLookupMock) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) bool {
 	panic("implement me")
 }
 
-func (v *ValidatorLookupMock) MessagesEmpty() bool {
-	panic("implement me")
-}
-
-func (v *ValidatorLookupMock) MessagesResponseReady() bool {
-	panic("implement me")
-}
-
-func (v *ValidatorLookupMock) MessagesNeedOlder() (bool, error) {
-	panic("implement me")
+func (v *ValidatorLookupMock) MessagesStatus() (MessageStatus, error) {
+	return MessagesEmpty, nil
 }
 
 func (v *ValidatorLookupMock) StartThread() bool {

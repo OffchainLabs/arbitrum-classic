@@ -63,12 +63,11 @@ class MachineThread : public Machine {
     std::string getErrorString();
     void clearError();
     Assertion getAssertion();
-    void operator()(
-        uint256_t max_gas,
-        bool go_over_gas,
-        const std::vector<std::vector<unsigned char>>& inbox_messages,
-        uint256_t messages_to_skip,
-        bool final_message_of_block);
+    void operator()(uint256_t max_gas,
+                    bool go_over_gas,
+                    std::vector<std::vector<unsigned char>> inbox_messages,
+                    uint256_t messages_to_skip,
+                    bool final_message_of_block);
 };
 
 #endif /* machine_hpp */

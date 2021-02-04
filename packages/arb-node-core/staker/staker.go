@@ -12,6 +12,15 @@ import (
 	"github.com/pkg/errors"
 )
 
+type Strategy uint8
+
+const (
+	EagerStrategy Strategy = iota
+	OpportunisticStrategy
+	ChallengerTakerStrategy
+	WatchtowerStrategy
+)
+
 type Staker struct {
 	*Validator
 	makeNewNodes    bool

@@ -137,27 +137,15 @@ func (ir *InboxReader) addMessages(newMessages []*ethbridge.DeliveredInboxMessag
 	if len(newMessages) == 0 {
 		return false, errors.New("must have messages to add")
 	}
-	if !ir.db.MessagesEmpty() {
-		return false, errors.New("not ready for messages")
-	}
 
 	messages := make([]inbox.InboxMessage, 0, len(newMessages))
 	for _, msg := range newMessages {
 		messages = append(messages, msg.Message)
 	}
-	if !ir.db.DeliverMessages(messages, newMessages[0].BeforeInboxAcc, true) {
-		return false, errors.New("unable to deliver messages")
-	}
-
-	start := time.Now()
-	for {
-		if ir.db.MessagesResponseReady() {
-			break
-		}
-		if time.Since(start) > time.Second*30 {
-			return false, errors.New("timed out adding messages")
-		}
-		<-time.After(time.Millisecond * 200)
-	}
-	return ir.db.MessagesNeedOlder()
+	return core.DeliverMessagesAndWait(
+		ir.db,
+		messages,
+		newMessages[0].BeforeInboxAcc,
+		true,
+	)
 }

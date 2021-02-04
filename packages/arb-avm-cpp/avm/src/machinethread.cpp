@@ -39,7 +39,7 @@ bool MachineThread::runMachine(
 
     machine_thread = std::make_unique<std::thread>(
         (std::reference_wrapper<MachineThread>(*this)), max_gas, go_over_gas,
-        inbox_messages, messages_to_skip, final_message_of_block);
+        std::move(inbox_messages), messages_to_skip, final_message_of_block);
 
     return true;
 }
@@ -71,7 +71,7 @@ void MachineThread::clearError() {
 void MachineThread::operator()(
     const uint256_t max_gas,
     const bool go_over_gas,
-    std::vector<std::vector<unsigned char>>& inbox_messages,
+    std::vector<std::vector<unsigned char>> inbox_messages,
     const uint256_t messages_to_skip,
     const bool final_message_of_block) {
     last_assertion = run(max_gas, go_over_gas, inbox_messages, messages_to_skip,
