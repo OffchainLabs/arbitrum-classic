@@ -66,24 +66,24 @@ bool ArbCore::machineIdle() {
 }
 
 bool ArbCore::messagesEmpty() {
-    return messages_status == MESSAGES_EMPTY;
+    return message_data_status == MESSAGES_EMPTY;
 }
 
-ArbCore::messages_status_enum ArbCore::messagesStatus() {
-    return messages_status;
+ArbCore::message_status_enum ArbCore::messagesStatus() {
+    return message_data_status;
 
-    if (messages_status != MESSAGES_ERROR) {
-        messages_status = MESSAGES_EMPTY;
+    if (message_data_status != MESSAGES_ERROR) {
+        message_data_status = MESSAGES_EMPTY;
     }
 }
 
 std::string ArbCore::messagesClearError() {
-    if (messages_status != ArbCore::MESSAGES_ERROR &&
-        messages_status != ArbCore::MESSAGES_NEED_OLDER) {
+    if (message_data_status != ArbCore::MESSAGES_ERROR &&
+        message_data_status != ArbCore::MESSAGES_NEED_OLDER) {
         return nullptr;
     }
 
-    messages_status = MESSAGES_EMPTY;
+    message_data_status = MESSAGES_EMPTY;
     auto str = core_error_string;
     core_error_string.clear();
 
@@ -122,19 +122,20 @@ void ArbCore::abortThread() {
 
 // deliverMessages sends messages to core thread.  Caller needs to verify that
 // messagesEmpty() returns true before calling this function.
-void ArbCore::deliverMessages(
-    const std::vector<std::vector<unsigned char>>& messages,
-    const uint256_t& previous_inbox_hash,
-    const bool last_block_complete) {
-    if (messages_status != MESSAGES_EMPTY) {
-        throw std::runtime_error("message_status != ARBCORE_EMPTY");
+bool ArbCore::deliverMessages(std::vector<std::vector<unsigned char>>& messages,
+                              const uint256_t& previous_inbox_hash,
+                              const bool last_block_complete) {
+    if (message_data_status != MESSAGES_EMPTY) {
+        return false;
     }
 
-    messages_inbox = messages;
-    messages_previous_inbox_hash = previous_inbox_hash;
-    messages_last_block_complete = last_block_complete;
+    message_data.messages = std::move(messages);
+    message_data.previous_inbox_hash = previous_inbox_hash;
+    message_data.last_block_complete = last_block_complete;
 
-    messages_status = MESSAGES_READY;
+    message_data_status = MESSAGES_READY;
+
+    return true;
 }
 
 std::unique_ptr<Transaction> ArbCore::makeTransaction() {
@@ -550,23 +551,23 @@ void ArbCore::operator()() {
     uint256_t last_sequence_number_in_machine;
 
     while (!arbcore_abort) {
-        if (messages_status == MESSAGES_READY) {
+        if (message_data_status == MESSAGES_READY) {
             // Reorg might occur while adding messages
-            auto add_status =
-                addMessages(messages_inbox, messages_previous_inbox_hash,
-                            last_sequence_number_in_machine,
-                            messages_last_block_complete, cache);
+            auto add_status = addMessages(
+                message_data.messages, message_data.previous_inbox_hash,
+                last_sequence_number_in_machine,
+                message_data.last_block_complete, cache);
             if (!add_status) {
                 // Messages from previous block invalid because of reorg so
                 // request older messages
-                messages_status = MESSAGES_NEED_OLDER;
+                message_data_status = MESSAGES_NEED_OLDER;
             } else if (!add_status->ok()) {
                 core_error_string = add_status->ToString();
-                messages_status = MESSAGES_ERROR;
+                message_data_status = MESSAGES_ERROR;
                 break;
             } else {
                 machine_idle = false;
-                messages_status = MESSAGES_SUCCESS;
+                message_data_status = MESSAGES_SUCCESS;
             }
         }
 
@@ -687,7 +688,7 @@ void ArbCore::operator()() {
             handleLogsCursorProcessed(*tx);
         }
 
-        if (!machineIdle() || messages_status != MESSAGES_READY) {
+        if (!machineIdle() || message_data_status != MESSAGES_READY) {
             // Machine is already running or new messages, so sleep for a short
             // while
             std::this_thread::sleep_for(std::chrono::milliseconds(200));

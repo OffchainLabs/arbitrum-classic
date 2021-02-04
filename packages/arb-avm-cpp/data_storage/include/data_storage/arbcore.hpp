@@ -51,10 +51,20 @@ class ArbCore {
         MESSAGES_SUCCESS,     // Out:  Messages processed successfully
         MESSAGES_NEED_OLDER,  // Out: Last message invalid, need older messages
         MESSAGES_ERROR        // Out: Error processing messages
-    } messages_status_enum;
+    } message_status_enum;
+
+   private:
+    struct message_data_struct {
+        std::vector<std::vector<unsigned char>> messages;
+        uint256_t previous_inbox_hash;
+        bool last_block_complete{false};
+    };
 
    private:
     std::unique_ptr<std::thread> core_thread;
+
+    // Core thread input
+    std::atomic<bool> arbcore_abort{false};
 
     // Core thread holds mutex only during reorg.
     // Routines accessing database for log entries will need to acquire mutex
@@ -69,15 +79,12 @@ class ArbCore {
     std::shared_ptr<Code> code{};
     Checkpoint pending_checkpoint;
 
-    // Core thread inbox input/output. Core thread will update if and only if
-    // set to MESSAGES_READY
-    std::atomic<messages_status_enum> messages_status{MESSAGES_EMPTY};
+    // Core thread inbox status input/output. Core thread will update if and
+    // only if set to MESSAGES_READY
+    std::atomic<message_status_enum> message_data_status{MESSAGES_EMPTY};
 
     // Core thread inbox input
-    std::atomic<bool> arbcore_abort{false};
-    std::vector<std::vector<unsigned char>> messages_inbox;
-    uint256_t messages_previous_inbox_hash;
-    bool messages_last_block_complete{false};
+    message_data_struct message_data;
 
     // Core thread inbox output
     std::string core_error_string;
@@ -156,12 +163,11 @@ class ArbCore {
 
    public:
     // Sending messages to core thread
-    void deliverMessages(
-        const std::vector<std::vector<unsigned char>>& messages,
-        const uint256_t& previous_inbox_hash,
-        bool last_block_complete);
+    bool deliverMessages(std::vector<std::vector<unsigned char>>& messages,
+                         const uint256_t& previous_inbox_hash,
+                         bool last_block_complete);
     bool messagesEmpty();
-    messages_status_enum messagesStatus();
+    message_status_enum messagesStatus();
     std::string messagesClearError();
 
    public:

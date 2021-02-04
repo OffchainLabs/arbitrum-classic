@@ -25,7 +25,7 @@ The `ArbCore::core_thread` processes message entries, performs reorgs on databas
 #### ArbCore Thread Receiving Messages
 
 - The message delivery itself does not require a mutex, but if a reorg occurs, `ArbCore::core_reorg_mutex` needs to be acquired.
-- The function `ArbCore::DeliverMessages()` is used by other threads to insert messages into the core thread. The state is managed between threads using the atmoic enum `ArbCore::messages_status`.
+- The function `ArbCore::DeliverMessages()` is used by other threads to insert messages into the core thread. The state is managed between threads using the atomic enum `ArbCore::message_data_status`.
 
   - `ArbCore::MESSAGES_EMPTY`: (Out) Ready to receive messages
   - `ArbCore::MESSAGES_READY`: (In) Messages in vector
@@ -33,13 +33,12 @@ The `ArbCore::core_thread` processes message entries, performs reorgs on databas
   - `ArbCore::MESSAGES_NEED_OLDER`: (Out) Last message invalid, need older messages
   - `ArbCore::MESSAGES_ERROR`: (Out) Error processing messages
 
-- The core thread only accesses or updates the following variables when `messages_status` is set to `MESSAGES_READY`. Correspondingly, other threads should only deliver messages when `messages_status` is set to `MESSAGES_EMPTY`. The states `MESSAGES_ERROR` and `MESSAGES_NEED_OLDER` should be cleared by calling `ArbCore::messagesClearError()`.
+- The core thread only accesses or updates the following variables when `message_data_status` is set to `MESSAGES_READY`. Correspondingly, other threads should only deliver messages when `message_data_status` is set to `MESSAGES_EMPTY`. The states `MESSAGES_ERROR` and `MESSAGES_NEED_OLDER` should be cleared by calling `ArbCore::messagesClearError()`.
 
-  - `ArbCore::messages_status`
-  - `ArbCore::messages_inbox`
-  - `ArbCore::messages_previous_inbox_hash`
-  - `ArbCore::messages_last_block_complete`
-  - `ArbCore::messages_status`
+  - `ArbCore::message_data_status`
+  - `ArbCore::message_data.messages`
+  - `ArbCore::message_data.previous_inbox_hash`
+  - `ArbCore::message_data.last_block_complete`
 
 - `ArbCore::deliverMessages` must only be called when `messagesEmpty` returns true
 - `ArbCore::messagesEmpty` can be called at any time
@@ -70,7 +69,12 @@ The following data is stored by core thread and appropriately modified whenever 
 
 - All database interaction dealing with `LogsCursor` includiung reorgs is handled synchronously by the core thread, so no mutex is needed for database interaction
 - The function `logsCursorGetLogs` needs reorg mutex to ensure underlying data is not affected by reorg while retrieving logs.
-- The state is communicated between threads using the atomic enum `ArbCore::logs_cursor.status ** `DataCursor::EMPTY`: (Out) Ready to receive request for data ** `DataCursor::REQUESTED`: (In) Data requested ** `DataCursor::CONFIRMED`: (In) Data count to confirm as received ** `DataCursor::ERROR`: (Out) Error getting data
+- The state is communicated between threads using the atomic enum `ArbCore::logs_cursor.status`
+
+  - `DataCursor::EMPTY`: (Out) Ready to receive request for data
+  - `DataCursor::REQUESTED`: (In) Data requested
+  - `DataCursor::CONFIRMED`: (In) Data count to confirm as received
+  - `DataCursor::ERROR`: (Out) Error getting data
 
 - `ArbCore::logsCursorRequest`: Asynchronously request the next X logs
   - Only call after successful call to `logsCursorGetLogs` or `logsCursorClearError`
@@ -88,7 +92,7 @@ The following data is stored by core thread and appropriately modified whenever 
 #### ArbCore and ExecutionCursor
 
 - The core thread is not involved with creating or advancing execution cursors. The reorg mutex does need to be required to avoid a reorg causing inconsistent results.
-- When an `ExecutionCursor` is initially created or an existing one is advanced, any existing data is checked to see if affected by reorg and a group of messages are retrieved from database so that machine can execute independent of reorgs.
+- When an `ExecutionCursor` is initially created or an existing one is advanced, any existing data is checked to see if affected by reorg.
 
 ### MachineThread
 

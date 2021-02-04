@@ -145,7 +145,9 @@ func (ir *InboxReader) addMessages(newMessages []*ethbridge.DeliveredInboxMessag
 	for _, msg := range newMessages {
 		messages = append(messages, msg.Message)
 	}
-	ir.db.DeliverMessages(messages, newMessages[0].BeforeInboxAcc, true)
+	if !ir.db.DeliverMessages(messages, newMessages[0].BeforeInboxAcc, true) {
+		return false, errors.New("unable to deliver messages")
+	}
 
 	start := time.Now()
 	for {

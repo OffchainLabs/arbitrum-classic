@@ -94,7 +94,7 @@ func (ac *ArbCore) MessagesNeedOlder() (bool, error) {
 	return false, errors.New("Unknown error occurred")
 }
 
-func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) {
+func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) bool {
 	rawInboxData := encodeInboxMessages(messages)
 	byteSlices := encodeByteSliceList(rawInboxData)
 
@@ -111,7 +111,8 @@ func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxH
 		cLastBlockComplete = 1
 	}
 
-	C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxHash.Bytes()), C.int(cLastBlockComplete))
+	status := C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxHash.Bytes()), C.int(cLastBlockComplete))
+	return status == 1
 }
 
 func (ac *ArbCore) GetSendCount() (*big.Int, error) {

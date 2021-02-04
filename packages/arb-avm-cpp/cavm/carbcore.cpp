@@ -82,13 +82,12 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
     auto previous_inbox_hash = receiveUint256(previous_inbox_hash_ptr);
 
     try {
-        arb_core->deliverMessages(messages, previous_inbox_hash,
-                                  last_block_complete);
+        auto status = arb_core->deliverMessages(messages, previous_inbox_hash,
+                                                last_block_complete);
+        return status;
     } catch (const std::exception& e) {
         return false;
     }
-
-    return true;
 }
 
 Uint256Result arbCoreGetLogCount(CArbCore* arbcore_ptr) {

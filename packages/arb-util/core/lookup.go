@@ -51,7 +51,7 @@ type ArbCoreLookup interface {
 }
 
 type ArbCoreInbox interface {
-	DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool)
+	DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) bool
 	MessagesEmpty() bool
 	MessagesResponseReady() bool
 	MessagesNeedOlder() (bool, error)
