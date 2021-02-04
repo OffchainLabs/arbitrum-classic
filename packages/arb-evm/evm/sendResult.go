@@ -82,6 +82,7 @@ type SendResultMessage interface {
 type SendResultMessageType uint8
 
 const (
+	WithdrawEthType SendResultMessageType = 0
 	BuddyResultType SendResultMessageType = 5
 )
 
@@ -90,6 +91,8 @@ func NewSendResultMessage(r *SendResult) (SendResultMessage, error) {
 		return nil, errors.New("send result message must have nonzero data")
 	}
 	switch SendResultMessageType(r.Data[0]) {
+	case WithdrawEthType:
+		return NewWithdrawEthResultFromData(r.Data)
 	case BuddyResultType:
 		return NewBuddyResultFromData(r.Data)
 	default:
@@ -119,5 +122,31 @@ func NewBuddyResultFromData(data []byte) (*BuddyResult, error) {
 	return &BuddyResult{
 		Address:   address,
 		Succeeded: success == 1,
+	}, nil
+}
+
+type WithdrawEthResult struct {
+	Destination common.Address
+	Amount      *big.Int
+}
+
+func NewWithdrawEthResultFromData(data []byte) (*WithdrawEthResult, error) {
+	if len(data) != 32*3 {
+		return nil, errors.New("unexpected withdraw eth result length")
+	}
+	typeCode := new(big.Int).SetBytes(data[0:32])
+	destination := data[32:64]
+	amount := new(big.Int).SetBytes(data[64:])
+
+	if typeCode.Cmp(big.NewInt(int64(WithdrawEthType))) != 0 {
+		return nil, errors.New("unexpected type code")
+	}
+
+	var address common.Address
+	copy(address[:], destination[12:])
+
+	return &WithdrawEthResult{
+		Destination: address,
+		Amount:      amount,
 	}, nil
 }

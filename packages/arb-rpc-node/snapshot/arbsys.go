@@ -32,11 +32,9 @@ import (
 )
 
 var (
-	txCountABI        abi.Method
-	withdrawEthABI    abi.Method
-	withdrawERC20ABI  abi.Method
-	withdrawERC721ABI abi.Method
-	getStorageAtABI   abi.Method
+	txCountABI      abi.Method
+	withdrawEthABI  abi.Method
+	getStorageAtABI abi.Method
 
 	ethWithdrawal    ethcommon.Hash
 	erc20Withdrawal  ethcommon.Hash
@@ -53,8 +51,6 @@ func init() {
 
 	txCountABI = arbsys.Methods["getTransactionCount"]
 	withdrawEthABI = arbsys.Methods["withdrawEth"]
-	withdrawERC20ABI = arbsys.Methods["withdrawERC20"]
-	withdrawERC721ABI = arbsys.Methods["withdrawERC721"]
 	getStorageAtABI = arbsys.Methods["getStorageAt"]
 
 	ethWithdrawal = arbsys.Events["EthWithdrawal"].ID
@@ -84,14 +80,6 @@ func WithdrawEthData(address common.Address) []byte {
 	return makeFuncData(withdrawEthABI, address)
 }
 
-func WithdrawERC20Data(address common.Address, amount *big.Int) []byte {
-	return makeFuncData(withdrawERC20ABI, address, amount)
-}
-
-func WithdrawERC721Data(address common.Address, id *big.Int) []byte {
-	return makeFuncData(withdrawERC721ABI, address, id)
-}
-
 func encodeLog(log evm.Log) types.Log {
 	return types.Log{
 		Address: log.Address.ToEthAddress(),
@@ -106,28 +94,6 @@ func ParseEthWithdrawalEvent(log evm.Log) (*arboscontracts.ArbSysEthWithdrawal, 
 	}
 	event := new(arboscontracts.ArbSysEthWithdrawal)
 	if err := arbsysConn.UnpackLog(event, "EthWithdrawal", encodeLog(log)); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-func ParseERC20WithdrawalEvent(log evm.Log) (*arboscontracts.ArbSysERC20Withdrawal, error) {
-	if log.Topics[0].ToEthHash() != erc20Withdrawal {
-		return nil, errors.New("wrong event type")
-	}
-	event := new(arboscontracts.ArbSysERC20Withdrawal)
-	if err := arbsysConn.UnpackLog(event, "ERC20Withdrawal", encodeLog(log)); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-func ParseERC721WithdrawalEvent(log evm.Log) (*arboscontracts.ArbSysERC721Withdrawal, error) {
-	if log.Topics[0].ToEthHash() != erc721Withdrawal {
-		return nil, errors.New("wrong event type")
-	}
-	event := new(arboscontracts.ArbSysERC721Withdrawal)
-	if err := arbsysConn.UnpackLog(event, "ERC721Withdrawal", encodeLog(log)); err != nil {
 		return nil, err
 	}
 	return event, nil

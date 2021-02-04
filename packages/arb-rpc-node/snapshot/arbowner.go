@@ -37,9 +37,9 @@ func init() {
 	}
 
 	giveOwnershipABI = arbowner.Methods["giveOwnership"]
-	startArbOSUpgradeABI = arbowner.Methods["startArbosUpgrade"]
-	continueArbOSUpgradeABI = arbowner.Methods["continueArbosUpgrade"]
-	finishArbOSUpgradeABI = arbowner.Methods["finishArbosUpgrade"]
+	startArbOSUpgradeABI = arbowner.Methods["startCodeUpload"]
+	continueArbOSUpgradeABI = arbowner.Methods["continueCodeUpload"]
+	finishArbOSUpgradeABI = arbowner.Methods["finishCodeUploadAsArbosUpgrade"]
 }
 
 func GiveOwnershipData(newOwnerAddr common.Address) []byte {

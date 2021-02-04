@@ -27,15 +27,13 @@ var (
 )
 
 // ArbSysABI is the input ABI used to generate the binding from.
-const ArbSysABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"ERC20Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"ERC721Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"EthWithdrawal\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"arbOSVersion\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getStorageAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"withdrawERC721\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"}]"
+const ArbSysABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"ERC20Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"ERC721Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"EthWithdrawal\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"arbOSVersion\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"calldataForL1\",\"type\":\"bytes\"}],\"name\":\"sendTxToL1\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]"
 
 // ArbSysFuncSigs maps the 4-byte function signature to its string representation.
 var ArbSysFuncSigs = map[string]string{
 	"051038f2": "arbOSVersion()",
-	"a169625f": "getStorageAt(address,uint256)",
 	"23ca0cd2": "getTransactionCount(address)",
-	"a1db9782": "withdrawERC20(address,uint256)",
-	"f3e414f8": "withdrawERC721(address,uint256)",
+	"928c169a": "sendTxToL1(address,bytes)",
 	"25e16063": "withdrawEth(address)",
 }
 
@@ -212,37 +210,6 @@ func (_ArbSys *ArbSysCallerSession) ArbOSVersion() (*big.Int, error) {
 	return _ArbSys.Contract.ArbOSVersion(&_ArbSys.CallOpts)
 }
 
-// GetStorageAt is a free data retrieval call binding the contract method 0xa169625f.
-//
-// Solidity: function getStorageAt(address account, uint256 index) view returns(uint256)
-func (_ArbSys *ArbSysCaller) GetStorageAt(opts *bind.CallOpts, account common.Address, index *big.Int) (*big.Int, error) {
-	var out []interface{}
-	err := _ArbSys.contract.Call(opts, &out, "getStorageAt", account, index)
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// GetStorageAt is a free data retrieval call binding the contract method 0xa169625f.
-//
-// Solidity: function getStorageAt(address account, uint256 index) view returns(uint256)
-func (_ArbSys *ArbSysSession) GetStorageAt(account common.Address, index *big.Int) (*big.Int, error) {
-	return _ArbSys.Contract.GetStorageAt(&_ArbSys.CallOpts, account, index)
-}
-
-// GetStorageAt is a free data retrieval call binding the contract method 0xa169625f.
-//
-// Solidity: function getStorageAt(address account, uint256 index) view returns(uint256)
-func (_ArbSys *ArbSysCallerSession) GetStorageAt(account common.Address, index *big.Int) (*big.Int, error) {
-	return _ArbSys.Contract.GetStorageAt(&_ArbSys.CallOpts, account, index)
-}
-
 // GetTransactionCount is a free data retrieval call binding the contract method 0x23ca0cd2.
 //
 // Solidity: function getTransactionCount(address account) view returns(uint256)
@@ -274,46 +241,25 @@ func (_ArbSys *ArbSysCallerSession) GetTransactionCount(account common.Address) 
 	return _ArbSys.Contract.GetTransactionCount(&_ArbSys.CallOpts, account)
 }
 
-// WithdrawERC20 is a paid mutator transaction binding the contract method 0xa1db9782.
+// SendTxToL1 is a paid mutator transaction binding the contract method 0x928c169a.
 //
-// Solidity: function withdrawERC20(address dest, uint256 amount) returns()
-func (_ArbSys *ArbSysTransactor) WithdrawERC20(opts *bind.TransactOpts, dest common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _ArbSys.contract.Transact(opts, "withdrawERC20", dest, amount)
+// Solidity: function sendTxToL1(address destAddr, bytes calldataForL1) payable returns()
+func (_ArbSys *ArbSysTransactor) SendTxToL1(opts *bind.TransactOpts, destAddr common.Address, calldataForL1 []byte) (*types.Transaction, error) {
+	return _ArbSys.contract.Transact(opts, "sendTxToL1", destAddr, calldataForL1)
 }
 
-// WithdrawERC20 is a paid mutator transaction binding the contract method 0xa1db9782.
+// SendTxToL1 is a paid mutator transaction binding the contract method 0x928c169a.
 //
-// Solidity: function withdrawERC20(address dest, uint256 amount) returns()
-func (_ArbSys *ArbSysSession) WithdrawERC20(dest common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _ArbSys.Contract.WithdrawERC20(&_ArbSys.TransactOpts, dest, amount)
+// Solidity: function sendTxToL1(address destAddr, bytes calldataForL1) payable returns()
+func (_ArbSys *ArbSysSession) SendTxToL1(destAddr common.Address, calldataForL1 []byte) (*types.Transaction, error) {
+	return _ArbSys.Contract.SendTxToL1(&_ArbSys.TransactOpts, destAddr, calldataForL1)
 }
 
-// WithdrawERC20 is a paid mutator transaction binding the contract method 0xa1db9782.
+// SendTxToL1 is a paid mutator transaction binding the contract method 0x928c169a.
 //
-// Solidity: function withdrawERC20(address dest, uint256 amount) returns()
-func (_ArbSys *ArbSysTransactorSession) WithdrawERC20(dest common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _ArbSys.Contract.WithdrawERC20(&_ArbSys.TransactOpts, dest, amount)
-}
-
-// WithdrawERC721 is a paid mutator transaction binding the contract method 0xf3e414f8.
-//
-// Solidity: function withdrawERC721(address dest, uint256 id) returns()
-func (_ArbSys *ArbSysTransactor) WithdrawERC721(opts *bind.TransactOpts, dest common.Address, id *big.Int) (*types.Transaction, error) {
-	return _ArbSys.contract.Transact(opts, "withdrawERC721", dest, id)
-}
-
-// WithdrawERC721 is a paid mutator transaction binding the contract method 0xf3e414f8.
-//
-// Solidity: function withdrawERC721(address dest, uint256 id) returns()
-func (_ArbSys *ArbSysSession) WithdrawERC721(dest common.Address, id *big.Int) (*types.Transaction, error) {
-	return _ArbSys.Contract.WithdrawERC721(&_ArbSys.TransactOpts, dest, id)
-}
-
-// WithdrawERC721 is a paid mutator transaction binding the contract method 0xf3e414f8.
-//
-// Solidity: function withdrawERC721(address dest, uint256 id) returns()
-func (_ArbSys *ArbSysTransactorSession) WithdrawERC721(dest common.Address, id *big.Int) (*types.Transaction, error) {
-	return _ArbSys.Contract.WithdrawERC721(&_ArbSys.TransactOpts, dest, id)
+// Solidity: function sendTxToL1(address destAddr, bytes calldataForL1) payable returns()
+func (_ArbSys *ArbSysTransactorSession) SendTxToL1(destAddr common.Address, calldataForL1 []byte) (*types.Transaction, error) {
+	return _ArbSys.Contract.SendTxToL1(&_ArbSys.TransactOpts, destAddr, calldataForL1)
 }
 
 // WithdrawEth is a paid mutator transaction binding the contract method 0x25e16063.

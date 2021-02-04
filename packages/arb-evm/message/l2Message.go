@@ -232,7 +232,8 @@ func (t Transaction) AsDataSafe() []byte {
 
 func (t Transaction) MessageID(sender common.Address, chain common.Address) common.Hash {
 	l2 := NewSafeL2Message(t)
-	inner := hashing.SoliditySHA3(hashing.Uint256(ChainAddressToID(chain)), hashing.Bytes32(marshaledBytesHash(l2.AsData())))
+	dataHash := hashing.SoliditySHA3(l2.AsData())
+	inner := hashing.SoliditySHA3(hashing.Uint256(ChainAddressToID(chain)), hashing.Bytes32(dataHash))
 	return hashing.SoliditySHA3(addressData(sender), hashing.Bytes32(inner))
 }
 

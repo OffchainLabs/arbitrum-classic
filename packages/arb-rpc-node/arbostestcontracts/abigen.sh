@@ -1,4 +1,5 @@
 #!/bin/bash
+
 abigen --sol=simple.sol --pkg=arbostestcontracts --out=simple.go
 abigen --sol=failedsend.sol --pkg=arbostestcontracts --out=failedsend.go
 abigen --sol=storage.sol --pkg=arbostestcontracts --out=storage.go

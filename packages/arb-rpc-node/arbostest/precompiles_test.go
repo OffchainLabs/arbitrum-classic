@@ -37,6 +37,20 @@ import (
 func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byte) {
 	precompileAddress := ethcommon.BytesToAddress([]byte{precompileNum})
 
+	ctx := context.Background()
+	backend, _ := test.SimulatedBackend()
+
+	ethCall := ethereum.CallMsg{
+		From:     ethcommon.Address{},
+		To:       &precompileAddress,
+		Gas:      1000000,
+		GasPrice: big.NewInt(0),
+		Value:    big.NewInt(0),
+		Data:     data,
+	}
+	ethRes, err := backend.CallContract(ctx, ethCall, nil)
+	failIfError(t, err)
+
 	tx := message.Transaction{
 		MaxGas:      big.NewInt(100000000),
 		GasPriceBid: big.NewInt(0),
@@ -56,7 +70,7 @@ func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byt
 	if res.IncomingRequest.Kind != message.L2Type {
 		t.Fatal("wrong request type")
 	}
-	_, err := message.L2Message{Data: res.IncomingRequest.Data}.AbstractMessage()
+	_, err = message.L2Message{Data: res.IncomingRequest.Data}.AbstractMessage()
 	failIfError(t, err)
 
 	if !bytes.Equal(res.ReturnData, correct) {
@@ -64,20 +78,6 @@ func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byt
 		t.Logf("Wanted result 0x%x", correct)
 		t.Error("calculated result incorrectly")
 	}
-
-	ctx := context.Background()
-	backend, _ := test.SimulatedBackend()
-
-	ethCall := ethereum.CallMsg{
-		From:     ethcommon.Address{},
-		To:       &precompileAddress,
-		Gas:      1000000,
-		GasPrice: big.NewInt(0),
-		Value:    big.NewInt(0),
-		Data:     data,
-	}
-	ethRes, err := backend.CallContract(ctx, ethCall, nil)
-	failIfError(t, err)
 
 	if !bytes.Equal(ethRes, correct) {
 		t.Logf("Got result 0x%x", res.ReturnData)

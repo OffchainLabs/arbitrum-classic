@@ -27,15 +27,25 @@ var (
 )
 
 // ArbOwnerABI is the input ABI used to generate the binding from.
-const ArbOwnerABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"sequencerAddr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"maxDelayBlocks\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxDelaySeconds\",\"type\":\"uint256\"}],\"name\":\"changeSequencer\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"marshalledCode\",\"type\":\"bytes\"}],\"name\":\"continueArbosUpgrade\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"finishArbosUpgrade\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwnerAddr\",\"type\":\"address\"}],\"name\":\"giveOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"startArbosUpgrade\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ArbOwnerABI = "[{\"inputs\":[],\"name\":\"addToReserveFunds\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"pluggableId\",\"type\":\"uint256\"}],\"name\":\"bindAddressToPluggable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sequencerAddr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"maxDelayBlocks\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxDelaySeconds\",\"type\":\"uint256\"}],\"name\":\"changeSequencer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"marshalledCode\",\"type\":\"bytes\"}],\"name\":\"continueCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"finishCodeUploadAsArbosUpgrade\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"keepState\",\"type\":\"bool\"}],\"name\":\"finishCodeUploadAsPluggable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getFeeMaxes\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getFeeRates\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getFeeRecipient\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwnerAddr\",\"type\":\"address\"}],\"name\":\"giveOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"blocksPerSend\",\"type\":\"uint256\"}],\"name\":\"setBlocksPerSend\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"num1\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"denom1\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"num2\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"denom2\",\"type\":\"uint256\"}],\"name\":\"setFeeMaxes\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"num1\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"denom1\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"num2\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"denom2\",\"type\":\"uint256\"}],\"name\":\"setFeeRates\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"}],\"name\":\"setFeeRecipient\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"startCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ArbOwnerFuncSigs maps the 4-byte function signature to its string representation.
 var ArbOwnerFuncSigs = map[string]string{
+	"c3bf429d": "addToReserveFunds()",
+	"f589445c": "bindAddressToPluggable(address,uint256)",
 	"ea180a38": "changeSequencer(address,uint256,uint256)",
-	"0b766fec": "continueArbosUpgrade(bytes)",
-	"e380002e": "finishArbosUpgrade()",
+	"56331f75": "continueCodeUpload(bytes)",
+	"fbb53a17": "finishCodeUploadAsArbosUpgrade()",
+	"f4f4e136": "finishCodeUploadAsPluggable(uint256,bool)",
+	"23e089dd": "getFeeMaxes()",
+	"d6e7a55e": "getFeeRates()",
+	"4ccb20c0": "getFeeRecipient()",
 	"e3a0a148": "giveOwnership(address)",
-	"6d92b8e4": "startArbosUpgrade()",
+	"340e4fc2": "setBlocksPerSend(uint256)",
+	"72861aa4": "setFeeMaxes(uint256,uint256,uint256,uint256)",
+	"30d2361e": "setFeeRates(uint256,uint256,uint256,uint256)",
+	"e74b981b": "setFeeRecipient(address)",
+	"31acdf5e": "startCodeUpload()",
 }
 
 // ArbOwner is an auto generated Go binding around an Ethereum contract.
@@ -180,6 +190,147 @@ func (_ArbOwner *ArbOwnerTransactorRaw) Transact(opts *bind.TransactOpts, method
 	return _ArbOwner.Contract.contract.Transact(opts, method, params...)
 }
 
+// GetFeeMaxes is a free data retrieval call binding the contract method 0x23e089dd.
+//
+// Solidity: function getFeeMaxes() view returns(uint256, uint256, uint256, uint256)
+func (_ArbOwner *ArbOwnerCaller) GetFeeMaxes(opts *bind.CallOpts) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
+	var out []interface{}
+	err := _ArbOwner.contract.Call(opts, &out, "getFeeMaxes")
+
+	if err != nil {
+		return *new(*big.Int), *new(*big.Int), *new(*big.Int), *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	out2 := *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
+	out3 := *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
+
+	return out0, out1, out2, out3, err
+
+}
+
+// GetFeeMaxes is a free data retrieval call binding the contract method 0x23e089dd.
+//
+// Solidity: function getFeeMaxes() view returns(uint256, uint256, uint256, uint256)
+func (_ArbOwner *ArbOwnerSession) GetFeeMaxes() (*big.Int, *big.Int, *big.Int, *big.Int, error) {
+	return _ArbOwner.Contract.GetFeeMaxes(&_ArbOwner.CallOpts)
+}
+
+// GetFeeMaxes is a free data retrieval call binding the contract method 0x23e089dd.
+//
+// Solidity: function getFeeMaxes() view returns(uint256, uint256, uint256, uint256)
+func (_ArbOwner *ArbOwnerCallerSession) GetFeeMaxes() (*big.Int, *big.Int, *big.Int, *big.Int, error) {
+	return _ArbOwner.Contract.GetFeeMaxes(&_ArbOwner.CallOpts)
+}
+
+// GetFeeRates is a free data retrieval call binding the contract method 0xd6e7a55e.
+//
+// Solidity: function getFeeRates() view returns(uint256, uint256, uint256, uint256)
+func (_ArbOwner *ArbOwnerCaller) GetFeeRates(opts *bind.CallOpts) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
+	var out []interface{}
+	err := _ArbOwner.contract.Call(opts, &out, "getFeeRates")
+
+	if err != nil {
+		return *new(*big.Int), *new(*big.Int), *new(*big.Int), *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	out2 := *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
+	out3 := *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
+
+	return out0, out1, out2, out3, err
+
+}
+
+// GetFeeRates is a free data retrieval call binding the contract method 0xd6e7a55e.
+//
+// Solidity: function getFeeRates() view returns(uint256, uint256, uint256, uint256)
+func (_ArbOwner *ArbOwnerSession) GetFeeRates() (*big.Int, *big.Int, *big.Int, *big.Int, error) {
+	return _ArbOwner.Contract.GetFeeRates(&_ArbOwner.CallOpts)
+}
+
+// GetFeeRates is a free data retrieval call binding the contract method 0xd6e7a55e.
+//
+// Solidity: function getFeeRates() view returns(uint256, uint256, uint256, uint256)
+func (_ArbOwner *ArbOwnerCallerSession) GetFeeRates() (*big.Int, *big.Int, *big.Int, *big.Int, error) {
+	return _ArbOwner.Contract.GetFeeRates(&_ArbOwner.CallOpts)
+}
+
+// GetFeeRecipient is a free data retrieval call binding the contract method 0x4ccb20c0.
+//
+// Solidity: function getFeeRecipient() view returns(address)
+func (_ArbOwner *ArbOwnerCaller) GetFeeRecipient(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _ArbOwner.contract.Call(opts, &out, "getFeeRecipient")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// GetFeeRecipient is a free data retrieval call binding the contract method 0x4ccb20c0.
+//
+// Solidity: function getFeeRecipient() view returns(address)
+func (_ArbOwner *ArbOwnerSession) GetFeeRecipient() (common.Address, error) {
+	return _ArbOwner.Contract.GetFeeRecipient(&_ArbOwner.CallOpts)
+}
+
+// GetFeeRecipient is a free data retrieval call binding the contract method 0x4ccb20c0.
+//
+// Solidity: function getFeeRecipient() view returns(address)
+func (_ArbOwner *ArbOwnerCallerSession) GetFeeRecipient() (common.Address, error) {
+	return _ArbOwner.Contract.GetFeeRecipient(&_ArbOwner.CallOpts)
+}
+
+// AddToReserveFunds is a paid mutator transaction binding the contract method 0xc3bf429d.
+//
+// Solidity: function addToReserveFunds() payable returns()
+func (_ArbOwner *ArbOwnerTransactor) AddToReserveFunds(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ArbOwner.contract.Transact(opts, "addToReserveFunds")
+}
+
+// AddToReserveFunds is a paid mutator transaction binding the contract method 0xc3bf429d.
+//
+// Solidity: function addToReserveFunds() payable returns()
+func (_ArbOwner *ArbOwnerSession) AddToReserveFunds() (*types.Transaction, error) {
+	return _ArbOwner.Contract.AddToReserveFunds(&_ArbOwner.TransactOpts)
+}
+
+// AddToReserveFunds is a paid mutator transaction binding the contract method 0xc3bf429d.
+//
+// Solidity: function addToReserveFunds() payable returns()
+func (_ArbOwner *ArbOwnerTransactorSession) AddToReserveFunds() (*types.Transaction, error) {
+	return _ArbOwner.Contract.AddToReserveFunds(&_ArbOwner.TransactOpts)
+}
+
+// BindAddressToPluggable is a paid mutator transaction binding the contract method 0xf589445c.
+//
+// Solidity: function bindAddressToPluggable(address addr, uint256 pluggableId) returns()
+func (_ArbOwner *ArbOwnerTransactor) BindAddressToPluggable(opts *bind.TransactOpts, addr common.Address, pluggableId *big.Int) (*types.Transaction, error) {
+	return _ArbOwner.contract.Transact(opts, "bindAddressToPluggable", addr, pluggableId)
+}
+
+// BindAddressToPluggable is a paid mutator transaction binding the contract method 0xf589445c.
+//
+// Solidity: function bindAddressToPluggable(address addr, uint256 pluggableId) returns()
+func (_ArbOwner *ArbOwnerSession) BindAddressToPluggable(addr common.Address, pluggableId *big.Int) (*types.Transaction, error) {
+	return _ArbOwner.Contract.BindAddressToPluggable(&_ArbOwner.TransactOpts, addr, pluggableId)
+}
+
+// BindAddressToPluggable is a paid mutator transaction binding the contract method 0xf589445c.
+//
+// Solidity: function bindAddressToPluggable(address addr, uint256 pluggableId) returns()
+func (_ArbOwner *ArbOwnerTransactorSession) BindAddressToPluggable(addr common.Address, pluggableId *big.Int) (*types.Transaction, error) {
+	return _ArbOwner.Contract.BindAddressToPluggable(&_ArbOwner.TransactOpts, addr, pluggableId)
+}
+
 // ChangeSequencer is a paid mutator transaction binding the contract method 0xea180a38.
 //
 // Solidity: function changeSequencer(address sequencerAddr, uint256 maxDelayBlocks, uint256 maxDelaySeconds) returns()
@@ -201,46 +352,67 @@ func (_ArbOwner *ArbOwnerTransactorSession) ChangeSequencer(sequencerAddr common
 	return _ArbOwner.Contract.ChangeSequencer(&_ArbOwner.TransactOpts, sequencerAddr, maxDelayBlocks, maxDelaySeconds)
 }
 
-// ContinueArbosUpgrade is a paid mutator transaction binding the contract method 0x0b766fec.
+// ContinueCodeUpload is a paid mutator transaction binding the contract method 0x56331f75.
 //
-// Solidity: function continueArbosUpgrade(bytes marshalledCode) returns()
-func (_ArbOwner *ArbOwnerTransactor) ContinueArbosUpgrade(opts *bind.TransactOpts, marshalledCode []byte) (*types.Transaction, error) {
-	return _ArbOwner.contract.Transact(opts, "continueArbosUpgrade", marshalledCode)
+// Solidity: function continueCodeUpload(bytes marshalledCode) returns()
+func (_ArbOwner *ArbOwnerTransactor) ContinueCodeUpload(opts *bind.TransactOpts, marshalledCode []byte) (*types.Transaction, error) {
+	return _ArbOwner.contract.Transact(opts, "continueCodeUpload", marshalledCode)
 }
 
-// ContinueArbosUpgrade is a paid mutator transaction binding the contract method 0x0b766fec.
+// ContinueCodeUpload is a paid mutator transaction binding the contract method 0x56331f75.
 //
-// Solidity: function continueArbosUpgrade(bytes marshalledCode) returns()
-func (_ArbOwner *ArbOwnerSession) ContinueArbosUpgrade(marshalledCode []byte) (*types.Transaction, error) {
-	return _ArbOwner.Contract.ContinueArbosUpgrade(&_ArbOwner.TransactOpts, marshalledCode)
+// Solidity: function continueCodeUpload(bytes marshalledCode) returns()
+func (_ArbOwner *ArbOwnerSession) ContinueCodeUpload(marshalledCode []byte) (*types.Transaction, error) {
+	return _ArbOwner.Contract.ContinueCodeUpload(&_ArbOwner.TransactOpts, marshalledCode)
 }
 
-// ContinueArbosUpgrade is a paid mutator transaction binding the contract method 0x0b766fec.
+// ContinueCodeUpload is a paid mutator transaction binding the contract method 0x56331f75.
 //
-// Solidity: function continueArbosUpgrade(bytes marshalledCode) returns()
-func (_ArbOwner *ArbOwnerTransactorSession) ContinueArbosUpgrade(marshalledCode []byte) (*types.Transaction, error) {
-	return _ArbOwner.Contract.ContinueArbosUpgrade(&_ArbOwner.TransactOpts, marshalledCode)
+// Solidity: function continueCodeUpload(bytes marshalledCode) returns()
+func (_ArbOwner *ArbOwnerTransactorSession) ContinueCodeUpload(marshalledCode []byte) (*types.Transaction, error) {
+	return _ArbOwner.Contract.ContinueCodeUpload(&_ArbOwner.TransactOpts, marshalledCode)
 }
 
-// FinishArbosUpgrade is a paid mutator transaction binding the contract method 0xe380002e.
+// FinishCodeUploadAsArbosUpgrade is a paid mutator transaction binding the contract method 0xfbb53a17.
 //
-// Solidity: function finishArbosUpgrade() returns()
-func (_ArbOwner *ArbOwnerTransactor) FinishArbosUpgrade(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ArbOwner.contract.Transact(opts, "finishArbosUpgrade")
+// Solidity: function finishCodeUploadAsArbosUpgrade() returns()
+func (_ArbOwner *ArbOwnerTransactor) FinishCodeUploadAsArbosUpgrade(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ArbOwner.contract.Transact(opts, "finishCodeUploadAsArbosUpgrade")
 }
 
-// FinishArbosUpgrade is a paid mutator transaction binding the contract method 0xe380002e.
+// FinishCodeUploadAsArbosUpgrade is a paid mutator transaction binding the contract method 0xfbb53a17.
 //
-// Solidity: function finishArbosUpgrade() returns()
-func (_ArbOwner *ArbOwnerSession) FinishArbosUpgrade() (*types.Transaction, error) {
-	return _ArbOwner.Contract.FinishArbosUpgrade(&_ArbOwner.TransactOpts)
+// Solidity: function finishCodeUploadAsArbosUpgrade() returns()
+func (_ArbOwner *ArbOwnerSession) FinishCodeUploadAsArbosUpgrade() (*types.Transaction, error) {
+	return _ArbOwner.Contract.FinishCodeUploadAsArbosUpgrade(&_ArbOwner.TransactOpts)
 }
 
-// FinishArbosUpgrade is a paid mutator transaction binding the contract method 0xe380002e.
+// FinishCodeUploadAsArbosUpgrade is a paid mutator transaction binding the contract method 0xfbb53a17.
 //
-// Solidity: function finishArbosUpgrade() returns()
-func (_ArbOwner *ArbOwnerTransactorSession) FinishArbosUpgrade() (*types.Transaction, error) {
-	return _ArbOwner.Contract.FinishArbosUpgrade(&_ArbOwner.TransactOpts)
+// Solidity: function finishCodeUploadAsArbosUpgrade() returns()
+func (_ArbOwner *ArbOwnerTransactorSession) FinishCodeUploadAsArbosUpgrade() (*types.Transaction, error) {
+	return _ArbOwner.Contract.FinishCodeUploadAsArbosUpgrade(&_ArbOwner.TransactOpts)
+}
+
+// FinishCodeUploadAsPluggable is a paid mutator transaction binding the contract method 0xf4f4e136.
+//
+// Solidity: function finishCodeUploadAsPluggable(uint256 id, bool keepState) returns()
+func (_ArbOwner *ArbOwnerTransactor) FinishCodeUploadAsPluggable(opts *bind.TransactOpts, id *big.Int, keepState bool) (*types.Transaction, error) {
+	return _ArbOwner.contract.Transact(opts, "finishCodeUploadAsPluggable", id, keepState)
+}
+
+// FinishCodeUploadAsPluggable is a paid mutator transaction binding the contract method 0xf4f4e136.
+//
+// Solidity: function finishCodeUploadAsPluggable(uint256 id, bool keepState) returns()
+func (_ArbOwner *ArbOwnerSession) FinishCodeUploadAsPluggable(id *big.Int, keepState bool) (*types.Transaction, error) {
+	return _ArbOwner.Contract.FinishCodeUploadAsPluggable(&_ArbOwner.TransactOpts, id, keepState)
+}
+
+// FinishCodeUploadAsPluggable is a paid mutator transaction binding the contract method 0xf4f4e136.
+//
+// Solidity: function finishCodeUploadAsPluggable(uint256 id, bool keepState) returns()
+func (_ArbOwner *ArbOwnerTransactorSession) FinishCodeUploadAsPluggable(id *big.Int, keepState bool) (*types.Transaction, error) {
+	return _ArbOwner.Contract.FinishCodeUploadAsPluggable(&_ArbOwner.TransactOpts, id, keepState)
 }
 
 // GiveOwnership is a paid mutator transaction binding the contract method 0xe3a0a148.
@@ -264,23 +436,107 @@ func (_ArbOwner *ArbOwnerTransactorSession) GiveOwnership(newOwnerAddr common.Ad
 	return _ArbOwner.Contract.GiveOwnership(&_ArbOwner.TransactOpts, newOwnerAddr)
 }
 
-// StartArbosUpgrade is a paid mutator transaction binding the contract method 0x6d92b8e4.
+// SetBlocksPerSend is a paid mutator transaction binding the contract method 0x340e4fc2.
 //
-// Solidity: function startArbosUpgrade() returns()
-func (_ArbOwner *ArbOwnerTransactor) StartArbosUpgrade(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ArbOwner.contract.Transact(opts, "startArbosUpgrade")
+// Solidity: function setBlocksPerSend(uint256 blocksPerSend) returns()
+func (_ArbOwner *ArbOwnerTransactor) SetBlocksPerSend(opts *bind.TransactOpts, blocksPerSend *big.Int) (*types.Transaction, error) {
+	return _ArbOwner.contract.Transact(opts, "setBlocksPerSend", blocksPerSend)
 }
 
-// StartArbosUpgrade is a paid mutator transaction binding the contract method 0x6d92b8e4.
+// SetBlocksPerSend is a paid mutator transaction binding the contract method 0x340e4fc2.
 //
-// Solidity: function startArbosUpgrade() returns()
-func (_ArbOwner *ArbOwnerSession) StartArbosUpgrade() (*types.Transaction, error) {
-	return _ArbOwner.Contract.StartArbosUpgrade(&_ArbOwner.TransactOpts)
+// Solidity: function setBlocksPerSend(uint256 blocksPerSend) returns()
+func (_ArbOwner *ArbOwnerSession) SetBlocksPerSend(blocksPerSend *big.Int) (*types.Transaction, error) {
+	return _ArbOwner.Contract.SetBlocksPerSend(&_ArbOwner.TransactOpts, blocksPerSend)
 }
 
-// StartArbosUpgrade is a paid mutator transaction binding the contract method 0x6d92b8e4.
+// SetBlocksPerSend is a paid mutator transaction binding the contract method 0x340e4fc2.
 //
-// Solidity: function startArbosUpgrade() returns()
-func (_ArbOwner *ArbOwnerTransactorSession) StartArbosUpgrade() (*types.Transaction, error) {
-	return _ArbOwner.Contract.StartArbosUpgrade(&_ArbOwner.TransactOpts)
+// Solidity: function setBlocksPerSend(uint256 blocksPerSend) returns()
+func (_ArbOwner *ArbOwnerTransactorSession) SetBlocksPerSend(blocksPerSend *big.Int) (*types.Transaction, error) {
+	return _ArbOwner.Contract.SetBlocksPerSend(&_ArbOwner.TransactOpts, blocksPerSend)
+}
+
+// SetFeeMaxes is a paid mutator transaction binding the contract method 0x72861aa4.
+//
+// Solidity: function setFeeMaxes(uint256 num1, uint256 denom1, uint256 num2, uint256 denom2) returns()
+func (_ArbOwner *ArbOwnerTransactor) SetFeeMaxes(opts *bind.TransactOpts, num1 *big.Int, denom1 *big.Int, num2 *big.Int, denom2 *big.Int) (*types.Transaction, error) {
+	return _ArbOwner.contract.Transact(opts, "setFeeMaxes", num1, denom1, num2, denom2)
+}
+
+// SetFeeMaxes is a paid mutator transaction binding the contract method 0x72861aa4.
+//
+// Solidity: function setFeeMaxes(uint256 num1, uint256 denom1, uint256 num2, uint256 denom2) returns()
+func (_ArbOwner *ArbOwnerSession) SetFeeMaxes(num1 *big.Int, denom1 *big.Int, num2 *big.Int, denom2 *big.Int) (*types.Transaction, error) {
+	return _ArbOwner.Contract.SetFeeMaxes(&_ArbOwner.TransactOpts, num1, denom1, num2, denom2)
+}
+
+// SetFeeMaxes is a paid mutator transaction binding the contract method 0x72861aa4.
+//
+// Solidity: function setFeeMaxes(uint256 num1, uint256 denom1, uint256 num2, uint256 denom2) returns()
+func (_ArbOwner *ArbOwnerTransactorSession) SetFeeMaxes(num1 *big.Int, denom1 *big.Int, num2 *big.Int, denom2 *big.Int) (*types.Transaction, error) {
+	return _ArbOwner.Contract.SetFeeMaxes(&_ArbOwner.TransactOpts, num1, denom1, num2, denom2)
+}
+
+// SetFeeRates is a paid mutator transaction binding the contract method 0x30d2361e.
+//
+// Solidity: function setFeeRates(uint256 num1, uint256 denom1, uint256 num2, uint256 denom2) returns()
+func (_ArbOwner *ArbOwnerTransactor) SetFeeRates(opts *bind.TransactOpts, num1 *big.Int, denom1 *big.Int, num2 *big.Int, denom2 *big.Int) (*types.Transaction, error) {
+	return _ArbOwner.contract.Transact(opts, "setFeeRates", num1, denom1, num2, denom2)
+}
+
+// SetFeeRates is a paid mutator transaction binding the contract method 0x30d2361e.
+//
+// Solidity: function setFeeRates(uint256 num1, uint256 denom1, uint256 num2, uint256 denom2) returns()
+func (_ArbOwner *ArbOwnerSession) SetFeeRates(num1 *big.Int, denom1 *big.Int, num2 *big.Int, denom2 *big.Int) (*types.Transaction, error) {
+	return _ArbOwner.Contract.SetFeeRates(&_ArbOwner.TransactOpts, num1, denom1, num2, denom2)
+}
+
+// SetFeeRates is a paid mutator transaction binding the contract method 0x30d2361e.
+//
+// Solidity: function setFeeRates(uint256 num1, uint256 denom1, uint256 num2, uint256 denom2) returns()
+func (_ArbOwner *ArbOwnerTransactorSession) SetFeeRates(num1 *big.Int, denom1 *big.Int, num2 *big.Int, denom2 *big.Int) (*types.Transaction, error) {
+	return _ArbOwner.Contract.SetFeeRates(&_ArbOwner.TransactOpts, num1, denom1, num2, denom2)
+}
+
+// SetFeeRecipient is a paid mutator transaction binding the contract method 0xe74b981b.
+//
+// Solidity: function setFeeRecipient(address recipient) returns()
+func (_ArbOwner *ArbOwnerTransactor) SetFeeRecipient(opts *bind.TransactOpts, recipient common.Address) (*types.Transaction, error) {
+	return _ArbOwner.contract.Transact(opts, "setFeeRecipient", recipient)
+}
+
+// SetFeeRecipient is a paid mutator transaction binding the contract method 0xe74b981b.
+//
+// Solidity: function setFeeRecipient(address recipient) returns()
+func (_ArbOwner *ArbOwnerSession) SetFeeRecipient(recipient common.Address) (*types.Transaction, error) {
+	return _ArbOwner.Contract.SetFeeRecipient(&_ArbOwner.TransactOpts, recipient)
+}
+
+// SetFeeRecipient is a paid mutator transaction binding the contract method 0xe74b981b.
+//
+// Solidity: function setFeeRecipient(address recipient) returns()
+func (_ArbOwner *ArbOwnerTransactorSession) SetFeeRecipient(recipient common.Address) (*types.Transaction, error) {
+	return _ArbOwner.Contract.SetFeeRecipient(&_ArbOwner.TransactOpts, recipient)
+}
+
+// StartCodeUpload is a paid mutator transaction binding the contract method 0x31acdf5e.
+//
+// Solidity: function startCodeUpload() returns()
+func (_ArbOwner *ArbOwnerTransactor) StartCodeUpload(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ArbOwner.contract.Transact(opts, "startCodeUpload")
+}
+
+// StartCodeUpload is a paid mutator transaction binding the contract method 0x31acdf5e.
+//
+// Solidity: function startCodeUpload() returns()
+func (_ArbOwner *ArbOwnerSession) StartCodeUpload() (*types.Transaction, error) {
+	return _ArbOwner.Contract.StartCodeUpload(&_ArbOwner.TransactOpts)
+}
+
+// StartCodeUpload is a paid mutator transaction binding the contract method 0x31acdf5e.
+//
+// Solidity: function startCodeUpload() returns()
+func (_ArbOwner *ArbOwnerTransactorSession) StartCodeUpload() (*types.Transaction, error) {
+	return _ArbOwner.Contract.StartCodeUpload(&_ArbOwner.TransactOpts)
 }
