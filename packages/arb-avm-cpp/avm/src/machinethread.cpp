@@ -49,12 +49,14 @@ void MachineThread::abortMachine() {
         machine_abort = true;
         machine_thread->join();
         machine_thread = nullptr;
+        machine_status = MACHINE_ABORTED;
     }
     machine_abort = false;
 }
 
 Assertion MachineThread::getAssertion() {
-    return last_assertion;
+    machine_status = MACHINE_NONE;
+    return std::move(last_assertion);
 }
 
 std::string MachineThread::getErrorString() {
@@ -69,7 +71,7 @@ void MachineThread::clearError() {
 void MachineThread::operator()(
     const uint256_t max_gas,
     const bool go_over_gas,
-    const std::vector<std::vector<unsigned char>>& inbox_messages,
+    std::vector<std::vector<unsigned char>>& inbox_messages,
     const uint256_t messages_to_skip,
     const bool final_message_of_block) {
     last_assertion = run(max_gas, go_over_gas, inbox_messages, messages_to_skip,
