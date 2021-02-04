@@ -147,6 +147,7 @@ contract EthERC20Bridge is L1Buddy {
         address erc20,
         address destination,
         uint256 amount,
+        bytes calldata extraData,
         uint256 maxGas,
         uint256 gasPriceBid,
         StandardTokenType tokenType

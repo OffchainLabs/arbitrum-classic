@@ -89,6 +89,7 @@ contract ArbTokenBridge is CloneFactory {
         address l1ERC20,
         address account,
         uint256 amount,
+        bytes calldata extraData,
         uint8 decimals
     ) external onlyEthPair {
         IArbToken token = ensureERC777TokenExists(l1ERC20, decimals);
@@ -102,7 +103,7 @@ contract ArbTokenBridge is CloneFactory {
         uint8 decimals
     ) external onlyEthPair {
         IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
-        token.bridgeMint(account, amount);
+        token.bridgeMint(account, amount, '');
     }
 
     function mintCustomtokenFromL1(
