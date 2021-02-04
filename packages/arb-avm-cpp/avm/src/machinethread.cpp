@@ -29,9 +29,6 @@ bool MachineThread::runMachine(
     uint256_t messages_to_skip,
     const bool final_message_of_block) {
     if (machine_status != MACHINE_NONE) {
-        machine_error_string =
-            "Unexpected machine_status when trying to run machine";
-        machine_status = MACHINE_ERROR;
         return false;
     }
 
@@ -55,6 +52,11 @@ void MachineThread::abortMachine() {
 }
 
 Assertion MachineThread::getAssertion() {
+    if (machine_status != MACHINE_SUCCESS) {
+        return {};
+    }
+    machine_thread->join();
+    machine_thread = nullptr;
     machine_status = MACHINE_NONE;
     return std::move(last_assertion);
 }
@@ -64,6 +66,7 @@ std::string MachineThread::getErrorString() {
 }
 
 void MachineThread::clearError() {
+    abortMachine();
     machine_status = MACHINE_NONE;
     machine_error_string.clear();
 }
