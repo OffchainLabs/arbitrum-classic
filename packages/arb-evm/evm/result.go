@@ -280,6 +280,10 @@ func NewResultFromValue(val value.Value) (Result, error) {
 		previousHeight, _ := tup.GetByInt64(7)
 
 		return parseBlockResult(blockNum, timestamp, gasLimit, blockStatsRaw, chainStatsRaw, gasStats, previousHeight)
+	} else if kindInt.BigInt().Uint64() == 2 {
+		return NewSendResultFromValue(tup)
+	} else if kindInt.BigInt().Uint64() == 3 {
+		return nil, errors.New("merkle root log unsupported")
 	} else {
 		return nil, errors.New("unknown result kind")
 	}

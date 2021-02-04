@@ -150,8 +150,10 @@ func TestBlocks(t *testing.T) {
 		message.NewInboxMessage(message.Eth{Value: big.NewInt(100), Dest: sender}, chain, big.NewInt(0), startTime),
 	)
 
+	halfSendCount := int64(5)
+
 	blockTimes := make([]inbox.ChainTime, 0)
-	for i := int64(0); i < 5; i++ {
+	for i := int64(0); i < halfSendCount; i++ {
 		time := inbox.ChainTime{
 			BlockNum:  common.NewTimeBlocksInt(1 + i),
 			Timestamp: big.NewInt(10 + i),
@@ -159,7 +161,7 @@ func TestBlocks(t *testing.T) {
 		blockTimes = append(blockTimes, time)
 	}
 
-	for i := int64(0); i < 5; i++ {
+	for i := int64(0); i < halfSendCount; i++ {
 		tx := message.Transaction{
 			MaxGas:      big.NewInt(100000000000),
 			GasPriceBid: big.NewInt(0),
@@ -197,7 +199,7 @@ func TestBlocks(t *testing.T) {
 	}
 
 	// Last value returned is not an error type
-	avmLogs, sends, _, _ := runAssertion(t, messages, 14, 10)
+	avmLogs, sends, _, _ := runAssertion(t, messages, 4+int(halfSendCount*4), 0)
 	results := make([]evm.Result, 0)
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
@@ -220,12 +222,13 @@ func TestBlocks(t *testing.T) {
 	blocks := make([]*evm.BlockInfo, 0)
 
 	for i, res := range results {
+		t.Logf("%v %T\n", i, res)
 		totalAVMLogCount = totalAVMLogCount.Add(totalAVMLogCount, big.NewInt(1))
 
-		if i%3 == 0 || i%3 == 1 {
+		if i%5 == 1 || i%5 == 3 {
 			res, ok := res.(*evm.TxResult)
 			if !ok {
-				t.Error("incorrect result type")
+				t.Fatal("incorrect result type")
 			}
 			succeededTxCheck(t, res)
 			blockGasUsed = blockGasUsed.Add(blockGasUsed, res.GasUsed)
@@ -236,7 +239,7 @@ func TestBlocks(t *testing.T) {
 			totalGasUsed = totalGasUsed.Add(totalGasUsed, res.GasUsed)
 			totalEVMLogCount = totalEVMLogCount.Add(totalEVMLogCount, big.NewInt(int64(len(res.EVMLogs))))
 			totalTxCount = totalTxCount.Add(totalTxCount, big.NewInt(1))
-		} else {
+		} else if i%5 == 4 {
 			res, ok := res.(*evm.BlockInfo)
 			if !ok {
 				t.Fatal("incorrect result type")
@@ -297,6 +300,11 @@ func TestBlocks(t *testing.T) {
 			blockTxCount = big.NewInt(0)
 			prevBlockNum = res.BlockNum
 			blockCount++
+		} else {
+			_, ok := res.(*evm.SendResult)
+			if !ok {
+				t.Fatal("incorrect result type")
+			}
 		}
 	}
 

@@ -63,12 +63,16 @@ func ByteArrayToBytes(val value.Value) ([]byte, error) {
 		return nil, errors.New("contents must be an buffer")
 	}
 
-	size := sizeInt.BigInt().Uint64()
-	if uint64(len(contentsBuffer.Data())) > size {
-		return nil, errors.Errorf("bytearray buffer too small, size=%v, length=%v", size, len(contentsBuffer.Data()))
+	return BufAndLengthToBytes(sizeInt.BigInt(), contentsBuffer)
+}
+
+func BufAndLengthToBytes(sizeInt *big.Int, contents *value.Buffer) ([]byte, error) {
+	size := sizeInt.Uint64()
+	if uint64(len(contents.Data())) > size {
+		return nil, errors.Errorf("buffer too small, size=%v, length=%v", size, len(contents.Data()))
 	}
 	data := make([]byte, size)
-	copy(data[:], contentsBuffer.Data())
+	copy(data[:], contents.Data())
 	return data, nil
 }
 
