@@ -68,20 +68,59 @@ func TestBuddyContract(t *testing.T) {
 		message.NewInboxMessage(buddyConstructor, connAddress2, big.NewInt(5), chainTime),
 	}
 
-	logs, sends, mach, _ := runAssertion(t, messages, 5, 1)
-	results := processTxResults(t, logs)
+	logs, _, mach, _ := runAssertion(t, messages, 6, 0)
+	results := processResults(t, logs)
 
-	checkConstructorResult(t, results[0], connAddress1)
-	txResultCheck(t, results[1], evm.ContractAlreadyExists)
-	succeededTxCheck(t, results[2])
-	checkConstructorResult(t, results[3], connAddress2)
-	txResultCheck(t, results[4], evm.ContractAlreadyExists)
+	buddyConRes, ok := results[0].(*evm.TxResult)
+	if !ok {
+		t.Fatal("expected tx res")
+	}
 
-	msg, err := message.NewOutMessageFromValue(sends[0])
+	buddySendRes, ok := results[1].(*evm.SendResult)
+	if !ok {
+		t.Fatal("expected send res")
+	}
+
+	contractConRes, ok := results[2].(*evm.TxResult)
+	if !ok {
+		t.Fatal("expected tx res")
+	}
+
+	noOpRes, ok := results[3].(*evm.TxResult)
+	if !ok {
+		t.Fatal("expected tx res")
+	}
+
+	contractCon2Res, ok := results[4].(*evm.TxResult)
+	if !ok {
+		t.Fatal("expected tx res")
+	}
+
+	buddyCon2Res, ok := results[5].(*evm.TxResult)
+	if !ok {
+		t.Fatal("expected tx res")
+	}
+
+	checkConstructorResult(t, buddyConRes, connAddress1)
+
+	if buddySendRes.BatchNumber.Cmp(big.NewInt(0)) != 0 {
+		t.Error("unexpected batch num")
+	}
+
+	if buddySendRes.BatchIndex.Cmp(big.NewInt(0)) != 0 {
+		t.Error("unexpected batch index")
+	}
+
+	buddyRes, err := evm.NewBuddyResultFromData(buddySendRes.Data)
 	failIfError(t, err)
-	if msg.Sender != connAddress1 {
+	if buddyRes.Address != connAddress1 {
 		t.Error("Buddy contract created at wrong address")
 	}
+
+	txResultCheck(t, contractConRes, evm.ContractAlreadyExists)
+	succeededTxCheck(t, noOpRes)
+	checkConstructorResult(t, contractCon2Res, connAddress2)
+	txResultCheck(t, buddyCon2Res, evm.ContractAlreadyExists)
 
 	snap := snapshot.NewSnapshot(mach.Clone(), inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),

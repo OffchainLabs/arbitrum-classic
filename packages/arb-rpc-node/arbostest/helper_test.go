@@ -112,15 +112,29 @@ func checkConstructorResult(t *testing.T, res *evm.TxResult, correctAddress comm
 	}
 }
 
-func processTxResults(t *testing.T, logs []value.Value) []*evm.TxResult {
+func processResults(t *testing.T, logs []value.Value) []evm.Result {
 	t.Helper()
-	results := make([]*evm.TxResult, 0, len(logs))
+	results := make([]evm.Result, 0, len(logs))
 	for _, avmLog := range logs {
-		res, err := evm.NewTxResultFromValue(avmLog)
+		res, err := evm.NewResultFromValue(avmLog)
 		failIfError(t, err)
 		results = append(results, res)
 	}
 	return results
+}
+
+func processTxResults(t *testing.T, logs []value.Value) []*evm.TxResult {
+	t.Helper()
+	results := processResults(t, logs)
+	txResults := make([]*evm.TxResult, 0, len(results))
+	for _, res := range results {
+		txRes, ok := res.(*evm.TxResult)
+		if !ok {
+			t.Fatalf("expected result to be tx result but got %T", res)
+		}
+		txResults = append(txResults, txRes)
+	}
+	return txResults
 }
 
 func txResultCheck(t *testing.T, res *evm.TxResult, correct evm.ResultType) {

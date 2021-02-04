@@ -17,6 +17,7 @@
 package evm
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/pkg/errors"
@@ -72,5 +73,51 @@ func NewSendResultFromValue(tup *value.TupleValue) (*SendResult, error) {
 		BatchNumber: batchNumberInt.BigInt(),
 		BatchIndex:  batchIndexInt.BigInt(),
 		Data:        data,
+	}, nil
+}
+
+type SendResultMessage interface {
+}
+
+type SendResultMessageType uint8
+
+const (
+	BuddyResultType SendResultMessageType = 5
+)
+
+func NewSendResultMessage(r *SendResult) (SendResultMessage, error) {
+	if len(r.Data) == 0 {
+		return nil, errors.New("send result message must have nonzero data")
+	}
+	switch SendResultMessageType(r.Data[0]) {
+	case BuddyResultType:
+		return NewBuddyResultFromData(r.Data)
+	default:
+		return nil, errors.Errorf("unhandled send result message type %v", r.Data[0])
+	}
+}
+
+type BuddyResult struct {
+	Address   common.Address
+	Succeeded bool
+}
+
+func NewBuddyResultFromData(data []byte) (*BuddyResult, error) {
+	if len(data) != 65 {
+		return nil, errors.New("unexpected buddy result length")
+	}
+	typeCode := new(big.Int).SetBytes(data[0:32])
+	contract := data[32:64]
+	success := data[64]
+
+	if typeCode.Cmp(big.NewInt(int64(BuddyResultType))) != 0 {
+		return nil, errors.New("unexpected type code")
+	}
+
+	var address common.Address
+	copy(address[:], contract[12:])
+	return &BuddyResult{
+		Address:   address,
+		Succeeded: success == 1,
 	}, nil
 }
