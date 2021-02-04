@@ -84,7 +84,6 @@ The following data is stored by core thread and appropriately modified whenever 
   - Call `logsCursorClearError` if returns true
 - `ArbCore::logsCursorClearError`: returns error string and clears error state
   - Only call if `LogsCursorCheckError` returns true
-- `ArbCore::logsCursor
 
 #### ArbCore and ExecutionCursor
 
