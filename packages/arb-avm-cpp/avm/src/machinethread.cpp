@@ -39,7 +39,7 @@ bool MachineThread::runMachine(
 
     machine_thread = std::make_unique<std::thread>(
         (std::reference_wrapper<MachineThread>(*this)), max_gas, go_over_gas,
-        std::move(inbox_messages), messages_to_skip, final_message_of_block);
+        inbox_messages, messages_to_skip, final_message_of_block);
 
     return true;
 }
