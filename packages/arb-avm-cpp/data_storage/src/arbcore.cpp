@@ -1232,8 +1232,8 @@ ValueResult<bool> ArbCore::executionCursorAddMessages(
     auto message_key_slice = vecToSlice(message_key);
 
     auto results = getVectorVectorUsingFamilyAndKey(
-        *tx.transaction, data_storage->send_column.get(), message_key_slice,
-        intx::narrow_cast<size_t>(message_group_size));
+        *tx.transaction, data_storage->messageentry_column.get(),
+        message_key_slice, intx::narrow_cast<size_t>(message_group_size));
     if (!results.status.ok()) {
         return {results.status, false};
     }
@@ -1758,12 +1758,12 @@ std::string ArbCore::logsCursorClearError() {
     return str;
 }
 
-bool ArbCore::logsCursorSetNextIndex(uint256_t next_index) {
+bool ArbCore::logsCursorSetLogCountConfirmed(uint256_t log_count) {
     if (logs_cursor.status != DataCursor::EMPTY) {
         return false;
     }
 
-    logs_cursor.confirmed_next_index = next_index;
+    logs_cursor.confirmed_next_index = log_count;
     logs_cursor.status = DataCursor::CONFIRMED;
 
     return true;
