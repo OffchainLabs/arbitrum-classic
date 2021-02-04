@@ -33,11 +33,11 @@ ArbStorage::ArbStorage(const std::string& db_path)
 
 void ArbStorage::initialize(const std::string& executable_path) {
     auto executable = loadExecutable(executable_path);
-    initialize(std::move(executable));
+    initialize(executable);
 }
 
-void ArbStorage::initialize(LoadedExecutable executable) {
-    arb_core->initialize(std::move(executable));
+void ArbStorage::initialize(const LoadedExecutable& executable) {
+    arb_core->initialize(executable);
 }
 
 bool ArbStorage::initialized() const {

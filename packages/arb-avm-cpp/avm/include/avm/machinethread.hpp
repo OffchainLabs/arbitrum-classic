@@ -29,11 +29,11 @@
 class MachineThread : public Machine {
    public:
     typedef enum {
-        MACHINE_NONE,
-        MACHINE_RUNNING,
-        MACHINE_ABORTED,
-        MACHINE_FINISHED,
-        MACHINE_ERROR
+        MACHINE_NONE,     // Not running, no result stored
+        MACHINE_RUNNING,  // Thread currently actively running machine
+        MACHINE_ABORTED,  // Thread was aborted
+        MACHINE_SUCCESS,  // Run finished, results available
+        MACHINE_ERROR     // Error occurred
     } machine_status_enum;
 
    private:
@@ -47,27 +47,28 @@ class MachineThread : public Machine {
 
    public:
     MachineThread() = default;
+    ~MachineThread() { abortMachine(); }
     explicit MachineThread(MachineState machine_state_)
         : Machine(std::move(machine_state_)) {}
     MachineThread(std::shared_ptr<Code> code, value static_val)
         : Machine(std::move(code), std::move(static_val)) {}
 
-    bool startThread(uint256_t max_gas,
-                     bool go_over_gas,
-                     std::vector<std::vector<unsigned char>> inbox_messages,
-                     uint256_t messages_to_skip,
-                     bool final_message_of_block);
-    void abortThread();
-    machine_status_enum status();
-    void clearStatus();
-    std::string get_error_string();
-    void clear_error_string();
-    Assertion getAssertion();
-    void operator()(uint256_t max_gas,
+    bool runMachine(uint256_t max_gas,
                     bool go_over_gas,
                     std::vector<std::vector<unsigned char>> inbox_messages,
                     uint256_t messages_to_skip,
-                    const bool final_message_of_block);
+                    bool final_message_of_block);
+    void abortMachine();
+    machine_status_enum status();
+    std::string getErrorString();
+    void clearError();
+    Assertion getAssertion();
+    void operator()(
+        uint256_t max_gas,
+        bool go_over_gas,
+        const std::vector<std::vector<unsigned char>>& inbox_messages,
+        uint256_t messages_to_skip,
+        bool final_message_of_block);
 };
 
 #endif /* machine_hpp */

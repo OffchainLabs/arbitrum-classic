@@ -62,41 +62,42 @@ ValueResult<MessageEntry> getMessageEntry(Transaction& tx,
 }  // namespace
 
 bool ArbCore::machineIdle() {
-    return delivering_machine_idle;
+    return machine_idle;
 }
 
 bool ArbCore::messagesEmpty() {
-    return delivering_inbox_status == MESSAGES_EMPTY;
+    return messages_status == MESSAGES_EMPTY;
 }
 
 ArbCore::messages_status_enum ArbCore::messagesStatus() {
-    return delivering_inbox_status;
+    return messages_status;
 
-    if (delivering_inbox_status != MESSAGES_ERROR) {
-        delivering_inbox_status = MESSAGES_EMPTY;
+    if (messages_status != MESSAGES_ERROR) {
+        messages_status = MESSAGES_EMPTY;
     }
 }
 
 std::string ArbCore::messagesClearError() {
-    if (delivering_inbox_status != ArbCore::MESSAGES_ERROR) {
+    if (messages_status != ArbCore::MESSAGES_ERROR &&
+        messages_status != ArbCore::MESSAGES_NEED_OLDER) {
         return nullptr;
     }
 
-    delivering_inbox_status = MESSAGES_EMPTY;
-    auto str = delivering_inbox_error_string;
-    delivering_inbox_error_string.clear();
+    messages_status = MESSAGES_EMPTY;
+    auto str = core_error_string;
+    core_error_string.clear();
 
     return str;
 }
 
 std::string ArbCore::machineClearError() {
-    if (!delivering_machine_error) {
+    if (!machine_error) {
         return nullptr;
     }
 
-    delivering_machine_error = false;
-    auto str = delivering_machine_error_string;
-    delivering_machine_error_string.clear();
+    machine_error = false;
+    auto str = machine_error_string;
+    machine_error_string.clear();
 
     return str;
 }
@@ -125,15 +126,15 @@ void ArbCore::deliverMessages(
     const std::vector<std::vector<unsigned char>>& messages,
     const uint256_t& previous_inbox_hash,
     const bool last_block_complete) {
-    if (delivering_inbox_status != MESSAGES_EMPTY) {
+    if (messages_status != MESSAGES_EMPTY) {
         throw std::runtime_error("message_status != ARBCORE_EMPTY");
     }
 
-    delivering_inbox_messages = messages;
-    delivering_previous_inbox_hash = previous_inbox_hash;
-    delivering_last_block_complete = last_block_complete;
+    messages_inbox = messages;
+    messages_previous_inbox_hash = previous_inbox_hash;
+    messages_last_block_complete = last_block_complete;
 
-    delivering_inbox_status = MESSAGES_READY;
+    messages_status = MESSAGES_READY;
 }
 
 std::unique_ptr<Transaction> ArbCore::makeTransaction() {
@@ -542,38 +543,36 @@ ArbCore::getMachineUsingStateKeys(Transaction&, MachineStateKeys, ValueCache&);
 // messages to the queue, starting machine thread when needed and colleting
 // results of machine thread.
 // This thread will update `delivering_messages` if and only if
-// `delivering_messages` is set to ARBCORE_MESSAGES_READY
+// `delivering_messages` is set to MESSAGES_READY
 void ArbCore::operator()() {
     ValueCache cache;
     uint256_t first_sequence_number_in_machine;
     uint256_t last_sequence_number_in_machine;
 
-    delivering_inbox_error_string.clear();
-
     while (!arbcore_abort) {
-        if (delivering_inbox_status == MESSAGES_READY) {
-            // Add messages, reorg might occur
-            auto add_status = addMessages(
-                delivering_inbox_messages, delivering_previous_inbox_hash,
-                last_sequence_number_in_machine, delivering_last_block_complete,
-                cache);
+        if (messages_status == MESSAGES_READY) {
+            // Reorg might occur while adding messages
+            auto add_status =
+                addMessages(messages_inbox, messages_previous_inbox_hash,
+                            last_sequence_number_in_machine,
+                            messages_last_block_complete, cache);
             if (!add_status) {
                 // Messages from previous block invalid because of reorg so
                 // request older messages
-                delivering_inbox_status = MESSAGES_NEED_OLDER;
+                messages_status = MESSAGES_NEED_OLDER;
             } else if (!add_status->ok()) {
-                delivering_inbox_error_string = add_status->ToString();
-                delivering_inbox_status = MESSAGES_ERROR;
+                core_error_string = add_status->ToString();
+                messages_status = MESSAGES_ERROR;
                 break;
             } else {
-                delivering_machine_idle = false;
-                delivering_inbox_status = MESSAGES_SUCCESS;
+                machine_idle = false;
+                messages_status = MESSAGES_SUCCESS;
             }
         }
 
         // Check machine thread
         if (machine->status() == MachineThread::MACHINE_ERROR) {
-            delivering_inbox_error_string = machine->get_error_string();
+            core_error_string = machine->getErrorString();
             break;
         }
 
@@ -584,15 +583,13 @@ void ArbCore::operator()() {
 
             machine = getMachineUsingStateKeys<MachineThread>(
                 *tx, pending_checkpoint.machine_state_keys, cache);
-            machine->clearStatus();
-        } else if (machine->status() == MachineThread::MACHINE_FINISHED) {
+        } else if (machine->status() == MachineThread::MACHINE_SUCCESS) {
             auto tx = Transaction::makeTransaction(data_storage);
 
             auto last_assertion = machine->getAssertion();
             auto messages_inserted = messageEntryInsertedCountImpl(*tx);
             if (!messages_inserted.status.ok()) {
-                delivering_inbox_error_string =
-                    messages_inserted.status.ToString();
+                core_error_string = messages_inserted.status.ToString();
                 break;
             }
             auto last_sequence_number_consumed =
@@ -607,7 +604,7 @@ void ArbCore::operator()() {
                 // Save logs and sends
                 auto status = saveAssertion(*tx, last_assertion);
                 if (!status.ok()) {
-                    delivering_inbox_error_string = status.ToString();
+                    core_error_string = status.ToString();
                     break;
                 }
 
@@ -620,12 +617,10 @@ void ArbCore::operator()() {
                 cache.clear();
             }
 
-            machine->clearStatus();
-
             auto status = tx->commit();
             if (!status.ok()) {
-                delivering_inbox_error_string = status.ToString();
-                delivering_machine_error = true;
+                core_error_string = status.ToString();
+                machine_error = true;
                 break;
             }
         }
@@ -635,17 +630,15 @@ void ArbCore::operator()() {
             auto tx = Transaction::makeTransaction(data_storage);
             auto messages_count = messageEntryInsertedCountImpl(*tx);
             if (!messages_count.status.ok()) {
-                delivering_inbox_error_string =
-                    messages_count.status.ToString();
-                delivering_machine_error = true;
+                core_error_string = messages_count.status.ToString();
+                machine_error = true;
                 break;
             }
 
             if (messages_count.data < pending_checkpoint.total_messages_read) {
                 // Should never happen, means reorg wasn't done properly
-                delivering_inbox_error_string =
-                    "messages_inserted < pending_checkpoint";
-                delivering_machine_error = true;
+                core_error_string = "messages_inserted < pending_checkpoint";
+                machine_error = true;
                 break;
             }
 
@@ -658,33 +651,31 @@ void ArbCore::operator()() {
                 auto next_message_result =
                     getMessageEntry(*tx, first_sequence_number_in_machine);
                 if (!next_message_result.status.ok()) {
-                    delivering_inbox_error_string =
-                        next_message_result.status.ToString();
-                    delivering_machine_error = true;
+                    core_error_string = next_message_result.status.ToString();
+                    machine_error = true;
                     break;
                 }
                 if (next_message_result.data.sequence_number !=
                     first_sequence_number_in_machine) {
-                    delivering_inbox_error_string =
+                    core_error_string =
                         "sequence number in message different than expected";
-                    delivering_machine_error = true;
+                    machine_error = true;
                     break;
                 }
                 std::vector<std::vector<unsigned char>> messages;
                 messages.push_back(next_message_result.data.data);
 
-                auto status = machine->startThread(
+                auto status = machine->runMachine(
                     0, false, std::move(messages), 0,
                     next_message_result.data.last_message_in_block);
                 if (!status) {
-                    delivering_inbox_error_string =
-                        "Error starting machine thread";
-                    delivering_machine_error = true;
+                    core_error_string = "Error starting machine thread";
+                    machine_error = true;
                     break;
                 }
             } else {
                 // Machine all caught up, no messages to process
-                delivering_machine_idle = true;
+                machine_idle = true;
             }
         }
 
@@ -696,14 +687,15 @@ void ArbCore::operator()() {
             handleLogsCursorProcessed(*tx);
         }
 
-        if (delivering_inbox_status != MESSAGES_READY) {
-            // No new messages, so sleep for a short while
+        if (!machineIdle() || messages_status != MESSAGES_READY) {
+            // Machine is already running or new messages, so sleep for a short
+            // while
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
     }
 
     // Error occurred, make sure machine stops cleanly
-    machine->abortThread();
+    machine->abortMachine();
 }
 
 rocksdb::Status ArbCore::saveLogs(Transaction& tx,
@@ -1033,46 +1025,53 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
         execution_cursor.resetCheckpoint();
     }
 
-    auto status =
-        executionCursorSetup(tx, execution_cursor, total_gas_used, cache);
+    auto handle_reorg = true;
+    while (handle_reorg) {
+        handle_reorg = false;
 
-    while (true) {
-        auto result = executionCursorAddMessages(tx, execution_cursor,
-                                                 message_group_size);
-        if (!result.status.ok()) {
-            return result.status;
-        }
-        if (!result.data) {
-            // No need to continue loop
-            break;
-        }
+        auto status =
+            executionCursorSetup(tx, execution_cursor, total_gas_used, cache);
 
-        // Run machine until specified gas is reached
-        auto remaining_gas = total_gas_used - execution_cursor.arb_gas_used;
-        if (remaining_gas > 0) {
-            auto assertion = machine->run(
-                remaining_gas, go_over_gas, execution_cursor.messages,
-                execution_cursor.messages_to_skip, false);
-            if (assertion.gasCount == 0) {
-                // Nothing was executed
+        while (true) {
+            auto result = executionCursorAddMessages(tx, execution_cursor,
+                                                     message_group_size);
+            if (!result.status.ok()) {
+                return result.status;
+            }
+            if (!result.data) {
+                // Reorg occurred, need to recreate machine
+                handle_reorg = true;
                 break;
             }
-            execution_cursor.messages_to_skip +=
-                assertion.inbox_messages_consumed;
-            if (execution_cursor.messages_to_skip > 0) {
-                execution_cursor.inbox_hash =
-                    execution_cursor
-                        .inbox_hashes[execution_cursor.messages_to_skip - 1];
-            }
-            execution_cursor.applyAssertion(assertion);
-            if (assertion.inbox_messages_consumed !=
-                execution_cursor.messages.size()) {
-                // Not all messages were consumed
+
+            // Run machine until specified gas is reached
+            auto remaining_gas = total_gas_used - execution_cursor.arb_gas_used;
+            if (remaining_gas > 0) {
+                auto assertion = machine->run(
+                    remaining_gas, go_over_gas, execution_cursor.messages,
+                    execution_cursor.messages_to_skip, false);
+                if (assertion.gasCount == 0) {
+                    // Nothing was executed
+                    break;
+                }
+                execution_cursor.messages_to_skip +=
+                    assertion.inbox_messages_consumed;
+                if (execution_cursor.messages_to_skip > 0) {
+                    execution_cursor.inbox_hash =
+                        execution_cursor
+                            .inbox_hashes[execution_cursor.messages_to_skip -
+                                          1];
+                }
+                execution_cursor.applyAssertion(assertion);
+                if (assertion.inbox_messages_consumed !=
+                    execution_cursor.messages.size()) {
+                    // Not all messages were consumed
+                    break;
+                }
+            } else {
+                // Gas reached
                 break;
             }
-        } else {
-            // Gas reached
-            break;
         }
     }
 
@@ -1103,7 +1102,7 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
                                               ExecutionCursor& execution_cursor,
                                               const uint256_t& total_gas_used,
                                               ValueCache& cache) {
-    const std::__1::lock_guard<std::mutex> lock(core_reorg_mutex);
+    const std::lock_guard<std::mutex> lock(core_reorg_mutex);
     auto checkpoint_result = getCheckpointUsingGas(tx, total_gas_used, false);
     if (checkpoint_result.status.IsNotFound()) {
         if (!execution_cursor.machine) {
@@ -1437,7 +1436,7 @@ nonstd::optional<rocksdb::Status> ArbCore::addMessages(
 
         if (final_machine_sequence_number >= current_sequence_number) {
             // Machine is running with obsolete messages
-            machine->abortThread();
+            machine->abortMachine();
         }
 
         auto previous_valid_sequence_number = current_sequence_number - 1;
@@ -1757,13 +1756,27 @@ bool ArbCore::logsCursorSetNextIndex(uint256_t next_index) {
 }
 
 nonstd::optional<std::vector<value>> ArbCore::logsCursorGetLogs() {
+    const std::lock_guard<std::mutex> lock(logs_cursor.reorg_mutex);
+
     if (logs_cursor.status != DataCursor::READY || logs_cursor.deleted_ready) {
         return nonstd::nullopt;
     }
 
+    std::vector<value> logs{std::move(logs_cursor.data)};
+    logs_cursor.data.clear();
+    logs_cursor.status = DataCursor::EMPTY;
+
+    return logs;
+}
+
+nonstd::optional<std::vector<value>> ArbCore::logsCursorGetDeletedLogs() {
     const std::lock_guard<std::mutex> lock(logs_cursor.reorg_mutex);
 
-    std::vector<value> logs{std::move(logs_cursor.data)};
+    if (!logs_cursor.deleted_ready) {
+        return nonstd::nullopt;
+    }
+
+    std::vector<value> logs{std::move(logs_cursor.deleted_data)};
     logs_cursor.data.clear();
     logs_cursor.status = DataCursor::EMPTY;
 

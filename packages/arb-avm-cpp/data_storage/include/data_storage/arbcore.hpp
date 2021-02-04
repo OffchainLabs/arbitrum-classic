@@ -71,24 +71,24 @@ class ArbCore {
 
     // Core thread inbox input/output. Core thread will update if and only if
     // set to MESSAGES_READY
-    std::atomic<messages_status_enum> delivering_inbox_status{MESSAGES_EMPTY};
+    std::atomic<messages_status_enum> messages_status{MESSAGES_EMPTY};
 
     // Core thread inbox input
     std::atomic<bool> arbcore_abort{false};
-    std::vector<std::vector<unsigned char>> delivering_inbox_messages;
-    uint256_t delivering_previous_inbox_hash;
-    bool delivering_last_block_complete;
+    std::vector<std::vector<unsigned char>> messages_inbox;
+    uint256_t messages_previous_inbox_hash;
+    bool messages_last_block_complete{false};
 
     // Core thread inbox output
-    std::string delivering_inbox_error_string;
+    std::string core_error_string;
 
     // Core thread logs output
     DataCursor logs_cursor;
 
     // Core thread machine state output
-    std::atomic<bool> delivering_machine_idle{false};
-    std::atomic<bool> delivering_machine_error{false};
-    std::string delivering_machine_error_string;
+    std::atomic<bool> machine_idle{false};
+    std::atomic<bool> machine_error{false};
+    std::string machine_error_string;
 
    public:
     ArbCore() = delete;
@@ -98,25 +98,24 @@ class ArbCore {
               getNextSegmentID(*makeConstTransaction()))) {}
 
     ~ArbCore() { abortThread(); }
-
+    void initialize(const LoadedExecutable& executable);
+    bool initialized() const;
     void operator()();
+
+   public:
+    // Public Thread interaction
     bool startThread();
     void abortThread();
-    void deliverMessages(
-        const std::vector<std::vector<unsigned char>>& messages,
-        const uint256_t& previous_inbox_hash,
-        const bool last_block_complete);
 
+   private:
+    // Private database interaction
+    uint256_t getInitialMachineHash(Transaction& tx);
     rocksdb::Status saveAssertion(Transaction& tx, const Assertion& assertion);
-
-    rocksdb::Status saveCheckpoint(Transaction& tx);
     ValueResult<Checkpoint> getCheckpoint(Transaction& tx,
                                           const uint256_t& arb_gas_used) const;
     rocksdb::Status resolveStagedMessage(Transaction& tx,
                                          value& message,
                                          ValueCache& cache) const;
-    bool isCheckpointsEmpty(Transaction& tx) const;
-    uint256_t maxCheckpointGas();
     ValueResult<Checkpoint> getCheckpointUsingGas(Transaction& tx,
                                                   const uint256_t& total_gas,
                                                   bool after_gas);
@@ -124,21 +123,18 @@ class ArbCore {
         Transaction& tx,
         const uint256_t& message_sequence_number,
         ValueCache& cache);
+    template <class T>
+    std::unique_ptr<T> getMachineUsingStateKeys(Transaction& transaction,
+                                                MachineStateKeys state_data,
+                                                ValueCache& value_cache);
 
-    std::unique_ptr<Transaction> makeTransaction();
-    std::unique_ptr<const Transaction> makeConstTransaction() const;
-    void initialize(const LoadedExecutable& executable);
-    bool initialized() const;
-
-    uint256_t getInitialMachineHash(Transaction& tx);
-
+   public:
+    // To be deprecated, use checkpoints instead
     template <class T>
     std::unique_ptr<T> getInitialMachine(ValueCache& value_cache);
-
     template <class T>
     std::unique_ptr<T> getInitialMachineImpl(Transaction& tx,
                                              ValueCache& value_cache);
-
     template <class T>
     std::unique_ptr<T> getMachine(uint256_t machineHash,
                                   ValueCache& value_cache);
@@ -146,31 +142,65 @@ class ArbCore {
     std::unique_ptr<T> getMachineImpl(Transaction& tx,
                                       uint256_t machineHash,
                                       ValueCache& value_cache);
-    template <class T>
-    std::unique_ptr<T> getMachineUsingStateKeys(Transaction& transaction,
-                                                MachineStateKeys state_data,
-                                                ValueCache& value_cache);
+
+   public:
+    // Useful for unit tests
+    rocksdb::Status saveCheckpoint(Transaction& tx);
+    bool isCheckpointsEmpty(Transaction& tx) const;
+    uint256_t maxCheckpointGas();
+
+   public:
+    // Managing machine state
+    bool machineIdle();
+    std::string machineClearError();
+
+   public:
+    // Sending messages to core thread
+    void deliverMessages(
+        const std::vector<std::vector<unsigned char>>& messages,
+        const uint256_t& previous_inbox_hash,
+        bool last_block_complete);
+    bool messagesEmpty();
+    messages_status_enum messagesStatus();
+    std::string messagesClearError();
+
+   public:
+    // Logs Cursor interaction
+    bool logsCursorRequest(uint256_t count);
+    nonstd::optional<std::vector<value>> logsCursorGetLogs();
+    nonstd::optional<std::vector<value>> logsCursorGetDeletedLogs();
+    bool logsCursorSetNextIndex(uint256_t next_index);
+    bool logsCursorCheckError() const;
+    std::string logsCursorClearError();
+
+   public:
+    // Execution Cursor interaction
+    ValueResult<std::unique_ptr<ExecutionCursor>> getExecutionCursor(
+        uint256_t total_gas_used,
+        ValueCache& cache);
+    rocksdb::Status Advance(ExecutionCursor& execution_cursor,
+                            uint256_t max_gas,
+                            bool go_over_gas,
+                            ValueCache& cache);
+
+   private:
+    // Execution cursor internal functions
+    rocksdb::Status getExecutionCursorImpl(Transaction& tx,
+                                           ExecutionCursor& execution_cursor,
+                                           uint256_t total_gas_used,
+                                           bool go_over_gas,
+                                           uint256_t message_group_size,
+                                           ValueCache& cache);
+
+   public:
+    // Public database interaction
+    std::unique_ptr<Transaction> makeTransaction();
+    std::unique_ptr<const Transaction> makeConstTransaction() const;
 
     ValueResult<uint256_t> logInsertedCount() const;
-    ValueResult<uint256_t> logInsertedCountImpl(Transaction& tx) const;
-
-    ValueResult<uint256_t> logProcessedCount(Transaction& tx) const;
-    rocksdb::Status updateLogProcessedCount(Transaction& tx,
-                                            rocksdb::Slice value_slice);
     ValueResult<uint256_t> sendInsertedCount() const;
-    ValueResult<uint256_t> sendInsertedCountImpl(Transaction& tx) const;
-
-    ValueResult<uint256_t> sendProcessedCount(Transaction& tx) const;
-    rocksdb::Status updateSendProcessedCount(Transaction& tx,
-                                             rocksdb::Slice value_slice);
     ValueResult<uint256_t> messageEntryInsertedCount() const;
-    ValueResult<uint256_t> messageEntryInsertedCountImpl(Transaction& tx) const;
-
     ValueResult<uint256_t> messageEntryProcessedCount() const;
-    ValueResult<uint256_t> messageEntryProcessedCountImpl(
-        Transaction& tx) const;
-
-    rocksdb::Status saveLogs(Transaction& tx, const std::vector<value>& val);
     ValueResult<std::vector<value>> getLogs(uint256_t index,
                                             uint256_t count,
                                             ValueCache& valueCache);
@@ -184,14 +214,6 @@ class ArbCore {
         uint256_t count) const;
     ValueResult<std::vector<uint256_t>> getMessageHashes(uint256_t index,
                                                          uint256_t count) const;
-    rocksdb::Status saveSends(
-        Transaction& tx,
-        const std::vector<std::vector<unsigned char>>& send);
-    bool machineIdle();
-    bool messagesEmpty();
-    messages_status_enum messagesStatus();
-    std::string messagesClearError();
-    std::string machineClearError();
     ValueResult<uint256_t> getInboxDelta(uint256_t start_index,
                                          uint256_t count);
     ValueResult<uint256_t> getInboxAcc(uint256_t index);
@@ -202,32 +224,35 @@ class ArbCore {
                                      uint256_t start_index,
                                      uint256_t count,
                                      ValueCache& cache);
-    ValueResult<std::unique_ptr<ExecutionCursor>> getExecutionCursor(
-        uint256_t total_gas_used,
-        ValueCache& cache);
-    rocksdb::Status Advance(ExecutionCursor& execution_cursor,
-                            uint256_t max_gas,
-                            bool go_over_gas,
-                            ValueCache& cache);
-    rocksdb::Status getExecutionCursorImpl(Transaction& tx,
-                                           ExecutionCursor& execution_cursor,
-                                           uint256_t total_gas_used,
-                                           bool go_over_gas,
-                                           uint256_t message_group_size,
-                                           ValueCache& cache);
 
-    bool logsCursorRequest(uint256_t count);
-    nonstd::optional<std::vector<value>> logsCursorGetLogs();
-    bool logsCursorSetNextIndex(uint256_t next_index);
-    bool logsCursorCheckError() const;
-    std::string logsCursorClearError();
+   private:
+    // Private database interaction
+    ValueResult<uint256_t> logInsertedCountImpl(Transaction& tx) const;
+
+    ValueResult<uint256_t> logProcessedCount(Transaction& tx) const;
+    rocksdb::Status updateLogProcessedCount(Transaction& tx,
+                                            rocksdb::Slice value_slice);
+    ValueResult<uint256_t> sendInsertedCountImpl(Transaction& tx) const;
+
+    ValueResult<uint256_t> sendProcessedCount(Transaction& tx) const;
+    rocksdb::Status updateSendProcessedCount(Transaction& tx,
+                                             rocksdb::Slice value_slice);
+    ValueResult<uint256_t> messageEntryInsertedCountImpl(Transaction& tx) const;
+
+    ValueResult<uint256_t> messageEntryProcessedCountImpl(
+        Transaction& tx) const;
+
+    rocksdb::Status saveLogs(Transaction& tx, const std::vector<value>& val);
+    rocksdb::Status saveSends(
+        Transaction& tx,
+        const std::vector<std::vector<unsigned char>>& send);
 
    private:
     nonstd::optional<rocksdb::Status> addMessages(
         const std::vector<std::vector<unsigned char>>& messages,
         const uint256_t& previous_inbox_hash,
         const uint256_t& final_machine_sequence_number,
-        const bool last_block_complete,
+        bool last_block_complete,
         ValueCache& cache);
     nonstd::optional<MessageEntry> getNextMessage();
     bool deleteMessage(const MessageEntry& entry);
