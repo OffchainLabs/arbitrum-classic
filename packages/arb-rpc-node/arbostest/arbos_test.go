@@ -73,11 +73,11 @@ func TestFib(t *testing.T) {
 	}
 
 	inboxMessages := makeSimpleInbox([]message.Message{
-		message.NewSafeL2Message(constructTx),
 		message.Eth{
 			Dest:  sender,
 			Value: big.NewInt(1000),
 		},
+		message.NewSafeL2Message(constructTx),
 		message.NewSafeL2Message(generateTx),
 		message.NewSafeL2Message(getFibTx),
 	})

@@ -37,13 +37,9 @@ static T shrink(uint256_t i) {
     return static_cast<T>(i & std::numeric_limits<T>::max());
 }
 
-bool hasStagedMessage(value& staged_message) {
-    if (nonstd::holds_alternative<Tuple>(staged_message) &&
-        nonstd::get<Tuple>(staged_message) != Tuple()) {
-        return true;
-    }
-
-    return false;
+bool hasStagedMessage(const value& staged_message) {
+    return !nonstd::holds_alternative<Tuple>(staged_message) ||
+           nonstd::get<Tuple>(staged_message) != Tuple();
 }
 }  // namespace
 
@@ -900,32 +896,38 @@ void send(MachineState& m) {
 
 BlockReason inboxPeekOp(MachineState& m) {
     m.stack.prepForMod(1);
-    bool has_staged_message = hasStagedMessage(m.staged_message);
-    if (!has_staged_message && m.context.inboxEmpty()) {
-        if (!m.context.next_block_height) {
+    if (!hasStagedMessage(m.staged_message)) {
+        if (!m.context.inboxEmpty()) {
+            m.staged_message = m.context.popInbox();
+            m.total_messages_consumed += 1;
+        } else if (m.context.next_block_height.has_value()) {
+            // The inboxPeekOp should always leave a message Tuple in
+            // staged_message so that hashes always come out consistently.  When
+            // a message is not available, the uint256_t sequence number of the
+            // next message is put into staged_messages.  This way, any function
+            // that uses staged_message can throw an error when staged_message
+            // is something other than a non-empty Tuple, and the uint256_t can
+            // be replaced by valid message Tuple when it becomes available.
+            m.staged_message = m.total_messages_consumed;
+
+            // When next_block_height is set, we know the result of the inbox
+            // peek opcode before we know the next message
+            m.stack[0] =
+                m.stack[0] == value(*m.context.next_block_height) ? 1 : 0;
+            ++m.pc;
+            m.total_messages_consumed += 1;
+            return NotBlocked{};
+        } else {
             // Don't have information needed to continue
             return InboxBlocked();
         }
-
-        // The inboxPeekOp should always leave a message Tuple in
-        // staged_message so that hashes always come out consistently.  When
-        // a message is not available, the uint256_t sequence number of the next
-        // message is put into staged_messages.  This way, any function that
-        // uses staged_message can throw an error when staged_message is
-        // something other than a non-empty Tuple, and the uint256_t can be
-        // replaced by valid message Tuple when it becomes available.
-        m.staged_message = m.total_messages_consumed;
-
-        // When next_block_height is set, we know the result of the inbox peek
-        // opcode before we know the next message
-        m.stack[0] = m.stack[0] == value(*m.context.next_block_height) ? 1 : 0;
-        ++m.pc;
-        return NotBlocked{};
     }
-    if (!has_staged_message) {
-        m.staged_message = m.context.popInbox();
-        m.total_messages_consumed += 1;
+
+    if (!nonstd::holds_alternative<Tuple>(m.staged_message)) {
+        // Don't have information needed to continue
+        return InboxBlocked();
     }
+
     m.stack[0] =
         m.stack[0] == nonstd::get<Tuple>(m.staged_message).get_element(1) ? 1
                                                                           : 0;

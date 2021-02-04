@@ -292,7 +292,7 @@ func NewTxResultFromValue(val value.Value) (*TxResult, error) {
 	}
 	txRes, ok := res.(*TxResult)
 	if !ok {
-		return nil, errors.New("got block result but expected transaction")
+		return nil, errors.Errorf("got %T but expected TxResult", res)
 	}
 	return txRes, nil
 }

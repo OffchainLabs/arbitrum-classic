@@ -214,6 +214,8 @@ func NewAddressFromInt(val value.IntValue) common.Address {
 func (im InboxMessage) ToBytes() []byte {
 	var data []byte
 	data = append(data, uint8(im.Kind))
+	emptyData := [12]byte{}
+	data = append(data, emptyData[:]...)
 	data = append(data, im.Sender[:]...)
 	data = append(data, math.U256Bytes(im.ChainTime.BlockNum.AsInt())...)
 	data = append(data, math.U256Bytes(im.ChainTime.Timestamp)...)

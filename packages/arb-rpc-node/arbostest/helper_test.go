@@ -144,7 +144,8 @@ func succeededTxCheck(t *testing.T, res *evm.TxResult) {
 
 func allResultsSucceeded(t *testing.T, results []*evm.TxResult) {
 	t.Helper()
-	for _, res := range results {
+	for i, res := range results {
+		t.Log("Checking result", i)
 		succeededTxCheck(t, res)
 	}
 }
