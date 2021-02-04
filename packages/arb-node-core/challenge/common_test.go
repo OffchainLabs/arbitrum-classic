@@ -132,9 +132,7 @@ func initializeChallengeData(
 	lookup core.ArbCore,
 	inboxMessagesRead *big.Int,
 ) *core.NodeInfo {
-	fmt.Println("testA")
 	initialMach, err := lookup.GetExecutionCursor(big.NewInt(0))
-	fmt.Println("testB", err)
 	test.FailIfError(t, err)
 	prevState := &core.NodeState{
 		ProposedBlock: big.NewInt(0),
@@ -148,9 +146,7 @@ func initializeChallengeData(
 			TotalLogCount:    big.NewInt(0),
 		},
 	}
-	fmt.Println("testC")
 	inboxDeltaHash, err := lookup.GetInboxDelta(big.NewInt(0), inboxMessagesRead)
-	fmt.Println("testD")
 	test.FailIfError(t, err)
 	afterInboxCount := new(big.Int).Add(prevState.InboxIndex, inboxMessagesRead)
 

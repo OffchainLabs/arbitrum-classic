@@ -119,6 +119,9 @@ TEST_CASE("ArbCore tests") {
             auto cursor = arbCore->getExecutionCursor(0, value_cache);
             REQUIRE(cursor.status.ok());
             REQUIRE(cursor.data->arb_gas_used == 0);
+
+            auto inboxAcc = arbCore->getInboxAcc(1);
+            REQUIRE(inboxAcc.status.ok());
         }
     }
 }

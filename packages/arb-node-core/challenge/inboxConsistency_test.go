@@ -1,7 +1,6 @@
 package challenge
 
 import (
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/big"
 	"math/rand"
@@ -56,17 +55,11 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 	_, err = core.DeliverMessagesAndWait(correctLookup, messages, common.Hash{}, false)
 	test.FailIfError(t, err)
 
-	fmt.Println("Got messages")
-
 	falseLookup := InvalidArbCore{ArbCore: correctLookup}
 
 	inboxMessagesRead := big.NewInt(203)
 
-	fmt.Println("test0")
-
 	challengedNode := initializeChallengeData(t, correctLookup, inboxMessagesRead)
-
-	fmt.Println("test1")
 
 	inboxAcc, err := falseLookup.GetInboxAcc(new(big.Int).Add(challengedNode.Assertion.After.InboxIndex, big.NewInt(1)))
 	test.FailIfError(t, err)
@@ -75,12 +68,8 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 	asserterTime := big.NewInt(100000)
 	challengerTime := big.NewInt(100000)
 
-	fmt.Println("test2")
-
 	rounds := executeChallenge(t, challengedNode, asserterTime, challengerTime, correctLookup, falseLookup)
 	if rounds != 3 {
 		t.Fatal("wrong round count", rounds)
 	}
-
-	fmt.Println("test3")
 }

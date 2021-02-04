@@ -33,7 +33,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
-	"runtime"
 	"unsafe"
 
 	"github.com/pkg/errors"
@@ -261,12 +260,7 @@ func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int) (core.ExecutionCurs
 	if cExecutionCursor == nil {
 		return nil, errors.Errorf("error creating execution cursor")
 	}
-	ret, err := NewExecutionCursor(cExecutionCursor)
-	if err != nil {
-		return nil, errors.Errorf("Error call NewExecutionCursor")
-	}
-	runtime.SetFinalizer(ret, deleteExecutionCursor)
-	return ret, nil
+	return NewExecutionCursor(cExecutionCursor)
 }
 
 func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool) error {
