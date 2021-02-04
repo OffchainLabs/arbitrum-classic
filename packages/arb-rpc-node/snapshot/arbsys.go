@@ -36,9 +36,7 @@ var (
 	withdrawEthABI  abi.Method
 	getStorageAtABI abi.Method
 
-	ethWithdrawal    ethcommon.Hash
-	erc20Withdrawal  ethcommon.Hash
-	erc721Withdrawal ethcommon.Hash
+	ethWithdrawal ethcommon.Hash
 
 	arbsysConn *bind.BoundContract
 )
@@ -54,8 +52,6 @@ func init() {
 	getStorageAtABI = arbsys.Methods["getStorageAt"]
 
 	ethWithdrawal = arbsys.Events["EthWithdrawal"].ID
-	erc20Withdrawal = arbsys.Events["ERC20Withdrawal"].ID
-	erc721Withdrawal = arbsys.Events["ERC721Withdrawal"].ID
 
 	arbsysConn = bind.NewBoundContract(arbos.ARB_SYS_ADDRESS, arbsys, nil, nil, nil)
 }
