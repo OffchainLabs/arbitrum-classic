@@ -19,6 +19,7 @@ package evm
 import (
 	"bytes"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -27,6 +28,69 @@ import (
 	"math/big"
 	"math/rand"
 )
+
+type AggregatorInfo struct {
+	Aggregator    *big.Int
+	CalldataBytes *big.Int
+}
+
+func NewAggregatorInfoFromOptionalValue(val value.Value) (*AggregatorInfo, error) {
+	tup, ok := val.(*value.TupleValue)
+	if !ok {
+		return nil, errors.New("val must be a tuple")
+	}
+	if tup.Len() == 0 {
+		return nil, errors.New("optional too short")
+	}
+	hasValue, _ := tup.GetByInt64(0)
+	hasValueInt, ok := hasValue.(value.IntValue)
+	if !ok {
+		return nil, errors.New("hasValue must be an int")
+	}
+	if hasValueInt.BigInt().Uint64() == 0 {
+		return nil, nil
+	}
+	if hasValueInt.BigInt().Uint64() != 1 {
+		return nil, errors.New("optional had unknown code")
+	}
+	if tup.Len() != 2 {
+		return nil, errors.New("optional with value too short")
+	}
+
+	nestedVal, _ := tup.GetByInt64(1)
+	nestedTup, ok := nestedVal.(*value.TupleValue)
+	if !ok || nestedTup.Len() != 2 {
+		return nil, errors.Errorf("expected tuple of length 2, but recieved %v", nestedVal)
+	}
+
+	aggregator, _ := nestedTup.GetByInt64(0)
+	calldataBytes, _ := nestedTup.GetByInt64(1)
+
+	aggregatorInt, ok := aggregator.(value.IntValue)
+	if !ok {
+		return nil, errors.New("aggregator must be an int")
+	}
+	calldataBytesInt, ok := calldataBytes.(value.IntValue)
+	if !ok {
+		return nil, errors.New("calldataBytes must be an int")
+	}
+	return &AggregatorInfo{
+		Aggregator:    aggregatorInt.BigInt(),
+		CalldataBytes: calldataBytesInt.BigInt(),
+	}, nil
+}
+
+func (a *AggregatorInfo) AsOptionalValue() value.Value {
+	if a == nil {
+		return value.NewEmptyTuple()
+	}
+	val := value.NewTuple2(
+		value.NewIntValue(a.Aggregator),
+		value.NewIntValue(a.CalldataBytes),
+	)
+	tup, _ := value.NewTupleFromSlice([]value.Value{val})
+	return tup
+}
 
 type Provenance struct {
 	L1SeqNum        *big.Int
@@ -93,27 +157,27 @@ func NewProvenanceFromValue(val value.Value) (Provenance, error) {
 	}, nil
 }
 
-func (p Provenance) AsValue() value.Value {
-	parent := p.IndexInParent
-	if parent == nil {
-		parent = math.MaxBig256
-	}
-	// Static slice correct size, so error can be ignored
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(p.L1SeqNum),
-		value.NewIntValue(new(big.Int).SetBytes(p.ParentRequestId[:])),
-		value.NewIntValue(parent),
-	})
-	return tup
+type IncomingRequest struct {
+	Kind           inbox.Type
+	Sender         common.Address
+	MessageID      common.Hash
+	Data           []byte
+	ChainTime      inbox.ChainTime
+	Provenance     Provenance
+	AggregatorInfo *AggregatorInfo
 }
 
-type IncomingRequest struct {
-	Kind       inbox.Type
-	Sender     common.Address
-	MessageID  common.Hash
-	Data       []byte
-	ChainTime  inbox.ChainTime
-	Provenance Provenance
+func (r IncomingRequest) String() string {
+	return fmt.Sprintf(
+		"IncomingRequest(%v, %v, %v, %v, %v, %v, %v)",
+		r.Kind,
+		r.Sender,
+		r.MessageID,
+		hexutil.Encode(r.Data),
+		r.ChainTime,
+		r.Provenance,
+		r.AggregatorInfo,
+	)
 }
 
 func CompareIncomingRequests(req1 IncomingRequest, req2 IncomingRequest) []string {
@@ -146,8 +210,8 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 	if !ok {
 		return failRet, errors.New("val must be a tuple")
 	}
-	if tup.Len() != 7 {
-		return failRet, errors.Errorf("expected tuple of length 7, but recieved tuple of length %v", tup.Len())
+	if tup.Len() != 8 {
+		return failRet, errors.Errorf("expected incoming request to be tuple of length 8, but recieved tuple of length %v", tup.Len())
 	}
 
 	// Tuple size already verified above, so error can be ignored
@@ -158,6 +222,7 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 	inboxSeqNum, _ := tup.GetByInt64(4)
 	messageData, _ := tup.GetByInt64(5)
 	provenanceVal, _ := tup.GetByInt64(6)
+	aggregatorInfoVal, _ := tup.GetByInt64(7)
 
 	kindInt, ok := kind.(value.IntValue)
 	if !ok {
@@ -186,12 +251,17 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 	var messageID common.Hash
 	copy(messageID[:], math.U256Bytes(messageIDInt.BigInt()))
 
-	data, err := inbox.ByteStackToHex(messageData)
+	data, err := inbox.ByteArrayToBytes(messageData)
 	if err != nil {
 		return failRet, errors.Wrap(err, "unmarshalling input data")
 	}
 
 	provenance, err := NewProvenanceFromValue(provenanceVal)
+	if err != nil {
+		return failRet, err
+	}
+
+	aggregatorInfo, err := NewAggregatorInfoFromOptionalValue(aggregatorInfoVal)
 	if err != nil {
 		return failRet, err
 	}
@@ -205,7 +275,8 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 			BlockNum:  common.NewTimeBlocks(blockNumberInt.BigInt()),
 			Timestamp: timestampInt.BigInt(),
 		},
-		Provenance: provenance,
+		Provenance:     provenance,
+		AggregatorInfo: aggregatorInfo,
 	}, nil
 }
 
@@ -217,18 +288,4 @@ func NewRandomIncomingRequest() IncomingRequest {
 		Data:      common.RandBytes(200),
 		ChainTime: inbox.NewRandomChainTime(),
 	}
-}
-
-func (ir IncomingRequest) AsValue() value.Value {
-	// Static slice correct size, so error can be ignored
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(int64(ir.Kind)),
-		value.NewIntValue(ir.ChainTime.BlockNum.AsInt()),
-		value.NewIntValue(ir.ChainTime.Timestamp),
-		inbox.NewIntFromAddress(ir.Sender),
-		value.NewIntValue(new(big.Int).SetBytes(ir.MessageID[:])),
-		inbox.BytesToByteStack(ir.Data),
-		ir.Provenance.AsValue(),
-	})
-	return tup
 }

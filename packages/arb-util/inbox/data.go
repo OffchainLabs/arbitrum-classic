@@ -17,7 +17,6 @@
 package inbox
 
 import (
-	"bytes"
 	"github.com/pkg/errors"
 	"math/big"
 
@@ -45,8 +44,33 @@ func bytesToValues(val []byte) []value.Value {
 	return ints
 }
 
-var errInt = errors.New("expected int value")
 var errTupleSize2 = errors.New("expected 2-tuple value")
+
+func ByteArrayToBytes(val value.Value) ([]byte, error) {
+	tupVal, ok := val.(*value.TupleValue)
+	if !ok || tupVal.Len() != 2 {
+		return nil, errors.New("expected byte array to be 2 tuple")
+	}
+	sizeVal, _ := tupVal.GetByInt64(0)
+	contents, _ := tupVal.GetByInt64(1)
+
+	sizeInt, ok := sizeVal.(value.IntValue)
+	if !ok {
+		return nil, errors.New("size must be an int")
+	}
+	contentsBuffer, ok := contents.(*value.Buffer)
+	if !ok {
+		return nil, errors.New("contents must be an buffer")
+	}
+
+	size := sizeInt.BigInt().Uint64()
+	if uint64(len(contentsBuffer.Data())) > size {
+		return nil, errors.Errorf("bytearray buffer too small, size=%v, length=%v", size, len(contentsBuffer.Data()))
+	}
+	data := make([]byte, size)
+	copy(data[:], contentsBuffer.Data())
+	return data, nil
+}
 
 func StackValueToList(val value.Value) ([]value.Value, error) {
 	tupVal, ok := val.(*value.TupleValue)
@@ -84,46 +108,6 @@ func ListToStackValue(vals []value.Value) *value.TupleValue {
 		ret = value.NewTuple2(val, ret)
 	}
 	return ret
-}
-
-func ByteStackToHex(val value.Value) ([]byte, error) {
-	tup, ok := val.(*value.TupleValue)
-	if !ok {
-		return nil, errors.Wrap(errTupleSize2, val.String())
-	}
-	if tup.Len() != 2 {
-		return nil, errors.Wrap(errTupleSize2, val.String())
-	}
-
-	// Tuple size already verified above, so error can be ignored
-	lengthVal, _ := tup.GetByInt64(0)
-	lengthIntVal, ok := lengthVal.(value.IntValue)
-	if !ok {
-		return nil, errInt
-	}
-	intLength := lengthIntVal.BigInt().Uint64()
-
-	stackVal, _ := tup.GetByInt64(1)
-
-	byteChunks := make([][32]byte, 0)
-	vals, err := StackValueToList(stackVal)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, val := range vals {
-		intVal, ok := val.(value.IntValue)
-		if !ok {
-			return nil, errInt
-		}
-		byteChunks = append(byteChunks, intVal.ToBytes())
-	}
-
-	var buf bytes.Buffer
-	for _, chunk := range byteChunks {
-		buf.Write(chunk[:])
-	}
-	return buf.Bytes()[:intLength], nil
 }
 
 func BytesToByteStack(val []byte) *value.TupleValue {

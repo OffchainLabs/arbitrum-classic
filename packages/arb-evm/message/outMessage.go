@@ -19,7 +19,6 @@ package message
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type OutMessage struct {
@@ -75,14 +74,4 @@ func NewOutMessageFromValue(val []byte) (OutMessage, error) {
 
 func NewRandomOutMessage(msg Message) OutMessage {
 	return NewOutMessage(msg, common.RandAddress())
-}
-
-func (im OutMessage) AsValue() value.Value {
-	// Static slice correct size, so error can be ignored
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(int64(im.Kind)),
-		inbox.NewIntFromAddress(im.Sender),
-		inbox.BytesToByteStack(im.Data),
-	})
-	return tup
 }

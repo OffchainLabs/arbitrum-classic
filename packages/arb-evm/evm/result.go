@@ -45,7 +45,6 @@ const (
 )
 
 type Result interface {
-	AsValue() value.Value
 }
 
 type TxResult struct {
@@ -105,35 +104,6 @@ func (r *TxResult) String() string {
 		r.GasUsed,
 		r.GasPrice,
 	)
-}
-
-func (r *TxResult) AsValue() value.Value {
-	// Static slice correct size, so error can be ignored
-	resultInfo, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(int64(r.ResultCode)),
-		inbox.BytesToByteStack(r.ReturnData),
-		LogsToLogStack(r.EVMLogs),
-	})
-
-	// Static slice correct size, so error can be ignored
-	chainInfo, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(r.CumulativeGas),
-		value.NewIntValue(r.TxIndex),
-		value.NewIntValue(r.StartLogIndex),
-	})
-
-	// Static slice correct size, so error can be ignored
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(0),
-		r.IncomingRequest.AsValue(),
-		resultInfo,
-		value.NewTuple2(
-			value.NewIntValue(r.GasUsed),
-			value.NewIntValue(r.GasPrice),
-		),
-		chainInfo,
-	})
-	return tup
 }
 
 func (r *TxResult) EthLogs(blockHash common.Hash) []*types.Log {
@@ -225,7 +195,7 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 	if err != nil {
 		return nil, err
 	}
-	returnBytes, err := inbox.ByteStackToHex(returnData)
+	returnBytes, err := inbox.ByteArrayToBytes(returnData)
 	if err != nil {
 		return nil, errors.Wrap(err, "umarshalling return data")
 	}
@@ -296,8 +266,8 @@ func NewResultFromValue(val value.Value) (Result, error) {
 		chainInfo, _ := tup.GetByInt64(4)
 		return parseTxResult(l1MsgVal, resultInfo, gasInfo, chainInfo)
 	} else if kindInt.BigInt().Uint64() == 1 {
-		if tup.Len() != 7 {
-			return nil, errors.Errorf("tx result expected tuple of length 7, but received len %v: %v", tup.Len(), tup)
+		if tup.Len() != 8 {
+			return nil, errors.Errorf("block result expected tuple of length 8, but received len %v: %v", tup.Len(), tup)
 		}
 
 		// Tuple size already verified above, so error can be ignored
@@ -306,9 +276,10 @@ func NewResultFromValue(val value.Value) (Result, error) {
 		gasLimit, _ := tup.GetByInt64(3)
 		blockStatsRaw, _ := tup.GetByInt64(4)
 		chainStatsRaw, _ := tup.GetByInt64(5)
-		previousHeight, _ := tup.GetByInt64(6)
+		gasStats, _ := tup.GetByInt64(6)
+		previousHeight, _ := tup.GetByInt64(7)
 
-		return parseBlockResult(blockNum, timestamp, gasLimit, blockStatsRaw, chainStatsRaw, previousHeight)
+		return parseBlockResult(blockNum, timestamp, gasLimit, blockStatsRaw, chainStatsRaw, gasStats, previousHeight)
 	} else {
 		return nil, errors.New("unknown result kind")
 	}

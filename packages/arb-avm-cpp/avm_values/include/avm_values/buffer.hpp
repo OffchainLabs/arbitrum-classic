@@ -262,15 +262,22 @@ class Buffer {
 
     std::vector<uint8_t> toFlatVector() const {
         std::vector<uint8_t> data;
+        if (size() == 0) {
+            return data;
+        }
         uint64_t last_index = lastIndex();
         uint64_t i = 0;
         while (true) {
             data.push_back(get(i));
             if (i == last_index) {
-                return data;
+                break;
             }
             i++;
         }
+        while (data.size() > 0 && data.back() == 0) {
+            data.pop_back();
+        }
+        return data;
     }
 };
 

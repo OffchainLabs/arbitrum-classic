@@ -18,47 +18,8 @@ package evm
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"math/rand"
 	"testing"
 )
-
-func TestLog(t *testing.T) {
-	rand.Seed(43242)
-	logs := make([]Log, 0)
-	for i := 0; i < 10; i++ {
-		l := NewRandomLog(3)
-		logVal, err := l.AsValue()
-		if err != nil {
-			t.Fatal(err)
-		}
-		l2, err := NewLogFromValue(logVal)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !l.Equals(l2) {
-			t.Error("unmarshaled log not equals to original")
-		}
-
-		logs = append(logs, l)
-	}
-
-	logVal := LogsToLogStack(logs)
-	logs2, err := LogStackToLogs(logVal)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(logs) != len(logs2) {
-		t.Fatal("wrong long count")
-	}
-
-	for i, l1 := range logs {
-		if !l1.Equals(logs2[i]) {
-			t.Fatalf("logs not equal: %v and %v", l1, logs2[i])
-		}
-	}
-}
 
 func TestLogFilter(t *testing.T) {
 	l := NewRandomLog(3)

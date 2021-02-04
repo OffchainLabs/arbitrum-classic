@@ -52,9 +52,11 @@ func New(codeFile string) (*Machine, error) {
 	if cMachine == nil {
 		return nil, errors.Errorf("error creating machine from file %s", codeFile)
 	}
+
 	ret := &Machine{cMachine}
 
 	runtime.SetFinalizer(ret, cdestroyVM)
+
 	return ret, nil
 }
 

@@ -25,7 +25,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"math/big"
 	"strings"
 )
 
@@ -155,7 +154,7 @@ func NewLogFromValue(val value.Value) (Log, error) {
 	var address common.Address
 	copy(address[:], contractIDBytes[12:])
 	logDataByteVal, _ := tupVal.GetByInt64(1)
-	logData, err := inbox.ByteStackToHex(logDataByteVal)
+	logData, err := inbox.ByteArrayToBytes(logDataByteVal)
 	if err != nil {
 		return Log{}, err
 	}
@@ -169,17 +168,6 @@ func NewLogFromValue(val value.Value) (Log, error) {
 	}
 
 	return Log{address, topics, logData}, nil
-}
-
-func (l Log) AsValue() (*value.TupleValue, error) {
-	data := []value.Value{
-		value.NewValueFromAddress(l.Address),
-		inbox.BytesToByteStack(l.Data),
-	}
-	for _, topic := range l.Topics {
-		data = append(data, value.NewIntValue(new(big.Int).SetBytes(topic.Bytes())))
-	}
-	return value.NewTupleFromSlice(data)
 }
 
 func LogStackToLogs(val value.Value) ([]Log, error) {
@@ -196,15 +184,4 @@ func LogStackToLogs(val value.Value) ([]Log, error) {
 		logs = append(logs, evmLog)
 	}
 	return logs, nil
-}
-
-func LogsToLogStack(logs []Log) *value.TupleValue {
-	logValues := make([]value.Value, 0, len(logs))
-	for _, evmLog := range logs {
-		logValue, err := evmLog.AsValue()
-		if err == nil {
-			logValues = append(logValues, logValue)
-		}
-	}
-	return inbox.ListToStackValue(logValues)
 }

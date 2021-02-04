@@ -125,7 +125,7 @@ func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 		return failRet, errors.New("inboxSeqNum must be an int")
 	}
 
-	data, err := ByteStackToHex(messageData)
+	data, err := ByteArrayToBytes(messageData)
 	if err != nil {
 		return failRet, errors.Wrap(err, "unmarshalling input data")
 	}

@@ -30,16 +30,12 @@ type OutputStatistics struct {
 	AVMSendCount *big.Int
 }
 
-func (os *OutputStatistics) AsValue() value.Value {
-	// Static slice correct size, so error can be ignored
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(os.GasUsed),
-		value.NewIntValue(os.TxCount),
-		value.NewIntValue(os.EVMLogCount),
-		value.NewIntValue(os.AVMLogCount),
-		value.NewIntValue(os.AVMSendCount),
-	})
-	return tup
+type GasAccountingSummary struct {
+	CurrentPrice          *big.Int
+	GasPool               *big.Int
+	Shortfall             *big.Int
+	TotalPaidToValidators *big.Int
+	PayoutAddress         *big.Int
 }
 
 type BlockInfo struct {
@@ -48,6 +44,7 @@ type BlockInfo struct {
 	GasLimit       *big.Int
 	BlockStats     *OutputStatistics
 	ChainStats     *OutputStatistics
+	GasSummary     *GasAccountingSummary
 	PreviousHeight *big.Int
 }
 
@@ -69,25 +66,13 @@ func (b *BlockInfo) FirstAVMSend() *big.Int {
 	return new(big.Int).Sub(b.ChainStats.AVMSendCount, b.BlockStats.AVMSendCount)
 }
 
-func (b *BlockInfo) AsValue() value.Value {
-	// Static slice correct size, so error can be ignored
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(1),
-		value.NewIntValue(b.BlockNum),
-		value.NewIntValue(b.Timestamp),
-		value.NewIntValue(b.GasLimit),
-		b.BlockStats.AsValue(),
-		b.ChainStats.AsValue(),
-	})
-	return tup
-}
-
 func parseBlockResult(
 	blockNum value.Value,
 	timestamp value.Value,
 	gasLimit value.Value,
 	blockStatsRaw value.Value,
 	chainStatsRaw value.Value,
+	gasStatsRaw value.Value,
 	previousHeight value.Value,
 ) (*BlockInfo, error) {
 	blockNumInt, ok := blockNum.(value.IntValue)
@@ -111,6 +96,10 @@ func parseBlockResult(
 	if err != nil {
 		return nil, err
 	}
+	gasStats, err := parseGasAccountingSummary(gasStatsRaw)
+	if err != nil {
+		return nil, err
+	}
 	previousHeightInt, ok := previousHeight.(value.IntValue)
 	if !ok {
 		return nil, errors.New("previousHeight must be an int")
@@ -122,6 +111,7 @@ func parseBlockResult(
 		GasLimit:       gasLimitInt.BigInt(),
 		BlockStats:     blockStats,
 		ChainStats:     chainStats,
+		GasSummary:     gasStats,
 		PreviousHeight: previousHeightInt.BigInt(),
 	}, nil
 }
@@ -165,6 +155,48 @@ func parseOutputStatistics(val value.Value) (*OutputStatistics, error) {
 		EVMLogCount:  evmLogCountInt.BigInt(),
 		AVMLogCount:  avmLogCountInt.BigInt(),
 		AVMSendCount: avmSendCountInt.BigInt(),
+	}, nil
+}
+
+func parseGasAccountingSummary(val value.Value) (*GasAccountingSummary, error) {
+	tup, ok := val.(*value.TupleValue)
+	if !ok || tup.Len() != 5 {
+		return nil, errors.New("expected result to be tuple of length 5")
+	}
+
+	// Tuple size already verified above, so error can be ignored
+	currentPrice, _ := tup.GetByInt64(0)
+	gasPool, _ := tup.GetByInt64(1)
+	shortfall, _ := tup.GetByInt64(2)
+	totalPaidToValidators, _ := tup.GetByInt64(3)
+	payoutAddress, _ := tup.GetByInt64(4)
+
+	currentPriceInt, ok := currentPrice.(value.IntValue)
+	if !ok {
+		return nil, errors.New("currentPrice must be an int")
+	}
+	gasPoolInt, ok := gasPool.(value.IntValue)
+	if !ok {
+		return nil, errors.New("gasPool must be an int")
+	}
+	shortfallInt, ok := shortfall.(value.IntValue)
+	if !ok {
+		return nil, errors.New("shortfall must be an int")
+	}
+	totalPaidToValidatorsInt, ok := totalPaidToValidators.(value.IntValue)
+	if !ok {
+		return nil, errors.New("totalPaidToValidators must be an int")
+	}
+	payoutAddressInt, ok := payoutAddress.(value.IntValue)
+	if !ok {
+		return nil, errors.New("payoutAddress must be an int")
+	}
+	return &GasAccountingSummary{
+		CurrentPrice:          currentPriceInt.BigInt(),
+		GasPool:               gasPoolInt.BigInt(),
+		Shortfall:             shortfallInt.BigInt(),
+		TotalPaidToValidators: totalPaidToValidatorsInt.BigInt(),
+		PayoutAddress:         payoutAddressInt.BigInt(),
 	}, nil
 }
 
