@@ -1758,7 +1758,7 @@ std::string ArbCore::logsCursorClearError() {
     return str;
 }
 
-bool ArbCore::logsCursorSetLogCountConfirmed(uint256_t log_count) {
+bool ArbCore::logsCursorSetConfirmedCount(uint256_t log_count) {
     if (logs_cursor.status != DataCursor::EMPTY) {
         return false;
     }

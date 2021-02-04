@@ -300,8 +300,35 @@ func (ac *ArbCore) LogsCursorRequest(count *big.Int) error {
 	return nil
 }
 
-func (ac *ArbCore) LogsCursorGetLogs() ([]value.Value, error) {
+// LogsCursorGetNewAndDeletedLogs asynchronously fetches the logs requested by LogsCursorRequest.
+// First slice returned contains new logs, second slice contains any logs deleted during reorg.
+// The deleted logs should be deleted first, then the new logs should be applied.
+func (ac *ArbCore) LogsCursorGetNewAndDeletedLogs() ([]value.Value, []value.Value, error) {
 	result := C.arbCoreLogsCursorGetLogs(ac.c)
+	if result.found == 0 {
+		// Nothing found, check for deleted logs
+		result = C.arbCoreLogsCursorGetDeletedLogs(ac.c)
+		if result.found == 0 {
+
+		}
+		return nil, nil, nil
+	}
+
+	data := receiveByteSliceArray(result.array)
+	logs := make([]value.Value, len(data))
+	for i, slice := range data {
+		var err error
+		logs[i], err = value.UnmarshalValue(bytes.NewReader(slice[:]))
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return logs, nil, nil
+}
+
+func (ac *ArbCore) LogsCursorGetDeletedLogs() ([]value.Value, error) {
+	result := C.arbCoreLogsCursorGetDeletedLogs(ac.c)
 	if result.found == 0 {
 		// Nothing found, try again later
 		return nil, nil
@@ -321,7 +348,7 @@ func (ac *ArbCore) LogsCursorGetLogs() ([]value.Value, error) {
 
 func (ac *ArbCore) LogsCursorSetNextIndex(count *big.Int) error {
 	countData := math.U256Bytes(count)
-	status := C.arbCoreLogsCursorSetNextIndex(ac.c, unsafeDataPointer(countData))
+	status := C.arbCoreLogsCursorSetConfirmedCount(ac.c, unsafeDataPointer(countData))
 	if status == 0 {
 		return errors.New("failed to send logs cursor set next index")
 	}

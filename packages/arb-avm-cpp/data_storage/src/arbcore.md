@@ -88,6 +88,8 @@ The following data is stored by core thread and appropriately modified whenever 
   - Call `logsCursorClearError` if returns true
 - `ArbCore::logsCursorClearError`: returns error string and clears error state
   - Only call if `LogsCursorCheckError` returns true
+- `ArbCore::logsCursorSetConfirmedCount`: Sets the count of logs that are confirmed as processed
+  - Should be called after logs are received and before `logsCursorRequest` is called for next batch of logs
 
 #### ArbCore and ExecutionCursor
 

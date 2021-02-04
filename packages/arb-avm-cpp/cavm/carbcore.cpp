@@ -296,13 +296,35 @@ ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr) {
     }
 }
 
-int arbCoreLogsCursorSetNextIndex(CArbCore* arbcore_ptr,
-                                  const void* count_ptr) {
+ByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(CArbCore* arbcore_ptr) {
+    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
+
+    try {
+        auto result = arbcore->logsCursorGetLogs();
+        if (!result) {
+            // Cursor not in the right state, may have deleted logs to process
+            return {{}, false};
+        }
+
+        std::vector<std::vector<unsigned char>> data;
+        for (const auto& val : *result) {
+            std::vector<unsigned char> marshalled_value;
+            marshal_value(val, marshalled_value);
+            data.push_back(move(marshalled_value));
+        }
+        return {returnCharVectorVector(data), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
+int arbCoreLogsCursorSetConfirmedCount(CArbCore* arbcore_ptr,
+                                       const void* count_ptr) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
     auto count = receiveUint256(count_ptr);
 
     try {
-        auto status = arbcore->logsCursorSetNextIndex(count);
+        auto status = arbcore->logsCursorSetConfirmedCount(count);
 
         return status;
     } catch (const std::exception& e) {

@@ -74,7 +74,9 @@ int arbCoreGetLogAcc(CArbCore* arbcore_ptr,
 
 int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr, const void* count);
 ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr);
-int arbCoreLogsCursorSetNextIndex(CArbCore* arbcore_ptr, const void* count);
+ByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(CArbCore* arbcore_ptr);
+int arbCoreLogsCursorSetConfirmedCount(CArbCore* arbcore_ptr,
+                                       const void* count_ptr);
 int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr);
 char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr);
 
