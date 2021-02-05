@@ -365,9 +365,22 @@ std::vector<unsigned char> MachineState::marshalForProof() const {
     auto currentInstruction = loadCurrentInstruction();
     auto& current_op = currentInstruction.op;
     auto opcode = current_op.opcode;
-    std::vector<MarshalLevel> stackPops = InstructionStackPops.at(opcode);
-    const std::vector<MarshalLevel>& auxStackPops =
-        InstructionAuxStackPops.at(opcode);
+
+    std::vector<MarshalLevel> stackPops = [&]() {
+        auto it = InstructionStackPops.find(opcode);
+        if (it == InstructionStackPops.end()) {
+            return InstructionStackPops.at(OpCode::ERROR);
+        }
+        return it->second;
+    }();
+
+    std::vector<MarshalLevel> auxStackPops = [&]() {
+        auto it = InstructionAuxStackPops.find(opcode);
+        if (it == InstructionAuxStackPops.end()) {
+            return InstructionAuxStackPops.at(OpCode::ERROR);
+        }
+        return it->second;
+    }();
 
     uint64_t stack_pop_count = stackPops.size();
 
