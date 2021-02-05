@@ -696,15 +696,15 @@ void tlen(MachineState& m) {
 
 namespace {
 uint256_t parseSignature(MachineState& m) {
-    auto recovery_int = assumeInt(m.stack[2]);
-    if (recovery_int != 0 && recovery_int != 1) {
-        return 0;
-    }
     std::array<unsigned char, 64> sig_raw{};
     auto it = to_big_endian(assumeInt(m.stack[0]), sig_raw.begin());
     to_big_endian(assumeInt(m.stack[1]), it);
-
+    auto recovery_int = assumeInt(m.stack[2]);
     auto message = be::store<ethash::hash256>(assumeInt(m.stack[3]));
+
+    if (recovery_int != 0 && recovery_int != 1) {
+        return 0;
+    }
 
     static secp256k1_context* context = secp256k1_context_create(
         SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
