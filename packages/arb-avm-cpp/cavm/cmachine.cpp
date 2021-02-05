@@ -133,7 +133,12 @@ ByteSlice machineMarshallForProof(CMachine* m) {
     assert(m);
     auto mach = static_cast<Machine*>(m);
     std::vector<unsigned char> buffer;
-    return returnCharVector(mach->marshalForProof());
+    try {
+        return returnCharVector(mach->marshalForProof());
+    } catch (const std::exception& e) {
+        std::cerr << "Error marshalling machine for proof: " << e.what() << std::endl;
+        return returnCharVector(buffer);
+    }
 }
 
 ByteSlice machineMarshallBufferProof(CMachine* m) {

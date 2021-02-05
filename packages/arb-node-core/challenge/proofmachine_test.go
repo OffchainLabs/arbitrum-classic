@@ -19,138 +19,27 @@ package challenge
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/pkg/errors"
 	"io/ioutil"
-	"math/big"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"testing"
 
+	"github.com/pkg/errors"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
-
-type ExecutionCutJSON struct {
-	GasUsed      uint64
-	InboxDelta   ethcommon.Hash
-	MachineState ethcommon.Hash
-	SendAcc      ethcommon.Hash
-	SendCount    *hexutil.Big
-	LogAcc       ethcommon.Hash
-	LogCount     *hexutil.Big
-}
-
-type proofData struct {
-	BeforeCut   ExecutionCutJSON
-	AfterCut    ExecutionCutJSON
-	Proof       hexutil.Bytes
-	BufferProof hexutil.Bytes
-}
-
-func generateProofCases(contract string) ([]*proofData, error) {
-	mach, err := cmachine.New(contract)
-	if err != nil {
-		return nil, err
-	}
-
-	maxSteps := uint64(100000)
-	db := core.NewValidatorLookupMock(mach)
-	for i := 0; i < 100; i++ {
-		db.AddMessage(inbox.NewRandomInboxMessage())
-	}
-
-	beforeCut := ExecutionCutJSON{
-		GasUsed:      0,
-		InboxDelta:   ethcommon.Hash{},
-		MachineState: mach.Hash().ToEthHash(),
-		SendAcc:      ethcommon.Hash{},
-		SendCount:    (*hexutil.Big)(big.NewInt(0)),
-		LogAcc:       ethcommon.Hash{},
-		LogCount:     (*hexutil.Big)(big.NewInt(0)),
-	}
-	nextMessageIndex := big.NewInt(0)
-	proofs := make([]*proofData, 0)
-	for i := uint64(0); i < maxSteps; i++ {
-		proof, err := mach.MarshalForProof()
-		if err != nil {
-			return nil, err
-		}
-		//mach.PrintState()
-		bproof, err := mach.MarshalBufferProof()
-		if err != nil {
-			fmt.Printf("Got error %v\n", err)
-			return nil, err
-		}
-		fmt.Printf("Got buffer proof %v\n", len(bproof))
-
-		messages, err := db.GetMessages(big.NewInt(0), big.NewInt(1))
-		if err != nil {
-			return nil, err
-		}
-		a, _, ranSteps := mach.ExecuteAssertion(1, true, messages, true)
-		fmt.Println("Ran", ranSteps)
-		if ranSteps == 0 {
-			break
-		}
-		if ranSteps != 1 {
-			return nil, errors.New("executed incorrect step count")
-		}
-		if mach.CurrentStatus() == machine.ErrorStop {
-			fmt.Println("Machine stopped in error state")
-			return proofs, nil
-			/*
-				beforeMach.PrintState()
-				mach.PrintState()
-				return nil, errors.New("machine stopped in error state")
-			*/
-		}
-		if a.InboxMessagesConsumed > 0 {
-			inboxDeltaHash, err := db.GetInboxDelta(big.NewInt(0), big.NewInt(1))
-			if err != nil {
-				return nil, err
-			}
-			beforeCut.InboxDelta = inboxDeltaHash.ToEthHash()
-		}
-
-		afterCut := ExecutionCutJSON{
-			GasUsed:      beforeCut.GasUsed + a.NumGas,
-			InboxDelta:   ethcommon.Hash{},
-			MachineState: mach.Hash().ToEthHash(),
-			SendAcc:      ethcommon.Hash{},
-			SendCount:    (*hexutil.Big)(new(big.Int).Add(beforeCut.SendCount.ToInt(), big.NewInt(int64(len(a.Sends))))),
-			LogAcc:       ethcommon.Hash{},
-			LogCount:     (*hexutil.Big)(new(big.Int).Add(beforeCut.LogCount.ToInt(), big.NewInt(int64(len(a.Logs))))),
-		}
-
-		proofs = append(proofs, &proofData{
-			BeforeCut:   beforeCut,
-			AfterCut:    afterCut,
-			Proof:       proof,
-			BufferProof: bproof,
-		})
-		beforeCut = afterCut
-		nextMessageIndex = nextMessageIndex.Add(nextMessageIndex, new(big.Int).SetUint64(a.InboxMessagesConsumed))
-	}
-	return proofs, nil
-}
 
 func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontracts.OneStepProof, osp2 *ethbridgetestcontracts.OneStepProof2) {
 	t.Log("proof test contact: ", contract)
 	ctx := context.Background()
 
-	proofs, err := generateProofCases(contract)
+	proofs, err := GenerateProofCases(contract, 100000)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +62,7 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 	}
 
 	for _, proof := range proofs {
-		opcode := proof.Proof[len(proof.Proof)-1]
+		opcode := proof.Proof[0]
 		t.Run(strconv.FormatUint(uint64(opcode), 10), func(t *testing.T) {
 			var err error
 			var machineData struct {

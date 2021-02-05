@@ -292,3 +292,10 @@ packages/arb-validator/cmd/evilRollupServer/evilRollupServer
 # geth setup
 packages/arb-bridge-eth/data/
 packages/arb-bridge-eth/password.txt
+
+# fuzzing
+/packages/arb-node-core/cmd/machine-fuzz/machine-fuzz
+/packages/arb-node-core/cmd/machine-fuzz/HONGGFUZZ.REPORT.TXT
+/packages/arb-node-core/cmd/machine-fuzz/SIG*.fuzz
+/packages/arb-node-core/cmd/machine-fuzz/crashes
+/packages/arb-node-core/cmd/machine-fuzz/corpus

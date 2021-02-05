@@ -27,10 +27,11 @@ package cmachine
 import "C"
 
 import (
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	"runtime"
 	"unsafe"
+
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -170,7 +171,11 @@ func (m *Machine) ExecuteAssertion(
 
 func (m *Machine) MarshalForProof() ([]byte, error) {
 	rawProof := C.machineMarshallForProof(m.c)
-	return receiveByteSlice(rawProof), nil
+	bytes := receiveByteSlice(rawProof)
+	if len(bytes) == 0 {
+		return nil, errors.Errorf("Error marshaling machine for proof")
+	}
+	return bytes, nil
 }
 
 func (m *Machine) MarshalBufferProof() ([]byte, error) {
