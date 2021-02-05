@@ -40,7 +40,7 @@ struct MachineStateKeys {
     uint256_t auxstack_hash;
     uint256_t arb_gas_remaining;
     CodePointRef pc{0, 0};
-    CodePointStub err_pc{{0, 0}, 0};
+    CodePointStub err_pc{{0, 0}, getErrCodePoint()};
     uint256_t staged_message_hash;
     uint256_t total_messages_consumed;
     Status status{};
