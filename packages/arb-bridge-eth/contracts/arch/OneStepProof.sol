@@ -877,6 +877,8 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
             return (3, 0, 82000, executeECMulInsn);
         } else if (opCode == OP_ECPAIRING) {
             return (1, 0, 1000, executeECPairingInsn);
+        } else if (opCode == OP_DEBUGPRINT) {
+            return (1, 0, 1, executePopInsn);
         } else if (opCode == OP_NEWBUFFER) {
             return (0, 0, 1, executeNewBuffer);
         } else if (opCode >= OP_GETBUFFER8 && opCode <= OP_SETBUFFER256) {

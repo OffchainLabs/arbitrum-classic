@@ -126,6 +126,8 @@ abstract contract OneStepProofCommon {
     uint8 internal constant OP_ECMUL = 0x82;
     uint8 internal constant OP_ECPAIRING = 0x83;
 
+    uint8 internal constant OP_DEBUGPRINT = 0x90;
+
     // Buffer operations
     uint8 internal constant OP_NEWBUFFER = 0xa0;
     uint8 internal constant OP_GETBUFFER8 = 0xa1;
