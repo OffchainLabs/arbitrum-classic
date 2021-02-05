@@ -459,15 +459,14 @@ BlockReason MachineState::runOne() {
             stack.push(std::move(imm));
         }
 
-        if (!instructionValidity()[static_cast<size_t>(
-                instruction.op.opcode)]) {
-            // The opcode is invalid, execute by transitioning to the error
-            // state
-            state = Status::Error;
-            return NotBlocked();
-        }
+        bool is_valid_instruction =
+            instructionValidity()[static_cast<size_t>(instruction.op.opcode)];
 
-        auto gas_cost = nextGasCost();
+        uint256_t gas_cost =
+            is_valid_instruction
+                ? nextGasCost()
+                : instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)];
+
         if (arb_gas_remaining < gas_cost) {
             // If there's insufficient gas remaining, execute by transitioning
             // to the error state with remaining gas set to max
@@ -476,6 +475,13 @@ BlockReason MachineState::runOne() {
             return NotBlocked();
         }
         arb_gas_remaining -= gas_cost;
+
+        if (!is_valid_instruction) {
+            // The opcode is invalid, execute by transitioning to the error
+            // state
+            state = Status::Error;
+            return NotBlocked();
+        }
 
         // save stack size for stack cleanup in case of error
         uint64_t startStackSize = stack.stacksize();
