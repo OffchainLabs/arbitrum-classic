@@ -207,3 +207,16 @@ func (e *ExecutionInfo) LogCount() *big.Int {
 func (e *ExecutionInfo) InboxMessagesRead() *big.Int {
 	return new(big.Int).Sub(e.After.InboxIndex, e.Before.InboxIndex)
 }
+
+type LogConsumer interface {
+	AddLogs(avmLogs []value.Value) error
+	DeleteLogs(avmLogs []value.Value) error
+}
+
+type ArbCoreLogsCursor interface {
+	LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
+	LogsCursorGetLogs(cursorIndex *big.Int) ([]value.Value, error)
+	LogsCursorGetDeletedLogs(cursorIndex *big.Int) ([]value.Value, error)
+	LogsCursorClearError(cursorIndex *big.Int) error
+	LogsCursorSetConfirmedCount(cursorIndex *big.Int) error
+}

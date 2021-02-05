@@ -289,10 +289,11 @@ func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, 
 	return cursor.updateValues()
 }
 
-func (ac *ArbCore) LogsCursorRequest(count *big.Int) error {
+func (ac *ArbCore) LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error {
+	cursorIndexData := math.U256Bytes(cursorIndex)
 	countData := math.U256Bytes(count)
 
-	status := C.arbCoreLogsCursorRequest(ac.c, unsafeDataPointer(countData))
+	status := C.arbCoreLogsCursorRequest(ac.c, unsafeDataPointer(cursorIndexData), unsafeDataPointer(countData))
 	if status == 0 {
 		return errors.New("failed to send logs cursor request")
 	}
@@ -300,18 +301,12 @@ func (ac *ArbCore) LogsCursorRequest(count *big.Int) error {
 	return nil
 }
 
-// LogsCursorGetNewAndDeletedLogs asynchronously fetches the logs requested by LogsCursorRequest.
-// First slice returned contains new logs, second slice contains any logs deleted during reorg.
-// The deleted logs should be deleted first, then the new logs should be applied.
-func (ac *ArbCore) LogsCursorGetNewAndDeletedLogs() ([]value.Value, []value.Value, error) {
-	result := C.arbCoreLogsCursorGetLogs(ac.c)
+func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) ([]value.Value, error) {
+	cursorIndexData := math.U256Bytes(cursorIndex)
+	result := C.arbCoreLogsCursorGetLogs(ac.c, unsafeDataPointer(cursorIndexData))
 	if result.found == 0 {
-		// Nothing found, check for deleted logs
-		result = C.arbCoreLogsCursorGetDeletedLogs(ac.c)
-		if result.found == 0 {
-
-		}
-		return nil, nil, nil
+		// Nothing found, try again later
+		return nil, nil
 	}
 
 	data := receiveByteSliceArray(result.array)
@@ -320,15 +315,16 @@ func (ac *ArbCore) LogsCursorGetNewAndDeletedLogs() ([]value.Value, []value.Valu
 		var err error
 		logs[i], err = value.UnmarshalValue(bytes.NewReader(slice[:]))
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	return logs, nil, nil
+	return logs, nil
 }
 
-func (ac *ArbCore) LogsCursorGetDeletedLogs() ([]value.Value, error) {
-	result := C.arbCoreLogsCursorGetDeletedLogs(ac.c)
+func (ac *ArbCore) LogsCursorGetDeletedLogs(cursorIndex *big.Int) ([]value.Value, error) {
+	cursorIndexData := math.U256Bytes(cursorIndex)
+	result := C.arbCoreLogsCursorGetDeletedLogs(ac.c, unsafeDataPointer(cursorIndexData))
 	if result.found == 0 {
 		// Nothing found, try again later
 		return nil, nil
@@ -346,18 +342,9 @@ func (ac *ArbCore) LogsCursorGetDeletedLogs() ([]value.Value, error) {
 	return logs, nil
 }
 
-func (ac *ArbCore) LogsCursorSetNextIndex(count *big.Int) error {
-	countData := math.U256Bytes(count)
-	status := C.arbCoreLogsCursorSetConfirmedCount(ac.c, unsafeDataPointer(countData))
-	if status == 0 {
-		return errors.New("failed to send logs cursor set next index")
-	}
-
-	return nil
-}
-
-func (ac *ArbCore) LogsCursorCheckError() bool {
-	status := C.arbCoreLogsCursorCheckError(ac.c)
+func (ac *ArbCore) LogsCursorCheckError(cursorIndex *big.Int) bool {
+	cursorIndexData := math.U256Bytes(cursorIndex)
+	status := C.arbCoreLogsCursorCheckError(ac.c, unsafeDataPointer(cursorIndexData))
 	if status == 0 {
 		return false
 	}
@@ -365,12 +352,24 @@ func (ac *ArbCore) LogsCursorCheckError() bool {
 	return true
 }
 
-func (ac *ArbCore) LogsCursorClearError() (string, error) {
-	cStr := C.arbCoreLogsCursorClearError(ac.c)
+func (ac *ArbCore) LogsCursorClearError(cursorIndex *big.Int) (string, error) {
+	cursorIndexData := math.U256Bytes(cursorIndex)
+	cStr := C.arbCoreLogsCursorClearError(ac.c, unsafeDataPointer(cursorIndexData))
 	if cStr == nil {
 		return "", errors.New("no error string present")
 	}
 	defer C.free(unsafe.Pointer(cStr))
 
 	return C.GoString(cStr), nil
+}
+
+func (ac *ArbCore) LogsCursorSetConfirmedCount(cursorIndex *big.Int, count *big.Int) error {
+	cursorIndexData := math.U256Bytes(cursorIndex)
+	countData := math.U256Bytes(count)
+	status := C.arbCoreLogsCursorSetConfirmedCount(ac.c, unsafeDataPointer(cursorIndexData), unsafeDataPointer(countData))
+	if status == 0 {
+		return errors.New("failed to send logs cursor set next index")
+	}
+
+	return nil
 }

@@ -90,7 +90,7 @@ class ArbCore {
     std::string core_error_string;
 
     // Core thread logs output
-    DataCursor logs_cursor;
+    std::vector<DataCursor> logs_cursors{1};
 
     // Core thread machine state output
     std::atomic<bool> machine_idle{false};
@@ -171,12 +171,24 @@ class ArbCore {
 
    public:
     // Logs Cursor interaction
-    bool logsCursorRequest(uint256_t count);
-    nonstd::optional<std::vector<value>> logsCursorGetLogs();
-    nonstd::optional<std::vector<value>> logsCursorGetDeletedLogs();
-    bool logsCursorCheckError() const;
-    std::string logsCursorClearError();
-    bool logsCursorSetConfirmedCount(uint256_t log_count);
+    bool logsCursorRequest(size_t cursor_index, uint256_t count);
+    nonstd::optional<std::vector<value>> logsCursorGetLogs(size_t cursor_index);
+    nonstd::optional<std::vector<value>> logsCursorGetDeletedLogs(
+        size_t cursor_index);
+    bool logsCursorCheckError(size_t cursor_index) const;
+    std::string logsCursorClearError(size_t cursor_index);
+    bool logsCursorSetConfirmedCount(size_t cursor_index, uint256_t log_count);
+
+   private:
+    // Logs cursor internal functions
+    void handleLogsCursorRequested(Transaction& tx,
+                                   size_t cursor_index,
+                                   ValueCache& cache);
+    void handleLogsCursorProcessed(Transaction& tx, size_t cursor_index);
+    rocksdb::Status handleLogsCursorReorg(Transaction& tx,
+                                          size_t cursor_index,
+                                          uint256_t log_count,
+                                          ValueCache& cache);
 
    public:
     // Execution Cursor interaction
@@ -266,11 +278,6 @@ class ArbCore {
                                                   uint256_t count,
                                                   ValueCache& valueCache);
 
-    void handleLogsCursorRequested(Transaction& tx, ValueCache& cache);
-    void handleLogsCursorProcessed(Transaction& tx);
-    rocksdb::Status handleLogsCursorReorg(Transaction& tx,
-                                          uint256_t log_count,
-                                          ValueCache& cache);
     ValueResult<bool> executionCursorAddMessages(
         Transaction& tx,
         ExecutionCursor& execution_cursor,

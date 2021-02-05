@@ -348,11 +348,13 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
         pending_checkpoint = Checkpoint{};
     }
 
-    // Update log cursor, must be called before logs are deleted
-    auto status =
-        handleLogsCursorReorg(tx, pending_checkpoint.log_count, cache);
-    if (!status.ok()) {
-        return status;
+    // Update log cursors, must be called before logs are deleted
+    for (size_t i = 0; i < logs_cursors.size(); i++) {
+        auto status =
+            handleLogsCursorReorg(tx, i, pending_checkpoint.log_count, cache);
+        if (!status.ok()) {
+            return status;
+        }
     }
 
     // Delete logs individually to handle reference counts
@@ -362,7 +364,7 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
         return *optional_status;
     }
 
-    status = updateLogInsertedCount(tx, pending_checkpoint.log_count);
+    auto status = updateLogInsertedCount(tx, pending_checkpoint.log_count);
     if (!status.ok()) {
         return status;
     }
@@ -693,12 +695,14 @@ void ArbCore::operator()() {
             }
         }
 
-        if (logs_cursor.status == DataCursor::REQUESTED) {
-            auto tx = Transaction::makeTransaction(data_storage);
-            handleLogsCursorRequested(*tx, cache);
-        } else if (logs_cursor.starting_index == DataCursor::CONFIRMED) {
-            auto tx = Transaction::makeTransaction(data_storage);
-            handleLogsCursorProcessed(*tx);
+        for (auto i = 0; i < logs_cursors.size(); i++) {
+            if (logs_cursors[i].status == DataCursor::REQUESTED) {
+                auto tx = Transaction::makeTransaction(data_storage);
+                handleLogsCursorRequested(*tx, i, cache);
+            } else if (logs_cursors[i].status == DataCursor::CONFIRMED) {
+                auto tx = Transaction::makeTransaction(data_storage);
+                handleLogsCursorProcessed(*tx, i);
+            }
         }
 
         if (!machineIdle() || message_data_status != MESSAGES_READY) {
@@ -1611,81 +1615,97 @@ bool ArbCore::deleteMessage(const MessageEntry& entry) {
     return true;
 }
 
-void ArbCore::handleLogsCursorRequested(Transaction& tx, ValueCache& cache) {
+void ArbCore::handleLogsCursorRequested(Transaction& tx,
+                                        size_t cursor_index,
+                                        ValueCache& cache) {
     // Provide requested logs
-    logs_cursor.data.clear();
+    logs_cursors[cursor_index].data.clear();
     auto log_inserted_count = logInsertedCountImpl(tx);
     if (!log_inserted_count.status.ok()) {
-        logs_cursor.error_string = log_inserted_count.status.ToString();
-        logs_cursor.status = DataCursor::ERROR;
+        logs_cursors[cursor_index].error_string =
+            log_inserted_count.status.ToString();
+        logs_cursors[cursor_index].status = DataCursor::ERROR;
         return;
     }
     auto log_processed_count = logProcessedCount(tx);
     if (!log_processed_count.status.ok()) {
-        logs_cursor.error_string = log_processed_count.status.ToString();
-        logs_cursor.status = DataCursor::ERROR;
+        logs_cursors[cursor_index].error_string =
+            log_processed_count.status.ToString();
+        logs_cursors[cursor_index].status = DataCursor::ERROR;
         return;
     }
     if (log_processed_count.data >= log_inserted_count.data) {
         // No new data available
-        logs_cursor.status = DataCursor::READY;
+        logs_cursors[cursor_index].status = DataCursor::READY;
         return;
     }
-    if (log_processed_count.data + logs_cursor.requested_count >=
+    if (log_processed_count.data + logs_cursors[cursor_index].requested_count >=
         log_inserted_count.data) {
         // Too many entries requested
-        logs_cursor.requested_count =
-            log_inserted_count.data - logs_cursor.confirmed_next_index;
+        logs_cursors[cursor_index].requested_count =
+            log_inserted_count.data -
+            logs_cursors[cursor_index].confirmed_next_index;
     }
-    if (logs_cursor.requested_count == 0) {
-        logs_cursor.status = DataCursor::READY;
+    if (logs_cursors[cursor_index].requested_count == 0) {
+        logs_cursors[cursor_index].status = DataCursor::READY;
         return;
     }
     auto requested_logs =
-        getLogs(log_processed_count.data, logs_cursor.requested_count, cache);
+        getLogs(log_processed_count.data,
+                logs_cursors[cursor_index].requested_count, cache);
     if (!requested_logs.status.ok()) {
-        logs_cursor.error_string = requested_logs.status.ToString();
-        logs_cursor.status = DataCursor::ERROR;
+        logs_cursors[cursor_index].error_string =
+            requested_logs.status.ToString();
+        logs_cursors[cursor_index].status = DataCursor::ERROR;
         return;
     }
-    logs_cursor.data.insert(logs_cursor.data.end(), requested_logs.data.begin(),
-                            requested_logs.data.end());
-    logs_cursor.status = DataCursor::READY;
+    logs_cursors[cursor_index].data.insert(
+        logs_cursors[cursor_index].data.end(), requested_logs.data.begin(),
+        requested_logs.data.end());
+    logs_cursors[cursor_index].status = DataCursor::READY;
 }
 
-void ArbCore::handleLogsCursorProcessed(Transaction& tx) {
+void ArbCore::handleLogsCursorProcessed(Transaction& tx, size_t cursor_index) {
     auto log_inserted_count = logInsertedCountImpl(tx);
     if (!log_inserted_count.status.ok()) {
-        logs_cursor.error_string = log_inserted_count.status.ToString();
-        logs_cursor.status = DataCursor::ERROR;
+        logs_cursors[cursor_index].error_string =
+            log_inserted_count.status.ToString();
+        logs_cursors[cursor_index].status = DataCursor::ERROR;
         return;
     }
     auto log_processed_count = logProcessedCount(tx);
     if (!log_processed_count.status.ok()) {
-        logs_cursor.error_string = log_processed_count.status.ToString();
-        logs_cursor.status = DataCursor::ERROR;
+        logs_cursors[cursor_index].error_string =
+            log_processed_count.status.ToString();
+        logs_cursors[cursor_index].status = DataCursor::ERROR;
         return;
     }
 
-    if (logs_cursor.confirmed_next_index > log_inserted_count.data) {
+    if (logs_cursors[cursor_index].confirmed_next_index >
+        log_inserted_count.data) {
         // Invalid value probably because of reorg, just ignore
-        logs_cursor.status = DataCursor::EMPTY;
+        logs_cursors[cursor_index].status = DataCursor::EMPTY;
         return;
     }
 
     std::vector<unsigned char> processed_key;
-    marshal_uint256_t(logs_cursor.confirmed_next_index, processed_key);
+    marshal_uint256_t(logs_cursors[cursor_index].confirmed_next_index,
+                      processed_key);
     auto status = updateLogProcessedCount(tx, vecToSlice(processed_key));
 
-    logs_cursor.status = DataCursor::EMPTY;
+    logs_cursors[cursor_index].status = DataCursor::EMPTY;
 }
 
 // handleLogsCursorReorg must be called before logs are deleted
-// Note that this function should not update logs_cursor.status because
-// it is happening out of line
+// Note that this function should not update logs_cursors[cursor_index].status
+// because it is happening out of line
 rocksdb::Status ArbCore::handleLogsCursorReorg(Transaction& tx,
+                                               size_t cursor_index,
                                                uint256_t log_count,
                                                ValueCache& cache) {
+    const std::lock_guard<std::mutex> lock(
+        logs_cursors[cursor_index].reorg_mutex);
+
     auto log_inserted_count = logInsertedCountImpl(tx);
     if (!log_inserted_count.status.ok()) {
         return log_inserted_count.status;
@@ -1700,99 +1720,108 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(Transaction& tx,
         return rocksdb::Status::OK();
     }
 
-    const std::lock_guard<std::mutex> lock(logs_cursor.reorg_mutex);
-
     if (log_count < log_processed_count.data) {
-        // Need to save logs that need to be deleted
+        // Need to save logs that will be deleted
         auto logs = getLogsNoLock(tx, log_count - 1,
                                   log_inserted_count.data - log_count, cache);
         if (!logs.status.ok()) {
             return logs.status;
         }
-        logs_cursor.deleted_data.insert(logs_cursor.deleted_data.end(),
-                                        logs.data.begin(), logs.data.end());
-        logs_cursor.deleted_ready = true;
+        logs_cursors[cursor_index].deleted_data.insert(
+            logs_cursors[cursor_index].deleted_data.end(), logs.data.begin(),
+            logs.data.end());
     }
 
-    if (!logs_cursor.data.empty()) {
-        if (logs_cursor.starting_index >= log_count) {
+    if (!logs_cursors[cursor_index].data.empty()) {
+        if (logs_cursors[cursor_index].starting_index >= log_count) {
             // Don't save anything
-            logs_cursor.data.clear();
-        } else if (logs_cursor.starting_index + logs_cursor.data.size() >
+            logs_cursors[cursor_index].data.clear();
+        } else if (logs_cursors[cursor_index].starting_index +
+                       logs_cursors[cursor_index].data.size() >
                    log_count) {
             // Only part of the data needs to be removed
-            auto offset = intx::narrow_cast<size_t>(log_count -
-                                                    logs_cursor.starting_index);
-            logs_cursor.data.erase(logs_cursor.data.begin() + offset,
-                                   logs_cursor.data.end());
+            auto offset = intx::narrow_cast<size_t>(
+                log_count - logs_cursors[cursor_index].starting_index);
+            logs_cursors[cursor_index].data.erase(
+                logs_cursors[cursor_index].data.begin() + offset,
+                logs_cursors[cursor_index].data.end());
         }
     }
 
     return rocksdb::Status::OK();
 }
 
-bool ArbCore::logsCursorRequest(uint256_t count) {
-    if (logs_cursor.status != DataCursor::EMPTY) {
+bool ArbCore::logsCursorRequest(size_t cursor_index, uint256_t count) {
+    if (logs_cursors[cursor_index].status != DataCursor::EMPTY) {
         return false;
     }
 
-    logs_cursor.requested_count = count;
-    logs_cursor.status = DataCursor::REQUESTED;
+    logs_cursors[cursor_index].requested_count = count;
+    logs_cursors[cursor_index].status = DataCursor::REQUESTED;
 
     return true;
 }
 
-bool ArbCore::logsCursorCheckError() const {
-    return logs_cursor.status == DataCursor::ERROR;
+nonstd::optional<std::vector<value>> ArbCore::logsCursorGetLogs(
+    size_t cursor_index) {
+    const std::lock_guard<std::mutex> lock(
+        logs_cursors[cursor_index].reorg_mutex);
+
+    if (logs_cursors[cursor_index].status != DataCursor::READY ||
+        !logs_cursors[cursor_index].deleted_data.empty()) {
+        return nonstd::nullopt;
+    }
+
+    std::vector<value> logs{std::move(logs_cursors[cursor_index].data)};
+    logs_cursors[cursor_index].data.clear();
+
+    return logs;
 }
 
-std::string ArbCore::logsCursorClearError() {
-    if (logs_cursor.status != DataCursor::ERROR) {
+nonstd::optional<std::vector<value>> ArbCore::logsCursorGetDeletedLogs(
+    size_t cursor_index) {
+    const std::lock_guard<std::mutex> lock(
+        logs_cursors[cursor_index].reorg_mutex);
+
+    if (logs_cursors[cursor_index].status != DataCursor::READY ||
+        logs_cursors[cursor_index].deleted_data.empty()) {
+        return nonstd::nullopt;
+    }
+
+    std::vector<value> logs{std::move(logs_cursors[cursor_index].deleted_data)};
+    logs_cursors[cursor_index].data.clear();
+
+    return logs;
+}
+
+bool ArbCore::logsCursorSetConfirmedCount(size_t cursor_index,
+                                          uint256_t log_count) {
+    const std::lock_guard<std::mutex> lock(
+        logs_cursors[cursor_index].reorg_mutex);
+    if (logs_cursors[cursor_index].status != DataCursor::READY ||
+        !logs_cursors[cursor_index].data.empty() ||
+        !logs_cursors[cursor_index].deleted_data.empty()) {
+        return false;
+    }
+
+    logs_cursors[cursor_index].confirmed_next_index = log_count;
+    logs_cursors[cursor_index].status = DataCursor::CONFIRMED;
+
+    return true;
+}
+
+bool ArbCore::logsCursorCheckError(size_t cursor_index) const {
+    return logs_cursors[cursor_index].status == DataCursor::ERROR;
+}
+
+std::string ArbCore::logsCursorClearError(size_t cursor_index) {
+    if (logs_cursors[cursor_index].status != DataCursor::ERROR) {
         return nullptr;
     }
 
-    logs_cursor.status = DataCursor::EMPTY;
-    auto str = logs_cursor.error_string;
-    logs_cursor.error_string.clear();
+    auto str = logs_cursors[cursor_index].error_string;
+    logs_cursors[cursor_index].error_string.clear();
+    logs_cursors[cursor_index].status = DataCursor::EMPTY;
 
     return str;
-}
-
-bool ArbCore::logsCursorSetConfirmedCount(uint256_t log_count) {
-    if (logs_cursor.status != DataCursor::EMPTY) {
-        return false;
-    }
-
-    logs_cursor.confirmed_next_index = log_count;
-    logs_cursor.status = DataCursor::CONFIRMED;
-
-    return true;
-}
-
-nonstd::optional<std::vector<value>> ArbCore::logsCursorGetLogs() {
-    const std::lock_guard<std::mutex> lock(logs_cursor.reorg_mutex);
-
-    if (logs_cursor.status != DataCursor::READY || logs_cursor.deleted_ready) {
-        return nonstd::nullopt;
-    }
-
-    std::vector<value> logs{std::move(logs_cursor.data)};
-    logs_cursor.data.clear();
-    logs_cursor.status = DataCursor::EMPTY;
-
-    return logs;
-}
-
-nonstd::optional<std::vector<value>> ArbCore::logsCursorGetDeletedLogs() {
-    const std::lock_guard<std::mutex> lock(logs_cursor.reorg_mutex);
-
-    if (!logs_cursor.deleted_ready) {
-        return nonstd::nullopt;
-    }
-
-    std::vector<value> logs{std::move(logs_cursor.deleted_data)};
-    logs_cursor.data.clear();
-    logs_cursor.status = DataCursor::EMPTY;
-
-    return logs;
 }

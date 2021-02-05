@@ -261,12 +261,16 @@ int arbCoreGetLogAcc(CArbCore* arbcore_ptr,
     }
 }
 
-int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr, const void* count_ptr) {
+int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr,
+                             const void* index_ptr,
+                             const void* count_ptr) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
+    auto cursor_index = receiveUint256(index_ptr);
     auto count = receiveUint256(count_ptr);
 
     try {
-        auto status = arbcore->logsCursorRequest(count);
+        auto status = arbcore->logsCursorRequest(
+            intx::narrow_cast<size_t>(cursor_index), count);
 
         return status;
     } catch (const std::exception& e) {
@@ -274,11 +278,14 @@ int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr, const void* count_ptr) {
     }
 }
 
-ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr) {
+ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
+                                              const void* index_ptr) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
+    auto cursor_index = receiveUint256(index_ptr);
 
     try {
-        auto result = arbcore->logsCursorGetLogs();
+        auto result =
+            arbcore->logsCursorGetLogs(intx::narrow_cast<size_t>(cursor_index));
         if (!result) {
             // Cursor not in the right state, may have deleted logs to process
             return {{}, false};
@@ -296,11 +303,14 @@ ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr) {
     }
 }
 
-ByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(CArbCore* arbcore_ptr) {
+ByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(CArbCore* arbcore_ptr,
+                                                     const void* index_ptr) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
+    auto cursor_index = receiveUint256(index_ptr);
 
     try {
-        auto result = arbcore->logsCursorGetLogs();
+        auto result =
+            arbcore->logsCursorGetLogs(intx::narrow_cast<size_t>(cursor_index));
         if (!result) {
             // Cursor not in the right state, may have deleted logs to process
             return {{}, false};
@@ -319,12 +329,15 @@ ByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(CArbCore* arbcore_ptr) {
 }
 
 int arbCoreLogsCursorSetConfirmedCount(CArbCore* arbcore_ptr,
+                                       const void* index_ptr,
                                        const void* count_ptr) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
+    auto cursor_index = receiveUint256(index_ptr);
     auto count = receiveUint256(count_ptr);
 
     try {
-        auto status = arbcore->logsCursorSetConfirmedCount(count);
+        auto status = arbcore->logsCursorSetConfirmedCount(
+            intx::narrow_cast<size_t>(cursor_index), count);
 
         return status;
     } catch (const std::exception& e) {
@@ -332,22 +345,27 @@ int arbCoreLogsCursorSetConfirmedCount(CArbCore* arbcore_ptr,
     }
 }
 
-int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr) {
+int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr, const void* index_ptr) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
+    auto cursor_index = receiveUint256(index_ptr);
 
     try {
-        return arbcore->logsCursorCheckError();
+        return arbcore->logsCursorCheckError(
+            intx::narrow_cast<size_t>(cursor_index));
     } catch (const std::exception& e) {
         return 0;
     }
 }
 
 // Returned string must be freed
-char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr) {
+char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr,
+                                  const void* index_ptr) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
+    auto cursor_index = receiveUint256(index_ptr);
 
     try {
-        auto str = arbcore->logsCursorClearError();
+        auto str = arbcore->logsCursorClearError(
+            intx::narrow_cast<size_t>(cursor_index));
 
         if (str.empty()) {
             return nullptr;

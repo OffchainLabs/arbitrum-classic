@@ -32,14 +32,13 @@ class DataCursor {
     typedef enum {
         EMPTY,      // Out: Ready to receive request for data
         REQUESTED,  // In: Data requested
-        READY,      // In: Data are ready to be picked up
+        READY,      // Out: Data is ready to be picked up
         CONFIRMED,  // In: Data count to confirm as received
         ERROR       // Out: Error getting data
     } status_enum;
 
    public:
-    std::atomic<status_enum> status;
-    std::atomic<bool> deleted_ready;
+    std::atomic<status_enum> status{EMPTY};
 
     // Mutex is acquired by core thread when reorg is occurring.
     // Other threads should acquire mutex whenever accessing below data.
@@ -54,6 +53,7 @@ class DataCursor {
     uint256_t confirmed_next_index;
 
    public:
+    DataCursor() = default;
 };
 
 #endif /* data_storage_datacursor_hpp */

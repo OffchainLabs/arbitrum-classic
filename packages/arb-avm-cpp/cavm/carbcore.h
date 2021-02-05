@@ -72,13 +72,20 @@ int arbCoreGetLogAcc(CArbCore* arbcore_ptr,
                      const void* count_ptr,
                      void* ret);
 
-int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr, const void* count);
-ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr);
-ByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(CArbCore* arbcore_ptr);
+int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr,
+                             const void* cursor_index,
+                             const void* count);
+ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
+                                              const void* cursor_index);
+ByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(CArbCore* arbcore_ptr,
+                                                     const void* cursor_index);
 int arbCoreLogsCursorSetConfirmedCount(CArbCore* arbcore_ptr,
+                                       const void* cursor_index,
                                        const void* count_ptr);
-int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr);
-char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr);
+int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr,
+                                const void* cursor_index);
+char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr,
+                                  const void* cursor_index);
 
 CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
                                             const void* total_gas_used_ptr);

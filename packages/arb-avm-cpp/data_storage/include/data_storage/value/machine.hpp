@@ -21,7 +21,7 @@
 
 #include <rocksdb/status.h>
 #include <avm_values/bigint.hpp>
-#include <avm_values/codepointstub.hpp>
+#include <avm_values/codepoint.hpp>
 
 class Transaction;
 
