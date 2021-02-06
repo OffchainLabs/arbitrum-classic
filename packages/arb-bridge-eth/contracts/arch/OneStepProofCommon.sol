@@ -261,9 +261,9 @@ abstract contract OneStepProofCommon {
                 ValueStack(stackCount, stackVals),
                 ValueStack(auxstackCount, auxstackVals),
                 uint8(proof[offset]) == 1,
-                uint8(proof[offset + 1]),
+                opCode,
                 proof,
-                offset + 2,
+                offset + 1,
                 bproof,
                 false
             );
