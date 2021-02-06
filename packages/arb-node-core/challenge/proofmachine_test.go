@@ -185,7 +185,7 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 				proof.BeforeCut.SendAcc,
 				proof.BeforeCut.LogAcc,
 			}
-			if len(proof.BufferProof) == 0 {
+			if proof.Proof[0] < 0xa1 || proof.Proof[0] > 0xa6 || proof.Proof[0] == 0x70 {
 				machineData, err = osp.ExecuteStep(
 					&bind.CallOpts{Context: ctx},
 					machineFields,

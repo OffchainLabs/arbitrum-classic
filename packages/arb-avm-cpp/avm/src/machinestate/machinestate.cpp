@@ -258,6 +258,12 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
         return buf;
     }
     if (opcode == OpCode::SEND) {
+        // No need for proof in underflow
+        if (stack.stacksize() +
+                static_cast<uint64_t>(op.immediate.has_value()) <
+            2) {
+            return buf;
+        }
         auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0])
                                    : nonstd::get_if<Buffer>(&stack[1]);
         if (!buffer) {
@@ -279,6 +285,12 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
     }
     if (opcode == OpCode::GET_BUFFER8 || opcode == OpCode::GET_BUFFER64 ||
         opcode == OpCode::GET_BUFFER256) {
+        // No need for proof in underflow
+        if (stack.stacksize() +
+                static_cast<uint64_t>(op.immediate.has_value()) <
+            2) {
+            return buf;
+        }
         // Find the buffer
         auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0])
                                    : nonstd::get_if<Buffer>(&stack[1]);
@@ -316,6 +328,12 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
             buf.insert(buf.end(), proof2.begin(), proof2.end());
         }
     } else {
+        // No need for proof in underflow
+        if (stack.stacksize() +
+                static_cast<uint64_t>(op.immediate.has_value()) <
+            3) {
+            return buf;
+        }
         auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[1])
                                    : nonstd::get_if<Buffer>(&stack[2]);
         if (!buffer) {
