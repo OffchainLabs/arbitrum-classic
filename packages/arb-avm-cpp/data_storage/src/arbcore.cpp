@@ -596,11 +596,11 @@ void ArbCore::operator()() {
                           << core_error_string << "\n";
                 break;
             }
-            auto last_sequence_number_consumed =
+            auto total_messages_consumed =
                 first_sequence_number_in_machine +
                 last_assertion.inbox_messages_consumed;
 
-            if (last_sequence_number_consumed > messages_inserted.data) {
+            if (total_messages_consumed > messages_inserted.data) {
                 // Machine consumed obsolete message, restore from checkpoint
                 machine = getMachineUsingStateKeys<MachineThread>(
                     *tx, pending_checkpoint.machine_state_keys, cache);
@@ -772,8 +772,8 @@ ValueResult<std::vector<value>> ArbCore::getLogsNoLock(Transaction& tx,
         return {log_count.status, {}};
     }
     auto max_log_count = log_count.data;
-    if (index > max_log_count - 1) {
-        return {rocksdb::Status::OK(), {}};
+    if (index >= max_log_count) {
+        return {rocksdb::Status::NotFound(), {}};
     }
     if (index + count > max_log_count) {
         count = max_log_count - index;
@@ -836,13 +836,12 @@ ValueResult<std::vector<uint256_t>> ArbCore::getInboxHashes(
     if (!message_count_result.status.ok()) {
         return {message_count_result.status, {}};
     }
-    auto max_message_index = message_count_result.data - 1;
-    if (index > max_message_index) {
+    auto max_message_count = message_count_result.data;
+    if (index >= max_message_count) {
         return {rocksdb::Status::NotFound(), {}};
     }
-    if (index + count > max_message_index) {
-        // count = max_message_index - index;
-        return {rocksdb::Status::NotFound(), {}};
+    if (index + count > max_message_count) {
+        count = max_message_count - index;
     }
 
     std::vector<unsigned char> key;
@@ -877,12 +876,12 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     if (!message_count.status.ok()) {
         return {message_count.status, {}};
     }
-    auto max_message_index = message_count.data - 1;
-    if (index > max_message_index) {
-        return {rocksdb::Status::OK(), {}};
+    auto max_message_count = message_count.data;
+    if (index >= max_message_count) {
+        return {rocksdb::Status::NotFound(), {}};
     }
-    if (index + count > max_message_index) {
-        count = max_message_index - index;
+    if (index + count > max_message_count) {
+        count = max_message_count - index;
     }
 
     std::vector<unsigned char> key;
@@ -936,12 +935,12 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
     if (!send_count.status.ok()) {
         return {send_count.status, {}};
     }
-    auto max_message_index = send_count.data - 1;
-    if (index > max_message_index) {
-        return {rocksdb::Status::OK(), {}};
+    auto max_send_count = send_count.data;
+    if (index >= max_send_count) {
+        return {rocksdb::Status::NotFound(), {}};
     }
-    if (index + count > max_message_index) {
-        count = max_message_index - index;
+    if (index + count > max_send_count) {
+        count = max_send_count - index;
     }
 
     std::vector<unsigned char> key;
