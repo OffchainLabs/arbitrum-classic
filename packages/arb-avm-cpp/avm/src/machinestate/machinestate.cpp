@@ -488,6 +488,7 @@ BlockReason MachineState::runOne() {
             return NotBlocked();
         }
         arb_gas_remaining -= gas_cost;
+        context.numGas += gas_cost;
 
         if (!is_valid_instruction) {
             // The opcode is invalid, execute by transitioning to the error
@@ -509,14 +510,12 @@ BlockReason MachineState::runOne() {
             // Get rid of the immediate and reset the gas if the machine was
             // actually blocked
             arb_gas_remaining += gas_cost;
+            context.numGas -= gas_cost;
             if (instruction.op.immediate) {
                 stack.popClear();
             }
             return blockReason;
         }
-
-        // adjust for the gas used
-        context.numGas += gas_cost;
 
         if (state == Status::Error) {
             // if state is Error, clean up stack
