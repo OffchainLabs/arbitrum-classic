@@ -200,14 +200,11 @@ abstract contract OneStepProofCommon {
         uint256 offset;
         // merkle proofs for buffer
         bytes bufProof;
+        bool errorOccurred;
     }
 
     function handleError(AssertionContext memory context) internal pure {
-        if (context.afterMachine.errHandlerHash == CODE_POINT_ERROR) {
-            context.afterMachine.setErrorStop();
-        } else {
-            context.afterMachine.instructionStackHash = context.afterMachine.errHandlerHash;
-        }
+        context.errorOccurred = true;
     }
 
     function deductGas(AssertionContext memory context, uint64 amount)
@@ -218,7 +215,6 @@ abstract contract OneStepProofCommon {
         context.gas += amount;
         if (context.afterMachine.arbGasRemaining < amount) {
             context.afterMachine.arbGasRemaining = MAX_UINT256;
-            handleError(context);
             return true;
         } else {
             context.afterMachine.arbGasRemaining -= amount;
@@ -228,9 +224,6 @@ abstract contract OneStepProofCommon {
 
     function handleOpcodeError(AssertionContext memory context) internal pure {
         handleError(context);
-        // Also clear the stack and auxstack
-        context.stack.length = 0;
-        context.auxstack.length = 0;
     }
 
     function initializeExecutionContext(
@@ -270,7 +263,8 @@ abstract contract OneStepProofCommon {
                 uint8(proof[offset + 1]),
                 proof,
                 offset + 2,
-                bproof
+                bproof,
+                false
             );
 
         uint8 immediate = uint8(proof[offset]);
@@ -312,12 +306,18 @@ abstract contract OneStepProofCommon {
             function(AssertionContext memory) internal view impl
         ) = opInfo(context.opcode);
 
+        // Require the prover to submit the minimal number of stack items
+        require(
+            ((dataPopCount > 0 || !context.hadImmediate) && context.stack.length <= dataPopCount) ||
+                (context.hadImmediate && dataPopCount == 0 && context.stack.length == 1),
+            STACK_MANY
+        );
+        require(context.auxstack.length <= auxPopCount, AUX_MANY);
+
         // Update end machine gas remaining before running opcode
         if (deductGas(context, gasCost)) {
-            return;
-        }
-
-        if (context.stack.length < dataPopCount) {
+            handleError(context);
+        } else if (context.stack.length < dataPopCount) {
             // If we have insufficient values, reject the proof unless the stack has been fully exhausted
             require(
                 context.afterMachine.dataStack.hash() == Value.newEmptyTuple().hash(),
@@ -325,10 +325,7 @@ abstract contract OneStepProofCommon {
             );
             // If the stack is empty, the instruction underflowed so we have hit an error
             handleError(context);
-            return;
-        }
-
-        if (context.auxstack.length < auxPopCount) {
+        } else if (context.auxstack.length < auxPopCount) {
             // If we have insufficient values, reject the proof unless the auxstack has been fully exhausted
             require(
                 context.afterMachine.auxStack.hash() == Value.newEmptyTuple().hash(),
@@ -336,18 +333,24 @@ abstract contract OneStepProofCommon {
             );
             // If the auxstack is empty, the instruction underflowed so we have hit an error
             handleError(context);
-            return;
+        } else {
+            impl(context);
         }
 
-        // Require the prover to submit the minimal number of stack items
-        require(
-            ((dataPopCount > 0 || !context.hadImmediate) && context.stack.length == dataPopCount) ||
-                (context.hadImmediate && dataPopCount == 0 && context.stack.length == 1),
-            STACK_MANY
-        );
-        require(context.auxstack.length == auxPopCount, AUX_MANY);
+        if (context.errorOccurred) {
+            if (context.afterMachine.errHandlerHash == CODE_POINT_ERROR) {
+                context.afterMachine.setErrorStop();
+            } else {
+                // Clear error
+                context.errorOccurred = false;
+                context.afterMachine.instructionStackHash = context.afterMachine.errHandlerHash;
 
-        impl(context);
+                if (!(context.hadImmediate && dataPopCount == 0)) {
+                    context.stack.length = 0;
+                }
+                context.auxstack.length = 0;
+            }
+        }
 
         // Add the stack and auxstack values to the start machine
         uint256 i = 0;
