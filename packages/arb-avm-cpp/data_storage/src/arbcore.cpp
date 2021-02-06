@@ -695,7 +695,7 @@ void ArbCore::operator()() {
             }
         }
 
-        for (auto i = 0; i < logs_cursors.size(); i++) {
+        for (size_t i = 0; i < logs_cursors.size(); i++) {
             if (logs_cursors[i].status == DataCursor::REQUESTED) {
                 auto tx = Transaction::makeTransaction(data_storage);
                 handleLogsCursorRequested(*tx, i, cache);
@@ -838,10 +838,11 @@ ValueResult<std::vector<uint256_t>> ArbCore::getInboxHashes(
     }
     auto max_message_index = message_count_result.data - 1;
     if (index > max_message_index) {
-        return {rocksdb::Status::OK(), {}};
+        return {rocksdb::Status::NotFound(), {}};
     }
     if (index + count > max_message_index) {
-        count = max_message_index - index;
+        // count = max_message_index - index;
+        return {rocksdb::Status::NotFound(), {}};
     }
 
     std::vector<unsigned char> key;
@@ -849,7 +850,7 @@ ValueResult<std::vector<uint256_t>> ArbCore::getInboxHashes(
     auto key_slice = vecToSlice(key);
 
     auto results = getVectorVectorUsingFamilyAndKey(
-        *tx->transaction, data_storage->send_column.get(), key_slice,
+        *tx->transaction, data_storage->messageentry_column.get(), key_slice,
         intx::narrow_cast<size_t>(count));
     if (!results.status.ok()) {
         return {results.status, {}};
@@ -889,7 +890,7 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     auto key_slice = vecToSlice(key);
 
     auto results = getVectorVectorUsingFamilyAndKey(
-        *tx->transaction, data_storage->send_column.get(), key_slice,
+        *tx->transaction, data_storage->messageentry_column.get(), key_slice,
         intx::narrow_cast<size_t>(count));
     if (!results.status.ok()) {
         return {results.status, {}};

@@ -50,19 +50,21 @@ TEST_CASE("ArbCore tests") {
             }
 
             std::vector<InboxMessage> inbox_messages;
+            inbox_messages.reserve(inbox_message_tuples.size());
             for (const auto& msg : inbox_message_tuples) {
                 inbox_messages.push_back(InboxMessage::fromTuple(msg));
             }
 
             std::vector<std::vector<unsigned char>> raw_messages;
+            raw_messages.reserve(inbox_messages.size());
             for (const auto& msg : inbox_messages) {
                 raw_messages.push_back(msg.serialize());
             }
 
-            for (size_t i = 0; i < raw_messages.size(); ++i) {
-                auto msg = extractInboxMessage(raw_messages[i]);
+            for (size_t k = 0; k < raw_messages.size(); ++k) {
+                auto msg = extractInboxMessage(raw_messages[k]);
                 auto msg_tup = msg.toTuple();
-                REQUIRE(hash(msg_tup) == hash(inbox_message_tuples[i]));
+                REQUIRE(hash(msg_tup) == hash(inbox_message_tuples[k]));
             }
 
             auto logs_json = j.at("logs");
