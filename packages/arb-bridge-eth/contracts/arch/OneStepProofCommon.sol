@@ -233,9 +233,10 @@ abstract contract OneStepProofCommon {
         bytes memory proof,
         bytes memory bproof
     ) internal pure returns (AssertionContext memory) {
-        uint8 stackCount = uint8(proof[0]);
-        uint8 auxstackCount = uint8(proof[1]);
-        uint256 offset = 2;
+        uint8 opCode = uint8(proof[0]);
+        uint8 stackCount = uint8(proof[1]);
+        uint8 auxstackCount = uint8(proof[2]);
+        uint256 offset = 3;
 
         // Leave some extra space for values pushed on the stack in the proofs
         Value.Data[] memory stackVals = new Value.Data[](stackCount + 4);
@@ -268,8 +269,7 @@ abstract contract OneStepProofCommon {
             );
 
         uint8 immediate = uint8(proof[offset]);
-        uint8 opCode = uint8(proof[offset + 1]);
-        offset += 2;
+        offset += 1;
 
         require(immediate == 0 || immediate == 1, BAD_IMM_TYP);
         Value.Data memory cp;

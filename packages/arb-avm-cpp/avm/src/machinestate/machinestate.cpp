@@ -395,6 +395,7 @@ std::vector<unsigned char> MachineState::marshalForProof() const {
     }
 
     std::vector<unsigned char> buf;
+    buf.push_back(static_cast<uint8_t>(current_op.opcode));
     buf.push_back(stack_pop_count);
     buf.push_back(auxStackPops.size());
 
@@ -413,7 +414,6 @@ std::vector<unsigned char> MachineState::marshalForProof() const {
                    arb_gas_remaining, errpc, staged_message);
 
     buf.push_back(current_op.immediate ? 1 : 0);
-    buf.push_back(static_cast<uint8_t>(current_op.opcode));
     return buf;
 }
 
