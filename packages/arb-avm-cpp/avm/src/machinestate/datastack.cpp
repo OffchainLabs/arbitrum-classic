@@ -44,13 +44,20 @@ std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
     Datastack c = *this;
     std::vector<unsigned char> buf;
     std::vector<value> values;
-    for (size_t i = 0; i < stackInfo.size(); ++i) {
+
+    // If the stack is underflowing, just send what's left
+    size_t items_to_pop = stackInfo.size();
+    if (c.stacksize() < items_to_pop) {
+        items_to_pop = c.stacksize();
+    }
+
+    for (size_t i = 0; i < items_to_pop; ++i) {
         values.push_back(c.pop());
     }
 
     // Marshal the values from deepest to most shallow in the stack
-    for (size_t i = 0; i < stackInfo.size(); ++i) {
-        auto index = stackInfo.size() - 1 - i;
+    for (size_t i = 0; i < values.size(); ++i) {
+        auto index = values.size() - 1 - i;
         ::marshalForProof(values[index], stackInfo[index], buf, code);
     }
 
