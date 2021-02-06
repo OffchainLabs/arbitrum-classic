@@ -134,6 +134,8 @@ Messages may arrive in the Inbox at any time (but not during the execution of an
 
 Certain conditions are said to “raise an Error”. If an Error is raised when the Error Codepoint is (0,0,0), then the VM enters the ErrorStop state. If an Error is raised when the Error Codepoint is not (0,0,0), then the Current Codepoint is set equal to the Error Codepoint.
 
+If an instruction raises an Error, the effect of the instruction on the Stack is as follows: first, if the instruction has an immediate value, that value is pushed onto the Stack; then, if the instruction would remove K items from the Stack in the non-error case, K items are removed from the Stack (except that the Stack is left empty if this would underflow the Stack).  Similarly, if the instruction would remove L items from the AuxStack in the non-error case, L items are removed from the AuxStack (except that the AuxStack is left empty if this would underflow the AuxStack).
+
 ## Blocking
 
 Some instructions are said to “block” until some condition is true. This means that if the condition is false, the instruction cannot complete execution and the VM must stay in the state it was in before the instruction. If the condition is true, the VM can execute the instruction. The result is as if the VM stopped and waited until the condition became true.
