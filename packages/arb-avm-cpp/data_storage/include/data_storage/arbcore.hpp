@@ -177,7 +177,7 @@ class ArbCore {
         size_t cursor_index);
     bool logsCursorCheckError(size_t cursor_index) const;
     std::string logsCursorClearError(size_t cursor_index);
-    bool logsCursorSetConfirmedCount(size_t cursor_index, uint256_t log_count);
+    bool logsCursorConfirmReceived(size_t cursor_index);
 
    private:
     // Logs cursor internal functions

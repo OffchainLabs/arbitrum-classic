@@ -1794,17 +1794,25 @@ nonstd::optional<std::vector<value>> ArbCore::logsCursorGetDeletedLogs(
     return logs;
 }
 
-bool ArbCore::logsCursorSetConfirmedCount(size_t cursor_index,
-                                          uint256_t log_count) {
+bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {
     const std::lock_guard<std::mutex> lock(
         logs_cursors[cursor_index].reorg_mutex);
-    if (logs_cursors[cursor_index].status != DataCursor::READY ||
-        !logs_cursors[cursor_index].data.empty() ||
-        !logs_cursors[cursor_index].deleted_data.empty()) {
+
+    if (logs_cursors[cursor_index].status != DataCursor::READY) {
+        logs_cursors[cursor_index].error_string =
+            "logsCursorSetReceived called at wrong state";
+        std::cerr << "Logs Cursor Set Received called at wrong state: "
+                  << logs_cursors[cursor_index].status << "\n";
+        logs_cursors[cursor_index].status = DataCursor::ERROR;
         return false;
     }
 
-    logs_cursors[cursor_index].confirmed_next_index = log_count;
+    if (!logs_cursors[cursor_index].data.empty() ||
+        !logs_cursors[cursor_index].deleted_data.empty()) {
+        // Still have logs to get
+        return false;
+    }
+
     logs_cursors[cursor_index].status = DataCursor::CONFIRMED;
 
     return true;
