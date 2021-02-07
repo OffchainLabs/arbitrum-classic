@@ -183,16 +183,6 @@ std::vector<unsigned char> MachineState::marshalState() const {
     return buf;
 }
 
-std::vector<unsigned char> makeProof(Buffer& buf, uint64_t loc) {
-    auto res2 = buf.makeProof(loc);
-    return res2;
-}
-
-std::vector<unsigned char> makeNormalizationProof(Buffer& buf) {
-    auto res2 = buf.makeNormalizationProof();
-    return res2;
-}
-
 void insertSizes(std::vector<unsigned char>& buf,
                  int sz1,
                  int sz2,
@@ -230,16 +220,16 @@ void makeSetBufferProof(std::vector<unsigned char>& buf,
             loc + i,
             static_cast<uint8_t>((v >> ((wordSize - 1 - i) * 8)) & 0xff));
     }
-    auto proof1 = makeProof(buffer, loc);
-    auto nproof1 = makeNormalizationProof(nbuffer1);
+    auto proof1 = buffer.makeProof(loc);
+    auto nproof1 = nbuffer1.makeNormalizationProof();
 
     if (aligned) {
         insertSizes(buf, proof1.size(), nproof1.size(), 0, 0);
         buf.insert(buf.end(), proof1.begin(), proof1.end());
         buf.insert(buf.end(), nproof1.begin(), nproof1.end());
     } else {
-        auto proof2 = makeProof(nbuffer1, loc + (wordSize - 1));
-        auto nproof2 = makeNormalizationProof(nbuffer);
+        auto proof2 = nbuffer1.makeProof(loc + (wordSize - 1));
+        auto nproof2 = nbuffer.makeNormalizationProof();
         insertSizes(buf, proof1.size(), nproof1.size(), proof2.size(),
                     nproof2.size());
         buf.insert(buf.end(), proof1.begin(), proof1.end());
@@ -249,39 +239,47 @@ void makeSetBufferProof(std::vector<unsigned char>& buf,
     }
 }
 
-std::vector<unsigned char> MachineState::marshalBufferProof() {
-    std::vector<unsigned char> buf;
+void MachineState::marshalBufferProof(OneStepProof& proof) const {
     auto op = loadCurrentInstruction().op;
     auto opcode = op.opcode;
     if ((opcode < OpCode::GET_BUFFER8 || opcode > OpCode::SET_BUFFER256) &&
         opcode != OpCode::SEND) {
-        return buf;
+        return;
     }
     if (opcode == OpCode::SEND) {
         // No need for proof in underflow
         if (stack.stacksize() +
                 static_cast<uint64_t>(op.immediate.has_value()) <
             2) {
-            return buf;
+            return;
         }
         auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0])
                                    : nonstd::get_if<Buffer>(&stack[1]);
         if (!buffer) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            return;
         }
         // Also need the offset
         auto size = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate)
                                  : nonstd::get_if<uint256_t>(&stack[0]);
         if (!size) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            return;
         }
         auto loc = static_cast<uint64_t>(*size);
-        auto proof = makeProof(*buffer, loc);
-        insertSizes(buf, proof.size(), 0, 0, 0);
-        buf.insert(buf.end(), proof.begin(), proof.end());
-        return buf;
+        auto data = buffer->toFlatVector();
+
+        // Loc must be at or past the last nonzero index in the buffer
+        if (loc < data.size()) {
+            auto buf_proof = buffer->makeProof(loc);
+            insertSizes(proof.buffer_proof, buf_proof.size(), 0, 0, 0);
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_proof.begin(), buf_proof.end());
+        } else {
+            proof.standard_proof.insert(proof.standard_proof.end(),
+                                        data.begin(), data.end());
+            std::fill_n(std::back_inserter(proof.standard_proof),
+                        loc - data.size(), 0);
+        }
+        return;
     }
     if (opcode == OpCode::GET_BUFFER8 || opcode == OpCode::GET_BUFFER64 ||
         opcode == OpCode::GET_BUFFER256) {
@@ -289,93 +287,101 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
         if (stack.stacksize() +
                 static_cast<uint64_t>(op.immediate.has_value()) <
             2) {
-            return buf;
+            return;
         }
         // Find the buffer
         auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0])
                                    : nonstd::get_if<Buffer>(&stack[1]);
         if (!buffer) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            insertSizes(proof.buffer_proof, 0, 0, 0, 0);
+            return;
         }
         // Also need the offset
         auto offset = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate)
                                    : nonstd::get_if<uint256_t>(&stack[0]);
         if (!offset) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            insertSizes(proof.buffer_proof, 0, 0, 0, 0);
+            return;
         }
         if (*offset > std::numeric_limits<uint64_t>::max()) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            insertSizes(proof.buffer_proof, 0, 0, 0, 0);
+            return;
         }
         auto loc = static_cast<uint64_t>(*offset);
         if (opcode == OpCode::GET_BUFFER8) {
-            auto proof = makeProof(*buffer, loc);
-            insertSizes(buf, proof.size(), 0, 0, 0);
-            buf.insert(buf.end(), proof.begin(), proof.end());
+            auto buf_proof = buffer->makeProof(loc);
+            insertSizes(proof.buffer_proof, buf_proof.size(), 0, 0, 0);
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_proof.begin(), buf_proof.end());
         } else if (opcode == OpCode::GET_BUFFER64) {
-            auto proof1 = makeProof(*buffer, loc);
-            auto proof2 = makeProof(*buffer, loc + 7);
-            insertSizes(buf, proof1.size(), 0, proof2.size(), 0);
-            buf.insert(buf.end(), proof1.begin(), proof1.end());
-            buf.insert(buf.end(), proof2.begin(), proof2.end());
+            auto buf_proof1 = buffer->makeProof(loc);
+            auto buf_proof2 = buffer->makeProof(loc + 7);
+            insertSizes(proof.buffer_proof, buf_proof1.size(), 0,
+                        buf_proof2.size(), 0);
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_proof1.begin(), buf_proof1.end());
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_proof2.begin(), buf_proof2.end());
         } else if (opcode == OpCode::GET_BUFFER256) {
-            auto proof1 = makeProof(*buffer, loc);
-            auto proof2 = makeProof(*buffer, loc + 31);
-            insertSizes(buf, proof1.size(), 0, proof2.size(), 0);
-            buf.insert(buf.end(), proof1.begin(), proof1.end());
-            buf.insert(buf.end(), proof2.begin(), proof2.end());
+            auto buf_proof1 = buffer->makeProof(loc);
+            auto buf_proof2 = buffer->makeProof(loc + 31);
+            insertSizes(proof.buffer_proof, buf_proof1.size(), 0,
+                        buf_proof2.size(), 0);
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_proof1.begin(), buf_proof1.end());
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_proof2.begin(), buf_proof2.end());
         }
     } else {
         // No need for proof in underflow
         if (stack.stacksize() +
                 static_cast<uint64_t>(op.immediate.has_value()) <
             3) {
-            return buf;
+            return;
         }
         auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[1])
                                    : nonstd::get_if<Buffer>(&stack[2]);
         if (!buffer) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            insertSizes(proof.buffer_proof, 0, 0, 0, 0);
+            return;
         }
         // Also need the offset
         auto offset = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate)
                                    : nonstd::get_if<uint256_t>(&stack[0]);
         if (!offset) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            insertSizes(proof.buffer_proof, 0, 0, 0, 0);
+            return;
         }
         if (*offset > std::numeric_limits<uint64_t>::max()) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            insertSizes(proof.buffer_proof, 0, 0, 0, 0);
+            return;
         }
         auto val = op.immediate ? nonstd::get_if<uint256_t>(&stack[0])
                                 : nonstd::get_if<uint256_t>(&stack[1]);
         if (!val) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            insertSizes(proof.buffer_proof, 0, 0, 0, 0);
+            return;
         }
         auto loc = static_cast<uint64_t>(*offset);
         if (opcode == OpCode::SET_BUFFER8) {
             Buffer nbuffer = buffer->set(loc, static_cast<uint8_t>(*val));
-            auto proof1 = makeProof(*buffer, loc);
-            auto nproof1 = makeNormalizationProof(nbuffer);
-            insertSizes(buf, proof1.size(), nproof1.size(), 0, 0);
-            buf.insert(buf.end(), proof1.begin(), proof1.end());
-            buf.insert(buf.end(), nproof1.begin(), nproof1.end());
+            auto buf_proof1 = buffer->makeProof(loc);
+            auto buf_nproof1 = nbuffer.makeNormalizationProof();
+            insertSizes(proof.buffer_proof, buf_proof1.size(),
+                        buf_nproof1.size(), 0, 0);
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_proof1.begin(), buf_proof1.end());
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_nproof1.begin(), buf_nproof1.end());
         } else if (opcode == OpCode::SET_BUFFER64) {
-            makeSetBufferProof(buf, loc, *buffer, *val, 8);
+            makeSetBufferProof(proof.buffer_proof, loc, *buffer, *val, 8);
         } else if (opcode == OpCode::SET_BUFFER256) {
-            makeSetBufferProof(buf, loc, *buffer, *val, 32);
+            makeSetBufferProof(proof.buffer_proof, loc, *buffer, *val, 32);
         }
     }
-
-    return buf;
 }
 
-std::vector<unsigned char> MachineState::marshalForProof() const {
+OneStepProof MachineState::marshalForProof() const {
     if (nonstd::holds_alternative<uint256_t>(staged_message)) {
         throw std::runtime_error(
             "Can't marshal machine with incomplete staged_message");
@@ -412,27 +418,32 @@ std::vector<unsigned char> MachineState::marshalForProof() const {
         }
     }
 
-    std::vector<unsigned char> buf;
-    buf.push_back(static_cast<uint8_t>(current_op.opcode));
-    buf.push_back(stack_pop_count);
-    buf.push_back(auxStackPops.size());
+    OneStepProof proof;
+
+    proof.standard_proof.push_back(static_cast<uint8_t>(current_op.opcode));
+    proof.standard_proof.push_back(stack_pop_count);
+    proof.standard_proof.push_back(auxStackPops.size());
 
     auto stackProof = stack.marshalForProof(stackPops, *code);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
 
-    buf.insert(buf.cend(), stackProof.second.begin(), stackProof.second.end());
+    proof.standard_proof.insert(proof.standard_proof.cend(),
+                                stackProof.second.begin(),
+                                stackProof.second.end());
     if (current_op.immediate) {
-        ::marshalForProof(*current_op.immediate, immediateMarshalLevel, buf,
-                          *code);
+        ::marshalForProof(*current_op.immediate, immediateMarshalLevel,
+                          proof.standard_proof, *code);
     }
-    buf.insert(buf.cend(), auxStackProof.second.begin(),
-               auxStackProof.second.end());
-    ::marshalState(buf, *code, currentInstruction.nextHash, stackProof.first,
-                   auxStackProof.first, registerVal, static_val,
-                   arb_gas_remaining, errpc, staged_message);
+    proof.standard_proof.insert(proof.standard_proof.cend(),
+                                auxStackProof.second.begin(),
+                                auxStackProof.second.end());
+    ::marshalState(proof.standard_proof, *code, currentInstruction.nextHash,
+                   stackProof.first, auxStackProof.first, registerVal,
+                   static_val, arb_gas_remaining, errpc, staged_message);
 
-    buf.push_back(current_op.immediate ? 1 : 0);
-    return buf;
+    proof.standard_proof.push_back(current_op.immediate ? 1 : 0);
+    marshalBufferProof(proof);
+    return proof;
 }
 
 BlockReason MachineState::isBlocked(bool newMessages) const {

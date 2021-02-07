@@ -59,6 +59,33 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
         return returnContext(context);
     }
 
+    function executeStepDebug(bytes32[3] calldata _machineFields, bytes calldata proof)
+        external
+        view
+        returns (
+            uint64 gas,
+            bytes32[5] memory fields,
+            string memory startMachine,
+            string memory afterMachine
+        )
+    {
+        bytes memory bproof = new bytes(0);
+        AssertionContext memory context =
+            initializeExecutionContext(
+                _machineFields[0],
+                _machineFields[1],
+                _machineFields[2],
+                proof,
+                bproof
+            );
+
+        executeOp(context);
+
+        (gas, fields) = returnContext(context);
+        startMachine = Machine.toString(context.startMachine);
+        afterMachine = Machine.toString(context.afterMachine);
+    }
+
     /* solhint-disable no-inline-assembly */
 
     // Arithmetic

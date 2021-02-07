@@ -67,11 +67,7 @@ library Hashing {
         uint256 startOffset,
         uint256 length
     ) internal pure returns (bytes32) {
-        return
-            keccak2(
-                bytes32(buf.length),
-                keccak2(bytes32(uint256(123)), merkleRoot(buf, startOffset, length, true))
-            );
+        return keccak2(bytes32(uint256(123)), merkleRoot(buf, startOffset, length, true));
     }
 
     function hashInt(uint256 val) internal pure returns (bytes32) {

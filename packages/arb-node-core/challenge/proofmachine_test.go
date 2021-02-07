@@ -22,6 +22,7 @@ import (
 	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"math/big"
@@ -59,10 +60,10 @@ type proofData struct {
 	BufferProof hexutil.Bytes
 }
 
-func generateProofCases(contract string) ([]*proofData, error) {
+func generateProofCases(contract string) ([]*proofData, []string, error) {
 	mach, err := cmachine.New(contract)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	maxSteps := uint64(100000)
@@ -80,46 +81,46 @@ func generateProofCases(contract string) ([]*proofData, error) {
 		LogAcc:       ethcommon.Hash{},
 		LogCount:     (*hexutil.Big)(big.NewInt(0)),
 	}
+
 	nextMessageIndex := big.NewInt(0)
+
 	proofs := make([]*proofData, 0)
+	machineStates := make([]string, 0)
+	machineStates = append(machineStates, mach.String())
 	for i := uint64(0); i < maxSteps; i++ {
-		proof, err := mach.MarshalForProof()
+		proof, bproof, err := mach.MarshalForProof()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		//mach.PrintState()
-		bproof, err := mach.MarshalBufferProof()
-		if err != nil {
-			fmt.Printf("Got error %v\n", err)
-			return nil, err
-		}
-		fmt.Printf("Got buffer proof %v\n", len(bproof))
 
 		messages, err := db.GetMessages(big.NewInt(0), big.NewInt(1))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		a, _, ranSteps := mach.ExecuteAssertion(1, true, messages, true)
-		fmt.Println("Ran", ranSteps)
+
+		a, _, ranSteps := mach.ExecuteAssertionAdvanced(
+			1,
+			true,
+			messages,
+			false,
+			common.NewHashFromEth(beforeCut.SendAcc),
+			common.NewHashFromEth(beforeCut.LogAcc),
+		)
 		if ranSteps == 0 {
 			break
 		}
 		if ranSteps != 1 {
-			return nil, errors.New("executed incorrect step count")
+			return nil, nil, errors.New("executed incorrect step count")
 		}
+		machineStates = append(machineStates, mach.String())
 		if mach.CurrentStatus() == machine.ErrorStop {
 			fmt.Println("Machine stopped in error state")
-			return proofs, nil
-			/*
-				beforeMach.PrintState()
-				mach.PrintState()
-				return nil, errors.New("machine stopped in error state")
-			*/
+			return proofs, nil, nil
 		}
 		if a.InboxMessagesConsumed > 0 {
 			inboxDeltaHash, err := db.GetInboxDelta(big.NewInt(0), big.NewInt(1))
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			beforeCut.InboxDelta = inboxDeltaHash.ToEthHash()
 		}
@@ -128,9 +129,9 @@ func generateProofCases(contract string) ([]*proofData, error) {
 			GasUsed:      beforeCut.GasUsed + a.NumGas,
 			InboxDelta:   ethcommon.Hash{},
 			MachineState: mach.Hash().ToEthHash(),
-			SendAcc:      ethcommon.Hash{},
+			SendAcc:      a.SendAcc.ToEthHash(),
 			SendCount:    (*hexutil.Big)(new(big.Int).Add(beforeCut.SendCount.ToInt(), big.NewInt(int64(len(a.Sends))))),
-			LogAcc:       ethcommon.Hash{},
+			LogAcc:       a.LogAcc.ToEthHash(),
 			LogCount:     (*hexutil.Big)(new(big.Int).Add(beforeCut.LogCount.ToInt(), big.NewInt(int64(len(a.Logs))))),
 		}
 
@@ -143,14 +144,14 @@ func generateProofCases(contract string) ([]*proofData, error) {
 		beforeCut = afterCut
 		nextMessageIndex = nextMessageIndex.Add(nextMessageIndex, new(big.Int).SetUint64(a.InboxMessagesConsumed))
 	}
-	return proofs, nil
+	return proofs, machineStates, nil
 }
 
 func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontracts.OneStepProof, osp2 *ethbridgetestcontracts.OneStepProof2) {
 	t.Log("proof test contact: ", contract)
 	ctx := context.Background()
 
-	proofs, err := generateProofCases(contract)
+	proofs, _, err := generateProofCases(contract)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,26 +186,27 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 				proof.BeforeCut.SendAcc,
 				proof.BeforeCut.LogAcc,
 			}
-			if proof.Proof[0] < 0xa1 || proof.Proof[0] > 0xa6 || proof.Proof[0] == 0x70 {
-				machineData, err = osp.ExecuteStep(
-					&bind.CallOpts{Context: ctx},
-					machineFields,
-					proof.Proof,
-				)
-			} else {
+
+			op := proof.Proof[0]
+			t.Log("Opcode", opcode)
+			if (op >= 0xa1 && op <= 0xa6) || op == 0x70 {
 				machineData, err = osp2.ExecuteStep(
 					&bind.CallOpts{Context: ctx},
 					machineFields,
 					proof.Proof,
 					proof.BufferProof,
 				)
+			} else {
+				ret, err := osp.ExecuteStepDebug(
+					&bind.CallOpts{Context: ctx},
+					machineFields,
+					proof.Proof,
+				)
+				test.FailIfError(t, err)
+				machineData.Fields = ret.Fields
+				machineData.Gas = ret.Gas
 			}
 			test.FailIfError(t, err)
-
-			t.Log("Opcode", opcode)
-			if err != nil {
-				t.Fatal("proof invalid with error", err)
-			}
 			correctGasUsed := proof.AfterCut.GasUsed - proof.BeforeCut.GasUsed
 			if machineData.Gas != correctGasUsed {
 				t.Fatalf("wrong gas %v instead of %v", machineData.Gas, correctGasUsed)
@@ -216,13 +218,13 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 				t.Fatal("wrong DidInboxInsn")
 			}
 			if machineData.Fields[3] != proof.AfterCut.SendAcc {
-				t.Fatal("wrong log")
+				t.Fatal("wrong send acc")
 			}
 			if machineData.Fields[4] != proof.AfterCut.LogAcc {
-				t.Fatal("wrong message")
+				t.Fatal("wrong log acc")
 			}
 			if machineData.Fields[1] != proof.AfterCut.MachineState {
-				t.Fatal("wrong after machine")
+				t.Fatalf("wrong after machine 0x%x 0x%x", machineData.Fields[1][:], proof.AfterCut.MachineState[:])
 			}
 		})
 	}

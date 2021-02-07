@@ -103,12 +103,7 @@ func (e *ExecutionImpl) OneStepProof(
 		return err
 	}
 
-	proofData, err := beforeMachine.MarshalForProof()
-	if err != nil {
-		return err
-	}
-
-	bufferProofData, err := beforeMachine.MarshalBufferProof()
+	proofData, bufferProofData, err := beforeMachine.MarshalForProof()
 	if err != nil {
 		return err
 	}
