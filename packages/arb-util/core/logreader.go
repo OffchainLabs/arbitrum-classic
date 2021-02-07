@@ -50,7 +50,13 @@ func (lr *LogReader) IsRunning() bool {
 }
 
 func (lr *LogReader) getLogs(ctx context.Context) error {
-	for ctx.Err() == nil {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+
 		err := lr.cursor.LogsCursorRequest(lr.cursorIndex, lr.maxCount)
 		if err != nil {
 			return err
@@ -127,6 +133,4 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 			}
 		}
 	}
-
-	return ctx.Err()
 }
