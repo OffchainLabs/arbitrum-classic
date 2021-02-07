@@ -27,6 +27,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 	"unsafe"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -185,7 +186,17 @@ Iter:
 			panic(err)
 		}
 
-		runFuzzValidateProof(contractFile.Name(), osp, osp2)
+		c := make(chan bool, 1)
+		go func() {
+			runFuzzValidateProof(contractFile.Name(), osp, osp2)
+			c <- true
+		}()
+
+		select {
+		case <-time.After(5 * time.Second):
+			panic("Hit timeout")
+		case <-c:
+		}
 
 		os.Remove(contractFile.Name())
 	}
