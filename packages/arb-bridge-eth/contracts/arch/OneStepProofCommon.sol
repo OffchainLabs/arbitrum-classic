@@ -29,6 +29,8 @@ abstract contract OneStepProofCommon {
 
     uint256 internal constant MAX_UINT256 = ((1 << 128) + 1) * ((1 << 128) - 1);
 
+    uint64 internal constant ERROR_GAS_COST = 5;
+
     string internal constant BAD_IMM_TYP = "BAD_IMM_TYP";
     string internal constant NO_IMM = "NO_IMM";
     string internal constant STACK_MISSING = "STACK_MISSING";
@@ -214,7 +216,7 @@ abstract contract OneStepProofCommon {
     {
         if (context.afterMachine.arbGasRemaining < amount) {
             // ERROR + GAS_SET
-            context.gas += 6;
+            context.gas += ERROR_GAS_COST;
             context.afterMachine.arbGasRemaining = MAX_UINT256;
             return true;
         } else {
@@ -317,14 +319,13 @@ abstract contract OneStepProofCommon {
         require(context.auxstack.length <= auxPopCount, AUX_MANY);
 
         // Update end machine gas remaining before running opcode
-        if (deductGas(context, gasCost)) {
-            handleError(context);
-        } else if (context.stack.length < dataPopCount) {
+        if (context.stack.length < dataPopCount) {
             // If we have insufficient values, reject the proof unless the stack has been fully exhausted
             require(
                 context.afterMachine.dataStack.hash() == Value.newEmptyTuple().hash(),
                 STACK_MISSING
             );
+            deductGas(context, ERROR_GAS_COST);
             // If the stack is empty, the instruction underflowed so we have hit an error
             handleError(context);
         } else if (context.auxstack.length < auxPopCount) {
@@ -333,7 +334,10 @@ abstract contract OneStepProofCommon {
                 context.afterMachine.auxStack.hash() == Value.newEmptyTuple().hash(),
                 AUX_MISSING
             );
+            deductGas(context, ERROR_GAS_COST);
             // If the auxstack is empty, the instruction underflowed so we have hit an error
+            handleError(context);
+        } else if (deductGas(context, gasCost)) {
             handleError(context);
         } else {
             impl(context);
