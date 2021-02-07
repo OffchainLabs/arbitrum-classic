@@ -212,11 +212,13 @@ abstract contract OneStepProofCommon {
         pure
         returns (bool)
     {
-        context.gas += amount;
         if (context.afterMachine.arbGasRemaining < amount) {
+            // ERROR + GAS_SET
+            context.gas += 6;
             context.afterMachine.arbGasRemaining = MAX_UINT256;
             return true;
         } else {
+            context.gas += amount;
             context.afterMachine.arbGasRemaining -= amount;
             return false;
         }
