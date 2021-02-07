@@ -83,7 +83,6 @@ Assertion Machine::run(uint256_t max_gas,
         inbox_messages, min_next_block_height, messages_to_skip};
 
     bool has_gas_limit = max_gas != 0;
-    auto start_time = std::chrono::system_clock::now();
     while (true) {
         if (has_gas_limit) {
             if (!go_over_gas) {

@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -46,19 +47,10 @@ type ProofData struct {
 	BufferProof hexutil.Bytes
 }
 
-type ProofError struct {
-	Err         error
-	PartialData []*ProofData
-}
-
-func (e ProofError) Error() string {
-	return e.Err.Error()
-}
-
-func GenerateProofCases(contract string, maxSteps uint64) ([]*ProofData, error) {
+func GenerateProofCases(contract string, maxSteps uint64) ([]*ProofData, []string, error) {
 	mach, err := cmachine.New(contract)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	db := core.NewValidatorLookupMock(mach)
@@ -77,25 +69,28 @@ func GenerateProofCases(contract string, maxSteps uint64) ([]*ProofData, error) 
 	}
 	nextMessageIndex := big.NewInt(0)
 	proofs := make([]*ProofData, 0)
+	machineStates := make([]string, 0)
+	machineStates = append(machineStates, mach.String())
 	for i := uint64(0); i < maxSteps; i++ {
-		proof, err := mach.MarshalForProof()
-		fmt.Printf("Marshalled proof for opcode 0x%x\n", proof[0])
+		proof, bproof, err := mach.MarshalForProof()
 		if err != nil {
 			panic(err)
 		}
-		//mach.PrintState()
-		bproof, err := mach.MarshalBufferProof()
-		if err != nil {
-			fmt.Printf("Got error %v\n", err)
-			return nil, ProofError{err, proofs}
-		}
-		fmt.Printf("Got buffer proof %v\n", len(bproof))
+		fmt.Printf("Marshalled proof for opcode 0x%x\n", proof[0])
 
 		messages, err := db.GetMessages(big.NewInt(0), big.NewInt(1))
 		if err != nil {
 			panic(err)
 		}
-		a, _, ranSteps := mach.ExecuteAssertion(1, true, messages, true)
+
+		a, _, ranSteps := mach.ExecuteAssertionAdvanced(
+			1,
+			true,
+			messages,
+			false,
+			common.NewHashFromEth(beforeCut.SendAcc),
+			common.NewHashFromEth(beforeCut.LogAcc),
+		)
 		fmt.Println("Ran", ranSteps)
 		if ranSteps == 0 {
 			break
@@ -103,22 +98,18 @@ func GenerateProofCases(contract string, maxSteps uint64) ([]*ProofData, error) 
 		if ranSteps != 1 {
 			panic("executed incorrect step count")
 		}
+		machineStates = append(machineStates, mach.String())
 		if mach.CurrentStatus() == machine.ErrorStop {
 			fmt.Println("Machine stopped in error state")
-			return proofs, nil
-			/*
-				beforeMach.PrintState()
-				mach.PrintState()
-				return nil, errors.New("machine stopped in error state")
-			*/
+			return proofs, nil, nil
 		}
 		if a.InboxMessagesConsumed > 0 {
 			fmt.Println("TODO: Inbox is currently unimplemented; stopping")
-			return proofs, nil
+			return proofs, nil, nil
 
 			inboxDeltaHash, err := db.GetInboxDelta(big.NewInt(0), big.NewInt(1))
 			if err != nil {
-				return nil, ProofError{err, proofs}
+				return nil, nil, err
 			}
 			beforeCut.InboxDelta = inboxDeltaHash.ToEthHash()
 		}
@@ -142,5 +133,5 @@ func GenerateProofCases(contract string, maxSteps uint64) ([]*ProofData, error) 
 		beforeCut = afterCut
 		nextMessageIndex = nextMessageIndex.Add(nextMessageIndex, new(big.Int).SetUint64(a.InboxMessagesConsumed))
 	}
-	return proofs, nil
+	return proofs, machineStates, nil
 }

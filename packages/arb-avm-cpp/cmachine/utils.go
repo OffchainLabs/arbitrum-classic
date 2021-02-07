@@ -24,8 +24,8 @@ import "C"
 
 import (
 	"bytes"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 	"unsafe"
 )
@@ -35,13 +35,18 @@ func unsafeDataPointer(data []byte) unsafe.Pointer {
 }
 
 func receiveBigInt(ptr unsafe.Pointer) *big.Int {
+	data := receive32Bytes(ptr)
+	return new(big.Int).SetBytes(data[:])
+}
+
+func receive32Bytes(ptr unsafe.Pointer) common.Hash {
 	defer C.free(ptr)
 	dataBuff := C.GoBytes(ptr, 32)
-	buf := bytes.NewBuffer(dataBuff)
-
+	rd := bytes.NewBuffer(dataBuff)
+	var data common.Hash
 	// Potential error can be ignored, bytes.Buffer is safe
-	intVal, _ := value.NewIntValueFromReader(buf)
-	return intVal.BigInt()
+	_, _ = rd.Read(data[:])
+	return data
 }
 
 func receiveByteSlice(slice C.ByteSlice) []byte {

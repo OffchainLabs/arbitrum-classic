@@ -93,7 +93,7 @@ Packed hash_node(RawBuffer* buf, uint64_t offset, uint64_t len, uint64_t sz) {
                   h2.lastIndex + (1 << (sz - 1)));
 }
 
-Packed RawBuffer::hash_aux() {
+Packed RawBuffer::hash_aux() const {
     if (saved) {
         return savedHash;
     }
@@ -115,7 +115,7 @@ Packed RawBuffer::hash_aux() {
     return res;
 }
 
-RawBuffer RawBuffer::normalize() {
+RawBuffer RawBuffer::normalize() const {
     if (hash() == zero_hash(5)) {
         return RawBuffer();
     }

@@ -39,7 +39,7 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 	t.Log("proof test contact: ", contract)
 	ctx := context.Background()
 
-	proofs, err := GenerateProofCases(contract, 100000)
+	proofs, _, err := GenerateProofCases(contract, 100000)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,26 +74,27 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 				proof.BeforeCut.SendAcc,
 				proof.BeforeCut.LogAcc,
 			}
-			if len(proof.BufferProof) == 0 {
-				machineData, err = osp.ExecuteStep(
-					&bind.CallOpts{Context: ctx},
-					machineFields,
-					proof.Proof,
-				)
-			} else {
+
+			op := proof.Proof[0]
+			t.Log("Opcode", opcode)
+			if (op >= 0xa1 && op <= 0xa6) || op == 0x70 {
 				machineData, err = osp2.ExecuteStep(
 					&bind.CallOpts{Context: ctx},
 					machineFields,
 					proof.Proof,
 					proof.BufferProof,
 				)
+			} else {
+				ret, err := osp.ExecuteStepDebug(
+					&bind.CallOpts{Context: ctx},
+					machineFields,
+					proof.Proof,
+				)
+				test.FailIfError(t, err)
+				machineData.Fields = ret.Fields
+				machineData.Gas = ret.Gas
 			}
 			test.FailIfError(t, err)
-
-			t.Log("Opcode", opcode)
-			if err != nil {
-				t.Fatal("proof invalid with error", err)
-			}
 			correctGasUsed := proof.AfterCut.GasUsed - proof.BeforeCut.GasUsed
 			if machineData.Gas != correctGasUsed {
 				t.Fatalf("wrong gas %v instead of %v", machineData.Gas, correctGasUsed)
@@ -105,13 +106,13 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 				t.Fatal("wrong DidInboxInsn")
 			}
 			if machineData.Fields[3] != proof.AfterCut.SendAcc {
-				t.Fatal("wrong log")
+				t.Fatal("wrong send acc")
 			}
 			if machineData.Fields[4] != proof.AfterCut.LogAcc {
-				t.Fatal("wrong message")
+				t.Fatal("wrong log acc")
 			}
 			if machineData.Fields[1] != proof.AfterCut.MachineState {
-				t.Fatal("wrong after machine")
+				t.Fatalf("wrong after machine 0x%x 0x%x", machineData.Fields[1][:], proof.AfterCut.MachineState[:])
 			}
 		})
 	}

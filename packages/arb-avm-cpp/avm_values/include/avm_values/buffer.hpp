@@ -61,8 +61,8 @@ Packed zero_packed(uint64_t sz);
 
 class RawBuffer {
    private:
-    bool saved;
-    Packed savedHash;
+    mutable bool saved;
+    mutable Packed savedHash;
 
     std::shared_ptr<std::vector<uint8_t>> leaf;
     std::shared_ptr<std::vector<RawBuffer>> node;
@@ -94,7 +94,7 @@ class RawBuffer {
         savedHash = zero_packed(LEAF_SIZE2);
     }
 
-    RawBuffer set(uint64_t offset, uint8_t v) {
+    RawBuffer set(uint64_t offset, uint8_t v) const {
         std::vector<uint8_t> arr(1);
         arr[0] = v;
         return set_many(offset, arr);
@@ -102,7 +102,7 @@ class RawBuffer {
 
     // Note: pos and len must be aligned so that the data to be written is in
     // one leaf
-    RawBuffer set_many(uint64_t offset, std::vector<uint8_t>& arr) {
+    RawBuffer set_many(uint64_t offset, std::vector<uint8_t>& arr) const {
         if (level == 0) {
             if (offset >= LEAF_SIZE) {
                 std::shared_ptr<std::vector<uint8_t>> empty =
@@ -183,14 +183,14 @@ class RawBuffer {
         }
     }
 
-    Packed hash_aux();
-    uint256_t hash() { return hash_aux().hash; }
+    Packed hash_aux() const;
+    uint256_t hash() const { return hash_aux().hash; }
 
     uint64_t lastIndex() { return hash_aux().lastIndex; }
 
     std::vector<RawBuffer> serialize(std::vector<unsigned char>& value_vector);
 
-    RawBuffer normalize();
+    RawBuffer normalize() const;
 
     uint64_t size() const { return calc_len(level); }
 
@@ -223,11 +223,11 @@ class Buffer {
         }
     }
 
-    Buffer set(uint64_t offset, uint8_t v) {
+    Buffer set(uint64_t offset, uint8_t v) const {
         return Buffer(buf->set(offset, v));
     }
 
-    Buffer set_many(uint64_t offset, std::vector<uint8_t> arr) {
+    Buffer set_many(uint64_t offset, std::vector<uint8_t> arr) const {
         return Buffer(buf->set_many(offset, arr));
     }
 
@@ -243,7 +243,7 @@ class Buffer {
 
     uint256_t hash() const { return buf->hash(); }
 
-    std::vector<unsigned char> makeProof(uint64_t loc) {
+    std::vector<unsigned char> makeProof(uint64_t loc) const {
         RawBuffer nbuf = buf->normalize();
         return nbuf.makeProof(loc);
     }

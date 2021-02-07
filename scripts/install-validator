@@ -35,11 +35,11 @@ cd ../
 cd ../..
 
 # install arb-validator
-cd packages/arb-validator
-go mod download
-go install -v ./...
+# cd packages/arb-validator
+# go mod download
+# go install -v ./...
 
-cd ../arb-tx-aggregator
-go mod download
-go install -v ./...
-cd ../..
+# cd ../arb-tx-aggregator
+# go mod download
+# go install -v ./...
+# cd ../..

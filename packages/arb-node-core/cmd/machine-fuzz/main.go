@@ -41,15 +41,10 @@ import (
 
 func runFuzzValidateProof(contract string, osp *ethbridgetestcontracts.OneStepProof, osp2 *ethbridgetestcontracts.OneStepProof2) {
 	ctx := context.Background()
-	proofs, err := challenge.GenerateProofCases(contract, 1000)
+	proofs, _, err := challenge.GenerateProofCases(contract, 1000)
 	if err != nil {
-		proofErr, ok := err.(challenge.ProofError)
-		if !ok || len(proofErr.PartialData) == 0 {
-			println("Error generating proofs: " + err.Error())
-			return
-		}
-		println("Partial error generating proofs: " + err.Error())
-		proofs = proofErr.PartialData
+		println("Error generating proofs: " + err.Error())
+		return
 	}
 
 	/*
@@ -72,8 +67,8 @@ func runFuzzValidateProof(contract string, osp *ethbridgetestcontracts.OneStepPr
 	*/
 
 	for _, proof := range proofs {
-		opcode := proof.Proof[0]
-		fmt.Printf("Checking proof for opcode 0x%x\n", opcode)
+		op := proof.Proof[0]
+		fmt.Printf("Checking proof for opcode 0x%x\n", op)
 		var err error
 		var machineData struct {
 			Gas    uint64
@@ -84,18 +79,18 @@ func runFuzzValidateProof(contract string, osp *ethbridgetestcontracts.OneStepPr
 			proof.BeforeCut.SendAcc,
 			proof.BeforeCut.LogAcc,
 		}
-		if len(proof.BufferProof) == 0 {
-			machineData, err = osp.ExecuteStep(
-				&bind.CallOpts{Context: ctx},
-				machineFields,
-				proof.Proof,
-			)
-		} else {
+		if (op >= 0xa1 && op <= 0xa6) || op == 0x70 {
 			machineData, err = osp2.ExecuteStep(
 				&bind.CallOpts{Context: ctx},
 				machineFields,
 				proof.Proof,
 				proof.BufferProof,
+			)
+		} else {
+			machineData, err = osp.ExecuteStep(
+				&bind.CallOpts{Context: ctx},
+				machineFields,
+				proof.Proof,
 			)
 		}
 		if err != nil {
