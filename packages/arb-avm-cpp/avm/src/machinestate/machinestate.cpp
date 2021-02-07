@@ -420,25 +420,25 @@ OneStepProof MachineState::marshalForProof() const {
 
     OneStepProof proof;
 
-    proof.standard_proof.push_back(static_cast<uint8_t>(current_op.opcode));
-    proof.standard_proof.push_back(stack_pop_count);
-    proof.standard_proof.push_back(auxStackPops.size());
-
     auto stackProof = stack.marshalForProof(stackPops, *code);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
 
+    proof.standard_proof.push_back(static_cast<uint8_t>(current_op.opcode));
+    proof.standard_proof.push_back(stackProof.count +
+                                   current_op.immediate.has_value());
+    proof.standard_proof.push_back(auxStackProof.count);
+
     proof.standard_proof.insert(proof.standard_proof.cend(),
-                                stackProof.second.begin(),
-                                stackProof.second.end());
+                                stackProof.data.begin(), stackProof.data.end());
     if (current_op.immediate) {
         ::marshalForProof(*current_op.immediate, immediateMarshalLevel,
                           proof.standard_proof, *code);
     }
     proof.standard_proof.insert(proof.standard_proof.cend(),
-                                auxStackProof.second.begin(),
-                                auxStackProof.second.end());
+                                auxStackProof.data.begin(),
+                                auxStackProof.data.end());
     ::marshalState(proof.standard_proof, *code, currentInstruction.nextHash,
-                   stackProof.first, auxStackProof.first, registerVal,
+                   stackProof.bottom, auxStackProof.bottom, registerVal,
                    static_val, arb_gas_remaining, errpc, staged_message);
 
     proof.standard_proof.push_back(current_op.immediate ? 1 : 0);

@@ -37,7 +37,7 @@ HashPreImage Datastack::getHashPreImage() const {
     }
 }
 
-std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
+DataStackProof Datastack::marshalForProof(
     const std::vector<MarshalLevel>& stackInfo,
     const Code& code) const {
     calculateAllHashes();
@@ -46,7 +46,7 @@ std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
     std::vector<value> values;
 
     // If the stack is underflowing, just send what's left
-    size_t items_to_pop = stackInfo.size();
+    uint8_t items_to_pop = stackInfo.size();
     if (c.stacksize() < items_to_pop) {
         items_to_pop = c.stacksize();
     }
@@ -61,7 +61,7 @@ std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
         ::marshalForProof(values[index], stackInfo[index], buf, code);
     }
 
-    return std::make_pair(c.getHashPreImage(), std::move(buf));
+    return {c.getHashPreImage(), std::move(buf), items_to_pop};
 }
 
 std::ostream& operator<<(std::ostream& os, const Datastack& val) {
