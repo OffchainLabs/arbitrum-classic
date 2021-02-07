@@ -493,28 +493,53 @@ BlockReason MachineState::runOne() {
 
     auto& instruction = loadCurrentInstruction();
 
+    static const auto error_gas_cost =
+        instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)];
+
+    // Always push the immediate to the stack if we're not blocked
+    if (instruction.op.immediate) {
+        auto imm = *instruction.op.immediate;
+        stack.push(std::move(imm));
+    }
+
+    // save stack size for stack cleanup in case of error
+    uint64_t start_stack_size = stack.stacksize();
+    uint64_t start_auxstack_size = auxstack.stacksize();
+
+    bool is_valid_instruction =
+        instructionValidity()[static_cast<size_t>(instruction.op.opcode)];
+
+    uint64_t stack_arg_count =
+        is_valid_instruction
+            ? InstructionStackPops.at(instruction.op.opcode).size()
+            : 0;
+    uint64_t auxstack_arg_count =
+        is_valid_instruction
+            ? InstructionAuxStackPops.at(instruction.op.opcode).size()
+            : 0;
+
     // We're only blocked if we can't execute at all
     BlockReason blockReason = [&]() -> BlockReason {
-        // Always push the immediate to the stack if we're not blocked
-        if (instruction.op.immediate) {
-            auto imm = *instruction.op.immediate;
-            stack.push(std::move(imm));
+        if (stack_arg_count > stack.stacksize() ||
+            auxstack_arg_count > auxstack.stacksize()) {
+            state = Status::Error;
+            ;
+            if (arb_gas_remaining < error_gas_cost) {
+                arb_gas_remaining = max_arb_gas_remaining;
+            } else {
+                arb_gas_remaining -= error_gas_cost;
+            }
+            context.numGas += error_gas_cost;
+            return NotBlocked();
         }
 
-        bool is_valid_instruction =
-            instructionValidity()[static_cast<size_t>(instruction.op.opcode)];
-
         uint256_t gas_cost =
-            is_valid_instruction
-                ? nextGasCost()
-                : instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)];
+            is_valid_instruction ? nextGasCost() : error_gas_cost;
 
         if (arb_gas_remaining < gas_cost) {
             // If there's insufficient gas remaining, execute by transitioning
             // to the error state with remaining gas set to max
-            context.numGas +=
-                instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)] +
-                instructionGasCosts()[static_cast<size_t>(OpCode::SET_GAS)];
+            context.numGas += error_gas_cost;
             arb_gas_remaining = max_arb_gas_remaining;
             state = Status::Error;
             return NotBlocked();
@@ -529,11 +554,13 @@ BlockReason MachineState::runOne() {
             return NotBlocked();
         }
 
-        // save stack size for stack cleanup in case of error
-        uint64_t startStackSize = stack.stacksize();
         BlockReason blockReason = NotBlocked();
         try {
             blockReason = runOp(instruction.op.opcode);
+        } catch (const stack_too_small&) {
+            // Charge an error instruction instead
+            arb_gas_remaining += gas_cost;
+            context.numGas -= gas_cost;
         } catch (const std::exception&) {
             state = Status::Error;
         }
@@ -548,23 +575,26 @@ BlockReason MachineState::runOne() {
             }
             return blockReason;
         }
-
-        if (state == Status::Error) {
-            // if state is Error, clean up stack
-            // Clear stack to base for instruction
-            auto stackItems =
-                InstructionStackPops.at(instruction.op.opcode).size();
-            while (stack.stacksize() > 0 &&
-                   startStackSize - stack.stacksize() < stackItems) {
-                stack.popClear();
-            }
-        }
-
         return NotBlocked();
     }();
 
     if (nonstd::holds_alternative<NotBlocked>(blockReason)) {
         context.numSteps += 1;
+    }
+
+    if (state == Status::Error) {
+        // if state is Error, clean up stack
+        // Clear stack to base for instruction
+        while (stack.stacksize() > 0 &&
+               start_stack_size - stack.stacksize() < stack_arg_count) {
+            stack.popClear();
+        }
+
+        while (auxstack.stacksize() > 0 &&
+               start_auxstack_size - auxstack.stacksize() <
+                   auxstack_arg_count) {
+            stack.popClear();
+        }
     }
 
     // If we're in the error state, jump to the error handler if one is set
