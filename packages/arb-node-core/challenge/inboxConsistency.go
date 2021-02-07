@@ -66,7 +66,7 @@ func (i *InboxConsistencyImpl) OneStepProof(
 	if err != nil {
 		return err
 	}
-	msgs, err := lookup.GetMessages(inboxOffset, big.NewInt(1))
+	msgs, err := lookup.GetMessages(new(big.Int).Add(inboxOffset, big.NewInt(1)), big.NewInt(1))
 	if err != nil {
 		return err
 	}

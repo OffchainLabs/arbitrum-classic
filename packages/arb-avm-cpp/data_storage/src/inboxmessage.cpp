@@ -24,7 +24,7 @@ uint256_t InboxMessage::hash(const uint256_t& previous_inbox_hash) const {
     std::vector<unsigned char> inbox_vector;
 
     inbox_vector.push_back(kind);
-    marshal_uint256_t(sender, inbox_vector);
+    inbox_vector.insert(inbox_vector.end(), sender.begin(), sender.end());
     marshal_uint256_t(block_number, inbox_vector);
     marshal_uint256_t(timestamp, inbox_vector);
     marshal_uint256_t(inbox_sequence_number, inbox_vector);
@@ -36,22 +36,25 @@ uint256_t InboxMessage::hash(const uint256_t& previous_inbox_hash) const {
     return ::hash(previous_inbox_hash, message_hash);
 }
 
-uint256_t hash_inbox(const uint256_t& previous_inbox_hash,
-                     const std::vector<unsigned char>& stored_state) {
-    constexpr auto message_fixed_size = 124;
+uint256_t hash_raw_message(const std::vector<unsigned char>& stored_state) {
+    constexpr auto message_fixed_size = 1 + 20 + 32 * 3;
 
     // Calculate hash of variable length data
     std::vector<unsigned char> variable_data{
-        stored_state.begin() + message_fixed_size + 1, stored_state.end()};
+        stored_state.begin() + message_fixed_size, stored_state.end()};
     auto variable_hash = hash(variable_data);
 
     std::vector<unsigned char> fixed_data{
         stored_state.begin(), stored_state.begin() + message_fixed_size};
     marshal_uint256_t(variable_hash, fixed_data);
 
-    auto message_hash = hash(fixed_data);
+    return hash(fixed_data);
+}
 
-    return hash(previous_inbox_hash, message_hash);
+uint256_t hash_inbox(const uint256_t& previous_inbox_hash,
+                     const std::vector<unsigned char>& stored_state) {
+    return hash(previous_inbox_hash, hash_raw_message(stored_state));
+    ;
 }
 
 InboxMessage extractInboxMessage(
@@ -60,7 +63,9 @@ InboxMessage extractInboxMessage(
 
     auto kind = *reinterpret_cast<const uint8_t*>(&*current_iter);
     current_iter++;
-    auto sender = extractUint256(current_iter);
+    Address sender;
+    std::copy(current_iter, current_iter + sender.size(), sender.begin());
+    current_iter += sender.size();
     auto block_number = extractUint256(current_iter);
     auto timestamp = extractUint256(current_iter);
     auto inbox_sequence_number = extractUint256(current_iter);
@@ -89,7 +94,8 @@ std::vector<InboxMessage> extractInboxMessages(
 std::vector<unsigned char> InboxMessage::serialize() const {
     std::vector<unsigned char> state_data_vector;
     state_data_vector.push_back(kind);
-    marshal_uint256_t(sender, state_data_vector);
+    state_data_vector.insert(state_data_vector.end(), sender.begin(),
+                             sender.end());
     marshal_uint256_t(block_number, state_data_vector);
     marshal_uint256_t(timestamp, state_data_vector);
     marshal_uint256_t(inbox_sequence_number, state_data_vector);
@@ -98,8 +104,16 @@ std::vector<unsigned char> InboxMessage::serialize() const {
 }
 
 Tuple InboxMessage::toTuple() {
-    return {uint256_t{kind},       block_number,           timestamp,   sender,
-            inbox_sequence_number, uint256_t{data.size()}, Buffer{data}};
+    uint8_t raw_sender[32];
+    std::fill_n(&raw_sender[0], 12, 0);
+    std::copy(sender.begin(), sender.end(), &raw_sender[12]);
+    return {uint256_t{kind},
+            block_number,
+            timestamp,
+            intx::be::load<uint256_t>(raw_sender),
+            inbox_sequence_number,
+            uint256_t{data.size()},
+            Buffer{data}};
 }
 
 InboxMessage InboxMessage::fromTuple(const Tuple& tup) {
@@ -110,11 +124,17 @@ InboxMessage InboxMessage::fromTuple(const Tuple& tup) {
         intx::narrow_cast<uint8_t>(tup.get_element_unsafe(0).get<uint256_t>());
     auto block_number = tup.get_element_unsafe(1).get<uint256_t>();
     auto timestamp = tup.get_element_unsafe(2).get<uint256_t>();
-    auto sender = tup.get_element_unsafe(3).get<uint256_t>();
+    auto sender_int = tup.get_element_unsafe(3).get<uint256_t>();
     auto inbox_sequence_number = tup.get_element_unsafe(4).get<uint256_t>();
     auto data_size =
         intx::narrow_cast<uint64_t>(tup.get_element_unsafe(5).get<uint256_t>());
     auto data_buf = tup.get_element_unsafe(6).get<Buffer>();
+
+    uint8_t raw_sender[32];
+    intx::be::store(raw_sender, sender_int);
+
+    Address sender;
+    std::copy(&raw_sender[12], &raw_sender[32], sender.begin());
 
     std::vector<unsigned char> data;
     data.reserve(data_size);

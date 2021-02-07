@@ -26,11 +26,13 @@
 #include <data_storage/value/machine.hpp>
 #include <utility>
 
+using Address = std::array<unsigned char, 20>;
+
 struct InboxMessage {
    public:
     // arb_gas_used not serialized/deserialized because it is part of index
     uint8_t kind;
-    uint256_t sender;
+    Address sender;
     uint256_t block_number;
     uint256_t timestamp;
     uint256_t inbox_sequence_number;
@@ -38,7 +40,7 @@ struct InboxMessage {
 
     InboxMessage() = default;
     InboxMessage(uint8_t kind,
-                 uint256_t sender,
+                 const Address& sender,
                  uint256_t block_number,
                  uint256_t timestamp,
                  uint256_t inbox_sequence_number,
@@ -58,6 +60,7 @@ struct InboxMessage {
     std::vector<unsigned char> serialize() const;
 };
 
+uint256_t hash_raw_message(const std::vector<unsigned char>& stored_state);
 uint256_t hash_inbox(const uint256_t& previous_inbox_hash,
                      const std::vector<unsigned char>& stored_state);
 InboxMessage extractInboxMessage(

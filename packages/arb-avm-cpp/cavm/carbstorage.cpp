@@ -35,7 +35,8 @@ CArbStorage* createArbStorage(const char* db_path) {
     try {
         auto storage = new ArbStorage(string_filename);
         return static_cast<void*>(storage);
-    } catch (const std::exception&) {
+    } catch (const std::exception& e) {
+        std::cerr << "Error creating storage " << e.what() << "\n";
         return nullptr;
     }
 }
