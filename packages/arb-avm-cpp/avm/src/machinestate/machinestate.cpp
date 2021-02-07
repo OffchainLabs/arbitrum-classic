@@ -247,12 +247,6 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
         return;
     }
     if (opcode == OpCode::SEND) {
-        // No need for proof in underflow
-        if (stack.stacksize() +
-                static_cast<uint64_t>(op.immediate.has_value()) <
-            2) {
-            return;
-        }
         auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0])
                                    : nonstd::get_if<Buffer>(&stack[1]);
         if (!buffer) {
@@ -265,15 +259,16 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
             return;
         }
         auto loc = static_cast<uint64_t>(*size);
-        auto data = buffer->toFlatVector();
-
-        // Loc must be at or past the last nonzero index in the buffer
-        if (loc < data.size()) {
+        if (loc > send_size_limit) {
+            return;
+        } else if (loc < buffer->data_length()) {
+            // Loc must be at or past the last nonzero index in the buffer
             auto buf_proof = buffer->makeProof(loc);
             insertSizes(proof.buffer_proof, buf_proof.size(), 0, 0, 0);
             proof.buffer_proof.insert(proof.buffer_proof.end(),
                                       buf_proof.begin(), buf_proof.end());
         } else {
+            auto data = buffer->toFlatVector();
             proof.standard_proof.insert(proof.standard_proof.end(),
                                         data.begin(), data.end());
             std::fill_n(std::back_inserter(proof.standard_proof),
@@ -283,12 +278,6 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
     }
     if (opcode == OpCode::GET_BUFFER8 || opcode == OpCode::GET_BUFFER64 ||
         opcode == OpCode::GET_BUFFER256) {
-        // No need for proof in underflow
-        if (stack.stacksize() +
-                static_cast<uint64_t>(op.immediate.has_value()) <
-            2) {
-            return;
-        }
         // Find the buffer
         auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0])
                                    : nonstd::get_if<Buffer>(&stack[1]);
@@ -333,12 +322,6 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
                                       buf_proof2.begin(), buf_proof2.end());
         }
     } else {
-        // No need for proof in underflow
-        if (stack.stacksize() +
-                static_cast<uint64_t>(op.immediate.has_value()) <
-            3) {
-            return;
-        }
         auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[1])
                                    : nonstd::get_if<Buffer>(&stack[2]);
         if (!buffer) {
@@ -406,22 +389,21 @@ OneStepProof MachineState::marshalForProof() const {
         return it->second;
     }();
 
-    uint64_t stack_pop_count = stackPops.size();
-
+    if (stackPops.size() > stack.stacksize()) {
+    }
     MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
-    if (current_op.immediate) {
-        if (stackPops.empty()) {
-            stack_pop_count++;
-        } else {
-            immediateMarshalLevel = stackPops[0];
-            stackPops.erase(stackPops.cbegin());
-        }
+    if (current_op.immediate && !stackPops.empty()) {
+        immediateMarshalLevel = stackPops[0];
+        stackPops.erase(stackPops.cbegin());
     }
 
     OneStepProof proof;
 
     auto stackProof = stack.marshalForProof(stackPops, *code);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
+
+    bool underflowed = stackProof.count < stackPops.size() ||
+                       auxStackProof.count < auxStackPops.size();
 
     proof.standard_proof.push_back(static_cast<uint8_t>(current_op.opcode));
     proof.standard_proof.push_back(stackProof.count +
@@ -442,7 +424,11 @@ OneStepProof MachineState::marshalForProof() const {
                    static_val, arb_gas_remaining, errpc, staged_message);
 
     proof.standard_proof.push_back(current_op.immediate ? 1 : 0);
-    marshalBufferProof(proof);
+
+    if (!underflowed) {
+        // Don't need a buffer proof if we're underflowing
+        marshalBufferProof(proof);
+    }
     return proof;
 }
 

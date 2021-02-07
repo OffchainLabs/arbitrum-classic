@@ -241,6 +241,14 @@ class Buffer {
 
     uint64_t lastIndex() const { return buf->lastIndex(); }
 
+    uint64_t data_length() const {
+        auto last = buf->lastIndex();
+        if (last == 0 && get(0) == 0) {
+            return 0;
+        }
+        return last + 1;
+    }
+
     uint256_t hash() const { return buf->hash(); }
 
     std::vector<unsigned char> makeProof(uint64_t loc) const {
