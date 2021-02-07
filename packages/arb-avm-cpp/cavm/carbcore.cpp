@@ -165,26 +165,27 @@ ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
     }
 }
 
-HashList arbCoreGetMessageHashes(CArbCore* arbcore_ptr,
-                                 const void* start_index_ptr,
-                                 const void* count_ptr) {
+ByteSliceResult arbCoreGetMessageHashes(CArbCore* arbcore_ptr,
+                                        const void* start_index_ptr,
+                                        const void* count_ptr) {
     try {
         auto hashes = static_cast<const ArbCore*>(arbcore_ptr)
                           ->getMessageHashes(receiveUint256(start_index_ptr),
                                              receiveUint256(count_ptr));
         if (!hashes.status.ok()) {
-            return {{}, false};
+            std::cerr << "error getting message hashes: "
+                      << hashes.status.ToString() << "\n";
+            return {{nullptr, 0}, false};
         }
 
         std::vector<unsigned char> serializedHashes;
         for (const auto& hash : hashes.data) {
             marshal_uint256_t(hash, serializedHashes);
         }
-        auto hashesData =
-            reinterpret_cast<unsigned char*>(malloc(serializedHashes.size()));
-        std::copy(serializedHashes.begin(), serializedHashes.end(), hashesData);
-        return {hashesData, static_cast<int>(hashes.data.size())};
+        return {returnCharVector(serializedHashes), true};
     } catch (const std::exception& e) {
+        std::cerr << "error, exception getting message hashes: " << e.what()
+                  << "\n";
         return {{}, false};
     }
 }

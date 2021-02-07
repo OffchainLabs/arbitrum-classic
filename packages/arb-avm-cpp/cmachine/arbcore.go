@@ -176,16 +176,13 @@ func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.Inb
 func (ac *ArbCore) GetMessageHashes(startIndex *big.Int, count *big.Int) ([]common.Hash, error) {
 	startIndexData := math.U256Bytes(startIndex)
 	countData := math.U256Bytes(count)
-
 	cHashList := C.arbCoreGetMessageHashes(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
-	if cHashList.count == 0 {
-		return nil, nil
+	if cHashList.found == 0 {
+		return nil, errors.New("not found")
 	}
-	defer C.free(cHashList.data)
-
-	data := (*[1 << 30]byte)(unsafe.Pointer(cHashList.data))[:cHashList.count:cHashList.count]
-	ret := make([]common.Hash, 0, int(cHashList.count))
-	for i := 0; i < int(cHashList.count); i++ {
+	data := receiveByteSlice(cHashList.slice)
+	ret := make([]common.Hash, 0, len(data)/32)
+	for i := 0; i < len(data)/32; i++ {
 		var hashVal common.Hash
 		copy(hashVal[:], data[i*32:])
 		ret = append(ret, hashVal)

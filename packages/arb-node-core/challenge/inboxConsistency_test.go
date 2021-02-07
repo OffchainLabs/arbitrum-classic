@@ -16,23 +16,23 @@ import (
 
 var tmpDir = "./tmp"
 
-type InvalidArbCore struct {
+type InvalidInboxArbCore struct {
 	core.ArbCore
 	fakeInboxAccs map[uint64]common.Hash
 }
 
-func NewInvalidArbCore(realCore core.ArbCore) *InvalidArbCore {
+func NewInvalidInboxArbCore(realCore core.ArbCore) *InvalidInboxArbCore {
 	fakeInboxAccs := make(map[uint64]common.Hash)
 	for i := uint64(200); i < 206; i++ {
 		fakeInboxAccs[i] = common.RandHash()
 	}
-	return &InvalidArbCore{
+	return &InvalidInboxArbCore{
 		ArbCore:       realCore,
 		fakeInboxAccs: fakeInboxAccs,
 	}
 }
 
-func (c *InvalidArbCore) GetInboxAcc(index *big.Int) (common.Hash, error) {
+func (c *InvalidInboxArbCore) GetInboxAcc(index *big.Int) (common.Hash, error) {
 	h, ok := c.fakeInboxAccs[index.Uint64()]
 	if ok {
 		return h, nil
@@ -40,9 +40,9 @@ func (c *InvalidArbCore) GetInboxAcc(index *big.Int) (common.Hash, error) {
 	return c.ArbCore.GetInboxAcc(index)
 }
 
-func generateRandomValidMessages() []inbox.InboxMessage {
+func generateRandomValidMessages(msgCount int) []inbox.InboxMessage {
 	messages := make([]inbox.InboxMessage, 0)
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < msgCount; i++ {
 		msg := inbox.InboxMessage{
 			Kind:        inbox.Type(2),
 			Sender:      common.RandAddress(),
@@ -77,10 +77,10 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 		t.Fatal("failed to start thread")
 	}
 
-	_, err = core.DeliverMessagesAndWait(correctLookup, generateRandomValidMessages(), common.Hash{}, false)
+	_, err = core.DeliverMessagesAndWait(correctLookup, generateRandomValidMessages(10000), common.Hash{}, false)
 	test.FailIfError(t, err)
 
-	falseLookup := NewInvalidArbCore(correctLookup)
+	falseLookup := NewInvalidInboxArbCore(correctLookup)
 
 	inboxMessagesRead := big.NewInt(203)
 
@@ -100,7 +100,7 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 }
 
 func TestInboxHashing(t *testing.T) {
-	messages := generateRandomValidMessages()
+	messages := generateRandomValidMessages(100)
 	defer func() {
 		if err := os.RemoveAll(tmpDir); err != nil {
 			panic(err)
@@ -138,5 +138,25 @@ func TestInboxHashing(t *testing.T) {
 			t.Log(msgs[0])
 			t.Fatal("unequal messages")
 		}
+	}
+
+	msgHashes, err := lookup.GetMessageHashes(big.NewInt(0), big.NewInt(int64(len(messages))))
+	test.FailIfError(t, err)
+	if len(msgHashes) != len(messages) {
+		t.Fatal("wrong msg hash count", len(msgHashes), len(messages))
+	}
+
+	delta := common.Hash{}
+	for i := range msgHashes {
+		delta = hashing.SoliditySHA3(hashing.Bytes32(acc), hashing.Bytes32(msgHashes[len(msgHashes)-1-i]))
+	}
+
+	dbDelta, err := lookup.GetInboxDelta(big.NewInt(0), big.NewInt(int64(len(messages))))
+	test.FailIfError(t, err)
+
+	if delta != dbDelta {
+		t.Log(delta)
+		t.Log(dbDelta)
+		t.Fatal("wrong delta")
 	}
 }

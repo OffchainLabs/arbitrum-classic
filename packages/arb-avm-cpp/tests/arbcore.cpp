@@ -124,6 +124,10 @@ TEST_CASE("ArbCore tests") {
 
             auto inboxAcc = arbCore->getInboxAcc(1);
             REQUIRE(inboxAcc.status.ok());
+
+            auto message_hashes = arbCore->getMessageHashes(0, 1);
+            REQUIRE(message_hashes.status.ok());
+            REQUIRE(message_hashes.data.size() == 1);
         }
     }
 }

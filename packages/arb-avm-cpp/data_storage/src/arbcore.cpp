@@ -917,8 +917,7 @@ ValueResult<std::vector<uint256_t>> ArbCore::getMessageHashes(
     std::vector<uint256_t> hashes;
     hashes.reserve(messages.data.size());
     for (const auto& message : messages.data) {
-        auto data = reinterpret_cast<const char*>(message.data());
-        auto hash = hash_value(deserialize_value(data));
+        auto hash = hash_value(extractInboxMessage(message).toTuple());
         hashes.push_back(hash);
     }
 
@@ -954,14 +953,16 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
 
 ValueResult<uint256_t> ArbCore::getInboxDelta(uint256_t start_index,
                                               uint256_t count) {
-    auto hashes_result = getInboxHashes(start_index, count);
+    auto hashes_result = getMessageHashes(start_index, count);
     if (!hashes_result.status.ok()) {
         return {hashes_result.status, 0};
     }
 
     uint256_t combined_hash = 0;
-    for (const auto& current_hash : hashes_result.data) {
-        combined_hash = hash(combined_hash, current_hash);
+    for (size_t i = 0; i < hashes_result.data.size(); ++i) {
+        combined_hash =
+            hash(combined_hash,
+                 hashes_result.data[hashes_result.data.size() - 1 - i]);
     }
 
     return {rocksdb::Status::OK(), combined_hash};
