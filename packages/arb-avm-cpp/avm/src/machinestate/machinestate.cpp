@@ -512,6 +512,9 @@ BlockReason MachineState::runOne() {
         if (arb_gas_remaining < gas_cost) {
             // If there's insufficient gas remaining, execute by transitioning
             // to the error state with remaining gas set to max
+            context.numGas +=
+                instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)] +
+                instructionGasCosts()[static_cast<size_t>(OpCode::SET_GAS)];
             arb_gas_remaining = max_arb_gas_remaining;
             state = Status::Error;
             return NotBlocked();
