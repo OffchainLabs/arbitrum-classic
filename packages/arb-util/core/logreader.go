@@ -11,13 +11,47 @@ import (
 type LogReader struct {
 	consumer    LogConsumer
 	cursor      LogsCursor
-	cursorIndex big.Int
-	maxCount    big.Int
+	cursorIndex *big.Int
+	maxCount    *big.Int
+
+	// Only in main thread
+	running    bool
+	cancelFunc context.CancelFunc
+}
+
+func NewLogReader(consumer LogConsumer, cursor LogsCursor, cursorIndex *big.Int, maxCount *big.Int) (*LogReader, error) {
+	return &LogReader{
+		consumer:    consumer,
+		cursor:      cursor,
+		cursorIndex: cursorIndex,
+		maxCount:    maxCount,
+	}, nil
+}
+
+func (lr *LogReader) Start(parentCtx context.Context) <-chan error {
+	errChan := make(chan error, 1)
+	ctx, cancelFunc := context.WithCancel(parentCtx)
+	go func() {
+		defer close(errChan)
+		errChan <- lr.getLogs(ctx)
+	}()
+	lr.cancelFunc = cancelFunc
+	lr.running = true
+	return errChan
+}
+
+func (lr *LogReader) Stop() {
+	lr.cancelFunc()
+	lr.running = false
+}
+
+func (lr *LogReader) IsRunning() bool {
+	return lr.running
 }
 
 func (lr *LogReader) getLogs(ctx context.Context) error {
-	for {
-		err := lr.cursor.LogsCursorRequest(&lr.cursorIndex, &lr.maxCount)
+	for ctx.Err() == nil {
+		err := lr.cursor.LogsCursorRequest(lr.cursorIndex, lr.maxCount)
 		if err != nil {
 			return err
 		}
@@ -27,7 +61,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 		for {
 			// Loop until new logs retrieved, may get deleted logs if reorg happened
 			// Cannot retrieve new logs until deleted logs have been retrieved
-			logs, err = lr.cursor.LogsCursorGetLogs(&lr.cursorIndex)
+			logs, err = lr.cursor.LogsCursorGetLogs(lr.cursorIndex)
 			if err != nil {
 				return err
 			}
@@ -37,7 +71,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 			}
 
 			// No new logs yet, check if deleted logs
-			deletedLogs, err := lr.cursor.LogsCursorGetDeletedLogs(&lr.cursorIndex)
+			deletedLogs, err = lr.cursor.LogsCursorGetDeletedLogs(lr.cursorIndex)
 			if err != nil {
 				return err
 			}
@@ -65,7 +99,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 		}
 
 		for {
-			status, err := lr.cursor.LogsCursorConfirmReceived(&lr.cursorIndex)
+			status, err := lr.cursor.LogsCursorConfirmReceived(lr.cursorIndex)
 			if err != nil {
 				return err
 			}
@@ -76,7 +110,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 
 			// Reorg happened since previous call to GetLogs.  Post-retrieve reorg of logscursor will only include
 			// extra deleted logs, won't add any new logs
-			newDeletedLogs, err := lr.cursor.LogsCursorGetDeletedLogs(&lr.cursorIndex)
+			newDeletedLogs, err := lr.cursor.LogsCursorGetDeletedLogs(lr.cursorIndex)
 			if err != nil {
 				return err
 			}
@@ -93,4 +127,6 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 			}
 		}
 	}
+
+	return ctx.Err()
 }
