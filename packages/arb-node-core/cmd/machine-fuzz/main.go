@@ -41,7 +41,7 @@ import (
 
 func runFuzzValidateProof(contract string, osp *ethbridgetestcontracts.OneStepProof, osp2 *ethbridgetestcontracts.OneStepProof2) {
 	ctx := context.Background()
-	proofs, _, err := challenge.GenerateProofCases(contract, 100)
+	proofs, _, err := challenge.GenerateProofCases(contract, 20)
 	if err != nil {
 		println("Error generating proofs: " + err.Error())
 		return
