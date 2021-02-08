@@ -868,7 +868,7 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
         } else if (opCode == OP_PUSH_INSN_IMM) {
             return (3, 0, 25, executePushInsnImmInsn);
         } else if (opCode == OP_SIDELOAD) {
-            return (0, 0, 10, executeSideloadInsn);
+            return (1, 0, 10, executeSideloadInsn);
         } else if (opCode == OP_ECRECOVER) {
             return (4, 0, 20000, executeECRecoverInsn);
         } else if (opCode == OP_ECADD) {
