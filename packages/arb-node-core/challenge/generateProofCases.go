@@ -118,9 +118,9 @@ func GenerateProofCases(contract string, maxSteps uint64) ([]*ProofData, []strin
 			GasUsed:      beforeCut.GasUsed + a.NumGas,
 			InboxDelta:   ethcommon.Hash{},
 			MachineState: mach.Hash().ToEthHash(),
-			SendAcc:      ethcommon.Hash{},
+			SendAcc:      a.SendAcc.ToEthHash(),
 			SendCount:    (*hexutil.Big)(new(big.Int).Add(beforeCut.SendCount.ToInt(), big.NewInt(int64(len(a.Sends))))),
-			LogAcc:       ethcommon.Hash{},
+			LogAcc:       a.LogAcc.ToEthHash(),
 			LogCount:     (*hexutil.Big)(new(big.Int).Add(beforeCut.LogCount.ToInt(), big.NewInt(int64(len(a.Logs))))),
 		}
 

@@ -111,26 +111,12 @@ func runFuzzValidateProof(contract string, osp *ethbridgetestcontracts.OneStepPr
 		if machineData.Fields[2] != proof.AfterCut.InboxDelta {
 			panic("wrong DidInboxInsn")
 		}
-		/*
-			if machineData.Fields[3] != proof.AfterCut.SendAcc {
-				println("Machine state:")
-				println(hex.EncodeToString(machineData.Fields[3][:]))
-				println(hex.EncodeToString(machineData.Fields[4][:]))
-				println("Proof state:")
-				println(hex.EncodeToString(proof.AfterCut.SendAcc[:]))
-				println(hex.EncodeToString(proof.AfterCut.LogAcc[:]))
-				panic("wrong log")
-			}
-			if machineData.Fields[4] != proof.AfterCut.LogAcc {
-				println("Machine state:")
-				println(hex.EncodeToString(machineData.Fields[3][:]))
-				println(hex.EncodeToString(machineData.Fields[4][:]))
-				println("Proof state:")
-				println(hex.EncodeToString(proof.AfterCut.SendAcc[:]))
-				println(hex.EncodeToString(proof.AfterCut.LogAcc[:]))
-				panic("wrong message")
-			}
-		*/
+		if machineData.Fields[3] != proof.AfterCut.SendAcc {
+			panic("wrong log")
+		}
+		if machineData.Fields[4] != proof.AfterCut.LogAcc {
+			panic("wrong message")
+		}
 		if machineData.Fields[1] != proof.AfterCut.MachineState {
 			panic("wrong after machine")
 		}
