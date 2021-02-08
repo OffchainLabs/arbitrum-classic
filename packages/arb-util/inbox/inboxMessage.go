@@ -59,7 +59,6 @@ func NewInboxMessageFromData(data []byte) (InboxMessage, error) {
 	kind := Type(data[0])
 	data = data[1:]
 
-	data = data[12:] // Skip first 12 bytes of 32 byte address data
 	var sender common.Address
 	copy(sender[:], data[:])
 	data = data[20:]
@@ -214,8 +213,6 @@ func NewAddressFromInt(val value.IntValue) common.Address {
 func (im InboxMessage) ToBytes() []byte {
 	var data []byte
 	data = append(data, uint8(im.Kind))
-	emptyData := [12]byte{}
-	data = append(data, emptyData[:]...)
 	data = append(data, im.Sender[:]...)
 	data = append(data, math.U256Bytes(im.ChainTime.BlockNum.AsInt())...)
 	data = append(data, math.U256Bytes(im.ChainTime.Timestamp)...)

@@ -213,10 +213,10 @@ type LogConsumer interface {
 	DeleteLogs(avmLogs []value.Value) error
 }
 
-type ArbCoreLogsCursor interface {
+type LogsCursor interface {
 	LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
 	LogsCursorGetLogs(cursorIndex *big.Int) ([]value.Value, error)
 	LogsCursorGetDeletedLogs(cursorIndex *big.Int) ([]value.Value, error)
 	LogsCursorClearError(cursorIndex *big.Int) error
-	LogsCursorSetConfirmedCount(cursorIndex *big.Int) error
+	LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 }

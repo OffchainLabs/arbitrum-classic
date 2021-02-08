@@ -176,16 +176,13 @@ func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.Inb
 func (ac *ArbCore) GetMessageHashes(startIndex *big.Int, count *big.Int) ([]common.Hash, error) {
 	startIndexData := math.U256Bytes(startIndex)
 	countData := math.U256Bytes(count)
-
 	cHashList := C.arbCoreGetMessageHashes(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
-	if cHashList.count == 0 {
-		return nil, nil
+	if cHashList.found == 0 {
+		return nil, errors.New("not found")
 	}
-	defer C.free(cHashList.data)
-
-	data := (*[1 << 30]byte)(unsafe.Pointer(cHashList.data))[:cHashList.count:cHashList.count]
-	ret := make([]common.Hash, 0, int(cHashList.count))
-	for i := 0; i < int(cHashList.count); i++ {
+	data := receiveByteSlice(cHashList.slice)
+	ret := make([]common.Hash, 0, len(data)/32)
+	for i := 0; i < len(data)/32; i++ {
 		var hashVal common.Hash
 		copy(hashVal[:], data[i*32:])
 		ret = append(ret, hashVal)
@@ -289,6 +286,11 @@ func (ac *ArbCore) LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
 
 	status := C.arbCoreLogsCursorRequest(ac.c, unsafeDataPointer(cursorIndexData), unsafeDataPointer(countData))
 	if status == 0 {
+		err := ac.LogsCursorCheckError(cursorIndex)
+		if err != nil {
+			return err
+		}
+
 		return errors.New("failed to send logs cursor request")
 	}
 
@@ -299,6 +301,11 @@ func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) ([]value.Value, error
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	result := C.arbCoreLogsCursorGetLogs(ac.c, unsafeDataPointer(cursorIndexData))
 	if result.found == 0 {
+		err := ac.LogsCursorCheckError(cursorIndex)
+		if err != nil {
+			return nil, err
+		}
+
 		// Nothing found, try again later
 		return nil, nil
 	}
@@ -320,6 +327,11 @@ func (ac *ArbCore) LogsCursorGetDeletedLogs(cursorIndex *big.Int) ([]value.Value
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	result := C.arbCoreLogsCursorGetDeletedLogs(ac.c, unsafeDataPointer(cursorIndexData))
 	if result.found == 0 {
+		err := ac.LogsCursorCheckError(cursorIndex)
+		if err != nil {
+			return nil, err
+		}
+
 		// Nothing found, try again later
 		return nil, nil
 	}
@@ -336,34 +348,34 @@ func (ac *ArbCore) LogsCursorGetDeletedLogs(cursorIndex *big.Int) ([]value.Value
 	return logs, nil
 }
 
-func (ac *ArbCore) LogsCursorCheckError(cursorIndex *big.Int) bool {
+func (ac *ArbCore) LogsCursorCheckError(cursorIndex *big.Int) error {
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	status := C.arbCoreLogsCursorCheckError(ac.c, unsafeDataPointer(cursorIndexData))
 	if status == 0 {
-		return false
+		return nil
 	}
 
-	return true
-}
-
-func (ac *ArbCore) LogsCursorClearError(cursorIndex *big.Int) (string, error) {
-	cursorIndexData := math.U256Bytes(cursorIndex)
 	cStr := C.arbCoreLogsCursorClearError(ac.c, unsafeDataPointer(cursorIndexData))
 	if cStr == nil {
-		return "", errors.New("no error string present")
+		return errors.New("Error occurred but no error string present")
 	}
 	defer C.free(unsafe.Pointer(cStr))
 
-	return C.GoString(cStr), nil
+	return errors.New(C.GoString(cStr))
 }
 
-func (ac *ArbCore) LogsCursorSetConfirmedCount(cursorIndex *big.Int, count *big.Int) error {
+func (ac *ArbCore) LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error) {
 	cursorIndexData := math.U256Bytes(cursorIndex)
-	countData := math.U256Bytes(count)
-	status := C.arbCoreLogsCursorSetConfirmedCount(ac.c, unsafeDataPointer(cursorIndexData), unsafeDataPointer(countData))
+	status := C.arbCoreLogsCursorConfirmReceived(ac.c, unsafeDataPointer(cursorIndexData))
 	if status == 0 {
-		return errors.New("failed to send logs cursor set next index")
+		err := ac.LogsCursorCheckError(cursorIndex)
+		if err != nil {
+			return false, err
+		}
+
+		// Still have more logs to retrieve
+		return false, nil
 	}
 
-	return nil
+	return true, nil
 }

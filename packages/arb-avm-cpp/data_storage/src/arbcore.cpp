@@ -596,11 +596,11 @@ void ArbCore::operator()() {
                           << core_error_string << "\n";
                 break;
             }
-            auto last_sequence_number_consumed =
+            auto total_messages_consumed =
                 first_sequence_number_in_machine +
                 last_assertion.inbox_messages_consumed;
 
-            if (last_sequence_number_consumed > messages_inserted.data) {
+            if (total_messages_consumed > messages_inserted.data) {
                 // Machine consumed obsolete message, restore from checkpoint
                 machine = getMachineUsingStateKeys<MachineThread>(
                     *tx, pending_checkpoint.machine_state_keys, cache);
@@ -695,7 +695,7 @@ void ArbCore::operator()() {
             }
         }
 
-        for (auto i = 0; i < logs_cursors.size(); i++) {
+        for (size_t i = 0; i < logs_cursors.size(); i++) {
             if (logs_cursors[i].status == DataCursor::REQUESTED) {
                 auto tx = Transaction::makeTransaction(data_storage);
                 handleLogsCursorRequested(*tx, i, cache);
@@ -772,8 +772,8 @@ ValueResult<std::vector<value>> ArbCore::getLogsNoLock(Transaction& tx,
         return {log_count.status, {}};
     }
     auto max_log_count = log_count.data;
-    if (index > max_log_count - 1) {
-        return {rocksdb::Status::OK(), {}};
+    if (index >= max_log_count) {
+        return {rocksdb::Status::NotFound(), {}};
     }
     if (index + count > max_log_count) {
         count = max_log_count - index;
@@ -836,12 +836,12 @@ ValueResult<std::vector<uint256_t>> ArbCore::getInboxHashes(
     if (!message_count_result.status.ok()) {
         return {message_count_result.status, {}};
     }
-    auto max_message_index = message_count_result.data - 1;
-    if (index > max_message_index) {
-        return {rocksdb::Status::OK(), {}};
+    auto max_message_count = message_count_result.data;
+    if (index >= max_message_count) {
+        return {rocksdb::Status::NotFound(), {}};
     }
-    if (index + count > max_message_index) {
-        count = max_message_index - index;
+    if (index + count > max_message_count) {
+        count = max_message_count - index;
     }
 
     std::vector<unsigned char> key;
@@ -849,7 +849,7 @@ ValueResult<std::vector<uint256_t>> ArbCore::getInboxHashes(
     auto key_slice = vecToSlice(key);
 
     auto results = getVectorVectorUsingFamilyAndKey(
-        *tx->transaction, data_storage->send_column.get(), key_slice,
+        *tx->transaction, data_storage->messageentry_column.get(), key_slice,
         intx::narrow_cast<size_t>(count));
     if (!results.status.ok()) {
         return {results.status, {}};
@@ -876,12 +876,12 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     if (!message_count.status.ok()) {
         return {message_count.status, {}};
     }
-    auto max_message_index = message_count.data - 1;
-    if (index > max_message_index) {
-        return {rocksdb::Status::OK(), {}};
+    auto max_message_count = message_count.data;
+    if (index >= max_message_count) {
+        return {rocksdb::Status::NotFound(), {}};
     }
-    if (index + count > max_message_index) {
-        count = max_message_index - index;
+    if (index + count > max_message_count) {
+        count = max_message_count - index;
     }
 
     std::vector<unsigned char> key;
@@ -889,7 +889,7 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     auto key_slice = vecToSlice(key);
 
     auto results = getVectorVectorUsingFamilyAndKey(
-        *tx->transaction, data_storage->send_column.get(), key_slice,
+        *tx->transaction, data_storage->messageentry_column.get(), key_slice,
         intx::narrow_cast<size_t>(count));
     if (!results.status.ok()) {
         return {results.status, {}};
@@ -917,8 +917,7 @@ ValueResult<std::vector<uint256_t>> ArbCore::getMessageHashes(
     std::vector<uint256_t> hashes;
     hashes.reserve(messages.data.size());
     for (const auto& message : messages.data) {
-        auto data = reinterpret_cast<const char*>(message.data());
-        auto hash = hash_value(deserialize_value(data));
+        auto hash = hash_value(extractInboxMessage(message).toTuple());
         hashes.push_back(hash);
     }
 
@@ -935,12 +934,12 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
     if (!send_count.status.ok()) {
         return {send_count.status, {}};
     }
-    auto max_message_index = send_count.data - 1;
-    if (index > max_message_index) {
-        return {rocksdb::Status::OK(), {}};
+    auto max_send_count = send_count.data;
+    if (index >= max_send_count) {
+        return {rocksdb::Status::NotFound(), {}};
     }
-    if (index + count > max_message_index) {
-        count = max_message_index - index;
+    if (index + count > max_send_count) {
+        count = max_send_count - index;
     }
 
     std::vector<unsigned char> key;
@@ -954,14 +953,16 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
 
 ValueResult<uint256_t> ArbCore::getInboxDelta(uint256_t start_index,
                                               uint256_t count) {
-    auto hashes_result = getInboxHashes(start_index, count);
+    auto hashes_result = getMessageHashes(start_index, count);
     if (!hashes_result.status.ok()) {
         return {hashes_result.status, 0};
     }
 
     uint256_t combined_hash = 0;
-    for (const auto& current_hash : hashes_result.data) {
-        combined_hash = hash(combined_hash, current_hash);
+    for (size_t i = 0; i < hashes_result.data.size(); ++i) {
+        combined_hash =
+            hash(combined_hash,
+                 hashes_result.data[hashes_result.data.size() - 1 - i]);
     }
 
     return {rocksdb::Status::OK(), combined_hash};
@@ -1794,17 +1795,25 @@ nonstd::optional<std::vector<value>> ArbCore::logsCursorGetDeletedLogs(
     return logs;
 }
 
-bool ArbCore::logsCursorSetConfirmedCount(size_t cursor_index,
-                                          uint256_t log_count) {
+bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {
     const std::lock_guard<std::mutex> lock(
         logs_cursors[cursor_index].reorg_mutex);
-    if (logs_cursors[cursor_index].status != DataCursor::READY ||
-        !logs_cursors[cursor_index].data.empty() ||
-        !logs_cursors[cursor_index].deleted_data.empty()) {
+
+    if (logs_cursors[cursor_index].status != DataCursor::READY) {
+        logs_cursors[cursor_index].error_string =
+            "logsCursorSetReceived called at wrong state";
+        std::cerr << "Logs Cursor Set Received called at wrong state: "
+                  << logs_cursors[cursor_index].status << "\n";
+        logs_cursors[cursor_index].status = DataCursor::ERROR;
         return false;
     }
 
-    logs_cursors[cursor_index].confirmed_next_index = log_count;
+    if (!logs_cursors[cursor_index].data.empty() ||
+        !logs_cursors[cursor_index].deleted_data.empty()) {
+        // Still have logs to get
+        return false;
+    }
+
     logs_cursors[cursor_index].status = DataCursor::CONFIRMED;
 
     return true;
