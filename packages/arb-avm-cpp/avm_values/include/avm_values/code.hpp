@@ -173,22 +173,16 @@ class Code {
                 return segment->addOperation(std::move(op));
             }
 
-            // The segment is full and other code is referencing it, so we must
-            // allocate a new segment
-            auto new_segment =
-                std::make_shared<CodeSegment>(ref.segment, segment->code);
-            auto stub = new_segment->addOperation(std::move(op));
-            segments[ref.segment] = std::move(new_segment);
-            return stub;
-        } else {
-            // This segment was already mutated elsewhere, therefore we must
-            // make a copy
-            uint64_t new_segment_num = next_segment_num++;
-            auto new_segment = segment->getSubset(new_segment_num, ref.pc);
-            auto stub = new_segment->addOperation(std::move(op));
-            segments[new_segment_num] = std::move(new_segment);
-            return stub;
+            // Fall back to making a copy as there are other references and no
+            // space to add this operation
         }
+        // This segment was already mutated elsewhere, therefore we must
+        // make a copy
+        uint64_t new_segment_num = next_segment_num++;
+        auto new_segment = segment->getSubset(new_segment_num, ref.pc);
+        auto stub = new_segment->addOperation(std::move(op));
+        segments[new_segment_num] = std::move(new_segment);
+        return stub;
     }
 
     CodePointRef initialCodePointRef() const {
