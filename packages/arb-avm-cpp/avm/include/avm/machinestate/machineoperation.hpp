@@ -96,6 +96,7 @@ void pushgas(MachineState& m);
 void errcodept(MachineState& m);
 void pushinsn(MachineState& m);
 void pushinsnimm(MachineState& m);
+void sideload(MachineState& m);
 
 void newbuffer(MachineState& m);
 void getbuffer8(MachineState& m);

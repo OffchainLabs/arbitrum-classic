@@ -1000,6 +1000,13 @@ void pushinsnimm(MachineState& m) {
     ++m.pc;
 }
 
+void sideload(MachineState& m) {
+    m.stack.prepForMod(1);
+    assumeInt(m.stack[0]);
+    m.stack[0] = Tuple();
+    ++m.pc;
+}
+
 void newbuffer(MachineState& m) {
     m.stack.prepForMod(0);
     m.stack.push(Buffer{});
