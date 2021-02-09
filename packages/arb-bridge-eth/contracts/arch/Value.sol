@@ -79,7 +79,10 @@ library Value {
     }
 
     function typeCodeVal(Data memory val) internal pure returns (Data memory) {
-        require(val.typeCode != 2, "invalid type code ???");
+        if (val.typeCode == 2) {
+            // Map HashPreImage to Tuple
+            return newInt(TUPLE_TYPECODE);
+        }
         return newInt(val.typeCode);
     }
 

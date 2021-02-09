@@ -25,6 +25,7 @@
 #include <memory>
 #include <thread>
 #include <vector>
+#include <atomic>
 
 class MachineThread : public Machine {
    public:
