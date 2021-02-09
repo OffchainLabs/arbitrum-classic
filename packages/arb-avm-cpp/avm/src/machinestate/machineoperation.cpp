@@ -405,16 +405,27 @@ void hashOp(MachineState& m) {
     ++m.pc;
 }
 
+struct ValueTypeVisitor {
+    ValueTypes operator()(const uint256_t&) const {
+        return NUM;
+    }
+    ValueTypes operator()(const CodePointStub&) const {
+        return CODEPT;
+    }
+    ValueTypes operator()(const Tuple&) const {
+        return TUPLE;
+    }
+    ValueTypes operator()(const HashPreImage&) const {
+        return TUPLE;
+    }
+    ValueTypes operator()(const Buffer&) const {
+        return BUFFER;
+    }
+};
+
 void typeOp(MachineState& m) {
     m.stack.prepForMod(1);
-    if (nonstd::holds_alternative<uint256_t>(m.stack[0]))
-        m.stack[0] = NUM;
-    else if (nonstd::holds_alternative<CodePointStub>(m.stack[0]))
-        m.stack[0] = CODEPT;
-    else if (nonstd::holds_alternative<Tuple>(m.stack[0]))
-        m.stack[0] = TUPLE;
-    else if (nonstd::holds_alternative<Buffer>(m.stack[0]))
-        m.stack[0] = BUFFER;
+    m.stack[0] = nonstd::visit(ValueTypeVisitor{}, m.stack[0]);
     ++m.pc;
 }
 
