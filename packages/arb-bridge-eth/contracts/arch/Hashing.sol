@@ -54,7 +54,7 @@ library Hashing {
             }
             return keccak1(bytes32(bytes32FromArray(data, startOffset)));
         }
-        bytes32 h2 = merkleRoot(data, startOffset + dataLength / 2, dataLength / 2, false);
+        bytes32 h2 = merkleRoot(data, startOffset + dataLength / 2, dataLength / 2, pack);
         if (h2 == keccak1(bytes32(0)) && pack) {
             return merkleRoot(data, startOffset, dataLength / 2, true);
         }
