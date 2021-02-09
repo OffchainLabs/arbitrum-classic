@@ -219,15 +219,15 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
     function executeIszeroInsn(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
         if (!val1.isInt()) {
-            pushVal(context.stack, Value.newInt(0));
-        } else {
-            uint256 a = val1.intVal;
-            uint256 c;
-            assembly {
-                c := iszero(a)
-            }
-            pushVal(context.stack, Value.newInt(c));
+            handleOpcodeError(context);
+            return;
         }
+        uint256 a = val1.intVal;
+        uint256 c;
+        assembly {
+            c := iszero(a)
+        }
+        pushVal(context.stack, Value.newInt(c));
     }
 
     function executeNotInsn(AssertionContext memory context) internal pure {
