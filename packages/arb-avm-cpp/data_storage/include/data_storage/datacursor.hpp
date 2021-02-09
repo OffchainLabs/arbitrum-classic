@@ -33,7 +33,6 @@ class DataCursor {
         EMPTY,      // Out: Ready to receive request for data
         REQUESTED,  // In: Data requested
         READY,      // Out: Data is ready to be picked up
-        CONFIRMED,  // In: Data count to confirm as received
         ERROR       // Out: Error getting data
     } status_enum;
 
@@ -43,15 +42,14 @@ class DataCursor {
     // Mutex is acquired by core thread when reorg is occurring.
     // Other threads should acquire mutex whenever accessing below data.
     std::mutex reorg_mutex;
-    uint256_t starting_index;
+    uint256_t pending_total_count;
+    uint256_t current_total_count;
     std::vector<value> data;
     std::vector<value> deleted_data;
     std::string error_string;
 
     // Input value
-    uint256_t requested_count;
-    uint256_t confirmed_next_index;
-    uint256_t pending_next_index;
+    uint256_t number_requested;
 
    public:
     DataCursor() = default;

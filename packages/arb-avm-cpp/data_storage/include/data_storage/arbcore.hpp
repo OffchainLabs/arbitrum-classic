@@ -129,6 +129,7 @@ class ArbCore {
     rocksdb::Status reorgToMessageOrBefore(
         Transaction& tx,
         const uint256_t& message_sequence_number,
+        const bool reorg,
         ValueCache& cache);
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(Transaction& transaction,
@@ -184,7 +185,6 @@ class ArbCore {
     void handleLogsCursorRequested(Transaction& tx,
                                    size_t cursor_index,
                                    ValueCache& cache);
-    void handleLogsCursorProcessed(Transaction& tx, size_t cursor_index);
     rocksdb::Status handleLogsCursorReorg(Transaction& tx,
                                           size_t cursor_index,
                                           uint256_t log_count,
