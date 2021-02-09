@@ -413,6 +413,8 @@ void typeOp(MachineState& m) {
         m.stack[0] = CODEPT;
     else if (nonstd::holds_alternative<Tuple>(m.stack[0]))
         m.stack[0] = TUPLE;
+    else if (nonstd::holds_alternative<Buffer>(m.stack[0]))
+        m.stack[0] = BUFFER;
     ++m.pc;
 }
 
