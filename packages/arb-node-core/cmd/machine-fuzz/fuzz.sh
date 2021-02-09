@@ -2,8 +2,12 @@
 set -eu
 cd "$(dirname "$0")"
 
-# former works on linux, latter works on macos
-cores="$(nproc --all || sysctl -n hw.logicalcpu)"
+if [ $# -gt 0 ]; then
+    cores="$1"
+else
+    # former works on linux, latter works on macos
+    cores="$(nproc --all || sysctl -n hw.logicalcpu)"
+fi
 
 mkdir -p corpus
 cp ../../../arb-avm-cpp/tests/machine-cases/* corpus/
