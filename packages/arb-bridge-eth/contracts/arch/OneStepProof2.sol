@@ -376,7 +376,7 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
     ) internal pure returns (bytes32) {
         bytes memory arr = bytes32ToArray(bytes32(val));
         bytes32 nword = get(buf, offset / 32, proof.proof1);
-        if ((offset % 32) + 8 >= 32) {
+        if ((offset % 32) + 8 > 32) {
             for (uint256 i = 0; i < 8 - ((offset % 32) + 8 - 32); i++) {
                 nword = setByte(nword, (offset + i) % 32, arr[i + 24]);
             }
@@ -417,7 +417,7 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
     ) internal pure returns (bytes32) {
         bytes memory arr = bytes32ToArray(bytes32(val));
         bytes32 nword = get(buf, offset / 32, proof.proof1);
-        if ((offset % 32) + 32 >= 32) {
+        if ((offset % 32) + 32 > 32) {
             for (uint256 i = 0; i < 32 - ((offset % 32) + 32 - 32); i++) {
                 nword = setByte(nword, (offset % 32) + i, arr[i]);
             }
