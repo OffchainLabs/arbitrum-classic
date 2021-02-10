@@ -182,7 +182,7 @@ class ArbCore {
 
    private:
     // Logs cursor internal functions
-    void handleLogsCursorRequested(Transaction& tx,
+    bool handleLogsCursorRequested(Transaction& tx,
                                    size_t cursor_index,
                                    ValueCache& cache);
     rocksdb::Status handleLogsCursorReorg(Transaction& tx,
@@ -195,10 +195,10 @@ class ArbCore {
     ValueResult<std::unique_ptr<ExecutionCursor>> getExecutionCursor(
         uint256_t total_gas_used,
         ValueCache& cache);
-    rocksdb::Status Advance(ExecutionCursor& execution_cursor,
-                            uint256_t max_gas,
-                            bool go_over_gas,
-                            ValueCache& cache);
+    rocksdb::Status advanceExecutionCursor(ExecutionCursor& execution_cursor,
+                                           uint256_t max_gas,
+                                           bool go_over_gas,
+                                           ValueCache& cache);
 
    private:
     // Execution cursor internal functions

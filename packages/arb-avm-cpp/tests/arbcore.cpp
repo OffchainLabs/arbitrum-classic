@@ -107,6 +107,18 @@ TEST_CASE("ArbCore tests") {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             }
 
+            REQUIRE(arbCore->logsCursorRequest(0, 1));
+            while (true) {
+                auto result = arbCore->logsCursorGetLogs(0);
+                REQUIRE(!arbCore->logsCursorCheckError(0));
+                if (result) {
+                    REQUIRE(!result->empty());
+                    REQUIRE(arbCore->logsCursorConfirmReceived(0));
+
+                    break;
+                }
+            }
+
             auto producedLogCountRes = arbCore->logInsertedCount();
             REQUIRE(producedLogCountRes.status.ok());
             REQUIRE(producedLogCountRes.data == logs.size());
@@ -121,6 +133,11 @@ TEST_CASE("ArbCore tests") {
             auto cursor = arbCore->getExecutionCursor(0, value_cache);
             REQUIRE(cursor.status.ok());
             REQUIRE(cursor.data->arb_gas_used == 0);
+
+            auto advanceStatus = arbCore->advanceExecutionCursor(
+                *cursor.data, 100, false, value_cache);
+            REQUIRE(advanceStatus.ok());
+            REQUIRE(cursor.data->arb_gas_used > 0);
 
             auto inboxAcc = arbCore->getInboxAcc(1);
             REQUIRE(inboxAcc.status.ok());

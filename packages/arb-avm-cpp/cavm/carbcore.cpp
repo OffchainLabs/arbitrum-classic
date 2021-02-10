@@ -419,8 +419,8 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
     auto max_gas = receiveUint256(max_gas_ptr);
     try {
         ValueCache cache;
-        auto status =
-            arbCore->Advance(*executionCursor, max_gas, go_over_gas, cache);
+        auto status = arbCore->advanceExecutionCursor(*executionCursor, max_gas,
+                                                      go_over_gas, cache);
         if (!status.ok()) {
             return false;
         }
