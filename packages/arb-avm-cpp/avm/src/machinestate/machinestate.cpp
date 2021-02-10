@@ -579,7 +579,7 @@ BlockReason MachineState::runOne() {
         while (auxstack.stacksize() > 0 &&
                start_auxstack_size - auxstack.stacksize() <
                    auxstack_arg_count) {
-            stack.popClear();
+            auxstack.popClear();
         }
     }
 
