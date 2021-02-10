@@ -81,11 +81,22 @@ describe('Hashing', function () {
       expect(await hashTester.testMerkleHash("0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")).to.equal("0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563")
     })
 
+    it('should work with 65 byte buffer', async () => {
+      let buf = [elem(0), elem(0), "0x0100000000000000000000000000000000000000000000000000000000000000", elem(0)]
+      expect(await hashTester.testMerkleHash("0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001")).to.equal(merkleHash(buf, 0, 4))
+    })
+
     it('should work with buffers with single word', async () => {
       for (let i = 16; i < 32; i++) {
         let buf = emptyBuffer(32)
         buf[i] = elem(1)
         expect(await hashTester.testMerkleHash(bufferToBytes(buf))).to.equal(merkleHash(buf, 0, 32))
+      }
+
+      for (let i = 2; i < 4; i++) {
+        let buf = emptyBuffer(4)
+        buf[i] = elem(1)
+        expect(await hashTester.testMerkleHash(bufferToBytes(buf))).to.equal(merkleHash(buf, 0, 4))
       }
 
     })

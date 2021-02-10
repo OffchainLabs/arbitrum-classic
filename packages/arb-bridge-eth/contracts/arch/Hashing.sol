@@ -63,12 +63,17 @@ library Hashing {
         return (keccak2(h1, h2), zero1 && zero2);
     }
 
+    function roundUpToPow2(uint256 len) internal pure returns (uint256) {
+        if (len <= 1) return 1;
+        else return 2*roundUpToPow2((len+1)/2);
+    }
+
     function bytesToBufferHash(
         bytes memory buf,
         uint256 startOffset,
         uint256 length
     ) internal pure returns (bytes32) {
-        (bytes32 mhash, ) = merkleRoot(buf, startOffset, length, true);
+        (bytes32 mhash, ) = merkleRoot(buf, startOffset, roundUpToPow2(length), true);
         return
             keccak2(
                 bytes32(buf.length),
