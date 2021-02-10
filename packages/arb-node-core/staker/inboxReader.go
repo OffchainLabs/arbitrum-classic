@@ -61,6 +61,12 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 	}
 	reorging := false
 	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+
 		for {
 			currentHeight, err := ir.bridge.CurrentBlockHeight(ctx)
 			if err != nil {

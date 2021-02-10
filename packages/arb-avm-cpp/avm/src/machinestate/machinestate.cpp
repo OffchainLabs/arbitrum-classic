@@ -819,6 +819,9 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::PUSH_INSN_IMM:
             machineoperation::pushinsnimm(*this);
             break;
+        case OpCode::SIDELOAD:
+            machineoperation::sideload(*this);
+            break;
         case OpCode::NEW_BUFFER:
             machineoperation::newbuffer(*this);
             break;

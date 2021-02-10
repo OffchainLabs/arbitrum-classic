@@ -2,7 +2,6 @@ package challenge
 
 import (
 	"context"
-	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"math/big"
 	"testing"
@@ -151,7 +150,6 @@ func initializeChallengeData(
 	afterInboxCount := new(big.Int).Add(prevState.InboxIndex, inboxMessagesRead)
 
 	inboxAcc, err := lookup.GetInboxAcc(afterInboxCount)
-	fmt.Println("testE")
 	test.FailIfError(t, err)
 
 	assertion := &core.Assertion{

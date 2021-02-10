@@ -295,7 +295,7 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::PUSH_INSN, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
         {OpCode::PUSH_INSN_IMM,
          {MarshalLevel::SINGLE, MarshalLevel::STUB, MarshalLevel::SINGLE}},
-        {OpCode::SIDELOAD, {}},
+        {OpCode::SIDELOAD, {MarshalLevel::SINGLE}},
         {OpCode::DEBUG_PRINT, {MarshalLevel::STUB}},
 
         {OpCode::NEW_BUFFER, {}},

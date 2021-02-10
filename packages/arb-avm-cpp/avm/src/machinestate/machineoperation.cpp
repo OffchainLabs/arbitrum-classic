@@ -405,14 +405,27 @@ void hashOp(MachineState& m) {
     ++m.pc;
 }
 
+struct ValueTypeVisitor {
+    ValueTypes operator()(const uint256_t&) const {
+        return NUM;
+    }
+    ValueTypes operator()(const CodePointStub&) const {
+        return CODEPT;
+    }
+    ValueTypes operator()(const Tuple&) const {
+        return TUPLE;
+    }
+    ValueTypes operator()(const HashPreImage&) const {
+        return TUPLE;
+    }
+    ValueTypes operator()(const Buffer&) const {
+        return BUFFER;
+    }
+};
+
 void typeOp(MachineState& m) {
     m.stack.prepForMod(1);
-    if (nonstd::holds_alternative<uint256_t>(m.stack[0]))
-        m.stack[0] = NUM;
-    else if (nonstd::holds_alternative<CodePointStub>(m.stack[0]))
-        m.stack[0] = CODEPT;
-    else if (nonstd::holds_alternative<Tuple>(m.stack[0]))
-        m.stack[0] = TUPLE;
+    m.stack[0] = nonstd::visit(ValueTypeVisitor{}, m.stack[0]);
     ++m.pc;
 }
 
@@ -997,6 +1010,13 @@ void pushinsnimm(MachineState& m) {
         target->pc, {static_cast<OpCode>(op), std::move(m.stack[1])});
     m.stack.popClear();
     m.stack.popClear();
+    ++m.pc;
+}
+
+void sideload(MachineState& m) {
+    m.stack.prepForMod(1);
+    assumeInt(m.stack[0]);
+    m.stack[0] = Tuple();
     ++m.pc;
 }
 

@@ -165,26 +165,27 @@ ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
     }
 }
 
-HashList arbCoreGetMessageHashes(CArbCore* arbcore_ptr,
-                                 const void* start_index_ptr,
-                                 const void* count_ptr) {
+ByteSliceResult arbCoreGetMessageHashes(CArbCore* arbcore_ptr,
+                                        const void* start_index_ptr,
+                                        const void* count_ptr) {
     try {
         auto hashes = static_cast<const ArbCore*>(arbcore_ptr)
                           ->getMessageHashes(receiveUint256(start_index_ptr),
                                              receiveUint256(count_ptr));
         if (!hashes.status.ok()) {
-            return {{}, false};
+            std::cerr << "error getting message hashes: "
+                      << hashes.status.ToString() << "\n";
+            return {{nullptr, 0}, false};
         }
 
         std::vector<unsigned char> serializedHashes;
         for (const auto& hash : hashes.data) {
             marshal_uint256_t(hash, serializedHashes);
         }
-        auto hashesData =
-            reinterpret_cast<unsigned char*>(malloc(serializedHashes.size()));
-        std::copy(serializedHashes.begin(), serializedHashes.end(), hashesData);
-        return {hashesData, static_cast<int>(hashes.data.size())};
+        return {returnCharVector(serializedHashes), true};
     } catch (const std::exception& e) {
+        std::cerr << "error, exception getting message hashes: " << e.what()
+                  << "\n";
         return {{}, false};
     }
 }
@@ -274,6 +275,8 @@ int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr,
 
         return status;
     } catch (const std::exception& e) {
+        std::cerr << "Exception while requesting logs from logscursor "
+                  << e.what() << std::endl;
         return false;
     }
 }
@@ -299,6 +302,8 @@ ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
         }
         return {returnCharVectorVector(data), true};
     } catch (const std::exception& e) {
+        std::cerr << "Exception while retrieving new logs from logscursor "
+                  << e.what() << std::endl;
         return {{}, false};
     }
 }
@@ -324,23 +329,25 @@ ByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(CArbCore* arbcore_ptr,
         }
         return {returnCharVectorVector(data), true};
     } catch (const std::exception& e) {
+        std::cerr << "Exception while retrieving deleted logs from logscursor "
+                  << e.what() << std::endl;
         return {{}, false};
     }
 }
 
-int arbCoreLogsCursorSetConfirmedCount(CArbCore* arbcore_ptr,
-                                       const void* index_ptr,
-                                       const void* count_ptr) {
+int arbCoreLogsCursorConfirmReceived(CArbCore* arbcore_ptr,
+                                     const void* index_ptr) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
     auto cursor_index = receiveUint256(index_ptr);
-    auto count = receiveUint256(count_ptr);
 
     try {
-        auto status = arbcore->logsCursorSetConfirmedCount(
-            intx::narrow_cast<size_t>(cursor_index), count);
+        auto status = arbcore->logsCursorConfirmReceived(
+            intx::narrow_cast<size_t>(cursor_index));
 
         return status;
     } catch (const std::exception& e) {
+        std::cerr << "Exception while confirming receipt of logscursor "
+                  << e.what() << std::endl;
         return 0;
     }
 }
@@ -353,6 +360,8 @@ int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr, const void* index_ptr) {
         return arbcore->logsCursorCheckError(
             intx::narrow_cast<size_t>(cursor_index));
     } catch (const std::exception& e) {
+        std::cerr << "Exception while checking error for logscursor "
+                  << e.what() << std::endl;
         return 0;
     }
 }
@@ -373,6 +382,8 @@ char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr,
 
         return strdup(str.c_str());
     } catch (const std::exception& e) {
+        std::cerr << "Exception while clearing error for logscursor "
+                  << e.what() << std::endl;
         return strdup("exception occurred in logsCursorClearError");
     }
 }
@@ -416,6 +427,8 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
 
         return true;
     } catch (const std::exception& e) {
+        std::cerr << "Exception while advancing execution cursor " << e.what()
+                  << std::endl;
         return false;
     }
 }
