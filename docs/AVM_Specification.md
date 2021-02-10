@@ -262,12 +262,12 @@ The instructions are as follows:
 
 | 0xa0 | newbuffer | Push an empty buffer to stack | 10 |
 
-| 0xa1 | getbuffer8 | Pop two values (A) and (B) off the stack. The value A must be a buffer and B must be an integer smaller than 2**64. Pushes to the stack Bth byte of buffer A. | 10 |
-| 0xa2 | getbuffer64 | Pop two values (A) and (B) off the stack. The value A must be a buffer and B must be an integer smaller than 2**64-7. Pushes to the stack B..B+7 bytes of buffer A as BE integer. | 10 |
-| 0xa3 | getbuffer256 | Pop two values (A) and (B) off the stack. The value A must be a buffer and B must be an integer smaller than 2**64-31. Pushes to the stack B..B+31 bytes of buffer A as BE integer. | 10 |
-| 0xa4 | setbuffer8 | Pop three values (A), (B) and (C) off the stack. The value A must be a buffer, B must be an integer smaller than 2**64 and C must be an integer smaller than 2**8. Pushes to stack a new buffer that is same as A except that byte in position B is now C. | 100 |
-| 0xa5 | setbuffer64 | Pop three values (A), (B) and (C) off the stack. The value A must be a buffer, B must be an integer smaller than 2**64-7 and C must be an integer smaller than 2**64. Pushes to stack a new buffer that is same as A except that bytes in positions B..B+7 are now BE representation of C. | 100 |
-| 0xa6 | setbuffer256 | Pop three values (A), (B) and (C) off the stack. The value A must be a buffer, B must be an integer smaller than 2**64-31 and C must be an integer. Pushes to stack a new buffer that is same as A except that bytes in positions B..B+31 are now BE representation of C. | 100 |
+| 0xa1 | getbuffer8 | Pop two values (A) and (B) off the stack. The value A must be a buffer and B must be an integer smaller than 2**64. If any of these conditions are not met, raise an error. Pushes to the stack Bth byte of buffer A. | 10 |
+| 0xa2 | getbuffer64 | Pop two values (A) and (B) off the stack. The value A must be a buffer and B must be an integer smaller than 2**64-7. If any of these conditions are not met, raise an error. Pushes to the stack B..B+7 bytes of buffer A as BE integer. | 10 |
+| 0xa3 | getbuffer256 | Pop two values (A) and (B) off the stack. The value A must be a buffer and B must be an integer smaller than 2**64-31. If any of these conditions are not met, raise an error. Pushes to the stack B..B+31 bytes of buffer A as BE integer. | 10 |
+| 0xa4 | setbuffer8 | Pop three values (A), (B) and (C) off the stack. The value A must be a buffer, B must be an integer smaller than 2**64 and C must be an integer smaller than 2**8. If any of these conditions are not met, raise an error. Pushes to stack a new buffer that is same as A except that byte in position B is now C. | 100 |
+| 0xa5 | setbuffer64 | Pop three values (A), (B) and (C) off the stack. The value A must be a buffer, B must be an integer smaller than 2**64-7 and C must be an integer smaller than 2**64. If any of these conditions are not met, raise an error. Pushes to stack a new buffer that is same as A except that bytes in positions B..B+7 are now BE representation of C. | 100 |
+| 0xa6 | setbuffer256 | Pop three values (A), (B) and (C) off the stack. The value A must be a buffer, B must be an integer smaller than 2**64-31 and C must be an integer. If any of these conditions are not met, raise an error. Pushes to stack a new buffer that is same as A except that bytes in positions B..B+31 are now BE representation of C. | 100 |
 
 ### Definition of `keccakf`
 
