@@ -477,7 +477,10 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        require(val2.intVal < (1 << 64), "buffer index must be 64-bit");
+        if (val2.intVal >= 1 << 64) {
+            handleOpcodeError(context);
+            return;
+        }
         uint256 res = getBuffer8(val1.bufferHash, val2.intVal, decodeProof(context.bufProof));
         pushVal(context.stack, Value.newInt(res));
     }
@@ -489,7 +492,10 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        require(val2.intVal + 7 < (1 << 64), "buffer index must be 64-bit");
+        if (val2.intVal >= (1 << 64) - 7) {
+            handleOpcodeError(context);
+            return;
+        }
         uint256 res = getBuffer64(val1.bufferHash, val2.intVal, decodeProof(context.bufProof));
         pushVal(context.stack, Value.newInt(res));
     }
@@ -501,7 +507,10 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        require(val2.intVal + 31 < (1 << 64), "buffer index must be 64-bit");
+        if (val2.intVal >= (1 << 64) - 31) {
+            handleOpcodeError(context);
+            return;
+        }
         uint256 res = getBuffer256(val1.bufferHash, val2.intVal, decodeProof(context.bufProof));
         pushVal(context.stack, Value.newInt(res));
     }
@@ -514,7 +523,10 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        require(val2.intVal < (1 << 64), "buffer index must be 64-bit");
+        if (val2.intVal >= 1 << 64 || val3.intVal >= 1 << 8) {
+            handleOpcodeError(context);
+            return;
+        }
         bytes32 res =
             setBuffer8(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
         pushVal(context.stack, Value.newBuffer(res));
@@ -528,7 +540,10 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        require(val2.intVal + 7 < (1 << 64), "buffer index must be 64-bit");
+        if (val2.intVal >= (1 << 64) - 7 || val3.intVal >= 1 << 64) {
+            handleOpcodeError(context);
+            return;
+        }
         bytes32 res =
             setBuffer64(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
         pushVal(context.stack, Value.newBuffer(res));
@@ -542,7 +557,10 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        require(val2.intVal + 31 < (1 << 64), "buffer index must be 64-bit");
+        if (val2.intVal >= (1 << 64) - 31) {
+            handleOpcodeError(context);
+            return;
+        }
         bytes32 res =
             setBuffer256(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
         pushVal(context.stack, Value.newBuffer(res));
