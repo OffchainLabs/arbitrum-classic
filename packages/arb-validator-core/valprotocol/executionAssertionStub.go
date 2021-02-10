@@ -17,11 +17,8 @@
 package valprotocol
 
 import (
-	"bytes"
 	"fmt"
 	"math/big"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -44,24 +41,41 @@ type ExecutionAssertionStub struct {
 var zeroBufferHash = hashing.SoliditySHA3(hashing.Uint256(big.NewInt(0)))
 var tagHash = hashing.SoliditySHA3(hashing.Uint256(big.NewInt(123)))
 
-func hashBuffer(buf []byte, pack bool) common.Hash {
+func roundUpToPow2(len int) int {
+	if len <= 1 {
+		return 1
+	}
+	return 2 * roundUpToPow2((len+1)/2)
+}
+
+func hashBufferAux(buf []byte, pack bool) (common.Hash, bool) {
 	if len(buf) == 0 {
-		return zeroBufferHash
+		return zeroBufferHash, true
 	}
 	if len(buf) == 32 {
 		var arr [32]byte
 		copy(arr[:], buf)
-		return hashing.SoliditySHA3(hashing.Bytes32(arr))
+		res := hashing.SoliditySHA3(hashing.Bytes32(arr))
+		return res, res == zeroBufferHash
 	}
 	len := len(buf)
-	h2 := hashBuffer(buf[len/2:len], false)
-	if h2 == zeroBufferHash && pack {
-		return hashBuffer(buf[0:len/2], true)
+	h2, zero2 := hashBufferAux(buf[len/2:len], false)
+	if zero2 && pack {
+		return hashBufferAux(buf[0:len/2], pack)
 	}
-	h1 := hashBuffer(buf[0:len/2], false)
-	return hashing.SoliditySHA3(hashing.Bytes32(h1), hashing.Bytes32(h2))
+	h1, zero1 := hashBufferAux(buf[0:len/2], false)
+	return hashing.SoliditySHA3(hashing.Bytes32(h1), hashing.Bytes32(h2)), zero1 && zero2
 }
 
+func hashBuffer(buf []byte) common.Hash {
+	// convert to pow2
+	arr := make([]byte, roundUpToPow2(len(buf)))
+	copy(arr, buf)
+	res, _ := hashBufferAux(arr, true)
+	return res
+}
+
+/*
 func BytesArrayAccumHash(initialHash common.Hash, data []byte, valCount uint64) common.Hash {
 	lastMsgHash := initialHash
 	rd := bytes.NewReader(data)
@@ -76,13 +90,14 @@ func BytesArrayAccumHash(initialHash common.Hash, data []byte, valCount uint64) 
 	}
 	return lastMsgHash
 }
+*/
 
 func BufferAccumHash(initialHash common.Hash, data [][]byte) common.Hash {
 	lastMsgHash := initialHash
 	for msg := range data {
 		bufHash := hashing.SoliditySHA3(
 			hashing.Bytes32(tagHash),
-			hashing.Bytes32(hashBuffer(data[msg], true)))
+			hashing.Bytes32(hashBuffer(data[msg])))
 		msgHash := hashing.SoliditySHA3(
 			hashing.Uint256(big.NewInt(int64(len(data[msg])))),
 			hashing.Bytes32(bufHash))
