@@ -47,19 +47,20 @@ library Hashing {
         uint256 startOffset,
         uint256 dataLength,
         bool pack
-    ) internal pure returns (bytes32) {
+    ) internal pure returns (bytes32, bool) {
         if (dataLength <= 32) {
             if (startOffset >= data.length) {
-                return keccak1(bytes32(0));
+                return (keccak1(bytes32(0)), true);
             }
-            return keccak1(bytes32(bytes32FromArray(data, startOffset)));
+            bytes32 res = keccak1(bytes32(bytes32FromArray(data, startOffset)));
+            return (res, res == keccak1(bytes32(0)));
         }
-        bytes32 h2 = merkleRoot(data, startOffset + dataLength / 2, dataLength / 2, pack);
-        if (h2 == keccak1(bytes32(0)) && pack) {
-            return merkleRoot(data, startOffset, dataLength / 2, true);
+        (bytes32 h2, bool zero2) = merkleRoot(data, startOffset + dataLength / 2, dataLength / 2, false);
+        if (zero2 && pack) {
+            return merkleRoot(data, startOffset, dataLength / 2, pack);
         }
-        bytes32 h1 = merkleRoot(data, startOffset, dataLength / 2, false);
-        return keccak2(h1, h2);
+        (bytes32 h1, bool zero1) = merkleRoot(data, startOffset, dataLength / 2, false);
+        return (keccak2(h1, h2), zero1 && zero2);
     }
 
     function bytesToBufferHash(
@@ -67,10 +68,11 @@ library Hashing {
         uint256 startOffset,
         uint256 length
     ) internal pure returns (bytes32) {
+        (bytes32 mhash, ) = merkleRoot(buf, startOffset, length, true);
         return
             keccak2(
                 bytes32(buf.length),
-                keccak2(bytes32(uint256(123)), merkleRoot(buf, startOffset, length, true))
+                keccak2(bytes32(uint256(123)), mhash)
             );
     }
 
