@@ -42,6 +42,13 @@ library Hashing {
         return res;
     }
 
+    /*
+     * Note that dataLength has to be a power of two.
+     * The boolean return value tells if the data segment data[startOffset..startOffset+dataLength] only included zeroes.
+     * If pack is true, the returned value is the merkle hash where trailing zeroes are ignored, that is,
+     *   if h is the smallest height for which all data[startOffset+2**h..] are zero, merkle hash of data[startOffset..startOffset+2**h] is returned.
+     * If all elements in the data segment are zero (and pack is true), keccak1(bytes32(0)) is returned.
+     */
     function merkleRoot(
         bytes memory data,
         uint256 startOffset,
