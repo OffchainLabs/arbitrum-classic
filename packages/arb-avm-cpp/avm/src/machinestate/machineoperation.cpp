@@ -891,7 +891,10 @@ void send(MachineState& m) {
     auto msg_size = assumeInt64(assumeInt(m.stack[0]));
     Buffer& buf = assumeBuffer(m.stack[1]);
 
-    if (msg_size > send_size_limit || buf.lastIndex() >= msg_size) {
+    // Note: the last msg_size == 0 check is implied by the buf.lastIndex()
+    // check, but it's additionally specified for clarity and in case the
+    // lastIndex method is refactored out.
+    if (msg_size > send_size_limit || buf.lastIndex() >= msg_size || msg_size == 0) {
         m.state = Status::Error;
         std::cerr << "Send failure: over size limit" << std::endl;
         return;

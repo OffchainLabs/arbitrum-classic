@@ -443,7 +443,7 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        if (val2.intVal > SEND_SIZE_LIMIT) {
+        if (val2.intVal > SEND_SIZE_LIMIT || val2.intVal == 0) {
             handleOpcodeError(context);
             return;
         }
