@@ -1087,6 +1087,9 @@ void setbuffer8(MachineState& m) {
     m.stack.prepForMod(3);
     auto offset = assumeInt64(assumeInt(m.stack[0]));
     auto val_int = assumeInt(m.stack[1]);
+    if (val_int > std::numeric_limits<uint8_t>::max()) {
+        throw int_out_of_bounds{};
+    }
     auto val = static_cast<uint8_t>(val_int);
     Buffer& md = assumeBuffer(m.stack[2]);
     auto res = md.set(offset, val);

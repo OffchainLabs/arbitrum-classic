@@ -127,7 +127,12 @@ func (e *ExecutionTracker) GetMachine(gasUsed *big.Int) (machine.Machine, error)
 }
 
 func JudgeAssertion(lookup ArbCoreLookup, assertion *Assertion, execTracker *ExecutionTracker) (ChallengeKind, error) {
-	afterInboxHash, err := lookup.GetInboxAcc(assertion.After.InboxIndex)
+	var afterInboxIndex big.Int
+	if assertion.After.TotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
+		afterInboxIndex = *assertion.After.TotalMessagesRead
+		afterInboxIndex.Sub(&afterInboxIndex, big.NewInt(1))
+	}
+	afterInboxHash, err := lookup.GetInboxAcc(&afterInboxIndex)
 	if err != nil {
 		return 0, err
 	}
@@ -135,7 +140,12 @@ func JudgeAssertion(lookup ArbCoreLookup, assertion *Assertion, execTracker *Exe
 		// Failed inbox consistency
 		return INBOX_CONSISTENCY, nil
 	}
-	inboxDelta, err := lookup.GetInboxDelta(assertion.Before.InboxIndex, assertion.InboxMessagesRead())
+	var beforeInboxIndex big.Int
+	if assertion.Before.TotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
+		beforeInboxIndex = *assertion.Before.TotalMessagesRead
+		beforeInboxIndex.Sub(&beforeInboxIndex, big.NewInt(1))
+	}
+	inboxDelta, err := lookup.GetInboxDelta(&beforeInboxIndex, assertion.InboxMessagesRead())
 	if err != nil {
 		return 0, err
 	}

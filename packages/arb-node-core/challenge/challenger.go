@@ -38,8 +38,13 @@ func NewChallenger(challenge *ethbridge.Challenge, lookup core.ArbCoreLookup, ch
 
 func (c *Challenger) getInboxDelta() (*inboxDelta, error) {
 	if c.inboxDelta == nil {
+		var startIndex big.Int
+		if c.challengedNode.Assertion.Before.TotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
+			startIndex = *c.challengedNode.Assertion.Before.TotalMessagesRead
+			startIndex.Sub(&startIndex, big.NewInt(1))
+		}
 		messagesHashes, err := c.lookup.GetMessageHashes(
-			c.challengedNode.Assertion.Before.InboxIndex,
+			&startIndex,
 			c.challengedNode.Assertion.InboxMessagesRead(),
 		)
 		if err != nil {
@@ -134,8 +139,13 @@ func (c *Challenger) handleInboxDeltaChallenge(ctx context.Context, prevBisectio
 	if err != nil {
 		return err
 	}
+	var startIndex big.Int
+	if c.challengedNode.Assertion.After.TotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
+		startIndex = *c.challengedNode.Assertion.After.TotalMessagesRead
+		startIndex.Sub(&startIndex, big.NewInt(1))
+	}
 	challengeImpl := &InboxDeltaImpl{
-		nodeAfterInboxCount: c.challengedNode.Assertion.After.InboxIndex,
+		nodeAfterInboxCount: &startIndex,
 		inboxDelta:          inboxDeltaData,
 	}
 	if prevBisection == nil {

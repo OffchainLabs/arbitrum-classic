@@ -23,7 +23,7 @@ func (e *ExecutionCursorMock) MachineHash() common.Hash {
 	return e.mach.Hash()
 }
 
-func (e *ExecutionCursorMock) NextInboxMessageIndex() *big.Int {
+func (e *ExecutionCursorMock) TotalMessagesRead() *big.Int {
 	return big.NewInt(0)
 }
 

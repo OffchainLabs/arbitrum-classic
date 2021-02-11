@@ -31,7 +31,7 @@ CExecutionCursor* executionCursorClone(CExecutionCursor* execution_cursor_ptr);
 int executionCursorMachineHash(CExecutionCursor* execution_cursor_ptr,
                                void* ret);
 int executionCursorInboxHash(CExecutionCursor* execution_cursor_ptr, void* ret);
-Uint256Result executionCursorNextInboxMessageIndex(
+Uint256Result executionCursorTotalMessagesRead(
     CExecutionCursor* execution_cursor_ptr);
 Uint256Result executionCursorTotalGasConsumed(
     CExecutionCursor* execution_cursor_ptr);
