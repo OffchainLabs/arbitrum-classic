@@ -24,7 +24,7 @@ const (
 type ExecutionCursor interface {
 	Clone() ExecutionCursor
 	MachineHash() common.Hash
-	NextInboxMessageIndex() *big.Int
+	TotalMessagesRead() *big.Int
 	InboxHash() common.Hash
 	TotalGasConsumed() *big.Int
 	TotalSendCount() *big.Int
@@ -150,28 +150,28 @@ func GetSingleLog(lookup ArbCoreLookup, index *big.Int) (value.Value, error) {
 }
 
 type ExecutionState struct {
-	MachineHash      common.Hash
-	InboxIndex       *big.Int
-	InboxHash        common.Hash
-	TotalGasConsumed *big.Int
-	TotalSendCount   *big.Int
-	TotalLogCount    *big.Int
+	MachineHash       common.Hash
+	TotalMessagesRead *big.Int
+	InboxHash         common.Hash
+	TotalGasConsumed  *big.Int
+	TotalSendCount    *big.Int
+	TotalLogCount     *big.Int
 }
 
 func NewExecutionState(c ExecutionCursor) *ExecutionState {
 	return &ExecutionState{
-		MachineHash:      c.MachineHash(),
-		InboxIndex:       c.NextInboxMessageIndex(),
-		InboxHash:        c.InboxHash(),
-		TotalGasConsumed: c.TotalGasConsumed(),
-		TotalSendCount:   c.TotalSendCount(),
-		TotalLogCount:    c.TotalLogCount(),
+		MachineHash:       c.MachineHash(),
+		TotalMessagesRead: c.TotalMessagesRead(),
+		InboxHash:         c.InboxHash(),
+		TotalGasConsumed:  c.TotalGasConsumed(),
+		TotalSendCount:    c.TotalSendCount(),
+		TotalLogCount:     c.TotalLogCount(),
 	}
 }
 
 func (e *ExecutionState) Equals(o *ExecutionState) bool {
 	return e.MachineHash == o.MachineHash &&
-		e.InboxIndex.Cmp(o.InboxIndex) == 0 &&
+		e.TotalMessagesRead.Cmp(o.TotalMessagesRead) == 0 &&
 		e.InboxHash == o.InboxHash &&
 		e.TotalGasConsumed.Cmp(o.TotalGasConsumed) == 0 &&
 		e.TotalSendCount.Cmp(o.TotalSendCount) == 0 &&
@@ -205,7 +205,7 @@ func (e *ExecutionInfo) LogCount() *big.Int {
 }
 
 func (e *ExecutionInfo) InboxMessagesRead() *big.Int {
-	return new(big.Int).Sub(e.After.InboxIndex, e.Before.InboxIndex)
+	return new(big.Int).Sub(e.After.TotalMessagesRead, e.Before.TotalMessagesRead)
 }
 
 type LogConsumer interface {

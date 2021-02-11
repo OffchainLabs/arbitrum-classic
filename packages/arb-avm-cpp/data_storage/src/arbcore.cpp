@@ -1026,9 +1026,7 @@ ValueResult<uint256_t> ArbCore::getInboxDelta(uint256_t start_index,
 
     uint256_t combined_hash = 0;
     for (size_t i = 0; i < hashes_result.data.size(); ++i) {
-        combined_hash =
-            hash(combined_hash,
-                 hashes_result.data[hashes_result.data.size() - 1 - i]);
+        combined_hash = hash(combined_hash, hashes_result.data[i]);
     }
 
     return {rocksdb::Status::OK(), combined_hash};

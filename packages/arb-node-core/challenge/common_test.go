@@ -137,19 +137,20 @@ func initializeChallengeData(
 		ProposedBlock: big.NewInt(0),
 		InboxMaxCount: big.NewInt(0),
 		ExecutionState: &core.ExecutionState{
-			TotalGasConsumed: big.NewInt(0),
-			MachineHash:      initialMach.MachineHash(),
-			InboxHash:        common.Hash{},
-			InboxIndex:       big.NewInt(0),
-			TotalSendCount:   big.NewInt(0),
-			TotalLogCount:    big.NewInt(0),
+			TotalGasConsumed:  big.NewInt(0),
+			MachineHash:       initialMach.MachineHash(),
+			InboxHash:         common.Hash{},
+			TotalMessagesRead: big.NewInt(0),
+			TotalSendCount:    big.NewInt(0),
+			TotalLogCount:     big.NewInt(0),
 		},
 	}
 	inboxDeltaHash, err := lookup.GetInboxDelta(big.NewInt(0), inboxMessagesRead)
 	test.FailIfError(t, err)
-	afterInboxCount := new(big.Int).Add(prevState.InboxIndex, inboxMessagesRead)
+	afterInboxCount := new(big.Int).Add(prevState.TotalMessagesRead, inboxMessagesRead)
+	afterInboxIndex := new(big.Int).Sub(afterInboxCount, big.NewInt(1))
 
-	inboxAcc, err := lookup.GetInboxAcc(afterInboxCount)
+	inboxAcc, err := lookup.GetInboxAcc(afterInboxIndex)
 	test.FailIfError(t, err)
 
 	assertion := &core.Assertion{
@@ -158,12 +159,12 @@ func initializeChallengeData(
 		ExecutionInfo: &core.ExecutionInfo{
 			Before: prevState.ExecutionState,
 			After: &core.ExecutionState{
-				MachineHash:      common.Hash{},
-				InboxIndex:       inboxMessagesRead,
-				InboxHash:        inboxAcc,
-				TotalGasConsumed: big.NewInt(0),
-				TotalSendCount:   big.NewInt(0),
-				TotalLogCount:    big.NewInt(0),
+				MachineHash:       common.Hash{},
+				TotalMessagesRead: inboxMessagesRead,
+				InboxHash:         inboxAcc,
+				TotalGasConsumed:  big.NewInt(0),
+				TotalSendCount:    big.NewInt(0),
+				TotalLogCount:     big.NewInt(0),
 			},
 			SendAcc: common.Hash{},
 			LogAcc:  common.Hash{},

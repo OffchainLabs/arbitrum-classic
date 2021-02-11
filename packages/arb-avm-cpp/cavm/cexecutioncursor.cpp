@@ -58,7 +58,7 @@ int executionCursorInboxHash(CExecutionCursor* execution_cursor_ptr,
     }
 }
 
-Uint256Result executionCursorNextInboxMessageIndex(
+Uint256Result executionCursorTotalMessagesRead(
     CExecutionCursor* execution_cursor_ptr) {
     try {
         auto index_result = static_cast<ExecutionCursor*>(execution_cursor_ptr)
