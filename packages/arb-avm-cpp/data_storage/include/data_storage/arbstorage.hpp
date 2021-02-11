@@ -42,8 +42,8 @@ class ArbStorage {
    public:
     explicit ArbStorage(const std::string& db_path);
     bool closeArbStorage();
-    void initialize(const LoadedExecutable& executable);
-    void initialize(const std::string& executable_path);
+    rocksdb::Status initialize(const LoadedExecutable& executable);
+    rocksdb::Status initialize(const std::string& executable_path);
     bool initialized() const;
 
     std::unique_ptr<Transaction> makeTransaction();
