@@ -45,7 +45,13 @@ int initializeArbStorage(CArbStorage* storage_ptr,
                          const char* executable_path) {
     auto storage = static_cast<ArbStorage*>(storage_ptr);
     try {
-        storage->initialize(executable_path);
+        auto status = storage->initialize(executable_path);
+        if (!status.ok()) {
+            std::cerr << "Error initializing storage" << status.ToString()
+                      << std::endl;
+            return false;
+        }
+
         return true;
     } catch (const std::exception&) {
         return false;

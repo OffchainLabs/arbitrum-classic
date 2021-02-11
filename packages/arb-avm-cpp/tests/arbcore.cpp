@@ -74,7 +74,7 @@ TEST_CASE("ArbCore tests") {
             }
 
             ArbStorage storage(dbpath);
-            storage.initialize(arb_os_path);
+            REQUIRE(storage.initialize(arb_os_path).ok());
             auto arbCore = storage.getArbCore();
             REQUIRE(arbCore->startThread());
 

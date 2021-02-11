@@ -63,9 +63,16 @@ int main(int argc, char* argv[]) {
         }
 
         auto code = std::make_shared<CodeSegment>(0, ops);
-        storage.initialize(LoadedExecutable{std::move(code), Tuple()});
+        auto status =
+            storage.initialize(LoadedExecutable{std::move(code), Tuple()});
+        if (!status.ok()) {
+            throw std::runtime_error("Error initializing storage");
+        }
     } else {
-        storage.initialize(filename);
+        auto status = storage.initialize(filename);
+        if (!status.ok()) {
+            throw std::runtime_error("Error initializing storage");
+        }
     }
 
     ValueCache value_cache{};

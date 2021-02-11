@@ -143,7 +143,7 @@ std::unique_ptr<const Transaction> ArbCore::makeConstTransaction() const {
     return std::make_unique<Transaction>(data_storage, std::move(transaction));
 }
 
-void ArbCore::initialize(const LoadedExecutable& executable) {
+rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     auto tx = makeTransaction();
 
     code = std::make_shared<Code>(0);
@@ -151,48 +151,80 @@ void ArbCore::initialize(const LoadedExecutable& executable) {
     machine = std::make_unique<MachineThread>(
         MachineState{code, executable.static_val});
 
-    auto res = saveMachine(*tx, *machine);
-    if (!res.status.ok()) {
-        throw std::runtime_error("failed to save initial machine");
+    auto result = getInitialMachineHash(*tx);
+    if (result.status.ok() && machine->hash() == result.data) {
+        if (machine->hash() != result.data) {
+            // Need to delete database and start from scratch
+            std::cerr << "Incorrect initial machine in database" << std::endl;
+            return rocksdb::Status::Corruption();
+        }
+
+        // Use latest existing checkpoint
+        ValueCache cache;
+        auto status = reorgToMessageOrBefore(*tx, 0, true, cache);
+        if (!status.ok()) {
+            std::cerr << "Error with initial reorg: " << status.ToString()
+                      << std::endl;
+            return status;
+        }
+
+        // Make sure logs cursors are starting at the correct logs
+        for (auto& logs_cursor : logs_cursors) {
+            logs_cursor.current_total_count = pending_checkpoint.log_count;
+        }
+    } else {
+        // Need to initialize database from scratch
+        auto res = saveMachine(*tx, *machine);
+        if (!res.status.ok()) {
+            std::cerr << "failed to save initial machine: "
+                      << res.status.ToString() << std::endl;
+            return res.status;
+        }
+
+        std::vector<unsigned char> value_data;
+        marshal_uint256_t(machine->hash(), value_data);
+        auto s = tx->transaction->Put(data_storage->state_column.get(),
+                                      vecToSlice(initial_machine_hash_key),
+                                      vecToSlice(value_data));
+        if (!s.ok()) {
+            std::cerr << "failed to save initial machine values into db: "
+                      << res.status.ToString() << std::endl;
+            return s;
+        }
+
+        s = saveCheckpoint(*tx);
+        if (!s.ok()) {
+            std::cerr << "failed to save initial checkpoint into db: "
+                      << s.ToString() << std::endl;
+            return s;
+        }
+
+        auto status = updateLogInsertedCount(*tx, 0);
+        if (!status.ok()) {
+            throw std::runtime_error("failed to initialize log inserted count");
+        }
+        status = updateSendInsertedCount(*tx, 0);
+        if (!status.ok()) {
+            throw std::runtime_error("failed to initialize log inserted count");
+        }
+        status = updateMessageEntryInsertedCount(*tx, 0);
+        if (!status.ok()) {
+            throw std::runtime_error("failed to initialize log inserted count");
+        }
+        status = updateMessageEntryProcessedCount(*tx, 0);
+        if (!status.ok()) {
+            throw std::runtime_error("failed to initialize log inserted count");
+        }
     }
 
-    std::vector<unsigned char> value_data;
-    marshal_uint256_t(machine->hash(), value_data);
-    auto s = tx->transaction->Put(data_storage->state_column.get(),
-                                  vecToSlice(initial_machine_hash_key),
-                                  vecToSlice(value_data));
+    auto s = tx->commit();
     if (!s.ok()) {
-        throw std::runtime_error(
-            "failed to save initial machine values into db");
+        std::cerr << "failed to commit initial state into db: " << s.ToString()
+                  << std::endl;
+        return s;
     }
 
-    auto status = saveCheckpoint(*tx);
-    if (!s.ok()) {
-        throw std::runtime_error(
-            "failed to save initial machine values into db");
-    }
-
-    status = updateLogInsertedCount(*tx, 0);
-    if (!s.ok()) {
-        throw std::runtime_error("failed to initialize log inserted count");
-    }
-    status = updateSendInsertedCount(*tx, 0);
-    if (!s.ok()) {
-        throw std::runtime_error("failed to initialize log inserted count");
-    }
-    status = updateMessageEntryInsertedCount(*tx, 0);
-    if (!s.ok()) {
-        throw std::runtime_error("failed to initialize log inserted count");
-    }
-    status = updateMessageEntryProcessedCount(*tx, 0);
-    if (!s.ok()) {
-        throw std::runtime_error("failed to initialize log inserted count");
-    }
-
-    s = tx->commit();
-    if (!s.ok()) {
-        throw std::runtime_error("failed to commit initial machine into db");
-    }
+    return rocksdb::Status::OK();
 }
 
 bool ArbCore::initialized() const {
@@ -204,24 +236,25 @@ bool ArbCore::initialized() const {
     return s.ok();
 }
 
-uint256_t ArbCore::getInitialMachineHash(Transaction& tx) {
+ValueResult<uint256_t> ArbCore::getInitialMachineHash(Transaction& tx) {
     std::string initial_raw;
     auto s = tx.transaction->GetForUpdate(
         rocksdb::ReadOptions(), data_storage->state_column.get(),
         vecToSlice(initial_machine_hash_key), &initial_raw);
     if (!s.ok()) {
-        throw std::runtime_error("failed to load initial machine");
+        return {s, 0};
     }
 
-    return intx::be::unsafe::load<uint256_t>(
-        reinterpret_cast<const unsigned char*>(initial_raw.data()));
+    return {rocksdb::Status::OK(),
+            intx::be::unsafe::load<uint256_t>(
+                reinterpret_cast<const unsigned char*>(initial_raw.data()))};
 }
 
 template <class T>
 std::unique_ptr<T> ArbCore::getInitialMachineImpl(Transaction& tx,
                                                   ValueCache& value_cache) {
     auto machine_hash = getInitialMachineHash(tx);
-    return getMachine<T>(machine_hash, value_cache);
+    return getMachine<T>(machine_hash.data, value_cache);
 }
 
 template std::unique_ptr<Machine> ArbCore::getInitialMachineImpl(Transaction&,
@@ -1161,7 +1194,10 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
         if (!execution_cursor.machine) {
             // Initialize machine to starting state
             auto initial_hash = getInitialMachineHash(tx);
-            auto result = getMachineStateKeys(tx, initial_hash);
+            if (!initial_hash.status.ok()) {
+                return initial_hash.status;
+            }
+            auto result = getMachineStateKeys(tx, initial_hash.data);
             if (!result.status.ok()) {
                 return result.status;
             }
