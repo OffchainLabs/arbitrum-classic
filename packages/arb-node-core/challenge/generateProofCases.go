@@ -99,13 +99,9 @@ func GenerateProofCases(contract string, maxSteps uint64) ([]*ProofData, []strin
 			panic("executed incorrect step count")
 		}
 		machineStates = append(machineStates, mach.String())
-		if mach.CurrentStatus() == machine.ErrorStop {
-			fmt.Println("Machine stopped in error state")
-			return proofs, nil, nil
-		}
 		if a.InboxMessagesConsumed > 0 {
 			fmt.Println("TODO: Inbox is currently unimplemented; stopping")
-			return proofs, nil, nil
+			break
 
 			inboxDeltaHash, err := db.GetInboxDelta(big.NewInt(0), big.NewInt(1))
 			if err != nil {
@@ -132,6 +128,11 @@ func GenerateProofCases(contract string, maxSteps uint64) ([]*ProofData, []strin
 		})
 		beforeCut = afterCut
 		nextMessageIndex = nextMessageIndex.Add(nextMessageIndex, new(big.Int).SetUint64(a.InboxMessagesConsumed))
+
+		if mach.CurrentStatus() == machine.ErrorStop {
+			fmt.Println("Machine stopped in error state")
+			break
+		}
 	}
 	return proofs, machineStates, nil
 }
