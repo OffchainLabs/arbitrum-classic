@@ -86,7 +86,7 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 
 	challengedNode := initializeChallengeData(t, correctLookup, inboxMessagesRead)
 
-	inboxAcc, err := falseLookup.GetInboxAcc(new(big.Int).Add(challengedNode.Assertion.After.TotalMessagesRead, big.NewInt(1)))
+	inboxAcc, err := falseLookup.GetInboxAcc(new(big.Int).Sub(challengedNode.Assertion.After.TotalMessagesRead, big.NewInt(1)))
 	test.FailIfError(t, err)
 	challengedNode.Assertion.After.InboxHash = inboxAcc
 

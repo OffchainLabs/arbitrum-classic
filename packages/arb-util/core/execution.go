@@ -132,25 +132,19 @@ func (e *ExecutionTracker) GetMachine(gasUsed *big.Int) (machine.Machine, error)
 }
 
 func JudgeAssertion(lookup ArbCoreLookup, assertion *Assertion, execTracker *ExecutionTracker) (ChallengeKind, error) {
-	var afterInboxIndex big.Int
+	var afterInboxHash common.Hash
 	if assertion.After.TotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
-		afterInboxIndex = *assertion.After.TotalMessagesRead
-		//afterInboxIndex.Sub(&afterInboxIndex, big.NewInt(1))
-	}
-	afterInboxHash, err := lookup.GetInboxAcc(&afterInboxIndex)
-	if err != nil {
-		return 0, err
+		var err error
+		afterInboxHash, err = lookup.GetInboxAcc(new(big.Int).Sub(assertion.After.TotalMessagesRead, big.NewInt(1)))
+		if err != nil {
+			return 0, err
+		}
 	}
 	if assertion.After.InboxHash != afterInboxHash {
 		// Failed inbox consistency
 		return INBOX_CONSISTENCY, nil
 	}
-	var beforeInboxIndex big.Int
-	if assertion.Before.TotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
-		beforeInboxIndex = *assertion.Before.TotalMessagesRead
-		//beforeInboxIndex.Sub(&beforeInboxIndex, big.NewInt(1))
-	}
-	inboxDelta, err := lookup.GetInboxDelta(&beforeInboxIndex, assertion.InboxMessagesRead())
+	inboxDelta, err := lookup.GetInboxDelta(assertion.Before.TotalMessagesRead, assertion.InboxMessagesRead())
 	if err != nil {
 		return 0, err
 	}

@@ -147,15 +147,12 @@ func initializeChallengeData(
 	}
 	inboxDeltaHash, err := lookup.GetInboxDelta(big.NewInt(0), inboxMessagesRead)
 	test.FailIfError(t, err)
-	afterInboxIndex := new(big.Int).Add(prevState.TotalMessagesRead, inboxMessagesRead)
-	/*
-		if afterInboxIndex.Cmp(big.NewInt(0)) != 0 {
-			afterInboxIndex = afterInboxIndex.Sub(afterInboxIndex, big.NewInt(1))
-		}
-	*/
-
-	inboxAcc, err := lookup.GetInboxAcc(afterInboxIndex)
-	test.FailIfError(t, err)
+	afterInboxTotalMessagesRead := new(big.Int).Add(prevState.TotalMessagesRead, inboxMessagesRead)
+	var inboxAcc common.Hash
+	if afterInboxTotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
+		inboxAcc, err = lookup.GetInboxAcc(new(big.Int).Sub(afterInboxTotalMessagesRead, big.NewInt(1)))
+		test.FailIfError(t, err)
+	}
 
 	assertion := &core.Assertion{
 		PrevProposedBlock: prevState.ProposedBlock,
@@ -164,7 +161,7 @@ func initializeChallengeData(
 			Before: prevState.ExecutionState,
 			After: &core.ExecutionState{
 				MachineHash:       common.Hash{},
-				TotalMessagesRead: inboxMessagesRead,
+				TotalMessagesRead: afterInboxTotalMessagesRead,
 				InboxHash:         inboxAcc,
 				TotalGasConsumed:  big.NewInt(0),
 				TotalSendCount:    big.NewInt(0),
@@ -178,15 +175,11 @@ func initializeChallengeData(
 
 	inboxMaxCount, err := lookup.GetMessageCount()
 	test.FailIfError(t, err)
-	inboxMaxIndex := inboxMaxCount
-	/*
-		if inboxMaxCount.Cmp(big.NewInt(0)) != 0 {
-			inboxMaxIndex = inboxMaxIndex.Sub(inboxMaxCount, big.NewInt(1))
-		}
-	*/
-	test.FailIfError(t, err)
-	inboxTopAcc, err := lookup.GetInboxAcc(inboxMaxIndex)
-	test.FailIfError(t, err)
+	var inboxTopAcc common.Hash
+	if inboxMaxCount.Cmp(big.NewInt(0)) != 0 {
+		inboxTopAcc, err = lookup.GetInboxAcc(new(big.Int).Sub(inboxMaxCount, big.NewInt(1)))
+		test.FailIfError(t, err)
+	}
 	return &core.NodeInfo{
 		NodeNum: big.NewInt(1),
 		BlockProposed: &common.BlockId{
