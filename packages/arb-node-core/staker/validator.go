@@ -224,7 +224,8 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, ma
 	var startIndex big.Int
 	if execInfo.After.TotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
 		startIndex = *execInfo.After.TotalMessagesRead
-		startIndex.Sub(&startIndex, big.NewInt(1))
+		// check
+		//startIndex.Sub(&startIndex, big.NewInt(1))
 	}
 	msgBlock, err := v.bridge.LookupMessageBlock(ctx, &startIndex)
 	if err != nil {

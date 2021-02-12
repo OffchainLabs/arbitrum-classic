@@ -96,7 +96,7 @@ func (ec *ExecutionCursor) updateValues() error {
 
 	result := C.executionCursorTotalMessagesRead(ec.c)
 	if result.found == 0 {
-		return errors.New("failed to get TotalGasConsumed")
+		return errors.New("failed to get TotalMessagesRead")
 	}
 	ec.totalMessagesRead = receiveBigInt(result.value)
 

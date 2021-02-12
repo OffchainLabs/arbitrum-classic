@@ -77,6 +77,11 @@ func (e *ExecutionTracker) fillInAccs(max int) error {
 	if err := e.fillInCursors(max); err != nil {
 		return err
 	}
+	if len(e.logAccs) < 2 {
+		// Nothing to fill in
+		return nil
+	}
+
 	for i := len(e.logAccs) - 1; i < max; i++ {
 		prevCursor := e.cursors[i-1]
 		cursor := e.cursors[i]
@@ -130,7 +135,7 @@ func JudgeAssertion(lookup ArbCoreLookup, assertion *Assertion, execTracker *Exe
 	var afterInboxIndex big.Int
 	if assertion.After.TotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
 		afterInboxIndex = *assertion.After.TotalMessagesRead
-		afterInboxIndex.Sub(&afterInboxIndex, big.NewInt(1))
+		//afterInboxIndex.Sub(&afterInboxIndex, big.NewInt(1))
 	}
 	afterInboxHash, err := lookup.GetInboxAcc(&afterInboxIndex)
 	if err != nil {
@@ -143,7 +148,7 @@ func JudgeAssertion(lookup ArbCoreLookup, assertion *Assertion, execTracker *Exe
 	var beforeInboxIndex big.Int
 	if assertion.Before.TotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
 		beforeInboxIndex = *assertion.Before.TotalMessagesRead
-		beforeInboxIndex.Sub(&beforeInboxIndex, big.NewInt(1))
+		//beforeInboxIndex.Sub(&beforeInboxIndex, big.NewInt(1))
 	}
 	inboxDelta, err := lookup.GetInboxDelta(&beforeInboxIndex, assertion.InboxMessagesRead())
 	if err != nil {

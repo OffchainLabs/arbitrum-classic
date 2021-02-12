@@ -41,7 +41,7 @@ func (c *Challenger) getInboxDelta() (*inboxDelta, error) {
 		var startIndex big.Int
 		if c.challengedNode.Assertion.Before.TotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
 			startIndex = *c.challengedNode.Assertion.Before.TotalMessagesRead
-			startIndex.Sub(&startIndex, big.NewInt(1))
+			//startIndex.Sub(&startIndex, big.NewInt(1))
 		}
 		messagesHashes, err := c.lookup.GetMessageHashes(
 			&startIndex,

@@ -147,8 +147,12 @@ func initializeChallengeData(
 	}
 	inboxDeltaHash, err := lookup.GetInboxDelta(big.NewInt(0), inboxMessagesRead)
 	test.FailIfError(t, err)
-	afterInboxCount := new(big.Int).Add(prevState.TotalMessagesRead, inboxMessagesRead)
-	afterInboxIndex := new(big.Int).Sub(afterInboxCount, big.NewInt(1))
+	afterInboxIndex := new(big.Int).Add(prevState.TotalMessagesRead, inboxMessagesRead)
+	/*
+		if afterInboxIndex.Cmp(big.NewInt(0)) != 0 {
+			afterInboxIndex = afterInboxIndex.Sub(afterInboxIndex, big.NewInt(1))
+		}
+	*/
 
 	inboxAcc, err := lookup.GetInboxAcc(afterInboxIndex)
 	test.FailIfError(t, err)
@@ -174,7 +178,14 @@ func initializeChallengeData(
 
 	inboxMaxCount, err := lookup.GetMessageCount()
 	test.FailIfError(t, err)
-	inboxTopAcc, err := lookup.GetInboxAcc(inboxMaxCount)
+	inboxMaxIndex := inboxMaxCount
+	/*
+		if inboxMaxCount.Cmp(big.NewInt(0)) != 0 {
+			inboxMaxIndex = inboxMaxIndex.Sub(inboxMaxCount, big.NewInt(1))
+		}
+	*/
+	test.FailIfError(t, err)
+	inboxTopAcc, err := lookup.GetInboxAcc(inboxMaxIndex)
 	test.FailIfError(t, err)
 	return &core.NodeInfo{
 		NodeNum: big.NewInt(1),

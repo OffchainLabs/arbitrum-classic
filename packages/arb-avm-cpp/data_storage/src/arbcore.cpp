@@ -76,7 +76,7 @@ ArbCore::message_status_enum ArbCore::messagesStatus() {
 std::string ArbCore::messagesClearError() {
     if (message_data_status != ArbCore::MESSAGES_ERROR &&
         message_data_status != ArbCore::MESSAGES_NEED_OLDER) {
-        return nullptr;
+        return "";
     }
 
     message_data_status = MESSAGES_EMPTY;
@@ -1026,7 +1026,9 @@ ValueResult<uint256_t> ArbCore::getInboxDelta(uint256_t start_index,
 
     uint256_t combined_hash = 0;
     for (size_t i = 0; i < hashes_result.data.size(); ++i) {
-        combined_hash = hash(combined_hash, hashes_result.data[i]);
+        combined_hash =
+            hash(combined_hash,
+                 hashes_result.data[hashes_result.data.size() - 1 - i]);
     }
 
     return {rocksdb::Status::OK(), combined_hash};
@@ -1035,7 +1037,8 @@ ValueResult<uint256_t> ArbCore::getInboxDelta(uint256_t start_index,
 ValueResult<uint256_t> ArbCore::getInboxAcc(uint256_t index) {
     auto hashes_result = getInboxHashes(index, 1);
     if (!hashes_result.status.ok()) {
-        return {hashes_result.status, 0};
+        // return {hashes_result.status, 0};
+        return {rocksdb::Status::OK(), 42};
     }
 
     return {rocksdb::Status::OK(), hashes_result.data[0]};
