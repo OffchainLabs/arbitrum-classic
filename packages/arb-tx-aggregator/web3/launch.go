@@ -18,7 +18,6 @@ package web3
 
 import (
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/aggregator"
@@ -34,7 +33,7 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 		return nil, err
 	}
 
-	if err := s.RegisterName("eth", filters.NewPublicFilterAPI(server, false)); err != nil {
+	if err := s.RegisterName("eth", NewFilterAPI(server, false)); err != nil {
 		return nil, err
 	}
 
