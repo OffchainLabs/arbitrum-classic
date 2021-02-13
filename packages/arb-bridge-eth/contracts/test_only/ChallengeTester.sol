@@ -41,26 +41,24 @@ contract ChallengeTester {
     }
 
     function startChallenge(
-        bytes32 inboxConsistencyHash,
-        bytes32 inboxDeltaHash,
         bytes32 executionHash,
         address payable asserter,
         address payable challenger,
         uint256 asserterTimeLeft,
-        uint256 challengerTimeLeft
+        uint256 challengerTimeLeft,
+        IBridge bridge
     ) public {
         Challenge chal = new Challenge();
         chal.initializeChallenge(
             oneStepProofAddress,
             oneStepProof2Address,
             address(this),
-            inboxConsistencyHash,
-            inboxDeltaHash,
             executionHash,
             asserter,
             challenger,
             asserterTimeLeft,
-            challengerTimeLeft
+            challengerTimeLeft,
+            bridge
         );
         challenge = address(chal);
     }

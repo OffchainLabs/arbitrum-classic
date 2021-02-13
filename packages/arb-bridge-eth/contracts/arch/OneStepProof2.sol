@@ -55,17 +55,29 @@ import "../libraries/Precompiles.sol";
 
 contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
     function executeStep(
-        bytes32[3] calldata _machineFields,
+        uint256 initialNextInboxMessageNum,
+        bytes32 initialSendAcc,
+        bytes32 initialLogAcc,
         bytes calldata proof,
         bytes calldata bproof
-    ) external view override returns (uint64 gas, bytes32[5] memory fields) {
+    )
+        external
+        view
+        override
+        returns (
+            uint64 gas,
+            uint256 nextInboxMessageNum,
+            bytes32[4] memory fields
+        )
+    {
         AssertionContext memory context =
             initializeExecutionContext(
-                _machineFields[0],
-                _machineFields[1],
-                _machineFields[2],
+                initialNextInboxMessageNum,
+                initialSendAcc,
+                initialLogAcc,
                 proof,
-                bproof
+                bproof,
+                IBridge(0) // no need to pass bridge in this prover
             );
 
         executeOp(context);

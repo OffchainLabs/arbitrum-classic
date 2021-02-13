@@ -21,7 +21,7 @@ pragma solidity ^0.6.11;
 import "../arch/OneStepProof2.sol";
 
 contract BufferProofTester is OneStepProof2 {
-    event OneStepProofResult(uint64 gas, bytes32[5] fields);
+    event OneStepProofResult(uint64 gas, uint256 nextInboxMessageNum, bytes32[4] fields);
 
     function testGet(
         bytes32 buf,
@@ -56,12 +56,20 @@ contract BufferProofTester is OneStepProof2 {
     }
 
     function executeStepTest(
-        bytes32[3] calldata machineFields,
+        uint256 initialNextInboxMessageNum,
+        bytes32 initialSendAcc,
+        bytes32 initialLogAcc,
         bytes calldata proof,
         bytes calldata bproof
     ) external {
-        (uint64 gas, bytes32[5] memory fields) =
-            OneStepProof2(address(this)).executeStep(machineFields, proof, bproof);
-        emit OneStepProofResult(gas, fields);
+        (uint64 gas, uint256 nextInboxMessageNum, bytes32[4] memory fields) =
+            OneStepProof2(address(this)).executeStep(
+                initialNextInboxMessageNum,
+                initialSendAcc,
+                initialLogAcc,
+                proof,
+                bproof
+            );
+        emit OneStepProofResult(gas, nextInboxMessageNum, fields);
     }
 }

@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 import "./IOneStepProof.sol";
 import "./Value.sol";
 import "./Machine.sol";
+import "../bridge/interfaces/IBridge.sol";
 
 abstract contract OneStepProofCommon {
     using Machine for Machine.Data;
@@ -157,14 +158,18 @@ abstract contract OneStepProofCommon {
     function returnContext(AssertionContext memory context)
         internal
         pure
-        returns (uint64 gas, bytes32[5] memory fields)
+        returns (
+            uint64 gas,
+            uint256 nextInboxMessageNum,
+            bytes32[4] memory fields
+        )
     {
         return (
             context.gas,
+            context.nextInboxMessageNum,
             [
                 Machine.hash(context.startMachine),
                 Machine.hash(context.afterMachine),
-                context.inboxDelta,
                 context.sendAcc,
                 context.logAcc
             ]
@@ -188,9 +193,10 @@ abstract contract OneStepProofCommon {
     }
 
     struct AssertionContext {
+        IBridge bridge;
         Machine.Data startMachine;
         Machine.Data afterMachine;
-        bytes32 inboxDelta;
+        uint256 nextInboxMessageNum;
         bytes32 sendAcc;
         bytes32 logAcc;
         uint64 gas;
@@ -231,11 +237,12 @@ abstract contract OneStepProofCommon {
     }
 
     function initializeExecutionContext(
-        bytes32 inboxDelta,
-        bytes32 messagesAcc,
-        bytes32 logsAcc,
+        uint256 nextInboxMessageNum,
+        bytes32 initialSendAcc,
+        bytes32 initialLogAcc,
         bytes memory proof,
-        bytes memory bproof
+        bytes memory bproof,
+        IBridge bridge
     ) internal pure returns (AssertionContext memory) {
         uint8 opCode = uint8(proof[0]);
         uint8 stackCount = uint8(proof[1]);
@@ -256,11 +263,12 @@ abstract contract OneStepProofCommon {
 
         AssertionContext memory context =
             AssertionContext(
+                bridge,
                 mach,
                 mach.clone(),
-                inboxDelta,
-                messagesAcc,
-                logsAcc,
+                nextInboxMessageNum,
+                initialSendAcc,
+                initialLogAcc,
                 0,
                 ValueStack(stackCount, stackVals),
                 ValueStack(auxstackCount, auxstackVals),

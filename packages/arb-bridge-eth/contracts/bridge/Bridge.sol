@@ -38,8 +38,8 @@ contract Bridge is Ownable, IBridge {
 
     address public override activeOutbox;
 
-    bytes32 private inboxMaxAcc;
-    uint256 private inboxMaxCount;
+    bytes32 inboxMaxAcc;
+    bytes32[] public override inboxMessages;
 
     function allowedInboxes(address inbox) external view override returns (bool) {
         return allowedInboxesMap[inbox].allowed;
@@ -55,7 +55,7 @@ contract Bridge is Ownable, IBridge {
         bytes32 messageDataHash
     ) external payable override returns (uint256) {
         require(allowedInboxesMap[msg.sender].allowed, "NOT_FROM_INBOX");
-        uint256 count = inboxMaxCount;
+        uint256 count = inboxMessages.length;
         bytes32 inboxAcc = inboxMaxAcc;
         bytes32 messageHash =
             Messages.messageHash(
@@ -66,8 +66,8 @@ contract Bridge is Ownable, IBridge {
                 count,
                 messageDataHash
             );
+        inboxMessages.push(messageHash);
         inboxMaxAcc = Messages.addMessageToInbox(inboxAcc, messageHash);
-        inboxMaxCount = count + 1;
         emit MessageDelivered(count, inboxAcc, msg.sender, kind, sender, messageDataHash);
         return count;
     }
@@ -118,7 +118,7 @@ contract Bridge is Ownable, IBridge {
         }
     }
 
-    function inboxInfo() external view override returns (uint256, bytes32) {
-        return (inboxMaxCount, inboxMaxAcc);
+    function messageCount() external view override returns (uint256) {
+        return inboxMessages.length;
     }
 }

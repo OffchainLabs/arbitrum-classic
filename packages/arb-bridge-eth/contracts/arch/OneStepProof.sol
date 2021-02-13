@@ -24,6 +24,7 @@ import "./OneStepProofCommon.sol";
 import "../bridge/Messages.sol";
 
 import "../libraries/Precompiles.sol";
+import "../libraries/BytesLib.sol";
 
 // Originally forked from https://github.com/leapdao/solEVM-enforcer/tree/master
 
@@ -31,27 +32,38 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
     using Machine for Machine.Data;
     using Hashing for Value.Data;
     using Value for Value.Data;
+    using BytesLib for bytes;
 
     uint256 private constant MAX_PAIRING_COUNT = 30;
 
     // machineFields
-    //  initialInbox
+    //  nextInboxIndex
     //  initialMessage
     //  initialLog
-    function executeStep(bytes32[3] calldata _machineFields, bytes calldata proof)
+    function executeStep(
+        IBridge bridge,
+        uint256 initialNextInboxMessageNum,
+        bytes32 initialSendAcc,
+        bytes32 initialLogAcc,
+        bytes calldata proof
+    )
         external
         view
         override
-        returns (uint64 gas, bytes32[5] memory fields)
+        returns (
+            uint64 gas,
+            uint256 nextInboxMessageNum,
+            bytes32[4] memory fields
+        )
     {
-        bytes memory bproof = new bytes(0);
         AssertionContext memory context =
             initializeExecutionContext(
-                _machineFields[0],
-                _machineFields[1],
-                _machineFields[2],
+                initialNextInboxMessageNum,
+                initialSendAcc,
+                initialLogAcc,
                 proof,
-                bproof
+                new bytes(0),
+                bridge
             );
 
         executeOp(context);
@@ -526,20 +538,61 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
 
     function incrementInbox(AssertionContext memory context)
         private
-        pure
+        view
         returns (Value.Data memory message)
     {
-        uint256 newInboxDelta;
-        (context.offset, message) = Marshaling.deserialize(context.proof, context.offset);
-        (context.offset, newInboxDelta) = Marshaling.deserializeInt(context.proof, context.offset);
+        bytes memory proof = context.proof;
+
+        // Get message out of proof
+        uint8 kind = uint8(proof[context.offset]);
+        context.offset++;
+        uint256 l1BlockNumber;
+        uint256 l1Timestamp;
+        uint256 inboxSeqNum;
+        (context.offset, l1BlockNumber) = Marshaling.deserializeInt(proof, context.offset);
+        (context.offset, l1Timestamp) = Marshaling.deserializeInt(proof, context.offset);
+        address sender = proof.toAddress(context.offset);
+        context.offset += 20;
+        (context.offset, inboxSeqNum) = Marshaling.deserializeInt(proof, context.offset);
+        uint256 messageDataLength;
+        (context.offset, messageDataLength) = Marshaling.deserializeInt(proof, context.offset);
+        bytes32 messageBufHash =
+            Hashing.bytesToBufferHash(proof, context.offset, messageDataLength);
+
+        uint256 offset = context.offset;
+        bytes32 messageDataHash;
+        assembly {
+            messageDataHash := keccak256(add(add(proof, 32), offset), messageDataLength)
+        }
+
+        bytes32 messageHash =
+            Messages.messageHash(
+                kind,
+                sender,
+                l1BlockNumber,
+                l1Timestamp,
+                inboxSeqNum,
+                messageDataHash
+            );
         require(
-            context.inboxDelta == Messages.addMessageToInbox(bytes32(newInboxDelta), message.hash())
+            context.bridge.inboxMessages(context.nextInboxMessageNum) == messageHash,
+            "WRONG_MESSAGE"
         );
-        context.inboxDelta = bytes32(newInboxDelta);
-        return message;
+
+        context.nextInboxMessageNum++;
+
+        Value.Data[] memory tupData = new Value.Data[](7);
+        tupData[0] = Value.newInt(uint256(kind));
+        tupData[1] = Value.newInt(l1BlockNumber);
+        tupData[2] = Value.newInt(l1Timestamp);
+        tupData[3] = Value.newInt(uint256(sender));
+        tupData[4] = Value.newInt(inboxSeqNum);
+        tupData[5] = Value.newInt(messageDataLength);
+        tupData[6] = Value.newHashedValue(messageBufHash, 1);
+        return Value.newTuple(tupData);
     }
 
-    function executeInboxPeekInsn(AssertionContext memory context) internal pure {
+    function executeInboxPeekInsn(AssertionContext memory context) internal view {
         Value.Data memory val = popVal(context.stack);
         if (context.afterMachine.pendingMessage.hash() != Value.newEmptyTuple().hash()) {
             context.afterMachine.pendingMessage = incrementInbox(context);
@@ -551,7 +604,7 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
         );
     }
 
-    function executeInboxInsn(AssertionContext memory context) internal pure {
+    function executeInboxInsn(AssertionContext memory context) internal view {
         if (context.afterMachine.pendingMessage.hash() != Value.newEmptyTuple().hash()) {
             // The pending message field is already full
             pushVal(context.stack, context.afterMachine.pendingMessage);

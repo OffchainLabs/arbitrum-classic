@@ -36,11 +36,9 @@ library RollupLib {
         uint256 proposedBlock,
         uint256 totalGasUsed,
         bytes32 machineHash,
-        bytes32 inboxTop,
         uint256 inboxCount,
         uint256 totalMessageCount,
-        uint256 totalLogCount,
-        uint256 inboxMaxCount
+        uint256 totalLogCount
     ) internal pure returns (bytes32) {
         return
             keccak256(
@@ -48,11 +46,9 @@ library RollupLib {
                     proposedBlock,
                     totalGasUsed,
                     machineHash,
-                    inboxTop,
                     inboxCount,
                     totalMessageCount,
-                    totalLogCount,
-                    inboxMaxCount
+                    totalLogCount
                 )
             );
     }
@@ -66,18 +62,16 @@ library RollupLib {
         uint256 beforeTotalSendCount;
         uint256 beforeTotalLogCount;
         uint256 beforeInboxMaxCount;
-        bytes32 inboxDelta;
         uint256 inboxMessagesRead;
         uint256 gasUsed;
         bytes32 sendAcc;
         uint256 sendCount;
         bytes32 logAcc;
         uint256 logCount;
-        bytes32 afterInboxHash;
         bytes32 afterMachineHash;
     }
 
-    function decodeAssertion(bytes32[7] memory bytes32Fields, uint256[10] memory intFields)
+    function decodeAssertion(bytes32[5] memory bytes32Fields, uint256[10] memory intFields)
         internal
         pure
         returns (Assertion memory)
@@ -92,15 +86,13 @@ library RollupLib {
                 intFields[3],
                 intFields[4],
                 intFields[5],
-                bytes32Fields[2],
                 intFields[6],
                 intFields[7],
-                bytes32Fields[3],
+                bytes32Fields[2],
                 intFields[8],
-                bytes32Fields[4],
+                bytes32Fields[3],
                 intFields[9],
-                bytes32Fields[5],
-                bytes32Fields[6]
+                bytes32Fields[4]
             );
     }
 
@@ -110,29 +102,21 @@ library RollupLib {
                 assertion.beforeProposedBlock,
                 assertion.beforeTotalGasUsed,
                 assertion.beforeMachineHash,
-                assertion.beforeInboxHash,
                 assertion.beforeInboxCount,
                 assertion.beforeTotalSendCount,
-                assertion.beforeTotalLogCount,
-                assertion.beforeInboxMaxCount
+                assertion.beforeTotalLogCount
             );
     }
 
-    function nodeStateHash(Assertion memory assertion, uint256 inboxMaxCount)
-        internal
-        view
-        returns (bytes32)
-    {
+    function nodeStateHash(Assertion memory assertion) internal view returns (bytes32) {
         return
             nodeStateHash(
                 block.number,
                 assertion.beforeTotalGasUsed + assertion.gasUsed,
                 assertion.afterMachineHash,
-                assertion.afterInboxHash,
                 assertion.beforeInboxCount + assertion.inboxMessagesRead,
                 assertion.beforeTotalSendCount + assertion.sendCount,
-                assertion.beforeTotalLogCount + assertion.logCount,
-                inboxMaxCount
+                assertion.beforeTotalLogCount + assertion.logCount
             );
     }
 
@@ -144,7 +128,7 @@ library RollupLib {
                 ChallengeLib.assertionHash(
                     0,
                     ChallengeLib.assertionRestHash(
-                        assertion.inboxDelta,
+                        assertion.beforeInboxCount,
                         assertion.beforeMachineHash,
                         0,
                         0,
@@ -155,7 +139,7 @@ library RollupLib {
                 ChallengeLib.assertionHash(
                     assertion.gasUsed,
                     ChallengeLib.assertionRestHash(
-                        0,
+                        assertion.beforeInboxCount + assertion.inboxMessagesRead,
                         assertion.afterMachineHash,
                         assertion.sendAcc,
                         assertion.sendCount,
@@ -166,44 +150,20 @@ library RollupLib {
             );
     }
 
-    function challengeRoot(
-        Assertion memory assertion,
-        uint256 inboxTopCount,
-        bytes32 inboxTopHash,
-        uint256 blockProposed
-    ) internal pure returns (bytes32) {
-        bytes32 inboxConsistencyHash =
-            ChallengeLib.bisectionChunkHash(
-                0,
-                inboxTopCount - assertion.beforeInboxCount - assertion.inboxMessagesRead,
-                inboxTopHash,
-                assertion.afterInboxHash
-            );
-
-        bytes32 inboxDeltaHash =
-            ChallengeLib.bisectionChunkHash(
-                0,
-                assertion.inboxMessagesRead,
-                ChallengeLib.inboxDeltaHash(assertion.afterInboxHash, 0),
-                ChallengeLib.inboxDeltaHash(assertion.beforeInboxHash, assertion.inboxDelta)
-            );
-
-        return
-            challengeRootHash(
-                inboxConsistencyHash,
-                inboxDeltaHash,
-                executionHash(assertion),
-                blockProposed
-            );
+    function challengeRoot(Assertion memory assertion, uint256 blockProposed)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return challengeRootHash(executionHash(assertion), blockProposed);
     }
 
-    function challengeRootHash(
-        bytes32 inboxConsistency,
-        bytes32 inboxDelta,
-        bytes32 execution,
-        uint256 proposedTime
-    ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(inboxConsistency, inboxDelta, execution, proposedTime));
+    function challengeRootHash(bytes32 execution, uint256 proposedTime)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encodePacked(execution, proposedTime));
     }
 
     function confirmHash(Assertion memory assertion) internal pure returns (bytes32) {

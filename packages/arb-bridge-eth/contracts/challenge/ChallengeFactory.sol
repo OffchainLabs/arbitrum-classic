@@ -35,26 +35,24 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
 
     function createChallenge(
         address _resultReceiver,
-        bytes32 _inboxConsistencyHash,
-        bytes32 _inboxDeltaHash,
         bytes32 _executionHash,
         address _asserter,
         address _challenger,
         uint256 _asserterTimeLeft,
-        uint256 _challengerTimeLeft
+        uint256 _challengerTimeLeft,
+        IBridge _bridge
     ) external override returns (address) {
         address clone = createClone(challengeTemplate);
         IChallenge(clone).initializeChallenge(
             oneStepProofAddress,
             oneStepProof2Address,
             _resultReceiver,
-            _inboxConsistencyHash,
-            _inboxDeltaHash,
             _executionHash,
             _asserter,
             _challenger,
             _asserterTimeLeft,
-            _challengerTimeLeft
+            _challengerTimeLeft,
+            _bridge
         );
         return address(clone);
     }
