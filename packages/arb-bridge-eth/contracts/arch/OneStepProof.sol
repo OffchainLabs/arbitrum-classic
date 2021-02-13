@@ -37,12 +37,12 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
     uint256 private constant MAX_PAIRING_COUNT = 30;
 
     // machineFields
-    //  nextInboxIndex
+    //  total
     //  initialMessage
     //  initialLog
     function executeStep(
         IBridge bridge,
-        uint256 initialNextInboxMessageNum,
+        uint256 initialMessagesRead,
         bytes32 initialSendAcc,
         bytes32 initialLogAcc,
         bytes calldata proof
@@ -52,13 +52,13 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
         override
         returns (
             uint64 gas,
-            uint256 nextInboxMessageNum,
+            uint256 totalMessagesRead,
             bytes32[4] memory fields
         )
     {
         AssertionContext memory context =
             initializeExecutionContext(
-                initialNextInboxMessageNum,
+                initialMessagesRead,
                 initialSendAcc,
                 initialLogAcc,
                 proof,
@@ -575,11 +575,11 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
                 messageDataHash
             );
         require(
-            context.bridge.inboxMessages(context.nextInboxMessageNum) == messageHash,
+            context.bridge.inboxMessages(context.totalMessagesRead) == messageHash,
             "WRONG_MESSAGE"
         );
 
-        context.nextInboxMessageNum++;
+        context.totalMessagesRead++;
 
         Value.Data[] memory tupData = new Value.Data[](7);
         tupData[0] = Value.newInt(uint256(kind));

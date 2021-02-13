@@ -160,13 +160,13 @@ abstract contract OneStepProofCommon {
         pure
         returns (
             uint64 gas,
-            uint256 nextInboxMessageNum,
+            uint256 totalMessagesRead,
             bytes32[4] memory fields
         )
     {
         return (
             context.gas,
-            context.nextInboxMessageNum,
+            context.totalMessagesRead,
             [
                 Machine.hash(context.startMachine),
                 Machine.hash(context.afterMachine),
@@ -196,7 +196,7 @@ abstract contract OneStepProofCommon {
         IBridge bridge;
         Machine.Data startMachine;
         Machine.Data afterMachine;
-        uint256 nextInboxMessageNum;
+        uint256 totalMessagesRead;
         bytes32 sendAcc;
         bytes32 logAcc;
         uint64 gas;
@@ -237,7 +237,7 @@ abstract contract OneStepProofCommon {
     }
 
     function initializeExecutionContext(
-        uint256 nextInboxMessageNum,
+        uint256 initialMessagesRead,
         bytes32 initialSendAcc,
         bytes32 initialLogAcc,
         bytes memory proof,
@@ -266,7 +266,7 @@ abstract contract OneStepProofCommon {
                 bridge,
                 mach,
                 mach.clone(),
-                nextInboxMessageNum,
+                initialMessagesRead,
                 initialSendAcc,
                 initialLogAcc,
                 0,

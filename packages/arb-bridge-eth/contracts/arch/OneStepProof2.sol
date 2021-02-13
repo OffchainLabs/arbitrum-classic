@@ -55,7 +55,7 @@ import "../libraries/Precompiles.sol";
 
 contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
     function executeStep(
-        uint256 initialNextInboxMessageNum,
+        uint256 initialMessagesRead,
         bytes32 initialSendAcc,
         bytes32 initialLogAcc,
         bytes calldata proof,
@@ -66,13 +66,13 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
         override
         returns (
             uint64 gas,
-            uint256 nextInboxMessageNum,
+            uint256 totalMessagesRead,
             bytes32[4] memory fields
         )
     {
         AssertionContext memory context =
             initializeExecutionContext(
-                initialNextInboxMessageNum,
+                initialMessagesRead,
                 initialSendAcc,
                 initialLogAcc,
                 proof,

@@ -262,14 +262,14 @@ contract Challenge is Cloneable, IChallenge {
     //  initialLogAcc
     // initialState
     //  _initialGasUsed
-    //  _initialMessageCount
+    //  _initialSendCount
     //  _initialLogCount
     function oneStepProveExecution(
         bytes32[] calldata _merkleNodes,
         uint256 _merkleRoute,
         uint256 _challengedSegmentStart,
         bytes32 _oldEndHash,
-        uint256 _initialNextInboxMessageNum,
+        uint256 _initialMessagesRead,
         bytes32 _initialSendAcc,
         bytes32 _initialLogAcc,
         uint256[3] memory _initialState,
@@ -279,10 +279,10 @@ contract Challenge is Cloneable, IChallenge {
     ) public executionChallenge onlyOnTurn {
         bytes32 rootHash;
         {
-            (uint64 gasUsed, uint256 nextInboxMessageNum, bytes32[4] memory proofFields) =
+            (uint64 gasUsed, uint256 totalMessagesRead, bytes32[4] memory proofFields) =
                 executeMachineStep(
                     prover,
-                    _initialNextInboxMessageNum,
+                    _initialMessagesRead,
                     _initialSendAcc,
                     _initialLogAcc,
                     _executionProof,
@@ -296,7 +296,7 @@ contract Challenge is Cloneable, IChallenge {
                         _initialLogAcc,
                         _initialState,
                         gasUsed,
-                        nextInboxMessageNum,
+                        totalMessagesRead,
                         proofFields
                     ),
                 "WRONG_END"
@@ -306,7 +306,7 @@ contract Challenge is Cloneable, IChallenge {
                 _challengedSegmentStart,
                 gasUsed,
                 oneStepProofExecutionBefore(
-                    _initialNextInboxMessageNum,
+                    _initialMessagesRead,
                     _initialSendAcc,
                     _initialLogAcc,
                     _initialState,
@@ -391,10 +391,10 @@ contract Challenge is Cloneable, IChallenge {
 
     // initialState
     //  _initialGasUsed
-    //  _initialMessageCount
+    //  _initialSendCount
     //  _initialLogCount
     function oneStepProveStoppedShort(
-        uint256 _initialNextInboxMessageNum,
+        uint256 _initialMessagesRead,
         bytes32 _initialSendAcc,
         bytes32 _initialLogAcc,
         uint256[3] calldata _initialState,
@@ -408,7 +408,7 @@ contract Challenge is Cloneable, IChallenge {
         (, , bytes32[4] memory proofFields) =
             executeMachineStep(
                 prover,
-                _initialNextInboxMessageNum,
+                _initialMessagesRead,
                 _initialSendAcc,
                 _initialLogAcc,
                 _executionProof,
@@ -418,7 +418,7 @@ contract Challenge is Cloneable, IChallenge {
         // Check that the before state is the end of the stopped short bisection which was stored in executionHash
         require(
             oneStepProofExecutionBefore(
-                _initialNextInboxMessageNum,
+                _initialMessagesRead,
                 _initialSendAcc,
                 _initialLogAcc,
                 _initialState,
@@ -536,7 +536,7 @@ contract Challenge is Cloneable, IChallenge {
 
     function executeMachineStep(
         uint8 prover,
-        uint256 _initialNextInboxMessageNum,
+        uint256 _initialMessagesRead,
         bytes32 _initialSendAcc,
         bytes32 _initialLogAcc,
         bytes memory _executionProof,
@@ -546,7 +546,7 @@ contract Challenge is Cloneable, IChallenge {
         view
         returns (
             uint64 gas,
-            uint256 nextInboxMessageNum,
+            uint256 totalMessagesRead,
             bytes32[4] memory fields
         )
     {
@@ -554,7 +554,7 @@ contract Challenge is Cloneable, IChallenge {
             return
                 executor.executeStep(
                     bridge,
-                    _initialNextInboxMessageNum,
+                    _initialMessagesRead,
                     _initialSendAcc,
                     _initialLogAcc,
                     _executionProof
@@ -562,7 +562,7 @@ contract Challenge is Cloneable, IChallenge {
         } else if (prover == 1) {
             return
                 executor2.executeStep(
-                    _initialNextInboxMessageNum,
+                    _initialMessagesRead,
                     _initialSendAcc,
                     _initialLogAcc,
                     _executionProof,
@@ -580,7 +580,7 @@ contract Challenge is Cloneable, IChallenge {
     //  afterMessagesHash
     //  afterLogsHash
     function oneStepProofExecutionBefore(
-        uint256 _initialNextInboxMessageNum,
+        uint256 _initialMessagesRead,
         bytes32 _initialSendAcc,
         bytes32 _initialLogAcc,
         uint256[3] memory _initialState,
@@ -590,7 +590,7 @@ contract Challenge is Cloneable, IChallenge {
             ChallengeLib.assertionHash(
                 _initialState[0],
                 ChallengeLib.assertionRestHash(
-                    _initialNextInboxMessageNum,
+                    _initialMessagesRead,
                     proofFields[0],
                     _initialSendAcc,
                     _initialState[1],
@@ -605,7 +605,7 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _initialLogAcc,
         uint256[3] memory _initialState,
         uint64 gasUsed,
-        uint256 _nextInboxMessageNum,
+        uint256 totalMessagesRead,
         bytes32[4] memory proofFields
     ) private pure returns (bytes32) {
         // The one step proof already guarantees us that firstMessage and lastMessage
@@ -616,7 +616,7 @@ contract Challenge is Cloneable, IChallenge {
             ChallengeLib.assertionHash(
                 _initialState[0].add(gasUsed),
                 ChallengeLib.assertionRestHash(
-                    _nextInboxMessageNum,
+                    totalMessagesRead,
                     proofFields[1],
                     proofFields[2],
                     _initialState[1].add((_initialSendAcc == proofFields[2] ? 0 : 1)),
