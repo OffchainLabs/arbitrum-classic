@@ -28,51 +28,23 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //solhint-disable no-inline-assembly
 
 import "./ICloneable.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
 
 contract CloneFactory {
+    using Clones for address;
     string private constant CLONE_MASTER = "CLONE_MASTER";
 
     function createClone(ICloneable target) internal returns (address result) {
         require(target.isMaster(), CLONE_MASTER);
-        bytes20 targetBytes = bytes20(address(target));
-        assembly {
-            let clone := mload(0x40)
-            mstore(clone, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
-            mstore(add(clone, 0x14), targetBytes)
-            mstore(
-                add(clone, 0x28),
-                0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000
-            )
-            result := create(0, clone, 0x37)
-        }
+        result = address(target).clone();
     }
 
     function create2Clone(ICloneable target, bytes32 salt) internal returns (address result) {
         require(target.isMaster(), CLONE_MASTER);
-        bytes20 targetBytes = bytes20(address(target));
-        assembly {
-            let clone := mload(0x40)
-            mstore(clone, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
-            mstore(add(clone, 0x14), targetBytes)
-            mstore(
-                add(clone, 0x28),
-                0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000
-            )
-            result := create2(0, clone, 0x37, salt)
-        }
+        result = address(target).cloneDeterministic(salt);
     }
 
-    function cloneCodeHash(ICloneable target) internal pure returns (bytes32 result) {
-        bytes20 targetBytes = bytes20(address(target));
-        assembly {
-            let clone := mload(0x40)
-            mstore(clone, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
-            mstore(add(clone, 0x14), targetBytes)
-            mstore(
-                add(clone, 0x28),
-                0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000
-            )
-            result := keccak256(clone, 0x37)
-        }
+    function calculateCreate2CloneAddress(ICloneable target, bytes32 salt) internal view returns (address calculatedAddress) {
+        calculatedAddress = address(target).predictDeterministicAddress(salt, address(this));
     }
 }
