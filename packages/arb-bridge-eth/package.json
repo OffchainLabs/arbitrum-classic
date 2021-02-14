@@ -39,6 +39,7 @@
     "typechain": "hardhat typechain"
   },
   "dependencies": {
+    "@openzeppelin/contracts": "3.4.0",
     "@types/node": "^14.0.13",
     "dotenv": "^8.2.0",
     "ethers": "^5.0.24",
