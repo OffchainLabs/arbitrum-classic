@@ -168,7 +168,7 @@ A VM that is in an extensive state can execute an instruction. To execute an ins
 
 If the opcode is not a value that is an opcode of the AVM instruction set, the machine is executed as though the instruction were the error opcode.
 
-If the opcode is valid, but there are not enough items on the stack or auxstack to execute the opcode, the machine is executed as though the instruction were an error opcode.
+If the opcode is valid, but there are not enough items on the stack or auxstack to execute the opcode, first clear whichever of the stack or auxstack that underflowed. Then remove the number of items that would have been consumed from whichever of the stack or auxstack didn't underflow, unless both underflowed in which case both should be cleared. Finally execute the machine as though the instruction were an error opcode.
 
 Otherwise the VM carries out the semantics of the opcode.
 
