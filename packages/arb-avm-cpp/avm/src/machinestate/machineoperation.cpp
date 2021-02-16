@@ -406,21 +406,11 @@ void hashOp(MachineState& m) {
 }
 
 struct ValueTypeVisitor {
-    ValueTypes operator()(const uint256_t&) const {
-        return NUM;
-    }
-    ValueTypes operator()(const CodePointStub&) const {
-        return CODEPT;
-    }
-    ValueTypes operator()(const Tuple&) const {
-        return TUPLE;
-    }
-    ValueTypes operator()(const HashPreImage&) const {
-        return TUPLE;
-    }
-    ValueTypes operator()(const Buffer&) const {
-        return BUFFER;
-    }
+    ValueTypes operator()(const uint256_t&) const { return NUM; }
+    ValueTypes operator()(const CodePointStub&) const { return CODEPT; }
+    ValueTypes operator()(const Tuple&) const { return TUPLE; }
+    ValueTypes operator()(const HashPreImage&) const { return TUPLE; }
+    ValueTypes operator()(const Buffer&) const { return BUFFER; }
 };
 
 void typeOp(MachineState& m) {
@@ -894,7 +884,8 @@ void send(MachineState& m) {
     // Note: the last msg_size == 0 check is implied by the buf.lastIndex()
     // check, but it's additionally specified for clarity and in case the
     // lastIndex method is refactored out.
-    if (msg_size > send_size_limit || buf.lastIndex() >= msg_size || msg_size == 0) {
+    if (msg_size > send_size_limit || buf.lastIndex() >= msg_size ||
+        msg_size == 0) {
         m.state = Status::Error;
         std::cerr << "Send failure: over size limit" << std::endl;
         return;
@@ -1016,11 +1007,20 @@ void pushinsnimm(MachineState& m) {
     ++m.pc;
 }
 
-void sideload(MachineState& m) {
+BlockReason sideload(MachineState& m) {
     m.stack.prepForMod(1);
-    assumeInt(m.stack[0]);
-    m.stack[0] = Tuple();
+    auto& block_num = assumeInt(m.stack[0]);
+    if (!m.context.sideloads.empty()) {
+        m.stack[0] = m.context.sideloads.back();
+        m.context.sideloads.pop_back();
+    } else {
+        if (m.context.stop_on_sideload && m.context.numSteps > 0) {
+            return SideloadBlocked{block_num};
+        }
+        m.stack[0] = Tuple();
+    }
     ++m.pc;
+    return NotBlocked{};
 }
 
 void newbuffer(MachineState& m) {

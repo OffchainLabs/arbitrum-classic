@@ -21,11 +21,11 @@
 #include <avm_values/value.hpp>
 
 #include <rocksdb/slice.h>
+#include <atomic>
 #include <chrono>
 #include <memory>
 #include <thread>
 #include <vector>
-#include <atomic>
 
 class MachineThread : public Machine {
    public:
@@ -54,21 +54,13 @@ class MachineThread : public Machine {
     MachineThread(std::shared_ptr<Code> code, value static_val)
         : Machine(std::move(code), std::move(static_val)) {}
 
-    bool runMachine(uint256_t max_gas,
-                    bool go_over_gas,
-                    std::vector<std::vector<unsigned char>> inbox_messages,
-                    uint256_t messages_to_skip,
-                    bool final_message_of_block);
+    bool runMachine(MachineExecutionConfig config);
     void abortMachine();
     machine_status_enum status();
     std::string getErrorString();
     void clearError();
     Assertion getAssertion();
-    void operator()(uint256_t max_gas,
-                    bool go_over_gas,
-                    std::vector<std::vector<unsigned char>> inbox_messages,
-                    uint256_t messages_to_skip,
-                    bool final_message_of_block);
+    void operator()(MachineExecutionConfig config);
 };
 
 #endif /* machine_hpp */

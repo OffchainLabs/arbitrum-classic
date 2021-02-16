@@ -150,18 +150,55 @@ ByteSlice machineMarshallState(CMachine* m) {
     return returnCharVector(mach->marshalState());
 }
 
-RawAssertion executeAssertion(CMachine* m,
-                              uint64_t max_gas,
-                              int go_over_gas,
-                              ByteSliceArray inbox_messages,
-                              int final_message_of_block) {
+CMachineExecutionConfig* machineExecutionConfigCreate() {
+    return new MachineExecutionConfig();
+}
+
+void machineExecutionConfigDestroy(CMachineExecutionConfig* m) {
+    if (m == nullptr) {
+        return;
+    }
+    delete static_cast<MachineExecutionConfig*>(m);
+}
+
+void* machineExecutionConfigClone(CMachineExecutionConfig* c) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    auto cloneConf = new MachineExecutionConfig(*config);
+    return static_cast<void*>(cloneConf);
+}
+
+void machineExecutionConfigSetMaxGas(CMachineExecutionConfig* c,
+                                     uint64_t max_gas,
+                                     int go_over_gas) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->max_gas = max_gas;
+    config->go_over_gas = go_over_gas;
+}
+
+void machineExecutionConfigSetInboxMessages(CMachineExecutionConfig* c,
+                                            ByteSliceArray bytes) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->setInboxMessagesFromBytes(receiveByteSliceArray(bytes));
+}
+
+void machineExecutionConfigSetFinalMessageOfBlock(CMachineExecutionConfig* c,
+                                                  int final_message_of_block) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->final_message_of_block = final_message_of_block;
+}
+
+RawAssertion executeAssertion(CMachine* m, const CMachineExecutionConfig* c) {
     assert(m);
+    assert(c);
     auto mach = static_cast<Machine*>(m);
-    auto messages = receiveByteSliceArray(inbox_messages);
+    auto config = static_cast<const MachineExecutionConfig*>(c);
 
     try {
-        Assertion assertion = mach->run(max_gas, go_over_gas, messages, 0,
-                                        final_message_of_block);
+        Assertion assertion = mach->run(*config);
         return makeRawAssertion(assertion);
     } catch (const std::exception& e) {
         std::cerr << "Failed to make assertion " << e.what() << "\n";

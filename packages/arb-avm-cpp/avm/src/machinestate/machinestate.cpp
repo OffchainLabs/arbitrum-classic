@@ -16,6 +16,7 @@
 
 #include <avm/machinestate/machinestate.hpp>
 
+#include <avm/machine.hpp>
 #include <avm/machinestate/machineoperation.hpp>
 #include <avm_values/exceptions.hpp>
 #include <avm_values/vmValueParser.hpp>
@@ -29,13 +30,24 @@ namespace {
 uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
 }  // namespace
 
-AssertionContext::AssertionContext(
-    std::vector<Tuple> inbox_messages,
-    const nonstd::optional<uint256_t>& min_next_block_height,
-    uint256_t messages_to_skip)
-    : inbox_messages(std::move(inbox_messages)),
-      next_block_height(min_next_block_height),
-      inbox_messages_consumed(messages_to_skip) {}
+AssertionContext::AssertionContext(const MachineExecutionConfig& config)
+    : inbox_messages(std::move(config.inbox_messages)),
+      inbox_messages_consumed(config.messages_to_skip),
+      sideloads(config.sideloads),
+      stop_on_sideload(config.stop_on_sideload) {
+    if (config.final_message_of_block && !config.inbox_messages.empty()) {
+        // Last message is the final message of a block, so need to
+        // set min_next_block_height to the block after the last block
+        auto block_num =
+            config.inbox_messages[config.inbox_messages.size() - 1].get_element(
+                1);
+        if (!nonstd::holds_alternative<uint256_t>(block_num)) {
+            throw std::runtime_error("Cannot get final block from tuple");
+        }
+
+        next_block_height = nonstd::get<uint256_t>(block_num) + 1;
+    }
+}
 
 MachineState::MachineState()
     : arb_gas_remaining(max_arb_gas_remaining),
@@ -754,7 +766,7 @@ BlockReason MachineState::runOp(OpCode opcode) {
             machineoperation::pushinsnimm(*this);
             break;
         case OpCode::SIDELOAD:
-            machineoperation::sideload(*this);
+            return machineoperation::sideload(*this);
             break;
         case OpCode::NEW_BUFFER:
             machineoperation::newbuffer(*this);

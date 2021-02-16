@@ -109,7 +109,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    auto assertion = mach->run(0, false, inbox_messages, 0, true);
+    MachineExecutionConfig execConfig;
+    execConfig.inbox_messages = inbox_messages;
+    execConfig.final_message_of_block = true;
+    auto assertion = mach->run(execConfig);
 
     std::cout << "Produced " << assertion.logs.size() << " logs\n";
 
@@ -122,6 +125,7 @@ int main(int argc, char* argv[]) {
     tx->commit();
 
     auto mach2 = storage.getMachine(mach->hash(), value_cache);
-    mach2->run(0, false, std::vector<Tuple>{}, 0, true);
+    execConfig.inbox_messages = std::vector<Tuple>();
+    mach2->run(execConfig);
     return 0;
 }

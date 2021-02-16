@@ -1,0 +1,7 @@
+{"version": 2, "static_val": {"Tuple": []}, "extensions": [], "code": [
+    {"opcode":  59, "immediate": null, "_comment": "There's an edge case where sideload is the first instruction we're avoiding"},
+    {"opcode": 123, "immediate": {"Int": "321"}},
+    {"opcode":  20, "immediate": {"Tuple": [{"Int": "42"}]}},
+    {"opcode":   4, "immediate": {"Int": "1"}, "_comment": "Errors if the eq fails, as it'll div by 0"},
+    {"opcode": 116, "immediate": null}
+]}

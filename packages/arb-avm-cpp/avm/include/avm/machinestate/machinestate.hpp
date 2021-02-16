@@ -23,8 +23,11 @@
 #include <avm_values/value.hpp>
 #include <avm_values/vmValueParser.hpp>
 
+#include <deque>
 #include <memory>
 #include <vector>
+
+class MachineExecutionConfig;
 
 struct AssertionContext {
     std::vector<Tuple> inbox_messages;
@@ -32,17 +35,16 @@ struct AssertionContext {
     size_t inbox_messages_consumed{0};
     uint256_t numSteps{0};
     uint256_t numGas{0};
-    bool blockingSideload{false};
     nonstd::optional<value> fake_inbox_peek_value;
     std::vector<std::vector<uint8_t>> sends;
     std::vector<value> logs;
     std::vector<value> debug_prints;
+    std::deque<Tuple> sideloads;
+    bool stop_on_sideload;
 
     AssertionContext() = default;
 
-    AssertionContext(std::vector<Tuple> inbox_messages,
-                     const nonstd::optional<uint256_t>& min_next_block_height,
-                     uint256_t messages_to_skip);
+    AssertionContext(const MachineExecutionConfig& config);
 
     // popInbox assumes that the number of messages already consumed is less
     // than the number of messages in the inbox

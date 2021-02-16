@@ -22,6 +22,7 @@
 
 #include <rocksdb/slice.h>
 #include <chrono>
+#include <deque>
 #include <memory>
 #include <vector>
 
@@ -32,6 +33,24 @@ struct Assertion {
     std::vector<std::vector<uint8_t>> sends;
     std::vector<value> logs;
     std::vector<value> debugPrints;
+    nonstd::optional<uint256_t> sideloadBlockNumber;
+};
+
+class MachineExecutionConfig {
+   public:
+    uint256_t max_gas;
+    bool go_over_gas;
+    std::vector<Tuple> inbox_messages;
+    uint256_t messages_to_skip;
+    bool final_message_of_block;
+    std::deque<Tuple> sideloads;
+    bool stop_on_sideload;
+
+    MachineExecutionConfig();
+
+    void setInboxMessagesFromBytes(
+        const std::vector<std::vector<unsigned char>>&);
+    void setSideloadsFromBytes(const std::vector<std::vector<unsigned char>>&);
 };
 
 class Machine {
@@ -50,16 +69,7 @@ class Machine {
         return Machine{MachineState::loadFromFile(executable_filename)};
     }
 
-    Assertion run(uint256_t max_gas,
-                  bool go_over_gas,
-                  const std::vector<std::vector<unsigned char>>& inbox_data,
-                  uint256_t messages_to_skip,
-                  bool final_message_of_block);
-    Assertion run(uint256_t max_gas,
-                  bool go_over_gas,
-                  const std::vector<Tuple>& inbox_messages,
-                  uint256_t messages_to_skip,
-                  bool final_message_of_block);
+    Assertion run(const MachineExecutionConfig& config);
 
     Status currentStatus() const { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }

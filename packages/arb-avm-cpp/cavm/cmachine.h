@@ -59,11 +59,7 @@ CMachine* machineClone(CMachine* m);
 CStatus machineCurrentStatus(CMachine* m);
 CBlockReason machineIsBlocked(CMachine* m, int newMessages);
 
-RawAssertion executeAssertion(CMachine* m,
-                              uint64_t max_gas,
-                              int go_over_gas,
-                              ByteSliceArray inbox_messages,
-                              int final_message_of_block);
+RawAssertion executeAssertion(CMachine* m, const CMachineExecutionConfig* c);
 
 ByteSlice machineMarshallForProof(CMachine* m);
 ByteSlice machineMarshallBufferProof(CMachine* m);
@@ -73,6 +69,17 @@ ByteSlice machineMarshallState(CMachine* m);
 void machinePrint(CMachine* m);
 
 int checkpointMachine(CMachine* m, CArbStorage* storage);
+
+CMachineExecutionConfig* machineExecutionConfigCreate();
+void machineExecutionConfigDestroy(CMachineExecutionConfig* m);
+void* machineExecutionConfigClone(CMachineExecutionConfig* c);
+void machineExecutionConfigSetMaxGas(CMachineExecutionConfig* c,
+                                     uint64_t max_gas,
+                                     int go_over_gas);
+void machineExecutionConfigSetInboxMessages(CMachineExecutionConfig* c,
+                                            ByteSliceArray bytes);
+void machineExecutionConfigSetFinalMessageOfBlock(CMachineExecutionConfig* c,
+                                                  int final_message_of_block);
 
 #ifdef __cplusplus
 }

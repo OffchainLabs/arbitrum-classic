@@ -77,6 +77,7 @@ typedef void CBlockStore;
 typedef void CCheckpointedMachine;
 typedef void CExecutionCursor;
 typedef void CMachine;
+typedef void CMachineExecutionConfig;
 typedef void CValueCache;
 
 #ifdef __cplusplus

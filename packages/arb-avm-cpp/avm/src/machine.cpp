@@ -38,75 +38,78 @@ bool validMessages(const std::vector<Tuple>& messages) {
     }
     return true;
 }
+
+template <typename T>
+void convertInboxMessagesFromBytes(
+    const std::vector<std::vector<unsigned char>>& bytes,
+    T& output) {
+    for (const auto& data : bytes) {
+        auto message = extractInboxMessage(data);
+        output.emplace_back(message.toTuple());
+    }
+}
 }  // namespace
 
-Assertion Machine::run(
-    uint256_t max_gas,
-    bool go_over_gas,
-    const std::vector<std::vector<unsigned char>>& inbox_data,
-    uint256_t messages_to_skip,
-    bool final_message_of_block) {
-    std::vector<Tuple> inbox_messages;
-    inbox_messages.reserve(inbox_messages.size());
-    for (const auto& data : inbox_data) {
-        auto inbox_message = extractInboxMessage(data);
-        inbox_messages.emplace_back(inbox_message.toTuple());
-    }
+MachineExecutionConfig::MachineExecutionConfig()
+    : max_gas(0),
+      go_over_gas(false),
+      inbox_messages(),
+      messages_to_skip(0),
+      final_message_of_block(false),
+      sideloads(),
+      stop_on_sideload(false) {}
 
-    return run(max_gas, go_over_gas, inbox_messages, messages_to_skip,
-               final_message_of_block);
+void MachineExecutionConfig::setInboxMessagesFromBytes(
+    const std::vector<std::vector<unsigned char>>& bytes) {
+    inbox_messages.clear();
+    inbox_messages.reserve(bytes.size());
+    convertInboxMessagesFromBytes(bytes, inbox_messages);
 }
 
-Assertion Machine::run(uint256_t max_gas,
-                       bool go_over_gas,
-                       const std::vector<Tuple>& inbox_messages,
-                       uint256_t messages_to_skip,
-                       bool final_message_of_block) {
-    if (!validMessages(inbox_messages)) {
+void MachineExecutionConfig::setSideloadsFromBytes(
+    const std::vector<std::vector<unsigned char>>& bytes) {
+    sideloads.clear();
+    convertInboxMessagesFromBytes(bytes, sideloads);
+}
+
+Assertion Machine::run(const MachineExecutionConfig& config) {
+    if (!validMessages(config.inbox_messages)) {
         throw std::runtime_error("invalid message format");
     }
 
-    nonstd::optional<uint256_t> min_next_block_height;
-    if (final_message_of_block && !inbox_messages.empty()) {
-        // Last message is the final message of a block, so need to
-        // set min_next_block_height to the block after the last block
-        auto block_num =
-            inbox_messages[inbox_messages.size() - 1].get_element(1);
-        if (!nonstd::holds_alternative<uint256_t>(block_num)) {
-            throw std::runtime_error("Cannot get final block from tuple");
-        }
+    machine_state.context = AssertionContext(config);
 
-        min_next_block_height = nonstd::get<uint256_t>(block_num) + 1;
-    }
-
-    machine_state.context = AssertionContext{
-        inbox_messages, min_next_block_height, messages_to_skip};
-
-    bool has_gas_limit = max_gas != 0;
-    auto start_time = std::chrono::system_clock::now();
+    bool has_gas_limit = config.max_gas != 0;
+    BlockReason block_reason = NotBlocked{};
     while (true) {
         if (has_gas_limit) {
-            if (!go_over_gas) {
+            if (!config.go_over_gas) {
                 if (machine_state.nextGasCost() + machine_state.context.numGas >
-                    max_gas) {
+                    config.max_gas) {
                     // Next step would go over gas limit
                     break;
                 }
-            } else if (machine_state.context.numGas >= max_gas) {
+            } else if (machine_state.context.numGas >= config.max_gas) {
                 // Last step reached or went over gas limit
                 break;
             }
         }
 
-        auto blockReason = machine_state.runOne();
-        if (!nonstd::get_if<NotBlocked>(&blockReason)) {
+        block_reason = machine_state.runOne();
+        if (!nonstd::get_if<NotBlocked>(&block_reason)) {
             break;
         }
+    }
+    nonstd::optional<uint256_t> sideload_block_number;
+    if (auto sideload_blocked =
+            nonstd::get_if<SideloadBlocked>(&block_reason)) {
+        sideload_block_number = sideload_blocked->block_number;
     }
     return {intx::narrow_cast<uint64_t>(machine_state.context.numSteps),
             intx::narrow_cast<uint64_t>(machine_state.context.numGas),
             machine_state.context.inbox_messages_consumed,
             std::move(machine_state.context.sends),
             std::move(machine_state.context.logs),
-            std::move(machine_state.context.debug_prints)};
+            std::move(machine_state.context.debug_prints),
+            sideload_block_number};
 }

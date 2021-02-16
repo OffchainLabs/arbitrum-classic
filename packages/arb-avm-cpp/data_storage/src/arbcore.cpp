@@ -615,6 +615,7 @@ void ArbCore::operator()() {
     ValueCache cache;
     uint256_t first_sequence_number_in_machine;
     uint256_t last_sequence_number_in_machine;
+    MachineExecutionConfig execConfig;
 
     while (!arbcore_abort) {
         if (message_data_status == MESSAGES_READY) {
@@ -749,9 +750,10 @@ void ArbCore::operator()() {
                 std::vector<std::vector<unsigned char>> messages;
                 messages.push_back(next_message_result.data.data);
 
-                auto status = machine->runMachine(
-                    0, false, std::move(messages), 0,
-                    next_message_result.data.last_message_in_block);
+                execConfig.setInboxMessagesFromBytes(messages);
+                execConfig.final_message_of_block =
+                    next_message_result.data.last_message_in_block;
+                auto status = machine->runMachine(execConfig);
                 if (!status) {
                     core_error_string = "Error starting machine thread";
                     machine_error = true;
@@ -1131,9 +1133,12 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
             // Run machine until specified gas is reached
             auto remaining_gas = total_gas_used - execution_cursor.arb_gas_used;
             if (remaining_gas > 0) {
-                auto assertion = machine->run(
-                    remaining_gas, go_over_gas, execution_cursor.messages,
-                    execution_cursor.messages_to_skip, false);
+                MachineExecutionConfig execConfig;
+                execConfig.max_gas = remaining_gas;
+                execConfig.go_over_gas = go_over_gas;
+                execConfig.inbox_messages = execution_cursor.messages;
+                execConfig.messages_to_skip = execution_cursor.messages_to_skip;
+                auto assertion = machine->run(execConfig);
                 if (assertion.gasCount == 0) {
                     // Nothing was executed
                     break;
