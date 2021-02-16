@@ -48,6 +48,11 @@ typedef struct {
     ByteSlice val;
 } CBlockReason;
 
+typedef struct {
+    ByteSlice standard_proof;
+    ByteSlice buffer_proof;
+} COneStepProof;
+
 CMachine* machineCreate(const char* filename);
 void machineDestroy(CMachine* m);
 
@@ -60,17 +65,18 @@ CStatus machineCurrentStatus(CMachine* m);
 CBlockReason machineIsBlocked(CMachine* m, int newMessages);
 
 RawAssertion executeAssertion(CMachine* m,
+                              void* before_send_acc_data,
+                              void* before_log_acc_data,
                               uint64_t max_gas,
                               int go_over_gas,
                               ByteSliceArray inbox_messages,
                               int final_message_of_block);
 
-ByteSlice machineMarshallForProof(CMachine* m);
-ByteSlice machineMarshallBufferProof(CMachine* m);
+COneStepProof machineMarshallForProof(CMachine* m);
 
 ByteSlice machineMarshallState(CMachine* m);
 
-void machinePrint(CMachine* m);
+char* machineInfo(CMachine* m);
 
 int checkpointMachine(CMachine* m, CArbStorage* storage);
 

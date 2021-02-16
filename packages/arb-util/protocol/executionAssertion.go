@@ -19,6 +19,7 @@ package protocol
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -26,7 +27,9 @@ type ExecutionAssertion struct {
 	NumGas                uint64
 	InboxMessagesConsumed uint64
 	Sends                 [][]byte
+	SendAcc               common.Hash
 	Logs                  []value.Value
+	LogAcc                common.Hash
 }
 
 func NewExecutionAssertion(
@@ -34,28 +37,18 @@ func NewExecutionAssertion(
 	inboxMessagesConsumed uint64,
 	sendsData []byte,
 	sendsCount uint64,
+	sendAcc common.Hash,
 	logsData []byte,
 	logsCount uint64,
+	logAcc common.Hash,
 ) *ExecutionAssertion {
 	return &ExecutionAssertion{
 		NumGas:                numGas,
 		InboxMessagesConsumed: inboxMessagesConsumed,
 		Sends:                 parseSends(sendsData, sendsCount),
+		SendAcc:               sendAcc,
 		Logs:                  BytesArrayToVals(logsData, logsCount),
-	}
-}
-
-func NewExecutionAssertionFromValues(
-	numGas uint64,
-	inboxMessagesConsumed uint64,
-	sends [][]byte,
-	logs []value.Value,
-) *ExecutionAssertion {
-	return &ExecutionAssertion{
-		NumGas:                numGas,
-		InboxMessagesConsumed: inboxMessagesConsumed,
-		Sends:                 sends,
-		Logs:                  logs,
+		LogAcc:                logAcc,
 	}
 }
 

@@ -76,7 +76,8 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
     /* solhint-disable no-inline-assembly */
 
     function executeErrorInsn(AssertionContext memory context) internal pure {
-        handleOpcodeError(context);
+        // Call error instead of  handleOpcodeError
+        handleError(context);
     }
 
     function makeZeros() internal pure returns (bytes32[] memory) {
@@ -447,27 +448,30 @@ contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        if (context.offset < context.proof.length) {
-            // We've passed more data in the proof which is the data of the send because it isn't too long
-            uint256 dataStart = context.offset;
-            uint256 dataLength = val2.intVal;
-            bytes memory proof = context.proof;
-            bytes32 bufferHash = Hashing.bytesToBufferHash(proof, dataStart, dataLength);
-            require(val1.hash() == bufferHash, "WRONG_SEND");
 
-            bytes32 dataHash;
-            assembly {
-                dataHash := keccak256(add(add(proof, 32), dataStart), dataLength)
-            }
-
-            context.sendAcc = keccak256(abi.encodePacked(context.sendAcc, dataHash));
+        if (context.offset == context.proof.length) {
+            // If we didn't pass the message data, the buffer must have been longer than the length param passed
+            require(
+                !checkBufferSize(val1.bufferHash, val2.intVal, decodeProof(context.bufProof)),
+                "BUF_LENGTH"
+            );
+            handleOpcodeError(context);
+            return;
         }
-        // If we didn't pass the message data, the buffer must have been longer than the length param passed
-        require(
-            !checkBufferSize(val1.bufferHash, val2.intVal, decodeProof(context.bufProof)),
-            "BUF_LENGTH"
-        );
-        handleOpcodeError(context);
+
+        // We've passed more data in the proof which is the data of the send because it isn't too long
+        uint256 dataStart = context.offset;
+        uint256 dataLength = val2.intVal;
+        bytes memory proof = context.proof;
+        bytes32 bufferHash = Hashing.bytesToBufferHash(proof, dataStart, dataLength);
+        require(val1.hash() == bufferHash, "WRONG_SEND");
+
+        bytes32 dataHash;
+        assembly {
+            dataHash := keccak256(add(add(proof, 32), dataStart), dataLength)
+        }
+
+        context.sendAcc = keccak256(abi.encodePacked(context.sendAcc, dataHash));
     }
 
     function executeGetBuffer8(AssertionContext memory context) internal pure {

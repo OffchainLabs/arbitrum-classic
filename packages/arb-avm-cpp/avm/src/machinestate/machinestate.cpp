@@ -183,16 +183,6 @@ std::vector<unsigned char> MachineState::marshalState() const {
     return buf;
 }
 
-std::vector<unsigned char> makeProof(Buffer& buf, uint64_t loc) {
-    auto res2 = buf.makeProof(loc);
-    return res2;
-}
-
-std::vector<unsigned char> makeNormalizationProof(Buffer& buf) {
-    auto res2 = buf.makeNormalizationProof();
-    return res2;
-}
-
 void insertSizes(std::vector<unsigned char>& buf,
                  int sz1,
                  int sz2,
@@ -230,16 +220,16 @@ void makeSetBufferProof(std::vector<unsigned char>& buf,
             loc + i,
             static_cast<uint8_t>((v >> ((wordSize - 1 - i) * 8)) & 0xff));
     }
-    auto proof1 = makeProof(buffer, loc);
-    auto nproof1 = makeNormalizationProof(nbuffer1);
+    auto proof1 = buffer.makeProof(loc);
+    auto nproof1 = nbuffer1.makeNormalizationProof();
 
     if (aligned) {
         insertSizes(buf, proof1.size(), nproof1.size(), 0, 0);
         buf.insert(buf.end(), proof1.begin(), proof1.end());
         buf.insert(buf.end(), nproof1.begin(), nproof1.end());
     } else {
-        auto proof2 = makeProof(nbuffer1, loc + (wordSize - 1));
-        auto nproof2 = makeNormalizationProof(nbuffer);
+        auto proof2 = nbuffer1.makeProof(loc + (wordSize - 1));
+        auto nproof2 = nbuffer.makeNormalizationProof();
         insertSizes(buf, proof1.size(), nproof1.size(), proof2.size(),
                     nproof2.size());
         buf.insert(buf.end(), proof1.begin(), proof1.end());
@@ -249,33 +239,42 @@ void makeSetBufferProof(std::vector<unsigned char>& buf,
     }
 }
 
-std::vector<unsigned char> MachineState::marshalBufferProof() {
-    std::vector<unsigned char> buf;
+void MachineState::marshalBufferProof(OneStepProof& proof) const {
     auto op = loadCurrentInstruction().op;
     auto opcode = op.opcode;
     if ((opcode < OpCode::GET_BUFFER8 || opcode > OpCode::SET_BUFFER256) &&
         opcode != OpCode::SEND) {
-        return buf;
+        return;
     }
     if (opcode == OpCode::SEND) {
         auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0])
                                    : nonstd::get_if<Buffer>(&stack[1]);
         if (!buffer) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            return;
         }
         // Also need the offset
         auto size = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate)
                                  : nonstd::get_if<uint256_t>(&stack[0]);
         if (!size) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            return;
         }
         auto loc = static_cast<uint64_t>(*size);
-        auto proof = makeProof(*buffer, loc);
-        insertSizes(buf, proof.size(), 0, 0, 0);
-        buf.insert(buf.end(), proof.begin(), proof.end());
-        return buf;
+        if (loc > send_size_limit) {
+            return;
+        } else if (loc < buffer->data_length()) {
+            // Loc must be at or past the last nonzero index in the buffer
+            auto buf_proof = buffer->makeProof(loc);
+            insertSizes(proof.buffer_proof, buf_proof.size(), 0, 0, 0);
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_proof.begin(), buf_proof.end());
+        } else {
+            auto data = buffer->toFlatVector();
+            proof.standard_proof.insert(proof.standard_proof.end(),
+                                        data.begin(), data.end());
+            std::fill_n(std::back_inserter(proof.standard_proof),
+                        loc - data.size(), 0);
+        }
+        return;
     }
     if (opcode == OpCode::GET_BUFFER8 || opcode == OpCode::GET_BUFFER64 ||
         opcode == OpCode::GET_BUFFER256) {
@@ -283,81 +282,89 @@ std::vector<unsigned char> MachineState::marshalBufferProof() {
         auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0])
                                    : nonstd::get_if<Buffer>(&stack[1]);
         if (!buffer) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            insertSizes(proof.buffer_proof, 0, 0, 0, 0);
+            return;
         }
         // Also need the offset
         auto offset = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate)
                                    : nonstd::get_if<uint256_t>(&stack[0]);
         if (!offset) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            insertSizes(proof.buffer_proof, 0, 0, 0, 0);
+            return;
         }
         if (*offset > std::numeric_limits<uint64_t>::max()) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            insertSizes(proof.buffer_proof, 0, 0, 0, 0);
+            return;
         }
         auto loc = static_cast<uint64_t>(*offset);
         if (opcode == OpCode::GET_BUFFER8) {
-            auto proof = makeProof(*buffer, loc);
-            insertSizes(buf, proof.size(), 0, 0, 0);
-            buf.insert(buf.end(), proof.begin(), proof.end());
+            auto buf_proof = buffer->makeProof(loc);
+            insertSizes(proof.buffer_proof, buf_proof.size(), 0, 0, 0);
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_proof.begin(), buf_proof.end());
         } else if (opcode == OpCode::GET_BUFFER64) {
-            auto proof1 = makeProof(*buffer, loc);
-            auto proof2 = makeProof(*buffer, loc + 7);
-            insertSizes(buf, proof1.size(), 0, proof2.size(), 0);
-            buf.insert(buf.end(), proof1.begin(), proof1.end());
-            buf.insert(buf.end(), proof2.begin(), proof2.end());
+            auto buf_proof1 = buffer->makeProof(loc);
+            auto buf_proof2 = buffer->makeProof(loc + 7);
+            insertSizes(proof.buffer_proof, buf_proof1.size(), 0,
+                        buf_proof2.size(), 0);
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_proof1.begin(), buf_proof1.end());
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_proof2.begin(), buf_proof2.end());
         } else if (opcode == OpCode::GET_BUFFER256) {
-            auto proof1 = makeProof(*buffer, loc);
-            auto proof2 = makeProof(*buffer, loc + 31);
-            insertSizes(buf, proof1.size(), 0, proof2.size(), 0);
-            buf.insert(buf.end(), proof1.begin(), proof1.end());
-            buf.insert(buf.end(), proof2.begin(), proof2.end());
+            auto buf_proof1 = buffer->makeProof(loc);
+            auto buf_proof2 = buffer->makeProof(loc + 31);
+            insertSizes(proof.buffer_proof, buf_proof1.size(), 0,
+                        buf_proof2.size(), 0);
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_proof1.begin(), buf_proof1.end());
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_proof2.begin(), buf_proof2.end());
         }
     } else {
         auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[1])
                                    : nonstd::get_if<Buffer>(&stack[2]);
         if (!buffer) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            insertSizes(proof.buffer_proof, 0, 0, 0, 0);
+            return;
         }
         // Also need the offset
         auto offset = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate)
                                    : nonstd::get_if<uint256_t>(&stack[0]);
         if (!offset) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            insertSizes(proof.buffer_proof, 0, 0, 0, 0);
+            return;
         }
         if (*offset > std::numeric_limits<uint64_t>::max()) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            insertSizes(proof.buffer_proof, 0, 0, 0, 0);
+            return;
         }
         auto val = op.immediate ? nonstd::get_if<uint256_t>(&stack[0])
                                 : nonstd::get_if<uint256_t>(&stack[1]);
         if (!val) {
-            insertSizes(buf, 0, 0, 0, 0);
-            return buf;
+            insertSizes(proof.buffer_proof, 0, 0, 0, 0);
+            return;
         }
         auto loc = static_cast<uint64_t>(*offset);
         if (opcode == OpCode::SET_BUFFER8) {
             Buffer nbuffer = buffer->set(loc, static_cast<uint8_t>(*val));
-            auto proof1 = makeProof(*buffer, loc);
-            auto nproof1 = makeNormalizationProof(nbuffer);
-            insertSizes(buf, proof1.size(), nproof1.size(), 0, 0);
-            buf.insert(buf.end(), proof1.begin(), proof1.end());
-            buf.insert(buf.end(), nproof1.begin(), nproof1.end());
+            auto buf_proof1 = buffer->makeProof(loc);
+            auto buf_nproof1 = nbuffer.makeNormalizationProof();
+            insertSizes(proof.buffer_proof, buf_proof1.size(),
+                        buf_nproof1.size(), 0, 0);
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_proof1.begin(), buf_proof1.end());
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_nproof1.begin(), buf_nproof1.end());
         } else if (opcode == OpCode::SET_BUFFER64) {
-            makeSetBufferProof(buf, loc, *buffer, *val, 8);
+            makeSetBufferProof(proof.buffer_proof, loc, *buffer, *val, 8);
         } else if (opcode == OpCode::SET_BUFFER256) {
-            makeSetBufferProof(buf, loc, *buffer, *val, 32);
+            makeSetBufferProof(proof.buffer_proof, loc, *buffer, *val, 32);
         }
     }
-
-    return buf;
 }
 
-std::vector<unsigned char> MachineState::marshalForProof() const {
+OneStepProof MachineState::marshalForProof() const {
     if (nonstd::holds_alternative<uint256_t>(staged_message)) {
         throw std::runtime_error(
             "Can't marshal machine with incomplete staged_message");
@@ -365,43 +372,64 @@ std::vector<unsigned char> MachineState::marshalForProof() const {
     auto currentInstruction = loadCurrentInstruction();
     auto& current_op = currentInstruction.op;
     auto opcode = current_op.opcode;
-    std::vector<MarshalLevel> stackPops = InstructionStackPops.at(opcode);
-    const std::vector<MarshalLevel>& auxStackPops =
-        InstructionAuxStackPops.at(opcode);
 
-    uint64_t stack_pop_count = stackPops.size();
-
-    MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
-    if (current_op.immediate) {
-        if (stackPops.empty()) {
-            stack_pop_count++;
-        } else {
-            immediateMarshalLevel = stackPops[0];
-            stackPops.erase(stackPops.cbegin());
+    std::vector<MarshalLevel> stackPops = [&]() {
+        auto it = InstructionStackPops.find(opcode);
+        if (it == InstructionStackPops.end()) {
+            return InstructionStackPops.at(OpCode::ERROR);
         }
+        return it->second;
+    }();
+
+    std::vector<MarshalLevel> auxStackPops = [&]() {
+        auto it = InstructionAuxStackPops.find(opcode);
+        if (it == InstructionAuxStackPops.end()) {
+            return InstructionAuxStackPops.at(OpCode::ERROR);
+        }
+        return it->second;
+    }();
+
+    if (stackPops.size() > stack.stacksize()) {
+    }
+    MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
+    if (current_op.immediate && !stackPops.empty()) {
+        immediateMarshalLevel = stackPops[0];
+        stackPops.erase(stackPops.cbegin());
     }
 
-    std::vector<unsigned char> buf;
-    buf.push_back(stack_pop_count);
-    buf.push_back(auxStackPops.size());
+    OneStepProof proof;
 
     auto stackProof = stack.marshalForProof(stackPops, *code);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
 
-    buf.insert(buf.cend(), stackProof.second.begin(), stackProof.second.end());
-    if (current_op.immediate) {
-        ::marshalForProof(*current_op.immediate, immediateMarshalLevel, buf,
-                          *code);
-    }
-    buf.insert(buf.cend(), auxStackProof.second.begin(),
-               auxStackProof.second.end());
-    ::marshalState(buf, *code, currentInstruction.nextHash, stackProof.first,
-                   auxStackProof.first, registerVal, static_val,
-                   arb_gas_remaining, errpc, staged_message);
+    bool underflowed = stackProof.count < stackPops.size() ||
+                       auxStackProof.count < auxStackPops.size();
 
-    buf.push_back(current_op.immediate ? 1 : 0);
-    buf.push_back(static_cast<uint8_t>(current_op.opcode));
-    return buf;
+    proof.standard_proof.push_back(static_cast<uint8_t>(current_op.opcode));
+    proof.standard_proof.push_back(stackProof.count +
+                                   current_op.immediate.has_value());
+    proof.standard_proof.push_back(auxStackProof.count);
+
+    proof.standard_proof.insert(proof.standard_proof.cend(),
+                                stackProof.data.begin(), stackProof.data.end());
+    if (current_op.immediate) {
+        ::marshalForProof(*current_op.immediate, immediateMarshalLevel,
+                          proof.standard_proof, *code);
+    }
+    proof.standard_proof.insert(proof.standard_proof.cend(),
+                                auxStackProof.data.begin(),
+                                auxStackProof.data.end());
+    ::marshalState(proof.standard_proof, *code, currentInstruction.nextHash,
+                   stackProof.bottom, auxStackProof.bottom, registerVal,
+                   static_val, arb_gas_remaining, errpc, staged_message);
+
+    proof.standard_proof.push_back(current_op.immediate ? 1 : 0);
+
+    if (!underflowed) {
+        // Don't need a buffer proof if we're underflowing
+        marshalBufferProof(proof);
+    }
+    return proof;
 }
 
 BlockReason MachineState::isBlocked(bool newMessages) const {
@@ -451,37 +479,74 @@ BlockReason MachineState::runOne() {
 
     auto& instruction = loadCurrentInstruction();
 
+    static const auto error_gas_cost =
+        instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)];
+
+    // Always push the immediate to the stack if we're not blocked
+    if (instruction.op.immediate) {
+        auto imm = *instruction.op.immediate;
+        stack.push(std::move(imm));
+    }
+
+    // save stack size for stack cleanup in case of error
+    uint64_t start_stack_size = stack.stacksize();
+    uint64_t start_auxstack_size = auxstack.stacksize();
+
+    bool is_valid_instruction =
+        instructionValidity()[static_cast<size_t>(instruction.op.opcode)];
+
+    uint64_t stack_arg_count =
+        is_valid_instruction
+            ? InstructionStackPops.at(instruction.op.opcode).size()
+            : 0;
+    uint64_t auxstack_arg_count =
+        is_valid_instruction
+            ? InstructionAuxStackPops.at(instruction.op.opcode).size()
+            : 0;
+
     // We're only blocked if we can't execute at all
     BlockReason blockReason = [&]() -> BlockReason {
-        // Always push the immediate to the stack if we're not blocked
-        if (instruction.op.immediate) {
-            auto imm = *instruction.op.immediate;
-            stack.push(std::move(imm));
+        if (stack_arg_count > stack.stacksize() ||
+            auxstack_arg_count > auxstack.stacksize()) {
+            state = Status::Error;
+            ;
+            if (arb_gas_remaining < error_gas_cost) {
+                arb_gas_remaining = max_arb_gas_remaining;
+            } else {
+                arb_gas_remaining -= error_gas_cost;
+            }
+            context.numGas += error_gas_cost;
+            return NotBlocked();
         }
 
-        if (!instructionValidity()[static_cast<size_t>(
-                instruction.op.opcode)]) {
+        uint256_t gas_cost =
+            is_valid_instruction ? nextGasCost() : error_gas_cost;
+
+        if (arb_gas_remaining < gas_cost) {
+            // If there's insufficient gas remaining, execute by transitioning
+            // to the error state with remaining gas set to max
+            context.numGas += error_gas_cost;
+            arb_gas_remaining = max_arb_gas_remaining;
+            state = Status::Error;
+            return NotBlocked();
+        }
+        arb_gas_remaining -= gas_cost;
+        context.numGas += gas_cost;
+
+        if (!is_valid_instruction) {
             // The opcode is invalid, execute by transitioning to the error
             // state
             state = Status::Error;
             return NotBlocked();
         }
 
-        auto gas_cost = nextGasCost();
-        if (arb_gas_remaining < gas_cost) {
-            // If there's insufficient gas remaining, execute by transitioning
-            // to the error state with remaining gas set to max
-            arb_gas_remaining = max_arb_gas_remaining;
-            state = Status::Error;
-            return NotBlocked();
-        }
-        arb_gas_remaining -= gas_cost;
-
-        // save stack size for stack cleanup in case of error
-        uint64_t startStackSize = stack.stacksize();
         BlockReason blockReason = NotBlocked();
         try {
             blockReason = runOp(instruction.op.opcode);
+        } catch (const stack_too_small&) {
+            // Charge an error instruction instead
+            arb_gas_remaining += gas_cost;
+            context.numGas -= gas_cost;
         } catch (const std::exception&) {
             state = Status::Error;
         }
@@ -490,31 +555,32 @@ BlockReason MachineState::runOne() {
             // Get rid of the immediate and reset the gas if the machine was
             // actually blocked
             arb_gas_remaining += gas_cost;
+            context.numGas -= gas_cost;
             if (instruction.op.immediate) {
                 stack.popClear();
             }
             return blockReason;
         }
-
-        // adjust for the gas used
-        context.numGas += gas_cost;
-
-        if (state == Status::Error) {
-            // if state is Error, clean up stack
-            // Clear stack to base for instruction
-            auto stackItems =
-                InstructionStackPops.at(instruction.op.opcode).size();
-            while (stack.stacksize() > 0 &&
-                   startStackSize - stack.stacksize() < stackItems) {
-                stack.popClear();
-            }
-        }
-
         return NotBlocked();
     }();
 
     if (nonstd::holds_alternative<NotBlocked>(blockReason)) {
         context.numSteps += 1;
+    }
+
+    if (state == Status::Error) {
+        // if state is Error, clean up stack
+        // Clear stack to base for instruction
+        while (stack.stacksize() > 0 &&
+               start_stack_size - stack.stacksize() < stack_arg_count) {
+            stack.popClear();
+        }
+
+        while (auxstack.stacksize() > 0 &&
+               start_auxstack_size - auxstack.stacksize() <
+                   auxstack_arg_count) {
+            auxstack.popClear();
+        }
     }
 
     // If we're in the error state, jump to the error handler if one is set

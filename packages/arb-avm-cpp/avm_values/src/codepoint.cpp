@@ -96,11 +96,19 @@ uint256_t hash(const CodePoint& cp) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Operation& val) {
+    auto opcode_name = [&]() -> std::string {
+        auto it = InstructionNames.find(val.opcode);
+        if (it != InstructionNames.end()) {
+            return it->second;
+        } else {
+            return "InvalidOpcode";
+        }
+    }();
+
     if (val.immediate) {
-        os << "Immediate(" << InstructionNames.at(val.opcode) << ", "
-           << *val.immediate << ")";
+        os << "Immediate(" << opcode_name << ", " << *val.immediate << ")";
     } else {
-        os << "Basic(" << InstructionNames.at(val.opcode) << ")";
+        os << "Basic(" << opcode_name << ")";
     }
     return os;
 }

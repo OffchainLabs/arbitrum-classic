@@ -113,21 +113,27 @@ func (m *Machine) IsBlocked(newMessages bool) machine.BlockReason {
 	return nil
 }
 
-func (m *Machine) PrintState() {
-	C.machinePrint(m.c)
+func (m *Machine) String() string {
+	cStr := C.machineInfo(m.c)
+	defer C.free(unsafe.Pointer(cStr))
+	return C.GoString(cStr)
 }
 
 func makeExecutionAssertion(assertion C.RawAssertion) (*protocol.ExecutionAssertion, []value.Value, uint64) {
 	sendsRaw := receiveByteSlice(assertion.sends)
+	sendAcc := receive32Bytes(assertion.sendAcc)
 	logsRaw := receiveByteSlice(assertion.logs)
+	logAcc := receive32Bytes(assertion.logAcc)
 	debugPrints := protocol.BytesArrayToVals(receiveByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
 	return protocol.NewExecutionAssertion(
 		uint64(assertion.numGas),
 		uint64(assertion.inbox_messages_consumed),
 		sendsRaw,
 		uint64(assertion.sendCount),
+		sendAcc,
 		logsRaw,
 		uint64(assertion.logCount),
+		logAcc,
 	), debugPrints, uint64(assertion.numSteps)
 }
 
@@ -136,6 +142,24 @@ func (m *Machine) ExecuteAssertion(
 	goOverGas bool,
 	messages []inbox.InboxMessage,
 	finalMessageOfBlock bool,
+) (*protocol.ExecutionAssertion, []value.Value, uint64) {
+	return m.ExecuteAssertionAdvanced(
+		maxGas,
+		goOverGas,
+		messages,
+		finalMessageOfBlock,
+		common.Hash{},
+		common.Hash{},
+	)
+}
+
+func (m *Machine) ExecuteAssertionAdvanced(
+	maxGas uint64,
+	goOverGas bool,
+	messages []inbox.InboxMessage,
+	finalMessageOfBlock bool,
+	beforeSendAcc common.Hash,
+	beforeLogAcc common.Hash,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64) {
 	goOverGasInt := C.uchar(0)
 	if goOverGas {
@@ -159,6 +183,8 @@ func (m *Machine) ExecuteAssertion(
 
 	assertion := C.executeAssertion(
 		m.c,
+		unsafeDataPointer(beforeSendAcc.Bytes()),
+		unsafeDataPointer(beforeLogAcc.Bytes()),
 		C.uint64_t(maxGas),
 		C.int(goOverGasInt),
 		msgData,
@@ -168,14 +194,9 @@ func (m *Machine) ExecuteAssertion(
 	return makeExecutionAssertion(assertion)
 }
 
-func (m *Machine) MarshalForProof() ([]byte, error) {
+func (m *Machine) MarshalForProof() ([]byte, []byte, error) {
 	rawProof := C.machineMarshallForProof(m.c)
-	return receiveByteSlice(rawProof), nil
-}
-
-func (m *Machine) MarshalBufferProof() ([]byte, error) {
-	rawProof := C.machineMarshallBufferProof(m.c)
-	return receiveByteSlice(rawProof), nil
+	return receiveByteSlice(rawProof.standard_proof), receiveByteSlice(rawProof.buffer_proof), nil
 }
 
 func (m *Machine) MarshalState() ([]byte, error) {

@@ -59,6 +59,33 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
         return returnContext(context);
     }
 
+    function executeStepDebug(bytes32[3] calldata _machineFields, bytes calldata proof)
+        external
+        view
+        returns (
+            uint64 gas,
+            bytes32[5] memory fields,
+            string memory startMachine,
+            string memory afterMachine
+        )
+    {
+        bytes memory bproof = new bytes(0);
+        AssertionContext memory context =
+            initializeExecutionContext(
+                _machineFields[0],
+                _machineFields[1],
+                _machineFields[2],
+                proof,
+                bproof
+            );
+
+        executeOp(context);
+
+        (gas, fields) = returnContext(context);
+        startMachine = Machine.toString(context.startMachine);
+        afterMachine = Machine.toString(context.afterMachine);
+    }
+
     /* solhint-disable no-inline-assembly */
 
     // Arithmetic
@@ -854,7 +881,7 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
         } else if (opCode == OP_INBOX) {
             return (0, 0, 40, executeInboxInsn);
         } else if (opCode == OP_ERROR) {
-            return (0, 0, 5, executeErrorInsn);
+            return (0, 0, ERROR_GAS_COST, executeErrorInsn);
         } else if (opCode == OP_STOP) {
             return (0, 0, 10, executeStopInsn);
         } else if (opCode == OP_SETGAS) {
@@ -884,7 +911,7 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
         } else if ((opCode >= OP_GETBUFFER8 && opCode <= OP_SETBUFFER256) || opCode == OP_SEND) {
             revert("use another contract to handle buffer opcodes");
         } else {
-            return (0, 0, 0, executeErrorInsn);
+            return (0, 0, ERROR_GAS_COST, executeErrorInsn);
         }
     }
 }

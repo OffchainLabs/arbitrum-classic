@@ -28,8 +28,21 @@ OUTBOX_ENTRY=$PREFIX/rollup/Outbox.sol:OutboxEntry
 ROLLUP_LIBS=$INBOX,$OUTBOX,$ROLLUP_CREATOR,$ROLLUP,$ROLLUP_LIB,$MESSAGES,$NODE,$OUTBOX_ENTRY
 IGNORED_MORE=$IGNORED,$ROLLUP_LIBS
 
+NM=$(realpath ./../../../node_modules)
+OZ=$NM/@openzeppelin
+BASE=$(realpath ./../../arb-bridge-eth/contracts)
+
+OZ_LIBS=$OZ/contracts/proxy/Clones.sol:Clones
+
+solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/rollup/NodeFactory.sol --overwrite -o .
+abigen --pkg=$PACKAGE --out=nodefactory.go --combined-json combined.json --exc=$IGNORED_MORE
+
+solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/challenge/ChallengeFactory.sol --overwrite -o .
+abigen --pkg=$PACKAGE --out=challengefactory.go --combined-json combined.json --exc=$IGNORED_MORE,$OZ_LIBS
+
+rm combined.json
+
 abigen --sol=$PREFIX/test_only/ChallengeTester.sol --pkg=$PACKAGE --out=challengeTester.go --exc=$IGNORED_MORE
 abigen --sol=$PREFIX/test_only/MachineTester.sol --pkg=$PACKAGE --out=machineTester.go --exc=$IGNORED_MORE
 abigen --sol=$PREFIX/arch/OneStepProof.sol --pkg=$PACKAGE --out=onestepproof.go --exc=$IGNORED_MORE
 abigen --sol=$PREFIX/arch/OneStepProof2.sol --pkg=$PACKAGE --out=onestepproof2.go --exc=$IGNORED_MORE
-abigen --sol=$PREFIX/rollup/NodeFactory.sol --pkg=$PACKAGE --out=nodefactory.go --exc=$IGNORED_MORE
