@@ -166,7 +166,13 @@ A VM that is in the Halted or ErrorStop state cannot execute instructions.
 
 A VM that is in an extensive state can execute an instruction. To execute an instruction, the VM gets the opcode from the Current Codepoint.
 
-If the opcode is not a value that is an opcode of the AVM instruction set, the machine is executed as though the instruction were the error opcode. Otherwise the VM carries out the semantics of the opcode.
+If the opcode is not a value that is an opcode of the AVM instruction set, the machine is executed as though the instruction were the error opcode.
+
+If the opcode is valid, but there are not enough items on the stack or auxstack to execute the opcode, the machine is executed as though the instruction were an error opcode.
+
+Otherwise the VM carries out the semantics of the opcode.
+
+If an error is raised while executing the opcode, remove the items from the stack and auxstack that would have been consumed by the opcode. In the case of underflow, remove the minimum of the number of items consumed and the size of the stack.
 
 The instructions are as follows:
 
