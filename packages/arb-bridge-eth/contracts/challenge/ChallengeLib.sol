@@ -53,7 +53,7 @@ library ChallengeLib {
     }
 
     function assertionRestHash(
-        uint256 _nextInboxMessageNum,
+        uint256 _totalMessagesRead,
         bytes32 _machineState,
         bytes32 _sendAcc,
         uint256 _sendCount,
@@ -63,7 +63,7 @@ library ChallengeLib {
         return
             keccak256(
                 abi.encodePacked(
-                    _nextInboxMessageNum,
+                    _totalMessagesRead,
                     _machineState,
                     _sendAcc,
                     _sendCount,

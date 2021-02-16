@@ -20,9 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"math/big"
@@ -32,25 +29,30 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
 type ExecutionCutJSON struct {
-	GasUsed      uint64
-	InboxDelta   ethcommon.Hash
-	MachineState ethcommon.Hash
-	SendAcc      ethcommon.Hash
-	SendCount    *hexutil.Big
-	LogAcc       ethcommon.Hash
-	LogCount     *hexutil.Big
+	GasUsed           uint64
+	TotalMessagesRead *hexutil.Big
+	MachineState      ethcommon.Hash
+	SendAcc           ethcommon.Hash
+	SendCount         *hexutil.Big
+	LogAcc            ethcommon.Hash
+	LogCount          *hexutil.Big
 }
 
 type proofData struct {
@@ -73,13 +75,13 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 	}
 
 	beforeCut := ExecutionCutJSON{
-		GasUsed:      0,
-		InboxDelta:   ethcommon.Hash{},
-		MachineState: mach.Hash().ToEthHash(),
-		SendAcc:      ethcommon.Hash{},
-		SendCount:    (*hexutil.Big)(big.NewInt(0)),
-		LogAcc:       ethcommon.Hash{},
-		LogCount:     (*hexutil.Big)(big.NewInt(0)),
+		GasUsed:           0,
+		TotalMessagesRead: (*hexutil.Big)(big.NewInt(0)),
+		MachineState:      mach.Hash().ToEthHash(),
+		SendAcc:           ethcommon.Hash{},
+		SendCount:         (*hexutil.Big)(big.NewInt(0)),
+		LogAcc:            ethcommon.Hash{},
+		LogCount:          (*hexutil.Big)(big.NewInt(0)),
 	}
 
 	nextMessageIndex := big.NewInt(0)
@@ -117,22 +119,15 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 			fmt.Println("Machine stopped in error state")
 			return proofs, nil, nil
 		}
-		if a.InboxMessagesConsumed > 0 {
-			inboxDeltaHash, err := db.GetInboxDelta(big.NewInt(0), big.NewInt(1))
-			if err != nil {
-				return nil, nil, err
-			}
-			beforeCut.InboxDelta = inboxDeltaHash.ToEthHash()
-		}
 
 		afterCut := ExecutionCutJSON{
-			GasUsed:      beforeCut.GasUsed + a.NumGas,
-			InboxDelta:   ethcommon.Hash{},
-			MachineState: mach.Hash().ToEthHash(),
-			SendAcc:      a.SendAcc.ToEthHash(),
-			SendCount:    (*hexutil.Big)(new(big.Int).Add(beforeCut.SendCount.ToInt(), big.NewInt(int64(len(a.Sends))))),
-			LogAcc:       a.LogAcc.ToEthHash(),
-			LogCount:     (*hexutil.Big)(new(big.Int).Add(beforeCut.LogCount.ToInt(), big.NewInt(int64(len(a.Logs))))),
+			GasUsed:           beforeCut.GasUsed + a.NumGas,
+			TotalMessagesRead: (*hexutil.Big)(new(big.Int).Add(beforeCut.TotalMessagesRead.ToInt(), new(big.Int).SetUint64(a.InboxMessagesConsumed))),
+			MachineState:      mach.Hash().ToEthHash(),
+			SendAcc:           ethcommon.Hash{},
+			SendCount:         (*hexutil.Big)(new(big.Int).Add(beforeCut.SendCount.ToInt(), big.NewInt(int64(len(a.Sends))))),
+			LogAcc:            ethcommon.Hash{},
+			LogCount:          (*hexutil.Big)(new(big.Int).Add(beforeCut.LogCount.ToInt(), big.NewInt(int64(len(a.Logs))))),
 		}
 
 		proofs = append(proofs, &proofData{
@@ -147,7 +142,7 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 	return proofs, machineStates, nil
 }
 
-func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontracts.OneStepProof, osp2 *ethbridgetestcontracts.OneStepProof2) {
+func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontracts.OneStepProof, osp2 *ethbridgetestcontracts.OneStepProof2, bridge ethcommon.Address) {
 	t.Log("proof test contact: ", contract)
 	ctx := context.Background()
 
@@ -178,13 +173,9 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 		t.Run(strconv.FormatUint(uint64(opcode), 10), func(t *testing.T) {
 			var err error
 			var machineData struct {
-				Gas    uint64
-				Fields [5][32]byte
-			}
-			machineFields := [3][32]byte{
-				proof.BeforeCut.InboxDelta,
-				proof.BeforeCut.SendAcc,
-				proof.BeforeCut.LogAcc,
+				Gas               uint64
+				TotalMessagesRead *big.Int
+				Fields            [4][32]byte
 			}
 
 			op := proof.Proof[0]
@@ -192,14 +183,23 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 			if (op >= 0xa1 && op <= 0xa6) || op == 0x70 {
 				machineData, err = osp2.ExecuteStep(
 					&bind.CallOpts{Context: ctx},
-					machineFields,
+					proof.BeforeCut.TotalMessagesRead.ToInt(),
+					proof.BeforeCut.SendAcc,
+					proof.BeforeCut.LogAcc,
 					proof.Proof,
 					proof.BufferProof,
 				)
 			} else {
+				var messagesRead [32]byte
+				copy(messagesRead[:], math.U256Bytes(proof.BeforeCut.TotalMessagesRead.ToInt()))
 				ret, err := osp.ExecuteStepDebug(
 					&bind.CallOpts{Context: ctx},
-					machineFields,
+					bridge,
+					[3][32]byte{
+						messagesRead,
+						proof.BeforeCut.SendAcc,
+						proof.BeforeCut.LogAcc,
+					},
 					proof.Proof,
 				)
 				test.FailIfError(t, err)
@@ -211,17 +211,17 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 			if machineData.Gas != correctGasUsed {
 				t.Fatalf("wrong gas %v instead of %v", machineData.Gas, correctGasUsed)
 			}
+			if machineData.TotalMessagesRead.Cmp(proof.AfterCut.TotalMessagesRead.ToInt()) != 0 {
+				t.Fatal("wrong total messages read")
+			}
 			if machineData.Fields[0] != proof.BeforeCut.MachineState {
 				t.Fatal("wrong before machine")
 			}
-			if machineData.Fields[2] != proof.AfterCut.InboxDelta {
-				t.Fatal("wrong DidInboxInsn")
+			if machineData.Fields[2] != proof.AfterCut.SendAcc {
+				t.Fatal("wrong log")
 			}
-			if machineData.Fields[3] != proof.AfterCut.SendAcc {
-				t.Fatal("wrong send acc")
-			}
-			if machineData.Fields[4] != proof.AfterCut.LogAcc {
-				t.Fatal("wrong log acc")
+			if machineData.Fields[3] != proof.AfterCut.LogAcc {
+				t.Fatal("wrong message")
 			}
 			if machineData.Fields[1] != proof.AfterCut.MachineState {
 				t.Fatalf("wrong after machine 0x%x 0x%x", machineData.Fields[1][:], proof.AfterCut.MachineState[:])
@@ -240,13 +240,15 @@ func TestValidateProof(t *testing.T) {
 	test.FailIfError(t, err)
 	_, _, osp2, err := ethbridgetestcontracts.DeployOneStepProof2(auth, client)
 	test.FailIfError(t, err)
+	bridgeAddr, _, _, err := ethbridgecontracts.DeployBridge(auth, client)
+	test.FailIfError(t, err)
 	client.Commit()
 
 	for _, machName := range testMachines {
 		machName := machName // capture range variable
 		t.Run(machName, func(t *testing.T) {
 			//t.Parallel()
-			runTestValidateProof(t, machName, osp, osp2)
+			runTestValidateProof(t, machName, osp, osp2, bridgeAddr)
 		})
 	}
 }

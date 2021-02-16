@@ -17,14 +17,12 @@ type Assertion struct {
 	PrevProposedBlock *big.Int
 	PrevInboxMaxCount *big.Int
 	*ExecutionInfo
-	InboxDelta common.Hash
 }
 
-func NewAssertionFromFields(a [7][32]byte, b [10]*big.Int) *Assertion {
+func NewAssertionFromFields(a [4][32]byte, b [10]*big.Int) *Assertion {
 	beforeState := &ExecutionState{
 		MachineHash:       a[0],
 		TotalMessagesRead: b[2],
-		InboxHash:         a[1],
 		TotalGasConsumed:  b[1],
 		TotalSendCount:    b[3],
 		TotalLogCount:     b[4],
@@ -36,28 +34,23 @@ func NewAssertionFromFields(a [7][32]byte, b [10]*big.Int) *Assertion {
 		ExecutionInfo: &ExecutionInfo{
 			Before: beforeState,
 			After: &ExecutionState{
-				MachineHash:       a[6],
+				MachineHash:       a[3],
 				TotalMessagesRead: new(big.Int).Add(beforeState.TotalMessagesRead, b[6]),
-				InboxHash:         a[3],
 				TotalGasConsumed:  new(big.Int).Add(beforeState.TotalGasConsumed, b[7]),
 				TotalSendCount:    new(big.Int).Add(beforeState.TotalSendCount, b[8]),
 				TotalLogCount:     new(big.Int).Add(beforeState.TotalLogCount, b[9]),
 			},
-			SendAcc: a[4],
-			LogAcc:  a[5],
+			SendAcc: a[1],
+			LogAcc:  a[2],
 		},
-		InboxDelta: a[2],
 	}
 }
 
-func (a *Assertion) BytesFields() [7][32]byte {
-	return [7][32]byte{
+func (a *Assertion) BytesFields() [4][32]byte {
+	return [4][32]byte{
 		a.Before.MachineHash,
-		a.Before.InboxHash,
-		a.InboxDelta,
 		a.SendAcc,
 		a.LogAcc,
-		a.After.InboxHash,
 		a.After.MachineHash,
 	}
 }
@@ -91,10 +84,6 @@ func BisectionChunkHash(
 	)
 }
 
-func InboxDeltaHash(inboxAcc, deltaAcc common.Hash) common.Hash {
-	return hashing.SoliditySHA3(hashing.Bytes32(inboxAcc), hashing.Bytes32(deltaAcc))
-}
-
 func assertionHash(
 	gasUsed *big.Int,
 	assertionRest common.Hash,
@@ -106,7 +95,7 @@ func assertionHash(
 }
 
 func assertionRestHash(
-	inboxDelta common.Hash,
+	totalMessagesRead *big.Int,
 	machineState common.Hash,
 	sendAcc common.Hash,
 	sendCount *big.Int,
@@ -114,7 +103,7 @@ func assertionRestHash(
 	logCount *big.Int,
 ) common.Hash {
 	return hashing.SoliditySHA3(
-		hashing.Bytes32(inboxDelta),
+		hashing.Uint256(totalMessagesRead),
 		hashing.Bytes32(machineState),
 		hashing.Bytes32(sendAcc),
 		hashing.Uint256(sendCount),
@@ -123,23 +112,9 @@ func assertionRestHash(
 	)
 }
 
-func (a *Assertion) InboxConsistencyHash(inboxTopHash common.Hash, inboxTopCount *big.Int) common.Hash {
-	messagesAfterCount := new(big.Int).Sub(inboxTopCount, a.After.TotalMessagesRead)
-	return BisectionChunkHash(big.NewInt(0), messagesAfterCount, inboxTopHash, a.After.InboxHash)
-}
-
-func (a *Assertion) InboxDeltaHash() common.Hash {
-	return BisectionChunkHash(
-		big.NewInt(0),
-		a.InboxMessagesRead(),
-		InboxDeltaHash(a.After.InboxHash, common.Hash{}),
-		InboxDeltaHash(a.Before.InboxHash, a.InboxDelta),
-	)
-}
-
 func (a *Assertion) BeforeExecutionHash() common.Hash {
 	restBefore := assertionRestHash(
-		a.InboxDelta,
+		a.Before.TotalMessagesRead,
 		a.Before.MachineHash,
 		common.Hash{},
 		big.NewInt(0),
@@ -151,7 +126,7 @@ func (a *Assertion) BeforeExecutionHash() common.Hash {
 
 func (a *Assertion) AfterExecutionHash() common.Hash {
 	restAfter := assertionRestHash(
-		common.Hash{},
+		a.After.TotalMessagesRead,
 		a.After.MachineHash,
 		a.SendAcc,
 		a.SendCount(),

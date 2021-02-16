@@ -139,21 +139,13 @@ func initializeChallengeData(
 		ExecutionState: &core.ExecutionState{
 			TotalGasConsumed:  big.NewInt(0),
 			MachineHash:       initialMach.MachineHash(),
-			InboxHash:         common.Hash{},
 			TotalMessagesRead: big.NewInt(0),
 			TotalSendCount:    big.NewInt(0),
 			TotalLogCount:     big.NewInt(0),
 		},
 	}
-	inboxDeltaHash, err := lookup.GetInboxDelta(big.NewInt(0), inboxMessagesRead)
-	test.FailIfError(t, err)
-	afterInboxTotalMessagesRead := new(big.Int).Add(prevState.TotalMessagesRead, inboxMessagesRead)
-	var inboxAcc common.Hash
-	if afterInboxTotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
-		inboxAcc, err = lookup.GetInboxAcc(new(big.Int).Sub(afterInboxTotalMessagesRead, big.NewInt(1)))
-		test.FailIfError(t, err)
-	}
 
+	afterInboxTotalMessagesRead := new(big.Int).Add(prevState.TotalMessagesRead, inboxMessagesRead)
 	assertion := &core.Assertion{
 		PrevProposedBlock: prevState.ProposedBlock,
 		PrevInboxMaxCount: prevState.InboxMaxCount,
@@ -162,7 +154,6 @@ func initializeChallengeData(
 			After: &core.ExecutionState{
 				MachineHash:       common.Hash{},
 				TotalMessagesRead: afterInboxTotalMessagesRead,
-				InboxHash:         inboxAcc,
 				TotalGasConsumed:  big.NewInt(0),
 				TotalSendCount:    big.NewInt(0),
 				TotalLogCount:     big.NewInt(0),
@@ -170,16 +161,10 @@ func initializeChallengeData(
 			SendAcc: common.Hash{},
 			LogAcc:  common.Hash{},
 		},
-		InboxDelta: inboxDeltaHash,
 	}
 
 	inboxMaxCount, err := lookup.GetMessageCount()
 	test.FailIfError(t, err)
-	var inboxTopAcc common.Hash
-	if inboxMaxCount.Cmp(big.NewInt(0)) != 0 {
-		inboxTopAcc, err = lookup.GetInboxAcc(new(big.Int).Sub(inboxMaxCount, big.NewInt(1)))
-		test.FailIfError(t, err)
-	}
 	return &core.NodeInfo{
 		NodeNum: big.NewInt(1),
 		BlockProposed: &common.BlockId{
@@ -188,7 +173,6 @@ func initializeChallengeData(
 		},
 		Assertion:     assertion,
 		InboxMaxCount: inboxMaxCount,
-		InboxMaxHash:  inboxTopAcc,
 	}
 }
 
@@ -210,6 +194,9 @@ func initializeChallengeTest(
 	_, _, tester, err := ethbridgetestcontracts.DeployChallengeTester(deployer, client, osp1Addr, osp2Addr)
 	test.FailIfError(t, err)
 
+	bridgeAddr, _, _, err := ethbridgecontracts.DeployBridge(deployer, client)
+	test.FailIfError(t, err)
+
 	asserterWalletAddress, _, _, err := ethbridgecontracts.DeployValidator(asserter, client)
 	test.FailIfError(t, err)
 	challengerWalletAddress, _, _, err := ethbridgecontracts.DeployValidator(challenger, client)
@@ -223,13 +210,12 @@ func initializeChallengeTest(
 
 	_, err = tester.StartChallenge(
 		deployer,
-		nd.Assertion.InboxConsistencyHash(nd.InboxMaxHash, nd.InboxMaxCount),
-		nd.Assertion.InboxDeltaHash(),
 		nd.Assertion.ExecutionHash(),
 		asserterWallet.Address().ToEthAddress(),
 		challengerWallet.Address().ToEthAddress(),
 		asserterTime,
 		challengerTime,
+		bridgeAddr,
 	)
 	test.FailIfError(t, err)
 	client.Commit()

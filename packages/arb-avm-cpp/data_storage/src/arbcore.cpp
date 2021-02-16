@@ -892,46 +892,6 @@ rocksdb::Status ArbCore::saveSends(
     return updateSendInsertedCount(tx, send_count);
 }
 
-ValueResult<std::vector<uint256_t>> ArbCore::getInboxHashes(
-    uint256_t index,
-    uint256_t count) const {
-    auto tx = Transaction::makeTransaction(data_storage);
-
-    // Check if attempting to get entries past current valid logs
-    auto message_count_result = messageEntryInsertedCountImpl(*tx);
-    if (!message_count_result.status.ok()) {
-        return {message_count_result.status, {}};
-    }
-    auto max_message_count = message_count_result.data;
-    if (index >= max_message_count) {
-        return {rocksdb::Status::NotFound(), {}};
-    }
-    if (index + count > max_message_count) {
-        count = max_message_count - index;
-    }
-
-    std::vector<unsigned char> key;
-    marshal_uint256_t(index, key);
-    auto key_slice = vecToSlice(key);
-
-    auto results = getVectorVectorUsingFamilyAndKey(
-        *tx->transaction, data_storage->messageentry_column.get(), key_slice,
-        intx::narrow_cast<size_t>(count));
-    if (!results.status.ok()) {
-        return {results.status, {}};
-    }
-
-    std::vector<uint256_t> messages;
-    messages.reserve(results.data.size());
-    for (const auto& data : results.data) {
-        auto message_entry = extractMessageEntry(0, vecToSlice(data));
-
-        messages.push_back(message_entry.inbox_hash);
-    }
-
-    return {rocksdb::Status::OK(), std::move(messages)};
-}
-
 ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     uint256_t index,
     uint256_t count) const {
@@ -972,24 +932,6 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     return {rocksdb::Status::OK(), std::move(messages)};
 }
 
-ValueResult<std::vector<uint256_t>> ArbCore::getMessageHashes(
-    uint256_t index,
-    uint256_t count) const {
-    auto messages = getMessages(index, count);
-    if (!messages.status.ok()) {
-        return {messages.status, {}};
-    }
-
-    std::vector<uint256_t> hashes;
-    hashes.reserve(messages.data.size());
-    for (const auto& message : messages.data) {
-        auto hash = hash_value(extractInboxMessage(message).toTuple());
-        hashes.push_back(hash);
-    }
-
-    return {rocksdb::Status::OK(), std::move(hashes)};
-}
-
 ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
     uint256_t index,
     uint256_t count) const {
@@ -1015,33 +957,6 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
     return getVectorVectorUsingFamilyAndKey(
         *tx->transaction, data_storage->send_column.get(), key_slice,
         intx::narrow_cast<size_t>(count));
-}
-
-ValueResult<uint256_t> ArbCore::getInboxDelta(uint256_t start_index,
-                                              uint256_t count) {
-    auto hashes_result = getMessageHashes(start_index, count);
-    if (!hashes_result.status.ok()) {
-        return {hashes_result.status, 0};
-    }
-
-    uint256_t combined_hash = 0;
-    for (size_t i = 0; i < hashes_result.data.size(); ++i) {
-        combined_hash =
-            hash(combined_hash,
-                 hashes_result.data[hashes_result.data.size() - 1 - i]);
-    }
-
-    return {rocksdb::Status::OK(), combined_hash};
-}
-
-ValueResult<uint256_t> ArbCore::getInboxAcc(uint256_t index) {
-    auto hashes_result = getInboxHashes(index, 1);
-    if (!hashes_result.status.ok()) {
-        // return {hashes_result.status, 0};
-        return {rocksdb::Status::OK(), 42};
-    }
-
-    return {rocksdb::Status::OK(), hashes_result.data[0]};
 }
 
 ValueResult<uint256_t> ArbCore::getSendAcc(uint256_t start_acc_hash,

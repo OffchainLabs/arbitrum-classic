@@ -261,27 +261,25 @@ abstract contract OneStepProofCommon {
         Machine.Data memory mach;
         (offset, mach) = Machine.deserializeMachine(proof, offset);
 
-        AssertionContext memory context =
-            AssertionContext(
-                bridge,
-                mach,
-                mach.clone(),
-                initialMessagesRead,
-                initialSendAcc,
-                initialLogAcc,
-                0,
-                ValueStack(stackCount, stackVals),
-                ValueStack(auxstackCount, auxstackVals),
-                uint8(proof[offset]) == 1,
-                opCode,
-                proof,
-                offset + 1,
-                bproof,
-                false
-            );
-
         uint8 immediate = uint8(proof[offset]);
         offset += 1;
+
+        AssertionContext memory context;
+        context.bridge = bridge;
+        context.startMachine = mach;
+        context.afterMachine = mach.clone();
+        context.totalMessagesRead = initialMessagesRead;
+        context.sendAcc = initialSendAcc;
+        context.logAcc = initialLogAcc;
+        context.gas = 0;
+        context.stack = ValueStack(stackCount, stackVals);
+        context.auxstack = ValueStack(auxstackCount, auxstackVals);
+        context.hadImmediate = uint8(proof[offset]) == 1;
+        context.opcode = opCode;
+        context.proof = proof;
+        context.bufProof = bproof;
+        context.errorOccurred = false;
+        context.offset = offset;
 
         require(immediate == 0 || immediate == 1, BAD_IMM_TYP);
         Value.Data memory cp;

@@ -141,12 +141,8 @@ func (r *Rollup) CreateChallenge(
 		authWithContext(ctx, r.builderAuth),
 		[2]ethcommon.Address{staker1.ToEthAddress(), staker2.ToEthAddress()},
 		[2]*big.Int{node1.NodeNum, node2.NodeNum},
-		[6][32]byte{
-			node1.InboxConsistencyHash(),
-			node1.Assertion.InboxDeltaHash(),
+		[2][32]byte{
 			node1.Assertion.ExecutionHash(),
-			node2.InboxConsistencyHash(),
-			node2.Assertion.InboxDeltaHash(),
 			node2.Assertion.ExecutionHash(),
 		},
 		[2]*big.Int{

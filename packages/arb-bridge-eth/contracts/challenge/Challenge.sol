@@ -42,13 +42,6 @@ contract Challenge is Cloneable, IChallenge {
         uint256 challengedSegmentLength,
         bytes32[] chainHashes
     );
-    event BisectedInboxDelta(
-        bytes32 indexed challengeRoot,
-        uint256 challengedSegmentStart,
-        uint256 challengedSegmentLength,
-        bytes32[] inboxAccHashes,
-        bytes32[] inboxDeltaHashes
-    );
     event AsserterTimedOut();
     event ChallengerTimedOut();
     event OneStepProofCompleted();

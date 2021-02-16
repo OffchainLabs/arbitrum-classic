@@ -123,7 +123,8 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                 _machineHash,
                 0, // inbox count
                 0, // send count
-                0 // log count
+                0, // log count
+                1 // Initialization message already in inbox
             );
         return
             INode(
@@ -411,7 +412,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         bytes32 blockHash,
         uint256 blockNumber,
         uint256 nodeNum,
-        bytes32[5] calldata assertionBytes32Fields,
+        bytes32[4] calldata assertionBytes32Fields,
         uint256[10] calldata assertionIntFields
     ) external whenNotPaused {
         require(isStaked(msg.sender), "NOT_STAKED");
@@ -478,7 +479,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         INode node =
             INode(
                 nodeFactory.createNode(
-                    RollupLib.nodeStateHash(assertion),
+                    RollupLib.nodeStateHash(assertion, inboxMaxCount),
                     RollupLib.challengeRoot(assertion, block.number),
                     RollupLib.confirmHash(assertion),
                     latestStakedNode(msg.sender),
@@ -490,7 +491,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         nodeCreated(node);
         stakeOnNode(msg.sender, nodeNum, confirmPeriodBlocks);
 
-        emit NodeCreated(nodeNum, assertionBytes32Fields, assertionIntFields);
+        emit NodeCreated(nodeNum, inboxMaxCount, assertionBytes32Fields, assertionIntFields);
     }
 
     /**

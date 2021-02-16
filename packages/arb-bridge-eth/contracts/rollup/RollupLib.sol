@@ -38,7 +38,8 @@ library RollupLib {
         bytes32 machineHash,
         uint256 inboxCount,
         uint256 totalMessageCount,
-        uint256 totalLogCount
+        uint256 totalLogCount,
+        uint256 inboxMaxCount
     ) internal pure returns (bytes32) {
         return
             keccak256(
@@ -48,7 +49,8 @@ library RollupLib {
                     machineHash,
                     inboxCount,
                     totalMessageCount,
-                    totalLogCount
+                    totalLogCount,
+                    inboxMaxCount
                 )
             );
     }
@@ -57,7 +59,6 @@ library RollupLib {
         uint256 beforeProposedBlock;
         uint256 beforeTotalGasUsed;
         bytes32 beforeMachineHash;
-        bytes32 beforeInboxHash;
         uint256 beforeInboxCount;
         uint256 beforeTotalSendCount;
         uint256 beforeTotalLogCount;
@@ -71,7 +72,7 @@ library RollupLib {
         bytes32 afterMachineHash;
     }
 
-    function decodeAssertion(bytes32[5] memory bytes32Fields, uint256[10] memory intFields)
+    function decodeAssertion(bytes32[4] memory bytes32Fields, uint256[10] memory intFields)
         internal
         pure
         returns (Assertion memory)
@@ -81,18 +82,17 @@ library RollupLib {
                 intFields[0],
                 intFields[1],
                 bytes32Fields[0],
-                bytes32Fields[1],
                 intFields[2],
                 intFields[3],
                 intFields[4],
                 intFields[5],
                 intFields[6],
                 intFields[7],
-                bytes32Fields[2],
+                bytes32Fields[1],
                 intFields[8],
-                bytes32Fields[3],
+                bytes32Fields[2],
                 intFields[9],
-                bytes32Fields[4]
+                bytes32Fields[3]
             );
     }
 
@@ -104,11 +104,16 @@ library RollupLib {
                 assertion.beforeMachineHash,
                 assertion.beforeInboxCount,
                 assertion.beforeTotalSendCount,
-                assertion.beforeTotalLogCount
+                assertion.beforeTotalLogCount,
+                assertion.beforeInboxMaxCount
             );
     }
 
-    function nodeStateHash(Assertion memory assertion) internal view returns (bytes32) {
+    function nodeStateHash(Assertion memory assertion, uint256 inboxMaxCount)
+        internal
+        view
+        returns (bytes32)
+    {
         return
             nodeStateHash(
                 block.number,
@@ -116,7 +121,8 @@ library RollupLib {
                 assertion.afterMachineHash,
                 assertion.beforeInboxCount + assertion.inboxMessagesRead,
                 assertion.beforeTotalSendCount + assertion.sendCount,
-                assertion.beforeTotalLogCount + assertion.logCount
+                assertion.beforeTotalLogCount + assertion.logCount,
+                inboxMaxCount
             );
     }
 

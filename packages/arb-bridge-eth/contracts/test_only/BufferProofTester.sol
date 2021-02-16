@@ -70,6 +70,6 @@ contract BufferProofTester is OneStepProof2 {
                 proof,
                 bproof
             );
-        emit OneStepProofResult(gas, nextInboxMessageNum, fields);
+        emit OneStepProofResult(gas, totalMessagesRead, fields);
     }
 }

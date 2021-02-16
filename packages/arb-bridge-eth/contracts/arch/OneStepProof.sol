@@ -71,29 +71,34 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
         return returnContext(context);
     }
 
-    function executeStepDebug(bytes32[3] calldata _machineFields, bytes calldata proof)
+    function executeStepDebug(
+        IBridge bridge,
+        bytes32[3] calldata inputFields,
+        bytes calldata proof
+    )
         external
         view
         returns (
             uint64 gas,
-            bytes32[5] memory fields,
+            uint256 totalMessagesRead,
+            bytes32[4] memory fields,
             string memory startMachine,
             string memory afterMachine
         )
     {
-        bytes memory bproof = new bytes(0);
         AssertionContext memory context =
             initializeExecutionContext(
-                _machineFields[0],
-                _machineFields[1],
-                _machineFields[2],
+                uint256(inputFields[0]),
+                inputFields[1],
+                inputFields[2],
                 proof,
-                bproof
+                new bytes(0),
+                bridge
             );
 
         executeOp(context);
 
-        (gas, fields) = returnContext(context);
+        (gas, totalMessagesRead, fields) = returnContext(context);
         startMachine = Machine.toString(context.startMachine);
         afterMachine = Machine.toString(context.afterMachine);
     }
