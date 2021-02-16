@@ -118,6 +118,8 @@ class ArbCore {
     // Private database interaction
     ValueResult<uint256_t> getInitialMachineHash(Transaction& tx);
     rocksdb::Status saveAssertion(Transaction& tx, const Assertion& assertion);
+    rocksdb::Status saveSideloadPosition(Transaction& tx,
+                                         uint256_t block_number);
     ValueResult<Checkpoint> getCheckpoint(Transaction& tx,
                                           const uint256_t& arb_gas_used) const;
     rocksdb::Status resolveStagedMessage(Transaction& tx,

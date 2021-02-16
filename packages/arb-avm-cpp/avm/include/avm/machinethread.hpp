@@ -59,7 +59,7 @@ class MachineThread : public Machine {
     machine_status_enum status();
     std::string getErrorString();
     void clearError();
-    Assertion getAssertion();
+    Assertion nextAssertion();
     void operator()(MachineExecutionConfig config);
 };
 

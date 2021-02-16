@@ -45,7 +45,7 @@ void MachineThread::abortMachine() {
     machine_abort = false;
 }
 
-Assertion MachineThread::getAssertion() {
+Assertion MachineThread::nextAssertion() {
     if (machine_status != MACHINE_SUCCESS) {
         return {};
     }

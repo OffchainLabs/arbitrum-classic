@@ -42,6 +42,7 @@ class DataStorage {
     std::unique_ptr<rocksdb::ColumnFamilyHandle> messageentry_column;
     std::unique_ptr<rocksdb::ColumnFamilyHandle> log_column;
     std::unique_ptr<rocksdb::ColumnFamilyHandle> send_column;
+    std::unique_ptr<rocksdb::ColumnFamilyHandle> sideload_column;
 
     explicit DataStorage(const std::string& db_path);
     rocksdb::Status closeDb();

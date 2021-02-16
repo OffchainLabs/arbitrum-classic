@@ -43,6 +43,7 @@ DataStorage::DataStorage(const std::string& db_path) {
                                  rocksdb::ColumnFamilyOptions());
     column_families.emplace_back("logs", rocksdb::ColumnFamilyOptions());
     column_families.emplace_back("sends", rocksdb::ColumnFamilyOptions());
+    column_families.emplace_back("sideloads", rocksdb::ColumnFamilyOptions());
 
     rocksdb::TransactionDB* db = nullptr;
     std::vector<rocksdb::ColumnFamilyHandle*> handles;
@@ -64,6 +65,7 @@ DataStorage::DataStorage(const std::string& db_path) {
         std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[5]);
     log_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[6]);
     send_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[7]);
+    sideload_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[8]);
 }
 
 rocksdb::Status DataStorage::closeDb() {
@@ -75,6 +77,7 @@ rocksdb::Status DataStorage::closeDb() {
     messageentry_column.reset();
     log_column.reset();
     send_column.reset();
+    sideload_column.reset();
     auto s = txn_db->Close();
     txn_db.reset();
     return s;

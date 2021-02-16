@@ -226,6 +226,7 @@ TEST_CASE("Stopping on sideload") {
     auto assertion = machine.run(execConfig);
     REQUIRE(machine.currentStatus() == Status::Error);
     REQUIRE(!assertion.sideloadBlockNumber);
+    REQUIRE(assertion.gasCount == 17);
 
     // Next, test running past the sideload with a value specified
     machine = orig_machine;
@@ -234,6 +235,7 @@ TEST_CASE("Stopping on sideload") {
     assertion = machine.run(execConfig);
     REQUIRE(machine.currentStatus() == Status::Halted);
     REQUIRE(!assertion.sideloadBlockNumber);
+    REQUIRE(assertion.gasCount == 27);
 
     // Next, test stopping on the sideload but continuing
     machine = orig_machine;
@@ -242,19 +244,23 @@ TEST_CASE("Stopping on sideload") {
     assertion = machine.run(execConfig);
     REQUIRE(machine.currentStatus() == Status::Extensive);
     REQUIRE(assertion.sideloadBlockNumber == uint256_t(0x321));
+    REQUIRE(assertion.gasCount == 1);
 
     assertion = machine.run(execConfig);
     REQUIRE(machine.currentStatus() == Status::Error);
     REQUIRE(!assertion.sideloadBlockNumber);
+    REQUIRE(assertion.gasCount == 16);
 
     // Next, test stopping on the sideload and adding a value
     machine = orig_machine;
     assertion = machine.run(execConfig);
     REQUIRE(machine.currentStatus() == Status::Extensive);
     REQUIRE(assertion.sideloadBlockNumber == uint256_t(0x321));
+    REQUIRE(assertion.gasCount == 1);
 
     execConfig.sideloads.push_back(Tuple(uint256_t(0x42)));
     assertion = machine.run(execConfig);
     REQUIRE(machine.currentStatus() == Status::Halted);
     REQUIRE(!assertion.sideloadBlockNumber);
+    REQUIRE(assertion.gasCount == 26);
 }

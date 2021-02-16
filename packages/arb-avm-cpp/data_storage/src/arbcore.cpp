@@ -350,7 +350,28 @@ rocksdb::Status ArbCore::saveAssertion(Transaction& tx,
     updateMessageEntryProcessedCount(tx,
                                      pending_checkpoint.total_messages_read);
 
+    if (assertion.sideloadBlockNumber) {
+        status = saveSideloadPosition(tx, *assertion.sideloadBlockNumber);
+        if (!status.ok()) {
+            return status;
+        }
+    }
+
     return rocksdb::Status::OK();
+}
+
+rocksdb::Status ArbCore::saveSideloadPosition(Transaction& tx,
+                                              uint256_t block_number) {
+    std::vector<unsigned char> key;
+    marshal_uint256_t(block_number, key);
+    auto key_slice = vecToSlice(key);
+
+    std::vector<unsigned char> value;
+    marshal_uint256_t(pending_checkpoint.arb_gas_used, value);
+    auto value_slice = vecToSlice(value);
+
+    return tx.transaction->Put(tx.datastorage->sideload_column.get(), key_slice,
+                               value_slice);
 }
 
 // reorgToMessageOrBefore resets the checkpoint and database entries
@@ -616,6 +637,7 @@ void ArbCore::operator()() {
     uint256_t first_sequence_number_in_machine;
     uint256_t last_sequence_number_in_machine;
     MachineExecutionConfig execConfig;
+    execConfig.stop_on_sideload = true;
 
     while (!arbcore_abort) {
         if (message_data_status == MESSAGES_READY) {
@@ -658,7 +680,7 @@ void ArbCore::operator()() {
         } else if (machine->status() == MachineThread::MACHINE_SUCCESS) {
             auto tx = Transaction::makeTransaction(data_storage);
 
-            auto last_assertion = machine->getAssertion();
+            auto last_assertion = machine->nextAssertion();
             auto messages_inserted = messageEntryInsertedCountImpl(*tx);
             if (!messages_inserted.status.ok()) {
                 core_error_string = messages_inserted.status.ToString();
@@ -687,6 +709,12 @@ void ArbCore::operator()() {
                 // Maybe save checkpoint
                 // TODO Decide how often to create checkpoint
                 status = saveCheckpoint(*tx);
+                if (!status.ok()) {
+                    core_error_string = status.ToString();
+                    std::cerr << "ArbCore checkpoint saving failed: "
+                              << core_error_string << "\n";
+                    break;
+                }
 
                 // TODO Decide how often to clear ValueCache
                 // (only clear cache when machine thread stopped)
