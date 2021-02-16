@@ -13,7 +13,7 @@ packages=(
 
 cd packages
 for i in "${packages[@]}"; do
-    cd $i
-    $1
+    cd "$i"
+    eval "$1"
     cd ..
 done
