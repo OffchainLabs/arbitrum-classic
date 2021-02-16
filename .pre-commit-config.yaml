@@ -55,6 +55,6 @@ repos:
           - 'prettier-plugin-solidity@^1.0.0-alpha.54'
       - id: go-vet
         name: Go Vet
-        entry: ./scripts/run-go-packages 'go vet ./...'
+        entry: ./scripts/run-go-packages "go vet $(go list ./... | grep -v 'arb-node-core/ethbridge[^/]*contracts')"
         language: script
         files: \.go$
