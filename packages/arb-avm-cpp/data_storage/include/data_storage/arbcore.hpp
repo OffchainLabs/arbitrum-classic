@@ -28,6 +28,7 @@
 #include <utility>
 
 #include <avm/machinethread.hpp>
+#include <map>
 #include <memory>
 #include <queue>
 #include <thread>
@@ -79,6 +80,11 @@ class ArbCore {
     std::shared_ptr<Code> code{};
     Checkpoint pending_checkpoint;
 
+    // Cache a machine ready to sideload view transactions just after recent
+    // blocks
+    std::mutex sideload_cache_mutex;
+    std::map<uint256_t, std::unique_ptr<Machine>> sideload_cache;
+
     // Core thread inbox status input/output. Core thread will update if and
     // only if set to MESSAGES_READY
     std::atomic<message_status_enum> message_data_status{MESSAGES_EMPTY};
@@ -118,8 +124,6 @@ class ArbCore {
     // Private database interaction
     ValueResult<uint256_t> getInitialMachineHash(Transaction& tx);
     rocksdb::Status saveAssertion(Transaction& tx, const Assertion& assertion);
-    rocksdb::Status saveSideloadPosition(Transaction& tx,
-                                         uint256_t block_number);
     ValueResult<Checkpoint> getCheckpoint(Transaction& tx,
                                           const uint256_t& arb_gas_used) const;
     rocksdb::Status resolveStagedMessage(Transaction& tx,
@@ -299,6 +303,19 @@ class ArbCore {
     rocksdb::Status updateMessageEntryInsertedCount(
         Transaction& tx,
         const uint256_t& message_index);
+
+   public:
+    // Public sideload interaction
+    ValueResult<std::unique_ptr<Machine>> getMachineForSideload(
+        const uint256_t& block_number,
+        ValueCache& cache);
+
+   private:
+    // Private sideload interaction
+    rocksdb::Status saveSideloadPosition(Transaction& tx,
+                                         const uint256_t& block_number);
+    ValueResult<uint256_t> getSideloadPosition(Transaction& tx,
+                                               const uint256_t& block_number);
 };
 
 nonstd::optional<rocksdb::Status> deleteLogsStartingAt(Transaction& tx,

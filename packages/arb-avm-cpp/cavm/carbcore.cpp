@@ -432,3 +432,23 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
         return false;
     }
 }
+
+CMachine* arbCoreGetMachineForSideload(CArbCore* arbcore_ptr,
+                                       uint64_t block_number) {
+    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
+    ValueCache cache;
+
+    try {
+        auto machine = arbcore->getMachineForSideload(block_number, cache);
+        if (!machine.status.ok()) {
+            std::cerr << "Failed to load machine for sideload"
+                      << machine.status.ToString() << std::endl;
+            return nullptr;
+        }
+        return static_cast<void*>(machine.data.release());
+    } catch (const std::exception& e) {
+        std::cerr << "Exception while loading machine for sideload " << e.what()
+                  << std::endl;
+        return nullptr;
+    }
+}

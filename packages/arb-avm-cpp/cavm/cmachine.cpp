@@ -191,6 +191,20 @@ void machineExecutionConfigSetFinalMessageOfBlock(CMachineExecutionConfig* c,
     config->final_message_of_block = final_message_of_block;
 }
 
+void machineExecutionConfigSetSideloads(CMachineExecutionConfig* c,
+                                        ByteSliceArray bytes) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->setSideloadsFromBytes(receiveByteSliceArray(bytes));
+}
+
+void machineExecutionConfigSetStopOnSideload(CMachineExecutionConfig* c,
+                                             int stop_on_sideload) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->stop_on_sideload = stop_on_sideload;
+}
+
 RawAssertion executeAssertion(CMachine* m, const CMachineExecutionConfig* c) {
     assert(m);
     assert(c);

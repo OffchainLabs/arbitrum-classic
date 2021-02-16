@@ -41,6 +41,8 @@ constexpr auto send_processed_key = std::array<char, 1>{-63};
 constexpr auto message_entry_inserted_key = std::array<char, 1>{-64};
 constexpr auto message_entry_processed_key = std::array<char, 1>{-65};
 
+constexpr auto sideload_cache_size = 20;
+
 ValueResult<MessageEntry> getMessageEntry(Transaction& tx,
                                           uint256_t message_sequence_number) {
     std::vector<unsigned char> previous_key;
@@ -358,20 +360,6 @@ rocksdb::Status ArbCore::saveAssertion(Transaction& tx,
     }
 
     return rocksdb::Status::OK();
-}
-
-rocksdb::Status ArbCore::saveSideloadPosition(Transaction& tx,
-                                              uint256_t block_number) {
-    std::vector<unsigned char> key;
-    marshal_uint256_t(block_number, key);
-    auto key_slice = vecToSlice(key);
-
-    std::vector<unsigned char> value;
-    marshal_uint256_t(pending_checkpoint.arb_gas_used, value);
-    auto value_slice = vecToSlice(value);
-
-    return tx.transaction->Put(tx.datastorage->sideload_column.get(), key_slice,
-                               value_slice);
 }
 
 // reorgToMessageOrBefore resets the checkpoint and database entries
@@ -697,6 +685,22 @@ void ArbCore::operator()() {
                 machine = getMachineUsingStateKeys<MachineThread>(
                     *tx, pending_checkpoint.machine_state_keys, cache);
             } else {
+                // Cache pre-sideload machines
+                if (last_assertion.sideloadBlockNumber) {
+                    auto block = *last_assertion.sideloadBlockNumber;
+                    std::lock_guard<std::mutex> lock(sideload_cache_mutex);
+                    sideload_cache[block] = std::make_unique<Machine>(*machine);
+                    auto it = sideload_cache.begin();
+                    while (it != sideload_cache.end()) {
+                        if (it->first < block - sideload_cache_size ||
+                            it->first > block) {
+                            it = sideload_cache.erase(it);
+                        } else {
+                            it++;
+                        }
+                    }
+                }
+
                 // Save logs and sends
                 auto status = saveAssertion(*tx, last_assertion);
                 if (!status.ok()) {
@@ -1968,4 +1972,64 @@ std::string ArbCore::logsCursorClearError(size_t cursor_index) {
     logs_cursors[cursor_index].status = DataCursor::EMPTY;
 
     return str;
+}
+
+rocksdb::Status ArbCore::saveSideloadPosition(Transaction& tx,
+                                              const uint256_t& block_number) {
+    std::vector<unsigned char> key;
+    marshal_uint256_t(block_number, key);
+    auto key_slice = vecToSlice(key);
+
+    std::vector<unsigned char> value;
+    marshal_uint256_t(pending_checkpoint.arb_gas_used, value);
+    auto value_slice = vecToSlice(value);
+
+    return tx.transaction->Put(tx.datastorage->sideload_column.get(), key_slice,
+                               value_slice);
+}
+
+ValueResult<uint256_t> ArbCore::getSideloadPosition(
+    Transaction& tx,
+    const uint256_t& block_number) {
+    std::vector<unsigned char> key;
+    marshal_uint256_t(block_number, key);
+    auto key_slice = vecToSlice(key);
+
+    std::string value_raw;
+
+    auto s = tx.transaction->Get(rocksdb::ReadOptions(),
+                                 tx.datastorage->sideload_column.get(),
+                                 key_slice, &value_raw);
+    if (!s.ok()) {
+        return {s, 0};
+    }
+
+    return {s, intx::be::unsafe::load<uint256_t>(
+                   reinterpret_cast<const unsigned char*>(value_raw.data()))};
+}
+
+ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
+    const uint256_t& block_number,
+    ValueCache& cache) {
+    // Check the cache
+    {
+        std::lock_guard<std::mutex> lock(sideload_cache_mutex);
+        auto it = sideload_cache.find(block_number);
+        if (it != sideload_cache.end()) {
+            return {rocksdb::Status::OK(),
+                    std::make_unique<Machine>(*it->second)};
+        }
+    }
+    // Not found in cache, try the DB
+    auto tx = Transaction::makeTransaction(data_storage);
+    auto position_res = getSideloadPosition(*tx, block_number);
+    if (!position_res.status.ok()) {
+        return {position_res.status, std::unique_ptr<Machine>(nullptr)};
+    }
+    auto execution_cursor = std::make_unique<ExecutionCursor>();
+
+    auto status = getExecutionCursorImpl(*tx, *execution_cursor,
+                                         position_res.data, false, 10, cache);
+
+    return {status, execution_cursor->takeMachine()};
 }
