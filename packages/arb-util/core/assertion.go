@@ -22,12 +22,12 @@ type Assertion struct {
 
 func NewAssertionFromFields(a [7][32]byte, b [10]*big.Int) *Assertion {
 	beforeState := &ExecutionState{
-		MachineHash:      a[0],
-		InboxIndex:       b[2],
-		InboxHash:        a[1],
-		TotalGasConsumed: b[1],
-		TotalSendCount:   b[3],
-		TotalLogCount:    b[4],
+		MachineHash:       a[0],
+		TotalMessagesRead: b[2],
+		InboxHash:         a[1],
+		TotalGasConsumed:  b[1],
+		TotalSendCount:    b[3],
+		TotalLogCount:     b[4],
 	}
 
 	return &Assertion{
@@ -36,12 +36,12 @@ func NewAssertionFromFields(a [7][32]byte, b [10]*big.Int) *Assertion {
 		ExecutionInfo: &ExecutionInfo{
 			Before: beforeState,
 			After: &ExecutionState{
-				MachineHash:      a[6],
-				InboxIndex:       new(big.Int).Add(beforeState.InboxIndex, b[6]),
-				InboxHash:        a[3],
-				TotalGasConsumed: new(big.Int).Add(beforeState.TotalGasConsumed, b[7]),
-				TotalSendCount:   new(big.Int).Add(beforeState.TotalSendCount, b[8]),
-				TotalLogCount:    new(big.Int).Add(beforeState.TotalLogCount, b[9]),
+				MachineHash:       a[6],
+				TotalMessagesRead: new(big.Int).Add(beforeState.TotalMessagesRead, b[6]),
+				InboxHash:         a[3],
+				TotalGasConsumed:  new(big.Int).Add(beforeState.TotalGasConsumed, b[7]),
+				TotalSendCount:    new(big.Int).Add(beforeState.TotalSendCount, b[8]),
+				TotalLogCount:     new(big.Int).Add(beforeState.TotalLogCount, b[9]),
 			},
 			SendAcc: a[4],
 			LogAcc:  a[5],
@@ -66,7 +66,7 @@ func (a *Assertion) IntFields() [10]*big.Int {
 	return [10]*big.Int{
 		a.PrevProposedBlock,
 		a.Before.TotalGasConsumed,
-		a.Before.InboxIndex,
+		a.Before.TotalMessagesRead,
 		a.Before.TotalSendCount,
 		a.Before.TotalLogCount,
 		a.PrevInboxMaxCount,
@@ -124,7 +124,7 @@ func assertionRestHash(
 }
 
 func (a *Assertion) InboxConsistencyHash(inboxTopHash common.Hash, inboxTopCount *big.Int) common.Hash {
-	messagesAfterCount := new(big.Int).Sub(inboxTopCount, a.After.InboxIndex)
+	messagesAfterCount := new(big.Int).Sub(inboxTopCount, a.After.TotalMessagesRead)
 	return BisectionChunkHash(big.NewInt(0), messagesAfterCount, inboxTopHash, a.After.InboxHash)
 }
 

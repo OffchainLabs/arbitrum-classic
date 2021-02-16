@@ -31,13 +31,13 @@ ArbStorage::ArbStorage(const std::string& db_path)
     : datastorage(std::make_shared<DataStorage>(db_path)),
       arb_core(std::make_shared<ArbCore>(datastorage)) {}
 
-void ArbStorage::initialize(const std::string& executable_path) {
+rocksdb::Status ArbStorage::initialize(const std::string& executable_path) {
     auto executable = loadExecutable(executable_path);
-    initialize(executable);
+    return initialize(executable);
 }
 
-void ArbStorage::initialize(const LoadedExecutable& executable) {
-    arb_core->initialize(executable);
+rocksdb::Status ArbStorage::initialize(const LoadedExecutable& executable) {
+    return arb_core->initialize(executable);
 }
 
 bool ArbStorage::initialized() const {

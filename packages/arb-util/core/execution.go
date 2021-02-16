@@ -77,6 +77,11 @@ func (e *ExecutionTracker) fillInAccs(max int) error {
 	if err := e.fillInCursors(max); err != nil {
 		return err
 	}
+	if len(e.logAccs) < 2 {
+		// Nothing to fill in
+		return nil
+	}
+
 	for i := len(e.logAccs) - 1; i < max; i++ {
 		prevCursor := e.cursors[i-1]
 		cursor := e.cursors[i]
@@ -127,15 +132,19 @@ func (e *ExecutionTracker) GetMachine(gasUsed *big.Int) (machine.Machine, error)
 }
 
 func JudgeAssertion(lookup ArbCoreLookup, assertion *Assertion, execTracker *ExecutionTracker) (ChallengeKind, error) {
-	afterInboxHash, err := lookup.GetInboxAcc(assertion.After.InboxIndex)
-	if err != nil {
-		return 0, err
+	var afterInboxHash common.Hash
+	if assertion.After.TotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
+		var err error
+		afterInboxHash, err = lookup.GetInboxAcc(new(big.Int).Sub(assertion.After.TotalMessagesRead, big.NewInt(1)))
+		if err != nil {
+			return 0, err
+		}
 	}
 	if assertion.After.InboxHash != afterInboxHash {
 		// Failed inbox consistency
 		return INBOX_CONSISTENCY, nil
 	}
-	inboxDelta, err := lookup.GetInboxDelta(assertion.Before.InboxIndex, assertion.InboxMessagesRead())
+	inboxDelta, err := lookup.GetInboxDelta(assertion.Before.TotalMessagesRead, assertion.InboxMessagesRead())
 	if err != nil {
 		return 0, err
 	}

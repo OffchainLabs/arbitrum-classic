@@ -105,7 +105,7 @@ class ArbCore {
               getNextSegmentID(*makeConstTransaction()))) {}
 
     ~ArbCore() { abortThread(); }
-    void initialize(const LoadedExecutable& executable);
+    rocksdb::Status initialize(const LoadedExecutable& executable);
     bool initialized() const;
     void operator()();
 
@@ -116,7 +116,7 @@ class ArbCore {
 
    private:
     // Private database interaction
-    uint256_t getInitialMachineHash(Transaction& tx);
+    ValueResult<uint256_t> getInitialMachineHash(Transaction& tx);
     rocksdb::Status saveAssertion(Transaction& tx, const Assertion& assertion);
     ValueResult<Checkpoint> getCheckpoint(Transaction& tx,
                                           const uint256_t& arb_gas_used) const;
@@ -129,7 +129,7 @@ class ArbCore {
     rocksdb::Status reorgToMessageOrBefore(
         Transaction& tx,
         const uint256_t& message_sequence_number,
-        const bool reorg,
+        bool reorg,
         ValueCache& cache);
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(Transaction& transaction,
@@ -182,7 +182,7 @@ class ArbCore {
 
    private:
     // Logs cursor internal functions
-    void handleLogsCursorRequested(Transaction& tx,
+    bool handleLogsCursorRequested(Transaction& tx,
                                    size_t cursor_index,
                                    ValueCache& cache);
     rocksdb::Status handleLogsCursorReorg(Transaction& tx,
@@ -195,10 +195,10 @@ class ArbCore {
     ValueResult<std::unique_ptr<ExecutionCursor>> getExecutionCursor(
         uint256_t total_gas_used,
         ValueCache& cache);
-    rocksdb::Status Advance(ExecutionCursor& execution_cursor,
-                            uint256_t max_gas,
-                            bool go_over_gas,
-                            ValueCache& cache);
+    rocksdb::Status advanceExecutionCursor(ExecutionCursor& execution_cursor,
+                                           uint256_t max_gas,
+                                           bool go_over_gas,
+                                           ValueCache& cache);
 
    private:
     // Execution cursor internal functions

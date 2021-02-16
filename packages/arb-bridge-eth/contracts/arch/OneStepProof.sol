@@ -908,7 +908,7 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
             return (1, 0, 1, executePopInsn);
         } else if (opCode == OP_NEWBUFFER) {
             return (0, 0, 1, executeNewBuffer);
-        } else if (opCode >= OP_GETBUFFER8 && opCode <= OP_SETBUFFER256) {
+        } else if ((opCode >= OP_GETBUFFER8 && opCode <= OP_SETBUFFER256) || opCode == OP_SEND) {
             revert("use another contract to handle buffer opcodes");
         } else {
             return (0, 0, ERROR_GAS_COST, executeErrorInsn);

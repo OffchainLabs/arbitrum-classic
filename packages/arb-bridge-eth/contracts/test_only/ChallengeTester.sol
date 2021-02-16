@@ -18,17 +18,19 @@
 
 pragma solidity ^0.6.11;
 
-import "../challenge/ChallengeFactory.sol";
+import "../challenge/Challenge.sol";
 
 contract ChallengeTester {
-    ChallengeFactory private challengeFactory;
+    address private oneStepProofAddress;
+    address private oneStepProof2Address;
     address public challenge;
     bool public challengeCompleted;
     address public winner;
     address public loser;
 
     constructor(address _oneStepProofAddress, address _oneStepProof2Address) public {
-        challengeFactory = new ChallengeFactory(_oneStepProofAddress, _oneStepProof2Address);
+        oneStepProofAddress = _oneStepProofAddress;
+        oneStepProof2Address = _oneStepProof2Address;
     }
 
     /* solhint-disable-next-line no-unused-vars */
@@ -47,7 +49,10 @@ contract ChallengeTester {
         uint256 asserterTimeLeft,
         uint256 challengerTimeLeft
     ) public {
-        challenge = challengeFactory.createChallenge(
+        Challenge chal = new Challenge();
+        chal.initializeChallenge(
+            oneStepProofAddress,
+            oneStepProof2Address,
             address(this),
             inboxConsistencyHash,
             inboxDeltaHash,
@@ -57,5 +62,6 @@ contract ChallengeTester {
             asserterTimeLeft,
             challengerTimeLeft
         );
+        challenge = address(chal);
     }
 }

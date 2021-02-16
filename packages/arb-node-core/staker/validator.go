@@ -170,7 +170,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, ma
 		return nil, err
 	}
 
-	minMessages := new(big.Int).Sub(startState.InboxMaxCount, startState.InboxIndex)
+	minMessages := new(big.Int).Sub(startState.InboxMaxCount, startState.TotalMessagesRead)
 	minimumGasToConsume := new(big.Int).Mul(timeSinceProposed, arbGasSpeedLimitPerBlock)
 	maximumGasToConsume := new(big.Int).Mul(minimumGasToConsume, big.NewInt(4))
 
@@ -212,7 +212,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, ma
 		return nil, nil
 	}
 
-	inboxDelta, err := v.lookup.GetInboxDelta(execInfo.Before.InboxIndex, execInfo.InboxMessagesRead())
+	inboxDelta, err := v.lookup.GetInboxDelta(execInfo.Before.TotalMessagesRead, execInfo.InboxMessagesRead())
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +221,11 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, ma
 		return nil, err
 	}
 
-	msgBlock, err := v.bridge.LookupMessageBlock(ctx, execInfo.After.InboxIndex)
+	if execInfo.After.TotalMessagesRead.Cmp(big.NewInt(0)) == 0 {
+		return nil, errors.New("no messages to lookup in generateNodeAction")
+	}
+	msgSequenceNumber := new(big.Int).Sub(execInfo.After.TotalMessagesRead, big.NewInt(1))
+	msgBlock, err := v.bridge.LookupMessageBlock(ctx, msgSequenceNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -273,12 +277,12 @@ func lookupNodeStartState(ctx context.Context, rollup *ethbridge.RollupWatcher, 
 			ProposedBlock: new(big.Int).SetUint64(creationEvent.Raw.BlockNumber),
 			InboxMaxCount: big.NewInt(1),
 			ExecutionState: &core.ExecutionState{
-				TotalGasConsumed: big.NewInt(0),
-				MachineHash:      creationEvent.MachineHash,
-				InboxHash:        common.Hash{},
-				InboxIndex:       big.NewInt(1),
-				TotalSendCount:   big.NewInt(0),
-				TotalLogCount:    big.NewInt(0),
+				TotalGasConsumed:  big.NewInt(0),
+				MachineHash:       creationEvent.MachineHash,
+				InboxHash:         common.Hash{},
+				TotalMessagesRead: big.NewInt(1),
+				TotalSendCount:    big.NewInt(0),
+				TotalLogCount:     big.NewInt(0),
 			},
 		}, nil
 	}
