@@ -42,24 +42,40 @@ library Hashing {
         return res;
     }
 
+    /*
+     * !! Note that dataLength must be a power of two !!
+     *
+     * If you have an arbitrary data length, you can round it up with roundUpToPow2.
+     * The boolean return value tells if the data segment data[startOffset..startOffset+dataLength] only included zeroes.
+     * If pack is true, the returned value is the merkle hash where trailing zeroes are ignored, that is,
+     *   if h is the smallest height for which all data[startOffset+2**h..] are zero, merkle hash of data[startOffset..startOffset+2**h] is returned.
+     * If all elements in the data segment are zero (and pack is true), keccak1(bytes32(0)) is returned.
+     */
     function merkleRoot(
         bytes memory data,
         uint256 startOffset,
         uint256 dataLength,
         bool pack
-    ) internal pure returns (bytes32) {
+    ) private pure returns (bytes32, bool) {
         if (dataLength <= 32) {
             if (startOffset >= data.length) {
-                return keccak1(bytes32(0));
+                return (keccak1(bytes32(0)), true);
             }
-            return keccak1(bytes32(bytes32FromArray(data, startOffset)));
+            bytes32 res = keccak1(bytes32(bytes32FromArray(data, startOffset)));
+            return (res, res == keccak1(bytes32(0)));
         }
-        bytes32 h2 = merkleRoot(data, startOffset + dataLength / 2, dataLength / 2, false);
-        if (h2 == keccak1(bytes32(0)) && pack) {
-            return merkleRoot(data, startOffset, dataLength / 2, true);
+        (bytes32 h2, bool zero2) =
+            merkleRoot(data, startOffset + dataLength / 2, dataLength / 2, false);
+        if (zero2 && pack) {
+            return merkleRoot(data, startOffset, dataLength / 2, pack);
         }
-        bytes32 h1 = merkleRoot(data, startOffset, dataLength / 2, false);
-        return keccak2(h1, h2);
+        (bytes32 h1, bool zero1) = merkleRoot(data, startOffset, dataLength / 2, false);
+        return (keccak2(h1, h2), zero1 && zero2);
+    }
+
+    function roundUpToPow2(uint256 len) internal pure returns (uint256) {
+        if (len <= 1) return 1;
+        else return 2 * roundUpToPow2((len + 1) / 2);
     }
 
     function bytesToBufferHash(
@@ -67,7 +83,8 @@ library Hashing {
         uint256 startOffset,
         uint256 length
     ) internal pure returns (bytes32) {
-        return keccak2(bytes32(uint256(123)), merkleRoot(buf, startOffset, length, true));
+        (bytes32 mhash, ) = merkleRoot(buf, startOffset, roundUpToPow2(length), true);
+        return keccak2(bytes32(buf.length), keccak2(bytes32(uint256(123)), mhash));
     }
 
     function hashInt(uint256 val) internal pure returns (bytes32) {
