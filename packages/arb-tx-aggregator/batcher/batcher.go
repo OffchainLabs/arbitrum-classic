@@ -19,7 +19,6 @@ package batcher
 import (
 	"container/list"
 	"context"
-	"github.com/pkg/errors"
 	"sync"
 	"time"
 
@@ -284,7 +283,7 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 
 	action, err := m.pendingBatch.validateTx(tx)
 	if action == REMOVE {
-		return errors.Wrap(err, "transaction rejected")
+		return err
 	}
 
 	m.pendingBatch.updateCurrentSnap(m.pendingSentBatches)
