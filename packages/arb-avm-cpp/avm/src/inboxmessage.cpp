@@ -87,20 +87,6 @@ InboxMessage extractInboxMessage(
         kind, sender, block_number, timestamp, inbox_sequence_number, data};
 }
 
-// std::vector<InboxMessage> extractInboxMessages(
-//    const std::vector<rocksdb::Slice>& slices) {
-//    std::vector<InboxMessage> messages;
-//
-//    for (const auto& slice : slices) {
-//        auto slice_vec = std::vector<unsigned char>{
-//            slice.data(), slice.data() + slice.size()};
-//        auto message = extractInboxMessage(slice_vec);
-//        messages.push_back(message);
-//    }
-//
-//    return messages;
-//}
-
 std::vector<unsigned char> InboxMessage::serialize() const {
     std::vector<unsigned char> state_data_vector;
     state_data_vector.push_back(kind);
