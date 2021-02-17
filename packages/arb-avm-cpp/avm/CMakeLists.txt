@@ -21,6 +21,7 @@ project (avm LANGUAGES CXX)
 
 set(LIB_HEADERS
   include/avm/machine.hpp
+  include/avm/inboxmessage.hpp
   include/avm/machinestate/blockreason.hpp
   include/avm/machinestate/datastack.hpp
   include/avm/machinestate/ecops.hpp
@@ -32,6 +33,7 @@ set(LIB_HEADERS
 
 set(LIB_SOURCES
   src/machine.cpp
+  src/inboxmessage.cpp
   src/machinestate/blockreason.cpp
   src/machinestate/datastack.cpp
   src/machinestate/ecops.cpp

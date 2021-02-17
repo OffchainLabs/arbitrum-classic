@@ -18,9 +18,10 @@
 #include "helper.hpp"
 
 #include <data_storage/arbstorage.hpp>
-#include <data_storage/inboxmessage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
+
+#include <avm/inboxmessage.hpp>
 
 #include <avm_values/vmValueParser.hpp>
 

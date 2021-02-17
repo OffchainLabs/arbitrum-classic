@@ -18,11 +18,11 @@
 
 #include "value/utils.hpp"
 
+#include <avm/inboxmessage.hpp>
 #include <avm/machinethread.hpp>
 #include <data_storage/aggregator.hpp>
 #include <data_storage/checkpoint.hpp>
 #include <data_storage/datastorage.hpp>
-#include <data_storage/inboxmessage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 #include <data_storage/value/value.hpp>
@@ -1229,7 +1229,7 @@ ValueResult<bool> ArbCore::executionCursorAddMessages(
         return {results.status, false};
     }
 
-    std::vector<Tuple> messages;
+    std::vector<InboxMessage> messages;
     std::vector<uint256_t> inbox_hashes;
     auto total_size = results.data.size();
     messages.reserve(total_size);
@@ -1237,7 +1237,7 @@ ValueResult<bool> ArbCore::executionCursorAddMessages(
     for (const auto& data : results.data) {
         auto message_entry = extractMessageEntry(0, vecToSlice(data));
         auto inbox_message = extractInboxMessage(message_entry.data);
-        messages.push_back(inbox_message.toTuple());
+        messages.push_back(inbox_message);
         inbox_hashes.push_back(message_entry.inbox_hash);
     }
 

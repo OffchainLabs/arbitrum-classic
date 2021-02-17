@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <data_storage/inboxmessage.hpp>
+#include <avm/inboxmessage.hpp>
 
-#include "value/utils.hpp"
+//#include "value/utils.hpp"
 
 #include <ethash/keccak.hpp>
 
@@ -57,6 +57,16 @@ uint256_t hash_inbox(const uint256_t& previous_inbox_hash,
     ;
 }
 
+namespace {
+template <typename Iterator>
+uint256_t extractUint256(Iterator& iter) {
+    auto ptr = reinterpret_cast<const char*>(&*iter);
+    auto int_val = deserializeUint256t(ptr);
+    iter += 32;
+    return int_val;
+}
+}  // namespace
+
 InboxMessage extractInboxMessage(
     const std::vector<unsigned char>& stored_state) {
     auto current_iter = stored_state.begin();
@@ -77,19 +87,19 @@ InboxMessage extractInboxMessage(
         kind, sender, block_number, timestamp, inbox_sequence_number, data};
 }
 
-std::vector<InboxMessage> extractInboxMessages(
-    const std::vector<rocksdb::Slice>& slices) {
-    std::vector<InboxMessage> messages;
-
-    for (const auto& slice : slices) {
-        auto slice_vec = std::vector<unsigned char>{
-            slice.data(), slice.data() + slice.size()};
-        auto message = extractInboxMessage(slice_vec);
-        messages.push_back(message);
-    }
-
-    return messages;
-}
+// std::vector<InboxMessage> extractInboxMessages(
+//    const std::vector<rocksdb::Slice>& slices) {
+//    std::vector<InboxMessage> messages;
+//
+//    for (const auto& slice : slices) {
+//        auto slice_vec = std::vector<unsigned char>{
+//            slice.data(), slice.data() + slice.size()};
+//        auto message = extractInboxMessage(slice_vec);
+//        messages.push_back(message);
+//    }
+//
+//    return messages;
+//}
 
 std::vector<unsigned char> InboxMessage::serialize() const {
     std::vector<unsigned char> state_data_vector;
@@ -99,6 +109,20 @@ std::vector<unsigned char> InboxMessage::serialize() const {
     marshal_uint256_t(block_number, state_data_vector);
     marshal_uint256_t(timestamp, state_data_vector);
     marshal_uint256_t(inbox_sequence_number, state_data_vector);
+    state_data_vector.insert(state_data_vector.end(), data.begin(), data.end());
+    return state_data_vector;
+}
+
+std::vector<unsigned char> InboxMessage::serializeForProof() const {
+    std::vector<unsigned char> state_data_vector;
+    state_data_vector.push_back(kind);
+    state_data_vector.insert(state_data_vector.end(), sender.begin(),
+                             sender.end());
+    marshal_uint256_t(block_number, state_data_vector);
+    marshal_uint256_t(timestamp, state_data_vector);
+    marshal_uint256_t(inbox_sequence_number, state_data_vector);
+    uint256_t proofLength = state_data_vector.size();
+    marshal_uint256_t(proofLength, state_data_vector);
     state_data_vector.insert(state_data_vector.end(), data.begin(), data.end());
     return state_data_vector;
 }

@@ -17,13 +17,8 @@
 #ifndef data_storage_inboxmessage_hpp
 #define data_storage_inboxmessage_hpp
 
-#include <avm/machine.hpp>
-#include <avm/machinestate/status.hpp>
 #include <avm_values/bigint.hpp>
-#include <avm_values/codepointstub.hpp>
-#include <data_storage/datastorage.hpp>
-#include <data_storage/storageresultfwd.hpp>
-#include <data_storage/value/machine.hpp>
+#include <avm_values/tuple.hpp>
 #include <utility>
 
 using Address = std::array<unsigned char, 20>;
@@ -58,6 +53,7 @@ struct InboxMessage {
 
     Tuple toTuple();
     std::vector<unsigned char> serialize() const;
+    std::vector<unsigned char> serializeForProof() const;
 };
 
 uint256_t hash_raw_message(const std::vector<unsigned char>& stored_state);
@@ -65,8 +61,6 @@ uint256_t hash_inbox(const uint256_t& previous_inbox_hash,
                      const std::vector<unsigned char>& stored_state);
 InboxMessage extractInboxMessage(
     const std::vector<unsigned char>& stored_state);
-std::vector<InboxMessage> extractInboxMessages(
-    const std::vector<rocksdb::Slice>& slices);
 
 std::vector<unsigned char> serializeInboxMessage(
     const InboxMessage& state_data);

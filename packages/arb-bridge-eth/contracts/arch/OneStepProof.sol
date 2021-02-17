@@ -554,10 +554,10 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
         uint256 l1BlockNumber;
         uint256 l1Timestamp;
         uint256 inboxSeqNum;
-        (context.offset, l1BlockNumber) = Marshaling.deserializeInt(proof, context.offset);
-        (context.offset, l1Timestamp) = Marshaling.deserializeInt(proof, context.offset);
         address sender = proof.toAddress(context.offset);
         context.offset += 20;
+        (context.offset, l1BlockNumber) = Marshaling.deserializeInt(proof, context.offset);
+        (context.offset, l1Timestamp) = Marshaling.deserializeInt(proof, context.offset);
         (context.offset, inboxSeqNum) = Marshaling.deserializeInt(proof, context.offset);
         uint256 messageDataLength;
         (context.offset, messageDataLength) = Marshaling.deserializeInt(proof, context.offset);

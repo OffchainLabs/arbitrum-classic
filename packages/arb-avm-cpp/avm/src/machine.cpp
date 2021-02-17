@@ -16,29 +16,14 @@
 
 #include <iostream>
 
+#include <avm/inboxmessage.hpp>
 #include <avm/machine.hpp>
 #include <avm_values/opcodes.hpp>
-
-#include <data_storage/inboxmessage.hpp>
 
 std::ostream& operator<<(std::ostream& os, const Machine& val) {
     os << val.machine_state;
     return os;
 }
-
-namespace {
-bool validMessages(const std::vector<Tuple>& messages) {
-    for (const auto& msg : messages) {
-        if (msg.tuple_size() < 2) {
-            return false;
-        }
-        if (!nonstd::holds_alternative<uint256_t>(msg.get_element(1))) {
-            return false;
-        }
-    }
-    return true;
-}
-}  // namespace
 
 Assertion Machine::run(
     uint256_t max_gas,
@@ -46,37 +31,27 @@ Assertion Machine::run(
     const std::vector<std::vector<unsigned char>>& inbox_data,
     uint256_t messages_to_skip,
     bool final_message_of_block) {
-    std::vector<Tuple> inbox_messages;
+    std::vector<InboxMessage> inbox_messages;
     inbox_messages.reserve(inbox_messages.size());
     for (const auto& data : inbox_data) {
         auto inbox_message = extractInboxMessage(data);
-        inbox_messages.emplace_back(inbox_message.toTuple());
+        inbox_messages.emplace_back(inbox_message);
     }
-
     return run(max_gas, go_over_gas, inbox_messages, messages_to_skip,
                final_message_of_block);
 }
 
 Assertion Machine::run(uint256_t max_gas,
                        bool go_over_gas,
-                       const std::vector<Tuple>& inbox_messages,
+                       const std::vector<InboxMessage>& inbox_messages,
                        uint256_t messages_to_skip,
                        bool final_message_of_block) {
-    if (!validMessages(inbox_messages)) {
-        throw std::runtime_error("invalid message format");
-    }
-
     nonstd::optional<uint256_t> min_next_block_height;
     if (final_message_of_block && !inbox_messages.empty()) {
         // Last message is the final message of a block, so need to
         // set min_next_block_height to the block after the last block
-        auto block_num =
-            inbox_messages[inbox_messages.size() - 1].get_element(1);
-        if (!nonstd::holds_alternative<uint256_t>(block_num)) {
-            throw std::runtime_error("Cannot get final block from tuple");
-        }
-
-        min_next_block_height = nonstd::get<uint256_t>(block_num) + 1;
+        min_next_block_height =
+            inbox_messages[inbox_messages.size() - 1].block_number + 1;
     }
 
     machine_state.context = AssertionContext{
