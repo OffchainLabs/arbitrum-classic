@@ -57,6 +57,11 @@ struct AssertionContext {
     }
 };
 
+struct OneStepProof {
+    std::vector<unsigned char> standard_proof;
+    std::vector<unsigned char> buffer_proof;
+};
+
 struct MachineState {
     std::shared_ptr<Code> code;
     mutable nonstd::optional<CodeSegmentSnapshot> loaded_segment;
@@ -90,9 +95,8 @@ struct MachineState {
                  uint256_t total_messages_consumed_,
                  value staged_message_);
 
-    std::vector<unsigned char> marshalBufferProof();
     uint256_t getMachineSize() const;
-    std::vector<unsigned char> marshalForProof() const;
+    OneStepProof marshalForProof() const;
     std::vector<unsigned char> marshalState() const;
     BlockReason runOp(OpCode opcode);
     BlockReason runOne();
@@ -101,6 +105,9 @@ struct MachineState {
 
     const CodePoint& loadCurrentInstruction() const;
     uint256_t nextGasCost() const;
+
+   private:
+    void marshalBufferProof(OneStepProof& proof) const;
 };
 
 #endif /* machinestate_hpp */

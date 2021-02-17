@@ -86,7 +86,7 @@ func TestInboxConsistencyChallenge(t *testing.T) {
 
 	challengedNode := initializeChallengeData(t, correctLookup, inboxMessagesRead)
 
-	inboxAcc, err := falseLookup.GetInboxAcc(challengedNode.Assertion.After.TotalMessagesRead)
+	inboxAcc, err := falseLookup.GetInboxAcc(new(big.Int).Sub(challengedNode.Assertion.After.TotalMessagesRead, big.NewInt(1)))
 	test.FailIfError(t, err)
 	challengedNode.Assertion.After.InboxHash = inboxAcc
 
@@ -148,7 +148,7 @@ func TestInboxHashing(t *testing.T) {
 
 	delta := common.Hash{}
 	for i := range msgHashes {
-		delta = hashing.SoliditySHA3(hashing.Bytes32(delta), hashing.Bytes32(msgHashes[i]))
+		delta = hashing.SoliditySHA3(hashing.Bytes32(delta), hashing.Bytes32(msgHashes[len(msgHashes)-1-i]))
 	}
 
 	dbDelta, err := lookup.GetInboxDelta(big.NewInt(0), big.NewInt(int64(len(messages))))

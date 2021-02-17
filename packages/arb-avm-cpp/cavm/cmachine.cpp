@@ -22,6 +22,7 @@
 #include <data_storage/value/machine.hpp>
 
 #include <iostream>
+#include <sstream>
 
 typedef struct {
     uint64_t stepCount;
@@ -76,10 +77,12 @@ void* machineClone(CMachine* m) {
     return static_cast<void*>(cloneMach);
 }
 
-void machinePrint(CMachine* m) {
+char* machineInfo(CMachine* m) {
     assert(m);
     auto mach = static_cast<Machine*>(m);
-    std::cout << "Machine info\n" << *mach << std::endl;
+    std::stringstream ss;
+    ss << *mach;
+    return strdup(ss.str().c_str());
 }
 
 CStatus machineCurrentStatus(CMachine* m) {
@@ -129,18 +132,13 @@ CBlockReason machineIsBlocked(CMachine* m, int newMessages) {
     return nonstd::visit(ReasonConverter{}, blockReason);
 }
 
-ByteSlice machineMarshallForProof(CMachine* m) {
+COneStepProof machineMarshallForProof(CMachine* m) {
     assert(m);
     auto mach = static_cast<Machine*>(m);
-    std::vector<unsigned char> buffer;
-    return returnCharVector(mach->marshalForProof());
-}
-
-ByteSlice machineMarshallBufferProof(CMachine* m) {
-    assert(m);
-    auto mach = static_cast<Machine*>(m);
-    std::vector<unsigned char> buffer;
-    return returnCharVector(mach->marshalBufferProof());
+    auto osp = mach->marshalForProof();
+    auto standard = returnCharVector(osp.standard_proof);
+    auto buf = returnCharVector(osp.buffer_proof);
+    return {standard, buf};
 }
 
 ByteSlice machineMarshallState(CMachine* m) {
@@ -205,15 +203,20 @@ void machineExecutionConfigSetStopOnSideload(CMachineExecutionConfig* c,
     config->stop_on_sideload = stop_on_sideload;
 }
 
-RawAssertion executeAssertion(CMachine* m, const CMachineExecutionConfig* c) {
+RawAssertion executeAssertion(CMachine* m,
+                              const CMachineExecutionConfig* c,
+                              void* before_send_acc_data,
+                              void* before_log_acc_data) {
     assert(m);
     assert(c);
     auto mach = static_cast<Machine*>(m);
     auto config = static_cast<const MachineExecutionConfig*>(c);
+    auto before_send_acc = receiveUint256(before_send_acc_data);
+    auto before_log_acc = receiveUint256(before_log_acc_data);
 
     try {
         Assertion assertion = mach->run(*config);
-        return makeRawAssertion(assertion);
+        return makeRawAssertion(assertion, before_send_acc, before_log_acc);
     } catch (const std::exception& e) {
         std::cerr << "Failed to make assertion " << e.what() << "\n";
         return makeEmptyAssertion();

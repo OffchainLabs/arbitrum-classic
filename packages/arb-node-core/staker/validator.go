@@ -221,12 +221,11 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, ma
 		return nil, err
 	}
 
-	var startIndex big.Int
-	if execInfo.After.TotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
-		startIndex = *execInfo.After.TotalMessagesRead
-		startIndex.Sub(&startIndex, big.NewInt(1))
+	if execInfo.After.TotalMessagesRead.Cmp(big.NewInt(0)) == 0 {
+		return nil, errors.New("no messages to lookup in generateNodeAction")
 	}
-	msgBlock, err := v.bridge.LookupMessageBlock(ctx, &startIndex)
+	msgSequenceNumber := new(big.Int).Sub(execInfo.After.TotalMessagesRead, big.NewInt(1))
+	msgBlock, err := v.bridge.LookupMessageBlock(ctx, msgSequenceNumber)
 	if err != nil {
 		return nil, err
 	}

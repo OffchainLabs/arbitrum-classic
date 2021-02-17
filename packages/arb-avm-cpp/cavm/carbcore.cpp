@@ -198,6 +198,10 @@ int arbCoreGetInboxDelta(CArbCore* arbcore_ptr,
     try {
         auto index_result = arb_core->getInboxDelta(
             receiveUint256(start_index_ptr), receiveUint256(count_ptr));
+        if (!index_result.status.ok()) {
+            return false;
+        }
+
         std::array<unsigned char, 32> val{};
         to_big_endian(index_result.data, val.begin());
         std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
@@ -213,6 +217,10 @@ int arbCoreGetInboxAcc(CArbCore* arbcore_ptr,
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     try {
         auto index_result = arb_core->getInboxAcc(receiveUint256(index_ptr));
+        if (!index_result.status.ok()) {
+            return false;
+        }
+
         std::array<unsigned char, 32> val{};
         to_big_endian(index_result.data, val.begin());
         std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
@@ -232,6 +240,10 @@ int arbCoreGetSendAcc(CArbCore* arbcore_ptr,
         auto index_result = arb_core->getSendAcc(
             receiveUint256(start_acc_hash), receiveUint256(start_index_ptr),
             receiveUint256(count_ptr));
+        if (!index_result.status.ok()) {
+            return false;
+        }
+
         std::array<unsigned char, 32> val{};
         to_big_endian(index_result.data, val.begin());
         std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
@@ -253,6 +265,10 @@ int arbCoreGetLogAcc(CArbCore* arbcore_ptr,
         auto index_result = arbcore->getLogAcc(
             receiveUint256(start_acc_hash), receiveUint256(start_index_ptr),
             receiveUint256(count_ptr), cache);
+        if (!index_result.status.ok()) {
+            return false;
+        }
+
         std::array<unsigned char, 32> val{};
         to_big_endian(index_result.data, val.begin());
         std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));

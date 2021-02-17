@@ -25,6 +25,12 @@
 class Transaction;
 struct SaveResults;
 
+struct DataStackProof {
+    HashPreImage bottom;
+    std::vector<unsigned char> data;
+    uint8_t count;
+};
+
 class Datastack {
     // lazyCount defines how many unhashed items are allowed on the stack
     // This serves to bound the total time it can take to hash the machine
@@ -99,9 +105,8 @@ class Datastack {
         }
     }
 
-    std::pair<HashPreImage, std::vector<unsigned char>> marshalForProof(
-        const std::vector<MarshalLevel>& stackInfo,
-        const Code& code) const;
+    DataStackProof marshalForProof(const std::vector<MarshalLevel>& stackInfo,
+                                   const Code& code) const;
 
     value& peek() {
         if (values.empty()) {

@@ -56,7 +56,7 @@ func (e *ExecutionImpl) FindFirstDivergence(lookup core.ArbCoreLookup, offsets [
 			LogCount:     executionInfo.LogCount(),
 		}
 		if cut.CutHash() != cuts[i].CutHash() {
-			if i == 0 {
+			if i == 0 && len(offsets) > 2 {
 				return 0, errors.New("first cut was already wrong")
 			}
 			return i, nil
@@ -103,12 +103,7 @@ func (e *ExecutionImpl) OneStepProof(
 		return err
 	}
 
-	proofData, err := beforeMachine.MarshalForProof()
-	if err != nil {
-		return err
-	}
-
-	bufferProofData, err := beforeMachine.MarshalBufferProof()
+	proofData, bufferProofData, err := beforeMachine.MarshalForProof()
 	if err != nil {
 		return err
 	}

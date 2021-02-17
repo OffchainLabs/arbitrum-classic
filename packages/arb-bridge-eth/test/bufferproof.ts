@@ -303,4 +303,5 @@ describe('BufferProof', function () {
       expect(res).to.equal(false)
     })
   })
+
 })

@@ -76,11 +76,8 @@ class Machine {
     BlockReason isBlocked(bool newMessages) const {
         return machine_state.isBlocked(newMessages);
     }
-    std::vector<unsigned char> marshalForProof() const {
+    OneStepProof marshalForProof() const {
         return machine_state.marshalForProof();
-    }
-    std::vector<unsigned char> marshalBufferProof() {
-        return machine_state.marshalBufferProof();
     }
 
     std::vector<unsigned char> marshalState() const {

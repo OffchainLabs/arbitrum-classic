@@ -110,8 +110,13 @@ value value_from_json(nlohmann::json full_value_json,
             }
         } else if (value_json.get().contains(CP_VAL_LABEL)) {
             auto& cp_json = value_json.get()[CP_VAL_LABEL];
-            auto internal_offset =
-                cp_json.at(CP_INTERNAL_LABEL).get<uint64_t>();
+            auto internal_json = cp_json.at(CP_INTERNAL_LABEL);
+            if (!internal_json.is_number_unsigned()) {
+                throw std::runtime_error(
+                    "codepoint internal label must be unsigned integer that "
+                    "fits within a uint64_t");
+            }
+            auto internal_offset = internal_json.get<uint64_t>();
             uint64_t pc = 0;
             // Special handle python compiler's marker for error code point
             if (internal_offset != std::numeric_limits<uint64_t>::max()) {

@@ -34,16 +34,13 @@ const (
 type Machine interface {
 	Hash() common.Hash
 	Clone() Machine
-	PrintState()
 
 	CurrentStatus() Status
 	IsBlocked(newMessages bool) BlockReason
 
 	ExecuteAssertion(maxGas uint64, goOverGas bool, messages []inbox.InboxMessage, finalMessageOfBlock bool) (*protocol.ExecutionAssertion, []value.Value, uint64)
 
-	MarshalForProof() ([]byte, error)
-
-	MarshalBufferProof() ([]byte, error)
+	MarshalForProof() ([]byte, []byte, error)
 
 	MarshalState() ([]byte, error)
 

@@ -31,7 +31,6 @@ TEST_CASE("CheckpointedMachine tests") {
     SECTION("CheckpointedMachine basic") {
         auto tx = arbcore->makeTransaction();
         REQUIRE(arbcore->initialized());
-        REQUIRE(arbcore->isCheckpointsEmpty(*tx));
         REQUIRE(arbcore->maxCheckpointGas() == 0);
 
         arbcore->saveCheckpoint(*tx);

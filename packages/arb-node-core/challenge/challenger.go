@@ -38,28 +38,20 @@ func NewChallenger(challenge *ethbridge.Challenge, lookup core.ArbCoreLookup, ch
 
 func (c *Challenger) getInboxDelta() (*inboxDelta, error) {
 	if c.inboxDelta == nil {
-		var startIndex big.Int
-		if c.challengedNode.Assertion.Before.TotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
-			startIndex = *c.challengedNode.Assertion.Before.TotalMessagesRead
-			startIndex.Sub(&startIndex, big.NewInt(1))
-		}
 		messagesHashes, err := c.lookup.GetMessageHashes(
-			&startIndex,
+			c.challengedNode.Assertion.Before.TotalMessagesRead,
 			c.challengedNode.Assertion.InboxMessagesRead(),
 		)
 		if err != nil {
 			return nil, err
 		}
-		inboxDeltaAccs := make([][32]byte, 0, len(messagesHashes)+1)
-		inboxDeltaAcc := common.Hash{}
-		inboxDeltaAccs = append(inboxDeltaAccs, inboxDeltaAcc)
+		inboxDeltaAccs := make([][32]byte, len(messagesHashes)+2)
 		for i := range messagesHashes {
 			msgHash := messagesHashes[len(messagesHashes)-1-i]
-			inboxDeltaAcc = hashing.SoliditySHA3(hashing.Bytes32(inboxDeltaAcc), hashing.Bytes32(msgHash))
-			inboxDeltaAccs = append(inboxDeltaAccs, inboxDeltaAcc)
+			inboxDeltaAccs[len(inboxDeltaAccs)-2-i] = hashing.SoliditySHA3(hashing.Bytes32(inboxDeltaAccs[len(inboxDeltaAccs)-1-i]), hashing.Bytes32(msgHash))
 		}
 		c.inboxDelta = &inboxDelta{
-			inboxDeltaAccs: inboxDeltaAccs,
+			inboxDeltaAccs: inboxDeltaAccs[:len(inboxDeltaAccs)-1],
 		}
 	}
 	return c.inboxDelta, nil
@@ -139,13 +131,8 @@ func (c *Challenger) handleInboxDeltaChallenge(ctx context.Context, prevBisectio
 	if err != nil {
 		return err
 	}
-	var startIndex big.Int
-	if c.challengedNode.Assertion.After.TotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
-		startIndex = *c.challengedNode.Assertion.After.TotalMessagesRead
-		startIndex.Sub(&startIndex, big.NewInt(1))
-	}
 	challengeImpl := &InboxDeltaImpl{
-		nodeAfterInboxCount: &startIndex,
+		nodeAfterInboxCount: c.challengedNode.Assertion.After.TotalMessagesRead,
 		inboxDelta:          inboxDeltaData,
 	}
 	if prevBisection == nil {
@@ -215,9 +202,12 @@ func handleChallenge(
 	if err != nil {
 		return err
 	}
+	if cutToChallenge >= len(prevCutOffsets) {
+		return errors.New("cannot challenge last cut")
+	}
 	inconsistentSegment := &core.ChallengeSegment{
-		Start:  prevCutOffsets[cutToChallenge-1],
-		Length: new(big.Int).Sub(prevCutOffsets[cutToChallenge], prevCutOffsets[cutToChallenge-1]),
+		Start:  prevCutOffsets[cutToChallenge],
+		Length: new(big.Int).Sub(prevCutOffsets[cutToChallenge+1], prevCutOffsets[cutToChallenge]),
 	}
 
 	if inconsistentSegment.Length.Cmp(big.NewInt(1)) == 0 {
@@ -244,7 +234,7 @@ func handleChallenge(
 			ctx,
 			challenge,
 			prevBisection,
-			cutToChallenge-1,
+			cutToChallenge,
 			inconsistentSegment,
 			subCuts,
 		)
@@ -258,7 +248,7 @@ func findFirstDivergenceSimple(impl SimpleChallengerImpl, lookup core.ArbCoreLoo
 			return 0, err
 		}
 		if !correctCut.Equals(cuts[i]) {
-			if i == 0 {
+			if i == 0 && len(cutOffsets) > 2 {
 				return 0, errors.New("first cut was already wrong")
 			}
 			return i, nil

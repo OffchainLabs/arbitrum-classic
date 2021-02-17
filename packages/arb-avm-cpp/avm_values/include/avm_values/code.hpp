@@ -55,9 +55,10 @@ class CodeSegment {
     // Return the subset of this code segment starting in the given pc
     std::shared_ptr<CodeSegment> getSubset(uint64_t new_segment_id,
                                            uint64_t pc) const {
+        // Make endpoint pc + 1 since pc should be included in segment
         return std::make_shared<CodeSegment>(
             new_segment_id,
-            std::vector<CodePoint>{code.begin(), code.begin() + pc});
+            std::vector<CodePoint>{code.begin(), code.begin() + pc + 1});
     }
 
    public:
