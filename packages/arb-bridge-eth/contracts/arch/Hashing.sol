@@ -56,7 +56,7 @@ library Hashing {
         uint256 startOffset,
         uint256 dataLength,
         bool pack
-    ) private pure returns (bytes32, bool) {
+    ) internal pure returns (bytes32, bool) {
         if (dataLength <= 32) {
             if (startOffset >= data.length) {
                 return (keccak1(bytes32(0)), true);
