@@ -20,16 +20,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"math/big"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"testing"
+
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
@@ -102,6 +103,8 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 			1,
 			true,
 			messages,
+			false,
+			nil,
 			false,
 			common.NewHashFromEth(beforeCut.SendAcc),
 			common.NewHashFromEth(beforeCut.LogAcc),

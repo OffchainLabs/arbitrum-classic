@@ -27,10 +27,11 @@ package cmachine
 import "C"
 
 import (
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	"runtime"
 	"unsafe"
+
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -148,29 +149,14 @@ func (m *Machine) ExecuteAssertion(
 		goOverGas,
 		messages,
 		finalMessageOfBlock,
+		nil,
+		false,
 		common.Hash{},
 		common.Hash{},
 	)
 }
 
-func (m *Machine) ExecuteAssertionAdvanced(
-	maxGas uint64,
-	goOverGas bool,
-	messages []inbox.InboxMessage,
-	finalMessageOfBlock bool,
-	beforeSendAcc common.Hash,
-	beforeLogAcc common.Hash,
-) (*protocol.ExecutionAssertion, []value.Value, uint64) {
-	goOverGasInt := C.uchar(0)
-	if goOverGas {
-		goOverGasInt = 1
-	}
-
-	finalMessageOfBlockInt := C.uchar(0)
-	if finalMessageOfBlock {
-		finalMessageOfBlockInt = 1
-	}
-
+func inboxMessagesToByteSliceArray(messages []inbox.InboxMessage) C.struct_ByteSliceArrayStruct {
 	rawInboxData := encodeInboxMessages(messages)
 	byteSlices := encodeByteSliceList(rawInboxData)
 	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
@@ -178,17 +164,51 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	for i, data := range byteSlices {
 		sliceArray[i] = data
 	}
-	defer C.free(sliceArrayData)
-	msgData := C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
+	return C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
+}
+
+func (m *Machine) ExecuteAssertionAdvanced(
+	maxGas uint64,
+	goOverGas bool,
+	messages []inbox.InboxMessage,
+	finalMessageOfBlock bool,
+	sideloads []inbox.InboxMessage,
+	stopOnSideload bool,
+	beforeSendAcc common.Hash,
+	beforeLogAcc common.Hash,
+) (*protocol.ExecutionAssertion, []value.Value, uint64) {
+	conf := C.machineExecutionConfigCreate()
+
+	goOverGasInt := C.int(0)
+	if goOverGas {
+		goOverGasInt = 1
+	}
+	C.machineExecutionConfigSetMaxGas(conf, C.uint64_t(maxGas), goOverGasInt)
+
+	finalMessageOfBlockInt := C.int(0)
+	if finalMessageOfBlock {
+		finalMessageOfBlockInt = 1
+	}
+
+	msgData := inboxMessagesToByteSliceArray(messages)
+	defer C.free(msgData.slices)
+	C.machineExecutionConfigSetInboxMessages(conf, msgData, finalMessageOfBlockInt)
+
+	sideloadsData := inboxMessagesToByteSliceArray(sideloads)
+	defer C.free(sideloadsData.slices)
+	C.machineExecutionConfigSetSideloads(conf, sideloadsData)
+
+	stopOnSideloadInt := C.int(0)
+	if stopOnSideload {
+		stopOnSideloadInt = 1
+	}
+	C.machineExecutionConfigSetStopOnSideload(conf, stopOnSideloadInt)
 
 	assertion := C.executeAssertion(
 		m.c,
+		conf,
 		unsafeDataPointer(beforeSendAcc.Bytes()),
 		unsafeDataPointer(beforeLogAcc.Bytes()),
-		C.uint64_t(maxGas),
-		C.int(goOverGasInt),
-		msgData,
-		C.int(finalMessageOfBlockInt),
 	)
 
 	return makeExecutionAssertion(assertion)
