@@ -36,6 +36,7 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
     function createChallenge(
         address _resultReceiver,
         bytes32 _executionHash,
+        uint256 _maxMessageCount,
         address _asserter,
         address _challenger,
         uint256 _asserterTimeLeft,
@@ -48,6 +49,7 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
             oneStepProof2Address,
             _resultReceiver,
             _executionHash,
+            _maxMessageCount,
             _asserter,
             _challenger,
             _asserterTimeLeft,

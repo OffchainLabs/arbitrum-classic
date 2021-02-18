@@ -537,12 +537,14 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
      * @param nodeNums Nodes of the stakers engaged in the challenge. The first node should be the earliest and is the one challenged
      * @param executionHashes Challenge related data for the two nodes
      * @param proposedTimes Times that the two nodes were proposed
+     * @param maxMessageCounts Total number of messages consumed by the two nodes
      */
     function createChallenge(
         address payable[2] calldata stakers,
         uint256[2] calldata nodeNums,
         bytes32[2] calldata executionHashes,
-        uint256[2] calldata proposedTimes
+        uint256[2] calldata proposedTimes,
+        uint256[2] calldata maxMessageCounts
     ) external whenNotPaused {
         require(nodeNums[0] < nodeNums[1], "WRONG_ORDER");
         require(nodeNums[1] <= latestNodeCreated(), "NOT_PROPOSED");
@@ -561,13 +563,21 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
         require(
             node1.challengeHash() ==
-                RollupLib.challengeRootHash(executionHashes[0], proposedTimes[0]),
+                RollupLib.challengeRootHash(
+                    executionHashes[0],
+                    proposedTimes[0],
+                    maxMessageCounts[0]
+                ),
             "CHAL_HASH"
         );
 
         require(
             node2.challengeHash() ==
-                RollupLib.challengeRootHash(executionHashes[1], proposedTimes[1]),
+                RollupLib.challengeRootHash(
+                    executionHashes[1],
+                    proposedTimes[1],
+                    maxMessageCounts[1]
+                ),
             "CHAL_HASH"
         );
 
@@ -581,6 +591,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             challengeFactory.createChallenge(
                 address(this),
                 executionHashes[0],
+                maxMessageCounts[0],
                 stakers[0],
                 stakers[1],
                 commonEndTime.sub(proposedTimes[0]),

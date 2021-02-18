@@ -73,6 +73,7 @@ contract Challenge is Cloneable, IChallenge {
     IRollup internal resultReceiver;
 
     bytes32 executionHash;
+    uint256 maxMessageCount;
 
     address public asserter;
     address public challenger;
@@ -125,6 +126,7 @@ contract Challenge is Cloneable, IChallenge {
         address _executionOneStepProof2Con,
         address _resultReceiver,
         bytes32 _executionHash,
+        uint256 _maxMessageCount,
         address _asserter,
         address _challenger,
         uint256 _asserterTimeLeft,
@@ -139,6 +141,8 @@ contract Challenge is Cloneable, IChallenge {
         resultReceiver = IRollup(_resultReceiver);
 
         executionHash = _executionHash;
+
+        maxMessageCount = _maxMessageCount;
 
         asserter = _asserter;
         challenger = _challenger;

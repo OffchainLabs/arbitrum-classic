@@ -42,6 +42,7 @@ contract ChallengeTester {
 
     function startChallenge(
         bytes32 executionHash,
+        uint256 maxMessageCount,
         address payable asserter,
         address payable challenger,
         uint256 asserterTimeLeft,
@@ -54,6 +55,7 @@ contract ChallengeTester {
             oneStepProof2Address,
             address(this),
             executionHash,
+            maxMessageCount,
             asserter,
             challenger,
             asserterTimeLeft,

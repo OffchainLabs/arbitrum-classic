@@ -161,15 +161,20 @@ library RollupLib {
         pure
         returns (bytes32)
     {
-        return challengeRootHash(executionHash(assertion), blockProposed);
+        return
+            challengeRootHash(
+                executionHash(assertion),
+                blockProposed,
+                assertion.beforeInboxCount + assertion.inboxMessagesRead
+            );
     }
 
-    function challengeRootHash(bytes32 execution, uint256 proposedTime)
-        internal
-        pure
-        returns (bytes32)
-    {
-        return keccak256(abi.encodePacked(execution, proposedTime));
+    function challengeRootHash(
+        bytes32 execution,
+        uint256 proposedTime,
+        uint256 maxMessageCount
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(execution, proposedTime, maxMessageCount));
     }
 
     function confirmHash(Assertion memory assertion) internal pure returns (bytes32) {

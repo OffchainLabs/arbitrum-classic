@@ -26,6 +26,7 @@ interface IChallenge {
         address _executionOneStepProof2Con,
         address _resultReceiver,
         bytes32 _executionHash,
+        uint256 _maxMessageCount,
         address _asserter,
         address _challenger,
         uint256 _asserterTimeLeft,
