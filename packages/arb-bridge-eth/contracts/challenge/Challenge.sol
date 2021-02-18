@@ -286,6 +286,8 @@ contract Challenge is Cloneable, IChallenge {
                     _bufferProof
                 );
 
+            require(totalMessagesRead <= maxMessageCount, "TOO_MANY_MESSAGES");
+
             require(
                 _oldEndHash !=
                     oneStepProofExecutionAfter(
