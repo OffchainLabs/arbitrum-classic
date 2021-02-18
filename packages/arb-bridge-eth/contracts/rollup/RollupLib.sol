@@ -37,7 +37,7 @@ library RollupLib {
         uint256 totalGasUsed,
         bytes32 machineHash,
         uint256 inboxCount,
-        uint256 totalMessageCount,
+        uint256 totalSendCount,
         uint256 totalLogCount,
         uint256 inboxMaxCount
     ) internal pure returns (bytes32) {
@@ -48,7 +48,7 @@ library RollupLib {
                     totalGasUsed,
                     machineHash,
                     inboxCount,
-                    totalMessageCount,
+                    totalSendCount,
                     totalLogCount,
                     inboxMaxCount
                 )

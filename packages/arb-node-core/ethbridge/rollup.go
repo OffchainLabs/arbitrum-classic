@@ -149,6 +149,10 @@ func (r *Rollup) CreateChallenge(
 			node1.BlockProposed.Height.AsInt(),
 			node2.BlockProposed.Height.AsInt(),
 		},
+		[2]*big.Int{
+			node1.Assertion.After.TotalMessagesRead,
+			node2.Assertion.After.TotalMessagesRead,
+		},
 	)
 	return err
 }

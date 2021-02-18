@@ -191,7 +191,9 @@ func initializeChallengeTest(
 	test.FailIfError(t, err)
 	osp2Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof2(deployer, client)
 	test.FailIfError(t, err)
-	_, _, tester, err := ethbridgetestcontracts.DeployChallengeTester(deployer, client, osp1Addr, osp2Addr)
+	osp3Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProofHash(deployer, client)
+	test.FailIfError(t, err)
+	_, _, tester, err := ethbridgetestcontracts.DeployChallengeTester(deployer, client, []ethcommon.Address{osp1Addr, osp2Addr, osp3Addr})
 	test.FailIfError(t, err)
 
 	bridgeAddr, _, _, err := ethbridgecontracts.DeployBridge(deployer, client)
@@ -211,6 +213,7 @@ func initializeChallengeTest(
 	_, err = tester.StartChallenge(
 		deployer,
 		nd.Assertion.ExecutionHash(),
+		nd.Assertion.After.TotalMessagesRead,
 		asserterWallet.Address().ToEthAddress(),
 		challengerWallet.Address().ToEthAddress(),
 		asserterTime,

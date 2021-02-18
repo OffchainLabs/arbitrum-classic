@@ -66,8 +66,7 @@ contract Challenge is Cloneable, IChallenge {
     uint256 private constant INBOX_DELTA_BISECTION_DEGREE = 250;
     uint256 private constant EXECUTION_BISECTION_DEGREE = 400;
 
-    IOneStepProof public executor;
-    IOneStepProof2 public executor2;
+    IOneStepProof[] public executors;
     IBridge public bridge;
 
     IRollup internal resultReceiver;
@@ -122,8 +121,7 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function initializeChallenge(
-        address _executionOneStepProofCon,
-        address _executionOneStepProof2Con,
+        IOneStepProof[] calldata _executors,
         address _resultReceiver,
         bytes32 _executionHash,
         uint256 _maxMessageCount,
@@ -135,8 +133,7 @@ contract Challenge is Cloneable, IChallenge {
     ) external override {
         require(turn == Turn.NoChallenge, CHAL_INIT_STATE);
 
-        executor = IOneStepProof(_executionOneStepProofCon);
-        executor2 = IOneStepProof2(_executionOneStepProof2Con);
+        executors = _executors;
 
         resultReceiver = IRollup(_resultReceiver);
 
@@ -277,11 +274,10 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 rootHash;
         {
             (uint64 gasUsed, uint256 totalMessagesRead, bytes32[4] memory proofFields) =
-                executeMachineStep(
-                    prover,
+                executors[prover].executeStep(
+                    bridge,
                     _initialMessagesRead,
-                    _initialSendAcc,
-                    _initialLogAcc,
+                    [_initialSendAcc, _initialLogAcc],
                     _executionProof,
                     _bufferProof
                 );
@@ -405,11 +401,10 @@ contract Challenge is Cloneable, IChallenge {
 
         // If this doesn't revert, we were able to successfully execute the machine
         (, uint256 totalMessagesRead, bytes32[4] memory proofFields) =
-            executeMachineStep(
-                prover,
+            executors[prover].executeStep(
+                bridge,
                 _initialMessagesRead,
-                _initialSendAcc,
-                _initialLogAcc,
+                [_initialSendAcc, _initialLogAcc],
                 _executionProof,
                 _bufferProof
             );
@@ -531,45 +526,6 @@ contract Challenge is Cloneable, IChallenge {
             return _chainLength;
         } else {
             return targetDegree;
-        }
-    }
-
-    function executeMachineStep(
-        uint8 prover,
-        uint256 _initialMessagesRead,
-        bytes32 _initialSendAcc,
-        bytes32 _initialLogAcc,
-        bytes memory _executionProof,
-        bytes memory _bufferProof
-    )
-        private
-        view
-        returns (
-            uint64 gas,
-            uint256 totalMessagesRead,
-            bytes32[4] memory fields
-        )
-    {
-        if (prover == 0) {
-            return
-                executor.executeStep(
-                    bridge,
-                    _initialMessagesRead,
-                    _initialSendAcc,
-                    _initialLogAcc,
-                    _executionProof
-                );
-        } else if (prover == 1) {
-            return
-                executor2.executeStep(
-                    _initialMessagesRead,
-                    _initialSendAcc,
-                    _initialLogAcc,
-                    _executionProof,
-                    _bufferProof
-                );
-        } else {
-            require(false, "INVALID_PROVER");
         }
     }
 

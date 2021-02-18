@@ -31,7 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
@@ -142,7 +141,17 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 	return proofs, machineStates, nil
 }
 
-func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontracts.OneStepProof, osp2 *ethbridgetestcontracts.OneStepProof2, bridge ethcommon.Address) {
+func getProverNum(op uint8) uint8 {
+	if (op >= 0xa1 && op <= 0xa6) || op == 0x70 {
+		return 1
+	} else if op >= 0x20 && op <= 0x24 {
+		return 2
+	} else {
+		return 0
+	}
+}
+
+func runTestValidateProof(t *testing.T, contract string, osps []*ethbridgetestcontracts.IOneStepProof, bridge ethcommon.Address) {
 	t.Log("proof test contact: ", contract)
 	ctx := context.Background()
 
@@ -163,49 +172,26 @@ func runTestValidateProof(t *testing.T, contract string, osp *ethbridgetestcontr
 	}
 
 	file := filepath.Join(filepath.Dir(filename), "../../arb-bridge-eth/test/proofs", filepath.Base(contract)+"-proofs.json")
-
 	if err := ioutil.WriteFile(file, data, 0644); err != nil {
 		t.Fatal(err)
 	}
 
 	for _, proof := range proofs {
-		opcode := proof.Proof[len(proof.Proof)-1]
-		t.Run(strconv.FormatUint(uint64(opcode), 10), func(t *testing.T) {
-			var err error
-			var machineData struct {
-				Gas               uint64
-				TotalMessagesRead *big.Int
-				Fields            [4][32]byte
-			}
-
-			op := proof.Proof[0]
-			t.Log("Opcode", opcode)
-			if (op >= 0xa1 && op <= 0xa6) || op == 0x70 {
-				machineData, err = osp2.ExecuteStep(
-					&bind.CallOpts{Context: ctx},
-					proof.BeforeCut.TotalMessagesRead.ToInt(),
+		op := proof.Proof[0]
+		t.Run(strconv.FormatUint(uint64(op), 10), func(t *testing.T) {
+			prover := getProverNum(op)
+			t.Logf("Opcode 0x%x with prover %v", op, prover)
+			machineData, err := osps[prover].ExecuteStep(
+				&bind.CallOpts{Context: ctx},
+				bridge,
+				proof.BeforeCut.TotalMessagesRead.ToInt(),
+				[2][32]byte{
 					proof.BeforeCut.SendAcc,
 					proof.BeforeCut.LogAcc,
-					proof.Proof,
-					proof.BufferProof,
-				)
-			} else {
-				var messagesRead [32]byte
-				copy(messagesRead[:], math.U256Bytes(proof.BeforeCut.TotalMessagesRead.ToInt()))
-				ret, err := osp.ExecuteStepDebug(
-					&bind.CallOpts{Context: ctx},
-					bridge,
-					[3][32]byte{
-						messagesRead,
-						proof.BeforeCut.SendAcc,
-						proof.BeforeCut.LogAcc,
-					},
-					proof.Proof,
-				)
-				test.FailIfError(t, err)
-				machineData.Fields = ret.Fields
-				machineData.Gas = ret.Gas
-			}
+				},
+				proof.Proof,
+				proof.BufferProof,
+			)
 			test.FailIfError(t, err)
 			correctGasUsed := proof.AfterCut.GasUsed - proof.BeforeCut.GasUsed
 			if machineData.Gas != correctGasUsed {
@@ -236,19 +222,30 @@ func TestValidateProof(t *testing.T) {
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth := bind.NewKeyedTransactor(pks[0])
 
-	_, _, osp, err := ethbridgetestcontracts.DeployOneStepProof(auth, client)
+	osp1Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof(auth, client)
 	test.FailIfError(t, err)
-	_, _, osp2, err := ethbridgetestcontracts.DeployOneStepProof2(auth, client)
+	osp2Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof2(auth, client)
+	test.FailIfError(t, err)
+	osp3Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProofHash(auth, client)
 	test.FailIfError(t, err)
 	bridgeAddr, _, _, err := ethbridgecontracts.DeployBridge(auth, client)
 	test.FailIfError(t, err)
 	client.Commit()
 
+	osp1, err := ethbridgetestcontracts.NewIOneStepProof(osp1Addr, client)
+	test.FailIfError(t, err)
+	osp2, err := ethbridgetestcontracts.NewIOneStepProof(osp2Addr, client)
+	test.FailIfError(t, err)
+	osp3, err := ethbridgetestcontracts.NewIOneStepProof(osp3Addr, client)
+	test.FailIfError(t, err)
+	provers := []*ethbridgetestcontracts.IOneStepProof{osp1, osp2, osp3}
+	t.Log(testMachines)
+
 	for _, machName := range testMachines {
 		machName := machName // capture range variable
 		t.Run(machName, func(t *testing.T) {
 			//t.Parallel()
-			runTestValidateProof(t, machName, osp, osp2, bridgeAddr)
+			runTestValidateProof(t, machName, provers, bridgeAddr)
 		})
 	}
 }

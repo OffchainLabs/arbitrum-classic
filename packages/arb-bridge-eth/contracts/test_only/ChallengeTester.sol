@@ -21,16 +21,14 @@ pragma solidity ^0.6.11;
 import "../challenge/Challenge.sol";
 
 contract ChallengeTester {
-    address private oneStepProofAddress;
-    address private oneStepProof2Address;
+    IOneStepProof[] public executors;
     address public challenge;
     bool public challengeCompleted;
     address public winner;
     address public loser;
 
-    constructor(address _oneStepProofAddress, address _oneStepProof2Address) public {
-        oneStepProofAddress = _oneStepProofAddress;
-        oneStepProof2Address = _oneStepProof2Address;
+    constructor(IOneStepProof[] memory _executors) public {
+        executors = _executors;
     }
 
     /* solhint-disable-next-line no-unused-vars */
@@ -51,8 +49,7 @@ contract ChallengeTester {
     ) public {
         Challenge chal = new Challenge();
         chal.initializeChallenge(
-            oneStepProofAddress,
-            oneStepProof2Address,
+            executors,
             address(this),
             executionHash,
             maxMessageCount,

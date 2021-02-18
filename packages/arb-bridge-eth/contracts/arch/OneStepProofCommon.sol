@@ -23,7 +23,7 @@ import "./Value.sol";
 import "./Machine.sol";
 import "../bridge/interfaces/IBridge.sol";
 
-abstract contract OneStepProofCommon {
+abstract contract OneStepProofCommon is IOneStepProof {
     using Machine for Machine.Data;
     using Hashing for Value.Data;
     using Value for Value.Data;
@@ -148,6 +148,46 @@ abstract contract OneStepProofCommon {
 
     uint256 internal constant SEND_SIZE_LIMIT = 10000;
 
+    // accs is [sendAcc, logAcc]
+    function executeStep(
+        IBridge bridge,
+        uint256 initialMessagesRead,
+        bytes32[2] calldata accs,
+        bytes calldata proof,
+        bytes calldata bproof
+    )
+        external
+        view
+        override
+        returns (
+            uint64 gas,
+            uint256 totalMessagesRead,
+            bytes32[4] memory fields
+        )
+    {
+        AssertionContext memory context =
+            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, bridge);
+
+        executeOp(context);
+
+        return returnContext(context);
+    }
+
+    function executeStepDebug(
+        IBridge bridge,
+        uint256 initialMessagesRead,
+        bytes32[2] calldata accs,
+        bytes calldata proof,
+        bytes calldata bproof
+    ) external view override returns (string memory startMachine, string memory afterMachine) {
+        AssertionContext memory context =
+            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, bridge);
+
+        executeOp(context);
+        startMachine = Machine.toString(context.startMachine);
+        afterMachine = Machine.toString(context.afterMachine);
+    }
+
     // fields
     // startMachineHash,
     // endMachineHash,
@@ -238,8 +278,7 @@ abstract contract OneStepProofCommon {
 
     function initializeExecutionContext(
         uint256 initialMessagesRead,
-        bytes32 initialSendAcc,
-        bytes32 initialLogAcc,
+        bytes32[2] calldata accs,
         bytes memory proof,
         bytes memory bproof,
         IBridge bridge
@@ -269,12 +308,12 @@ abstract contract OneStepProofCommon {
         context.startMachine = mach;
         context.afterMachine = mach.clone();
         context.totalMessagesRead = initialMessagesRead;
-        context.sendAcc = initialSendAcc;
-        context.logAcc = initialLogAcc;
+        context.sendAcc = accs[0];
+        context.logAcc = accs[1];
         context.gas = 0;
         context.stack = ValueStack(stackCount, stackVals);
         context.auxstack = ValueStack(auxstackCount, auxstackVals);
-        context.hadImmediate = uint8(proof[offset]) == 1;
+        context.hadImmediate = immediate == 1;
         context.opcode = opCode;
         context.proof = proof;
         context.bufProof = bproof;

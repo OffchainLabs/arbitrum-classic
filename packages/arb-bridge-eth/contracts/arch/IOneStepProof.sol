@@ -24,24 +24,7 @@ interface IOneStepProof {
     function executeStep(
         IBridge bridge,
         uint256 initialMessagesRead,
-        bytes32 initialSendAcc,
-        bytes32 initialLogAcc,
-        bytes calldata proof
-    )
-        external
-        view
-        returns (
-            uint64 gas,
-            uint256 totalMessagesRead,
-            bytes32[4] memory fields
-        );
-}
-
-interface IOneStepProof2 {
-    function executeStep(
-        uint256 initialMessagesRead,
-        bytes32 initialSendAcc,
-        bytes32 initialLogAcc,
+        bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
     )
@@ -52,4 +35,12 @@ interface IOneStepProof2 {
             uint256 totalMessagesRead,
             bytes32[4] memory fields
         );
+
+    function executeStepDebug(
+        IBridge bridge,
+        uint256 initialMessagesRead,
+        bytes32[2] calldata accs,
+        bytes calldata proof,
+        bytes calldata bproof
+    ) external view returns (string memory startMachine, string memory afterMachine);
 }

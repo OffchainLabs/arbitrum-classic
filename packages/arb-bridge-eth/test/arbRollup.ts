@@ -125,16 +125,7 @@ describe('ArbRollup', () => {
     const Node = await ethers.getContractFactory('Node')
     const node = Node.attach(nodeAddress) as NodeCon
 
-    prevNodeState = new NodeState(
-      blockCreated,
-      0,
-      initialVmState,
-      zerobytes32,
-      0,
-      0,
-      0,
-      1
-    )
+    prevNodeState = new NodeState(blockCreated, 0, initialVmState, 0, 0, 0, 1)
 
     assert.equal(
       await node.stateHash(),

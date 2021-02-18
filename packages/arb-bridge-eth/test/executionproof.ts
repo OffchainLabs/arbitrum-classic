@@ -21,16 +21,17 @@ import { BigNumber } from 'ethers'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { TransactionReceipt } from '@ethersproject/providers'
 import { BytesLike } from '@ethersproject/bytes'
-import { use, expect } from 'chai'
+import { use, expect, assert } from 'chai'
 import { OneStepProofTester } from '../build/types/OneStepProofTester'
-import { BufferProofTester } from '../build/types/BufferProofTester'
+import { IOneStepProof } from '../build/types/IOneStepProof'
+import { Bridge } from '../build/types/Bridge'
 import * as fs from 'fs'
 
 const { utils } = ethers
 
 interface ExecutionCut {
   GasUsed: number
-  InboxDelta: BytesLike
+  TotalMessagesRead: BytesLike
   MachineState: BytesLike
   SendAcc: BytesLike
   SendCount: BytesLike
@@ -46,36 +47,51 @@ interface Proof {
 }
 
 let ospTester: OneStepProofTester
-let ospTester2: BufferProofTester
+let executors: IOneStepProof[]
+let bridge: Bridge
 
-async function executeStep(proof: Proof): Promise<ContractTransaction> {
-  const machineFields: [BytesLike, BytesLike, BytesLike] = [
-    proof.BeforeCut.InboxDelta,
-    proof.BeforeCut.SendAcc,
-    proof.BeforeCut.LogAcc,
-  ]
-  return proof.BufferProof == '0x'
-    ? await ospTester.executeStepTest(machineFields, proof.Proof)
-    : await ospTester2.executeStepTest(
-        machineFields,
-        proof.Proof,
-        proof.BufferProof
-      )
+function getProver(op: number) {
+  if ((op >= 0xa1 && op <= 0xa6) || op == 0x70) {
+    return 1
+  } else if (op >= 0x20 && op <= 0x24) {
+    return 2
+  } else {
+    return 0
+  }
 }
 
 describe('OneStepProof', function () {
   before(async () => {
-    const OneStepProof = await ethers.getContractFactory('OneStepProofTester')
-    ospTester = (await OneStepProof.deploy()) as OneStepProofTester
+    const OneStepProofTester = await ethers.getContractFactory(
+      'OneStepProofTester'
+    )
+    ospTester = (await OneStepProofTester.deploy()) as OneStepProofTester
     await ospTester.deployed()
 
-    const BufferProof = await ethers.getContractFactory('BufferProofTester')
-    ospTester2 = (await BufferProof.deploy()) as BufferProofTester
-    await ospTester2.deployed()
+    const OneStepProof = await ethers.getContractFactory('OneStepProof')
+    const osp1 = (await OneStepProof.deploy()) as IOneStepProof
+    await osp1.deployed()
+
+    const OneStepProof2 = await ethers.getContractFactory('OneStepProof2')
+    const osp2 = (await OneStepProof2.deploy()) as IOneStepProof
+    await osp2.deployed()
+
+    const OneStepProofHash = await ethers.getContractFactory('OneStepProofHash')
+    const osp3 = (await OneStepProofHash.deploy()) as IOneStepProof
+    await osp3.deployed()
+
+    executors = [osp1, osp2, osp3]
+
+    const Bridge = await ethers.getContractFactory('Bridge')
+    bridge = (await Bridge.deploy()) as Bridge
+    await bridge.deployed()
   })
   const files = fs.readdirSync('./test/proofs')
   for (const filename of files) {
     if (!filename.endsWith('json')) {
+      continue
+    }
+    if (filename != 'opcodetestecops.mexe-proofs.json') {
       continue
     }
     const file = fs.readFileSync('./test/proofs/' + filename)
@@ -91,17 +107,31 @@ describe('OneStepProof', function () {
       this.timeout(100000)
       const receipts: TransactionReceipt[] = []
       const opcodes: number[] = []
-      before(async () => {
+      it(`should execute steps`, async function () {
         for (const proof of data.slice(0, 50)) {
-          const proofData = Buffer.from(proof.Proof, 'base64')
-          const opcode = proofData[proofData.length - 1]
+          const proofData = ethers.utils.arrayify(proof.Proof)
+          const opcode = proofData[0]
           if (opcode == 131) {
             // Skip too expensive opcode
             continue
           }
-          const tx = await executeStep(proof)
-          opcodes.push(opcode)
-          receipts.push(await tx.wait())
+          const prover = getProver(opcode)
+          try {
+            const tx = await ospTester.executeStepTest(
+              executors[prover].address,
+              bridge.address,
+              proof.BeforeCut.TotalMessagesRead,
+              [proof.BeforeCut.SendAcc, proof.BeforeCut.LogAcc],
+              proof.Proof,
+              proof.BufferProof
+            )
+
+            const receipt = await tx.wait()
+            receipts.push(receipt)
+            opcodes.push(opcode)
+          } catch (e) {
+            assert.fail(`Failed to generate proof ${opcode}, ${prover}`)
+          }
         }
       })
 
@@ -124,6 +154,7 @@ describe('OneStepProof', function () {
           const parsedEv = (ev as any) as {
             args: {
               gas: BigNumber
+              totalMessagesRead: BigNumber
               fields: [BytesLike, BytesLike, BytesLike, BytesLike, BytesLike]
             }
           }
@@ -135,13 +166,13 @@ describe('OneStepProof', function () {
             utils.hexlify(proof.AfterCut.MachineState)
           )
           expect(parsedEv.args.fields[2], message).to.equal(
-            utils.hexlify(proof.AfterCut.InboxDelta)
-          )
-          expect(parsedEv.args.fields[3], message).to.equal(
             utils.hexlify(proof.AfterCut.SendAcc)
           )
-          expect(parsedEv.args.fields[4], message).to.equal(
+          expect(parsedEv.args.fields[3], message).to.equal(
             utils.hexlify(proof.AfterCut.LogAcc)
+          )
+          expect(parsedEv.args.totalMessagesRead, message).to.equal(
+            BigNumber.from(proof.AfterCut.TotalMessagesRead)
           )
           expect(parsedEv.args.gas, message).to.equal(
             proof.AfterCut.GasUsed - proof.BeforeCut.GasUsed

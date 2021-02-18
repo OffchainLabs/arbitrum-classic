@@ -24,13 +24,11 @@ import "../libraries/CloneFactory.sol";
 
 contract ChallengeFactory is CloneFactory, IChallengeFactory {
     ICloneable public challengeTemplate;
-    address public oneStepProofAddress;
-    address public oneStepProof2Address;
+    IOneStepProof[] public executors;
 
-    constructor(address _oneStepProofAddress, address _oneStepProof2Address) public {
+    constructor(IOneStepProof[] memory _executors) public {
         challengeTemplate = ICloneable(new Challenge());
-        oneStepProofAddress = _oneStepProofAddress;
-        oneStepProof2Address = _oneStepProof2Address;
+        executors = _executors;
     }
 
     function createChallenge(
@@ -45,8 +43,7 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
     ) external override returns (address) {
         address clone = createClone(challengeTemplate);
         IChallenge(clone).initializeChallenge(
-            oneStepProofAddress,
-            oneStepProof2Address,
+            executors,
             _resultReceiver,
             _executionHash,
             _maxMessageCount,
