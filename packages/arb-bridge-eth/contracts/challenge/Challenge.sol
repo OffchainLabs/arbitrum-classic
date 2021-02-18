@@ -402,7 +402,7 @@ contract Challenge is Cloneable, IChallenge {
         require(kind == Kind.StoppedShort, "WRONG_KIND");
 
         // If this doesn't revert, we were able to successfully execute the machine
-        (, , bytes32[4] memory proofFields) =
+        (, uint256 totalMessagesRead, bytes32[4] memory proofFields) =
             executeMachineStep(
                 prover,
                 _initialMessagesRead,
@@ -411,6 +411,7 @@ contract Challenge is Cloneable, IChallenge {
                 _executionProof,
                 _bufferProof
             );
+        require(totalMessagesRead <= maxMessageCount, "TOO_MANY_MESSAGES");
 
         // Check that the before state is the end of the stopped short bisection which was stored in executionHash
         require(
