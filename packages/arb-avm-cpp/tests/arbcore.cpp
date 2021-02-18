@@ -78,7 +78,7 @@ TEST_CASE("ArbCore tests") {
             auto arbCore = storage.getArbCore();
             REQUIRE(arbCore->startThread());
 
-            REQUIRE(arbCore->deliverMessages(raw_messages, 0, false));
+            REQUIRE(arbCore->deliverMessages(raw_messages, 0, true));
 
             ArbCore::message_status_enum status;
             while (true) {
@@ -145,6 +145,12 @@ TEST_CASE("ArbCore tests") {
             auto message_hashes = arbCore->getMessageHashes(0, 1);
             REQUIRE(message_hashes.status.ok());
             REQUIRE(message_hashes.data.size() == 1);
+
+            auto before_sideload = arbCore->getMachineForSideload(
+                inbox_messages.back().block_number, value_cache);
+            REQUIRE(before_sideload.status.ok());
+            REQUIRE(before_sideload.data->machine_state.loadCurrentInstruction()
+                        .op.opcode == OpCode::SIDELOAD);
         }
     }
 }
