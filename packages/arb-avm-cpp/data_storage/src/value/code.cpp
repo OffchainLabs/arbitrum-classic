@@ -46,7 +46,7 @@ std::array<unsigned char, segment_key_size> segment_key(uint64_t segment_id) {
 
 struct RawCodePoint {
     OpCode opcode;
-    nonstd::optional<uint256_t> immediateHash;
+    std::optional<uint256_t> immediateHash;
     uint256_t next_hash;
 };
 
@@ -57,7 +57,7 @@ RawCodePoint extractRawCodePoint(const char*& ptr) {
     ++ptr;
     uint256_t next_hash = deserializeUint256t(ptr);
     if (!is_immediate) {
-        return {opcode, nonstd::nullopt, next_hash};
+        return {opcode, std::nullopt, next_hash};
     }
     uint256_t value_hash = deserializeUint256t(ptr);
     return {opcode, value_hash, next_hash};
@@ -188,7 +188,7 @@ uint64_t getNextSegmentID(const Transaction& transaction) {
     if (!s.ok()) {
         throw std::runtime_error("couldn't load segment id");
     }
-    auto ptr = segment_id_raw.data();
+    auto ptr = reinterpret_cast<const char*>(segment_id_raw.data());
     return deserialize_uint64_t(ptr);
 }
 

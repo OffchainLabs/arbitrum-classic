@@ -42,15 +42,15 @@ struct ParsedBuffer {
 };
 
 using ParsedTupVal =
-    nonstd::variant<uint256_t, CodePointStub, Buffer, ValueHash, ParsedBuffer>;
+    std::variant<uint256_t, CodePointStub, Buffer, ValueHash, ParsedBuffer>;
 
-using ParsedBufVal = nonstd::variant<Buffer, ParsedBuffer>;
+using ParsedBufVal = std::variant<Buffer, ParsedBuffer>;
 
-using ParsedSerializedVal = nonstd::variant<uint256_t,
-                                            CodePointStub,
-                                            Buffer,
-                                            std::vector<ParsedTupVal>,
-                                            ParsedBuffer>;
+using ParsedSerializedVal = std::variant<uint256_t,
+                                         CodePointStub,
+                                         Buffer,
+                                         std::vector<ParsedTupVal>,
+                                         ParsedBuffer>;
 
 struct ValueBeingParsed {
     value val;
@@ -61,8 +61,8 @@ struct ValueBeingParsed {
         : val{std::move(v)}, reference_count{count}, raw_vals{} {}
 
     void setTupleElement(uint64_t pos, value&& newval) {
-        if (nonstd::holds_alternative<Tuple>(val)) {
-            val.get<Tuple>().unsafe_set_element(pos, std::move(newval));
+        if (std::holds_alternative<Tuple>(val)) {
+            std::get<Tuple>(val).unsafe_set_element(pos, std::move(newval));
         }
     }
 };
@@ -202,8 +202,8 @@ std::vector<value> serializeValue(
     value_vector.push_back(TUPLE + val.tuple_size());
     for (uint64_t i = 0; i < val.tuple_size(); i++) {
         auto nested = val.get_element_unsafe(i);
-        if (nonstd::holds_alternative<Tuple>(nested)) {
-            const auto& nested_tup = nested.get<Tuple>();
+        if (std::holds_alternative<Tuple>(nested)) {
+            const auto& nested_tup = std::get<Tuple>(nested);
             value_vector.push_back(TUPLE);
             marshal_uint256_t(hash(nested_tup), value_vector);
             ret.push_back(nested);
@@ -240,7 +240,7 @@ std::vector<value> serializeValue(
     const value& val,
     std::vector<unsigned char>& value_vector,
     std::map<uint64_t, uint64_t>& segment_counts) {
-    return nonstd::visit(
+    return std::visit(
         [&](const auto& val) {
             return serializeValue(val, value_vector, segment_counts);
         },
@@ -271,10 +271,10 @@ void deleteParsedValue(const std::vector<ParsedTupVal>& tup,
                        std::map<uint64_t, uint64_t>&) {
     for (const auto& val : tup) {
         // We only need to delete tuples since other values are recorded inline
-        if (nonstd::holds_alternative<ValueHash>(val)) {
-            vals_to_delete.push_back(val.get<ValueHash>().hash);
-        } else if (nonstd::holds_alternative<ParsedBuffer>(val)) {
-            auto parsed = val.get<ParsedBuffer>();
+        if (std::holds_alternative<ValueHash>(val)) {
+            vals_to_delete.push_back(std::get<ValueHash>(val).hash);
+        } else if (std::holds_alternative<ParsedBuffer>(val)) {
+            auto parsed = std::get<ParsedBuffer>(val);
             for (const auto& val : parsed.nodes) {
                 vals_to_delete.push_back(val);
             }
@@ -289,7 +289,7 @@ GetResults applyValue(value&& val,
     auto& current = val_stack.back();
 
     // This function is only called when populating an existing tuple
-    auto tuple_size = current.val.get<Tuple>().tuple_size();
+    auto tuple_size = std::get<Tuple>(current.val).tuple_size();
     uint64_t tuple_index = tuple_size - current.raw_vals.size() - 1;
     if (tuple_index >= tuple_size) {
         throw std::runtime_error("Tuple and raw_vals size mismatch");
@@ -373,7 +373,7 @@ Buffer processBuffer(const Transaction& transaction,
     for (uint64_t i = 0; i < NODE_SIZE; i++) {
         auto val_hash = ValueHash{val.nodes[i]};
         if (auto cached_val = val_cache.loadIfExists(val_hash.hash)) {
-            RawBuffer buf = *(*cached_val).get<Buffer>().buf;
+            RawBuffer buf = *std::get<Buffer>(cached_val.value()).buf;
             buf.level = val.level - 1;
             (*vec)[i] = buf;
             continue;
@@ -389,13 +389,13 @@ Buffer processBuffer(const Transaction& transaction,
 
         auto record = parseRecord(results.stored_value);
 
-        if (nonstd::holds_alternative<Buffer>(record)) {
-            Buffer buf = record.get<Buffer>();
+        if (std::holds_alternative<Buffer>(record)) {
+            Buffer buf = std::get<Buffer>(record);
             val_cache.maybeSave(buf);
             (*vec)[i] = *buf.buf;
-        } else if (nonstd::holds_alternative<ParsedBuffer>(record)) {
-            Buffer buf = processBuffer(transaction, record.get<ParsedBuffer>(),
-                                       val_cache);
+        } else if (std::holds_alternative<ParsedBuffer>(record)) {
+            Buffer buf = processBuffer(
+                transaction, std::get<ParsedBuffer>(record), val_cache);
             val_cache.maybeSave(buf);
             (*vec)[i] = *buf.buf;
         } else {
@@ -496,7 +496,7 @@ GetResults processVal(const Transaction& transaction,
 
     auto record = parseRecord(results.stored_value);
 
-    return nonstd::visit(
+    return std::visit(
         [&](const auto& val) {
             return processVal(transaction, val, val_stack, segment_ids,
                               results.reference_count, val_cache);
@@ -524,7 +524,7 @@ GetResults processFirstVal(const Transaction& transaction,
 
     auto record = parseRecord(results.stored_value);
 
-    return nonstd::visit(
+    return std::visit(
         [&](const auto& val) {
             return processFirstVal(transaction, val, val_stack, segment_ids,
                                    results.reference_count, val_cache);
@@ -560,7 +560,7 @@ DbResult<value> getValueImpl(const Transaction& transaction,
             auto next = std::move(current.raw_vals.back());
             current.raw_vals.pop_back();
 
-            auto results = nonstd::visit(
+            auto results = std::visit(
                 [&](const auto& val) {
                     return processVal(transaction, val, val_stack, segment_ids,
                                       0, value_cache);
@@ -655,7 +655,7 @@ DeleteResults deleteValueImpl(Transaction& transaction,
         auto key = vecToSlice(hash_key);
         auto results = deleteRefCountedData(*transaction.transaction, key);
         if (results.status.ok() && results.reference_count == 0) {
-            nonstd::visit(
+            std::visit(
                 [&](const auto& val) {
                     deleteParsedValue(val, items_to_delete, segment_counts);
                 },

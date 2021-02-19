@@ -206,20 +206,19 @@ void AggregatorStore::saveRequest(const uint256_t& request_id,
 
 namespace {
 template <typename Key>
-nonstd::optional<uint64_t> returnIndex(rocksdb::Transaction& tx,
-                                       const Key& key) {
+std::optional<uint64_t> returnIndex(rocksdb::Transaction& tx, const Key& key) {
     std::string request_value;
     auto s = tx.GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(key),
                              &request_value);
     if (!s.ok()) {
-        return nonstd::nullopt;
+        return std::nullopt;
     }
     auto it = request_value.begin();
     return extractUint64(it);
 }
 }  // namespace
 
-nonstd::optional<uint64_t> AggregatorStore::getPossibleRequestInfo(
+std::optional<uint64_t> AggregatorStore::getPossibleRequestInfo(
     const uint256_t& request_id) const {
     auto tx = data_storage->beginTransaction();
     return returnIndex(*tx, requestKey(request_id));
@@ -236,7 +235,7 @@ void AggregatorStore::saveBlockHash(const uint256_t& block_hash,
     }
 }
 
-nonstd::optional<uint64_t> AggregatorStore::getPossibleBlock(
+std::optional<uint64_t> AggregatorStore::getPossibleBlock(
     const uint256_t& block_hash) const {
     auto tx = data_storage->beginTransaction();
     return returnIndex(*tx, blockHashKey(block_hash));

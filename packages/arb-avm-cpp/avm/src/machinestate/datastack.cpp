@@ -92,7 +92,7 @@ Datastack::Datastack(Tuple tuple_rep) : Datastack() {
     Tuple ret = tuple_rep;
     while (ret.tuple_size() == 2) {
         push(ret.get_element(0));
-        ret = nonstd::get<Tuple>(ret.get_element(1));
+        ret = std::get<Tuple>(ret.get_element(1));
     }
 }
 

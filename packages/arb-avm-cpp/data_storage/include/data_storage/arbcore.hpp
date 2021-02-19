@@ -173,8 +173,8 @@ class ArbCore {
    public:
     // Logs Cursor interaction
     bool logsCursorRequest(size_t cursor_index, uint256_t count);
-    nonstd::optional<std::vector<value>> logsCursorGetLogs(size_t cursor_index);
-    nonstd::optional<std::vector<value>> logsCursorGetDeletedLogs(
+    std::optional<std::vector<value>> logsCursorGetLogs(size_t cursor_index);
+    std::optional<std::vector<value>> logsCursorGetDeletedLogs(
         size_t cursor_index);
     bool logsCursorCheckError(size_t cursor_index) const;
     std::string logsCursorClearError(size_t cursor_index);
@@ -259,13 +259,13 @@ class ArbCore {
         const std::vector<std::vector<unsigned char>>& send);
 
    private:
-    nonstd::optional<rocksdb::Status> addMessages(
+    std::optional<rocksdb::Status> addMessages(
         const std::vector<std::vector<unsigned char>>& messages,
         const uint256_t& previous_inbox_hash,
         const uint256_t& final_machine_sequence_number,
         bool last_block_complete,
         ValueCache& cache);
-    nonstd::optional<MessageEntry> getNextMessage();
+    std::optional<MessageEntry> getNextMessage();
     bool deleteMessage(const MessageEntry& entry);
     ValueResult<std::vector<value>> getLogsNoLock(Transaction& tx,
                                                   uint256_t index,
@@ -293,7 +293,7 @@ class ArbCore {
         const uint256_t& message_index);
 };
 
-nonstd::optional<rocksdb::Status> deleteLogsStartingAt(Transaction& tx,
-                                                       uint256_t log_index);
+std::optional<rocksdb::Status> deleteLogsStartingAt(Transaction& tx,
+                                                    uint256_t log_index);
 
 #endif /* arbcore_hpp */

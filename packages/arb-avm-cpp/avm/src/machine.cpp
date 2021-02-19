@@ -46,7 +46,7 @@ Assertion Machine::run(uint256_t max_gas,
                        const std::vector<InboxMessage>& inbox_messages,
                        uint256_t messages_to_skip,
                        bool final_message_of_block) {
-    nonstd::optional<uint256_t> min_next_block_height;
+    std::optional<uint256_t> min_next_block_height;
     if (final_message_of_block && !inbox_messages.empty()) {
         // Last message is the final message of a block, so need to
         // set min_next_block_height to the block after the last block
@@ -73,7 +73,7 @@ Assertion Machine::run(uint256_t max_gas,
         }
 
         auto blockReason = machine_state.runOne();
-        if (!nonstd::get_if<NotBlocked>(&blockReason)) {
+        if (!std::get_if<NotBlocked>(&blockReason)) {
             break;
         }
     }

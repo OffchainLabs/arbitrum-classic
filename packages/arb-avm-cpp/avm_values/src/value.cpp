@@ -92,19 +92,20 @@ value assembleValueFromDeserialized(std::vector<DeserializedValue> values) {
     for (size_t i = 0; i < total_values_size; ++i) {
         size_t val_pos = total_values_size - 1 - i;
         auto& val = values[val_pos];
-        if (!nonstd::holds_alternative<TuplePlaceholder>(val)) {
+        if (!std::holds_alternative<TuplePlaceholder>(val)) {
             continue;
         }
-        auto holder = val.get<TuplePlaceholder>();
+        auto holder = std::get<TuplePlaceholder>(val);
         Tuple tup(holder.values);
         for (uint8_t j = 0; j < holder.values; ++j) {
-            tup.set_element(j, std::move(values[val_pos + 1 + j].get<value>()));
+            tup.set_element(
+                j, std::move(std::get<value>(values[val_pos + 1 + j])));
         }
         values.erase(values.begin() + val_pos + 1,
                      values.begin() + val_pos + 1 + holder.values);
         values[val_pos] = std::move(tup);
     }
-    return values.back().get<value>();
+    return std::get<value>(values.back());
 }
 
 void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
@@ -158,7 +159,7 @@ void marshal_value(const value& full_val, std::vector<unsigned char>& buf) {
     while (!values.empty()) {
         const auto val = std::move(values.back());
         values.pop_back();
-        nonstd::visit(marshaller, val);
+        std::visit(marshaller, val);
     }
 }
 
@@ -227,7 +228,7 @@ void marshalForProof(const value& val,
                      MarshalLevel marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code) {
-    return nonstd::visit(
+    return std::visit(
         [&](const auto& v) {
             return marshalForProof(v, marshal_level, buf, code);
         },
@@ -235,7 +236,7 @@ void marshalForProof(const value& val,
 }
 
 uint256_t hash_value(const value& value) {
-    return nonstd::visit([](const auto& val) { return hash(val); }, value);
+    return std::visit([](const auto& val) { return hash(val); }, value);
 }
 
 struct GetSize {
@@ -253,7 +254,7 @@ struct GetSize {
 };
 
 uint256_t getSize(const value& val) {
-    return nonstd::visit(GetSize{}, val);
+    return std::visit(GetSize{}, val);
 }
 
 struct ValuePrinter {
@@ -287,5 +288,5 @@ struct ValuePrinter {
 };
 
 std::ostream& operator<<(std::ostream& os, const value& val) {
-    return *nonstd::visit(ValuePrinter{os}, val);
+    return *std::visit(ValuePrinter{os}, val);
 }

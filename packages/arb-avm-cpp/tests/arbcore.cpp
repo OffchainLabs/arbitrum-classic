@@ -46,7 +46,8 @@ TEST_CASE("ArbCore tests") {
 
             std::vector<Tuple> inbox_message_tuples;
             for (auto& json_message : j.at("inbox")) {
-                auto tup = simple_value_from_json(json_message).get<Tuple>();
+                auto tup =
+                    std::get<Tuple>(simple_value_from_json(json_message));
                 inbox_message_tuples.push_back(std::move(tup));
             }
 

@@ -189,7 +189,7 @@ inline RawAssertion makeEmptyAssertion() {
 
 inline Tuple getTuple(void* data) {
     auto charData = reinterpret_cast<const char*>(data);
-    return nonstd::get<Tuple>(deserialize_value(charData));
+    return std::get<Tuple>(deserialize_value(charData));
 }
 
 inline std::vector<std::vector<unsigned char>> getInboxMessages(void* data) {

@@ -41,7 +41,7 @@ MachineState runUnaryOp(uint256_t arg1, OpCode op) {
 void testUnaryOp(uint256_t arg1, uint256_t result, OpCode op) {
     MachineState m = runUnaryOp(arg1, op);
     value res = m.stack.pop();
-    auto num = nonstd::get_if<uint256_t>(&res);
+    auto num = std::get_if<uint256_t>(&res);
     REQUIRE(num);
     REQUIRE(*num == result);
     REQUIRE(m.stack.stacksize() == 0);
@@ -61,7 +61,7 @@ void testBinaryOp(uint256_t arg1,
                   OpCode op) {
     MachineState m = runBinaryOp(arg1, arg2, op);
     value res = m.stack.pop();
-    auto actual = nonstd::get_if<uint256_t>(&res);
+    auto actual = std::get_if<uint256_t>(&res);
     REQUIRE(actual);
     REQUIRE(*actual == expected);
     REQUIRE(m.stack.stacksize() == 0);
@@ -86,7 +86,7 @@ void testTertiaryOp(uint256_t arg1,
                     OpCode op) {
     MachineState m = runTertiaryOp(arg1, arg2, arg3, op);
     value res = m.stack.pop();
-    auto num = nonstd::get_if<uint256_t>(&res);
+    auto num = std::get_if<uint256_t>(&res);
     REQUIRE(num);
     REQUIRE(*num == result);
     REQUIRE(m.stack.stacksize() == 0);
@@ -146,7 +146,7 @@ TEST_CASE("OPCODE: DIV opcode is correct") {
     SECTION("unsigned division is correct") {
         MachineState m = runBinaryOp(-6_u256, 2_u256, OpCode::DIV);
         value res = m.stack.pop();
-        auto num = nonstd::get_if<uint256_t>(&res);
+        auto num = std::get_if<uint256_t>(&res);
         REQUIRE(num);
         REQUIRE(*num != 3);
         REQUIRE(m.stack.stacksize() == 0);
@@ -346,7 +346,7 @@ TEST_CASE("OPCODE: EQ opcode is correct") {
         m.stack.push(Tuple{uint256_t{1}, uint256_t{2}});
         m.runOp(OpCode::EQ);
         value res = m.stack.pop();
-        auto actual = nonstd::get_if<uint256_t>(&res);
+        auto actual = std::get_if<uint256_t>(&res);
         REQUIRE(actual);
         REQUIRE(*actual == 1);
         REQUIRE(m.stack.stacksize() == 0);
@@ -357,7 +357,7 @@ TEST_CASE("OPCODE: EQ opcode is correct") {
         m.stack.push(Tuple{uint256_t{1}, uint256_t{3}});
         m.runOp(OpCode::EQ);
         value res = m.stack.pop();
-        auto actual = nonstd::get_if<uint256_t>(&res);
+        auto actual = std::get_if<uint256_t>(&res);
         REQUIRE(actual);
         REQUIRE(*actual == 0);
         REQUIRE(m.stack.stacksize() == 0);
@@ -879,7 +879,7 @@ TEST_CASE("OPCODE: BREAKPOINT opcode is correct") {
         MachineState m;
         auto blockReason = m.runOp(OpCode::BREAKPOINT);
         REQUIRE(m.state == Status::Extensive);
-        REQUIRE(nonstd::get_if<BreakpointBlocked>(&blockReason) != nullptr);
+        REQUIRE(std::get_if<BreakpointBlocked>(&blockReason) != nullptr);
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
@@ -929,7 +929,7 @@ TEST_CASE("OPCODE: SET_GAS opcode is correct") {
 }
 
 uint256_t& assumeInt(value& val) {
-    auto aNum = nonstd::get_if<uint256_t>(&val);
+    auto aNum = std::get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
     }
@@ -1097,14 +1097,14 @@ TEST_CASE("OPCODE: KECCAKF opcode is correct") {
         m.runOne();
         auto ret = m.stack.pop();
         {
-            REQUIRE(nonstd::holds_alternative<Tuple>(ret));
-            auto ret_tup = nonstd::get<Tuple>(ret);
+            REQUIRE(std::holds_alternative<Tuple>(ret));
+            auto ret_tup = std::get<Tuple>(ret);
             REQUIRE(ret_tup.tuple_size() == 7);
             std::array<uint256_t, 7> parts;
             for (size_t i = 0; i < 7; ++i) {
                 auto val = ret_tup.get_element(i);
-                REQUIRE(nonstd::holds_alternative<uint256_t>(val));
-                parts[i] = nonstd::get<uint256_t>(val);
+                REQUIRE(std::holds_alternative<uint256_t>(val));
+                parts[i] = std::get<uint256_t>(val);
             }
 
             uint256_t correct0 = hexToInt(
@@ -1142,14 +1142,14 @@ TEST_CASE("OPCODE: KECCAKF opcode is correct") {
         m.runOne();
         ret = m.stack.pop();
         {
-            REQUIRE(nonstd::holds_alternative<Tuple>(ret));
-            auto ret_tup = nonstd::get<Tuple>(ret);
+            REQUIRE(std::holds_alternative<Tuple>(ret));
+            auto ret_tup = std::get<Tuple>(ret);
             REQUIRE(ret_tup.tuple_size() == 7);
             std::array<uint256_t, 7> parts;
             for (size_t i = 0; i < 7; ++i) {
                 auto val = ret_tup.get_element(i);
-                REQUIRE(nonstd::holds_alternative<uint256_t>(val));
-                parts[i] = nonstd::get<uint256_t>(val);
+                REQUIRE(std::holds_alternative<uint256_t>(val));
+                parts[i] = std::get<uint256_t>(val);
             }
             uint256_t correct0 = hexToInt(
                 "8a20d9b25569d094093d8d1270d76b6c6a332cd07057b56d2d5c954df96ecb"
@@ -1258,8 +1258,8 @@ TEST_CASE("OPCODE: SHA256F opcode is correct") {
                 m.stack.push(initial_hash_state);
                 m.runOne();
                 auto ret = m.stack.pop();
-                REQUIRE(nonstd::holds_alternative<uint256_t>(ret));
-                REQUIRE(ret.get<uint256_t>() == test_case.output_digest);
+                REQUIRE(std::holds_alternative<uint256_t>(ret));
+                REQUIRE(std::get<uint256_t>(ret) == test_case.output_digest);
             }
             ++i;
         }

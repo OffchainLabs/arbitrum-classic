@@ -130,15 +130,15 @@ InboxMessage InboxMessage::fromTuple(const Tuple& tup) {
     if (tup.tuple_size() != 7) {
         throw std::runtime_error("wrong tup size");
     }
-    auto kind =
-        intx::narrow_cast<uint8_t>(tup.get_element_unsafe(0).get<uint256_t>());
-    auto block_number = tup.get_element_unsafe(1).get<uint256_t>();
-    auto timestamp = tup.get_element_unsafe(2).get<uint256_t>();
-    auto sender_int = tup.get_element_unsafe(3).get<uint256_t>();
-    auto inbox_sequence_number = tup.get_element_unsafe(4).get<uint256_t>();
-    auto data_size =
-        intx::narrow_cast<uint64_t>(tup.get_element_unsafe(5).get<uint256_t>());
-    auto data_buf = tup.get_element_unsafe(6).get<Buffer>();
+    auto kind = intx::narrow_cast<uint8_t>(
+        std::get<uint256_t>(tup.get_element_unsafe(0)));
+    auto block_number = std::get<uint256_t>(tup.get_element_unsafe(1));
+    auto timestamp = std::get<uint256_t>(tup.get_element_unsafe(2));
+    auto sender_int = std::get<uint256_t>(tup.get_element_unsafe(3));
+    auto inbox_sequence_number = std::get<uint256_t>(tup.get_element_unsafe(4));
+    auto data_size = intx::narrow_cast<uint64_t>(
+        std::get<uint256_t>(tup.get_element_unsafe(5)));
+    auto data_buf = std::get<Buffer>(tup.get_element_unsafe(6));
 
     uint8_t raw_sender[32];
     intx::be::store(raw_sender, sender_int);

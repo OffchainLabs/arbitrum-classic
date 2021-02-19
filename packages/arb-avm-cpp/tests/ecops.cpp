@@ -83,8 +83,8 @@ TEST_CASE("ECOp: g1PfromBytes") {
         (Fr<alt_bn128_pp>::random_element()) * G1<alt_bn128_pp>::one();
 
     auto outP = g1PfromBytes(toG1ArbPoint(P));
-    REQUIRE(nonstd::holds_alternative<G1<alt_bn128_pp>>(outP));
-    REQUIRE(outP.get<G1<alt_bn128_pp>>() == P);
+    REQUIRE(std::holds_alternative<G1<alt_bn128_pp>>(outP));
+    REQUIRE(std::get<G1<alt_bn128_pp>>(outP) == P);
 }
 
 TEST_CASE("ECOp: g2PfromBytes") {
@@ -93,8 +93,8 @@ TEST_CASE("ECOp: g2PfromBytes") {
         (Fr<alt_bn128_pp>::random_element()) * G2<alt_bn128_pp>::one();
 
     auto outP = g2PfromBytes(toG2ArbPoint(P));
-    REQUIRE(nonstd::holds_alternative<G2<alt_bn128_pp>>(outP));
-    REQUIRE(outP.get<G2<alt_bn128_pp>>() == P);
+    REQUIRE(std::holds_alternative<G2<alt_bn128_pp>>(outP));
+    REQUIRE(std::get<G2<alt_bn128_pp>>(outP) == P);
 }
 
 TEST_CASE("ECOp: ecpairing_internal") {
@@ -122,38 +122,38 @@ TEST_CASE("ECOp: ecpairing_internal") {
         prod = prod * alt_bn128_pp::reduced_pairing(P[i], Q[i]);
     }
     auto res = ecpairing_internal(all_points);
-    REQUIRE(nonstd::holds_alternative<alt_bn128_GT>(res));
-    REQUIRE(prod == res.get<alt_bn128_GT>());
+    REQUIRE(std::holds_alternative<alt_bn128_GT>(res));
+    REQUIRE(prod == std::get<alt_bn128_GT>(res));
 }
 
 TEST_CASE("ECOp: ecpairing") {
     for (const auto& test_case : preparePairingCases()) {
         auto res = ecpairing(test_case.points);
         std::string msg;
-        if (nonstd::holds_alternative<std::string>(res)) {
-            msg = res.get<std::string>();
+        if (std::holds_alternative<std::string>(res)) {
+            msg = std::get<std::string>(res);
         }
         INFO(msg);
-        REQUIRE(nonstd::holds_alternative<bool>(res));
-        REQUIRE(res.get<bool>());
+        REQUIRE(std::holds_alternative<bool>(res));
+        REQUIRE(std::get<bool>(res));
     }
 }
 
 TEST_CASE("ECOp: ecadd") {
     for (const auto& test_case : prepareECAddCases()) {
         auto res = ecadd(test_case.a, test_case.b);
-        REQUIRE(!nonstd::holds_alternative<std::string>(res));
-        REQUIRE(nonstd::holds_alternative<G1Point>(res));
-        REQUIRE(test_case.res.x == res.get<G1Point>().x);
-        REQUIRE(test_case.res.y == res.get<G1Point>().y);
+        REQUIRE(!std::holds_alternative<std::string>(res));
+        REQUIRE(std::holds_alternative<G1Point>(res));
+        REQUIRE(test_case.res.x == std::get<G1Point>(res).x);
+        REQUIRE(test_case.res.y == std::get<G1Point>(res).y);
     }
 }
 
 TEST_CASE("ECOp: ecmul") {
     for (const auto& test_case : prepareECMulCases()) {
         auto res = ecmul(test_case.a, test_case.k);
-        REQUIRE(nonstd::holds_alternative<G1Point>(res));
-        REQUIRE(test_case.res.x == res.get<G1Point>().x);
-        REQUIRE(test_case.res.y == res.get<G1Point>().y);
+        REQUIRE(std::holds_alternative<G1Point>(res));
+        REQUIRE(test_case.res.x == std::get<G1Point>(res).x);
+        REQUIRE(test_case.res.y == std::get<G1Point>(res).y);
     }
 }

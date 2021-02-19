@@ -22,11 +22,11 @@
 #include <avm_values/tuple.hpp>
 #include <avm_values/value.hpp>
 
-#include <nonstd/optional.hpp>
+#include <optional>
 
 struct Operation {
     OpCode opcode;
-    nonstd::optional<value> immediate;
+    std::optional<value> immediate;
 
     Operation(OpCode opcode_) : opcode(opcode_) {}
     Operation(OpCode opcode_, value val);
