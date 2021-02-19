@@ -29,7 +29,6 @@
 
 constexpr int TUP_TUPLE_LENGTH = 33;
 constexpr int TUP_NUM_LENGTH = 33;
-constexpr int TUP_BUFFER_LENGTH = 33;
 constexpr int TUP_CODEPT_LENGTH = 49;
 
 struct ValueHash {
@@ -419,7 +418,7 @@ GetResults processVal(const Transaction& transaction,
 GetResults processFirstVal(const Transaction& transaction,
                            const ParsedBuffer& val,
                            std::vector<ValueBeingParsed>& val_stack,
-                           std::set<uint64_t>& segs,
+                           std::set<uint64_t>&,
                            uint32_t reference_count,
                            ValueCache& val_cache) {
     return applyValue(processBuffer(transaction, val, val_cache),
