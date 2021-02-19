@@ -197,8 +197,7 @@ TEST_CASE("MachineTestVectors") {
                 std::string{machine_test_cases_path} + "/" + filename + ".mexe";
 
             auto mach = Machine::loadFromFile(test_file);
-            while (
-                nonstd::holds_alternative<NotBlocked>(mach.isBlocked(false))) {
+            while (std::holds_alternative<NotBlocked>(mach.isBlocked(false))) {
                 mach.run(0, false, std::vector<InboxMessage>{}, 0, false);
             }
             REQUIRE(mach.currentStatus() == Status::Halted);

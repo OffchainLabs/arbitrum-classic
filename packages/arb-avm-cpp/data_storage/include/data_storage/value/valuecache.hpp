@@ -39,7 +39,7 @@ class ValueCache {
    public:
     void clear();
     void maybeSave(value val);
-    nonstd::optional<value> loadIfExists(const uint256_t& hash);
+    std::optional<value> loadIfExists(const uint256_t& hash);
 };
 
 #endif /* valuecache_hpp */

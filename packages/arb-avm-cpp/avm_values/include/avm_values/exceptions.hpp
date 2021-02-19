@@ -17,7 +17,7 @@
 #ifndef exceptions_hpp
 #define exceptions_hpp
 
-#include <nonstd/variant.hpp>
+#include <exception>
 
 class bad_tuple_index : public std::exception {
    public:

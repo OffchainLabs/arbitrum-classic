@@ -38,9 +38,9 @@ void initializeDatastack(const Transaction& transaction,
     ValueCache value_cache{};
     auto results = ::getValue(transaction, tuple_hash, value_cache);
     REQUIRE(results.status.ok());
-    REQUIRE(nonstd::holds_alternative<Tuple>(results.data));
+    REQUIRE(std::holds_alternative<Tuple>(results.data));
 
-    Datastack data_stack(nonstd::get<Tuple>(results.data));
+    Datastack data_stack(std::get<Tuple>(results.data));
 
     REQUIRE(data_stack.hash() == expected_hash);
     REQUIRE(data_stack.stacksize() == expected_size);
@@ -84,7 +84,7 @@ void saveAndGetDataStack(Transaction& transaction,
     ValueCache value_cache{};
     auto get_results = getValue(transaction, expected_hash, value_cache);
 
-    REQUIRE(nonstd::holds_alternative<Tuple>(get_results.data));
+    REQUIRE(std::holds_alternative<Tuple>(get_results.data));
     REQUIRE(get_results.status.ok());
     REQUIRE(get_results.reference_count == 1);
     REQUIRE(hash_value(get_results.data) == expected_hash);
@@ -103,7 +103,7 @@ void saveTwiceAndGetDataStack(Transaction& transaction,
     ValueCache value_cache{};
     auto get_results = getValue(transaction, expected_hash, value_cache);
 
-    REQUIRE(nonstd::holds_alternative<Tuple>(get_results.data));
+    REQUIRE(std::holds_alternative<Tuple>(get_results.data));
     REQUIRE(get_results.status.ok());
     REQUIRE(get_results.reference_count == 2);
     REQUIRE(hash_value(get_results.data) == expected_hash);

@@ -30,12 +30,12 @@
 
 struct AssertionContext {
     std::vector<InboxMessage> inbox_messages;
-    nonstd::optional<uint256_t> next_block_height;
+    std::optional<uint256_t> next_block_height;
     size_t inbox_messages_consumed{0};
     uint256_t numSteps{0};
     uint256_t numGas{0};
     bool blockingSideload{false};
-    nonstd::optional<value> fake_inbox_peek_value;
+    std::optional<value> fake_inbox_peek_value;
     std::vector<std::vector<uint8_t>> sends;
     std::vector<value> logs;
     std::vector<value> debug_prints;
@@ -43,7 +43,7 @@ struct AssertionContext {
     AssertionContext() = default;
 
     AssertionContext(std::vector<InboxMessage> inbox_messages,
-                     const nonstd::optional<uint256_t>& min_next_block_height,
+                     const std::optional<uint256_t>& min_next_block_height,
                      uint256_t messages_to_skip);
 
     // popInbox assumes that the number of messages already consumed is less
@@ -70,7 +70,7 @@ struct OneStepProof {
 
 struct MachineState {
     std::shared_ptr<Code> code;
-    mutable nonstd::optional<CodeSegmentSnapshot> loaded_segment;
+    mutable std::optional<CodeSegmentSnapshot> loaded_segment;
     value registerVal;
     value static_val;
     Datastack stack;

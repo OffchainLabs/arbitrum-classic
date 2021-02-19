@@ -45,6 +45,6 @@ std::ostream& operator<<(std::ostream& os, const SideloadBlocked&) {
 }
 
 std::ostream& operator<<(std::ostream& os, const BlockReason& val) {
-    nonstd::visit([&](const auto& reason) { os << reason; }, val);
+    std::visit([&](const auto& reason) { os << reason; }, val);
     return os;
 }

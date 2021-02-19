@@ -46,7 +46,7 @@ TEST_CASE("ARBOS test vectors") {
             std::vector<InboxMessage> messages;
             for (auto& json_message : j.at("inbox")) {
                 messages.push_back(InboxMessage::fromTuple(
-                    simple_value_from_json(json_message).get<Tuple>()));
+                    std::get<Tuple>(simple_value_from_json(json_message))));
             }
 
             auto logs_json = j.at("logs");
@@ -62,7 +62,7 @@ TEST_CASE("ARBOS test vectors") {
             auto assertion = mach->run(0, false, messages, 0, false);
             INFO("Machine ran for " << assertion.stepCount << " steps");
             REQUIRE(assertion.logs.size() == logs.size());
-            auto log = logs[0].get<Tuple>();
+            auto log = std::get<Tuple>(logs[0]);
             for (size_t k = 0; k < assertion.logs.size(); ++k) {
                 REQUIRE(assertion.logs[k] == logs[k]);
             }
