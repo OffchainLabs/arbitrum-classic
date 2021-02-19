@@ -51,16 +51,6 @@ ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
                                         const void* start_index_ptr,
                                         const void* count_ptr);
 
-ByteSliceResult arbCoreGetMessageHashes(CArbCore* arbcore_ptr,
-                                        const void* start_index_ptr,
-                                        const void* count_ptr);
-
-int arbCoreGetInboxDelta(CArbCore* arbcore_ptr,
-                         const void* start_index_ptr,
-                         const void* count_ptr,
-                         void* ret);
-
-int arbCoreGetInboxAcc(CArbCore* arbcore_ptr, const void* index_ptr, void* ret);
 int arbCoreGetSendAcc(CArbCore* arbcore_ptr,
                       const void* start_acc_hash,
                       const void* start_index_ptr,

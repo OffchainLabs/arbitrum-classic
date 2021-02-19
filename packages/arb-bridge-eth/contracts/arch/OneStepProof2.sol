@@ -49,36 +49,10 @@ import "./OneStepProofCommon.sol";
 import "./Value.sol";
 import "./Machine.sol";
 
-import "../libraries/Precompiles.sol";
-
 // Originally forked from https://github.com/leapdao/solEVM-enforcer/tree/master
 
-contract OneStepProof2 is IOneStepProof2, OneStepProofCommon {
-    function executeStep(
-        bytes32[3] calldata _machineFields,
-        bytes calldata proof,
-        bytes calldata bproof
-    ) external view override returns (uint64 gas, bytes32[5] memory fields) {
-        AssertionContext memory context =
-            initializeExecutionContext(
-                _machineFields[0],
-                _machineFields[1],
-                _machineFields[2],
-                proof,
-                bproof
-            );
-
-        executeOp(context);
-
-        return returnContext(context);
-    }
-
+contract OneStepProof2 is OneStepProofCommon {
     /* solhint-disable no-inline-assembly */
-
-    function executeErrorInsn(AssertionContext memory context) internal pure {
-        // Call error instead of  handleOpcodeError
-        handleError(context);
-    }
 
     function makeZeros() internal pure returns (bytes32[] memory) {
         bytes32[] memory zeros = new bytes32[](64);

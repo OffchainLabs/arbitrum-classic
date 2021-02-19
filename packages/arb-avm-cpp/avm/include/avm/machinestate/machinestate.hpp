@@ -17,9 +17,11 @@
 #ifndef machinestate_hpp
 #define machinestate_hpp
 
+#include <avm/inboxmessage.hpp>
 #include <avm/machinestate/blockreason.hpp>
 #include <avm/machinestate/datastack.hpp>
 #include <avm/machinestate/status.hpp>
+
 #include <avm_values/value.hpp>
 #include <avm_values/vmValueParser.hpp>
 
@@ -27,7 +29,7 @@
 #include <vector>
 
 struct AssertionContext {
-    std::vector<Tuple> inbox_messages;
+    std::vector<InboxMessage> inbox_messages;
     nonstd::optional<uint256_t> next_block_height;
     size_t inbox_messages_consumed{0};
     uint256_t numSteps{0};
@@ -40,14 +42,20 @@ struct AssertionContext {
 
     AssertionContext() = default;
 
-    AssertionContext(std::vector<Tuple> inbox_messages,
+    AssertionContext(std::vector<InboxMessage> inbox_messages,
                      const nonstd::optional<uint256_t>& min_next_block_height,
                      uint256_t messages_to_skip);
 
     // popInbox assumes that the number of messages already consumed is less
     // than the number of messages in the inbox
     Tuple popInbox() {
-        return std::move(inbox_messages[inbox_messages_consumed++]);
+        return inbox_messages[inbox_messages_consumed++].toTuple();
+    }
+
+    // peekInbox assumes that the number of messages already consumed is less
+    // than the number of messages in the inbox
+    const InboxMessage& peekInbox() const {
+        return inbox_messages[inbox_messages_consumed];
     }
 
     bool inboxEmpty() const {

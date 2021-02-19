@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
     ValueCache value_cache{};
     auto mach = storage.getInitialMachine(value_cache);
 
-    std::vector<Tuple> inbox_messages;
+    std::vector<InboxMessage> inbox_messages;
     if (argc == 5) {
         if (std::string(argv[3]) == "--inbox") {
             std::ifstream file(argv[4], std::ios::binary);
@@ -91,8 +91,8 @@ int main(int argc, char* argv[]) {
             auto data = reinterpret_cast<const char*>(raw_inbox.data());
             auto inbox_val = nonstd::get<Tuple>(deserialize_value(data));
             while (inbox_val != Tuple{}) {
-                inbox_messages.push_back(
-                    std::move(inbox_val.get_element(1).get<Tuple>()));
+                inbox_messages.push_back(InboxMessage::fromTuple(
+                    std::move(inbox_val.get_element(1).get<Tuple>())));
                 inbox_val =
                     nonstd::get<Tuple>(std::move(inbox_val.get_element(0)));
             }
@@ -103,8 +103,8 @@ int main(int argc, char* argv[]) {
             file >> j;
 
             for (auto& val : j["inbox"]) {
-                inbox_messages.push_back(
-                    simple_value_from_json(val).get<Tuple>());
+                inbox_messages.push_back(InboxMessage::fromTuple(
+                    simple_value_from_json(val).get<Tuple>()));
             }
         }
     }
@@ -122,6 +122,6 @@ int main(int argc, char* argv[]) {
     tx->commit();
 
     auto mach2 = storage.getMachine(mach->hash(), value_cache);
-    mach2->run(0, false, std::vector<Tuple>{}, 0, true);
+    mach2->run(0, false, std::vector<InboxMessage>{}, 0, true);
     return 0;
 }

@@ -23,68 +23,17 @@ import "./OneStepProofCommon.sol";
 
 import "../bridge/Messages.sol";
 
-import "../libraries/Precompiles.sol";
+import "../libraries/BytesLib.sol";
 
 // Originally forked from https://github.com/leapdao/solEVM-enforcer/tree/master
 
-contract OneStepProof is IOneStepProof, OneStepProofCommon {
+contract OneStepProof is OneStepProofCommon {
     using Machine for Machine.Data;
     using Hashing for Value.Data;
     using Value for Value.Data;
+    using BytesLib for bytes;
 
     uint256 private constant MAX_PAIRING_COUNT = 30;
-
-    // machineFields
-    //  initialInbox
-    //  initialMessage
-    //  initialLog
-    function executeStep(bytes32[3] calldata _machineFields, bytes calldata proof)
-        external
-        view
-        override
-        returns (uint64 gas, bytes32[5] memory fields)
-    {
-        bytes memory bproof = new bytes(0);
-        AssertionContext memory context =
-            initializeExecutionContext(
-                _machineFields[0],
-                _machineFields[1],
-                _machineFields[2],
-                proof,
-                bproof
-            );
-
-        executeOp(context);
-
-        return returnContext(context);
-    }
-
-    function executeStepDebug(bytes32[3] calldata _machineFields, bytes calldata proof)
-        external
-        view
-        returns (
-            uint64 gas,
-            bytes32[5] memory fields,
-            string memory startMachine,
-            string memory afterMachine
-        )
-    {
-        bytes memory bproof = new bytes(0);
-        AssertionContext memory context =
-            initializeExecutionContext(
-                _machineFields[0],
-                _machineFields[1],
-                _machineFields[2],
-                proof,
-                bproof
-            );
-
-        executeOp(context);
-
-        (gas, fields) = returnContext(context);
-        startMachine = Machine.toString(context.startMachine);
-        afterMachine = Machine.toString(context.afterMachine);
-    }
 
     /* solhint-disable no-inline-assembly */
 
@@ -272,66 +221,6 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
     }
 
     /* solhint-enable no-inline-assembly */
-
-    // Hash
-
-    function executeHashInsn(AssertionContext memory context) internal pure {
-        Value.Data memory val = popVal(context.stack);
-        pushVal(context.stack, Value.newInt(uint256(val.hash())));
-    }
-
-    function executeTypeInsn(AssertionContext memory context) internal pure {
-        Value.Data memory val = popVal(context.stack);
-        pushVal(context.stack, val.typeCodeVal());
-    }
-
-    function executeKeccakFInsn(AssertionContext memory context) internal pure {
-        Value.Data memory val = popVal(context.stack);
-        if (!val.isTuple() || val.tupleVal.length != 7) {
-            handleOpcodeError(context);
-            return;
-        }
-
-        Value.Data[] memory values = val.tupleVal;
-        for (uint256 i = 0; i < 7; i++) {
-            if (!values[i].isInt()) {
-                handleOpcodeError(context);
-                return;
-            }
-        }
-        uint256[25] memory data;
-        for (uint256 i = 0; i < 25; i++) {
-            data[5 * (i % 5) + i / 5] = uint256(uint64(values[i / 4].intVal >> ((i % 4) * 64)));
-        }
-
-        data = Precompiles.keccakF(data);
-
-        Value.Data[] memory outValues = new Value.Data[](7);
-        for (uint256 i = 0; i < 7; i++) {
-            outValues[i] = Value.newInt(0);
-        }
-
-        for (uint256 i = 0; i < 25; i++) {
-            outValues[i / 4].intVal |= data[5 * (i % 5) + i / 5] << ((i % 4) * 64);
-        }
-
-        pushVal(context.stack, Value.newTuple(outValues));
-    }
-
-    function executeSha256FInsn(AssertionContext memory context) internal pure {
-        Value.Data memory val1 = popVal(context.stack);
-        Value.Data memory val2 = popVal(context.stack);
-        Value.Data memory val3 = popVal(context.stack);
-        if (!val1.isInt() || !val2.isInt() || !val3.isInt()) {
-            handleOpcodeError(context);
-            return;
-        }
-        uint256 a = val1.intVal;
-        uint256 b = val2.intVal;
-        uint256 c = val3.intVal;
-
-        pushVal(context.stack, Value.newInt(Precompiles.sha256Block([b, c], a)));
-    }
 
     // Stack ops
 
@@ -526,20 +415,61 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
 
     function incrementInbox(AssertionContext memory context)
         private
-        pure
+        view
         returns (Value.Data memory message)
     {
-        uint256 newInboxDelta;
-        (context.offset, message) = Marshaling.deserialize(context.proof, context.offset);
-        (context.offset, newInboxDelta) = Marshaling.deserializeInt(context.proof, context.offset);
+        bytes memory proof = context.proof;
+
+        // Get message out of proof
+        uint8 kind = uint8(proof[context.offset]);
+        context.offset++;
+        uint256 l1BlockNumber;
+        uint256 l1Timestamp;
+        uint256 inboxSeqNum;
+        address sender = proof.toAddress(context.offset);
+        context.offset += 20;
+        (context.offset, l1BlockNumber) = Marshaling.deserializeInt(proof, context.offset);
+        (context.offset, l1Timestamp) = Marshaling.deserializeInt(proof, context.offset);
+        (context.offset, inboxSeqNum) = Marshaling.deserializeInt(proof, context.offset);
+        uint256 messageDataLength;
+        (context.offset, messageDataLength) = Marshaling.deserializeInt(proof, context.offset);
+        bytes32 messageBufHash =
+            Hashing.bytesToBufferHash(proof, context.offset, messageDataLength);
+
+        uint256 offset = context.offset;
+        bytes32 messageDataHash;
+        assembly {
+            messageDataHash := keccak256(add(add(proof, 32), offset), messageDataLength)
+        }
+
+        bytes32 messageHash =
+            Messages.messageHash(
+                kind,
+                sender,
+                l1BlockNumber,
+                l1Timestamp,
+                inboxSeqNum,
+                messageDataHash
+            );
         require(
-            context.inboxDelta == Messages.addMessageToInbox(bytes32(newInboxDelta), message.hash())
+            context.bridge.inboxMessages(context.totalMessagesRead) == messageHash,
+            "WRONG_MESSAGE"
         );
-        context.inboxDelta = bytes32(newInboxDelta);
-        return message;
+
+        context.totalMessagesRead++;
+
+        Value.Data[] memory tupData = new Value.Data[](7);
+        tupData[0] = Value.newInt(uint256(kind));
+        tupData[1] = Value.newInt(l1BlockNumber);
+        tupData[2] = Value.newInt(l1Timestamp);
+        tupData[3] = Value.newInt(uint256(sender));
+        tupData[4] = Value.newInt(inboxSeqNum);
+        tupData[5] = Value.newInt(messageDataLength);
+        tupData[6] = Value.newHashedValue(messageBufHash, 1);
+        return Value.newTuple(tupData);
     }
 
-    function executeInboxPeekInsn(AssertionContext memory context) internal pure {
+    function executeInboxPeekInsn(AssertionContext memory context) internal view {
         Value.Data memory val = popVal(context.stack);
         if (context.afterMachine.pendingMessage.hash() != Value.newEmptyTuple().hash()) {
             context.afterMachine.pendingMessage = incrementInbox(context);
@@ -551,7 +481,7 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
         );
     }
 
-    function executeInboxInsn(AssertionContext memory context) internal pure {
+    function executeInboxInsn(AssertionContext memory context) internal view {
         if (context.afterMachine.pendingMessage.hash() != Value.newEmptyTuple().hash()) {
             // The pending message field is already full
             pushVal(context.stack, context.afterMachine.pendingMessage);
@@ -814,16 +744,6 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
             return (1, 0, 1, executeNotInsn);
         } else if (opCode == OP_BYTE || opCode == OP_SHL || opCode == OP_SHR || opCode == OP_SAR) {
             return (2, 0, 4, binaryMathOp);
-        } else if (opCode == OP_HASH) {
-            return (1, 0, 7, executeHashInsn);
-        } else if (opCode == OP_TYPE) {
-            return (1, 0, 3, executeTypeInsn);
-        } else if (opCode == OP_ETHHASH2) {
-            return (2, 0, 8, binaryMathOp);
-        } else if (opCode == OP_KECCAK_F) {
-            return (1, 0, 600, executeKeccakFInsn);
-        } else if (opCode == OP_SHA256_F) {
-            return (3, 0, 250, executeSha256FInsn);
         } else if (opCode == OP_POP) {
             return (1, 0, 1, executePopInsn);
         } else if (opCode == OP_SPUSH) {
@@ -908,6 +828,8 @@ contract OneStepProof is IOneStepProof, OneStepProofCommon {
             return (1, 0, 1, executePopInsn);
         } else if (opCode == OP_NEWBUFFER) {
             return (0, 0, 1, executeNewBuffer);
+        } else if (opCode >= OP_HASH && opCode <= OP_SHA256_F) {
+            revert("use another contract to handle hashing opcodes");
         } else if ((opCode >= OP_GETBUFFER8 && opCode <= OP_SETBUFFER256) || opCode == OP_SEND) {
             revert("use another contract to handle buffer opcodes");
         } else {

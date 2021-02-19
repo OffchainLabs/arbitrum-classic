@@ -30,7 +30,7 @@ uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
 }  // namespace
 
 AssertionContext::AssertionContext(
-    std::vector<Tuple> inbox_messages,
+    std::vector<InboxMessage> inbox_messages,
     const nonstd::optional<uint256_t>& min_next_block_height,
     uint256_t messages_to_skip)
     : inbox_messages(std::move(inbox_messages)),
@@ -428,6 +428,17 @@ OneStepProof MachineState::marshalForProof() const {
     if (!underflowed) {
         // Don't need a buffer proof if we're underflowing
         marshalBufferProof(proof);
+    }
+    // Inbox or inbox peek with no staged message
+    if ((current_op.opcode == OpCode::INBOX ||
+         current_op.opcode == OpCode::INBOX_PEEK) &&
+        staged_message == value{Tuple{}}) {
+        if (context.inboxEmpty()) {
+            throw std::runtime_error("Can't generate proof with empty inbox");
+        }
+        auto message_data = context.peekInbox().serializeForProof();
+        proof.standard_proof.insert(proof.standard_proof.end(),
+                                    message_data.begin(), message_data.end());
     }
     return proof;
 }

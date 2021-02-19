@@ -10,10 +10,9 @@ import (
 
 type ExecutionImpl struct {
 	initialCursor core.ExecutionCursor
-	inboxDelta    *inboxDelta
 }
 
-func (i *ExecutionImpl) SegmentTarget() int {
+func (e *ExecutionImpl) SegmentTarget() int {
 	return 400
 }
 
@@ -27,13 +26,13 @@ func (e *ExecutionImpl) GetCuts(lookup core.ArbCoreLookup, offsets []*big.Int) (
 		}
 
 		cuts = append(cuts, core.ExecutionCut{
-			GasUsed:      executionInfo.GasUsed(),
-			InboxDelta:   e.inboxDelta.inboxDeltaAccs[executionInfo.InboxMessagesRead().Uint64()],
-			MachineState: executionInfo.After.MachineHash,
-			SendAcc:      executionInfo.SendAcc,
-			SendCount:    executionInfo.SendCount(),
-			LogAcc:       executionInfo.LogAcc,
-			LogCount:     executionInfo.LogCount(),
+			GasUsed:           executionInfo.GasUsed(),
+			TotalMessagesRead: executionInfo.After.TotalMessagesRead,
+			MachineState:      executionInfo.After.MachineHash,
+			SendAcc:           executionInfo.SendAcc,
+			SendCount:         executionInfo.SendCount(),
+			LogAcc:            executionInfo.LogAcc,
+			LogCount:          executionInfo.LogCount(),
 		})
 	}
 	return cuts, nil
@@ -47,13 +46,13 @@ func (e *ExecutionImpl) FindFirstDivergence(lookup core.ArbCoreLookup, offsets [
 			return 0, err
 		}
 		cut := core.ExecutionCut{
-			GasUsed:      executionInfo.GasUsed(),
-			InboxDelta:   e.inboxDelta.inboxDeltaAccs[executionInfo.InboxMessagesRead().Uint64()],
-			MachineState: executionInfo.After.MachineHash,
-			SendAcc:      executionInfo.SendAcc,
-			SendCount:    executionInfo.SendCount(),
-			LogAcc:       executionInfo.LogAcc,
-			LogCount:     executionInfo.LogCount(),
+			GasUsed:           executionInfo.GasUsed(),
+			TotalMessagesRead: executionInfo.After.TotalMessagesRead,
+			MachineState:      executionInfo.After.MachineHash,
+			SendAcc:           executionInfo.SendAcc,
+			SendCount:         executionInfo.SendCount(),
+			LogAcc:            executionInfo.LogAcc,
+			LogCount:          executionInfo.LogCount(),
 		}
 		if cut.CutHash() != cuts[i].CutHash() {
 			if i == 0 && len(offsets) > 2 {
@@ -116,7 +115,6 @@ func (e *ExecutionImpl) OneStepProof(
 		prevBisection,
 		segmentToChallenge,
 		execInfo,
-		e.inboxDelta.inboxDeltaAccs[execInfo.InboxMessagesRead().Uint64()],
 		proofData,
 		bufferProofData,
 		opcode,

@@ -5,22 +5,15 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/pkg/errors"
 	"math/big"
 )
-
-type inboxDelta struct {
-	inboxDeltaAccs [][32]byte
-}
 
 type Challenger struct {
 	challenge      *ethbridge.Challenge
 	lookup         core.ArbCoreLookup
 	challengedNode *core.NodeInfo
 	stakerAddress  common.Address
-
-	inboxDelta *inboxDelta
 }
 
 func (c *Challenger) ChallengeAddress() common.Address {
@@ -34,27 +27,6 @@ func NewChallenger(challenge *ethbridge.Challenge, lookup core.ArbCoreLookup, ch
 		challengedNode: challengedNode,
 		stakerAddress:  stakerAddress,
 	}
-}
-
-func (c *Challenger) getInboxDelta() (*inboxDelta, error) {
-	if c.inboxDelta == nil {
-		messagesHashes, err := c.lookup.GetMessageHashes(
-			c.challengedNode.Assertion.Before.TotalMessagesRead,
-			c.challengedNode.Assertion.InboxMessagesRead(),
-		)
-		if err != nil {
-			return nil, err
-		}
-		inboxDeltaAccs := make([][32]byte, len(messagesHashes)+2)
-		for i := range messagesHashes {
-			msgHash := messagesHashes[len(messagesHashes)-1-i]
-			inboxDeltaAccs[len(inboxDeltaAccs)-2-i] = hashing.SoliditySHA3(hashing.Bytes32(inboxDeltaAccs[len(inboxDeltaAccs)-1-i]), hashing.Bytes32(msgHash))
-		}
-		c.inboxDelta = &inboxDelta{
-			inboxDeltaAccs: inboxDeltaAccs[:len(inboxDeltaAccs)-1],
-		}
-	}
-	return c.inboxDelta, nil
 }
 
 func (c *Challenger) HandleConflict(ctx context.Context) error {
@@ -72,7 +44,7 @@ func (c *Challenger) HandleConflict(ctx context.Context) error {
 	}
 
 	var prevBisection *core.Bisection
-	if kind == core.UNINITIALIZED {
+	if kind == core.Uninitialized {
 		startCursor, err := c.lookup.GetExecutionCursor(c.challengedNode.Assertion.Before.TotalGasConsumed)
 		if err != nil {
 			return err
@@ -83,11 +55,11 @@ func (c *Challenger) HandleConflict(ctx context.Context) error {
 			false,
 			[]*big.Int{c.challengedNode.Assertion.GasUsed()},
 		)
-		kind, err = core.JudgeAssertion(c.lookup, c.challengedNode.Assertion, execTracker)
+		kind, err = core.JudgeAssertion(c.challengedNode.Assertion, execTracker)
 		if err != nil {
 			return err
 		}
-		if kind == core.STOPPED_SHORT {
+		if kind == core.StoppedShort {
 			panic("Not yet handled")
 		}
 	} else {
@@ -103,56 +75,25 @@ func (c *Challenger) HandleConflict(ctx context.Context) error {
 	}
 
 	switch kind {
-	case core.INBOX_CONSISTENCY:
-		return c.handleInboxConsistencyChallenge(ctx, prevBisection)
-	case core.INBOX_DELTA:
-		return c.handleInboxDeltaChallenge(ctx, prevBisection)
-	case core.EXECUTION:
+	case core.Execution:
 		return c.handleExecutionChallenge(ctx, prevBisection)
-	case core.STOPPED_SHORT:
+	case core.StoppedShort:
 		return c.handleStoppedShortChallenge()
 	default:
 		return errors.New("can't handle challenge")
 	}
 }
 
-func (c *Challenger) handleInboxConsistencyChallenge(ctx context.Context, prevBisection *core.Bisection) error {
-	challengeImpl := &InboxConsistencyImpl{
-		inboxMaxCount: c.challengedNode.InboxMaxCount,
-	}
-	if prevBisection == nil {
-		prevBisection = c.challengedNode.InitialInboxConsistencyBisection()
-	}
-	return handleChallenge(ctx, c.challenge, c.lookup, challengeImpl, prevBisection)
-}
-
-func (c *Challenger) handleInboxDeltaChallenge(ctx context.Context, prevBisection *core.Bisection) error {
-	inboxDeltaData, err := c.getInboxDelta()
-	if err != nil {
-		return err
-	}
-	challengeImpl := &InboxDeltaImpl{
-		nodeAfterInboxCount: c.challengedNode.Assertion.After.TotalMessagesRead,
-		inboxDelta:          inboxDeltaData,
-	}
-	if prevBisection == nil {
-		prevBisection = c.challengedNode.InitialInboxDeltaBisection()
-	}
-	return handleChallenge(ctx, c.challenge, c.lookup, challengeImpl, prevBisection)
-}
-
 func (c *Challenger) handleExecutionChallenge(ctx context.Context, prevBisection *core.Bisection) error {
 	if prevBisection == nil {
 		prevBisection = c.challengedNode.InitialExecutionBisection()
 	}
-	inboxDeltaData, err := c.getInboxDelta()
 	initialCursor, err := c.lookup.GetExecutionCursor(c.challengedNode.Assertion.Before.TotalGasConsumed)
 	if err != nil {
 		return err
 	}
 	challengeImpl := &ExecutionImpl{
 		initialCursor: initialCursor,
-		inboxDelta:    inboxDeltaData,
 	}
 	return handleChallenge(ctx, c.challenge, c.lookup, challengeImpl, prevBisection)
 }
@@ -239,34 +180,6 @@ func handleChallenge(
 			subCuts,
 		)
 	}
-}
-
-func findFirstDivergenceSimple(impl SimpleChallengerImpl, lookup core.ArbCoreLookup, cutOffsets []*big.Int, cuts []core.Cut) (int, error) {
-	for i, cutOffset := range cutOffsets {
-		correctCut, err := impl.GetCut(lookup, cutOffset)
-		if err != nil {
-			return 0, err
-		}
-		if !correctCut.Equals(cuts[i]) {
-			if i == 0 && len(cutOffsets) > 2 {
-				return 0, errors.New("first cut was already wrong")
-			}
-			return i, nil
-		}
-	}
-	return 0, errors.New("all cuts correct")
-}
-
-func getCutsSimple(impl SimpleChallengerImpl, lookup core.ArbCoreLookup, offsets []*big.Int) ([]core.Cut, error) {
-	cuts := make([]core.Cut, 0, len(offsets))
-	for _, cutOffset := range offsets {
-		cut, err := impl.GetCut(lookup, cutOffset)
-		if err != nil {
-			return nil, err
-		}
-		cuts = append(cuts, cut)
-	}
-	return cuts, nil
 }
 
 func generateBisectionCutOffsets(segment *core.ChallengeSegment, subSegmentCount int) []*big.Int {

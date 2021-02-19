@@ -224,16 +224,10 @@ class ArbCore {
     ValueResult<std::vector<std::vector<unsigned char>>> getSends(
         uint256_t index,
         uint256_t count) const;
-    ValueResult<std::vector<uint256_t>> getInboxHashes(uint256_t index,
-                                                       uint256_t count) const;
+
     ValueResult<std::vector<std::vector<unsigned char>>> getMessages(
         uint256_t index,
         uint256_t count) const;
-    ValueResult<std::vector<uint256_t>> getMessageHashes(uint256_t index,
-                                                         uint256_t count) const;
-    ValueResult<uint256_t> getInboxDelta(uint256_t start_index,
-                                         uint256_t count);
-    ValueResult<uint256_t> getInboxAcc(uint256_t index);
     ValueResult<uint256_t> getSendAcc(uint256_t start_acc_hash,
                                       uint256_t start_index,
                                       uint256_t count);

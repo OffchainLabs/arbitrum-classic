@@ -63,7 +63,7 @@ Machine generateTestMachine() {
 
 void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
     auto assertion =
-        mach.run(gas_count_target, false, std::vector<Tuple>{}, 0, true);
+        mach.run(gas_count_target, false, std::vector<InboxMessage>{}, 0, true);
     REQUIRE(assertion.gasCount <= gas_count_target);
     auto val = mach.machine_state.stack.pop();
     REQUIRE(val == value{uint256_t{4}});
@@ -91,7 +91,7 @@ TEST_CASE("Code serialization") {
 
     SECTION("Save different and load") {
         auto mach2 = mach;
-        mach2.run(7, false, std::vector<Tuple>{}, 0, true);
+        mach2.run(7, false, std::vector<InboxMessage>{}, 0, true);
         saveMachine(*tx, mach);
         saveMachine(*tx, mach2);
 

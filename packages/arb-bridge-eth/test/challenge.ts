@@ -21,7 +21,7 @@ import { ContractTransaction } from '@ethersproject/contracts'
 import { assert, expect } from 'chai'
 import { ChallengeTester } from '../build/types/ChallengeTester'
 import { Challenge } from '../build/types/Challenge'
-// import { RollupTester } from '../build/types/RollupTester'
+import { Bridge } from '../build/types/Bridge'
 import { initializeAccounts } from './utils'
 
 import { Node, NodeState, Assertion, RollupContract } from './rolluplib'
@@ -33,6 +33,7 @@ const zerobytes32 =
 
 let accounts: Signer[]
 let challengeTester: ChallengeTester
+let bridge: Bridge
 
 describe('Challenge', () => {
   before(async () => {
@@ -52,6 +53,10 @@ describe('Challenge', () => {
       osp2.address
     )) as ChallengeTester
     await challengeTester.deployed()
+
+    const Bridge = await ethers.getContractFactory('Bridge')
+    bridge = (await Bridge.deploy()) as Bridge
+    await bridge.deployed()
   })
 
   let challenge: Challenge
@@ -62,7 +67,6 @@ describe('Challenge', () => {
       block.number,
       0,
       initialVmState,
-      zerobytes32,
       0,
       0,
       0,
@@ -76,16 +80,15 @@ describe('Challenge', () => {
       [],
       []
     )
-    challengedNode = new Node(assertion, 10, zerobytes32, 0)
-    const fields = challengedNode.challengeFields()
+    challengedNode = new Node(assertion, 10, 0)
     await challengeTester.startChallenge(
-      fields[0],
-      fields[1],
-      fields[2],
+      challengedNode.assertion.executionHash(),
+      challengedNode.assertion.afterMessageCount(),
       await accounts[0].getAddress(),
       await accounts[1].getAddress(),
       100,
-      100
+      100,
+      bridge.address
     )
     const challengeAddress = await challengeTester.challenge()
     const Challenge = await ethers.getContractFactory('Challenge')

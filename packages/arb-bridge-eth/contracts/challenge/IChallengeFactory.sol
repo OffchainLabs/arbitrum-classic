@@ -18,15 +18,17 @@
 
 pragma solidity ^0.6.11;
 
+import "../bridge/interfaces/IBridge.sol";
+
 interface IChallengeFactory {
     function createChallenge(
         address _resultReceiver,
-        bytes32 _inboxConsistencyHash,
-        bytes32 _inboxDeltaHash,
         bytes32 _executionHash,
+        uint256 _maxMessageCount,
         address _asserter,
         address _challenger,
         uint256 _asserterTimeLeft,
-        uint256 _challengerTimeLeft
+        uint256 _challengerTimeLeft,
+        IBridge _bridge
     ) external returns (address);
 }

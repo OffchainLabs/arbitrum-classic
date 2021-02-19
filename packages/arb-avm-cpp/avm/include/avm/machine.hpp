@@ -17,6 +17,7 @@
 #ifndef machine_hpp
 #define machine_hpp
 
+#include <avm/inboxmessage.hpp>
 #include <avm/machinestate/machinestate.hpp>
 #include <avm_values/value.hpp>
 
@@ -57,7 +58,7 @@ class Machine {
                   bool final_message_of_block);
     Assertion run(uint256_t max_gas,
                   bool go_over_gas,
-                  const std::vector<Tuple>& inbox_messages,
+                  const std::vector<InboxMessage>& inbox_messages,
                   uint256_t messages_to_skip,
                   bool final_message_of_block);
 

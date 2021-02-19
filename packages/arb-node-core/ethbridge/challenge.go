@@ -5,9 +5,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/pkg/errors"
 	"math/big"
 )
@@ -59,107 +57,6 @@ func NewChallenge(address ethcommon.Address, client ethutils.EthClient, builder 
 	}, nil
 }
 
-func (c *Challenge) BisectInboxConsistency(
-	ctx context.Context,
-	prevBisection *core.Bisection,
-	segmentToChallenge int,
-	challengedSegment *core.ChallengeSegment,
-	subCuts []core.Cut,
-) error {
-	subCutHashes := cutsToHashes(subCuts)
-	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
-	nodes, path := prevTree.GetProof(segmentToChallenge)
-	_, err := c.builderCon.BisectInboxConsistency(
-		authWithContext(ctx, c.builderAuth),
-		nodes,
-		path,
-		challengedSegment.Start,
-		challengedSegment.Length,
-		prevCutHashes[segmentToChallenge+1],
-		subCutHashes,
-	)
-	return err
-}
-
-func (c *Challenge) OneStepProveInboxConsistency(
-	ctx context.Context,
-	prevBisection *core.Bisection,
-	segmentToChallenge int,
-	challengedSegment *core.ChallengeSegment,
-	lowerHash [32]byte,
-	value [32]byte,
-) error {
-	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
-	nodes, path := prevTree.GetProof(segmentToChallenge)
-	_, err := c.builderCon.OneStepProveInboxConsistency(
-		authWithContext(ctx, c.builderAuth),
-		nodes,
-		path,
-		challengedSegment.Start,
-		prevCutHashes[segmentToChallenge+1],
-		lowerHash,
-		value,
-	)
-	return err
-}
-
-func (c *Challenge) BisectInboxDelta(
-	ctx context.Context,
-	prevBisection *core.Bisection,
-	segmentToChallenge int,
-	challengedSegment *core.ChallengeSegment,
-	subCuts []core.Cut,
-) error {
-	subInboxAccHashes := make([][32]byte, 0, len(subCuts))
-	subInboxDeltaHashes := make([][32]byte, 0, len(subCuts))
-	for _, cut := range subCuts {
-		subInboxAccHashes = append(subInboxAccHashes, cut.(core.InboxDeltaCut).InboxAccHash)
-		subInboxDeltaHashes = append(subInboxDeltaHashes, cut.(core.InboxDeltaCut).InboxDeltaHash)
-	}
-	_, prevTree := calculateBisectionTree(prevBisection)
-	nodes, path := prevTree.GetProof(segmentToChallenge)
-	_, err := c.builderCon.BisectInboxDelta(
-		authWithContext(ctx, c.builderAuth),
-		nodes,
-		path,
-		challengedSegment.Start,
-		challengedSegment.Length,
-		prevBisection.Cuts[segmentToChallenge+1].(core.InboxDeltaCut).InboxDeltaHash,
-		subInboxAccHashes,
-		subInboxDeltaHashes,
-	)
-	return err
-}
-
-func (c *Challenge) OneStepProveInboxDelta(
-	ctx context.Context,
-	prevBisection *core.Bisection,
-	segmentToChallenge int,
-	challengedSegment *core.ChallengeSegment,
-	msg inbox.InboxMessage,
-) error {
-	_, prevTree := calculateBisectionTree(prevBisection)
-	nodes, path := prevTree.GetProof(segmentToChallenge)
-	oldBefore := prevBisection.Cuts[segmentToChallenge].(core.InboxDeltaCut)
-	oldAfter := prevBisection.Cuts[segmentToChallenge+1].(core.InboxDeltaCut)
-	_, err := c.builderCon.OneStepProveInboxDelta(
-		authWithContext(ctx, c.builderAuth),
-		nodes,
-		path,
-		challengedSegment.Start,
-		oldAfter.InboxDeltaHash,
-		oldBefore.InboxDeltaHash,
-		oldAfter.InboxAccHash,
-		uint8(msg.Kind),
-		msg.ChainTime.BlockNum.AsInt(),
-		msg.ChainTime.Timestamp,
-		msg.Sender.ToEthAddress(),
-		msg.InboxSeqNum,
-		msg.Data,
-	)
-	return err
-}
-
 func (c *Challenge) BisectExecution(
 	ctx context.Context,
 	prevBisection *core.Bisection,
@@ -189,7 +86,6 @@ func (c *Challenge) OneStepProveExecution(
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	beforeExecInfo *core.ExecutionInfo,
-	beforeInboxDelta common.Hash,
 	executionProof []byte,
 	bufferProof []byte,
 	opcode uint8,
@@ -206,11 +102,9 @@ func (c *Challenge) OneStepProveExecution(
 		path,
 		prevBisection.ChallengedSegment.Start,
 		prevCutHashes[segmentToChallenge+1],
-		[3][32]byte{
-			beforeInboxDelta,
-			beforeExecInfo.SendAcc,
-			beforeExecInfo.LogAcc,
-		},
+		beforeExecInfo.Before.TotalMessagesRead,
+		beforeExecInfo.SendAcc,
+		beforeExecInfo.LogAcc,
 		[3]*big.Int{
 			beforeExecInfo.GasUsed(),
 			beforeExecInfo.SendCount(),

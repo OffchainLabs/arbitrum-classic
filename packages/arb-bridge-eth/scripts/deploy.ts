@@ -7,6 +7,7 @@ type ContractName =
   | 'ChallengeFactory'
   | 'OneStepProof'
   | 'OneStepProof2'
+  | 'OneStepProofHash'
 
 const logDeploy = (contractName: string, contract: Contract) => {
   console.log(
@@ -19,6 +20,7 @@ export default async function deploy_contracts(): Promise<
 > {
   const OneStepProof = await ethers.getContractFactory('OneStepProof')
   const OneStepProof2 = await ethers.getContractFactory('OneStepProof2')
+  const OneStepProofHash = await ethers.getContractFactory('OneStepProofHash')
   const ChallengeFactory = await ethers.getContractFactory('ChallengeFactory')
   const NodeFactory = await ethers.getContractFactory('NodeFactory')
   const Rollup = await ethers.getContractFactory('Rollup')
@@ -28,11 +30,14 @@ export default async function deploy_contracts(): Promise<
   logDeploy('OneStepProof', oneStepProof)
   const oneStepProof2 = await OneStepProof2.deploy()
   logDeploy('OneStepProof2', oneStepProof2)
+  const oneStepProof3 = await OneStepProofHash.deploy()
+  logDeploy('OneStepProofHash', oneStepProof3)
 
-  const challengeFactory = await ChallengeFactory.deploy(
+  const challengeFactory = await ChallengeFactory.deploy([
     oneStepProof.address,
-    oneStepProof2.address
-  )
+    oneStepProof2.address,
+    oneStepProof3.address,
+  ])
   logDeploy('ChallengeFactory', challengeFactory)
 
   const nodeFactory = await NodeFactory.deploy()
@@ -50,6 +55,9 @@ export default async function deploy_contracts(): Promise<
     }),
     oneStepProof2.deployed().then(() => {
       console.log('OneStepProof2 deployed')
+    }),
+    oneStepProof3.deployed().then(() => {
+      console.log('OneStepProofHash deployed')
     }),
     challengeFactory.deployed().then(() => {
       console.log('ChallengeFactory deployed')
@@ -77,6 +85,7 @@ export default async function deploy_contracts(): Promise<
     ChallengeFactory: challengeFactory,
     OneStepProof: oneStepProof,
     OneStepProof2: oneStepProof2,
+    OneStepProofHash: oneStepProof3,
   }
   return contracts
 }

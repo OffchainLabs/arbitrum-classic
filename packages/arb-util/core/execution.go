@@ -131,28 +131,7 @@ func (e *ExecutionTracker) GetMachine(gasUsed *big.Int) (machine.Machine, error)
 	return e.cursors[index].Clone().TakeMachine()
 }
 
-func JudgeAssertion(lookup ArbCoreLookup, assertion *Assertion, execTracker *ExecutionTracker) (ChallengeKind, error) {
-	var afterInboxHash common.Hash
-	if assertion.After.TotalMessagesRead.Cmp(big.NewInt(0)) != 0 {
-		var err error
-		afterInboxHash, err = lookup.GetInboxAcc(new(big.Int).Sub(assertion.After.TotalMessagesRead, big.NewInt(1)))
-		if err != nil {
-			return 0, err
-		}
-	}
-	if assertion.After.InboxHash != afterInboxHash {
-		// Failed inbox consistency
-		return INBOX_CONSISTENCY, nil
-	}
-	inboxDelta, err := lookup.GetInboxDelta(assertion.Before.TotalMessagesRead, assertion.InboxMessagesRead())
-	if err != nil {
-		return 0, err
-	}
-	if assertion.InboxDelta != inboxDelta {
-		// Failed inbox delta
-		return INBOX_DELTA, nil
-	}
-
+func JudgeAssertion(assertion *Assertion, execTracker *ExecutionTracker) (ChallengeKind, error) {
 	localExecutionInfo, err := execTracker.GetExecutionInfo(assertion.GasUsed())
 	if err != nil {
 		return 0, err
@@ -160,11 +139,11 @@ func JudgeAssertion(lookup ArbCoreLookup, assertion *Assertion, execTracker *Exe
 	if localExecutionInfo.InboxMessagesRead().Cmp(assertion.InboxMessagesRead()) > 0 {
 		// Execution read more messages than provided so assertion should have
 		// stopped short
-		return STOPPED_SHORT, nil
+		return StoppedShort, nil
 	}
 
 	if !assertion.ExecutionInfo.Equals(localExecutionInfo) {
-		return EXECUTION, nil
+		return Execution, nil
 	}
-	return NO_CHALLENGE, nil
+	return NoChallenge, nil
 }

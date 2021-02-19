@@ -21,8 +21,9 @@ pragma solidity ^0.6.11;
 import "./IOneStepProof.sol";
 import "./Value.sol";
 import "./Machine.sol";
+import "../bridge/interfaces/IBridge.sol";
 
-abstract contract OneStepProofCommon {
+abstract contract OneStepProofCommon is IOneStepProof {
     using Machine for Machine.Data;
     using Hashing for Value.Data;
     using Value for Value.Data;
@@ -147,6 +148,46 @@ abstract contract OneStepProofCommon {
 
     uint256 internal constant SEND_SIZE_LIMIT = 10000;
 
+    // accs is [sendAcc, logAcc]
+    function executeStep(
+        IBridge bridge,
+        uint256 initialMessagesRead,
+        bytes32[2] calldata accs,
+        bytes calldata proof,
+        bytes calldata bproof
+    )
+        external
+        view
+        override
+        returns (
+            uint64 gas,
+            uint256 totalMessagesRead,
+            bytes32[4] memory fields
+        )
+    {
+        AssertionContext memory context =
+            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, bridge);
+
+        executeOp(context);
+
+        return returnContext(context);
+    }
+
+    function executeStepDebug(
+        IBridge bridge,
+        uint256 initialMessagesRead,
+        bytes32[2] calldata accs,
+        bytes calldata proof,
+        bytes calldata bproof
+    ) external view override returns (string memory startMachine, string memory afterMachine) {
+        AssertionContext memory context =
+            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, bridge);
+
+        executeOp(context);
+        startMachine = Machine.toString(context.startMachine);
+        afterMachine = Machine.toString(context.afterMachine);
+    }
+
     // fields
     // startMachineHash,
     // endMachineHash,
@@ -157,14 +198,18 @@ abstract contract OneStepProofCommon {
     function returnContext(AssertionContext memory context)
         internal
         pure
-        returns (uint64 gas, bytes32[5] memory fields)
+        returns (
+            uint64 gas,
+            uint256 totalMessagesRead,
+            bytes32[4] memory fields
+        )
     {
         return (
             context.gas,
+            context.totalMessagesRead,
             [
                 Machine.hash(context.startMachine),
                 Machine.hash(context.afterMachine),
-                context.inboxDelta,
                 context.sendAcc,
                 context.logAcc
             ]
@@ -188,9 +233,10 @@ abstract contract OneStepProofCommon {
     }
 
     struct AssertionContext {
+        IBridge bridge;
         Machine.Data startMachine;
         Machine.Data afterMachine;
-        bytes32 inboxDelta;
+        uint256 totalMessagesRead;
         bytes32 sendAcc;
         bytes32 logAcc;
         uint64 gas;
@@ -231,11 +277,11 @@ abstract contract OneStepProofCommon {
     }
 
     function initializeExecutionContext(
-        bytes32 inboxDelta,
-        bytes32 messagesAcc,
-        bytes32 logsAcc,
+        uint256 initialMessagesRead,
+        bytes32[2] calldata accs,
         bytes memory proof,
-        bytes memory bproof
+        bytes memory bproof,
+        IBridge bridge
     ) internal pure returns (AssertionContext memory) {
         uint8 opCode = uint8(proof[0]);
         uint8 stackCount = uint8(proof[1]);
@@ -254,26 +300,25 @@ abstract contract OneStepProofCommon {
         Machine.Data memory mach;
         (offset, mach) = Machine.deserializeMachine(proof, offset);
 
-        AssertionContext memory context =
-            AssertionContext(
-                mach,
-                mach.clone(),
-                inboxDelta,
-                messagesAcc,
-                logsAcc,
-                0,
-                ValueStack(stackCount, stackVals),
-                ValueStack(auxstackCount, auxstackVals),
-                uint8(proof[offset]) == 1,
-                opCode,
-                proof,
-                offset + 1,
-                bproof,
-                false
-            );
-
         uint8 immediate = uint8(proof[offset]);
         offset += 1;
+
+        AssertionContext memory context;
+        context.bridge = bridge;
+        context.startMachine = mach;
+        context.afterMachine = mach.clone();
+        context.totalMessagesRead = initialMessagesRead;
+        context.sendAcc = accs[0];
+        context.logAcc = accs[1];
+        context.gas = 0;
+        context.stack = ValueStack(stackCount, stackVals);
+        context.auxstack = ValueStack(auxstackCount, auxstackVals);
+        context.hadImmediate = immediate == 1;
+        context.opcode = opCode;
+        context.proof = proof;
+        context.bufProof = bproof;
+        context.errorOccurred = false;
+        context.offset = offset;
 
         require(immediate == 0 || immediate == 1, BAD_IMM_TYP);
         Value.Data memory cp;
