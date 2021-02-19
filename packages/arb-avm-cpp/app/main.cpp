@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
             auto inbox_val = std::get<Tuple>(deserialize_value(data));
             while (inbox_val != Tuple{}) {
                 inbox_messages.push_back(InboxMessage::fromTuple(
-                    std::move(inbox_val.get_element(1).get<Tuple>())));
+                    std::move(std::get<Tuple>(inbox_val.get_element(1)))));
                 inbox_val =
                     std::get<Tuple>(std::move(inbox_val.get_element(0)));
             }
@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
 
             for (auto& val : j["inbox"]) {
                 inbox_messages.push_back(InboxMessage::fromTuple(
-                    simple_value_from_json(val).get<Tuple>()));
+                    std::get<Tuple>(simple_value_from_json(val))));
             }
         }
     }
