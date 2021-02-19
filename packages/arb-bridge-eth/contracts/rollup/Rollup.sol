@@ -469,7 +469,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             msg.sender
         );
 
-        // inboxMaxCount must be greater than beforeInboxCount since we can't have read past the end of the inbox
+        // Ensure that the assertion doesn't read past the end of the current inbox
         uint256 inboxMaxCount = bridge.messageCount();
         require(
             assertion.inboxMessagesRead <= inboxMaxCount.sub(assertion.beforeInboxCount),
