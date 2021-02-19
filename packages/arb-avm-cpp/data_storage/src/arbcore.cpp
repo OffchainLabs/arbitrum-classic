@@ -207,15 +207,18 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         }
         status = updateSendInsertedCount(*tx, 0);
         if (!status.ok()) {
-            throw std::runtime_error("failed to initialize log inserted count");
+            throw std::runtime_error(
+                "failed to initialize send inserted count");
         }
         status = updateMessageEntryInsertedCount(*tx, 0);
         if (!status.ok()) {
-            throw std::runtime_error("failed to initialize log inserted count");
+            throw std::runtime_error(
+                "failed to initialize message entry inserted count");
         }
         status = updateMessageEntryProcessedCount(*tx, 0);
         if (!status.ok()) {
-            throw std::runtime_error("failed to initialize log inserted count");
+            throw std::runtime_error(
+                "failed to initialize message entry processed inserted count");
         }
     }
 
@@ -1498,11 +1501,6 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
             *tx, previous_valid_sequence_number, false, cache);
     }
 
-    InboxMessage next_inbox_message;
-    if (current_message_index < messages_count) {
-        next_inbox_message =
-            extractInboxMessage(messages[current_message_index]);
-    }
     while (current_message_index < messages_count) {
         // Encode key
         std::vector<unsigned char> key;
@@ -1511,23 +1509,11 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
         auto current_inbox_hash = hash_inbox(current_previous_inbox_hash,
                                              messages[current_message_index]);
 
-        auto current_inbox_message = std::move(next_inbox_message);
-        if (current_message_index < messages_count) {
-            next_inbox_message =
-                extractInboxMessage(messages[current_message_index]);
-        } else {
-            next_inbox_message = {};
-        }
-
-        bool last_message_in_block;
-        if (last_block_complete &&
-            ((current_message_index == messages_count - 1) ||
-             current_inbox_message.block_number !=
-                 next_inbox_message.block_number)) {
-            last_message_in_block = true;
-        } else {
-            last_message_in_block = false;
-        }
+        auto current_inbox_message =
+            extractInboxMessage(messages[current_message_index]);
+        bool last_message_in_block =
+            last_block_complete &&
+            ((current_message_index == messages_count - 1));
 
         // Encode message entry
         auto messageEntry = MessageEntry{
@@ -1728,7 +1714,7 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(Transaction& tx,
     auto log_processed_count = logProcessedCount(tx);
     if (!log_processed_count.status.ok()) {
         std::cerr << "Error getting processed count in Cursor Reorg: "
-                  << log_inserted_count.status.ToString() << "\n";
+                  << log_processed_count.status.ToString() << "\n";
         return log_processed_count.status;
     }
 
