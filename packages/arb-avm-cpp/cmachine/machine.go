@@ -53,16 +53,17 @@ func New(codeFile string) (*Machine, error) {
 	if cMachine == nil {
 		return nil, errors.Errorf("error creating machine from file %s", codeFile)
 	}
-
-	ret := &Machine{cMachine}
-
-	runtime.SetFinalizer(ret, cdestroyVM)
-
-	return ret, nil
+	return WrapCMachine(cMachine), nil
 }
 
 func cdestroyVM(cMachine *Machine) {
 	C.machineDestroy(cMachine.c)
+}
+
+func WrapCMachine(cMachine unsafe.Pointer) *Machine {
+	ret := &Machine{cMachine}
+	runtime.SetFinalizer(ret, cdestroyVM)
+	return ret
 }
 
 func (m *Machine) Hash() (ret common.Hash) {

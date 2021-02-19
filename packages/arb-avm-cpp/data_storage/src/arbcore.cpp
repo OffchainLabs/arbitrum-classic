@@ -692,7 +692,8 @@ void ArbCore::operator()() {
                     sideload_cache[block] = std::make_unique<Machine>(*machine);
                     auto it = sideload_cache.begin();
                     while (it != sideload_cache.end()) {
-                        if (it->first < block - sideload_cache_size ||
+                        if ((block > sideload_cache_size &&
+                             it->first < block - sideload_cache_size) ||
                             it->first > block) {
                             it = sideload_cache.erase(it);
                         } else {

@@ -457,7 +457,7 @@ CMachine* arbCoreGetMachineForSideload(CArbCore* arbcore_ptr,
     try {
         auto machine = arbcore->getMachineForSideload(block_number, cache);
         if (!machine.status.ok()) {
-            std::cerr << "Failed to load machine for sideload"
+            std::cerr << "Failed to load machine for sideload "
                       << machine.status.ToString() << std::endl;
             return nullptr;
         }
