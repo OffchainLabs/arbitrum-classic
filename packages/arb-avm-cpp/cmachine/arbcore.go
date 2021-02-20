@@ -27,24 +27,28 @@ package cmachine
 import "C"
 import (
 	"bytes"
+	"math/big"
+	"unsafe"
+
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"math/big"
-	"unsafe"
 
 	"github.com/pkg/errors"
 )
 
 type ArbCore struct {
-	c unsafe.Pointer
+	c       unsafe.Pointer
+	storage *ArbStorage
 }
 
-func NewArbCore(c unsafe.Pointer) *ArbCore {
+func NewArbCore(c unsafe.Pointer, storage *ArbStorage) *ArbCore {
 	// ArbCore has same lifetime as ArbStorage, no need to have finalizer
-	return &ArbCore{c: c}
+	// Keeping a reference to ArbStorage makes sure that ArbCore isn't
+	// destroyed too early, as ArbStorage owns ArbCore, not this struct
+	return &ArbCore{c: c, storage: storage}
 }
 
 func (ac *ArbCore) StartThread() bool {

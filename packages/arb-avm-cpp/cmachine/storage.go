@@ -26,10 +26,11 @@ package cmachine
 */
 import "C"
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/pkg/errors"
 	"runtime"
 	"unsafe"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -109,7 +110,7 @@ func (s *ArbStorage) DeleteCheckpoint(machineHash common.Hash) bool {
 
 func (s *ArbStorage) GetArbCore() core.ArbCore {
 	ac := C.createArbCore(s.c)
-	return NewArbCore(ac)
+	return NewArbCore(ac, s)
 }
 
 func (s *ArbStorage) GetAggregatorStore() *AggregatorStore {
