@@ -70,7 +70,7 @@ class Machine {
         return Machine{MachineState::loadFromFile(executable_filename)};
     }
 
-    Assertion run(const MachineExecutionConfig& config);
+    Assertion run(MachineExecutionConfig config);
 
     Status currentStatus() const { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }

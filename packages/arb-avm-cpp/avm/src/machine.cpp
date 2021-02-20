@@ -59,20 +59,23 @@ void MachineExecutionConfig::setSideloadsFromBytes(
     convertInboxMessagesFromBytes(bytes, sideloads);
 }
 
-Assertion Machine::run(const MachineExecutionConfig& config) {
-    machine_state.context = AssertionContext(config);
-
+Assertion Machine::run(MachineExecutionConfig config) {
+    auto config_max_gas = config.max_gas;
+    auto config_go_over_gas = config.go_over_gas;
     bool has_gas_limit = config.max_gas != 0;
+
+    machine_state.context = AssertionContext(std::move(config));
+
     BlockReason block_reason = NotBlocked{};
     while (true) {
         if (has_gas_limit) {
-            if (!config.go_over_gas) {
+            if (!config_go_over_gas) {
                 if (machine_state.nextGasCost() + machine_state.context.numGas >
-                    config.max_gas) {
+                    config_max_gas) {
                     // Next step would go over gas limit
                     break;
                 }
-            } else if (machine_state.context.numGas >= config.max_gas) {
+            } else if (machine_state.context.numGas >= config_max_gas) {
                 // Last step reached or went over gas limit
                 break;
             }
