@@ -687,10 +687,16 @@ void ArbCore::operator()() {
                 // Cache pre-sideload machines
                 if (last_assertion.sideloadBlockNumber) {
                     auto block = *last_assertion.sideloadBlockNumber;
-                    std::lock_guard<std::mutex> lock(sideload_cache_mutex);
+                    std::unique_lock<std::shared_mutex> lock(
+                        sideload_cache_mutex);
                     sideload_cache[block] = std::make_unique<Machine>(*machine);
+                    // Remove any sideload_cache entries that are either more
+                    // than sideload_cache_size blocks old, or in the future
+                    // (meaning they've been reorg'd out).
                     auto it = sideload_cache.begin();
                     while (it != sideload_cache.end()) {
+                        // Note: we check if block > sideload_cache_size here
+                        // to prevent an underflow in the following check.
                         if ((block > sideload_cache_size &&
                              it->first < block - sideload_cache_size) ||
                             it->first > block) {
@@ -1931,7 +1937,7 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
     ValueCache& cache) {
     // Check the cache
     {
-        std::lock_guard<std::mutex> lock(sideload_cache_mutex);
+        std::shared_lock<std::shared_mutex> lock(sideload_cache_mutex);
         auto it = sideload_cache.find(block_number);
         if (it != sideload_cache.end()) {
             return {rocksdb::Status::OK(),

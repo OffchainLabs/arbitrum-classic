@@ -31,6 +31,7 @@
 #include <map>
 #include <memory>
 #include <queue>
+#include <shared_mutex>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -82,7 +83,7 @@ class ArbCore {
 
     // Cache a machine ready to sideload view transactions just after recent
     // blocks
-    std::mutex sideload_cache_mutex;
+    std::shared_mutex sideload_cache_mutex;
     std::map<uint256_t, std::unique_ptr<Machine>> sideload_cache;
 
     // Core thread inbox status input/output. Core thread will update if and

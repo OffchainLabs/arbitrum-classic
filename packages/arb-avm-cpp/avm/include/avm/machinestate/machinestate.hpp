@@ -46,7 +46,7 @@ struct AssertionContext {
 
     AssertionContext() = default;
 
-    AssertionContext(const MachineExecutionConfig& config);
+    AssertionContext(MachineExecutionConfig config);
 
     // popInbox assumes that the number of messages already consumed is less
     // than the number of messages in the inbox

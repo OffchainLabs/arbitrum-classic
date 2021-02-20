@@ -30,10 +30,10 @@ namespace {
 uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
 }  // namespace
 
-AssertionContext::AssertionContext(const MachineExecutionConfig& config)
+AssertionContext::AssertionContext(MachineExecutionConfig config)
     : inbox_messages(std::move(config.inbox_messages)),
       inbox_messages_consumed(config.messages_to_skip),
-      sideloads(config.sideloads),
+      sideloads(std::move(config.sideloads)),
       stop_on_sideload(config.stop_on_sideload) {
     if (config.final_message_of_block && !config.inbox_messages.empty()) {
         // Last message is the final message of a block, so need to

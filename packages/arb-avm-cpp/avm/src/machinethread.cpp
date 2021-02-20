@@ -30,7 +30,7 @@ bool MachineThread::runMachine(MachineExecutionConfig config) {
     machine_status = MACHINE_RUNNING;
 
     machine_thread = std::make_unique<std::thread>(
-        (std::reference_wrapper<MachineThread>(*this)), config);
+        (std::reference_wrapper<MachineThread>(*this)), std::move(config));
 
     return true;
 }
@@ -66,6 +66,6 @@ void MachineThread::clearError() {
 }
 
 void MachineThread::operator()(MachineExecutionConfig config) {
-    last_assertion = run(config);
+    last_assertion = run(std::move(config));
     machine_status = MACHINE_SUCCESS;
 }
