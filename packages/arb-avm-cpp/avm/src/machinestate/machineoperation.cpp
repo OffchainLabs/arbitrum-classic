@@ -38,15 +38,15 @@ static T shrink(uint256_t i) {
 }
 
 bool hasStagedMessage(const value& staged_message) {
-    return !nonstd::holds_alternative<Tuple>(staged_message) ||
-           nonstd::get<Tuple>(staged_message) != Tuple();
+    return !std::holds_alternative<Tuple>(staged_message) ||
+           std::get<Tuple>(staged_message) != Tuple();
 }
 }  // namespace
 
 namespace machineoperation {
 
 uint256_t& assumeInt(value& val) {
-    auto aNum = nonstd::get_if<uint256_t>(&val);
+    auto aNum = std::get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
     }
@@ -54,7 +54,7 @@ uint256_t& assumeInt(value& val) {
 }
 
 const uint256_t& assumeInt(const value& val) {
-    auto aNum = nonstd::get_if<uint256_t>(&val);
+    auto aNum = std::get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
     }
@@ -62,7 +62,7 @@ const uint256_t& assumeInt(const value& val) {
 }
 
 const CodePointStub& assumeCodePoint(const value& val) {
-    auto cp = nonstd::get_if<CodePointStub>(&val);
+    auto cp = std::get_if<CodePointStub>(&val);
     if (!cp) {
         throw bad_pop_type{};
     }
@@ -78,7 +78,7 @@ uint64_t assumeInt64(uint256_t& val) {
 }
 
 const Tuple& assumeTuple(const value& val) {
-    auto tup = nonstd::get_if<Tuple>(&val);
+    auto tup = std::get_if<Tuple>(&val);
     if (!tup) {
         throw bad_pop_type{};
     }
@@ -86,7 +86,7 @@ const Tuple& assumeTuple(const value& val) {
 }
 
 Tuple& assumeTuple(value& val) {
-    auto tup = nonstd::get_if<Tuple>(&val);
+    auto tup = std::get_if<Tuple>(&val);
     if (!tup) {
         throw bad_pop_type{};
     }
@@ -94,7 +94,7 @@ Tuple& assumeTuple(value& val) {
 }
 
 Buffer& assumeBuffer(value& val) {
-    auto buf = nonstd::get_if<Buffer>(&val);
+    auto buf = std::get_if<Buffer>(&val);
     if (!buf) {
         throw bad_pop_type{};
     }
@@ -415,7 +415,7 @@ struct ValueTypeVisitor {
 
 void typeOp(MachineState& m) {
     m.stack.prepForMod(1);
-    m.stack[0] = nonstd::visit(ValueTypeVisitor{}, m.stack[0]);
+    m.stack[0] = std::visit(ValueTypeVisitor{}, m.stack[0]);
     ++m.pc;
 }
 
@@ -607,7 +607,7 @@ void errPush(MachineState& m) {
 
 void errSet(MachineState& m) {
     m.stack.prepForMod(1);
-    auto codePointVal = nonstd::get_if<CodePointStub>(&m.stack[0]);
+    auto codePointVal = std::get_if<CodePointStub>(&m.stack[0]);
     if (!codePointVal) {
         m.state = Status::Error;
     } else {
@@ -758,12 +758,12 @@ void ec_add(MachineState& m) {
 
     auto ret = ecadd({aVal, bVal}, {cVal, dVal});
 
-    if (nonstd::holds_alternative<std::string>(ret)) {
+    if (std::holds_alternative<std::string>(ret)) {
         m.state = Status::Error;
         return;
     }
 
-    G1Point ans = ret.get<G1Point>();
+    G1Point ans = std::get<G1Point>(ret);
     cVal = ans.x;
     dVal = ans.y;
     m.stack.popClear();
@@ -779,12 +779,12 @@ void ec_mul(MachineState& m) {
 
     auto ret = ecmul({aVal, bVal}, cVal);
 
-    if (nonstd::holds_alternative<std::string>(ret)) {
+    if (std::holds_alternative<std::string>(ret)) {
         m.state = Status::Error;
         return;
     }
 
-    G1Point ans = ret.get<G1Point>();
+    G1Point ans = std::get<G1Point>(ret);
     bVal = ans.x;
     cVal = ans.y;
     m.stack.popClear();
@@ -824,12 +824,12 @@ void ec_pairing(MachineState& m) {
     }
 
     auto ret = ecpairing(points);
-    if (nonstd::holds_alternative<std::string>(ret)) {
+    if (std::holds_alternative<std::string>(ret)) {
         m.state = Status::Error;
         return;
     }
 
-    m.stack[0] = ret.get<bool>() ? 1 : 0;
+    m.stack[0] = std::get<bool>(ret) ? 1 : 0;
     ++m.pc;
 }
 
@@ -930,14 +930,13 @@ BlockReason inboxPeekOp(MachineState& m) {
         }
     }
 
-    if (!nonstd::holds_alternative<Tuple>(m.staged_message)) {
+    if (!std::holds_alternative<Tuple>(m.staged_message)) {
         // Don't have information needed to continue
         return InboxBlocked();
     }
 
     m.stack[0] =
-        m.stack[0] == nonstd::get<Tuple>(m.staged_message).get_element(1) ? 1
-                                                                          : 0;
+        m.stack[0] == std::get<Tuple>(m.staged_message).get_element(1) ? 1 : 0;
     ++m.pc;
     return NotBlocked{};
 }
@@ -948,7 +947,7 @@ BlockReason inboxOp(MachineState& m) {
         return InboxBlocked();
     }
     if (has_staged_message) {
-        m.stack.push(Tuple(nonstd::get<Tuple>(m.staged_message)));
+        m.stack.push(Tuple(std::get<Tuple>(m.staged_message)));
         m.staged_message = Tuple();
     } else {
         m.stack.push(m.context.popInbox());
@@ -979,7 +978,7 @@ void errcodept(MachineState& m) {
 
 void pushinsn(MachineState& m) {
     m.stack.prepForMod(2);
-    auto target = nonstd::get_if<CodePointStub>(&m.stack[1]);
+    auto target = std::get_if<CodePointStub>(&m.stack[1]);
     if (!target) {
         m.state = Status::Error;
         return;
@@ -993,7 +992,7 @@ void pushinsn(MachineState& m) {
 
 void pushinsnimm(MachineState& m) {
     m.stack.prepForMod(3);
-    auto target = nonstd::get_if<CodePointStub>(&m.stack[2]);
+    auto target = std::get_if<CodePointStub>(&m.stack[2]);
     if (!target) {
         m.state = Status::Error;
         return;
@@ -1011,7 +1010,7 @@ BlockReason sideload(MachineState& m) {
     m.stack.prepForMod(1);
     auto& block_num = assumeInt(m.stack[0]);
     if (!m.context.sideloads.empty()) {
-        m.stack[0] = m.context.sideloads.back();
+        m.stack[0] = m.context.sideloads.back().toTuple();
         m.context.sideloads.pop_back();
     } else {
         if (m.context.stop_on_sideload && m.context.numSteps > 0) {

@@ -16,10 +16,9 @@
 
 #include <iostream>
 
+#include <avm/inboxmessage.hpp>
 #include <avm/machine.hpp>
 #include <avm_values/opcodes.hpp>
-
-#include <data_storage/inboxmessage.hpp>
 
 std::ostream& operator<<(std::ostream& os, const Machine& val) {
     os << val.machine_state;
@@ -27,25 +26,13 @@ std::ostream& operator<<(std::ostream& os, const Machine& val) {
 }
 
 namespace {
-bool validMessages(const std::vector<Tuple>& messages) {
-    for (const auto& msg : messages) {
-        if (msg.tuple_size() < 2) {
-            return false;
-        }
-        if (!nonstd::holds_alternative<uint256_t>(msg.get_element(1))) {
-            return false;
-        }
-    }
-    return true;
-}
-
 template <typename T>
 void convertInboxMessagesFromBytes(
     const std::vector<std::vector<unsigned char>>& bytes,
     T& output) {
     for (const auto& data : bytes) {
         auto message = extractInboxMessage(data);
-        output.emplace_back(message.toTuple());
+        output.emplace_back(message);
     }
 }
 }  // namespace
@@ -73,10 +60,6 @@ void MachineExecutionConfig::setSideloadsFromBytes(
 }
 
 Assertion Machine::run(const MachineExecutionConfig& config) {
-    if (!validMessages(config.inbox_messages)) {
-        throw std::runtime_error("invalid message format");
-    }
-
     machine_state.context = AssertionContext(config);
 
     bool has_gas_limit = config.max_gas != 0;
@@ -96,13 +79,12 @@ Assertion Machine::run(const MachineExecutionConfig& config) {
         }
 
         block_reason = machine_state.runOne();
-        if (!nonstd::get_if<NotBlocked>(&block_reason)) {
+        if (!std::get_if<NotBlocked>(&block_reason)) {
             break;
         }
     }
-    nonstd::optional<uint256_t> sideload_block_number;
-    if (auto sideload_blocked =
-            nonstd::get_if<SideloadBlocked>(&block_reason)) {
+    std::optional<uint256_t> sideload_block_number;
+    if (auto sideload_blocked = std::get_if<SideloadBlocked>(&block_reason)) {
         sideload_block_number = sideload_blocked->block_number;
     }
     return {intx::narrow_cast<uint64_t>(machine_state.context.numSteps),

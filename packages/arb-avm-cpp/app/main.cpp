@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
     ValueCache value_cache{};
     auto mach = storage.getInitialMachine(value_cache);
 
-    std::vector<Tuple> inbox_messages;
+    std::vector<InboxMessage> inbox_messages;
     if (argc == 5) {
         if (std::string(argv[3]) == "--inbox") {
             std::ifstream file(argv[4], std::ios::binary);
@@ -89,12 +89,12 @@ int main(int argc, char* argv[]) {
                 (std::istreambuf_iterator<char>(file)),
                 std::istreambuf_iterator<char>());
             auto data = reinterpret_cast<const char*>(raw_inbox.data());
-            auto inbox_val = nonstd::get<Tuple>(deserialize_value(data));
+            auto inbox_val = std::get<Tuple>(deserialize_value(data));
             while (inbox_val != Tuple{}) {
-                inbox_messages.push_back(
-                    std::move(inbox_val.get_element(1).get<Tuple>()));
+                inbox_messages.push_back(InboxMessage::fromTuple(
+                    std::move(std::get<Tuple>(inbox_val.get_element(1)))));
                 inbox_val =
-                    nonstd::get<Tuple>(std::move(inbox_val.get_element(0)));
+                    std::get<Tuple>(std::move(inbox_val.get_element(0)));
             }
             std::reverse(inbox_messages.begin(), inbox_messages.end());
         } else if (std::string(argv[3]) == "--json-inbox") {
@@ -103,8 +103,8 @@ int main(int argc, char* argv[]) {
             file >> j;
 
             for (auto& val : j["inbox"]) {
-                inbox_messages.push_back(
-                    simple_value_from_json(val).get<Tuple>());
+                inbox_messages.push_back(InboxMessage::fromTuple(
+                    std::get<Tuple>(simple_value_from_json(val))));
             }
         }
     }
@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
     tx->commit();
 
     auto mach2 = storage.getMachine(mach->hash(), value_cache);
-    execConfig.inbox_messages = std::vector<Tuple>();
+    execConfig.inbox_messages = std::vector<InboxMessage>();
     mach2->run(execConfig);
     return 0;
 }

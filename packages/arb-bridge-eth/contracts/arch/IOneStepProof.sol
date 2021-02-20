@@ -18,17 +18,29 @@
 
 pragma solidity ^0.6.11;
 
-interface IOneStepProof {
-    function executeStep(bytes32[3] calldata _machineFields, bytes calldata proof)
-        external
-        view
-        returns (uint64 gas, bytes32[5] memory fields);
-}
+import "../bridge/interfaces/IBridge.sol";
 
-interface IOneStepProof2 {
+interface IOneStepProof {
     function executeStep(
-        bytes32[3] calldata _machineFields,
+        IBridge bridge,
+        uint256 initialMessagesRead,
+        bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
-    ) external view returns (uint64 gas, bytes32[5] memory fields);
+    )
+        external
+        view
+        returns (
+            uint64 gas,
+            uint256 totalMessagesRead,
+            bytes32[4] memory fields
+        );
+
+    function executeStepDebug(
+        IBridge bridge,
+        uint256 initialMessagesRead,
+        bytes32[2] calldata accs,
+        bytes calldata proof,
+        bytes calldata bproof
+    ) external view returns (string memory startMachine, string memory afterMachine);
 }

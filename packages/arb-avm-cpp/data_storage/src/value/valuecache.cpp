@@ -25,10 +25,10 @@ void ValueCache::maybeSave(value val) {
     cache.emplace(value_hash, std::move(val));
 }
 
-nonstd::optional<value> ValueCache::loadIfExists(const uint256_t& hash) {
+std::optional<value> ValueCache::loadIfExists(const uint256_t& hash) {
     auto iter = cache.find(hash);
     if (iter == cache.end()) {
-        return nonstd::nullopt;
+        return std::nullopt;
     }
 
     return iter->second;

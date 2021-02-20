@@ -207,8 +207,7 @@ TEST_CASE("MachineTestVectors") {
 
             auto mach = Machine::loadFromFile(test_file);
             MachineExecutionConfig execConfig;
-            while (
-                nonstd::holds_alternative<NotBlocked>(mach.isBlocked(false))) {
+            while (std::holds_alternative<NotBlocked>(mach.isBlocked(false))) {
                 mach.run(execConfig);
             }
             REQUIRE(mach.currentStatus() == Status::Halted);
@@ -226,16 +225,16 @@ TEST_CASE("Stopping on sideload") {
     auto assertion = machine.run(execConfig);
     REQUIRE(machine.currentStatus() == Status::Error);
     REQUIRE(!assertion.sideloadBlockNumber);
-    REQUIRE(assertion.gasCount == 17);
+    REQUIRE(assertion.gasCount == 13);
 
     // Next, test running past the sideload with a value specified
     machine = orig_machine;
-    execConfig.sideloads.push_back(Tuple(uint256_t(0x42)));
+    execConfig.sideloads.emplace_back(InboxMessage());
     execConfig.stop_on_sideload = true;  // Shouldn't matter
     assertion = machine.run(execConfig);
     REQUIRE(machine.currentStatus() == Status::Halted);
     REQUIRE(!assertion.sideloadBlockNumber);
-    REQUIRE(assertion.gasCount == 27);
+    REQUIRE(assertion.gasCount == 23);
 
     // Next, test stopping on the sideload but continuing
     machine = orig_machine;
@@ -249,7 +248,7 @@ TEST_CASE("Stopping on sideload") {
     assertion = machine.run(execConfig);
     REQUIRE(machine.currentStatus() == Status::Error);
     REQUIRE(!assertion.sideloadBlockNumber);
-    REQUIRE(assertion.gasCount == 16);
+    REQUIRE(assertion.gasCount == 12);
 
     // Next, test stopping on the sideload and adding a value
     machine = orig_machine;
@@ -258,9 +257,9 @@ TEST_CASE("Stopping on sideload") {
     REQUIRE(assertion.sideloadBlockNumber == uint256_t(0x321));
     REQUIRE(assertion.gasCount == 1);
 
-    execConfig.sideloads.push_back(Tuple(uint256_t(0x42)));
+    execConfig.sideloads.emplace_back(InboxMessage());
     assertion = machine.run(execConfig);
     REQUIRE(machine.currentStatus() == Status::Halted);
     REQUIRE(!assertion.sideloadBlockNumber);
-    REQUIRE(assertion.gasCount == 26);
+    REQUIRE(assertion.gasCount == 22);
 }

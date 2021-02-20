@@ -17,9 +17,11 @@
 #ifndef machinestate_hpp
 #define machinestate_hpp
 
+#include <avm/inboxmessage.hpp>
 #include <avm/machinestate/blockreason.hpp>
 #include <avm/machinestate/datastack.hpp>
 #include <avm/machinestate/status.hpp>
+
 #include <avm_values/value.hpp>
 #include <avm_values/vmValueParser.hpp>
 
@@ -30,16 +32,16 @@
 class MachineExecutionConfig;
 
 struct AssertionContext {
-    std::vector<Tuple> inbox_messages;
-    nonstd::optional<uint256_t> next_block_height;
+    std::vector<InboxMessage> inbox_messages;
+    std::optional<uint256_t> next_block_height;
     size_t inbox_messages_consumed{0};
     uint256_t numSteps{0};
     uint256_t numGas{0};
-    nonstd::optional<value> fake_inbox_peek_value;
+    std::optional<value> fake_inbox_peek_value;
     std::vector<std::vector<uint8_t>> sends;
     std::vector<value> logs;
     std::vector<value> debug_prints;
-    std::deque<Tuple> sideloads;
+    std::deque<InboxMessage> sideloads;
     bool stop_on_sideload;
 
     AssertionContext() = default;
@@ -49,7 +51,13 @@ struct AssertionContext {
     // popInbox assumes that the number of messages already consumed is less
     // than the number of messages in the inbox
     Tuple popInbox() {
-        return std::move(inbox_messages[inbox_messages_consumed++]);
+        return inbox_messages[inbox_messages_consumed++].toTuple();
+    }
+
+    // peekInbox assumes that the number of messages already consumed is less
+    // than the number of messages in the inbox
+    const InboxMessage& peekInbox() const {
+        return inbox_messages[inbox_messages_consumed];
     }
 
     bool inboxEmpty() const {
@@ -64,7 +72,7 @@ struct OneStepProof {
 
 struct MachineState {
     std::shared_ptr<Code> code;
-    mutable nonstd::optional<CodeSegmentSnapshot> loaded_segment;
+    mutable std::optional<CodeSegmentSnapshot> loaded_segment;
     value registerVal;
     value static_val;
     Datastack stack;

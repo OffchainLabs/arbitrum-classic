@@ -17,6 +17,7 @@
 #ifndef machine_hpp
 #define machine_hpp
 
+#include <avm/inboxmessage.hpp>
 #include <avm/machinestate/machinestate.hpp>
 #include <avm_values/value.hpp>
 
@@ -33,17 +34,17 @@ struct Assertion {
     std::vector<std::vector<uint8_t>> sends;
     std::vector<value> logs;
     std::vector<value> debugPrints;
-    nonstd::optional<uint256_t> sideloadBlockNumber;
+    std::optional<uint256_t> sideloadBlockNumber;
 };
 
 class MachineExecutionConfig {
    public:
     uint256_t max_gas;
     bool go_over_gas;
-    std::vector<Tuple> inbox_messages;
+    std::vector<InboxMessage> inbox_messages;
     uint256_t messages_to_skip;
     bool final_message_of_block;
-    std::deque<Tuple> sideloads;
+    std::deque<InboxMessage> sideloads;
     bool stop_on_sideload;
 
     MachineExecutionConfig();

@@ -18,17 +18,19 @@
 
 pragma solidity ^0.6.11;
 
+import "../bridge/interfaces/IBridge.sol";
+import "../arch/IOneStepProof.sol";
+
 interface IChallenge {
     function initializeChallenge(
-        address _executionOneStepProofCon,
-        address _executionOneStepProof2Con,
+        IOneStepProof[] calldata _executors,
         address _resultReceiver,
-        bytes32 _inboxConsistencyHash,
-        bytes32 _inboxDeltaHash,
         bytes32 _executionHash,
+        uint256 _maxMessageCount,
         address _asserter,
         address _challenger,
         uint256 _asserterTimeLeft,
-        uint256 _challengerTimeLeft
+        uint256 _challengerTimeLeft,
+        IBridge _bridge
     ) external;
 }

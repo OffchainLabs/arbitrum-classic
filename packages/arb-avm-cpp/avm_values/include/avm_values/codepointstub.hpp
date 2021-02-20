@@ -59,6 +59,11 @@ struct CodePointStub {
         return val1.hash == val2.hash;
     }
 
+    friend bool operator!=(const CodePointStub& val1,
+                           const CodePointStub& val2) {
+        return val1.hash != val2.hash;
+    }
+
     void marshal(std::vector<unsigned char>& buf) const;
 
     bool is_error() const;

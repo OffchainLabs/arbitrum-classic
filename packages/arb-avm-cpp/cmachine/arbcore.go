@@ -175,46 +175,6 @@ func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.Inb
 	return messages, nil
 }
 
-func (ac *ArbCore) GetMessageHashes(startIndex *big.Int, count *big.Int) ([]common.Hash, error) {
-	startIndexData := math.U256Bytes(startIndex)
-	countData := math.U256Bytes(count)
-	cHashList := C.arbCoreGetMessageHashes(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
-	if cHashList.found == 0 {
-		return nil, errors.New("not found")
-	}
-	data := receiveByteSlice(cHashList.slice)
-	ret := make([]common.Hash, 0, len(data)/32)
-	for i := 0; i < len(data)/32; i++ {
-		var hashVal common.Hash
-		copy(hashVal[:], data[i*32:])
-		ret = append(ret, hashVal)
-	}
-
-	return ret, nil
-}
-
-func (ac *ArbCore) GetInboxDelta(startIndex *big.Int, count *big.Int) (ret common.Hash, err error) {
-	startIndexData := math.U256Bytes(startIndex)
-	countData := math.U256Bytes(count)
-
-	status := C.arbCoreGetInboxDelta(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData), unsafe.Pointer(&ret[0]))
-	if status == 0 {
-		err = errors.New("failed to get inbox delta")
-		return
-	}
-
-	return
-}
-
-func (ac *ArbCore) GetInboxAcc(index *big.Int) (ret common.Hash, err error) {
-	indexData := math.U256Bytes(index)
-	status := C.arbCoreGetInboxAcc(ac.c, unsafeDataPointer(indexData), unsafe.Pointer(&ret[0]))
-	if status == 0 {
-		err = errors.New("failed to get inbox delta")
-	}
-	return
-}
-
 func (ac *ArbCore) GetSendAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (ret common.Hash, err error) {
 	startIndexData := math.U256Bytes(startIndex)
 	countData := math.U256Bytes(count)
@@ -227,7 +187,7 @@ func (ac *ArbCore) GetSendAcc(startAcc common.Hash, startIndex *big.Int, count *
 		unsafe.Pointer(&ret[0]),
 	)
 	if status == 0 {
-		err = errors.New("failed to get inbox delta")
+		err = errors.New("failed to get send acc")
 	}
 
 	return
@@ -245,7 +205,7 @@ func (ac *ArbCore) GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *b
 		unsafe.Pointer(&ret[0]),
 	)
 	if status == 0 {
-		err = errors.New("failed to get inbox delta")
+		err = errors.New("failed to get log acc")
 	}
 
 	return

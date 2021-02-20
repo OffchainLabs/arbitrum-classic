@@ -19,6 +19,7 @@
 
 #include <avm_values/codepoint.hpp>
 
+#include <cassert>
 #include <memory>
 #include <mutex>
 #include <unordered_map>

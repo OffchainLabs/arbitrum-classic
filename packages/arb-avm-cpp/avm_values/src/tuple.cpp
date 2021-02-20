@@ -120,9 +120,7 @@ constexpr uint64_t hash_size = 32;
 // recursion. All non-tuple values or tuples with a cached hash are
 // basic. Tuples that haven't been hashed yet are not
 struct BasicValChecker {
-    bool operator()(const value& val) const {
-        return nonstd::visit(*this, val);
-    }
+    bool operator()(const value& val) const { return std::visit(*this, val); }
     bool operator()(const Tuple& tup) const {
         return !tup.tpl || !tup.tpl->deferredHashing;
     }
@@ -169,7 +167,7 @@ void Tuple::calculateHashPreImage() const {
                 auto& elem = tup.get_element_unsafe(i);
                 if (!BasicValChecker{}(elem)) {
                     found_complex = true;
-                    tups.push_back(tup.get_element(i).get<Tuple>());
+                    tups.push_back(std::get<Tuple>(tup.get_element(i)));
                 }
             }
             if (!found_complex) {

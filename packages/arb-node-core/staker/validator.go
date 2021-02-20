@@ -181,11 +181,11 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, ma
 	execTracker := core.NewExecutionTracker(v.lookup, cursor, false, gasesUsed)
 
 	for _, nd := range successorsNodes {
-		chalType, err := core.JudgeAssertion(v.lookup, nd.Assertion, execTracker)
+		chalType, err := core.JudgeAssertion(nd.Assertion, execTracker)
 		if err != nil {
 			return nil, err
 		}
-		if chalType == core.NO_CHALLENGE {
+		if chalType == core.NoChallenge {
 			return nd, nil
 		}
 		blockId, err := getBlockID(ctx, v.client, nd.Assertion.PrevProposedBlock)
@@ -212,10 +212,6 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, ma
 		return nil, nil
 	}
 
-	inboxDelta, err := v.lookup.GetInboxDelta(execInfo.Before.TotalMessagesRead, execInfo.InboxMessagesRead())
-	if err != nil {
-		return nil, err
-	}
 	lastNodeCreated, err := v.rollup.LatestNodeCreated(ctx)
 	if err != nil {
 		return nil, err
@@ -233,9 +229,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, ma
 	return &nodeCreationInfo{
 		assertion: &core.Assertion{
 			PrevProposedBlock: startState.ProposedBlock,
-			PrevInboxMaxCount: startState.InboxMaxCount,
 			ExecutionInfo:     execInfo,
-			InboxDelta:        inboxDelta,
 		},
 		block:     msgBlock,
 		newNodeID: newNodeID,
@@ -279,7 +273,6 @@ func lookupNodeStartState(ctx context.Context, rollup *ethbridge.RollupWatcher, 
 			ExecutionState: &core.ExecutionState{
 				TotalGasConsumed:  big.NewInt(0),
 				MachineHash:       creationEvent.MachineHash,
-				InboxHash:         common.Hash{},
 				TotalMessagesRead: big.NewInt(1),
 				TotalSendCount:    big.NewInt(0),
 				TotalLogCount:     big.NewInt(0),

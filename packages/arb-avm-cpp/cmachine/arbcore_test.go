@@ -21,7 +21,5 @@ import (
 )
 
 func TestArbCore(t *testing.T) {
-	//var arbCore core.ArbCoreLookup = NewArbCore(nil)
-	//_, err := arbCore.GetInboxAcc(big.NewInt(0))
 
 }

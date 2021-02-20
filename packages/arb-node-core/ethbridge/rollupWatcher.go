@@ -19,7 +19,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-var rollupABI abi.ABI
 var rollupCreatedID ethcommon.Hash
 var nodeCreatedID ethcommon.Hash
 var challengeCreatedID ethcommon.Hash
@@ -35,7 +34,6 @@ func init() {
 	challengeCreatedID = parsedRollup.Events["RollupChallengeStarted"].ID
 	messageDeliveredID = parsedRollup.Events["MessageDelivered"].ID
 	l2MessageFromOriginCallABI = parsedRollup.Methods["sendL2MessageFromOrigin"]
-	rollupABI = parsedRollup
 }
 
 type StakerInfo struct {
@@ -138,7 +136,6 @@ func (r *RollupWatcher) LookupNodes(ctx context.Context, nodes []*big.Int) ([]*c
 			BlockProposed: proposed,
 			Assertion:     core.NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
 			InboxMaxCount: parsedLog.InboxMaxCount,
-			InboxMaxHash:  parsedLog.InboxMaxHash,
 		})
 	}
 	return infos, nil

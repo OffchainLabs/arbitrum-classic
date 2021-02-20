@@ -31,7 +31,7 @@ class ExecutionCursor : public Checkpoint {
    public:
     std::unique_ptr<Machine> machine;
     uint256_t first_message_sequence_number;
-    std::vector<Tuple> messages;
+    std::vector<InboxMessage> messages;
     std::vector<uint256_t> inbox_hashes;
     size_t messages_to_skip{0};
 
@@ -39,7 +39,7 @@ class ExecutionCursor : public Checkpoint {
     ExecutionCursor() = default;
     ExecutionCursor(Checkpoint& checkpoint,
                     std::unique_ptr<Machine>& machine,
-                    std::vector<Tuple>& messages,
+                    std::vector<InboxMessage>& messages,
                     std::vector<uint256_t>& inbox_hashes,
                     size_t messages_to_skip)
         : Checkpoint(checkpoint),

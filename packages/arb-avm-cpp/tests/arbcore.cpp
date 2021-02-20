@@ -18,9 +18,10 @@
 #include "helper.hpp"
 
 #include <data_storage/arbstorage.hpp>
-#include <data_storage/inboxmessage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
+
+#include <avm/inboxmessage.hpp>
 
 #include <avm_values/vmValueParser.hpp>
 
@@ -45,7 +46,8 @@ TEST_CASE("ArbCore tests") {
 
             std::vector<Tuple> inbox_message_tuples;
             for (auto& json_message : j.at("inbox")) {
-                auto tup = simple_value_from_json(json_message).get<Tuple>();
+                auto tup =
+                    std::get<Tuple>(simple_value_from_json(json_message));
                 inbox_message_tuples.push_back(std::move(tup));
             }
 
@@ -138,13 +140,6 @@ TEST_CASE("ArbCore tests") {
                 *cursor.data, 100, false, value_cache);
             REQUIRE(advanceStatus.ok());
             REQUIRE(cursor.data->arb_gas_used > 0);
-
-            auto inboxAcc = arbCore->getInboxAcc(1);
-            REQUIRE(inboxAcc.status.ok());
-
-            auto message_hashes = arbCore->getMessageHashes(0, 1);
-            REQUIRE(message_hashes.status.ok());
-            REQUIRE(message_hashes.data.size() == 1);
 
             auto before_sideload = arbCore->getMachineForSideload(
                 inbox_messages.back().block_number, value_cache);

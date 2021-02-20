@@ -18,14 +18,21 @@
 
 pragma solidity ^0.6.11;
 
-import "../arch/OneStepProof.sol";
+import "../arch/IOneStepProof.sol";
 
-contract OneStepProofTester is OneStepProof {
-    event OneStepProofResult(uint64 gas, bytes32[5] fields);
+contract OneStepProofTester {
+    event OneStepProofResult(uint64 gas, uint256 totalMessagesRead, bytes32[4] fields);
 
-    function executeStepTest(bytes32[3] calldata machineFields, bytes calldata proof) external {
-        (uint64 gas, bytes32[5] memory fields) =
-            OneStepProof(address(this)).executeStep(machineFields, proof);
-        emit OneStepProofResult(gas, fields);
+    function executeStepTest(
+        address executor,
+        IBridge bridge,
+        uint256 initialMessagesRead,
+        bytes32[2] calldata accs,
+        bytes calldata proof,
+        bytes calldata bproof
+    ) external {
+        (uint64 gas, uint256 totalMessagesRead, bytes32[4] memory fields) =
+            IOneStepProof(executor).executeStep(bridge, initialMessagesRead, accs, proof, bproof);
+        emit OneStepProofResult(gas, totalMessagesRead, fields);
     }
 }

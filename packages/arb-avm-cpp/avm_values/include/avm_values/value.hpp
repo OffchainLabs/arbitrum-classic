@@ -18,11 +18,11 @@
 #define value_hpp
 
 #include <avm_values/bigint.hpp>
+#include <avm_values/buffer.hpp>
 #include <avm_values/opcodes.hpp>
 #include <avm_values/valuetype.hpp>
-#include <avm_values/buffer.hpp>
 
-#include <nonstd/variant.hpp>
+#include <variant>
 
 class Tuple;
 struct Operation;
@@ -32,12 +32,13 @@ class Code;
 struct CodePointStub;
 struct CodePointRef;
 
-using value = nonstd::variant<Tuple, uint256_t, CodePointStub, HashPreImage, Buffer>;
+using value =
+    std::variant<Tuple, uint256_t, CodePointStub, HashPreImage, Buffer>;
 
 struct TuplePlaceholder {
     uint8_t values;
 };
-using DeserializedValue = nonstd::variant<TuplePlaceholder, value>;
+using DeserializedValue = std::variant<TuplePlaceholder, value>;
 
 std::ostream& operator<<(std::ostream& os, const value& val);
 uint256_t hash_value(const value& value);

@@ -14,9 +14,7 @@ import (
 	"strings"
 )
 
-var challengeABI abi.ABI
 var bisectedID ethcommon.Hash
-var bisectedInboxDeltaID ethcommon.Hash
 
 func init() {
 	parsedChallenge, err := abi.JSON(strings.NewReader(ethbridgecontracts.ChallengeABI))
@@ -24,8 +22,6 @@ func init() {
 		panic(err)
 	}
 	bisectedID = parsedChallenge.Events["Bisected"].ID
-	bisectedInboxDeltaID = parsedChallenge.Events["BisectedInboxDelta"].ID
-	challengeABI = parsedChallenge
 }
 
 type ChallengeTurn uint8
@@ -113,7 +109,7 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 		FromBlock: nil,
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{c.address},
-		Topics:    [][]ethcommon.Hash{{bisectedID, bisectedInboxDeltaID}, {challengeState.ToEthHash()}},
+		Topics:    [][]ethcommon.Hash{{bisectedID}, {challengeState.ToEthHash()}},
 	}
 	logs, err := c.client.FilterLogs(ctx, query)
 	if err != nil {
@@ -125,41 +121,19 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 	if len(logs) > 1 {
 		return nil, errors.New("too many matching  bisections")
 	}
-	var cuts []core.Cut
-	var challengeSegment *core.ChallengeSegment
-	if logs[0].Topics[0] == bisectedID {
-		parsedLog, err := c.con.ParseBisected(logs[0])
-		if err != nil {
-			return nil, err
-		}
-		cuts = make([]core.Cut, 0, len(parsedLog.ChainHashes))
-		for _, ch := range parsedLog.ChainHashes {
-			cuts = append(cuts, core.NewSimpleCut(ch))
-		}
-		challengeSegment = &core.ChallengeSegment{
-			Start:  parsedLog.ChallengedSegmentStart,
-			Length: parsedLog.ChallengedSegmentLength,
-		}
-	} else if logs[0].Topics[0] == bisectedInboxDeltaID {
-		parsedLog, err := c.con.ParseBisectedInboxDelta(logs[0])
-		if err != nil {
-			return nil, err
-		}
-		cuts = make([]core.Cut, 0, len(parsedLog.InboxAccHashes))
-		for i, inboxAccHash := range parsedLog.InboxAccHashes {
-			cuts = append(cuts, core.InboxDeltaCut{
-				InboxAccHash:   inboxAccHash,
-				InboxDeltaHash: parsedLog.InboxDeltaHashes[i],
-			})
-		}
-		challengeSegment = &core.ChallengeSegment{
-			Start:  parsedLog.ChallengedSegmentStart,
-			Length: parsedLog.ChallengedSegmentLength,
-		}
-	} else {
-		return nil, errors.New("unexpected event type")
-	}
 
+	parsedLog, err := c.con.ParseBisected(logs[0])
+	if err != nil {
+		return nil, err
+	}
+	cuts := make([]core.Cut, 0, len(parsedLog.ChainHashes))
+	for _, ch := range parsedLog.ChainHashes {
+		cuts = append(cuts, core.NewSimpleCut(ch))
+	}
+	challengeSegment := &core.ChallengeSegment{
+		Start:  parsedLog.ChallengedSegmentStart,
+		Length: parsedLog.ChallengedSegmentLength,
+	}
 	return &core.Bisection{
 		ChallengedSegment: challengeSegment,
 		Cuts:              cuts,

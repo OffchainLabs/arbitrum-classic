@@ -9,12 +9,10 @@ import (
 type ChallengeKind uint8
 
 const (
-	UNINITIALIZED ChallengeKind = iota
-	INBOX_CONSISTENCY
-	INBOX_DELTA
-	EXECUTION
-	STOPPED_SHORT
-	NO_CHALLENGE
+	Uninitialized ChallengeKind = iota
+	Execution
+	StoppedShort
+	NoChallenge
 )
 
 type NodeID *big.Int
@@ -24,7 +22,6 @@ type NodeInfo struct {
 	BlockProposed *common.BlockId
 	Assertion     *Assertion
 	InboxMaxCount *big.Int
-	InboxMaxHash  common.Hash
 }
 
 func (n *NodeInfo) AfterState() *NodeState {
@@ -32,42 +29,6 @@ func (n *NodeInfo) AfterState() *NodeState {
 		ProposedBlock:  n.BlockProposed.Height.AsInt(),
 		InboxMaxCount:  n.InboxMaxCount,
 		ExecutionState: n.Assertion.After,
-	}
-}
-
-func (n *NodeInfo) InboxConsistencyHash() common.Hash {
-	messagesAfterCount := new(big.Int).Sub(n.InboxMaxCount, n.Assertion.After.TotalMessagesRead)
-	return BisectionChunkHash(big.NewInt(0), messagesAfterCount, n.InboxMaxHash, n.Assertion.After.InboxHash)
-}
-
-func (n *NodeInfo) InitialInboxConsistencyBisection() *Bisection {
-	return &Bisection{
-		ChallengedSegment: &ChallengeSegment{
-			Start:  big.NewInt(0),
-			Length: new(big.Int).Sub(n.InboxMaxCount, n.Assertion.After.TotalMessagesRead),
-		},
-		Cuts: []Cut{
-			NewSimpleCut(n.InboxMaxHash),
-			NewSimpleCut(n.Assertion.After.InboxHash),
-		},
-	}
-}
-
-func (n *NodeInfo) InitialInboxDeltaBisection() *Bisection {
-	beforeCut := InboxDeltaCut{
-		InboxAccHash:   n.Assertion.After.InboxHash,
-		InboxDeltaHash: [32]byte{},
-	}
-	afterCut := InboxDeltaCut{
-		InboxAccHash:   n.Assertion.Before.InboxHash,
-		InboxDeltaHash: n.Assertion.InboxDelta,
-	}
-	return &Bisection{
-		ChallengedSegment: &ChallengeSegment{
-			Start:  big.NewInt(0),
-			Length: n.Assertion.InboxMessagesRead(),
-		},
-		Cuts: []Cut{beforeCut, afterCut},
 	}
 }
 
@@ -79,22 +40,22 @@ func (n *NodeInfo) InitialExecutionBisection() *Bisection {
 		},
 		Cuts: []Cut{
 			ExecutionCut{
-				GasUsed:      big.NewInt(0),
-				InboxDelta:   n.Assertion.InboxDelta,
-				MachineState: n.Assertion.Before.MachineHash,
-				SendAcc:      common.Hash{},
-				SendCount:    big.NewInt(0),
-				LogAcc:       common.Hash{},
-				LogCount:     big.NewInt(0),
+				GasUsed:           big.NewInt(0),
+				TotalMessagesRead: n.Assertion.Before.TotalMessagesRead,
+				MachineState:      n.Assertion.Before.MachineHash,
+				SendAcc:           common.Hash{},
+				SendCount:         big.NewInt(0),
+				LogAcc:            common.Hash{},
+				LogCount:          big.NewInt(0),
 			},
 			ExecutionCut{
-				GasUsed:      n.Assertion.GasUsed(),
-				InboxDelta:   common.Hash{},
-				MachineState: n.Assertion.After.MachineHash,
-				SendAcc:      n.Assertion.SendAcc,
-				SendCount:    n.Assertion.SendCount(),
-				LogAcc:       n.Assertion.LogAcc,
-				LogCount:     n.Assertion.LogCount(),
+				GasUsed:           n.Assertion.GasUsed(),
+				TotalMessagesRead: n.Assertion.After.TotalMessagesRead,
+				MachineState:      n.Assertion.After.MachineHash,
+				SendAcc:           n.Assertion.SendAcc,
+				SendCount:         n.Assertion.SendCount(),
+				LogAcc:            n.Assertion.LogAcc,
+				LogCount:          n.Assertion.LogCount(),
 			},
 		},
 	}

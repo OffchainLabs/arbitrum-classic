@@ -37,15 +37,11 @@ AssertionContext::AssertionContext(const MachineExecutionConfig& config)
       stop_on_sideload(config.stop_on_sideload) {
     if (config.final_message_of_block && !config.inbox_messages.empty()) {
         // Last message is the final message of a block, so need to
-        // set min_next_block_height to the block after the last block
-        auto block_num =
-            config.inbox_messages[config.inbox_messages.size() - 1].get_element(
-                1);
-        if (!nonstd::holds_alternative<uint256_t>(block_num)) {
-            throw std::runtime_error("Cannot get final block from tuple");
-        }
-
-        next_block_height = nonstd::get<uint256_t>(block_num) + 1;
+        // set next_block_height to the block after the last block
+        next_block_height =
+            config.inbox_messages[config.inbox_messages.size() - 1]
+                .block_number +
+            1;
     }
 }
 
@@ -128,7 +124,7 @@ uint256_t MachineState::hash() const {
         oit = to_big_endian(val, oit);
     }
     {
-        if (nonstd::holds_alternative<uint256_t>(staged_message)) {
+        if (std::holds_alternative<uint256_t>(staged_message)) {
             throw std::runtime_error(
                 "Can't get hash of machine with incomplete staged_message");
         }
@@ -162,7 +158,7 @@ void marshalState(std::vector<unsigned char>& buf,
                   uint256_t arb_gas_remaining,
                   CodePointStub errpc,
                   const value& staged_message) {
-    if (nonstd::holds_alternative<uint256_t>(staged_message)) {
+    if (std::holds_alternative<uint256_t>(staged_message)) {
         throw std::runtime_error(
             "Can't marshal machine with incomplete staged_message");
     }
@@ -181,7 +177,7 @@ void marshalState(std::vector<unsigned char>& buf,
 }  // namespace
 
 std::vector<unsigned char> MachineState::marshalState() const {
-    if (nonstd::holds_alternative<uint256_t>(staged_message)) {
+    if (std::holds_alternative<uint256_t>(staged_message)) {
         throw std::runtime_error(
             "Can't marshal machine with incomplete staged_message");
     }
@@ -259,14 +255,14 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
         return;
     }
     if (opcode == OpCode::SEND) {
-        auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0])
-                                   : nonstd::get_if<Buffer>(&stack[1]);
+        auto buffer = op.immediate ? std::get_if<Buffer>(&stack[0])
+                                   : std::get_if<Buffer>(&stack[1]);
         if (!buffer) {
             return;
         }
         // Also need the offset
-        auto size = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate)
-                                 : nonstd::get_if<uint256_t>(&stack[0]);
+        auto size = op.immediate ? std::get_if<uint256_t>(&*op.immediate)
+                                 : std::get_if<uint256_t>(&stack[0]);
         if (!size) {
             return;
         }
@@ -291,15 +287,15 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
     if (opcode == OpCode::GET_BUFFER8 || opcode == OpCode::GET_BUFFER64 ||
         opcode == OpCode::GET_BUFFER256) {
         // Find the buffer
-        auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[0])
-                                   : nonstd::get_if<Buffer>(&stack[1]);
+        auto buffer = op.immediate ? std::get_if<Buffer>(&stack[0])
+                                   : std::get_if<Buffer>(&stack[1]);
         if (!buffer) {
             insertSizes(proof.buffer_proof, 0, 0, 0, 0);
             return;
         }
         // Also need the offset
-        auto offset = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate)
-                                   : nonstd::get_if<uint256_t>(&stack[0]);
+        auto offset = op.immediate ? std::get_if<uint256_t>(&*op.immediate)
+                                   : std::get_if<uint256_t>(&stack[0]);
         if (!offset) {
             insertSizes(proof.buffer_proof, 0, 0, 0, 0);
             return;
@@ -334,15 +330,15 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
                                       buf_proof2.begin(), buf_proof2.end());
         }
     } else {
-        auto buffer = op.immediate ? nonstd::get_if<Buffer>(&stack[1])
-                                   : nonstd::get_if<Buffer>(&stack[2]);
+        auto buffer = op.immediate ? std::get_if<Buffer>(&stack[1])
+                                   : std::get_if<Buffer>(&stack[2]);
         if (!buffer) {
             insertSizes(proof.buffer_proof, 0, 0, 0, 0);
             return;
         }
         // Also need the offset
-        auto offset = op.immediate ? nonstd::get_if<uint256_t>(&*op.immediate)
-                                   : nonstd::get_if<uint256_t>(&stack[0]);
+        auto offset = op.immediate ? std::get_if<uint256_t>(&*op.immediate)
+                                   : std::get_if<uint256_t>(&stack[0]);
         if (!offset) {
             insertSizes(proof.buffer_proof, 0, 0, 0, 0);
             return;
@@ -351,8 +347,8 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
             insertSizes(proof.buffer_proof, 0, 0, 0, 0);
             return;
         }
-        auto val = op.immediate ? nonstd::get_if<uint256_t>(&stack[0])
-                                : nonstd::get_if<uint256_t>(&stack[1]);
+        auto val = op.immediate ? std::get_if<uint256_t>(&stack[0])
+                                : std::get_if<uint256_t>(&stack[1]);
         if (!val) {
             insertSizes(proof.buffer_proof, 0, 0, 0, 0);
             return;
@@ -377,7 +373,7 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
 }
 
 OneStepProof MachineState::marshalForProof() const {
-    if (nonstd::holds_alternative<uint256_t>(staged_message)) {
+    if (std::holds_alternative<uint256_t>(staged_message)) {
         throw std::runtime_error(
             "Can't marshal machine with incomplete staged_message");
     }
@@ -441,6 +437,17 @@ OneStepProof MachineState::marshalForProof() const {
         // Don't need a buffer proof if we're underflowing
         marshalBufferProof(proof);
     }
+    // Inbox or inbox peek with no staged message
+    if ((current_op.opcode == OpCode::INBOX ||
+         current_op.opcode == OpCode::INBOX_PEEK) &&
+        staged_message == value{Tuple{}}) {
+        if (context.inboxEmpty()) {
+            throw std::runtime_error("Can't generate proof with empty inbox");
+        }
+        auto message_data = context.peekInbox().serializeForProof();
+        proof.standard_proof.insert(proof.standard_proof.end(),
+                                    message_data.begin(), message_data.end());
+    }
     return proof;
 }
 
@@ -464,8 +471,7 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
 
 const CodePoint& MachineState::loadCurrentInstruction() const {
     if (!loaded_segment || loaded_segment->segment->segmentID() != pc.segment) {
-        loaded_segment =
-            nonstd::make_optional(code->loadCodeSegment(pc.segment));
+        loaded_segment = std::make_optional(code->loadCodeSegment(pc.segment));
     }
     return (*loaded_segment->segment)[pc.pc];
 }
@@ -563,7 +569,7 @@ BlockReason MachineState::runOne() {
             state = Status::Error;
         }
 
-        if (!nonstd::holds_alternative<NotBlocked>(blockReason)) {
+        if (!std::holds_alternative<NotBlocked>(blockReason)) {
             // Get rid of the immediate and reset the gas if the machine was
             // actually blocked
             arb_gas_remaining += gas_cost;
@@ -576,7 +582,7 @@ BlockReason MachineState::runOne() {
         return NotBlocked();
     }();
 
-    if (nonstd::holds_alternative<NotBlocked>(blockReason)) {
+    if (std::holds_alternative<NotBlocked>(blockReason)) {
         context.numSteps += 1;
     }
 

@@ -117,7 +117,7 @@ TEST_CASE("MessageStore tests") {
 
         // Attempt to add message with incorrect previous hash
         REQUIRE(store->addMessages(7, 13, messages2, inbox_hashes2,
-                                   inbox_hashes[1] + 1) == nonstd::nullopt);
+                                   inbox_hashes[1] + 1) == std::nullopt);
 
         // Add message with correct previous hash
         REQUIRE(
