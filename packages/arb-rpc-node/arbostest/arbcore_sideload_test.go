@@ -37,19 +37,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-func generateRandomValidMessage() inbox.InboxMessage {
-	return inbox.InboxMessage{
-		Kind:        inbox.Type(2),
-		Sender:      common.RandAddress(),
-		InboxSeqNum: big.NewInt(0),
-		Data:        common.RandBytes(200),
-		ChainTime: inbox.ChainTime{
-			BlockNum:  common.NewTimeBlocksInt(0),
-			Timestamp: big.NewInt(0),
-		},
-	}
-}
-
 func TestArbCoreSideload(t *testing.T) {
 	var precompileNum byte = 2
 	data := common.RandBytes(100)
@@ -78,7 +65,18 @@ func TestArbCoreSideload(t *testing.T) {
 		t.Fatal("failed to start thread")
 	}
 
-	_, err = core.DeliverMessagesAndWait(arbCore, []inbox.InboxMessage{generateRandomValidMessage()}, common.Hash{}, true)
+	messages := []inbox.InboxMessage{
+		message.NewInboxMessage(
+			initMsg(),
+			chain,
+			big.NewInt(0),
+			inbox.ChainTime{
+				BlockNum:  common.NewTimeBlocksInt(0),
+				Timestamp: big.NewInt(0),
+			},
+		),
+	}
+	_, err = core.DeliverMessagesAndWait(arbCore, messages, common.Hash{}, true)
 	test.FailIfError(t, err)
 	for {
 		if arbCore.MachineIdle() {
@@ -115,7 +113,13 @@ func TestArbCoreSideload(t *testing.T) {
 		Data:        data,
 	}
 
-	sideloadMessages := makeSimpleInbox([]message.Message{message.NewSafeL2Message(tx)})
+	chainTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
+	}
+	sideloadMessages := []inbox.InboxMessage{
+		message.NewInboxMessage(message.NewSafeL2Message(tx), sender, big.NewInt(1), chainTime),
+	}
 
 	assertion, _, _ := sideloadMachine.ExecuteAssertionAdvanced(0, false, nil, false, sideloadMessages, true, common.Hash{}, common.Hash{})
 	results := processTxResults(t, assertion.Logs)
