@@ -1,9 +1,10 @@
 package core
 
 import (
-	"github.com/pkg/errors"
 	"math/big"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -101,6 +102,8 @@ type ArbCore interface {
 	ArbCoreInbox
 	StartThread() bool
 	StopThread()
+	GetMachineForSideload(uint64) (machine.Machine, error)
+	MachineIdle() bool
 }
 
 func GetSingleMessage(lookup ArbCoreLookup, index *big.Int) (inbox.InboxMessage, error) {

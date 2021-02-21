@@ -22,12 +22,7 @@ MachineThread::machine_status_enum MachineThread::status() {
     return machine_status;
 }
 
-bool MachineThread::runMachine(
-    uint256_t max_gas,
-    bool go_over_gas,
-    std::vector<std::vector<unsigned char>> inbox_messages,
-    uint256_t messages_to_skip,
-    const bool final_message_of_block) {
+bool MachineThread::runMachine(MachineExecutionConfig config) {
     if (machine_status != MACHINE_NONE) {
         return false;
     }
@@ -35,8 +30,7 @@ bool MachineThread::runMachine(
     machine_status = MACHINE_RUNNING;
 
     machine_thread = std::make_unique<std::thread>(
-        (std::reference_wrapper<MachineThread>(*this)), max_gas, go_over_gas,
-        std::move(inbox_messages), messages_to_skip, final_message_of_block);
+        (std::reference_wrapper<MachineThread>(*this)), std::move(config));
 
     return true;
 }
@@ -51,7 +45,7 @@ void MachineThread::abortMachine() {
     machine_abort = false;
 }
 
-Assertion MachineThread::getAssertion() {
+Assertion MachineThread::nextAssertion() {
     if (machine_status != MACHINE_SUCCESS) {
         return {};
     }
@@ -71,13 +65,7 @@ void MachineThread::clearError() {
     machine_error_string.clear();
 }
 
-void MachineThread::operator()(
-    const uint256_t max_gas,
-    const bool go_over_gas,
-    std::vector<std::vector<unsigned char>> inbox_messages,
-    const uint256_t messages_to_skip,
-    const bool final_message_of_block) {
-    last_assertion = run(max_gas, go_over_gas, inbox_messages, messages_to_skip,
-                         final_message_of_block);
+void MachineThread::operator()(MachineExecutionConfig config) {
+    last_assertion = run(std::move(config));
     machine_status = MACHINE_SUCCESS;
 }

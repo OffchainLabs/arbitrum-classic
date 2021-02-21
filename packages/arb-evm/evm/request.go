@@ -19,14 +19,15 @@ package evm
 import (
 	"bytes"
 	"fmt"
+	"math/big"
+	"math/rand"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/pkg/errors"
-	"math/big"
-	"math/rand"
 )
 
 type AggregatorInfo struct {
@@ -165,6 +166,7 @@ type IncomingRequest struct {
 	ChainTime      inbox.ChainTime
 	Provenance     Provenance
 	AggregatorInfo *AggregatorInfo
+	AdminMode      bool
 }
 
 func (r IncomingRequest) String() string {
@@ -222,7 +224,18 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 	inboxSeqNum, _ := tup.GetByInt64(4)
 	messageData, _ := tup.GetByInt64(5)
 	provenanceVal, _ := tup.GetByInt64(6)
-	aggregatorInfoVal, _ := tup.GetByInt64(7)
+	remVal, _ := tup.GetByInt64(7)
+
+	remTup, ok := remVal.(*value.TupleValue)
+	if !ok {
+		return failRet, errors.New("remaining incoming request values must be a tuple")
+	}
+	if remTup.Len() != 2 {
+		return failRet, errors.Errorf("expected incoming request remaining values to be tuple of length 2, but received tuple of length %v", remTup.Len())
+	}
+
+	aggregatorInfoVal, _ := remTup.GetByInt64(0)
+	adminModeVal, _ := remTup.GetByInt64(1)
 
 	kindInt, ok := kind.(value.IntValue)
 	if !ok {
@@ -266,6 +279,19 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 		return failRet, err
 	}
 
+	adminModeInt, ok := adminModeVal.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("adminMode must be a boolean")
+	}
+	var adminMode bool
+	if adminModeInt.Equal(value.NewInt64Value(0)) {
+		adminMode = false
+	} else if adminModeInt.Equal(value.NewInt64Value(1)) {
+		adminMode = true
+	} else {
+		return failRet, errors.Errorf("expected adminMode to be an integer either 0 or 1, but received integer %v", adminModeInt)
+	}
+
 	return IncomingRequest{
 		Kind:      inbox.Type(kindInt.BigInt().Uint64()),
 		Sender:    inbox.NewAddressFromInt(senderInt),
@@ -277,6 +303,7 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 		},
 		Provenance:     provenance,
 		AggregatorInfo: aggregatorInfo,
+		AdminMode:      adminMode,
 	}, nil
 }
 

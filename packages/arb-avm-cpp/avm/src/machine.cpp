@@ -25,62 +25,76 @@ std::ostream& operator<<(std::ostream& os, const Machine& val) {
     return os;
 }
 
-Assertion Machine::run(
-    uint256_t max_gas,
-    bool go_over_gas,
-    const std::vector<std::vector<unsigned char>>& inbox_data,
-    uint256_t messages_to_skip,
-    bool final_message_of_block) {
-    std::vector<InboxMessage> inbox_messages;
-    inbox_messages.reserve(inbox_messages.size());
-    for (const auto& data : inbox_data) {
-        auto inbox_message = extractInboxMessage(data);
-        inbox_messages.emplace_back(inbox_message);
+namespace {
+template <typename T>
+void convertInboxMessagesFromBytes(
+    const std::vector<std::vector<unsigned char>>& bytes,
+    T& output) {
+    for (const auto& data : bytes) {
+        auto message = extractInboxMessage(data);
+        output.emplace_back(message);
     }
-    return run(max_gas, go_over_gas, inbox_messages, messages_to_skip,
-               final_message_of_block);
+}
+}  // namespace
+
+MachineExecutionConfig::MachineExecutionConfig()
+    : max_gas(0),
+      go_over_gas(false),
+      inbox_messages(),
+      messages_to_skip(0),
+      final_message_of_block(false),
+      sideloads(),
+      stop_on_sideload(false) {}
+
+void MachineExecutionConfig::setInboxMessagesFromBytes(
+    const std::vector<std::vector<unsigned char>>& bytes) {
+    inbox_messages.clear();
+    inbox_messages.reserve(bytes.size());
+    convertInboxMessagesFromBytes(bytes, inbox_messages);
 }
 
-Assertion Machine::run(uint256_t max_gas,
-                       bool go_over_gas,
-                       const std::vector<InboxMessage>& inbox_messages,
-                       uint256_t messages_to_skip,
-                       bool final_message_of_block) {
-    std::optional<uint256_t> min_next_block_height;
-    if (final_message_of_block && !inbox_messages.empty()) {
-        // Last message is the final message of a block, so need to
-        // set min_next_block_height to the block after the last block
-        min_next_block_height =
-            inbox_messages[inbox_messages.size() - 1].block_number + 1;
-    }
+void MachineExecutionConfig::setSideloadsFromBytes(
+    const std::vector<std::vector<unsigned char>>& bytes) {
+    sideloads.clear();
+    convertInboxMessagesFromBytes(bytes, sideloads);
+}
 
-    machine_state.context = AssertionContext{
-        inbox_messages, min_next_block_height, messages_to_skip};
+Assertion Machine::run(MachineExecutionConfig config) {
+    auto config_max_gas = config.max_gas;
+    auto config_go_over_gas = config.go_over_gas;
+    bool has_gas_limit = config.max_gas != 0;
 
-    bool has_gas_limit = max_gas != 0;
+    machine_state.context = AssertionContext(std::move(config));
+
+    BlockReason block_reason = NotBlocked{};
     while (true) {
         if (has_gas_limit) {
-            if (!go_over_gas) {
+            if (!config_go_over_gas) {
                 if (machine_state.nextGasCost() + machine_state.context.numGas >
-                    max_gas) {
+                    config_max_gas) {
                     // Next step would go over gas limit
                     break;
                 }
-            } else if (machine_state.context.numGas >= max_gas) {
+            } else if (machine_state.context.numGas >= config_max_gas) {
                 // Last step reached or went over gas limit
                 break;
             }
         }
 
-        auto blockReason = machine_state.runOne();
-        if (!std::get_if<NotBlocked>(&blockReason)) {
+        block_reason = machine_state.runOne();
+        if (!std::get_if<NotBlocked>(&block_reason)) {
             break;
         }
+    }
+    std::optional<uint256_t> sideload_block_number;
+    if (auto sideload_blocked = std::get_if<SideloadBlocked>(&block_reason)) {
+        sideload_block_number = sideload_blocked->block_number;
     }
     return {intx::narrow_cast<uint64_t>(machine_state.context.numSteps),
             intx::narrow_cast<uint64_t>(machine_state.context.numGas),
             machine_state.context.inbox_messages_consumed,
             std::move(machine_state.context.sends),
             std::move(machine_state.context.logs),
-            std::move(machine_state.context.debug_prints)};
+            std::move(machine_state.context.debug_prints),
+            sideload_block_number};
 }

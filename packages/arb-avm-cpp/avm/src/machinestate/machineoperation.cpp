@@ -1006,11 +1006,20 @@ void pushinsnimm(MachineState& m) {
     ++m.pc;
 }
 
-void sideload(MachineState& m) {
+BlockReason sideload(MachineState& m) {
     m.stack.prepForMod(1);
-    assumeInt(m.stack[0]);
-    m.stack[0] = Tuple();
+    auto& block_num = assumeInt(m.stack[0]);
+    if (!m.context.sideloads.empty()) {
+        m.stack[0] = m.context.sideloads.back().toTuple();
+        m.context.sideloads.pop_back();
+    } else {
+        if (m.context.stop_on_sideload && m.context.numSteps > 0) {
+            return SideloadBlocked{block_num};
+        }
+        m.stack[0] = Tuple();
+    }
     ++m.pc;
+    return NotBlocked{};
 }
 
 void newbuffer(MachineState& m) {

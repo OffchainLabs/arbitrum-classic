@@ -1,0 +1,6 @@
+{"version": 2, "static_val": {"Tuple": []}, "extensions": [], "code": [
+    {"opcode":  59, "immediate": null, "_comment": "There's an edge case where sideload is the first instruction we're avoiding"},
+    {"opcode": 123, "immediate": {"Int": "321"}},
+    {"opcode":  80, "immediate": {"Int": "0"}, "_comment": "Validates that the tuple from sideload isn't empty"},
+    {"opcode": 116, "immediate": null}
+]}

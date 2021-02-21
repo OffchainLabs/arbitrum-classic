@@ -148,22 +148,69 @@ ByteSlice machineMarshallState(CMachine* m) {
     return returnCharVector(mach->marshalState());
 }
 
+CMachineExecutionConfig* machineExecutionConfigCreate() {
+    return new MachineExecutionConfig();
+}
+
+void machineExecutionConfigDestroy(CMachineExecutionConfig* m) {
+    if (m == nullptr) {
+        return;
+    }
+    delete static_cast<MachineExecutionConfig*>(m);
+}
+
+void* machineExecutionConfigClone(CMachineExecutionConfig* c) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    auto cloneConf = new MachineExecutionConfig(*config);
+    return static_cast<void*>(cloneConf);
+}
+
+void machineExecutionConfigSetMaxGas(CMachineExecutionConfig* c,
+                                     uint64_t max_gas,
+                                     int go_over_gas) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->max_gas = max_gas;
+    config->go_over_gas = go_over_gas;
+}
+
+void machineExecutionConfigSetInboxMessages(CMachineExecutionConfig* c,
+                                            ByteSliceArray bytes,
+                                            int final_message_of_block) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->setInboxMessagesFromBytes(receiveByteSliceArray(bytes));
+    config->final_message_of_block = final_message_of_block;
+}
+
+void machineExecutionConfigSetSideloads(CMachineExecutionConfig* c,
+                                        ByteSliceArray bytes) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->setSideloadsFromBytes(receiveByteSliceArray(bytes));
+}
+
+void machineExecutionConfigSetStopOnSideload(CMachineExecutionConfig* c,
+                                             int stop_on_sideload) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->stop_on_sideload = stop_on_sideload;
+}
+
 RawAssertion executeAssertion(CMachine* m,
+                              const CMachineExecutionConfig* c,
                               void* before_send_acc_data,
-                              void* before_log_acc_data,
-                              uint64_t max_gas,
-                              int go_over_gas,
-                              ByteSliceArray inbox_messages,
-                              int final_message_of_block) {
+                              void* before_log_acc_data) {
     assert(m);
+    assert(c);
     auto mach = static_cast<Machine*>(m);
-    auto messages = receiveByteSliceArray(inbox_messages);
+    auto config = static_cast<const MachineExecutionConfig*>(c);
     auto before_send_acc = receiveUint256(before_send_acc_data);
     auto before_log_acc = receiveUint256(before_log_acc_data);
 
     try {
-        Assertion assertion = mach->run(max_gas, go_over_gas, messages, 0,
-                                        final_message_of_block);
+        Assertion assertion = mach->run(*config);
         return makeRawAssertion(assertion, before_send_acc, before_log_acc);
     } catch (const std::exception& e) {
         std::cerr << "Failed to make assertion " << e.what() << "\n";

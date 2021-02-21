@@ -41,6 +41,8 @@ constexpr auto send_processed_key = std::array<char, 1>{-63};
 constexpr auto message_entry_inserted_key = std::array<char, 1>{-64};
 constexpr auto message_entry_processed_key = std::array<char, 1>{-65};
 
+constexpr auto sideload_cache_size = 20;
+
 ValueResult<MessageEntry> getMessageEntry(Transaction& tx,
                                           uint256_t message_sequence_number) {
     std::vector<unsigned char> previous_key;
@@ -350,6 +352,13 @@ rocksdb::Status ArbCore::saveAssertion(Transaction& tx,
     updateMessageEntryProcessedCount(tx,
                                      pending_checkpoint.total_messages_read);
 
+    if (assertion.sideloadBlockNumber) {
+        status = saveSideloadPosition(tx, *assertion.sideloadBlockNumber);
+        if (!status.ok()) {
+            return status;
+        }
+    }
+
     return rocksdb::Status::OK();
 }
 
@@ -614,6 +623,8 @@ void ArbCore::operator()() {
     ValueCache cache;
     uint256_t first_sequence_number_in_machine;
     uint256_t last_sequence_number_in_machine;
+    MachineExecutionConfig execConfig;
+    execConfig.stop_on_sideload = true;
 
     while (!arbcore_abort) {
         if (message_data_status == MESSAGES_READY) {
@@ -656,7 +667,7 @@ void ArbCore::operator()() {
         } else if (machine->status() == MachineThread::MACHINE_SUCCESS) {
             auto tx = Transaction::makeTransaction(data_storage);
 
-            auto last_assertion = machine->getAssertion();
+            auto last_assertion = machine->nextAssertion();
             auto messages_inserted = messageEntryInsertedCountImpl(*tx);
             if (!messages_inserted.status.ok()) {
                 core_error_string = messages_inserted.status.ToString();
@@ -673,6 +684,29 @@ void ArbCore::operator()() {
                 machine = getMachineUsingStateKeys<MachineThread>(
                     *tx, pending_checkpoint.machine_state_keys, cache);
             } else {
+                // Cache pre-sideload machines
+                if (last_assertion.sideloadBlockNumber) {
+                    auto block = *last_assertion.sideloadBlockNumber;
+                    std::unique_lock<std::shared_mutex> lock(
+                        sideload_cache_mutex);
+                    sideload_cache[block] = std::make_unique<Machine>(*machine);
+                    // Remove any sideload_cache entries that are either more
+                    // than sideload_cache_size blocks old, or in the future
+                    // (meaning they've been reorg'd out).
+                    auto it = sideload_cache.begin();
+                    while (it != sideload_cache.end()) {
+                        // Note: we check if block > sideload_cache_size here
+                        // to prevent an underflow in the following check.
+                        if ((block > sideload_cache_size &&
+                             it->first < block - sideload_cache_size) ||
+                            it->first > block) {
+                            it = sideload_cache.erase(it);
+                        } else {
+                            it++;
+                        }
+                    }
+                }
+
                 // Save logs and sends
                 auto status = saveAssertion(*tx, last_assertion);
                 if (!status.ok()) {
@@ -685,6 +719,12 @@ void ArbCore::operator()() {
                 // Maybe save checkpoint
                 // TODO Decide how often to create checkpoint
                 status = saveCheckpoint(*tx);
+                if (!status.ok()) {
+                    core_error_string = status.ToString();
+                    std::cerr << "ArbCore checkpoint saving failed: "
+                              << core_error_string << "\n";
+                    break;
+                }
 
                 // TODO Decide how often to clear ValueCache
                 // (only clear cache when machine thread stopped)
@@ -748,9 +788,10 @@ void ArbCore::operator()() {
                 std::vector<std::vector<unsigned char>> messages;
                 messages.push_back(next_message_result.data.data);
 
-                auto status = machine->runMachine(
-                    0, false, std::move(messages), 0,
-                    next_message_result.data.last_message_in_block);
+                execConfig.setInboxMessagesFromBytes(messages);
+                execConfig.final_message_of_block =
+                    next_message_result.data.last_message_in_block;
+                auto status = machine->runMachine(execConfig);
                 if (!status) {
                     core_error_string = "Error starting machine thread";
                     machine_error = true;
@@ -1048,9 +1089,12 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
             // Run machine until specified gas is reached
             auto remaining_gas = total_gas_used - execution_cursor.arb_gas_used;
             if (remaining_gas > 0) {
-                auto assertion = machine->run(
-                    remaining_gas, go_over_gas, execution_cursor.messages,
-                    execution_cursor.messages_to_skip, false);
+                MachineExecutionConfig execConfig;
+                execConfig.max_gas = remaining_gas;
+                execConfig.go_over_gas = go_over_gas;
+                execConfig.inbox_messages = execution_cursor.messages;
+                execConfig.messages_to_skip = execution_cursor.messages_to_skip;
+                auto assertion = machine->run(execConfig);
                 if (assertion.gasCount == 0) {
                     // Nothing was executed
                     break;
@@ -1852,4 +1896,64 @@ std::string ArbCore::logsCursorClearError(size_t cursor_index) {
     logs_cursors[cursor_index].status = DataCursor::EMPTY;
 
     return str;
+}
+
+rocksdb::Status ArbCore::saveSideloadPosition(Transaction& tx,
+                                              const uint256_t& block_number) {
+    std::vector<unsigned char> key;
+    marshal_uint256_t(block_number, key);
+    auto key_slice = vecToSlice(key);
+
+    std::vector<unsigned char> value;
+    marshal_uint256_t(pending_checkpoint.arb_gas_used, value);
+    auto value_slice = vecToSlice(value);
+
+    return tx.transaction->Put(tx.datastorage->sideload_column.get(), key_slice,
+                               value_slice);
+}
+
+ValueResult<uint256_t> ArbCore::getSideloadPosition(
+    Transaction& tx,
+    const uint256_t& block_number) {
+    std::vector<unsigned char> key;
+    marshal_uint256_t(block_number, key);
+    auto key_slice = vecToSlice(key);
+
+    std::string value_raw;
+
+    auto s = tx.transaction->Get(rocksdb::ReadOptions(),
+                                 tx.datastorage->sideload_column.get(),
+                                 key_slice, &value_raw);
+    if (!s.ok()) {
+        return {s, 0};
+    }
+
+    return {s, intx::be::unsafe::load<uint256_t>(
+                   reinterpret_cast<const unsigned char*>(value_raw.data()))};
+}
+
+ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
+    const uint256_t& block_number,
+    ValueCache& cache) {
+    // Check the cache
+    {
+        std::shared_lock<std::shared_mutex> lock(sideload_cache_mutex);
+        auto it = sideload_cache.find(block_number);
+        if (it != sideload_cache.end()) {
+            return {rocksdb::Status::OK(),
+                    std::make_unique<Machine>(*it->second)};
+        }
+    }
+    // Not found in cache, try the DB
+    auto tx = Transaction::makeTransaction(data_storage);
+    auto position_res = getSideloadPosition(*tx, block_number);
+    if (!position_res.status.ok()) {
+        return {position_res.status, std::unique_ptr<Machine>(nullptr)};
+    }
+    auto execution_cursor = std::make_unique<ExecutionCursor>();
+
+    auto status = getExecutionCursorImpl(*tx, *execution_cursor,
+                                         position_res.data, false, 10, cache);
+
+    return {status, execution_cursor->takeMachine()};
 }

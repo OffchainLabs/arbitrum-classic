@@ -39,6 +39,7 @@ type Machine interface {
 	IsBlocked(newMessages bool) BlockReason
 
 	ExecuteAssertion(maxGas uint64, goOverGas bool, messages []inbox.InboxMessage, finalMessageOfBlock bool) (*protocol.ExecutionAssertion, []value.Value, uint64)
+	ExecuteAssertionAdvanced(maxGas uint64, goOverGas bool, messages []inbox.InboxMessage, finalMessageOfBlock bool, sideloads []inbox.InboxMessage, stopOnSideload bool, beforeSendAcc common.Hash, beforeLogAcc common.Hash) (*protocol.ExecutionAssertion, []value.Value, uint64)
 
 	MarshalForProof() ([]byte, []byte, error)
 

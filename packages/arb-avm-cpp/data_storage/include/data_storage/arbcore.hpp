@@ -28,8 +28,10 @@
 #include <utility>
 
 #include <avm/machinethread.hpp>
+#include <map>
 #include <memory>
 #include <queue>
+#include <shared_mutex>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -78,6 +80,11 @@ class ArbCore {
     std::unique_ptr<MachineThread> machine;
     std::shared_ptr<Code> code{};
     Checkpoint pending_checkpoint;
+
+    // Cache a machine ready to sideload view transactions just after recent
+    // blocks
+    std::shared_mutex sideload_cache_mutex;
+    std::map<uint256_t, std::unique_ptr<Machine>> sideload_cache;
 
     // Core thread inbox status input/output. Core thread will update if and
     // only if set to MESSAGES_READY
@@ -291,6 +298,19 @@ class ArbCore {
     rocksdb::Status updateMessageEntryInsertedCount(
         Transaction& tx,
         const uint256_t& message_index);
+
+   public:
+    // Public sideload interaction
+    ValueResult<std::unique_ptr<Machine>> getMachineForSideload(
+        const uint256_t& block_number,
+        ValueCache& cache);
+
+   private:
+    // Private sideload interaction
+    rocksdb::Status saveSideloadPosition(Transaction& tx,
+                                         const uint256_t& block_number);
+    ValueResult<uint256_t> getSideloadPosition(Transaction& tx,
+                                               const uint256_t& block_number);
 };
 
 std::optional<rocksdb::Status> deleteLogsStartingAt(Transaction& tx,

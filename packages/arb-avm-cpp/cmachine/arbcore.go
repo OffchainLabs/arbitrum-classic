@@ -34,6 +34,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
 	"github.com/pkg/errors"
@@ -342,4 +343,14 @@ func (ac *ArbCore) LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 	}
 
 	return true, nil
+}
+
+func (ac *ArbCore) GetMachineForSideload(blockNumber uint64) (machine.Machine, error) {
+	cMachine := C.arbCoreGetMachineForSideload(ac.c, C.uint64_t(blockNumber))
+
+	if cMachine == nil {
+		return nil, errors.Errorf("error getting machine for sideload")
+	}
+
+	return WrapCMachine(cMachine), nil
 }

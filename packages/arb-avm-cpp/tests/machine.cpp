@@ -73,7 +73,10 @@ TEST_CASE("Checkpoint State") {
     ValueCache value_cache{};
 
     auto machine = storage.getInitialMachine(value_cache);
-    machine->run(3, false, std::vector<InboxMessage>{}, 0, true);
+    MachineExecutionConfig execConfig;
+    execConfig.max_gas = 3;
+    execConfig.final_message_of_block = true;
+    machine->run(execConfig);
 
     SECTION("default") { checkpointState(storage, *machine); }
     SECTION("save twice") { checkpointStateTwice(storage, *machine); }
@@ -97,10 +100,14 @@ TEST_CASE("Delete machine checkpoint") {
 
     SECTION("default") {
         auto machine = storage.getInitialMachine(value_cache);
-        machine->run(4, false, std::vector<InboxMessage>{}, 0, true);
+        MachineExecutionConfig execConfig;
+        execConfig.max_gas = 4;
+        execConfig.final_message_of_block = true;
+        machine->run(execConfig);
         auto transaction = storage.makeTransaction();
         saveMachine(*transaction, *machine);
-        machine->run(0, false, std::vector<InboxMessage>{}, 0, true);
+        execConfig.max_gas = 0;
+        machine->run(execConfig);
         saveMachine(*transaction, *machine);
         deleteCheckpoint(*transaction, *machine);
         REQUIRE(transaction->commit().ok());
@@ -126,8 +133,10 @@ TEST_CASE("Restore checkpoint") {
 TEST_CASE("Proof") {
     auto machine = Machine::loadFromFile(test_contract_path);
     while (true) {
-        auto assertion =
-            machine.run(3, false, std::vector<InboxMessage>{}, 0, true);
+        MachineExecutionConfig execConfig;
+        execConfig.max_gas = 3;
+        execConfig.final_message_of_block = true;
+        auto assertion = machine.run(execConfig);
         machine.marshalForProof();
         if (assertion.stepCount == 0) {
             break;
@@ -197,10 +206,60 @@ TEST_CASE("MachineTestVectors") {
                 std::string{machine_test_cases_path} + "/" + filename + ".mexe";
 
             auto mach = Machine::loadFromFile(test_file);
+            MachineExecutionConfig execConfig;
             while (std::holds_alternative<NotBlocked>(mach.isBlocked(false))) {
-                mach.run(0, false, std::vector<InboxMessage>{}, 0, false);
+                mach.run(execConfig);
             }
             REQUIRE(mach.currentStatus() == Status::Halted);
         }
     }
+}
+
+TEST_CASE("Stopping on sideload") {
+    auto orig_machine = Machine::loadFromFile(
+        std::string(machine_test_cases_path) + "/sideloadtest.mexe");
+    MachineExecutionConfig execConfig;
+
+    // First, test running straight past the sideload
+    Machine machine = orig_machine;
+    auto assertion = machine.run(execConfig);
+    REQUIRE(machine.currentStatus() == Status::Error);
+    REQUIRE(!assertion.sideloadBlockNumber);
+    REQUIRE(assertion.gasCount == 13);
+
+    // Next, test running past the sideload with a value specified
+    machine = orig_machine;
+    execConfig.sideloads.emplace_back(InboxMessage());
+    execConfig.stop_on_sideload = true;  // Shouldn't matter
+    assertion = machine.run(execConfig);
+    REQUIRE(machine.currentStatus() == Status::Halted);
+    REQUIRE(!assertion.sideloadBlockNumber);
+    REQUIRE(assertion.gasCount == 23);
+
+    // Next, test stopping on the sideload but continuing
+    machine = orig_machine;
+    execConfig.sideloads.clear();
+    execConfig.stop_on_sideload = true;
+    assertion = machine.run(execConfig);
+    REQUIRE(machine.currentStatus() == Status::Extensive);
+    REQUIRE(assertion.sideloadBlockNumber == uint256_t(0x321));
+    REQUIRE(assertion.gasCount == 1);
+
+    assertion = machine.run(execConfig);
+    REQUIRE(machine.currentStatus() == Status::Error);
+    REQUIRE(!assertion.sideloadBlockNumber);
+    REQUIRE(assertion.gasCount == 12);
+
+    // Next, test stopping on the sideload and adding a value
+    machine = orig_machine;
+    assertion = machine.run(execConfig);
+    REQUIRE(machine.currentStatus() == Status::Extensive);
+    REQUIRE(assertion.sideloadBlockNumber == uint256_t(0x321));
+    REQUIRE(assertion.gasCount == 1);
+
+    execConfig.sideloads.emplace_back(InboxMessage());
+    assertion = machine.run(execConfig);
+    REQUIRE(machine.currentStatus() == Status::Halted);
+    REQUIRE(!assertion.sideloadBlockNumber);
+    REQUIRE(assertion.gasCount == 22);
 }

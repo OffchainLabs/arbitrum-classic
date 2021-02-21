@@ -80,7 +80,7 @@ TEST_CASE("ArbCore tests") {
             auto arbCore = storage.getArbCore();
             REQUIRE(arbCore->startThread());
 
-            REQUIRE(arbCore->deliverMessages(raw_messages, 0, false));
+            REQUIRE(arbCore->deliverMessages(raw_messages, 0, true));
 
             ArbCore::message_status_enum status;
             while (true) {
@@ -140,6 +140,12 @@ TEST_CASE("ArbCore tests") {
                 *cursor.data, 100, false, value_cache);
             REQUIRE(advanceStatus.ok());
             REQUIRE(cursor.data->arb_gas_used > 0);
+
+            auto before_sideload = arbCore->getMachineForSideload(
+                inbox_messages.back().block_number, value_cache);
+            REQUIRE(before_sideload.status.ok());
+            REQUIRE(before_sideload.data->machine_state.loadCurrentInstruction()
+                        .op.opcode == OpCode::SIDELOAD);
         }
     }
 }

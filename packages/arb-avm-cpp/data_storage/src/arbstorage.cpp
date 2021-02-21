@@ -45,6 +45,7 @@ bool ArbStorage::initialized() const {
 }
 
 bool ArbStorage::closeArbStorage() {
+    arb_core->abortThread();
     auto status = datastorage->closeDb();
     return status.ok();
 }

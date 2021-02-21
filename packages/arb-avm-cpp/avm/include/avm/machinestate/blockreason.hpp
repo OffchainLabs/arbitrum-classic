@@ -46,6 +46,7 @@ struct InboxBlocked {
 
 struct SideloadBlocked {
     static constexpr BlockType type = Sideload;
+    uint256_t block_number;
 };
 
 using BlockReason = std::variant<NotBlocked,
