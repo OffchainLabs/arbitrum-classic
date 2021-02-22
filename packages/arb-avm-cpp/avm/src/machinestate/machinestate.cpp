@@ -35,13 +35,11 @@ AssertionContext::AssertionContext(MachineExecutionConfig config)
       inbox_messages_consumed(config.messages_to_skip),
       sideloads(std::move(config.sideloads)),
       stop_on_sideload(config.stop_on_sideload) {
-    if (config.final_message_of_block && !config.inbox_messages.empty()) {
+    if (config.final_message_of_block && !inbox_messages.empty()) {
         // Last message is the final message of a block, so need to
         // set next_block_height to the block after the last block
         next_block_height =
-            config.inbox_messages[config.inbox_messages.size() - 1]
-                .block_number +
-            1;
+            inbox_messages[inbox_messages.size() - 1].block_number + 1;
     }
 }
 
