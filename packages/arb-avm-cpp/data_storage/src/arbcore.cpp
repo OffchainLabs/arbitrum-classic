@@ -1138,6 +1138,7 @@ rocksdb::Status ArbCore::resolveStagedMessage(Transaction& tx,
             // Unable to resolve cursor, no valid message found
             return message_lookup.status;
         }
+        message = std::move(message_lookup.data);
     }
 
     return rocksdb::Status::OK();
