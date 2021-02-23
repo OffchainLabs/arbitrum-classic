@@ -1133,12 +1133,13 @@ rocksdb::Status ArbCore::resolveStagedMessage(Transaction& tx,
             return rocksdb::Status::NotFound();
         }
 
-        auto message_lookup = getValue(tx, sequence_number, cache);
+        auto message_lookup = getMessageEntry(tx, sequence_number);
         if (!message_lookup.status.ok()) {
             // Unable to resolve cursor, no valid message found
             return message_lookup.status;
         }
-        message = std::move(message_lookup.data);
+        auto inbox_message = extractInboxMessage(message_lookup.data.data);
+        message = inbox_message.toTuple();
     }
 
     return rocksdb::Status::OK();
