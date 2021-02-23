@@ -88,9 +88,9 @@ std::string ArbCore::messagesClearError() {
     return str;
 }
 
-std::string ArbCore::machineClearError() {
+std::optional<std::string> ArbCore::machineClearError() {
     if (!machine_error) {
-        return nullptr;
+        return std::nullopt;
     }
 
     machine_error = false;

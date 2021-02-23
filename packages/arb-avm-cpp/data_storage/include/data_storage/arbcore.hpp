@@ -167,7 +167,7 @@ class ArbCore {
    public:
     // Managing machine state
     bool machineIdle();
-    std::string machineClearError();
+    std::optional<std::string> machineClearError();
 
    public:
     // Sending messages to core thread

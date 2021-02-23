@@ -104,6 +104,8 @@ TEST_CASE("ArbCore tests") {
         }
 
         while (!arbCore->machineIdle()) {
+            auto err_str = arbCore->machineClearError();
+            REQUIRE(!err_str.has_value());
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
 
