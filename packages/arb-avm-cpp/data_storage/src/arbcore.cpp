@@ -1497,6 +1497,9 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
         // Reorg checkpoint and everything else
         auto reorg_status = reorgToMessageOrBefore(
             *tx, previous_valid_sequence_number, false, cache);
+        if (!reorg_status.ok()) {
+            return reorg_status;
+        }
     }
 
     InboxMessage next_inbox_message;
