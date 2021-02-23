@@ -1729,21 +1729,15 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(Transaction& tx,
                   << log_inserted_count.status.ToString() << "\n";
         return log_inserted_count.status;
     }
-    auto log_processed_count = logProcessedCount(tx);
-    if (!log_processed_count.status.ok()) {
-        std::cerr << "Error getting processed count in Cursor Reorg: "
-                  << log_inserted_count.status.ToString() << "\n";
-        return log_processed_count.status;
-    }
 
     if (log_count >= log_inserted_count.data) {
         // No reorg needed
         return rocksdb::Status::OK();
     }
 
-    if (log_count < log_processed_count.data) {
+    if (log_count < logs_cursors[cursor_index].current_total_count) {
         // Need to save logs that will be deleted
-        auto logs = getLogsNoLock(tx, log_count - 1,
+        auto logs = getLogsNoLock(tx, log_count,
                                   log_inserted_count.data - log_count, cache);
         if (!logs.status.ok()) {
             std::cerr << "Error getting " << log_count - 1
