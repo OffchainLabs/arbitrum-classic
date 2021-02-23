@@ -679,7 +679,11 @@ void ArbCore::operator()() {
                 first_sequence_number_in_machine +
                 last_assertion.inbox_messages_consumed;
 
-            if (total_messages_consumed > messages_inserted.data) {
+            auto reorg_applicable_messages = total_messages_consumed;
+            if (machine->stagedMessageIsPlaceholder()) {
+                reorg_applicable_messages -= 1;
+            }
+            if (reorg_applicable_messages > messages_inserted.data) {
                 // Machine consumed obsolete message, restore from checkpoint
                 machine = getMachineUsingStateKeys<MachineThread>(
                     *tx, pending_checkpoint.machine_state_keys, cache);

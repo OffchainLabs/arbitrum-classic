@@ -72,6 +72,7 @@ class Machine {
 
     Assertion run(MachineExecutionConfig config);
 
+    bool stagedMessageIsPlaceholder() const;
     Status currentStatus() const { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }
     BlockReason isBlocked(bool newMessages) const {

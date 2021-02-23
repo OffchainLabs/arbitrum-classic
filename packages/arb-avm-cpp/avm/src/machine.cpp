@@ -98,3 +98,7 @@ Assertion Machine::run(MachineExecutionConfig config) {
             std::move(machine_state.context.debug_prints),
             sideload_block_number};
 }
+
+bool Machine::stagedMessageIsPlaceholder() const {
+    return std::holds_alternative<uint256_t>(machine_state.staged_message);
+}
