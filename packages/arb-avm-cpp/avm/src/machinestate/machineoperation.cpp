@@ -922,6 +922,7 @@ BlockReason inboxPeekOp(MachineState& m) {
             m.stack[0] =
                 m.stack[0] == value(*m.context.next_block_height) ? 1 : 0;
             ++m.pc;
+            m.context.inbox_messages_consumed += 1;
             m.total_messages_consumed += 1;
             return NotBlocked{};
         } else {
