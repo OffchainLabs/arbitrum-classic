@@ -2,11 +2,12 @@ package challenge
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/pkg/errors"
-	"math/big"
 )
 
 type Challenger struct {
@@ -38,53 +39,17 @@ func (c *Challenger) HandleConflict(ctx context.Context) error {
 		// Not our turn
 		return nil
 	}
-	kind, err := c.challenge.Kind(ctx)
+
+	challengeState, err := c.challenge.ChallengeState(ctx)
 	if err != nil {
 		return err
 	}
 
-	var prevBisection *core.Bisection
-	if kind == core.Uninitialized {
-		startCursor, err := c.lookup.GetExecutionCursor(c.challengedNode.Assertion.Before.TotalGasConsumed)
-		if err != nil {
-			return err
-		}
-		execTracker := core.NewExecutionTracker(
-			c.lookup,
-			startCursor,
-			false,
-			[]*big.Int{c.challengedNode.Assertion.GasUsed()},
-		)
-		kind, err = core.JudgeAssertion(c.challengedNode.Assertion, execTracker)
-		if err != nil {
-			return err
-		}
-		if kind == core.StoppedShort {
-			panic("Not yet handled")
-		}
-	} else {
-		challengeState, err := c.challenge.ChallengeState(ctx)
-		if err != nil {
-			return err
-		}
-
-		prevBisection, err = c.challenge.LookupBisection(ctx, challengeState)
-		if err != nil {
-			return err
-		}
+	prevBisection, err := c.challenge.LookupBisection(ctx, challengeState)
+	if err != nil {
+		return err
 	}
 
-	switch kind {
-	case core.Execution:
-		return c.handleExecutionChallenge(ctx, prevBisection)
-	case core.StoppedShort:
-		return c.handleStoppedShortChallenge()
-	default:
-		return errors.New("can't handle challenge")
-	}
-}
-
-func (c *Challenger) handleExecutionChallenge(ctx context.Context, prevBisection *core.Bisection) error {
 	if prevBisection == nil {
 		prevBisection = c.challengedNode.InitialExecutionBisection()
 	}
@@ -95,11 +60,7 @@ func (c *Challenger) handleExecutionChallenge(ctx context.Context, prevBisection
 	challengeImpl := &ExecutionImpl{
 		initialCursor: initialCursor,
 	}
-	return handleChallenge(ctx, c.challenge, c.lookup, challengeImpl, prevBisection)
-}
-
-func (c *Challenger) handleStoppedShortChallenge() error {
-	panic("Unimplemented")
+	return handleChallenge(ctx, c.challenge, c.challengedNode.Assertion, c.lookup, challengeImpl, prevBisection)
 }
 
 type SimpleChallengerImpl interface {
@@ -109,8 +70,8 @@ type SimpleChallengerImpl interface {
 type ChallengerImpl interface {
 	SegmentTarget() int
 
-	GetCuts(lookup core.ArbCoreLookup, offsets []*big.Int) ([]core.Cut, error)
-	FindFirstDivergence(lookup core.ArbCoreLookup, offsets []*big.Int, cuts []core.Cut) (int, error)
+	GetCuts(lookup core.ArbCoreLookup, assertion *core.Assertion, offsets []*big.Int) ([]core.Cut, error)
+	FindFirstDivergence(lookup core.ArbCoreLookup, assertion *core.Assertion, offsets []*big.Int, cuts []core.Cut) (DivergenceInfo, error)
 
 	Bisect(
 		ctx context.Context,
@@ -125,6 +86,17 @@ type ChallengerImpl interface {
 		ctx context.Context,
 		challenge *ethbridge.Challenge,
 		lookup core.ArbCoreLookup,
+		assertion *core.Assertion,
+		prevBisection *core.Bisection,
+		segmentToChallenge int,
+		challengedSegment *core.ChallengeSegment,
+	) error
+
+	ProveContinuedExecution(
+		ctx context.Context,
+		challenge *ethbridge.Challenge,
+		lookup core.ArbCoreLookup,
+		assertion *core.Assertion,
 		prevBisection *core.Bisection,
 		segmentToChallenge int,
 		challengedSegment *core.ChallengeSegment,
@@ -134,40 +106,35 @@ type ChallengerImpl interface {
 func handleChallenge(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
+	assertion *core.Assertion,
 	lookup core.ArbCoreLookup,
 	challengeImpl ChallengerImpl,
 	prevBisection *core.Bisection,
 ) error {
 	prevCutOffsets := generateBisectionCutOffsets(prevBisection.ChallengedSegment, len(prevBisection.Cuts)-1)
-	cutToChallenge, err := challengeImpl.FindFirstDivergence(lookup, prevCutOffsets, prevBisection.Cuts)
+	divergence, err := challengeImpl.FindFirstDivergence(lookup, assertion, prevCutOffsets, prevBisection.Cuts)
 	if err != nil {
 		return err
 	}
-	if cutToChallenge >= len(prevCutOffsets) {
-		return errors.New("cannot challenge last cut")
+	if divergence.DifferentIndex == 0 {
+		return errors.New("first cut was already wrong")
 	}
+	cutToChallenge := divergence.DifferentIndex - 1
 	inconsistentSegment := &core.ChallengeSegment{
 		Start:  prevCutOffsets[cutToChallenge],
 		Length: new(big.Int).Sub(prevCutOffsets[cutToChallenge+1], prevCutOffsets[cutToChallenge]),
 	}
 
-	if inconsistentSegment.Length.Cmp(big.NewInt(1)) == 0 {
-		return challengeImpl.OneStepProof(
-			ctx,
-			challenge,
-			lookup,
-			prevBisection,
-			cutToChallenge-1,
-			inconsistentSegment,
-		)
-	} else {
+	cmp := divergence.SegmentSteps.Cmp(big.NewInt(1))
+	if cmp > 0 || divergence.EndIsUnreachable {
+		// Steps > 1 or the endpoint is unreachable: Dissect further
 		segmentCount := challengeImpl.SegmentTarget()
 		if inconsistentSegment.Length.Cmp(big.NewInt(int64(segmentCount))) < 0 {
 			// Safe since this is less than 400
 			segmentCount = int(inconsistentSegment.Length.Int64())
 		}
 		subCutOffsets := generateBisectionCutOffsets(inconsistentSegment, segmentCount)
-		subCuts, err := challengeImpl.GetCuts(lookup, subCutOffsets)
+		subCuts, err := challengeImpl.GetCuts(lookup, assertion, subCutOffsets)
 		if err != nil {
 			return err
 		}
@@ -178,6 +145,31 @@ func handleChallenge(
 			cutToChallenge,
 			inconsistentSegment,
 			subCuts,
+		)
+	} else if cmp < 0 {
+		// Steps == 0: Prove that the previous instruction's execution continued through this gas window
+		// Also sometimes called a zero step proof, or a constraint win
+		// We specifically don't do this when we think the endpoint is unreachable,
+		// as we need to dissect unreachable endpoints to force our opponent to fail to prove them
+		return challengeImpl.ProveContinuedExecution(
+			ctx,
+			challenge,
+			lookup,
+			assertion,
+			prevBisection,
+			cutToChallenge,
+			inconsistentSegment,
+		)
+	} else {
+		// Steps == 1: Do a one step proof, proving the execution of this step specifically
+		return challengeImpl.OneStepProof(
+			ctx,
+			challenge,
+			lookup,
+			assertion,
+			prevBisection,
+			cutToChallenge,
+			inconsistentSegment,
 		)
 	}
 }

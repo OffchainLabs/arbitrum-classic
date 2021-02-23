@@ -28,6 +28,7 @@ type ExecutionCursor interface {
 	TotalMessagesRead() *big.Int
 	InboxHash() common.Hash
 	TotalGasConsumed() *big.Int
+	TotalSteps() *big.Int
 	TotalSendCount() *big.Int
 	TotalLogCount() *big.Int
 

@@ -40,9 +40,11 @@ abigen --pkg=$PACKAGE --out=nodefactory.go --combined-json combined.json --exc=$
 solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/challenge/ChallengeFactory.sol --overwrite -o .
 abigen --pkg=$PACKAGE --out=challengefactory.go --combined-json combined.json --exc=$IGNORED_MORE,$OZ_LIBS
 
+solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/test_only/ChallengeTester.sol --overwrite -o .
+abigen --pkg=$PACKAGE --out=challengeTester.go --combined-json combined.json --exc=$IGNORED_MORE,$OZ_LIBS,$ARCH_PREFIX/IOneStepProof.sol:IOneStepProof,$CHAL_PREFIX/ChallengeFactory.sol:ChallengeFactory
+
 rm combined.json
 
-abigen --sol=$PREFIX/test_only/ChallengeTester.sol --pkg=$PACKAGE --out=challengeTester.go --exc=$IGNORED_MORE,$ARCH_PREFIX/IOneStepProof.sol:IOneStepProof
 abigen --sol=$PREFIX/test_only/MachineTester.sol --pkg=$PACKAGE --out=machineTester.go --exc=$IGNORED_MORE
 abigen --sol=$PREFIX/arch/OneStepProof.sol --pkg=$PACKAGE --out=onestepproof.go --exc=$IGNORED_MORE,$ARCH_PREFIX/IOneStepProof.sol:IOneStepProof
 abigen --sol=$PREFIX/arch/OneStepProof2.sol --pkg=$PACKAGE --out=onestepproof2.go --exc=$IGNORED_MORE,$ARCH_PREFIX/IOneStepProof.sol:IOneStepProof

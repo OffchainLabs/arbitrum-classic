@@ -25,13 +25,14 @@ package cmachine
 */
 import "C"
 import (
+	"math/big"
+	"runtime"
+	"unsafe"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/pkg/errors"
-	"math/big"
-	"runtime"
-	"unsafe"
 )
 
 type ExecutionCursor struct {
@@ -42,6 +43,7 @@ type ExecutionCursor struct {
 	totalGasConsumed  *big.Int
 	totalSendCount    *big.Int
 	totalLogCount     *big.Int
+	totalSteps        *big.Int
 }
 
 func deleteExecutionCursor(ac *ExecutionCursor) {
@@ -69,6 +71,7 @@ func (ec *ExecutionCursor) Clone() core.ExecutionCursor {
 		totalGasConsumed:  ec.totalGasConsumed,
 		totalSendCount:    ec.totalSendCount,
 		totalLogCount:     ec.totalLogCount,
+		totalSteps:        ec.totalSteps,
 	}
 }
 
@@ -118,6 +121,12 @@ func (ec *ExecutionCursor) updateValues() error {
 	}
 	ec.totalLogCount = receiveBigInt(result.value)
 
+	result = C.executionCursorTotalSteps(ec.c)
+	if result.found == 0 {
+		return errors.New("failed to get TotalSteps")
+	}
+	ec.totalSteps = receiveBigInt(result.value)
+
 	return nil
 }
 
@@ -143,4 +152,8 @@ func (ec *ExecutionCursor) TotalSendCount() *big.Int {
 
 func (ec *ExecutionCursor) TotalLogCount() *big.Int {
 	return ec.totalLogCount
+}
+
+func (ec *ExecutionCursor) TotalSteps() *big.Int {
+	return ec.totalSteps
 }

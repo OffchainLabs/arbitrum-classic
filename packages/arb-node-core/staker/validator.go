@@ -2,8 +2,9 @@ package staker
 
 import (
 	"context"
-	"github.com/pkg/errors"
 	"math/big"
+
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -181,11 +182,11 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, ma
 	execTracker := core.NewExecutionTracker(v.lookup, cursor, false, gasesUsed)
 
 	for _, nd := range successorsNodes {
-		chalType, err := core.JudgeAssertion(nd.Assertion, execTracker)
+		valid, err := core.IsAssertionValid(nd.Assertion, execTracker)
 		if err != nil {
 			return nil, err
 		}
-		if chalType == core.NoChallenge {
+		if valid {
 			return nd, nil
 		}
 		blockId, err := getBlockID(ctx, v.client, nd.Assertion.PrevProposedBlock)
@@ -202,7 +203,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, ma
 		return nil, nil
 	}
 
-	execInfo, err := execTracker.GetExecutionInfo(gasesUsed[len(gasesUsed)-1])
+	execInfo, _, err := execTracker.GetExecutionInfo(gasesUsed[len(gasesUsed)-1])
 	if err != nil {
 		return nil, err
 	}

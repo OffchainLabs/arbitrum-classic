@@ -2,9 +2,10 @@ package challenge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"math/big"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -22,8 +23,8 @@ func executeChallenge(
 	challengedNode *core.NodeInfo,
 	asserterTime *big.Int,
 	challengerTime *big.Int,
-	correctLookup core.ArbCore,
-	falseLookup core.ArbCore,
+	correctLookup core.ArbCoreLookup,
+	falseLookup core.ArbCoreLookup,
 ) int {
 	ctx := context.Background()
 
@@ -48,6 +49,7 @@ func executeChallenge(
 	turn := ethbridge.CHALLENGER_TURN
 	rounds := 0
 	for {
+		t.Logf("executing challenge round %v", rounds)
 		checkTurn(t, challenge, turn)
 		if turn == ethbridge.CHALLENGER_TURN {
 			err := challenger.HandleConflict(ctx)
@@ -128,35 +130,35 @@ func checkChallengeCompleted(t *testing.T, tester *ethbridgetestcontracts.Challe
 
 func initializeChallengeData(
 	t *testing.T,
-	lookup core.ArbCore,
-	inboxMessagesRead *big.Int,
+	lookup core.ArbCoreLookup,
+	gasTarget *big.Int,
 ) *core.NodeInfo {
-	initialMach, err := lookup.GetExecutionCursor(big.NewInt(0))
+	cursor, err := lookup.GetExecutionCursor(big.NewInt(0))
 	test.FailIfError(t, err)
 	prevState := &core.NodeState{
 		ProposedBlock: big.NewInt(0),
 		InboxMaxCount: big.NewInt(0),
 		ExecutionState: &core.ExecutionState{
+			MachineHash:       cursor.MachineHash(),
+			TotalMessagesRead: cursor.TotalMessagesRead(),
 			TotalGasConsumed:  big.NewInt(0),
-			MachineHash:       initialMach.MachineHash(),
-			TotalMessagesRead: big.NewInt(0),
 			TotalSendCount:    big.NewInt(0),
 			TotalLogCount:     big.NewInt(0),
 		},
 	}
 
-	afterInboxTotalMessagesRead := new(big.Int).Add(prevState.TotalMessagesRead, inboxMessagesRead)
+	lookup.AdvanceExecutionCursor(cursor, gasTarget, true)
 	assertion := &core.Assertion{
 		PrevProposedBlock: prevState.ProposedBlock,
 		PrevInboxMaxCount: prevState.InboxMaxCount,
 		ExecutionInfo: &core.ExecutionInfo{
 			Before: prevState.ExecutionState,
 			After: &core.ExecutionState{
-				MachineHash:       common.Hash{},
-				TotalMessagesRead: afterInboxTotalMessagesRead,
-				TotalGasConsumed:  big.NewInt(0),
-				TotalSendCount:    big.NewInt(0),
-				TotalLogCount:     big.NewInt(0),
+				MachineHash:       distortHash(cursor.MachineHash()),
+				TotalMessagesRead: cursor.TotalMessagesRead(),
+				TotalGasConsumed:  new(big.Int).Sub(cursor.TotalGasConsumed(), prevState.ExecutionState.TotalGasConsumed),
+				TotalSendCount:    new(big.Int).Sub(cursor.TotalSendCount(), prevState.ExecutionState.TotalSendCount),
+				TotalLogCount:     new(big.Int).Sub(cursor.TotalLogCount(), prevState.ExecutionState.TotalLogCount),
 			},
 			SendAcc: common.Hash{},
 			LogAcc:  common.Hash{},

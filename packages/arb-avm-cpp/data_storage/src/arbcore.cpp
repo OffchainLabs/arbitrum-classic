@@ -1068,9 +1068,10 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     ValueCache& cache) {
     auto tx = Transaction::makeTransaction(data_storage);
 
-    return getExecutionCursorImpl(*tx, execution_cursor,
-                                  execution_cursor.arb_gas_used + max_gas,
-                                  go_over_gas, 10, cache);
+    auto status = getExecutionCursorImpl(
+        *tx, execution_cursor, execution_cursor.arb_gas_used + max_gas,
+        go_over_gas, 10, cache);
+    return status;
 }
 
 rocksdb::Status ArbCore::getExecutionCursorImpl(
@@ -1299,15 +1300,12 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
 
     auto pending_reorg_applicable_messages =
         pending_checkpoint.total_messages_read;
-    if (machine->stagedMessageIsPlaceholder()) {
-        pending_reorg_applicable_messages -= 1;
-    }
-    if (current_message_sequence_number >= pending_reorg_applicable_messages) {
+    if (current_message_sequence_number > pending_reorg_applicable_messages) {
         // Already past core machine, probably reorg
         return {rocksdb::Status::OK(), false};
     }
 
-    if (current_message_sequence_number + message_group_size >=
+    if (current_message_sequence_number + message_group_size >
         pending_reorg_applicable_messages) {
         // Don't read past primary machine
         message_group_size =
