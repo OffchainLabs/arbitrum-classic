@@ -1407,29 +1407,24 @@ rocksdb::Status ArbCore::updateMessageEntryProcessedCount(
 // Returns std::nullopt when caller needs to provide messages from earlier
 // block.
 std::optional<rocksdb::Status> ArbCore::addMessages(
-    const std::vector<std::vector<unsigned char>>& messages,
-    const uint256_t& previous_inbox_hash,
+    const std::vector<std::vector<unsigned char>>& new_messages,
+    const uint256_t& prev_inbox_hash,
     const uint256_t& final_machine_sequence_number,
     const bool last_block_complete,
     ValueCache& cache) {
     auto tx = Transaction::makeTransaction(data_storage);
 
-    // Get the last message sequence number that was added to database
     auto message_count_result = messageEntryInsertedCountImpl(*tx);
     if (!message_count_result.status.ok()) {
         return message_count_result.status;
     }
-    std::optional<uint256_t> last_inserted_sequence_number;
-    if (message_count_result.data > 0) {
-        last_inserted_sequence_number = message_count_result.data - 1;
-    }
+    auto existing_message_count = message_count_result.data;
 
-    auto first_message = extractInboxMessage(messages[0]);
+    auto first_message = extractInboxMessage(new_messages[0]);
 
+    auto previous_inbox_hash = prev_inbox_hash;
     if (first_message.inbox_sequence_number > 0) {
-        if (!last_inserted_sequence_number.has_value() ||
-            first_message.inbox_sequence_number >
-                *last_inserted_sequence_number + 1) {
+        if (first_message.inbox_sequence_number > existing_message_count) {
             // Not allowed to skip message sequence numbers, ask for older
             // messages
             return std::nullopt;
@@ -1449,38 +1444,37 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
         }
     }
 
-    size_t current_message_index = 0;
     auto current_sequence_number = first_message.inbox_sequence_number;
 
-    if (messages.empty()) {
-        // No new messages, just need to truncating obsolete messages
+    if (new_messages.empty()) {
+        // No new messages, just need to truncate obsolete messages
         current_sequence_number = first_message.inbox_sequence_number - 1;
     }
 
     // Skip any valid messages that we already have in database
-    auto messages_count = messages.size();
-    auto current_previous_inbox_hash = previous_inbox_hash;
-    while ((current_sequence_number <= last_inserted_sequence_number) &&
-           (current_message_index < messages_count)) {
+    auto new_messages_count = new_messages.size();
+    size_t new_messages_index = 0;
+    while ((current_sequence_number < existing_message_count) &&
+           (new_messages_index < new_messages_count)) {
         auto existing_message_entry =
             getMessageEntry(*tx, current_sequence_number);
         if (!existing_message_entry.status.ok()) {
             return existing_message_entry.status;
         }
-        auto current_inbox_hash = hash_inbox(current_previous_inbox_hash,
-                                             messages[current_message_index]);
+        auto current_inbox_hash =
+            hash_inbox(previous_inbox_hash, new_messages[new_messages_index]);
         if (existing_message_entry.data.inbox_hash != current_inbox_hash) {
             // Entry doesn't match because of reorg
             break;
         }
 
-        current_message_index++;
-        current_previous_inbox_hash = current_inbox_hash;
+        new_messages_index++;
+        previous_inbox_hash = current_inbox_hash;
         current_sequence_number =
-            first_message.inbox_sequence_number + current_message_index;
+            first_message.inbox_sequence_number + new_messages_index;
     }
 
-    if (current_sequence_number <= last_inserted_sequence_number) {
+    if (current_sequence_number < existing_message_count) {
         // Reorg occurred
         const std::lock_guard<std::mutex> lock(core_reorg_mutex);
 
@@ -1503,30 +1497,27 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
         }
     }
 
-    InboxMessage next_inbox_message;
-    if (current_message_index < messages_count) {
-        next_inbox_message =
-            extractInboxMessage(messages[current_message_index]);
-    }
-    while (current_message_index < messages_count) {
+    while (new_messages_index < new_messages_count) {
         // Encode key
         std::vector<unsigned char> key;
         marshal_uint256_t(current_sequence_number, key);
 
-        auto current_inbox_hash = hash_inbox(current_previous_inbox_hash,
-                                             messages[current_message_index]);
+        auto current_inbox_hash =
+            hash_inbox(previous_inbox_hash, new_messages[new_messages_index]);
 
+        auto next_inbox_message =
+            extractInboxMessage(new_messages[new_messages_index]);
         auto current_inbox_message = std::move(next_inbox_message);
-        if (current_message_index < messages_count) {
+        if (new_messages_index < new_messages_count) {
             next_inbox_message =
-                extractInboxMessage(messages[current_message_index]);
+                extractInboxMessage(new_messages[new_messages_index]);
         } else {
             next_inbox_message = {};
         }
 
         bool last_message_in_block;
         if (last_block_complete &&
-            ((current_message_index == messages_count - 1) ||
+            ((new_messages_index == new_messages_count - 1) ||
              current_inbox_message.block_number !=
                  next_inbox_message.block_number)) {
             last_message_in_block = true;
@@ -1538,7 +1529,7 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
         auto messageEntry = MessageEntry{
             current_sequence_number, current_inbox_hash,
             intx::narrow_cast<uint64_t>(current_inbox_message.block_number),
-            last_message_in_block, (messages[current_message_index])};
+            last_message_in_block, (new_messages[new_messages_index])};
         auto serialized_messageentry = serializeMessageEntry(messageEntry);
 
         // Save message entry into database
@@ -1549,8 +1540,8 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
             return put_status;
         }
 
-        current_message_index++;
-        current_previous_inbox_hash = current_inbox_hash;
+        new_messages_index++;
+        previous_inbox_hash = current_inbox_hash;
         current_sequence_number += 1;
     }
 

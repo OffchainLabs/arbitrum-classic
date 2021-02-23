@@ -267,8 +267,8 @@ class ArbCore {
 
    private:
     std::optional<rocksdb::Status> addMessages(
-        const std::vector<std::vector<unsigned char>>& messages,
-        const uint256_t& previous_inbox_hash,
+        const std::vector<std::vector<unsigned char>>& new_messages,
+        const uint256_t& prev_inbox_hash,
         const uint256_t& final_machine_sequence_number,
         bool last_block_complete,
         ValueCache& cache);
