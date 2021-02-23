@@ -145,6 +145,10 @@ func popRandomTx(b batch, queuedTxes *txQueues) (*types.Transaction, int, bool) 
 		}
 
 		first = false
+		// Something is weird, bail and try again later
+		if index >= len(queuedTxes.accounts) {
+			return nil, 0, false
+		}
 		account := queuedTxes.accounts[index]
 		nextAccount := queuedTxes.queues[account]
 		tx := nextAccount.Peek()
