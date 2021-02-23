@@ -795,6 +795,19 @@ void ArbCore::operator()() {
                 execConfig.setInboxMessagesFromBytes(messages);
                 execConfig.final_message_of_block =
                     next_message_result.data.last_message_in_block;
+
+                // Resolve staged message if possible.  If message not found,
+                // machine will just be blocked
+                auto resolve_status = resolveStagedMessage(
+                    *tx, machine->machine_state.staged_message, cache);
+                if (!resolve_status.IsNotFound() && !resolve_status.ok()) {
+                    core_error_string = "error resolving staged message";
+                    machine_error = true;
+                    std::cerr << "ArbCore error: " << core_error_string << ": "
+                              << resolve_status.ToString() << "\n";
+                    break;
+                }
+
                 auto status = machine->runMachine(execConfig);
                 if (!status) {
                     core_error_string = "Error starting machine thread";
@@ -1077,6 +1090,9 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
 
         auto status =
             executionCursorSetup(tx, execution_cursor, total_gas_used, cache);
+        if (!status.ok()) {
+            return status;
+        }
 
         while (true) {
             auto result = executionCursorAddMessages(tx, execution_cursor,
@@ -1098,6 +1114,20 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                 execConfig.go_over_gas = go_over_gas;
                 execConfig.inbox_messages = execution_cursor.messages;
                 execConfig.messages_to_skip = execution_cursor.messages_to_skip;
+
+                // Resolve staged message if possible.
+                // If placeholder message not found, machine will just be
+                // blocked
+                auto resolve_status = resolveStagedMessage(
+                    tx, machine->machine_state.staged_message, cache);
+                if (!resolve_status.IsNotFound() && !resolve_status.ok()) {
+                    core_error_string = "error resolving staged message";
+                    machine_error = true;
+                    std::cerr << "ArbCore error: " << core_error_string << ": "
+                              << resolve_status.ToString() << "\n";
+                    return resolve_status;
+                }
+
                 auto assertion = machine->run(execConfig);
                 if (assertion.gasCount == 0) {
                     // Nothing was executed
@@ -1112,10 +1142,22 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                                           1];
                 }
                 execution_cursor.applyAssertion(assertion);
+
+                if (total_gas_used <= execution_cursor.arb_gas_used) {
+                    // Gas reached
+                    break;
+                }
+
                 if (assertion.inbox_messages_consumed !=
                     execution_cursor.messages.size()) {
                     // Not all messages were consumed
-                    break;
+                    core_error_string = "not all messages were consumed";
+                    machine_error = true;
+                    std::cerr << "ArbCore error: " << core_error_string << ", "
+                              << execution_cursor.messages.size() -
+                                     assertion.inbox_messages_consumed
+                              << " messages left" << std::endl;
+                    return rocksdb::Status::Corruption();
                 }
             } else {
                 // Gas reached
@@ -1185,7 +1227,7 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
             return result.status;
         }
 
-        if (result.data) {
+        if (result.data && execution_cursor.machine) {
             // Execution cursor machine still valid, so use it
             return rocksdb::Status::OK();
         }
@@ -1600,49 +1642,6 @@ std::optional<MessageEntry> ArbCore::getNextMessage() {
 
     auto key = reinterpret_cast<const char*>(it->key().data());
     return extractMessageEntry(deserializeUint256t(key), it->value());
-}
-
-// deleteMessage deletes the provided message only if it has not changed in DB
-bool ArbCore::deleteMessage(const MessageEntry& entry) {
-    auto tx = Transaction::makeTransaction(data_storage);
-
-    std::vector<unsigned char> key;
-    marshal_uint256_t(entry.sequence_number, key);
-    auto key_slice = vecToSlice(key);
-    std::string value;
-    auto get_status = tx->transaction->GetForUpdate(
-        rocksdb::ReadOptions(), tx->datastorage->messageentry_column.get(),
-        key_slice, &value);
-    if (!get_status.ok()) {
-        std::cerr << "In deleteMessage get: " << get_status.ToString()
-                  << std::endl;
-        return false;
-    }
-
-    auto db_entry =
-        extractMessageEntry(entry.sequence_number, rocksdb::Slice(value));
-    if (entry != db_entry) {
-        // Entry changed, reorg probably occurred
-        return false;
-    }
-
-    // Delete message entry
-    auto delete_status = tx->transaction->Delete(
-        tx->datastorage->messageentry_column.get(), key_slice);
-    if (!delete_status.ok()) {
-        std::cerr << "In deleteMessage delete: " << delete_status.ToString()
-                  << std::endl;
-        return false;
-    }
-
-    auto commit_status = tx->commit();
-    if (!commit_status.ok()) {
-        std::cerr << "In deleteMessage commit: " << commit_status.ToString()
-                  << std::endl;
-        return false;
-    }
-
-    return true;
 }
 
 bool ArbCore::handleLogsCursorRequested(Transaction& tx,
