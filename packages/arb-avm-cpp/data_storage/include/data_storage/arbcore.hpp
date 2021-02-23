@@ -273,7 +273,6 @@ class ArbCore {
         bool last_block_complete,
         ValueCache& cache);
     std::optional<MessageEntry> getNextMessage();
-    bool deleteMessage(const MessageEntry& entry);
     ValueResult<std::vector<value>> getLogsNoLock(Transaction& tx,
                                                   uint256_t index,
                                                   uint256_t count,
