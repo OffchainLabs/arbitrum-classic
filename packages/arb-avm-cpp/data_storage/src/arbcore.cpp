@@ -814,7 +814,7 @@ void ArbCore::operator()() {
                 // Resolve staged message if possible.  If message not found,
                 // machine will just be blocked
                 auto resolve_status = resolveStagedMessage(
-                    *tx, machine->machine_state.staged_message, cache);
+                    *tx, machine->machine_state.staged_message);
                 if (!resolve_status.IsNotFound() && !resolve_status.ok()) {
                     core_error_string = "error resolving staged message";
                     machine_error = true;
@@ -1134,7 +1134,7 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                 // If placeholder message not found, machine will just be
                 // blocked
                 auto resolve_status = resolveStagedMessage(
-                    tx, machine->machine_state.staged_message, cache);
+                    tx, machine->machine_state.staged_message);
                 if (!resolve_status.IsNotFound() && !resolve_status.ok()) {
                     core_error_string = "error resolving staged message";
                     machine_error = true;
@@ -1173,8 +1173,7 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
 }
 
 rocksdb::Status ArbCore::resolveStagedMessage(Transaction& tx,
-                                              value& message,
-                                              ValueCache& cache) const {
+                                              value& message) const {
     if (std::holds_alternative<uint256_t>(message)) {
         auto sequence_number = std::get<uint256_t>(message);
         if (sequence_number >= pending_checkpoint.total_messages_read) {
@@ -1248,8 +1247,7 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
             continue;
         }
 
-        auto resolve_status =
-            resolveStagedMessage(tx, staged_message.data, cache);
+        auto resolve_status = resolveStagedMessage(tx, staged_message.data);
         if (!resolve_status.ok()) {
             // Unable to resolve staged_message, try earlier checkpoint
             if (checkpoint_result.data.arb_gas_used == 0) {
