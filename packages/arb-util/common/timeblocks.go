@@ -18,24 +18,9 @@ package common
 
 import (
 	"math/big"
-	"time"
 )
 
 type TimeBlocks big.Int
-
-var _durationPerBlock time.Duration
-
-func init() {
-	_durationPerBlock = time.Duration(2) * time.Second
-}
-
-func SetDurationPerBlock(d time.Duration) {
-	_durationPerBlock = d
-}
-
-func GetDurationPerBlock() time.Duration {
-	return _durationPerBlock
-}
 
 func NewTimeBlocks(val *big.Int) *TimeBlocks {
 	return (*TimeBlocks)(val)
@@ -53,24 +38,8 @@ func (tb *TimeBlocks) AsInt() *big.Int {
 	return (*big.Int)(tb)
 }
 
-func BlocksFromSeconds(seconds int64) *TimeBlocks {
-	return (*TimeBlocks)(big.NewInt(int64(time.Duration(seconds) * time.Second / _durationPerBlock)))
-}
-
-func (tb *TimeBlocks) Duration() time.Duration {
-	return TicksFromBlockNum(tb).Duration()
-}
-
 func (tb *TimeBlocks) Cmp(tb2 *TimeBlocks) int {
 	return (*big.Int)(tb).Cmp((*big.Int)(tb2))
-}
-
-func (tb *TimeBlocks) Marshal() *TimeBlocksBuf {
-	return &TimeBlocksBuf{Val: MarshalBigInt(tb.AsInt())}
-}
-
-func (tb *TimeBlocksBuf) Unmarshal() *TimeBlocks {
-	return (*TimeBlocks)(tb.Val.Unmarshal())
 }
 
 func (tb *TimeBlocks) String() string {

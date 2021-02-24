@@ -41,7 +41,7 @@ func initMsg() message.Init {
 		ChainParams: protocol.ChainParams{
 			StakeRequirement:        big.NewInt(0),
 			StakeToken:              common.Address{},
-			GracePeriod:             common.TimeTicks{Val: big.NewInt(5)},
+			GracePeriod:             common.NewTimeBlocks(big.NewInt(12)),
 			MaxExecutionSteps:       0,
 			ArbGasSpeedLimitPerTick: 0,
 		},

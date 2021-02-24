@@ -26,7 +26,7 @@ import (
 type ChainParams struct {
 	StakeRequirement        *big.Int
 	StakeToken              common.Address
-	GracePeriod             common.TimeTicks // in Ticks
+	GracePeriod             *common.TimeBlocks
 	MaxExecutionSteps       uint64
 	ArbGasSpeedLimitPerTick uint64 // in ArbGas per tick
 }
@@ -35,7 +35,7 @@ func NewRandomChainParams() ChainParams {
 	return ChainParams{
 		StakeRequirement:        common.RandBigInt(),
 		StakeToken:              common.RandAddress(),
-		GracePeriod:             common.TimeTicks{Val: common.RandBigInt()},
+		GracePeriod:             common.NewTimeBlocks(common.RandBigInt()),
 		MaxExecutionSteps:       rand.Uint64(),
 		ArbGasSpeedLimitPerTick: rand.Uint64(),
 	}
@@ -53,14 +53,10 @@ func (cp ChainParams) WithStakeToken(address common.Address) ChainParams {
 	return ret
 }
 
-func (cp ChainParams) WithGracePeriod(period common.TimeTicks) ChainParams {
+func (cp ChainParams) WithGracePeriod(period *common.TimeBlocks) ChainParams {
 	ret := cp
 	ret.GracePeriod = period
 	return ret
-}
-
-func (cp ChainParams) WithGracePeriodBlocks(period common.TimeBlocks) ChainParams {
-	return cp.WithGracePeriod(common.TicksFromBlockNum(&period))
 }
 
 func (cp ChainParams) WithMaxExecutionSteps(steps uint64) ChainParams {
