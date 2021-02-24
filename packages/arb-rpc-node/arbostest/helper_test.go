@@ -41,7 +41,7 @@ func initMsg() message.Init {
 		ChainParams: protocol.ChainParams{
 			StakeRequirement:        big.NewInt(0),
 			StakeToken:              common.Address{},
-			GracePeriod:             common.NewTimeBlocks(big.NewInt(12)),
+			GracePeriod:             common.NewTimeBlocks(big.NewInt(3)),
 			MaxExecutionSteps:       0,
 			ArbGasSpeedLimitPerTick: 0,
 		},
@@ -160,7 +160,7 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int
 	t.Log(string(testCase))
 
 	if len(assertion.Logs) != logCount {
-		t.Fatal("unexpected log count ", len(assertion.Logs))
+		t.Fatal("unexpected log count ", len(assertion.Logs), "instead of", logCount)
 	}
 
 	if len(assertion.Sends) != sendCount {

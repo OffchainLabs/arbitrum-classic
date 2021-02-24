@@ -147,7 +147,7 @@ func TestBlocks(t *testing.T) {
 
 	messages = append(
 		messages,
-		message.NewInboxMessage(message.Eth{Value: big.NewInt(100), Dest: sender}, chain, big.NewInt(0), startTime),
+		message.NewInboxMessage(message.Eth{Value: big.NewInt(1000), Dest: sender}, chain, big.NewInt(0), startTime),
 	)
 
 	halfSendCount := int64(5)
@@ -168,7 +168,7 @@ func TestBlocks(t *testing.T) {
 			SequenceNum: big.NewInt(i * 2),
 			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 			Payment:     big.NewInt(i * 2),
-			Data:        snapshot.WithdrawEthData(common.Address{}),
+			Data:        snapshot.WithdrawEthData(common.RandAddress()),
 		}
 		tx2 := message.Transaction{
 			MaxGas:      big.NewInt(100000000000),
@@ -176,7 +176,7 @@ func TestBlocks(t *testing.T) {
 			SequenceNum: big.NewInt(i*2 + 1),
 			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 			Payment:     big.NewInt(i*2 + 1),
-			Data:        snapshot.WithdrawEthData(common.Address{}),
+			Data:        snapshot.WithdrawEthData(common.RandAddress()),
 		}
 		messages = append(
 			messages,
@@ -199,7 +199,7 @@ func TestBlocks(t *testing.T) {
 	}
 
 	// Last value returned is not an error type
-	avmLogs, sends, _, _ := runAssertion(t, messages, 4+int(halfSendCount*4), 0)
+	avmLogs, sends, _, _ := runAssertion(t, messages, int(halfSendCount*6-2), int(halfSendCount-1))
 	results := make([]evm.Result, 0)
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
@@ -220,12 +220,19 @@ func TestBlocks(t *testing.T) {
 	prevBlockNum := abi.MaxUint256
 
 	blocks := make([]*evm.BlockInfo, 0)
+	merkleRoots := make([]*evm.MerkleRootResult, 0)
 
 	for i, res := range results {
 		t.Logf("%v %T\n", i, res)
 		totalAVMLogCount = totalAVMLogCount.Add(totalAVMLogCount, big.NewInt(1))
 
-		if i%5 == 1 || i%5 == 3 {
+		if i%6 == 0 || i%6 == 2 {
+			_, ok := res.(*evm.SendResult)
+			if !ok {
+				t.Fatal("incorrect result type")
+			}
+			blockAVMLogCount = blockAVMLogCount.Add(blockAVMLogCount, big.NewInt(1))
+		} else if i%6 == 1 || i%6 == 3 {
 			res, ok := res.(*evm.TxResult)
 			if !ok {
 				t.Fatal("incorrect result type")
@@ -239,7 +246,14 @@ func TestBlocks(t *testing.T) {
 			totalGasUsed = totalGasUsed.Add(totalGasUsed, res.GasUsed)
 			totalEVMLogCount = totalEVMLogCount.Add(totalEVMLogCount, big.NewInt(int64(len(res.EVMLogs))))
 			totalTxCount = totalTxCount.Add(totalTxCount, big.NewInt(1))
-		} else if i%5 == 4 {
+		} else if i%6 == 4 {
+			root, ok := res.(*evm.MerkleRootResult)
+			if !ok {
+				t.Fatal("incorrect result type")
+			}
+			merkleRoots = append(merkleRoots, root)
+			blockAVMLogCount = blockAVMLogCount.Add(blockAVMLogCount, big.NewInt(1))
+		} else if i%6 == 5 {
 			res, ok := res.(*evm.BlockInfo)
 			if !ok {
 				t.Fatal("incorrect result type")
@@ -260,7 +274,7 @@ func TestBlocks(t *testing.T) {
 			if res.BlockStats.AVMLogCount.Cmp(blockAVMLogCount) != 0 {
 				t.Error("unexpected block log count", res.BlockStats.AVMLogCount, "instead of", blockAVMLogCount)
 			}
-			if res.BlockStats.AVMSendCount.Cmp(big.NewInt(2)) != 0 {
+			if res.BlockStats.AVMSendCount.Cmp(big.NewInt(1)) != 0 {
 				t.Error("unexpected block send count")
 			}
 			if res.BlockStats.EVMLogCount.Cmp(blockEVMLogCount) != 0 {
@@ -276,7 +290,7 @@ func TestBlocks(t *testing.T) {
 			if res.ChainStats.AVMLogCount.Cmp(totalAVMLogCount) != 0 {
 				t.Error("unexpected chain log count", res.ChainStats.AVMLogCount, "instead of", totalAVMLogCount)
 			}
-			if res.ChainStats.AVMSendCount.Cmp(big.NewInt(int64(blockCount*2)+2)) != 0 {
+			if res.ChainStats.AVMSendCount.Cmp(big.NewInt(int64(blockCount)+1)) != 0 {
 				t.Error("unexpected chain send count")
 			}
 			if res.ChainStats.EVMLogCount.Cmp(totalEVMLogCount) != 0 {
@@ -300,36 +314,50 @@ func TestBlocks(t *testing.T) {
 			blockTxCount = big.NewInt(0)
 			prevBlockNum = res.BlockNum
 			blockCount++
-		} else {
-			_, ok := res.(*evm.SendResult)
-			if !ok {
-				t.Fatal("incorrect result type")
-			}
 		}
 	}
 
-	parsedSends := make([]message.Eth, 0)
-	for _, send := range sends {
-		outMsg, err := message.NewOutMessageFromValue(send)
+	if len(sends) != len(merkleRoots) {
+		t.Fatal("incorrect send or send log count")
+	}
+	for i, send := range sends {
+		outMsg, err := message.NewOutMessageFromBytes(send)
 		failIfError(t, err)
 
-		if outMsg.Kind != message.EthType {
-			t.Fatal("outgoing message had wrong type", outMsg.Kind)
+		sendMessageRoot, ok := outMsg.(*message.SendMessageRoot)
+		if !ok {
+			t.Fatal("send had wrong kind")
 		}
 
-		if outMsg.Sender != sender {
-			t.Fatal("wrong withdraw sender")
+		sendMessageLog := merkleRoots[i]
+		if sendMessageRoot.BatchNumber.Cmp(big.NewInt(int64(i))) != 0 {
+			t.Log("merkle send had wrong batch number")
 		}
-		parsedSends = append(parsedSends, message.NewEthFromData(outMsg.Data))
+		if sendMessageLog.BatchNumber.Cmp(big.NewInt(int64(i))) != 0 {
+			t.Log("merkle log had wrong batch num")
+		}
+
+		if sendMessageRoot.NumInBatch.Cmp(sendMessageLog.NumInBatch) != 0 {
+			t.Error("merkle send and log have different num in batch")
+		}
+
+		if sendMessageRoot.NumInBatch.Cmp(big.NewInt(2)) != 0 {
+			t.Error("merkle send should contain 2 outputs")
+		}
+
+		treeHash := sendMessageLog.Tree.Hash()
+		if treeHash != sendMessageRoot.OutputRoot {
+			t.Error("incorrect send root", treeHash, sendMessageRoot.OutputRoot)
+		}
 	}
 
-	for blockIndex, block := range blocks {
+	for _, block := range blocks {
 		txCount := block.BlockStats.TxCount.Uint64()
 		startLog := block.FirstAVMLog().Uint64()
 		for i := uint64(0); i < txCount; i++ {
 			txRes, ok := results[startLog+i].(*evm.TxResult)
 			if !ok {
-				t.Fatal("block results must be tx results")
+				continue
 			}
 			if txRes.IncomingRequest.ChainTime.BlockNum.AsInt().Cmp(block.BlockNum) != 0 {
 				t.Error("tx in block had wrong block num")
@@ -340,22 +368,8 @@ func TestBlocks(t *testing.T) {
 		}
 
 		sendCount := block.BlockStats.AVMSendCount.Uint64()
-		startSend := block.FirstAVMSend().Uint64()
-		if sendCount != 2 {
-			t.Fatal("wrong send count")
-		}
-
-		for i := uint64(0); i < sendCount; i++ {
-			send := parsedSends[startSend+i]
-			correctVal := big.NewInt(int64(blockIndex*2 + int(i)))
-			if send.Value.Cmp(correctVal) != 0 {
-				t.Log("block", blockIndex)
-				t.Log("index in block", i)
-				t.Log("log index", startSend+i)
-				t.Log("send value", send.Value)
-				t.Log("correct", correctVal)
-				t.Fatal("wrong send value")
-			}
+		if sendCount != 1 {
+			t.Error("wrong send count", sendCount)
 		}
 	}
 }
