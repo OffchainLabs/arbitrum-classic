@@ -315,7 +315,16 @@ rocksdb::Status ArbCore::saveCheckpoint(Transaction& tx) {
     if (pending_checkpoint.total_messages_read > 0) {
         auto existing_message_entry =
             getMessageEntry(tx, pending_checkpoint.total_messages_read - 1);
-        pending_checkpoint.inbox_hash = existing_message_entry.data.inbox_hash;
+        if (existing_message_entry.status.IsNotFound()) {
+            pending_checkpoint.inbox_hash = 0;
+        } else if (!existing_message_entry.status.ok()) {
+            std::cerr << "ArbCore unable to get inbox hash from database: "
+                      << existing_message_entry.status.ToString() << "\n";
+            return existing_message_entry.status;
+        } else {
+            pending_checkpoint.inbox_hash =
+                existing_message_entry.data.inbox_hash;
+        }
     } else {
         pending_checkpoint.inbox_hash = 0;
     }
@@ -395,7 +404,8 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
                 it->value().data(), it->value().data() + it->value().size());
             auto checkpoint = extractCheckpoint(checkpoint_vector);
 
-            if (message_sequence_number >= checkpoint.total_messages_read - 1) {
+            if (checkpoint.total_messages_read == 0 ||
+                message_sequence_number >= checkpoint.total_messages_read - 1) {
                 // Good checkpoint
                 pending_checkpoint = checkpoint;
                 good_checkpoint_found = true;
@@ -757,7 +767,12 @@ void ArbCore::operator()() {
                 break;
             }
 
-            if (messages_count.data < pending_checkpoint.total_messages_read) {
+            auto reorg_applicable_messages =
+                pending_checkpoint.total_messages_read;
+            if (machine->stagedMessageIsPlaceholder()) {
+                reorg_applicable_messages -= 1;
+            }
+            if (messages_count.data < reorg_applicable_messages) {
                 // Should never happen, means reorg wasn't done properly
                 core_error_string = "messages_inserted < pending_checkpoint";
                 machine_error = true;
@@ -1147,18 +1162,6 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                     // Gas reached
                     break;
                 }
-
-                if (assertion.inbox_messages_consumed !=
-                    execution_cursor.messages.size()) {
-                    // Not all messages were consumed
-                    core_error_string = "not all messages were consumed";
-                    machine_error = true;
-                    std::cerr << "ArbCore error: " << core_error_string << ", "
-                              << execution_cursor.messages.size() -
-                                     assertion.inbox_messages_consumed
-                              << " messages left" << std::endl;
-                    return rocksdb::Status::Corruption();
-                }
             } else {
                 // Gas reached
                 break;
@@ -1174,7 +1177,7 @@ rocksdb::Status ArbCore::resolveStagedMessage(Transaction& tx,
                                               ValueCache& cache) const {
     if (std::holds_alternative<uint256_t>(message)) {
         auto sequence_number = std::get<uint256_t>(message);
-        if (sequence_number >= pending_checkpoint.total_messages_read - 1) {
+        if (sequence_number >= pending_checkpoint.total_messages_read) {
             // Staged message obsolete
             return rocksdb::Status::NotFound();
         }
@@ -1193,70 +1196,82 @@ rocksdb::Status ArbCore::resolveStagedMessage(Transaction& tx,
 
 rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
                                               ExecutionCursor& execution_cursor,
-                                              const uint256_t& total_gas_used,
+                                              const uint256_t& gas_used,
                                               ValueCache& cache) {
-    const std::lock_guard<std::mutex> lock(core_reorg_mutex);
-    auto checkpoint_result = getCheckpointUsingGas(tx, total_gas_used, false);
-    if (checkpoint_result.status.IsNotFound()) {
-        if (!execution_cursor.machine) {
-            // Initialize machine to starting state
-            auto initial_hash = getInitialMachineHash(tx);
-            if (!initial_hash.status.ok()) {
-                return initial_hash.status;
+    auto target_gas_used = gas_used;
+    while (true) {
+        const std::lock_guard<std::mutex> lock(core_reorg_mutex);
+        auto checkpoint_result =
+            getCheckpointUsingGas(tx, target_gas_used, false);
+        if (checkpoint_result.status.IsNotFound()) {
+            if (!execution_cursor.machine) {
+                // Initialize machine to starting state
+                auto initial_hash = getInitialMachineHash(tx);
+                if (!initial_hash.status.ok()) {
+                    return initial_hash.status;
+                }
+                auto result = getMachineStateKeys(tx, initial_hash.data);
+                if (!result.status.ok()) {
+                    return result.status;
+                }
+                execution_cursor.machine_state_keys = result.data;
+                execution_cursor.machine = getMachineUsingStateKeys<Machine>(
+                    tx, execution_cursor.machine_state_keys, cache);
             }
-            auto result = getMachineStateKeys(tx, initial_hash.data);
-            if (!result.status.ok()) {
-                return result.status;
-            }
-            execution_cursor.machine_state_keys = result.data;
-            execution_cursor.machine = getMachineUsingStateKeys<Machine>(
-                tx, execution_cursor.machine_state_keys, cache);
-        }
 
-        // Use execution cursor as is
-        return rocksdb::Status::OK();
-    } else if (!checkpoint_result.status.ok()) {
-        return checkpoint_result.status;
-    } else if (execution_cursor.machine &&
-               execution_cursor.arb_gas_used >
-                   checkpoint_result.data.arb_gas_used) {
-        // Execution cursor used more gas than checkpoint so use it if inbox
-        // hash valid
-        auto result = executionCursorAddMessages(tx, execution_cursor, 0);
-        if (!result.status.ok()) {
-            return result.status;
-        }
-
-        if (result.data && execution_cursor.machine) {
-            // Execution cursor machine still valid, so use it
+            // Use execution cursor as is
             return rocksdb::Status::OK();
+        } else if (!checkpoint_result.status.ok()) {
+            return checkpoint_result.status;
+        } else if (execution_cursor.machine &&
+                   execution_cursor.arb_gas_used >
+                       checkpoint_result.data.arb_gas_used) {
+            // Execution cursor used more gas than checkpoint so use it if inbox
+            // hash valid
+            auto result = executionCursorAddMessages(tx, execution_cursor, 0);
+            if (result.status.ok() && result.data && execution_cursor.machine) {
+                // Execution cursor machine still valid, so use it
+                return rocksdb::Status::OK();
+            }
         }
+
+        auto staged_message = getValue(
+            tx, checkpoint_result.data.machine_state_keys.staged_message_hash,
+            cache);
+        if (!staged_message.status.ok()) {
+            // Corrupt checkpoint, try earlier checkpoint
+            if (checkpoint_result.data.arb_gas_used == 0) {
+                std::cerr << "first checkpoint corrupted" << std::endl;
+                return staged_message.status;
+            }
+            target_gas_used = checkpoint_result.data.arb_gas_used - 1;
+            continue;
+        }
+
+        auto resolve_status =
+            resolveStagedMessage(tx, staged_message.data, cache);
+        if (!resolve_status.ok()) {
+            // Unable to resolve staged_message, try earlier checkpoint
+            if (checkpoint_result.data.arb_gas_used == 0) {
+                std::cerr << "first checkpoint corrupted" << std::endl;
+                return staged_message.status;
+            }
+            target_gas_used = checkpoint_result.data.arb_gas_used - 1;
+            continue;
+        }
+
+        // Update execution_cursor with checkpoint
+        execution_cursor.resetCheckpoint();
+        execution_cursor.setCheckpoint(checkpoint_result.data);
+        execution_cursor.machine = getMachineUsingStateKeys<Machine>(
+            tx, execution_cursor.machine_state_keys, cache);
+
+        // Replace staged_message with resolved value
+        execution_cursor.machine->machine_state.staged_message =
+            staged_message.data;
+
+        return rocksdb::Status::OK();
     }
-
-    auto staged_message = getValue(
-        tx, checkpoint_result.data.machine_state_keys.staged_message_hash,
-        cache);
-    if (!staged_message.status.ok()) {
-        return staged_message.status;
-    }
-
-    auto resolve_status = resolveStagedMessage(tx, staged_message.data, cache);
-    if (!resolve_status.ok()) {
-        // Unable to resolve staged_message, so can't use checkpoint
-        return resolve_status;
-    }
-
-    // Update execution_cursor with checkpoint
-    execution_cursor.resetCheckpoint();
-    execution_cursor.setCheckpoint(checkpoint_result.data);
-    execution_cursor.machine = getMachineUsingStateKeys<Machine>(
-        tx, execution_cursor.machine_state_keys, cache);
-
-    // Replace staged_message with resolved value
-    execution_cursor.machine->machine_state.staged_message =
-        staged_message.data;
-
-    return rocksdb::Status::OK();
 }
 
 ValueResult<bool> ArbCore::executionCursorAddMessages(
@@ -1268,14 +1283,17 @@ ValueResult<bool> ArbCore::executionCursorAddMessages(
     auto message_group_size = orig_message_group_size;
 
     // Check if current machine is obsolete
-    if (execution_cursor.total_messages_read > 0) {
+    auto current_reorg_applicable_messages =
+        execution_cursor.total_messages_read;
+    if (execution_cursor.machine &&
+        execution_cursor.machine->stagedMessageIsPlaceholder()) {
+        current_reorg_applicable_messages -= 1;
+    }
+    if (current_reorg_applicable_messages > 0) {
         auto stored_result =
             getMessageEntry(tx, execution_cursor.total_messages_read - 1);
-        if (!stored_result.status.ok()) {
-            return {stored_result.status, false};
-        }
-
-        if (execution_cursor.inbox_hash != stored_result.data.inbox_hash) {
+        if (stored_result.status.ok() &&
+            execution_cursor.inbox_hash != stored_result.data.inbox_hash) {
             // Obsolete machine, reorg occurred
             return {rocksdb::Status::OK(), false};
         }
@@ -1291,17 +1309,21 @@ ValueResult<bool> ArbCore::executionCursorAddMessages(
     auto current_message_sequence_number =
         execution_cursor.first_message_sequence_number;
 
-    if (current_message_sequence_number >=
-        pending_checkpoint.total_messages_read) {
+    auto pending_reorg_applicable_messages =
+        pending_checkpoint.total_messages_read;
+    if (machine->stagedMessageIsPlaceholder()) {
+        pending_reorg_applicable_messages -= 1;
+    }
+    if (current_message_sequence_number >= pending_reorg_applicable_messages) {
         // Already past core machine, probably reorg
         return {rocksdb::Status::OK(), false};
     }
 
     if (current_message_sequence_number + message_group_size >=
-        pending_checkpoint.total_messages_read) {
+        pending_reorg_applicable_messages) {
         // Don't read past primary machine
-        message_group_size = pending_checkpoint.total_messages_read -
-                             current_message_sequence_number;
+        message_group_size =
+            pending_reorg_applicable_messages - current_message_sequence_number;
     }
 
     if (message_group_size == 0) {
