@@ -625,7 +625,7 @@ template std::unique_ptr<MachineThread>
 ArbCore::getMachineUsingStateKeys(Transaction&, MachineStateKeys, ValueCache&);
 
 // operator() runs the main thread for ArbCore.  It is responsible for adding
-// messages to the queue, starting machine thread when needed and colleting
+// messages to the queue, starting machine thread when needed and collecting
 // results of machine thread.
 // This thread will update `delivering_messages` if and only if
 // `delivering_messages` is set to MESSAGES_READY

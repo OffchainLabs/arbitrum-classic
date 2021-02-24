@@ -80,6 +80,17 @@ Uint256Result executionCursorTotalGasConsumed(
     }
 }
 
+Uint256Result executionCursorTotalSteps(
+    CExecutionCursor* execution_cursor_ptr) {
+    try {
+        auto index_result =
+            static_cast<ExecutionCursor*>(execution_cursor_ptr)->total_steps;
+        return {returnUint256(index_result), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
 Uint256Result executionCursorTotalSendCount(
     CExecutionCursor* execution_cursor_ptr) {
     try {
