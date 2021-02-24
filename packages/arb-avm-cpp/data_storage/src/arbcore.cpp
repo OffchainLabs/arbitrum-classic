@@ -767,20 +767,6 @@ void ArbCore::operator()() {
                 break;
             }
 
-            auto reorg_applicable_messages =
-                pending_checkpoint.total_messages_read;
-            if (machine->stagedMessageIsPlaceholder()) {
-                reorg_applicable_messages -= 1;
-            }
-            if (messages_count.data < reorg_applicable_messages) {
-                // Should never happen, means reorg wasn't done properly
-                core_error_string = "messages_inserted < pending_checkpoint";
-                machine_error = true;
-                std::cerr << "ArbCore reorg error: " << core_error_string
-                          << "\n";
-                break;
-            }
-
             first_sequence_number_in_machine =
                 pending_checkpoint.total_messages_read;
             if (messages_count.data > first_sequence_number_in_machine) {
@@ -1531,6 +1517,15 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
             hash_inbox(previous_inbox_hash, new_messages[new_messages_index]);
         if (existing_message_entry.data.inbox_hash != current_inbox_hash) {
             // Entry doesn't match because of reorg
+            break;
+        }
+
+        if (existing_message_entry.data.last_message_in_block &&
+            !(last_block_complete &&
+              new_messages_index == new_messages_count - 1)) {
+            // existing message was marked as last message in block but
+            // new message is not marked as last message, so they should be
+            // considered different
             break;
         }
 
