@@ -24,6 +24,8 @@
 #include <boost/endian/conversion.hpp>
 
 void Checkpoint::resetCheckpoint() {
+    total_steps = 0;
+    arb_gas_used = 0;
     total_messages_read = 0;
     inbox_hash = 0;
     block_height = 0;
@@ -35,6 +37,7 @@ void Checkpoint::resetCheckpoint() {
 // applyAssertion does not update processed_message_accumulator_hash so it will
 // have to be updated by caller.
 void Checkpoint::applyAssertion(const Assertion& assertion) {
+    total_steps += assertion.stepCount;
     arb_gas_used += assertion.gasCount;
     total_messages_read += assertion.inbox_messages_consumed;
     send_count += assertion.sends.size();
@@ -45,6 +48,7 @@ Checkpoint extractCheckpoint(const std::vector<unsigned char>& stored_state) {
     auto current_iter = stored_state.begin();
 
     auto arb_gas_used = extractUint256(current_iter);
+    auto total_steps = extractUint256(current_iter);
     auto total_messages_read = extractUint256(current_iter);
     auto processed_message_accumulator_hash = extractUint256(current_iter);
     auto block_height = extractUint64(current_iter);
@@ -53,19 +57,17 @@ Checkpoint extractCheckpoint(const std::vector<unsigned char>& stored_state) {
 
     auto machineStateKeys = extractMachineStateKeys(current_iter);
 
-    return Checkpoint{arb_gas_used,
-                      total_messages_read,
-                      processed_message_accumulator_hash,
-                      block_height,
-                      send_count,
-                      log_count,
-                      machineStateKeys};
+    return Checkpoint{total_steps,         arb_gas_used,
+                      total_messages_read, processed_message_accumulator_hash,
+                      block_height,        send_count,
+                      log_count,           machineStateKeys};
 }
 
 std::vector<unsigned char> serializeCheckpoint(const Checkpoint& state_data) {
     std::vector<unsigned char> state_data_vector;
 
     marshal_uint256_t(state_data.arb_gas_used, state_data_vector);
+    marshal_uint256_t(state_data.total_steps, state_data_vector);
     marshal_uint256_t(state_data.total_messages_read, state_data_vector);
     marshal_uint256_t(state_data.inbox_hash, state_data_vector);
     marshal_uint64_t(state_data.block_height, state_data_vector);

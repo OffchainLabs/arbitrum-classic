@@ -28,6 +28,7 @@
 
 struct Checkpoint {
    public:
+    uint256_t total_steps;
     uint256_t arb_gas_used;
     uint256_t total_messages_read;
     uint256_t inbox_hash;
@@ -38,14 +39,16 @@ struct Checkpoint {
     MachineStateKeys machine_state_keys{};
 
     Checkpoint() = default;
-    Checkpoint(uint256_t arb_gas_used,
+    Checkpoint(uint256_t total_steps,
+               uint256_t arb_gas_used,
                uint256_t total_messages_read,
                uint256_t inbox_hash,
                uint64_t block_height,
                uint64_t send_count,
                uint64_t log_count,
                MachineStateKeys machine_state_keys)
-        : arb_gas_used(arb_gas_used),
+        : total_steps(total_steps),
+          arb_gas_used(arb_gas_used),
           total_messages_read(total_messages_read),
           inbox_hash(inbox_hash),
           block_height(block_height),
