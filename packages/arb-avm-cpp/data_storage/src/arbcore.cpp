@@ -1012,6 +1012,10 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
 ValueResult<uint256_t> ArbCore::getSendAcc(uint256_t start_acc_hash,
                                            uint256_t start_index,
                                            uint256_t count) {
+    if (count == 0) {
+        return {rocksdb::Status::OK(), start_acc_hash};
+    }
+
     auto sends_result = getSends(start_index, count);
     if (!sends_result.status.ok()) {
         return {sends_result.status, 0};
@@ -1028,6 +1032,10 @@ ValueResult<uint256_t> ArbCore::getLogAcc(uint256_t start_acc_hash,
                                           uint256_t start_index,
                                           uint256_t count,
                                           ValueCache& cache) {
+    if (count == 0) {
+        return {rocksdb::Status::OK(), start_acc_hash};
+    }
+
     auto sends_result = getLogs(start_index, count, cache);
     if (!sends_result.status.ok()) {
         return {sends_result.status, 0};
