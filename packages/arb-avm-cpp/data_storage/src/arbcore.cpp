@@ -879,6 +879,10 @@ ValueResult<std::vector<value>> ArbCore::getLogsNoLock(Transaction& tx,
                                                        uint256_t index,
                                                        uint256_t count,
                                                        ValueCache& valueCache) {
+    if (count == 0) {
+        return {rocksdb::Status::OK(), {}};
+    }
+
     // Check if attempting to get entries past current valid logs
     auto log_count = logInsertedCountImpl(tx);
     if (!log_count.status.ok()) {
@@ -947,6 +951,10 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     uint256_t count) const {
     auto tx = Transaction::makeTransaction(data_storage);
 
+    if (count == 0) {
+        return {rocksdb::Status::OK(), {}};
+    }
+
     // Check if attempting to get entries past current valid logs
     auto message_count = messageEntryInsertedCountImpl(*tx);
     if (!message_count.status.ok()) {
@@ -987,6 +995,10 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
     uint256_t count) const {
     auto tx = Transaction::makeTransaction(data_storage);
 
+    if (count == 0) {
+        return {rocksdb::Status::OK(), {}};
+    }
+
     // Check if attempting to get entries past current valid logs
     auto send_count = sendInsertedCountImpl(*tx);
     if (!send_count.status.ok()) {
@@ -1012,10 +1024,6 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
 ValueResult<uint256_t> ArbCore::getSendAcc(uint256_t start_acc_hash,
                                            uint256_t start_index,
                                            uint256_t count) {
-    if (count == 0) {
-        return {rocksdb::Status::OK(), start_acc_hash};
-    }
-
     auto sends_result = getSends(start_index, count);
     if (!sends_result.status.ok()) {
         return {sends_result.status, 0};
@@ -1032,10 +1040,6 @@ ValueResult<uint256_t> ArbCore::getLogAcc(uint256_t start_acc_hash,
                                           uint256_t start_index,
                                           uint256_t count,
                                           ValueCache& cache) {
-    if (count == 0) {
-        return {rocksdb::Status::OK(), start_acc_hash};
-    }
-
     auto sends_result = getLogs(start_index, count, cache);
     if (!sends_result.status.ok()) {
         return {sends_result.status, 0};
