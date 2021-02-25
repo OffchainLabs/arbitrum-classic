@@ -18,10 +18,11 @@ package txdb
 
 import (
 	"context"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	"math/big"
 	"sync"
+
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -31,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/trie"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
@@ -64,6 +66,7 @@ type TxDB struct {
 	lookup     core.ArbCoreLookup
 	as         AggregatorStore
 	timeGetter ChainTimeGetter
+	chain      common.Address
 
 	rmLogsFeed      event.Feed
 	chainFeed       event.Feed
@@ -73,8 +76,7 @@ type TxDB struct {
 	pendingLogsFeed event.Feed
 	blockProcFeed   event.Feed
 
-	callMut   sync.Mutex
-	snapCache *snapshotCache
+	callMut sync.Mutex
 }
 
 func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
@@ -336,16 +338,37 @@ func (db *TxDB) LatestBlock() (*common.BlockId, error) {
 	return db.as.LatestBlock()
 }
 
-func (db *TxDB) LatestSnapshot() *snapshot.Snapshot {
-	db.callMut.Lock()
-	defer db.callMut.Unlock()
-	return db.snapCache.latest()
+func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot, error) {
+	mach, err := db.lookup.GetMachineForSideload(info.Header.Number.Uint64())
+	if err != nil || mach == nil {
+		return nil, err
+	}
+	currentTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocks(new(big.Int).Set(info.Header.Number)),
+		Timestamp: new(big.Int).SetUint64(info.Header.Time),
+	}
+	snap := snapshot.NewSnapshot(mach, currentTime, message.ChainAddressToID(db.chain), big.NewInt(1<<60))
+	return snap, nil
 }
 
-func (db *TxDB) GetSnapshot(time inbox.ChainTime) *snapshot.Snapshot {
-	db.callMut.Lock()
-	defer db.callMut.Unlock()
-	return db.snapCache.getSnapshot(time)
+func (db *TxDB) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {
+	info, err := db.GetBlock(blockHeight)
+	if err != nil || info == nil {
+		return nil, err
+	}
+	return db.getSnapshotForInfo(info)
+}
+
+func (db *TxDB) LatestSnapshot() *snapshot.Snapshot {
+	block, err := db.LatestBlock()
+	if err != nil || block == nil {
+		return nil
+	}
+	snap, err := db.GetSnapshot(block.Height.AsInt().Uint64())
+	if err != nil {
+		return nil
+	}
+	return snap
 }
 
 func (db *TxDB) SubscribeChainEvent(ch chan<- ethcore.ChainEvent) event.Subscription {

@@ -18,15 +18,17 @@ package aggregator
 
 import (
 	"context"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	"math/big"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
@@ -39,7 +41,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -160,14 +161,7 @@ func (m *Server) PendingCall(msg message.ContractTransaction, sender ethcommon.A
 }
 
 func (m *Server) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {
-	info, err := m.BlockInfoByNumber(blockHeight)
-	if err != nil || info == nil {
-		return nil, err
-	}
-	return m.db.GetSnapshot(inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocks(new(big.Int).SetUint64(blockHeight)),
-		Timestamp: new(big.Int).SetUint64(info.Header.Time),
-	}), nil
+	return m.db.GetSnapshot(blockHeight)
 }
 
 func (m *Server) LatestSnapshot() *snapshot.Snapshot {
