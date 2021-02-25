@@ -280,6 +280,10 @@ class ArbCore {
         Transaction& tx,
         ExecutionCursor& execution_cursor,
         const uint256_t& orig_message_group_size);
+    ValueResult<bool> executionCursorAddMessagesNoLock(
+        Transaction& tx,
+        ExecutionCursor& execution_cursor,
+        const uint256_t& orig_message_group_size);
     rocksdb::Status executionCursorSetup(Transaction& tx,
                                          ExecutionCursor& execution_cursor,
                                          const uint256_t& total_gas_used,
