@@ -55,6 +55,12 @@ TEST_CASE("ARBOS test vectors") {
                 logs.push_back(simple_value_from_json(log_json));
             }
 
+            auto sends_json = j.at("sends");
+            std::vector<std::vector<uint8_t>> sends;
+            for (auto& send_json : sends_json) {
+                sends.push_back(send_from_json(send_json));
+            }
+
             ArbStorage storage(dbpath);
             REQUIRE(storage.initialize(arb_os_path).ok());
             auto mach = storage.getInitialMachine(value_cache);
@@ -63,9 +69,12 @@ TEST_CASE("ARBOS test vectors") {
             auto assertion = mach->run(config);
             INFO("Machine ran for " << assertion.stepCount << " steps");
             REQUIRE(assertion.logs.size() == logs.size());
-            auto log = std::get<Tuple>(logs[0]);
             for (size_t k = 0; k < assertion.logs.size(); ++k) {
                 REQUIRE(assertion.logs[k] == logs[k]);
+            }
+            REQUIRE(assertion.sends.size() == sends.size());
+            for (size_t k = 0; k < assertion.sends.size(); ++k) {
+                REQUIRE(assertion.sends[k] == sends[k]);
             }
             {
                 auto tx = storage.makeTransaction();

@@ -75,6 +75,12 @@ TEST_CASE("ArbCore tests") {
                 logs.push_back(simple_value_from_json(log_json));
             }
 
+            auto sends_json = j.at("sends");
+            std::vector<std::vector<uint8_t>> sends;
+            for (auto& send_json : sends_json) {
+                sends.push_back(send_from_json(send_json));
+            }
+
             ArbStorage storage(dbpath);
             REQUIRE(storage.initialize(arb_os_path).ok());
             auto arbCore = storage.getArbCore();
@@ -130,6 +136,16 @@ TEST_CASE("ArbCore tests") {
             REQUIRE(logsRes.data.size() == logs.size());
             for (size_t k = 0; k < logs.size(); ++k) {
                 REQUIRE(logsRes.data[k] == logs[k]);
+            }
+
+            auto producedSendCountRes = arbCore->sendInsertedCount();
+            REQUIRE(producedSendCountRes.status.ok());
+            REQUIRE(producedSendCountRes.data == sends.size());
+            auto sendsRes = arbCore->getSends(0, producedSendCountRes.data);
+            REQUIRE(sendsRes.status.ok());
+            REQUIRE(sendsRes.data.size() == sends.size());
+            for (size_t k = 0; k < sends.size(); ++k) {
+                REQUIRE(sendsRes.data[k] == sends[k]);
             }
 
             auto cursor = arbCore->getExecutionCursor(0, value_cache);
