@@ -1060,10 +1060,9 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     ValueCache& cache) {
     auto tx = Transaction::makeTransaction(data_storage);
 
-    auto status = getExecutionCursorImpl(
-        *tx, execution_cursor, execution_cursor.arb_gas_used + max_gas,
-        go_over_gas, 10, cache);
-    return status;
+    return getExecutionCursorImpl(*tx, execution_cursor,
+                                  execution_cursor.arb_gas_used + max_gas,
+                                  go_over_gas, 10, cache);
 }
 
 rocksdb::Status ArbCore::getExecutionCursorImpl(
