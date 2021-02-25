@@ -42,11 +42,11 @@ struct AssertionContext {
     std::vector<value> logs;
     std::vector<value> debug_prints;
     std::deque<InboxMessage> sideloads;
-    bool stop_on_sideload;
+    bool stop_on_sideload{};
 
     AssertionContext() = default;
 
-    AssertionContext(MachineExecutionConfig config);
+    explicit AssertionContext(MachineExecutionConfig config);
 
     // popInbox assumes that the number of messages already consumed is less
     // than the number of messages in the inbox
@@ -56,11 +56,11 @@ struct AssertionContext {
 
     // peekInbox assumes that the number of messages already consumed is less
     // than the number of messages in the inbox
-    const InboxMessage& peekInbox() const {
+    [[nodiscard]] const InboxMessage& peekInbox() const {
         return inbox_messages[inbox_messages_consumed];
     }
 
-    bool inboxEmpty() const {
+    [[nodiscard]] bool inboxEmpty() const {
         return inbox_messages_consumed == inbox_messages.size();
     }
 };

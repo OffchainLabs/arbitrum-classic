@@ -127,9 +127,7 @@ class ArbCore {
     rocksdb::Status saveAssertion(Transaction& tx, const Assertion& assertion);
     ValueResult<Checkpoint> getCheckpoint(Transaction& tx,
                                           const uint256_t& arb_gas_used) const;
-    rocksdb::Status resolveStagedMessage(Transaction& tx,
-                                         value& message,
-                                         ValueCache& cache) const;
+    rocksdb::Status resolveStagedMessage(Transaction& tx, value& message) const;
     ValueResult<Checkpoint> getCheckpointUsingGas(Transaction& tx,
                                                   const uint256_t& total_gas,
                                                   bool after_gas);
@@ -167,7 +165,7 @@ class ArbCore {
    public:
     // Managing machine state
     bool machineIdle();
-    std::string machineClearError();
+    std::optional<std::string> machineClearError();
 
    public:
     // Sending messages to core thread
@@ -267,19 +265,22 @@ class ArbCore {
 
    private:
     std::optional<rocksdb::Status> addMessages(
-        const std::vector<std::vector<unsigned char>>& messages,
-        const uint256_t& previous_inbox_hash,
+        const std::vector<std::vector<unsigned char>>& new_messages,
+        const uint256_t& prev_inbox_hash,
         const uint256_t& final_machine_sequence_number,
         bool last_block_complete,
         ValueCache& cache);
     std::optional<MessageEntry> getNextMessage();
-    bool deleteMessage(const MessageEntry& entry);
     ValueResult<std::vector<value>> getLogsNoLock(Transaction& tx,
                                                   uint256_t index,
                                                   uint256_t count,
                                                   ValueCache& valueCache);
 
     ValueResult<bool> executionCursorAddMessages(
+        Transaction& tx,
+        ExecutionCursor& execution_cursor,
+        const uint256_t& orig_message_group_size);
+    ValueResult<bool> executionCursorAddMessagesNoLock(
         Transaction& tx,
         ExecutionCursor& execution_cursor,
         const uint256_t& orig_message_group_size);
