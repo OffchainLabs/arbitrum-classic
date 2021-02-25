@@ -685,67 +685,53 @@ void ArbCore::operator()() {
                           << core_error_string << "\n";
                 break;
             }
-            auto total_messages_consumed =
-                first_sequence_number_in_machine +
-                last_assertion.inbox_messages_consumed;
 
-            auto reorg_applicable_messages = total_messages_consumed;
-            if (machine->stagedMessageIsPlaceholder()) {
-                reorg_applicable_messages -= 1;
-            }
-            if (reorg_applicable_messages > messages_inserted.data) {
-                // Machine consumed obsolete message, restore from checkpoint
-                machine = getMachineUsingStateKeys<MachineThread>(
-                    *tx, pending_checkpoint.machine_state_keys, cache);
-            } else {
-                // Cache pre-sideload machines
-                if (last_assertion.sideloadBlockNumber) {
-                    auto block = *last_assertion.sideloadBlockNumber;
-                    std::unique_lock<std::shared_mutex> lock(
-                        sideload_cache_mutex);
-                    sideload_cache[block] = std::make_unique<Machine>(*machine);
-                    // Remove any sideload_cache entries that are either more
-                    // than sideload_cache_size blocks old, or in the future
-                    // (meaning they've been reorg'd out).
-                    auto it = sideload_cache.begin();
-                    while (it != sideload_cache.end()) {
-                        // Note: we check if block > sideload_cache_size here
-                        // to prevent an underflow in the following check.
-                        if ((block > sideload_cache_size &&
-                             it->first < block - sideload_cache_size) ||
-                            it->first > block) {
-                            it = sideload_cache.erase(it);
-                        } else {
-                            it++;
-                        }
+            // Cache pre-sideload machines
+            if (last_assertion.sideloadBlockNumber) {
+                auto block = *last_assertion.sideloadBlockNumber;
+                std::unique_lock<std::shared_mutex> lock(sideload_cache_mutex);
+                sideload_cache[block] = std::make_unique<Machine>(*machine);
+                // Remove any sideload_cache entries that are either more
+                // than sideload_cache_size blocks old, or in the future
+                // (meaning they've been reorg'd out).
+                auto it = sideload_cache.begin();
+                while (it != sideload_cache.end()) {
+                    // Note: we check if block > sideload_cache_size here
+                    // to prevent an underflow in the following check.
+                    if ((block > sideload_cache_size &&
+                         it->first < block - sideload_cache_size) ||
+                        it->first > block) {
+                        it = sideload_cache.erase(it);
+                    } else {
+                        it++;
                     }
                 }
-
-                // Save logs and sends
-                auto status = saveAssertion(*tx, last_assertion);
-                if (!status.ok()) {
-                    core_error_string = status.ToString();
-                    std::cerr << "ArbCore assertion saving failed: "
-                              << core_error_string << "\n";
-                    break;
-                }
-
-                // Maybe save checkpoint
-                // TODO Decide how often to create checkpoint
-                status = saveCheckpoint(*tx);
-                if (!status.ok()) {
-                    core_error_string = status.ToString();
-                    std::cerr << "ArbCore checkpoint saving failed: "
-                              << core_error_string << "\n";
-                    break;
-                }
-
-                // TODO Decide how often to clear ValueCache
-                // (only clear cache when machine thread stopped)
-                cache.clear();
             }
 
-            auto status = tx->commit();
+            // Save logs and sends
+            auto status = saveAssertion(*tx, last_assertion);
+            if (!status.ok()) {
+                core_error_string = status.ToString();
+                std::cerr << "ArbCore assertion saving failed: "
+                          << core_error_string << "\n";
+                break;
+            }
+
+            // Maybe save checkpoint
+            // TODO Decide how often to create checkpoint
+            status = saveCheckpoint(*tx);
+            if (!status.ok()) {
+                core_error_string = status.ToString();
+                std::cerr << "ArbCore checkpoint saving failed: "
+                          << core_error_string << "\n";
+                break;
+            }
+
+            // TODO Decide how often to clear ValueCache
+            // (only clear cache when machine thread stopped)
+            cache.clear();
+
+            status = tx->commit();
             if (!status.ok()) {
                 core_error_string = status.ToString();
                 machine_error = true;
@@ -842,6 +828,9 @@ void ArbCore::operator()() {
 
 rocksdb::Status ArbCore::saveLogs(Transaction& tx,
                                   const std::vector<value>& vals) {
+    if (vals.empty()) {
+        return rocksdb::Status::OK();
+    }
     auto log_result = logInsertedCountImpl(tx);
     if (!log_result.status.ok()) {
         return log_result.status;
@@ -928,6 +917,9 @@ ValueResult<std::vector<value>> ArbCore::getLogsNoLock(Transaction& tx,
 rocksdb::Status ArbCore::saveSends(
     Transaction& tx,
     const std::vector<std::vector<unsigned char>>& sends) {
+    if (sends.empty()) {
+        return rocksdb::Status::OK();
+    }
     auto send_result = sendInsertedCountImpl(tx);
     if (!send_result.status.ok()) {
         return send_result.status;
@@ -1272,16 +1264,10 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
     auto message_group_size = orig_message_group_size;
 
     // Check if current machine is obsolete
-    auto current_reorg_applicable_messages =
-        execution_cursor.total_messages_read;
-    if (execution_cursor.machine &&
-        execution_cursor.machine->stagedMessageIsPlaceholder()) {
-        current_reorg_applicable_messages -= 1;
-    }
-    if (current_reorg_applicable_messages > 0) {
+    if (execution_cursor.total_messages_read > 0) {
         auto stored_result =
             getMessageEntry(tx, execution_cursor.total_messages_read - 1);
-        if (stored_result.status.ok() &&
+        if (!stored_result.status.ok() ||
             execution_cursor.inbox_hash != stored_result.data.inbox_hash) {
             // Obsolete machine, reorg occurred
             return {rocksdb::Status::OK(), false};
@@ -1298,18 +1284,13 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
     auto current_message_sequence_number =
         execution_cursor.first_message_sequence_number;
 
-    auto pending_reorg_applicable_messages =
-        pending_checkpoint.total_messages_read;
-    if (current_message_sequence_number > pending_reorg_applicable_messages) {
-        // Already past core machine, probably reorg
-        return {rocksdb::Status::OK(), false};
-    }
+    auto inserted_message_count_result = messageEntryInsertedCount();
 
     if (current_message_sequence_number + message_group_size >
-        pending_reorg_applicable_messages) {
+        inserted_message_count_result.data) {
         // Don't read past primary machine
-        message_group_size =
-            pending_reorg_applicable_messages - current_message_sequence_number;
+        message_group_size = inserted_message_count_result.data -
+                             current_message_sequence_number;
     }
 
     if (message_group_size == 0) {
