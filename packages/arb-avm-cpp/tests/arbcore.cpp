@@ -40,7 +40,10 @@ TEST_CASE("ArbCore tests") {
         "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
         "evm_test_arbsys", "evm_xcontract_call_with_constructors"};
 
+    uint64_t logs_count = 0;
+
     for (const auto& filename : files) {
+        INFO("Testing " << filename);
         auto test_file =
             std::string{arb_os_test_cases_path} + "/" + filename + ".aoslog";
 
@@ -78,7 +81,7 @@ TEST_CASE("ArbCore tests") {
             logs.push_back(simple_value_from_json(log_json));
         }
 
-        REQUIRE(arbCore->deliverMessages(raw_messages, 0, true));
+        REQUIRE(arbCore->deliverMessages(raw_messages, 0, false));
 
         ArbCore::message_status_enum status;
         while (true) {
@@ -109,18 +112,6 @@ TEST_CASE("ArbCore tests") {
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
 
-        REQUIRE(arbCore->logsCursorRequest(0, 1));
-        while (true) {
-            auto result = arbCore->logsCursorGetLogs(0);
-            REQUIRE(!arbCore->logsCursorCheckError(0));
-            if (result) {
-                REQUIRE(!result->empty());
-                REQUIRE(arbCore->logsCursorConfirmReceived(0));
-
-                break;
-            }
-        }
-
         auto producedLogCountRes = arbCore->logInsertedCount();
         REQUIRE(producedLogCountRes.status.ok());
         REQUIRE(producedLogCountRes.data == logs.size());
@@ -132,6 +123,27 @@ TEST_CASE("ArbCore tests") {
             REQUIRE(logsRes.data[k] == logs[k]);
         }
 
+        REQUIRE(arbCore->logsCursorRequest(0, 1));
+        while (true) {
+            auto deleted = arbCore->logsCursorGetDeletedLogs(0);
+            if (deleted.has_value()) {
+                REQUIRE(deleted->size() >= logs_count);
+                logs_count -= deleted->size();
+            }
+            auto result = arbCore->logsCursorGetLogs(0);
+            REQUIRE(!arbCore->logsCursorCheckError(0));
+            if (result.has_value()) {
+                REQUIRE(logs_count + result->size() == logs.size());
+                for (uint64_t k = 0; k < logs.size() - logs_count; ++k) {
+                    REQUIRE(result->at(k) == logs[logs_count + k]);
+                }
+                logs_count += result->size();
+                REQUIRE(arbCore->logsCursorConfirmReceived(0));
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        }
+
         auto cursor = arbCore->getExecutionCursor(0, value_cache);
         REQUIRE(cursor.status.ok());
         REQUIRE(cursor.data->arb_gas_used == 0);
@@ -141,10 +153,10 @@ TEST_CASE("ArbCore tests") {
         REQUIRE(advanceStatus.ok());
         REQUIRE(cursor.data->arb_gas_used > 0);
 
-        auto before_sideload = arbCore->getMachineForSideload(
-            inbox_messages.back().block_number, value_cache);
-        REQUIRE(before_sideload.status.ok());
-        REQUIRE(before_sideload.data->machine_state.loadCurrentInstruction()
-                    .op.opcode == OpCode::SIDELOAD);
+        //        auto before_sideload = arbCore->getMachineForSideload(
+        //            inbox_messages.back().block_number, value_cache);
+        //        REQUIRE(before_sideload.status.ok());
+        //        REQUIRE(before_sideload.data->machine_state.loadCurrentInstruction()
+        //                    .op.opcode == OpCode::SIDELOAD);
     }
 }
