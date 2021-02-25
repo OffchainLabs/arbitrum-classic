@@ -1094,7 +1094,8 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
     uint256_t total_gas_used,
     bool go_over_gas,
     uint256_t message_group_size,
-    ValueCache& cache) {
+    ValueCache& cache,
+    bool is_for_sideload) {
     if (!execution_cursor.machine) {
         // Existing execution_cursor cannot be used
         execution_cursor.resetCheckpoint();
@@ -1111,8 +1112,11 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
         }
 
         while (true) {
+            // We load the "+1" message simply to see if it exists.
+            // If it's not present, we know it's the final message.
+            // It's dropped later on if present.
             auto result = executionCursorAddMessages(tx, execution_cursor,
-                                                     message_group_size);
+                                                     message_group_size + 1);
             if (!result.status.ok()) {
                 return result.status;
             }
@@ -1130,6 +1134,14 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                 execConfig.go_over_gas = go_over_gas;
                 execConfig.inbox_messages = execution_cursor.messages;
                 execConfig.messages_to_skip = execution_cursor.messages_to_skip;
+                if (execution_cursor.messages.size() > message_group_size) {
+                    execution_cursor.messages.resize(
+                        uint64_t(message_group_size));
+                    execution_cursor.inbox_hashes.resize(
+                        uint64_t(message_group_size));
+                } else if (is_for_sideload) {
+                    execConfig.final_message_of_block = true;
+                }
 
                 // Resolve staged message if possible.
                 // If placeholder message not found, machine will just be
@@ -1968,8 +1980,8 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
     }
     auto execution_cursor = std::make_unique<ExecutionCursor>();
 
-    auto status = getExecutionCursorImpl(*tx, *execution_cursor,
-                                         position_res.data, false, 10, cache);
+    auto status = getExecutionCursorImpl(
+        *tx, *execution_cursor, position_res.data, false, 10, cache, true);
 
     return {status, execution_cursor->takeMachine()};
 }

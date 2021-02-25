@@ -212,7 +212,8 @@ class ArbCore {
                                            uint256_t total_gas_used,
                                            bool go_over_gas,
                                            uint256_t message_group_size,
-                                           ValueCache& cache);
+                                           ValueCache& cache,
+                                           bool is_for_sideload = false);
 
    public:
     // Public database interaction
