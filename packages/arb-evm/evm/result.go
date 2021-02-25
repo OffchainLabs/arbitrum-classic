@@ -283,7 +283,7 @@ func NewResultFromValue(val value.Value) (Result, error) {
 	} else if kindInt.BigInt().Uint64() == 2 {
 		return NewSendResultFromValue(tup)
 	} else if kindInt.BigInt().Uint64() == 3 {
-		return nil, errors.New("merkle root log unsupported")
+		return NewMerkleRootLogResultFromValue(tup)
 	} else {
 		return nil, errors.New("unknown result kind")
 	}

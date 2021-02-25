@@ -159,6 +159,8 @@ github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416/go.mod h1:NBIhNtsFMo
 github.com/nxadm/tail v1.4.4 h1:DQuhQpB1tVlglWS2hLQ5OV6B5r8aGxSrPc5Qo6uTN78=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.3/go.mod h1:1TRAUsDcss+34PBF0hHY8kJ7ekbM5Pl87qRcl13NwjY=
+github.com/offchainlabs/arbitrum/packages/arb-evm v0.7.3/go.mod h1:ZX7diAoSV75J8wv7VWtuP0mZioDZXL2UxW70AqQN6CA=
+github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.7.3/go.mod h1:Q3+Qt/7Xt0y8AODL/asfMEzV4EYvt5Bs/FHN0PNktzQ=
 github.com/offchainlabs/go-solidity-sha3 v0.1.2 h1:IJ/KUv8zW5+Rtq/VvhNjq/Q7MDXjDx1ArAvkJhBRQAs=
 github.com/offchainlabs/go-solidity-sha3 v0.1.2/go.mod h1:WYAU7UTm1wXzEhnsTt843T77fKfR9x/rqqzjm8NJ3Mc=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=

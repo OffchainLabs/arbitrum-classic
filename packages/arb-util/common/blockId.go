@@ -38,20 +38,6 @@ func (id *BlockId) Clone() *BlockId {
 	}
 }
 
-func (id *BlockId) MarshalToBuf() *BlockIdBuf {
-	return &BlockIdBuf{
-		Height:     id.Height.Marshal(),
-		HeaderHash: id.HeaderHash.MarshalToBuf(),
-	}
-}
-
-func (idb *BlockIdBuf) Unmarshal() *BlockId {
-	return &BlockId{
-		Height:     idb.Height.Unmarshal(),
-		HeaderHash: idb.HeaderHash.Unmarshal(),
-	}
-}
-
 func (id *BlockId) Equals(id2 *BlockId) bool {
 	return id.Height.Cmp(id2.Height) == 0 &&
 		id.HeaderHash.Equals(id2.HeaderHash)
