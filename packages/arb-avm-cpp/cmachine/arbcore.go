@@ -179,11 +179,6 @@ func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.Inb
 }
 
 func (ac *ArbCore) GetSendAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (ret common.Hash, err error) {
-	if count.Cmp(big.NewInt(0)) == 0 {
-		ret = startAcc
-		return
-	}
-
 	startIndexData := math.U256Bytes(startIndex)
 	countData := math.U256Bytes(count)
 
@@ -202,11 +197,6 @@ func (ac *ArbCore) GetSendAcc(startAcc common.Hash, startIndex *big.Int, count *
 }
 
 func (ac *ArbCore) GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (ret common.Hash, err error) {
-	if count.Cmp(big.NewInt(0)) == 0 {
-		ret = startAcc
-		return
-	}
-
 	startIndexData := math.U256Bytes(startIndex)
 	countData := math.U256Bytes(count)
 
