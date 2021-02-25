@@ -1120,7 +1120,7 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                 // If placeholder message not found, machine will just be
                 // blocked
                 auto resolve_status = resolveStagedMessage(
-                    tx, machine->machine_state.staged_message);
+                    tx, execution_cursor.machine->machine_state.staged_message);
                 if (!resolve_status.IsNotFound() && !resolve_status.ok()) {
                     core_error_string = "error resolving staged message";
                     machine_error = true;
@@ -1129,7 +1129,7 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                     return resolve_status;
                 }
 
-                auto assertion = machine->run(execConfig);
+                auto assertion = execution_cursor.machine->run(execConfig);
                 if (assertion.gasCount == 0) {
                     // Nothing was executed
                     break;
@@ -1162,11 +1162,6 @@ rocksdb::Status ArbCore::resolveStagedMessage(Transaction& tx,
                                               value& message) const {
     if (std::holds_alternative<uint256_t>(message)) {
         auto sequence_number = std::get<uint256_t>(message);
-        if (sequence_number >= pending_checkpoint.total_messages_read) {
-            // Staged message obsolete
-            return rocksdb::Status::NotFound();
-        }
-
         auto message_lookup = getMessageEntry(tx, sequence_number);
         if (!message_lookup.status.ok()) {
             // Unable to resolve cursor, no valid message found
@@ -1256,6 +1251,16 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
 
         return rocksdb::Status::OK();
     }
+}
+
+ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
+    Transaction& tx,
+    ExecutionCursor& execution_cursor,
+    const uint256_t& orig_message_group_size) {
+    const std::lock_guard<std::mutex> lock(core_reorg_mutex);
+
+    return executionCursorAddMessages(tx, execution_cursor,
+                                      orig_message_group_size);
 }
 
 ValueResult<bool> ArbCore::executionCursorAddMessages(
