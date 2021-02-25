@@ -62,7 +62,7 @@ func NewSendResultFromValue(tup *value.TupleValue) (*SendResult, error) {
 	}
 	dataContentsBuf, ok := dataContentsVal.(*value.Buffer)
 	if !ok {
-		return nil, errors.New("dataContents must be an int")
+		return nil, errors.New("dataContents must be a buffer")
 	}
 
 	data, err := inbox.BufAndLengthToBytes(dataSizeInt.BigInt(), dataContentsBuf)

@@ -125,7 +125,7 @@ func TestDepositEthTx(t *testing.T) {
 	getBalance5 := message.Transaction{
 		MaxGas:      big.NewInt(1000000),
 		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(9),
+		SequenceNum: big.NewInt(8),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS),
 		Payment:     big.NewInt(0),
 		Data:        snapshot.GetBalanceData(connAddress1),
