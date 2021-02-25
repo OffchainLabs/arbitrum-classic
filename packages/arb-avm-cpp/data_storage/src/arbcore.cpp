@@ -1932,17 +1932,20 @@ ValueResult<uint256_t> ArbCore::getSideloadPosition(
     marshal_uint256_t(block_number, key);
     auto key_slice = vecToSlice(key);
 
-    std::string value_raw;
+    auto it = std::unique_ptr<rocksdb::Iterator>(tx.transaction->GetIterator(
+        rocksdb::ReadOptions(), tx.datastorage->sideload_column.get()));
 
-    auto s = tx.transaction->Get(rocksdb::ReadOptions(),
-                                 tx.datastorage->sideload_column.get(),
-                                 key_slice, &value_raw);
+    it->SeekForPrev(key_slice);
+
+    auto s = it->status();
     if (!s.ok()) {
         return {s, 0};
     }
 
+    auto value_slice = it->value();
+
     return {s, intx::be::unsafe::load<uint256_t>(
-                   reinterpret_cast<const unsigned char*>(value_raw.data()))};
+                   reinterpret_cast<const unsigned char*>(value_slice.data()))};
 }
 
 ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
