@@ -140,8 +140,6 @@ abstract contract OneStepProofCommon is IOneStepProof {
     uint8 internal constant OP_SETBUFFER64 = 0xa5;
     uint8 internal constant OP_SETBUFFER256 = 0xa6;
 
-    uint64 internal constant EC_PAIRING_POINT_GAS_COST = 500000;
-
     uint8 internal constant CODE_POINT_TYPECODE = 1;
     bytes32 internal constant CODE_POINT_ERROR =
         keccak256(abi.encodePacked(CODE_POINT_TYPECODE, uint8(0), bytes32(0)));

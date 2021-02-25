@@ -840,15 +840,16 @@ uint64_t ec_pairing_variable_gas_cost(const MachineState& m) {
         return gas_cost;
     }
     try {
-        const Tuple* val = &assumeTuple(m.stack[0]);
+        auto val = m.stack[0];
         for (int i = 0; i < max_ec_pairing_points; i++) {
-            if (val->tuple_size() == 0) {
+            const Tuple* tup = &assumeTuple(val);
+            if (tup->tuple_size() == 0) {
                 break;
             }
-            if (val->tuple_size() != 2) {
+            if (tup->tuple_size() != 2) {
                 throw bad_pop_type{};
             }
-            val = &assumeTuple(val->get_element_unsafe(1));
+            val = tup->get_element_unsafe(1);
             gas_cost += ec_pair_gas_cost;
         }
     } catch (const std::exception&) {

@@ -34,6 +34,8 @@ contract OneStepProof is OneStepProofCommon {
     using BytesLib for bytes;
 
     uint256 private constant MAX_PAIRING_COUNT = 30;
+    uint64 internal constant EC_PAIRING_BASE_GAS_COST = 1000;
+    uint64 internal constant EC_PAIRING_POINT_GAS_COST = 500000;
 
     /* solhint-disable no-inline-assembly */
 
@@ -615,11 +617,12 @@ contract OneStepProof is OneStepProofCommon {
         Value.Data memory val = popVal(context.stack);
 
         Value.Data[MAX_PAIRING_COUNT] memory items;
+        bool postGasError = false;
         uint256 count;
         for (count = 0; count < MAX_PAIRING_COUNT; count++) {
             if (!val.isTuple()) {
-                handleOpcodeError(context);
-                return;
+                postGasError = true;
+                break;
             }
             Value.Data[] memory stackTupleVals = val.tupleVal;
             if (stackTupleVals.length == 0) {
@@ -627,18 +630,22 @@ contract OneStepProof is OneStepProofCommon {
                 break;
             }
             if (stackTupleVals.length != 2) {
-                handleOpcodeError(context);
-                return;
+                postGasError = true;
+                break;
             }
             items[count] = stackTupleVals[0];
             val = stackTupleVals[1];
         }
 
         if (deductGas(context, uint64(EC_PAIRING_POINT_GAS_COST * count))) {
+            // When we run out of gas, we only charge for an error + gas_set
+            // That means we need to deduct the previously charged base cost here
+            context.gas -= EC_PAIRING_BASE_GAS_COST;
+            handleError(context);
             return;
         }
 
-        if (!val.isTuple() || val.tupleVal.length != 0) {
+        if (postGasError || !val.isTuple() || val.tupleVal.length != 0) {
             // Must end on empty tuple
             handleOpcodeError(context);
             return;
@@ -823,7 +830,7 @@ contract OneStepProof is OneStepProofCommon {
         } else if (opCode == OP_ECMUL) {
             return (3, 0, 82000, executeECMulInsn);
         } else if (opCode == OP_ECPAIRING) {
-            return (1, 0, 1000, executeECPairingInsn);
+            return (1, 0, EC_PAIRING_BASE_GAS_COST, executeECPairingInsn);
         } else if (opCode == OP_DEBUGPRINT) {
             return (1, 0, 1, executePopInsn);
         } else if (opCode == OP_NEWBUFFER) {

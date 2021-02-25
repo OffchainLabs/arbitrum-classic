@@ -1,0 +1,6 @@
+{"version":2,"static_val":{"Tuple":[]},"extensions":[],"code":[
+  {"opcode":61,"immediate":{"CodePoint":{"Internal":3}}},
+  {"opcode":117,"immediate":{"Int":"44c"}},
+  {"opcode":131,"immediate":{"Tuple":[{"Int":"0"},{"Tuple":[]}]}},
+  {"opcode":116,"immediate":null}
+]}
