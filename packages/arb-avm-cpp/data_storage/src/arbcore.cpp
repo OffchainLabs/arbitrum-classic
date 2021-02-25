@@ -1096,8 +1096,8 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
         }
 
         while (true) {
-            auto result = executionCursorAddMessagesNoLock(tx, execution_cursor,
-                                                           message_group_size);
+            auto result = executionCursorAddMessages(tx, execution_cursor,
+                                                     message_group_size);
             if (!result.status.ok()) {
                 return result.status;
             }
@@ -1208,7 +1208,8 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
                        checkpoint_result.data.arb_gas_used) {
             // Execution cursor used more gas than checkpoint so use it if inbox
             // hash valid
-            auto result = executionCursorAddMessages(tx, execution_cursor, 0);
+            auto result =
+                executionCursorAddMessagesNoLock(tx, execution_cursor, 0);
             if (result.status.ok() && result.data && execution_cursor.machine) {
                 // Execution cursor machine still valid, so use it
                 return rocksdb::Status::OK();
