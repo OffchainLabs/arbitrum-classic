@@ -85,7 +85,8 @@ func TestArbCoreSideload(t *testing.T) {
 		<-time.After(time.Millisecond * 200)
 	}
 
-	sideloadMachine, err := arbCore.GetMachineForSideload(0)
+	// ArbCore should backtrack and look for the latest previous sideload
+	sideloadMachine, err := arbCore.GetMachineForSideload(5)
 	test.FailIfError(t, err)
 
 	precompileAddress := ethcommon.BytesToAddress([]byte{precompileNum})
