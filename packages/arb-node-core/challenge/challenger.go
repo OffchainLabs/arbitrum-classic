@@ -57,50 +57,10 @@ func (c *Challenger) HandleConflict(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	challengeImpl := &ExecutionImpl{
+	challengeImpl := ExecutionImpl{
 		initialCursor: initialCursor,
 	}
 	return handleChallenge(ctx, c.challenge, c.challengedNode.Assertion, c.lookup, challengeImpl, prevBisection)
-}
-
-type SimpleChallengerImpl interface {
-	GetCut(lookup core.ArbCoreLookup, offsets *big.Int) (core.Cut, error)
-}
-
-type ChallengerImpl interface {
-	SegmentTarget() int
-
-	GetCuts(lookup core.ArbCoreLookup, assertion *core.Assertion, offsets []*big.Int) ([]core.Cut, error)
-	FindFirstDivergence(lookup core.ArbCoreLookup, assertion *core.Assertion, offsets []*big.Int, cuts []core.Cut) (DivergenceInfo, error)
-
-	Bisect(
-		ctx context.Context,
-		challenge *ethbridge.Challenge,
-		prevBisection *core.Bisection,
-		segmentToChallenge int,
-		inconsistentSegment *core.ChallengeSegment,
-		subCuts []core.Cut,
-	) error
-
-	OneStepProof(
-		ctx context.Context,
-		challenge *ethbridge.Challenge,
-		lookup core.ArbCoreLookup,
-		assertion *core.Assertion,
-		prevBisection *core.Bisection,
-		segmentToChallenge int,
-		challengedSegment *core.ChallengeSegment,
-	) error
-
-	ProveContinuedExecution(
-		ctx context.Context,
-		challenge *ethbridge.Challenge,
-		lookup core.ArbCoreLookup,
-		assertion *core.Assertion,
-		prevBisection *core.Bisection,
-		segmentToChallenge int,
-		challengedSegment *core.ChallengeSegment,
-	) error
 }
 
 func handleChallenge(
@@ -108,7 +68,7 @@ func handleChallenge(
 	challenge *ethbridge.Challenge,
 	assertion *core.Assertion,
 	lookup core.ArbCoreLookup,
-	challengeImpl ChallengerImpl,
+	challengeImpl ExecutionImpl,
 	prevBisection *core.Bisection,
 ) error {
 	prevCutOffsets := generateBisectionCutOffsets(prevBisection.ChallengedSegment, len(prevBisection.Cuts)-1)

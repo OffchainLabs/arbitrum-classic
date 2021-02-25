@@ -207,8 +207,6 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _gasUsedBefore,
         bytes32 _assertionRest
     ) external onlyOnTurn {
-        require(_challengedSegmentLength > 1, "TOO SHORT");
-
         bytes32 beforeChainHash = ChallengeLib.assertionHash(_gasUsedBefore, _assertionRest);
 
         bytes32 bisectionHash =
