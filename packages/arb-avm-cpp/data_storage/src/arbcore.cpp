@@ -1263,16 +1263,10 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
     auto message_group_size = orig_message_group_size;
 
     // Check if current machine is obsolete
-    auto current_reorg_applicable_messages =
-        execution_cursor.total_messages_read;
-    if (execution_cursor.machine &&
-        execution_cursor.machine->stagedMessageIsPlaceholder()) {
-        current_reorg_applicable_messages -= 1;
-    }
-    if (current_reorg_applicable_messages > 0) {
+    if (execution_cursor.total_messages_read > 0) {
         auto stored_result =
             getMessageEntry(tx, execution_cursor.total_messages_read - 1);
-        if (stored_result.status.ok() &&
+        if (!stored_result.status.ok() ||
             execution_cursor.inbox_hash != stored_result.data.inbox_hash) {
             // Obsolete machine, reorg occurred
             return {rocksdb::Status::OK(), false};
@@ -1289,21 +1283,13 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
     auto current_message_sequence_number =
         execution_cursor.first_message_sequence_number;
 
-    auto pending_reorg_applicable_messages =
-        pending_checkpoint.total_messages_read;
-    if (machine->stagedMessageIsPlaceholder()) {
-        pending_reorg_applicable_messages -= 1;
-    }
-    if (current_message_sequence_number >= pending_reorg_applicable_messages) {
-        // Already past core machine, probably reorg
-        return {rocksdb::Status::OK(), false};
-    }
+    auto inserted_message_count_result = messageEntryInsertedCount();
 
-    if (current_message_sequence_number + message_group_size >=
-        pending_reorg_applicable_messages) {
+    if (current_message_sequence_number + message_group_size >
+        inserted_message_count_result.data) {
         // Don't read past primary machine
-        message_group_size =
-            pending_reorg_applicable_messages - current_message_sequence_number;
+        message_group_size = inserted_message_count_result.data -
+                             current_message_sequence_number;
     }
 
     if (message_group_size == 0) {
