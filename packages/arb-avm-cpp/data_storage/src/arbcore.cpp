@@ -436,9 +436,15 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
         pending_checkpoint = Checkpoint{};
     }
 
+    auto status =
+        deleteSideloadsStartingAt(tx, pending_checkpoint.block_height);
+    if (!status.ok()) {
+        return status;
+    }
+
     // Update log cursors, must be called before logs are deleted
     for (size_t i = 0; i < logs_cursors.size(); i++) {
-        auto status =
+        status =
             handleLogsCursorReorg(tx, i, pending_checkpoint.log_count, cache);
         if (!status.ok()) {
             return status;
@@ -452,7 +458,7 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
         return *optional_status;
     }
 
-    auto status = updateLogInsertedCount(tx, pending_checkpoint.log_count);
+    status = updateLogInsertedCount(tx, pending_checkpoint.log_count);
     if (!status.ok()) {
         return status;
     }
@@ -1958,6 +1964,39 @@ ValueResult<uint256_t> ArbCore::getSideloadPosition(
 
     return {s, intx::be::unsafe::load<uint256_t>(
                    reinterpret_cast<const unsigned char*>(value_slice.data()))};
+}
+
+rocksdb::Status ArbCore::deleteSideloadsStartingAt(
+    Transaction& tx,
+    const uint256_t& block_number) {
+    // Clear the cache
+    {
+        std::unique_lock<std::shared_mutex> guard(sideload_cache_mutex);
+        auto it = sideload_cache.lower_bound(block_number);
+        while (it != sideload_cache.end()) {
+            it = sideload_cache.erase(it);
+        }
+    }
+
+    // Clear the DB
+    std::vector<unsigned char> key;
+    marshal_uint256_t(block_number, key);
+    auto key_slice = vecToSlice(key);
+
+    auto it = std::unique_ptr<rocksdb::Iterator>(tx.transaction->GetIterator(
+        rocksdb::ReadOptions(), tx.datastorage->sideload_column.get()));
+
+    it->Seek(key_slice);
+
+    while (it->Valid()) {
+        tx.transaction->Delete(it->key());
+        it->Next();
+    }
+    auto s = it->status();
+    if (s.IsNotFound()) {
+        s = rocksdb::Status::OK();
+    }
+    return s;
 }
 
 ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(

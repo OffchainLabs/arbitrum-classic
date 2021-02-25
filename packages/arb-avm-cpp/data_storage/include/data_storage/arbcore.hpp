@@ -313,6 +313,8 @@ class ArbCore {
                                          const uint256_t& block_number);
     ValueResult<uint256_t> getSideloadPosition(Transaction& tx,
                                                const uint256_t& block_number);
+    rocksdb::Status deleteSideloadsStartingAt(Transaction& tx,
+                                              const uint256_t& block_number);
 };
 
 std::optional<rocksdb::Status> deleteLogsStartingAt(Transaction& tx,
