@@ -1096,8 +1096,8 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
         }
 
         while (true) {
-            auto result = executionCursorAddMessages(tx, execution_cursor,
-                                                     message_group_size);
+            auto result = executionCursorAddMessagesNoLock(tx, execution_cursor,
+                                                           message_group_size);
             if (!result.status.ok()) {
                 return result.status;
             }
@@ -1253,7 +1253,7 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
     }
 }
 
-ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
+ValueResult<bool> ArbCore::executionCursorAddMessages(
     Transaction& tx,
     ExecutionCursor& execution_cursor,
     const uint256_t& orig_message_group_size) {
@@ -1263,12 +1263,10 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
                                       orig_message_group_size);
 }
 
-ValueResult<bool> ArbCore::executionCursorAddMessages(
+ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
     Transaction& tx,
     ExecutionCursor& execution_cursor,
     const uint256_t& orig_message_group_size) {
-    const std::lock_guard<std::mutex> lock(core_reorg_mutex);
-
     auto message_group_size = orig_message_group_size;
 
     // Check if current machine is obsolete
