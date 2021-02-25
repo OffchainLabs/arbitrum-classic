@@ -1260,8 +1260,8 @@ ValueResult<bool> ArbCore::executionCursorAddMessages(
     const uint256_t& orig_message_group_size) {
     const std::lock_guard<std::mutex> lock(core_reorg_mutex);
 
-    return executionCursorAddMessages(tx, execution_cursor,
-                                      orig_message_group_size);
+    return executionCursorAddMessagesNoLock(tx, execution_cursor,
+                                            orig_message_group_size);
 }
 
 ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
