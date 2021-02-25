@@ -58,8 +58,9 @@ TEST_CASE("ARBOS test vectors") {
             ArbStorage storage(dbpath);
             REQUIRE(storage.initialize(arb_os_path).ok());
             auto mach = storage.getInitialMachine(value_cache);
-            mach->machine_state.stack.push(uint256_t{0});
-            auto assertion = mach->run(MachineExecutionConfig());
+            MachineExecutionConfig config;
+            config.inbox_messages = messages;
+            auto assertion = mach->run(config);
             INFO("Machine ran for " << assertion.stepCount << " steps");
             REQUIRE(assertion.logs.size() == logs.size());
             auto log = std::get<Tuple>(logs[0]);
