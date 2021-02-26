@@ -17,7 +17,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
-func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big.Int, endGas *big.Int, faultConfig faultConfig, asserterMayFail bool) {
+func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big.Int, endGas *big.Int, faultConfig faultConfig, asserterMayFail bool) int {
 	tmpDir, err := ioutil.TempDir("", "arbitrum")
 	test.FailIfError(t, err)
 	defer func() {
@@ -54,7 +54,7 @@ func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big
 	challengedNode := initializeChallengeData(t, faultyCore, startGas, endGas)
 
 	time := big.NewInt(100)
-	executeChallenge(
+	return executeChallenge(
 		t,
 		challengedNode,
 		time,
@@ -98,5 +98,8 @@ func TestChallengeToOSPWithMessage(t *testing.T) {
 }
 
 func TestChallengeToUnreachable(t *testing.T) {
-	runExecutionTest(t, []inbox.InboxMessage{makeInitMsg()}, big.NewInt(1200000), big.NewInt(1300000), faultConfig{messagesReadCap: big.NewInt(0)}, true)
+	rounds := runExecutionTest(t, []inbox.InboxMessage{makeInitMsg()}, big.NewInt(1200000), big.NewInt(1300000), faultConfig{messagesReadCap: big.NewInt(0)}, true)
+	if rounds < 2 {
+		t.Fatal("TestChallengeToUnreachable failed too early")
+	}
 }
