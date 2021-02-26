@@ -686,6 +686,15 @@ void ArbCore::operator()() {
                 break;
             }
 
+            // Save logs and sends
+            auto status = saveAssertion(*tx, last_assertion);
+            if (!status.ok()) {
+                core_error_string = status.ToString();
+                std::cerr << "ArbCore assertion saving failed: "
+                          << core_error_string << "\n";
+                break;
+            }
+
             // Cache pre-sideload machines
             if (last_assertion.sideloadBlockNumber) {
                 auto block = *last_assertion.sideloadBlockNumber;
@@ -706,38 +715,49 @@ void ArbCore::operator()() {
                         it++;
                     }
                 }
-            }
 
-            // Save logs and sends
-            auto status = saveAssertion(*tx, last_assertion);
-            if (!status.ok()) {
-                core_error_string = status.ToString();
-                std::cerr << "ArbCore assertion saving failed: "
-                          << core_error_string << "\n";
-                break;
-            }
+                // Save checkpoint for every sideload
+                status = saveCheckpoint(*tx);
+                if (!status.ok()) {
+                    core_error_string = status.ToString();
+                    std::cerr << "ArbCore checkpoint saving failed: "
+                              << core_error_string << "\n";
+                    break;
+                }
 
-            // Maybe save checkpoint
-            // TODO Decide how often to create checkpoint
-            status = saveCheckpoint(*tx);
-            if (!status.ok()) {
-                core_error_string = status.ToString();
-                std::cerr << "ArbCore checkpoint saving failed: "
-                          << core_error_string << "\n";
-                break;
-            }
+                // TODO Decide how often to clear ValueCache
+                // (only clear cache when machine thread stopped)
+                cache.clear();
 
-            // TODO Decide how often to clear ValueCache
-            // (only clear cache when machine thread stopped)
-            cache.clear();
+                status = tx->commit();
+                if (!status.ok()) {
+                    core_error_string = status.ToString();
+                    machine_error = true;
+                    std::cerr << "ArbCore database update failed: "
+                              << core_error_string << "\n";
+                    break;
+                }
 
-            status = tx->commit();
-            if (!status.ok()) {
-                core_error_string = status.ToString();
-                machine_error = true;
-                std::cerr << "ArbCore database update failed: "
-                          << core_error_string << "\n";
-                break;
+                // Machine was stopped to save sideload, update execConfig
+                // and start machine back up where it stopped
+                execConfig.messages_to_skip +=
+                    last_assertion.inbox_messages_consumed;
+                auto machine_status = machine->runMachine(execConfig);
+                if (!machine_status) {
+                    core_error_string = "Error starting machine thread";
+                    machine_error = true;
+                    std::cerr << "ArbCore error: " << core_error_string << "\n";
+                    break;
+                }
+            } else {
+                status = tx->commit();
+                if (!status.ok()) {
+                    core_error_string = status.ToString();
+                    machine_error = true;
+                    std::cerr << "ArbCore database update failed: "
+                              << core_error_string << "\n";
+                    break;
+                }
             }
         }
 
