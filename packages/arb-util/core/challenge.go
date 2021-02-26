@@ -25,11 +25,7 @@ func (c SimpleCut) String() string {
 }
 
 func (c SimpleCut) Equals(other Cut) bool {
-	o, ok := other.(SimpleCut)
-	if !ok {
-		return false
-	}
-	return c.hash == o.hash
+	return c.CutHash() == other.CutHash()
 }
 
 func (c SimpleCut) CutHash() [32]byte {
@@ -47,17 +43,7 @@ type ExecutionCut struct {
 }
 
 func (c ExecutionCut) Equals(other Cut) bool {
-	o, ok := other.(ExecutionCut)
-	if !ok {
-		return false
-	}
-	return c.GasUsed.Cmp(o.GasUsed) == 0 &&
-		c.TotalMessagesRead.Cmp(o.TotalMessagesRead) == 0 &&
-		c.MachineState == o.MachineState &&
-		c.SendAcc == o.SendAcc &&
-		c.SendCount.Cmp(o.SendCount) == 0 &&
-		c.LogAcc == o.LogAcc &&
-		c.LogCount.Cmp(o.LogCount) == 0
+	return c.CutHash() == other.CutHash()
 }
 
 func (c ExecutionCut) RestHash() [32]byte {

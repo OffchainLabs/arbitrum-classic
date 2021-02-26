@@ -2,6 +2,8 @@ package ethbridge
 
 import (
 	"context"
+	"strings"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -11,7 +13,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 var bisectedID ethcommon.Hash
@@ -53,14 +54,6 @@ func NewChallengeWatcher(address ethcommon.Address, client ethutils.EthClient) (
 
 func (c *ChallengeWatcher) Address() common.Address {
 	return common.NewAddressFromEth(c.address)
-}
-
-func (c *ChallengeWatcher) Kind(ctx context.Context) (core.ChallengeKind, error) {
-	rawKind, err := c.con.Kind(&bind.CallOpts{Context: ctx})
-	if err != nil {
-		return 0, err
-	}
-	return core.ChallengeKind(rawKind), nil
 }
 
 func (c *ChallengeWatcher) Turn(ctx context.Context) (ChallengeTurn, error) {
@@ -116,10 +109,10 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 		return nil, err
 	}
 	if len(logs) == 0 {
-		return nil, errors.New("no matching bisection")
+		return nil, nil
 	}
 	if len(logs) > 1 {
-		return nil, errors.New("too many matching  bisections")
+		return nil, errors.New("too many matching bisections")
 	}
 
 	parsedLog, err := c.con.ParseBisected(logs[0])

@@ -1,9 +1,10 @@
 package core
 
 import (
-	"github.com/pkg/errors"
 	"math/big"
 	"sort"
+
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -35,8 +36,18 @@ type ExecutionTracker struct {
 	logAccs  []common.Hash
 }
 
-func NewExecutionTracker(lookup ArbCoreLookup, cursor ExecutionCursor, goOverGas bool, stopPoints []*big.Int) *ExecutionTracker {
-	sort.Sort(BigIntList(stopPoints))
+func NewExecutionTracker(lookup ArbCoreLookup, cursor ExecutionCursor, goOverGas bool, stopPointsArg []*big.Int) *ExecutionTracker {
+	sort.Sort(BigIntList(stopPointsArg))
+	// Deduplicate stop points
+	stopPoints := make([]*big.Int, 0, len(stopPointsArg))
+	var lastStopPoint *big.Int = nil
+	for _, stopPoint := range stopPointsArg {
+		if lastStopPoint != nil && lastStopPoint.Cmp(stopPoint) == 0 {
+			continue
+		}
+		stopPoints = append(stopPoints, stopPoint)
+		lastStopPoint = stopPoint
+	}
 	cursors := make([]ExecutionCursor, 0, len(stopPoints)+1)
 	cursors = append(cursors, cursor)
 	sendAccs := make([]common.Hash, 0, len(stopPoints)+1)
@@ -60,13 +71,15 @@ func NewExecutionTracker(lookup ArbCoreLookup, cursor ExecutionCursor, goOverGas
 }
 
 func (e *ExecutionTracker) fillInCursors(max int) error {
-	for i := len(e.cursors) - 1; i < max; i++ {
-		nextCursor := e.cursors[len(e.cursors)-1].Clone()
+	for i := len(e.cursors); i <= max; i++ {
+		nextCursor := e.cursors[i-1].Clone()
 		nextStopPoint := e.sortedStopPoints[i]
-		gasToExecute := new(big.Int).Sub(nextStopPoint, nextCursor.TotalGasConsumed())
-		err := e.lookup.AdvanceExecutionCursor(nextCursor, gasToExecute, e.goOverGas)
-		if err != nil {
-			return err
+		if nextStopPoint.Cmp(nextCursor.TotalGasConsumed()) > 0 {
+			gasToExecute := new(big.Int).Sub(nextStopPoint, nextCursor.TotalGasConsumed())
+			err := e.lookup.AdvanceExecutionCursor(nextCursor, gasToExecute, e.goOverGas)
+			if err != nil {
+				return err
+			}
 		}
 		e.cursors = append(e.cursors, nextCursor)
 	}
@@ -77,23 +90,19 @@ func (e *ExecutionTracker) fillInAccs(max int) error {
 	if err := e.fillInCursors(max); err != nil {
 		return err
 	}
-	if len(e.logAccs) < 2 {
-		// Nothing to fill in
-		return nil
-	}
 
-	for i := len(e.logAccs) - 1; i < max; i++ {
+	for i := len(e.logAccs); i <= max; i++ {
 		prevCursor := e.cursors[i-1]
 		cursor := e.cursors[i]
 		prevSendAcc := e.sendAccs[i-1]
 		prevLogAcc := e.logAccs[i-1]
-		sendCount := new(big.Int).Sub(prevCursor.TotalSendCount(), cursor.TotalSendCount())
-		sendAcc, err := e.lookup.GetSendAcc(prevSendAcc, cursor.TotalSendCount(), sendCount)
+		sendCount := new(big.Int).Sub(cursor.TotalSendCount(), prevCursor.TotalSendCount())
+		sendAcc, err := e.lookup.GetSendAcc(prevSendAcc, prevCursor.TotalSendCount(), sendCount)
 		if err != nil {
 			return err
 		}
-		logCount := new(big.Int).Sub(prevCursor.TotalLogCount(), cursor.TotalLogCount())
-		logAcc, err := e.lookup.GetLogAcc(prevLogAcc, cursor.TotalLogCount(), logCount)
+		logCount := new(big.Int).Sub(cursor.TotalLogCount(), prevCursor.TotalLogCount())
+		logAcc, err := e.lookup.GetLogAcc(prevLogAcc, prevCursor.TotalLogCount(), logCount)
 		if err != nil {
 			return err
 		}
@@ -103,13 +112,13 @@ func (e *ExecutionTracker) fillInAccs(max int) error {
 	return nil
 }
 
-func (e *ExecutionTracker) GetExecutionInfo(gasUsed *big.Int) (*ExecutionInfo, error) {
+func (e *ExecutionTracker) GetExecutionInfo(gasUsed *big.Int) (*ExecutionInfo, *big.Int, error) {
 	index, ok := e.stopPointIndex[string(gasUsed.Bytes())]
 	if !ok {
-		return nil, errors.New("invalid gas used")
+		return nil, nil, errors.New("invalid gas used")
 	}
 	if err := e.fillInAccs(index); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	return &ExecutionInfo{
@@ -117,7 +126,7 @@ func (e *ExecutionTracker) GetExecutionInfo(gasUsed *big.Int) (*ExecutionInfo, e
 		After:   NewExecutionState(e.cursors[index]),
 		SendAcc: e.sendAccs[index],
 		LogAcc:  e.logAccs[index],
-	}, nil
+	}, e.cursors[index].TotalSteps(), nil
 }
 
 func (e *ExecutionTracker) GetMachine(gasUsed *big.Int) (machine.Machine, error) {
@@ -131,19 +140,16 @@ func (e *ExecutionTracker) GetMachine(gasUsed *big.Int) (machine.Machine, error)
 	return e.cursors[index].Clone().TakeMachine()
 }
 
-func JudgeAssertion(assertion *Assertion, execTracker *ExecutionTracker) (ChallengeKind, error) {
-	localExecutionInfo, err := execTracker.GetExecutionInfo(assertion.GasUsed())
+func IsAssertionValid(assertion *Assertion, execTracker *ExecutionTracker) (bool, error) {
+	localExecutionInfo, _, err := execTracker.GetExecutionInfo(assertion.GasUsed())
 	if err != nil {
-		return 0, err
+		return false, err
 	}
-	if localExecutionInfo.InboxMessagesRead().Cmp(assertion.InboxMessagesRead()) > 0 {
+	if localExecutionInfo.InboxMessagesRead().Cmp(assertion.InboxMessagesRead()) > 0 || localExecutionInfo.After.TotalGasConsumed.Cmp(assertion.GasUsed()) < 0 {
 		// Execution read more messages than provided so assertion should have
 		// stopped short
-		return StoppedShort, nil
+		return false, nil
 	}
 
-	if !assertion.ExecutionInfo.Equals(localExecutionInfo) {
-		return Execution, nil
-	}
-	return NoChallenge, nil
+	return assertion.ExecutionInfo.Equals(localExecutionInfo), nil
 }

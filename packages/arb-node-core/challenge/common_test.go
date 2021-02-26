@@ -2,9 +2,10 @@ package challenge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"math/big"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -22,8 +23,9 @@ func executeChallenge(
 	challengedNode *core.NodeInfo,
 	asserterTime *big.Int,
 	challengerTime *big.Int,
-	correctLookup core.ArbCore,
-	falseLookup core.ArbCore,
+	correctLookup core.ArbCoreLookup,
+	falseLookup core.ArbCoreLookup,
+	asserterMayFail bool,
 ) int {
 	ctx := context.Background()
 
@@ -48,6 +50,7 @@ func executeChallenge(
 	turn := ethbridge.CHALLENGER_TURN
 	rounds := 0
 	for {
+		t.Logf("executing challenge round %v", rounds)
 		checkTurn(t, challenge, turn)
 		if turn == ethbridge.CHALLENGER_TURN {
 			err := challenger.HandleConflict(ctx)
@@ -65,6 +68,10 @@ func executeChallenge(
 			turn = ethbridge.ASSERTER_TURN
 		} else {
 			err := asserter.HandleConflict(ctx)
+			if asserterMayFail && err != nil {
+				t.Logf("Asserter failed challenge: %v", err.Error())
+				return rounds
+			}
 			test.FailIfError(t, err)
 			if asserterBackend.TransactionCount() == 0 {
 				t.Fatal("should be able to transact")
@@ -128,43 +135,44 @@ func checkChallengeCompleted(t *testing.T, tester *ethbridgetestcontracts.Challe
 
 func initializeChallengeData(
 	t *testing.T,
-	lookup core.ArbCore,
-	inboxMessagesRead *big.Int,
+	lookup core.ArbCoreLookup,
+	startGas *big.Int,
+	endGas *big.Int,
 ) *core.NodeInfo {
-	initialMach, err := lookup.GetExecutionCursor(big.NewInt(0))
+	cursor, err := lookup.GetExecutionCursor(startGas)
+	test.FailIfError(t, err)
+	inboxMaxCount, err := lookup.GetMessageCount()
 	test.FailIfError(t, err)
 	prevState := &core.NodeState{
 		ProposedBlock: big.NewInt(0),
-		InboxMaxCount: big.NewInt(0),
+		InboxMaxCount: inboxMaxCount,
 		ExecutionState: &core.ExecutionState{
-			TotalGasConsumed:  big.NewInt(0),
-			MachineHash:       initialMach.MachineHash(),
-			TotalMessagesRead: big.NewInt(0),
-			TotalSendCount:    big.NewInt(0),
-			TotalLogCount:     big.NewInt(0),
+			MachineHash:       cursor.MachineHash(),
+			TotalMessagesRead: cursor.TotalMessagesRead(),
+			TotalGasConsumed:  cursor.TotalGasConsumed(),
+			TotalSendCount:    cursor.TotalSendCount(),
+			TotalLogCount:     cursor.TotalLogCount(),
 		},
 	}
 
-	afterInboxTotalMessagesRead := new(big.Int).Add(prevState.TotalMessagesRead, inboxMessagesRead)
+	lookup.AdvanceExecutionCursor(cursor, endGas, true)
 	assertion := &core.Assertion{
 		PrevProposedBlock: prevState.ProposedBlock,
 		PrevInboxMaxCount: prevState.InboxMaxCount,
 		ExecutionInfo: &core.ExecutionInfo{
 			Before: prevState.ExecutionState,
 			After: &core.ExecutionState{
-				MachineHash:       common.Hash{},
-				TotalMessagesRead: afterInboxTotalMessagesRead,
-				TotalGasConsumed:  big.NewInt(0),
-				TotalSendCount:    big.NewInt(0),
-				TotalLogCount:     big.NewInt(0),
+				MachineHash:       cursor.MachineHash(),
+				TotalMessagesRead: cursor.TotalMessagesRead(),
+				TotalGasConsumed:  cursor.TotalGasConsumed(),
+				TotalSendCount:    cursor.TotalSendCount(),
+				TotalLogCount:     cursor.TotalLogCount(),
 			},
 			SendAcc: common.Hash{},
 			LogAcc:  common.Hash{},
 		},
 	}
 
-	inboxMaxCount, err := lookup.GetMessageCount()
-	test.FailIfError(t, err)
 	return &core.NodeInfo{
 		NodeNum: big.NewInt(1),
 		BlockProposed: &common.BlockId{

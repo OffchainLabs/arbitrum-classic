@@ -44,6 +44,10 @@ func (e *ExecutionCursorMock) TotalLogCount() *big.Int {
 	return big.NewInt(0)
 }
 
+func (e *ExecutionCursorMock) TotalSteps() *big.Int {
+	return big.NewInt(0)
+}
+
 func (e *ExecutionCursorMock) TakeMachine() (machine.Machine, error) {
 	return e.mach, nil
 }
