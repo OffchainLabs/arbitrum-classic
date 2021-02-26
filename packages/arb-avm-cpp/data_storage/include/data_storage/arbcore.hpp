@@ -287,7 +287,8 @@ class ArbCore {
     rocksdb::Status executionCursorSetup(Transaction& tx,
                                          ExecutionCursor& execution_cursor,
                                          const uint256_t& total_gas_used,
-                                         ValueCache& cache);
+                                         ValueCache& cache,
+                                         bool is_for_sideload = false);
 
     rocksdb::Status updateLogInsertedCount(Transaction& tx,
                                            const uint256_t& log_index);
