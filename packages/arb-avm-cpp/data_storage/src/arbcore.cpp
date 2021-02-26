@@ -436,8 +436,8 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
         pending_checkpoint = Checkpoint{};
     }
 
-    auto status =
-        deleteSideloadsStartingAt(tx, pending_checkpoint.block_height);
+    auto status = deleteSideloadsStartingAt(
+        tx, pending_checkpoint.next_sideload_block_number);
     if (!status.ok()) {
         return status;
     }
