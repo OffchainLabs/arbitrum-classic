@@ -3,20 +3,20 @@ package staker
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/core/types"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/pkg/errors"
 )
 
 type Strategy uint8
 
 const (
-	EagerStrategy Strategy = iota
-	OpportunisticStrategy
+	MakeNodesStrategy Strategy = iota
+	StakeLatestStrategy
 	ChallengerTakerStrategy
 	WatchtowerStrategy
 )
@@ -24,7 +24,9 @@ const (
 type Staker struct {
 	*Validator
 	makeNewNodes    bool
+	latestValidNode *big.Int
 	activeChallenge *challenge.Challenger
+	strategy        Strategy
 }
 
 func NewStaker(
@@ -38,9 +40,14 @@ func NewStaker(
 	if err != nil {
 		return nil, err
 	}
+	latestConfirmed, err := val.rollup.LatestConfirmedNode(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return &Staker{
-		Validator:    val,
-		makeNewNodes: true,
+		Validator:       val,
+		makeNewNodes:    true,
+		latestValidNode: latestConfirmed,
 	}, nil
 }
 
@@ -50,13 +57,20 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 		return nil, err
 	}
 
-	if err := s.handleConflict(ctx, info); err != nil {
-		return nil, err
+	if info != nil {
+		if s.latestValidNode == nil || s.latestValidNode.Cmp(info.LatestStakedNode) < 0 {
+			s.latestValidNode = info.LatestStakedNode
+		}
 	}
+
 	if err := s.resolveNextNode(ctx); err != nil {
 		return nil, err
 	}
+
 	if info != nil {
+		if err := s.handleConflict(ctx, info); err != nil {
+			return nil, err
+		}
 		if err := s.advanceStake(ctx, info); err != nil {
 			return nil, err
 		}
@@ -108,14 +122,6 @@ func (s *Staker) newStake(ctx context.Context) error {
 }
 
 func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) error {
-	info, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
-	if err != nil {
-		return err
-	}
-	if info == nil {
-		return errors.New("no stake placed")
-	}
-
 	action, err := s.generateNodeAction(ctx, info.LatestStakedNode, true)
 	if err != nil || action == nil {
 		return err
@@ -134,14 +140,7 @@ func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) e
 	}
 }
 
-func (s *Staker) createConflict(ctx context.Context) error {
-	info, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
-	if err != nil {
-		return err
-	}
-	if info == nil {
-		return errors.New("not staked")
-	}
+func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo) error {
 	if info.CurrentChallenge != nil {
 		return nil
 	}
