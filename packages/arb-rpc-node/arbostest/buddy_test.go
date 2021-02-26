@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"math/big"
 	"testing"
 
@@ -68,7 +67,7 @@ func TestBuddyContract(t *testing.T) {
 		message.NewInboxMessage(buddyConstructor, connAddress2, big.NewInt(5), chainTime),
 	}
 
-	logs, _, mach, _ := runAssertion(t, messages, 6, 0)
+	logs, _, snap, _ := runAssertion(t, messages, 6, 0)
 	results := processResults(t, logs)
 
 	buddyConRes, ok := results[0].(*evm.TxResult)
@@ -121,11 +120,6 @@ func TestBuddyContract(t *testing.T) {
 	succeededTxCheck(t, noOpRes)
 	checkConstructorResult(t, contractCon2Res, connAddress2)
 	txResultCheck(t, buddyCon2Res, evm.ContractAlreadyExists)
-
-	snap := snapshot.NewSnapshot(mach.Clone(), inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}, message.ChainAddressToID(chain), big.NewInt(5))
 
 	conn1Code, err := snap.GetCode(connAddress1)
 	failIfError(t, err)

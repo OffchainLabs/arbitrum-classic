@@ -34,7 +34,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.AbstractL2Message) ([]message.AbstractL2Message, *snapshot.Snapshot) {
@@ -77,7 +76,7 @@ func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.Abstr
 		l2Message2,
 	})
 
-	logs, _, mach, _ := runAssertion(t, messages, 4, 0)
+	logs, _, snap, _ := runAssertion(t, messages, 4, 0)
 	results := processTxResults(t, logs)
 
 	allResultsSucceeded(t, results)
@@ -108,12 +107,6 @@ func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.Abstr
 
 		msgs = append(msgs, l2Message)
 	}
-
-	snap := snapshot.NewSnapshot(mach.Clone(), inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}, message.ChainAddressToID(chain), big.NewInt(4))
-
 	return msgs, snap
 }
 
