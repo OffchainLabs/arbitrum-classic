@@ -838,6 +838,9 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::SIDELOAD:
             return machineoperation::sideload(*this);
             break;
+            /**********************/
+            /*  Buffer Operations */
+            /**********************/
         case OpCode::NEW_BUFFER:
             machineoperation::newbuffer(*this);
             break;

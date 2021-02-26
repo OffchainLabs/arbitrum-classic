@@ -246,7 +246,7 @@ struct GetSize {
 
     uint256_t operator()(const Tuple& val) const { return val.getSize(); }
 
-    uint256_t operator()(const Buffer&) const { return 1; }
+    uint256_t operator()(const Buffer& buf) const { return buf.lastIndex()+1; }
 
     uint256_t operator()(const uint256_t&) const { return 1; }
 
