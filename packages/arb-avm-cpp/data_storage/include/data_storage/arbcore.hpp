@@ -134,7 +134,7 @@ class ArbCore {
     rocksdb::Status reorgToMessageOrBefore(
         Transaction& tx,
         const uint256_t& message_sequence_number,
-        bool reorg,
+        const bool use_latest,
         ValueCache& cache);
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(Transaction& transaction,
@@ -266,9 +266,9 @@ class ArbCore {
    private:
     std::optional<rocksdb::Status> addMessages(
         const std::vector<std::vector<unsigned char>>& new_messages,
-        const uint256_t& prev_inbox_hash,
-        const uint256_t& final_machine_sequence_number,
         bool last_block_complete,
+        const uint256_t& prev_inbox_hash,
+        const uint256_t& message_count_in_machine,
         ValueCache& cache);
     std::optional<MessageEntry> getNextMessage();
     ValueResult<std::vector<value>> getLogsNoLock(Transaction& tx,

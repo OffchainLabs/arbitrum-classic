@@ -139,6 +139,7 @@ TEST_CASE("ArbCore tests") {
             REQUIRE(sendsRes.data[k] == sends[k]);
         }
 
+        /*
         REQUIRE(arbCore->logsCursorRequest(0, 1));
         while (true) {
             auto deleted = arbCore->logsCursorGetDeletedLogs(0);
@@ -159,6 +160,7 @@ TEST_CASE("ArbCore tests") {
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
+        */
 
         auto cursor = arbCore->getExecutionCursor(0, value_cache);
         REQUIRE(cursor.status.ok());
