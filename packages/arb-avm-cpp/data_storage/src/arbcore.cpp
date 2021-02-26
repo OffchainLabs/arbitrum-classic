@@ -121,7 +121,7 @@ void ArbCore::abortThread() {
 // deliverMessages sends messages to core thread
 bool ArbCore::deliverMessages(std::vector<std::vector<unsigned char>>& messages,
                               const uint256_t& previous_inbox_hash,
-                              const bool last_block_complete) {
+                              bool last_block_complete) {
     if (message_data_status != MESSAGES_EMPTY) {
         return false;
     }
@@ -379,7 +379,7 @@ rocksdb::Status ArbCore::saveAssertion(Transaction& tx,
 rocksdb::Status ArbCore::reorgToMessageOrBefore(
     Transaction& tx,
     const uint256_t& message_sequence_number,
-    const bool use_latest,
+    bool use_latest,
     ValueCache& cache) {
     auto it = std::unique_ptr<rocksdb::Iterator>(tx.transaction->GetIterator(
         rocksdb::ReadOptions(), tx.datastorage->checkpoint_column.get()));
