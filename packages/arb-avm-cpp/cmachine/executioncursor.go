@@ -109,9 +109,9 @@ func (ec *ExecutionCursor) updateValues() error {
 	}
 	ec.totalGasConsumed = receiveBigInt(result.value)
 
-	result = C.executionCursorTotalMessagesRead(ec.c)
+	result = C.executionCursorTotalSendCount(ec.c)
 	if result.found == 0 {
-		return errors.New("failed to get NextInboxMessageIndex")
+		return errors.New("failed to get TotalSendCount")
 	}
 	ec.totalSendCount = receiveBigInt(result.value)
 

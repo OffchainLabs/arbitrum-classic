@@ -2,7 +2,6 @@ package challenge
 
 import (
 	"io/ioutil"
-	"math"
 	"math/big"
 	"os"
 	"testing"
@@ -18,7 +17,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
-func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, gas *big.Int, faultConfig faultConfig) {
+func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big.Int, endGas *big.Int, faultConfig faultConfig, asserterMayFail bool) {
 	tmpDir, err := ioutil.TempDir("", "arbitrum")
 	test.FailIfError(t, err)
 	defer func() {
@@ -50,9 +49,9 @@ func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, gas *big.Int,
 		<-time.After(time.Millisecond * 200)
 	}
 
-	challengedNode := initializeChallengeData(t, arbCore, gas)
-
 	faultyCore := newFaultyCore(arbCore, faultConfig)
+
+	challengedNode := initializeChallengeData(t, faultyCore, startGas, endGas)
 
 	time := big.NewInt(100)
 	executeChallenge(
@@ -62,17 +61,18 @@ func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, gas *big.Int,
 		time,
 		arbCore,
 		faultyCore,
+		asserterMayFail,
 	)
 }
 
 func TestChallengeToOSP(t *testing.T) {
-	runExecutionTest(t, []inbox.InboxMessage{}, big.NewInt(200000), faultConfig{distortMachineAtGas: big.NewInt(100000)})
+	runExecutionTest(t, []inbox.InboxMessage{}, big.NewInt(0), big.NewInt(200000), faultConfig{distortMachineAtGas: big.NewInt(100000)}, false)
 }
 
-func TestChallengeToOSPWithMessage(t *testing.T) {
+func makeInitMsg() inbox.InboxMessage {
 	owner := common.RandAddress()
 	chain := common.RandAddress()
-	initMsg := message.NewInboxMessage(
+	return message.NewInboxMessage(
 		message.Init{
 			ChainParams: protocol.ChainParams{
 				StakeRequirement:        big.NewInt(0),
@@ -91,5 +91,12 @@ func TestChallengeToOSPWithMessage(t *testing.T) {
 			Timestamp: big.NewInt(0),
 		},
 	)
-	runExecutionTest(t, []inbox.InboxMessage{initMsg}, big.NewInt(math.MaxInt64), faultConfig{distortMachineAtGas: big.NewInt(1500000)})
+}
+
+func TestChallengeToOSPWithMessage(t *testing.T) {
+	runExecutionTest(t, []inbox.InboxMessage{makeInitMsg()}, big.NewInt(1200000), big.NewInt(1300000), faultConfig{distortMachineAtGas: big.NewInt(1250000)}, false)
+}
+
+func TestChallengeToUnreachable(t *testing.T) {
+	runExecutionTest(t, []inbox.InboxMessage{makeInitMsg()}, big.NewInt(1200000), big.NewInt(1300000), faultConfig{messagesReadCap: big.NewInt(0)}, true)
 }

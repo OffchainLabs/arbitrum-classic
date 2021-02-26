@@ -17,6 +17,7 @@ func distortHash(hash common.Hash) common.Hash {
 
 type faultConfig struct {
 	distortMachineAtGas *big.Int
+	messagesReadCap     *big.Int
 }
 
 type faultyExecutionCursor struct {
@@ -37,6 +38,14 @@ func (e faultyExecutionCursor) MachineHash() common.Hash {
 		hash = distortHash(hash)
 	}
 	return hash
+}
+
+func (e faultyExecutionCursor) TotalMessagesRead() *big.Int {
+	messages := e.ExecutionCursor.TotalMessagesRead()
+	if e.config.messagesReadCap != nil && messages.Cmp(e.config.messagesReadCap) > 0 {
+		messages = new(big.Int).Set(e.config.messagesReadCap)
+	}
+	return messages
 }
 
 type faultyCore struct {
