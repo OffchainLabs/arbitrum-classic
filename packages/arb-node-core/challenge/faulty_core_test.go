@@ -19,16 +19,19 @@ type faultConfig struct {
 	distortMachineAtGas *big.Int
 	messagesReadCap     *big.Int
 	phantomMessageAtGas *big.Int
+	stallMachineAt      *big.Int
 }
 
 type faultyExecutionCursor struct {
-	config faultConfig
+	config     faultConfig
+	phantomGas *big.Int
 	core.ExecutionCursor
 }
 
 func (e faultyExecutionCursor) Clone() core.ExecutionCursor {
 	return faultyExecutionCursor{
 		config:          e.config,
+		phantomGas:      new(big.Int).Set(e.phantomGas),
 		ExecutionCursor: e.ExecutionCursor.Clone(),
 	}
 }
@@ -52,6 +55,11 @@ func (e faultyExecutionCursor) TotalMessagesRead() *big.Int {
 	return messages
 }
 
+func (e faultyExecutionCursor) TotalGasConsumed() *big.Int {
+	gas := e.ExecutionCursor.TotalGasConsumed()
+	return new(big.Int).Add(gas, e.phantomGas)
+}
+
 type faultyCore struct {
 	config faultConfig
 	core.ArbCore
@@ -71,10 +79,21 @@ func (c faultyCore) GetExecutionCursor(totalGasUsed *big.Int) (core.ExecutionCur
 	}
 	return faultyExecutionCursor{
 		config:          c.config,
+		phantomGas:      big.NewInt(0),
 		ExecutionCursor: cursor,
 	}, nil
 }
 
 func (c faultyCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool) error {
-	return c.ArbCore.AdvanceExecutionCursor(executionCursor.(faultyExecutionCursor).ExecutionCursor, maxGas, goOverGas)
+	faultyCursor := executionCursor.(faultyExecutionCursor)
+	targetGas := new(big.Int).Add(executionCursor.TotalGasConsumed(), maxGas)
+	if c.config.stallMachineAt != nil && targetGas.Cmp(c.config.stallMachineAt) > 0 {
+		phantomGas := new(big.Int).Sub(targetGas, c.config.stallMachineAt)
+		maxGas = new(big.Int).Sub(targetGas, phantomGas)
+		faultyCursor.phantomGas.Set(phantomGas)
+		if maxGas.Cmp(big.NewInt(0)) <= 0 {
+			return nil
+		}
+	}
+	return c.ArbCore.AdvanceExecutionCursor(faultyCursor.ExecutionCursor, maxGas, goOverGas)
 }

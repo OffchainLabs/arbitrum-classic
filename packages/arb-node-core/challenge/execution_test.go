@@ -17,17 +17,26 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
-func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big.Int, endGas *big.Int, faultConfig faultConfig, asserterMayFail bool) int {
+func prepareArbCore(t *testing.T, messages []inbox.InboxMessage) (core.ArbCore, func()) {
 	tmpDir, err := ioutil.TempDir("", "arbitrum")
 	test.FailIfError(t, err)
-	defer func() {
+	storage, err := cmachine.NewArbStorage(tmpDir)
+	if err != nil {
+		os.RemoveAll(tmpDir)
+	}
+	test.FailIfError(t, err)
+	shutdown := func() {
+		storage.CloseArbStorage()
 		if err := os.RemoveAll(tmpDir); err != nil {
 			panic(err)
 		}
-	}()
-	storage, err := cmachine.NewArbStorage(tmpDir)
-	test.FailIfError(t, err)
-	defer storage.CloseArbStorage()
+	}
+	returning := false
+	defer (func() {
+		if !returning {
+			shutdown()
+		}
+	})()
 
 	err = storage.Initialize(arbos.Path())
 	test.FailIfError(t, err)
@@ -49,6 +58,13 @@ func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big
 		<-time.After(time.Millisecond * 200)
 	}
 
+	returning = true
+	return arbCore, shutdown
+}
+
+func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big.Int, endGas *big.Int, faultConfig faultConfig, asserterMayFail bool) int {
+	arbCore, shutdown := prepareArbCore(t, messages)
+	defer shutdown()
 	faultyCore := newFaultyCore(arbCore, faultConfig)
 
 	challengedNode := initializeChallengeData(t, faultyCore, startGas, endGas)
@@ -102,4 +118,30 @@ func TestChallengeToUnreachable(t *testing.T) {
 	if rounds < 2 {
 		t.Fatal("TestChallengeToUnreachable failed too early")
 	}
+}
+
+func TestChallengeToUnreachableSmall(t *testing.T) {
+	messages := []inbox.InboxMessage{makeInitMsg()}
+	arbCore, shutdown := prepareArbCore(t, messages)
+	defer shutdown()
+	cursor, err := arbCore.GetExecutionCursor(big.NewInt(1 << 30))
+	test.FailIfError(t, err)
+	startGas := cursor.TotalGasConsumed()
+	endGas := new(big.Int).Add(startGas, big.NewInt(1))
+
+	faultConfig := faultConfig{stallMachineAt: startGas}
+	faultyCore := newFaultyCore(arbCore, faultConfig)
+
+	challengedNode := initializeChallengeData(t, faultyCore, startGas, endGas)
+
+	time := big.NewInt(100)
+	executeChallenge(
+		t,
+		challengedNode,
+		time,
+		time,
+		arbCore,
+		faultyCore,
+		true,
+	)
 }
