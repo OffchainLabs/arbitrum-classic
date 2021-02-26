@@ -115,6 +115,7 @@ const config = {
     },
     arbitrum: {
       url: 'http://127.0.0.1:8547',
+      // url: 'https://kovan3.arbitrum.io/rpc',
       gas: 999999999999999,
       accounts: {
         mnemonic: 'jar deny prosper gasp flush glass core corn alarm treat leg smart',
@@ -123,6 +124,9 @@ const config = {
         count: 10,
       },
     }
+  },
+  mocha: {
+    timeout: 0
   },
   etherscan: {
     apiKey: process.env['ETHERSCAN_API_KEY'],

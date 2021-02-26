@@ -71,10 +71,6 @@ contract ArbTokenBridge is CloneFactory {
         token.bridgeMint(account, amount);
     }
 
-    function getOrigin() view public returns (address) {
-        return tx.origin;
-    }
-
     function updateERC777TokenInfo(
         address l1ERC20,
         string calldata name,
