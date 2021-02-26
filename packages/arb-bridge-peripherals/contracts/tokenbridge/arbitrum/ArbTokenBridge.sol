@@ -37,11 +37,7 @@ contract ArbTokenBridge is CloneFactory {
 
     ICloneable public immutable templateERC20;
     ICloneable public immutable templateERC777;
-    address immutable l1Pair;
-
-    function getL1Pair() view public returns (address) {
-        return l1Pair;
-    }
+    address immutable public l1Pair;
 
     modifier onlyEthPair {
         // This ensures that this method can only be called from the L1 pair of this contract
@@ -70,13 +66,11 @@ contract ArbTokenBridge is CloneFactory {
         address account,
         uint256 amount,
         uint8 decimals
-    // ) external onlyEthPair returns (uint256) {
-    ) external returns (uint256) {
-        require(tx.origin == l1Pair, "oh damn");
-        // IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
-        // token.bridgeMint(account, amount);
-        return 1;
+    ) external onlyEthPair {
+        IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
+        token.bridgeMint(account, amount);
     }
+
     function getOrigin() view public returns (address) {
         return tx.origin;
     }
