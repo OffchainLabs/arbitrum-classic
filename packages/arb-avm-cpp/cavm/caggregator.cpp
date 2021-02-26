@@ -117,3 +117,28 @@ int aggregatorSaveBlockHash(CAggregatorStore* agg,
         return 0;
     }
 }
+
+Uint256Result aggregatorLogsProcessedCount(CAggregatorStore* agg) {
+    auto store = static_cast<AggregatorStore*>(agg);
+    try {
+        auto count_result = store->logsProcessedCount();
+        if (!count_result.status.ok()) {
+            return {{}, false};
+        }
+        return {returnUint256(count_result.data), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
+int aggregatorUpdateLogsProcessedCount(CAggregatorStore* agg, void* count_ptr) {
+    auto count = receiveUint256(count_ptr);
+    auto store = static_cast<AggregatorStore*>(agg);
+
+    try {
+        auto status = store->updateLogsProcessedCount(count);
+        return status.ok();
+    } catch (const std::exception& e) {
+        return false;
+    }
+}
