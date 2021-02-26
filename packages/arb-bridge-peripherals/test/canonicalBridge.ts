@@ -19,17 +19,30 @@ import { ethers } from 'hardhat';
 import { assert, expect } from 'chai';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 
-describe('Bridge peripherals', () => {
+describe('Bridge peripherals layer 2', () => {
   let accounts: SignerWithAddress[];
   before(async function() {
     accounts = await ethers.getSigners();
   })
   
-  it('should deploy bridge contracts correctly', async function () {
-    const signedLiquidityFactory = await ethers.getContractFactory("SignedLiquidityProvider");
-    const bridge = "0x0000000000000000000000000000000000000000";
-    const signedLiquidity = await signedLiquidityFactory.deploy(bridge, accounts[0].address);
-    const code = await ethers.provider.getCode(signedLiquidity.address);
-    assert.notEqual(code, "0x", "Signed liquidity contract not deployed");
+  it('should mint erc20 tokens correctly', async function () {
+    const TestBridge = await ethers.getContractFactory("TestBridge");
+    console.log("before")
+    const testBridge = await TestBridge.deploy();
+    console.log("after")
+
+    console.log(await testBridge.getL1Pair())
+
+    const l1ERC20 = "0x0000000000000000000000000000000000000000";
+    const account = "0x0000000000000000000000000000000000000000";
+    const amount = "1";
+    const decimals = "18";
+
+    const tx = await testBridge.mintERC20FromL1(l1ERC20, account, amount, decimals, {gasLimit: 999999999999});
+
+    const l2ERC20 = await testBridge.calculateBridgedERC20Address(l1ERC20);
+    console.log(l2ERC20);
+
+    // assert.notEqual(code, "0x", "Signed liquidity contract not deployed");
   })
 })
