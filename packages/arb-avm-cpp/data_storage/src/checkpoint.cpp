@@ -28,6 +28,7 @@ void Checkpoint::resetCheckpoint() {
     arb_gas_used = 0;
     total_messages_read = 0;
     inbox_hash = 0;
+    next_sideload_block_number = 0;
     block_height = 0;
     send_count = 0;
     log_count = 0;
