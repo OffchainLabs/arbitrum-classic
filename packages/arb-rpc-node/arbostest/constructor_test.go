@@ -31,9 +31,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 var constructorData = hexutil.MustDecode(arbostestcontracts.FibonacciBin)
@@ -53,16 +51,11 @@ func TestContructor(t *testing.T) {
 	ethReceipt, err := client.TransactionReceipt(ctx, signedTx.Hash())
 	failIfError(t, err)
 
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
-
 	l2Message, err := message.NewL2Message(message.NewCompressedECDSAFromEth(signedTx))
 	failIfError(t, err)
 
 	inboxMessages := makeSimpleInbox([]message.Message{l2Message})
-	logs, _, mach, _ := runAssertion(t, inboxMessages, 1, 0)
+	logs, _, snap, _ := runAssertion(t, inboxMessages, 1, 0)
 	results := processTxResults(t, logs)
 
 	res := results[0]
@@ -90,7 +83,6 @@ func TestContructor(t *testing.T) {
 	ethCode, err := client.CodeAt(ctx, ethReceipt.ContractAddress, nil)
 	failIfError(t, err)
 
-	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(9999999))
 	arbCode, err := snap.GetCode(arbAddress)
 	failIfError(t, err)
 

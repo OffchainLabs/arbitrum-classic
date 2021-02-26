@@ -30,7 +30,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
@@ -100,7 +99,7 @@ func TestCreate2(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(existsCloneTx), sender, big.NewInt(4), chainTime),
 	}
 
-	logs, _, mach, _ := runAssertion(t, inboxMessages, 4, 0)
+	logs, _, snap, _ := runAssertion(t, inboxMessages, 4, 0)
 	results := processTxResults(t, logs)
 
 	allResultsSucceeded(t, results)
@@ -129,7 +128,6 @@ func TestCreate2(t *testing.T) {
 		t.Fatal("wrong exists clone output")
 	}
 
-	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(4))
 	cloneCode, err := snap.GetCode(common.NewAddressFromEth(cloneConnAddress))
 	failIfError(t, err)
 	if len(cloneCode) != 45 {
