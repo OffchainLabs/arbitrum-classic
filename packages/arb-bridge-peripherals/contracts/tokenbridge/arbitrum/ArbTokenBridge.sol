@@ -70,9 +70,15 @@ contract ArbTokenBridge is CloneFactory {
         address account,
         uint256 amount,
         uint8 decimals
-    ) external onlyEthPair {
-        IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
-        token.bridgeMint(account, amount);
+    // ) external onlyEthPair returns (uint256) {
+    ) external returns (uint256) {
+        require(tx.origin == l1Pair, "oh damn");
+        // IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
+        // token.bridgeMint(account, amount);
+        return 1;
+    }
+    function getOrigin() view public returns (address) {
+        return tx.origin;
     }
 
     function updateERC777TokenInfo(
