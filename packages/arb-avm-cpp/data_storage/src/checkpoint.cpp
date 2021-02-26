@@ -42,6 +42,9 @@ void Checkpoint::applyAssertion(const Assertion& assertion) {
     total_messages_read += assertion.inbox_messages_consumed;
     send_count += assertion.sends.size();
     log_count += assertion.logs.size();
+    if (assertion.sideloadBlockNumber) {
+        next_sideload_block_number = *assertion.sideloadBlockNumber + 1;
+    }
 }
 
 Checkpoint extractCheckpoint(const std::vector<unsigned char>& stored_state) {
@@ -51,16 +54,22 @@ Checkpoint extractCheckpoint(const std::vector<unsigned char>& stored_state) {
     auto total_steps = extractUint256(current_iter);
     auto total_messages_read = extractUint256(current_iter);
     auto processed_message_accumulator_hash = extractUint256(current_iter);
+    auto next_sideload_block_number = extractUint256(current_iter);
     auto block_height = extractUint64(current_iter);
     auto send_count = extractUint64(current_iter);
     auto log_count = extractUint64(current_iter);
 
     auto machineStateKeys = extractMachineStateKeys(current_iter);
 
-    return Checkpoint{total_steps,         arb_gas_used,
-                      total_messages_read, processed_message_accumulator_hash,
-                      block_height,        send_count,
-                      log_count,           machineStateKeys};
+    return Checkpoint{total_steps,
+                      arb_gas_used,
+                      total_messages_read,
+                      processed_message_accumulator_hash,
+                      next_sideload_block_number,
+                      block_height,
+                      send_count,
+                      log_count,
+                      machineStateKeys};
 }
 
 std::vector<unsigned char> serializeCheckpoint(const Checkpoint& state_data) {
@@ -70,6 +79,7 @@ std::vector<unsigned char> serializeCheckpoint(const Checkpoint& state_data) {
     marshal_uint256_t(state_data.total_steps, state_data_vector);
     marshal_uint256_t(state_data.total_messages_read, state_data_vector);
     marshal_uint256_t(state_data.inbox_hash, state_data_vector);
+    marshal_uint256_t(state_data.next_sideload_block_number, state_data_vector);
     marshal_uint64_t(state_data.block_height, state_data_vector);
     marshal_uint64_t(state_data.send_count, state_data_vector);
     marshal_uint64_t(state_data.log_count, state_data_vector);
