@@ -1198,7 +1198,8 @@ rocksdb::Status ArbCore::resolveStagedMessage(Transaction& tx,
 rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
                                               ExecutionCursor& execution_cursor,
                                               const uint256_t& gas_used,
-                                              ValueCache& cache) {
+                                              ValueCache& cache,
+                                              bool is_for_sideload) {
     auto target_gas_used = gas_used;
     while (true) {
         const std::lock_guard<std::mutex> lock(core_reorg_mutex);
@@ -1250,15 +1251,17 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
             continue;
         }
 
-        auto resolve_status = resolveStagedMessage(tx, staged_message.data);
-        if (!resolve_status.ok()) {
-            // Unable to resolve staged_message, try earlier checkpoint
-            if (checkpoint_result.data.arb_gas_used == 0) {
-                std::cerr << "first checkpoint corrupted" << std::endl;
-                return staged_message.status;
+        if (!is_for_sideload) {
+            auto resolve_status = resolveStagedMessage(tx, staged_message.data);
+            if (!resolve_status.ok()) {
+                // Unable to resolve staged_message, try earlier checkpoint
+                if (checkpoint_result.data.arb_gas_used == 0) {
+                    std::cerr << "first checkpoint corrupted" << std::endl;
+                    return staged_message.status;
+                }
+                target_gas_used = checkpoint_result.data.arb_gas_used - 1;
+                continue;
             }
-            target_gas_used = checkpoint_result.data.arb_gas_used - 1;
-            continue;
         }
 
         // Update execution_cursor with checkpoint
@@ -1993,8 +1996,11 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
     // Check the cache
     {
         std::shared_lock<std::shared_mutex> lock(sideload_cache_mutex);
-        auto it = sideload_cache.find(block_number);
-        if (it != sideload_cache.end()) {
+        // Look for the first value after the value we want
+        auto it = sideload_cache.upper_bound(block_number);
+        if (it != sideload_cache.begin()) {
+            // Go back a value to find the one we want
+            it--;
             return {rocksdb::Status::OK(),
                     std::make_unique<Machine>(*it->second)};
         }
@@ -2007,8 +2013,8 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
     }
     auto execution_cursor = std::make_unique<ExecutionCursor>();
 
-    auto status = getExecutionCursorImpl(*tx, *execution_cursor,
-                                         position_res.data, false, 10, cache);
+    auto status = executionCursorSetup(*tx, *execution_cursor,
+                                       position_res.data, cache, true);
 
     return {status, execution_cursor->takeMachine()};
 }
