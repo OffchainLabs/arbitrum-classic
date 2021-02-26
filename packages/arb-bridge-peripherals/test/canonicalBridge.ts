@@ -28,25 +28,26 @@ describe('Bridge peripherals layer 2', () => {
   it('should mint erc20 tokens correctly', async function () {
     const TestBridge = await ethers.getContractFactory("TestBridge");
     const testBridge = await TestBridge.deploy();
-    console.log("Bridge deployed")
 
-    const l1ERC20 = "0x0000000000000000000000000000000000000000";
-    const account = "0x0000000000000000000000000000000000000000";
+    const l1ERC20 = "0x0000000000000000000000000000000000000001";
+    const account = "0x0000000000000000000000000000000000000002";
     const amount = "1";
     const decimals = "18";
 
-    console.log("await testBridge.getOrigin()")
-    console.log(await testBridge.getOrigin())
+    const l2ERC20Address = await testBridge.calculateBridgedERC20Address(l1ERC20);
 
-    const tx = await testBridge.mintERC20FromL1(l1ERC20, account, amount, decimals, {
-      gasLimit: 99999999999999,
-    });
-    console.log(tx)
+    const preTokenCode = await ethers.provider.getCode(l2ERC20Address);
+    assert.equal(preTokenCode, "0x", "Something already deployed to address");
 
-    const l2ERC20 = await testBridge.calculateBridgedERC20Address(l1ERC20);
-    console.log("calculated address");
-    console.log(l2ERC20);
+    const tx = await testBridge.mintERC20FromL1(l1ERC20, account, amount, decimals);
 
-    // assert.notEqual(code, "0x", "Signed liquidity contract not deployed");
+    const postTokenCode = await ethers.provider.getCode(l2ERC20Address);
+    assert.notEqual(postTokenCode, "0x", "Token not deployed to correct address");
+
+    const Erc20 = await ethers.getContractFactory("StandardArbERC20");
+    const erc20 = await Erc20.attach(l2ERC20Address);
+
+    const balance = await erc20.balanceOf(account);
+    assert.equal(balance.toString(), amount, "Tokens not minted correctly");
   })
 })
