@@ -729,35 +729,26 @@ void ArbCore::operator()() {
                 // (only clear cache when machine thread stopped)
                 cache.clear();
 
-                status = tx->commit();
-                if (!status.ok()) {
-                    core_error_string = status.ToString();
-                    machine_error = true;
-                    std::cerr << "ArbCore database update failed: "
-                              << core_error_string << "\n";
-                    break;
-                }
-
                 // Machine was stopped to save sideload, update execConfig
                 // and start machine back up where it stopped
                 execConfig.messages_to_skip +=
                     last_assertion.inbox_messages_consumed;
-                auto machine_status = machine->runMachine(execConfig);
-                if (!machine_status) {
+                auto machine_success = machine->runMachine(execConfig);
+                if (!machine_success) {
                     core_error_string = "Error starting machine thread";
                     machine_error = true;
                     std::cerr << "ArbCore error: " << core_error_string << "\n";
                     break;
                 }
-            } else {
-                status = tx->commit();
-                if (!status.ok()) {
-                    core_error_string = status.ToString();
-                    machine_error = true;
-                    std::cerr << "ArbCore database update failed: "
-                              << core_error_string << "\n";
-                    break;
-                }
+            }
+
+            status = tx->commit();
+            if (!status.ok()) {
+                core_error_string = status.ToString();
+                machine_error = true;
+                std::cerr << "ArbCore database update failed: "
+                          << core_error_string << "\n";
+                break;
             }
         }
 
