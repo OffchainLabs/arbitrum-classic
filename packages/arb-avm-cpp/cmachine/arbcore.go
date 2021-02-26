@@ -273,17 +273,18 @@ func (ac *ArbCore) LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
 	return nil
 }
 
-func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) ([]value.Value, error) {
+func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Value, error) {
 	cursorIndexData := math.U256Bytes(cursorIndex)
-	result := C.arbCoreLogsCursorGetLogs(ac.c, unsafeDataPointer(cursorIndexData))
+	var firstIndex big.Int
+	result := C.arbCoreLogsCursorGetLogs(ac.c, unsafeDataPointer(cursorIndexData), unsafeDataPointer(firstIndex.Bytes()))
 	if result.found == 0 {
 		err := ac.LogsCursorCheckError(cursorIndex)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		// Nothing found, try again later
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	data := receiveByteSliceArray(result.array)
@@ -292,24 +293,25 @@ func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) ([]value.Value, error
 		var err error
 		logs[i], err = value.UnmarshalValue(bytes.NewReader(slice[:]))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return logs, nil
+	return &firstIndex, logs, nil
 }
 
-func (ac *ArbCore) LogsCursorGetDeletedLogs(cursorIndex *big.Int) ([]value.Value, error) {
+func (ac *ArbCore) LogsCursorGetDeletedLogs(cursorIndex *big.Int) (*big.Int, []value.Value, error) {
 	cursorIndexData := math.U256Bytes(cursorIndex)
-	result := C.arbCoreLogsCursorGetDeletedLogs(ac.c, unsafeDataPointer(cursorIndexData))
+	var firstIndex big.Int
+	result := C.arbCoreLogsCursorGetDeletedLogs(ac.c, unsafeDataPointer(cursorIndexData), unsafeDataPointer(firstIndex.Bytes()))
 	if result.found == 0 {
 		err := ac.LogsCursorCheckError(cursorIndex)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		// Nothing found, try again later
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	data := receiveByteSliceArray(result.array)
@@ -318,10 +320,10 @@ func (ac *ArbCore) LogsCursorGetDeletedLogs(cursorIndex *big.Int) ([]value.Value
 		var err error
 		logs[i], err = value.UnmarshalValue(bytes.NewReader(slice[:]))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
-	return logs, nil
+	return &firstIndex, logs, nil
 }
 
 func (ac *ArbCore) LogsCursorCheckError(cursorIndex *big.Int) error {

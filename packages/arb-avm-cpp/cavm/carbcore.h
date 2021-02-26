@@ -67,9 +67,11 @@ int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr,
                              const void* cursor_index,
                              const void* count);
 ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
-                                              const void* cursor_index);
+                                              const void* cursor_index,
+                                              void* first_index_ret);
 ByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(CArbCore* arbcore_ptr,
-                                                     const void* cursor_index);
+                                                     const void* cursor_index,
+                                                     void* first_index_ret);
 int arbCoreLogsCursorConfirmReceived(CArbCore* arbcore_ptr,
                                      const void* cursor_index);
 int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr,

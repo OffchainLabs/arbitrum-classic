@@ -252,13 +252,15 @@ int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr,
 }
 
 ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
-                                              const void* index_ptr) {
+                                              const void* index_ptr,
+                                              void* first_index_ret) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
     auto cursor_index = receiveUint256(index_ptr);
+    uint256_t log_start_index;
 
     try {
-        auto result =
-            arbcore->logsCursorGetLogs(intx::narrow_cast<size_t>(cursor_index));
+        auto result = arbcore->logsCursorGetLogs(
+            intx::narrow_cast<size_t>(cursor_index), log_start_index);
         if (!result) {
             // Cursor not in the right state, may have deleted logs to process
             return {{}, false};
@@ -270,6 +272,12 @@ ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
             marshal_value(val, marshalled_value);
             data.push_back(move(marshalled_value));
         }
+
+        std::array<unsigned char, 32> val{};
+        to_big_endian(log_start_index, val.begin());
+        std::copy(val.begin(), val.end(),
+                  reinterpret_cast<char*>(first_index_ret));
+
         return {returnCharVectorVector(data), true};
     } catch (const std::exception& e) {
         std::cerr << "Exception while retrieving new logs from logscursor "
@@ -279,13 +287,15 @@ ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
 }
 
 ByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(CArbCore* arbcore_ptr,
-                                                     const void* index_ptr) {
+                                                     const void* index_ptr,
+                                                     void* first_index_ret) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
     auto cursor_index = receiveUint256(index_ptr);
+    uint256_t log_start_index;
 
     try {
-        auto result =
-            arbcore->logsCursorGetLogs(intx::narrow_cast<size_t>(cursor_index));
+        auto result = arbcore->logsCursorGetDeletedLogs(
+            intx::narrow_cast<size_t>(cursor_index), log_start_index);
         if (!result) {
             // Cursor not in the right state, may have deleted logs to process
             return {{}, false};
@@ -297,6 +307,12 @@ ByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(CArbCore* arbcore_ptr,
             marshal_value(val, marshalled_value);
             data.push_back(move(marshalled_value));
         }
+
+        std::array<unsigned char, 32> val{};
+        to_big_endian(log_start_index, val.begin());
+        std::copy(val.begin(), val.end(),
+                  reinterpret_cast<char*>(first_index_ret));
+
         return {returnCharVectorVector(data), true};
     } catch (const std::exception& e) {
         std::cerr << "Exception while retrieving deleted logs from logscursor "

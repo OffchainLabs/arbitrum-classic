@@ -178,9 +178,12 @@ class ArbCore {
    public:
     // Logs Cursor interaction
     bool logsCursorRequest(size_t cursor_index, uint256_t count);
-    std::optional<std::vector<value>> logsCursorGetLogs(size_t cursor_index);
+    std::optional<std::vector<value>> logsCursorGetLogs(
+        size_t cursor_index,
+        uint256_t& first_index_out);
     std::optional<std::vector<value>> logsCursorGetDeletedLogs(
-        size_t cursor_index);
+        size_t cursor_index,
+        uint256_t& first_index_out);
     bool logsCursorCheckError(size_t cursor_index) const;
     std::string logsCursorClearError(size_t cursor_index);
     bool logsCursorConfirmReceived(size_t cursor_index);

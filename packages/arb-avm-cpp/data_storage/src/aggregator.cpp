@@ -27,6 +27,8 @@
 
 #include <sstream>
 
+constexpr auto logs_processed_key = std::array<char, 1>{-51};
+
 constexpr auto block_key = std::array<char, 1>{-52};
 
 constexpr auto request_key_prefix = std::array<char, 1>{-54};
@@ -266,4 +268,19 @@ void AggregatorStore::reorg(uint64_t block_height) {
     auto tx = data_storage->beginTransaction();
     BlockSaver{}.saveMax(*tx, block_height);
     commitTx(*tx);
+}
+
+ValueResult<uint256_t> AggregatorStore::logsProcessedCount() const {
+    auto tx = data_storage->beginTransaction();
+    return getUint256UsingFamilyAndKey(*tx, data_storage->default_column.get(),
+                                       vecToSlice(logs_processed_key));
+}
+
+rocksdb::Status AggregatorStore::updateLogsProcessedCount(uint256_t& count) {
+    std::vector<unsigned char> value;
+    marshal_uint256_t(count, value);
+
+    auto tx = data_storage->beginTransaction();
+    return tx->Put(data_storage->default_column.get(),
+                   vecToSlice(logs_processed_key), vecToSlice(value));
 }
