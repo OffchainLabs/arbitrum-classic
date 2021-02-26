@@ -30,29 +30,22 @@ describe('Bridge peripherals layer 2', () => {
     const testBridge = await TestBridge.deploy();
     console.log("Bridge deployed")
 
-    console.log("current pair")
-    console.log(await testBridge.getL1Pair())
-    console.log("current account")
-    console.log(accounts[0].address)
-    console.log("current origin")
-    console.log(await testBridge.getOrigin())
-    console.log("and again origin")
-    console.log(await testBridge.getOrigin())
-
     const l1ERC20 = "0x0000000000000000000000000000000000000000";
     const account = "0x0000000000000000000000000000000000000000";
     const amount = "1";
     const decimals = "18";
 
-    // const tx = await testBridge.mintERC20FromL1(l1ERC20, account, amount, decimals, {
-    //   gasLimit: 99999999999999,
+    console.log("await testBridge.getOrigin()")
+    console.log(await testBridge.getOrigin())
 
-    // });
-    // console.log(tx)
+    const tx = await testBridge.mintERC20FromL1(l1ERC20, account, amount, decimals, {
+      gasLimit: 99999999999999,
+    });
+    console.log(tx)
 
-    // const l2ERC20 = await testBridge.calculateBridgedERC20Address(l1ERC20);
-    // console.log("calculated address");
-    // console.log(l2ERC20);
+    const l2ERC20 = await testBridge.calculateBridgedERC20Address(l1ERC20);
+    console.log("calculated address");
+    console.log(l2ERC20);
 
     // assert.notEqual(code, "0x", "Signed liquidity contract not deployed");
   })
