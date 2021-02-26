@@ -184,6 +184,20 @@ value simple_value_from_json(const nlohmann::json& full_value_json) {
     return assembleValueFromDeserialized(std::move(values));
 }
 
+std::vector<uint8_t> send_from_json(const nlohmann::json& val) {
+    if (!val.is_array()) {
+        throw std::runtime_error("send must be an array");
+    }
+    std::vector<uint8_t> data;
+    for (const auto& item : val) {
+        if (!item.is_number_integer()) {
+            std::cerr << "Invalid send byte " << item << "\n";
+        }
+        data.push_back(item.get<uint8_t>());
+    }
+    return data;
+}
+
 LoadedExecutable loadExecutable(const std::string& executable_filename) {
     std::ifstream executable_input_stream(executable_filename);
     if (!executable_input_stream.is_open()) {

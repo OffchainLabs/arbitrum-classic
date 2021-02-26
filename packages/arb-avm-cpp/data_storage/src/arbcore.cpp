@@ -686,6 +686,15 @@ void ArbCore::operator()() {
                 break;
             }
 
+            // Save logs and sends
+            auto status = saveAssertion(*tx, last_assertion);
+            if (!status.ok()) {
+                core_error_string = status.ToString();
+                std::cerr << "ArbCore assertion saving failed: "
+                          << core_error_string << "\n";
+                break;
+            }
+
             // Cache pre-sideload machines
             if (last_assertion.sideloadBlockNumber) {
                 auto block = *last_assertion.sideloadBlockNumber;
@@ -706,30 +715,32 @@ void ArbCore::operator()() {
                         it++;
                     }
                 }
-            }
 
-            // Save logs and sends
-            auto status = saveAssertion(*tx, last_assertion);
-            if (!status.ok()) {
-                core_error_string = status.ToString();
-                std::cerr << "ArbCore assertion saving failed: "
-                          << core_error_string << "\n";
-                break;
-            }
+                // Save checkpoint for every sideload
+                status = saveCheckpoint(*tx);
+                if (!status.ok()) {
+                    core_error_string = status.ToString();
+                    std::cerr << "ArbCore checkpoint saving failed: "
+                              << core_error_string << "\n";
+                    break;
+                }
 
-            // Maybe save checkpoint
-            // TODO Decide how often to create checkpoint
-            status = saveCheckpoint(*tx);
-            if (!status.ok()) {
-                core_error_string = status.ToString();
-                std::cerr << "ArbCore checkpoint saving failed: "
-                          << core_error_string << "\n";
-                break;
-            }
+                // TODO Decide how often to clear ValueCache
+                // (only clear cache when machine thread stopped)
+                cache.clear();
 
-            // TODO Decide how often to clear ValueCache
-            // (only clear cache when machine thread stopped)
-            cache.clear();
+                // Machine was stopped to save sideload, update execConfig
+                // and start machine back up where it stopped
+                execConfig.messages_to_skip +=
+                    last_assertion.inbox_messages_consumed;
+                auto machine_success = machine->runMachine(execConfig);
+                if (!machine_success) {
+                    core_error_string = "Error starting machine thread";
+                    machine_error = true;
+                    std::cerr << "ArbCore error: " << core_error_string << "\n";
+                    break;
+                }
+            }
 
             status = tx->commit();
             if (!status.ok()) {
@@ -879,6 +890,10 @@ ValueResult<std::vector<value>> ArbCore::getLogsNoLock(Transaction& tx,
                                                        uint256_t index,
                                                        uint256_t count,
                                                        ValueCache& valueCache) {
+    if (count == 0) {
+        return {rocksdb::Status::OK(), {}};
+    }
+
     // Check if attempting to get entries past current valid logs
     auto log_count = logInsertedCountImpl(tx);
     if (!log_count.status.ok()) {
@@ -947,6 +962,10 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     uint256_t count) const {
     auto tx = Transaction::makeTransaction(data_storage);
 
+    if (count == 0) {
+        return {rocksdb::Status::OK(), {}};
+    }
+
     // Check if attempting to get entries past current valid logs
     auto message_count = messageEntryInsertedCountImpl(*tx);
     if (!message_count.status.ok()) {
@@ -987,6 +1006,10 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
     uint256_t count) const {
     auto tx = Transaction::makeTransaction(data_storage);
 
+    if (count == 0) {
+        return {rocksdb::Status::OK(), {}};
+    }
+
     // Check if attempting to get entries past current valid logs
     auto send_count = sendInsertedCountImpl(*tx);
     if (!send_count.status.ok()) {
@@ -1012,10 +1035,6 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
 ValueResult<uint256_t> ArbCore::getSendAcc(uint256_t start_acc_hash,
                                            uint256_t start_index,
                                            uint256_t count) {
-    if (count == 0) {
-        return {rocksdb::Status::OK(), start_acc_hash};
-    }
-
     auto sends_result = getSends(start_index, count);
     if (!sends_result.status.ok()) {
         return {sends_result.status, 0};
@@ -1032,10 +1051,6 @@ ValueResult<uint256_t> ArbCore::getLogAcc(uint256_t start_acc_hash,
                                           uint256_t start_index,
                                           uint256_t count,
                                           ValueCache& cache) {
-    if (count == 0) {
-        return {rocksdb::Status::OK(), start_acc_hash};
-    }
-
     auto sends_result = getLogs(start_index, count, cache);
     if (!sends_result.status.ok()) {
         return {sends_result.status, 0};
