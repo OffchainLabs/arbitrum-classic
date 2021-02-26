@@ -18,14 +18,13 @@
 
 pragma solidity ^0.6.11;
 
-import "./ArbERC20Bridge.sol";
-import "./OZERC20.sol";
+import "./open-zeppelin/OZERC20.sol";
 import "arb-bridge-eth/contracts/libraries/Cloneable.sol";
+import "./IArbToken.sol";
+import "./ArbTokenBridge.sol";
 
-import "./IArbERC20.sol";
-
-contract StandardArbERC20 is ERC20, Cloneable, IArbERC20 {
-    ArbERC20Bridge public bridge;
+contract StandardArbERC20 is ERC20, Cloneable, IArbToken {
+    ArbTokenBridge public bridge;
     address public l1Address;
 
     modifier onlyBridge {
@@ -33,26 +32,19 @@ contract StandardArbERC20 is ERC20, Cloneable, IArbERC20 {
         _;
     }
 
-    function initialize(ArbERC20Bridge _bridge, address _l1Address) external {
+    function initialize(address _bridge, address _l1Address, uint8 decimals_) external override {
         require(address(bridge) != address(0), "ALREADY_INIT");
-        bridge = _bridge;
+        bridge = ArbTokenBridge(_bridge);
         l1Address = _l1Address;
-        _decimals = 18;
+        _decimals = decimals_;
     }
 
-    function updateInfo(
-        string memory newName,
-        string memory newSymbol,
-        uint8 newDecimals
-    ) public override onlyBridge {
+    function updateInfo(string memory newName, string memory newSymbol) public override onlyBridge {
         if (bytes(newName).length != 0) {
             _name = newName;
         }
         if (bytes(newSymbol).length != 0) {
             _symbol = newSymbol;
-        }
-        if (newDecimals == 0) {
-            _decimals = newDecimals;
         }
     }
 
@@ -62,12 +54,11 @@ contract StandardArbERC20 is ERC20, Cloneable, IArbERC20 {
 
     function withdraw(address destination, uint256 amount) external {
         _burn(msg.sender, amount);
-        bridge.withdraw(destination, amount);
+        bridge.withdraw(l1Address, destination, amount);
     }
 
-    function migrate() external {
-        uint256 balance = balanceOf(msg.sender);
-        _burn(msg.sender, balance);
-        bridge.migrate(msg.sender, balance);
+    function migrate(uint256 amount, address target) external {
+        _burn(msg.sender, amount);
+        bridge.migrate(l1Address, target, msg.sender, amount);
     }
 }

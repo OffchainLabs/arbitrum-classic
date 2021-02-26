@@ -134,7 +134,7 @@ class ArbCore {
     rocksdb::Status reorgToMessageOrBefore(
         Transaction& tx,
         const uint256_t& message_sequence_number,
-        bool reorg,
+        bool use_latest,
         ValueCache& cache);
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(Transaction& transaction,
@@ -266,9 +266,9 @@ class ArbCore {
    private:
     std::optional<rocksdb::Status> addMessages(
         const std::vector<std::vector<unsigned char>>& new_messages,
-        const uint256_t& prev_inbox_hash,
-        const uint256_t& final_machine_sequence_number,
         bool last_block_complete,
+        const uint256_t& prev_inbox_hash,
+        const uint256_t& message_count_in_machine,
         ValueCache& cache);
     std::optional<MessageEntry> getNextMessage();
     ValueResult<std::vector<value>> getLogsNoLock(Transaction& tx,
@@ -287,7 +287,8 @@ class ArbCore {
     rocksdb::Status executionCursorSetup(Transaction& tx,
                                          ExecutionCursor& execution_cursor,
                                          const uint256_t& total_gas_used,
-                                         ValueCache& cache);
+                                         ValueCache& cache,
+                                         bool is_for_sideload = false);
 
     rocksdb::Status updateLogInsertedCount(Transaction& tx,
                                            const uint256_t& log_index);
@@ -312,6 +313,8 @@ class ArbCore {
                                          const uint256_t& block_number);
     ValueResult<uint256_t> getSideloadPosition(Transaction& tx,
                                                const uint256_t& block_number);
+    rocksdb::Status deleteSideloadsStartingAt(Transaction& tx,
+                                              const uint256_t& block_number);
 };
 
 std::optional<rocksdb::Status> deleteLogsStartingAt(Transaction& tx,

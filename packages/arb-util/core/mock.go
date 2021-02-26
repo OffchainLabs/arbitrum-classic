@@ -157,3 +157,7 @@ func (v *ValidatorLookupMock) GetExecutionCursor(totalGasUsed *big.Int) (Executi
 	}
 	panic("implement me")
 }
+
+func (v *ValidatorLookupMock) GetMachineForSideload(blockNumber uint64) (machine.Machine, error) {
+	panic("implement me")
+}

@@ -33,11 +33,6 @@ import (
 )
 
 func TestFib(t *testing.T) {
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
-
 	fib, err := abi.JSON(strings.NewReader(arbostestcontracts.FibonacciABI))
 	failIfError(t, err)
 
@@ -82,7 +77,7 @@ func TestFib(t *testing.T) {
 		message.NewSafeL2Message(getFibTx),
 	})
 
-	logs, _, mach, _ := runAssertion(t, inboxMessages, 3, 0)
+	logs, _, snap, _ := runAssertion(t, inboxMessages, 3, 0)
 	results := processTxResults(t, logs)
 	allResultsSucceeded(t, results)
 	checkConstructorResult(t, results[0], connAddress1)
@@ -106,7 +101,6 @@ func TestFib(t *testing.T) {
 		t.Fatal("getFib had incorrect result")
 	}
 
-	snap := snapshot.NewSnapshot(mach.Clone(), chainTime, message.ChainAddressToID(chain), big.NewInt(1))
 	code, err := snap.GetCode(connAddress1)
 	failIfError(t, err)
 	t.Log("code", len(code))
@@ -114,11 +108,6 @@ func TestFib(t *testing.T) {
 }
 
 func TestDeposit(t *testing.T) {
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
-
 	amount := big.NewInt(1000)
 	messages := []message.Message{
 		message.Eth{
@@ -127,9 +116,7 @@ func TestDeposit(t *testing.T) {
 		},
 	}
 
-	_, _, mach, _ := runAssertion(t, makeSimpleInbox(messages), 0, 0)
-
-	snap := snapshot.NewSnapshot(mach.Clone(), chainTime, message.ChainAddressToID(chain), big.NewInt(1))
+	_, _, snap, _ := runAssertion(t, makeSimpleInbox(messages), 0, 0)
 	checkBalance(t, snap, sender, amount)
 }
 

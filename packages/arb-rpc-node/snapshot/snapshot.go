@@ -17,6 +17,8 @@
 package snapshot
 
 import (
+	"math/big"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
@@ -25,7 +27,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/pkg/errors"
-	"math/big"
 )
 
 type Snapshot struct {
@@ -154,7 +155,7 @@ func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.In
 }
 
 func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash) (*evm.TxResult, error) {
-	assertion, _, steps := mach.ExecuteAssertion(100000000, false, []inbox.InboxMessage{msg}, false)
+	assertion, _, steps := mach.ExecuteAssertionAdvanced(100000000, false, nil, false, []inbox.InboxMessage{msg}, true, common.Hash{}, common.Hash{})
 
 	// If the machine wasn't able to run and it reports that it is currently
 	// blocked, return the block reason to give the client more information
