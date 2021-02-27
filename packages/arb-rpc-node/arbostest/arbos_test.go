@@ -186,7 +186,7 @@ func TestBlocks(t *testing.T) {
 	}
 
 	// Last value returned is not an error type
-	avmLogs, sends, _, _ := runAssertion(t, messages, int(halfSendCount*6-2), int(halfSendCount-1))
+	avmLogs, sends, _, _ := runAssertion(t, messages, int(halfSendCount*6-4), int(halfSendCount-1))
 	results := make([]evm.Result, 0)
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
@@ -213,13 +213,7 @@ func TestBlocks(t *testing.T) {
 		t.Logf("%v %T\n", i, res)
 		totalAVMLogCount = totalAVMLogCount.Add(totalAVMLogCount, big.NewInt(1))
 
-		if i%6 == 0 || i%6 == 2 {
-			_, ok := res.(*evm.SendResult)
-			if !ok {
-				t.Fatal("incorrect result type")
-			}
-			blockAVMLogCount = blockAVMLogCount.Add(blockAVMLogCount, big.NewInt(1))
-		} else if i%6 == 1 || i%6 == 3 {
+		if i%6 == 0 || i%6 == 1 {
 			res, ok := res.(*evm.TxResult)
 			if !ok {
 				t.Fatal("incorrect result type")
@@ -233,6 +227,12 @@ func TestBlocks(t *testing.T) {
 			totalGasUsed = totalGasUsed.Add(totalGasUsed, res.GasUsed)
 			totalEVMLogCount = totalEVMLogCount.Add(totalEVMLogCount, big.NewInt(int64(len(res.EVMLogs))))
 			totalTxCount = totalTxCount.Add(totalTxCount, big.NewInt(1))
+		} else if i%6 == 2 || i%6 == 3 {
+			_, ok := res.(*evm.SendResult)
+			if !ok {
+				t.Fatal("incorrect result type")
+			}
+			blockAVMLogCount = blockAVMLogCount.Add(blockAVMLogCount, big.NewInt(1))
 		} else if i%6 == 4 {
 			root, ok := res.(*evm.MerkleRootResult)
 			if !ok {

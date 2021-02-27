@@ -45,6 +45,11 @@ func TestWithdrawEth(t *testing.T) {
 		Timestamp: big.NewInt(0),
 	}
 
+	laterChainTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(1),
+		Timestamp: big.NewInt(1),
+	}
+
 	inboxMessages := []inbox.InboxMessage{
 		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.Eth{
@@ -53,18 +58,27 @@ func TestWithdrawEth(t *testing.T) {
 		}, sender, big.NewInt(1), chainTime),
 		message.NewInboxMessage(depositMsg, common.RandAddress(), big.NewInt(2), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(tx), sender, big.NewInt(3), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), sender, big.NewInt(4), laterChainTime),
 	}
 
-	logs, _, _, _ := runAssertion(t, inboxMessages, 2, 0)
+	logs, _, _, _ := runAssertion(t, inboxMessages, 4, 1)
 	results := processResults(t, logs)
 
-	sendRes, ok := results[0].(*evm.SendResult)
+	txRes, ok := results[0].(*evm.TxResult)
+	if !ok {
+		t.Fatal("not tx res")
+	}
+	sendRes, ok := results[1].(*evm.SendResult)
 	if !ok {
 		t.Fatal("not send res")
 	}
-	txRes, ok := results[1].(*evm.TxResult)
+	_, ok = results[2].(*evm.MerkleRootResult)
 	if !ok {
-		t.Fatal("not tx res")
+		t.Fatal("not merkle send res")
+	}
+	_, ok = results[3].(*evm.BlockInfo)
+	if !ok {
+		t.Fatal("not block res")
 	}
 
 	succeededTxCheck(t, txRes)
