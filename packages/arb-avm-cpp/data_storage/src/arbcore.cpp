@@ -1772,10 +1772,10 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(Transaction& tx,
         auto logs = getLogsNoLock(tx, log_count,
                                   log_inserted_count.data - log_count, cache);
         if (!logs.status.ok()) {
-            std::cerr << "Error getting " << log_count - 1
-                      << " logs in Cursor reorg starting at "
-                      << log_inserted_count.data - log_count << ": "
-                      << log_inserted_count.status.ToString() << "\n";
+            std::cerr << "Error getting " << log_count << " logs starting at "
+                      << log_inserted_count.data - log_count
+                      << " in Cursor reorg : " << logs.status.ToString()
+                      << "\n";
             return logs.status;
         }
         logs_cursors[cursor_index].deleted_data.insert(
@@ -1798,6 +1798,8 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(Transaction& tx,
                 logs_cursors[cursor_index].data.end());
         }
     }
+
+    logs_cursors[cursor_index].current_total_count = log_count;
 
     return rocksdb::Status::OK();
 }
