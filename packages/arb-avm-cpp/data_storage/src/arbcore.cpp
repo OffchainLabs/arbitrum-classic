@@ -1735,6 +1735,10 @@ bool ArbCore::handleLogsCursorRequested(Transaction& tx,
         requested_logs.data.end());
     logs_cursors[cursor_index].status = DataCursor::READY;
 
+    logs_cursors[cursor_index].pending_total_count =
+        logs_cursors[cursor_index].current_total_count +
+        logs_cursors[cursor_index].data.size();
+
     return true;
 }
 
@@ -1800,6 +1804,7 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(Transaction& tx,
     }
 
     logs_cursors[cursor_index].current_total_count = log_count;
+    logs_cursors[cursor_index].pending_total_count = log_count;
 
     return rocksdb::Status::OK();
 }
@@ -1836,10 +1841,6 @@ std::optional<std::vector<value>> ArbCore::logsCursorGetLogs(
         return std::nullopt;
     }
 
-    logs_cursors[cursor_index].pending_total_count =
-        logs_cursors[cursor_index].current_total_count +
-        logs_cursors[cursor_index].data.size();
-
     std::vector<value> logs{std::move(logs_cursors[cursor_index].data)};
     logs_cursors[cursor_index].data.clear();
 
@@ -1865,7 +1866,7 @@ std::optional<std::vector<value>> ArbCore::logsCursorGetDeletedLogs(
     }
 
     std::vector<value> logs{std::move(logs_cursors[cursor_index].deleted_data)};
-    logs_cursors[cursor_index].data.clear();
+    logs_cursors[cursor_index].deleted_data.clear();
 
     first_index_out = logs_cursors[cursor_index].current_total_count;
 

@@ -143,31 +143,33 @@ TEST_CASE("ArbCore tests") {
             REQUIRE(sendsRes.data[k] == sends[k]);
         }
 
-        auto log_request_count = 1;
-        REQUIRE(arbCore->logsCursorRequest(0, log_request_count));
-        while (true) {
-            uint256_t first_deleted_log_index;
-            auto deleted =
-                arbCore->logsCursorGetDeletedLogs(0, first_deleted_log_index);
-            if (deleted.has_value()) {
-                REQUIRE(first_deleted_log_index <= logs_count);
-                REQUIRE(deleted->size() == logs_count);
-                logs_count -= deleted->size();
-            }
-            uint256_t first_log_index;
-            auto result = arbCore->logsCursorGetLogs(0, first_log_index);
-            REQUIRE(!arbCore->logsCursorCheckError(0));
-            if (result.has_value()) {
-                REQUIRE(first_log_index == logs_count);
-                REQUIRE(result->size() <= logs.size() - logs_count);
-                for (uint64_t k = 0; k < result->size(); ++k) {
-                    REQUIRE(result->at(k) == logs[logs_count + k]);
+        while (logs_count < logs.size()) {
+            auto log_request_count = 3;
+            REQUIRE(arbCore->logsCursorRequest(0, log_request_count));
+            while (true) {
+                uint256_t first_deleted_log_index;
+                auto deleted = arbCore->logsCursorGetDeletedLogs(
+                    0, first_deleted_log_index);
+                if (deleted.has_value()) {
+                    REQUIRE(first_deleted_log_index <= logs_count);
+                    REQUIRE(deleted->size() == logs_count);
+                    logs_count -= deleted->size();
                 }
-                logs_count += result->size();
-                REQUIRE(arbCore->logsCursorConfirmReceived(0));
-                break;
+                uint256_t first_log_index;
+                auto result = arbCore->logsCursorGetLogs(0, first_log_index);
+                REQUIRE(!arbCore->logsCursorCheckError(0));
+                if (result.has_value()) {
+                    REQUIRE(first_log_index == logs_count);
+                    REQUIRE(result->size() <= logs.size() - logs_count);
+                    for (uint64_t k = 0; k < result->size(); ++k) {
+                        REQUIRE(result->at(k) == logs[logs_count + k]);
+                    }
+                    logs_count += result->size();
+                    REQUIRE(arbCore->logsCursorConfirmReceived(0));
+                    break;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
         REQUIRE(logs_count == logs.size());
 
