@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package core
 
 import (
@@ -38,17 +54,11 @@ type ExecutionCursor interface {
 }
 
 type ArbCoreLookup interface {
-	GetLogCount() (*big.Int, error)
-	GetLogs(startIndex, count *big.Int) ([]value.Value, error)
-
-	GetSendCount() (*big.Int, error)
-	GetSends(startIndex, count *big.Int) ([][]byte, error)
-
-	GetMessageCount() (*big.Int, error)
-	GetMessages(startIndex, count *big.Int) ([]inbox.InboxMessage, error)
+	ArbOutputLookup
 
 	GetSendAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
 	GetLogAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
+	GetInboxHash(index *big.Int) (common.Hash, error)
 
 	// GetExecutionCursor returns a cursor containing the machine after executing totalGasUsed
 	// from the original machine
@@ -57,8 +67,6 @@ type ArbCoreLookup interface {
 	// Advance executes as much as it can without going over maxGas or
 	// optionally until it reaches or goes over maxGas
 	AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool) error
-
-	GetMachineForSideload(uint64) (machine.Machine, error)
 }
 
 type ArbCoreInbox interface {
@@ -108,7 +116,7 @@ type ArbCore interface {
 	MachineIdle() bool
 }
 
-func GetSingleMessage(lookup ArbCoreLookup, index *big.Int) (inbox.InboxMessage, error) {
+func GetSingleMessage(lookup ArbOutputLookup, index *big.Int) (inbox.InboxMessage, error) {
 	messages, err := lookup.GetMessages(index, big.NewInt(1))
 	if err != nil {
 		return inbox.InboxMessage{}, err
@@ -122,7 +130,7 @@ func GetSingleMessage(lookup ArbCoreLookup, index *big.Int) (inbox.InboxMessage,
 	return messages[0], nil
 }
 
-func GetSingleSend(lookup ArbCoreLookup, index *big.Int) ([]byte, error) {
+func GetSingleSend(lookup ArbOutputLookup, index *big.Int) ([]byte, error) {
 	sends, err := lookup.GetSends(index, big.NewInt(1))
 	if err != nil {
 		return nil, err
@@ -136,7 +144,7 @@ func GetSingleSend(lookup ArbCoreLookup, index *big.Int) ([]byte, error) {
 	return sends[0], nil
 }
 
-func GetSingleLog(lookup ArbCoreLookup, index *big.Int) (value.Value, error) {
+func GetSingleLog(lookup ArbOutputLookup, index *big.Int) (value.Value, error) {
 	logs, err := lookup.GetLogs(index, big.NewInt(1))
 	if err != nil {
 		return nil, err

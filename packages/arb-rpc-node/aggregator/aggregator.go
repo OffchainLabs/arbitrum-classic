@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 var logger = log.With().Caller().Str("component", "aggregator").Logger()
@@ -87,14 +86,6 @@ func (m *Server) GetBlockCount() (uint64, error) {
 	return id.Height.AsInt().Uint64(), nil
 }
 
-func (m *Server) InitialBlockHeight() (*big.Int, error) {
-	earliest, err := m.db.EarliestBlock()
-	if err != nil {
-		return nil, err
-	}
-	return earliest.Height.AsInt(), nil
-}
-
 func (m *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
 	if *block == rpc.LatestBlockNumber || *block == rpc.PendingBlockNumber {
 		return m.GetBlockCount()
@@ -106,8 +97,8 @@ func (m *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
 }
 
 // GetMessageResult returns the value output by the VM in response to the
-//l2message with the given hash
-func (m *Server) GetRequestResult(requestId common.Hash) (value.Value, error) {
+// l2message with the given hash
+func (m *Server) GetRequestResult(requestId common.Hash) (*evm.TxResult, error) {
 	return m.db.GetRequest(requestId)
 }
 
@@ -118,6 +109,14 @@ func (m *Server) GetChainAddress() ethcommon.Address {
 
 func (m *Server) BlockInfoByNumber(height uint64) (*machine.BlockInfo, error) {
 	return m.db.GetBlock(height)
+}
+
+func (m *Server) BlockLogFromInfo(block *machine.BlockInfo) (*evm.BlockInfo, error) {
+	blockLog, err := core.GetSingleLog(m.lookup, new(big.Int).SetUint64(block.BlockLog))
+	if err != nil {
+		return nil, err
+	}
+	return evm.NewBlockResultFromValue(blockLog)
 }
 
 func (m *Server) BlockInfoByHash(hash common.Hash) (*machine.BlockInfo, error) {
@@ -191,7 +190,7 @@ func (m *Server) HeaderByNumber(_ context.Context, blockNumber rpc.BlockNumber) 
 		return nil, err
 	}
 
-	info, err := m.BlockInfoByNumber(height)
+	info, err := m.db.GetBlock(height)
 	if err != nil || info == nil {
 		return nil, err
 	}
@@ -246,7 +245,7 @@ func (m *Server) BloomStatus() (uint64, uint64) {
 	return 0, 0
 }
 
-func (m *Server) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
+func (m *Server) ServiceFilter(_ context.Context, _ *bloombits.MatcherSession) {
 	// Currently not implemented
 }
 

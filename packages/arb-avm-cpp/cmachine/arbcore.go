@@ -237,6 +237,10 @@ func (ac *ArbCore) GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *b
 	return
 }
 
+func (ac *ArbCore) GetInboxHash(index *big.Int) (ret common.Hash, err error) {
+	panic("unimplemented method")
+}
+
 func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int) (core.ExecutionCursor, error) {
 	totalGasUsedData := math.U256Bytes(totalGasUsed)
 

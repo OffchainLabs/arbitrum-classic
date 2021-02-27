@@ -1,5 +1,5 @@
 /*
-* Copyright 2020, Offchain Labs, Inc.
+* Copyright 2020-2021, Offchain Labs, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
@@ -43,30 +42,15 @@ import (
 
 var logger = log.With().Caller().Str("component", "txdb").Logger()
 
-type AggregatorStore interface {
-	GetPossibleRequestInfo(requestId common.Hash) *uint64
-	GetPossibleBlock(blockHash common.Hash) *uint64
-	GetBlockHeader(height uint64) (*machine.BlockInfo, error)
-	EarliestBlock() (*common.BlockId, error)
-	LatestBlock() (*common.BlockId, error)
-
-	SaveBlock(header *types.Header, logIndex uint64) error
-	SaveEmptyBlock(header *types.Header) error
-	SaveBlockHash(blockHash common.Hash, blockHeight uint64) error
-	SaveRequest(requestId common.Hash, logIndex uint64) error
-	Reorg(height uint64) error
-}
-
 type ChainTimeGetter interface {
 	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
 	TimestampForBlockHash(ctx context.Context, hash common.Hash) (*big.Int, error)
 }
 
 type TxDB struct {
-	lookup     core.ArbCoreLookup
-	as         AggregatorStore
-	timeGetter ChainTimeGetter
-	chain      common.Address
+	lookup core.ArbOutputLookup
+	as     machine.AggregatorStore
+	chain  common.Address
 
 	rmLogsFeed      event.Feed
 	chainFeed       event.Feed
@@ -79,6 +63,18 @@ type TxDB struct {
 	callMut sync.Mutex
 }
 
+func New(
+	core core.ArbOutputLookup,
+	as machine.AggregatorStore,
+	chain common.Address,
+) (*TxDB, error) {
+	return &TxDB{
+		lookup: core,
+		as:     as,
+		chain:  chain,
+	}, nil
+}
+
 func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
 	avmLogs, err := db.lookup.GetLogs(res.FirstAVMLog(), res.BlockStats.AVMLogCount)
 	if err != nil {
@@ -86,11 +82,15 @@ func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
 	}
 	results := make([]*evm.TxResult, 0, len(avmLogs))
 	for _, avmLog := range avmLogs {
-		res, err := evm.NewTxResultFromValue(avmLog)
+		res, err := evm.NewResultFromValue(avmLog)
 		if err != nil {
 			return nil, err
 		}
-		results = append(results, res)
+		txRes, ok := res.(*evm.TxResult)
+		if !ok {
+			continue
+		}
+		results = append(results, txRes)
 	}
 	return results, nil
 }
@@ -108,10 +108,8 @@ func (db *TxDB) UpdateCurrentLogCount() (*big.Int, error) {
 }
 
 func (db *TxDB) AddLogs(avmLogs []value.Value) error {
-	ctx := context.Background()
-
 	for _, avmLog := range avmLogs {
-		if err := db.HandleLog(ctx, avmLog); err != nil {
+		if err := db.HandleLog(avmLog); err != nil {
 			return err
 		}
 	}
@@ -171,7 +169,7 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 	return nil
 }
 
-func (db *TxDB) HandleLog(ctx context.Context, avmLog value.Value) error {
+func (db *TxDB) HandleLog(avmLog value.Value) error {
 	res, err := evm.NewResultFromValue(avmLog)
 	if err != nil {
 		logger.Error().Stack().Err(err).Msg("Error parsing log result")
@@ -187,10 +185,6 @@ func (db *TxDB) HandleLog(ctx context.Context, avmLog value.Value) error {
 		Uint64("block_logcount", blockInfo.ChainStats.AVMLogCount.Uint64()).
 		Uint64("block_sendcount", blockInfo.ChainStats.AVMSendCount.Uint64()).
 		Msg("produced l2 block")
-
-	if err := db.fillEmptyBlocks(ctx, blockInfo.BlockNum); err != nil {
-		return err
-	}
 
 	txResults, err := db.GetBlockResults(blockInfo)
 	if err != nil {
@@ -226,10 +220,6 @@ func (db *TxDB) HandleLog(ctx context.Context, avmLog value.Value) error {
 		}
 	}
 
-	id, err := db.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(blockInfo.BlockNum))
-	if err != nil {
-		return err
-	}
 	prev, err := db.GetBlock(blockInfo.BlockNum.Uint64() - 1)
 	if err != nil {
 		return err
@@ -244,7 +234,7 @@ func (db *TxDB) HandleLog(ctx context.Context, avmLog value.Value) error {
 		GasLimit:   blockInfo.GasLimit().Uint64(),
 		GasUsed:    blockInfo.BlockStats.GasUsed.Uint64(),
 		Time:       blockInfo.Timestamp.Uint64(),
-		Extra:      id.HeaderHash.Bytes(),
+		Extra:      nil,
 	}
 
 	block := types.NewBlock(header, ethTxes, nil, ethReceipts, new(trie.Trie))
@@ -254,14 +244,13 @@ func (db *TxDB) HandleLog(ctx context.Context, avmLog value.Value) error {
 		Uint64("block_logcount", blockInfo.ChainStats.AVMLogCount.Uint64()).
 		Uint64("block_messagecount", blockInfo.ChainStats.AVMSendCount.Uint64()).
 		Msg("saved l2 block")
-	if err := db.as.SaveBlock(block.Header(), avmLogIndex); err != nil {
-		return err
-	}
 
 	ethLogs := make([]*types.Log, 0)
 	for _, res := range processedResults {
 		ethLogs = append(ethLogs, res.Result.EthLogs(common.NewHashFromEth(block.Hash()))...)
 	}
+
+	requests := make([]machine.EVMRequestInfo, 0, len(txResults))
 
 	for i, txRes := range txResults {
 		if txRes.ResultCode != evm.ReturnCode && txRes.ResultCode != evm.RevertCode {
@@ -271,12 +260,13 @@ func (db *TxDB) HandleLog(ctx context.Context, avmLog value.Value) error {
 			}
 		}
 
-		if err := db.as.SaveRequest(txRes.IncomingRequest.MessageID, blockInfo.FirstAVMLog().Uint64()+uint64(i)); err != nil {
-			return err
-		}
+		requests = append(requests, machine.EVMRequestInfo{
+			RequestId: txRes.IncomingRequest.MessageID,
+			LogIndex:  blockInfo.FirstAVMLog().Uint64() + uint64(i),
+		})
 	}
 
-	if err := db.as.SaveBlockHash(common.NewHashFromEth(block.Hash()), block.Number().Uint64()); err != nil {
+	if err := db.as.SaveBlock(block.Header(), avmLogIndex, requests); err != nil {
 		return err
 	}
 
@@ -288,68 +278,12 @@ func (db *TxDB) HandleLog(ctx context.Context, avmLog value.Value) error {
 	return nil
 }
 
-func (db *TxDB) saveEmptyBlock(ctx context.Context, prev ethcommon.Hash, number *big.Int) error {
-	blockId, err := db.timeGetter.BlockIdForHeight(ctx, common.NewTimeBlocks(number))
-	if err != nil {
-		return err
-	}
-	time, err := db.timeGetter.TimestampForBlockHash(ctx, blockId.HeaderHash)
-	if err != nil {
-		return err
-	}
-	header := &types.Header{
-		ParentHash: prev,
-		Difficulty: big.NewInt(0),
-		Number:     new(big.Int).Set(number),
-		GasLimit:   10000000,
-		GasUsed:    0,
-		Time:       time.Uint64(),
-		Extra:      blockId.HeaderHash.Bytes(),
-	}
-	block := types.NewBlock(header, nil, nil, nil, new(trie.Trie))
-	if err := db.as.SaveEmptyBlock(block.Header()); err != nil {
-		return err
-	}
-
-	if err := db.as.SaveBlockHash(common.NewHashFromEth(block.Hash()), block.NumberU64()); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (db *TxDB) AddInitialBlock(ctx context.Context, initialBlockHeight *big.Int) error {
-	return db.saveEmptyBlock(ctx, ethcommon.Hash{}, initialBlockHeight)
-}
-
-func (db *TxDB) fillEmptyBlocks(ctx context.Context, max *big.Int) error {
-	latest, err := db.as.LatestBlock()
-	if err != nil {
-		return err
-	}
-	next := new(big.Int).Add(latest.Height.AsInt(), big.NewInt(1))
-	// Fill in empty blocks
-	for next.Cmp(max) < 0 {
-		prev, err := db.GetBlock(next.Uint64() - 1)
-		if err != nil {
-			return err
-		}
-		if prev == nil {
-			return errors.Errorf("trying to add block %v, but prev header was not found", next)
-		}
-		if err := db.saveEmptyBlock(ctx, prev.Header.Hash(), next); err != nil {
-			return err
-		}
-		next = next.Add(next, big.NewInt(1))
-	}
-	return nil
-}
-
 func (db *TxDB) GetBlockWithHash(blockHash common.Hash) (*machine.BlockInfo, error) {
 	blockHeight := db.as.GetPossibleBlock(blockHash)
 	if blockHeight == nil {
 		return nil, nil
 	}
-	info, err := db.as.GetBlockHeader(*blockHeight)
+	info, err := db.as.GetBlockInfo(*blockHeight)
 	if err != nil {
 		return nil, err
 	}
@@ -359,19 +293,15 @@ func (db *TxDB) GetBlockWithHash(blockHash common.Hash) (*machine.BlockInfo, err
 	return info, err
 }
 
-func (db *TxDB) GetRequest(requestId common.Hash) (value.Value, error) {
+func (db *TxDB) GetRequest(requestId common.Hash) (*evm.TxResult, error) {
 	requestCandidate := db.as.GetPossibleRequestInfo(requestId)
 	if requestCandidate == nil {
 		return nil, nil
 	}
-	logVals, err := db.lookup.GetLogs(new(big.Int).SetUint64(*requestCandidate), big.NewInt(1))
+	logVal, err := core.GetSingleLog(db.lookup, new(big.Int).SetUint64(*requestCandidate))
 	if err != nil {
 		return nil, err
 	}
-	if len(logVals) != 1 {
-		return nil, errors.New("unexpected log count")
-	}
-	logVal := logVals[0]
 	res, err := evm.NewTxResultFromValue(logVal)
 	if err != nil {
 		return nil, err
@@ -379,16 +309,15 @@ func (db *TxDB) GetRequest(requestId common.Hash) (value.Value, error) {
 	if res.IncomingRequest.MessageID != requestId {
 		return nil, nil
 	}
-	return logVal, nil
+	return res, nil
 }
 
 func (db *TxDB) GetMachineBlockResults(block *machine.BlockInfo) ([]*evm.TxResult, error) {
-	if block.BlockLog == nil {
-		// No arb block at this height
-		return nil, nil
+	blockLog, err := core.GetSingleLog(db.lookup, new(big.Int).SetUint64(block.BlockLog))
+	if err != nil {
+		return nil, err
 	}
-
-	res, err := evm.NewBlockResultFromValue(block.BlockLog)
+	res, err := evm.NewBlockResultFromValue(blockLog)
 	if err != nil {
 		return nil, err
 	}
@@ -403,15 +332,18 @@ func (db *TxDB) GetBlock(height uint64) (*machine.BlockInfo, error) {
 	if height > latest.Height.AsInt().Uint64() {
 		return nil, nil
 	}
-	return db.as.GetBlockHeader(height)
-}
-
-func (db *TxDB) EarliestBlock() (*common.BlockId, error) {
-	return db.as.EarliestBlock()
+	return db.as.GetBlockInfo(height)
 }
 
 func (db *TxDB) LatestBlock() (*common.BlockId, error) {
-	return db.as.LatestBlock()
+	latest, err := db.as.LatestBlockInfo()
+	if err != nil {
+		return nil, err
+	}
+	return &common.BlockId{
+		Height:     common.NewTimeBlocks(latest.Header.Number),
+		HeaderHash: common.NewHashFromEth(latest.Header.Hash()),
+	}, nil
 }
 
 func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot, error) {
