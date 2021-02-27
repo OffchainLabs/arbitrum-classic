@@ -42,11 +42,23 @@ constexpr auto message_entry_inserted_key = std::array<char, 1>{-64};
 constexpr auto message_entry_processed_key = std::array<char, 1>{-65};
 
 constexpr auto sideload_cache_size = 20;
+}  // namespace
 
-ValueResult<MessageEntry> getMessageEntry(Transaction& tx,
-                                          uint256_t message_sequence_number) {
+ValueResult<MessageEntry> ArbCore::getMessageEntry(
+    Transaction& tx,
+    uint256_t message_sequence_number) const {
     std::vector<unsigned char> previous_key;
     marshal_uint256_t(message_sequence_number, previous_key);
+
+    auto messages_inserted = messageEntryInsertedCountImpl(tx);
+    if (!messages_inserted.status.ok()) {
+        return {messages_inserted.status, {}};
+    }
+
+    if (message_sequence_number > messages_inserted.data) {
+        // Don't allow stale entries to be used
+        return {rocksdb::Status::NotFound(), {}};
+    }
 
     auto result = getVectorUsingFamilyAndKey(
         *tx.transaction, tx.datastorage->messageentry_column.get(),
@@ -60,8 +72,6 @@ ValueResult<MessageEntry> getMessageEntry(Transaction& tx,
 
     return {result.status, std::move(parsed_state)};
 }
-
-}  // namespace
 
 bool ArbCore::machineIdle() {
     return machine_idle;
@@ -683,13 +693,6 @@ void ArbCore::operator()() {
             auto tx = Transaction::makeTransaction(data_storage);
 
             auto last_assertion = machine->nextAssertion();
-            auto messages_inserted = messageEntryInsertedCountImpl(*tx);
-            if (!messages_inserted.status.ok()) {
-                core_error_string = messages_inserted.status.ToString();
-                std::cerr << "ArbCore message insertion failed: "
-                          << core_error_string << "\n";
-                break;
-            }
 
             // Save logs and sends
             auto status = saveAssertion(*tx, last_assertion);
@@ -1033,6 +1036,17 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
     return getVectorVectorUsingFamilyAndKey(
         *tx->transaction, data_storage->send_column.get(), key_slice,
         intx::narrow_cast<size_t>(count));
+}
+
+ValueResult<uint256_t> ArbCore::getInboxAcc(uint256_t index) {
+    auto tx = Transaction::makeTransaction(data_storage);
+
+    auto result = getMessageEntry(*tx, index);
+    if (!result.status.ok()) {
+        return {result.status, 0};
+    }
+
+    return {rocksdb::Status::OK(), result.data.inbox_hash};
 }
 
 ValueResult<uint256_t> ArbCore::getSendAcc(uint256_t start_acc_hash,
