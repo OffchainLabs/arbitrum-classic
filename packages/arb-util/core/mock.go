@@ -1,8 +1,9 @@
 package core
 
 import (
-	"github.com/pkg/errors"
 	"math/big"
+
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -40,6 +41,10 @@ func (e *ExecutionCursorMock) TotalSendCount() *big.Int {
 }
 
 func (e *ExecutionCursorMock) TotalLogCount() *big.Int {
+	return big.NewInt(0)
+}
+
+func (e *ExecutionCursorMock) TotalSteps() *big.Int {
 	return big.NewInt(0)
 }
 
@@ -150,5 +155,9 @@ func (v *ValidatorLookupMock) GetExecutionCursor(totalGasUsed *big.Int) (Executi
 	if totalGasUsed.Cmp(big.NewInt(0)) == 0 {
 		return &ExecutionCursorMock{mach: v.startMachine}, nil
 	}
+	panic("implement me")
+}
+
+func (v *ValidatorLookupMock) GetMachineForSideload(blockNumber uint64) (machine.Machine, error) {
 	panic("implement me")
 }

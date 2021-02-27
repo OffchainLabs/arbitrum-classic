@@ -21,22 +21,14 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"strings"
 	"testing"
 )
 
 func TestTransfer(t *testing.T) {
-
 	constructorData := hexutil.MustDecode(arbostestcontracts.TransferBin)
-
-	chainTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}
 
 	constructorTx1 := message.Transaction{
 		MaxGas:      big.NewInt(1000000000),
@@ -74,7 +66,7 @@ func TestTransfer(t *testing.T) {
 		message.NewSafeL2Message(connCallTx),
 	})
 
-	logs, _, mach, _ := runAssertion(t, inboxMessages, 3, 0)
+	logs, _, snap, _ := runAssertion(t, inboxMessages, 3, 0)
 	results := processTxResults(t, logs)
 
 	allResultsSucceeded(t, results)
@@ -86,7 +78,6 @@ func TestTransfer(t *testing.T) {
 	t.Log("GasUsed", res.GasUsed)
 	t.Log("GasLimit", connCallTx.MaxGas)
 
-	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(4))
 	checkBalance(t, snap, connAddress1, big.NewInt(101))
 	checkBalance(t, snap, connAddress2, big.NewInt(99))
 	checkBalance(t, snap, sender, big.NewInt(9800))

@@ -33,7 +33,7 @@ import "./RollupLib.sol";
 import "../libraries/CloneFactory.sol";
 import "../libraries/ICloneable.sol";
 
-contract RollupCreator is Ownable, CloneFactory {
+contract RollupCreatorNoProxy is Ownable, CloneFactory {
     event RollupCreated(address rollupAddress);
 
     ICloneable rollupTemplate;
@@ -50,7 +50,7 @@ contract RollupCreator is Ownable, CloneFactory {
         nodeFactory = _nodeFactory;
     }
 
-    function createRollup(
+    function createRollupNoProxy(
         bytes32 _machineHash,
         uint256 _confirmPeriodBlocks,
         uint256 _extraChallengeTimeBlocks,
@@ -61,7 +61,7 @@ contract RollupCreator is Ownable, CloneFactory {
         bytes calldata _extraConfig
     ) external returns (IRollup) {
         return
-            createRollup(
+            createRollupNoProxy(
                 RollupLib.Config(
                     _machineHash,
                     _confirmPeriodBlocks,
@@ -84,16 +84,9 @@ contract RollupCreator is Ownable, CloneFactory {
         address rollup;
     }
 
-    // After this setup:
-    // Rollup should be the owner of bridge
-    // Rollup should be the owner of it's upgrade admin
-    // Bridge should have a single inbox and outbox
-    function createRollup(RollupLib.Config memory config) private returns (IRollup) {
+    function createRollupNoProxy(RollupLib.Config memory config) private returns (IRollup) {
         CreateRollupFrame memory frame;
-        frame.admin = new ProxyAdmin();
-        frame.rollup = address(
-            new TransparentUpgradeableProxy(address(rollupTemplate), address(frame.admin), "")
-        );
+        frame.rollup = createClone(rollupTemplate);
 
         frame.bridge = new Bridge();
         frame.inbox = new Inbox(IBridge(frame.bridge));
@@ -102,7 +95,6 @@ contract RollupCreator is Ownable, CloneFactory {
         frame.outbox = new Outbox(frame.rollup, IBridge(frame.bridge));
 
         frame.bridge.transferOwnership(frame.rollup);
-        frame.admin.transferOwnership(frame.rollup);
         IRollup(frame.rollup).initialize(
             config.machineHash,
             config.confirmPeriodBlocks,
@@ -113,7 +105,7 @@ contract RollupCreator is Ownable, CloneFactory {
             config.owner,
             config.extraConfig,
             [
-                address(frame.admin),
+                address(0),
                 address(frame.bridge),
                 address(frame.outbox),
                 address(frame.rollupEventBridge),

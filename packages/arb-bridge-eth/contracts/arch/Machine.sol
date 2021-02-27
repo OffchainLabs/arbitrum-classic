@@ -25,6 +25,7 @@ import "../libraries/DebugPrint.sol";
 library Machine {
     using Hashing for Value.Data;
 
+    // Make sure these don't conflict with Challenge.MACHINE_UNREACHABLE (currently 100)
     uint256 internal constant MACHINE_EXTENSIVE = 0;
     uint256 internal constant MACHINE_ERRORSTOP = 1;
     uint256 internal constant MACHINE_HALT = 2;

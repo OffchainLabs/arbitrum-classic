@@ -18,6 +18,9 @@ package txdb
 
 import (
 	"context"
+	"math/big"
+	"sync"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -38,8 +41,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator-core/arbbridge"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"math/big"
-	"sync"
 )
 
 var logger = log.With().Caller().Str("component", "txdb").Logger()

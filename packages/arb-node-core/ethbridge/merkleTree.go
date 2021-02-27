@@ -17,9 +17,10 @@
 package ethbridge
 
 import (
+	"math/big"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"math/big"
 )
 
 type MerkleTree struct {

@@ -28,6 +28,7 @@ type ExecutionCursor interface {
 	TotalMessagesRead() *big.Int
 	InboxHash() common.Hash
 	TotalGasConsumed() *big.Int
+	TotalSteps() *big.Int
 	TotalSendCount() *big.Int
 	TotalLogCount() *big.Int
 
@@ -56,6 +57,8 @@ type ArbCoreLookup interface {
 	// Advance executes as much as it can without going over maxGas or
 	// optionally until it reaches or goes over maxGas
 	AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool) error
+
+	GetMachineForSideload(uint64) (machine.Machine, error)
 }
 
 type ArbCoreInbox interface {
@@ -102,7 +105,6 @@ type ArbCore interface {
 	ArbCoreInbox
 	StartThread() bool
 	StopThread()
-	GetMachineForSideload(uint64) (machine.Machine, error)
 	MachineIdle() bool
 }
 

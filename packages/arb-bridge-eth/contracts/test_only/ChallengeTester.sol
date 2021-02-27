@@ -18,17 +18,17 @@
 
 pragma solidity ^0.6.11;
 
-import "../challenge/Challenge.sol";
+import "../challenge/ChallengeFactory.sol";
 
 contract ChallengeTester {
-    IOneStepProof[] public executors;
     address public challenge;
     bool public challengeCompleted;
     address public winner;
     address public loser;
+    ChallengeFactory public challengeFactory;
 
     constructor(IOneStepProof[] memory _executors) public {
-        executors = _executors;
+        challengeFactory = new ChallengeFactory(_executors);
     }
 
     /* solhint-disable-next-line no-unused-vars */
@@ -47,9 +47,7 @@ contract ChallengeTester {
         uint256 challengerTimeLeft,
         IBridge bridge
     ) public {
-        Challenge chal = new Challenge();
-        chal.initializeChallenge(
-            executors,
+        challenge = challengeFactory.createChallenge(
             address(this),
             executionHash,
             maxMessageCount,
@@ -59,6 +57,5 @@ contract ChallengeTester {
             challengerTimeLeft,
             bridge
         );
-        challenge = address(chal);
     }
 }

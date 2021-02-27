@@ -422,30 +422,33 @@ contract OneStepProof is OneStepProofCommon {
     {
         bytes memory proof = context.proof;
 
-        // Get message out of proof
-        uint8 kind = uint8(proof[context.offset]);
-        context.offset++;
-        uint256 l1BlockNumber;
-        uint256 l1Timestamp;
-        uint256 inboxSeqNum;
-        address sender = proof.toAddress(context.offset);
-        context.offset += 20;
-        (context.offset, l1BlockNumber) = Marshaling.deserializeInt(proof, context.offset);
-        (context.offset, l1Timestamp) = Marshaling.deserializeInt(proof, context.offset);
-        (context.offset, inboxSeqNum) = Marshaling.deserializeInt(proof, context.offset);
-        uint256 messageDataLength;
-        (context.offset, messageDataLength) = Marshaling.deserializeInt(proof, context.offset);
-        bytes32 messageBufHash =
-            Hashing.bytesToBufferHash(proof, context.offset, messageDataLength);
+        bytes32 messageHash;
+        Value.Data[] memory tupData = new Value.Data[](7);
 
-        uint256 offset = context.offset;
-        bytes32 messageDataHash;
-        assembly {
-            messageDataHash := keccak256(add(add(proof, 32), offset), messageDataLength)
-        }
+        {
+            // Get message out of proof
+            uint8 kind = uint8(proof[context.offset]);
+            context.offset++;
+            uint256 l1BlockNumber;
+            uint256 l1Timestamp;
+            uint256 inboxSeqNum;
+            address sender = proof.toAddress(context.offset);
+            context.offset += 20;
+            (context.offset, l1BlockNumber) = Marshaling.deserializeInt(proof, context.offset);
+            (context.offset, l1Timestamp) = Marshaling.deserializeInt(proof, context.offset);
+            (context.offset, inboxSeqNum) = Marshaling.deserializeInt(proof, context.offset);
+            uint256 messageDataLength;
+            (context.offset, messageDataLength) = Marshaling.deserializeInt(proof, context.offset);
+            bytes32 messageBufHash =
+                Hashing.bytesToBufferHash(proof, context.offset, messageDataLength);
 
-        bytes32 messageHash =
-            Messages.messageHash(
+            uint256 offset = context.offset;
+            bytes32 messageDataHash;
+            assembly {
+                messageDataHash := keccak256(add(add(proof, 32), offset), messageDataLength)
+            }
+
+            messageHash = Messages.messageHash(
                 kind,
                 sender,
                 l1BlockNumber,
@@ -453,21 +456,29 @@ contract OneStepProof is OneStepProofCommon {
                 inboxSeqNum,
                 messageDataHash
             );
+
+            tupData[0] = Value.newInt(uint256(kind));
+            tupData[1] = Value.newInt(l1BlockNumber);
+            tupData[2] = Value.newInt(l1Timestamp);
+            tupData[3] = Value.newInt(uint256(sender));
+            tupData[4] = Value.newInt(inboxSeqNum);
+            tupData[5] = Value.newInt(messageDataLength);
+            tupData[6] = Value.newHashedValue(messageBufHash, 1);
+        }
+
+        bytes32 prevAcc = 0;
+        if (context.totalMessagesRead > 0) {
+            prevAcc = context.bridge.inboxAccs(context.totalMessagesRead - 1);
+        }
+
         require(
-            context.bridge.inboxMessages(context.totalMessagesRead) == messageHash,
+            Messages.addMessageToInbox(prevAcc, messageHash) ==
+                context.bridge.inboxAccs(context.totalMessagesRead),
             "WRONG_MESSAGE"
         );
 
         context.totalMessagesRead++;
 
-        Value.Data[] memory tupData = new Value.Data[](7);
-        tupData[0] = Value.newInt(uint256(kind));
-        tupData[1] = Value.newInt(l1BlockNumber);
-        tupData[2] = Value.newInt(l1Timestamp);
-        tupData[3] = Value.newInt(uint256(sender));
-        tupData[4] = Value.newInt(inboxSeqNum);
-        tupData[5] = Value.newInt(messageDataLength);
-        tupData[6] = Value.newHashedValue(messageBufHash, 1);
         return Value.newTuple(tupData);
     }
 

@@ -31,8 +31,6 @@ import "../libraries/MerkleLib.sol";
 contract Challenge is Cloneable, IChallenge {
     using SafeMath for uint256;
 
-    enum Kind { Uninitialized, Execution, StoppedShort }
-
     enum Turn { NoChallenge, Asserter, Challenger }
 
     event InitiatedChallenge();
@@ -45,7 +43,7 @@ contract Challenge is Cloneable, IChallenge {
     event AsserterTimedOut();
     event ChallengerTimedOut();
     event OneStepProofCompleted();
-    event ConstraintWin();
+    event ContinuedExecutionProven();
 
     // Can only initialize once
     string private constant CHAL_INIT_STATE = "CHAL_INIT_STATE";
@@ -65,13 +63,13 @@ contract Challenge is Cloneable, IChallenge {
     uint256 private constant INBOX_CONSISTENCY_BISECTION_DEGREE = 400;
     uint256 private constant INBOX_DELTA_BISECTION_DEGREE = 250;
     uint256 private constant EXECUTION_BISECTION_DEGREE = 400;
+    bytes32 private constant UNREACHABLE_ASSERTION = bytes32(uint256(0));
 
     IOneStepProof[] public executors;
     IBridge public bridge;
 
     IRollup internal resultReceiver;
 
-    bytes32 executionHash;
     uint256 maxMessageCount;
 
     address public asserter;
@@ -81,7 +79,6 @@ contract Challenge is Cloneable, IChallenge {
     uint256 public asserterTimeLeft;
     uint256 public challengerTimeLeft;
 
-    Kind public kind;
     Turn public turn;
 
     // This is the root of a merkle tree with nodes like (prev, next, steps)
@@ -103,23 +100,6 @@ contract Challenge is Cloneable, IChallenge {
         lastMoveBlock = block.number;
     }
 
-    modifier executionChallenge {
-        // If we're in a stopped short challenge and the next step is an execution challenge, that means the asserter has decided to challenge the bisection
-        if (kind == Kind.StoppedShort) {
-            kind = Kind.Execution;
-            executionHash = 0;
-        }
-        if (kind == Kind.Uninitialized) {
-            challengeState = executionHash;
-            kind = Kind.Execution;
-            // Free no longer needed storage
-            executionHash = 0;
-        } else {
-            require(kind == Kind.Execution, "WRONG_KIND");
-        }
-        _;
-    }
-
     function initializeChallenge(
         IOneStepProof[] calldata _executors,
         address _resultReceiver,
@@ -137,8 +117,6 @@ contract Challenge is Cloneable, IChallenge {
 
         resultReceiver = IRollup(_resultReceiver);
 
-        executionHash = _executionHash;
-
         maxMessageCount = _maxMessageCount;
 
         asserter = _asserter;
@@ -146,10 +124,9 @@ contract Challenge is Cloneable, IChallenge {
         asserterTimeLeft = _asserterTimeLeft;
         challengerTimeLeft = _challengerTimeLeft;
 
-        kind = Kind.Uninitialized;
         turn = Turn.Challenger;
 
-        challengeState = 0;
+        challengeState = _executionHash;
 
         lastMoveBlock = block.number;
         bridge = _bridge;
@@ -180,8 +157,10 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _gasUsedBefore,
         bytes32 _assertionRest,
         bytes32[] calldata _chainHashes
-    ) external executionChallenge onlyOnTurn {
-        require(_challengedSegmentLength > 1, "TOO_SHORT");
+    ) external onlyOnTurn {
+        if (_chainHashes[_chainHashes.length - 1] != UNREACHABLE_ASSERTION) {
+            require(_challengedSegmentLength > 1, "TOO_SHORT");
+        }
         require(
             _chainHashes.length ==
                 bisectionDegree(_challengedSegmentLength, EXECUTION_BISECTION_DEGREE) + 1,
@@ -193,6 +172,7 @@ contract Challenge is Cloneable, IChallenge {
             _chainHashes[0] == ChallengeLib.assertionHash(_gasUsedBefore, _assertionRest),
             "segment pre-fields"
         );
+        require(_chainHashes[0] != UNREACHABLE_ASSERTION, "UNREACHABLE_START");
 
         require(
             _gasUsedBefore < _challengedSegmentStart.add(_challengedSegmentLength),
@@ -208,11 +188,7 @@ contract Challenge is Cloneable, IChallenge {
             );
         verifySegmentProof(bisectionHash, _merkleNodes, _merkleRoute);
 
-        updateBisectionRoot(
-            _chainHashes,
-            _challengedSegmentStart,
-            _challengedSegmentStart.add(_challengedSegmentLength).sub(_gasUsedBefore)
-        );
+        updateBisectionRoot(_chainHashes, _challengedSegmentStart, _challengedSegmentLength);
 
         emit Bisected(
             challengeState,
@@ -222,7 +198,7 @@ contract Challenge is Cloneable, IChallenge {
         );
     }
 
-    function constraintWinExecution(
+    function proveContinuedExecution(
         bytes32[] calldata _merkleNodes,
         uint256 _merkleRoute,
         uint256 _challengedSegmentStart,
@@ -230,9 +206,7 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _oldEndHash,
         uint256 _gasUsedBefore,
         bytes32 _assertionRest
-    ) external executionChallenge onlyOnTurn {
-        require(_challengedSegmentLength > 1, "TOO SHORT");
-
+    ) external onlyOnTurn {
         bytes32 beforeChainHash = ChallengeLib.assertionHash(_gasUsedBefore, _assertionRest);
 
         bytes32 bisectionHash =
@@ -244,9 +218,12 @@ contract Challenge is Cloneable, IChallenge {
             );
         verifySegmentProof(bisectionHash, _merkleNodes, _merkleRoute);
 
-        require(_gasUsedBefore >= _challengedSegmentStart.add(_challengedSegmentLength), "BAD_GAS");
+        require(
+            _gasUsedBefore >= _challengedSegmentStart.add(_challengedSegmentLength),
+            "NOT_CONT"
+        );
         require(beforeChainHash != _oldEndHash, "WRONG_END");
-        emit ConstraintWin();
+        emit ContinuedExecutionProven();
         _currentWin();
     }
 
@@ -262,6 +239,7 @@ contract Challenge is Cloneable, IChallenge {
         bytes32[] calldata _merkleNodes,
         uint256 _merkleRoute,
         uint256 _challengedSegmentStart,
+        uint256 _challengedSegmentLength,
         bytes32 _oldEndHash,
         uint256 _initialMessagesRead,
         bytes32 _initialSendAcc,
@@ -270,7 +248,7 @@ contract Challenge is Cloneable, IChallenge {
         bytes memory _executionProof,
         bytes memory _bufferProof,
         uint8 prover
-    ) public executionChallenge onlyOnTurn {
+    ) public onlyOnTurn {
         bytes32 rootHash;
         {
             (uint64 gasUsed, uint256 totalMessagesRead, bytes32[4] memory proofFields) =
@@ -283,6 +261,17 @@ contract Challenge is Cloneable, IChallenge {
                 );
 
             require(totalMessagesRead <= maxMessageCount, "TOO_MANY_MESSAGES");
+
+            require(
+                // if false, this segment must be proven with proveContinuedExecution
+                _initialState[0] < _challengedSegmentStart.add(_challengedSegmentLength),
+                "OSP_CONT"
+            );
+            require(
+                _initialState[0].add(gasUsed) >=
+                    _challengedSegmentStart.add(_challengedSegmentLength),
+                "OSP_SHORT"
+            );
 
             require(
                 _oldEndHash !=
@@ -299,7 +288,7 @@ contract Challenge is Cloneable, IChallenge {
 
             rootHash = ChallengeLib.bisectionChunkHash(
                 _challengedSegmentStart,
-                gasUsed,
+                _challengedSegmentLength,
                 oneStepProofExecutionBefore(
                     _initialMessagesRead,
                     _initialSendAcc,
@@ -312,115 +301,6 @@ contract Challenge is Cloneable, IChallenge {
         }
 
         verifySegmentProof(rootHash, _merkleNodes, _merkleRoute);
-
-        emit OneStepProofCompleted();
-        _currentWin();
-    }
-
-    /**
-     * @notice Object that the machine should have blocked after less gas used than was claimed and provide
-     * bisection of that smaller chunk. This can only occur as the first move in a challenge
-     *
-     * @dev Can only do a stopped short bisection as a first move
-     * @param _challengedSegmentLength Number of messages in the challenged segment
-     * @param _oldEndHash Hash of the end of the challenged segment
-     * @param _chainHashes Array of intermediate hashes of the challenged segment
-     * @param _newSegmentLength New segment length that's shorter than the challenged segment
-     * @param _startAssertionHash Hash of the assertion at the beginning of the challenged segment
-     */
-    function bisectExecutionStoppedShort(
-        uint256 _challengedSegmentLength,
-        bytes32 _oldEndHash,
-        bytes32[] calldata _chainHashes,
-        uint256 _newSegmentLength,
-        bytes32 _startAssertionHash
-    ) external onlyOnTurn {
-        require(kind == Kind.Uninitialized, "BAD_KIND");
-        // Unlike the other bisections, it's safe for the number of steps executed to be 1
-        require(_newSegmentLength > 0, "BAD_LENGTH");
-        require(
-            _chainHashes.length ==
-                bisectionDegree(_newSegmentLength, EXECUTION_BISECTION_DEGREE) + 1,
-            "CUT_COUNT"
-        );
-        require(_newSegmentLength < _challengedSegmentLength, "TOO_LONG");
-
-        require(
-            ChallengeLib.bisectionChunkHash(
-                0,
-                _challengedSegmentLength,
-                _startAssertionHash,
-                _oldEndHash
-            ) == executionHash,
-            "END_HASH"
-        );
-
-        // Reuse the executionHash variable to store last assertion
-        updateBisectionRoot(_chainHashes, 0, _newSegmentLength);
-        executionHash = _chainHashes[_chainHashes.length - 1];
-        kind = Kind.StoppedShort;
-
-        emit Bisected(challengeState, 0, _challengedSegmentLength, _chainHashes);
-    }
-
-    // Can only do a stopped short bisection as a first move
-    function executionCantRun(
-        uint256 _challengedSegmentLength,
-        bytes32 _oldEndHash,
-        bytes32 _startAssertionHash
-    ) external onlyOnTurn {
-        require(kind == Kind.Uninitialized, "WRONG_KIND");
-
-        require(
-            ChallengeLib.bisectionChunkHash(
-                0,
-                _challengedSegmentLength,
-                _startAssertionHash,
-                _oldEndHash
-            ) == executionHash,
-            "WRONG_KIND"
-        );
-        executionHash = _startAssertionHash;
-        kind = Kind.StoppedShort;
-    }
-
-    // initialState
-    //  _initialGasUsed
-    //  _initialSendCount
-    //  _initialLogCount
-    function oneStepProveStoppedShort(
-        uint256 _initialMessagesRead,
-        bytes32 _initialSendAcc,
-        bytes32 _initialLogAcc,
-        uint256[3] calldata _initialState,
-        bytes calldata _executionProof,
-        bytes memory _bufferProof,
-        uint8 prover
-    ) external onlyOnTurn {
-        require(kind == Kind.StoppedShort, "WRONG_KIND");
-
-        // If this doesn't revert, we were able to successfully execute the machine
-        (, uint256 totalMessagesRead, bytes32[4] memory proofFields) =
-            executors[prover].executeStep(
-                bridge,
-                _initialMessagesRead,
-                [_initialSendAcc, _initialLogAcc],
-                _executionProof,
-                _bufferProof
-            );
-        require(totalMessagesRead <= maxMessageCount, "TOO_MANY_MESSAGES");
-
-        // Check that the before state is the end of the stopped short bisection which was stored in executionHash
-        require(
-            oneStepProofExecutionBefore(
-                _initialMessagesRead,
-                _initialSendAcc,
-                _initialLogAcc,
-                _initialState,
-                proofFields
-            ) == executionHash,
-            "WRONG_END"
-        );
 
         emit OneStepProofCompleted();
         _currentWin();
