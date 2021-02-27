@@ -44,7 +44,7 @@ func deployRollup(
 	rollupAddr, _, _, err := ethbridgecontracts.DeployRollup(auth, client)
 	test.FailIfError(t, err)
 
-	_, _, rollupCreator, err := ethbridgecontracts.DeployRollupCreator(auth, client)
+	_, _, rollupCreator, err := ethbridgetestcontracts.DeployRollupCreatorNoProxy(auth, client)
 	test.FailIfError(t, err)
 	client.Commit()
 
@@ -52,7 +52,7 @@ func deployRollup(
 	test.FailIfError(t, err)
 	client.Commit()
 
-	tx, err := rollupCreator.CreateRollup(
+	tx, err := rollupCreator.CreateRollupNoProxy(
 		auth,
 		machineHash,
 		confirmPeriodBlocks,
