@@ -1,69 +1,17 @@
 package challenge
 
 import (
-	"io/ioutil"
-	"math/big"
-	"os"
-	"testing"
-	"time"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"math/big"
+	"testing"
 )
 
-func prepareArbCore(t *testing.T, messages []inbox.InboxMessage) (core.ArbCore, func()) {
-	tmpDir, err := ioutil.TempDir("", "arbitrum")
-	test.FailIfError(t, err)
-	storage, err := cmachine.NewArbStorage(tmpDir)
-	if err != nil {
-		os.RemoveAll(tmpDir)
-	}
-	test.FailIfError(t, err)
-	shutdown := func() {
-		storage.CloseArbStorage()
-		if err := os.RemoveAll(tmpDir); err != nil {
-			panic(err)
-		}
-	}
-	returning := false
-	defer (func() {
-		if !returning {
-			shutdown()
-		}
-	})()
-
-	err = storage.Initialize(arbos.Path())
-	test.FailIfError(t, err)
-
-	arbCore := storage.GetArbCore()
-	started := arbCore.StartThread()
-	if !started {
-		t.Fatal("failed to start thread")
-	}
-
-	if len(messages) > 0 {
-		_, err = core.DeliverMessagesAndWait(arbCore, messages, common.Hash{}, false)
-		test.FailIfError(t, err)
-	}
-	for {
-		if arbCore.MachineIdle() {
-			break
-		}
-		<-time.After(time.Millisecond * 200)
-	}
-
-	returning = true
-	return arbCore, shutdown
-}
-
 func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big.Int, endGas *big.Int, faultConfig faultConfig, asserterMayFail bool) int {
-	arbCore, shutdown := prepareArbCore(t, messages)
+	arbCore, shutdown := test.PrepareArbCore(t, messages)
 	defer shutdown()
 	faultyCore := newFaultyCore(arbCore, faultConfig)
 
@@ -123,7 +71,7 @@ func TestChallengeToUnreachable(t *testing.T) {
 
 func TestChallengeToUnreachableSmall(t *testing.T) {
 	messages := []inbox.InboxMessage{makeInitMsg()}
-	arbCore, shutdown := prepareArbCore(t, messages)
+	arbCore, shutdown := test.PrepareArbCore(t, messages)
 	defer shutdown()
 	cursor, err := arbCore.GetExecutionCursor(big.NewInt(1 << 30))
 	test.FailIfError(t, err)

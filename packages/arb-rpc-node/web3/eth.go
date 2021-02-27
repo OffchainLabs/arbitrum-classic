@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020-2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package web3
 
 import (
@@ -245,7 +261,7 @@ func (s *Server) GetBlockByNumber(blockNum *rpc.BlockNumber, includeTxData bool)
 		return nil, err
 	}
 	info, err := s.srv.BlockInfoByNumber(height)
-	if err != nil || info == nil {
+	if err != nil {
 		return nil, err
 	}
 	return s.getBlock(info, includeTxData)
@@ -254,16 +270,10 @@ func (s *Server) GetBlockByNumber(blockNum *rpc.BlockNumber, includeTxData bool)
 func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, *machine.BlockInfo, error) {
 	var requestId arbcommon.Hash
 	copy(requestId[:], txHash)
-	val, err := s.srv.GetRequestResult(requestId)
-	if err != nil || val == nil {
+	res, err := s.srv.GetRequestResult(requestId)
+	if err != nil || res == nil {
 		return nil, nil, err
 	}
-
-	res, err := evm.NewTxResultFromValue(val)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	info, err := s.srv.BlockInfoByNumber(res.IncomingRequest.L2BlockNumber.Uint64())
 	if err != nil || info == nil {
 		return nil, nil, err
@@ -346,16 +356,11 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 }
 
 func (s *Server) getBlockTransactionCount(block *machine.BlockInfo) (*hexutil.Big, error) {
-	if block.BlockLog == nil {
-		// No arbitrum block at this height
-		return (*hexutil.Big)(big.NewInt(0)), nil
-	}
-
-	arbBlock, err := evm.NewBlockResultFromValue(block.BlockLog)
+	info, err := s.srv.BlockLogFromInfo(block)
 	if err != nil {
 		return nil, err
 	}
-	return (*hexutil.Big)(arbBlock.BlockStats.TxCount), nil
+	return (*hexutil.Big)(info.BlockStats.TxCount), nil
 }
 
 func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint64) (*TransactionResult, error) {
@@ -363,18 +368,11 @@ func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint
 	if err != nil || block == nil {
 		return nil, err
 	}
-
-	if block.BlockLog == nil {
-		// No arbitrum block at this height
-		return nil, nil
-	}
-
-	blockInfo, err := evm.NewBlockResultFromValue(block.BlockLog)
+	info, err := s.srv.BlockLogFromInfo(block)
 	if err != nil {
 		return nil, err
 	}
-
-	txRes, err := s.srv.GetTxInBlockAtIndexResults(blockInfo, uint64(index))
+	txRes, err := s.srv.GetTxInBlockAtIndexResults(info, uint64(index))
 	if err != nil {
 		return nil, err
 	}
@@ -584,11 +582,7 @@ func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, err
 
 func (s *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
 	if *block == rpc.EarliestBlockNumber {
-		height, err := s.srv.InitialBlockHeight()
-		if err != nil {
-			return 0, err
-		}
-		return height.Uint64(), err
+		return 0, nil
 	} else if *block == rpc.LatestBlockNumber {
 		return s.srv.GetBlockCount()
 	} else if *block >= 0 {

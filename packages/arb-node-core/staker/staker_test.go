@@ -12,7 +12,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"math/big"
 	"testing"
 )
@@ -117,7 +116,8 @@ func TestStaker(t *testing.T) {
 	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, ethbridge.NewTransactAuth(auth))
 	test.FailIfError(t, err)
 
-	lookup := core.NewValidatorLookupMock(mach)
+	lookup, shutdown := test.PrepareArbCore(t, nil)
+	defer shutdown()
 
 	staker, err := NewStaker(ctx, lookup, client, val, common.NewAddressFromEth(validatorUtilsAddr))
 	test.FailIfError(t, err)
