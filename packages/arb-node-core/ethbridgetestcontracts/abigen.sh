@@ -25,7 +25,9 @@ INBOX=$PREFIX/rollup/Inbox.sol:Inbox
 MESSAGES=$PREFIX/bridge/Messages.sol:Messages
 NODE=$PREFIX/rollup/Node.sol:Node
 OUTBOX_ENTRY=$PREFIX/rollup/Outbox.sol:OutboxEntry
-ROLLUP_LIBS=$INBOX,$OUTBOX,$ROLLUP_CREATOR,$ROLLUP,$ROLLUP_LIB,$MESSAGES,$NODE,$OUTBOX_ENTRY
+INODE=$PREFIX/rollup/INode.sol:INode
+ROLLUP_LIBS=$INBOX,$OUTBOX,$ROLLUP_CREATOR,$ROLLUP,$ROLLUP_LIB,$MESSAGES,$NODE,$OUTBOX_ENTRY,$INODE
+
 IGNORED_MORE=$IGNORED,$ROLLUP_LIBS
 
 NM=$(realpath ./../../../node_modules)
@@ -42,6 +44,9 @@ abigen --pkg=$PACKAGE --out=challengefactory.go --combined-json combined.json --
 
 solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/test_only/ChallengeTester.sol --overwrite -o .
 abigen --pkg=$PACKAGE --out=challengeTester.go --combined-json combined.json --exc=$IGNORED_MORE,$OZ_LIBS,$ARCH_PREFIX/IOneStepProof.sol:IOneStepProof,$CHAL_PREFIX/ChallengeFactory.sol:ChallengeFactory
+
+solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/rollup/RollupCreatorNoProxy.sol --overwrite -o .
+abigen --pkg=$PACKAGE --out=rollupcreatornoproxy.go --combined-json combined.json --exc=$IGNORED_MORE,$OZ_LIBS
 
 rm combined.json
 
