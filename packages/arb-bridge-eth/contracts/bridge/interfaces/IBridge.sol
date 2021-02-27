@@ -53,7 +53,7 @@ interface IBridge {
 
     function allowedOutboxes(address outbox) external view returns (bool);
 
-    function inboxMessages(uint256 index) external view returns (bytes32);
+    function inboxAccs(uint256 index) external view returns (bytes32);
 
     function messageCount() external view returns (uint256);
 }
