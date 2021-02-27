@@ -233,6 +233,7 @@ class ArbCore {
     ValueResult<std::vector<std::vector<unsigned char>>> getMessages(
         uint256_t index,
         uint256_t count) const;
+    ValueResult<uint256_t> getInboxAcc(uint256_t index);
     ValueResult<uint256_t> getSendAcc(uint256_t start_acc_hash,
                                       uint256_t start_index,
                                       uint256_t count);
@@ -243,6 +244,9 @@ class ArbCore {
 
    private:
     // Private database interaction
+    ValueResult<MessageEntry> getMessageEntry(
+        Transaction& tx,
+        uint256_t message_sequence_number) const;
     ValueResult<uint256_t> logInsertedCountImpl(Transaction& tx) const;
 
     ValueResult<uint256_t> logProcessedCount(Transaction& tx) const;

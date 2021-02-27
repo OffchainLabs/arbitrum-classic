@@ -165,6 +165,25 @@ ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
     }
 }
 
+int arbCoreGetInboxAcc(CArbCore* arbcore_ptr,
+                       const void* index_ptr,
+                       void* ret) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    try {
+        auto result = arb_core->getInboxAcc(receiveUint256(index_ptr));
+        if (!result.status.ok()) {
+            return false;
+        }
+
+        std::array<unsigned char, 32> val{};
+        to_big_endian(result.data, val.begin());
+        std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
+        return true;
+    } catch (const std::exception& e) {
+        return false;
+    }
+}
+
 int arbCoreGetSendAcc(CArbCore* arbcore_ptr,
                       const void* start_acc_hash,
                       const void* start_index_ptr,
