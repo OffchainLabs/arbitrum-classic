@@ -44,9 +44,9 @@ contract ArbTokenBridge is CloneFactory {
         _;
     }
 
-    constructor() public {
-        templateERC20 = new StandardArbERC20();
-        templateERC777 = new StandardArbERC777();
+    constructor(address _templateERC20, address _templateERC777) public {
+        templateERC20 = ICloneable(_templateERC20);
+        templateERC777 = ICloneable(_templateERC777);
     }
 
     function mintERC777FromL1(

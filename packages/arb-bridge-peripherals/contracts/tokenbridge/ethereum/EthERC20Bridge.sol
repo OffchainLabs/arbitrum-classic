@@ -18,12 +18,13 @@
 
 pragma solidity ^0.6.11;
 
+import "@openzeppelin/contracts/proxy/Clones.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./L1Buddy.sol";
 import "../arbitrum/ArbTokenBridge.sol";
 
 import "./IExitLiquidityProvider.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../libraries/SafeERC20Namer.sol";
 
 contract EthERC20Bridge is L1Buddy {
@@ -34,18 +35,32 @@ contract EthERC20Bridge is L1Buddy {
 
     mapping(address => address) customL2Tokens;
 
-    constructor(IInbox _inbox) public L1Buddy(_inbox) {}
+    address private immutable l2TemplateERC777;
+    address private immutable l2TemplateERC20;
+
+    constructor(
+        IInbox _inbox,
+        address _l2TemplateERC777,
+        address _l2TemplateERC20
+    ) public L1Buddy(_inbox) {
+        l2TemplateERC777 = _l2TemplateERC777;
+        l2TemplateERC20 = _l2TemplateERC20;
+    }
 
     function connectToChain(uint256 maxGas, uint256 gasPriceBid) external payable {
         // Pay for gas
         if (msg.value > 0) {
             inbox.depositEth{ value: msg.value }(address(this));
         }
+        bytes memory deployCode = abi.encodePacked(
+            type(ArbTokenBridge).creationCode,
+            abi.encode(l2TemplateERC20, l2TemplateERC777)
+        );
         inbox.deployL2ContractPair(
             maxGas, // max gas
             gasPriceBid, // gas price
             0, // payment
-            type(ArbTokenBridge).creationCode
+            deployCode
         );
     }
 
@@ -176,6 +191,16 @@ contract EthERC20Bridge is L1Buddy {
                 decimals
             )
         );
+    }
+
+    function calculateL2ERC777Address(address erc20) external view returns (address) {
+        bytes32 salt = bytes32(uint256(erc20));
+        return Clones.predictDeterministicAddress(l2TemplateERC777, salt, address(this));
+    }
+
+    function calculateL2ERC20Address(address erc20) external view returns (address) {
+        bytes32 salt = bytes32(uint256(erc20));
+        return Clones.predictDeterministicAddress(l2TemplateERC20, salt, address(this));
     }
 
     function sendPairedContractTransaction(
