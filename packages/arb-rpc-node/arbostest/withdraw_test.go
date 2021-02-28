@@ -51,14 +51,14 @@ func TestWithdrawEth(t *testing.T) {
 	}
 
 	inboxMessages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.Eth{
 			Dest:  sender,
 			Value: big.NewInt(1000),
-		}, sender, big.NewInt(1), chainTime),
-		message.NewInboxMessage(depositMsg, common.RandAddress(), big.NewInt(2), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx), sender, big.NewInt(3), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), sender, big.NewInt(4), laterChainTime),
+		}, sender, big.NewInt(1), big.NewInt(0), chainTime),
+		message.NewInboxMessage(depositMsg, common.RandAddress(), big.NewInt(2), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx), sender, big.NewInt(3), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), sender, big.NewInt(4), big.NewInt(0), laterChainTime),
 	}
 
 	logs, _, _, _ := runAssertion(t, inboxMessages, 4, 1)

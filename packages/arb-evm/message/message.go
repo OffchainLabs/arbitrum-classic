@@ -45,11 +45,12 @@ type Message interface {
 	AsData() []byte
 }
 
-func NewInboxMessage(msg Message, sender common.Address, inboxSeqNum *big.Int, time inbox.ChainTime) inbox.InboxMessage {
+func NewInboxMessage(msg Message, sender common.Address, inboxSeqNum *big.Int, gasPrice *big.Int, time inbox.ChainTime) inbox.InboxMessage {
 	return inbox.InboxMessage{
 		Kind:        msg.Type(),
 		Sender:      sender,
 		InboxSeqNum: inboxSeqNum,
+		GasPrice:    gasPrice,
 		Data:        msg.AsData(),
 		ChainTime:   time,
 	}
@@ -59,6 +60,7 @@ func NewRandomInboxMessage(msg Message) inbox.InboxMessage {
 	return NewInboxMessage(
 		msg,
 		common.RandAddress(),
+		common.RandBigInt(),
 		common.RandBigInt(),
 		inbox.NewRandomChainTime(),
 	)

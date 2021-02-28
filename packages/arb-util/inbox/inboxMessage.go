@@ -48,6 +48,7 @@ type InboxMessage struct {
 	Kind        Type
 	Sender      common.Address
 	InboxSeqNum *big.Int
+	GasPrice    *big.Int
 	Data        []byte
 	ChainTime   ChainTime
 }
@@ -72,11 +73,15 @@ func NewInboxMessageFromData(data []byte) (InboxMessage, error) {
 	inboxSeqNum := new(big.Int).SetBytes(data[:32])
 	data = data[32:]
 
+	gasPrice := new(big.Int).SetBytes(data[:32])
+	data = data[32:]
+
 	return InboxMessage{
 		Kind:        kind,
 		Sender:      sender,
 		ChainTime:   ChainTime{BlockNum: blockNumber, Timestamp: timestamp},
 		InboxSeqNum: inboxSeqNum,
+		GasPrice:    gasPrice,
 		Data:        data,
 	}, nil
 }
@@ -87,8 +92,8 @@ func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 	if !ok {
 		return failRet, errors.New("val must be a tuple")
 	}
-	if tup.Len() != 6 {
-		return failRet, errors.Errorf("expected tuple of length 6, but recieved tuple of length %v", tup.Len())
+	if tup.Len() != 8 {
+		return failRet, errors.Errorf("expected tuple of length 8, but recieved tuple of length %v", tup.Len())
 	}
 
 	// Tuple size already verified above, so error can be ignored
@@ -97,7 +102,9 @@ func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 	timestamp, _ := tup.GetByInt64(2)
 	sender, _ := tup.GetByInt64(3)
 	inboxSeqNum, _ := tup.GetByInt64(4)
-	messageData, _ := tup.GetByInt64(5)
+	gasPriceL1, _ := tup.GetByInt64(5)
+	msgSize, _ := tup.GetByInt64(6)
+	msgData, _ := tup.GetByInt64(7)
 
 	kindInt, ok := kind.(value.IntValue)
 	if !ok {
@@ -124,7 +131,21 @@ func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 		return failRet, errors.New("inboxSeqNum must be an int")
 	}
 
-	data, err := ByteArrayToBytes(messageData)
+	gasPriceInt, ok := gasPriceL1.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("gasPriceL1 must be an int")
+	}
+
+	msgSizeInt, ok := msgSize.(value.IntValue)
+	if !ok {
+		return failRet, errors.New("msgSize must be an int")
+	}
+	msgDataBuffer, ok := msgData.(*value.Buffer)
+	if !ok {
+		return failRet, errors.New("msgData must be an buffer")
+	}
+
+	data, err := BufAndLengthToBytes(msgSizeInt.BigInt(), msgDataBuffer)
 	if err != nil {
 		return failRet, errors.Wrap(err, "unmarshalling input data")
 	}
@@ -133,6 +154,7 @@ func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 		Kind:        Type(kindInt.BigInt().Uint64()),
 		Sender:      NewAddressFromInt(senderInt),
 		InboxSeqNum: inboxSeqNumInt.BigInt(),
+		GasPrice:    gasPriceInt.BigInt(),
 		Data:        data,
 		ChainTime: ChainTime{
 			BlockNum:  common.NewTimeBlocks(blockNumberInt.BigInt()),
@@ -170,6 +192,7 @@ func (im InboxMessage) AsValue() value.Value {
 		value.NewIntValue(im.ChainTime.Timestamp),
 		NewIntFromAddress(im.Sender),
 		value.NewIntValue(im.InboxSeqNum),
+		value.NewIntValue(im.GasPrice),
 		BytesToByteStack(im.Data),
 	})
 	return tup
@@ -182,6 +205,7 @@ func (im InboxMessage) CommitmentHash() common.Hash {
 		hashing.Uint256(im.ChainTime.BlockNum.AsInt()),
 		hashing.Uint256(im.ChainTime.Timestamp),
 		hashing.Uint256(im.InboxSeqNum),
+		hashing.Uint256(im.GasPrice),
 		hashing.Bytes32(hashing.SoliditySHA3(im.Data)),
 	)
 }
@@ -191,6 +215,7 @@ func (im InboxMessage) Equals(o InboxMessage) bool {
 		im.Sender == o.Sender &&
 		im.InboxSeqNum.Cmp(o.InboxSeqNum) == 0 &&
 		bytes.Equal(im.Data, o.Data) &&
+		im.GasPrice.Cmp(o.GasPrice) == 0 &&
 		im.ChainTime.BlockNum.AsInt().Cmp(o.ChainTime.BlockNum.AsInt()) == 0 &&
 		im.ChainTime.Timestamp.Cmp(o.ChainTime.Timestamp) == 0
 }
@@ -217,6 +242,7 @@ func (im InboxMessage) ToBytes() []byte {
 	data = append(data, math.U256Bytes(im.ChainTime.BlockNum.AsInt())...)
 	data = append(data, math.U256Bytes(im.ChainTime.Timestamp)...)
 	data = append(data, math.U256Bytes(im.InboxSeqNum)...)
+	data = append(data, math.U256Bytes(im.GasPrice)...)
 	data = append(data, im.Data...)
 	return data
 }

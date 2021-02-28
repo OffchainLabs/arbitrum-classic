@@ -40,7 +40,7 @@ func TestFib(t *testing.T) {
 	failIfError(t, err)
 
 	constructTx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.Address{},
@@ -49,7 +49,7 @@ func TestFib(t *testing.T) {
 	}
 
 	generateTx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: connAddress1,
@@ -59,7 +59,7 @@ func TestFib(t *testing.T) {
 
 	getFibTx := message.Call{
 		BasicTx: message.BasicTx{
-			MaxGas:      big.NewInt(1000000000),
+			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
 			DestAddress: connAddress1,
 			Payment:     big.NewInt(0),
@@ -129,12 +129,12 @@ func TestBlocks(t *testing.T) {
 
 	messages = append(
 		messages,
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), startTime),
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), startTime),
 	)
 
 	messages = append(
 		messages,
-		message.NewInboxMessage(message.Eth{Value: big.NewInt(1000), Dest: sender}, chain, big.NewInt(0), startTime),
+		message.NewInboxMessage(message.Eth{Value: big.NewInt(1000), Dest: sender}, chain, big.NewInt(0), big.NewInt(0), startTime),
 	)
 
 	halfSendCount := int64(5)
@@ -150,7 +150,7 @@ func TestBlocks(t *testing.T) {
 
 	for i := int64(0); i < halfSendCount; i++ {
 		tx := message.Transaction{
-			MaxGas:      big.NewInt(100000000000),
+			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
 			SequenceNum: big.NewInt(i * 2),
 			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
@@ -158,7 +158,7 @@ func TestBlocks(t *testing.T) {
 			Data:        snapshot.WithdrawEthData(common.RandAddress()),
 		}
 		tx2 := message.Transaction{
-			MaxGas:      big.NewInt(100000000000),
+			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
 			SequenceNum: big.NewInt(i*2 + 1),
 			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
@@ -171,6 +171,7 @@ func TestBlocks(t *testing.T) {
 				message.NewSafeL2Message(tx),
 				sender,
 				big.NewInt(i*2+2),
+				big.NewInt(0),
 				blockTimes[i],
 			),
 		)
@@ -180,6 +181,7 @@ func TestBlocks(t *testing.T) {
 				message.NewSafeL2Message(tx2),
 				sender,
 				big.NewInt(i*2+2),
+				big.NewInt(0),
 				blockTimes[i],
 			),
 		)

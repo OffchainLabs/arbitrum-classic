@@ -57,6 +57,7 @@ type TxResult struct {
 	CumulativeGas   *big.Int
 	TxIndex         *big.Int
 	StartLogIndex   *big.Int
+	FeeStats        *FeeStats
 }
 
 func CompareResults(res1 *TxResult, res2 *TxResult) []string {
@@ -161,10 +162,80 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 	}
 }
 
-func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.Value, chainInfo value.Value) (*TxResult, error) {
+type FeeStats struct {
+	WeiPerTx        *big.Int
+	WeiPerCalldata  *big.Int
+	WeiPerStorage   *big.Int
+	WeiPerArbGas    *big.Int
+	PaidForTx       *big.Int
+	PaidForCalldata *big.Int
+	PaidForStorage  *big.Int
+	PaidForCompute  *big.Int
+}
+
+func NewFeeStatsFromValue(val value.Value) (*FeeStats, error) {
+	tup, ok := val.(*value.TupleValue)
+	if !ok || tup.Len() != 8 {
+		return nil, errors.Errorf("expected gas fee tuple of length 8, but recieved %v", val)
+	}
+	weiPerTx, _ := tup.GetByInt64(0)
+	weiPerCalldata, _ := tup.GetByInt64(1)
+	weiPerStorage, _ := tup.GetByInt64(2)
+	weiPerArbGas, _ := tup.GetByInt64(3)
+	paidForTx, _ := tup.GetByInt64(4)
+	paidForCalldata, _ := tup.GetByInt64(5)
+	paidForStorage, _ := tup.GetByInt64(6)
+	paidForCompute, _ := tup.GetByInt64(7)
+
+	weiPerTxInt, ok := weiPerTx.(value.IntValue)
+	if !ok {
+		return nil, errors.New("weiPerTx must be an int")
+	}
+	weiPerCalldataInt, ok := weiPerCalldata.(value.IntValue)
+	if !ok {
+		return nil, errors.New("weiPerCalldata must be an int")
+	}
+	weiPerStorageInt, ok := weiPerStorage.(value.IntValue)
+	if !ok {
+		return nil, errors.New("weiPerStorage must be an int")
+	}
+	weiPerArbGasInt, ok := weiPerArbGas.(value.IntValue)
+	if !ok {
+		return nil, errors.New("weiPerArbGas must be an int")
+	}
+	paidForTxInt, ok := paidForTx.(value.IntValue)
+	if !ok {
+		return nil, errors.New("paidForTx must be an int")
+	}
+	paidForCalldataInt, ok := paidForCalldata.(value.IntValue)
+	if !ok {
+		return nil, errors.New("paidForCalldata must be an int")
+	}
+	paidForStorageInt, ok := paidForStorage.(value.IntValue)
+	if !ok {
+		return nil, errors.New("paidForStorage must be an int")
+	}
+	paidForComputeInt, ok := paidForCompute.(value.IntValue)
+	if !ok {
+		return nil, errors.New("paidForCompute must be an int")
+	}
+
+	return &FeeStats{
+		WeiPerTx:        weiPerTxInt.BigInt(),
+		WeiPerCalldata:  weiPerCalldataInt.BigInt(),
+		WeiPerStorage:   weiPerStorageInt.BigInt(),
+		WeiPerArbGas:    weiPerArbGasInt.BigInt(),
+		PaidForTx:       paidForTxInt.BigInt(),
+		PaidForCalldata: paidForCalldataInt.BigInt(),
+		PaidForStorage:  paidForStorageInt.BigInt(),
+		PaidForCompute:  paidForComputeInt.BigInt(),
+	}, nil
+}
+
+func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.Value, chainInfo value.Value, feeStatsVal value.Value) (*TxResult, error) {
 	resultTup, ok := resultInfo.(*value.TupleValue)
 	if !ok || resultTup.Len() != 3 {
-		return nil, errors.Errorf("advise expected result info tuple of length 3, but recieved %v", resultTup)
+		return nil, errors.Errorf("expected result info tuple of length 3, but recieved %v", resultTup)
 	}
 
 	// Tuple size already verified above, so error can be ignored
@@ -228,6 +299,10 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 		return nil, errors.New("startLogIndex must be an int")
 	}
 
+	feeStats, err := NewFeeStatsFromValue(feeStatsVal)
+	if err != nil {
+		return nil, err
+	}
 	return &TxResult{
 		IncomingRequest: l1Msg,
 		ResultCode:      ResultType(resultCodeInt.BigInt().Uint64()),
@@ -238,6 +313,7 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 		CumulativeGas:   cumulativeGasInt.BigInt(),
 		TxIndex:         txIndexInt.BigInt(),
 		StartLogIndex:   startLogIndexInt.BigInt(),
+		FeeStats:        feeStats,
 	}, nil
 }
 
@@ -255,8 +331,8 @@ func NewResultFromValue(val value.Value) (Result, error) {
 	}
 
 	if kindInt.BigInt().Uint64() == 0 {
-		if tup.Len() != 5 {
-			return nil, errors.Errorf("tx result expected tuple of length 5, but recieved len %v: %v", tup.Len(), tup)
+		if tup.Len() != 6 {
+			return nil, errors.Errorf("tx result expected tuple of length 6, but recieved len %v: %v", tup.Len(), tup)
 		}
 
 		// Tuple size already verified above, so error can be ignored
@@ -264,7 +340,8 @@ func NewResultFromValue(val value.Value) (Result, error) {
 		resultInfo, _ := tup.GetByInt64(2)
 		gasInfo, _ := tup.GetByInt64(3)
 		chainInfo, _ := tup.GetByInt64(4)
-		return parseTxResult(l1MsgVal, resultInfo, gasInfo, chainInfo)
+		feeStats, _ := tup.GetByInt64(5)
+		return parseTxResult(l1MsgVal, resultInfo, gasInfo, chainInfo, feeStats)
 	} else if kindInt.BigInt().Uint64() == 1 {
 		if tup.Len() != 8 {
 			return nil, errors.Errorf("block result expected tuple of length 8, but received len %v: %v", tup.Len(), tup)

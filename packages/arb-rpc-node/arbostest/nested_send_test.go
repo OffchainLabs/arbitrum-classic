@@ -31,7 +31,7 @@ func TestFailedNestedSend(t *testing.T) {
 	dest := common.RandAddress()
 
 	tx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.Address{},
@@ -42,7 +42,7 @@ func TestFailedNestedSend(t *testing.T) {
 	failedSend, err := abi.JSON(strings.NewReader(arbostestcontracts.FailedSendABI))
 	failIfError(t, err)
 	sendTx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: connAddress1,

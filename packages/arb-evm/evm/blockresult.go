@@ -31,11 +31,13 @@ type OutputStatistics struct {
 }
 
 type GasAccountingSummary struct {
-	CurrentPrice          *big.Int
-	GasPool               *big.Int
-	Shortfall             *big.Int
-	TotalPaidToValidators *big.Int
-	PayoutAddress         *big.Int
+	PricePerL2Tx             *big.Int
+	PricePerL1CalldataByte   *big.Int
+	PricePerStorageCell      *big.Int
+	PricePerArbGasBase       *big.Int
+	PricePerArbGasCongestion *big.Int
+	PricePerArbGasTotal      *big.Int
+	GasPool                  *big.Int
 }
 
 type BlockInfo struct {
@@ -119,7 +121,7 @@ func parseBlockResult(
 func parseOutputStatistics(val value.Value) (*OutputStatistics, error) {
 	tup, ok := val.(*value.TupleValue)
 	if !ok || tup.Len() != 5 {
-		return nil, errors.New("expected result to be tuple of length 5")
+		return nil, errors.New("expected output statistics to be tuple of length 5")
 	}
 
 	// Tuple size already verified above, so error can be ignored
@@ -160,43 +162,55 @@ func parseOutputStatistics(val value.Value) (*OutputStatistics, error) {
 
 func parseGasAccountingSummary(val value.Value) (*GasAccountingSummary, error) {
 	tup, ok := val.(*value.TupleValue)
-	if !ok || tup.Len() != 5 {
-		return nil, errors.New("expected result to be tuple of length 5")
+	if !ok || tup.Len() != 7 {
+		return nil, errors.New("expected gas accounting summary to be tuple of length 7")
 	}
 
 	// Tuple size already verified above, so error can be ignored
-	currentPrice, _ := tup.GetByInt64(0)
-	gasPool, _ := tup.GetByInt64(1)
-	shortfall, _ := tup.GetByInt64(2)
-	totalPaidToValidators, _ := tup.GetByInt64(3)
-	payoutAddress, _ := tup.GetByInt64(4)
+	pricePerL2Tx, _ := tup.GetByInt64(0)
+	pricePerL1CalldataByte, _ := tup.GetByInt64(1)
+	pricePerStorageCell, _ := tup.GetByInt64(2)
+	pricePerArbGasBase, _ := tup.GetByInt64(3)
+	pricePerArbGasCongestion, _ := tup.GetByInt64(4)
+	pricePerArbGasTotal, _ := tup.GetByInt64(5)
+	gasPool, _ := tup.GetByInt64(6)
 
-	currentPriceInt, ok := currentPrice.(value.IntValue)
+	pricePerL2TxInt, ok := pricePerL2Tx.(value.IntValue)
 	if !ok {
-		return nil, errors.New("currentPrice must be an int")
+		return nil, errors.New("pricePerL2Tx must be an int")
+	}
+	pricePerL1CalldataByteInt, ok := pricePerL1CalldataByte.(value.IntValue)
+	if !ok {
+		return nil, errors.New("pricePerL1CalldataByte must be an int")
+	}
+	pricePerStorageCellInt, ok := pricePerStorageCell.(value.IntValue)
+	if !ok {
+		return nil, errors.New("pricePerStorageCell must be an int")
+	}
+	pricePerArbGasBaseInt, ok := pricePerArbGasBase.(value.IntValue)
+	if !ok {
+		return nil, errors.New("pricePerArbGasBase must be an int")
+	}
+	pricePerArbGasCongestionInt, ok := pricePerArbGasCongestion.(value.IntValue)
+	if !ok {
+		return nil, errors.New("pricePerArbGasCongestion must be an int")
+	}
+	pricePerArbGasTotalInt, ok := pricePerArbGasTotal.(value.IntValue)
+	if !ok {
+		return nil, errors.New("pricePerArbGasTotal must be an int")
 	}
 	gasPoolInt, ok := gasPool.(value.IntValue)
 	if !ok {
 		return nil, errors.New("gasPool must be an int")
 	}
-	shortfallInt, ok := shortfall.(value.IntValue)
-	if !ok {
-		return nil, errors.New("shortfall must be an int")
-	}
-	totalPaidToValidatorsInt, ok := totalPaidToValidators.(value.IntValue)
-	if !ok {
-		return nil, errors.New("totalPaidToValidators must be an int")
-	}
-	payoutAddressInt, ok := payoutAddress.(value.IntValue)
-	if !ok {
-		return nil, errors.New("payoutAddress must be an int")
-	}
 	return &GasAccountingSummary{
-		CurrentPrice:          currentPriceInt.BigInt(),
-		GasPool:               gasPoolInt.BigInt(),
-		Shortfall:             shortfallInt.BigInt(),
-		TotalPaidToValidators: totalPaidToValidatorsInt.BigInt(),
-		PayoutAddress:         payoutAddressInt.BigInt(),
+		PricePerL2Tx:             pricePerL2TxInt.BigInt(),
+		PricePerL1CalldataByte:   pricePerL1CalldataByteInt.BigInt(),
+		PricePerStorageCell:      pricePerStorageCellInt.BigInt(),
+		PricePerArbGasBase:       pricePerArbGasBaseInt.BigInt(),
+		PricePerArbGasCongestion: pricePerArbGasCongestionInt.BigInt(),
+		PricePerArbGasTotal:      pricePerArbGasTotalInt.BigInt(),
+		GasPool:                  gasPoolInt.BigInt(),
 	}, nil
 }
 
