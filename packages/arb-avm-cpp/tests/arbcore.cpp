@@ -153,11 +153,10 @@ TEST_CASE("ArbCore tests") {
                     REQUIRE(deleted.second->size() == logs_count);
                     logs_count -= deleted.second->size();
                 }
-                uint256_t first_log_index;
                 auto result = arbCore->logsCursorGetLogs(0);
                 REQUIRE(!arbCore->logsCursorCheckError(0));
                 if (result.second.has_value()) {
-                    REQUIRE(first_log_index == logs_count);
+                    REQUIRE(result.first == logs_count);
                     REQUIRE(result.second->size() <= logs.size() - logs_count);
                     for (uint64_t k = 0; k < result.second->size(); ++k) {
                         REQUIRE(result.second->at(k) == logs[logs_count + k]);
