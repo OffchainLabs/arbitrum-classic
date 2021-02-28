@@ -14,18 +14,23 @@
   },
   "homepage": "https://offchainlabs.com/",
   "scripts": {
-    "build": "truffle compile"
+    "build": "hardhat compile",
+    "typechain": "hardhat typechain"
   },
   "devDependencies": {
-    "@nomiclabs/buidler": "^1.4.7",
-    "@openzeppelin/contracts": "^3.3.0",
-    "@typechain/ethers-v4": "^1.0.0",
+    "@openzeppelin/contracts": "^3.4.0",
+    "@typechain/ethers-v5": "^1.0.0",
     "@typechain/truffle-v4": "^2.0.3",
     "@typechain/truffle-v5": "^2.0.2",
     "@typechain/web3-v1": "^1.0.0",
-    "buidler-typechain": "^0.1.1",
-    "ethers": "~4.0.47",
-    "ts-generator": "^0.0.8",
-    "typechain": "^2.0.0"
+    "ethers": "^5.0.24",
+    "ts-generator": "^0.1.1",
+    "typechain": "^4.0.0"
+  },
+  "dependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.1",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "hardhat": "^2.0.11",
+    "typescript": "^4.2.2"
   }
 }
