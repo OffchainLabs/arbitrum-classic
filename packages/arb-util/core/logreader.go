@@ -126,10 +126,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 		if len(logs) > 0 {
 			cmp := firstIndex.Cmp(currentLogCount)
 			if cmp == 1 {
-				// Some logs were skipped, pull these manually
-				// TODO
-				//skippedCount := new(big.Int).Sub(firstIndex, currentLogIndex)
-				//result, err := lr.cursor
+				return errors.New("logscursor skipped log entries")
 			}
 
 			if err = lr.consumer.AddLogs(logs); err != nil {
@@ -149,7 +146,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 
 			// Reorg happened since previous call to GetLogs.  Post-retrieve reorg of logscursor will only include
 			// extra deleted logs, won't add any new logs
-			firstNewDeletedIndex, newDeletedLogs, err := lr.cursor.LogsCursorGetDeletedLogs(lr.cursorIndex)
+			_, newDeletedLogs, err := lr.cursor.LogsCursorGetDeletedLogs(lr.cursorIndex)
 			if err != nil {
 				return err
 			}
@@ -163,10 +160,6 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 				if err != nil {
 					return err
 				}
-			} else {
-				// Logs not provided to delete
-				// TODO
-				_ = firstNewDeletedIndex
 			}
 		}
 	}

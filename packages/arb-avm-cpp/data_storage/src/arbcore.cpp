@@ -1825,12 +1825,11 @@ bool ArbCore::logsCursorRequest(size_t cursor_index, uint256_t count) {
     return true;
 }
 
-std::optional<std::vector<value>> ArbCore::logsCursorGetLogs(
-    size_t cursor_index,
-    uint256_t& first_index_out) {
+std::pair<uint256_t, std::optional<std::vector<value>>>
+ArbCore::logsCursorGetLogs(size_t cursor_index) {
     if (cursor_index >= logs_cursors.size()) {
         std::cerr << "Invalid logsCursor index: " << cursor_index << "\n";
-        return std::nullopt;
+        return {0, std::nullopt};
     }
 
     const std::lock_guard<std::mutex> lock(
@@ -1838,23 +1837,21 @@ std::optional<std::vector<value>> ArbCore::logsCursorGetLogs(
 
     if (logs_cursors[cursor_index].status != DataCursor::READY ||
         !logs_cursors[cursor_index].deleted_data.empty()) {
-        return std::nullopt;
+        return {0, std::nullopt};
     }
 
-    std::vector<value> logs = std::move(logs_cursors[cursor_index].data);
+    std::vector<value> logs;
+    logs.swap(logs_cursors[cursor_index].data);
     logs_cursors[cursor_index].data.clear();
 
-    first_index_out = logs_cursors[cursor_index].current_total_count;
-
-    return std::move(logs);
+    return {logs_cursors[cursor_index].current_total_count, std::move(logs)};
 }
 
-std::optional<std::vector<value>> ArbCore::logsCursorGetDeletedLogs(
-    size_t cursor_index,
-    uint256_t& first_index_out) {
+std::pair<uint256_t, std::optional<std::vector<value>>>
+ArbCore::logsCursorGetDeletedLogs(size_t cursor_index) {
     if (cursor_index >= logs_cursors.size()) {
         std::cerr << "Invalid logsCursor index: " << cursor_index << "\n";
-        return std::nullopt;
+        return {0, std::nullopt};
     }
 
     const std::lock_guard<std::mutex> lock(
@@ -1862,15 +1859,14 @@ std::optional<std::vector<value>> ArbCore::logsCursorGetDeletedLogs(
 
     if (logs_cursors[cursor_index].status != DataCursor::READY ||
         logs_cursors[cursor_index].deleted_data.empty()) {
-        return std::nullopt;
+        return {0, std::nullopt};
     }
 
-    std::vector<value> logs = std::move(logs_cursors[cursor_index].deleted_data);
+    std::vector<value> logs;
+    logs.swap(logs_cursors[cursor_index].deleted_data);
     logs_cursors[cursor_index].deleted_data.clear();
 
-    first_index_out = logs_cursors[cursor_index].current_total_count;
-
-    return std::move(logs);
+    return {logs_cursors[cursor_index].current_total_count, std::move(logs)};
 }
 
 bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {

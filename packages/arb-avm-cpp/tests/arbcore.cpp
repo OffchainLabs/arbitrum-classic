@@ -147,24 +147,22 @@ TEST_CASE("ArbCore tests") {
             auto log_request_count = 3;
             REQUIRE(arbCore->logsCursorRequest(0, log_request_count));
             while (true) {
-                uint256_t first_deleted_log_index;
-                auto deleted = arbCore->logsCursorGetDeletedLogs(
-                    0, first_deleted_log_index);
-                if (deleted.has_value()) {
-                    REQUIRE(first_deleted_log_index <= logs_count);
-                    REQUIRE(deleted->size() == logs_count);
-                    logs_count -= deleted->size();
+                auto deleted = arbCore->logsCursorGetDeletedLogs(0);
+                if (deleted.second.has_value()) {
+                    REQUIRE(deleted.first <= logs_count);
+                    REQUIRE(deleted.second->size() == logs_count);
+                    logs_count -= deleted.second->size();
                 }
                 uint256_t first_log_index;
-                auto result = arbCore->logsCursorGetLogs(0, first_log_index);
+                auto result = arbCore->logsCursorGetLogs(0);
                 REQUIRE(!arbCore->logsCursorCheckError(0));
-                if (result.has_value()) {
+                if (result.second.has_value()) {
                     REQUIRE(first_log_index == logs_count);
-                    REQUIRE(result->size() <= logs.size() - logs_count);
-                    for (uint64_t k = 0; k < result->size(); ++k) {
-                        REQUIRE(result->at(k) == logs[logs_count + k]);
+                    REQUIRE(result.second->size() <= logs.size() - logs_count);
+                    for (uint64_t k = 0; k < result.second->size(); ++k) {
+                        REQUIRE(result.second->at(k) == logs[logs_count + k]);
                     }
-                    logs_count += result->size();
+                    logs_count += result.second->size();
                     REQUIRE(arbCore->logsCursorConfirmReceived(0));
                     break;
                 }

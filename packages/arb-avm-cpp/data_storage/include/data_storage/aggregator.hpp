@@ -46,7 +46,7 @@ class AggregatorStore {
 
     void reorg(uint64_t block_height);
     ValueResult<uint256_t> logsProcessedCount() const;
-    rocksdb::Status updateLogsProcessedCount(uint256_t& count);
+    rocksdb::Status updateLogsProcessedCount(const uint256_t& count);
 };
 
 #endif /* aggregator_hpp */
