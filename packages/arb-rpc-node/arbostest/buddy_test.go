@@ -38,6 +38,11 @@ func TestBuddyContract(t *testing.T) {
 		Timestamp: big.NewInt(0),
 	}
 
+	laterChainTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(1),
+		Timestamp: big.NewInt(1),
+	}
+
 	simpleCode := hexutil.MustDecode(arbostestcontracts.SimpleBin)
 	buddyConstructor := message.BuddyDeployment{
 		MaxGas:      big.NewInt(10000000),
@@ -64,10 +69,10 @@ func TestBuddyContract(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(contractCreation), sender, big.NewInt(2), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(noOpTx), sender, big.NewInt(3), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(contractCreation2), sender, big.NewInt(4), chainTime),
-		message.NewInboxMessage(buddyConstructor, connAddress2, big.NewInt(5), chainTime),
+		message.NewInboxMessage(buddyConstructor, connAddress2, big.NewInt(5), laterChainTime),
 	}
 
-	logs, _, snap, _ := runAssertion(t, messages, 6, 0)
+	logs, _, snap, _ := runAssertion(t, messages, 8, 1)
 	results := processResults(t, logs)
 
 	buddyConRes, ok := results[0].(*evm.TxResult)
@@ -75,27 +80,27 @@ func TestBuddyContract(t *testing.T) {
 		t.Fatal("expected tx res")
 	}
 
-	buddySendRes, ok := results[1].(*evm.SendResult)
+	contractConRes, ok := results[1].(*evm.TxResult)
+	if !ok {
+		t.Fatal("expected tx res")
+	}
+
+	noOpRes, ok := results[2].(*evm.TxResult)
+	if !ok {
+		t.Fatal("expected tx res")
+	}
+
+	contractCon2Res, ok := results[3].(*evm.TxResult)
+	if !ok {
+		t.Fatal("expected tx res")
+	}
+
+	buddySendRes, ok := results[4].(*evm.SendResult)
 	if !ok {
 		t.Fatal("expected send res")
 	}
 
-	contractConRes, ok := results[2].(*evm.TxResult)
-	if !ok {
-		t.Fatal("expected tx res")
-	}
-
-	noOpRes, ok := results[3].(*evm.TxResult)
-	if !ok {
-		t.Fatal("expected tx res")
-	}
-
-	contractCon2Res, ok := results[4].(*evm.TxResult)
-	if !ok {
-		t.Fatal("expected tx res")
-	}
-
-	buddyCon2Res, ok := results[5].(*evm.TxResult)
+	buddyCon2Res, ok := results[7].(*evm.TxResult)
 	if !ok {
 		t.Fatal("expected tx res")
 	}
