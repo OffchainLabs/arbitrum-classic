@@ -1841,12 +1841,12 @@ std::optional<std::vector<value>> ArbCore::logsCursorGetLogs(
         return std::nullopt;
     }
 
-    std::vector<value> logs{std::move(logs_cursors[cursor_index].data)};
+    std::vector<value> logs = std::move(logs_cursors[cursor_index].data);
     logs_cursors[cursor_index].data.clear();
 
     first_index_out = logs_cursors[cursor_index].current_total_count;
 
-    return logs;
+    return std::move(logs);
 }
 
 std::optional<std::vector<value>> ArbCore::logsCursorGetDeletedLogs(
@@ -1865,12 +1865,12 @@ std::optional<std::vector<value>> ArbCore::logsCursorGetDeletedLogs(
         return std::nullopt;
     }
 
-    std::vector<value> logs{std::move(logs_cursors[cursor_index].deleted_data)};
+    std::vector<value> logs = std::move(logs_cursors[cursor_index].deleted_data);
     logs_cursors[cursor_index].deleted_data.clear();
 
     first_index_out = logs_cursors[cursor_index].current_total_count;
 
-    return logs;
+    return std::move(logs);
 }
 
 bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {
