@@ -55,6 +55,9 @@ contract Node is Cloneable, INode {
     /// @notice This value starts at zero and is set to a value when the first child is created. After that it is constant until the node is destroyed
     uint256 public override firstChildBlock;
 
+    /// @notice The number of the latest child of this node to be created
+    uint256 public override latestChildNumber;
+
     modifier onlyRollup {
         require(msg.sender == rollup, "ROLLUP_ONLY");
         _;
@@ -117,10 +120,11 @@ contract Node is Cloneable, INode {
         stakerCount--;
     }
 
-    function childCreated() external override onlyRollup {
+    function childCreated(uint256 number) external override onlyRollup {
         if (firstChildBlock == 0) {
             firstChildBlock = block.number;
         }
+        latestChildNumber = number;
     }
 
     function newChildConfirmDeadline(uint256 deadline) external override onlyRollup {

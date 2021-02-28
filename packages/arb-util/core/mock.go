@@ -151,6 +151,10 @@ func (v *ValidatorLookupMock) GetLogAcc(startAcc common.Hash, startIndex *big.In
 	panic("implement me")
 }
 
+func (v *ValidatorLookupMock) GetInboxAcc(index *big.Int) (common.Hash, error) {
+	panic("implement me")
+}
+
 func (v *ValidatorLookupMock) GetExecutionCursor(totalGasUsed *big.Int) (ExecutionCursor, error) {
 	if totalGasUsed.Cmp(big.NewInt(0)) == 0 {
 		return &ExecutionCursorMock{mach: v.startMachine}, nil

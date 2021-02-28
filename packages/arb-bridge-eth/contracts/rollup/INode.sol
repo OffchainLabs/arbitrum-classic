@@ -34,7 +34,7 @@ interface INode {
 
     function removeStaker(address staker) external;
 
-    function childCreated() external;
+    function childCreated(uint256) external;
 
     function newChildConfirmDeadline(uint256 deadline) external;
 
@@ -55,6 +55,8 @@ interface INode {
     function stakers(address staker) external view returns (bool);
 
     function firstChildBlock() external view returns (uint256);
+
+    function latestChildNumber() external view returns (uint256);
 
     function requirePastDeadline() external view;
 

@@ -196,25 +196,13 @@ contract ValidatorUtils {
         return stakers;
     }
 
-    function successorNodes(Rollup rollup, uint256 nodeNum)
-        external
-        view
-        returns (uint256[] memory)
-    {
-        uint256[] memory nodes = new uint256[](100000);
-        uint256 index = 0;
-        for (uint256 i = nodeNum + 1; i <= rollup.latestNodeCreated(); i++) {
-            INode node = rollup.getNode(i);
-            if (node.prev() == nodeNum) {
-                nodes[index] = i;
-                index++;
-            }
+    function latestStaked(Rollup rollup, address staker) external view returns (uint256, bytes32) {
+        uint256 node = rollup.latestStakedNode(staker);
+        if (node == 0) {
+            node = rollup.latestConfirmed();
         }
-        // Shrink array down to real size
-        assembly {
-            mstore(nodes, index)
-        }
-        return nodes;
+        bytes32 acc = rollup.getNodeHash(node);
+        return (node, acc);
     }
 
     function stakedNodes(Rollup rollup, address staker) external view returns (uint256[] memory) {

@@ -2,10 +2,11 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
+
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -70,27 +71,27 @@ func (r *Rollup) NewStake(ctx context.Context, amount *big.Int) error {
 	}
 }
 
-func (r *Rollup) StakeOnExistingNode(ctx context.Context, block *common.BlockId, node core.NodeID) error {
+func (r *Rollup) StakeOnExistingNode(ctx context.Context, nodeNumber core.NodeID, nodeHash [32]byte) error {
 	_, err := r.builderCon.StakeOnExistingNode(
 		authWithContext(ctx, r.builderAuth),
-		block.HeaderHash.ToEthHash(),
-		block.Height.AsInt(),
-		node,
+		nodeNumber,
+		nodeHash,
 	)
 	return err
 }
 
 func (r *Rollup) StakeOnNewNode(
 	ctx context.Context,
-	block *common.BlockId,
-	node core.NodeID,
+	hasSibling bool,
+	lastHash [32]byte,
+	inboxHash [32]byte,
 	assertion *core.Assertion,
 ) error {
 	_, err := r.builderCon.StakeOnNewNode(
 		authWithContext(ctx, r.builderAuth),
-		block.HeaderHash.ToEthHash(),
-		block.Height.AsInt(),
-		node,
+		hasSibling,
+		lastHash,
+		inboxHash,
 		assertion.BytesFields(),
 		assertion.IntFields(),
 	)

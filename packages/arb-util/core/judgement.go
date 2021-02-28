@@ -22,6 +22,7 @@ type NodeInfo struct {
 	BlockProposed *common.BlockId
 	Assertion     *Assertion
 	InboxMaxCount *big.Int
+	NodeHash      common.Hash
 }
 
 func (n *NodeInfo) AfterState() *NodeState {

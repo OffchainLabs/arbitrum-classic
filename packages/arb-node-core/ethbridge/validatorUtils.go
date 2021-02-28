@@ -2,6 +2,8 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -9,7 +11,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"math/big"
 )
 
 type ConfirmType uint8
@@ -84,8 +85,8 @@ func (v *ValidatorUtils) GetStakers(ctx context.Context) ([]common.Address, erro
 	return common.AddressArrayFromEth(addresses), nil
 }
 
-func (v *ValidatorUtils) SuccessorNodes(ctx context.Context, node core.NodeID) ([]*big.Int, error) {
-	return v.con.SuccessorNodes(&bind.CallOpts{Context: ctx}, v.rollupAddress, node)
+func (v *ValidatorUtils) LatestStaked(ctx context.Context, staker common.Address) (*big.Int, [32]byte, error) {
+	return v.con.LatestStaked(&bind.CallOpts{Context: ctx}, v.rollupAddress, staker.ToEthAddress())
 }
 
 func (v *ValidatorUtils) StakedNodes(ctx context.Context, staker common.Address) ([]*big.Int, error) {

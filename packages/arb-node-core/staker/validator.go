@@ -90,7 +90,7 @@ func (v *Validator) resolveNextNode(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		nodeInfo, err := lookupNode(ctx, v.rollup.RollupWatcher, unresolvedNodeIndex)
+		nodeInfo, err := v.rollup.RollupWatcher.LookupNode(ctx, unresolvedNodeIndex)
 		if err != nil {
 			return err
 		}
@@ -108,41 +108,43 @@ func (v *Validator) resolveNextNode(ctx context.Context) error {
 	}
 }
 
-type nodeCreationInfo struct {
-	assertion *core.Assertion
-	block     *common.BlockId
-	newNodeID core.NodeID
+type createNodeAction struct {
+	assertion  *core.Assertion
+	hasSibling bool
+	lastHash   [32]byte
+	inboxAcc   [32]byte
 }
 
-type nodeMovementInfo struct {
-	block   *common.BlockId
-	nodeNum core.NodeID
+type existingNodeAction struct {
+	number core.NodeID
+	hash   [32]byte
 }
 
-type nodeActionInfo interface {
-}
+type nodeAction interface{}
 
-func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, maybeMakeNode bool) (nodeActionInfo, error) {
-	startState, err := lookupNodeStartState(ctx, v.rollup.RollupWatcher, base)
+func (v *Validator) generateNodeAction(ctx context.Context, address common.Address, active bool, proactiveNewNodes bool) (nodeAction, bool, error) {
+	base, baseHash, err := v.validatorUtils.LatestStaked(ctx, address)
 	if err != nil {
-		return nil, err
+		return nil, false, err
+	}
+
+	startState, err := lookupNodeStartState(ctx, v.rollup.RollupWatcher, base, baseHash)
+	if err != nil {
+		return nil, false, err
 	}
 
 	cursor, err := v.lookup.GetExecutionCursor(startState.TotalGasConsumed)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if cursor.MachineHash() != startState.MachineHash {
-		return nil, errors.New("local machine doesn't match chain")
+		return nil, false, errors.New("local machine doesn't match chain")
 	}
 
-	successorsIndexes, err := v.validatorUtils.SuccessorNodes(ctx, base)
+	// Not necessarily successors
+	successorsNodes, err := v.rollup.LookupNodeChildren(ctx, baseHash)
 	if err != nil {
-		return nil, err
-	}
-	successorsNodes, err := v.rollup.LookupNodes(ctx, successorsIndexes)
-	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	gasesUsed := make([]*big.Int, 0, len(successorsNodes))
@@ -150,91 +152,102 @@ func (v *Validator) generateNodeAction(ctx context.Context, base core.NodeID, ma
 		gasesUsed = append(gasesUsed, nd.Assertion.GasUsed())
 	}
 
-	currentBlockId, err := getBlockID(ctx, v.client, nil)
+	currentBlock, err := getBlockID(ctx, v.client, nil)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	minAssertionPeriod, err := v.rollup.MinimumAssertionPeriod(ctx)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	timeSinceProposed := new(big.Int).Sub(currentBlockId.Height.AsInt(), startState.ProposedBlock)
+	timeSinceProposed := new(big.Int).Sub(currentBlock.Height.AsInt(), startState.ProposedBlock)
 	if timeSinceProposed.Cmp(minAssertionPeriod) < 0 {
 		// Too soon to assert
-		return nil, nil
+		// TODO check if wrongNodesExist
+		return nil, false, nil
 	}
 
 	arbGasSpeedLimitPerBlock, err := v.rollup.ArbGasSpeedLimitPerBlock(ctx)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	minMessages := new(big.Int).Sub(startState.InboxMaxCount, startState.TotalMessagesRead)
 	minimumGasToConsume := new(big.Int).Mul(timeSinceProposed, arbGasSpeedLimitPerBlock)
 	maximumGasToConsume := new(big.Int).Mul(minimumGasToConsume, big.NewInt(4))
 
-	if maybeMakeNode {
+	if active {
 		gasesUsed = append(gasesUsed, maximumGasToConsume)
 	}
 
 	execTracker := core.NewExecutionTracker(v.lookup, cursor, false, gasesUsed)
 
+	var correctNode nodeAction
+	wrongNodesExist := true
 	for _, nd := range successorsNodes {
-		valid, err := core.IsAssertionValid(nd.Assertion, execTracker)
-		if err != nil {
-			return nil, err
+		if correctNode != nil && wrongNodesExist {
+			// We've found everything we could hope to find
+			break
 		}
-		if valid {
-			return nd, nil
+		if correctNode == nil {
+			// TODO make this atomic with inbox reorgs
+			valid, err := core.IsAssertionValid(nd.Assertion, execTracker)
+			if err != nil {
+				return nil, false, err
+			}
+			if valid {
+				id := core.NodeID(nd.NodeNum)
+				correctNode = existingNodeAction{
+					number: id,
+					hash:   nd.NodeHash,
+				}
+				continue
+			}
 		}
-		blockId, err := getBlockID(ctx, v.client, nd.Assertion.PrevProposedBlock)
-		if err != nil {
-			return nil, err
-		}
-		return &nodeMovementInfo{
-			block:   blockId,
-			nodeNum: nd.NodeNum,
-		}, nil
+		// If we've hit this point, the node is "wrong"
+		wrongNodesExist = true
 	}
 
-	if !maybeMakeNode {
-		return nil, nil
+	if !active || correctNode != nil || (!proactiveNewNodes && !wrongNodesExist) {
+		return correctNode, wrongNodesExist, nil
 	}
 
 	execInfo, _, err := execTracker.GetExecutionInfo(gasesUsed[len(gasesUsed)-1])
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if execInfo.GasUsed().Cmp(minimumGasToConsume) < 0 && execInfo.InboxMessagesRead().Cmp(minMessages) < 0 {
 		// Couldn't execute far enough
-		return nil, nil
-	}
-
-	lastNodeCreated, err := v.rollup.LatestNodeCreated(ctx)
-	if err != nil {
-		return nil, err
+		return nil, wrongNodesExist, nil
 	}
 
 	if execInfo.After.TotalMessagesRead.Cmp(big.NewInt(0)) == 0 {
-		return nil, errors.New("no messages to lookup in generateNodeAction")
+		return nil, wrongNodesExist, errors.New("no messages to lookup in generateNodeAction")
 	}
 	msgSequenceNumber := new(big.Int).Sub(execInfo.After.TotalMessagesRead, big.NewInt(1))
-	msgBlock, err := v.bridge.LookupMessageBlock(ctx, msgSequenceNumber)
+	// TODO make this atomic with inbox reorgs
+	inboxAcc, err := v.lookup.GetInboxAcc(msgSequenceNumber)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	newNodeID := new(big.Int).Add(lastNodeCreated, big.NewInt(1))
-	return &nodeCreationInfo{
+	hasSibling := len(successorsNodes) > 0
+	lastHash := baseHash
+	if hasSibling {
+		lastHash = successorsNodes[len(successorsNodes)-1].NodeHash
+	}
+	action := createNodeAction{
 		assertion: &core.Assertion{
 			PrevProposedBlock: startState.ProposedBlock,
 			ExecutionInfo:     execInfo,
 		},
-		block:     msgBlock,
-		newNodeID: newNodeID,
-	}, nil
+		hasSibling: hasSibling,
+		lastHash:   lastHash,
+		inboxAcc:   inboxAcc,
+	}
+	return action, wrongNodesExist, nil
 }
 
 func getBlockID(ctx context.Context, client ethutils.EthClient, number *big.Int) (*common.BlockId, error) {
@@ -248,21 +261,7 @@ func getBlockID(ctx context.Context, client ethutils.EthClient, number *big.Int)
 	}, nil
 }
 
-func lookupNode(ctx context.Context, rollup *ethbridge.RollupWatcher, node core.NodeID) (*core.NodeInfo, error) {
-	currentNodes, err := rollup.LookupNodes(ctx, []*big.Int{node})
-	if err != nil {
-		return nil, err
-	}
-	if len(currentNodes) == 0 {
-		return nil, errors.New("no matching node")
-	}
-	if len(currentNodes) > 1 {
-		return nil, errors.New("too many matching nodes")
-	}
-	return currentNodes[0], nil
-}
-
-func lookupNodeStartState(ctx context.Context, rollup *ethbridge.RollupWatcher, nodeNum *big.Int) (*core.NodeState, error) {
+func lookupNodeStartState(ctx context.Context, rollup *ethbridge.RollupWatcher, nodeNum *big.Int, nodeHash [32]byte) (*core.NodeState, error) {
 	if nodeNum.Cmp(big.NewInt(0)) == 0 {
 		creationEvent, err := rollup.LookupCreation(ctx)
 		if err != nil {
@@ -280,9 +279,12 @@ func lookupNodeStartState(ctx context.Context, rollup *ethbridge.RollupWatcher, 
 			},
 		}, nil
 	}
-	node, err := lookupNode(ctx, rollup, nodeNum)
+	node, err := rollup.LookupNode(ctx, nodeNum)
 	if err != nil {
 		return nil, err
+	}
+	if node.NodeHash != nodeHash {
+		return nil, errors.New("Looked up starting node but found wrong hash")
 	}
 	return node.AfterState(), nil
 }

@@ -2,8 +2,9 @@ package staker
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
@@ -15,15 +16,14 @@ import (
 type Strategy uint8
 
 const (
-	MakeNodesStrategy Strategy = iota
+	WatchtowerStrategy Strategy = iota
+	DefensiveStrategy
 	StakeLatestStrategy
-	ChallengerTakerStrategy
-	WatchtowerStrategy
+	MakeNodesStrategy
 )
 
 type Staker struct {
 	*Validator
-	makeNewNodes    bool
 	latestValidNode *big.Int
 	activeChallenge *challenge.Challenger
 	strategy        Strategy
@@ -35,6 +35,7 @@ func NewStaker(
 	client ethutils.EthClient,
 	wallet *ethbridge.ValidatorWallet,
 	validatorUtilsAddress common.Address,
+	strategy Strategy,
 ) (*Staker, error) {
 	val, err := NewValidator(ctx, lookup, client, wallet, validatorUtilsAddress)
 	if err != nil {
@@ -46,8 +47,8 @@ func NewStaker(
 	}
 	return &Staker{
 		Validator:       val,
-		makeNewNodes:    true,
 		latestValidNode: latestConfirmed,
+		strategy:        strategy,
 	}, nil
 }
 
@@ -95,7 +96,7 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 			return err
 		}
 
-		nodeInfo, err := lookupNode(ctx, s.rollup.RollupWatcher, challengedNode)
+		nodeInfo, err := s.rollup.RollupWatcher.LookupNode(ctx, challengedNode)
 		if err != nil {
 			return err
 		}
@@ -122,21 +123,29 @@ func (s *Staker) newStake(ctx context.Context) error {
 }
 
 func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) error {
-	action, err := s.generateNodeAction(ctx, info.LatestStakedNode, true)
-	if err != nil || action == nil {
+	active := s.strategy > WatchtowerStrategy
+	action, wrongNodesExist, err := s.generateNodeAction(ctx, s.wallet.Address(), active, s.strategy == MakeNodesStrategy)
+	if err != nil {
 		return err
+	}
+	// TODO raise an alert if wrongNodesExist (esp for watchtower strategy)
+	if action == nil || !active {
+		return nil
 	}
 
 	switch action := action.(type) {
-	case *nodeCreationInfo:
-		if !s.makeNewNodes {
+	case createNodeAction:
+		if !wrongNodesExist && s.strategy < StakeLatestStrategy {
 			return nil
 		}
-		return s.rollup.StakeOnNewNode(ctx, action.block, action.newNodeID, action.assertion)
-	case *nodeMovementInfo:
-		return s.rollup.StakeOnExistingNode(ctx, action.block, action.nodeNum)
+		return s.rollup.StakeOnNewNode(ctx, action.hasSibling, action.lastHash, action.inboxAcc, action.assertion)
+	case existingNodeAction:
+		if !wrongNodesExist && s.strategy < StakeLatestStrategy {
+			return nil
+		}
+		return s.rollup.StakeOnExistingNode(ctx, action.number, action.hash)
 	default:
-		panic("invalid type")
+		panic("invalid action type")
 	}
 }
 
@@ -164,11 +173,11 @@ func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo)
 			node1, node2 = node2, node1
 		}
 
-		node1Info, err := lookupNode(ctx, s.rollup.RollupWatcher, node1)
+		node1Info, err := s.rollup.RollupWatcher.LookupNode(ctx, node1)
 		if err != nil {
 			return err
 		}
-		node2Info, err := lookupNode(ctx, s.rollup.RollupWatcher, node2)
+		node2Info, err := s.rollup.RollupWatcher.LookupNode(ctx, node2)
 		if err != nil {
 			return err
 		}
