@@ -125,7 +125,7 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 	var currentBlockHeight uint64
 	blocksFound := false
 	for i, _ := range avmLogs {
-		// Parse L2 blocks in reverse
+		// Parse L2 transaction receipts in reverse
 		res, err := evm.NewResultFromValue(avmLogs[lastResultIndex-i])
 		if err != nil {
 			return err

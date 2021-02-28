@@ -251,73 +251,62 @@ int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr,
     }
 }
 
-ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
-                                              const void* index_ptr,
-                                              void* first_index_ret) {
+IndexedByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
+                                                     const void* index_ptr) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
     auto cursor_index = receiveUint256(index_ptr);
-    uint256_t log_start_index;
 
     try {
-        auto result = arbcore->logsCursorGetLogs(
-            intx::narrow_cast<size_t>(cursor_index), log_start_index);
-        if (!result) {
+        auto result =
+            arbcore->logsCursorGetLogs(intx::narrow_cast<size_t>(cursor_index));
+        if (!result.second) {
             // Cursor not in the right state, may have deleted logs to process
-            return {{}, false};
+            return {0, {}, false};
         }
 
         std::vector<std::vector<unsigned char>> data;
-        for (const auto& val : *result) {
+        for (const auto& val : *result.second) {
             std::vector<unsigned char> marshalled_value;
             marshal_value(val, marshalled_value);
             data.push_back(move(marshalled_value));
         }
 
-        std::array<unsigned char, 32> val{};
-        to_big_endian(log_start_index, val.begin());
-        std::copy(val.begin(), val.end(),
-                  reinterpret_cast<char*>(first_index_ret));
-
-        return {returnCharVectorVector(data), true};
+        return {returnUint256(result.first), returnCharVectorVector(data),
+                true};
     } catch (const std::exception& e) {
         std::cerr << "Exception while retrieving new logs from logscursor "
                   << e.what() << std::endl;
-        return {{}, false};
+        return {0, {}, false};
     }
 }
 
-ByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(CArbCore* arbcore_ptr,
-                                                     const void* index_ptr,
-                                                     void* first_index_ret) {
+IndexedByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(
+    CArbCore* arbcore_ptr,
+    const void* index_ptr) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
     auto cursor_index = receiveUint256(index_ptr);
-    uint256_t log_start_index;
 
     try {
         auto result = arbcore->logsCursorGetDeletedLogs(
-            intx::narrow_cast<size_t>(cursor_index), log_start_index);
-        if (!result) {
+            intx::narrow_cast<size_t>(cursor_index));
+        if (!result.second) {
             // Cursor not in the right state, may have deleted logs to process
-            return {{}, false};
+            return {0, {}, false};
         }
 
         std::vector<std::vector<unsigned char>> data;
-        for (const auto& val : *result) {
+        for (const auto& val : *result.second) {
             std::vector<unsigned char> marshalled_value;
             marshal_value(val, marshalled_value);
             data.push_back(move(marshalled_value));
         }
 
-        std::array<unsigned char, 32> val{};
-        to_big_endian(log_start_index, val.begin());
-        std::copy(val.begin(), val.end(),
-                  reinterpret_cast<char*>(first_index_ret));
-
-        return {returnCharVectorVector(data), true};
+        return {returnUint256(result.first), returnCharVectorVector(data),
+                true};
     } catch (const std::exception& e) {
         std::cerr << "Exception while retrieving deleted logs from logscursor "
                   << e.what() << std::endl;
-        return {{}, false};
+        return {0, {}, false};
     }
 }
 

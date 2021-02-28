@@ -275,8 +275,7 @@ func (ac *ArbCore) LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
 
 func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Value, error) {
 	cursorIndexData := math.U256Bytes(cursorIndex)
-	var firstIndex big.Int
-	result := C.arbCoreLogsCursorGetLogs(ac.c, unsafeDataPointer(cursorIndexData), unsafeDataPointer(firstIndex.Bytes()))
+	result := C.arbCoreLogsCursorGetLogs(ac.c, unsafeDataPointer(cursorIndexData))
 	if result.found == 0 {
 		err := ac.LogsCursorCheckError(cursorIndex)
 		if err != nil {
@@ -287,6 +286,7 @@ func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Va
 		return nil, nil, nil
 	}
 
+	firstIndex := receiveBigInt(result.first_index)
 	data := receiveByteSliceArray(result.array)
 	logs := make([]value.Value, len(data))
 	for i, slice := range data {
@@ -297,13 +297,12 @@ func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Va
 		}
 	}
 
-	return &firstIndex, logs, nil
+	return firstIndex, logs, nil
 }
 
 func (ac *ArbCore) LogsCursorGetDeletedLogs(cursorIndex *big.Int) (*big.Int, []value.Value, error) {
 	cursorIndexData := math.U256Bytes(cursorIndex)
-	var firstIndex big.Int
-	result := C.arbCoreLogsCursorGetDeletedLogs(ac.c, unsafeDataPointer(cursorIndexData), unsafeDataPointer(firstIndex.Bytes()))
+	result := C.arbCoreLogsCursorGetDeletedLogs(ac.c, unsafeDataPointer(cursorIndexData))
 	if result.found == 0 {
 		err := ac.LogsCursorCheckError(cursorIndex)
 		if err != nil {
@@ -314,6 +313,7 @@ func (ac *ArbCore) LogsCursorGetDeletedLogs(cursorIndex *big.Int) (*big.Int, []v
 		return nil, nil, nil
 	}
 
+	firstIndex := receiveBigInt(result.first_index)
 	data := receiveByteSliceArray(result.array)
 	logs := make([]value.Value, len(data))
 	for i, slice := range data {
@@ -323,7 +323,7 @@ func (ac *ArbCore) LogsCursorGetDeletedLogs(cursorIndex *big.Int) (*big.Int, []v
 			return nil, nil, err
 		}
 	}
-	return &firstIndex, logs, nil
+	return firstIndex, logs, nil
 }
 
 func (ac *ArbCore) LogsCursorCheckError(cursorIndex *big.Int) error {

@@ -276,7 +276,8 @@ ValueResult<uint256_t> AggregatorStore::logsProcessedCount() const {
                                        vecToSlice(logs_processed_key));
 }
 
-rocksdb::Status AggregatorStore::updateLogsProcessedCount(uint256_t& count) {
+rocksdb::Status AggregatorStore::updateLogsProcessedCount(
+    const uint256_t& count) {
     std::vector<unsigned char> value;
     marshal_uint256_t(count, value);
 
