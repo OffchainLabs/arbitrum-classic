@@ -49,7 +49,7 @@ func NewSnapshot(mach machine.Machine, time inbox.ChainTime, chainId *big.Int, l
 // If an error is returned, s is unmodified
 func (s *Snapshot) AddMessage(msg message.Message, sender common.Address, targetHash common.Hash) (*evm.TxResult, error) {
 	mach := s.mach.Clone()
-	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, s.time)
+	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), s.time)
 	res, err := runTx(mach, inboxMsg, targetHash)
 	if err != nil {
 		return nil, err
@@ -86,14 +86,14 @@ func (s *Snapshot) Call(msg message.ContractTransaction, sender common.Address) 
 }
 
 func (s *Snapshot) TryTx(msg message.Message, sender common.Address, targetHash common.Hash) (*evm.TxResult, error) {
-	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, s.time)
+	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), s.time)
 	return runTx(s.mach.Clone(), inboxMsg, targetHash)
 }
 
 func (s *Snapshot) BasicCall(data []byte, dest common.Address) (*evm.TxResult, error) {
 	msg := message.ContractTransaction{
 		BasicTx: message.BasicTx{
-			MaxGas:      big.NewInt(1000000000),
+			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
 			DestAddress: dest,
 			Payment:     big.NewInt(0),

@@ -61,6 +61,7 @@ contract Bridge is Ownable, IBridge {
                 block.number,
                 block.timestamp, // solhint-disable-line not-rely-on-time
                 count,
+                tx.gasprice,
                 messageDataHash
             );
         bytes32 prevAcc = 0;

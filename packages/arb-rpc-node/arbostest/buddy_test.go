@@ -64,12 +64,12 @@ func TestBuddyContract(t *testing.T) {
 	contractCreation2 := makeSimpleConstructorTx(fibCode, big.NewInt(1))
 
 	messages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
-		message.NewInboxMessage(buddyConstructor, connAddress1, big.NewInt(1), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(contractCreation), sender, big.NewInt(2), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(noOpTx), sender, big.NewInt(3), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(contractCreation2), sender, big.NewInt(4), chainTime),
-		message.NewInboxMessage(buddyConstructor, connAddress2, big.NewInt(5), laterChainTime),
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(buddyConstructor, connAddress1, big.NewInt(1), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(contractCreation), sender, big.NewInt(2), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(noOpTx), sender, big.NewInt(3), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(contractCreation2), sender, big.NewInt(4), big.NewInt(0), chainTime),
+		message.NewInboxMessage(buddyConstructor, connAddress2, big.NewInt(5), big.NewInt(0), laterChainTime),
 	}
 
 	logs, _, snap, _ := runAssertion(t, messages, 8, 1)

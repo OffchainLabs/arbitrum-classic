@@ -45,7 +45,7 @@ func generateFib(t *testing.T, val *big.Int) []byte {
 func makeTxCountCall(account common.Address) message.L2Message {
 	call := message.Call{
 		BasicTx: message.BasicTx{
-			MaxGas:      big.NewInt(1000000000),
+			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
 			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 			Payment:     big.NewInt(0),
@@ -70,7 +70,7 @@ func TestTransactionCount(t *testing.T) {
 
 	// Valid contract deployment
 	tx1 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.Address{},
@@ -80,7 +80,7 @@ func TestTransactionCount(t *testing.T) {
 
 	// Valid value tranfer to EOA
 	tx2 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: randDest,
@@ -90,7 +90,7 @@ func TestTransactionCount(t *testing.T) {
 
 	// Invalid sequencer number
 	tx3 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(3),
 		DestAddress: randDest,
@@ -100,7 +100,7 @@ func TestTransactionCount(t *testing.T) {
 
 	// Insufficient balance
 	tx4 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(2),
 		DestAddress: randDest,
@@ -110,7 +110,7 @@ func TestTransactionCount(t *testing.T) {
 
 	// Valid transaction to contract
 	tx5 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(2),
 		DestAddress: connAddress1,
@@ -120,7 +120,7 @@ func TestTransactionCount(t *testing.T) {
 
 	// Transaction to contract with incorrect sequence number
 	tx6 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(4),
 		DestAddress: connAddress1,
@@ -130,7 +130,7 @@ func TestTransactionCount(t *testing.T) {
 
 	// Transaction to contract with insufficient balance
 	tx7 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(3),
 		DestAddress: connAddress1,
@@ -140,7 +140,7 @@ func TestTransactionCount(t *testing.T) {
 
 	// Transaction to contract with insufficient balance
 	tx8 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(1000),
 		SequenceNum: big.NewInt(3),
 		DestAddress: connAddress1,
@@ -154,26 +154,26 @@ func TestTransactionCount(t *testing.T) {
 	}
 
 	messages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(1), chainTime),
-		message.NewInboxMessage(message.Eth{Dest: sender, Value: big.NewInt(1000)}, sender, big.NewInt(2), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(3), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx1), sender, big.NewInt(4), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(5), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx2), sender, big.NewInt(6), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(7), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx3), sender, big.NewInt(8), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(9), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx4), sender, big.NewInt(10), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(11), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx5), sender, big.NewInt(12), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(13), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx6), sender, big.NewInt(14), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(15), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx7), sender, big.NewInt(16), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(17), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx8), sender, big.NewInt(18), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(19), chainTime),
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(1), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.Eth{Dest: sender, Value: big.NewInt(1000)}, sender, big.NewInt(2), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(3), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx1), sender, big.NewInt(4), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(5), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx2), sender, big.NewInt(6), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(7), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx3), sender, big.NewInt(8), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(9), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx4), sender, big.NewInt(10), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(11), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx5), sender, big.NewInt(12), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(13), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx6), sender, big.NewInt(14), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(15), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx7), sender, big.NewInt(16), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(17), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx8), sender, big.NewInt(18), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(19), big.NewInt(0), chainTime),
 	}
 
 	logs, _, _, _ := runAssertion(t, messages, len(messages)-2, 0)
@@ -221,7 +221,7 @@ func TestTransactionCount(t *testing.T) {
 
 func makeSyscallTx(data []byte, seq *big.Int, addr common.Address) message.Message {
 	tx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: seq,
 		DestAddress: addr,
