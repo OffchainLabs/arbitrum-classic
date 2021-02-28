@@ -31,6 +31,7 @@ struct InboxMessage {
     uint256_t block_number;
     uint256_t timestamp;
     uint256_t inbox_sequence_number;
+    uint256_t gas_price_l1;
     std::vector<unsigned char> data;
 
     InboxMessage() = default;
@@ -39,12 +40,14 @@ struct InboxMessage {
                  uint256_t block_number,
                  uint256_t timestamp,
                  uint256_t inbox_sequence_number,
+                 uint256_t gas_price_l1,
                  std::vector<unsigned char> data)
         : kind(kind),
           sender(sender),
           block_number(block_number),
           timestamp(timestamp),
           inbox_sequence_number(inbox_sequence_number),
+          gas_price_l1(gas_price_l1),
           data(std::move(data)) {}
 
     static InboxMessage fromTuple(const Tuple& tup);

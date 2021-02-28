@@ -112,6 +112,10 @@ TEST_CASE("ArbCore tests") {
             REQUIRE(tries < 5);
         }
 
+        auto accRes = arbCore->getInboxAcc(inbox_messages.size() - 1);
+        REQUIRE(accRes.status.ok());
+        REQUIRE(accRes.data != 0);
+
         while (!arbCore->machineIdle()) {
             auto err_str = arbCore->machineClearError();
             REQUIRE(!err_str.has_value());

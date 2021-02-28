@@ -102,6 +102,7 @@ func makeInitMsg() inbox.InboxMessage {
 		},
 		chain,
 		big.NewInt(0),
+		big.NewInt(0),
 		inbox.ChainTime{
 			BlockNum:  common.NewTimeBlocksInt(0),
 			Timestamp: big.NewInt(0),

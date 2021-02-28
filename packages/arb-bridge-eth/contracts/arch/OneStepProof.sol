@@ -423,7 +423,7 @@ contract OneStepProof is OneStepProofCommon {
         bytes memory proof = context.proof;
 
         bytes32 messageHash;
-        Value.Data[] memory tupData = new Value.Data[](7);
+        Value.Data[] memory tupData = new Value.Data[](8);
 
         {
             // Get message out of proof
@@ -432,11 +432,13 @@ contract OneStepProof is OneStepProofCommon {
             uint256 l1BlockNumber;
             uint256 l1Timestamp;
             uint256 inboxSeqNum;
+            uint256 gasPriceL1;
             address sender = proof.toAddress(context.offset);
             context.offset += 20;
             (context.offset, l1BlockNumber) = Marshaling.deserializeInt(proof, context.offset);
             (context.offset, l1Timestamp) = Marshaling.deserializeInt(proof, context.offset);
             (context.offset, inboxSeqNum) = Marshaling.deserializeInt(proof, context.offset);
+            (context.offset, gasPriceL1) = Marshaling.deserializeInt(proof, context.offset);
             uint256 messageDataLength;
             (context.offset, messageDataLength) = Marshaling.deserializeInt(proof, context.offset);
             bytes32 messageBufHash =
@@ -454,6 +456,7 @@ contract OneStepProof is OneStepProofCommon {
                 l1BlockNumber,
                 l1Timestamp,
                 inboxSeqNum,
+                gasPriceL1,
                 messageDataHash
             );
 
@@ -462,8 +465,9 @@ contract OneStepProof is OneStepProofCommon {
             tupData[2] = Value.newInt(l1Timestamp);
             tupData[3] = Value.newInt(uint256(sender));
             tupData[4] = Value.newInt(inboxSeqNum);
-            tupData[5] = Value.newInt(messageDataLength);
-            tupData[6] = Value.newHashedValue(messageBufHash, 1);
+            tupData[5] = Value.newInt(gasPriceL1);
+            tupData[6] = Value.newInt(messageDataLength);
+            tupData[7] = Value.newHashedValue(messageBufHash, 1);
         }
 
         bytes32 prevAcc = 0;

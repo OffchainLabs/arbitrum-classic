@@ -185,13 +185,19 @@ func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []type
 			return nil, err
 		}
 
+		txData, _, err := r.client.TransactionByHash(ctx, rawMsg.Raw.TxHash)
+		if err != nil {
+			return nil, err
+		}
+
 		msg := &DeliveredInboxMessage{
 			BlockHash:      common.NewHashFromEth(rawMsg.Raw.BlockHash),
 			BeforeInboxAcc: rawMsg.BeforeInboxAcc,
 			Message: inbox.InboxMessage{
-				Kind:        0,
-				Sender:      common.Address{},
-				InboxSeqNum: nil,
+				Kind:        inbox.Type(rawMsg.Kind),
+				Sender:      common.NewAddressFromEth(rawMsg.Sender),
+				InboxSeqNum: rawMsg.MessageIndex,
+				GasPrice:    txData.GasPrice(),
 				Data:        data,
 				ChainTime: inbox.ChainTime{
 					BlockNum: common.NewTimeBlocks(

@@ -40,7 +40,7 @@ func TestFib(t *testing.T) {
 	failIfError(t, err)
 
 	constructTx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.Address{},
@@ -49,7 +49,7 @@ func TestFib(t *testing.T) {
 	}
 
 	generateTx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: connAddress1,
@@ -59,7 +59,7 @@ func TestFib(t *testing.T) {
 
 	getFibTx := message.Call{
 		BasicTx: message.BasicTx{
-			MaxGas:      big.NewInt(1000000000),
+			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
 			DestAddress: connAddress1,
 			Payment:     big.NewInt(0),
@@ -129,12 +129,12 @@ func TestBlocks(t *testing.T) {
 
 	messages = append(
 		messages,
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), startTime),
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), startTime),
 	)
 
 	messages = append(
 		messages,
-		message.NewInboxMessage(message.Eth{Value: big.NewInt(1000), Dest: sender}, chain, big.NewInt(0), startTime),
+		message.NewInboxMessage(message.Eth{Value: big.NewInt(1000), Dest: sender}, chain, big.NewInt(0), big.NewInt(0), startTime),
 	)
 
 	halfSendCount := int64(5)
@@ -150,7 +150,7 @@ func TestBlocks(t *testing.T) {
 
 	for i := int64(0); i < halfSendCount; i++ {
 		tx := message.Transaction{
-			MaxGas:      big.NewInt(100000000000),
+			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
 			SequenceNum: big.NewInt(i * 2),
 			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
@@ -158,7 +158,7 @@ func TestBlocks(t *testing.T) {
 			Data:        snapshot.WithdrawEthData(common.RandAddress()),
 		}
 		tx2 := message.Transaction{
-			MaxGas:      big.NewInt(100000000000),
+			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
 			SequenceNum: big.NewInt(i*2 + 1),
 			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
@@ -171,6 +171,7 @@ func TestBlocks(t *testing.T) {
 				message.NewSafeL2Message(tx),
 				sender,
 				big.NewInt(i*2+2),
+				big.NewInt(0),
 				blockTimes[i],
 			),
 		)
@@ -180,13 +181,14 @@ func TestBlocks(t *testing.T) {
 				message.NewSafeL2Message(tx2),
 				sender,
 				big.NewInt(i*2+2),
+				big.NewInt(0),
 				blockTimes[i],
 			),
 		)
 	}
 
 	// Last value returned is not an error type
-	avmLogs, sends, _, _ := runAssertion(t, messages, int(halfSendCount*6-2), int(halfSendCount-1))
+	avmLogs, sends, _, _ := runAssertion(t, messages, int(halfSendCount*6-4), int(halfSendCount-1))
 	results := make([]evm.Result, 0)
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
@@ -213,13 +215,7 @@ func TestBlocks(t *testing.T) {
 		t.Logf("%v %T\n", i, res)
 		totalAVMLogCount = totalAVMLogCount.Add(totalAVMLogCount, big.NewInt(1))
 
-		if i%6 == 0 || i%6 == 2 {
-			_, ok := res.(*evm.SendResult)
-			if !ok {
-				t.Fatal("incorrect result type")
-			}
-			blockAVMLogCount = blockAVMLogCount.Add(blockAVMLogCount, big.NewInt(1))
-		} else if i%6 == 1 || i%6 == 3 {
+		if i%6 == 0 || i%6 == 1 {
 			res, ok := res.(*evm.TxResult)
 			if !ok {
 				t.Fatal("incorrect result type")
@@ -233,6 +229,12 @@ func TestBlocks(t *testing.T) {
 			totalGasUsed = totalGasUsed.Add(totalGasUsed, res.GasUsed)
 			totalEVMLogCount = totalEVMLogCount.Add(totalEVMLogCount, big.NewInt(int64(len(res.EVMLogs))))
 			totalTxCount = totalTxCount.Add(totalTxCount, big.NewInt(1))
+		} else if i%6 == 2 || i%6 == 3 {
+			_, ok := res.(*evm.SendResult)
+			if !ok {
+				t.Fatal("incorrect result type")
+			}
+			blockAVMLogCount = blockAVMLogCount.Add(blockAVMLogCount, big.NewInt(1))
 		} else if i%6 == 4 {
 			root, ok := res.(*evm.MerkleRootResult)
 			if !ok {
