@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -136,6 +137,26 @@ func TestStaker(t *testing.T) {
 
 	faultyStaker, err := NewStaker(ctx, faultyCore, client, val2, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)
+
+	bridgeAddr, err := staker.rollup.Bridge(ctx)
+	test.FailIfError(t, err)
+	bridge, err := ethbridge.NewBridgeWatcher(bridgeAddr.ToEthAddress(), client)
+	test.FailIfError(t, err)
+	_, err = NewInboxReader(ctx, bridge, core)
+	test.FailIfError(t, err)
+
+	for i := 1; i <= 30; i++ {
+		msgCount, err := core.GetMessageCount()
+		test.FailIfError(t, err)
+		if msgCount.Cmp(big.NewInt(1)) >= 0 {
+			// We've found the inbox message
+			break
+		}
+		if i == 100 {
+			t.Fatal("Failed to load initializing message")
+		}
+		<-time.After(time.Second * 1)
+	}
 
 	for i := 0; i < 100; i++ {
 		if (i % 2) == 0 {
