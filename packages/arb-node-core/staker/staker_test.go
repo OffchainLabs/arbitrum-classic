@@ -2,6 +2,9 @@ package staker
 
 import (
 	"context"
+	"math/big"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -13,8 +16,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"math/big"
-	"testing"
 )
 
 func deployRollup(
@@ -119,7 +120,7 @@ func TestStaker(t *testing.T) {
 
 	lookup := core.NewValidatorLookupMock(mach)
 
-	staker, err := NewStaker(ctx, lookup, client, val, common.NewAddressFromEth(validatorUtilsAddr))
+	staker, err := NewStaker(ctx, lookup, client, val, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)
 
 	for i := 0; i < 100; i++ {

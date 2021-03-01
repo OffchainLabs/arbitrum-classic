@@ -165,7 +165,6 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 	timeSinceProposed := new(big.Int).Sub(currentBlock.Height.AsInt(), startState.ProposedBlock)
 	if timeSinceProposed.Cmp(minAssertionPeriod) < 0 {
 		// Too soon to assert
-		// TODO check if wrongNodesExist
 		return nil, false, nil
 	}
 
@@ -224,14 +223,14 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		return nil, wrongNodesExist, nil
 	}
 
-	if execInfo.After.TotalMessagesRead.Cmp(big.NewInt(0)) == 0 {
-		return nil, wrongNodesExist, errors.New("no messages to lookup in generateNodeAction")
-	}
-	msgSequenceNumber := new(big.Int).Sub(execInfo.After.TotalMessagesRead, big.NewInt(1))
 	// TODO make this atomic with inbox reorgs
-	inboxAcc, err := v.lookup.GetInboxAcc(msgSequenceNumber)
-	if err != nil {
-		return nil, false, err
+	inboxAcc := [32]byte{}
+	if execInfo.After.TotalMessagesRead.Cmp(big.NewInt(0)) > 0 {
+		msgSequenceNumber := new(big.Int).Sub(execInfo.After.TotalMessagesRead, big.NewInt(1))
+		inboxAcc, err = v.lookup.GetInboxAcc(msgSequenceNumber)
+		if err != nil {
+			return nil, false, err
+		}
 	}
 	hasSibling := len(successorsNodes) > 0
 	lastHash := baseHash
@@ -241,6 +240,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 	action := createNodeAction{
 		assertion: &core.Assertion{
 			PrevProposedBlock: startState.ProposedBlock,
+			PrevInboxMaxCount: startState.InboxMaxCount,
 			ExecutionInfo:     execInfo,
 		},
 		hasSibling: hasSibling,
@@ -273,7 +273,7 @@ func lookupNodeStartState(ctx context.Context, rollup *ethbridge.RollupWatcher, 
 			ExecutionState: &core.ExecutionState{
 				TotalGasConsumed:  big.NewInt(0),
 				MachineHash:       creationEvent.MachineHash,
-				TotalMessagesRead: big.NewInt(1),
+				TotalMessagesRead: big.NewInt(0),
 				TotalSendCount:    big.NewInt(0),
 				TotalLogCount:     big.NewInt(0),
 			},

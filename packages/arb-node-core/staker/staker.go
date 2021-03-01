@@ -2,7 +2,6 @@ package staker
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -24,7 +23,6 @@ const (
 
 type Staker struct {
 	*Validator
-	latestValidNode *big.Int
 	activeChallenge *challenge.Challenger
 	strategy        Strategy
 }
@@ -41,14 +39,9 @@ func NewStaker(
 	if err != nil {
 		return nil, err
 	}
-	latestConfirmed, err := val.rollup.LatestConfirmedNode(ctx)
-	if err != nil {
-		return nil, err
-	}
 	return &Staker{
-		Validator:       val,
-		latestValidNode: latestConfirmed,
-		strategy:        strategy,
+		Validator: val,
+		strategy:  strategy,
 	}, nil
 }
 
@@ -57,10 +50,9 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	if info != nil {
-		if s.latestValidNode == nil || s.latestValidNode.Cmp(info.LatestStakedNode) < 0 {
-			s.latestValidNode = info.LatestStakedNode
+	if info == nil && s.strategy >= StakeLatestStrategy {
+		if err := s.newStake(ctx); err != nil {
+			return nil, err
 		}
 	}
 
@@ -69,10 +61,15 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 	}
 
 	if info != nil {
-		if err := s.handleConflict(ctx, info); err != nil {
+		if err = s.handleConflict(ctx, info); err != nil {
 			return nil, err
 		}
-		if err := s.advanceStake(ctx, info); err != nil {
+	}
+	if err := s.advanceStake(ctx); err != nil {
+		return nil, err
+	}
+	if info != nil && s.builder.TransactionCount() == 0 {
+		if err := s.createConflict(ctx, info); err != nil {
 			return nil, err
 		}
 	}
@@ -85,7 +82,7 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 		return nil
 	}
 
-	if s.activeChallenge != nil || s.activeChallenge.ChallengeAddress() != *info.CurrentChallenge {
+	if s.activeChallenge == nil || s.activeChallenge.ChallengeAddress() != *info.CurrentChallenge {
 		challengeCon, err := ethbridge.NewChallenge(info.CurrentChallenge.ToEthAddress(), s.client, s.builder)
 		if err != nil {
 			return err
@@ -122,7 +119,7 @@ func (s *Staker) newStake(ctx context.Context) error {
 	return s.rollup.NewStake(ctx, stakeAmount)
 }
 
-func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) error {
+func (s *Staker) advanceStake(ctx context.Context) error {
 	active := s.strategy > WatchtowerStrategy
 	action, wrongNodesExist, err := s.generateNodeAction(ctx, s.wallet.Address(), active, s.strategy == MakeNodesStrategy)
 	if err != nil {
