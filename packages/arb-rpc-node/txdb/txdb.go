@@ -325,25 +325,18 @@ func (db *TxDB) GetMachineBlockResults(block *machine.BlockInfo) ([]*evm.TxResul
 }
 
 func (db *TxDB) GetBlock(height uint64) (*machine.BlockInfo, error) {
-	latest, err := db.LatestBlock()
+	latest, err := db.BlockCount()
 	if err != nil {
 		return nil, err
 	}
-	if height > latest.Height.AsInt().Uint64() {
+	if height > latest {
 		return nil, nil
 	}
 	return db.as.GetBlockInfo(height)
 }
 
-func (db *TxDB) LatestBlock() (*common.BlockId, error) {
-	latest, err := db.as.LatestBlockInfo()
-	if err != nil {
-		return nil, err
-	}
-	return &common.BlockId{
-		Height:     common.NewTimeBlocks(latest.Header.Number),
-		HeaderHash: common.NewHashFromEth(latest.Header.Hash()),
-	}, nil
+func (db *TxDB) BlockCount() (uint64, error) {
+	return db.as.BlockCount()
 }
 
 func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot, error) {
@@ -367,16 +360,12 @@ func (db *TxDB) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {
 	return db.getSnapshotForInfo(info)
 }
 
-func (db *TxDB) LatestSnapshot() *snapshot.Snapshot {
-	block, err := db.LatestBlock()
-	if err != nil || block == nil {
-		return nil
-	}
-	snap, err := db.GetSnapshot(block.Height.AsInt().Uint64())
+func (db *TxDB) LatestSnapshot() (*snapshot.Snapshot, error) {
+	block, err := db.BlockCount()
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return snap
+	return db.GetSnapshot(block)
 }
 
 func (db *TxDB) SubscribeChainEvent(ch chan<- ethcore.ChainEvent) event.Subscription {

@@ -160,7 +160,7 @@ func main() {
 
 	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
 	l1 := NewL1Emulator()
-	backend := NewBackend(db, l1, signer)
+	backend := NewBackend(arbCore, db, l1, signer)
 
 	if err := backend.AddInboxMessage(initMsg, rollupAddress, backend.l1Emulator.GenerateBlock()); err != nil {
 		logger.Fatal().Stack().Err(err).Send()
@@ -319,8 +319,9 @@ type Backend struct {
 	messages []inbox.InboxMessage
 }
 
-func NewBackend(db *txdb.TxDB, l1 *L1Emulator, signer types.Signer) *Backend {
+func NewBackend(arbcore core.ArbCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer) *Backend {
 	return &Backend{
+		arbcore:    arbcore,
 		db:         db,
 		l1Emulator: l1,
 		signer:     signer,
@@ -334,7 +335,7 @@ func (b *Backend) Reorg(height uint64) error {
 }
 
 func (b *Backend) reorg(height uint64) error {
-	startHeight, err := b.db.LatestBlock()
+	startHeight, err := b.db.BlockCount()
 	if err != nil {
 		return err
 	}
@@ -343,14 +344,14 @@ func (b *Backend) reorg(height uint64) error {
 	if latestHeight != height {
 		panic("wrong height")
 	}
-	newLatest, err := b.db.LatestBlock()
+	newLatest, err := b.db.BlockCount()
 	if err != nil {
 		return err
 	}
 	logger.
 		Info().
-		Uint64("start", startHeight.Height.AsInt().Uint64()).
-		Uint64("end", newLatest.Height.AsInt().Uint64()).
+		Uint64("start", startHeight).
+		Uint64("end", newLatest).
 		Uint64("height", height).
 		Msg("Reorged chain")
 	b.messages = b.messages[:height-1]
@@ -428,16 +429,19 @@ func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, bl
 		Timestamp: block.timestamp,
 	}
 
-	inboxMessage := message.NewInboxMessage(msg, sender, big.NewInt(int64(len(b.messages))), chainTime)
+	inboxMessage := message.NewInboxMessage(msg, sender, big.NewInt(int64(len(b.messages))), big.NewInt(0), chainTime)
 
 	b.messages = append(b.messages, inboxMessage)
 	msgCount, err := b.arbcore.GetMessageCount()
 	if err != nil {
 		return err
 	}
-	prevHash, err := b.arbcore.GetInboxHash(msgCount.Sub(msgCount, big.NewInt(1)))
-	if err != nil {
-		return err
+	var prevHash common.Hash
+	if msgCount.Cmp(big.NewInt(0)) > 0 {
+		prevHash, err = b.arbcore.GetInboxAcc(msgCount.Sub(msgCount, big.NewInt(1)))
+		if err != nil {
+			return err
+		}
 	}
 	successful, err := core.DeliverMessagesAndWait(b.arbcore, []inbox.InboxMessage{inboxMessage}, prevHash, true)
 	if err != nil {
@@ -456,10 +460,10 @@ func (b *Backend) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subs
 }
 
 // Return nil if no pending snapshot is available
-func (b *Backend) PendingSnapshot() *snapshot.Snapshot {
+func (b *Backend) PendingSnapshot() (*snapshot.Snapshot, error) {
 	b.Lock()
 	defer b.Unlock()
-	return nil
+	return nil, nil
 }
 
 type L1BlockInfo struct {

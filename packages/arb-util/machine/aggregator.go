@@ -40,7 +40,7 @@ type AggregatorStore interface {
 	GetPossibleRequestInfo(requestId common.Hash) *uint64
 	GetPossibleBlock(blockHash common.Hash) *uint64
 	GetBlockInfo(height uint64) (*BlockInfo, error)
-	LatestBlockInfo() (*BlockInfo, error)
+	BlockCount() (uint64, error)
 
 	SaveBlock(header *types.Header, logIndex uint64, requests []EVMRequestInfo) error
 	Reorg(height uint64) error

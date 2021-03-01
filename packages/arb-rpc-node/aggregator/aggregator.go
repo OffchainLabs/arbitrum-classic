@@ -74,16 +74,15 @@ func NewServer(
 // SendTransaction takes a request signed transaction l2message from a Client
 // and puts it in a queue to be included in the next transaction batch
 func (m *Server) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	panic("unimplemented")
-	//return m.batch.SendTransaction(ctx, tx)
+	return m.batch.SendTransaction(ctx, tx)
 }
 
 func (m *Server) GetBlockCount() (uint64, error) {
-	id, err := m.db.LatestBlock()
+	latest, err := m.db.BlockCount()
 	if err != nil {
 		return 0, err
 	}
-	return id.Height.AsInt().Uint64(), nil
+	return latest, nil
 }
 
 func (m *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
@@ -150,7 +149,11 @@ func (m *Server) AdjustGas(msg message.ContractTransaction) message.ContractTran
 // and return the result
 func (m *Server) Call(msg message.ContractTransaction, sender ethcommon.Address) (*evm.TxResult, error) {
 	msg = m.AdjustGas(msg)
-	return m.db.LatestSnapshot().Call(msg, common.NewAddressFromEth(sender))
+	snap, err := m.db.LatestSnapshot()
+	if err != nil {
+		return nil, err
+	}
+	return snap.Call(msg, common.NewAddressFromEth(sender))
 }
 
 // PendingCall takes a request from a Client to process in a temporary context
@@ -163,16 +166,19 @@ func (m *Server) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {
 	return m.db.GetSnapshot(blockHeight)
 }
 
-func (m *Server) LatestSnapshot() *snapshot.Snapshot {
+func (m *Server) LatestSnapshot() (*snapshot.Snapshot, error) {
 	return m.db.LatestSnapshot()
 }
 
-func (m *Server) PendingSnapshot() *snapshot.Snapshot {
-	pending := m.batch.PendingSnapshot()
+func (m *Server) PendingSnapshot() (*snapshot.Snapshot, error) {
+	pending, err := m.batch.PendingSnapshot()
+	if err != nil {
+		return nil, err
+	}
 	if pending == nil {
 		return m.LatestSnapshot()
 	}
-	return pending
+	return pending, nil
 }
 
 func (m *Server) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
@@ -250,8 +256,7 @@ func (m *Server) ServiceFilter(_ context.Context, _ *bloombits.MatcherSession) {
 }
 
 func (m *Server) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subscription {
-	panic("unimplemented")
-	//return m.scope.Track(m.batch.SubscribeNewTxsEvent(ch))
+	return m.scope.Track(m.batch.SubscribeNewTxsEvent(ch))
 }
 
 func (m *Server) SubscribePendingLogsEvent(ch chan<- []*types.Log) event.Subscription {
