@@ -189,6 +189,18 @@ func (ac *ArbCore) GetInboxAcc(index *big.Int) (ret common.Hash, err error) {
 	return
 }
 
+func (ac *ArbCore) GetInboxAccPair(index1 *big.Int, index2 *big.Int) (ret1 common.Hash, ret2 common.Hash, err error) {
+	startIndex1Data := math.U256Bytes(index1)
+	startIndex2Data := math.U256Bytes(index2)
+
+	status := C.arbCoreGetInboxAccPair(ac.c, unsafeDataPointer(startIndex1Data), unsafeDataPointer(startIndex2Data), unsafe.Pointer(&ret1[0]), unsafe.Pointer(&ret2[0]))
+	if status == 0 {
+		err = errors.New("failed to get inbox acc")
+	}
+
+	return
+}
+
 func (ac *ArbCore) GetSendAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (ret common.Hash, err error) {
 	startIndexData := math.U256Bytes(startIndex)
 	countData := math.U256Bytes(count)
