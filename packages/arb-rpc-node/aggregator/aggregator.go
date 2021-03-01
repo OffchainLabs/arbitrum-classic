@@ -85,9 +85,9 @@ func (m *Server) GetBlockCount() (uint64, error) {
 	return latest, nil
 }
 
-func (m *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
+func (m *Server) BlockNum(block *rpc.BlockNumber) (uint64, error) {
 	if *block == rpc.LatestBlockNumber || *block == rpc.PendingBlockNumber {
-		return m.GetBlockCount()
+		return m.db.LatestBlock()
 	} else if *block >= 0 {
 		return uint64(*block), nil
 	} else {
@@ -182,8 +182,7 @@ func (m *Server) PendingSnapshot() (*snapshot.Snapshot, error) {
 }
 
 func (m *Server) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
-	panic("unimplemented")
-	//return m.batch.PendingTransactionCount(ctx, account)
+	return m.batch.PendingTransactionCount(ctx, account)
 }
 
 func (m *Server) ChainDb() ethdb.Database {
@@ -191,7 +190,7 @@ func (m *Server) ChainDb() ethdb.Database {
 }
 
 func (m *Server) HeaderByNumber(_ context.Context, blockNumber rpc.BlockNumber) (*types.Header, error) {
-	height, err := m.blockNum(&blockNumber)
+	height, err := m.BlockNum(&blockNumber)
 	if err != nil {
 		return nil, err
 	}

@@ -57,6 +57,8 @@ class MachineExecutionConfig {
 class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
 
+    Assertion runImpl();
+
    public:
     MachineState machine_state;
 
@@ -71,6 +73,7 @@ class Machine {
     }
 
     Assertion run(MachineExecutionConfig config);
+    Assertion continueRunning();
 
     Status currentStatus() const { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }

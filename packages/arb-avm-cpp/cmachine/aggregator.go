@@ -109,7 +109,6 @@ func (as *AggregatorStore) BlockCount() (uint64, error) {
 		return 0, errors.New("failed to load block count")
 
 	}
-
 	return uint64(result.value), nil
 }
 
@@ -144,7 +143,6 @@ func (as *AggregatorStore) GetPossibleBlock(blockHash common.Hash) *uint64 {
 		return nil
 	}
 	index := uint64(result.value)
-
 	return &index
 }
 
@@ -156,7 +154,7 @@ func (as *AggregatorStore) CurrentLogCount() (*big.Int, error) {
 	return receiveBigInt(result.value), nil
 }
 
-func (as AggregatorStore) UpdateCurrentLogCount(count *big.Int) error {
+func (as *AggregatorStore) UpdateCurrentLogCount(count *big.Int) error {
 	countData := math.U256Bytes(count)
 	status := C.aggregatorUpdateLogsProcessedCount(as.c, unsafeDataPointer(countData))
 	if status == 0 {

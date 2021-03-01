@@ -111,6 +111,7 @@ func DeliverMessagesAndWait(db ArbCoreInbox, messages []inbox.InboxMessage, prev
 type ArbCore interface {
 	ArbCoreLookup
 	ArbCoreInbox
+	LogsCursor
 	StartThread() bool
 	StopThread()
 	MachineIdle() bool
@@ -225,6 +226,6 @@ type LogsCursor interface {
 	LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
 	LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Value, error)
 	LogsCursorGetDeletedLogs(cursorIndex *big.Int) (*big.Int, []value.Value, error)
-	LogsCursorClearError(cursorIndex *big.Int) error
+	LogsCursorCheckError(cursorIndex *big.Int) error
 	LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 }

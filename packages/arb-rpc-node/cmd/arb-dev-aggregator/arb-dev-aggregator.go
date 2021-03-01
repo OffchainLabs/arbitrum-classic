@@ -78,7 +78,7 @@ func init() {
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
+	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlDebug, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
 
 	// Print line number that log was created on
 	logger = log.With().Caller().Str("component", "arb-dev-aggregator").Logger()
@@ -110,7 +110,7 @@ func main() {
 		}()
 	}
 
-	tmpDir, err := ioutil.TempDir("", "arbitrum")
+	tmpDir, err := ioutil.TempDir(".", "arbitrum")
 	if err != nil {
 		logger.Fatal().Err(err).Msg("error generating temporary directory")
 	}
@@ -141,7 +141,7 @@ func main() {
 		StakeToken:              common.Address{},
 		GracePeriod:             common.NewTimeBlocksInt(3),
 		MaxExecutionSteps:       10000000000,
-		ArbGasSpeedLimitPerTick: 200000,
+		ArbGasSpeedLimitPerTick: 20000000000,
 	}
 	owner := common.RandAddress()
 	rollupAddress := common.RandAddress()
@@ -160,7 +160,10 @@ func main() {
 
 	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
 	l1 := NewL1Emulator()
-	backend := NewBackend(arbCore, db, l1, signer)
+	backend, err := NewBackend(arbCore, db, l1, signer)
+	if err != nil {
+		logger.Fatal().Err(err).Send()
+	}
 
 	if err := backend.AddInboxMessage(initMsg, rollupAddress, backend.l1Emulator.GenerateBlock()); err != nil {
 		logger.Fatal().Stack().Err(err).Send()
@@ -184,9 +187,15 @@ func main() {
 		if err != nil {
 			logger.Fatal().Stack().Err(err).Send()
 		}
-		deposit := message.Eth{
-			Dest:  common.NewAddressFromEth(account.Address),
-			Value: depositSize,
+		deposit := message.EthDepositTx{
+			L2Message: message.NewSafeL2Message(message.Transaction{
+				MaxGas:      big.NewInt(1000000),
+				GasPriceBid: big.NewInt(0),
+				SequenceNum: big.NewInt(1),
+				DestAddress: common.NewAddressFromEth(account.Address),
+				Payment:     depositSize,
+				Data:        nil,
+			}),
 		}
 		if err := backend.AddInboxMessage(deposit, rollupAddress, backend.l1Emulator.GenerateBlock()); err != nil {
 			logger.Fatal().Stack().Err(err).Send()
@@ -311,6 +320,7 @@ type Backend struct {
 	sync.Mutex
 	arbcore    core.ArbCore
 	db         *txdb.TxDB
+	logReader  *core.LogReader
 	l1Emulator *L1Emulator
 	signer     types.Signer
 
@@ -319,13 +329,35 @@ type Backend struct {
 	messages []inbox.InboxMessage
 }
 
-func NewBackend(arbcore core.ArbCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer) *Backend {
+func NewBackend(arbcore core.ArbCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer) (*Backend, error) {
+	logReader := core.NewLogReader(db, arbcore, big.NewInt(0), big.NewInt(10))
+	errChan := logReader.Start(context.Background())
+	go func() {
+		err := <-errChan
+		log.Fatal().Err(err).Msg("error reading logs")
+	}()
+
+	go func() {
+		for {
+			coreLogs, err := arbcore.GetLogCount()
+			if err != nil {
+				panic(err)
+			}
+			coreMessages, err := arbcore.GetMessageCount()
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println("Total count", coreLogs, coreMessages)
+			<-time.After(time.Second)
+		}
+	}()
 	return &Backend{
 		arbcore:    arbcore,
 		db:         db,
+		logReader:  logReader,
 		l1Emulator: l1,
 		signer:     signer,
-	}
+	}, nil
 }
 
 func (b *Backend) Reorg(height uint64) error {
@@ -385,6 +417,7 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		Uint64("nonce", tx.Nonce()).
 		Str("from", sender.Hex()).
 		Str("value", tx.Value().String()).
+		Hex("hash", tx.Hash().Bytes()).
 		Msg("sent transaction")
 	startHeight := b.l1Emulator.Latest().blockId.Height.AsInt().Uint64()
 	block := b.l1Emulator.GenerateBlock()
@@ -450,6 +483,27 @@ func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, bl
 	if !successful {
 		return errors.New("failed to deliver message")
 	}
+	for {
+		if b.arbcore.MachineIdle() {
+			break
+		}
+		<-time.After(time.Millisecond * 1000)
+	}
+	for {
+		txdbLogs, err := b.db.CurrentLogCount()
+		if err != nil {
+			return err
+		}
+		coreLogs, err := b.arbcore.GetLogCount()
+		if err != nil {
+			return err
+		}
+		if txdbLogs.Cmp(coreLogs) == 0 {
+			break
+		}
+		<-time.After(time.Millisecond * 200)
+	}
+
 	return nil
 }
 

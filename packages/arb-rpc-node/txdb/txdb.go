@@ -18,6 +18,8 @@ package txdb
 
 import (
 	"context"
+	"fmt"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
 
@@ -96,15 +98,11 @@ func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
 }
 
 func (db *TxDB) CurrentLogCount() (*big.Int, error) {
-	//return db.as.CurrentLogCount()
-	// TODO
-	return big.NewInt(0), nil
+	return db.as.CurrentLogCount()
 }
 
-func (db *TxDB) UpdateCurrentLogCount() (*big.Int, error) {
-	//return db.as.UpdateCurrentLogCount()
-	// TODO
-	return big.NewInt(0), nil
+func (db *TxDB) UpdateCurrentLogCount(count *big.Int) error {
+	return db.as.UpdateCurrentLogCount(count)
 }
 
 func (db *TxDB) AddLogs(avmLogs []value.Value) error {
@@ -180,6 +178,12 @@ func (db *TxDB) HandleLog(avmLog value.Value) error {
 		return nil
 	}
 
+	totalLogCount, err := db.lookup.GetLogCount()
+	if err != nil {
+		return err
+	}
+	fmt.Println("Total log count", totalLogCount)
+
 	logger.Debug().
 		Uint64("number", blockInfo.BlockNum.Uint64()).
 		Uint64("block_logcount", blockInfo.ChainStats.AVMLogCount.Uint64()).
@@ -189,6 +193,9 @@ func (db *TxDB) HandleLog(avmLog value.Value) error {
 	txResults, err := db.GetBlockResults(blockInfo)
 	if err != nil {
 		return err
+	}
+	for _, res := range txResults {
+		fmt.Println("Got res", res.IncomingRequest.MessageID)
 	}
 
 	processedResults := evm.FilterEthTxResults(txResults)
@@ -220,15 +227,20 @@ func (db *TxDB) HandleLog(avmLog value.Value) error {
 		}
 	}
 
-	prev, err := db.GetBlock(blockInfo.BlockNum.Uint64() - 1)
-	if err != nil {
-		return err
+	prevHash := ethcommon.Hash{}
+	if blockInfo.BlockNum.Cmp(big.NewInt(0)) > 0 {
+		prev, err := db.GetBlock(blockInfo.BlockNum.Uint64() - 1)
+		if err != nil {
+			return err
+		}
+		if prev == nil {
+			return errors.Errorf("trying to add block %v, but prev header was not found", blockInfo.BlockNum.Uint64())
+		}
+		prevHash = prev.Header.Hash()
 	}
-	if prev == nil {
-		return errors.Errorf("trying to add block %v, but prev header was not found", blockInfo.BlockNum.Uint64())
-	}
+
 	header := &types.Header{
-		ParentHash: prev.Header.Hash(),
+		ParentHash: prevHash,
 		Difficulty: big.NewInt(0),
 		Number:     new(big.Int).Set(blockInfo.BlockNum),
 		GasLimit:   blockInfo.GasLimit().Uint64(),
@@ -325,11 +337,11 @@ func (db *TxDB) GetMachineBlockResults(block *machine.BlockInfo) ([]*evm.TxResul
 }
 
 func (db *TxDB) GetBlock(height uint64) (*machine.BlockInfo, error) {
-	latest, err := db.BlockCount()
+	count, err := db.BlockCount()
 	if err != nil {
 		return nil, err
 	}
-	if height > latest {
+	if height >= count {
 		return nil, nil
 	}
 	return db.as.GetBlockInfo(height)
@@ -337,6 +349,17 @@ func (db *TxDB) GetBlock(height uint64) (*machine.BlockInfo, error) {
 
 func (db *TxDB) BlockCount() (uint64, error) {
 	return db.as.BlockCount()
+}
+
+func (db *TxDB) LatestBlock() (uint64, error) {
+	blockCount, err := db.as.BlockCount()
+	if err != nil {
+		return 0, err
+	}
+	if blockCount == 0 {
+		return 0, errors.New("no blocks")
+	}
+	return blockCount - 1, nil
 }
 
 func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot, error) {
@@ -361,7 +384,7 @@ func (db *TxDB) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {
 }
 
 func (db *TxDB) LatestSnapshot() (*snapshot.Snapshot, error) {
-	block, err := db.BlockCount()
+	block, err := db.LatestBlock()
 	if err != nil {
 		return nil, err
 	}
