@@ -61,7 +61,7 @@ struct AssertionContext {
     }
 
     [[nodiscard]] bool inboxEmpty() const {
-        return inbox_messages_consumed == inbox_messages.size();
+        return inbox_messages_consumed >= inbox_messages.size();
     }
 };
 
