@@ -45,7 +45,23 @@ contract ArbTokenBridge is CloneFactory {
         _;
     }
 
+    modifier onlyFromL2Token(address l1ERC20) {
+        // This ensures that this method can only be called by the L2 token
+        require(msg.sender == calculateBridgedERC777Address(l1ERC20)
+            || msg.sender == calculateBridgedERC20Address(l1ERC20)
+            || msg.sender == customToken[l1ERC20], "NOT_FROM_TOKEN");
+        _;
+    }
+    modifier onlyToL2Token(address l1ERC20, address to) {
+        // This ensures that this method can only be called by the L2 token
+        require(to == calculateBridgedERC777Address(l1ERC20)
+            || to == calculateBridgedERC20Address(l1ERC20)
+            || to == customToken[l1ERC20], "NOT_TO_TOKEN");
+        _;
+    }
+
     constructor(address _l1Pair) public {
+        require(_l1Pair != address(0), "L1 pair can't be address 0");
         templateERC20 = new StandardArbERC20();
         templateERC777 = new StandardArbERC777();
         l1Pair = _l1Pair;
@@ -95,13 +111,12 @@ contract ArbTokenBridge is CloneFactory {
         customToken[l1Address] = l2Address;
     }
 
-    function withdraw(address l1ERC20, address destination, uint256 amount) external {
-        require(msg.sender == calculateBridgedERC777Address(l1ERC20)
-            || msg.sender == calculateBridgedERC20Address(l1ERC20)
-            || msg.sender == customToken[l1ERC20], "NOT_FROM_TOKEN");
-
+    function withdraw(address l1ERC20, address destination, uint256 amount)
+        external
+        onlyFromL2Token(l1ERC20)
+    {
         ArbSys(100).sendTxToL1(
-            address(this),
+            l1Pair,
             abi.encodeWithSignature(
                 "withdrawFromL2(uint256,address,address,uint256)",
                 exitNum,
@@ -113,13 +128,13 @@ contract ArbTokenBridge is CloneFactory {
         exitNum++;
     }
 
-    function migrate(address l1ERC20, address target, address account, uint256 amount) external {
-        address bridgedERC777 = calculateBridgedERC777Address(l1ERC20);
-        address bridgedERC20 = calculateBridgedERC20Address(l1ERC20);
-
-        require(msg.sender == bridgedERC777 || msg.sender == bridgedERC20, "NOT_FROM_TOKEN");
-        require(target == bridgedERC777 || target == bridgedERC20 || target == customToken[l1ERC20], "NOT_TO_TOKEN");
-
+    // A token can be bridged into different L2 implementations (ie 777 and 20)
+    // this method allows you to migrate your balance between them.
+    function migrate(address l1ERC20, address target, address account, uint256 amount)
+        external
+        onlyFromL2Token(l1ERC20)
+        onlyToL2Token(l1ERC20, target)
+    {
         IArbToken(target).bridgeMint(account, amount);
     }
 
