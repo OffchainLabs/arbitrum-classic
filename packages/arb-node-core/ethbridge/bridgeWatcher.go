@@ -32,12 +32,12 @@ func init() {
 	messageDeliveredID = parsedBridgeABI.Events["MessageDelivered"].ID
 	bridgeABI = parsedBridgeABI
 
-	parsedIMessageProviderABI, err := abi.JSON(strings.NewReader(ethbridgecontracts.InboxABI))
+	parsedInboxABI, err := abi.JSON(strings.NewReader(ethbridgecontracts.InboxABI))
 	if err != nil {
 		panic(err)
 	}
-	inboxMessageDeliveredID = parsedIMessageProviderABI.Events["InboxMessageDelivered"].ID
-	inboxMessageFromOriginID = parsedIMessageProviderABI.Events["InboxMessageDeliveredFromOrigin"].ID
+	inboxMessageDeliveredID = parsedInboxABI.Events["InboxMessageDelivered"].ID
+	inboxMessageFromOriginID = parsedInboxABI.Events["InboxMessageDeliveredFromOrigin"].ID
 }
 
 type InboxMessageGetter interface {
