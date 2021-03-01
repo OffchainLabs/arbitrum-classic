@@ -106,10 +106,7 @@ class ArbCore {
 
    public:
     ArbCore() = delete;
-    explicit ArbCore(std::shared_ptr<DataStorage> data_storage_)
-        : data_storage(std::move(data_storage_)),
-          code(std::make_shared<Code>(
-              getNextSegmentID(*makeConstTransaction()))) {}
+    explicit ArbCore(std::shared_ptr<DataStorage> data_storage_);
 
     ~ArbCore() { abortThread(); }
     rocksdb::Status initialize(const LoadedExecutable& executable);
@@ -240,7 +237,7 @@ class ArbCore {
         uint256_t index2);
     ValueResult<uint256_t> getSendAcc(uint256_t start_acc_hash,
                                       uint256_t start_index,
-                                      uint256_t count);
+                                      uint256_t count) const;
     ValueResult<uint256_t> getLogAcc(uint256_t start_acc_hash,
                                      uint256_t start_index,
                                      uint256_t count,
@@ -278,7 +275,6 @@ class ArbCore {
         const uint256_t& prev_inbox_acc,
         const uint256_t& message_count_in_machine,
         ValueCache& cache);
-    std::optional<MessageEntry> getNextMessage();
     ValueResult<std::vector<value>> getLogsNoLock(Transaction& tx,
                                                   uint256_t index,
                                                   uint256_t count,
@@ -323,6 +319,11 @@ class ArbCore {
                                                const uint256_t& block_number);
     rocksdb::Status deleteSideloadsStartingAt(Transaction& tx,
                                               const uint256_t& block_number);
+    rocksdb::Status logsCursorSaveCurrentTotalCount(Transaction& tx,
+                                                    size_t cursor_index,
+                                                    uint256_t count);
+    ValueResult<uint256_t> logsCursorGetCurrentTotalCount(Transaction& tx,
+                                                          size_t cursor_index);
 };
 
 std::optional<rocksdb::Status> deleteLogsStartingAt(Transaction& tx,
