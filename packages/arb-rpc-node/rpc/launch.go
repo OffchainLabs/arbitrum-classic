@@ -92,7 +92,10 @@ func LaunchAggregator(
 		if err != nil {
 			return err
 		}
-		batch = batcher.NewStatefulBatcher(ctx, db, l2ChainID, client, inbox, maxBatchTime)
+		batch, err = batcher.NewStatefulBatcher(ctx, db, l2ChainID, client, inbox, maxBatchTime)
+		if err != nil {
+			return err
+		}
 	}
 
 	return LaunchAggregatorAdvanced(

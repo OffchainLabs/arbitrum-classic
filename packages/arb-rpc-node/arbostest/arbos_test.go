@@ -123,8 +123,8 @@ func TestDeposit(t *testing.T) {
 func TestBlocks(t *testing.T) {
 	messages := make([]inbox.InboxMessage, 0)
 	startTime := inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
+		BlockNum:  common.NewTimeBlocksInt(1),
+		Timestamp: big.NewInt(1),
 	}
 
 	messages = append(
@@ -141,13 +141,13 @@ func TestBlocks(t *testing.T) {
 
 	blockTimes := make([]inbox.ChainTime, 0)
 	blockTimes = append(blockTimes, inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
+		BlockNum:  common.NewTimeBlocksInt(1),
+		Timestamp: big.NewInt(1),
 	})
 	for i := int64(0); i < halfSendCount; i++ {
 		time := inbox.ChainTime{
-			BlockNum:  common.NewTimeBlocksInt(1 + i),
-			Timestamp: big.NewInt(10 + i),
+			BlockNum:  common.NewTimeBlocksInt(2 + i),
+			Timestamp: big.NewInt(11 + i),
 		}
 		blockTimes = append(blockTimes, time)
 	}

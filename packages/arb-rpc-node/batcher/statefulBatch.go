@@ -34,12 +34,16 @@ type statefulBatch struct {
 	txCounts map[common.Address]uint64
 }
 
-func newStatefulBatch(db *txdb.TxDB, maxSize common.StorageSize, signer types.Signer) *statefulBatch {
+func newStatefulBatch(db *txdb.TxDB, maxSize common.StorageSize, signer types.Signer) (*statefulBatch, error) {
+	snap, err := db.LatestSnapshot()
+	if err != nil {
+		return nil, err
+	}
 	return &statefulBatch{
 		statelessBatch: newStatelessBatch(db, maxSize, signer),
-		snap:           db.LatestSnapshot(),
+		snap:           snap,
 		txCounts:       make(map[common.Address]uint64),
-	}
+	}, nil
 }
 
 func (p *statefulBatch) newFromExisting() batch {
@@ -135,8 +139,11 @@ func (p *statefulBatch) addIncludedTx(tx *types.Transaction) error {
 	return nil
 }
 
-func (p *statefulBatch) updateCurrentSnap(pendingSentBatches *list.List) {
-	snap := p.db.LatestSnapshot().Clone()
+func (p *statefulBatch) updateCurrentSnap(pendingSentBatches *list.List) error {
+	snap, err := p.db.LatestSnapshot()
+	if err != nil {
+		return err
+	}
 	if p.snap.Height().Cmp(snap.Height()) < 0 {
 		// Add all of the already broadcast transactions to the snapshot
 		// If they were already included, they'll be ignored because they will
@@ -164,4 +171,5 @@ func (p *statefulBatch) updateCurrentSnap(pendingSentBatches *list.List) {
 		}
 		p.snap = snap
 	}
+	return nil
 }

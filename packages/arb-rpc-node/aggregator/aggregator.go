@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 var logger = log.With().Caller().Str("component", "aggregator").Logger()
@@ -75,29 +74,20 @@ func NewServer(
 // SendTransaction takes a request signed transaction l2message from a Client
 // and puts it in a queue to be included in the next transaction batch
 func (m *Server) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	panic("unimplemented")
-	//return m.batch.SendTransaction(ctx, tx)
+	return m.batch.SendTransaction(ctx, tx)
 }
 
 func (m *Server) GetBlockCount() (uint64, error) {
-	id, err := m.db.LatestBlock()
+	latest, err := m.db.BlockCount()
 	if err != nil {
 		return 0, err
 	}
-	return id.Height.AsInt().Uint64(), nil
+	return latest, nil
 }
 
-func (m *Server) InitialBlockHeight() (*big.Int, error) {
-	earliest, err := m.db.EarliestBlock()
-	if err != nil {
-		return nil, err
-	}
-	return earliest.Height.AsInt(), nil
-}
-
-func (m *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
+func (m *Server) BlockNum(block *rpc.BlockNumber) (uint64, error) {
 	if *block == rpc.LatestBlockNumber || *block == rpc.PendingBlockNumber {
-		return m.GetBlockCount()
+		return m.db.LatestBlock()
 	} else if *block >= 0 {
 		return uint64(*block), nil
 	} else {
@@ -106,8 +96,8 @@ func (m *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
 }
 
 // GetMessageResult returns the value output by the VM in response to the
-//l2message with the given hash
-func (m *Server) GetRequestResult(requestId common.Hash) (value.Value, error) {
+// l2message with the given hash
+func (m *Server) GetRequestResult(requestId common.Hash) (*evm.TxResult, error) {
 	return m.db.GetRequest(requestId)
 }
 
@@ -118,6 +108,14 @@ func (m *Server) GetChainAddress() ethcommon.Address {
 
 func (m *Server) BlockInfoByNumber(height uint64) (*machine.BlockInfo, error) {
 	return m.db.GetBlock(height)
+}
+
+func (m *Server) BlockLogFromInfo(block *machine.BlockInfo) (*evm.BlockInfo, error) {
+	blockLog, err := core.GetSingleLog(m.lookup, new(big.Int).SetUint64(block.BlockLog))
+	if err != nil {
+		return nil, err
+	}
+	return evm.NewBlockResultFromValue(blockLog)
 }
 
 func (m *Server) BlockInfoByHash(hash common.Hash) (*machine.BlockInfo, error) {
@@ -151,7 +149,11 @@ func (m *Server) AdjustGas(msg message.ContractTransaction) message.ContractTran
 // and return the result
 func (m *Server) Call(msg message.ContractTransaction, sender ethcommon.Address) (*evm.TxResult, error) {
 	msg = m.AdjustGas(msg)
-	return m.db.LatestSnapshot().Call(msg, common.NewAddressFromEth(sender))
+	snap, err := m.db.LatestSnapshot()
+	if err != nil {
+		return nil, err
+	}
+	return snap.Call(msg, common.NewAddressFromEth(sender))
 }
 
 // PendingCall takes a request from a Client to process in a temporary context
@@ -164,21 +166,23 @@ func (m *Server) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {
 	return m.db.GetSnapshot(blockHeight)
 }
 
-func (m *Server) LatestSnapshot() *snapshot.Snapshot {
+func (m *Server) LatestSnapshot() (*snapshot.Snapshot, error) {
 	return m.db.LatestSnapshot()
 }
 
-func (m *Server) PendingSnapshot() *snapshot.Snapshot {
-	pending := m.batch.PendingSnapshot()
+func (m *Server) PendingSnapshot() (*snapshot.Snapshot, error) {
+	pending, err := m.batch.PendingSnapshot()
+	if err != nil {
+		return nil, err
+	}
 	if pending == nil {
 		return m.LatestSnapshot()
 	}
-	return pending
+	return pending, nil
 }
 
 func (m *Server) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
-	panic("unimplemented")
-	//return m.batch.PendingTransactionCount(ctx, account)
+	return m.batch.PendingTransactionCount(ctx, account)
 }
 
 func (m *Server) ChainDb() ethdb.Database {
@@ -186,12 +190,12 @@ func (m *Server) ChainDb() ethdb.Database {
 }
 
 func (m *Server) HeaderByNumber(_ context.Context, blockNumber rpc.BlockNumber) (*types.Header, error) {
-	height, err := m.blockNum(&blockNumber)
+	height, err := m.BlockNum(&blockNumber)
 	if err != nil {
 		return nil, err
 	}
 
-	info, err := m.BlockInfoByNumber(height)
+	info, err := m.db.GetBlock(height)
 	if err != nil || info == nil {
 		return nil, err
 	}
@@ -246,13 +250,12 @@ func (m *Server) BloomStatus() (uint64, uint64) {
 	return 0, 0
 }
 
-func (m *Server) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
+func (m *Server) ServiceFilter(_ context.Context, _ *bloombits.MatcherSession) {
 	// Currently not implemented
 }
 
 func (m *Server) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subscription {
-	panic("unimplemented")
-	//return m.scope.Track(m.batch.SubscribeNewTxsEvent(ch))
+	return m.scope.Track(m.batch.SubscribeNewTxsEvent(ch))
 }
 
 func (m *Server) SubscribePendingLogsEvent(ch chan<- []*types.Log) event.Subscription {

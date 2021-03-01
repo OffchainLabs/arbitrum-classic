@@ -183,7 +183,7 @@ func (ac *ArbCore) GetInboxAcc(index *big.Int) (ret common.Hash, err error) {
 
 	status := C.arbCoreGetInboxAcc(ac.c, unsafeDataPointer(startIndexData), unsafe.Pointer(&ret[0]))
 	if status == 0 {
-		err = errors.New("failed to get inbox acc")
+		err = errors.Errorf("failed to get inbox acc for %v", index)
 	}
 
 	return

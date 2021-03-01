@@ -31,10 +31,9 @@ class AggregatorStore {
     std::shared_ptr<DataStorage> data_storage;
 
    public:
-    explicit AggregatorStore(std::shared_ptr<DataStorage> data_storage_)
-        : data_storage(std::move(data_storage_)) {}
+    explicit AggregatorStore(std::shared_ptr<DataStorage> data_storage_);
 
-    std::pair<uint64_t, std::vector<char>> latestBlock() const;
+    uint64_t blockCount() const;
     void saveBlock(uint64_t height, const std::vector<char>& data);
     std::vector<char> getBlock(uint64_t height) const;
 
@@ -46,7 +45,7 @@ class AggregatorStore {
 
     void reorg(uint64_t block_height);
     ValueResult<uint256_t> logsProcessedCount() const;
-    rocksdb::Status updateLogsProcessedCount(const uint256_t& count);
+    void updateLogsProcessedCount(const uint256_t& count);
 };
 
 #endif /* aggregator_hpp */
