@@ -208,8 +208,8 @@ std::vector<value> serializeValue(
             ret.push_back(nested);
         } else {
             auto res = serializeValue(nested, value_vector, segment_counts);
-            for (size_t i = 0; i < res.size(); i++) {
-                ret.push_back(res[i]);
+            for (const auto& re : res) {
+                ret.push_back(re);
             }
         }
     }
@@ -229,8 +229,9 @@ std::vector<value> serializeValue(const Buffer& b,
     int len = 0;
     parseBuffer<ParsedBufVal>((char*)value_vector.data() + l1, len);
     std::vector<value> ret{};
-    for (size_t i = 0; i < res.size(); i++) {
-        ret.emplace_back(Buffer(res[i]));
+    ret.reserve(res.size());
+    for (auto& re : res) {
+        ret.emplace_back(Buffer(re));
     }
     return ret;
 }
@@ -274,8 +275,8 @@ void deleteParsedValue(const std::vector<ParsedTupVal>& tup,
             vals_to_delete.push_back(std::get<ValueHash>(val).hash);
         } else if (std::holds_alternative<ParsedBuffer>(val)) {
             auto parsed = std::get<ParsedBuffer>(val);
-            for (const auto& val : parsed.nodes) {
-                vals_to_delete.push_back(val);
+            for (const auto& val2 : parsed.nodes) {
+                vals_to_delete.push_back(val2);
             }
         }
     }
@@ -457,7 +458,8 @@ GetResults processVal(const Transaction&,
                       uint32_t reference_count,
                       ValueCache&) {
     // Add empty tuple to stack, will be filled in as values are processed
-    val_stack.emplace_back(Tuple(val.size()), reference_count);
+    val_stack.emplace_back(Tuple::createSizedTuple(val.size()),
+                           reference_count);
 
     // Fill new vector with list of elements that will populate tuple
     val_stack.back().raw_vals.insert(val_stack.back().raw_vals.end(),
