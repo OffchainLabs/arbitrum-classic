@@ -40,8 +40,6 @@ void Checkpoint::resetCheckpoint() {
 void Checkpoint::applyAssertion(const Assertion& assertion) {
     total_steps += assertion.stepCount;
     arb_gas_used += assertion.gasCount;
-    std::cout << "Apply " << total_messages_read << " "
-              << assertion.inbox_messages_consumed << std::endl;
     total_messages_read += assertion.inbox_messages_consumed;
     send_count += assertion.sends.size();
     log_count += assertion.logs.size();
