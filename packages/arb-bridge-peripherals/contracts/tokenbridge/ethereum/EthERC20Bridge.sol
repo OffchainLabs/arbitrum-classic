@@ -45,7 +45,7 @@ contract EthERC20Bridge is L1Buddy {
             maxGas, // max gas
             gasPriceBid, // gas price
             0, // payment
-            type(ArbTokenBridge).creationCode
+            type(ArbSymmetricTokenBridge).creationCode
         );
     }
 
