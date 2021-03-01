@@ -241,7 +241,7 @@ func (db *TxDB) HandleLog(ctx context.Context, avmLog value.Value) error {
 		ParentHash: prev.Header.Hash(),
 		Difficulty: big.NewInt(0),
 		Number:     new(big.Int).Set(blockInfo.BlockNum),
-		GasLimit:   blockInfo.GasLimit.Uint64(),
+		GasLimit:   blockInfo.GasLimit().Uint64(),
 		GasUsed:    blockInfo.BlockStats.GasUsed.Uint64(),
 		Time:       blockInfo.Timestamp.Uint64(),
 		Extra:      id.HeaderHash.Bytes(),
