@@ -109,9 +109,10 @@ func (v *Validator) resolveNextNode(ctx context.Context) error {
 }
 
 type createNodeAction struct {
-	assertion *core.Assertion
-	lastHash  [32]byte
-	inboxAcc  [32]byte
+	assertion  *core.Assertion
+	hasSibling bool
+	lastHash   [32]byte
+	inboxAcc   [32]byte
 }
 
 type existingNodeAction struct {
@@ -232,8 +233,9 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 	if err != nil {
 		return nil, false, err
 	}
+	hasSibling := len(successorsNodes) > 0
 	lastHash := baseHash
-	if len(successorsNodes) > 0 {
+	if hasSibling {
 		lastHash = successorsNodes[len(successorsNodes)-1].NodeHash
 	}
 	action := createNodeAction{
@@ -241,8 +243,9 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 			PrevProposedBlock: startState.ProposedBlock,
 			ExecutionInfo:     execInfo,
 		},
-		lastHash: lastHash,
-		inboxAcc: inboxAcc,
+		hasSibling: hasSibling,
+		lastHash:   lastHash,
+		inboxAcc:   inboxAcc,
 	}
 	return action, wrongNodesExist, nil
 }

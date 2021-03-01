@@ -2906,25 +2906,25 @@ func (_Rollup *RollupTransactorSession) StakeOnExistingNode(nodeNum *big.Int, no
 	return _Rollup.Contract.StakeOnExistingNode(&_Rollup.TransactOpts, nodeNum, nodeHash)
 }
 
-// StakeOnNewNode is a paid mutator transaction binding the contract method 0x0023e4a0.
+// StakeOnNewNode is a paid mutator transaction binding the contract method 0xcff35123.
 //
-// Solidity: function stakeOnNewNode(bytes32 expectedLastHash, bytes32 expectedInboxHash, bytes32[4] assertionBytes32Fields, uint256[10] assertionIntFields) returns()
-func (_Rollup *RollupTransactor) StakeOnNewNode(opts *bind.TransactOpts, expectedLastHash [32]byte, expectedInboxHash [32]byte, assertionBytes32Fields [4][32]byte, assertionIntFields [10]*big.Int) (*types.Transaction, error) {
-	return _Rollup.contract.Transact(opts, "stakeOnNewNode", expectedLastHash, expectedInboxHash, assertionBytes32Fields, assertionIntFields)
+// Solidity: function stakeOnNewNode(bool expectedHasSibling, bytes32 expectedLastHash, bytes32 expectedInboxHash, bytes32[4] assertionBytes32Fields, uint256[10] assertionIntFields) returns()
+func (_Rollup *RollupTransactor) StakeOnNewNode(opts *bind.TransactOpts, expectedHasSibling bool, expectedLastHash [32]byte, expectedInboxHash [32]byte, assertionBytes32Fields [4][32]byte, assertionIntFields [10]*big.Int) (*types.Transaction, error) {
+	return _Rollup.contract.Transact(opts, "stakeOnNewNode", expectedHasSibling, expectedLastHash, expectedInboxHash, assertionBytes32Fields, assertionIntFields)
 }
 
-// StakeOnNewNode is a paid mutator transaction binding the contract method 0x0023e4a0.
+// StakeOnNewNode is a paid mutator transaction binding the contract method 0xcff35123.
 //
-// Solidity: function stakeOnNewNode(bytes32 expectedLastHash, bytes32 expectedInboxHash, bytes32[4] assertionBytes32Fields, uint256[10] assertionIntFields) returns()
-func (_Rollup *RollupSession) StakeOnNewNode(expectedLastHash [32]byte, expectedInboxHash [32]byte, assertionBytes32Fields [4][32]byte, assertionIntFields [10]*big.Int) (*types.Transaction, error) {
-	return _Rollup.Contract.StakeOnNewNode(&_Rollup.TransactOpts, expectedLastHash, expectedInboxHash, assertionBytes32Fields, assertionIntFields)
+// Solidity: function stakeOnNewNode(bool expectedHasSibling, bytes32 expectedLastHash, bytes32 expectedInboxHash, bytes32[4] assertionBytes32Fields, uint256[10] assertionIntFields) returns()
+func (_Rollup *RollupSession) StakeOnNewNode(expectedHasSibling bool, expectedLastHash [32]byte, expectedInboxHash [32]byte, assertionBytes32Fields [4][32]byte, assertionIntFields [10]*big.Int) (*types.Transaction, error) {
+	return _Rollup.Contract.StakeOnNewNode(&_Rollup.TransactOpts, expectedHasSibling, expectedLastHash, expectedInboxHash, assertionBytes32Fields, assertionIntFields)
 }
 
-// StakeOnNewNode is a paid mutator transaction binding the contract method 0x0023e4a0.
+// StakeOnNewNode is a paid mutator transaction binding the contract method 0xcff35123.
 //
-// Solidity: function stakeOnNewNode(bytes32 expectedLastHash, bytes32 expectedInboxHash, bytes32[4] assertionBytes32Fields, uint256[10] assertionIntFields) returns()
-func (_Rollup *RollupTransactorSession) StakeOnNewNode(expectedLastHash [32]byte, expectedInboxHash [32]byte, assertionBytes32Fields [4][32]byte, assertionIntFields [10]*big.Int) (*types.Transaction, error) {
-	return _Rollup.Contract.StakeOnNewNode(&_Rollup.TransactOpts, expectedLastHash, expectedInboxHash, assertionBytes32Fields, assertionIntFields)
+// Solidity: function stakeOnNewNode(bool expectedHasSibling, bytes32 expectedLastHash, bytes32 expectedInboxHash, bytes32[4] assertionBytes32Fields, uint256[10] assertionIntFields) returns()
+func (_Rollup *RollupTransactorSession) StakeOnNewNode(expectedHasSibling bool, expectedLastHash [32]byte, expectedInboxHash [32]byte, assertionBytes32Fields [4][32]byte, assertionIntFields [10]*big.Int) (*types.Transaction, error) {
+	return _Rollup.Contract.StakeOnNewNode(&_Rollup.TransactOpts, expectedHasSibling, expectedLastHash, expectedInboxHash, assertionBytes32Fields, assertionIntFields)
 }
 
 // UpgradeImplementation is a paid mutator transaction binding the contract method 0x83f94db7.
