@@ -8,6 +8,7 @@ import "./IArbToken.sol";
 import "./ArbTokenBridge.sol";
 
 contract StandardArbERC777 is ERC777, Cloneable, IArbToken {
+    using DecimalConverter for uint256;
     ArbTokenBridge public bridge;
     address public l1Address;
     uint8 public l1Decimals;
@@ -22,7 +23,7 @@ contract StandardArbERC777 is ERC777, Cloneable, IArbToken {
         bridge = ArbTokenBridge(_bridge);
         l1Address = _l1Address;
 
-        require(_decimals <= 18);
+        require(_decimals <= 18, "Decimals must be less than 18");
         l1Decimals = _decimals;
         _granularity = 10 ** uint256(18 - _decimals);
     }
@@ -37,12 +38,12 @@ contract StandardArbERC777 is ERC777, Cloneable, IArbToken {
     }
 
     function bridgeMint(address account, uint256 amount) external override onlyBridge {
-        _mint(account, DecimalConverter.from20to777(l1Decimals, amount), '', '');
+        _mint(account, amount.from20to777(l1Decimals), '', '');
     }
 
     function withdraw(address destination, uint256 amount) external {
         _burn(msg.sender, amount, '', '');
-        bridge.withdraw(l1Address, destination, DecimalConverter.from777to20(l1Decimals, amount));
+        bridge.withdraw(l1Address, destination, amount.from777to20(l1Decimals));
     }
 
     function migrate(address target, uint256 amount) external {
