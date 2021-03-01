@@ -101,6 +101,16 @@ uint64_t blockCountImpl(rocksdb::Transaction& tx) {
     auto it = value.begin();
     return extractUint64(it);
 }
+
+void updateLogsProcessedCountImpl(rocksdb::Transaction& tx,
+                                  const uint256_t& count) {
+    std::vector<unsigned char> value;
+    marshal_uint256_t(count, value);
+    auto s = tx.Put(vecToSlice(logs_processed_key), vecToSlice(value));
+    if (!s.ok()) {
+        throw std::runtime_error("filed to save processed count");
+    }
+}
 }  // namespace
 
 std::array<char, block_key.size() + sizeof(uint64_t)> blockEntryKey(
@@ -143,6 +153,7 @@ AggregatorStore::AggregatorStore(std::shared_ptr<DataStorage> data_storage_)
     auto s = tx->Get(rocksdb::ReadOptions{}, vecToSlice(block_key), &value);
     if (s.IsNotFound()) {
         saveBlockCount(*tx, 0);
+        updateLogsProcessedCountImpl(*tx, 0);
     }
     commitTx(*tx);
 }
@@ -221,12 +232,8 @@ ValueResult<uint256_t> AggregatorStore::logsProcessedCount() const {
                                        vecToSlice(logs_processed_key));
 }
 
-rocksdb::Status AggregatorStore::updateLogsProcessedCount(
-    const uint256_t& count) {
-    std::vector<unsigned char> value;
-    marshal_uint256_t(count, value);
-
+void AggregatorStore::updateLogsProcessedCount(const uint256_t& count) {
     auto tx = data_storage->beginTransaction();
-    return tx->Put(data_storage->default_column.get(),
-                   vecToSlice(logs_processed_key), vecToSlice(value));
+    updateLogsProcessedCountImpl(*tx, count);
+    commitTx(*tx);
 }

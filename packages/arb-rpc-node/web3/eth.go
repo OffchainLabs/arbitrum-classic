@@ -71,7 +71,10 @@ func (s *Server) BlockNumber() (hexutil.Uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return hexutil.Uint64(blockCount), nil
+	if blockCount == 0 {
+		return 0, errors.New("no blocks")
+	}
+	return hexutil.Uint64(blockCount - 1), nil
 }
 
 func (s *Server) GetBalance(address *common.Address, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
@@ -131,7 +134,7 @@ func (s *Server) GetBlockTransactionCountByHash(blockHash common.Hash) (*hexutil
 }
 
 func (s *Server) GetBlockTransactionCountByNumber(blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
-	height, err := s.blockNum(blockNum)
+	height, err := s.srv.BlockNum(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -256,12 +259,12 @@ func (s *Server) GetBlockByHash(blockHashRaw hexutil.Bytes, includeTxData bool) 
 }
 
 func (s *Server) GetBlockByNumber(blockNum *rpc.BlockNumber, includeTxData bool) (*GetBlockResult, error) {
-	height, err := s.blockNum(blockNum)
+	height, err := s.srv.BlockNum(blockNum)
 	if err != nil {
 		return nil, err
 	}
 	info, err := s.srv.BlockInfoByNumber(height)
-	if err != nil {
+	if err != nil || info == nil {
 		return nil, err
 	}
 	return s.getBlock(info, includeTxData)
@@ -309,7 +312,7 @@ func (s *Server) GetTransactionByBlockHashAndIndex(blockHash common.Hash, index 
 }
 
 func (s *Server) GetTransactionByBlockNumberAndIndex(blockNum *rpc.BlockNumber, index hexutil.Uint64) (*TransactionResult, error) {
-	height, err := s.blockNum(blockNum)
+	height, err := s.srv.BlockNum(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -584,16 +587,4 @@ func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, err
 		return nil, errors.New("unsupported block number")
 	}
 	return snap, nil
-}
-
-func (s *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
-	if *block == rpc.EarliestBlockNumber {
-		return 0, nil
-	} else if *block == rpc.LatestBlockNumber {
-		return s.srv.GetBlockCount()
-	} else if *block >= 0 {
-		return uint64(*block), nil
-	} else {
-		return 0, errors.New("unsupported block num")
-	}
 }

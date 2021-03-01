@@ -757,9 +757,7 @@ void ArbCore::operator()() {
 
                 // Machine was stopped to save sideload, update execConfig
                 // and start machine back up where it stopped
-                execConfig.messages_to_skip +=
-                    last_assertion.inbox_messages_consumed;
-                auto machine_success = machine->runMachine(execConfig);
+                auto machine_success = machine->continueRunningMachine();
                 if (!machine_success) {
                     core_error_string = "Error starting machine thread";
                     machine_error = true;
@@ -789,11 +787,15 @@ void ArbCore::operator()() {
                           << core_error_string << "\n";
                 break;
             }
-
-            if (messages_count.data > pending_checkpoint.total_messages_read) {
+            auto total_messages_read = pending_checkpoint.total_messages_read;
+            if (std::holds_alternative<uint256_t>(
+                    machine->machine_state.staged_message)) {
+                total_messages_read -= 1;
+            }
+            if (messages_count.data > total_messages_read) {
                 // New messages to process
-                auto next_message_result = getMessageEntry(
-                    *tx, pending_checkpoint.total_messages_read);
+                auto next_message_result =
+                    getMessageEntry(*tx, total_messages_read);
                 if (!next_message_result.status.ok()) {
                     core_error_string = next_message_result.status.ToString();
                     machine_error = true;
@@ -802,7 +804,7 @@ void ArbCore::operator()() {
                     break;
                 }
                 if (next_message_result.data.sequence_number !=
-                    pending_checkpoint.total_messages_read) {
+                    total_messages_read) {
                     core_error_string =
                         "sequence number in message different than expected";
                     machine_error = true;

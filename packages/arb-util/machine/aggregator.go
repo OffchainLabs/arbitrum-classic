@@ -17,6 +17,7 @@
 package machine
 
 import (
+	"math/big"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -44,6 +45,9 @@ type AggregatorStore interface {
 
 	SaveBlock(header *types.Header, logIndex uint64, requests []EVMRequestInfo) error
 	Reorg(height uint64) error
+
+	CurrentLogCount() (*big.Int, error)
+	UpdateCurrentLogCount(count *big.Int) error
 }
 
 type InMemoryAggregatorStore struct {

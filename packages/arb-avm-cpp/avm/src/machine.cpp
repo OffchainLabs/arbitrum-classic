@@ -60,22 +60,28 @@ void MachineExecutionConfig::setSideloadsFromBytes(
 }
 
 Assertion Machine::run(MachineExecutionConfig config) {
-    auto config_max_gas = config.max_gas;
-    auto config_go_over_gas = config.go_over_gas;
-    bool has_gas_limit = config.max_gas != 0;
-
     machine_state.context = AssertionContext(std::move(config));
+    return runImpl();
+}
 
+Assertion Machine::continueRunning() {
+    machine_state.context.resetForContinuedRun();
+    return runImpl();
+}
+
+Assertion Machine::runImpl() {
+    bool has_gas_limit = machine_state.context.max_gas != 0;
     BlockReason block_reason = NotBlocked{};
     while (true) {
         if (has_gas_limit) {
-            if (!config_go_over_gas) {
+            if (!machine_state.context.go_over_gas) {
                 if (machine_state.nextGasCost() + machine_state.context.numGas >
-                    config_max_gas) {
+                    machine_state.context.max_gas) {
                     // Next step would go over gas limit
                     break;
                 }
-            } else if (machine_state.context.numGas >= config_max_gas) {
+            } else if (machine_state.context.numGas >=
+                       machine_state.context.max_gas) {
                 // Last step reached or went over gas limit
                 break;
             }
@@ -92,7 +98,8 @@ Assertion Machine::run(MachineExecutionConfig config) {
     }
     return {intx::narrow_cast<uint64_t>(machine_state.context.numSteps),
             intx::narrow_cast<uint64_t>(machine_state.context.numGas),
-            machine_state.context.inbox_messages_consumed,
+            machine_state.context.inbox_messages_consumed -
+                machine_state.context.messages_to_skip,
             std::move(machine_state.context.sends),
             std::move(machine_state.context.logs),
             std::move(machine_state.context.debug_prints),
