@@ -140,12 +140,26 @@ func (e *ExecutionTracker) GetMachine(gasUsed *big.Int) (machine.Machine, error)
 	return e.cursors[index].Clone().TakeMachine()
 }
 
-func IsAssertionValid(assertion *Assertion, execTracker *ExecutionTracker) (bool, error) {
+func IsAssertionValid(assertion *Assertion, execTracker *ExecutionTracker, targetInboxAcc [32]byte) (bool, error) {
 	localExecutionInfo, _, err := execTracker.GetExecutionInfo(assertion.GasUsed())
 	if err != nil {
 		return false, err
 	}
-	if localExecutionInfo.InboxMessagesRead().Cmp(assertion.InboxMessagesRead()) > 0 || localExecutionInfo.After.TotalGasConsumed.Cmp(assertion.GasUsed()) < 0 {
+	notEnoughMessages := localExecutionInfo.InboxMessagesRead().Cmp(assertion.InboxMessagesRead()) > 0
+	if notEnoughMessages {
+		actualEndAcc, expectedEndAcc, err := execTracker.lookup.GetInboxAccPair(localExecutionInfo.After.TotalMessagesRead, assertion.After.TotalMessagesRead)
+		if err != nil {
+			return false, err
+		}
+		if actualEndAcc != localExecutionInfo.After.InboxAcc || expectedEndAcc != targetInboxAcc {
+			return false, errors.New("inbox reorg while evaluating assertion")
+		}
+	} else {
+		if localExecutionInfo.After.InboxAcc != targetInboxAcc {
+			return false, errors.New("inbox reorg while evaluating assertion")
+		}
+	}
+	if notEnoughMessages || localExecutionInfo.After.TotalGasConsumed.Cmp(assertion.GasUsed()) < 0 {
 		// Execution read more messages than provided so assertion should have
 		// stopped short
 		return false, nil

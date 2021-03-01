@@ -23,6 +23,7 @@ type NodeInfo struct {
 	Assertion     *Assertion
 	InboxMaxCount *big.Int
 	NodeHash      common.Hash
+	AfterInboxAcc [32]byte
 }
 
 func (n *NodeInfo) AfterState() *NodeState {

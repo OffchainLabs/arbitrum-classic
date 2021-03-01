@@ -138,6 +138,7 @@ func (r *RollupWatcher) LookupNode(ctx context.Context, number *big.Int) (*core.
 		BlockProposed: proposed,
 		Assertion:     core.NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
 		InboxMaxCount: parsedLog.InboxMaxCount,
+		AfterInboxAcc: parsedLog.AfterInboxAcc,
 		NodeHash:      parsedLog.NodeHash,
 	}, nil
 }
@@ -175,6 +176,7 @@ func (r *RollupWatcher) LookupNodeChildren(ctx context.Context, parentHash [32]b
 			BlockProposed: proposed,
 			Assertion:     core.NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
 			InboxMaxCount: parsedLog.InboxMaxCount,
+			AfterInboxAcc: parsedLog.AfterInboxAcc,
 			NodeHash:      lastHash,
 		})
 	}

@@ -50,6 +50,7 @@ type ArbCoreLookup interface {
 	GetSendAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
 	GetLogAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
 	GetInboxAcc(index *big.Int) (common.Hash, error)
+	GetInboxAccPair(index1 *big.Int, index2 *big.Int) (common.Hash, common.Hash, error)
 
 	// GetExecutionCursor returns a cursor containing the machine after executing totalGasUsed
 	// from the original machine
@@ -153,6 +154,7 @@ func GetSingleLog(lookup ArbCoreLookup, index *big.Int) (value.Value, error) {
 
 type ExecutionState struct {
 	MachineHash       common.Hash
+	InboxAcc          common.Hash
 	TotalMessagesRead *big.Int
 	TotalGasConsumed  *big.Int
 	TotalSendCount    *big.Int
@@ -162,6 +164,7 @@ type ExecutionState struct {
 func NewExecutionState(c ExecutionCursor) *ExecutionState {
 	return &ExecutionState{
 		MachineHash:       c.MachineHash(),
+		InboxAcc:          c.InboxAcc(),
 		TotalMessagesRead: c.TotalMessagesRead(),
 		TotalGasConsumed:  c.TotalGasConsumed(),
 		TotalSendCount:    c.TotalSendCount(),
@@ -172,6 +175,7 @@ func NewExecutionState(c ExecutionCursor) *ExecutionState {
 func (e *ExecutionState) Equals(o *ExecutionState) bool {
 	return e.MachineHash == o.MachineHash &&
 		e.TotalMessagesRead.Cmp(o.TotalMessagesRead) == 0 &&
+		e.InboxAcc == o.InboxAcc &&
 		e.TotalGasConsumed.Cmp(o.TotalGasConsumed) == 0 &&
 		e.TotalSendCount.Cmp(o.TotalSendCount) == 0 &&
 		e.TotalLogCount.Cmp(o.TotalLogCount) == 0

@@ -191,8 +191,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 			break
 		}
 		if correctNode == nil {
-			// TODO make this atomic with inbox reorgs
-			valid, err := core.IsAssertionValid(nd.Assertion, execTracker)
+			valid, err := core.IsAssertionValid(nd.Assertion, execTracker, nd.AfterInboxAcc)
 			if err != nil {
 				return nil, false, err
 			}
@@ -223,15 +222,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		return nil, wrongNodesExist, nil
 	}
 
-	// TODO make this atomic with inbox reorgs
-	inboxAcc := [32]byte{}
-	if execInfo.After.TotalMessagesRead.Cmp(big.NewInt(0)) > 0 {
-		msgSequenceNumber := new(big.Int).Sub(execInfo.After.TotalMessagesRead, big.NewInt(1))
-		inboxAcc, err = v.lookup.GetInboxAcc(msgSequenceNumber)
-		if err != nil {
-			return nil, false, err
-		}
-	}
+	inboxAcc := execInfo.After.InboxAcc
 	hasSiblingByte := [1]byte{0}
 	lastHash := baseHash
 	if len(successorsNodes) > 0 {
