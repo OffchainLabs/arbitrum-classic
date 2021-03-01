@@ -137,7 +137,7 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 
 		blocksFound = true
 
-		currentBlockHeight = txRes.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64()
+		currentBlockHeight = txRes.IncomingRequest.L2BlockNumber.Uint64()
 		logBlockInfo, err := db.GetBlock(currentBlockHeight)
 		if err != nil {
 			return err
