@@ -1049,6 +1049,26 @@ ValueResult<uint256_t> ArbCore::getInboxAcc(uint256_t index) {
     return {rocksdb::Status::OK(), result.data.inbox_acc};
 }
 
+ValueResult<std::pair<uint256_t, uint256_t>> ArbCore::getInboxAccPair(
+    uint256_t index1,
+    uint256_t index2) {
+    auto tx = Transaction::makeTransaction(data_storage);
+    const std::lock_guard<std::mutex> lock(core_reorg_mutex);
+
+    auto result1 = getMessageEntry(*tx, index1);
+    if (!result1.status.ok()) {
+        return {result1.status, {0, 0}};
+    }
+
+    auto result2 = getMessageEntry(*tx, index2);
+    if (!result2.status.ok()) {
+        return {result2.status, {0, 0}};
+    }
+
+    return {rocksdb::Status::OK(),
+            {result1.data.inbox_acc, result2.data.inbox_acc}};
+}
+
 ValueResult<uint256_t> ArbCore::getSendAcc(uint256_t start_acc_hash,
                                            uint256_t start_index,
                                            uint256_t count) {

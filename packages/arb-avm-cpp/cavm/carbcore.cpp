@@ -184,6 +184,32 @@ int arbCoreGetInboxAcc(CArbCore* arbcore_ptr,
     }
 }
 
+int arbCoreGetInboxAccPair(CArbCore* arbcore_ptr,
+                           const void* index1_ptr,
+                           const void* index2_ptr,
+                           void* ret1,
+                           void* ret2) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    try {
+        auto result = arb_core->getInboxAccPair(receiveUint256(index1_ptr),
+                                                receiveUint256(index2_ptr));
+        if (!result.status.ok()) {
+            return false;
+        }
+
+        std::array<unsigned char, 32> val1{};
+        to_big_endian(result.data.first, val1.begin());
+        std::copy(val1.begin(), val1.end(), reinterpret_cast<char*>(ret1));
+
+        std::array<unsigned char, 32> val2{};
+        to_big_endian(result.data.first, val2.begin());
+        std::copy(val2.begin(), val2.end(), reinterpret_cast<char*>(ret2));
+        return true;
+    } catch (const std::exception& e) {
+        return false;
+    }
+}
+
 int arbCoreGetSendAcc(CArbCore* arbcore_ptr,
                       const void* start_acc_hash,
                       const void* start_index_ptr,

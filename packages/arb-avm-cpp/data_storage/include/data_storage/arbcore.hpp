@@ -235,6 +235,9 @@ class ArbCore {
         uint256_t index,
         uint256_t count) const;
     ValueResult<uint256_t> getInboxAcc(uint256_t index);
+    ValueResult<std::pair<uint256_t, uint256_t>> getInboxAccPair(
+        uint256_t index1,
+        uint256_t index2);
     ValueResult<uint256_t> getSendAcc(uint256_t start_acc_hash,
                                       uint256_t start_index,
                                       uint256_t count);
