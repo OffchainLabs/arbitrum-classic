@@ -38,7 +38,6 @@ AssertionContext::AssertionContext(MachineExecutionConfig config)
       stop_on_sideload(config.stop_on_sideload),
       max_gas(config.max_gas),
       go_over_gas(config.go_over_gas) {
-    std::cout << "Initialized context " << inbox_messages_consumed << std::endl;
     if (config.final_message_of_block && !inbox_messages.empty()) {
         // Last message is the final message of a block, so need to
         // set next_block_height to the block after the last block

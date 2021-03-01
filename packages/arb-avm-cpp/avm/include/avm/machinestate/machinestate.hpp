@@ -74,7 +74,7 @@ struct AssertionContext {
         max_gas -= numGas;
         numGas = 0;
         numSteps = 0;
-        messages_to_skip += inbox_messages_consumed;
+        messages_to_skip = inbox_messages_consumed;
     }
 };
 
