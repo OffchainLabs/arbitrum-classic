@@ -821,6 +821,10 @@ void ArbCore::operator()() {
                     pending_checkpoint.total_messages_read + messages.size();
                 execConfig.setInboxMessagesFromBytes(messages);
 
+                std::cout << "Running " << total_messages_read << " "
+                          << messages_count.data << " " << messages.size()
+                          << std::endl;
+
                 auto status = machine->runMachine(execConfig);
                 if (!status) {
                     core_error_string = "Error starting machine thread";

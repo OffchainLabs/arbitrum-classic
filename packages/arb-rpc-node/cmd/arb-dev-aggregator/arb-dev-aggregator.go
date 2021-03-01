@@ -188,13 +188,14 @@ func main() {
 			logger.Fatal().Stack().Err(err).Send()
 		}
 		deposit := message.EthDepositTx{
-			L2Message: message.NewSafeL2Message(message.Transaction{
-				MaxGas:      big.NewInt(1000000),
-				GasPriceBid: big.NewInt(0),
-				SequenceNum: big.NewInt(1),
-				DestAddress: common.NewAddressFromEth(account.Address),
-				Payment:     depositSize,
-				Data:        nil,
+			L2Message: message.NewSafeL2Message(message.ContractTransaction{
+				BasicTx: message.BasicTx{
+					MaxGas:      big.NewInt(1000000),
+					GasPriceBid: big.NewInt(0),
+					DestAddress: common.NewAddressFromEth(account.Address),
+					Payment:     depositSize,
+					Data:        nil,
+				},
 			}),
 		}
 		if err := backend.AddInboxMessage(deposit, rollupAddress, backend.l1Emulator.GenerateBlock()); err != nil {
@@ -337,6 +338,20 @@ func NewBackend(arbcore core.ArbCore, db *txdb.TxDB, l1 *L1Emulator, signer type
 		log.Fatal().Err(err).Msg("error reading logs")
 	}()
 
+	go func() {
+		for {
+			coreLogs, err := arbcore.GetLogCount()
+			if err != nil {
+				panic(err)
+			}
+			coreMessages, err := arbcore.GetMessageCount()
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println("Total count", coreLogs, coreMessages)
+			<-time.After(time.Second)
+		}
+	}()
 	return &Backend{
 		arbcore:    arbcore,
 		db:         db,
