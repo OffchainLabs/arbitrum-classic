@@ -82,16 +82,12 @@ func (r *Rollup) StakeOnExistingNode(ctx context.Context, nodeNumber core.NodeID
 
 func (r *Rollup) StakeOnNewNode(
 	ctx context.Context,
-	hasSibling bool,
-	lastHash [32]byte,
-	inboxHash [32]byte,
+	nodeHash [32]byte,
 	assertion *core.Assertion,
 ) error {
 	_, err := r.builderCon.StakeOnNewNode(
 		authWithContext(ctx, r.builderAuth),
-		hasSibling,
-		lastHash,
-		inboxHash,
+		nodeHash,
 		assertion.BytesFields(),
 		assertion.IntFields(),
 	)

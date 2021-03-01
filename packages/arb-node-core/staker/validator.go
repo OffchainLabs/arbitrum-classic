@@ -12,6 +12,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
 
 type Validator struct {
@@ -109,10 +110,8 @@ func (v *Validator) resolveNextNode(ctx context.Context) error {
 }
 
 type createNodeAction struct {
-	assertion  *core.Assertion
-	hasSibling bool
-	lastHash   [32]byte
-	inboxAcc   [32]byte
+	assertion *core.Assertion
+	hash      [32]byte
 }
 
 type existingNodeAction struct {
@@ -147,9 +146,10 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		return nil, false, err
 	}
 
-	gasesUsed := make([]*big.Int, 0, len(successorsNodes))
+	gasesUsed := make([]*big.Int, 0, len(successorsNodes)+1)
+	gasesUsed = append(gasesUsed, startState.TotalGasConsumed)
 	for _, nd := range successorsNodes {
-		gasesUsed = append(gasesUsed, nd.Assertion.GasUsed())
+		gasesUsed = append(gasesUsed, nd.Assertion.After.TotalGasConsumed)
 	}
 
 	currentBlock, err := getBlockID(ctx, v.client, nil)
@@ -213,7 +213,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		return correctNode, wrongNodesExist, nil
 	}
 
-	execInfo, _, err := execTracker.GetExecutionInfo(gasesUsed[len(gasesUsed)-1])
+	execInfo, _, err := execTracker.GetExecutionInfo(maximumGasToConsume)
 	if err != nil {
 		return nil, false, err
 	}
@@ -232,20 +232,27 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 			return nil, false, err
 		}
 	}
-	hasSibling := len(successorsNodes) > 0
+	hasSiblingByte := [1]byte{0}
 	lastHash := baseHash
-	if hasSibling {
+	if len(successorsNodes) > 0 {
 		lastHash = successorsNodes[len(successorsNodes)-1].NodeHash
+		hasSiblingByte[0] = 1
 	}
+	assertion := &core.Assertion{
+		PrevProposedBlock: startState.ProposedBlock,
+		PrevInboxMaxCount: startState.InboxMaxCount,
+		ExecutionInfo:     execInfo,
+	}
+	executionHash := core.BisectionChunkHash(
+		big.NewInt(0),
+		execInfo.GasUsed(),
+		assertion.BeforeExecutionHash(),
+		assertion.AfterExecutionHash(),
+	)
+	newNodeHash := hashing.SoliditySHA3(hasSiblingByte[:], lastHash[:], executionHash[:], inboxAcc[:])
 	action := createNodeAction{
-		assertion: &core.Assertion{
-			PrevProposedBlock: startState.ProposedBlock,
-			PrevInboxMaxCount: startState.InboxMaxCount,
-			ExecutionInfo:     execInfo,
-		},
-		hasSibling: hasSibling,
-		lastHash:   lastHash,
-		inboxAcc:   inboxAcc,
+		assertion: assertion,
+		hash:      newNodeHash,
 	}
 	return action, wrongNodesExist, nil
 }
