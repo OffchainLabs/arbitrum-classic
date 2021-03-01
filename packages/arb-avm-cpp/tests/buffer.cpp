@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-#include "helper.hpp"
-
 #include <data_storage/storageresult.hpp>
-#include <data_storage/value/value.hpp>
 
 #include <avm/machinestate/datastack.hpp>
 
@@ -25,7 +22,11 @@
 
 #include <ethash/keccak.hpp>
 
-uint256_t hash_buffer_aux(uint8_t* buf, int offset, int sz, bool pack, bool &zero) {
+uint256_t hash_buffer_aux(uint8_t* buf,
+                          int offset,
+                          int sz,
+                          bool pack,
+                          bool& zero) {
     if (sz == 32) {
         auto hash_val = ethash::keccak256(buf + offset, 32);
         auto res = intx::be::load<uint256_t>(hash_val);
@@ -88,13 +89,10 @@ TEST_CASE("Buffer") {
     }
 
     SECTION("hashing with single zeroes") {
-        const int SIZE = 1024*32;
+        const int SIZE = 1024 * 32;
         for (int j = 0; j < 1024; j++) {
-            uint8_t arr[SIZE];
-            for (int i = 0; i < SIZE; i++) {
-                arr[i] = 0;
-            }
-            arr[j*32] = 123;
+            uint8_t arr[SIZE] = {};
+            arr[j * 32] = 123;
             REQUIRE(hash_buffer(arr, 0, SIZE) == hash_acc(arr, SIZE));
         }
     }

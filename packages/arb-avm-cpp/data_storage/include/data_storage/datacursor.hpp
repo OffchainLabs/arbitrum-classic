@@ -39,8 +39,7 @@ class DataCursor {
    public:
     std::atomic<status_enum> status{EMPTY};
 
-    // Mutex is acquired by core thread when reorg is occurring.
-    // Other threads should acquire mutex whenever accessing below data.
+    // All threads should acquire mutex before modifying any of the below fields
     std::mutex reorg_mutex;
     uint256_t pending_total_count;
     uint256_t current_total_count;

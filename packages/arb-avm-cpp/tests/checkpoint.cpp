@@ -23,8 +23,6 @@
 
 #include <avm/machine.hpp>
 
-#include <avm_values/vmValueParser.hpp>
-
 #define CATCH_CONFIG_ENABLE_BENCHMARKING 1
 #include <catch2/catch.hpp>
 
@@ -90,7 +88,7 @@ TEST_CASE("Save value") {
 
     SECTION("save 1 num tuple") {
         uint256_t num = 1;
-        auto tuple = Tuple(num);
+        auto tuple = Tuple::createTuple(num);
         saveValue(*transaction, tuple, 1, true);
     }
     SECTION("save num") {
@@ -110,19 +108,19 @@ TEST_CASE("Save tuple") {
 
     SECTION("save 1 num tuple") {
         uint256_t num = 1;
-        auto tuple = Tuple(num);
+        auto tuple = Tuple::createTuple(num);
         saveValue(*transaction, tuple, 1, true);
     }
     SECTION("save 2, 1 num tuples") {
         uint256_t num = 1;
-        auto tuple = Tuple(num);
+        auto tuple = Tuple::createTuple(num);
         saveValue(*transaction, tuple, 1, true);
         saveValue(*transaction, tuple, 2, true);
     }
     SECTION("saved tuple in tuple") {
         uint256_t num = 1;
-        value inner_tuple = Tuple(num);
-        auto tuple = Tuple(inner_tuple);
+        value inner_tuple = Tuple::createTuple(num);
+        auto tuple = Tuple::createTuple(inner_tuple);
         saveValue(*transaction, tuple, 1, true);
         saveValue(*transaction, tuple, 2, true);
     }
@@ -164,28 +162,28 @@ TEST_CASE("Save and get tuple values") {
 
     SECTION("save num tuple") {
         uint256_t num = 1;
-        auto tuple = Tuple(num);
+        auto tuple = Tuple::createTuple(num);
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(num)};
         getTupleValues(*transaction, hash(tuple), hashes, value_cache);
     }
     SECTION("save codepoint tuple") {
         CodePointStub code_point_stub({0, 1}, 654546);
-        auto tuple = Tuple(code_point_stub);
+        auto tuple = Tuple::createTuple(code_point_stub);
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(code_point_stub)};
         getTupleValues(*transaction, hash(tuple), hashes, value_cache);
     }
     SECTION("save codepoint tuple") {
         CodePointStub code_point_stub({0, 1}, 654546);
-        auto tuple = Tuple(code_point_stub);
+        auto tuple = Tuple::createTuple(code_point_stub);
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(code_point_stub)};
         getTupleValues(*transaction, hash(tuple), hashes, value_cache);
     }
     SECTION("save nested tuple") {
         value inner_tuple = Tuple();
-        value tuple = Tuple(inner_tuple);
+        value tuple = Tuple::createTuple(inner_tuple);
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash_value(inner_tuple)};
         getTupleValues(*transaction, hash_value(tuple), hashes, value_cache);
@@ -220,14 +218,14 @@ TEST_CASE("Save And Get Tuple") {
 
     SECTION("save 1 num tuple") {
         uint256_t num = 1;
-        auto tuple = Tuple(num);
+        auto tuple = Tuple::createTuple(num);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
     }
     SECTION("save codepoint in tuple") {
         value_cache.clear();
         CodePointStub code_point_stub({0, 1}, 654546);
-        auto tuple = Tuple(code_point_stub);
+        auto tuple = Tuple::createTuple(code_point_stub);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
     }
@@ -235,7 +233,7 @@ TEST_CASE("Save And Get Tuple") {
         value_cache.clear();
         auto transaction2 = storage.makeTransaction();
         uint256_t num = 1;
-        auto tuple = Tuple(num);
+        auto tuple = Tuple::createTuple(num);
         saveValue(*transaction, tuple, 1, true);
         saveValue(*transaction2, tuple, 2, true);
         getTuple(*transaction, tuple, 2, true, value_cache);
@@ -255,8 +253,8 @@ TEST_CASE("Save And Get Tuple") {
     SECTION("save tuple in tuple") {
         value_cache.clear();
         uint256_t num = 1;
-        auto inner_tuple = Tuple(num);
-        auto tuple = Tuple(value(inner_tuple));
+        auto inner_tuple = Tuple::createTuple(num);
+        auto tuple = Tuple::createTuple(inner_tuple);
         REQUIRE(hash(tuple) != hash(inner_tuple));
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
@@ -265,9 +263,9 @@ TEST_CASE("Save And Get Tuple") {
     SECTION("save 2 tuples in tuple") {
         value_cache.clear();
         uint256_t num = 1;
-        value inner_tuple = Tuple(num);
+        value inner_tuple = Tuple::createTuple(num);
         uint256_t num2 = 2;
-        value inner_tuple2 = Tuple(num2);
+        value inner_tuple2 = Tuple::createTuple(num2);
         auto tuple = Tuple(inner_tuple, inner_tuple2);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
@@ -278,8 +276,8 @@ TEST_CASE("Save And Get Tuple") {
         value_cache.clear();
         auto transaction2 = storage.makeTransaction();
         uint256_t num = 1;
-        value inner_tuple = Tuple(num);
-        value tuple = Tuple(inner_tuple);
+        value inner_tuple = Tuple::createTuple(num);
+        value tuple = Tuple::createTuple(inner_tuple);
         saveValue(*transaction, inner_tuple, 1, true);
         getTuple(*transaction, inner_tuple, 1, true, value_cache);
         saveValue(*transaction, tuple, 1, true);
@@ -299,9 +297,9 @@ TEST_CASE("Checkpoint Benchmark") {
     ArbStorage storage(dbpath);
     auto transaction = storage.makeTransaction();
     uint256_t num = 1;
-    value tuple = Tuple(num);
+    value tuple = Tuple::createTuple(num);
     for (uint64_t i = 1; i < 100000; i++) {
-        tuple = Tuple(tuple);
+        tuple = Tuple::createTuple(tuple);
     }
     saveValue(*transaction, tuple);
     ValueCache value_cache{};

@@ -25,7 +25,7 @@
 #include <ostream>
 
 uint64_t deserialize_uint64_t(const char*& bufptr) {
-    uint64_t val = intx::be::unsafe::load<uint64_t>(
+    auto val = intx::be::unsafe::load<uint64_t>(
         reinterpret_cast<const unsigned char*>(bufptr));
     bufptr += sizeof(val);
     return val;
@@ -72,7 +72,7 @@ value deserialize_value(const char*& bufptr) {
                 if (valType >= TUPLE && valType <= TUPLE + 8) {
                     uint8_t tuple_size = valType - TUPLE;
                     values_to_read += tuple_size;
-                    values.push_back(TuplePlaceholder{tuple_size});
+                    values.emplace_back(TuplePlaceholder{tuple_size});
                 } else {
                     std::printf("in deserialize_value, unhandled type = %X\n",
                                 valType);
@@ -96,7 +96,7 @@ value assembleValueFromDeserialized(std::vector<DeserializedValue> values) {
             continue;
         }
         auto holder = std::get<TuplePlaceholder>(val);
-        Tuple tup(holder.values);
+        Tuple tup = Tuple::createSizedTuple(holder.values);
         for (uint8_t j = 0; j < holder.values; ++j) {
             tup.set_element(
                 j, std::move(std::get<value>(values[val_pos + 1 + j])));
@@ -110,8 +110,7 @@ value assembleValueFromDeserialized(std::vector<DeserializedValue> values) {
 
 void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
     uint64_t big_endian_val = boost::endian::native_to_big(val);
-    const unsigned char* data =
-        reinterpret_cast<const unsigned char*>(&big_endian_val);
+    const auto data = reinterpret_cast<const unsigned char*>(&big_endian_val);
     buf.insert(buf.end(), data, data + sizeof(big_endian_val));
 }
 
