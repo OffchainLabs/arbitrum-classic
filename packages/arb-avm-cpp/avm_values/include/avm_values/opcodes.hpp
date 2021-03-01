@@ -487,10 +487,10 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::DEBUG_PRINT, 1},
 
     {OpCode::NEW_BUFFER, 1},
-    {OpCode::GET_BUFFER8, 10},
+    {OpCode::GET_BUFFER8, 2},
     {OpCode::GET_BUFFER64, 10},
     {OpCode::GET_BUFFER256, 10},
-    {OpCode::SET_BUFFER8, 100},
+    {OpCode::SET_BUFFER8, 80},
     {OpCode::SET_BUFFER64, 100},
     {OpCode::SET_BUFFER256, 100},
 

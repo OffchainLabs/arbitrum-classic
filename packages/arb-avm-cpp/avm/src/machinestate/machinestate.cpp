@@ -846,6 +846,7 @@ BlockReason MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::GET_BUFFER8:
             machineoperation::getbuffer8(*this);
+//            machineoperation::pop(*this);
             break;
         case OpCode::GET_BUFFER64:
             machineoperation::getbuffer64(*this);

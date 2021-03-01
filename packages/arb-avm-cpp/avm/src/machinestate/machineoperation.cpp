@@ -1034,6 +1034,7 @@ void getbuffer8(MachineState& m) {
     auto offset = assumeInt64(assumeInt(m.stack[0]));
     Buffer& md = assumeBuffer(m.stack[1]);
     auto res = uint256_t(md.get(offset));
+//    auto res = uint256_t(0);
     m.stack.popClear();
     m.stack.popClear();
     m.stack.push(res);
@@ -1093,6 +1094,7 @@ void setbuffer8(MachineState& m) {
     auto val = static_cast<uint8_t>(val_int);
     Buffer& md = assumeBuffer(m.stack[2]);
     auto res = md.set(offset, val);
+    // res.hash();
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();

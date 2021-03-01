@@ -156,6 +156,7 @@ class RawBuffer {
     uint8_t get(uint64_t pos) const {
         auto res = get_many(pos, 1);
         return res[0];
+        // return 123;
     }
 
     // Note: pos and len must be aligned so that the data to be read is from one
