@@ -23,7 +23,7 @@ contract StandardArbERC777 is ERC777, Cloneable, IArbToken {
         bridge = ArbTokenBridge(_bridge);
         l1Address = _l1Address;
 
-        require(_decimals <= 18, "Decimals must be less than 18");
+        require(_decimals <= 18, "Decimals must be less than or equal to 18");
         l1Decimals = _decimals;
         _granularity = 10 ** uint256(18 - _decimals);
     }
