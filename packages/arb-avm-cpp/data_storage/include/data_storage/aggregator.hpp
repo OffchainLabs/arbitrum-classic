@@ -22,6 +22,8 @@
 #include <rocksdb/utilities/transaction.h>
 
 #include <optional>
+#include "datastorage.hpp"
+#include "storageresult.hpp"
 
 class DataStorage;
 
@@ -43,6 +45,8 @@ class AggregatorStore {
     void saveBlockHash(const uint256_t& block_hash, uint64_t block_height);
 
     void reorg(uint64_t block_height);
+    ValueResult<uint256_t> logsProcessedCount() const;
+    rocksdb::Status updateLogsProcessedCount(const uint256_t& count);
 };
 
 #endif /* aggregator_hpp */

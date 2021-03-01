@@ -27,7 +27,7 @@ void Checkpoint::resetCheckpoint() {
     total_steps = 0;
     arb_gas_used = 0;
     total_messages_read = 0;
-    inbox_hash = 0;
+    inbox_acc = 0;
     next_sideload_block_number = 0;
     block_height = 0;
     send_count = 0;
@@ -79,7 +79,7 @@ std::vector<unsigned char> serializeCheckpoint(const Checkpoint& state_data) {
     marshal_uint256_t(state_data.arb_gas_used, state_data_vector);
     marshal_uint256_t(state_data.total_steps, state_data_vector);
     marshal_uint256_t(state_data.total_messages_read, state_data_vector);
-    marshal_uint256_t(state_data.inbox_hash, state_data_vector);
+    marshal_uint256_t(state_data.inbox_acc, state_data_vector);
     marshal_uint256_t(state_data.next_sideload_block_number, state_data_vector);
     marshal_uint64_t(state_data.block_height, state_data_vector);
     marshal_uint64_t(state_data.send_count, state_data_vector);

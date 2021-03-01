@@ -43,7 +43,6 @@ type GasAccountingSummary struct {
 type BlockInfo struct {
 	BlockNum       *big.Int
 	Timestamp      *big.Int
-	GasLimit       *big.Int
 	BlockStats     *OutputStatistics
 	ChainStats     *OutputStatistics
 	GasSummary     *GasAccountingSummary
@@ -68,10 +67,17 @@ func (b *BlockInfo) FirstAVMSend() *big.Int {
 	return new(big.Int).Sub(b.ChainStats.AVMSendCount, b.BlockStats.AVMSendCount)
 }
 
+func (b *BlockInfo) GasLimit() *big.Int {
+	limit := new(big.Int).Set(b.GasSummary.GasPool)
+	if b.BlockStats.GasUsed.Cmp(limit) > 0 {
+		limit = limit.Set(b.BlockStats.GasUsed)
+	}
+	return limit
+}
+
 func parseBlockResult(
 	blockNum value.Value,
 	timestamp value.Value,
-	gasLimit value.Value,
 	blockStatsRaw value.Value,
 	chainStatsRaw value.Value,
 	gasStatsRaw value.Value,
@@ -84,10 +90,6 @@ func parseBlockResult(
 	timestampInt, ok := timestamp.(value.IntValue)
 	if !ok {
 		return nil, errors.New("timestamp must be an int")
-	}
-	gasLimitInt, ok := gasLimit.(value.IntValue)
-	if !ok {
-		return nil, errors.New("gasLimit must be an int")
 	}
 	blockStats, err := parseOutputStatistics(blockStatsRaw)
 	if err != nil {
@@ -110,7 +112,6 @@ func parseBlockResult(
 	return &BlockInfo{
 		BlockNum:       blockNumInt.BigInt(),
 		Timestamp:      timestampInt.BigInt(),
-		GasLimit:       gasLimitInt.BigInt(),
 		BlockStats:     blockStats,
 		ChainStats:     chainStats,
 		GasSummary:     gasStats,

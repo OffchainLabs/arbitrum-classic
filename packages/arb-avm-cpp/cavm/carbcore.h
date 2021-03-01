@@ -30,7 +30,7 @@ char* arbCoreMessagesClearError(CArbCore* arbcore_ptr);
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            ByteSliceArray inbox_messages,
-                           void* previous_inbox_hash_ptr,
+                           void* previous_inbox_acc_ptr,
                            int last_block_complete);
 
 Uint256Result arbCoreGetLogCount(CArbCore* arbcore_ptr);
@@ -66,10 +66,11 @@ int arbCoreGetLogAcc(CArbCore* arbcore_ptr,
 int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr,
                              const void* cursor_index,
                              const void* count);
-ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
-                                              const void* cursor_index);
-ByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(CArbCore* arbcore_ptr,
-                                                     const void* cursor_index);
+IndexedByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
+                                                     const void* index_ptr);
+IndexedByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(
+    CArbCore* arbcore_ptr,
+    const void* index_ptr);
 int arbCoreLogsCursorConfirmReceived(CArbCore* arbcore_ptr,
                                      const void* cursor_index);
 int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr,

@@ -77,7 +77,7 @@ func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
 	return status, nil
 }
 
-func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) bool {
+func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool) bool {
 	rawInboxData := encodeInboxMessages(messages)
 	byteSlices := encodeByteSliceList(rawInboxData)
 
@@ -94,7 +94,7 @@ func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxH
 		cLastBlockComplete = 1
 	}
 
-	status := C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxHash.Bytes()), C.int(cLastBlockComplete))
+	status := C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxAcc.Bytes()), C.int(cLastBlockComplete))
 	return status == 1
 }
 
@@ -273,55 +273,57 @@ func (ac *ArbCore) LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
 	return nil
 }
 
-func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) ([]value.Value, error) {
+func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Value, error) {
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	result := C.arbCoreLogsCursorGetLogs(ac.c, unsafeDataPointer(cursorIndexData))
 	if result.found == 0 {
 		err := ac.LogsCursorCheckError(cursorIndex)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		// Nothing found, try again later
-		return nil, nil
+		return nil, nil, nil
 	}
 
+	firstIndex := receiveBigInt(result.first_index)
 	data := receiveByteSliceArray(result.array)
 	logs := make([]value.Value, len(data))
 	for i, slice := range data {
 		var err error
 		logs[i], err = value.UnmarshalValue(bytes.NewReader(slice[:]))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return logs, nil
+	return firstIndex, logs, nil
 }
 
-func (ac *ArbCore) LogsCursorGetDeletedLogs(cursorIndex *big.Int) ([]value.Value, error) {
+func (ac *ArbCore) LogsCursorGetDeletedLogs(cursorIndex *big.Int) (*big.Int, []value.Value, error) {
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	result := C.arbCoreLogsCursorGetDeletedLogs(ac.c, unsafeDataPointer(cursorIndexData))
 	if result.found == 0 {
 		err := ac.LogsCursorCheckError(cursorIndex)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		// Nothing found, try again later
-		return nil, nil
+		return nil, nil, nil
 	}
 
+	firstIndex := receiveBigInt(result.first_index)
 	data := receiveByteSliceArray(result.array)
 	logs := make([]value.Value, len(data))
 	for i, slice := range data {
 		var err error
 		logs[i], err = value.UnmarshalValue(bytes.NewReader(slice[:]))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
-	return logs, nil
+	return firstIndex, logs, nil
 }
 
 func (ac *ArbCore) LogsCursorCheckError(cursorIndex *big.Int) error {

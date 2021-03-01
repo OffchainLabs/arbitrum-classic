@@ -115,7 +115,7 @@ func (r *TxResult) EthLogs(blockHash common.Hash) []*types.Log {
 			Address:     l.Address.ToEthAddress(),
 			Topics:      common.NewEthHashesFromHashes(l.Topics),
 			Data:        l.Data,
-			BlockNumber: r.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64(),
+			BlockNumber: r.IncomingRequest.L2BlockNumber.Uint64(),
 			TxHash:      r.IncomingRequest.MessageID.ToEthHash(),
 			TxIndex:     uint(r.TxIndex.Uint64()),
 			BlockHash:   blockHash.ToEthHash(),
@@ -157,7 +157,7 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 		ContractAddress:   contractAddress,
 		GasUsed:           r.GasUsed.Uint64(),
 		BlockHash:         blockHash.ToEthHash(),
-		BlockNumber:       r.IncomingRequest.ChainTime.BlockNum.AsInt(),
+		BlockNumber:       r.IncomingRequest.L2BlockNumber,
 		TransactionIndex:  uint(r.TxIndex.Uint64()),
 	}
 }
@@ -343,20 +343,19 @@ func NewResultFromValue(val value.Value) (Result, error) {
 		feeStats, _ := tup.GetByInt64(5)
 		return parseTxResult(l1MsgVal, resultInfo, gasInfo, chainInfo, feeStats)
 	} else if kindInt.BigInt().Uint64() == 1 {
-		if tup.Len() != 8 {
-			return nil, errors.Errorf("block result expected tuple of length 8, but received len %v: %v", tup.Len(), tup)
+		if tup.Len() != 7 {
+			return nil, errors.Errorf("block result expected tuple of length 7, but received len %v: %v", tup.Len(), tup)
 		}
 
 		// Tuple size already verified above, so error can be ignored
 		blockNum, _ := tup.GetByInt64(1)
 		timestamp, _ := tup.GetByInt64(2)
-		gasLimit, _ := tup.GetByInt64(3)
-		blockStatsRaw, _ := tup.GetByInt64(4)
-		chainStatsRaw, _ := tup.GetByInt64(5)
-		gasStats, _ := tup.GetByInt64(6)
-		previousHeight, _ := tup.GetByInt64(7)
+		blockStatsRaw, _ := tup.GetByInt64(3)
+		chainStatsRaw, _ := tup.GetByInt64(4)
+		gasStats, _ := tup.GetByInt64(5)
+		previousHeight, _ := tup.GetByInt64(6)
 
-		return parseBlockResult(blockNum, timestamp, gasLimit, blockStatsRaw, chainStatsRaw, gasStats, previousHeight)
+		return parseBlockResult(blockNum, timestamp, blockStatsRaw, chainStatsRaw, gasStats, previousHeight)
 	} else if kindInt.BigInt().Uint64() == 2 {
 		return NewSendResultFromValue(tup)
 	} else if kindInt.BigInt().Uint64() == 3 {

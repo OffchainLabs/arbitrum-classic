@@ -53,14 +53,14 @@ int arbCoreMachineIdle(CArbCore* arbcore_ptr) {
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            ByteSliceArray inbox_messages,
-                           void* previous_inbox_hash_ptr,
+                           void* previous_inbox_acc_ptr,
                            const int last_block_complete) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     auto messages = receiveByteSliceArray(inbox_messages);
-    auto previous_inbox_hash = receiveUint256(previous_inbox_hash_ptr);
+    auto previous_inbox_acc = receiveUint256(previous_inbox_acc_ptr);
 
     try {
-        auto status = arb_core->deliverMessages(messages, previous_inbox_hash,
+        auto status = arb_core->deliverMessages(messages, previous_inbox_acc,
                                                 last_block_complete);
         return status;
     } catch (const std::exception& e) {
@@ -251,34 +251,7 @@ int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr,
     }
 }
 
-ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
-                                              const void* index_ptr) {
-    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
-    auto cursor_index = receiveUint256(index_ptr);
-
-    try {
-        auto result =
-            arbcore->logsCursorGetLogs(intx::narrow_cast<size_t>(cursor_index));
-        if (!result) {
-            // Cursor not in the right state, may have deleted logs to process
-            return {{}, false};
-        }
-
-        std::vector<std::vector<unsigned char>> data;
-        for (const auto& val : *result) {
-            std::vector<unsigned char> marshalled_value;
-            marshal_value(val, marshalled_value);
-            data.push_back(move(marshalled_value));
-        }
-        return {returnCharVectorVector(data), true};
-    } catch (const std::exception& e) {
-        std::cerr << "Exception while retrieving new logs from logscursor "
-                  << e.what() << std::endl;
-        return {{}, false};
-    }
-}
-
-ByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(CArbCore* arbcore_ptr,
+IndexedByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
                                                      const void* index_ptr) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
     auto cursor_index = receiveUint256(index_ptr);
@@ -288,20 +261,52 @@ ByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(CArbCore* arbcore_ptr,
             arbcore->logsCursorGetLogs(intx::narrow_cast<size_t>(cursor_index));
         if (!result) {
             // Cursor not in the right state, may have deleted logs to process
-            return {{}, false};
+            return {0, {}, false};
         }
 
         std::vector<std::vector<unsigned char>> data;
-        for (const auto& val : *result) {
+        for (const auto& val : result->second) {
             std::vector<unsigned char> marshalled_value;
             marshal_value(val, marshalled_value);
             data.push_back(move(marshalled_value));
         }
-        return {returnCharVectorVector(data), true};
+
+        return {returnUint256(result->first), returnCharVectorVector(data),
+                true};
+    } catch (const std::exception& e) {
+        std::cerr << "Exception while retrieving new logs from logscursor "
+                  << e.what() << std::endl;
+        return {0, {}, false};
+    }
+}
+
+IndexedByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(
+    CArbCore* arbcore_ptr,
+    const void* index_ptr) {
+    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
+    auto cursor_index = receiveUint256(index_ptr);
+
+    try {
+        auto result = arbcore->logsCursorGetDeletedLogs(
+            intx::narrow_cast<size_t>(cursor_index));
+        if (!result) {
+            // Cursor not in the right state, may have deleted logs to process
+            return {0, {}, false};
+        }
+
+        std::vector<std::vector<unsigned char>> data;
+        for (const auto& val : result->second) {
+            std::vector<unsigned char> marshalled_value;
+            marshal_value(val, marshalled_value);
+            data.push_back(move(marshalled_value));
+        }
+
+        return {returnUint256(result->first), returnCharVectorVector(data),
+                true};
     } catch (const std::exception& e) {
         std::cerr << "Exception while retrieving deleted logs from logscursor "
                   << e.what() << std::endl;
-        return {{}, false};
+        return {0, {}, false};
     }
 }
 

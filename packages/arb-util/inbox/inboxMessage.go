@@ -90,7 +90,7 @@ func NewInboxMessageFromValue(val value.Value) (InboxMessage, error) {
 	failRet := InboxMessage{}
 	tup, ok := val.(*value.TupleValue)
 	if !ok {
-		return failRet, errors.New("val must be a tuple")
+		return failRet, errors.New("inbox message must be a tuple")
 	}
 	if tup.Len() != 8 {
 		return failRet, errors.Errorf("expected tuple of length 8, but recieved tuple of length %v", tup.Len())

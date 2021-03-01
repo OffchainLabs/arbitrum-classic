@@ -26,7 +26,7 @@ type ExecutionCursor interface {
 	Clone() ExecutionCursor
 	MachineHash() common.Hash
 	TotalMessagesRead() *big.Int
-	InboxHash() common.Hash
+	InboxAcc() common.Hash
 	TotalGasConsumed() *big.Int
 	TotalSteps() *big.Int
 	TotalSendCount() *big.Int
@@ -63,12 +63,12 @@ type ArbCoreLookup interface {
 }
 
 type ArbCoreInbox interface {
-	DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) bool
+	DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool) bool
 	MessagesStatus() (MessageStatus, error)
 }
 
-func DeliverMessagesAndWait(db ArbCoreInbox, messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) (bool, error) {
-	if !db.DeliverMessages(messages, previousInboxHash, lastBlockComplete) {
+func DeliverMessagesAndWait(db ArbCoreInbox, messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool) (bool, error) {
+	if !db.DeliverMessages(messages, previousInboxAcc, lastBlockComplete) {
 		return false, errors.New("unable to deliver messages")
 	}
 
@@ -210,12 +210,14 @@ func (e *ExecutionInfo) InboxMessagesRead() *big.Int {
 type LogConsumer interface {
 	AddLogs(avmLogs []value.Value) error
 	DeleteLogs(avmLogs []value.Value) error
+	CurrentLogCount() (*big.Int, error)
+	UpdateCurrentLogCount(count *big.Int) error
 }
 
 type LogsCursor interface {
 	LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
-	LogsCursorGetLogs(cursorIndex *big.Int) ([]value.Value, error)
-	LogsCursorGetDeletedLogs(cursorIndex *big.Int) ([]value.Value, error)
+	LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Value, error)
+	LogsCursorGetDeletedLogs(cursorIndex *big.Int) (*big.Int, []value.Value, error)
 	LogsCursorClearError(cursorIndex *big.Int) error
 	LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 }

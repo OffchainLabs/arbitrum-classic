@@ -58,7 +58,7 @@ class ArbCore {
    private:
     struct message_data_struct {
         std::vector<std::vector<unsigned char>> messages;
-        uint256_t previous_inbox_hash;
+        uint256_t previous_inbox_acc;
         bool last_block_complete{false};
     };
 
@@ -170,7 +170,7 @@ class ArbCore {
    public:
     // Sending messages to core thread
     bool deliverMessages(std::vector<std::vector<unsigned char>>& messages,
-                         const uint256_t& previous_inbox_hash,
+                         const uint256_t& previous_inbox_acc,
                          bool last_block_complete);
     message_status_enum messagesStatus();
     std::string messagesClearError();
@@ -178,9 +178,10 @@ class ArbCore {
    public:
     // Logs Cursor interaction
     bool logsCursorRequest(size_t cursor_index, uint256_t count);
-    std::optional<std::vector<value>> logsCursorGetLogs(size_t cursor_index);
-    std::optional<std::vector<value>> logsCursorGetDeletedLogs(
+    std::optional<std::pair<uint256_t, std::vector<value>>> logsCursorGetLogs(
         size_t cursor_index);
+    std::optional<std::pair<uint256_t, std::vector<value>>>
+    logsCursorGetDeletedLogs(size_t cursor_index);
     bool logsCursorCheckError(size_t cursor_index) const;
     std::string logsCursorClearError(size_t cursor_index);
     bool logsCursorConfirmReceived(size_t cursor_index);
@@ -271,7 +272,7 @@ class ArbCore {
     std::optional<rocksdb::Status> addMessages(
         const std::vector<std::vector<unsigned char>>& new_messages,
         bool last_block_complete,
-        const uint256_t& prev_inbox_hash,
+        const uint256_t& prev_inbox_acc,
         const uint256_t& message_count_in_machine,
         ValueCache& cache);
     std::optional<MessageEntry> getNextMessage();

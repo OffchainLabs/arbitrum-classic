@@ -95,6 +95,82 @@ func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
 	return results, nil
 }
 
+func (db *TxDB) CurrentLogCount() (*big.Int, error) {
+	//return db.as.CurrentLogCount()
+	// TODO
+	return big.NewInt(0), nil
+}
+
+func (db *TxDB) UpdateCurrentLogCount() (*big.Int, error) {
+	//return db.as.UpdateCurrentLogCount()
+	// TODO
+	return big.NewInt(0), nil
+}
+
+func (db *TxDB) AddLogs(avmLogs []value.Value) error {
+	ctx := context.Background()
+
+	for _, avmLog := range avmLogs {
+		if err := db.HandleLog(ctx, avmLog); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
+	// Collect all logs that will be removed so they can be sent to rmLogs subscription
+	lastResultIndex := len(avmLogs) - 1
+	var currentBlockHeight uint64
+	blocksFound := false
+	for i, _ := range avmLogs {
+		// Parse L2 transaction receipts in reverse
+		res, err := evm.NewResultFromValue(avmLogs[lastResultIndex-i])
+		if err != nil {
+			return err
+		}
+		txRes, ok := res.(*evm.TxResult)
+		if !ok {
+			continue
+		}
+
+		blocksFound = true
+
+		currentBlockHeight = txRes.IncomingRequest.L2BlockNumber.Uint64()
+		logBlockInfo, err := db.GetBlock(currentBlockHeight)
+		if err != nil {
+			return err
+		}
+		logs := txRes.EthLogs(common.NewHashFromEth(logBlockInfo.Header.Hash()))
+		lastLogIndex := len(logs) - 1
+		oldEthLogs := make([]*types.Log, 0)
+		for j := range logs {
+			// Add logs in reverse
+			oldEthLogs = append(oldEthLogs, logs[lastLogIndex-j])
+		}
+
+		if len(oldEthLogs) > 0 {
+			db.rmLogsFeed.Send(ethcore.RemovedLogsEvent{Logs: oldEthLogs})
+		}
+	}
+	if !blocksFound {
+		return nil
+	}
+
+	if currentBlockHeight > 0 {
+		currentBlockHeight--
+	}
+
+	// Reset block height
+	err := db.as.Reorg(currentBlockHeight)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (db *TxDB) HandleLog(ctx context.Context, avmLog value.Value) error {
 	res, err := evm.NewResultFromValue(avmLog)
 	if err != nil {
@@ -109,7 +185,7 @@ func (db *TxDB) HandleLog(ctx context.Context, avmLog value.Value) error {
 	logger.Debug().
 		Uint64("number", blockInfo.BlockNum.Uint64()).
 		Uint64("block_logcount", blockInfo.ChainStats.AVMLogCount.Uint64()).
-		Uint64("block_messagecount", blockInfo.ChainStats.AVMSendCount.Uint64()).
+		Uint64("block_sendcount", blockInfo.ChainStats.AVMSendCount.Uint64()).
 		Msg("produced l2 block")
 
 	if err := db.fillEmptyBlocks(ctx, blockInfo.BlockNum); err != nil {
@@ -165,7 +241,7 @@ func (db *TxDB) HandleLog(ctx context.Context, avmLog value.Value) error {
 		ParentHash: prev.Header.Hash(),
 		Difficulty: big.NewInt(0),
 		Number:     new(big.Int).Set(blockInfo.BlockNum),
-		GasLimit:   blockInfo.GasLimit.Uint64(),
+		GasLimit:   blockInfo.GasLimit().Uint64(),
 		GasUsed:    blockInfo.BlockStats.GasUsed.Uint64(),
 		Time:       blockInfo.Timestamp.Uint64(),
 		Extra:      id.HeaderHash.Bytes(),

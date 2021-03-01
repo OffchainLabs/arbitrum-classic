@@ -26,6 +26,7 @@ package cmachine
 import "C"
 import (
 	"encoding/binary"
+	"github.com/ethereum/go-ethereum/common/math"
 	"math/big"
 	"runtime"
 	"unsafe"
@@ -150,7 +151,12 @@ func (as *AggregatorStore) GetBlock(height uint64) (*machine.BlockInfo, error) {
 	return info, nil
 }
 
-func (as *AggregatorStore) Reorg(height uint64, sendCount uint64, logCount uint64) error {
+func (as *AggregatorStore) Reorg(height uint64) error {
+	status := C.aggregatorReorg(as.c, C.uint64_t(height))
+	if status == 0 {
+		return errors.New("failed to reset aggregator height")
+	}
+
 	return nil
 }
 
@@ -183,5 +189,24 @@ func (as *AggregatorStore) SaveBlockHash(blockHash common.Hash, blockHeight uint
 	if C.aggregatorSaveBlockHash(as.c, unsafeDataPointer(blockHash.Bytes()), C.uint64_t(blockHeight)) == 0 {
 		return errors.New("failed to save request")
 	}
+	return nil
+}
+
+func (as *AggregatorStore) CurrentLogCount() (*big.Int, error) {
+	result := C.aggregatorLogsProcessedCount(as.c)
+	if result.found == 0 {
+		return nil, errors.New("failed to get processed log count")
+	}
+
+	return receiveBigInt(result.value), nil
+}
+
+func (as AggregatorStore) UpdateCurrentLogCount(count *big.Int) error {
+	countData := math.U256Bytes(count)
+	status := C.aggregatorUpdateLogsProcessedCount(as.c, unsafeDataPointer(countData))
+	if status == 0 {
+		return errors.New("failed to update processed log count")
+	}
+
 	return nil
 }

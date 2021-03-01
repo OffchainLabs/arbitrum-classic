@@ -30,19 +30,19 @@ struct MessageEntry {
     // sequence_number not serialized/deserialized because it is part of index
     uint256_t sequence_number{};
 
-    uint256_t inbox_hash;
+    uint256_t inbox_acc;
     uint64_t block_height{};
     bool last_message_in_block{};
     std::vector<unsigned char> data;
 
     MessageEntry() = default;
     MessageEntry(uint256_t sequence_number,
-                 uint256_t inbox_hash,
+                 uint256_t inbox_acc,
                  uint64_t block_height,
                  bool last_message_in_block,
                  std::vector<unsigned char> message)
         : sequence_number(sequence_number),
-          inbox_hash(inbox_hash),
+          inbox_acc(inbox_acc),
           block_height(block_height),
           last_message_in_block(last_message_in_block),
           data(std::move(message)) {}

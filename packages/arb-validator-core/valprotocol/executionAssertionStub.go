@@ -28,8 +28,8 @@ type ExecutionAssertionStub struct {
 	NumGas            uint64
 	BeforeMachineHash common.Hash
 	AfterMachineHash  common.Hash
-	BeforeInboxHash   common.Hash
-	AfterInboxHash    common.Hash
+	BeforeInboxAcc    common.Hash
+	AfterInboxAcc     common.Hash
 	FirstMessageHash  common.Hash
 	LastMessageHash   common.Hash
 	MessageCount      uint64
@@ -113,8 +113,8 @@ func (a *ExecutionAssertionStub) MarshalToBuf() *ExecutionAssertionStubBuf {
 		NumGas:            a.NumGas,
 		BeforeMachineHash: a.BeforeMachineHash.MarshalToBuf(),
 		AfterMachineHash:  a.AfterMachineHash.MarshalToBuf(),
-		BeforeInboxHash:   a.BeforeInboxHash.MarshalToBuf(),
-		AfterInboxHash:    a.AfterInboxHash.MarshalToBuf(),
+		BeforeInboxAcc:    a.BeforeInboxAcc.MarshalToBuf(),
+		AfterInboxAcc:     a.AfterInboxAcc.MarshalToBuf(),
 		FirstMessageHash:  a.FirstMessageHash.MarshalToBuf(),
 		LastMessageHash:   a.LastMessageHash.MarshalToBuf(),
 		MessageCount:      a.MessageCount,
@@ -129,8 +129,8 @@ func (a *ExecutionAssertionStubBuf) Unmarshal() *ExecutionAssertionStub {
 		NumGas:            a.NumGas,
 		BeforeMachineHash: a.BeforeMachineHash.Unmarshal(),
 		AfterMachineHash:  a.AfterMachineHash.Unmarshal(),
-		BeforeInboxHash:   a.BeforeInboxHash.Unmarshal(),
-		AfterInboxHash:    a.AfterInboxHash.Unmarshal(),
+		BeforeInboxAcc:    a.BeforeInboxAcc.Unmarshal(),
+		AfterInboxAcc:     a.AfterInboxAcc.Unmarshal(),
 		FirstMessageHash:  a.FirstMessageHash.Unmarshal(),
 		LastMessageHash:   a.LastMessageHash.Unmarshal(),
 		MessageCount:      a.MessageCount,
@@ -145,8 +145,8 @@ func (a *ExecutionAssertionStub) Clone() *ExecutionAssertionStub {
 		NumGas:            a.NumGas,
 		BeforeMachineHash: a.BeforeMachineHash,
 		AfterMachineHash:  a.AfterMachineHash,
-		BeforeInboxHash:   a.BeforeInboxHash,
-		AfterInboxHash:    a.AfterInboxHash,
+		BeforeInboxAcc:    a.BeforeInboxAcc,
+		AfterInboxAcc:     a.AfterInboxAcc,
 		FirstMessageHash:  a.FirstMessageHash,
 		LastMessageHash:   a.LastMessageHash,
 		MessageCount:      a.MessageCount,
@@ -158,13 +158,13 @@ func (a *ExecutionAssertionStub) Clone() *ExecutionAssertionStub {
 
 func (a *ExecutionAssertionStub) String() string {
 	return fmt.Sprintf(
-		"Assertion(NumGas: %v, BeforeMachineHash: %v, AfterMachineHash: %v, BeforeInboxHash: %v, AfterInboxHash: %v "+
+		"Assertion(NumGas: %v, BeforeMachineHash: %v, AfterMachineHash: %v, BeforeInboxAcc: %v, AfterInboxAcc: %v "+
 			"FirstMessageHash: %v, LastMessageHash: %v, MessageCount %v, FirstLogHash: %v LastLogHash: %v, LogCount %v)",
 		a.NumGas,
 		a.BeforeMachineHash,
 		a.AfterMachineHash,
-		a.BeforeInboxHash,
-		a.AfterInboxHash,
+		a.BeforeInboxAcc,
+		a.AfterInboxAcc,
 		a.FirstMessageHash,
 		a.LastMessageHash,
 		a.MessageCount,
@@ -178,8 +178,8 @@ func (a *ExecutionAssertionStub) Equals(b *ExecutionAssertionStub) bool {
 	return a.NumGas == b.NumGas &&
 		a.BeforeMachineHash == b.BeforeMachineHash &&
 		a.AfterMachineHash == b.AfterMachineHash &&
-		a.BeforeInboxHash == b.BeforeInboxHash &&
-		a.AfterInboxHash == b.AfterInboxHash &&
+		a.BeforeInboxAcc == b.BeforeInboxAcc &&
+		a.AfterInboxAcc == b.AfterInboxAcc &&
 		a.FirstMessageHash == b.FirstMessageHash &&
 		a.LastMessageHash == b.LastMessageHash &&
 		a.MessageCount == b.MessageCount &&

@@ -169,7 +169,7 @@ func (r *RollupWatcher) LookupNodeChildren(ctx context.Context, parentHash [32]b
 		if i > 0 {
 			lastHashIsSibling[0] = 1
 		}
-		lastHash = hashing.SoliditySHA3(lastHashIsSibling, lastHash, parsedLog.ExecutionHash, parsedLog.AfterInboxHash)
+		lastHash = hashing.SoliditySHA3(lastHashIsSibling, lastHash, parsedLog.ExecutionHash, parsedLog.AfterInboxAcc)
 		infos = append(infos, &core.NodeInfo{
 			NodeNum:       parsedLog.NodeNum,
 			BlockProposed: proposed,

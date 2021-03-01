@@ -412,7 +412,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         uint256 nodeNum = latestNodeCreated() + 1;
         uint256 deadlineBlock;
         uint256 inboxMaxCount;
-        bytes32 afterInboxHash = 0;
+        bytes32 afterInboxAcc = 0;
         INode node;
         bytes32 executionHash;
         INode prevNode = getNode(latestStakedNode(msg.sender));
@@ -476,7 +476,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             uint256 afterInboxCount = assertion.beforeInboxCount.add(assertion.inboxMessagesRead);
             require(afterInboxCount <= inboxMaxCount, "INBOX_PAST_END");
             if (afterInboxCount > 0) {
-                afterInboxHash = bridge.inboxAccs(afterInboxCount - 1);
+                afterInboxAcc = bridge.inboxAccs(afterInboxCount - 1);
             }
 
             node = INode(
@@ -500,7 +500,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                 lastHash = getNodeHash(node.prev());
             }
             bytes32 nodeHash =
-                RollupLib.nodeHash(hasSibling, lastHash, executionHash, afterInboxHash);
+                RollupLib.nodeHash(hasSibling, lastHash, executionHash, afterInboxAcc);
             require(nodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
             nodeCreated(node, nodeHash);
             prevNode.childCreated(nodeNum);
@@ -513,7 +513,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             getNodeHash(nodeNum),
             executionHash,
             inboxMaxCount,
-            afterInboxHash,
+            afterInboxAcc,
             assertionBytes32Fields,
             assertionIntFields
         );

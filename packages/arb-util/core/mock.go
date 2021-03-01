@@ -28,7 +28,7 @@ func (e *ExecutionCursorMock) TotalMessagesRead() *big.Int {
 	return big.NewInt(0)
 }
 
-func (e *ExecutionCursorMock) InboxHash() common.Hash {
+func (e *ExecutionCursorMock) InboxAcc() common.Hash {
 	return common.Hash{}
 }
 
@@ -73,7 +73,7 @@ func (v *ValidatorLookupMock) GetMessageCount() (*big.Int, error) {
 	return big.NewInt(int64(len(v.Messages))), nil
 }
 
-func (v *ValidatorLookupMock) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) bool {
+func (v *ValidatorLookupMock) DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool) bool {
 	panic("implement me")
 }
 

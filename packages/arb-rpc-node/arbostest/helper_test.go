@@ -164,7 +164,7 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int
 	}
 
 	if len(assertion.Sends) != sendCount {
-		t.Fatal("unxpected send count ", len(assertion.Sends))
+		t.Fatal("unxpected send count ", len(assertion.Sends), "instead of", sendCount)
 	}
 
 	var snap *snapshot.Snapshot

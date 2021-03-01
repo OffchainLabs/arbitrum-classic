@@ -31,7 +31,7 @@ struct Checkpoint {
     uint256_t total_steps;
     uint256_t arb_gas_used;
     uint256_t total_messages_read;
-    uint256_t inbox_hash;
+    uint256_t inbox_acc;
     uint256_t next_sideload_block_number;
 
     uint64_t block_height{};
@@ -43,7 +43,7 @@ struct Checkpoint {
     Checkpoint(uint256_t total_steps,
                uint256_t arb_gas_used,
                uint256_t total_messages_read,
-               uint256_t inbox_hash,
+               uint256_t inbox_acc,
                uint256_t next_sideload_block_number,
                uint64_t block_height,
                uint64_t send_count,
@@ -52,7 +52,7 @@ struct Checkpoint {
         : total_steps(total_steps),
           arb_gas_used(arb_gas_used),
           total_messages_read(total_messages_read),
-          inbox_hash(inbox_hash),
+          inbox_acc(inbox_acc),
           next_sideload_block_number(next_sideload_block_number),
           block_height(block_height),
           send_count(send_count),

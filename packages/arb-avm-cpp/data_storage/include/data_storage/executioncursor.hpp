@@ -32,7 +32,7 @@ class ExecutionCursor : public Checkpoint {
     std::unique_ptr<Machine> machine;
     uint256_t first_message_sequence_number;
     std::vector<InboxMessage> messages;
-    std::vector<uint256_t> inbox_hashes;
+    std::vector<uint256_t> inbox_accumulators;
     size_t messages_to_skip{0};
 
    public:
@@ -40,20 +40,20 @@ class ExecutionCursor : public Checkpoint {
     ExecutionCursor(Checkpoint& checkpoint,
                     std::unique_ptr<Machine>& machine,
                     std::vector<InboxMessage>& messages,
-                    std::vector<uint256_t>& inbox_hashes,
+                    std::vector<uint256_t>& inbox_accumulators,
                     size_t messages_to_skip)
         : Checkpoint(checkpoint),
           machine(std::move(machine)),
           first_message_sequence_number(checkpoint.total_messages_read),
           messages(std::move(messages)),
-          inbox_hashes(std::move(inbox_hashes)),
+          inbox_accumulators(std::move(inbox_accumulators)),
           messages_to_skip(messages_to_skip) {}
     ~ExecutionCursor() = default;
     ExecutionCursor(const ExecutionCursor& rhs) : Checkpoint(rhs) {
         machine = std::make_unique<Machine>(*rhs.machine);
         first_message_sequence_number = rhs.first_message_sequence_number;
         messages = rhs.messages;
-        inbox_hashes = rhs.inbox_hashes;
+        inbox_accumulators = rhs.inbox_accumulators;
         messages_to_skip = rhs.messages_to_skip;
     }
     ExecutionCursor& operator=(const ExecutionCursor& rhs) {
@@ -61,7 +61,7 @@ class ExecutionCursor : public Checkpoint {
         machine = std::make_unique<Machine>(*rhs.machine);
         first_message_sequence_number = rhs.first_message_sequence_number;
         messages = rhs.messages;
-        inbox_hashes = rhs.inbox_hashes;
+        inbox_accumulators = rhs.inbox_accumulators;
         messages_to_skip = rhs.messages_to_skip;
 
         return *this;

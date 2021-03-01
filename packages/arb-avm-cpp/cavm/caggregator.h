@@ -73,6 +73,9 @@ int aggregatorSaveBlockHash(CAggregatorStore* agg,
                             const void* block_hash,
                             uint64_t block_height);
 
+Uint256Result aggregatorLogsProcessedCount(CAggregatorStore* agg);
+int aggregatorUpdateLogsProcessedCount(CAggregatorStore* agg, void* count_ptr);
+
 #ifdef __cplusplus
 }
 #endif

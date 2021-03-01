@@ -43,10 +43,16 @@ typedef struct ByteSliceArrayStruct {
     int count;
 } ByteSliceArray;
 
-typedef struct {
+typedef struct ByteSliceArrayResultStruct {
     ByteSliceArray array;
     int found;
 } ByteSliceArrayResult;
+
+typedef struct IndexedByteSliceArrayResultStruct {
+    void* first_index;
+    ByteSliceArray array;
+    int found;
+} IndexedByteSliceArrayResult;
 
 typedef struct Uint64ResultStruct {
     uint64_t value;

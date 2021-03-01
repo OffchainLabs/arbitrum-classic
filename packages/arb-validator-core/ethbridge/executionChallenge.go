@@ -57,13 +57,13 @@ func (c *executionChallenge) BisectAssertion(
 	logAccs := make([][32]byte, 0, len(assertions)+1)
 	gasses := make([]uint64, 0, len(assertions))
 	machineHashes = append(machineHashes, assertions[0].BeforeMachineHash)
-	inboxHashes = append(inboxHashes, assertions[0].BeforeInboxHash)
+	inboxHashes = append(inboxHashes, assertions[0].BeforeInboxAcc)
 	messageAccs = append(messageAccs, assertions[0].FirstMessageHash)
 	logAccs = append(logAccs, assertions[0].FirstLogHash)
 	outCounts := make([]uint64, len(assertions)*2)
 	for i, assertion := range assertions {
 		machineHashes = append(machineHashes, assertion.AfterMachineHash)
-		inboxHashes = append(inboxHashes, assertion.AfterInboxHash)
+		inboxHashes = append(inboxHashes, assertion.AfterInboxAcc)
 		messageAccs = append(messageAccs, assertion.LastMessageHash)
 		logAccs = append(logAccs, assertion.LastLogHash)
 		gasses = append(gasses, assertion.NumGas)
@@ -112,7 +112,7 @@ func (c *executionChallenge) OneStepProof(
 	tx, err := c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return c.challenge.OneStepProof(
 			auth,
-			assertion.AfterInboxHash,
+			assertion.AfterInboxAcc,
 			assertion.FirstMessageHash,
 			assertion.FirstLogHash,
 			proof,
@@ -124,7 +124,7 @@ func (c *executionChallenge) OneStepProof(
 			c.client,
 			c.auth.auth.From,
 			c.contractAddress,
-			assertion.AfterInboxHash,
+			assertion.AfterInboxAcc,
 			assertion.FirstMessageHash,
 			assertion.FirstLogHash,
 			proof,
@@ -143,7 +143,7 @@ func (c *executionChallenge) OneStepProofBuffer(
 	defer c.auth.Unlock()
 	tx, err := c.challenge.OneStepProofBuffer(
 		c.auth.getAuth(ctx),
-		assertion.AfterInboxHash,
+		assertion.AfterInboxAcc,
 		assertion.FirstMessageHash,
 		assertion.FirstLogHash,
 		proof,
@@ -155,7 +155,7 @@ func (c *executionChallenge) OneStepProofBuffer(
 			c.client,
 			c.auth.auth.From,
 			c.contractAddress,
-			assertion.AfterInboxHash,
+			assertion.AfterInboxAcc,
 			assertion.FirstMessageHash,
 			assertion.FirstLogHash,
 			proof,
@@ -176,7 +176,7 @@ func (c *executionChallenge) OneStepProofWithMessage(
 	tx, err := c.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return c.challenge.OneStepProofWithMessage(
 			auth,
-			assertion.AfterInboxHash,
+			assertion.AfterInboxAcc,
 			assertion.FirstMessageHash,
 			assertion.FirstLogHash,
 			proof,
@@ -194,7 +194,7 @@ func (c *executionChallenge) OneStepProofWithMessage(
 			c.client,
 			c.auth.auth.From,
 			c.contractAddress,
-			assertion.AfterInboxHash,
+			assertion.AfterInboxAcc,
 			assertion.FirstMessageHash,
 			assertion.FirstLogHash,
 			proof,

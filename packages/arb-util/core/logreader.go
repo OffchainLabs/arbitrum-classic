@@ -4,9 +4,12 @@ import (
 	"context"
 	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"time"
 )
+
+var logger = log.With().Caller().Str("component", "logreader").Logger()
 
 type LogReader struct {
 	consumer    LogConsumer
@@ -62,12 +65,14 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 			return err
 		}
 
+		var firstIndex *big.Int
 		var logs []value.Value
+		var firstDeletedIndex *big.Int
 		var deletedLogs []value.Value
 		for {
 			// Loop until new logs retrieved, may get deleted logs if reorg happened
 			// Cannot retrieve new logs until deleted logs have been retrieved
-			logs, err = lr.cursor.LogsCursorGetLogs(lr.cursorIndex)
+			firstIndex, logs, err = lr.cursor.LogsCursorGetLogs(lr.cursorIndex)
 			if err != nil {
 				return err
 			}
@@ -77,7 +82,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 			}
 
 			// No new logs yet, check if deleted logs
-			deletedLogs, err = lr.cursor.LogsCursorGetDeletedLogs(lr.cursorIndex)
+			firstDeletedIndex, deletedLogs, err = lr.cursor.LogsCursorGetDeletedLogs(lr.cursorIndex)
 			if err != nil {
 				return err
 			}
@@ -90,16 +95,41 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 			time.Sleep(1 * time.Second)
 		}
 
-		if len(logs) > 0 {
-			err = lr.consumer.AddLogs(logs)
+		currentLogCount, err := lr.consumer.CurrentLogCount()
+		if err != nil {
+			return err
+		}
+
+		currentLogIndex := new(big.Int).Sub(currentLogCount, big.NewInt(1))
+
+		if len(deletedLogs) > 0 && firstDeletedIndex.Cmp(currentLogIndex) <= 0 {
+			// Existing logs to delete
+			deletedCount := new(big.Int).Sub(currentLogCount, firstDeletedIndex)
+			if deletedCount.Cmp(big.NewInt(int64(len(deletedLogs)))) != 0 {
+				logger.Warn().
+					Uint64("currentLogCount", currentLogCount.Uint64()).
+					Uint64("firstDeletedIndex", firstDeletedIndex.Uint64()).
+					Int("deletedLogs count", len(deletedLogs)).
+					Msg("more deleted logs sent than we previously received")
+			}
+			if err = lr.consumer.DeleteLogs(deletedLogs[:deletedCount.Uint64()]); err != nil {
+				return err
+			}
+
+			currentLogCount = firstDeletedIndex
+			err = lr.consumer.UpdateCurrentLogCount(currentLogCount)
 			if err != nil {
 				return err
 			}
 		}
 
-		if len(deletedLogs) > 0 {
-			err = lr.consumer.DeleteLogs(deletedLogs)
-			if err != nil {
+		if len(logs) > 0 {
+			cmp := firstIndex.Cmp(currentLogCount)
+			if cmp == 1 {
+				return errors.New("logscursor skipped log entries")
+			}
+
+			if err = lr.consumer.AddLogs(logs); err != nil {
 				return err
 			}
 		}
@@ -116,7 +146,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 
 			// Reorg happened since previous call to GetLogs.  Post-retrieve reorg of logscursor will only include
 			// extra deleted logs, won't add any new logs
-			newDeletedLogs, err := lr.cursor.LogsCursorGetDeletedLogs(lr.cursorIndex)
+			_, newDeletedLogs, err := lr.cursor.LogsCursorGetDeletedLogs(lr.cursorIndex)
 			if err != nil {
 				return err
 			}
@@ -124,7 +154,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 				return errors.New("missing expected deleted logs")
 			}
 
-			// Got deleted logs successfully0w
+			// Got deleted logs successfully
 			if len(newDeletedLogs) > 0 {
 				err = lr.consumer.DeleteLogs(newDeletedLogs)
 				if err != nil {
