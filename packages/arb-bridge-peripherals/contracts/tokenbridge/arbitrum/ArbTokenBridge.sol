@@ -57,7 +57,7 @@ contract ArbTokenBridge is CloneFactory {
         uint256 amount,
         uint8 decimals
     ) external onlyEthPair {
-        IArbToken token = ensureTokenExists(l1ERC20, decimals);
+        IArbToken token = ensureERC777TokenExists(l1ERC20, decimals);
         token.bridgeMint(account, amount);
     }
 
@@ -77,7 +77,7 @@ contract ArbTokenBridge is CloneFactory {
         string calldata symbol,
         uint8 decimals
     ) external onlyEthPair {
-        IArbToken token = ensureTokenExists(l1ERC20, decimals);
+        IArbToken token = ensureERC777TokenExists(l1ERC20, decimals);
         token.updateInfo(name, symbol);
     }
 
@@ -131,7 +131,7 @@ contract ArbTokenBridge is CloneFactory {
         return calculateCreate2CloneAddress(templateERC20, bytes32(uint256(l1ERC20)));
     }
 
-    function ensureTokenExists(address l1ERC20, uint8 decimals) private returns (IArbToken) {
+    function ensureERC777TokenExists(address l1ERC20, uint8 decimals) private returns (IArbToken) {
         address _customToken = customToken[l1ERC20];
         if (_customToken != address(0)) {
             return IArbToken(_customToken);
