@@ -4,7 +4,7 @@
 
 import { Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-import { Contract } from '@ethersproject/Contracts'
+import { Contract } from '@ethersproject/contracts'
 
 import { ArbOwner } from './ArbOwner'
 
