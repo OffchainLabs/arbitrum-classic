@@ -78,10 +78,11 @@ func New(
 }
 
 func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
-	avmLogs, err := db.lookup.GetLogs(res.FirstAVMLog(), res.BlockStats.AVMLogCount)
+	avmLogs, err := db.lookup.GetLogs(res.FirstAVMLog(), res.BlockStats.TxCount)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("GetBlockResults", res.BlockNum, res.FirstAVMLog(), res.BlockStats.AVMLogCount, res.BlockStats.TxCount, len(avmLogs))
 	results := make([]*evm.TxResult, 0, len(avmLogs))
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
@@ -186,14 +187,16 @@ func (db *TxDB) HandleLog(avmLog value.Value) error {
 
 	logger.Debug().
 		Uint64("number", blockInfo.BlockNum.Uint64()).
-		Uint64("block_logcount", blockInfo.ChainStats.AVMLogCount.Uint64()).
-		Uint64("block_sendcount", blockInfo.ChainStats.AVMSendCount.Uint64()).
+		Uint64("block_txcount", blockInfo.BlockStats.TxCount.Uint64()).
+		Uint64("block_logcount", blockInfo.BlockStats.AVMLogCount.Uint64()).
+		Uint64("block_sendcount", blockInfo.BlockStats.AVMSendCount.Uint64()).
 		Msg("produced l2 block")
 
 	txResults, err := db.GetBlockResults(blockInfo)
 	if err != nil {
 		return err
 	}
+	fmt.Println("Block results for", blockInfo.BlockNum)
 	for _, res := range txResults {
 		fmt.Println("Got res", res.IncomingRequest.MessageID)
 	}
@@ -251,12 +254,6 @@ func (db *TxDB) HandleLog(avmLog value.Value) error {
 
 	block := types.NewBlock(header, ethTxes, nil, ethReceipts, new(trie.Trie))
 	avmLogIndex := blockInfo.ChainStats.AVMLogCount.Uint64() - 1
-	logger.Debug().
-		Uint64("number", block.Header().Number.Uint64()).
-		Uint64("block_logcount", blockInfo.ChainStats.AVMLogCount.Uint64()).
-		Uint64("block_messagecount", blockInfo.ChainStats.AVMSendCount.Uint64()).
-		Msg("saved l2 block")
-
 	ethLogs := make([]*types.Log, 0)
 	for _, res := range processedResults {
 		ethLogs = append(ethLogs, res.Result.EthLogs(common.NewHashFromEth(block.Hash()))...)
