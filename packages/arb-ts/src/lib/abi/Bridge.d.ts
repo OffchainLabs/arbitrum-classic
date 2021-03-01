@@ -28,7 +28,7 @@ interface BridgeInterface extends ethers.utils.Interface {
     'allowedOutboxes(address)': FunctionFragment
     'deliverMessageToInbox(uint8,address,bytes32)': FunctionFragment
     'executeCall(address,uint256,bytes)': FunctionFragment
-    'inboxMessages(uint256)': FunctionFragment
+    'inboxAccs(uint256)': FunctionFragment
     'messageCount()': FunctionFragment
     'owner()': FunctionFragment
     'renounceOwnership()': FunctionFragment
@@ -58,7 +58,7 @@ interface BridgeInterface extends ethers.utils.Interface {
     values: [string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
-    functionFragment: 'inboxMessages',
+    functionFragment: 'inboxAccs',
     values: [BigNumberish]
   ): string
   encodeFunctionData(
@@ -100,10 +100,7 @@ interface BridgeInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'executeCall', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'inboxMessages',
-    data: BytesLike
-  ): Result
+  decodeFunctionResult(functionFragment: 'inboxAccs', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'messageCount',
     data: BytesLike
@@ -211,14 +208,14 @@ export class Bridge extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    inboxMessages(
+    inboxAccs(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<{
       0: string
     }>
 
-    'inboxMessages(uint256)'(
+    'inboxAccs(uint256)'(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<{
@@ -334,9 +331,9 @@ export class Bridge extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  inboxMessages(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>
+  inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>
 
-  'inboxMessages(uint256)'(
+  'inboxAccs(uint256)'(
     arg0: BigNumberish,
     overrides?: CallOverrides
   ): Promise<string>
@@ -444,12 +441,9 @@ export class Bridge extends Contract {
       1: string
     }>
 
-    inboxMessages(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<string>
+    inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>
 
-    'inboxMessages(uint256)'(
+    'inboxAccs(uint256)'(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<string>
@@ -567,12 +561,9 @@ export class Bridge extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    inboxMessages(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
+    inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>
 
-    'inboxMessages(uint256)'(
+    'inboxAccs(uint256)'(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
@@ -677,12 +668,12 @@ export class Bridge extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    inboxMessages(
+    inboxAccs(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'inboxMessages(uint256)'(
+    'inboxAccs(uint256)'(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>

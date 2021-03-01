@@ -2,9 +2,8 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Signer } from 'ethers'
+import { Contract, Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-import { Contract } from '@ethersproject/contracts'
 
 import { ArbFunctionTable } from './ArbFunctionTable'
 

@@ -23,8 +23,9 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 interface OutboxInterface extends ethers.utils.Interface {
   functions: {
     'executeBuddyContractReceipt(uint256,bytes32[],uint256,address,bool)': FunctionFragment
-    'executeTransaction(uint256,bytes32[],uint256,address,address,uint256,uint256,uint256,bytes)': FunctionFragment
+    'executeTransaction(uint256,bytes32[],uint256,address,address,uint256,uint256,uint256,uint256,bytes)': FunctionFragment
     'l2ToL1Block()': FunctionFragment
+    'l2ToL1EthBlock()': FunctionFragment
     'l2ToL1Sender()': FunctionFragment
     'l2ToL1Timestamp()': FunctionFragment
     'processOutgoingMessages(bytes,uint256[])': FunctionFragment
@@ -45,11 +46,16 @@ interface OutboxInterface extends ethers.utils.Interface {
       BigNumberish,
       BigNumberish,
       BigNumberish,
+      BigNumberish,
       BytesLike
     ]
   ): string
   encodeFunctionData(
     functionFragment: 'l2ToL1Block',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'l2ToL1EthBlock',
     values?: undefined
   ): string
   encodeFunctionData(
@@ -74,6 +80,10 @@ interface OutboxInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'l2ToL1Block', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'l2ToL1EthBlock',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'l2ToL1Sender',
     data: BytesLike
@@ -133,19 +143,21 @@ export class Outbox extends Contract {
       l2Sender: string,
       destAddr: string,
       l2Block: BigNumberish,
+      l1Block: BigNumberish,
       l2Timestamp: BigNumberish,
       amount: BigNumberish,
       calldataForL1: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'executeTransaction(uint256,bytes32[],uint256,address,address,uint256,uint256,uint256,bytes)'(
+    'executeTransaction(uint256,bytes32[],uint256,address,address,uint256,uint256,uint256,uint256,bytes)'(
       outboxIndex: BigNumberish,
       proof: BytesLike[],
       index: BigNumberish,
       l2Sender: string,
       destAddr: string,
       l2Block: BigNumberish,
+      l1Block: BigNumberish,
       l2Timestamp: BigNumberish,
       amount: BigNumberish,
       calldataForL1: BytesLike,
@@ -159,6 +171,18 @@ export class Outbox extends Contract {
     }>
 
     'l2ToL1Block()'(
+      overrides?: CallOverrides
+    ): Promise<{
+      0: BigNumber
+    }>
+
+    l2ToL1EthBlock(
+      overrides?: CallOverrides
+    ): Promise<{
+      0: BigNumber
+    }>
+
+    'l2ToL1EthBlock()'(
       overrides?: CallOverrides
     ): Promise<{
       0: BigNumber
@@ -226,19 +250,21 @@ export class Outbox extends Contract {
     l2Sender: string,
     destAddr: string,
     l2Block: BigNumberish,
+    l1Block: BigNumberish,
     l2Timestamp: BigNumberish,
     amount: BigNumberish,
     calldataForL1: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'executeTransaction(uint256,bytes32[],uint256,address,address,uint256,uint256,uint256,bytes)'(
+  'executeTransaction(uint256,bytes32[],uint256,address,address,uint256,uint256,uint256,uint256,bytes)'(
     outboxIndex: BigNumberish,
     proof: BytesLike[],
     index: BigNumberish,
     l2Sender: string,
     destAddr: string,
     l2Block: BigNumberish,
+    l1Block: BigNumberish,
     l2Timestamp: BigNumberish,
     amount: BigNumberish,
     calldataForL1: BytesLike,
@@ -248,6 +274,10 @@ export class Outbox extends Contract {
   l2ToL1Block(overrides?: CallOverrides): Promise<BigNumber>
 
   'l2ToL1Block()'(overrides?: CallOverrides): Promise<BigNumber>
+
+  l2ToL1EthBlock(overrides?: CallOverrides): Promise<BigNumber>
+
+  'l2ToL1EthBlock()'(overrides?: CallOverrides): Promise<BigNumber>
 
   l2ToL1Sender(overrides?: CallOverrides): Promise<string>
 
@@ -295,19 +325,21 @@ export class Outbox extends Contract {
       l2Sender: string,
       destAddr: string,
       l2Block: BigNumberish,
+      l1Block: BigNumberish,
       l2Timestamp: BigNumberish,
       amount: BigNumberish,
       calldataForL1: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'executeTransaction(uint256,bytes32[],uint256,address,address,uint256,uint256,uint256,bytes)'(
+    'executeTransaction(uint256,bytes32[],uint256,address,address,uint256,uint256,uint256,uint256,bytes)'(
       outboxIndex: BigNumberish,
       proof: BytesLike[],
       index: BigNumberish,
       l2Sender: string,
       destAddr: string,
       l2Block: BigNumberish,
+      l1Block: BigNumberish,
       l2Timestamp: BigNumberish,
       amount: BigNumberish,
       calldataForL1: BytesLike,
@@ -317,6 +349,10 @@ export class Outbox extends Contract {
     l2ToL1Block(overrides?: CallOverrides): Promise<BigNumber>
 
     'l2ToL1Block()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    l2ToL1EthBlock(overrides?: CallOverrides): Promise<BigNumber>
+
+    'l2ToL1EthBlock()'(overrides?: CallOverrides): Promise<BigNumber>
 
     l2ToL1Sender(overrides?: CallOverrides): Promise<string>
 
@@ -374,19 +410,21 @@ export class Outbox extends Contract {
       l2Sender: string,
       destAddr: string,
       l2Block: BigNumberish,
+      l1Block: BigNumberish,
       l2Timestamp: BigNumberish,
       amount: BigNumberish,
       calldataForL1: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'executeTransaction(uint256,bytes32[],uint256,address,address,uint256,uint256,uint256,bytes)'(
+    'executeTransaction(uint256,bytes32[],uint256,address,address,uint256,uint256,uint256,uint256,bytes)'(
       outboxIndex: BigNumberish,
       proof: BytesLike[],
       index: BigNumberish,
       l2Sender: string,
       destAddr: string,
       l2Block: BigNumberish,
+      l1Block: BigNumberish,
       l2Timestamp: BigNumberish,
       amount: BigNumberish,
       calldataForL1: BytesLike,
@@ -396,6 +434,10 @@ export class Outbox extends Contract {
     l2ToL1Block(overrides?: CallOverrides): Promise<BigNumber>
 
     'l2ToL1Block()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    l2ToL1EthBlock(overrides?: CallOverrides): Promise<BigNumber>
+
+    'l2ToL1EthBlock()'(overrides?: CallOverrides): Promise<BigNumber>
 
     l2ToL1Sender(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -444,19 +486,21 @@ export class Outbox extends Contract {
       l2Sender: string,
       destAddr: string,
       l2Block: BigNumberish,
+      l1Block: BigNumberish,
       l2Timestamp: BigNumberish,
       amount: BigNumberish,
       calldataForL1: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'executeTransaction(uint256,bytes32[],uint256,address,address,uint256,uint256,uint256,bytes)'(
+    'executeTransaction(uint256,bytes32[],uint256,address,address,uint256,uint256,uint256,uint256,bytes)'(
       outboxIndex: BigNumberish,
       proof: BytesLike[],
       index: BigNumberish,
       l2Sender: string,
       destAddr: string,
       l2Block: BigNumberish,
+      l1Block: BigNumberish,
       l2Timestamp: BigNumberish,
       amount: BigNumberish,
       calldataForL1: BytesLike,
@@ -466,6 +510,10 @@ export class Outbox extends Contract {
     l2ToL1Block(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'l2ToL1Block()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    l2ToL1EthBlock(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'l2ToL1EthBlock()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     l2ToL1Sender(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
