@@ -58,7 +58,7 @@ class ArbCore {
    private:
     struct message_data_struct {
         std::vector<std::vector<unsigned char>> messages;
-        uint256_t previous_inbox_hash;
+        uint256_t previous_inbox_acc;
         bool last_block_complete{false};
     };
 
@@ -170,7 +170,7 @@ class ArbCore {
    public:
     // Sending messages to core thread
     bool deliverMessages(std::vector<std::vector<unsigned char>>& messages,
-                         const uint256_t& previous_inbox_hash,
+                         const uint256_t& previous_inbox_acc,
                          bool last_block_complete);
     message_status_enum messagesStatus();
     std::string messagesClearError();
@@ -272,7 +272,7 @@ class ArbCore {
     std::optional<rocksdb::Status> addMessages(
         const std::vector<std::vector<unsigned char>>& new_messages,
         bool last_block_complete,
-        const uint256_t& prev_inbox_hash,
+        const uint256_t& prev_inbox_acc,
         const uint256_t& message_count_in_machine,
         ValueCache& cache);
     std::optional<MessageEntry> getNextMessage();

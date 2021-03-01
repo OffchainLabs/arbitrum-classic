@@ -476,9 +476,9 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             "INBOX_PAST_END"
         );
         uint256 afterInboxCount = assertion.beforeInboxCount.add(assertion.inboxMessagesRead);
-        bytes32 afterInboxHash = 0;
+        bytes32 afterInboxAcc = 0;
         if (afterInboxCount > 0) {
-            afterInboxHash = bridge.inboxAccs(afterInboxCount - 1);
+            afterInboxAcc = bridge.inboxAccs(afterInboxCount - 1);
         }
 
         INode node =
@@ -499,7 +499,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         emit NodeCreated(
             nodeNum,
             inboxMaxCount,
-            afterInboxHash,
+            afterInboxAcc,
             assertionBytes32Fields,
             assertionIntFields
         );

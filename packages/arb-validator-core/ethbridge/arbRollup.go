@@ -206,8 +206,8 @@ func (vm *arbRollup) MakeAssertion(
 	fields := [8][32]byte{
 		beforeState.MachineHash,
 		assertion.AfterMachineHash,
-		assertion.BeforeInboxHash,
-		assertion.AfterInboxHash,
+		assertion.BeforeInboxAcc,
+		assertion.AfterInboxAcc,
 		assertion.LastMessageHash,
 		assertion.LastLogHash,
 		prevPrevLeafHash,

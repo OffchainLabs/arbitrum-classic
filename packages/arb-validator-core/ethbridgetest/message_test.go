@@ -86,7 +86,7 @@ func TestDeliveredMessage(t *testing.T) {
 
 	beforeInbox := common.RandHash()
 	msgHash := common.RandHash()
-	bridgeInboxHash, err := messageTester.AddMessageToInbox(
+	bridgeInboxAcc, err := messageTester.AddMessageToInbox(
 		nil,
 		beforeInbox,
 		msgHash,
@@ -94,7 +94,7 @@ func TestDeliveredMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bridgeInboxHash != hashing.SoliditySHA3(
+	if bridgeInboxAcc != hashing.SoliditySHA3(
 		hashing.Bytes32(beforeInbox),
 		hashing.Bytes32(msgHash),
 	) {

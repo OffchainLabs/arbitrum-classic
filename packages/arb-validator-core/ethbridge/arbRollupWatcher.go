@@ -252,7 +252,7 @@ func (vm *ethRollupWatcher) processEvents(
 			MaxInboxCount:    eventVal.InboxCount,
 			AssertionParams:  params,
 			AfterMachineHash: eventVal.Fields[2],
-			AfterInboxHash:   eventVal.Fields[3],
+			AfterInboxAcc:    eventVal.Fields[3],
 			NumGas:           eventVal.NumArbGas,
 			LastMessageHash:  eventVal.Fields[4],
 			MessageCount:     eventVal.MessageCount,

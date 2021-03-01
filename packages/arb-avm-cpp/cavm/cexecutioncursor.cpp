@@ -44,12 +44,11 @@ int executionCursorMachineHash(CExecutionCursor* execution_cursor_ptr,
     }
 }
 
-int executionCursorInboxHash(CExecutionCursor* execution_cursor_ptr,
-                             void* ret) {
+int executionCursorInboxAcc(CExecutionCursor* execution_cursor_ptr, void* ret) {
     auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
     try {
         std::array<unsigned char, 32> val{};
-        to_big_endian(executionCursor->inbox_hash, val.begin());
+        to_big_endian(executionCursor->inbox_acc, val.begin());
         std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
 
         return true;
