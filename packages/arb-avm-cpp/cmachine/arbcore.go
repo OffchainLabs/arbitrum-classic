@@ -183,7 +183,7 @@ func (ac *ArbCore) GetInboxAcc(index *big.Int) (ret common.Hash, err error) {
 
 	status := C.arbCoreGetInboxAcc(ac.c, unsafeDataPointer(startIndexData), unsafe.Pointer(&ret[0]))
 	if status == 0 {
-		err = errors.New("failed to get inbox acc")
+		err = errors.Errorf("failed to get inbox acc for %v", index)
 	}
 
 	return
@@ -235,10 +235,6 @@ func (ac *ArbCore) GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *b
 	}
 
 	return
-}
-
-func (ac *ArbCore) GetInboxHash(index *big.Int) (ret common.Hash, err error) {
-	panic("unimplemented method")
 }
 
 func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int) (core.ExecutionCursor, error) {

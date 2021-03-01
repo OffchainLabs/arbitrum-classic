@@ -66,7 +66,7 @@ func parseBlockData(data []byte) (*machine.BlockInfo, error) {
 }
 
 func serializeBlockData(header *types.Header, logIndex uint64) ([]byte, error) {
-	blockData := []byte{}
+	var blockData []byte
 
 	logIndexData := make([]byte, 8)
 	binary.BigEndian.PutUint64(logIndexData[:], logIndex)
@@ -103,13 +103,14 @@ func (as *AggregatorStore) SaveBlock(header *types.Header, logIndex uint64, requ
 	return nil
 }
 
-func (as *AggregatorStore) LatestBlockInfo() (*machine.BlockInfo, error) {
-	result := C.aggregatorLatestBlock(as.c)
+func (as *AggregatorStore) BlockCount() (uint64, error) {
+	result := C.aggregatorBlockCount(as.c)
 	if result.found == 0 {
-		return nil, errors.New("failed to load block count")
+		return 0, errors.New("failed to load block count")
+
 	}
 
-	return parseBlockData(receiveByteSlice(result.data))
+	return uint64(result.value), nil
 }
 
 func (as *AggregatorStore) GetBlockInfo(height uint64) (*machine.BlockInfo, error) {
@@ -143,6 +144,7 @@ func (as *AggregatorStore) GetPossibleBlock(blockHash common.Hash) *uint64 {
 		return nil
 	}
 	index := uint64(result.value)
+
 	return &index
 }
 
@@ -151,7 +153,6 @@ func (as *AggregatorStore) CurrentLogCount() (*big.Int, error) {
 	if result.found == 0 {
 		return nil, errors.New("failed to get processed log count")
 	}
-
 	return receiveBigInt(result.value), nil
 }
 
@@ -161,6 +162,5 @@ func (as AggregatorStore) UpdateCurrentLogCount(count *big.Int) error {
 	if status == 0 {
 		return errors.New("failed to update processed log count")
 	}
-
 	return nil
 }

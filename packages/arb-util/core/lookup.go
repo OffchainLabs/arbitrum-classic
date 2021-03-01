@@ -58,7 +58,7 @@ type ArbCoreLookup interface {
 
 	GetSendAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
 	GetLogAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
-	GetInboxHash(index *big.Int) (common.Hash, error)
+	GetInboxAcc(index *big.Int) (ret common.Hash, err error)
 
 	// GetExecutionCursor returns a cursor containing the machine after executing totalGasUsed
 	// from the original machine
