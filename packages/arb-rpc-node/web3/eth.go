@@ -264,7 +264,7 @@ func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, 
 		return nil, nil, err
 	}
 
-	info, err := s.srv.BlockInfoByNumber(res.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64())
+	info, err := s.srv.BlockInfoByNumber(res.IncomingRequest.L2BlockNumber.Uint64())
 	if err != nil || info == nil {
 		return nil, nil, err
 	}
@@ -445,7 +445,7 @@ func makeTransactionResult(processedTx *evm.ProcessedTx, blockHash *common.Hash)
 	res := processedTx.Result
 	vVal, rVal, sVal := tx.RawSignatureValues()
 	txIndex := res.TxIndex.Uint64()
-	blockNum := res.IncomingRequest.ChainTime.BlockNum.AsInt()
+	blockNum := res.IncomingRequest.L2BlockNumber
 
 	provenance := res.IncomingRequest.Provenance
 	var parentRequestId *common.Hash

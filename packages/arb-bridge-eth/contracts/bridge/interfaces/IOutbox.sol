@@ -30,6 +30,8 @@ interface IOutbox {
 
     function l2ToL1Block() external view returns (uint256);
 
+    function l2ToL1EthBlock() external view returns (uint256);
+
     function l2ToL1Timestamp() external view returns (uint256);
 
     function processOutgoingMessages(bytes calldata sendsData, uint256[] calldata sendLengths)
