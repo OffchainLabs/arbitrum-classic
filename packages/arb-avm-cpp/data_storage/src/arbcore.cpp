@@ -788,10 +788,26 @@ void ArbCore::operator()() {
                 break;
             }
             auto total_messages_read = pending_checkpoint.total_messages_read;
+            bool resolved_staged = false;
             if (std::holds_alternative<uint256_t>(
                     machine->machine_state.staged_message)) {
-                total_messages_read -= 1;
+                // Resolve staged message if possible.  If message not found,
+                // machine will just be blocked
+                auto resolve_status = resolveStagedMessage(
+                    *tx, machine->machine_state.staged_message);
+                if (!resolve_status.IsNotFound() && !resolve_status.ok()) {
+                    core_error_string = "error resolving staged message";
+                    machine_error = true;
+                    std::cerr << "ArbCore error: " << core_error_string << ": "
+                              << resolve_status.ToString() << "\n";
+                    break;
+                }
+                if (resolve_status.ok()) {
+                    resolved_staged = true;
+                }
             }
+
+            std::vector<std::vector<unsigned char>> messages;
             if (messages_count.data > total_messages_read) {
                 // New messages to process
                 auto next_message_result =
@@ -811,26 +827,17 @@ void ArbCore::operator()() {
                     std::cerr << "ArbCore error: " << core_error_string << "\n";
                     break;
                 }
-                std::vector<std::vector<unsigned char>> messages;
                 messages.push_back(next_message_result.data.data);
-                message_count_in_machine =
-                    pending_checkpoint.total_messages_read + 1;
-
-                execConfig.setInboxMessagesFromBytes(messages);
                 execConfig.final_message_of_block =
                     next_message_result.data.last_message_in_block;
+            } else {
+                execConfig.final_message_of_block = false;
+            }
 
-                // Resolve staged message if possible.  If message not found,
-                // machine will just be blocked
-                auto resolve_status = resolveStagedMessage(
-                    *tx, machine->machine_state.staged_message);
-                if (!resolve_status.IsNotFound() && !resolve_status.ok()) {
-                    core_error_string = "error resolving staged message";
-                    machine_error = true;
-                    std::cerr << "ArbCore error: " << core_error_string << ": "
-                              << resolve_status.ToString() << "\n";
-                    break;
-                }
+            if (messages.size() > 0 || resolved_staged) {
+                message_count_in_machine =
+                    pending_checkpoint.total_messages_read + messages.size();
+                execConfig.setInboxMessagesFromBytes(messages);
 
                 auto status = machine->runMachine(execConfig);
                 if (!status) {
