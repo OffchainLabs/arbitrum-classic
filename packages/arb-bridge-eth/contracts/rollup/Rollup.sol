@@ -399,13 +399,11 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     /**
      * @notice Move stake onto a new node
      * @param expectedLastHash The hash of the latest sibling if it exists or else the parent (protects against reorgs)
-     * @param expectedHasSibling If the lastHash specified is that of a sibling (protects against reorgs)
      * @param expectedInboxHash The expected inbox accumulator hash after the assertion (protects against reorgs)
      * @param assertionBytes32Fields Assertion data for creating
      * @param assertionIntFields Assertion data for creating
      */
     function stakeOnNewNode(
-        bool expectedHasSibling,
         bytes32 expectedLastHash,
         bytes32 expectedInboxHash,
         bytes32[4] calldata assertionBytes32Fields,
@@ -499,7 +497,6 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             bytes32 lastHash;
             uint256 latestSibling = prevNode.latestChildNumber();
             bool hasSibling = latestSibling > 0;
-            require(hasSibling == expectedHasSibling, "UNEXPECTED_SIBLING");
             if (hasSibling) {
                 lastHash = getNodeHash(prevNode.latestChildNumber());
             } else {

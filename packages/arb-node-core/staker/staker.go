@@ -138,7 +138,7 @@ func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) e
 		if !wrongNodesExist && s.strategy < StakeLatestStrategy {
 			return nil
 		}
-		return s.rollup.StakeOnNewNode(ctx, action.hasSibling, action.lastHash, action.inboxAcc, action.assertion)
+		return s.rollup.StakeOnNewNode(ctx, action.lastHash, action.inboxAcc, action.assertion)
 	case existingNodeAction:
 		if !wrongNodesExist && s.strategy < StakeLatestStrategy {
 			return nil

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/pkg/errors"
@@ -105,7 +106,7 @@ func (r *RollupWatcher) LookupCreation(ctx context.Context) (*ethbridgecontracts
 
 func (r *RollupWatcher) LookupNode(ctx context.Context, number *big.Int) (*core.NodeInfo, error) {
 	var numberAsHash ethcommon.Hash
-	copy(numberAsHash[:], hashing.Uint256(number))
+	copy(numberAsHash[:], math.U256Bytes(number))
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
 		FromBlock: nil,
@@ -147,7 +148,7 @@ func (r *RollupWatcher) LookupNodeChildren(ctx context.Context, parentHash [32]b
 		FromBlock: nil,
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
-		Topics:    [][]ethcommon.Hash{{nodeCreatedID}, {parentHash}},
+		Topics:    [][]ethcommon.Hash{{nodeCreatedID}, {}, {parentHash}},
 	}
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
@@ -159,9 +160,6 @@ func (r *RollupWatcher) LookupNodeChildren(ctx context.Context, parentHash [32]b
 		parsedLog, err := r.con.ParseNodeCreated(ethLog)
 		if err != nil {
 			return nil, err
-		}
-		if parsedLog.ParentNodeHash != parentHash {
-			continue
 		}
 		proposed := &common.BlockId{
 			Height:     common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
