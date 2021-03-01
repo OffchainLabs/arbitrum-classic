@@ -230,7 +230,7 @@ func (x *DisputableNodeBuf) Unmarshal() *DisputableNode {
 func (dn *DisputableNode) ValidAfterVMProtoData(prevState *VMProtoData) *VMProtoData {
 	return NewVMProtoData(
 		dn.Assertion.AfterMachineHash,
-		dn.Assertion.AfterInboxHash,
+		dn.Assertion.AfterInboxAcc,
 		new(big.Int).Add(prevState.InboxCount, dn.AssertionParams.ImportedMessageCount),
 		new(big.Int).Add(prevState.MessageCount, new(big.Int).SetUint64(dn.Assertion.MessageCount)),
 		new(big.Int).Add(prevState.LogCount, new(big.Int).SetUint64(dn.Assertion.LogCount)),

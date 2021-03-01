@@ -53,14 +53,14 @@ int arbCoreMachineIdle(CArbCore* arbcore_ptr) {
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            ByteSliceArray inbox_messages,
-                           void* previous_inbox_hash_ptr,
+                           void* previous_inbox_acc_ptr,
                            const int last_block_complete) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     auto messages = receiveByteSliceArray(inbox_messages);
-    auto previous_inbox_hash = receiveUint256(previous_inbox_hash_ptr);
+    auto previous_inbox_acc = receiveUint256(previous_inbox_acc_ptr);
 
     try {
-        auto status = arb_core->deliverMessages(messages, previous_inbox_hash,
+        auto status = arb_core->deliverMessages(messages, previous_inbox_acc,
                                                 last_block_complete);
         return status;
     } catch (const std::exception& e) {

@@ -77,7 +77,7 @@ func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
 	return status, nil
 }
 
-func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) bool {
+func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool) bool {
 	rawInboxData := encodeInboxMessages(messages)
 	byteSlices := encodeByteSliceList(rawInboxData)
 
@@ -94,7 +94,7 @@ func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxH
 		cLastBlockComplete = 1
 	}
 
-	status := C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxHash.Bytes()), C.int(cLastBlockComplete))
+	status := C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxAcc.Bytes()), C.int(cLastBlockComplete))
 	return status == 1
 }
 

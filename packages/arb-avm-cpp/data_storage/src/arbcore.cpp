@@ -130,14 +130,14 @@ void ArbCore::abortThread() {
 
 // deliverMessages sends messages to core thread
 bool ArbCore::deliverMessages(std::vector<std::vector<unsigned char>>& messages,
-                              const uint256_t& previous_inbox_hash,
+                              const uint256_t& previous_inbox_acc,
                               bool last_block_complete) {
     if (message_data_status != MESSAGES_EMPTY) {
         return false;
     }
 
     message_data.messages = std::move(messages);
-    message_data.previous_inbox_hash = previous_inbox_hash;
+    message_data.previous_inbox_acc = previous_inbox_acc;
     message_data.last_block_complete = last_block_complete;
 
     message_data_status = MESSAGES_READY;
@@ -326,17 +326,17 @@ rocksdb::Status ArbCore::saveCheckpoint(Transaction& tx) {
         auto existing_message_entry =
             getMessageEntry(tx, pending_checkpoint.total_messages_read - 1);
         if (existing_message_entry.status.IsNotFound()) {
-            pending_checkpoint.inbox_hash = 0;
+            pending_checkpoint.inbox_acc = 0;
         } else if (!existing_message_entry.status.ok()) {
             std::cerr << "ArbCore unable to get inbox hash from database: "
                       << existing_message_entry.status.ToString() << "\n";
             return existing_message_entry.status;
         } else {
-            pending_checkpoint.inbox_hash =
-                existing_message_entry.data.inbox_hash;
+            pending_checkpoint.inbox_acc =
+                existing_message_entry.data.inbox_acc;
         }
     } else {
-        pending_checkpoint.inbox_hash = 0;
+        pending_checkpoint.inbox_acc = 0;
     }
 
     std::vector<unsigned char> key;
@@ -663,7 +663,7 @@ void ArbCore::operator()() {
             // Reorg might occur while adding messages
             auto add_status = addMessages(message_data.messages,
                                           message_data.last_block_complete,
-                                          message_data.previous_inbox_hash,
+                                          message_data.previous_inbox_acc,
                                           message_count_in_machine, cache);
             if (!add_status) {
                 // Messages from previous block invalid because of reorg so
@@ -972,7 +972,7 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
         return {rocksdb::Status::OK(), {}};
     }
 
-    // Check if attempting to get entries past current valid logs
+    // Check if attempting to get entries past current valid messages
     auto message_count = messageEntryInsertedCountImpl(*tx);
     if (!message_count.status.ok()) {
         return {message_count.status, {}};
@@ -1016,7 +1016,7 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
         return {rocksdb::Status::OK(), {}};
     }
 
-    // Check if attempting to get entries past current valid logs
+    // Check if attempting to get entries past current valid sends
     auto send_count = sendInsertedCountImpl(*tx);
     if (!send_count.status.ok()) {
         return {send_count.status, {}};
@@ -1046,7 +1046,7 @@ ValueResult<uint256_t> ArbCore::getInboxAcc(uint256_t index) {
         return {result.status, 0};
     }
 
-    return {rocksdb::Status::OK(), result.data.inbox_hash};
+    return {rocksdb::Status::OK(), result.data.inbox_acc};
 }
 
 ValueResult<uint256_t> ArbCore::getSendAcc(uint256_t start_acc_hash,
@@ -1169,10 +1169,9 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                 execution_cursor.messages_to_skip +=
                     assertion.inbox_messages_consumed;
                 if (execution_cursor.messages_to_skip > 0) {
-                    execution_cursor.inbox_hash =
-                        execution_cursor
-                            .inbox_hashes[execution_cursor.messages_to_skip -
-                                          1];
+                    execution_cursor.inbox_acc =
+                        execution_cursor.inbox_accumulators
+                            [execution_cursor.messages_to_skip - 1];
                 }
                 execution_cursor.applyAssertion(assertion);
 
@@ -1310,7 +1309,7 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
         auto stored_result =
             getMessageEntry(tx, execution_cursor.total_messages_read - 1);
         if (!stored_result.status.ok() ||
-            execution_cursor.inbox_hash != stored_result.data.inbox_hash) {
+            execution_cursor.inbox_acc != stored_result.data.inbox_acc) {
             // Obsolete machine, reorg occurred
             return {rocksdb::Status::OK(), false};
         }
@@ -1320,7 +1319,7 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
     execution_cursor.first_message_sequence_number +=
         execution_cursor.messages_to_skip;
     execution_cursor.messages.clear();
-    execution_cursor.inbox_hashes.clear();
+    execution_cursor.inbox_accumulators.clear();
     execution_cursor.messages_to_skip = 0;
 
     auto current_message_sequence_number =
@@ -1352,19 +1351,19 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
     }
 
     std::vector<InboxMessage> messages;
-    std::vector<uint256_t> inbox_hashes;
+    std::vector<uint256_t> inbox_accumulators;
     auto total_size = results.data.size();
     messages.reserve(total_size);
-    inbox_hashes.reserve(total_size);
+    inbox_accumulators.reserve(total_size);
     for (const auto& data : results.data) {
         auto message_entry = extractMessageEntry(0, vecToSlice(data));
         auto inbox_message = extractInboxMessage(message_entry.data);
         messages.push_back(inbox_message);
-        inbox_hashes.push_back(message_entry.inbox_hash);
+        inbox_accumulators.push_back(message_entry.inbox_acc);
     }
 
     execution_cursor.messages = std::move(messages);
-    execution_cursor.inbox_hashes = std::move(inbox_hashes);
+    execution_cursor.inbox_accumulators = std::move(inbox_accumulators);
     execution_cursor.messages_to_skip = 0;
 
     return {rocksdb::Status::OK(), true};
@@ -1486,7 +1485,7 @@ rocksdb::Status ArbCore::updateMessageEntryProcessedCount(
 std::optional<rocksdb::Status> ArbCore::addMessages(
     const std::vector<std::vector<unsigned char>>& new_messages,
     bool last_block_complete,
-    const uint256_t& prev_inbox_hash,
+    const uint256_t& prev_inbox_acc,
     const uint256_t& message_count_in_machine,
     ValueCache& cache) {
     auto tx = Transaction::makeTransaction(data_storage);
@@ -1499,7 +1498,7 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
 
     auto first_message = extractInboxMessage(new_messages[0]);
 
-    auto previous_inbox_hash = prev_inbox_hash;
+    auto previous_inbox_acc = prev_inbox_acc;
     if (first_message.inbox_sequence_number > 0) {
         if (first_message.inbox_sequence_number > existing_message_count) {
             // Not allowed to skip message sequence numbers, ask for older
@@ -1507,14 +1506,14 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
             return std::nullopt;
         }
 
-        // Check that previous_inbox_hash matches hash from previous message
+        // Check that previous_inbox_acc matches acc from previous message
         auto previous_sequence_number = first_message.inbox_sequence_number - 1;
         auto previous_result = getMessageEntry(*tx, previous_sequence_number);
         if (!previous_result.status.ok()) {
             return previous_result.status;
         }
 
-        if (previous_result.data.inbox_hash != previous_inbox_hash) {
+        if (previous_result.data.inbox_acc != previous_inbox_acc) {
             // Previous inbox doesn't match which means reorg happened and
             // caller needs to try again with messages from earlier block
             return std::nullopt;
@@ -1538,9 +1537,9 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
         if (!existing_message_entry.status.ok()) {
             return existing_message_entry.status;
         }
-        auto current_inbox_hash =
-            hash_inbox(previous_inbox_hash, new_messages[new_messages_index]);
-        if (existing_message_entry.data.inbox_hash != current_inbox_hash) {
+        auto current_inbox_acc =
+            hash_inbox(previous_inbox_acc, new_messages[new_messages_index]);
+        if (existing_message_entry.data.inbox_acc != current_inbox_acc) {
             // Entry doesn't match because of reorg
             break;
         }
@@ -1555,7 +1554,7 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
         }
 
         new_messages_index++;
-        previous_inbox_hash = current_inbox_hash;
+        previous_inbox_acc = current_inbox_acc;
         current_sequence_number =
             first_message.inbox_sequence_number + new_messages_index;
     }
@@ -1585,8 +1584,8 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
         std::vector<unsigned char> key;
         marshal_uint256_t(current_sequence_number, key);
 
-        auto current_inbox_hash =
-            hash_inbox(previous_inbox_hash, new_messages[new_messages_index]);
+        auto current_inbox_acc =
+            hash_inbox(previous_inbox_acc, new_messages[new_messages_index]);
 
         auto next_inbox_message =
             extractInboxMessage(new_messages[new_messages_index]);
@@ -1610,7 +1609,7 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
 
         // Encode message entry
         auto messageEntry = MessageEntry{
-            current_sequence_number, current_inbox_hash,
+            current_sequence_number, current_inbox_acc,
             intx::narrow_cast<uint64_t>(current_inbox_message.block_number),
             last_message_in_block, (new_messages[new_messages_index])};
         auto serialized_messageentry = serializeMessageEntry(messageEntry);
@@ -1624,7 +1623,7 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
         }
 
         new_messages_index++;
-        previous_inbox_hash = current_inbox_hash;
+        previous_inbox_acc = current_inbox_acc;
         current_sequence_number += 1;
     }
 

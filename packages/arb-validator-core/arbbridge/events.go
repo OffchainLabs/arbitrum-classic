@@ -127,7 +127,7 @@ type AssertedEvent struct {
 	MaxInboxCount    *big.Int
 	NumGas           uint64
 	AfterMachineHash common.Hash
-	AfterInboxHash   common.Hash
+	AfterInboxAcc    common.Hash
 	LastMessageHash  common.Hash
 	MessageCount     uint64
 	LastLogHash      common.Hash

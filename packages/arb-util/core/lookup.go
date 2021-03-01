@@ -26,7 +26,7 @@ type ExecutionCursor interface {
 	Clone() ExecutionCursor
 	MachineHash() common.Hash
 	TotalMessagesRead() *big.Int
-	InboxHash() common.Hash
+	InboxAcc() common.Hash
 	TotalGasConsumed() *big.Int
 	TotalSteps() *big.Int
 	TotalSendCount() *big.Int
@@ -62,12 +62,12 @@ type ArbCoreLookup interface {
 }
 
 type ArbCoreInbox interface {
-	DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) bool
+	DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool) bool
 	MessagesStatus() (MessageStatus, error)
 }
 
-func DeliverMessagesAndWait(db ArbCoreInbox, messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) (bool, error) {
-	if !db.DeliverMessages(messages, previousInboxHash, lastBlockComplete) {
+func DeliverMessagesAndWait(db ArbCoreInbox, messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool) (bool, error) {
+	if !db.DeliverMessages(messages, previousInboxAcc, lastBlockComplete) {
 		return false, errors.New("unable to deliver messages")
 	}
 
