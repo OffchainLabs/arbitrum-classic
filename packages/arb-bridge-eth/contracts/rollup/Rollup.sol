@@ -426,13 +426,6 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                 "PREV_STATE_HASH"
             );
 
-            uint256 baseTime = prevNode.deadlineBlock().sub(assertion.beforeProposedBlock);
-            require(
-                prevNode.firstChildBlock() == 0 ||
-                    block.number < baseTime.add(prevNode.firstChildBlock()),
-                "NO_NEW_CHILDREN"
-            );
-
             uint256 timeSinceLastNode = block.number.sub(assertion.beforeProposedBlock);
             // Verify that assertion meets the minimum Delta time requirement
             require(timeSinceLastNode >= minimumAssertionPeriod, "TIME_DELTA");

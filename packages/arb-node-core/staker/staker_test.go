@@ -127,7 +127,7 @@ func TestStaker(t *testing.T) {
 	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, ethbridge.NewTransactAuth(auth2))
 	test.FailIfError(t, err)
 
-	core, shutdown := challenge.PrepareTestArbCore(t, []inbox.InboxMessage{challenge.MakeTestInitMsg()})
+	core, shutdown := challenge.PrepareTestArbCore(t, []inbox.InboxMessage{})
 	defer shutdown()
 
 	staker, err := NewStaker(ctx, core, client, val, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
@@ -142,17 +142,18 @@ func TestStaker(t *testing.T) {
 	test.FailIfError(t, err)
 	bridge, err := ethbridge.NewBridgeWatcher(bridgeAddr.ToEthAddress(), client)
 	test.FailIfError(t, err)
-	_, err = NewInboxReader(ctx, bridge, core)
+	reader, err := NewInboxReader(ctx, bridge, core)
 	test.FailIfError(t, err)
+	reader.Start(ctx)
 
-	for i := 1; i <= 30; i++ {
+	for i := 1; i <= 10; i++ {
 		msgCount, err := core.GetMessageCount()
 		test.FailIfError(t, err)
 		if msgCount.Cmp(big.NewInt(1)) >= 0 {
 			// We've found the inbox message
 			break
 		}
-		if i == 100 {
+		if i == 10 {
 			t.Fatal("Failed to load initializing message")
 		}
 		<-time.After(time.Second * 1)

@@ -62,6 +62,7 @@ func NewBridgeWatcher(address ethcommon.Address, client ethutils.EthClient) (*Br
 		con:     con,
 		address: address,
 		client:  client,
+		inboxes: make(map[ethcommon.Address]InboxMessageGetter),
 	}, nil
 }
 

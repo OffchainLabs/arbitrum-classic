@@ -33,7 +33,6 @@ func init() {
 	rollupCreatedID = parsedRollup.Events["RollupCreated"].ID
 	nodeCreatedID = parsedRollup.Events["NodeCreated"].ID
 	challengeCreatedID = parsedRollup.Events["RollupChallengeStarted"].ID
-	messageDeliveredID = parsedRollup.Events["MessageDelivered"].ID
 	l2MessageFromOriginCallABI = parsedRollup.Methods["sendL2MessageFromOrigin"]
 }
 
@@ -170,7 +169,7 @@ func (r *RollupWatcher) LookupNodeChildren(ctx context.Context, parentHash [32]b
 		if i > 0 {
 			lastHashIsSibling[0] = 1
 		}
-		lastHash = hashing.SoliditySHA3(lastHashIsSibling, lastHash, parsedLog.ExecutionHash, parsedLog.AfterInboxAcc)
+		lastHash = hashing.SoliditySHA3(lastHashIsSibling[:], lastHash[:], parsedLog.ExecutionHash[:], parsedLog.AfterInboxAcc[:])
 		infos = append(infos, &core.NodeInfo{
 			NodeNum:       parsedLog.NodeNum,
 			BlockProposed: proposed,
