@@ -75,7 +75,7 @@ TEST_CASE("Checkpoint State") {
     auto machine = storage.getInitialMachine(value_cache);
     MachineExecutionConfig execConfig;
     execConfig.max_gas = 3;
-    execConfig.final_message_of_block = true;
+    execConfig.next_block_height = 3;
     machine->run(execConfig);
 
     SECTION("default") { checkpointState(storage, *machine); }
@@ -102,7 +102,7 @@ TEST_CASE("Delete machine checkpoint") {
         auto machine = storage.getInitialMachine(value_cache);
         MachineExecutionConfig execConfig;
         execConfig.max_gas = 4;
-        execConfig.final_message_of_block = true;
+        execConfig.next_block_height = 3;
         machine->run(execConfig);
         auto transaction = storage.makeTransaction();
         saveMachine(*transaction, *machine);
@@ -135,7 +135,7 @@ TEST_CASE("Proof") {
     while (true) {
         MachineExecutionConfig execConfig;
         execConfig.max_gas = 3;
-        execConfig.final_message_of_block = true;
+        execConfig.next_block_height = 3;
         auto assertion = machine.run(execConfig);
         machine.marshalForProof();
         if (assertion.stepCount == 0) {
