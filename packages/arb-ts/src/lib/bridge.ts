@@ -34,21 +34,21 @@ export class Bridge extends L1Bridge {
     this.l2Bridge = new L2Bridge(arbERC20BridgeAddress, arbSigner)
   }
 
-  public async withdrawETH(value: BigNumber, destinationAddress?: string) {
-    return await this.l2Bridge.withdrawETH(value, destinationAddress)
+  public withdrawETH(value: BigNumber, destinationAddress?: string) {
+    return this.l2Bridge.withdrawETH(value, destinationAddress)
   }
-  public async withdrawERC20(
+  public withdrawERC20(
     erc20l1Address: string,
     amount: BigNumber,
     destinationAddress?: string
   ) {
-    return await this.l2Bridge.withdrawERC20(
+    return this.l2Bridge.withdrawERC20(
       erc20l1Address,
       amount,
       destinationAddress
     )
   }
-  public async getERC20L1Address(erc20L2Address: string) {
-    return await this.l2Bridge.getERC20L1Address(erc20L2Address)
+  public getERC20L1Address(erc20L2Address: string) {
+    return this.l2Bridge.getERC20L1Address(erc20L2Address)
   }
 }

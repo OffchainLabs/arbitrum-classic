@@ -60,15 +60,15 @@ export class L2Bridge {
     )
   }
 
-  public async getERC20L1Address(erc20L2Address: string) {
-    return await this.arbERC20Bridge.customToken(erc20L2Address)
+  public getERC20L1Address(erc20L2Address: string) {
+    return this.arbERC20Bridge.customToken(erc20L2Address)
   }
 
-  public async getWalletAddress() {
+  public getWalletAddress() {
     const { walletAddressCache } = this
     if (walletAddressCache) {
       return walletAddressCache
     }
-    return await this.l2Signer.getAddress()
+    return this.l2Signer.getAddress()
   }
 }
