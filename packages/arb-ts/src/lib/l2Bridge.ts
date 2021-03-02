@@ -15,7 +15,7 @@
  */
 /* eslint-env node */
 'use strict'
-import { providers, Signer, BigNumber } from 'ethers'
+import { Signer, BigNumber } from 'ethers'
 import { ArbTokenBridgeFactory } from './abi/ArbTokenBridgeFactory'
 import { ArbTokenBridge } from './abi/ArbTokenBridge'
 import { ArbSys } from './abi/ArbSys'
@@ -24,18 +24,12 @@ import { ArbSysFactory } from './abi/ArbSysFactory'
 const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
 
 export class L2Bridge {
-  l2Provider: providers.JsonRpcProvider
   l2Signer: Signer
   arbSys: ArbSys
   arbERC20Bridge: ArbTokenBridge
   walletAddressCache?: string
 
-  constructor(
-    arbERC20BridgeAddress: string,
-    l2Provider: providers.JsonRpcProvider,
-    l2Signer: Signer
-  ) {
-    this.l2Provider = l2Provider
+  constructor(arbERC20BridgeAddress: string, l2Signer: Signer) {
     this.l2Signer = l2Signer
 
     this.arbSys = ArbSysFactory.connect(ARB_SYS_ADDRESS, l2Signer)

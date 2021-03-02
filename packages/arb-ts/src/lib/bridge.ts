@@ -15,7 +15,7 @@
  */
 /* eslint-env node */
 'use strict'
-import { providers, Signer, BigNumber } from 'ethers'
+import { Signer, BigNumber } from 'ethers'
 import { L1Bridge } from './l1Bridge'
 import { L2Bridge } from './l2Bridge'
 
@@ -27,13 +27,11 @@ export class Bridge extends L1Bridge {
     inboxAddress: string,
     erc20BridgeAddress: string,
     arbERC20BridgeAddress: string,
-    ethProvider: providers.JsonRpcProvider,
     ethSigner: Signer,
-    arbProvider: providers.JsonRpcProvider,
     arbSigner: Signer
   ) {
-    super(inboxAddress, erc20BridgeAddress, ethProvider, ethSigner)
-    this.l2Bridge = new L2Bridge(arbERC20BridgeAddress, arbProvider, arbSigner)
+    super(inboxAddress, erc20BridgeAddress, ethSigner)
+    this.l2Bridge = new L2Bridge(arbERC20BridgeAddress, arbSigner)
   }
 
   public async withdrawETH(value: BigNumber, destinationAddress?: string) {

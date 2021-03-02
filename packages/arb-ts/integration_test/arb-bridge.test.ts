@@ -23,10 +23,8 @@ const l2TestWallet = Wallet.createRandom(arbProvider)
 const bridge = new Bridge(
   inboxAddress,
   erc20BridgeAddress,
-  erc20BridgeAddress,
-  ethProvider,
+  'arb20BridgeAddress',
   l1TestWallet,
-  arbProvider,
   l2TestWallet
 )
 

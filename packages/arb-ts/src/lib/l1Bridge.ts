@@ -15,14 +15,13 @@
  */
 /* eslint-env node */
 'use strict'
-import { providers, Signer, BigNumber } from 'ethers'
+import { Signer, BigNumber } from 'ethers'
 import { InboxFactory } from './abi/InboxFactory'
 import { EthERC20BridgeFactory } from './abi/EthERC20BridgeFactory'
 import { EthERC20Bridge } from './abi/EthERC20Bridge'
 import { Inbox } from './abi/Inbox'
 
 export class L1Bridge {
-  l1Provider: providers.JsonRpcProvider
   l1Signer: Signer
   inbox: Inbox
   ethERC20Bridge: EthERC20Bridge
@@ -31,16 +30,11 @@ export class L1Bridge {
   constructor(
     inboxAddress: string,
     erc20BridgeAddress: string,
-    l1Provider: providers.JsonRpcProvider,
     l1Signer: Signer
   ) {
-    this.l1Provider = l1Provider
     this.l1Signer = l1Signer
 
-    const l1SignerOrProvider = l1Signer || l1Provider
-    this.inbox =
-      l1SignerOrProvider &&
-      InboxFactory.connect(inboxAddress, l1SignerOrProvider)
+    this.inbox = InboxFactory.connect(inboxAddress, l1Signer)
 
     this.ethERC20Bridge = EthERC20BridgeFactory.connect(
       erc20BridgeAddress,
