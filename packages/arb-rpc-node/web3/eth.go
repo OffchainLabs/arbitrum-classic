@@ -355,6 +355,16 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 
 		ReturnCode: hexutil.Uint64(res.ResultCode),
 		ReturnData: res.ReturnData,
+		FeeStats: &FeeStatsResult{
+			WeiPerTx:        (*hexutil.Big)(res.FeeStats.WeiPerTx),
+			WeiPerCalldata:  (*hexutil.Big)(res.FeeStats.WeiPerCalldata),
+			WeiPerStorage:   (*hexutil.Big)(res.FeeStats.WeiPerStorage),
+			WeiPerArbGas:    (*hexutil.Big)(res.FeeStats.WeiPerArbGas),
+			PaidForTx:       (*hexutil.Big)(res.FeeStats.PaidForTx),
+			PaidForCalldata: (*hexutil.Big)(res.FeeStats.PaidForCalldata),
+			PaidForStorage:  (*hexutil.Big)(res.FeeStats.PaidForStorage),
+			PaidForCompute:  (*hexutil.Big)(res.FeeStats.PaidForCompute),
+		},
 	}, nil
 }
 

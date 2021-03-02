@@ -38,6 +38,17 @@ type CallTxArgs struct {
 	Data     *hexutil.Bytes  `json:"data"`
 }
 
+type FeeStatsResult struct {
+	WeiPerTx        *hexutil.Big `json:"weiPerTx"`
+	WeiPerCalldata  *hexutil.Big `json:"weiPerCalldata"`
+	WeiPerStorage   *hexutil.Big `json:"weiPerStorage"`
+	WeiPerArbGas    *hexutil.Big `json:"weiPerArbGas"`
+	PaidForTx       *hexutil.Big `json:"paidForTx"`
+	PaidForCalldata *hexutil.Big `json:"paidForCalldata"`
+	PaidForStorage  *hexutil.Big `json:"paidForStorage"`
+	PaidForCompute  *hexutil.Big `json:"paidForCompute"`
+}
+
 // Receipt represents the results of a transaction.
 type GetTransactionReceiptResult struct {
 	TransactionHash   common.Hash     `json:"transactionHash"`
@@ -54,8 +65,9 @@ type GetTransactionReceiptResult struct {
 	Status            hexutil.Uint64  `json:"status"`
 
 	// Arbitrum Specific Fields
-	ReturnCode hexutil.Uint64 `json:"returnCode"`
-	ReturnData hexutil.Bytes  `json:"returnData"`
+	ReturnCode hexutil.Uint64  `json:"returnCode"`
+	ReturnData hexutil.Bytes   `json:"returnData"`
+	FeeStats   *FeeStatsResult `json:"feeStats"`
 }
 
 type TransactionResult struct {
