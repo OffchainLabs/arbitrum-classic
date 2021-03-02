@@ -64,11 +64,11 @@ export class L2Bridge {
     return this.arbERC20Bridge.customToken(erc20L2Address)
   }
 
-  public getWalletAddress() {
-    const { walletAddressCache } = this
-    if (walletAddressCache) {
-      return walletAddressCache
+  public async getWalletAddress() {
+    if (this.walletAddressCache) {
+      return this.walletAddressCache
     }
-    return this.l2Signer.getAddress()
+    this.walletAddressCache = await this.l2Signer.getAddress()
+    return this.walletAddressCache
   }
 }
