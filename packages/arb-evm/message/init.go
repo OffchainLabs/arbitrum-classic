@@ -39,11 +39,11 @@ func NewInitFromData(data []byte) Init {
 	owner, data := extractAddress(data)
 	return Init{
 		ChainParams: protocol.ChainParams{
-			StakeRequirement:        stakeRequirement,
-			StakeToken:              stakeToken,
-			GracePeriod:             common.NewTimeBlocks(gracePeriod),
-			MaxExecutionSteps:       maxExecutionSteps.Uint64(),
-			ArbGasSpeedLimitPerTick: arbGasSpeedLimit.Uint64(),
+			StakeRequirement:          stakeRequirement,
+			StakeToken:                stakeToken,
+			GracePeriod:               common.NewTimeBlocks(gracePeriod),
+			MaxExecutionSteps:         maxExecutionSteps.Uint64(),
+			ArbGasSpeedLimitPerSecond: arbGasSpeedLimit.Uint64(),
 		},
 		Owner:       owner,
 		ExtraConfig: data,
@@ -57,7 +57,7 @@ func (m Init) Type() inbox.Type {
 func (m Init) AsData() []byte {
 	data := make([]byte, 0)
 	data = append(data, math.U256Bytes(m.GracePeriod.AsInt())...)
-	data = append(data, math.U256Bytes(new(big.Int).SetUint64(m.ArbGasSpeedLimitPerTick))...)
+	data = append(data, math.U256Bytes(new(big.Int).SetUint64(m.ArbGasSpeedLimitPerSecond))...)
 	data = append(data, math.U256Bytes(new(big.Int).SetUint64(m.MaxExecutionSteps))...)
 	data = append(data, math.U256Bytes(m.StakeRequirement)...)
 	data = append(data, addressData(m.StakeToken)...)
