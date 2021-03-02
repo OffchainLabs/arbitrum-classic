@@ -60,6 +60,7 @@ class ArbCore {
         std::vector<std::vector<unsigned char>> messages;
         uint256_t previous_inbox_acc;
         bool last_block_complete{false};
+        std::optional<uint256_t> reorg_height;
     };
 
    private:
@@ -168,7 +169,8 @@ class ArbCore {
     // Sending messages to core thread
     bool deliverMessages(std::vector<std::vector<unsigned char>>& messages,
                          const uint256_t& previous_inbox_acc,
-                         bool last_block_complete);
+                         bool last_block_complete,
+                         const std::optional<uint256_t>& reorg_height);
     message_status_enum messagesStatus();
     std::string messagesClearError();
 
@@ -274,6 +276,7 @@ class ArbCore {
         bool last_block_complete,
         const uint256_t& prev_inbox_acc,
         const uint256_t& message_count_in_machine,
+        const std::optional<uint256_t>& reorg_height,
         ValueCache& cache);
     ValueResult<std::vector<value>> getLogsNoLock(Transaction& tx,
                                                   uint256_t index,
