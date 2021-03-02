@@ -32,19 +32,13 @@ uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
 
 AssertionContext::AssertionContext(MachineExecutionConfig config)
     : inbox_messages(std::move(config.inbox_messages)),
+      next_block_height(config.next_block_height),
       inbox_messages_consumed(config.messages_to_skip),
       messages_to_skip(config.messages_to_skip),
       sideloads(std::move(config.sideloads)),
       stop_on_sideload(config.stop_on_sideload),
       max_gas(config.max_gas),
-      go_over_gas(config.go_over_gas) {
-    if (config.final_message_of_block && !inbox_messages.empty()) {
-        // Last message is the final message of a block, so need to
-        // set next_block_height to the block after the last block
-        next_block_height =
-            inbox_messages[inbox_messages.size() - 1].block_number + 1;
-    }
-}
+      go_over_gas(config.go_over_gas) {}
 
 MachineState::MachineState()
     : arb_gas_remaining(max_arb_gas_remaining),

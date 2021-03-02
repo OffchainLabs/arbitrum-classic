@@ -64,7 +64,7 @@ Machine generateTestMachine() {
 void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
     MachineExecutionConfig execConfig;
     execConfig.max_gas = gas_count_target;
-    execConfig.final_message_of_block = true;
+    execConfig.next_block_height = 7;
     auto assertion = mach.run(execConfig);
     REQUIRE(assertion.gasCount <= gas_count_target);
     auto val = mach.machine_state.stack.pop();
@@ -95,7 +95,7 @@ TEST_CASE("Code serialization") {
         auto mach2 = mach;
         MachineExecutionConfig execConfig;
         execConfig.max_gas = 7;
-        execConfig.final_message_of_block = true;
+        execConfig.next_block_height = 8;
         mach2.run(execConfig);
         saveMachine(*tx, mach);
         saveMachine(*tx, mach2);

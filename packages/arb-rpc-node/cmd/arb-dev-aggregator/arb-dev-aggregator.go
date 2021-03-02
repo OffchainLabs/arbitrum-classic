@@ -337,21 +337,6 @@ func NewBackend(arbcore core.ArbCore, db *txdb.TxDB, l1 *L1Emulator, signer type
 		err := <-errChan
 		log.Fatal().Err(err).Msg("error reading logs")
 	}()
-
-	go func() {
-		for {
-			coreLogs, err := arbcore.GetLogCount()
-			if err != nil {
-				panic(err)
-			}
-			coreMessages, err := arbcore.GetMessageCount()
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println("Total count", coreLogs, coreMessages)
-			<-time.After(time.Second)
-		}
-	}()
 	return &Backend{
 		arbcore:    arbcore,
 		db:         db,

@@ -176,12 +176,17 @@ void machineExecutionConfigSetMaxGas(CMachineExecutionConfig* c,
 }
 
 void machineExecutionConfigSetInboxMessages(CMachineExecutionConfig* c,
-                                            ByteSliceArray bytes,
-                                            int final_message_of_block) {
+                                            ByteSliceArray bytes) {
     assert(c);
     auto config = static_cast<MachineExecutionConfig*>(c);
     config->setInboxMessagesFromBytes(receiveByteSliceArray(bytes));
-    config->final_message_of_block = final_message_of_block;
+}
+
+void machineExecutionConfigSetNextBlockHeight(CMachineExecutionConfig* c,
+                                              void* next_block_height) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->next_block_height = receiveUint256(next_block_height);
 }
 
 void machineExecutionConfigSetSideloads(CMachineExecutionConfig* c,
