@@ -30,10 +30,9 @@ TEST_CASE("ARBOS test vectors") {
     DBDeleter deleter;
     ValueCache value_cache{};
 
-    std::vector<std::string> files = {"evm_direct_deploy_add",
-                                      "evm_direct_deploy_and_call_add",
-                                      //"evm_test_arbsys",
-                                      "evm_xcontract_call_with_constructors"};
+    std::vector<std::string> files = {
+        "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
+        "evm_test_arbsys", "evm_xcontract_call_with_constructors"};
 
     for (const auto& filename : files) {
         DYNAMIC_SECTION(filename) {
@@ -61,6 +60,7 @@ TEST_CASE("ARBOS test vectors") {
             for (auto& send_json : sends_json) {
                 sends.push_back(send_from_json(send_json));
             }
+            auto total_gas_target = j.at("total_gas").get<uint64_t>();
 
             ArbStorage storage(dbpath);
             REQUIRE(storage.initialize(arb_os_path).ok());
@@ -69,6 +69,7 @@ TEST_CASE("ARBOS test vectors") {
             config.inbox_messages = messages;
             auto assertion = mach->run(config);
             INFO("Machine ran for " << assertion.stepCount << " steps");
+            REQUIRE(assertion.gasCount == total_gas_target);
             REQUIRE(assertion.logs.size() == logs.size());
             for (size_t k = 0; k < assertion.logs.size(); ++k) {
                 REQUIRE(assertion.logs[k] == logs[k]);

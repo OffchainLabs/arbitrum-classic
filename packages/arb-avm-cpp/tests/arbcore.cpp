@@ -36,10 +36,9 @@ TEST_CASE("ArbCore tests") {
     auto arbCore = storage.getArbCore();
     REQUIRE(arbCore->startThread());
 
-    std::vector<std::string> files = {"evm_direct_deploy_add",
-                                      "evm_direct_deploy_and_call_add",
-                                      //"evm_test_arbsys",
-                                      "evm_xcontract_call_with_constructors"};
+    std::vector<std::string> files = {
+        "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
+        "evm_test_arbsys", "evm_xcontract_call_with_constructors"};
 
     uint64_t logs_count = 0;
 
