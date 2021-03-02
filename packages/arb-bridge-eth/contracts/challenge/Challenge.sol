@@ -75,7 +75,7 @@ contract Challenge is Cloneable, IChallenge {
     address public asserter;
     address public challenger;
 
-    uint256 public lastMoveBlock;
+    uint256 public override lastMoveBlock;
     uint256 public asserterTimeLeft;
     uint256 public challengerTimeLeft;
 
@@ -306,7 +306,7 @@ contract Challenge is Cloneable, IChallenge {
         _currentWin();
     }
 
-    function timeout() external {
+    function timeout() external override {
         uint256 timeSinceLastMove = block.number.sub(lastMoveBlock);
         require(timeSinceLastMove > currentResponderTimeLeft(), TIMEOUT_DEADLINE);
 
@@ -329,7 +329,7 @@ contract Challenge is Cloneable, IChallenge {
         }
     }
 
-    function currentResponderTimeLeft() public view returns (uint256) {
+    function currentResponderTimeLeft() public view override returns (uint256) {
         if (turn == Turn.Asserter) {
             return asserterTimeLeft;
         } else if (turn == Turn.Challenger) {

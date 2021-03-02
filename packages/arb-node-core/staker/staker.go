@@ -81,12 +81,10 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 		// Ignore our stake creation, as it's useless by itself
 		txCount--
 	}
-	if txCount == 0 {
-		if info != nil && s.builder.TransactionCount() == 0 {
-			tx, err := s.removeOldStakers(ctx)
-			if err != nil || tx == nil {
-				return tx, err
-			}
+	if txCount == 0 && info != nil {
+		tx, err := s.removeOldStakers(ctx)
+		if err != nil || tx == nil {
+			return tx, err
 		}
 		return nil, nil
 	}

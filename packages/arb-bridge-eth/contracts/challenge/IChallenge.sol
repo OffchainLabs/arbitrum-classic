@@ -33,4 +33,10 @@ interface IChallenge {
         uint256 _challengerTimeLeft,
         IBridge _bridge
     ) external;
+
+    function currentResponderTimeLeft() external view returns (uint256);
+
+    function lastMoveBlock() external view returns (uint256);
+
+    function timeout() external;
 }

@@ -78,6 +78,17 @@ func (v *Validator) removeOldStakers(ctx context.Context) (*types.Transaction, e
 	return v.wallet.ReturnOldDeposits(ctx, stakersToEliminate)
 }
 
+func (v *Validator) resolveTimedOutChallenges(ctx context.Context) (*types.Transaction, error) {
+	challengesToEliminate, err := v.validatorUtils.TimedOutChallenges(ctx, 1024)
+	if err != nil {
+		return nil, err
+	}
+	if len(challengesToEliminate) == 0 {
+		return nil, nil
+	}
+	return v.wallet.TimeoutChallenges(ctx, challengesToEliminate)
+}
+
 func (v *Validator) resolveNextNode(ctx context.Context) error {
 	confirmType, successorWithStake, stakerAddress, err := v.validatorUtils.CheckDecidableNextNode(ctx)
 	if err != nil {
