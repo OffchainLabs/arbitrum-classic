@@ -31,7 +31,8 @@
 TEST_CASE("ArbCore tests") {
     std::vector<std::string> files = {
         "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
-        "evm_test_arbsys", "evm_xcontract_call_with_constructors"};
+        "evm_test_arbsys", "evm_xcontract_call_with_constructors"
+    };
 
     for (const auto& filename : files) {
         DYNAMIC_SECTION(filename) {
@@ -95,6 +96,7 @@ TEST_CASE("ArbCore tests") {
                     status != ArbCore::MESSAGES_READY) {
                     break;
                 }
+                std::cerr << "Send msg\n";
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
             REQUIRE(status == ArbCore::MESSAGES_SUCCESS);
@@ -112,11 +114,13 @@ TEST_CASE("ArbCore tests") {
             }
 
             while (!arbCore->machineIdle()) {
+                std::cerr << "Wait idle\n";
                 std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             }
 
             REQUIRE(arbCore->logsCursorRequest(0, 1));
             while (true) {
+                std::cerr << "Wait for result\n";
                 auto result = arbCore->logsCursorGetLogs(0);
                 REQUIRE(!arbCore->logsCursorCheckError(0));
                 if (result) {

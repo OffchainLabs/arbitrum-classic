@@ -262,7 +262,7 @@ struct ValuePrinter {
     std::ostream& os;
 
     std::ostream* operator()(const Buffer& b) const {
-        os << "Buffer(" << hash(b) << ")";
+        os << "Buffer(" << b.hash() << "," << b.lastIndex() << "," << b.maxAccess << ")";
         return &os;
     }
 

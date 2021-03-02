@@ -216,6 +216,11 @@ class Buffer {
     Buffer(const RawBuffer& buffer, uint64_t mx) {
         buf = std::make_shared<RawBuffer>(buffer);
         maxAccess = mx;
+        /*
+        if (buf->lastIndex() > maxAccess) {
+            std::cerr << "??? " << buf->lastIndex() << " > " << maxAccess << "\n";
+        }
+        */
     }
 
     Buffer() {
@@ -235,7 +240,7 @@ class Buffer {
     }
 
     Buffer set_many(uint64_t offset, std::vector<uint8_t> arr) const {
-        return Buffer(buf->set_many(offset, arr), std::max(offset, maxAccess));
+        return Buffer(buf->set_many(offset, arr), std::max(offset+arr.size()-1, maxAccess));
     }
 
     uint8_t get(uint64_t pos) const { return buf->get(pos); }

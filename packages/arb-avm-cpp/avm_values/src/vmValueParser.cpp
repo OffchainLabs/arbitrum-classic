@@ -134,8 +134,8 @@ value value_from_json(nlohmann::json full_value_json,
                     "fits within a uint64_t");
             }
             auto max_access = mx_json.get<uint64_t>();
-            values.emplace_back(
-                Buffer{buffer_value_from_json(buf_json.at(BUF_LABEL)), max_access});
+            auto buf = buffer_value_from_json(buf_json);
+            values.emplace_back(Buffer{buf, max_access});
         } else {
             throw std::runtime_error("invalid value type");
         }
@@ -192,8 +192,9 @@ value simple_value_from_json(const nlohmann::json& full_value_json) {
                     "fits within a uint64_t");
             }
             auto max_access = mx_json.get<uint64_t>();
-            values.emplace_back(
-                Buffer{buffer_value_from_json(buf_json.at(BUF_LABEL)), max_access});
+            auto buf = buffer_value_from_json(buf_json);
+            // std::cerr << "Loaded buffer " << max_access << " hash " << buf.hash() << "\n";
+            values.emplace_back(Buffer{buf, max_access});
         } else {
             throw std::runtime_error("invalid value type");
         }

@@ -159,7 +159,7 @@ std::vector<RawBuffer> RawBuffer::serialize(
     if (level > 0) {
         value_vector.push_back(1);
         for (uint64_t i = 0; i < NODE_SIZE; i++) {
-            uint256_t hash_ = hash2(123, (*node)[i].hash());
+            uint256_t hash_ = hash2(1234, (*node)[i].hash());
             marshal_uint256_t(hash_, value_vector);
             ret.push_back((*node)[i]);
         }
