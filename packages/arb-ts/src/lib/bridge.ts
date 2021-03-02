@@ -50,7 +50,7 @@ export class Bridge extends L1Bridge {
       destinationAddress
     )
   }
-  public async getERC20LlAddress(erc20L2Address: string) {
-    return await this.l2Bridge.getERC20LlAddress(erc20L2Address)
+  public async getERC20L1Address(erc20L2Address: string) {
+    return await this.l2Bridge.getERC20L1Address(erc20L2Address)
   }
 }

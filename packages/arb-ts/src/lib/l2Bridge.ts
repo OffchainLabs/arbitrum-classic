@@ -66,7 +66,7 @@ export class L2Bridge {
     )
   }
 
-  public async getERC20LlAddress(erc20L2Address: string) {
+  public async getERC20L1Address(erc20L2Address: string) {
     return await this.arbERC20Bridge.customToken(erc20L2Address)
   }
 
