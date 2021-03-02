@@ -18,7 +18,6 @@ package txdb
 
 import (
 	"context"
-	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
@@ -82,7 +81,6 @@ func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("GetBlockResults", res.BlockNum, res.FirstAVMLog(), res.BlockStats.AVMLogCount, res.BlockStats.TxCount, len(avmLogs))
 	results := make([]*evm.TxResult, 0, len(avmLogs))
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
@@ -121,7 +119,7 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 	lastResultIndex := len(avmLogs) - 1
 	var currentBlockHeight uint64
 	blocksFound := false
-	for i, _ := range avmLogs {
+	for i := range avmLogs {
 		// Parse L2 transaction receipts in reverse
 		res, err := evm.NewResultFromValue(avmLogs[lastResultIndex-i])
 		if err != nil {
@@ -179,12 +177,6 @@ func (db *TxDB) HandleLog(avmLog value.Value) error {
 		return nil
 	}
 
-	totalLogCount, err := db.lookup.GetLogCount()
-	if err != nil {
-		return err
-	}
-	fmt.Println("Total log count", totalLogCount)
-
 	logger.Debug().
 		Uint64("number", blockInfo.BlockNum.Uint64()).
 		Uint64("block_txcount", blockInfo.BlockStats.TxCount.Uint64()).
@@ -195,10 +187,6 @@ func (db *TxDB) HandleLog(avmLog value.Value) error {
 	txResults, err := db.GetBlockResults(blockInfo)
 	if err != nil {
 		return err
-	}
-	fmt.Println("Block results for", blockInfo.BlockNum)
-	for _, res := range txResults {
-		fmt.Println("Got res", res.IncomingRequest.MessageID)
 	}
 
 	processedResults := evm.FilterEthTxResults(txResults)
