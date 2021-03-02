@@ -81,7 +81,7 @@ func init() {
 	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
 
 	// Print line number that log was created on
-	logger = log.With().Caller().Str("component", "arb-dev-aggregator").Logger()
+	logger = log.With().Caller().Str("component", "arb-dev-node").Logger()
 }
 
 func main() {
@@ -151,7 +151,7 @@ func main() {
 		ExtraConfig: nil,
 	}
 
-	as := storage.GetAggregatorStore()
+	as := storage.GetNodeStore()
 
 	db, err := txdb.New(arbCore, as, rollupAddress)
 	if err != nil {
@@ -261,7 +261,7 @@ func main() {
 	plugins := make(map[string]interface{})
 	plugins["evm"] = &EVM{backend: backend, as: as}
 
-	if err := rpc.LaunchAggregatorAdvanced(
+	if err := rpc.LaunchNodeAdvanced(
 		db,
 		rollupAddress,
 		"8547",
@@ -272,13 +272,13 @@ func main() {
 		true,
 		plugins,
 	); err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Error running LaunchAggregator")
+		logger.Fatal().Stack().Err(err).Msg("Error running LaunchNode")
 	}
 }
 
 type EVM struct {
 	backend *Backend
-	as      machine.AggregatorStore
+	as      machine.NodeStore
 }
 
 func (s *EVM) Snapshot() (hexutil.Uint64, error) {

@@ -50,7 +50,7 @@ type ChainTimeGetter interface {
 
 type TxDB struct {
 	lookup core.ArbOutputLookup
-	as     machine.AggregatorStore
+	as     machine.NodeStore
 	chain  common.Address
 
 	rmLogsFeed      event.Feed
@@ -66,7 +66,7 @@ type TxDB struct {
 
 func New(
 	core core.ArbOutputLookup,
-	as machine.AggregatorStore,
+	as machine.NodeStore,
 	chain common.Address,
 ) (*TxDB, error) {
 	return &TxDB{

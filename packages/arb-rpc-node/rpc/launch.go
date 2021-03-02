@@ -57,7 +57,7 @@ type StatelessBatcherMode struct {
 
 func (b StatelessBatcherMode) isBatcherMode() {}
 
-func LaunchAggregator(
+func LaunchNode(
 	ctx context.Context,
 	client ethutils.EthClient,
 	rollupAddress common.Address,
@@ -98,7 +98,7 @@ func LaunchAggregator(
 		}
 	}
 
-	return LaunchAggregatorAdvanced(
+	return LaunchNodeAdvanced(
 		db,
 		rollupAddress,
 		web3RPCPort,
@@ -111,7 +111,7 @@ func LaunchAggregator(
 	)
 }
 
-func LaunchAggregatorAdvanced(
+func LaunchNodeAdvanced(
 	db *txdb.TxDB,
 	rollupAddress common.Address,
 	web3RPCPort string,

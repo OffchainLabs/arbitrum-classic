@@ -113,7 +113,7 @@ func (s *ArbStorage) GetArbCore() core.ArbCore {
 	return NewArbCore(ac, s)
 }
 
-func (s *ArbStorage) GetAggregatorStore() machine.AggregatorStore {
+func (s *ArbStorage) GetNodeStore() machine.NodeStore {
 	as := C.createAggregatorStore(s.c)
-	return NewAggregatorStore(as)
+	return NewNodeStore(as)
 }
