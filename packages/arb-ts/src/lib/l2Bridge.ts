@@ -42,7 +42,7 @@ export class L2Bridge {
 
   public async withdrawETH(value: BigNumber, destinationAddress?: string) {
     const address = destinationAddress || (await this.getWalletAddress())
-    this.arbSys.withdrawEth(address, {
+    return this.arbSys.withdrawEth(address, {
       value,
     })
   }
