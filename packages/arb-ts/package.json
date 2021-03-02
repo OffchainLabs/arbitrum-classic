@@ -27,7 +27,7 @@
     "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
     "update:abi": "./scripts/update-abi && yarn format",
-    "int_test": "yarn run mocha integration_test/arb-bridge.test.ts --timeout 15000"
+    "test:integration": "yarn run mocha integration_test/arb-bridge.test.ts --timeout 15000"
   },
   "dependencies": {
     "@ethersproject/address": "^5.0.8",
