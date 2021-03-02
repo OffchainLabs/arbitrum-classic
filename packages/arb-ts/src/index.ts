@@ -13,6 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { providers } from 'ethers'
 
 export { Bridge } from './lib/bridge'
+export { L1Bridge } from './lib/l1bridge'
+export { L2Bridge } from './lib/l2bridge'
+export { ArbConversion } from './lib/conversion'
+
+export { RollupCreatorFactory } from './lib/abi/RollupCreatorFactory'

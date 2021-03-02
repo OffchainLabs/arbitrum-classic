@@ -13,7 +13,7 @@ yarn workspace arb-bridge-peripherals typechain
 
 cd ../arb-bridge-eth/build/types
 
-\cp -rf Outbox* Bridge* Inbox* ../../../arb-ts/src/lib/abi
+\cp -rf Outbox* Bridge* Inbox* Rollup* ../../../arb-ts/src/lib/abi
 
 cd ../../../arbos-contracts/typechain
 

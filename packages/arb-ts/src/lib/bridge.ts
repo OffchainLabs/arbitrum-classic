@@ -16,113 +16,41 @@
 /* eslint-env node */
 'use strict'
 import { providers, Signer, BigNumber } from 'ethers'
-import { InboxFactory } from './abi/InboxFactory'
-import { EthERC20BridgeFactory } from './abi/EthERC20BridgeFactory'
-import { EthERC20Bridge } from './abi/EthERC20Bridge'
-import { ArbTokenBridgeFactory } from './abi/ArbTokenBridgeFactory'
-import { ArbTokenBridge } from './abi/ArbTokenBridge'
-import { Inbox } from './abi/Inbox'
-import { ArbSys } from './abi/ArbSys'
-import { ArbSysFactory } from './abi/ArbSysFactory'
+import { L1Bridge } from './l1Bridge'
+import { L2Bridge } from './l2Bridge'
 
-const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
-
-export class Bridge {
-  ethProvider: providers.JsonRpcProvider
-  arbProvider: providers.JsonRpcProvider
-  ethSigner: Signer
-  arbSigner: Signer
-  inbox: Inbox
-  arbSys: ArbSys
-  ethERC20Bridge: EthERC20Bridge
-  arbERC20Bridge: ArbTokenBridge
+export class Bridge extends L1Bridge {
+  l2Bridge: L2Bridge
   walletAddressCache?: string
 
   constructor(
     inboxAddress: string,
     erc20BridgeAddress: string,
+    arbERC20BridgeAddress: string,
     ethProvider: providers.JsonRpcProvider,
     ethSigner: Signer,
     arbProvider: providers.JsonRpcProvider,
     arbSigner: Signer
   ) {
-    this.ethProvider = ethProvider
-    this.arbProvider = arbProvider
-    this.ethSigner = ethSigner
-    this.arbSigner = arbSigner
-
-    const ethSignerOrProvider = ethSigner || ethProvider
-    this.inbox =
-      ethSignerOrProvider &&
-      InboxFactory.connect(inboxAddress, ethSignerOrProvider)
-
-    this.arbSys = ArbSysFactory.connect(ARB_SYS_ADDRESS, arbSigner)
-
-    this.ethERC20Bridge = EthERC20BridgeFactory.connect(
-      erc20BridgeAddress,
-      ethSigner
-    )
-    this.arbERC20Bridge = ArbTokenBridgeFactory.connect(
-      erc20BridgeAddress,
-      arbSigner
-    )
+    super(inboxAddress, erc20BridgeAddress, ethProvider, ethSigner)
+    this.l2Bridge = new L2Bridge(arbERC20BridgeAddress, arbProvider, arbSigner)
   }
 
-  public async depositEth(destinationAddress?: string) {
-    if (!this.ethSigner || !this.inbox) {
-      throw new Error('No eth signer provider')
-    }
-    const address = destinationAddress || (await this.getWalletAddress())
-    return this.inbox.depositEth(address)
-  }
-  public async withdrawEth(destinationAddress?: string) {
-    const address = destinationAddress || (await this.getWalletAddress())
-    this.arbSys.withdrawEth(address)
-  }
-
-  public async depositERC20(
-    erc20L1Address: string,
-    amount: BigNumber,
-    maxGas: BigNumber,
-    gasPriceBid: BigNumber,
-    destinationAddress?: string
-  ) {
-    const destination = destinationAddress || (await this.getWalletAddress())
-    this.ethERC20Bridge.depositAsERC20(
-      erc20L1Address,
-      destination,
-      amount,
-      maxGas,
-      gasPriceBid
-    )
+  public async withdrawETH(value: BigNumber, destinationAddress?: string) {
+    return await this.l2Bridge.withdrawETH(value, destinationAddress)
   }
   public async withdrawERC20(
     erc20l1Address: string,
     amount: BigNumber,
     destinationAddress?: string
   ) {
-    const destination = destinationAddress || (await this.getWalletAddress())
-    return await this.arbERC20Bridge.withdraw(
+    return await this.l2Bridge.withdrawERC20(
       erc20l1Address,
-      destination,
-      amount
+      amount,
+      destinationAddress
     )
   }
-
-  public async getERC20L2Address(erc20L1Address: string) {
-    return await this.ethERC20Bridge.customL2Tokens(erc20L1Address)
-  }
-
   public async getERC20LlAddress(erc20L2Address: string) {
-    return await this.arbERC20Bridge.customToken(erc20L2Address)
-  }
-
-  public async getWalletAddress() {
-    const { walletAddressCache } = this
-    if (walletAddressCache) {
-      return walletAddressCache
-    }
-
-    return await this.ethSigner.getAddress()
+    return await this.l2Bridge.getERC20LlAddress(erc20L2Address)
   }
 }
