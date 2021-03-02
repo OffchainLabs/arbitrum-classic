@@ -28,7 +28,7 @@ type ChainParams struct {
 	StakeToken                common.Address
 	GracePeriod               *common.TimeBlocks
 	MaxExecutionSteps         uint64
-	ArbGasSpeedLimitPerSecond uint64 // in ArbGas per tick
+	ArbGasSpeedLimitPerSecond uint64
 }
 
 func NewRandomChainParams() ChainParams {
@@ -65,7 +65,7 @@ func (cp ChainParams) WithMaxExecutionSteps(steps uint64) ChainParams {
 	return ret
 }
 
-func (cp ChainParams) WithArbGasSpeedLimitPerTick(limit uint64) ChainParams {
+func (cp ChainParams) WithArbGasSpeedLimitPerSecond(limit uint64) ChainParams {
 	ret := cp
 	ret.ArbGasSpeedLimitPerSecond = limit
 	return ret
