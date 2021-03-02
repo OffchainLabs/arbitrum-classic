@@ -78,7 +78,7 @@ func init() {
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlDebug, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
+	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
 
 	// Print line number that log was created on
 	logger = log.With().Caller().Str("component", "arb-dev-aggregator").Logger()
