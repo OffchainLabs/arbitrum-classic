@@ -43,9 +43,6 @@ export class L1Bridge {
   }
 
   public async depositETH(value: BigNumber, destinationAddress?: string) {
-    if (!this.l1Signer || !this.inbox) {
-      throw new Error('No eth signer provider')
-    }
     const address = destinationAddress || (await this.getWalletAddress())
     return this.inbox.depositEth(address, {
       value,
