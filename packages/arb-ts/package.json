@@ -34,9 +34,7 @@
     "@ethersproject/bignumber": "^5.0.12",
     "@ethersproject/bytes": "^5.0.8",
     "@types/promise-poller": "^1.7.0",
-    "ethers": "^5.0.24",
-    "jayson": "^3.2.0",
-    "promise-poller": "^1.9.1"
+    "ethers": "^5.0.24"
   },
   "peerDependencies": {
     "ethers": "~5.0.24"
