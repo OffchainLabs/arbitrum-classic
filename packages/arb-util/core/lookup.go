@@ -70,12 +70,12 @@ type ArbCoreLookup interface {
 }
 
 type ArbCoreInbox interface {
-	DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool) bool
+	DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool, reorgHeight *big.Int) bool
 	MessagesStatus() (MessageStatus, error)
 }
 
 func DeliverMessagesAndWait(db ArbCoreInbox, messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool) (bool, error) {
-	if !db.DeliverMessages(messages, previousInboxAcc, lastBlockComplete) {
+	if !db.DeliverMessages(messages, previousInboxAcc, lastBlockComplete, nil) {
 		return false, errors.New("unable to deliver messages")
 	}
 

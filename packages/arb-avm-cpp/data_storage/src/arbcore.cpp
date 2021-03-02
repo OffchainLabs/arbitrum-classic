@@ -146,7 +146,8 @@ void ArbCore::abortThread() {
 // deliverMessages sends messages to core thread
 bool ArbCore::deliverMessages(std::vector<std::vector<unsigned char>>& messages,
                               const uint256_t& previous_inbox_acc,
-                              bool last_block_complete) {
+                              bool last_block_complete,
+                              const std::optional<uint256_t>& reorg_height) {
     if (message_data_status != MESSAGES_EMPTY) {
         return false;
     }
@@ -154,6 +155,7 @@ bool ArbCore::deliverMessages(std::vector<std::vector<unsigned char>>& messages,
     message_data.messages = std::move(messages);
     message_data.previous_inbox_acc = previous_inbox_acc;
     message_data.last_block_complete = last_block_complete;
+    message_data.reorg_height = reorg_height;
 
     message_data_status = MESSAGES_READY;
 
@@ -679,10 +681,10 @@ void ArbCore::operator()() {
     while (!arbcore_abort) {
         if (message_data_status == MESSAGES_READY) {
             // Reorg might occur while adding messages
-            auto add_status = addMessages(message_data.messages,
-                                          message_data.last_block_complete,
-                                          message_data.previous_inbox_acc,
-                                          message_count_in_machine, cache);
+            auto add_status = addMessages(
+                message_data.messages, message_data.last_block_complete,
+                message_data.previous_inbox_acc, message_count_in_machine,
+                message_data.reorg_height, cache);
             if (!add_status) {
                 // Messages from previous block invalid because of reorg so
                 // request older messages
@@ -856,7 +858,7 @@ void ArbCore::operator()() {
                 }
             }
 
-            if (messages.size() > 0 || resolved_staged) {
+            if (!messages.empty() || resolved_staged) {
                 message_count_in_machine =
                     pending_checkpoint.total_messages_read + messages.size();
                 execConfig.setInboxMessagesFromBytes(messages);
@@ -1556,6 +1558,7 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
     bool last_block_complete,
     const uint256_t& prev_inbox_acc,
     const uint256_t& message_count_in_machine,
+    const std::optional<uint256_t>& reorg_height,
     ValueCache& cache) {
     auto tx = Transaction::makeTransaction(data_storage);
 
@@ -1565,35 +1568,61 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
     }
     auto existing_message_count = message_count_result.data;
 
-    auto first_message = extractInboxMessage(new_messages[0]);
-
     auto previous_inbox_acc = prev_inbox_acc;
-    if (first_message.inbox_sequence_number > 0) {
-        if (first_message.inbox_sequence_number > existing_message_count) {
-            // Not allowed to skip message sequence numbers, ask for older
-            // messages
+
+    uint256_t first_sequence_number;
+    uint256_t current_sequence_number;
+    if (!new_messages.empty()) {
+        auto first_message = extractInboxMessage(new_messages[0]);
+        first_sequence_number = first_message.inbox_sequence_number;
+
+        if (first_message.inbox_sequence_number > 0) {
+            if (first_message.inbox_sequence_number > existing_message_count) {
+                // Not allowed to skip message sequence numbers, ask for older
+                // messages
+                return std::nullopt;
+            }
+
+            // Check that previous_inbox_acc matches acc from previous message
+            auto previous_sequence_number =
+                first_message.inbox_sequence_number - 1;
+            auto previous_result =
+                getMessageEntry(*tx, previous_sequence_number);
+            if (!previous_result.status.ok()) {
+                return previous_result.status;
+            }
+
+            if (previous_result.data.inbox_acc != previous_inbox_acc) {
+                // Previous inbox doesn't match which means reorg happened and
+                // caller needs to try again with messages from earlier block
+                return std::nullopt;
+            }
+
+            // No new messages, just need to truncate obsolete messages
+            if (*reorg_height == 0) {
+                std::cerr << "cannot reorg past first message right now"
+                          << std::endl;
+                return std::nullopt;
+            }
+
+            current_sequence_number = *reorg_height;
+            first_sequence_number = current_sequence_number;
+        }
+    } else {
+        if (!reorg_height) {
+            std::cerr << "reorg_sequence_number must be provided if no "
+                         "messages provided"
+                      << std::endl;
             return std::nullopt;
         }
 
-        // Check that previous_inbox_acc matches acc from previous message
-        auto previous_sequence_number = first_message.inbox_sequence_number - 1;
-        auto previous_result = getMessageEntry(*tx, previous_sequence_number);
-        if (!previous_result.status.ok()) {
-            return previous_result.status;
-        }
-
-        if (previous_result.data.inbox_acc != previous_inbox_acc) {
-            // Previous inbox doesn't match which means reorg happened and
-            // caller needs to try again with messages from earlier block
+        if (*reorg_height == 0) {
+            std::cerr << "cannot reorg past first message right now"
+                      << std::endl;
             return std::nullopt;
         }
-    }
-
-    auto current_sequence_number = first_message.inbox_sequence_number;
-
-    if (new_messages.empty()) {
-        // No new messages, just need to truncate obsolete messages
-        current_sequence_number = first_message.inbox_sequence_number - 1;
+        current_sequence_number = *reorg_height;
+        first_sequence_number = current_sequence_number;
     }
 
     // Skip any valid messages that we already have in database
@@ -1624,8 +1653,7 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
 
         new_messages_index++;
         previous_inbox_acc = current_inbox_acc;
-        current_sequence_number =
-            first_message.inbox_sequence_number + new_messages_index;
+        current_sequence_number = first_sequence_number + new_messages_index;
     }
 
     std::optional<uint256_t> previous_valid_sequence_number;

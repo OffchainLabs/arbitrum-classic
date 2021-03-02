@@ -87,7 +87,7 @@ TEST_CASE("ArbCore tests") {
             sends.push_back(send_from_json(send_json));
         }
 
-        REQUIRE(arbCore->deliverMessages(raw_messages, 0, false));
+        REQUIRE(arbCore->deliverMessages(raw_messages, 0, false, std::nullopt));
 
         ArbCore::message_status_enum status;
         while (true) {
@@ -191,5 +191,8 @@ TEST_CASE("ArbCore tests") {
         //        REQUIRE(before_sideload.status.ok());
         //        REQUIRE(before_sideload.data->machine_state.loadCurrentInstruction()
         //                    .op.opcode == OpCode::SIDELOAD);
+
+        // Reorg to first message
+        REQUIRE(arbCore->deliverMessages(raw_messages, 0, false, 1));
     }
 }
