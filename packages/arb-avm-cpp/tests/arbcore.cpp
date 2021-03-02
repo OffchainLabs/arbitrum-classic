@@ -195,4 +195,19 @@ TEST_CASE("ArbCore tests") {
         // Reorg to first message
         REQUIRE(arbCore->deliverMessages(raw_messages, 0, false, 1));
     }
+
+    // Reorg to first message
+    std::vector<std::vector<unsigned char>> empty_messages;
+    REQUIRE(arbCore->deliverMessages(empty_messages, 0, false, 1));
+
+    ArbCore::message_status_enum status;
+    while (true) {
+        status = arbCore->messagesStatus();
+        if (status != ArbCore::MESSAGES_EMPTY &&
+            status != ArbCore::MESSAGES_READY) {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    REQUIRE(status == ArbCore::MESSAGES_SUCCESS);
 }
