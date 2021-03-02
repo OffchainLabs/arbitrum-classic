@@ -356,16 +356,20 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 		ReturnCode: hexutil.Uint64(res.ResultCode),
 		ReturnData: res.ReturnData,
 		FeeStats: &FeeStatsResult{
-			WeiPerTx:        (*hexutil.Big)(res.FeeStats.WeiPerTx),
-			WeiPerCalldata:  (*hexutil.Big)(res.FeeStats.WeiPerCalldata),
-			WeiPerStorage:   (*hexutil.Big)(res.FeeStats.WeiPerStorage),
-			WeiPerArbGas:    (*hexutil.Big)(res.FeeStats.WeiPerArbGas),
-			PaidForTx:       (*hexutil.Big)(res.FeeStats.PaidForTx),
-			PaidForCalldata: (*hexutil.Big)(res.FeeStats.PaidForCalldata),
-			PaidForStorage:  (*hexutil.Big)(res.FeeStats.PaidForStorage),
-			PaidForCompute:  (*hexutil.Big)(res.FeeStats.PaidForCompute),
+			Prices:    feeSetToFeeSetResult(res.FeeStats.Price),
+			UnitsUsed: feeSetToFeeSetResult(res.FeeStats.UnitsUsed),
+			Paid:      feeSetToFeeSetResult(res.FeeStats.Paid),
 		},
 	}, nil
+}
+
+func feeSetToFeeSetResult(feeset *evm.FeeSet) *FeeSetResult {
+	return &FeeSetResult{
+		L1Transaction: (*hexutil.Big)(feeset.L1Transaction),
+		L1Calldata:    (*hexutil.Big)(feeset.L1Calldata),
+		L2Storage:     (*hexutil.Big)(feeset.L2Storage),
+		L2Computation: (*hexutil.Big)(feeset.L2Computation),
+	}
 }
 
 func (s *Server) getBlockTransactionCount(block *machine.BlockInfo) (*hexutil.Big, error) {

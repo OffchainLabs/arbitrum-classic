@@ -38,15 +38,17 @@ type CallTxArgs struct {
 	Data     *hexutil.Bytes  `json:"data"`
 }
 
+type FeeSetResult struct {
+	L1Transaction *hexutil.Big `json:"l1Transaction"`
+	L1Calldata    *hexutil.Big `json:"l1Calldata"`
+	L2Storage     *hexutil.Big `json:"l2Storage"`
+	L2Computation *hexutil.Big `json:"l2Computation"`
+}
+
 type FeeStatsResult struct {
-	WeiPerTx        *hexutil.Big `json:"weiPerTx"`
-	WeiPerCalldata  *hexutil.Big `json:"weiPerCalldata"`
-	WeiPerStorage   *hexutil.Big `json:"weiPerStorage"`
-	WeiPerArbGas    *hexutil.Big `json:"weiPerArbGas"`
-	PaidForTx       *hexutil.Big `json:"paidForTx"`
-	PaidForCalldata *hexutil.Big `json:"paidForCalldata"`
-	PaidForStorage  *hexutil.Big `json:"paidForStorage"`
-	PaidForCompute  *hexutil.Big `json:"paidForCompute"`
+	Prices    *FeeSetResult `json:"prices"`
+	UnitsUsed *FeeSetResult `json:"unitsUsed"`
+	Paid      *FeeSetResult `json:"paid"`
 }
 
 // Receipt represents the results of a transaction.
