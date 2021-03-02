@@ -55,18 +55,19 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            ByteSliceArray inbox_messages,
                            void* previous_inbox_acc_ptr,
                            const int last_block_complete,
-                           void* reorg_height_ptr) {
+                           void* reorg_message_count_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     auto messages = receiveByteSliceArray(inbox_messages);
     auto previous_inbox_acc = receiveUint256(previous_inbox_acc_ptr);
-    std::optional<uint256_t> reorg_height;
-    if (reorg_height_ptr != nullptr) {
-        reorg_height = receiveUint256(reorg_height_ptr);
+    std::optional<uint256_t> reorg_message_count;
+    if (reorg_message_count_ptr != nullptr) {
+        reorg_message_count = receiveUint256(reorg_message_count_ptr);
     }
 
     try {
-        auto status = arb_core->deliverMessages(
-            messages, previous_inbox_acc, last_block_complete, reorg_height);
+        auto status =
+            arb_core->deliverMessages(messages, previous_inbox_acc,
+                                      last_block_complete, reorg_message_count);
         return status;
     } catch (const std::exception& e) {
         return false;
