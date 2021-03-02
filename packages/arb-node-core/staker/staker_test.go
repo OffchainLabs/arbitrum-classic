@@ -158,15 +158,34 @@ func TestStaker(t *testing.T) {
 		<-time.After(time.Second * 1)
 	}
 
-	for i := 0; i < 500; i++ {
+	faultyStakerAlive := false
+	faultyStakerDead := false
+	for i := 100; i >= 0; i++ {
 		if (i % 2) == 0 {
 			_, err := staker.Act(ctx)
 			test.FailIfError(t, err)
-		} else {
+		} else if !faultyStakerAlive || !faultyStakerDead {
 			_, err = faultyStaker.Act(ctx)
 			test.FailIfError(t, err)
 		}
 		client.Commit()
+
+		faultyStakerInfo, err := staker.rollup.StakerInfo(ctx, common.NewAddressFromEth(validatorAddress2))
+		test.FailIfError(t, err)
+		if faultyStakerInfo == nil {
+			faultyStakerDead = true
+		} else {
+			faultyStakerAlive = true
+			faultyStakerDead = false
+		}
+
+		latestConfirmed, err := staker.rollup.LatestConfirmedNode(ctx)
+		test.FailIfError(t, err)
+		if latestConfirmed.Cmp(big.NewInt(0)) != 0 {
+			break
+		} else if i == 0 {
+			t.Fatal("No node was confirmed")
+		}
 	}
 
 	stakerInfo, err := staker.rollup.StakerInfo(ctx, common.NewAddressFromEth(validatorAddress))
@@ -182,18 +201,5 @@ func TestStaker(t *testing.T) {
 
 	if stakerInfo.LatestStakedNode.Cmp(big.NewInt(0)) == 0 {
 		t.Fatal("Staker didn't stake on node")
-	}
-
-	latestConfirmed, err := staker.rollup.LatestConfirmedNode(ctx)
-	test.FailIfError(t, err)
-	if latestConfirmed.Cmp(stakerInfo.LatestStakedNode) != 0 {
-		t.Fatal("Staked node remains unconfirmed")
-	}
-
-	faultyStakerInfo, err := staker.rollup.StakerInfo(ctx, common.NewAddressFromEth(validatorAddress2))
-	test.FailIfError(t, err)
-
-	if faultyStakerInfo.AmountStaked.Cmp(big.NewInt(0)) > 0 {
-		t.Fatal("Faulty staker still has stake")
 	}
 }

@@ -46,11 +46,14 @@ func NewStaker(
 }
 
 func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
+	s.builder.ClearTransactions()
 	info, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
 	if err != nil {
 		return nil, err
 	}
+	creatingNewStake := false
 	if info == nil && s.strategy >= StakeLatestStrategy {
+		creatingNewStake = true
 		if err := s.newStake(ctx); err != nil {
 			return nil, err
 		}
@@ -72,6 +75,20 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 		if err := s.createConflict(ctx, info); err != nil {
 			return nil, err
 		}
+	}
+	txCount := s.builder.TransactionCount()
+	if creatingNewStake {
+		// Ignore our stake creation, as it's useless by itself
+		txCount--
+	}
+	if txCount == 0 {
+		if info != nil && s.builder.TransactionCount() == 0 {
+			tx, err := s.removeOldStakers(ctx)
+			if err != nil || tx == nil {
+				return tx, err
+			}
+		}
+		return nil, nil
 	}
 	return s.wallet.ExecuteTransactions(ctx, s.builder)
 }
@@ -155,6 +172,10 @@ func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo)
 	if err != nil {
 		return err
 	}
+	latestNode, err := s.rollup.LatestConfirmedNode(ctx)
+	if err != nil {
+		return err
+	}
 	for _, staker := range stakers {
 		conflictType, node1, node2, err := s.validatorUtils.FindStakerConflict(ctx, s.wallet.Address(), staker)
 		if err != nil {
@@ -168,6 +189,10 @@ func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo)
 		if node2.Cmp(node1) < 0 {
 			staker1, staker2 = staker2, staker1
 			node1, node2 = node2, node1
+		}
+		if node1.Cmp(latestNode) < 0 {
+			// removeOldStakers will take care of them
+			continue
 		}
 
 		node1Info, err := s.rollup.RollupWatcher.LookupNode(ctx, node1)

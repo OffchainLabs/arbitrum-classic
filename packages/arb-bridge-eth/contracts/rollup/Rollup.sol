@@ -603,8 +603,12 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             node1.deadlineBlock().sub(proposedTimes[0]).add(extraChallengeTimeBlocks).add(
                 getNode(node1.prev()).firstChildBlock()
             );
+        if (commonEndTime < proposedTimes[1]) {
+            // The second node was created too late to be challenged.
+            completeChallengeImpl(stakers[0], stakers[1]);
+            return;
+        }
         // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
-        // We must ensure that the challenge time left never underflows by restricting when nodes can be created
         address challengeAddress =
             challengeFactory.createChallenge(
                 address(this),
@@ -632,6 +636,10 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         // Only the challenge contract can declare winners and losers
         require(msg.sender == inChallenge(winningStaker, losingStaker), "WRONG_SENDER");
 
+        completeChallengeImpl(winningStaker, losingStaker);
+    }
+
+    function completeChallengeImpl(address winningStaker, address losingStaker) private {
         uint256 remainingLoserStake = amountStaked(losingStaker);
         uint256 winnerStake = amountStaked(winningStaker);
         if (remainingLoserStake > winnerStake) {
