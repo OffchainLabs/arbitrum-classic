@@ -144,10 +144,11 @@ void ArbCore::abortThread() {
 }
 
 // deliverMessages sends messages to core thread
-bool ArbCore::deliverMessages(std::vector<std::vector<unsigned char>>& messages,
-                              const uint256_t& previous_inbox_acc,
-                              bool last_block_complete,
-                              const std::optional<uint256_t>& reorg_height) {
+bool ArbCore::deliverMessages(
+    std::vector<std::vector<unsigned char>>& messages,
+    const uint256_t& previous_inbox_acc,
+    bool last_block_complete,
+    const std::optional<uint256_t>& reorg_message_count) {
     if (message_data_status != MESSAGES_EMPTY) {
         return false;
     }
@@ -155,7 +156,7 @@ bool ArbCore::deliverMessages(std::vector<std::vector<unsigned char>>& messages,
     message_data.messages = std::move(messages);
     message_data.previous_inbox_acc = previous_inbox_acc;
     message_data.last_block_complete = last_block_complete;
-    message_data.reorg_height = reorg_height;
+    message_data.reorg_message_count = reorg_message_count;
 
     message_data_status = MESSAGES_READY;
 
@@ -684,7 +685,7 @@ void ArbCore::operator()() {
             auto add_status = addMessages(
                 message_data.messages, message_data.last_block_complete,
                 message_data.previous_inbox_acc, message_count_in_machine,
-                message_data.reorg_height, cache);
+                message_data.reorg_message_count, cache);
             if (!add_status) {
                 // Messages from previous block invalid because of reorg so
                 // request older messages
@@ -1558,7 +1559,7 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
     bool last_block_complete,
     const uint256_t& prev_inbox_acc,
     const uint256_t& message_count_in_machine,
-    const std::optional<uint256_t>& reorg_height,
+    const std::optional<uint256_t>& reorg_message_count,
     ValueCache& cache) {
     auto tx = Transaction::makeTransaction(data_storage);
 
@@ -1598,30 +1599,22 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
                 return std::nullopt;
             }
 
-            // No new messages, just need to truncate obsolete messages
-            if (*reorg_height == 0) {
-                std::cerr << "cannot reorg past first message right now"
-                          << std::endl;
-                return std::nullopt;
-            }
-
-            current_sequence_number = *reorg_height;
-            first_sequence_number = current_sequence_number;
+            current_sequence_number = first_sequence_number;
         }
     } else {
-        if (!reorg_height) {
+        if (!reorg_message_count) {
             std::cerr << "reorg_sequence_number must be provided if no "
                          "messages provided"
                       << std::endl;
             return std::nullopt;
         }
 
-        if (*reorg_height == 0) {
+        if (*reorg_message_count == 0) {
             std::cerr << "cannot reorg past first message right now"
                       << std::endl;
             return std::nullopt;
         }
-        current_sequence_number = *reorg_height;
+        current_sequence_number = *reorg_message_count;
         first_sequence_number = current_sequence_number;
     }
 

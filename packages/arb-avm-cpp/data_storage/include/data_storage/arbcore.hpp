@@ -60,7 +60,7 @@ class ArbCore {
         std::vector<std::vector<unsigned char>> messages;
         uint256_t previous_inbox_acc;
         bool last_block_complete{false};
-        std::optional<uint256_t> reorg_height;
+        std::optional<uint256_t> reorg_message_count;
     };
 
    private:
@@ -276,7 +276,7 @@ class ArbCore {
         bool last_block_complete,
         const uint256_t& prev_inbox_acc,
         const uint256_t& message_count_in_machine,
-        const std::optional<uint256_t>& reorg_height,
+        const std::optional<uint256_t>& reorg_message_count,
         ValueCache& cache);
     ValueResult<std::vector<value>> getLogsNoLock(Transaction& tx,
                                                   uint256_t index,

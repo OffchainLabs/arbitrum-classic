@@ -191,9 +191,6 @@ TEST_CASE("ArbCore tests") {
         //        REQUIRE(before_sideload.status.ok());
         //        REQUIRE(before_sideload.data->machine_state.loadCurrentInstruction()
         //                    .op.opcode == OpCode::SIDELOAD);
-
-        // Reorg to first message
-        REQUIRE(arbCore->deliverMessages(raw_messages, 0, false, 1));
     }
 
     // Reorg to first message
