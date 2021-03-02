@@ -412,7 +412,7 @@ contract Challenge is Cloneable, IChallenge {
     // proofFields
     //  initialMachineHash
     //  afterMachineHash
-    //  afterInboxHash
+    //  afterInboxAcc
     //  afterMessagesHash
     //  afterLogsHash
     function oneStepProofExecutionBefore(

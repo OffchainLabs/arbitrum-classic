@@ -7,8 +7,8 @@ message ExecutionAssertionStubBuf {
     uint64 numGas = 1;
     common.HashBuf beforeMachineHash = 2;
     common.HashBuf afterMachineHash = 3;
-    common.HashBuf beforeInboxHash = 4;
-    common.HashBuf afterInboxHash = 5;
+    common.HashBuf beforeInboxAcc = 4;
+    common.HashBuf afterInboxAcc = 5;
     common.HashBuf firstMessageHash = 6;
     common.HashBuf lastMessageHash = 7;
     uint64 messageCount = 8;

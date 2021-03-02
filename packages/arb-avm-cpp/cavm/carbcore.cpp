@@ -53,14 +53,14 @@ int arbCoreMachineIdle(CArbCore* arbcore_ptr) {
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            ByteSliceArray inbox_messages,
-                           void* previous_inbox_hash_ptr,
+                           void* previous_inbox_acc_ptr,
                            const int last_block_complete) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     auto messages = receiveByteSliceArray(inbox_messages);
-    auto previous_inbox_hash = receiveUint256(previous_inbox_hash_ptr);
+    auto previous_inbox_acc = receiveUint256(previous_inbox_acc_ptr);
 
     try {
-        auto status = arb_core->deliverMessages(messages, previous_inbox_hash,
+        auto status = arb_core->deliverMessages(messages, previous_inbox_acc,
                                                 last_block_complete);
         return status;
     } catch (const std::exception& e) {
@@ -178,6 +178,32 @@ int arbCoreGetInboxAcc(CArbCore* arbcore_ptr,
         std::array<unsigned char, 32> val{};
         to_big_endian(result.data, val.begin());
         std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
+        return true;
+    } catch (const std::exception& e) {
+        return false;
+    }
+}
+
+int arbCoreGetInboxAccPair(CArbCore* arbcore_ptr,
+                           const void* index1_ptr,
+                           const void* index2_ptr,
+                           void* ret1,
+                           void* ret2) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    try {
+        auto result = arb_core->getInboxAccPair(receiveUint256(index1_ptr),
+                                                receiveUint256(index2_ptr));
+        if (!result.status.ok()) {
+            return false;
+        }
+
+        std::array<unsigned char, 32> val1{};
+        to_big_endian(result.data.first, val1.begin());
+        std::copy(val1.begin(), val1.end(), reinterpret_cast<char*>(ret1));
+
+        std::array<unsigned char, 32> val2{};
+        to_big_endian(result.data.first, val2.begin());
+        std::copy(val2.begin(), val2.end(), reinterpret_cast<char*>(ret2));
         return true;
     } catch (const std::exception& e) {
         return false;

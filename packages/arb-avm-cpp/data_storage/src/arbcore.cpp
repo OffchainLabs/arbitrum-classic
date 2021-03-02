@@ -40,9 +40,24 @@ constexpr auto send_inserted_key = std::array<char, 1>{-62};
 constexpr auto send_processed_key = std::array<char, 1>{-63};
 constexpr auto message_entry_inserted_key = std::array<char, 1>{-64};
 constexpr auto message_entry_processed_key = std::array<char, 1>{-65};
+constexpr auto logscursor_current_prefix = std::array<char, 1>{-66};
 
 constexpr auto sideload_cache_size = 20;
 }  // namespace
+
+ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_)
+    : data_storage(std::move(data_storage_)),
+      code(std::make_shared<Code>(getNextSegmentID(*makeConstTransaction()))) {
+    if (logs_cursors.size() > 255) {
+        throw std::runtime_error("Too many logscursors");
+    }
+    for (size_t i = 0; i < logs_cursors.size(); i++) {
+        logs_cursors[i].current_total_key.insert(
+            logs_cursors[i].current_total_key.end(),
+            logscursor_current_prefix.begin(), logscursor_current_prefix.end());
+        logs_cursors[i].current_total_key.emplace_back(i);
+    }
+}
 
 ValueResult<MessageEntry> ArbCore::getMessageEntry(
     Transaction& tx,
@@ -130,14 +145,14 @@ void ArbCore::abortThread() {
 
 // deliverMessages sends messages to core thread
 bool ArbCore::deliverMessages(std::vector<std::vector<unsigned char>>& messages,
-                              const uint256_t& previous_inbox_hash,
+                              const uint256_t& previous_inbox_acc,
                               bool last_block_complete) {
     if (message_data_status != MESSAGES_EMPTY) {
         return false;
     }
 
     message_data.messages = std::move(messages);
-    message_data.previous_inbox_hash = previous_inbox_hash;
+    message_data.previous_inbox_acc = previous_inbox_acc;
     message_data.last_block_complete = last_block_complete;
 
     message_data_status = MESSAGES_READY;
@@ -178,11 +193,6 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
             std::cerr << "Error with initial reorg: " << status.ToString()
                       << std::endl;
             return status;
-        }
-
-        // Make sure logs cursors are starting at the correct logs
-        for (auto& logs_cursor : logs_cursors) {
-            logs_cursor.current_total_count = pending_checkpoint.log_count;
         }
     } else {
         // Need to initialize database from scratch
@@ -226,6 +236,14 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         status = updateMessageEntryProcessedCount(*tx, 0);
         if (!status.ok()) {
             throw std::runtime_error("failed to initialize log inserted count");
+        }
+
+        for (size_t i = 0; i < logs_cursors.size(); i++) {
+            status = logsCursorSaveCurrentTotalCount(*tx, i, 0);
+            if (!status.ok()) {
+                throw std::runtime_error(
+                    "failed to initialize logscursor counts");
+            }
         }
     }
 
@@ -326,17 +344,17 @@ rocksdb::Status ArbCore::saveCheckpoint(Transaction& tx) {
         auto existing_message_entry =
             getMessageEntry(tx, pending_checkpoint.total_messages_read - 1);
         if (existing_message_entry.status.IsNotFound()) {
-            pending_checkpoint.inbox_hash = 0;
+            pending_checkpoint.inbox_acc = 0;
         } else if (!existing_message_entry.status.ok()) {
             std::cerr << "ArbCore unable to get inbox hash from database: "
                       << existing_message_entry.status.ToString() << "\n";
             return existing_message_entry.status;
         } else {
-            pending_checkpoint.inbox_hash =
-                existing_message_entry.data.inbox_hash;
+            pending_checkpoint.inbox_acc =
+                existing_message_entry.data.inbox_acc;
         }
     } else {
-        pending_checkpoint.inbox_hash = 0;
+        pending_checkpoint.inbox_acc = 0;
     }
 
     std::vector<unsigned char> key;
@@ -663,7 +681,7 @@ void ArbCore::operator()() {
             // Reorg might occur while adding messages
             auto add_status = addMessages(message_data.messages,
                                           message_data.last_block_complete,
-                                          message_data.previous_inbox_hash,
+                                          message_data.previous_inbox_acc,
                                           message_count_in_machine, cache);
             if (!add_status) {
                 // Messages from previous block invalid because of reorg so
@@ -1003,7 +1021,7 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
         return {rocksdb::Status::OK(), {}};
     }
 
-    // Check if attempting to get entries past current valid logs
+    // Check if attempting to get entries past current valid messages
     auto message_count = messageEntryInsertedCountImpl(*tx);
     if (!message_count.status.ok()) {
         return {message_count.status, {}};
@@ -1047,7 +1065,7 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
         return {rocksdb::Status::OK(), {}};
     }
 
-    // Check if attempting to get entries past current valid logs
+    // Check if attempting to get entries past current valid sends
     auto send_count = sendInsertedCountImpl(*tx);
     if (!send_count.status.ok()) {
         return {send_count.status, {}};
@@ -1077,12 +1095,32 @@ ValueResult<uint256_t> ArbCore::getInboxAcc(uint256_t index) {
         return {result.status, 0};
     }
 
-    return {rocksdb::Status::OK(), result.data.inbox_hash};
+    return {rocksdb::Status::OK(), result.data.inbox_acc};
+}
+
+ValueResult<std::pair<uint256_t, uint256_t>> ArbCore::getInboxAccPair(
+    uint256_t index1,
+    uint256_t index2) {
+    auto tx = Transaction::makeTransaction(data_storage);
+    const std::lock_guard<std::mutex> lock(core_reorg_mutex);
+
+    auto result1 = getMessageEntry(*tx, index1);
+    if (!result1.status.ok()) {
+        return {result1.status, {0, 0}};
+    }
+
+    auto result2 = getMessageEntry(*tx, index2);
+    if (!result2.status.ok()) {
+        return {result2.status, {0, 0}};
+    }
+
+    return {rocksdb::Status::OK(),
+            {result1.data.inbox_acc, result2.data.inbox_acc}};
 }
 
 ValueResult<uint256_t> ArbCore::getSendAcc(uint256_t start_acc_hash,
                                            uint256_t start_index,
-                                           uint256_t count) {
+                                           uint256_t count) const {
     auto sends_result = getSends(start_index, count);
     if (!sends_result.status.ok()) {
         return {sends_result.status, 0};
@@ -1200,10 +1238,9 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                 execution_cursor.messages_to_skip +=
                     assertion.inbox_messages_consumed;
                 if (execution_cursor.messages_to_skip > 0) {
-                    execution_cursor.inbox_hash =
-                        execution_cursor
-                            .inbox_hashes[execution_cursor.messages_to_skip -
-                                          1];
+                    execution_cursor.inbox_acc =
+                        execution_cursor.inbox_accumulators
+                            [execution_cursor.messages_to_skip - 1];
                 }
                 execution_cursor.applyAssertion(assertion);
 
@@ -1341,7 +1378,7 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
         auto stored_result =
             getMessageEntry(tx, execution_cursor.total_messages_read - 1);
         if (!stored_result.status.ok() ||
-            execution_cursor.inbox_hash != stored_result.data.inbox_hash) {
+            execution_cursor.inbox_acc != stored_result.data.inbox_acc) {
             // Obsolete machine, reorg occurred
             return {rocksdb::Status::OK(), false};
         }
@@ -1351,7 +1388,7 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
     execution_cursor.first_message_sequence_number +=
         execution_cursor.messages_to_skip;
     execution_cursor.messages.clear();
-    execution_cursor.inbox_hashes.clear();
+    execution_cursor.inbox_accumulators.clear();
     execution_cursor.messages_to_skip = 0;
 
     auto current_message_sequence_number =
@@ -1383,19 +1420,19 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
     }
 
     std::vector<InboxMessage> messages;
-    std::vector<uint256_t> inbox_hashes;
+    std::vector<uint256_t> inbox_accumulators;
     auto total_size = results.data.size();
     messages.reserve(total_size);
-    inbox_hashes.reserve(total_size);
+    inbox_accumulators.reserve(total_size);
     for (const auto& data : results.data) {
         auto message_entry = extractMessageEntry(0, vecToSlice(data));
         auto inbox_message = extractInboxMessage(message_entry.data);
         messages.push_back(inbox_message);
-        inbox_hashes.push_back(message_entry.inbox_hash);
+        inbox_accumulators.push_back(message_entry.inbox_acc);
     }
 
     execution_cursor.messages = std::move(messages);
-    execution_cursor.inbox_hashes = std::move(inbox_hashes);
+    execution_cursor.inbox_accumulators = std::move(inbox_accumulators);
     execution_cursor.messages_to_skip = 0;
 
     return {rocksdb::Status::OK(), true};
@@ -1517,7 +1554,7 @@ rocksdb::Status ArbCore::updateMessageEntryProcessedCount(
 std::optional<rocksdb::Status> ArbCore::addMessages(
     const std::vector<std::vector<unsigned char>>& new_messages,
     bool last_block_complete,
-    const uint256_t& prev_inbox_hash,
+    const uint256_t& prev_inbox_acc,
     const uint256_t& message_count_in_machine,
     ValueCache& cache) {
     auto tx = Transaction::makeTransaction(data_storage);
@@ -1530,7 +1567,7 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
 
     auto first_message = extractInboxMessage(new_messages[0]);
 
-    auto previous_inbox_hash = prev_inbox_hash;
+    auto previous_inbox_acc = prev_inbox_acc;
     if (first_message.inbox_sequence_number > 0) {
         if (first_message.inbox_sequence_number > existing_message_count) {
             // Not allowed to skip message sequence numbers, ask for older
@@ -1538,14 +1575,14 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
             return std::nullopt;
         }
 
-        // Check that previous_inbox_hash matches hash from previous message
+        // Check that previous_inbox_acc matches acc from previous message
         auto previous_sequence_number = first_message.inbox_sequence_number - 1;
         auto previous_result = getMessageEntry(*tx, previous_sequence_number);
         if (!previous_result.status.ok()) {
             return previous_result.status;
         }
 
-        if (previous_result.data.inbox_hash != previous_inbox_hash) {
+        if (previous_result.data.inbox_acc != previous_inbox_acc) {
             // Previous inbox doesn't match which means reorg happened and
             // caller needs to try again with messages from earlier block
             return std::nullopt;
@@ -1569,9 +1606,9 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
         if (!existing_message_entry.status.ok()) {
             return existing_message_entry.status;
         }
-        auto current_inbox_hash =
-            hash_inbox(previous_inbox_hash, new_messages[new_messages_index]);
-        if (existing_message_entry.data.inbox_hash != current_inbox_hash) {
+        auto current_inbox_acc =
+            hash_inbox(previous_inbox_acc, new_messages[new_messages_index]);
+        if (existing_message_entry.data.inbox_acc != current_inbox_acc) {
             // Entry doesn't match because of reorg
             break;
         }
@@ -1586,7 +1623,7 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
         }
 
         new_messages_index++;
-        previous_inbox_hash = current_inbox_hash;
+        previous_inbox_acc = current_inbox_acc;
         current_sequence_number =
             first_message.inbox_sequence_number + new_messages_index;
     }
@@ -1616,8 +1653,8 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
         std::vector<unsigned char> key;
         marshal_uint256_t(current_sequence_number, key);
 
-        auto current_inbox_hash =
-            hash_inbox(previous_inbox_hash, new_messages[new_messages_index]);
+        auto current_inbox_acc =
+            hash_inbox(previous_inbox_acc, new_messages[new_messages_index]);
 
         auto next_inbox_message =
             extractInboxMessage(new_messages[new_messages_index]);
@@ -1641,7 +1678,7 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
 
         // Encode message entry
         auto messageEntry = MessageEntry{
-            current_sequence_number, current_inbox_hash,
+            current_sequence_number, current_inbox_acc,
             intx::narrow_cast<uint64_t>(current_inbox_message.block_number),
             last_message_in_block, (new_messages[new_messages_index])};
         auto serialized_messageentry = serializeMessageEntry(messageEntry);
@@ -1655,7 +1692,7 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
         }
 
         new_messages_index++;
-        previous_inbox_hash = current_inbox_hash;
+        previous_inbox_acc = current_inbox_acc;
         current_sequence_number += 1;
     }
 
@@ -1697,21 +1734,6 @@ std::optional<rocksdb::Status> deleteLogsStartingAt(Transaction& tx,
     return rocksdb::Status::OK();
 }
 
-// getNextMessage returns the next message to handle.
-std::optional<MessageEntry> ArbCore::getNextMessage() {
-    auto tx = Transaction::makeTransaction(data_storage);
-    auto it = std::unique_ptr<rocksdb::Iterator>(tx->transaction->GetIterator(
-        rocksdb::ReadOptions(), tx->datastorage->messageentry_column.get()));
-
-    it->SeekToFirst();
-    if (!it->Valid()) {
-        return std::nullopt;
-    }
-
-    auto key = reinterpret_cast<const char*>(it->key().data());
-    return extractMessageEntry(deserializeUint256t(key), it->value());
-}
-
 bool ArbCore::handleLogsCursorRequested(Transaction& tx,
                                         size_t cursor_index,
                                         ValueCache& cache) {
@@ -1733,19 +1755,25 @@ bool ArbCore::handleLogsCursorRequested(Transaction& tx,
         return true;
     }
 
-    if (logs_cursors[cursor_index].current_total_count >=
-        log_inserted_count.data) {
+    auto current_count_result =
+        logsCursorGetCurrentTotalCount(tx, cursor_index);
+    if (!current_count_result.status.ok()) {
+        std::cerr << "Unable to get logs cursor current total count: "
+                  << cursor_index << "\n";
+        return false;
+    }
+
+    if (current_count_result.data >= log_inserted_count.data) {
         // No new data available
         logs_cursors[cursor_index].status = DataCursor::READY;
         return true;
     }
-    if (logs_cursors[cursor_index].current_total_count +
+    if (current_count_result.data +
             logs_cursors[cursor_index].number_requested >
         log_inserted_count.data) {
         // Too many entries requested
         logs_cursors[cursor_index].number_requested =
-            log_inserted_count.data -
-            logs_cursors[cursor_index].current_total_count;
+            log_inserted_count.data - current_count_result.data;
     }
     if (logs_cursors[cursor_index].number_requested == 0) {
         logs_cursors[cursor_index].status = DataCursor::READY;
@@ -1753,7 +1781,7 @@ bool ArbCore::handleLogsCursorRequested(Transaction& tx,
         return true;
     }
     auto requested_logs =
-        getLogs(logs_cursors[cursor_index].current_total_count,
+        getLogs(current_count_result.data,
                 logs_cursors[cursor_index].number_requested, cache);
     if (!requested_logs.status.ok()) {
         logs_cursors[cursor_index].error_string =
@@ -1765,8 +1793,7 @@ bool ArbCore::handleLogsCursorRequested(Transaction& tx,
     logs_cursors[cursor_index].status = DataCursor::READY;
 
     logs_cursors[cursor_index].pending_total_count =
-        logs_cursors[cursor_index].current_total_count +
-        logs_cursors[cursor_index].data.size();
+        current_count_result.data + logs_cursors[cursor_index].data.size();
 
     return true;
 }
@@ -1800,7 +1827,15 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(Transaction& tx,
         return rocksdb::Status::OK();
     }
 
-    if (log_count < logs_cursors[cursor_index].current_total_count) {
+    auto current_count_result =
+        logsCursorGetCurrentTotalCount(tx, cursor_index);
+    if (!current_count_result.status.ok()) {
+        std::cerr << "Unable to get logs cursor current total count: "
+                  << cursor_index << "\n";
+        return current_count_result.status;
+    }
+
+    if (log_count < current_count_result.data) {
         // Need to save logs that will be deleted
         auto logs = getLogsNoLock(tx, log_count,
                                   log_inserted_count.data - log_count, cache);
@@ -1817,22 +1852,27 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(Transaction& tx,
     }
 
     if (!logs_cursors[cursor_index].data.empty()) {
-        if (logs_cursors[cursor_index].current_total_count >= log_count) {
+        if (current_count_result.data >= log_count) {
             // Don't save anything
             logs_cursors[cursor_index].data.clear();
-        } else if (logs_cursors[cursor_index].current_total_count +
+        } else if (current_count_result.data +
                        logs_cursors[cursor_index].data.size() >
                    log_count) {
             // Only part of the data needs to be removed
-            auto offset = intx::narrow_cast<size_t>(
-                log_count - logs_cursors[cursor_index].current_total_count);
+            auto offset = intx::narrow_cast<size_t>(log_count -
+                                                    current_count_result.data);
             logs_cursors[cursor_index].data.erase(
                 logs_cursors[cursor_index].data.begin() + offset,
                 logs_cursors[cursor_index].data.end());
         }
     }
 
-    logs_cursors[cursor_index].current_total_count = log_count;
+    auto status = logsCursorSaveCurrentTotalCount(tx, cursor_index, log_count);
+    if (!status.ok()) {
+        std::cerr << "unable to save current total count during reorg"
+                  << std::endl;
+        return status;
+    }
     logs_cursors[cursor_index].pending_total_count = log_count;
 
     return rocksdb::Status::OK();
@@ -1873,7 +1913,16 @@ ArbCore::logsCursorGetLogs(size_t cursor_index) {
     logs.swap(logs_cursors[cursor_index].data);
     logs_cursors[cursor_index].data.clear();
 
-    return {{logs_cursors[cursor_index].current_total_count, std::move(logs)}};
+    auto tx = Transaction::makeTransaction(data_storage);
+    auto current_count_result =
+        logsCursorGetCurrentTotalCount(*tx, cursor_index);
+    if (!current_count_result.status.ok()) {
+        std::cerr << "Unable to get logs cursor current total count: "
+                  << cursor_index << "\n";
+        return std::nullopt;
+    }
+
+    return {{current_count_result.data, std::move(logs)}};
 }
 
 std::optional<std::pair<uint256_t, std::vector<value>>>
@@ -1895,7 +1944,16 @@ ArbCore::logsCursorGetDeletedLogs(size_t cursor_index) {
     logs.swap(logs_cursors[cursor_index].deleted_data);
     logs_cursors[cursor_index].deleted_data.clear();
 
-    return {{logs_cursors[cursor_index].current_total_count, std::move(logs)}};
+    auto tx = Transaction::makeTransaction(data_storage);
+    auto current_count_result =
+        logsCursorGetCurrentTotalCount(*tx, cursor_index);
+    if (!current_count_result.status.ok()) {
+        std::cerr << "Unable to get logs cursor current total count: "
+                  << cursor_index << "\n";
+        return std::nullopt;
+    }
+
+    return {{current_count_result.data, std::move(logs)}};
 }
 
 bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {
@@ -1922,8 +1980,11 @@ bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {
         return false;
     }
 
-    logs_cursors[cursor_index].current_total_count =
-        logs_cursors[cursor_index].pending_total_count;
+    auto tx = Transaction::makeTransaction(data_storage);
+    auto status = logsCursorSaveCurrentTotalCount(
+        *tx, cursor_index, logs_cursors[cursor_index].pending_total_count);
+    tx->commit();
+
     logs_cursors[cursor_index].status = DataCursor::EMPTY;
 
     return true;
@@ -1960,6 +2021,25 @@ std::string ArbCore::logsCursorClearError(size_t cursor_index) {
     logs_cursors[cursor_index].status = DataCursor::EMPTY;
 
     return str;
+}
+
+rocksdb::Status ArbCore::logsCursorSaveCurrentTotalCount(Transaction& tx,
+                                                         size_t cursor_index,
+                                                         uint256_t count) {
+    std::vector<unsigned char> value_data;
+    marshal_uint256_t(count, value_data);
+    return tx.transaction->Put(
+        data_storage->state_column.get(),
+        vecToSlice(logs_cursors[cursor_index].current_total_key),
+        vecToSlice(value_data));
+}
+
+ValueResult<uint256_t> ArbCore::logsCursorGetCurrentTotalCount(
+    Transaction& tx,
+    size_t cursor_index) {
+    return getUint256UsingFamilyAndKey(
+        *tx.transaction, tx.datastorage->state_column.get(),
+        vecToSlice(logs_cursors[cursor_index].current_total_key));
 }
 
 rocksdb::Status ArbCore::saveSideloadPosition(Transaction& tx,

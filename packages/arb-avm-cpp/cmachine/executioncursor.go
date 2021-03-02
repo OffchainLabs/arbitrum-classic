@@ -39,7 +39,7 @@ type ExecutionCursor struct {
 	c                 unsafe.Pointer
 	machineHash       common.Hash
 	totalMessagesRead *big.Int
-	inboxHash         common.Hash
+	inboxAcc          common.Hash
 	totalGasConsumed  *big.Int
 	totalSendCount    *big.Int
 	totalLogCount     *big.Int
@@ -67,7 +67,7 @@ func (ec *ExecutionCursor) Clone() core.ExecutionCursor {
 		c:                 C.executionCursorClone(ec.c),
 		machineHash:       ec.machineHash,
 		totalMessagesRead: ec.totalMessagesRead,
-		inboxHash:         ec.inboxHash,
+		inboxAcc:          ec.inboxAcc,
 		totalGasConsumed:  ec.totalGasConsumed,
 		totalSendCount:    ec.totalSendCount,
 		totalLogCount:     ec.totalLogCount,
@@ -92,9 +92,9 @@ func (ec *ExecutionCursor) updateValues() error {
 		return errors.New("failed to load machine hash")
 	}
 
-	status = C.executionCursorInboxHash(ec.c, unsafe.Pointer(&ec.inboxHash[0]))
+	status = C.executionCursorInboxAcc(ec.c, unsafe.Pointer(&ec.inboxAcc[0]))
 	if status == 0 {
-		return errors.New("failed to load inbox hash")
+		return errors.New("failed to load inbox acc")
 	}
 
 	result := C.executionCursorTotalMessagesRead(ec.c)
@@ -134,8 +134,8 @@ func (ec *ExecutionCursor) MachineHash() common.Hash {
 	return ec.machineHash
 }
 
-func (ec *ExecutionCursor) InboxHash() common.Hash {
-	return ec.inboxHash
+func (ec *ExecutionCursor) InboxAcc() common.Hash {
+	return ec.inboxAcc
 }
 
 func (ec *ExecutionCursor) TotalMessagesRead() *big.Int {

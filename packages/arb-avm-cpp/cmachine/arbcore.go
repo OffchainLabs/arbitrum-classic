@@ -77,7 +77,7 @@ func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
 	return status, nil
 }
 
-func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) bool {
+func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool) bool {
 	rawInboxData := encodeInboxMessages(messages)
 	byteSlices := encodeByteSliceList(rawInboxData)
 
@@ -94,7 +94,7 @@ func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxH
 		cLastBlockComplete = 1
 	}
 
-	status := C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxHash.Bytes()), C.int(cLastBlockComplete))
+	status := C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxAcc.Bytes()), C.int(cLastBlockComplete))
 	return status == 1
 }
 
@@ -184,6 +184,18 @@ func (ac *ArbCore) GetInboxAcc(index *big.Int) (ret common.Hash, err error) {
 	status := C.arbCoreGetInboxAcc(ac.c, unsafeDataPointer(startIndexData), unsafe.Pointer(&ret[0]))
 	if status == 0 {
 		err = errors.Errorf("failed to get inbox acc for %v", index)
+	}
+
+	return
+}
+
+func (ac *ArbCore) GetInboxAccPair(index1 *big.Int, index2 *big.Int) (ret1 common.Hash, ret2 common.Hash, err error) {
+	startIndex1Data := math.U256Bytes(index1)
+	startIndex2Data := math.U256Bytes(index2)
+
+	status := C.arbCoreGetInboxAccPair(ac.c, unsafeDataPointer(startIndex1Data), unsafeDataPointer(startIndex2Data), unsafe.Pointer(&ret1[0]), unsafe.Pointer(&ret2[0]))
+	if status == 0 {
+		err = errors.New("failed to get inbox acc")
 	}
 
 	return

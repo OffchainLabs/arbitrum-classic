@@ -189,7 +189,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
     // fields
     // startMachineHash,
     // endMachineHash,
-    // afterInboxHash,
+    // afterInboxAcc,
     // afterMessagesHash,
     // afterLogsHash
 

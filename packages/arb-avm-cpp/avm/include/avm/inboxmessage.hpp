@@ -26,8 +26,8 @@ using Address = std::array<unsigned char, 20>;
 struct InboxMessage {
    public:
     // arb_gas_used not serialized/deserialized because it is part of index
-    uint8_t kind;
-    Address sender;
+    uint8_t kind{};
+    Address sender{};
     uint256_t block_number;
     uint256_t timestamp;
     uint256_t inbox_sequence_number;
@@ -52,15 +52,15 @@ struct InboxMessage {
 
     static InboxMessage fromTuple(const Tuple& tup);
 
-    uint256_t hash(const uint256_t& previous_inbox_hash) const;
+    [[nodiscard]] uint256_t hash(const uint256_t& previous_inbox_acc) const;
 
     Tuple toTuple();
-    std::vector<unsigned char> serialize() const;
-    std::vector<unsigned char> serializeForProof() const;
+    [[nodiscard]] std::vector<unsigned char> serialize() const;
+    [[nodiscard]] std::vector<unsigned char> serializeForProof() const;
 };
 
 uint256_t hash_raw_message(const std::vector<unsigned char>& stored_state);
-uint256_t hash_inbox(const uint256_t& previous_inbox_hash,
+uint256_t hash_inbox(const uint256_t& previous_inbox_acc,
                      const std::vector<unsigned char>& stored_state);
 InboxMessage extractInboxMessage(
     const std::vector<unsigned char>& stored_state);

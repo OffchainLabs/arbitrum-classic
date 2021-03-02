@@ -30,9 +30,10 @@ TEST_CASE("ARBOS test vectors") {
     DBDeleter deleter;
     ValueCache value_cache{};
 
-    std::vector<std::string> files = {
-        "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
-        "evm_test_arbsys", "evm_xcontract_call_with_constructors"};
+    std::vector<std::string> files = {"evm_direct_deploy_add",
+                                      "evm_direct_deploy_and_call_add",
+                                      //"evm_test_arbsys",
+                                      "evm_xcontract_call_with_constructors"};
 
     for (const auto& filename : files) {
         DYNAMIC_SECTION(filename) {
