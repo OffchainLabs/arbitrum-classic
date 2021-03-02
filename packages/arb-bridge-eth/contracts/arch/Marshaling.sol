@@ -176,9 +176,11 @@ library Marshaling {
         } else if (valType == Value.codePointTypeCode()) {
             return deserializeCodePoint(data, offset);
         } else if (valType == Value.bufferTypeCode()) {
+            uint256 szVal;
+            (offset, szVal) = deserializeInt(data, offset);
             bytes32 hashVal;
             (offset, hashVal) = deserializeBytes32(data, offset);
-            return (offset, Value.newBuffer(hashVal));
+            return (offset, Value.newBuffer(hashVal, szVal));
         } else if (valType == Value.tuplePreImageTypeCode()) {
             return deserializeHashPreImage(data, offset);
         } else if (valType >= Value.tupleTypeCode() && valType < Value.valueTypeCode()) {

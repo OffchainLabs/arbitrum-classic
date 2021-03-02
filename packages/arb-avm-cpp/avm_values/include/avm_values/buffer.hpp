@@ -211,25 +211,31 @@ class RawBuffer {
 class Buffer {
    public:
     std::shared_ptr<RawBuffer> buf;
+    uint64_t maxAccess;
 
-    Buffer(const RawBuffer& buffer) {
+    Buffer(const RawBuffer& buffer, uint64_t mx) {
         buf = std::make_shared<RawBuffer>(buffer);
+        maxAccess = mx;
     }
 
-    Buffer() { buf = std::make_shared<RawBuffer>(); }
+    Buffer() {
+        buf = std::make_shared<RawBuffer>(); 
+        maxAccess = 0;
+    }
 
     Buffer(const std::vector<uint8_t>& data) : Buffer() {
         for (uint64_t i = 0; i < data.size(); i++) {
             buf = std::make_shared<RawBuffer>(buf->set(i, data[i]));
         }
+        maxAccess = data.size();
     }
 
     Buffer set(uint64_t offset, uint8_t v) const {
-        return Buffer(buf->set(offset, v));
+        return Buffer(buf->set(offset, v), std::max(offset, maxAccess));
     }
 
     Buffer set_many(uint64_t offset, std::vector<uint8_t> arr) const {
-        return Buffer(buf->set_many(offset, arr));
+        return Buffer(buf->set_many(offset, arr), std::max(offset, maxAccess));
     }
 
     uint8_t get(uint64_t pos) const { return buf->get(pos); }
@@ -291,7 +297,7 @@ class Buffer {
 };
 
 inline uint256_t hash(const Buffer& b) {
-    return hash(123, b.hash());
+    return hash(b.maxAccess, b.hash());
 }
 
 inline bool operator==(const Buffer& val1, const Buffer& val2) {

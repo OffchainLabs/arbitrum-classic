@@ -707,7 +707,7 @@ contract OneStepProof is OneStepProofCommon {
     }
 
     function executeNewBuffer(AssertionContext memory context) internal pure {
-        pushVal(context.stack, Value.newBuffer(keccak256(abi.encodePacked(bytes32(0)))));
+        pushVal(context.stack, Value.newBuffer(keccak256(abi.encodePacked(bytes32(0))), 0));
     }
 
     function opInfo(uint256 opCode)

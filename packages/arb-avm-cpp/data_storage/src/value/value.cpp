@@ -36,6 +36,7 @@ struct ValueHash {
 };
 
 struct ParsedBuffer {
+    uint64_t max_access;
     uint64_t level;
     std::vector<uint256_t> nodes;
 };
@@ -69,13 +70,13 @@ struct ValueBeingParsed {
 namespace {
 
 template <class T>
-T parseBuffer(const char* buf, int& len) {
+T parseBuffer(const char* buf, int& len, uint64_t max_access) {
     uint8_t level = buf[0];
     len++;
     // Empty
     if (buf[1] == 0) {
         len++;
-        return Buffer(RawBuffer(level, true));
+        return Buffer(RawBuffer(level, true), max_access);
     }
     len++;
     if (level == 0) {
@@ -85,7 +86,7 @@ T parseBuffer(const char* buf, int& len) {
             (*res)[i] = buf[i + 2];
         }
         len += LEAF_SIZE;
-        return Buffer(RawBuffer(res));
+        return Buffer(RawBuffer(res), max_access);
     }
     buf += 2;
     auto res = std::vector<uint256_t>();
@@ -94,7 +95,7 @@ T parseBuffer(const char* buf, int& len) {
         res.push_back(hash);
         len += 32;
     }
-    return ParsedBuffer{level, res};
+    return ParsedBuffer{level, max_access, res};
 }
 
 std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
@@ -112,10 +113,11 @@ std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
         switch (value_type) {
             case BUFFER: {
                 int len = 0;
-                auto res = parseBuffer<ParsedTupVal>(buf, len);
+                uint64_t mx = deserialize_uint64_t(buf);
+                auto res = parseBuffer<ParsedTupVal>(buf, len, mx);
 
                 return_vector.push_back(res);
-                iter += len + 1;
+                iter += len + 1 + 8;
                 break;
             }
             case NUM: {
@@ -162,7 +164,8 @@ ParsedSerializedVal parseRecord(const std::vector<unsigned char>& data) {
         }
         case BUFFER: {
             int len = 0;
-            auto res = parseBuffer<ParsedSerializedVal>(buf, len);
+            uint64_t mx = deserialize_uint64_t(buf);
+            auto res = parseBuffer<ParsedSerializedVal>(buf, len, mx);
             return res;
         }
         default: {
@@ -224,13 +227,13 @@ std::vector<value> serializeValue(const Buffer& b,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(BUFFER);
-    int l1 = value_vector.size();
+    marshal_uint64_t(b.maxAccess, value_vector);
     std::vector<RawBuffer> res = b.serialize(value_vector);
-    int len = 0;
-    parseBuffer<ParsedBufVal>((char*)value_vector.data() + l1, len);
+    // int l1 = value_vector.size();
+    // int len = 0; parseBuffer<ParsedBufVal>((char*)value_vector.data() + l1, len);
     std::vector<value> ret{};
     for (size_t i = 0; i < res.size(); i++) {
-        ret.emplace_back(Buffer(res[i]));
+        ret.emplace_back(Buffer(res[i], 0));
     }
     return ret;
 }
@@ -402,7 +405,7 @@ Buffer processBuffer(const Transaction& transaction,
             return Buffer();
         }
     }
-    return Buffer(RawBuffer(vec, val.level));
+    return Buffer(RawBuffer(vec, val.level), val.max_access);
 }
 
 GetResults processVal(const Transaction& transaction,

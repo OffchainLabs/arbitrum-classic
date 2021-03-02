@@ -25,6 +25,7 @@ const std::string INT_VAL_LABEL = "Int";
 const std::string TUP_VAL_LABEL = "Tuple";
 const std::string CP_VAL_LABEL = "CodePoint";
 const std::string BUF_LABEL = "Buffer";
+const std::string BUF_MAX_ACCESS_LABEL = "max_access";
 const std::string BUF_ELEM_LABEL = "elem";
 const std::string BUF_LEAF_LABEL = "Leaf";
 const std::string BUF_NODE_LABEL = "Node";
@@ -125,8 +126,16 @@ value value_from_json(nlohmann::json full_value_json,
             values.push_back(
                 value{CodePointStub({code.segmentID(), pc}, code[pc])});
         } else if (value_json.get().contains(BUF_LABEL)) {
+            auto& buf_json = value_json.get()[BUF_LABEL];
+            auto mx_json = buf_json.at(BUF_MAX_ACCESS_LABEL);
+            if (!mx_json.is_number_unsigned()) {
+                throw std::runtime_error(
+                    "codepoint internal label must be unsigned integer that "
+                    "fits within a uint64_t");
+            }
+            auto max_access = mx_json.get<uint64_t>();
             values.emplace_back(
-                Buffer{buffer_value_from_json(value_json.get()[BUF_LABEL])});
+                Buffer{buffer_value_from_json(buf_json.at(BUF_LABEL)), max_access});
         } else {
             throw std::runtime_error("invalid value type");
         }
@@ -175,8 +184,16 @@ value simple_value_from_json(const nlohmann::json& full_value_json) {
                 json_values.push_back(*it);
             }
         } else if (value_json.get().contains(BUF_LABEL)) {
+            auto& buf_json = value_json.get()[BUF_LABEL];
+            auto mx_json = buf_json.at(BUF_MAX_ACCESS_LABEL);
+            if (!mx_json.is_number_unsigned()) {
+                throw std::runtime_error(
+                    "codepoint internal label must be unsigned integer that "
+                    "fits within a uint64_t");
+            }
+            auto max_access = mx_json.get<uint64_t>();
             values.emplace_back(
-                Buffer{buffer_value_from_json(value_json.get()[BUF_LABEL])});
+                Buffer{buffer_value_from_json(buf_json.at(BUF_LABEL)), max_access});
         } else {
             throw std::runtime_error("invalid value type");
         }

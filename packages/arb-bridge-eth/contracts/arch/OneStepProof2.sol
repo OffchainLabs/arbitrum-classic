@@ -493,6 +493,11 @@ contract OneStepProof2 is OneStepProofCommon {
         pushVal(context.stack, Value.newInt(res));
     }
 
+    function max(uint256 a, uint256 b) internal pure returns (uint256) {
+        if (a > b) return a;
+        else return b;
+    }
+
     function executeSetBuffer8(AssertionContext memory context) internal pure {
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
@@ -507,7 +512,7 @@ contract OneStepProof2 is OneStepProofCommon {
         }
         bytes32 res =
             setBuffer8(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
-        pushVal(context.stack, Value.newBuffer(res));
+        pushVal(context.stack, Value.newBuffer(res, max(val1.size, val2.intVal)));
     }
 
     function executeSetBuffer64(AssertionContext memory context) internal pure {
@@ -524,7 +529,7 @@ contract OneStepProof2 is OneStepProofCommon {
         }
         bytes32 res =
             setBuffer64(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
-        pushVal(context.stack, Value.newBuffer(res));
+        pushVal(context.stack, Value.newBuffer(res, max(val1.size, val2.intVal+7)));
     }
 
     function executeSetBuffer256(AssertionContext memory context) internal pure {
@@ -541,7 +546,7 @@ contract OneStepProof2 is OneStepProofCommon {
         }
         bytes32 res =
             setBuffer256(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
-        pushVal(context.stack, Value.newBuffer(res));
+        pushVal(context.stack, Value.newBuffer(res, max(val1.size, val2.intVal+31)));
     }
 
     function opInfo(uint256 opCode)

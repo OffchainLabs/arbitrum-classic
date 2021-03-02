@@ -192,7 +192,7 @@ library Value {
         return Data(0, _val, new Data[](0), 0, CODE_POINT_TYPECODE, uint256(1));
     }
 
-    function newBuffer(bytes32 bufHash) internal pure returns (Data memory) {
+    function newBuffer(bytes32 bufHash, uint256 sz) internal pure returns (Data memory) {
         return
             Data(
                 uint256(0),
@@ -200,7 +200,7 @@ library Value {
                 new Data[](0),
                 bufHash,
                 BUFFER_TYPECODE,
-                uint256(1)
+                sz
             );
     }
 }

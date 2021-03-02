@@ -219,6 +219,7 @@ void marshalForProof(const Buffer& val,
                      std::vector<unsigned char>& buf,
                      const Code&) {
     buf.push_back(BUFFER);
+    marshal_uint256_t(val.maxAccess, buf);
     marshal_uint256_t(val.hash(), buf);
 }
 
@@ -246,7 +247,7 @@ struct GetSize {
 
     uint256_t operator()(const Tuple& val) const { return val.getSize(); }
 
-    uint256_t operator()(const Buffer& buf) const { return buf.lastIndex()+1; }
+    uint256_t operator()(const Buffer& buf) const { return buf.maxAccess; }
 
     uint256_t operator()(const uint256_t&) const { return 1; }
 
@@ -281,7 +282,6 @@ struct ValuePrinter {
     }
 
     std::ostream* operator()(const CodePointStub& val) const {
-        //        std::printf("in CodePoint ostream operator\n");
         os << "CodePointStub(" << val.pc.pc << ")";
         return &os;
     }
