@@ -137,11 +137,11 @@ func main() {
 	}
 
 	config := protocol.ChainParams{
-		StakeRequirement:        big.NewInt(10),
-		StakeToken:              common.Address{},
-		GracePeriod:             common.NewTimeBlocksInt(3),
-		MaxExecutionSteps:       10000000000,
-		ArbGasSpeedLimitPerTick: 20000000000,
+		StakeRequirement:          big.NewInt(10),
+		StakeToken:                common.Address{},
+		GracePeriod:               common.NewTimeBlocksInt(3),
+		MaxExecutionSteps:         10000000000,
+		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 	owner := common.RandAddress()
 	rollupAddress := common.RandAddress()

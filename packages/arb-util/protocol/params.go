@@ -24,20 +24,20 @@ import (
 
 // If StakeToken is 0, stake requirement is ETH measured in Wei, otherwise stake requirement is units of stakeStoken
 type ChainParams struct {
-	StakeRequirement        *big.Int
-	StakeToken              common.Address
-	GracePeriod             *common.TimeBlocks
-	MaxExecutionSteps       uint64
-	ArbGasSpeedLimitPerTick uint64 // in ArbGas per tick
+	StakeRequirement          *big.Int
+	StakeToken                common.Address
+	GracePeriod               *common.TimeBlocks
+	MaxExecutionSteps         uint64
+	ArbGasSpeedLimitPerSecond uint64 // in ArbGas per tick
 }
 
 func NewRandomChainParams() ChainParams {
 	return ChainParams{
-		StakeRequirement:        common.RandBigInt(),
-		StakeToken:              common.RandAddress(),
-		GracePeriod:             common.NewTimeBlocks(common.RandBigInt()),
-		MaxExecutionSteps:       rand.Uint64(),
-		ArbGasSpeedLimitPerTick: rand.Uint64(),
+		StakeRequirement:          common.RandBigInt(),
+		StakeToken:                common.RandAddress(),
+		GracePeriod:               common.NewTimeBlocks(common.RandBigInt()),
+		MaxExecutionSteps:         rand.Uint64(),
+		ArbGasSpeedLimitPerSecond: rand.Uint64(),
 	}
 }
 
@@ -67,7 +67,7 @@ func (cp ChainParams) WithMaxExecutionSteps(steps uint64) ChainParams {
 
 func (cp ChainParams) WithArbGasSpeedLimitPerTick(limit uint64) ChainParams {
 	ret := cp
-	ret.ArbGasSpeedLimitPerTick = limit
+	ret.ArbGasSpeedLimitPerSecond = limit
 	return ret
 }
 
@@ -76,5 +76,5 @@ func (cp ChainParams) Equals(cp2 ChainParams) bool {
 		cp.StakeToken == cp2.StakeToken &&
 		cp.GracePeriod == cp2.GracePeriod &&
 		cp.MaxExecutionSteps == cp2.MaxExecutionSteps &&
-		cp.ArbGasSpeedLimitPerTick == cp2.ArbGasSpeedLimitPerTick
+		cp.ArbGasSpeedLimitPerSecond == cp2.ArbGasSpeedLimitPerSecond
 }

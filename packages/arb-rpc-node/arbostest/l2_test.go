@@ -171,6 +171,17 @@ func TestCallTx(t *testing.T) {
 	if new(big.Int).SetBytes(call2Res.ReturnData).Cmp(big.NewInt(5)) != 0 {
 		t.Errorf("Storage was updated")
 	}
+
+	_, err = snap.Call(message.ContractTransaction{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: common.Address{},
+			Payment:     big.NewInt(0),
+			Data:        hexutil.MustDecode(arbostestcontracts.SimpleBin),
+		},
+	}, sender)
+	failIfError(t, err)
 }
 
 func TestContractTx(t *testing.T) {

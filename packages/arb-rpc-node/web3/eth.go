@@ -539,6 +539,12 @@ func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.T
 	}
 	from, msg := buildCallMsg(args)
 	msg = s.srv.AdjustGas(msg)
+	log.Debug().
+		Uint64("gaslimit", msg.MaxGas.Uint64()).
+		Uint64("gasPriceBid", msg.GasPriceBid.Uint64()).
+		Str("sender", from.Hex()).
+		Str("dest", msg.DestAddress.Hex()).
+		Msg("executing call")
 	res, err := snap.Call(msg, from)
 	if err != nil {
 		logMsg := logger.Warn().Err(err)
@@ -551,11 +557,9 @@ func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.T
 		return nil, err
 	}
 	log.Debug().
-		Uint64("gaslimit", msg.MaxGas.Uint64()).
 		Uint64("gasused", res.GasUsed.Uint64()).
 		Hex("returndata", res.ReturnData).
 		Int("resultcode", int(res.ResultCode)).
-		Str("dest", msg.DestAddress.Hex()).
 		Msg("executed call")
 
 	if res.ResultCode != evm.ReturnCode && res.ResultCode != evm.RevertCode {

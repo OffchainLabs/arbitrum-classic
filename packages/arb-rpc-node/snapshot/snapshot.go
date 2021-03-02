@@ -17,6 +17,7 @@
 package snapshot
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
@@ -93,7 +94,7 @@ func (s *Snapshot) TryTx(msg message.Message, sender common.Address, targetHash 
 func (s *Snapshot) BasicCall(data []byte, dest common.Address) (*evm.TxResult, error) {
 	msg := message.ContractTransaction{
 		BasicTx: message.BasicTx{
-			MaxGas:      big.NewInt(10000000),
+			MaxGas:      big.NewInt(100000000000),
 			GasPriceBid: big.NewInt(0),
 			DestAddress: dest,
 			Payment:     big.NewInt(0),
@@ -155,7 +156,7 @@ func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.In
 }
 
 func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash) (*evm.TxResult, error) {
-	assertion, _, steps := mach.ExecuteAssertionAdvanced(100000000, false, nil, false, []inbox.InboxMessage{msg}, true, common.Hash{}, common.Hash{})
+	assertion, _, steps := mach.ExecuteAssertionAdvanced(100000000000, false, nil, false, []inbox.InboxMessage{msg}, true, common.Hash{}, common.Hash{})
 
 	// If the machine wasn't able to run and it reports that it is currently
 	// blocked, return the block reason to give the client more information
@@ -166,6 +167,7 @@ func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash)
 
 	avmLogs := assertion.Logs
 	if len(avmLogs) == 0 {
+		fmt.Println("bad mach", mach)
 		return nil, errors.New("no logs produced by tx")
 	}
 

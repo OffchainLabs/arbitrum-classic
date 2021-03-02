@@ -39,11 +39,11 @@ func makeInitMsg() inbox.InboxMessage {
 	return message.NewInboxMessage(
 		message.Init{
 			ChainParams: protocol.ChainParams{
-				StakeRequirement:        big.NewInt(0),
-				StakeToken:              common.Address{},
-				GracePeriod:             common.NewTimeBlocks(big.NewInt(3)),
-				MaxExecutionSteps:       0,
-				ArbGasSpeedLimitPerTick: 0,
+				StakeRequirement:          big.NewInt(0),
+				StakeToken:                common.Address{},
+				GracePeriod:               common.NewTimeBlocks(big.NewInt(3)),
+				MaxExecutionSteps:         0,
+				ArbGasSpeedLimitPerSecond: 0,
 			},
 			Owner:       owner,
 			ExtraConfig: []byte{},
