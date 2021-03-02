@@ -158,7 +158,7 @@ func TestStaker(t *testing.T) {
 		<-time.After(time.Second * 1)
 	}
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 500; i++ {
 		if (i % 2) == 0 {
 			_, err := staker.Act(ctx)
 			test.FailIfError(t, err)
