@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/ethereum/go-ethereum v1.9.24
+	github.com/go-kit/kit v0.8.0
 	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c // indirect
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-evm v0.7.3
@@ -13,6 +14,7 @@ require (
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../arb-util
+
 replace github.com/offchainlabs/arbitrum/packages/arb-evm => ../arb-evm
 
 replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp
