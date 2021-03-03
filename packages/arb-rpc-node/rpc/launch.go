@@ -46,13 +46,15 @@ type ForwarderBatcherMode struct {
 func (b ForwarderBatcherMode) isBatcherMode() {}
 
 type StatefulBatcherMode struct {
-	Auth *bind.TransactOpts
+	Auth         *bind.TransactOpts
+	InboxAddress common.Address
 }
 
 func (b StatefulBatcherMode) isBatcherMode() {}
 
 type StatelessBatcherMode struct {
-	Auth *bind.TransactOpts
+	Auth         *bind.TransactOpts
+	InboxAddress common.Address
 }
 
 func (b StatelessBatcherMode) isBatcherMode() {}
@@ -61,7 +63,6 @@ func LaunchNode(
 	ctx context.Context,
 	client ethutils.EthClient,
 	rollupAddress common.Address,
-	inboxAddress common.Address,
 	db *txdb.TxDB,
 	web3RPCPort string,
 	web3WSPort string,
@@ -81,14 +82,14 @@ func LaunchNode(
 		batch = batcher.NewForwarder(forwardClient)
 	case StatelessBatcherMode:
 		auth := ethbridge.NewTransactAuth(batcherMode.Auth)
-		inbox, err := ethbridge.NewStandardInbox(inboxAddress.ToEthAddress(), client, auth)
+		inbox, err := ethbridge.NewStandardInbox(batcherMode.InboxAddress.ToEthAddress(), client, auth)
 		if err != nil {
 			return err
 		}
 		batch = batcher.NewStatelessBatcher(ctx, db, l2ChainID, client, inbox, maxBatchTime)
 	case StatefulBatcherMode:
 		auth := ethbridge.NewTransactAuth(batcherMode.Auth)
-		inbox, err := ethbridge.NewStandardInbox(inboxAddress.ToEthAddress(), client, auth)
+		inbox, err := ethbridge.NewStandardInbox(batcherMode.InboxAddress.ToEthAddress(), client, auth)
 		if err != nil {
 			return err
 		}

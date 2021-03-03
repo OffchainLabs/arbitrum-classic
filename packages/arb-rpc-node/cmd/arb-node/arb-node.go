@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
 	golog "log"
 	"net/http"
 	_ "net/http/pprof"
@@ -30,7 +31,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
@@ -72,7 +72,7 @@ func main() {
 		10,
 		"maxBatchTime=NumSeconds",
 	)
-
+	inboxAddressStr := fs.String("inbox", "", "address of the inbox contract")
 	forwardTxURL := fs.String("forward-url", "", "url of another node to send transactions through")
 
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
@@ -84,9 +84,9 @@ func main() {
 		logger.Fatal().Stack().Err(err).Msg("Error parsing arguments")
 	}
 
-	if fs.NArg() != 4 {
+	if fs.NArg() != 3 {
 		logger.Fatal().Msgf(
-			"usage: arb-node [--maxBatchTime=NumSeconds] %s <inbox_address> %s",
+			"usage: arb-node [--maxBatchTime=NumSeconds] %s %s",
 			utils.WalletArgsString,
 			utils.RollupArgsString,
 		)
@@ -99,8 +99,6 @@ func main() {
 		}()
 	}
 
-	inboxAddressStr := fs.Arg(0)
-	inboxAddress := common.HexToAddress(inboxAddressStr)
 	rollupArgs := utils.ParseRollupCommand(fs, 1)
 
 	ethclint, err := ethutils.NewRPCEthClient(rollupArgs.EthURL)
@@ -120,6 +118,11 @@ func main() {
 			logger.Fatal().Stack().Err(err).Msg("Error running GetKeystore")
 		}
 
+		if *inboxAddressStr == "" {
+			logger.Fatal().Msg("must submit inbox addres via --inbox if not running in forwarder mode")
+		}
+		inboxAddress := common.HexToAddress(*inboxAddressStr)
+
 		logger.Info().Hex("from", auth.From.Bytes()).Msg("Arbitrum node submitting batches")
 
 		if err := ethbridge.WaitForBalance(
@@ -132,35 +135,27 @@ func main() {
 		}
 
 		if *keepPendingState {
-			batcherMode = rpc.StatefulBatcherMode{Auth: auth}
+			batcherMode = rpc.StatefulBatcherMode{Auth: auth, InboxAddress: inboxAddress}
 		} else {
-			batcherMode = rpc.StatelessBatcherMode{Auth: auth}
+			batcherMode = rpc.StatelessBatcherMode{Auth: auth, InboxAddress: inboxAddress}
 		}
 	}
 
 	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "arbos.mexe")
 	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
 
-	storage, err := cmachine.NewArbStorage(dbPath)
+	monitor, err := staker.NewMonitor(dbPath, contractFile)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("error opening ArbStorage")
+		logger.Fatal().Err(err).Msg("error opening monitor")
 	}
-	defer storage.CloseArbStorage()
+	defer monitor.Close()
 
-	err = storage.Initialize(contractFile)
+	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupArgs.Address)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("error initializing ArbStorage")
+		logger.Fatal().Stack().Err(err).Send()
 	}
 
-	arbCore := storage.GetArbCore()
-	started := arbCore.StartThread()
-	if !started {
-		logger.Fatal().Msg("failed to start thread")
-	}
-
-	as := storage.GetNodeStore()
-
-	db, err := txdb.New(arbCore, as, rollupArgs.Address)
+	_, err = monitor.StartInboxReader(context.Background(), rollupArgs.EthURL, rollupArgs.Address)
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Send()
 	}
@@ -169,7 +164,6 @@ func main() {
 		ctx,
 		ethclint,
 		rollupArgs.Address,
-		inboxAddress,
 		db,
 		"8547",
 		"8548",

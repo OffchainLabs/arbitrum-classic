@@ -49,9 +49,10 @@ type ChainTimeGetter interface {
 }
 
 type TxDB struct {
-	lookup core.ArbOutputLookup
-	as     machine.NodeStore
-	chain  common.Address
+	lookup    core.ArbOutputLookup
+	as        machine.NodeStore
+	chain     common.Address
+	logReader *core.LogReader
 
 	rmLogsFeed      event.Feed
 	chainFeed       event.Feed
@@ -65,15 +66,29 @@ type TxDB struct {
 }
 
 func New(
-	core core.ArbOutputLookup,
+	ctx context.Context,
+	arbCore core.ArbCore,
 	as machine.NodeStore,
 	chain common.Address,
 ) (*TxDB, error) {
-	return &TxDB{
-		lookup: core,
+	db := &TxDB{
+		lookup: arbCore,
 		as:     as,
 		chain:  chain,
-	}, nil
+	}
+	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(10))
+	errChan := logReader.Start(ctx)
+	go func() {
+		err := <-errChan
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			log.Fatal().Err(err).Msg("error reading logs")
+		}
+	}()
+	db.logReader = logReader
+	return db, nil
 }
 
 func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
