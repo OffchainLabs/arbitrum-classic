@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	golog "log"
 	"net/http"
@@ -81,7 +80,7 @@ func main() {
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Msg("Error loading wallet keystore")
 	}
-	fmt.Printf("Loaded wallet with address %v\n", auth.From.String())
+	logger.Info().Str("address", auth.From.String()).Msg("Loaded wallet")
 	client, err := ethutils.NewRPCEthClient(os.Args[2])
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Msg("Error creating Ethereum RPC client")
@@ -168,5 +167,5 @@ func main() {
 	}
 	reader.Start(ctx)
 
-	<-stakerManager.RunInBackground(ctx, logger)
+	<-stakerManager.RunInBackground(ctx)
 }

@@ -75,6 +75,7 @@ func (v *Validator) removeOldStakers(ctx context.Context) (*types.Transaction, e
 	if len(stakersToEliminate) == 0 {
 		return nil, nil
 	}
+	logger.Info().Int("count", len(stakersToEliminate)).Msg("Removing old stakers")
 	return v.wallet.ReturnOldDeposits(ctx, stakersToEliminate)
 }
 
@@ -86,6 +87,7 @@ func (v *Validator) resolveTimedOutChallenges(ctx context.Context) (*types.Trans
 	if len(challengesToEliminate) == 0 {
 		return nil, nil
 	}
+	logger.Info().Int("count", len(challengesToEliminate)).Msg("Timing out challenges")
 	return v.wallet.TimeoutChallenges(ctx, challengesToEliminate)
 }
 
@@ -96,6 +98,7 @@ func (v *Validator) resolveNextNode(ctx context.Context) error {
 	}
 	switch confirmType {
 	case ethbridge.CONFIRM_TYPE_INVALID:
+		logger.Info().Msg("Rejecting node")
 		return v.rollup.RejectNextNode(ctx, successorWithStake, stakerAddress)
 	case ethbridge.CONFIRM_TYPE_VALID:
 		unresolvedNodeIndex, err := v.rollup.FirstUnresolvedNode(ctx)
@@ -114,6 +117,7 @@ func (v *Validator) resolveNextNode(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		logger.Info().Int("node", int(unresolvedNodeIndex.Int64())).Msg("Confirming node")
 		return v.rollup.ConfirmNextNode(ctx, logAcc, sends)
 	default:
 		return nil
