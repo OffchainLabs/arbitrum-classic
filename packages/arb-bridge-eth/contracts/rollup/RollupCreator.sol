@@ -34,7 +34,7 @@ import "../libraries/CloneFactory.sol";
 import "../libraries/ICloneable.sol";
 
 contract RollupCreator is Ownable, CloneFactory {
-    event RollupCreated(address rollupAddress);
+    event RollupCreated(address rollupAddress, address inboxAddress);
 
     ICloneable rollupTemplate;
     address challengeFactory;
@@ -121,7 +121,7 @@ contract RollupCreator is Ownable, CloneFactory {
                 nodeFactory
             ]
         );
-        emit RollupCreated(frame.rollup);
+        emit RollupCreated(frame.rollup, address(frame.inbox));
         return IRollup(frame.rollup);
     }
 }

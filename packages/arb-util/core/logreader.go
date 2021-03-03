@@ -16,18 +16,20 @@ type LogReader struct {
 	cursor      LogsCursor
 	cursorIndex *big.Int
 	maxCount    *big.Int
+	sleepTime   time.Duration
 
 	// Only in main thread
 	running    bool
 	cancelFunc context.CancelFunc
 }
 
-func NewLogReader(consumer LogConsumer, cursor LogsCursor, cursorIndex *big.Int, maxCount *big.Int) *LogReader {
+func NewLogReader(consumer LogConsumer, cursor LogsCursor, cursorIndex *big.Int, maxCount *big.Int, sleepTime time.Duration) *LogReader {
 	return &LogReader{
 		consumer:    consumer,
 		cursor:      cursor,
 		cursorIndex: cursorIndex,
 		maxCount:    maxCount,
+		sleepTime:   sleepTime,
 	}
 }
 
@@ -92,7 +94,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 			}
 
 			// No new logs or deleted logs so give some time for new logs to be added
-			time.Sleep(1 * time.Second)
+			time.Sleep(lr.sleepTime)
 		}
 
 		currentLogCount, err := lr.consumer.CurrentLogCount()
