@@ -91,7 +91,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         rollupEventBridge.rollupInitialized(
             _confirmPeriodBlocks,
             _extraChallengeTimeBlocks,
-            _arbGasSpeedLimitPerBlock / 2,
+            _arbGasSpeedLimitPerBlock,
             _baseStake,
             _stakeToken,
             _owner,
