@@ -336,7 +336,7 @@ type Backend struct {
 }
 
 func NewBackend(arbcore core.ArbCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer) (*Backend, error) {
-	logReader := core.NewLogReader(db, arbcore, big.NewInt(0), big.NewInt(10))
+	logReader := core.NewLogReader(db, arbcore, big.NewInt(0), big.NewInt(10), 10*time.Millisecond)
 	errChan := logReader.Start(context.Background())
 	go func() {
 		err := <-errChan
