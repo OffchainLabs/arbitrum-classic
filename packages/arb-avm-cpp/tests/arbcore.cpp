@@ -143,7 +143,9 @@ TEST_CASE("ArbCore tests") {
             REQUIRE(sendsRes.data[k] == sends[k]);
         }
 
-        while (logs_count < logs.size()) {
+        tries = 0;
+        bool done = false;
+        while (!done) {
             auto log_request_count = 3;
             REQUIRE(arbCore->logsCursorRequest(0, log_request_count));
             while (true) {
@@ -163,10 +165,15 @@ TEST_CASE("ArbCore tests") {
                     }
                     logs_count += result->second.size();
                     REQUIRE(arbCore->logsCursorConfirmReceived(0));
+                    if (result->first == logs.size()) {
+                        done = true;
+                    }
                     break;
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
+            REQUIRE(tries < 20);
+            tries++;
         }
         REQUIRE(logs_count == logs.size());
 
