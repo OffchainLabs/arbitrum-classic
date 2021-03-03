@@ -18,9 +18,10 @@
 
 #include <avm/machinestate/datastack.hpp>
 
-#include <catch2/catch.hpp>
-
 #include <ethash/keccak.hpp>
+
+#define CATCH_CONFIG_ENABLE_BENCHMARKING 1
+#include <catch2/catch.hpp>
 
 uint256_t hash_buffer_aux(uint8_t* buf,
                           int offset,
@@ -87,7 +88,7 @@ TEST_CASE("Buffer") {
         }
         REQUIRE(hash_buffer(arr, 0, 131072) == hash_acc(arr, SIZE));
     }
-
+/*
     SECTION("hashing with single zeroes") {
         const int SIZE = 1024 * 32;
         for (int j = 0; j < 1024; j++) {
@@ -96,6 +97,8 @@ TEST_CASE("Buffer") {
             REQUIRE(hash_buffer(arr, 0, SIZE) == hash_acc(arr, SIZE));
         }
     }
+*/
+
 
     SECTION("last index") {
         Buffer buf;
@@ -117,4 +120,67 @@ TEST_CASE("Buffer") {
         buf = buf.set(300000, 123);
         REQUIRE(buf.lastIndex() == 300000);
     }
+
+    SECTION("hash_buffer_bench 2") {
+        Buffer acc;
+        // acc = acc.set(1152921504606846976, 123);
+        acc = acc.set(1100000, 123);
+        // acc.buf->analyze();
+        acc.hash_no_cache();
+    }
+
+    SECTION("hash_simple_bench") {
+        const int SIZE = 1024;
+        uint8_t arr[SIZE];
+        for (int i = 0; i < SIZE; i++) {
+            arr[i] = rand() % 256;
+        }
+        BENCHMARK_ADVANCED("simple check")
+        (Catch::Benchmark::Chronometer meter) {
+           meter.measure([&arr] {
+                return hash_buffer(arr, 0, 1024);
+            });
+        };
+    }
+
+    SECTION("hash_buffer_bench") {
+        const int SIZE = 1024;
+        uint8_t arr[SIZE];
+        for (int i = 0; i < SIZE; i++) {
+            arr[i] = rand() % 256;
+        }
+        Buffer acc;
+        for (int i = 0; i < SIZE; i++) {
+            acc = acc.set(i, arr[i]);
+        }
+        BENCHMARK_ADVANCED("simple check")
+        (Catch::Benchmark::Chronometer meter) {
+           meter.measure([&acc] {
+                return acc.hash_no_cache();
+            });
+        };
+    }
+
+    SECTION("hash_buffer_bench 2") {
+        Buffer acc;
+        acc = acc.set(1152921504606846976, 123);
+        BENCHMARK_ADVANCED("simple check")
+        (Catch::Benchmark::Chronometer meter) {
+           meter.measure([&acc] {
+                return acc.hash_no_cache();
+            });
+        };
+    }
+
+    SECTION("hash_buffer_bench fast?") {
+        Buffer acc;
+        acc = acc.set(1152921504606846976, 123);
+        BENCHMARK_ADVANCED("simple check")
+        (Catch::Benchmark::Chronometer meter) {
+           meter.measure([&acc] {
+                return acc.buf->hash_fast();
+            });
+        };
+    }
+
 }

@@ -187,6 +187,13 @@ class RawBuffer {
     Packed hash_aux() const;
     uint256_t hash() const { return hash_aux().hash; }
 
+    void analyze();
+
+    uint256_t hash_fast();
+
+    Packed hash_aux_no_cache() const;
+    uint256_t hash_no_cache() const { return hash_aux_no_cache().hash; }
+
     uint64_t lastIndex() { return hash_aux().lastIndex; }
 
     std::vector<RawBuffer> serialize(std::vector<unsigned char>& value_vector);
@@ -262,6 +269,8 @@ class Buffer {
     }
 
     uint256_t hash() const { return buf->hash(); }
+
+    uint256_t hash_no_cache() const { return buf->hash_no_cache(); }
 
     std::vector<unsigned char> makeProof(uint64_t loc) const {
         RawBuffer nbuf = buf->normalize();
