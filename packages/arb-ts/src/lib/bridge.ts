@@ -24,13 +24,12 @@ export class Bridge extends L1Bridge {
   walletAddressCache?: string
 
   constructor(
-    inboxAddress: string,
     erc20BridgeAddress: string,
     arbERC20BridgeAddress: string,
     ethSigner: Signer,
     arbSigner: Signer
   ) {
-    super(inboxAddress, erc20BridgeAddress, ethSigner)
+    super(erc20BridgeAddress, ethSigner)
     this.l2Bridge = new L2Bridge(arbERC20BridgeAddress, arbSigner)
   }
 

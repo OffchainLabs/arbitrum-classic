@@ -23,18 +23,12 @@ import { Inbox } from './abi/Inbox'
 
 export class L1Bridge {
   l1Signer: Signer
-  inbox: Inbox
   ethERC20Bridge: EthERC20Bridge
   walletAddressCache?: string
+  inboxCached?: Inbox
 
-  constructor(
-    inboxAddress: string,
-    erc20BridgeAddress: string,
-    l1Signer: Signer
-  ) {
+  constructor(erc20BridgeAddress: string, l1Signer: Signer) {
     this.l1Signer = l1Signer
-
-    this.inbox = InboxFactory.connect(inboxAddress, l1Signer)
 
     this.ethERC20Bridge = EthERC20BridgeFactory.connect(
       erc20BridgeAddress,
@@ -44,7 +38,8 @@ export class L1Bridge {
 
   public async depositETH(value: BigNumber, destinationAddress?: string) {
     const address = destinationAddress || (await this.getWalletAddress())
-    return this.inbox.depositEth(address, {
+    const inbox = await this.getInbox()
+    return inbox.depositEth(address, {
       value,
     })
   }
@@ -76,5 +71,14 @@ export class L1Bridge {
     }
     this.walletAddressCache = await this.l1Signer.getAddress()
     return this.walletAddressCache
+  }
+
+  public async getInbox() {
+    if (this.inboxCached) {
+      return this.inboxCached
+    }
+    const inboxAddress = await this.ethERC20Bridge.inbox()
+    this.inboxCached = InboxFactory.connect(inboxAddress, this.l1Signer)
+    return this.inboxCached
   }
 }
