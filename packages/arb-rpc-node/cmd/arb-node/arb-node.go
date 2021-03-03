@@ -99,7 +99,7 @@ func main() {
 		}()
 	}
 
-	rollupArgs := utils.ParseRollupCommand(fs, 1)
+	rollupArgs := utils.ParseRollupCommand(fs, 0)
 
 	ethclint, err := ethutils.NewRPCEthClient(rollupArgs.EthURL)
 	if err != nil {
