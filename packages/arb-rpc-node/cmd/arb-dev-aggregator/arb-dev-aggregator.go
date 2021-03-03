@@ -237,7 +237,14 @@ func main() {
 	go func() {
 		<-c
 		backend.Lock()
-		messages := backend.messages
+		messageCount, err := backend.arbcore.GetMessageCount()
+		if err != nil {
+			logger.Fatal().Err(err).Send()
+		}
+		messages, err := backend.arbcore.GetMessages(big.NewInt(0), messageCount)
+		if err != nil {
+			logger.Fatal().Err(err).Send()
+		}
 		backend.Unlock()
 		data, err := inbox.TestVectorJSON(messages, nil, nil)
 		if err != nil {
@@ -326,8 +333,6 @@ type Backend struct {
 	signer     types.Signer
 
 	newTxFeed event.Feed
-
-	messages []inbox.InboxMessage
 }
 
 func NewBackend(arbcore core.ArbCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer) (*Backend, error) {
@@ -358,10 +363,6 @@ func (b *Backend) reorg(height uint64) error {
 		return err
 	}
 	b.l1Emulator.Reorg(height)
-	latestHeight := b.l1Emulator.Latest().blockId.Height.AsInt().Uint64()
-	if latestHeight != height {
-		panic("wrong height")
-	}
 	newLatest, err := b.db.BlockCount()
 	if err != nil {
 		return err
@@ -372,7 +373,16 @@ func (b *Backend) reorg(height uint64) error {
 		Uint64("end", newLatest).
 		Uint64("height", height).
 		Msg("Reorged chain")
-	b.messages = b.messages[:height-1]
+	if err := core.ReorgAndWait(b.arbcore, new(big.Int).SetUint64(height)); err != nil {
+		return err
+	}
+	afterCount, err := b.arbcore.GetMessageCount()
+	if err != nil {
+		return err
+	}
+	if afterCount.Uint64() != height {
+		panic("wrong after count")
+	}
 	return nil
 }
 
@@ -447,14 +457,12 @@ func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, bl
 		BlockNum:  block.blockId.Height,
 		Timestamp: block.timestamp,
 	}
-
-	inboxMessage := message.NewInboxMessage(msg, sender, big.NewInt(int64(len(b.messages))), big.NewInt(0), chainTime)
-
-	b.messages = append(b.messages, inboxMessage)
 	msgCount, err := b.arbcore.GetMessageCount()
 	if err != nil {
 		return err
 	}
+	inboxMessage := message.NewInboxMessage(msg, sender, new(big.Int).Set(msgCount), big.NewInt(0), chainTime)
+
 	var prevHash common.Hash
 	if msgCount.Cmp(big.NewInt(0)) > 0 {
 		prevHash, err = b.arbcore.GetInboxAcc(msgCount.Sub(msgCount, big.NewInt(1)))
@@ -537,6 +545,11 @@ func (b *L1Emulator) Reorg(height uint64) {
 		delete(b.l1BlocksByHash, b.l1Blocks[i].blockId.HeaderHash)
 	}
 	b.l1Blocks = b.l1Blocks[:height+1]
+
+	latestHeight := b.Latest().blockId.Height.AsInt().Uint64()
+	if latestHeight != height {
+		panic("wrong height")
+	}
 }
 
 func (b *L1Emulator) BlockIdForHeight(_ context.Context, height *common.TimeBlocks) (*common.BlockId, error) {

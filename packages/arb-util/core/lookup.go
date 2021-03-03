@@ -78,26 +78,9 @@ func DeliverMessagesAndWait(db ArbCoreInbox, messages []inbox.InboxMessage, prev
 	if !db.DeliverMessages(messages, previousInboxAcc, lastBlockComplete, nil) {
 		return false, errors.New("unable to deliver messages")
 	}
-
-	start := time.Now()
-	var status MessageStatus
-	var err error
-	for {
-		status, err = db.MessagesStatus()
-		if err != nil {
-			return false, err
-		}
-
-		if status == MessagesEmpty {
-			return false, errors.New("should have messages")
-		}
-		if status != MessagesReady {
-			break
-		}
-		if time.Since(start) > time.Second*30 {
-			return false, errors.New("timed out adding messages")
-		}
-		<-time.After(time.Millisecond * 200)
+	status, err := waitForMessages(db)
+	if err != nil {
+		return false, err
 	}
 	if status == MessagesSuccess {
 		return true, nil
@@ -106,6 +89,44 @@ func DeliverMessagesAndWait(db ArbCoreInbox, messages []inbox.InboxMessage, prev
 		return false, nil
 	}
 	return false, errors.New("Unexpected status")
+}
+
+func ReorgAndWait(db ArbCoreInbox, reorgMessageCount *big.Int) error {
+	if !db.DeliverMessages(nil, common.Hash{}, false, reorgMessageCount) {
+		return errors.New("unable to deliver messages")
+	}
+	status, err := waitForMessages(db)
+	if err != nil {
+		return err
+	}
+	if status == MessagesSuccess {
+		return nil
+	}
+	return errors.New("Unexpected status")
+}
+
+func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
+	start := time.Now()
+	var status MessageStatus
+	var err error
+	for {
+		status, err = db.MessagesStatus()
+		if err != nil {
+			return 0, err
+		}
+
+		if status == MessagesEmpty {
+			return 0, errors.New("should have messages")
+		}
+		if status != MessagesReady {
+			break
+		}
+		if time.Since(start) > time.Second*30 {
+			return 0, errors.New("timed out adding messages")
+		}
+		<-time.After(time.Millisecond * 50)
+	}
+	return status, nil
 }
 
 type ArbCore interface {
