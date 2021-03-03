@@ -2,10 +2,11 @@ package staker
 
 import (
 	"context"
+	"encoding/hex"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/rs/zerolog"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
@@ -47,7 +48,7 @@ func NewStaker(
 	}, val.bridge, nil
 }
 
-func (s *Staker) RunInBackground(ctx context.Context, logger zerolog.Logger) chan bool {
+func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 	done := make(chan bool)
 	go func() {
 		defer func() {
@@ -59,6 +60,9 @@ func (s *Staker) RunInBackground(ctx context.Context, logger zerolog.Logger) cha
 			if tx != nil {
 				// Note: methodName isn't accurate, it's just used for logging
 				_, err = ethbridge.WaitForReceiptWithResults(ctx, s.client, s.wallet.From().ToEthAddress(), tx, "for staking")
+				if err == nil {
+					logger.Info().Str("hash", tx.Hash().String()).Msg("Successfully executed transaction")
+				}
 			}
 			if err != nil {
 				logger.Warn().Err(err).Msg("Staking error (possible reorg?)")
@@ -88,9 +92,8 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	creatingNewStake := false
-	if info == nil && s.strategy >= StakeLatestStrategy {
-		creatingNewStake = true
+	creatingNewStake := info == nil
+	if creatingNewStake {
 		if err := s.newStake(ctx); err != nil {
 			return nil, err
 		}
@@ -118,12 +121,17 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 		// Ignore our stake creation, as it's useless by itself
 		txCount--
 	}
-	if txCount == 0 && info != nil {
-		tx, err := s.removeOldStakers(ctx)
-		if err != nil || tx == nil {
-			return tx, err
+	if txCount == 0 {
+		if info != nil {
+			tx, err := s.removeOldStakers(ctx)
+			if err != nil || tx != nil {
+				return tx, err
+			}
 		}
 		return nil, nil
+	}
+	if creatingNewStake {
+		logger.Info().Msg("Staking to execute transactions")
 	}
 	return s.wallet.ExecuteTransactions(ctx, s.builder)
 }
@@ -135,6 +143,8 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 	}
 
 	if s.activeChallenge == nil || s.activeChallenge.ChallengeAddress() != *info.CurrentChallenge {
+		logger.Warn().Str("challenge", info.CurrentChallenge.String()).Msg("Entered challenge")
+
 		challengeCon, err := ethbridge.NewChallenge(info.CurrentChallenge.ToEthAddress(), s.client, s.builder)
 		if err != nil {
 			return err
@@ -184,11 +194,15 @@ func (s *Staker) advanceStake(ctx context.Context) error {
 
 	switch action := action.(type) {
 	case createNodeAction:
+		logger.Info().Str("hash", hex.EncodeToString(action.hash[:])).Msg("Creating node")
+
 		if !wrongNodesExist && s.strategy < StakeLatestStrategy {
 			return nil
 		}
 		return s.rollup.StakeOnNewNode(ctx, action.hash, action.assertion)
 	case existingNodeAction:
+		logger.Info().Int("node", int((*big.Int)(action.number).Int64())).Msg("Staking on existing node")
+
 		if !wrongNodesExist && s.strategy < StakeLatestStrategy {
 			return nil
 		}
@@ -238,6 +252,7 @@ func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo)
 		if err != nil {
 			return err
 		}
+		logger.Warn().Int("ourNode", int(node1.Int64())).Int("otherNode", int(node2.Int64())).Str("otherStaker", staker2.String()).Msg("Creating challenge")
 		return s.rollup.CreateChallenge(
 			ctx,
 			staker1,

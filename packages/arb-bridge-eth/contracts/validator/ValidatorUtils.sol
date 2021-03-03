@@ -186,7 +186,9 @@ contract ValidatorUtils {
         for (uint256 i = 0; i < stakerCount; i++) {
             address staker = rollup.getStakerAddress(i);
             uint256 latestStakedNode = rollup.latestStakedNode(staker);
-            if (latestStakedNode <= latestConfirmed) {
+            if (
+                latestStakedNode <= latestConfirmed && rollup.currentChallenge(staker) == address(0)
+            ) {
                 stakers[index] = staker;
                 index++;
             }
