@@ -22,6 +22,35 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
   }
 })
 
+task('create-chain', 'Creates a rollup chain').setAction(
+  async (taskArguments, hre) => {
+    const { deployments, ethers } = hre
+    const [deployer] = await ethers.getSigners()
+    const rollupCreatorDep = await deployments.get('RollupCreator')
+    const RollupCreator = await ethers.getContractFactory('RollupCreator')
+    const rollupCreator = RollupCreator.attach(
+      rollupCreatorDep.address
+    ).connect(deployer)
+    const tx = await rollupCreator.createRollup(
+      '0x7ef409f713e348cc95db45c22341495a1965097539d66b6010b0a04b0b820efe',
+      900,
+      0,
+      2000000000,
+      ethers.utils.parseEther('.1'),
+      ethers.constants.AddressZero,
+      await deployer.getAddress(),
+      '0x'
+    )
+    const receipt = await tx.wait()
+    console.log(receipt)
+    console.log(receipt.logs)
+    const ev = rollupCreator.interface.parseLog(
+      receipt.logs[receipt.logs.length - 1]
+    )
+    console.log(ev)
+  }
+)
+
 task('deposit', 'Deposit coins into ethbridge')
   .addPositionalParam('chain', "The rollup chain's address")
   .addPositionalParam('privkey', 'The private key of the depositer')
@@ -76,6 +105,12 @@ const config = {
     },
     parity: {
       url: 'http://127.0.0.1:7545',
+    },
+    devnet: {
+      url: 'https://devnet.arbitrum.io/rpc',
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
     },
   },
   etherscan: {
