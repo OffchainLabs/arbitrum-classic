@@ -22,6 +22,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
+//go:generate go run arboshash.go
+
 type RollupArgs struct {
 	ValidatorFolder string
 	EthURL          string
