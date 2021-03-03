@@ -2,17 +2,18 @@ package staker
 
 import (
 	"context"
+	"math/big"
+	"time"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/pkg/errors"
-	"math/big"
-	"time"
 )
 
 type InboxReader struct {
 	// Only in run thread
-	bridge            ethbridge.BridgeWatcher
+	bridge            *ethbridge.BridgeWatcher
 	db                core.ArbCore
 	firstMessageBlock *big.Int
 
@@ -21,7 +22,7 @@ type InboxReader struct {
 	cancelFunc context.CancelFunc
 }
 
-func NewInboxReader(ctx context.Context, bridge ethbridge.BridgeWatcher, db core.ArbCore) (*InboxReader, error) {
+func NewInboxReader(ctx context.Context, bridge *ethbridge.BridgeWatcher, db core.ArbCore) (*InboxReader, error) {
 	firstMessageBlock, err := bridge.LookupMessageBlock(ctx, big.NewInt(0))
 	if err != nil {
 		return nil, err
@@ -38,7 +39,14 @@ func (ir *InboxReader) Start(parentCtx context.Context) <-chan error {
 	ctx, cancelFunc := context.WithCancel(parentCtx)
 	go func() {
 		defer close(errChan)
-		errChan <- ir.getMessages(ctx)
+		for {
+			err := ir.getMessages(ctx)
+			if err == nil {
+				break
+			}
+			errChan <- err
+			<-time.After(time.Second * 5)
+		}
 	}()
 	ir.cancelFunc = cancelFunc
 	ir.running = true

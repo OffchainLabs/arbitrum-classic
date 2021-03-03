@@ -2,13 +2,14 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
-	"math/big"
 )
 
 type BuilderBackend struct {
@@ -35,6 +36,10 @@ func NewBuilderBackend(wallet *ValidatorWallet) (*BuilderBackend, error) {
 
 func (b *BuilderBackend) TransactionCount() int {
 	return len(b.transactions)
+}
+
+func (b *BuilderBackend) ClearTransactions() {
+	b.transactions = nil
 }
 
 func (b *BuilderBackend) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {

@@ -2,6 +2,10 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
+	"sort"
+	"strings"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -10,11 +14,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/pkg/errors"
-	"math/big"
-	"sort"
-	"strings"
 )
 
 var bridgeABI abi.ABI
@@ -60,6 +62,7 @@ func NewBridgeWatcher(address ethcommon.Address, client ethutils.EthClient) (*Br
 		con:     con,
 		address: address,
 		client:  client,
+		inboxes: make(map[ethcommon.Address]InboxMessageGetter),
 	}, nil
 }
 
@@ -178,6 +181,9 @@ func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []type
 		data, ok := messageData[msgNum]
 		if !ok {
 			return nil, errors.New("message not found")
+		}
+		if hashing.SoliditySHA3(data) != rawMsg.MessageDataHash {
+			return nil, errors.New("found message data with mismatched hash")
 		}
 
 		header, err := r.client.HeaderByHash(ctx, rawMsg.Raw.BlockHash)

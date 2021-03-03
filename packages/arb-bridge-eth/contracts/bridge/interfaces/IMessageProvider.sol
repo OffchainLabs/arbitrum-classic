@@ -18,25 +18,8 @@
 
 pragma solidity ^0.6.11;
 
-import "../bridge/interfaces/IBridge.sol";
-import "../arch/IOneStepProof.sol";
+interface IMessageProvider {
+    event InboxMessageDelivered(uint256 indexed messageNum, bytes data);
 
-interface IChallenge {
-    function initializeChallenge(
-        IOneStepProof[] calldata _executors,
-        address _resultReceiver,
-        bytes32 _executionHash,
-        uint256 _maxMessageCount,
-        address _asserter,
-        address _challenger,
-        uint256 _asserterTimeLeft,
-        uint256 _challengerTimeLeft,
-        IBridge _bridge
-    ) external;
-
-    function currentResponderTimeLeft() external view returns (uint256);
-
-    function lastMoveBlock() external view returns (uint256);
-
-    function timeout() external;
+    event InboxMessageDeliveredFromOrigin(uint256 indexed messageNum);
 }

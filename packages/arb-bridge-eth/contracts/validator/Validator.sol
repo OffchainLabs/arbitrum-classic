@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 pragma experimental ABIEncoderV2;
 
 import "../rollup/IRollup.sol";
+import "../challenge/IChallenge.sol";
 
 contract Validator {
     address owner;
@@ -70,6 +71,13 @@ contract Validator {
         uint256 stakerCount = stakers.length;
         for (uint256 i = 0; i < stakerCount; i++) {
             try rollup.returnOldDeposit(stakers[i]) {} catch {}
+        }
+    }
+
+    function timeoutChallenges(IRollup rollup, IChallenge[] calldata challenges) external {
+        uint256 challengesCount = challenges.length;
+        for (uint256 i = 0; i < challengesCount; i++) {
+            try challenges[i].timeout() {} catch {}
         }
     }
 }

@@ -23,6 +23,9 @@ interface IRollup {
 
     event NodeCreated(
         uint256 indexed nodeNum,
+        bytes32 indexed parentNodeHash,
+        bytes32 nodeHash,
+        bytes32 executionHash,
         uint256 inboxMaxCount,
         bytes32 afterInboxAcc,
         bytes32[4] assertionBytes32Fields,

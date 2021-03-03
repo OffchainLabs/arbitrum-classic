@@ -2,9 +2,14 @@ package staker
 
 import (
 	"context"
+	"math/big"
+	"testing"
+	"time"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
@@ -12,8 +17,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"math/big"
-	"testing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 func deployRollup(
@@ -89,6 +93,7 @@ func TestStaker(t *testing.T) {
 
 	clnt, pks := test.SimulatedBackend()
 	auth := bind.NewKeyedTransactor(pks[0])
+	auth2 := bind.NewKeyedTransactor(pks[0])
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 
 	rollupAddr := deployRollup(
@@ -111,40 +116,91 @@ func TestStaker(t *testing.T) {
 	validatorAddress, _, _, err := ethbridgecontracts.DeployValidator(auth, client)
 	test.FailIfError(t, err)
 
+	validatorAddress2, _, _, err := ethbridgecontracts.DeployValidator(auth2, client)
+	test.FailIfError(t, err)
+
 	client.Commit()
 
 	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, ethbridge.NewTransactAuth(auth))
 	test.FailIfError(t, err)
 
-	lookup, shutdown := test.PrepareArbCore(t, nil)
+	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, ethbridge.NewTransactAuth(auth2))
+	test.FailIfError(t, err)
+
+	core, shutdown := test.PrepareArbCore(t, []inbox.InboxMessage{})
 	defer shutdown()
 
-	staker, err := NewStaker(ctx, lookup, client, val, common.NewAddressFromEth(validatorUtilsAddr))
+	staker, err := NewStaker(ctx, core, client, val, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)
 
-	for i := 0; i < 100; i++ {
+	faultyCore := challenge.NewFaultyCore(core, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(10000)})
+
+	faultyStaker, err := NewStaker(ctx, faultyCore, client, val2, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
+	test.FailIfError(t, err)
+
+	bridgeAddr, err := staker.rollup.Bridge(ctx)
+	test.FailIfError(t, err)
+	bridge, err := ethbridge.NewBridgeWatcher(bridgeAddr.ToEthAddress(), client)
+	test.FailIfError(t, err)
+	reader, err := NewInboxReader(ctx, bridge, core)
+	test.FailIfError(t, err)
+	reader.Start(ctx)
+
+	for i := 1; i <= 10; i++ {
+		msgCount, err := core.GetMessageCount()
+		test.FailIfError(t, err)
+		if msgCount.Cmp(big.NewInt(1)) >= 0 {
+			// We've found the inbox message
+			break
+		}
+		if i == 10 {
+			t.Fatal("Failed to load initializing message")
+		}
+		<-time.After(time.Second * 1)
+	}
+
+	faultyStakerAlive := false
+	faultyStakerDead := false
+	for i := 100; i >= 0; i++ {
+		if (i % 2) == 0 {
+			_, err := staker.Act(ctx)
+			test.FailIfError(t, err)
+		} else if !faultyStakerAlive || !faultyStakerDead {
+			_, err = faultyStaker.Act(ctx)
+			test.FailIfError(t, err)
+		}
 		client.Commit()
+
+		faultyStakerInfo, err := staker.rollup.StakerInfo(ctx, common.NewAddressFromEth(validatorAddress2))
+		test.FailIfError(t, err)
+		if faultyStakerInfo == nil {
+			faultyStakerDead = true
+		} else {
+			faultyStakerAlive = true
+			faultyStakerDead = false
+		}
+
+		latestConfirmed, err := staker.rollup.LatestConfirmedNode(ctx)
+		test.FailIfError(t, err)
+		if latestConfirmed.Cmp(big.NewInt(0)) != 0 {
+			break
+		} else if i == 0 {
+			t.Fatal("No node was confirmed")
+		}
 	}
-
-	err = staker.newStake(ctx)
-	test.FailIfError(t, err)
-
-	if staker.builder.TransactionCount() == 0 {
-		t.Fatal("didn't place stake")
-	}
-
-	_, err = val.ExecuteTransactions(ctx, staker.builder)
-	test.FailIfError(t, err)
-
-	client.Commit()
 
 	stakerInfo, err := staker.rollup.StakerInfo(ctx, common.NewAddressFromEth(validatorAddress))
 	test.FailIfError(t, err)
 
-	if stakerInfo.CurrentChallenge != nil {
-		t.Fatal("shouldn't be in challenge")
+	if stakerInfo == nil {
+		t.Fatal("Staker isn't staked")
 	}
-	if stakerInfo.LatestStakedNode.Cmp(big.NewInt(0)) != 0 {
-		t.Fatal("staked on wrong node")
+
+	if stakerInfo.CurrentChallenge != nil || stakerInfo.AmountStaked.Cmp(big.NewInt(0)) == 0 {
+		t.Fatal("Staker didn't resolve challenge")
+	}
+
+	if stakerInfo.LatestStakedNode.Cmp(big.NewInt(0)) == 0 {
+		t.Fatal("Staker didn't stake on node")
 	}
 }

@@ -181,6 +181,8 @@ func initializeChallengeData(
 		},
 		Assertion:     assertion,
 		InboxMaxCount: inboxMaxCount,
+		NodeHash:      common.RandHash(),
+		AfterInboxAcc: [32]byte{},
 	}
 }
 
