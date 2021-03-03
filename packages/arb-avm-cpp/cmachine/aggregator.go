@@ -85,14 +85,16 @@ func (as *NodeStore) SaveBlock(header *types.Header, logIndex uint64, requests [
 		return err
 	}
 
-	if C.aggregatorSaveBlock(as.c, C.uint64_t(header.Number.Uint64()), unsafeDataPointer(blockData), C.int(len(blockData))) == 0 {
-		return errors.New("failed to save block")
-	}
-
+	requestIds := make([]common.Hash, 0, len(requests))
+	logIndexes := make([]C.uint64_t, 0, len(requests))
 	for _, request := range requests {
-		if C.aggregatorSaveRequest(as.c, unsafeDataPointer(request.RequestId.Bytes()), C.uint64_t(request.LogIndex)) == 0 {
-			return errors.New("failed to save request")
-		}
+		requestIds = append(requestIds, request.RequestId)
+		logIndexes = append(logIndexes, request.LogIndex)
+	}
+	cRequestIds := encodeHashArray(requestIds)
+
+	if C.aggregatorSaveBlock(as.c, C.uint64_t(header.Number.Uint64()), cRequestIds, (*C.uint64_t)(&logIndexes[0]), unsafeDataPointer(blockData), C.int(len(blockData))) == 0 {
+		return errors.New("failed to save block")
 	}
 
 	headerHash := header.Hash()

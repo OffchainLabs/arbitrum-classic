@@ -52,10 +52,13 @@ typedef struct CRequestInfoStruct CRequestInfo;
 void deleteAggregatorStore(CAggregatorStore* m);
 
 Uint64Result aggregatorBlockCount(const CAggregatorStore* agg);
-int aggregatorSaveBlock(CAggregatorStore* agg,
+int aggregatorSaveBlock(CAggregatorStore* agg_ptr,
                         uint64_t height,
-                        const void* data,
-                        int data_length);
+                        const void* block_hash,
+                        ByteSliceArray requests_data,
+                        const uint64_t* log_indexes,
+                        const void* block_data,
+                        int block_data_length);
 CBlockData aggregatorGetBlock(const CAggregatorStore* agg, uint64_t height);
 int aggregatorReorg(CAggregatorStore* agg, uint64_t block_height);
 

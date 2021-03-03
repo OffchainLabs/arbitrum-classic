@@ -80,6 +80,15 @@ func encodeByteSliceList(goSlices [][]byte) []C.ByteSlice {
 	return byteSlices
 }
 
+func encodeHashArray(hashes []common.Hash) C.ByteSliceArray {
+	byteSlices := make([]C.ByteSlice, 0, len(hashes))
+	for _, hash := range hashes {
+		byteSlices = append(byteSlices, hash.Bytes())
+	}
+
+	return toByteSliceArrayView(byteSlices)
+}
+
 func encodeInboxMessages(inboxMessages []inbox.InboxMessage) [][]byte {
 	data := make([][]byte, 0, len(inboxMessages))
 	for _, msg := range inboxMessages {

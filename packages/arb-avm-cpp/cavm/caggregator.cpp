@@ -36,14 +36,21 @@ Uint64Result aggregatorBlockCount(const CAggregatorStore* agg) {
     }
 }
 
-int aggregatorSaveBlock(CAggregatorStore* agg,
+int aggregatorSaveBlock(CAggregatorStore* agg_ptr,
                         uint64_t height,
-                        const void* data,
-                        int data_length) {
+                        const void* block_hash_ptr,
+                        ByteSliceArray requests_data,
+                        const uint64_t* log_indexes,
+                        const void* block_data,
+                        int block_data_length) {
     try {
-        auto ptr = reinterpret_cast<const char*>(data);
-        static_cast<AggregatorStore*>(agg)->saveBlock(height,
-                                                      {ptr, ptr + data_length});
+        auto agg = static_cast<AggregatorStore*>(agg_ptr);
+        auto block_hash = receiveUint256(block_hash_ptr);
+        auto request_ids = receiveUint256Array(requests_data);
+        auto block_ptr = reinterpret_cast<const char*>(block_data);
+
+        agg->saveBlock(height, block_hash, request_ids, log_indexes, {block_ptr, block_ptr + block_data_length});
+
         return true;
     } catch (const std::exception& e) {
         std::cerr << "aggregatorSaveBlock error: " << e.what() << std::endl;
@@ -83,18 +90,6 @@ Uint64Result aggregatorGetPossibleRequestInfo(const CAggregatorStore* agg,
     }
 }
 
-int aggregatorSaveRequest(CAggregatorStore* agg,
-                          const void* request_id,
-                          uint64_t log_index) {
-    try {
-        static_cast<AggregatorStore*>(agg)->saveRequest(
-            receiveUint256(request_id), log_index);
-        return 1;
-    } catch (const std::exception&) {
-        return 0;
-    }
-}
-
 // block_hash is 32 bytes long
 Uint64Result aggregatorGetPossibleBlock(const CAggregatorStore* agg,
                                         const void* block_hash) {
@@ -104,18 +99,6 @@ Uint64Result aggregatorGetPossibleBlock(const CAggregatorStore* agg,
         return {*index, true};
     } else {
         return {0, false};
-    }
-}
-
-int aggregatorSaveBlockHash(CAggregatorStore* agg,
-                            const void* block_hash,
-                            uint64_t block_height) {
-    try {
-        static_cast<AggregatorStore*>(agg)->saveBlockHash(
-            receiveUint256(block_hash), block_height);
-        return 1;
-    } catch (const std::exception&) {
-        return 0;
     }
 }
 
