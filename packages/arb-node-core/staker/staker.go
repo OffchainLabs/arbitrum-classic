@@ -194,18 +194,16 @@ func (s *Staker) advanceStake(ctx context.Context) error {
 
 	switch action := action.(type) {
 	case createNodeAction:
-		logger.Info().Str("hash", hex.EncodeToString(action.hash[:])).Msg("Creating node")
-
-		if !wrongNodesExist && s.strategy < StakeLatestStrategy {
+		if !wrongNodesExist && s.strategy < MakeNodesStrategy {
 			return nil
 		}
+		logger.Info().Str("hash", hex.EncodeToString(action.hash[:])).Msg("Creating node")
 		return s.rollup.StakeOnNewNode(ctx, action.hash, action.assertion)
 	case existingNodeAction:
-		logger.Info().Int("node", int((*big.Int)(action.number).Int64())).Msg("Staking on existing node")
-
 		if !wrongNodesExist && s.strategy < StakeLatestStrategy {
 			return nil
 		}
+		logger.Info().Int("node", int((*big.Int)(action.number).Int64())).Msg("Staking on existing node")
 		return s.rollup.StakeOnExistingNode(ctx, action.number, action.hash)
 	default:
 		panic("invalid action type")

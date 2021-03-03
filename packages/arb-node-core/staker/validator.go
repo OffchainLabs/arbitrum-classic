@@ -199,7 +199,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 	execTracker := core.NewExecutionTracker(v.lookup, cursor, false, gasesUsed)
 
 	var correctNode nodeAction
-	wrongNodesExist := true
+	wrongNodesExist := false
 	for _, nd := range successorsNodes {
 		if correctNode != nil && wrongNodesExist {
 			// We've found everything we could hope to find
